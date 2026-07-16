@@ -8,6 +8,51 @@ Use the bundled contracts. Do not ask for or read the full Kiwe/DSA plugin codeb
 
 Do not create cart, checkout, auth, save, search, AI, service-worker, history, focus, or WooCommerce authority.
 
+# AppShell theme.json quick contract
+
+If your output includes `appshell-theme/import/[theme-id]/theme.json`, copy this shape and only change values that are clearly marked as theme-specific.
+
+Do not invent alternate manifest keys.
+
+Important:
+
+- Use `schema`, not `type`.
+- Do not use `schemaVersion` in AppShell theme manifests. `schemaVersion` is only used by optional Kiwe settings profiles.
+- Do not use nested `contracts`, `colorAuthority`, `authority`, `supportedPresentationModes`, `supportedDockShapes`, `cssFiles`, or object-form `supports`.
+- `supports` must be an array of allowed strings.
+- `screens` must use Kiwe screen names only.
+
+```json
+{
+  "schema": "kiwe.surface-theme.v1",
+  "id": "your-theme-id",
+  "name": "Your Theme Name",
+  "version": "1.0.0",
+  "profile": "marketplace",
+  "mode": "css-only",
+  "description": "Short presentation-only Kiwe DSA AppShell theme description under 240 characters.",
+  "author": "Your name or team",
+  "css": ["css/theme.css"],
+  "assets": [],
+  "screens": ["profile", "cart", "checkout", "search", "menu", "saved", "links", "notifications", "ios-install", "games", "ai"],
+  "requires": {
+    "uiContract": "kiwe.surface-ui.v2",
+    "tokenContract": "kiwe.universal",
+    "minKiwe": "0.5.75"
+  },
+  "supports": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "dock-shape-pill", "dock-shape-box", "dock-shape-square", "horizontal", "vertical", "reduced-motion"],
+  "budgets": {
+    "cssKb": 40,
+    "jsKb": 0,
+    "blockingAssets": 0
+  },
+  "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+}
+```
+
+If a theme does not cover a screen, remove that screen from `screens`. Do not add unsupported screen names such as `orders`, `downloads`, `addresses`, or `install`; those are payload sections or concepts inside supported screens, not theme-manifest screen IDs.
+
+
 # Kiwe UI System Brain
 
 This folder is the portable UI-authoring brain for Kiwe DSA themes. It is intentionally small enough to hand to a designer, agency, or AI assistant without exposing the whole plugin codebase.
