@@ -68,6 +68,16 @@ node kiwe-ai-toolkit/bin/kiwe.js start combined --brief "Netflix-like ultra-mode
 
 Do not ask the human to paste long Kiwe rules. `kiwe_start_project` returns the relevant mode context, output contract, preview requirements, Bricks boundaries, Seam vocabulary guidance, and AppShell separation rules.
 
+### Browser AI fallback
+
+Some browser AIs can read public GitHub files but cannot connect MCP tools or safely execute repo code. In that case, do not clone or crawl the whole repo. Read one static context file:
+
+- `contexts/website.md` for a normal website/page.
+- `contexts/theme.md` for a Kiwe DSA/AppShell theme.
+- `contexts/combined.md` for a website/page plus AppShell direction/settings.
+
+These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
+
 ## MCP
 
 Run the MCP server over stdio:

@@ -8,6 +8,12 @@ AI assistants should not load the full repository to create designs. Start here:
 - `kiwe-ai-toolkit/README.md`
 - `kiwe-ai-toolkit/mcp/index.js`
 
+For browser AIs without MCP or shell execution, read only the relevant static context:
+
+- `kiwe-ai-toolkit/contexts/website.md`
+- `kiwe-ai-toolkit/contexts/theme.md`
+- `kiwe-ai-toolkit/contexts/combined.md`
+
 Preferred first tool call:
 
 ```json
@@ -28,4 +34,3 @@ node kiwe-ai-toolkit/bin/kiwe.js start auto --brief "Paste the human brief here.
 ```
 
 Do not read the whole plugin first. The toolkit provides compact contracts for website, theme, and combined handoffs.
-
