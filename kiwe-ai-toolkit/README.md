@@ -120,6 +120,7 @@ website-handoff/
     preview/
       index.html
       assets/site.css
+    bricks-paste.html
     bricks-notes.md
   KIWE_CONTEXT.md
 ```

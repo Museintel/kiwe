@@ -48,6 +48,16 @@ Build a polished website/page. Seam is available, not mandatory. Good output may
 - custom CSS for the actual visual style;
 - preview-only JavaScript clearly marked as preview-only.
 
+Required website artifacts:
+
+- `preview/index.html` for visual review.
+- `preview/assets/site.css` for preview CSS.
+- `preview/assets/site.js` only when preview-only interaction is needed.
+- `bricks-paste.html` as the copy/paste artifact for Bricks HTML-to-Bricks import.
+- `bricks-notes.md` explaining how the preview maps to Bricks and which interactions remain Kiwe/WordPress/Woo/Bricks-owned.
+
+Do not return a React, Vite, Next, Tailwind, shadcn, or other build-app project as the primary output. Those can be inspirational prototypes only if separately requested. The Kiwe handoff must be plain HTML/CSS with optional preview-only JS so it can travel into Bricks.
+
 Seam roles are semantic/headless by default. `data-role="card"` tells tools what something is; it must not force the page into generic cards. Seam core has no starter visual layer right now: no default card/button/modal padding, radius, border, shadow, or background. Use site CSS and searchable Seam Class Vocabulary names such as `.seam-card`, `.seam-accordion`, `.seam-table`, `.seam-horizontal-rail`, `.seam-size-xl`, or `.seam-density-spacious` for the actual look.
 
 ## Bricks path
@@ -59,6 +69,8 @@ Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview con
 - prefer reusable classes and variables;
 - keep JS separate and minimal;
 - do not recreate Kiwe/DSA behavior authority.
+
+Also include `bricks-paste.html`. In most cases it should be the same semantic page as the preview, but packaged as one paste-ready HTML document or clearly documented HTML/CSS/JS block for Bricks import.
 
 ## Kiwe capability boundaries
 
@@ -107,6 +119,7 @@ Do not ask for "zero custom CSS". That makes most real marketing/editorial pages
 Ask for:
 
 - a standalone previewable HTML page;
+- a `bricks-paste.html` file that is ready to paste/import through Bricks HTML-to-Bricks;
 - CSS that consumes Kiwe/Seam variables from `token-map.css` and `runtime/seam.css`;
 - public Seam roles/flows/tones/states where they describe the structure;
 - reusable generic component/layout classes from the Seam Class Vocabulary for the actual art direction;
@@ -128,6 +141,8 @@ Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This m
 - no hardcoded generated Bricks element IDs.
 
 The preview is allowed to use mock content and placeholder interactions, but production handoff must say which interactions are placeholders and which are Kiwe/DSA-owned.
+
+Do not accept a React/Vite/Tailwind/shadcn application as the handoff unless the assignment explicitly asked for a separate app prototype. Kiwe website handoffs should be plain HTML/CSS with optional preview-only JS, because the target path is Bricks HTML-to-Bricks.
 
 
 # Prompt for using Kiwe Framework
@@ -878,12 +893,14 @@ website-handoff/
     assets/
       site.css
       site.js       # optional, preview-only
+  bricks-paste.html
   bricks-notes.md
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
+- Produce `bricks-paste.html` as the copy/paste artifact for Bricks HTML-to-Bricks import. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, or hidden local files.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
@@ -943,6 +960,7 @@ combined-kiwe-handoff/
       assets/
         site.css
         site.js       # optional, preview-only
+    bricks-paste.html
     bricks-notes.md
   appshell-theme/
     import/
@@ -961,6 +979,7 @@ combined-kiwe-handoff/
 Rules:
 
 - Keep the website/page CSS and AppShell theme CSS separate.
+- The website lane must include `website/bricks-paste.html`. This is the Bricks copy/paste artifact. Do not return only a React/Vite app, screenshot, Markdown spec, or preview without the paste-ready file.
 - Website CSS may use Seam Class Vocabulary and Bricks-friendly classes.
 - AppShell theme CSS may style DSA theme selectors and allowed public Seam classes according to `ui-system/`.
 - The combined preview may show the DSA dock/sheet over the website, but preview markup is not production runtime.

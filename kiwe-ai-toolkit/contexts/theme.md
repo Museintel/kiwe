@@ -652,12 +652,14 @@ website-handoff/
     assets/
       site.css
       site.js       # optional, preview-only
+  bricks-paste.html
   bricks-notes.md
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
+- Produce `bricks-paste.html` as the copy/paste artifact for Bricks HTML-to-Bricks import. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, or hidden local files.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
@@ -717,6 +719,7 @@ combined-kiwe-handoff/
       assets/
         site.css
         site.js       # optional, preview-only
+    bricks-paste.html
     bricks-notes.md
   appshell-theme/
     import/
@@ -735,6 +738,7 @@ combined-kiwe-handoff/
 Rules:
 
 - Keep the website/page CSS and AppShell theme CSS separate.
+- The website lane must include `website/bricks-paste.html`. This is the Bricks copy/paste artifact. Do not return only a React/Vite app, screenshot, Markdown spec, or preview without the paste-ready file.
 - Website CSS may use Seam Class Vocabulary and Bricks-friendly classes.
 - AppShell theme CSS may style DSA theme selectors and allowed public Seam classes according to `ui-system/`.
 - The combined preview may show the DSA dock/sheet over the website, but preview markup is not production runtime.

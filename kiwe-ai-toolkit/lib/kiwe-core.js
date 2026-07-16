@@ -164,7 +164,7 @@ function copyDir(src, dest) {
 }
 
 function websiteScaffold(root, brief) {
-  writeFile(path.join(root, 'website/preview/index.html'), `<!doctype html>
+  const previewHtml = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -182,7 +182,8 @@ function websiteScaffold(root, brief) {
   </main>
 </body>
 </html>
-`);
+`;
+  writeFile(path.join(root, 'website/preview/index.html'), previewHtml);
   writeFile(path.join(root, 'website/preview/assets/site.css'), `@import "../../../packs/website-builder/contracts/token-map.css";
 
 /* Website/page CSS goes here. Use Seam Class Vocabulary names and Kiwe/Seam tokens. */
@@ -191,30 +192,55 @@ body {
   font-family: var(--kiwe-font-body, system-ui, sans-serif);
 }
 `);
-  writeFile(path.join(root, 'website/bricks-notes.md'), '# Bricks notes\n\nDescribe how this preview should be imported or recreated in Bricks. Do not include generated Bricks IDs.\n');
+  writeFile(path.join(root, 'website/bricks-paste.html'), `<!-- Kiwe Bricks paste-ready artifact.
+Paste/import this through Bricks HTML-to-Bricks. Replace scaffold content with the finished page.
+Do not require React/Vite/Tailwind build steps or generated Bricks IDs. -->
+${previewHtml}`);
+  writeFile(path.join(root, 'website/bricks-notes.md'), '# Bricks notes\n\nDescribe how `bricks-paste.html` should be pasted/imported through Bricks HTML-to-Bricks. Document preview-only behavior and Kiwe/WordPress/Woo/Bricks-owned interactions. Do not include generated Bricks IDs.\n');
 }
 
 function themeScaffold(root, name) {
   const id = safeName(name, 'kiwe-theme');
   writeFile(path.join(root, `appshell-theme/import/${id}/theme.json`), JSON.stringify({
-    schemaVersion: 1,
+    schema: 'kiwe.surface-theme.v1',
     id,
     name: id.replace(/-/g, ' '),
     version: '0.1.0',
+    profile: 'marketplace',
+    mode: 'css-only',
     description: 'Kiwe DSA AppShell theme generated from Kiwe AI Toolkit.',
     author: 'Kiwe AI Toolkit',
-    supports: {
-      presentation: ['classic', 'sheet'],
-      dock: ['dock', 'navbar'],
-      dockShapes: ['pill', 'box', 'square'],
-      colorModes: ['light', 'dark']
+    css: ['css/theme.css'],
+    assets: [],
+    screens: ['profile', 'cart', 'search', 'menu', 'saved', 'links', 'notifications', 'ios-install', 'ai'],
+    requires: {
+      uiContract: 'kiwe.surface-ui.v2',
+      tokenContract: 'kiwe.universal',
+      minKiwe: '0.5.75'
     },
-    css: ['css/theme.css']
+    supports: ['light', 'dark', 'sheet', 'classic', 'dock', 'split-dock', 'full-dock', 'navigation-bar', 'dock-shape-pill', 'dock-shape-box', 'dock-shape-square', 'horizontal', 'vertical', 'reduced-motion'],
+    budgets: {
+      cssKb: 40,
+      jsKb: 0,
+      blockingAssets: 0
+    },
+    forbidden: ['remote-code', 'trackers', 'php', 'service-worker', 'history-owner', 'cart-owner', 'checkout-owner', 'phonekey-owner', 'bricks-owner']
   }, null, 2) + '\n');
   writeFile(path.join(root, `appshell-theme/import/${id}/css/theme.css`), `/*
  * Kiwe DSA AppShell theme CSS.
  * Style existing DSA selectors only. Do not create runtime authority.
  */
+`);
+  writeFile(path.join(root, 'appshell-theme/README.md'), `# ${id} AppShell theme handoff
+
+This folder must contain a safe importable theme package and a standalone preview.
+
+Validate with:
+
+\`\`\`bash
+node tools/ui-theme/validate-package.cjs appshell-theme/import/${id}
+node tools/ui-theme/validate-handoff.cjs appshell-theme
+\`\`\`
 `);
   writeFile(path.join(root, 'appshell-theme/preview/index.html'), '<!doctype html><html lang="en"><meta charset="utf-8"><title>Kiwe AppShell theme preview</title><body><p>Build standalone visual preview here. Link the import CSS.</p></body></html>\n');
   writeFile(path.join(root, 'appshell-theme/preview/PLACEHOLDERS.md'), '# Preview placeholders\n\nDocument mock products, account names, orders, links, scores, and AI data here. None of this belongs in the importable theme package.\n');
@@ -298,10 +324,10 @@ export function validateHandoff(targetDir, mode = 'website') {
   const root = path.resolve(targetDir || '.');
   const required = ['README.md', 'KIWE_CONTEXT.md'];
   if (normalized === 'website' || normalized === 'combined') {
-    required.push('website/preview/index.html', 'website/preview/assets/site.css', 'website/bricks-notes.md');
+    required.push('website/preview/index.html', 'website/preview/assets/site.css', 'website/bricks-paste.html', 'website/bricks-notes.md');
   }
   if (normalized === 'theme' || normalized === 'combined') {
-    required.push('appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
+    required.push('appshell-theme/README.md', 'appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
   }
   if (normalized === 'combined') {
     required.push('kiwe-settings/SETTINGS-NOTES.md');
