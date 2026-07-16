@@ -294,6 +294,62 @@ Important:
 If a theme does not cover a screen, remove that screen from `screens`. Do not add unsupported screen names such as `orders`, `downloads`, `addresses`, or `install`; those are payload sections or concepts inside supported screens, not theme-manifest screen IDs.
 
 
+# AppShell preview quick contract
+
+If your output includes `appshell-theme/preview/index.html`, it must prove the theme against Kiwe's actual preview selectors and Geometry Engine states. A pretty mock phone is not enough.
+
+Minimum preview shell requirements:
+
+- Include a root with `data-dsa-surface`.
+- Include `data-dsa-ui-contract="2"`.
+- Include `data-dsa-dock-presentation` and demonstrate dock plus navigation bar values; use `navbar` for the navigation-bar runtime value.
+- Include `data-dsa-dock-orientation`.
+- Include Geometry Engine variables in the preview markup/style:
+  - `--dsa-dock-control-size`
+  - `--dsa-dock-only-reserve`
+  - `--dsa-screen-block-reserve`
+- If `supports` includes `split-dock`, include `dsa-dock-split`.
+- If `supports` includes dock shapes, demonstrate:
+  - `dsa-dock-shape-pill`
+  - `dsa-dock-shape-box`
+  - `dsa-dock-shape-square`
+- If `supports` includes dark mode, include `data-kiwe-theme="dark"`.
+- Link the importable CSS from `../import/[theme-id]/css/theme.css`; the preview must demonstrate the real import CSS.
+- Keep preview controls outside the app viewport, preferably using `kiwe-preview-toolbar` and `kiwe-preview-stage`.
+
+Required screen selectors when the theme manifest lists these screens:
+
+- `profile`: `data-dsa-profile-panel`
+- `cart`: `data-dsa-cart-panel` and `data-dsa-cart-fbt-rail`
+- `checkout`: `data-dsa-checkout-panel` and `data-dsa-checkout-form`
+- `search`: `data-dsa-search-panel`, `data-dsa-search-form`, `data-dsa-search-input`, and `data-dsa-search-results`
+- `menu`: `dsa-menu-panel`
+- `saved`: `data-dsa-saved-panel`
+- `links`: `dsa-links-panel`
+- `notifications`: `data-dsa-notification-panel`
+- `ios-install`: `data-dsa-ios-install-panel`
+- `games`: `data-dsa-game-panel`
+- `ai`: `data-dsa-ai-panel`
+
+Cart FBT must be a horizontal rail. Include `data-dsa-cart-fbt-rail` on that rail. Do not render it as a stacked list.
+
+Links site score is optional. The preview and README must show/document both:
+
+- score present; and
+- score absent/no score/without score, where no badge is rendered at all.
+
+The AppShell handoff README must include:
+
+- distinctness note / visual thesis;
+- screen coverage summary;
+- shell mode coverage summary;
+- selector-fit checklist;
+- intentional limitations;
+- core/plugin changes section, including "no core/plugin changes" when true;
+- Seam AppShell adoption map acknowledgement;
+- validation commands.
+
+
 # Kiwe UI System Brain
 
 This folder is the portable UI-authoring brain for Kiwe DSA themes. It is intentionally small enough to hand to a designer, agency, or AI assistant without exposing the whole plugin codebase.
