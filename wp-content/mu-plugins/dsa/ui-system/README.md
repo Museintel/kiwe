@@ -78,6 +78,8 @@ Batch 37 makes Seam roles semantic/headless by default after website-output test
 
 Batch 38 adds the Seam Class Vocabulary: a neutral/searchable Bricks class library with 21 Kiwe Seam categories and 276 generic class handles. It covers core roles, content, commerce, navigation, disclosures, tables/data, media, forms, sizes, density, emphasis, placement, aspect, flow controls, and utilities. These names are pushed from `Kiwe > Framework` so Bricks designers can search, add, and style classes such as `seam-card`, `seam-accordion`, `seam-table`, `seam-size-xl`, and `seam-density-spacious`. They are naming infrastructure, not visual recipes.
 
+Batch 39 simplifies the Kiwe AI Toolkit website-output contract after real browser-AI testing showed duplicated website previews wasted tokens and encouraged cut-corner output. Website/page mode now requires one `website/bricks-paste.html` file that opens directly in a browser and is also the Bricks HTML-to-Bricks paste/import artifact. Combined mode now treats `combined-preview/index.html` as the single human review preview for the paired website + DSA AppShell experience, while `appshell-theme/preview/index.html` remains a technical validator fixture for theme selectors/states. Validators, audit tooling, scaffold generation, public contexts, `framework-system/`, `ui-system/HANDOFF-MODES.md`, and the package manifest were updated to enforce this lighter contract.
+
 Next release-prep steps:
 
 1. Live Hostinger upload/proof after the rebuilt MU package is deployed.

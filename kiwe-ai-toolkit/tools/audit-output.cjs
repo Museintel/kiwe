@@ -51,12 +51,12 @@ if (exists('package.json') || exists('vite.config.ts') || exists('tailwind.confi
   add('fail', 'Output looks like a React/Vite/Tailwind/shadcn app. Kiwe handoffs must be plain HTML/CSS with optional preview-only JS unless an app prototype was explicitly requested.');
 }
 
-if (!exists('website/preview/index.html') && !exists('preview/index.html')) {
-  add('fail', 'Missing standalone website preview index.html.');
+if (!exists('website/bricks-paste.html') && !exists('bricks-paste.html')) {
+  add('fail', 'Missing bricks-paste.html. It is the single website/page artifact: browser preview and Bricks HTML-to-Bricks copy/paste file.');
 }
 
-if (!exists('website/bricks-paste.html') && !exists('bricks-paste.html')) {
-  add('fail', 'Missing bricks-paste.html copy/paste artifact for Bricks HTML-to-Bricks.');
+if (exists('website/preview/index.html')) {
+  add('warn', 'Duplicate website/preview/index.html detected. Website mode should normally use website/bricks-paste.html as the single preview + Bricks artifact unless a split preview was explicitly requested.');
 }
 
 if (exists('website') && exists('appshell-theme') && !exists('combined-preview/index.html')) {
@@ -85,7 +85,7 @@ for (const file of themeJsonFiles) {
   }
 }
 
-if (!themeJsonFiles.length && /appshell|dsa|dock|sheet/i.test(allText)) {
+if (exists('appshell-theme') && !themeJsonFiles.length) {
   add('fail', 'AppShell/DSA direction appears present but no importable theme.json was found.');
 }
 

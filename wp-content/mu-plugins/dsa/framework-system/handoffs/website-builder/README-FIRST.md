@@ -40,10 +40,7 @@ Build a polished website/page. Seam is available, not mandatory. Good output may
 
 Required website artifacts:
 
-- `preview/index.html` for visual review.
-- `preview/assets/site.css` for preview CSS.
-- `preview/assets/site.js` only when preview-only interaction is needed.
-- `bricks-paste.html` as the copy/paste artifact for Bricks HTML-to-Bricks import.
+- `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks.
 - `bricks-notes.md` explaining how the preview maps to Bricks and which interactions remain Kiwe/WordPress/Woo/Bricks-owned.
 
 Do not return a React, Vite, Next, Tailwind, shadcn, or other build-app project as the primary output. Those can be inspirational prototypes only if separately requested. The Kiwe handoff must be plain HTML/CSS with optional preview-only JS so it can travel into Bricks.
@@ -60,7 +57,7 @@ Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview con
 - keep JS separate and minimal;
 - do not recreate Kiwe/DSA behavior authority.
 
-Also include `bricks-paste.html`. In most cases it should be the same semantic page as the preview, but packaged as one paste-ready HTML document or clearly documented HTML/CSS/JS block for Bricks import.
+Use `bricks-paste.html` as the preview and paste file. Keep it self-contained by default so browser AIs do not spend tokens maintaining duplicate `preview/index.html`, `site.css`, and `site.js` files. Only add separate assets when the human explicitly requests split files or when a real media asset is required.
 
 ## Kiwe capability boundaries
 

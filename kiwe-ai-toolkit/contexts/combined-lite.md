@@ -28,12 +28,7 @@ combined-kiwe-handoff/
       combined-preview.css  # optional, preview-only
       combined-preview.js   # optional, preview-only
   website/
-    preview/
-      index.html
-      assets/
-        site.css
-        site.js       # optional, preview-only
-    bricks-paste.html
+    bricks-paste.html       # open in browser for website/page preview; paste/import through Bricks
     bricks-notes.md
   appshell-theme/
     README.md
@@ -56,20 +51,18 @@ combined-kiwe-handoff/
 
 It should show the website/page behind the Kiwe DSA dock/sheet/screen so the site owner can judge the full AppShell experience in one place. This is where the DSA theme should be experienced over the actual page design.
 
-The separate previews still exist, but they are technical fixtures:
+The separate AppShell theme preview still exists, but it is a technical fixture:
 
-- `website/preview/index.html` proves the page/Bricks lane.
 - `appshell-theme/preview/index.html` proves the AppShell theme against validator selectors and shell states.
 - `combined-preview/index.html` proves the paired experience.
+- `website/bricks-paste.html` proves the page/Bricks lane and is also the Bricks import artifact.
 
 The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/WooCommerce/Bricks-owned.
 
 ## Website/page rules
 
-- `website/preview/index.html` must be standalone and viewable in a browser.
-- `website/preview/assets/site.css` must contain the page visual CSS.
-- `website/preview/assets/site.js` is optional and must be preview-only.
-- `website/bricks-paste.html` is required. It is the copy/paste artifact for Bricks HTML-to-Bricks import.
+- `website/bricks-paste.html` is required. It is the single website/page artifact: open it directly in a browser for visual review, then paste/import the same file through Bricks HTML-to-Bricks.
+- Keep `website/bricks-paste.html` self-contained by default. Do not create duplicate `website/preview/index.html`, `site.css`, or `site.js` files unless the human explicitly asks for split files.
 - Do not require React, Vite, Tailwind, shadcn, Next, a build pipeline, generated Bricks IDs, or hidden local files.
 - Use semantic HTML, class-based CSS, reusable variables, minimal inline styles, and Bricks-friendly structure.
 

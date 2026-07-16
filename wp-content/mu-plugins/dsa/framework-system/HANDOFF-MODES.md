@@ -15,19 +15,14 @@ Expected output:
 ```text
 website-handoff/
   README.md
-  preview/
-    index.html
-    assets/
-      site.css
-      site.js       # optional, preview-only
-  bricks-paste.html
+  bricks-paste.html  # open in browser for preview; paste/import through Bricks
   bricks-notes.md
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
-- Produce `bricks-paste.html` as the copy/paste artifact for Bricks HTML-to-Bricks import. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, or hidden local files.
+- Produce `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, duplicate preview files, or hidden local files.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
@@ -87,12 +82,7 @@ combined-kiwe-handoff/
       combined-preview.css  # optional, preview-only
       combined-preview.js   # optional, preview-only
   website/
-    preview/
-      index.html
-      assets/
-        site.css
-        site.js       # optional, preview-only
-    bricks-paste.html
+    bricks-paste.html      # Bricks artifact; also openable as the website/page preview
     bricks-notes.md
   appshell-theme/
     import/
@@ -115,7 +105,8 @@ Rules:
 - The website lane must include `website/bricks-paste.html`. This is the Bricks copy/paste artifact. Do not return only a React/Vite app, screenshot, Markdown spec, or preview without the paste-ready file.
 - Website CSS may use Seam Class Vocabulary and Bricks-friendly classes.
 - AppShell theme CSS may style DSA theme selectors and allowed public Seam classes according to `ui-system/`.
-- The separate `website/preview/index.html` and `appshell-theme/preview/index.html` are technical fixtures for Bricks/page review and AppShell validator proof. They are not the primary combined-mode visual review.
+- Do not create a separate `website/preview/index.html` by default. `website/bricks-paste.html` is the website/page preview and the Bricks import artifact. Only add split website preview assets if the human explicitly asks for them.
+- The separate `appshell-theme/preview/index.html` is a technical fixture for AppShell validator proof. It is not the primary combined-mode visual review.
 - The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/Woo/Bricks-owned.
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.

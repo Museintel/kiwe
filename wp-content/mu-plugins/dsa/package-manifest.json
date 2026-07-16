@@ -177,12 +177,12 @@
       "sha256": "c3ae30b809bd0590f9495ad63faee1f49bff85a2dcd4437c1f3f5d6a1aefb7c4"
     },
     "framework-system/HANDOFF-LITE.md": {
-      "bytes": 2587,
-      "sha256": "8d428a92c101b6b273bd9053e2972c375b02c7ee0db9c446a4c6b6bc62e229f9"
+      "bytes": 2983,
+      "sha256": "727091b20e666c31749f559bbdfd45b0f43c2b5871e8dbfb82bb2e89a789c173"
     },
     "framework-system/HANDOFF-MODES.md": {
-      "bytes": 7796,
-      "sha256": "ab12aeec80b3af5e1238bc1b38ecc18a54547413c857a98f6c6b97d8b21fbfb0"
+      "bytes": 7997,
+      "sha256": "1702b9b06e1a1116750639d35a342db4b1436f7f7a8f867c0d42813aeaf1be5a"
     },
     "framework-system/README.md": {
       "bytes": 8057,
@@ -221,16 +221,16 @@
       "sha256": "f71a96621cb973db90ae7af67a898f519cd12a7b11e18d0eea464d02120b73b4"
     },
     "framework-system/handoffs/website-builder/HANDOFF-LITE.md": {
-      "bytes": 2945,
-      "sha256": "b45a12656b0998c7c82370448cbe88bb3be94b5c65a9cdc35db8ef99525052a5"
+      "bytes": 2983,
+      "sha256": "727091b20e666c31749f559bbdfd45b0f43c2b5871e8dbfb82bb2e89a789c173"
     },
     "framework-system/handoffs/website-builder/HANDOFF-MODES.md": {
-      "bytes": 7796,
-      "sha256": "ab12aeec80b3af5e1238bc1b38ecc18a54547413c857a98f6c6b97d8b21fbfb0"
+      "bytes": 7997,
+      "sha256": "1702b9b06e1a1116750639d35a342db4b1436f7f7a8f867c0d42813aeaf1be5a"
     },
     "framework-system/handoffs/website-builder/README-FIRST.md": {
-      "bytes": 3636,
-      "sha256": "a4ffefca97195f0701510ab4ca6c403991af762ff2e2ac8b37a82b7b12afc1a2"
+      "bytes": 3666,
+      "sha256": "3c0e3b0d1309f4b48ebc58150454446c66691b2d7ef36cae705c79aefc645cc3"
     },
     "framework-system/handoffs/website-builder/bricks/BRICKS-INTEGRATION.md": {
       "bytes": 8895,
@@ -669,12 +669,12 @@
       "sha256": "e17e78f78d6713087227529977200f8d8fd5b734af5b953b4946a7f66f4250a1"
     },
     "ui-system/HANDOFF-MODES.md": {
-      "bytes": 7796,
-      "sha256": "ab12aeec80b3af5e1238bc1b38ecc18a54547413c857a98f6c6b97d8b21fbfb0"
+      "bytes": 7997,
+      "sha256": "1702b9b06e1a1116750639d35a342db4b1436f7f7a8f867c0d42813aeaf1be5a"
     },
     "ui-system/README.md": {
-      "bytes": 20111,
-      "sha256": "c78eda82bf36a9b0521df1ffe48d5b23f59184584c013a43d5548fbfe53cb825"
+      "bytes": 20887,
+      "sha256": "14f0bd7ae208ca7810ed925547dce0242e7bc5dfb188d2ad2769178fc190c82c"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

@@ -27,7 +27,7 @@ Do not ask for "zero custom CSS". That makes most real marketing/editorial pages
 
 Ask for:
 
-- a standalone previewable HTML page;
+- a single `bricks-paste.html` file that opens in a browser as the standalone preview and is ready to paste/import through Bricks HTML-to-Bricks;
 - CSS that consumes Kiwe/Seam variables from `token-map.css` and `runtime/seam.css`;
 - public Seam roles/flows/tones/states where they describe the structure;
 - reusable generic component/layout classes from the Seam Class Vocabulary for the actual art direction;
@@ -48,4 +48,6 @@ Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This m
 - no localStorage behavior for DSA-owned actions;
 - no hardcoded generated Bricks element IDs.
 
-The preview is allowed to use mock content and placeholder interactions, but production handoff must say which interactions are placeholders and which are Kiwe/DSA-owned.
+The `bricks-paste.html` preview is allowed to use mock content and placeholder interactions, but production handoff must say which interactions are placeholders and which are Kiwe/DSA-owned.
+
+Do not accept a React/Vite/Tailwind/shadcn application as the handoff unless the assignment explicitly asked for a separate app prototype. Kiwe website handoffs should be plain HTML/CSS with optional preview-only JS, because the target path is Bricks HTML-to-Bricks.

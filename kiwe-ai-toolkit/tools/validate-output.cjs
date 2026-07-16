@@ -24,13 +24,13 @@ if (!validModes.has(mode)) {
 const root = path.resolve(target);
 const required = ['README.md', 'KIWE_CONTEXT.md'];
 if (mode === 'website' || mode === 'combined') {
-  required.push('website/preview/index.html', 'website/preview/assets/site.css', 'website/bricks-notes.md');
+  required.push('website/bricks-paste.html', 'website/bricks-notes.md');
 }
 if (mode === 'theme' || mode === 'combined') {
   required.push('appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
 }
 if (mode === 'combined') {
-  required.push('kiwe-settings/SETTINGS-NOTES.md');
+  required.push('combined-preview/index.html', 'kiwe-settings/SETTINGS-NOTES.md');
 }
 
 const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));

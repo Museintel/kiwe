@@ -50,10 +50,7 @@ Build a polished website/page. Seam is available, not mandatory. Good output may
 
 Required website artifacts:
 
-- `preview/index.html` for visual review.
-- `preview/assets/site.css` for preview CSS.
-- `preview/assets/site.js` only when preview-only interaction is needed.
-- `bricks-paste.html` as the copy/paste artifact for Bricks HTML-to-Bricks import.
+- `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks.
 - `bricks-notes.md` explaining how the preview maps to Bricks and which interactions remain Kiwe/WordPress/Woo/Bricks-owned.
 
 Do not return a React, Vite, Next, Tailwind, shadcn, or other build-app project as the primary output. Those can be inspirational prototypes only if separately requested. The Kiwe handoff must be plain HTML/CSS with optional preview-only JS so it can travel into Bricks.
@@ -70,7 +67,7 @@ Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview con
 - keep JS separate and minimal;
 - do not recreate Kiwe/DSA behavior authority.
 
-Also include `bricks-paste.html`. In most cases it should be the same semantic page as the preview, but packaged as one paste-ready HTML document or clearly documented HTML/CSS/JS block for Bricks import.
+Use `bricks-paste.html` as the preview and paste file. Keep it self-contained by default so browser AIs do not spend tokens maintaining duplicate `preview/index.html`, `site.css`, and `site.js` files. Only add separate assets when the human explicitly requests split files or when a real media asset is required.
 
 ## Kiwe capability boundaries
 
@@ -118,8 +115,7 @@ Do not ask for "zero custom CSS". That makes most real marketing/editorial pages
 
 Ask for:
 
-- a standalone previewable HTML page;
-- a `bricks-paste.html` file that is ready to paste/import through Bricks HTML-to-Bricks;
+- a single `bricks-paste.html` file that opens in a browser as the standalone preview and is ready to paste/import through Bricks HTML-to-Bricks;
 - CSS that consumes Kiwe/Seam variables from `token-map.css` and `runtime/seam.css`;
 - public Seam roles/flows/tones/states where they describe the structure;
 - reusable generic component/layout classes from the Seam Class Vocabulary for the actual art direction;
@@ -140,7 +136,7 @@ Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This m
 - no localStorage behavior for DSA-owned actions;
 - no hardcoded generated Bricks element IDs.
 
-The preview is allowed to use mock content and placeholder interactions, but production handoff must say which interactions are placeholders and which are Kiwe/DSA-owned.
+The `bricks-paste.html` preview is allowed to use mock content and placeholder interactions, but production handoff must say which interactions are placeholders and which are Kiwe/DSA-owned.
 
 Do not accept a React/Vite/Tailwind/shadcn application as the handoff unless the assignment explicitly asked for a separate app prototype. Kiwe website handoffs should be plain HTML/CSS with optional preview-only JS, because the target path is Bricks HTML-to-Bricks.
 
@@ -266,19 +262,14 @@ Expected output:
 ```text
 website-handoff/
   README.md
-  preview/
-    index.html
-    assets/
-      site.css
-      site.js       # optional, preview-only
-  bricks-paste.html
+  bricks-paste.html  # open in browser for preview; paste/import through Bricks
   bricks-notes.md
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
-- Produce `bricks-paste.html` as the copy/paste artifact for Bricks HTML-to-Bricks import. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, or hidden local files.
+- Produce `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, duplicate preview files, or hidden local files.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
@@ -338,12 +329,7 @@ combined-kiwe-handoff/
       combined-preview.css  # optional, preview-only
       combined-preview.js   # optional, preview-only
   website/
-    preview/
-      index.html
-      assets/
-        site.css
-        site.js       # optional, preview-only
-    bricks-paste.html
+    bricks-paste.html      # Bricks artifact; also openable as the website/page preview
     bricks-notes.md
   appshell-theme/
     import/
@@ -366,7 +352,8 @@ Rules:
 - The website lane must include `website/bricks-paste.html`. This is the Bricks copy/paste artifact. Do not return only a React/Vite app, screenshot, Markdown spec, or preview without the paste-ready file.
 - Website CSS may use Seam Class Vocabulary and Bricks-friendly classes.
 - AppShell theme CSS may style DSA theme selectors and allowed public Seam classes according to `ui-system/`.
-- The separate `website/preview/index.html` and `appshell-theme/preview/index.html` are technical fixtures for Bricks/page review and AppShell validator proof. They are not the primary combined-mode visual review.
+- Do not create a separate `website/preview/index.html` by default. `website/bricks-paste.html` is the website/page preview and the Bricks import artifact. Only add split website preview assets if the human explicitly asks for them.
+- The separate `appshell-theme/preview/index.html` is a technical fixture for AppShell validator proof. It is not the primary combined-mode visual review.
 - The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/Woo/Bricks-owned.
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.

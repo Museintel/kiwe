@@ -271,13 +271,21 @@ function copyDir(src, dest) {
 }
 
 function websiteScaffold(root, brief) {
-  const previewHtml = `<!doctype html>
+  const pageHtml = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kiwe website preview</title>
-  <link rel="stylesheet" href="./assets/site.css">
+  <title>Kiwe Bricks-ready website page</title>
+  <style>
+    /* Kiwe website/page CSS goes here.
+       This file is intentionally self-contained: open it in a browser for preview,
+       then paste/import it through Bricks HTML-to-Bricks. */
+    body {
+      margin: 0;
+      font-family: var(--kiwe-font-body, system-ui, sans-serif);
+    }
+  </style>
 </head>
 <body>
   <main class="seam-section seam-stack seam-gap-lg">
@@ -290,20 +298,13 @@ function websiteScaffold(root, brief) {
 </body>
 </html>
 `;
-  writeFile(path.join(root, 'website/preview/index.html'), previewHtml);
-  writeFile(path.join(root, 'website/preview/assets/site.css'), `@import "../../../packs/website-builder/contracts/token-map.css";
-
-/* Website/page CSS goes here. Use Seam Class Vocabulary names and Kiwe/Seam tokens. */
-body {
-  margin: 0;
-  font-family: var(--kiwe-font-body, system-ui, sans-serif);
-}
-`);
   writeFile(path.join(root, 'website/bricks-paste.html'), `<!-- Kiwe Bricks paste-ready artifact.
-Paste/import this through Bricks HTML-to-Bricks. Replace scaffold content with the finished page.
-Do not require React/Vite/Tailwind build steps or generated Bricks IDs. -->
-${previewHtml}`);
-  writeFile(path.join(root, 'website/bricks-notes.md'), '# Bricks notes\n\nDescribe how `bricks-paste.html` should be pasted/imported through Bricks HTML-to-Bricks. Document preview-only behavior and Kiwe/WordPress/Woo/Bricks-owned interactions. Do not include generated Bricks IDs.\n');
+Open this same file in a browser for website/page preview.
+Paste/import it through Bricks HTML-to-Bricks.
+Replace scaffold content with the finished page.
+Do not require React/Vite/Tailwind build steps, generated Bricks IDs, or hidden local files. -->
+${pageHtml}`);
+  writeFile(path.join(root, 'website/bricks-notes.md'), '# Bricks notes\n\n`bricks-paste.html` is the single website/page artifact: open it in a browser for preview, then paste/import the same file through Bricks HTML-to-Bricks. Document preview-only behavior and Kiwe/WordPress/Woo/Bricks-owned interactions. Do not include generated Bricks IDs.\n');
 }
 
 function themeScaffold(root, name) {
@@ -399,7 +400,6 @@ function combinedPreviewScaffold(root, name, brief) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kiwe combined preview</title>
-  <link rel="stylesheet" href="../website/preview/assets/site.css">
   <link rel="stylesheet" href="../appshell-theme/import/${id}/css/theme.css">
   <link rel="stylesheet" href="./assets/combined-preview.css">
 </head>
@@ -453,6 +453,7 @@ body {
 .kiwe-combined-preview__page {
   min-height: 100vh;
   padding: clamp(2rem, 7vw, 6rem);
+  font-family: var(--kiwe-font-body, system-ui, sans-serif);
 }
 
 .kiwe-combined-preview .dsa-surface {
@@ -512,7 +513,7 @@ export function validateHandoff(targetDir, mode = 'website') {
   const root = path.resolve(targetDir || '.');
   const required = ['README.md', 'KIWE_CONTEXT.md'];
   if (normalized === 'website' || normalized === 'combined') {
-    required.push('website/preview/index.html', 'website/preview/assets/site.css', 'website/bricks-paste.html', 'website/bricks-notes.md');
+    required.push('website/bricks-paste.html', 'website/bricks-notes.md');
   }
   if (normalized === 'theme' || normalized === 'combined') {
     required.push('appshell-theme/README.md', 'appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');

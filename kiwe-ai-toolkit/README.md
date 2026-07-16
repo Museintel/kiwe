@@ -118,10 +118,7 @@ Example MCP client entry:
 website-handoff/
   README.md
   website/
-    preview/
-      index.html
-      assets/site.css
-    bricks-paste.html
+    bricks-paste.html  # browser preview + Bricks paste/import artifact
     bricks-notes.md
   KIWE_CONTEXT.md
 ```
@@ -144,10 +141,14 @@ theme-handoff/
 ```text
 combined-kiwe-handoff/
   README.md
-  combined-preview/
-  website/
-  appshell-theme/
-  kiwe-settings/
+  combined-preview/index.html  # primary human review: website with DSA over it
+  website/bricks-paste.html    # Bricks artifact; also website/page preview
+  website/bricks-notes.md
+  appshell-theme/import/theme-id/theme.json
+  appshell-theme/import/theme-id/css/theme.css
+  appshell-theme/preview/index.html
+  appshell-theme/preview/PLACEHOLDERS.md
+  kiwe-settings/               # optional profile/settings lane
   KIWE_CONTEXT.md
 ```
 
