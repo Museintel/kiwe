@@ -332,6 +332,11 @@ Expected output:
 ```text
 combined-kiwe-handoff/
   README.md
+  combined-preview/
+    index.html              # primary human review: website/page with DSA AppShell over it
+    assets/
+      combined-preview.css  # optional, preview-only
+      combined-preview.js   # optional, preview-only
   website/
     preview/
       index.html
@@ -356,11 +361,13 @@ combined-kiwe-handoff/
 
 Rules:
 
+- `combined-preview/index.html` is the primary review artifact. It should show the website/page behind the Kiwe DSA dock/sheet/screen, using the AppShell theme CSS and realistic placeholder data.
 - Keep the website/page CSS and AppShell theme CSS separate.
 - The website lane must include `website/bricks-paste.html`. This is the Bricks copy/paste artifact. Do not return only a React/Vite app, screenshot, Markdown spec, or preview without the paste-ready file.
 - Website CSS may use Seam Class Vocabulary and Bricks-friendly classes.
 - AppShell theme CSS may style DSA theme selectors and allowed public Seam classes according to `ui-system/`.
-- The combined preview may show the DSA dock/sheet over the website, but preview markup is not production runtime.
+- The separate `website/preview/index.html` and `appshell-theme/preview/index.html` are technical fixtures for Bricks/page review and AppShell validator proof. They are not the primary combined-mode visual review.
+- The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/Woo/Bricks-owned.
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.
 - Do not use website CSS to restyle protected DSA internals.

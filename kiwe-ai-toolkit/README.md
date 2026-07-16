@@ -144,6 +144,7 @@ theme-handoff/
 ```text
 combined-kiwe-handoff/
   README.md
+  combined-preview/
   website/
   appshell-theme/
   kiwe-settings/

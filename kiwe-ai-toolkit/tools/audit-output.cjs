@@ -59,6 +59,10 @@ if (!exists('website/bricks-paste.html') && !exists('bricks-paste.html')) {
   add('fail', 'Missing bricks-paste.html copy/paste artifact for Bricks HTML-to-Bricks.');
 }
 
+if (exists('website') && exists('appshell-theme') && !exists('combined-preview/index.html')) {
+  add('fail', 'Combined handoff is missing combined-preview/index.html, the primary review artifact showing the website/page behind the Kiwe DSA AppShell.');
+}
+
 if (!exists('website/bricks-notes.md') && !exists('bricks-notes.md')) {
   add('warn', 'Missing bricks-notes.md explaining Bricks import mapping and capability boundaries.');
 }

@@ -391,6 +391,86 @@ function settingsScaffold(root) {
   writeFile(path.join(root, 'kiwe-settings/SETTINGS-NOTES.md'), '# Kiwe settings notes\n\nExplain every changed setting. Remove this folder if the design does not require Kiwe settings changes.\n');
 }
 
+function combinedPreviewScaffold(root, name, brief) {
+  const id = safeName(name, 'kiwe-theme');
+  writeFile(path.join(root, 'combined-preview/index.html'), `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiwe combined preview</title>
+  <link rel="stylesheet" href="../website/preview/assets/site.css">
+  <link rel="stylesheet" href="../appshell-theme/import/${id}/css/theme.css">
+  <link rel="stylesheet" href="./assets/combined-preview.css">
+</head>
+<body>
+  <main class="kiwe-combined-preview" data-kiwe-combined-preview>
+    <section class="kiwe-combined-preview__page" aria-label="Website page preview">
+      <p class="seam-eyebrow">Combined Kiwe preview</p>
+      <h1>Replace with the finished website/page behind the DSA AppShell.</h1>
+      <p>${brief || 'This preview should show the page and Kiwe DSA theme together.'}</p>
+    </section>
+    <section
+      class="dsa-surface dsa-dock-shape-pill"
+      data-dsa-surface
+      data-dsa-ui-contract="2"
+      data-dsa-dock-presentation="dock"
+      data-dsa-dock-orientation="horizontal"
+      data-kiwe-theme="dark"
+      style="--dsa-dock-control-size:48px;--dsa-dock-only-reserve:82px;--dsa-screen-block-reserve:104px;"
+      aria-label="Kiwe DSA AppShell preview"
+    >
+      <article class="dsa-panel" data-dsa-search-panel>
+        <h2>DSA sheet over page</h2>
+        <form data-dsa-search-form><input data-dsa-search-input value="Preview" aria-label="Search preview"></form>
+        <div data-dsa-search-results>Preview-only result area.</div>
+      </article>
+      <nav class="dsa-dock" aria-label="Preview dock">
+        <button type="button">Menu</button>
+        <button type="button">Search</button>
+        <button type="button">Saved</button>
+        <button type="button">AI</button>
+      </nav>
+    </section>
+  </main>
+  <script src="./assets/combined-preview.js"></script>
+</body>
+</html>
+`);
+  writeFile(path.join(root, 'combined-preview/assets/combined-preview.css'), `/* Combined preview only: show website/page and DSA AppShell together. */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--kiwe-font-body, system-ui, sans-serif);
+}
+
+.kiwe-combined-preview {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.kiwe-combined-preview__page {
+  min-height: 100vh;
+  padding: clamp(2rem, 7vw, 6rem);
+}
+
+.kiwe-combined-preview .dsa-surface {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.kiwe-combined-preview .dsa-panel,
+.kiwe-combined-preview .dsa-dock {
+  pointer-events: auto;
+}
+`);
+  writeFile(path.join(root, 'combined-preview/assets/combined-preview.js'), `// Preview-only combined controller. Production behavior remains Kiwe/WordPress/Woo/Bricks-owned.
+document.documentElement.dataset.kiweCombinedPreview = '1';
+`);
+}
+
 export function createHandoff({ mode = 'website', outputDir = '', name = '', brief = '' } = {}) {
   const normalized = normalizeMode(mode);
   const baseName = safeName(name || `${normalized}-kiwe-handoff`, `${normalized}-kiwe-handoff`);
@@ -416,6 +496,7 @@ Run Kiwe validation before importing or installing anything.
   if (normalized === 'website' || normalized === 'combined') websiteScaffold(root, brief);
   if (normalized === 'theme' || normalized === 'combined') themeScaffold(root, baseName);
   if (normalized === 'combined') settingsScaffold(root);
+  if (normalized === 'combined') combinedPreviewScaffold(root, baseName, brief);
 
   const contractsDir = path.join(root, 'kiwe-contracts');
   ensureDir(contractsDir);
@@ -437,7 +518,7 @@ export function validateHandoff(targetDir, mode = 'website') {
     required.push('appshell-theme/README.md', 'appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
   }
   if (normalized === 'combined') {
-    required.push('kiwe-settings/SETTINGS-NOTES.md');
+    required.push('combined-preview/index.html', 'kiwe-settings/SETTINGS-NOTES.md');
   }
   const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));
   return {

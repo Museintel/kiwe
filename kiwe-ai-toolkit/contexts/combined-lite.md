@@ -22,6 +22,11 @@ Keep these lanes separate:
 ```text
 combined-kiwe-handoff/
   README.md
+  combined-preview/
+    index.html
+    assets/
+      combined-preview.css  # optional, preview-only
+      combined-preview.js   # optional, preview-only
   website/
     preview/
       index.html
@@ -44,6 +49,20 @@ combined-kiwe-handoff/
     kiwe-appsite-profile.json   # optional, only if settings change
     SETTINGS-NOTES.md           # optional, only if settings change
 ```
+
+## Combined preview rule
+
+`combined-preview/index.html` is the primary human review artifact for combined mode.
+
+It should show the website/page behind the Kiwe DSA dock/sheet/screen so the site owner can judge the full AppShell experience in one place. This is where the DSA theme should be experienced over the actual page design.
+
+The separate previews still exist, but they are technical fixtures:
+
+- `website/preview/index.html` proves the page/Bricks lane.
+- `appshell-theme/preview/index.html` proves the AppShell theme against validator selectors and shell states.
+- `combined-preview/index.html` proves the paired experience.
+
+The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/WooCommerce/Bricks-owned.
 
 ## Website/page rules
 
@@ -218,4 +237,3 @@ For generated AI output review, also use:
 ```bash
 node kiwe-ai-toolkit/tools/audit-output.cjs combined-kiwe-handoff
 ```
-
