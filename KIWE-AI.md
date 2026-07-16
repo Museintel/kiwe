@@ -18,12 +18,13 @@ Read exactly one static context file after this entrypoint:
 
 - Website/page only: `kiwe-ai-toolkit/contexts/website.md`
 - Kiwe DSA/AppShell theme only: `kiwe-ai-toolkit/contexts/theme.md`
-- Website/page + AppShell direction/settings: `kiwe-ai-toolkit/contexts/combined.md`
+- Website/page + AppShell direction/settings, browser-short version: `kiwe-ai-toolkit/contexts/combined-lite.md`
+- Website/page + AppShell direction/settings, full version: `kiwe-ai-toolkit/contexts/combined.md`
 
 For a prompt that asks for both a website/page and a Kiwe AppShell/DSA direction, read:
 
 ```text
-kiwe-ai-toolkit/contexts/combined.md
+kiwe-ai-toolkit/contexts/combined-lite.md
 ```
 
 Treat that file as the authoritative generated toolkit response. It exists so browser AIs do not need to execute repo code or read the full plugin.

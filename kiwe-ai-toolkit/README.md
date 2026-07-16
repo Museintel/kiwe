@@ -74,6 +74,7 @@ Some browser AIs can read public GitHub files but cannot connect MCP tools or sa
 
 - `contexts/website.md` for a normal website/page.
 - `contexts/theme.md` for a Kiwe DSA/AppShell theme.
+- `contexts/combined-lite.md` for browser models that need a short website/page plus AppShell contract.
 - `contexts/combined.md` for a website/page plus AppShell direction/settings.
 
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.

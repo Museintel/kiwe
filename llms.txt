@@ -12,6 +12,7 @@ For browser AIs without MCP or shell execution, read only the relevant static co
 
 - `kiwe-ai-toolkit/contexts/website.md`
 - `kiwe-ai-toolkit/contexts/theme.md`
+- `kiwe-ai-toolkit/contexts/combined-lite.md`
 - `kiwe-ai-toolkit/contexts/combined.md`
 
 Preferred first tool call:
