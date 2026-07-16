@@ -110,7 +110,8 @@ Important:
 - Do not use `schemaVersion` in AppShell theme manifests. `schemaVersion` is only used by optional Kiwe settings profiles.
 - Do not use nested `contracts`, `colorAuthority`, `authority`, `supportedPresentationModes`, `supportedDockShapes`, `cssFiles`, or object-form `supports`.
 - `supports` must be an array of allowed strings.
-- `screens` must use Kiwe screen names only.
+- `screens` must use Kiwe screen names only and must match the brief/settings. Do not list cart, checkout, or profile by default for a non-commerce or non-membership website just because those screens exist.
+- For a news/editorial website, the usual screen set is `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, and `ai`. Add `cart`/`checkout` only for commerce, WooCommerce, shop, products, paid reports, subscriptions, or checkout. Add `profile` when account, membership, login, personalization, orders, downloads, or addresses are truly part of the brief.
 
 ```json
 {
@@ -141,6 +142,8 @@ Important:
 ```
 
 If a theme does not cover a screen, remove that screen from `screens`. Do not add unsupported screen names such as `orders`, `downloads`, `addresses`, or `install`; those are payload sections or concepts inside supported screens, not theme-manifest screen IDs.
+
+For combined website/page + AppShell handoffs, match the AppShell screens to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only include commerce/account screens when the brief, Kiwe settings profile, or site business model requires them.
 
 ## AppShell importable CSS rules
 
@@ -198,6 +201,10 @@ Links site score is optional. The preview and README must show/document both:
 
 - score present; and
 - score absent/no score/without score, where no badge is rendered at all.
+
+It is valid to create distinctive presentations for existing `ai` and `notifications` screens. They must use Kiwe-owned AI/notification payloads/actions and must not execute AI actions, notification permission requests, push subscription, dismiss state, or privacy/master-switch behavior from theme or preview code.
+
+Responsive fit is mandatory. Test the AppShell preview at narrow widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
 
 ## AppShell README requirements
 

@@ -20,7 +20,8 @@ Important:
 - Do not use `schemaVersion` in AppShell theme manifests. `schemaVersion` is only used by optional Kiwe settings profiles.
 - Do not use nested `contracts`, `colorAuthority`, `authority`, `supportedPresentationModes`, `supportedDockShapes`, `cssFiles`, or object-form `supports`.
 - `supports` must be an array of allowed strings.
-- `screens` must use Kiwe screen names only.
+- `screens` must use Kiwe screen names only, and should match the brief/settings. Do not list cart/checkout/profile by default for a non-commerce or non-membership website just because those screens exist.
+- For combined website/page + AppShell handoffs, a news/editorial default is usually `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, and `ai`. Add `cart`/`checkout` only for commerce, WooCommerce, shop, products, paid reports, subscriptions, or checkout. Add `profile` when account, membership, login, personalization, orders, downloads, or addresses are truly part of the brief.
 
 ```json
 {
@@ -96,6 +97,10 @@ Links site score is optional. The preview and README must show/document both:
 
 - score present; and
 - score absent/no score/without score, where no badge is rendered at all.
+
+Combined website/page + AppShell previews must match the site type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses unless the brief/settings include commerce or membership. It is good to innovate with existing `ai` and `notifications` screens, but only as presentation over Kiwe-owned payloads/actions.
+
+Responsive fit is mandatory. Check narrow mobile widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
 
 The AppShell handoff README must include:
 
@@ -462,20 +467,25 @@ Build the preview like this:
 
 The preview should demonstrate:
 
-- Profile/account
-- Orders/downloads/addresses/password/profile actions if represented by the theme
-- Cart with quantity controls, checkout CTA, trust badges, and FBT rail
+- Every screen listed in `theme.json`, and only those screens unless the README explicitly explains why an optional capability is being shown.
+- Profile/account only when membership, login, account, or personalization is part of the brief/settings.
+- Orders/downloads/addresses/password/profile actions only if represented by the theme and relevant to the appsite.
+- Cart with quantity controls, checkout CTA, trust badges, and FBT rail only when commerce, WooCommerce, shop, products, paid reports, subscriptions, or checkout are part of the brief/settings.
 - Search with filters/alphabet/results
 - Menu with page table of contents
 - Links/social hub with optional score hidden and shown states
 - Saved
-- Notifications
+- Notifications when notification preferences, alerts, updates, briefs, or push/PWA journeys are part of the brief/settings
 - iOS install
 - AI/inbox/report shell
 - Dock modes and dock shape modes
 - Sheet/classic, light/dark, narrow/compact/wide
 
 Use natural placeholder data. Do not fill the UI with debug labels.
+
+For combined website/page + AppShell handoffs, match the AppShell screens to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only include commerce/account screens when the brief, Kiwe settings profile, or site business model requires them. If a theme supports an optional screen but the current combined preview hides it, document that in the README/settings notes.
+
+Responsive fit is a hard quality gate. The standalone preview must be checked at narrow mobile widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling unless the element is an intentional rail such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
 
 Also demonstrate "absent optional data" states. At minimum, include a Links screen state where site score is missing and therefore not rendered at all.
 

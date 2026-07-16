@@ -2,6 +2,17 @@
   "$schema": "https://kiwe.local/schemas/screen-payloads.json",
   "contract": "kiwe.surface-ui.v2",
   "principle": "Payloads expose capabilities and state. Themes may rearrange them but must preserve action ownership and data attributes.",
+  "siteTypeGuidance": {
+    "principle": "Supported screens are capabilities, not mandatory content. In combined website/page + AppShell handoffs, include only the screens that match the brief, Kiwe settings profile, and site business model.",
+    "newsEditorialDefault": ["search", "menu", "saved", "links", "notifications", "ios-install", "ai"],
+    "commerceScreens": ["cart", "checkout"],
+    "membershipScreens": ["profile"],
+    "notes": [
+      "A non-commerce news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses.",
+      "A theme may support optional screens, but the preview and settings notes must explain whether those screens are visible, hidden, or only relevant for WooCommerce/member sites.",
+      "Notifications and AI are valid DSA surfaces when they use existing notification/AI payloads and keep action execution core-owned."
+    ]
+  },
   "screens": {
     "profile": {
       "ownedBy": "PhoneKey, WordPress user, WooCommerce account when available",

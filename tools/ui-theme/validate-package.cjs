@@ -19,6 +19,23 @@ const forbiddenCssPatterns = [
 	{ label: 'javascript url', pattern: /url\(\s*['"]?javascript:/i },
 	{ label: 'fixed full-screen overlay', pattern: /position\s*:\s*fixed[\s\S]{0,240}(?:inset\s*:\s*0|width\s*:\s*100vw|height\s*:\s*100vh)/i },
 ];
+const riskyCssPatterns = [
+	{
+		label: 'viewport-width sizing inside AppShell theme CSS',
+		pattern: /\b(?:width|min-width|max-width|inline-size|min-inline-size|max-inline-size)\s*:\s*100vw/i,
+		message: 'Use Geometry Engine inline variables, percentages, or max-width:100% instead of 100vw inside sheets/screens; 100vw often causes horizontal overflow in inset sheets.'
+	},
+	{
+		label: 'non-shrinking decorative pseudo-element',
+		pattern: /::(?:before|after)\s*\{[\s\S]{0,260}flex\s*:\s*0\s+0\s+auto/i,
+		message: 'Decorative ::before/::after flex items should usually use flex:1 1 auto, max-width:100%, or be absolutely clipped; flex:0 0 auto can overflow narrow sheets.'
+	},
+	{
+		label: 'space-between flex header without wrapping',
+		pattern: /(?:\.dsa-[^{]*(?:header|panel)|\[data-dsa-[^\]]*header[^\]]*\])[^{]*\{(?=[\s\S]{0,360}display\s*:\s*flex)(?=[\s\S]{0,360}justify-content\s*:\s*space-between)(?![\s\S]{0,360}flex-wrap\s*:)/i,
+		message: 'Panel headers that use flex + space-between should allow wrapping or shrinking children at narrow widths; otherwise badges/stripes can create horizontal scroll.'
+	}
+];
 
 const errors = [];
 const warnings = [];
@@ -263,6 +280,9 @@ function validatePackage() {
 		const body = fs.readFileSync(full, 'utf8');
 		for (const check of forbiddenCssPatterns) {
 			if (check.pattern.test(body)) fail(`CSS file ${css} contains forbidden ${check.label}`);
+		}
+		for (const check of riskyCssPatterns) {
+			if (check.pattern.test(body)) warn(`CSS file ${css} has risky ${check.label}: ${check.message}`);
 		}
 		validateSeamUsage(css, body, 'css');
 		if (!/(--kiwe-|--dsa-|data-dsa-|dsa-visual-|kiwe-)/.test(body)) {

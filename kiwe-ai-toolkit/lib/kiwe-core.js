@@ -54,7 +54,8 @@ Important:
 - Do not use \`schemaVersion\` in AppShell theme manifests. \`schemaVersion\` is only used by optional Kiwe settings profiles.
 - Do not use nested \`contracts\`, \`colorAuthority\`, \`authority\`, \`supportedPresentationModes\`, \`supportedDockShapes\`, \`cssFiles\`, or object-form \`supports\`.
 - \`supports\` must be an array of allowed strings.
-- \`screens\` must use Kiwe screen names only.
+- \`screens\` must use Kiwe screen names only, and should match the brief/settings. Do not list cart/checkout/profile by default for a non-commerce or non-membership website just because those screens exist.
+- For combined website/page + AppShell handoffs, a news/editorial default is usually \`search\`, \`menu\`, \`saved\`, \`links\`, \`notifications\`, \`ios-install\`, and \`ai\`. Add \`cart\`/\`checkout\` only for commerce, WooCommerce, shop, products, paid reports, subscriptions, or checkout. Add \`profile\` when account, membership, login, personalization, orders, downloads, or addresses are truly part of the brief.
 
 \`\`\`json
 {
@@ -132,6 +133,10 @@ Links site score is optional. The preview and README must show/document both:
 
 - score present; and
 - score absent/no score/without score, where no badge is rendered at all.
+
+Combined website/page + AppShell previews must match the site type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses unless the brief/settings include commerce or membership. It is good to innovate with existing \`ai\` and \`notifications\` screens, but only as presentation over Kiwe-owned payloads/actions.
+
+Responsive fit is mandatory. Check narrow mobile widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
 
 The AppShell handoff README must include:
 
