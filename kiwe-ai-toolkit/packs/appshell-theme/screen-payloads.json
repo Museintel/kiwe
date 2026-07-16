@@ -1,0 +1,190 @@
+{
+  "$schema": "https://kiwe.local/schemas/screen-payloads.json",
+  "contract": "kiwe.surface-ui.v2",
+  "principle": "Payloads expose capabilities and state. Themes may rearrange them but must preserve action ownership and data attributes.",
+  "screens": {
+    "profile": {
+      "ownedBy": "PhoneKey, WordPress user, WooCommerce account when available",
+      "currentFactory": "assets/js/modules/profile-panel.js",
+      "requiredRoot": "[data-dsa-profile-panel]",
+      "actions": [
+        { "id": "editProfile", "selector": "[data-dsa-profile-form]", "authority": "DSA account REST" },
+        { "id": "avatar", "selector": "[data-dsa-avatar-input]", "authority": "DSA account REST" },
+        { "id": "emailConfirm", "selector": "[data-dsa-profile-email-confirm]", "authority": "DSA account REST" },
+        { "id": "downloads", "selector": "[data-dsa-account-view=\"downloads\"]", "authority": "WooCommerce account endpoint" },
+        { "id": "addresses", "selector": "[data-dsa-account-view=\"addresses\"]", "authority": "WooCommerce account endpoint" },
+        { "id": "logout", "selector": "[data-dsa-account-logout]", "authority": "WordPress/WooCommerce logout" }
+      ],
+      "themeableBlocks": [
+        "avatar",
+        "displayName",
+        "email",
+        "editButton",
+        "ordersMetric",
+        "savedMetric",
+        "kiwePointsMetric",
+        "downloadsRow",
+        "ordersRow",
+        "addressesRow",
+        "notificationPreferencesRow",
+        "signOutRow",
+        "recentOrders"
+      ],
+      "notes": [
+        "Orders, Downloads, Addresses, and Sign out may be rows, cards, pills, or stat blocks.",
+        "Do not clone logout/account actions without their data attributes.",
+        "The theme may show counts such as Orders, Saved, and Kiwe points when payloads expose them; missing counts must degrade to labels."
+      ]
+    },
+    "cart": {
+      "ownedBy": "WooCommerce cart and DSA cart reconciliation",
+      "currentFactory": "assets/js/modules/commerce-panels.js",
+      "runtimeAdapter": "visual-profile registry in commerce-panels.js",
+      "requiredRoot": "[data-dsa-cart-panel]",
+      "actions": [
+        { "id": "quantity", "selector": "[data-dsa-cart-quantity]", "authority": "DSA cart mutation queue" },
+        { "id": "openProduct", "selector": "[data-dsa-full-navigation]", "authority": "DSA navigation/protected-flow contract" },
+        { "id": "checkout", "selector": "[data-dsa-checkout-open]", "authority": "WooCommerce checkout route or DSA checkout surface gate" },
+        { "id": "fbtAdd", "selector": "[data-dsa-cart-add]", "authority": "DSA cart mutation queue" },
+        { "id": "fbtClaim", "selector": "[data-dsa-cart-claim]", "authority": "DSA cart mutation queue" }
+      ],
+      "themeableBlocks": ["items", "totals", "discountSummary", "checkoutAction", "fbtRail", "trustBadges", "emptyState"],
+      "notes": [
+        "Do not create an independent remove button unless core exposes a data-dsa-cart-remove contract; current removal is quantity-to-zero through data-dsa-cart-quantity.",
+        "FBT is always a side-scrolling rail. Themes may restyle its cards but must preserve .dsa-cart-fbt[data-dsa-cart-fbt] and .dsa-cart-fbt__rail[data-dsa-cart-fbt-rail] as a horizontal overflow rail with snap behavior; do not reinterpret it as a stacked list or auto-fit grid.",
+        "Checkout presentation may move, but data-dsa-checkout-open must remain on the authoritative checkout CTA."
+      ]
+    },
+    "checkout": {
+      "ownedBy": "WooCommerce checkout/payment authority",
+      "currentFactory": "assets/js/modules/commerce-panels.js",
+      "requiredRoot": "[data-dsa-checkout-panel]",
+      "themeableBlocks": ["notices", "billingFields", "shippingFields", "orderFields", "discountSummary", "continueAction"],
+      "forbidden": ["Replacing payment method authority", "Submitting orders outside WooCommerce checkout contract"]
+    },
+    "search": {
+      "ownedBy": "DSA Search REST and optional Bricks Filter Search bridge",
+      "currentFactory": "assets/js/search.js plus shell placeholder in assets/js/surface.js",
+      "runtimeAdapter": "visual-profile shell registry in surface.js; behavior remains in search.js",
+      "requiredRoot": "[data-dsa-search-panel]",
+      "actions": [
+        { "id": "input", "selector": "[data-dsa-search-input]", "authority": "DSA Search REST and Bricks bridge" },
+        { "id": "clear", "selector": "[data-dsa-search-clear]", "authority": "DSA Search module" },
+        { "id": "filters", "selector": "[data-dsa-search-filter]", "authority": "DSA Search REST" },
+        { "id": "alphabet", "selector": "[data-dsa-search-prefix]", "authority": "DSA Search REST" },
+        { "id": "alphabetBack", "selector": "[data-dsa-search-prefix-back]", "authority": "DSA Search REST" },
+        { "id": "quickAdd", "selector": "[data-dsa-search-add]", "authority": "DSA cart mutation queue" }
+      ],
+      "themeableBlocks": ["searchBox", "status", "familyFilters", "alphabetRail", "productResults", "postResults", "authorResults", "categoryResults"],
+      "notes": [
+        "Themes may rearrange the shell slots but must keep data-dsa-search-form, data-dsa-search-input, data-dsa-search-filters, data-dsa-search-alphabet, and data-dsa-search-results.",
+        "Bricks bridge reconciliation stays in assets/js/search.js; themes must not call Bricks filter utilities directly."
+      ]
+    },
+    "menu": {
+      "ownedBy": "WordPress menus, DSA menu settings, page heading context engine",
+      "currentFactory": "assets/js/modules/surface-panels.js",
+      "runtimeAdapter": "visual-profile registry in surface-panels.js",
+      "requiredRoot": ".dsa-menu-panel",
+      "actions": [
+        { "id": "navigate", "selector": "[data-dsa-full-navigation]", "authority": "DSA navigation/protected-flow contract" },
+        { "id": "pageAnchor", "selector": "[data-dsa-menu-anchor]", "authority": "DSA Surface close and page scroll bridge" }
+      ],
+      "themeableBlocks": ["menuGroups", "menuRows", "pageTableOfContents", "adminDashboardAction"],
+      "notes": [
+        "Page table-of-contents buttons are behavior-owned by the Surface close and page-scroll bridge. Themes may style or reposition them, but must keep data-dsa-menu-anchor on the clickable control and must not replace scrolling with theme JS."
+      ]
+    },
+    "saved": {
+      "ownedBy": "DSA Saved Items service and Woo wishlist-like state",
+      "currentFactory": "assets/js/modules/surface-panels.js",
+      "runtimeAdapter": "visual-profile registry in surface-panels.js",
+      "requiredRoot": "[data-dsa-saved-panel]",
+      "actions": [
+        { "id": "open", "selector": "[data-dsa-full-navigation]", "authority": "DSA navigation/protected-flow contract" },
+        { "id": "remove", "selector": "[data-dsa-saved-remove]", "authority": "DSA Saved Items REST" }
+      ],
+      "themeableBlocks": ["wishlist", "bookmarks", "emptyState", "savedCountMetric"]
+    },
+    "links": {
+      "ownedBy": "DSA links/site identity/trust services",
+      "currentFactory": "assets/js/modules/links-panel.js",
+      "runtimeAdapter": "visual-profile registry in links-panel.js",
+      "requiredRoot": ".dsa-links-panel",
+      "actions": [
+        { "id": "edit", "selector": "[data-dsa-links-edit]", "authority": "DSA Links editor" },
+        { "id": "view", "selector": "[data-dsa-links-view]", "authority": "DSA Links editor" },
+        { "id": "cart", "selector": "[data-dsa-links-cart]", "authority": "DSA cart surface" },
+        { "id": "save", "selector": "[data-dsa-links-form]", "authority": "DSA Links REST" },
+        { "id": "logo", "selector": "[data-dsa-links-logo]", "authority": "DSA Links REST upload" },
+        { "id": "social", "selector": "[data-dsa-social-id]", "authority": "DSA Links REST" },
+        { "id": "navigate", "selector": "[data-dsa-full-navigation]", "authority": "DSA navigation/protected-flow contract" }
+      ],
+      "themeableBlocks": ["identity", "socialLinks", "commerceActions", "editorialRail", "review", "trustBadges", "adminEdit"],
+      "notes": [
+        "Identity, logo, site score, and commerce actions must consume Geometry Engine width and token colors. Do not let a score badge, logo, social link, Shop action, or Cart action shrink text below readability or become white-on-light / dark-on-dark in either color mode."
+      ]
+    },
+    "notifications": {
+      "ownedBy": "DSA notification preference service, Push/PWA journey, PhoneKey identity when required",
+      "currentFactory": "assets/js/modules/surface-panels.js",
+      "runtimeAdapter": "visual-profile registry in surface-panels.js",
+      "requiredRoot": "[data-dsa-notification-panel]",
+      "actions": [
+        { "id": "form", "selector": "[data-dsa-notification-form]", "authority": "DSA notification preference REST" },
+        { "id": "platform", "selector": "[data-dsa-notification-platform]", "authority": "DSA native notification journey" },
+        { "id": "email", "selector": "[data-dsa-notification-email]", "authority": "DSA notification preference REST" },
+        { "id": "phone", "selector": "[data-dsa-notification-phone]", "authority": "DSA notification preference REST" },
+        { "id": "message", "selector": "[data-dsa-notification-message]", "authority": "DSA notification preference REST" }
+      ],
+      "themeableBlocks": ["topics", "channels", "contactFields", "categoryPreferences", "appButtons", "trustBadges", "submit"]
+    },
+    "ios-install": {
+      "ownedBy": "DSA PWA/iOS notification install journey",
+      "currentFactory": "assets/js/modules/surface-panels.js",
+      "runtimeAdapter": "visual-profile registry in surface-panels.js",
+      "requiredRoot": "[data-dsa-ios-install-panel]",
+      "actions": [
+        { "id": "done", "selector": "[data-dsa-ios-install-done]", "authority": "DSA iOS notification resume journey" }
+      ],
+      "themeableBlocks": ["instructions", "trustBadges", "doneAction"]
+    },
+    "games": {
+      "ownedBy": "DSA Games engine, reward session service, and Surface game lifecycle",
+      "currentFactory": "assets/js/modules/surface-panels.js plus assets/js/modules/games-engine.js",
+      "requiredRoot": "[data-dsa-game-panel]",
+      "actions": [
+        { "id": "start", "selector": "[data-dsa-start-game]", "authority": "DSA game lifecycle and reward session gate" },
+        { "id": "canvas", "selector": "[data-dsa-game-canvas]", "authority": "DSA Games engine" },
+        { "id": "score", "selector": "[data-dsa-game-score]", "authority": "DSA Games engine" },
+        { "id": "best", "selector": "[data-dsa-game-best]", "authority": "DSA Games engine" },
+        { "id": "bonus", "selector": "[data-dsa-game-bonus]", "authority": "DSA reward display" },
+        { "id": "message", "selector": "[data-dsa-game-message]", "authority": "DSA game lifecycle" }
+      ],
+      "themeableBlocks": ["startPrompt", "canvasFrame", "hud", "gameChoices", "message", "rewardPreview"],
+      "notes": [
+        "Themes may style the game shell, HUD, choices, messages, and canvas frame.",
+        "Themes must not replace the canvas engine, score loop, reward verification, attempt timing, or coupon issuance authority.",
+        "Standalone previews may use a static canvas poster or simple mock canvas; that preview code is never importable theme code."
+      ]
+    },
+    "ai": {
+      "ownedBy": "DSA AI insight queue, notification history, cart/notification/action executors",
+      "currentFactory": "assets/js/modules/ai-panel.js",
+      "runtimeAdapter": "visual-profile registry in ai-panel.js",
+      "requiredRoot": "[data-dsa-ai-panel]",
+      "actions": [
+        { "id": "tray", "selector": "[data-dsa-ai-tray-toggle]", "authority": "DSA AI tray state" },
+        { "id": "insightAction", "selector": "[data-dsa-ai-insight-action]", "authority": "DSA AI action executor" },
+        { "id": "insightDismiss", "selector": "[data-dsa-ai-insight-dismiss]", "authority": "DSA AI memory" },
+        { "id": "notificationDismiss", "selector": "[data-dsa-ai-notification-dismiss]", "authority": "DSA AI notification history" },
+        { "id": "status", "selector": "[data-dsa-ai-insight-status]", "authority": "DSA AI action executor" }
+      ],
+      "themeableBlocks": ["panelTitle", "inboxSummary", "insightCards", "emptyState", "reportCards", "chatPlaceholder"],
+      "notes": [
+        "Themes may rearrange AI presentation but must not execute AI actions directly.",
+        "Popout rendering and swipe/dismiss ownership remain core-owned."
+      ]
+    }
+  }
+}

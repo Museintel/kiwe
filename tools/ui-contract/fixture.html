@@ -1,0 +1,54 @@
+<!doctype html>
+<html class="dsa-overlay-active" lang="en" data-kiwe-theme="light">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+	<title>Kiwe Surface UI Contract Fixture</title>
+	<link rel="stylesheet" href="/wp-content/mu-plugins/dsa/assets/css/surface.css">
+	<style>
+		:root {
+			--dsa-active-color: #d50062;
+			--dsa-hover-color: #20b89a;
+			--dsa-hero-text-color: rgba(80, 88, 99, .56);
+			--dsa-surface-fg: #202833;
+			--dsa-screen-content-width: 980px;
+			--dsa-screen-gutter: 12px;
+			--dsa-admin-bar-height: 0px;
+			--dsa-admin-bar-half: 0px;
+			--dsa-dock-control-size: 40px;
+			--dsa-dock-ai-size: 54px;
+			--dsa-dock-icon-size: 21px;
+			--dsa-dock-icon-scale: 1;
+			--dsa-dock-badge-size: 17px;
+			--dsa-dock-gap: 2px;
+			--dsa-dock-padding: 7px;
+			--dsa-dock-cluster-gap: 8px;
+			--dsa-dock-cluster-axis-size: min(430px, calc(100dvw - 24px));
+			--dsa-screen-inline-reserve: 12px;
+			--dsa-screen-block-reserve: 142px;
+			--dsa-screen-dock-reserve: 142px;
+			--dsa-dock-only-reserve: 68px;
+			--dsa-context-bottom-offset: 82px;
+			--dsa-context-width: min(430px, calc(100dvw - 24px));
+			--dsa-context-left: max(12px, calc((100dvw - min(430px, calc(100dvw - 24px))) / 2));
+			--dsa-screen-available-inline: calc(100dvw - 24px);
+			--dsa-screen-available-block: calc(100dvh - 154px);
+		}
+		body { margin: 0; min-height: 100dvh; background: #e9edf1; }
+		.dsa-surface { --dsa-context-bottom-offset: 82px; }
+		[data-kiwe-theme="dark"] body { background: #0f141b; }
+		.fixture-icon { font: 800 15px/1 system-ui; }
+		.fixture-context { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; }
+	</style>
+</head>
+<body>
+	<div id="dsa-surface" class="dsa-surface dsa-dock-shape-rounded dsa-dock-material-solid dsa-screen-material-solid dsa-dock-mobile-horizontal dsa-dock-mobile-horizontal-position-center dsa-dock-mobile-horizontal-vertical-position-bottom" data-dsa-surface data-dsa-ui-contract="2" data-dsa-layout="narrow" data-dsa-density="comfortable" data-dsa-dock-mobile="1" data-dsa-dock-orientation="horizontal">
+		<div class="dsa-dock-context" data-dsa-dock-context data-dsa-context="cart" data-dsa-context-width="dock"><div class="dsa-dock-context__content" data-dsa-dock-context-content></div></div>
+		<div class="dsa-dock-cluster" data-dsa-dock-cluster>
+			<nav class="dsa-dock dsa-phonekey-dock" role="toolbar" aria-label="Surface tools"></nav>
+		</div>
+		<div class="dsa-overlay-root" data-dsa-overlay-root></div>
+	</div>
+	<script src="fixture.js"></script>
+</body>
+</html>

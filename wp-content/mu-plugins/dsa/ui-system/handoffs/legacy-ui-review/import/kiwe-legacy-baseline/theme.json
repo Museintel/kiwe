@@ -1,0 +1,26 @@
+{
+  "schema": "kiwe.surface-theme.v1",
+  "id": "kiwe.legacy-baseline",
+  "name": "Kiwe Legacy Baseline",
+  "version": "1.0.0",
+  "profile": "legacy",
+  "mode": "css-only",
+  "description": "Review manifest for Kiwe's built-in low-tax Legacy UI profile.",
+  "author": "Kiwe",
+  "css": [],
+  "assets": [],
+  "screens": ["profile", "cart", "checkout", "search", "menu", "saved", "links", "notifications", "ios-install", "games", "ai"],
+  "requires": {
+    "uiContract": "kiwe.surface-ui.v2",
+    "tokenContract": "kiwe.universal",
+    "minKiwe": "0.5.73"
+  },
+  "supports": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "horizontal", "vertical", "reduced-motion"],
+  "tokens": {},
+  "budgets": {
+    "cssKb": 0,
+    "jsKb": 0,
+    "blockingAssets": 0
+  },
+  "forbidden": ["remote-code", "remote-fonts", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+}

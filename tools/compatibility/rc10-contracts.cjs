@@ -1,0 +1,40 @@
+const fs = require( 'fs' );
+const path = require( 'path' );
+
+const root = path.resolve( __dirname, '..', '..' );
+const read = ( file ) => fs.readFileSync( path.join( root, file ), 'utf8' );
+const environment = read( 'wp-content/mu-plugins/dsa/includes/Environment.php' );
+const settings = read( 'wp-content/mu-plugins/dsa/includes/Settings.php' );
+const assets = read( 'wp-content/mu-plugins/dsa/includes/Public_Endpoint/Assets.php' );
+const renderer = read( 'wp-content/mu-plugins/dsa/includes/Public_Endpoint/Surface_Renderer.php' );
+const schema = read( 'wp-content/mu-plugins/dsa/includes/Schema/Schema_Geo_Service.php' );
+const routes = read( 'wp-content/mu-plugins/dsa/includes/Runtime/Route_Capability_Service.php' );
+const surface = read( 'wp-content/mu-plugins/dsa/assets/js/surface.js' );
+const hydration = read( 'wp-content/mu-plugins/dsa/includes/Rest/Runtime_Hydration_Controller.php' );
+const readiness = read( 'wp-content/mu-plugins/dsa/includes/Diagnostics/Production_Readiness_Service.php' );
+const checks = [];
+const check = ( name, pass ) => checks.push( { name, pass: Boolean( pass ) } );
+
+check( 'frontend shell excludes non-document request types', [ 'REST_REQUEST', 'XMLRPC_REQUEST', 'wp_is_json_request', 'is_feed', 'is_robots', 'is_trackback', 'is_embed', 'is_preview', 'is_favicon', 'is_customize_preview' ].every( ( token ) => environment.includes( token ) ) );
+check( 'frontend eligibility remains filterable for host integrations', environment.includes( "apply_filters( 'dsa_should_render_frontend'" ) );
+check( 'first-session Home is opt-in for new installs', /'initial_preloader_enabled'\s*=>\s*false/.test( settings ) );
+check( 'readiness warns when full-screen Home is deliberately enabled', readiness.includes( "'initial_home_surface'" ) && readiness.includes( 'ad-supported or search-sensitive editorial sites' ) );
+check( 'Home cannot strand no-JavaScript visitors', assets.includes( '<noscript><style>#dsa-initial-preloader{display:none!important}</style></noscript>' ) );
+check( 'Home does not introduce a competing H1', !assets.includes( '<h1 class="dsa-initial-preloader__hero"' ) && assets.includes( 'aria-level="2"' ) );
+check( 'Surface-only copy is excluded from search snippets', assets.includes( 'data-dsa-session-home data-nosnippet' ) && renderer.includes( 'data-dsa-surface data-nosnippet' ) );
+check( 'schema is restricted to indexable public requests', schema.includes( 'is_indexable_request' ) && [ 'is_preview()', 'is_search()', 'is_404()', 'blog_public', 'post_password_required', "'publish' !== get_post_status" ].every( ( token ) => schema.includes( token ) ) );
+check( 'schema defers to established SEO providers', [ 'WPSEO_VERSION', 'RANK_MATH_VERSION', 'AIOSEO_VERSION', 'SEOPRESS_VERSION', 'THE_SEO_FRAMEWORK_VERSION' ].every( ( token ) => schema.includes( token ) ) );
+check( 'Product schema defers to Woo structured data', schema.includes( 'woo_outputs_product_schema' ) && schema.includes( "class_exists( 'WC_Structured_Data' )" ) );
+check( 'schema IDs use canonicalized URLs and remove campaign parameters', schema.includes( 'wp_get_canonical_url' ) && [ 'utm_source', 'gclid', 'fbclid', 'msclkid' ].every( ( token ) => schema.includes( token ) ) );
+check( 'archive schema cache identity is stable across requests', schema.includes( "get_lastpostmodified( 'GMT' )" ) && schema.includes( "'route-static'" ) && !/if \( ! \$post_id \) \{\s*return gmdate\( 'c' \)/.test( schema ) );
+check( 'View Transition opt-in is server-gated to editorial documents', assets.includes( "! empty( $route_policy['viewTransitions']['currentDocumentEditorial'] )" ) && routes.includes( 'current_document_is_editorial' ) );
+check( 'morph delivery remains off by default', /'editorial_morph_navigation'\s*=>\s*false/.test( settings ) );
+check( 'ad and consent interactions bypass DSA navigation', [ 'ins.adsbygoogle', '[data-ad-client]', '[data-google-query-id]', '#onetrust-banner-sdk', '.cky-consent-container', '.cmplz-cookiebanner' ].every( ( token ) => routes.includes( token ) ) );
+check( 'navigation preserves external, download, popup, form, and protected routes', [ 'download_attribute', 'target_window', 'popup_or_drawer_trigger', 'protected_full_document', "link.closest( 'form' )" ].every( ( token ) => surface.includes( token ) ) );
+check( 'private hydration remains no-store and cookie-varying', hydration.includes( "'Cache-Control'" ) && hydration.includes( 'private, no-store' ) && hydration.includes( "'Vary'" ) && hydration.includes( 'Cookie' ) );
+check( 'DSA does not take canonical or document-title server authority', !/add_filter\(\s*['"](?:wpseo_canonical|rank_math\/frontend\/canonical|document_title_parts|pre_get_document_title)/.test( assets + renderer + schema ) );
+
+for ( const item of checks ) console.log( `${ item.pass ? 'PASS' : 'FAIL' } ${ item.name }` );
+const failed = checks.filter( ( item ) => !item.pass );
+console.log( `\n${ checks.length - failed.length }/${ checks.length } RC10 SEO/AdSense/cache contracts passed.` );
+if ( failed.length ) process.exit( 1 );

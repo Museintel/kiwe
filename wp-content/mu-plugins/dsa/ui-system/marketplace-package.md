@@ -1,0 +1,134 @@
+# Kiwe Marketplace Theme Package Rules
+
+This file defines the first portable package boundary for Kiwe DSA visual themes.
+
+A Kiwe theme package is presentation. It is not a WordPress plugin, not a WooCommerce extension, not a PhoneKey provider, not a Bricks template importer, and not a service-worker bundle.
+
+## Package shape
+
+Recommended folder:
+
+```text
+theme-id/
+  theme.json
+  css/
+    theme.css
+  assets/
+    optional.svg
+  README.md
+```
+
+`theme.json` must follow `theme-manifest.schema.json`.
+
+Example:
+
+```json
+{
+  "schema": "kiwe.surface-theme.v1",
+  "id": "studio.account-cards",
+  "name": "Account Cards",
+  "version": "1.0.0",
+  "profile": "marketplace",
+  "mode": "css-only",
+  "description": "Card-led account and commerce styling for Kiwe DSA.",
+  "author": "Studio",
+  "css": ["css/theme.css"],
+  "assets": ["assets/badge.svg"],
+  "screens": ["profile", "cart", "search", "menu", "saved", "links", "notifications", "ios-install", "ai"],
+  "requires": {
+    "uiContract": "kiwe.surface-ui.v2",
+    "tokenContract": "kiwe.universal",
+    "minKiwe": "0.5.73"
+  },
+  "supports": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "dock-shape-pill", "dock-shape-box", "dock-shape-square", "horizontal", "vertical", "reduced-motion"],
+  "budgets": {
+    "cssKb": 40,
+    "jsKb": 0,
+    "blockingAssets": 0
+  },
+  "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+}
+```
+
+## Import rule
+
+An imported theme may add scoped CSS, static local image assets, and approved adapter-profile declarations.
+
+An imported theme must not add PHP, visitor-facing JavaScript, remote assets, tracking pixels, fonts, REST routes, service workers, WordPress options, WooCommerce hooks, Bricks templates, dynamic tags, or database tables.
+
+If a future theme needs htmx or Alpine, it must be approved as a Kiwe-owned runtime feature first. Marketplace packages do not import their own htmx/Alpine runtime.
+
+## Export rule
+
+A theme export may include:
+
+- `theme.json`
+- CSS files listed by `theme.json`
+- static image assets listed by `theme.json`
+- a human README
+
+A theme export must not include:
+
+- user data
+- orders, carts, coupons, addresses, profile data, notification preferences, Push subscriptions, or PhoneKey state
+- Bricks post meta or site-specific generated Bricks element IDs
+- SecureTrack logs or settings
+- service-worker files or PWA manifests
+- package-manifest hashes from the plugin release
+
+## Acceptance checks
+
+Reject a package when any of these are true:
+
+- It contains PHP, executable visitor JavaScript, remote scripts, remote stylesheets, remote fonts, trackers, or analytics beacons.
+- It changes or removes required `data-dsa-*` selectors from `screen-payloads.json`.
+- It creates another cart, checkout, auth, profile, notification, Search, Bricks, service-worker, history, focus, or geometry authority.
+- It hardcodes per-site Bricks IDs, post IDs, product IDs, user IDs, order IDs, URLs, or filesystem paths.
+- It uses viewport magic numbers instead of Geometry Engine attributes and CSS variables.
+- It hides required close/focus controls, fails keyboard navigation, ignores reduced motion, or places panel content behind the dock.
+- It needs a package version mismatch, manifest drift, or incomplete-upload bypass to work.
+
+## Runtime bridge
+
+Themes may read `window.DSA.ui` when present:
+
+- `contract`
+- `adapterVersion`
+- `visualProfile`
+- `adapterScreens`
+- `colorModel.active`
+- `colorModel.hover`
+- `getVisualProfile()`
+- `withProfile(payload)`
+- `seam.landmarks(scope?, filters?)`
+- `seam.describe(element)`
+- `seam.adoption(role?)`
+- `seam.activePanel()`
+
+This bridge is informational and presentational. It does not grant authority to mutate cart, account, checkout, PhoneKey, notifications, Search, service-worker, history, Bricks, or geometry state.
+
+Use `window.Seam.landmarks()` for platform/page-level Seam discovery. Use `window.DSA.ui.seam.landmarks()` when reviewing the active Kiwe AppShell panel. Landmark filters may include `role`, `flow`, `tone`, `scene`, `state`, `slot`, `surfacePanel`, `root`, and `authority`.
+
+Use `window.Seam.adoption(role)` or `window.DSA.ui.seam.adoption(role)` before assuming a public Seam class is safe inside live Kiwe sheets/screens. Public WordPress/Bricks page sections may use the normal Seam vocabulary, but DSA internals follow the `appShellAdoption` map from `seam-vocabulary.json`.
+
+Example:
+
+```js
+window.DSA.ui.seam.landmarks(null, { surfacePanel: 'cart', role: 'card' });
+window.DSA.ui.seam.landmarks(null, { slot: 'fbt-rail' });
+window.DSA.ui.seam.adoption('button'); // shadow-only until visual parity is proven.
+```
+
+Do not use these helpers to mutate state. They are for inspection, preview tooling, tests, and theme-review diagnostics.
+
+## Designer handoff
+
+Give a designer or AI assistant only this `ui-system/` folder when the goal is a new Kiwe visual theme. They should produce:
+
+1. A design direction.
+2. A `theme.json` proposal.
+3. Scoped CSS using `token-map.css`.
+4. Screen arrangements that preserve `screen-payloads.json` selectors.
+5. Notes for any desired core capability that does not already exist.
+
+If the design requires new data, new actions, or new authority, that is not a theme change. It becomes a Kiwe core feature proposal.

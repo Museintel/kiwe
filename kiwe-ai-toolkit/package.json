@@ -1,0 +1,24 @@
+{
+  "name": "@kiwe/ai-toolkit",
+  "version": "0.1.0",
+  "description": "AI toolkit for creating Kiwe website, AppShell theme, and combined handoffs without reading the full plugin codebase.",
+  "type": "module",
+  "bin": {
+    "kiwe": "./bin/kiwe.js"
+  },
+  "scripts": {
+    "test": "node --check bin/kiwe.js && node --check lib/kiwe-core.js && node --check mcp/index.js && node tools/validate-output.cjs --help"
+  },
+  "keywords": [
+    "kiwe",
+    "seam",
+    "wordpress",
+    "bricks",
+    "mcp",
+    "ai-toolkit"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0"
+  }
+}

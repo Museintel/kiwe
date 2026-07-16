@@ -1,0 +1,68 @@
+/*
+ * Legacy UI profile reference.
+ *
+ * Legacy is the built-in low-tax baseline shipped by Kiwe. This file is not a
+ * complete copy of production CSS; it is a compact reference for designers and
+ * AI assistants so they understand the baseline profile, stable selectors, and
+ * shared dock shape variables.
+ */
+
+.dsa-surface[data-dsa-visual-profile="legacy"],
+.dsa-surface.dsa-visual-legacy {
+	--dsa-legacy-surface: var(--dsa-ui-surface, var(--kiwe-color-surface-raised, #fff));
+	--dsa-legacy-bg: var(--dsa-ui-bg, var(--kiwe-color-surface, #f6f7f8));
+	--dsa-legacy-text: var(--dsa-ui-text, var(--kiwe-color-text, #202936));
+	--dsa-legacy-muted: var(--dsa-ui-muted, var(--kiwe-color-text-muted, #677381));
+	--dsa-legacy-border: var(--dsa-ui-border, var(--kiwe-color-border, rgba(32,41,54,.16)));
+}
+
+/*
+ * Dock shape is a core shell setting and must remain visible in Legacy too.
+ * Runtime classes:
+ * - dsa-dock-shape-pill
+ * - dsa-dock-shape-box
+ * - dsa-dock-shape-square
+ */
+
+.dsa-surface.dsa-dock-shape-pill {
+	--dsa-dock-shell-radius: 999px;
+	--dsa-dock-control-radius: 999px;
+	--dsa-dock-segment-radius: 14px;
+}
+
+.dsa-surface.dsa-dock-shape-box {
+	--dsa-dock-shell-radius: var(--kiwe-radius-lg, 18px);
+	--dsa-dock-control-radius: var(--kiwe-radius-md, 12px);
+	--dsa-dock-segment-radius: var(--kiwe-radius-md, 12px);
+}
+
+.dsa-surface.dsa-dock-shape-square {
+	--dsa-dock-shell-radius: 0;
+	--dsa-dock-control-radius: 0;
+	--dsa-dock-segment-radius: 0;
+}
+
+.dsa-surface.dsa-visual-legacy .dsa-phonekey-dock {
+	border-radius: var(--dsa-dock-shell-radius, 999px);
+}
+
+.dsa-surface.dsa-visual-legacy .dsa-dock__button {
+	border-radius: var(--dsa-dock-control-radius, 999px);
+}
+
+/*
+ * Legacy keeps module layout simple and low-paint. Designers may tune spacing,
+ * contrast, typography, and icon sizing, but must preserve the data-dsa-* slots
+ * documented in slots.md and screen-payloads.json.
+ */
+
+.dsa-surface.dsa-visual-legacy .dsa-panel {
+	color: var(--dsa-legacy-text);
+	background: var(--dsa-legacy-surface);
+}
+
+.dsa-surface.dsa-visual-legacy .dsa-panel__meta,
+.dsa-surface.dsa-visual-legacy .dsa-menu-link__body small,
+.dsa-surface.dsa-visual-legacy .dsa-cart-panel__item-body span {
+	color: var(--dsa-legacy-muted);
+}

@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.local/schemas/theme-manifest.schema.json",
+  "title": "Kiwe DSA Theme Manifest",
+  "type": "object",
+  "required": ["schema", "id", "name", "version", "profile", "screens", "requires"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "kiwe.surface-theme.v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*){0,2}$",
+      "maxLength": 80
+    },
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9.-]+)?$"
+    },
+    "profile": {
+      "type": "string",
+      "enum": ["legacy", "kiwe-2027", "marketplace"]
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["css-only", "adapter-profile"],
+      "default": "css-only"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 240
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "css": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^(?!.*\\.\\.)(?!/)[a-zA-Z0-9_/-]+\\.css$" },
+      "maxItems": 4,
+      "default": []
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(?!.*\\.\\.)(?!/)[a-zA-Z0-9_/-]+\\.(svg|png|webp|avif)$"
+      },
+      "maxItems": 24,
+      "default": []
+    },
+    "adapters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "type": "string" },
+        "cart": { "type": "string" },
+        "checkout": { "type": "string" },
+        "search": { "type": "string" },
+        "menu": { "type": "string" },
+        "saved": { "type": "string" },
+        "links": { "type": "string" },
+        "notifications": { "type": "string" },
+        "ios-install": { "type": "string" },
+        "ai": { "type": "string" }
+      }
+    },
+    "screens": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["profile", "cart", "checkout", "search", "menu", "saved", "links", "notifications", "ios-install", "games", "ai"]
+      },
+      "uniqueItems": true
+    },
+    "requires": {
+      "type": "object",
+      "required": ["uiContract", "tokenContract"],
+      "additionalProperties": false,
+      "properties": {
+        "uiContract": { "type": "string", "const": "kiwe.surface-ui.v2" },
+        "tokenContract": { "type": "string", "const": "kiwe.universal" },
+        "minKiwe": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9.-]+)?$" }
+      }
+    },
+    "supports": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "dock-shape-pill", "dock-shape-box", "dock-shape-square", "horizontal", "vertical", "reduced-motion"]
+      },
+      "uniqueItems": true,
+      "default": ["light", "dark", "sheet", "classic", "dock"]
+    },
+    "tokens": {
+      "type": "object",
+      "description": "Optional token overrides. Initial marketplace themes should prefer consuming Kiwe runtime tokens; exported packages must not require more than active/hover color authority unless a later contract adds palette controls.",
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 120
+      },
+      "default": {}
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cssKb": { "type": "integer", "minimum": 0, "maximum": 80 },
+        "jsKb": { "type": "integer", "minimum": 0, "maximum": 40 },
+        "blockingAssets": { "type": "integer", "minimum": 0, "maximum": 0 }
+      }
+    },
+    "forbidden": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["remote-code", "remote-fonts", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+      },
+      "uniqueItems": true,
+      "default": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+    }
+  }
+}

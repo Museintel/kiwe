@@ -1,0 +1,1185 @@
+<?php
+/**
+ * Seam Enqueue + Runtime REST Bridge
+ * Version: 3.0.0
+ *
+ * Snippet-first production loader for the Bricks MVP.
+ *
+ * Responsibilities:
+ * - Load seam.flow.css after Bricks/theme frontend CSS.
+ * - Load seam.runtime.js on the public frontend only.
+ * - Pass useful page context and safe local data to the runtime.
+ * - Provide a small WordPress REST bridge for dynamic bindings and actions.
+ *
+ * This file intentionally does not mutate Bricks content. Import/sync belongs
+ * in seam-ingest.php and, later, the packaged Seam plugin.
+ */
+
+defined('ABSPATH') || exit;
+
+$seam_constants_file = __DIR__ . '/seam-constants.php';
+if (file_exists($seam_constants_file)) {
+    require_once $seam_constants_file;
+} else {
+    if (!defined('SEAM_RUNTIME_VERSION')) {
+        define('SEAM_RUNTIME_VERSION', '3.0.0');
+    }
+
+    if (!defined('SEAM_UPLOAD_DIR')) {
+        define('SEAM_UPLOAD_DIR', WP_CONTENT_DIR . '/uploads/seam');
+    }
+
+    if (!defined('SEAM_UPLOAD_URL')) {
+        define('SEAM_UPLOAD_URL', content_url('uploads/seam'));
+    }
+
+    if (!defined('SEAM_DATA_OPTION')) {
+        define('SEAM_DATA_OPTION', 'seam_runtime_data');
+    }
+
+    if (!defined('SEAM_PROJECT_STATE_OPTION')) {
+        define('SEAM_PROJECT_STATE_OPTION', 'seam_project_state');
+    }
+
+    if (!defined('SEAM_INGEST_HASH_OPTION')) {
+        define('SEAM_INGEST_HASH_OPTION', 'seam_ingest_hash');
+    }
+
+    if (!defined('SEAM_INGEST_BACKUPS_OPTION')) {
+        define('SEAM_INGEST_BACKUPS_OPTION', 'seam_ingest_backups');
+    }
+
+    if (!defined('SEAM_DB_OPTION_STATE')) {
+        define('SEAM_DB_OPTION_STATE', SEAM_PROJECT_STATE_OPTION);
+    }
+
+    if (!defined('SEAM_DB_OPTION_HASH')) {
+        define('SEAM_DB_OPTION_HASH', SEAM_INGEST_HASH_OPTION);
+    }
+
+    if (!defined('SEAM_DB_OPTION_BACKUPS')) {
+        define('SEAM_DB_OPTION_BACKUPS', SEAM_INGEST_BACKUPS_OPTION);
+    }
+}
+
+if (!class_exists('Seam_Runtime_Bad_Request_Exception')) {
+    class Seam_Runtime_Bad_Request_Exception extends RuntimeException {}
+}
+
+if (!class_exists('Seam_Runtime_Service_Unavailable_Exception')) {
+    class Seam_Runtime_Service_Unavailable_Exception extends RuntimeException {}
+}
+
+add_action('wp_enqueue_scripts', 'seam_enqueue_assets', 99);
+add_action('rest_api_init', 'seam_register_runtime_routes');
+add_filter('body_class', 'seam_body_classes');
+
+/**
+ * Load Seam frontend assets.
+ */
+function seam_enqueue_assets(): void
+{
+    if (!apply_filters('seam/assets/enabled', true)) {
+        return;
+    }
+
+    $css_path = seam_asset_path('seam.flow.css');
+    $js_path  = seam_asset_path('seam.runtime.js');
+
+    if (file_exists($css_path)) {
+        wp_enqueue_style(
+            'seam-flow',
+            seam_asset_url('seam.flow.css'),
+            seam_style_dependencies(),
+            seam_asset_version($css_path)
+        );
+
+        $inline_css = seam_frontend_personality_css();
+        if ($inline_css !== '') {
+            wp_add_inline_style('seam-flow', $inline_css);
+        }
+    }
+
+    if (!file_exists($js_path)) {
+        return;
+    }
+
+    if (seam_is_bricks_builder_context()) {
+        return;
+    }
+
+    if (!apply_filters('seam/runtime/enabled', !is_admin())) {
+        return;
+    }
+
+    $script_deps = seam_script_dependencies();
+    $script_args = true;
+
+    if (function_exists('get_bloginfo') && version_compare((string) get_bloginfo('version'), '6.3', '>=')) {
+        $script_args = [
+            'in_footer' => true,
+            'strategy'  => 'defer',
+        ];
+    }
+
+    wp_enqueue_script(
+        'seam-runtime',
+        seam_asset_url('seam.runtime.js'),
+        $script_deps,
+        seam_asset_version($js_path),
+        $script_args
+    );
+
+    if ($script_args === true) {
+        wp_script_add_data('seam-runtime', 'defer', true);
+    }
+
+    $config = seam_runtime_config();
+    $data   = seam_frontend_local_data();
+
+    wp_add_inline_script(
+        'seam-runtime',
+        'window.seamConfig = ' . wp_json_encode($config) . ';' . "\n" .
+        'window.seamData = Object.assign({}, window.seamData || {}, ' . wp_json_encode($data) . ');',
+        'before'
+    );
+}
+
+function seam_asset_path(string $file): string
+{
+    $base_dir = apply_filters('seam/assets/base_dir', SEAM_UPLOAD_DIR);
+    return trailingslashit((string) $base_dir) . ltrim($file, '/\\');
+}
+
+function seam_asset_url(string $file): string
+{
+    $base_url = apply_filters('seam/assets/base_url', SEAM_UPLOAD_URL);
+    return trailingslashit((string) $base_url) . ltrim($file, '/\\');
+}
+
+function seam_asset_version(string $path): string
+{
+    return file_exists($path) ? (string) filemtime($path) : SEAM_RUNTIME_VERSION;
+}
+
+function seam_style_dependencies(): array
+{
+    $candidates = [
+        'bricks-frontend',
+        'bricks-frontend-css',
+        'bricks-frontend-inline',
+        'bricks-style-manager',
+        'bricks-global-elements',
+        'bricks-frontend-rtl',
+        'bricks-global-classes-inline',
+        'bricks-dynamic-data',
+    ];
+
+    $deps = [];
+    foreach ($candidates as $handle) {
+        if (wp_style_is($handle, 'registered') || wp_style_is($handle, 'enqueued')) {
+            $deps[] = $handle;
+        }
+    }
+
+    return apply_filters('seam/assets/style_dependencies', array_values(array_unique($deps)));
+}
+
+function seam_script_dependencies(): array
+{
+    $deps = [];
+
+    if (wp_script_is('bricks-scripts', 'registered') || wp_script_is('bricks-scripts', 'enqueued')) {
+        $deps[] = 'bricks-scripts';
+    }
+
+    return apply_filters('seam/assets/script_dependencies', $deps);
+}
+
+function seam_runtime_config(): array
+{
+    $post_id = seam_current_post_id();
+    $state   = get_option(SEAM_PROJECT_STATE_OPTION, []);
+    $project = is_array($state) && isset($state['project']) && is_array($state['project']) ? $state['project'] : [];
+
+    $config = [
+        'version'                => SEAM_RUNTIME_VERSION,
+        'apiBase'                => untrailingslashit(rest_url('seam/v1')),
+        'resolvePath'            => '/resolve',
+        'actionPath'             => '/action',
+        'nonce'                  => wp_create_nonce('wp_rest'),
+        'debug'                  => seam_is_debug_enabled(),
+        'autoInit'               => true,
+        'observe'                => true,
+        'live'                   => false,
+        'polling'                => false,
+        'cacheTtl'               => 15000,
+        'disableInBricksBuilder' => true,
+        'context'                => [
+            'postId'       => $post_id,
+            'isSingular'   => is_singular(),
+            'isArchive'    => is_archive(),
+            'isSearch'     => is_search(),
+            'isFrontPage'  => is_front_page(),
+            'isLoggedIn'   => is_user_logged_in(),
+            'bricksActive' => seam_is_bricks_active(),
+            'wooActive'    => function_exists('WC'),
+            'acfActive'    => function_exists('get_field'),
+        ],
+        'project'                => [
+            'hash'       => (string) get_option(SEAM_INGEST_HASH_OPTION, ''),
+            'updatedAt'  => is_array($state) && isset($state['ingested_at']) ? (string) $state['ingested_at'] : '',
+            'target'     => isset($project['target']) ? (string) $project['target'] : 'bricks',
+            'name'       => isset($project['name']) ? (string) $project['name'] : '',
+            'version'    => isset($project['version']) ? (string) $project['version'] : SEAM_RUNTIME_VERSION,
+        ],
+        'personality'            => seam_frontend_personality_summary(seam_frontend_personality_from_state($state)),
+    ];
+
+    return apply_filters('seam/runtime/config', $config);
+}
+
+function seam_frontend_local_data(): array
+{
+    $data = [
+        'option' => [
+            'blogname'        => get_option('blogname'),
+            'blogdescription' => get_option('blogdescription'),
+            'siteurl'         => get_option('siteurl'),
+            'home'            => get_option('home'),
+        ],
+        'post' => [
+            'current' => null,
+        ],
+        'user' => [
+            'current' => seam_current_user_data(),
+        ],
+    ];
+
+    $post_id = seam_current_post_id();
+    if ($post_id && seam_user_can_read_post($post_id)) {
+        $post = get_post($post_id);
+        if ($post) {
+            $data['post']['current'] = seam_format_post_data($post);
+        }
+    }
+
+    $runtime_data = get_option(SEAM_DATA_OPTION, []);
+    if (is_array($runtime_data)) {
+        $data = array_replace_recursive($data, $runtime_data);
+    }
+
+    return apply_filters('seam/runtime/local_data', $data);
+}
+
+function seam_frontend_personality_from_state($state): array
+{
+    if (is_array($state) && isset($state['personality']) && is_array($state['personality'])) {
+        return $state['personality'];
+    }
+
+    $runtime_data = get_option(SEAM_DATA_OPTION, []);
+    if (is_array($runtime_data) && isset($runtime_data['personality']) && is_array($runtime_data['personality'])) {
+        return $runtime_data['personality'];
+    }
+
+    return [];
+}
+
+function seam_frontend_personality_summary(array $personality): array
+{
+
+    return [
+        'version'          => isset($personality['version']) ? (string) $personality['version'] : SEAM_RUNTIME_VERSION,
+        'portable'         => isset($personality['portable']) ? (bool) $personality['portable'] : true,
+        'summary'          => isset($personality['summary']) ? (string) $personality['summary'] : '',
+        'traits'           => isset($personality['traits']) && is_array($personality['traits']) ? array_values($personality['traits']) : [],
+        'profile'          => isset($personality['profile']) && is_array($personality['profile']) ? $personality['profile'] : [],
+        'platformAdapters' => isset($personality['platform_adapters']) && is_array($personality['platform_adapters']) ? $personality['platform_adapters'] : [],
+    ];
+}
+
+function seam_frontend_personality_css(): string
+{
+    $runtime_data = get_option(SEAM_DATA_OPTION, []);
+    if (!is_array($runtime_data)) {
+        return '';
+    }
+
+    $personality = isset($runtime_data['personality']) && is_array($runtime_data['personality']) ? $runtime_data['personality'] : [];
+    $profile     = isset($personality['profile']) && is_array($personality['profile']) ? $personality['profile'] : [];
+
+    $shape     = isset($profile['shape_language']) ? sanitize_key((string) $profile['shape_language']) : '';
+    $density   = isset($profile['visual_density']) ? sanitize_key((string) $profile['visual_density']) : '';
+    $heading   = isset($profile['heading_intensity']) ? sanitize_key((string) $profile['heading_intensity']) : '';
+    $elevation = isset($profile['elevation']) ? sanitize_key((string) $profile['elevation']) : '';
+    $motion    = isset($profile['motion']) ? sanitize_key((string) $profile['motion']) : '';
+
+    $vars = [
+        '--seam-personality-version' => isset($personality['version']) ? '"' . esc_attr((string) $personality['version']) . '"' : '"' . SEAM_RUNTIME_VERSION . '"',
+        '--seam-shape-language'      => $shape !== '' ? $shape : 'soft-rectangular',
+        '--seam-visual-density'      => $density !== '' ? $density : 'comfortable',
+        '--seam-heading-intensity'   => $heading !== '' ? $heading : 'balanced',
+        '--seam-elevation-profile'   => $elevation !== '' ? $elevation : 'soft-raised',
+        '--seam-motion-profile'      => $motion !== '' ? $motion : 'subtle-responsive',
+    ];
+
+    $css = ':root{';
+    foreach ($vars as $name => $value) {
+        $css .= $name . ':' . $value . ';';
+    }
+    $css .= '}';
+
+    return $css;
+}
+
+function seam_current_post_id(): int
+{
+    $post_id = 0;
+
+    if (is_singular()) {
+        $post_id = (int) get_queried_object_id();
+    }
+
+    if (!$post_id && function_exists('get_the_ID')) {
+        $post_id = (int) get_the_ID();
+    }
+
+    return $post_id;
+}
+
+function seam_format_post_data(WP_Post $post): array
+{
+    $post_id = (int) $post->ID;
+
+    return [
+        'id'        => $post_id,
+        'title'     => get_the_title($post_id),
+        'excerpt'   => get_the_excerpt($post_id),
+        'url'       => get_permalink($post_id),
+        'date'      => get_the_date('', $post_id),
+        'thumbnail' => [
+            'url' => get_the_post_thumbnail_url($post_id, 'full'),
+        ],
+        'author'    => [
+            'name' => get_the_author_meta('display_name', (int) $post->post_author),
+        ],
+    ];
+}
+
+function seam_current_user_data()
+{
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        return [
+            'logged_in' => false,
+        ];
+    }
+
+    $user = get_userdata($user_id);
+    if (!$user) {
+        return [
+            'logged_in' => false,
+        ];
+    }
+
+    return [
+        'id'           => $user_id,
+        'logged_in'    => true,
+        'display_name' => $user->display_name,
+        'avatar'       => get_avatar_url($user_id),
+    ];
+}
+
+function seam_body_classes(array $classes): array
+{
+    $classes[] = 'seam-runtime-ready';
+
+    if (seam_is_debug_enabled()) {
+        $classes[] = 'seam-debug';
+    }
+
+    if (seam_is_bricks_active()) {
+        $classes[] = 'seam-bricks';
+    }
+
+    $personality = seam_frontend_personality_from_state(get_option(SEAM_PROJECT_STATE_OPTION, []));
+    $profile     = isset($personality['profile']) && is_array($personality['profile']) ? $personality['profile'] : [];
+
+    foreach (['visual_density' => 'density', 'heading_intensity' => 'heading', 'shape_language' => 'shape', 'elevation' => 'elevation'] as $key => $prefix) {
+        if (!empty($profile[$key])) {
+            $classes[] = 'seam-' . $prefix . '-' . sanitize_html_class((string) $profile[$key]);
+        }
+    }
+
+    return array_values(array_unique($classes));
+}
+
+function seam_is_bricks_active(): bool
+{
+    return defined('BRICKS_VERSION') || function_exists('bricks_is_frontend') || function_exists('bricks_is_builder');
+}
+
+function seam_is_bricks_builder_context(): bool
+{
+    if (is_admin() && !wp_doing_ajax()) {
+        return true;
+    }
+
+    $checks = [
+        'bricks_is_builder',
+        'bricks_is_builder_iframe',
+        'bricks_is_builder_main',
+        'bricks_is_builder_call',
+    ];
+
+    foreach ($checks as $function) {
+        if (function_exists($function) && $function()) {
+            return true;
+        }
+    }
+
+    $request_keys = [
+        'bricks',
+        'brickspreview',
+        'bricks-is-builder',
+        'bricks-is-builder-iframe',
+    ];
+
+    foreach ($request_keys as $key) {
+        if (isset($_GET[$key]) || isset($_POST[$key])) {
+            return true;
+        }
+    }
+
+    $headers = [
+        'HTTP_X_BRICKS_IS_BUILDER',
+        'HTTP_X_BRICKS_BUILDER',
+    ];
+
+    foreach ($headers as $header) {
+        if (!empty($_SERVER[$header])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function seam_is_debug_enabled(): bool
+{
+    if (!current_user_can('manage_options')) {
+        return false;
+    }
+
+    if (defined('SEAM_DEBUG') && SEAM_DEBUG) {
+        return true;
+    }
+
+    if (defined('WP_DEBUG') && WP_DEBUG && isset($_GET['seam-debug'])) {
+        return true;
+    }
+
+    return false;
+}
+
+function seam_register_runtime_routes(): void
+{
+    register_rest_route('seam/v1', '/resolve', [
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => 'seam_rest_resolve',
+        'permission_callback' => 'seam_can_resolve_path',
+        'args'                => [
+            'path' => [
+                'required'          => true,
+                'type'              => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+            ],
+            'post_id' => [
+                'required'          => false,
+                'type'              => 'integer',
+                'sanitize_callback' => 'absint',
+            ],
+        ],
+    ]);
+
+    register_rest_route('seam/v1', '/action', [
+        'methods'             => WP_REST_Server::CREATABLE,
+        'callback'            => 'seam_rest_action',
+        'permission_callback' => 'seam_can_run_action',
+    ]);
+
+    register_rest_route('seam/v1', '/health', [
+        'methods'             => WP_REST_Server::READABLE,
+        'callback'            => 'seam_rest_health',
+        'permission_callback' => static function (): bool {
+            return current_user_can('manage_options');
+        },
+    ]);
+}
+
+function seam_can_resolve_path(WP_REST_Request $request): bool
+{
+    $path = (string) $request->get_param('path');
+
+    if (!seam_is_valid_runtime_path($path)) {
+        return false;
+    }
+
+    if (strpos($path, 'user:current.') === 0) {
+        return is_user_logged_in();
+    }
+
+    if (strpos($path, 'post:') === 0) {
+        return seam_can_resolve_post_path($path, $request);
+    }
+
+    if (strpos($path, 'acf.post:') === 0) {
+        return seam_can_resolve_acf_path($path, $request);
+    }
+
+    if (strpos($path, 'option.') === 0) {
+        $field = substr($path, strlen('option.'));
+        return in_array($field, seam_public_option_keys(), true);
+    }
+
+    $public_prefixes = [
+        'woo.product:',
+        'woo.cart.',
+        'seam:data.',
+    ];
+
+    foreach ($public_prefixes as $prefix) {
+        if (strpos($path, $prefix) === 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function seam_is_valid_runtime_path(string $path): bool
+{
+    if ($path === '' || strlen($path) > 220) {
+        return false;
+    }
+
+    if (strpos($path, '..') !== false) {
+        return false;
+    }
+
+    return (bool) preg_match('/^[a-zA-Z0-9_:\\.\\-\\*\\[\\]]+$/', $path);
+}
+
+function seam_can_resolve_post_path(string $path, WP_REST_Request $request): bool
+{
+    if (!preg_match('/^post:([^\\.]+)\\.(.+)$/', $path, $matches)) {
+        return false;
+    }
+
+    $post_id = seam_resolve_post_id($matches[1], $request);
+    if (!$post_id || !seam_user_can_read_post($post_id)) {
+        return false;
+    }
+
+    $field = $matches[2];
+    if (strpos($field, 'meta.') !== 0) {
+        return true;
+    }
+
+    $meta_key = substr($field, 5);
+    return seam_is_public_post_meta_key($meta_key, $post_id);
+}
+
+function seam_can_resolve_acf_path(string $path, WP_REST_Request $request): bool
+{
+    if (!function_exists('get_field')) {
+        return false;
+    }
+
+    if (!preg_match('/^acf\\.post:([^\\.]+)\\.(.+)$/', $path, $matches)) {
+        return false;
+    }
+
+    $post_id = seam_resolve_post_id($matches[1], $request);
+    if (!$post_id || !seam_user_can_read_post($post_id)) {
+        return false;
+    }
+
+    $field = $matches[2];
+    if ($field === '' || strpos($field, '_') === 0) {
+        return false;
+    }
+
+    return (bool) apply_filters('seam/runtime/allow_acf_field', true, $field, $post_id, $path);
+}
+
+function seam_can_run_action(WP_REST_Request $request): bool
+{
+    $nonce = $request->get_header('X-WP-Nonce');
+
+    if (!$nonce) {
+        $nonce = (string) $request->get_param('_wpnonce');
+    }
+
+    return (bool) wp_verify_nonce($nonce, 'wp_rest');
+}
+
+function seam_rest_resolve(WP_REST_Request $request): WP_REST_Response
+{
+    $path = (string) $request->get_param('path');
+
+    try {
+        $value = seam_resolve_path($path, $request);
+
+        $response = new WP_REST_Response(['value' => $value], 200);
+        $response->header('Cache-Control', seam_cache_header_for_path($path));
+        $response->header('X-Seam-Runtime', SEAM_RUNTIME_VERSION);
+
+        return $response;
+    } catch (Throwable $error) {
+        seam_log_runtime_error($error);
+
+        return new WP_REST_Response([
+            'error'   => 'seam_resolve_failed',
+            'message' => seam_is_debug_enabled() ? $error->getMessage() : 'Unable to resolve this Seam path.',
+        ], 500);
+    }
+}
+
+function seam_rest_action(WP_REST_Request $request): WP_REST_Response
+{
+    $params = $request->get_json_params();
+    if (!is_array($params)) {
+        $params = [];
+    }
+
+    $action = isset($params['action']) ? sanitize_key((string) $params['action']) : '';
+    $data   = isset($params['data']) && is_array($params['data']) ? $params['data'] : [];
+
+    try {
+        $result = seam_run_action($action, $data);
+
+        $response = new WP_REST_Response([
+            'success' => true,
+            'result'  => $result,
+        ], 200);
+        $response->header('Cache-Control', 'no-store');
+        $response->header('X-Seam-Runtime', SEAM_RUNTIME_VERSION);
+
+        return $response;
+    } catch (Throwable $error) {
+        seam_log_runtime_error($error);
+
+        return new WP_REST_Response([
+            'success' => false,
+            'error'   => 'seam_action_failed',
+            'message' => seam_is_debug_enabled() ? $error->getMessage() : 'Unable to run this Seam action.',
+        ], seam_runtime_action_error_status($error));
+    }
+}
+
+function seam_rest_health(): WP_REST_Response
+{
+    return new WP_REST_Response([
+        'version'      => SEAM_RUNTIME_VERSION,
+        'bricksActive' => seam_is_bricks_active(),
+        'flowCss'      => file_exists(seam_asset_path('seam.flow.css')),
+        'runtimeJs'    => file_exists(seam_asset_path('seam.runtime.js')),
+        'wooActive'    => function_exists('WC'),
+        'acfActive'    => function_exists('get_field'),
+    ], 200);
+}
+
+function seam_runtime_action_error_status(Throwable $error): int
+{
+    if ($error instanceof Seam_Runtime_Bad_Request_Exception) {
+        return 400;
+    }
+
+    if ($error instanceof Seam_Runtime_Service_Unavailable_Exception) {
+        return 503;
+    }
+
+    return 500;
+}
+
+function seam_resolve_path(string $path, WP_REST_Request $request = null)
+{
+    $custom = apply_filters('seam/runtime/resolve_path', null, $path, $request);
+    if ($custom !== null) {
+        return $custom;
+    }
+
+    if (strpos($path, 'post:') === 0) {
+        return seam_resolve_post_path($path, $request);
+    }
+
+    if (strpos($path, 'user:current.') === 0) {
+        return seam_resolve_current_user_path(substr($path, strlen('user:current.')));
+    }
+
+    if (strpos($path, 'option.') === 0) {
+        return seam_resolve_option_path(substr($path, strlen('option.')));
+    }
+
+    if (strpos($path, 'woo.cart.') === 0) {
+        return seam_resolve_woo_cart_path(substr($path, strlen('woo.cart.')));
+    }
+
+    if (strpos($path, 'woo.product:') === 0) {
+        return seam_resolve_woo_product_path($path, $request);
+    }
+
+    if (strpos($path, 'acf.post:') === 0) {
+        return seam_resolve_acf_post_path($path, $request);
+    }
+
+    if (strpos($path, 'seam:data.') === 0) {
+        return seam_array_get(get_option(SEAM_DATA_OPTION, []), substr($path, strlen('seam:data.')));
+    }
+
+    throw new RuntimeException('Unsupported path: ' . $path);
+}
+
+function seam_resolve_post_path(string $path, WP_REST_Request $request = null)
+{
+    if (!preg_match('/^post:([^\\.]+)\\.(.+)$/', $path, $matches)) {
+        throw new RuntimeException('Invalid post path.');
+    }
+
+    $post_id = seam_resolve_post_id($matches[1], $request);
+    if (!$post_id || !seam_user_can_read_post($post_id)) {
+        return null;
+    }
+
+    $post = get_post($post_id);
+    if (!$post) {
+        return null;
+    }
+
+    $field = $matches[2];
+
+    switch ($field) {
+        case 'id':
+            return $post_id;
+        case 'title':
+            return get_the_title($post_id);
+        case 'content':
+            return apply_filters('the_content', $post->post_content);
+        case 'excerpt':
+            return get_the_excerpt($post_id);
+        case 'url':
+            return get_permalink($post_id);
+        case 'date':
+            return get_the_date('', $post_id);
+        case 'thumbnail.url':
+            return get_the_post_thumbnail_url($post_id, 'full');
+        case 'author.name':
+            return get_the_author_meta('display_name', (int) $post->post_author);
+    }
+
+    if (strpos($field, 'meta.') === 0) {
+        $meta_key = substr($field, 5);
+        if (!seam_is_public_post_meta_key($meta_key, $post_id)) {
+            return null;
+        }
+
+        return get_post_meta($post_id, $meta_key, true);
+    }
+
+    return null;
+}
+
+function seam_resolve_post_id(string $reference, WP_REST_Request $request = null): int
+{
+    if ($reference !== 'current') {
+        return absint($reference);
+    }
+
+    if ($request) {
+        $request_post_id = absint($request->get_param('post_id'));
+        if ($request_post_id) {
+            return $request_post_id;
+        }
+    }
+
+    $current = seam_current_post_id();
+    if ($current) {
+        return $current;
+    }
+
+    $referer = wp_get_referer();
+    if ($referer) {
+        return (int) url_to_postid($referer);
+    }
+
+    return 0;
+}
+
+function seam_user_can_read_post(int $post_id): bool
+{
+    $post = get_post($post_id);
+    if (!$post || $post->post_status === 'trash') {
+        return false;
+    }
+
+    if ($post->post_status === 'publish') {
+        return true;
+    }
+
+    return current_user_can('read_post', $post_id);
+}
+
+function seam_is_public_post_meta_key(string $meta_key, int $post_id): bool
+{
+    if ($meta_key === '' || strpos($meta_key, '_') === 0) {
+        return false;
+    }
+
+    $allowed = apply_filters('seam/runtime/public_post_meta_keys', [], $post_id);
+    if (is_array($allowed) && in_array($meta_key, $allowed, true)) {
+        return true;
+    }
+
+    $registered = get_registered_meta_keys('post', get_post_type($post_id));
+    if (isset($registered[$meta_key]) && !empty($registered[$meta_key]['show_in_rest'])) {
+        return true;
+    }
+
+    return false;
+}
+
+function seam_resolve_current_user_path(string $field)
+{
+    $data = seam_current_user_data();
+
+    switch ($field) {
+        case 'id':
+        case 'logged_in':
+        case 'display_name':
+        case 'avatar':
+            return isset($data[$field]) ? $data[$field] : null;
+    }
+
+    return null;
+}
+
+function seam_resolve_option_path(string $field)
+{
+    if (!in_array($field, seam_public_option_keys(), true)) {
+        return null;
+    }
+
+    return get_option($field);
+}
+
+function seam_public_option_keys(): array
+{
+    return apply_filters('seam/runtime/public_option_keys', [
+        'blogname',
+        'blogdescription',
+        'siteurl',
+        'home',
+    ]);
+}
+
+function seam_resolve_woo_cart_path(string $field)
+{
+    if (!seam_woo_cart_available()) {
+        return null;
+    }
+
+    $cart = WC()->cart;
+
+    switch ($field) {
+        case 'count':
+            return $cart->get_cart_contents_count();
+        case 'subtotal':
+            return wp_strip_all_tags($cart->get_cart_subtotal());
+        case 'total':
+            return wp_strip_all_tags($cart->get_total());
+        case 'items':
+            return array_values(array_map('seam_format_cart_item', $cart->get_cart()));
+    }
+
+    return null;
+}
+
+function seam_resolve_woo_product_path(string $path, WP_REST_Request $request = null)
+{
+    if (!function_exists('wc_get_product')) {
+        return null;
+    }
+
+    if (!preg_match('/^woo\\.product:([^\\.]+)\\.(.+)$/', $path, $matches)) {
+        throw new RuntimeException('Invalid WooCommerce product path.');
+    }
+
+    $product_id = seam_resolve_post_id($matches[1], $request);
+    if (!$product_id || !seam_user_can_read_post($product_id)) {
+        return null;
+    }
+
+    $product = wc_get_product($product_id);
+    if (!$product) {
+        return null;
+    }
+
+    $field = $matches[2];
+
+    switch ($field) {
+        case 'id':
+            return $product->get_id();
+        case 'name':
+        case 'title':
+            return $product->get_name();
+        case 'price':
+            return $product->get_price();
+        case 'price_html':
+            return $product->get_price_html();
+        case 'regular_price':
+            return $product->get_regular_price();
+        case 'sale_price':
+            return $product->get_sale_price();
+        case 'on_sale':
+            return $product->is_on_sale();
+        case 'stock_quantity':
+            return $product->get_stock_quantity();
+        case 'stock_status':
+            return $product->get_stock_status();
+        case 'sku':
+            return $product->get_sku();
+        case 'url':
+            return get_permalink($product->get_id());
+        case 'image':
+        case 'image.url':
+            return wp_get_attachment_image_url($product->get_image_id(), 'full');
+    }
+
+    return null;
+}
+
+function seam_resolve_acf_post_path(string $path, WP_REST_Request $request = null)
+{
+    if (!function_exists('get_field')) {
+        return null;
+    }
+
+    if (!preg_match('/^acf\\.post:([^\\.]+)\\.(.+)$/', $path, $matches)) {
+        throw new RuntimeException('Invalid ACF path.');
+    }
+
+    $post_id = seam_resolve_post_id($matches[1], $request);
+    if (!$post_id || !seam_user_can_read_post($post_id)) {
+        return null;
+    }
+
+    $field = $matches[2];
+    if ($field === '' || strpos($field, '_') === 0) {
+        return null;
+    }
+
+    if (!apply_filters('seam/runtime/allow_acf_field', true, $field, $post_id, $path)) {
+        return null;
+    }
+
+    return get_field($field, $post_id);
+}
+
+function seam_run_action(string $action, array $data): array
+{
+    if ($action === '') {
+        throw new Seam_Runtime_Bad_Request_Exception('Action is required.');
+    }
+
+    switch ($action) {
+        case 'woo.cart.add':
+            return seam_action_woo_cart_add($data);
+        case 'woo.cart.remove':
+            return seam_action_woo_cart_remove($data);
+        case 'woo.cart.update_quantity':
+            return seam_action_woo_cart_update_quantity($data);
+    }
+
+    $custom = apply_filters('seam/runtime/action', null, $action, $data);
+    if ($custom !== null) {
+        return is_array($custom) ? $custom : ['value' => $custom];
+    }
+
+    throw new Seam_Runtime_Bad_Request_Exception('Unsupported action: ' . $action);
+}
+
+function seam_action_woo_cart_add(array $data): array
+{
+    if (!seam_woo_cart_available()) {
+        throw new Seam_Runtime_Service_Unavailable_Exception('WooCommerce cart is unavailable.');
+    }
+
+    $product_id   = isset($data['product_id']) ? absint($data['product_id']) : 0;
+    $variation_id = isset($data['variation_id']) ? absint($data['variation_id']) : 0;
+    $quantity     = isset($data['quantity']) ? max(1, absint($data['quantity'])) : 1;
+
+    if (!$product_id) {
+        throw new Seam_Runtime_Bad_Request_Exception('Product ID is required.');
+    }
+
+    $variation = isset($data['variation']) && is_array($data['variation']) ? seam_sanitize_assoc($data['variation']) : [];
+    $cart_data = isset($data['cart_item_data']) && is_array($data['cart_item_data']) ? seam_sanitize_assoc($data['cart_item_data']) : [];
+
+    $key = WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation, $cart_data);
+
+    if (!$key) {
+        throw new RuntimeException('Unable to add this product to the cart.');
+    }
+
+    return seam_cart_summary(['cart_item_key' => $key]);
+}
+
+function seam_action_woo_cart_remove(array $data): array
+{
+    if (!seam_woo_cart_available()) {
+        throw new Seam_Runtime_Service_Unavailable_Exception('WooCommerce cart is unavailable.');
+    }
+
+    $key = isset($data['cart_item_key']) ? sanitize_text_field((string) $data['cart_item_key']) : '';
+    if ($key === '') {
+        throw new Seam_Runtime_Bad_Request_Exception('Cart item key is required.');
+    }
+
+    WC()->cart->remove_cart_item($key);
+
+    return seam_cart_summary();
+}
+
+function seam_action_woo_cart_update_quantity(array $data): array
+{
+    if (!seam_woo_cart_available()) {
+        throw new Seam_Runtime_Service_Unavailable_Exception('WooCommerce cart is unavailable.');
+    }
+
+    $key      = isset($data['cart_item_key']) ? sanitize_text_field((string) $data['cart_item_key']) : '';
+    $quantity = isset($data['quantity']) ? max(0, absint($data['quantity'])) : 1;
+
+    if ($key === '') {
+        throw new Seam_Runtime_Bad_Request_Exception('Cart item key is required.');
+    }
+
+    WC()->cart->set_quantity($key, $quantity);
+
+    return seam_cart_summary();
+}
+
+function seam_woo_cart_available(): bool
+{
+    if (!function_exists('WC')) {
+        return false;
+    }
+
+    if (WC()->cart) {
+        return true;
+    }
+
+    if (function_exists('wc_load_cart')) {
+        wc_load_cart();
+    }
+
+    return (bool) WC()->cart;
+}
+
+function seam_cart_summary(array $extra = []): array
+{
+    if (!seam_woo_cart_available()) {
+        return $extra;
+    }
+
+    return array_merge([
+        'cart_count' => WC()->cart->get_cart_contents_count(),
+        'subtotal'   => wp_strip_all_tags(WC()->cart->get_cart_subtotal()),
+        'total'      => wp_strip_all_tags(WC()->cart->get_total()),
+    ], $extra);
+}
+
+function seam_format_cart_item(array $item): array
+{
+    $product = isset($item['data']) && is_object($item['data']) ? $item['data'] : null;
+
+    return [
+        'cart_item_key' => isset($item['key']) ? (string) $item['key'] : '',
+        'product_id'    => isset($item['product_id']) ? (int) $item['product_id'] : 0,
+        'variation_id'  => isset($item['variation_id']) ? (int) $item['variation_id'] : 0,
+        'name'          => $product && method_exists($product, 'get_name') ? $product->get_name() : '',
+        'quantity'      => isset($item['quantity']) ? (int) $item['quantity'] : 0,
+        'price'         => $product && method_exists($product, 'get_price') ? $product->get_price() : '',
+        'line_total'    => isset($item['line_total']) ? $item['line_total'] : '',
+        'image'         => $product && method_exists($product, 'get_image_id') ? wp_get_attachment_image_url($product->get_image_id(), 'thumbnail') : '',
+    ];
+}
+
+function seam_sanitize_assoc(array $data): array
+{
+    $clean = [];
+
+    foreach ($data as $key => $value) {
+        $clean_key = sanitize_key((string) $key);
+        if ($clean_key === '') {
+            continue;
+        }
+
+        if (is_array($value)) {
+            $clean[$clean_key] = seam_sanitize_assoc($value);
+            continue;
+        }
+
+        if (is_bool($value) || is_int($value) || is_float($value)) {
+            $clean[$clean_key] = $value;
+            continue;
+        }
+
+        $clean[$clean_key] = sanitize_text_field((string) $value);
+    }
+
+    return $clean;
+}
+
+function seam_array_get($data, string $path)
+{
+    if (!is_array($data) || $path === '') {
+        return null;
+    }
+
+    $current = $data;
+    foreach (explode('.', $path) as $part) {
+        if (!is_array($current) || !array_key_exists($part, $current)) {
+            return null;
+        }
+
+        $current = $current[$part];
+    }
+
+    return $current;
+}
+
+function seam_cache_header_for_path(string $path): string
+{
+    if (strpos($path, 'woo.cart.') === 0 || strpos($path, 'user:current.') === 0) {
+        return 'no-store';
+    }
+
+    if (strpos($path, 'woo.product:') === 0) {
+        return 'public, max-age=300';
+    }
+
+    if (strpos($path, 'post:') === 0 || strpos($path, 'acf.post:') === 0) {
+        return 'no-store';
+    }
+
+    return 'public, max-age=600';
+}
+
+function seam_log_runtime_error(Throwable $error): void
+{
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[Seam Runtime] ' . $error->getMessage());
+    }
+}

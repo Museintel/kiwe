@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Flat Design Prototype</title>
+<style>
+  /* 
+   * Seam Tokens (Simulated)
+   * These replace hardcoded values to create a cohesive flat aesthetic.
+   */
+  :root {
+    --kiwe-color-border: #e5e7eb;
+    --kiwe-color-surface: #ffffff;
+    --kiwe-color-text: #111827;
+    --kiwe-color-muted: #6b7280;
+    --kiwe-color-brand: #d6006f;
+    --kiwe-color-success: #12a66a;
+    --kiwe-color-danger: #d83a52;
+    --kiwe-font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    
+    /* Elevated border radii for modern look */
+    --kiwe-radius-md: 10px;
+    --kiwe-radius-lg: 16px;
+    --kiwe-radius-full: 9999px;
+    
+    /* Direct mappings for the surface */
+    --dsa-ui-surface: var(--kiwe-color-surface);
+    --dsa-ui-border: var(--kiwe-color-border);
+    --dsa-ui-text: var(--kiwe-color-text);
+    --dsa-ui-muted: var(--kiwe-color-muted);
+    
+    /* Semantic Colors */
+    --dsa-active-color: #111827;
+    --dsa-hover-color: #24c6a1;
+  }
+  
+  /* Dark Mode Toggle */
+  html[data-theme="dark"] {
+    --kiwe-color-border: #374151;
+    --kiwe-color-surface: #1f2937;
+    --kiwe-color-text: #f9fafb;
+    --kiwe-color-muted: #9ca3af;
+    --dsa-active-color: #f9fafb;
+    --dsa-hover-color: #34d399; /* slightly brighter for dark mode */
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--kiwe-font-ui);
+    background: #f3f4f6; /* Represents the underlying WordPress website */
+    color: var(--dsa-ui-text);
+    overflow: hidden;
+  }
+  
+  html[data-theme="dark"] body {
+    background: #111827;
+  }
+
+  /* Website mock */
+  .site-mock {
+    padding: 60px 20px;
+    text-align: center;
+    color: #9ca3af;
+  }
+  .site-mock h1 { 
+    font-weight: 800; /* Crisp typography! Not 850 or 950 */
+    font-size: 2.5rem;
+    color: inherit;
+  }
+  
+  /* =========================================
+     The Appshell Base 
+     ========================================= */
+  .dsa-surface {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .dsa-surface * {
+    pointer-events: auto;
+    box-sizing: border-box;
+  }
+
+  /* =========================================
+     The Dock (Flat & Crisp)
+     ========================================= */
+  .dsa-dock-cluster {
+    position: absolute;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    
+    /* Replaced heavy shadow with a 1px crisp border and slight background transparency */
+    background: color-mix(in srgb, var(--dsa-ui-surface) 95%, transparent);
+    border: 1px solid var(--dsa-ui-border);
+    border-radius: var(--kiwe-radius-full);
+    padding: 8px 12px;
+    backdrop-filter: blur(12px); /* Kept minimal blur just for readability over site */
+    box-shadow: 0 4px 24px rgba(0,0,0,0.04); /* Ultra subtle, clean shadow */
+    transition: all 0.3s ease;
+  }
+
+  .dsa-dock-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--dsa-ui-muted);
+    font-size: 18px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: 0.2s cubic-bezier(0,0,0.3,1); /* Decelerate only curve */
+  }
+  
+  .dsa-dock-btn:hover, .dsa-dock-btn.is-active {
+    background: color-mix(in srgb, var(--dsa-hover-color) 12%, transparent);
+    color: var(--dsa-hover-color);
+  }
+  
+  /* AI Button gets distinct brand treatment */
+  .dsa-ai-btn {
+    background: color-mix(in srgb, var(--kiwe-color-brand) 10%, transparent);
+    color: var(--kiwe-color-brand);
+  }
+
+  /* =========================================
+     Overlay Root & Modes 
+     ========================================= */
+  .dsa-overlay-root {
+    position: absolute;
+    inset: 0;
+    display: none;
+    z-index: 999;
+  }
+  
+  .dsa-overlay-root.is-active {
+    display: flex;
+  }
+
+  /* Mode 1: Classic Overlay (Flattened) */
+  .dsa-mode-classic .dsa-overlay-root {
+    /* Removed the heavy radial gradients! Pure flat transparency. */
+    background: color-mix(in srgb, var(--dsa-ui-surface) 95%, transparent);
+    backdrop-filter: blur(10px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .dsa-mode-classic .dsa-panel {
+    width: 100%;
+    max-width: 460px;
+    border-radius: var(--kiwe-radius-lg);
+    max-height: 85vh;
+  }
+  
+  /* Mode 2: Sheet Bottom */
+  .dsa-mode-sheet-bottom .dsa-overlay-root {
+    background: rgba(0,0,0,0.3);
+    align-items: flex-end;
+  }
+  .dsa-mode-sheet-bottom .dsa-panel {
+    width: 100%;
+    max-height: 85vh;
+    border-radius: var(--kiwe-radius-lg) var(--kiwe-radius-lg) 0 0;
+    transform: translateY(100%);
+    animation: slideUp 0.35s forwards cubic-bezier(0, 0, 0.3, 1); /* iOS Standard Easing */
+    border-bottom: none;
+  }
+
+  /* Mode 3: Sheet Side */
+  .dsa-mode-sheet-side .dsa-overlay-root {
+    background: rgba(0,0,0,0.3);
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+  .dsa-mode-sheet-side .dsa-panel {
+    width: 460px;
+    height: 100%;
+    border-radius: var(--kiwe-radius-lg) 0 0 var(--kiwe-radius-lg);
+    transform: translateX(100%);
+    animation: slideLeft 0.35s forwards cubic-bezier(0, 0, 0.3, 1);
+    border-right: none;
+  }
+  
+  /* Mode 4: Navbar Presentation */
+  .dsa-mode-navbar .dsa-dock-cluster {
+    top: 0;
+    bottom: auto;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    padding: 10px 24px;
+    justify-content: center;
+    gap: 32px;
+  }
+
+  /* =========================================
+     The Panel (Content Container)
+     ========================================= */
+  .dsa-panel {
+    background: var(--dsa-ui-surface);
+    border: 1px solid var(--dsa-ui-border);
+    padding: 24px;
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    /* Box shadow removed entirely. Relying strictly on borders for structure */
+  }
+  
+  .dsa-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .dsa-panel h2 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 800; /* Crisp! */
+    color: var(--dsa-ui-text); /* Fixed issue where it was grey */
+    letter-spacing: -0.02em;
+  }
+
+  /* Sheet Pull Handle */
+  .dsa-sheet-handle {
+    width: 48px;
+    height: 5px;
+    border-radius: var(--kiwe-radius-full);
+    background: color-mix(in srgb, var(--dsa-ui-text) 16%, transparent);
+    margin: -8px auto 16px auto;
+    cursor: grab;
+  }
+  
+  .dsa-sheet-handle:hover {
+    background: color-mix(in srgb, var(--dsa-hover-color) 40%, transparent);
+  }
+
+  /* =========================================
+     Module Cards (Flat & Clean)
+     ========================================= */
+  .dsa-card {
+    border: 1px solid var(--dsa-ui-border);
+    border-radius: var(--kiwe-radius-md); /* Updated from hardcoded 7px to 10px */
+    padding: 16px;
+    background: color-mix(in srgb, var(--dsa-ui-surface) 100%, transparent);
+    /* NO SHADOWS. Pure flat design. */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: 0.2s ease;
+  }
+  
+  .dsa-card:hover {
+    border-color: color-mix(in srgb, var(--dsa-hover-color) 40%, transparent);
+  }
+  
+  .dsa-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .dsa-card h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--dsa-ui-text);
+  }
+  
+  .dsa-card p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--dsa-ui-muted);
+  }
+  
+  .dsa-price {
+    font-weight: 700;
+    color: var(--kiwe-color-success); /* Semantic color, not hardcoded hex */
+  }
+
+  .dsa-primary-btn {
+    margin-top: 12px;
+    padding: 14px;
+    background: var(--dsa-hover-color);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--kiwe-radius-md);
+    font-weight: 700; 
+    font-family: var(--kiwe-font-ui);
+    cursor: pointer;
+    text-align: center;
+    transition: 0.2s ease;
+  }
+  
+  .dsa-primary-btn:hover {
+    filter: brightness(1.1);
+  }
+  
+  .dsa-danger-btn {
+    margin-top: 12px;
+    padding: 14px;
+    background: color-mix(in srgb, var(--kiwe-color-danger) 12%, transparent);
+    color: var(--kiwe-color-danger);
+    border: none;
+    border-radius: var(--kiwe-radius-md);
+    font-weight: 700; 
+    font-family: var(--kiwe-font-ui);
+    cursor: pointer;
+    text-align: center;
+  }
+
+  /* Animations */
+  @keyframes slideUp { to { transform: translateY(0); } }
+  @keyframes slideLeft { to { transform: translateX(0); } }
+
+  /* =========================================
+     Prototype Controls (Not part of UI)
+     ========================================= */
+  .controls {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    z-index: 2000;
+    color: #000;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    width: 280px;
+  }
+  .controls h3 { margin: 0 0 12px 0; font-size: 16px; font-weight:800; }
+  .controls button {
+    display: block;
+    margin-bottom: 8px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .controls button:hover { background: #e5e7eb; }
+</style>
+</head>
+<body>
+
+<!-- Mock Underlying Website -->
+<div class="site-mock">
+  <h1>Underlying WordPress Site</h1>
+  <p>The appshell floats above this content.</p>
+</div>
+
+<!-- Prototype Controls -->
+<div class="controls">
+  <h3>Preview Modes</h3>
+  <button onclick="setMode('dsa-mode-sheet-bottom')">1. Sheet (Bottom Drawer)</button>
+  <button onclick="setMode('dsa-mode-sheet-side')">2. Sheet (Side Drawer)</button>
+  <button onclick="setMode('dsa-mode-classic')">3. Surface (Flattened Overlay)</button>
+  <button onclick="setMode('dsa-mode-navbar')">4. Navbar (Top Rail)</button>
+  <hr style="border:none; border-top:1px solid #e5e7eb; margin: 12px 0;">
+  <button onclick="toggleTheme()">Toggle Dark Mode</button>
+  <button onclick="closePanel()" style="background: #fee2e2; color: #991b1b; border-color: #fecaca;">Close Open Panel</button>
+</div>
+
+<!-- DSA Appshell -->
+<div class="dsa-surface dsa-mode-sheet-bottom" id="appshell">
+  
+  <!-- Overlay Root (Background Blur/Tint) -->
+  <div class="dsa-overlay-root is-active" id="overlay">
+    
+    <!-- The Module Panel -->
+    <div class="dsa-panel">
+      <div class="dsa-sheet-handle"></div>
+      
+      <div class="dsa-panel-header">
+        <h2>Shopping Cart</h2>
+      </div>
+      
+      <!-- Module Content (Flat Cards) -->
+      <div class="dsa-card">
+        <div class="dsa-card-info">
+          <h3>Premium Flat Theme</h3>
+          <p>Zero tax architecture</p>
+        </div>
+        <div class="dsa-price">$49.00</div>
+      </div>
+      
+      <div class="dsa-card">
+        <div class="dsa-card-info">
+          <h3>UI Overhaul Package</h3>
+          <p>Crisp typography & borders</p>
+        </div>
+        <div class="dsa-price">$19.00</div>
+      </div>
+      
+      <div style="flex-grow: 1;"></div>
+      
+      <!-- Semantic Buttons -->
+      <button class="dsa-primary-btn">
+        Checkout Securely
+      </button>
+      <button class="dsa-danger-btn">
+        Clear Cart
+      </button>
+    </div>
+  </div>
+
+  <!-- The Dock -->
+  <div class="dsa-dock-cluster">
+    <button class="dsa-dock-btn" onclick="openPanel()">☰</button>
+    <button class="dsa-dock-btn" onclick="openPanel()">🔍</button>
+    <button class="dsa-dock-btn dsa-ai-btn" onclick="openPanel()">✨</button>
+    <button class="dsa-dock-btn is-active" onclick="openPanel()">🛍️</button>
+    <button class="dsa-dock-btn" onclick="openPanel()">👤</button>
+  </div>
+</div>
+
+<script>
+  function setMode(mode) {
+    const shell = document.getElementById('appshell');
+    shell.className = 'dsa-surface ' + mode;
+    openPanel();
+    
+    const handle = document.querySelector('.dsa-sheet-handle');
+    if(mode === 'dsa-mode-sheet-bottom' || mode === 'dsa-mode-sheet-side') {
+      handle.style.display = 'block';
+    } else {
+      handle.style.display = 'none';
+    }
+  }
+  
+  function toggleTheme() {
+    const html = document.documentElement;
+    if(html.getAttribute('data-theme') === 'dark') {
+      html.removeAttribute('data-theme');
+    } else {
+      html.setAttribute('data-theme', 'dark');
+    }
+  }
+  
+  function closePanel() {
+    document.getElementById('overlay').classList.remove('is-active');
+  }
+  
+  function openPanel() {
+    document.getElementById('overlay').classList.add('is-active');
+    
+    // Restart animation for visual feedback
+    const panel = document.querySelector('.dsa-panel');
+    panel.style.animation = 'none';
+    panel.offsetHeight; // trigger reflow
+    panel.style.animation = null; 
+  }
+</script>
+</body>
+</html>

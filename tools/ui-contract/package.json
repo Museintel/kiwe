@@ -1,0 +1,14 @@
+{
+  "name": "kiwe-ui-contract",
+  "private": true,
+  "version": "0.5.25",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node run.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.53.2"
+  }
+}

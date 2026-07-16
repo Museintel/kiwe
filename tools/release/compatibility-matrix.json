@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "wordpress": ["7.x"],
+  "php": ["8.2", "8.3", "8.4"],
+  "woocommerce": {
+    "status": "optional",
+    "policy": "current stable supported after RC13 live HPOS, checkout, gateway, tax, refund, and analytics proof"
+  },
+  "bricks": {
+    "status": "optional",
+    "baseline": "2.3.7",
+    "policy": "additive integration; RC13 live editor and frontend proof required"
+  },
+  "notes": "CI validates source and platform declarations. It does not claim private Bricks or live commerce certification."
+}

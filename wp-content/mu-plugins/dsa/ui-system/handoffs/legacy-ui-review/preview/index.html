@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en" data-kiwe-theme="light">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+	<title>Kiwe Legacy UI Review Preview</title>
+	<style>
+		:root {
+			--dsa-active-color: #8f8f98;
+			--dsa-hover-color: #24c6a1;
+			--dsa-ui-surface: #ffffff;
+			--dsa-ui-bg: #f6f7f8;
+			--dsa-ui-text: #202936;
+			--dsa-ui-muted: #677381;
+			--dsa-ui-border: rgba(32,41,54,.16);
+			--kiwe-color-brand: var(--dsa-active-color);
+			--kiwe-color-accent: var(--dsa-hover-color);
+			--kiwe-color-text: var(--dsa-ui-text);
+			--kiwe-color-text-muted: var(--dsa-ui-muted);
+			--kiwe-color-surface: var(--dsa-ui-bg);
+			--kiwe-color-surface-raised: var(--dsa-ui-surface);
+			--kiwe-color-border: var(--dsa-ui-border);
+		}
+		html[data-kiwe-theme="dark"] {
+			--dsa-ui-surface: #171c24;
+			--dsa-ui-bg: #10141b;
+			--dsa-ui-text: #edf1f6;
+			--dsa-ui-muted: #a8b0ba;
+			--dsa-ui-border: rgba(237,241,246,.15);
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			min-height: 100vh;
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			color: var(--dsa-ui-text);
+			background: linear-gradient(135deg, #eef2f7, #f8f4f6);
+		}
+		html[data-kiwe-theme="dark"] body { background: linear-gradient(135deg, #10141b, #1d2330); }
+		.kiwe-preview-toolbar {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			align-items: center;
+			padding: 10px 14px;
+			border-bottom: 1px solid var(--dsa-ui-border);
+			background: var(--dsa-ui-surface);
+		}
+		.kiwe-preview-toolbar label { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--dsa-ui-muted); }
+		.kiwe-preview-toolbar select { color: var(--dsa-ui-text); background: var(--dsa-ui-bg); border: 1px solid var(--dsa-ui-border); border-radius: 8px; padding: 4px 8px; }
+		.kiwe-preview-note { margin: 0; padding: 8px 14px; color: var(--dsa-ui-muted); font-size: 12px; background: color-mix(in srgb, var(--dsa-ui-surface) 88%, transparent); }
+		.kiwe-preview-stage { display: grid; place-items: center; min-height: calc(100vh - 86px); padding: 18px; }
+		.kiwe-preview-viewport {
+			position: relative;
+			width: min(1120px, 100%);
+			height: min(720px, calc(100vh - 122px));
+			overflow: hidden;
+			border: 1px solid var(--dsa-ui-border);
+			border-radius: 22px;
+			background: color-mix(in srgb, var(--dsa-ui-bg) 76%, #fff 24%);
+			box-shadow: 0 22px 70px rgba(20,30,40,.2);
+		}
+		.kiwe-preview-viewport[data-size="tablet"] { width: min(760px, 100%); }
+		.kiwe-preview-viewport[data-size="mobile"] { width: min(390px, 100%); height: min(760px, calc(100vh - 122px)); }
+		.kiwe-preview-host { position: absolute; inset: 0; padding: 34px; color: var(--dsa-ui-muted); }
+		.kiwe-preview-host h1 { max-width: 12ch; margin: 12px 0; color: var(--dsa-ui-text); font-size: clamp(38px, 7vw, 84px); line-height: .92; letter-spacing: -.06em; }
+		.dsa-surface {
+			position: absolute;
+			inset: 0;
+			--dsa-dock-control-size: 48px;
+			--dsa-dock-ai-size: 54px;
+			--dsa-dock-icon-size: 22px;
+			--dsa-dock-badge-size: 18px;
+			--dsa-dock-gap: 4px;
+			--dsa-dock-padding: 8px;
+			--dsa-dock-only-reserve: 84px;
+			--dsa-screen-block-reserve: 104px;
+			--dsa-screen-inline-reserve: 24px;
+			--dsa-screen-available-inline: calc(100% - 24px);
+			--dsa-screen-available-block: calc(100% - 104px);
+			--dsa-dock-shell-radius: 999px;
+			--dsa-dock-control-radius: 999px;
+			--dsa-dock-segment-radius: 14px;
+		}
+		.dsa-surface.dsa-dock-shape-pill {
+			--dsa-dock-shell-radius: 999px;
+			--dsa-dock-control-radius: 999px;
+			--dsa-dock-segment-radius: 14px;
+		}
+		.dsa-surface.dsa-dock-shape-box {
+			--dsa-dock-shell-radius: 18px;
+			--dsa-dock-control-radius: 12px;
+			--dsa-dock-segment-radius: 12px;
+		}
+		.dsa-surface.dsa-dock-shape-square {
+			--dsa-dock-shell-radius: 0;
+			--dsa-dock-control-radius: 0;
+			--dsa-dock-segment-radius: 0;
+		}
+		.dsa-overlay-root { position: absolute; inset: 0; display: grid; background: rgba(32,41,54,.22); pointer-events: none; }
+		.dsa-overlay-root.is-hidden { display: none; }
+		.dsa-panel {
+			position: absolute;
+			display: none;
+			overflow: auto;
+			pointer-events: auto;
+			width: min(680px, calc(100% - 24px));
+			max-height: var(--dsa-screen-available-block);
+			padding: 22px;
+			border: 1px solid var(--dsa-ui-border);
+			border-radius: 22px;
+			background: var(--dsa-ui-surface);
+			box-shadow: 0 18px 60px rgba(32,41,54,.22);
+		}
+		.dsa-panel.is-active { display: block; }
+		.dsa-theme-sheet[data-dsa-dock-orientation="horizontal"] .dsa-panel { left: 12px; right: 12px; bottom: calc(var(--dsa-dock-only-reserve) + 12px); width: auto; }
+		.dsa-theme-sheet[data-dsa-dock-orientation="vertical"] .dsa-panel { top: 12px; right: calc(var(--dsa-dock-only-reserve) + 12px); bottom: 12px; width: min(680px, calc(100% - var(--dsa-dock-only-reserve) - 24px)); max-height: none; }
+		.dsa-theme-classic .dsa-panel { inset: 0; width: auto; max-height: none; border-radius: 0; box-shadow: none; }
+		.dsa-theme-classic[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] .dsa-panel { bottom: var(--dsa-dock-only-reserve); }
+		.dsa-theme-classic[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="vertical"] .dsa-panel { right: var(--dsa-dock-only-reserve); }
+		.dsa-dock {
+			position: absolute;
+			z-index: 5;
+			display: flex;
+			gap: var(--dsa-dock-gap);
+			align-items: center;
+			padding: var(--dsa-dock-padding);
+			border: 1px solid var(--dsa-ui-border);
+			border-radius: var(--dsa-dock-shell-radius);
+			background: var(--dsa-ui-surface);
+			box-shadow: 0 14px 36px rgba(32,41,54,.18);
+			pointer-events: auto;
+		}
+		.dsa-dock button {
+			position: relative;
+			display: grid;
+			place-items: center;
+			width: var(--dsa-dock-control-size);
+			height: var(--dsa-dock-control-size);
+			border: 0;
+			border-radius: var(--dsa-dock-control-radius);
+			color: var(--dsa-ui-muted);
+			background: transparent;
+		}
+		.dsa-dock button[aria-pressed="true"] { color: #fff; background: var(--dsa-ui-text); }
+		.dsa-dock .dsa-ai-launcher { width: var(--dsa-dock-ai-size); height: var(--dsa-dock-ai-size); color: #fff; background: var(--dsa-active-color); }
+		.dsa-dock svg, .dsa-icon { width: var(--dsa-dock-icon-size); height: var(--dsa-dock-icon-size); fill: none; stroke: currentColor; stroke-width: 1.8; }
+		.dsa-dock__badge { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; min-width: var(--dsa-dock-badge-size); height: var(--dsa-dock-badge-size); border-radius: 999px; color: #fff; background: #d83a52; font-size: 10px; }
+		.dsa-surface[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] .dsa-dock { left: 50%; bottom: 12px; transform: translateX(-50%); }
+		.dsa-surface[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="vertical"] .dsa-dock { right: 12px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+		.dsa-surface[data-dsa-dock-presentation="navbar"][data-dsa-dock-orientation="horizontal"] .dsa-dock { left: 0; right: 0; bottom: 0; justify-content: center; height: var(--dsa-dock-only-reserve); border-radius: 0; }
+		.dsa-surface[data-dsa-dock-presentation="navbar"][data-dsa-dock-orientation="vertical"] .dsa-dock { top: 0; right: 0; bottom: 0; flex-direction: column; justify-content: center; width: var(--dsa-dock-only-reserve); border-radius: 0; }
+		.dsa-surface.dsa-dock-split[data-dsa-dock-presentation="dock"] .dsa-dock { gap: 12px; background: transparent; border: 0; box-shadow: none; }
+		.dsa-surface.dsa-dock-split[data-dsa-dock-presentation="dock"] .dsa-dock button:not(.dsa-ai-launcher) { border: 1px solid var(--dsa-ui-border); background: var(--dsa-ui-surface); }
+		.dsa-surface.dsa-dock-split[data-dsa-dock-presentation="dock"] .dsa-dock button[aria-pressed="true"] { background: var(--dsa-ui-text); }
+		.dsa-panel__header { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+		.dsa-panel__avatar, .dsa-avatar-editor {
+			display: grid;
+			place-items: center;
+			width: 76px;
+			height: 76px;
+			border-radius: 18px;
+			background: var(--dsa-ui-bg);
+			color: var(--dsa-ui-muted);
+			font-weight: 800;
+		}
+		.dsa-avatar-editor span { font-size: 11px; }
+		.dsa-avatar-editor input { display: none; }
+		.dsa-panel__name { margin: 0 0 4px; font-size: 22px; font-weight: 800; }
+		.dsa-panel__status, .dsa-panel__meta { color: var(--dsa-ui-muted); font-size: 12px; }
+		.dsa-profile-form, .kiwe-preview-grid { display: grid; gap: 10px; }
+		.dsa-auth-field { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid var(--dsa-ui-border); border-radius: 12px; color: var(--dsa-ui-text); background: var(--dsa-ui-bg); }
+		.dsa-panel__button, .kiwe-preview-btn { min-height: 42px; padding: 10px 12px; border: 1px solid var(--dsa-ui-border); border-radius: 12px; color: var(--dsa-ui-text); background: var(--dsa-ui-bg); font-weight: 700; }
+		.dsa-auth-primary { color: #fff; background: var(--dsa-ui-text); }
+		.dsa-account-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+		.dsa-account-actions .dsa-panel__button { display: inline-flex; gap: 8px; align-items: center; }
+		.dsa-recent-orders, .kiwe-preview-card { margin-top: 12px; padding: 14px; border: 1px solid var(--dsa-ui-border); border-radius: 16px; background: var(--dsa-ui-bg); }
+		.kiwe-preview-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--dsa-ui-border); }
+		.kiwe-preview-row:first-child { border-top: 0; }
+		.kiwe-preview-thumb { width: 58px; height: 58px; border-radius: 14px; background: linear-gradient(135deg, #e9d5ff, #bfdbfe); }
+		.dsa-cart-panel__item, .dsa-search-result-card, .dsa-saved-card, .dsa-ai-insight { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--dsa-ui-border); }
+		.dsa-cart-panel__item:first-child, .dsa-search-result-card:first-child, .dsa-saved-card:first-child, .dsa-ai-insight:first-child { border-top: 0; }
+		.dsa-search-panel__form { display: flex; gap: 8px; margin: 14px 0; }
+		.dsa-search-panel__form input { flex: 1; }
+		.dsa-search-panel__filters, .dsa-search-panel__alphabet { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+		.dsa-menu-panel a, .dsa-links-panel a { color: inherit; text-decoration: none; }
+		.kiwe-preview-hidden { display: none !important; }
+	</style>
+</head>
+<body>
+	<svg hidden>
+		<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c2-5 14-5 16 0"/></symbol>
+		<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></symbol>
+		<symbol id="i-links" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.9 15.7 6.2M8.2 13.1l7.5 4.7"/></symbol>
+		<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2z"/></symbol>
+		<symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l8.8 8.8 8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+		<symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></symbol>
+		<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+		<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 21h14"/></symbol>
+		<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-5.4 7-12A7 7 0 1 0 5 9c0 6.6 7 12 7 12z"/><circle cx="12" cy="9" r="2"/></symbol>
+		<symbol id="i-key" viewBox="0 0 24 24"><circle cx="7" cy="15" r="4"/><path d="M10 12 21 1m-5 5 3 3"/></symbol>
+		<symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></symbol>
+	</svg>
+	<header class="kiwe-preview-toolbar">
+		<strong>Kiwe Legacy UI review</strong>
+		<label>Screen <select id="screen"><option value="profile">Profile</option><option value="cart">Cart</option><option value="checkout">Checkout</option><option value="search">Search</option><option value="menu">Menu</option><option value="saved">Saved</option><option value="links">Links</option><option value="notifications">Notifications</option><option value="ios-install">iOS Install</option><option value="games">Games</option><option value="ai">AI</option></select></label>
+		<label>Panel <select id="presentation"><option value="sheet">Sheet</option><option value="classic">Classic</option></select></label>
+		<label>Dock <select id="dock"><option value="full">Legacy full compact dock</option><option value="split">Shared split compact dock</option><option value="navbar">Shared Navigation bar</option></select></label>
+		<label>Shape <select id="shape"><option value="pill">Pill</option><option value="box">Rounded box</option><option value="square">Square / no radius</option></select></label>
+		<label>Direction <select id="orientation"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>
+		<label>Theme <select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+		<label>Viewport <select id="size"><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobile</option></select></label>
+	</header>
+	<p class="kiwe-preview-note">Standalone preview for visual review only. It uses Legacy selectors and mock data; the live plugin remains final truth.</p>
+	<main class="kiwe-preview-stage">
+		<div class="kiwe-preview-viewport" data-size="desktop">
+			<div class="kiwe-preview-host"><small>HOST WEBSITE MOCK</small><h1>Quiet commerce page.</h1><p>Neutral page content behind the Kiwe Surface.</p></div>
+			<div class="dsa-surface dsa-theme-sheet dsa-dock-shape-pill" data-dsa-surface data-dsa-ui-contract="2" data-dsa-visual-profile="legacy" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-presentation="dock" data-dsa-dock-orientation="horizontal">
+				<div class="dsa-overlay-root" data-dsa-overlay-root>
+					<section class="dsa-panel dsa-profile-panel is-active" role="dialog" aria-modal="false" aria-label="Profile" data-dsa-profile-panel data-screen="profile">
+						<div class="dsa-panel__header"><label class="dsa-avatar-editor"><span>Change photo</span><input type="file" data-dsa-avatar-input></label><div><p class="dsa-panel__name">Munaf Patni</p><span class="dsa-panel__status">Verified</span></div></div>
+						<form class="dsa-profile-form" data-dsa-profile-form><input class="dsa-auth-field" value="Munaf" aria-label="First name"><input class="dsa-auth-field" value="Patni" aria-label="Last name"><input class="dsa-auth-field" value="Munaf Patni" aria-label="Display name"><input class="dsa-auth-field" value="munaf@example.com" aria-label="Email"><div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary">Update profile</button><span class="dsa-panel__meta">Ready</span></div></form>
+						<div class="dsa-panel__list dsa-account-actions" data-dsa-context-slot data-dsa-context-name="profile" data-dsa-context-width="dock"><button class="dsa-panel__button" data-dsa-account-view="downloads"><svg class="dsa-icon"><use href="#i-download"/></svg><span>Downloads</span></button><button class="dsa-panel__button" data-dsa-account-view="addresses"><svg class="dsa-icon"><use href="#i-pin"/></svg><span>Addresses</span></button><button class="dsa-panel__button" data-dsa-account-view="password"><svg class="dsa-icon"><use href="#i-key"/></svg><span>Password</span></button></div>
+						<section class="dsa-recent-orders" data-dsa-recent-orders><div class="kiwe-preview-row"><strong>Recent orders</strong><span>2 orders</span></div></section>
+						<button class="dsa-panel__button dsa-logout-button" data-dsa-account-logout><svg class="dsa-icon"><use href="#i-out"/></svg></button>
+					</section>
+					<section class="dsa-panel dsa-cart-panel" role="dialog" aria-modal="false" data-dsa-cart-panel data-screen="cart"><h2>Your cart</h2><article class="dsa-cart-panel__item"><span class="kiwe-preview-thumb"></span><div><strong>Daily Carry 02</strong><p class="dsa-panel__meta">Qty selector uses DSA cart authority.</p></div><b>₹1,850</b></article><article class="dsa-cart-panel__item"><span class="kiwe-preview-thumb"></span><div><strong>Field Tray</strong><p class="dsa-panel__meta">Product link keeps full navigation contract.</p></div><b>₹1,290</b></article><section class="dsa-cart-fbt" data-dsa-cart-fbt data-dsa-keep-open><h3>Frequently Bought Together</h3><div class="dsa-cart-fbt__rail" data-dsa-cart-fbt-rail><article class="dsa-cart-fbt__card"><span class="kiwe-preview-thumb"></span><strong>Care Kit</strong><a class="dsa-cart-fbt__view" data-dsa-full-navigation>View</a></article><article class="dsa-cart-fbt__card"><span class="kiwe-preview-thumb"></span><strong>Desk Mat</strong><button class="dsa-cart-fbt__action" type="button" data-dsa-cart-add="101">Add</button></article></div></section><div class="kiwe-preview-card"><div class="kiwe-preview-row"><span>Total</span><strong>₹3,140</strong></div><button class="dsa-panel__button dsa-auth-primary" data-dsa-checkout-open>Checkout</button></div></section>
+					<section class="dsa-panel dsa-checkout-panel" role="dialog" aria-modal="false" data-dsa-checkout-panel data-screen="checkout"><h2>Checkout</h2><form class="dsa-checkout-form" data-dsa-checkout-form data-dsa-keep-open><div class="kiwe-preview-grid"><input class="dsa-auth-field" data-dsa-checkout-field placeholder="Billing name"><input class="dsa-auth-field" data-dsa-checkout-field placeholder="Address"><input class="dsa-auth-field" data-dsa-checkout-field placeholder="Phone"><button class="dsa-panel__button dsa-auth-primary">Continue</button></div></form></section>
+					<section class="dsa-panel dsa-search-panel" role="dialog" aria-modal="false" data-dsa-search-panel data-screen="search"><h2>Search</h2><form class="dsa-search-panel__form" data-dsa-search-form><input class="dsa-auth-field" data-dsa-search-input placeholder="Search products and posts"><button class="dsa-panel__button" data-dsa-search-clear>Clear</button></form><div class="dsa-search-panel__filters" data-dsa-search-filters><button class="kiwe-preview-btn">Products</button><button class="kiwe-preview-btn">Posts</button></div><div class="dsa-search-panel__alphabet" data-dsa-search-alphabet><button class="kiwe-preview-btn">A</button><button class="kiwe-preview-btn">B</button></div><div data-dsa-search-results><article class="dsa-search-result-card"><span class="kiwe-preview-thumb"></span><div><strong>Measured Light</strong><p class="dsa-panel__meta">Product result</p></div></article></div></section>
+					<section class="dsa-panel dsa-menu-panel" role="dialog" aria-modal="false" data-screen="menu"><h2>Menu</h2><a class="kiwe-preview-row" data-dsa-full-navigation><strong>Shop</strong><span>›</span></a><a class="kiwe-preview-row" data-dsa-full-navigation><strong>Journal</strong><span>›</span></a><nav class="kiwe-preview-card"><strong>On this page</strong><button class="dsa-panel__button" data-dsa-menu-anchor>Intro</button><button class="dsa-panel__button" data-dsa-menu-anchor>Products</button></nav></section>
+					<section class="dsa-panel dsa-saved-panel" role="dialog" aria-modal="false" data-dsa-saved-panel data-screen="saved"><h2>Saved</h2><article class="dsa-saved-card"><span class="kiwe-preview-thumb"></span><div><strong>Desk Object</strong><p class="dsa-panel__meta">Saved product</p></div><button class="dsa-panel__button" data-dsa-saved-remove>Remove</button></article></section>
+					<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" data-screen="links"><h2>Links</h2><div class="kiwe-preview-card"><strong>Northstar Supply</strong><p class="dsa-panel__meta">Social and site hub. Site score shown state: 96. Score absent state: when no score is configured, no score badge renders.</p></div><a class="kiwe-preview-row" data-dsa-full-navigation><span>Instagram</span><span>›</span></a><button class="dsa-panel__button" data-dsa-links-cart>Open cart</button></section>
+					<section class="dsa-panel dsa-notification-panel" role="dialog" aria-modal="false" data-dsa-notification-panel data-screen="notifications"><h2>Notification preferences</h2><label class="kiwe-preview-row"><span>Offers</span><input type="checkbox" checked></label><label class="kiwe-preview-row"><span>Order updates</span><input type="checkbox" checked></label><button class="dsa-panel__button dsa-auth-primary" data-dsa-notification-form>Save preferences</button></section>
+					<section class="dsa-panel dsa-ios-install-panel" role="dialog" aria-modal="false" data-dsa-ios-install-panel data-screen="ios-install"><h2>iPhone and iPad App</h2><ol><li>Tap Share</li><li>Add to Home Screen</li><li>Open the app icon</li></ol><button class="dsa-panel__button dsa-auth-primary" data-dsa-ios-install-done>Done</button></section>
+					<section class="dsa-panel dsa-game-panel" role="dialog" aria-modal="false" data-dsa-game-panel data-screen="games"><h2>Game</h2><canvas data-dsa-game-canvas width="640" height="220" style="width:100%;border:1px solid var(--dsa-ui-border);border-radius:16px;background:var(--dsa-ui-bg)"></canvas><div class="kiwe-preview-row"><span data-dsa-game-score>Score 0</span><span data-dsa-game-best>Best 0</span><span data-dsa-game-bonus>Reward preview</span></div><button class="dsa-panel__button" data-dsa-start-game="dino">Start Dino</button><p data-dsa-game-message class="dsa-panel__meta">Choose a game</p></section>
+					<section class="dsa-panel dsa-ai-panel" role="dialog" aria-modal="false" data-dsa-ai-panel data-screen="ai"><h2>AI Assistant</h2><article class="dsa-ai-insight"><div><strong>Useful signal</strong><p class="dsa-panel__meta">A preview insight using core-owned actions.</p></div><button class="dsa-panel__button" data-dsa-ai-insight-action>Open</button><button class="dsa-panel__button" data-dsa-ai-insight-dismiss>Dismiss</button></article></section>
+				</div>
+				<nav class="dsa-dock dsa-phonekey-dock" data-dsa-dock-cluster aria-label="Kiwe modules">
+					<button class="dsa-dock__button is-split-segment-start" data-dsa-module="profile" aria-label="Account" aria-pressed="true"><svg><use href="#i-user"/></svg></button>
+					<button class="dsa-dock__button" data-dsa-module="search" aria-label="Search"><svg><use href="#i-search"/></svg></button>
+					<button class="dsa-dock__button is-split-before-ai" data-dsa-module="links" aria-label="Links"><svg><use href="#i-links"/></svg></button>
+					<button class="dsa-dock__button dsa-ai-launcher" data-dsa-module="ai" aria-label="AI"><svg><use href="#i-spark"/></svg></button>
+					<button class="dsa-dock__button is-split-after-ai" data-dsa-module="saved" aria-label="Saved"><svg><use href="#i-heart"/></svg><span class="dsa-dock__badge">4</span></button>
+					<button class="dsa-dock__button" data-dsa-module="cart" aria-label="Cart"><svg><use href="#i-bag"/></svg><span class="dsa-dock__badge">2</span></button>
+					<button class="dsa-dock__button is-split-segment-end" data-dsa-module="menu" aria-label="Menu"><svg><use href="#i-menu"/></svg></button>
+				</nav>
+			</div>
+		</div>
+	</main>
+	<script>
+		const $ = ( id ) => document.getElementById( id );
+		const surface = document.querySelector( '.dsa-surface' );
+		const viewport = document.querySelector( '.kiwe-preview-viewport' );
+		const controls = [ 'screen', 'presentation', 'dock', 'shape', 'orientation', 'theme', 'size' ].map( $ );
+		function render() {
+			const screen = $( 'screen' ).value;
+			const dock = $( 'dock' ).value;
+			const dockPresentation = dock === 'navbar' ? 'navbar' : 'dock';
+			document.documentElement.dataset.kiweTheme = $( 'theme' ).value;
+			viewport.dataset.size = $( 'size' ).value;
+			surface.classList.toggle( 'dsa-theme-sheet', $( 'presentation' ).value === 'sheet' );
+			surface.classList.toggle( 'dsa-theme-classic', $( 'presentation' ).value === 'classic' );
+			surface.classList.toggle( 'dsa-dock-split', dock === 'split' && dockPresentation === 'dock' );
+			surface.classList.toggle( 'dsa-dock-shape-pill', $( 'shape' ).value === 'pill' );
+			surface.classList.toggle( 'dsa-dock-shape-box', $( 'shape' ).value === 'box' );
+			surface.classList.toggle( 'dsa-dock-shape-square', $( 'shape' ).value === 'square' );
+			surface.dataset.dsaDockPresentation = dockPresentation;
+			surface.dataset.dsaDockOrientation = $( 'orientation' ).value;
+			surface.querySelectorAll( '.dsa-panel' ).forEach( ( panel ) => panel.classList.toggle( 'is-active', panel.dataset.screen === screen ) );
+			surface.querySelectorAll( '[data-dsa-module]' ).forEach( ( button ) => button.setAttribute( 'aria-pressed', button.dataset.dsaModule === screen ? 'true' : 'false' ) );
+		}
+		controls.forEach( ( control ) => control.addEventListener( 'change', render ) );
+		render();
+	</script>
+</body>
+</html>

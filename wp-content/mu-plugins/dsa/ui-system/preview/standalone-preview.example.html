@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en" data-kiwe-theme="light">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+	<title>Kiwe Theme Preview Skeleton</title>
+	<style>
+		:root {
+			--kiwe-color-brand: #d6006f;
+			--kiwe-color-accent: #24c6a1;
+			--kiwe-color-text: #202936;
+			--kiwe-color-text-muted: #687584;
+			--kiwe-color-surface: #f6f8f7;
+			--kiwe-color-surface-raised: #fff;
+			--kiwe-color-border: rgba(32,41,54,.16);
+			--dsa-active-color: var(--kiwe-color-brand);
+			--dsa-hover-color: var(--kiwe-color-accent);
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			min-height: 100vh;
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			color: var(--kiwe-color-text);
+			background: linear-gradient(135deg, #f7e8f1, #e5f6f2);
+		}
+		.kiwe-preview-toolbar {
+			display: flex;
+			gap: 10px;
+			align-items: center;
+			justify-content: space-between;
+			padding: 10px 14px;
+			border-bottom: 1px solid var(--kiwe-color-border);
+			background: rgba(255,255,255,.9);
+		}
+		.kiwe-preview-toolbar small { color: var(--kiwe-color-text-muted); }
+		.kiwe-preview-stage {
+			display: grid;
+			place-items: center;
+			min-height: calc(100vh - 50px);
+			padding: 24px;
+		}
+		.kiwe-preview-viewport {
+			position: relative;
+			width: min(390px, 100%);
+			height: min(760px, calc(100vh - 98px));
+			overflow: hidden;
+			border: 1px solid var(--kiwe-color-border);
+			border-radius: 28px;
+			background: rgba(255,255,255,.45);
+			box-shadow: 0 24px 80px rgba(32,41,54,.24);
+		}
+		.dsa-surface {
+			position: absolute;
+			inset: 0;
+			--dsa-dock-control-size: 48px;
+			--dsa-dock-ai-size: 54px;
+			--dsa-dock-icon-size: 23px;
+			--dsa-dock-badge-size: 18px;
+			--dsa-dock-gap: 2px;
+			--dsa-dock-padding: 8px;
+			--dsa-dock-only-reserve: 82px;
+			--dsa-screen-block-reserve: 104px;
+			--dsa-screen-inline-reserve: 24px;
+			--dsa-screen-available-inline: calc(100% - 24px);
+			--dsa-screen-available-block: calc(100% - 104px);
+			--dsa-dock-shell-radius: 999px;
+			--dsa-dock-control-radius: 999px;
+			--dsa-dock-segment-radius: 14px;
+		}
+		.dsa-surface.dsa-dock-shape-pill {
+			--dsa-dock-shell-radius: 999px;
+			--dsa-dock-control-radius: 999px;
+			--dsa-dock-segment-radius: 14px;
+		}
+		.dsa-surface.dsa-dock-shape-box {
+			--dsa-dock-shell-radius: 18px;
+			--dsa-dock-control-radius: 12px;
+			--dsa-dock-segment-radius: 12px;
+		}
+		.dsa-surface.dsa-dock-shape-square {
+			--dsa-dock-shell-radius: 0;
+			--dsa-dock-control-radius: 0;
+			--dsa-dock-segment-radius: 0;
+		}
+		.dsa-overlay-root {
+			position: absolute;
+			inset: 0;
+			display: grid;
+			align-items: end;
+			padding: 12px 12px calc(var(--dsa-dock-only-reserve) + 12px);
+			background: rgba(32,41,54,.18);
+		}
+		.dsa-panel {
+			max-height: var(--dsa-screen-available-block);
+			overflow: auto;
+			border: 1px solid var(--kiwe-color-border);
+			border-radius: 24px;
+			background: var(--kiwe-color-surface-raised);
+			padding: 22px;
+		}
+		.dsa-phonekey-dock {
+			position: absolute;
+			left: 50%;
+			bottom: 14px;
+			transform: translateX(-50%);
+			display: flex;
+			align-items: center;
+			gap: var(--dsa-dock-gap);
+			padding: var(--dsa-dock-padding);
+			border: 1px solid var(--kiwe-color-border);
+			border-radius: var(--dsa-dock-shell-radius);
+			background: var(--kiwe-color-surface-raised);
+		}
+		.dsa-phonekey-dock button {
+			width: var(--dsa-dock-control-size);
+			height: var(--dsa-dock-control-size);
+			border: 0;
+			border-radius: var(--dsa-dock-control-radius);
+			background: transparent;
+			color: var(--kiwe-color-text-muted);
+		}
+		.dsa-phonekey-dock button[aria-pressed="true"] {
+			background: var(--kiwe-color-text);
+			color: #fff;
+		}
+		.dsa-phonekey-dock [data-dsa-module="ai"] {
+			width: var(--dsa-dock-ai-size);
+			height: var(--dsa-dock-ai-size);
+			background: var(--kiwe-color-brand);
+			color: #fff;
+		}
+		.kiwe-preview-card {
+			display: grid;
+			gap: 8px;
+			padding: 14px;
+			border: 1px solid var(--kiwe-color-border);
+			border-radius: 16px;
+			background: var(--kiwe-color-surface);
+		}
+		.kiwe-preview-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			padding: 12px 0;
+			border-top: 1px solid var(--kiwe-color-border);
+		}
+	</style>
+	<!-- Copy a candidate theme beside this preview and link it here. Keep preview CSS separate. -->
+	<!-- <link rel="stylesheet" href="../import/theme-id/css/theme.css"> -->
+</head>
+<body>
+	<header class="kiwe-preview-toolbar">
+		<strong>Kiwe preview skeleton</strong>
+		<small>Preview controls live outside the app viewport.</small>
+	</header>
+	<main class="kiwe-preview-stage">
+		<div class="kiwe-preview-viewport">
+			<div
+				class="dsa-surface dsa-theme-sheet dsa-visual-marketplace dsa-dock-shape-pill"
+				data-dsa-surface
+				data-dsa-ui-contract="2"
+				data-dsa-layout="narrow"
+				data-dsa-density="comfortable"
+				data-dsa-dock-presentation="dock"
+				data-dsa-dock-orientation="horizontal"
+				data-dsa-sheet-position="bottom"
+				data-dsa-sheet-space="inset"
+			>
+				<div class="dsa-overlay-root" data-dsa-overlay-root>
+					<section class="dsa-panel dsa-profile-panel" role="dialog" aria-modal="false" aria-label="Profile" data-dsa-profile-panel>
+						<p class="dsa-hero-kicker">Profile &amp; activity</p>
+						<h1>Your account</h1>
+						<div class="kiwe-preview-card">
+							<strong>MP</strong>
+							<span>Munaf Patni</span>
+							<small>munaf@example.com</small>
+						</div>
+						<div class="kiwe-preview-row"><span>Orders</span><strong>07</strong></div>
+						<div class="kiwe-preview-row"><span>Saved</span><strong>12</strong></div>
+						<div class="kiwe-preview-row"><span>Kiwe points</span><strong>320</strong></div>
+						<button type="button" data-dsa-account-view="orders">Track, return, buy again</button>
+						<button type="button" data-dsa-account-view="addresses">Addresses</button>
+						<button type="button" data-dsa-account-logout>Sign out</button>
+					</section>
+				</div>
+				<nav class="dsa-phonekey-dock" data-dsa-dock-cluster aria-label="Kiwe modules">
+					<button type="button" data-dsa-module="menu">☷</button>
+					<button type="button" data-dsa-module="search">⌕</button>
+					<button type="button" data-dsa-module="profile" aria-pressed="true">♙</button>
+					<button type="button" data-dsa-module="links">⌘</button>
+					<button type="button" data-dsa-module="saved">♡</button>
+					<button type="button" data-dsa-module="cart">▢</button>
+					<button type="button" data-dsa-module="ai">✧</button>
+				</nav>
+			</div>
+		</div>
+	</main>
+</body>
+</html>

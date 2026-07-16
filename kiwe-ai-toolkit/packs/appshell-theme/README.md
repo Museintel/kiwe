@@ -1,0 +1,131 @@
+# Kiwe UI System Brain
+
+This folder is the portable UI-authoring brain for Kiwe DSA themes. It is intentionally small enough to hand to a designer, agency, or AI assistant without exposing the whole plugin codebase.
+
+The core rule: Kiwe owns capabilities and authority; themes own arrangement and presentation.
+
+Themes may rearrange Profile, Orders, Addresses, Downloads, Saved, Cart, Search, Menu, Trust, badges, and rails. Themes must not create a second cart, checkout, auth, PhoneKey, payment, history, focus, service-worker, or Bricks query authority.
+
+Framework handoff lives next to this folder at `framework-system/`. Use `ui-system/` when the assignment is a Kiwe DSA AppShell theme. Use `framework-system/` when the assignment is Kiwe/Seam framework usage for WordPress pages, Bricks variables/classes, universal tokens, or framework extension.
+
+## Current status
+
+Batch 1 created this portable UI brain as contract-only reference.
+
+Batch 2 began the runtime proof with Profile only. The production Profile module has a tiny visual-profile adapter registry: Legacy remains the fallback/default renderer, and Kiwe 2027 can rearrange the same Profile/account capabilities without creating new account, PhoneKey, WooCommerce, or notification authority.
+
+Batch 3 extends the same pattern to Menu and Saved in `assets/js/modules/surface-panels.js`. Legacy remains fallback/default. Kiwe 2027 may rearrange site menu links, page table-of-contents, saved wishlist items, bookmarks, empty states, and saved metrics while preserving the existing click/navigation/remove selectors.
+
+Batch 4 extends the adapter proof to Cart in `assets/js/modules/commerce-panels.js` without touching Checkout/payment. Legacy remains fallback/default. Kiwe 2027 may rearrange cart summary, item stack, discount summary, FBT rail, trust badges, empty state, and checkout CTA while preserving the existing quantity, FBT add/claim, full navigation, and checkout-open selectors.
+
+Batch 5 extends the adapter proof to the Search shell in `assets/js/surface.js`. Legacy remains fallback/default. Kiwe 2027 may rearrange the Search title, status, input, filters, alphabet rail, and results container while `assets/js/search.js` remains the behavior authority for DSA Search REST, Bricks Filter Search bridge reconciliation, quick-add, filters, alphabet, and result rendering.
+
+Batch 6 extends the adapter proof to Links, notification preferences, and the iOS install guide. Legacy remains fallback/default. Kiwe 2027 may rearrange Links identity/social/commerce/posts/review/trust blocks, notification topic/channel/category/app controls, and iOS install steps while preserving the existing edit/upload/cart/social/preference/platform/save/install selectors.
+
+Batch 7 extends the adapter proof to the AI panel, inbox, and report presentation in `assets/js/modules/ai-panel.js`. Legacy remains fallback/default. Kiwe 2027 may rearrange AI title, signal inbox, empty state, read/unread summary, report grid, and disabled chat placeholder while preserving the existing AI insight action/dismiss, notification dismiss, tray toggle, status, swipe, and popout-owned selectors.
+
+Batch 8 adds the first runtime theme registry in `assets/js/surface.js` as `window.DSA.ui`. It exposes the active contract id, adapter version, active visual profile, adapter-ready screen ids, current Active/Hover color model, and small helpers for profile-aware payloads. This is intentionally tiny: it gives future theme folders one canonical browser bridge without moving cart, checkout, PhoneKey, Bricks, geometry, or lifecycle authority into theme code.
+
+Batch 9 defines the first marketplace package boundary. `theme-manifest.schema.json` now describes a `kiwe.surface-theme.v1` package with scoped CSS/assets, required UI/token contracts, supported presentation modes, budgets, and forbidden authority classes. `marketplace-package.md` documents import/export rules, rejection checks, the `window.DSA.ui` bridge, and the designer handoff process.
+
+Batch 10 adds the first source-level package validator at `tools/ui-theme/validate-package.cjs`. It checks a proposed theme folder for `theme.json`, required contracts, allowed screens, safe relative CSS/assets, CSS budget, forbidden executable/document files, remote CSS imports/URLs, and unlisted files. A safe fixture package lives at `tools/ui-theme/fixtures/valid/`.
+
+Batch 11 adds the standalone preview handoff contract. `preview-handoff.md` tells designers how to include a viewable HTML preview without mixing preview placeholders, simulator code, fake geometry, or debug labels into the importable theme. `preview/standalone-preview.example.html` provides a minimal app-viewport skeleton with preview controls outside the Surface, production-style `data-dsa-*` attributes, and Geometry Engine variables. `screen-payloads.json` now also documents the Games surface selectors and authority boundary. Dock support is explicit: themes may declare full compact dock, split compact dock, and navigation-bar support, and previews must show split dock with the same `dsa-dock-split` and `is-split-*` runtime classes production emits.
+
+Batch 12 adds the Legacy UI review handoff at `handoffs/legacy-ui-review/`. It gives outside UI reviewers a neutral standalone preview, a baseline manifest, placeholder notes, and a review brief without revealing known issues or asking them to rewrite core behavior. This creates the same review loop for the built-in Legacy profile that marketplace themes use: validate the package boundary, inspect the preview, report visual issues, and separate CSS-level fixes from core/runtime requests.
+
+Batch 17 graduates the built-in modern profile from prototype language to `Kiwe 2027`. Existing saved `prototype` values remain compatibility aliases, but new runtime payloads and admin settings use `kiwe2027`. Links site score is now optional core data: a blank admin score is emitted as no score and the badge must be omitted by all themes. Dock modes are also explicit UI-brain rules: full compact dock, split compact dock, and Navigation bar are core shell modes that themes may style but must not reinterpret or allow page content to bleed through.
+
+Batch 18 makes Dock shape a first-class shell state instead of a vague styling hint. Admin exposes Pill, Rounded box, and Square / no radius. The renderer normalizes older `rounded` settings to Pill for compatibility, while the CSS publishes `--dsa-dock-shell-radius`, `--dsa-dock-control-radius`, and `--dsa-dock-segment-radius` so Legacy, Kiwe 2027, and future themes can honor the same shape controls. Theme handoffs should preview all claimed dock modes and shape modes.
+
+Batch 19 records the first external-AI theme intake audit at `theme-intake-audit-2026-07-15.md` and tightens `prompt.md` after multiple "ultra-modern" outputs converged on Aurora/glass/frosted-card patterns. Future handoffs must now include a distinctness note, selector-fit checklist, local preview placeholders, absent optional-data states, and a clear separation between CSS-only theme work and core/adapter-profile requirements.
+
+Batch 20 begins the Seam framework merge. `assets/css/seam.css` is now the production-safe, opt-in Seam class/attribute layer for WordPress pages and future Bricks exports. `includes/Design/Seam_Vocabulary_Schema.php`, `seam-vocabulary.md`, and `seam-vocabulary.json` define the canonical vocabulary: roles, flows, tones, scenes, states, motion, shapes, body classes, and reserved behavior attributes. The old Seam runtime ideas remain reserved; Batch 20 does not create a second cart/auth/checkout/page-history authority.
+
+Batch 21 exports Seam into Bricks without making Bricks the framework authority. The existing Kiwe token export now also publishes curated Seam global classes/categories to Bricks 2.4 global class storage while Kiwe continues to ship `assets/css/seam.css` as the portable source of styling. Attribute/class parity was tightened for gap, alignment, justification, and hidden state helpers so page builders, AI handoffs, and raw HTML can use the same vocabulary.
+
+Batch 22 adds the safe Seam runtime at `assets/js/seam.js`. It exposes `window.Seam.ready`, vocabulary-aware query/closest helpers, `setAttr`, `setState`, `toggleState`, `hasState`, and `describe`. It deliberately does not revive the old Seam binding/action system in production and does not own cart, checkout, auth, PhoneKey, service workers, page history, focus traps, or DSA surface lifecycle.
+
+Batch 23 starts Kiwe DSA adoption through a protected shadow contract. Rendered DSA panel roots now receive `data-seam-*` metadata (`data-seam-role`, `data-seam-flow`, `data-seam-tone`, `data-seam-scene`, and `data-seam-surface-panel`) after render/update. Public page authors can use normal Seam classes and attributes; Kiwe's own panels use `data-seam-*` first so the framework brain can identify them without accidentally applying generic page-level Seam CSS to live sheets/screens.
+
+Batch 24 extends that shadow contract into stable DSA interior landmarks. After each render/update, the runtime annotates existing title blocks, FBT rails, cart items, saved grids, forms, fields, media, badges, prices, action rows, CTAs, trust rows, and game stages with protected `data-seam-*` metadata. This does not change visual styling or behavior selectors; it gives Seam, validators, Bricks/page handoffs, and AI reviewers a reliable semantic map of the live AppShell.
+
+Batch 25 adds the first landmark discovery API. `window.Seam.landmarks(scope?, filters?)` returns public Seam and protected Kiwe shadow landmarks; `window.DSA.ui.seam.landmarks()` scopes the same idea to the active AppShell panel. `window.Seam.describe()` and `window.DSA.ui.seam.activePanel()` provide small semantic summaries for tooling, previews, diagnostics, and AI/theme review. The debug-only Seam linter now also catches unknown `data-seam-*` shadow attributes and Kiwe roots missing a shadow role.
+
+Batch 26 tightens the offline marketplace validator. `tools/ui-theme/validate-package.cjs` now reads `seam-vocabulary.json` and the production Seam CSS class list. Importable theme CSS fails when it uses unknown `.seam-*` classes, invalid public Seam attribute values, or protected Kiwe `data-seam-*` shadow selectors. Regression fixtures under `tools/ui-theme/fixtures/invalid-seam-*` prove the failure cases.
+
+Batch 27 adds whole-handoff validation at `tools/ui-theme/validate-handoff.cjs`. It runs the import-package validator and then checks `preview/index.html` plus `preview/PLACEHOLDERS.md` for Kiwe geometry attributes, dock modes, dock shape states, screen selectors, FBT rail proof, placeholder documentation, and forbidden remote/network/service-worker/payment behavior. The Legacy UI review handoff now passes this stricter preview contract.
+
+Batch 28 adds review-quality gates to the whole-handoff validator. A returned AI/designer handoff must now include a root README with a distinctness note / visual thesis, screen and shell mode coverage, selector-fit checklist, validation instructions, intentional limitations, and explicit core/plugin change separation. The Legacy UI review README now models these required sections.
+
+Batch 29 starts real DSA adoption of public Seam classes, but only where visual risk is low. The runtime now adds public `seam-eyebrow`, `seam-caption`, `seam-price`, and matching tone classes to existing DSA eyebrow, caption, and price landmarks while keeping cards, buttons, inputs, media, badges, dock geometry, checkout, and sheet layout on protected `data-seam-*` shadow metadata until visual parity is proven.
+
+Batch 30 adds a machine-readable Seam adoption map to the canonical vocabulary contract. `appShellAdoption` now tells runtime code, validators, handoff AIs, and reviewers whether a role is `public-adopted`, `shadow-only`, or `authority-only` inside Kiwe DSA internals. `window.Seam.adoption(role?)` and `window.DSA.ui.seam.adoption(role?)` expose the same decision in the browser. This intentionally blocks premature public-class adoption for cards, buttons, inputs, media, badges, nav, actions, forms, fields, and modals because those classes still carry layout/shape/spacing risk inside live sheets/screens.
+
+Batch 31 adds the Seam adoption audit command at `tools/ui-theme/audit-seam-adoption.cjs` and requires handoff READMEs to acknowledge the AppShell adoption map. The audit checks that DSA runtime does not attach shadow-only public classes, that public-adopted classes are actually applied, and that shadow-only reasons remain tied to real high-risk Seam CSS declarations. This makes the framework brain testable instead of relying on memory.
+
+Batch 32 adds the final integration proof note at `integration-proof-2026-07-16.md` and aligns the marketplace, preview, and Kiwe 2027 reference docs with the current Seam adoption bridge. The proof file lists the commands that must pass before the framework track moves into release prep, including runtime syntax checks, PHP Seam vocabulary linting, Seam adoption audit, package/handoff validation, invalid-fixture rejection, and MU manifest verification.
+
+Batch 33 completes release prep for the Seam/Kiwe Framework track. `Kiwe > Tokens` is now `Kiwe > Framework` because the admin action pushes variables, the Kiwe Universal palette, and Kiwe Seam global classes/categories into Bricks. The legacy `kiwe-tokens` admin slug redirects to the Framework page. The root MU loader and nested package are bumped to `0.5.75`, the changelog records the framework track, and the package manifest is rebuilt for folder-based MU deployment.
+
+Batch 34 adds `framework-system/` as the portable Kiwe Framework handoff folder. It contains curated Seam vocabulary, token map, runtime snapshots, Bricks capability docs, framework prompt, source map, and reference audit tooling so web developers can use Kiwe/Seam without receiving the whole plugin. `ui-system/` remains the AppShell theme brain; `framework-system/` is the framework brain.
+
+Batch 35 tightens the framework after external developer review and AI website/page-output audits. `window.Seam` now validates against both nested and flat vocabulary contracts, mirrors the `collapsed` state class, and ships as 0.3.1. The Seam CSS no longer has a self-referential scene-intensity fallback, body heading identity classes now affect scene headings, and the debug linter flags shadow-only public Seam classes placed inside live Kiwe roots. `framework-system/HANDOFF-LITE.md` defines the smaller file set to give ordinary web developers/AIs, while the framework prompt and Bricks notes now explicitly separate Seam-built website/page work from Kiwe AppShell theme work. Seam is optional/additive for website pages; Kiwe AppShell themes remain `ui-system/`; DSA/Woo/Bricks behavior authority remains core-owned. Bricks 2.4 beta's `includes/html-to-bricks` converter is now documented as a real handoff target for standalone website previews.
+
+Batch 36 adds `framework-system/handoffs/website-builder/` as the one-folder website/page handoff. It copies only the practical framework prompt, handoff-lite instructions, token/vocabulary contracts, runtime CSS/JS, and Bricks capability docs needed by an AI/web developer to build a normal website/page with Kiwe/Seam. This avoids giving the full framework source/reference folder for ordinary website work while keeping AppShell theme work separate in `ui-system/`.
+
+Batch 37 makes Seam roles semantic/headless by default after website-output testing showed that high role usage produced repetitive boxed layouts. `data-role="card"` and `.seam-card` now identify meaning without forcing padding, background, border, shadow, radius, flex layout, gap, or color. The temporary recipe idea has been removed entirely for now: no recipe-prefixed classes ship in core and no recipe classes are exported to Bricks. Bricks export now focuses on semantic roles, neutral flows, states, tones, motion, explicit shape utilities, and universal Kiwe/Seam tokens. The vocabulary/contracts explain that real website art direction should live in site CSS/classes backed by Kiwe/Seam tokens, and reusable missing patterns should become generic framework additions rather than project-locked classes. AppShell shadow adoption remains protected for isolation from site CSS, not because core role classes are visually heavy.
+
+Batch 38 adds the Seam Class Vocabulary: a neutral/searchable Bricks class library with 21 Kiwe Seam categories and 276 generic class handles. It covers core roles, content, commerce, navigation, disclosures, tables/data, media, forms, sizes, density, emphasis, placement, aspect, flow controls, and utilities. These names are pushed from `Kiwe > Framework` so Bricks designers can search, add, and style classes such as `seam-card`, `seam-accordion`, `seam-table`, `seam-size-xl`, and `seam-density-spacious`. They are naming infrastructure, not visual recipes.
+
+Next release-prep steps:
+
+1. Live Hostinger upload/proof after the rebuilt MU package is deployed.
+
+## Files
+
+- `theme-manifest.schema.json` - the shape of a future theme folder.
+- `prompt.md` - the prompt to give an AI along with this folder when requesting a new theme.
+- `HANDOFF-MODES.md` - explains website-only, DSA-theme-only, and combined website + AppShell theme assignments.
+- `marketplace-package.md` - import/export, acceptance, and designer handoff rules.
+- `preview-handoff.md` - standalone HTML preview rules and layer separation.
+- `theme-intake-audit-2026-07-15.md` - first external-AI theme intake findings and prompt corrections.
+- `integration-proof-2026-07-16.md` - final framework-track proof checklist before release prep.
+- `seam-vocabulary.md` - human-readable Seam vocabulary and authority rules.
+- `seam-vocabulary.json` - machine-readable Seam vocabulary for validators, builders, and AI handoffs.
+- `seam-class-vocabulary.md` - human-readable neutral class library for Bricks/global-class authoring.
+- `seam-class-vocabulary.json` - machine-readable searchable class vocabulary pushed to Bricks.
+- `screen-payloads.json` - what screens can consume and rearrange.
+- `bricks-capabilities.json` - Bricks hooks, dynamic tags, builder controls, and safe design boundaries.
+- `token-map.css` - the universal token aliases theme authors should use.
+- `tokens-reference.md` - explains why the portable token map is curated and how to request/promote missing tokens.
+- `slots.md` - stable slots/data attributes and what they mean.
+- `budgets.md` - payload, motion, paint, authority, and interaction constraints.
+- `adapters/adapter-contract.js` - function signatures and helper expectations.
+- `adapters/profile.kiwe-2027.example.js` - example Profile layout using existing Profile capabilities.
+- `profiles/legacy.css` - compact reference for the built-in low-tax Legacy profile and shared dock shape variables.
+- `profiles/kiwe-2027.css` - scoped profile styling example for the built-in modern profile.
+- `preview/standalone-preview.example.html` - copyable preview shell skeleton; not importable theme code.
+- `handoffs/legacy-ui-review/` - reviewer bundle for auditing the built-in Legacy UI profile.
+
+## htmx and Alpine
+
+Use htmx only for server-owned fragments where WordPress remains authoritative.
+
+Use Alpine only for local presentation state such as tabs, disclosure, preview toggles, and temporary local UI.
+
+Do not use htmx or Alpine for PhoneKey/auth, checkout/payment, cart reconciliation authority, service-worker policy, navigation history, focus trapping, or the Surface lifecycle.
+
+## Color model
+
+For now, site owners control the primary brand state through Active and Hover colors. The theme system must consume the universal `kiwe-*` tokens and compatibility `dsa-*` aliases. A richer palette can be added later without breaking theme folders.
+
+## Package validation
+
+From the repository root:
+
+```bash
+node tools/ui-theme/validate-package.cjs path/to/theme-folder
+```
+
+The validator is intentionally conservative. Passing it does not mean a design is visually approved; failing it means the package crossed the first marketplace safety boundary.

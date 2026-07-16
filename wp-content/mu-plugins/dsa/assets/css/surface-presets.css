@@ -1,0 +1,7 @@
+/*
+ * Compatibility stub.
+ *
+ * Kiwe 0.5.36 removed the experimental presentation-set system. Theme presentation
+ * now lives in surface.css so the same Surface modules can render as either
+ * Classic screens or configured sheets without changing module logic.
+ */

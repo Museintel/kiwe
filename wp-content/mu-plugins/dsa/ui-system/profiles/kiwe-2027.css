@@ -1,0 +1,84 @@
+/*
+ * Kiwe 2027 profile reference.
+ * Kiwe 2027 is the built-in modern AppShell profile. This compact file is a
+ * designer-facing reference, not a complete copy of production CSS.
+ */
+
+.dsa-surface .kiwe-profile-v2027 {
+	display: grid;
+	gap: var(--kiwe-theme-space-md);
+}
+
+.kiwe-profile-v2027__identity {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: var(--kiwe-theme-space-sm);
+	padding-block: var(--kiwe-theme-space-sm);
+	border-bottom: 1px solid var(--kiwe-theme-border);
+}
+
+.kiwe-profile-v2027__avatar {
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border-radius: var(--kiwe-theme-radius-card);
+	background: var(--kiwe-theme-text);
+	color: var(--kiwe-theme-inverse);
+	font-weight: 900;
+}
+
+.kiwe-profile-v2027__identity small,
+.kiwe-profile-v2027__identity em,
+.kiwe-profile-v2027__stats small,
+.kiwe-profile-v2027__row small {
+	display: block;
+	color: var(--kiwe-theme-muted);
+	font-style: normal;
+}
+
+.kiwe-profile-v2027__stats {
+	display: grid;
+	overflow: hidden;
+	border: 1px solid var(--kiwe-theme-border);
+	border-radius: var(--kiwe-theme-radius-panel);
+	background: var(--kiwe-theme-surface-raised);
+}
+
+.kiwe-profile-v2027__stats span {
+	display: grid;
+	gap: 4px;
+	padding: var(--kiwe-theme-space-md);
+	border-bottom: 1px solid var(--kiwe-theme-border);
+}
+
+.kiwe-profile-v2027__stats span:last-child {
+	border-bottom: 0;
+}
+
+.kiwe-profile-v2027__rows {
+	display: grid;
+}
+
+.kiwe-profile-v2027__row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--kiwe-theme-space-sm);
+	padding: var(--kiwe-theme-space-sm) 0;
+	border: 0;
+	border-bottom: 1px solid var(--kiwe-theme-border);
+	background: transparent;
+	color: var(--kiwe-theme-text);
+	text-align: left;
+}
+
+.kiwe-profile-v2027__signout {
+	justify-self: start;
+	margin-top: var(--kiwe-theme-space-sm);
+	border: 0;
+	background: transparent;
+	color: var(--kiwe-color-danger, #d83a52);
+	font-weight: 900;
+}

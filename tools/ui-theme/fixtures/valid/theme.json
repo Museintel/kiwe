@@ -1,0 +1,25 @@
+{
+  "schema": "kiwe.surface-theme.v1",
+  "id": "studio.account-cards",
+  "name": "Account Cards",
+  "version": "1.0.0",
+  "profile": "marketplace",
+  "mode": "css-only",
+  "description": "Fixture package for the Kiwe UI theme validator.",
+  "author": "Kiwe",
+  "css": ["css/theme.css"],
+  "assets": ["assets/badge.svg"],
+  "screens": ["profile", "cart", "search", "menu", "saved", "links", "notifications", "ios-install", "ai"],
+  "requires": {
+    "uiContract": "kiwe.surface-ui.v2",
+    "tokenContract": "kiwe.universal",
+    "minKiwe": "0.5.73"
+  },
+  "supports": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "dock-shape-pill", "dock-shape-box", "dock-shape-square", "horizontal", "vertical", "reduced-motion"],
+  "budgets": {
+    "cssKb": 40,
+    "jsKb": 0,
+    "blockingAssets": 0
+  },
+  "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+}

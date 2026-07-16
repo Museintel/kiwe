@@ -1,0 +1,14 @@
+{
+  "schema": "kiwe.surface-theme.v1",
+  "id": "fixture.invalid-seam-class",
+  "name": "Invalid Seam Class",
+  "version": "1.0.0",
+  "profile": "marketplace",
+  "mode": "css-only",
+  "css": ["css/theme.css"],
+  "screens": ["profile"],
+  "requires": {
+    "uiContract": "kiwe.surface-ui.v2",
+    "tokenContract": "kiwe.universal"
+  }
+}

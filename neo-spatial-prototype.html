@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Neo-Spatial Prototype</title>
+<style>
+  /* 
+   * Seam Tokens (Simulated)
+   */
+  :root {
+    --kiwe-color-border: #e5e7eb;
+    --kiwe-color-surface: #ffffff;
+    --kiwe-color-text: #111827;
+    --kiwe-color-muted: #6b7280;
+    --kiwe-color-brand: #d6006f;
+    --kiwe-font-ui: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    
+    --kiwe-radius-md: 10px;
+    --kiwe-radius-lg: 16px;
+    --kiwe-radius-full: 9999px;
+    
+    /* Tactile Motion Tokens */
+    --kiwe-motion-duration-normal: 300ms;
+    --kiwe-motion-easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    
+    /* Surface Mappings */
+    --dsa-ui-surface: var(--kiwe-color-surface);
+    --dsa-ui-border: var(--kiwe-color-border);
+    --dsa-ui-text: var(--kiwe-color-text);
+    --dsa-ui-muted: var(--kiwe-color-muted);
+    
+    --dsa-active-color: #111827;
+    --dsa-hover-color: #24c6a1;
+  }
+  
+  html[data-theme="dark"] {
+    --kiwe-color-border: #374151;
+    --kiwe-color-surface: #1f2937;
+    --kiwe-color-text: #f9fafb;
+    --dsa-active-color: #f9fafb;
+    --dsa-hover-color: #34d399;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--kiwe-font-ui);
+    /* Colorful background to demonstrate vibrancy/glassmorphism */
+    background: linear-gradient(135deg, #fbcfe8, #bfdbfe, #ddd6fe);
+    color: var(--dsa-ui-text);
+    overflow: hidden;
+    height: 100vh;
+  }
+  
+  html[data-theme="dark"] body {
+    background: linear-gradient(135deg, #4c1d95, #1e3a8a, #0f172a);
+  }
+
+  .site-mock {
+    padding: 80px 20px;
+    text-align: center;
+    color: #1f2937;
+  }
+  html[data-theme="dark"] .site-mock { color: #f9fafb; }
+  .site-mock h1 { font-weight: 800; font-size: 3rem; margin-bottom: 10px; }
+
+  /* =========================================
+     The Appshell Base 
+     ========================================= */
+  .dsa-surface {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+  }
+  .dsa-surface * {
+    pointer-events: auto;
+    box-sizing: border-box;
+  }
+
+  /* =========================================
+     The Dock (Neo-Spatial)
+     ========================================= */
+  .dsa-dock-cluster {
+    position: absolute;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: var(--kiwe-radius-full);
+    padding: 8px 12px;
+    transition: all 0.3s ease;
+    
+    /* Default Base Styles */
+    box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+  }
+  
+  /* Dock Material: Glass (High Vibrancy, Machined Edge) */
+  .dsa-surface.dsa-dock-material-glass .dsa-dock-cluster {
+    background: color-mix(in srgb, var(--dsa-ui-surface) 65%, transparent);
+    backdrop-filter: blur(24px) saturate(200%);
+    box-shadow: 
+      0 12px 32px rgba(0,0,0,0.08), 
+      inset 0 0 0 1px color-mix(in srgb, var(--dsa-ui-text) 8%, transparent);
+  }
+
+  /* Dock Material: Solid */
+  .dsa-surface.dsa-dock-material-solid .dsa-dock-cluster {
+    background: var(--dsa-ui-surface);
+    backdrop-filter: none;
+    border: 1px solid var(--dsa-ui-border);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  }
+
+  /* Dock Buttons */
+  .dsa-dock-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--dsa-ui-muted);
+    font-size: 18px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    /* Tactile Spring Motion! */
+    transition: transform var(--kiwe-motion-duration-normal) var(--kiwe-motion-easing-spring), background 0.2s ease, color 0.2s ease;
+  }
+  
+  .dsa-dock-btn:hover, .dsa-dock-btn.is-active {
+    background: color-mix(in srgb, var(--dsa-hover-color) 12%, transparent);
+    color: var(--dsa-hover-color);
+  }
+  
+  .dsa-dock-btn:active {
+    transform: scale(0.90); /* The Squish Effect */
+  }
+
+  /* =========================================
+     Overlay Root & Modes 
+     ========================================= */
+  .dsa-overlay-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .dsa-overlay-root.is-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Screen Material: Glass (Vibrant Neo-Spatial) */
+  .dsa-surface.dsa-screen-material-glass .dsa-overlay-root {
+    backdrop-filter: blur(24px) saturate(200%);
+    /* We use a very subtle tint instead of a heavy block of color */
+    background: color-mix(in srgb, var(--dsa-ui-surface) 40%, transparent);
+  }
+
+  /* Screen Material: Solid */
+  .dsa-surface.dsa-screen-material-solid .dsa-overlay-root {
+    background: var(--dsa-ui-surface);
+    backdrop-filter: none;
+  }
+
+  /* =========================================
+     The Panel
+     ========================================= */
+  .dsa-panel {
+    width: 100%;
+    max-width: 480px;
+    border-radius: var(--kiwe-radius-lg);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transform: scale(0.95) translateY(20px);
+    transition: transform 0.4s cubic-bezier(0.18, 0.9, 0.2, 1.12); /* Snap easing */
+  }
+  
+  .dsa-overlay-root.is-active .dsa-panel {
+    transform: scale(1) translateY(0);
+  }
+  
+  /* Panel on Glass Screen */
+  .dsa-surface.dsa-screen-material-glass .dsa-panel {
+    background: color-mix(in srgb, var(--dsa-ui-surface) 75%, transparent);
+    box-shadow: 
+      0 24px 64px rgba(0,0,0,0.12),
+      inset 0 1px 0 0 color-mix(in srgb, #ffffff 40%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--dsa-ui-text) 5%, transparent);
+  }
+  
+  /* Panel on Solid Screen */
+  .dsa-surface.dsa-screen-material-solid .dsa-panel {
+    background: var(--dsa-ui-surface);
+    border: 1px solid var(--dsa-ui-border);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.05);
+  }
+
+  .dsa-panel h2 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--dsa-ui-text);
+    letter-spacing: -0.03em;
+  }
+
+  /* =========================================
+     Interactive Cards (Spotlight Glow)
+     ========================================= */
+  .dsa-card {
+    border-radius: var(--kiwe-radius-md);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    
+    /* Base style */
+    border: 1px solid var(--dsa-ui-border);
+    background-color: color-mix(in srgb, var(--dsa-ui-surface) 100%, transparent);
+    
+    /* Tactile Spring */
+    transition: transform var(--kiwe-motion-duration-normal) var(--kiwe-motion-easing-spring), border-color 0.2s ease, background-size 0.4s ease;
+    
+    /* Spotlight CSS Trick */
+    background-image: radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--dsa-hover-color) 16%, transparent), transparent 60%);
+    background-size: 100% 0%;
+    background-repeat: no-repeat;
+  }
+  
+  /* Glass panel specific card tweak */
+  .dsa-surface.dsa-screen-material-glass .dsa-card {
+    background-color: color-mix(in srgb, var(--dsa-ui-surface) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--dsa-ui-text) 8%, transparent);
+  }
+
+  .dsa-card:hover {
+    border-color: color-mix(in srgb, var(--dsa-hover-color) 60%, transparent);
+    background-size: 100% 250%; /* Triggers spotlight glow */
+  }
+  
+  .dsa-card:active {
+    transform: scale(0.96); /* Tactile Squish */
+  }
+  
+  .dsa-card h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--dsa-ui-text); }
+  .dsa-card p { margin: 4px 0 0 0; font-size: 14px; color: var(--dsa-ui-muted); }
+
+  .dsa-primary-btn {
+    margin-top: 12px;
+    padding: 16px;
+    background: var(--dsa-hover-color);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--kiwe-radius-md);
+    font-weight: 700; 
+    font-size: 16px;
+    cursor: pointer;
+    
+    /* Tactile Spring */
+    transition: transform var(--kiwe-motion-duration-normal) var(--kiwe-motion-easing-spring), filter 0.2s ease;
+  }
+  .dsa-primary-btn:hover { filter: brightness(1.1); }
+  .dsa-primary-btn:active { transform: scale(0.95); }
+
+  /* =========================================
+     Prototype Controls
+     ========================================= */
+  .controls {
+    position: fixed; top: 20px; left: 20px;
+    background: #ffffff; padding: 20px;
+    border-radius: 12px; border: 1px solid #d1d5db;
+    z-index: 2000; color: #000;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 280px;
+  }
+  .controls h3 { margin: 0 0 12px 0; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #4b5563; }
+  .controls label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 600; cursor: pointer; }
+  .controls button {
+    display: block; width: 100%; padding: 10px; margin-bottom: 8px;
+    border: 1px solid #d1d5db; background: #f9fafb;
+    border-radius: 6px; cursor: pointer; font-weight: 600;
+  }
+  .controls button:hover { background: #e5e7eb; }
+</style>
+</head>
+<body>
+
+<div class="site-mock">
+  <h1>Wordpress Site Underneath</h1>
+  <p>Vibrant background used to demonstrate intense glassmorphism.</p>
+</div>
+
+<div class="controls">
+  <h3>Material Settings</h3>
+  <label>
+    <input type="checkbox" id="dockMaterial" checked onchange="updateMaterials()"> 
+    Dock: Glass (unchecked = Solid)
+  </label>
+  <label>
+    <input type="checkbox" id="screenMaterial" checked onchange="updateMaterials()"> 
+    Screen: Glass (unchecked = Solid)
+  </label>
+  
+  <hr style="border:none; border-top:1px solid #e5e7eb; margin: 16px 0;">
+  
+  <h3>Actions</h3>
+  <button onclick="toggleTheme()">Toggle Dark Mode</button>
+  <button onclick="closePanel()" style="background: #fee2e2; color: #991b1b; border-color: #fecaca;">Close Panel</button>
+</div>
+
+<!-- DSA Appshell: Driven purely by the exact classes used in your PHP renderer -->
+<div class="dsa-surface dsa-dock-material-glass dsa-screen-material-glass" id="appshell">
+  
+  <div class="dsa-overlay-root is-active" id="overlay">
+    <div class="dsa-panel">
+      <h2>Search</h2>
+      
+      <div class="dsa-card">
+        <div>
+          <h3>Click Me to Feel Physics</h3>
+          <p>Notice the squish and the spotlight hover glow.</p>
+        </div>
+      </div>
+      
+      <div class="dsa-card">
+        <div>
+          <h3>Hover over me</h3>
+          <p>Pure CSS radial glow mapping.</p>
+        </div>
+      </div>
+      
+      <button class="dsa-primary-btn">Tactile Action Button</button>
+    </div>
+  </div>
+
+  <div class="dsa-dock-cluster">
+    <button class="dsa-dock-btn" onclick="openPanel()">☰</button>
+    <button class="dsa-dock-btn is-active" onclick="openPanel()">🔍</button>
+    <button class="dsa-dock-btn" onclick="openPanel()">✨</button>
+    <button class="dsa-dock-btn" onclick="openPanel()">🛍️</button>
+    <button class="dsa-dock-btn" onclick="openPanel()">👤</button>
+  </div>
+</div>
+
+<script>
+  function updateMaterials() {
+    const shell = document.getElementById('appshell');
+    const isDockGlass = document.getElementById('dockMaterial').checked;
+    const isScreenGlass = document.getElementById('screenMaterial').checked;
+    
+    // Clear old classes
+    shell.classList.remove('dsa-dock-material-glass', 'dsa-dock-material-solid', 'dsa-screen-material-glass', 'dsa-screen-material-solid');
+    
+    // Apply new classes natively like Surface_Renderer.php does
+    shell.classList.add(isDockGlass ? 'dsa-dock-material-glass' : 'dsa-dock-material-solid');
+    shell.classList.add(isScreenGlass ? 'dsa-screen-material-glass' : 'dsa-screen-material-solid');
+  }
+  
+  function toggleTheme() {
+    const html = document.documentElement;
+    if(html.getAttribute('data-theme') === 'dark') html.removeAttribute('data-theme');
+    else html.setAttribute('data-theme', 'dark');
+  }
+  
+  function closePanel() {
+    document.getElementById('overlay').classList.remove('is-active');
+  }
+  
+  function openPanel() {
+    document.getElementById('overlay').classList.add('is-active');
+  }
+</script>
+</body>
+</html>

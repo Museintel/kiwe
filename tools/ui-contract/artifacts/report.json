@@ -1,0 +1,4305 @@
+{
+  "generatedAt": "2026-07-05T20:36:15.002Z",
+  "results": [
+    {
+      "id": "phone-320-horizontal-menu-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 111.09375,
+          "top": 500,
+          "bottom": 550,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 12,
+          "bottom": 490
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-menu-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 111.09375,
+          "top": 500,
+          "bottom": 550,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 12,
+          "bottom": 490
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-profile-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 494,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 60.5,
+          "bottom": 441.5
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-profile-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 494,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 60.5,
+          "bottom": 441.5
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-cart-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 502,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 27.75,
+          "bottom": 474.25
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-cart-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 502,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 27.75,
+          "bottom": 474.25
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-links-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 502,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 71,
+          "bottom": 431
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-links-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 502,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 71,
+          "bottom": 431
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-320-horizontal-search-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 502,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 15.6875,
+          "bottom": 486.296875
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "phone-320-horizontal-search-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 308,
+          "top": 570,
+          "bottom": 626,
+          "width": 296
+        },
+        "context": {
+          "left": 12,
+          "right": 308,
+          "top": 502,
+          "bottom": 550,
+          "width": 296,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 308,
+          "top": 15.6875,
+          "bottom": 486.296875
+        },
+        "viewport": {
+          "width": 320,
+          "height": 640
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "phone-390-horizontal-menu-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 111.09375,
+          "top": 704,
+          "bottom": 754,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 83,
+          "bottom": 623
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-menu-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 111.09375,
+          "top": 704,
+          "bottom": 754,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 83,
+          "bottom": 623
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-profile-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 698,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 159.5,
+          "bottom": 546.5
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-profile-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 698,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 159.5,
+          "bottom": 546.5
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-cart-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 706,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 176.25,
+          "bottom": 529.75
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-cart-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 706,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 176.25,
+          "bottom": 529.75
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-links-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 706,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 186,
+          "bottom": 520
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-links-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 706,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 186,
+          "bottom": 520
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "phone-390-horizontal-search-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 706,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 102.6875,
+          "bottom": 603.296875
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "phone-390-horizontal-search-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 12,
+          "right": 378,
+          "top": 774,
+          "bottom": 830,
+          "width": 366
+        },
+        "context": {
+          "left": 12,
+          "right": 378,
+          "top": 706,
+          "bottom": 754,
+          "width": 366,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 378,
+          "top": 102.6875,
+          "bottom": 603.296875
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-menu-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 129.59375,
+          "top": 636,
+          "bottom": 686,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 49,
+          "bottom": 589
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-menu-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 129.59375,
+          "top": 636,
+          "bottom": 686,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 49,
+          "bottom": 589
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-profile-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 630,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 125.5,
+          "bottom": 512.5
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-profile-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 630,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 125.5,
+          "bottom": 512.5
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-cart-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 638,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 142.25,
+          "bottom": 495.75
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-cart-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 638,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 142.25,
+          "bottom": 495.75
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-links-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 638,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 152,
+          "bottom": 486
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-links-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 638,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 152,
+          "bottom": 486
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-search-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 638,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 89.265625,
+          "bottom": 548.71875
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "resized-desktop-horizontal-search-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 706,
+          "bottom": 762,
+          "width": 430
+        },
+        "context": {
+          "left": 30.5,
+          "right": 460.5,
+          "top": 638,
+          "bottom": 686,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 479,
+          "top": 89.265625,
+          "bottom": 548.71875
+        },
+        "viewport": {
+          "width": 491,
+          "height": 776
+        },
+        "layout": "narrow",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "tablet-horizontal-menu-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 268.09375,
+          "top": 580,
+          "bottom": 630,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 33.5,
+          "bottom": 548.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-menu-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 111.09375,
+          "top": 645.5,
+          "bottom": 695.5,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 98.5,
+          "bottom": 613.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-menu-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 268.09375,
+          "top": 580,
+          "bottom": 630,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 33.5,
+          "bottom": 548.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-menu-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 111.09375,
+          "top": 645.5,
+          "bottom": 695.5,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 98.5,
+          "bottom": 613.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-profile-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 574,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 97.5,
+          "bottom": 484.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-profile-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 581.5,
+          "bottom": 637.5,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 162.5,
+          "bottom": 549.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-profile-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 574,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 97.5,
+          "bottom": 484.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-profile-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 581.5,
+          "bottom": 637.5,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 162.5,
+          "bottom": 549.5
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-cart-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 582,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 91.25,
+          "bottom": 490.75
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-cart-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 587.75,
+          "bottom": 635.75,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 156.25,
+          "bottom": 555.75
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-cart-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 582,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 91.25,
+          "bottom": 490.75
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-cart-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 587.75,
+          "bottom": 635.75,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 156.25,
+          "bottom": 555.75
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-links-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 582,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 62.96875,
+          "bottom": 519.03125
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-links-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 616.015625,
+          "bottom": 664.015625,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 127.96875,
+          "bottom": 584.03125
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-links-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 582,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 62.96875,
+          "bottom": 519.03125
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-vertical-links-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 616.015625,
+          "bottom": 664.015625,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 127.96875,
+          "bottom": 584.03125
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "tablet-horizontal-search-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 582,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 82.140625,
+          "bottom": 499.84375
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "tablet-vertical-search-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 603.71875,
+          "bottom": 651.71875,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 140.265625,
+          "bottom": 571.71875
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "tablet-horizontal-search-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 169,
+          "right": 599,
+          "top": 650,
+          "bottom": 706,
+          "width": 430
+        },
+        "context": {
+          "left": 169,
+          "right": 599,
+          "top": 582,
+          "bottom": 630,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 756,
+          "top": 82.140625,
+          "bottom": 499.84375
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "tablet-vertical-search-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 700,
+          "right": 756,
+          "top": 276,
+          "bottom": 706,
+          "width": 56
+        },
+        "context": {
+          "left": 12,
+          "right": 686,
+          "top": 603.71875,
+          "bottom": 651.71875,
+          "width": 674,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 12,
+          "right": 686,
+          "top": 140.265625,
+          "bottom": 571.71875
+        },
+        "viewport": {
+          "width": 768,
+          "height": 720
+        },
+        "layout": "compact",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "desktop-horizontal-menu-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 567.09375,
+          "top": 760,
+          "bottom": 810,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 108.796875,
+          "bottom": 653.1875
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-menu-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 257.09375,
+          "top": 750.1875,
+          "bottom": 800.1875,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 173.796875,
+          "bottom": 718.1875
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-menu-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 567.09375,
+          "top": 760,
+          "bottom": 810,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 108.796875,
+          "bottom": 653.1875
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-menu-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 257.09375,
+          "top": 750.1875,
+          "bottom": 800.1875,
+          "width": 99.09375,
+          "policy": "content"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 173.796875,
+          "bottom": 718.1875
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-profile-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 754,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 214,
+          "bottom": 548
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-profile-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 645,
+          "bottom": 701,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 279,
+          "bottom": 613
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-profile-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 754,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 214,
+          "bottom": 548
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-profile-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 645,
+          "bottom": 701,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 279,
+          "bottom": 613
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-cart-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 762,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 192.25,
+          "bottom": 569.734375
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-cart-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 666.71875,
+          "bottom": 714.71875,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 257.25,
+          "bottom": 634.734375
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-cart-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 762,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 192.25,
+          "bottom": 569.734375
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-cart-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 666.71875,
+          "bottom": 714.71875,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 257.25,
+          "bottom": 634.734375
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-links-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 762,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 148.09375,
+          "bottom": 613.890625
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-links-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 710.875,
+          "bottom": 758.875,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 213.09375,
+          "bottom": 678.890625
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-links-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 762,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 148.09375,
+          "bottom": 613.890625
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-vertical-links-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 710.875,
+          "bottom": 758.875,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 213.09375,
+          "bottom": 678.890625
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": null
+      }
+    },
+    {
+      "id": "desktop-horizontal-search-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 762,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 157.484375,
+          "bottom": 604.5
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "desktop-vertical-search-light",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 701.5,
+          "bottom": 749.5,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 222.484375,
+          "bottom": 669.5
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "desktop-horizontal-search-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 468,
+          "right": 898,
+          "top": 830,
+          "bottom": 886,
+          "width": 430
+        },
+        "context": {
+          "left": 468,
+          "right": 898,
+          "top": 762,
+          "bottom": 810,
+          "width": 430,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 193,
+          "right": 1173,
+          "top": 157.484375,
+          "bottom": 604.5
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "horizontal",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "desktop-vertical-search-dark",
+      "assertions": {
+        "layout": true,
+        "viewportOverflow": true,
+        "dockContextAlignment": true,
+        "contextPlacement": true,
+        "accessibleNames": true,
+        "accessibleMediaAndFields": true,
+        "uniqueIds": true,
+        "oneDialog": true,
+        "touchTargets": true,
+        "searchContract": true
+      },
+      "geometry": {
+        "dock": {
+          "left": 1298,
+          "right": 1354,
+          "top": 456,
+          "bottom": 886,
+          "width": 56
+        },
+        "context": {
+          "left": 158,
+          "right": 1138,
+          "top": 701.5,
+          "bottom": 749.5,
+          "width": 980,
+          "policy": "dock"
+        },
+        "panel": {
+          "left": 158,
+          "right": 1138,
+          "top": 222.484375,
+          "bottom": 669.5
+        },
+        "viewport": {
+          "width": 1366,
+          "height": 900
+        },
+        "layout": "wide",
+        "orientation": "vertical",
+        "unnamed": 0,
+        "imagesWithoutAlt": 0,
+        "fieldsWithoutNames": 0,
+        "duplicateIds": [],
+        "dialogs": 1,
+        "dockTargets": [
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40,
+          40
+        ],
+        "searchContract": {
+          "activeFilters": 1,
+          "alphabetVisible": true,
+          "cards": 2,
+          "quickAdds": 2
+        }
+      }
+    },
+    {
+      "id": "search-bricks-tgbzzq-contract",
+      "assertions": {
+        "contextPreserved": true,
+        "alphabetAvailable": true,
+        "alphabetDrills": true,
+        "nonLiveBricksBridge": true,
+        "historyReconciled": true,
+        "selectedFilterReconciled": true,
+        "cardsAndQuickAdd": true
+      },
+      "evidence": {
+        "alphabetVisible": true,
+        "selectedPrefix": "L",
+        "nextPrefix": "La",
+        "selectedBefore": "products",
+        "nativeValue": "lactase",
+        "instanceValue": "lactase",
+        "selectedCalls": 4,
+        "fetchCalls": 4,
+        "abortCalls": 4,
+        "repairedSelection": true,
+        "closeReconciled": true,
+        "closeHistoryPersisted": true,
+        "addCalls": 1,
+        "cards": 1,
+        "quickAdds": 1
+      }
+    }
+  ],
+  "failures": []
+}

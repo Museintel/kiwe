@@ -1,0 +1,43 @@
+/*
+ * Kiwe UI System token map.
+ *
+ * Themes should consume canonical --kiwe-* tokens first and --dsa-* aliases
+ * when they need Surface geometry/state values.
+ *
+ * Current admin color controls:
+ * - Active => --kiwe-color-brand => --dsa-active-color
+ * - Hover  => --kiwe-color-accent => --dsa-hover-color
+ */
+
+:where(.dsa-surface) {
+	--kiwe-theme-brand: var(--kiwe-color-brand, var(--dsa-active-color, #d6006f));
+	--kiwe-theme-accent: var(--kiwe-color-accent, var(--dsa-hover-color, #24c6a1));
+	--kiwe-theme-hero: var(--kiwe-color-hero, var(--dsa-hero-text-color, rgba(20,24,34,0.18)));
+
+	--kiwe-theme-surface: var(--kiwe-color-surface, var(--dsa-ui-surface, #f6f8f7));
+	--kiwe-theme-surface-raised: var(--kiwe-color-surface-raised, var(--dsa-ui-surface, #fff));
+	--kiwe-theme-text: var(--kiwe-color-text, var(--dsa-ui-text, #1f2933));
+	--kiwe-theme-muted: var(--kiwe-color-text-muted, var(--dsa-ui-muted, #64717d));
+	--kiwe-theme-inverse: var(--kiwe-color-text-inverse, var(--dsa-ui-inverse, #fff));
+	--kiwe-theme-border: var(--kiwe-color-border, var(--dsa-ui-border, rgba(31,41,51,0.16)));
+
+	--kiwe-theme-radius-card: var(--kiwe-card-radius, var(--kiwe-radius-md, 10px));
+	--kiwe-theme-radius-panel: var(--kiwe-radius-xl, 20px);
+	--kiwe-theme-radius-pill: var(--kiwe-radius-full, 9999px);
+
+	--kiwe-theme-space-xs: var(--kiwe-space-xs, 8px);
+	--kiwe-theme-space-sm: var(--kiwe-space-sm, 12px);
+	--kiwe-theme-space-md: var(--kiwe-space-md, 18px);
+	--kiwe-theme-space-lg: var(--kiwe-space-lg, 28px);
+
+	--kiwe-theme-type-caption: var(--kiwe-type-caption, 12px);
+	--kiwe-theme-type-body: var(--kiwe-type-body, 16px);
+	--kiwe-theme-type-h5: var(--kiwe-type-h5, 24px);
+	--kiwe-theme-type-h2: var(--kiwe-type-h2, 48px);
+
+	--kiwe-theme-dock-control: var(--dsa-dock-control-size, var(--kiwe-control-size, 48px));
+	--kiwe-theme-dock-ai: var(--dsa-dock-ai-size, var(--kiwe-control-size-ai, 54px));
+	--kiwe-theme-dock-icon: var(--dsa-dock-icon-size, var(--kiwe-icon-size, 23px));
+	--kiwe-theme-badge: var(--dsa-dock-badge-size, var(--kiwe-badge-size, 18px));
+}
+

@@ -1,0 +1,14 @@
+.DS_Store
+Thumbs.db
+node_modules/
+vendor/
+.env
+.env.*
+*.log
+wp-content/debug.log
+.tools/
+tmp/
+kiwe-ai-toolkit/node_modules/
+kiwe-ai-toolkit/tmp/
+kiwe-ai-toolkit/out/
+ui/

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://kiwe.local/schemas/bricks-capabilities.json",
+  "source": "includes/Bricks/Bricks_Integration.php and docs/BRICKS-INTEGRATION.md",
+  "principle": "Bricks remains page-design authority. DSA remains Surface/app authority. Theme authors may style/arrange DSA surfaces and may rely on semantic Bricks markers, but must not copy per-site Bricks element IDs.",
+  "hooks": [
+    "bricks/dynamic_tags_list",
+    "bricks/dynamic_data/render_tag",
+    "bricks/dynamic_data/render_content",
+    "bricks/element/render_attributes",
+    "bricks/frontend/render_element",
+    "bricks/elements/woocommerce-mini-cart/controls",
+    "bricks/elements/filter-search/controls",
+    "bricks/elements/icon/controls",
+    "bricks/elements/product-add-to-cart/control_groups",
+    "bricks/elements/product-add-to-cart/controls",
+    "bricks/elements/product-upsells/control_groups",
+    "bricks/elements/product-upsells/controls",
+    "bricks/element/settings",
+    "bricks/element/set_root_attributes"
+  ],
+  "dynamicTags": [
+    "{kiwe_site_logo}",
+    "{kiwe_site_logo_inverse}",
+    "{kiwe_store_address_1}",
+    "{kiwe_store_address_2}",
+    "{kiwe_store_city}",
+    "{kiwe_store_country}",
+    "{kiwe_store_state}",
+    "{kiwe_store_postcode}",
+    "{kiwe_store_phone}",
+    "{kiwe_store_email}",
+    "{kiwe_selling_locations}",
+    "{kiwe_shipping_locations}",
+    "{woo_product_weight}",
+    "{kiwe_menu_<menu_id>}"
+  ],
+  "semanticAttributes": [
+    { "name": "data-dsa-bricks-id", "meaning": "Stable runtime marker for observed Bricks element roots. Never hardcode across sites." },
+    { "name": "data-dsa-bricks-type", "meaning": "Observed Bricks element type for registry/classification." },
+    { "name": "data-dsa-open-module", "meaning": "Bricks Icon launcher target for a registered DSA module." },
+    { "name": "data-dsa-search-bridge", "meaning": "Bricks Filter Search element that DSA Search may bridge into." }
+  ],
+  "builderControls": [
+    "Icon element: Kiwe DSA launcher module selector",
+    "Filter Search element: Use as DSA Search bridge",
+    "WooCommerce mini-cart: quantity stepper and Kiwe mini-cart controls",
+    "Product add-to-cart: DSA add-to-cart enhancer controls",
+    "Product upsells: linked products / FBT controls"
+  ],
+  "exportsToBricks": {
+    "variables": "Kiwe universal tokens are exported to Bricks global variables as kiwe-* variables.",
+    "colors": "Kiwe universal color tokens are exported to the Bricks color palette as Kiwe Universal.",
+    "classes": "Kiwe Seam framework classes are exported to Bricks global classes under Kiwe Seam categories. The expanded Seam Class Vocabulary is neutral/searchable: Bricks stores names/categories and designers attach visual styles there; Kiwe only ships CSS for true framework primitives/utilities."
+  },
+  "seamGlobalClassCategories": [
+    "Kiwe Seam Flow",
+    "Kiwe Seam Role Core",
+    "Kiwe Seam Content",
+    "Kiwe Seam Commerce",
+    "Kiwe Seam Navigation",
+    "Kiwe Seam Disclosure",
+    "Kiwe Seam Data",
+    "Kiwe Seam Media",
+    "Kiwe Seam Form",
+    "Kiwe Seam Tone",
+    "Kiwe Seam Size",
+    "Kiwe Seam Density",
+    "Kiwe Seam Emphasis",
+    "Kiwe Seam Scene",
+    "Kiwe Seam State",
+    "Kiwe Seam Motion",
+    "Kiwe Seam Shape",
+    "Kiwe Seam Placement",
+    "Kiwe Seam Aspect",
+    "Kiwe Seam Flow Control",
+    "Kiwe Seam Utility"
+  ],
+  "safeForThemes": [
+    "Consume Kiwe tokens exported to Bricks variables.",
+    "Style DSA surfaces with universal kiwe-* and compatibility dsa-* tokens.",
+    "Design Bricks pages that contain semantic DSA launchers.",
+    "Use DSA Search bridge when Bricks owns the page query."
+  ],
+  "forbiddenForThemes": [
+    "Do not parse or persist Bricks post meta from a theme.",
+    "Do not copy generated Bricks IDs between websites.",
+    "Do not replace Bricks query authority with DSA theme code.",
+    "Do not create alternate mini-cart/checkout/payment authority."
+  ]
+}

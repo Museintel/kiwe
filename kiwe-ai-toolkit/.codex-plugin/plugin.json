@@ -1,0 +1,25 @@
+{
+  "name": "kiwe",
+  "version": "0.1.0",
+  "description": "Create Kiwe website, DSA AppShell theme, and combined handoffs without reading the full plugin codebase.",
+  "author": {
+    "name": "Kiwe"
+  },
+  "license": "MIT",
+  "keywords": ["kiwe", "seam", "wordpress", "bricks", "app-shell"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Kiwe",
+    "shortDescription": "Kiwe/Seam handoff toolkit",
+    "longDescription": "Provides compact Kiwe contracts, prompts, and handoff scaffolds for website/page, DSA AppShell theme, and combined outputs.",
+    "developerName": "Kiwe",
+    "category": "Design",
+    "capabilities": ["Instructions"],
+    "defaultPrompt": [
+      "Create a Kiwe website handoff.",
+      "Create a Kiwe DSA AppShell theme handoff.",
+      "Create a combined Kiwe website and AppShell theme handoff."
+    ],
+    "brandColor": "#d6006f"
+  }
+}

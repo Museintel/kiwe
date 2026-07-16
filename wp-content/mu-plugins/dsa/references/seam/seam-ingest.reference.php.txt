@@ -1,0 +1,352 @@
+<?php
+/**
+ * Seam Ingest for Bricks Builder — v3.0 (Updated for new architecture)
+ * Reads minimal seam.project.json → generates full Universal Token Library + Bricks HEX variables
+ */
+
+defined('ABSPATH') || exit;
+
+// ==================== CONSTANTS ====================
+if (!defined('SEAM_UPLOAD_DIR')) {
+    define('SEAM_UPLOAD_DIR', WP_CONTENT_DIR . '/uploads/seam');
+}
+if (!defined('SEAM_UPLOAD_URL')) {
+    define('SEAM_UPLOAD_URL', content_url('uploads/seam'));
+}
+if (!defined('SEAM_PROJECT_FILE')) {
+    define('SEAM_PROJECT_FILE', SEAM_UPLOAD_DIR . '/seam.project.json');
+}
+if (!defined('SEAM_TOKENS_JSON')) {
+    define('SEAM_TOKENS_JSON', SEAM_UPLOAD_DIR . '/seam.tokens.json');
+}
+if (!defined('SEAM_TOKENS_GENERATED_CSS')) {
+    define('SEAM_TOKENS_GENERATED_CSS', SEAM_UPLOAD_DIR . '/seam.tokens.generated.css');
+}
+if (!defined('SEAM_RUNTIME_DATA')) {
+    define('SEAM_RUNTIME_DATA', SEAM_UPLOAD_DIR . '/seam.runtime-data.json');
+}
+
+if (!defined('BRICKS_DB_GLOBAL_VARIABLES')) {
+    define('BRICKS_DB_GLOBAL_VARIABLES', 'bricks_global_variables');
+}
+if (!defined('BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES')) {
+    define('BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES', 'bricks_global_variables_categories');
+}
+if (!defined('BRICKS_DB_COLOR_PALETTE')) {
+    define('BRICKS_DB_COLOR_PALETTE', 'bricks_color_palette');
+}
+if (!defined('BRICKS_DB_STYLE_MANAGER')) {
+    define('BRICKS_DB_STYLE_MANAGER', 'bricks_style_manager');
+}
+if (!defined('BRICKS_DB_THEME_STYLES')) {
+    define('BRICKS_DB_THEME_STYLES', 'bricks_theme_styles');
+}
+
+// ==================== HOOKS ====================
+add_action('admin_menu', 'seam_ingest_register_admin');
+add_action('admin_init', 'seam_ingest_handle_admin_actions');
+
+// ==================== ADMIN UI (kept from your working version) ====================
+function seam_ingest_register_admin(): void
+{
+    add_menu_page('Seam', 'Seam', 'manage_options', 'seam-dashboard', 'seam_ingest_render_dashboard', 'dashicons-art', 59);
+    add_submenu_page('seam-dashboard', 'Ingest Project', 'Ingest Project', 'manage_options', 'seam-ingest', 'seam_ingest_render_page');
+    add_submenu_page('seam-dashboard', 'Status', 'Status', 'manage_options', 'seam-status', 'seam_ingest_render_status');
+}
+
+function seam_ingest_render_dashboard(): void
+{
+    $state = get_option('seam_project_state', []);
+    ?>
+    <div class="wrap">
+        <h1>Seam v3</h1>
+        <div class="card" style="max-width:760px;margin-top:20px;">
+            <h2>Project Pipeline</h2>
+            <p>Upload <code>seam.project.json</code> (minimal source of truth). Ingest generates full tokens, Bricks variables, and runtime files.</p>
+            <?php if (!empty($state['project']['name'])) : ?>
+                <p><strong>Current project:</strong> <?php echo esc_html($state['project']['name']); ?> — Last ingest: <?php echo esc_html($state['ingested_at'] ?? 'Unknown'); ?></p>
+            <?php endif; ?>
+            <p><a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=seam-ingest')); ?>">Ingest seam.project.json</a></p>
+        </div>
+    </div>
+    <?php
+}
+
+function seam_ingest_render_page(): void
+{
+    if (!current_user_can('manage_options')) return;
+
+    if (isset($_POST['seam_ingest_nonce']) && wp_verify_nonce($_POST['seam_ingest_nonce'], 'seam_ingest_project')) {
+        seam_ingest_handle_upload();
+    }
+
+    $file = SEAM_UPLOAD_DIR . '/seam.project.json';
+    ?>
+    <div class="wrap">
+        <h1>Ingest Seam Project (v3)</h1>
+        <div class="notice notice-info">
+            <p>Upload the minimal <code>seam.project.json</code>. This will generate <code>seam.tokens.json</code>, <code>seam.tokens.generated.css</code>, Bricks variables, and runtime data.</p>
+        </div>
+        <div class="card" style="max-width:760px;margin-top:20px;">
+            <h2>Current File</h2>
+            <table class="form-table">
+                <tr><th>Expected location</th><td><code><?php echo esc_html($file); ?></code></td></tr>
+                <tr><th>Exists</th><td><?php echo file_exists($file) ? 'Yes' : 'No'; ?></td></tr>
+                <tr><th>Last changed</th><td><?php echo file_exists($file) ? esc_html(date_i18n('Y-m-d H:i:s', filemtime($file))) : 'Not available'; ?></td></tr>
+            </table>
+        </div>
+        <div class="card" style="max-width:760px;margin-top:20px;">
+            <h2>Upload</h2>
+            <form method="post" enctype="multipart/form-data">
+                <?php wp_nonce_field('seam_ingest_project', 'seam_ingest_nonce'); ?>
+                <p><input type="file" name="seam_project_file" accept=".json" required></p>
+                <p><label><input type="checkbox" name="seam_force" value="1"> Force ingest even if unchanged</label></p>
+                <p><button class="button button-primary button-hero" type="submit">Upload & Ingest</button></p>
+            </form>
+        </div>
+    </div>
+    <?php
+}
+
+function seam_ingest_render_status(): void
+{
+    $state = get_option('seam_project_state', []);
+    ?>
+    <div class="wrap">
+        <h1>Seam Status</h1>
+        <pre><?php print_r($state); ?></pre>
+    </div>
+    <?php
+}
+
+// ==================== UPLOAD HANDLER ====================
+function seam_ingest_handle_upload(): void
+{
+    if (!current_user_can('manage_options')) {
+        seam_ingest_notice('error', 'Permission denied.');
+        return;
+    }
+    if (empty($_FILES['seam_project_file']) || $_FILES['seam_project_file']['error'] !== UPLOAD_ERR_OK) {
+        seam_ingest_notice('error', 'Please upload a valid seam.project.json file.');
+        return;
+    }
+
+    $json = file_get_contents($_FILES['seam_project_file']['tmp_name']);
+    $project = json_decode($json, true);
+
+    if (!is_array($project) || ($project['seam'] ?? '') !== '3.0') {
+        seam_ingest_notice('error', 'Invalid Seam v3 project file. Must contain "seam": "3.0".');
+        return;
+    }
+
+    wp_mkdir_p(SEAM_UPLOAD_DIR);
+    file_put_contents(SEAM_PROJECT_FILE, $json);
+
+    $result = seam_ingest_project($project, md5($json), !empty($_POST['seam_force']), $json);
+    seam_ingest_notice($result['success'] ? 'success' : 'error', $result['message']);
+}
+
+function seam_ingest_handle_admin_actions(): void
+{
+    if (!current_user_can('manage_options')) return;
+
+    if (isset($_POST['seam_reingest_saved'], $_POST['seam_reingest_nonce']) && wp_verify_nonce($_POST['seam_reingest_nonce'], 'seam_reingest_saved')) {
+        $file = SEAM_UPLOAD_DIR . '/seam.project.json';
+        if (file_exists($file)) {
+            $json = file_get_contents($file);
+            $project = json_decode($json, true);
+            if (is_array($project)) seam_ingest_project($project, md5($json), true, $json);
+        }
+    }
+
+    if (isset($_POST['seam_clear_ingest'], $_POST['seam_clear_nonce']) && wp_verify_nonce($_POST['seam_clear_nonce'], 'seam_clear_ingest')) {
+        // clear logic (kept minimal for snippet)
+        delete_option('seam_project_state');
+        delete_option('seam_ingest_hash');
+    }
+}
+
+// ==================== CORE INGEST LOGIC (UPDATED FOR v3) ====================
+function seam_ingest_project(array $project, string $hash, bool $force = false, string $raw_json = ''): array
+{
+    if (!wp_mkdir_p(SEAM_UPLOAD_DIR)) {
+        return ['success' => false, 'message' => 'Could not create upload folder.'];
+    }
+
+    // Generate full computed tokens from minimal project.json
+    $computed = seam_generate_full_computed_tokens($project);
+
+    // Build Bricks data
+    $variables = seam_build_bricks_variables_from_computed($computed, $project);
+    $palette = seam_build_bricks_palette($project);
+
+    // Write generated token files
+    file_put_contents(SEAM_TOKENS_JSON, wp_json_encode($computed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    file_put_contents(SEAM_TOKENS_GENERATED_CSS, seam_generate_tokens_generated_css($computed, $project));
+
+    // Write runtime data
+    $runtime_data = [
+        'project' => $project,
+        'personality' => $project['personality'] ?? [],
+        'brand' => $project['brand'] ?? []
+    ];
+    file_put_contents(SEAM_RUNTIME_DATA, wp_json_encode($runtime_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+    // Update Bricks options
+    update_option(BRICKS_DB_GLOBAL_VARIABLES, $variables);
+    update_option(BRICKS_DB_COLOR_PALETTE, $palette);
+
+    // Save state
+    update_option('seam_project_state', [
+        'project' => $project,
+        'ingested_at' => current_time('mysql')
+    ]);
+    update_option('seam_ingest_hash', $hash);
+
+    return ['success' => true, 'message' => 'Seam v3 project ingested successfully. Tokens and Bricks variables generated.'];
+}
+
+// ==================== NEW: FULL TOKEN GENERATION ====================
+function seam_generate_full_computed_tokens(array $project): array
+{
+    $brand = $project['brand']['colors'] ?? [];
+    $seed = $project['seed'] ?? [];
+    $fonts = $project['brand']['fonts'] ?? [];
+
+    $computed = [
+        'note' => 'AUTO-GENERATED by seam-ingest.php — do not edit manually',
+        'color' => [
+            '--color-surface' => $brand['surface'] ?? '#FCFAF8',
+            '--color-surface-raised' => $brand['surface-raised'] ?? '#FFFFFF',
+            '--color-text' => $brand['text'] ?? '#282828',
+            '--color-brand' => $brand['brand'] ?? '#377753',
+            '--color-accent' => $brand['accent'] ?? '#B19542',
+            '--color-neutral' => $brand['neutral'] ?? '#5A5A5A',
+            '--color-success' => $brand['success'] ?? '#437A22',
+            '--color-warning' => $brand['warning'] ?? '#B8860B',
+            '--color-danger' => $brand['danger'] ?? '#A12C2C',
+            '--color-info' => $brand['info'] ?? '#2F6F9F',
+            '--color-footer' => $brand['footer'] ?? '#1C1C1C',
+            '--color-shadow' => $brand['shadow'] ?? '#111111',
+        ],
+        'font' => [
+            '--font-display' => $fonts['display'] ?? 'Poppins, system-ui, sans-serif',
+            '--font-body' => $fonts['body'] ?? 'Poppins, system-ui, sans-serif',
+            '--font-mono' => $fonts['mono'] ?? 'ui-monospace, monospace',
+        ],
+        'type' => [
+            '--type-micro' => 'clamp(9.72px, 0.05vw + 9.57px, 10.24px)',
+            '--type-caption' => 'clamp(11.67px, 0.1vw + 11.34px, 12.8px)',
+            '--type-body' => 'clamp(14px, 0.18vw + 13.43px, 16px)',
+            '--type-lg' => 'clamp(20.16px, 0.43vw + 18.78px, 25px)',
+            '--type-xl' => 'clamp(24.19px, 0.63vw + 22.18px, 31.25px)',
+            '--type-2xl' => 'clamp(29.03px, 0.9vw + 26.16px, 39.06px)',
+            '--type-3xl' => 'clamp(34.84px, 1.25vw + 30.84px, 48.83px)',
+            '--type-4xl' => 'clamp(41.8px, 1.72vw + 36.31px, 61.04px)',
+            '--type-5xl' => 'clamp(50.16px, 2.33vw + 42.7px, 76.29px)',
+            '--type-6xl' => 'clamp(60.2px, 3.14vw + 50.15px, 95.37px)',
+        ],
+        'space' => [
+            '--space-xxs' => 'clamp(4px, 0.36vw + 2.86px, 8px)',
+            '--space-xs' => 'clamp(6px, 0.54vw + 4.29px, 12px)',
+            '--space-sm' => 'clamp(9px, 0.8vw + 6.43px, 18px)',
+            '--space-md' => 'clamp(13.5px, 1.21vw + 9.64px, 27px)',
+            '--space-lg' => 'clamp(20.25px, 1.81vw + 14.46px, 40.5px)',
+            '--space-xl' => 'clamp(30.38px, 2.71vw + 21.7px, 60.75px)',
+        ],
+        'radius' => [
+            '--radius-base' => ($seed['radius']['base'] ?? 8) . 'px',
+            '--radius-xs' => 'calc(var(--radius-base) * 0.25)',
+            '--radius-sm' => 'calc(var(--radius-base) * 0.5)',
+            '--radius-md' => 'var(--radius-base)',
+            '--radius-lg' => 'calc(var(--radius-base) * 1.5)',
+            '--radius-xl' => 'calc(var(--radius-base) * 2)',
+            '--radius-full' => '9999px',
+        ],
+        'scene' => [
+            '--scene-display-coeff' => 1.5,
+            '--scene-heading-coeff' => 1.2,
+            '--scene-body-coeff' => 0.4,
+            '--scene-ui-coeff' => 0.15,
+            '--scene-padding-coeff' => 0.9,
+            '--scene-gap-coeff' => 1.0,
+        ],
+        'motion' => [
+            '--motion-fast' => '150ms',
+            '--motion-normal' => '300ms',
+            '--motion-slow' => '600ms',
+            '--ease-standard' => 'cubic-bezier(0.4, 0, 0.2, 1)',
+        ],
+        'z' => [
+            '--z-base' => '0',
+            '--z-raised' => '10',
+            '--z-sticky' => '100',
+            '--z-overlay' => '1000',
+            '--z-modal' => '1100',
+            '--z-toast' => '1200',
+        ]
+    ];
+
+    // Add heading hierarchy if present
+    if (!empty($project['personality']['heading_hierarchy'])) {
+        $computed['heading_hierarchy'] = $project['personality']['heading_hierarchy'];
+    }
+
+    return $computed;
+}
+
+function seam_generate_tokens_generated_css(array $computed, array $project): string
+{
+    $css = "/* SEAM TOKENS GENERATED CSS — v3.0 (auto-generated by ingest.php) */\n";
+    $css .= "@layer seam.tokens {\n:root {\n";
+
+    foreach ($computed as $group => $tokens) {
+        if (!is_array($tokens)) continue;
+        foreach ($tokens as $name => $value) {
+            if (is_array($value)) continue; // skip heading_hierarchy etc.
+            $css .= "    {$name}: {$value};\n";
+        }
+    }
+
+    // Dark mode (basic)
+    $css .= "}\n\n:root[data-theme=\"dark\"] {\n";
+    $css .= "    --color-surface: #151816;\n";
+    $css .= "    --color-surface-raised: #1E241F;\n";
+    $css .= "    --color-text: #F2F4F1;\n";
+    $css .= "}\n}\n";
+
+    return $css;
+}
+
+function seam_build_bricks_variables_from_computed(array $computed, array $project): array
+{
+    $vars = [];
+    foreach ($computed as $group => $tokens) {
+        if (!is_array($tokens)) continue;
+        foreach ($tokens as $name => $value) {
+            if (is_array($value)) continue;
+            $vars[] = [
+                'name' => $name,
+                'value' => $value,
+                'category' => 'Seam' . ucfirst($group)
+            ];
+        }
+    }
+    return $vars;
+}
+
+function seam_build_bricks_palette(array $project): array
+{
+    $colors = $project['brand']['colors'] ?? [];
+    $palette = [];
+    foreach ($colors as $name => $hex) {
+        $palette[] = ['hex' => $hex];
+    }
+    return [['id' => 'seam', 'name' => 'Seam', 'colors' => $palette]];
+}
+
+function seam_ingest_notice(string $type, string $message): void
+{
+    $class = $type === 'success' ? 'notice-success' : 'notice-error';
+    echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . wp_kses_post($message) . '</p></div>';
+}

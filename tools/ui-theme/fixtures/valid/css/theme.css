@@ -1,0 +1,8 @@
+.dsa-visual-marketplace .dsa-panel {
+  border-radius: var(--kiwe-radius-panel, var(--dsa-sheet-radius, 24px));
+  color: var(--kiwe-color-text, var(--dsa-text-color, #202936));
+}
+
+.dsa-visual-marketplace [data-dsa-profile-panel] {
+  background: var(--kiwe-surface-panel, var(--dsa-panel-bg, #fff));
+}

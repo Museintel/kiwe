@@ -1,0 +1,38 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '../..');
+const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+const checks = [];
+const check = (name, condition) => checks.push([name, Boolean(condition)]);
+
+const loader = read('wp-content/mu-plugins/dsa.php');
+const entry = read('wp-content/mu-plugins/dsa/dsa.php');
+const runtime = read('wp-content/mu-plugins/dsa/includes/Runtime/Package_Manifest.php');
+const readme = read('README.md');
+const runbook = read('docs/RELEASE-RUNBOOK.md');
+const workflow = read('.github/workflows/quality.yml');
+const matrix = JSON.parse(read('tools/release/compatibility-matrix.json'));
+const versionMatch = entry.match(/define\(\s*'DSA_VERSION'\s*,\s*'([^']+)'\s*\)/);
+const currentVersion = versionMatch ? versionMatch[1] : '';
+
+check('loader and package are version-synchronized', Boolean(currentVersion) && loader.includes(currentVersion) && entry.includes(currentVersion));
+check('PHP 8.2 minimum is declared', loader.includes('Requires PHP: 8.2') && entry.includes('Requires PHP: 8.2'));
+check('runtime uses generated package manifest', runtime.includes("private const MANIFEST     = 'package-manifest.json'") && runtime.includes("hash_file( 'sha256'"));
+check('runtime package proof remains cached', runtime.includes('CACHE_TTL') && runtime.includes('dsa_package_manifest_proof'));
+check('manifest paths are constrained', runtime.includes("str_contains( $relative, '..' )") && runtime.includes("str_starts_with( $relative, '/' )"));
+check('README identifies exact deployment pair', readme.includes('dsa.php') && readme.includes('dsa/'));
+check('README does not require a ZIP', readme.includes('No ZIP is required'));
+check('runbook covers incomplete uploads', runbook.includes('Incomplete Upload Drill'));
+check('runbook covers non-destructive rollback', runbook.includes('Do not manually delete options'));
+check('compatibility matrix covers PHP 8.2-8.4', ['8.2', '8.3', '8.4'].every((version) => matrix.php.includes(version)));
+check('compatibility claims keep live proof separate', matrix.notes.includes('does not claim'));
+check('CI matrix covers PHP 8.2-8.4', ['8.2', '8.3', '8.4'].every((version) => workflow.includes(version)));
+check('CI does not silently resume PHP lint', !workflow.includes('php -l'));
+check('CI verifies generated package', workflow.includes('verify-package.cjs'));
+check('repository has editor and export contracts', fs.existsSync(path.join(root, '.editorconfig')) && fs.existsSync(path.join(root, '.gitattributes')));
+check('changelog records current release', Boolean(currentVersion) && read('CHANGELOG.md').includes(currentVersion));
+
+const failed = checks.filter(([, passed]) => !passed);
+for (const [name, passed] of checks) process.stdout.write(`${passed ? 'PASS' : 'FAIL'} ${name}\n`);
+process.stdout.write(`${checks.length - failed.length}/${checks.length} contracts passed.\n`);
+if (failed.length) process.exit(1);
