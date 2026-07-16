@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, getContext, listClassVocabulary, listModes, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, listClassVocabulary, listModes, startProject, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -11,6 +11,19 @@ const server = new Server(
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
+    {
+      name: 'kiwe_start_project',
+      description: 'Start a Kiwe project from a plain-language human brief. Returns the correct compact context and output contract so the human prompt can stay short.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          mode: { type: 'string', enum: ['auto', 'website', 'theme', 'combined'], default: 'auto' },
+          brief: { type: 'string', description: 'Plain-language human design brief.' },
+          name: { type: 'string', description: 'Optional handoff/project name.' }
+        },
+        required: ['brief']
+      }
+    },
     {
       name: 'kiwe_list_modes',
       description: 'List Kiwe output modes: website, theme, combined.',
@@ -63,6 +76,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const args = request.params.arguments || {};
   let result;
   switch (request.params.name) {
+    case 'kiwe_start_project':
+      result = startProject(args);
+      break;
     case 'kiwe_list_modes':
       result = listModes();
       break;

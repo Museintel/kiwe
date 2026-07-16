@@ -28,10 +28,45 @@ Giving the whole plugin to an AI wastes tokens and invites it to invent against 
 ```bash
 npm install
 node bin/kiwe.js modes
+node bin/kiwe.js start combined --brief "Netflix-like ultra-modern news website for Indian startups and business news, with a matching Kiwe AppShell direction"
 node bin/kiwe.js context combined
 node bin/kiwe.js create combined ./out/my-kiwe-handoff --name my-kiwe-handoff
 node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 ```
+
+## For external AIs and designers
+
+The human prompt should stay short. The toolkit carries the rules.
+
+Good human prompt:
+
+```text
+Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Create a Netflix-like ultra-modern news website for Indian startups, businesses,
+entrepreneurs, and celebrity-owned business spotlights.
+Include the Kiwe AppShell/DSA direction too.
+```
+
+The AI should then start with one tool call:
+
+```json
+{
+  "tool": "kiwe_start_project",
+  "arguments": {
+    "mode": "combined",
+    "brief": "Netflix-like ultra-modern news website for Indian startups, businesses, entrepreneurs, funding news, and celebrity-owned business spotlights, with matching Kiwe AppShell/DSA direction."
+  }
+}
+```
+
+If tool calling is not available, clone the repo and run:
+
+```bash
+npm install --prefix kiwe-ai-toolkit
+node kiwe-ai-toolkit/bin/kiwe.js start combined --brief "Netflix-like ultra-modern news website for Indian startups, businesses, entrepreneurs, funding news, and celebrity-owned business spotlights, with matching Kiwe AppShell/DSA direction."
+```
+
+Do not ask the human to paste long Kiwe rules. `kiwe_start_project` returns the relevant mode context, output contract, preview requirements, Bricks boundaries, Seam vocabulary guidance, and AppShell separation rules.
 
 ## MCP
 
@@ -57,6 +92,7 @@ Example MCP client entry:
 
 ## MCP tools
 
+- `kiwe_start_project`
 - `kiwe_list_modes`
 - `kiwe_get_context`
 - `kiwe_create_handoff`
@@ -109,4 +145,3 @@ The public tool namespace is `kiwe`.
 - Kiwe = product/tool namespace.
 - Seam = neutral framework and class vocabulary.
 - DSA/AppShell = runtime surface, sheets, dock, and capabilities.
-

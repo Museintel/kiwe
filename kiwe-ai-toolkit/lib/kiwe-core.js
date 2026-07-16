@@ -86,6 +86,56 @@ export function listClassVocabulary() {
   throw new Error('Seam class vocabulary was not found in toolkit packs.');
 }
 
+function inferMode(mode, brief) {
+  const requested = String(mode || '').trim().toLowerCase();
+  if (requested && requested !== 'auto') {
+    return normalizeMode(requested);
+  }
+
+  const text = String(brief || '').toLowerCase();
+  const wantsTheme = /\b(theme|appshell|app shell|dsa|dock|sheet|surface|screen|kiwe ui)\b/.test(text);
+  const wantsWebsite = /\b(website|webpage|page|bricks|landing|homepage|site|news|store|shop|editorial)\b/.test(text);
+
+  if (wantsTheme && wantsWebsite) return 'combined';
+  if (wantsTheme) return 'theme';
+  return 'website';
+}
+
+export function startProject({ mode = 'auto', brief = '', name = '' } = {}) {
+  const normalized = inferMode(mode, brief);
+  const title = safeName(name || brief || `${normalized}-kiwe-project`, `${normalized}-kiwe-project`);
+  const humanBrief = String(brief || '').trim() || 'No human brief supplied.';
+
+  const parts = [
+    `# Kiwe project start: ${title}`,
+    '',
+    `Selected mode: ${normalized}`,
+    '',
+    '## Human brief',
+    '',
+    humanBrief,
+    '',
+    '## How to use this response',
+    '',
+    'Use this response as the authoritative assignment brief. The human should not need to prompt-engineer Kiwe details.',
+    'Create the requested output using the Kiwe context below, then validate the handoff before final delivery.',
+    '',
+    'If you can write files, first scaffold the output with:',
+    '',
+    `kiwe_create_handoff({ "mode": "${normalized}", "outputDir": "./${title}", "name": "${title}", "brief": ${JSON.stringify(humanBrief)} })`,
+    '',
+    'If you only have CLI access, use:',
+    '',
+    `node kiwe-ai-toolkit/bin/kiwe.js create ${normalized} ./${title} --name ${title} --brief ${JSON.stringify(humanBrief)}`,
+    '',
+    'Then replace the scaffold content with the finished design while preserving the required folder/file contract.',
+    '',
+    getContext(normalized)
+  ];
+
+  return parts.filter(Boolean).join('\n').trim() + '\n';
+}
+
 function safeName(value, fallback) {
   const raw = String(value || fallback || 'kiwe-handoff').toLowerCase();
   return raw.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || fallback;
