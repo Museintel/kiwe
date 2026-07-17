@@ -116,7 +116,25 @@ It records:
 
 The proof does not call Bricks save APIs, does not update WordPress pages, does not publish content, and does not modify WooCommerce data. It exists so a future apply button can refuse unsafe/stale candidates before any mutation path exists.
 
-The WordPress admin preview/download/stage/proof flow and the CLI/MCP planner share the same authority boundary: they are planning artifacts only. They do not become a trusted adapter and they do not prove a page was saved.
+## Guarded authorization
+
+Batch 10 adds a future-apply authorization token:
+
+```text
+kiwe.guarded-apply-authorization.v1
+```
+
+The authorization can be attached only after:
+
+1. a valid stage exists;
+2. the stage has no blockers;
+3. a trusted-adapter proof exists;
+4. the proof is `adapter-proof-ready`;
+5. the proof has no blockers.
+
+It records the admin user, stage id, plan hash, gates, blockers, and future-only authority. It is not the final apply button. It does not call Bricks save APIs, does not update WordPress pages, does not publish content, and does not modify WooCommerce data.
+
+The WordPress admin preview/download/stage/proof/authorization flow and the CLI/MCP planner share the same authority boundary: they are planning artifacts only. They do not become a trusted adapter and they do not prove a page was saved.
 
 ## Future adapter rules
 
