@@ -49,6 +49,12 @@ https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/d
 Also ask for the target site's `kiwe.site-graph.v1` JSON. Do not guess categories, term IDs, pages, products, dynamic tags, or Bricks query-loop object types. The Site Graph is available to admins from Kiwe as:
 
 ```text
+Kiwe > Framework > AI connector and Site Graph > Download Site Graph JSON
+```
+
+Tool clients can also use:
+
+```text
 GET /wp-json/dsa/v1/site-graph?sampleLimit=8
 ```
 

@@ -2,6 +2,7 @@
 
 namespace DSA\Admin;
 
+use DSA\AI\Site_Graph_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -72,6 +73,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_send_notification_campaign', [ $this, 'handle_notification_campaign' ] );
 		add_action( 'admin_post_dsa_export_bricks_tokens', [ $this, 'export_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_apply_bricks_tokens', [ $this, 'apply_bricks_tokens' ] );
+		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1370,6 +1372,41 @@ final class Admin {
 		exit;
 	}
 
+	public function export_site_graph(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to export the Kiwe Site Graph.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_export_site_graph' );
+
+		$raw_sample_limit = isset( $_POST['sampleLimit'] ) ? sanitize_text_field( wp_unslash( $_POST['sampleLimit'] ) ) : '8';
+		$sample_limit     = absint( $raw_sample_limit );
+		$sample_limit     = max( 0, min( 24, $sample_limit ) );
+		$service          = new Site_Graph_Service( $this->settings, $this->modules );
+		$payload          = $service->graph( [ 'sampleLimit' => $sample_limit ] );
+		$json             = wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+
+		if ( ! $json ) {
+			wp_safe_redirect( add_query_arg( 'site-graph-exported', 'encode-error', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+
+		$site = sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' );
+		$file = sprintf( 'kiwe-site-graph-%s-%s.json', $site, gmdate( 'Ymd-His' ) );
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'X-Robots-Tag: noindex, nofollow' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -1956,6 +1993,9 @@ final class Admin {
 					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks framework storage was not available. Use the JSON download and import it after Bricks is active.', 'dsa' ); ?></p></div>
 				<?php endif; ?>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['site-graph-exported'] ) && 'encode-error' === sanitize_key( (string) wp_unslash( $_GET['site-graph-exported'] ) ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Kiwe could not encode the Site Graph JSON. Try a smaller sample size and check server logs if it continues.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Kiwe Framework for builders', 'dsa' ); ?></h2>
@@ -1984,6 +2024,38 @@ final class Admin {
 					<?php wp_nonce_field( 'dsa_export_bricks_tokens' ); ?>
 					<?php submit_button( __( 'Download Bricks Framework JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
+
+				<section class="dsa-admin__panel" style="margin-top: 1rem;">
+					<h2><?php esc_html_e( 'AI connector and Site Graph', 'dsa' ); ?></h2>
+					<p><?php esc_html_e( 'Use this when an AI or web developer needs to turn an approved Seam/Kiwe design into Bricks query loops, dynamic data, and Kiwe AppShell launchers for this exact WordPress site. The Site Graph is admin-only, read-only, and contains no secrets, visitor state, orders, payment data, or credentials.', 'dsa' ); ?></p>
+					<div class="dsa-admin-token-summary">
+						<div><strong><?php esc_html_e( 'Read-only', 'dsa' ); ?></strong><span><?php esc_html_e( 'Site Graph', 'dsa' ); ?></span></div>
+						<div><strong><?php esc_html_e( 'v1', 'dsa' ); ?></strong><span><?php esc_html_e( 'schema', 'dsa' ); ?></span></div>
+						<div><strong><?php esc_html_e( 'Admin', 'dsa' ); ?></strong><span><?php esc_html_e( 'access', 'dsa' ); ?></span></div>
+						<div><strong><?php esc_html_e( 'No write', 'dsa' ); ?></strong><span><?php esc_html_e( 'authority', 'dsa' ); ?></span></div>
+					</div>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_export_site_graph">
+						<?php wp_nonce_field( 'dsa_export_site_graph' ); ?>
+						<p class="dsa-admin-inline-fields">
+							<label>
+								<span><?php esc_html_e( 'Samples per content type', 'dsa' ); ?></span>
+								<select name="sampleLimit">
+									<?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?>
+										<option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</label>
+							<?php submit_button( __( 'Download Site Graph JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
+						</p>
+					</form>
+					<p class="description"><?php esc_html_e( 'REST endpoint for tool clients:', 'dsa' ); ?> <code><?php echo esc_html( rest_url( 'dsa/v1/site-graph?sampleLimit=8' ) ); ?></code></p>
+					<p class="description"><?php esc_html_e( 'Safe AI sequence: generate/audit handoff, add bricks-bindings/ with the Site Graph, run validate-bindings, then prepare a dry-run apply plan. Do not let browser AI claim it saved Bricks or WordPress.', 'dsa' ); ?></p>
+					<ul class="ul-disc">
+						<li><code>https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md</code></li>
+						<li><code>https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md</code></li>
+					</ul>
+				</section>
 				<div class="dsa-admin-token-grid">
 					<?php foreach ( $items as $token ) : ?>
 						<?php $slider = Seam_Token_Service::slider_value( is_array( $token ) ? $token : [] ); ?>

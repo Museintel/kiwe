@@ -32,6 +32,14 @@ When Kiwe is installed, admins can fetch the Site Graph from:
 GET /wp-json/dsa/v1/site-graph?sampleLimit=8
 ```
 
+Admins can also download the same graph from:
+
+```text
+Kiwe > Framework > AI connector and Site Graph > Download Site Graph JSON
+```
+
+The admin download path is useful for browser-based AI workflows where REST cookie/nonces or external connectors are inconvenient.
+
 Permissions:
 
 - requires `manage_options`;

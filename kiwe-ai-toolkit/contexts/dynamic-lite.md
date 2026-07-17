@@ -12,6 +12,8 @@ Do not read the whole Kiwe repo. Do not search GitHub. Do not guess the target s
 - The target site's `kiwe.site-graph.v1` JSON.
 - The plain-language dynamic request, for example: "turn placeholder product rails into Bricks query loops and dynamic product cards."
 
+If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > Framework > AI connector and Site Graph`.
+
 ## What the Site Graph gives you
 
 The Site Graph is admin-only and read-only. It can include:

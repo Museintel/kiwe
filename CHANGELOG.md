@@ -6,6 +6,7 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 - Began the Kiwe AI/connector integration track for dynamic WordPress + Bricks handoffs.
 - Added the read-only `kiwe.site-graph.v1` service with admin-only REST access at `/wp-json/dsa/v1/site-graph` and a WordPress 7 Abilities API surface as `dsa/get-site-graph` when abilities are available.
+- Added a `Kiwe > Framework` AI connector card and admin-only Site Graph JSON download so non-developers can hand a target site's real WordPress/Bricks/Woo/Kiwe context to an AI without exposing the full plugin or relying on public REST crawling.
 - Added `connector-system/` as the third portable brain beside `ui-system/` and `framework-system/`, documenting how accepted Seam/AppShell handoffs become Bricks query-loop and dynamic-data binding plans without giving AI cart/search/auth/checkout/runtime authority.
 - Added `kiwe-ai-toolkit/contexts/dynamic-lite.md`, CLI commands, and MCP tools for v5-style dynamic binding passes that consume a target Site Graph instead of guessing site categories, products, pages, Bricks dynamic tags, or query-loop object types.
 - Added the `kiwe.bricks-bindings.v1` schema, `validate-bindings` CLI/MCP validator, and a fixture-backed test so dynamic passes can be checked for real Site Graph terms, Bricks query-loop object types, dynamic tags, canonical Kiwe launchers, and non-mutating apply authority.

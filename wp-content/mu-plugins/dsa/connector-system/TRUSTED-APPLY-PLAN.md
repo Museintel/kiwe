@@ -52,6 +52,8 @@ Validate the binding plan first:
 node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
 ```
 
+Admins can download `site-graph.json` from `Kiwe > Framework > AI connector and Site Graph`.
+
 Prepare a dry-run apply plan:
 
 ```bash

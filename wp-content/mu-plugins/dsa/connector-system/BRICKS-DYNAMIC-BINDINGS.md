@@ -12,6 +12,8 @@ A dynamic binding pass needs only:
 
 Do not read the full plugin codebase. Do not guess categories, pages, products, Bricks tags, or query-loop object types when the Site Graph provides them.
 
+Admins can download the target Site Graph from `Kiwe > Framework > AI connector and Site Graph`.
+
 ## Output expectation
 
 The AI should keep the normal Kiwe handoff shape and add one optional folder:
