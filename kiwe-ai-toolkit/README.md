@@ -37,22 +37,29 @@ node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 ## For external AIs and designers
 
 The human prompt should stay short. The toolkit carries the rules.
+For browser AIs, give direct raw links so the model does not waste tokens searching GitHub.
 
 Good human prompts:
 
 ```text
-Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
 Create a Netflix-like ultra-modern news website for Indian startups, businesses,
 entrepreneurs, and celebrity-owned business spotlights, with its Kiwe AppShell included.
 ```
 
 ```text
-Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
 Create a quiet luxury DSA AppShell theme.
 ```
 
 ```text
-Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
 Create a conversion-focused product landing page.
 ```
 
@@ -85,12 +92,13 @@ The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page
 
 Some browser AIs can read public GitHub files but cannot connect MCP tools or safely execute repo code. In that case, do not clone or crawl the whole repo. Read one static context file:
 
-- `contexts/website.md` for a normal website/page.
-- `contexts/theme.md` for a Kiwe DSA/AppShell theme.
-- `contexts/combined-lite.md` for browser models that need a short website/page plus AppShell contract.
-- `contexts/combined.md` for a website/page plus AppShell direction/settings.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/website.md` for a normal website/page.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/theme.md` for a Kiwe DSA/AppShell theme.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md` for browser models that need a short website/page plus AppShell contract.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md` for a website/page plus AppShell direction/settings.
 
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
+Do not use web search to find these files; open the exact raw URL that matches the assignment mode.
 
 ## MCP
 

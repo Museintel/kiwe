@@ -13,18 +13,19 @@ The toolkit gives compact context packs and validation rules so you do not waste
 ## Browser AI path, no tool execution
 
 If you are a browser-based AI and cannot connect the Kiwe MCP server or run the CLI, do not clone or crawl the full repository.
+Do not use web search to discover toolkit files. Use the exact raw links below.
 
 Read exactly one static context file after this entrypoint:
 
-- Website/page only: `kiwe-ai-toolkit/contexts/website.md`
-- Kiwe DSA/AppShell theme only: `kiwe-ai-toolkit/contexts/theme.md`
-- Website/page + AppShell direction/settings, browser-short version: `kiwe-ai-toolkit/contexts/combined-lite.md`
-- Website/page + AppShell direction/settings, full version: `kiwe-ai-toolkit/contexts/combined.md`
+- Website/page only: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/website.md`
+- Kiwe DSA/AppShell theme only: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/theme.md`
+- Website/page + AppShell direction/settings, browser-short version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md`
+- Website/page + AppShell direction/settings, full version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md`
 
 For a prompt that asks for both a website/page and a Kiwe AppShell/DSA direction, read:
 
 ```text
-kiwe-ai-toolkit/contexts/combined-lite.md
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md
 ```
 
 Treat that file as the authoritative generated toolkit response. It exists so browser AIs do not need to execute repo code or read the full plugin.
@@ -63,17 +64,23 @@ The human should not need to prompt-engineer Kiwe. They should only provide the 
 Good human prompts:
 
 ```text
-Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
 Create a Netflix-like ultra-modern news website for Indian startups and businesses, with its Kiwe AppShell included.
 ```
 
 ```text
-Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
 Create a quiet luxury DSA AppShell theme.
 ```
 
 ```text
-Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
 Create a conversion-focused product landing page.
 ```
 
