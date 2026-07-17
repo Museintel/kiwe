@@ -416,6 +416,43 @@ It records:
 
 The shell still does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or execute an adapter. It is the last non-mutating shape-selection artifact before a future controlled save path.
 
+## Final save approval
+
+Batch 20 adds the final save approval lock:
+
+```text
+kiwe.final-save-approval.v1
+```
+
+The approval can be attached only after:
+
+1. a valid stage exists;
+2. the dry-run apply plan is still present;
+3. target resolution is ready;
+4. rollback capture is ready;
+5. rendered target baseline inspection is ready;
+6. minimal adapter shell is ready;
+7. stage, target resolution, rollback capture, rendered inspection, and shell plan hashes match;
+8. the admin checks the explicit final save approval box;
+9. no blockers remain.
+
+It records:
+
+- exact minimal adapter shell ID;
+- rendered inspection ID;
+- rollback capture ID;
+- target resolution ID and target post ID;
+- selected strategy ID;
+- approved operation IDs;
+- post-apply Kiwe audit plan;
+- browser smoke plan;
+- rollback verification plan;
+- `actualSaveExecuted: false`;
+- `mayExecuteMutationNow: false`;
+- `mayBuildControlledExecutor: true` only when clean.
+
+The approval still does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or execute an adapter. It is the human approval artifact for building the next controlled executor, not the executor itself.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -434,4 +471,5 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 12. rendered target baseline inspection is attached;
 13. minimal adapter shell is attached;
 14. final save approval is captured for the exact shell;
-15. post-apply Kiwe audit and browser smoke tests pass.
+15. a controlled executor is built for that exact approval;
+16. post-apply Kiwe audit and browser smoke tests pass.

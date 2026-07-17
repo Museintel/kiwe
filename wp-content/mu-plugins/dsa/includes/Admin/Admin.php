@@ -17,6 +17,7 @@ use DSA\AI\Target_Resolution_Service;
 use DSA\AI\Rollback_Capture_Service;
 use DSA\AI\Rendered_Target_Inspection_Service;
 use DSA\AI\Minimal_Adapter_Shell_Service;
+use DSA\AI\Final_Save_Approval_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -102,6 +103,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_capture_apply_rollback', [ $this, 'capture_apply_rollback' ] );
 		add_action( 'admin_post_dsa_inspect_rendered_target', [ $this, 'inspect_rendered_target' ] );
 		add_action( 'admin_post_dsa_build_minimal_adapter_shell', [ $this, 'build_minimal_adapter_shell' ] );
+		add_action( 'admin_post_dsa_approve_final_save', [ $this, 'approve_final_save' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -2304,6 +2306,68 @@ final class Admin {
 		exit;
 	}
 
+	public function approve_final_save(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to approve Kiwe controlled saves.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_approve_final_save_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$approval = ( new Final_Save_Approval_Service() )->approve(
+			$stage,
+			[
+				'userId'                    => get_current_user_id(),
+				'createdAt'                 => gmdate( 'c' ),
+				'explicitFinalSaveApproval' => ! empty( $_POST['explicitFinalSaveApproval'] ),
+			]
+		);
+
+		if ( 'final-save-approved' !== ( $approval['status'] ?? '' ) ) {
+			$stager->attach_final_save_approval( $stage_id, $approval );
+			wp_die(
+				esc_html__( 'Final save approval found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Final save approval blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_final_save_approval( $stage_id, $approval );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'           => 'kiwe-framework',
+					'apply-save-ok'  => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3188,6 +3252,7 @@ final class Admin {
 		$active_capture = isset( $_GET['apply-capture'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-capture'] ) ) : '';
 		$active_inspection = isset( $_GET['apply-inspection'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-inspection'] ) ) : '';
 		$active_shell = isset( $_GET['apply-shell'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-shell'] ) ) : '';
+		$active_save = isset( $_GET['apply-save-ok'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-save-ok'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -3224,6 +3289,9 @@ final class Admin {
 		if ( '' !== $active_shell ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Minimal adapter shell built. This selected a future apply route but still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_save ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Final save approval recorded for the exact adapter shell. This still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -3249,6 +3317,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Capture', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Inspect', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Shell', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Save OK', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -3271,6 +3340,7 @@ final class Admin {
 					$capture = isset( $record['rollbackCapture'] ) && is_array( $record['rollbackCapture'] ) ? $record['rollbackCapture'] : [];
 					$inspection = isset( $record['renderedTargetInspection'] ) && is_array( $record['renderedTargetInspection'] ) ? $record['renderedTargetInspection'] : [];
 					$shell = isset( $record['minimalAdapterShell'] ) && is_array( $record['minimalAdapterShell'] ) ? $record['minimalAdapterShell'] : [];
+					$save_approval = isset( $record['finalSaveApproval'] ) && is_array( $record['finalSaveApproval'] ) ? $record['finalSaveApproval'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -3307,8 +3377,11 @@ final class Admin {
 					$shell_status = (string) ( $shell['status'] ?? __( 'not built', 'dsa' ) );
 					$shell_blockers = isset( $shell['blockers'] ) && is_array( $shell['blockers'] ) ? count( $shell['blockers'] ) : 0;
 					$can_shell = [] !== $inspection && 'rendered-target-inspection-ready' === ( $inspection['status'] ?? '' ) && 0 === $inspection_blockers;
+					$save_status = (string) ( $save_approval['status'] ?? __( 'not approved', 'dsa' ) );
+					$save_blockers = isset( $save_approval['blockers'] ) && is_array( $save_approval['blockers'] ) ? count( $save_approval['blockers'] ) : 0;
+					$can_save_approve = [] !== $shell && 'minimal-adapter-shell-ready' === ( $shell['status'] ?? '' ) && 0 === $shell_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -3324,6 +3397,7 @@ final class Admin {
 						<td><?php echo esc_html( $capture_status ); ?><?php echo $capture_blockers > 0 ? ' (' . esc_html( (string) $capture_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $inspection_status ); ?><?php echo $inspection_blockers > 0 ? ' (' . esc_html( (string) $inspection_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $shell_status ); ?><?php echo $shell_blockers > 0 ? ' (' . esc_html( (string) $shell_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $save_status ); ?><?php echo $save_blockers > 0 ? ' (' . esc_html( (string) $save_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -3401,11 +3475,21 @@ final class Admin {
 								<?php wp_nonce_field( 'dsa_build_minimal_adapter_shell_' . $id ); ?>
 								<button class="button button-primary" type="submit" <?php disabled( ! $can_shell ); ?>><?php esc_html_e( 'Build adapter shell', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_approve_final_save">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_approve_final_save_' . $id ); ?>
+								<label style="display:block; margin-bottom:.25rem;">
+									<input type="checkbox" name="explicitFinalSaveApproval" value="1" <?php disabled( ! $can_save_approve ); ?>>
+									<?php esc_html_e( 'I approve this exact adapter shell for the next controlled save step.', 'dsa' ); ?>
+								</label>
+								<button class="button button-primary" type="submit" <?php disabled( ! $can_save_approve ); ?>><?php esc_html_e( 'Record save approval', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="17">
+							<td colspan="18">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
@@ -3417,6 +3501,7 @@ final class Admin {
 								<?php $this->render_rollback_capture_details( $capture ); ?>
 								<?php $this->render_rendered_target_inspection_details( $inspection ); ?>
 								<?php $this->render_minimal_adapter_shell_details( $shell ); ?>
+								<?php $this->render_final_save_approval_details( $save_approval ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -4015,6 +4100,77 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Shell blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_final_save_approval_details( array $approval ): void {
+		if ( [] === $approval ) {
+			return;
+		}
+		$blockers = isset( $approval['blockers'] ) && is_array( $approval['blockers'] ) ? $approval['blockers'] : [];
+		$gates    = isset( $approval['gates'] ) && is_array( $approval['gates'] ) ? $approval['gates'] : [];
+		$audit    = isset( $approval['postApplyAuditPlan'] ) && is_array( $approval['postApplyAuditPlan'] ) ? $approval['postApplyAuditPlan'] : [];
+		$smoke    = isset( $approval['browserSmokePlan'] ) && is_array( $approval['browserSmokePlan'] ) ? $approval['browserSmokePlan'] : [];
+		$rollback = isset( $approval['rollbackVerificationPlan'] ) && is_array( $approval['rollbackVerificationPlan'] ) ? $approval['rollbackVerificationPlan'] : [];
+		$ops      = isset( $approval['approvedOperationIds'] ) && is_array( $approval['approvedOperationIds'] ) ? $approval['approvedOperationIds'] : [];
+		?>
+		<p><strong><?php esc_html_e( 'Final save approval', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $approval['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $approval['explicitFinalSaveApproval'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'explicit approval', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $approval['targetPostId'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'target', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $ops ) ); ?></strong><span><?php esc_html_e( 'approved ops', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description"><?php esc_html_e( 'This approval locks the exact target, rollback capture, rendered inspection, and minimal adapter shell for a later controlled executor. It does not save Bricks, WordPress page content, WooCommerce data, or publish state.', 'dsa' ); ?></p>
+		<ul class="ul-disc">
+			<li><?php esc_html_e( 'Shell:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $approval['minimalAdapterShellId'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Inspection:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $approval['renderedInspectionId'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Rollback capture:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $approval['rollbackCaptureId'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Strategy:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $approval['selectedStrategyId'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Plan hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $approval['planHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+		</ul>
+		<?php if ( [] !== $gates ) : ?>
+			<p><strong><?php esc_html_e( 'Approval gates', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $gates as $gate ) : ?>
+					<?php if ( is_array( $gate ) ) : ?>
+						<li><code><?php echo esc_html( (string) ( $gate['status'] ?? '' ) ); ?></code> <?php echo esc_html( (string) ( $gate['label'] ?? $gate['id'] ?? '' ) ); ?></li>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $audit ) : ?>
+			<p><strong><?php esc_html_e( 'Required post-apply audit plan', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $audit as $step ) : ?>
+					<li><code><?php echo esc_html( (string) $step ); ?></code></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $smoke ) : ?>
+			<p><strong><?php esc_html_e( 'Required browser smoke plan', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $smoke as $step ) : ?>
+					<li><code><?php echo esc_html( (string) $step ); ?></code></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $rollback ) : ?>
+			<p><strong><?php esc_html_e( 'Rollback verification', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<li><?php esc_html_e( 'Snapshot hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $rollback['snapshotHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+				<li><?php esc_html_e( 'Meta hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $rollback['metaHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Approval blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

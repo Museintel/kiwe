@@ -123,6 +123,8 @@ After rollback capture, admins can attach `kiwe.rendered-target-inspection.v1`. 
 
 After rendered target inspection, admins can attach `kiwe.minimal-adapter-shell.v1`. This selects the least-risk future route and allowed operation set for the exact target. It is still non-mutating and does not run Bricks save, WordPress update, publish, WooCommerce mutation, or custom runtime code.
 
+After the minimal adapter shell is ready, admins can attach `kiwe.final-save-approval.v1`. This is an explicit-checkbox approval for that exact shell and target. It locks the post-apply Kiwe audit plan, browser smoke plan, and rollback verification plan, but still does not save Bricks, WordPress content, WooCommerce, or publish state.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.
