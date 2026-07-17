@@ -96,6 +96,8 @@ Batch 46 restores the original heading-first DSA Menu behavior. Admin-selected H
 
 Batch 47 tightens combined-mode proof after the National Chikki v4 review exposed preview gaps that the folder validator missed. Combined mode now treats `combined-preview/index.html` as the single primary visual proof and makes `appshell-theme/preview/index.html` optional technical evidence only. The toolkit, generated contexts, browser `combined-lite.md`, preview handoff rules, and audit script now require combined-preview controls for desktop/tablet/mobile Geometry Engine profiles plus narrow stress widths, Sheet and Classic, full compact dock, split compact dock, Navigation bar, horizontal/vertical orientation, pill/rounded-box/square dock shapes, light/dark, and header/page launcher smoke tests. The audit also distinguishes Navigation bar from horizontal dock orientation, flags Classic side-drawer-only previews, requires iframe launcher bridges when the Bricks page is framed, and warns when manual Profile/Cart/Search/Menu launcher verification is not reported.
 
+Batch 48 aligns the executable Kiwe AI Toolkit validator with the browser-facing handoff contract after National Chikki v4.1 correctly removed provenance-only files. `KIWE_CONTEXT.md` is no longer required or scaffolded in final handoff folders; it remains a context source the toolkit can provide, not an import/review artifact. The audit warning for Navigation bar wording was also relaxed so outputs that clearly state navbar is a separate presentation, not horizontal dock, do not receive a false warning.
+
 Next release-prep steps:
 
 1. Live Hostinger upload/proof after the rebuilt MU package is deployed.

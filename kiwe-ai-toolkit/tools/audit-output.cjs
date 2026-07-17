@@ -169,7 +169,7 @@ const allPreviewText = `${combinedPreviewText}\n${combinedPreviewSupportText}\n$
 if (/(?:320|360|390|430)/.test(allPreviewText) && !/(desktop|tablet|mobile|1280|1200|1024|768|640)/i.test(allPreviewText)) {
   add('warn', 'Preview viewport controls are mobile-only. Kiwe Geometry Engine proof must include desktop, tablet, mobile profiles and may add 320/360/390 narrow stress cases.');
 }
-if (/navigation bar|navbar/i.test(allPreviewText) && !/(separate|distinct|not (?:a )?horizontal dock|not relabel|presentation mode)/i.test(allPreviewText)) {
+if (/navigation bar|navbar/i.test(allPreviewText) && !/(separate|distinct|not (?:a )?horizontal(?: compact)? dock|not (?:as|just|merely) horizontal|not relabel|presentation(?: mode|, not)|separate presentation)/i.test(allText)) {
   add('warn', 'Preview mentions Navigation bar but does not clearly distinguish it from horizontal dock orientation. Navigation bar is a separate presentation mode; horizontal/vertical are dock orientations.');
 }
 if (/classic[\s\S]{0,320}(?:width\s*:\s*min\(\s*(?:390|430)px|left\s*:\s*auto|right\s*:\s*0)/i.test(allPreviewText)) {
@@ -280,7 +280,7 @@ if (roles.size) {
   }
 }
 
-if (/Aurora|glassmorphism|frosted|bento/i.test(allText)) {
+if (/"(?:id|name)"\s*:\s*"[^"]*(?:aurora|glassmorphism|frosted)|class\s*=\s*["'][^"']*\b(?:aurora|glassmorphism|frosted|glass-card|frosted-card)\b/i.test(allText)) {
   add('warn', 'Design may be drifting toward common Aurora/glass/bento patterns; confirm a distinct visual thesis.');
 }
 

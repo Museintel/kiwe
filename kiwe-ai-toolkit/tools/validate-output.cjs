@@ -22,7 +22,7 @@ if (!validModes.has(mode)) {
 }
 
 const root = path.resolve(target);
-const required = ['README.md', 'KIWE_CONTEXT.md'];
+const required = ['README.md'];
 if (mode === 'website' || mode === 'combined') {
   required.push('website/bricks-paste.html', 'website/bricks-notes.md');
 }

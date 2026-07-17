@@ -595,8 +595,6 @@ ${brief || 'No brief provided yet.'}
 
 Run Kiwe validation before importing or installing anything.
 `);
-  writeFile(path.join(root, 'KIWE_CONTEXT.md'), getContext(normalized));
-
   if (normalized === 'website' || normalized === 'combined') websiteScaffold(root, brief);
   if (normalized === 'theme' || normalized === 'combined') themeScaffold(root, baseName, { includePreview: normalized === 'theme' });
   if (normalized === 'combined') settingsScaffold(root);
@@ -614,7 +612,7 @@ Run Kiwe validation before importing or installing anything.
 export function validateHandoff(targetDir, mode = 'website') {
   const normalized = normalizeMode(mode);
   const root = path.resolve(targetDir || '.');
-  const required = ['README.md', 'KIWE_CONTEXT.md'];
+  const required = ['README.md'];
   if (normalized === 'website' || normalized === 'combined') {
     required.push('website/bricks-paste.html', 'website/bricks-notes.md');
   }
