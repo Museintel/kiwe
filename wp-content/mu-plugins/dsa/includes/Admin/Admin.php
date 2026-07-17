@@ -4,6 +4,7 @@ namespace DSA\Admin;
 
 use DSA\AI\Site_Graph_Service;
 use DSA\AI\Binding_Plan_Validator;
+use DSA\AI\Apply_Plan_Preparer;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -1453,6 +1454,7 @@ final class Admin {
 		$sample_limit     = max( 0, min( 24, absint( $raw_sample_limit ) ) );
 		$site_graph       = ( new Site_Graph_Service( $this->settings, $this->modules ) )->graph( [ 'sampleLimit' => $sample_limit ] );
 		$report           = ( new Binding_Plan_Validator() )->validate( $binding, $site_graph );
+		$apply_plan       = ( new Apply_Plan_Preparer() )->prepare( $binding, $site_graph, $report );
 		$key              = md5( get_current_user_id() . '|' . microtime( true ) . '|' . wp_rand() );
 
 		set_transient(
@@ -1464,6 +1466,7 @@ final class Admin {
 				'sampleLimit' => $sample_limit,
 				'siteName'    => wp_strip_all_tags( (string) get_bloginfo( 'name' ) ),
 				'report'      => $report,
+				'applyPlan'   => $apply_plan,
 			],
 			10 * MINUTE_IN_SECONDS
 		);
@@ -2185,6 +2188,7 @@ final class Admin {
 		$summary  = isset( $report['summary'] ) && is_array( $report['summary'] ) ? $report['summary'] : [];
 		$counts   = isset( $report['counts'] ) && is_array( $report['counts'] ) ? $report['counts'] : [];
 		$findings = isset( $report['findings'] ) && is_array( $report['findings'] ) ? $report['findings'] : [];
+		$apply_plan = isset( $payload['applyPlan'] ) && is_array( $payload['applyPlan'] ) ? $payload['applyPlan'] : [];
 		$ok       = ! empty( $report['ok'] );
 		?>
 		<div class="notice <?php echo $ok ? 'notice-success' : 'notice-error'; ?>" style="margin: 1rem 0;">
@@ -2218,8 +2222,108 @@ final class Admin {
 				<?php endforeach; ?>
 			</ul>
 		<?php else : ?>
-			<p class="description"><?php esc_html_e( 'No validator findings were reported. This still does not mutate WordPress or Bricks; use prepare-apply-plan for the next dry-run step.', 'dsa' ); ?></p>
+			<p class="description"><?php esc_html_e( 'No validator findings were reported. This still does not mutate WordPress or Bricks; review the dry-run apply plan below before any future adapter path.', 'dsa' ); ?></p>
 		<?php endif; ?>
+		<?php
+		$this->render_apply_plan_preview( $apply_plan );
+	}
+
+	private function render_apply_plan_preview( array $apply_plan ): void {
+		if ( [] === $apply_plan ) {
+			return;
+		}
+
+		$capabilities  = isset( $apply_plan['siteCapabilities'] ) && is_array( $apply_plan['siteCapabilities'] ) ? $apply_plan['siteCapabilities'] : [];
+		$preflight     = isset( $apply_plan['preflight'] ) && is_array( $apply_plan['preflight'] ) ? $apply_plan['preflight'] : [];
+		$operations    = isset( $apply_plan['operations'] ) && is_array( $apply_plan['operations'] ) ? $apply_plan['operations'] : [];
+		$manual_review = isset( $apply_plan['manualReview'] ) && is_array( $apply_plan['manualReview'] ) ? $apply_plan['manualReview'] : [];
+		$operation_count = count( $operations );
+		$review_count    = count( $manual_review );
+		$visible_operations = array_slice( $operations, 0, 20 );
+		$hidden_operations  = max( 0, $operation_count - count( $visible_operations ) );
+		?>
+		<div class="dsa-lpm-card" style="margin-top: 1rem;">
+			<h3><?php esc_html_e( 'Dry-run apply plan', 'dsa' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'This preview translates the validated binding file into the operations a future trusted Kiwe/Bricks adapter would review. It is non-mutating and does not save WordPress, WooCommerce, or Bricks content.', 'dsa' ); ?></p>
+			<div class="dsa-admin-token-summary">
+				<div><strong><?php echo esc_html( (string) $operation_count ); ?></strong><span><?php esc_html_e( 'planned operations', 'dsa' ); ?></span></div>
+				<div><strong><?php echo esc_html( (string) $review_count ); ?></strong><span><?php esc_html_e( 'review items', 'dsa' ); ?></span></div>
+				<div><strong><?php echo ! empty( $capabilities['bricksActive'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'Bricks active', 'dsa' ); ?></span></div>
+				<div><strong><?php echo ! empty( $capabilities['trustedAdapterLikelyAvailable'] ) ? esc_html__( 'Likely', 'dsa' ) : esc_html__( 'Manual', 'dsa' ); ?></strong><span><?php esc_html_e( 'adapter path', 'dsa' ); ?></span></div>
+				<div><strong><?php echo ! empty( $capabilities['htmlCssToBricksAvailable'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'HTML/CSS import', 'dsa' ); ?></span></div>
+				<div><strong><?php esc_html_e( 'Dry run', 'dsa' ); ?></strong><span><?php esc_html_e( 'save mode', 'dsa' ); ?></span></div>
+			</div>
+
+			<?php if ( [] !== $preflight ) : ?>
+				<h4><?php esc_html_e( 'Preflight gates', 'dsa' ); ?></h4>
+				<ul class="ul-disc">
+					<?php foreach ( $preflight as $checkpoint ) : ?>
+						<?php
+						if ( ! is_array( $checkpoint ) ) {
+							continue;
+						}
+						$label   = (string) ( $checkpoint['label'] ?? $checkpoint['id'] ?? '' );
+						$status  = (string) ( $checkpoint['status'] ?? '' );
+						$details = (string) ( $checkpoint['details'] ?? '' );
+						if ( '' === $label ) {
+							continue;
+						}
+						?>
+						<li><strong><?php echo esc_html( $label ); ?></strong> <code><?php echo esc_html( $status ); ?></code><?php echo '' !== $details ? ' — ' . esc_html( $details ) : ''; ?></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+
+			<?php if ( [] !== $visible_operations ) : ?>
+				<h4><?php esc_html_e( 'Prepared operations', 'dsa' ); ?></h4>
+				<table class="widefat striped">
+					<thead><tr><th><?php esc_html_e( 'Type', 'dsa' ); ?></th><th><?php esc_html_e( 'Label', 'dsa' ); ?></th><th><?php esc_html_e( 'Target', 'dsa' ); ?></th><th><?php esc_html_e( 'Status', 'dsa' ); ?></th></tr></thead>
+					<tbody>
+					<?php foreach ( $visible_operations as $operation ) : ?>
+						<?php
+						if ( ! is_array( $operation ) ) {
+							continue;
+						}
+						$type     = (string) ( $operation['type'] ?? '' );
+						$label    = (string) ( $operation['label'] ?? $operation['id'] ?? '' );
+						$selector = (string) ( $operation['selector'] ?? $operation['module'] ?? $operation['tag'] ?? '' );
+						$status   = (string) ( $operation['status'] ?? '' );
+						?>
+						<tr>
+							<td><code><?php echo esc_html( $type ); ?></code></td>
+							<td><?php echo esc_html( $label ); ?></td>
+							<td><?php echo esc_html( $selector ); ?></td>
+							<td><?php echo esc_html( $status ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php if ( $hidden_operations > 0 ) : ?>
+					<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 20 operations; %d more are present in the dry-run plan.', 'dsa' ), $hidden_operations ) ); ?></p>
+				<?php endif; ?>
+			<?php else : ?>
+				<p class="description"><?php esc_html_e( 'No prepared operations were produced from this binding plan.', 'dsa' ); ?></p>
+			<?php endif; ?>
+
+			<?php if ( [] !== $manual_review ) : ?>
+				<h4><?php esc_html_e( 'Manual review queue', 'dsa' ); ?></h4>
+				<ul class="ul-disc">
+					<?php foreach ( array_slice( $manual_review, 0, 10 ) as $review_item ) : ?>
+						<?php
+						if ( ! is_array( $review_item ) ) {
+							continue;
+						}
+						$message = (string) ( $review_item['message'] ?? '' );
+						$source  = (string) ( $review_item['source'] ?? '' );
+						if ( '' === $message ) {
+							continue;
+						}
+						?>
+						<li><strong><?php echo esc_html( $source ); ?>:</strong> <?php echo esc_html( $message ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+		</div>
 		<?php
 	}
 

@@ -181,7 +181,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 The same check is available to MCP clients as `kiwe_validate_bindings`. It validates `bricks-bindings/kiwe-bindings.json` against `kiwe.bricks-bindings.v1`, verifies real Site Graph post types/terms/query-loop object types/dynamic tags where supplied, and enforces canonical Kiwe launchers such as `data-dsa-open-module`.
 
-If Kiwe is installed on the target WordPress site, admins can also upload the produced `kiwe-bindings.json` at `Kiwe > Framework > AI connector and Site Graph` for a live non-mutating validation report.
+If Kiwe is installed on the target WordPress site, admins can also upload the produced `kiwe-bindings.json` at `Kiwe > Framework > AI connector and Site Graph` for a live non-mutating validation report. The same admin report also previews the dry-run apply plan, including preflight gates, Bricks/Kiwe operations, and manual-review items, without saving anything.
 
 4. After validation, prepare the dry-run apply plan:
 
