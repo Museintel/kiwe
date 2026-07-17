@@ -197,6 +197,8 @@ It must not contain:
 - remote `@import`, remote `url()`, data URLs, or JavaScript URLs in CSS
 - preview-only mocks, simulator code, or placeholder product/account data
 
+Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns dock, sheet, screen, and backdrop placement and measurement. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those properties belong in core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, inner spacing, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+
 ## Preview rules
 
 The preview must be viewable as standalone HTML, but preview code is not the theme.

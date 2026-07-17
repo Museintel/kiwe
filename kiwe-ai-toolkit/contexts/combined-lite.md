@@ -91,6 +91,8 @@ Useful website Seam vocabulary:
 - `data-tone`
 - `data-state`
 
+Important: `data-role` is a controlled Seam vocabulary, not a free naming slot. Use official broad roles only, such as `hero`, `card`, `nav`, `button`, `form`, `testimonial`, `price`, or `footer`. For specific ecommerce/editorial concepts, use Seam Class Vocabulary names such as `.seam-product-card`, `.seam-product-rail`, `.seam-product-grid`, `.seam-story`, `.seam-article`, plus project classes such as `.nc-product`. If extra preview semantics are needed, use `data-project-role`, not custom `data-role` values. Do not invent values such as `product-card`, `site-header`, `save-placeholder`, `add-to-cart-placeholder`, `category-link`, or `search-placeholder`.
+
 ## Authority boundaries
 
 Do not create production authority for:
@@ -163,6 +165,8 @@ The importable package is only:
 The import package must not contain JavaScript, TypeScript, PHP, HTML, WASM, remote fonts, remote scripts, trackers, service workers, executable files, remote `@import`, remote `url()`, data URLs, or JavaScript URLs.
 
 The theme CSS is presentation-only. It may style existing DSA selectors and allowed public Seam classes. It must not create runtime authority.
+
+The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, spacing inside content, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
 
 ## AppShell preview quick contract
 

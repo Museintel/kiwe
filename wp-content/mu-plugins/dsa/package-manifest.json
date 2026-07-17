@@ -673,8 +673,8 @@
       "sha256": "04d5f9c2add124776d3c0a045b690a223386cf4ca1fae870e9e681acd78e3aeb"
     },
     "ui-system/README.md": {
-      "bytes": 23228,
-      "sha256": "76837e7e701dbc9f90142c2ebc86d16b4f6a8ed73fe047e5239d3ea5f2913fd9"
+      "bytes": 24001,
+      "sha256": "bf90ad703937af1c08d413e3d3d4402d28db90515d268cc9737e20d9cde2e33c"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
@@ -741,8 +741,8 @@
       "sha256": "628dcddfdcdfde38e6f4acb58ba0aa954a54be3b90802295dd9e4a10bde8dbd7"
     },
     "ui-system/prompt.md": {
-      "bytes": 16382,
-      "sha256": "20c09f7bdd0939b978bd5850af5b14c3ecbd9d1f5a02ea62726a255cf99f605a"
+      "bytes": 17080,
+      "sha256": "82b87671ff85d538e208ae4a38aea89e92c39bc4a96e18432cb09178f235aa39"
     },
     "ui-system/screen-payloads.json": {
       "bytes": 13480,

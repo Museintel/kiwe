@@ -86,6 +86,8 @@ Batch 41 clarifies the combined-handoff boundary after a Grok browser output vis
 
 Batch 42 refines the AI/toolkit review loop after the National Chikki ChatGPT handoff. Combined validation now treats `kiwe-settings/` as truly optional and only requires `SETTINGS-NOTES.md` when that folder exists. The theme package validator no longer misreads `max-width: calc(100vw - …)` as a forbidden full-screen overlay, while still failing true `position: fixed; inset: 0` ownership inside importable theme CSS. Website handoff docs now clarify that `data-role` is controlled Seam vocabulary; custom ecommerce/page concepts should use Seam Class Vocabulary handles, project classes, or `data-project-role`. The AI output audit now warns on non-standard `data-role` values so outputs can be vocabulary-clean without making every warning fatal.
 
+Batch 43 incorporates direct feedback from the ChatGPT National Chikki v2 self-audit. `combined-lite.md` now explicitly includes the two rules that were previously compressed out of the browser-short workflow: `data-role` is controlled Seam vocabulary, and importable AppShell theme CSS must not own dock/screen/sheet/backdrop geometry. The AppShell prompt and generated contexts now spell out that Geometry Engine owns placement/measurement and that fixed/absolute positioning, inset/edge offsets, hardcoded z-index, 100vw/100vh sizing, and viewport offsets on core shell selectors belong in core or preview-only CSS. `validate-package.cjs` now fails these geometry-ownership violations with selector-specific messages instead of relying only on broad overlay detection.
+
 Next release-prep steps:
 
 1. Live Hostinger upload/proof after the rebuilt MU package is deployed.

@@ -227,6 +227,26 @@ function validateSeamUsage(relative, body, kind) {
 	}
 }
 
+function isGeometrySelector(selector) {
+	return /\[data-dsa-dock(?:[\]=\s])|\.dsa-dock(?![-_a-zA-Z0-9])|\[data-dsa-screen(?:[\]=\s])|\[data-dsa-screen-backdrop(?:[\]=\s])|\.dsa-panel(?![-_a-zA-Z0-9])|\.dsa-sheet(?![-_a-zA-Z0-9])/i.test(selector);
+}
+
+function validateGeometryOwnership(relative, body) {
+	for (const match of body.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+		const selector = match[1].trim();
+		const declarations = match[2];
+		if (!isGeometrySelector(selector)) continue;
+		const geometryMatches = [];
+		if (/(?:^|;)\s*position\s*:\s*(?:fixed|absolute)\b/i.test(declarations)) geometryMatches.push('position');
+		if (/(?:^|;)\s*(?:inset|top|right|bottom|left|z-index)\s*:/i.test(declarations)) geometryMatches.push('edge/z-index');
+		if (/(?:^|;)\s*(?:width|inline-size|min-width|min-inline-size|max-width|max-inline-size)\s*:\s*100vw\b/i.test(declarations)) geometryMatches.push('100vw sizing');
+		if (/(?:^|;)\s*(?:height|block-size|min-height|min-block-size|max-height|max-block-size)\s*:\s*100vh\b/i.test(declarations)) geometryMatches.push('100vh sizing');
+		if (geometryMatches.length) {
+			fail(`${relative} assigns ${[...new Set(geometryMatches)].join(', ')} to AppShell geometry selector "${selector.slice(0, 140)}". Kiwe Geometry Engine owns dock/screen/sheet/backdrop placement; move this to preview-only CSS or core.`);
+		}
+	}
+}
+
 function safeRelativeFile(root, relativePath, label) {
 	if (typeof relativePath !== 'string' || relativePath.includes('\\') || relativePath.includes('\0')) {
 		fail(`${label} has unsafe path: ${relativePath}`);
@@ -285,6 +305,7 @@ function validatePackage() {
 			if (check.pattern.test(body)) warn(`CSS file ${css} has risky ${check.label}: ${check.message}`);
 		}
 		validateSeamUsage(css, body, 'css');
+		validateGeometryOwnership(css, body);
 		if (!/(--kiwe-|--dsa-|data-dsa-|dsa-visual-|kiwe-)/.test(body)) {
 			warn(`CSS file ${css} does not appear to use Kiwe tokens or scoped selectors`);
 		}

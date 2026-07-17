@@ -138,6 +138,8 @@ Combined website/page + AppShell previews must match the site type. A news/edito
 
 Responsive fit is mandatory. Check narrow mobile widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
 
+The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set \`position: fixed\`, \`position: absolute\`, \`inset\`, \`top\`, \`right\`, \`bottom\`, \`left\`, hardcoded \`z-index\`, \`width: 100vw\`, \`height: 100vh\`, or hardcoded viewport offsets on \`[data-dsa-dock]\`, \`.dsa-dock\`, \`[data-dsa-screen]\`, \`.dsa-panel\`, \`.dsa-sheet\`, \`[data-dsa-screen-backdrop]\`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, spacing inside content, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+
 The AppShell handoff README must include:
 
 - distinctness note / visual thesis;
