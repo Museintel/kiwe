@@ -2,7 +2,7 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
-## Unreleased - 2026-07-17
+## 0.5.82 - 2026-07-18
 
 - Began the Kiwe AI/connector integration track for dynamic WordPress + Bricks handoffs.
 - Added the read-only `kiwe.site-graph.v1` service with admin-only REST access at `/wp-json/dsa/v1/site-graph` and a WordPress 7 Abilities API surface as `dsa/get-site-graph` when abilities are available.
