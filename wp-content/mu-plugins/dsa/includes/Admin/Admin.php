@@ -14,6 +14,7 @@ use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\AI\Fresh_Site_Graph_Revalidator;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
 use DSA\AI\Target_Resolution_Service;
+use DSA\AI\Rollback_Capture_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -96,6 +97,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_revalidate_apply_sitegraph', [ $this, 'revalidate_apply_sitegraph' ] );
 		add_action( 'admin_post_dsa_build_rollback_readiness', [ $this, 'build_rollback_readiness' ] );
 		add_action( 'admin_post_dsa_resolve_apply_target', [ $this, 'resolve_apply_target' ] );
+		add_action( 'admin_post_dsa_capture_apply_rollback', [ $this, 'capture_apply_rollback' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -2115,6 +2117,67 @@ final class Admin {
 		exit;
 	}
 
+	public function capture_apply_rollback(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to capture Kiwe rollback snapshots.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_capture_apply_rollback_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$capture = ( new Rollback_Capture_Service() )->capture(
+			$stage,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'rollback-capture-ready' !== ( $capture['status'] ?? '' ) ) {
+			$stager->attach_rollback_capture( $stage_id, $capture );
+			wp_die(
+				esc_html__( 'Rollback capture found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Rollback capture blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_rollback_capture( $stage_id, $capture );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => 'kiwe-framework',
+					'apply-capture' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2996,6 +3059,7 @@ final class Admin {
 		$active_fresh = isset( $_GET['apply-fresh'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-fresh'] ) ) : '';
 		$active_rollback = isset( $_GET['apply-rollback'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-rollback'] ) ) : '';
 		$active_target = isset( $_GET['apply-target'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-target'] ) ) : '';
+		$active_capture = isset( $_GET['apply-capture'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-capture'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -3023,6 +3087,9 @@ final class Admin {
 		if ( '' !== $active_target ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Apply target resolved and locked. This still did not save Bricks or WordPress content.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_capture ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Rollback snapshot captured into Kiwe internal staging. This still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -3045,6 +3112,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Fresh', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Rollback', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Target', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Capture', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -3064,6 +3132,7 @@ final class Admin {
 					$fresh = isset( $record['freshSiteGraphRevalidation'] ) && is_array( $record['freshSiteGraphRevalidation'] ) ? $record['freshSiteGraphRevalidation'] : [];
 					$rollback = isset( $record['rollbackReadinessCheckpoint'] ) && is_array( $record['rollbackReadinessCheckpoint'] ) ? $record['rollbackReadinessCheckpoint'] : [];
 					$target = isset( $record['targetResolution'] ) && is_array( $record['targetResolution'] ) ? $record['targetResolution'] : [];
+					$capture = isset( $record['rollbackCapture'] ) && is_array( $record['rollbackCapture'] ) ? $record['rollbackCapture'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -3091,8 +3160,11 @@ final class Admin {
 					$target_status = (string) ( $target['status'] ?? __( 'not resolved', 'dsa' ) );
 					$target_blockers = isset( $target['blockers'] ) && is_array( $target['blockers'] ) ? count( $target['blockers'] ) : 0;
 					$can_target = [] !== $rollback && 'rollback-readiness-ready' === ( $rollback['status'] ?? '' ) && 0 === $rollback_blockers;
+					$capture_status = (string) ( $capture['status'] ?? __( 'not captured', 'dsa' ) );
+					$capture_blockers = isset( $capture['blockers'] ) && is_array( $capture['blockers'] ) ? count( $capture['blockers'] ) : 0;
+					$can_capture = [] !== $target && 'target-resolution-ready' === ( $target['status'] ?? '' ) && 0 === $target_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -3105,6 +3177,7 @@ final class Admin {
 						<td><?php echo esc_html( $fresh_status ); ?><?php echo $fresh_blockers > 0 ? ' (' . esc_html( (string) $fresh_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $rollback_status ); ?><?php echo $rollback_blockers > 0 ? ' (' . esc_html( (string) $rollback_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $target_status ); ?><?php echo $target_blockers > 0 ? ' (' . esc_html( (string) $target_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $capture_status ); ?><?php echo $capture_blockers > 0 ? ' (' . esc_html( (string) $capture_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -3164,11 +3237,17 @@ final class Admin {
 								</label>
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_target ); ?>><?php esc_html_e( 'Resolve target', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_capture_apply_rollback">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_capture_apply_rollback_' . $id ); ?>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_capture ); ?>><?php esc_html_e( 'Capture rollback snapshot', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="14">
+							<td colspan="15">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
@@ -3177,6 +3256,7 @@ final class Admin {
 								<?php $this->render_fresh_sitegraph_revalidation_details( $fresh ); ?>
 								<?php $this->render_rollback_readiness_details( $rollback ); ?>
 								<?php $this->render_target_resolution_details( $target ); ?>
+								<?php $this->render_rollback_capture_details( $capture ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -3583,6 +3663,56 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Target blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_rollback_capture_details( array $capture ): void {
+		if ( [] === $capture ) {
+			return;
+		}
+		$blockers = isset( $capture['blockers'] ) && is_array( $capture['blockers'] ) ? $capture['blockers'] : [];
+		$target   = isset( $capture['target'] ) && is_array( $capture['target'] ) ? $capture['target'] : [];
+		$snapshot = isset( $capture['snapshot'] ) && is_array( $capture['snapshot'] ) ? $capture['snapshot'] : [];
+		$fields   = isset( $snapshot['fields'] ) && is_array( $snapshot['fields'] ) ? $snapshot['fields'] : [];
+		$meta     = isset( $snapshot['meta'] ) && is_array( $snapshot['meta'] ) ? $snapshot['meta'] : [];
+		$meta_keys = isset( $capture['metaKeys'] ) && is_array( $capture['metaKeys'] ) ? $capture['metaKeys'] : array_keys( $meta );
+		?>
+		<p><strong><?php esc_html_e( 'Rollback capture', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $capture['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $capture['actualRollbackSnapshotCaptured'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'snapshot captured', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $capture['actualWordPressRevisionCreated'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'WP revision', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $meta_keys ) ); ?></strong><span><?php esc_html_e( 'meta keys', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description"><?php esc_html_e( 'This is a Kiwe-owned rollback snapshot of the resolved target. It writes the staging record only; it does not save Bricks, publish, or alter the target page.', 'dsa' ); ?></p>
+		<?php if ( [] !== $target || [] !== $fields ) : ?>
+			<ul class="ul-disc">
+				<li><?php esc_html_e( 'Target:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $target['id'] ?? $fields['ID'] ?? 0 ) ); ?></code> <?php echo esc_html( (string) ( $target['postType'] ?? $fields['post_type'] ?? '' ) ); ?> / <?php echo esc_html( (string) ( $target['status'] ?? $fields['post_status'] ?? '' ) ); ?></li>
+				<li><?php esc_html_e( 'Title:', 'dsa' ); ?> <?php echo esc_html( (string) ( $target['title'] ?? $fields['post_title'] ?? '' ) ); ?></li>
+				<li><?php esc_html_e( 'Snapshot hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $capture['snapshotHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+				<li><?php esc_html_e( 'Meta hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $capture['metaHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $meta_keys ) : ?>
+			<p><strong><?php esc_html_e( 'Captured meta keys', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( array_slice( $meta_keys, 0, 16 ) as $key ) : ?>
+					<li><code><?php echo esc_html( (string) $key ); ?></code></li>
+				<?php endforeach; ?>
+			</ul>
+			<?php if ( count( $meta_keys ) > 16 ) : ?>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 16 captured meta keys; %d more are stored in the rollback snapshot.', 'dsa' ), count( $meta_keys ) - 16 ) ); ?></p>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Rollback capture blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

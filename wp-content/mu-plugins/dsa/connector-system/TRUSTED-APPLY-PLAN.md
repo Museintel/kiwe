@@ -312,6 +312,40 @@ It records:
 
 The target lock still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It only tells a future adapter which exact WordPress object is allowed to be touched after real rollback capture.
 
+## Rollback capture
+
+Batch 17 adds the locked-target snapshot:
+
+```text
+kiwe.rollback-capture.v1
+```
+
+The rollback capture can be attached only after:
+
+1. a valid stage exists;
+2. fresh Site Graph revalidation is ready;
+3. rollback readiness is ready;
+4. target resolution is ready;
+5. stage, fresh revalidation, rollback readiness, and target resolution plan hashes match;
+6. the resolved target object can be read;
+7. no blockers remain.
+
+It records:
+
+- target post ID;
+- post type;
+- status;
+- title;
+- URL;
+- current WordPress post fields;
+- relevant meta keys using the `_bricks*`, `_kiwe_*`, `_dsa_*`, and `_wp_page_template` families;
+- snapshot hash;
+- meta hash;
+- `actualRollbackSnapshotCaptured: true` when clean;
+- `actualWordPressRevisionCreated: false`.
+
+The capture writes only the Kiwe staging record. It still does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or create a native WordPress revision. It gives the next adapter rung a concrete restore payload for the exact locked target.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -326,6 +360,7 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 8. fresh Site Graph revalidation passes;
 9. rollback readiness checkpoint is attached;
 10. target resolution is attached;
-11. a real rollback/revision point is captured for the exact target;
+11. rollback capture is attached for the exact target;
 12. the adapter can inspect the rendered Bricks tree before save;
-13. post-apply Kiwe audit and browser smoke tests pass.
+13. the smallest possible mutation is selected and reviewed;
+14. post-apply Kiwe audit and browser smoke tests pass.

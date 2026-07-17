@@ -117,6 +117,8 @@ After fresh revalidation, admins can build `kiwe.rollback-readiness-checkpoint.v
 
 After rollback readiness, admins can attach `kiwe.target-resolution.v1` by entering the exact post/page/template ID that the future adapter is allowed to touch. Target resolution is still non-mutating and prevents ambiguous saves.
 
+After target resolution, admins can attach `kiwe.rollback-capture.v1`. This captures the locked target's current WordPress fields and relevant Bricks/Kiwe/DSA meta into Kiwe's internal staging record. It is restore-prep only: it does not save Bricks, edit WordPress content, publish, or create a native WordPress revision.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.
