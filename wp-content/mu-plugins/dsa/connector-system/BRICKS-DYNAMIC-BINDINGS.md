@@ -87,6 +87,8 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 MCP clients can call `kiwe_validate_bindings` with `targetDir` and optional `siteGraphPath`.
 
+WordPress admins can validate the same `kiwe-bindings.json` against the current live Site Graph from `Kiwe > Framework > AI connector and Site Graph`. This admin intake does not write Bricks data.
+
 Prepare a dry-run apply plan with:
 
 ```bash

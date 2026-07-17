@@ -53,6 +53,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 ```
 
 Admins can download `site-graph.json` from `Kiwe > Framework > AI connector and Site Graph`.
+Admins can also upload an AI-produced `kiwe-bindings.json` there to run the same style of validation against the current live Site Graph without mutating Bricks.
 
 Prepare a dry-run apply plan:
 

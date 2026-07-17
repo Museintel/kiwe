@@ -3,6 +3,7 @@
 namespace DSA\Admin;
 
 use DSA\AI\Site_Graph_Service;
+use DSA\AI\Binding_Plan_Validator;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -74,6 +75,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_export_bricks_tokens', [ $this, 'export_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_apply_bricks_tokens', [ $this, 'apply_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
+		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1407,6 +1409,69 @@ final class Admin {
 		exit;
 	}
 
+	public function validate_binding_plan(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to validate Kiwe binding plans.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_validate_binding_plan' );
+
+		$file = $_FILES['dsa_binding_file'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		if ( ! is_array( $file ) || empty( $file['tmp_name'] ) || ! empty( $file['error'] ) ) {
+			$this->redirect_binding_plan_error( 'missing' );
+		}
+
+		if ( ! is_uploaded_file( (string) $file['tmp_name'] ) ) {
+			$this->redirect_binding_plan_error( 'missing' );
+		}
+
+		if ( ! empty( $file['size'] ) && (int) $file['size'] > 512 * 1024 ) {
+			$this->redirect_binding_plan_error( 'size' );
+		}
+
+		$name = sanitize_file_name( $file['name'] ?? '' );
+		if ( ! preg_match( '/\.json$/i', $name ) ) {
+			$this->redirect_binding_plan_error( 'type' );
+		}
+
+		$raw = file_get_contents( (string) $file['tmp_name'] );
+		if ( false === $raw || '' === trim( $raw ) ) {
+			$this->redirect_binding_plan_error( 'empty' );
+		}
+
+		$binding = json_decode( $raw, true );
+		if ( ! is_array( $binding ) ) {
+			$this->redirect_binding_plan_error( 'json' );
+		}
+
+		$raw_sample_limit = isset( $_POST['sampleLimit'] ) ? sanitize_text_field( wp_unslash( $_POST['sampleLimit'] ) ) : '8';
+		$sample_limit     = max( 0, min( 24, absint( $raw_sample_limit ) ) );
+		$site_graph       = ( new Site_Graph_Service( $this->settings, $this->modules ) )->graph( [ 'sampleLimit' => $sample_limit ] );
+		$report           = ( new Binding_Plan_Validator() )->validate( $binding, $site_graph );
+		$key              = md5( get_current_user_id() . '|' . microtime( true ) . '|' . wp_rand() );
+
+		set_transient(
+			'dsa_binding_report_' . $key,
+			[
+				'userId'      => get_current_user_id(),
+				'createdAt'   => gmdate( 'c' ),
+				'fileName'    => $name,
+				'sampleLimit' => $sample_limit,
+				'siteName'    => wp_strip_all_tags( (string) get_bloginfo( 'name' ) ),
+				'report'      => $report,
+			],
+			10 * MINUTE_IN_SECONDS
+		);
+
+		wp_safe_redirect( add_query_arg( 'binding-report', $key, admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -1982,6 +2047,7 @@ final class Admin {
 		$counts   = Seam_Token_Service::counts( $items );
 		$class_export = Seam_Token_Service::framework_classes_for_bricks();
 		$class_count  = isset( $class_export['classes'] ) && is_array( $class_export['classes'] ) ? count( $class_export['classes'] ) : 0;
+		$binding_report = $this->framework_binding_report();
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe Framework', 'dsa' ); ?></h1>
@@ -1995,6 +2061,9 @@ final class Admin {
 			<?php endif; ?>
 			<?php if ( isset( $_GET['site-graph-exported'] ) && 'encode-error' === sanitize_key( (string) wp_unslash( $_GET['site-graph-exported'] ) ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Kiwe could not encode the Site Graph JSON. Try a smaller sample size and check server logs if it continues.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['binding-plan'] ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->binding_plan_error_message( sanitize_key( (string) wp_unslash( $_GET['binding-plan'] ) ) ) ); ?></p></div>
 			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
@@ -2049,6 +2118,28 @@ final class Admin {
 							<?php submit_button( __( 'Download Site Graph JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
 						</p>
 					</form>
+					<h3><?php esc_html_e( 'Validate AI binding plan', 'dsa' ); ?></h3>
+					<p class="description"><?php esc_html_e( 'Upload an AI-produced bricks-bindings/kiwe-bindings.json file. Kiwe validates it against this site\'s current Site Graph and shows a report only; it does not save Bricks data or apply changes.', 'dsa' ); ?></p>
+					<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_validate_binding_plan">
+						<?php wp_nonce_field( 'dsa_validate_binding_plan' ); ?>
+						<p class="dsa-admin-inline-fields">
+							<label>
+								<span><?php esc_html_e( 'Binding JSON', 'dsa' ); ?></span>
+								<input type="file" name="dsa_binding_file" accept="application/json,.json" required>
+							</label>
+							<label>
+								<span><?php esc_html_e( 'Site Graph sample size', 'dsa' ); ?></span>
+								<select name="sampleLimit">
+									<?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?>
+										<option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</label>
+							<?php submit_button( __( 'Validate Binding Plan', 'dsa' ), 'secondary', 'submit', false ); ?>
+						</p>
+					</form>
+					<?php $this->render_binding_plan_report( $binding_report ); ?>
 					<p class="description"><?php esc_html_e( 'REST endpoint for tool clients:', 'dsa' ); ?> <code><?php echo esc_html( rest_url( 'dsa/v1/site-graph?sampleLimit=8' ) ); ?></code></p>
 					<p class="description"><?php esc_html_e( 'Safe AI sequence: generate/audit handoff, add bricks-bindings/ with the Site Graph, run validate-bindings, then prepare a dry-run apply plan. Do not let browser AI claim it saved Bricks or WordPress.', 'dsa' ); ?></p>
 					<ul class="ul-disc">
@@ -2082,6 +2173,53 @@ final class Admin {
 				</div>
 			</section>
 		</div>
+		<?php
+	}
+
+	private function render_binding_plan_report( array $payload ): void {
+		if ( [] === $payload ) {
+			return;
+		}
+
+		$report   = isset( $payload['report'] ) && is_array( $payload['report'] ) ? $payload['report'] : [];
+		$summary  = isset( $report['summary'] ) && is_array( $report['summary'] ) ? $report['summary'] : [];
+		$counts   = isset( $report['counts'] ) && is_array( $report['counts'] ) ? $report['counts'] : [];
+		$findings = isset( $report['findings'] ) && is_array( $report['findings'] ) ? $report['findings'] : [];
+		$ok       = ! empty( $report['ok'] );
+		?>
+		<div class="notice <?php echo $ok ? 'notice-success' : 'notice-error'; ?>" style="margin: 1rem 0;">
+			<p>
+				<strong><?php echo $ok ? esc_html__( 'Binding plan passed runtime validation.', 'dsa' ) : esc_html__( 'Binding plan needs fixes before any apply path.', 'dsa' ); ?></strong>
+				<?php echo esc_html( sprintf( __( 'File: %1$s. Site Graph samples: %2$d.', 'dsa' ), (string) ( $payload['fileName'] ?? 'kiwe-bindings.json' ), (int) ( $payload['sampleLimit'] ?? 0 ) ) ); ?>
+			</p>
+		</div>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $summary['queries'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'queries', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $summary['dynamicFields'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'dynamic fields', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $summary['launchers'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'launchers', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $summary['menuContext'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'menu context', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $counts['fail'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'failures', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $counts['warn'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'warnings', 'dsa' ); ?></span></div>
+		</div>
+		<?php if ( [] !== $findings ) : ?>
+			<ul class="ul-disc">
+				<?php foreach ( $findings as $finding ) : ?>
+					<?php
+					if ( ! is_array( $finding ) ) {
+						continue;
+					}
+					$level   = sanitize_key( (string) ( $finding['level'] ?? 'info' ) );
+					$message = (string) ( $finding['message'] ?? '' );
+					if ( '' === $message ) {
+						continue;
+					}
+					?>
+					<li><strong><?php echo esc_html( strtoupper( $level ) ); ?>:</strong> <?php echo esc_html( $message ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php else : ?>
+			<p class="description"><?php esc_html_e( 'No validator findings were reported. This still does not mutate WordPress or Bricks; use prepare-apply-plan for the next dry-run step.', 'dsa' ); ?></p>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -4368,6 +4506,37 @@ final class Admin {
 	private function redirect_profile_error( string $code ): void {
 		wp_safe_redirect( add_query_arg( 'profile-error', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe' ) ) );
 		exit;
+	}
+
+	private function redirect_binding_plan_error( string $code ): void {
+		wp_safe_redirect( add_query_arg( 'binding-plan', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		exit;
+	}
+
+	private function binding_plan_error_message( string $code ): string {
+		$messages = [
+			'missing' => __( 'Choose a kiwe-bindings.json file to validate.', 'dsa' ),
+			'size'    => __( 'Binding plan file is too large. Use a JSON file under 512 KB.', 'dsa' ),
+			'type'    => __( 'Binding plan intake only accepts .json files.', 'dsa' ),
+			'empty'   => __( 'Binding plan file was empty.', 'dsa' ),
+			'json'    => __( 'Binding plan file was not valid JSON.', 'dsa' ),
+		];
+
+		return $messages[ $code ] ?? __( 'Binding plan could not be processed.', 'dsa' );
+	}
+
+	private function framework_binding_report(): array {
+		$key = isset( $_GET['binding-report'] ) ? sanitize_key( (string) wp_unslash( $_GET['binding-report'] ) ) : '';
+		if ( '' === $key ) {
+			return [];
+		}
+
+		$payload = get_transient( 'dsa_binding_report_' . $key );
+		if ( ! is_array( $payload ) || (int) ( $payload['userId'] ?? 0 ) !== get_current_user_id() ) {
+			return [];
+		}
+
+		return $payload;
 	}
 
 	private function profile_error_message( string $code ): string {

@@ -78,6 +78,14 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 MCP clients can call `kiwe_validate_bindings`.
 
+Admins can also validate an AI-produced `bricks-bindings/kiwe-bindings.json` directly against the live target site from:
+
+```text
+Kiwe > Framework > AI connector and Site Graph > Validate AI binding plan
+```
+
+That admin intake is non-mutating. It reports failures/warnings only.
+
 7. Prepare a dry-run trusted apply plan:
 
 ```bash

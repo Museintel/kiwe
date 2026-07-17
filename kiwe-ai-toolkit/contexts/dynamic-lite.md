@@ -47,6 +47,8 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs <handoff-or-bindings-dir-or-jso
 
 MCP clients should call `kiwe_validate_bindings` with `targetDir` and `siteGraphPath`.
 
+If the human has WordPress admin access, they can also upload `bricks-bindings/kiwe-bindings.json` at `Kiwe > Framework > AI connector and Site Graph` for a live non-mutating validation report.
+
 If no execution is available, do not claim validation ran. Self-check against this context and report that executable validation was not available.
 
 After validation, an apply-path request may prepare a dry-run plan:
