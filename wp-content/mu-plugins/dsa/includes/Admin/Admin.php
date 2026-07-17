@@ -15,6 +15,7 @@ use DSA\AI\Fresh_Site_Graph_Revalidator;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
 use DSA\AI\Target_Resolution_Service;
 use DSA\AI\Rollback_Capture_Service;
+use DSA\AI\Rendered_Target_Inspection_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -98,6 +99,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_build_rollback_readiness', [ $this, 'build_rollback_readiness' ] );
 		add_action( 'admin_post_dsa_resolve_apply_target', [ $this, 'resolve_apply_target' ] );
 		add_action( 'admin_post_dsa_capture_apply_rollback', [ $this, 'capture_apply_rollback' ] );
+		add_action( 'admin_post_dsa_inspect_rendered_target', [ $this, 'inspect_rendered_target' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -2178,6 +2180,67 @@ final class Admin {
 		exit;
 	}
 
+	public function inspect_rendered_target(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to inspect Kiwe apply targets.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_inspect_rendered_target_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$inspection = ( new Rendered_Target_Inspection_Service() )->inspect(
+			$stage,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'rendered-target-inspection-ready' !== ( $inspection['status'] ?? '' ) ) {
+			$stager->attach_rendered_target_inspection( $stage_id, $inspection );
+			wp_die(
+				esc_html__( 'Rendered target inspection found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Rendered target inspection blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_rendered_target_inspection( $stage_id, $inspection );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'             => 'kiwe-framework',
+					'apply-inspection' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3060,6 +3123,7 @@ final class Admin {
 		$active_rollback = isset( $_GET['apply-rollback'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-rollback'] ) ) : '';
 		$active_target = isset( $_GET['apply-target'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-target'] ) ) : '';
 		$active_capture = isset( $_GET['apply-capture'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-capture'] ) ) : '';
+		$active_inspection = isset( $_GET['apply-inspection'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-inspection'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -3090,6 +3154,9 @@ final class Admin {
 		if ( '' !== $active_capture ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Rollback snapshot captured into Kiwe internal staging. This still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_inspection ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Rendered target baseline inspected. This still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -3113,6 +3180,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Rollback', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Target', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Capture', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Inspect', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -3133,6 +3201,7 @@ final class Admin {
 					$rollback = isset( $record['rollbackReadinessCheckpoint'] ) && is_array( $record['rollbackReadinessCheckpoint'] ) ? $record['rollbackReadinessCheckpoint'] : [];
 					$target = isset( $record['targetResolution'] ) && is_array( $record['targetResolution'] ) ? $record['targetResolution'] : [];
 					$capture = isset( $record['rollbackCapture'] ) && is_array( $record['rollbackCapture'] ) ? $record['rollbackCapture'] : [];
+					$inspection = isset( $record['renderedTargetInspection'] ) && is_array( $record['renderedTargetInspection'] ) ? $record['renderedTargetInspection'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -3163,8 +3232,11 @@ final class Admin {
 					$capture_status = (string) ( $capture['status'] ?? __( 'not captured', 'dsa' ) );
 					$capture_blockers = isset( $capture['blockers'] ) && is_array( $capture['blockers'] ) ? count( $capture['blockers'] ) : 0;
 					$can_capture = [] !== $target && 'target-resolution-ready' === ( $target['status'] ?? '' ) && 0 === $target_blockers;
+					$inspection_status = (string) ( $inspection['status'] ?? __( 'not inspected', 'dsa' ) );
+					$inspection_blockers = isset( $inspection['blockers'] ) && is_array( $inspection['blockers'] ) ? count( $inspection['blockers'] ) : 0;
+					$can_inspect = [] !== $capture && 'rollback-capture-ready' === ( $capture['status'] ?? '' ) && 0 === $capture_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -3178,6 +3250,7 @@ final class Admin {
 						<td><?php echo esc_html( $rollback_status ); ?><?php echo $rollback_blockers > 0 ? ' (' . esc_html( (string) $rollback_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $target_status ); ?><?php echo $target_blockers > 0 ? ' (' . esc_html( (string) $target_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $capture_status ); ?><?php echo $capture_blockers > 0 ? ' (' . esc_html( (string) $capture_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $inspection_status ); ?><?php echo $inspection_blockers > 0 ? ' (' . esc_html( (string) $inspection_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -3243,11 +3316,17 @@ final class Admin {
 								<?php wp_nonce_field( 'dsa_capture_apply_rollback_' . $id ); ?>
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_capture ); ?>><?php esc_html_e( 'Capture rollback snapshot', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_inspect_rendered_target">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_inspect_rendered_target_' . $id ); ?>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_inspect ); ?>><?php esc_html_e( 'Inspect rendered baseline', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="15">
+							<td colspan="16">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
@@ -3257,6 +3336,7 @@ final class Admin {
 								<?php $this->render_rollback_readiness_details( $rollback ); ?>
 								<?php $this->render_target_resolution_details( $target ); ?>
 								<?php $this->render_rollback_capture_details( $capture ); ?>
+								<?php $this->render_rendered_target_inspection_details( $inspection ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -3713,6 +3793,76 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Rollback capture blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_rendered_target_inspection_details( array $inspection ): void {
+		if ( [] === $inspection ) {
+			return;
+		}
+		$blockers = isset( $inspection['blockers'] ) && is_array( $inspection['blockers'] ) ? $inspection['blockers'] : [];
+		$warnings = isset( $inspection['warnings'] ) && is_array( $inspection['warnings'] ) ? $inspection['warnings'] : [];
+		$baseline = isset( $inspection['baseline'] ) && is_array( $inspection['baseline'] ) ? $inspection['baseline'] : [];
+		$bricks   = isset( $inspection['bricks'] ) && is_array( $inspection['bricks'] ) ? $inspection['bricks'] : [];
+		$coverage = isset( $inspection['operationSelectorCoverage'] ) && is_array( $inspection['operationSelectorCoverage'] ) ? $inspection['operationSelectorCoverage'] : [];
+		$visible_coverage = array_slice( $coverage, 0, 12 );
+		$hidden_coverage  = max( 0, count( $coverage ) - count( $visible_coverage ) );
+		?>
+		<p><strong><?php esc_html_e( 'Rendered target baseline inspection', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $inspection['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $bricks['hasBricksMeta'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'Bricks meta', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $bricks['estimatedElementNodes'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'nodes', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $warnings ) ); ?></strong><span><?php esc_html_e( 'warnings', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description"><?php esc_html_e( 'This is a baseline inspection from the protected rollback snapshot. It does not perform a browser render, Bricks save, WordPress update, or publish action.', 'dsa' ); ?></p>
+		<ul class="ul-disc">
+			<li><?php esc_html_e( 'Mode:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $inspection['inspectionMode'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'URL:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $baseline['url'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Post content length:', 'dsa' ); ?> <?php echo esc_html( (string) ( $baseline['postContentLength'] ?? 0 ) ); ?></li>
+			<li><?php esc_html_e( 'Snapshot hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $baseline['snapshotHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+		</ul>
+		<?php if ( [] !== $visible_coverage ) : ?>
+			<p><strong><?php esc_html_e( 'Operation selector coverage', 'dsa' ); ?></strong></p>
+			<table class="widefat striped">
+				<thead><tr><th><?php esc_html_e( 'Type', 'dsa' ); ?></th><th><?php esc_html_e( 'Selector', 'dsa' ); ?></th><th><?php esc_html_e( 'Coverage', 'dsa' ); ?></th><th><?php esc_html_e( 'Blocking', 'dsa' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $visible_coverage as $item ) : ?>
+					<?php
+					if ( ! is_array( $item ) ) {
+						continue;
+					}
+					?>
+					<tr>
+						<td><code><?php echo esc_html( (string) ( $item['type'] ?? '' ) ); ?></code></td>
+						<td><code><?php echo esc_html( (string) ( $item['selector'] ?? '' ) ); ?></code></td>
+						<td><?php echo esc_html( (string) ( $item['coverage'] ?? '' ) ); ?></td>
+						<td><?php echo ! empty( $item['blocking'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php if ( $hidden_coverage > 0 ) : ?>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 12 selector checks; %d more are stored in the inspection artifact.', 'dsa' ), $hidden_coverage ) ); ?></p>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php if ( [] !== $warnings ) : ?>
+			<p><strong><?php esc_html_e( 'Inspection warnings', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $warnings as $warning ) : ?>
+					<li><?php echo esc_html( (string) $warning ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Rendered inspection blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

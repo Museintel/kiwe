@@ -346,6 +346,39 @@ It records:
 
 The capture writes only the Kiwe staging record. It still does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or create a native WordPress revision. It gives the next adapter rung a concrete restore payload for the exact locked target.
 
+## Rendered target baseline inspection
+
+Batch 18 adds the baseline inspection rung:
+
+```text
+kiwe.rendered-target-inspection.v1
+```
+
+The inspection can be attached only after:
+
+1. a valid stage exists;
+2. target resolution is ready;
+3. rollback capture is ready;
+4. stage, target resolution, and rollback capture plan hashes match;
+5. the rollback snapshot is available;
+6. no blockers remain.
+
+It records:
+
+- target post ID;
+- baseline URL;
+- post content length and hash;
+- rollback snapshot hash;
+- Bricks meta keys;
+- decoded Bricks JSON payload count;
+- estimated Bricks element-node count;
+- operation selector coverage against current post content and Bricks meta;
+- warnings for missing baseline selectors or missing Bricks meta.
+
+Selector absence in the current baseline is not automatically blocking. A first import or blank target will often not contain the future handoff's selectors yet. The future adapter must still map selectors after conversion/import and before save.
+
+The inspection writes only the Kiwe staging record. It does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or perform a browser render. Browser smoke remains a later post-apply/final preview requirement.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -361,6 +394,6 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 9. rollback readiness checkpoint is attached;
 10. target resolution is attached;
 11. rollback capture is attached for the exact target;
-12. the adapter can inspect the rendered Bricks tree before save;
-13. the smallest possible mutation is selected and reviewed;
+12. rendered target baseline inspection is attached;
+13. the adapter can map/import against the inspected target with the smallest possible mutation;
 14. post-apply Kiwe audit and browser smoke tests pass.

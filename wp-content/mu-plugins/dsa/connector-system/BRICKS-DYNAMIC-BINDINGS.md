@@ -119,6 +119,8 @@ After rollback readiness, admins can attach `kiwe.target-resolution.v1` by enter
 
 After target resolution, admins can attach `kiwe.rollback-capture.v1`. This captures the locked target's current WordPress fields and relevant Bricks/Kiwe/DSA meta into Kiwe's internal staging record. It is restore-prep only: it does not save Bricks, edit WordPress content, publish, or create a native WordPress revision.
 
+After rollback capture, admins can attach `kiwe.rendered-target-inspection.v1`. This inspects the protected baseline snapshot for post content, Bricks meta shape, estimated nodes, and operation selector coverage. Missing selectors are warnings for first-import/new-content cases; they are not permission for an AI or adapter to guess a save.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

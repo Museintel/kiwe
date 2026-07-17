@@ -61,6 +61,10 @@ MCP clients should call `kiwe_prepare_apply_plan`.
 
 This produces `kiwe.bricks-apply-plan.v1`. It is not a mutation. It lists the future Bricks apply sequence, preflight checks, operations, and manual-review gates for an admin-approved trusted adapter.
 
+In WordPress admin, the non-mutating apply path continues as a staged safety chain before any future adapter may save: `kiwe.trusted-apply-stage.v1`, `kiwe.trusted-adapter-proof.v1`, `kiwe.guarded-apply-authorization.v1`, `kiwe.pre-execution-gate.v1`, `kiwe.trusted-execution-preview.v1`, `kiwe.final-apply-confirmation.v1`, `kiwe.fresh-sitegraph-revalidation.v1`, `kiwe.rollback-readiness-checkpoint.v1`, `kiwe.target-resolution.v1`, `kiwe.rollback-capture.v1`, and `kiwe.rendered-target-inspection.v1`.
+
+The rendered target inspection is a baseline snapshot inspection, not permission to save. Missing selectors on the current target are warnings/manual review for first-import or new-content cases; a future adapter must map them after conversion/import and before any reviewed save.
+
 ## `kiwe-bindings.json` quick contract
 
 ```json
