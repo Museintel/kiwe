@@ -20,6 +20,7 @@ use DSA\AI\Minimal_Adapter_Shell_Service;
 use DSA\AI\Final_Save_Approval_Service;
 use DSA\AI\Controlled_Executor_Service;
 use DSA\AI\Bricks_Controlled_Adapter_Service;
+use DSA\AI\Post_Apply_Verification_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -108,6 +109,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_approve_final_save', [ $this, 'approve_final_save' ] );
 		add_action( 'admin_post_dsa_build_controlled_executor', [ $this, 'build_controlled_executor' ] );
 		add_action( 'admin_post_dsa_prepare_bricks_controlled_adapter', [ $this, 'prepare_bricks_controlled_adapter' ] );
+		add_action( 'admin_post_dsa_build_post_apply_verification', [ $this, 'build_post_apply_verification' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -2494,6 +2496,67 @@ final class Admin {
 		exit;
 	}
 
+	public function build_post_apply_verification(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to build Kiwe post-apply verification.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_build_post_apply_verification_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$verification = ( new Post_Apply_Verification_Service() )->build(
+			$stage,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'post-apply-verification-ready' !== ( $verification['status'] ?? '' ) ) {
+			$stager->attach_post_apply_verification( $stage_id, $verification );
+			wp_die(
+				esc_html__( 'Post-apply verification proof found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Post-apply verification blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_post_apply_verification( $stage_id, $verification );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'              => 'kiwe-framework',
+					'apply-post-verify' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3381,6 +3444,7 @@ final class Admin {
 		$active_save = isset( $_GET['apply-save-ok'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-save-ok'] ) ) : '';
 		$active_executor = isset( $_GET['apply-executor'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-executor'] ) ) : '';
 		$active_adapter = isset( $_GET['apply-adapter'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-adapter'] ) ) : '';
+		$active_post_verify = isset( $_GET['apply-post-verify'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-post-verify'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -3426,6 +3490,9 @@ final class Admin {
 		if ( '' !== $active_adapter ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Bricks controlled adapter plan prepared. This mapped approved operations to adapter instructions but still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_post_verify ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Post-apply verification and rollback proof built. This selected the smallest future controlled run and proof plan but still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -3454,6 +3521,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Save OK', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Executor', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Adapter', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Post proof', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -3479,6 +3547,7 @@ final class Admin {
 					$save_approval = isset( $record['finalSaveApproval'] ) && is_array( $record['finalSaveApproval'] ) ? $record['finalSaveApproval'] : [];
 					$executor = isset( $record['controlledExecutor'] ) && is_array( $record['controlledExecutor'] ) ? $record['controlledExecutor'] : [];
 					$adapter = isset( $record['bricksControlledAdapter'] ) && is_array( $record['bricksControlledAdapter'] ) ? $record['bricksControlledAdapter'] : [];
+					$post_verify = isset( $record['postApplyVerification'] ) && is_array( $record['postApplyVerification'] ) ? $record['postApplyVerification'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -3524,8 +3593,11 @@ final class Admin {
 					$adapter_status = (string) ( $adapter['status'] ?? __( 'not prepared', 'dsa' ) );
 					$adapter_blockers = isset( $adapter['blockers'] ) && is_array( $adapter['blockers'] ) ? count( $adapter['blockers'] ) : 0;
 					$can_adapter = [] !== $executor && 'controlled-executor-skeleton-ready' === ( $executor['status'] ?? '' ) && 0 === $executor_blockers;
+					$post_verify_status = (string) ( $post_verify['status'] ?? __( 'not built', 'dsa' ) );
+					$post_verify_blockers = isset( $post_verify['blockers'] ) && is_array( $post_verify['blockers'] ) ? count( $post_verify['blockers'] ) : 0;
+					$can_post_verify = [] !== $adapter && 'bricks-controlled-adapter-ready' === ( $adapter['status'] ?? '' ) && 0 === $adapter_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor || $id === $active_adapter ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor || $id === $active_adapter || $id === $active_post_verify ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -3544,6 +3616,7 @@ final class Admin {
 						<td><?php echo esc_html( $save_status ); ?><?php echo $save_blockers > 0 ? ' (' . esc_html( (string) $save_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $executor_status ); ?><?php echo $executor_blockers > 0 ? ' (' . esc_html( (string) $executor_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $adapter_status ); ?><?php echo $adapter_blockers > 0 ? ' (' . esc_html( (string) $adapter_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $post_verify_status ); ?><?php echo $post_verify_blockers > 0 ? ' (' . esc_html( (string) $post_verify_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -3645,11 +3718,18 @@ final class Admin {
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_adapter ); ?>><?php esc_html_e( 'Prepare Bricks adapter plan', 'dsa' ); ?></button>
 								<p class="description" style="margin:.25rem 0 0;"><?php esc_html_e( 'Maps approved operations only; no Bricks save runs.', 'dsa' ); ?></p>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_build_post_apply_verification">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_build_post_apply_verification_' . $id ); ?>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_post_verify ); ?>><?php esc_html_e( 'Build post-apply proof', 'dsa' ); ?></button>
+								<p class="description" style="margin:.25rem 0 0;"><?php esc_html_e( 'Plans smallest-run verification and rollback proof; no save runs.', 'dsa' ); ?></p>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor || $id === $active_adapter ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor || $id === $active_adapter || $id === $active_post_verify ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="20">
+							<td colspan="21">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
@@ -3664,6 +3744,7 @@ final class Admin {
 								<?php $this->render_final_save_approval_details( $save_approval ); ?>
 								<?php $this->render_controlled_executor_details( $executor ); ?>
 								<?php $this->render_bricks_controlled_adapter_details( $adapter ); ?>
+								<?php $this->render_post_apply_verification_details( $post_verify ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -4474,6 +4555,93 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Adapter blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_post_apply_verification_details( array $verification ): void {
+		if ( [] === $verification ) {
+			return;
+		}
+		$blockers = isset( $verification['blockers'] ) && is_array( $verification['blockers'] ) ? $verification['blockers'] : [];
+		$gates    = isset( $verification['gates'] ) && is_array( $verification['gates'] ) ? $verification['gates'] : [];
+		$candidate = isset( $verification['smallestControlledRunCandidate'] ) && is_array( $verification['smallestControlledRunCandidate'] ) ? $verification['smallestControlledRunCandidate'] : [];
+		$plan     = isset( $verification['postApplyVerificationPlan'] ) && is_array( $verification['postApplyVerificationPlan'] ) ? $verification['postApplyVerificationPlan'] : [];
+		$rollback = isset( $verification['rollbackProof'] ) && is_array( $verification['rollbackProof'] ) ? $verification['rollbackProof'] : [];
+		$matrix   = isset( $verification['verificationMatrix'] ) && is_array( $verification['verificationMatrix'] ) ? $verification['verificationMatrix'] : [];
+		$visible  = array_slice( $matrix, 0, 10 );
+		$hidden   = max( 0, count( $matrix ) - count( $visible ) );
+		?>
+		<p><strong><?php esc_html_e( 'Post-apply verification and rollback proof', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $verification['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $candidate['operationId'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'smallest op', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $verification['actualApplyExecuted'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'apply ran', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $verification['actualRollbackExecuted'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'rollback ran', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description"><?php esc_html_e( 'This proof artifact prepares the smallest future controlled run, post-apply checks, and rollback restore proof. It still does not save Bricks, update WordPress content, mutate WooCommerce, publish, or execute rollback.', 'dsa' ); ?></p>
+		<ul class="ul-disc">
+			<li><?php esc_html_e( 'Adapter:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $verification['bricksControlledAdapterId'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Target:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $verification['targetPostId'] ?? 0 ) ); ?></code></li>
+			<li><?php esc_html_e( 'Plan hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $verification['planHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+			<li><?php esc_html_e( 'Run type:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $candidate['type'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Run action:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $candidate['adapterAction'] ?? '' ) ); ?></code></li>
+		</ul>
+		<?php if ( [] !== $gates ) : ?>
+			<p><strong><?php esc_html_e( 'Verification gates', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $gates as $gate ) : ?>
+					<?php if ( is_array( $gate ) ) : ?>
+						<li><code><?php echo esc_html( (string) ( $gate['status'] ?? '' ) ); ?></code> <?php echo esc_html( (string) ( $gate['label'] ?? $gate['id'] ?? '' ) ); ?></li>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $plan ) : ?>
+			<p><strong><?php esc_html_e( 'Post-apply verification plan', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $plan as $step ) : ?>
+					<li><code><?php echo esc_html( (string) $step ); ?></code></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $rollback ) : ?>
+			<p><strong><?php esc_html_e( 'Rollback proof', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<li><?php esc_html_e( 'Snapshot hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $rollback['snapshotHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+				<li><?php esc_html_e( 'Meta hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $rollback['metaHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+				<li><?php esc_html_e( 'Field keys:', 'dsa' ); ?> <?php echo esc_html( (string) count( isset( $rollback['fieldKeys'] ) && is_array( $rollback['fieldKeys'] ) ? $rollback['fieldKeys'] : [] ) ); ?></li>
+				<li><?php esc_html_e( 'Meta keys:', 'dsa' ); ?> <?php echo esc_html( (string) count( isset( $rollback['metaKeys'] ) && is_array( $rollback['metaKeys'] ) ? $rollback['metaKeys'] : [] ) ); ?></li>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $visible ) : ?>
+			<p><strong><?php esc_html_e( 'Verification matrix', 'dsa' ); ?></strong></p>
+			<table class="widefat striped">
+				<thead><tr><th><?php esc_html_e( 'Operation', 'dsa' ); ?></th><th><?php esc_html_e( 'Type', 'dsa' ); ?></th><th><?php esc_html_e( 'Checks', 'dsa' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $visible as $item ) : ?>
+					<?php if ( is_array( $item ) ) : ?>
+						<tr>
+							<td><code><?php echo esc_html( (string) ( $item['operationId'] ?? '' ) ); ?></code></td>
+							<td><code><?php echo esc_html( (string) ( $item['type'] ?? '' ) ); ?></code></td>
+							<td><?php echo esc_html( implode( '; ', array_map( 'strval', isset( $item['checks'] ) && is_array( $item['checks'] ) ? $item['checks'] : [] ) ) ); ?></td>
+						</tr>
+					<?php endif; ?>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php if ( $hidden > 0 ) : ?>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 10 verification rows; %d more are stored in the proof artifact.', 'dsa' ), $hidden ) ); ?></p>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Post-apply verification blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

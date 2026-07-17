@@ -530,6 +530,42 @@ It records:
 
 The adapter plan is real because it translates reviewed operation IDs into a specific Bricks/Kiwe route. It is still non-mutating because post-apply verification, browser smoke, and rollback proof are not yet allowed to execute a Bricks save.
 
+## Post-apply verification and rollback proof
+
+Batch 23 adds the final pre-run proof artifact:
+
+```text
+kiwe.post-apply-verification.v1
+```
+
+The proof can be attached only after:
+
+1. the Bricks controlled adapter plan is `bricks-controlled-adapter-ready`;
+2. the controlled executor skeleton is ready;
+3. final save approval is still ready;
+4. rollback capture is ready and contains a snapshot hash/payload;
+5. rendered target inspection is ready;
+6. target resolution is ready;
+7. all late artifact plan hashes match;
+8. one smallest controlled run candidate can be selected;
+9. no inherited blockers remain.
+
+It records:
+
+- exact adapter, executor, approval, rollback capture, rendered inspection, and target IDs;
+- target post/page/template ID;
+- the smallest future controlled run candidate, capped at one approved operation;
+- post-apply verification steps for target reload, plan-hash revalidation, rendered smoke, Kiwe authority audit, selector/launcher/menu checks, and failure handling;
+- rollback proof from the captured snapshot, including snapshot hash, meta hash, captured field keys, captured relevant meta keys, restore plan, and restore verification plan;
+- operation-specific verification matrix for query loops, dynamic fields, launchers, and menu-context sections;
+- `actualApplyExecuted: false`;
+- `actualPostApplyVerificationRun: false`;
+- `actualRollbackExecuted: false`;
+- `mayExecuteMutationNow: false`;
+- `mayPrepareControlledRunNext: true` only when clean.
+
+This proof still does not save Bricks, update WordPress page content, mutate WooCommerce, publish, or execute rollback. It is the artifact that makes a later smallest controlled staging-site mutation auditable and reversible.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -551,4 +587,6 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 15. a controlled executor skeleton is built for that exact approval;
 16. a Bricks controlled adapter plan is prepared for that exact executor;
 17. post-apply verification and rollback proof for the smallest mutation are available;
-18. post-apply Kiwe audit and browser smoke tests pass.
+18. the human explicitly starts the smallest controlled run on a staging target;
+19. real post-apply Kiwe audit and browser smoke tests pass;
+20. rollback execution evidence is captured if any check fails.

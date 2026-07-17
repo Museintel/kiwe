@@ -129,6 +129,8 @@ After final save approval, admins can build `kiwe.controlled-executor.v1`. This 
 
 After the executor skeleton is ready, admins can prepare `kiwe.bricks-controlled-adapter.v1`. This is the first real adapter-planning layer: it maps approved operation IDs to deterministic Bricks/Kiwe adapter instructions. Bricks operations target Bricks ability/conversion/save-pipeline concepts and require element-id mapping; Kiwe launcher/menu-context operations remain runtime verification instructions. The artifact still keeps `adapterCanSaveNow: false`, `actualSaveExecuted: false`, and `mayExecuteMutationNow: false`.
 
+After the adapter plan is ready, admins can build `kiwe.post-apply-verification.v1`. This selects one smallest future controlled run and records the exact post-apply checks plus rollback proof from the captured snapshot. It still keeps `actualApplyExecuted: false`, `actualPostApplyVerificationRun: false`, `actualRollbackExecuted: false`, and `mayExecuteMutationNow: false`.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.
@@ -149,6 +151,7 @@ Later batches may add a save-capable trusted apply adapter that:
 
 1. calls Bricks 2.4 abilities such as HTML/CSS conversion, dynamic-data preview, global-query creation, and page element mutation;
 2. follows Bricks' preferred HTML-first route for greenfield page structure, then performs a focused data pass for query loops and dynamic tags;
-3. validates the rendered output before and after save;
-4. captures/proves rollback before changes;
-5. refuses destructive writes unless the admin explicitly approves.
+3. runs only the smallest approved operation first;
+4. validates the rendered output before and after save;
+5. captures/proves rollback before changes and verifies rollback if any check fails;
+6. refuses destructive writes unless the admin explicitly approves.
