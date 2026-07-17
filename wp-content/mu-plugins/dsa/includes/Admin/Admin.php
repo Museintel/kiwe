@@ -16,6 +16,7 @@ use DSA\AI\Rollback_Readiness_Checkpoint_Service;
 use DSA\AI\Target_Resolution_Service;
 use DSA\AI\Rollback_Capture_Service;
 use DSA\AI\Rendered_Target_Inspection_Service;
+use DSA\AI\Minimal_Adapter_Shell_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -100,6 +101,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_resolve_apply_target', [ $this, 'resolve_apply_target' ] );
 		add_action( 'admin_post_dsa_capture_apply_rollback', [ $this, 'capture_apply_rollback' ] );
 		add_action( 'admin_post_dsa_inspect_rendered_target', [ $this, 'inspect_rendered_target' ] );
+		add_action( 'admin_post_dsa_build_minimal_adapter_shell', [ $this, 'build_minimal_adapter_shell' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -2241,6 +2243,67 @@ final class Admin {
 		exit;
 	}
 
+	public function build_minimal_adapter_shell(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to build Kiwe adapter shells.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_build_minimal_adapter_shell_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$shell = ( new Minimal_Adapter_Shell_Service() )->build(
+			$stage,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'minimal-adapter-shell-ready' !== ( $shell['status'] ?? '' ) ) {
+			$stager->attach_minimal_adapter_shell( $stage_id, $shell );
+			wp_die(
+				esc_html__( 'Minimal adapter shell found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Adapter shell blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_minimal_adapter_shell( $stage_id, $shell );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'        => 'kiwe-framework',
+					'apply-shell' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3124,6 +3187,7 @@ final class Admin {
 		$active_target = isset( $_GET['apply-target'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-target'] ) ) : '';
 		$active_capture = isset( $_GET['apply-capture'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-capture'] ) ) : '';
 		$active_inspection = isset( $_GET['apply-inspection'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-inspection'] ) ) : '';
+		$active_shell = isset( $_GET['apply-shell'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-shell'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -3157,6 +3221,9 @@ final class Admin {
 		if ( '' !== $active_inspection ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Rendered target baseline inspected. This still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_shell ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Minimal adapter shell built. This selected a future apply route but still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -3181,6 +3248,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Target', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Capture', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Inspect', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Shell', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -3202,6 +3270,7 @@ final class Admin {
 					$target = isset( $record['targetResolution'] ) && is_array( $record['targetResolution'] ) ? $record['targetResolution'] : [];
 					$capture = isset( $record['rollbackCapture'] ) && is_array( $record['rollbackCapture'] ) ? $record['rollbackCapture'] : [];
 					$inspection = isset( $record['renderedTargetInspection'] ) && is_array( $record['renderedTargetInspection'] ) ? $record['renderedTargetInspection'] : [];
+					$shell = isset( $record['minimalAdapterShell'] ) && is_array( $record['minimalAdapterShell'] ) ? $record['minimalAdapterShell'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -3235,8 +3304,11 @@ final class Admin {
 					$inspection_status = (string) ( $inspection['status'] ?? __( 'not inspected', 'dsa' ) );
 					$inspection_blockers = isset( $inspection['blockers'] ) && is_array( $inspection['blockers'] ) ? count( $inspection['blockers'] ) : 0;
 					$can_inspect = [] !== $capture && 'rollback-capture-ready' === ( $capture['status'] ?? '' ) && 0 === $capture_blockers;
+					$shell_status = (string) ( $shell['status'] ?? __( 'not built', 'dsa' ) );
+					$shell_blockers = isset( $shell['blockers'] ) && is_array( $shell['blockers'] ) ? count( $shell['blockers'] ) : 0;
+					$can_shell = [] !== $inspection && 'rendered-target-inspection-ready' === ( $inspection['status'] ?? '' ) && 0 === $inspection_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -3251,6 +3323,7 @@ final class Admin {
 						<td><?php echo esc_html( $target_status ); ?><?php echo $target_blockers > 0 ? ' (' . esc_html( (string) $target_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $capture_status ); ?><?php echo $capture_blockers > 0 ? ' (' . esc_html( (string) $capture_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $inspection_status ); ?><?php echo $inspection_blockers > 0 ? ' (' . esc_html( (string) $inspection_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $shell_status ); ?><?php echo $shell_blockers > 0 ? ' (' . esc_html( (string) $shell_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -3322,11 +3395,17 @@ final class Admin {
 								<?php wp_nonce_field( 'dsa_inspect_rendered_target_' . $id ); ?>
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_inspect ); ?>><?php esc_html_e( 'Inspect rendered baseline', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_build_minimal_adapter_shell">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_build_minimal_adapter_shell_' . $id ); ?>
+								<button class="button button-primary" type="submit" <?php disabled( ! $can_shell ); ?>><?php esc_html_e( 'Build adapter shell', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="16">
+							<td colspan="17">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
@@ -3337,6 +3416,7 @@ final class Admin {
 								<?php $this->render_target_resolution_details( $target ); ?>
 								<?php $this->render_rollback_capture_details( $capture ); ?>
 								<?php $this->render_rendered_target_inspection_details( $inspection ); ?>
+								<?php $this->render_minimal_adapter_shell_details( $shell ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -3863,6 +3943,78 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Rendered inspection blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_minimal_adapter_shell_details( array $shell ): void {
+		if ( [] === $shell ) {
+			return;
+		}
+		$blockers  = isset( $shell['blockers'] ) && is_array( $shell['blockers'] ) ? $shell['blockers'] : [];
+		$warnings  = isset( $shell['warnings'] ) && is_array( $shell['warnings'] ) ? $shell['warnings'] : [];
+		$strategy  = isset( $shell['selectedStrategy'] ) && is_array( $shell['selectedStrategy'] ) ? $shell['selectedStrategy'] : [];
+		$ops       = isset( $shell['operationPlan'] ) && is_array( $shell['operationPlan'] ) ? $shell['operationPlan'] : [];
+		$contract  = isset( $shell['futureAdapterContract'] ) && is_array( $shell['futureAdapterContract'] ) ? $shell['futureAdapterContract'] : [];
+		$visible_ops = array_slice( $ops, 0, 12 );
+		$hidden_ops  = max( 0, count( $ops ) - count( $visible_ops ) );
+		?>
+		<p><strong><?php esc_html_e( 'Minimal adapter shell', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $shell['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $strategy['id'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'strategy', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $ops ) ); ?></strong><span><?php esc_html_e( 'operations', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $warnings ) ); ?></strong><span><?php esc_html_e( 'warnings', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description"><?php esc_html_e( 'This shell selects a future apply route only. It does not execute a Bricks save, WordPress update, publish action, or WooCommerce mutation.', 'dsa' ); ?></p>
+		<?php if ( [] !== $strategy ) : ?>
+			<ul class="ul-disc">
+				<li><?php esc_html_e( 'Selected route:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $strategy['id'] ?? '' ) ); ?></code></li>
+				<li><?php esc_html_e( 'Reason:', 'dsa' ); ?> <?php echo esc_html( (string) ( $strategy['reason'] ?? '' ) ); ?></li>
+				<li><?php esc_html_e( 'Target:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $contract['allowedTargetPostId'] ?? $shell['targetPostId'] ?? 0 ) ); ?></code></li>
+				<li><?php esc_html_e( 'Plan hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $contract['allowedPlanHash'] ?? $shell['planHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $visible_ops ) : ?>
+			<p><strong><?php esc_html_e( 'Allowed future operations', 'dsa' ); ?></strong></p>
+			<table class="widefat striped">
+				<thead><tr><th><?php esc_html_e( 'Type', 'dsa' ); ?></th><th><?php esc_html_e( 'Selector', 'dsa' ); ?></th><th><?php esc_html_e( 'Authority', 'dsa' ); ?></th><th><?php esc_html_e( 'Smallest safe step', 'dsa' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $visible_ops as $operation ) : ?>
+					<?php
+					if ( ! is_array( $operation ) ) {
+						continue;
+					}
+					?>
+					<tr>
+						<td><code><?php echo esc_html( (string) ( $operation['type'] ?? '' ) ); ?></code></td>
+						<td><code><?php echo esc_html( (string) ( $operation['selector'] ?? '' ) ); ?></code></td>
+						<td><?php echo esc_html( (string) ( $operation['authority'] ?? '' ) ); ?></td>
+						<td><?php echo esc_html( (string) ( $operation['smallestSafeStep'] ?? '' ) ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php if ( $hidden_ops > 0 ) : ?>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 12 shell operations; %d more are stored in the shell artifact.', 'dsa' ), $hidden_ops ) ); ?></p>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php if ( [] !== $warnings ) : ?>
+			<p><strong><?php esc_html_e( 'Shell warnings', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $warnings as $warning ) : ?>
+					<li><?php echo esc_html( (string) $warning ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Shell blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

@@ -379,6 +379,43 @@ Selector absence in the current baseline is not automatically blocking. A first 
 
 The inspection writes only the Kiwe staging record. It does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or perform a browser render. Browser smoke remains a later post-apply/final preview requirement.
 
+## Minimal adapter shell
+
+Batch 19 adds the future adapter shell:
+
+```text
+kiwe.minimal-adapter-shell.v1
+```
+
+The shell can be attached only after:
+
+1. a valid stage exists;
+2. the dry-run apply plan is still present;
+3. trusted adapter proof is ready;
+4. target resolution is ready;
+5. rollback capture is ready;
+6. rendered target baseline inspection is ready;
+7. stage, proof, target resolution, rollback capture, and rendered inspection plan hashes match;
+8. no blockers remain.
+
+It records:
+
+- selected strategy:
+  - `kiwe-runtime-only-review`;
+  - `bricks-abilities-adapter-preferred`;
+  - `html-css-to-bricks-import-review`;
+  - `manual-builder-fallback`;
+- allowed target post ID;
+- locked plan hash;
+- rollback capture ID;
+- rendered inspection ID;
+- allowed operation IDs;
+- smallest safe step per operation;
+- warnings from selector coverage and adapter capability gaps;
+- final future-adapter contract.
+
+The shell still does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or execute an adapter. It is the last non-mutating shape-selection artifact before a future controlled save path.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -395,5 +432,6 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 10. target resolution is attached;
 11. rollback capture is attached for the exact target;
 12. rendered target baseline inspection is attached;
-13. the adapter can map/import against the inspected target with the smallest possible mutation;
-14. post-apply Kiwe audit and browser smoke tests pass.
+13. minimal adapter shell is attached;
+14. final save approval is captured for the exact shell;
+15. post-apply Kiwe audit and browser smoke tests pass.

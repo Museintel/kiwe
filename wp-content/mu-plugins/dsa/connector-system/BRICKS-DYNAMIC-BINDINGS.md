@@ -121,6 +121,8 @@ After target resolution, admins can attach `kiwe.rollback-capture.v1`. This capt
 
 After rollback capture, admins can attach `kiwe.rendered-target-inspection.v1`. This inspects the protected baseline snapshot for post content, Bricks meta shape, estimated nodes, and operation selector coverage. Missing selectors are warnings for first-import/new-content cases; they are not permission for an AI or adapter to guess a save.
 
+After rendered target inspection, admins can attach `kiwe.minimal-adapter-shell.v1`. This selects the least-risk future route and allowed operation set for the exact target. It is still non-mutating and does not run Bricks save, WordPress update, publish, WooCommerce mutation, or custom runtime code.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

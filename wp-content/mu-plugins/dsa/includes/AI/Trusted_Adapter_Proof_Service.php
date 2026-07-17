@@ -13,12 +13,14 @@ final class Trusted_Adapter_Proof_Service {
 		$operations   = $this->array_value( $apply_plan, 'operations' );
 		$blockers     = $this->blockers( $stage, $apply_plan, $capabilities );
 		$gates        = $this->gates( $stage, $apply_plan, $capabilities, $blockers );
+		$plan_hash    = (string) ( $stage['plan']['hash'] ?? '' );
 
 		return [
 			'schema'               => 'kiwe.trusted-adapter-proof.v1',
 			'stageId'              => (string) ( $stage['id'] ?? '' ),
 			'createdAt'            => gmdate( 'c' ),
 			'status'               => [] === $blockers ? 'adapter-proof-ready' : 'adapter-proof-blocked',
+			'planHash'             => $plan_hash,
 			'mutatesWordPress'     => false,
 			'mutatesBricksContent' => false,
 			'capabilities'         => $capabilities,

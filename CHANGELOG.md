@@ -25,6 +25,7 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Added target resolution: rollback-ready stages can receive `kiwe.target-resolution.v1`, requiring an explicit target post/page/template ID and locking the future adapter scope to that exact WordPress object without saving or mutating content.
 - Added rollback capture: target-locked stages can receive `kiwe.rollback-capture.v1`, storing a Kiwe-owned snapshot of the resolved target's WordPress fields plus relevant Bricks/Kiwe/DSA meta before any future adapter mutation. This writes only Kiwe staging metadata and still does not save Bricks/page content or create a WordPress revision.
 - Added rendered target baseline inspection: rollback-captured stages can receive `kiwe.rendered-target-inspection.v1`, summarizing the locked target's current post content, Bricks meta shape, estimated Bricks nodes, and operation selector coverage as warnings/manual review before any future adapter mutation.
+- Added the minimal adapter shell: render-inspected stages can receive `kiwe.minimal-adapter-shell.v1`, selecting the least-risk future apply route and allowed operation set while still refusing Bricks saves, WordPress updates, publish actions, and WooCommerce mutations.
 - Source-reviewed local Bricks 2.4 beta AI abilities, query-loop, dynamic-data, HTML/CSS conversion, global-query, Woo setup, and import/export surfaces; updated Kiwe Bricks admin copy/version marker to reflect the 2.4 beta source review while preserving existing Bricks compatibility boundaries.
 
 ## 0.5.75 - 2026-07-16
