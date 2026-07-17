@@ -195,6 +195,37 @@ It records:
 
 The preview still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It is a rehearsal for a future executor, not the executor.
 
+## Final apply confirmation
+
+Batch 13 adds the explicit human confirmation lock:
+
+```text
+kiwe.final-apply-confirmation.v1
+```
+
+The confirmation can be attached only after:
+
+1. a valid stage exists;
+2. the dry-run apply plan is still present;
+3. trusted-adapter proof is ready;
+4. guarded authorization is ready;
+5. the pre-execution gate is ready;
+6. the trusted execution preview is ready;
+7. stage, authorization, gate, and preview plan hashes match;
+8. the admin explicitly checks the exact-preview confirmation box;
+9. no blockers remain.
+
+It records:
+
+- the confirmed stage id;
+- the confirmed plan hash;
+- the confirmed execution preview id;
+- operation count;
+- rollback, rendered-preview, and post-apply audit scope;
+- the future adapter contract.
+
+The confirmation still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It only says that a future mutation adapter may now be built against this exact preview and hash.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -205,7 +236,7 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 4. guarded authorization is attached;
 5. the pre-execution gate is ready;
 6. the trusted execution preview is ready;
-7. the admin explicitly approves the target page/site;
+7. final apply confirmation is attached;
 8. a rollback/revision point exists;
 9. the adapter can inspect the rendered Bricks tree before save;
 10. post-apply Kiwe audit and browser smoke tests pass.

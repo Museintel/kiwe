@@ -109,6 +109,8 @@ After authorization, admins can build `kiwe.pre-execution-gate.v1`. The gate is 
 
 After the gate passes, admins can build `kiwe.trusted-execution-preview.v1`. The preview is still non-mutating; it rehearses operation-level preview, rollback, final-confirmation, and post-apply audit requirements before any trusted adapter is allowed to save.
 
+After preview, admins can attach `kiwe.final-apply-confirmation.v1`. The confirmation requires an explicit checkbox for the exact execution preview and still does not save Bricks or WordPress content.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

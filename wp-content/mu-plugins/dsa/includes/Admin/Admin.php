@@ -10,6 +10,7 @@ use DSA\AI\Trusted_Adapter_Proof_Service;
 use DSA\AI\Guarded_Apply_Authorizer;
 use DSA\AI\Pre_Execution_Gate_Service;
 use DSA\AI\Trusted_Execution_Preview_Service;
+use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -88,6 +89,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_authorize_apply_stage', [ $this, 'authorize_apply_stage' ] );
 		add_action( 'admin_post_dsa_gate_apply_stage', [ $this, 'gate_apply_stage' ] );
 		add_action( 'admin_post_dsa_preview_apply_execution', [ $this, 'preview_apply_execution' ] );
+		add_action( 'admin_post_dsa_confirm_apply_execution', [ $this, 'confirm_apply_execution' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1842,6 +1844,76 @@ final class Admin {
 		exit;
 	}
 
+	public function confirm_apply_execution(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to confirm Kiwe apply previews.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_confirm_apply_execution_' . $stage_id );
+
+		$explicit = isset( $_POST['confirmExactPreview'] ) && '1' === (string) wp_unslash( $_POST['confirmExactPreview'] );
+		if ( ! $explicit ) {
+			wp_die(
+				esc_html__( 'Final confirmation requires checking the exact-preview confirmation box.', 'dsa' ),
+				esc_html__( 'Confirmation required', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$confirmation = ( new Final_Apply_Confirmation_Service() )->confirm(
+			$stage,
+			[
+				'userId'                    => get_current_user_id(),
+				'createdAt'                 => gmdate( 'c' ),
+				'explicitAdminConfirmation' => true,
+			]
+		);
+
+		if ( 'confirmed-for-future-adapter' !== ( $confirmation['status'] ?? '' ) ) {
+			wp_die(
+				esc_html__( 'This execution preview is not ready for final confirmation.', 'dsa' ),
+				esc_html__( 'Final confirmation blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_final_confirmation( $stage_id, $confirmation );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => 'kiwe-framework',
+					'apply-confirm' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2719,6 +2791,7 @@ final class Admin {
 		$active_auth  = isset( $_GET['apply-auth'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-auth'] ) ) : '';
 		$active_gate  = isset( $_GET['apply-gate'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-gate'] ) ) : '';
 		$active_preview = isset( $_GET['apply-preview'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-preview'] ) ) : '';
+		$active_confirm = isset( $_GET['apply-confirm'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-confirm'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -2733,6 +2806,9 @@ final class Admin {
 		}
 		if ( '' !== $active_preview ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Execution preview built. This is still preview-only: no Bricks, WordPress, WooCommerce, or publish mutation was performed.', 'dsa' ) . '</p></div>';
+		}
+		if ( '' !== $active_confirm ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Final apply confirmation recorded for the current execution preview. This still did not save Bricks or WordPress content.', 'dsa' ) . '</p></div>';
 		}
 		if ( [] === $records ) {
 			return;
@@ -2752,6 +2828,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Authorization', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Gate', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Preview', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Confirmation', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -2767,6 +2844,7 @@ final class Admin {
 					$authorization = isset( $record['applyAuthorization'] ) && is_array( $record['applyAuthorization'] ) ? $record['applyAuthorization'] : [];
 					$gate = isset( $record['preExecutionGate'] ) && is_array( $record['preExecutionGate'] ) ? $record['preExecutionGate'] : [];
 					$preview = isset( $record['executionPreview'] ) && is_array( $record['executionPreview'] ) ? $record['executionPreview'] : [];
+					$confirmation = isset( $record['finalConfirmation'] ) && is_array( $record['finalConfirmation'] ) ? $record['finalConfirmation'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -2782,8 +2860,11 @@ final class Admin {
 					$preview_status = (string) ( $preview['status'] ?? __( 'not built', 'dsa' ) );
 					$preview_blockers = isset( $preview['blockers'] ) && is_array( $preview['blockers'] ) ? count( $preview['blockers'] ) : 0;
 					$can_preview = [] !== $gate && 'ready-for-final-executor-build' === ( $gate['status'] ?? '' ) && 0 === $gate_blockers;
+					$confirmation_status = (string) ( $confirmation['status'] ?? __( 'not confirmed', 'dsa' ) );
+					$confirmation_blockers = isset( $confirmation['blockers'] ) && is_array( $confirmation['blockers'] ) ? count( $confirmation['blockers'] ) : 0;
+					$can_confirm = [] !== $preview && 'ready-for-final-confirmation' === ( $preview['status'] ?? '' ) && 0 === $preview_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -2792,6 +2873,7 @@ final class Admin {
 						<td><?php echo esc_html( $auth_status ); ?></td>
 						<td><?php echo esc_html( $gate_status ); ?><?php echo $gate_blockers > 0 ? ' (' . esc_html( (string) $gate_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $preview_status ); ?><?php echo $preview_blockers > 0 ? ' (' . esc_html( (string) $preview_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $confirmation_status ); ?><?php echo $confirmation_blockers > 0 ? ' (' . esc_html( (string) $confirmation_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -2818,15 +2900,26 @@ final class Admin {
 								<?php wp_nonce_field( 'dsa_preview_apply_execution_' . $id ); ?>
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_preview ); ?>><?php esc_html_e( 'Build execution preview', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_confirm_apply_execution">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_confirm_apply_execution_' . $id ); ?>
+								<label style="display:block; margin-bottom:.25rem;">
+									<input type="checkbox" name="confirmExactPreview" value="1" <?php disabled( ! $can_confirm ); ?>>
+									<?php esc_html_e( 'I reviewed this exact execution preview.', 'dsa' ); ?>
+								</label>
+								<button class="button button-primary" type="submit" <?php disabled( ! $can_confirm ); ?>><?php esc_html_e( 'Record final confirmation', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="10">
+							<td colspan="11">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
 								<?php $this->render_trusted_execution_preview_details( $preview ); ?>
+								<?php $this->render_final_apply_confirmation_details( $confirmation ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -3041,6 +3134,54 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Execution preview blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_final_apply_confirmation_details( array $confirmation ): void {
+		if ( [] === $confirmation ) {
+			return;
+		}
+		$blockers = isset( $confirmation['blockers'] ) && is_array( $confirmation['blockers'] ) ? $confirmation['blockers'] : [];
+		$scope    = isset( $confirmation['confirmedScope'] ) && is_array( $confirmation['confirmedScope'] ) ? $confirmation['confirmedScope'] : [];
+		$contract = isset( $confirmation['futureAdapterContract'] ) && is_array( $confirmation['futureAdapterContract'] ) ? $confirmation['futureAdapterContract'] : [];
+		?>
+		<p><strong><?php esc_html_e( 'Final apply confirmation', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $confirmation['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><code><?php echo esc_html( substr( (string) ( $confirmation['id'] ?? '' ), 0, 24 ) ); ?></code></strong><span><?php esc_html_e( 'confirmation', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $confirmation['explicitAdminConfirmation'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'admin checked', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $scope['operationCount'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'operations', 'dsa' ); ?></span></div>
+			<div><strong><?php esc_html_e( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'mutates now', 'dsa' ); ?></span></div>
+		</div>
+		<?php if ( [] !== $scope ) : ?>
+			<p><strong><?php esc_html_e( 'Confirmed scope', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<li><?php esc_html_e( 'Stage:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $scope['stageId'] ?? '' ) ); ?></code></li>
+				<li><?php esc_html_e( 'Plan hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $scope['planHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+				<li><?php esc_html_e( 'Preview:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $scope['previewId'] ?? '' ) ); ?></code></li>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $contract ) : ?>
+			<p><strong><?php esc_html_e( 'Future adapter must still', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $contract as $key => $value ) : ?>
+					<?php
+					if ( ! $value ) {
+						continue;
+					}
+					?>
+					<li><?php echo esc_html( (string) $key ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Final confirmation blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>
