@@ -9,6 +9,7 @@ use DSA\AI\Trusted_Apply_Stager;
 use DSA\AI\Trusted_Adapter_Proof_Service;
 use DSA\AI\Guarded_Apply_Authorizer;
 use DSA\AI\Pre_Execution_Gate_Service;
+use DSA\AI\Trusted_Execution_Preview_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -86,6 +87,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_prove_apply_stage', [ $this, 'prove_apply_stage' ] );
 		add_action( 'admin_post_dsa_authorize_apply_stage', [ $this, 'authorize_apply_stage' ] );
 		add_action( 'admin_post_dsa_gate_apply_stage', [ $this, 'gate_apply_stage' ] );
+		add_action( 'admin_post_dsa_preview_apply_execution', [ $this, 'preview_apply_execution' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1780,6 +1782,66 @@ final class Admin {
 		exit;
 	}
 
+	public function preview_apply_execution(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to build Kiwe execution previews.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_preview_apply_execution_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$preview = ( new Trusted_Execution_Preview_Service() )->preview(
+			$stage,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'ready-for-final-confirmation' !== ( $preview['status'] ?? '' ) ) {
+			wp_die(
+				esc_html__( 'This apply candidate is not ready for execution preview.', 'dsa' ),
+				esc_html__( 'Execution preview blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_execution_preview( $stage_id, $preview );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => 'kiwe-framework',
+					'apply-preview' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2656,6 +2718,7 @@ final class Admin {
 		$active_proof = isset( $_GET['apply-proof'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-proof'] ) ) : '';
 		$active_auth  = isset( $_GET['apply-auth'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-auth'] ) ) : '';
 		$active_gate  = isset( $_GET['apply-gate'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-gate'] ) ) : '';
+		$active_preview = isset( $_GET['apply-preview'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-preview'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -2667,6 +2730,9 @@ final class Admin {
 		}
 		if ( '' !== $active_gate ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Pre-execution gate built. The future executor still must capture rollback, render preview, ask final confirmation, and pass post-apply audits before any mutation.', 'dsa' ) . '</p></div>';
+		}
+		if ( '' !== $active_preview ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Execution preview built. This is still preview-only: no Bricks, WordPress, WooCommerce, or publish mutation was performed.', 'dsa' ) . '</p></div>';
 		}
 		if ( [] === $records ) {
 			return;
@@ -2685,6 +2751,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Proof', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Authorization', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Gate', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Preview', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -2699,6 +2766,7 @@ final class Admin {
 					$proof = isset( $record['adapterProof'] ) && is_array( $record['adapterProof'] ) ? $record['adapterProof'] : [];
 					$authorization = isset( $record['applyAuthorization'] ) && is_array( $record['applyAuthorization'] ) ? $record['applyAuthorization'] : [];
 					$gate = isset( $record['preExecutionGate'] ) && is_array( $record['preExecutionGate'] ) ? $record['preExecutionGate'] : [];
+					$preview = isset( $record['executionPreview'] ) && is_array( $record['executionPreview'] ) ? $record['executionPreview'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -2711,8 +2779,11 @@ final class Admin {
 					$gate_status = (string) ( $gate['status'] ?? __( 'not gated', 'dsa' ) );
 					$gate_blockers = isset( $gate['blockers'] ) && is_array( $gate['blockers'] ) ? count( $gate['blockers'] ) : 0;
 					$can_gate = [] !== $authorization && 'authorized-for-future-adapter' === ( $authorization['status'] ?? '' ) && 0 === count( isset( $authorization['blockers'] ) && is_array( $authorization['blockers'] ) ? $authorization['blockers'] : [] );
+					$preview_status = (string) ( $preview['status'] ?? __( 'not built', 'dsa' ) );
+					$preview_blockers = isset( $preview['blockers'] ) && is_array( $preview['blockers'] ) ? count( $preview['blockers'] ) : 0;
+					$can_preview = [] !== $gate && 'ready-for-final-executor-build' === ( $gate['status'] ?? '' ) && 0 === $gate_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -2720,6 +2791,7 @@ final class Admin {
 						<td><?php echo esc_html( $proof_status ); ?><?php echo $proof_blockers > 0 ? ' (' . esc_html( (string) $proof_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $auth_status ); ?></td>
 						<td><?php echo esc_html( $gate_status ); ?><?php echo $gate_blockers > 0 ? ' (' . esc_html( (string) $gate_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $preview_status ); ?><?php echo $preview_blockers > 0 ? ' (' . esc_html( (string) $preview_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -2740,14 +2812,21 @@ final class Admin {
 								<?php wp_nonce_field( 'dsa_gate_apply_stage_' . $id ); ?>
 								<button class="button button-primary" type="submit" <?php disabled( ! $can_gate ); ?>><?php esc_html_e( 'Build pre-execution gate', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_preview_apply_execution">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_preview_apply_execution_' . $id ); ?>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_preview ); ?>><?php esc_html_e( 'Build execution preview', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="9">
+							<td colspan="10">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
+								<?php $this->render_trusted_execution_preview_details( $preview ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -2883,6 +2962,85 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Gate blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_trusted_execution_preview_details( array $preview ): void {
+		if ( [] === $preview ) {
+			return;
+		}
+		$blockers     = isset( $preview['blockers'] ) && is_array( $preview['blockers'] ) ? $preview['blockers'] : [];
+		$rollback     = isset( $preview['rollbackPlan'] ) && is_array( $preview['rollbackPlan'] ) ? $preview['rollbackPlan'] : [];
+		$render_plan  = isset( $preview['renderPreviewPlan'] ) && is_array( $preview['renderPreviewPlan'] ) ? $preview['renderPreviewPlan'] : [];
+		$operations   = isset( $preview['operationPreview'] ) && is_array( $preview['operationPreview'] ) ? $preview['operationPreview'] : [];
+		$audit_plan   = isset( $preview['postApplyAuditPlan'] ) && is_array( $preview['postApplyAuditPlan'] ) ? $preview['postApplyAuditPlan'] : [];
+		$visible_ops  = array_slice( $operations, 0, 12 );
+		$hidden_ops   = max( 0, count( $operations ) - count( $visible_ops ) );
+		?>
+		<p><strong><?php esc_html_e( 'Trusted execution preview', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $preview['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><code><?php echo esc_html( substr( (string) ( $preview['id'] ?? '' ), 0, 24 ) ); ?></code></strong><span><?php esc_html_e( 'preview', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $operations ) ); ?></strong><span><?php esc_html_e( 'operation previews', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+			<div><strong><?php esc_html_e( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'mutates now', 'dsa' ); ?></span></div>
+		</div>
+		<?php if ( [] !== $rollback ) : ?>
+			<p><strong><?php esc_html_e( 'Rollback/revision requirements', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $rollback as $item ) : ?>
+					<li><?php echo esc_html( (string) $item ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $render_plan ) : ?>
+			<p><strong><?php esc_html_e( 'Rendered preview requirements', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $render_plan as $item ) : ?>
+					<li><?php echo esc_html( (string) $item ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $visible_ops ) : ?>
+			<p><strong><?php esc_html_e( 'Operation preview', 'dsa' ); ?></strong></p>
+			<table class="widefat striped">
+				<thead><tr><th><?php esc_html_e( 'Type', 'dsa' ); ?></th><th><?php esc_html_e( 'Label', 'dsa' ); ?></th><th><?php esc_html_e( 'Authority', 'dsa' ); ?></th><th><?php esc_html_e( 'Requirement', 'dsa' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $visible_ops as $operation ) : ?>
+					<?php
+					if ( ! is_array( $operation ) ) {
+						continue;
+					}
+					?>
+					<tr>
+						<td><code><?php echo esc_html( (string) ( $operation['type'] ?? '' ) ); ?></code></td>
+						<td><?php echo esc_html( (string) ( $operation['label'] ?? $operation['id'] ?? '' ) ); ?></td>
+						<td><?php echo esc_html( (string) ( $operation['futureAuthority'] ?? '' ) ); ?></td>
+						<td><?php echo esc_html( (string) ( $operation['previewRequirement'] ?? '' ) ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php if ( $hidden_ops > 0 ) : ?>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 12 operation previews; %d more are present.', 'dsa' ), $hidden_ops ) ); ?></p>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php if ( [] !== $audit_plan ) : ?>
+			<p><strong><?php esc_html_e( 'Post-apply audit requirements', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $audit_plan as $item ) : ?>
+					<li><?php echo esc_html( (string) $item ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Execution preview blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

@@ -166,6 +166,35 @@ It records the required future-adapter contract:
 
 The gate still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It is a lock, not the key.
 
+## Trusted execution preview
+
+Batch 12 adds the rehearsal artifact:
+
+```text
+kiwe.trusted-execution-preview.v1
+```
+
+The preview can be attached only after:
+
+1. a valid stage exists;
+2. the dry-run apply plan is still present;
+3. trusted-adapter proof is ready;
+4. guarded authorization is ready;
+5. the pre-execution gate is ready;
+6. stage, authorization, and gate plan hashes match;
+7. no blockers remain.
+
+It records:
+
+- rollback/revision requirements;
+- rendered-preview requirements;
+- operation-level preview requirements;
+- final confirmation requirements;
+- post-apply audit requirements;
+- forbidden mutation actions for the current batch.
+
+The preview still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It is a rehearsal for a future executor, not the executor.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -175,7 +204,8 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 3. the stage has trusted-adapter proof;
 4. guarded authorization is attached;
 5. the pre-execution gate is ready;
-6. the admin explicitly approves the target page/site;
-7. a rollback/revision point exists;
-8. the adapter can inspect the rendered Bricks tree before save;
-9. post-apply Kiwe audit and browser smoke tests pass.
+6. the trusted execution preview is ready;
+7. the admin explicitly approves the target page/site;
+8. a rollback/revision point exists;
+9. the adapter can inspect the rendered Bricks tree before save;
+10. post-apply Kiwe audit and browser smoke tests pass.

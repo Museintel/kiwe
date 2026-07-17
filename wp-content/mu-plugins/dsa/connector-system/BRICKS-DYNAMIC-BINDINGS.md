@@ -107,6 +107,8 @@ After proof passes, admins can attach `kiwe.guarded-apply-authorization.v1`. Tha
 
 After authorization, admins can build `kiwe.pre-execution-gate.v1`. The gate is still non-mutating; it confirms the staged plan, proof, and authorization line up and records the rollback, rendered-preview, final-confirmation, smallest-mutation, post-apply audit, and browser-smoke requirements a future adapter must satisfy.
 
+After the gate passes, admins can build `kiwe.trusted-execution-preview.v1`. The preview is still non-mutating; it rehearses operation-level preview, rollback, final-confirmation, and post-apply audit requirements before any trusted adapter is allowed to save.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.
