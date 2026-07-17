@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { prepareApplyPlan as prepareBricksApplyPlan } from './apply-planner.js';
 import { validateBindings as validateBindingsPlan } from './binding-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -217,6 +218,10 @@ export function validateBindings(targetDir, options = {}) {
   return validateBindingsPlan(targetDir, options);
 }
 
+export function prepareApplyPlan(targetDir, options = {}) {
+  return prepareBricksApplyPlan(targetDir, options);
+}
+
 function inferMode(mode, brief) {
   const requested = String(mode || '').trim().toLowerCase();
   if (requested && requested !== 'auto') {
@@ -292,6 +297,7 @@ export function startDynamicPass({ brief = '', siteGraphSummary = '', currentHan
     '## Required behavior',
     '',
     'Use the full target Site Graph JSON supplied by the human. Do not guess missing WordPress, WooCommerce, Bricks, or Kiwe details. Add a bricks-bindings/ folder with a binding plan and notes. Do not mutate WordPress or Bricks unless a trusted apply tool actually runs.',
+    'After creating the binding plan, run validate-bindings when tools are available. If the human asks for an apply path, run prepare-apply-plan after validation; it is a dry-run plan, not a WordPress mutation.',
     '',
     getDynamicContext()
   ].join('\n').trim() + '\n';

@@ -85,6 +85,16 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 MCP clients can call `kiwe_validate_bindings` with `targetDir` and optional `siteGraphPath`.
 
+Prepare a dry-run apply plan with:
+
+```bash
+node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph ./site-graph.json
+```
+
+MCP clients can call `kiwe_prepare_apply_plan`.
+
+The apply plan uses `kiwe.bricks-apply-plan.v1` and remains non-mutating. It is the bridge contract for a future admin-approved Bricks adapter.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

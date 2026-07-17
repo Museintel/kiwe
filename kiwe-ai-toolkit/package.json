@@ -7,7 +7,7 @@
     "kiwe": "./bin/kiwe.js"
   },
   "scripts": {
-    "test": "node --check bin/kiwe.js && node --check lib/kiwe-core.js && node --check lib/binding-validator.js && node --check mcp/index.js && node tools/validate-output.cjs --help && node tools/audit-output.cjs --help && node tools/validate-bindings.cjs --help && node tools/validate-bindings.cjs fixtures/bindings-valid --site-graph fixtures/bindings-valid/site-graph.json"
+    "test": "node --check bin/kiwe.js && node --check lib/kiwe-core.js && node --check lib/binding-validator.js && node --check lib/apply-planner.js && node --check mcp/index.js && node tools/validate-output.cjs --help && node tools/audit-output.cjs --help && node tools/validate-bindings.cjs --help && node tools/prepare-apply-plan.cjs --help && node tools/validate-bindings.cjs fixtures/bindings-valid --site-graph fixtures/bindings-valid/site-graph.json && node tools/prepare-apply-plan.cjs fixtures/bindings-valid --site-graph fixtures/bindings-valid/site-graph.json"
   },
   "keywords": [
     "kiwe",

@@ -35,6 +35,7 @@ node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 node bin/kiwe.js dynamic-context
 node bin/kiwe.js dynamic-pass --brief "Turn approved product rails into Bricks query-loop binding plans using the supplied Site Graph."
 node bin/kiwe.js validate-bindings ./out/my-kiwe-handoff --site-graph ./site-graph.json
+node bin/kiwe.js prepare-apply ./out/my-kiwe-handoff --site-graph ./site-graph.json
 ```
 
 ## For external AIs and designers
@@ -135,6 +136,7 @@ Example MCP client entry:
 - `kiwe_create_handoff`
 - `kiwe_validate_handoff`
 - `kiwe_validate_bindings`
+- `kiwe_prepare_apply_plan`
 - `kiwe_list_class_vocabulary`
 - `kiwe_get_dynamic_context`
 - `kiwe_start_dynamic_pass`
@@ -178,6 +180,18 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 ```
 
 The same check is available to MCP clients as `kiwe_validate_bindings`. It validates `bricks-bindings/kiwe-bindings.json` against `kiwe.bricks-bindings.v1`, verifies real Site Graph post types/terms/query-loop object types/dynamic tags where supplied, and enforces canonical Kiwe launchers such as `data-dsa-open-module`.
+
+4. After validation, prepare the dry-run apply plan:
+
+```bash
+node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph ./site-graph.json
+```
+
+MCP clients can call `kiwe_prepare_apply_plan`.
+
+This returns `kiwe.bricks-apply-plan.v1`: a non-mutating plan that lists preflight gates, Bricks query-loop operations, dynamic-data operations, Kiwe launcher/menu-context operations, manual review items, and future adapter steps. Add `--write` only when you intentionally want the toolkit to write `bricks-apply/kiwe-apply-plan.json` and `bricks-apply/APPLY-NOTES.md` into the handoff.
+
+This is still not a WordPress mutation. It exists so a later trusted adapter can apply with admin approval, revision capture, rendered-output inspection, and post-apply audit.
 
 ## Output modes
 

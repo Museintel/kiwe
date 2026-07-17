@@ -47,6 +47,16 @@ MCP clients should call `kiwe_validate_bindings` with `targetDir` and `siteGraph
 
 If no execution is available, do not claim validation ran. Self-check against this context and report that executable validation was not available.
 
+After validation, an apply-path request may prepare a dry-run plan:
+
+```bash
+node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs <handoff-or-bindings-dir-or-json> --site-graph <site-graph.json>
+```
+
+MCP clients should call `kiwe_prepare_apply_plan`.
+
+This produces `kiwe.bricks-apply-plan.v1`. It is not a mutation. It lists the future Bricks apply sequence, preflight checks, operations, and manual-review gates for an admin-approved trusted adapter.
+
 ## `kiwe-bindings.json` quick contract
 
 ```json

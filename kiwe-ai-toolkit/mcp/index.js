@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, startDynamicPass, startProject, validateBindings, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, prepareApplyPlan, startDynamicPass, startProject, validateBindings, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -78,6 +78,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       }
     },
     {
+      name: 'kiwe_prepare_apply_plan',
+      description: 'Prepare a dry-run, non-mutating Bricks apply plan from a validated Kiwe binding plan and target-site Site Graph.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          targetDir: { type: 'string', description: 'Handoff folder, bricks-bindings folder, or kiwe-bindings.json path.' },
+          siteGraphPath: { type: 'string', description: 'Required path to kiwe.site-graph.v1 JSON for target-site capabilities.' },
+          write: { type: 'boolean', description: 'If true, writes bricks-apply/kiwe-apply-plan.json and APPLY-NOTES.md into the handoff folder.' }
+        },
+        required: ['targetDir', 'siteGraphPath']
+      }
+    },
+    {
       name: 'kiwe_list_class_vocabulary',
       description: 'Return Seam Class Vocabulary groups/classes for Bricks/global-class authoring.',
       inputSchema: { type: 'object', properties: {} }
@@ -124,6 +137,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_validate_bindings':
       result = validateBindings(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });
+      break;
+    case 'kiwe_prepare_apply_plan':
+      result = prepareApplyPlan(args.targetDir, { siteGraphPath: args.siteGraphPath || '', write: Boolean(args.write) });
       break;
     case 'kiwe_list_class_vocabulary':
       result = listClassVocabulary();

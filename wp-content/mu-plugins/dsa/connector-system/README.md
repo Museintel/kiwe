@@ -70,7 +70,15 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 MCP clients can call `kiwe_validate_bindings`.
 
-7. Later batches can safely apply the plan through Bricks 2.4 abilities or Bricks import workflows.
+7. Prepare a dry-run trusted apply plan:
+
+```bash
+node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph ./site-graph.json
+```
+
+MCP clients can call `kiwe_prepare_apply_plan`.
+
+8. Later batches can safely apply the plan through Bricks 2.4 abilities or Bricks import workflows after admin approval, revision capture, rendered-output inspection, and post-apply audit.
 
 ## Lead rule
 

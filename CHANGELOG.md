@@ -9,6 +9,7 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Added `connector-system/` as the third portable brain beside `ui-system/` and `framework-system/`, documenting how accepted Seam/AppShell handoffs become Bricks query-loop and dynamic-data binding plans without giving AI cart/search/auth/checkout/runtime authority.
 - Added `kiwe-ai-toolkit/contexts/dynamic-lite.md`, CLI commands, and MCP tools for v5-style dynamic binding passes that consume a target Site Graph instead of guessing site categories, products, pages, Bricks dynamic tags, or query-loop object types.
 - Added the `kiwe.bricks-bindings.v1` schema, `validate-bindings` CLI/MCP validator, and a fixture-backed test so dynamic passes can be checked for real Site Graph terms, Bricks query-loop object types, dynamic tags, canonical Kiwe launchers, and non-mutating apply authority.
+- Added the `kiwe.bricks-apply-plan.v1` dry-run apply planner plus `prepare-apply-plan` CLI/MCP tooling. It turns a validated binding plan and Site Graph into preflight gates, Bricks query-loop/dynamic-data operations, Kiwe launcher/menu-context operations, manual-review items, and future adapter steps without mutating WordPress.
 - Source-reviewed local Bricks 2.4 beta AI abilities, query-loop, dynamic-data, HTML/CSS conversion, global-query, Woo setup, and import/export surfaces; updated Kiwe Bricks admin copy/version marker to reflect the 2.4 beta source review while preserving existing Bricks compatibility boundaries.
 
 ## 0.5.75 - 2026-07-16
