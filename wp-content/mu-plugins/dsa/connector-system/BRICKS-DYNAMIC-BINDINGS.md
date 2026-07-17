@@ -105,6 +105,8 @@ Admins can then run a trusted-adapter proof. The proof attaches `kiwe.trusted-ad
 
 After proof passes, admins can attach `kiwe.guarded-apply-authorization.v1`. That authorization is a future-only review token, not an apply action.
 
+After authorization, admins can build `kiwe.pre-execution-gate.v1`. The gate is still non-mutating; it confirms the staged plan, proof, and authorization line up and records the rollback, rendered-preview, final-confirmation, smallest-mutation, post-apply audit, and browser-smoke requirements a future adapter must satisfy.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

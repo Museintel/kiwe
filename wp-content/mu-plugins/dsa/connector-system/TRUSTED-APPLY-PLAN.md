@@ -136,13 +136,46 @@ It records the admin user, stage id, plan hash, gates, blockers, and future-only
 
 The WordPress admin preview/download/stage/proof/authorization flow and the CLI/MCP planner share the same authority boundary: they are planning artifacts only. They do not become a trusted adapter and they do not prove a page was saved.
 
+## Pre-execution gate
+
+Batch 11 adds the last non-mutating checkpoint before a future adapter is allowed to exist:
+
+```text
+kiwe.pre-execution-gate.v1
+```
+
+The gate can be attached only after:
+
+1. a valid stage exists;
+2. the reviewed dry-run apply plan is present;
+3. a trusted-adapter proof exists and is `adapter-proof-ready`;
+4. guarded authorization exists and is `authorized-for-future-adapter`;
+5. stage, proof, authorization, and apply-plan hashes agree;
+6. no blockers remain.
+
+It records the required future-adapter contract:
+
+- revalidate the stage hash;
+- revalidate the authorization;
+- capture rollback or revision state;
+- render and inspect the output before save;
+- ask final admin confirmation;
+- execute the smallest possible adapter mutation;
+- run post-apply Kiwe audit;
+- run post-apply browser smoke tests.
+
+The gate still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It is a lock, not the key.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
 
 1. `validate-bindings` passes;
 2. `prepare-apply-plan` passes;
-3. the admin explicitly approves the target page/site;
-4. a rollback/revision point exists;
-5. the adapter can inspect the rendered Bricks tree before save;
-6. post-apply Kiwe audit and browser smoke tests pass.
+3. the stage has trusted-adapter proof;
+4. guarded authorization is attached;
+5. the pre-execution gate is ready;
+6. the admin explicitly approves the target page/site;
+7. a rollback/revision point exists;
+8. the adapter can inspect the rendered Bricks tree before save;
+9. post-apply Kiwe audit and browser smoke tests pass.

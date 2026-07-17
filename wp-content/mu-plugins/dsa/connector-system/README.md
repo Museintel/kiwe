@@ -97,7 +97,8 @@ MCP clients can call `kiwe_prepare_apply_plan`.
 8. Admins may stage a reviewed plan inside Kiwe. A stage record stores the plan hash, status, gate results, blockers, counts, and future apply requirements. It is an internal review queue item, not a Bricks save.
 9. Admins can run the trusted-adapter proof against a staged plan. The proof uses the current live Site Graph to verify Bricks/adapter capability signals, map operations, surface blockers, and attach `kiwe.trusted-adapter-proof.v1` metadata to the stage. It still does not save Bricks/page content.
 10. Admins can authorize a proven stage for a future trusted adapter. The authorization is `kiwe.guarded-apply-authorization.v1`: an internal review token that records human approval, plan hash, gates, blockers, and future-only authority. It still does not save Bricks/page content.
-11. Later batches can safely apply the staged/proven/authorized plan through Bricks 2.4 abilities or Bricks import workflows after revision capture, rendered-output inspection, and final post-apply audit. Until that future adapter exists, the CLI and WordPress admin apply-plan views/downloads/stages/proofs/authorizations are inspection contracts only.
+11. Admins can build the pre-execution gate for an authorized stage. The gate is `kiwe.pre-execution-gate.v1`: the final non-mutating checkpoint that revalidates stage/proof/authorization hashes and records what a future adapter must do before the first mutation.
+12. Later batches can safely apply the staged/proven/authorized/gated plan through Bricks 2.4 abilities or Bricks import workflows only after rollback/revision capture, rendered-output inspection, final admin confirmation, smallest possible adapter mutation, post-apply Kiwe audit, and browser smoke tests. Until that future adapter exists, the CLI and WordPress admin apply-plan views/downloads/stages/proofs/authorizations/gates are inspection contracts only.
 
 ## Lead rule
 
