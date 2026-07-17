@@ -77,6 +77,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_apply_bricks_tokens', [ $this, 'apply_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
+		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1475,6 +1476,65 @@ final class Admin {
 		exit;
 	}
 
+	public function download_apply_plan(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to download Kiwe apply plans.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$key = isset( $_POST['bindingReport'] ) ? sanitize_key( (string) wp_unslash( $_POST['bindingReport'] ) ) : '';
+		if ( '' === $key ) {
+			wp_die(
+				esc_html__( 'Apply plan report key is missing.', 'dsa' ),
+				esc_html__( 'Missing report', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_download_apply_plan_' . $key );
+
+		$payload = get_transient( 'dsa_binding_report_' . $key );
+		if ( ! is_array( $payload ) || (int) ( $payload['userId'] ?? 0 ) !== get_current_user_id() ) {
+			wp_die(
+				esc_html__( 'Apply plan report expired or is not available for this admin user.', 'dsa' ),
+				esc_html__( 'Apply plan unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$apply_plan = isset( $payload['applyPlan'] ) && is_array( $payload['applyPlan'] ) ? $payload['applyPlan'] : [];
+		if ( [] === $apply_plan ) {
+			wp_die(
+				esc_html__( 'This binding report does not contain a dry-run apply plan.', 'dsa' ),
+				esc_html__( 'Apply plan unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$json = wp_json_encode( $apply_plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! $json ) {
+			wp_die(
+				esc_html__( 'Could not encode the dry-run apply plan.', 'dsa' ),
+				esc_html__( 'Apply plan export failed', 'dsa' ),
+				[ 'response' => 500 ]
+			);
+		}
+
+		$site = sanitize_title( (string) ( $payload['siteName'] ?? get_bloginfo( 'name' ) ?: 'appsite' ) );
+		$file = sprintf( 'kiwe-apply-plan-%s-%s.json', $site ?: 'appsite', gmdate( 'Ymd-His' ) );
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'X-Robots-Tag: noindex, nofollow' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2189,6 +2249,7 @@ final class Admin {
 		$counts   = isset( $report['counts'] ) && is_array( $report['counts'] ) ? $report['counts'] : [];
 		$findings = isset( $report['findings'] ) && is_array( $report['findings'] ) ? $report['findings'] : [];
 		$apply_plan = isset( $payload['applyPlan'] ) && is_array( $payload['applyPlan'] ) ? $payload['applyPlan'] : [];
+		$report_key = isset( $payload['key'] ) ? sanitize_key( (string) $payload['key'] ) : '';
 		$ok       = ! empty( $report['ok'] );
 		?>
 		<div class="notice <?php echo $ok ? 'notice-success' : 'notice-error'; ?>" style="margin: 1rem 0;">
@@ -2225,10 +2286,10 @@ final class Admin {
 			<p class="description"><?php esc_html_e( 'No validator findings were reported. This still does not mutate WordPress or Bricks; review the dry-run apply plan below before any future adapter path.', 'dsa' ); ?></p>
 		<?php endif; ?>
 		<?php
-		$this->render_apply_plan_preview( $apply_plan );
+		$this->render_apply_plan_preview( $apply_plan, $report_key );
 	}
 
-	private function render_apply_plan_preview( array $apply_plan ): void {
+	private function render_apply_plan_preview( array $apply_plan, string $report_key = '' ): void {
 		if ( [] === $apply_plan ) {
 			return;
 		}
@@ -2245,6 +2306,14 @@ final class Admin {
 		<div class="dsa-lpm-card" style="margin-top: 1rem;">
 			<h3><?php esc_html_e( 'Dry-run apply plan', 'dsa' ); ?></h3>
 			<p class="description"><?php esc_html_e( 'This preview translates the validated binding file into the operations a future trusted Kiwe/Bricks adapter would review. It is non-mutating and does not save WordPress, WooCommerce, or Bricks content.', 'dsa' ); ?></p>
+			<?php if ( '' !== $report_key ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin: 0 0 1rem;">
+					<input type="hidden" name="action" value="dsa_download_apply_plan">
+					<input type="hidden" name="bindingReport" value="<?php echo esc_attr( $report_key ); ?>">
+					<?php wp_nonce_field( 'dsa_download_apply_plan_' . $report_key ); ?>
+					<button class="button button-secondary" type="submit"><?php esc_html_e( 'Download dry-run apply plan JSON', 'dsa' ); ?></button>
+				</form>
+			<?php endif; ?>
 			<div class="dsa-admin-token-summary">
 				<div><strong><?php echo esc_html( (string) $operation_count ); ?></strong><span><?php esc_html_e( 'planned operations', 'dsa' ); ?></span></div>
 				<div><strong><?php echo esc_html( (string) $review_count ); ?></strong><span><?php esc_html_e( 'review items', 'dsa' ); ?></span></div>
@@ -2269,7 +2338,7 @@ final class Admin {
 							continue;
 						}
 						?>
-						<li><strong><?php echo esc_html( $label ); ?></strong> <code><?php echo esc_html( $status ); ?></code><?php echo '' !== $details ? ' — ' . esc_html( $details ) : ''; ?></li>
+						<li><strong><?php echo esc_html( $label ); ?></strong> <code><?php echo esc_html( $status ); ?></code><?php echo '' !== $details ? ' - ' . esc_html( $details ) : ''; ?></li>
 					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
@@ -4639,6 +4708,8 @@ final class Admin {
 		if ( ! is_array( $payload ) || (int) ( $payload['userId'] ?? 0 ) !== get_current_user_id() ) {
 			return [];
 		}
+
+		$payload['key'] = $key;
 
 		return $payload;
 	}

@@ -13,6 +13,7 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Added the `kiwe.bricks-bindings.v1` schema, `validate-bindings` CLI/MCP validator, and a fixture-backed test so dynamic passes can be checked for real Site Graph terms, Bricks query-loop object types, dynamic tags, canonical Kiwe launchers, and non-mutating apply authority.
 - Added the `kiwe.bricks-apply-plan.v1` dry-run apply planner plus `prepare-apply-plan` CLI/MCP tooling. It turns a validated binding plan and Site Graph into preflight gates, Bricks query-loop/dynamic-data operations, Kiwe launcher/menu-context operations, manual-review items, and future adapter steps without mutating WordPress.
 - Added the same dry-run apply-plan preview to `Kiwe > Framework > AI connector and Site Graph` after binding-plan upload, so admins can inspect planned Bricks/Kiwe operations and preflight gates against the live target site before any trusted adapter exists.
+- Added a nonce-protected admin download for the live dry-run apply plan JSON, making the WordPress-reviewed `kiwe.bricks-apply-plan.v1` artifact portable for the next trusted-adapter stage without exposing secrets or writing Bricks data.
 - Source-reviewed local Bricks 2.4 beta AI abilities, query-loop, dynamic-data, HTML/CSS conversion, global-query, Woo setup, and import/export surfaces; updated Kiwe Bricks admin copy/version marker to reflect the 2.4 beta source review while preserving existing Bricks compatibility boundaries.
 
 ## 0.5.75 - 2026-07-16
