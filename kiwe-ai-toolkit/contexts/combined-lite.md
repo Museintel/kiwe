@@ -274,6 +274,8 @@ Example:
 
 Hiding a dock item only hides the dock button. It does not delete the registered DSA module. Header/Bricks/page launchers may still open modules with canonical `data-dsa-open-module`.
 
+Treat Kiwe settings as a site preset, not the boundary of the AppShell theme. The importable theme should provide resilient baseline styling for every registered core DSA screen even when the current combined preview hides some icons/screens. A news/editorial preset may hide cart/checkout visually, but if the site owner later enables cart, notifications, AI, or another registered module in Kiwe admin, that module should inherit the theme’s shared panel/card/button/form/badge/CTA language rather than falling back to a broken or mismatched look.
+
 ## AppShell README requirements
 
 The AppShell handoff README must include:

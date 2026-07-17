@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.5.78",
+  "version": "0.5.79",
   "algorithm": "sha256",
   "file_count": 195,
   "files": {
@@ -174,7 +174,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "f1a1472c8e7c1dac8b7375b715b3ffc71fcd2f7649d38248b649cc634a58752b"
+      "sha256": "f44a7d9bce7c65cca3869e39ec4d60ec5567da57bdff19f43d1e1180541f17c5"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -741,12 +741,12 @@
       "sha256": "628dcddfdcdfde38e6f4acb58ba0aa954a54be3b90802295dd9e4a10bde8dbd7"
     },
     "ui-system/prompt.md": {
-      "bytes": 17080,
-      "sha256": "82b87671ff85d538e208ae4a38aea89e92c39bc4a96e18432cb09178f235aa39"
+      "bytes": 18567,
+      "sha256": "3b285150c8effeffefed17dc7500f8ba482094a552ded85a0c93900fad73a44f"
     },
     "ui-system/screen-payloads.json": {
-      "bytes": 13480,
-      "sha256": "4b484fe83bea09c6635a67e0653e108c1d612e69a9343e19c06a2fe8df710b29"
+      "bytes": 13588,
+      "sha256": "4d13cbfabb4ef9e807fc2eb7dbd98541cc8c3cb1270a30e293ca84fdca3ed6fa"
     },
     "ui-system/seam-class-vocabulary.json": {
       "bytes": 6618,

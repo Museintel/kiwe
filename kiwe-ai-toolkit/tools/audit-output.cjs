@@ -43,6 +43,7 @@ const textFiles = files.filter((file) => /\.(html|css|js|json|md|txt|tsx|ts|jsx)
 const allText = textFiles.map((file) => `\n--- ${rel(file)} ---\n${read(file)}`).join('\n');
 const findings = [];
 let seamRoles = null;
+let coreScreens = null;
 
 function getSeamRoles() {
   if (seamRoles) return seamRoles;
@@ -62,6 +63,26 @@ function getSeamRoles() {
     if (seamRoles.size) break;
   }
   return seamRoles;
+}
+
+function getCoreScreens() {
+  if (coreScreens) return coreScreens;
+  coreScreens = new Set();
+  const candidates = [
+    path.join(__dirname, '..', 'packs', 'appshell-theme', 'screen-payloads.json'),
+    path.join(__dirname, '..', 'packs', 'website-builder', 'screen-payloads.json')
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    try {
+      const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+      for (const screen of Object.keys(json.screens || {})) coreScreens.add(String(screen));
+    } catch (_) {
+      // Non-fatal; audit can continue without screen coverage checks.
+    }
+    if (coreScreens.size) break;
+  }
+  return coreScreens;
 }
 
 function add(level, message, file = '') {
@@ -163,6 +184,11 @@ for (const file of themeJsonFiles) {
   if (json.schema && json.schema !== 'kiwe.surface-theme.v1') add('fail', 'theme.json schema must be kiwe.surface-theme.v1.', rel(file));
   for (const stale of ['schemaVersion', 'contract', 'requiredUiContract', 'supportedModes', 'supportedPresentations', 'supportedDockModes', 'supportedDockShapes', 'supportedColorModes']) {
     if (stale in json) add('fail', `theme.json uses stale/unsupported key: ${stale}`, rel(file));
+  }
+  const screens = Array.isArray(json.screens) ? json.screens.map((screen) => String(screen)) : [];
+  const missingScreens = Array.from(getCoreScreens()).filter((screen) => !screens.includes(screen));
+  if (missingScreens.length) {
+    add('warn', `theme.json.screens omits registered core screens: ${missingScreens.join(', ')}. That is acceptable only for a clearly documented partial theme; marketplace-ready themes should skin all registered screens even if the current settings profile hides some dock icons.`, rel(file));
   }
 }
 

@@ -583,7 +583,7 @@ Themes are presentation only. Kiwe owns capability, state, lifecycle, security, 
 
 ## Required shell modes
 
-Your theme must account for all core shell states it claims in `theme.json`:
+Your theme must account for all core shell states it supports in `theme.json`:
 
 - Sheet and Classic presentation.
 - Full compact dock.
@@ -611,6 +611,15 @@ Do not hardcode one dock radius and ignore admin shape controls.
 ## Screen rules
 
 Preserve all required selectors from `screen-payloads.json` and `slots.md`.
+
+A Kiwe AppShell theme is a reusable visual skin, not a screenshot of the currently enabled dock icons. Treat `kiwe-settings/` as a recommended site preset only:
+
+- `kiwe-settings/kiwe-appsite-profile.json` may hide dock icons or choose a site-specific order/focus item.
+- Hiding a dock icon does not remove that registered DSA module from the plugin.
+- Importable theme CSS must provide a resilient baseline for every registered core screen in `screen-payloads.json`: profile, cart, checkout, search, menu, saved, links, notifications, iOS install, games, and AI.
+- If the combined preview is for a non-commerce/news site, it may hide cart/checkout/order-heavy UI, but enabling cart later in Kiwe admin must still inherit the theme’s panel, card, button, form, badge, rail, and CTA language without looking broken.
+- `theme.json.screens` should list all core screens the theme can safely skin. A partial theme that only skins the screens shown in the preview must clearly label itself as partial and is not marketplace-ready.
+- Use broad stable selectors and tokens for shared shell language, then add light module-specific refinements only where needed. Do not make the design depend on a fixed dock order or fixed set of enabled icons.
 
 Use the Seam adoption map correctly:
 
@@ -712,7 +721,7 @@ Build the preview like this:
 
 The preview should demonstrate:
 
-- Every screen listed in `theme.json`, and only those screens unless the README explicitly explains why an optional capability is being shown.
+- Every core screen listed in `screen-payloads.json` at least once in either the AppShell preview or a documented optional-state panel, unless the README explicitly labels the output as a partial/non-marketplace theme.
 - Profile/account only when membership, login, account, or personalization is part of the brief/settings.
 - Orders/downloads/addresses/password/profile actions only if represented by the theme and relevant to the appsite.
 - Cart with quantity controls, checkout CTA, trust badges, and FBT rail only when commerce, WooCommerce, shop, products, paid reports, subscriptions, or checkout are part of the brief/settings.
@@ -728,7 +737,7 @@ The preview should demonstrate:
 
 Use natural placeholder data. Do not fill the UI with debug labels.
 
-For combined website/page + AppShell handoffs, match the AppShell screens to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only include commerce/account screens when the brief, Kiwe settings profile, or site business model requires them. If a theme supports an optional screen but the current combined preview hides it, document that in the README/settings notes.
+For combined website/page + AppShell handoffs, match the visible AppShell preset to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only show commerce/account screens when the brief, Kiwe settings profile, or site business model requires them. However, the importable theme must still skin those registered screens through shared theme language so a site owner can enable them later without visual breakage. If an optional screen is hidden in the current preset, document that it is supported but hidden in the README/settings notes.
 
 Responsive fit is a hard quality gate. The standalone preview must be checked at narrow mobile widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling unless the element is an intentional rail such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
 
