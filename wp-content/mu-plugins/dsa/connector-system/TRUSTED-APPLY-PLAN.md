@@ -226,6 +226,34 @@ It records:
 
 The confirmation still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It only says that a future mutation adapter may now be built against this exact preview and hash.
 
+## Fresh Site Graph revalidation
+
+Batch 14 adds the post-confirmation drift check:
+
+```text
+kiwe.fresh-sitegraph-revalidation.v1
+```
+
+The revalidation can be attached only after:
+
+1. a valid stage exists;
+2. the dry-run apply plan is still present;
+3. final apply confirmation is attached;
+4. the final confirmation plan hash matches the staged plan;
+5. a fresh admin-generated `kiwe.site-graph.v1` is available.
+
+It checks:
+
+- Bricks availability for Bricks operations;
+- current Bricks version and HTML/CSS conversion signal;
+- WooCommerce active state;
+- query-loop post types;
+- taxonomy term IDs such as `product_cat::123`;
+- dynamic tags when the fresh graph exposes them;
+- Kiwe-owned launcher/menu-context operations.
+
+The revalidation still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It exists to catch live-site drift after confirmation and before rollback/execution work begins.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -237,6 +265,7 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 5. the pre-execution gate is ready;
 6. the trusted execution preview is ready;
 7. final apply confirmation is attached;
-8. a rollback/revision point exists;
-9. the adapter can inspect the rendered Bricks tree before save;
-10. post-apply Kiwe audit and browser smoke tests pass.
+8. fresh Site Graph revalidation passes;
+9. a rollback/revision point exists;
+10. the adapter can inspect the rendered Bricks tree before save;
+11. post-apply Kiwe audit and browser smoke tests pass.

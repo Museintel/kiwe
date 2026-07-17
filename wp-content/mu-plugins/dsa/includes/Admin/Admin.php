@@ -11,6 +11,7 @@ use DSA\AI\Guarded_Apply_Authorizer;
 use DSA\AI\Pre_Execution_Gate_Service;
 use DSA\AI\Trusted_Execution_Preview_Service;
 use DSA\AI\Final_Apply_Confirmation_Service;
+use DSA\AI\Fresh_Site_Graph_Revalidator;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -90,6 +91,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_gate_apply_stage', [ $this, 'gate_apply_stage' ] );
 		add_action( 'admin_post_dsa_preview_apply_execution', [ $this, 'preview_apply_execution' ] );
 		add_action( 'admin_post_dsa_confirm_apply_execution', [ $this, 'confirm_apply_execution' ] );
+		add_action( 'admin_post_dsa_revalidate_apply_sitegraph', [ $this, 'revalidate_apply_sitegraph' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1914,6 +1916,69 @@ final class Admin {
 		exit;
 	}
 
+	public function revalidate_apply_sitegraph(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to revalidate Kiwe apply candidates.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_revalidate_apply_sitegraph_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$site_graph   = ( new Site_Graph_Service( $this->settings, $this->modules ) )->graph( [ 'sampleLimit' => 12 ] );
+		$revalidation = ( new Fresh_Site_Graph_Revalidator() )->revalidate(
+			$stage,
+			$site_graph,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'fresh-sitegraph-ready' !== ( $revalidation['status'] ?? '' ) ) {
+			$stager->attach_fresh_sitegraph_revalidation( $stage_id, $revalidation );
+			wp_die(
+				esc_html__( 'Fresh Site Graph revalidation found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Fresh Site Graph blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_fresh_sitegraph_revalidation( $stage_id, $revalidation );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => 'kiwe-framework',
+					'apply-fresh'   => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2792,6 +2857,7 @@ final class Admin {
 		$active_gate  = isset( $_GET['apply-gate'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-gate'] ) ) : '';
 		$active_preview = isset( $_GET['apply-preview'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-preview'] ) ) : '';
 		$active_confirm = isset( $_GET['apply-confirm'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-confirm'] ) ) : '';
+		$active_fresh = isset( $_GET['apply-fresh'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-fresh'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -2809,6 +2875,9 @@ final class Admin {
 		}
 		if ( '' !== $active_confirm ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Final apply confirmation recorded for the current execution preview. This still did not save Bricks or WordPress content.', 'dsa' ) . '</p></div>';
+		}
+		if ( '' !== $active_fresh ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Fresh Site Graph revalidation passed against the current live site. This still did not save Bricks or WordPress content.', 'dsa' ) . '</p></div>';
 		}
 		if ( [] === $records ) {
 			return;
@@ -2829,6 +2898,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Gate', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Preview', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Confirmation', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Fresh', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -2845,6 +2915,7 @@ final class Admin {
 					$gate = isset( $record['preExecutionGate'] ) && is_array( $record['preExecutionGate'] ) ? $record['preExecutionGate'] : [];
 					$preview = isset( $record['executionPreview'] ) && is_array( $record['executionPreview'] ) ? $record['executionPreview'] : [];
 					$confirmation = isset( $record['finalConfirmation'] ) && is_array( $record['finalConfirmation'] ) ? $record['finalConfirmation'] : [];
+					$fresh = isset( $record['freshSiteGraphRevalidation'] ) && is_array( $record['freshSiteGraphRevalidation'] ) ? $record['freshSiteGraphRevalidation'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -2863,8 +2934,11 @@ final class Admin {
 					$confirmation_status = (string) ( $confirmation['status'] ?? __( 'not confirmed', 'dsa' ) );
 					$confirmation_blockers = isset( $confirmation['blockers'] ) && is_array( $confirmation['blockers'] ) ? count( $confirmation['blockers'] ) : 0;
 					$can_confirm = [] !== $preview && 'ready-for-final-confirmation' === ( $preview['status'] ?? '' ) && 0 === $preview_blockers;
+					$fresh_status = (string) ( $fresh['status'] ?? __( 'not run', 'dsa' ) );
+					$fresh_blockers = isset( $fresh['blockers'] ) && is_array( $fresh['blockers'] ) ? count( $fresh['blockers'] ) : 0;
+					$can_fresh = [] !== $confirmation && 'confirmed-for-future-adapter' === ( $confirmation['status'] ?? '' ) && 0 === $confirmation_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -2874,6 +2948,7 @@ final class Admin {
 						<td><?php echo esc_html( $gate_status ); ?><?php echo $gate_blockers > 0 ? ' (' . esc_html( (string) $gate_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $preview_status ); ?><?php echo $preview_blockers > 0 ? ' (' . esc_html( (string) $preview_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $confirmation_status ); ?><?php echo $confirmation_blockers > 0 ? ' (' . esc_html( (string) $confirmation_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $fresh_status ); ?><?php echo $fresh_blockers > 0 ? ' (' . esc_html( (string) $fresh_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -2910,16 +2985,23 @@ final class Admin {
 								</label>
 								<button class="button button-primary" type="submit" <?php disabled( ! $can_confirm ); ?>><?php esc_html_e( 'Record final confirmation', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_revalidate_apply_sitegraph">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_revalidate_apply_sitegraph_' . $id ); ?>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_fresh ); ?>><?php esc_html_e( 'Revalidate live Site Graph', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="11">
+							<td colspan="12">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
 								<?php $this->render_trusted_execution_preview_details( $preview ); ?>
 								<?php $this->render_final_apply_confirmation_details( $confirmation ); ?>
+								<?php $this->render_fresh_sitegraph_revalidation_details( $fresh ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -3182,6 +3264,71 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Final confirmation blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_fresh_sitegraph_revalidation_details( array $fresh ): void {
+		if ( [] === $fresh ) {
+			return;
+		}
+		$blockers = isset( $fresh['blockers'] ) && is_array( $fresh['blockers'] ) ? $fresh['blockers'] : [];
+		$warnings = isset( $fresh['warnings'] ) && is_array( $fresh['warnings'] ) ? $fresh['warnings'] : [];
+		$checks   = isset( $fresh['operationChecks'] ) && is_array( $fresh['operationChecks'] ) ? $fresh['operationChecks'] : [];
+		$counts   = isset( $fresh['counts'] ) && is_array( $fresh['counts'] ) ? $fresh['counts'] : [];
+		$caps     = isset( $fresh['capabilities'] ) && is_array( $fresh['capabilities'] ) ? $fresh['capabilities'] : [];
+		$site     = isset( $fresh['site'] ) && is_array( $fresh['site'] ) ? $fresh['site'] : [];
+		$visible  = array_slice( $checks, 0, 12 );
+		$hidden   = max( 0, count( $checks ) - count( $visible ) );
+		?>
+		<p><strong><?php esc_html_e( 'Fresh Site Graph revalidation', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $fresh['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $caps['bricksActive'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'Bricks active', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $caps['wooActive'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'Woo active', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $counts['blockers'] ?? count( $blockers ) ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+			<div><strong><?php esc_html_e( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'mutates now', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description">
+			<?php echo esc_html( sprintf( __( 'Fresh graph: %1$s (%2$s), generated %3$s. Hash: %4$s', 'dsa' ), (string) ( $site['name'] ?? '' ), (string) ( $site['homeUrl'] ?? '' ), (string) ( $fresh['siteGraphGeneratedAt'] ?? '' ), substr( (string) ( $fresh['siteGraphHash'] ?? '' ), 0, 16 ) ) ); ?>
+		</p>
+		<?php if ( [] !== $visible ) : ?>
+			<table class="widefat striped">
+				<thead><tr><th><?php esc_html_e( 'Type', 'dsa' ); ?></th><th><?php esc_html_e( 'Status', 'dsa' ); ?></th><th><?php esc_html_e( 'Check', 'dsa' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $visible as $check ) : ?>
+					<?php
+					if ( ! is_array( $check ) ) {
+						continue;
+					}
+					?>
+					<tr>
+						<td><code><?php echo esc_html( (string) ( $check['type'] ?? '' ) ); ?></code></td>
+						<td><?php echo esc_html( (string) ( $check['status'] ?? '' ) ); ?></td>
+						<td><?php echo esc_html( (string) ( $check['message'] ?? '' ) ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php if ( $hidden > 0 ) : ?>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 12 fresh checks; %d more are present.', 'dsa' ), $hidden ) ); ?></p>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php if ( [] !== $warnings ) : ?>
+			<p><strong><?php esc_html_e( 'Fresh warnings', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $warnings as $warning ) : ?>
+					<li><?php echo esc_html( (string) $warning ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Fresh blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

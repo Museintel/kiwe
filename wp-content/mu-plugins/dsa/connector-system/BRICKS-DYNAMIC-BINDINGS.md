@@ -111,6 +111,8 @@ After the gate passes, admins can build `kiwe.trusted-execution-preview.v1`. The
 
 After preview, admins can attach `kiwe.final-apply-confirmation.v1`. The confirmation requires an explicit checkbox for the exact execution preview and still does not save Bricks or WordPress content.
 
+After final confirmation, admins can run `kiwe.fresh-sitegraph-revalidation.v1`. The revalidation checks the current live Site Graph for drift in Bricks capability, post types, taxonomy terms, and dynamic tags before any rollback or mutation adapter work begins.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.
