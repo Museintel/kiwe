@@ -282,6 +282,36 @@ It records:
 
 This checkpoint still does not capture a real WordPress revision, Bricks element tree snapshot, or backup. Those must happen immediately before a future mutation adapter saves anything, once the exact target page/template is resolved.
 
+## Target resolution
+
+Batch 16 adds the explicit target lock:
+
+```text
+kiwe.target-resolution.v1
+```
+
+The target lock can be attached only after:
+
+1. a valid stage exists;
+2. fresh Site Graph revalidation is ready;
+3. rollback readiness is ready;
+4. stage, fresh revalidation, and rollback readiness plan hashes match;
+5. the admin supplies an explicit target post/page/template ID;
+6. the target object exists and is not an attachment, revision, or navigation menu item;
+7. no blockers remain.
+
+It records:
+
+- target post ID;
+- post type;
+- status;
+- title;
+- URL;
+- locked plan hash;
+- allowed future scope.
+
+The target lock still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It only tells a future adapter which exact WordPress object is allowed to be touched after real rollback capture.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -295,6 +325,7 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 7. final apply confirmation is attached;
 8. fresh Site Graph revalidation passes;
 9. rollback readiness checkpoint is attached;
-10. a real rollback/revision point is captured for the exact target;
-11. the adapter can inspect the rendered Bricks tree before save;
-12. post-apply Kiwe audit and browser smoke tests pass.
+10. target resolution is attached;
+11. a real rollback/revision point is captured for the exact target;
+12. the adapter can inspect the rendered Bricks tree before save;
+13. post-apply Kiwe audit and browser smoke tests pass.

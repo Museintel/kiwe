@@ -13,6 +13,7 @@ use DSA\AI\Trusted_Execution_Preview_Service;
 use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\AI\Fresh_Site_Graph_Revalidator;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
+use DSA\AI\Target_Resolution_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -94,6 +95,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_confirm_apply_execution', [ $this, 'confirm_apply_execution' ] );
 		add_action( 'admin_post_dsa_revalidate_apply_sitegraph', [ $this, 'revalidate_apply_sitegraph' ] );
 		add_action( 'admin_post_dsa_build_rollback_readiness', [ $this, 'build_rollback_readiness' ] );
+		add_action( 'admin_post_dsa_resolve_apply_target', [ $this, 'resolve_apply_target' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -2042,6 +2044,77 @@ final class Admin {
 		exit;
 	}
 
+	public function resolve_apply_target(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to resolve Kiwe apply targets.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_resolve_apply_target_' . $stage_id );
+
+		$target_post_id = isset( $_POST['targetPostId'] ) ? absint( wp_unslash( $_POST['targetPostId'] ) ) : 0;
+		if ( $target_post_id <= 0 ) {
+			wp_die(
+				esc_html__( 'Target post/page/template ID is required.', 'dsa' ),
+				esc_html__( 'Target required', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$resolution = ( new Target_Resolution_Service() )->resolve(
+			$stage,
+			[
+				'userId'       => get_current_user_id(),
+				'createdAt'    => gmdate( 'c' ),
+				'targetPostId' => $target_post_id,
+			]
+		);
+
+		if ( 'target-resolution-ready' !== ( $resolution['status'] ?? '' ) ) {
+			$stager->attach_target_resolution( $stage_id, $resolution );
+			wp_die(
+				esc_html__( 'Target resolution found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Target resolution blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_target_resolution( $stage_id, $resolution );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'         => 'kiwe-framework',
+					'apply-target' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2922,6 +2995,7 @@ final class Admin {
 		$active_confirm = isset( $_GET['apply-confirm'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-confirm'] ) ) : '';
 		$active_fresh = isset( $_GET['apply-fresh'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-fresh'] ) ) : '';
 		$active_rollback = isset( $_GET['apply-rollback'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-rollback'] ) ) : '';
+		$active_target = isset( $_GET['apply-target'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-target'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -2946,6 +3020,9 @@ final class Admin {
 		if ( '' !== $active_rollback ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Rollback readiness checkpoint built. A real revision/backup still must be captured immediately before any future mutation.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_target ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Apply target resolved and locked. This still did not save Bricks or WordPress content.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -2967,6 +3044,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Confirmation', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Fresh', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Rollback', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Target', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -2985,6 +3063,7 @@ final class Admin {
 					$confirmation = isset( $record['finalConfirmation'] ) && is_array( $record['finalConfirmation'] ) ? $record['finalConfirmation'] : [];
 					$fresh = isset( $record['freshSiteGraphRevalidation'] ) && is_array( $record['freshSiteGraphRevalidation'] ) ? $record['freshSiteGraphRevalidation'] : [];
 					$rollback = isset( $record['rollbackReadinessCheckpoint'] ) && is_array( $record['rollbackReadinessCheckpoint'] ) ? $record['rollbackReadinessCheckpoint'] : [];
+					$target = isset( $record['targetResolution'] ) && is_array( $record['targetResolution'] ) ? $record['targetResolution'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -3009,8 +3088,11 @@ final class Admin {
 					$rollback_status = (string) ( $rollback['status'] ?? __( 'not checked', 'dsa' ) );
 					$rollback_blockers = isset( $rollback['blockers'] ) && is_array( $rollback['blockers'] ) ? count( $rollback['blockers'] ) : 0;
 					$can_rollback = [] !== $fresh && 'fresh-sitegraph-ready' === ( $fresh['status'] ?? '' ) && 0 === $fresh_blockers;
+					$target_status = (string) ( $target['status'] ?? __( 'not resolved', 'dsa' ) );
+					$target_blockers = isset( $target['blockers'] ) && is_array( $target['blockers'] ) ? count( $target['blockers'] ) : 0;
+					$can_target = [] !== $rollback && 'rollback-readiness-ready' === ( $rollback['status'] ?? '' ) && 0 === $rollback_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -3022,6 +3104,7 @@ final class Admin {
 						<td><?php echo esc_html( $confirmation_status ); ?><?php echo $confirmation_blockers > 0 ? ' (' . esc_html( (string) $confirmation_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $fresh_status ); ?><?php echo $fresh_blockers > 0 ? ' (' . esc_html( (string) $fresh_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $rollback_status ); ?><?php echo $rollback_blockers > 0 ? ' (' . esc_html( (string) $rollback_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $target_status ); ?><?php echo $target_blockers > 0 ? ' (' . esc_html( (string) $target_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -3070,11 +3153,22 @@ final class Admin {
 								<?php wp_nonce_field( 'dsa_build_rollback_readiness_' . $id ); ?>
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_rollback ); ?>><?php esc_html_e( 'Build rollback readiness', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_resolve_apply_target">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_resolve_apply_target_' . $id ); ?>
+								<label style="display:block; margin-bottom:.25rem;">
+									<span class="screen-reader-text"><?php esc_html_e( 'Target post, page, or template ID', 'dsa' ); ?></span>
+									<input type="number" min="1" name="targetPostId" class="small-text" placeholder="<?php echo esc_attr__( 'ID', 'dsa' ); ?>" <?php disabled( ! $can_target ); ?>>
+									<?php esc_html_e( 'target ID', 'dsa' ); ?>
+								</label>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_target ); ?>><?php esc_html_e( 'Resolve target', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="13">
+							<td colspan="14">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
@@ -3082,6 +3176,7 @@ final class Admin {
 								<?php $this->render_final_apply_confirmation_details( $confirmation ); ?>
 								<?php $this->render_fresh_sitegraph_revalidation_details( $fresh ); ?>
 								<?php $this->render_rollback_readiness_details( $rollback ); ?>
+								<?php $this->render_target_resolution_details( $target ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -3453,6 +3548,41 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Rollback readiness blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_target_resolution_details( array $resolution ): void {
+		if ( [] === $resolution ) {
+			return;
+		}
+		$blockers = isset( $resolution['blockers'] ) && is_array( $resolution['blockers'] ) ? $resolution['blockers'] : [];
+		$target   = isset( $resolution['target'] ) && is_array( $resolution['target'] ) ? $resolution['target'] : [];
+		$scope    = isset( $resolution['allowedFutureScope'] ) && is_array( $resolution['allowedFutureScope'] ) ? $resolution['allowedFutureScope'] : [];
+		?>
+		<p><strong><?php esc_html_e( 'Target resolution', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $resolution['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $target['id'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'target id', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $target['postType'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'post type', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+			<div><strong><?php esc_html_e( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'mutates now', 'dsa' ); ?></span></div>
+		</div>
+		<?php if ( [] !== $target ) : ?>
+			<ul class="ul-disc">
+				<li><?php esc_html_e( 'Title:', 'dsa' ); ?> <?php echo esc_html( (string) ( $target['title'] ?? '' ) ); ?></li>
+				<li><?php esc_html_e( 'Status:', 'dsa' ); ?> <?php echo esc_html( (string) ( $target['status'] ?? '' ) ); ?></li>
+				<li><?php esc_html_e( 'URL:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $target['url'] ?? '' ) ); ?></code></li>
+				<li><?php esc_html_e( 'Locked plan hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $scope['planHash'] ?? $resolution['planHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Target blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

@@ -115,6 +115,8 @@ After final confirmation, admins can run `kiwe.fresh-sitegraph-revalidation.v1`.
 
 After fresh revalidation, admins can build `kiwe.rollback-readiness-checkpoint.v1`. This locks the approved artifact hashes and required rollback captures but does not yet create a real WordPress/Bricks revision.
 
+After rollback readiness, admins can attach `kiwe.target-resolution.v1` by entering the exact post/page/template ID that the future adapter is allowed to touch. Target resolution is still non-mutating and prevents ambiguous saves.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

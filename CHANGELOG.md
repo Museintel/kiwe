@@ -22,6 +22,7 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Added the final apply confirmation lock: previewed stages can receive `kiwe.final-apply-confirmation.v1` only after an explicit admin checkbox confirms the exact execution preview. The artifact allows a future adapter to be built while still refusing immediate Bricks, WordPress, WooCommerce, or publish mutation.
 - Added fresh Site Graph revalidation: confirmed stages can receive `kiwe.fresh-sitegraph-revalidation.v1`, checking the current live Site Graph for Bricks availability, post types, taxonomy terms, dynamic tags, warnings, and blockers before any future adapter is allowed to proceed.
 - Added rollback readiness checkpoints: fresh-revalidated stages can receive `kiwe.rollback-readiness-checkpoint.v1`, locking artifact hashes and required rollback captures while clearly marking that no actual Bricks/WordPress revision has been captured or mutated yet.
+- Added target resolution: rollback-ready stages can receive `kiwe.target-resolution.v1`, requiring an explicit target post/page/template ID and locking the future adapter scope to that exact WordPress object without saving or mutating content.
 - Source-reviewed local Bricks 2.4 beta AI abilities, query-loop, dynamic-data, HTML/CSS conversion, global-query, Woo setup, and import/export surfaces; updated Kiwe Bricks admin copy/version marker to reflect the 2.4 beta source review while preserving existing Bricks compatibility boundaries.
 
 ## 0.5.75 - 2026-07-16
