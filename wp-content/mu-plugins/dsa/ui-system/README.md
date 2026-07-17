@@ -82,6 +82,8 @@ Batch 39 simplifies the Kiwe AI Toolkit website-output contract after real brows
 
 Batch 40 tightens AppShell theme intake after the Signal Theatre AI handoff exposed two system-level gaps: decorative header stripes could create horizontal overflow on narrow screens, and combined news-site prompts could accidentally pull in Woo/account screens because themes defaulted to every possible DSA screen. `screen-payloads.json`, `prompt.md`, the AI toolkit AppShell pack, and browser context files now state that `theme.json.screens` must match the brief/settings/site type. News/editorial handoffs should not show cart, checkout, orders, downloads, or addresses unless commerce or membership is actually in scope. The theme package validator now warns on risky viewport-width sizing, non-shrinking decorative pseudo-elements, and space-between panel headers without wrapping because those patterns commonly break inset sheets on 320-390px mobile widths.
 
+Batch 41 clarifies the combined-handoff boundary after a Grok browser output visually treated the Kiwe AppShell as an overlay but packaged it as one page file. The public AI entrypoint and toolkit examples now use the phrase "with its Kiwe AppShell included" and explicitly state that the AppShell is Kiwe runtime chrome around the page, not part of the Bricks page itself. `HANDOFF-MODES.md`, `combined-lite.md`, generated context files, and the AI output audit now enforce that `website/bricks-paste.html` is page-only and must not contain `data-dsa-surface`, DSA dock/sheet markup, or AppShell preview controllers. Only `combined-preview/index.html` should show the website and AppShell together for human review.
+
 Next release-prep steps:
 
 1. Live Hostinger upload/proof after the rebuilt MU package is deployed.

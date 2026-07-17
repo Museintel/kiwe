@@ -59,6 +59,16 @@ if (exists('website/preview/index.html')) {
   add('warn', 'Duplicate website/preview/index.html detected. Website mode should normally use website/bricks-paste.html as the single preview + Bricks artifact unless a split preview was explicitly requested.');
 }
 
+const bricksPastePath = exists('website/bricks-paste.html')
+  ? path.join(root, 'website/bricks-paste.html')
+  : (exists('bricks-paste.html') ? path.join(root, 'bricks-paste.html') : '');
+if (bricksPastePath) {
+  const bricksPaste = read(bricksPastePath);
+  if (/\bdata-dsa-surface\b|class\s*=\s*["'][^"']*\bdsa-surface\b|class\s*=\s*["'][^"']*\bdsa-dock\b|class\s*=\s*["'][^"']*\bdsa-sheet\b|\bshowKiweSheet\s*\(/i.test(bricksPaste)) {
+    add('fail', 'website/bricks-paste.html contains Kiwe AppShell/dock/sheet markup or preview controller code. The Bricks page artifact must be page-only; only combined-preview/index.html should show the AppShell over the page.', rel(bricksPastePath));
+  }
+}
+
 if (exists('website') && exists('appshell-theme') && !exists('combined-preview/index.html')) {
   add('fail', 'Combined handoff is missing combined-preview/index.html, the primary review artifact showing the website/page behind the Kiwe DSA AppShell.');
 }

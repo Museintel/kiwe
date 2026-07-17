@@ -64,7 +64,7 @@ Good human prompts:
 
 ```text
 Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
-Create a Netflix-like ultra-modern news website for Indian startups and businesses, with Kiwe AppShell included.
+Create a Netflix-like ultra-modern news website for Indian startups and businesses, with its Kiwe AppShell included.
 ```
 
 ```text
@@ -89,4 +89,4 @@ The AI must translate the plain-language request into the correct toolkit mode:
 }
 ```
 
-The toolkit response carries the detailed output format, Bricks handoff rules, Seam framework boundaries, AppShell screen rules, preview requirements, responsive overflow rules, and validation expectations.
+The toolkit response carries the detailed output format, Bricks handoff rules, Seam framework boundaries, AppShell screen rules, preview requirements, responsive overflow rules, and validation expectations. The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page itself.

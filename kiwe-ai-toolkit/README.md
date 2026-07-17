@@ -43,7 +43,7 @@ Good human prompts:
 ```text
 Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
 Create a Netflix-like ultra-modern news website for Indian startups, businesses,
-entrepreneurs, and celebrity-owned business spotlights, with Kiwe AppShell included.
+entrepreneurs, and celebrity-owned business spotlights, with its Kiwe AppShell included.
 ```
 
 ```text
@@ -78,6 +78,8 @@ node kiwe-ai-toolkit/bin/kiwe.js start combined --brief "Netflix-like ultra-mode
 Do not ask the human to paste long Kiwe rules. `kiwe_start_project` returns the relevant mode context, output contract, preview requirements, Bricks boundaries, Seam vocabulary guidance, and AppShell separation rules.
 
 Do not expect humans to mention artifact names, screen eligibility, responsive overflow rules, Kiwe authority boundaries, or validator requirements. Those are toolkit responsibilities.
+
+The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page itself. In combined mode, only `combined-preview/index.html` shows the page and AppShell together.
 
 ### Browser AI fallback
 

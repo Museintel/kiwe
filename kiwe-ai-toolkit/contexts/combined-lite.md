@@ -59,6 +59,12 @@ The separate AppShell theme preview still exists, but it is a technical fixture:
 
 The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/WooCommerce/Bricks-owned.
 
+The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page itself. Combined mode has one review file that shows them together, but the deliverables remain separate:
+
+- `combined-preview/index.html` may show the website/page with the Kiwe AppShell overlay.
+- `website/bricks-paste.html` must be page-only and must not include `data-dsa-surface`, DSA dock markup, DSA sheet/screen markup, AppShell preview JS, or Kiwe runtime mocks.
+- `appshell-theme/import/[theme-id]/css/theme.css` styles existing Kiwe AppShell selectors. It must not style the whole website.
+
 ## Website/page rules
 
 - `website/bricks-paste.html` is required. It is the single website/page artifact: open it directly in a browser for visual review, then paste/import the same file through Bricks HTML-to-Bricks.
