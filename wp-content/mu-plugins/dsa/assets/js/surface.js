@@ -1698,7 +1698,6 @@
 			node.id = id;
 			return id;
 		};
-		const sectionSelector = '[data-role~="section"], .seam-section';
 		const labelledByText = function ( node ) {
 			const labelledBy = String( node.getAttribute( 'aria-labelledby' ) || '' ).trim();
 			if ( ! labelledBy ) return '';
@@ -1707,16 +1706,29 @@
 				return normalizeTitle( labelNode && labelNode.textContent );
 			} ).filter( Boolean ).join( ' ' );
 		};
+		const headings = selector ? Array.from( scope.querySelectorAll( selector ) ).filter( function ( heading ) {
+			if ( heading.closest( blockedClosest ) ) return false;
+			if ( heading.hidden || heading.getAttribute( 'aria-hidden' ) === 'true' ) return false;
+			return Boolean( normalizeTitle( heading.textContent ) );
+		} ).slice( 0, 60 ).map( function ( heading, index ) {
+			const title = normalizeTitle( heading.textContent );
+			return { id: assignId( heading, title, index ), title: title, level: Number( heading.tagName.slice( 1 ) ) || 2, source: 'heading' };
+		} ) : [];
+
+		if ( headings.length ) return headings;
+
+		const sectionSelector = '[data-role~="section"], .seam-section';
 		const sections = Array.from( scope.querySelectorAll( sectionSelector ) ).filter( function ( section ) {
 			if ( section.closest( blockedClosest ) ) return false;
 			if ( section.hidden || section.getAttribute( 'aria-hidden' ) === 'true' ) return false;
+			const titleNode = section.querySelector( 'h1,h2,h3,h4,h5,h6' );
 			return Boolean(
 				normalizeTitle( section.getAttribute( 'aria-label' ) )
 				|| labelledByText( section )
-				|| normalizeTitle( section.querySelector( 'h1,h2,h3,h4,h5,h6,[data-kiwe-section-title],[data-seam-title]' ) && section.querySelector( 'h1,h2,h3,h4,h5,h6,[data-kiwe-section-title],[data-seam-title]' ).textContent )
+				|| normalizeTitle( titleNode && titleNode.textContent )
 			);
 		} ).slice( 0, 60 ).map( function ( section, index ) {
-			const titleNode = section.querySelector( 'h1,h2,h3,h4,h5,h6,[data-kiwe-section-title],[data-seam-title]' );
+			const titleNode = section.querySelector( 'h1,h2,h3,h4,h5,h6' );
 			const title = normalizeTitle( section.getAttribute( 'aria-label' ) )
 				|| labelledByText( section )
 				|| normalizeTitle( titleNode && titleNode.textContent );
@@ -1724,17 +1736,7 @@
 			return { id: assignId( section, title, index ), title: title, level: level, source: 'section' };
 		} );
 
-		if ( sections.length ) return sections;
-		if ( !selector ) return [];
-
-		return Array.from( scope.querySelectorAll( selector ) ).filter( function ( heading ) {
-			if ( heading.closest( blockedClosest ) ) return false;
-			if ( heading.hidden || heading.getAttribute( 'aria-hidden' ) === 'true' ) return false;
-			return Boolean( normalizeTitle( heading.textContent ) );
-		} ).slice( 0, 60 ).map( function ( heading, index ) {
-			const title = normalizeTitle( heading.textContent );
-			return { id: assignId( heading, title, index ), title: title, level: Number( heading.tagName.slice( 1 ) ) || 2, source: 'heading' };
-		} );
+		return sections;
 	}
 
 	function isCurrentUrl( url ) {

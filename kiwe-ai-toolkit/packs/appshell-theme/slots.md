@@ -60,7 +60,7 @@ FBT is a fixed interaction pattern, not a loose list. Themes may restyle the car
 | Bricks observed element | `[data-dsa-bricks-id]` |
 | Bricks type | `[data-dsa-bricks-type]` |
 | External module launcher | `[data-dsa-open-module]` |
-| Menu context section | Public Seam section (`[data-role~="section"]` or `.seam-section`) with `id` and `aria-label`, `aria-labelledby`, or visible heading text |
+| Menu context fallback | Existing semantic section (`[data-role~="section"]` or `.seam-section`) with `id` and standard label sources; used only when configured heading TOC items are unavailable |
 | Bricks Search bridge | `[data-dsa-search-bridge]` |
 | Full navigation link | `[data-dsa-full-navigation]` |
 | Keep overlay open | `[data-dsa-keep-open]` |

@@ -38,7 +38,7 @@
     { "name": "data-dsa-bricks-id", "meaning": "Stable runtime marker for observed Bricks element roots. Never hardcode across sites." },
     { "name": "data-dsa-bricks-type", "meaning": "Observed Bricks element type for registry/classification." },
     { "name": "data-dsa-open-module", "meaning": "Canonical Bricks/page launcher target for a registered DSA module such as cart, profile, search, menu, saved, links, theme, ai, notifications, or ios-install." },
-    { "name": "data-role=\"section\" / .seam-section", "meaning": "Public Seam section marker consumed by DSA Menu context when the section has a stable id and aria-label, aria-labelledby, or visible heading text." },
+    { "name": "data-role=\"section\" / .seam-section", "meaning": "Public Seam section meaning for page structure. Kiwe may read existing sections as menu-context fallback when configured heading TOC items are unavailable; do not add this solely for DSA Menu." },
     { "name": "data-dsa-search-bridge", "meaning": "Bricks Filter Search element that DSA Search may bridge into." }
   ],
   "builderControls": [

@@ -865,7 +865,7 @@ Rules:
 Website/page markup may include Kiwe hooks, but must not implement Kiwe behavior itself.
 
 - Open a DSA module from a page/header control with canonical `data-dsa-open-module="cart"`. Valid values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
-- Mark real page sections for DSA Menu context with public Seam section vocabulary: `data-role="section"` or `.seam-section`, a stable `id`, and a human label through `aria-label`, `aria-labelledby`, or visible section heading text. Kiwe Menu uses these Seam sections first, then falls back to configured heading levels.
+- Do not add Seam attributes only to feed the DSA Menu. Kiwe Menu context is heading-first: it reads the admin-selected heading levels for classic blog/page table-of-contents behavior. When no configured headings are available, Kiwe may opportunistically use existing semantic page sections (`data-role="section"` or `.seam-section`) with a stable `id` and standard labels (`aria-label`, `aria-labelledby`, or visible heading text) as contextual fallback.
 - Do not create duplicate cart/profile/search/save/auth behavior. Keep Kiwe hooks as handoff points to the live plugin.
 - Do not use website CSS to restyle protected DSA internals.
 
