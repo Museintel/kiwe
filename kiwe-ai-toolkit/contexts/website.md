@@ -363,6 +363,14 @@ Rules:
 - The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/Woo/Bricks-owned.
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.
+
+## Page-to-AppShell hooks
+
+Website/page markup may include Kiwe hooks, but must not implement Kiwe behavior itself.
+
+- Open a DSA module from a page/header control with `data-kiwe-open="cart"` or canonical `data-dsa-open-module="cart"`. Valid values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
+- Mark real page sections for DSA Menu context with `id`, `data-kiwe-menu-section`, and `data-kiwe-menu-label="Heritage"` (or the desired human label). Kiwe Menu uses these labelled sections first, then falls back to configured heading levels.
+- Do not create duplicate cart/profile/search/save/auth behavior. Keep Kiwe hooks as handoff points to the live plugin.
 - Do not use website CSS to restyle protected DSA internals.
 
 ## Kiwe settings/profile lane
@@ -375,6 +383,8 @@ This is useful when the design wants:
 - Split compact dock on/off.
 - Dock shape: `pill`, `box`, or `square`.
 - Dock module visibility and order.
+- Dock focus item: `dock.focus_item` chooses the emphasized/focus button and split-dock center. Default is `ai`; use another enabled module or custom link only when the brief justifies it.
+- Custom dock links: `dock.custom_items` may add safe URL navigation items such as Home. They navigate only; they do not create new DSA screens.
 - Dark/light mode action hidden from the dock because a page/header launcher will open it elsewhere.
 - Cart hidden from the dock for a non-commerce site.
 - Cart visible for a WooCommerce/ecommerce site.
@@ -404,6 +414,7 @@ Safe high-level keys include:
     "dock": {
       "presentation": "dock",
       "split_style": true,
+      "focus_item": "ai",
       "shape": "pill",
       "desktop_orientation": "auto",
       "tablet_orientation": "auto",
@@ -416,9 +427,13 @@ Safe high-level keys include:
         "saved": true,
         "cart": true,
         "theme": false,
-        "ai": true
+        "ai": true,
+        "link-home": true
       },
-      "item_order": ["menu", "search", "profile", "links", "saved", "cart", "theme", "ai"]
+      "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
+      "custom_items": [
+        { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
+      ]
     },
     "dsa_theme": {
       "active_color": "#8f8f98",
@@ -432,7 +447,7 @@ Safe high-level keys include:
 Notes:
 
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
-- Bricks/Icon launchers may still open DSA modules through Kiwe's Bricks controls and `data-dsa-open-module`.
+- Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls, `data-dsa-open-module`, `data-kiwe-open="cart"`, or `data-dsa-open="profile"`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
 - The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
 

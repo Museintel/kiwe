@@ -93,6 +93,17 @@ Useful website Seam vocabulary:
 
 Important: `data-role` is a controlled Seam vocabulary, not a free naming slot. Use official broad roles only, such as `hero`, `card`, `nav`, `button`, `form`, `testimonial`, `price`, or `footer`. For specific ecommerce/editorial concepts, use Seam Class Vocabulary names such as `.seam-product-card`, `.seam-product-rail`, `.seam-product-grid`, `.seam-story`, `.seam-article`, plus project classes such as `.nc-product`. If extra preview semantics are needed, use `data-project-role`, not custom `data-role` values. Do not invent values such as `product-card`, `site-header`, `save-placeholder`, `add-to-cart-placeholder`, `category-link`, or `search-placeholder`.
 
+## Page-to-AppShell hooks
+
+The website/page may include Kiwe hooks, but must not implement Kiwe behavior itself.
+
+- Page/header controls that open AppShell modules should use `data-kiwe-open="cart"` or canonical `data-dsa-open-module="cart"`. Valid module values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
+- Real page sections that should appear in the DSA Menu context should include `id`, `data-kiwe-menu-section`, and `data-kiwe-menu-label="Heritage"` (or the relevant human label). Kiwe Menu uses these labelled sections first, then falls back to configured heading levels. This lets context items be Heritage, Bestsellers, Limca Record, etc. without forcing those exact words into H1/H2/H3 text.
+- Save/wishlist/bookmark affordances should use Kiwe save hooks from the toolkit/contracts. Do not create local storage or duplicate save authority except as clearly labelled preview-only behavior.
+- Example header buttons: `<button type="button" data-kiwe-open="profile" aria-label="Open account">...</button>` and `<button type="button" data-kiwe-open="cart" aria-label="Open cart">...</button>`.
+
+Preview-only JS may simulate these hooks inside `combined-preview/index.html`, but `website/bricks-paste.html` should keep the real attributes so the live plugin owns behavior after Bricks import.
+
 ## Authority boundaries
 
 Do not create production authority for:
@@ -215,6 +226,53 @@ Links site score is optional. The preview and README must show/document both:
 It is valid to create distinctive presentations for existing `ai` and `notifications` screens. They must use Kiwe-owned AI/notification payloads/actions and must not execute AI actions, notification permission requests, push subscription, dismiss state, or privacy/master-switch behavior from theme or preview code.
 
 Responsive fit is mandatory. Test the AppShell preview at narrow widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
+
+## Kiwe settings/profile quick rules
+
+If the design changes dock composition or shell behavior, include `kiwe-settings/kiwe-appsite-profile.json` and `kiwe-settings/SETTINGS-NOTES.md`.
+
+Important dock settings:
+
+- `dock.presentation`: `dock` or `navbar`.
+- `dock.split_style`: split compact dock on/off. It only applies when presentation is `dock`.
+- `dock.shape`: `pill`, `box`, or `square`.
+- `dock.enabled_items` and `dock.item_order`: visible built-in modules and their order.
+- `dock.focus_item`: the enabled item that becomes the emphasized/focus button and split-dock center. Default is `ai`, but a design may choose `search`, `cart`, or a custom link when justified.
+- `dock.custom_items`: safe URL navigation items such as Home. Custom dock links navigate only; they do not create new DSA screens.
+
+Example:
+
+```json
+{
+  "type": "kiwe-appsite-profile",
+  "schemaVersion": 1,
+  "settings": {
+    "dock": {
+      "presentation": "dock",
+      "split_style": true,
+      "shape": "pill",
+      "focus_item": "ai",
+      "enabled_items": {
+        "menu": true,
+        "search": true,
+        "profile": true,
+        "links": true,
+        "saved": true,
+        "cart": true,
+        "theme": false,
+        "ai": true,
+        "link-home": true
+      },
+      "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
+      "custom_items": [
+        { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
+      ]
+    }
+  }
+}
+```
+
+Hiding a dock item only hides the dock button. It does not delete the registered DSA module. Header/Bricks/page launchers may still open modules with `data-dsa-open-module`, `data-kiwe-open="cart"`, or `data-dsa-open="profile"`.
 
 ## AppShell README requirements
 

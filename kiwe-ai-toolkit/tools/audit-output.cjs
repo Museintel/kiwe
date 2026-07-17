@@ -94,6 +94,50 @@ if (exists('website') && exists('appshell-theme') && !exists('combined-preview/i
   add('fail', 'Combined handoff is missing combined-preview/index.html, the primary review artifact showing the website/page behind the Kiwe DSA AppShell.');
 }
 
+const knownDsaModules = new Set(['menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'secure', 'notifications', 'ios-install', 'games']);
+const settingsText = textFiles
+  .filter((file) => rel(file).startsWith('kiwe-settings/'))
+  .map((file) => read(file))
+  .join('\n');
+const hasCustomDockSettings = /"custom_items"\s*:\s*\[/.test(settingsText);
+const hasFocusItemSettings = /"focus_item"\s*:/.test(settingsText);
+
+for (const file of textFiles.filter((item) => /\.html?$/i.test(item))) {
+  const body = read(file);
+  for (const match of body.matchAll(/\bdata-dsa-module\s*=\s*["']([^"']+)["']/gi)) {
+    const moduleId = String(match[1] || '').trim();
+    if (moduleId && !knownDsaModules.has(moduleId) && !moduleId.startsWith('link-')) {
+      add('warn', `Unknown DSA module "${moduleId}". Use registered modules, or define a URL-only custom dock link in kiwe-settings dock.custom_items with an id such as link-home.`, rel(file));
+    }
+  }
+  if (/\bdata-open-screen\s*=|\bdata-nav-anchor\s*=/.test(body)) {
+    add('warn', 'Preview-only dock attributes such as data-open-screen/data-nav-anchor detected. Use Kiwe module launch hooks or kiwe-settings for production handoff behavior.', rel(file));
+  }
+  for (const match of body.matchAll(/\bdata-dsa-menu-anchor\s*=\s*["']([^"']+)["']/gi)) {
+    const anchor = String(match[1] || '').trim();
+    if (anchor.startsWith('#')) {
+      add('warn', `data-dsa-menu-anchor should contain a raw id such as "${anchor.slice(1)}", not a hash-prefixed selector.`, rel(file));
+    }
+  }
+}
+
+if (/data-dsa-module\s*=\s*["']home["']|>Home<\/|aria-label\s*=\s*["']Home["']/i.test(allText) && !hasCustomDockSettings) {
+  add('warn', 'Home appears as a dock/AppShell item but no kiwe-settings dock.custom_items entry was found. Add a URL-only custom dock link instead of inventing a Home DSA screen.');
+}
+
+if (/\bdsa-dock-primary\b|data-dsa-dock-focus-id|focus button|split-dock center/i.test(allText) && !hasFocusItemSettings) {
+  add('warn', 'The AppShell appears to choose a dock focus/primary item, but no kiwe-settings dock.focus_item was found. Add focus_item so the live split dock matches the preview.');
+}
+
+const websiteText = bricksPastePath ? read(bricksPastePath) : '';
+if (websiteText && /#heritage|#shop-bestsellers|#limca-record|data-dsa-menu-anchor|table of contents|on this page/i.test(allText) && !/\bdata-kiwe-menu-section\b/.test(websiteText)) {
+  add('warn', 'The AppShell/menu preview references page sections, but website/bricks-paste.html does not expose data-kiwe-menu-section + data-kiwe-menu-label landmarks. Add them to the real sections so live DSA Menu context can scroll correctly.');
+}
+
+if (websiteText && /(cart|bag|account|profile)[^<]{0,80}(<\/button>|<\/a>)|aria-label\s*=\s*["'][^"']*(cart|bag|account|profile)/i.test(websiteText) && !/\bdata-(?:kiwe-open|dsa-open|dsa-open-module)\b/.test(websiteText)) {
+  add('warn', 'Website/header appears to include cart/account/profile affordances without Kiwe open hooks. Use data-kiwe-open="cart", data-kiwe-open="profile", or canonical data-dsa-open-module.');
+}
+
 if (!exists('website/bricks-notes.md') && !exists('bricks-notes.md')) {
   add('warn', 'Missing bricks-notes.md explaining Bricks import mapping and capability boundaries.');
 }

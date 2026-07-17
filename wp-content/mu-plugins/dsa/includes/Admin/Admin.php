@@ -2404,10 +2404,15 @@ final class Admin {
 		$dock_shape = sanitize_key( (string) ( $dock['shape'] ?? 'pill' ) );
 		$dock_shape = 'rounded' === $dock_shape ? 'pill' : $dock_shape;
 		$dock_shape = in_array( $dock_shape, [ 'pill', 'box', 'square' ], true ) ? $dock_shape : 'pill';
-		$labels = $this->dock_module_labels();
+		$custom_items = $this->dock_custom_items_for_admin( $dock );
+		$labels = array_merge( $this->dock_module_labels(), $this->dock_custom_item_labels( $custom_items ) );
 		$order = array_values( array_unique( array_filter( array_map( 'sanitize_key', (array) ( $dock['item_order'] ?? [] ) ), static fn( string $id ): bool => isset( $labels[ $id ] ) ) ) );
 		foreach ( array_keys( $labels ) as $id ) if ( ! in_array( $id, $order, true ) ) $order[] = $id;
 		$enabled = array_replace( array_fill_keys( array_keys( $labels ), true ), (array) ( $dock['enabled_items'] ?? [] ) );
+		$focus_item = sanitize_key( (string) ( $dock['focus_item'] ?? 'ai' ) );
+		if ( ! isset( $labels[ $focus_item ] ) ) {
+			$focus_item = isset( $labels['ai'] ) ? 'ai' : ( array_key_first( $labels ) ?: '' );
+		}
 		$dock_profiles = [
 			'desktop' => [ 'label' => __( 'Desktop', 'dsa' ), 'orientation' => 'auto', 'vertical_position' => 'center', 'horizontal_position' => 'right', 'horizontal_vertical_position' => 'bottom' ],
 			'tablet'  => [ 'label' => __( 'Tablet', 'dsa' ), 'orientation' => 'auto', 'vertical_position' => 'center', 'horizontal_position' => 'center', 'horizontal_vertical_position' => 'bottom' ],
@@ -2428,12 +2433,34 @@ final class Admin {
 								<span class="dashicons dashicons-move" aria-hidden="true"></span>
 								<input type="hidden" name="dock[item_order][]" value="<?php echo esc_attr( $id ); ?>">
 								<label><input type="checkbox" name="dock[enabled_items][<?php echo esc_attr( $id ); ?>]" value="1" <?php checked( ! empty( $enabled[ $id ] ) ); ?>> <strong><?php echo esc_html( $labels[ $id ] ); ?></strong></label>
+								<label><input type="radio" name="dock[focus_item]" value="<?php echo esc_attr( $id ); ?>" <?php checked( $focus_item, $id ); ?>> <?php esc_html_e( 'Focus', 'dsa' ); ?></label>
 								<code><?php echo esc_html( $id ); ?></code>
 							</li>
 						<?php endforeach; ?>
 					</ul>
 					<table class="form-table" role="presentation">
 						<tbody>
+							<tr>
+								<th scope="row"><?php esc_html_e( 'Custom dock links', 'dsa' ); ?></th>
+								<td>
+									<div class="dsa-admin-builder" data-dsa-dock-link-builder>
+										<div class="dsa-admin-rows" data-dsa-dock-links>
+											<?php foreach ( $custom_items as $index => $item ) : ?>
+												<div class="dsa-admin-row" data-dsa-dock-link-row>
+													<input type="hidden" name="dock[custom_items][<?php echo esc_attr( (string) $index ); ?>][id]" value="<?php echo esc_attr( $item['id'] ); ?>">
+													<input type="hidden" name="dock[custom_items][<?php echo esc_attr( (string) $index ); ?>][enabled]" value="1">
+													<label><span><?php esc_html_e( 'Label', 'dsa' ); ?></span><input type="text" name="dock[custom_items][<?php echo esc_attr( (string) $index ); ?>][label]" value="<?php echo esc_attr( $item['label'] ); ?>" placeholder="<?php echo esc_attr__( 'Home', 'dsa' ); ?>"></label>
+													<label><span><?php esc_html_e( 'URL', 'dsa' ); ?></span><input type="url" name="dock[custom_items][<?php echo esc_attr( (string) $index ); ?>][url]" value="<?php echo esc_url( $item['url'] ); ?>" placeholder="<?php echo esc_attr( home_url( '/' ) ); ?>"></label>
+													<label><span><?php esc_html_e( 'Lucide icon', 'dsa' ); ?></span><input type="text" name="dock[custom_items][<?php echo esc_attr( (string) $index ); ?>][icon]" value="<?php echo esc_attr( $item['icon'] ); ?>" placeholder="home"></label>
+													<button class="button dsa-admin-remove" type="button" data-dsa-remove-row><?php esc_html_e( 'Remove', 'dsa' ); ?></button>
+												</div>
+											<?php endforeach; ?>
+										</div>
+										<button class="button dsa-admin-add" type="button" data-dsa-add-dock-link><?php esc_html_e( '+ Add dock link', 'dsa' ); ?></button>
+										<p class="description"><?php esc_html_e( 'Use for safe navigation items such as Home. Custom dock links navigate by URL; they do not create new DSA screens or duplicate cart/search/profile authority.', 'dsa' ); ?></p>
+									</div>
+								</td>
+							</tr>
 							<tr>
 								<th scope="row"><?php esc_html_e( 'Context rail', 'dsa' ); ?></th>
 								<td>
@@ -4415,12 +4442,37 @@ final class Admin {
 
 		$input = wp_unslash( $input );
 		$enabled = (array) ( $current['enabled_items'] ?? [] );
+		$custom_items = isset( $input['custom_items'] ) ? $this->sanitize_dock_custom_items( $input['custom_items'] ) : $this->dock_custom_items_for_admin( $current );
+		$allowed_labels = array_merge( $this->dock_module_labels(), $this->dock_custom_item_labels( $custom_items ) );
 		$order = array_values( array_unique( array_filter( array_map( 'sanitize_key', (array) ( $input['item_order'] ?? ( $current['item_order'] ?? [] ) ) ) ) ) );
 
 		if ( isset( $input['enabled_items'] ) && is_array( $input['enabled_items'] ) ) {
-			foreach ( array_keys( $this->dock_module_labels() ) as $id ) {
+			foreach ( array_keys( $allowed_labels ) as $id ) {
 				$enabled[ $id ] = ! empty( $input['enabled_items'][ $id ] );
 			}
+		}
+
+		foreach ( $custom_items as $item ) {
+			if ( ! isset( $enabled[ $item['id'] ] ) ) {
+				$enabled[ $item['id'] ] = ! empty( $item['enabled'] );
+			}
+		}
+
+		$enabled = array_replace(
+			array_fill_keys( array_keys( $allowed_labels ), true ),
+			array_intersect_key( $enabled, $allowed_labels )
+		);
+
+		$order = array_values( array_filter( $order, static fn( string $id ): bool => isset( $allowed_labels[ $id ] ) ) );
+		foreach ( array_keys( $allowed_labels ) as $id ) {
+			if ( ! in_array( $id, $order, true ) ) {
+				$order[] = $id;
+			}
+		}
+
+		$focus_item = sanitize_key( (string) ( $input['focus_item'] ?? ( $current['focus_item'] ?? 'ai' ) ) );
+		if ( ! isset( $allowed_labels[ $focus_item ] ) ) {
+			$focus_item = isset( $allowed_labels['ai'] ) ? 'ai' : ( array_key_first( $allowed_labels ) ?: '' );
 		}
 
 		$heading = sanitize_key( $input['menu_heading_tag'] ?? ( $current['menu_heading_tag'] ?? 'span' ) );
@@ -4441,6 +4493,7 @@ final class Admin {
 			'fill_axis'           => 'navbar' === ( $input['presentation'] ?? ( $current['presentation'] ?? 'dock' ) ),
 			'context_rail_enabled' => array_key_exists( 'context_rail_enabled', $input ) ? ! empty( $input['context_rail_enabled'] ) : ! empty( $current['context_rail_enabled'] ),
 			'split_style'         => array_key_exists( 'split_style', $input ) ? ! empty( $input['split_style'] ) : ! empty( $current['split_style'] ),
+			'focus_item'          => $focus_item,
 			'desktop_orientation' => in_array( $input['desktop_orientation'] ?? ( $current['desktop_orientation'] ?? 'auto' ), [ 'auto', 'vertical', 'horizontal' ], true ) ? sanitize_key( $input['desktop_orientation'] ?? $current['desktop_orientation'] ) : 'auto',
 			'tablet_orientation'  => in_array( $input['tablet_orientation'] ?? ( $current['tablet_orientation'] ?? 'auto' ), [ 'auto', 'vertical', 'horizontal' ], true ) ? sanitize_key( $input['tablet_orientation'] ?? $current['tablet_orientation'] ) : 'auto',
 			'mobile_orientation'  => in_array( $input['mobile_orientation'] ?? ( $current['mobile_orientation'] ?? 'auto' ), [ 'auto', 'vertical', 'horizontal' ], true ) ? sanitize_key( $input['mobile_orientation'] ?? $current['mobile_orientation'] ) : 'auto',
@@ -4463,6 +4516,7 @@ final class Admin {
 			'tablet_breakpoint'   => 1024,
 			'enabled_items'       => $enabled,
 			'item_order'          => $order,
+			'custom_items'        => $custom_items,
 			'menu_label'          => sanitize_text_field( $input['menu_label'] ?? ( $current['menu_label'] ?? 'Menu' ) ),
 			'menu_url'            => esc_url_raw( $input['menu_url'] ?? ( $current['menu_url'] ?? '' ) ),
 			'menu_nav_id'         => absint( $input['menu_nav_id'] ?? ( $current['menu_nav_id'] ?? 0 ) ),
@@ -4613,6 +4667,105 @@ final class Admin {
 		}
 
 		return $labels;
+	}
+
+	private function dock_custom_item_labels( array $items ): array {
+		$labels = [];
+
+		foreach ( $items as $item ) {
+			$id = sanitize_key( (string) ( $item['id'] ?? '' ) );
+			if ( '' === $id ) {
+				continue;
+			}
+
+			$labels[ $id ] = sanitize_text_field( (string) ( $item['label'] ?? $id ) );
+		}
+
+		return $labels;
+	}
+
+	private function dock_custom_items_for_admin( array $dock ): array {
+		$items = isset( $dock['custom_items'] ) && is_array( $dock['custom_items'] ) ? $dock['custom_items'] : [];
+		$out   = [];
+
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$label = sanitize_text_field( (string) ( $item['label'] ?? '' ) );
+			$url   = esc_url_raw( (string) ( $item['url'] ?? '' ) );
+			if ( '' === $label || '' === $url ) {
+				continue;
+			}
+
+			$id = sanitize_key( (string) ( $item['id'] ?? '' ) );
+			if ( '' === $id || 0 !== strpos( $id, 'link-' ) ) {
+				$id = 'link-' . sanitize_title( $label );
+			}
+			if ( '' === $id || 'link-' === $id ) {
+				$id = 'link-custom-' . ( (int) $index + 1 );
+			}
+
+			$out[] = [
+				'id'      => $id,
+				'label'   => $label,
+				'url'     => $url,
+				'icon'    => sanitize_key( (string) ( $item['icon'] ?? 'home' ) ) ?: 'home',
+				'enabled' => ! empty( $item['enabled'] ),
+			];
+		}
+
+		return array_slice( $out, 0, 12 );
+	}
+
+	private function sanitize_dock_custom_items( $items ): array {
+		if ( ! is_array( $items ) ) {
+			return [];
+		}
+
+		$out  = [];
+		$used = [];
+
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$label = sanitize_text_field( (string) ( $item['label'] ?? '' ) );
+			$url   = esc_url_raw( (string) ( $item['url'] ?? '' ) );
+			$icon  = sanitize_key( (string) ( $item['icon'] ?? 'home' ) ) ?: 'home';
+			$id    = sanitize_key( (string) ( $item['id'] ?? '' ) );
+
+			if ( '' === $label || '' === $url ) {
+				continue;
+			}
+
+			if ( '' === $id || 0 !== strpos( $id, 'link-' ) ) {
+				$id = 'link-' . sanitize_title( $label );
+			}
+			if ( '' === $id || 'link-' === $id ) {
+				$id = 'link-custom-' . ( (int) $index + 1 );
+			}
+
+			$base = $id;
+			$suffix = 2;
+			while ( isset( $used[ $id ] ) ) {
+				$id = $base . '-' . $suffix;
+				$suffix++;
+			}
+			$used[ $id ] = true;
+
+			$out[] = [
+				'id'      => $id,
+				'label'   => $label,
+				'url'     => $url,
+				'icon'    => $icon,
+				'enabled' => true,
+			];
+		}
+
+		return array_slice( $out, 0, 12 );
 	}
 
 	private function sanitize_dsa_theme( $input, array $current ): array {

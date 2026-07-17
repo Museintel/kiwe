@@ -12,7 +12,7 @@
 	}
 
 	function renumberRows( container, nameRoot ) {
-		Array.prototype.forEach.call( container.querySelectorAll( '[data-dsa-menu-row], [data-dsa-message-row]' ), function ( row, index ) {
+		Array.prototype.forEach.call( container.querySelectorAll( '[data-dsa-menu-row], [data-dsa-message-row], [data-dsa-dock-link-row]' ), function ( row, index ) {
 			Array.prototype.forEach.call( row.querySelectorAll( '[name]' ), function ( field ) {
 				field.name = field.name.replace( new RegExp( escapeRegExp( nameRoot ) + '\\[[0-9]+\\]' ), nameRoot + '[' + index + ']' );
 			} );
@@ -28,7 +28,7 @@
 			}
 
 			event.preventDefault();
-			const row = button.closest( '[data-dsa-menu-row], [data-dsa-message-row]' );
+			const row = button.closest( '[data-dsa-menu-row], [data-dsa-message-row], [data-dsa-dock-link-row]' );
 
 			if ( row ) {
 				row.remove();
@@ -63,6 +63,21 @@
 			'<label><span>Image URL</span><input type="url" name="dock[menu_items][' + index + '][image]" value="' + escapeAttr( item.image || '' ) + '" placeholder="Optional rounded image"></label>',
 			'<input type="hidden" name="dock[menu_items][' + index + '][object_id]" value="' + escapeAttr( item.object_id || 0 ) + '">',
 			'<input type="hidden" name="dock[menu_items][' + index + '][object_type]" value="' + escapeAttr( item.object_type || '' ) + '">',
+			'<button class="button dsa-admin-remove" type="button" data-dsa-remove-row>Remove</button>',
+			'</div>',
+		].join( '' );
+	}
+
+	function dockLinkRowHtml( index, item ) {
+		item = item || {};
+
+		return [
+			'<div class="dsa-admin-row" data-dsa-dock-link-row>',
+			'<input type="hidden" name="dock[custom_items][' + index + '][id]" value="' + escapeAttr( item.id || '' ) + '">',
+			'<input type="hidden" name="dock[custom_items][' + index + '][enabled]" value="1">',
+			'<label><span>Label</span><input type="text" name="dock[custom_items][' + index + '][label]" value="' + escapeAttr( item.label || '' ) + '" placeholder="Home"></label>',
+			'<label><span>URL</span><input type="url" name="dock[custom_items][' + index + '][url]" value="' + escapeAttr( item.url || '' ) + '" placeholder="/"></label>',
+			'<label><span>Lucide icon</span><input type="text" name="dock[custom_items][' + index + '][icon]" value="' + escapeAttr( item.icon || 'home' ) + '" placeholder="home"></label>',
 			'<button class="button dsa-admin-remove" type="button" data-dsa-remove-row>Remove</button>',
 			'</div>',
 		].join( '' );
@@ -150,6 +165,30 @@
 			results.hidden = true;
 			results.innerHTML = '';
 		} );
+	}
+
+	function initDockLinkBuilder() {
+		const builder = document.querySelector( '[data-dsa-dock-link-builder]' );
+
+		if ( ! builder ) {
+			return;
+		}
+
+		const rows = builder.querySelector( '[data-dsa-dock-links]' );
+		const add = builder.querySelector( '[data-dsa-add-dock-link]' );
+
+		if ( ! rows ) {
+			return;
+		}
+
+		bindRemoveButtons( rows, 'dock[custom_items]' );
+
+		if ( add ) {
+			add.addEventListener( 'click', function ( event ) {
+				event.preventDefault();
+				rows.insertAdjacentHTML( 'beforeend', dockLinkRowHtml( nextRowIndex( rows, 'dock[custom_items]' ) ) );
+			} );
+		}
 	}
 
 	function searchMenuTargets( query ) {
@@ -478,6 +517,7 @@
 
 	function init() {
 		initMenuBuilder();
+		initDockLinkBuilder();
 		initMessages();
 		initMetricsSummary();
 		initSortableTables();

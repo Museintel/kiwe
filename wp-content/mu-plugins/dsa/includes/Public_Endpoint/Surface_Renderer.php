@@ -36,7 +36,12 @@ final class Surface_Renderer {
 			$dock['enabled_items']['cart'] = false;
 		}
 		$modules = $this->dock_items( $dock );
-		$main_module_count = count( array_filter( $modules, static fn( array $module ): bool => 'ai' !== (string) ( $module['id'] ?? '' ) ) );
+		$focus_item = sanitize_key( (string) ( $dock['focus_item'] ?? 'ai' ) );
+		$module_ids = array_map( static fn( array $module ): string => sanitize_key( (string) ( $module['id'] ?? '' ) ), $modules );
+		if ( ! in_array( $focus_item, $module_ids, true ) ) {
+			$focus_item = in_array( 'ai', $module_ids, true ) ? 'ai' : ( $module_ids[0] ?? '' );
+		}
+		$main_module_count = count( array_filter( $modules, static fn( array $module ): bool => $focus_item !== (string) ( $module['id'] ?? '' ) ) );
 		$ai_module_count = count( $modules ) - $main_module_count;
 		$visual  = $this->settings->get( 'visual_effects', [] );
 		$style   = $this->settings->get( 'style', [] );
@@ -121,14 +126,17 @@ final class Surface_Renderer {
 		<!-- DSA Surface <?php echo esc_html( DSA_VERSION ); ?> -->
 		<script id="dsa-element-registry" type="application/json"><?php echo $registry_json ? $registry_json : '{}'; ?></script>
 		<div class="dsa-document-scrim" data-dsa-scrim hidden></div>
-		<div id="dsa-surface" class="<?php echo esc_attr( implode( ' ', $surface_classes ) ); ?>" data-dsa-surface data-nosnippet data-dsa-ui-contract="2" data-dsa-visual-profile="<?php echo esc_attr( $visual_profile ); ?>" data-dsa-theme="<?php echo esc_attr( $theme_mode ); ?>" data-dsa-dock-presentation="<?php echo esc_attr( $dock_presentation ); ?>" data-dsa-dock-profile="desktop" data-dsa-dock-orientation="<?php echo esc_attr( $initial_orientation ); ?>" data-dsa-dock-position="<?php echo esc_attr( $initial_position ); ?>" data-dsa-dock-alignment="<?php echo esc_attr( $initial_alignment ); ?>" data-dsa-dock-edge="<?php echo esc_attr( $initial_edge ); ?>" data-dsa-sheet-position="<?php echo esc_attr( $sheet_position ); ?>" data-dsa-sheet-backdrop="<?php echo esc_attr( $sheet_backdrop ); ?>" data-dsa-sheet-spacing="<?php echo esc_attr( $sheet_spacing ); ?>" data-dsa-sheet-origin="<?php echo esc_attr( $sheet_origin ); ?>" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-item-count="<?php echo esc_attr( (string) $main_module_count ); ?>" data-dsa-dock-ai-count="<?php echo esc_attr( (string) $ai_module_count ); ?>" style="--dsa-dock-item-count:<?php echo esc_attr( (string) $main_module_count ); ?>;--dsa-dock-ai-count:<?php echo esc_attr( (string) $ai_module_count ); ?>;--dsa-sheet-duration:<?php echo esc_attr( (string) $sheet_duration ); ?>ms;--dsa-sheet-max-height:<?php echo esc_attr( (string) $sheet_max_height ); ?>dvh;--dsa-sheet-width-percent:<?php echo esc_attr( (string) $sheet_width_percent ); ?>;">
+		<div id="dsa-surface" class="<?php echo esc_attr( implode( ' ', $surface_classes ) ); ?>" data-dsa-surface data-nosnippet data-dsa-ui-contract="2" data-dsa-visual-profile="<?php echo esc_attr( $visual_profile ); ?>" data-dsa-theme="<?php echo esc_attr( $theme_mode ); ?>" data-dsa-dock-presentation="<?php echo esc_attr( $dock_presentation ); ?>" data-dsa-dock-focus-id="<?php echo esc_attr( $focus_item ); ?>" data-dsa-dock-profile="desktop" data-dsa-dock-orientation="<?php echo esc_attr( $initial_orientation ); ?>" data-dsa-dock-position="<?php echo esc_attr( $initial_position ); ?>" data-dsa-dock-alignment="<?php echo esc_attr( $initial_alignment ); ?>" data-dsa-dock-edge="<?php echo esc_attr( $initial_edge ); ?>" data-dsa-sheet-position="<?php echo esc_attr( $sheet_position ); ?>" data-dsa-sheet-backdrop="<?php echo esc_attr( $sheet_backdrop ); ?>" data-dsa-sheet-spacing="<?php echo esc_attr( $sheet_spacing ); ?>" data-dsa-sheet-origin="<?php echo esc_attr( $sheet_origin ); ?>" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-item-count="<?php echo esc_attr( (string) $main_module_count ); ?>" data-dsa-dock-ai-count="<?php echo esc_attr( (string) $ai_module_count ); ?>" style="--dsa-dock-item-count:<?php echo esc_attr( (string) $main_module_count ); ?>;--dsa-dock-ai-count:<?php echo esc_attr( (string) $ai_module_count ); ?>;--dsa-sheet-duration:<?php echo esc_attr( (string) $sheet_duration ); ?>ms;--dsa-sheet-max-height:<?php echo esc_attr( (string) $sheet_max_height ); ?>dvh;--dsa-sheet-width-percent:<?php echo esc_attr( (string) $sheet_width_percent ); ?>;">
 			<div class="dsa-dock-context" data-dsa-dock-context hidden><div class="dsa-dock-context__content" data-dsa-dock-context-content></div></div>
 			<div class="dsa-dock-cluster" data-dsa-dock-cluster>
 			<nav class="dsa-dock dsa-phonekey-dock" role="toolbar" aria-label="<?php echo esc_attr__( 'Surface tools', 'dsa' ); ?>">
 				<?php foreach ( $modules as $index => $module ) : ?>
 					<?php
 					$button_classes = [ 'dsa-dock__button' ];
-					if ( 'ai' === (string) $module['id'] ) {
+					$module_id = sanitize_key( (string) ( $module['id'] ?? '' ) );
+					$is_focus = $focus_item === $module_id;
+					if ( $is_focus ) {
+						$button_classes[] = 'dsa-dock-focus';
 						$button_classes[] = 'dsa-ai-launcher';
 					}
 					if ( $dock_split_enabled ) {
@@ -138,26 +146,43 @@ final class Surface_Renderer {
 						if ( count( $modules ) - 1 === (int) $index ) {
 							$button_classes[] = 'is-split-segment-end';
 						}
-						if ( isset( $modules[ $index + 1 ] ) && 'ai' === (string) ( $modules[ $index + 1 ]['id'] ?? '' ) ) {
+						if ( isset( $modules[ $index + 1 ] ) && $focus_item === sanitize_key( (string) ( $modules[ $index + 1 ]['id'] ?? '' ) ) ) {
+							$button_classes[] = 'is-split-before-focus';
 							$button_classes[] = 'is-split-before-ai';
 						}
-						if ( isset( $modules[ $index - 1 ] ) && 'ai' === (string) ( $modules[ $index - 1 ]['id'] ?? '' ) ) {
+						if ( isset( $modules[ $index - 1 ] ) && $focus_item === sanitize_key( (string) ( $modules[ $index - 1 ]['id'] ?? '' ) ) ) {
+							$button_classes[] = 'is-split-after-focus';
 							$button_classes[] = 'is-split-after-ai';
 						}
 					}
 					?>
+					<?php if ( 'link' === sanitize_key( (string) ( $module['mode'] ?? '' ) ) && ! empty( $module['url'] ) ) : ?>
+					<a
+						class="<?php echo esc_attr( implode( ' ', $button_classes ) ); ?>"
+						href="<?php echo esc_url( $module['url'] ); ?>"
+						data-dsa-module="<?php echo esc_attr( $module_id ); ?>"
+						data-dsa-module-mode="link"
+						data-dsa-dock-link
+						data-dsa-full-navigation
+						aria-label="<?php echo esc_attr( $module['label'] ); ?>"
+					>
+						<span class="dsa-dock__icon dsa-icon-<?php echo esc_attr( $module_id ); ?>" aria-hidden="true"><?php echo wp_kses( $module['icon'], $this->svg_allowlist() ); ?></span>
+						<span class="dsa-dock__badge" data-dsa-badge="<?php echo esc_attr( $module_id ); ?>" <?php echo empty( $module['badge'] ) ? 'hidden' : ''; ?>><?php echo esc_html( (string) ( $module['badge'] ?? '' ) ); ?></span>
+					</a>
+					<?php else : ?>
 					<button
 						class="<?php echo esc_attr( implode( ' ', $button_classes ) ); ?>"
 						type="button"
-						data-dsa-module="<?php echo esc_attr( $module['id'] ); ?>"
+						data-dsa-module="<?php echo esc_attr( $module_id ); ?>"
 						data-dsa-module-mode="<?php echo esc_attr( $module['mode'] ?? 'dock' ); ?>"
-						data-dsa-module-panel="<?php echo esc_attr( $module['panel'] ?? $module['id'] ); ?>"
+						data-dsa-module-panel="<?php echo esc_attr( $module['panel'] ?? $module_id ); ?>"
 						aria-pressed="false"
 						aria-label="<?php echo esc_attr( $module['label'] ); ?>"
 					>
-						<span class="dsa-dock__icon dsa-icon-<?php echo esc_attr( $module['id'] ); ?>" aria-hidden="true"><?php echo wp_kses( $module['icon'], $this->svg_allowlist() ); ?></span>
-						<span class="dsa-dock__badge" data-dsa-badge="<?php echo esc_attr( $module['id'] ); ?>" <?php echo empty( $module['badge'] ) ? 'hidden' : ''; ?>><?php echo esc_html( (string) ( $module['badge'] ?? '' ) ); ?></span>
+						<span class="dsa-dock__icon dsa-icon-<?php echo esc_attr( $module_id ); ?>" aria-hidden="true"><?php echo wp_kses( $module['icon'], $this->svg_allowlist() ); ?></span>
+						<span class="dsa-dock__badge" data-dsa-badge="<?php echo esc_attr( $module_id ); ?>" <?php echo empty( $module['badge'] ) ? 'hidden' : ''; ?>><?php echo esc_html( (string) ( $module['badge'] ?? '' ) ); ?></span>
 					</button>
+					<?php endif; ?>
 				<?php endforeach; ?>
 			</nav>
 			</div>

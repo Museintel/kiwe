@@ -201,7 +201,7 @@ final class Module_Registry {
 		);
 		$badges = isset( $context['badges'] ) && is_array( $context['badges'] ) ? $context['badges'] : [];
 		$labels = isset( $context['labels'] ) && is_array( $context['labels'] ) ? $context['labels'] : [];
-		$modules = $this->public_modules();
+		$modules = array_merge( $this->public_modules(), $this->custom_link_modules( $dock ) );
 		$order = isset( $dock['item_order'] ) && is_array( $dock['item_order'] )
 			? array_values( array_unique( array_map( 'sanitize_key', $dock['item_order'] ) ) )
 			: [];
@@ -223,7 +223,8 @@ final class Module_Registry {
 
 		foreach ( $modules as $id => $module ) {
 			$mode = sanitize_key( $module['mode'] ?? 'dock' );
-			if ( ! in_array( $mode, [ 'dock', 'action' ], true ) || empty( $enabled[ $id ] ) || ! $this->module_visible( $module, $context ) ) {
+			$default_enabled = 'link' === $mode ? ! empty( $module['enabled'] ) : true;
+			if ( ! in_array( $mode, [ 'dock', 'action', 'link' ], true ) || empty( $enabled[ $id ] ?? $default_enabled ) || ! $this->module_visible( $module, $context ) ) {
 				continue;
 			}
 
@@ -238,6 +239,7 @@ final class Module_Registry {
 				'dismiss'        => sanitize_key( $module['dismiss'] ?? 'outside_safe' ),
 				'visibility'     => sanitize_key( $module['visibility'] ?? 'all' ),
 				'protected_flow' => sanitize_key( $module['protected_flow'] ?? '' ),
+				'url'            => esc_url_raw( (string) ( $module['url'] ?? '' ) ),
 			];
 		}
 
@@ -272,7 +274,7 @@ final class Module_Registry {
 			],
 			isset( $dock['enabled_items'] ) && is_array( $dock['enabled_items'] ) ? $dock['enabled_items'] : []
 		);
-		$modules = $this->public_modules();
+		$modules = array_merge( $this->public_modules(), $this->custom_link_modules( $dock ) );
 		$order = isset( $dock['item_order'] ) && is_array( $dock['item_order'] )
 			? array_values( array_unique( array_map( 'sanitize_key', $dock['item_order'] ) ) )
 			: [];
@@ -295,6 +297,8 @@ final class Module_Registry {
 
 		foreach ( $modules as $id => $module ) {
 			$admin_only = 'admins' === sanitize_key( $module['visibility'] ?? 'all' ) || ! empty( $module['admin_only'] );
+			$mode       = sanitize_key( $module['mode'] ?? 'dock' );
+			$default_enabled = 'link' === $mode ? ! empty( $module['enabled'] ) : true;
 
 			if ( $admin_only && ! $can_manage ) {
 				continue;
@@ -303,13 +307,14 @@ final class Module_Registry {
 			$out[] = [
 				'id'             => sanitize_key( $id ),
 				'label'          => sanitize_text_field( $module['label'] ?? $id ),
-				'enabled'        => ! empty( $enabled[ $id ] ),
-				'mode'           => sanitize_key( $module['mode'] ?? 'dock' ),
+				'enabled'        => ! empty( $enabled[ $id ] ?? $default_enabled ),
+				'mode'           => $mode,
 				'panel'          => sanitize_key( $module['panel'] ?? $id ),
 				'binder'         => sanitize_key( $module['binder'] ?? '' ),
 				'dismiss'        => sanitize_key( $module['dismiss'] ?? 'outside_safe' ),
 				'visibility'     => sanitize_key( $module['visibility'] ?? 'all' ),
 				'protected_flow' => sanitize_key( $module['protected_flow'] ?? '' ),
+				'url'            => esc_url_raw( (string) ( $module['url'] ?? '' ) ),
 			];
 		}
 
@@ -317,6 +322,53 @@ final class Module_Registry {
 			'version' => 1,
 			'items'   => $out,
 		];
+	}
+
+	/**
+	 * @return array<string,array>
+	 */
+	private function custom_link_modules( array $dock ): array {
+		$items = isset( $dock['custom_items'] ) && is_array( $dock['custom_items'] ) ? $dock['custom_items'] : [];
+		$out   = [];
+
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$id    = sanitize_key( (string) ( $item['id'] ?? '' ) );
+			$label = sanitize_text_field( (string) ( $item['label'] ?? '' ) );
+			$url   = esc_url_raw( (string) ( $item['url'] ?? '' ) );
+			$icon  = sanitize_key( (string) ( $item['icon'] ?? 'external-link' ) );
+
+			if ( '' === $label || '' === $url ) {
+				continue;
+			}
+
+			if ( '' === $id || 0 !== strpos( $id, 'link-' ) ) {
+				$id = 'link-' . sanitize_title( $label );
+			}
+
+			if ( '' === $id || 'link-' === $id || isset( $out[ $id ] ) ) {
+				$id = 'link-custom-' . ( (int) $index + 1 );
+			}
+
+			$out[ $id ] = [
+				'id'         => $id,
+				'label'      => $label,
+				'icon'       => $this->lucide_icon( $icon ?: 'external-link' ),
+				'order'      => 80 + (int) $index,
+				'mode'       => 'link',
+				'panel'      => '',
+				'binder'     => '',
+				'dismiss'    => 'none',
+				'visibility' => 'all',
+				'enabled'    => ! empty( $item['enabled'] ),
+				'url'        => $url,
+			];
+		}
+
+		return $out;
 	}
 
 	private function module_visible( array $module, array $context ): bool {
