@@ -66,7 +66,7 @@ data-dsa-open-module="search"
 
 Use only registered module names: `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, `ios-install`, `games`.
 
-If a page needs a Home dock item, do not invent a Home DSA module. Use a custom dock link in `kiwe-settings`.
+Home or other URL-only dock items are valid. Do not call them invalid merely because they are not built-in DSA screens. The requirement is that they must be declared as custom dock links in `kiwe-settings`, not invented as registered DSA modules.
 
 For ecommerce pages:
 
@@ -122,7 +122,7 @@ Common settings to declare:
 - `dock.enabled_items`: visible built-in modules/custom links.
 - `dock.item_order`: visible item order.
 - `dock.focus_item`: the emphasized/focus item and split-dock center.
-- `dock.custom_items`: URL-only custom dock links such as Home.
+- `dock.custom_items`: URL-only custom dock links such as Home, Shop, About, Offers, or any safe site URL. These are first-class Kiwe dock items, but they navigate only and do not create new DSA screens.
 
 Do not use `theme.json` for Kiwe settings profile schema. `theme.json` is the AppShell theme manifest. `kiwe-settings/kiwe-appsite-profile.json` is the settings/profile artifact.
 
@@ -222,7 +222,7 @@ Verify:
 - square/no-rounded shape is genuinely square or near-zero radius;
 - adding/enabling another registered module later does not break spacing, badge placement, active state, focus state, or segment rounding.
 
-Do not invent a module ID for URL navigation. Use custom dock links.
+URL navigation in the dock is allowed through custom dock links. Do not invent a registered DSA module ID for URL navigation; use `dock.custom_items` and a custom item id such as `link-home`.
 
 Do not use preview-only attributes as production contracts, such as:
 

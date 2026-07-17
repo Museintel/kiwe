@@ -135,7 +135,7 @@ for (const file of textFiles.filter((item) => /\.html?$/i.test(item))) {
   for (const match of body.matchAll(/\bdata-dsa-module\s*=\s*["']([^"']+)["']/gi)) {
     const moduleId = String(match[1] || '').trim();
     if (moduleId && !knownDsaModules.has(moduleId) && !moduleId.startsWith('link-')) {
-      add('warn', `Unknown DSA module "${moduleId}". Use registered modules, or define a URL-only custom dock link in kiwe-settings dock.custom_items with an id such as link-home.`, rel(file));
+      add('warn', `Unknown DSA module "${moduleId}". URL-only dock links are valid, but they must be declared in kiwe-settings dock.custom_items and rendered as custom link items, not invented as registered DSA modules.`, rel(file));
     }
   }
   if (/\bdata-open-screen\s*=|\bdata-nav-anchor\s*=/.test(body)) {
@@ -154,7 +154,7 @@ for (const file of textFiles.filter((item) => /\.html?$/i.test(item))) {
 }
 
 if (/data-dsa-module\s*=\s*["']home["']|>Home<\/|aria-label\s*=\s*["']Home["']/i.test(allText) && !hasCustomDockSettings) {
-  add('warn', 'Home appears as a dock/AppShell item but no kiwe-settings dock.custom_items entry was found. Add a URL-only custom dock link instead of inventing a Home DSA screen.');
+  add('warn', 'Home appears as a dock/AppShell item but no kiwe-settings dock.custom_items entry was found. Home/custom URL dock items are valid, but they must be declared as URL-only custom links rather than registered DSA screens.');
 }
 
 if (/\bdsa-dock-primary\b|data-dsa-dock-focus-id|focus button|split-dock center/i.test(allText) && !hasFocusItemSettings) {
