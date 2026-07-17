@@ -6,6 +6,7 @@ use DSA\AI\Site_Graph_Service;
 use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Apply_Plan_Preparer;
 use DSA\AI\Trusted_Apply_Stager;
+use DSA\AI\Trusted_Adapter_Proof_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -80,6 +81,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
 		add_action( 'admin_post_dsa_stage_apply_plan', [ $this, 'stage_apply_plan' ] );
+		add_action( 'admin_post_dsa_prove_apply_stage', [ $this, 'prove_apply_stage' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1608,6 +1610,52 @@ final class Admin {
 		exit;
 	}
 
+	public function prove_apply_stage(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to run Kiwe adapter proofs.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_prove_apply_stage_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$site_graph = ( new Site_Graph_Service( $this->settings, $this->modules ) )->graph( [ 'sampleLimit' => 8 ] );
+		$proof      = ( new Trusted_Adapter_Proof_Service() )->prove( $stage, $site_graph );
+		$stager->attach_proof( $stage_id, $proof );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'        => 'kiwe-framework',
+					'apply-proof' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2481,8 +2529,12 @@ final class Admin {
 	private function render_trusted_apply_stages(): void {
 		$records = ( new Trusted_Apply_Stager() )->records();
 		$active_stage = isset( $_GET['apply-stage'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-stage'] ) ) : '';
+		$active_proof = isset( $_GET['apply-proof'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-proof'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
+		if ( '' !== $active_proof ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Trusted adapter proof refreshed. This inspected capabilities and mapped operations without saving Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
 		if ( [] === $records ) {
 			return;
@@ -2498,7 +2550,9 @@ final class Admin {
 						<th><?php esc_html_e( 'Status', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Plan hash', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Operations', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Proof', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -2508,23 +2562,83 @@ final class Admin {
 						continue;
 					}
 					$plan = isset( $record['plan'] ) && is_array( $record['plan'] ) ? $record['plan'] : [];
+					$proof = isset( $record['adapterProof'] ) && is_array( $record['adapterProof'] ) ? $record['adapterProof'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
 					$operations = (int) ( $plan['operations'] ?? 0 );
 					$created = (string) ( $record['createdAt'] ?? '' );
+					$proof_status = (string) ( $proof['status'] ?? __( 'not run', 'dsa' ) );
+					$proof_blockers = isset( $proof['blockers'] ) && is_array( $proof['blockers'] ) ? count( $proof['blockers'] ) : 0;
 					?>
-					<tr<?php echo $id === $active_stage ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
 						<td><?php echo esc_html( (string) $operations ); ?></td>
+						<td><?php echo esc_html( $proof_status ); ?><?php echo $proof_blockers > 0 ? ' (' . esc_html( (string) $proof_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
+						<td>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+								<input type="hidden" name="action" value="dsa_prove_apply_stage">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_prove_apply_stage_' . $id ); ?>
+								<button class="button button-secondary" type="submit"><?php esc_html_e( 'Run adapter proof', 'dsa' ); ?></button>
+							</form>
+						</td>
 					</tr>
+					<?php if ( $id === $active_proof && [] !== $proof ) : ?>
+						<tr>
+							<td colspan="7">
+								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
+							</td>
+						</tr>
+					<?php endif; ?>
 				<?php endforeach; ?>
 				</tbody>
 			</table>
 		</div>
+		<?php
+	}
+
+	private function render_trusted_adapter_proof_details( array $proof ): void {
+		$capabilities = isset( $proof['capabilities'] ) && is_array( $proof['capabilities'] ) ? $proof['capabilities'] : [];
+		$gates        = isset( $proof['gates'] ) && is_array( $proof['gates'] ) ? $proof['gates'] : [];
+		$operations   = isset( $proof['operationMap'] ) && is_array( $proof['operationMap'] ) ? $proof['operationMap'] : [];
+		$blockers     = isset( $proof['blockers'] ) && is_array( $proof['blockers'] ) ? $proof['blockers'] : [];
+		?>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo ! empty( $capabilities['bricksActive'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'Bricks active', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $capabilities['trustedAdapterSignalAvailable'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'Manual', 'dsa' ); ?></strong><span><?php esc_html_e( 'adapter signal', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $capabilities['htmlCssToBricksAvailable'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'HTML/CSS path', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $operations ) ); ?></strong><span><?php esc_html_e( 'mapped operations', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+		</div>
+		<?php if ( [] !== $gates ) : ?>
+			<ul class="ul-disc">
+				<?php foreach ( $gates as $gate ) : ?>
+					<?php
+					if ( ! is_array( $gate ) ) {
+						continue;
+					}
+					$label = (string) ( $gate['label'] ?? $gate['id'] ?? '' );
+					$status = (string) ( $gate['status'] ?? '' );
+					if ( '' === $label ) {
+						continue;
+					}
+					?>
+					<li><strong><?php echo esc_html( $label ); ?>:</strong> <code><?php echo esc_html( $status ); ?></code></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
 		<?php
 	}
 

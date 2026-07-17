@@ -101,6 +101,8 @@ The apply plan uses `kiwe.bricks-apply-plan.v1` and remains non-mutating. It is 
 
 When staged in WordPress admin, Kiwe wraps the reviewed dry-run plan in `kiwe.trusted-apply-stage.v1`. That stage record is a capped Kiwe review queue item with a plan hash and gates; it still does not write Bricks page data.
 
+Admins can then run a trusted-adapter proof. The proof attaches `kiwe.trusted-adapter-proof.v1` metadata to the stage by checking the current live Site Graph and mapping each operation for future adapter review. This remains non-mutating.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

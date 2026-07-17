@@ -35,6 +35,42 @@ final class Trusted_Apply_Stager {
 		);
 	}
 
+	public function find( string $id ): array {
+		if ( '' === $id ) {
+			return [];
+		}
+		foreach ( $this->records() as $record ) {
+			if ( is_array( $record ) && $id === (string) ( $record['id'] ?? '' ) ) {
+				return $record;
+			}
+		}
+
+		return [];
+	}
+
+	public function attach_proof( string $id, array $proof ): array {
+		$records = $this->records();
+		$updated = [];
+		$matched = false;
+		foreach ( $records as $record ) {
+			if ( ! is_array( $record ) ) {
+				continue;
+			}
+			if ( $id === (string) ( $record['id'] ?? '' ) ) {
+				$record['adapterProof'] = $proof;
+				$record['proofedAt']    = (string) ( $proof['createdAt'] ?? gmdate( 'c' ) );
+				$matched                = true;
+			}
+			$updated[] = $record;
+		}
+		if ( ! $matched ) {
+			return [];
+		}
+		update_option( self::OPTION, array_slice( $updated, 0, self::MAX_RECORDS ), false );
+
+		return $this->find( $id );
+	}
+
 	public function build_record( array $apply_plan, array $context = [] ): array {
 		$json        = $this->json_encode( $apply_plan );
 		$plan_hash   = hash( 'sha256', false !== $json ? $json : serialize( $apply_plan ) );

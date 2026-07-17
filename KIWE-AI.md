@@ -109,7 +109,7 @@ If shell execution is not allowed, use the browser AI path above.
 
 For dynamic binding revisions, run `validate-bindings` when shell or MCP execution is available. If execution is not available, do not claim it ran; instead self-check the binding plan against `dynamic-lite.md` and report the limitation.
 
-If the human is using the WordPress admin UI, they can upload the produced `bricks-bindings/kiwe-bindings.json` at `Kiwe > Framework > AI connector and Site Graph` to get a live non-mutating validation report against the target site's current Site Graph. The same admin report also shows the dry-run apply-plan preview, lets the human download the reviewed apply-plan JSON, and can stage it as a Kiwe-owned `kiwe.trusted-apply-stage.v1` review candidate without running CLI tools.
+If the human is using the WordPress admin UI, they can upload the produced `bricks-bindings/kiwe-bindings.json` at `Kiwe > Framework > AI connector and Site Graph` to get a live non-mutating validation report against the target site's current Site Graph. The same admin report also shows the dry-run apply-plan preview, lets the human download the reviewed apply-plan JSON, can stage it as a Kiwe-owned `kiwe.trusted-apply-stage.v1` review candidate, and can run `kiwe.trusted-adapter-proof.v1` against that stage without running CLI tools.
 
 For apply-path requests, run `prepare-apply-plan` only after `validate-bindings` passes. The apply plan is dry-run and non-mutating. Do not claim WordPress, Bricks, WooCommerce, or Kiwe were changed unless a future trusted adapter actually performs the mutation with admin approval.
 

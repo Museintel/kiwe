@@ -93,7 +93,30 @@ The stage record stores:
 
 The staging queue is capped and Kiwe-owned. It is a review queue for a future trusted adapter, not a builder mutation.
 
-The WordPress admin preview/download/stage flow and the CLI/MCP planner share the same authority boundary: they are planning artifacts only. They do not become a trusted adapter and they do not prove a page was saved.
+## Adapter proof
+
+Batch 9 adds a proof layer for staged candidates:
+
+```text
+kiwe.trusted-adapter-proof.v1
+```
+
+The proof is generated from:
+
+1. the staged `kiwe.trusted-apply-stage.v1` record;
+2. the current live `kiwe.site-graph.v1` context.
+
+It records:
+
+- current Bricks/WordPress capability signals;
+- stage/apply-plan gates;
+- blockers;
+- operation mapping for future adapter review;
+- future apply requirements.
+
+The proof does not call Bricks save APIs, does not update WordPress pages, does not publish content, and does not modify WooCommerce data. It exists so a future apply button can refuse unsafe/stale candidates before any mutation path exists.
+
+The WordPress admin preview/download/stage/proof flow and the CLI/MCP planner share the same authority boundary: they are planning artifacts only. They do not become a trusted adapter and they do not prove a page was saved.
 
 ## Future adapter rules
 
