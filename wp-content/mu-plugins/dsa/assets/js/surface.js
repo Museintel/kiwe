@@ -1698,23 +1698,27 @@
 			node.id = id;
 			return id;
 		};
-		const sectionSelector = '[data-kiwe-menu-section], [data-dsa-menu-section], [data-seam-section], [data-seam-role="section"], [data-role="section"]';
+		const sectionSelector = '[data-role~="section"], .seam-section';
+		const labelledByText = function ( node ) {
+			const labelledBy = String( node.getAttribute( 'aria-labelledby' ) || '' ).trim();
+			if ( ! labelledBy ) return '';
+			return labelledBy.split( /\s+/ ).map( function ( id ) {
+				const labelNode = document.getElementById( id );
+				return normalizeTitle( labelNode && labelNode.textContent );
+			} ).filter( Boolean ).join( ' ' );
+		};
 		const sections = Array.from( scope.querySelectorAll( sectionSelector ) ).filter( function ( section ) {
 			if ( section.closest( blockedClosest ) ) return false;
 			if ( section.hidden || section.getAttribute( 'aria-hidden' ) === 'true' ) return false;
 			return Boolean(
-				normalizeTitle( section.getAttribute( 'data-kiwe-menu-label' ) )
-				|| normalizeTitle( section.getAttribute( 'data-dsa-menu-label' ) )
-				|| normalizeTitle( section.getAttribute( 'data-seam-label' ) )
-				|| normalizeTitle( section.getAttribute( 'aria-label' ) )
+				normalizeTitle( section.getAttribute( 'aria-label' ) )
+				|| labelledByText( section )
 				|| normalizeTitle( section.querySelector( 'h1,h2,h3,h4,h5,h6,[data-kiwe-section-title],[data-seam-title]' ) && section.querySelector( 'h1,h2,h3,h4,h5,h6,[data-kiwe-section-title],[data-seam-title]' ).textContent )
 			);
 		} ).slice( 0, 60 ).map( function ( section, index ) {
 			const titleNode = section.querySelector( 'h1,h2,h3,h4,h5,h6,[data-kiwe-section-title],[data-seam-title]' );
-			const title = normalizeTitle( section.getAttribute( 'data-kiwe-menu-label' ) )
-				|| normalizeTitle( section.getAttribute( 'data-dsa-menu-label' ) )
-				|| normalizeTitle( section.getAttribute( 'data-seam-label' ) )
-				|| normalizeTitle( section.getAttribute( 'aria-label' ) )
+			const title = normalizeTitle( section.getAttribute( 'aria-label' ) )
+				|| labelledByText( section )
 				|| normalizeTitle( titleNode && titleNode.textContent );
 			const level = titleNode && /^H[1-6]$/.test( titleNode.tagName ) ? Number( titleNode.tagName.slice( 1 ) ) : 2;
 			return { id: assignId( section, title, index ), title: title, level: level, source: 'section' };
@@ -9127,9 +9131,9 @@
 	}
 
 	document.addEventListener( 'click', function ( event ) {
-		const launcher = closestEventTarget( event, '[data-dsa-open-module], [data-kiwe-open], [data-dsa-open]' );
+		const launcher = closestEventTarget( event, '[data-dsa-open-module]' );
 		if ( ! launcher || launcher.closest( '[data-dsa-surface]' ) ) return;
-		const moduleId = String( launcher.dataset.dsaOpenModule || launcher.dataset.kiweOpen || launcher.dataset.dsaOpen || '' );
+		const moduleId = String( launcher.dataset.dsaOpenModule || '' );
 		if ( ! moduleId ) return;
 		event.preventDefault();
 		event.stopPropagation();
@@ -9142,7 +9146,7 @@
 
 	document.addEventListener( 'keydown', function ( event ) {
 		if ( event.key !== 'Enter' && event.key !== ' ' ) return;
-		const launcher = closestEventTarget( event, '[data-dsa-open-module], [data-kiwe-open], [data-dsa-open]' );
+		const launcher = closestEventTarget( event, '[data-dsa-open-module]' );
 		if ( ! launcher || launcher.closest( '[data-dsa-surface]' ) ) return;
 		event.preventDefault();
 		launcher.click();

@@ -97,10 +97,10 @@ Important: `data-role` is a controlled Seam vocabulary, not a free naming slot. 
 
 The website/page may include Kiwe hooks, but must not implement Kiwe behavior itself.
 
-- Page/header controls that open AppShell modules should use `data-kiwe-open="cart"` or canonical `data-dsa-open-module="cart"`. Valid module values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
-- Real page sections that should appear in the DSA Menu context should include `id`, `data-kiwe-menu-section`, and `data-kiwe-menu-label="Heritage"` (or the relevant human label). Kiwe Menu uses these labelled sections first, then falls back to configured heading levels. This lets context items be Heritage, Bestsellers, Limca Record, etc. without forcing those exact words into H1/H2/H3 text.
+- Page/header controls that open AppShell modules should use canonical `data-dsa-open-module="cart"`. Valid module values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
+- Real page sections that should appear in the DSA Menu context should use public Seam section vocabulary: `data-role="section"` or `.seam-section`, a stable `id`, and a human label through `aria-label`, `aria-labelledby`, or visible heading text. Kiwe Menu uses these Seam sections first, then falls back to configured heading levels. This lets context items be Heritage, Bestsellers, Limca Record, etc. without forcing those exact words into H1/H2/H3 text or inventing Kiwe-only page attributes.
 - Save/wishlist/bookmark affordances should use Kiwe save hooks from the toolkit/contracts. Do not create local storage or duplicate save authority except as clearly labelled preview-only behavior.
-- Example header buttons: `<button type="button" data-kiwe-open="profile" aria-label="Open account">...</button>` and `<button type="button" data-kiwe-open="cart" aria-label="Open cart">...</button>`.
+- Example header buttons: `<button type="button" data-dsa-open-module="profile" aria-label="Open account">...</button>` and `<button type="button" data-dsa-open-module="cart" aria-label="Open cart">...</button>`.
 
 Preview-only JS may simulate these hooks inside `combined-preview/index.html`, but `website/bricks-paste.html` should keep the real attributes so the live plugin owns behavior after Bricks import.
 
@@ -272,7 +272,7 @@ Example:
 }
 ```
 
-Hiding a dock item only hides the dock button. It does not delete the registered DSA module. Header/Bricks/page launchers may still open modules with `data-dsa-open-module`, `data-kiwe-open="cart"`, or `data-dsa-open="profile"`.
+Hiding a dock item only hides the dock button. It does not delete the registered DSA module. Header/Bricks/page launchers may still open modules with canonical `data-dsa-open-module`.
 
 ## AppShell README requirements
 

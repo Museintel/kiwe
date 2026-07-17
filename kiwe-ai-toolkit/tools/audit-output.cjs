@@ -130,12 +130,12 @@ if (/\bdsa-dock-primary\b|data-dsa-dock-focus-id|focus button|split-dock center/
 }
 
 const websiteText = bricksPastePath ? read(bricksPastePath) : '';
-if (websiteText && /#heritage|#shop-bestsellers|#limca-record|data-dsa-menu-anchor|table of contents|on this page/i.test(allText) && !/\bdata-kiwe-menu-section\b/.test(websiteText)) {
-  add('warn', 'The AppShell/menu preview references page sections, but website/bricks-paste.html does not expose data-kiwe-menu-section + data-kiwe-menu-label landmarks. Add them to the real sections so live DSA Menu context can scroll correctly.');
+if (websiteText && /#heritage|#shop-bestsellers|#limca-record|data-dsa-menu-anchor|table of contents|on this page/i.test(allText) && !/(data-role\s*=\s*["'][^"']*\bsection\b|class\s*=\s*["'][^"']*\bseam-section\b)/i.test(websiteText)) {
+  add('warn', 'The AppShell/menu preview references page sections, but website/bricks-paste.html does not expose public Seam section landmarks. Add data-role="section" or .seam-section with a stable id and aria-label/aria-labelledby/visible heading so live DSA Menu context can scroll correctly.');
 }
 
-if (websiteText && /(cart|bag|account|profile)[^<]{0,80}(<\/button>|<\/a>)|aria-label\s*=\s*["'][^"']*(cart|bag|account|profile)/i.test(websiteText) && !/\bdata-(?:kiwe-open|dsa-open|dsa-open-module)\b/.test(websiteText)) {
-  add('warn', 'Website/header appears to include cart/account/profile affordances without Kiwe open hooks. Use data-kiwe-open="cart", data-kiwe-open="profile", or canonical data-dsa-open-module.');
+if (websiteText && /(cart|bag|account|profile)[^<]{0,80}(<\/button>|<\/a>)|aria-label\s*=\s*["'][^"']*(cart|bag|account|profile)/i.test(websiteText) && !/\bdata-dsa-open-module\b/.test(websiteText)) {
+  add('warn', 'Website/header appears to include cart/account/profile affordances without the canonical Kiwe open hook. Use data-dsa-open-module="cart" or data-dsa-open-module="profile".');
 }
 
 if (!exists('website/bricks-notes.md') && !exists('bricks-notes.md')) {

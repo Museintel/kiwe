@@ -38,10 +38,7 @@
     { "name": "data-dsa-bricks-id", "meaning": "Stable runtime marker for observed Bricks element roots. Never hardcode across sites." },
     { "name": "data-dsa-bricks-type", "meaning": "Observed Bricks element type for registry/classification." },
     { "name": "data-dsa-open-module", "meaning": "Canonical Bricks/page launcher target for a registered DSA module such as cart, profile, search, menu, saved, links, theme, ai, notifications, or ios-install." },
-    { "name": "data-kiwe-open", "meaning": "Readable alias for opening a registered DSA module from page/header markup, e.g. data-kiwe-open=\"cart\"." },
-    { "name": "data-dsa-open", "meaning": "Readable DSA alias for opening a registered DSA module from page/header markup." },
-    { "name": "data-kiwe-menu-section", "meaning": "Marks a real page section for DSA Menu context navigation." },
-    { "name": "data-kiwe-menu-label", "meaning": "Human label for a DSA Menu context section, e.g. Heritage, Bestsellers, Limca Record." },
+    { "name": "data-role=\"section\" / .seam-section", "meaning": "Public Seam section marker consumed by DSA Menu context when the section has a stable id and aria-label, aria-labelledby, or visible heading text." },
     { "name": "data-dsa-search-bridge", "meaning": "Bricks Filter Search element that DSA Search may bridge into." }
   ],
   "builderControls": [

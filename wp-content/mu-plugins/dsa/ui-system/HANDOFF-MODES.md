@@ -117,8 +117,8 @@ Rules:
 
 Website/page markup may include Kiwe hooks, but must not implement Kiwe behavior itself.
 
-- Open a DSA module from a page/header control with `data-kiwe-open="cart"` or canonical `data-dsa-open-module="cart"`. Valid values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
-- Mark real page sections for DSA Menu context with `id`, `data-kiwe-menu-section`, and `data-kiwe-menu-label="Heritage"` (or the desired human label). Kiwe Menu uses these labelled sections first, then falls back to configured heading levels.
+- Open a DSA module from a page/header control with canonical `data-dsa-open-module="cart"`. Valid values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
+- Mark real page sections for DSA Menu context with public Seam section vocabulary: `data-role="section"` or `.seam-section`, a stable `id`, and a human label through `aria-label`, `aria-labelledby`, or visible section heading text. Kiwe Menu uses these Seam sections first, then falls back to configured heading levels.
 - Do not create duplicate cart/profile/search/save/auth behavior. Keep Kiwe hooks as handoff points to the live plugin.
 - Do not use website CSS to restyle protected DSA internals.
 
@@ -196,7 +196,7 @@ Safe high-level keys include:
 Notes:
 
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
-- Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls, `data-dsa-open-module`, `data-kiwe-open="cart"`, or `data-dsa-open="profile"`.
+- Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls and canonical `data-dsa-open-module`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
 - The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
 
