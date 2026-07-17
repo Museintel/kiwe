@@ -34,6 +34,7 @@ node bin/kiwe.js create combined ./out/my-kiwe-handoff --name my-kiwe-handoff
 node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 node bin/kiwe.js dynamic-context
 node bin/kiwe.js dynamic-pass --brief "Turn approved product rails into Bricks query-loop binding plans using the supplied Site Graph."
+node bin/kiwe.js validate-bindings ./out/my-kiwe-handoff --site-graph ./site-graph.json
 ```
 
 ## For external AIs and designers
@@ -133,6 +134,7 @@ Example MCP client entry:
 - `kiwe_get_context`
 - `kiwe_create_handoff`
 - `kiwe_validate_handoff`
+- `kiwe_validate_bindings`
 - `kiwe_list_class_vocabulary`
 - `kiwe_get_dynamic_context`
 - `kiwe_start_dynamic_pass`
@@ -168,6 +170,14 @@ bricks-bindings/
 ```
 
 This is a binding plan, not a direct mutation. It maps placeholder rails/cards/buttons to Bricks query loops, dynamic data tags, and Kiwe launchers using real site terms/pages/products. Later trusted apply adapters can use Bricks 2.4 abilities to convert/import/apply after validation.
+
+Validate the binding plan before accepting it:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
+```
+
+The same check is available to MCP clients as `kiwe_validate_bindings`. It validates `bricks-bindings/kiwe-bindings.json` against `kiwe.bricks-bindings.v1`, verifies real Site Graph post types/terms/query-loop object types/dynamic tags where supplied, and enforces canonical Kiwe launchers such as `data-dsa-open-module`.
 
 ## Output modes
 

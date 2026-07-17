@@ -57,17 +57,33 @@ The existing `website/bricks-paste.html` remains the paste/import artifact and b
       }
     }
   ],
+  "dynamicFields": [],
   "launchers": [
     {
-      "selector": "[data-kiwe-launch='cart']",
+      "selector": "[data-dsa-open-module='cart']",
       "attribute": "data-dsa-open-module",
       "value": "cart"
     }
   ],
+  "menuContext": [],
   "assumptions": [],
   "requiresHumanReview": []
 }
 ```
+
+The formal schema lives at:
+
+```text
+kiwe-ai-toolkit/schemas/bricks-bindings.schema.json
+```
+
+Validate a binding plan with:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
+```
+
+MCP clients can call `kiwe_validate_bindings` with `targetDir` and optional `siteGraphPath`.
 
 ## Rules
 

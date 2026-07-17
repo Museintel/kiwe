@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateBindings as validateBindingsPlan } from './binding-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -210,6 +211,10 @@ export function listClassVocabulary() {
     }
   }
   throw new Error('Seam class vocabulary was not found in toolkit packs.');
+}
+
+export function validateBindings(targetDir, options = {}) {
+  return validateBindingsPlan(targetDir, options);
 }
 
 function inferMode(mode, brief) {

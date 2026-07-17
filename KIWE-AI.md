@@ -95,9 +95,12 @@ If MCP/tool calling is unavailable but shell execution is allowed:
 npm install --prefix kiwe-ai-toolkit
 node kiwe-ai-toolkit/bin/kiwe.js start auto --brief "Paste the human brief here."
 node kiwe-ai-toolkit/bin/kiwe.js dynamic-pass --brief "Paste the dynamic binding request here."
+node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
 ```
 
 If shell execution is not allowed, use the browser AI path above.
+
+For dynamic binding revisions, run `validate-bindings` when shell or MCP execution is available. If execution is not available, do not claim it ran; instead self-check the binding plan against `dynamic-lite.md` and report the limitation.
 
 ## Human prompt should be short
 

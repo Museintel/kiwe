@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, startDynamicPass, startProject, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, startDynamicPass, startProject, validateBindings, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -65,6 +65,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       }
     },
     {
+      name: 'kiwe_validate_bindings',
+      description: 'Validate a Kiwe Bricks dynamic binding plan, optionally against a supplied target-site Site Graph JSON file.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          targetDir: { type: 'string', description: 'Handoff folder, bricks-bindings folder, or kiwe-bindings.json path.' },
+          siteGraphPath: { type: 'string', description: 'Optional path to kiwe.site-graph.v1 JSON for deep validation.' },
+          optional: { type: 'boolean', description: 'If true, missing binding plan is informational instead of failing.' }
+        },
+        required: ['targetDir']
+      }
+    },
+    {
       name: 'kiwe_list_class_vocabulary',
       description: 'Return Seam Class Vocabulary groups/classes for Bricks/global-class authoring.',
       inputSchema: { type: 'object', properties: {} }
@@ -108,6 +121,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_validate_handoff':
       result = validateHandoff(args.targetDir, args.mode);
+      break;
+    case 'kiwe_validate_bindings':
+      result = validateBindings(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });
       break;
     case 'kiwe_list_class_vocabulary':
       result = listClassVocabulary();

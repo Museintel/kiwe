@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, startDynamicPass, startProject, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, startDynamicPass, startProject, validateBindings, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -21,6 +21,7 @@ Commands:
   kiwe vocabulary
   kiwe dynamic-context
   kiwe dynamic-pass --brief text [--site-graph-summary text] [--handoff-summary text]
+  kiwe validate-bindings <handoff-or-bindings-dir-or-json> [--site-graph path/to/site-graph.json] [--optional]
 `);
 }
 
@@ -52,6 +53,13 @@ try {
     const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
     const currentHandoffSummary = handoffIndex >= 0 ? args[handoffIndex + 1] : '';
     print(startDynamicPass({ brief, siteGraphSummary, currentHandoffSummary }));
+  } else if (command === 'validate-bindings') {
+    const siteGraphIndex = args.indexOf('--site-graph');
+    const targetDir = args[0] && !args[0].startsWith('--') ? args[0] : '.';
+    const siteGraphPath = siteGraphIndex >= 0 ? args[siteGraphIndex + 1] : '';
+    const result = validateBindings(targetDir, { siteGraphPath, optional: args.includes('--optional') });
+    print(result);
+    process.exitCode = result.ok ? 0 : 1;
   } else if (command === 'create') {
     const mode = args[0] || 'website';
     const outputDir = args[1] || '';

@@ -37,6 +37,16 @@ bricks-bindings/
 
 The normal `website/bricks-paste.html` remains the page preview and Bricks paste/import artifact. The binding folder explains how static prototype regions map to Bricks query loops, dynamic tags, Kiwe launchers, and review requirements.
 
+Validate the binding plan when a CLI or MCP tool is available:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bindings.cjs <handoff-or-bindings-dir-or-json> --site-graph <site-graph.json>
+```
+
+MCP clients should call `kiwe_validate_bindings` with `targetDir` and `siteGraphPath`.
+
+If no execution is available, do not claim validation ran. Self-check against this context and report that executable validation was not available.
+
 ## `kiwe-bindings.json` quick contract
 
 ```json

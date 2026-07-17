@@ -62,7 +62,14 @@ The new dynamic pass becomes:
    - static titles/images/prices/excerpts become Bricks dynamic-data bindings;
    - page/header buttons use canonical Kiwe launchers;
    - WooCommerce/cart/checkout/search/auth remain owned by Woo, Bricks, WordPress, and Kiwe.
-6. Kiwe/Bricks validate the binding plan before anything is applied.
+6. Kiwe/Bricks validate the binding plan before anything is applied. The public toolkit validator is:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
+```
+
+MCP clients can call `kiwe_validate_bindings`.
+
 7. Later batches can safely apply the plan through Bricks 2.4 abilities or Bricks import workflows.
 
 ## Lead rule

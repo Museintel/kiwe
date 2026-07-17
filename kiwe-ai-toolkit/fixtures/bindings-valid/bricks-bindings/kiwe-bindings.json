@@ -1,0 +1,55 @@
+{
+  "schema": "kiwe.bricks-bindings.v1",
+  "siteGraphSchema": "kiwe.site-graph.v1",
+  "target": {
+    "builder": "bricks",
+    "mode": "binding-plan",
+    "applyAuthority": "human-or-kiwe-adapter"
+  },
+  "queries": [
+    {
+      "id": "fudge-products",
+      "label": "Fudge product rail",
+      "selector": "[data-kiwe-binding='fudge-products']",
+      "bricks": {
+        "objectType": "post",
+        "post_type": ["product"],
+        "posts_per_page": 4,
+        "tax_query": ["product_cat::123"],
+        "orderby": "menu_order",
+        "order": "ASC"
+      },
+      "bindings": {
+        "title": "{post_title}",
+        "url": "{post_url}",
+        "excerpt": "{post_excerpt}",
+        "image": "{featured_image}",
+        "weight": "{woo_product_weight}"
+      }
+    }
+  ],
+  "dynamicFields": [
+    {
+      "selector": "#fudge",
+      "field": "sectionHeading",
+      "tag": "{post_title}"
+    }
+  ],
+  "launchers": [
+    {
+      "selector": "[data-dsa-open-module='cart']",
+      "attribute": "data-dsa-open-module",
+      "value": "cart"
+    }
+  ],
+  "menuContext": [
+    {
+      "label": "Fudge favourites",
+      "id": "fudge",
+      "source": "visible-section"
+    }
+  ],
+  "assumptions": [],
+  "requiresHumanReview": []
+}
+
