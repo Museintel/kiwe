@@ -125,7 +125,9 @@ After rendered target inspection, admins can attach `kiwe.minimal-adapter-shell.
 
 After the minimal adapter shell is ready, admins can attach `kiwe.final-save-approval.v1`. This is an explicit-checkbox approval for that exact shell and target. It locks the post-apply Kiwe audit plan, browser smoke plan, and rollback verification plan, but still does not save Bricks, WordPress content, WooCommerce, or publish state.
 
-After final save approval, admins can build `kiwe.controlled-executor.v1`. This is the controlled executor skeleton: it defines the future adapter interface and pre-mutation checklist for the exact approval while keeping adapter execution unavailable. It still does not save Bricks, WordPress content, WooCommerce, or publish state.
+After final save approval, admins can build `kiwe.controlled-executor.v1`. This is the controlled executor skeleton: it defines the future adapter interface and pre-mutation checklist for the exact approval while keeping save execution unavailable. It still does not save Bricks, WordPress content, WooCommerce, or publish state.
+
+After the executor skeleton is ready, admins can prepare `kiwe.bricks-controlled-adapter.v1`. This is the first real adapter-planning layer: it maps approved operation IDs to deterministic Bricks/Kiwe adapter instructions. Bricks operations target Bricks ability/conversion/save-pipeline concepts and require element-id mapping; Kiwe launcher/menu-context operations remain runtime verification instructions. The artifact still keeps `adapterCanSaveNow: false`, `actualSaveExecuted: false`, and `mayExecuteMutationNow: false`.
 
 ## Rules
 
@@ -143,9 +145,10 @@ After final save approval, admins can build `kiwe.controlled-executor.v1`. This 
 
 Batch 1 is read-only and produces the plan.
 
-Later batches may add a trusted apply adapter that:
+Later batches may add a save-capable trusted apply adapter that:
 
 1. calls Bricks 2.4 abilities such as HTML/CSS conversion, dynamic-data preview, global-query creation, and page element mutation;
-2. validates the rendered output before save;
-3. captures a Bricks revision before changes;
-4. refuses destructive writes unless the admin explicitly approves.
+2. follows Bricks' preferred HTML-first route for greenfield page structure, then performs a focused data pass for query loops and dynamic tags;
+3. validates the rendered output before and after save;
+4. captures/proves rollback before changes;
+5. refuses destructive writes unless the admin explicitly approves.

@@ -19,6 +19,7 @@ use DSA\AI\Rendered_Target_Inspection_Service;
 use DSA\AI\Minimal_Adapter_Shell_Service;
 use DSA\AI\Final_Save_Approval_Service;
 use DSA\AI\Controlled_Executor_Service;
+use DSA\AI\Bricks_Controlled_Adapter_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -106,6 +107,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_build_minimal_adapter_shell', [ $this, 'build_minimal_adapter_shell' ] );
 		add_action( 'admin_post_dsa_approve_final_save', [ $this, 'approve_final_save' ] );
 		add_action( 'admin_post_dsa_build_controlled_executor', [ $this, 'build_controlled_executor' ] );
+		add_action( 'admin_post_dsa_prepare_bricks_controlled_adapter', [ $this, 'prepare_bricks_controlled_adapter' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -2431,6 +2433,67 @@ final class Admin {
 		exit;
 	}
 
+	public function prepare_bricks_controlled_adapter(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to prepare Kiwe Bricks adapters.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_prepare_bricks_controlled_adapter_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$adapter = ( new Bricks_Controlled_Adapter_Service() )->prepare(
+			$stage,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'bricks-controlled-adapter-ready' !== ( $adapter['status'] ?? '' ) ) {
+			$stager->attach_bricks_controlled_adapter( $stage_id, $adapter );
+			wp_die(
+				esc_html__( 'Bricks controlled adapter plan found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Bricks controlled adapter blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_bricks_controlled_adapter( $stage_id, $adapter );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => 'kiwe-framework',
+					'apply-adapter' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3317,6 +3380,7 @@ final class Admin {
 		$active_shell = isset( $_GET['apply-shell'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-shell'] ) ) : '';
 		$active_save = isset( $_GET['apply-save-ok'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-save-ok'] ) ) : '';
 		$active_executor = isset( $_GET['apply-executor'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-executor'] ) ) : '';
+		$active_adapter = isset( $_GET['apply-adapter'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-adapter'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -3359,6 +3423,9 @@ final class Admin {
 		if ( '' !== $active_executor ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Controlled executor skeleton built. This defined the future adapter interface but still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_adapter ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Bricks controlled adapter plan prepared. This mapped approved operations to adapter instructions but still did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -3386,6 +3453,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Shell', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Save OK', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Executor', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Adapter', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -3410,6 +3478,7 @@ final class Admin {
 					$shell = isset( $record['minimalAdapterShell'] ) && is_array( $record['minimalAdapterShell'] ) ? $record['minimalAdapterShell'] : [];
 					$save_approval = isset( $record['finalSaveApproval'] ) && is_array( $record['finalSaveApproval'] ) ? $record['finalSaveApproval'] : [];
 					$executor = isset( $record['controlledExecutor'] ) && is_array( $record['controlledExecutor'] ) ? $record['controlledExecutor'] : [];
+					$adapter = isset( $record['bricksControlledAdapter'] ) && is_array( $record['bricksControlledAdapter'] ) ? $record['bricksControlledAdapter'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -3452,8 +3521,11 @@ final class Admin {
 					$executor_status = (string) ( $executor['status'] ?? __( 'not built', 'dsa' ) );
 					$executor_blockers = isset( $executor['blockers'] ) && is_array( $executor['blockers'] ) ? count( $executor['blockers'] ) : 0;
 					$can_executor = [] !== $save_approval && 'final-save-approved' === ( $save_approval['status'] ?? '' ) && 0 === $save_blockers;
+					$adapter_status = (string) ( $adapter['status'] ?? __( 'not prepared', 'dsa' ) );
+					$adapter_blockers = isset( $adapter['blockers'] ) && is_array( $adapter['blockers'] ) ? count( $adapter['blockers'] ) : 0;
+					$can_adapter = [] !== $executor && 'controlled-executor-skeleton-ready' === ( $executor['status'] ?? '' ) && 0 === $executor_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor || $id === $active_adapter ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -3471,6 +3543,7 @@ final class Admin {
 						<td><?php echo esc_html( $shell_status ); ?><?php echo $shell_blockers > 0 ? ' (' . esc_html( (string) $shell_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $save_status ); ?><?php echo $save_blockers > 0 ? ' (' . esc_html( (string) $save_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $executor_status ); ?><?php echo $executor_blockers > 0 ? ' (' . esc_html( (string) $executor_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $adapter_status ); ?><?php echo $adapter_blockers > 0 ? ' (' . esc_html( (string) $adapter_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -3565,11 +3638,18 @@ final class Admin {
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_executor ); ?>><?php esc_html_e( 'Build executor skeleton', 'dsa' ); ?></button>
 								<p class="description" style="margin:.25rem 0 0;"><?php esc_html_e( 'Defines the future adapter interface only; no Bricks save runs.', 'dsa' ); ?></p>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_prepare_bricks_controlled_adapter">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_prepare_bricks_controlled_adapter_' . $id ); ?>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_adapter ); ?>><?php esc_html_e( 'Prepare Bricks adapter plan', 'dsa' ); ?></button>
+								<p class="description" style="margin:.25rem 0 0;"><?php esc_html_e( 'Maps approved operations only; no Bricks save runs.', 'dsa' ); ?></p>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback || $id === $active_target || $id === $active_capture || $id === $active_inspection || $id === $active_shell || $id === $active_save || $id === $active_executor || $id === $active_adapter ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="19">
+							<td colspan="20">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
@@ -3583,6 +3663,7 @@ final class Admin {
 								<?php $this->render_minimal_adapter_shell_details( $shell ); ?>
 								<?php $this->render_final_save_approval_details( $save_approval ); ?>
 								<?php $this->render_controlled_executor_details( $executor ); ?>
+								<?php $this->render_bricks_controlled_adapter_details( $adapter ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -4275,6 +4356,7 @@ final class Admin {
 		<div class="dsa-admin-token-summary">
 			<div><strong><?php echo esc_html( (string) ( $executor['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
 			<div><strong><?php echo ! empty( $executor['adapterImplementationPresent'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'adapter present', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $executor['adapterCanSaveNow'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'adapter can save', 'dsa' ); ?></span></div>
 			<div><strong><?php echo ! empty( $executor['actualSaveExecuted'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'save executed', 'dsa' ); ?></span></div>
 			<div><strong><?php echo esc_html( (string) count( $ops ) ); ?></strong><span><?php esc_html_e( 'approved ops', 'dsa' ); ?></span></div>
 			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
@@ -4301,7 +4383,7 @@ final class Admin {
 			<p><strong><?php esc_html_e( 'Future execution interface', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<li><?php esc_html_e( 'Strategy:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $interface['strategyId'] ?? '' ) ); ?></code></li>
-				<li><?php esc_html_e( 'Allowed methods are stored in the artifact and remain unavailable until the Bricks adapter implementation exists.', 'dsa' ); ?></li>
+				<li><?php esc_html_e( 'Allowed methods are stored in the artifact. The controlled adapter planner may prepare instructions, but actual save execution remains unavailable until post-apply proof and rollback verification exist.', 'dsa' ); ?></li>
 			</ul>
 		<?php endif; ?>
 		<?php if ( [] !== $checklist ) : ?>
@@ -4314,6 +4396,84 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Executor blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_bricks_controlled_adapter_details( array $adapter ): void {
+		if ( [] === $adapter ) {
+			return;
+		}
+		$blockers     = isset( $adapter['blockers'] ) && is_array( $adapter['blockers'] ) ? $adapter['blockers'] : [];
+		$gates        = isset( $adapter['gates'] ) && is_array( $adapter['gates'] ) ? $adapter['gates'] : [];
+		$instructions = isset( $adapter['operationInstructions'] ) && is_array( $adapter['operationInstructions'] ) ? $adapter['operationInstructions'] : [];
+		$lock         = isset( $adapter['mutationLock'] ) && is_array( $adapter['mutationLock'] ) ? $adapter['mutationLock'] : [];
+		$required     = isset( $adapter['requiredBeforeAnySave'] ) && is_array( $adapter['requiredBeforeAnySave'] ) ? $adapter['requiredBeforeAnySave'] : [];
+		$visible      = array_slice( $instructions, 0, 12 );
+		$hidden       = max( 0, count( $instructions ) - count( $visible ) );
+		?>
+		<p><strong><?php esc_html_e( 'Bricks controlled adapter plan', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $adapter['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) ( $adapter['adapterMethod'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'method', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $adapter['adapterCanSaveNow'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'can save now', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $instructions ) ); ?></strong><span><?php esc_html_e( 'instructions', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description"><?php esc_html_e( 'This is the real controlled adapter planning artifact. It maps approved operations to Bricks/Kiwe adapter instructions, but it still refuses wp_update_post, raw _bricks meta writes, WooCommerce mutation, and publish actions.', 'dsa' ); ?></p>
+		<ul class="ul-disc">
+			<li><?php esc_html_e( 'Executor:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $adapter['controlledExecutorId'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Target:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $adapter['targetPostId'] ?? 0 ) ); ?></code></li>
+			<li><?php esc_html_e( 'Strategy:', 'dsa' ); ?> <code><?php echo esc_html( (string) ( $adapter['selectedStrategyId'] ?? '' ) ); ?></code></li>
+			<li><?php esc_html_e( 'Plan hash:', 'dsa' ); ?> <code><?php echo esc_html( substr( (string) ( $adapter['planHash'] ?? '' ), 0, 24 ) ); ?></code></li>
+			<li><?php esc_html_e( 'Bricks element mapping required:', 'dsa' ); ?> <code><?php echo ! empty( $lock['requiresBricksElementIdMapping'] ) ? esc_html__( 'yes', 'dsa' ) : esc_html__( 'no', 'dsa' ); ?></code></li>
+		</ul>
+		<?php if ( [] !== $gates ) : ?>
+			<p><strong><?php esc_html_e( 'Adapter gates', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $gates as $gate ) : ?>
+					<?php if ( is_array( $gate ) ) : ?>
+						<li><code><?php echo esc_html( (string) ( $gate['status'] ?? '' ) ); ?></code> <?php echo esc_html( (string) ( $gate['label'] ?? $gate['id'] ?? '' ) ); ?></li>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $visible ) : ?>
+			<p><strong><?php esc_html_e( 'Prepared adapter instructions', 'dsa' ); ?></strong></p>
+			<table class="widefat striped">
+				<thead><tr><th><?php esc_html_e( 'Type', 'dsa' ); ?></th><th><?php esc_html_e( 'Action', 'dsa' ); ?></th><th><?php esc_html_e( 'Selector', 'dsa' ); ?></th><th><?php esc_html_e( 'Executes now', 'dsa' ); ?></th></tr></thead>
+				<tbody>
+				<?php foreach ( $visible as $instruction ) : ?>
+					<?php if ( is_array( $instruction ) ) : ?>
+						<tr>
+							<td><code><?php echo esc_html( (string) ( $instruction['type'] ?? '' ) ); ?></code></td>
+							<td><?php echo esc_html( (string) ( $instruction['adapterAction'] ?? '' ) ); ?></td>
+							<td><code><?php echo esc_html( (string) ( $instruction['selector'] ?? '' ) ); ?></code></td>
+							<td><?php echo ! empty( $instruction['canExecuteNow'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></td>
+						</tr>
+					<?php endif; ?>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php if ( $hidden > 0 ) : ?>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Showing first 12 adapter instructions; %d more are stored in the adapter artifact.', 'dsa' ), $hidden ) ); ?></p>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php if ( [] !== $required ) : ?>
+			<p><strong><?php esc_html_e( 'Still required before any future save', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $required as $step ) : ?>
+					<li><?php echo esc_html( (string) $step ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Adapter blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

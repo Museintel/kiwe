@@ -485,12 +485,50 @@ It records:
 - future execution interface;
 - pre-mutation checklist;
 - inherited post-apply audit, browser smoke, and rollback verification plans;
-- `adapterImplementationPresent: false`;
+- `adapterImplementationPresent: true` when the controlled adapter planner is present;
+- `adapterCanSaveNow: false`;
 - `actualSaveExecuted: false`;
 - `mayExecuteMutationNow: false`;
 - `mayBuildBricksAdapterNext: true` only when clean.
 
-The skeleton still does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or execute adapter code. It defines what the next Bricks adapter must obey; it is not that adapter.
+The skeleton still does not call Bricks save APIs, update WordPress page content, publish content, modify WooCommerce data, or execute save-capable adapter code. It defines what the next Bricks adapter plan must obey; it is not a save.
+
+## Bricks controlled adapter plan
+
+Batch 22 adds the first concrete adapter-planning artifact:
+
+```text
+kiwe.bricks-controlled-adapter.v1
+```
+
+The adapter plan can be attached only after:
+
+1. a valid stage exists;
+2. final save approval is `final-save-approved`;
+3. the minimal adapter shell is ready;
+4. target resolution is ready;
+5. the controlled executor skeleton is `controlled-executor-skeleton-ready`;
+6. stage, approval, shell, target resolution, and executor plan hashes match;
+7. approved operation IDs can be mapped to adapter instructions;
+8. no inherited blockers remain.
+
+It records:
+
+- exact controlled executor ID;
+- exact target post/page/template ID;
+- selected strategy and adapter method;
+- approved operation IDs;
+- deterministic adapter instructions for `bricks.query-loop`, `bricks.dynamic-field`, `kiwe.launcher-attribute`, and `kiwe.menu-context`;
+- whether Bricks element-id mapping is required;
+- forbidden direct writes such as `wp_update_post`, `update_post_meta:_bricks*`, WooCommerce mutation, and publish;
+- `adapterImplementationPresent: true`;
+- `adapterPlanPrepared: true`;
+- `adapterCanSaveNow: false`;
+- `actualSaveExecuted: false`;
+- `mayExecuteMutationNow: false`;
+- `requiresPostApplyProofBeforeMutation: true`.
+
+The adapter plan is real because it translates reviewed operation IDs into a specific Bricks/Kiwe route. It is still non-mutating because post-apply verification, browser smoke, and rollback proof are not yet allowed to execute a Bricks save.
 
 ## Future adapter rules
 
@@ -511,5 +549,6 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 13. minimal adapter shell is attached;
 14. final save approval is captured for the exact shell;
 15. a controlled executor skeleton is built for that exact approval;
-16. a real controlled Bricks adapter implementation exists for the selected strategy;
-17. post-apply Kiwe audit and browser smoke tests pass.
+16. a Bricks controlled adapter plan is prepared for that exact executor;
+17. post-apply verification and rollback proof for the smallest mutation are available;
+18. post-apply Kiwe audit and browser smoke tests pass.

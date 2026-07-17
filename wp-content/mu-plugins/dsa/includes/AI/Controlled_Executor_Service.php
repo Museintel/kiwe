@@ -48,11 +48,12 @@ final class Controlled_Executor_Service {
 			'mutatesWordPress'             => false,
 			'mutatesBricksContent'         => false,
 			'writesKiweInternalRecord'     => true,
-			'adapterImplementationPresent' => false,
+			'adapterImplementationPresent' => class_exists( __NAMESPACE__ . '\\Bricks_Controlled_Adapter_Service' ),
+			'adapterCanSaveNow'            => false,
 			'actualSaveExecuted'           => false,
 			'mayExecuteMutationNow'        => false,
 			'mayBuildBricksAdapterNext'     => [] === $blockers,
-			'nextRequiredStep'             => 'Implement the Bricks controlled adapter for this executor interface, then run the smallest approved mutation followed by post-apply audit, browser smoke tests, and rollback verification.',
+			'nextRequiredStep'             => 'Prepare the Bricks controlled adapter artifact for this executor interface. Actual mutation remains locked until post-apply verification and rollback proof exist.',
 		];
 	}
 
@@ -128,10 +129,10 @@ final class Controlled_Executor_Service {
 				'details' => 'The executor skeleton must be scoped to a locked target with rollback and baseline artifacts.',
 			],
 			[
-				'id'      => 'adapter-not-present',
-				'label'   => 'Real Bricks adapter intentionally absent',
+				'id'      => 'adapter-planner',
+				'label'   => 'Bricks adapter planner available',
 				'status'  => 'passed',
-				'details' => 'This batch builds the executor contract only. No Bricks save adapter is executed.',
+				'details' => class_exists( __NAMESPACE__ . '\\Bricks_Controlled_Adapter_Service' ) ? 'A controlled adapter planning service is available. It still does not execute Bricks saves.' : 'The executor contract is available, but the controlled adapter planner has not been loaded.',
 			],
 			[
 				'id'      => 'no-blockers',
