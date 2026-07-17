@@ -53,7 +53,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 ```
 
 Admins can download `site-graph.json` from `Kiwe > Framework > AI connector and Site Graph`.
-Admins can also upload an AI-produced `kiwe-bindings.json` there to run the same style of validation against the current live Site Graph without mutating Bricks. After upload, Kiwe also renders the dry-run apply-plan preview in admin so non-developers can inspect the same preflight gates and planned operations without running the CLI. The report includes a nonce-protected download for the reviewed apply-plan JSON.
+Admins can also upload an AI-produced `kiwe-bindings.json` there to run the same style of validation against the current live Site Graph without mutating Bricks. After upload, Kiwe also renders the dry-run apply-plan preview in admin so non-developers can inspect the same preflight gates and planned operations without running the CLI. The report includes a nonce-protected download for the reviewed apply-plan JSON and a staging action for trusted adapter review.
 
 Prepare a dry-run apply plan:
 
@@ -73,7 +73,27 @@ MCP clients can call:
 kiwe_prepare_apply_plan
 ```
 
-The WordPress admin preview/download and the CLI/MCP planner share the same authority boundary: they are planning artifacts only. They do not become a trusted adapter and they do not prove a page was saved.
+## Staging record
+
+The WordPress admin can stage a validated dry-run apply plan as:
+
+```text
+kiwe.trusted-apply-stage.v1
+```
+
+The stage record stores:
+
+- a stable stage id;
+- the apply-plan hash;
+- source site/file context;
+- counts for operations, preflight gates, and manual review items;
+- gate statuses and blockers;
+- future apply requirements;
+- the reviewed dry-run plan.
+
+The staging queue is capped and Kiwe-owned. It is a review queue for a future trusted adapter, not a builder mutation.
+
+The WordPress admin preview/download/stage flow and the CLI/MCP planner share the same authority boundary: they are planning artifacts only. They do not become a trusted adapter and they do not prove a page was saved.
 
 ## Future adapter rules
 

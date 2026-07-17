@@ -5,6 +5,7 @@ namespace DSA\Admin;
 use DSA\AI\Site_Graph_Service;
 use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Apply_Plan_Preparer;
+use DSA\AI\Trusted_Apply_Stager;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -78,6 +79,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
+		add_action( 'admin_post_dsa_stage_apply_plan', [ $this, 'stage_apply_plan' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1535,6 +1537,77 @@ final class Admin {
 		exit;
 	}
 
+	public function stage_apply_plan(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to stage Kiwe apply plans.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$key = isset( $_POST['bindingReport'] ) ? sanitize_key( (string) wp_unslash( $_POST['bindingReport'] ) ) : '';
+		if ( '' === $key ) {
+			wp_die(
+				esc_html__( 'Apply plan report key is missing.', 'dsa' ),
+				esc_html__( 'Missing report', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_stage_apply_plan_' . $key );
+
+		$payload = get_transient( 'dsa_binding_report_' . $key );
+		if ( ! is_array( $payload ) || (int) ( $payload['userId'] ?? 0 ) !== get_current_user_id() ) {
+			wp_die(
+				esc_html__( 'Apply plan report expired or is not available for this admin user.', 'dsa' ),
+				esc_html__( 'Apply plan unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$report = isset( $payload['report'] ) && is_array( $payload['report'] ) ? $payload['report'] : [];
+		if ( empty( $report['ok'] ) ) {
+			wp_die(
+				esc_html__( 'Fix binding validation failures before staging an apply candidate.', 'dsa' ),
+				esc_html__( 'Binding plan not stageable', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$apply_plan = isset( $payload['applyPlan'] ) && is_array( $payload['applyPlan'] ) ? $payload['applyPlan'] : [];
+		if ( [] === $apply_plan ) {
+			wp_die(
+				esc_html__( 'This binding report does not contain a dry-run apply plan.', 'dsa' ),
+				esc_html__( 'Apply plan unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$record = ( new Trusted_Apply_Stager() )->stage(
+			$apply_plan,
+			[
+				'userId'           => get_current_user_id(),
+				'createdAt'        => gmdate( 'c' ),
+				'siteName'         => (string) ( $payload['siteName'] ?? wp_strip_all_tags( (string) get_bloginfo( 'name' ) ) ),
+				'fileName'         => (string) ( $payload['fileName'] ?? 'kiwe-bindings.json' ),
+				'bindingReportKey' => $key,
+			]
+		);
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'           => 'kiwe-framework',
+					'binding-report' => $key,
+					'apply-stage'    => sanitize_key( (string) ( $record['id'] ?? '' ) ),
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2203,6 +2276,7 @@ final class Admin {
 						</p>
 					</form>
 					<?php $this->render_binding_plan_report( $binding_report ); ?>
+					<?php $this->render_trusted_apply_stages(); ?>
 					<p class="description"><?php esc_html_e( 'REST endpoint for tool clients:', 'dsa' ); ?> <code><?php echo esc_html( rest_url( 'dsa/v1/site-graph?sampleLimit=8' ) ); ?></code></p>
 					<p class="description"><?php esc_html_e( 'Safe AI sequence: generate/audit handoff, add bricks-bindings/ with the Site Graph, run validate-bindings, then prepare a dry-run apply plan. Do not let browser AI claim it saved Bricks or WordPress.', 'dsa' ); ?></p>
 					<ul class="ul-disc">
@@ -2307,12 +2381,20 @@ final class Admin {
 			<h3><?php esc_html_e( 'Dry-run apply plan', 'dsa' ); ?></h3>
 			<p class="description"><?php esc_html_e( 'This preview translates the validated binding file into the operations a future trusted Kiwe/Bricks adapter would review. It is non-mutating and does not save WordPress, WooCommerce, or Bricks content.', 'dsa' ); ?></p>
 			<?php if ( '' !== $report_key ) : ?>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin: 0 0 1rem;">
-					<input type="hidden" name="action" value="dsa_download_apply_plan">
-					<input type="hidden" name="bindingReport" value="<?php echo esc_attr( $report_key ); ?>">
-					<?php wp_nonce_field( 'dsa_download_apply_plan_' . $report_key ); ?>
-					<button class="button button-secondary" type="submit"><?php esc_html_e( 'Download dry-run apply plan JSON', 'dsa' ); ?></button>
-				</form>
+				<div class="dsa-admin-inline-fields" style="margin: 0 0 1rem;">
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_download_apply_plan">
+						<input type="hidden" name="bindingReport" value="<?php echo esc_attr( $report_key ); ?>">
+						<?php wp_nonce_field( 'dsa_download_apply_plan_' . $report_key ); ?>
+						<button class="button button-secondary" type="submit"><?php esc_html_e( 'Download dry-run apply plan JSON', 'dsa' ); ?></button>
+					</form>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_stage_apply_plan">
+						<input type="hidden" name="bindingReport" value="<?php echo esc_attr( $report_key ); ?>">
+						<?php wp_nonce_field( 'dsa_stage_apply_plan_' . $report_key ); ?>
+						<button class="button button-primary" type="submit"><?php esc_html_e( 'Stage for trusted adapter review', 'dsa' ); ?></button>
+					</form>
+				</div>
 			<?php endif; ?>
 			<div class="dsa-admin-token-summary">
 				<div><strong><?php echo esc_html( (string) $operation_count ); ?></strong><span><?php esc_html_e( 'planned operations', 'dsa' ); ?></span></div>
@@ -2392,6 +2474,56 @@ final class Admin {
 					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	private function render_trusted_apply_stages(): void {
+		$records = ( new Trusted_Apply_Stager() )->records();
+		$active_stage = isset( $_GET['apply-stage'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-stage'] ) ) : '';
+		if ( '' !== $active_stage ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
+		}
+		if ( [] === $records ) {
+			return;
+		}
+		?>
+		<div class="dsa-lpm-card" style="margin-top: 1rem;">
+			<h3><?php esc_html_e( 'Trusted adapter staging queue', 'dsa' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'These are Kiwe-owned staging records for reviewed dry-run apply plans. They are not Bricks saves, page imports, product edits, or publish actions.', 'dsa' ); ?></p>
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Stage', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Status', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Plan hash', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Operations', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach ( array_slice( $records, 0, 5 ) as $record ) : ?>
+					<?php
+					if ( ! is_array( $record ) ) {
+						continue;
+					}
+					$plan = isset( $record['plan'] ) && is_array( $record['plan'] ) ? $record['plan'] : [];
+					$id = (string) ( $record['id'] ?? '' );
+					$status = (string) ( $record['status'] ?? '' );
+					$hash = (string) ( $plan['hash'] ?? '' );
+					$operations = (int) ( $plan['operations'] ?? 0 );
+					$created = (string) ( $record['createdAt'] ?? '' );
+					?>
+					<tr<?php echo $id === $active_stage ? ' class="is-active"' : ''; ?>>
+						<td><code><?php echo esc_html( $id ); ?></code></td>
+						<td><?php echo esc_html( $status ); ?></td>
+						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
+						<td><?php echo esc_html( (string) $operations ); ?></td>
+						<td><?php echo esc_html( $created ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
 		</div>
 		<?php
 	}

@@ -84,7 +84,7 @@ Admins can also validate an AI-produced `bricks-bindings/kiwe-bindings.json` dir
 Kiwe > Framework > AI connector and Site Graph > Validate AI binding plan
 ```
 
-That admin intake is non-mutating. It reports failures/warnings and now also shows the dry-run apply-plan preview for the same upload: preflight gates, prepared Bricks query/dynamic-field operations, Kiwe launcher/menu-context operations, and manual-review items. Admins can download that reviewed `kiwe.bricks-apply-plan.v1` JSON from the report. It still does not save WordPress, WooCommerce, or Bricks content.
+That admin intake is non-mutating. It reports failures/warnings and now also shows the dry-run apply-plan preview for the same upload: preflight gates, prepared Bricks query/dynamic-field operations, Kiwe launcher/menu-context operations, and manual-review items. Admins can download that reviewed `kiwe.bricks-apply-plan.v1` JSON from the report or stage it as a capped Kiwe-owned `kiwe.trusted-apply-stage.v1` review candidate. It still does not save WordPress, WooCommerce, or Bricks content.
 
 7. Prepare a dry-run trusted apply plan:
 
@@ -94,7 +94,8 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph
 
 MCP clients can call `kiwe_prepare_apply_plan`.
 
-8. Later batches can safely apply the plan through Bricks 2.4 abilities or Bricks import workflows after admin approval, revision capture, rendered-output inspection, and post-apply audit. Until that future adapter exists, both the CLI and WordPress admin apply-plan views/downloads are inspection contracts only.
+8. Admins may stage a reviewed plan inside Kiwe. A stage record stores the plan hash, status, gate results, blockers, counts, and future apply requirements. It is an internal review queue item, not a Bricks save.
+9. Later batches can safely apply the staged plan through Bricks 2.4 abilities or Bricks import workflows after admin approval, revision capture, rendered-output inspection, and post-apply audit. Until that future adapter exists, the CLI and WordPress admin apply-plan views/downloads/stages are inspection contracts only.
 
 ## Lead rule
 

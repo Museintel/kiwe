@@ -87,7 +87,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 MCP clients can call `kiwe_validate_bindings` with `targetDir` and optional `siteGraphPath`.
 
-WordPress admins can validate the same `kiwe-bindings.json` against the current live Site Graph from `Kiwe > Framework > AI connector and Site Graph`. This admin intake does not write Bricks data. When validation completes, the same screen also shows a dry-run apply-plan preview and a JSON download so admins can inspect or share the planned query-loop, dynamic-field, launcher, menu-context, and manual-review operations before any future adapter path is considered.
+WordPress admins can validate the same `kiwe-bindings.json` against the current live Site Graph from `Kiwe > Framework > AI connector and Site Graph`. This admin intake does not write Bricks data. When validation completes, the same screen also shows a dry-run apply-plan preview, a JSON download, and a staging action so admins can inspect, share, or pin the planned query-loop, dynamic-field, launcher, menu-context, and manual-review operations before any future adapter path is considered.
 
 Prepare a dry-run apply plan with:
 
@@ -98,6 +98,8 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph
 MCP clients can call `kiwe_prepare_apply_plan`.
 
 The apply plan uses `kiwe.bricks-apply-plan.v1` and remains non-mutating. It is the bridge contract for a future admin-approved Bricks adapter.
+
+When staged in WordPress admin, Kiwe wraps the reviewed dry-run plan in `kiwe.trusted-apply-stage.v1`. That stage record is a capped Kiwe review queue item with a plan hash and gates; it still does not write Bricks page data.
 
 ## Rules
 
