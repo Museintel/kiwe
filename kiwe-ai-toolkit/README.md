@@ -38,13 +38,22 @@ node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 
 The human prompt should stay short. The toolkit carries the rules.
 
-Good human prompt:
+Good human prompts:
 
 ```text
 Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
 Create a Netflix-like ultra-modern news website for Indian startups, businesses,
-entrepreneurs, and celebrity-owned business spotlights.
-Include the Kiwe AppShell/DSA direction too.
+entrepreneurs, and celebrity-owned business spotlights, with Kiwe AppShell included.
+```
+
+```text
+Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Create a quiet luxury DSA AppShell theme.
+```
+
+```text
+Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Create a conversion-focused product landing page.
 ```
 
 The AI should then start with one tool call:
@@ -53,8 +62,8 @@ The AI should then start with one tool call:
 {
   "tool": "kiwe_start_project",
   "arguments": {
-    "mode": "combined",
-    "brief": "Netflix-like ultra-modern news website for Indian startups, businesses, entrepreneurs, funding news, and celebrity-owned business spotlights, with matching Kiwe AppShell/DSA direction."
+    "mode": "auto",
+    "brief": "Use the human's plain-language design brief exactly."
   }
 }
 ```
@@ -67,6 +76,8 @@ node kiwe-ai-toolkit/bin/kiwe.js start combined --brief "Netflix-like ultra-mode
 ```
 
 Do not ask the human to paste long Kiwe rules. `kiwe_start_project` returns the relevant mode context, output contract, preview requirements, Bricks boundaries, Seam vocabulary guidance, and AppShell separation rules.
+
+Do not expect humans to mention artifact names, screen eligibility, responsive overflow rules, Kiwe authority boundaries, or validator requirements. Those are toolkit responsibilities.
 
 ### Browser AI fallback
 

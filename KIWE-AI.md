@@ -58,12 +58,35 @@ If shell execution is not allowed, use the browser AI path above.
 
 ## Human prompt should be short
 
-The human should not need to prompt-engineer Kiwe. A good prompt is:
+The human should not need to prompt-engineer Kiwe. They should only provide the repo/toolkit pointer and the design intent. Do not expect humans to mention output folders, Bricks artifacts, AppShell validator rules, screen eligibility, overflow rules, or Kiwe authority boundaries; the toolkit response supplies those.
+
+Good human prompts:
 
 ```text
 Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
-Create a Netflix-like ultra-modern news website for Indian startups and businesses.
-Include the Kiwe AppShell/DSA direction too.
+Create a Netflix-like ultra-modern news website for Indian startups and businesses, with Kiwe AppShell included.
 ```
 
-The toolkit response carries the detailed output format, Bricks handoff rules, Seam framework boundaries, preview requirements, and validation expectations.
+```text
+Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Create a quiet luxury DSA AppShell theme.
+```
+
+```text
+Use https://github.com/Museintel/kiwe and the Kiwe AI Toolkit.
+Create a conversion-focused product landing page.
+```
+
+The AI must translate the plain-language request into the correct toolkit mode:
+
+```json
+{
+  "tool": "kiwe_start_project",
+  "arguments": {
+    "mode": "auto",
+    "brief": "Use the human's plain-language design brief exactly."
+  }
+}
+```
+
+The toolkit response carries the detailed output format, Bricks handoff rules, Seam framework boundaries, AppShell screen rules, preview requirements, responsive overflow rules, and validation expectations.
