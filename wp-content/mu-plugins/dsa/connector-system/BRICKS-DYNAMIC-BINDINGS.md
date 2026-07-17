@@ -125,6 +125,8 @@ After rendered target inspection, admins can attach `kiwe.minimal-adapter-shell.
 
 After the minimal adapter shell is ready, admins can attach `kiwe.final-save-approval.v1`. This is an explicit-checkbox approval for that exact shell and target. It locks the post-apply Kiwe audit plan, browser smoke plan, and rollback verification plan, but still does not save Bricks, WordPress content, WooCommerce, or publish state.
 
+After final save approval, admins can build `kiwe.controlled-executor.v1`. This is the controlled executor skeleton: it defines the future adapter interface and pre-mutation checklist for the exact approval while keeping adapter execution unavailable. It still does not save Bricks, WordPress content, WooCommerce, or publish state.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.
