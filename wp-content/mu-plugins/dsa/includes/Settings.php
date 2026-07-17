@@ -253,7 +253,7 @@ final class Settings {
 					'prefer_bricks_native_cart' => true,
 					'quantity_stepper_enabled'  => true,
 					'stock_badge_enabled'       => true,
-					'verified_version'          => '2.3.7',
+					'verified_version'          => '2.4-beta-source-reviewed',
 				],
 				'search'              => [
 					'configuration_version' => 2,

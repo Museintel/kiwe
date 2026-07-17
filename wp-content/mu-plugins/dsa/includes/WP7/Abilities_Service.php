@@ -2,6 +2,7 @@
 
 namespace DSA\WP7;
 
+use DSA\AI\Site_Graph_Service;
 use DSA\Element_Registry;
 use DSA\Settings;
 use DSA\Trust\Trust_Service;
@@ -16,7 +17,8 @@ final class Abilities_Service {
 	public function __construct(
 		private Settings $settings,
 		private Element_Registry $registry,
-		private Trust_Service $trust
+		private Trust_Service $trust,
+		private ?Site_Graph_Service $site_graph = null
 	) {}
 
 	public function register(): void {
@@ -78,6 +80,25 @@ final class Abilities_Service {
 				],
 			]
 		);
+
+		if ( $this->site_graph ) {
+			wp_register_ability(
+				'dsa/get-site-graph',
+				[
+					'label'               => __( 'Get Kiwe site graph', 'dsa' ),
+					'description'         => __( 'Returns an admin-only, non-secret WordPress, WooCommerce, Bricks, Seam, and Kiwe capability graph for AI design/binding workflows.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->site_graph_input_schema(),
+					'output_schema'       => $this->site_graph_output_schema(),
+					'execute_callback'    => [ $this, 'execute_site_graph' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+		}
 	}
 
 	public function can_manage(): bool {
@@ -120,6 +141,21 @@ final class Abilities_Service {
 		];
 	}
 
+	public function execute_site_graph( array $input = [] ): array {
+		if ( ! $this->site_graph ) {
+			return [
+				'schema' => 'kiwe.site-graph.v1',
+				'error'  => 'site_graph_unavailable',
+			];
+		}
+
+		return $this->site_graph->graph(
+			[
+				'sampleLimit' => isset( $input['sampleLimit'] ) ? absint( $input['sampleLimit'] ) : 8,
+			]
+		);
+	}
+
 	public function summary(): array {
 		return [
 			'id'          => 'abilities',
@@ -128,7 +164,15 @@ final class Abilities_Service {
 			'status'      => $this->available() ? 'registered-readonly' : 'fallback',
 			'description' => __( 'Machine-readable, admin-only readonly diagnostics for AI agents, automation, and WordPress-native command surfaces.', 'dsa' ),
 			'fallback'    => __( 'DSA REST controllers and deterministic admin reports remain available.', 'dsa' ),
-			'abilities'   => [ 'dsa/audit-trust', 'dsa/summarize-route' ],
+			'abilities'   => array_values(
+				array_filter(
+					[
+						'dsa/audit-trust',
+						'dsa/summarize-route',
+						$this->site_graph ? 'dsa/get-site-graph' : '',
+					]
+				)
+			),
 		];
 	}
 
@@ -172,6 +216,38 @@ final class Abilities_Service {
 				],
 			],
 			'required'   => [ 'version', 'route', 'postId', 'elementCount', 'registrySource', 'types' ],
+		];
+	}
+
+	private function site_graph_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'sampleLimit' => [
+					'type'        => 'integer',
+					'minimum'     => 0,
+					'maximum'     => 24,
+					'description' => __( 'Maximum number of public sample posts/pages/terms per collection.', 'dsa' ),
+				],
+			],
+		];
+	}
+
+	private function site_graph_output_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'schema'        => [ 'type' => 'string' ],
+				'generatedAt'   => [ 'type' => 'string' ],
+				'site'          => [ 'type' => 'object' ],
+				'wordpress'     => [ 'type' => 'object' ],
+				'woocommerce'   => [ 'type' => 'object' ],
+				'bricks'        => [ 'type' => 'object' ],
+				'kiwe'          => [ 'type' => 'object' ],
+				'bindingTargets' => [ 'type' => 'object' ],
+				'guardrails'    => [ 'type' => 'object' ],
+			],
+			'required'   => [ 'schema', 'generatedAt', 'site', 'wordpress', 'woocommerce', 'bricks', 'kiwe', 'bindingTargets', 'guardrails' ],
 		];
 	}
 }

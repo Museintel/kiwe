@@ -223,6 +223,60 @@ if (!exists('website/bricks-notes.md') && !exists('bricks-notes.md')) {
   add('warn', 'Missing bricks-notes.md explaining Bricks import mapping and capability boundaries.');
 }
 
+if (exists('bricks-bindings')) {
+  if (!exists('bricks-bindings/kiwe-bindings.json')) {
+    add('fail', 'bricks-bindings/ exists but bricks-bindings/kiwe-bindings.json is missing.');
+  }
+  if (!exists('bricks-bindings/BINDING-NOTES.md')) {
+    add('warn', 'bricks-bindings/ exists but BINDING-NOTES.md is missing. Explain Site Graph sources, assumptions, review items, and apply authority.');
+  }
+
+  if (exists('bricks-bindings/kiwe-bindings.json')) {
+    const bindingPath = path.join(root, 'bricks-bindings/kiwe-bindings.json');
+    let bindingJson = null;
+    try {
+      bindingJson = JSON.parse(read(bindingPath));
+    } catch (error) {
+      add('fail', `kiwe-bindings.json is invalid JSON: ${error.message}`, rel(bindingPath));
+    }
+
+    if (bindingJson) {
+      if (bindingJson.schema !== 'kiwe.bricks-bindings.v1') {
+        add('fail', 'kiwe-bindings.json schema must be kiwe.bricks-bindings.v1.', rel(bindingPath));
+      }
+      if (bindingJson.siteGraphSchema !== 'kiwe.site-graph.v1') {
+        add('warn', 'kiwe-bindings.json should declare siteGraphSchema: kiwe.site-graph.v1 so bindings are tied to a real target-site context.', rel(bindingPath));
+      }
+      const target = bindingJson.target || {};
+      if (target.builder !== 'bricks') {
+        add('warn', 'kiwe-bindings.json target.builder should be "bricks" for the current dynamic binding pass.', rel(bindingPath));
+      }
+      if (/direct|auto|mutat|write|save/i.test(String(target.applyAuthority || '')) && !/human|adapter|trusted|review/i.test(String(target.applyAuthority || ''))) {
+        add('warn', 'kiwe-bindings.json appears to claim direct apply authority. Dynamic pass output should be a binding plan unless a trusted Kiwe/Bricks apply tool actually ran.', rel(bindingPath));
+      }
+      const queries = Array.isArray(bindingJson.queries) ? bindingJson.queries : [];
+      for (const query of queries) {
+        const q = query && query.bricks && typeof query.bricks === 'object' ? query.bricks : {};
+        if (!q.objectType) {
+          add('warn', `Binding query "${query && query.id ? query.id : 'unnamed'}" is missing bricks.objectType. Use the Site Graph/Bricks query-loop types.`, rel(bindingPath));
+        }
+        const taxValues = []
+          .concat(Array.isArray(q.tax_query) ? q.tax_query : [])
+          .concat(Array.isArray(q.tax_query_not) ? q.tax_query_not : []);
+        for (const value of taxValues) {
+          if (typeof value === 'string' && !/^[a-z0-9_-]+::\d+$/i.test(value)) {
+            add('warn', `Binding query "${query && query.id ? query.id : 'unnamed'}" uses taxonomy filter "${value}". Bricks taxonomy filters should use taxonomy::term_id from the Site Graph.`, rel(bindingPath));
+          }
+        }
+      }
+      const review = Array.isArray(bindingJson.requiresHumanReview) ? bindingJson.requiresHumanReview : [];
+      if (/placeholder|TODO|guess|unknown/i.test(JSON.stringify(bindingJson)) && review.length === 0) {
+        add('warn', 'Binding plan contains placeholder/unknown/guess language but requiresHumanReview is empty.', rel(bindingPath));
+      }
+    }
+  }
+}
+
 const themeJsonFiles = files.filter((file) => path.basename(file) === 'theme.json');
 for (const file of themeJsonFiles) {
   let json;

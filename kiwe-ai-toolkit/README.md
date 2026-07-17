@@ -32,6 +32,8 @@ node bin/kiwe.js start combined --brief "Netflix-like ultra-modern news website 
 node bin/kiwe.js context combined
 node bin/kiwe.js create combined ./out/my-kiwe-handoff --name my-kiwe-handoff
 node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
+node bin/kiwe.js dynamic-context
+node bin/kiwe.js dynamic-pass --brief "Turn approved product rails into Bricks query-loop binding plans using the supplied Site Graph."
 ```
 
 ## For external AIs and designers
@@ -132,6 +134,40 @@ Example MCP client entry:
 - `kiwe_create_handoff`
 - `kiwe_validate_handoff`
 - `kiwe_list_class_vocabulary`
+- `kiwe_get_dynamic_context`
+- `kiwe_start_dynamic_pass`
+
+## Dynamic WordPress/Bricks binding pass
+
+After a website/page or combined handoff passes visual/toolkit audit, use the dynamic pass to bind it to a real WordPress site:
+
+1. Export/read the target site's admin-only Site Graph:
+
+```text
+GET /wp-json/dsa/v1/site-graph?sampleLimit=8
+```
+
+On WordPress 7+ with Abilities API available, Kiwe also exposes:
+
+```text
+dsa/get-site-graph
+```
+
+2. Give the AI only:
+
+- the current handoff files;
+- the Site Graph JSON;
+- `kiwe_get_dynamic_context` or `kiwe_start_dynamic_pass`.
+
+3. The AI should add:
+
+```text
+bricks-bindings/
+  kiwe-bindings.json
+  BINDING-NOTES.md
+```
+
+This is a binding plan, not a direct mutation. It maps placeholder rails/cards/buttons to Bricks query loops, dynamic data tags, and Kiwe launchers using real site terms/pages/products. Later trusted apply adapters can use Bricks 2.4 abilities to convert/import/apply after validation.
 
 ## Output modes
 

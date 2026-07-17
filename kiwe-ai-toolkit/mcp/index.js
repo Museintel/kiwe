@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, getContext, listClassVocabulary, listModes, startProject, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, startDynamicPass, startProject, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -68,6 +68,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: 'kiwe_list_class_vocabulary',
       description: 'Return Seam Class Vocabulary groups/classes for Bricks/global-class authoring.',
       inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_get_dynamic_context',
+      description: 'Return Kiwe dynamic binding context for revising a passed handoff with WordPress/Bricks/Woo query loops and dynamic data using a target Site Graph.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_start_dynamic_pass',
+      description: 'Start a v5-style dynamic binding pass from a plain-language request, current handoff summary, and Site Graph summary.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          brief: { type: 'string', description: 'Plain-language dynamic binding request.' },
+          siteGraphSummary: { type: 'string', description: 'Short summary of the supplied kiwe.site-graph.v1 JSON.' },
+          currentHandoffSummary: { type: 'string', description: 'Short summary of the current handoff being revised.' }
+        },
+        required: ['brief']
+      }
     }
   ]
 }));
@@ -93,6 +111,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_list_class_vocabulary':
       result = listClassVocabulary();
+      break;
+    case 'kiwe_get_dynamic_context':
+      result = getDynamicContext();
+      break;
+    case 'kiwe_start_dynamic_pass':
+      result = startDynamicPass(args);
       break;
     default:
       throw new Error(`Unknown tool: ${request.params.name}`);

@@ -4,6 +4,7 @@ namespace DSA;
 
 use DSA\Admin\Admin;
 use DSA\AI\Copilot_Service;
+use DSA\AI\Site_Graph_Service;
 use DSA\Bricks\Bricks_Integration;
 use DSA\Commerce\Cart_Payload_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -45,6 +46,7 @@ use DSA\Rest\Checkout_Controller;
 use DSA\Rest\Settings_Controller;
 use DSA\Rest\Search_Controller;
 use DSA\Rest\Saved_Items_Controller;
+use DSA\Rest\Site_Graph_Controller;
 use DSA\Rest\Editorial_Envelope_Controller;
 use DSA\Rest\Apex_Profile_Controller;
 use DSA\Rest\Runtime_Hydration_Controller;
@@ -103,6 +105,7 @@ final class Plugin {
 	private $editorial_fragments;
 	private $asset_build;
 	private $apex_acceptance;
+	private $site_graph;
 
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
@@ -127,7 +130,8 @@ final class Plugin {
 		$this->trust      = new Trust_Service();
 		$this->flow_guard = new Flow_Guard();
 		$this->triggers   = new Trigger_Service();
-		$this->native     = new Native_Service( $this->settings, $this->registry, $this->trust );
+		$this->site_graph = new Site_Graph_Service( $this->settings, $this->modules );
+		$this->native     = new Native_Service( $this->settings, $this->registry, $this->trust, $this->site_graph );
 		$this->copilot    = new Copilot_Service( $this->settings, $this->registry, $this->trust, $this->native );
 		$this->commerce   = new Commerce_Context_Service( $this->linked_products );
 		$this->cod_gate   = new COD_Gate_Service( $this->settings );
@@ -200,6 +204,7 @@ final class Plugin {
 		( new Push_Controller( $this->push ) )->register();
 		( new Admin_Notifications_Controller( $this->admin_notifications ) )->register();
 		( new Settings_Controller( $this->settings, $this->registry, $this->trust, $this->modules, $this->native, $this->copilot, $this->reviews ) )->register();
+		( new Site_Graph_Controller( $this->site_graph ) )->register();
 		( new Search_Controller( $this->search ) )->register();
 		( new Saved_Items_Controller( $this->saved_items ) )->register();
 		( new Editorial_Envelope_Controller( $this->editorial_fragments ) )->register();

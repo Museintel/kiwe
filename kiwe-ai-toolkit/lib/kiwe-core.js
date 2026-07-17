@@ -190,6 +190,14 @@ export function getContext(mode = 'website') {
   return parts.filter(Boolean).join('\n\n').trim() + '\n';
 }
 
+export function getDynamicContext() {
+  const context = readMaybe('contexts/dynamic-lite.md');
+  if (!context) {
+    throw new Error('Dynamic binding context was not found.');
+  }
+  return context.trim() + '\n';
+}
+
 export function listClassVocabulary() {
   const candidates = [
     'packs/website-builder/contracts/seam-class-vocabulary.json',
@@ -252,6 +260,36 @@ export function startProject({ mode = 'auto', brief = '', name = '' } = {}) {
   ];
 
   return parts.filter(Boolean).join('\n').trim() + '\n';
+}
+
+export function startDynamicPass({ brief = '', siteGraphSummary = '', currentHandoffSummary = '' } = {}) {
+  const humanBrief = String(brief || '').trim() || 'Revise the current Kiwe handoff into a WordPress/Bricks dynamic binding pass.';
+  const graphSummary = String(siteGraphSummary || '').trim() || 'No Site Graph summary supplied. Ask for the target site kiwe.site-graph.v1 JSON before creating bindings.';
+  const handoffSummary = String(currentHandoffSummary || '').trim() || 'No current handoff summary supplied. Inspect only the handoff files the human provides.';
+
+  return [
+    '# Kiwe dynamic binding pass',
+    '',
+    'Use this response after the website/page and optional AppShell theme already pass the normal Kiwe audit.',
+    '',
+    '## Human brief',
+    '',
+    humanBrief,
+    '',
+    '## Current handoff summary',
+    '',
+    handoffSummary,
+    '',
+    '## Site Graph summary',
+    '',
+    graphSummary,
+    '',
+    '## Required behavior',
+    '',
+    'Use the full target Site Graph JSON supplied by the human. Do not guess missing WordPress, WooCommerce, Bricks, or Kiwe details. Add a bricks-bindings/ folder with a binding plan and notes. Do not mutate WordPress or Bricks unless a trusted apply tool actually runs.',
+    '',
+    getDynamicContext()
+  ].join('\n').trim() + '\n';
 }
 
 function safeName(value, fallback) {

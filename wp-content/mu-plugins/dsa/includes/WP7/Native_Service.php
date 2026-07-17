@@ -2,6 +2,7 @@
 
 namespace DSA\WP7;
 
+use DSA\AI\Site_Graph_Service;
 use DSA\Element_Registry;
 use DSA\Settings;
 use DSA\Trust\Trust_Service;
@@ -17,8 +18,8 @@ final class Native_Service {
 	private $bindings;
 	private $dataviews;
 
-	public function __construct( Settings $settings, Element_Registry $registry, Trust_Service $trust ) {
-		$this->abilities     = new Abilities_Service( $settings, $registry, $trust );
+	public function __construct( Settings $settings, Element_Registry $registry, Trust_Service $trust, ?Site_Graph_Service $site_graph = null ) {
+		$this->abilities     = new Abilities_Service( $settings, $registry, $trust, $site_graph );
 		$this->ai_client     = new AI_Client_Service();
 		$this->interactivity = new Interactive_Blocks_Service();
 		$this->bindings      = new Bindings_Service();

@@ -3961,7 +3961,7 @@ final class Admin {
 							<tr>
 								<th scope="row"><?php esc_html_e( 'Verified Target', 'dsa' ); ?></th>
 								<td>
-									<p><?php esc_html_e( 'Checked against Bricks 2.3.7 mini-cart element: `woocommerce-mini-cart`, `cartDetails`, `.mini-cart-link`, `.cart-detail`, and `widget_shopping_cart_content` are present.', 'dsa' ); ?></p>
+									<p><?php esc_html_e( 'Checked against the Bricks 2.3.7 mini-cart contract and source-reviewed against Bricks 2.4 beta. Bricks 2.4 adds AI abilities and MCP surfaces that Kiwe can use for future dynamic binding workflows.', 'dsa' ); ?></p>
 									<p class="description"><?php esc_html_e( 'The old snippet is treated as feature source material. DSA does not paste legacy Bricks AJAX or discount code into the MU plugin.', 'dsa' ); ?></p>
 								</td>
 							</tr>
@@ -4010,7 +4010,7 @@ final class Admin {
 										<input type="checkbox" name="bricks[add_to_cart_enhancer_enabled]" value="1" <?php checked( ! empty( $bricks['add_to_cart_enhancer_enabled'] ) ); ?> <?php disabled( ! $has_woo ); ?>>
 										<?php esc_html_e( 'Expose Bricks product add-to-cart behavior and quantity styling controls', 'dsa' ); ?>
 									</label>
-									<p class="description"><?php esc_html_e( 'Verified against Bricks 2.3.7 `product-add-to-cart`. Visual styling stays in Bricks.', 'dsa' ); ?></p>
+									<p class="description"><?php esc_html_e( 'Verified against the Bricks product add-to-cart contract. Visual styling stays in Bricks.', 'dsa' ); ?></p>
 								</td>
 							</tr>
 							<tr>
@@ -4041,7 +4041,7 @@ final class Admin {
 										<input type="checkbox" name="bricks[linked_products_controls_enabled]" value="1" <?php checked( ! empty( $bricks['linked_products_controls_enabled'] ) ); ?> <?php disabled( ! $has_woo ); ?>>
 										<?php esc_html_e( 'Expose Kiwe FBT and recommendation controls in Bricks', 'dsa' ); ?>
 									</label>
-									<p class="description"><?php esc_html_e( 'Verified against Bricks 2.3.7 `woocommerce-mini-cart` and `product-upsells`. Bricks owns card styling; Kiwe supplies safe cart recommendations and source presets.', 'dsa' ); ?></p>
+									<p class="description"><?php esc_html_e( 'Verified against Bricks `woocommerce-mini-cart` and `product-upsells`. Bricks owns card styling; Kiwe supplies safe cart recommendations and source presets.', 'dsa' ); ?></p>
 								</td>
 							</tr>
 						</tbody>
@@ -5102,7 +5102,7 @@ final class Admin {
 			'prefer_bricks_native_cart' => ! empty( $input['prefer_bricks_native_cart'] ),
 			'quantity_stepper_enabled'  => ! empty( $input['quantity_stepper_enabled'] ),
 			'stock_badge_enabled'       => ! empty( $input['stock_badge_enabled'] ),
-			'verified_version'          => '2.3.7',
+			'verified_version'          => '2.4-beta-source-reviewed',
 		];
 	}
 

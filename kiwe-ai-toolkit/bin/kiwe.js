@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, getContext, listClassVocabulary, listModes, startProject, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, startDynamicPass, startProject, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -19,6 +19,8 @@ Commands:
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
   kiwe validate <website|theme|combined> <output-dir>
   kiwe vocabulary
+  kiwe dynamic-context
+  kiwe dynamic-pass --brief text [--site-graph-summary text] [--handoff-summary text]
 `);
 }
 
@@ -40,6 +42,16 @@ try {
     print(getContext(args[0] || 'website'));
   } else if (command === 'vocabulary') {
     print(listClassVocabulary());
+  } else if (command === 'dynamic-context') {
+    print(getDynamicContext());
+  } else if (command === 'dynamic-pass') {
+    const briefIndex = args.indexOf('--brief');
+    const graphIndex = args.indexOf('--site-graph-summary');
+    const handoffIndex = args.indexOf('--handoff-summary');
+    const brief = briefIndex >= 0 ? args[briefIndex + 1] : '';
+    const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
+    const currentHandoffSummary = handoffIndex >= 0 ? args[handoffIndex + 1] : '';
+    print(startDynamicPass({ brief, siteGraphSummary, currentHandoffSummary }));
   } else if (command === 'create') {
     const mode = args[0] || 'website';
     const outputDir = args[1] || '';

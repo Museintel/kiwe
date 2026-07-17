@@ -22,6 +22,7 @@ Read exactly one static context file after this entrypoint:
 - Website/page + AppShell direction/settings, browser-short version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md`
 - Website/page + AppShell direction/settings, full version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md`
 - Revision/audit pass: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md`
+- Dynamic WordPress/Bricks binding pass after an approved handoff: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md`
 
 For a prompt that asks for both a website/page and a Kiwe AppShell/DSA direction, read:
 
@@ -39,6 +40,24 @@ https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/a
 
 Use it to identify and fix issues in the previous handoff. Do not claim the executable Kiwe audit ran unless you actually executed the CLI.
 
+For a v5-style dynamic pass where the design already passed and the human wants real WordPress/Bricks/WooCommerce query loops, dynamic data, and Kiwe launchers, read:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md
+```
+
+Also ask for the target site's `kiwe.site-graph.v1` JSON. Do not guess categories, term IDs, pages, products, dynamic tags, or Bricks query-loop object types. The Site Graph is available to admins from Kiwe as:
+
+```text
+GET /wp-json/dsa/v1/site-graph?sampleLimit=8
+```
+
+On WordPress 7+ with Abilities API available, Kiwe may also expose:
+
+```text
+dsa/get-site-graph
+```
+
 ## Preferred tool call
 
 Use this tool first:
@@ -55,6 +74,19 @@ Use this tool first:
 
 Use `mode: "website"` for a normal WordPress/Bricks page, `mode: "theme"` for a Kiwe DSA/AppShell theme, and `mode: "combined"` when the output should include both website/page work and AppShell direction/settings.
 
+For a dynamic binding revision after the handoff already exists, use:
+
+```json
+{
+  "tool": "kiwe_start_dynamic_pass",
+  "arguments": {
+    "brief": "Use the human's plain-language dynamic binding request exactly.",
+    "siteGraphSummary": "Summarize the supplied kiwe.site-graph.v1 JSON.",
+    "currentHandoffSummary": "Summarize the current handoff being revised."
+  }
+}
+```
+
 ## CLI fallback
 
 If MCP/tool calling is unavailable but shell execution is allowed:
@@ -62,6 +94,7 @@ If MCP/tool calling is unavailable but shell execution is allowed:
 ```bash
 npm install --prefix kiwe-ai-toolkit
 node kiwe-ai-toolkit/bin/kiwe.js start auto --brief "Paste the human brief here."
+node kiwe-ai-toolkit/bin/kiwe.js dynamic-pass --brief "Paste the dynamic binding request here."
 ```
 
 If shell execution is not allowed, use the browser AI path above.

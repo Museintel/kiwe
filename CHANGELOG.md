@@ -2,6 +2,14 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## Unreleased - 2026-07-17
+
+- Began the Kiwe AI/connector integration track for dynamic WordPress + Bricks handoffs.
+- Added the read-only `kiwe.site-graph.v1` service with admin-only REST access at `/wp-json/dsa/v1/site-graph` and a WordPress 7 Abilities API surface as `dsa/get-site-graph` when abilities are available.
+- Added `connector-system/` as the third portable brain beside `ui-system/` and `framework-system/`, documenting how accepted Seam/AppShell handoffs become Bricks query-loop and dynamic-data binding plans without giving AI cart/search/auth/checkout/runtime authority.
+- Added `kiwe-ai-toolkit/contexts/dynamic-lite.md`, CLI commands, and MCP tools for v5-style dynamic binding passes that consume a target Site Graph instead of guessing site categories, products, pages, Bricks dynamic tags, or query-loop object types.
+- Source-reviewed local Bricks 2.4 beta AI abilities, query-loop, dynamic-data, HTML/CSS conversion, global-query, Woo setup, and import/export surfaces; updated Kiwe Bricks admin copy/version marker to reflect the 2.4 beta source review while preserving existing Bricks compatibility boundaries.
+
 ## 0.5.75 - 2026-07-16
 
 - Completed the Seam/Kiwe Framework integration track: production-safe Seam CSS, canonical vocabulary, protected DSA shadow landmarks, public adoption map, runtime inspection helpers, and DSA-safe public class adoption for low-risk text/price landmarks.
