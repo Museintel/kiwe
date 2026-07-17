@@ -169,11 +169,13 @@ combined-kiwe-handoff/
   website/bricks-notes.md
   appshell-theme/import/theme-id/theme.json
   appshell-theme/import/theme-id/css/theme.css
-  appshell-theme/preview/index.html
-  appshell-theme/preview/PLACEHOLDERS.md
+  appshell-theme/preview/index.html          # optional technical fixture only
+  appshell-theme/preview/PLACEHOLDERS.md     # optional technical fixture only
   kiwe-settings/               # optional profile/settings lane
   KIWE_CONTEXT.md
 ```
+
+Combined mode has one primary visual review: `combined-preview/index.html`. It must show the website/page behind the Kiwe AppShell and include AppShell variation controls there. Do not make reviewers open a separate website preview and a separate AppShell preview to understand the paired design.
 
 ## Naming
 

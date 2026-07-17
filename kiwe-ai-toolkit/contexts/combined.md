@@ -297,7 +297,9 @@ If a theme does not cover a screen, remove that screen from `screens`. Do not ad
 
 # AppShell preview quick contract
 
-If your output includes `appshell-theme/preview/index.html`, it must prove the theme against Kiwe's actual preview selectors and Geometry Engine states. A pretty mock phone is not enough.
+For theme-only mode, `appshell-theme/preview/index.html` must prove the theme against Kiwe's actual preview selectors and Geometry Engine states. A pretty mock phone is not enough.
+
+For combined mode, `combined-preview/index.html` is the single primary visual proof. Put the website/page behind the Kiwe AppShell and put the AppShell variation controls there. A separate `appshell-theme/preview/index.html` is optional technical proof only.
 
 Minimum preview shell requirements:
 
@@ -317,6 +319,8 @@ Minimum preview shell requirements:
 - If `supports` includes dark mode, include `data-kiwe-theme="dark"`.
 - Link the importable CSS from `../import/[theme-id]/css/theme.css`; the preview must demonstrate the real import CSS.
 - Keep preview controls outside the app viewport, preferably using `kiwe-preview-toolbar` and `kiwe-preview-stage`.
+- Navigation bar is a separate presentation mode, not horizontal dock orientation. `data-dsa-dock-presentation="navbar"` is distinct from `data-dsa-dock-presentation="dock"` plus `data-dsa-dock-orientation="horizontal"`.
+- Classic surface mode must prove the full app viewport unless the live Geometry Engine setting explicitly defines a narrower surface. Do not use a 390px side drawer as the only Classic proof.
 
 Required screen selectors when the theme manifest lists these screens:
 
@@ -341,7 +345,7 @@ Links site score is optional. The preview and README must show/document both:
 
 Combined website/page + AppShell previews must match the site type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses unless the brief/settings include commerce or membership. It is good to innovate with existing `ai` and `notifications` screens, but only as presentation over Kiwe-owned payloads/actions.
 
-Responsive fit is mandatory. Check narrow mobile widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
+Responsive fit is mandatory. Prove Geometry Engine profiles for desktop, tablet, and mobile, then add narrow mobile stress widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
 
 The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, spacing inside content, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
 
@@ -718,6 +722,8 @@ Build the preview like this:
 - Use Geometry Engine variables such as `--dsa-dock-control-size`, `--dsa-dock-ai-size`, `--dsa-dock-only-reserve`, `--dsa-screen-block-reserve`, and the dock shape radius variables.
 - Include preview controls for switching at least light/dark, sheet/classic, viewport size, full compact dock, split compact dock, Navigation bar, and dock shape if the theme claims support for those modes.
 - Keep all preview controls outside `.dsa-surface`.
+- For combined website/page + AppShell handoffs, put these controls in `combined-preview/index.html`. The combined preview is the primary visual proof. A separate `appshell-theme/preview/index.html` is optional technical proof only and must not be the only place where dock modes, shapes, Classic, or device profiles are tested.
+- If the combined preview loads `website/bricks-paste.html` in an iframe, add preview-only bridge JavaScript so canonical page/header launchers such as `data-dsa-open-module="cart"`, `data-dsa-open-module="profile"`, and `data-dsa-open-module="search"` open the corresponding preview DSA screen.
 
 The preview should demonstrate:
 
@@ -739,7 +745,11 @@ Use natural placeholder data. Do not fill the UI with debug labels.
 
 For combined website/page + AppShell handoffs, match the visible AppShell preset to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only show commerce/account screens when the brief, Kiwe settings profile, or site business model requires them. However, the importable theme must still skin those registered screens through shared theme language so a site owner can enable them later without visual breakage. If an optional screen is hidden in the current preset, document that it is supported but hidden in the README/settings notes.
 
-Responsive fit is a hard quality gate. The standalone preview must be checked at narrow mobile widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling unless the element is an intentional rail such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
+Navigation bar is not a horizontal dock. `data-dsa-dock-presentation="navbar"` is a distinct presentation mode. Horizontal and vertical are dock orientations under `data-dsa-dock-presentation="dock"`. Split dock applies only when presentation is `dock`.
+
+Classic mode must prove full app-viewport coverage unless a live Kiwe setting explicitly narrows it. Do not use a 390px side drawer as the only Classic proof.
+
+Responsive fit is a hard quality gate. The standalone/combined preview must prove desktop, tablet, and mobile Geometry Engine profiles, then also check narrow mobile stress widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling unless the element is an intentional rail such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
 
 Also demonstrate "absent optional data" states. At minimum, include a Links screen state where site score is missing and therefore not rendered at all.
 
@@ -838,6 +848,10 @@ Keep four layers separate:
 
 The preview may simulate data, screen switching, light/dark mode, viewport profiles, sheet/classic presentation, full compact dock, split compact dock, Navigation bar presentation, and placeholder commerce/account/search states. It must not simulate real cart mutation, checkout/payment, PhoneKey, Push subscription, service-worker behavior, Bricks queries, reward verification, or browser history ownership. Marketplace manifests may describe support as `navigation-bar`, but production preview markup must use the runtime attribute value `data-dsa-dock-presentation="navbar"`.
 
+For combined website/page + AppShell handoffs, `combined-preview/index.html` is the single primary visual proof. It must show the website/page behind the AppShell and include the variation controls there. A separate AppShell-only preview is optional technical proof only; do not make it the only place where dock modes, dock shapes, Classic, or responsive profiles are reviewed.
+
+If the combined preview loads `website/bricks-paste.html` in an iframe, add preview-only bridge JavaScript for canonical page/header launchers such as `data-dsa-open-module="cart"`, `data-dsa-open-module="profile"`, and `data-dsa-open-module="search"`. The bridge is only for the preview; live WordPress behavior remains Kiwe-owned.
+
 ## Geometry rules for preview HTML
 
 The preview shell should mimic Kiwe geometry by setting production-style attributes and CSS variables on the Surface root:
@@ -881,9 +895,11 @@ When previewing split dock, add the same runtime classes the production renderer
 </div>
 ```
 
-Split dock applies only when `data-dsa-dock-presentation="dock"`. A navigation bar must ignore split styling even if a preview toggle accidentally leaves `dsa-dock-split` on the root. Full compact dock, split compact dock, and Navigation bar are core dock modes; a theme may style their material, radius, badge treatment, and spacing, but may not convert one mode into another. If a handoff claims dock styling, preview pill (`dsa-dock-shape-pill`), rounded box (`dsa-dock-shape-box`), and square/no-radius (`dsa-dock-shape-square`) so reviewers can see the shape controls actually work.
+Split dock applies only when `data-dsa-dock-presentation="dock"`. A navigation bar must ignore split styling even if a preview toggle accidentally leaves `dsa-dock-split` on the root. Navigation bar is not a horizontal dock: `navbar` is a separate presentation mode, while `horizontal` and `vertical` are orientation states for compact dock. Full compact dock, split compact dock, and Navigation bar are core dock modes; a theme may style their material, radius, badge treatment, and spacing, but may not convert one mode into another. If a handoff claims dock styling, preview pill (`dsa-dock-shape-pill`), rounded box (`dsa-dock-shape-box`), and square/no-radius (`dsa-dock-shape-square`) so reviewers can see the shape controls actually work.
 
-Do not replace Geometry Engine behavior with one-off hardcoded offsets like `right: 94px`, `width: min(780px, 100%)`, or a fixed toolbar overlay. If a preview needs controls, place them outside the app viewport or reserve space for them above the preview. Mixed-content rows such as logo plus optional score, social links, Shop/Cart actions, and metrics must wrap or rebalance before text becomes unreadable; shrinking labels into fragments is a preview and theme failure. If the Links payload has no site score, omit the score badge entirely. Do not render `0`, a blank white card, or placeholder score copy.
+Do not replace Geometry Engine behavior with one-off hardcoded offsets like `right: 94px`, `width: min(780px, 100%)`, or a fixed toolbar overlay. Classic mode must prove full app-viewport coverage unless a live Kiwe setting explicitly narrows it; a 390px side drawer is not sufficient Classic proof. If a preview needs controls, place them outside the app viewport or reserve space for them above the preview. Mixed-content rows such as logo plus optional score, social links, Shop/Cart actions, and metrics must wrap or rebalance before text becomes unreadable; shrinking labels into fragments is a preview and theme failure. If the Links payload has no site score, omit the score badge entirely. Do not render `0`, a blank white card, or placeholder score copy.
+
+Responsive proof must include desktop, tablet, and mobile Geometry Engine profiles, then add narrow stress cases such as 320px, 360px, and 390px. A preview that only tests phone widths is incomplete.
 
 ## Preview controls
 
@@ -1087,7 +1103,7 @@ combined-kiwe-handoff/
         theme.json
         css/
           theme.css
-    preview/
+    preview/                  # optional technical fixture only; not required for combined mode
       index.html
       PLACEHOLDERS.md
   kiwe-settings/
@@ -1098,6 +1114,9 @@ combined-kiwe-handoff/
 Rules:
 
 - `combined-preview/index.html` is the primary review artifact. It should show the website/page behind the Kiwe DSA dock/sheet/screen, using the AppShell theme CSS and realistic placeholder data.
+- Combined mode should have one primary preview, not separate website and AppShell visual reviews. Put the variation controls in `combined-preview/index.html` so the reviewer can test the page and AppShell together.
+- The combined preview must prove: page/header `data-dsa-open-module` launchers, dock buttons, full compact dock, split compact dock, Navigation bar, horizontal and vertical dock orientation, Sheet and Classic surface modes, light/dark, pill/rounded-box/square dock shapes, desktop/tablet/mobile Geometry Engine profiles, and narrow mobile stress widths.
+- If `website/bricks-paste.html` is loaded inside an iframe, preview-only JS must bridge canonical page/header launchers such as `data-dsa-open-module="cart"` and `data-dsa-open-module="profile"` into the preview AppShell. In live WordPress, Kiwe owns that behavior; in the combined preview, the bridge only proves the handoff.
 - Keep the website/page CSS and AppShell theme CSS separate.
 - The website lane must include `website/bricks-paste.html`. This is the Bricks copy/paste artifact. Do not return only a React/Vite app, screenshot, Markdown spec, or preview without the paste-ready file.
 - The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page itself. `website/bricks-paste.html` must be page-only: no `data-dsa-surface`, DSA dock, DSA sheet/screen markup, AppShell preview controller, or Kiwe runtime mock belongs in the Bricks paste artifact.
@@ -1105,10 +1124,11 @@ Rules:
 - Website CSS may use Seam Class Vocabulary and Bricks-friendly classes.
 - AppShell theme CSS may style DSA theme selectors and allowed public Seam classes according to `ui-system/`.
 - Do not create a separate `website/preview/index.html` by default. `website/bricks-paste.html` is the website/page preview and the Bricks import artifact. Only add split website preview assets if the human explicitly asks for them.
-- The separate `appshell-theme/preview/index.html` is a technical fixture for AppShell validator proof. It is not the primary combined-mode visual review.
+- A separate `appshell-theme/preview/index.html` is optional in combined mode. If included, label it as a technical fixture only. Do not make it the only place where dock shape, Navigation bar, Classic, or device profiles are tested.
 - The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/Woo/Bricks-owned.
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.
+- Navigation bar is not a horizontal dock. `dock.presentation="navbar"` is a separate core presentation mode; `horizontal` and `vertical` are dock orientation states. Split dock applies only when presentation is `dock`.
 
 ## Page-to-AppShell hooks
 

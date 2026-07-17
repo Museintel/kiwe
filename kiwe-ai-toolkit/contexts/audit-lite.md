@@ -39,13 +39,16 @@ For a combined handoff, verify:
 - `website/bricks-notes.md` exists.
 - `appshell-theme/import/<theme-id>/theme.json` exists.
 - `appshell-theme/import/<theme-id>/css/theme.css` exists.
-- `appshell-theme/preview/index.html` exists as a technical selector/state fixture.
-- `appshell-theme/preview/PLACEHOLDERS.md` explicitly says all mock data/content is preview-only.
+- `combined-preview/index.html` is the single primary visual proof for combined mode. It must include the page and AppShell together with variation controls.
+- `appshell-theme/preview/index.html` is optional in combined mode. If it exists, it is only a technical selector/state fixture and must not be the only place where dock modes, dock shapes, Classic, or responsive profiles are reviewed.
+- Any preview placeholder documentation explicitly says all mock data/content is preview-only.
 - `kiwe-settings/` exists when the design changes dock composition, focus item, module visibility/order, presentation, shape, or other Kiwe runtime settings.
 
 For website-only mode, do not output duplicate preview folders unless explicitly requested. `website/bricks-paste.html` is both browser preview and Bricks paste/import artifact.
 
 For combined mode, do not duplicate the website inside the AppShell import package. The AppShell is runtime chrome around the page, not part of the Bricks page.
+
+Do not create separate human review previews for the website and AppShell in combined mode. The reviewer should open one combined preview and see the website/page behind the Kiwe AppShell.
 
 ## Website / Bricks audit
 
@@ -217,6 +220,7 @@ Verify:
 - split compact dock works;
 - navigation bar works;
 - split dock is disabled/irrelevant when presentation is `navbar`;
+- Navigation bar is not just horizontal dock. `dock.presentation="navbar"` is a separate mode; `horizontal` and `vertical` are compact dock orientations.
 - horizontal and vertical orientation work;
 - `pill`, `box`, and `square` shapes visibly differ;
 - square/no-rounded shape is genuinely square or near-zero radius;
@@ -259,6 +263,9 @@ Checkout CTA and AI chat placeholder must flow with panel content and not float 
 
 Check narrow widths around:
 
+- desktop Geometry Engine profile, e.g. 1280px or wider;
+- tablet Geometry Engine profile, e.g. 768px-1024px;
+- mobile Geometry Engine profile, e.g. 390px;
 - 320px
 - 360px
 - 390px
@@ -282,6 +289,30 @@ Preview-only JS must not:
 - use localStorage/sessionStorage for capability state.
 
 Combined preview should show the website/page behind the Kiwe AppShell. It should not replace the website artifact, and the website artifact must remain page-only.
+
+Combined preview must include variation controls in the same preview for:
+
+- desktop/tablet/mobile Geometry Engine profiles and narrow stress widths;
+- Sheet and Classic modes;
+- full compact dock, split compact dock, and Navigation bar;
+- horizontal and vertical dock orientation;
+- pill, rounded box, and square/no-radius dock shapes;
+- light/dark;
+- score present and score absent when Links is in scope.
+
+If the website/page is loaded in an iframe and `website/bricks-paste.html` contains `data-dsa-open-module`, the combined preview needs preview-only bridge JavaScript so header/page Profile, Cart, Search, and Menu launchers open the matching DSA screen/sheet in the preview. Do not claim this passed unless you clicked or otherwise verified the launchers.
+
+Classic mode must prove full app-viewport coverage unless a live Kiwe setting explicitly narrows it. Do not use a 390px side drawer as the only Classic proof.
+
+Manual smoke tests that should be reported:
+
+- page/header Profile launcher opens Profile surface;
+- page/header Cart or Bag launcher opens Cart surface when commerce is in scope;
+- page/header Search launcher opens Search surface;
+- dock modules open the matching surfaces;
+- close affordance closes the surface;
+- Menu context anchors scroll to real page sections/headings;
+- shape/presentation/device controls visibly change the preview without horizontal overflow.
 
 ## Report format
 

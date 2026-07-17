@@ -226,6 +226,8 @@ Build the preview like this:
 - Use Geometry Engine variables such as `--dsa-dock-control-size`, `--dsa-dock-ai-size`, `--dsa-dock-only-reserve`, `--dsa-screen-block-reserve`, and the dock shape radius variables.
 - Include preview controls for switching at least light/dark, sheet/classic, viewport size, full compact dock, split compact dock, Navigation bar, and dock shape if the theme claims support for those modes.
 - Keep all preview controls outside `.dsa-surface`.
+- For combined website/page + AppShell handoffs, put these controls in `combined-preview/index.html`. The combined preview is the primary visual proof. A separate `appshell-theme/preview/index.html` is optional technical proof only and must not be the only place where dock modes, shapes, Classic, or device profiles are tested.
+- If the combined preview loads `website/bricks-paste.html` in an iframe, add preview-only bridge JavaScript so canonical page/header launchers such as `data-dsa-open-module="cart"`, `data-dsa-open-module="profile"`, and `data-dsa-open-module="search"` open the corresponding preview DSA screen.
 
 The preview should demonstrate:
 
@@ -247,7 +249,11 @@ Use natural placeholder data. Do not fill the UI with debug labels.
 
 For combined website/page + AppShell handoffs, match the visible AppShell preset to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only show commerce/account screens when the brief, Kiwe settings profile, or site business model requires them. However, the importable theme must still skin those registered screens through shared theme language so a site owner can enable them later without visual breakage. If an optional screen is hidden in the current preset, document that it is supported but hidden in the README/settings notes.
 
-Responsive fit is a hard quality gate. The standalone preview must be checked at narrow mobile widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling unless the element is an intentional rail such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
+Navigation bar is not a horizontal dock. `data-dsa-dock-presentation="navbar"` is a distinct presentation mode. Horizontal and vertical are dock orientations under `data-dsa-dock-presentation="dock"`. Split dock applies only when presentation is `dock`.
+
+Classic mode must prove full app-viewport coverage unless a live Kiwe setting explicitly narrows it. Do not use a 390px side drawer as the only Classic proof.
+
+Responsive fit is a hard quality gate. The standalone/combined preview must prove desktop, tablet, and mobile Geometry Engine profiles, then also check narrow mobile stress widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling unless the element is an intentional rail such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
 
 Also demonstrate "absent optional data" states. At minimum, include a Links screen state where site score is missing and therefore not rendered at all.
 

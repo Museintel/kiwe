@@ -56,6 +56,10 @@ Keep four layers separate:
 
 The preview may simulate data, screen switching, light/dark mode, viewport profiles, sheet/classic presentation, full compact dock, split compact dock, Navigation bar presentation, and placeholder commerce/account/search states. It must not simulate real cart mutation, checkout/payment, PhoneKey, Push subscription, service-worker behavior, Bricks queries, reward verification, or browser history ownership. Marketplace manifests may describe support as `navigation-bar`, but production preview markup must use the runtime attribute value `data-dsa-dock-presentation="navbar"`.
 
+For combined website/page + AppShell handoffs, `combined-preview/index.html` is the single primary visual proof. It must show the website/page behind the AppShell and include the variation controls there. A separate AppShell-only preview is optional technical proof only; do not make it the only place where dock modes, dock shapes, Classic, or responsive profiles are reviewed.
+
+If the combined preview loads `website/bricks-paste.html` in an iframe, add preview-only bridge JavaScript for canonical page/header launchers such as `data-dsa-open-module="cart"`, `data-dsa-open-module="profile"`, and `data-dsa-open-module="search"`. The bridge is only for the preview; live WordPress behavior remains Kiwe-owned.
+
 ## Geometry rules for preview HTML
 
 The preview shell should mimic Kiwe geometry by setting production-style attributes and CSS variables on the Surface root:
@@ -99,9 +103,11 @@ When previewing split dock, add the same runtime classes the production renderer
 </div>
 ```
 
-Split dock applies only when `data-dsa-dock-presentation="dock"`. A navigation bar must ignore split styling even if a preview toggle accidentally leaves `dsa-dock-split` on the root. Full compact dock, split compact dock, and Navigation bar are core dock modes; a theme may style their material, radius, badge treatment, and spacing, but may not convert one mode into another. If a handoff claims dock styling, preview pill (`dsa-dock-shape-pill`), rounded box (`dsa-dock-shape-box`), and square/no-radius (`dsa-dock-shape-square`) so reviewers can see the shape controls actually work.
+Split dock applies only when `data-dsa-dock-presentation="dock"`. A navigation bar must ignore split styling even if a preview toggle accidentally leaves `dsa-dock-split` on the root. Navigation bar is not a horizontal dock: `navbar` is a separate presentation mode, while `horizontal` and `vertical` are orientation states for compact dock. Full compact dock, split compact dock, and Navigation bar are core dock modes; a theme may style their material, radius, badge treatment, and spacing, but may not convert one mode into another. If a handoff claims dock styling, preview pill (`dsa-dock-shape-pill`), rounded box (`dsa-dock-shape-box`), and square/no-radius (`dsa-dock-shape-square`) so reviewers can see the shape controls actually work.
 
-Do not replace Geometry Engine behavior with one-off hardcoded offsets like `right: 94px`, `width: min(780px, 100%)`, or a fixed toolbar overlay. If a preview needs controls, place them outside the app viewport or reserve space for them above the preview. Mixed-content rows such as logo plus optional score, social links, Shop/Cart actions, and metrics must wrap or rebalance before text becomes unreadable; shrinking labels into fragments is a preview and theme failure. If the Links payload has no site score, omit the score badge entirely. Do not render `0`, a blank white card, or placeholder score copy.
+Do not replace Geometry Engine behavior with one-off hardcoded offsets like `right: 94px`, `width: min(780px, 100%)`, or a fixed toolbar overlay. Classic mode must prove full app-viewport coverage unless a live Kiwe setting explicitly narrows it; a 390px side drawer is not sufficient Classic proof. If a preview needs controls, place them outside the app viewport or reserve space for them above the preview. Mixed-content rows such as logo plus optional score, social links, Shop/Cart actions, and metrics must wrap or rebalance before text becomes unreadable; shrinking labels into fragments is a preview and theme failure. If the Links payload has no site score, omit the score badge entirely. Do not render `0`, a blank white card, or placeholder score copy.
+
+Responsive proof must include desktop, tablet, and mobile Geometry Engine profiles, then add narrow stress cases such as 320px, 360px, and 390px. A preview that only tests phone widths is incomplete.
 
 ## Preview controls
 

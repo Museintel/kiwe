@@ -92,7 +92,9 @@ If a theme does not cover a screen, remove that screen from \`screens\`. Do not 
 function appShellPreviewQuickContract() {
   return `# AppShell preview quick contract
 
-If your output includes \`appshell-theme/preview/index.html\`, it must prove the theme against Kiwe's actual preview selectors and Geometry Engine states. A pretty mock phone is not enough.
+For theme-only mode, \`appshell-theme/preview/index.html\` must prove the theme against Kiwe's actual preview selectors and Geometry Engine states. A pretty mock phone is not enough.
+
+For combined mode, \`combined-preview/index.html\` is the single primary visual proof. Put the website/page behind the Kiwe AppShell and put the AppShell variation controls there. A separate \`appshell-theme/preview/index.html\` is optional technical proof only.
 
 Minimum preview shell requirements:
 
@@ -112,6 +114,8 @@ Minimum preview shell requirements:
 - If \`supports\` includes dark mode, include \`data-kiwe-theme="dark"\`.
 - Link the importable CSS from \`../import/[theme-id]/css/theme.css\`; the preview must demonstrate the real import CSS.
 - Keep preview controls outside the app viewport, preferably using \`kiwe-preview-toolbar\` and \`kiwe-preview-stage\`.
+- Navigation bar is a separate presentation mode, not horizontal dock orientation. \`data-dsa-dock-presentation="navbar"\` is distinct from \`data-dsa-dock-presentation="dock"\` plus \`data-dsa-dock-orientation="horizontal"\`.
+- Classic surface mode must prove the full app viewport unless the live Geometry Engine setting explicitly defines a narrower surface. Do not use a 390px side drawer as the only Classic proof.
 
 Required screen selectors when the theme manifest lists these screens:
 
@@ -136,7 +140,7 @@ Links site score is optional. The preview and README must show/document both:
 
 Combined website/page + AppShell previews must match the site type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses unless the brief/settings include commerce or membership. It is good to innovate with existing \`ai\` and \`notifications\` screens, but only as presentation over Kiwe-owned payloads/actions.
 
-Responsive fit is mandatory. Check narrow mobile widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
+Responsive fit is mandatory. Prove Geometry Engine profiles for desktop, tablet, and mobile, then add narrow mobile stress widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
 
 The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set \`position: fixed\`, \`position: absolute\`, \`inset\`, \`top\`, \`right\`, \`bottom\`, \`left\`, hardcoded \`z-index\`, \`width: 100vw\`, \`height: 100vh\`, or hardcoded viewport offsets on \`[data-dsa-dock]\`, \`.dsa-dock\`, \`[data-dsa-screen]\`, \`.dsa-panel\`, \`.dsa-sheet\`, \`[data-dsa-screen-backdrop]\`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, spacing inside content, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
 
@@ -314,7 +318,7 @@ ${pageHtml}`);
   writeFile(path.join(root, 'website/bricks-notes.md'), '# Bricks notes\n\n`bricks-paste.html` is the single website/page artifact: open it in a browser for preview, then paste/import the same file through Bricks HTML-to-Bricks. Document preview-only behavior and Kiwe/WordPress/Woo/Bricks-owned interactions. Do not include generated Bricks IDs.\n');
 }
 
-function themeScaffold(root, name) {
+function themeScaffold(root, name, { includePreview = true } = {}) {
   const id = safeName(name, 'kiwe-theme');
   writeFile(path.join(root, `appshell-theme/import/${id}/theme.json`), JSON.stringify({
     schema: 'kiwe.surface-theme.v1',
@@ -327,7 +331,7 @@ function themeScaffold(root, name) {
     author: 'Kiwe AI Toolkit',
     css: ['css/theme.css'],
     assets: [],
-    screens: ['profile', 'cart', 'search', 'menu', 'saved', 'links', 'notifications', 'ios-install', 'ai'],
+    screens: ['profile', 'cart', 'checkout', 'search', 'menu', 'saved', 'links', 'notifications', 'ios-install', 'games', 'ai'],
     requires: {
       uiContract: 'kiwe.surface-ui.v2',
       tokenContract: 'kiwe.universal',
@@ -348,17 +352,19 @@ function themeScaffold(root, name) {
 `);
   writeFile(path.join(root, 'appshell-theme/README.md'), `# ${id} AppShell theme handoff
 
-This folder must contain a safe importable theme package and a standalone preview.
+This folder must contain a safe importable theme package${includePreview ? ' and a standalone preview' : ''}.
 
 Validate with:
 
 \`\`\`bash
 node tools/ui-theme/validate-package.cjs appshell-theme/import/${id}
-node tools/ui-theme/validate-handoff.cjs appshell-theme
+${includePreview ? 'node tools/ui-theme/validate-handoff.cjs appshell-theme' : 'node kiwe-ai-toolkit/tools/validate-output.cjs . --mode combined'}
 \`\`\`
 `);
-  writeFile(path.join(root, 'appshell-theme/preview/index.html'), '<!doctype html><html lang="en"><meta charset="utf-8"><title>Kiwe AppShell theme preview</title><body><p>Build standalone visual preview here. Link the import CSS.</p></body></html>\n');
-  writeFile(path.join(root, 'appshell-theme/preview/PLACEHOLDERS.md'), '# Preview placeholders\n\nDocument mock products, account names, orders, links, scores, and AI data here. None of this belongs in the importable theme package.\n');
+  if (includePreview) {
+    writeFile(path.join(root, 'appshell-theme/preview/index.html'), '<!doctype html><html lang="en"><meta charset="utf-8"><title>Kiwe AppShell theme preview</title><body><p>Build standalone visual preview here. Link the import CSS.</p></body></html>\n');
+    writeFile(path.join(root, 'appshell-theme/preview/PLACEHOLDERS.md'), '# Preview placeholders\n\nDocument mock products, account names, orders, links, scores, and AI data here. None of this belongs in the importable theme package.\n');
+  }
 }
 
 function settingsScaffold(root) {
@@ -411,12 +417,24 @@ function combinedPreviewScaffold(root, name, brief) {
   <link rel="stylesheet" href="./assets/combined-preview.css">
 </head>
 <body>
-  <main class="kiwe-combined-preview" data-kiwe-combined-preview>
-    <section class="kiwe-combined-preview__page" aria-label="Website page preview">
-      <p class="seam-eyebrow">Combined Kiwe preview</p>
-      <h1>Replace with the finished website/page behind the DSA AppShell.</h1>
-      <p>${brief || 'This preview should show the page and Kiwe DSA theme together.'}</p>
-    </section>
+  <header class="kiwe-preview-toolbar" aria-label="Combined preview controls">
+    <button type="button" data-kiwe-preview-set-device="desktop">Desktop 1280</button>
+    <button type="button" data-kiwe-preview-set-device="tablet">Tablet 768</button>
+    <button type="button" data-kiwe-preview-set-device="mobile">Mobile 390</button>
+    <button type="button" data-kiwe-preview-set-device="narrow">Narrow 320</button>
+    <button type="button" data-kiwe-preview-set-surface-mode="sheet">Sheet</button>
+    <button type="button" data-kiwe-preview-set-surface-mode="classic">Classic</button>
+    <button type="button" data-kiwe-preview-set-presentation="dock">Dock</button>
+    <button type="button" data-kiwe-preview-set-presentation="split">Split dock</button>
+    <button type="button" data-kiwe-preview-set-presentation="navbar">Navigation bar</button>
+    <button type="button" data-kiwe-preview-set-shape="pill">Pill</button>
+    <button type="button" data-kiwe-preview-set-shape="box">Rounded box</button>
+    <button type="button" data-kiwe-preview-set-shape="square">Square</button>
+    <span role="note">Navigation bar is a separate presentation mode, not horizontal dock.</span>
+  </header>
+  <main class="kiwe-preview-stage">
+  <div class="kiwe-combined-preview kiwe-preview-viewport" data-kiwe-combined-preview data-device="desktop">
+    <iframe class="kiwe-site-frame" title="Website/Bricks artifact preview" src="../website/bricks-paste.html"></iframe>
     <section
       class="dsa-surface dsa-dock-shape-pill"
       data-dsa-surface
@@ -429,16 +447,18 @@ function combinedPreviewScaffold(root, name, brief) {
     >
       <article class="dsa-panel" data-dsa-search-panel>
         <h2>DSA sheet over page</h2>
+        <p>Preview-only AppShell proof. Header buttons in the page iframe should open this sheet through data-dsa-open-module.</p>
         <form data-dsa-search-form><input data-dsa-search-input value="Preview" aria-label="Search preview"></form>
         <div data-dsa-search-results>Preview-only result area.</div>
       </article>
       <nav class="dsa-dock" aria-label="Preview dock">
-        <button type="button">Menu</button>
-        <button type="button">Search</button>
-        <button type="button">Saved</button>
-        <button type="button">AI</button>
+        <button type="button" data-dsa-module="menu">Menu</button>
+        <button type="button" data-dsa-module="search">Search</button>
+        <button type="button" data-dsa-module="saved">Saved</button>
+        <button type="button" data-dsa-module="ai">AI</button>
       </nav>
     </section>
+  </div>
   </main>
   <script src="./assets/combined-preview.js"></script>
 </body>
@@ -452,15 +472,47 @@ body {
 }
 
 .kiwe-combined-preview {
-  min-height: 100vh;
+  width: min(1280px, 100%);
+  height: min(840px, calc(100vh - 76px));
   position: relative;
   overflow: hidden;
+  margin: 0 auto;
+  background: Canvas;
 }
 
-.kiwe-combined-preview__page {
-  min-height: 100vh;
-  padding: clamp(2rem, 7vw, 6rem);
-  font-family: var(--kiwe-font-body, system-ui, sans-serif);
+.kiwe-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.kiwe-preview-stage {
+  min-height: calc(100vh - 64px);
+  display: grid;
+  place-items: center;
+}
+
+.kiwe-site-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.kiwe-combined-preview[data-device="tablet"] {
+  width: 768px;
+  height: 920px;
+}
+
+.kiwe-combined-preview[data-device="mobile"] {
+  width: 390px;
+  height: 844px;
+}
+
+.kiwe-combined-preview[data-device="narrow"] {
+  width: 320px;
+  height: 700px;
 }
 
 .kiwe-combined-preview .dsa-surface {
@@ -473,9 +525,53 @@ body {
 .kiwe-combined-preview .dsa-dock {
   pointer-events: auto;
 }
+
+.kiwe-combined-preview [data-dsa-surface][data-kiwe-preview-surface-mode="classic"] .dsa-panel {
+  inset: 0;
+  width: auto;
+  max-height: none;
+}
 `);
   writeFile(path.join(root, 'combined-preview/assets/combined-preview.js'), `// Preview-only combined controller. Production behavior remains Kiwe/WordPress/Woo/Bricks-owned.
 document.documentElement.dataset.kiweCombinedPreview = '1';
+
+const viewport = document.querySelector('[data-kiwe-combined-preview]');
+const surface = document.querySelector('[data-dsa-surface]');
+const frame = document.querySelector('.kiwe-site-frame');
+
+document.addEventListener('click', (event) => {
+  const device = event.target.closest('[data-kiwe-preview-set-device]');
+  if (device && viewport) viewport.dataset.device = device.dataset.kiwePreviewSetDevice;
+
+  const surfaceMode = event.target.closest('[data-kiwe-preview-set-surface-mode]');
+  if (surfaceMode && surface) surface.dataset.kiwePreviewSurfaceMode = surfaceMode.dataset.kiwePreviewSetSurfaceMode;
+
+  const shape = event.target.closest('[data-kiwe-preview-set-shape]');
+  if (shape && surface) {
+    surface.classList.remove('dsa-dock-shape-pill', 'dsa-dock-shape-box', 'dsa-dock-shape-square');
+    surface.classList.add('dsa-dock-shape-' + shape.dataset.kiwePreviewSetShape);
+  }
+
+  const presentation = event.target.closest('[data-kiwe-preview-set-presentation]');
+  if (presentation && surface) {
+    const value = presentation.dataset.kiwePreviewSetPresentation;
+    surface.dataset.dsaDockPresentation = value === 'navbar' ? 'navbar' : 'dock';
+    surface.classList.toggle('dsa-dock-split', value === 'split');
+  }
+});
+
+function bridgeFrameLaunchers() {
+  if (!frame || !frame.contentDocument) return;
+  frame.contentDocument.addEventListener('click', (event) => {
+    const launcher = event.target.closest('[data-dsa-open-module]');
+    if (!launcher) return;
+    event.preventDefault();
+    if (surface) surface.dataset.kiwePreviewActiveModule = launcher.dataset.dsaOpenModule;
+  });
+}
+
+frame?.addEventListener('load', bridgeFrameLaunchers);
+bridgeFrameLaunchers();
 `);
 }
 
@@ -502,7 +598,7 @@ Run Kiwe validation before importing or installing anything.
   writeFile(path.join(root, 'KIWE_CONTEXT.md'), getContext(normalized));
 
   if (normalized === 'website' || normalized === 'combined') websiteScaffold(root, brief);
-  if (normalized === 'theme' || normalized === 'combined') themeScaffold(root, baseName);
+  if (normalized === 'theme' || normalized === 'combined') themeScaffold(root, baseName, { includePreview: normalized === 'theme' });
   if (normalized === 'combined') settingsScaffold(root);
   if (normalized === 'combined') combinedPreviewScaffold(root, baseName, brief);
 
@@ -522,8 +618,11 @@ export function validateHandoff(targetDir, mode = 'website') {
   if (normalized === 'website' || normalized === 'combined') {
     required.push('website/bricks-paste.html', 'website/bricks-notes.md');
   }
-  if (normalized === 'theme' || normalized === 'combined') {
+  if (normalized === 'theme') {
     required.push('appshell-theme/README.md', 'appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
+  }
+  if (normalized === 'combined') {
+    required.push('appshell-theme/README.md');
   }
   if (normalized === 'combined') {
     required.push('combined-preview/index.html');

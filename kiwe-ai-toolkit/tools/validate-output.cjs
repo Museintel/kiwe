@@ -26,7 +26,7 @@ const required = ['README.md', 'KIWE_CONTEXT.md'];
 if (mode === 'website' || mode === 'combined') {
   required.push('website/bricks-paste.html', 'website/bricks-notes.md');
 }
-if (mode === 'theme' || mode === 'combined') {
+if (mode === 'theme') {
   required.push('appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
 }
 if (mode === 'combined') {

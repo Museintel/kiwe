@@ -122,6 +122,60 @@ if (exists('website') && exists('appshell-theme') && !exists('combined-preview/i
   add('fail', 'Combined handoff is missing combined-preview/index.html, the primary review artifact showing the website/page behind the Kiwe DSA AppShell.');
 }
 
+const combinedPreviewPath = exists('combined-preview/index.html') ? path.join(root, 'combined-preview/index.html') : '';
+const combinedPreviewText = combinedPreviewPath ? read(combinedPreviewPath) : '';
+const combinedPreviewSupportText = textFiles
+  .filter((file) => rel(file).startsWith('combined-preview/'))
+  .map((file) => read(file))
+  .join('\n');
+const appShellPreviewPath = exists('appshell-theme/preview/index.html') ? path.join(root, 'appshell-theme/preview/index.html') : '';
+const appShellPreviewText = appShellPreviewPath ? read(appShellPreviewPath) : '';
+const appShellPreviewSupportText = textFiles
+  .filter((file) => rel(file).startsWith('appshell-theme/preview/'))
+  .map((file) => read(file))
+  .join('\n');
+
+if (combinedPreviewPath) {
+  if (appShellPreviewPath) {
+    add('warn', 'Combined handoff includes a separate appshell-theme/preview/index.html. Combined mode should use combined-preview/index.html as the single primary visual proof with page + AppShell + variation controls; AppShell-only preview should be omitted unless explicitly labelled as a technical fixture.', rel(appShellPreviewPath));
+  }
+
+  const combinedProofText = `${combinedPreviewText}\n${combinedPreviewSupportText}`;
+  const combinedShapes = new Set();
+  for (const match of combinedProofText.matchAll(/dsa-dock-shape-(pill|box|square)|data-[\w-]*(?:preview-)?set-(?:shape|dock-shape)\s*=\s*["'](pill|box|square)["']/gi)) {
+    combinedShapes.add(String(match[1] || match[2] || '').toLowerCase());
+  }
+  if (combinedShapes.size < 3) {
+    add('warn', 'combined-preview/index.html does not prove dock shape switching. Combined review must visibly cover pill, rounded box, and square/no-radius dock shapes.', rel(combinedPreviewPath));
+  }
+  if (!/data-[\w-]*(?:preview-)?set-(?:presentation|dock)|full compact|split compact|navigation bar|navbar/i.test(combinedProofText)) {
+    add('warn', 'combined-preview/index.html does not prove dock presentation switching. Combined review must cover full compact dock, split compact dock, and Navigation bar as separate core modes.', rel(combinedPreviewPath));
+  }
+  if (!/data-[\w-]*(?:preview-)?set-(?:surface|surface-mode|mode)|sheet[\s\S]{0,240}classic|classic[\s\S]{0,240}sheet/i.test(combinedProofText)) {
+    add('warn', 'combined-preview/index.html does not prove Sheet and Classic surface modes in the page + AppShell context.', rel(combinedPreviewPath));
+  }
+  if (!/(desktop|tablet|mobile|1280|1200|1024|768|640)/i.test(combinedProofText)) {
+    add('warn', 'combined-preview/index.html does not prove Geometry Engine device profiles. Include desktop, tablet, mobile, plus narrow stress widths rather than mobile-only 320/360/390 controls.', rel(combinedPreviewPath));
+  }
+  if (websiteText && /\bdata-dsa-open-module\b/i.test(websiteText) && /<iframe\b/i.test(combinedPreviewText) && !/contentDocument[\s\S]{0,1200}data-dsa-open-module|data-dsa-open-module[\s\S]{0,1200}contentDocument/i.test(combinedPreviewSupportText)) {
+    add('warn', 'website/bricks-paste.html contains data-dsa-open-module hooks and combined-preview uses an iframe, but no iframe bridge for those header/page launchers was detected. Header profile/cart/search/menu buttons must open the previewed DSA screen.', rel(combinedPreviewPath));
+  }
+  if (websiteText && /\bdata-dsa-open-module\b/i.test(websiteText) && !/(manual smoke|smoke test|clicked|verified)[\s\S]{0,240}(?:profile|account)[\s\S]{0,240}(?:cart|bag|search|menu)|(?:profile|account)[\s\S]{0,240}(?:cart|bag|search|menu)[\s\S]{0,240}(?:manual smoke|smoke test|clicked|verified)/i.test(allText)) {
+    add('warn', 'No manual smoke-test note found for page/header launchers. Combined handoffs with data-dsa-open-module should report that Profile/Account, Cart/Bag, Search, and Menu launchers were clicked or otherwise verified in combined-preview/index.html.', rel(combinedPreviewPath));
+  }
+}
+
+const allPreviewText = `${combinedPreviewText}\n${combinedPreviewSupportText}\n${appShellPreviewText}\n${appShellPreviewSupportText}`;
+if (/(?:320|360|390|430)/.test(allPreviewText) && !/(desktop|tablet|mobile|1280|1200|1024|768|640)/i.test(allPreviewText)) {
+  add('warn', 'Preview viewport controls are mobile-only. Kiwe Geometry Engine proof must include desktop, tablet, mobile profiles and may add 320/360/390 narrow stress cases.');
+}
+if (/navigation bar|navbar/i.test(allPreviewText) && !/(separate|distinct|not (?:a )?horizontal dock|not relabel|presentation mode)/i.test(allPreviewText)) {
+  add('warn', 'Preview mentions Navigation bar but does not clearly distinguish it from horizontal dock orientation. Navigation bar is a separate presentation mode; horizontal/vertical are dock orientations.');
+}
+if (/classic[\s\S]{0,320}(?:width\s*:\s*min\(\s*(?:390|430)px|left\s*:\s*auto|right\s*:\s*0)/i.test(allPreviewText)) {
+  add('warn', 'Classic surface preview appears to use a narrow side-drawer layout. Classic DSA surface proof should cover the full app viewport unless the live Geometry Engine setting explicitly says otherwise.');
+}
+
 const knownDsaModules = new Set(['menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'secure', 'notifications', 'ios-install', 'games']);
 const settingsText = textFiles
   .filter((file) => rel(file).startsWith('kiwe-settings/'))
