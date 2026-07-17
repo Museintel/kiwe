@@ -21,6 +21,7 @@ Read exactly one static context file after this entrypoint:
 - Kiwe DSA/AppShell theme only: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/theme.md`
 - Website/page + AppShell direction/settings, browser-short version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md`
 - Website/page + AppShell direction/settings, full version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md`
+- Revision/audit pass: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md`
 
 For a prompt that asks for both a website/page and a Kiwe AppShell/DSA direction, read:
 
@@ -29,6 +30,14 @@ https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/c
 ```
 
 Treat that file as the authoritative generated toolkit response. It exists so browser AIs do not need to execute repo code or read the full plugin.
+
+For v2/v3/v4-style revision prompts, read the relevant mode context first, then read:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md
+```
+
+Use it to identify and fix issues in the previous handoff. Do not claim the executable Kiwe audit ran unless you actually executed the CLI.
 
 ## Preferred tool call
 

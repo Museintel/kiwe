@@ -96,9 +96,11 @@ Some browser AIs can read public GitHub files but cannot connect MCP tools or sa
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/theme.md` for a Kiwe DSA/AppShell theme.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md` for browser models that need a short website/page plus AppShell contract.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md` for a website/page plus AppShell direction/settings.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md` for v2/v3/v4 revision and self-audit passes.
 
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
 Do not use web search to find these files; open the exact raw URL that matches the assignment mode.
+For revisions, read the mode context first, then `audit-lite.md`, and report what was found/fixed. Do not claim the executable Kiwe CLI/audit ran unless it actually executed.
 
 ## MCP
 
