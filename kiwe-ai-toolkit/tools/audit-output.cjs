@@ -42,6 +42,27 @@ const files = walk(root);
 const textFiles = files.filter((file) => /\.(html|css|js|json|md|txt|tsx|ts|jsx)$/i.test(file));
 const allText = textFiles.map((file) => `\n--- ${rel(file)} ---\n${read(file)}`).join('\n');
 const findings = [];
+let seamRoles = null;
+
+function getSeamRoles() {
+  if (seamRoles) return seamRoles;
+  seamRoles = new Set();
+  const candidates = [
+    path.join(__dirname, '..', 'packs', 'website-builder', 'contracts', 'seam-vocabulary.json'),
+    path.join(__dirname, '..', 'packs', 'appshell-theme', 'seam-vocabulary.json')
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    try {
+      const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+      for (const role of json.role || []) seamRoles.add(String(role));
+    } catch (_) {
+      // Non-fatal; audit can continue without role checks.
+    }
+    if (seamRoles.size) break;
+  }
+  return seamRoles;
+}
 
 function add(level, message, file = '') {
   findings.push({ level, message, file });
@@ -111,6 +132,22 @@ for (const [label, pattern] of forbiddenRuntime) {
 
 if (/data-dsa-save|data-dsa-open|data-dsa-cart|data-dsa-checkout/i.test(allText) && !/preview-only|placeholder/i.test(allText)) {
   add('warn', 'Kiwe capability attributes appear without clear preview-only/placeholder documentation.');
+}
+
+const roles = getSeamRoles();
+if (roles.size) {
+  for (const file of textFiles.filter((item) => /\.html?$/i.test(item))) {
+    const body = read(file);
+    const seen = new Set();
+    for (const match of body.matchAll(/\bdata-role\s*=\s*["']([^"']+)["']/gi)) {
+      for (const value of String(match[1]).split(/\s+/).filter(Boolean)) {
+        if (!roles.has(value) && !seen.has(value)) {
+          seen.add(value);
+          add('warn', `Non-standard Seam data-role value "${value}". Use official Seam roles only; use Seam classes, project classes, or data-project-role for custom concepts.`, rel(file));
+        }
+      }
+    }
+  }
 }
 
 if (/Aurora|glassmorphism|frosted|bento/i.test(allText)) {

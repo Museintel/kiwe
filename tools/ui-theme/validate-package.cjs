@@ -17,7 +17,7 @@ const forbiddenCssPatterns = [
 	{ label: 'remote url()', pattern: /url\(\s*['"]?https?:\/\//i },
 	{ label: 'data url', pattern: /url\(\s*['"]?data:/i },
 	{ label: 'javascript url', pattern: /url\(\s*['"]?javascript:/i },
-	{ label: 'fixed full-screen overlay', pattern: /position\s*:\s*fixed[\s\S]{0,240}(?:inset\s*:\s*0|width\s*:\s*100vw|height\s*:\s*100vh)/i },
+	{ label: 'fixed full-screen overlay', pattern: /position\s*:\s*fixed[\s\S]{0,240}(?:inset\s*:\s*0|(?:^|[;{]\s*)width\s*:\s*100vw|(?:^|[;{]\s*)height\s*:\s*100vh)/i },
 ];
 const riskyCssPatterns = [
 	{

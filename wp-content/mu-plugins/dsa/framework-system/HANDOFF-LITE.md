@@ -37,6 +37,8 @@ This is not a Kiwe AppShell theme handoff. Kiwe AppShell themes use `ui-system/`
 
 Seam roles are semantic/headless by default. Do not ask an AI to maximize `data-role` usage as a visual design method. Use Seam for meaning, flow, tokens, states, and builder portability; use site CSS and reusable generic classes from `seam-class-vocabulary.json` for the actual website look. Seam core intentionally does not ship starter card/button/modal visuals, padding, radius, border, shadow, or background.
 
+`data-role` is a controlled Seam vocabulary, not a free naming slot. Use official role values from `seam-vocabulary.json`. For specific components like product cards, category chips, search placeholders, save placeholders, or add-to-cart placeholders, use classes from `seam-class-vocabulary.json` plus project classes or a project-specific attribute such as `data-project-role`.
+
 ## Bricks path
 
 Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This means a good standalone preview should be built so it can travel into Bricks:

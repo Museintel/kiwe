@@ -30,7 +30,10 @@ if (mode === 'theme' || mode === 'combined') {
   required.push('appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
 }
 if (mode === 'combined') {
-  required.push('combined-preview/index.html', 'kiwe-settings/SETTINGS-NOTES.md');
+  required.push('combined-preview/index.html');
+  if (fs.existsSync(path.join(root, 'kiwe-settings'))) {
+    required.push('kiwe-settings/SETTINGS-NOTES.md');
+  }
 }
 
 const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));

@@ -57,6 +57,8 @@ Do not return a React, Vite, Next, Tailwind, shadcn, or other build-app project 
 
 Seam roles are semantic/headless by default. `data-role="card"` tells tools what something is; it must not force the page into generic cards. Seam core has no starter visual layer right now: no default card/button/modal padding, radius, border, shadow, or background. Use site CSS and searchable Seam Class Vocabulary names such as `.seam-card`, `.seam-accordion`, `.seam-table`, `.seam-horizontal-rail`, `.seam-size-xl`, or `.seam-density-spacious` for the actual look.
 
+Use `data-role` only for official Seam role values from `contracts/seam-vocabulary.json`, such as `hero`, `card`, `nav`, `button`, `form`, `testimonial`, `price`, or `footer`. For specific ecommerce/editorial concepts, prefer Seam Class Vocabulary names such as `.seam-product-card`, `.seam-product-rail`, `.seam-category`, `.seam-story`, or project classes such as `.nc-product`. Do not invent custom `data-role` values like `product-card`, `site-header`, `save-placeholder`, or `add-to-cart-placeholder`; use a project-specific attribute such as `data-project-role` if extra preview semantics are needed.
+
 ## Bricks path
 
 Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
@@ -124,6 +126,8 @@ Ask for:
 This is not a Kiwe AppShell theme handoff. Kiwe AppShell themes use `ui-system/` and style the DSA sheets/screens/dock around existing capabilities.
 
 Seam roles are semantic/headless by default. Do not ask an AI to maximize `data-role` usage as a visual design method. Use Seam for meaning, flow, tokens, states, and builder portability; use site CSS and reusable generic classes from `seam-class-vocabulary.json` for the actual website look. Seam core intentionally does not ship starter card/button/modal visuals, padding, radius, border, shadow, or background.
+
+`data-role` is a controlled Seam vocabulary, not a free naming slot. Use official role values from `seam-vocabulary.json`. For specific components like product cards, category chips, search placeholders, save placeholders, or add-to-cart placeholders, use classes from `seam-class-vocabulary.json` plus project classes or a project-specific attribute such as `data-project-role`.
 
 ## Bricks path
 

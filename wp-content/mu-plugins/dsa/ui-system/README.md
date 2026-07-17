@@ -84,6 +84,8 @@ Batch 40 tightens AppShell theme intake after the Signal Theatre AI handoff expo
 
 Batch 41 clarifies the combined-handoff boundary after a Grok browser output visually treated the Kiwe AppShell as an overlay but packaged it as one page file. The public AI entrypoint and toolkit examples now use the phrase "with its Kiwe AppShell included" and explicitly state that the AppShell is Kiwe runtime chrome around the page, not part of the Bricks page itself. `HANDOFF-MODES.md`, `combined-lite.md`, generated context files, and the AI output audit now enforce that `website/bricks-paste.html` is page-only and must not contain `data-dsa-surface`, DSA dock/sheet markup, or AppShell preview controllers. Only `combined-preview/index.html` should show the website and AppShell together for human review.
 
+Batch 42 refines the AI/toolkit review loop after the National Chikki ChatGPT handoff. Combined validation now treats `kiwe-settings/` as truly optional and only requires `SETTINGS-NOTES.md` when that folder exists. The theme package validator no longer misreads `max-width: calc(100vw - …)` as a forbidden full-screen overlay, while still failing true `position: fixed; inset: 0` ownership inside importable theme CSS. Website handoff docs now clarify that `data-role` is controlled Seam vocabulary; custom ecommerce/page concepts should use Seam Class Vocabulary handles, project classes, or `data-project-role`. The AI output audit now warns on non-standard `data-role` values so outputs can be vocabulary-clean without making every warning fatal.
+
 Next release-prep steps:
 
 1. Live Hostinger upload/proof after the rebuilt MU package is deployed.
