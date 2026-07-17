@@ -49,6 +49,8 @@ MCP clients should call `kiwe_validate_bindings` with `targetDir` and `siteGraph
 
 If the human has WordPress admin access, they can also upload `bricks-bindings/kiwe-bindings.json` at `Kiwe > Framework > AI connector and Site Graph` for a live non-mutating validation report.
 
+On WordPress 7+ / MCP Adapter capable sites, Kiwe may expose the same early connector path as abilities: `dsa/get-site-graph`, `dsa/validate-bindings`, `dsa/prepare-apply-plan`, and `dsa/stage-apply-plan`. These are safe connector surfaces. `dsa/stage-apply-plan` writes only Kiwe internal review metadata and does not save Bricks, WordPress page content, WooCommerce, or publish state.
+
 If no execution is available, do not claim validation ran. Self-check against this context and report that executable validation was not available.
 
 After validation, an apply-path request may prepare a dry-run plan:

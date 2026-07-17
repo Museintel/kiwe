@@ -50,9 +50,17 @@ On WordPress 7+ when the Abilities API is available, Kiwe also registers:
 
 ```text
 dsa/get-site-graph
+dsa/validate-bindings
+dsa/prepare-apply-plan
+dsa/stage-apply-plan
 ```
 
-That ability returns the same `kiwe.site-graph.v1` graph for MCP/AI clients.
+These abilities give MCP/AI clients the same safe connector path as the admin and CLI tools:
+
+- `dsa/get-site-graph` returns the current `kiwe.site-graph.v1` context.
+- `dsa/validate-bindings` validates a `kiwe.bricks-bindings.v1` object against the current or supplied Site Graph.
+- `dsa/prepare-apply-plan` returns a non-mutating `kiwe.bricks-apply-plan.v1` dry-run result after validation passes.
+- `dsa/stage-apply-plan` stores a reviewed dry-run plan as a Kiwe internal `kiwe.trusted-apply-stage.v1` review candidate. It writes only Kiwe staging metadata; it does not save Bricks/page content.
 
 ## How this fits the AI workflow
 
@@ -77,6 +85,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 ```
 
 MCP clients can call `kiwe_validate_bindings`.
+WordPress 7+/MCP Adapter clients can call `dsa/validate-bindings`.
 
 Admins can also validate an AI-produced `bricks-bindings/kiwe-bindings.json` directly against the live target site from:
 
@@ -93,6 +102,7 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph
 ```
 
 MCP clients can call `kiwe_prepare_apply_plan`.
+WordPress 7+/MCP Adapter clients can call `dsa/prepare-apply-plan`, then `dsa/stage-apply-plan` when the human wants the reviewed plan stored in Kiwe's internal staging queue.
 
 8. Admins may stage a reviewed plan inside Kiwe. A stage record stores the plan hash, status, gate results, blockers, counts, and future apply requirements. It is an internal review queue item, not a Bricks save.
 9. Admins can run the trusted-adapter proof against a staged plan. The proof uses the current live Site Graph to verify Bricks/adapter capability signals, map operations, surface blockers, and attach `kiwe.trusted-adapter-proof.v1` metadata to the stage. It still does not save Bricks/page content.
