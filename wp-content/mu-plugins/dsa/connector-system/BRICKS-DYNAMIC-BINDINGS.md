@@ -113,6 +113,8 @@ After preview, admins can attach `kiwe.final-apply-confirmation.v1`. The confirm
 
 After final confirmation, admins can run `kiwe.fresh-sitegraph-revalidation.v1`. The revalidation checks the current live Site Graph for drift in Bricks capability, post types, taxonomy terms, and dynamic tags before any rollback or mutation adapter work begins.
 
+After fresh revalidation, admins can build `kiwe.rollback-readiness-checkpoint.v1`. This locks the approved artifact hashes and required rollback captures but does not yet create a real WordPress/Bricks revision.
+
 ## Rules
 
 - Use real `taxonomy::term_id` values from the Site Graph for Bricks taxonomy filters.

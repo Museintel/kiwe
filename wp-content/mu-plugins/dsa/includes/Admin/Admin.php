@@ -12,6 +12,7 @@ use DSA\AI\Pre_Execution_Gate_Service;
 use DSA\AI\Trusted_Execution_Preview_Service;
 use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\AI\Fresh_Site_Graph_Revalidator;
+use DSA\AI\Rollback_Readiness_Checkpoint_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -92,6 +93,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_preview_apply_execution', [ $this, 'preview_apply_execution' ] );
 		add_action( 'admin_post_dsa_confirm_apply_execution', [ $this, 'confirm_apply_execution' ] );
 		add_action( 'admin_post_dsa_revalidate_apply_sitegraph', [ $this, 'revalidate_apply_sitegraph' ] );
+		add_action( 'admin_post_dsa_build_rollback_readiness', [ $this, 'build_rollback_readiness' ] );
 		add_action( 'admin_post_dsa_clear_search_cache', [ $this, 'clear_search_cache' ] );
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
@@ -1979,6 +1981,67 @@ final class Admin {
 		exit;
 	}
 
+	public function build_rollback_readiness(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to build Kiwe rollback readiness checkpoints.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$stage_id = isset( $_POST['stageId'] ) ? sanitize_key( (string) wp_unslash( $_POST['stageId'] ) ) : '';
+		if ( '' === $stage_id ) {
+			wp_die(
+				esc_html__( 'Apply stage id is missing.', 'dsa' ),
+				esc_html__( 'Missing stage', 'dsa' ),
+				[ 'response' => 400 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_build_rollback_readiness_' . $stage_id );
+
+		$stager = new Trusted_Apply_Stager();
+		$stage  = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			wp_die(
+				esc_html__( 'Apply stage was not found.', 'dsa' ),
+				esc_html__( 'Apply stage unavailable', 'dsa' ),
+				[ 'response' => 404 ]
+			);
+		}
+
+		$checkpoint = ( new Rollback_Readiness_Checkpoint_Service() )->checkpoint(
+			$stage,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+
+		if ( 'rollback-readiness-ready' !== ( $checkpoint['status'] ?? '' ) ) {
+			$stager->attach_rollback_readiness_checkpoint( $stage_id, $checkpoint );
+			wp_die(
+				esc_html__( 'Rollback readiness found blockers. Review the staging row details before continuing.', 'dsa' ),
+				esc_html__( 'Rollback readiness blocked', 'dsa' ),
+				[ 'response' => 409 ]
+			);
+		}
+
+		$stager->attach_rollback_readiness_checkpoint( $stage_id, $checkpoint );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'           => 'kiwe-framework',
+					'apply-rollback' => $stage_id,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function apply_bricks_tokens(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -2858,6 +2921,7 @@ final class Admin {
 		$active_preview = isset( $_GET['apply-preview'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-preview'] ) ) : '';
 		$active_confirm = isset( $_GET['apply-confirm'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-confirm'] ) ) : '';
 		$active_fresh = isset( $_GET['apply-fresh'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-fresh'] ) ) : '';
+		$active_rollback = isset( $_GET['apply-rollback'] ) ? sanitize_key( (string) wp_unslash( $_GET['apply-rollback'] ) ) : '';
 		if ( '' !== $active_stage ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Dry-run apply plan staged for trusted adapter review. This did not save Bricks or WordPress page content.', 'dsa' ) . '</p></div>';
 		}
@@ -2879,6 +2943,9 @@ final class Admin {
 		if ( '' !== $active_fresh ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Fresh Site Graph revalidation passed against the current live site. This still did not save Bricks or WordPress content.', 'dsa' ) . '</p></div>';
 		}
+		if ( '' !== $active_rollback ) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Rollback readiness checkpoint built. A real revision/backup still must be captured immediately before any future mutation.', 'dsa' ) . '</p></div>';
+		}
 		if ( [] === $records ) {
 			return;
 		}
@@ -2899,6 +2966,7 @@ final class Admin {
 						<th><?php esc_html_e( 'Preview', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Confirmation', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Fresh', 'dsa' ); ?></th>
+						<th><?php esc_html_e( 'Rollback', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Created', 'dsa' ); ?></th>
 						<th><?php esc_html_e( 'Action', 'dsa' ); ?></th>
 					</tr>
@@ -2916,6 +2984,7 @@ final class Admin {
 					$preview = isset( $record['executionPreview'] ) && is_array( $record['executionPreview'] ) ? $record['executionPreview'] : [];
 					$confirmation = isset( $record['finalConfirmation'] ) && is_array( $record['finalConfirmation'] ) ? $record['finalConfirmation'] : [];
 					$fresh = isset( $record['freshSiteGraphRevalidation'] ) && is_array( $record['freshSiteGraphRevalidation'] ) ? $record['freshSiteGraphRevalidation'] : [];
+					$rollback = isset( $record['rollbackReadinessCheckpoint'] ) && is_array( $record['rollbackReadinessCheckpoint'] ) ? $record['rollbackReadinessCheckpoint'] : [];
 					$id = (string) ( $record['id'] ?? '' );
 					$status = (string) ( $record['status'] ?? '' );
 					$hash = (string) ( $plan['hash'] ?? '' );
@@ -2937,8 +3006,11 @@ final class Admin {
 					$fresh_status = (string) ( $fresh['status'] ?? __( 'not run', 'dsa' ) );
 					$fresh_blockers = isset( $fresh['blockers'] ) && is_array( $fresh['blockers'] ) ? count( $fresh['blockers'] ) : 0;
 					$can_fresh = [] !== $confirmation && 'confirmed-for-future-adapter' === ( $confirmation['status'] ?? '' ) && 0 === $confirmation_blockers;
+					$rollback_status = (string) ( $rollback['status'] ?? __( 'not checked', 'dsa' ) );
+					$rollback_blockers = isset( $rollback['blockers'] ) && is_array( $rollback['blockers'] ) ? count( $rollback['blockers'] ) : 0;
+					$can_rollback = [] !== $fresh && 'fresh-sitegraph-ready' === ( $fresh['status'] ?? '' ) && 0 === $fresh_blockers;
 					?>
-					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh ) ? ' class="is-active"' : ''; ?>>
+					<tr<?php echo ( $id === $active_stage || $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback ) ? ' class="is-active"' : ''; ?>>
 						<td><code><?php echo esc_html( $id ); ?></code></td>
 						<td><?php echo esc_html( $status ); ?></td>
 						<td><code><?php echo esc_html( substr( $hash, 0, 16 ) ); ?></code></td>
@@ -2949,6 +3021,7 @@ final class Admin {
 						<td><?php echo esc_html( $preview_status ); ?><?php echo $preview_blockers > 0 ? ' (' . esc_html( (string) $preview_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $confirmation_status ); ?><?php echo $confirmation_blockers > 0 ? ' (' . esc_html( (string) $confirmation_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $fresh_status ); ?><?php echo $fresh_blockers > 0 ? ' (' . esc_html( (string) $fresh_blockers ) . ')' : ''; ?></td>
+						<td><?php echo esc_html( $rollback_status ); ?><?php echo $rollback_blockers > 0 ? ' (' . esc_html( (string) $rollback_blockers ) . ')' : ''; ?></td>
 						<td><?php echo esc_html( $created ); ?></td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -2991,17 +3064,24 @@ final class Admin {
 								<?php wp_nonce_field( 'dsa_revalidate_apply_sitegraph_' . $id ); ?>
 								<button class="button button-secondary" type="submit" <?php disabled( ! $can_fresh ); ?>><?php esc_html_e( 'Revalidate live Site Graph', 'dsa' ); ?></button>
 							</form>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: .35rem;">
+								<input type="hidden" name="action" value="dsa_build_rollback_readiness">
+								<input type="hidden" name="stageId" value="<?php echo esc_attr( $id ); ?>">
+								<?php wp_nonce_field( 'dsa_build_rollback_readiness_' . $id ); ?>
+								<button class="button button-secondary" type="submit" <?php disabled( ! $can_rollback ); ?>><?php esc_html_e( 'Build rollback readiness', 'dsa' ); ?></button>
+							</form>
 						</td>
 					</tr>
-					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh ) && [] !== $proof ) : ?>
+					<?php if ( ( $id === $active_proof || $id === $active_auth || $id === $active_gate || $id === $active_preview || $id === $active_confirm || $id === $active_fresh || $id === $active_rollback ) && [] !== $proof ) : ?>
 						<tr>
-							<td colspan="12">
+							<td colspan="13">
 								<?php $this->render_trusted_adapter_proof_details( $proof ); ?>
 								<?php $this->render_guarded_apply_authorization_details( $authorization ); ?>
 								<?php $this->render_pre_execution_gate_details( $gate ); ?>
 								<?php $this->render_trusted_execution_preview_details( $preview ); ?>
 								<?php $this->render_final_apply_confirmation_details( $confirmation ); ?>
 								<?php $this->render_fresh_sitegraph_revalidation_details( $fresh ); ?>
+								<?php $this->render_rollback_readiness_details( $rollback ); ?>
 							</td>
 						</tr>
 					<?php endif; ?>
@@ -3329,6 +3409,50 @@ final class Admin {
 		<?php endif; ?>
 		<?php if ( [] !== $blockers ) : ?>
 			<p><strong><?php esc_html_e( 'Fresh blockers', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $blockers as $blocker ) : ?>
+					<li><?php echo esc_html( (string) $blocker ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php
+	}
+
+	private function render_rollback_readiness_details( array $rollback ): void {
+		if ( [] === $rollback ) {
+			return;
+		}
+		$blockers  = isset( $rollback['blockers'] ) && is_array( $rollback['blockers'] ) ? $rollback['blockers'] : [];
+		$hashes    = isset( $rollback['artifactHashes'] ) && is_array( $rollback['artifactHashes'] ) ? $rollback['artifactHashes'] : [];
+		$captures  = isset( $rollback['requiredRollbackCapture'] ) && is_array( $rollback['requiredRollbackCapture'] ) ? $rollback['requiredRollbackCapture'] : [];
+		?>
+		<p><strong><?php esc_html_e( 'Rollback readiness checkpoint', 'dsa' ); ?></strong></p>
+		<div class="dsa-admin-token-summary">
+			<div><strong><?php echo esc_html( (string) ( $rollback['status'] ?? '' ) ); ?></strong><span><?php esc_html_e( 'status', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $rollback['readyForRollbackCapture'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'ready for capture', 'dsa' ); ?></span></div>
+			<div><strong><?php echo ! empty( $rollback['actualRevisionCaptured'] ) ? esc_html__( 'Yes', 'dsa' ) : esc_html__( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'revision captured', 'dsa' ); ?></span></div>
+			<div><strong><?php echo esc_html( (string) count( $blockers ) ); ?></strong><span><?php esc_html_e( 'blockers', 'dsa' ); ?></span></div>
+			<div><strong><?php esc_html_e( 'No', 'dsa' ); ?></strong><span><?php esc_html_e( 'mutates now', 'dsa' ); ?></span></div>
+		</div>
+		<p class="description"><?php esc_html_e( 'This checkpoint is readiness-only. A real WordPress/Bricks rollback snapshot must still be captured immediately before a future mutation adapter saves anything.', 'dsa' ); ?></p>
+		<?php if ( [] !== $captures ) : ?>
+			<p><strong><?php esc_html_e( 'Required rollback captures before mutation', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $captures as $item ) : ?>
+					<li><?php echo esc_html( (string) $item ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $hashes ) : ?>
+			<p><strong><?php esc_html_e( 'Locked artifact hashes', 'dsa' ); ?></strong></p>
+			<ul class="ul-disc">
+				<?php foreach ( $hashes as $key => $value ) : ?>
+					<li><?php echo esc_html( (string) $key ); ?>: <code><?php echo esc_html( substr( (string) $value, 0, 24 ) ); ?></code></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+		<?php if ( [] !== $blockers ) : ?>
+			<p><strong><?php esc_html_e( 'Rollback readiness blockers', 'dsa' ); ?></strong></p>
 			<ul class="ul-disc">
 				<?php foreach ( $blockers as $blocker ) : ?>
 					<li><?php echo esc_html( (string) $blocker ); ?></li>

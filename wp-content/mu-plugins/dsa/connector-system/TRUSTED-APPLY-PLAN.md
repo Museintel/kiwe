@@ -254,6 +254,34 @@ It checks:
 
 The revalidation still does not call Bricks save APIs, update WordPress pages, publish content, or modify WooCommerce data. It exists to catch live-site drift after confirmation and before rollback/execution work begins.
 
+## Rollback readiness checkpoint
+
+Batch 15 adds the rollback-readiness lock:
+
+```text
+kiwe.rollback-readiness-checkpoint.v1
+```
+
+The checkpoint can be attached only after:
+
+1. a valid stage exists;
+2. the dry-run apply plan is still present;
+3. the execution preview is ready;
+4. final apply confirmation is attached;
+5. fresh Site Graph revalidation is ready;
+6. stage, confirmation, and fresh revalidation plan hashes match;
+7. no blockers remain.
+
+It records:
+
+- locked hashes for the stage, apply plan, execution preview, final confirmation, and fresh revalidation;
+- required rollback captures for WordPress/Bricks/Kiwe/source artifacts;
+- `captureMode: readiness-only`;
+- `actualRevisionCaptured: false`;
+- `readyForRollbackCapture: true` when clean.
+
+This checkpoint still does not capture a real WordPress revision, Bricks element tree snapshot, or backup. Those must happen immediately before a future mutation adapter saves anything, once the exact target page/template is resolved.
+
 ## Future adapter rules
 
 A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows only after:
@@ -266,6 +294,7 @@ A future adapter may use Bricks 2.4 abilities or Bricks builder import workflows
 6. the trusted execution preview is ready;
 7. final apply confirmation is attached;
 8. fresh Site Graph revalidation passes;
-9. a rollback/revision point exists;
-10. the adapter can inspect the rendered Bricks tree before save;
-11. post-apply Kiwe audit and browser smoke tests pass.
+9. rollback readiness checkpoint is attached;
+10. a real rollback/revision point is captured for the exact target;
+11. the adapter can inspect the rendered Bricks tree before save;
+12. post-apply Kiwe audit and browser smoke tests pass.
