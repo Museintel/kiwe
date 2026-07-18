@@ -393,6 +393,29 @@ final class Trusted_Apply_Stager {
 		return $this->find( $id );
 	}
 
+	public function attach_staging_execution( string $id, array $execution ): array {
+		$records = $this->records();
+		$updated = [];
+		$matched = false;
+		foreach ( $records as $record ) {
+			if ( ! is_array( $record ) ) {
+				continue;
+			}
+			if ( $id === (string) ( $record['id'] ?? '' ) ) {
+				$record['stagingExecution']   = $execution;
+				$record['stagingExecutedAt']  = (string) ( $execution['createdAt'] ?? gmdate( 'c' ) );
+				$matched                      = true;
+			}
+			$updated[] = $record;
+		}
+		if ( ! $matched ) {
+			return [];
+		}
+		update_option( self::OPTION, array_slice( $updated, 0, self::MAX_RECORDS ), false );
+
+		return $this->find( $id );
+	}
+
 	public function build_record( array $apply_plan, array $context = [] ): array {
 		$json        = $this->json_encode( $apply_plan );
 		$plan_hash   = hash( 'sha256', false !== $json ? $json : serialize( $apply_plan ) );

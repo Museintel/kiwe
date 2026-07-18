@@ -70,6 +70,29 @@ POST /wp-json/dsa/v1/ai/themes/{themeId}/activate
 
 A Kiwe theme package is one JSON file with root `schema: "kiwe.theme-package.v1"`, root `theme`, root `settings`, and root `css`. The `settings` preset is limited to safe theme-owned subsets (`style`, `dock`, `dsa_theme`, and `visual_effects`) and appears in WordPress under `Kiwe > Theme > Installed themes`. Do not output or ask users to import a loose settings file for DSA themes.
 
+Staging-aware clients can inspect the target site and run the first controlled staging executor:
+
+```text
+GET  /wp-json/dsa/v1/ai/site-inspection?sampleLimit=12
+POST /wp-json/dsa/v1/ai/staging/execute
+POST /wp-json/dsa/v1/ai/stages/{stageId}/execute-staging
+```
+
+`/ai/site-inspection` is read-only and returns installed plugin inventory, active plugin status, safe Bricks option summaries, Bricks templates, pages/posts, and staging detection. It redacts secrets and does not expose raw Bricks page meta.
+
+`/ai/staging/execute` is intentionally narrow. It requires `confirmControlledStagingExecution: true` and `stagingSiteConfirmed: true`, refuses production-looking hosts unless explicitly overridden by the human, and supports only staging-safe operations such as:
+
+- `wordpress.page.upsert`
+- `wordpress.post.upsert`
+- `bricks.template.create`
+- `bricks.template.upsert`
+- `bricks.settings.patch`
+- `kiwe.theme-package.install-activate`
+
+Page/post/template operations may include `html`, `bricksPasteHtml`, and optional `css`. The executor stores sanitized staging content and preserves safe preview CSS while refusing script-like payloads. `bricks.settings.patch` is limited to known Bricks settings/options, scalar or simple nested payloads, safe path keys, and an internal patch hash log. It exists for staging checks such as Bricks import/converter switches or global-class/variable setting probes; do not use it as a raw Bricks database writer.
+
+It does not mutate WooCommerce products/orders/settings, does not run cart/checkout/auth, and does not raw-write `_bricks` JSON. Bricks-ready HTML is stored as page content plus a Kiwe staging source artifact so Bricks HTML-to-Bricks conversion can be reviewed/imported safely.
+
 The legacy same-site admin REST path still exists for logged-in WordPress admin contexts at `GET /wp-json/dsa/v1/site-graph?sampleLimit=8`, but external AI tools should use `/wp-json/dsa/v1/ai/*` with a Kiwe AI key.
 
 On WordPress 7+ with Abilities API available, Kiwe may also expose:

@@ -2,6 +2,15 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.85 - 2026-07-18
+
+- Added the controlled staging executor for Kiwe AI API clients, gated by explicit staging confirmation before creating or updating WordPress pages/posts, Bricks templates, or Kiwe theme packages.
+- Added read-only site inspection for AI clients, including installed plugin inventory, Bricks presence/version signals, safe Bricks option summaries, Bricks template inventory, page/post samples, and staging-host detection without exposing raw secrets or `_bricks` payloads.
+- Added sanitized preview CSS preservation for staged AI pages/templates and a narrow `bricks.settings.patch` operation for staging-only Bricks settings probes.
+- Added API scopes and REST routes for `/ai/site-inspection`, `/ai/staging/execute`, and `/ai/stages/{stageId}/execute-staging`; existing `all` keys automatically include the new capabilities.
+- Kept WooCommerce mutations, cart/checkout/auth runtime actions, and raw Bricks meta writes locked out of the staging executor until a proven controlled adapter path is ready.
+- Updated Kiwe AI docs and connector contracts so staging tests can discover site/plugin/Bricks context first, then run only confirmed staging-safe operations.
+
 ## 0.5.84 - 2026-07-18
 
 - Added Kiwe theme package install/export/activate as the official replacement for loose DSA settings import/export. Theme packages now carry the manifest, presentation CSS, and a safe theme settings preset, and imported themes appear under `Kiwe > Theme > Installed themes`.

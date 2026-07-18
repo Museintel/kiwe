@@ -9,6 +9,7 @@ const plugin = read('wp-content/mu-plugins/dsa/includes/Plugin.php');
 const keys = read('wp-content/mu-plugins/dsa/includes/AI/Access_Key_Service.php');
 const rest = read('wp-content/mu-plugins/dsa/includes/Rest/AI_Access_Controller.php');
 const themeService = read('wp-content/mu-plugins/dsa/includes/Theme/Theme_Package_Service.php');
+const stagingExecutor = read('wp-content/mu-plugins/dsa/includes/AI/Staging_Execution_Service.php');
 const manifest = read('wp-content/mu-plugins/dsa/package-manifest.json');
 const docs = read('KIWE-AI.md') + '\n' + read('kiwe-ai-toolkit/contexts/dynamic-lite.md');
 
@@ -26,9 +27,10 @@ check('REST AI routes cover trusted apply chain', rest.includes("'/ai/stage-appl
 check('REST AI routes require API-key guard', rest.includes('authenticate_request') && rest.includes("'permission_callback' => '__return_true'"));
 check('Status endpoint accepts any active key', rest.includes("[ 'GET', '/ai/status', 'status', 'status' ]") && keys.includes("'status' !== $required_scope"));
 check('AI API exposes theme package install and activation', rest.includes("'/ai/themes/install'") && rest.includes("'/ai/themes/(?P<themeId>[a-zA-Z0-9._-]+)/activate'") && keys.includes("'themes'"));
+check('AI API exposes read-only site inspection and staging executor scopes', rest.includes("'/ai/site-inspection'") && rest.includes("'/ai/staging/execute'") && rest.includes("'/ai/stages/(?P<stageId>[a-zA-Z0-9:_-]+)/execute-staging'") && keys.includes("'site_inspection'") && keys.includes("'staging_execute'") && stagingExecutor.includes("'bricks.settings.patch'"));
 check('AI API exposes locked mutation/runtime boundaries', rest.includes("'/ai/mutations/bricks-page-save'") && rest.includes("'/ai/mutations/wordpress-publish'") && rest.includes("'/ai/mutations/woocommerce'") && rest.includes("'/ai/runtime/checkout'") && keys.includes("'controlled_mutation'"));
 check('Theme package activation uses sanitized settings overlay', rest.includes('safe_settings_overlay') && themeService.includes('sanitize_dock_custom_items') && themeService.includes("kiwe.theme-package.v1"));
-check('Package manifest includes API key and theme package files', manifest.includes('includes/AI/Access_Key_Service.php') && manifest.includes('includes/Rest/AI_Access_Controller.php') && manifest.includes('includes/Theme/Theme_Package_Service.php') && manifest.includes('ui-system/theme-package.schema.json'));
+check('Package manifest includes API key, theme package, inspection, and staging executor files', manifest.includes('includes/AI/Access_Key_Service.php') && manifest.includes('includes/Rest/AI_Access_Controller.php') && manifest.includes('includes/Theme/Theme_Package_Service.php') && manifest.includes('includes/AI/Site_Introspection_Service.php') && manifest.includes('includes/AI/Staging_Execution_Service.php') && manifest.includes('ui-system/theme-package.schema.json'));
 check('Docs point external AI clients to Kiwe > AI and /ai API', docs.includes('Kiwe > AI > API access keys') && docs.includes('/wp-json/dsa/v1/ai/site-graph'));
 check('Docs describe theme package API and locked mutation boundaries', docs.includes('/wp-json/dsa/v1/ai/themes/install') && docs.includes('/wp-json/dsa/v1/ai/mutations/bricks-page-save') && docs.includes('kiwe.theme-package.v1'));
 check('Docs do not send AI connector workflow back to Kiwe > Framework', !docs.includes('Kiwe > Framework > AI connector'));

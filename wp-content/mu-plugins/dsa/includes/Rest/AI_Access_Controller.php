@@ -17,7 +17,9 @@ use DSA\AI\Pre_Execution_Gate_Service;
 use DSA\AI\Rendered_Target_Inspection_Service;
 use DSA\AI\Rollback_Capture_Service;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
+use DSA\AI\Site_Introspection_Service;
 use DSA\AI\Site_Graph_Service;
+use DSA\AI\Staging_Execution_Service;
 use DSA\AI\Target_Resolution_Service;
 use DSA\AI\Trusted_Adapter_Proof_Service;
 use DSA\AI\Trusted_Apply_Stager;
@@ -70,6 +72,9 @@ final class AI_Access_Controller {
 			[ 'GET', '/ai/themes', 'themes', 'themes' ],
 			[ 'POST', '/ai/themes/install', 'install_theme', 'themes' ],
 			[ 'POST', '/ai/themes/(?P<themeId>[a-zA-Z0-9._-]+)/activate', 'activate_theme', 'themes' ],
+			[ 'GET', '/ai/site-inspection', 'site_inspection', 'site_inspection' ],
+			[ 'POST', '/ai/staging/execute', 'execute_staging', 'staging_execute' ],
+			[ 'POST', '/ai/stages/(?P<stageId>[a-zA-Z0-9:_-]+)/execute-staging', 'execute_stage_staging', 'staging_execute' ],
 			[ 'POST', '/ai/mutations/bricks-page-save', 'locked_mutation', 'controlled_mutation' ],
 			[ 'POST', '/ai/mutations/wordpress-publish', 'locked_mutation', 'controlled_mutation' ],
 			[ 'POST', '/ai/mutations/woocommerce', 'locked_mutation', 'controlled_mutation' ],
@@ -115,7 +120,9 @@ final class AI_Access_Controller {
 				'stageApplyPlan'    => true,
 				'trustedApplyChain' => true,
 				'themes'            => true,
-				'mutatesContent'    => false,
+				'siteInspection'    => true,
+				'stagingExecution'  => 'explicit-confirmation-required',
+				'mutatesContent'    => 'staging-only-with-explicit-confirmation',
 				'controlledMutationIntents' => [
 					'bricksPageSave'       => 'locked-behind-future-controlled-executor',
 					'wordpressPublish'     => 'locked-behind-future-controlled-executor',
@@ -389,6 +396,59 @@ final class AI_Access_Controller {
 			'ok'     => true,
 			'schema' => 'kiwe.ai-theme-activation-result.v1',
 			'active' => $service->public_record( $record ),
+		];
+	}
+
+	private function site_inspection( WP_REST_Request $request, array $auth ): array {
+		return [
+			'ok'         => true,
+			'inspection' => ( new Site_Introspection_Service() )->inspect( [ 'sampleLimit' => absint( $request->get_param( 'sampleLimit' ) ?: 12 ) ] ),
+		];
+	}
+
+	private function execute_staging( WP_REST_Request $request, array $auth ): array {
+		$payload = $this->array_param( $request, 'execution' );
+		if ( [] === $payload ) {
+			$payload = $request->get_json_params();
+			$payload = is_array( $payload ) ? $payload : [];
+		}
+		if ( [] === $payload ) {
+			return $this->bad_request( 'missing_execution', 'Request body must include a staging execution package.' );
+		}
+
+		$result = ( new Staging_Execution_Service( $this->settings ) )->execute( $payload, $this->context( $auth ) );
+
+		return [
+			'ok'      => 'staging-execution-complete' === (string) ( $result['status'] ?? '' ),
+			'schema'  => 'kiwe.ai-staging-execution-result.v1',
+			'result'  => $result,
+		];
+	}
+
+	private function execute_stage_staging( WP_REST_Request $request, array $auth ): array {
+		$stage_id = sanitize_key( (string) $request->get_param( 'stageId' ) );
+		$stager   = new Trusted_Apply_Stager();
+		$stage    = $stager->find( $stage_id );
+		if ( [] === $stage ) {
+			return $this->not_found( 'stage_not_found', 'Apply stage was not found.' );
+		}
+		$payload = $this->array_param( $request, 'execution' );
+		if ( [] === $payload ) {
+			$payload = $request->get_json_params();
+			$payload = is_array( $payload ) ? $payload : [];
+		}
+		if ( [] === $payload ) {
+			return $this->bad_request( 'missing_execution', 'Request body must include a staging execution package.' );
+		}
+
+		$result  = ( new Staging_Execution_Service( $this->settings ) )->execute( $payload, $this->context( $auth ), $stage );
+		$updated = $stager->attach_staging_execution( $stage_id, $result );
+
+		return [
+			'ok'      => 'staging-execution-complete' === (string) ( $result['status'] ?? '' ),
+			'schema'  => 'kiwe.ai-stage-staging-execution-result.v1',
+			'result'  => $result,
+			'stage'   => $updated,
 		];
 	}
 

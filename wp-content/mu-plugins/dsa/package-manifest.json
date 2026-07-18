@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "0.5.84",
+  "version": "0.5.85",
   "algorithm": "sha256",
-  "file_count": 222,
+  "file_count": 224,
   "files": {
     "assets/css/admin.css": {
       "bytes": 16111,
@@ -186,7 +186,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "e6cc066a6e0ab55b4b93187d833b598f6db9949f5b0a286f2ac9451e443f567b"
+      "sha256": "e82ef3cf033f0a859a1a5f1b414a61764e4c6c864f9bbdb412b60d0a4d278bf1"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -321,8 +321,8 @@
       "sha256": "7e66ce79a3ffed377ea8c5d810aeba4684d897be3c2dcdba57956726dc882087"
     },
     "includes/AI/Access_Key_Service.php": {
-      "bytes": 7042,
-      "sha256": "1ee045c2b30a99c42ace56b2104afa3867601ce89277e253d32b470c090fed5c"
+      "bytes": 7084,
+      "sha256": "aca64d0420589c356e5d395a04ebcc6febce679eb6a5b3b9f7abd61b5cb9f7cb"
     },
     "includes/AI/Apply_Plan_Preparer.php": {
       "bytes": 10108,
@@ -388,6 +388,14 @@
       "bytes": 15337,
       "sha256": "408e6597f8f51d2ed29e50196d67e2a93a0450bc6546e69f936699595f3df655"
     },
+    "includes/AI/Site_Introspection_Service.php": {
+      "bytes": 7915,
+      "sha256": "4e38e9470047e4452ab286d2e9e533ee194a883e5ced0a9f4768b0548ef3e1be"
+    },
+    "includes/AI/Staging_Execution_Service.php": {
+      "bytes": 16349,
+      "sha256": "3d525b09feb59cc6c60fd26f8a6312e94b9796aed400a523e2b7033099d83691"
+    },
     "includes/AI/Target_Resolution_Service.php": {
       "bytes": 6731,
       "sha256": "f40359b2e2380d7cd3866490da8bffde0406bf21aa576c80e75d26fc8984243d"
@@ -397,8 +405,8 @@
       "sha256": "451211b01f0dd482d3f2f88f1c472adf39f0ce3870235d14bc5c84eaef29ece6"
     },
     "includes/AI/Trusted_Apply_Stager.php": {
-      "bytes": 17483,
-      "sha256": "fe359027ef507fdfaed5cd3b4f79b73eb7f0c1706a5d7b8effa28c19e07efda9"
+      "bytes": 18152,
+      "sha256": "f4cd544171e75963b49431b4bed88784c3082af0d8b314db3aff5532060c0f38"
     },
     "includes/AI/Trusted_Execution_Preview_Service.php": {
       "bytes": 9793,
@@ -565,8 +573,8 @@
       "sha256": "9d859932191b840169835d999b8d9be7835a6ad662757720fd262e042409d2e6"
     },
     "includes/Rest/AI_Access_Controller.php": {
-      "bytes": 19916,
-      "sha256": "fbed4456eb2aa63419a66c8062d4b2fc05100f1801008c93ce692b82a248f07d"
+      "bytes": 22468,
+      "sha256": "35aa244b82fd9cd600861b076651eb1bbe702ff88151fed9dd6262b884c79f0d"
     },
     "includes/Rest/Account_Controller.php": {
       "bytes": 14471,

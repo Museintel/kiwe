@@ -21,6 +21,8 @@ final class Access_Key_Service {
 		'stage_apply_plan',
 		'trusted_apply_chain',
 		'themes',
+		'site_inspection',
+		'staging_execute',
 		'controlled_mutation',
 	];
 

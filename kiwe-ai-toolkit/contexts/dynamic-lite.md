@@ -18,6 +18,10 @@ External tool clients can use a revocable key created in `Kiwe > AI > API access
 
 Kiwe theme package install/activation is allowed through `/wp-json/dsa/v1/ai/themes/install` and `/wp-json/dsa/v1/ai/themes/{themeId}/activate` when the key has theme scope. A theme package is one JSON file containing `schema: "kiwe.theme-package.v1"`, `theme`, `settings`, and `css`; do not produce a loose settings import file for DSA themes.
 
+For target-site inspection, use `/wp-json/dsa/v1/ai/site-inspection`. It returns active/installed plugin inventory, safe Bricks settings summaries, Bricks templates, pages/posts, and staging detection without raw Bricks meta or secrets.
+
+For staging-only execution, use `/wp-json/dsa/v1/ai/staging/execute` or `/wp-json/dsa/v1/ai/stages/{stageId}/execute-staging`. The body must include `confirmControlledStagingExecution: true`, `stagingSiteConfirmed: true`, and an `operations` array. Allowed operation types are `wordpress.page.upsert`, `wordpress.post.upsert`, `bricks.template.create`, `bricks.template.upsert`, `bricks.settings.patch`, and `kiwe.theme-package.install-activate`. Page/post/template operations may include `html`, `bricksPasteHtml`, and optional safe preview `css`; Bricks settings patches are limited to known Bricks settings/options and safe patch paths. This executor may create/update staging WordPress content, Bricks templates/settings probes, and Kiwe theme packages, but it does not mutate WooCommerce, run checkout/cart/auth, or raw-write `_bricks` JSON.
+
 ## What the Site Graph gives you
 
 The Site Graph is admin-only and read-only. It can include:
