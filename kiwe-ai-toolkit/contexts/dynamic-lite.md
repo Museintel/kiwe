@@ -12,7 +12,9 @@ Do not read the whole Kiwe repo. Do not search GitHub. Do not guess the target s
 - The target site's `kiwe.site-graph.v1` JSON.
 - The plain-language dynamic request, for example: "turn placeholder product rails into Bricks query loops and dynamic product cards."
 
-If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > Framework > AI connector and Site Graph`.
+If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > AI > AI connector and Site Graph`.
+
+External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, and `/wp-json/dsa/v1/ai/stages/{stageId}/...`.
 
 ## What the Site Graph gives you
 
@@ -47,7 +49,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs <handoff-or-bindings-dir-or-jso
 
 MCP clients should call `kiwe_validate_bindings` with `targetDir` and `siteGraphPath`.
 
-If the human has WordPress admin access, they can also upload `bricks-bindings/kiwe-bindings.json` at `Kiwe > Framework > AI connector and Site Graph` for a live non-mutating validation report.
+If the human has WordPress admin access, they can also upload `bricks-bindings/kiwe-bindings.json` at `Kiwe > AI > AI connector and Site Graph` for a live non-mutating validation report.
 
 On WordPress 7+ / MCP Adapter capable sites, Kiwe may expose the same early connector path as abilities: `dsa/get-site-graph`, `dsa/validate-bindings`, `dsa/prepare-apply-plan`, and `dsa/stage-apply-plan`. These are safe connector surfaces. `dsa/stage-apply-plan` writes only Kiwe internal review metadata and does not save Bricks, WordPress page content, WooCommerce, or publish state.
 

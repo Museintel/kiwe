@@ -29,13 +29,16 @@ The Site Graph is read-only. It never exposes secrets, API keys, visitor state, 
 When Kiwe is installed, admins can fetch the Site Graph from:
 
 ```text
-GET /wp-json/dsa/v1/site-graph?sampleLimit=8
+GET /wp-json/dsa/v1/ai/site-graph?sampleLimit=8
+Authorization: Bearer kiwe_ai_...
 ```
+
+Create or revoke API keys from `Kiwe > AI > API access keys`. The same-site admin REST endpoint remains available at `/wp-json/dsa/v1/site-graph?sampleLimit=8` for logged-in/admin workflows, but external AI/tool clients should use the `/ai/*` connector endpoints.
 
 Admins can also download the same graph from:
 
 ```text
-Kiwe > Framework > AI connector and Site Graph > Download Site Graph JSON
+Kiwe > AI > AI connector and Site Graph > Download Site Graph JSON
 ```
 
 The admin download path is useful for browser-based AI workflows where REST cookie/nonces or external connectors are inconvenient.
@@ -90,7 +93,7 @@ WordPress 7+/MCP Adapter clients can call `dsa/validate-bindings`.
 Admins can also validate an AI-produced `bricks-bindings/kiwe-bindings.json` directly against the live target site from:
 
 ```text
-Kiwe > Framework > AI connector and Site Graph > Validate AI binding plan
+Kiwe > AI > AI connector and Site Graph > Validate AI binding plan
 ```
 
 That admin intake is non-mutating. It reports failures/warnings and now also shows the dry-run apply-plan preview for the same upload: preflight gates, prepared Bricks query/dynamic-field operations, Kiwe launcher/menu-context operations, and manual-review items. Admins can download that reviewed `kiwe.bricks-apply-plan.v1` JSON from the report or stage it as a capped Kiwe-owned `kiwe.trusted-apply-stage.v1` review candidate. It still does not save WordPress, WooCommerce, or Bricks content.
@@ -103,6 +106,7 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph
 
 MCP clients can call `kiwe_prepare_apply_plan`.
 WordPress 7+/MCP Adapter clients can call `dsa/prepare-apply-plan`, then `dsa/stage-apply-plan` when the human wants the reviewed plan stored in Kiwe's internal staging queue.
+External REST clients can call the API-key equivalents at `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, and `/wp-json/dsa/v1/ai/stages/{stageId}/...`.
 
 8. Admins may stage a reviewed plan inside Kiwe. A stage record stores the plan hash, status, gate results, blockers, counts, and future apply requirements. It is an internal review queue item, not a Bricks save.
 9. Admins can run the trusted-adapter proof against a staged plan. The proof uses the current live Site Graph to verify Bricks/adapter capability signals, map operations, surface blockers, and attach `kiwe.trusted-adapter-proof.v1` metadata to the stage. It still does not save Bricks/page content.

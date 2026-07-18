@@ -12,6 +12,7 @@ use DSA\AI\Pre_Execution_Gate_Service;
 use DSA\AI\Trusted_Execution_Preview_Service;
 use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\AI\Fresh_Site_Graph_Revalidator;
+use DSA\AI\Access_Key_Service;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
 use DSA\AI\Target_Resolution_Service;
 use DSA\AI\Rollback_Capture_Service;
@@ -91,6 +92,8 @@ final class Admin {
 		add_action( 'admin_post_dsa_send_notification_campaign', [ $this, 'handle_notification_campaign' ] );
 		add_action( 'admin_post_dsa_export_bricks_tokens', [ $this, 'export_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_apply_bricks_tokens', [ $this, 'apply_bricks_tokens' ] );
+		add_action( 'admin_post_dsa_create_ai_access_key', [ $this, 'create_ai_access_key' ] );
+		add_action( 'admin_post_dsa_revoke_ai_access_key', [ $this, 'revoke_ai_access_key' ] );
 		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
@@ -164,6 +167,15 @@ final class Admin {
 			'manage_options',
 			'kiwe-framework',
 			[ $this, 'render_framework_page' ]
+		);
+
+		add_submenu_page(
+			'kiwe',
+			__( 'Kiwe AI', 'dsa' ),
+			__( 'AI', 'dsa' ),
+			'manage_options',
+			'kiwe-ai',
+			[ $this, 'render_ai_page' ]
 		);
 
 		add_submenu_page(
@@ -312,7 +324,7 @@ final class Admin {
 	}
 
 	public function assets( string $hook ): void {
-		if ( ! in_array( $hook, [ 'toplevel_page_kiwe', 'kiwe_page_kiwe-auth', 'kiwe_page_kiwe-app', 'kiwe_page_kiwe-framework', 'kiwe_page_kiwe-tokens', 'kiwe_page_kiwe-developer', 'kiwe_page_kiwe-dock', 'kiwe_page_kiwe-theme', 'kiwe_page_kiwe-games', 'kiwe_page_kiwe-links', 'kiwe_page_kiwe-search', 'kiwe_page_kiwe-menu', 'kiwe_page_kiwe-secure', 'kiwe_page_kiwe-email', 'kiwe_page_kiwe-woocommerce', 'kiwe_page_kiwe-analytics', 'kiwe_page_kiwe-abandoned-cart', 'kiwe_page_kiwe-bricks' ], true ) ) {
+		if ( ! in_array( $hook, [ 'toplevel_page_kiwe', 'kiwe_page_kiwe-auth', 'kiwe_page_kiwe-app', 'kiwe_page_kiwe-framework', 'kiwe_page_kiwe-ai', 'kiwe_page_kiwe-tokens', 'kiwe_page_kiwe-developer', 'kiwe_page_kiwe-dock', 'kiwe_page_kiwe-theme', 'kiwe_page_kiwe-games', 'kiwe_page_kiwe-links', 'kiwe_page_kiwe-search', 'kiwe_page_kiwe-menu', 'kiwe_page_kiwe-secure', 'kiwe_page_kiwe-email', 'kiwe_page_kiwe-woocommerce', 'kiwe_page_kiwe-analytics', 'kiwe_page_kiwe-abandoned-cart', 'kiwe_page_kiwe-bricks' ], true ) ) {
 			return;
 		}
 
@@ -1301,7 +1313,7 @@ final class Admin {
 		if ( 'kiwe-tokens' === $redirect_page ) {
 			$redirect_page = 'kiwe-framework';
 		}
-		if ( ! in_array( $redirect_page, [ 'kiwe', 'kiwe-app', 'kiwe-haptic', 'kiwe-framework', 'kiwe-dock', 'kiwe-theme', 'kiwe-games', 'kiwe-links', 'kiwe-search', 'kiwe-menu', 'kiwe-secure', 'kiwe-email', 'kiwe-woocommerce', 'kiwe-analytics', 'kiwe-abandoned-cart', 'kiwe-bricks', 'kiwe-developer' ], true ) ) {
+		if ( ! in_array( $redirect_page, [ 'kiwe', 'kiwe-app', 'kiwe-haptic', 'kiwe-framework', 'kiwe-ai', 'kiwe-dock', 'kiwe-theme', 'kiwe-games', 'kiwe-links', 'kiwe-search', 'kiwe-menu', 'kiwe-secure', 'kiwe-email', 'kiwe-woocommerce', 'kiwe-analytics', 'kiwe-abandoned-cart', 'kiwe-bricks', 'kiwe-developer' ], true ) ) {
 			$redirect_page = 'kiwe';
 		}
 
@@ -1408,6 +1420,60 @@ final class Admin {
 		exit;
 	}
 
+	public function create_ai_access_key(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to create Kiwe AI API keys.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_create_ai_access_key' );
+
+		$label  = isset( $_POST['label'] ) ? sanitize_text_field( wp_unslash( $_POST['label'] ) ) : '';
+		$scopes = isset( $_POST['scopes'] ) && is_array( $_POST['scopes'] )
+			? array_map( 'sanitize_key', wp_unslash( $_POST['scopes'] ) )
+			: [ 'all' ];
+
+		$created = ( new Access_Key_Service() )->create(
+			$label,
+			$scopes,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+		$plain   = (string) ( $created['key'] ?? '' );
+		$once    = substr( hash( 'sha256', $plain . '|' . wp_rand() ), 0, 16 );
+		set_transient( 'dsa_ai_key_once_' . $once, $plain, 10 * MINUTE_IN_SECONDS );
+
+		wp_safe_redirect( add_query_arg( 'kiwe-ai-key-created', $once, admin_url( 'admin.php?page=kiwe-ai' ) ) );
+		exit;
+	}
+
+	public function revoke_ai_access_key(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to revoke Kiwe AI API keys.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		$id = isset( $_POST['keyId'] ) ? sanitize_key( (string) wp_unslash( $_POST['keyId'] ) ) : '';
+		if ( '' === $id ) {
+			wp_safe_redirect( add_query_arg( 'kiwe-ai-key-revoked', 'missing', admin_url( 'admin.php?page=kiwe-ai' ) ) );
+			exit;
+		}
+
+		check_admin_referer( 'dsa_revoke_ai_access_key_' . $id );
+		$revoked = ( new Access_Key_Service() )->revoke( $id, get_current_user_id() );
+
+		wp_safe_redirect( add_query_arg( 'kiwe-ai-key-revoked', $revoked ? '1' : '0', admin_url( 'admin.php?page=kiwe-ai' ) ) );
+		exit;
+	}
+
 	public function export_site_graph(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -1427,7 +1493,7 @@ final class Admin {
 		$json             = wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 
 		if ( ! $json ) {
-			wp_safe_redirect( add_query_arg( 'site-graph-exported', 'encode-error', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			wp_safe_redirect( add_query_arg( 'site-graph-exported', 'encode-error', admin_url( 'admin.php?page=kiwe-ai' ) ) );
 			exit;
 		}
 
@@ -1504,7 +1570,7 @@ final class Admin {
 			10 * MINUTE_IN_SECONDS
 		);
 
-		wp_safe_redirect( add_query_arg( 'binding-report', $key, admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		wp_safe_redirect( add_query_arg( 'binding-report', $key, admin_url( 'admin.php?page=kiwe-ai' ) ) );
 		exit;
 	}
 
@@ -1628,7 +1694,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'           => 'kiwe-framework',
+					'page'           => 'kiwe-ai',
 					'binding-report' => $key,
 					'apply-stage'    => sanitize_key( (string) ( $record['id'] ?? '' ) ),
 				],
@@ -1675,7 +1741,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'        => 'kiwe-framework',
+					'page'        => 'kiwe-ai',
 					'apply-proof' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -1735,7 +1801,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'       => 'kiwe-framework',
+					'page'       => 'kiwe-ai',
 					'apply-auth' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -1795,7 +1861,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'       => 'kiwe-framework',
+					'page'       => 'kiwe-ai',
 					'apply-gate' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -1855,7 +1921,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'          => 'kiwe-framework',
+					'page'          => 'kiwe-ai',
 					'apply-preview' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -1925,7 +1991,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'          => 'kiwe-framework',
+					'page'          => 'kiwe-ai',
 					'apply-confirm' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -1988,7 +2054,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'          => 'kiwe-framework',
+					'page'          => 'kiwe-ai',
 					'apply-fresh'   => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2049,7 +2115,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'           => 'kiwe-framework',
+					'page'           => 'kiwe-ai',
 					'apply-rollback' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2120,7 +2186,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'         => 'kiwe-framework',
+					'page'         => 'kiwe-ai',
 					'apply-target' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2181,7 +2247,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'          => 'kiwe-framework',
+					'page'          => 'kiwe-ai',
 					'apply-capture' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2242,7 +2308,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'             => 'kiwe-framework',
+					'page'             => 'kiwe-ai',
 					'apply-inspection' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2303,7 +2369,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'        => 'kiwe-framework',
+					'page'        => 'kiwe-ai',
 					'apply-shell' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2365,7 +2431,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'           => 'kiwe-framework',
+					'page'           => 'kiwe-ai',
 					'apply-save-ok'  => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2426,7 +2492,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'           => 'kiwe-framework',
+					'page'           => 'kiwe-ai',
 					'apply-executor' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2487,7 +2553,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'          => 'kiwe-framework',
+					'page'          => 'kiwe-ai',
 					'apply-adapter' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -2548,7 +2614,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'              => 'kiwe-framework',
+					'page'              => 'kiwe-ai',
 					'apply-post-verify' => $stage_id,
 				],
 				admin_url( 'admin.php' )
@@ -3132,7 +3198,6 @@ final class Admin {
 		$counts   = Seam_Token_Service::counts( $items );
 		$class_export = Seam_Token_Service::framework_classes_for_bricks();
 		$class_count  = isset( $class_export['classes'] ) && is_array( $class_export['classes'] ) ? count( $class_export['classes'] ) : 0;
-		$binding_report = $this->framework_binding_report();
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe Framework', 'dsa' ); ?></h1>
@@ -3144,13 +3209,6 @@ final class Admin {
 					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks framework storage was not available. Use the JSON download and import it after Bricks is active.', 'dsa' ); ?></p></div>
 				<?php endif; ?>
 			<?php endif; ?>
-			<?php if ( isset( $_GET['site-graph-exported'] ) && 'encode-error' === sanitize_key( (string) wp_unslash( $_GET['site-graph-exported'] ) ) ) : ?>
-				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Kiwe could not encode the Site Graph JSON. Try a smaller sample size and check server logs if it continues.', 'dsa' ); ?></p></div>
-			<?php endif; ?>
-			<?php if ( isset( $_GET['binding-plan'] ) ) : ?>
-				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->binding_plan_error_message( sanitize_key( (string) wp_unslash( $_GET['binding-plan'] ) ) ) ); ?></p></div>
-			<?php endif; ?>
-
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Kiwe Framework for builders', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Kiwe ships one universal framework vocabulary. The DSA Surface consumes these same kiwe-* variables and Seam classes, and web designers can push the active framework into Bricks as additive variables, a Kiwe Universal color palette, and a searchable neutral Seam Class Vocabulary. Existing Bricks token sets and classes are not overwritten.', 'dsa' ); ?></p>
@@ -3178,61 +3236,6 @@ final class Admin {
 					<?php wp_nonce_field( 'dsa_export_bricks_tokens' ); ?>
 					<?php submit_button( __( 'Download Bricks Framework JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
-
-				<section class="dsa-admin__panel" style="margin-top: 1rem;">
-					<h2><?php esc_html_e( 'AI connector and Site Graph', 'dsa' ); ?></h2>
-					<p><?php esc_html_e( 'Use this when an AI or web developer needs to turn an approved Seam/Kiwe design into Bricks query loops, dynamic data, and Kiwe AppShell launchers for this exact WordPress site. The Site Graph is admin-only, read-only, and contains no secrets, visitor state, orders, payment data, or credentials.', 'dsa' ); ?></p>
-					<div class="dsa-admin-token-summary">
-						<div><strong><?php esc_html_e( 'Read-only', 'dsa' ); ?></strong><span><?php esc_html_e( 'Site Graph', 'dsa' ); ?></span></div>
-						<div><strong><?php esc_html_e( 'v1', 'dsa' ); ?></strong><span><?php esc_html_e( 'schema', 'dsa' ); ?></span></div>
-						<div><strong><?php esc_html_e( 'Admin', 'dsa' ); ?></strong><span><?php esc_html_e( 'access', 'dsa' ); ?></span></div>
-						<div><strong><?php esc_html_e( 'No write', 'dsa' ); ?></strong><span><?php esc_html_e( 'authority', 'dsa' ); ?></span></div>
-					</div>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-						<input type="hidden" name="action" value="dsa_export_site_graph">
-						<?php wp_nonce_field( 'dsa_export_site_graph' ); ?>
-						<p class="dsa-admin-inline-fields">
-							<label>
-								<span><?php esc_html_e( 'Samples per content type', 'dsa' ); ?></span>
-								<select name="sampleLimit">
-									<?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?>
-										<option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option>
-									<?php endforeach; ?>
-								</select>
-							</label>
-							<?php submit_button( __( 'Download Site Graph JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
-						</p>
-					</form>
-					<h3><?php esc_html_e( 'Validate AI binding plan', 'dsa' ); ?></h3>
-					<p class="description"><?php esc_html_e( 'Upload an AI-produced bricks-bindings/kiwe-bindings.json file. Kiwe validates it against this site\'s current Site Graph and shows a report only; it does not save Bricks data or apply changes.', 'dsa' ); ?></p>
-					<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-						<input type="hidden" name="action" value="dsa_validate_binding_plan">
-						<?php wp_nonce_field( 'dsa_validate_binding_plan' ); ?>
-						<p class="dsa-admin-inline-fields">
-							<label>
-								<span><?php esc_html_e( 'Binding JSON', 'dsa' ); ?></span>
-								<input type="file" name="dsa_binding_file" accept="application/json,.json" required>
-							</label>
-							<label>
-								<span><?php esc_html_e( 'Site Graph sample size', 'dsa' ); ?></span>
-								<select name="sampleLimit">
-									<?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?>
-										<option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option>
-									<?php endforeach; ?>
-								</select>
-							</label>
-							<?php submit_button( __( 'Validate Binding Plan', 'dsa' ), 'secondary', 'submit', false ); ?>
-						</p>
-					</form>
-					<?php $this->render_binding_plan_report( $binding_report ); ?>
-					<?php $this->render_trusted_apply_stages(); ?>
-					<p class="description"><?php esc_html_e( 'REST endpoint for tool clients:', 'dsa' ); ?> <code><?php echo esc_html( rest_url( 'dsa/v1/site-graph?sampleLimit=8' ) ); ?></code></p>
-					<p class="description"><?php esc_html_e( 'Safe AI sequence: generate/audit handoff, add bricks-bindings/ with the Site Graph, run validate-bindings, then prepare a dry-run apply plan. Do not let browser AI claim it saved Bricks or WordPress.', 'dsa' ); ?></p>
-					<ul class="ul-disc">
-						<li><code>https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md</code></li>
-						<li><code>https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md</code></li>
-					</ul>
-				</section>
 				<div class="dsa-admin-token-grid">
 					<?php foreach ( $items as $token ) : ?>
 						<?php $slider = Seam_Token_Service::slider_value( is_array( $token ) ? $token : [] ); ?>
@@ -3257,6 +3260,180 @@ final class Admin {
 						</article>
 					<?php endforeach; ?>
 				</div>
+			</section>
+		</div>
+		<?php
+	}
+
+	public function render_ai_page(): void {
+		$binding_report = $this->framework_binding_report();
+		$key_service    = new Access_Key_Service();
+		$keys           = $key_service->public_records();
+		$created_key    = '';
+		$created_token  = isset( $_GET['kiwe-ai-key-created'] ) ? sanitize_key( (string) wp_unslash( $_GET['kiwe-ai-key-created'] ) ) : '';
+		if ( '' !== $created_token ) {
+			$created_key = (string) get_transient( 'dsa_ai_key_once_' . $created_token );
+			delete_transient( 'dsa_ai_key_once_' . $created_token );
+		}
+		$rest_base = rest_url( 'dsa/v1/ai' );
+		?>
+		<div class="wrap dsa-admin">
+			<h1><?php esc_html_e( 'Kiwe AI', 'dsa' ); ?></h1>
+			<p class="description"><?php esc_html_e( 'Kiwe AI is the connector layer for browser AI, IDE agents, and future MCP-style tooling. Framework settings stay in Kiwe > Framework; AI access keys, Site Graph export, binding validation, and trusted apply staging live here.', 'dsa' ); ?></p>
+
+			<?php if ( '' !== $created_key ) : ?>
+				<div class="notice notice-success is-dismissible">
+					<p><strong><?php esc_html_e( 'Kiwe AI API key created.', 'dsa' ); ?></strong> <?php esc_html_e( 'Copy it now. Kiwe stores only a hash and will not show the secret again.', 'dsa' ); ?></p>
+					<p><textarea readonly rows="3" style="width: 100%; max-width: 860px;"><?php echo esc_textarea( $created_key ); ?></textarea></p>
+				</div>
+			<?php elseif ( '' !== $created_token ) : ?>
+				<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'That one-time API key view has expired or was already shown.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['kiwe-ai-key-revoked'] ) ) : ?>
+				<?php $revoked_status = sanitize_key( (string) wp_unslash( $_GET['kiwe-ai-key-revoked'] ) ); ?>
+				<div class="notice <?php echo '1' === $revoked_status ? 'notice-success' : 'notice-warning'; ?> is-dismissible"><p><?php echo '1' === $revoked_status ? esc_html__( 'Kiwe AI API key revoked.', 'dsa' ) : esc_html__( 'Kiwe AI API key could not be revoked.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['site-graph-exported'] ) && 'encode-error' === sanitize_key( (string) wp_unslash( $_GET['site-graph-exported'] ) ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Kiwe could not encode the Site Graph JSON. Try a smaller sample size and check server logs if it continues.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['binding-plan'] ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->binding_plan_error_message( sanitize_key( (string) wp_unslash( $_GET['binding-plan'] ) ) ) ); ?></p></div>
+			<?php endif; ?>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'API access keys', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Create a revocable key when an external AI tool needs to inspect this site and use Kiwe’s safe AI connector endpoints. Use Authorization: Bearer or X-Kiwe-AI-Key. Keys are scoped, hashed at rest, and can be deleted from this page.', 'dsa' ); ?></p>
+				<div class="dsa-admin-token-summary">
+					<div><strong><?php echo esc_html( (string) count( array_filter( $keys, static fn( $record ) => empty( $record['revokedAt'] ) ) ) ); ?></strong><span><?php esc_html_e( 'active keys', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Hashed', 'dsa' ); ?></strong><span><?php esc_html_e( 'storage', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Scoped', 'dsa' ); ?></strong><span><?php esc_html_e( 'access', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Revocable', 'dsa' ); ?></strong><span><?php esc_html_e( 'control', 'dsa' ); ?></span></div>
+				</div>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_create_ai_access_key">
+					<?php wp_nonce_field( 'dsa_create_ai_access_key' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label>
+							<span><?php esc_html_e( 'Label', 'dsa' ); ?></span>
+							<input type="text" name="label" value="" placeholder="<?php esc_attr_e( 'Claude / ChatGPT / Codex testing', 'dsa' ); ?>">
+						</label>
+						<label>
+							<input type="checkbox" name="scopes[]" value="all" checked>
+							<span><?php esc_html_e( 'All Kiwe AI connector access', 'dsa' ); ?></span>
+						</label>
+						<?php submit_button( __( 'Create API Key', 'dsa' ), 'primary', 'submit', false ); ?>
+					</p>
+					<details>
+						<summary><?php esc_html_e( 'Advanced scopes', 'dsa' ); ?></summary>
+						<p class="description"><?php esc_html_e( 'If “all” is checked, Kiwe stores only the all scope. Uncheck it to create a narrower key.', 'dsa' ); ?></p>
+						<p class="dsa-admin-token-chips">
+							<?php foreach ( Access_Key_Service::SCOPES as $scope ) : ?>
+								<?php if ( 'all' === $scope ) { continue; } ?>
+								<label><input type="checkbox" name="scopes[]" value="<?php echo esc_attr( $scope ); ?>"> <code><?php echo esc_html( $scope ); ?></code></label>
+							<?php endforeach; ?>
+						</p>
+					</details>
+				</form>
+
+				<?php if ( [] !== $keys ) : ?>
+					<table class="widefat striped" style="margin-top: 1rem;">
+						<thead><tr><th><?php esc_html_e( 'Label', 'dsa' ); ?></th><th><?php esc_html_e( 'Key', 'dsa' ); ?></th><th><?php esc_html_e( 'Scopes', 'dsa' ); ?></th><th><?php esc_html_e( 'Created', 'dsa' ); ?></th><th><?php esc_html_e( 'Last used', 'dsa' ); ?></th><th><?php esc_html_e( 'Status', 'dsa' ); ?></th><th><?php esc_html_e( 'Action', 'dsa' ); ?></th></tr></thead>
+						<tbody>
+							<?php foreach ( $keys as $record ) : ?>
+								<?php
+								if ( ! is_array( $record ) ) {
+									continue;
+								}
+								$id      = sanitize_key( (string) ( $record['id'] ?? '' ) );
+								$revoked = '' !== (string) ( $record['revokedAt'] ?? '' );
+								?>
+								<tr>
+									<td><?php echo esc_html( (string) ( $record['label'] ?? '' ) ); ?></td>
+									<td><code><?php echo esc_html( (string) ( $record['prefix'] ?? '' ) ); ?>...<?php echo esc_html( (string) ( $record['last4'] ?? '' ) ); ?></code></td>
+									<td><code><?php echo esc_html( implode( ', ', isset( $record['scopes'] ) && is_array( $record['scopes'] ) ? $record['scopes'] : [] ) ); ?></code></td>
+									<td><?php echo esc_html( (string) ( $record['createdAt'] ?? '' ) ); ?></td>
+									<td><?php echo esc_html( (string) ( $record['lastUsedAt'] ?? __( 'Never', 'dsa' ) ) ); ?></td>
+									<td><?php echo $revoked ? esc_html__( 'Revoked', 'dsa' ) : esc_html__( 'Active', 'dsa' ); ?></td>
+									<td>
+										<?php if ( ! $revoked && '' !== $id ) : ?>
+											<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+												<input type="hidden" name="action" value="dsa_revoke_ai_access_key">
+												<input type="hidden" name="keyId" value="<?php echo esc_attr( $id ); ?>">
+												<?php wp_nonce_field( 'dsa_revoke_ai_access_key_' . $id ); ?>
+												<button class="button button-secondary" type="submit"><?php esc_html_e( 'Revoke', 'dsa' ); ?></button>
+											</form>
+										<?php else : ?>
+											<span aria-hidden="true">—</span>
+										<?php endif; ?>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				<?php endif; ?>
+			</section>
+
+			<section class="dsa-admin__panel" style="margin-top: 1rem;">
+				<h2><?php esc_html_e( 'AI connector and Site Graph', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Use this when an AI or web developer needs to turn an approved Seam/Kiwe design into Bricks query loops, dynamic data, and Kiwe AppShell launchers for this exact WordPress site. The Site Graph is read-only and contains no secrets, visitor state, orders, payment data, or credentials.', 'dsa' ); ?></p>
+				<div class="dsa-admin-token-summary">
+					<div><strong><?php esc_html_e( 'Read-only', 'dsa' ); ?></strong><span><?php esc_html_e( 'Site Graph', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'v1', 'dsa' ); ?></strong><span><?php esc_html_e( 'schema', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'API key', 'dsa' ); ?></strong><span><?php esc_html_e( 'tool access', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Staging only', 'dsa' ); ?></strong><span><?php esc_html_e( 'write boundary', 'dsa' ); ?></span></div>
+				</div>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_export_site_graph">
+					<?php wp_nonce_field( 'dsa_export_site_graph' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label>
+							<span><?php esc_html_e( 'Samples per content type', 'dsa' ); ?></span>
+							<select name="sampleLimit">
+								<?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?>
+									<option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</label>
+						<?php submit_button( __( 'Download Site Graph JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</p>
+				</form>
+				<h3><?php esc_html_e( 'Validate AI binding plan', 'dsa' ); ?></h3>
+				<p class="description"><?php esc_html_e( 'Upload an AI-produced bricks-bindings/kiwe-bindings.json file. Kiwe validates it against this site\'s current Site Graph and shows a report only; it does not save Bricks data or apply changes.', 'dsa' ); ?></p>
+				<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_validate_binding_plan">
+					<?php wp_nonce_field( 'dsa_validate_binding_plan' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label>
+							<span><?php esc_html_e( 'Binding JSON', 'dsa' ); ?></span>
+							<input type="file" name="dsa_binding_file" accept="application/json,.json" required>
+						</label>
+						<label>
+							<span><?php esc_html_e( 'Site Graph sample size', 'dsa' ); ?></span>
+							<select name="sampleLimit">
+								<?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?>
+									<option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</label>
+						<?php submit_button( __( 'Validate Binding Plan', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</p>
+				</form>
+				<?php $this->render_binding_plan_report( $binding_report ); ?>
+				<?php $this->render_trusted_apply_stages(); ?>
+				<h3><?php esc_html_e( 'REST endpoints for tool clients', 'dsa' ); ?></h3>
+				<p class="description"><?php esc_html_e( 'Base endpoint:', 'dsa' ); ?> <code><?php echo esc_html( $rest_base ); ?></code></p>
+				<ul class="ul-disc">
+					<li><code>GET /status</code> — <?php esc_html_e( 'verify a key and connector capability.', 'dsa' ); ?></li>
+					<li><code>GET /site-graph?sampleLimit=8</code> — <?php esc_html_e( 'discover posts, products, terms, pages, Bricks capability, Kiwe launchers, and dynamic-data hints.', 'dsa' ); ?></li>
+					<li><code>POST /validate-bindings</code> — <?php esc_html_e( 'validate AI-produced bindings.', 'dsa' ); ?></li>
+					<li><code>POST /prepare-apply-plan</code> — <?php esc_html_e( 'build a non-mutating dry-run operation plan.', 'dsa' ); ?></li>
+					<li><code>POST /stage-apply-plan</code> and <code>/stages/{stageId}/...</code> — <?php esc_html_e( 'run the trusted staging chain without directly saving content.', 'dsa' ); ?></li>
+				</ul>
+				<p class="description"><?php esc_html_e( 'Safe AI sequence: generate/audit handoff, add bricks-bindings/ with the Site Graph, run validate-bindings, prepare a dry-run apply plan, then stage it for trusted review. Do not let browser AI claim it saved Bricks or WordPress unless a future controlled executor explicitly performs that save.', 'dsa' ); ?></p>
+				<ul class="ul-disc">
+					<li><code>https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md</code></li>
+					<li><code>https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md</code></li>
+				</ul>
 			</section>
 		</div>
 		<?php
@@ -6937,7 +7114,7 @@ final class Admin {
 	}
 
 	private function redirect_binding_plan_error( string $code ): void {
-		wp_safe_redirect( add_query_arg( 'binding-plan', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		wp_safe_redirect( add_query_arg( 'binding-plan', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe-ai' ) ) );
 		exit;
 	}
 

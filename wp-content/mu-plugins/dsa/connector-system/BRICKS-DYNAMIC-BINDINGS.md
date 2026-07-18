@@ -12,7 +12,7 @@ A dynamic binding pass needs only:
 
 Do not read the full plugin codebase. Do not guess categories, pages, products, Bricks tags, or query-loop object types when the Site Graph provides them.
 
-Admins can download the target Site Graph from `Kiwe > Framework > AI connector and Site Graph`.
+Admins can download the target Site Graph from `Kiwe > AI > AI connector and Site Graph`.
 
 ## Output expectation
 
@@ -87,7 +87,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 MCP clients can call `kiwe_validate_bindings` with `targetDir` and optional `siteGraphPath`.
 
-WordPress admins can validate the same `kiwe-bindings.json` against the current live Site Graph from `Kiwe > Framework > AI connector and Site Graph`. This admin intake does not write Bricks data. When validation completes, the same screen also shows a dry-run apply-plan preview, a JSON download, and a staging action so admins can inspect, share, or pin the planned query-loop, dynamic-field, launcher, menu-context, and manual-review operations before any future adapter path is considered.
+WordPress admins can validate the same `kiwe-bindings.json` against the current live Site Graph from `Kiwe > AI > AI connector and Site Graph`. This admin intake does not write Bricks data. When validation completes, the same screen also shows a dry-run apply-plan preview, a JSON download, and a staging action so admins can inspect, share, or pin the planned query-loop, dynamic-field, launcher, menu-context, and manual-review operations before any future adapter path is considered.
 
 Prepare a dry-run apply plan with:
 

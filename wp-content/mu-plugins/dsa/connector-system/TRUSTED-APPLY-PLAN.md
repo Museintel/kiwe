@@ -52,7 +52,7 @@ Validate the binding plan first:
 node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
 ```
 
-Admins can download `site-graph.json` from `Kiwe > Framework > AI connector and Site Graph`.
+Admins can download `site-graph.json` from `Kiwe > AI > AI connector and Site Graph`.
 Admins can also upload an AI-produced `kiwe-bindings.json` there to run the same style of validation against the current live Site Graph without mutating Bricks. After upload, Kiwe also renders the dry-run apply-plan preview in admin so non-developers can inspect the same preflight gates and planned operations without running the CLI. The report includes a nonce-protected download for the reviewed apply-plan JSON and a staging action for trusted adapter review.
 
 Prepare a dry-run apply plan:

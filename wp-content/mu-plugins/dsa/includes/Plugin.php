@@ -47,6 +47,7 @@ use DSA\Rest\Settings_Controller;
 use DSA\Rest\Search_Controller;
 use DSA\Rest\Saved_Items_Controller;
 use DSA\Rest\Site_Graph_Controller;
+use DSA\Rest\AI_Access_Controller;
 use DSA\Rest\Editorial_Envelope_Controller;
 use DSA\Rest\Apex_Profile_Controller;
 use DSA\Rest\Runtime_Hydration_Controller;
@@ -205,6 +206,7 @@ final class Plugin {
 		( new Admin_Notifications_Controller( $this->admin_notifications ) )->register();
 		( new Settings_Controller( $this->settings, $this->registry, $this->trust, $this->modules, $this->native, $this->copilot, $this->reviews ) )->register();
 		( new Site_Graph_Controller( $this->site_graph ) )->register();
+		( new AI_Access_Controller( $this->site_graph ) )->register();
 		( new Search_Controller( $this->search ) )->register();
 		( new Saved_Items_Controller( $this->saved_items ) )->register();
 		( new Editorial_Envelope_Controller( $this->editorial_fragments ) )->register();

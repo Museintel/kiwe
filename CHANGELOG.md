@@ -2,6 +2,13 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.83 - 2026-07-18
+
+- Split Kiwe AI connector administration into `Kiwe > AI`, leaving `Kiwe > Framework` focused only on Seam/Kiwe Framework variables, palette, class vocabulary, and Bricks framework push/download settings.
+- Added revocable, scoped Kiwe AI API keys generated from `Kiwe > AI`. Keys are shown once, stored only as hashes, track last use, and can authenticate external tool clients with `Authorization: Bearer ...` or `X-Kiwe-AI-Key`.
+- Added `/wp-json/dsa/v1/ai/*` API-key-protected connector endpoints for Site Graph discovery, binding validation, dry-run apply-plan preparation, trusted stage creation, and the full non-mutating trusted-apply artifact chain.
+- Updated AI/tooling docs so browser AIs, IDE agents, and developers use `Kiwe > AI` for Site Graph export, binding-plan upload, trusted staging review, and API-key connector access.
+
 ## 0.5.82 - 2026-07-18
 
 - Began the Kiwe AI/connector integration track for dynamic WordPress + Bricks handoffs.
