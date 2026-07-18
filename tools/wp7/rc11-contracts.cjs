@@ -13,16 +13,25 @@ const plugin = read( 'wp-content/mu-plugins/dsa/includes/Plugin.php' );
 const restFiles = fs.readdirSync( path.join( root, 'wp-content/mu-plugins/dsa/includes/Rest' ) ).filter( ( file ) => file.endsWith( '.php' ) ).map( ( file ) => read( 'wp-content/mu-plugins/dsa/includes/Rest/' + file ) ).join( '\n' );
 const checks = [];
 const check = ( name, pass ) => checks.push( { name, pass: Boolean( pass ) } );
+const abilityCount = ( abilities.match(/wp_register_ability\(/g) || [] ).length;
+const expectedAbilities = [
+	'dsa/audit-trust',
+	'dsa/summarize-route',
+	'dsa/get-site-graph',
+	'dsa/validate-bindings',
+	'dsa/prepare-apply-plan',
+	'dsa/stage-apply-plan',
+];
 
 check( 'Abilities register on official category and ability hooks', abilities.includes( "wp_abilities_api_categories_init" ) && abilities.includes( "wp_abilities_api_init" ) );
 check( 'Ability category is registered before use', abilities.includes( 'wp_register_ability_category' ) && abilities.includes( "private const CATEGORY = 'kiwe-appsite'" ) );
-check( 'Only bounded read-first abilities ship', ( abilities.match(/wp_register_ability\(/g) || [] ).length === 2 && abilities.includes( "'dsa/audit-trust'" ) && abilities.includes( "'dsa/summarize-route'" ) );
-check( 'Abilities are readonly and core-REST discoverable', ( abilities.match(/'readonly'\s*=>\s*true/g) || [] ).length === 2 && ( abilities.match(/'show_in_rest'\s*=>\s*true/g) || [] ).length === 2 );
-check( 'Abilities require explicit administrator capability', abilities.includes( "current_user_can( 'manage_options' )" ) && ( abilities.match(/'permission_callback'/g) || [] ).length === 2 );
-check( 'Every returned ability payload has a mandatory schema', ( abilities.match(/'output_schema'/g) || [] ).length === 2 && abilities.includes( "'required'" ) && abilities.includes( "'maxItems' => 24" ) );
+check( 'Only bounded read-first AI connector abilities ship', abilityCount === expectedAbilities.length && expectedAbilities.every( ( id ) => abilities.includes( `'${ id }'` ) ) );
+check( 'Abilities are core-REST discoverable with explicit non-mutation annotations', ( abilities.match(/'show_in_rest'\s*=>\s*true/g) || [] ).length === abilityCount && ( abilities.match(/'readonly'\s*=>\s*true/g) || [] ).length >= 5 && abilities.includes( "'writesKiweReviewQueue' => true" ) && abilities.includes( "'mutatesWordPress'      => false" ) && abilities.includes( "'mutatesBricksContent'  => false" ) );
+check( 'Abilities require explicit administrator capability', abilities.includes( "current_user_can( 'manage_options' )" ) && ( abilities.match(/'permission_callback'/g) || [] ).length === abilityCount );
+check( 'Every returned ability payload has a mandatory schema', ( abilities.match(/'output_schema'/g) || [] ).length === abilityCount && abilities.includes( "'required'" ) && abilities.includes( "'maxItems' => 24" ) );
 check( 'Ability output is bounded and excludes raw settings and elements', abilities.includes( 'array_slice( $types, 0, 24 )' ) && abilities.includes( 'array_slice( (array)' ) && !abilities.includes( "'elements' =>" ) && !abilities.includes( '$this->settings->all()' ) );
 check( 'Ability service contains no write or transport authority', !/\b(?:update_option|update_post_meta|update_user_meta|wp_insert_post|wp_update_post|delete_option|delete_post_meta|wp_remote_|curl_|dsaPost)\s*\(/.test( abilities ) );
-check( 'Native service registers the ability adapter', native.includes( '$this->abilities->register();' ) && plugin.includes( 'new Native_Service( $this->settings, $this->registry, $this->trust )' ) );
+check( 'Native service registers the ability adapter', native.includes( '$this->abilities->register();' ) && plugin.includes( 'new Native_Service( $this->settings, $this->registry, $this->trust, $this->site_graph )' ) );
 check( 'WordPress 7 receives one native Interactivity script module', assets.includes( "wp_enqueue_script_module(" ) && assets.includes( "'dsa-native-islands'" ) && assets.includes( "[ '@wordpress/interactivity' ]" ) );
 check( 'Partial hosts retain classic island fallbacks', assets.includes( "foreach ( [ 'ai', 'app', 'data' ] as $island )" ) && assets.includes( "function_exists( 'wp_interactivity_state' )" ) );
 check( 'Native island bridge consumes the canonical Surface events', [ 'surface:ai:notifications', 'surface:app:adoption', 'surface:native:data' ].every( ( event ) => moduleSource.includes( event ) ) );

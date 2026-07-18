@@ -134,7 +134,7 @@ final class Surface_Renderer {
 		<div id="dsa-surface" class="<?php echo esc_attr( implode( ' ', $surface_classes ) ); ?>" data-dsa-surface data-nosnippet data-dsa-ui-contract="2" data-dsa-visual-profile="<?php echo esc_attr( $visual_profile ); ?>" data-dsa-installed-theme="<?php echo esc_attr( $active_theme_id ); ?>" data-dsa-theme="<?php echo esc_attr( $theme_mode ); ?>" data-dsa-dock-presentation="<?php echo esc_attr( $dock_presentation ); ?>" data-dsa-dock-focus-id="<?php echo esc_attr( $focus_item ); ?>" data-dsa-dock-profile="desktop" data-dsa-dock-orientation="<?php echo esc_attr( $initial_orientation ); ?>" data-dsa-dock-position="<?php echo esc_attr( $initial_position ); ?>" data-dsa-dock-alignment="<?php echo esc_attr( $initial_alignment ); ?>" data-dsa-dock-edge="<?php echo esc_attr( $initial_edge ); ?>" data-dsa-sheet-position="<?php echo esc_attr( $sheet_position ); ?>" data-dsa-sheet-backdrop="<?php echo esc_attr( $sheet_backdrop ); ?>" data-dsa-sheet-spacing="<?php echo esc_attr( $sheet_spacing ); ?>" data-dsa-sheet-origin="<?php echo esc_attr( $sheet_origin ); ?>" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-item-count="<?php echo esc_attr( (string) $main_module_count ); ?>" data-dsa-dock-ai-count="<?php echo esc_attr( (string) $ai_module_count ); ?>" style="--dsa-dock-item-count:<?php echo esc_attr( (string) $main_module_count ); ?>;--dsa-dock-ai-count:<?php echo esc_attr( (string) $ai_module_count ); ?>;--dsa-sheet-duration:<?php echo esc_attr( (string) $sheet_duration ); ?>ms;--dsa-sheet-max-height:<?php echo esc_attr( (string) $sheet_max_height ); ?>dvh;--dsa-sheet-width-percent:<?php echo esc_attr( (string) $sheet_width_percent ); ?>;">
 			<div class="dsa-dock-context" data-dsa-dock-context hidden><div class="dsa-dock-context__content" data-dsa-dock-context-content></div></div>
 			<div class="dsa-dock-cluster" data-dsa-dock-cluster>
-			<nav class="dsa-dock dsa-phonekey-dock" role="toolbar" aria-label="<?php echo esc_attr__( 'Surface tools', 'dsa' ); ?>">
+			<nav class="dsa-dock dsa-phonekey-dock" data-dsa-dock role="toolbar" aria-label="<?php echo esc_attr__( 'Surface tools', 'dsa' ); ?>">
 				<?php foreach ( $modules as $index => $module ) : ?>
 					<?php
 					$button_classes = [ 'dsa-dock__button' ];
@@ -142,6 +142,7 @@ final class Surface_Renderer {
 					$is_focus = $focus_item === $module_id;
 					if ( $is_focus ) {
 						$button_classes[] = 'dsa-dock-focus';
+						$button_classes[] = 'dsa-dock-primary';
 						$button_classes[] = 'dsa-ai-launcher';
 					}
 					if ( $dock_split_enabled ) {
@@ -165,9 +166,11 @@ final class Surface_Renderer {
 					<a
 						class="<?php echo esc_attr( implode( ' ', $button_classes ) ); ?>"
 						href="<?php echo esc_url( $module['url'] ); ?>"
+						data-dsa-dock-item
 						data-dsa-module="<?php echo esc_attr( $module_id ); ?>"
 						data-dsa-module-mode="link"
 						data-dsa-dock-link
+						<?php echo $is_focus ? 'data-dsa-dock-focus data-dsa-dock-primary' : ''; ?>
 						data-dsa-full-navigation
 						aria-label="<?php echo esc_attr( $module['label'] ); ?>"
 					>
@@ -178,9 +181,11 @@ final class Surface_Renderer {
 					<button
 						class="<?php echo esc_attr( implode( ' ', $button_classes ) ); ?>"
 						type="button"
+						data-dsa-dock-item
 						data-dsa-module="<?php echo esc_attr( $module_id ); ?>"
 						data-dsa-module-mode="<?php echo esc_attr( $module['mode'] ?? 'dock' ); ?>"
 						data-dsa-module-panel="<?php echo esc_attr( $module['panel'] ?? $module_id ); ?>"
+						<?php echo $is_focus ? 'data-dsa-dock-focus data-dsa-dock-primary' : ''; ?>
 						aria-pressed="false"
 						aria-label="<?php echo esc_attr( $module['label'] ); ?>"
 					>

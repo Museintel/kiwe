@@ -58,7 +58,8 @@ final class Site_Introspection_Service {
 	}
 
 	private function bricks( int $sample_limit ): array {
-		$active = defined( 'BRICKS_VERSION' ) || post_type_exists( 'bricks_template' ) || class_exists( '\Bricks\Helpers' );
+		$active     = defined( 'BRICKS_VERSION' ) || post_type_exists( 'bricks_template' ) || class_exists( '\Bricks\Helpers' );
+		$conversion = ( new Bricks_Html_Css_Converter_Service() )->available();
 
 		return [
 			'active'       => $active,
@@ -75,8 +76,11 @@ final class Site_Introspection_Service {
 				'pageSettingsMeta' => defined( 'BRICKS_DB_PAGE_SETTINGS' ) ? BRICKS_DB_PAGE_SETTINGS : '_bricks_page_settings',
 			],
 			'htmlCssToBricks' => [
-				'detected' => class_exists( '\Bricks\Html_To_Bricks_Converter' ) || class_exists( '\Bricks\Abilities\Conversion' ),
-				'kiwePolicy' => 'Kiwe prefers Bricks-ready HTML first. Raw Bricks JSON writes are available only through the controlled staging executor with confirmRawBricksJsonWrite and rollback backup metadata.',
+				'detected'       => ! empty( $conversion['native'] ) || ! empty( $conversion['fallback'] ),
+				'bricksNative'   => ! empty( $conversion['native'] ),
+				'kiweFallback'   => ! empty( $conversion['fallback'] ),
+				'preferred'      => (string) ( $conversion['preferred'] ?? 'kiwe-fallback' ),
+				'kiwePolicy'     => 'Use controlled staging operations bricks.page.from-html or bricks.template.from-html. Kiwe writes rollback metadata, preserves Seam classes/data attributes, and stores safe CSS in Bricks page settings.',
 			],
 			'settings'    => [
 				'global'      => $this->safe_option_summary( defined( 'BRICKS_DB_GLOBAL_SETTINGS' ) ? BRICKS_DB_GLOBAL_SETTINGS : 'bricks_global_settings' ),

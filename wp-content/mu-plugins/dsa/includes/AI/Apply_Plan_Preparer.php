@@ -71,6 +71,8 @@ final class Apply_Plan_Preparer {
 			'bricksAbilityManager'        => ! empty( $abilities['bricksAbilityManager'] ) || ! empty( $abilities['bricksAbilityManagerPresent'] ),
 			'bricksMcpLikelyAvailable'    => ! empty( $abilities['mcpLikelyAvailable'] ),
 			'htmlCssToBricksAvailable'    => ! empty( $conversion['htmlCssToBricksAvailable'] ),
+			'bricksNativeConverterAvailable' => ! empty( $conversion['bricksNativeAvailable'] ),
+			'kiweFallbackConverterAvailable' => ! empty( $conversion['kiweFallbackAvailable'] ),
 			'trustedAdapterLikelyAvailable' => $trusted,
 			'manualBuilderFallback'       => true,
 		];
@@ -94,7 +96,7 @@ final class Apply_Plan_Preparer {
 				'id'      => 'html-css-to-bricks',
 				'label'   => 'Confirm Bricks HTML/CSS import/conversion path.',
 				'status'  => ! empty( $capabilities['htmlCssToBricksAvailable'] ) ? 'available' : 'manual-builder-fallback',
-				'details' => ! empty( $capabilities['htmlCssToBricksAvailable'] ) ? 'Bricks conversion capability appears available in the Site Graph.' : 'Use manual Bricks review if conversion is unavailable.',
+				'details' => ! empty( $capabilities['htmlCssToBricksAvailable'] ) ? ( ! empty( $capabilities['bricksNativeConverterAvailable'] ) ? 'Bricks native HTML/CSS conversion appears available.' : 'Kiwe controlled fallback conversion appears available for staging page/template creation.' ) : 'Use manual Bricks review if conversion is unavailable.',
 			],
 			[
 				'id'      => 'trusted-adapter',

@@ -1265,6 +1265,8 @@
 			return;
 		}
 		const resolvedPanel = String( panelName || panel.getAttribute( 'data-dsa-lazy-panel' ) || 'surface' ).toLowerCase().replace( /[^a-z0-9_-]+/g, '-' );
+		panel.setAttribute( 'data-dsa-screen', '' );
+		panel.setAttribute( 'data-dsa-screen-module', resolvedPanel || 'surface' );
 		panel.setAttribute( 'data-seam-root', 'kiwe-dsa' );
 		panel.setAttribute( 'data-seam-role', 'modal' );
 		panel.setAttribute( 'data-seam-flow', 'stack' );

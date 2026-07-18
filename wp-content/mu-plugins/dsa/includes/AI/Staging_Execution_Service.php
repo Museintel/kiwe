@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Staging_Execution_Service {
 	private const MAX_HTML_BYTES = 450000;
 	private const MAX_CSS_BYTES  = 180000;
+	private const MAX_BRICKS_JSON_BYTES = 1800000;
 	private const MAX_OPS        = 12;
 	private const BRICKS_SETTING_OPTIONS = [
 		'bricks_global_settings',
@@ -60,7 +61,7 @@ final class Staging_Execution_Service {
 				'Fetch /ai/site-inspection and confirm created IDs.',
 				'Open created staging page URLs on desktop/tablet/mobile.',
 				'Open Kiwe dock screens and header launchers on created pages.',
-				'If Bricks HTML-to-Bricks import is needed, import the stored bricksPasteHtml in Bricks and then re-run inspection.',
+				'If Bricks HTML/CSS conversion ran, inspect the generated Bricks page/template JSON, CSS page settings, and frontend render.',
 				'If Woo/cart/checkout/auth/raw Bricks operations ran, review returned IDs/hashes and rollback metadata before any next mutation.',
 			],
 		];
@@ -103,8 +104,8 @@ final class Staging_Execution_Service {
 			if ( 'auth.run' === $type && empty( $request['confirmAuthRuntime'] ) && in_array( sanitize_key( (string) ( $operation['action'] ?? 'probe' ) ), [ 'create_test_user', 'delete_test_user' ], true ) ) {
 				$blockers[] = 'auth.run user creation/deletion requires confirmAuthRuntime true.';
 			}
-			if ( 'bricks.raw-meta-write' === $type && empty( $request['confirmRawBricksJsonWrite'] ) ) {
-				$blockers[] = 'bricks.raw-meta-write requires confirmRawBricksJsonWrite true.';
+			if ( in_array( $type, [ 'bricks.raw-meta-write', 'bricks.page.from-html', 'bricks.template.from-html' ], true ) && empty( $request['confirmRawBricksJsonWrite'] ) ) {
+				$blockers[] = sprintf( '%s requires confirmRawBricksJsonWrite true.', $type );
 			}
 		}
 
@@ -120,6 +121,14 @@ final class Staging_Execution_Service {
 
 		if ( 'wordpress.post.upsert' === $type ) {
 			return $this->upsert_post( $operation, 'post', $execution_id );
+		}
+
+		if ( 'bricks.page.from-html' === $type ) {
+			return $this->upsert_bricks_page_from_html( $operation, $execution_id );
+		}
+
+		if ( 'bricks.template.from-html' === $type ) {
+			return $this->upsert_bricks_template_from_html( $operation, $execution_id );
 		}
 
 		if ( 'bricks.template.create' === $type || 'bricks.template.upsert' === $type ) {
@@ -257,6 +266,134 @@ final class Staging_Execution_Service {
 		$result['bricksTemplate'] = true;
 
 		return $result;
+	}
+
+	private function upsert_bricks_page_from_html( array $operation, string $execution_id ): array {
+		$result = $this->upsert_post( array_merge( $operation, [ 'type' => 'wordpress.page.upsert' ] ), 'page', $execution_id );
+		if ( empty( $result['ok'] ) ) {
+			return $result;
+		}
+
+		$conversion = $this->apply_bricks_conversion( absint( $result['postId'] ?? 0 ), $operation, $execution_id );
+		if ( empty( $conversion['ok'] ) ) {
+			return array_merge( $result, $conversion, [ 'ok' => false ] );
+		}
+
+		return array_merge( $result, $conversion, [ 'bricksPage' => true ] );
+	}
+
+	private function upsert_bricks_template_from_html( array $operation, string $execution_id ): array {
+		$result = $this->upsert_bricks_template( array_merge( $operation, [ 'type' => 'bricks.template.upsert' ] ), $execution_id );
+		if ( empty( $result['ok'] ) ) {
+			return $result;
+		}
+
+		$conversion = $this->apply_bricks_conversion( absint( $result['postId'] ?? 0 ), $operation, $execution_id );
+		if ( empty( $conversion['ok'] ) ) {
+			return array_merge( $result, $conversion, [ 'ok' => false ] );
+		}
+
+		return array_merge( $result, $conversion, [ 'bricksTemplate' => true ] );
+	}
+
+	private function apply_bricks_conversion( int $post_id, array $operation, string $execution_id ): array {
+		if ( ! $post_id || ! get_post( $post_id ) ) {
+			return $this->failure( 'target_post_missing', 'Bricks conversion target post was not found.' );
+		}
+
+		$html = (string) ( $operation['html'] ?? $operation['bricksPasteHtml'] ?? '' );
+		$css  = (string) ( $operation['css'] ?? '' );
+		if ( strlen( $html ) > self::MAX_HTML_BYTES ) {
+			return $this->failure( 'html_too_large', 'HTML exceeds staging executor size budget.' );
+		}
+		if ( strlen( $css ) > self::MAX_CSS_BYTES ) {
+			return $this->failure( 'css_too_large', 'CSS exceeds staging executor size budget.' );
+		}
+
+		$converter  = new Bricks_Html_Css_Converter_Service();
+		$conversion = $converter->convert(
+			$html,
+			$css,
+			[
+				'createGlobalClasses' => ! empty( $operation['createGlobalClasses'] ),
+				'extractVariables'    => ! empty( $operation['extractVariables'] ),
+				'pageSettings'        => isset( $operation['pageSettings'] ) && is_array( $operation['pageSettings'] ) ? $operation['pageSettings'] : [],
+			]
+		);
+
+		if ( empty( $conversion['success'] ) || empty( $conversion['elements'] ) || ! is_array( $conversion['elements'] ) ) {
+			return [
+				'ok'       => false,
+				'code'     => 'bricks_conversion_failed',
+				'message'  => 'HTML/CSS could not be converted to Bricks elements.',
+				'warnings' => isset( $conversion['warnings'] ) && is_array( $conversion['warnings'] ) ? $conversion['warnings'] : [],
+				'errors'   => isset( $conversion['errors'] ) && is_array( $conversion['errors'] ) ? $conversion['errors'] : [],
+			];
+		}
+
+		$elements_json = wp_json_encode( $conversion['elements'] );
+		if ( ! is_string( $elements_json ) || strlen( $elements_json ) > self::MAX_BRICKS_JSON_BYTES ) {
+			return $this->failure( 'bricks_json_too_large', 'Converted Bricks element JSON exceeds staging safety budget.' );
+		}
+
+		$content_key  = defined( 'BRICKS_DB_PAGE_CONTENT' ) ? BRICKS_DB_PAGE_CONTENT : '_bricks_page_content_2';
+		$settings_key = defined( 'BRICKS_DB_PAGE_SETTINGS' ) ? BRICKS_DB_PAGE_SETTINGS : '_bricks_page_settings';
+		$mode_key     = '_bricks_editor_mode';
+		$previous = [
+			$content_key  => get_post_meta( $post_id, $content_key, true ),
+			$settings_key => get_post_meta( $post_id, $settings_key, true ),
+			$mode_key     => get_post_meta( $post_id, $mode_key, true ),
+		];
+		update_post_meta( $post_id, '_kiwe_ai_bricks_conversion_backup_' . substr( $execution_id, -12 ), $previous );
+
+		update_post_meta( $post_id, $content_key, $conversion['elements'] );
+
+		$current_settings = get_post_meta( $post_id, $settings_key, true );
+		$current_settings = is_array( $current_settings ) ? $current_settings : [];
+		$page_settings    = isset( $conversion['pageSettings'] ) && is_array( $conversion['pageSettings'] ) ? $this->sanitize_bricks_page_settings( $conversion['pageSettings'] ) : [];
+		update_post_meta( $post_id, $settings_key, array_merge( $current_settings, $page_settings ) );
+		update_post_meta( $post_id, $mode_key, 'bricks' );
+		update_post_meta( $post_id, '_kiwe_ai_bricks_conversion_hash', hash( 'sha256', $elements_json . "\n/* css */\n" . (string) ( $page_settings['customCss'] ?? '' ) ) );
+		update_post_meta( $post_id, '_kiwe_ai_bricks_conversion_converter', sanitize_text_field( (string) ( $conversion['converter'] ?? '' ) ) );
+
+		return [
+			'ok'                    => true,
+			'type'                  => $operation['type'] ?? '',
+			'convertedToBricksJson' => true,
+			'rawBricksMetaWritten'  => true,
+			'converter'             => sanitize_text_field( (string) ( $conversion['converter'] ?? '' ) ),
+			'elementCount'          => count( $conversion['elements'] ),
+			'pageSettingsWritten'   => array_values( array_keys( $page_settings ) ),
+			'bricksContentMetaKey'  => $content_key,
+			'bricksSettingsMetaKey' => $settings_key,
+			'warnings'              => isset( $conversion['warnings'] ) && is_array( $conversion['warnings'] ) ? $conversion['warnings'] : [],
+			'globalClassesCount'    => isset( $conversion['globalClasses'] ) && is_array( $conversion['globalClasses'] ) ? count( $conversion['globalClasses'] ) : 0,
+			'globalVariablesCount'  => isset( $conversion['globalVariables'] ) && is_array( $conversion['globalVariables'] ) ? count( $conversion['globalVariables'] ) : 0,
+		];
+	}
+
+	private function sanitize_bricks_page_settings( array $settings ): array {
+		$out = [];
+		foreach ( $settings as $key => $value ) {
+			$key = (string) $key;
+			if ( 'customCss' === $key ) {
+				$css = $this->sanitize_staging_css( (string) $value );
+				if ( '' !== $css ) {
+					$out['customCss'] = $css;
+				}
+				continue;
+			}
+			if ( ! preg_match( '/^[a-zA-Z0-9_-]{1,64}$/', $key ) || preg_match( '/script|code|php|password|secret|token|key|license|nonce/i', $key ) ) {
+				continue;
+			}
+			if ( is_bool( $value ) || is_int( $value ) || is_float( $value ) || null === $value ) {
+				$out[ $key ] = $value;
+			} elseif ( is_scalar( $value ) ) {
+				$out[ $key ] = sanitize_text_field( substr( (string) $value, 0, 4000 ) );
+			}
+		}
+
+		return $out;
 	}
 
 	private function install_activate_theme( array $operation ): array {
@@ -439,7 +576,7 @@ final class Staging_Execution_Service {
 		$css = substr( $css, 0, self::MAX_CSS_BYTES );
 		$css = preg_replace( '/\\/\\*.*?\\*\\//s', '', $css );
 		$css = is_string( $css ) ? $css : '';
-		if ( preg_match( '/<|>|@import|expression\\s*\\(|javascript:|vbscript:|data:text\\/html|behavior\\s*:|-moz-binding/i', $css ) ) {
+		if ( preg_match( '/<|@import|expression\\s*\\(|javascript:|vbscript:|data:text\\/html|(^|[;{\\s])behavior\\s*:|-moz-binding/i', $css ) ) {
 			return '';
 		}
 

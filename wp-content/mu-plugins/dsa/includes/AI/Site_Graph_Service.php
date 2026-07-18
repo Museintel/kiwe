@@ -153,6 +153,7 @@ final class Site_Graph_Service {
 		$active        = defined( 'BRICKS_VERSION' ) || class_exists( '\Bricks\Helpers' ) || class_exists( '\Bricks\Setup' );
 		$bricks_config = $this->settings->get( 'bricks', [] );
 		$bricks_config = is_array( $bricks_config ) ? $bricks_config : [];
+		$conversion    = ( new Bricks_Html_Css_Converter_Service() )->available();
 
 		return [
 			'active'          => $active,
@@ -167,8 +168,11 @@ final class Site_Graph_Service {
 			'dynamicTags'     => $this->bricks_dynamic_tags(),
 			'kiweDynamicTags' => $this->kiwe_dynamic_tags(),
 			'conversion'      => [
-				'htmlCssToBricksAvailable' => class_exists( '\Bricks\Html_To_Bricks_Converter' ) || class_exists( '\Bricks\Abilities\Conversion' ),
-				'preferredWorkflow'        => 'convert-html-css-to-bricks-data -> inspect/audit -> persist with Bricks abilities or builder import',
+				'htmlCssToBricksAvailable' => ! empty( $conversion['native'] ) || ! empty( $conversion['fallback'] ),
+				'bricksNativeAvailable'    => ! empty( $conversion['native'] ),
+				'kiweFallbackAvailable'     => ! empty( $conversion['fallback'] ),
+				'preferredConverter'        => (string) ( $conversion['preferred'] ?? 'kiwe-fallback' ),
+				'preferredWorkflow'         => 'Use Kiwe staging operation bricks.page.from-html or bricks.template.from-html; Kiwe uses Bricks native conversion when present and otherwise preserves Seam HTML/CSS through its fallback converter.',
 			],
 		];
 	}

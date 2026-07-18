@@ -60,6 +60,8 @@ Do not create separate human review previews for the website and AppShell in com
 - no `data-dsa-surface`, `.dsa-dock`, `.dsa-sheet`, or `.dsa-panel` AppShell shell markup;
 - no duplicate cart/search/profile/auth/save/AI runtime authority.
 
+If the handoff is being applied to a real staging site through Kiwe AI, prefer the controlled `bricks.page.from-html` or `bricks.template.from-html` executor path over browser clipboard paste. The handoff author should still provide clean HTML/CSS, not raw Bricks JSON, unless a verified target explicitly asks for raw JSON. The auditor should check that the HTML/CSS is converter-friendly: semantic nesting, stable classes, preserved `data-dsa-open-module` launchers, no huge base64 payloads, no script-owned production behavior, and CSS that can safely live in Bricks page `customCss`.
+
 Page/header controls that open Kiwe modules must use canonical hooks:
 
 ```html

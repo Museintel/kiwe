@@ -139,7 +139,7 @@ final class Fresh_Site_Graph_Revalidator {
 
 	private function warnings( array $site_graph, array $operations ): array {
 		$warnings = [];
-		if ( [] !== $this->bricks_operations( $operations ) && empty( $site_graph['bricks']['conversion']['htmlCssToBricksAvailable'] ) ) {
+		if ( [] !== $this->bricks_operations( $operations ) && empty( $site_graph['bricks']['conversion']['htmlCssToBricksAvailable'] ) && empty( $site_graph['bricks']['conversion']['kiweFallbackAvailable'] ) ) {
 			$warnings[] = 'Fresh Site Graph does not expose a Bricks HTML/CSS conversion signal; manual builder/import fallback may be required.';
 		}
 		if ( [] === $this->dynamic_tag_names( $site_graph ) ) {

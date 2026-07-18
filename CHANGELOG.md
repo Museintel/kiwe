@@ -2,6 +2,14 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.88 - 2026-07-18
+
+- Added a controlled Kiwe HTML/CSS-to-Bricks conversion lane for staging AI execution: `bricks.page.from-html` and `bricks.template.from-html` create/update pages/templates, convert clean Seam/HTML handoffs into Bricks element JSON, preserve classes/IDs/data/ARIA launchers, store safe CSS in Bricks page settings, and write rollback backup metadata.
+- Added `Bricks_Html_Css_Converter_Service`, preferring Bricks native conversion when available and using a Kiwe fallback converter on current Bricks installs that do not expose the native server converter.
+- Updated Site Graph, Site Inspection, preflight, and toolkit contexts so AI clients discover the controlled conversion path instead of depending on browser clipboard paste or hand-authored raw `_bricks` JSON.
+- Added production AppShell contract hooks for theme authors: `[data-dsa-dock]`, `[data-dsa-dock-item]`, `[data-dsa-dock-focus]`, `[data-dsa-dock-primary]`, and `[data-dsa-screen]`/`data-dsa-screen-module`, while preserving legacy `.dsa-ai-launcher` compatibility.
+- Relaxed safe CSS sanitization for normal CSS child selectors and `scroll-behavior` while continuing to block imports, executable URLs, expressions, legacy `behavior:`, bindings, and HTML/script payloads.
+
 ## 0.5.87 - 2026-07-18
 
 - Added custom content discovery to AI Site Graph and Site Inspection: custom post types, custom taxonomies, registered post meta, and observed safe custom-field keys are now exposed with values redacted and secret-like keys excluded.
