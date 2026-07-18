@@ -2,6 +2,12 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.87 - 2026-07-18
+
+- Added custom content discovery to AI Site Graph and Site Inspection: custom post types, custom taxonomies, registered post meta, and observed safe custom-field keys are now exposed with values redacted and secret-like keys excluded.
+- Fixed controlled staging sanitization so Bricks template settings, Bricks raw payloads, and nested adapter payloads preserve case-sensitive keys such as `templateConditions`.
+- Updated Bricks/template staging readiness so AI-created templates can carry front-page/home conditions without key-casing drift.
+
 ## 0.5.86 - 2026-07-18
 
 - Completed the controlled mutation executor stage for AI/staging testing: WooCommerce product/order/settings mutations, cart runtime harnesses, checkout validation/pending-order harnesses, auth test-user runtime harnesses, and raw Bricks meta writes now run through the same explicit staging executor.

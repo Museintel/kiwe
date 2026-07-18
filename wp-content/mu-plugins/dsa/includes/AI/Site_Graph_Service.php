@@ -32,6 +32,7 @@ final class Site_Graph_Service {
 			'wordpress'     => $this->wordpress_summary( $sample_limit ),
 			'woocommerce'   => $this->woocommerce_summary( $sample_limit ),
 			'bricks'        => $this->bricks_summary(),
+			'customContent' => $this->custom_content_summary( $sample_limit ),
 			'kiwe'          => [
 				'version'       => defined( 'DSA_VERSION' ) ? DSA_VERSION : '',
 				'modules'       => $this->modules->manifest_contract( $dock ),
@@ -268,6 +269,175 @@ final class Site_Graph_Service {
 		}
 
 		return $taxonomies;
+	}
+
+	private function custom_content_summary( int $sample_limit ): array {
+		return [
+			'postTypes'    => $this->custom_post_types( $sample_limit ),
+			'taxonomies'   => $this->custom_taxonomies( $sample_limit ),
+			'customFields' => $this->custom_field_summary( $sample_limit ),
+			'guardrails'   => [
+				'valuesRedacted'      => true,
+				'secretKeysExcluded'  => true,
+				'bricksMetaSeparated' => true,
+				'useFor'              => 'AI dynamic binding and Bricks query-loop planning without exposing private field values.',
+			],
+		];
+	}
+
+	private function custom_post_types( int $sample_limit ): array {
+		$out     = [];
+		$objects = get_post_types( [ '_builtin' => false ], 'objects' );
+		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
+			if ( ! is_object( $object ) ) {
+				continue;
+			}
+			$out[] = [
+				'name'       => sanitize_key( (string) $name ),
+				'label'      => sanitize_text_field( (string) ( $object->label ?? $name ) ),
+				'public'     => ! empty( $object->public ),
+				'showUi'     => ! empty( $object->show_ui ),
+				'showInRest' => ! empty( $object->show_in_rest ),
+				'restBase'   => sanitize_key( (string) ( $object->rest_base ?? $name ) ),
+				'taxonomies' => array_values( array_map( 'sanitize_key', get_object_taxonomies( (string) $name ) ) ),
+				'counts'     => $this->post_counts( (string) $name ),
+				'samples'    => $sample_limit ? $this->post_samples( (string) $name, min( $sample_limit, 8 ) ) : [],
+			];
+		}
+
+		return $out;
+	}
+
+	private function custom_taxonomies( int $sample_limit ): array {
+		$out     = [];
+		$objects = get_taxonomies( [ '_builtin' => false ], 'objects' );
+		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
+			if ( ! is_object( $object ) ) {
+				continue;
+			}
+			$out[] = [
+				'name'       => sanitize_key( (string) $name ),
+				'label'      => sanitize_text_field( (string) ( $object->label ?? $name ) ),
+				'public'     => ! empty( $object->public ),
+				'showUi'     => ! empty( $object->show_ui ),
+				'showInRest' => ! empty( $object->show_in_rest ),
+				'objectType' => array_values( array_map( 'sanitize_key', (array) ( $object->object_type ?? [] ) ) ),
+				'terms'      => $sample_limit ? $this->terms_for_taxonomy( (string) $name, min( $sample_limit, 16 ) ) : [],
+			];
+		}
+
+		return $out;
+	}
+
+	private function custom_field_summary( int $sample_limit ): array {
+		$post_types = get_post_types( [], 'names' );
+		$registered = [];
+		foreach ( is_array( $post_types ) ? $post_types : [] as $post_type ) {
+			$keys = function_exists( 'get_registered_meta_keys' ) ? get_registered_meta_keys( 'post', (string) $post_type ) : [];
+			foreach ( is_array( $keys ) ? $keys : [] as $key => $schema ) {
+				if ( $this->is_secretish_key( (string) $key ) ) {
+					continue;
+				}
+				$registered[] = [
+					'postType'   => sanitize_key( (string) $post_type ),
+					'key'        => sanitize_text_field( (string) $key ),
+					'type'       => sanitize_key( (string) ( $schema['type'] ?? '' ) ),
+					'single'     => ! empty( $schema['single'] ),
+					'showInRest' => ! empty( $schema['show_in_rest'] ),
+					'protected'  => str_starts_with( (string) $key, '_' ),
+				];
+			}
+		}
+
+		return [
+			'registered' => array_slice( $registered, 0, 160 ),
+			'observed'   => $this->observed_custom_fields( $sample_limit ),
+		];
+	}
+
+	private function observed_custom_fields( int $sample_limit ): array {
+		$out = [];
+		$post_types = get_post_types( [ 'public' => true ], 'names' );
+		foreach ( is_array( $post_types ) ? $post_types : [] as $post_type ) {
+			$ids = get_posts(
+				[
+					'post_type'              => (string) $post_type,
+					'post_status'            => [ 'publish', 'draft', 'private' ],
+					'posts_per_page'         => max( 1, min( 8, $sample_limit ) ),
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => true,
+					'update_post_term_cache' => false,
+				]
+			);
+			foreach ( is_array( $ids ) ? $ids : [] as $id ) {
+				$meta = get_post_meta( absint( $id ) );
+				foreach ( is_array( $meta ) ? $meta : [] as $key => $values ) {
+					$key = (string) $key;
+					if ( $this->is_secretish_key( $key ) ) {
+						continue;
+					}
+					$bucket = sanitize_key( (string) $post_type ) . '|' . $key;
+					if ( ! isset( $out[ $bucket ] ) ) {
+						$out[ $bucket ] = [
+							'postType'   => sanitize_key( (string) $post_type ),
+							'key'        => sanitize_text_field( $key ),
+							'protected'  => str_starts_with( $key, '_' ),
+							'bricksMeta' => str_starts_with( $key, '_bricks' ),
+							'occurrences' => 0,
+							'valueTypes' => [],
+						];
+					}
+					$out[ $bucket ]['occurrences']++;
+					foreach ( is_array( $values ) ? $values : [] as $value ) {
+						$type = $this->meta_value_type( $value );
+						$out[ $bucket ]['valueTypes'][ $type ] = true;
+					}
+				}
+			}
+		}
+
+		$out = array_values(
+			array_map(
+				static function ( array $field ): array {
+					$field['valueTypes'] = array_keys( $field['valueTypes'] );
+					return $field;
+				},
+				$out
+			)
+		);
+		usort( $out, static fn( array $a, array $b ): int => ( $b['occurrences'] ?? 0 ) <=> ( $a['occurrences'] ?? 0 ) );
+
+		return array_slice( $out, 0, 220 );
+	}
+
+	private function meta_value_type( mixed $value ): string {
+		if ( is_serialized( $value ) ) {
+			return 'serialized';
+		}
+		$decoded = is_string( $value ) ? json_decode( $value, true ) : null;
+		if ( is_array( $decoded ) ) {
+			return 'json';
+		}
+		if ( is_numeric( $value ) ) {
+			return 'number';
+		}
+		if ( is_string( $value ) && preg_match( '/^https?:\\/\\//i', $value ) ) {
+			return 'url';
+		}
+
+		return is_scalar( $value ) ? 'scalar' : gettype( $value );
+	}
+
+	private function is_secretish_key( string $key ): bool {
+		if ( '' === $key ) {
+			return true;
+		}
+		if ( preg_match( '/password|secret|token|nonce|session|cookie|license|consumer|private|payment|stripe|paypal|key/i', $key ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private function terms_for_taxonomy( string $taxonomy, int $limit ): array {

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.5.86",
+  "version": "0.5.87",
   "algorithm": "sha256",
   "file_count": 225,
   "files": {
@@ -186,7 +186,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "76cfd97d525c6d2613130b3423f9a75ad7fced2cb19da568dcb11eaab7b1683a"
+      "sha256": "7be75b333be348c3a4a85612a900191c15b5d1c4fbfaae67444f9c50a7d41ba0"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -341,8 +341,8 @@
       "sha256": "341043a4df6db3d5df000c6427f05dfc7f1b45f836dcb27a69966a9e385a37d6"
     },
     "includes/AI/Controlled_Mutation_Service.php": {
-      "bytes": 28258,
-      "sha256": "f5a26214f9e596038af419553be746e50bacdd18213f266538efdeb921352799"
+      "bytes": 28484,
+      "sha256": "5701c7a6a79a39a16d6bff0e115294a4124427634d56de8be62dc0094bbf8e9e"
     },
     "includes/AI/Copilot_Service.php": {
       "bytes": 7279,
@@ -389,16 +389,16 @@
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 15337,
-      "sha256": "408e6597f8f51d2ed29e50196d67e2a93a0450bc6546e69f936699595f3df655"
+      "bytes": 21347,
+      "sha256": "777a739549c0c9f5e90f40e12a8836360a36b74b23187dde438cd1dae6b60d60"
     },
     "includes/AI/Site_Introspection_Service.php": {
-      "bytes": 8463,
-      "sha256": "0099450b1fc5d3f9f63e6e2026b97e70c8bb86d9ceab9676672005430f940fb2"
+      "bytes": 13015,
+      "sha256": "6e3afcc2b9812b541cac83249fe889232e865ccca6c92f2b86a189ac3df89aca"
     },
     "includes/AI/Staging_Execution_Service.php": {
-      "bytes": 18346,
-      "sha256": "03e8955c9ade658fbdea974ef730867524d6c0de724acdffe52252943a7373ba"
+      "bytes": 18572,
+      "sha256": "9b04290c6ba3f49aa7f2840a459b021e8e33afb9cf4caa204ea2e18da92ad820"
     },
     "includes/AI/Target_Resolution_Service.php": {
       "bytes": 6731,

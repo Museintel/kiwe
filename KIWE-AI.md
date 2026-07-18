@@ -78,7 +78,7 @@ POST /wp-json/dsa/v1/ai/staging/execute
 POST /wp-json/dsa/v1/ai/stages/{stageId}/execute-staging
 ```
 
-`/ai/site-inspection` is read-only and returns installed plugin inventory, active plugin status, safe Bricks option summaries, Bricks templates, pages/posts, and staging detection. It redacts secrets and does not expose raw Bricks page meta.
+`/ai/site-inspection` is read-only and returns installed plugin inventory, active plugin status, safe Bricks option summaries, Bricks templates, pages/posts, custom post types, custom taxonomies, safe observed custom-field keys, and staging detection. It redacts secrets and does not expose raw Bricks page meta values.
 
 `/ai/staging/execute` is intentionally narrow. It requires `confirmControlledStagingExecution: true` and `stagingSiteConfirmed: true`, refuses production-looking hosts unless explicitly overridden by the human, and supports only staging-safe operations such as:
 
@@ -107,6 +107,8 @@ WooCommerce, cart, checkout, auth, and raw Bricks operations require extra expli
 - Raw Bricks `_bricks*` meta writes: `confirmRawBricksJsonWrite: true`
 
 The executor can create/update WooCommerce staging products, create/update staging orders, patch a controlled allow-list of WooCommerce settings, run server-side cart harness actions, validate checkout fields or create pending staging orders, create/delete Kiwe-marked test users, and write allowed Bricks meta keys with backup metadata. Bricks-ready HTML is still the preferred first path; raw `_bricks` JSON writes are for controlled staging adapter tests only.
+
+For custom WordPress structures, use `/ai/site-graph` first. The graph includes `customContent.postTypes`, `customContent.taxonomies`, and `customContent.customFields` so AI can bind to real Pods/ACF/native custom content without guessing slugs or field handles. Field values are not exposed; use the keys/types/occurrence signals for planning only.
 
 The legacy same-site admin REST path still exists for logged-in WordPress admin contexts at `GET /wp-json/dsa/v1/site-graph?sampleLimit=8`, but external AI tools should use `/wp-json/dsa/v1/ai/*` with a Kiwe AI key.
 

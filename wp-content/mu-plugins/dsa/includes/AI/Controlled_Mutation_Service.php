@@ -638,7 +638,7 @@ final class Controlled_Mutation_Service {
 		if ( is_array( $value ) ) {
 			$out = [];
 			foreach ( $value as $key => $nested ) {
-				$clean_key = is_int( $key ) ? $key : sanitize_key( (string) $key );
+				$clean_key = is_int( $key ) ? $key : $this->safe_payload_key( (string) $key );
 				if ( '' === (string) $clean_key || preg_match( '/script|code|php|password|secret|token|key|license|nonce/i', (string) $clean_key ) ) {
 					continue;
 				}
@@ -660,6 +660,15 @@ final class Controlled_Mutation_Service {
 		}
 
 		return null;
+	}
+
+	private function safe_payload_key( string $key ): string {
+		$key = trim( $key );
+		if ( '' === $key || strlen( $key ) > 96 || ! preg_match( '/^[a-zA-Z0-9_.:-]+$/', $key ) ) {
+			return '';
+		}
+
+		return $key;
 	}
 
 	private function append_log( string $option, array $entry ): void {

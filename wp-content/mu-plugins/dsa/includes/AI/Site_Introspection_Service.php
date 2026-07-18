@@ -22,6 +22,7 @@ final class Site_Introspection_Service {
 			'plugins'     => $this->plugins(),
 			'bricks'      => $this->bricks( $sample_limit ),
 			'wordpress'   => $this->wordpress( $sample_limit ),
+			'customContent' => $this->custom_content( $sample_limit ),
 			'guardrails'  => [
 				'readOnly'           => true,
 				'secretsRedacted'    => true,
@@ -92,6 +93,134 @@ final class Site_Introspection_Service {
 			'pages' => $this->posts( 'page', $sample_limit ),
 			'posts' => $this->posts( 'post', $sample_limit ),
 		];
+	}
+
+	private function custom_content( int $sample_limit ): array {
+		return [
+			'postTypes'    => $this->custom_post_types( $sample_limit ),
+			'taxonomies'   => $this->custom_taxonomies( $sample_limit ),
+			'customFields' => $this->observed_custom_fields( $sample_limit ),
+			'guardrails'   => [
+				'valuesRedacted'     => true,
+				'secretKeysExcluded' => true,
+			],
+		];
+	}
+
+	private function custom_post_types( int $sample_limit ): array {
+		$out     = [];
+		$objects = get_post_types( [ '_builtin' => false ], 'objects' );
+		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
+			if ( ! is_object( $object ) ) {
+				continue;
+			}
+			$out[] = [
+				'name'       => sanitize_key( (string) $name ),
+				'label'      => sanitize_text_field( (string) ( $object->label ?? $name ) ),
+				'public'     => ! empty( $object->public ),
+				'showUi'     => ! empty( $object->show_ui ),
+				'showInRest' => ! empty( $object->show_in_rest ),
+				'taxonomies' => array_values( array_map( 'sanitize_key', get_object_taxonomies( (string) $name ) ) ),
+				'samples'    => $sample_limit && ! empty( $object->public ) ? $this->posts( (string) $name, min( $sample_limit, 8 ) ) : [],
+			];
+		}
+
+		return $out;
+	}
+
+	private function custom_taxonomies( int $sample_limit ): array {
+		$out     = [];
+		$objects = get_taxonomies( [ '_builtin' => false ], 'objects' );
+		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
+			if ( ! is_object( $object ) ) {
+				continue;
+			}
+			$out[] = [
+				'name'       => sanitize_key( (string) $name ),
+				'label'      => sanitize_text_field( (string) ( $object->label ?? $name ) ),
+				'public'     => ! empty( $object->public ),
+				'showUi'     => ! empty( $object->show_ui ),
+				'showInRest' => ! empty( $object->show_in_rest ),
+				'objectType' => array_values( array_map( 'sanitize_key', (array) ( $object->object_type ?? [] ) ) ),
+				'terms'      => $sample_limit ? $this->terms( (string) $name, min( $sample_limit, 16 ) ) : [],
+			];
+		}
+
+		return $out;
+	}
+
+	private function observed_custom_fields( int $sample_limit ): array {
+		$out        = [];
+		$post_types = get_post_types( [ 'public' => true ], 'names' );
+		foreach ( is_array( $post_types ) ? $post_types : [] as $post_type ) {
+			$ids = get_posts(
+				[
+					'post_type'              => (string) $post_type,
+					'post_status'            => [ 'publish', 'draft', 'private' ],
+					'posts_per_page'         => max( 1, min( 8, $sample_limit ) ),
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => true,
+					'update_post_term_cache' => false,
+				]
+			);
+			foreach ( is_array( $ids ) ? $ids : [] as $id ) {
+				foreach ( get_post_meta( absint( $id ) ) as $key => $values ) {
+					$key = (string) $key;
+					if ( $this->is_secretish_key( $key ) ) {
+						continue;
+					}
+					$bucket = sanitize_key( (string) $post_type ) . '|' . $key;
+					if ( ! isset( $out[ $bucket ] ) ) {
+						$out[ $bucket ] = [
+							'postType'    => sanitize_key( (string) $post_type ),
+							'key'         => sanitize_text_field( $key ),
+							'protected'   => str_starts_with( $key, '_' ),
+							'bricksMeta'  => str_starts_with( $key, '_bricks' ),
+							'occurrences' => 0,
+						];
+					}
+					$out[ $bucket ]['occurrences'] += max( 1, count( is_array( $values ) ? $values : [] ) );
+				}
+			}
+		}
+
+		$out = array_values( $out );
+		usort( $out, static fn( array $a, array $b ): int => ( $b['occurrences'] ?? 0 ) <=> ( $a['occurrences'] ?? 0 ) );
+
+		return array_slice( $out, 0, 220 );
+	}
+
+	private function terms( string $taxonomy, int $limit ): array {
+		if ( ! taxonomy_exists( $taxonomy ) ) {
+			return [];
+		}
+		$terms = get_terms(
+			[
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => false,
+				'number'     => max( 1, min( 48, $limit ) ),
+				'orderby'    => 'count',
+				'order'      => 'DESC',
+			]
+		);
+		if ( is_wp_error( $terms ) || ! is_array( $terms ) ) {
+			return [];
+		}
+
+		return array_map(
+			static fn( $term ): array => [
+				'id'    => absint( $term->term_id ?? 0 ),
+				'name'  => sanitize_text_field( (string) ( $term->name ?? '' ) ),
+				'slug'  => sanitize_title( (string) ( $term->slug ?? '' ) ),
+				'count' => max( 0, (int) ( $term->count ?? 0 ) ),
+			],
+			$terms
+		);
+	}
+
+	private function is_secretish_key( string $key ): bool {
+		return '' === $key || (bool) preg_match( '/password|secret|token|nonce|session|cookie|license|consumer|private|payment|stripe|paypal|key/i', $key );
 	}
 
 	private function templates( int $limit ): array {
