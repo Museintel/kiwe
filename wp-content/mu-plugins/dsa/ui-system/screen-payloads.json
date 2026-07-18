@@ -60,6 +60,17 @@
         { "id": "fbtClaim", "selector": "[data-dsa-cart-claim]", "authority": "DSA cart mutation queue" }
       ],
       "themeableBlocks": ["items", "totals", "discountSummary", "checkoutAction", "fbtRail", "trustBadges", "emptyState"],
+      "runtimeSelectors": {
+        "items": "[data-dsa-cart-line], .dsa-cart-line, .dsa-cart-panel__item",
+        "itemImage": ".dsa-line-thumb, .dsa-cart-panel__image-placeholder",
+        "itemBody": ".dsa-cart-line__body, .dsa-cart-panel__item-body",
+        "quantity": "[data-dsa-cart-quantity], .dsa-quantity, .dsa-cart-panel__quantity",
+        "summary": ".dsa-cart-panel__summary, .kiwe-cart-v2027__summary",
+        "checkoutAction": "[data-dsa-checkout-open], .dsa-cart-panel__checkout, .kiwe-cart-v2027__checkout",
+        "fbtRail": "[data-dsa-cart-fbt-rail], .dsa-cart-fbt__rail",
+        "fbtCard": "[data-dsa-cart-fbt-card], .dsa-fbt-card, .dsa-cart-fbt__card",
+        "fbtImage": ".dsa-fbt-img, .dsa-cart-fbt__image-placeholder"
+      },
       "notes": [
         "Do not create an independent remove button unless core exposes a data-dsa-cart-remove contract; current removal is quantity-to-zero through data-dsa-cart-quantity.",
         "FBT is always a side-scrolling rail. Themes may restyle its cards but must preserve .dsa-cart-fbt[data-dsa-cart-fbt] and .dsa-cart-fbt__rail[data-dsa-cart-fbt-rail] as a horizontal overflow rail with snap behavior; do not reinterpret it as a stacked list or auto-fit grid.",

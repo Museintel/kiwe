@@ -2,6 +2,13 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.90 - 2026-07-18
+
+- Fixed installed AppShell theme visual authority: custom theme CSS is now runtime-scoped to the active `#dsa-surface[data-dsa-surface].dsa-installed-theme-*` root so valid `[data-dsa-surface]` selectors can override core visual defaults while Geometry Engine placement/state remain core-owned.
+- Removed core split-dock visual `!important` pressure from the focus launcher so imported themes can skin dock focus states instead of being forced back to the built-in Kiwe 2027 colors.
+- Added stable live cart theme hooks (`[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, `.dsa-fbt-img`) and documented them in the UI/toolkit/audit loop so preview cart skins map to the real runtime cart adapter.
+- Mirrored Kiwe light/dark mode onto the Surface root as `data-kiwe-theme`, allowing theme CSS dark-mode selectors to work in production the same way they work in combined previews.
+
 ## 0.5.89 - 2026-07-18
 
 - Fixed the Bricks HTML/CSS staging executor loop so `bricks.page.from-html` and `bricks.template.from-html` convert from the real AI handoff source while publishing only a hidden Kiwe-managed placeholder as normal WordPress content. This prevents `<style>`/CSS text from leaking visibly above the rendered Bricks page after AI imports.

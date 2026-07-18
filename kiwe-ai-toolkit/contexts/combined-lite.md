@@ -180,7 +180,7 @@ The importable package is only:
 
 The import package must not contain JavaScript, TypeScript, PHP, HTML, WASM, remote fonts, remote scripts, trackers, service workers, executable files, remote `@import`, remote `url()`, data URLs, or JavaScript URLs.
 
-The theme CSS is presentation-only. It may style existing DSA selectors and allowed public Seam classes. It must not create runtime authority.
+The theme CSS is presentation-only. It may style existing DSA selectors and allowed public Seam classes. It must not create runtime authority. In production, Kiwe runtime-scopes installed theme CSS to the active `#dsa-surface[data-dsa-surface].dsa-installed-theme-[theme-id]` root so correct `[data-dsa-surface]` selectors have visual authority over core defaults while core keeps geometry/state ownership.
 
 The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, spacing inside content, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
 
@@ -210,7 +210,7 @@ Minimum preview shell requirements:
 Required screen selectors when the theme manifest lists these screens:
 
 - `profile`: `data-dsa-profile-panel`
-- `cart`: `data-dsa-cart-panel` and `data-dsa-cart-fbt-rail`
+- `cart`: `data-dsa-cart-panel` and `data-dsa-cart-fbt-rail`; stable cart internals include `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`
 - `checkout`: `data-dsa-checkout-panel` and `data-dsa-checkout-form`
 - `search`: `data-dsa-search-panel`, `data-dsa-search-form`, `data-dsa-search-input`, and `data-dsa-search-results`
 - `menu`: `dsa-menu-panel`

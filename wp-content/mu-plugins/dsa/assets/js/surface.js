@@ -6853,6 +6853,9 @@
 		root.dataset.kiweTheme = mode;
 		root.dataset.brxTheme = mode;
 		root.style.colorScheme = mode;
+		if ( surface ) {
+			surface.dataset.kiweTheme = mode;
+		}
 		if ( persist ) {
 			try {
 				window.localStorage.setItem( 'brx_mode', mode );

@@ -133,6 +133,7 @@ Use the Seam adoption map correctly:
 
 - Public WordPress/Bricks page sections may use the normal public Seam vocabulary.
 - Importable AppShell theme CSS may style existing DSA selectors and public Seam classes.
+- Kiwe runtime-scopes installed theme CSS to the active `#dsa-surface[data-dsa-surface].dsa-installed-theme-[theme-id]` root, so normal `[data-dsa-surface]` selectors have visual authority over core defaults while Kiwe keeps geometry and state authority.
 - Do not add protected `data-seam-*` attributes to theme markup or CSS.
 - Do not assume high-impact classes such as `seam-card`, `seam-button`, `seam-input`, `seam-media`, `seam-badge`, `seam-nav`, `seam-actions`, `seam-form`, `seam-field`, or `seam-modal` are safe to attach to live DSA internals. Check `appShellAdoption.shadowOnly` first.
 - If you believe a shadow-only role should become public-adopted, document that as a proposed core change. Do not silently depend on it in the importable theme.
@@ -210,6 +211,8 @@ It must not contain:
 Theme settings belong inside the theme package, not in a separate loose settings export/import. Keep `theme.json` as the manifest-only validator file. Put dock composition, focus item, shape, sheet behavior, active theme id, color settings, and visual-effect presets in `theme-package.json` under root `settings`. Put the same CSS as `css/theme.css` in `theme-package.json` under root `css` so Kiwe can import one file and show it under `Kiwe > Theme > Installed themes`.
 
 Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns dock, sheet, screen, and backdrop placement and measurement. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those properties belong in core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, inner spacing, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+
+Use the live runtime hooks in `screen-payloads.json` for screen internals. For cart, stable theme hooks include `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`; do not style only preview-only item/card names.
 
 ## Preview rules
 

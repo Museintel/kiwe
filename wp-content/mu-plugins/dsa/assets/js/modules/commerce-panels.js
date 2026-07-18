@@ -272,8 +272,8 @@ function renderCartRecommendationCard( product ) {
 	}
 
 	return [
-		'<article class="dsa-cart-fbt__card">',
-		image ? '<img src="' + escapeHtml( image ) + '" alt="">' : '<span class="dsa-cart-fbt__image-placeholder" aria-hidden="true"></span>',
+		'<article class="dsa-cart-fbt__card dsa-fbt-card" data-dsa-cart-fbt-card>',
+		image ? '<img class="dsa-fbt-img" src="' + escapeHtml( image ) + '" alt="">' : '<span class="dsa-cart-fbt__image-placeholder dsa-fbt-img" aria-hidden="true"></span>',
 		offerLabel ? '<em>' + escapeHtml( offerLabel ) + '</em>' : '',
 		'<strong>' + escapeHtml( title ) + '</strong>',
 		triggerTitle ? '<small>with ' + escapeHtml( triggerTitle ) + '</small>' : '',
@@ -301,17 +301,17 @@ function renderCartPanelItem( item ) {
 	const productLink = item.permalink ? '<a class="dsa-cart-panel__product-link" href="' + escapeHtml( item.permalink ) + '" data-dsa-full-navigation>' + escapeHtml( title ) + '</a>' : '<strong>' + escapeHtml( title ) + '</strong>';
 	const plusDisabled = quantity >= maxQuantity ? ' disabled' : '';
 	const content = [
-		image ? '<img src="' + escapeHtml( image ) + '" alt="">' : '<span class="dsa-cart-panel__image-placeholder" aria-hidden="true"></span>',
-		'<span class="dsa-cart-panel__item-body">',
+		image ? '<img class="dsa-line-thumb" src="' + escapeHtml( image ) + '" alt="">' : '<span class="dsa-cart-panel__image-placeholder dsa-line-thumb" aria-hidden="true"></span>',
+		'<span class="dsa-cart-panel__item-body dsa-cart-line__body">',
 		productLink,
 		'<span>' + ( price ? escapeHtml( price ) : '' ) + '</span>',
 		weight ? '<small class="dsa-cart-panel__weight">' + escapeHtml( weight ) + '</small>' : '',
 		stockBadge ? '<em class="dsa-cart-panel__stock-badge is-' + escapeHtml( stockBadge.type || 'alert' ) + '">' + escapeHtml( stockBadge.label ) + '</em>' : '',
 		'</span>',
-		quantityControls && key ? '<span class="dsa-cart-panel__quantity" data-dsa-keep-open><button type="button" data-dsa-cart-quantity="' + escapeHtml( key ) + '"' + itemMeta + ' data-dsa-cart-next="' + escapeHtml( Math.max( 0, quantity - 1 ) ) + '" aria-label="Decrease quantity">&minus;</button><strong>' + escapeHtml( quantity || 1 ) + '</strong><button type="button" data-dsa-cart-quantity="' + escapeHtml( key ) + '"' + itemMeta + ' data-dsa-cart-next="' + escapeHtml( Math.min( maxQuantity, quantity + 1 ) ) + '" aria-label="Increase quantity"' + plusDisabled + '>+</button></span>' : '<span class="dsa-cart-panel__quantity-label">Qty ' + escapeHtml( quantity || 1 ) + '</span>',
+		quantityControls && key ? '<span class="dsa-cart-panel__quantity dsa-quantity" data-dsa-keep-open><button type="button" data-dsa-cart-quantity="' + escapeHtml( key ) + '"' + itemMeta + ' data-dsa-cart-next="' + escapeHtml( Math.max( 0, quantity - 1 ) ) + '" aria-label="Decrease quantity">&minus;</button><strong>' + escapeHtml( quantity || 1 ) + '</strong><button type="button" data-dsa-cart-quantity="' + escapeHtml( key ) + '"' + itemMeta + ' data-dsa-cart-next="' + escapeHtml( Math.min( maxQuantity, quantity + 1 ) ) + '" aria-label="Increase quantity"' + plusDisabled + '>+</button></span>' : '<span class="dsa-cart-panel__quantity-label dsa-quantity">Qty ' + escapeHtml( quantity || 1 ) + '</span>',
 	].join( '' );
 
-	return '<article class="dsa-cart-panel__item">' + content + '</article>';
+	return '<article class="dsa-cart-panel__item dsa-cart-line" data-dsa-cart-line>' + content + '</article>';
 }
 
 export function renderCart( payload ) {

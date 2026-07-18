@@ -179,6 +179,8 @@ A theme that omits core screens must clearly label itself as partial/non-marketp
 
 Importable theme CSS is presentation-only.
 
+Installed theme CSS should use production selectors such as `[data-dsa-surface]`, `[data-dsa-dock]`, `[data-dsa-screen]`, `.dsa-panel`, and documented screen internals. Kiwe runtime-scopes installed theme CSS to the active surface so correct `[data-dsa-surface]` selectors can beat core visual defaults while core keeps geometry/state ownership. If a preview looks branded but the import CSS only styles preview-only selectors, mark it as a failure.
+
 Do not set AppShell geometry ownership in importable theme CSS on dock, screen, sheet, panel, or backdrop selectors:
 
 - `position: fixed`
@@ -245,7 +247,7 @@ Use `screen-payloads.json` as the screen truth.
 Check that the theme preserves required roots/actions/selectors for:
 
 - Profile account actions and rows.
-- Cart quantity, checkout CTA, FBT rail, totals, empty state.
+- Cart quantity, checkout CTA, FBT rail, totals, empty state. For cart theming, verify the live-runtime hook family: `[data-dsa-cart-panel]`, `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-rail]`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`.
 - Checkout fields/notices/continue action without owning payment.
 - Search form, input, filters, alphabet rail, results.
 - Menu navigation and page table-of-contents anchors.

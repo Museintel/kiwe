@@ -6638,8 +6638,8 @@ html[data-kiwe-theme="dark"] .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-p
 .dsa-surface[data-dsa-ui-contract="2"].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] .dsa-ai-launcher {
 	margin-inline: 10px;
 	border-radius: var(--dsa-dock-segment-radius, 14px);
-	background: var(--dsa-active-color, #8f8f98) !important;
-	color: var(--dsa-ui-inverse, #fff) !important;
+	background: var(--dsa-active-color, #8f8f98);
+	color: var(--dsa-ui-inverse, #fff);
 	box-shadow: 0 14px 30px color-mix(in srgb, var(--dsa-active-color, #8f8f98) 22%, transparent);
 }
 

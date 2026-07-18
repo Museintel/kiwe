@@ -83,7 +83,7 @@ final class Surface_Renderer {
 		$surface_classes = [
 			'dsa-surface',
 			'dsa-visual-' . sanitize_html_class( $visual_profile ),
-			'dsa-installed-theme-' . $active_theme_id,
+			'dsa-installed-theme-' . sanitize_html_class( $active_theme_id ),
 			'dsa-theme-' . sanitize_html_class( $theme_mode ),
 			'dsa-sheet-position-' . sanitize_html_class( $sheet_position ),
 			'dsa-sheet-animation-' . sanitize_html_class( $sheet_animation ),

@@ -228,8 +228,14 @@ final class Theme_Package_Service {
 
 	public function active_css( array $settings ): string {
 		$active = $this->active( $settings );
+		$css    = (string) ( $active['css'] ?? '' );
+		$id     = $this->sanitize_id( (string) ( $active['id'] ?? '' ) );
 
-		return (string) ( $active['css'] ?? '' );
+		if ( '' === trim( $css ) || '' === $id || ! empty( $active['builtIn'] ) || in_array( $id, [ 'legacy', 'kiwe2027' ], true ) ) {
+			return $css;
+		}
+
+		return $this->compile_runtime_theme_css( $css, $id );
 	}
 
 	public function public_record( array $record ): array {
@@ -310,6 +316,16 @@ final class Theme_Package_Service {
 		}
 
 		return '';
+	}
+
+	private function compile_runtime_theme_css( string $css, string $id ): string {
+		$scope    = '#dsa-surface[data-dsa-surface].dsa-installed-theme-' . sanitize_html_class( $this->sanitize_id( $id ) );
+		$compiled = preg_replace( '/(?<![\w#.-])\[data-dsa-surface\]/', $scope, $css );
+		if ( ! is_string( $compiled ) || '' === trim( $compiled ) ) {
+			return $css;
+		}
+
+		return "/* Kiwe runtime-scoped installed theme: {$id} */\n" . $compiled;
 	}
 
 	private function validate_css( string $css ): string {
