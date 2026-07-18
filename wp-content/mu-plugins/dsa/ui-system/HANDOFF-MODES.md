@@ -54,12 +54,12 @@ theme-handoff/
 
 Rules:
 
-- The importable package is only `theme.json` plus theme CSS/assets allowed by the validator.
+- The review folder includes `theme.json`, `css/theme.css`, and `theme-package.json`. `theme-package.json` is the single Kiwe admin/API import file containing the manifest, CSS, and safe theme settings preset.
 - Preview code is visual proof only.
 - Do not create website/page sections.
 - Do not invent DSA behavior or state authority.
 - Use `screen-payloads.json`, `slots.md`, `preview-handoff.md`, and `theme-manifest.schema.json`.
-- Dock destination visibility is configuration, not theme CSS. If a design needs a different dock composition, document it as a Kiwe settings/profile change.
+- Dock destination visibility is configuration, not theme CSS. If a design needs a different dock composition, declare it inside `theme-package.json` root `settings`.
 
 ## Mode 3: Combined website/page + DSA AppShell theme
 
@@ -87,15 +87,13 @@ combined-kiwe-handoff/
   appshell-theme/
     import/
       theme-id/
+        theme-package.json
         theme.json
         css/
           theme.css
     preview/                  # optional technical fixture only; not required for combined mode
       index.html
       PLACEHOLDERS.md
-  kiwe-settings/
-    kiwe-appsite-profile.json   # optional, only when changing Kiwe settings
-    SETTINGS-NOTES.md
 ```
 
 Rules:
@@ -126,9 +124,9 @@ Website/page markup may include Kiwe hooks, but must not implement Kiwe behavior
 - Do not create duplicate cart/profile/search/save/auth behavior. Keep Kiwe hooks as handoff points to the live plugin.
 - Do not use website CSS to restyle protected DSA internals.
 
-## Kiwe settings/profile lane
+## Kiwe theme package settings lane
 
-Combined handoffs may include `kiwe-settings/kiwe-appsite-profile.json` when the design intentionally changes Kiwe runtime settings.
+Combined handoffs should include `appshell-theme/import/theme-id/theme-package.json` when the design intentionally changes Kiwe runtime settings. Do not create a separate `kiwe-settings/` folder for DSA theme settings.
 
 This is useful when the design wants:
 
@@ -143,56 +141,53 @@ This is useful when the design wants:
 - Cart visible for a WooCommerce/ecommerce site.
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
+
+`theme.json` remains the manifest-only validator file. Put the settings preset in `theme-package.json` at root `settings`, beside root `theme` and root `css`.
 - Active/hover/hero colors.
 - WooCommerce or Search bridge settings when the website design requires them.
 
-Use only recognized Kiwe profile settings. Unknown keys are ignored by import.
+Use only recognized Kiwe theme settings. Unknown keys are ignored by import.
 
-Safe high-level keys include:
+Safe root `settings` keys inside `theme-package.json` include:
 
 ```json
 {
-  "type": "kiwe-appsite-profile",
-  "schemaVersion": 1,
-  "settings": {
-    "enabled": true,
-    "style": {
-      "visual_profile": "kiwe2027",
-      "mode": "sheet",
-      "sheet_position": "bottom",
-      "sheet_spacing": "inset",
-      "sheet_origin": "above_dock",
-      "sheet_width_percent": 78
+  "style": {
+    "visual_profile": "kiwe2027",
+    "mode": "sheet",
+    "sheet_position": "bottom",
+    "sheet_spacing": "inset",
+    "sheet_origin": "above_dock",
+    "sheet_width_percent": 78
+  },
+  "dock": {
+    "presentation": "dock",
+    "split_style": true,
+    "focus_item": "ai",
+    "shape": "pill",
+    "desktop_orientation": "auto",
+    "tablet_orientation": "auto",
+    "mobile_orientation": "auto",
+    "enabled_items": {
+      "menu": true,
+      "search": true,
+      "profile": true,
+      "links": true,
+      "saved": true,
+      "cart": true,
+      "theme": false,
+      "ai": true,
+      "link-home": true
     },
-    "dock": {
-      "presentation": "dock",
-      "split_style": true,
-      "focus_item": "ai",
-      "shape": "pill",
-      "desktop_orientation": "auto",
-      "tablet_orientation": "auto",
-      "mobile_orientation": "auto",
-      "enabled_items": {
-        "menu": true,
-        "search": true,
-        "profile": true,
-        "links": true,
-        "saved": true,
-        "cart": true,
-        "theme": false,
-        "ai": true,
-        "link-home": true
-      },
-      "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
-      "custom_items": [
-        { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
-      ]
-    },
-    "dsa_theme": {
-      "active_color": "#8f8f98",
-      "hover_color": "#24c6a1",
-      "hero_text_color": "rgba(20,24,34,0.18)"
-    }
+    "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
+    "custom_items": [
+      { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
+    ]
+  },
+  "dsa_theme": {
+    "active_color": "#8f8f98",
+    "hover_color": "#24c6a1",
+    "hero_text_color": "rgba(20,24,34,0.18)"
   }
 }
 ```
@@ -216,4 +211,4 @@ For DSA theme only:
 
 For combined:
 
-> Follow both `framework-system/handoffs/website-builder/prompt.md` and `ui-system/prompt.md`, using `HANDOFF-MODES.md` as the layer boundary. Create a combined website/page plus DSA AppShell theme handoff. Keep website, AppShell theme, and Kiwe settings/profile output separate.
+> Follow both `framework-system/handoffs/website-builder/prompt.md` and `ui-system/prompt.md`, using `HANDOFF-MODES.md` as the layer boundary. Create a combined website/page plus DSA AppShell theme handoff. Keep website/page output separate from the AppShell theme package; place DSA theme settings inside `theme-package.json`.

@@ -10,6 +10,7 @@ Recommended folder:
 
 ```text
 theme-id/
+  theme-package.json
   theme.json
   css/
     theme.css
@@ -18,7 +19,9 @@ theme-id/
   README.md
 ```
 
-`theme.json` must follow `theme-manifest.schema.json`.
+`theme-package.json` is the single Kiwe admin/API import/export file. It contains the manifest, safe settings preset, and inline CSS so imported themes appear under `Kiwe > Theme > Installed themes`.
+
+`theme.json` remains a manifest-only validator file and must follow `theme-manifest.schema.json`. Do not put settings into `theme.json`.
 
 Example:
 
@@ -50,11 +53,41 @@ Example:
 }
 ```
 
+Minimal `theme-package.json` wrapper:
+
+```json
+{
+  "type": "kiwe-theme-package",
+  "schema": "kiwe.theme-package.v1",
+  "schemaVersion": 1,
+  "theme": {
+    "schema": "kiwe.surface-theme.v1",
+    "id": "studio.account-cards",
+    "name": "Account Cards",
+    "version": "1.0.0",
+    "profile": "marketplace",
+    "mode": "css-only",
+    "css": ["css/theme.css"],
+    "assets": [],
+    "screens": ["profile", "cart", "checkout", "search", "menu", "saved", "links", "notifications", "ios-install", "games", "ai"],
+    "requires": { "uiContract": "kiwe.surface-ui.v2", "tokenContract": "kiwe.universal", "minKiwe": "0.5.84" },
+    "supports": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "dock-shape-pill", "dock-shape-box", "dock-shape-square", "horizontal", "vertical", "reduced-motion"],
+    "budgets": { "cssKb": 40, "jsKb": 0, "blockingAssets": 0 },
+    "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+  },
+  "settings": {
+    "style": { "active_theme_id": "studio.account-cards", "visual_profile": "kiwe2027" },
+    "dock": { "presentation": "dock", "split_style": true, "shape": "pill", "focus_item": "ai" }
+  },
+  "css": "/* same presentation CSS as css/theme.css */"
+}
+```
+
 ## Import rule
 
-An imported theme may add scoped CSS, static local image assets, and approved adapter-profile declarations.
+An imported theme may add scoped CSS, static local image assets, and a safe theme settings preset for `style`, `dock`, `dsa_theme`, and `visual_effects`.
 
-An imported theme must not add PHP, visitor-facing JavaScript, remote assets, tracking pixels, fonts, REST routes, service workers, WordPress options, WooCommerce hooks, Bricks templates, dynamic tags, or database tables.
+An imported theme must not add PHP, visitor-facing JavaScript, remote assets, tracking pixels, fonts, REST routes, service workers, arbitrary WordPress options, WooCommerce hooks, Bricks templates, dynamic tags, or database tables.
 
 If a future theme needs htmx or Alpine, it must be approved as a Kiwe-owned runtime feature first. Marketplace packages do not import their own htmx/Alpine runtime.
 
@@ -62,6 +95,7 @@ If a future theme needs htmx or Alpine, it must be approved as a Kiwe-owned runt
 
 A theme export may include:
 
+- `theme-package.json` as the single re-importable artifact
 - `theme.json`
 - CSS files listed by `theme.json`
 - static image assets listed by `theme.json`

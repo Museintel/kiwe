@@ -20,6 +20,8 @@ final class Access_Key_Service {
 		'prepare_apply_plan',
 		'stage_apply_plan',
 		'trusted_apply_chain',
+		'themes',
+		'controlled_mutation',
 	];
 
 	public function create( string $label, array $scopes, array $context = [] ): array {

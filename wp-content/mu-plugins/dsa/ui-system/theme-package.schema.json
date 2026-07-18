@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.local/schemas/theme-package.schema.json",
+  "title": "Kiwe DSA Theme Package",
+  "type": "object",
+  "required": ["schema", "theme", "settings", "css"],
+  "additionalProperties": true,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "kiwe-theme-package"
+    },
+    "schema": {
+      "type": "string",
+      "const": "kiwe.theme-package.v1"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "theme": {
+      "type": "object",
+      "required": ["schema", "id", "name", "version", "profile", "screens", "requires"],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "kiwe.surface-theme.v1"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]{0,79}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9.-]+)?$"
+        },
+        "profile": {
+          "type": "string",
+          "enum": ["legacy", "kiwe-2027", "marketplace"]
+        },
+        "css": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "screens": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["profile", "cart", "checkout", "search", "menu", "saved", "links", "notifications", "ios-install", "games", "ai"]
+          },
+          "uniqueItems": true
+        },
+        "requires": {
+          "type": "object"
+        },
+        "supports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Safe theme preset. Kiwe imports only the style, dock, dsa_theme, and visual_effects subsets."
+    },
+    "css": {
+      "type": "string",
+      "maxLength": 81920
+    }
+  }
+}

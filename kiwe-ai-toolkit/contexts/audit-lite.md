@@ -39,10 +39,11 @@ For a combined handoff, verify:
 - `website/bricks-notes.md` exists.
 - `appshell-theme/import/<theme-id>/theme.json` exists.
 - `appshell-theme/import/<theme-id>/css/theme.css` exists.
+- `appshell-theme/import/<theme-id>/theme-package.json` exists when the theme changes dock composition, focus item, module visibility/order, presentation, shape, colors, visual effects, sheet behavior, or other Kiwe runtime theme settings.
 - `combined-preview/index.html` is the single primary visual proof for combined mode. It must include the page and AppShell together with variation controls.
 - `appshell-theme/preview/index.html` is optional in combined mode. If it exists, it is only a technical selector/state fixture and must not be the only place where dock modes, dock shapes, Classic, or responsive profiles are reviewed.
 - Any preview placeholder documentation explicitly says all mock data/content is preview-only.
-- `kiwe-settings/` exists when the design changes dock composition, focus item, module visibility/order, presentation, shape, or other Kiwe runtime settings.
+- Do not require or create a separate `kiwe-settings/` folder for AppShell theme settings. Kiwe imports/exports installed themes; the safe settings preset belongs inside the theme package.
 
 For website-only mode, do not output duplicate preview folders unless explicitly requested. `website/bricks-paste.html` is both browser preview and Bricks paste/import artifact.
 
@@ -69,7 +70,7 @@ data-dsa-open-module="search"
 
 Use only registered module names: `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, `ios-install`, `games`.
 
-Home or other URL-only dock items are valid. Do not call them invalid merely because they are not built-in DSA screens. The requirement is that they must be declared as custom dock links in `kiwe-settings`, not invented as registered DSA modules.
+Home or other URL-only dock items are valid. Do not call them invalid merely because they are not built-in DSA screens. The requirement is that they must be declared as custom dock links in the theme package `settings.dock.custom_items`, not invented as registered DSA modules.
 
 For ecommerce pages:
 
@@ -113,9 +114,9 @@ data-dsa-menu-anchor="#heritage"
 
 Every manual menu anchor in preview must match a real page `id`, unless the preview clearly demonstrates live heading-generated context.
 
-## Kiwe settings audit
+## Kiwe theme package settings audit
 
-Include `kiwe-settings/kiwe-appsite-profile.json` when the design changes runtime settings.
+Include `appshell-theme/import/<theme-id>/theme-package.json` when the design changes runtime settings. This is the single Kiwe admin/API import file for an installed theme. It must contain root `theme`, `settings`, and `css` keys. Keep `theme.json` as the manifest-only validator file.
 
 Common settings to declare:
 
@@ -127,7 +128,7 @@ Common settings to declare:
 - `dock.focus_item`: the emphasized/focus item and split-dock center.
 - `dock.custom_items`: URL-only custom dock links such as Home, Shop, About, Offers, or any safe site URL. These are first-class Kiwe dock items, but they navigate only and do not create new DSA screens.
 
-Do not use `theme.json` for Kiwe settings profile schema. `theme.json` is the AppShell theme manifest. `kiwe-settings/kiwe-appsite-profile.json` is the settings/profile artifact.
+Do not use `theme.json` for Kiwe settings. `theme.json` is the AppShell theme manifest. Theme settings belong in `theme-package.json` at root `settings`, beside the root `theme` manifest and root `css` import CSS.
 
 ## AppShell theme manifest audit
 

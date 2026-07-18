@@ -2,6 +2,14 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.84 - 2026-07-18
+
+- Added Kiwe theme package install/export/activate as the official replacement for loose DSA settings import/export. Theme packages now carry the manifest, presentation CSS, and a safe theme settings preset, and imported themes appear under `Kiwe > Theme > Installed themes`.
+- Added `Theme_Package_Service` with reserved built-in themes, CSS import safety checks, protected AppShell geometry rejection, sanitized activation overlays, and support for URL-only custom dock links inside theme package settings.
+- Added `/wp-json/dsa/v1/ai/themes`, `/ai/themes/install`, and `/ai/themes/{themeId}/activate` for revocable-key AI clients to push and activate DSA theme packages without receiving arbitrary WordPress settings authority.
+- Added explicit locked AI discovery routes for Bricks page saves, WordPress publish operations, WooCommerce mutations, and cart/checkout/auth runtime actions. These routes advertise the boundary and remain locked behind a future controlled staging-site executor.
+- Updated the AI toolkit, UI brain, marketplace docs, and audit tooling so combined/theme handoffs produce a single importable `theme-package.json` instead of a separate `kiwe-settings` profile folder.
+
 ## 0.5.83 - 2026-07-18
 
 - Split Kiwe AI connector administration into `Kiwe > AI`, leaving `Kiwe > Framework` focused only on Seam/Kiwe Framework variables, palette, class vocabulary, and Bricks framework push/download settings.

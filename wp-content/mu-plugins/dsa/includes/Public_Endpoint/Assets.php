@@ -20,6 +20,7 @@ use DSA\Rewards\Reward_Service;
 use DSA\Runtime\Route_Capability_Service;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
+use DSA\Theme\Theme_Package_Service;
 use DSA\Trust\Trust_Service;
 use DSA\Trigger\Trigger_Service;
 use DSA\WP7\Native_Service;
@@ -146,6 +147,10 @@ final class Assets {
 			[ 'dsa-seam' ],
 			$surface_stylesheet_version
 		);
+		$active_theme_css = ( new Theme_Package_Service() )->active_css( $settings );
+		if ( '' !== trim( $active_theme_css ) ) {
+			wp_add_inline_style( 'dsa-surface', $active_theme_css );
+		}
 		if ( ! empty( $route_policy['viewTransitions']['enabled'] ) && ! empty( $route_policy['viewTransitions']['currentDocumentEditorial'] ) ) {
 			wp_add_inline_style( 'dsa-surface', '@view-transition { navigation: auto; }' );
 		}

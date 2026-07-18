@@ -178,22 +178,28 @@ if (/classic[\s\S]{0,320}(?:width\s*:\s*min\(\s*(?:390|430)px|left\s*:\s*auto|ri
 
 const knownDsaModules = new Set(['menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'secure', 'notifications', 'ios-install', 'games']);
 const settingsText = textFiles
-  .filter((file) => rel(file).startsWith('kiwe-settings/'))
+  .filter((file) => rel(file).startsWith('kiwe-settings/') || /(^|\/)theme-package\.json$/i.test(rel(file)))
   .map((file) => read(file))
   .join('\n');
+const hasStaleSettingsFolder = files.some((file) => rel(file).startsWith('kiwe-settings/'));
+const hasThemePackageSettings = /"settings"\s*:\s*\{/.test(settingsText);
 const hasCustomDockSettings = /"custom_items"\s*:\s*\[/.test(settingsText);
 const hasFocusItemSettings = /"focus_item"\s*:/.test(settingsText);
+
+if (hasStaleSettingsFolder) {
+  add('warn', 'kiwe-settings/ folder detected. Current Kiwe AppShell theme settings should travel inside appshell-theme/import/<theme-id>/theme-package.json so Kiwe imports/exports installed themes, not loose settings profiles.');
+}
 
 for (const file of textFiles.filter((item) => /\.html?$/i.test(item))) {
   const body = read(file);
   for (const match of body.matchAll(/\bdata-dsa-module\s*=\s*["']([^"']+)["']/gi)) {
     const moduleId = String(match[1] || '').trim();
     if (moduleId && !knownDsaModules.has(moduleId) && !moduleId.startsWith('link-')) {
-      add('warn', `Unknown DSA module "${moduleId}". URL-only dock links are valid, but they must be declared in kiwe-settings dock.custom_items and rendered as custom link items, not invented as registered DSA modules.`, rel(file));
+      add('warn', `Unknown DSA module "${moduleId}". URL-only dock links are valid, but they must be declared in theme-package.json settings.dock.custom_items and rendered as custom link items, not invented as registered DSA modules.`, rel(file));
     }
   }
   if (/\bdata-open-screen\s*=|\bdata-nav-anchor\s*=/.test(body)) {
-    add('warn', 'Preview-only dock attributes such as data-open-screen/data-nav-anchor detected. Use Kiwe module launch hooks or kiwe-settings for production handoff behavior.', rel(file));
+    add('warn', 'Preview-only dock attributes such as data-open-screen/data-nav-anchor detected. Use Kiwe module launch hooks or theme-package settings for production handoff behavior.', rel(file));
   }
   for (const match of body.matchAll(/\bdata-dsa-menu-anchor\s*=\s*["']([^"']+)["']/gi)) {
     const anchor = String(match[1] || '').trim();
@@ -208,11 +214,11 @@ for (const file of textFiles.filter((item) => /\.html?$/i.test(item))) {
 }
 
 if (/data-dsa-module\s*=\s*["']home["']|>Home<\/|aria-label\s*=\s*["']Home["']/i.test(allText) && !hasCustomDockSettings) {
-  add('warn', 'Home appears as a dock/AppShell item but no kiwe-settings dock.custom_items entry was found. Home/custom URL dock items are valid, but they must be declared as URL-only custom links rather than registered DSA screens.');
+  add('warn', 'Home appears as a dock/AppShell item but no theme-package.json settings.dock.custom_items entry was found. Home/custom URL dock items are valid, but they must be declared as URL-only custom links rather than registered DSA screens.');
 }
 
 if (/\bdsa-dock-primary\b|data-dsa-dock-focus-id|focus button|split-dock center/i.test(allText) && !hasFocusItemSettings) {
-  add('warn', 'The AppShell appears to choose a dock focus/primary item, but no kiwe-settings dock.focus_item was found. Add focus_item so the live split dock matches the preview.');
+  add('warn', 'The AppShell appears to choose a dock focus/primary item, but no theme-package.json settings.dock.focus_item was found. Add focus_item so the live split dock matches the preview.');
 }
 
 if (websiteText && /(cart|bag|account|profile)[^<]{0,80}(<\/button>|<\/a>)|aria-label\s*=\s*["'][^"']*(cart|bag|account|profile)/i.test(websiteText) && !/\bdata-dsa-open-module\b/.test(websiteText)) {
@@ -278,6 +284,7 @@ if (exists('bricks-bindings')) {
 }
 
 const themeJsonFiles = files.filter((file) => path.basename(file) === 'theme.json');
+const themePackageFiles = files.filter((file) => path.basename(file) === 'theme-package.json');
 for (const file of themeJsonFiles) {
   let json;
   try {
@@ -302,6 +309,27 @@ for (const file of themeJsonFiles) {
 
 if (exists('appshell-theme') && !themeJsonFiles.length) {
   add('fail', 'AppShell/DSA direction appears present but no importable theme.json was found.');
+}
+
+for (const file of themePackageFiles) {
+  let json;
+  try {
+    json = JSON.parse(read(file));
+  } catch (error) {
+    add('fail', `theme-package.json is invalid JSON: ${error.message}`, rel(file));
+    continue;
+  }
+  if (json.schema !== 'kiwe.theme-package.v1') add('fail', 'theme-package.json schema must be kiwe.theme-package.v1.', rel(file));
+  if (!json.theme || typeof json.theme !== 'object') add('fail', 'theme-package.json must contain a root theme manifest object.', rel(file));
+  if (!json.settings || typeof json.settings !== 'object') add('warn', 'theme-package.json has no root settings object. Add it when dock composition, focus item, shape, sheet behavior, colors, or visual effects are part of the design.', rel(file));
+  if (typeof json.css !== 'string' || !json.css.trim()) add('warn', 'theme-package.json should contain root css with the same presentation CSS as css/theme.css so Kiwe admin/API can import one theme file.', rel(file));
+  if (json.theme && json.theme.id && !rel(file).includes(`/import/${json.theme.id}/`)) {
+    add('warn', `theme-package.json theme.id "${json.theme.id}" does not match its import folder path.`, rel(file));
+  }
+}
+
+if (exists('appshell-theme') && !themePackageFiles.length && (hasThemePackageSettings || /custom_items|focus_item|split_style|"shape"\s*:/i.test(allText))) {
+  add('warn', 'AppShell theme appears to define dock/theme settings but no appshell-theme/import/<theme-id>/theme-package.json was found. Current Kiwe imports installed theme packages, not loose settings profiles.');
 }
 
 const forbiddenRuntime = [

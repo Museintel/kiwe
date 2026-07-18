@@ -14,8 +14,7 @@ Create a combined Kiwe handoff:
 Keep these lanes separate:
 
 - `website/` is for the page/website preview and Bricks paste artifact.
-- `appshell-theme/` is for the importable Kiwe DSA theme package.
-- `kiwe-settings/` is optional and only for Kiwe admin/profile settings.
+- `appshell-theme/` is for the importable Kiwe DSA theme package. Theme settings travel inside the theme package, not as a separate settings import/export lane.
 
 ## Required output shape
 
@@ -34,15 +33,13 @@ combined-kiwe-handoff/
     README.md
     import/
       [theme-id]/
+        theme-package.json # single Kiwe admin/API import file: manifest + CSS + safe settings preset
         theme.json
         css/
           theme.css
     preview/                      # optional technical fixture only
       index.html
       PLACEHOLDERS.md
-  kiwe-settings/
-    kiwe-appsite-profile.json   # optional, only if settings change
-    SETTINGS-NOTES.md           # optional, only if settings change
 ```
 
 ## Combined preview rule
@@ -168,12 +165,13 @@ Important:
 
 If a theme does not cover a screen, remove that screen from `screens`. Do not add unsupported screen names such as `orders`, `downloads`, `addresses`, or `install`; those are payload sections or concepts inside supported screens, not theme-manifest screen IDs.
 
-For combined website/page + AppShell handoffs, match the AppShell screens to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only include commerce/account screens when the brief, Kiwe settings profile, or site business model requires them.
+For combined website/page + AppShell handoffs, match the AppShell screens to the website type. A news/editorial website should not automatically show cart, checkout, orders, downloads, or addresses just because the prompt says "Netflix-like"; only include commerce/account screens when the brief, Kiwe theme settings preset, or site business model requires them.
 
 ## AppShell importable CSS rules
 
 The importable package is only:
 
+- `theme-package.json`
 - `theme.json`
 - CSS files listed in `theme.json`
 - listed static image assets, if any
@@ -233,26 +231,41 @@ It is valid to create distinctive presentations for existing `ai` and `notificat
 
 Responsive fit is mandatory. Test desktop, tablet, and mobile Geometry Engine profiles, then narrow stress widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
 
-## Kiwe settings/profile quick rules
+## Kiwe theme package settings quick rules
 
-If the design changes dock composition or shell behavior, include `kiwe-settings/kiwe-appsite-profile.json` and `kiwe-settings/SETTINGS-NOTES.md`.
+If the design changes dock composition or shell behavior, include those settings inside `appshell-theme/import/[theme-id]/theme-package.json`. Do not output a separate `kiwe-settings/` folder for AppShell theme settings.
 
-Important dock settings:
-
-- `dock.presentation`: `dock` or `navbar`.
-- `dock.split_style`: split compact dock on/off. It only applies when presentation is `dock`.
-- `dock.shape`: `pill`, `box`, or `square`.
-- `dock.enabled_items` and `dock.item_order`: visible built-in modules and their order.
-- `dock.focus_item`: the enabled item that becomes the emphasized/focus button and split-dock center. Default is `ai`, but a design may choose `search`, `cart`, or a custom link when justified.
-- `dock.custom_items`: safe URL navigation items such as Home. Custom dock links navigate only; they do not create new DSA screens.
-
-Example:
+`theme-package.json` is the one file Kiwe admin/API imports as an installed theme. It wraps the manifest, CSS, and safe settings preset:
 
 ```json
 {
-  "type": "kiwe-appsite-profile",
+  "type": "kiwe-theme-package",
+  "schema": "kiwe.theme-package.v1",
   "schemaVersion": 1,
+  "theme": {
+    "schema": "kiwe.surface-theme.v1",
+    "id": "your-theme-id",
+    "name": "Your Theme Name",
+    "version": "1.0.0",
+    "profile": "marketplace",
+    "mode": "css-only",
+    "css": ["css/theme.css"],
+    "assets": [],
+    "screens": ["search", "menu", "saved", "links", "notifications", "ios-install", "ai"],
+    "requires": {
+      "uiContract": "kiwe.surface-ui.v2",
+      "tokenContract": "kiwe.universal",
+      "minKiwe": "0.5.84"
+    },
+    "supports": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "dock-shape-pill", "dock-shape-box", "dock-shape-square", "horizontal", "vertical", "reduced-motion"],
+    "budgets": { "cssKb": 40, "jsKb": 0, "blockingAssets": 0 },
+    "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+  },
   "settings": {
+    "style": {
+      "active_theme_id": "your-theme-id",
+      "visual_profile": "kiwe2027"
+    },
     "dock": {
       "presentation": "dock",
       "split_style": true,
@@ -264,7 +277,7 @@ Example:
         "profile": true,
         "links": true,
         "saved": true,
-        "cart": true,
+        "cart": false,
         "theme": false,
         "ai": true,
         "link-home": true
@@ -274,6 +287,46 @@ Example:
         { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
       ]
     }
+  },
+  "css": "/* same presentation CSS as css/theme.css, inline for Kiwe admin/API import */"
+}
+```
+
+Keep `theme.json` as the manifest-only validator file. Do not put settings into `theme.json`. Put settings in `theme-package.json` under root `settings`.
+
+Important dock settings:
+
+- `dock.presentation`: `dock` or `navbar`.
+- `dock.split_style`: split compact dock on/off. It only applies when presentation is `dock`.
+- `dock.shape`: `pill`, `box`, or `square`.
+- `dock.enabled_items` and `dock.item_order`: visible built-in modules and their order.
+- `dock.focus_item`: the enabled item that becomes the emphasized/focus button and split-dock center. Default is `ai`, but a design may choose `search`, `cart`, or a custom link when justified.
+- `dock.custom_items`: safe URL navigation items such as Home. Custom dock links navigate only; they do not create new DSA screens.
+
+Minimal `settings` object example inside `theme-package.json`:
+
+```json
+{
+  "dock": {
+    "presentation": "dock",
+    "split_style": true,
+    "shape": "pill",
+    "focus_item": "ai",
+    "enabled_items": {
+      "menu": true,
+      "search": true,
+      "profile": true,
+      "links": true,
+      "saved": true,
+      "cart": true,
+      "theme": false,
+      "ai": true,
+      "link-home": true
+    },
+    "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
+    "custom_items": [
+      { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
+    ]
   }
 }
 ```

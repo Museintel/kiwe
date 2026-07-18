@@ -132,6 +132,7 @@ final class Settings {
 					'sheet_origin'      => 'bottom',
 					'sheet_width_percent' => 78,
 					'screen_heading_tag' => 'h2',
+					'active_theme_id'   => 'legacy',
 				],
 				'position'            => 'right-center',
 				'surface_width'       => 72,

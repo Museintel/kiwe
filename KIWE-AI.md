@@ -60,6 +60,16 @@ GET /wp-json/dsa/v1/ai/site-graph?sampleLimit=8
 Authorization: Bearer kiwe_ai_...
 ```
 
+Theme installers can use the same key to review, install, and activate Kiwe DSA theme packages:
+
+```text
+GET  /wp-json/dsa/v1/ai/themes
+POST /wp-json/dsa/v1/ai/themes/install
+POST /wp-json/dsa/v1/ai/themes/{themeId}/activate
+```
+
+A Kiwe theme package is one JSON file with root `schema: "kiwe.theme-package.v1"`, root `theme`, root `settings`, and root `css`. The `settings` preset is limited to safe theme-owned subsets (`style`, `dock`, `dsa_theme`, and `visual_effects`) and appears in WordPress under `Kiwe > Theme > Installed themes`. Do not output or ask users to import a loose settings file for DSA themes.
+
 The legacy same-site admin REST path still exists for logged-in WordPress admin contexts at `GET /wp-json/dsa/v1/site-graph?sampleLimit=8`, but external AI tools should use `/wp-json/dsa/v1/ai/*` with a Kiwe AI key.
 
 On WordPress 7+ with Abilities API available, Kiwe may also expose:
@@ -116,6 +126,19 @@ For dynamic binding revisions, run `validate-bindings` when shell or MCP executi
 If the human is using the WordPress admin UI, they can upload the produced `bricks-bindings/kiwe-bindings.json` at `Kiwe > AI > AI connector and Site Graph` to get a live non-mutating validation report against the target site's current Site Graph. The same admin report also shows the dry-run apply-plan preview, lets the human download the reviewed apply-plan JSON, can stage it as a Kiwe-owned `kiwe.trusted-apply-stage.v1` review candidate, can run `kiwe.trusted-adapter-proof.v1`, can attach `kiwe.guarded-apply-authorization.v1`, can build `kiwe.pre-execution-gate.v1`, can build `kiwe.trusted-execution-preview.v1`, can attach `kiwe.final-apply-confirmation.v1`, can run `kiwe.fresh-sitegraph-revalidation.v1`, can build `kiwe.rollback-readiness-checkpoint.v1`, can attach `kiwe.target-resolution.v1`, can capture `kiwe.rollback-capture.v1`, can attach `kiwe.rendered-target-inspection.v1`, can build `kiwe.minimal-adapter-shell.v1`, can record `kiwe.final-save-approval.v1`, can build `kiwe.controlled-executor.v1`, can prepare `kiwe.bricks-controlled-adapter.v1`, and can build `kiwe.post-apply-verification.v1` as non-mutating proof artifacts without running CLI tools.
 
 External API clients can run the same connector chain with a Kiwe AI key through `/wp-json/dsa/v1/ai/*`. These endpoints can read Site Graph context and write Kiwe internal staging/proof metadata, but they still do not save Bricks page content, publish WordPress changes, mutate WooCommerce data, or execute checkout/cart/auth behavior.
+
+Direct mutation intent endpoints exist only as explicit locked surfaces so AI clients can discover the boundary instead of guessing:
+
+```text
+POST /wp-json/dsa/v1/ai/mutations/bricks-page-save
+POST /wp-json/dsa/v1/ai/mutations/wordpress-publish
+POST /wp-json/dsa/v1/ai/mutations/woocommerce
+POST /wp-json/dsa/v1/ai/runtime/cart
+POST /wp-json/dsa/v1/ai/runtime/checkout
+POST /wp-json/dsa/v1/ai/runtime/auth
+```
+
+They return locked responses unless a future controlled staging-site executor is deliberately enabled. AI keys do not grant checkout, cart, auth, WooCommerce mutation, WordPress publish, or Bricks save authority by themselves.
 
 `kiwe.controlled-executor.v1`, `kiwe.bricks-controlled-adapter.v1`, and `kiwe.post-apply-verification.v1` are still not saves. The executor records the future adapter interface. The adapter plan maps approved operation IDs to deterministic Bricks/Kiwe instructions. The post-apply proof selects the smallest future controlled run and proves rollback source/checks from the captured snapshot. These artifacts keep `actualApplyExecuted`/`actualSaveExecuted`, `actualRollbackExecuted`, and `mayExecuteMutationNow` false until a human starts a real staging-site controlled run.
 

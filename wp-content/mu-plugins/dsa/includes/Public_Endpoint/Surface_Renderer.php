@@ -6,6 +6,7 @@ use DSA\Element_Registry;
 use DSA\Environment;
 use DSA\Modules\Module_Registry;
 use DSA\PhoneKey\PhoneKey_Bridge;
+use DSA\Theme\Theme_Package_Service;
 use DSA\Settings;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,8 +30,9 @@ final class Surface_Renderer {
 			return;
 		}
 
-		$dock    = $this->settings->get( 'dock', [] );
-		$commerce = $this->settings->get( 'commerce', [] );
+		$all_settings = $this->settings->all();
+		$dock         = isset( $all_settings['dock'] ) && is_array( $all_settings['dock'] ) ? $all_settings['dock'] : [];
+		$commerce     = isset( $all_settings['commerce'] ) && is_array( $all_settings['commerce'] ) ? $all_settings['commerce'] : [];
 
 		if ( empty( $commerce['cart_surface_enabled'] ) ) {
 			$dock['enabled_items']['cart'] = false;
@@ -47,6 +49,8 @@ final class Surface_Renderer {
 		$style   = $this->settings->get( 'style', [] );
 		$raw_visual_profile = sanitize_key( (string) ( $style['visual_profile'] ?? 'legacy' ) );
 		$visual_profile = in_array( $raw_visual_profile, [ 'prototype', 'kiwe2027', 'kiwe-2027' ], true ) ? 'kiwe2027' : 'legacy';
+		$active_theme = ( new Theme_Package_Service() )->active( $all_settings );
+		$active_theme_id = sanitize_html_class( (string) ( $active_theme['id'] ?? $visual_profile ) );
 		$theme_mode = in_array( $style['mode'] ?? 'classic', [ 'classic', 'sheet' ], true ) ? (string) $style['mode'] : 'classic';
 		$sheet_position = in_array( $style['sheet_position'] ?? 'bottom', [ 'bottom', 'right', 'left' ], true ) ? (string) $style['sheet_position'] : 'bottom';
 		$sheet_animation = in_array( $style['sheet_animation'] ?? 'slide', [ 'slide', 'soft', 'snap' ], true ) ? (string) $style['sheet_animation'] : 'slide';
@@ -79,6 +83,7 @@ final class Surface_Renderer {
 		$surface_classes = [
 			'dsa-surface',
 			'dsa-visual-' . sanitize_html_class( $visual_profile ),
+			'dsa-installed-theme-' . $active_theme_id,
 			'dsa-theme-' . sanitize_html_class( $theme_mode ),
 			'dsa-sheet-position-' . sanitize_html_class( $sheet_position ),
 			'dsa-sheet-animation-' . sanitize_html_class( $sheet_animation ),
@@ -126,7 +131,7 @@ final class Surface_Renderer {
 		<!-- DSA Surface <?php echo esc_html( DSA_VERSION ); ?> -->
 		<script id="dsa-element-registry" type="application/json"><?php echo $registry_json ? $registry_json : '{}'; ?></script>
 		<div class="dsa-document-scrim" data-dsa-scrim hidden></div>
-		<div id="dsa-surface" class="<?php echo esc_attr( implode( ' ', $surface_classes ) ); ?>" data-dsa-surface data-nosnippet data-dsa-ui-contract="2" data-dsa-visual-profile="<?php echo esc_attr( $visual_profile ); ?>" data-dsa-theme="<?php echo esc_attr( $theme_mode ); ?>" data-dsa-dock-presentation="<?php echo esc_attr( $dock_presentation ); ?>" data-dsa-dock-focus-id="<?php echo esc_attr( $focus_item ); ?>" data-dsa-dock-profile="desktop" data-dsa-dock-orientation="<?php echo esc_attr( $initial_orientation ); ?>" data-dsa-dock-position="<?php echo esc_attr( $initial_position ); ?>" data-dsa-dock-alignment="<?php echo esc_attr( $initial_alignment ); ?>" data-dsa-dock-edge="<?php echo esc_attr( $initial_edge ); ?>" data-dsa-sheet-position="<?php echo esc_attr( $sheet_position ); ?>" data-dsa-sheet-backdrop="<?php echo esc_attr( $sheet_backdrop ); ?>" data-dsa-sheet-spacing="<?php echo esc_attr( $sheet_spacing ); ?>" data-dsa-sheet-origin="<?php echo esc_attr( $sheet_origin ); ?>" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-item-count="<?php echo esc_attr( (string) $main_module_count ); ?>" data-dsa-dock-ai-count="<?php echo esc_attr( (string) $ai_module_count ); ?>" style="--dsa-dock-item-count:<?php echo esc_attr( (string) $main_module_count ); ?>;--dsa-dock-ai-count:<?php echo esc_attr( (string) $ai_module_count ); ?>;--dsa-sheet-duration:<?php echo esc_attr( (string) $sheet_duration ); ?>ms;--dsa-sheet-max-height:<?php echo esc_attr( (string) $sheet_max_height ); ?>dvh;--dsa-sheet-width-percent:<?php echo esc_attr( (string) $sheet_width_percent ); ?>;">
+		<div id="dsa-surface" class="<?php echo esc_attr( implode( ' ', $surface_classes ) ); ?>" data-dsa-surface data-nosnippet data-dsa-ui-contract="2" data-dsa-visual-profile="<?php echo esc_attr( $visual_profile ); ?>" data-dsa-installed-theme="<?php echo esc_attr( $active_theme_id ); ?>" data-dsa-theme="<?php echo esc_attr( $theme_mode ); ?>" data-dsa-dock-presentation="<?php echo esc_attr( $dock_presentation ); ?>" data-dsa-dock-focus-id="<?php echo esc_attr( $focus_item ); ?>" data-dsa-dock-profile="desktop" data-dsa-dock-orientation="<?php echo esc_attr( $initial_orientation ); ?>" data-dsa-dock-position="<?php echo esc_attr( $initial_position ); ?>" data-dsa-dock-alignment="<?php echo esc_attr( $initial_alignment ); ?>" data-dsa-dock-edge="<?php echo esc_attr( $initial_edge ); ?>" data-dsa-sheet-position="<?php echo esc_attr( $sheet_position ); ?>" data-dsa-sheet-backdrop="<?php echo esc_attr( $sheet_backdrop ); ?>" data-dsa-sheet-spacing="<?php echo esc_attr( $sheet_spacing ); ?>" data-dsa-sheet-origin="<?php echo esc_attr( $sheet_origin ); ?>" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-item-count="<?php echo esc_attr( (string) $main_module_count ); ?>" data-dsa-dock-ai-count="<?php echo esc_attr( (string) $ai_module_count ); ?>" style="--dsa-dock-item-count:<?php echo esc_attr( (string) $main_module_count ); ?>;--dsa-dock-ai-count:<?php echo esc_attr( (string) $ai_module_count ); ?>;--dsa-sheet-duration:<?php echo esc_attr( (string) $sheet_duration ); ?>ms;--dsa-sheet-max-height:<?php echo esc_attr( (string) $sheet_max_height ); ?>dvh;--dsa-sheet-width-percent:<?php echo esc_attr( (string) $sheet_width_percent ); ?>;">
 			<div class="dsa-dock-context" data-dsa-dock-context hidden><div class="dsa-dock-context__content" data-dsa-dock-context-content></div></div>
 			<div class="dsa-dock-cluster" data-dsa-dock-cluster>
 			<nav class="dsa-dock dsa-phonekey-dock" role="toolbar" aria-label="<?php echo esc_attr__( 'Surface tools', 'dsa' ); ?>">

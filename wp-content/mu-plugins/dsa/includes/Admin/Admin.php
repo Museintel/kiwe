@@ -35,6 +35,7 @@ use DSA\Security\Secret_Store;
 use DSA\Saved\Saved_Items_Service;
 use DSA\Search\Search_Service;
 use DSA\Settings;
+use DSA\Theme\Theme_Package_Service;
 use DSA\WP7\Native_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -80,6 +81,10 @@ final class Admin {
 		add_action( 'admin_post_dsa_save_settings', [ $this, 'save_settings' ] );
 		add_action( 'admin_post_dsa_export_profile', [ $this, 'export_profile' ] );
 		add_action( 'admin_post_dsa_import_profile', [ $this, 'import_profile' ] );
+		add_action( 'admin_post_dsa_export_theme', [ $this, 'export_theme' ] );
+		add_action( 'admin_post_dsa_import_theme', [ $this, 'import_theme' ] );
+		add_action( 'admin_post_dsa_activate_theme', [ $this, 'activate_theme' ] );
+		add_action( 'admin_post_dsa_delete_theme', [ $this, 'delete_theme' ] );
 		add_action( 'admin_post_dsa_linked_bulk_cross_sells', [ $this, 'handle_linked_bulk_cross_sells' ] );
 		add_action( 'admin_post_dsa_linked_clear_cross_sells', [ $this, 'handle_linked_clear_cross_sells' ] );
 		add_action( 'admin_post_dsa_linked_rerun_mapping', [ $this, 'handle_linked_rerun_mapping' ] );
@@ -1388,6 +1393,112 @@ final class Admin {
 		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
 		header( 'X-Content-Type-Options: nosniff' );
 		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function export_theme(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to export Kiwe themes.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_export_theme' );
+
+		$theme_id = isset( $_POST['themeId'] ) ? ( new Theme_Package_Service() )->sanitize_id( (string) wp_unslash( $_POST['themeId'] ) ) : '';
+		$payload  = ( new Theme_Package_Service() )->export_payload( $this->settings->all(), $theme_id );
+		$json     = wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! $json ) {
+			wp_safe_redirect( add_query_arg( 'theme-error', 'encode', admin_url( 'admin.php?page=kiwe-theme' ) ) );
+			exit;
+		}
+
+		$id   = sanitize_title( (string) ( $payload['theme']['id'] ?? 'kiwe-theme' ) );
+		$file = sprintf( 'kiwe-theme-%s-%s.json', $id ?: 'theme', gmdate( 'Ymd-His' ) );
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function import_theme(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to import Kiwe themes.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_import_theme' );
+
+		$file = $_FILES['dsa_theme_file'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( ! is_array( $file ) || empty( $file['tmp_name'] ) || ! empty( $file['error'] ) || ! is_uploaded_file( (string) $file['tmp_name'] ) ) {
+			$this->redirect_theme_error( 'missing' );
+		}
+		if ( ! empty( $file['size'] ) && (int) $file['size'] > 1024 * 1024 ) {
+			$this->redirect_theme_error( 'size' );
+		}
+		$name = sanitize_file_name( $file['name'] ?? '' );
+		if ( ! preg_match( '/\.json$/i', $name ) ) {
+			$this->redirect_theme_error( 'type' );
+		}
+		$raw = file_get_contents( (string) $file['tmp_name'] );
+		if ( false === $raw || '' === trim( $raw ) ) {
+			$this->redirect_theme_error( 'empty' );
+		}
+		$payload = json_decode( $raw, true );
+		if ( ! is_array( $payload ) ) {
+			$this->redirect_theme_error( 'json' );
+		}
+
+		$result = ( new Theme_Package_Service() )->install(
+			$payload,
+			[
+				'userId'    => get_current_user_id(),
+				'createdAt' => gmdate( 'c' ),
+			]
+		);
+		if ( empty( $result['ok'] ) ) {
+			$this->redirect_theme_error( sanitize_key( (string) ( $result['code'] ?? 'invalid' ) ) );
+		}
+
+		wp_safe_redirect( add_query_arg( [ 'theme-imported' => (string) ( $result['record']['id'] ?? '1' ) ], admin_url( 'admin.php?page=kiwe-theme' ) ) );
+		exit;
+	}
+
+	public function activate_theme(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to activate Kiwe themes.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		$service  = new Theme_Package_Service();
+		$theme_id = isset( $_POST['themeId'] ) ? $service->sanitize_id( (string) wp_unslash( $_POST['themeId'] ) ) : '';
+		check_admin_referer( 'dsa_activate_theme_' . $theme_id );
+		$record = $service->find( $theme_id );
+		if ( [] === $record ) {
+			$this->redirect_theme_error( 'not-found' );
+		}
+
+		$settings = $this->apply_theme_record_to_settings( $record, $this->settings->all() );
+		$this->settings->update( $settings );
+		wp_safe_redirect( add_query_arg( [ 'theme-activated' => $theme_id ], admin_url( 'admin.php?page=kiwe-theme' ) ) );
+		exit;
+	}
+
+	public function delete_theme(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to delete Kiwe themes.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		$service  = new Theme_Package_Service();
+		$theme_id = isset( $_POST['themeId'] ) ? $service->sanitize_id( (string) wp_unslash( $_POST['themeId'] ) ) : '';
+		check_admin_referer( 'dsa_delete_theme_' . $theme_id );
+		$service->delete( $theme_id );
+		$settings = $this->settings->all();
+		if ( $theme_id === (string) ( $settings['style']['active_theme_id'] ?? '' ) ) {
+			$settings['style']['active_theme_id'] = 'legacy';
+			$settings['style']['visual_profile']  = 'legacy';
+			$this->settings->update( $settings );
+		}
+		wp_safe_redirect( add_query_arg( [ 'theme-deleted' => $theme_id ], admin_url( 'admin.php?page=kiwe-theme' ) ) );
 		exit;
 	}
 
@@ -5323,6 +5434,10 @@ final class Admin {
 		$sheet_max_height = max( 45, min( 96, (int) ( $current['sheet_max_height'] ?? 82 ) ) );
 		$sheet_width_percent = max( 50, min( 90, (int) ( $current['sheet_width_percent'] ?? 78 ) ) );
 		$screen_heading_tag = in_array( $current['screen_heading_tag'] ?? 'h2', [ 'h1', 'h2', 'h3', 'h4', 'p', 'span' ], true ) ? (string) $current['screen_heading_tag'] : 'h2';
+		$theme_service = new Theme_Package_Service();
+		$installed_themes = array_map( [ $theme_service, 'public_record' ], $theme_service->all() );
+		$active_theme = $theme_service->active( $this->settings->all() );
+		$active_theme_id = (string) ( $active_theme['id'] ?? ( $visual_profile ?: 'legacy' ) );
 		$all = $this->settings->all();
 		$theme = wp_parse_args( $all['dsa_theme'] ?? [], $this->settings->defaults()['dsa_theme'] );
 		$visual = wp_parse_args( $all['visual_effects'] ?? [], $this->settings->defaults()['visual_effects'] );
@@ -5340,12 +5455,62 @@ final class Admin {
 			<h1><?php esc_html_e( 'Kiwe Theme', 'dsa' ); ?></h1>
 			<p><?php esc_html_e( 'Choose how Kiwe presents the same Surface modules. Theme changes presentation only; data, REST, PhoneKey, cart, search, AI, and module contracts remain unchanged.', 'dsa' ); ?></p>
 			<?php if ( isset( $_GET['settings-updated'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Theme saved.', 'dsa' ); ?></p></div><?php endif; ?>
+			<?php if ( isset( $_GET['theme-imported'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Theme installed. Activate it below when ready.', 'dsa' ); ?></p></div><?php endif; ?>
+			<?php if ( isset( $_GET['theme-activated'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Installed theme activated.', 'dsa' ); ?></p></div><?php endif; ?>
+			<?php if ( isset( $_GET['theme-deleted'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Installed theme deleted.', 'dsa' ); ?></p></div><?php endif; ?>
+			<?php if ( isset( $_GET['theme-error'] ) ) : ?><div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->theme_error_message( sanitize_key( (string) wp_unslash( $_GET['theme-error'] ) ) ) ); ?></p></div><?php endif; ?>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Installed themes', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'A Kiwe theme package contains the visual theme manifest, optional CSS, and the Kiwe theme settings preset in one importable file. Built-in themes stay available; imported themes appear here and can be activated or exported.', 'dsa' ); ?></p>
+				<div class="dsa-admin-token-summary">
+					<div><strong><?php echo esc_html( (string) count( $installed_themes ) ); ?></strong><span><?php esc_html_e( 'installed', 'dsa' ); ?></span></div>
+					<div><strong><?php echo esc_html( $active_theme_id ); ?></strong><span><?php esc_html_e( 'active theme', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'CSS + settings', 'dsa' ); ?></strong><span><?php esc_html_e( 'package', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Geometry locked', 'dsa' ); ?></strong><span><?php esc_html_e( 'core-owned', 'dsa' ); ?></span></div>
+				</div>
+				<table class="widefat striped" style="margin-top: 1rem;">
+					<thead><tr><th><?php esc_html_e( 'Theme', 'dsa' ); ?></th><th><?php esc_html_e( 'Profile', 'dsa' ); ?></th><th><?php esc_html_e( 'Package', 'dsa' ); ?></th><th><?php esc_html_e( 'Actions', 'dsa' ); ?></th></tr></thead>
+					<tbody>
+						<?php foreach ( $installed_themes as $record ) : ?>
+							<?php $id = (string) ( $record['id'] ?? '' ); ?>
+							<tr>
+								<td><strong><?php echo esc_html( (string) ( $record['name'] ?? $id ) ); ?></strong><br><code><?php echo esc_html( $id ); ?></code><?php if ( ! empty( $record['description'] ) ) : ?><p class="description"><?php echo esc_html( (string) $record['description'] ); ?></p><?php endif; ?></td>
+								<td><?php echo esc_html( (string) ( $record['profile'] ?? 'marketplace' ) ); ?></td>
+								<td><?php echo ! empty( $record['builtIn'] ) ? esc_html__( 'Built in', 'dsa' ) : esc_html__( 'Imported', 'dsa' ); ?> · <?php echo ! empty( $record['hasCss'] ) ? esc_html__( 'CSS', 'dsa' ) : esc_html__( 'No CSS', 'dsa' ); ?> · <?php echo ! empty( $record['hasSettings'] ) ? esc_html__( 'Settings', 'dsa' ) : esc_html__( 'No settings', 'dsa' ); ?></td>
+								<td class="dsa-admin-inline-fields">
+									<?php if ( $id !== $active_theme_id ) : ?>
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_activate_theme"><input type="hidden" name="themeId" value="<?php echo esc_attr( $id ); ?>"><?php wp_nonce_field( 'dsa_activate_theme_' . $id ); ?><button class="button button-primary" type="submit"><?php esc_html_e( 'Activate', 'dsa' ); ?></button></form>
+									<?php else : ?>
+										<span class="button disabled" aria-disabled="true"><?php esc_html_e( 'Active', 'dsa' ); ?></span>
+									<?php endif; ?>
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_export_theme"><input type="hidden" name="themeId" value="<?php echo esc_attr( $id ); ?>"><?php wp_nonce_field( 'dsa_export_theme' ); ?><button class="button button-secondary" type="submit"><?php esc_html_e( 'Export', 'dsa' ); ?></button></form>
+									<?php if ( empty( $record['builtIn'] ) ) : ?>
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_delete_theme"><input type="hidden" name="themeId" value="<?php echo esc_attr( $id ); ?>"><?php wp_nonce_field( 'dsa_delete_theme_' . $id ); ?><button class="button button-secondary" type="submit"><?php esc_html_e( 'Delete', 'dsa' ); ?></button></form>
+									<?php endif; ?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<h3><?php esc_html_e( 'Import theme package', 'dsa' ); ?></h3>
+				<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_import_theme">
+					<?php wp_nonce_field( 'dsa_import_theme' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label><span><?php esc_html_e( 'Theme JSON package', 'dsa' ); ?></span><input type="file" name="dsa_theme_file" accept="application/json,.json" required></label>
+						<?php submit_button( __( 'Import Theme', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</p>
+				</form>
+			</section>
+
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( 'dsa_save_settings' ); ?>
 				<input type="hidden" name="action" value="dsa_save_settings">
 				<input type="hidden" name="_dsa_redirect" value="kiwe-theme">
 				<input type="hidden" name="visual_effects[_classic_present]" value="1">
 				<input type="hidden" name="visual_effects[_transition_present]" value="1">
+				<input type="hidden" name="style[active_theme_id]" value="<?php echo esc_attr( $active_theme_id ); ?>">
 				<h2><?php esc_html_e( 'Visual profile', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Legacy preserves the ultra-light baseline. Kiwe 2027 is the built-in app UI track and can evolve without replacing Legacy.', 'dsa' ); ?></p>
 				<div class="dsa-theme-options">
@@ -7113,6 +7278,59 @@ final class Admin {
 		exit;
 	}
 
+	private function redirect_theme_error( string $code ): void {
+		wp_safe_redirect( add_query_arg( 'theme-error', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe-theme' ) ) );
+		exit;
+	}
+
+	private function theme_error_message( string $code ): string {
+		$messages = [
+			'missing'     => __( 'Choose a Kiwe theme JSON package to import.', 'dsa' ),
+			'size'        => __( 'Theme package is too large. Use a JSON file under 1 MB.', 'dsa' ),
+			'type'        => __( 'Theme import only accepts .json files.', 'dsa' ),
+			'empty'       => __( 'Theme package was empty.', 'dsa' ),
+			'json'        => __( 'Theme package was not valid JSON.', 'dsa' ),
+			'missing_id'  => __( 'Theme package is missing a valid theme id.', 'dsa' ),
+			'reserved_id' => __( 'Built-in theme ids cannot be overwritten.', 'dsa' ),
+			'invalid_css' => __( 'Theme CSS failed Kiwe safety checks.', 'dsa' ),
+			'not-found'   => __( 'Theme was not found.', 'dsa' ),
+		];
+
+		return $messages[ $code ] ?? __( 'Theme package could not be processed.', 'dsa' );
+	}
+
+	private function apply_theme_record_to_settings( array $record, array $current ): array {
+		$id       = ( new Theme_Package_Service() )->sanitize_id( (string) ( $record['id'] ?? 'legacy' ) );
+		$settings = isset( $record['settings'] ) && is_array( $record['settings'] ) ? $record['settings'] : [];
+		$next     = $current;
+		$profile  = sanitize_key( (string) ( $record['profile'] ?? '' ) );
+
+		if ( isset( $settings['style'] ) && is_array( $settings['style'] ) ) {
+			$next['style'] = $this->sanitize_style_settings( array_merge( $settings['style'], [ 'active_theme_id' => $id ] ), $current['style'] ?? [] );
+		} else {
+			$style = isset( $current['style'] ) && is_array( $current['style'] ) ? $current['style'] : [];
+			$style['active_theme_id'] = $id;
+			if ( 'legacy' === $id || 'legacy' === $profile ) {
+				$style['visual_profile'] = 'legacy';
+			} elseif ( 'kiwe2027' === $id || in_array( $profile, [ 'kiwe-2027', 'kiwe2027', 'prototype' ], true ) ) {
+				$style['visual_profile'] = 'kiwe2027';
+			}
+			$next['style'] = $this->sanitize_style_settings( $style, $current['style'] ?? [] );
+		}
+
+		if ( isset( $settings['dock'] ) && is_array( $settings['dock'] ) ) {
+			$next['dock'] = $this->sanitize_dock_settings( $settings['dock'], $current['dock'] );
+		}
+		if ( isset( $settings['dsa_theme'] ) && is_array( $settings['dsa_theme'] ) ) {
+			$next['dsa_theme'] = $this->sanitize_dsa_theme( $settings['dsa_theme'], $current['dsa_theme'] );
+		}
+		if ( isset( $settings['visual_effects'] ) && is_array( $settings['visual_effects'] ) ) {
+			$next['visual_effects'] = $this->sanitize_visual_effects( $settings['visual_effects'], $current['visual_effects'] );
+		}
+
+		return $next;
+	}
+
 	private function redirect_binding_plan_error( string $code ): void {
 		wp_safe_redirect( add_query_arg( 'binding-plan', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe-ai' ) ) );
 		exit;
@@ -7174,6 +7392,10 @@ final class Admin {
 		$sheet_spacing = sanitize_key( (string) ( $input['sheet_spacing'] ?? ( $current['sheet_spacing'] ?? 'edge' ) ) );
 		$sheet_origin = sanitize_key( (string) ( $input['sheet_origin'] ?? ( $current['sheet_origin'] ?? 'bottom' ) ) );
 		$screen_heading_tag = sanitize_key( (string) ( $input['screen_heading_tag'] ?? ( $current['screen_heading_tag'] ?? 'h2' ) ) );
+		$active_theme_id = ( new Theme_Package_Service() )->sanitize_id( (string) ( $input['active_theme_id'] ?? ( $current['active_theme_id'] ?? ( in_array( $visual_profile, [ 'prototype', 'kiwe2027', 'kiwe-2027' ], true ) ? 'kiwe2027' : 'legacy' ) ) ) );
+		if ( '' === $active_theme_id ) {
+			$active_theme_id = in_array( $visual_profile, [ 'prototype', 'kiwe2027', 'kiwe-2027' ], true ) ? 'kiwe2027' : 'legacy';
+		}
 		return [
 			'visual_profile'    => in_array( $visual_profile, [ 'prototype', 'kiwe2027', 'kiwe-2027' ], true ) ? 'kiwe2027' : 'legacy',
 			'mode'              => in_array( $mode, [ 'classic', 'sheet' ], true ) ? $mode : 'classic',
@@ -7186,6 +7408,7 @@ final class Admin {
 			'sheet_origin'      => in_array( $sheet_origin, [ 'bottom', 'above_dock' ], true ) ? $sheet_origin : 'bottom',
 			'sheet_width_percent' => max( 50, min( 90, absint( $input['sheet_width_percent'] ?? ( $current['sheet_width_percent'] ?? 78 ) ) ) ),
 			'screen_heading_tag' => in_array( $screen_heading_tag, [ 'h1', 'h2', 'h3', 'h4', 'p', 'span' ], true ) ? $screen_heading_tag : 'h2',
+			'active_theme_id'   => $active_theme_id,
 		];
 	}
 

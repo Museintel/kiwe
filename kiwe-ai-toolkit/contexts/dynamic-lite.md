@@ -14,7 +14,9 @@ Do not read the whole Kiwe repo. Do not search GitHub. Do not guess the target s
 
 If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > AI > AI connector and Site Graph`.
 
-External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, and `/wp-json/dsa/v1/ai/stages/{stageId}/...`.
+External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, `/wp-json/dsa/v1/ai/stages/{stageId}/...`, and `/wp-json/dsa/v1/ai/themes`.
+
+Kiwe theme package install/activation is allowed through `/wp-json/dsa/v1/ai/themes/install` and `/wp-json/dsa/v1/ai/themes/{themeId}/activate` when the key has theme scope. A theme package is one JSON file containing `schema: "kiwe.theme-package.v1"`, `theme`, `settings`, and `css`; do not produce a loose settings import file for DSA themes.
 
 ## What the Site Graph gives you
 
@@ -136,3 +138,5 @@ The controlled executor skeleton defines the future adapter interface only. The 
 - whether applying the plan requires Bricks 2.4 abilities, manual Bricks builder work, or a future Kiwe adapter.
 
 Do not claim that Bricks, WordPress, WooCommerce, or Kiwe were mutated unless an actual trusted apply tool ran.
+
+Direct AI intent endpoints for Bricks save, WordPress publish, WooCommerce mutation, cart, checkout, and auth may exist, but they are locked discovery surfaces. Treat locked responses as proof of the boundary, not as failed authority.

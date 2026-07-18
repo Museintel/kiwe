@@ -31,9 +31,6 @@ if (mode === 'theme') {
 }
 if (mode === 'combined') {
   required.push('combined-preview/index.html');
-  if (fs.existsSync(path.join(root, 'kiwe-settings'))) {
-    required.push('kiwe-settings/SETTINGS-NOTES.md');
-  }
 }
 
 const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));
@@ -41,6 +38,26 @@ if (missing.length) {
   console.error(`Kiwe handoff validation failed for ${root}`);
   for (const rel of missing) console.error(`Missing: ${rel}`);
   process.exit(1);
+}
+
+if (mode === 'theme' || mode === 'combined') {
+  const importRoot = path.join(root, 'appshell-theme', 'import');
+  if (fs.existsSync(importRoot)) {
+    const themeDirs = fs.readdirSync(importRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+    for (const entry of themeDirs) {
+      for (const rel of [
+        `appshell-theme/import/${entry.name}/theme.json`,
+        `appshell-theme/import/${entry.name}/css/theme.css`,
+        `appshell-theme/import/${entry.name}/theme-package.json`
+      ]) {
+        if (!fs.existsSync(path.join(root, rel))) {
+          console.error(`Kiwe handoff validation failed for ${root}`);
+          console.error(`Missing: ${rel}`);
+          process.exit(1);
+        }
+      }
+    }
+  }
 }
 
 console.log(`Kiwe handoff OK: ${root} (${mode})`);

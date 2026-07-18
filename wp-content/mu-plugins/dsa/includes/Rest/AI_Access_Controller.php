@@ -22,6 +22,8 @@ use DSA\AI\Target_Resolution_Service;
 use DSA\AI\Trusted_Adapter_Proof_Service;
 use DSA\AI\Trusted_Apply_Stager;
 use DSA\AI\Trusted_Execution_Preview_Service;
+use DSA\Settings;
+use DSA\Theme\Theme_Package_Service;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -32,6 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class AI_Access_Controller {
 	public function __construct(
 		private Site_Graph_Service $site_graph,
+		private ?Settings $settings = null,
 		private ?Access_Key_Service $keys = null
 	) {
 		$this->keys = $this->keys ?: new Access_Key_Service();
@@ -64,6 +67,15 @@ final class AI_Access_Controller {
 			[ 'POST', '/ai/stages/(?P<stageId>[a-zA-Z0-9:_-]+)/controlled-executor', 'controlled_executor', 'trusted_apply_chain' ],
 			[ 'POST', '/ai/stages/(?P<stageId>[a-zA-Z0-9:_-]+)/bricks-adapter-plan', 'bricks_adapter_plan', 'trusted_apply_chain' ],
 			[ 'POST', '/ai/stages/(?P<stageId>[a-zA-Z0-9:_-]+)/post-apply-verification', 'post_apply_verification', 'trusted_apply_chain' ],
+			[ 'GET', '/ai/themes', 'themes', 'themes' ],
+			[ 'POST', '/ai/themes/install', 'install_theme', 'themes' ],
+			[ 'POST', '/ai/themes/(?P<themeId>[a-zA-Z0-9._-]+)/activate', 'activate_theme', 'themes' ],
+			[ 'POST', '/ai/mutations/bricks-page-save', 'locked_mutation', 'controlled_mutation' ],
+			[ 'POST', '/ai/mutations/wordpress-publish', 'locked_mutation', 'controlled_mutation' ],
+			[ 'POST', '/ai/mutations/woocommerce', 'locked_mutation', 'controlled_mutation' ],
+			[ 'POST', '/ai/runtime/cart', 'locked_runtime', 'controlled_mutation' ],
+			[ 'POST', '/ai/runtime/checkout', 'locked_runtime', 'controlled_mutation' ],
+			[ 'POST', '/ai/runtime/auth', 'locked_runtime', 'controlled_mutation' ],
 		];
 
 		foreach ( $routes as [ $method, $route, $callback, $scope ] ) {
@@ -102,7 +114,14 @@ final class AI_Access_Controller {
 				'prepareApplyPlan'  => true,
 				'stageApplyPlan'    => true,
 				'trustedApplyChain' => true,
+				'themes'            => true,
 				'mutatesContent'    => false,
+				'controlledMutationIntents' => [
+					'bricksPageSave'       => 'locked-behind-future-controlled-executor',
+					'wordpressPublish'     => 'locked-behind-future-controlled-executor',
+					'woocommerceMutation'  => 'locked-behind-future-controlled-executor',
+					'checkoutCartAuthRun'  => 'runtime-owned-not-direct-ai-api',
+				],
 			],
 		];
 	}
@@ -306,6 +325,114 @@ final class AI_Access_Controller {
 			'attach_post_apply_verification',
 			'post-apply-verification-ready'
 		);
+	}
+
+	private function themes( WP_REST_Request $request, array $auth ): array {
+		$service = new Theme_Package_Service();
+		$settings = $this->settings ? $this->settings->all() : [];
+		$active = $service->active( $settings );
+
+		return [
+			'ok'      => true,
+			'schema'  => 'kiwe.ai-themes.v1',
+			'active'  => $service->public_record( $active ),
+			'records' => array_map( [ $service, 'public_record' ], $service->all() ),
+		];
+	}
+
+	private function install_theme( WP_REST_Request $request, array $auth ): array {
+		$package = $this->array_param( $request, 'package' );
+		if ( [] === $package ) {
+			$package = $request->get_json_params();
+			$package = is_array( $package ) ? $package : [];
+		}
+		if ( [] === $package ) {
+			return $this->bad_request( 'missing_theme_package', 'Request body must include a Kiwe theme package.' );
+		}
+		$result = ( new Theme_Package_Service() )->install(
+			$package,
+			[
+				'userId'    => 0,
+				'createdAt' => gmdate( 'c' ),
+				'apiKeyId'  => (string) ( $auth['record']['id'] ?? '' ),
+			]
+		);
+		if ( empty( $result['ok'] ) ) {
+			return [
+				'ok'         => false,
+				'httpStatus' => 400,
+				'error'      => $result,
+			];
+		}
+
+		return [
+			'ok'     => true,
+			'schema' => 'kiwe.ai-theme-install-result.v1',
+			'record' => $result['record'],
+		];
+	}
+
+	private function activate_theme( WP_REST_Request $request, array $auth ): array {
+		if ( ! $this->settings ) {
+			return $this->bad_request( 'settings_unavailable', 'Kiwe settings service is unavailable.' );
+		}
+		$service  = new Theme_Package_Service();
+		$theme_id = $service->sanitize_id( (string) $request->get_param( 'themeId' ) );
+		$record   = $service->find( $theme_id );
+		if ( [] === $record ) {
+			return $this->not_found( 'theme_not_found', 'Theme was not found.' );
+		}
+
+		$this->settings->update( $service->safe_settings_overlay( $record, $this->settings->all() ) );
+
+		return [
+			'ok'     => true,
+			'schema' => 'kiwe.ai-theme-activation-result.v1',
+			'active' => $service->public_record( $record ),
+		];
+	}
+
+	private function locked_mutation( WP_REST_Request $request, array $auth ): array {
+		return [
+			'ok'         => false,
+			'httpStatus' => 423,
+			'schema'     => 'kiwe.ai-controlled-mutation-locked.v1',
+			'route'      => $request->get_route(),
+			'message'    => 'Direct AI mutation is intentionally locked. Use the trusted apply chain, target resolution, rollback capture, rendered inspection, final save approval, controlled executor, adapter plan, and post-apply verification before any real mutation adapter may be enabled.',
+			'canMutateNow' => false,
+			'requiredBeforeUnlock' => [
+				'validated-bindings',
+				'staged-apply-plan',
+				'adapter-proof',
+				'guarded-authorization',
+				'pre-execution-gate',
+				'execution-preview',
+				'final-confirmation',
+				'fresh-site-graph',
+				'rollback-readiness',
+				'target-resolution',
+				'rollback-capture',
+				'rendered-target-inspection',
+				'minimal-adapter-shell',
+				'final-save-approval',
+				'controlled-executor',
+				'bricks-adapter-plan',
+				'post-apply-verification',
+				'staging-site-human-run',
+			],
+		];
+	}
+
+	private function locked_runtime( WP_REST_Request $request, array $auth ): array {
+		return [
+			'ok'         => false,
+			'httpStatus' => 423,
+			'schema'     => 'kiwe.ai-runtime-authority-locked.v1',
+			'route'      => $request->get_route(),
+			'message'    => 'Cart, checkout, and authentication flows are runtime-owned by Kiwe, WooCommerce, WordPress, and PhoneKey. External AI keys cannot run or impersonate visitor/customer runtime actions.',
+			'canRunNow'  => false,
+			'allowedUse' => 'Generate launchers, validate bindings, stage/apply review artifacts, and preserve canonical attributes such as data-dsa-open-module.',
+		];
 	}
 
 	private function attach_stage_artifact( WP_REST_Request $request, callable $builder, string $attach_method, string $ready_status ): array {
