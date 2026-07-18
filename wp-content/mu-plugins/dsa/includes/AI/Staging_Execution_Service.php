@@ -269,7 +269,19 @@ final class Staging_Execution_Service {
 	}
 
 	private function upsert_bricks_page_from_html( array $operation, string $execution_id ): array {
-		$result = $this->upsert_post( array_merge( $operation, [ 'type' => 'wordpress.page.upsert' ] ), 'page', $execution_id );
+		$result = $this->upsert_post(
+			array_merge(
+				$operation,
+				[
+					'type'           => 'wordpress.page.upsert',
+					'html'           => $this->bricks_managed_placeholder(),
+					'bricksPasteHtml' => $this->bricks_managed_placeholder(),
+					'css'            => '',
+				]
+			),
+			'page',
+			$execution_id
+		);
 		if ( empty( $result['ok'] ) ) {
 			return $result;
 		}
@@ -279,11 +291,22 @@ final class Staging_Execution_Service {
 			return array_merge( $result, $conversion, [ 'ok' => false ] );
 		}
 
-		return array_merge( $result, $conversion, [ 'bricksPage' => true ] );
+		return array_merge( $result, $conversion, [ 'bricksPage' => true, 'storedBricksPasteHtml' => false, 'visiblePostContent' => 'kiwe-managed-placeholder' ] );
 	}
 
 	private function upsert_bricks_template_from_html( array $operation, string $execution_id ): array {
-		$result = $this->upsert_bricks_template( array_merge( $operation, [ 'type' => 'bricks.template.upsert' ] ), $execution_id );
+		$result = $this->upsert_bricks_template(
+			array_merge(
+				$operation,
+				[
+					'type'           => 'bricks.template.upsert',
+					'html'           => $this->bricks_managed_placeholder(),
+					'bricksPasteHtml' => $this->bricks_managed_placeholder(),
+					'css'            => '',
+				]
+			),
+			$execution_id
+		);
 		if ( empty( $result['ok'] ) ) {
 			return $result;
 		}
@@ -293,7 +316,7 @@ final class Staging_Execution_Service {
 			return array_merge( $result, $conversion, [ 'ok' => false ] );
 		}
 
-		return array_merge( $result, $conversion, [ 'bricksTemplate' => true ] );
+		return array_merge( $result, $conversion, [ 'bricksTemplate' => true, 'storedBricksPasteHtml' => false, 'visiblePostContent' => 'kiwe-managed-placeholder' ] );
 	}
 
 	private function apply_bricks_conversion( int $post_id, array $operation, string $execution_id ): array {
@@ -347,6 +370,8 @@ final class Staging_Execution_Service {
 		update_post_meta( $post_id, '_kiwe_ai_bricks_conversion_backup_' . substr( $execution_id, -12 ), $previous );
 
 		update_post_meta( $post_id, $content_key, $conversion['elements'] );
+		update_post_meta( $post_id, '_kiwe_bricks_source_hash', hash( 'sha256', $html . "\n/* css */\n" . $css ) );
+		update_post_meta( $post_id, '_kiwe_bricks_source_bytes', strlen( $html ) + strlen( $css ) );
 
 		$current_settings = get_post_meta( $post_id, $settings_key, true );
 		$current_settings = is_array( $current_settings ) ? $current_settings : [];
@@ -370,6 +395,10 @@ final class Staging_Execution_Service {
 			'globalClassesCount'    => isset( $conversion['globalClasses'] ) && is_array( $conversion['globalClasses'] ) ? count( $conversion['globalClasses'] ) : 0,
 			'globalVariablesCount'  => isset( $conversion['globalVariables'] ) && is_array( $conversion['globalVariables'] ) ? count( $conversion['globalVariables'] ) : 0,
 		];
+	}
+
+	private function bricks_managed_placeholder(): string {
+		return '<div hidden data-kiwe-bricks-managed="true" aria-hidden="true"></div>';
 	}
 
 	private function sanitize_bricks_page_settings( array $settings ): array {

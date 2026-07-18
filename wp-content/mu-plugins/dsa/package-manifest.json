@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.5.88",
+  "version": "0.5.89",
   "algorithm": "sha256",
   "file_count": 226,
   "files": {
@@ -186,7 +186,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "b1a0836912b1024d0ad598cf9024d795ed4f43030b0fe9636b8dd328363659b3"
+      "sha256": "388189b5e3d2eeea0ba8980a3734f93bbff67ef327e9330ea0215bff6e30f0cf"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -401,8 +401,8 @@
       "sha256": "0b9fc2c223683afd8e5565852c6ba6e81d04ce1ffba59de2275088b796b3a7ba"
     },
     "includes/AI/Staging_Execution_Service.php": {
-      "bytes": 25204,
-      "sha256": "db29b62528c4c96913c608d8f9abcc030275770e2a796a92995af668f76c5867"
+      "bytes": 26113,
+      "sha256": "64c5a96452c5581da9671a8f05d5414dbfe651d5c4afbb4c932e8a958adfdf04"
     },
     "includes/AI/Target_Resolution_Service.php": {
       "bytes": 6731,

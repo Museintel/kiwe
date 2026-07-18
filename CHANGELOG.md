@@ -2,6 +2,11 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.89 - 2026-07-18
+
+- Fixed the Bricks HTML/CSS staging executor loop so `bricks.page.from-html` and `bricks.template.from-html` convert from the real AI handoff source while publishing only a hidden Kiwe-managed placeholder as normal WordPress content. This prevents `<style>`/CSS text from leaking visibly above the rendered Bricks page after AI imports.
+- Stored the original source hash and byte budget metadata beside generated Bricks JSON so future audits can prove which handoff source created the page/template without re-publishing the raw paste payload.
+
 ## 0.5.88 - 2026-07-18
 
 - Added a controlled Kiwe HTML/CSS-to-Bricks conversion lane for staging AI execution: `bricks.page.from-html` and `bricks.template.from-html` create/update pages/templates, convert clean Seam/HTML handoffs into Bricks element JSON, preserve classes/IDs/data/ARIA launchers, store safe CSS in Bricks page settings, and write rollback backup metadata.
