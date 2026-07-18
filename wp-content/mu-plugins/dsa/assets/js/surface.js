@@ -33,6 +33,8 @@
 		hero_text_color: 'rgba(20,24,34,0.18)',
 		confetti_color_source: 'hero',
 	}, data.theme || {} );
+	const installedTheme = data.installedTheme || {};
+	const themeScreens = installedTheme && installedTheme.screens && typeof installedTheme.screens === 'object' ? installedTheme.screens : {};
 	const styleConfig = Object.assign( {
 		screen_heading_tag: 'h2',
 	}, data.style || {} );
@@ -131,6 +133,10 @@
 	}
 	function withUiProfile( payload ) {
 		return Object.assign( {}, payload || {}, { visualProfile: currentVisualProfile() } );
+	}
+	function screenTheme( screen ) {
+		const value = themeScreens && themeScreens[ screen ] && typeof themeScreens[ screen ] === 'object' ? themeScreens[ screen ] : {};
+		return Object.assign( {}, value );
 	}
 	function seamUiBridge() {
 		return {
@@ -5996,6 +6002,7 @@
 			routes: commerce.routes || {},
 			complements: commerce.complements || [],
 			visualProfile: currentVisualProfile(),
+			screenTheme: screenTheme( 'cart' ),
 			trustBadges: protectedTrustBadges(),
 		} );
 	}

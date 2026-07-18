@@ -36,7 +36,7 @@ Do not confuse these layers:
 - Standalone previewable HTML pages that can be visually reviewed before being brought into Bricks.
 - Documentation for how a designer should use the framework.
 - Proposals for new framework roles/classes/tokens.
-- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md` and keep website, AppShell theme, and Kiwe settings/profile output separate.
+- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md`, keep website/page output separate from the AppShell theme package, and place DSA theme settings inside `theme-package.json`.
 
 Custom CSS is allowed. Seam-native does not mean zero custom CSS; it means Kiwe/Seam tokens, vocabulary, and behavior boundaries stay authoritative.
 

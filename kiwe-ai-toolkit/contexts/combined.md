@@ -1,6 +1,6 @@
-﻿# Kiwe context: Website/page + DSA AppShell theme
+# Kiwe context: Website/page + DSA AppShell theme
 
-Website/page, AppShell theme package, and optional Kiwe settings profile kept in separate folders.
+Website/page, combined preview, and AppShell theme package. Theme settings travel inside theme-package.json.
 
 ## Important boundary
 
@@ -18,7 +18,7 @@ Give this folder to an AI, web developer, or Bricks designer when the job is:
 
 This is not a Kiwe AppShell theme handoff. AppShell themes use `ui-system/` and style DSA sheets/screens/dock around existing Kiwe capabilities.
 
-If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `appshell-theme/`, and optional `kiwe-settings/` folders.
+If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `appshell-theme/`, and `combined-preview/` folders. AppShell theme settings belong inside `appshell-theme/import/<theme-id>/theme-package.json`.
 
 ## Read order
 
@@ -183,7 +183,7 @@ Do not confuse these layers:
 - Standalone previewable HTML pages that can be visually reviewed before being brought into Bricks.
 - Documentation for how a designer should use the framework.
 - Proposals for new framework roles/classes/tokens.
-- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md` and keep website, AppShell theme, and Kiwe settings/profile output separate.
+- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md`, keep website/page output separate from the AppShell theme package, and place DSA theme settings inside `theme-package.json`.
 
 Custom CSS is allowed. Seam-native does not mean zero custom CSS; it means Kiwe/Seam tokens, vocabulary, and behavior boundaries stay authoritative.
 
@@ -258,7 +258,7 @@ Do not invent alternate manifest keys.
 Important:
 
 - Use `schema`, not `type`.
-- Do not use `schemaVersion` in AppShell theme manifests. `schemaVersion` is only used by optional Kiwe settings profiles.
+- Do not use `schemaVersion` in AppShell theme manifests. `schemaVersion` is only used by `theme-package.json` wrappers and other package/profile wrappers.
 - Do not use nested `contracts`, `colorAuthority`, `authority`, `supportedPresentationModes`, `supportedDockShapes`, `cssFiles`, or object-form `supports`.
 - `supports` must be an array of allowed strings.
 - `screens` must use Kiwe screen names only, and should match the brief/settings. Do not list cart/checkout/profile by default for a non-commerce or non-membership website just because those screens exist.
@@ -522,7 +522,7 @@ Create a new Kiwe DSA AppShell visual theme in the requested visual style, for e
 
 Your theme may change the look, layout, hierarchy, spacing, material, typography, icon treatment, badge style, card style, and screen arrangement. It must not create new runtime authority.
 
-If the assignment asks for a website/page and a DSA AppShell theme together, follow `HANDOFF-MODES.md`: keep website/page files, AppShell theme package, standalone previews, and optional Kiwe settings/profile JSON in separate folders.
+If the assignment asks for a website/page and a DSA AppShell theme together, follow `HANDOFF-MODES.md`: keep website/page files, AppShell theme package, and standalone previews separate. Theme settings belong inside the AppShell theme package, not in a separate settings/profile folder.
 
 ## Originality requirement
 
@@ -616,10 +616,11 @@ Do not hardcode one dock radius and ignore admin shape controls.
 
 Preserve all required selectors from `screen-payloads.json` and `slots.md`.
 
-A Kiwe AppShell theme is a reusable visual skin, not a screenshot of the currently enabled dock icons. Treat `kiwe-settings/` as a recommended site preset only:
+A Kiwe AppShell theme is a reusable visual skin, not a screenshot of the currently enabled dock icons. Treat `theme-package.json` root `settings` as the recommended site preset:
 
-- `kiwe-settings/kiwe-appsite-profile.json` may hide dock icons or choose a site-specific order/focus item.
+- `theme-package.json` root `settings` may hide dock icons or choose a site-specific order/focus item.
 - Hiding a dock icon does not remove that registered DSA module from the plugin.
+- `theme-package.json` root `settings.screens` may carry sanitized presentation/copy labels for live screens. For cart, allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`.
 - Importable theme CSS must provide a resilient baseline for every registered core screen in `screen-payloads.json`: profile, cart, checkout, search, menu, saved, links, notifications, iOS install, games, and AI.
 - If the combined preview is for a non-commerce/news site, it may hide cart/checkout/order-heavy UI, but enabling cart later in Kiwe admin must still inherit the theme’s panel, card, button, form, badge, rail, and CTA language without looking broken.
 - `theme.json.screens` should list all core screens the theme can safely skin. A partial theme that only skins the screens shown in the preview must clearly label itself as partial and is not marketplace-ready.
@@ -704,6 +705,10 @@ It must not contain:
 - preview-only mocks, simulator code, or placeholder product/account data
 
 Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns dock, sheet, screen, and backdrop placement and measurement. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those properties belong in core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, inner spacing, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+
+Theme settings belong inside the theme package, not in a separate loose settings export/import. Keep `theme.json` as the manifest-only validator file. Put dock composition, focus item, shape, sheet behavior, active theme id, color settings, visual-effect presets, and safe screen copy settings in `theme-package.json` under root `settings`. Put the same CSS as `css/theme.css` in `theme-package.json` under root `css` so Kiwe can import one file and show it under `Kiwe > Theme > Installed themes`.
+
+If your preview uses custom cart copy such as "Your tea-time bag", "Pairs well with", or a renamed checkout CTA and that copy should appear on a live WooCommerce site, declare it in `theme-package.json` under `settings.screens.cart`. This is copy only: do not place products, prices, totals, checkout URLs, cart state, JavaScript, or behavior there.
 
 Use the live runtime hooks in `screen-payloads.json` for screen internals. For cart, stable theme hooks include `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`; do not style only preview-only item/card names.
 
@@ -1070,12 +1075,12 @@ theme-handoff/
 
 Rules:
 
-- The importable package is only `theme.json` plus theme CSS/assets allowed by the validator.
+- The review folder includes `theme.json`, `css/theme.css`, and `theme-package.json`. `theme-package.json` is the single Kiwe admin/API import file containing the manifest, CSS, and safe theme settings preset.
 - Preview code is visual proof only.
 - Do not create website/page sections.
 - Do not invent DSA behavior or state authority.
 - Use `screen-payloads.json`, `slots.md`, `preview-handoff.md`, and `theme-manifest.schema.json`.
-- Dock destination visibility is configuration, not theme CSS. If a design needs a different dock composition, document it as a Kiwe settings/profile change.
+- Dock destination visibility is configuration, not theme CSS. If a design needs a different dock composition, declare it inside `theme-package.json` root `settings`.
 
 ## Mode 3: Combined website/page + DSA AppShell theme
 
@@ -1103,15 +1108,13 @@ combined-kiwe-handoff/
   appshell-theme/
     import/
       theme-id/
+        theme-package.json
         theme.json
         css/
           theme.css
     preview/                  # optional technical fixture only; not required for combined mode
       index.html
       PLACEHOLDERS.md
-  kiwe-settings/
-    kiwe-appsite-profile.json   # optional, only when changing Kiwe settings
-    SETTINGS-NOTES.md
 ```
 
 Rules:
@@ -1142,9 +1145,9 @@ Website/page markup may include Kiwe hooks, but must not implement Kiwe behavior
 - Do not create duplicate cart/profile/search/save/auth behavior. Keep Kiwe hooks as handoff points to the live plugin.
 - Do not use website CSS to restyle protected DSA internals.
 
-## Kiwe settings/profile lane
+## Kiwe theme package settings lane
 
-Combined handoffs may include `kiwe-settings/kiwe-appsite-profile.json` when the design intentionally changes Kiwe runtime settings.
+Combined handoffs should include `appshell-theme/import/theme-id/theme-package.json` when the design intentionally changes Kiwe runtime settings. Do not create a separate `kiwe-settings/` folder for DSA theme settings.
 
 This is useful when the design wants:
 
@@ -1157,57 +1160,67 @@ This is useful when the design wants:
 - Dark/light mode action hidden from the dock because a page/header launcher will open it elsewhere.
 - Cart hidden from the dock for a non-commerce site.
 - Cart visible for a WooCommerce/ecommerce site.
+- Screen presentation copy, such as cart titles and FBT/checkout labels, when the preview copy is intended to appear in live Kiwe.
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
+
+`theme.json` remains the manifest-only validator file. Put the settings preset in `theme-package.json` at root `settings`, beside root `theme` and root `css`.
 - Active/hover/hero colors.
 - WooCommerce or Search bridge settings when the website design requires them.
 
-Use only recognized Kiwe profile settings. Unknown keys are ignored by import.
+Use only recognized Kiwe theme settings. Unknown keys are ignored by import.
 
-Safe high-level keys include:
+Safe root `settings` keys inside `theme-package.json` include:
 
 ```json
 {
-  "type": "kiwe-appsite-profile",
-  "schemaVersion": 1,
-  "settings": {
-    "enabled": true,
-    "style": {
-      "visual_profile": "kiwe2027",
-      "mode": "sheet",
-      "sheet_position": "bottom",
-      "sheet_spacing": "inset",
-      "sheet_origin": "above_dock",
-      "sheet_width_percent": 78
+  "style": {
+    "visual_profile": "kiwe2027",
+    "mode": "sheet",
+    "sheet_position": "bottom",
+    "sheet_spacing": "inset",
+    "sheet_origin": "above_dock",
+    "sheet_width_percent": 78
+  },
+  "dock": {
+    "presentation": "dock",
+    "split_style": true,
+    "focus_item": "ai",
+    "shape": "pill",
+    "desktop_orientation": "auto",
+    "tablet_orientation": "auto",
+    "mobile_orientation": "auto",
+    "enabled_items": {
+      "menu": true,
+      "search": true,
+      "profile": true,
+      "links": true,
+      "saved": true,
+      "cart": true,
+      "theme": false,
+      "ai": true,
+      "link-home": true
     },
-    "dock": {
-      "presentation": "dock",
-      "split_style": true,
-      "focus_item": "ai",
-      "shape": "pill",
-      "desktop_orientation": "auto",
-      "tablet_orientation": "auto",
-      "mobile_orientation": "auto",
-      "enabled_items": {
-        "menu": true,
-        "search": true,
-        "profile": true,
-        "links": true,
-        "saved": true,
-        "cart": true,
-        "theme": false,
-        "ai": true,
-        "link-home": true
-      },
-      "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
-      "custom_items": [
-        { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
-      ]
-    },
-    "dsa_theme": {
-      "active_color": "#8f8f98",
-      "hover_color": "#24c6a1",
-      "hero_text_color": "rgba(20,24,34,0.18)"
+    "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
+    "custom_items": [
+      { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
+    ]
+  },
+  "dsa_theme": {
+    "active_color": "#8f8f98",
+    "hover_color": "#24c6a1",
+    "hero_text_color": "rgba(20,24,34,0.18)"
+  },
+  "screens": {
+    "cart": {
+      "label": "Bag",
+      "eyebrow": "Cart",
+      "title": "Your tea-time bag",
+      "emptyTitle": "Your tea-time bag is waiting.",
+      "emptyText": "Add products to continue.",
+      "fbtTitle": "Pairs well with",
+      "checkoutLabel": "Checkout",
+      "checkoutEmptyLabel": "Empty"
     }
   }
 }
@@ -1218,6 +1231,8 @@ Notes:
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
 - Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls and canonical `data-dsa-open-module`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
+- `settings.screens.cart` is presentation/copy only. It may set labels such as `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. It must not contain cart data, prices, line items, checkout URLs, JavaScript, endpoints, or state authority. WooCommerce/Kiwe still own the cart runtime.
+- If a preview shows custom cart copy such as "Your tea-time bag" or "Pairs well with" and that copy is intended for the live theme, it must be declared in `theme-package.json` under `settings.screens.cart`; otherwise document it as preview-only.
 - The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
 
 ## What to ask the AI
@@ -1232,4 +1247,4 @@ For DSA theme only:
 
 For combined:
 
-> Follow both `framework-system/handoffs/website-builder/prompt.md` and `ui-system/prompt.md`, using `HANDOFF-MODES.md` as the layer boundary. Create a combined website/page plus DSA AppShell theme handoff. Keep website, AppShell theme, and Kiwe settings/profile output separate.
+> Follow both `framework-system/handoffs/website-builder/prompt.md` and `ui-system/prompt.md`, using `HANDOFF-MODES.md` as the layer boundary. Create a combined website/page plus DSA AppShell theme handoff. Keep website/page output separate from the AppShell theme package; place DSA theme settings inside `theme-package.json`.

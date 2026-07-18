@@ -26,7 +26,7 @@ Create a new Kiwe DSA AppShell visual theme in the requested visual style, for e
 
 Your theme may change the look, layout, hierarchy, spacing, material, typography, icon treatment, badge style, card style, and screen arrangement. It must not create new runtime authority.
 
-If the assignment asks for a website/page and a DSA AppShell theme together, follow `HANDOFF-MODES.md`: keep website/page files, AppShell theme package, standalone previews, and optional Kiwe settings/profile JSON in separate folders.
+If the assignment asks for a website/page and a DSA AppShell theme together, follow `HANDOFF-MODES.md`: keep website/page files, AppShell theme package, and standalone previews separate. Theme settings belong inside the AppShell theme package, not in a separate settings/profile folder.
 
 ## Originality requirement
 
@@ -120,10 +120,11 @@ Do not hardcode one dock radius and ignore admin shape controls.
 
 Preserve all required selectors from `screen-payloads.json` and `slots.md`.
 
-A Kiwe AppShell theme is a reusable visual skin, not a screenshot of the currently enabled dock icons. Treat `kiwe-settings/` as a recommended site preset only:
+A Kiwe AppShell theme is a reusable visual skin, not a screenshot of the currently enabled dock icons. Treat `theme-package.json` root `settings` as the recommended site preset:
 
-- `kiwe-settings/kiwe-appsite-profile.json` may hide dock icons or choose a site-specific order/focus item.
+- `theme-package.json` root `settings` may hide dock icons or choose a site-specific order/focus item.
 - Hiding a dock icon does not remove that registered DSA module from the plugin.
+- `theme-package.json` root `settings.screens` may carry sanitized presentation/copy labels for live screens. For cart, allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`.
 - Importable theme CSS must provide a resilient baseline for every registered core screen in `screen-payloads.json`: profile, cart, checkout, search, menu, saved, links, notifications, iOS install, games, and AI.
 - If the combined preview is for a non-commerce/news site, it may hide cart/checkout/order-heavy UI, but enabling cart later in Kiwe admin must still inherit the theme’s panel, card, button, form, badge, rail, and CTA language without looking broken.
 - `theme.json.screens` should list all core screens the theme can safely skin. A partial theme that only skins the screens shown in the preview must clearly label itself as partial and is not marketplace-ready.
@@ -208,6 +209,10 @@ It must not contain:
 - preview-only mocks, simulator code, or placeholder product/account data
 
 Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns dock, sheet, screen, and backdrop placement and measurement. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those properties belong in core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, inner spacing, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+
+Theme settings belong inside the theme package, not in a separate loose settings export/import. Keep `theme.json` as the manifest-only validator file. Put dock composition, focus item, shape, sheet behavior, active theme id, color settings, visual-effect presets, and safe screen copy settings in `theme-package.json` under root `settings`. Put the same CSS as `css/theme.css` in `theme-package.json` under root `css` so Kiwe can import one file and show it under `Kiwe > Theme > Installed themes`.
+
+If your preview uses custom cart copy such as "Your tea-time bag", "Pairs well with", or a renamed checkout CTA and that copy should appear on a live WooCommerce site, declare it in `theme-package.json` under `settings.screens.cart`. This is copy only: do not place products, prices, totals, checkout URLs, cart state, JavaScript, or behavior there.
 
 Use the live runtime hooks in `screen-payloads.json` for screen internals. For cart, stable theme hooks include `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`; do not style only preview-only item/card names.
 

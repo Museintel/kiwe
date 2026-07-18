@@ -147,7 +147,9 @@ final class Assets {
 			[ 'dsa-seam' ],
 			$surface_stylesheet_version
 		);
-		$active_theme_css = ( new Theme_Package_Service() )->active_css( $settings );
+		$theme_package_service = new Theme_Package_Service();
+		$active_theme_record   = $theme_package_service->active( $settings );
+		$active_theme_css      = $theme_package_service->active_css( $settings );
 		if ( '' !== trim( $active_theme_css ) ) {
 			wp_add_inline_style( 'dsa-surface', $active_theme_css );
 		}
@@ -287,6 +289,12 @@ final class Assets {
 				'style'      => $settings['style'] ?? [],
 				'haptic'     => $settings['haptic'] ?? [],
 				'theme'      => $settings['dsa_theme'] ?? [],
+				'installedTheme' => [
+					'id'       => sanitize_key( (string) ( $active_theme_record['id'] ?? '' ) ),
+					'name'     => sanitize_text_field( (string) ( $active_theme_record['name'] ?? '' ) ),
+					'settings' => isset( $active_theme_record['settings'] ) && is_array( $active_theme_record['settings'] ) ? $active_theme_record['settings'] : [],
+					'screens'  => isset( $active_theme_record['settings']['screens'] ) && is_array( $active_theme_record['settings']['screens'] ) ? $active_theme_record['settings']['screens'] : [],
+				],
 				'designTokens' => Token_Schema::contract( $settings, $manifest ),
 				'kiweTokens' => $this->kiwe_tokens_data(),
 				'seamTokens' => $this->kiwe_tokens_data(),

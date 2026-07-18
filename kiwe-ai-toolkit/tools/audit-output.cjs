@@ -185,6 +185,7 @@ const hasStaleSettingsFolder = files.some((file) => rel(file).startsWith('kiwe-s
 const hasThemePackageSettings = /"settings"\s*:\s*\{/.test(settingsText);
 const hasCustomDockSettings = /"custom_items"\s*:\s*\[/.test(settingsText);
 const hasFocusItemSettings = /"focus_item"\s*:/.test(settingsText);
+const hasScreenCartSettings = /"screens"\s*:\s*\{[\s\S]*"cart"\s*:\s*\{/.test(settingsText);
 
 if (hasStaleSettingsFolder) {
   add('warn', 'kiwe-settings/ folder detected. Current Kiwe AppShell theme settings should travel inside appshell-theme/import/<theme-id>/theme-package.json so Kiwe imports/exports installed themes, not loose settings profiles.');
@@ -328,8 +329,16 @@ for (const file of themePackageFiles) {
   }
 }
 
+const placeholderText = textFiles
+  .filter((file) => /PLACEHOLDERS\.md$/i.test(file))
+  .map((file) => read(file))
+  .join('\n');
+if (/Your tea-time bag|Pairs well with|tea-time bag|bag is ready/i.test(combinedPreviewText) && !hasScreenCartSettings && !/cart copy[\s\S]{0,120}preview-only|preview-only[\s\S]{0,120}cart copy/i.test(placeholderText)) {
+  add('fail', 'Combined preview contains custom cart/bag copy, but no theme-package.json settings.screens.cart preset was found. Live-intended cart copy must travel in the installed theme package; otherwise document it as preview-only in PLACEHOLDERS.md.', rel(combinedPreviewPath || root));
+}
+
 if (exists('appshell-theme') && !themePackageFiles.length && (hasThemePackageSettings || /custom_items|focus_item|split_style|"shape"\s*:/i.test(allText))) {
-  add('warn', 'AppShell theme appears to define dock/theme settings but no appshell-theme/import/<theme-id>/theme-package.json was found. Current Kiwe imports installed theme packages, not loose settings profiles.');
+  add('fail', 'AppShell theme appears to define dock/theme settings but no appshell-theme/import/<theme-id>/theme-package.json was found. Current Kiwe imports installed theme packages, not loose settings profiles.');
 }
 
 const forbiddenRuntime = [

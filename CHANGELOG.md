@@ -2,6 +2,13 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## 0.5.91 - 2026-07-18
+
+- Added a safe installed-theme screen-copy lane: theme packages may now import sanitized `settings.screens.cart` labels such as cart title, empty-state copy, FBT heading, and checkout labels, so live Kiwe cart sheets can match AI/combined-preview theme copy without giving themes cart, checkout, product, price, or WooCommerce authority.
+- Exposed the active installed theme's sanitized screen settings to the frontend runtime and wired the real cart adapter to consume those labels while preserving WooCommerce-owned cart data, quantities, totals, and checkout behavior.
+- Fixed theme package activation so safe `style.visual_profile` presets are actually applied, letting marketplace themes opt into the modern Kiwe 2027 screen adapter instead of inheriting stale/legacy panel composition.
+- Updated the UI-system, Kiwe AI Toolkit lite/full contexts, marketplace package docs, scaffold generator, and audit contracts so future AI handoffs treat preview cart copy as live only when it is declared in `theme-package.json`.
+
 ## 0.5.90 - 2026-07-18
 
 - Fixed installed AppShell theme visual authority: custom theme CSS is now runtime-scoped to the active `#dsa-surface[data-dsa-surface].dsa-installed-theme-*` root so valid `[data-dsa-surface]` selectors can override core visual defaults while Geometry Engine placement/state remain core-owned.

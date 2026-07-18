@@ -8,7 +8,7 @@ Give this folder to an AI, web developer, or Bricks designer when the job is:
 
 This is not a Kiwe AppShell theme handoff. AppShell themes use `ui-system/` and style DSA sheets/screens/dock around existing Kiwe capabilities.
 
-If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `appshell-theme/`, and optional `kiwe-settings/` folders.
+If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `appshell-theme/`, and `combined-preview/` folders. AppShell theme settings belong inside `appshell-theme/import/<theme-id>/theme-package.json`.
 
 ## Read order
 

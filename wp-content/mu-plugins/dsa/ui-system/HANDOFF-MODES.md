@@ -139,6 +139,7 @@ This is useful when the design wants:
 - Dark/light mode action hidden from the dock because a page/header launcher will open it elsewhere.
 - Cart hidden from the dock for a non-commerce site.
 - Cart visible for a WooCommerce/ecommerce site.
+- Screen presentation copy, such as cart titles and FBT/checkout labels, when the preview copy is intended to appear in live Kiwe.
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
 
@@ -188,6 +189,18 @@ Safe root `settings` keys inside `theme-package.json` include:
     "active_color": "#8f8f98",
     "hover_color": "#24c6a1",
     "hero_text_color": "rgba(20,24,34,0.18)"
+  },
+  "screens": {
+    "cart": {
+      "label": "Bag",
+      "eyebrow": "Cart",
+      "title": "Your tea-time bag",
+      "emptyTitle": "Your tea-time bag is waiting.",
+      "emptyText": "Add products to continue.",
+      "fbtTitle": "Pairs well with",
+      "checkoutLabel": "Checkout",
+      "checkoutEmptyLabel": "Empty"
+    }
   }
 }
 ```
@@ -197,6 +210,8 @@ Notes:
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
 - Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls and canonical `data-dsa-open-module`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
+- `settings.screens.cart` is presentation/copy only. It may set labels such as `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. It must not contain cart data, prices, line items, checkout URLs, JavaScript, endpoints, or state authority. WooCommerce/Kiwe still own the cart runtime.
+- If a preview shows custom cart copy such as "Your tea-time bag" or "Pairs well with" and that copy is intended for the live theme, it must be declared in `theme-package.json` under `settings.screens.cart`; otherwise document it as preview-only.
 - The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
 
 ## What to ask the AI

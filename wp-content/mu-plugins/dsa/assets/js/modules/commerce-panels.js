@@ -2,6 +2,21 @@ let phonekey = {};
 let commerce = {};
 let checkoutState = {};
 
+function cartCopy( payload, label ) {
+	const screen = payload && payload.screenTheme && typeof payload.screenTheme === 'object' ? payload.screenTheme : {};
+	const fallbackLabel = label || 'Cart';
+	return {
+		label: screen.label || fallbackLabel,
+		eyebrow: screen.eyebrow || screen.label || fallbackLabel,
+		title: screen.title || 'Your cart',
+		emptyTitle: screen.emptyTitle || 'Your cart is waiting.',
+		emptyText: screen.emptyText || 'Add a product and Kiwe will keep the checkout path close without taking over WooCommerce.',
+		fbtTitle: screen.fbtTitle || '',
+		checkoutLabel: screen.checkoutLabel || 'Checkout',
+		checkoutEmptyLabel: screen.checkoutEmptyLabel || 'Empty',
+	};
+}
+
 function escapeHtml( value ) {
 	return String( value == null ? '' : value ).replace( /[&<>'"]/g, function ( character ) {
 		return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[ character ];
@@ -67,9 +82,10 @@ function renderLegacyCartPanel( label ) {
 function renderPrototypeCartPanel( label, payload ) {
 	payload = payload || {};
 	const cart = phonekey.cart || {};
+	const copy = cartCopy( payload, label );
 
 	if ( ! cart.available ) {
-		return renderBasicPanel( label, 'Cart appears here when WooCommerce is active.');
+		return renderBasicPanel( copy.label, 'Cart appears here when WooCommerce is active.');
 	}
 
 	const items = Array.isArray( cart.items ) ? cart.items : [];
@@ -80,27 +96,27 @@ function renderPrototypeCartPanel( label, payload ) {
 
 	if ( ! items.length ) {
 		return [
-			'<section class="dsa-panel dsa-cart-panel kiwe-cart-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-cart-panel data-dsa-cart-adapter="prototype-2027">',
-			'<div class="kiwe-cart-v2027__title"><p class="dsa-cart-panel__eyebrow">' + escapeHtml( label || 'Cart' ) + '</p><h2>Your cart is waiting.</h2><p class="dsa-panel__meta">Add a product and Kiwe will keep the checkout path close without taking over WooCommerce.</p></div>',
+			'<section class="dsa-panel dsa-cart-panel kiwe-cart-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-cart-panel data-dsa-cart-adapter="prototype-2027">',
+			'<div class="kiwe-cart-v2027__title"><p class="dsa-cart-panel__eyebrow">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.emptyTitle ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( copy.emptyText ) + '</p></div>',
 			trustBadges,
 			'<div class="kiwe-cart-v2027__empty"><strong>Empty cart</strong><span>Items you add will appear here inside the Surface.</span></div>',
-			checkoutUrl ? '<a class="dsa-cart-panel__checkout is-disabled kiwe-cart-v2027__checkout" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock" aria-disabled="true"><span>Checkout</span><span class="dsa-panel__meta">Empty</span></a>' : '',
+			checkoutUrl ? '<a class="dsa-cart-panel__checkout is-disabled kiwe-cart-v2027__checkout dsa-primary-action" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock" aria-disabled="true"><span>' + escapeHtml( copy.checkoutLabel ) + '</span><span class="dsa-panel__meta">' + escapeHtml( copy.checkoutEmptyLabel ) + '</span></a>' : '',
 			'</section>',
 		].join( '' );
 	}
 
 	return [
-		'<section class="dsa-panel dsa-cart-panel dsa-cart-panel--has-checkout kiwe-cart-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-cart-panel data-dsa-cart-adapter="prototype-2027">',
-		'<div class="kiwe-cart-v2027__title"><p class="dsa-cart-panel__eyebrow">' + escapeHtml( label || 'Cart' ) + '</p><h2>Your cart</h2></div>',
-		'<div class="dsa-cart-panel__summary kiwe-cart-v2027__summary"><span><small>Total</small><strong>' + escapeHtml( cart.total || '' ) + '</strong></span><span><small>Items</small><strong>' + escapeHtml( count ) + '</strong></span></div>',
+		'<section class="dsa-panel dsa-cart-panel dsa-cart-panel--has-checkout kiwe-cart-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-cart-panel data-dsa-cart-adapter="prototype-2027">',
+		'<div class="kiwe-cart-v2027__title"><p class="dsa-cart-panel__eyebrow">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2></div>',
+		'<div class="dsa-cart-panel__summary kiwe-cart-v2027__summary dsa-totals"><span><small>Total</small><strong>' + escapeHtml( cart.total || '' ) + '</strong></span><span><small>Items</small><strong>' + escapeHtml( count ) + '</strong></span></div>',
 		renderDiscountSummary( cart.discountSummary, 'cart' ),
 		'<div class="dsa-cart-panel__items kiwe-cart-v2027__items">',
 		items.map( renderCartPanelItem ).join( '' ),
 		'</div>',
-		renderCartRecommendations( recommendations ),
+		renderCartRecommendations( recommendations, copy ),
 		trustBadges,
 		'<p class="dsa-panel__meta" data-dsa-cart-message></p>',
-		checkoutUrl ? '<a class="dsa-cart-panel__checkout kiwe-cart-v2027__checkout" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-checkout-open data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock"><span>Checkout</span><span class="dsa-panel__meta">' + escapeHtml( cart.total || '' ) + '</span></a>' : '',
+		checkoutUrl ? '<a class="dsa-cart-panel__checkout kiwe-cart-v2027__checkout dsa-primary-action" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-checkout-open data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock"><span>' + escapeHtml( copy.checkoutLabel ) + '</span><span class="dsa-panel__meta">' + escapeHtml( cart.total || '' ) + '</span></a>' : '',
 		'</section>',
 	].join( '' );
 }
@@ -222,7 +238,7 @@ function renderCheckoutField( field ) {
 	].join( '' );
 }
 
-function renderCartRecommendations( products ) {
+function renderCartRecommendations( products, copy ) {
 	const settings = commerce.settings || {};
 	const list = Array.isArray( products ) ? products.slice( 0, Number( settings.fbtMaxProducts ) || 6 ) : [];
 
@@ -232,7 +248,7 @@ function renderCartRecommendations( products ) {
 
 	return [
 		'<section class="dsa-cart-fbt" data-dsa-cart-fbt data-dsa-keep-open>',
-		'<h3>' + escapeHtml( settings.fbtTitle || 'Frequently Bought Together' ) + '</h3>',
+		'<h3 class="dsa-section-label">' + escapeHtml( ( copy && copy.fbtTitle ) || settings.fbtTitle || 'Frequently Bought Together' ) + '</h3>',
 		'<div class="dsa-cart-fbt__rail" data-dsa-cart-fbt-rail>',
 		list.map( renderCartRecommendationCard ).join( '' ),
 		'</div>',

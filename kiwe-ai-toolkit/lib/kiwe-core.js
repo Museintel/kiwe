@@ -22,7 +22,7 @@ export const modes = {
   combined: {
     label: 'Website/page + DSA AppShell theme',
     packs: ['website-builder', 'appshell-theme'],
-    summary: 'Website/page, AppShell theme package, and optional Kiwe settings profile kept in separate folders.'
+    summary: 'Website/page, combined preview, and AppShell theme package. Theme settings travel inside theme-package.json.'
   }
 };
 
@@ -53,7 +53,7 @@ Do not invent alternate manifest keys.
 Important:
 
 - Use \`schema\`, not \`type\`.
-- Do not use \`schemaVersion\` in AppShell theme manifests. \`schemaVersion\` is only used by optional Kiwe settings profiles.
+- Do not use \`schemaVersion\` in AppShell theme manifests. \`schemaVersion\` is only used by \`theme-package.json\` wrappers and other package/profile wrappers.
 - Do not use nested \`contracts\`, \`colorAuthority\`, \`authority\`, \`supportedPresentationModes\`, \`supportedDockShapes\`, \`cssFiles\`, or object-form \`supports\`.
 - \`supports\` must be an array of allowed strings.
 - \`screens\` must use Kiwe screen names only, and should match the brief/settings. Do not list cart/checkout/profile by default for a non-commerce or non-membership website just because those screens exist.
@@ -369,7 +369,7 @@ ${pageHtml}`);
 
 function themeScaffold(root, name, { includePreview = true } = {}) {
   const id = safeName(name, 'kiwe-theme');
-  writeFile(path.join(root, `appshell-theme/import/${id}/theme.json`), JSON.stringify({
+  const manifest = {
     schema: 'kiwe.surface-theme.v1',
     id,
     name: id.replace(/-/g, ' '),
@@ -393,12 +393,64 @@ function themeScaffold(root, name, { includePreview = true } = {}) {
       blockingAssets: 0
     },
     forbidden: ['remote-code', 'trackers', 'php', 'service-worker', 'history-owner', 'cart-owner', 'checkout-owner', 'phonekey-owner', 'bricks-owner']
-  }, null, 2) + '\n');
-  writeFile(path.join(root, `appshell-theme/import/${id}/css/theme.css`), `/*
+  };
+  const css = `/*
  * Kiwe DSA AppShell theme CSS.
  * Style existing DSA selectors only. Do not create runtime authority.
  */
-`);
+`;
+  const settings = {
+    style: {
+      active_theme_id: id,
+      visual_profile: 'kiwe2027',
+      mode: 'sheet',
+      sheet_position: 'bottom',
+      sheet_spacing: 'inset',
+      sheet_origin: 'above_dock',
+      sheet_width_percent: 78
+    },
+    dock: {
+      presentation: 'dock',
+      split_style: true,
+      shape: 'pill',
+      desktop_orientation: 'auto',
+      tablet_orientation: 'auto',
+      mobile_orientation: 'auto',
+      enabled_items: {
+        menu: true,
+        search: true,
+        profile: true,
+        links: true,
+        saved: true,
+        cart: true,
+        theme: false,
+        ai: true
+      },
+      item_order: ['menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai']
+    },
+    screens: {
+      cart: {
+        label: 'Cart',
+        eyebrow: 'Cart',
+        title: 'Your cart',
+        emptyTitle: 'Your cart is waiting.',
+        emptyText: 'Add products to continue.',
+        fbtTitle: 'Frequently Bought Together',
+        checkoutLabel: 'Checkout',
+        checkoutEmptyLabel: 'Empty'
+      }
+    }
+  };
+  writeFile(path.join(root, `appshell-theme/import/${id}/theme.json`), JSON.stringify(manifest, null, 2) + '\n');
+  writeFile(path.join(root, `appshell-theme/import/${id}/css/theme.css`), css);
+  writeFile(path.join(root, `appshell-theme/import/${id}/theme-package.json`), JSON.stringify({
+    type: 'kiwe-theme-package',
+    schema: 'kiwe.theme-package.v1',
+    schemaVersion: 1,
+    theme: manifest,
+    settings,
+    css
+  }, null, 2) + '\n');
   writeFile(path.join(root, 'appshell-theme/README.md'), `# ${id} AppShell theme handoff
 
 This folder must contain a safe importable theme package${includePreview ? ' and a standalone preview' : ''}.
@@ -414,44 +466,6 @@ ${includePreview ? 'node tools/ui-theme/validate-handoff.cjs appshell-theme' : '
     writeFile(path.join(root, 'appshell-theme/preview/index.html'), '<!doctype html><html lang="en"><meta charset="utf-8"><title>Kiwe AppShell theme preview</title><body><p>Build standalone visual preview here. Link the import CSS.</p></body></html>\n');
     writeFile(path.join(root, 'appshell-theme/preview/PLACEHOLDERS.md'), '# Preview placeholders\n\nDocument mock products, account names, orders, links, scores, and AI data here. None of this belongs in the importable theme package.\n');
   }
-}
-
-function settingsScaffold(root) {
-  writeFile(path.join(root, 'kiwe-settings/kiwe-appsite-profile.json'), JSON.stringify({
-    type: 'kiwe-appsite-profile',
-    schemaVersion: 1,
-    settings: {
-      enabled: true,
-      style: {
-        visual_profile: 'kiwe2027',
-        mode: 'sheet',
-        sheet_position: 'bottom',
-        sheet_spacing: 'inset',
-        sheet_origin: 'above_dock',
-        sheet_width_percent: 78
-      },
-      dock: {
-        presentation: 'dock',
-        split_style: true,
-        shape: 'pill',
-        desktop_orientation: 'auto',
-        tablet_orientation: 'auto',
-        mobile_orientation: 'auto',
-        enabled_items: {
-          menu: true,
-          search: true,
-          profile: true,
-          links: true,
-          saved: true,
-          cart: true,
-          theme: false,
-          ai: true
-        },
-        item_order: ['menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai']
-      }
-    }
-  }, null, 2) + '\n');
-  writeFile(path.join(root, 'kiwe-settings/SETTINGS-NOTES.md'), '# Kiwe settings notes\n\nExplain every changed setting. Remove this folder if the design does not require Kiwe settings changes.\n');
 }
 
 function combinedPreviewScaffold(root, name, brief) {
@@ -646,7 +660,6 @@ Run Kiwe validation before importing or installing anything.
 `);
   if (normalized === 'website' || normalized === 'combined') websiteScaffold(root, brief);
   if (normalized === 'theme' || normalized === 'combined') themeScaffold(root, baseName, { includePreview: normalized === 'theme' });
-  if (normalized === 'combined') settingsScaffold(root);
   if (normalized === 'combined') combinedPreviewScaffold(root, baseName, brief);
 
   const contractsDir = path.join(root, 'kiwe-contracts');
@@ -668,13 +681,28 @@ export function validateHandoff(targetDir, mode = 'website') {
   if (normalized === 'theme') {
     required.push('appshell-theme/README.md', 'appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
   }
-  if (normalized === 'combined') {
+  if (normalized === 'theme' || normalized === 'combined') {
     required.push('appshell-theme/README.md');
   }
   if (normalized === 'combined') {
     required.push('combined-preview/index.html');
-    if (fs.existsSync(path.join(root, 'kiwe-settings'))) {
-      required.push('kiwe-settings/SETTINGS-NOTES.md');
+  }
+  if (normalized === 'theme' || normalized === 'combined') {
+    const importRoot = path.join(root, 'appshell-theme', 'import');
+    if (!fs.existsSync(importRoot)) {
+      required.push('appshell-theme/import/<theme-id>/theme-package.json');
+    } else {
+      const themeDirs = fs.readdirSync(importRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+      if (!themeDirs.length) {
+        required.push('appshell-theme/import/<theme-id>/theme-package.json');
+      }
+      for (const entry of themeDirs) {
+        required.push(
+          `appshell-theme/import/${entry.name}/theme.json`,
+          `appshell-theme/import/${entry.name}/css/theme.css`,
+          `appshell-theme/import/${entry.name}/theme-package.json`
+        );
+      }
     }
   }
   const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));

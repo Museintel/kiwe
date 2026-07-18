@@ -126,6 +126,12 @@ final class Theme_Package_Service {
 					$style[ $key ] = sanitize_key( (string) $settings['style'][ $key ] );
 				}
 			}
+			if ( isset( $settings['style']['visual_profile'] ) ) {
+				$visual_profile = sanitize_key( (string) $settings['style']['visual_profile'] );
+				if ( in_array( $visual_profile, [ 'legacy', 'kiwe2027', 'kiwe-2027', 'prototype' ], true ) ) {
+					$style['visual_profile'] = 'legacy' === $visual_profile ? 'legacy' : 'kiwe2027';
+				}
+			}
 			foreach ( [ 'sheet_duration_ms', 'sheet_max_height', 'sheet_width_percent' ] as $key ) {
 				if ( isset( $settings['style'][ $key ] ) ) {
 					$style[ $key ] = absint( $settings['style'][ $key ] );
@@ -208,6 +214,10 @@ final class Theme_Package_Service {
 			}
 			$next['visual_effects'] = $visual;
 		}
+
+		$next['theme_screens'] = isset( $settings['screens'] ) && is_array( $settings['screens'] )
+			? $this->sanitize_screen_settings( $settings['screens'] )
+			: [];
 
 		return $next;
 	}
@@ -373,11 +383,31 @@ final class Theme_Package_Service {
 	}
 
 	private function sanitize_setting_subset( array $settings ): array {
-		$allowed = [ 'style', 'dock', 'dsa_theme', 'visual_effects' ];
+		$allowed = [ 'style', 'dock', 'dsa_theme', 'visual_effects', 'screens' ];
 		$out     = [];
 		foreach ( $allowed as $key ) {
 			if ( isset( $settings[ $key ] ) && is_array( $settings[ $key ] ) ) {
-				$out[ $key ] = $settings[ $key ];
+				$out[ $key ] = 'screens' === $key ? $this->sanitize_screen_settings( $settings[ $key ] ) : $settings[ $key ];
+			}
+		}
+
+		return $out;
+	}
+
+	private function sanitize_screen_settings( array $screens ): array {
+		$out = [];
+		if ( isset( $screens['cart'] ) && is_array( $screens['cart'] ) ) {
+			$cart = [];
+			foreach ( [ 'label', 'eyebrow', 'title', 'emptyTitle', 'emptyText', 'fbtTitle', 'checkoutLabel', 'checkoutEmptyLabel' ] as $key ) {
+				if ( isset( $screens['cart'][ $key ] ) ) {
+					$value = sanitize_text_field( (string) $screens['cart'][ $key ] );
+					if ( '' !== $value ) {
+						$cart[ $key ] = $value;
+					}
+				}
+			}
+			if ( [] !== $cart ) {
+				$out['cart'] = $cart;
 			}
 		}
 
@@ -436,6 +466,7 @@ final class Theme_Package_Service {
 				'dock'           => isset( $settings['dock'] ) && is_array( $settings['dock'] ) ? $settings['dock'] : [],
 				'dsa_theme'      => isset( $settings['dsa_theme'] ) && is_array( $settings['dsa_theme'] ) ? $settings['dsa_theme'] : [],
 				'visual_effects' => isset( $settings['visual_effects'] ) && is_array( $settings['visual_effects'] ) ? $settings['visual_effects'] : [],
+				'screens'        => isset( $settings['theme_screens'] ) && is_array( $settings['theme_screens'] ) ? $settings['theme_screens'] : [],
 			]
 		);
 	}

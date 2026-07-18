@@ -129,8 +129,11 @@ Common settings to declare:
 - `dock.item_order`: visible item order.
 - `dock.focus_item`: the emphasized/focus item and split-dock center.
 - `dock.custom_items`: URL-only custom dock links such as Home, Shop, About, Offers, or any safe site URL. These are first-class Kiwe dock items, but they navigate only and do not create new DSA screens.
+- `screens.cart`: optional presentation/copy labels for the live cart adapter. Allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. This lane must not contain cart data, product IDs, prices, totals, checkout URLs, JavaScript, endpoints, or state authority.
 
 Do not use `theme.json` for Kiwe settings. `theme.json` is the AppShell theme manifest. Theme settings belong in `theme-package.json` at root `settings`, beside the root `theme` manifest and root `css` import CSS.
+
+If a preview shows custom live-intended cart copy such as "Your tea-time bag" or "Pairs well with", verify that the same copy is present in `theme-package.json` under `settings.screens.cart`. If it is absent, mark the package as a preview/live mismatch. If the copy is intentionally preview-only, `PLACEHOLDERS.md` must say so explicitly.
 
 ## AppShell theme manifest audit
 
@@ -247,7 +250,7 @@ Use `screen-payloads.json` as the screen truth.
 Check that the theme preserves required roots/actions/selectors for:
 
 - Profile account actions and rows.
-- Cart quantity, checkout CTA, FBT rail, totals, empty state. For cart theming, verify the live-runtime hook family: `[data-dsa-cart-panel]`, `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-rail]`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`.
+- Cart quantity, checkout CTA, FBT rail, totals, empty state, and optional `settings.screens.cart` copy. For cart theming, verify the live-runtime hook family: `[data-dsa-cart-panel]`, `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-rail]`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`.
 - Checkout fields/notices/continue action without owning payment.
 - Search form, input, filters, alphabet rail, results.
 - Menu navigation and page table-of-contents anchors.

@@ -65,8 +65,9 @@
         "itemImage": ".dsa-line-thumb, .dsa-cart-panel__image-placeholder",
         "itemBody": ".dsa-cart-line__body, .dsa-cart-panel__item-body",
         "quantity": "[data-dsa-cart-quantity], .dsa-quantity, .dsa-cart-panel__quantity",
-        "summary": ".dsa-cart-panel__summary, .kiwe-cart-v2027__summary",
-        "checkoutAction": "[data-dsa-checkout-open], .dsa-cart-panel__checkout, .kiwe-cart-v2027__checkout",
+        "summary": ".dsa-cart-panel__summary, .kiwe-cart-v2027__summary, .dsa-totals",
+        "checkoutAction": "[data-dsa-checkout-open], .dsa-cart-panel__checkout, .kiwe-cart-v2027__checkout, .dsa-primary-action",
+        "sectionLabel": ".dsa-section-label",
         "fbtRail": "[data-dsa-cart-fbt-rail], .dsa-cart-fbt__rail",
         "fbtCard": "[data-dsa-cart-fbt-card], .dsa-fbt-card, .dsa-cart-fbt__card",
         "fbtImage": ".dsa-fbt-img, .dsa-cart-fbt__image-placeholder"

@@ -71,7 +71,7 @@
     },
     "settings": {
       "type": "object",
-      "description": "Safe theme preset. Kiwe imports only the style, dock, dsa_theme, and visual_effects subsets."
+      "description": "Safe theme preset. Kiwe imports only the style, dock, dsa_theme, visual_effects, and screens subsets. screens may contain presentation/copy labels for registered panels; it may not contain behavior, JavaScript, endpoints, or state authority."
     },
     "css": {
       "type": "string",

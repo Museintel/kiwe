@@ -130,7 +130,7 @@ Do not invent alternate manifest keys.
 Important:
 
 - Use `schema`, not `type`.
-- Do not use `schemaVersion` in AppShell theme manifests. `schemaVersion` is only used by optional Kiwe settings profiles.
+- Do not use `schemaVersion` in AppShell theme manifests. `schemaVersion` is only used by `theme-package.json` wrappers and other package/profile wrappers.
 - Do not use nested `contracts`, `colorAuthority`, `authority`, `supportedPresentationModes`, `supportedDockShapes`, `cssFiles`, or object-form `supports`.
 - `supports` must be an array of allowed strings.
 - `screens` must use Kiwe screen names only and must match the brief/settings. Do not list cart, checkout, or profile by default for a non-commerce or non-membership website just because those screens exist.
@@ -287,6 +287,18 @@ If the design changes dock composition or shell behavior, include those settings
       "custom_items": [
         { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
       ]
+    },
+    "screens": {
+      "cart": {
+        "label": "Bag",
+        "eyebrow": "Cart",
+        "title": "Your tea-time bag",
+        "emptyTitle": "Your tea-time bag is waiting.",
+        "emptyText": "Add products to continue.",
+        "fbtTitle": "Pairs well with",
+        "checkoutLabel": "Checkout",
+        "checkoutEmptyLabel": "Empty"
+      }
     }
   },
   "css": "/* same presentation CSS as css/theme.css, inline for Kiwe admin/API import */"
@@ -303,6 +315,9 @@ Important dock settings:
 - `dock.enabled_items` and `dock.item_order`: visible built-in modules and their order.
 - `dock.focus_item`: the enabled item that becomes the emphasized/focus button and split-dock center. Default is `ai`, but a design may choose `search`, `cart`, or a custom link when justified.
 - `dock.custom_items`: safe URL navigation items such as Home. Custom dock links navigate only; they do not create new DSA screens.
+- `screens.cart`: presentation/copy labels only. Allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. Do not put cart data, line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority here.
+
+If the combined preview shows custom cart copy such as "Your tea-time bag" or an FBT heading such as "Pairs well with" and that copy is intended to appear live, declare it in `theme-package.json` under `settings.screens.cart`. If not declared there, the audit should treat it as preview-only copy and should not expect it to appear in the live Kiwe cart adapter.
 
 Minimal `settings` object example inside `theme-package.json`:
 
@@ -328,6 +343,14 @@ Minimal `settings` object example inside `theme-package.json`:
     "custom_items": [
       { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
     ]
+  },
+  "screens": {
+    "cart": {
+      "label": "Bag",
+      "title": "Your tea-time bag",
+      "fbtTitle": "Pairs well with",
+      "checkoutLabel": "Checkout"
+    }
   }
 }
 ```

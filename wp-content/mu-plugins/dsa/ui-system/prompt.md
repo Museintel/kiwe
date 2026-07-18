@@ -124,6 +124,7 @@ A Kiwe AppShell theme is a reusable visual skin, not a screenshot of the current
 
 - `theme-package.json` root `settings` may hide dock icons or choose a site-specific order/focus item.
 - Hiding a dock icon does not remove that registered DSA module from the plugin.
+- `theme-package.json` root `settings.screens` may carry sanitized presentation/copy labels for live screens. For cart, allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`.
 - Importable theme CSS must provide a resilient baseline for every registered core screen in `screen-payloads.json`: profile, cart, checkout, search, menu, saved, links, notifications, iOS install, games, and AI.
 - If the combined preview is for a non-commerce/news site, it may hide cart/checkout/order-heavy UI, but enabling cart later in Kiwe admin must still inherit the theme’s panel, card, button, form, badge, rail, and CTA language without looking broken.
 - `theme.json.screens` should list all core screens the theme can safely skin. A partial theme that only skins the screens shown in the preview must clearly label itself as partial and is not marketplace-ready.
@@ -208,7 +209,9 @@ It must not contain:
 - remote `@import`, remote `url()`, data URLs, or JavaScript URLs in CSS
 - preview-only mocks, simulator code, or placeholder product/account data
 
-Theme settings belong inside the theme package, not in a separate loose settings export/import. Keep `theme.json` as the manifest-only validator file. Put dock composition, focus item, shape, sheet behavior, active theme id, color settings, and visual-effect presets in `theme-package.json` under root `settings`. Put the same CSS as `css/theme.css` in `theme-package.json` under root `css` so Kiwe can import one file and show it under `Kiwe > Theme > Installed themes`.
+Theme settings belong inside the theme package, not in a separate loose settings export/import. Keep `theme.json` as the manifest-only validator file. Put dock composition, focus item, shape, sheet behavior, active theme id, color settings, visual-effect presets, and safe screen copy settings in `theme-package.json` under root `settings`. Put the same CSS as `css/theme.css` in `theme-package.json` under root `css` so Kiwe can import one file and show it under `Kiwe > Theme > Installed themes`.
+
+If your preview uses custom cart copy such as "Your tea-time bag", "Pairs well with", or a renamed checkout CTA and that copy should appear on a live WooCommerce site, declare it in `theme-package.json` under `settings.screens.cart`. This is copy only: do not place products, prices, totals, checkout URLs, cart state, JavaScript, or behavior there.
 
 Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns dock, sheet, screen, and backdrop placement and measurement. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those properties belong in core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, inner spacing, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
 
