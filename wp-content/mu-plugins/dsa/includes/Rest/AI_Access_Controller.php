@@ -124,10 +124,10 @@ final class AI_Access_Controller {
 				'stagingExecution'  => 'explicit-confirmation-required',
 				'mutatesContent'    => 'staging-only-with-explicit-confirmation',
 				'controlledMutationIntents' => [
-					'bricksPageSave'       => 'locked-behind-future-controlled-executor',
-					'wordpressPublish'     => 'locked-behind-future-controlled-executor',
-					'woocommerceMutation'  => 'locked-behind-future-controlled-executor',
-					'checkoutCartAuthRun'  => 'runtime-owned-not-direct-ai-api',
+					'bricksPageSave'       => 'available-through-staging-executor-with-confirmRawBricksJsonWrite',
+					'wordpressPublish'     => 'available-through-staging-executor-with-publishOnStaging',
+					'woocommerceMutation'  => 'available-through-staging-executor-with-confirmWooCommerceMutation',
+					'checkoutCartAuthRun'  => 'available-through-staging-executor-with-confirmRuntimeExecution',
 				],
 			],
 		];
@@ -453,46 +453,111 @@ final class AI_Access_Controller {
 	}
 
 	private function locked_mutation( WP_REST_Request $request, array $auth ): array {
+		$payload = $this->controlled_route_payload( $request, $this->default_operation_for_route( $request->get_route() ) );
+		if ( ! empty( $payload['confirmControlledStagingExecution'] ) ) {
+			$result = ( new Staging_Execution_Service( $this->settings ) )->execute( $payload, $this->context( $auth ) );
+
+			return [
+				'ok'      => 'staging-execution-complete' === (string) ( $result['status'] ?? '' ),
+				'schema'  => 'kiwe.ai-controlled-mutation-result.v1',
+				'route'   => $request->get_route(),
+				'result'  => $result,
+			];
+		}
+
 		return [
 			'ok'         => false,
 			'httpStatus' => 423,
-			'schema'     => 'kiwe.ai-controlled-mutation-locked.v1',
+			'schema'     => 'kiwe.ai-controlled-mutation-confirmation-required.v1',
 			'route'      => $request->get_route(),
-			'message'    => 'Direct AI mutation is intentionally locked. Use the trusted apply chain, target resolution, rollback capture, rendered inspection, final save approval, controlled executor, adapter plan, and post-apply verification before any real mutation adapter may be enabled.',
+			'message'    => 'Controlled mutation is available only through the staging executor body with explicit confirmation flags. Send confirmControlledStagingExecution, stagingSiteConfirmed, and the operation-specific confirmation required by the operation type.',
 			'canMutateNow' => false,
+			'stagingExecutorRoute' => '/wp-json/dsa/v1/ai/staging/execute',
+			'defaultOperationType' => $this->default_operation_for_route( $request->get_route() ),
 			'requiredBeforeUnlock' => [
-				'validated-bindings',
-				'staged-apply-plan',
-				'adapter-proof',
-				'guarded-authorization',
-				'pre-execution-gate',
-				'execution-preview',
-				'final-confirmation',
-				'fresh-site-graph',
-				'rollback-readiness',
-				'target-resolution',
-				'rollback-capture',
-				'rendered-target-inspection',
-				'minimal-adapter-shell',
-				'final-save-approval',
-				'controlled-executor',
-				'bricks-adapter-plan',
-				'post-apply-verification',
-				'staging-site-human-run',
+				'confirmControlledStagingExecution',
+				'stagingSiteConfirmed',
+				'confirmWooCommerceMutation for WooCommerce/order/checkout mutations',
+				'confirmRuntimeExecution for cart/checkout/auth runtime harnesses',
+				'confirmRawBricksJsonWrite for raw Bricks meta writes',
 			],
 		];
 	}
 
 	private function locked_runtime( WP_REST_Request $request, array $auth ): array {
+		$payload = $this->controlled_route_payload( $request, $this->default_operation_for_route( $request->get_route() ) );
+		if ( ! empty( $payload['confirmControlledStagingExecution'] ) ) {
+			$result = ( new Staging_Execution_Service( $this->settings ) )->execute( $payload, $this->context( $auth ) );
+
+			return [
+				'ok'      => 'staging-execution-complete' === (string) ( $result['status'] ?? '' ),
+				'schema'  => 'kiwe.ai-controlled-runtime-result.v1',
+				'route'   => $request->get_route(),
+				'result'  => $result,
+			];
+		}
+
 		return [
 			'ok'         => false,
 			'httpStatus' => 423,
-			'schema'     => 'kiwe.ai-runtime-authority-locked.v1',
+			'schema'     => 'kiwe.ai-runtime-confirmation-required.v1',
 			'route'      => $request->get_route(),
-			'message'    => 'Cart, checkout, and authentication flows are runtime-owned by Kiwe, WooCommerce, WordPress, and PhoneKey. External AI keys cannot run or impersonate visitor/customer runtime actions.',
+			'message'    => 'Cart, checkout, and authentication harnesses require the staging executor body with explicit confirmation. The API does not impersonate a shopper silently.',
 			'canRunNow'  => false,
-			'allowedUse' => 'Generate launchers, validate bindings, stage/apply review artifacts, and preserve canonical attributes such as data-dsa-open-module.',
+			'stagingExecutorRoute' => '/wp-json/dsa/v1/ai/staging/execute',
+			'defaultOperationType' => $this->default_operation_for_route( $request->get_route() ),
+			'allowedUse' => 'Run staging-only cart snapshots/adds, checkout validation/pending order creation, and test-user auth probes/creation/deletion when the request carries explicit confirmation flags.',
 		];
+	}
+
+	private function controlled_route_payload( WP_REST_Request $request, string $default_type ): array {
+		$payload = $this->array_param( $request, 'execution' );
+		if ( [] === $payload ) {
+			$payload = $request->get_json_params();
+			$payload = is_array( $payload ) ? $payload : [];
+		}
+		if ( [] === $payload ) {
+			return [];
+		}
+		if ( empty( $payload['operations'] ) || ! is_array( $payload['operations'] ) ) {
+			$operation = $payload;
+			unset(
+				$operation['confirmControlledStagingExecution'],
+				$operation['stagingSiteConfirmed'],
+				$operation['allowCurrentHostAsStaging'],
+				$operation['confirmWooCommerceMutation'],
+				$operation['confirmRuntimeExecution'],
+				$operation['confirmAuthRuntime'],
+				$operation['confirmRawBricksJsonWrite']
+			);
+			$operation['type'] = sanitize_text_field( (string) ( $operation['type'] ?? $default_type ) );
+			$payload['operations'] = [ $operation ];
+		}
+
+		return $payload;
+	}
+
+	private function default_operation_for_route( string $route ): string {
+		if ( str_contains( $route, '/mutations/woocommerce' ) ) {
+			return 'woocommerce.mutate';
+		}
+		if ( str_contains( $route, '/mutations/bricks-page-save' ) ) {
+			return 'bricks.raw-meta-write';
+		}
+		if ( str_contains( $route, '/mutations/wordpress-publish' ) ) {
+			return 'wordpress.page.upsert';
+		}
+		if ( str_contains( $route, '/runtime/cart' ) ) {
+			return 'cart.run';
+		}
+		if ( str_contains( $route, '/runtime/checkout' ) ) {
+			return 'checkout.run';
+		}
+		if ( str_contains( $route, '/runtime/auth' ) ) {
+			return 'auth.run';
+		}
+
+		return '';
 	}
 
 	private function attach_stage_artifact( WP_REST_Request $request, callable $builder, string $attach_method, string $ready_status ): array {

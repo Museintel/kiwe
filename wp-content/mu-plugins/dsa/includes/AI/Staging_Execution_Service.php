@@ -24,6 +24,7 @@ final class Staging_Execution_Service {
 
 	public function execute( array $request, array $context = [], array $stage = [] ): array {
 		$operations = isset( $request['operations'] ) && is_array( $request['operations'] ) ? array_slice( $request['operations'], 0, self::MAX_OPS ) : [];
+		$types      = array_map( fn( $operation ): string => is_array( $operation ) ? $this->operation_type( $operation ) : '', $operations );
 		$created_at = (string) ( $context['createdAt'] ?? gmdate( 'c' ) );
 		$id         = 'staging-exec-' . substr( hash( 'sha256', wp_json_encode( $request ) . '|' . $created_at ), 0, 16 );
 		$blockers   = $this->global_blockers( $request, $operations, $stage );
@@ -36,6 +37,7 @@ final class Staging_Execution_Service {
 		}
 
 		$failed = array_values( array_filter( $results, static fn( array $result ): bool => empty( $result['ok'] ) ) );
+		$raw_bricks_written = (bool) array_filter( $results, static fn( array $result ): bool => ! empty( $result['rawBricksMetaWritten'] ) );
 
 		return [
 			'schema'                  => 'kiwe.staging-execution-result.v1',
@@ -48,9 +50,9 @@ final class Staging_Execution_Service {
 			'stagingOnly'             => true,
 			'actualMutationExecuted'  => [] === $blockers && [] !== $results,
 			'actualPublishExecuted'   => [] === $blockers && (bool) array_filter( $results, static fn( array $result ): bool => ! empty( $result['published'] ) ),
-			'mutatesWooCommerce'      => false,
-			'runsCheckoutCartAuth'    => false,
-			'rawBricksMetaWritten'    => false,
+			'mutatesWooCommerce'      => [] === $blockers && $this->has_woocommerce_mutation( $types ),
+			'runsCheckoutCartAuth'    => [] === $blockers && $this->has_runtime_operation( $types ),
+			'rawBricksMetaWritten'    => [] === $blockers && $raw_bricks_written,
 			'blockers'                => $blockers,
 			'operationsRequested'     => count( $operations ),
 			'results'                 => $results,
@@ -59,6 +61,7 @@ final class Staging_Execution_Service {
 				'Open created staging page URLs on desktop/tablet/mobile.',
 				'Open Kiwe dock screens and header launchers on created pages.',
 				'If Bricks HTML-to-Bricks import is needed, import the stored bricksPasteHtml in Bricks and then re-run inspection.',
+				'If Woo/cart/checkout/auth/raw Bricks operations ran, review returned IDs/hashes and rollback metadata before any next mutation.',
 			],
 		];
 	}
@@ -90,9 +93,18 @@ final class Staging_Execution_Service {
 			if ( ! is_array( $operation ) ) {
 				continue;
 			}
-			$type = (string) ( $operation['type'] ?? '' );
-			if ( in_array( $type, [ 'woocommerce.mutate', 'cart.run', 'checkout.run', 'auth.run', 'bricks.raw-meta-write' ], true ) ) {
-				$blockers[] = sprintf( 'Operation type %s is forbidden in staging executor.', $type );
+			$type = $this->operation_type( $operation );
+			if ( $this->has_woocommerce_mutation( [ $type ] ) && empty( $request['confirmWooCommerceMutation'] ) ) {
+				$blockers[] = sprintf( 'Operation type %s requires confirmWooCommerceMutation true.', $type );
+			}
+			if ( $this->has_runtime_operation( [ $type ] ) && empty( $request['confirmRuntimeExecution'] ) ) {
+				$blockers[] = sprintf( 'Operation type %s requires confirmRuntimeExecution true.', $type );
+			}
+			if ( 'auth.run' === $type && empty( $request['confirmAuthRuntime'] ) && in_array( sanitize_key( (string) ( $operation['action'] ?? 'probe' ) ), [ 'create_test_user', 'delete_test_user' ], true ) ) {
+				$blockers[] = 'auth.run user creation/deletion requires confirmAuthRuntime true.';
+			}
+			if ( 'bricks.raw-meta-write' === $type && empty( $request['confirmRawBricksJsonWrite'] ) ) {
+				$blockers[] = 'bricks.raw-meta-write requires confirmRawBricksJsonWrite true.';
 			}
 		}
 
@@ -100,7 +112,7 @@ final class Staging_Execution_Service {
 	}
 
 	private function execute_operation( array $operation, string $execution_id ): array {
-		$type = strtolower( preg_replace( '/[^a-z0-9._-]+/', '', (string) ( $operation['type'] ?? '' ) ) );
+		$type = $this->operation_type( $operation );
 
 		if ( 'wordpress.page.upsert' === $type ) {
 			return $this->upsert_post( $operation, 'page', $execution_id );
@@ -122,7 +134,36 @@ final class Staging_Execution_Service {
 			return $this->install_activate_theme( $operation );
 		}
 
+		$controlled_mutations = new Controlled_Mutation_Service( $this->settings );
+		if ( $controlled_mutations->supports( $type ) ) {
+			return $controlled_mutations->execute( $operation, $type, $execution_id );
+		}
+
 		return $this->failure( 'unsupported_operation', sprintf( 'Unsupported staging operation type: %s', $type ) );
+	}
+
+	private function operation_type( array $operation ): string {
+		return strtolower( preg_replace( '/[^a-z0-9._-]+/', '', (string) ( $operation['type'] ?? '' ) ) );
+	}
+
+	private function has_woocommerce_mutation( array $types ): bool {
+		foreach ( $types as $type ) {
+			if ( str_starts_with( $type, 'woocommerce.' ) || 'checkout.run' === $type ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function has_runtime_operation( array $types ): bool {
+		foreach ( $types as $type ) {
+			if ( in_array( $type, [ 'cart.run', 'checkout.run', 'auth.run' ], true ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private function upsert_post( array $operation, string $post_type, string $execution_id ): array {

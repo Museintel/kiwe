@@ -88,10 +88,25 @@ POST /wp-json/dsa/v1/ai/stages/{stageId}/execute-staging
 - `bricks.template.upsert`
 - `bricks.settings.patch`
 - `kiwe.theme-package.install-activate`
+- `woocommerce.mutate`
+- `woocommerce.product.upsert`
+- `woocommerce.order.upsert`
+- `woocommerce.settings.patch`
+- `cart.run`
+- `checkout.run`
+- `auth.run`
+- `bricks.raw-meta-write`
 
 Page/post/template operations may include `html`, `bricksPasteHtml`, and optional `css`. The executor stores sanitized staging content and preserves safe preview CSS while refusing script-like payloads. `bricks.settings.patch` is limited to known Bricks settings/options, scalar or simple nested payloads, safe path keys, and an internal patch hash log. It exists for staging checks such as Bricks import/converter switches or global-class/variable setting probes; do not use it as a raw Bricks database writer.
 
-It does not mutate WooCommerce products/orders/settings, does not run cart/checkout/auth, and does not raw-write `_bricks` JSON. Bricks-ready HTML is stored as page content plus a Kiwe staging source artifact so Bricks HTML-to-Bricks conversion can be reviewed/imported safely.
+WooCommerce, cart, checkout, auth, and raw Bricks operations require extra explicit flags:
+
+- WooCommerce product/order/settings mutation: `confirmWooCommerceMutation: true`
+- Cart/checkout/auth harnesses: `confirmRuntimeExecution: true`
+- Auth test-user create/delete: `confirmAuthRuntime: true`
+- Raw Bricks `_bricks*` meta writes: `confirmRawBricksJsonWrite: true`
+
+The executor can create/update WooCommerce staging products, create/update staging orders, patch a controlled allow-list of WooCommerce settings, run server-side cart harness actions, validate checkout fields or create pending staging orders, create/delete Kiwe-marked test users, and write allowed Bricks meta keys with backup metadata. Bricks-ready HTML is still the preferred first path; raw `_bricks` JSON writes are for controlled staging adapter tests only.
 
 The legacy same-site admin REST path still exists for logged-in WordPress admin contexts at `GET /wp-json/dsa/v1/site-graph?sampleLimit=8`, but external AI tools should use `/wp-json/dsa/v1/ai/*` with a Kiwe AI key.
 
@@ -161,7 +176,7 @@ POST /wp-json/dsa/v1/ai/runtime/checkout
 POST /wp-json/dsa/v1/ai/runtime/auth
 ```
 
-They return locked responses unless a future controlled staging-site executor is deliberately enabled. AI keys do not grant checkout, cart, auth, WooCommerce mutation, WordPress publish, or Bricks save authority by themselves.
+When called without the staging executor confirmation body, they return confirmation-required responses. With the same explicit flags used by `/ai/staging/execute`, they run through the controlled staging executor. AI keys still do not grant silent production mutation, shopper impersonation, payment execution, or unbounded database access.
 
 `kiwe.controlled-executor.v1`, `kiwe.bricks-controlled-adapter.v1`, and `kiwe.post-apply-verification.v1` are still not saves. The executor records the future adapter interface. The adapter plan maps approved operation IDs to deterministic Bricks/Kiwe instructions. The post-apply proof selects the smallest future controlled run and proves rollback source/checks from the captured snapshot. These artifacts keep `actualApplyExecuted`/`actualSaveExecuted`, `actualRollbackExecuted`, and `mayExecuteMutationNow` false until a human starts a real staging-site controlled run.
 

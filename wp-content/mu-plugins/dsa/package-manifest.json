@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "0.5.85",
+  "version": "0.5.86",
   "algorithm": "sha256",
-  "file_count": 224,
+  "file_count": 225,
   "files": {
     "assets/css/admin.css": {
       "bytes": 16111,
@@ -186,7 +186,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "e82ef3cf033f0a859a1a5f1b414a61764e4c6c864f9bbdb412b60d0a4d278bf1"
+      "sha256": "76cfd97d525c6d2613130b3423f9a75ad7fced2cb19da568dcb11eaab7b1683a"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -340,6 +340,10 @@
       "bytes": 11554,
       "sha256": "341043a4df6db3d5df000c6427f05dfc7f1b45f836dcb27a69966a9e385a37d6"
     },
+    "includes/AI/Controlled_Mutation_Service.php": {
+      "bytes": 28258,
+      "sha256": "f5a26214f9e596038af419553be746e50bacdd18213f266538efdeb921352799"
+    },
     "includes/AI/Copilot_Service.php": {
       "bytes": 7279,
       "sha256": "9e70c0275416656661bf3140262e925fcdead9b0ced8191a0f12b807f8b365e6"
@@ -389,12 +393,12 @@
       "sha256": "408e6597f8f51d2ed29e50196d67e2a93a0450bc6546e69f936699595f3df655"
     },
     "includes/AI/Site_Introspection_Service.php": {
-      "bytes": 7915,
-      "sha256": "4e38e9470047e4452ab286d2e9e533ee194a883e5ced0a9f4768b0548ef3e1be"
+      "bytes": 8463,
+      "sha256": "0099450b1fc5d3f9f63e6e2026b97e70c8bb86d9ceab9676672005430f940fb2"
     },
     "includes/AI/Staging_Execution_Service.php": {
-      "bytes": 16349,
-      "sha256": "3d525b09feb59cc6c60fd26f8a6312e94b9796aed400a523e2b7033099d83691"
+      "bytes": 18346,
+      "sha256": "03e8955c9ade658fbdea974ef730867524d6c0de724acdffe52252943a7373ba"
     },
     "includes/AI/Target_Resolution_Service.php": {
       "bytes": 6731,
@@ -573,8 +577,8 @@
       "sha256": "9d859932191b840169835d999b8d9be7835a6ad662757720fd262e042409d2e6"
     },
     "includes/Rest/AI_Access_Controller.php": {
-      "bytes": 22468,
-      "sha256": "35aa244b82fd9cd600861b076651eb1bbe702ff88151fed9dd6262b884c79f0d"
+      "bytes": 25331,
+      "sha256": "bd8a124dd7a607cfef1336e080fb4fa8d3f3e03cdb3f968f08163d3f5ff445d2"
     },
     "includes/Rest/Account_Controller.php": {
       "bytes": 14471,

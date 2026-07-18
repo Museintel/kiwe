@@ -26,7 +26,7 @@ final class Site_Introspection_Service {
 				'readOnly'           => true,
 				'secretsRedacted'    => true,
 				'rawBricksMetaHidden' => true,
-				'writePath'          => 'Use /wp-json/dsa/v1/ai/staging/execute with explicit staging confirmation for allowed draft/staging operations.',
+				'writePath'          => 'Use /wp-json/dsa/v1/ai/staging/execute with explicit staging confirmation for controlled WordPress, Bricks, WooCommerce, cart, checkout, auth, and raw Bricks staging operations.',
 			],
 		];
 	}
@@ -68,10 +68,14 @@ final class Site_Introspection_Service {
 				'templatePostType' => defined( 'BRICKS_DB_TEMPLATE_SLUG' ) ? BRICKS_DB_TEMPLATE_SLUG : 'bricks_template',
 				'templateTypeMeta' => defined( 'BRICKS_DB_TEMPLATE_TYPE' ) ? BRICKS_DB_TEMPLATE_TYPE : '_bricks_template_type',
 				'templateSettingsMeta' => defined( 'BRICKS_DB_TEMPLATE_SETTINGS' ) ? BRICKS_DB_TEMPLATE_SETTINGS : '_bricks_template_settings',
+				'pageContentMeta' => defined( 'BRICKS_DB_PAGE_CONTENT' ) ? BRICKS_DB_PAGE_CONTENT : '_bricks_page_content_2',
+				'pageHeaderMeta'  => defined( 'BRICKS_DB_PAGE_HEADER' ) ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
+				'pageFooterMeta'  => defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+				'pageSettingsMeta' => defined( 'BRICKS_DB_PAGE_SETTINGS' ) ? BRICKS_DB_PAGE_SETTINGS : '_bricks_page_settings',
 			],
 			'htmlCssToBricks' => [
 				'detected' => class_exists( '\Bricks\Html_To_Bricks_Converter' ) || class_exists( '\Bricks\Abilities\Conversion' ),
-				'kiwePolicy' => 'Kiwe stores Bricks-ready HTML on staging targets first; raw Bricks JSON writes stay locked until a converter/ability save path is proven on that site.',
+				'kiwePolicy' => 'Kiwe prefers Bricks-ready HTML first. Raw Bricks JSON writes are available only through the controlled staging executor with confirmRawBricksJsonWrite and rollback backup metadata.',
 			],
 			'settings'    => [
 				'global'      => $this->safe_option_summary( defined( 'BRICKS_DB_GLOBAL_SETTINGS' ) ? BRICKS_DB_GLOBAL_SETTINGS : 'bricks_global_settings' ),
