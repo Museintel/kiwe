@@ -9,6 +9,7 @@ const payloadsPath = path.join(repo, 'wp-content/mu-plugins/dsa/ui-system/screen
 const seamVocabularyPath = path.join(repo, 'wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.json');
 const seamClassVocabularyPath = path.join(repo, 'wp-content/mu-plugins/dsa/ui-system/seam-class-vocabulary.json');
 const seamCssPath = path.join(repo, 'wp-content/mu-plugins/dsa/assets/css/seam.css');
+const seamTokenServicePath = path.join(repo, 'wp-content/mu-plugins/dsa/includes/Design/Seam_Token_Service.php');
 
 const allowedExtensions = new Set(['.json', '.md', '.css', '.svg', '.png', '.webp', '.avif']);
 const forbiddenExtensions = new Set(['.php', '.phtml', '.phar', '.js', '.mjs', '.cjs', '.ts', '.jsx', '.tsx', '.html', '.htm', '.wasm']);
@@ -40,6 +41,22 @@ const riskyCssPatterns = [
 const errors = [];
 const warnings = [];
 let seamContract = null;
+
+const themeTokenTopLevelKeys = new Set(['enabled', 'profile_label', 'overrides', 'bricks_theme_style']);
+const allowedThemeCssTokenAliases = new Set(['radius-panel', 'surface-panel']);
+const screenCopyFields = {
+	profile: new Set(['label', 'eyebrow', 'title', 'intro', 'accountLabel', 'editLabel', 'ordersTitle', 'ordersText', 'downloadsTitle', 'downloadsText', 'notificationsTitle', 'notificationsText', 'addressesTitle', 'addressesText', 'passwordTitle', 'passwordText', 'signOutLabel', 'recentOrdersTitle']),
+	cart: new Set(['label', 'eyebrow', 'title', 'emptyTitle', 'emptyText', 'fbtTitle', 'checkoutLabel', 'checkoutEmptyLabel']),
+	checkout: new Set(['label', 'title', 'loadingText', 'unavailableText', 'continueLabel', 'returnLabel', 'shippingToggleLabel', 'accountToggleLabel']),
+	search: new Set(['label', 'eyebrow', 'title', 'intro', 'placeholder']),
+	menu: new Set(['label', 'eyebrow', 'title', 'intro', 'contextTitle', 'dashboardLabel']),
+	saved: new Set(['label', 'eyebrow', 'title', 'intro', 'emptyTitle', 'emptyText', 'wishlistLabel', 'bookmarksLabel', 'summaryWishlistLabel', 'summaryBookmarksLabel', 'summaryTotalLabel']),
+	links: new Set(['label', 'eyebrow', 'title', 'intro', 'shopLabel', 'shopMeta', 'cartLabel', 'cartMeta']),
+	notifications: new Set(['label', 'eyebrow', 'title', 'intro', 'topicsLegend', 'channelsLegend', 'appText', 'submitLabel', 'emailPlaceholder', 'phonePlaceholder']),
+	'ios-install': new Set(['label', 'eyebrow', 'title', 'intro', 'stepOneTitle', 'stepOneText', 'stepTwoTitle', 'stepTwoText', 'stepThreeTitle', 'stepThreeText', 'doneLabel']),
+	games: new Set(['label', 'eyebrow', 'startTitle', 'startText', 'mobileStartText', 'chooseText', 'scoreLabel', 'bestLabel']),
+	ai: new Set(['label', 'eyebrow', 'title', 'intro', 'emptyTitle', 'emptyText', 'chatPlaceholder'])
+};
 
 function fail(message) {
 	errors.push(message);
@@ -130,6 +147,99 @@ function loadSeamContract() {
 		protectedShadowAttributes: new Set(((vocabulary.protectedShadowAttributes || {}).attributes || []).map(String)),
 	};
 	return seamContract;
+}
+
+function officialTokenNames() {
+	if (!fs.existsSync(seamTokenServicePath)) return new Set();
+	const php = fs.readFileSync(seamTokenServicePath, 'utf8');
+	const names = new Set();
+	for (const match of php.matchAll(/self::token\(\s*'([^']+)'/g)) {
+		names.add(match[1]);
+	}
+	return names;
+}
+
+function isPlainObject(value) {
+	return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function validateThemePackageTokenSettings(tokens) {
+	if (!isPlainObject(tokens)) {
+		fail('theme-package.json settings.tokens must be an object containing enabled, profile_label, overrides, and optional bricks_theme_style');
+		return;
+	}
+
+	for (const key of Object.keys(tokens)) {
+		if (/^--|var\(/i.test(key)) {
+			fail(`theme-package.json settings.tokens uses CSS variable key "${key}". Use settings.tokens.overrides with official token names such as "color-brand", without --kiwe- or var().`);
+		} else if (!themeTokenTopLevelKeys.has(key)) {
+			fail(`theme-package.json settings.tokens has unsupported top-level key "${key}". Allowed keys are enabled, profile_label, overrides, and bricks_theme_style`);
+		}
+	}
+
+	if (!Object.prototype.hasOwnProperty.call(tokens, 'overrides')) {
+		fail('theme-package.json settings.tokens must contain an overrides object');
+		return;
+	}
+
+	if (!isPlainObject(tokens.overrides)) {
+		fail('theme-package.json settings.tokens.overrides must be an object keyed by official Kiwe universal token names');
+		return;
+	}
+
+	const officialTokens = officialTokenNames();
+	for (const tokenName of Object.keys(tokens.overrides)) {
+		if (/^--|var\(/i.test(tokenName)) {
+			fail(`theme-package.json settings.tokens.overrides "${tokenName}" must use the official token name without --kiwe- or var()`);
+		} else if (!/^[a-z0-9][a-z0-9_-]{1,80}$/i.test(tokenName)) {
+			fail(`theme-package.json settings.tokens.overrides has invalid token name: ${tokenName}`);
+		} else if (officialTokens.size && !officialTokens.has(tokenName)) {
+			fail(`theme-package.json settings.tokens.overrides contains unknown Kiwe token: ${tokenName}`);
+		}
+	}
+
+	if (Object.prototype.hasOwnProperty.call(tokens, 'bricks_theme_style') && !isPlainObject(tokens.bricks_theme_style)) {
+		fail('theme-package.json settings.tokens.bricks_theme_style must be an object when present');
+	}
+}
+
+function validateThemePackageScreenSettings(screens) {
+	if (!isPlainObject(screens)) {
+		fail('theme-package.json settings.screens must be an object keyed by registered DSA screen ids');
+		return;
+	}
+
+	for (const [screen, config] of Object.entries(screens)) {
+		const fields = screenCopyFields[screen];
+		if (!fields) {
+			fail(`theme-package.json settings.screens contains unsupported screen "${screen}". Use registered DSA screens only: ${Object.keys(screenCopyFields).join(', ')}`);
+			continue;
+		}
+		if (!isPlainObject(config)) {
+			fail(`theme-package.json settings.screens.${screen} must be an object of presentation-only copy fields`);
+			continue;
+		}
+		for (const key of Object.keys(config)) {
+			if (!fields.has(key)) {
+				fail(`theme-package.json settings.screens.${screen}.${key} is not a live Kiwe screen-copy field. Use only supported ${screen} fields: ${Array.from(fields).join(', ')}`);
+			}
+		}
+	}
+}
+
+function validateKiweCssTokenReferences(relative, body) {
+	const officialTokens = officialTokenNames();
+	const seen = new Set();
+	for (const match of body.matchAll(/--kiwe-([a-z0-9-]+)/gi)) {
+		const raw = String(match[0]);
+		const tokenName = String(match[1]);
+		if (seen.has(raw)) continue;
+		seen.add(raw);
+		if (tokenName.startsWith('theme-')) continue;
+		if (allowedThemeCssTokenAliases.has(tokenName)) continue;
+		if (officialTokens.size && officialTokens.has(tokenName)) continue;
+		fail(`${relative} references unsupported Kiwe token variable "${raw}". Use official universal tokens such as --kiwe-color-surface, --kiwe-color-surface-raised, --kiwe-radius-xl, --kiwe-radius-full, --kiwe-shadow-md, and --kiwe-space-md, or documented --kiwe-theme-* aliases.`);
+	}
 }
 
 function isInside(parent, child) {
@@ -280,6 +390,27 @@ function validatePackage() {
 
 	const manifest = readJson(manifestPath);
 	validateSimpleSchema(schema, manifest);
+	const themePackagePath = path.join(packageDir, 'theme-package.json');
+	const hasThemePackage = fs.existsSync(themePackagePath);
+	let themePackage = {};
+	if (hasThemePackage) {
+		themePackage = readJson(themePackagePath);
+		if (themePackage.schema !== 'kiwe.theme-package.v1') fail('theme-package.json schema must be kiwe.theme-package.v1');
+		if (!themePackage.theme || typeof themePackage.theme !== 'object') fail('theme-package.json must contain a root theme manifest object');
+		if (typeof themePackage.css !== 'string' || !themePackage.css.trim()) warn('theme-package.json should contain root css matching css/theme.css for one-file Kiwe admin/API import');
+		const packageSettings = themePackage.settings && typeof themePackage.settings === 'object' ? themePackage.settings : {};
+		if (manifest.profile === 'marketplace' && !Object.prototype.hasOwnProperty.call(packageSettings, 'tokens')) {
+			fail('theme-package.json settings.tokens is required for marketplace AppShell themes so DSA, Seam page CSS, and Bricks global theme style stay synchronized');
+		}
+		if (Object.prototype.hasOwnProperty.call(packageSettings, 'tokens')) {
+			validateThemePackageTokenSettings(packageSettings.tokens);
+			const style = isPlainObject(packageSettings.tokens) && isPlainObject(packageSettings.tokens.bricks_theme_style) ? packageSettings.tokens.bricks_theme_style : {};
+			if (style.id && !/^[a-z0-9_-]{1,80}$/i.test(String(style.id))) fail(`theme-package.json settings.tokens.bricks_theme_style.id is invalid: ${style.id}`);
+		}
+		if (Object.prototype.hasOwnProperty.call(packageSettings, 'screens')) {
+			validateThemePackageScreenSettings(packageSettings.screens);
+		}
+	}
 
 	const knownScreens = new Set(Object.keys((payloads && payloads.screens) || {}));
 	for (const screen of manifest.screens || []) {
@@ -287,6 +418,7 @@ function validatePackage() {
 	}
 
 	const listed = new Set(['theme.json']);
+	if (hasThemePackage) listed.add('theme-package.json');
 	let cssBytes = 0;
 	for (const css of manifest.css || []) {
 		const full = safeRelativeFile(packageDir, css, 'css');
@@ -306,6 +438,7 @@ function validatePackage() {
 		}
 		validateSeamUsage(css, body, 'css');
 		validateGeometryOwnership(css, body);
+		validateKiweCssTokenReferences(css, body);
 		if (!/(--kiwe-|--dsa-|data-dsa-|dsa-visual-|kiwe-)/.test(body)) {
 			warn(`CSS file ${css} does not appear to use Kiwe tokens or scoped selectors`);
 		}

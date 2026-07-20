@@ -12,6 +12,7 @@ If you can run shell commands, also run:
 
 ```bash
 node kiwe-ai-toolkit/tools/validate-output.cjs /path/to/handoff --mode combined
+node kiwe-ai-toolkit/tools/validate-framework-profile.cjs /path/to/handoff --optional
 node kiwe-ai-toolkit/tools/audit-output.cjs /path/to/handoff
 ```
 
@@ -47,9 +48,13 @@ For a combined handoff, verify:
 
 For website-only mode, do not output duplicate preview folders unless explicitly requested. `website/bricks-paste.html` is both browser preview and Bricks paste/import artifact.
 
+If website-only mode includes a sitewide reusable design-token profile, verify `framework/kiwe-framework-profile.json` uses `schema: "kiwe.framework-profile.v1"` and contains only `settings.tokens`. This file imports at `Kiwe > Framework`; it is not a DSA theme package and must not contain dock, sheet, screen, module, WooCommerce, page content, or AppShell CSS behavior.
+
 For combined mode, do not duplicate the website inside the AppShell import package. The AppShell is runtime chrome around the page, not part of the Bricks page.
 
 Do not create separate human review previews for the website and AppShell in combined mode. The reviewer should open one combined preview and see the website/page behind the Kiwe AppShell.
+
+For combined mode, live-intended palette, typography, spacing, radius, shadow, and global Bricks style personality must live inside `appshell-theme/import/<theme-id>/theme-package.json` under `settings.tokens` for marketplace AppShell themes. Do not require a separate Framework profile unless the brief explicitly asks for a standalone `Kiwe > Framework` import artifact too.
 
 ## Website / Bricks audit
 
@@ -129,11 +134,37 @@ Common settings to declare:
 - `dock.item_order`: visible item order.
 - `dock.focus_item`: the emphasized/focus item and split-dock center.
 - `dock.custom_items`: URL-only custom dock links such as Home, Shop, About, Offers, or any safe site URL. These are first-class Kiwe dock items, but they navigate only and do not create new DSA screens.
-- `screens.cart`: optional presentation/copy labels for the live cart adapter. Allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. This lane must not contain cart data, product IDs, prices, totals, checkout URLs, JavaScript, endpoints, or state authority.
+- `tokens`: design token profile overrides for the live DSA theme, Seam website/page CSS, and Bricks global theme-style export. Token names must be official Kiwe universal names only; examples include `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `type-h2`, `leading-tight`, `space-md`, `radius-lg`, and `shadow-md`.
+- `tokens.bricks_theme_style`: optional safe global Bricks theme-style export metadata. It may cover only global typography, colors, links, and site background. It must not own Bricks element-level styling, AppShell geometry, modules, state, WooCommerce data, or runtime behavior.
+- `screens`: optional presentation/copy labels for the live registered DSA screen/sheet adapters. Allowed screen keys are `profile`, `cart`, `checkout`, `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, `games`, and `ai`. This lane may rename labels, titles, helper text, empty states, safe CTA labels, the Cart FBT rail title, Profile row labels, Links shop/cart labels, Notification form labels, iOS install steps, Game labels, and AI empty/chat copy. It must not contain products, orders, saved items, profile identity, menu items, search results, social URLs, score values, notification state, AI messages/actions, cart line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority.
 
 Do not use `theme.json` for Kiwe settings. `theme.json` is the AppShell theme manifest. Theme settings belong in `theme-package.json` at root `settings`, beside the root `theme` manifest and root `css` import CSS.
 
-If a preview shows custom live-intended cart copy such as "Your tea-time bag" or "Pairs well with", verify that the same copy is present in `theme-package.json` under `settings.screens.cart`. If it is absent, mark the package as a preview/live mismatch. If the copy is intentionally preview-only, `PLACEHOLDERS.md` must say so explicitly.
+Audit the actual import shape, not just whether a friendly-looking object exists. Fail the package when:
+
+- `settings.tokens` contains raw CSS variable keys such as `--kiwe-color-brand`;
+- `settings.tokens` is missing from a marketplace AppShell theme package with a distinctive live visual personality;
+- `settings.tokens` is missing an `overrides` object when a token profile is declared;
+- `settings.tokens.overrides` uses `--kiwe-*`, `var(...)`, private token names, or invalid token names instead of official Kiwe universal token names like `color-brand`;
+- importable `theme.css` references unsupported `--kiwe-*` CSS variables that are not official universal tokens or documented `--kiwe-theme-*` aliases. Fail invented variables such as `--kiwe-color-background`, `--kiwe-radius-card`, `--kiwe-radius-control`, `--kiwe-shadow-panel`, and `--kiwe-space-unit`; use `--kiwe-color-surface`, `--kiwe-color-surface-raised`, `--kiwe-radius-xl`, `--kiwe-radius-full`, `--kiwe-shadow-md`, and `--kiwe-space-md` instead;
+- `settings.screens` contains unsupported screen ids;
+- a `settings.screens.<screen>` object contains unsupported field names. For example, fail `profile.helperText`, `profile.ordersLabel`, `profile.addressesLabel`, `profile.downloadsLabel`, `profile.actionLabel`, `links.scoreLabel`, `links.noScoreText`, `links.instagramLabel`, `links.storesLabel`, and `links.giftingLabel`. Use live fields such as `intro`, `ordersTitle`, `ordersText`, `downloadsTitle`, `downloadsText`, `addressesTitle`, `addressesText`, `shopLabel`, `shopMeta`, `cartLabel`, and `cartMeta`.
+
+If a preview shows custom live-intended screen/sheet copy, verify that the same copy is present in `theme-package.json` under `settings.screens`. Examples: custom account title/rows under `settings.screens.profile`, cart/bag title and FBT title under `settings.screens.cart`, search placeholder under `settings.screens.search`, menu table-of-contents label under `settings.screens.menu`, Links action labels under `settings.screens.links`, and AI chat placeholder under `settings.screens.ai`. If absent, mark the package as a preview/live mismatch. If the copy is intentionally preview-only, `PLACEHOLDERS.md` must say so explicitly.
+
+Kiwe also exposes manual registered screen/sheet copy controls under `Kiwe > Theme > DSA screen/sheet copy`; those admin overrides merge over imported package defaults. A handoff should still include live-intended package defaults so first install matches the preview.
+
+If a preview shows a distinctive palette, background, font pairing, heading scale, or global link treatment that should appear live, verify that the same personality is represented in `theme-package.json` under `settings.tokens.overrides` and, for Bricks/site-wide application, `settings.tokens.bricks_theme_style`. If the token profile is missing, mark the package as a preview/live mismatch: importable `theme.css` alone is not enough to synchronize DSA, Seam page CSS, and Bricks global style.
+
+Standalone Framework profiles must be narrow:
+
+- `schema: "kiwe.framework-profile.v1"`;
+- `settings.tokens.enabled`;
+- `settings.tokens.profile_label`;
+- `settings.tokens.overrides` using official Kiwe universal token names only;
+- optional `settings.tokens.bricks_theme_style` metadata.
+
+Reject or mark for revision any Framework profile that carries custom token names, AppShell geometry, dock configuration, screen copy, products, posts, Bricks raw JSON, or runtime behavior.
 
 ## AppShell theme manifest audit
 
@@ -183,6 +214,8 @@ A theme that omits core screens must clearly label itself as partial/non-marketp
 Importable theme CSS is presentation-only.
 
 Installed theme CSS should use production selectors such as `[data-dsa-surface]`, `[data-dsa-dock]`, `[data-dsa-screen]`, `.dsa-panel`, and documented screen internals. Kiwe runtime-scopes installed theme CSS to the active surface so correct `[data-dsa-surface]` selectors can beat core visual defaults while core keeps geometry/state ownership. If a preview looks branded but the import CSS only styles preview-only selectors, mark it as a failure.
+
+If `theme.json.screens` lists a registered screen, `appshell-theme/import/<theme-id>/css/theme.css` must target that screen's live runtime root from `screen-payloads.json`. A package that styles only preview fixture classes may pass a standalone screenshot and still fail live. Treat preview-fixture-only selectors in import CSS as a failure, especially `.dsa-screen-head`, `.dsa-screen-body`, `.dsa-profile-card`, `.dsa-score-card`, `.dsa-links-identity`, `.dsa-account-rows`, `.dsa-link-list`, `.dsa-install-steps`, `.dsa-game-frame`, and `.dsa-ai-insight`.
 
 Do not set AppShell geometry ownership in importable theme CSS on dock, screen, sheet, panel, or backdrop selectors:
 

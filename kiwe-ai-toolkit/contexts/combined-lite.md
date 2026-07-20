@@ -76,6 +76,8 @@ The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page
 
 Seam is semantic/headless. Use Seam classes/attributes for meaning and structure where helpful, but use custom page CSS for the actual visual art direction.
 
+If the paired design has a distinctive live-intended palette, type scale, font pairing, site background, spacing, radius, or shadow system, declare that design-token personality inside `appshell-theme/import/[theme-id]/theme-package.json` at `settings.tokens`. For combined marketplace AppShell themes this is required, not optional, because DSA, Seam page CSS, and Bricks global theme style must share the same token profile. Do not leave the brand system only inside preview CSS. A separate `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` is reserved for website/page-only handoffs or explicit standalone `Kiwe > Framework` imports; combined mode uses the theme package token lane.
+
 Useful website Seam vocabulary:
 
 - `seam-horizontal-rail`
@@ -207,6 +209,8 @@ Minimum preview shell requirements:
 - Link the importable CSS from `../import/[theme-id]/css/theme.css`; the preview must demonstrate the real import CSS.
 - Keep preview controls outside the app viewport, preferably using `kiwe-preview-toolbar` and `kiwe-preview-stage`.
 
+The importable `theme.css` must style live Kiwe roots and documented runtime internals. Do not make the installed theme depend on preview-fixture-only classes such as `.dsa-screen-head`, `.dsa-screen-body`, `.dsa-profile-card`, `.dsa-score-card`, `.dsa-links-identity`, `.dsa-account-rows`, `.dsa-link-list`, `.dsa-install-steps`, `.dsa-game-frame`, or `.dsa-ai-insight`. Those names may exist only in preview CSS if they are part of a standalone mock fixture. If `theme.json.screens` lists a screen, `theme.css` must target that screen's live root below.
+
 Required screen selectors when the theme manifest lists these screens:
 
 - `profile`: `data-dsa-profile-panel`
@@ -288,7 +292,34 @@ If the design changes dock composition or shell behavior, include those settings
         { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
       ]
     },
+    "tokens": {
+      "enabled": true,
+      "profile_label": "Your Theme Design Tokens",
+      "overrides": {
+        "color-brand": "#d6006f",
+        "color-accent": "#24c6a1",
+        "color-surface": "#f6f8f7",
+        "color-text": "#1f2933",
+        "font-display": "Inter, system-ui, sans-serif",
+        "font-body": "Inter, system-ui, sans-serif",
+        "type-h1": "clamp(52px, 5vw + 36px, 108px)",
+        "type-h2": "clamp(38px, 3vw + 28.4px, 72px)"
+      },
+      "bricks_theme_style": {
+        "enabled": true,
+        "id": "kiwe-global-design",
+        "label": "Kiwe Universal Design Tokens"
+      }
+    },
     "screens": {
+      "profile": {
+        "label": "Account",
+        "eyebrow": "Profile & Activity",
+        "title": "Your National account",
+        "ordersTitle": "Orders",
+        "addressesTitle": "Addresses",
+        "signOutLabel": "Sign out"
+      },
       "cart": {
         "label": "Bag",
         "eyebrow": "Cart",
@@ -298,6 +329,12 @@ If the design changes dock composition or shell behavior, include those settings
         "fbtTitle": "Pairs well with",
         "checkoutLabel": "Checkout",
         "checkoutEmptyLabel": "Empty"
+      },
+      "links": {
+        "label": "Links",
+        "title": "National links",
+        "shopLabel": "Shop all products",
+        "cartLabel": "Tea-time bag"
       }
     }
   },
@@ -315,9 +352,18 @@ Important dock settings:
 - `dock.enabled_items` and `dock.item_order`: visible built-in modules and their order.
 - `dock.focus_item`: the enabled item that becomes the emphasized/focus button and split-dock center. Default is `ai`, but a design may choose `search`, `cart`, or a custom link when justified.
 - `dock.custom_items`: safe URL navigation items such as Home. Custom dock links navigate only; they do not create new DSA screens.
-- `screens.cart`: presentation/copy labels only. Allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. Do not put cart data, line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority here.
+- `tokens`: the design token profile that lets the live DSA theme, Seam website CSS, and Bricks global theme style share one visual personality. Use only known Kiwe universal token names such as `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `type-h2`, `leading-tight`, `space-md`, `radius-lg`, and `shadow-md`. Do not invent private token names when a Kiwe token can carry the design.
+- `tokens` must be shaped as `settings.tokens.enabled`, `settings.tokens.profile_label`, `settings.tokens.overrides`, and optional `settings.tokens.bricks_theme_style`. Do not put raw CSS variable keys at the top of `tokens`, and do not use `--kiwe-*` or `var(...)` keys inside `overrides`. Wrong: `"tokens": { "--kiwe-color-brand": "#d71920" }`. Right: `"tokens": { "enabled": true, "overrides": { "color-brand": "#d71920" } }`.
+- Importable `theme.css` should consume official CSS variables generated from those same tokens, such as `--kiwe-color-brand`, `--kiwe-color-accent`, `--kiwe-color-surface`, `--kiwe-color-surface-raised`, `--kiwe-color-text`, `--kiwe-font-display`, `--kiwe-type-h1`, `--kiwe-radius-xl`, `--kiwe-radius-full`, `--kiwe-shadow-md`, and `--kiwe-space-md`, or documented `--kiwe-theme-*` aliases. Do not use invented/obsolete CSS variables such as `--kiwe-color-background`, `--kiwe-radius-card`, `--kiwe-radius-control`, `--kiwe-shadow-panel`, or `--kiwe-space-unit`; they will not be driven by the live token profile.
+- `tokens.bricks_theme_style`: optional safe Bricks global theme-style lane. It may set global typography, colors, links, and site background only. It must not contain element-level Bricks styling, component recipes, AppShell geometry, or per-module behavior.
+- `screens`: presentation/copy labels only for registered DSA screens/sheets. Allowed screen keys are `profile`, `cart`, `checkout`, `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, `games`, and `ai`. This lane may rename labels, titles, helper text, empty states, safe CTA labels, FBT rail title, profile row labels, Links shop/cart labels, notification form labels, iOS install steps, game labels, and AI empty/chat copy. It must not contain products, orders, saved items, profile identity, menu items, search results, social URLs, score values, notification state, AI messages/actions, cart line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority.
+- Common examples: `screens.cart.title`, `screens.cart.fbtTitle`, `screens.profile.title`, `screens.profile.ordersTitle`, `screens.links.shopLabel`, `screens.search.placeholder`, `screens.menu.contextTitle`, `screens.notifications.submitLabel`, and `screens.ai.chatPlaceholder`.
 
-If the combined preview shows custom cart copy such as "Your tea-time bag" or an FBT heading such as "Pairs well with" and that copy is intended to appear live, declare it in `theme-package.json` under `settings.screens.cart`. If not declared there, the audit should treat it as preview-only copy and should not expect it to appear in the live Kiwe cart adapter.
+`settings.screens` must use live Kiwe field names exactly. Do not create natural-language aliases such as `helperText`, `ordersLabel`, `addressesLabel`, `downloadsLabel`, `actionLabel`, `scoreLabel`, `noScoreText`, `instagramLabel`, `storesLabel`, or `giftingLabel`; Kiwe will sanitize/ignore unsupported fields and the installed theme will drift from the preview. Use `intro` for helper/body copy, `ordersTitle`/`ordersText` for Profile rows, and `shopLabel`/`shopMeta` or `cartLabel`/`cartMeta` for Links actions.
+
+If the combined preview shows custom live-intended screen/sheet copy, declare the same copy in `theme-package.json` under `settings.screens`. For example, "Your tea-time bag" belongs in `settings.screens.cart.title`, "Pairs well with" belongs in `settings.screens.cart.fbtTitle`, "Your National account" belongs in `settings.screens.profile.title`, and renamed Links actions belong in `settings.screens.links`. If not declared there, the audit should treat it as preview-only copy and should not expect it to appear in the live Kiwe adapters.
+
+Site owners can later edit registered DSA screen/sheet copy manually under `Kiwe > Theme > DSA screen/sheet copy`; those admin overrides merge over imported `settings.screens` defaults. The package must still ship the intended defaults so the preview and first live install match.
 
 Minimal `settings` object example inside `theme-package.json`:
 
@@ -344,12 +390,36 @@ Minimal `settings` object example inside `theme-package.json`:
       { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
     ]
   },
+  "tokens": {
+    "enabled": true,
+    "profile_label": "Theme design tokens",
+    "overrides": {
+      "color-brand": "#d6006f",
+      "color-accent": "#24c6a1",
+      "color-surface": "#f6f8f7",
+      "color-text": "#1f2933",
+      "font-display": "Inter, system-ui, sans-serif",
+      "font-body": "Inter, system-ui, sans-serif"
+    },
+    "bricks_theme_style": {
+      "enabled": true,
+      "id": "kiwe-global-design",
+      "label": "Kiwe Universal Design Tokens"
+    }
+  },
   "screens": {
+    "profile": {
+      "label": "Account",
+      "title": "Your account"
+    },
     "cart": {
       "label": "Bag",
       "title": "Your tea-time bag",
       "fbtTitle": "Pairs well with",
       "checkoutLabel": "Checkout"
+    },
+    "search": {
+      "placeholder": "Search products and stories"
     }
   }
 }
@@ -388,5 +458,6 @@ node tools/ui-theme/validate-handoff.cjs appshell-theme
 For generated AI output review, also use:
 
 ```bash
+node kiwe-ai-toolkit/tools/validate-framework-profile.cjs combined-kiwe-handoff --optional
 node kiwe-ai-toolkit/tools/audit-output.cjs combined-kiwe-handoff
 ```

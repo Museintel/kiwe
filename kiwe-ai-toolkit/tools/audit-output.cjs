@@ -44,6 +44,24 @@ const allText = textFiles.map((file) => `\n--- ${rel(file)} ---\n${read(file)}`)
 const findings = [];
 let seamRoles = null;
 let coreScreens = null;
+let screenPayloads = null;
+let officialTokenNames = null;
+
+const themeTokenTopLevelKeys = new Set(['enabled', 'profile_label', 'overrides', 'bricks_theme_style']);
+const allowedThemeCssTokenAliases = new Set(['radius-panel', 'surface-panel']);
+const screenCopyFields = {
+  profile: new Set(['label', 'eyebrow', 'title', 'intro', 'accountLabel', 'editLabel', 'ordersTitle', 'ordersText', 'downloadsTitle', 'downloadsText', 'notificationsTitle', 'notificationsText', 'addressesTitle', 'addressesText', 'passwordTitle', 'passwordText', 'signOutLabel', 'recentOrdersTitle']),
+  cart: new Set(['label', 'eyebrow', 'title', 'emptyTitle', 'emptyText', 'fbtTitle', 'checkoutLabel', 'checkoutEmptyLabel']),
+  checkout: new Set(['label', 'title', 'loadingText', 'unavailableText', 'continueLabel', 'returnLabel', 'shippingToggleLabel', 'accountToggleLabel']),
+  search: new Set(['label', 'eyebrow', 'title', 'intro', 'placeholder']),
+  menu: new Set(['label', 'eyebrow', 'title', 'intro', 'contextTitle', 'dashboardLabel']),
+  saved: new Set(['label', 'eyebrow', 'title', 'intro', 'emptyTitle', 'emptyText', 'wishlistLabel', 'bookmarksLabel', 'summaryWishlistLabel', 'summaryBookmarksLabel', 'summaryTotalLabel']),
+  links: new Set(['label', 'eyebrow', 'title', 'intro', 'shopLabel', 'shopMeta', 'cartLabel', 'cartMeta']),
+  notifications: new Set(['label', 'eyebrow', 'title', 'intro', 'topicsLegend', 'channelsLegend', 'appText', 'submitLabel', 'emailPlaceholder', 'phonePlaceholder']),
+  'ios-install': new Set(['label', 'eyebrow', 'title', 'intro', 'stepOneTitle', 'stepOneText', 'stepTwoTitle', 'stepTwoText', 'stepThreeTitle', 'stepThreeText', 'doneLabel']),
+  games: new Set(['label', 'eyebrow', 'startTitle', 'startText', 'mobileStartText', 'chooseText', 'scoreLabel', 'bestLabel']),
+  ai: new Set(['label', 'eyebrow', 'title', 'intro', 'emptyTitle', 'emptyText', 'chatPlaceholder'])
+};
 
 function getSeamRoles() {
   if (seamRoles) return seamRoles;
@@ -68,6 +86,17 @@ function getSeamRoles() {
 function getCoreScreens() {
   if (coreScreens) return coreScreens;
   coreScreens = new Set();
+  const payloads = getScreenPayloads();
+  if (payloads) {
+    for (const screen of Object.keys(payloads.screens || {})) coreScreens.add(String(screen));
+    return coreScreens;
+  }
+  return coreScreens;
+}
+
+function getScreenPayloads() {
+  if (screenPayloads) return screenPayloads;
+  screenPayloads = null;
   const candidates = [
     path.join(__dirname, '..', 'packs', 'appshell-theme', 'screen-payloads.json'),
     path.join(__dirname, '..', 'packs', 'website-builder', 'screen-payloads.json')
@@ -76,17 +105,146 @@ function getCoreScreens() {
     if (!fs.existsSync(file)) continue;
     try {
       const json = JSON.parse(fs.readFileSync(file, 'utf8'));
-      for (const screen of Object.keys(json.screens || {})) coreScreens.add(String(screen));
+      screenPayloads = json;
     } catch (_) {
       // Non-fatal; audit can continue without screen coverage checks.
     }
-    if (coreScreens.size) break;
+    if (screenPayloads) break;
   }
-  return coreScreens;
+  return screenPayloads;
+}
+
+function getOfficialTokenNames() {
+  if (officialTokenNames) return officialTokenNames;
+  officialTokenNames = new Set();
+  const candidates = [
+    path.join(__dirname, '..', '..', 'wp-content', 'mu-plugins', 'dsa', 'includes', 'Design', 'Seam_Token_Service.php'),
+    path.join(__dirname, '..', '..', 'wp-content', 'mu-plugins', 'dsa', 'ui-system', 'token-map.css'),
+    path.join(__dirname, '..', 'packs', 'website-builder', 'contracts', 'token-map.css')
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    const body = read(file);
+    for (const match of body.matchAll(/self::token\(\s*['"]([^'"]+)['"]/g)) {
+      officialTokenNames.add(String(match[1]));
+    }
+    for (const match of body.matchAll(/['"]name['"]\s*=>\s*['"]([^'"]+)['"]/g)) {
+      officialTokenNames.add(String(match[1]));
+    }
+    for (const match of body.matchAll(/--kiwe-([a-z0-9-]+)/g)) {
+      const name = String(match[1]);
+      if (!name.startsWith('theme-')) officialTokenNames.add(name);
+    }
+    if (officialTokenNames.size) break;
+  }
+  return officialTokenNames;
 }
 
 function add(level, message, file = '') {
   findings.push({ level, message, file });
+}
+
+function selectorIsMentioned(selector, cssText) {
+  if (!selector || !cssText) return false;
+  return String(selector)
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .some((part) => cssText.includes(part));
+}
+
+function isPlainObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function validateThemePackageTokenSettings(tokens, file) {
+  if (!isPlainObject(tokens)) {
+    add('fail', 'theme-package.json settings.tokens must be an object containing enabled, profile_label, overrides, and optional bricks_theme_style.', rel(file));
+    return;
+  }
+
+  for (const key of Object.keys(tokens)) {
+    if (/^--|var\(/i.test(key)) {
+      add('fail', `theme-package.json settings.tokens uses CSS variable key "${key}". Use settings.tokens.overrides with official token names such as "color-brand", without --kiwe- or var().`, rel(file));
+    } else if (!themeTokenTopLevelKeys.has(key)) {
+      add('fail', `theme-package.json settings.tokens has unsupported top-level key "${key}". Allowed keys are enabled, profile_label, overrides, and bricks_theme_style. Token values belong in settings.tokens.overrides.`, rel(file));
+    }
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(tokens, 'overrides')) {
+    add('fail', 'theme-package.json settings.tokens must contain an overrides object. A token lane without overrides will not synchronize DSA, Seam page CSS, and Bricks global theme style.', rel(file));
+    return;
+  }
+
+  if (!isPlainObject(tokens.overrides)) {
+    add('fail', 'theme-package.json settings.tokens.overrides must be an object keyed by official Kiwe universal token names.', rel(file));
+    return;
+  }
+
+  const official = getOfficialTokenNames();
+  for (const tokenName of Object.keys(tokens.overrides)) {
+    if (/^--|var\(/i.test(tokenName)) {
+      add('fail', `theme-package.json settings.tokens.overrides "${tokenName}" must use the official token name without --kiwe- or var().`, rel(file));
+    } else if (!/^[a-z0-9][a-z0-9_-]{1,80}$/i.test(tokenName)) {
+      add('fail', `theme-package.json settings.tokens.overrides has invalid token name "${tokenName}".`, rel(file));
+    } else if (official.size && !official.has(tokenName)) {
+      add('warn', `theme-package.json settings.tokens.overrides "${tokenName}" is not in the known Kiwe universal token list. Use official tokens or request core promotion.`, rel(file));
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(tokens, 'bricks_theme_style') && !isPlainObject(tokens.bricks_theme_style)) {
+    add('fail', 'theme-package.json settings.tokens.bricks_theme_style must be an object when present.', rel(file));
+  }
+}
+
+function validateThemePackageScreenSettings(screens, file) {
+  if (!isPlainObject(screens)) {
+    add('fail', 'theme-package.json settings.screens must be an object keyed by registered DSA screen ids.', rel(file));
+    return;
+  }
+
+  for (const [screen, config] of Object.entries(screens)) {
+    const fields = screenCopyFields[screen];
+    if (!fields) {
+      add('fail', `theme-package.json settings.screens contains unsupported screen "${screen}". Use registered DSA screens only: ${Object.keys(screenCopyFields).join(', ')}.`, rel(file));
+      continue;
+    }
+    if (!isPlainObject(config)) {
+      add('fail', `theme-package.json settings.screens.${screen} must be an object of presentation-only copy fields.`, rel(file));
+      continue;
+    }
+    for (const key of Object.keys(config)) {
+      if (!fields.has(key)) {
+        add('fail', `theme-package.json settings.screens.${screen}.${key} is not a live Kiwe screen-copy field. Use only supported ${screen} fields: ${Array.from(fields).join(', ')}.`, rel(file));
+      }
+    }
+  }
+}
+
+function validateThemePackageSettings(json, file) {
+  const settings = isPlainObject(json.settings) ? json.settings : null;
+  if (!settings) return;
+  if (Object.prototype.hasOwnProperty.call(settings, 'tokens')) {
+    validateThemePackageTokenSettings(settings.tokens, file);
+  }
+  if (Object.prototype.hasOwnProperty.call(settings, 'screens')) {
+    validateThemePackageScreenSettings(settings.screens, file);
+  }
+}
+
+function validateImportCssKiweTokenReferences(cssText, file) {
+  const official = getOfficialTokenNames();
+  const seen = new Set();
+  for (const match of cssText.matchAll(/--kiwe-([a-z0-9-]+)/gi)) {
+    const raw = String(match[0]);
+    const tokenName = String(match[1]);
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    if (tokenName.startsWith('theme-')) continue;
+    if (allowedThemeCssTokenAliases.has(tokenName)) continue;
+    if (official.size && official.has(tokenName)) continue;
+    add('fail', `Importable theme CSS references unsupported Kiwe token variable "${raw}". Use official universal tokens such as --kiwe-color-surface, --kiwe-color-surface-raised, --kiwe-radius-xl, --kiwe-radius-full, --kiwe-shadow-md, and --kiwe-space-md, or documented --kiwe-theme-* aliases.`, rel(file));
+  }
 }
 
 if (exists('package.json') || exists('vite.config.ts') || exists('tailwind.config.js') || exists('components.json')) {
@@ -177,6 +335,10 @@ if (/classic[\s\S]{0,320}(?:width\s*:\s*min\(\s*(?:390|430)px|left\s*:\s*auto|ri
 }
 
 const knownDsaModules = new Set(['menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'secure', 'notifications', 'ios-install', 'games']);
+const themePackageFiles = files.filter((file) => path.basename(file) === 'theme-package.json');
+const importThemeCssFiles = files.filter((file) => /(^|\/|\\)appshell-theme(\/|\\)import(\/|\\)[^/\\]+(\/|\\).*\.css$/i.test(rel(file)));
+const importThemeCssText = importThemeCssFiles.map((file) => `\n--- ${rel(file)} ---\n${read(file)}`).join('\n');
+const frameworkProfilePath = exists('framework/kiwe-framework-profile.json') ? path.join(root, 'framework', 'kiwe-framework-profile.json') : '';
 const settingsText = textFiles
   .filter((file) => rel(file).startsWith('kiwe-settings/') || /(^|\/)theme-package\.json$/i.test(rel(file)))
   .map((file) => read(file))
@@ -185,10 +347,90 @@ const hasStaleSettingsFolder = files.some((file) => rel(file).startsWith('kiwe-s
 const hasThemePackageSettings = /"settings"\s*:\s*\{/.test(settingsText);
 const hasCustomDockSettings = /"custom_items"\s*:\s*\[/.test(settingsText);
 const hasFocusItemSettings = /"focus_item"\s*:/.test(settingsText);
+const hasScreenSettings = /"screens"\s*:\s*\{/.test(settingsText);
+const hasScreenProfileSettings = /"screens"\s*:\s*\{[\s\S]*"profile"\s*:\s*\{/.test(settingsText);
 const hasScreenCartSettings = /"screens"\s*:\s*\{[\s\S]*"cart"\s*:\s*\{/.test(settingsText);
+const hasScreenLinksSettings = /"screens"\s*:\s*\{[\s\S]*"links"\s*:\s*\{/.test(settingsText);
+const hasAnyTokenSettings = /"tokens"\s*:\s*\{/.test(settingsText);
 
 if (hasStaleSettingsFolder) {
   add('warn', 'kiwe-settings/ folder detected. Current Kiwe AppShell theme settings should travel inside appshell-theme/import/<theme-id>/theme-package.json so Kiwe imports/exports installed themes, not loose settings profiles.');
+}
+
+if (frameworkProfilePath) {
+  let frameworkProfile = null;
+  try {
+    frameworkProfile = JSON.parse(read(frameworkProfilePath));
+  } catch (error) {
+    add('fail', `framework/kiwe-framework-profile.json is invalid JSON: ${error.message}`, rel(frameworkProfilePath));
+  }
+
+  if (frameworkProfile) {
+    if (frameworkProfile.schema !== 'kiwe.framework-profile.v1') {
+      add('fail', 'Framework profile schema must be kiwe.framework-profile.v1.', rel(frameworkProfilePath));
+    }
+    const settings = frameworkProfile.settings && typeof frameworkProfile.settings === 'object' && !Array.isArray(frameworkProfile.settings) ? frameworkProfile.settings : null;
+    const tokens = settings && settings.tokens && typeof settings.tokens === 'object' && !Array.isArray(settings.tokens) ? settings.tokens : null;
+    if (!tokens) {
+      add('fail', 'Framework profile must contain settings.tokens.', rel(frameworkProfilePath));
+    }
+    if (settings) {
+      for (const key of Object.keys(settings)) {
+        if (key !== 'tokens') {
+          add('fail', `Framework profile settings must contain only tokens; found settings.${key}.`, rel(frameworkProfilePath));
+        }
+      }
+    }
+    for (const forbidden of ['dock', 'style', 'screens', 'theme_screens', 'dsa_theme', 'visual_effects', 'commerce', 'bricks', 'css', 'html']) {
+      if (Object.prototype.hasOwnProperty.call(frameworkProfile, forbidden)) {
+        add('fail', `Framework profile must not contain root ${forbidden}. Put AppShell settings in theme-package.json and page content in website/bricks-paste.html.`, rel(frameworkProfilePath));
+      }
+    }
+    if (tokens && tokens.overrides && typeof tokens.overrides === 'object' && !Array.isArray(tokens.overrides)) {
+      const official = getOfficialTokenNames();
+      for (const tokenName of Object.keys(tokens.overrides)) {
+        if (/^--|var\(/i.test(tokenName)) {
+          add('fail', `Framework profile override "${tokenName}" must use the official token name without --kiwe- or var().`, rel(frameworkProfilePath));
+        } else if (official.size && !official.has(tokenName)) {
+          add('warn', `Framework profile override "${tokenName}" is not in the known Kiwe universal token list. Use official token names or request core promotion.`, rel(frameworkProfilePath));
+        }
+      }
+    }
+  }
+}
+
+if (exists('appshell-theme') && themePackageFiles.length && !hasAnyTokenSettings && /(?:font-family|--kiwe-color-|--kiwe-theme-|background|color|box-shadow|text-shadow|Your tea-time bag|brand|palette|typography|heading)/i.test(allText)) {
+  add('fail', 'AppShell theme defines a visual personality but no theme-package.json settings.tokens profile was found. Modern combined/marketplace Kiwe themes must carry official token overrides so DSA, Seam page CSS, and Bricks global theme style stay synchronized.');
+}
+
+if (exists('appshell-theme') && importThemeCssText) {
+  const previewOnlyScreenSelectors = [
+    '.dsa-screen-head',
+    '.dsa-screen-body',
+    '.dsa-profile-card',
+    '.dsa-score-card',
+    '.dsa-links-identity',
+    '.dsa-account-rows',
+    '.dsa-link-list',
+    '.dsa-editorial-title',
+    '.dsa-install-steps',
+    '.dsa-game-hud',
+    '.dsa-game-frame',
+    '.dsa-ai-status',
+    '.dsa-ai-insight',
+    '.dsa-ai-chat-placeholder',
+    '.dsa-preference-group',
+    '.dsa-contact-field',
+    '.dsa-inline-notice',
+    '.dsa-result-thumb'
+  ];
+  const leakedSelectors = previewOnlyScreenSelectors.filter((selector) => importThemeCssText.includes(selector));
+  if (leakedSelectors.length) {
+    add('fail', `Importable AppShell theme CSS relies on preview-fixture screen selectors (${leakedSelectors.join(', ')}). Move fixture-only selectors to combined-preview CSS and target live Kiwe runtime roots/internals in theme.css.`, importThemeCssFiles.map(rel).join(', '));
+  }
+  for (const file of importThemeCssFiles) {
+    validateImportCssKiweTokenReferences(read(file), file);
+  }
 }
 
 for (const file of textFiles.filter((item) => /\.html?$/i.test(item))) {
@@ -285,7 +527,6 @@ if (exists('bricks-bindings')) {
 }
 
 const themeJsonFiles = files.filter((file) => path.basename(file) === 'theme.json');
-const themePackageFiles = files.filter((file) => path.basename(file) === 'theme-package.json');
 for (const file of themeJsonFiles) {
   let json;
   try {
@@ -305,6 +546,15 @@ for (const file of themeJsonFiles) {
   const missingScreens = Array.from(getCoreScreens()).filter((screen) => !screens.includes(screen));
   if (missingScreens.length) {
     add('warn', `theme.json.screens omits registered core screens: ${missingScreens.join(', ')}. That is acceptable only for a clearly documented partial theme; marketplace-ready themes should skin all registered screens even if the current settings profile hides some dock icons.`, rel(file));
+  }
+  const payloads = getScreenPayloads();
+  if (importThemeCssText && payloads && payloads.screens) {
+    for (const screen of screens) {
+      const requiredRoot = payloads.screens[screen] && payloads.screens[screen].requiredRoot;
+      if (requiredRoot && !selectorIsMentioned(requiredRoot, importThemeCssText)) {
+        add('fail', `theme.json lists screen "${screen}" but importable theme.css does not target its live runtime root ${requiredRoot}. A preview may still look correct, but the installed theme can fall back to Kiwe defaults for that screen/sheet.`, rel(file));
+      }
+    }
   }
 }
 
@@ -327,6 +577,7 @@ for (const file of themePackageFiles) {
   if (json.theme && json.theme.id && !rel(file).includes(`/import/${json.theme.id}/`)) {
     add('warn', `theme-package.json theme.id "${json.theme.id}" does not match its import folder path.`, rel(file));
   }
+  validateThemePackageSettings(json, file);
 }
 
 const placeholderText = textFiles
@@ -335,6 +586,15 @@ const placeholderText = textFiles
   .join('\n');
 if (/Your tea-time bag|Pairs well with|tea-time bag|bag is ready/i.test(combinedPreviewText) && !hasScreenCartSettings && !/cart copy[\s\S]{0,120}preview-only|preview-only[\s\S]{0,120}cart copy/i.test(placeholderText)) {
   add('fail', 'Combined preview contains custom cart/bag copy, but no theme-package.json settings.screens.cart preset was found. Live-intended cart copy must travel in the installed theme package; otherwise document it as preview-only in PLACEHOLDERS.md.', rel(combinedPreviewPath || root));
+}
+if (/Your\s+[A-Z][^<\n]{0,70}\s+account|National customer|customer account/i.test(combinedPreviewText) && !hasScreenProfileSettings && !/profile copy[\s\S]{0,120}preview-only|preview-only[\s\S]{0,120}profile copy/i.test(placeholderText)) {
+  add('fail', 'Combined preview contains custom profile/account copy, but no theme-package.json settings.screens.profile preset was found. Live-intended Profile copy must travel in the installed theme package; otherwise document it as preview-only in PLACEHOLDERS.md.', rel(combinedPreviewPath || root));
+}
+if (/National links|Shop all products|Tea-time bag|Open store locations|Corporate gifting/i.test(combinedPreviewText) && !hasScreenLinksSettings && !/links copy[\s\S]{0,120}preview-only|preview-only[\s\S]{0,120}links copy/i.test(placeholderText)) {
+  add('fail', 'Combined preview contains custom Links screen/action copy, but no theme-package.json settings.screens.links preset was found. Live-intended Links copy must travel in the installed theme package; otherwise document it as preview-only in PLACEHOLDERS.md.', rel(combinedPreviewPath || root));
+}
+if (/settings\.screens\.cart|settings\.screens\.profile|settings\.screens\.links|settings\.screens\.ai/i.test(allText) && !hasScreenSettings && exists('appshell-theme')) {
+  add('warn', 'The handoff discusses live screen-copy settings but no theme-package.json settings.screens object was found. Ensure all live-intended DSA screen/sheet copy is in the installed theme package.');
 }
 
 if (exists('appshell-theme') && !themePackageFiles.length && (hasThemePackageSettings || /custom_items|focus_item|split_style|"shape"\s*:/i.test(allText))) {
