@@ -247,6 +247,16 @@ function validateImportCssKiweTokenReferences(cssText, file) {
   }
 }
 
+function validateImportCssNoRuntimeBridgeTokens(cssText, file) {
+  const seen = new Set();
+  for (const match of cssText.matchAll(/--dsa-runtime-token-\d{4}/gi)) {
+    seen.add(match[0]);
+  }
+  if (seen.size) {
+    add('fail', `Importable theme CSS references Kiwe core runtime bridge token(s) ${Array.from(seen).sort().join(', ')}. Generated --dsa-runtime-token-* variables are private migration glue for Kiwe runtime CSS, not public Seam/AppShell theme vocabulary. Use official --kiwe-* variables, documented --kiwe-theme-* aliases, or request a generic universal token promotion.`, rel(file));
+  }
+}
+
 if (exists('package.json') || exists('vite.config.ts') || exists('tailwind.config.js') || exists('components.json')) {
   add('fail', 'Output looks like a React/Vite/Tailwind/shadcn app. Kiwe handoffs must be plain HTML/CSS with optional preview-only JS unless an app prototype was explicitly requested.');
 }
@@ -430,6 +440,7 @@ if (exists('appshell-theme') && importThemeCssText) {
   }
   for (const file of importThemeCssFiles) {
     validateImportCssKiweTokenReferences(read(file), file);
+    validateImportCssNoRuntimeBridgeTokens(read(file), file);
   }
 }
 

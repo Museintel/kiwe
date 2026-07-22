@@ -12,6 +12,8 @@ The full plugin remains the runtime authority. This toolkit is the public design
 
 Current lane rule: combined output uses AppShell `theme-package.json` for live DSA theme settings and `settings.tokens`; standalone `kiwe.framework-profile.v1` files are for website/page-only Framework token profiles or explicit `Kiwe > Framework` imports, not loose AppShell settings profiles.
 
+Token authority rule: AI handoffs should use official universal token names in `settings.tokens.overrides` and consume generated public variables such as `--kiwe-color-brand`, `--kiwe-color-surface`, `--kiwe-radius-lg`, or documented `--kiwe-theme-*` aliases. Do not copy Kiwe core's generated `--dsa-runtime-token-####` bridge variables into themes, previews, docs, or Bricks page CSS; those names are private runtime migration glue and are rejected by the package/audit validators.
+
 ## Why this exists
 
 Giving the whole plugin to an AI wastes tokens and invites it to invent against internals. Kiwe instead hands the AI a mode-specific contract pack:

@@ -44,6 +44,8 @@ Seam roles are semantic/headless by default. `data-role="card"` or `.seam-card` 
 
 Prefer the Kiwe/Seam token library first. If a design genuinely needs a missing art-direction variable, propose a generic addition to the universal token library instead of inventing project-locked token names. Temporary preview-only variables are allowed only when clearly documented.
 
+Do not use generated `--dsa-runtime-token-####` variables. They are private Kiwe core bridge tokens for runtime token-purity migration, not public Seam/Framework vocabulary. Website CSS and theme CSS should use official `--kiwe-*`, documented `--kiwe-theme-*`, or a proposed generic universal token.
+
 ## What you must not create
 
 Do not create a second authority for:

@@ -32,6 +32,10 @@ jobs:
           node tools/ui-theme/audit-seam-adoption.cjs
           node tools/ui-theme/audit-runtime-token-purity.cjs
           node tools/ui-theme/validate-package.cjs tools/ui-theme/fixtures/valid
+          if node tools/ui-theme/validate-package.cjs tools/ui-theme/fixtures/invalid-runtime-bridge-token; then
+            echo "invalid-runtime-bridge-token fixture unexpectedly passed"
+            exit 1
+          fi
           node kiwe-ai-toolkit/tools/validate-framework-profile.cjs kiwe-ai-toolkit/fixtures/framework-profile-valid
       - name: Run release contracts
         run: |

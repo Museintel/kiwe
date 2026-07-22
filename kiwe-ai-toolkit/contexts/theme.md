@@ -246,6 +246,8 @@ Do not use htmx or Alpine for PhoneKey/auth, checkout/payment, cart reconciliati
 
 Theme CSS should consume canonical `--kiwe-*` tokens and compatibility `dsa-*` aliases. Hidden private palettes, font systems, and heading scales should be promoted into official token overrides when they are intended to appear live.
 
+Do not copy generated `--dsa-runtime-token-####` variables into a theme package or preview handoff. Those tokens are private Kiwe core migration bridge variables used by the runtime token-purity audit; they are not stable public Seam/AppShell vocabulary. Use official `--kiwe-*` variables, documented `--kiwe-theme-*` aliases, or request a generic universal token addition instead.
+
 ## Package validation
 
 From the repository root:

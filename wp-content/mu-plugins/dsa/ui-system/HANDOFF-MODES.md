@@ -244,6 +244,7 @@ Notes:
 - If a preview shows custom live-intended screen/sheet copy, it must be declared in `theme-package.json` under `settings.screens`; otherwise document it as preview-only.
 - `Kiwe > Theme` exposes manual DSA screen/sheet copy controls. Manual admin edits merge over imported `settings.screens` defaults, but a theme package should still ship defaults so first install matches the preview.
 - If a preview shows a distinctive palette, type scale, font pairing, background, shadows, or global link treatment intended for live use, it must be declared in `theme-package.json` under `settings.tokens.overrides`; otherwise document it as preview-only. Use official Kiwe token names only.
+- Never use generated `--dsa-runtime-token-####` variables in AppShell theme, website, preview, or documentation output. They are private Kiwe runtime bridge variables for core token-purity migration, not public Seam/Theme tokens. Use official `--kiwe-*`, documented `--kiwe-theme-*`, or propose a missing universal token.
 - The theme settings must not contain users, orders, credentials, logs, raw API keys, API secrets, or private data.
 
 ## What to ask the AI

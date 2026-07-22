@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.23 - 2026-07-22
+
+- Aligned the public Kiwe AI Toolkit, AppShell/theme prompts, framework handoff docs, and audit loop around Seam token purity.
+- Made package and handoff validators reject private generated `--dsa-runtime-token-*` bridge variables in theme output so AIs cannot mistake Kiwe core migration tokens for public design tokens.
+- Added an invalid runtime-bridge-token fixture plus CI/release/AI contract checks to prove the validator catches that boundary.
+
 ## 0.6.22 - 2026-07-22
 
 - Completed the runtime Seam purity pass for DSA Surface CSS: legacy raw component values now live in a token-authority bridge and runtime declarations consume variables.

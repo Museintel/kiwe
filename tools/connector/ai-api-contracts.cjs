@@ -47,6 +47,8 @@ const frameworkProfileValidator = read('kiwe-ai-toolkit/lib/framework-profile-va
 const frameworkProfileCli = read('kiwe-ai-toolkit/tools/validate-framework-profile.cjs');
 const frameworkProfileSchema = read('kiwe-ai-toolkit/schemas/framework-profile.schema.json');
 const validateOutput = read('kiwe-ai-toolkit/tools/validate-output.cjs');
+const auditOutput = read('kiwe-ai-toolkit/tools/audit-output.cjs');
+const themePackageValidator = read('tools/ui-theme/validate-package.cjs');
 const toolkitBin = read('kiwe-ai-toolkit/bin/kiwe.js');
 const validFrameworkFixture = read('kiwe-ai-toolkit/fixtures/framework-profile-valid/framework/kiwe-framework-profile.json');
 const invalidFrameworkFixture = read('kiwe-ai-toolkit/fixtures/framework-profile-invalid/framework/kiwe-framework-profile.json');
@@ -128,6 +130,7 @@ check('Theme packages can carry official token overrides', themeService.includes
 check('Toolkit documents standalone Framework profile lane', themeDocs.includes('kiwe.framework-profile.v1') && themeDocs.includes('framework/kiwe-framework-profile.json') && themeDocs.includes('Kiwe > Framework') && themeDocs.includes('official Kiwe universal token names only'));
 check('Toolkit ships a standalone Framework profile schema and validator', toolkitCore.includes('validateFrameworkProfile') && toolkitBin.includes('validate-framework-profile') && frameworkProfileCli.includes('validateFrameworkProfile') && validateOutput.includes('validate-framework-profile.cjs') && frameworkProfileValidator.includes('officialTokenNames') && frameworkProfileValidator.includes('unknown_token_name') && frameworkProfileSchema.includes('kiwe.framework-profile.v1'));
 check('Toolkit Framework profile fixtures prove valid and invalid boundaries', validFrameworkFixture.includes('"schema": "kiwe.framework-profile.v1"') && validFrameworkFixture.includes('"bricks_theme_style"') && invalidFrameworkFixture.includes('"--kiwe-color-brand"') && invalidFrameworkFixture.includes('"settings":') && invalidFrameworkFixture.includes('"dock"'));
+check('Toolkit and validators reject private runtime bridge token leakage', themeDocs.includes('--dsa-runtime-token-####') && auditOutput.includes('validateImportCssNoRuntimeBridgeTokens') && auditOutput.includes('--dsa-runtime-token-') && themePackageValidator.includes('validateNoRuntimeBridgeTokenReferences') && themePackageValidator.includes('--dsa-runtime-token-') && fs.existsSync(path.join(root, 'tools/ui-theme/fixtures/invalid-runtime-bridge-token/css/theme.css')));
 
 function settingsLike(haystack, needle) {
 	return haystack.includes(needle) || haystack.includes(needle.replaceAll("'", '"'));

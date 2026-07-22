@@ -178,6 +178,8 @@ Use canonical `--kiwe-*` tokens and aliases from `token-map.css` for palette, ty
 
 Do not create a hidden large palette, font system, or heading scale that cannot map back to Kiwe tokens. Importable `theme.css` should consume the token profile; it should not be the only place where the design personality exists.
 
+Never use generated `--dsa-runtime-token-####` variables in handoff CSS, preview CSS, or documentation. Those are private Kiwe core bridge tokens for runtime token-purity validation, not public design tokens. Use official `--kiwe-*` variables, documented `--kiwe-theme-*` aliases, or propose a missing generic token for promotion into the universal library.
+
 ## Output format
 
 Return a complete handoff folder shaped like this:

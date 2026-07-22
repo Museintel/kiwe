@@ -134,6 +134,7 @@ This is useful when the design wants:
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
 - Design-token profile: palette, font stacks, heading scale, site background, line-height, spacing, radius, shadows, and the optional safe Bricks global theme-style export. Active/hover/hero colors remain compatibility settings for `color-brand`, `color-accent`, and `color-hero`.
+- Do not use generated `--dsa-runtime-token-####` variables in website, AppShell, preview, or documentation output. Those are private Kiwe runtime bridge variables for core token-purity migration, not public Seam/Framework tokens. Use official `--kiwe-*`, documented `--kiwe-theme-*`, or propose a missing universal token.
 - WooCommerce or Search bridge settings when the website design requires them.
 
 `theme.json` remains the manifest-only validator file. Put the settings preset in `theme-package.json` at root `settings`, beside root `theme` and root `css`.
@@ -221,4 +222,4 @@ For DSA theme only:
 
 For combined:
 
-> Follow both `framework-system/handoffs/website-builder/prompt.md` and `ui-system/prompt.md`, using `HANDOFF-MODES.md` as the layer boundary. Create a combined website/page plus DSA AppShell theme handoff. Keep website, AppShell theme, and Kiwe settings/profile output separate.
+> Follow both `framework-system/handoffs/website-builder/prompt.md` and `ui-system/prompt.md`, using `HANDOFF-MODES.md` as the layer boundary. Create a combined website/page plus DSA AppShell theme handoff. Keep website/page output separate from the AppShell theme package and place live AppShell theme settings inside `theme-package.json`.

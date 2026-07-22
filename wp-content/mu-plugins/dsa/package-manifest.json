@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.6.22",
+  "version": "0.6.23",
   "algorithm": "sha256",
   "file_count": 260,
   "files": {
@@ -194,15 +194,15 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "4c61e178d9a4f3415d88c60a32e941241de285cd3a6efd80f40755cd51cc0962"
+      "sha256": "d732759f3a282338d50016d70edc3a529a287f671c5d1a15a5f8b6e6da58f159"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
       "sha256": "0af7b237a344e12e37529f2a571b24de4299790305d519b604c6fb46ca1de03a"
     },
     "framework-system/HANDOFF-MODES.md": {
-      "bytes": 12113,
-      "sha256": "d51d21be9aaec503d5426086c47c133c8e65122fd67e5ee5b815b5fa5a5297a3"
+      "bytes": 12436,
+      "sha256": "1f34e787d66d09d7392d0dcdd9dce8c7b8a0bc34cae5464e1876a2be7ebdf39f"
     },
     "framework-system/README.md": {
       "bytes": 8057,
@@ -249,8 +249,8 @@
       "sha256": "0af7b237a344e12e37529f2a571b24de4299790305d519b604c6fb46ca1de03a"
     },
     "framework-system/handoffs/website-builder/HANDOFF-MODES.md": {
-      "bytes": 10849,
-      "sha256": "ef66ff3c038395685806f98824b68e2622632700a1ad5a2e164f53585950db04"
+      "bytes": 11233,
+      "sha256": "0de3c32189799eccadb1d8b6cd563d7449c84839337ec73de6c77c18d0c1ead1"
     },
     "framework-system/handoffs/website-builder/README-FIRST.md": {
       "bytes": 4913,
@@ -293,8 +293,8 @@
       "sha256": "59fceb894b58cffd13b269cdcaf8e458a2143d488cfcf8cb751f9ab5534453bf"
     },
     "framework-system/handoffs/website-builder/prompt.md": {
-      "bytes": 6504,
-      "sha256": "97be9fd0f4b8a29c8f7c886af5cd16643c94ff63685d5436bd65b72bb70655c7"
+      "bytes": 6864,
+      "sha256": "21418c0e03237910875dc76e219f63fdd6a676d81866b5f10a6be0da6d737419"
     },
     "framework-system/handoffs/website-builder/runtime/seam.css": {
       "bytes": 18175,
@@ -305,8 +305,8 @@
       "sha256": "5d766c23963e03e73c93ce321bb5c30c7818d715f73ce28ca0e8028bc19deb74"
     },
     "framework-system/prompt.md": {
-      "bytes": 6504,
-      "sha256": "97be9fd0f4b8a29c8f7c886af5cd16643c94ff63685d5436bd65b72bb70655c7"
+      "bytes": 6864,
+      "sha256": "21418c0e03237910875dc76e219f63fdd6a676d81866b5f10a6be0da6d737419"
     },
     "framework-system/references/seam-enqueue.reference.php.txt": {
       "bytes": 34903,
@@ -925,8 +925,8 @@
       "sha256": "6d61487d486b7b0db14398d1446a30a2370e7278213b6156f871df6abb1ef60f"
     },
     "ui-system/HANDOFF-MODES.md": {
-      "bytes": 14257,
-      "sha256": "bec3e8854de35c0f08b879edcc48360378bd922b4b1ad4daa7915d5738d5810b"
+      "bytes": 14580,
+      "sha256": "7fe266946b3b32c7a3c00ce01743187a2505b281e35fcd4c5eaf9ebf57b3e7d7"
     },
     "ui-system/README.md": {
       "bytes": 50737,
@@ -997,8 +997,8 @@
       "sha256": "628dcddfdcdfde38e6f4acb58ba0aa954a54be3b90802295dd9e4a10bde8dbd7"
     },
     "ui-system/prompt.md": {
-      "bytes": 23111,
-      "sha256": "5860cd7966133da153ed4f5018e8c5f4d718ae7d033792caaf87b53fd5876b7b"
+      "bytes": 23470,
+      "sha256": "2ed0a2483242f3e7dfefe4edb3fff54e475d1a4611249b45a69d1deacd1078fb"
     },
     "ui-system/screen-payloads.json": {
       "bytes": 14426,

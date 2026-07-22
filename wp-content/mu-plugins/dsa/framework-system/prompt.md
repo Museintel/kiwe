@@ -36,13 +36,15 @@ Do not confuse these layers:
 - Standalone previewable HTML pages that can be visually reviewed before being brought into Bricks.
 - Documentation for how a designer should use the framework.
 - Proposals for new framework roles/classes/tokens.
-- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md` and keep website, AppShell theme, and Kiwe settings/profile output separate.
+- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md`, keep website/page output separate from the AppShell theme package, and place live AppShell theme settings inside `theme-package.json`.
 
 Custom CSS is allowed. Seam-native does not mean zero custom CSS; it means Kiwe/Seam tokens, vocabulary, and behavior boundaries stay authoritative.
 
 Seam roles are semantic/headless by default. `data-role="card"` or `.seam-card` should identify an element as a card-like thing, but must not be relied on to create the visual design. Seam core does not ship generic card/button/modal padding, radius, border, shadow, or background. Build the visual layer with neutral framework primitives, universal Kiwe/Seam tokens, and the searchable Seam Class Vocabulary. Prefer existing generic classes such as `seam-card`, `seam-accordion`, `seam-table`, `seam-horizontal-rail`, `seam-size-xl`, `seam-density-spacious`, and `seam-emphasis-featured` before inventing new names.
 
 Prefer the Kiwe/Seam token library first. If a design genuinely needs a missing art-direction variable, propose a generic addition to the universal token library instead of inventing project-locked token names. Temporary preview-only variables are allowed only when clearly documented.
+
+Do not use generated `--dsa-runtime-token-####` variables. They are private Kiwe core bridge tokens for runtime token-purity migration, not public Seam/Framework vocabulary. Website CSS and theme CSS should use official `--kiwe-*`, documented `--kiwe-theme-*`, or a proposed generic universal token.
 
 ## What you must not create
 

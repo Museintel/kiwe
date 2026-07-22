@@ -11,6 +11,7 @@ const runtime = read('wp-content/mu-plugins/dsa/includes/Runtime/Package_Manifes
 const readme = read('README.md');
 const runbook = read('docs/RELEASE-RUNBOOK.md');
 const workflow = read('.github/workflows/quality.yml');
+const themeValidator = read('tools/ui-theme/validate-package.cjs');
 const matrix = JSON.parse(read('tools/release/compatibility-matrix.json'));
 const versionMatch = entry.match(/define\(\s*'DSA_VERSION'\s*,\s*'([^']+)'\s*\)/);
 const currentVersion = versionMatch ? versionMatch[1] : '';
@@ -30,6 +31,7 @@ check('CI matrix covers PHP 8.2-8.4', ['8.2', '8.3', '8.4'].every((version) => w
 check('CI does not silently resume PHP lint', !workflow.includes('php -l'));
 check('CI verifies generated package', workflow.includes('verify-package.cjs'));
 check('CI enforces Seam runtime token purity', workflow.includes('audit-runtime-token-purity.cjs') && workflow.includes('audit-seam-adoption.cjs'));
+check('theme validator rejects private runtime bridge token leakage', themeValidator.includes('validateNoRuntimeBridgeTokenReferences') && themeValidator.includes('--dsa-runtime-token-') && fs.existsSync(path.join(root, 'tools/ui-theme/fixtures/invalid-runtime-bridge-token/css/theme.css')));
 check('repository has editor and export contracts', fs.existsSync(path.join(root, '.editorconfig')) && fs.existsSync(path.join(root, '.gitattributes')));
 check('changelog records current release', Boolean(currentVersion) && read('CHANGELOG.md').includes(currentVersion));
 

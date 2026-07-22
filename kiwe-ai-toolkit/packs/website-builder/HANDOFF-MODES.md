@@ -147,6 +147,7 @@ This is useful when the design wants:
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
 - Design-token profile: palette, font stacks, heading scale, site background, line-height, spacing, radius, shadows, and the optional safe Bricks global theme-style export. Active/hover/hero colors remain compatibility settings for `color-brand`, `color-accent`, and `color-hero`.
+- Do not use generated `--dsa-runtime-token-####` variables in website, AppShell, preview, or documentation output. Those are private Kiwe runtime bridge variables for core token-purity migration, not public Seam/Framework tokens. Use official `--kiwe-*`, documented `--kiwe-theme-*`, or propose a missing universal token.
 
 `theme.json` remains the manifest-only validator file. Put the settings preset in `theme-package.json` at root `settings`, beside root `theme` and root `css`.
 - Active/hover/hero colors.

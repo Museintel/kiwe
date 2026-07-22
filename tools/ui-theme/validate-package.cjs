@@ -242,6 +242,16 @@ function validateKiweCssTokenReferences(relative, body) {
 	}
 }
 
+function validateNoRuntimeBridgeTokenReferences(relative, body) {
+	const seen = new Set();
+	for (const match of body.matchAll(/--dsa-runtime-token-\d{4}/gi)) {
+		seen.add(match[0]);
+	}
+	if (seen.size) {
+		fail(`${relative} references Kiwe core runtime bridge token(s) ${Array.from(seen).sort().join(', ')}. These generated --dsa-runtime-token-* variables are private migration glue for Kiwe runtime CSS, not public Seam/Theme vocabulary. Use official --kiwe-* variables, documented --kiwe-theme-* aliases, or request promotion to the universal token library.`);
+	}
+}
+
 function isInside(parent, child) {
 	const relative = path.relative(parent, child);
 	return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
@@ -459,6 +469,7 @@ function validatePackage() {
 		validateSeamUsage(css, body, 'css');
 		validateGeometryOwnership(css, body);
 		validateKiweCssTokenReferences(css, body);
+		validateNoRuntimeBridgeTokenReferences(css, body);
 		if (!/(--kiwe-|--dsa-|data-dsa-|dsa-visual-|kiwe-)/.test(body)) {
 			warn(`CSS file ${css} does not appear to use Kiwe tokens or scoped selectors`);
 		}
