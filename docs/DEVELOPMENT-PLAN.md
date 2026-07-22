@@ -1,12 +1,12 @@
 # DSA Development Plan
 
-**Current baseline:** Kiwe DSA `0.6.21`, WordPress 7.x, PHP 8.2-8.4, Bricks 2.3.7-first, shared-host compatible.
+**Current baseline:** Kiwe DSA `0.6.22`, WordPress 7.x, PHP 8.2-8.4, Bricks 2.3.7-first, shared-host compatible.
 
 This is the authoritative short execution view. `DSA-ARCHITECTURE.md` remains the architectural history and decision record. `SECURITY-AUDIT.md` owns security acceptance detail.
 
 ## Implemented AI Track - Kiwe Studio AI + Companion + SecureTrack AI Settings
 
-Status: Companion and SecureTrack relocation landed in `0.6.11`; Studio operating modes and native-provider controls landed in `0.6.12`; Bricks AI Intelligence and the optional Bricks front-end editor companion landed in `0.6.13`; SecureTrack now uses shared Companion/native AI settings without a separate SecureTrack key field as of `0.6.14`; AI access key creation has a shared-host-safe one-time-secret display fallback as of `0.6.15`; AI-less Site Graph Data now supports both explicit `queries` and compact `resources` batch reads as of `0.6.16`; combined-mode preview/live parity and native prompt compaction were tightened in `0.6.17`; sheet grabber chrome anchoring landed in `0.6.18`; Companion review parity tightening landed in `0.6.19`; sheet grabber chrome metrics were tokenized in `0.6.20`; the first Seam token-hygiene audit and dock/search token fixes landed in `0.6.21`. Keep this as the operating boundary for later deeper WordPress AI Client and model-orchestration work.
+Status: Companion and SecureTrack relocation landed in `0.6.11`; Studio operating modes and native-provider controls landed in `0.6.12`; Bricks AI Intelligence and the optional Bricks front-end editor companion landed in `0.6.13`; SecureTrack now uses shared Companion/native AI settings without a separate SecureTrack key field as of `0.6.14`; AI access key creation has a shared-host-safe one-time-secret display fallback as of `0.6.15`; AI-less Site Graph Data now supports both explicit `queries` and compact `resources` batch reads as of `0.6.16`; combined-mode preview/live parity and native prompt compaction were tightened in `0.6.17`; sheet grabber chrome anchoring landed in `0.6.18`; Companion review parity tightening landed in `0.6.19`; sheet grabber chrome metrics were tokenized in `0.6.20`; the first Seam token-hygiene audit and dock/search token fixes landed in `0.6.21`; strict runtime token-purity enforcement landed in `0.6.22`. Keep this as the operating boundary for later deeper WordPress AI Client and model-orchestration work.
 
 Product direction:
 

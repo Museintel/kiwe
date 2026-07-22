@@ -27,6 +27,12 @@ jobs:
         run: php -r "exit(PHP_VERSION_ID >= 80200 && PHP_VERSION_ID < 80500 ? 0 : 1);"
       - name: Verify release package
         run: node tools/release/verify-package.cjs
+      - name: Run Seam and runtime UI audits
+        run: |
+          node tools/ui-theme/audit-seam-adoption.cjs
+          node tools/ui-theme/audit-runtime-token-purity.cjs
+          node tools/ui-theme/validate-package.cjs tools/ui-theme/fixtures/valid
+          node kiwe-ai-toolkit/tools/validate-framework-profile.cjs kiwe-ai-toolkit/fixtures/framework-profile-valid
       - name: Run release contracts
         run: |
           node tools/security/rc4-contracts.cjs

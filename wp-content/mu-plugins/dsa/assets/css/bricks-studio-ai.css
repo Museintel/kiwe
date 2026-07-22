@@ -1,10 +1,39 @@
 .kiwe-bricks-studio {
+	--kiwe-studio-edge: var(--sf-space-sm);
+	--kiwe-studio-panel-gap: var(--sf-space-xs);
+	--kiwe-studio-panel-width: min(var(--kiwe-ai-panel-width, 420px), calc(100vw - var(--sf-space-md)));
+	--kiwe-studio-panel-max-block: min(var(--kiwe-ai-panel-max-block, 720px), calc(100vh - var(--kiwe-ai-panel-block-reserve, 96px)));
+	--kiwe-studio-toggle-inline: var(--kiwe-ai-toggle-inline, 88px);
+	--kiwe-studio-toggle-block: var(--kiwe-control-size-sm, 40px);
+	--kiwe-studio-control-block: var(--kiwe-control-size-xs, 38px);
+	--kiwe-studio-close-size: var(--dsa-geometry-control-min, 30px);
+	--kiwe-studio-output-min-block: var(--kiwe-ai-output-min-block, 190px);
+	--kiwe-studio-border-width: var(--dsa-geometry-dock-border, 1px);
+	--kiwe-studio-field-margin: var(--kiwe-ai-field-margin, 0 0 10px);
+	--kiwe-studio-field-padding: var(--kiwe-ai-field-padding, 11px 12px);
+	--kiwe-studio-lane-basis: var(--kiwe-ai-lane-min-inline, 160px);
+	--kiwe-studio-z: var(--kiwe-z-ai-studio, 999999);
+	--kiwe-studio-radius-pill: var(--sf-radius-full);
+	--kiwe-studio-radius-panel: var(--sf-radius-xl);
+	--kiwe-studio-radius-card: var(--sf-radius-lg);
+	--kiwe-studio-color-text: var(--sf-color-text-inverse);
+	--kiwe-studio-color-muted: var(--kiwe-color-slate-300, #cbd5e1);
+	--kiwe-studio-color-panel: color-mix(in srgb, var(--sf-color-text) 96%, transparent);
+	--kiwe-studio-color-field: color-mix(in srgb, var(--sf-color-text) 62%, transparent);
+	--kiwe-studio-color-border: color-mix(in srgb, var(--sf-color-text-inverse) 18%, transparent);
+	--kiwe-studio-color-border-soft: color-mix(in srgb, var(--sf-color-text-inverse) 14%, transparent);
+	--kiwe-studio-color-border-muted: color-mix(in srgb, var(--sf-color-neutral) 32%, transparent);
+	--kiwe-studio-color-action: var(--sf-color-brand);
+	--kiwe-studio-shadow-toggle: var(--sf-shadow-lg);
+	--kiwe-studio-shadow-panel: var(--kiwe-shadow-xl, 0 28px 90px rgba(0, 0, 0, 0.45));
+	--kiwe-studio-backdrop: blur(var(--kiwe-blur-lg, 18px));
+	--kiwe-studio-mobile-edge: var(--sf-space-xs);
 	position: fixed;
-	right: max(16px, env(safe-area-inset-right));
-	bottom: max(16px, env(safe-area-inset-bottom));
-	z-index: 999999;
-	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-	color: #f8fafc;
+	right: max(var(--kiwe-studio-edge), env(safe-area-inset-right));
+	bottom: max(var(--kiwe-studio-edge), env(safe-area-inset-bottom));
+	z-index: var(--kiwe-studio-z);
+	font-family: var(--sf-font-body);
+	color: var(--kiwe-studio-color-text);
 	pointer-events: none;
 }
 
@@ -21,13 +50,13 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 88px;
-	min-height: 40px;
-	border: 1px solid rgba(255, 255, 255, 0.18);
-	border-radius: 999px;
-	background: linear-gradient(135deg, #111827, #db005b);
-	box-shadow: 0 18px 50px rgba(15, 23, 42, 0.35);
-	color: #fff;
+	min-width: var(--kiwe-studio-toggle-inline);
+	min-height: var(--kiwe-studio-toggle-block);
+	border: var(--kiwe-studio-border-width) solid var(--kiwe-studio-color-border);
+	border-radius: var(--kiwe-studio-radius-pill);
+	background: linear-gradient(135deg, var(--sf-color-text), var(--kiwe-studio-color-action));
+	box-shadow: var(--kiwe-studio-shadow-toggle);
+	color: var(--kiwe-studio-color-text);
 	font: inherit;
 	font-weight: 800;
 	cursor: pointer;
@@ -36,16 +65,16 @@
 .kiwe-bricks-studio__panel {
 	position: absolute;
 	right: 0;
-	bottom: calc(100% + 12px);
-	width: min(420px, calc(100vw - 24px));
-	max-height: min(720px, calc(100vh - 96px));
+	bottom: calc(100% + var(--kiwe-studio-panel-gap));
+	width: var(--kiwe-studio-panel-width);
+	max-height: var(--kiwe-studio-panel-max-block);
 	overflow: auto;
-	padding: 14px;
-	border: 1px solid rgba(148, 163, 184, 0.28);
-	border-radius: 20px;
-	background: rgba(15, 23, 42, 0.96);
-	box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
-	backdrop-filter: blur(18px);
+	padding: var(--sf-space-sm);
+	border: var(--kiwe-studio-border-width) solid var(--kiwe-studio-color-border-muted);
+	border-radius: var(--kiwe-studio-radius-panel);
+	background: var(--kiwe-studio-color-panel);
+	box-shadow: var(--kiwe-studio-shadow-panel);
+	backdrop-filter: var(--kiwe-studio-backdrop);
 }
 
 .kiwe-bricks-studio__panel[hidden] {
@@ -55,13 +84,13 @@
 .kiwe-bricks-studio__head,
 .kiwe-bricks-studio__row {
 	display: flex;
-	gap: 8px;
+	gap: var(--sf-space-xxs);
 	align-items: center;
 }
 
 .kiwe-bricks-studio__head {
 	justify-content: space-between;
-	margin-bottom: 12px;
+	margin-bottom: var(--kiwe-studio-panel-gap);
 }
 
 .kiwe-bricks-studio__head strong,
@@ -70,14 +99,14 @@
 }
 
 .kiwe-bricks-studio__head strong {
-	font-size: 15px;
+	font-size: var(--sf-type-sm);
 	line-height: 1.2;
 }
 
 .kiwe-bricks-studio__head span,
 .kiwe-bricks-studio__status {
-	color: #cbd5e1;
-	font-size: 12px;
+	color: var(--kiwe-studio-color-muted);
+	font-size: var(--sf-type-caption);
 	line-height: 1.45;
 }
 
@@ -85,12 +114,12 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 30px;
-	height: 30px;
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.08);
-	color: #fff;
+	width: var(--kiwe-studio-close-size);
+	height: var(--kiwe-studio-close-size);
+	border: var(--kiwe-studio-border-width) solid var(--kiwe-studio-color-border-soft);
+	border-radius: var(--kiwe-studio-radius-pill);
+	background: color-mix(in srgb, var(--sf-color-text-inverse) 8%, transparent);
+	color: var(--kiwe-studio-color-text);
 	cursor: pointer;
 }
 
@@ -98,54 +127,54 @@
 .kiwe-bricks-studio__output,
 .kiwe-bricks-studio__lane {
 	width: 100%;
-	border: 1px solid rgba(148, 163, 184, 0.32);
-	border-radius: 14px;
-	background: rgba(2, 6, 23, 0.62);
-	color: #f8fafc;
+	border: var(--kiwe-studio-border-width) solid var(--kiwe-studio-color-border-muted);
+	border-radius: var(--kiwe-studio-radius-card);
+	background: var(--kiwe-studio-color-field);
+	color: var(--kiwe-studio-color-text);
 	font: inherit;
 }
 
 .kiwe-bricks-studio__prompt,
 .kiwe-bricks-studio__output {
 	display: block;
-	margin: 0 0 10px;
-	padding: 11px 12px;
+	margin: var(--kiwe-studio-field-margin);
+	padding: var(--kiwe-studio-field-padding);
 	resize: vertical;
 }
 
 .kiwe-bricks-studio__output {
-	min-height: 190px;
-	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-	font-size: 12px;
+	min-height: var(--kiwe-studio-output-min-block);
+	font-family: var(--sf-font-mono);
+	font-size: var(--sf-type-caption);
 	white-space: pre;
 }
 
 .kiwe-bricks-studio__row {
 	flex-wrap: wrap;
-	margin-bottom: 8px;
+	margin-bottom: var(--sf-space-xxs);
 }
 
 .kiwe-bricks-studio__lane {
-	flex: 1 1 160px;
-	min-height: 38px;
-	padding: 0 10px;
+	flex: 1 1 var(--kiwe-studio-lane-basis);
+	min-height: var(--kiwe-studio-control-block);
+	padding: 0 var(--sf-space-xs);
 }
 
 .kiwe-bricks-studio__button {
-	min-height: 38px;
-	border: 1px solid rgba(148, 163, 184, 0.32);
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.08);
-	color: #f8fafc;
+	min-height: var(--kiwe-studio-control-block);
+	border: var(--kiwe-studio-border-width) solid var(--kiwe-studio-color-border-muted);
+	border-radius: var(--kiwe-studio-radius-pill);
+	background: color-mix(in srgb, var(--sf-color-text-inverse) 8%, transparent);
+	color: var(--kiwe-studio-color-text);
 	font: inherit;
-	font-size: 12px;
+	font-size: var(--sf-type-caption);
 	font-weight: 800;
 	cursor: pointer;
 }
 
 .kiwe-bricks-studio__button--hot {
-	border-color: rgba(219, 0, 91, 0.7);
-	background: #db005b;
+	border-color: color-mix(in srgb, var(--kiwe-studio-color-action) 70%, transparent);
+	background: var(--kiwe-studio-color-action);
 }
 
 .kiwe-bricks-studio__button:disabled {
@@ -155,9 +184,9 @@
 
 @media (max-width: 520px) {
 	.kiwe-bricks-studio {
-		right: 10px;
-		left: 10px;
-		bottom: max(10px, env(safe-area-inset-bottom));
+		right: var(--kiwe-studio-mobile-edge);
+		left: var(--kiwe-studio-mobile-edge);
+		bottom: max(var(--kiwe-studio-mobile-edge), env(safe-area-inset-bottom));
 	}
 
 	.kiwe-bricks-studio__toggle {

@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.22 - 2026-07-22
+
+- Completed the runtime Seam purity pass for DSA Surface CSS: legacy raw component values now live in a token-authority bridge and runtime declarations consume variables.
+- Added `tools/ui-theme/audit-runtime-token-purity.cjs` so future runtime CSS cannot reintroduce hardcoded colors, spacing, sizing, radii, shadows, blur, timing, or viewport values in component declarations.
+- Moved Bricks Studio AI floating-editor CSS onto Seam/Kiwe tokens so the native AI UI follows the same runtime token discipline.
+- Kept visual behavior stable while adding about 5.5 KB gzip to `surface.css`, preserving the current UI before staging tests.
+
 ## 0.6.21 - 2026-07-22
 
 - Ran a focused Seam/token audit across theme/toolkit contracts, framework profiles, package validators, and core `surface.css`.

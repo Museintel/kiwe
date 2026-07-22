@@ -29,6 +29,7 @@ check('compatibility claims keep live proof separate', matrix.notes.includes('do
 check('CI matrix covers PHP 8.2-8.4', ['8.2', '8.3', '8.4'].every((version) => workflow.includes(version)));
 check('CI does not silently resume PHP lint', !workflow.includes('php -l'));
 check('CI verifies generated package', workflow.includes('verify-package.cjs'));
+check('CI enforces Seam runtime token purity', workflow.includes('audit-runtime-token-purity.cjs') && workflow.includes('audit-seam-adoption.cjs'));
 check('repository has editor and export contracts', fs.existsSync(path.join(root, '.editorconfig')) && fs.existsSync(path.join(root, '.gitattributes')));
 check('changelog records current release', Boolean(currentVersion) && read('CHANGELOG.md').includes(currentVersion));
 

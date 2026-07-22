@@ -1,16 +1,16 @@
 {
   "schema": 1,
-  "version": "0.6.21",
+  "version": "0.6.22",
   "algorithm": "sha256",
-  "file_count": 259,
+  "file_count": 260,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
       "sha256": "a312c3914b9324669d06a4368ef5b3d450b364f7bf96dde3a8b5c8b6c75e2ee5"
     },
     "assets/css/bricks-studio-ai.css": {
-      "bytes": 3419,
-      "sha256": "a87a14ff2059d9726059fdbb0a8ed894f21e2115fe191a7aaf43dff367b4b1b7"
+      "bytes": 6553,
+      "sha256": "b6c448bd71151b9a42d9e9d05af403d9388b68d881b1d4c664e60fe63d9137dc"
     },
     "assets/css/seam.css": {
       "bytes": 18175,
@@ -21,8 +21,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 212091,
-      "sha256": "dd3ee52a0d563260fa53033e908ca47396b45b9f1047a47b22fe940ad46cd92a"
+      "bytes": 272146,
+      "sha256": "00887d523abf481539c2fb15b7daff582180a0d8f7311f5e1a65491347cde69e"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "ea2fb12f5f4c84297999660cd14094082cac8959b9c49d481e834bae5a9fb23c"
+      "sha256": "4c61e178d9a4f3415d88c60a32e941241de285cd3a6efd80f40755cd51cc0962"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -908,6 +908,10 @@
       "bytes": 861,
       "sha256": "25562e9297bbaf818b7462ebe80391e4af114383aff78991b7229c9b64d51554"
     },
+    "site-graph-system/release-proof-0.6.22.md": {
+      "bytes": 1368,
+      "sha256": "cfc316e6efb198afe6a105b6b99a160775e4ee061f005d81be925ef3d902da01"
+    },
     "site-graph-system/release-proof-0.6.7.md": {
       "bytes": 4783,
       "sha256": "5b5eac0b179658d71d74d7ae0a25b1d9340615ff4204b4f13a9c4ae93873e500"
@@ -925,8 +929,8 @@
       "sha256": "bec3e8854de35c0f08b879edcc48360378bd922b4b1ad4daa7915d5738d5810b"
     },
     "ui-system/README.md": {
-      "bytes": 50084,
-      "sha256": "6b3d4095a4b81fdcf9e1cbee419b68255f28a253f4e8c7ec056d2a8bb69618d9"
+      "bytes": 50737,
+      "sha256": "868bc9f5b8e90438b4bb6d93aaf5edae2c018770aa6e9c00fdeec7078cdb02bc"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
