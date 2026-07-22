@@ -4,6 +4,8 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+- Neutralized brand-specific examples in the public combined-lite toolkit context so Audit Companion and browser AI guidance remain marketplace/general-purpose rather than biased toward prior National Chikki tests.
+
 ## 0.6.24 - 2026-07-23
 
 - Added an explicit Audit Companion lane with `/wp-json/dsa/v1/ai/audit-companion/context` and `/review` so browser AI can submit generated handoff files and receive compact `mustFix`, `shouldFix`, and `passed` maps before spending another broad revision pass.

@@ -347,7 +347,7 @@ If the design changes dock composition or shell behavior, include those settings
       "profile": {
         "label": "Account",
         "eyebrow": "Profile & Activity",
-        "title": "Your National account",
+        "title": "Your account",
         "ordersTitle": "Orders",
         "addressesTitle": "Addresses",
         "signOutLabel": "Sign out"
@@ -364,9 +364,9 @@ If the design changes dock composition or shell behavior, include those settings
       },
       "links": {
         "label": "Links",
-        "title": "National links",
+        "title": "Store links",
         "shopLabel": "Shop all products",
-        "cartLabel": "Tea-time bag"
+        "cartLabel": "Shopping bag"
       }
     }
   },
@@ -394,7 +394,7 @@ Important dock settings:
 
 `settings.screens` must use live Kiwe field names exactly. Do not create natural-language aliases such as `helperText`, `ordersLabel`, `addressesLabel`, `downloadsLabel`, `actionLabel`, `scoreLabel`, `noScoreText`, `instagramLabel`, `storesLabel`, or `giftingLabel`; Kiwe will sanitize/ignore unsupported fields and the installed theme will drift from the preview. Use `intro` for helper/body copy, `ordersTitle`/`ordersText` for Profile rows, and `shopLabel`/`shopMeta` or `cartLabel`/`cartMeta` for Links actions.
 
-If the combined preview shows custom live-intended screen/sheet copy, declare the same copy in `theme-package.json` under `settings.screens`. For example, "Your tea-time bag" belongs in `settings.screens.cart.title`, "Pairs well with" belongs in `settings.screens.cart.fbtTitle`, "Your National account" belongs in `settings.screens.profile.title`, and renamed Links actions belong in `settings.screens.links`. If not declared there, the audit should treat it as preview-only copy and should not expect it to appear in the live Kiwe adapters.
+If the combined preview shows custom live-intended screen/sheet copy, declare the same copy in `theme-package.json` under `settings.screens`. For example, a custom cart title belongs in `settings.screens.cart.title`, a custom FBT rail label belongs in `settings.screens.cart.fbtTitle`, a custom account title belongs in `settings.screens.profile.title`, and renamed Links actions belong in `settings.screens.links`. If not declared there, the audit should treat it as preview-only copy and should not expect it to appear in the live Kiwe adapters.
 
 Site owners can later edit registered DSA screen/sheet copy manually under `Kiwe > Theme > DSA screen/sheet copy`; those admin overrides merge over imported `settings.screens` defaults. The package must still ship the intended defaults so the preview and first live install match.
 
