@@ -70,6 +70,8 @@ final class AI_Access_Controller {
 			[ [ 'GET', 'POST' ], '/ai/companion/context', 'companion_context', 'companion' ],
 			[ 'POST', '/ai/companion/ask', 'companion_ask', 'companion' ],
 			[ 'POST', '/ai/companion/review-output', 'companion_review_output', 'companion' ],
+			[ [ 'GET', 'POST' ], '/ai/audit-companion/context', 'audit_companion_context', 'companion' ],
+			[ 'POST', '/ai/audit-companion/review', 'audit_companion_review', 'companion' ],
 			[ 'GET', '/ai/companion/memory', 'companion_memory', 'companion' ],
 			[ 'POST', '/ai/companion/memory/clear', 'companion_memory_clear', 'companion' ],
 			[ 'GET', '/ai/studio/status', 'studio_status', 'studio_ai' ],
@@ -151,6 +153,7 @@ final class AI_Access_Controller {
 				'companion'         => [
 					'enabled' => ! empty( $this->ai_settings()['companion_enabled'] ),
 					'route'   => '/wp-json/dsa/v1/ai/companion/context',
+					'auditRoute' => '/wp-json/dsa/v1/ai/audit-companion/review',
 					'model'   => 'deterministic-context-broker-no-model-call',
 				],
 				'studioAi'          => [
@@ -272,6 +275,14 @@ final class AI_Access_Controller {
 
 	private function companion_review_output( WP_REST_Request $request, array $auth ): array {
 		return $this->companion()->review_output( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function audit_companion_context( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->audit_context( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function audit_companion_review( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->audit_review( $this->merged_request_args( $request ), $auth );
 	}
 
 	private function companion_memory( WP_REST_Request $request, array $auth ): array {

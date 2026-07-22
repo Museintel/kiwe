@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.6.23",
+  "version": "0.6.24",
   "algorithm": "sha256",
   "file_count": 260,
   "files": {
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "d732759f3a282338d50016d70edc3a529a287f671c5d1a15a5f8b6e6da58f159"
+      "sha256": "8a8b502a87473c215612ea42711b90a41c0ca9d8912cb2263c90e84b90f09e52"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -341,8 +341,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 19952,
-      "sha256": "8cefc1a5f3278655d68c93d071662eab05dcd72c4d4f2678f3205533dd44b32d"
+      "bytes": 44251,
+      "sha256": "1d5d1d60afddf0d3720ee0a1a47e0b0b8edd9a6cd859dc815d6e7336fad2b64c"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -449,8 +449,8 @@
       "sha256": "bbe1be2bf9d288e41fca09e5a7af476a9d59893c0e9f864868cce8cac1de5f25"
     },
     "includes/AI/Studio_AI_Service.php": {
-      "bytes": 18471,
-      "sha256": "8dfa7c5feef8883db631be045f887381d0af331032a9b9159b4052096cd94d09"
+      "bytes": 18703,
+      "sha256": "429af330ee58c218a70cc84ca5f23d4b1ca92e149c2334bf75478346fb0d287c"
     },
     "includes/AI/Target_Resolution_Service.php": {
       "bytes": 6731,
@@ -469,8 +469,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 579951,
-      "sha256": "2f621a976570736f8089751b244df8c886e97722ee81dcef4f0aee0ac0166905"
+      "bytes": 580030,
+      "sha256": "206161c345b7360272d1974e0525d1bc9199ca349826e3831993cb896dcad1a9"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -629,8 +629,8 @@
       "sha256": "7eb8fb97e62cc295e6cb9ce342ec7ae2671528d1610035fab74fe710629409a0"
     },
     "includes/Rest/AI_Access_Controller.php": {
-      "bytes": 35649,
-      "sha256": "2e630f123f430eb05f6b7b81bfe5108390ae14ee453c7aface3100a62112860b"
+      "bytes": 36272,
+      "sha256": "f36f8c8de644d6a51951cb6ddf3dfbb8f2ffce49bf72dd02afc99e62d4bdd327"
     },
     "includes/Rest/Account_Controller.php": {
       "bytes": 14471,
@@ -829,8 +829,8 @@
       "sha256": "7b77565b4110da4ccee7013611d0ee44dc32a6069aa13a317b167b5d9a15eb58"
     },
     "includes/WP7/Abilities_Service.php": {
-      "bytes": 35034,
-      "sha256": "51a5a62eb121e79589fcea6cc6e88e756611d450d92595621889fdc4fa80962a"
+      "bytes": 35954,
+      "sha256": "14fcac713b0e7f3ac1a7743a3a1d253818e951cb31a324b4dc1fbe1f33919c1f"
     },
     "includes/WP7/Bindings_Service.php": {
       "bytes": 2548,

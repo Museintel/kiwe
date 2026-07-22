@@ -51,6 +51,8 @@ final class AI_Companion_Service {
 				'context'      => '/wp-json/dsa/v1/ai/companion/context',
 				'ask'          => '/wp-json/dsa/v1/ai/companion/ask',
 				'reviewOutput' => '/wp-json/dsa/v1/ai/companion/review-output',
+				'auditContext' => '/wp-json/dsa/v1/ai/audit-companion/context',
+				'auditReview'  => '/wp-json/dsa/v1/ai/audit-companion/review',
 				'memory'       => '/wp-json/dsa/v1/ai/companion/memory',
 			],
 			'boundaries'  => [
@@ -105,6 +107,11 @@ final class AI_Companion_Service {
 					'https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md',
 				],
 				'fallback'  => 'Use GitHub blob fallback only if raw URLs are unavailable. Do not read the whole repository.',
+				'auditCompanion' => [
+					'context' => '/wp-json/dsa/v1/ai/audit-companion/context',
+					'review'  => '/wp-json/dsa/v1/ai/audit-companion/review',
+					'purpose' => 'Submit generated files for a compact deterministic pass/fail map before spending another model revision pass.',
+				],
 			],
 			'cards'       => $cards,
 			'memory'      => ! empty( $settings['memory_enabled'] ) ? $this->memory->summary( 10 ) : [ 'disabled' => true ],
@@ -135,8 +142,111 @@ final class AI_Companion_Service {
 			'contextHash' => substr( hash( 'sha256', (string) wp_json_encode( $context['cards'] ?? [] ) ), 0, 32 ),
 			'nextRoutes'  => [
 				'reviewOutput' => '/wp-json/dsa/v1/ai/companion/review-output',
+				'auditReview'  => '/wp-json/dsa/v1/ai/audit-companion/review',
 				'validateBindings' => '/wp-json/dsa/v1/ai/validate-bindings',
 				'stageExecution' => '/wp-json/dsa/v1/ai/staging/execute',
+			],
+		];
+	}
+
+	public function audit_context( array $args = [], array $auth = [] ): array {
+		$args['mode'] = (string) ( $args['mode'] ?? 'audit' );
+		$context      = $this->context( $args, $auth );
+		if ( empty( $context['ok'] ) ) {
+			return $context;
+		}
+
+		return [
+			'ok'            => true,
+			'schema'        => 'kiwe.audit-companion.context.v1',
+			'generatedAt'   => gmdate( 'c' ),
+			'mode'          => (string) ( $context['mode'] ?? 'audit' ),
+			'purpose'       => 'Deterministic pre-revision audit lane. Use this after v1 output so browser AI revises concrete failures instead of rediscovering Kiwe rules token by token.',
+			'routes'        => [
+				'context' => '/wp-json/dsa/v1/ai/audit-companion/context',
+				'review'  => '/wp-json/dsa/v1/ai/audit-companion/review',
+			],
+			'payloadShape'  => [
+				'method' => 'POST',
+				'body'   => [
+					'mode'  => 'combined|website|theme|dynamic|audit',
+					'files' => [
+						'README.md' => 'file text',
+						'combined-preview/index.html' => 'file text',
+						'website/bricks-paste.html' => 'file text',
+						'appshell-theme/import/<theme-id>/theme-package.json' => 'file text',
+					],
+				],
+			],
+			'gates'         => [
+				'requiredOutputShape',
+				'pageOnlyWebsiteArtifact',
+				'themePackageSchemaAndSettings',
+				'seamControlledDataRoles',
+				'appshellGeometryAuthority',
+				'combinedPreviewProof',
+				'customDockLinks',
+				'tokenPurity',
+				'secretLeakage',
+				'encodingMojibake',
+			],
+			'limits'        => [
+				'maxReviewBytes' => (int) ( $this->settings()['max_review_bytes'] ?? 0 ),
+				'filesAreNotStored' => true,
+				'memoryStoresOnlyFingerprints' => ! empty( $this->settings()['memory_enabled'] ),
+			],
+			'contextCards'  => $context['cards'] ?? [],
+			'contextHash'   => substr( hash( 'sha256', (string) wp_json_encode( $context['cards'] ?? [] ) ), 0, 32 ),
+			'next'          => [
+				'Generate or revise actual files.',
+				'Submit those files to /ai/audit-companion/review.',
+				'Fix every mustFix item, then re-submit until verdict is pass or only acknowledged warnings remain.',
+				'Do not claim browser, Bricks import, WooCommerce, checkout/auth/cart, or live Kiwe install tests unless those tests actually ran.',
+			],
+		];
+	}
+
+	public function audit_review( array $args = [], array $auth = [] ): array {
+		$review = $this->review_output( $args, $auth );
+		if ( empty( $review['schema'] ) || ! empty( $review['error'] ) ) {
+			return $review;
+		}
+
+		$findings = isset( $review['findings'] ) && is_array( $review['findings'] ) ? $review['findings'] : [];
+		$must_fix = array_values(
+			array_filter(
+				$findings,
+				static fn( array $finding ): bool => in_array( (string) ( $finding['severity'] ?? 'info' ), [ 'critical', 'error' ], true )
+			)
+		);
+		$should_fix = array_values(
+			array_filter(
+				$findings,
+				static fn( array $finding ): bool => 'warning' === (string) ( $finding['severity'] ?? 'info' )
+			)
+		);
+
+		return [
+			'ok'             => empty( $must_fix ),
+			'schema'         => 'kiwe.audit-companion.review.v1',
+			'mode'           => (string) ( $review['mode'] ?? ( $args['mode'] ?? 'combined' ) ),
+			'verdict'        => empty( $must_fix ) ? ( empty( $should_fix ) ? 'pass' : 'pass_with_warnings' ) : 'needs_revision',
+			'bytes'          => (int) ( $review['bytes'] ?? 0 ),
+			'counts'         => $review['counts'] ?? [],
+			'mustFix'        => $must_fix,
+			'shouldFix'      => $should_fix,
+			'passed'         => $review['auditMap']['passed'] ?? [],
+			'revisionPrompt' => empty( $must_fix )
+				? 'Audit Companion found no blocking deterministic errors. If warnings remain, address them when they affect the brief, then run official validators and live tests.'
+				: 'Revise the actual files for every mustFix item, keep unchanged files intact, then re-submit the same file map to /ai/audit-companion/review. Do not browse the whole repo.',
+			'trace'          => [
+				'sourceReviewSchema' => (string) ( $review['schema'] ?? '' ),
+				'fingerprintLane'    => 'audit-companion',
+				'modelCalled'        => false,
+			],
+			'limitations'    => [
+				'This deterministic review does not prove browser rendering, WordPress import, Bricks import, WooCommerce behavior, checkout/auth/cart behavior, or live Kiwe theme installation.',
+				'Those tests must be reported separately with actual commands or browser/live-site evidence.',
 			],
 		];
 	}
@@ -148,6 +258,17 @@ final class AI_Companion_Service {
 		}
 
 		$mode  = $this->mode( (string) ( $args['mode'] ?? 'combined' ), $settings );
+		if ( '' === $mode ) {
+			return [
+				'ok'         => false,
+				'httpStatus' => 403,
+				'schema'     => 'kiwe.ai-companion.review.v1',
+				'error'      => [
+					'code'    => 'mode_disabled',
+					'message' => 'That Companion mode is disabled in Kiwe > AI.',
+				],
+			];
+		}
 		$files = $this->normalize_files( $args['files'] ?? [] );
 		$total = array_sum( array_map( static fn( array $file ): int => strlen( (string) ( $file['content'] ?? '' ) ), $files ) );
 		if ( $total > (int) $settings['max_review_bytes'] ) {
@@ -171,10 +292,16 @@ final class AI_Companion_Service {
 			$path_map[ (string) $file['path'] ] = (string) $file['content'];
 		}
 
+		$findings = array_merge( $findings, $this->review_required_shape( $mode, $path_map ) );
+		$findings = array_merge( $findings, $this->review_data_roles( $path_map ) );
+		$findings = array_merge( $findings, $this->review_text_encoding( $path_map ) );
+
 		$theme_css = $this->file_like( $path_map, 'theme.css' );
 		if ( '' !== $theme_css ) {
 			$findings = array_merge( $findings, $this->review_theme_css( $theme_css ) );
 		}
+
+		$findings = array_merge( $findings, $this->review_theme_package( $mode, $path_map, $theme_css ) );
 
 		$combined_preview = $this->file_like( $path_map, 'combined-preview/index.html' );
 		$combined_css     = $this->file_like( $path_map, 'combined-preview/assets/combined-preview.css' );
@@ -235,12 +362,29 @@ final class AI_Companion_Service {
 			'ok'        => 0 === $counts['critical'] + $counts['error'],
 			'schema'    => 'kiwe.ai-companion.review.v1',
 			'mode'      => $mode,
+			'verdict'   => 0 === $counts['critical'] + $counts['error'] ? ( 0 === $counts['warning'] ? 'pass' : 'pass_with_warnings' ) : 'needs_revision',
 			'bytes'     => $total,
 			'counts'    => $counts,
 			'findings'  => $findings,
+			'auditMap'  => [
+				'mustFix' => array_values(
+					array_filter(
+						$findings,
+						static fn( array $finding ): bool => in_array( (string) ( $finding['severity'] ?? 'info' ), [ 'critical', 'error' ], true )
+					)
+				),
+				'shouldFix' => array_values(
+					array_filter(
+						$findings,
+						static fn( array $finding ): bool => 'warning' === (string) ( $finding['severity'] ?? 'info' )
+					)
+				),
+				'passed' => $this->passed_review_checks( $mode, $path_map, $findings ),
+			],
 			'next'      => [
 				'If errors exist, revise actual files before rerunning the audit.',
 				'If review passes, run official validators and live WordPress/Bricks/Theme import tests when available.',
+				'For token-efficient browser-AI revisions, use /wp-json/dsa/v1/ai/audit-companion/review and fix its mustFix list first.',
 			],
 		];
 	}
@@ -416,6 +560,361 @@ final class AI_Companion_Service {
 		return '';
 	}
 
+	private function has_file_like( array $path_map, string $needle ): bool {
+		return '' !== $this->file_like( $path_map, $needle );
+	}
+
+	private function path_like( array $path_map, string $needle ): string {
+		foreach ( $path_map as $path => $content ) {
+			if ( str_ends_with( str_replace( '\\', '/', (string) $path ), $needle ) ) {
+				return (string) $path;
+			}
+		}
+
+		return '';
+	}
+
+	private function review_required_shape( string $mode, array $path_map ): array {
+		$findings = [];
+		if ( [] === $path_map ) {
+			return [
+				[
+					'severity' => 'error',
+					'code'     => 'no_files_submitted',
+					'message'  => 'Audit Companion needs generated files in the files map. Submit path => content for the actual handoff files.',
+				],
+			];
+		}
+
+		$required = [ 'README.md' ];
+		if ( in_array( $mode, [ 'website', 'combined' ], true ) ) {
+			$required[] = 'website/bricks-paste.html';
+			$required[] = 'website/bricks-notes.md';
+		}
+		if ( 'combined' === $mode ) {
+			$required[] = 'combined-preview/index.html';
+		}
+		if ( in_array( $mode, [ 'theme', 'combined' ], true ) ) {
+			$required[] = 'theme.json';
+			$required[] = 'css/theme.css';
+			$required[] = 'theme-package.json';
+		}
+
+		foreach ( $required as $needle ) {
+			if ( ! $this->has_file_like( $path_map, $needle ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'missing_required_file',
+					'message'  => sprintf( 'Required Kiwe %s handoff file is missing: %s.', $mode, $needle ),
+					'path'     => $needle,
+				];
+			}
+		}
+
+		foreach ( array_keys( $path_map ) as $path ) {
+			$path = str_replace( '\\', '/', (string) $path );
+			if ( str_starts_with( $path, 'theme/' ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'obsolete_theme_folder',
+					'message'  => 'Combined/theme handoffs must use appshell-theme/import/<theme-id>/... not a root theme/ folder.',
+					'path'     => $path,
+				];
+			}
+			if ( str_starts_with( $path, 'kiwe-settings/' ) ) {
+				$findings[] = [
+					'severity' => 'warning',
+					'code'     => 'obsolete_separate_settings_lane',
+					'message'  => 'AppShell theme settings should travel inside appshell-theme/import/<theme-id>/theme-package.json, not a separate kiwe-settings folder.',
+					'path'     => $path,
+				];
+			}
+			if ( preg_match( '#^(audit|data|reports?|validation-output)/#i', $path ) ) {
+				$findings[] = [
+					'severity' => 'warning',
+					'code'     => 'non_required_handoff_lane',
+					'message'  => 'This folder is not part of the compact required handoff shape. Keep output lean unless the brief explicitly asks for this artifact.',
+					'path'     => $path,
+				];
+			}
+		}
+
+		return $findings;
+	}
+
+	private function review_data_roles( array $path_map ): array {
+		$allowed = [
+			'section', 'container', 'hero', 'lead', 'eyebrow', 'label', 'caption', 'hint', 'micro',
+			'card', 'media', 'avatar', 'button', 'badge', 'chip', 'nav', 'actions', 'form', 'field',
+			'input', 'textarea', 'select', 'modal', 'toast', 'testimonial', 'price', 'progress',
+			'skeleton', 'footer', 'aside',
+		];
+		$allowed_map = array_fill_keys( $allowed, true );
+		$findings    = [];
+
+		foreach ( $path_map as $path => $content ) {
+			if ( ! preg_match( '/\\.(?:html|md)$/i', (string) $path ) ) {
+				continue;
+			}
+			if ( preg_match_all( '/data-role\\s*=\\s*["\\\']([^"\\\']+)["\\\']/i', (string) $content, $matches ) ) {
+				foreach ( $matches[1] as $role ) {
+					$role = sanitize_key( (string) $role );
+					if ( '' !== $role && empty( $allowed_map[ $role ] ) ) {
+						$findings[] = [
+							'severity' => 'error',
+							'code'     => 'unsupported_seam_data_role',
+							'message'  => sprintf( 'Unsupported data-role "%s". Use official broad Seam roles only; put project concepts in classes or data-project-role.', $role ),
+							'path'     => sanitize_text_field( (string) $path ),
+						];
+					}
+				}
+			}
+		}
+
+		return $findings;
+	}
+
+	private function review_text_encoding( array $path_map ): array {
+		$findings = [];
+		foreach ( $path_map as $path => $content ) {
+			if ( preg_match( '/(?:â€”|â€“|â€™|â€œ|â€|â†’|Ã—|Â·|Â£|Â₹)/u', (string) $content ) ) {
+				$findings[] = [
+					'severity' => 'warning',
+					'code'     => 'mojibake_text_encoding',
+					'message'  => 'File appears to contain mojibake/encoding artifacts. Fix text encoding before handoff.',
+					'path'     => sanitize_text_field( (string) $path ),
+				];
+			}
+		}
+
+		return $findings;
+	}
+
+	private function review_theme_package( string $mode, array $path_map, string $theme_css ): array {
+		$findings    = [];
+		$package     = $this->file_like( $path_map, 'theme-package.json' );
+		$packagePath = $this->path_like( $path_map, 'theme-package.json' );
+		if ( '' === $package ) {
+			return $findings;
+		}
+
+		$json = json_decode( $package, true );
+		if ( ! is_array( $json ) ) {
+			return [
+				[
+					'severity' => 'error',
+					'code'     => 'invalid_theme_package_json',
+					'message'  => 'theme-package.json is not valid JSON.',
+					'path'     => sanitize_text_field( $packagePath ),
+				],
+			];
+		}
+
+		foreach ( [ 'theme', 'settings', 'css' ] as $key ) {
+			if ( ! array_key_exists( $key, $json ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'theme_package_missing_root_key',
+					'message'  => sprintf( 'theme-package.json must contain root "%s". It is the single import file: theme manifest + settings + inline CSS.', $key ),
+					'path'     => sanitize_text_field( $packagePath ),
+				];
+			}
+		}
+
+		if ( isset( $json['css'] ) && is_string( $json['css'] ) && preg_match( '/\\.css$/i', trim( $json['css'] ) ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'theme_package_css_not_inline',
+				'message'  => 'theme-package.json root css must contain the actual import CSS, not a path such as theme.css.',
+				'path'     => sanitize_text_field( $packagePath ),
+			];
+		} elseif ( '' !== $theme_css && isset( $json['css'] ) && is_string( $json['css'] ) && trim( (string) $json['css'] ) !== trim( $theme_css ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'theme_package_css_mismatch',
+				'message'  => 'theme-package.json root css must byte-match appshell-theme/import/<theme-id>/css/theme.css.',
+				'path'     => sanitize_text_field( $packagePath ),
+			];
+		}
+
+		$settings = isset( $json['settings'] ) && is_array( $json['settings'] ) ? $json['settings'] : [];
+		if ( 'combined' === $mode && empty( $settings['tokens'] ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'missing_theme_token_profile',
+				'message'  => 'Combined marketplace AppShell themes with a distinctive visual personality must include settings.tokens so DSA, Seam page CSS, and Bricks global style share one token profile.',
+				'path'     => sanitize_text_field( $packagePath ),
+			];
+		}
+		if ( isset( $settings['tokens'] ) ) {
+			$findings = array_merge( $findings, $this->review_token_settings( $settings['tokens'], $packagePath ) );
+		}
+		if ( isset( $settings['screens'] ) ) {
+			$findings = array_merge( $findings, $this->review_screen_settings( $settings['screens'], $packagePath ) );
+		}
+		if ( isset( $settings['dock'] ) && is_array( $settings['dock'] ) ) {
+			$findings = array_merge( $findings, $this->review_dock_settings( $settings['dock'], $packagePath ) );
+		}
+
+		return $findings;
+	}
+
+	private function review_token_settings( $tokens, string $path ): array {
+		$findings = [];
+		if ( ! is_array( $tokens ) ) {
+			return [
+				[
+					'severity' => 'error',
+					'code'     => 'invalid_theme_tokens',
+					'message'  => 'settings.tokens must be an object containing enabled, profile_label, overrides, and optional bricks_theme_style.',
+					'path'     => sanitize_text_field( $path ),
+				],
+			];
+		}
+		$allowed_top = [ 'enabled' => true, 'profile_label' => true, 'overrides' => true, 'bricks_theme_style' => true ];
+		foreach ( $tokens as $key => $value ) {
+			$key = (string) $key;
+			if ( str_starts_with( $key, '--' ) || str_contains( $key, 'var(' ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'token_css_variable_key',
+					'message'  => 'settings.tokens must use official token names in settings.tokens.overrides, not CSS variable keys.',
+					'path'     => sanitize_text_field( $path ),
+				];
+			} elseif ( empty( $allowed_top[ $key ] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'unsupported_tokens_key',
+					'message'  => sprintf( 'Unsupported settings.tokens key "%s". Token values belong in settings.tokens.overrides.', $key ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+		}
+		if ( empty( $tokens['overrides'] ) || ! is_array( $tokens['overrides'] ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'missing_token_overrides',
+				'message'  => 'settings.tokens must include an overrides object keyed by official Kiwe universal token names.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		} else {
+			foreach ( $tokens['overrides'] as $token => $value ) {
+				$token = (string) $token;
+				if ( str_starts_with( $token, '--' ) || str_contains( $token, 'var(' ) || ! preg_match( '/^[a-z0-9][a-z0-9_-]{1,80}$/i', $token ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'invalid_token_override_name',
+						'message'  => sprintf( 'Invalid token override "%s". Use official names like color-brand, color-surface, radius-lg, shadow-md, type-h1.', $token ),
+						'path'     => sanitize_text_field( $path ),
+					];
+				}
+			}
+		}
+
+		return $findings;
+	}
+
+	private function review_screen_settings( $screens, string $path ): array {
+		$allowed_fields = [
+			'profile' => [ 'label', 'eyebrow', 'title', 'intro', 'accountLabel', 'editLabel', 'ordersTitle', 'ordersText', 'downloadsTitle', 'downloadsText', 'notificationsTitle', 'notificationsText', 'addressesTitle', 'addressesText', 'passwordTitle', 'passwordText', 'signOutLabel', 'recentOrdersTitle' ],
+			'cart' => [ 'label', 'eyebrow', 'title', 'emptyTitle', 'emptyText', 'fbtTitle', 'checkoutLabel', 'checkoutEmptyLabel' ],
+			'checkout' => [ 'label', 'title', 'loadingText', 'unavailableText', 'continueLabel', 'returnLabel', 'shippingToggleLabel', 'accountToggleLabel' ],
+			'search' => [ 'label', 'eyebrow', 'title', 'intro', 'placeholder' ],
+			'menu' => [ 'label', 'eyebrow', 'title', 'intro', 'contextTitle', 'dashboardLabel' ],
+			'saved' => [ 'label', 'eyebrow', 'title', 'intro', 'emptyTitle', 'emptyText', 'wishlistLabel', 'bookmarksLabel', 'summaryWishlistLabel', 'summaryBookmarksLabel', 'summaryTotalLabel' ],
+			'links' => [ 'label', 'eyebrow', 'title', 'intro', 'shopLabel', 'shopMeta', 'cartLabel', 'cartMeta' ],
+			'notifications' => [ 'label', 'eyebrow', 'title', 'intro', 'topicsLegend', 'channelsLegend', 'appText', 'submitLabel', 'emailPlaceholder', 'phonePlaceholder' ],
+			'ios-install' => [ 'label', 'eyebrow', 'title', 'intro', 'stepOneTitle', 'stepOneText', 'stepTwoTitle', 'stepTwoText', 'stepThreeTitle', 'stepThreeText', 'doneLabel' ],
+			'games' => [ 'label', 'eyebrow', 'startTitle', 'startText', 'mobileStartText', 'chooseText', 'scoreLabel', 'bestLabel' ],
+			'ai' => [ 'label', 'eyebrow', 'title', 'intro', 'emptyTitle', 'emptyText', 'chatPlaceholder' ],
+		];
+		$findings = [];
+		if ( ! is_array( $screens ) ) {
+			return [
+				[
+					'severity' => 'error',
+					'code'     => 'invalid_screen_settings',
+					'message'  => 'settings.screens must be an object keyed by registered DSA screen ids.',
+					'path'     => sanitize_text_field( $path ),
+				],
+			];
+		}
+
+		foreach ( $screens as $screen => $config ) {
+			$screen = sanitize_key( (string) $screen );
+			if ( empty( $allowed_fields[ $screen ] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'unsupported_screen_settings_key',
+					'message'  => sprintf( 'Unsupported settings.screens key "%s". Use registered DSA screens only.', $screen ),
+					'path'     => sanitize_text_field( $path ),
+				];
+				continue;
+			}
+			if ( ! is_array( $config ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'invalid_screen_copy_object',
+					'message'  => sprintf( 'settings.screens.%s must be an object of presentation-only copy fields.', $screen ),
+					'path'     => sanitize_text_field( $path ),
+				];
+				continue;
+			}
+			$field_map = array_fill_keys( $allowed_fields[ $screen ], true );
+			foreach ( $config as $field => $value ) {
+				if ( empty( $field_map[ (string) $field ] ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'unsupported_screen_copy_field',
+						'message'  => sprintf( 'settings.screens.%s.%s is not a live Kiwe screen-copy field.', $screen, (string) $field ),
+						'path'     => sanitize_text_field( $path ),
+					];
+				}
+			}
+		}
+
+		return $findings;
+	}
+
+	private function review_dock_settings( array $dock, string $path ): array {
+		$registered = array_fill_keys( [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'notifications', 'ios-install', 'games' ], true );
+		$custom     = [];
+		if ( isset( $dock['custom_items'] ) && is_array( $dock['custom_items'] ) ) {
+			foreach ( $dock['custom_items'] as $item ) {
+				if ( is_array( $item ) && ! empty( $item['id'] ) ) {
+					$custom[ sanitize_key( (string) $item['id'] ) ] = true;
+				}
+			}
+		}
+
+		$requested = [];
+		foreach ( [ 'enabled_items', 'item_order' ] as $key ) {
+			if ( isset( $dock[ $key ] ) && is_array( $dock[ $key ] ) ) {
+				foreach ( $dock[ $key ] as $item ) {
+					$requested[ sanitize_key( (string) $item ) ] = true;
+				}
+			}
+		}
+		if ( isset( $dock['focus_item'] ) ) {
+			$requested[ sanitize_key( (string) $dock['focus_item'] ) ] = true;
+		}
+
+		$findings = [];
+		foreach ( array_keys( $requested ) as $item ) {
+			if ( '' === $item || isset( $registered[ $item ] ) || isset( $custom[ $item ] ) ) {
+				continue;
+			}
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'dock_item_without_registered_or_custom_authority',
+				'message'  => sprintf( 'Dock item "%s" is neither a registered DSA module nor declared in settings.dock.custom_items.', $item ),
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		return $findings;
+	}
+
 	private function review_theme_css( string $css ): array {
 		$findings = [];
 		if ( preg_match( '/(?:^|[\\s,{])(?:\\.dsa-screen-head|\\.dsa-toolbar|\\.dsa-preview-|\\.dsa-fixture-|\\.dsa-dock-primary|\\.dsa-dock-secondary)\\b/i', $css ) ) {
@@ -446,6 +945,20 @@ final class AI_Companion_Service {
 				'message'  => 'Theme CSS appears to own dock arrangement/measurement. Prefer Kiwe dock settings and core geometry variables.',
 			];
 		}
+		if ( preg_match( '/--dsa-runtime-token-\\d{4}/i', $css ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'private_runtime_bridge_token_in_theme_css',
+				'message'  => 'Importable theme.css references private --dsa-runtime-token-* bridge variables. Use public --kiwe-* or documented --kiwe-theme-* tokens.',
+			];
+		}
+		if ( preg_match( '/(?:#dsa-surface|\\[data-dsa-surface\\])[^{}]*(?:data-dsa-dock|dsa-dock|data-dsa-dock-focus|data-dsa-dock-primary|dsa-ai-launcher|dsa-dock__button|data-dsa-module)[^{]*{[^}]*(?:\\bgap\\s*:|\\bmargin\\s*:|\\bpadding\\s*:|inline-size\\s*:|block-size\\s*:|min-width\\s*:|max-width\\s*:|min-height\\s*:|max-height\\s*:|\\bdisplay\\s*:|\\bflex\\s*:|\\border\\s*:|align-|justify-|place-|\\btransform\\s*:|\\btranslate\\s*:|\\bscale\\s*:|\\brotate\\s*:|\\boverflow)/is', $css ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'dock_geometry_or_arrangement_in_theme_css',
+				'message'  => 'Importable theme.css owns dock geometry/arrangement/effect gutters. Kiwe Geometry Engine owns dock layout, sizing, spacing, transform, overflow, and split/focus placement.',
+			];
+		}
 
 		return $findings;
 	}
@@ -459,8 +972,52 @@ final class AI_Companion_Service {
 				'message'  => 'Primary combined preview uses private AppShell fixture structure that Kiwe core does not render live. Use live-like DSA roots/internals for the primary proof.',
 			];
 		}
+		foreach ( [
+			'data-dsa-surface' => 'Combined preview must include the live AppShell surface root.',
+			'data-dsa-ui-contract="2"' => 'Combined preview must prove the current DSA UI contract.',
+			'data-dsa-dock-presentation' => 'Combined preview must expose dock presentation switching/proof.',
+			'data-dsa-dock-orientation' => 'Combined preview must expose dock orientation switching/proof.',
+			'dsa-dock-shape-pill' => 'Combined preview must prove pill dock shape.',
+			'dsa-dock-shape-box' => 'Combined preview must prove rounded-box dock shape.',
+			'dsa-dock-shape-square' => 'Combined preview must prove square/no-radius dock shape.',
+			'data-dsa-profile-panel' => 'Combined preview must include Profile screen proof when AppShell direction is included.',
+			'data-dsa-cart-panel' => 'Combined preview must include Cart screen proof when commerce/AppShell direction is included.',
+			'data-dsa-search-panel' => 'Combined preview must include Search screen proof.',
+			'data-dsa-ai-panel' => 'Combined preview must include AI screen proof or clearly mark the theme partial.',
+		] as $needle => $message ) {
+			if ( ! str_contains( $content, $needle ) ) {
+				$findings[] = [
+					'severity' => 'warning',
+					'code'     => 'combined_preview_missing_proof',
+					'message'  => $message,
+				];
+			}
+		}
 
 		return $findings;
+	}
+
+	private function passed_review_checks( string $mode, array $path_map, array $findings ): array {
+		$codes = array_fill_keys( array_map( static fn( array $finding ): string => (string) ( $finding['code'] ?? '' ), $findings ), true );
+		$passed = [];
+		foreach ( [
+			'requiredShapeChecked' => ! isset( $codes['missing_required_file'] ) && [] !== $path_map,
+			'noSecretLeakagePattern' => ! isset( $codes['secret_like_content'] ),
+			'seamDataRolesChecked' => ! isset( $codes['unsupported_seam_data_role'] ),
+			'appshellGeometryChecked' => ! isset( $codes['protected_geometry_in_theme_css'] ) && ! isset( $codes['protected_surface_geometry_in_theme_css'] ) && ! isset( $codes['dock_geometry_or_arrangement_in_theme_css'] ),
+			'themePackageChecked' => ! isset( $codes['theme_package_missing_root_key'] ) && ! isset( $codes['theme_package_css_not_inline'] ) && ! isset( $codes['theme_package_css_mismatch'] ),
+			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
+			'pageArtifactChecked' => ! isset( $codes['page_artifact_contains_appshell'] ),
+		] as $label => $ok ) {
+			if ( $ok ) {
+				$passed[] = $label;
+			}
+		}
+		if ( 'combined' === $mode && ! isset( $codes['combined_preview_missing'] ) ) {
+			$passed[] = 'combinedPreviewPresenceChecked';
+		}
+
+		return $passed;
 	}
 
 	private function disabled( string $code, string $message ): array {

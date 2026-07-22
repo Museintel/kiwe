@@ -86,7 +86,7 @@ final class Studio_AI_Service {
 			'next'          => [
 				'browserAi' => 'Use browserPrompt plus contextPacket. Do not read the full repository.',
 				'nativeAi'  => 'Call /ai/studio/draft only if Kiwe > AI native generation is enabled and this API key has native_ai scope.',
-				'audit'     => 'After first output, call /ai/studio/review or use audit-lite.',
+				'audit'     => 'After first output, call /ai/studio/review or /ai/audit-companion/review, then fix the deterministic mustFix list before spending another broad model pass.',
 			],
 			'boundaries'    => $this->boundaries(),
 		];
@@ -147,7 +147,7 @@ final class Studio_AI_Service {
 			return $this->disabled_response();
 		}
 
-		$review = $this->companion->review_output( $args, $auth );
+		$review = $this->companion->audit_review( $args, $auth );
 
 		return [
 			'ok'            => ! empty( $review['ok'] ),
@@ -159,7 +159,7 @@ final class Studio_AI_Service {
 				'reason' => 'Studio review keeps model use off by default; deterministic audit is the authority gate.',
 			],
 			'next'          => [
-				'ifFailed' => 'Revise output and re-run review.',
+				'ifFailed' => 'Revise output against deterministic mustFix items and re-run review.',
 				'ifPassed' => 'Use trusted staging executor for any WordPress/Bricks/Kiwe mutation.',
 			],
 		];
@@ -222,7 +222,7 @@ final class Studio_AI_Service {
 			. "Use the supplied Kiwe Studio context packet, not the whole repository.\n"
 			. "Mode: {$lane}\n"
 			. "Brief: {$brief}\n\n"
-			. "Create the Kiwe handoff/output required by the toolkit, keep Seam semantic/headless, keep Kiwe-owned capabilities out of page code, and self-audit before final output."
+			. "Create the Kiwe handoff/output required by the toolkit, keep Seam semantic/headless, keep Kiwe-owned capabilities out of page code, and self-audit before final output. If a Kiwe AI key is available, submit files to /ai/audit-companion/review and fix mustFix items first."
 		);
 	}
 

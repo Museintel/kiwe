@@ -113,7 +113,7 @@ Some browser AIs can read public GitHub files but cannot connect MCP tools or sa
 
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
 Do not use web search to find these files; open the exact raw URL that matches the assignment mode.
-For revisions, read the mode context first, then `audit-lite.md`, and report what was found/fixed. Do not claim the executable Kiwe CLI/audit ran unless it actually executed.
+For revisions, read the mode context first, then `audit-lite.md`, and report what was found/fixed. If a target-site Kiwe AI key is available, call `/wp-json/dsa/v1/ai/audit-companion/review` with the actual generated file map before broad self-audit, fix every `mustFix` item, then rerun the same route. Do not claim the executable Kiwe CLI/audit ran unless it actually executed.
 
 ## MCP
 

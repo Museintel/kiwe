@@ -3968,7 +3968,8 @@ final class Admin {
 				<code><?php echo esc_html( $rest_base ); ?>/studio/review</code>,
 				<code><?php echo esc_html( $rest_base ); ?>/companion/context</code>,
 				<code><?php echo esc_html( $rest_base ); ?>/companion/ask</code>,
-				<code><?php echo esc_html( $rest_base ); ?>/companion/review-output</code>
+				<code><?php echo esc_html( $rest_base ); ?>/companion/review-output</code>,
+				<code><?php echo esc_html( $rest_base ); ?>/audit-companion/review</code>
 			</p>
 		</section>
 		<?php

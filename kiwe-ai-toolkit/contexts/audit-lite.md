@@ -22,9 +22,10 @@ If the human gives a target-site Kiwe AI key and Companion AI is enabled in `Kiw
 
 ```text
 POST /wp-json/dsa/v1/ai/companion/review-output
+POST /wp-json/dsa/v1/ai/audit-companion/review
 ```
 
-Use it as an extra compact rule/finding source, not as a replacement for this audit context or for official validators. A Companion pass does not prove browser rendering, WordPress import, Bricks import, WooCommerce behavior, checkout/auth/cart behavior, or live Kiwe theme installation unless those tests actually ran.
+Prefer `/ai/audit-companion/review` for revision loops because it returns a compact `mustFix` / `shouldFix` / `passed` map. Submit the actual generated file map, revise every `mustFix` item, then rerun the same route before spending another broad model pass. Use it as an extra compact rule/finding source, not as a replacement for this audit context or for official validators. A Companion pass does not prove browser rendering, WordPress import, Bricks import, WooCommerce behavior, checkout/auth/cart behavior, or live Kiwe theme installation unless those tests actually ran.
 
 ## Audit posture
 

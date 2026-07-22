@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.24 - 2026-07-23
+
+- Added an explicit Audit Companion lane with `/wp-json/dsa/v1/ai/audit-companion/context` and `/review` so browser AI can submit generated handoff files and receive compact `mustFix`, `shouldFix`, and `passed` maps before spending another broad revision pass.
+- Tightened deterministic Companion review coverage for combined output shape, AppShell theme-package schema, screen-copy settings, token profile purity, custom dock-link authority, controlled Seam `data-role` values, private runtime token leakage, fixture selectors, and encoding artifacts.
+- Mirrored Audit Companion through WordPress Abilities, Studio review, Kiwe > AI endpoint hints, and public toolkit contexts so self-audit is guided by deterministic gates instead of prompt-level spoon-feeding.
+
 ## 0.6.23 - 2026-07-22
 
 - Aligned the public Kiwe AI Toolkit, AppShell/theme prompts, framework handoff docs, and audit loop around Seam token purity.

@@ -360,6 +360,23 @@ final class Abilities_Service {
 			);
 
 			wp_register_ability(
+				'dsa/audit-kiwe-handoff',
+				[
+					'label'               => __( 'Audit Kiwe handoff', 'dsa' ),
+					'description'         => __( 'Returns a compact deterministic Audit Companion pass/fail map for browser AI revisions without reading the full plugin or calling a model.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->generic_object_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_companion_audit_review' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
 				'dsa/start-studio-project',
 				[
 					'label'               => __( 'Start Kiwe Studio AI project', 'dsa' ),
@@ -527,6 +544,10 @@ final class Abilities_Service {
 
 	public function execute_companion_review_output( array $input = [] ): array {
 		return $this->companion()->review_output( $input, [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
+	}
+
+	public function execute_companion_audit_review( array $input = [] ): array {
+		return $this->companion()->audit_review( $input, [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
 	}
 
 	public function execute_studio_start( array $input = [] ): array {
