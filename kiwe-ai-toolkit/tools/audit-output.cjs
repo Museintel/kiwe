@@ -427,8 +427,6 @@ if (exists('appshell-theme') && importThemeCssText) {
     '.dsa-game-hud',
     '.dsa-game-frame',
     '.dsa-ai-status',
-    '.dsa-ai-insight',
-    '.dsa-ai-chat-placeholder',
     '.dsa-preference-group',
     '.dsa-contact-field',
     '.dsa-inline-notice',

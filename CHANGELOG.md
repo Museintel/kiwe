@@ -4,6 +4,7 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+- Aligned the static handoff audit with live AI screen selectors by allowing `.dsa-ai-insight` and `.dsa-ai-chat-placeholder` in importable AppShell theme CSS when they target Kiwe runtime markup instead of preview-only fixtures.
 - Neutralized brand-specific examples in the public combined-lite toolkit context so Audit Companion and browser AI guidance remain marketplace/general-purpose rather than biased toward prior National Chikki tests.
 
 ## 0.6.24 - 2026-07-23
