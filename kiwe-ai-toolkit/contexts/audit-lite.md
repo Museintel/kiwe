@@ -18,6 +18,14 @@ node kiwe-ai-toolkit/tools/audit-output.cjs /path/to/handoff
 
 If you cannot run code, perform the manual audit below and report every issue you found and fixed.
 
+If the human gives a target-site Kiwe AI key and Companion AI is enabled in `Kiwe > AI`, you may also run the deterministic site Companion audit:
+
+```text
+POST /wp-json/dsa/v1/ai/companion/review-output
+```
+
+Use it as an extra compact rule/finding source, not as a replacement for this audit context or for official validators. A Companion pass does not prove browser rendering, WordPress import, Bricks import, WooCommerce behavior, checkout/auth/cart behavior, or live Kiwe theme installation unless those tests actually ran.
+
 ## Audit posture
 
 Be critical. Passing a basic folder-shape validator is not enough. A Kiwe handoff should be:
@@ -67,6 +75,8 @@ For combined mode, live-intended palette, typography, spacing, radius, shadow, a
 
 If the handoff is being applied to a real staging site through Kiwe AI, prefer the controlled `bricks.page.from-html` or `bricks.template.from-html` executor path over browser clipboard paste. The handoff author should still provide clean HTML/CSS, not raw Bricks JSON, unless a verified target explicitly asks for raw JSON. The auditor should check that the HTML/CSS is converter-friendly: semantic nesting, stable classes, preserved `data-dsa-open-module` launchers, no huge base64 payloads, no script-owned production behavior, and CSS that can safely live in Bricks page `customCss`.
 
+Converter-friendly also means human-readable after import. Audit the rendered page text at mobile and desktop widths for cramped or joined copy caused by missing inline spacing or over-compressed layout, such as `BestsellersThe`, `A century ofirresistible`, or `100+years`. Stat cards, category chips, hero eyebrow/title pairs, and CTA rows must preserve readable spacing and minimum legible type size after Bricks import.
+
 Page/header controls that open Kiwe modules must use canonical hooks:
 
 ```html
@@ -78,6 +88,12 @@ data-dsa-open-module="search"
 Use only registered module names: `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, `ios-install`, `games`.
 
 Home or other URL-only dock items are valid. Do not call them invalid merely because they are not built-in DSA screens. The requirement is that they must be declared as custom dock links in the theme package `settings.dock.custom_items`, not invented as registered DSA modules.
+
+Repeated launcher activation must be audited. Rapidly click/tap the same dock item and any matching page/header launcher more than once. The result must still be one active screen/sheet for that module, one backdrop/overlay path, and no stacked duplicate panel markup or visible repeated pop animation.
+
+Dock focus styling must be audited separately from active/open state. The configured `dock.focus_item` should be visibly emphasized through the live `data-dsa-dock-focus` / `data-dsa-dock-primary` hooks even when another module is currently open. Do not pass themes that only style `[aria-pressed="true"]` and leave a non-AI focus item, such as Search, visually ordinary.
+
+Custom URL dock links must show an icon when the package/settings request one. A Home link using `home` or `house` must not render as a blank dock button.
 
 For ecommerce pages:
 
@@ -215,7 +231,9 @@ Importable theme CSS is presentation-only.
 
 Installed theme CSS should use production selectors such as `[data-dsa-surface]`, `[data-dsa-dock]`, `[data-dsa-screen]`, `.dsa-panel`, and documented screen internals. Kiwe runtime-scopes installed theme CSS to the active surface so correct `[data-dsa-surface]` selectors can beat core visual defaults while core keeps geometry/state ownership. If a preview looks branded but the import CSS only styles preview-only selectors, mark it as a failure.
 
-If `theme.json.screens` lists a registered screen, `appshell-theme/import/<theme-id>/css/theme.css` must target that screen's live runtime root from `screen-payloads.json`. A package that styles only preview fixture classes may pass a standalone screenshot and still fail live. Treat preview-fixture-only selectors in import CSS as a failure, especially `.dsa-screen-head`, `.dsa-screen-body`, `.dsa-profile-card`, `.dsa-score-card`, `.dsa-links-identity`, `.dsa-account-rows`, `.dsa-link-list`, `.dsa-install-steps`, `.dsa-game-frame`, and `.dsa-ai-insight`.
+If `theme.json.screens` lists a registered screen, `appshell-theme/import/<theme-id>/css/theme.css` must target that screen's live runtime root from `screen-payloads.json`. A package that styles only preview fixture classes may pass a standalone screenshot and still fail live. Treat preview-fixture-only selectors in import CSS as a failure, especially `.dsa-screen-head`, `.dsa-screen-body`, `.dsa-profile-card`, `.dsa-score-card`, `.dsa-links-identity`, `.dsa-account-rows`, `.dsa-link-list`, `.dsa-install-steps`, and `.dsa-game-frame`.
+
+The primary `combined-preview/index.html` must not use those private fixture-only DSA wrappers either. It is the human approval artifact, so it must resemble what Kiwe can render live after import. If custom mock wrappers are needed for optional selector experiments, put them only in an optional technical fixture and label them preview-only. Live core selectors such as `.dsa-ai-insight` are allowed when they exist in Kiwe runtime markup.
 
 Do not set AppShell geometry ownership in importable theme CSS on dock, screen, sheet, panel, or backdrop selectors:
 
@@ -232,6 +250,17 @@ Do not set AppShell geometry ownership in importable theme CSS on dock, screen, 
 - hardcoded viewport offsets
 
 Those belong to Kiwe Geometry Engine or preview-only CSS.
+
+Dock arrangement is also Geometry Engine-owned. On `[data-dsa-dock]`, `.dsa-dock`, `.dsa-dock-cluster`, `.dsa-phonekey-dock`, `[data-dsa-dock-focus]`, `[data-dsa-dock-primary]`, `.dsa-ai-launcher`, `.dsa-dock__button`, or `[data-dsa-module]`, fail import CSS that sets:
+
+- `gap`, `row-gap`, or `column-gap`;
+- `margin` or `padding` on the dock shell/control/focus item;
+- width/height/inline-size/block-size/min/max sizing;
+- `display`, `flex`, `grid`, `order`, `align-*`, `justify-*`, or `place-*`;
+- `transform`, `translate`, `scale`, or `rotate`;
+- `overflow` or `overflow-x/y`.
+
+This is not cosmetic. A theme-defined split-dock gap or focus margin can make the outer dock shell technically centered while the visible buttons drift right/left or clip effects. Core owns split spacing and effect-safe gutters. Theme CSS may still style the dock visually with colors, borders, radius, shadows, icons, badges, labels, and state appearance.
 
 Theme CSS may style:
 
@@ -266,6 +295,7 @@ Verify:
 - `pill`, `box`, and `square` shapes visibly differ;
 - square/no-rounded shape is genuinely square or near-zero radius;
 - adding/enabling another registered module later does not break spacing, badge placement, active state, focus state, or segment rounding.
+- at 320px, 360px, and 390px, the visible dock controls remain centered as a group inside the Geometry Engine shell and retain adequate room for badges, outlines, glows, and shadows without horizontal clipping.
 
 URL navigation in the dock is allowed through custom dock links. Do not invent a registered DSA module ID for URL navigation; use `dock.custom_items` and a custom item id such as `link-home`.
 
@@ -296,9 +326,31 @@ Check that the theme preserves required roots/actions/selectors for:
 
 Links site score is optional. If absent, omit the score badge entirely. Do not show a blank, white, zero, or placeholder score card.
 
-FBT must remain a horizontal side-scrolling rail in every theme.
+FBT must remain a horizontal side-scrolling rail in every theme. On mobile, FBT cards must retain enough width and internal layout to read the title/meta and reach the View/Add action; do not pass cramped rail cards that reduce product text to unreadable initials.
 
 Checkout CTA and AI chat placeholder must flow with panel content and not float over products/messages.
+
+Search has a stricter live/preview parity audit:
+
+- `[data-dsa-search-form]` is a semantic/runtime form hook. Treat it as a neutral wrapper unless Kiwe core markup explicitly makes it the visual field. Fail themes/previews that put a second decorative pill/card/container on the form around an already-styled field.
+- `[data-dsa-search-input]` must not autofocus on narrow/touch Sheet open. The initial Search surface should open without summoning the mobile keyboard; keyboard reserve is only tested after the user focuses the input.
+- Alphabet/search filter chips must be visually centered round controls. Fail off-center letters caused by unbalanced padding, tiny line-height, or block display inside circular chips.
+
+Transient Kiwe notification/toast audit:
+
+- Do not attach notification toasts to the dock or position them from the AI/focus dock item.
+- Desktop notifications should use a top-right safe-area viewport; mobile/touch notifications should use a top safe-area stack.
+- The toast viewport must exist even when `ai` or `notifications` dock icons are hidden by theme settings. Dock visibility does not disable system feedback.
+- Multiple notifications should cascade compactly and expand on hover/focus-within so all visible actions remain reachable.
+- Use the live Kiwe proof hook `window.DSA.previewNotification({ title, body, actionLabel })` when a browser smoke test needs deterministic notification cards. Fail previews that create their own notification fixture JavaScript instead of exercising Kiwe's body-level stack.
+- Notification theme CSS may style the cards, but production actions, dismiss state, AI action execution, browser notification permission, and push subscription remain Kiwe-owned.
+
+External site popup/modal audit:
+
+- Treat Kiwe dock, DSA sheets/screens, and site/Bricks popups as separate layers. DSA sheets/screens are AppShell-owned; page login popups, Bricks popups, offcanvas panels, lightboxes, search overlays, and third-party modals are page-owned.
+- The dock must yield when an external page modal is active and no Kiwe DSA overlay is active. Fail outputs that show the dock sitting over a login/signup popup, newsletter popup, Bricks popup, lightbox, or page-owned dialog.
+- Theme CSS must not solve popup overlap by assigning hardcoded z-index or fixed/absolute geometry to Kiwe dock/screen/sheet/backdrop selectors. The external-modal yield state is Kiwe core/Geometry Engine behavior.
+- Combined previews should include or document at least one external page-modal state if the page design contains modal launchers, proving the popup owns its content layer while Kiwe-owned DSA launchers still open Kiwe surfaces.
 
 ## Responsive audit
 
@@ -316,6 +368,8 @@ No sheet/screen should create horizontal page or panel scrolling except intentio
 Decorative stripes, oversized labels, badges, score cards, logos, and pseudo-elements must shrink, wrap, clip inside the panel, or stack.
 
 No content may render under the dock, navigation bar, safe area, or browser chrome reserve.
+
+When testing mobile/touch Sheet mode, include a keyboard-reserved Search state: open Search, confirm no initial autofocus/keyboard, then focus the input and verify the sheet remains usable and the dock stays centered/in viewport rather than shifting or collapsing around the visual viewport.
 
 ## Preview audit
 
@@ -351,9 +405,11 @@ Manual smoke tests that should be reported:
 - page/header Cart or Bag launcher opens Cart surface when commerce is in scope;
 - page/header Search launcher opens Search surface;
 - dock modules open the matching surfaces;
+- repeated clicks/taps on one launcher keep one active surface and do not stack duplicate panels;
 - close affordance closes the surface;
 - Menu context anchors scroll to real page sections/headings;
 - shape/presentation/device controls visibly change the preview without horizontal overflow.
+- mobile/touch Search opens without automatic keyboard focus, and the focused-input state still respects the visual viewport/dock reserve.
 
 ## Report format
 

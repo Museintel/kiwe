@@ -142,10 +142,10 @@ This is useful when the design wants:
 - Screen presentation copy, such as cart titles and FBT/checkout labels, when the preview copy is intended to appear in live Kiwe.
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
+- Design-token profile: palette, font stacks, heading scale, site background, line-height, spacing, radius, shadows, and the optional safe Bricks global theme-style export. Active/hover/hero colors remain compatibility settings for `color-brand`, `color-accent`, and `color-hero`.
+- WooCommerce or Search bridge settings when the website design requires them.
 
 `theme.json` remains the manifest-only validator file. Put the settings preset in `theme-package.json` at root `settings`, beside root `theme` and root `css`.
-- Active/hover/hero colors.
-- WooCommerce or Search bridge settings when the website design requires them.
 
 Use only recognized Kiwe theme settings. Unknown keys are ignored by import.
 
@@ -190,7 +190,32 @@ Safe root `settings` keys inside `theme-package.json` include:
     "hover_color": "#24c6a1",
     "hero_text_color": "rgba(20,24,34,0.18)"
   },
+  "tokens": {
+    "enabled": true,
+    "profile_label": "Theme design tokens",
+    "overrides": {
+      "color-brand": "#8f8f98",
+      "color-accent": "#24c6a1",
+      "color-surface": "#f6f8f7",
+      "color-text": "#1f2933",
+      "font-display": "Inter, system-ui, sans-serif",
+      "font-body": "Inter, system-ui, sans-serif",
+      "type-h1": "clamp(52px, 5vw + 36px, 108px)",
+      "type-h2": "clamp(38px, 3vw + 28.4px, 72px)"
+    },
+    "bricks_theme_style": {
+      "enabled": true,
+      "id": "kiwe-global-design",
+      "label": "Kiwe Universal Design Tokens"
+    }
+  },
   "screens": {
+    "profile": {
+      "label": "Account",
+      "title": "Your account",
+      "ordersTitle": "Orders",
+      "addressesTitle": "Addresses"
+    },
     "cart": {
       "label": "Bag",
       "eyebrow": "Cart",
@@ -200,6 +225,11 @@ Safe root `settings` keys inside `theme-package.json` include:
       "fbtTitle": "Pairs well with",
       "checkoutLabel": "Checkout",
       "checkoutEmptyLabel": "Empty"
+    },
+    "links": {
+      "label": "Links",
+      "shopLabel": "Shop all products",
+      "cartLabel": "Tea-time bag"
     }
   }
 }
@@ -210,9 +240,11 @@ Notes:
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
 - Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls and canonical `data-dsa-open-module`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
-- `settings.screens.cart` is presentation/copy only. It may set labels such as `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. It must not contain cart data, prices, line items, checkout URLs, JavaScript, endpoints, or state authority. WooCommerce/Kiwe still own the cart runtime.
-- If a preview shows custom cart copy such as "Your tea-time bag" or "Pairs well with" and that copy is intended for the live theme, it must be declared in `theme-package.json` under `settings.screens.cart`; otherwise document it as preview-only.
-- The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
+- `settings.screens` is presentation/copy only for registered DSA screens/sheets: `profile`, `cart`, `checkout`, `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, `games`, and `ai`. It may rename labels, titles, helper text, empty states, safe CTA labels, Cart FBT title, Profile row labels, Links shop/cart labels, notification form labels, iOS install steps, game labels, and AI empty/chat copy. It must not contain products, orders, saved items, profile identity, menu items, search results, social URLs, score values, notification state, AI messages/actions, cart line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority.
+- If a preview shows custom live-intended screen/sheet copy, it must be declared in `theme-package.json` under `settings.screens`; otherwise document it as preview-only.
+- `Kiwe > Theme` exposes manual DSA screen/sheet copy controls. Manual admin edits merge over imported `settings.screens` defaults, but a theme package should still ship defaults so first install matches the preview.
+- If a preview shows a distinctive palette, type scale, font pairing, background, shadows, or global link treatment intended for live use, it must be declared in `theme-package.json` under `settings.tokens.overrides`; otherwise document it as preview-only. Use official Kiwe token names only.
+- The theme settings must not contain users, orders, credentials, logs, raw API keys, API secrets, or private data.
 
 ## What to ask the AI
 

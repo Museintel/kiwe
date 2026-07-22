@@ -101,7 +101,7 @@
     },
     "tokens": {
       "type": "object",
-      "description": "Optional token overrides. Initial marketplace themes should prefer consuming Kiwe runtime tokens; exported packages must not require more than active/hover color authority unless a later contract adds palette controls.",
+      "description": "Optional manifest note for token usage. Live design-token profile overrides belong in theme-package.json under settings.tokens using official Kiwe universal token names.",
       "additionalProperties": {
         "type": "string",
         "maxLength": 120

@@ -338,7 +338,11 @@ function validateSeamUsage(relative, body, kind) {
 }
 
 function isGeometrySelector(selector) {
-	return /\[data-dsa-dock(?:[\]=\s])|\.dsa-dock(?![-_a-zA-Z0-9])|\[data-dsa-screen(?:[\]=\s])|\[data-dsa-screen-backdrop(?:[\]=\s])|\.dsa-panel(?![-_a-zA-Z0-9])|\.dsa-sheet(?![-_a-zA-Z0-9])/i.test(selector);
+	return /\[data-dsa-dock(?:[\]=\s-])|\.dsa-dock(?![-_a-zA-Z0-9])|\.dsa-dock-cluster(?![-_a-zA-Z0-9])|\.dsa-phonekey-dock(?![-_a-zA-Z0-9])|\[data-dsa-screen(?:[\]=\s])|\[data-dsa-screen-backdrop(?:[\]=\s])|\.dsa-panel(?![-_a-zA-Z0-9])|\.dsa-sheet(?![-_a-zA-Z0-9])/i.test(selector);
+}
+
+function isDockArrangementSelector(selector) {
+	return /\[data-dsa-dock(?:[\]=\s-])|\.dsa-dock(?![-_a-zA-Z0-9])|\.dsa-dock-cluster(?![-_a-zA-Z0-9])|\.dsa-phonekey-dock(?![-_a-zA-Z0-9])|\.dsa-dock__button(?![-_a-zA-Z0-9])|\.dsa-ai-launcher(?![-_a-zA-Z0-9])|\[data-dsa-module(?:[\]=\s])|\[data-dsa-dock-(?:focus|primary|cluster)(?:[\]=\s])/i.test(selector);
 }
 
 function validateGeometryOwnership(relative, body) {
@@ -353,6 +357,22 @@ function validateGeometryOwnership(relative, body) {
 		if (/(?:^|;)\s*(?:height|block-size|min-height|min-block-size|max-height|max-block-size)\s*:\s*100vh\b/i.test(declarations)) geometryMatches.push('100vh sizing');
 		if (geometryMatches.length) {
 			fail(`${relative} assigns ${[...new Set(geometryMatches)].join(', ')} to AppShell geometry selector "${selector.slice(0, 140)}". Kiwe Geometry Engine owns dock/screen/sheet/backdrop placement; move this to preview-only CSS or core.`);
+		}
+	}
+
+	for (const match of body.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+		const selector = match[1].trim();
+		const declarations = match[2];
+		if (!isDockArrangementSelector(selector)) continue;
+		const dockMatches = [];
+		if (/(?:^|;)\s*(?:display|flex(?:-(?:basis|grow|shrink|direction|wrap))?|order|grid(?:-[a-z-]+)?|place-(?:items|content|self)|align-(?:items|content|self)|justify-(?:items|content|self))\s*:/i.test(declarations)) dockMatches.push('dock layout');
+		if (/(?:^|;)\s*(?:gap|row-gap|column-gap)\s*:/i.test(declarations)) dockMatches.push('dock gap');
+		if (/(?:^|;)\s*(?:margin|margin-inline|margin-block|margin-left|margin-right|margin-top|margin-bottom|padding|padding-inline|padding-block|padding-left|padding-right|padding-top|padding-bottom)\s*:/i.test(declarations)) dockMatches.push('dock spacing');
+		if (/(?:^|;)\s*(?:width|inline-size|min-width|min-inline-size|max-width|max-inline-size|height|block-size|min-height|min-block-size|max-height|max-block-size)\s*:/i.test(declarations)) dockMatches.push('dock sizing');
+		if (/(?:^|;)\s*(?:transform|translate|scale|rotate)\s*:/i.test(declarations)) dockMatches.push('dock transform');
+		if (/(?:^|;)\s*overflow(?:-[xy])?\s*:/i.test(declarations)) dockMatches.push('dock overflow');
+		if (dockMatches.length) {
+			fail(`${relative} assigns ${[...new Set(dockMatches)].join(', ')} to dock arrangement selector "${selector.slice(0, 140)}". Kiwe Geometry Engine owns dock measurement, split spacing, effect-safe gutters, control sizing, and focus placement; use settings/tokens or preview-only CSS instead.`);
 		}
 	}
 }

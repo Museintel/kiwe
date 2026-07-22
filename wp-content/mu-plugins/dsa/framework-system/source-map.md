@@ -22,9 +22,12 @@ This folder is a portable handoff. The real plugin sources live elsewhere.
 | Portable class vocabulary JSON snapshot | `wp-content/mu-plugins/dsa/ui-system/seam-class-vocabulary.json` |
 | Portable class vocabulary docs | `wp-content/mu-plugins/dsa/ui-system/seam-class-vocabulary.md` |
 | Universal token schema | `wp-content/mu-plugins/dsa/includes/Design/Token_Schema.php` |
+| Framework profile schema | `wp-content/mu-plugins/dsa/framework-system/contracts/framework-profile.schema.json` |
 | Bricks/framework export service | `wp-content/mu-plugins/dsa/includes/Design/Seam_Token_Service.php` |
 | Public token handoff map | `wp-content/mu-plugins/dsa/ui-system/token-map.css` |
 | Token handoff explanation | `wp-content/mu-plugins/dsa/ui-system/tokens-reference.md` |
+| Framework profile import/export | `wp-content/mu-plugins/dsa/includes/Admin/Admin.php` |
+| AI staging Framework profile apply | `wp-content/mu-plugins/dsa/includes/AI/Staging_Execution_Service.php` |
 
 ## Bricks integration
 
@@ -58,6 +61,8 @@ It pushes the active Kiwe Framework into Bricks as:
 - Kiwe Universal color palette;
 - Kiwe Seam global classes/categories, including the expanded neutral Seam Class Vocabulary.
 
+It also imports/exports standalone Framework profiles using `schema: "kiwe.framework-profile.v1"`. A Framework profile contains `settings.tokens` only: official Kiwe universal token overrides and safe Bricks global theme-style metadata. DSA/AppShell theme packages remain separate and install under `Kiwe > Theme`.
+
 The old `Kiwe > Tokens` slug (`kiwe-tokens`) redirects to `kiwe-framework` for compatibility.
 
 ## Validation commands
@@ -68,6 +73,7 @@ Run from the repo root:
 node tools/ui-theme/audit-seam-adoption.cjs
 node tools/ui-theme/validate-package.cjs tools/ui-theme/fixtures/valid
 node tools/ui-theme/validate-handoff.cjs wp-content/mu-plugins/dsa/ui-system/handoffs/legacy-ui-review
+node kiwe-ai-toolkit/tools/validate-framework-profile.cjs kiwe-ai-toolkit/fixtures/framework-profile-valid
 node tools/release/verify-package.cjs
 ```
 

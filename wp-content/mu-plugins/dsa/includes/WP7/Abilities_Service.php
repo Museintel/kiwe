@@ -3,11 +3,21 @@
 namespace DSA\WP7;
 
 use DSA\AI\Apply_Plan_Preparer;
+use DSA\AI\AI_Companion_Memory_Service;
+use DSA\AI\AI_Companion_Service;
+use DSA\AI\AI_Provider_Service;
 use DSA\AI\Binding_Plan_Validator;
+use DSA\AI\Bricks_AI_Intelligence_Service;
+use DSA\AI\Internal_AI_Advisor_Service;
+use DSA\AI\Internal_AI_Context_Service;
+use DSA\AI\Internal_AI_Enrichment_Service;
 use DSA\AI\Site_Graph_Service;
+use DSA\AI\Studio_AI_Service;
 use DSA\AI\Trusted_Apply_Stager;
 use DSA\Element_Registry;
+use DSA\Secure\SecureTrack_AI_Brief_Service;
 use DSA\Settings;
+use DSA\Site_Graph\Data_Query_Service;
 use DSA\Trust\Trust_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -16,13 +26,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Abilities_Service {
 	private const CATEGORY = 'kiwe-appsite';
+	private Data_Query_Service $data_query;
+	private SecureTrack_AI_Brief_Service $securetrack;
 
 	public function __construct(
 		private Settings $settings,
 		private Element_Registry $registry,
 		private Trust_Service $trust,
 		private ?Site_Graph_Service $site_graph = null
-	) {}
+	) {
+		$this->data_query  = new Data_Query_Service();
+		$this->securetrack = new SecureTrack_AI_Brief_Service();
+	}
 
 	public function register(): void {
 		if ( ! $this->available() ) {
@@ -76,6 +91,90 @@ final class Abilities_Service {
 				'category'            => self::CATEGORY,
 				'output_schema'       => $this->route_output_schema(),
 				'execute_callback'    => [ $this, 'execute_route_summary' ],
+				'permission_callback' => [ $this, 'can_manage' ],
+				'meta'                => [
+					'annotations' => [ 'readonly' => true ],
+					'show_in_rest' => true,
+				],
+			]
+		);
+
+		wp_register_ability(
+			'dsa/get-site-graph-data-schema',
+			[
+				'label'               => __( 'Get Kiwe Site Graph Data schema', 'dsa' ),
+				'description'         => __( 'Returns the read-only Site Graph Data contract for headless WordPress/WooCommerce/menu/media queries.', 'dsa' ),
+				'category'            => self::CATEGORY,
+				'output_schema'       => $this->generic_object_schema(),
+				'execute_callback'    => [ $this, 'execute_site_graph_data_schema' ],
+				'permission_callback' => [ $this, 'can_manage' ],
+				'meta'                => [
+					'annotations' => [ 'readonly' => true ],
+					'show_in_rest' => true,
+				],
+			]
+		);
+
+		wp_register_ability(
+			'dsa/query-site-graph-data',
+			[
+				'label'               => __( 'Query Kiwe Site Graph Data', 'dsa' ),
+				'description'         => __( 'Queries normalized WordPress, WooCommerce, media, term, menu, and site identity data through the Kiwe Site Graph Data reader.', 'dsa' ),
+				'category'            => self::CATEGORY,
+				'input_schema'        => $this->site_graph_data_input_schema(),
+				'output_schema'       => $this->generic_object_schema(),
+				'execute_callback'    => [ $this, 'execute_site_graph_data' ],
+				'permission_callback' => [ $this, 'can_manage' ],
+				'meta'                => [
+					'annotations' => [ 'readonly' => true ],
+					'show_in_rest' => true,
+				],
+			]
+		);
+
+		wp_register_ability(
+			'dsa/get-securetrack-brief',
+			[
+				'label'               => __( 'Get SecureTrack AI brief', 'dsa' ),
+				'description'         => __( 'Returns a redacted, read-only SecureTrack posture brief for internal AI triage and admin recommendations.', 'dsa' ),
+				'category'            => self::CATEGORY,
+				'input_schema'        => $this->securetrack_brief_input_schema(),
+				'output_schema'       => $this->generic_object_schema(),
+				'execute_callback'    => [ $this, 'execute_securetrack_brief' ],
+				'permission_callback' => [ $this, 'can_manage' ],
+				'meta'                => [
+					'annotations' => [ 'readonly' => true ],
+					'show_in_rest' => true,
+				],
+			]
+		);
+
+		wp_register_ability(
+			'dsa/get-bricks-ai-context',
+			[
+				'label'               => __( 'Get Kiwe Bricks AI context', 'dsa' ),
+				'description'         => __( 'Returns a read-only Bricks-native planning packet: elements, compact controls, query loops, dynamic tags, conditions, interactions, Seam rules, and Kiwe launcher boundaries.', 'dsa' ),
+				'category'            => self::CATEGORY,
+				'input_schema'        => $this->generic_object_schema(),
+				'output_schema'       => $this->generic_object_schema(),
+				'execute_callback'    => [ $this, 'execute_bricks_ai_context' ],
+				'permission_callback' => [ $this, 'can_manage' ],
+				'meta'                => [
+					'annotations' => [ 'readonly' => true ],
+					'show_in_rest' => true,
+				],
+			]
+		);
+
+		wp_register_ability(
+			'dsa/plan-bricks-ai-page',
+			[
+				'label'               => __( 'Plan a Bricks-native Kiwe page', 'dsa' ),
+				'description'         => __( 'Returns a compact Bricks + Seam planning packet for AI page, dynamic binding, combined, or audit work without mutating Bricks content.', 'dsa' ),
+				'category'            => self::CATEGORY,
+				'input_schema'        => $this->generic_object_schema(),
+				'output_schema'       => $this->generic_object_schema(),
+				'execute_callback'    => [ $this, 'execute_bricks_ai_plan' ],
 				'permission_callback' => [ $this, 'can_manage' ],
 				'meta'                => [
 					'annotations' => [ 'readonly' => true ],
@@ -157,6 +256,142 @@ final class Abilities_Service {
 					],
 				]
 			);
+
+			wp_register_ability(
+				'dsa/get-internal-ai-context',
+				[
+					'label'               => __( 'Get Kiwe internal AI context', 'dsa' ),
+					'description'         => __( 'Returns the safe combined context for Kiwe internal AI: Site Graph summary, headless data schema, SecureTrack brief, WP7 signals, and operating boundaries.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->internal_ai_context_input_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_internal_ai_context' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/run-internal-ai-advisor',
+				[
+					'label'               => __( 'Run Kiwe internal AI advisor', 'dsa' ),
+					'description'         => __( 'Runs deterministic, read-only Kiwe advisor checks over Site Graph, Site Graph Data, SecureTrack, WP7 signals, and staging boundaries.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->internal_ai_advisor_input_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_internal_ai_advisor' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/enrich-internal-ai-advisor',
+				[
+					'label'               => __( 'Enrich Kiwe internal AI advisor', 'dsa' ),
+					'description'         => __( 'Returns the model-optional enrichment envelope for the deterministic Kiwe advisor. It may prepare native AI Client input, but does not mutate the site or call a model in this adapter.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->internal_ai_enrichment_input_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_internal_ai_enrichment' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/get-companion-context',
+				[
+					'label'               => __( 'Get Kiwe Companion context', 'dsa' ),
+					'description'         => __( 'Returns compact Kiwe contract cards for AI website/page, DSA theme, combined handoff, dynamic binding, audit, staging, or security work without reading the full codebase.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->generic_object_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_companion_context' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/ask-companion',
+				[
+					'label'               => __( 'Ask Kiwe Companion', 'dsa' ),
+					'description'         => __( 'Returns a deterministic, token-efficient Kiwe guidance answer. This does not call a model or mutate the site.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->generic_object_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_companion_ask' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/review-ai-output',
+				[
+					'label'               => __( 'Review Kiwe AI output', 'dsa' ),
+					'description'         => __( 'Runs deterministic Companion checks over AI handoff files and records only privacy-safe finding fingerprints for future guidance.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->generic_object_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_companion_review_output' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/start-studio-project',
+				[
+					'label'               => __( 'Start Kiwe Studio AI project', 'dsa' ),
+					'description'         => __( 'Returns a token-saving Studio context packet and workflow for website/page, AppShell theme, combined, dynamic, audit, staging, or security work.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->generic_object_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_studio_start' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/review-studio-output',
+				[
+					'label'               => __( 'Review Kiwe Studio output', 'dsa' ),
+					'description'         => __( 'Runs the deterministic Studio/Companion review gate over an AI handoff before any trusted staging or live import is considered.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->generic_object_schema(),
+					'output_schema'       => $this->generic_object_schema(),
+					'execute_callback'    => [ $this, 'execute_studio_review' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
 		}
 	}
 
@@ -213,6 +448,101 @@ final class Abilities_Service {
 				'sampleLimit' => isset( $input['sampleLimit'] ) ? absint( $input['sampleLimit'] ) : 8,
 			]
 		);
+	}
+
+	public function execute_site_graph_data_schema(): array {
+		return $this->data_query->schema();
+	}
+
+	public function execute_site_graph_data( array $input = [] ): array {
+		$private = empty( $input['publicOnly'] );
+		unset( $input['publicOnly'], $input['abilityInvocationId'] );
+
+		return $this->data_query->query( $input, $private );
+	}
+
+	public function execute_securetrack_brief( array $input = [] ): array {
+		if ( ! $this->securetrack_brief_allowed() ) {
+			return [
+				'ok'     => false,
+				'schema' => 'kiwe.securetrack-ai-brief.v1',
+				'error'  => [
+					'code'    => 'securetrack_brief_not_allowed',
+					'message' => 'Enable redacted SecureTrack brief sharing in Kiwe > AI before exposing it to AI abilities.',
+				],
+			];
+		}
+
+		return $this->securetrack->brief( isset( $input['limit'] ) ? absint( $input['limit'] ) : 12 );
+	}
+
+	public function execute_internal_ai_context( array $input = [] ): array {
+		if ( ! $this->site_graph ) {
+			return [
+				'schema' => 'kiwe.internal-ai.context.v1',
+				'error'  => 'site_graph_unavailable',
+			];
+		}
+
+		$input['includeSecureTrack'] = $this->securetrack_brief_allowed();
+
+		return ( new Internal_AI_Context_Service( $this->site_graph, $this->data_query, $this->securetrack ) )->context( $input );
+	}
+
+	public function execute_internal_ai_advisor( array $input = [] ): array {
+		if ( ! $this->site_graph ) {
+			return [
+				'ok'     => false,
+				'schema' => 'kiwe.internal-ai.advisor.v1',
+				'error'  => 'site_graph_unavailable',
+			];
+		}
+
+		$input['includeSecureTrack'] = $this->securetrack_brief_allowed();
+
+		return ( new Internal_AI_Advisor_Service( new Internal_AI_Context_Service( $this->site_graph, $this->data_query, $this->securetrack ) ) )->advise( $input );
+	}
+
+	public function execute_internal_ai_enrichment( array $input = [] ): array {
+		if ( ! $this->site_graph ) {
+			return [
+				'ok'     => false,
+				'schema' => 'kiwe.internal-ai.enrichment.v1',
+				'error'  => 'site_graph_unavailable',
+			];
+		}
+
+		$input['includeSecureTrack'] = $this->securetrack_brief_allowed();
+
+		return ( new Internal_AI_Enrichment_Service( new Internal_AI_Advisor_Service( new Internal_AI_Context_Service( $this->site_graph, $this->data_query, $this->securetrack ) ) ) )->enrich( $input );
+	}
+
+	public function execute_companion_context( array $input = [] ): array {
+		return $this->companion()->context( $input, [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
+	}
+
+	public function execute_companion_ask( array $input = [] ): array {
+		return $this->companion()->ask( $input, [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
+	}
+
+	public function execute_companion_review_output( array $input = [] ): array {
+		return $this->companion()->review_output( $input, [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
+	}
+
+	public function execute_studio_start( array $input = [] ): array {
+		return $this->studio()->start_project( $input, [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
+	}
+
+	public function execute_studio_review( array $input = [] ): array {
+		return $this->studio()->review( $input, [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
+	}
+
+	public function execute_bricks_ai_context( array $input = [] ): array {
+		return ( new Bricks_AI_Intelligence_Service( $this->settings ) )->context( $input );
+	}
+
+	public function execute_bricks_ai_plan( array $input = [] ): array {
+		return ( new Bricks_AI_Intelligence_Service( $this->settings ) )->planning_packet( $input );
 	}
 
 	public function execute_binding_validation( array $input = [] ): array {
@@ -318,7 +648,20 @@ final class Abilities_Service {
 					[
 						'dsa/audit-trust',
 						'dsa/summarize-route',
+						'dsa/get-site-graph-data-schema',
+						'dsa/query-site-graph-data',
+						'dsa/get-securetrack-brief',
+						'dsa/get-bricks-ai-context',
+						'dsa/plan-bricks-ai-page',
 						$this->site_graph ? 'dsa/get-site-graph' : '',
+						$this->site_graph ? 'dsa/get-internal-ai-context' : '',
+						$this->site_graph ? 'dsa/run-internal-ai-advisor' : '',
+						$this->site_graph ? 'dsa/enrich-internal-ai-advisor' : '',
+						$this->site_graph ? 'dsa/get-companion-context' : '',
+						$this->site_graph ? 'dsa/ask-companion' : '',
+						$this->site_graph ? 'dsa/review-ai-output' : '',
+						$this->site_graph ? 'dsa/start-studio-project' : '',
+						$this->site_graph ? 'dsa/review-studio-output' : '',
 						$this->site_graph ? 'dsa/validate-bindings' : '',
 						$this->site_graph ? 'dsa/prepare-apply-plan' : '',
 						$this->site_graph ? 'dsa/stage-apply-plan' : '',
@@ -330,6 +673,31 @@ final class Abilities_Service {
 
 	public function available(): bool {
 		return function_exists( 'wp_register_ability' ) && function_exists( 'wp_register_ability_category' );
+	}
+
+	private function companion(): AI_Companion_Service {
+		return new AI_Companion_Service(
+			$this->settings,
+			$this->site_graph ?: new Site_Graph_Service( $this->settings ),
+			new AI_Companion_Memory_Service()
+		);
+	}
+
+	private function studio(): Studio_AI_Service {
+		return new Studio_AI_Service(
+			$this->settings,
+			$this->site_graph,
+			$this->companion(),
+			new AI_Provider_Service( $this->settings )
+		);
+	}
+
+	private function securetrack_brief_allowed(): bool {
+		$defaults = $this->settings->defaults()['ai'] ?? [];
+		$current  = $this->settings->get( 'ai', [] );
+		$ai       = array_replace_recursive( is_array( $defaults ) ? $defaults : [], is_array( $current ) ? $current : [] );
+
+		return ! empty( $ai['securetrack_brief_enabled'] );
 	}
 
 	private function trust_output_schema(): array {
@@ -400,6 +768,74 @@ final class Abilities_Service {
 				'guardrails'    => [ 'type' => 'object' ],
 			],
 			'required'   => [ 'schema', 'generatedAt', 'site', 'wordpress', 'woocommerce', 'bricks', 'kiwe', 'bindingTargets', 'guardrails' ],
+		];
+	}
+
+	private function site_graph_data_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'resource'   => [ 'type' => 'string' ],
+				'type'       => [ 'type' => 'string' ],
+				'postType'   => [ 'type' => 'string' ],
+				'taxonomy'   => [ 'type' => 'string' ],
+				'term'       => [ 'type' => [ 'string', 'array' ] ],
+				'category'   => [ 'type' => [ 'string', 'array' ] ],
+				'search'     => [ 'type' => 'string' ],
+				'slug'       => [ 'type' => 'string' ],
+				'limit'      => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 200 ],
+				'page'       => [ 'type' => 'integer', 'minimum' => 1 ],
+				'fields'     => [ 'type' => [ 'string', 'array' ] ],
+				'queries'    => [ 'type' => 'object' ],
+				'publicOnly' => [ 'type' => 'boolean' ],
+			],
+		];
+	}
+
+	private function securetrack_brief_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'limit' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 40 ],
+			],
+		];
+	}
+
+	private function internal_ai_context_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'sampleLimit' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 24 ],
+				'secureLimit' => [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 40 ],
+			],
+		];
+	}
+
+	private function internal_ai_advisor_input_schema(): array {
+		$schema = $this->internal_ai_context_input_schema();
+		$schema['properties']['focus'] = [
+			'type' => 'string',
+			'enum' => [ 'all', 'security', 'headless', 'wp7', 'staging', 'site_graph' ],
+		];
+
+		return $schema;
+	}
+
+	private function internal_ai_enrichment_input_schema(): array {
+		$schema = $this->internal_ai_advisor_input_schema();
+		$schema['properties']['style'] = [
+			'type' => 'string',
+			'enum' => [ 'executive', 'developer', 'security', 'handoff' ],
+		];
+		$schema['properties']['limit'] = [ 'type' => 'integer', 'minimum' => 1, 'maximum' => 12 ];
+
+		return $schema;
+	}
+
+	private function generic_object_schema(): array {
+		return [
+			'type'                 => 'object',
+			'additionalProperties' => true,
 		];
 	}
 

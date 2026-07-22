@@ -2,6 +2,8 @@
 
 namespace DSA\Theme;
 
+use DSA\Design\Seam_Token_Service;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -215,6 +217,45 @@ final class Theme_Package_Service {
 			$next['visual_effects'] = $visual;
 		}
 
+		if ( isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ) {
+			$defaults = [
+				'enabled'            => true,
+				'profile_label'      => 'Kiwe Universal',
+				'overrides'          => [],
+				'bricks_theme_style' => [
+					'enabled' => true,
+					'id'      => 'kiwe-global-design',
+					'label'   => 'Kiwe Universal Design Tokens',
+				],
+			];
+			$tokens = isset( $current['tokens'] ) && is_array( $current['tokens'] ) ? array_replace_recursive( $defaults, $current['tokens'] ) : $defaults;
+			if ( array_key_exists( 'enabled', $settings['tokens'] ) ) {
+				$tokens['enabled'] = ! empty( $settings['tokens']['enabled'] );
+			}
+			if ( isset( $settings['tokens']['profile_label'] ) ) {
+				$label = sanitize_text_field( (string) $settings['tokens']['profile_label'] );
+				$tokens['profile_label'] = '' !== $label ? substr( $label, 0, 80 ) : $defaults['profile_label'];
+			}
+			if ( isset( $settings['tokens']['overrides'] ) && is_array( $settings['tokens']['overrides'] ) ) {
+				$tokens['overrides'] = Seam_Token_Service::sanitize_overrides( $settings['tokens']['overrides'] );
+			}
+			if ( isset( $settings['tokens']['bricks_theme_style'] ) && is_array( $settings['tokens']['bricks_theme_style'] ) ) {
+				$style_input = $settings['tokens']['bricks_theme_style'];
+				if ( array_key_exists( 'enabled', $style_input ) ) {
+					$tokens['bricks_theme_style']['enabled'] = ! empty( $style_input['enabled'] );
+				}
+				if ( isset( $style_input['id'] ) ) {
+					$id = sanitize_key( (string) $style_input['id'] );
+					$tokens['bricks_theme_style']['id'] = '' !== $id ? substr( $id, 0, 80 ) : $defaults['bricks_theme_style']['id'];
+				}
+				if ( isset( $style_input['label'] ) ) {
+					$label = sanitize_text_field( (string) $style_input['label'] );
+					$tokens['bricks_theme_style']['label'] = '' !== $label ? substr( $label, 0, 100 ) : $defaults['bricks_theme_style']['label'];
+				}
+			}
+			$next['tokens'] = $tokens;
+		}
+
 		$next['theme_screens'] = isset( $settings['screens'] ) && is_array( $settings['screens'] )
 			? $this->sanitize_screen_settings( $settings['screens'] )
 			: [];
@@ -383,11 +424,27 @@ final class Theme_Package_Service {
 	}
 
 	private function sanitize_setting_subset( array $settings ): array {
-		$allowed = [ 'style', 'dock', 'dsa_theme', 'visual_effects', 'screens' ];
+		$allowed = [ 'style', 'dock', 'dsa_theme', 'visual_effects', 'tokens', 'screens' ];
 		$out     = [];
 		foreach ( $allowed as $key ) {
 			if ( isset( $settings[ $key ] ) && is_array( $settings[ $key ] ) ) {
-				$out[ $key ] = 'screens' === $key ? $this->sanitize_screen_settings( $settings[ $key ] ) : $settings[ $key ];
+				if ( 'screens' === $key ) {
+					$out[ $key ] = $this->sanitize_screen_settings( $settings[ $key ] );
+				} elseif ( 'tokens' === $key ) {
+					$theme_style = isset( $settings[ $key ]['bricks_theme_style'] ) && is_array( $settings[ $key ]['bricks_theme_style'] ) ? $settings[ $key ]['bricks_theme_style'] : [];
+					$out[ $key ] = [
+						'enabled'            => array_key_exists( 'enabled', $settings[ $key ] ) ? ! empty( $settings[ $key ]['enabled'] ) : true,
+						'profile_label'      => sanitize_text_field( (string) ( $settings[ $key ]['profile_label'] ?? 'Kiwe Universal' ) ),
+						'overrides'          => Seam_Token_Service::sanitize_overrides( isset( $settings[ $key ]['overrides'] ) && is_array( $settings[ $key ]['overrides'] ) ? $settings[ $key ]['overrides'] : [] ),
+						'bricks_theme_style' => [
+							'enabled' => array_key_exists( 'enabled', $theme_style ) ? ! empty( $theme_style['enabled'] ) : true,
+							'id'      => sanitize_key( (string) ( $theme_style['id'] ?? 'kiwe-global-design' ) ),
+							'label'   => sanitize_text_field( (string) ( $theme_style['label'] ?? 'Kiwe Universal Design Tokens' ) ),
+						],
+					];
+				} else {
+					$out[ $key ] = $settings[ $key ];
+				}
 			}
 		}
 
@@ -395,23 +452,7 @@ final class Theme_Package_Service {
 	}
 
 	private function sanitize_screen_settings( array $screens ): array {
-		$out = [];
-		if ( isset( $screens['cart'] ) && is_array( $screens['cart'] ) ) {
-			$cart = [];
-			foreach ( [ 'label', 'eyebrow', 'title', 'emptyTitle', 'emptyText', 'fbtTitle', 'checkoutLabel', 'checkoutEmptyLabel' ] as $key ) {
-				if ( isset( $screens['cart'][ $key ] ) ) {
-					$value = sanitize_text_field( (string) $screens['cart'][ $key ] );
-					if ( '' !== $value ) {
-						$cart[ $key ] = $value;
-					}
-				}
-			}
-			if ( [] !== $cart ) {
-				$out['cart'] = $cart;
-			}
-		}
-
-		return $out;
+		return Screen_Copy_Schema::sanitize( $screens );
 	}
 
 	private function sanitize_dock_custom_items( array $items ): array {
@@ -466,6 +507,7 @@ final class Theme_Package_Service {
 				'dock'           => isset( $settings['dock'] ) && is_array( $settings['dock'] ) ? $settings['dock'] : [],
 				'dsa_theme'      => isset( $settings['dsa_theme'] ) && is_array( $settings['dsa_theme'] ) ? $settings['dsa_theme'] : [],
 				'visual_effects' => isset( $settings['visual_effects'] ) && is_array( $settings['visual_effects'] ) ? $settings['visual_effects'] : [],
+				'tokens'         => isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ? $settings['tokens'] : [],
 				'screens'        => isset( $settings['theme_screens'] ) && is_array( $settings['theme_screens'] ) ? $settings['theme_screens'] : [],
 			]
 		);

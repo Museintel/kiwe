@@ -41,11 +41,12 @@ function renderCartTrustBadges( badges ) {
 	} ).join( '' ) + '</div>';
 }
 
-function renderLegacyCartPanel( label ) {
+function renderLegacyCartPanel( label, payload ) {
+	const copy = cartCopy( payload, label );
 	const cart = phonekey.cart || {};
 
 	if ( ! cart.available ) {
-		return renderBasicPanel( label, 'Cart appears here when WooCommerce is active.');
+		return renderBasicPanel( copy.label, 'Cart appears here when WooCommerce is active.');
 	}
 
 	const items = Array.isArray( cart.items ) ? cart.items : [];
@@ -54,27 +55,27 @@ function renderLegacyCartPanel( label ) {
 
 	if ( ! items.length ) {
 		return [
-			'<section class="dsa-panel dsa-cart-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-cart-panel>',
-			'<p class="dsa-cart-panel__eyebrow">' + escapeHtml( label || 'Cart' ) + '</p>',
-			'<h2>Your cart is waiting.</h2>',
-			'<p class="dsa-panel__meta">Items you add will appear here inside the Surface.</p>',
-			checkoutUrl ? '<a class="dsa-cart-panel__checkout is-disabled" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock" aria-disabled="true"><span>Checkout</span><span class="dsa-panel__meta">Empty</span></a>' : '',
+			'<section class="dsa-panel dsa-cart-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-cart-panel>',
+			'<p class="dsa-cart-panel__eyebrow">' + escapeHtml( copy.eyebrow ) + '</p>',
+			'<h2>' + escapeHtml( copy.emptyTitle ) + '</h2>',
+			'<p class="dsa-panel__meta">' + escapeHtml( copy.emptyText ) + '</p>',
+			checkoutUrl ? '<a class="dsa-cart-panel__checkout is-disabled" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock" aria-disabled="true"><span>' + escapeHtml( copy.checkoutLabel ) + '</span><span class="dsa-panel__meta">' + escapeHtml( copy.checkoutEmptyLabel ) + '</span></a>' : '',
 			'</section>',
 		].join( '' );
 	}
 
 	return [
-		'<section class="dsa-panel dsa-cart-panel dsa-cart-panel--has-checkout" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-cart-panel>',
-		'<p class="dsa-cart-panel__eyebrow">' + escapeHtml( label || 'Cart' ) + '</p>',
-		'<h2>Your cart</h2>',
+		'<section class="dsa-panel dsa-cart-panel dsa-cart-panel--has-checkout" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-cart-panel>',
+		'<p class="dsa-cart-panel__eyebrow">' + escapeHtml( copy.eyebrow ) + '</p>',
+		'<h2>' + escapeHtml( copy.title ) + '</h2>',
 		'<div class="dsa-cart-panel__summary"><strong>' + escapeHtml( cart.total || '' ) + '</strong><span>' + escapeHtml( cart.count || items.length ) + ' item(s)</span></div>',
 		renderDiscountSummary( cart.discountSummary, 'cart' ),
 		'<div class="dsa-cart-panel__items">',
 		items.map( renderCartPanelItem ).join( '' ),
 		'</div>',
-		renderCartRecommendations( recommendations ),
+		renderCartRecommendations( recommendations, copy ),
 		'<p class="dsa-panel__meta" data-dsa-cart-message></p>',
-		checkoutUrl ? '<a class="dsa-cart-panel__checkout" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-checkout-open data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock"><span>Checkout</span><span class="dsa-panel__meta">' + escapeHtml( cart.total || '' ) + '</span></a>' : '',
+		checkoutUrl ? '<a class="dsa-cart-panel__checkout" href="' + escapeHtml( checkoutUrl ) + '" data-dsa-checkout-open data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="cart" data-dsa-context-width="dock"><span>' + escapeHtml( copy.checkoutLabel ) + '</span><span class="dsa-panel__meta">' + escapeHtml( cart.total || '' ) + '</span></a>' : '',
 		'</section>',
 	].join( '' );
 }
@@ -127,19 +128,35 @@ const cartAdapters = {
 	kiwe2027: renderPrototypeCartPanel,
 };
 
-function renderCheckoutPanel() {
+function checkoutCopy( payload ) {
+	const screen = payload && payload.screenTheme && typeof payload.screenTheme === 'object' ? payload.screenTheme : {};
+	return {
+		label: screen.label || payload.label || 'Checkout',
+		title: screen.title || 'Checkout details',
+		loadingText: screen.loadingText || 'Preparing checkout...',
+		unavailableText: screen.unavailableText || 'WooCommerce checkout is not available.',
+		continueLabel: screen.continueLabel || 'Continue to Place order',
+		returnLabel: screen.returnLabel || 'Return to Place order',
+		shippingToggleLabel: screen.shippingToggleLabel || 'Use a different shipping address',
+		accountToggleLabel: screen.accountToggleLabel || 'Create an account',
+	};
+}
+
+function renderCheckoutPanel( payload ) {
+	payload = payload || {};
+	const copy = checkoutCopy( payload );
 	const contract = checkoutState.contract || {};
 
 	if ( checkoutState.loading || ! checkoutState.contract ) {
 		return [
-			'<section class="dsa-panel dsa-checkout-panel" role="dialog" aria-modal="false" aria-label="Checkout" data-dsa-checkout-panel>',
-			'<p class="dsa-checkout-panel__loading">Preparing checkout...</p>',
+			'<section class="dsa-panel dsa-checkout-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-checkout-panel>',
+			'<p class="dsa-checkout-panel__loading">' + escapeHtml( copy.loadingText ) + '</p>',
 			'</section>',
 		].join( '' );
 	}
 
 	if ( ! contract.available ) {
-		return renderBasicPanel( 'Checkout', 'WooCommerce checkout is not available.' );
+		return renderBasicPanel( copy.label, copy.unavailableText );
 	}
 
 	const groups = contract.groups || {};
@@ -148,18 +165,18 @@ function renderCheckoutPanel() {
 	}, [] );
 
 	return [
-		'<section class="dsa-panel dsa-checkout-panel" role="dialog" aria-modal="false" aria-label="Checkout" data-dsa-checkout-panel>',
-		'<h2 class="dsa-visually-hidden">Checkout details</h2>',
+		'<section class="dsa-panel dsa-checkout-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-checkout-panel>',
+		'<h2 class="dsa-visually-hidden">' + escapeHtml( copy.title ) + '</h2>',
 		renderCheckoutNotices(),
 		renderDiscountSummary( contract.discountSummary, 'checkout' ),
 		'<form id="dsa-checkout-surface-form" class="dsa-checkout-form" data-dsa-checkout-form data-dsa-keep-open>',
-		contract.needsShipping ? '<label class="dsa-checkout-checkbox dsa-checkout-shipping-toggle"><input name="ship_to_different_address" type="checkbox" value="1" data-dsa-checkout-field data-dsa-checkout-shipping-toggle' + ( contract.shipToDifferent ? ' checked' : '' ) + '><span>Use a different shipping address</span></label>' : '',
-		contract.canCreateAccount ? '<label class="dsa-checkout-checkbox dsa-checkout-account-toggle"><input name="createaccount" type="checkbox" value="1" data-dsa-checkout-field data-dsa-checkout-account-toggle' + ( contract.createAccount ? ' checked' : '' ) + ( contract.accountRequired ? ' disabled' : '' ) + '><span>Create an account</span></label>' : '',
+		contract.needsShipping ? '<label class="dsa-checkout-checkbox dsa-checkout-shipping-toggle"><input name="ship_to_different_address" type="checkbox" value="1" data-dsa-checkout-field data-dsa-checkout-shipping-toggle' + ( contract.shipToDifferent ? ' checked' : '' ) + '><span>' + escapeHtml( copy.shippingToggleLabel ) + '</span></label>' : '',
+		contract.canCreateAccount ? '<label class="dsa-checkout-checkbox dsa-checkout-account-toggle"><input name="createaccount" type="checkbox" value="1" data-dsa-checkout-field data-dsa-checkout-account-toggle' + ( contract.createAccount ? ' checked' : '' ) + ( contract.accountRequired ? ' disabled' : '' ) + '><span>' + escapeHtml( copy.accountToggleLabel ) + '</span></label>' : '',
 		'<div class="dsa-checkout-fields">',
 		fields.map( renderCheckoutField ).join( '' ),
 		'</div>',
 		'<div class="dsa-checkout-actions" data-dsa-context-slot data-dsa-context-name="checkout" data-dsa-context-width="dock">',
-		'<button class="dsa-cart-panel__checkout dsa-checkout-continue" type="submit" form="dsa-checkout-surface-form"><span>' + ( checkoutState.returnToPage ? 'Return to Place order' : 'Continue to Place order' ) + '</span><span class="dsa-panel__meta">' + escapeHtml( contract.cartTotal || '' ) + '</span></button>',
+		'<button class="dsa-cart-panel__checkout dsa-checkout-continue" type="submit" form="dsa-checkout-surface-form"><span>' + escapeHtml( checkoutState.returnToPage ? copy.returnLabel : copy.continueLabel ) + '</span><span class="dsa-panel__meta">' + escapeHtml( contract.cartTotal || '' ) + '</span></button>',
 		'<span class="dsa-panel__meta" data-dsa-checkout-message></span>',
 		'</div>',
 		'</form>',
@@ -343,5 +360,5 @@ export function renderCheckout( payload ) {
 	payload = payload || {};
 	commerce = { settings: payload.settings || {}, routes: payload.routes || {}, complements: [] };
 	checkoutState = payload.checkoutState || {};
-	return renderCheckoutPanel();
+	return renderCheckoutPanel( payload );
 }

@@ -908,8 +908,237 @@
 	gap: 10px;
 }
 
+.dsa-admin-screen-copy-grid {
+	display: grid;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.dsa-admin-screen-copy {
+	padding: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	background: #fff;
+}
+
+.dsa-admin-screen-copy summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	cursor: pointer;
+}
+
+.dsa-admin-screen-copy code {
+	font-size: 11px;
+}
+
+.dsa-admin-eyebrow {
+	margin: 0 0 4px;
+	color: var(--dsa-admin-accent);
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+}
+
+.dsa-ai-advisor {
+	border-color: color-mix(in srgb, var(--dsa-admin-accent) 24%, #dcdcde);
+	background:
+		linear-gradient(135deg, color-mix(in srgb, var(--dsa-admin-accent) 8%, #fff), #fff 42%),
+		#fff;
+}
+
+.dsa-ai-advisor__head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(220px, .38fr);
+	gap: 18px;
+	align-items: start;
+}
+
+.dsa-ai-advisor__head h2 {
+	margin: 0;
+	font-size: clamp(24px, 3vw, 38px);
+	line-height: 1.05;
+}
+
+.dsa-ai-advisor__head p:not(.dsa-admin-eyebrow) {
+	max-width: 780px;
+	margin: 8px 0 0;
+	color: #50575e;
+	font-size: 14px;
+}
+
+.dsa-ai-advisor__meta,
+.dsa-ai-advisor__actions,
+.dsa-ai-advisor__cards,
+.dsa-ai-advisor__list {
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dsa-ai-advisor__meta span {
+	display: grid;
+	gap: 3px;
+	padding: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, .78);
+	color: #646970;
+	font-size: 12px;
+	text-transform: uppercase;
+}
+
+.dsa-ai-advisor__meta strong {
+	color: #1d2327;
+	font-size: 15px;
+	text-transform: none;
+}
+
+.dsa-ai-advisor__summary {
+	margin-top: 18px;
+}
+
+.dsa-ai-advisor__filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 12px;
+	align-items: end;
+	margin: 16px 0 0;
+	padding: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 10px;
+	background: #f6f7f7;
+}
+
+.dsa-ai-advisor__filters label {
+	display: grid;
+	gap: 4px;
+}
+
+.dsa-ai-advisor__filters label span {
+	color: #50575e;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.dsa-ai-advisor__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 18px;
+	margin-top: 18px;
+}
+
+.dsa-ai-advisor__enrichment {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(220px, .34fr);
+	gap: 14px;
+	margin-top: 16px;
+	padding: 16px;
+	border: 1px solid color-mix(in srgb, var(--dsa-admin-accent) 22%, #dcdcde);
+	border-radius: 14px;
+	background:
+		radial-gradient(circle at top left, color-mix(in srgb, var(--dsa-admin-accent) 11%, transparent), transparent 34%),
+		#fff;
+}
+
+.dsa-ai-advisor__enrichment h3,
+.dsa-ai-advisor__enrichment p {
+	margin: 0;
+}
+
+.dsa-ai-advisor__enrichment h3 {
+	font-size: 18px;
+}
+
+.dsa-ai-advisor__enrichment p {
+	margin-top: 8px;
+	color: #50575e;
+}
+
+.dsa-ai-advisor__enrichment > div:last-child {
+	display: grid;
+	gap: 6px;
+	align-content: center;
+	padding: 12px;
+	border-radius: 10px;
+	background: #f6f7f7;
+}
+
+.dsa-ai-advisor__enrichment > div:last-child strong {
+	color: #1d2327;
+}
+
+.dsa-ai-advisor__enrichment > div:last-child span {
+	color: #646970;
+	font-size: 12px;
+}
+
+.dsa-ai-advisor__column {
+	min-width: 0;
+}
+
+.dsa-ai-advisor__column h3 {
+	margin: 16px 0 10px;
+}
+
+.dsa-ai-advisor-card,
+.dsa-ai-advisor__list li,
+.dsa-ai-advisor__actions li {
+	display: grid;
+	gap: 6px;
+	padding: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 10px;
+	background: #fff;
+}
+
+.dsa-ai-advisor-card > span,
+.dsa-ai-advisor__list strong {
+	color: var(--dsa-admin-accent);
+	font-size: 11px;
+	font-weight: 800;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+
+.dsa-ai-advisor-card p,
+.dsa-ai-advisor__list span {
+	margin: 0;
+	color: #50575e;
+}
+
+.dsa-ai-advisor-card--good {
+	border-color: #8bd4a0;
+	background: #f1fbf4;
+}
+
+.dsa-ai-advisor-card--warning {
+	border-color: #f0c36d;
+	background: #fff8e5;
+}
+
+.dsa-ai-advisor-card--critical {
+	border-color: #d63638;
+	background: #fcf0f1;
+}
+
+.dsa-ai-advisor-card--info {
+	border-color: #9ecbe8;
+	background: #f2f9fd;
+}
+
 @media (max-width: 782px) {
 	.dsa-admin-device-card .dsa-admin-inline-fields {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.dsa-ai-advisor__head,
+	.dsa-ai-advisor__enrichment,
+	.dsa-ai-advisor__grid {
 		grid-template-columns: minmax(0, 1fr);
 	}
 }

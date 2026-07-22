@@ -106,7 +106,9 @@ Combined website/page + AppShell previews must match the site type. A news/edito
 
 Responsive fit is mandatory. Prove Geometry Engine profiles for desktop, tablet, and mobile, then add narrow mobile stress widths around 320px, 360px, and 390px. No sheet/screen may create horizontal page or panel scroll except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that force the panel wider than the viewport.
 
-The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, spacing inside content, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `.dsa-dock-cluster`, `.dsa-phonekey-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS.
+
+Dock arrangement is especially protected because small CSS changes can make a centered shell look right-biased on mobile. Importable theme CSS must not set `gap`, `row-gap`, `column-gap`, `margin`, `padding`, `width`, `height`, `inline-size`, `block-size`, `min/max-*` sizing, `display`, `flex`, `grid`, `order`, `align-*`, `justify-*`, `place-*`, `transform`, `translate`, `scale`, `rotate`, or `overflow` on dock shell/control/focus selectors such as `[data-dsa-dock]`, `.dsa-dock`, `.dsa-dock-cluster`, `.dsa-phonekey-dock`, `[data-dsa-dock-focus]`, `[data-dsa-dock-primary]`, `.dsa-ai-launcher`, `.dsa-dock__button`, or `[data-dsa-module]`. Use `settings.dock`, official dock shapes, and Geometry Engine variables for composition. Theme CSS may style color, typography, border, radius, shadow, icons, badges, cards, buttons, content spacing, rails, and state appearance while consuming Geometry Engine variables. Visual effects must fit inside the Geometry Engine's safe gutters; do not use negative margins, transforms, or overflow clipping to create glow/shadow space.
 
 The AppShell handoff README must include:
 
@@ -240,7 +242,9 @@ Do not use htmx or Alpine for PhoneKey/auth, checkout/payment, cart reconciliati
 
 ## Color model
 
-For now, site owners control the primary brand state through Active and Hover colors. The theme system must consume the universal `kiwe-*` tokens and compatibility `dsa-*` aliases. A richer palette can be added later without breaking theme folders.
+`Kiwe > Framework` owns the shared design-token profile. Active and Hover colors remain compatibility controls for `--kiwe-color-brand` and `--kiwe-color-accent`, while modern themes may also carry official token overrides for surface/background color, text color, typography, fonts, spacing, radius, motion, and elevation inside `theme-package.json` at `settings.tokens`.
+
+Theme CSS should consume canonical `--kiwe-*` tokens and compatibility `dsa-*` aliases. Hidden private palettes, font systems, and heading scales should be promoted into official token overrides when they are intended to appear live.
 
 ## Package validation
 
@@ -379,7 +383,7 @@ A Kiwe AppShell theme is a reusable visual skin, not a screenshot of the current
 
 - `theme-package.json` root `settings` may hide dock icons or choose a site-specific order/focus item.
 - Hiding a dock icon does not remove that registered DSA module from the plugin.
-- `theme-package.json` root `settings.screens` may carry sanitized presentation/copy labels for live screens. For cart, allowed text keys are `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`.
+- `theme-package.json` root `settings.screens` may carry sanitized presentation/copy labels for live registered DSA screens/sheets. Allowed screen keys are `profile`, `cart`, `checkout`, `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, `games`, and `ai`. This lane may rename labels, titles, helper text, empty states, safe CTA labels, Cart FBT rail title, Profile row labels, Links shop/cart labels, notification form labels, iOS install steps, game labels, and AI empty/chat copy. It must not contain products, orders, saved items, profile identity, menu items, search results, social URLs, score values, notification state, AI messages/actions, cart line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority.
 - Importable theme CSS must provide a resilient baseline for every registered core screen in `screen-payloads.json`: profile, cart, checkout, search, menu, saved, links, notifications, iOS install, games, and AI.
 - If the combined preview is for a non-commerce/news site, it may hide cart/checkout/order-heavy UI, but enabling cart later in Kiwe admin must still inherit the theme’s panel, card, button, form, badge, rail, and CTA language without looking broken.
 - `theme.json.screens` should list all core screens the theme can safely skin. A partial theme that only skins the screens shown in the preview must clearly label itself as partial and is not marketplace-ready.
@@ -420,11 +424,13 @@ Every preview must include a selector-fit checklist in its `README.md`:
 - Whether any desired layout would require a future adapter-profile or core wrapper.
 - Confirmation that FBT remains horizontal, score can be hidden when absent, dock shape controls visibly change the dock, and sheet content does not pass beneath the dock.
 
-## Color and tokens
+## Color, typography, and design tokens
 
-For now, site owners control the main color model through Active and Hover colors.
+Kiwe now has a shared design-token profile under `Kiwe > Framework`. Active and Hover colors remain legacy-compatible controls that map to `--kiwe-color-brand` and `--kiwe-color-accent`, but they are no longer the ceiling of the design system.
 
-Use tokens and aliases from `token-map.css`. Do not create a hidden large palette that cannot map back to Kiwe tokens. You may propose future palette controls separately, but the importable theme must work with current Active/Hover color authority.
+Use canonical `--kiwe-*` tokens and aliases from `token-map.css` for palette, typography, site background, spacing, radius, motion, and elevation. If your theme needs a live visual personality beyond CSS selectors, include `settings.tokens` inside `theme-package.json`: `tokens.enabled`, `tokens.profile_label`, `tokens.overrides` with official Kiwe universal token names only, and `tokens.bricks_theme_style` when the same personality should be pushed to Bricks as safe global typography, colors, links, and site background.
+
+Do not create a hidden large palette, font system, or heading scale that cannot map back to Kiwe tokens. Importable `theme.css` should consume the token profile; it should not be the only place where the design personality exists.
 
 ## Output format
 
@@ -467,7 +473,7 @@ Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns
 
 Theme settings belong inside the theme package, not in a separate loose settings export/import. Keep `theme.json` as the manifest-only validator file. Put dock composition, focus item, shape, sheet behavior, active theme id, color settings, visual-effect presets, and safe screen copy settings in `theme-package.json` under root `settings`. Put the same CSS as `css/theme.css` in `theme-package.json` under root `css` so Kiwe can import one file and show it under `Kiwe > Theme > Installed themes`.
 
-If your preview uses custom cart copy such as "Your tea-time bag", "Pairs well with", or a renamed checkout CTA and that copy should appear on a live WooCommerce site, declare it in `theme-package.json` under `settings.screens.cart`. This is copy only: do not place products, prices, totals, checkout URLs, cart state, JavaScript, or behavior there.
+If your preview uses custom live-intended screen/sheet copy, declare the same copy in `theme-package.json` under `settings.screens`. Examples: "Your tea-time bag" belongs in `settings.screens.cart.title`, "Pairs well with" belongs in `settings.screens.cart.fbtTitle`, "Your account" variants belong in `settings.screens.profile.title`, Links action labels belong in `settings.screens.links`, Search placeholder belongs in `settings.screens.search.placeholder`, and AI chat copy belongs in `settings.screens.ai.chatPlaceholder`. This is copy only: do not place products, prices, totals, profile/user data, social URLs, search results, checkout URLs, cart state, JavaScript, or behavior there.
 
 Use the live runtime hooks in `screen-payloads.json` for screen internals. For cart, stable theme hooks include `[data-dsa-cart-line]`, `.dsa-cart-line`, `.dsa-line-thumb`, `.dsa-quantity`, `[data-dsa-cart-fbt-card]`, `.dsa-fbt-card`, and `.dsa-fbt-img`; do not style only preview-only item/card names.
 
@@ -797,12 +803,15 @@ website-handoff/
   README.md
   bricks-paste.html  # open in browser for preview; paste/import through Bricks
   bricks-notes.md
+  framework/
+    kiwe-framework-profile.json # optional when the page defines a sitewide token profile
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
 - Produce `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, duplicate preview files, or hidden local files.
+- If the website/page establishes a brand system that should be reused by Bricks and future Kiwe pages, include `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. This imports at `Kiwe > Framework`, not `Kiwe > Theme`.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
@@ -894,6 +903,7 @@ Rules:
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.
 - Navigation bar is not a horizontal dock. `dock.presentation="navbar"` is a separate core presentation mode; `horizontal` and `vertical` are dock orientation states. Split dock applies only when presentation is `dock`.
+- In combined mode, put the live-intended design-token profile in `appshell-theme/import/theme-id/theme-package.json` under `settings.tokens` so the theme install keeps DSA, Seam page CSS, and Bricks global style aligned. Do not add a separate Framework profile unless the brief explicitly asks for a standalone `Kiwe > Framework` import artifact too.
 
 ## Page-to-AppShell hooks
 
@@ -990,9 +1000,10 @@ Notes:
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
 - Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls and canonical `data-dsa-open-module`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
-- `settings.screens.cart` is presentation/copy only. It may set labels such as `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. It must not contain cart data, prices, line items, checkout URLs, JavaScript, endpoints, or state authority. WooCommerce/Kiwe still own the cart runtime.
-- If a preview shows custom cart copy such as "Your tea-time bag" or "Pairs well with" and that copy is intended for the live theme, it must be declared in `theme-package.json` under `settings.screens.cart`; otherwise document it as preview-only.
-- The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
+- `settings.screens` is presentation/copy only for registered DSA screens/sheets: `profile`, `cart`, `checkout`, `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, `games`, and `ai`. It may rename labels, titles, helper text, empty states, safe CTA labels, Cart FBT title, Profile row labels, Links shop/cart labels, notification form labels, iOS install steps, game labels, and AI empty/chat copy. It must not contain products, orders, saved items, profile identity, menu items, search results, social URLs, score values, notification state, AI messages/actions, cart line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority.
+- If a preview shows custom live-intended screen/sheet copy, it must be declared in `theme-package.json` under `settings.screens`; otherwise document it as preview-only.
+- `Kiwe > Theme` exposes manual DSA screen/sheet copy controls. Manual admin edits merge over imported `settings.screens` defaults, but a theme package should still ship defaults so first install matches the preview.
+- The theme settings must not contain users, orders, credentials, logs, raw API keys, API secrets, or private data.
 
 ## What to ask the AI
 

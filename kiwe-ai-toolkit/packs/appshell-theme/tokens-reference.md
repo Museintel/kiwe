@@ -12,11 +12,14 @@ It is intentionally not a raw dump of every CSS variable used inside production 
 - surface, raised surface, text, muted text, inverse text, and border
 - common radius aliases
 - spacing aliases
-- typography aliases
+- typography, heading scale, font, line-height, and tracking aliases
+- safe elevation/shadow aliases
 - dock control, AI, icon, and badge sizes
 - compatibility aliases that bridge `--kiwe-*` tokens to `--dsa-*` runtime values
 
 This is the safe design surface for marketplace themes.
+
+`Kiwe > Framework` is the editable site design-token profile. It can export the same profile to Bricks as additive `kiwe-*` variables, the Kiwe Universal color palette, the neutral Seam Class Vocabulary, and one safe global Bricks theme style covering only body/headings, colors, links, and site background.
 
 ## What it does not contain
 
@@ -34,9 +37,10 @@ Theme authors should not depend on those internal variables unless they are docu
 
 ## Current relationship
 
-As of Kiwe `0.5.73`:
+In the current Kiwe Framework architecture:
 
 - `ui-system/token-map.css` exposes the curated portable token map.
+- `Design\Seam_Token_Service` is the complete canonical PHP source for Kiwe universal tokens and Bricks export.
 - production `assets/css/surface.css` contains more variables because it owns runtime geometry, state, transitions, legacy compatibility, and built-in profile internals.
 
 That difference is expected. It does not mean the UI brain is missing the design tokens required to create a theme.
@@ -63,7 +67,7 @@ Kiwe core can then decide whether to promote that variable into `token-map.css` 
 Themes must:
 
 - consume `--kiwe-theme-*` aliases first where possible
-- support Active and Hover color authority through the provided aliases
+- support the Kiwe Framework design-token profile and preserve Active/Hover compatibility through the provided aliases
 - preserve dock shape variables:
   - `--dsa-dock-shell-radius`
   - `--dsa-dock-control-radius`
@@ -76,5 +80,5 @@ Themes must not:
 
 - hardcode one dock radius while ignoring `dsa-dock-shape-*`
 - hardcode viewport offsets instead of using geometry variables
-- create hidden color systems that cannot map back to Active/Hover and documented tokens
+- create hidden color, font, heading, background, shadow, or spacing systems that cannot map back to documented Kiwe tokens
 - depend on private variables such as `--dsa-flat-*` unless the theme is explicitly targeting a built-in profile reference

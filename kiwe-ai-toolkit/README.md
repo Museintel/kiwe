@@ -6,9 +6,11 @@ It exposes only the compact contracts an AI needs:
 
 - `website` — normal WordPress/Bricks page or website using Seam Framework.
 - `theme` — Kiwe DSA/AppShell theme package.
-- `combined` — website/page plus AppShell theme plus optional Kiwe settings profile.
+- `combined` — website/page plus AppShell theme package, including safe live theme settings and token profile when needed.
 
 The full plugin remains the runtime authority. This toolkit is the public design/generation interface.
+
+Current lane rule: combined output uses AppShell `theme-package.json` for live DSA theme settings and `settings.tokens`; standalone `kiwe.framework-profile.v1` files are for website/page-only Framework token profiles or explicit `Kiwe > Framework` imports, not loose AppShell settings profiles.
 
 ## Why this exists
 
@@ -20,7 +22,9 @@ Giving the whole plugin to an AI wastes tokens and invites it to invent against 
 - theme package schema;
 - preview rules;
 - Bricks boundaries;
+- Bricks AI Intelligence routes for elements, query loops, dynamic tags, conditions, and interactions;
 - Kiwe settings/profile lane;
+- theme-package and Framework-profile boundaries;
 - validation expectations.
 
 ## CLI
@@ -32,6 +36,7 @@ node bin/kiwe.js start combined --brief "Netflix-like ultra-modern news website 
 node bin/kiwe.js context combined
 node bin/kiwe.js create combined ./out/my-kiwe-handoff --name my-kiwe-handoff
 node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
+node tools/validate-framework-profile.cjs ./out/my-website-handoff --optional
 node bin/kiwe.js dynamic-context
 node bin/kiwe.js dynamic-pass --brief "Turn approved product rails into Bricks query-loop binding plans using the supplied Site Graph."
 node bin/kiwe.js validate-bindings ./out/my-kiwe-handoff --site-graph ./site-graph.json
@@ -92,6 +97,8 @@ Do not expect humans to mention artifact names, screen eligibility, responsive o
 
 The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page itself. In combined mode, only `combined-preview/index.html` shows the page and AppShell together.
 
+When a target site has Kiwe installed and a scoped Kiwe AI key is available, external AIs should ask `/wp-json/dsa/v1/ai/bricks/context` or `/wp-json/dsa/v1/ai/bricks/plan` for Bricks-native intelligence before emitting Bricks JSON or dynamic binding plans. A key with `bricks_ai`, `studio_ai`, or `all` scope can read this packet. It is read-only and covers Bricks elements, compact element controls, query loops, dynamic tags, conditions, interactions, Seam rules, and Kiwe launcher/runtime boundaries. Admins can also enable the read-only Kiwe Studio companion inside the Bricks front-end editor from `Kiwe > AI`.
+
 ### Browser AI fallback
 
 Some browser AIs can read public GitHub files but cannot connect MCP tools or safely execute repo code. In that case, do not clone or crawl the whole repo. Read one static context file:
@@ -145,12 +152,22 @@ Example MCP client entry:
 
 After a website/page or combined handoff passes visual/toolkit audit, use the dynamic pass to bind it to a real WordPress site:
 
-1. Export/read the target site's admin-only Site Graph:
+1. Export/read the target site's admin-only Site Graph for capabilities and Bricks/dynamic binding facts:
 
 ```text
 GET /wp-json/dsa/v1/ai/site-graph?sampleLimit=8
 Authorization: Bearer kiwe_ai_...
 ```
+
+For public/headless content data, use the AI-less Site Graph Data API instead of scraping the frontend:
+
+```text
+GET /wp-json/dsa/v1/site-graph/data/schema
+GET /wp-json/dsa/v1/site-graph/data?resource=products&taxonomy=product_cat&term=fudge&limit=4
+POST /wp-json/dsa/v1/site-graph/data
+```
+
+The data route is read-only and public-safe. Anonymous requests only return public/published posts, pages, products, menus, terms, media, and site identity. Authenticated administrators can receive broader private reads. One `POST` body may include a `queries` object so a headless page can fetch site identity, menus, product rails, post rails, and media in a single GraphQL-like envelope without using the AI connector.
 
 On WordPress 7+ with Abilities API available, Kiwe also exposes:
 
@@ -165,6 +182,7 @@ dsa/stage-apply-plan
 
 - the current handoff files;
 - the Site Graph JSON;
+- optional Site Graph Data API responses when the visual/page content should be grounded in real public site data;
 - `kiwe_get_dynamic_context` or `kiwe_start_dynamic_pass`.
 
 3. The AI should add:
@@ -215,7 +233,11 @@ website-handoff/
   website/
     bricks-paste.html  # browser preview + Bricks paste/import artifact
     bricks-notes.md
+  framework/
+    kiwe-framework-profile.json # optional sitewide Seam/Kiwe token profile
 ```
+
+Use `framework/kiwe-framework-profile.json` only when a website/page-only handoff establishes a reusable brand token profile. It must use `schema: "kiwe.framework-profile.v1"` and contain `settings.tokens` only. Combined/AppShell theme work should normally put live-intended tokens inside `appshell-theme/import/theme-id/theme-package.json` under `settings.tokens`.
 
 ### AppShell theme only
 
@@ -238,13 +260,15 @@ combined-kiwe-handoff/
   website/bricks-paste.html    # Bricks artifact; also website/page preview
   website/bricks-notes.md
   appshell-theme/import/theme-id/theme.json
+  appshell-theme/import/theme-id/theme-package.json # single Kiwe admin/API import file when settings change
   appshell-theme/import/theme-id/css/theme.css
   appshell-theme/preview/index.html          # optional technical fixture only
   appshell-theme/preview/PLACEHOLDERS.md     # optional technical fixture only
-  kiwe-settings/               # optional profile/settings lane
 ```
 
 Combined mode has one primary visual review: `combined-preview/index.html`. It must show the website/page behind the Kiwe AppShell and include AppShell variation controls there. Do not make reviewers open a separate website preview and a separate AppShell preview to understand the paired design.
+
+Standalone Framework profiles import/export under `Kiwe > Framework`. Theme packages install under `Kiwe > Theme > Installed themes`. AI staging clients can apply a Framework profile with `kiwe.framework-profile.apply` and then explicitly push the active profile to Bricks with `kiwe.framework.push-bricks`.
 
 ## Naming
 

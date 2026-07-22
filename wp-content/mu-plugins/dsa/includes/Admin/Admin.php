@@ -2,7 +2,12 @@
 
 namespace DSA\Admin;
 
+use DSA\AI\AI_Companion_Memory_Service;
+use DSA\AI\AI_Companion_Service;
 use DSA\AI\Site_Graph_Service;
+use DSA\AI\Internal_AI_Advisor_Service;
+use DSA\AI\Internal_AI_Context_Service;
+use DSA\AI\Internal_AI_Enrichment_Service;
 use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Apply_Plan_Preparer;
 use DSA\AI\Trusted_Apply_Stager;
@@ -35,6 +40,7 @@ use DSA\Security\Secret_Store;
 use DSA\Saved\Saved_Items_Service;
 use DSA\Search\Search_Service;
 use DSA\Settings;
+use DSA\Theme\Screen_Copy_Schema;
 use DSA\Theme\Theme_Package_Service;
 use DSA\WP7\Native_Service;
 
@@ -81,6 +87,8 @@ final class Admin {
 		add_action( 'admin_post_dsa_save_settings', [ $this, 'save_settings' ] );
 		add_action( 'admin_post_dsa_export_profile', [ $this, 'export_profile' ] );
 		add_action( 'admin_post_dsa_import_profile', [ $this, 'import_profile' ] );
+		add_action( 'admin_post_dsa_export_framework_profile', [ $this, 'export_framework_profile' ] );
+		add_action( 'admin_post_dsa_import_framework_profile', [ $this, 'import_framework_profile' ] );
 		add_action( 'admin_post_dsa_export_theme', [ $this, 'export_theme' ] );
 		add_action( 'admin_post_dsa_import_theme', [ $this, 'import_theme' ] );
 		add_action( 'admin_post_dsa_activate_theme', [ $this, 'activate_theme' ] );
@@ -1298,10 +1306,13 @@ final class Admin {
 			'permissions'         => $this->sanitize_permissions_settings( $_POST['permissions'] ?? null, $current['permissions'] ),
 			'protected_flow'      => $this->sanitize_protected_flow_settings( $_POST['protected_flow'] ?? null, $current['protected_flow'] ),
 			'secure'              => $this->sanitize_secure_settings( $_POST['secure'] ?? null, $current['secure'] ),
+			'ai'                  => $this->sanitize_ai_settings( $_POST['ai'] ?? null, $current['ai'] ?? [] ),
 			'email'               => $this->sanitize_email_settings( $_POST['email'] ?? null, $current['email'] ),
 			'abandoned_cart'      => $this->sanitize_abandoned_cart_settings( $_POST['abandoned_cart'] ?? null, $current['abandoned_cart'] ),
 			'commerce'            => $this->sanitize_commerce_settings( $_POST['commerce'] ?? null, $current['commerce'] ),
 			'bricks'              => $this->sanitize_bricks_settings( $_POST['bricks'] ?? null, $current['bricks'] ),
+			'tokens'              => $this->sanitize_token_settings( $_POST['tokens'] ?? null, $current['tokens'] ?? [] ),
+			'theme_screens'       => $this->sanitize_theme_screen_settings( $_POST['theme_screens'] ?? null, $current['theme_screens'] ?? [] ),
 			'haptic'             => $this->sanitize_haptic_settings( $_POST['haptic'] ?? null, $current['haptic'] ),
 			'games'               => $this->sanitize_games_settings( $_POST['games'] ?? null, $current['games'] ),
 			'link_hub'            => $this->sanitize_link_hub_settings( $_POST['link_hub'] ?? null, $current['link_hub'] ),
@@ -1310,6 +1321,7 @@ final class Admin {
 		];
 
 		$this->settings->update( $update );
+		$this->save_securetrack_ai_settings( $_POST['securetrack_ai'] ?? null, $update['ai'] );
 
 		$redirect_page = sanitize_key( wp_unslash( $_POST['_dsa_redirect'] ?? 'kiwe' ) );
 		if ( 'kiwe-style' === $redirect_page ) {
@@ -1513,7 +1525,7 @@ final class Admin {
 
 		check_admin_referer( 'dsa_export_bricks_tokens' );
 
-		$json = wp_json_encode( Seam_Token_Service::export_for_bricks( $this->universal_tokens() ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		$json = wp_json_encode( Seam_Token_Service::export_for_bricks( $this->universal_tokens(), $this->bricks_theme_style_options() ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 
 		if ( ! $json ) {
 			wp_safe_redirect( add_query_arg( 'settings-updated', '0', admin_url( 'admin.php?page=kiwe-framework' ) ) );
@@ -1528,6 +1540,79 @@ final class Admin {
 		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
 		header( 'X-Content-Type-Options: nosniff' );
 		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function export_framework_profile(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to export Kiwe Framework profiles.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_export_framework_profile' );
+
+		$json = wp_json_encode( $this->framework_profile_payload(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+
+		if ( ! $json ) {
+			wp_safe_redirect( add_query_arg( 'framework-profile-error', 'encode', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+
+		$site = sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' );
+		$file = sprintf( 'kiwe-framework-profile-%s-%s.json', $site, gmdate( 'Ymd-His' ) );
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function import_framework_profile(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to import Kiwe Framework profiles.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_import_framework_profile' );
+
+		$file = $_FILES['dsa_framework_profile_file'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( ! is_array( $file ) || empty( $file['tmp_name'] ) || ! empty( $file['error'] ) || ! is_uploaded_file( (string) $file['tmp_name'] ) ) {
+			$this->redirect_framework_profile_error( 'missing' );
+		}
+		if ( ! empty( $file['size'] ) && (int) $file['size'] > 1024 * 1024 ) {
+			$this->redirect_framework_profile_error( 'size' );
+		}
+		$name = sanitize_file_name( $file['name'] ?? '' );
+		if ( ! preg_match( '/\.json$/i', $name ) ) {
+			$this->redirect_framework_profile_error( 'type' );
+		}
+		$raw = file_get_contents( (string) $file['tmp_name'] );
+		if ( false === $raw || '' === trim( $raw ) ) {
+			$this->redirect_framework_profile_error( 'empty' );
+		}
+		$payload = json_decode( $raw, true );
+		if ( ! is_array( $payload ) ) {
+			$this->redirect_framework_profile_error( 'json' );
+		}
+
+		$tokens = $this->framework_profile_tokens_input( $payload );
+		if ( ! is_array( $tokens ) ) {
+			$this->redirect_framework_profile_error( 'invalid' );
+		}
+
+		$settings           = $this->settings->all();
+		$settings['tokens'] = $this->sanitize_token_settings( $tokens, $settings['tokens'] ?? [] );
+		$this->settings->update( $settings );
+
+		wp_safe_redirect( add_query_arg( 'framework-profile-imported', '1', admin_url( 'admin.php?page=kiwe-framework' ) ) );
 		exit;
 	}
 
@@ -1558,6 +1643,14 @@ final class Admin {
 		$plain   = (string) ( $created['key'] ?? '' );
 		$once    = substr( hash( 'sha256', $plain . '|' . wp_rand() ), 0, 16 );
 		set_transient( 'dsa_ai_key_once_' . $once, $plain, 10 * MINUTE_IN_SECONDS );
+		update_option(
+			'dsa_ai_key_once_' . $once,
+			[
+				'key'       => $plain,
+				'expiresAt' => time() + ( 10 * MINUTE_IN_SECONDS ),
+			],
+			false
+		);
 
 		wp_safe_redirect( add_query_arg( 'kiwe-ai-key-created', $once, admin_url( 'admin.php?page=kiwe-ai' ) ) );
 		exit;
@@ -2750,20 +2843,23 @@ final class Admin {
 			exit;
 		}
 
-		$export             = Seam_Token_Service::export_for_bricks( $this->universal_tokens() );
+		$export             = Seam_Token_Service::export_for_bricks( $this->universal_tokens(), $this->bricks_theme_style_options() );
 		$kiwe_variables     = isset( $export['variables'] ) && is_array( $export['variables'] ) ? $export['variables'] : [];
 		$kiwe_categories    = isset( $export['categories'] ) && is_array( $export['categories'] ) ? $export['categories'] : [];
 		$kiwe_palette       = isset( $export['colorPalette'] ) && is_array( $export['colorPalette'] ) ? $export['colorPalette'] : [];
+		$kiwe_theme_style   = isset( $export['themeStyle'] ) && is_array( $export['themeStyle'] ) ? $export['themeStyle'] : [];
 		$kiwe_classes       = isset( $export['classes'] ) && is_array( $export['classes'] ) ? $export['classes'] : [];
 		$kiwe_class_categories = isset( $export['classCategories'] ) && is_array( $export['classCategories'] ) ? $export['classCategories'] : [];
 		$current_variables  = get_option( BRICKS_DB_GLOBAL_VARIABLES, [] );
 		$current_categories = get_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, [] );
 		$current_palette    = defined( 'BRICKS_DB_COLOR_PALETTE' ) ? get_option( BRICKS_DB_COLOR_PALETTE, [] ) : [];
+		$current_theme_styles = defined( 'BRICKS_DB_THEME_STYLES' ) ? get_option( BRICKS_DB_THEME_STYLES, [] ) : [];
 		$current_classes    = defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES, [] ) : [];
 		$current_class_categories = defined( 'BRICKS_DB_GLOBAL_CLASSES_CATEGORIES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES_CATEGORIES, [] ) : [];
 		$current_variables  = is_array( $current_variables ) ? $current_variables : [];
 		$current_categories = is_array( $current_categories ) ? $current_categories : [];
 		$current_palette    = is_array( $current_palette ) ? $current_palette : [];
+		$current_theme_styles = is_array( $current_theme_styles ) ? $current_theme_styles : [];
 		$current_classes    = is_array( $current_classes ) ? $current_classes : [];
 		$current_class_categories = is_array( $current_class_categories ) ? $current_class_categories : [];
 
@@ -2776,6 +2872,7 @@ final class Admin {
 				'variables'  => $current_variables,
 				'categories' => $current_categories,
 				'palette'    => $current_palette,
+				'themeStyles' => $current_theme_styles,
 				'classes'    => $current_classes,
 				'classCategories' => $current_class_categories,
 			],
@@ -2880,6 +2977,15 @@ final class Admin {
 		update_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories, false );
 		if ( defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
 			update_option( BRICKS_DB_COLOR_PALETTE, $merged_palette, false );
+		}
+		$token_settings = $this->settings->get( 'tokens', [] );
+		$theme_style_settings = isset( $token_settings['bricks_theme_style'] ) && is_array( $token_settings['bricks_theme_style'] ) ? $token_settings['bricks_theme_style'] : [];
+		if ( defined( 'BRICKS_DB_THEME_STYLES' ) && ! empty( $kiwe_theme_style['id'] ) && ! empty( $kiwe_theme_style['settings'] ) && ! empty( $theme_style_settings['enabled'] ) ) {
+			$current_theme_styles[ (string) $kiwe_theme_style['id'] ] = [
+				'label'    => sanitize_text_field( (string) ( $kiwe_theme_style['label'] ?? 'Kiwe Universal Design Tokens' ) ),
+				'settings' => $kiwe_theme_style['settings'],
+			];
+			update_option( BRICKS_DB_THEME_STYLES, $current_theme_styles, false );
 		}
 		if ( defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ) {
 			if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_classes_in_db' ) ) {
@@ -3292,30 +3398,48 @@ final class Admin {
 
 	private function universal_tokens(): array {
 		$settings = $this->settings->all();
-		$theme = is_array( $settings['dsa_theme'] ?? null ) ? $settings['dsa_theme'] : [];
-		$visual = is_array( $settings['visual_effects'] ?? null ) ? $settings['visual_effects'] : [];
-		$overrides = [
-			'color-brand' => (string) ( $theme['active_color'] ?? '#d6006f' ),
-			'color-accent' => (string) ( $theme['hover_color'] ?? '#24c6a1' ),
-			'color-hero'   => (string) ( $theme['hero_text_color'] ?? 'rgba(20,24,34,0.18)' ),
-			'glass-blur'   => max( 0, min( 24, absint( $visual['blur_strength'] ?? 10 ) ) ) . 'px',
-		];
+		return Seam_Token_Service::tokens_with_overrides( Seam_Token_Service::overrides_from_settings( $settings ) );
+	}
 
-		return Seam_Token_Service::tokens_with_overrides( $overrides );
+	private function bricks_theme_style_options(): array {
+		$tokens = $this->settings->get( 'tokens', [] );
+		$style  = isset( $tokens['bricks_theme_style'] ) && is_array( $tokens['bricks_theme_style'] ) ? $tokens['bricks_theme_style'] : [];
+
+		return [
+			'id'    => sanitize_key( (string) ( $style['id'] ?? 'kiwe-global-design' ) ) ?: 'kiwe-global-design',
+			'label' => sanitize_text_field( (string) ( $style['label'] ?? 'Kiwe Universal Design Tokens' ) ) ?: 'Kiwe Universal Design Tokens',
+		];
 	}
 
 	public function render_framework_page(): void {
+		$settings = $this->settings->all();
 		$items    = $this->universal_tokens();
 		$counts   = Seam_Token_Service::counts( $items );
 		$class_export = Seam_Token_Service::framework_classes_for_bricks();
 		$class_count  = isset( $class_export['classes'] ) && is_array( $class_export['classes'] ) ? count( $class_export['classes'] ) : 0;
+		$token_defaults = $this->settings->defaults()['tokens'];
+		$token_settings = wp_parse_args( isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ? $settings['tokens'] : [], $token_defaults );
+		$token_settings['bricks_theme_style'] = wp_parse_args(
+			is_array( $token_settings['bricks_theme_style'] ?? null ) ? $token_settings['bricks_theme_style'] : [],
+			$token_defaults['bricks_theme_style']
+		);
+		$token_overrides = Seam_Token_Service::sanitize_overrides( isset( $token_settings['overrides'] ) && is_array( $token_settings['overrides'] ) ? $token_settings['overrides'] : [] );
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe Framework', 'dsa' ); ?></h1>
+			<?php if ( isset( $_GET['settings-updated'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Framework design token profile saved.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['framework-profile-imported'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Framework profile imported. Push Kiwe Framework to Bricks when you want those tokens/classes written to Bricks.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['framework-profile-error'] ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->framework_profile_error_message( sanitize_key( (string) wp_unslash( $_GET['framework-profile-error'] ) ) ) ); ?></p></div>
+			<?php endif; ?>
 			<?php if ( isset( $_GET['tokens-exported'] ) ) : ?>
 				<?php $export_status = sanitize_key( (string) wp_unslash( $_GET['tokens-exported'] ) ); ?>
 				<?php if ( 'bricks' === $export_status ) : ?>
-					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Kiwe Framework was pushed to Bricks as additive kiwe-* variables, the Kiwe Universal color palette, and the neutral Seam Class Vocabulary. Existing non-Kiwe Bricks variables, classes, and palettes were left untouched.', 'dsa' ); ?></p></div>
+					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Kiwe Framework was pushed to Bricks as additive kiwe-* variables, the Kiwe Universal color palette, the neutral Seam Class Vocabulary, and one safe global Kiwe theme style. Existing non-Kiwe Bricks variables, classes, palettes, and theme styles were left untouched.', 'dsa' ); ?></p></div>
 				<?php elseif ( 'no-bricks' === $export_status ) : ?>
 					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks framework storage was not available. Use the JSON download and import it after Bricks is active.', 'dsa' ); ?></p></div>
 				<?php endif; ?>
@@ -3347,30 +3471,77 @@ final class Admin {
 					<?php wp_nonce_field( 'dsa_export_bricks_tokens' ); ?>
 					<?php submit_button( __( 'Download Bricks Framework JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
-				<div class="dsa-admin-token-grid">
-					<?php foreach ( $items as $token ) : ?>
-						<?php $slider = Seam_Token_Service::slider_value( is_array( $token ) ? $token : [] ); ?>
-						<article class="dsa-admin-token-card">
-							<header>
-								<code><?php echo esc_html( (string) ( $token['cssVar'] ?? '' ) ); ?></code>
-								<span><?php echo esc_html( (string) ( $token['type'] ?? 'project' ) ); ?></span>
-							</header>
-							<strong><?php echo esc_html( (string) ( $token['value'] ?? '' ) ); ?></strong>
-							<?php if ( ! empty( $token['description'] ) ) : ?>
-								<p><?php echo esc_html( (string) $token['description'] ); ?></p>
-							<?php endif; ?>
-							<?php if ( ! empty( $token['seamAlias'] ) ) : ?>
-								<small><?php echo esc_html( sprintf( __( 'SEAM reference: %s', 'dsa' ), (string) $token['seamAlias'] ) ); ?></small>
-							<?php endif; ?>
-							<?php if ( 'color' === ( $token['type'] ?? '' ) && preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', (string) ( $token['value'] ?? '' ) ) ) : ?>
-								<i style="background: <?php echo esc_attr( (string) $token['value'] ); ?>"></i>
-							<?php endif; ?>
-							<?php if ( is_array( $slider ) ) : ?>
-								<input type="range" min="0" max="<?php echo esc_attr( (string) $slider['max'] ); ?>" value="<?php echo esc_attr( (string) $slider['value'] ); ?>" disabled>
-							<?php endif; ?>
-						</article>
-					<?php endforeach; ?>
+				<div class="dsa-admin-inline-fields" style="margin-top: 12px;">
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_export_framework_profile">
+						<?php wp_nonce_field( 'dsa_export_framework_profile' ); ?>
+						<?php submit_button( __( 'Export Framework Profile', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</form>
+					<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_import_framework_profile">
+						<?php wp_nonce_field( 'dsa_import_framework_profile' ); ?>
+						<label class="screen-reader-text" for="dsa-framework-profile-file"><?php esc_html_e( 'Import Framework Profile JSON', 'dsa' ); ?></label>
+						<input id="dsa-framework-profile-file" type="file" name="dsa_framework_profile_file" accept="application/json,.json" required>
+						<?php submit_button( __( 'Import Framework Profile', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</form>
 				</div>
+				<p class="description"><?php esc_html_e( 'Framework profiles carry only the shared Seam/Kiwe design-token profile and safe Bricks global theme style metadata. AppShell dock/sheet behavior belongs to Kiwe themes; AI/staging access belongs to Kiwe > AI.', 'dsa' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_save_settings">
+					<input type="hidden" name="_dsa_redirect" value="kiwe-framework">
+					<input type="hidden" name="tokens[enabled]" value="0">
+					<input type="hidden" name="tokens[bricks_theme_style][enabled]" value="0">
+					<?php wp_nonce_field( 'dsa_save_settings' ); ?>
+					<table class="form-table" role="presentation">
+						<tbody>
+							<tr>
+								<th scope="row"><?php esc_html_e( 'Design token profile', 'dsa' ); ?></th>
+								<td class="dsa-admin-inline-fields">
+									<label><input type="checkbox" name="tokens[enabled]" value="1" <?php checked( ! empty( $token_settings['enabled'] ) ); ?>> <?php esc_html_e( 'Use profile token overrides', 'dsa' ); ?></label>
+									<input class="regular-text" type="text" name="tokens[profile_label]" value="<?php echo esc_attr( (string) ( $token_settings['profile_label'] ?? 'Kiwe Universal' ) ); ?>" placeholder="<?php echo esc_attr__( 'Profile label', 'dsa' ); ?>">
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e( 'Bricks theme style', 'dsa' ); ?></th>
+								<td class="dsa-admin-inline-fields">
+									<label><input type="checkbox" name="tokens[bricks_theme_style][enabled]" value="1" <?php checked( ! empty( $token_settings['bricks_theme_style']['enabled'] ) ); ?>> <?php esc_html_e( 'Push safe global theme style', 'dsa' ); ?></label>
+									<input type="text" name="tokens[bricks_theme_style][id]" value="<?php echo esc_attr( (string) ( $token_settings['bricks_theme_style']['id'] ?? 'kiwe-global-design' ) ); ?>" placeholder="kiwe-global-design">
+									<input class="regular-text" type="text" name="tokens[bricks_theme_style][label]" value="<?php echo esc_attr( (string) ( $token_settings['bricks_theme_style']['label'] ?? 'Kiwe Universal Design Tokens' ) ); ?>" placeholder="<?php echo esc_attr__( 'Bricks theme style label', 'dsa' ); ?>">
+									<p class="description"><?php esc_html_e( 'Kiwe only writes global typography, color palette, links, and site background lanes. Element-level Bricks styling remains designer-owned.', 'dsa' ); ?></p>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+					<div class="dsa-admin-token-grid">
+						<?php foreach ( $items as $token ) : ?>
+							<?php
+							$token_name = (string) ( $token['name'] ?? '' );
+							$slider = Seam_Token_Service::slider_value( is_array( $token ) ? $token : [] );
+							?>
+							<article class="dsa-admin-token-card">
+								<header>
+									<code><?php echo esc_html( (string) ( $token['cssVar'] ?? '' ) ); ?></code>
+									<span><?php echo esc_html( (string) ( $token['type'] ?? 'project' ) ); ?></span>
+								</header>
+								<label class="screen-reader-text" for="kiwe-token-<?php echo esc_attr( $token_name ); ?>"><?php echo esc_html( sprintf( __( 'Override %s', 'dsa' ), (string) ( $token['cssVar'] ?? $token_name ) ) ); ?></label>
+								<input id="kiwe-token-<?php echo esc_attr( $token_name ); ?>" type="text" name="tokens[overrides][<?php echo esc_attr( $token_name ); ?>]" value="<?php echo esc_attr( (string) ( $token_overrides[ $token_name ] ?? '' ) ); ?>" placeholder="<?php echo esc_attr( (string) ( $token['value'] ?? '' ) ); ?>">
+								<?php if ( ! empty( $token['description'] ) ) : ?>
+									<p><?php echo esc_html( (string) $token['description'] ); ?></p>
+								<?php endif; ?>
+								<?php if ( ! empty( $token['seamAlias'] ) ) : ?>
+									<small><?php echo esc_html( sprintf( __( 'SEAM reference: %s', 'dsa' ), (string) $token['seamAlias'] ) ); ?></small>
+								<?php endif; ?>
+								<?php if ( 'color' === ( $token['type'] ?? '' ) && preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', (string) ( $token['value'] ?? '' ) ) ) : ?>
+									<i style="background: <?php echo esc_attr( (string) $token['value'] ); ?>"></i>
+								<?php endif; ?>
+								<?php if ( is_array( $slider ) ) : ?>
+									<input type="range" min="0" max="<?php echo esc_attr( (string) $slider['max'] ); ?>" value="<?php echo esc_attr( (string) $slider['value'] ); ?>" disabled>
+								<?php endif; ?>
+							</article>
+						<?php endforeach; ?>
+					</div>
+					<?php submit_button( __( 'Save Framework Design Tokens', 'dsa' ) ); ?>
+				</form>
 			</section>
 		</div>
 		<?php
@@ -3384,9 +3555,40 @@ final class Admin {
 		$created_token  = isset( $_GET['kiwe-ai-key-created'] ) ? sanitize_key( (string) wp_unslash( $_GET['kiwe-ai-key-created'] ) ) : '';
 		if ( '' !== $created_token ) {
 			$created_key = (string) get_transient( 'dsa_ai_key_once_' . $created_token );
+			if ( '' === $created_key ) {
+				$created_fallback = get_option( 'dsa_ai_key_once_' . $created_token, [] );
+				if ( is_array( $created_fallback ) && time() <= absint( $created_fallback['expiresAt'] ?? 0 ) ) {
+					$created_key = (string) ( $created_fallback['key'] ?? '' );
+				}
+			}
 			delete_transient( 'dsa_ai_key_once_' . $created_token );
+			delete_option( 'dsa_ai_key_once_' . $created_token );
 		}
 		$rest_base = rest_url( 'dsa/v1/ai' );
+		$settings  = $this->settings->all();
+		$ai_settings = array_replace_recursive( $this->settings->defaults()['ai'] ?? [], is_array( $settings['ai'] ?? null ) ? $settings['ai'] : [] );
+		$site_graph_service = new Site_Graph_Service( $this->settings, $this->modules );
+		$companion = new AI_Companion_Service( $this->settings, $site_graph_service, new AI_Companion_Memory_Service() );
+		$companion_status = $companion->status( [ 'record' => [ 'scopes' => [ 'admin' ] ] ] );
+		$include_securetrack = ! empty( $ai_settings['securetrack_brief_enabled'] );
+		$advisor   = ( new Internal_AI_Advisor_Service( new Internal_AI_Context_Service( $site_graph_service ) ) )->advise(
+			[
+				'focus'       => isset( $_GET['advisor-focus'] ) ? sanitize_key( (string) wp_unslash( $_GET['advisor-focus'] ) ) : 'all',
+				'sampleLimit' => 8,
+				'secureLimit' => 12,
+				'includeSecureTrack' => $include_securetrack,
+			]
+		);
+		$enrichment = ( new Internal_AI_Enrichment_Service( new Internal_AI_Advisor_Service( new Internal_AI_Context_Service( $site_graph_service ) ) ) )->enrich(
+			[
+				'focus'       => isset( $_GET['advisor-focus'] ) ? sanitize_key( (string) wp_unslash( $_GET['advisor-focus'] ) ) : 'all',
+				'style'       => isset( $_GET['advisor-style'] ) ? sanitize_key( (string) wp_unslash( $_GET['advisor-style'] ) ) : 'executive',
+				'sampleLimit' => 8,
+				'secureLimit' => 12,
+				'limit'       => 6,
+				'includeSecureTrack' => $include_securetrack,
+			]
+		);
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe AI', 'dsa' ); ?></h1>
@@ -3410,6 +3612,10 @@ final class Admin {
 			<?php if ( isset( $_GET['binding-plan'] ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->binding_plan_error_message( sanitize_key( (string) wp_unslash( $_GET['binding-plan'] ) ) ) ); ?></p></div>
 			<?php endif; ?>
+
+			<?php $this->render_ai_companion_settings( $ai_settings, $companion_status, $rest_base ); ?>
+
+			<?php $this->render_internal_ai_advisor( $advisor, $enrichment, $rest_base ); ?>
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'API access keys', 'dsa' ); ?></h2>
@@ -3547,6 +3753,391 @@ final class Admin {
 				</ul>
 			</section>
 		</div>
+		<?php
+	}
+
+	private function render_ai_companion_settings( array $ai_settings, array $companion_status, string $rest_base ): void {
+		$modes = isset( $ai_settings['companion_modes'] ) && is_array( $ai_settings['companion_modes'] ) ? $ai_settings['companion_modes'] : [];
+		$stp = function_exists( 'stp_cfg' ) ? stp_cfg( true ) : [];
+		$stp = is_array( $stp ) ? $stp : [];
+		$ai_status = function_exists( 'stp_ai_status' ) ? stp_ai_status() : [];
+		$ai_status = is_array( $ai_status ) ? $ai_status : [];
+		$mode     = sanitize_key( (string) ( $stp['v2_ai_mode'] ?? 'batch' ) );
+		$studio_mode = sanitize_key( (string) ( $ai_settings['studio_mode'] ?? 'browser_companion' ) );
+		$native_provider = sanitize_key( (string) ( $ai_settings['native_provider'] ?? 'none' ) );
+		$native_model = sanitize_text_field( (string) ( $ai_settings['native_model'] ?? '' ) );
+		$native_key_stored = '' !== (string) ( $ai_settings['native_api_key'] ?? '' );
+		$securetrack_native_supported = in_array( $native_provider, [ 'gemini', 'groq', 'xai' ], true );
+		?>
+		<section class="dsa-admin__panel dsa-ai-companion">
+			<div class="dsa-ai-advisor__head">
+				<div>
+					<p class="dsa-admin-eyebrow"><?php esc_html_e( 'Kiwe Companion AI', 'dsa' ); ?></p>
+					<h2><?php esc_html_e( 'Studio AI, Companion, and SecureTrack', 'dsa' ); ?></h2>
+					<p><?php esc_html_e( 'Studio AI can run three ways: native Kiwe AI with a configured provider, browser AI plus Companion context packets, or browser AI only. Companion keeps outside tools token-efficient by giving them the right Kiwe packet instead of the whole plugin.', 'dsa' ); ?></p>
+				</div>
+				<div class="dsa-ai-advisor__meta">
+					<span><strong><?php echo ! empty( $ai_settings['studio_enabled'] ) ? esc_html__( 'On', 'dsa' ) : esc_html__( 'Off', 'dsa' ); ?></strong><?php esc_html_e( 'studio', 'dsa' ); ?></span>
+					<span><strong><?php echo esc_html( str_replace( '_', ' ', $studio_mode ) ); ?></strong><?php esc_html_e( 'mode', 'dsa' ); ?></span>
+					<span><strong><?php echo ! empty( $ai_settings['companion_enabled'] ) ? esc_html__( 'On', 'dsa' ) : esc_html__( 'Off', 'dsa' ); ?></strong><?php esc_html_e( 'companion', 'dsa' ); ?></span>
+					<span><strong><?php echo ! empty( $ai_settings['memory_enabled'] ) ? esc_html__( 'On', 'dsa' ) : esc_html__( 'Off', 'dsa' ); ?></strong><?php esc_html_e( 'local memory', 'dsa' ); ?></span>
+					<span><strong><?php echo ! empty( $ai_settings['securetrack_brief_enabled'] ) ? esc_html__( 'Allowed', 'dsa' ) : esc_html__( 'Blocked', 'dsa' ); ?></strong><?php esc_html_e( 'SecureTrack bridge', 'dsa' ); ?></span>
+					<span><strong><?php echo esc_html( strtoupper( $native_provider ) ); ?></strong><?php esc_html_e( 'native provider', 'dsa' ); ?></span>
+				</div>
+			</div>
+
+			<div class="dsa-admin-token-summary">
+				<div><strong><?php echo ! empty( $ai_settings['token_saver_enabled'] ) ? esc_html__( 'On', 'dsa' ) : esc_html__( 'Off', 'dsa' ); ?></strong><span><?php esc_html_e( 'token saver', 'dsa' ); ?></span></div>
+				<div><strong><?php echo ! empty( $companion_status['enabled'] ) ? esc_html__( 'Ready', 'dsa' ) : esc_html__( 'Disabled', 'dsa' ); ?></strong><span><?php esc_html_e( 'API broker', 'dsa' ); ?></span></div>
+				<div><strong><?php echo esc_html( (string) absint( $ai_settings['max_context_cards'] ?? 12 ) ); ?></strong><span><?php esc_html_e( 'context cards', 'dsa' ); ?></span></div>
+				<div><strong><?php echo esc_html( number_format_i18n( absint( $ai_settings['max_review_bytes'] ?? 120000 ) ) ); ?></strong><span><?php esc_html_e( 'review bytes', 'dsa' ); ?></span></div>
+				<div><strong><?php echo $native_key_stored ? esc_html__( 'Key stored', 'dsa' ) : esc_html__( 'No key', 'dsa' ); ?></strong><span><?php esc_html_e( 'native key', 'dsa' ); ?></span></div>
+			</div>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="dsa_save_settings">
+				<input type="hidden" name="_dsa_redirect" value="kiwe-ai">
+				<?php wp_nonce_field( 'dsa_save_settings' ); ?>
+
+				<table class="form-table" role="presentation">
+					<tbody>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Kiwe Studio AI', 'dsa' ); ?></th>
+							<td>
+								<label><input type="checkbox" name="ai[studio_enabled]" value="1" <?php checked( ! empty( $ai_settings['studio_enabled'] ) ); ?>> <?php esc_html_e( 'Enable Studio AI workflows', 'dsa' ); ?></label><br>
+								<label><input type="checkbox" name="ai[token_saver_enabled]" value="1" <?php checked( ! empty( $ai_settings['token_saver_enabled'] ) ); ?>> <?php esc_html_e( 'Use token saver packets by default', 'dsa' ); ?></label><br>
+								<label><input type="checkbox" name="ai[prefer_companion_context]" value="1" <?php checked( ! empty( $ai_settings['prefer_companion_context'] ) ); ?>> <?php esc_html_e( 'Prefer Companion context before native drafting', 'dsa' ); ?></label>
+								<br><label><input type="checkbox" name="ai[bricks_editor_companion_enabled]" value="1" <?php checked( ! empty( $ai_settings['bricks_editor_companion_enabled'] ) ); ?>> <?php esc_html_e( 'Show Kiwe Studio companion in the Bricks front-end editor', 'dsa' ); ?></label>
+								<p class="description"><?php esc_html_e( 'Studio coordinates browser AI, Companion packets, native drafting, deterministic audits, and staging gates. It does not give models direct WordPress/Bricks/WooCommerce mutation authority.', 'dsa' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Studio operating mode', 'dsa' ); ?></th>
+							<td>
+								<select name="ai[studio_mode]">
+									<option value="browser_companion" <?php selected( $studio_mode, 'browser_companion' ); ?>><?php esc_html_e( 'Browser AI + Companion AI packets', 'dsa' ); ?></option>
+									<option value="native" <?php selected( $studio_mode, 'native' ); ?>><?php esc_html_e( 'Native Kiwe AI provider', 'dsa' ); ?></option>
+									<option value="browser_only" <?php selected( $studio_mode, 'browser_only' ); ?>><?php esc_html_e( 'Browser AI only - no internal AI', 'dsa' ); ?></option>
+								</select>
+								<p class="description"><?php esc_html_e( 'Browser + Companion is the safest default: external AI receives compact Kiwe context and local audit help without spending model tokens inside WordPress.', 'dsa' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Native AI provider', 'dsa' ); ?></th>
+							<td>
+								<p class="dsa-admin-inline-fields">
+									<label>
+										<span><?php esc_html_e( 'Provider', 'dsa' ); ?></span>
+										<select name="ai[native_provider]">
+											<?php foreach ( [ 'none' => 'None', 'wordpress_ai_client' => 'WordPress AI Client', 'openai_compatible' => 'OpenAI-compatible', 'gemini' => 'Google Gemini', 'groq' => 'Groq API', 'xai' => 'xAI Grok API' ] as $value => $label ) : ?>
+												<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $native_provider, $value ); ?>><?php echo esc_html( $label ); ?></option>
+											<?php endforeach; ?>
+										</select>
+									</label>
+									<label>
+										<span><?php esc_html_e( 'Model', 'dsa' ); ?></span>
+										<input type="text" name="ai[native_model]" value="<?php echo esc_attr( $native_model ); ?>" placeholder="gemini-2.5-flash / gpt-4.1-mini" style="min-width:260px;">
+									</label>
+									<label>
+										<span><?php esc_html_e( 'Max output tokens', 'dsa' ); ?></span>
+										<input type="number" name="ai[max_native_tokens]" value="<?php echo esc_attr( (string) absint( $ai_settings['max_native_tokens'] ?? 1200 ) ); ?>" min="200" max="12000" step="100">
+									</label>
+									<label>
+										<span><?php esc_html_e( 'Context bytes', 'dsa' ); ?></span>
+										<input type="number" name="ai[max_native_context_bytes]" value="<?php echo esc_attr( (string) absint( $ai_settings['max_native_context_bytes'] ?? 60000 ) ); ?>" min="10000" max="200000" step="1000">
+									</label>
+								</p>
+								<p>
+									<label>
+										<span><?php esc_html_e( 'Base URL', 'dsa' ); ?></span>
+										<input type="url" name="ai[native_base_url]" value="<?php echo esc_attr( (string) ( $ai_settings['native_base_url'] ?? '' ) ); ?>" class="regular-text" placeholder="https://api.openai.com/v1">
+									</label>
+								</p>
+								<p>
+									<label>
+										<span class="screen-reader-text"><?php esc_html_e( 'Native AI API key', 'dsa' ); ?></span>
+										<input type="password" name="ai[native_api_key]" value="" class="regular-text" autocomplete="new-password" placeholder="<?php echo esc_attr( $native_key_stored ? __( 'Key stored - leave blank to keep', 'dsa' ) : __( 'No native key stored', 'dsa' ) ); ?>">
+									</label>
+								</p>
+								<p>
+									<label><input type="checkbox" name="ai[allow_native_generation]" value="1" <?php checked( ! empty( $ai_settings['allow_native_generation'] ) ); ?>> <?php esc_html_e( 'Allow native model drafting when the Kiwe AI key also has native_ai scope', 'dsa' ); ?></label><br>
+									<label><input type="checkbox" name="ai[allow_browser_handoff_export]" value="1" <?php checked( ! empty( $ai_settings['allow_browser_handoff_export'] ) ); ?>> <?php esc_html_e( 'Allow browser handoff prompt export', 'dsa' ); ?></label>
+								</p>
+								<p class="description"><?php esc_html_e( 'Native keys are encrypted by Kiwe Secret Store. Drafting is read-only and bounded; saves, staging, runtime cart/checkout/auth, and theme/page imports remain separate controlled actions.', 'dsa' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Companion AI', 'dsa' ); ?></th>
+							<td>
+								<label><input type="checkbox" name="ai[companion_enabled]" value="1" <?php checked( ! empty( $ai_settings['companion_enabled'] ) ); ?>> <?php esc_html_e( 'Enable Companion AI context broker', 'dsa' ); ?></label>
+								<p class="description"><?php esc_html_e( 'External AI clients must still use a revocable Kiwe AI key with the companion scope. This switch only makes the broker available.', 'dsa' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Allowed Companion modes', 'dsa' ); ?></th>
+							<td class="dsa-admin-token-chips">
+								<?php foreach ( [ 'website', 'theme', 'combined', 'dynamic', 'audit', 'staging', 'security' ] as $companion_mode ) : ?>
+									<label><input type="checkbox" name="ai[companion_modes][<?php echo esc_attr( $companion_mode ); ?>]" value="1" <?php checked( ! empty( $modes[ $companion_mode ] ) ); ?>> <code><?php echo esc_html( $companion_mode ); ?></code></label>
+								<?php endforeach; ?>
+								<p class="description"><?php esc_html_e( 'Disable any lane you do not want external AI tools to ask the Companion about.', 'dsa' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Privacy and memory', 'dsa' ); ?></th>
+							<td>
+								<label><input type="checkbox" name="ai[memory_enabled]" value="1" <?php checked( ! empty( $ai_settings['memory_enabled'] ) ); ?>> <?php esc_html_e( 'Remember repeated audit findings as privacy-safe fingerprints', 'dsa' ); ?></label><br>
+								<label><input type="checkbox" name="ai[log_prompts]" value="1" <?php checked( ! empty( $ai_settings['log_prompts'] ) ); ?>> <?php esc_html_e( 'Allow prompt logging', 'dsa' ); ?></label>
+								<p class="description"><?php esc_html_e( 'Prompt logging stays off by default. Memory stores finding codes/counts only, not handoff files, prompts, credentials, visitor data, or order/payment data.', 'dsa' ); ?></p>
+								<p class="dsa-admin-inline-fields">
+									<label><span><?php esc_html_e( 'Retention days', 'dsa' ); ?></span><input type="number" name="ai[memory_retention_days]" value="<?php echo esc_attr( (string) absint( $ai_settings['memory_retention_days'] ?? 90 ) ); ?>" min="7" max="365"></label>
+									<label><span><?php esc_html_e( 'Max context cards', 'dsa' ); ?></span><input type="number" name="ai[max_context_cards]" value="<?php echo esc_attr( (string) absint( $ai_settings['max_context_cards'] ?? 12 ) ); ?>" min="4" max="40"></label>
+									<label><span><?php esc_html_e( 'Max review bytes', 'dsa' ); ?></span><input type="number" name="ai[max_review_bytes]" value="<?php echo esc_attr( (string) absint( $ai_settings['max_review_bytes'] ?? 120000 ) ); ?>" min="20000" max="500000" step="1000"></label>
+									<label><span><?php esc_html_e( 'Context TTL', 'dsa' ); ?></span><input type="number" name="ai[cache_ttl_seconds]" value="<?php echo esc_attr( (string) absint( $ai_settings['cache_ttl_seconds'] ?? 300 ) ); ?>" min="30" max="3600"></label>
+								</p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'SecureTrack AI bridge', 'dsa' ); ?></th>
+							<td>
+								<label><input type="checkbox" name="ai[securetrack_brief_enabled]" value="1" <?php checked( ! empty( $ai_settings['securetrack_brief_enabled'] ) ); ?>> <?php esc_html_e( 'Allow redacted SecureTrack brief to Companion/API keys that also have security scope', 'dsa' ); ?></label>
+								<p class="description"><?php esc_html_e( 'This uses the Companion AI settings above. It does not create a separate SecureTrack model key, and it does not expose raw IPs, usernames, URLs, payloads, secrets, or visitor/order data. API keys also need all, security_brief, or companion_securetrack scope.', 'dsa' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'SecureTrack Site Brain AI', 'dsa' ); ?></th>
+							<td>
+								<p>
+									<strong><?php esc_html_e( 'Provider source:', 'dsa' ); ?></strong>
+									<?php if ( $securetrack_native_supported ) : ?>
+										<?php
+										echo esc_html(
+											sprintf(
+												/* translators: 1: provider, 2: model */
+												__( 'Uses Native AI provider above: %1$s / %2$s.', 'dsa' ),
+												strtoupper( $native_provider ),
+												'' !== $native_model ? $native_model : __( 'default model', 'dsa' )
+											)
+										);
+										?>
+									<?php else : ?>
+										<?php esc_html_e( 'Local-only. Choose Gemini, Groq, or xAI in Native AI provider above if SecureTrack cloud review should use the shared Kiwe AI key.', 'dsa' ); ?>
+									<?php endif; ?>
+								</p>
+								<p class="dsa-admin-inline-fields">
+									<label>
+										<span><?php esc_html_e( 'Mode', 'dsa' ); ?></span>
+										<select name="securetrack_ai[v2_ai_mode]">
+											<option value="batch" <?php selected( $mode, 'batch' ); ?>><?php esc_html_e( 'Batch - save tokens', 'dsa' ); ?></option>
+											<option value="always" <?php selected( $mode, 'always' ); ?>><?php esc_html_e( 'Always on - realtime review', 'dsa' ); ?></option>
+										</select>
+									</label>
+									<label>
+										<span><?php esc_html_e( 'Batch minutes', 'dsa' ); ?></span>
+										<input type="number" name="securetrack_ai[v2_ai_batch_mins]" value="<?php echo esc_attr( (string) absint( $stp['v2_ai_batch_mins'] ?? 5 ) ); ?>" min="1" max="60">
+									</label>
+								</p>
+								<p>
+									<label><input type="checkbox" name="securetrack_ai[v2_auto_block_local]" value="1" <?php checked( ! empty( $stp['v2_auto_block_local'] ) ); ?>> <?php esc_html_e( 'Allow mature local Site Brain to raise auto-block recommendations without cloud review', 'dsa' ); ?></label><br>
+									<label><input type="checkbox" name="securetrack_ai[v2_share_patterns]" value="1" <?php checked( ! empty( $stp['v2_share_patterns'] ) ); ?>> <?php esc_html_e( 'Allow anonymized learned pattern sharing when a future global model is connected', 'dsa' ); ?></label>
+								</p>
+								<p>
+									<strong><?php esc_html_e( 'Status:', 'dsa' ); ?></strong>
+									<?php if ( $securetrack_native_supported && $native_key_stored ) : ?>
+										<span style="color:#059669;font-weight:700"><?php esc_html_e( 'Shared native key configured', 'dsa' ); ?></span>
+									<?php elseif ( ! $securetrack_native_supported ) : ?>
+										<span style="color:#64748b;font-weight:700"><?php esc_html_e( 'Not configured', 'dsa' ); ?></span>
+									<?php else : ?>
+										<span style="color:#d97706;font-weight:700"><?php esc_html_e( 'Native key missing', 'dsa' ); ?></span>
+									<?php endif; ?>
+									<?php if ( ! empty( $ai_status['message'] ) ) : ?>
+										<small><?php echo esc_html( ' - ' . (string) $ai_status['message'] . ' (' . (string) ( $ai_status['updated_at'] ?? '' ) . ')' ); ?></small>
+									<?php endif; ?>
+								</p>
+								<p class="description"><?php esc_html_e( 'No separate SecureTrack API key is stored from this screen. SecureTrack cloud review, when supported, syncs from the Native AI provider/key above. Companion API access remains controlled by Kiwe AI API keys and scopes.', 'dsa' ); ?></p>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				<?php submit_button( __( 'Save Kiwe AI Settings', 'dsa' ) ); ?>
+			</form>
+
+			<p class="description">
+				<?php esc_html_e( 'Studio and Companion endpoints:', 'dsa' ); ?>
+				<code><?php echo esc_html( $rest_base ); ?>/studio/start</code>,
+				<code><?php echo esc_html( $rest_base ); ?>/studio/draft</code>,
+				<code><?php echo esc_html( $rest_base ); ?>/studio/review</code>,
+				<code><?php echo esc_html( $rest_base ); ?>/companion/context</code>,
+				<code><?php echo esc_html( $rest_base ); ?>/companion/ask</code>,
+				<code><?php echo esc_html( $rest_base ); ?>/companion/review-output</code>
+			</p>
+		</section>
+		<?php
+	}
+
+	private function render_internal_ai_advisor( array $advisor, array $enrichment, string $rest_base ): void {
+		$summary         = isset( $advisor['summary'] ) && is_array( $advisor['summary'] ) ? $advisor['summary'] : [];
+		$findings        = isset( $advisor['findings'] ) && is_array( $advisor['findings'] ) ? $advisor['findings'] : [];
+		$recommendations = isset( $advisor['recommendations'] ) && is_array( $advisor['recommendations'] ) ? $advisor['recommendations'] : [];
+		$actions         = isset( $advisor['actions'] ) && is_array( $advisor['actions'] ) ? $advisor['actions'] : [];
+		$model           = isset( $advisor['model'] ) && is_array( $advisor['model'] ) ? $advisor['model'] : [];
+		$enriched        = isset( $enrichment['enrichment'] ) && is_array( $enrichment['enrichment'] ) ? $enrichment['enrichment'] : [];
+		$enrichment_model = isset( $enrichment['model'] ) && is_array( $enrichment['model'] ) ? $enrichment['model'] : [];
+		$focus           = sanitize_key( (string) ( $advisor['focus'] ?? 'all' ) );
+		$style           = sanitize_key( (string) ( $enrichment['style'] ?? 'executive' ) );
+		$mode            = sanitize_text_field( (string) ( $advisor['mode'] ?? 'deterministic-readonly' ) );
+		$context_hash    = sanitize_text_field( (string) ( $advisor['contextHash'] ?? '' ) );
+		$active_focuses  = [ 'all', 'security', 'headless', 'wp7', 'staging', 'site_graph' ];
+		$styles          = [ 'executive', 'developer', 'security', 'handoff' ];
+		?>
+		<section class="dsa-admin__panel dsa-ai-advisor">
+			<div class="dsa-ai-advisor__head">
+				<div>
+					<p class="dsa-admin-eyebrow"><?php esc_html_e( 'Internal AI Advisor', 'dsa' ); ?></p>
+					<h2><?php esc_html_e( 'Kiwe Advisor', 'dsa' ); ?></h2>
+					<p><?php esc_html_e( 'Deterministic read-only recommendations from Site Graph, Site Graph Data, SecureTrack, WordPress 7 signals, and the trusted staging boundary. A model may enrich wording later; these checks remain the authority.', 'dsa' ); ?></p>
+				</div>
+				<div class="dsa-ai-advisor__meta">
+					<span><strong><?php echo esc_html( $mode ); ?></strong><?php esc_html_e( 'mode', 'dsa' ); ?></span>
+					<span><strong><?php echo ! empty( $model['nativeAvailable'] ) ? esc_html__( 'Available', 'dsa' ) : esc_html__( 'Fallback', 'dsa' ); ?></strong><?php esc_html_e( 'WP AI Client', 'dsa' ); ?></span>
+					<span><strong><?php echo ! empty( $enrichment_model['called'] ) ? esc_html__( 'Called', 'dsa' ) : esc_html__( 'Prepared', 'dsa' ); ?></strong><?php esc_html_e( 'enrichment', 'dsa' ); ?></span>
+					<?php if ( '' !== $context_hash ) : ?>
+						<span><strong><code><?php echo esc_html( substr( $context_hash, 0, 12 ) ); ?></code></strong><?php esc_html_e( 'context hash', 'dsa' ); ?></span>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<div class="dsa-admin-token-summary dsa-ai-advisor__summary">
+				<div><strong><?php echo esc_html( (string) absint( $summary['findings'] ?? count( $findings ) ) ); ?></strong><span><?php esc_html_e( 'findings', 'dsa' ); ?></span></div>
+				<div><strong><?php echo esc_html( (string) absint( $summary['recommendations'] ?? count( $recommendations ) ) ); ?></strong><span><?php esc_html_e( 'recommendations', 'dsa' ); ?></span></div>
+				<div><strong><?php echo esc_html( (string) absint( $summary['actions'] ?? count( $actions ) ) ); ?></strong><span><?php esc_html_e( 'safe actions', 'dsa' ); ?></span></div>
+				<div><strong><?php echo esc_html( (string) absint( $summary['blockers'] ?? 0 ) ); ?></strong><span><?php esc_html_e( 'critical blockers', 'dsa' ); ?></span></div>
+			</div>
+
+			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" class="dsa-ai-advisor__filters">
+				<input type="hidden" name="page" value="kiwe-ai">
+				<label>
+					<span><?php esc_html_e( 'Focus', 'dsa' ); ?></span>
+					<select name="advisor-focus">
+						<?php foreach ( $active_focuses as $item ) : ?>
+							<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $focus, $item ); ?>><?php echo esc_html( str_replace( '_', ' ', $item ) ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+				<label>
+					<span><?php esc_html_e( 'Summary style', 'dsa' ); ?></span>
+					<select name="advisor-style">
+						<?php foreach ( $styles as $item ) : ?>
+							<option value="<?php echo esc_attr( $item ); ?>" <?php selected( $style, $item ); ?>><?php echo esc_html( $item ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+				<?php submit_button( __( 'Refresh Advisor', 'dsa' ), 'secondary', 'submit', false ); ?>
+				<span class="description"><?php esc_html_e( 'Refresh recomputes the packet; it does not call a model or mutate anything.', 'dsa' ); ?></span>
+			</form>
+
+			<?php if ( [] !== $enriched ) : ?>
+				<div class="dsa-ai-advisor__enrichment">
+					<div>
+						<h3><?php echo esc_html( (string) ( $enriched['headline'] ?? __( 'Advisor summary', 'dsa' ) ) ); ?></h3>
+						<p><?php echo esc_html( (string) ( $enriched['narrative'] ?? '' ) ); ?></p>
+						<?php if ( ! empty( $enriched['nextBestAction'] ) ) : ?>
+							<p><strong><?php esc_html_e( 'Next best action:', 'dsa' ); ?></strong> <?php echo esc_html( (string) $enriched['nextBestAction'] ); ?></p>
+						<?php endif; ?>
+					</div>
+					<div>
+						<strong><?php echo ! empty( $enrichment_model['available'] ) ? esc_html__( 'Native-ready', 'dsa' ) : esc_html__( 'Deterministic fallback', 'dsa' ); ?></strong>
+						<span><?php echo esc_html( (string) ( $enrichment_model['whyNotCalled'] ?? '' ) ); ?></span>
+					</div>
+				</div>
+			<?php endif; ?>
+
+			<div class="dsa-ai-advisor__grid">
+				<div class="dsa-ai-advisor__column">
+					<h3><?php esc_html_e( 'Findings', 'dsa' ); ?></h3>
+					<?php if ( [] === $findings ) : ?>
+						<p class="description"><?php esc_html_e( 'No advisor findings for this focus.', 'dsa' ); ?></p>
+					<?php else : ?>
+						<ul class="dsa-ai-advisor__cards">
+							<?php foreach ( array_slice( $findings, 0, 12 ) as $finding ) : ?>
+								<?php
+								if ( ! is_array( $finding ) ) {
+									continue;
+								}
+								$severity = sanitize_key( (string) ( $finding['severity'] ?? 'info' ) );
+								$title    = sanitize_text_field( (string) ( $finding['title'] ?? $finding['id'] ?? '' ) );
+								$detail   = sanitize_textarea_field( (string) ( $finding['detail'] ?? '' ) );
+								$source   = sanitize_text_field( (string) ( $finding['source'] ?? '' ) );
+								?>
+								<li class="dsa-ai-advisor-card dsa-ai-advisor-card--<?php echo esc_attr( $severity ); ?>">
+									<span><?php echo esc_html( strtoupper( $severity ) ); ?></span>
+									<strong><?php echo esc_html( $title ); ?></strong>
+									<?php if ( '' !== $detail ) : ?><p><?php echo esc_html( $detail ); ?></p><?php endif; ?>
+									<?php if ( '' !== $source ) : ?><code><?php echo esc_html( $source ); ?></code><?php endif; ?>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+				</div>
+
+				<div class="dsa-ai-advisor__column">
+					<h3><?php esc_html_e( 'Recommendations', 'dsa' ); ?></h3>
+					<?php if ( [] === $recommendations ) : ?>
+						<p class="description"><?php esc_html_e( 'No recommendations for this focus.', 'dsa' ); ?></p>
+					<?php else : ?>
+						<ol class="dsa-ai-advisor__list">
+							<?php foreach ( array_slice( $recommendations, 0, 12 ) as $recommendation ) : ?>
+								<?php
+								if ( ! is_array( $recommendation ) ) {
+									continue;
+								}
+								$message = sanitize_textarea_field( (string) ( $recommendation['message'] ?? '' ) );
+								$type    = sanitize_key( (string) ( $recommendation['type'] ?? '' ) );
+								$lane    = sanitize_key( (string) ( $recommendation['lane'] ?? '' ) );
+								if ( '' === $message ) {
+									continue;
+								}
+								?>
+								<li><strong><?php echo esc_html( $lane ); ?></strong><span><?php echo esc_html( $message ); ?></span><code><?php echo esc_html( $type ); ?></code></li>
+							<?php endforeach; ?>
+						</ol>
+					<?php endif; ?>
+
+					<h3><?php esc_html_e( 'Safe next actions', 'dsa' ); ?></h3>
+					<?php if ( [] === $actions ) : ?>
+						<p class="description"><?php esc_html_e( 'No safe next actions for this focus.', 'dsa' ); ?></p>
+					<?php else : ?>
+						<ul class="dsa-ai-advisor__actions">
+							<?php foreach ( array_slice( $actions, 0, 10 ) as $action ) : ?>
+								<?php
+								if ( ! is_array( $action ) ) {
+									continue;
+								}
+								$label = sanitize_text_field( (string) ( $action['label'] ?? $action['id'] ?? '' ) );
+								$type  = sanitize_key( (string) ( $action['type'] ?? '' ) );
+								$route = esc_url_raw( (string) ( $action['route'] ?? '' ) );
+								$mutates = ! empty( $action['mutates'] );
+								?>
+								<li>
+									<strong><?php echo esc_html( $label ); ?></strong>
+									<span><code><?php echo esc_html( $type ); ?></code><?php echo $mutates ? ' ' . esc_html__( 'requires confirmation', 'dsa' ) : ' ' . esc_html__( 'read-only', 'dsa' ); ?></span>
+									<?php if ( '' !== $route ) : ?><code><?php echo esc_html( $route ); ?></code><?php endif; ?>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<p class="description">
+				<?php esc_html_e( 'Tool route:', 'dsa' ); ?>
+				<code><?php echo esc_html( trailingslashit( $rest_base ) . 'advisor' ); ?></code>
+				<?php esc_html_e( 'Ability:', 'dsa' ); ?>
+				<code>dsa/run-internal-ai-advisor</code>
+				<?php esc_html_e( 'Enrichment:', 'dsa' ); ?>
+				<code><?php echo esc_html( trailingslashit( $rest_base ) . 'advisor/enrich' ); ?></code>
+				<code>dsa/enrich-internal-ai-advisor</code>
+			</p>
+		</section>
 		<?php
 	}
 
@@ -5442,6 +6033,8 @@ final class Admin {
 		$theme = wp_parse_args( $all['dsa_theme'] ?? [], $this->settings->defaults()['dsa_theme'] );
 		$visual = wp_parse_args( $all['visual_effects'] ?? [], $this->settings->defaults()['visual_effects'] );
 		$dock = wp_parse_args( $all['dock'] ?? [], $this->settings->defaults()['dock'] );
+		$theme_screens = isset( $all['theme_screens'] ) && is_array( $all['theme_screens'] ) ? $all['theme_screens'] : [];
+		$screen_copy_schema = Screen_Copy_Schema::screens();
 		$dock_shape = sanitize_key( (string) ( $dock['shape'] ?? 'pill' ) );
 		$dock_shape = 'rounded' === $dock_shape ? 'pill' : $dock_shape;
 		$dock_shape = in_array( $dock_shape, [ 'pill', 'box', 'square' ], true ) ? $dock_shape : 'pill';
@@ -5539,7 +6132,7 @@ final class Admin {
 									<option value="navbar" <?php selected( $dock['presentation'] ?? 'dock', 'navbar' ); ?>><?php esc_html_e( 'Navigation bar', 'dsa' ); ?></option>
 								</select>
 								<input type="hidden" name="dock[split_style]" value="0">
-								<label><input type="checkbox" name="dock[split_style]" value="1" <?php checked( ! empty( $dock['split_style'] ) ); ?>> <?php esc_html_e( 'Split compact dock around the AI/action button', 'dsa' ); ?></label>
+								<label><input type="checkbox" name="dock[split_style]" value="1" <?php checked( ! empty( $dock['split_style'] ) ); ?>> <?php esc_html_e( 'Split compact dock around focus button', 'dsa' ); ?></label>
 								<p class="description"><?php esc_html_e( 'Compact dock may be full/unsplit or split around the emphasized action. Split style never applies to Navigation bar. Navigation bar attaches to the chosen viewport edge with zero outer gap.', 'dsa' ); ?></p>
 							</td>
 						</tr>
@@ -5593,6 +6186,38 @@ final class Admin {
 						<tr>
 							<th scope="row"><label for="dsa-theme-screen-heading"><?php esc_html_e( 'Screen title tag', 'dsa' ); ?></label></th>
 							<td><select id="dsa-theme-screen-heading" name="style[screen_heading_tag]"><?php foreach ( [ 'h1', 'h2', 'h3', 'h4', 'p', 'span' ] as $tag ) : ?><option value="<?php echo esc_attr( $tag ); ?>" <?php selected( $screen_heading_tag, $tag ); ?>><?php echo esc_html( strtoupper( $tag ) ); ?></option><?php endforeach; ?></select><p class="description"><?php esc_html_e( 'Semantic tag for top-level DSA screen titles such as Cart, Search, Profile, Menu, Links, Saved, AI, and notification surfaces. Theme CSS keeps the visual size independent from this semantic choice.', 'dsa' ); ?></p></td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'DSA screen/sheet copy', 'dsa' ); ?></th>
+							<td>
+								<p class="description"><?php esc_html_e( 'Presentation labels for every registered DSA screen/sheet live under Kiwe > Theme. Empty fields use Kiwe defaults. These fields do not own profile data, links, menu items, search results, cart state, checkout, games, notifications, AI actions, or WordPress/WooCommerce authority.', 'dsa' ); ?></p>
+								<div class="dsa-admin-screen-copy-grid">
+									<?php foreach ( $screen_copy_schema as $screen_id => $screen_definition ) : ?>
+										<?php
+										$screen_values = isset( $theme_screens[ $screen_id ] ) && is_array( $theme_screens[ $screen_id ] ) ? $theme_screens[ $screen_id ] : [];
+										$open = in_array( $screen_id, [ 'cart', 'profile' ], true );
+										?>
+										<details class="dsa-admin-screen-copy" <?php echo $open ? 'open' : ''; ?>>
+											<summary>
+												<strong><?php echo esc_html( (string) ( $screen_definition['label'] ?? $screen_id ) ); ?></strong>
+												<code><?php echo esc_html( $screen_id ); ?></code>
+											</summary>
+											<?php if ( ! empty( $screen_definition['description'] ) ) : ?>
+												<p class="description"><?php echo esc_html( (string) $screen_definition['description'] ); ?></p>
+											<?php endif; ?>
+											<div class="dsa-admin-device-grid">
+												<?php foreach ( (array) ( $screen_definition['fields'] ?? [] ) as $field_key => $field ) : ?>
+													<?php $value = isset( $screen_values[ $field_key ] ) ? (string) $screen_values[ $field_key ] : ''; ?>
+													<label>
+														<span><?php echo esc_html( (string) ( $field['label'] ?? $field_key ) ); ?></span>
+														<input type="text" name="theme_screens[<?php echo esc_attr( $screen_id ); ?>][<?php echo esc_attr( $field_key ); ?>]" value="<?php echo esc_attr( $value ); ?>" placeholder="<?php echo esc_attr( (string) ( $field['placeholder'] ?? '' ) ); ?>" maxlength="<?php echo esc_attr( (string) max( 1, (int) ( $field['max'] ?? 120 ) ) ); ?>">
+													</label>
+												<?php endforeach; ?>
+											</div>
+										</details>
+									<?php endforeach; ?>
+								</div>
+							</td>
 						</tr>
 						<tr data-dsa-theme-controls="classic">
 							<th scope="row"><?php esc_html_e( 'Classic Surface material', 'dsa' ); ?></th>
@@ -7152,6 +7777,8 @@ final class Admin {
 				'visual_effects'      => $settings['visual_effects'] ?? [],
 				'app'                 => $settings['app'] ?? [],
 				'dsa_theme'           => $settings['dsa_theme'] ?? [],
+				'tokens'              => $settings['tokens'] ?? [],
+				'theme_screens'       => $settings['theme_screens'] ?? [],
 				'schema_geo'          => $settings['schema_geo'] ?? [],
 				'metrics'             => $settings['metrics'] ?? [],
 				'permissions'         => $settings['permissions'] ?? [],
@@ -7216,6 +7843,14 @@ final class Admin {
 			$next['dsa_theme'] = $this->sanitize_dsa_theme( $input['dsa_theme'], $current['dsa_theme'] );
 		}
 
+		if ( isset( $input['tokens'] ) && is_array( $input['tokens'] ) ) {
+			$next['tokens'] = $this->sanitize_token_settings( $input['tokens'], $current['tokens'] ?? [] );
+		}
+
+		if ( isset( $input['theme_screens'] ) && is_array( $input['theme_screens'] ) ) {
+			$next['theme_screens'] = $this->sanitize_theme_screen_settings( $input['theme_screens'], $current['theme_screens'] ?? [] );
+		}
+
 		if ( isset( $input['schema_geo'] ) && is_array( $input['schema_geo'] ) ) {
 			$next['schema_geo'] = $this->sanitize_schema_geo_settings( $input['schema_geo'], $current['schema_geo'] );
 		}
@@ -7273,14 +7908,67 @@ final class Admin {
 		return $next;
 	}
 
+	private function framework_profile_payload(): array {
+		$settings = $this->settings->all();
+		$tokens   = $this->sanitize_token_settings( $settings['tokens'] ?? [], $this->settings->defaults()['tokens'] );
+
+		return [
+			'type'          => 'kiwe-framework-profile',
+			'schema'        => 'kiwe.framework-profile.v1',
+			'schemaVersion' => 1,
+			'pluginVersion' => DSA_VERSION,
+			'exportedAt'    => gmdate( 'c' ),
+			'source'        => [
+				'siteName' => get_bloginfo( 'name' ),
+				'siteUrl'  => home_url( '/' ),
+			],
+			'settings'      => [
+				'tokens' => $tokens,
+			],
+		];
+	}
+
+	private function framework_profile_tokens_input( array $payload ): ?array {
+		if ( isset( $payload['settings'] ) && is_array( $payload['settings'] ) && isset( $payload['settings']['tokens'] ) && is_array( $payload['settings']['tokens'] ) ) {
+			return $payload['settings']['tokens'];
+		}
+		if ( isset( $payload['tokens'] ) && is_array( $payload['tokens'] ) ) {
+			return $payload['tokens'];
+		}
+		if ( array_intersect( [ 'enabled', 'profile_label', 'overrides', 'bricks_theme_style' ], array_keys( $payload ) ) ) {
+			return $payload;
+		}
+
+		return null;
+	}
+
 	private function redirect_profile_error( string $code ): void {
 		wp_safe_redirect( add_query_arg( 'profile-error', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe' ) ) );
+		exit;
+	}
+
+	private function redirect_framework_profile_error( string $code ): void {
+		wp_safe_redirect( add_query_arg( 'framework-profile-error', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe-framework' ) ) );
 		exit;
 	}
 
 	private function redirect_theme_error( string $code ): void {
 		wp_safe_redirect( add_query_arg( 'theme-error', sanitize_key( $code ), admin_url( 'admin.php?page=kiwe-theme' ) ) );
 		exit;
+	}
+
+	private function framework_profile_error_message( string $code ): string {
+		$messages = [
+			'encode'  => __( 'Kiwe could not encode the Framework profile JSON.', 'dsa' ),
+			'missing' => __( 'Choose a Kiwe Framework profile JSON file to import.', 'dsa' ),
+			'size'    => __( 'Framework profile is too large. Use a JSON file under 1 MB.', 'dsa' ),
+			'type'    => __( 'Framework profile import only accepts .json files.', 'dsa' ),
+			'empty'   => __( 'Framework profile was empty.', 'dsa' ),
+			'json'    => __( 'Framework profile was not valid JSON.', 'dsa' ),
+			'invalid' => __( 'Framework profile must contain settings.tokens or a raw tokens object.', 'dsa' ),
+		];
+
+		return $messages[ $code ] ?? __( 'Framework profile could not be processed.', 'dsa' );
 	}
 
 	private function theme_error_message( string $code ): string {
@@ -7861,6 +8549,60 @@ final class Admin {
 		];
 	}
 
+	private function sanitize_token_settings( $input, array $current ): array {
+		$defaults = $this->settings->defaults()['tokens'];
+		$next     = wp_parse_args( is_array( $current ) ? $current : [], $defaults );
+		$next['bricks_theme_style'] = wp_parse_args(
+			is_array( $next['bricks_theme_style'] ?? null ) ? $next['bricks_theme_style'] : [],
+			$defaults['bricks_theme_style']
+		);
+
+		if ( ! is_array( $input ) ) {
+			$next['overrides'] = Seam_Token_Service::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
+			return $next;
+		}
+
+		$input = wp_unslash( $input );
+
+		if ( array_key_exists( 'enabled', $input ) ) {
+			$next['enabled'] = ! empty( $input['enabled'] );
+		}
+		if ( array_key_exists( 'profile_label', $input ) ) {
+			$label = sanitize_text_field( (string) $input['profile_label'] );
+			$next['profile_label'] = '' !== $label ? substr( $label, 0, 80 ) : $defaults['profile_label'];
+		}
+		if ( array_key_exists( 'overrides', $input ) && is_array( $input['overrides'] ) ) {
+			$next['overrides'] = Seam_Token_Service::sanitize_overrides( $input['overrides'] );
+		} else {
+			$next['overrides'] = Seam_Token_Service::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
+		}
+
+		if ( isset( $input['bricks_theme_style'] ) && is_array( $input['bricks_theme_style'] ) ) {
+			$style_input = $input['bricks_theme_style'];
+			if ( array_key_exists( 'enabled', $style_input ) ) {
+				$next['bricks_theme_style']['enabled'] = ! empty( $style_input['enabled'] );
+			}
+			if ( array_key_exists( 'id', $style_input ) ) {
+				$id = sanitize_key( (string) $style_input['id'] );
+				$next['bricks_theme_style']['id'] = '' !== $id ? substr( $id, 0, 80 ) : $defaults['bricks_theme_style']['id'];
+			}
+			if ( array_key_exists( 'label', $style_input ) ) {
+				$label = sanitize_text_field( (string) $style_input['label'] );
+				$next['bricks_theme_style']['label'] = '' !== $label ? substr( $label, 0, 100 ) : $defaults['bricks_theme_style']['label'];
+			}
+		}
+
+		return $next;
+	}
+
+	private function sanitize_theme_screen_settings( $input, array $current ): array {
+		if ( ! is_array( $input ) ) {
+			return $current;
+		}
+
+		return Screen_Copy_Schema::sanitize( wp_unslash( $input ) );
+	}
+
 	private function sanitize_games_settings( $input, array $current ): array {
 		if ( ! is_array( $input ) ) {
 			return $current;
@@ -7998,6 +8740,126 @@ final class Admin {
 			'auto_logout_roles'   => $roles,
 			'trusted_proxy_cidrs' => $this->sanitize_cidr_lines( $input['trusted_proxy_cidrs'] ?? ( $current['trusted_proxy_cidrs'] ?? '' ) ),
 		];
+	}
+
+	private function sanitize_ai_settings( $input, array $current ): array {
+		$defaults = $this->settings->defaults()['ai'] ?? [];
+		$current  = array_replace_recursive( is_array( $defaults ) ? $defaults : [], is_array( $current ) ? $current : [] );
+		if ( ! is_array( $input ) ) {
+			return $current;
+		}
+
+		$input = wp_unslash( $input );
+		$modes_input = isset( $input['companion_modes'] ) && is_array( $input['companion_modes'] ) ? $input['companion_modes'] : [];
+		$modes = [];
+		foreach ( [ 'website', 'theme', 'combined', 'dynamic', 'audit', 'staging', 'security' ] as $mode ) {
+			$modes[ $mode ] = ! empty( $modes_input[ $mode ] );
+		}
+		$studio_mode = sanitize_key( (string) ( $input['studio_mode'] ?? ( $current['studio_mode'] ?? 'browser_companion' ) ) );
+		if ( ! in_array( $studio_mode, [ 'native', 'browser_companion', 'browser_only' ], true ) ) {
+			$studio_mode = 'browser_companion';
+		}
+		$native_provider = sanitize_key( (string) ( $input['native_provider'] ?? ( $current['native_provider'] ?? 'none' ) ) );
+		if ( ! in_array( $native_provider, [ 'none', 'wordpress_ai_client', 'openai_compatible', 'gemini', 'groq', 'xai' ], true ) ) {
+			$native_provider = 'none';
+		}
+		$native_key_input = trim( (string) ( $input['native_api_key'] ?? '' ) );
+		$native_key = '' !== $native_key_input ? Secret_Store::encrypt( $native_key_input ) : (string) ( $current['native_api_key'] ?? '' );
+		$native_model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $input['native_model'] ?? ( $current['native_model'] ?? '' ) ) );
+		$native_model = preg_replace( '#^models/#', '', (string) $native_model );
+
+		return [
+			'studio_enabled'           => ! empty( $input['studio_enabled'] ),
+			'studio_mode'              => $studio_mode,
+			'native_provider'          => $native_provider,
+			'native_model'             => $native_model,
+			'native_base_url'          => esc_url_raw( (string) ( $input['native_base_url'] ?? ( $current['native_base_url'] ?? '' ) ) ),
+			'native_api_key'           => $native_key,
+			'allow_native_generation'  => ! empty( $input['allow_native_generation'] ),
+			'token_saver_enabled'      => ! empty( $input['token_saver_enabled'] ),
+			'prefer_companion_context' => ! empty( $input['prefer_companion_context'] ),
+			'bricks_editor_companion_enabled' => ! empty( $input['bricks_editor_companion_enabled'] ),
+			'max_native_tokens'        => max( 200, min( 12000, absint( $input['max_native_tokens'] ?? ( $current['max_native_tokens'] ?? 1200 ) ) ) ),
+			'max_native_context_bytes' => max( 10000, min( 200000, absint( $input['max_native_context_bytes'] ?? ( $current['max_native_context_bytes'] ?? 60000 ) ) ) ),
+			'allow_browser_handoff_export' => ! empty( $input['allow_browser_handoff_export'] ),
+			'companion_enabled'         => ! empty( $input['companion_enabled'] ),
+			'companion_modes'           => $modes,
+			'securetrack_brief_enabled' => ! empty( $input['securetrack_brief_enabled'] ),
+			'memory_enabled'            => ! empty( $input['memory_enabled'] ),
+			'memory_retention_days'     => max( 7, min( 365, absint( $input['memory_retention_days'] ?? ( $current['memory_retention_days'] ?? 90 ) ) ) ),
+			'max_context_cards'         => max( 4, min( 40, absint( $input['max_context_cards'] ?? ( $current['max_context_cards'] ?? 12 ) ) ) ),
+			'max_review_bytes'          => max( 20000, min( 500000, absint( $input['max_review_bytes'] ?? ( $current['max_review_bytes'] ?? 120000 ) ) ) ),
+			'cache_ttl_seconds'         => max( 30, min( 3600, absint( $input['cache_ttl_seconds'] ?? ( $current['cache_ttl_seconds'] ?? 300 ) ) ) ),
+			'log_prompts'               => ! empty( $input['log_prompts'] ),
+		];
+	}
+
+	private function save_securetrack_ai_settings( $input, array $ai_settings = [] ): void {
+		if ( ! is_array( $input ) || ! function_exists( 'stp_cfg' ) ) {
+			return;
+		}
+
+		$input = wp_unslash( $input );
+		$raw_old = (array) get_option( 'stp_settings', [] );
+		$old     = function_exists( 'stp_cfg' ) ? stp_cfg( true ) : $raw_old;
+		$old     = is_array( $old ) ? $old : [];
+
+		$native_provider = sanitize_key( (string) ( $ai_settings['native_provider'] ?? 'none' ) );
+		$provider        = in_array( $native_provider, [ 'gemini', 'groq', 'xai' ], true ) ? $native_provider : 'none';
+
+		$mode = sanitize_key( (string) ( $input['v2_ai_mode'] ?? ( $old['v2_ai_mode'] ?? 'batch' ) ) );
+		if ( ! in_array( $mode, [ 'batch', 'always' ], true ) ) {
+			$mode = 'batch';
+		}
+
+		$model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $ai_settings['native_model'] ?? ( $old['v2_ai_model'] ?? 'gemini-2.5-flash' ) ) );
+		$model = preg_replace( '#^models/#', '', (string) $model );
+		if ( '' === $model ) {
+			$provider_defaults = function_exists( 'stp_ai_default_models' ) ? (array) stp_ai_default_models( $provider ) : [];
+			$model = ! empty( $provider_defaults[0]['name'] ) ? (string) $provider_defaults[0]['name'] : 'gemini-2.5-flash';
+			$model = preg_replace( '#^models/#', '', $model );
+		}
+
+		$native_key_plain = '';
+		if ( 'none' !== $provider && ! empty( $ai_settings['native_api_key'] ) ) {
+			$native_key_plain = Secret_Store::decrypt( (string) $ai_settings['native_api_key'] );
+		}
+		$stored_key_enc = '';
+		if ( '' !== $native_key_plain && function_exists( 'stp_encrypt_secret' ) ) {
+			$stored_key_enc = stp_encrypt_secret( sanitize_text_field( $native_key_plain ) );
+		}
+
+		$next = $raw_old;
+		$next['v2_ai_provider']      = $provider;
+		$next['v2_ai_model']         = $model;
+		$next['v2_ai_mode']          = $mode;
+		$next['v2_ai_key']           = '';
+		$next['v2_ai_key_enc']       = $stored_key_enc;
+		$next['v2_ai_batch_mins']    = max( 1, min( 60, absint( $input['v2_ai_batch_mins'] ?? ( $old['v2_ai_batch_mins'] ?? 5 ) ) ) );
+		$next['v2_auto_block_local'] = ! empty( $input['v2_auto_block_local'] ) ? 1 : 0;
+		$next['v2_share_patterns']   = ! empty( $input['v2_share_patterns'] ) ? 1 : 0;
+
+		if ( class_exists( '\DSA\Secure\SecureTrack_Settings_Policy' ) ) {
+			$next = \DSA\Secure\SecureTrack_Settings_Policy::normalize_runtime_config( $next );
+			if ( ! \DSA\Secure\SecureTrack_Settings_Policy::kiwe_allows_auto_logout() ) {
+				$next['idle_timeout_mins']  = 0;
+				$next['idle_timeout_roles'] = [];
+			}
+		}
+
+		update_option( 'stp_settings', $next, false );
+		wp_cache_delete( 'settings', 'securetrack_pro' );
+
+		if ( function_exists( 'stp_ai_status' ) && ( $provider !== ( $old['v2_ai_provider'] ?? 'none' ) || $model !== ( $old['v2_ai_model'] ?? '' ) || $stored_key_enc !== (string) ( $raw_old['v2_ai_key_enc'] ?? '' ) ) ) {
+			stp_ai_status(
+				[
+					'connected' => 0,
+					'provider'  => $provider,
+					'model'     => $model,
+					'message'   => 'none' === $provider ? 'SecureTrack is using local-only review. Choose Gemini, Groq, or xAI as Native AI provider to share the Kiwe AI key.' : 'SecureTrack synced from Kiwe Native AI provider settings.',
+				]
+			);
+		}
 	}
 
 	private function sanitize_cidr_lines( $value ): string {

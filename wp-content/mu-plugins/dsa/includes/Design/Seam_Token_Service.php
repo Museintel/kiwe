@@ -41,6 +41,12 @@ final class Seam_Token_Service {
 			self::token( 'font-display', 'Inter, system-ui, sans-serif', 'font', 'Display and heading font stack.', '--font-display' ),
 			self::token( 'font-body', 'Inter, system-ui, sans-serif', 'font', 'Body and UI font stack.', '--font-body' ),
 			self::token( 'font-mono', 'ui-monospace, Menlo, monospace', 'font', 'Code and data font stack.', '--font-mono' ),
+			self::token( 'leading-tight', '1.05', 'type', 'Tight line height for hero and display headings.', '--leading-tight' ),
+			self::token( 'leading-snug', '1.16', 'type', 'Snug line height for section headings.', '--leading-snug' ),
+			self::token( 'leading-normal', '1.5', 'type', 'Readable line height for body copy and controls.', '--leading-normal' ),
+			self::token( 'leading-relaxed', '1.75', 'type', 'Loose long-form reading rhythm.', '--leading-relaxed' ),
+			self::token( 'tracking-tight', '-0.025em', 'type', 'Tighter tracking for large display copy.', '--tracking-tight' ),
+			self::token( 'tracking-normal', '0', 'type', 'Default letter spacing.', '--tracking-normal' ),
 			self::token( 'space-xxs', 'clamp(4px, 0.36vw + 2.86px, 8px)', 'space', 'Minimum inline icon and label gap.', '--space-xxs' ),
 			self::token( 'space-xs', 'clamp(6px, 0.54vw + 4.29px, 12px)', 'space', 'Small related-item gap.', '--space-xs' ),
 			self::token( 'space-sm', 'clamp(9px, 0.8vw + 6.43px, 18px)', 'space', 'Standard component padding.', '--space-sm' ),
@@ -53,7 +59,9 @@ final class Seam_Token_Service {
 			self::token( 'radius-lg', '15px', 'radius', 'Large cards and drawers.', '--radius-lg' ),
 			self::token( 'radius-xl', '20px', 'radius', 'Sheet-style panels.', '--radius-xl' ),
 			self::token( 'radius-full', '9999px', 'radius', 'Pills, avatars, and circular controls.', '--radius-full' ),
+			self::token( 'card-radius', 'var(--kiwe-radius-md)', 'radius', 'Default card radius alias for theme packages.', '--card-radius' ),
 			self::token( 'density', '1', 'scene', 'Inherited scene density baseline.', '--density' ),
+			self::token( 'scene-intensity', '1', 'scene', 'Global scene intensity multiplier for expressive pages.', '--seam-scene-intensity' ),
 			self::token( 'scene-dramatic', '1.4', 'scene', 'Hero sections and expressive moments.', 'data-scene=dramatic' ),
 			self::token( 'scene-elevated', '1.15', 'scene', 'Feature and highlight sections.', 'data-scene=elevated' ),
 			self::token( 'scene-standard', '1', 'scene', 'Default page sections.', 'data-scene=standard' ),
@@ -68,6 +76,10 @@ final class Seam_Token_Service {
 			self::token( 'motion-easing-enter', 'cubic-bezier(0, 0, 0.2, 1)', 'motion', 'Entrance easing curve.', '--motion-easing-enter' ),
 			self::token( 'motion-easing-exit', 'cubic-bezier(0.4, 0, 1, 1)', 'motion', 'Exit easing curve.', '--motion-easing-exit' ),
 			self::token( 'motion-easing-spring', 'cubic-bezier(0.34, 1.56, 0.64, 1)', 'motion', 'Elastic feedback curve.', '--motion-easing-spring' ),
+			self::token( 'shadow-sm', '0 1px 2px rgba(15,23,42,.08)', 'component', 'Small elevation shadow token.', '--shadow-sm' ),
+			self::token( 'shadow-md', '0 8px 24px rgba(15,23,42,.10)', 'component', 'Medium elevation shadow token.', '--shadow-md' ),
+			self::token( 'shadow-lg', '0 18px 50px rgba(15,23,42,.14)', 'component', 'Large elevation shadow token.', '--shadow-lg' ),
+			self::token( 'opacity-disabled', '.5', 'component', 'Disabled-state opacity token.', '--opacity-disabled' ),
 			self::token( 'glass-blur', '10px', 'component', 'Default frosted-glass blur shared by Kiwe Surface components.', '--glass-blur' ),
 			self::token( 'control-size-sm', '30px', 'component', 'Compressed interactive control size for constrained viewports.', '--control-size-sm' ),
 			self::token( 'control-size', '48px', 'component', 'Preferred interactive control and dock item size.', '--control-size' ),
@@ -87,6 +99,7 @@ final class Seam_Token_Service {
 			self::token( 'viewport-gutter', '12px', 'layout', 'Minimum safe clearance from viewport edges.', '--viewport-gutter' ),
 			self::token( 'content-width', '1120px', 'layout', 'Default centered page content width.', '--content-width' ),
 			self::token( 'content-width-narrow', '760px', 'layout', 'Narrow article, form, and reading column width.', '--content-width-narrow' ),
+			self::token( 'content-width-wide', '1440px', 'layout', 'Wide editorial and commerce canvas width.', '--content-width-wide' ),
 			self::token( 'grid-min-col', '240px', 'layout', 'Minimum responsive grid column width.', '--grid-min-col' ),
 			self::token( 'section-gap', 'var(--kiwe-space-xl)', 'layout', 'Gap between adjacent page sections.', '--section-gap' ),
 			self::token( 'stack-gap', 'var(--kiwe-space-md)', 'layout', 'Vertical stack rhythm for related blocks.', '--stack-gap' ),
@@ -159,7 +172,62 @@ final class Seam_Token_Service {
 		return $tokens;
 	}
 
-	public static function export_for_bricks( ?array $tokens = null ): array {
+	public static function token_names(): array {
+		return array_values(
+			array_filter(
+				array_map(
+					static fn( array $token ): string => (string) ( $token['name'] ?? '' ),
+					self::universal_tokens()
+				)
+			)
+		);
+	}
+
+	public static function sanitize_overrides( array $overrides ): array {
+		$allowed = array_flip( self::token_names() );
+		$out     = [];
+
+		foreach ( $overrides as $name => $value ) {
+			$name = self::clean_name( (string) $name );
+			if ( '' === $name || ! isset( $allowed[ $name ] ) ) {
+				continue;
+			}
+
+			$value = self::clean_value( is_scalar( $value ) ? (string) $value : '' );
+			if ( '' === $value ) {
+				continue;
+			}
+
+			$out[ $name ] = substr( $value, 0, 180 );
+		}
+
+		return $out;
+	}
+
+	public static function overrides_from_settings( array $settings ): array {
+		$theme  = isset( $settings['dsa_theme'] ) && is_array( $settings['dsa_theme'] ) ? $settings['dsa_theme'] : [];
+		$visual = isset( $settings['visual_effects'] ) && is_array( $settings['visual_effects'] ) ? $settings['visual_effects'] : [];
+		$tokens = isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ? $settings['tokens'] : [];
+
+		$active = sanitize_hex_color( (string) ( $theme['active_color'] ?? '' ) ) ?: '#8f8f98';
+		$hover  = sanitize_hex_color( (string) ( $theme['hover_color'] ?? '' ) ) ?: '#24c6a1';
+		$hero   = preg_match( '/^(#[0-9a-f]{3,6}|rgba?\([^)]+\))$/i', (string) ( $theme['hero_text_color'] ?? '' ) ) ? (string) $theme['hero_text_color'] : 'rgba(20,24,34,0.18)';
+
+		$overrides = [
+			'color-brand'  => $active,
+			'color-accent' => $hover,
+			'color-hero'   => $hero,
+			'glass-blur'   => max( 0, min( 24, absint( $visual['blur_strength'] ?? 10 ) ) ) . 'px',
+		];
+
+		if ( ! empty( $tokens['enabled'] ) && isset( $tokens['overrides'] ) && is_array( $tokens['overrides'] ) ) {
+			$overrides = array_merge( $overrides, self::sanitize_overrides( $tokens['overrides'] ) );
+		}
+
+		return self::sanitize_overrides( $overrides );
+	}
+
+	public static function export_for_bricks( ?array $tokens = null, array $options = [] ): array {
 		$tokens = self::normalize_tokens( $tokens ?: self::universal_tokens() );
 		$categories = self::categories_for_tokens( $tokens );
 		$category_by_key = [];
@@ -199,14 +267,114 @@ final class Seam_Token_Service {
 		}
 
 		$framework_classes = self::framework_classes_for_bricks();
+		$theme_style       = self::theme_style_for_bricks( $tokens, $options );
 
 		return [
 			'variables'    => $variables,
 			'categories'   => $out_categories,
 			'colorPalette' => self::color_palette_for_bricks( $tokens ),
+			'themeStyle'   => $theme_style,
+			'themeStyles'  => [ $theme_style ],
 			'classes'      => $framework_classes['classes'],
 			'classCategories' => $framework_classes['categories'],
 			'classVocabulary' => self::class_vocabulary_groups(),
+		];
+	}
+
+	public static function theme_style_for_bricks( ?array $tokens = null, array $options = [] ): array {
+		$tokens = self::normalize_tokens( $tokens ?: self::universal_tokens() );
+		$id     = self::clean_theme_style_id( (string) ( $options['id'] ?? 'kiwe-global-design' ) );
+		$label  = sanitize_text_field( (string) ( $options['label'] ?? __( 'Kiwe Universal Design Tokens', 'dsa' ) ) );
+
+		if ( '' === $id ) {
+			$id = 'kiwe-global-design';
+		}
+		if ( '' === $label ) {
+			$label = __( 'Kiwe Universal Design Tokens', 'dsa' );
+		}
+
+		$settings = [
+			'_custom'    => true,
+			'conditions' => [
+				'conditions' => [
+					[
+						'id'   => 'kiwe-global-entire-site',
+						'main' => 'any',
+					],
+				],
+			],
+			'typography' => [
+				'typographyBody' => [
+					'font-family' => 'var(--kiwe-font-body)',
+					'font-size'   => 'var(--kiwe-type-body)',
+					'font-weight' => '400',
+					'line-height' => 'var(--kiwe-leading-normal)',
+					'color'       => 'var(--kiwe-color-text)',
+				],
+				'typographyHeadings' => [
+					'font-family'    => 'var(--kiwe-font-display)',
+					'font-weight'    => '700',
+					'line-height'    => 'var(--kiwe-leading-tight)',
+					'letter-spacing' => 'var(--kiwe-tracking-tight)',
+					'color'          => 'var(--kiwe-color-text)',
+				],
+				'typographyHeadingH1' => [
+					'font-size'   => 'var(--kiwe-type-h1)',
+					'line-height' => 'var(--kiwe-leading-tight)',
+				],
+				'typographyHeadingH2' => [
+					'font-size'   => 'var(--kiwe-type-h2)',
+					'line-height' => 'var(--kiwe-leading-tight)',
+				],
+				'typographyHeadingH3' => [
+					'font-size'   => 'var(--kiwe-type-h3)',
+					'line-height' => 'var(--kiwe-leading-snug)',
+				],
+				'typographyHeadingH4' => [
+					'font-size'   => 'var(--kiwe-type-h4)',
+					'line-height' => 'var(--kiwe-leading-snug)',
+				],
+				'typographyHeadingH5' => [
+					'font-size'   => 'var(--kiwe-type-h5)',
+					'line-height' => 'var(--kiwe-leading-normal)',
+				],
+				'typographyHeadingH6' => [
+					'font-size'   => 'var(--kiwe-type-h6)',
+					'line-height' => 'var(--kiwe-leading-normal)',
+				],
+				'h1Margin' => [ 'bottom' => 'var(--kiwe-space-sm)' ],
+				'h2Margin' => [ 'bottom' => 'var(--kiwe-space-sm)' ],
+				'h3Margin' => [ 'bottom' => 'var(--kiwe-space-xs)' ],
+				'h4Margin' => [ 'bottom' => 'var(--kiwe-space-xs)' ],
+				'h5Margin' => [ 'bottom' => 'var(--kiwe-space-xs)' ],
+				'h6Margin' => [ 'bottom' => 'var(--kiwe-space-xs)' ],
+			],
+			'colors' => self::theme_style_colors( $tokens ),
+			'links'  => [
+				'typography' => [
+					'color'       => 'var(--kiwe-color-brand)',
+					'font-weight' => '600',
+				],
+				'transition' => 'color var(--kiwe-motion-duration-fast) var(--kiwe-motion-easing-standard)',
+			],
+			'general' => [
+				'siteBackground' => [
+					'color' => self::bricks_color_ref( $tokens, 'color-surface' ),
+				],
+			],
+			'css'  => [],
+			'seam' => [
+				'contract' => 'kiwe.seam.bricks-theme-style.v1',
+				'source'   => 'kiwe-framework',
+				'strategy' => 'safe-global-typography-colors-links-background-only',
+				'variables' => 'canonical --kiwe-*',
+			],
+		];
+
+		return [
+			'id'       => $id,
+			'label'    => $label,
+			'settings' => $settings,
 		];
 	}
 
@@ -642,6 +810,58 @@ final class Seam_Token_Service {
 		];
 	}
 
+	private static function theme_style_colors( array $tokens ): array {
+		return [
+			'colorPrimary'   => self::bricks_color_ref( $tokens, 'color-brand', 'colorPrimary' ),
+			'colorSecondary' => self::bricks_color_ref( $tokens, 'color-accent', 'colorSecondary' ),
+			'colorLight'     => self::bricks_color_ref( $tokens, 'color-surface', 'colorLight' ),
+			'colorDark'      => self::bricks_color_ref( $tokens, 'color-text', 'colorDark' ),
+			'colorMuted'     => self::bricks_color_ref( $tokens, 'color-text-muted', 'colorMuted' ),
+			'colorInfo'      => self::bricks_color_ref( $tokens, 'color-info', 'colorInfo' ),
+			'colorSuccess'   => self::bricks_color_ref( $tokens, 'color-success', 'colorSuccess' ),
+			'colorWarning'   => self::bricks_color_ref( $tokens, 'color-warning', 'colorWarning' ),
+			'colorDanger'    => self::bricks_color_ref( $tokens, 'color-danger', 'colorDanger' ),
+		];
+	}
+
+	private static function bricks_color_ref( array $tokens, string $name, string $seed = '' ): array {
+		$name  = self::clean_name( $name );
+		$value = self::token_value( $tokens, $name );
+		$hex   = self::hex_fallback( $value );
+		$color = [
+			'id'    => self::stable_id( 'kw-style-color-' . ( '' !== $seed ? $seed : $name ) ),
+			'raw'   => 'var(--kiwe-' . $name . ')',
+			'light' => $hex,
+		];
+
+		if ( '' !== $hex ) {
+			$color['hex']  = $hex;
+			$color['dark'] = $hex;
+		}
+
+		return $color;
+	}
+
+	private static function token_value( array $tokens, string $name ): string {
+		$name = self::clean_name( $name );
+		foreach ( self::normalize_tokens( $tokens ) as $token ) {
+			if ( $name === (string) ( $token['name'] ?? '' ) ) {
+				return (string) ( $token['value'] ?? '' );
+			}
+		}
+
+		return '';
+	}
+
+	private static function hex_fallback( string $value ): string {
+		$value = trim( $value );
+		if ( preg_match( '/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i', $value ) ) {
+			return $value;
+		}
+
+		return '#000000';
+	}
+
 	private static function token( string $name, string $value, string $type, string $description, string $seam_alias = '' ): array {
 		$name = self::clean_name( $name );
 
@@ -739,7 +959,7 @@ final class Seam_Token_Service {
 			return 'font';
 		}
 
-		if ( str_starts_with( $name, 'type-' ) ) {
+		if ( str_starts_with( $name, 'type-' ) || str_starts_with( $name, 'leading-' ) || str_starts_with( $name, 'tracking-' ) ) {
 			return 'type';
 		}
 
@@ -797,7 +1017,7 @@ final class Seam_Token_Service {
 			return 'font';
 		}
 
-		if ( str_starts_with( $name, 'type-' ) ) {
+		if ( str_starts_with( $name, 'type-' ) || str_starts_with( $name, 'leading-' ) || str_starts_with( $name, 'tracking-' ) ) {
 			return 'type';
 		}
 
@@ -852,6 +1072,14 @@ final class Seam_Token_Service {
 		$value = preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', (string) $value );
 
 		return trim( (string) $value );
+	}
+
+	private static function clean_theme_style_id( string $id ): string {
+		$id = strtolower( trim( $id ) );
+		$id = preg_replace( '/[^a-z0-9_-]+/', '-', $id );
+		$id = trim( (string) $id, '-' );
+
+		return substr( $id, 0, 80 );
 	}
 
 	private static function clean_css_custom_property( string $name ): string {

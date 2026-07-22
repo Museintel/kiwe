@@ -132,6 +132,15 @@ final class Module_Registry {
 
 	private function lucide_icon( string $name ): string {
 		$name = sanitize_key( $name );
+		if ( 'house' === $name ) {
+			$name = 'home';
+		}
+		if ( 'home' === $name ) {
+			return '<svg class="dsa-lucide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"></path><path d="M9 21v-6a3 3 0 0 1 6 0v6"></path></svg>';
+		}
+		if ( 'external-link' === $name ) {
+			return '<svg class="dsa-lucide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>';
+		}
 		$href = esc_url( DSA_URL . 'assets/icons/lucide/sprite.svg' ) . '#' . $name;
 		return '<svg class="dsa-lucide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' . esc_attr( $href ) . '"></use></svg>';
 	}

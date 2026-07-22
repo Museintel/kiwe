@@ -16,12 +16,20 @@ final class Access_Key_Service {
 	public const SCOPES = [
 		'all',
 		'site_graph',
+		'site_graph_data',
 		'validate_bindings',
 		'prepare_apply_plan',
 		'stage_apply_plan',
 		'trusted_apply_chain',
 		'themes',
 		'site_inspection',
+		'security_brief',
+		'internal_ai',
+		'companion',
+		'companion_securetrack',
+		'studio_ai',
+		'native_ai',
+		'bricks_ai',
 		'staging_execute',
 		'controlled_mutation',
 	];
@@ -103,7 +111,7 @@ final class Access_Key_Service {
 				continue;
 			}
 			$scopes = $this->normalize_scopes( isset( $record['scopes'] ) && is_array( $record['scopes'] ) ? $record['scopes'] : [] );
-			if ( 'status' !== $required_scope && ! in_array( 'all', $scopes, true ) && ! in_array( $required_scope, $scopes, true ) ) {
+			if ( 'status' !== $required_scope && ! $this->scope_satisfied( $required_scope, $scopes ) ) {
 				return $this->auth_failure( 'scope_denied', 'Kiwe AI API key does not include the required scope.' );
 			}
 			$this->mark_used( (string) ( $record['id'] ?? '' ) );
@@ -134,6 +142,20 @@ final class Access_Key_Service {
 		}
 
 		return array_values( array_unique( $out ) );
+	}
+
+	private function scope_satisfied( string $required_scope, array $scopes ): bool {
+		if ( in_array( 'all', $scopes, true ) || in_array( $required_scope, $scopes, true ) ) {
+			return true;
+		}
+		if ( 'security_brief' === $required_scope && in_array( 'companion_securetrack', $scopes, true ) ) {
+			return true;
+		}
+		if ( 'bricks_ai' === $required_scope && in_array( 'studio_ai', $scopes, true ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private function records(): array {

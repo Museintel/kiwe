@@ -1444,8 +1444,8 @@ function stp_pg_settings() {
 			'v2_ai_batch_mins'     => max( 1, min( 60, (int) ( $_POST['v2_ai_batch_mins'] ?? 5 ) ) ),
 			'v2_uncertain_low'     => max( 1, min( 95, (int) ( $_POST['v2_uncertain_low'] ?? 30 ) ) ),
 			'v2_uncertain_high'    => max( 2, min( 99, (int) ( $_POST['v2_uncertain_high'] ?? 70 ) ) ),
-			'v2_auto_block_local'  => (int) isset( $_POST['v2_auto_block_local'] ),
-			'v2_share_patterns'    => (int) isset( $_POST['v2_share_patterns'] ),
+			'v2_auto_block_local'  => (int) ! empty( $_POST['v2_auto_block_local'] ),
+			'v2_share_patterns'    => (int) ! empty( $_POST['v2_share_patterns'] ),
 		);
 		if ( $new['v2_uncertain_high'] <= $new['v2_uncertain_low'] ) $new['v2_uncertain_high'] = min( 99, $new['v2_uncertain_low'] + 20 );
 		$new = \DSA\Secure\SecureTrack_Settings_Policy::normalize_runtime_config( $new );
@@ -1604,37 +1604,14 @@ function stp_pg_settings() {
         <input type="number" name="v2_uncertain_low" value="<?php echo esc_attr( $s['v2_uncertain_low'] ); ?>" min="1" max="95" style="width:70px">
         to
         <input type="number" name="v2_uncertain_high" value="<?php echo esc_attr( $s['v2_uncertain_high'] ); ?>" min="2" max="99" style="width:70px"><br>
-        AI provider:
-        <select name="v2_ai_provider">
-          <?php foreach ( array( 'none' => 'None - local only', 'gemini' => 'Google Gemini (free tier available)', 'groq' => 'Groq API (free plan)', 'xai' => 'xAI Grok API (paid/credits)' ) as $pv => $pl ): ?>
-            <option value="<?php echo esc_attr( $pv ); ?>" <?php selected( $s['v2_ai_provider'], $pv ); ?>><?php echo esc_html( $pl ); ?></option>
-          <?php endforeach; ?>
-        </select>
-        Model:
-        <select name="v2_ai_model" style="max-width:260px">
-          <?php
-          $has_current_model = false;
-          foreach ( $ai_models as $m ):
-            $mn = preg_replace( '#^models/#', '', (string) ( $m['name'] ?? '' ) );
-            if ( $mn === '' ) continue;
-            if ( $mn === $s['v2_ai_model'] ) $has_current_model = true;
-            $tier = (string) ( $m['tier'] ?? stp_ai_model_tier_label( $s['v2_ai_provider'], $mn ) );
-          ?>
-            <option value="<?php echo esc_attr( $mn ); ?>" <?php selected( $s['v2_ai_model'], $mn ); ?>><?php echo esc_html( $mn ); ?><?php echo ! empty( $m['label'] ) && $m['label'] !== $mn ? ' - ' . esc_html( $m['label'] ) : ''; ?><?php echo $tier !== '' ? ' [' . esc_html( $tier ) . ']' : ''; ?></option>
-          <?php endforeach; ?>
-          <?php if ( ! $has_current_model ): ?>
-            <option value="<?php echo esc_attr( $s['v2_ai_model'] ); ?>" selected><?php echo esc_html( $s['v2_ai_model'] ); ?> - current [<?php echo esc_html( stp_ai_model_tier_label( $s['v2_ai_provider'], $s['v2_ai_model'] ) ); ?>]</option>
-          <?php endif; ?>
-        </select>
-        <a href="<?php echo esc_url( wp_nonce_url( '?page=stp-settings&stp_do=fetchmodels', 'stp_do' ) ); ?>" class="button button-small">Fetch Models</a>
-        <small><?php echo ! empty( $ai_models_status['message'] ) ? esc_html( ' ' . $ai_models_status['message'] . ' ' . ( $ai_models_status['updated_at'] ?? '' ) ) : ''; ?></small><br>
-        Mode:
-        <select name="v2_ai_mode">
-          <option value="batch" <?php selected( $s['v2_ai_mode'], 'batch' ); ?>>Batch - save tokens</option>
-          <option value="always" <?php selected( $s['v2_ai_mode'], 'always' ); ?>>Always on - realtime review</option>
-        </select>
-        Batch every <input type="number" name="v2_ai_batch_mins" value="<?php echo esc_attr( $s['v2_ai_batch_mins'] ); ?>" min="1" max="60" style="width:70px"> minutes<br>
-        API key: <input type="password" name="v2_ai_key" value="" class="regular-text" autocomplete="new-password" placeholder="<?php echo empty( $s['v2_ai_key'] ) ? 'No key stored' : 'Key stored - leave blank to keep'; ?>"><br>
+        <input type="hidden" name="v2_ai_provider" value="<?php echo esc_attr( $s['v2_ai_provider'] ); ?>">
+        <input type="hidden" name="v2_ai_model" value="<?php echo esc_attr( $s['v2_ai_model'] ); ?>">
+        <input type="hidden" name="v2_ai_mode" value="<?php echo esc_attr( $s['v2_ai_mode'] ); ?>">
+        <input type="hidden" name="v2_ai_batch_mins" value="<?php echo esc_attr( $s['v2_ai_batch_mins'] ); ?>">
+        <input type="hidden" name="v2_auto_block_local" value="<?php echo ! empty( $s['v2_auto_block_local'] ) ? '1' : ''; ?>">
+        <input type="hidden" name="v2_share_patterns" value="<?php echo ! empty( $s['v2_share_patterns'] ) ? '1' : ''; ?>">
+        <p><strong>AI provider settings live in Kiwe &gt; AI.</strong> SecureTrack still owns local Site Brain learning and security enforcement. Redacted security context uses Companion consent/scopes, and optional cloud review uses the shared Native AI provider/key when supported; there is no separate SecureTrack API key field.</p>
+        <p><a href="<?php echo esc_url( admin_url( 'admin.php?page=kiwe-ai' ) ); ?>" class="button button-small">Open Kiwe AI settings</a></p>
         <strong>AI status:</strong>
         <?php if ( ! empty( $ai_status['connected'] ) && ( $ai_status['provider'] ?? '' ) === ( $s['v2_ai_provider'] ?? '' ) ): ?>
           <span style="color:#059669;font-weight:700">Connected</span>
@@ -1645,9 +1622,7 @@ function stp_pg_settings() {
         <?php endif; ?>
         <small><?php echo ! empty( $ai_status['message'] ) ? esc_html( ' - ' . $ai_status['message'] . ' (' . ( $ai_status['updated_at'] ?? '' ) . ')' ) : ''; ?></small>
         <a href="<?php echo esc_url( wp_nonce_url( '?page=stp-settings&stp_do=testai', 'stp_do' ) ); ?>" class="button button-small">Test AI Connection</a><br>
-        <label><input type="checkbox" name="v2_auto_block_local" <?php checked($s['v2_auto_block_local']); ?>> Allow mature local brain to raise auto-block recommendations without cloud review</label><br>
-        <label><input type="checkbox" name="v2_share_patterns" <?php checked($s['v2_share_patterns']); ?>> Share anonymized learned patterns if a future global model is connected</label>
-        <p class="description">Batch mode saves tokens by reviewing uncertain events later. Always-on mode reviews uncertain events immediately and may slow the request that created them. Gemini Flash/Flash-Lite and Groq are free-plan friendly; xAI/Grok API uses paid credits even when the consumer Grok app has free access. AI packets use compact JSON with site-salted IP/user hashes instead of raw IP addresses or usernames.</p>
+        <p class="description">Batch/realtime review mode, local auto-block recommendation policy, and future pattern-sharing consent are controlled from Kiwe &gt; AI. Provider/model/API-key authority comes from the shared Native AI settings.</p>
       </td>
     </tr>
 

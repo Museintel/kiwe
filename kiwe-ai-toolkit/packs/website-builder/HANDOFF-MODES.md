@@ -17,12 +17,15 @@ website-handoff/
   README.md
   bricks-paste.html  # open in browser for preview; paste/import through Bricks
   bricks-notes.md
+  framework/
+    kiwe-framework-profile.json # optional when the page defines a sitewide token profile
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
 - Produce `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, duplicate preview files, or hidden local files.
+- If the website/page establishes a brand system that should be reused by Bricks and future Kiwe pages, include `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. This imports at `Kiwe > Framework`, not `Kiwe > Theme`.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
@@ -114,6 +117,7 @@ Rules:
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.
 - Navigation bar is not a horizontal dock. `dock.presentation="navbar"` is a separate core presentation mode; `horizontal` and `vertical` are dock orientation states. Split dock applies only when presentation is `dock`.
+- In combined mode, put the live-intended design-token profile in `appshell-theme/import/theme-id/theme-package.json` under `settings.tokens` so the theme install keeps DSA, Seam page CSS, and Bricks global style aligned. Do not add a separate Framework profile unless the brief explicitly asks for a standalone `Kiwe > Framework` import artifact too.
 
 ## Page-to-AppShell hooks
 
@@ -142,6 +146,7 @@ This is useful when the design wants:
 - Screen presentation copy, such as cart titles and FBT/checkout labels, when the preview copy is intended to appear in live Kiwe.
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
+- Design-token profile: palette, font stacks, heading scale, site background, line-height, spacing, radius, shadows, and the optional safe Bricks global theme-style export. Active/hover/hero colors remain compatibility settings for `color-brand`, `color-accent`, and `color-hero`.
 
 `theme.json` remains the manifest-only validator file. Put the settings preset in `theme-package.json` at root `settings`, beside root `theme` and root `css`.
 - Active/hover/hero colors.
@@ -190,7 +195,30 @@ Safe root `settings` keys inside `theme-package.json` include:
     "hover_color": "#24c6a1",
     "hero_text_color": "rgba(20,24,34,0.18)"
   },
+  "tokens": {
+    "enabled": true,
+    "profile_label": "Theme design tokens",
+    "overrides": {
+      "color-brand": "#8f8f98",
+      "color-accent": "#24c6a1",
+      "color-surface": "#f6f8f7",
+      "color-text": "#1f2933",
+      "font-display": "Inter, system-ui, sans-serif",
+      "font-body": "Inter, system-ui, sans-serif"
+    },
+    "bricks_theme_style": {
+      "enabled": true,
+      "id": "kiwe-global-design",
+      "label": "Kiwe Universal Design Tokens"
+    }
+  },
   "screens": {
+    "profile": {
+      "label": "Account",
+      "title": "Your account",
+      "ordersTitle": "Orders",
+      "addressesTitle": "Addresses"
+    },
     "cart": {
       "label": "Bag",
       "eyebrow": "Cart",
@@ -200,6 +228,11 @@ Safe root `settings` keys inside `theme-package.json` include:
       "fbtTitle": "Pairs well with",
       "checkoutLabel": "Checkout",
       "checkoutEmptyLabel": "Empty"
+    },
+    "links": {
+      "label": "Links",
+      "shopLabel": "Shop all products",
+      "cartLabel": "Tea-time bag"
     }
   }
 }
@@ -210,9 +243,10 @@ Notes:
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
 - Bricks/Icon/header launchers may still open DSA modules through Kiwe's Bricks controls and canonical `data-dsa-open-module`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
-- `settings.screens.cart` is presentation/copy only. It may set labels such as `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. It must not contain cart data, prices, line items, checkout URLs, JavaScript, endpoints, or state authority. WooCommerce/Kiwe still own the cart runtime.
-- If a preview shows custom cart copy such as "Your tea-time bag" or "Pairs well with" and that copy is intended for the live theme, it must be declared in `theme-package.json` under `settings.screens.cart`; otherwise document it as preview-only.
-- The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
+- `settings.screens` is presentation/copy only for registered DSA screens/sheets: `profile`, `cart`, `checkout`, `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, `games`, and `ai`. It may rename labels, titles, helper text, empty states, safe CTA labels, Cart FBT title, Profile row labels, Links shop/cart labels, notification form labels, iOS install steps, game labels, and AI empty/chat copy. It must not contain products, orders, saved items, profile identity, menu items, search results, social URLs, score values, notification state, AI messages/actions, cart line items, totals, checkout/payment URLs, JavaScript, endpoints, or state authority.
+- If a preview shows custom live-intended screen/sheet copy, it must be declared in `theme-package.json` under `settings.screens`; otherwise document it as preview-only.
+- `Kiwe > Theme` exposes manual DSA screen/sheet copy controls. Manual admin edits merge over imported `settings.screens` defaults, but a theme package should still ship defaults so first install matches the preview.
+- The theme settings must not contain users, orders, credentials, logs, raw API keys, API secrets, or private data.
 
 ## What to ask the AI
 

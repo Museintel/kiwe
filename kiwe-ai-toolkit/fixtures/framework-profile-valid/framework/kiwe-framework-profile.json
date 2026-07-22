@@ -1,0 +1,32 @@
+{
+  "type": "kiwe-framework-profile",
+  "schema": "kiwe.framework-profile.v1",
+  "schemaVersion": 1,
+  "pluginVersion": "0.5.92",
+  "exportedAt": "2026-07-18T00:00:00Z",
+  "source": {
+    "siteName": "Kiwe fixture",
+    "siteUrl": "https://example.test/"
+  },
+  "settings": {
+    "tokens": {
+      "enabled": true,
+      "profile_label": "Fixture Framework",
+      "overrides": {
+        "color-brand": "#d6006f",
+        "color-accent": "#00cdc6",
+        "color-surface": "#fff8ea",
+        "color-text": "#201713",
+        "font-display": "Inter, system-ui, sans-serif",
+        "type-h1": "clamp(2.5rem, 6vw, 5rem)",
+        "radius-lg": "24px",
+        "shadow-md": "0 18px 40px rgba(32, 23, 19, 0.16)"
+      },
+      "bricks_theme_style": {
+        "enabled": true,
+        "id": "kiwe-fixture-framework",
+        "label": "Kiwe Fixture Framework"
+      }
+    }
+  }
+}

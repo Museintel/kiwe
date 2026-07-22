@@ -23,7 +23,9 @@ final class Site_Graph_Service {
 
 		$settings = $this->settings->all();
 		$dock     = isset( $settings['dock'] ) && is_array( $settings['dock'] ) ? $settings['dock'] : [];
-		$tokens   = Seam_Token_Service::universal_tokens();
+		$tokens   = Seam_Token_Service::tokens_with_overrides( Seam_Token_Service::overrides_from_settings( $settings ) );
+		$token_settings = isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ? $settings['tokens'] : [];
+		$theme_style_settings = isset( $token_settings['bricks_theme_style'] ) && is_array( $token_settings['bricks_theme_style'] ) ? $token_settings['bricks_theme_style'] : [];
 
 		return [
 			'schema'        => 'kiwe.site-graph.v1',
@@ -33,6 +35,7 @@ final class Site_Graph_Service {
 			'woocommerce'   => $this->woocommerce_summary( $sample_limit ),
 			'bricks'        => $this->bricks_summary(),
 			'customContent' => $this->custom_content_summary( $sample_limit ),
+			'connectors'    => $this->connectors_summary(),
 			'kiwe'          => [
 				'version'       => defined( 'DSA_VERSION' ) ? DSA_VERSION : '',
 				'modules'       => $this->modules->manifest_contract( $dock ),
@@ -41,9 +44,17 @@ final class Site_Graph_Service {
 				'bricksBridge'  => $this->safe_setting_fragment( isset( $settings['bricks'] ) && is_array( $settings['bricks'] ) ? $settings['bricks'] : [], [ 'dynamic_tags_enabled', 'dsa_icon_launcher_enabled', 'linked_products_controls_enabled', 'prefer_bricks_native_cart', 'quantity_stepper_enabled', 'stock_badge_enabled', 'verified_version' ] ),
 				'tokenSummary'  => [
 					'source'        => 'kiwe.universal',
+					'profileLabel'  => sanitize_text_field( (string) ( $token_settings['profile_label'] ?? 'Kiwe Universal' ) ),
 					'count'         => count( $tokens ),
 					'counts'        => Seam_Token_Service::counts( $tokens ),
 					'bricksAdditive' => true,
+					'bricksThemeStyle' => [
+						'enabled' => ! empty( $theme_style_settings['enabled'] ),
+						'id'      => sanitize_key( (string) ( $theme_style_settings['id'] ?? 'kiwe-global-design' ) ),
+						'label'   => sanitize_text_field( (string) ( $theme_style_settings['label'] ?? 'Kiwe Universal Design Tokens' ) ),
+						'safeLanes' => [ 'typography', 'colors', 'links', 'general.siteBackground' ],
+					],
+					'overrideNames' => array_keys( Seam_Token_Service::overrides_from_settings( $settings ) ),
 				],
 			],
 			'bindingTargets' => $this->binding_targets(),
@@ -67,6 +78,90 @@ final class Site_Graph_Service {
 			'status'      => 'readonly',
 			'description' => __( 'Admin-only context graph for AI design, Bricks binding, WordPress content inventory, WooCommerce terms, and Kiwe AppShell capabilities.', 'dsa' ),
 			'schema'      => 'kiwe.site-graph.v1',
+		];
+	}
+
+	private function connectors_summary(): array {
+		return [
+			'siteGraphData' => [
+				'schema'      => 'kiwe.site-graph.data.v1',
+				'publicSafe'  => true,
+				'readOnly'    => true,
+				'restRoutes'  => [
+					'/wp-json/dsa/v1/site-graph/data/schema',
+					'/wp-json/dsa/v1/site-graph/data',
+					'/wp-json/dsa/v1/ai/site-graph-data/schema',
+					'/wp-json/dsa/v1/ai/site-graph-data',
+				],
+				'aiKeyScopes' => [ 'site_graph_data', 'all' ],
+				'useFor'      => [ 'headless page data', 'real product rails', 'real post rails', 'menus', 'terms', 'media', 'site identity' ],
+			],
+			'internalAI' => [
+				'schema'      => 'kiwe.internal-ai.context.v1',
+				'advisorSchema' => 'kiwe.internal-ai.advisor.v1',
+				'enrichmentSchema' => 'kiwe.internal-ai.enrichment.v1',
+				'readOnly'    => true,
+				'restRoute'   => '/wp-json/dsa/v1/ai/internal-context',
+				'restRoutes'  => [
+					'/wp-json/dsa/v1/ai/internal-context',
+					'/wp-json/dsa/v1/ai/advisor',
+					'/wp-json/dsa/v1/ai/advisor/enrich',
+				],
+				'aiKeyScopes' => [ 'internal_ai', 'all' ],
+				'useFor'      => [ 'Kiwe internal AI context', 'deterministic advisor findings', 'model-optional enrichment envelope', 'admin copilot preparation', 'MCP-style planning packet' ],
+			],
+			'companionAI' => [
+				'schema'      => 'kiwe.companion-context.v1',
+				'readOnly'    => true,
+				'modelCall'   => false,
+				'restRoutes'  => [
+					'/wp-json/dsa/v1/ai/companion/status',
+					'/wp-json/dsa/v1/ai/companion/context',
+					'/wp-json/dsa/v1/ai/companion/ask',
+					'/wp-json/dsa/v1/ai/companion/review-output',
+				],
+				'aiKeyScopes' => [ 'companion', 'all' ],
+				'useFor'      => [ 'token-saving browser AI context', 'theme/page/combined handoff guidance', 'deterministic audit memory', 'avoid full repository reads' ],
+			],
+			'studioAI' => [
+				'schema'      => 'kiwe.studio-ai.status.v1',
+				'readOnly'    => true,
+				'modelCall'   => 'optional-native-provider-only-when-enabled',
+				'restRoutes'  => [
+					'/wp-json/dsa/v1/ai/studio/status',
+					'/wp-json/dsa/v1/ai/studio/start',
+					'/wp-json/dsa/v1/ai/studio/draft',
+					'/wp-json/dsa/v1/ai/studio/review',
+				],
+				'aiKeyScopes' => [ 'studio_ai', 'native_ai', 'all' ],
+				'useFor'      => [ 'website/page generation workflow', 'DSA theme generation workflow', 'combined website plus AppShell workflow', 'native AI draft envelopes', 'browser AI plus Companion flow' ],
+			],
+			'secureTrackBrief' => [
+				'schema'      => 'kiwe.securetrack.ai-brief.v1',
+				'readOnly'    => true,
+				'redacted'    => true,
+				'restRoute'   => '/wp-json/dsa/v1/ai/security-brief',
+				'aiKeyScopes' => [ 'security_brief', 'all' ],
+				'useFor'      => [ 'security posture explanation', 'triage', 'admin recommendations' ],
+			],
+			'wpAbilities' => [
+				'available' => function_exists( 'wp_register_ability' ) && function_exists( 'wp_register_ability_category' ),
+				'abilities' => [
+					'dsa/get-site-graph',
+					'dsa/get-site-graph-data-schema',
+					'dsa/query-site-graph-data',
+					'dsa/get-securetrack-brief',
+					'dsa/get-internal-ai-context',
+					'dsa/run-internal-ai-advisor',
+					'dsa/enrich-internal-ai-advisor',
+					'dsa/get-companion-context',
+					'dsa/start-studio-project',
+					'dsa/review-studio-output',
+					'dsa/validate-bindings',
+					'dsa/prepare-apply-plan',
+					'dsa/stage-apply-plan',
+				],
+			],
 		];
 	}
 

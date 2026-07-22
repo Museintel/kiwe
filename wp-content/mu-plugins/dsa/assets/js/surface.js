@@ -89,6 +89,7 @@
 	let activeOverlayModuleId = '';
 	let activeOverlayPanel = '';
 	let activeOverlayLifecycle = null;
+	let lastOverlayOpenGuard = { moduleId: '', at: 0 };
 	let overlayContentSequence = 0;
 	let surfaceLifecycleSequence = 0;
 	let surfaceScrollY = 0;
@@ -121,10 +122,12 @@
 		'menu',
 		'saved',
 		'cart',
+		'checkout',
 		'search',
 		'links',
 		'notifications',
 		'ios-install',
+		'games',
 		'ai',
 	] );
 	function currentVisualProfile() {
@@ -137,6 +140,13 @@
 	function screenTheme( screen ) {
 		const value = themeScreens && themeScreens[ screen ] && typeof themeScreens[ screen ] === 'object' ? themeScreens[ screen ] : {};
 		return Object.assign( {}, value );
+	}
+	function screenCopy( screen, defaults ) {
+		return Object.assign( {}, defaults || {}, screenTheme( screen ) );
+	}
+	function screenLabel( screen, fallback ) {
+		const copy = screenCopy( screen, { label: fallback || screen || '' } );
+		return copy.label || fallback || screen || '';
 	}
 	function seamUiBridge() {
 		return {
@@ -514,8 +524,20 @@
 	const dockContext = surface.querySelector( '[data-dsa-dock-context]' );
 	const dockContextContent = surface.querySelector( '[data-dsa-dock-context-content]' );
 	const aiPopout = surface.querySelector( '[data-dsa-ai-popout]' );
-	if ( aiPopout && document.body && aiPopout.parentNode !== document.body ) {
-		document.body.appendChild( aiPopout );
+	let notificationStack = null;
+	if ( aiPopout && document.body ) {
+		notificationStack = document.querySelector( '[data-dsa-notification-stack]' );
+		if ( ! notificationStack ) {
+			notificationStack = document.createElement( 'div' );
+			notificationStack.className = 'dsa-notification-stack';
+			notificationStack.setAttribute( 'data-dsa-notification-stack', '1' );
+			notificationStack.setAttribute( 'aria-live', 'polite' );
+			notificationStack.setAttribute( 'aria-label', 'Kiwe notifications' );
+			document.body.appendChild( notificationStack );
+		}
+		if ( aiPopout.parentNode !== notificationStack ) {
+			notificationStack.appendChild( aiPopout );
+		}
 	}
 	const loader = surface.querySelector( '[data-dsa-loader]' );
 	const loaderMessage = surface.querySelector( '[data-dsa-loader-message]' );
@@ -526,6 +548,8 @@
 	let lastFocusedElement = null;
 	let overlayCloseTimer = 0;
 	let dockContextPlacements = [];
+	let externalSiteModalFrame = 0;
+	let externalSiteModalActive = false;
 	let registry = { elements: [], count: 0 };
 	let navigationInFlight = false;
 	let loaderStartedAt = 0;
@@ -1038,6 +1062,11 @@
 	}
 
 	function openOverlay( moduleId, label ) {
+		const now = Date.now();
+		if ( lastOverlayOpenGuard.moduleId === moduleId && now - lastOverlayOpenGuard.at < 420 ) {
+			return;
+		}
+		lastOverlayOpenGuard = { moduleId: moduleId, at: now };
 		if ( ! overlayRoot ) {
 			return;
 		}
@@ -1492,56 +1521,57 @@
 
 	function renderModulePanel( module, label ) {
 		const panel = module.panel || module.id;
+		const resolvedLabel = screenLabel( panel, label || module.label || panel );
 
 		if ( panel === 'profile' ) {
-			return renderProfilePanel( label );
+			return renderProfilePanel( resolvedLabel );
 		}
 
 		if ( panel === 'cart' ) {
-			return renderCartPanel( label );
+			return renderCartPanel( resolvedLabel );
 		}
 
 		if ( panel === 'checkout' ) {
-			return renderCheckoutPanel();
+			return renderCheckoutPanel( resolvedLabel );
 		}
 
 		if ( panel === 'menu' ) {
-			return renderMenuPanel( label );
+			return renderMenuPanel( resolvedLabel );
 		}
 
 		if ( panel === 'search' ) {
-			return renderSearchPanel( label );
+			return renderSearchPanel( resolvedLabel );
 		}
 
 		if ( panel === 'secure' ) {
-			return renderSecurePanel( label );
+			return renderSecurePanel( resolvedLabel );
 		}
 
 		if ( panel === 'links' ) {
-			return renderLinksPanel( label );
+			return renderLinksPanel( resolvedLabel );
 		}
 
 		if ( panel === 'saved' ) {
-			return renderSavedPanel( label );
+			return renderSavedPanel( resolvedLabel );
 		}
 
 		if ( panel === 'games' ) {
-			return renderGamesPanel( label );
+			return renderGamesPanel( resolvedLabel );
 		}
 
 		if ( panel === 'ai' ) {
-			return renderAiPanel( label );
+			return renderAiPanel( resolvedLabel );
 		}
 
 		if ( panel === 'notifications' ) {
-			return renderNotificationPreferencePanel();
+			return renderNotificationPreferencePanel( resolvedLabel );
 		}
 
 		if ( panel === 'ios-install' ) {
-			return renderIosInstallPanel();
+			return renderIosInstallPanel( resolvedLabel );
 		}
 
-		return renderBasicPanel( label, 'DSA detected ' + escapeHtml( registry.count || 0 ) + ' page elements on this route.' );
+		return renderBasicPanel( resolvedLabel, 'DSA detected ' + escapeHtml( registry.count || 0 ) + ' page elements on this route.' );
 	}
 
 	function renderLazyPresentation( panel, label ) {
@@ -1598,17 +1628,29 @@
 	function searchPanelLabel( label ) {
 		return label || 'Search';
 	}
+	function searchPanelCopy( label ) {
+		const copy = screenCopy( 'search', {
+			label: searchPanelLabel( label ),
+			eyebrow: searchPanelLabel( label ),
+			title: 'Find what you need.',
+			placeholder: 'Search products and posts',
+		} );
+		copy.eyebrow = copy.eyebrow || copy.label || searchPanelLabel( label );
+		return copy;
+	}
 
 	function renderLegacySearchPanel( label ) {
+		const copy = searchPanelCopy( label );
 		return [
-			'<section class="dsa-panel dsa-search-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( searchPanelLabel( label ) ) + '" data-dsa-search-panel>',
-			'<p class="dsa-search-panel__eyebrow">' + escapeHtml( searchPanelLabel( label ) ) + '</p>',
-			'<h2>Find what you need.</h2>',
+			'<section class="dsa-panel dsa-search-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-search-panel>',
+			'<p class="dsa-search-panel__eyebrow">' + escapeHtml( copy.eyebrow ) + '</p>',
+			'<h2>' + escapeHtml( copy.title ) + '</h2>',
+			copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '',
 			'<form class="dsa-search-panel__form" role="search" data-dsa-search-form data-dsa-keep-open>',
-			'<label class="dsa-visually-hidden" for="dsa-live-search">Search products and posts</label>',
+			'<label class="dsa-visually-hidden" for="dsa-live-search">' + escapeHtml( copy.placeholder ) + '</label>',
 			'<span class="dsa-search-panel__field">',
 			'<span class="dsa-search-glyph" aria-hidden="true"></span>',
-			'<input id="dsa-live-search" type="search" name="q" inputmode="search" autocomplete="off" placeholder="Search products and posts" data-dsa-search-input>',
+			'<input id="dsa-live-search" type="search" name="q" inputmode="search" autocomplete="off" placeholder="' + escapeHtml( copy.placeholder ) + '" data-dsa-search-input>',
 			'<button type="button" aria-label="Clear search" data-dsa-search-clear hidden>&times;</button>',
 			'</span>',
 			'</form>',
@@ -1620,19 +1662,20 @@
 	}
 
 	function renderPrototypeSearchPanel( label ) {
-		const resolvedLabel = searchPanelLabel( label );
+		const copy = searchPanelCopy( label );
 		return [
-			'<section class="dsa-panel dsa-search-panel kiwe-search-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( resolvedLabel ) + '" data-dsa-search-panel data-dsa-search-adapter="prototype-2027">',
+			'<section class="dsa-panel dsa-search-panel kiwe-search-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-search-panel data-dsa-search-adapter="prototype-2027">',
 			'<div class="kiwe-search-v2027__title">',
-			'<p class="dsa-search-panel__eyebrow">' + escapeHtml( resolvedLabel ) + '</p>',
-			'<h2>Find what you need.</h2>',
+			'<p class="dsa-search-panel__eyebrow">' + escapeHtml( copy.eyebrow ) + '</p>',
+			'<h2>' + escapeHtml( copy.title ) + '</h2>',
+			copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '',
 			'<p class="dsa-panel__meta dsa-search-panel__status" data-dsa-search-status></p>',
 			'</div>',
 			'<form class="dsa-search-panel__form kiwe-search-v2027__form" role="search" data-dsa-search-form data-dsa-keep-open>',
-			'<label class="dsa-visually-hidden" for="dsa-live-search">Search products and posts</label>',
+			'<label class="dsa-visually-hidden" for="dsa-live-search">' + escapeHtml( copy.placeholder ) + '</label>',
 			'<span class="dsa-search-panel__field">',
 			'<span class="dsa-search-glyph" aria-hidden="true"></span>',
-			'<input id="dsa-live-search" type="search" name="q" inputmode="search" autocomplete="off" placeholder="Search products and posts" data-dsa-search-input>',
+			'<input id="dsa-live-search" type="search" name="q" inputmode="search" autocomplete="off" placeholder="' + escapeHtml( copy.placeholder ) + '" data-dsa-search-input>',
 			'<button type="button" aria-label="Clear search" data-dsa-search-clear hidden>&times;</button>',
 			'</span>',
 			'</form>',
@@ -1654,12 +1697,21 @@
 		const adapter = presentationModules.get( 'menu' );
 		if ( ! adapter || typeof adapter.renderMenu !== 'function' ) return renderLazyPresentation( 'menu', label || 'Menu' );
 		const tag = /^(h1|h2|h3|h4|p|span)$/.test( dockSettings.menu_heading_tag || '' ) ? dockSettings.menu_heading_tag : 'span';
-		const menuLabel = dockSettings.menu_label || label;
+		const copy = screenCopy( 'menu', {
+			label: dockSettings.menu_label || label || 'Menu',
+			contextTitle: ( dockSettings.menu_context || {} ).title || 'On this page',
+			dashboardLabel: 'Dashboard',
+		} );
+		const menuLabel = copy.label || dockSettings.menu_label || label || 'Menu';
 		const items = Array.isArray( dockSettings.menu_items ) ? dockSettings.menu_items : [];
 		const configuredGroups = Array.isArray( dockSettings.menu_groups ) ? dockSettings.menu_groups : [];
 		const menuGroups = configuredGroups.length ? configuredGroups : ( items.length ? [ { label: '', items: items } ] : [] );
 		const fallbackUrl = window.location.origin + '/';
 		const contextHeadings = collectContextHeadings();
+		const adminDashboard = Object.assign( {}, dockSettings.admin_dashboard || {} );
+		if ( copy.dashboardLabel ) {
+			adminDashboard.label = copy.dashboardLabel;
+		}
 		const links = items.length ? items : [
 			{
 				title: menuLabel,
@@ -1677,9 +1729,10 @@
 			links: links.map( menuPayloadItem ),
 			fallbackUrl: fallbackUrl,
 			contextHeadings: contextHeadings,
-			contextTitle: ( dockSettings.menu_context || {} ).title || 'On this page',
-			adminDashboard: dockSettings.admin_dashboard || {},
+			contextTitle: copy.contextTitle || 'On this page',
+			adminDashboard: adminDashboard,
 			visualProfile: currentVisualProfile(),
+			screenTheme: copy,
 		} );
 	}
 
@@ -1714,18 +1767,7 @@
 				return normalizeTitle( labelNode && labelNode.textContent );
 			} ).filter( Boolean ).join( ' ' );
 		};
-		const headings = selector ? Array.from( scope.querySelectorAll( selector ) ).filter( function ( heading ) {
-			if ( heading.closest( blockedClosest ) ) return false;
-			if ( heading.hidden || heading.getAttribute( 'aria-hidden' ) === 'true' ) return false;
-			return Boolean( normalizeTitle( heading.textContent ) );
-		} ).slice( 0, 60 ).map( function ( heading, index ) {
-			const title = normalizeTitle( heading.textContent );
-			return { id: assignId( heading, title, index ), title: title, level: Number( heading.tagName.slice( 1 ) ) || 2, source: 'heading' };
-		} ) : [];
-
-		if ( headings.length ) return headings;
-
-		const sectionSelector = '[data-role~="section"], .seam-section';
+		const sectionSelector = 'section[id], [data-role~="section"], [data-seam-role~="section"], [data-seam-role~="hero"], .seam-section';
 		const sections = Array.from( scope.querySelectorAll( sectionSelector ) ).filter( function ( section ) {
 			if ( section.closest( blockedClosest ) ) return false;
 			if ( section.hidden || section.getAttribute( 'aria-hidden' ) === 'true' ) return false;
@@ -1744,7 +1786,18 @@
 			return { id: assignId( section, title, index ), title: title, level: level, source: 'section' };
 		} );
 
-		return sections;
+		if ( sections.length ) return sections;
+
+		const headings = selector ? Array.from( scope.querySelectorAll( selector ) ).filter( function ( heading ) {
+			if ( heading.closest( blockedClosest ) ) return false;
+			if ( heading.hidden || heading.getAttribute( 'aria-hidden' ) === 'true' ) return false;
+			return Boolean( normalizeTitle( heading.textContent ) );
+		} ).slice( 0, 60 ).map( function ( heading, index ) {
+			const title = normalizeTitle( heading.textContent );
+			return { id: assignId( heading, title, index ), title: title, level: Number( heading.tagName.slice( 1 ) ) || 2, source: 'heading' };
+		} ) : [];
+
+		return headings;
 	}
 
 	function isCurrentUrl( url ) {
@@ -2150,7 +2203,7 @@
 		const items = active.concat( history );
 
 		const adapter = presentationModules.get( 'ai' );
-		return adapter && typeof adapter.renderInbox === 'function' ? adapter.renderInbox( withUiProfile( { items: items, unread: active.length + unreadAiNotificationCount(), open: aiTrayOpen } ) ) : '';
+		return adapter && typeof adapter.renderInbox === 'function' ? adapter.renderInbox( withUiProfile( { items: items, unread: active.length + unreadAiNotificationCount(), open: aiTrayOpen, screenTheme: screenTheme( 'ai' ) } ) ) : '';
 	}
 
 	function renderAiBenefits( insight ) {
@@ -2164,11 +2217,12 @@
 		const active = activeAiInsights();
 		const history = aiNotificationHistory.slice().sort( function ( a, b ) { return Number( b.createdAt || 0 ) - Number( a.createdAt || 0 ); } );
 		return {
-			label: label || 'AI Assistant',
+			label: screenLabel( 'ai', label || 'AI Assistant' ),
 			items: active.concat( history ),
 			unread: active.length + unreadAiNotificationCount(),
 			open: aiTrayOpen,
 			visualProfile: currentVisualProfile(),
+			screenTheme: screenTheme( 'ai' ),
 		};
 	}
 
@@ -2233,9 +2287,9 @@
 		if ( ! notificationId ) {
 			return;
 		}
-		if ( card === aiPopout ) {
+		if ( card && card.classList && card.classList.contains( 'dsa-ai-popout' ) ) {
 			removeAiNotification( notificationId );
-			hideAiPopout( false );
+			hideAiPopout( false, false, card );
 			return;
 		}
 		if ( card ) {
@@ -2337,33 +2391,86 @@
 		if ( overlayRoot && ! overlayRoot.hidden && overlayRoot.querySelector( '[data-dsa-ai-panel]' ) ) {
 			return;
 		}
-		if ( aiPopoutInsightId === insight.id || aiNotificationQueue.some( function ( queued ) { return queued.insight.id === insight.id; } ) ) {
+		if ( isAiPopoutVisible( insight.id ) || aiNotificationQueue.some( function ( queued ) { return queued.insight.id === insight.id; } ) ) {
 			return;
 		}
-		if ( aiPopout && aiPopout.hidden && ! aiPopoutClosing ) {
+		if ( aiPopout && canShowAnotherAiPopout() && ! aiPopoutClosing ) {
 			showAiPopout( insight, context );
 			return;
 		}
 		aiNotificationQueue.push( { insight: insight, context: context || 'page' } );
 	}
 
+	function visibleAiPopoutCards() {
+		const root = notificationStack || document;
+		return Array.prototype.slice.call( root.querySelectorAll( '.dsa-ai-popout:not([hidden])' ) );
+	}
+
+	function isAiPopoutVisible( insightId ) {
+		if ( aiPopoutInsightId === insightId ) return true;
+		return visibleAiPopoutCards().some( function ( card ) {
+			return card.dataset && card.dataset.dsaAiInsight === insightId;
+		} );
+	}
+
+	function canShowAnotherAiPopout() {
+		return visibleAiPopoutCards().length < 3;
+	}
+
+	function acquireAiPopoutCard() {
+		if ( aiPopout && aiPopout.hidden ) {
+			return aiPopout;
+		}
+		if ( ! notificationStack || ! aiPopout ) {
+			return null;
+		}
+		const card = document.createElement( 'aside' );
+		card.className = aiPopout.className || 'dsa-ai-popout';
+		card.setAttribute( 'data-dsa-ai-popout', '1' );
+		card.setAttribute( 'role', 'status' );
+		card.hidden = true;
+		notificationStack.appendChild( card );
+		return card;
+	}
+
+	function syncNotificationStack() {
+		if ( ! notificationStack ) return;
+		const cards = visibleAiPopoutCards();
+		notificationStack.dataset.count = String( cards.length );
+		cards.forEach( function ( card, index ) {
+			card.style.setProperty( '--dsa-notification-index', String( index ) );
+			card.dataset.placement = window.innerWidth <= 640 ? 'mobile-top' : 'top-right';
+		} );
+	}
+
 	function showAiPopout( insight, context ) {
-		if ( ! aiPopout || ! insight || ! surface.querySelector( '[data-dsa-module="ai"]' ) ) {
+		if ( ! aiPopout || ! insight ) {
 			return;
 		}
 
-		window.clearTimeout( aiPopoutTimer );
+		const card = acquireAiPopoutCard();
+		if ( ! card ) return;
+
+		if ( card.dsaAiPopoutTimer ) {
+			window.clearTimeout( card.dsaAiPopoutTimer );
+			card.dsaAiPopoutTimer = 0;
+		}
+		if ( card === aiPopout ) {
+			window.clearTimeout( aiPopoutTimer );
+		}
 		window.clearTimeout( aiPopoutAnimationTimer );
-		aiPopoutClosing = false;
-		aiPopoutInsightId = insight.id;
+		if ( card === aiPopout ) {
+			aiPopoutClosing = false;
+			aiPopoutInsightId = insight.id;
+		}
 		aiPopoutContext = context;
 		const popoutDismissible = isAiNotificationDismissible( insight );
 		aiPopoutLocked = Boolean( insight.requiredAction && ! popoutDismissible );
 		aiInsightMemory.shown[ context + '|' + insight.id ] = Date.now();
 		saveAiInsightMemory();
-		aiPopout.innerHTML = [
+		card.innerHTML = [
 			popoutDismissible ? '<button type="button" class="dsa-ai-popout__close" data-dsa-ai-popout-dismiss="' + escapeHtml( insight.id ) + '" aria-label="Dismiss notification">&times;</button>' : ( aiPopoutLocked ? '' : '<button type="button" class="dsa-ai-popout__close" data-dsa-ai-popout-close aria-label="Close insight">&times;</button>' ),
-			'<div class="dsa-ai-popout__head"><span class="dsa-ai-glyph" aria-hidden="true"></span><strong>AI Assistant</strong></div>',
+			'<div class="dsa-ai-popout__head"><span class="dsa-ai-glyph" aria-hidden="true"></span><strong>' + escapeHtml( insight.notification ? 'Kiwe notification' : 'AI Assistant' ) + '</strong></div>',
 			'<small>' + escapeHtml( insight.kicker || 'New insight' ) + '</small>',
 			'<h3>' + escapeHtml( insight.title || '' ) + '</h3>',
 			'<p>' + escapeHtml( insight.message || '' ) + '</p>',
@@ -2374,35 +2481,48 @@
 			'</div>',
 			'<span class="dsa-ai-popout__status" data-dsa-ai-popout-status></span>',
 		].join( '' );
-		aiPopout.dataset.dsaAiInsight = insight.id;
-		aiPopout.toggleAttribute( 'data-dsa-ai-dismissible', popoutDismissible );
+		card.dataset.dsaAiInsight = insight.id;
+		card.dataset.dsaAiContext = context || 'page';
+		card.toggleAttribute( 'data-dsa-ai-dismissible', popoutDismissible );
 		if ( popoutDismissible ) {
-			bindAiNotificationSwipe( aiPopout );
+			bindAiNotificationSwipe( card );
 		}
-		aiPopout.classList.remove( 'is-leaving' );
-		aiPopout.classList.add( 'is-entering' );
-		aiPopout.hidden = false;
+		card.classList.remove( 'is-leaving' );
+		card.classList.add( 'is-entering' );
+		card.hidden = false;
 		surfaceFeedback( 'notification' );
 		window.requestAnimationFrame( function () {
 			positionAiPopout();
-			window.requestAnimationFrame( function () { aiPopout.classList.remove( 'is-entering' ); } );
+			window.requestAnimationFrame( function () { card.classList.remove( 'is-entering' ); } );
 		} );
 		window.setTimeout( positionAiPopout, 80 );
 		if ( ! aiPopoutLocked && ( insight.notification || context !== 'cart' ) ) {
-			aiPopoutTimer = window.setTimeout( hideAiPopout, Math.max( 2000, Math.min( 15000, Number( aiConfig.popupDurationMs ) || 3200 ) ) );
+			card.dsaAiPopoutTimer = window.setTimeout( function () {
+				hideAiPopout( true, false, card );
+			}, Math.max( 2000, Math.min( 15000, Number( aiConfig.popupDurationMs ) || 3200 ) ) );
+			if ( card === aiPopout ) {
+				aiPopoutTimer = card.dsaAiPopoutTimer;
+			}
 		}
 	}
 
-	function hideAiPopout( showNext, immediate ) {
-		if ( aiPopoutLocked && ! immediate ) {
+	function hideAiPopout( showNext, immediate, card ) {
+		const target = card || aiPopout;
+		if ( target === aiPopout && aiPopoutLocked && ! immediate ) {
 			return;
 		}
 		showNext = showNext !== false;
-		window.clearTimeout( aiPopoutTimer );
-		aiPopoutTimer = 0;
-		aiPopoutInsightId = '';
-		aiPopoutContext = '';
-		if ( ! aiPopout || aiPopout.hidden ) {
+		if ( target && target.dsaAiPopoutTimer ) {
+			window.clearTimeout( target.dsaAiPopoutTimer );
+			target.dsaAiPopoutTimer = 0;
+		}
+		if ( target === aiPopout ) {
+			window.clearTimeout( aiPopoutTimer );
+			aiPopoutTimer = 0;
+			aiPopoutInsightId = '';
+			aiPopoutContext = '';
+		}
+		if ( ! target || target.hidden ) {
 			if ( showNext ) {
 				showNextAiPopout();
 			}
@@ -2411,13 +2531,20 @@
 
 		const finish = function () {
 			window.clearTimeout( aiPopoutAnimationTimer );
-			aiPopout.hidden = true;
-			aiPopout.innerHTML = '';
-			aiPopout.classList.remove( 'is-entering', 'is-leaving' );
-			aiPopout.style.transform = '';
-			aiPopout.style.opacity = '';
-			aiPopoutClosing = false;
-			aiPopoutLocked = false;
+			target.hidden = true;
+			target.innerHTML = '';
+			target.classList.remove( 'is-entering', 'is-leaving' );
+			target.style.transform = '';
+			target.style.opacity = '';
+			target.style.removeProperty( '--dsa-notification-index' );
+			if ( target !== aiPopout && target.parentNode ) {
+				target.parentNode.removeChild( target );
+			}
+			if ( target === aiPopout ) {
+				aiPopoutClosing = false;
+				aiPopoutLocked = false;
+			}
+			syncNotificationStack();
 			if ( showNext ) {
 				showNextAiPopout();
 			}
@@ -2428,13 +2555,15 @@
 			return;
 		}
 
-		aiPopoutClosing = true;
-		aiPopout.classList.add( 'is-leaving' );
+		if ( target === aiPopout ) {
+			aiPopoutClosing = true;
+		}
+		target.classList.add( 'is-leaving' );
 		aiPopoutAnimationTimer = window.setTimeout( finish, 280 );
 	}
 
 	function showNextAiPopout() {
-		if ( ! aiNotificationQueue.length || ! aiPopout || ! aiPopout.hidden ) {
+		if ( ! aiNotificationQueue.length || ! aiPopout || ! canShowAnotherAiPopout() ) {
 			return;
 		}
 		const next = aiNotificationQueue.shift();
@@ -2444,49 +2573,12 @@
 	}
 
 	function positionAiPopout() {
-		if ( ! aiPopout || aiPopout.hidden ) {
-			return;
-		}
-
-		const button = surface.querySelector( '[data-dsa-module="ai"]' );
-		const dock = surface.querySelector( '.dsa-dock' );
-
-		if ( ! button || ! dock ) {
-			return;
-		}
-
-		const buttonRect = button.getBoundingClientRect();
-		const popRect = aiPopout.getBoundingClientRect();
-		const direction = window.getComputedStyle( dock ).flexDirection;
-		const horizontal = direction === 'row' || direction === 'row-reverse';
-		const margin = 14;
-		let left = 12;
-		let top = 12;
-		let placement = '';
-
-		if ( horizontal ) {
-			left = buttonRect.left + ( buttonRect.width - popRect.width ) / 2;
-			if ( buttonRect.top > window.innerHeight / 2 ) {
-				top = buttonRect.top - popRect.height - margin;
-				placement = 'top';
-			} else {
-				top = buttonRect.bottom + margin;
-				placement = 'bottom';
-			}
-		} else {
-			top = buttonRect.top + ( buttonRect.height - popRect.height ) / 2;
-			if ( buttonRect.left > window.innerWidth / 2 ) {
-				left = buttonRect.left - popRect.width - margin;
-				placement = 'left';
-			} else {
-				left = buttonRect.right + margin;
-				placement = 'right';
-			}
-		}
-
-		aiPopout.style.left = Math.max( 12, Math.min( window.innerWidth - popRect.width - 12, left ) ) + 'px';
-		aiPopout.style.top = Math.max( 12, Math.min( window.innerHeight - popRect.height - 12, top ) ) + 'px';
-		aiPopout.dataset.placement = placement;
+		visibleAiPopoutCards().forEach( function ( card ) {
+			card.style.left = '';
+			card.style.top = '';
+			card.dataset.placement = window.innerWidth <= 640 ? 'mobile-top' : 'top-right';
+		} );
+		syncNotificationStack();
 	}
 
 	function markAiInsightInteracted( insightId ) {
@@ -2657,11 +2749,12 @@
 		const adapter = presentationModules.get( 'games' );
 		if ( ! adapter || typeof adapter.renderGames !== 'function' ) return renderLazyPresentation( 'games', label || 'Game' );
 		return adapter.renderGames( {
-			label: label || 'Game',
+			label: screenLabel( 'games', label || 'Game' ),
 			config: gamesConfig,
 			scheduledGame: scheduledGame || '',
 			bonusLabel: nextBonusLabel( 0 ),
 			coarsePointer: isCoarsePointer(),
+			screenTheme: screenTheme( 'games' ),
 		} );
 	}
 
@@ -2676,13 +2769,15 @@
 	}
 
 	function linksPresentationPayload( label ) {
+		const copy = screenCopy( 'links', { label: label || 'Links' } );
 		return {
-			label: label || 'Links',
+			label: copy.label || label || 'Links',
 			hub: linksHub,
 			dark: currentColorMode() === 'dark',
 			logoDark: data.site && data.site.logoInverse ? data.site.logoInverse : '',
 			documentTitle: document.title || '',
 			visualProfile: currentVisualProfile(),
+			screenTheme: copy,
 		};
 	}
 
@@ -2741,9 +2836,10 @@
 		const adapter = presentationModules.get( 'saved' );
 		if ( ! adapter || typeof adapter.renderSaved !== 'function' ) return renderLazyPresentation( 'saved', label || 'Saved' );
 		return adapter.renderSaved( {
-			label: label || 'Saved',
+			label: screenLabel( 'saved', label || 'Saved' ),
 			items: savedItems,
 			visualProfile: currentVisualProfile(),
+			screenTheme: screenTheme( 'saved' ),
 		} );
 	}
 
@@ -2910,11 +3006,12 @@
 
 	function renderProfilePanel( label ) {
 		const user = phonekey.user || {};
+		const resolvedLabel = screenLabel( 'profile', label || 'Profile' );
 
 		if ( ! user.loggedIn || appPhoneKeyGate ) {
 			resetPhoneKeyState();
 			return [
-				'<section class="dsa-panel dsa-auth-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-phonekey-auth' + ( appPhoneKeyGate ? ' data-dsa-keep-open data-dsa-required-gate' : '' ) + '>',
+				'<section class="dsa-panel dsa-auth-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( resolvedLabel ) + '" data-dsa-phonekey-auth' + ( appPhoneKeyGate ? ' data-dsa-keep-open data-dsa-required-gate' : '' ) + '>',
 				phoneKeyCloseButton(),
 				renderPhoneKeyStart(),
 				'</section>',
@@ -2927,12 +3024,13 @@
 		}
 
 		return adapter.render( {
-			label: label,
+			label: resolvedLabel,
 			user: user,
 			hasWoo: Boolean( phonekey.cart && phonekey.cart.available ),
 			iconSprite: iconSprite,
 			visualProfile: currentVisualProfile(),
 			savedCount: savedItems.length,
+			screenTheme: screenTheme( 'profile' ),
 		} );
 	}
 
@@ -4209,7 +4307,8 @@
 		}
 
 		const module = getSurfaceModule( 'checkout' );
-		replaceOverlayContent( renderCheckoutPanel(), { reason: 'checkout_render', module: module, label: 'Checkout' } );
+		const label = screenLabel( 'checkout', 'Checkout' );
+		replaceOverlayContent( renderCheckoutPanel( label ), { reason: 'checkout_render', module: module, label: label } );
 		if ( module && hydrateLazyPresentation( module ) ) return;
 		bindCheckoutPanel();
 	}
@@ -4574,7 +4673,8 @@
 		}
 
 		if ( options.rerender && overlayRoot && ! overlayRoot.hidden && overlayRoot.querySelector( '[data-dsa-cart-panel]' ) ) {
-			replaceOverlayContent( renderCartPanel( 'Cart' ), { reason: 'cart_refresh', module: getSurfaceModule( 'cart' ), label: 'Cart' } );
+			const label = screenLabel( 'cart', 'Cart' );
+			replaceOverlayContent( renderCartPanel( label ), { reason: 'cart_refresh', module: getSurfaceModule( 'cart' ), label: label } );
 			bindCartPanel();
 		}
 
@@ -4582,7 +4682,8 @@
 			checkoutState.contract.discountSummary = response.cart.discountSummary;
 			checkoutState.contract.cartTotal = response.cart.total || checkoutState.contract.cartTotal || '';
 			if ( options.rerender && overlayRoot && ! overlayRoot.hidden && overlayRoot.querySelector( '[data-dsa-checkout-panel]' ) ) {
-				replaceOverlayContent( renderCheckoutPanel(), { reason: 'checkout_refresh', module: getSurfaceModule( 'checkout' ), label: 'Checkout' } );
+				const label = screenLabel( 'checkout', 'Checkout' );
+				replaceOverlayContent( renderCheckoutPanel( label ), { reason: 'checkout_refresh', module: getSurfaceModule( 'checkout' ), label: label } );
 				bindCheckoutPanel();
 			}
 		}
@@ -5104,7 +5205,8 @@
 			back.addEventListener( 'click', function ( event ) {
 				event.preventDefault();
 				event.stopPropagation();
-				replaceOverlayContent( renderProfilePanel( 'Profile' ), { reason: 'profile_return', module: getSurfaceModule( 'profile' ), label: 'Profile' } );
+				const label = screenLabel( 'profile', 'Profile' );
+				replaceOverlayContent( renderProfilePanel( label ), { reason: 'profile_return', module: getSurfaceModule( 'profile' ), label: label } );
 				bindProfilePanel();
 			} );
 		}
@@ -6007,10 +6109,17 @@
 		} );
 	}
 
-	function renderCheckoutPanel() {
+	function renderCheckoutPanel( label ) {
 		const adapter = presentationModules.get( 'checkout' );
-		if ( ! adapter || typeof adapter.renderCheckout !== 'function' ) return renderLazyPresentation( 'checkout', 'Checkout' );
-		return adapter.renderCheckout( { checkoutState: checkoutState, settings: commerce.settings || {}, routes: commerce.routes || {} } );
+		const resolvedLabel = screenLabel( 'checkout', label || 'Checkout' );
+		if ( ! adapter || typeof adapter.renderCheckout !== 'function' ) return renderLazyPresentation( 'checkout', resolvedLabel );
+		return adapter.renderCheckout( {
+			label: resolvedLabel,
+			checkoutState: checkoutState,
+			settings: commerce.settings || {},
+			routes: commerce.routes || {},
+			screenTheme: screenTheme( 'checkout' ),
+		} );
 	}
 
 
@@ -6577,9 +6686,9 @@
 
 	function applyThemeVariables() {
 		const root = document.documentElement;
-		root.style.setProperty( '--dsa-active-color', theme.active_color || '#8f8f98' );
-		root.style.setProperty( '--dsa-hover-color', theme.hover_color || '#24c6a1' );
-		root.style.setProperty( '--dsa-hero-text-color', theme.hero_text_color || 'rgba(20,24,34,0.18)' );
+		root.style.setProperty( '--dsa-active-color', 'var(--kiwe-color-brand, ' + ( theme.active_color || '#8f8f98' ) + ')' );
+		root.style.setProperty( '--dsa-hover-color', 'var(--kiwe-color-accent, ' + ( theme.hover_color || '#24c6a1' ) + ')' );
+		root.style.setProperty( '--dsa-hero-text-color', 'var(--kiwe-color-hero, ' + ( theme.hero_text_color || 'rgba(20,24,34,0.18)' ) + ')' );
 	}
 
 	function geometryCssNumber( name, fallback ) {
@@ -6710,8 +6819,11 @@
 		const contextRect = dockContext && ! dockContext.hidden ? dockContext.getBoundingClientRect() : null;
 		const contextSize = contextRect && contextRect.height > 0 ? contextRect.height + ( navbar ? 0 : geometry.clusterGap ) : 0;
 		const dockReserve = geometry.crossAxis + ( navbar ? 0 : gutter );
-		const blockReserve = ( orientation === 'horizontal' ? dockReserve : gutter ) + contextSize;
-		const inlineReserve = orientation === 'vertical' ? dockReserve : gutter;
+		const activeEditable = document.activeElement && document.activeElement.matches && document.activeElement.matches( 'input, textarea, select, [contenteditable="true"]' );
+		const keyboardActive = Boolean( mobile && activeEditable && activeEditable.closest && activeEditable.closest( '.dsa-panel' ) );
+		const effectiveDockReserve = keyboardActive ? 0 : dockReserve;
+		const blockReserve = ( orientation === 'horizontal' ? effectiveDockReserve : gutter ) + contextSize;
+		const inlineReserve = orientation === 'vertical' ? effectiveDockReserve : gutter;
 		const reserve = Math.max( blockReserve, inlineReserve );
 		const panelInline = Math.max( 1, width - inlineReserve - gutter * 2 );
 		const panelBlock = Math.max( 1, height - blockReserve - safe.top - safe.bottom - adminBarHeight - gutter );
@@ -6748,7 +6860,8 @@
 			'--dsa-dock-main-axis-size': geometry.mainAxis.toFixed( 2 ) + 'px',
 			'--dsa-dock-cluster-axis-size': geometry.clusterAxis.toFixed( 2 ) + 'px',
 			'--dsa-screen-dock-reserve': reserve.toFixed( 2 ) + 'px',
-			'--dsa-dock-only-reserve': dockReserve.toFixed( 2 ) + 'px',
+			'--dsa-dock-only-reserve': effectiveDockReserve.toFixed( 2 ) + 'px',
+			'--dsa-dock-physical-reserve': dockReserve.toFixed( 2 ) + 'px',
 			'--dsa-screen-block-reserve': blockReserve.toFixed( 2 ) + 'px',
 			'--dsa-screen-inline-reserve': inlineReserve.toFixed( 2 ) + 'px',
 			'--dsa-screen-available-inline': panelInline.toFixed( 2 ) + 'px',
@@ -6777,6 +6890,7 @@
 		surface.dataset.dsaDockEdge = orientation === 'horizontal' ? horizontalEdge : verticalEdge;
 		surface.dataset.dsaLayout = layout;
 		surface.dataset.dsaDensity = density;
+		surface.dataset.dsaKeyboardActive = keyboardActive ? '1' : '0';
 		window.DSA.geometry = {
 			version: 1,
 			orientation: orientation,
@@ -6799,6 +6913,7 @@
 			blockReserve: blockReserve,
 			inlineReserve: inlineReserve,
 			contextSize: contextSize,
+			keyboardActive: keyboardActive,
 		};
 		window.dispatchEvent( new CustomEvent( 'surface:geometry:change', { detail: window.DSA.geometry } ) );
 	}
@@ -6825,6 +6940,145 @@
 			const observer = new ResizeObserver( scheduleSurfaceGeometry );
 			if ( dockContext ) observer.observe( dockContext );
 			if ( overlayRoot ) observer.observe( overlayRoot );
+		}
+	}
+
+	const externalSiteModalSelectors = [
+		'dialog[open]',
+		'[role="dialog"][aria-modal="true"]',
+		'[role="alertdialog"][aria-modal="true"]',
+		'[aria-modal="true"]',
+		'.brx-popup',
+		'.brxe-popup',
+		'.bricks-popup',
+		'.bricks-search-overlay.show',
+		'.brxe-offcanvas.brx-open',
+		'.brxe-nav-nested.brx-open',
+		'[data-brx-popup]',
+		'[data-popup]',
+		'[data-modal]',
+		'[data-offcanvas]',
+		'.pum-overlay.pum-active',
+		'.pum-container',
+		'.elementor-popup-modal',
+		'.mfp-wrap',
+		'.mfp-bg',
+		'.modal.show',
+		'.modal.is-active',
+		'.modal[aria-hidden="false"]',
+		'.offcanvas.show',
+		'.offcanvas.is-active',
+		'.xoo-el-container',
+		'.xoo-el-modal',
+	].join( ',' );
+
+	function isDsaOwnedNode( element ) {
+		return Boolean(
+			element
+			&& element.closest
+			&& element.closest( '[data-dsa-surface], [data-dsa-notification-stack], [data-dsa-initial-preloader], #wpadminbar' )
+		);
+	}
+
+	function visibleExternalSiteModalElement( element ) {
+		if ( ! element || ! element.isConnected || isDsaOwnedNode( element ) ) {
+			return false;
+		}
+
+		if ( element.hidden || element.getAttribute( 'aria-hidden' ) === 'true' ) {
+			return false;
+		}
+
+		const style = window.getComputedStyle( element );
+		if ( style.display === 'none' || style.visibility === 'hidden' || Number( style.opacity ) === 0 ) {
+			return false;
+		}
+
+		const rect = element.getBoundingClientRect();
+		if ( rect.width < 48 || rect.height < 48 ) {
+			return false;
+		}
+
+		if (
+			rect.bottom <= 0
+			|| rect.right <= 0
+			|| rect.top >= ( window.innerHeight || document.documentElement.clientHeight || 0 )
+			|| rect.left >= ( window.innerWidth || document.documentElement.clientWidth || 0 )
+		) {
+			return false;
+		}
+
+		const ariaModal = element.getAttribute( 'aria-modal' ) === 'true';
+		const semanticDialog = element.matches( 'dialog[open], [role="dialog"], [role="alertdialog"]' );
+		const knownPopup = element.matches(
+			'.brx-popup, .brxe-popup, .bricks-popup, .bricks-search-overlay.show, .brxe-offcanvas.brx-open, .brxe-nav-nested.brx-open, [data-brx-popup], [data-popup], [data-modal], [data-offcanvas], .pum-overlay.pum-active, .pum-container, .elementor-popup-modal, .mfp-wrap, .mfp-bg, .modal.show, .modal.is-active, .modal[aria-hidden="false"], .offcanvas.show, .offcanvas.is-active, .xoo-el-container, .xoo-el-modal'
+		);
+
+		if ( ariaModal || semanticDialog || knownPopup ) {
+			return true;
+		}
+
+		const position = style.position;
+		const zIndex = Number.parseInt( style.zIndex, 10 );
+		return ( position === 'fixed' || position === 'sticky' ) && Number.isFinite( zIndex ) && zIndex >= 900;
+	}
+
+	function isExternalSiteModalActive() {
+		if ( ! document.body ) {
+			return false;
+		}
+
+		const candidates = document.querySelectorAll( externalSiteModalSelectors );
+		for ( let index = 0; index < candidates.length; index++ ) {
+			if ( visibleExternalSiteModalElement( candidates[ index ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	function syncExternalSiteModalState() {
+		const active = isExternalSiteModalActive();
+		if ( active === externalSiteModalActive ) {
+			return;
+		}
+
+		externalSiteModalActive = active;
+		document.documentElement.classList.toggle( 'dsa-site-modal-active', active );
+		document.documentElement.dataset.dsaSiteModalActive = active ? '1' : '0';
+		surface.dataset.dsaSiteModalActive = active ? '1' : '0';
+		window.dispatchEvent( new CustomEvent( 'surface:site-modal:change', { detail: { active: active } } ) );
+	}
+
+	function scheduleExternalSiteModalState() {
+		window.cancelAnimationFrame( externalSiteModalFrame );
+		externalSiteModalFrame = window.requestAnimationFrame( syncExternalSiteModalState );
+	}
+
+	function initializeExternalSiteModalYield() {
+		syncExternalSiteModalState();
+		window.addEventListener( 'resize', scheduleExternalSiteModalState, { passive: true } );
+		window.addEventListener( 'orientationchange', scheduleExternalSiteModalState, { passive: true } );
+		window.addEventListener( 'focusin', scheduleExternalSiteModalState, true );
+		document.addEventListener( 'click', function () {
+			window.setTimeout( scheduleExternalSiteModalState, 0 );
+			window.setTimeout( scheduleExternalSiteModalState, 180 );
+		}, true );
+		document.addEventListener( 'keydown', function ( event ) {
+			if ( event.key === 'Escape' ) {
+				window.setTimeout( scheduleExternalSiteModalState, 0 );
+				window.setTimeout( scheduleExternalSiteModalState, 180 );
+			}
+		}, true );
+
+		if ( typeof MutationObserver === 'function' && document.body ) {
+			new MutationObserver( scheduleExternalSiteModalState ).observe( document.body, {
+				childList: true,
+				subtree: true,
+				attributes: true,
+				attributeFilter: [ 'class', 'style', 'hidden', 'aria-hidden', 'aria-modal', 'open' ],
+			} );
 		}
 	}
 
@@ -6961,16 +7215,19 @@
 		openOverlay( 'notifications', 'Personalize your Appsite' );
 	}
 
-	function renderNotificationPreferencePanel() {
+	function renderNotificationPreferencePanel( label ) {
 		const adapter = presentationModules.get( 'notifications' );
-		if ( ! adapter || typeof adapter.renderNotifications !== 'function' ) return renderLazyPresentation( 'notifications', 'Personalize your Appsite' );
+		const resolvedLabel = screenLabel( 'notifications', label || 'Personalize your Appsite' );
+		if ( ! adapter || typeof adapter.renderNotifications !== 'function' ) return renderLazyPresentation( 'notifications', resolvedLabel );
 		return adapter.renderNotifications( {
+			label: resolvedLabel,
 			config: notificationConfig,
 			preferences: notificationPreferences,
 			user: phonekey.user || {},
 			setupGate: notificationSetupGate,
 			trustBadges: protectedTrustBadges(),
 			visualProfile: currentVisualProfile(),
+			screenTheme: screenTheme( 'notifications' ),
 		} );
 	}
 
@@ -7125,14 +7382,17 @@
 		openOverlay( 'ios-install', 'iPhone and iPad App' );
 	}
 
-	function renderIosInstallPanel() {
+	function renderIosInstallPanel( label ) {
 		const adapter = presentationModules.get( 'ios-install' ) || presentationModules.get( 'notifications' );
 		const siteName = data.site && ( data.site.title || data.site.name ) ? data.site.title || data.site.name : 'this Appsite';
-		if ( ! adapter || typeof adapter.renderIosInstall !== 'function' ) return renderLazyPresentation( 'ios-install', 'iPhone and iPad App' );
+		const resolvedLabel = screenLabel( 'ios-install', label || 'iPhone and iPad App' );
+		if ( ! adapter || typeof adapter.renderIosInstall !== 'function' ) return renderLazyPresentation( 'ios-install', resolvedLabel );
 		return adapter.renderIosInstall( {
+			label: resolvedLabel,
 			siteName: siteName,
 			trustBadges: protectedTrustBadges(),
 			visualProfile: currentVisualProfile(),
+			screenTheme: screenTheme( 'ios-install' ),
 		} );
 	}
 
@@ -7426,7 +7686,7 @@
 			return;
 		}
 
-		if ( ! aiPopout || ! surface.querySelector( '[data-dsa-module="ai"]' ) ) {
+		if ( ! aiPopout ) {
 			performPwaInstall( button, prompt, platform );
 			return;
 		}
@@ -8979,31 +9239,33 @@
 			.replace( /'/g, '&#039;' );
 	}
 
-	if ( aiPopout ) {
-		aiPopout.addEventListener( 'click', function ( event ) {
+	function handleAiPopoutClick( event ) {
+		const card = closestEventTarget( event, '.dsa-ai-popout' ) || aiPopout;
+		if ( ! card ) return false;
+
 			const dismiss = closestEventTarget( event, '[data-dsa-ai-popout-dismiss]' );
 			if ( dismiss ) {
 				event.preventDefault();
 				event.stopPropagation();
-				dismissAiNotificationCard( aiPopout, dismiss.dataset.dsaAiPopoutDismiss );
-				return;
+				dismissAiNotificationCard( card, dismiss.dataset.dsaAiPopoutDismiss );
+				return true;
 			}
 
 			const close = closestEventTarget( event, '[data-dsa-ai-popout-close]' );
 			if ( close ) {
 				event.preventDefault();
 				event.stopPropagation();
-				hideAiPopout();
-				return;
+				hideAiPopout( true, false, card );
+				return true;
 			}
 
 			const view = closestEventTarget( event, '[data-dsa-ai-popout-view]' );
 			if ( view ) {
 				event.preventDefault();
 				event.stopPropagation();
-				hideAiPopout( false, true );
+				hideAiPopout( false, true, card );
 				openOverlay( 'ai', 'AI Assistant' );
-				return;
+				return true;
 			}
 
 			const action = closestEventTarget( event, '[data-dsa-ai-popout-action]' );
@@ -9011,8 +9273,15 @@
 				event.preventDefault();
 				event.stopPropagation();
 				executeAiInsightAction( action.dataset.dsaAiPopoutAction, action );
+				return true;
 			}
-		} );
+			return false;
+	}
+
+	if ( notificationStack ) {
+		notificationStack.addEventListener( 'click', handleAiPopoutClick );
+	} else if ( aiPopout ) {
+		aiPopout.addEventListener( 'click', handleAiPopoutClick );
 	}
 
 	if ( dockContext ) {
@@ -9270,12 +9539,33 @@
 	window.DSA.hideLoader = hideLoader;
 	window.DSA.inspectAppInstall = inspectPwaInstallReadiness;
 	window.DSA.inspectEditorialReconciliation = inspectEditorialReconciliation;
+	window.DSA.previewNotification = function ( options ) {
+		const input = options && typeof options === 'object' ? options : {};
+		const seed = String( input.id || ( 'preview-' + Date.now() + '-' + Math.random().toString( 36 ).slice( 2, 7 ) ) );
+		const notice = recordAiNotification( {
+			id: seed,
+			type: String( input.type || 'preview_notification' ),
+			kicker: String( input.kicker || 'Kiwe notice' ),
+			title: String( input.title || 'Preview notification' ),
+			body: String( input.body || input.message || 'This notification uses Kiwe core cascade geometry.' ),
+			action: String( input.action || '' ),
+			actionLabel: String( input.actionLabel || input.cta || '' ),
+			notification: true,
+			requiredAction: Boolean( input.requiredAction ),
+			dismissible: input.dismissible === false ? false : true,
+		} );
+		if ( notice ) {
+			queueAiPopout( notice, String( input.context || 'preview' ) );
+		}
+		return notice || null;
+	};
 	window.DSA.previewLoader = function ( duration ) {
 		showLoader();
 		window.setTimeout( hideLoader, Number( duration ) || 1800 );
 	};
 
 	initializeSurfaceGeometry();
+	initializeExternalSiteModalYield();
 	normalizeStaleSurfaceHistoryEntry();
 	setupCrossDocumentViewTransitions();
 	showInitialPreloader();

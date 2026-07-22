@@ -19,6 +19,11 @@ function renderAppBadgeIcon( icon ) {
 	return '<svg viewBox="0 0 48 48" focusable="false"><rect x="3" y="3" width="42" height="42" rx="10" fill="#0a84ff"/><path d="M16 34 27 14m-7-1 14 21M13 28h23" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>';
 }
 
+function screenCopy( payload, defaults ) {
+	const screen = payload && payload.screenTheme && typeof payload.screenTheme === 'object' ? payload.screenTheme : {};
+	return Object.assign( {}, defaults || {}, screen );
+}
+
 function renderNotificationChoice( name, item, selected ) {
 	selected = Array.isArray( selected ) ? selected : [];
 	const checked = selected.indexOf( item.id ) !== -1;
@@ -42,8 +47,21 @@ function notificationData( payload ) {
 	payload = payload || {};
 	const config = payload.config || {};
 	const preferences = payload.preferences || {};
+	const copy = screenCopy( payload, {
+		label: payload.label || 'Personalize your Appsite',
+		eyebrow: 'Notifications',
+		title: 'Choose what reaches you.',
+		intro: 'Useful moments only. Every choice stays optional and editable.',
+		topicsLegend: 'What matters to you?',
+		channelsLegend: 'How should we reach you?',
+		appText: 'App notifications use the same no-store installation journey from Home.',
+		submitLabel: 'Save my choices',
+		emailPlaceholder: 'Email for email updates',
+		phonePlaceholder: 'Phone for WhatsApp or SMS',
+	} );
 	return {
 		payload: payload,
+		copy: copy,
 		config: config,
 		preferences: preferences,
 		topics: Array.isArray( config.topics ) ? config.topics : [],
@@ -57,21 +75,21 @@ function notificationData( payload ) {
 function renderNotificationFormParts( data ) {
 	return [
 		'<form data-dsa-notification-form>',
-		'<fieldset class="dsa-notification-options"><legend>What matters to you?</legend>',
+		'<fieldset class="dsa-notification-options"><legend>' + escapeHtml( data.copy.topicsLegend ) + '</legend>',
 		data.topics.map( function ( topic ) { return renderNotificationChoice( 'topics', topic, data.preferences.topics ); } ).join( '' ),
 		'</fieldset>',
-		'<fieldset class="dsa-notification-options dsa-notification-options--channels"><legend>How should we reach you?</legend>',
+		'<fieldset class="dsa-notification-options dsa-notification-options--channels"><legend>' + escapeHtml( data.copy.channelsLegend ) + '</legend>',
 		data.channels.map( function ( channel ) { return renderNotificationChoice( 'channels', channel, data.preferences.channels ); } ).join( '' ),
 		'</fieldset>',
-		data.user.loggedIn ? '' : '<div class="dsa-notification-contact" data-dsa-notification-contact><input class="dsa-auth-field" type="email" autocomplete="email" placeholder="Email for email updates" data-dsa-notification-email><input class="dsa-auth-field" type="tel" autocomplete="tel" placeholder="Phone for WhatsApp or SMS" data-dsa-notification-phone' + ( ( data.preferences.channels || [] ).indexOf( 'sms' ) === -1 && ( data.preferences.channels || [] ).indexOf( 'whatsapp' ) === -1 ? ' hidden' : '' ) + '></div>',
+		data.user.loggedIn ? '' : '<div class="dsa-notification-contact" data-dsa-notification-contact><input class="dsa-auth-field" type="email" autocomplete="email" placeholder="' + escapeHtml( data.copy.emailPlaceholder ) + '" data-dsa-notification-email><input class="dsa-auth-field" type="tel" autocomplete="tel" placeholder="' + escapeHtml( data.copy.phonePlaceholder ) + '" data-dsa-notification-phone' + ( ( data.preferences.channels || [] ).indexOf( 'sms' ) === -1 && ( data.preferences.channels || [] ).indexOf( 'whatsapp' ) === -1 ? ' hidden' : '' ) + '></div>',
 		renderNotificationCategories( 'productCategories', 'Product categories', data.productCategories, data.preferences.productCategories ),
 		renderNotificationCategories( 'postCategories', 'Post categories', data.postCategories, data.preferences.postCategories ),
 		'<div class="dsa-notification-app-buttons" data-dsa-notification-app-buttons>',
-		'<p>App notifications use the same no-store installation journey from Home.</p>',
+		'<p>' + escapeHtml( data.copy.appText ) + '</p>',
 		renderNotificationAppButtons(),
 		'</div>',
 		renderTrustBadges( data.payload.trustBadges ),
-		'<div class="dsa-notification-submit"><button type="submit" class="dsa-panel__button dsa-auth-primary">Save my choices</button><span data-dsa-notification-message aria-live="polite"></span></div>',
+		'<div class="dsa-notification-submit"><button type="submit" class="dsa-panel__button dsa-auth-primary">' + escapeHtml( data.copy.submitLabel ) + '</button><span data-dsa-notification-message aria-live="polite"></span></div>',
 		'</form>',
 	].join( '' );
 }
@@ -79,10 +97,10 @@ function renderNotificationFormParts( data ) {
 function renderLegacyNotifications( payload ) {
 	const data = notificationData( payload );
 	return [
-		'<section class="dsa-panel dsa-notification-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="Personalize your Appsite" data-dsa-notification-panel data-dsa-keep-open' + ( data.payload.setupGate ? ' data-dsa-required-gate' : '' ) + '>',
-		'<p class="dsa-hero-kicker">Notifications</p>',
-		'<h2>Personalize your Appsite.</h2>',
-		'<p class="dsa-notification-panel__intro">Choose useful moments and how you want to receive them. Every choice stays optional.</p>',
+		'<section class="dsa-panel dsa-notification-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '" data-dsa-notification-panel data-dsa-keep-open' + ( data.payload.setupGate ? ' data-dsa-required-gate' : '' ) + '>',
+		'<p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p>',
+		'<h2>' + escapeHtml( data.copy.title ) + '</h2>',
+		'<p class="dsa-notification-panel__intro">' + escapeHtml( data.copy.intro ) + '</p>',
 		renderNotificationFormParts( data ),
 		'</section>',
 	].join( '' );
@@ -91,8 +109,8 @@ function renderLegacyNotifications( payload ) {
 function renderPrototypeNotifications( payload ) {
 	const data = notificationData( payload );
 	return [
-		'<section class="dsa-panel dsa-notification-panel dsa-hero-panel kiwe-notifications-v2027" role="dialog" aria-modal="false" aria-label="Personalize your Appsite" data-dsa-notification-panel data-dsa-keep-open data-dsa-notification-adapter="prototype-2027"' + ( data.payload.setupGate ? ' data-dsa-required-gate' : '' ) + '>',
-		'<div class="kiwe-notifications-v2027__title"><p class="dsa-hero-kicker">Notifications</p><h2>Choose what reaches you.</h2><p class="dsa-notification-panel__intro">Useful moments only. Every choice stays optional and editable.</p></div>',
+		'<section class="dsa-panel dsa-notification-panel dsa-hero-panel kiwe-notifications-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '" data-dsa-notification-panel data-dsa-keep-open data-dsa-notification-adapter="prototype-2027"' + ( data.payload.setupGate ? ' data-dsa-required-gate' : '' ) + '>',
+		'<div class="kiwe-notifications-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title ) + '</h2><p class="dsa-notification-panel__intro">' + escapeHtml( data.copy.intro ) + '</p></div>',
 		renderNotificationFormParts( data ),
 		'</section>',
 	].join( '' );
@@ -112,15 +130,29 @@ export function renderNotifications( payload ) {
 }
 
 function renderLegacyIosInstall( payload ) {
+	payload = payload || {};
 	const siteName = payload.siteName || 'this Appsite';
+	const copy = screenCopy( payload, {
+		label: payload.label || 'iPhone and iPad App',
+		eyebrow: 'For iPhone & iPad',
+		title: 'Welcome, iOS users.',
+		intro: 'Give ' + siteName + ' its own place on your Home Screen, then open it once to finish notifications.',
+		stepOneTitle: 'Open Safari Share',
+		stepOneText: 'Use the Share button in Safari.',
+		stepTwoTitle: 'Add to Home Screen',
+		stepTwoText: 'Choose Add to Home Screen from the share sheet.',
+		stepThreeTitle: 'Tap Add, then open the app',
+		stepThreeText: 'Your notification choices are already waiting there.',
+		doneLabel: 'I added it',
+	} );
 	return [
-		'<section class="dsa-panel dsa-ios-install-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="iOS App installation" data-dsa-ios-install-panel data-dsa-keep-open>',
-		'<p class="dsa-hero-kicker">For iPhone &amp; iPad</p>',
-		'<h2>Welcome, iOS users.</h2>',
-		'<p class="dsa-ios-install-panel__lead">Give ' + escapeHtml( siteName ) + ' its own place on your Home Screen, then open it once to finish notifications.</p>',
-		'<ol class="dsa-ios-steps"><li><span class="dsa-ios-share" aria-hidden="true">&#8679;</span><div><strong>Open Safari Share</strong><small>Use the Share button in Safari.</small></div></li><li><span aria-hidden="true">+</span><div><strong>Add to Home Screen</strong><small>Choose Add to Home Screen from the share sheet.</small></div></li><li><span aria-hidden="true">&#10003;</span><div><strong>Tap Add, then open the app</strong><small>Your notification choices are already waiting there.</small></div></li></ol>',
+		'<section class="dsa-panel dsa-ios-install-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ios-install-panel data-dsa-keep-open>',
+		'<p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p>',
+		'<h2>' + escapeHtml( copy.title ) + '</h2>',
+		'<p class="dsa-ios-install-panel__lead">' + escapeHtml( copy.intro ) + '</p>',
+		'<ol class="dsa-ios-steps"><li><span class="dsa-ios-share" aria-hidden="true">&#8679;</span><div><strong>' + escapeHtml( copy.stepOneTitle ) + '</strong><small>' + escapeHtml( copy.stepOneText ) + '</small></div></li><li><span aria-hidden="true">+</span><div><strong>' + escapeHtml( copy.stepTwoTitle ) + '</strong><small>' + escapeHtml( copy.stepTwoText ) + '</small></div></li><li><span aria-hidden="true">&#10003;</span><div><strong>' + escapeHtml( copy.stepThreeTitle ) + '</strong><small>' + escapeHtml( copy.stepThreeText ) + '</small></div></li></ol>',
 		renderTrustBadges( payload.trustBadges ),
-		'<button type="button" class="dsa-panel__button dsa-auth-primary" data-dsa-ios-install-done>I added it</button>',
+		'<button type="button" class="dsa-panel__button dsa-auth-primary" data-dsa-ios-install-done>' + escapeHtml( copy.doneLabel ) + '</button>',
 		'</section>',
 	].join( '' );
 }
@@ -128,12 +160,25 @@ function renderLegacyIosInstall( payload ) {
 function renderPrototypeIosInstall( payload ) {
 	payload = payload || {};
 	const siteName = payload.siteName || 'this Appsite';
+	const copy = screenCopy( payload, {
+		label: payload.label || 'iPhone and iPad App',
+		eyebrow: 'For iPhone & iPad',
+		title: 'Add the Appsite.',
+		intro: 'Give ' + siteName + ' its own Home Screen place, then open it once to finish notifications.',
+		stepOneTitle: 'Open Safari Share',
+		stepOneText: 'Use the Share button in Safari.',
+		stepTwoTitle: 'Add to Home Screen',
+		stepTwoText: 'Choose Add to Home Screen from the share sheet.',
+		stepThreeTitle: 'Tap Add, then open the app',
+		stepThreeText: 'Your notification choices are already waiting there.',
+		doneLabel: 'I added it',
+	} );
 	return [
-		'<section class="dsa-panel dsa-ios-install-panel dsa-hero-panel kiwe-ios-v2027" role="dialog" aria-modal="false" aria-label="iOS App installation" data-dsa-ios-install-panel data-dsa-keep-open data-dsa-ios-adapter="prototype-2027">',
-		'<div class="kiwe-ios-v2027__title"><p class="dsa-hero-kicker">For iPhone &amp; iPad</p><h2>Add the Appsite.</h2><p class="dsa-ios-install-panel__lead">Give ' + escapeHtml( siteName ) + ' its own Home Screen place, then open it once to finish notifications.</p></div>',
-		'<ol class="dsa-ios-steps"><li><span class="dsa-ios-share" aria-hidden="true">&#8679;</span><div><strong>Open Safari Share</strong><small>Use the Share button in Safari.</small></div></li><li><span aria-hidden="true">+</span><div><strong>Add to Home Screen</strong><small>Choose Add to Home Screen from the share sheet.</small></div></li><li><span aria-hidden="true">&#10003;</span><div><strong>Tap Add, then open the app</strong><small>Your notification choices are already waiting there.</small></div></li></ol>',
+		'<section class="dsa-panel dsa-ios-install-panel dsa-hero-panel kiwe-ios-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ios-install-panel data-dsa-keep-open data-dsa-ios-adapter="prototype-2027">',
+		'<div class="kiwe-ios-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-ios-install-panel__lead">' + escapeHtml( copy.intro ) + '</p></div>',
+		'<ol class="dsa-ios-steps"><li><span class="dsa-ios-share" aria-hidden="true">&#8679;</span><div><strong>' + escapeHtml( copy.stepOneTitle ) + '</strong><small>' + escapeHtml( copy.stepOneText ) + '</small></div></li><li><span aria-hidden="true">+</span><div><strong>' + escapeHtml( copy.stepTwoTitle ) + '</strong><small>' + escapeHtml( copy.stepTwoText ) + '</small></div></li><li><span aria-hidden="true">&#10003;</span><div><strong>' + escapeHtml( copy.stepThreeTitle ) + '</strong><small>' + escapeHtml( copy.stepThreeText ) + '</small></div></li></ol>',
 		renderTrustBadges( payload.trustBadges ),
-		'<button type="button" class="dsa-panel__button dsa-auth-primary" data-dsa-ios-install-done>I added it</button>',
+		'<button type="button" class="dsa-panel__button dsa-auth-primary" data-dsa-ios-install-done>' + escapeHtml( copy.doneLabel ) + '</button>',
 		'</section>',
 	].join( '' );
 }
@@ -174,12 +219,29 @@ function renderSavedGroup( title, items ) {
 	].join( '' );
 }
 
-function renderSavedSummary( wishes, bookmarks ) {
+function savedCopy( payload ) {
+	return screenCopy( payload, {
+		label: payload.label || 'Saved',
+		eyebrow: payload.label || 'Saved',
+		title: 'Your saved shelf.',
+		intro: 'Wishlist products and page bookmarks stay close.',
+		emptyTitle: 'Nothing saved yet.',
+		emptyText: 'Tap the bookmark or heart on products and pages to build this shelf.',
+		wishlistLabel: 'Wishlist',
+		bookmarksLabel: 'Bookmarks',
+		summaryWishlistLabel: 'Wishlist',
+		summaryBookmarksLabel: 'Bookmarks',
+		summaryTotalLabel: 'Total saved',
+	} );
+}
+
+function renderSavedSummary( wishes, bookmarks, copy ) {
+	copy = copy || {};
 	return [
 		'<div class="kiwe-saved-v2027__summary" aria-label="Saved summary">',
-		'<span><strong>' + escapeHtml( wishes.length ) + '</strong><small>Wishlist</small></span>',
-		'<span><strong>' + escapeHtml( bookmarks.length ) + '</strong><small>Bookmarks</small></span>',
-		'<span><strong>' + escapeHtml( wishes.length + bookmarks.length ) + '</strong><small>Total saved</small></span>',
+		'<span><strong>' + escapeHtml( wishes.length ) + '</strong><small>' + escapeHtml( copy.summaryWishlistLabel || 'Wishlist' ) + '</small></span>',
+		'<span><strong>' + escapeHtml( bookmarks.length ) + '</strong><small>' + escapeHtml( copy.summaryBookmarksLabel || 'Bookmarks' ) + '</small></span>',
+		'<span><strong>' + escapeHtml( wishes.length + bookmarks.length ) + '</strong><small>' + escapeHtml( copy.summaryTotalLabel || 'Total saved' ) + '</small></span>',
 		'</div>',
 	].join( '' );
 }
@@ -189,14 +251,15 @@ function renderLegacySaved( payload ) {
 	const items = Array.isArray( payload.items ) ? payload.items : [];
 	const wishes = items.filter( function ( item ) { return item.type === 'wishlist'; } );
 	const bookmarks = items.filter( function ( item ) { return item.type !== 'wishlist'; } );
-	const label = payload.label || 'Saved';
+	const copy = savedCopy( payload );
 	return [
-		'<section class="dsa-panel dsa-saved-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-saved-panel>',
-		'<p class="dsa-saved-panel__eyebrow">' + escapeHtml( label ) + '</p>',
-		'<h2>Keep the good things close.</h2>',
-		wishes.length ? renderSavedGroup( 'Wishlist', wishes ) : '',
-		bookmarks.length ? renderSavedGroup( 'Bookmarks', bookmarks ) : '',
-		! items.length ? '<div class="dsa-saved-empty"><strong>Nothing saved yet.</strong><span>Your bookmarks and wishlist will appear here.</span></div>' : '',
+		'<section class="dsa-panel dsa-saved-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-saved-panel>',
+		'<p class="dsa-saved-panel__eyebrow">' + escapeHtml( copy.eyebrow ) + '</p>',
+		'<h2>' + escapeHtml( copy.title ) + '</h2>',
+		copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '',
+		wishes.length ? renderSavedGroup( copy.wishlistLabel, wishes ) : '',
+		bookmarks.length ? renderSavedGroup( copy.bookmarksLabel, bookmarks ) : '',
+		! items.length ? '<div class="dsa-saved-empty"><strong>' + escapeHtml( copy.emptyTitle ) + '</strong><span>' + escapeHtml( copy.emptyText ) + '</span></div>' : '',
 		'</section>',
 	].join( '' );
 }
@@ -206,16 +269,16 @@ function renderPrototypeSaved( payload ) {
 	const items = Array.isArray( payload.items ) ? payload.items : [];
 	const wishes = items.filter( function ( item ) { return item.type === 'wishlist'; } );
 	const bookmarks = items.filter( function ( item ) { return item.type !== 'wishlist'; } );
-	const label = payload.label || 'Saved';
+	const copy = savedCopy( payload );
 	const hasItems = items.length > 0;
 
 	return [
-		'<section class="dsa-panel dsa-saved-panel kiwe-saved-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-saved-panel data-dsa-saved-adapter="prototype-2027">',
-		'<div class="kiwe-saved-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( label ) + '</p><h2>Your saved shelf.</h2><p class="dsa-panel__meta">Wishlist products and page bookmarks stay close without changing WooCommerce authority.</p></div>',
-		renderSavedSummary( wishes, bookmarks ),
-		wishes.length ? renderSavedGroup( 'Wishlist', wishes ) : '',
-		bookmarks.length ? renderSavedGroup( 'Bookmarks', bookmarks ) : '',
-		! hasItems ? '<div class="dsa-saved-empty kiwe-saved-v2027__empty"><strong>Nothing saved yet.</strong><span>Tap the bookmark or heart on products and pages to build this shelf.</span></div>' : '',
+		'<section class="dsa-panel dsa-saved-panel kiwe-saved-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-saved-panel data-dsa-saved-adapter="prototype-2027">',
+		'<div class="kiwe-saved-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p></div>',
+		renderSavedSummary( wishes, bookmarks, copy ),
+		wishes.length ? renderSavedGroup( copy.wishlistLabel, wishes ) : '',
+		bookmarks.length ? renderSavedGroup( copy.bookmarksLabel, bookmarks ) : '',
+		! hasItems ? '<div class="dsa-saved-empty kiwe-saved-v2027__empty"><strong>' + escapeHtml( copy.emptyTitle ) + '</strong><span>' + escapeHtml( copy.emptyText ) + '</span></div>' : '',
 		'</section>',
 	].join( '' );
 }
@@ -236,27 +299,35 @@ export function renderSaved( payload ) {
 export function renderGames( payload ) {
 	payload = payload || {};
 	const config = payload.config || {};
+	const copy = screenCopy( payload, {
+		label: payload.label || 'Game',
+		eyebrow: payload.label || 'Game',
+		startTitle: config.startTitle || 'Are You Game! for discount??',
+		startText: config.startText || 'Press any key to start',
+		mobileStartText: config.mobileStartText || 'Touch to start',
+		chooseText: 'Choose a game',
+		scoreLabel: 'Score',
+		bestLabel: 'Best',
+	} );
 	const games = Array.isArray( config.games ) ? config.games : [
 		{ id: 'dino', label: 'Dinosaur Jump' },
 		{ id: 'star', label: 'Star Shooter' },
 	];
-	const label = payload.label || 'Game';
 	const startGameId = payload.scheduledGame || '';
-	const startTitle = config.startTitle || 'Are You Game! for discount??';
-	const startText = payload.coarsePointer ? ( config.mobileStartText || 'Touch to start' ) : ( config.startText || 'Press any key to start' );
+	const startText = payload.coarsePointer ? copy.mobileStartText : copy.startText;
 
 	return [
-		'<section class="dsa-panel dsa-game-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-game-panel data-dsa-keep-open' + ( startGameId ? ' data-dsa-scheduled-game="' + escapeHtml( startGameId ) + '"' : '' ) + '>',
-		'<p class="dsa-hero-kicker">' + escapeHtml( label ) + '</p>',
-		startGameId ? '<div class="dsa-game-start" data-dsa-game-start><strong>' + escapeHtml( startTitle ) + '</strong><span>' + escapeHtml( startText ) + '</span></div>' : '',
+		'<section class="dsa-panel dsa-game-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-game-panel data-dsa-keep-open' + ( startGameId ? ' data-dsa-scheduled-game="' + escapeHtml( startGameId ) + '"' : '' ) + '>',
+		'<p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p>',
+		startGameId ? '<div class="dsa-game-start" data-dsa-game-start><strong>' + escapeHtml( copy.startTitle ) + '</strong><span>' + escapeHtml( startText ) + '</span></div>' : '',
 		'<div class="dsa-game-stage">',
 		'<canvas class="dsa-game-canvas" width="960" height="420" data-dsa-game-canvas></canvas>',
 		'<div class="dsa-game-hud">',
-		'<span data-dsa-game-score>Score 0</span>',
-		'<span data-dsa-game-best>Best 0</span>',
+		'<span data-dsa-game-score>' + escapeHtml( copy.scoreLabel ) + ' 0</span>',
+		'<span data-dsa-game-best>' + escapeHtml( copy.bestLabel ) + ' 0</span>',
 		'<span data-dsa-game-bonus>' + escapeHtml( payload.bonusLabel || '' ) + '</span>',
 		'</div>',
-		'<div class="dsa-game-message" data-dsa-game-message>' + escapeHtml( startGameId ? startText : 'Choose a game' ) + '</div>',
+		'<div class="dsa-game-message" data-dsa-game-message>' + escapeHtml( startGameId ? startText : copy.chooseText ) + '</div>',
 		'</div>',
 		'<div class="dsa-game-actions"' + ( startGameId ? ' hidden' : '' ) + '>',
 		games.map( function ( game ) {
@@ -286,19 +357,30 @@ function renderMenuContext( headings, title ) {
 	return '<section class="dsa-menu-context" data-dsa-menu-context><h2 class="dsa-menu-context__title">' + escapeHtml( title || 'On this page' ) + '</h2><ol class="dsa-menu-context__list">' + headings.map( function ( heading ) { return '<li style="--dsa-menu-depth:' + Math.max( 0, heading.level - minimumLevel ) + '"><button type="button" data-dsa-menu-anchor="' + escapeHtml( heading.id ) + '">' + escapeHtml( heading.title ) + '</button></li>'; } ).join( '' ) + '</ol></section>';
 }
 
+function menuCopy( payload ) {
+	return screenCopy( payload, {
+		label: payload.label || 'Menu',
+		eyebrow: payload.label || 'Menu',
+		title: 'Move around faster.',
+		intro: '',
+		contextTitle: payload.contextTitle || 'On this page',
+		dashboardLabel: 'Dashboard',
+	} );
+}
+
 function renderLegacyMenu( payload ) {
 	payload = payload || {};
-	const label = payload.label || 'Menu';
+	const copy = menuCopy( payload );
 	const tag = /^(h1|h2|h3|h4|p|span)$/.test( payload.tag || '' ) ? payload.tag : 'span';
 	const groups = Array.isArray( payload.groups ) ? payload.groups : [];
 	const links = Array.isArray( payload.links ) ? payload.links : [];
 	const admin = payload.adminDashboard || {};
-	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( label ) + '</' + tag + '>' + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' ) : '<ul class="dsa-menu-list">' + links.map( function ( item ) { return renderMenuItem( item, payload.fallbackUrl ); } ).join( '' ) + '</ul>' ) + renderMenuContext( payload.contextHeadings, payload.contextTitle ) + ( admin.url ? '<a class="dsa-menu-dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || 'Dashboard' ) + '</a>' : '' ) + '</section>';
+	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</' + tag + '><h2>' + escapeHtml( copy.title ) + '</h2>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' ) : '<ul class="dsa-menu-list">' + links.map( function ( item ) { return renderMenuItem( item, payload.fallbackUrl ); } ).join( '' ) + '</ul>' ) + renderMenuContext( payload.contextHeadings, copy.contextTitle ) + ( admin.url ? '<a class="dsa-menu-dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '' ) + '</section>';
 }
 
 function renderPrototypeMenu( payload ) {
 	payload = payload || {};
-	const label = payload.label || 'Menu';
+	const copy = menuCopy( payload );
 	const groups = Array.isArray( payload.groups ) ? payload.groups : [];
 	const links = Array.isArray( payload.links ) ? payload.links : [];
 	const admin = payload.adminDashboard || {};
@@ -308,16 +390,16 @@ function renderPrototypeMenu( payload ) {
 	const menuBody = groups.length
 		? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' )
 		: '<ul class="dsa-menu-list">' + links.map( function ( item ) { return renderMenuItem( item, payload.fallbackUrl ); } ).join( '' ) + '</ul>';
-	const context = renderMenuContext( payload.contextHeadings, payload.contextTitle );
+	const context = renderMenuContext( payload.contextHeadings, copy.contextTitle );
 
 	return [
-		'<section class="dsa-panel dsa-menu-panel dsa-hero-panel kiwe-menu-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-menu-adapter="prototype-2027">',
-		'<div class="kiwe-menu-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( label ) + '</p><h2>Move around faster.</h2><p class="dsa-panel__meta">' + escapeHtml( String( linkCount ) ) + ' site links' + ( context ? ' plus this page guide' : '' ) + '.</p></div>',
+		'<section class="dsa-panel dsa-menu-panel dsa-hero-panel kiwe-menu-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-menu-adapter="prototype-2027">',
+		'<div class="kiwe-menu-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( copy.intro || ( String( linkCount ) + ' site links' + ( context ? ' plus this page guide' : '' ) + '.' ) ) + '</p></div>',
 		'<div class="kiwe-menu-v2027__grid">',
 		'<div class="kiwe-menu-v2027__nav">' + menuBody + '</div>',
 		context ? '<div class="kiwe-menu-v2027__context">' + context + '</div>' : '',
 		'</div>',
-		admin.url ? '<a class="dsa-menu-dashboard kiwe-menu-v2027__dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || 'Dashboard' ) + '</a>' : '',
+		admin.url ? '<a class="dsa-menu-dashboard kiwe-menu-v2027__dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '',
 		'</section>',
 	].join( '' );
 }

@@ -17,6 +17,20 @@ function socialGlyph( id, label ) {
 	return open + ( glyphs[ id ] || '<circle cx="12" cy="12" r="8"></circle>' ) + '</svg>';
 }
 
+function linksCopy( payload ) {
+	const screen = payload && payload.screenTheme && typeof payload.screenTheme === 'object' ? payload.screenTheme : {};
+	return {
+		label: screen.label || payload.label || 'Links',
+		eyebrow: screen.eyebrow || screen.label || payload.label || 'Links',
+		title: screen.title || '',
+		intro: screen.intro || 'Store links, social proof, trust, and recent content in one Appsite surface.',
+		shopLabel: screen.shopLabel || 'Shop',
+		shopMeta: screen.shopMeta || 'Open store',
+		cartLabel: screen.cartLabel || 'Cart',
+		cartMeta: screen.cartMeta || 'Open cart',
+	};
+}
+
 function social( item, preview ) {
 	const id = item.id || 'link';
 	const label = item.label || id;
@@ -47,21 +61,22 @@ function adminBar( editor ) {
 function linksViewData( payload ) {
 	payload = payload || {};
 	const hub = payload.hub || {};
+	const copy = linksCopy( payload );
 	const editor = hub.editor || {};
 	const socials = hub.canEdit && Array.isArray( editor.socials ) && editor.socials.length ? editor.socials : ( Array.isArray( hub.socials ) ? hub.socials : [] );
 	const shop = hub.shop || {};
 	const actions = [];
-	if ( hub.commerceAvailable && ( shop.url || hub.canEdit ) ) actions.push( shop.url ? '<a class="dsa-shop-link" href="' + escapeHtml( shop.url ) + '" data-dsa-full-navigation><span>' + escapeHtml( shop.label || 'Shop' ) + '</span><small>Open store</small></a>' : '<span class="dsa-shop-link dsa-shop-link--empty"><span>' + escapeHtml( shop.label || 'Shop' ) + '</span><small>Not set</small></span>' );
-	if ( hub.cartAvailable ) actions.push( '<button class="dsa-shop-link dsa-links-cart-button" type="button" data-dsa-links-cart data-dsa-keep-open><span>Cart</span><small>Open cart</small></button>' );
+	if ( hub.commerceAvailable && ( shop.url || hub.canEdit ) ) actions.push( shop.url ? '<a class="dsa-shop-link" href="' + escapeHtml( shop.url ) + '" data-dsa-full-navigation><span>' + escapeHtml( shop.label || copy.shopLabel ) + '</span><small>' + escapeHtml( copy.shopMeta ) + '</small></a>' : '<span class="dsa-shop-link dsa-shop-link--empty"><span>' + escapeHtml( shop.label || copy.shopLabel ) + '</span><small>Not set</small></span>' );
+	if ( hub.cartAvailable ) actions.push( '<button class="dsa-shop-link dsa-links-cart-button" type="button" data-dsa-links-cart data-dsa-keep-open><span>' + escapeHtml( copy.cartLabel ) + '</span><small>' + escapeHtml( copy.cartMeta ) + '</small></button>' );
 	const logo = payload.dark && payload.logoDark ? payload.logoDark : ( hub.logo || '' );
-	const name = hub.siteName || payload.documentTitle || payload.label || 'Links';
+	const name = hub.siteName || payload.documentTitle || copy.title || copy.label;
 	const items = Array.isArray( hub.posts ) ? hub.posts : [];
 	const checks = Array.isArray( hub.health ) ? hub.health : [];
 	const rawScore = hub.score == null ? '' : String( hub.score ).trim();
 	const hasScore = rawScore !== '' && Number.isFinite( Number( rawScore ) );
 	const score = hasScore ? Math.max( 0, Math.min( 100, Number( rawScore ) ) ) : null;
 
-	return { payload: payload, hub: hub, editor: editor, socials: socials, actions: actions, logo: logo, name: name, items: items, checks: checks, hasScore: hasScore, score: score };
+	return { payload: payload, copy: copy, hub: hub, editor: editor, socials: socials, actions: actions, logo: logo, name: name, items: items, checks: checks, hasScore: hasScore, score: score };
 }
 
 function linksHero( data ) {
@@ -70,14 +85,14 @@ function linksHero( data ) {
 
 function renderLegacyLinks( payload ) {
 	const data = linksViewData( payload );
-	return '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.payload.label || 'Links' ) + '">' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + ( data.socials.length ? '<div class="dsa-social-grid">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit ); } ).join( '' ) + '</div>' : '' ) + ( data.actions.length ? '<div class="dsa-links-commerce-actions">' + data.actions.join( '' ) + '</div>' : '' ) + ( data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '' ) + ( data.hub.review && data.hub.review.text ? review( data.hub.review ) : '' ) + ( data.checks.length ? '<div class="dsa-health-row" data-dsa-context-slot data-dsa-context-name="links" data-dsa-context-width="dock">' + data.checks.map( health ).join( '' ) + '</div>' : '' ) + '</section>';
+	return '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '"><div class="dsa-links-panel__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2>' + ( data.copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p>' : '' ) + '</div>' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + ( data.socials.length ? '<div class="dsa-social-grid">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit ); } ).join( '' ) + '</div>' : '' ) + ( data.actions.length ? '<div class="dsa-links-commerce-actions">' + data.actions.join( '' ) + '</div>' : '' ) + ( data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '' ) + ( data.hub.review && data.hub.review.text ? review( data.hub.review ) : '' ) + ( data.checks.length ? '<div class="dsa-health-row" data-dsa-context-slot data-dsa-context-name="links" data-dsa-context-width="dock">' + data.checks.map( health ).join( '' ) + '</div>' : '' ) + '</section>';
 }
 
 function renderPrototypeLinks( payload ) {
 	const data = linksViewData( payload );
 	return [
-		'<section class="dsa-panel dsa-links-panel kiwe-links-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.payload.label || 'Links' ) + '" data-dsa-links-adapter="prototype-2027">',
-		'<div class="kiwe-links-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( data.payload.label || 'Links' ) + '</p><h2>' + escapeHtml( data.name ) + '</h2><p class="dsa-panel__meta">Store links, social proof, trust, and recent content in one Appsite surface.</p></div>',
+		'<section class="dsa-panel dsa-links-panel kiwe-links-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '" data-dsa-links-adapter="prototype-2027">',
+		'<div class="kiwe-links-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p></div>',
 		'<div class="kiwe-links-v2027__identity">' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + '</div>',
 		data.socials.length ? '<div class="dsa-social-grid kiwe-links-v2027__socials">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit ); } ).join( '' ) + '</div>' : '',
 		data.actions.length ? '<div class="dsa-links-commerce-actions kiwe-links-v2027__actions">' + data.actions.join( '' ) + '</div>' : '',

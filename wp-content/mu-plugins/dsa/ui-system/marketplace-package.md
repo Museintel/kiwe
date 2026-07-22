@@ -79,11 +79,20 @@ Minimal `theme-package.json` wrapper:
     "style": { "active_theme_id": "studio.account-cards", "visual_profile": "kiwe2027" },
     "dock": { "presentation": "dock", "split_style": true, "shape": "pill", "focus_item": "ai" },
     "screens": {
+      "profile": {
+        "label": "Account",
+        "title": "Your account",
+        "ordersTitle": "Orders"
+      },
       "cart": {
         "label": "Bag",
         "title": "Your tea-time bag",
         "fbtTitle": "Pairs well with",
         "checkoutLabel": "Checkout"
+      },
+      "links": {
+        "shopLabel": "Shop all products",
+        "cartLabel": "Tea-time bag"
       }
     }
   },
@@ -93,9 +102,9 @@ Minimal `theme-package.json` wrapper:
 
 ## Import rule
 
-An imported theme may add scoped CSS, static local image assets, and a safe theme settings preset for `style`, `dock`, `dsa_theme`, `visual_effects`, and `screens`.
+An imported theme may add scoped CSS, static local image assets, and a safe theme settings preset for `style`, `dock`, `dsa_theme`, `visual_effects`, `tokens`, and `screens`.
 
-`settings.screens` is presentation/copy only. Current cart copy keys include `label`, `eyebrow`, `title`, `emptyTitle`, `emptyText`, `fbtTitle`, `checkoutLabel`, and `checkoutEmptyLabel`. Themes must not put product IDs, prices, totals, checkout URLs, JavaScript, endpoints, cart state, or checkout/payment authority in screen settings.
+`settings.screens` is presentation/copy only for registered DSA screens/sheets: `profile`, `cart`, `checkout`, `search`, `menu`, `saved`, `links`, `notifications`, `ios-install`, `games`, and `ai`. Themes may rename labels, titles, helper text, empty states, safe CTA labels, Cart FBT title, Profile row labels, Links shop/cart labels, notification form labels, iOS install steps, game labels, and AI empty/chat copy. Themes must not put products, orders, saved items, profile identity, menu items, social URLs, score values, search results, notification state, AI messages/actions, product IDs, prices, totals, checkout URLs, JavaScript, endpoints, cart state, or checkout/payment authority in screen settings.
 
 An imported theme must not add PHP, visitor-facing JavaScript, remote assets, tracking pixels, fonts, REST routes, service workers, arbitrary WordPress options, WooCommerce hooks, Bricks templates, dynamic tags, or database tables.
 

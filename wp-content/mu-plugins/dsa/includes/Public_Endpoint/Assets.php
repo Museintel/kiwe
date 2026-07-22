@@ -78,6 +78,7 @@ final class Assets {
 		add_action( 'wp_body_open', [ $this, 'print_initial_preloader' ], 0 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 		add_action( 'wp_footer', [ $this, 'print_initial_preloader_fallback' ], 0 );
+		add_action( 'wp_footer', [ $this, 'print_token_cascade_guard' ], 999 );
 	}
 
 	public function filter_admin_bar( bool $show ): bool {
@@ -120,17 +121,7 @@ final class Assets {
 		];
 		$route_policy = $this->route_capabilities->policy( $settings, $manifest, $commerce );
 
-		$visual = isset( $settings['visual_effects'] ) && is_array( $settings['visual_effects'] ) ? $settings['visual_effects'] : [];
-		$theme  = isset( $settings['dsa_theme'] ) && is_array( $settings['dsa_theme'] ) ? $settings['dsa_theme'] : [];
-		$active = sanitize_hex_color( $theme['active_color'] ?? '' ) ?: '#8f8f98';
-		$hover  = sanitize_hex_color( $theme['hover_color'] ?? '' ) ?: '#24c6a1';
-		$hero   = preg_match( '/^(#[0-9a-f]{3,6}|rgba?\([^)]+\))$/i', (string) ( $theme['hero_text_color'] ?? '' ) ) ? (string) $theme['hero_text_color'] : 'rgba(20,24,34,0.18)';
-		$seam_token_overrides = [
-			'color-brand' => $active,
-			'color-accent' => $hover,
-			'color-hero' => $hero,
-			'glass-blur' => max( 0, min( 24, absint( $visual['blur_strength'] ?? 10 ) ) ) . 'px',
-		];
+		$seam_token_overrides = Seam_Token_Service::overrides_from_settings( $settings );
 		wp_enqueue_style(
 			'dsa-seam',
 			DSA_URL . 'assets/css/seam.css',
@@ -150,9 +141,13 @@ final class Assets {
 		$theme_package_service = new Theme_Package_Service();
 		$active_theme_record   = $theme_package_service->active( $settings );
 		$active_theme_css      = $theme_package_service->active_css( $settings );
+		$active_theme_screens  = isset( $active_theme_record['settings']['screens'] ) && is_array( $active_theme_record['settings']['screens'] ) ? $active_theme_record['settings']['screens'] : [];
+		$site_theme_screens    = isset( $settings['theme_screens'] ) && is_array( $settings['theme_screens'] ) ? $settings['theme_screens'] : [];
+		$resolved_theme_screens = array_replace_recursive( $active_theme_screens, $site_theme_screens );
 		if ( '' !== trim( $active_theme_css ) ) {
 			wp_add_inline_style( 'dsa-surface', $active_theme_css );
 		}
+		wp_add_inline_style( 'dsa-surface', $this->runtime_appshell_contract_css() );
 		if ( ! empty( $route_policy['viewTransitions']['enabled'] ) && ! empty( $route_policy['viewTransitions']['currentDocumentEditorial'] ) ) {
 			wp_add_inline_style( 'dsa-surface', '@view-transition { navigation: auto; }' );
 		}
@@ -293,7 +288,7 @@ final class Assets {
 					'id'       => sanitize_key( (string) ( $active_theme_record['id'] ?? '' ) ),
 					'name'     => sanitize_text_field( (string) ( $active_theme_record['name'] ?? '' ) ),
 					'settings' => isset( $active_theme_record['settings'] ) && is_array( $active_theme_record['settings'] ) ? $active_theme_record['settings'] : [],
-					'screens'  => isset( $active_theme_record['settings']['screens'] ) && is_array( $active_theme_record['settings']['screens'] ) ? $active_theme_record['settings']['screens'] : [],
+					'screens'  => $resolved_theme_screens,
 				],
 				'designTokens' => Token_Schema::contract( $settings, $manifest ),
 				'kiweTokens' => $this->kiwe_tokens_data(),
@@ -659,6 +654,7 @@ final class Assets {
 		}
 
 		$footprint = $this->settings->manifest()['footprint'];
+		$settings  = $this->settings->all();
 		$visual    = $this->settings->get( 'visual_effects', [] );
 		$theme     = $this->settings->get( 'dsa_theme', [] );
 		$style     = $this->settings->get( 'style', [] );
@@ -667,14 +663,7 @@ final class Assets {
 		$active    = sanitize_hex_color( $theme['active_color'] ?? '' ) ?: '#8f8f98';
 		$hover     = sanitize_hex_color( $theme['hover_color'] ?? '' ) ?: '#24c6a1';
 		$hero      = preg_match( '/^(#[0-9a-f]{3,6}|rgba?\([^)]+\))$/i', (string) ( $theme['hero_text_color'] ?? '' ) ) ? (string) $theme['hero_text_color'] : 'rgba(20,24,34,0.18)';
-		$kiwe_tokens = Seam_Token_Service::css_variables(
-			[
-				'color-brand' => $active,
-				'color-accent' => $hover,
-				'color-hero' => $hero,
-				'glass-blur' => $blur . 'px',
-			]
-		);
+		$kiwe_tokens = Seam_Token_Service::css_variables( Seam_Token_Service::overrides_from_settings( $settings ) );
 		$kiwe_css = '';
 
 		foreach ( $kiwe_tokens as $name => $value ) {
@@ -698,20 +687,83 @@ final class Assets {
 
 	}
 
-	private function kiwe_tokens_data(): array {
-		$visual = $this->settings->get( 'visual_effects', [] );
-		$theme = $this->settings->get( 'dsa_theme', [] );
-		$active = sanitize_hex_color( $theme['active_color'] ?? '' ) ?: '#8f8f98';
-		$hover = sanitize_hex_color( $theme['hover_color'] ?? '' ) ?: '#24c6a1';
-		$hero = preg_match( '/^(#[0-9a-f]{3,6}|rgba?\([^)]+\))$/i', (string) ( $theme['hero_text_color'] ?? '' ) ) ? (string) $theme['hero_text_color'] : 'rgba(20,24,34,0.18)';
-		$items = Seam_Token_Service::tokens_with_overrides(
-			[
-				'color-brand' => $active,
-				'color-accent' => $hover,
-				'color-hero' => $hero,
-				'glass-blur' => max( 0, min( 24, absint( $visual['blur_strength'] ?? 10 ) ) ) . 'px',
-			]
+	public function print_token_cascade_guard(): void {
+		if ( ! $this->settings->get( 'enabled', true ) || ! Environment::should_render_frontend() ) {
+			return;
+		}
+
+		$settings    = $this->settings->all();
+		$visual      = $this->settings->get( 'visual_effects', [] );
+		$theme       = $this->settings->get( 'dsa_theme', [] );
+		$active      = sanitize_hex_color( $theme['active_color'] ?? '' ) ?: '#8f8f98';
+		$hover       = sanitize_hex_color( $theme['hover_color'] ?? '' ) ?: '#24c6a1';
+		$hero        = preg_match( '/^(#[0-9a-f]{3,6}|rgba?\([^)]+\))$/i', (string) ( $theme['hero_text_color'] ?? '' ) ) ? (string) $theme['hero_text_color'] : 'rgba(20,24,34,0.18)';
+		$kiwe_tokens = Seam_Token_Service::css_variables( Seam_Token_Service::overrides_from_settings( $settings ) );
+		$kiwe_css    = '';
+
+		foreach ( $kiwe_tokens as $name => $value ) {
+			$kiwe_css .= $name . ':' . $value . ';';
+		}
+
+		printf(
+			'<style id="dsa-token-cascade-guard">:root{%5$s--dsa-blur-strength:var(--kiwe-glass-blur,%1$dpx);--dsa-active-color:var(--kiwe-color-brand,%2$s);--dsa-hover-color:var(--kiwe-color-accent,%3$s);--dsa-hero-text-color:var(--kiwe-color-hero,%4$s);}</style>' . "\n",
+			max( 0, min( 24, (int) ( $visual['blur_strength'] ?? 10 ) ) ),
+			esc_html( $active ),
+			esc_html( $hover ),
+			esc_html( $hero ),
+			esc_html( $kiwe_css )
 		);
+	}
+
+	private function runtime_appshell_contract_css(): string {
+		return <<<'CSS'
+/* Kiwe AppShell runtime contract guard: appended after installed theme CSS. */
+#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock],
+#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] .dsa-phonekey-dock {
+	gap: 0 !important;
+}
+#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-focus],
+#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-primary] {
+	margin-inline: var(--dsa-dock-split-focus-gap, 10px) !important;
+}
+@media (max-width: 340px) {
+	#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-focus],
+	#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-primary] {
+		margin-inline: var(--dsa-dock-split-focus-gap-narrow, 6px) !important;
+	}
+}
+#dsa-surface[data-dsa-surface] [data-dsa-dock-focus],
+#dsa-surface[data-dsa-surface] [data-dsa-dock-primary] {
+	background: var(--dsa-active-color, var(--kiwe-color-brand, #8f8f98)) !important;
+	color: var(--dsa-ui-inverse, #fff) !important;
+	border-color: color-mix(in srgb, var(--dsa-active-color, var(--kiwe-color-brand, #8f8f98)) 48%, transparent) !important;
+	box-shadow: 0 14px 30px color-mix(in srgb, var(--dsa-active-color, var(--kiwe-color-brand, #8f8f98)) 24%, transparent) !important;
+}
+#dsa-surface[data-dsa-surface] [data-dsa-dock-focus] .dsa-lucide,
+#dsa-surface[data-dsa-surface] [data-dsa-dock-primary] .dsa-lucide {
+	color: currentColor !important;
+	stroke: currentColor !important;
+	opacity: 1 !important;
+}
+@media (max-width: 640px) {
+	#dsa-surface[data-dsa-surface] [data-dsa-cart-fbt-rail] {
+		display: grid !important;
+		grid-auto-flow: column !important;
+		grid-auto-columns: clamp(224px, 72vw, 304px) !important;
+		overflow-x: auto !important;
+		overflow-y: hidden !important;
+	}
+	#dsa-surface[data-dsa-surface] [data-dsa-cart-fbt-rail] :is([data-dsa-cart-fbt-card], .dsa-fbt-card) {
+		min-inline-size: 224px !important;
+		max-inline-size: 304px !important;
+	}
+}
+CSS;
+	}
+
+	private function kiwe_tokens_data(): array {
+		$settings = $this->settings->all();
+		$items = Seam_Token_Service::tokens_with_overrides( Seam_Token_Service::overrides_from_settings( $settings ) );
 
 		return [
 			'enabled'         => true,
@@ -720,6 +772,7 @@ final class Assets {
 			'items'           => array_slice( $items, 0, 80 ),
 			'affectsSurface'  => true,
 			'bricksAdditive'  => true,
+			'bricksThemeStyle' => true,
 		];
 	}
 

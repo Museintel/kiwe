@@ -1,0 +1,17 @@
+{
+  "schema": "kiwe.framework-profile.v1",
+  "settings": {
+    "tokens": {
+      "enabled": true,
+      "profile_label": "Invalid Framework",
+      "overrides": {
+        "--kiwe-color-brand": "#d6006f",
+        "private-magic-token": "42px"
+      }
+    },
+    "dock": {
+      "focus_item": "search"
+    }
+  },
+  "css": ".dsa-dock { position: fixed; }"
+}

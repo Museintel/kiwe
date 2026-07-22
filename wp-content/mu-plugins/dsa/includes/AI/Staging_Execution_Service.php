@@ -2,6 +2,7 @@
 
 namespace DSA\AI;
 
+use DSA\Design\Seam_Token_Service;
 use DSA\Settings;
 use DSA\Theme\Theme_Package_Service;
 
@@ -139,6 +140,14 @@ final class Staging_Execution_Service {
 			return $this->patch_bricks_settings( $operation, $execution_id );
 		}
 
+		if ( 'kiwe.framework.push-bricks' === $type ) {
+			return $this->push_kiwe_framework_to_bricks( $operation, $execution_id );
+		}
+
+		if ( 'kiwe.framework-profile.apply' === $type ) {
+			return $this->apply_kiwe_framework_profile( $operation, $execution_id );
+		}
+
 		if ( 'kiwe.theme-package.install-activate' === $type ) {
 			return $this->install_activate_theme( $operation );
 		}
@@ -264,6 +273,7 @@ final class Staging_Execution_Service {
 		$result['postType']      = $post_type;
 		$result['templateType']  = $template_type;
 		$result['bricksTemplate'] = true;
+		$this->flush_bricks_template_cache( $post_id );
 
 		return $result;
 	}
@@ -370,6 +380,16 @@ final class Staging_Execution_Service {
 		update_post_meta( $post_id, '_kiwe_ai_bricks_conversion_backup_' . substr( $execution_id, -12 ), $previous );
 
 		update_post_meta( $post_id, $content_key, $conversion['elements'] );
+		$written_elements = get_post_meta( $post_id, $content_key, true );
+		if ( ! is_array( $written_elements ) || count( $written_elements ) !== count( $conversion['elements'] ) ) {
+			return [
+				'ok'       => false,
+				'code'     => 'bricks_content_meta_blocked',
+				'message'  => 'Converted Bricks element JSON was not persisted. Bricks capability or post-meta guards likely blocked the write.',
+				'expectedElementCount' => count( $conversion['elements'] ),
+				'storedElementCount'   => is_array( $written_elements ) ? count( $written_elements ) : 0,
+			];
+		}
 		update_post_meta( $post_id, '_kiwe_bricks_source_hash', hash( 'sha256', $html . "\n/* css */\n" . $css ) );
 		update_post_meta( $post_id, '_kiwe_bricks_source_bytes', strlen( $html ) + strlen( $css ) );
 
@@ -380,6 +400,7 @@ final class Staging_Execution_Service {
 		update_post_meta( $post_id, $mode_key, 'bricks' );
 		update_post_meta( $post_id, '_kiwe_ai_bricks_conversion_hash', hash( 'sha256', $elements_json . "\n/* css */\n" . (string) ( $page_settings['customCss'] ?? '' ) ) );
 		update_post_meta( $post_id, '_kiwe_ai_bricks_conversion_converter', sanitize_text_field( (string) ( $conversion['converter'] ?? '' ) ) );
+		$this->flush_bricks_template_cache( $post_id );
 
 		return [
 			'ok'                    => true,
@@ -399,6 +420,16 @@ final class Staging_Execution_Service {
 
 	private function bricks_managed_placeholder(): string {
 		return '<div hidden data-kiwe-bricks-managed="true" aria-hidden="true"></div>';
+	}
+
+	private function flush_bricks_template_cache( int $post_id ): void {
+		if ( ! $post_id || ! function_exists( 'get_post_type' ) || ! function_exists( 'wp_cache_set' ) ) {
+			return;
+		}
+		$template_post_type = defined( 'BRICKS_DB_TEMPLATE_SLUG' ) ? BRICKS_DB_TEMPLATE_SLUG : 'bricks_template';
+		if ( get_post_type( $post_id ) === $template_post_type ) {
+			wp_cache_set( 'last_changed', microtime(), 'bricks_' . $template_post_type );
+		}
 	}
 
 	private function sanitize_bricks_page_settings( array $settings ): array {
@@ -501,6 +532,297 @@ final class Staging_Execution_Service {
 			'previousHash' => hash( 'sha256', wp_json_encode( $current ) ?: '' ),
 			'nextHash'     => hash( 'sha256', wp_json_encode( $next ) ?: '' ),
 		];
+	}
+
+	private function push_kiwe_framework_to_bricks( array $operation, string $execution_id ): array {
+		if ( ! $this->settings ) {
+			return $this->failure( 'settings_unavailable', 'Kiwe settings service is unavailable.' );
+		}
+		if ( ! defined( 'BRICKS_DB_GLOBAL_VARIABLES' ) || ! defined( 'BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES' ) ) {
+			return $this->failure( 'bricks_unavailable', 'Bricks framework storage is unavailable.' );
+		}
+
+		$settings = $this->settings->all();
+		$token_settings = isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ? $settings['tokens'] : [];
+		$theme_style_settings = isset( $token_settings['bricks_theme_style'] ) && is_array( $token_settings['bricks_theme_style'] ) ? $token_settings['bricks_theme_style'] : [];
+		$export = Seam_Token_Service::export_for_bricks(
+			Seam_Token_Service::tokens_with_overrides( Seam_Token_Service::overrides_from_settings( $settings ) ),
+			[
+				'id'    => sanitize_key( (string) ( $theme_style_settings['id'] ?? 'kiwe-global-design' ) ) ?: 'kiwe-global-design',
+				'label' => sanitize_text_field( (string) ( $theme_style_settings['label'] ?? 'Kiwe Universal Design Tokens' ) ) ?: 'Kiwe Universal Design Tokens',
+			]
+		);
+
+		$kiwe_variables        = isset( $export['variables'] ) && is_array( $export['variables'] ) ? $export['variables'] : [];
+		$kiwe_categories       = isset( $export['categories'] ) && is_array( $export['categories'] ) ? $export['categories'] : [];
+		$kiwe_palette          = isset( $export['colorPalette'] ) && is_array( $export['colorPalette'] ) ? $export['colorPalette'] : [];
+		$kiwe_theme_style      = isset( $export['themeStyle'] ) && is_array( $export['themeStyle'] ) ? $export['themeStyle'] : [];
+		$kiwe_classes          = isset( $export['classes'] ) && is_array( $export['classes'] ) ? $export['classes'] : [];
+		$kiwe_class_categories = isset( $export['classCategories'] ) && is_array( $export['classCategories'] ) ? $export['classCategories'] : [];
+
+		$current_variables        = get_option( BRICKS_DB_GLOBAL_VARIABLES, [] );
+		$current_categories       = get_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, [] );
+		$current_palette          = defined( 'BRICKS_DB_COLOR_PALETTE' ) ? get_option( BRICKS_DB_COLOR_PALETTE, [] ) : [];
+		$current_theme_styles     = defined( 'BRICKS_DB_THEME_STYLES' ) ? get_option( BRICKS_DB_THEME_STYLES, [] ) : [];
+		$current_classes          = defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES, [] ) : [];
+		$current_class_categories = defined( 'BRICKS_DB_GLOBAL_CLASSES_CATEGORIES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES_CATEGORIES, [] ) : [];
+
+		$current_variables        = is_array( $current_variables ) ? $current_variables : [];
+		$current_categories       = is_array( $current_categories ) ? $current_categories : [];
+		$current_palette          = is_array( $current_palette ) ? $current_palette : [];
+		$current_theme_styles     = is_array( $current_theme_styles ) ? $current_theme_styles : [];
+		$current_classes          = is_array( $current_classes ) ? $current_classes : [];
+		$current_class_categories = is_array( $current_class_categories ) ? $current_class_categories : [];
+
+		update_option(
+			'dsa_ai_framework_push_backup',
+			[
+				'executionId'     => $execution_id,
+				'createdAt'       => gmdate( 'c' ),
+				'variablesHash'   => hash( 'sha256', wp_json_encode( $current_variables ) ?: '' ),
+				'categoriesHash'  => hash( 'sha256', wp_json_encode( $current_categories ) ?: '' ),
+				'paletteHash'     => hash( 'sha256', wp_json_encode( $current_palette ) ?: '' ),
+				'themeStylesHash' => hash( 'sha256', wp_json_encode( $current_theme_styles ) ?: '' ),
+				'classesHash'     => hash( 'sha256', wp_json_encode( $current_classes ) ?: '' ),
+			],
+			false
+		);
+
+		$merged_variables = array_values(
+			array_filter(
+				$current_variables,
+				static function ( $variable ): bool {
+					if ( ! is_array( $variable ) ) {
+						return false;
+					}
+					$name   = isset( $variable['name'] ) ? (string) $variable['name'] : '';
+					$source = isset( $variable['source'] ) ? (string) $variable['source'] : '';
+					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'kiwe-' );
+				}
+			)
+		);
+		$merged_categories = array_values(
+			array_filter(
+				$current_categories,
+				static function ( $category ): bool {
+					if ( ! is_array( $category ) ) {
+						return false;
+					}
+					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
+					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
+					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'Kiwe ' );
+				}
+			)
+		);
+		$merged_palette = array_values(
+			array_filter(
+				$current_palette,
+				static function ( $palette ): bool {
+					if ( ! is_array( $palette ) ) {
+						return false;
+					}
+					$name   = isset( $palette['name'] ) ? (string) $palette['name'] : '';
+					$source = isset( $palette['source'] ) ? (string) $palette['source'] : '';
+					return 'kiwe-universal' !== $source && 'Kiwe Universal' !== $name;
+				}
+			)
+		);
+		$kiwe_class_names = array_flip(
+			array_filter(
+				array_map(
+					static fn( $class ): string => is_array( $class ) ? (string) ( $class['name'] ?? '' ) : '',
+					$kiwe_classes
+				)
+			)
+		);
+		$merged_classes = array_values(
+			array_filter(
+				$current_classes,
+				static function ( $class ) use ( $kiwe_class_names ): bool {
+					if ( ! is_array( $class ) ) {
+						return false;
+					}
+					$name   = isset( $class['name'] ) ? (string) $class['name'] : '';
+					$source = isset( $class['source'] ) ? (string) $class['source'] : '';
+					return 'kiwe-seam' !== $source && ! isset( $kiwe_class_names[ $name ] );
+				}
+			)
+		);
+		$merged_class_categories = array_values(
+			array_filter(
+				$current_class_categories,
+				static function ( $category ): bool {
+					if ( ! is_array( $category ) ) {
+						return false;
+					}
+					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
+					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
+					return 'kiwe-seam' !== $source && ! str_starts_with( $name, 'Kiwe Seam ' );
+				}
+			)
+		);
+
+		$merged_variables        = array_merge( $merged_variables, $kiwe_variables );
+		$merged_categories       = array_merge( $merged_categories, $kiwe_categories );
+		$merged_palette          = array_merge( $merged_palette, $kiwe_palette );
+		$merged_classes          = array_merge( $merged_classes, $kiwe_classes );
+		$merged_class_categories = array_merge( $merged_class_categories, $kiwe_class_categories );
+
+		update_option( BRICKS_DB_GLOBAL_VARIABLES, $merged_variables, false );
+		update_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories, false );
+		if ( defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
+			update_option( BRICKS_DB_COLOR_PALETTE, $merged_palette, false );
+		}
+		$theme_style_pushed = false;
+		if ( defined( 'BRICKS_DB_THEME_STYLES' ) && ! empty( $kiwe_theme_style['id'] ) && ! empty( $kiwe_theme_style['settings'] ) && ! empty( $theme_style_settings['enabled'] ) ) {
+			$current_theme_styles[ (string) $kiwe_theme_style['id'] ] = [
+				'label'    => sanitize_text_field( (string) ( $kiwe_theme_style['label'] ?? 'Kiwe Universal Design Tokens' ) ),
+				'settings' => $kiwe_theme_style['settings'],
+			];
+			update_option( BRICKS_DB_THEME_STYLES, $current_theme_styles, false );
+			$theme_style_pushed = true;
+		}
+		if ( defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ) {
+			if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_classes_in_db' ) ) {
+				\Bricks\Helpers::save_global_classes_in_db( $merged_classes );
+			} else {
+				update_option( BRICKS_DB_GLOBAL_CLASSES, $merged_classes, false );
+			}
+		}
+		if ( defined( 'BRICKS_DB_GLOBAL_CLASSES_CATEGORIES' ) ) {
+			update_option( BRICKS_DB_GLOBAL_CLASSES_CATEGORIES, $merged_class_categories, false );
+		}
+
+		return [
+			'ok'               => true,
+			'type'             => 'kiwe.framework.push-bricks',
+			'variables'        => count( $kiwe_variables ),
+			'categories'       => count( $kiwe_categories ),
+			'classes'          => count( $kiwe_classes ),
+			'classCategories'  => count( $kiwe_class_categories ),
+			'palettePushed'    => defined( 'BRICKS_DB_COLOR_PALETTE' ),
+			'themeStylePushed' => $theme_style_pushed,
+			'nonKiwePreserved' => true,
+			'requestedBy'      => sanitize_text_field( (string) ( $operation['reason'] ?? '' ) ),
+		];
+	}
+
+	private function apply_kiwe_framework_profile( array $operation, string $execution_id ): array {
+		if ( ! $this->settings ) {
+			return $this->failure( 'settings_unavailable', 'Kiwe settings service is unavailable.' );
+		}
+
+		$payload = isset( $operation['profile'] ) && is_array( $operation['profile'] ) ? $operation['profile'] : [];
+		if ( [] === $payload && isset( $operation['package'] ) && is_array( $operation['package'] ) ) {
+			$payload = $operation['package'];
+		}
+		if ( [] === $payload && isset( $operation['tokens'] ) && is_array( $operation['tokens'] ) ) {
+			$payload = [ 'tokens' => $operation['tokens'] ];
+		}
+		if ( [] === $payload ) {
+			return $this->failure( 'missing_framework_profile', 'Framework profile operation requires profile, package, or tokens.' );
+		}
+
+		$tokens_input = $this->framework_profile_tokens_input( $payload );
+		if ( ! is_array( $tokens_input ) ) {
+			return $this->failure( 'invalid_framework_profile', 'Framework profile must contain settings.tokens or a raw tokens object.' );
+		}
+
+		$settings = $this->settings->all();
+		$current  = isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ? $settings['tokens'] : [];
+		$defaults = $this->settings->defaults()['tokens'] ?? [
+			'enabled'            => true,
+			'profile_label'      => 'Kiwe Universal',
+			'overrides'          => [],
+			'bricks_theme_style' => [
+				'enabled' => true,
+				'id'      => 'kiwe-global-design',
+				'label'   => 'Kiwe Universal Design Tokens',
+			],
+		];
+		$next = $this->sanitize_framework_token_settings( $tokens_input, $current, $defaults );
+
+		update_option(
+			'dsa_ai_framework_profile_backup',
+			[
+				'executionId'  => $execution_id,
+				'createdAt'    => gmdate( 'c' ),
+				'previousHash' => hash( 'sha256', wp_json_encode( $current ) ?: '' ),
+				'nextHash'     => hash( 'sha256', wp_json_encode( $next ) ?: '' ),
+				'requestedBy'  => sanitize_text_field( (string) ( $operation['reason'] ?? '' ) ),
+			],
+			false
+		);
+
+		$settings['tokens'] = $next;
+		$this->settings->update( $settings );
+
+		return [
+			'ok'                 => true,
+			'type'               => 'kiwe.framework-profile.apply',
+			'profileLabel'       => (string) ( $next['profile_label'] ?? 'Kiwe Universal' ),
+			'overridesApplied'   => count( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] ),
+			'overrideNames'      => array_values( array_keys( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] ) ),
+			'bricksThemeStyle'   => [
+				'enabled' => ! empty( $next['bricks_theme_style']['enabled'] ),
+				'id'      => (string) ( $next['bricks_theme_style']['id'] ?? 'kiwe-global-design' ),
+				'label'   => (string) ( $next['bricks_theme_style']['label'] ?? 'Kiwe Universal Design Tokens' ),
+			],
+			'pushToBricksNeeded' => true,
+			'requestedBy'        => sanitize_text_field( (string) ( $operation['reason'] ?? '' ) ),
+		];
+	}
+
+	private function framework_profile_tokens_input( array $payload ): ?array {
+		if ( isset( $payload['settings'] ) && is_array( $payload['settings'] ) && isset( $payload['settings']['tokens'] ) && is_array( $payload['settings']['tokens'] ) ) {
+			return $payload['settings']['tokens'];
+		}
+		if ( isset( $payload['tokens'] ) && is_array( $payload['tokens'] ) ) {
+			return $payload['tokens'];
+		}
+		if ( array_intersect( [ 'enabled', 'profile_label', 'overrides', 'bricks_theme_style' ], array_keys( $payload ) ) ) {
+			return $payload;
+		}
+
+		return null;
+	}
+
+	private function sanitize_framework_token_settings( array $input, array $current, array $defaults ): array {
+		$next = wp_parse_args( $current, $defaults );
+		$next['bricks_theme_style'] = wp_parse_args(
+			is_array( $next['bricks_theme_style'] ?? null ) ? $next['bricks_theme_style'] : [],
+			is_array( $defaults['bricks_theme_style'] ?? null ) ? $defaults['bricks_theme_style'] : []
+		);
+
+		if ( array_key_exists( 'enabled', $input ) ) {
+			$next['enabled'] = ! empty( $input['enabled'] );
+		}
+		if ( array_key_exists( 'profile_label', $input ) ) {
+			$label = sanitize_text_field( (string) $input['profile_label'] );
+			$next['profile_label'] = '' !== $label ? substr( $label, 0, 80 ) : (string) ( $defaults['profile_label'] ?? 'Kiwe Universal' );
+		}
+		if ( isset( $input['overrides'] ) && is_array( $input['overrides'] ) ) {
+			$next['overrides'] = Seam_Token_Service::sanitize_overrides( $input['overrides'] );
+		} else {
+			$next['overrides'] = Seam_Token_Service::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
+		}
+
+		if ( isset( $input['bricks_theme_style'] ) && is_array( $input['bricks_theme_style'] ) ) {
+			$style_input = $input['bricks_theme_style'];
+			if ( array_key_exists( 'enabled', $style_input ) ) {
+				$next['bricks_theme_style']['enabled'] = ! empty( $style_input['enabled'] );
+			}
+			if ( array_key_exists( 'id', $style_input ) ) {
+				$id = sanitize_key( (string) $style_input['id'] );
+				$next['bricks_theme_style']['id'] = '' !== $id ? substr( $id, 0, 80 ) : (string) ( $defaults['bricks_theme_style']['id'] ?? 'kiwe-global-design' );
+			}
+			if ( array_key_exists( 'label', $style_input ) ) {
+				$label = sanitize_text_field( (string) $style_input['label'] );
+				$next['bricks_theme_style']['label'] = '' !== $label ? substr( $label, 0, 100 ) : (string) ( $defaults['bricks_theme_style']['label'] ?? 'Kiwe Universal Design Tokens' );
+			}
+		}
+
+		return $next;
 	}
 
 	private function sanitize_template_settings( array $settings ): array {

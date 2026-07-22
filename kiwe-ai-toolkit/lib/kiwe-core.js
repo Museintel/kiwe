@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepareApplyPlan as prepareBricksApplyPlan } from './apply-planner.js';
 import { validateBindings as validateBindingsPlan } from './binding-validator.js';
+import { validateFrameworkProfile as validateFrameworkProfilePlan } from './framework-profile-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -218,6 +219,10 @@ export function validateBindings(targetDir, options = {}) {
   return validateBindingsPlan(targetDir, options);
 }
 
+export function validateFrameworkProfile(targetDir, options = {}) {
+  return validateFrameworkProfilePlan(targetDir, options);
+}
+
 export function prepareApplyPlan(targetDir, options = {}) {
   return prepareBricksApplyPlan(targetDir, options);
 }
@@ -429,6 +434,14 @@ function themeScaffold(root, name, { includePreview = true } = {}) {
       item_order: ['menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai']
     },
     screens: {
+      profile: {
+        label: 'Profile',
+        eyebrow: 'Profile & Activity',
+        title: 'Your account',
+        ordersTitle: 'Orders',
+        addressesTitle: 'Addresses',
+        signOutLabel: 'Sign out'
+      },
       cart: {
         label: 'Cart',
         eyebrow: 'Cart',
@@ -438,6 +451,22 @@ function themeScaffold(root, name, { includePreview = true } = {}) {
         fbtTitle: 'Frequently Bought Together',
         checkoutLabel: 'Checkout',
         checkoutEmptyLabel: 'Empty'
+      },
+      search: {
+        label: 'Search',
+        title: 'Find what you need.',
+        placeholder: 'Search products and posts'
+      },
+      links: {
+        label: 'Links',
+        title: 'Store links',
+        shopLabel: 'Shop',
+        cartLabel: 'Cart'
+      },
+      ai: {
+        label: 'AI Assistant',
+        title: 'Useful things, at the right moment.',
+        chatPlaceholder: 'Chat with AI'
       }
     }
   };
@@ -706,10 +735,13 @@ export function validateHandoff(targetDir, mode = 'website') {
     }
   }
   const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));
+  const frameworkProfile = validateFrameworkProfilePlan(root, { optional: true });
+  const frameworkErrors = frameworkProfile.ok ? [] : frameworkProfile.errors || [];
   return {
-    ok: missing.length === 0,
+    ok: missing.length === 0 && frameworkErrors.length === 0,
     mode: normalized,
     root,
-    missing
+    missing,
+    frameworkProfile
   };
 }

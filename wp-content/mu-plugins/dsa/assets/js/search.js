@@ -515,8 +515,19 @@ export function mount( root, config ) {
 
 	requestResults( root, config, input.value.trim() );
 	window.requestAnimationFrame( function () {
-		if ( root.isConnected ) {
+		if ( root.isConnected && shouldAutofocusSearchInput( root, config ) ) {
 			input.focus( { preventScroll: true } );
 		}
 	} );
+}
+
+function shouldAutofocusSearchInput( root, config ) {
+	if ( config && config.autofocus === false ) return false;
+	const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia( '(hover: none), (pointer: coarse)' ).matches;
+	const narrowViewport = Math.min(
+		window.innerWidth || 1024,
+		document.documentElement ? document.documentElement.clientWidth || 1024 : 1024
+	) <= 640;
+	const sheetSurface = root && root.closest && root.closest( '.dsa-theme-sheet, [data-dsa-surface].dsa-theme-sheet' );
+	return ! ( sheetSurface && ( coarsePointer || narrowViewport ) );
 }

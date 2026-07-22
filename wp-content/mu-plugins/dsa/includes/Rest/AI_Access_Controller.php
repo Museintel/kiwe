@@ -3,6 +3,9 @@
 namespace DSA\Rest;
 
 use DSA\AI\Access_Key_Service;
+use DSA\AI\AI_Companion_Memory_Service;
+use DSA\AI\AI_Companion_Service;
+use DSA\AI\Bricks_AI_Intelligence_Service;
 use DSA\AI\Apply_Plan_Preparer;
 use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Bricks_Controlled_Adapter_Service;
@@ -11,20 +14,27 @@ use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\AI\Final_Save_Approval_Service;
 use DSA\AI\Fresh_Site_Graph_Revalidator;
 use DSA\AI\Guarded_Apply_Authorizer;
+use DSA\AI\Internal_AI_Advisor_Service;
+use DSA\AI\Internal_AI_Context_Service;
+use DSA\AI\Internal_AI_Enrichment_Service;
 use DSA\AI\Minimal_Adapter_Shell_Service;
 use DSA\AI\Post_Apply_Verification_Service;
 use DSA\AI\Pre_Execution_Gate_Service;
 use DSA\AI\Rendered_Target_Inspection_Service;
 use DSA\AI\Rollback_Capture_Service;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
+use DSA\AI\AI_Provider_Service;
 use DSA\AI\Site_Introspection_Service;
 use DSA\AI\Site_Graph_Service;
 use DSA\AI\Staging_Execution_Service;
+use DSA\AI\Studio_AI_Service;
 use DSA\AI\Target_Resolution_Service;
 use DSA\AI\Trusted_Adapter_Proof_Service;
 use DSA\AI\Trusted_Apply_Stager;
 use DSA\AI\Trusted_Execution_Preview_Service;
+use DSA\Secure\SecureTrack_AI_Brief_Service;
 use DSA\Settings;
+use DSA\Site_Graph\Data_Query_Service;
 use DSA\Theme\Theme_Package_Service;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -50,6 +60,24 @@ final class AI_Access_Controller {
 		$routes = [
 			[ 'GET', '/ai/status', 'status', 'status' ],
 			[ 'GET', '/ai/site-graph', 'site_graph', 'site_graph' ],
+			[ 'GET', '/ai/site-graph-data/schema', 'site_graph_data_schema', 'site_graph_data' ],
+			[ [ 'GET', 'POST' ], '/ai/site-graph-data', 'site_graph_data', 'site_graph_data' ],
+			[ 'GET', '/ai/security-brief', 'security_brief', 'security_brief' ],
+			[ 'GET', '/ai/internal-context', 'internal_context', 'internal_ai' ],
+			[ [ 'GET', 'POST' ], '/ai/advisor', 'advisor', 'internal_ai' ],
+			[ [ 'GET', 'POST' ], '/ai/advisor/enrich', 'advisor_enrichment', 'internal_ai' ],
+			[ 'GET', '/ai/companion/status', 'companion_status', 'companion' ],
+			[ [ 'GET', 'POST' ], '/ai/companion/context', 'companion_context', 'companion' ],
+			[ 'POST', '/ai/companion/ask', 'companion_ask', 'companion' ],
+			[ 'POST', '/ai/companion/review-output', 'companion_review_output', 'companion' ],
+			[ 'GET', '/ai/companion/memory', 'companion_memory', 'companion' ],
+			[ 'POST', '/ai/companion/memory/clear', 'companion_memory_clear', 'companion' ],
+			[ 'GET', '/ai/studio/status', 'studio_status', 'studio_ai' ],
+			[ 'POST', '/ai/studio/start', 'studio_start', 'studio_ai' ],
+			[ 'POST', '/ai/studio/draft', 'studio_draft', 'studio_ai' ],
+			[ 'POST', '/ai/studio/review', 'studio_review', 'studio_ai' ],
+			[ [ 'GET', 'POST' ], '/ai/bricks/context', 'bricks_ai_context', 'bricks_ai' ],
+			[ 'POST', '/ai/bricks/plan', 'bricks_ai_plan', 'bricks_ai' ],
 			[ 'POST', '/ai/validate-bindings', 'validate_bindings', 'validate_bindings' ],
 			[ 'POST', '/ai/prepare-apply-plan', 'prepare_apply_plan', 'prepare_apply_plan' ],
 			[ 'POST', '/ai/stage-apply-plan', 'stage_apply_plan', 'stage_apply_plan' ],
@@ -115,6 +143,29 @@ final class AI_Access_Controller {
 			'key'        => $auth['record'],
 			'capability' => [
 				'siteGraph'         => true,
+				'siteGraphData'     => true,
+				'securityBrief'     => $this->securetrack_brief_allowed( $auth ) ? true : 'requires Kiwe > AI SecureTrack sharing plus security_brief or companion_securetrack scope',
+				'internalAiContext' => true,
+				'internalAiAdvisor' => true,
+				'internalAiEnrichment' => 'model-optional-readonly',
+				'companion'         => [
+					'enabled' => ! empty( $this->ai_settings()['companion_enabled'] ),
+					'route'   => '/wp-json/dsa/v1/ai/companion/context',
+					'model'   => 'deterministic-context-broker-no-model-call',
+				],
+				'studioAi'          => [
+					'enabled'       => ! empty( $this->ai_settings()['studio_enabled'] ),
+					'route'         => '/wp-json/dsa/v1/ai/studio/start',
+					'operatingMode' => sanitize_key( (string) ( $this->ai_settings()['studio_mode'] ?? 'browser_companion' ) ),
+					'nativeDraft'   => $this->auth_has_scope( $auth, 'native_ai' ) ? 'allowed-if-enabled-in-kiwe-ai' : 'requires-native_ai-scope',
+				],
+				'bricksAi'          => [
+					'route'       => '/wp-json/dsa/v1/ai/bricks/context',
+					'planRoute'   => '/wp-json/dsa/v1/ai/bricks/plan',
+					'scope'       => 'bricks_ai or studio_ai',
+					'covers'      => [ 'elements', 'elementControls', 'queryLoops', 'dynamicTags', 'conditions', 'interactions', 'Seam rules', 'Kiwe launchers' ],
+					'readOnly'    => true,
+				],
 				'validateBindings'  => true,
 				'prepareApplyPlan'  => true,
 				'stageApplyPlan'    => true,
@@ -135,6 +186,124 @@ final class AI_Access_Controller {
 
 	private function site_graph( WP_REST_Request $request, array $auth ): array {
 		return $this->site_graph->graph( [ 'sampleLimit' => absint( $request->get_param( 'sampleLimit' ) ?: 8 ) ] );
+	}
+
+	private function site_graph_data_schema( WP_REST_Request $request, array $auth ): array {
+		return ( new Data_Query_Service() )->schema();
+	}
+
+	private function site_graph_data( WP_REST_Request $request, array $auth ): array {
+		$args = $request->get_params();
+		$body = $request->get_json_params();
+		if ( is_array( $body ) ) {
+			$args = array_replace_recursive( $args, $body );
+		}
+		unset( $args['rest_route'] );
+
+		$private = empty( $args['publicOnly'] );
+		unset( $args['publicOnly'] );
+
+		return ( new Data_Query_Service() )->query( $args, $private );
+	}
+
+	private function security_brief( WP_REST_Request $request, array $auth ): array {
+		if ( ! $this->securetrack_brief_allowed( $auth ) ) {
+			return [
+				'ok'         => false,
+				'httpStatus' => 403,
+				'schema'     => 'kiwe.securetrack-ai-brief.v1',
+				'error'      => [
+					'code'    => 'securetrack_brief_not_allowed',
+					'message' => 'Enable SecureTrack brief sharing in Kiwe > AI and use a key scoped to security_brief, companion_securetrack, or all.',
+				],
+			];
+		}
+
+		return ( new SecureTrack_AI_Brief_Service() )->brief( absint( $request->get_param( 'limit' ) ?: 12 ) );
+	}
+
+	private function internal_context( WP_REST_Request $request, array $auth ): array {
+		return ( new Internal_AI_Context_Service( $this->site_graph ) )->context(
+			[
+				'sampleLimit' => absint( $request->get_param( 'sampleLimit' ) ?: 8 ),
+				'secureLimit' => absint( $request->get_param( 'secureLimit' ) ?: 12 ),
+				'includeSecureTrack' => $this->securetrack_brief_allowed( $auth ),
+			]
+		);
+	}
+
+	private function advisor( WP_REST_Request $request, array $auth ): array {
+		$args = $request->get_params();
+		$body = $request->get_json_params();
+		if ( is_array( $body ) ) {
+			$args = array_replace_recursive( $args, $body );
+		}
+		unset( $args['rest_route'] );
+
+		$args['includeSecureTrack'] = $this->securetrack_brief_allowed( $auth );
+
+		return ( new Internal_AI_Advisor_Service( new Internal_AI_Context_Service( $this->site_graph ) ) )->advise( $args );
+	}
+
+	private function advisor_enrichment( WP_REST_Request $request, array $auth ): array {
+		$args = $request->get_params();
+		$body = $request->get_json_params();
+		if ( is_array( $body ) ) {
+			$args = array_replace_recursive( $args, $body );
+		}
+		unset( $args['rest_route'] );
+
+		$args['includeSecureTrack'] = $this->securetrack_brief_allowed( $auth );
+
+		return ( new Internal_AI_Enrichment_Service( new Internal_AI_Advisor_Service( new Internal_AI_Context_Service( $this->site_graph ) ) ) )->enrich( $args );
+	}
+
+	private function companion_status( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->status( $auth );
+	}
+
+	private function companion_context( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->context( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function companion_ask( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->ask( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function companion_review_output( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->review_output( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function companion_memory( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->memory();
+	}
+
+	private function companion_memory_clear( WP_REST_Request $request, array $auth ): array {
+		return $this->companion()->clear_memory();
+	}
+
+	private function studio_status( WP_REST_Request $request, array $auth ): array {
+		return $this->studio()->status( $auth );
+	}
+
+	private function studio_start( WP_REST_Request $request, array $auth ): array {
+		return $this->studio()->start_project( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function studio_draft( WP_REST_Request $request, array $auth ): array {
+		return $this->studio()->draft( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function studio_review( WP_REST_Request $request, array $auth ): array {
+		return $this->studio()->review( $this->merged_request_args( $request ), $auth );
+	}
+
+	private function bricks_ai_context( WP_REST_Request $request, array $auth ): array {
+		return ( new Bricks_AI_Intelligence_Service( $this->settings_service() ) )->context( $this->merged_request_args( $request ) );
+	}
+
+	private function bricks_ai_plan( WP_REST_Request $request, array $auth ): array {
+		return ( new Bricks_AI_Intelligence_Service( $this->settings_service() ) )->planning_packet( $this->merged_request_args( $request ) );
 	}
 
 	private function validate_bindings( WP_REST_Request $request, array $auth ): array {
@@ -338,12 +507,21 @@ final class AI_Access_Controller {
 		$service = new Theme_Package_Service();
 		$settings = $this->settings ? $this->settings->all() : [];
 		$active = $service->active( $settings );
+		$active_id = (string) ( $active['id'] ?? '' );
+		$records = array_map(
+			static function ( array $record ) use ( $service, $active_id ): array {
+				$public = $service->public_record( $record );
+				$public['active'] = $active_id !== '' && $active_id === (string) ( $record['id'] ?? '' );
+				return $public;
+			},
+			$service->all()
+		);
 
 		return [
 			'ok'      => true,
 			'schema'  => 'kiwe.ai-themes.v1',
 			'active'  => $service->public_record( $active ),
-			'records' => array_map( [ $service, 'public_record' ], $service->all() ),
+			'records' => $records,
 		];
 	}
 
@@ -416,7 +594,21 @@ final class AI_Access_Controller {
 			return $this->bad_request( 'missing_execution', 'Request body must include a staging execution package.' );
 		}
 
-		$result = ( new Staging_Execution_Service( $this->settings ) )->execute( $payload, $this->context( $auth ) );
+		$context       = $this->context( $auth );
+		$previous_user = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$owner_user    = absint( $context['userId'] ?? 0 );
+
+		if ( $owner_user > 0 && function_exists( 'wp_set_current_user' ) && function_exists( 'user_can' ) && user_can( $owner_user, 'manage_options' ) ) {
+			wp_set_current_user( $owner_user );
+		}
+
+		try {
+			$result = ( new Staging_Execution_Service( $this->settings ) )->execute( $payload, $context );
+		} finally {
+			if ( function_exists( 'wp_set_current_user' ) ) {
+				wp_set_current_user( absint( $previous_user ) );
+			}
+		}
 
 		return [
 			'ok'      => 'staging-execution-complete' === (string) ( $result['status'] ?? '' ),
@@ -560,6 +752,66 @@ final class AI_Access_Controller {
 		return '';
 	}
 
+	private function companion(): AI_Companion_Service {
+		return new AI_Companion_Service(
+			$this->settings_service(),
+			$this->site_graph,
+			new AI_Companion_Memory_Service()
+		);
+	}
+
+	private function studio(): Studio_AI_Service {
+		return new Studio_AI_Service(
+			$this->settings_service(),
+			$this->site_graph,
+			$this->companion(),
+			new AI_Provider_Service( $this->settings_service() )
+		);
+	}
+
+	private function settings_service(): Settings {
+		if ( ! $this->settings ) {
+			$this->settings = new Settings();
+		}
+
+		return $this->settings;
+	}
+
+	private function ai_settings(): array {
+		$service  = $this->settings_service();
+		$defaults = $service->defaults()['ai'] ?? [];
+		$current  = $service->get( 'ai', [] );
+
+		return array_replace_recursive( is_array( $defaults ) ? $defaults : [], is_array( $current ) ? $current : [] );
+	}
+
+	private function securetrack_brief_allowed( array $auth ): bool {
+		$ai = $this->ai_settings();
+		if ( empty( $ai['securetrack_brief_enabled'] ) ) {
+			return false;
+		}
+
+		return $this->auth_has_scope( $auth, 'security_brief' ) || $this->auth_has_scope( $auth, 'companion_securetrack' );
+	}
+
+	private function auth_has_scope( array $auth, string $scope ): bool {
+		$record = isset( $auth['record'] ) && is_array( $auth['record'] ) ? $auth['record'] : [];
+		$scopes = isset( $record['scopes'] ) && is_array( $record['scopes'] ) ? array_map( 'sanitize_key', $record['scopes'] ) : [];
+
+		return in_array( 'all', $scopes, true ) || in_array( sanitize_key( $scope ), $scopes, true );
+	}
+
+	private function merged_request_args( WP_REST_Request $request ): array {
+		$args = $request->get_params();
+		$body = $request->get_json_params();
+		if ( is_array( $body ) ) {
+			$args = array_replace_recursive( $args, $body );
+		}
+		unset( $args['rest_route'] );
+
+		return $args;
+	}
+
 	private function attach_stage_artifact( WP_REST_Request $request, callable $builder, string $attach_method, string $ready_status ): array {
 		$stager   = new Trusted_Apply_Stager();
 		$stage_id = sanitize_key( (string) $request->get_param( 'stageId' ) );
@@ -579,8 +831,10 @@ final class AI_Access_Controller {
 	}
 
 	private function context( array $auth ): array {
+		$created_by = absint( $auth['record']['createdBy'] ?? 0 );
+
 		return [
-			'userId'    => 0,
+			'userId'    => $created_by,
 			'createdAt' => gmdate( 'c' ),
 			'apiKeyId'  => (string) ( $auth['record']['id'] ?? '' ),
 		];

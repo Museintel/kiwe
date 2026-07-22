@@ -11,6 +11,19 @@ function benefits( insight ) {
 	} ).join( '' ) + '</ul>' : '';
 }
 
+function aiCopy( payload ) {
+	const screen = payload && payload.screenTheme && typeof payload.screenTheme === 'object' ? payload.screenTheme : {};
+	return {
+		label: screen.label || payload.label || 'AI Assistant',
+		eyebrow: screen.eyebrow || screen.label || payload.label || 'AI Assistant',
+		title: screen.title || 'Useful things, at the right moment.',
+		intro: screen.intro || 'DSA keeps the decisions deterministic; this surface only arranges the useful signals.',
+		emptyTitle: screen.emptyTitle || 'You are all caught up.',
+		emptyText: screen.emptyText || 'New account, cart, notification, and safety insights will collect here.',
+		chatPlaceholder: screen.chatPlaceholder || 'Chat with AI',
+	};
+}
+
 function notificationTime( timestamp ) {
 	try {
 		return new Intl.DateTimeFormat( undefined, { hour: 'numeric', minute: '2-digit' } ).format( new Date( Number( timestamp ) ) );
@@ -33,8 +46,9 @@ function insightCard( insight ) {
 
 function renderLegacyInbox( payload ) {
 	const items = Array.isArray( payload.items ) ? payload.items : [];
+	const copy = aiCopy( payload );
 	if ( ! items.length ) {
-		return '<div class="dsa-ai-empty"><span class="dsa-ai-glyph" aria-hidden="true"></span><strong>You are all caught up.</strong><p>New account and cart insights will collect here.</p></div>';
+		return '<div class="dsa-ai-empty"><span class="dsa-ai-glyph" aria-hidden="true"></span><strong>' + escapeHtml( copy.emptyTitle ) + '</strong><p>' + escapeHtml( copy.emptyText ) + '</p></div>';
 	}
 	const unread = Number( payload.unread || 0 );
 	const open = Boolean( payload.open );
@@ -43,8 +57,9 @@ function renderLegacyInbox( payload ) {
 
 function renderPrototypeInbox( payload ) {
 	const items = Array.isArray( payload.items ) ? payload.items : [];
+	const copy = aiCopy( payload );
 	if ( ! items.length ) {
-		return '<div class="dsa-ai-empty kiwe-ai-v2027__empty"><span class="dsa-ai-glyph" aria-hidden="true"></span><strong>You are all caught up.</strong><p>New account, cart, notification, and safety insights will collect here.</p></div>';
+		return '<div class="dsa-ai-empty kiwe-ai-v2027__empty"><span class="dsa-ai-glyph" aria-hidden="true"></span><strong>' + escapeHtml( copy.emptyTitle ) + '</strong><p>' + escapeHtml( copy.emptyText ) + '</p></div>';
 	}
 	const unread = Number( payload.unread || 0 );
 	const open = Boolean( payload.open );
@@ -65,21 +80,23 @@ export function renderInbox( payload ) {
 }
 
 function renderLegacyPanel( payload ) {
+	const copy = aiCopy( payload );
 	return [
-		'<section class="dsa-panel dsa-ai-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( payload.label || 'AI Assistant' ) + '" data-dsa-ai-panel data-dsa-keep-open>',
-		'<p class="dsa-hero-kicker">AI Assistant</p><h2>Useful things, at the right moment.</h2>',
+		'<section class="dsa-panel dsa-ai-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ai-panel data-dsa-keep-open>',
+		'<p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ),
 		'<div class="dsa-ai-insights" data-dsa-ai-insights>' + renderInbox( payload ) + '</div>',
-		'<div class="dsa-ai-chat-placeholder" data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="ai" data-dsa-context-width="dock"><input type="text" placeholder="Chat with AI" aria-label="Chat with AI" readonly><button type="button" aria-label="Send message" disabled>&uarr;</button></div>',
+		'<div class="dsa-ai-chat-placeholder" data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="ai" data-dsa-context-width="dock"><input type="text" placeholder="' + escapeHtml( copy.chatPlaceholder ) + '" aria-label="' + escapeHtml( copy.chatPlaceholder ) + '" readonly><button type="button" aria-label="Send message" disabled>&uarr;</button></div>',
 		'</section>',
 	].join( '' );
 }
 
 function renderPrototypePanel( payload ) {
+	const copy = aiCopy( payload );
 	return [
-		'<section class="dsa-panel dsa-ai-panel dsa-hero-panel kiwe-ai-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( payload.label || 'AI Assistant' ) + '" data-dsa-ai-panel data-dsa-keep-open data-dsa-ai-adapter="prototype-2027">',
-		'<div class="kiwe-ai-v2027__title"><p class="dsa-hero-kicker">AI Assistant</p><h2>Useful things, at the right moment.</h2><p class="dsa-panel__meta">DSA keeps the decisions deterministic; this surface only arranges the useful signals.</p></div>',
+		'<section class="dsa-panel dsa-ai-panel dsa-hero-panel kiwe-ai-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ai-panel data-dsa-keep-open data-dsa-ai-adapter="prototype-2027">',
+		'<div class="kiwe-ai-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p></div>',
 		'<div class="dsa-ai-insights kiwe-ai-v2027__insights" data-dsa-ai-insights>' + renderInbox( payload ) + '</div>',
-		'<div class="dsa-ai-chat-placeholder kiwe-ai-v2027__chat" data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="ai" data-dsa-context-width="dock"><input type="text" placeholder="Chat with AI" aria-label="Chat with AI" readonly><button type="button" aria-label="Send message" disabled>&uarr;</button></div>',
+		'<div class="dsa-ai-chat-placeholder kiwe-ai-v2027__chat" data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="ai" data-dsa-context-width="dock"><input type="text" placeholder="' + escapeHtml( copy.chatPlaceholder ) + '" aria-label="' + escapeHtml( copy.chatPlaceholder ) + '" readonly><button type="button" aria-label="Send message" disabled>&uarr;</button></div>',
 		'</section>',
 	].join( '' );
 }

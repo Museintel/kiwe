@@ -1,8 +1,86 @@
 # DSA Development Plan
 
-**Current baseline:** Kiwe DSA `0.5.73`, WordPress 7.x, PHP 8.2-8.4, Bricks 2.3.7-first, shared-host compatible.
+**Current baseline:** Kiwe DSA `0.6.21`, WordPress 7.x, PHP 8.2-8.4, Bricks 2.3.7-first, shared-host compatible.
 
 This is the authoritative short execution view. `DSA-ARCHITECTURE.md` remains the architectural history and decision record. `SECURITY-AUDIT.md` owns security acceptance detail.
+
+## Implemented AI Track - Kiwe Studio AI + Companion + SecureTrack AI Settings
+
+Status: Companion and SecureTrack relocation landed in `0.6.11`; Studio operating modes and native-provider controls landed in `0.6.12`; Bricks AI Intelligence and the optional Bricks front-end editor companion landed in `0.6.13`; SecureTrack now uses shared Companion/native AI settings without a separate SecureTrack key field as of `0.6.14`; AI access key creation has a shared-host-safe one-time-secret display fallback as of `0.6.15`; AI-less Site Graph Data now supports both explicit `queries` and compact `resources` batch reads as of `0.6.16`; combined-mode preview/live parity and native prompt compaction were tightened in `0.6.17`; sheet grabber chrome anchoring landed in `0.6.18`; Companion review parity tightening landed in `0.6.19`; sheet grabber chrome metrics were tokenized in `0.6.20`; the first Seam token-hygiene audit and dock/search token fixes landed in `0.6.21`. Keep this as the operating boundary for later deeper WordPress AI Client and model-orchestration work.
+
+Product direction:
+
+- Move all AI-facing SecureTrack settings out of `Kiwe > Secure` and into `Kiwe > AI`.
+- Keep `Kiwe > Secure` focused on security enforcement, auto logout, risk rules, break-glass, monitoring, and human security controls.
+- `Kiwe > AI` should own API keys, AI scopes, Studio operating mode, native-provider settings, companion access, redacted SecureTrack AI brief permissions, advisor/enrichment settings, connector budgets, and AI audit logs. SecureTrack must not render a separate provider/model/API-key lane; it uses Companion consent/scopes and the shared Native AI provider when supported.
+
+Key principle:
+
+The same revocable Kiwe AI key can be allowed to access SecureTrack AI context only when the admin explicitly grants that scope. Otherwise the key may still work for normal AI connector features such as Site Graph, theme package install/review, framework profile application, staging proof metadata, and dynamic binding support. Deleting the key in `Kiwe > AI` must revoke all access immediately.
+
+Long-term vision:
+
+Create an optional **Kiwe Studio AI** inside the plugin. When a designer/developer uses external browser AI, IDE AI, GitHub/tool calls, or native Kiwe AI to create a website/page, DSA/AppShell theme, or combined handoff, Studio chooses the cheapest safe lane: native Kiwe AI with an admin-provided key, browser AI plus Companion packets, or browser AI only. The companion should make the external AI's work easier without forcing it to read the whole plugin or wasting tokens.
+
+Architecture intent:
+
+- Studio is a workflow engine; the companion is a site-aware context broker and reviewer, not an always-chatty chatbot.
+- Deterministic systems come first: Site Graph, Site Graph Data, framework/theme schemas, SecureTrack redacted brief, installed plugin inventory, Bricks capability summaries, validation rules, previous audit failures, and safe settings state.
+- Model calls, when available through WordPress 7 AI Client / native AI abilities, are optional enrichment over a compact context packet, not the source of authority.
+- Companion responses should be small, hashable, cached, and delta-based: "read this context", "these are the missing selectors", "this theme CSS owns dock geometry", "this page needs real query loops", "these categories/products exist", etc.
+- Avoid token waste by returning context cards, rule IDs, validation diffs, and short next-action plans instead of dumping full files or logs.
+- Treat the "learning" layer as local product memory, not uncontrolled training: store anonymized/structured pass-fail fingerprints, recurring handoff mistakes, accepted fixes, validator error frequencies, and site-specific preferences. Do not store raw secrets, full visitor trails, raw SecureTrack events, private customer data, or unredacted prompts.
+
+Current endpoints / abilities:
+
+- `GET /wp-json/dsa/v1/ai/companion/status` - feature flags, model/native-AI availability, budgets, scopes, and safe operating boundary.
+- `GET /wp-json/dsa/v1/ai/companion/context` - compact mode-aware context packet for website, theme, combined, dynamic binding, or audit work.
+- `POST /wp-json/dsa/v1/ai/companion/ask` - bounded question-answer interface over approved context only.
+- `POST /wp-json/dsa/v1/ai/companion/review-output` - non-mutating review of a handoff/package against current Kiwe rules and target-site graph.
+- `GET /wp-json/dsa/v1/ai/companion/memory` - admin-readable summary of learned local patterns, stored as safe rule cards rather than raw transcripts.
+- `GET /wp-json/dsa/v1/ai/studio/status` - Studio mode, native-provider status, budgets, scopes, and route map.
+- `POST /wp-json/dsa/v1/ai/studio/start` - token-saving Studio packet and workflow for browser AI, native AI, or browser-only use.
+- `POST /wp-json/dsa/v1/ai/studio/draft` - optional bounded native-provider draft; requires Kiwe > AI native generation and a key with `native_ai` scope.
+- `POST /wp-json/dsa/v1/ai/studio/review` - deterministic Companion review gate for the Studio output.
+- `GET|POST /wp-json/dsa/v1/ai/bricks/context` - read-only Bricks-native intelligence packet for external AI tools: elements, compact controls, query loops, dynamic tags, conditions, interactions, Seam rules, and Kiwe launcher/runtime boundaries.
+- `POST /wp-json/dsa/v1/ai/bricks/plan` - compact Bricks + Seam planning packet for website/page, combined, dynamic, or audit work.
+- Logged-in Bricks editor routes under `/wp-json/dsa/v1/bricks/studio/*` mirror the context/start/draft flow for the optional front-end editor companion, using WordPress nonce/capabilities rather than API keys.
+- WordPress 7 abilities may mirror these as `dsa/get-companion-context`, `dsa/ask-companion`, `dsa/review-ai-output`, `dsa/start-studio-project`, `dsa/review-studio-output`, `dsa/get-bricks-ai-context`, and `dsa/plan-bricks-ai-page` when available.
+
+Suggested admin shape under `Kiwe > AI`:
+
+- API access keys and scopes.
+- Studio AI enable/disable and operating mode: `native`, `browser_companion`, or `browser_only`.
+- Bricks front-end editor companion enable/disable; this only exposes read-only planning/native-draft assistance in the editor and does not save Bricks content.
+- Native AI provider, model, base URL, encrypted API key, max context bytes, max output tokens, and explicit native-generation allow switch.
+- Companion AI enable/disable.
+- Allowed companion modes: website/page, AppShell theme, combined, dynamic binding, audit, staging proof, SecureTrack brief.
+- SecureTrack AI access: off by default; redacted brief only; no enforcement mutation.
+- Token/budget controls: max context size, max review size, cache TTL, per-key rate limits.
+- Memory controls: enable/disable local learning, clear memory, export memory summary, never-store sensitive categories.
+- Audit log: key used, mode, context hash, redaction status, actions suggested, mutations blocked/allowed.
+
+Mutation boundary:
+
+The companion must not save Bricks, publish WordPress content, mutate WooCommerce, run checkout/cart/auth, change SecureTrack enforcement, or alter keys/settings unless the request enters the existing controlled staging executor with explicit human confirmation. The companion can advise, validate, prepare plans, stage proof artifacts, and explain why a proposed handoff failed.
+
+Token hardening backlog:
+
+- Audit remaining historical fixed values in `assets/css/surface.css` and classify them as source-of-truth base tokens, browser fallback values, or component-level magic numbers.
+- Move component-level spacing, sizing, radius, shadow, and motion values behind named Kiwe/Seam/DSA tokens before treating any AppShell theme as fully token-pure.
+- Keep the boundary precise: numeric values may exist at the base-token/fallback layer, but runtime components and installed themes should consume named tokens instead of embedding one-off values.
+
+Acceptance target for the later batch:
+
+- All AI-related SecureTrack controls appear under `Kiwe > AI`, while `Kiwe > Secure` remains security-control focused.
+- API keys support explicit companion/SecureTrack/Studio/native scopes.
+- Companion endpoints return compact, redacted, mode-aware packets.
+- Studio endpoints return token-saving packets, native draft envelopes, and deterministic review gates without mutation authority.
+- Bricks AI endpoints return enough Bricks-native element/query/dynamic/condition/interaction context for browser AI and native AI to plan Bricks pages without crawling Bricks source.
+- The Bricks front-end editor companion can fetch context, generate a plan, or request bounded native draft output from inside the editor without directly mutating the page.
+- External AIs can use the companion to improve first-pass website/theme/combined outputs without reading the full codebase.
+- The companion learns locally from validation/audit results as structured rule cards, not as raw private data.
+- Existing Site Graph, dynamic binding, theme package, framework profile, advisor, enrichment, and controlled executor routes remain compatible.
 
 ## Active Lead Log - 2026-07-14
 

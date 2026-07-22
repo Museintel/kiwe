@@ -273,6 +273,24 @@ final class Surface_Renderer {
 				'href' => true,
 				'xlink:href' => true,
 			],
+			'path' => [
+				'd' => true,
+			],
+			'circle' => [
+				'cx' => true,
+				'cy' => true,
+				'r' => true,
+				'fill' => true,
+			],
+			'line' => [
+				'x1' => true,
+				'x2' => true,
+				'y1' => true,
+				'y2' => true,
+			],
+			'polyline' => [
+				'points' => true,
+			],
 			'span' => [
 				'class' => true,
 				'aria-hidden' => true,

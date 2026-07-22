@@ -60,6 +60,69 @@ GET /wp-json/dsa/v1/ai/site-graph?sampleLimit=8
 Authorization: Bearer kiwe_ai_...
 ```
 
+Copy the full key immediately after creation. Kiwe stores only a hash and shows the full secret once; the table later shows only a prefix/last-four fingerprint for identification.
+
+For public/headless content data, do not scrape the site's frontend. Use the AI-less Site Graph Data API:
+
+```text
+GET  /wp-json/dsa/v1/site-graph/data/schema
+GET  /wp-json/dsa/v1/site-graph/data?resource=products&taxonomy=product_cat&term=fudge&limit=4
+POST /wp-json/dsa/v1/site-graph/data
+```
+
+This route is read-only and public-safe. Anonymous calls return public/published posts, pages, products, menus, terms, media, and site identity. Authenticated administrators can receive broader private reads. A `POST` body may include a `queries` object to fetch many page datasets in one GraphQL-like request, or a compact `resources` array such as:
+
+```json
+{
+  "resources": ["site", "products", "pages", "media"],
+  "limits": { "products": 4, "pages": 4, "media": 4 }
+}
+```
+
+Writes still belong to the controlled staging executor.
+
+API-key clients can also use the same data lane through the AI namespace when a key has `site_graph_data` or `all` scope:
+
+```text
+GET  /wp-json/dsa/v1/ai/site-graph-data/schema
+GET  /wp-json/dsa/v1/ai/site-graph-data?resource=posts&limit=6
+POST /wp-json/dsa/v1/ai/site-graph-data
+```
+
+For internal Kiwe AI context and redacted security intelligence:
+
+```text
+GET /wp-json/dsa/v1/ai/internal-context
+GET|POST /wp-json/dsa/v1/ai/advisor
+GET|POST /wp-json/dsa/v1/ai/advisor/enrich
+GET /wp-json/dsa/v1/ai/security-brief
+GET /wp-json/dsa/v1/ai/companion/status
+GET|POST /wp-json/dsa/v1/ai/companion/context
+POST /wp-json/dsa/v1/ai/companion/ask
+POST /wp-json/dsa/v1/ai/companion/review-output
+GET /wp-json/dsa/v1/ai/companion/memory
+GET  /wp-json/dsa/v1/ai/studio/status
+POST /wp-json/dsa/v1/ai/studio/start
+POST /wp-json/dsa/v1/ai/studio/draft
+POST /wp-json/dsa/v1/ai/studio/review
+GET|POST /wp-json/dsa/v1/ai/bricks/context
+POST /wp-json/dsa/v1/ai/bricks/plan
+```
+
+`/ai/internal-context` returns the safe fused packet for Kiwe internal AI: Site Graph summary/hash, Site Graph Data schema, WordPress 7/Abilities signals, capability map, operating boundaries, and a SecureTrack status lane. SecureTrack brief details are off unless `Kiwe > AI` enables redacted SecureTrack sharing and the key has `all`, `security_brief`, or `companion_securetrack` scope. `/ai/advisor` runs the deterministic read-only advisor over that context and returns findings, recommendations, and safe next actions without calling a model or mutating the site. `/ai/advisor/enrich` returns the model-optional enrichment envelope: deterministic fallback summary, priority ordering, and the bounded model payload/schema a future WordPress AI Client adapter may use. It does not call a model in the current adapter. `/ai/security-brief` is redacted and separately gated: no raw IPs, usernames, secrets, full URLs, request payloads, or visitor trails.
+
+The same advisor/enrichment seam is visible to administrators at `Kiwe > AI` as the Kiwe Advisor panel. It is server-rendered and read-only; refreshing the panel recomputes findings and the deterministic enrichment summary from current context but does not execute staging, call a model, save Bricks, mutate WooCommerce, run checkout/cart/auth, or change security enforcement.
+
+Kiwe Companion AI is the optional site-aware context broker for external AIs creating website/page, DSA/AppShell theme, combined, dynamic binding, audit, staging, or security-support outputs. Enable it in `Kiwe > AI`, then issue a revocable key with `companion` scope. The Companion returns compact context cards, route hints, validation diffs, rule IDs, and safe next-action plans rather than dumping the whole plugin or raw security logs. Its local memory stores privacy-safe fingerprints, structured pass/fail finding codes, and counts only, never secrets, raw visitor trails, raw SecureTrack events, customer data, full handoff files, or unredacted transcripts. SecureTrack AI exposure is a toggle under `Kiwe > AI`: redacted SecureTrack briefs use Companion consent/scopes, and SecureTrack Site Brain cloud review syncs from the shared Native AI provider/key when that provider is supported. There is no separate SecureTrack API-key field in Kiwe AI. `Kiwe > Secure` remains focused on human security controls and enforcement.
+
+Kiwe Studio AI is the higher-level companion workflow. Enable it in `Kiwe > AI` and choose one operating mode: `native` for bounded native drafting through the configured provider/API key, `browser_companion` for browser AI plus token-saving Studio packet and Companion review, or `browser_only` when the user wants public toolkit prompts with no internal AI support. Use `/wp-json/dsa/v1/ai/studio/start` first for a token-saving Studio packet, `/wp-json/dsa/v1/ai/studio/draft` only when native drafting is enabled and the Kiwe AI key has `native_ai` scope, and `/wp-json/dsa/v1/ai/studio/review` after v1 output. A normal `studio_ai` key can obtain packets and deterministic reviews; add `native_ai` only when the key may spend provider tokens. Studio does not save Bricks, publish WordPress content, mutate WooCommerce, run cart/checkout/auth, or change SecureTrack enforcement.
+
+Bricks AI Intelligence is the Bricks-native map for both browser AI and Kiwe Studio AI. External tool clients can use a key with `bricks_ai`, `studio_ai`, or `all` scope to call `/wp-json/dsa/v1/ai/bricks/context` before emitting Bricks JSON or dynamic binding plans, and `/wp-json/dsa/v1/ai/bricks/plan` for a compact planning packet. It reports available Bricks elements, compact element controls, query loops, dynamic tags, conditions, interactions, Seam headless rules, and Kiwe launcher/runtime boundaries. It is read-only. It does not paste content, save Bricks, publish pages, or create Woo/cart/auth behavior.
+
+When working inside the Bricks front-end editor, admins can enable the Kiwe Studio companion at `Kiwe > AI`. The editor panel uses WordPress nonce-auth routes (`/wp-json/dsa/v1/bricks/studio/context`, `/start`, `/draft`) to fetch the same Bricks + Seam context, plan a page/section, or call native AI when explicitly allowed. The panel is a planning/copilot surface, not a direct mutation surface; staging saves still go through the controlled executor.
+
+For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `0.6.14` records the Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, and mutation boundaries for the Site Graph + internal AI phase.
+
 Theme installers can use the same key to review, install, and activate Kiwe DSA theme packages:
 
 ```text
@@ -68,7 +131,9 @@ POST /wp-json/dsa/v1/ai/themes/install
 POST /wp-json/dsa/v1/ai/themes/{themeId}/activate
 ```
 
-A Kiwe theme package is one JSON file with root `schema: "kiwe.theme-package.v1"`, root `theme`, root `settings`, and root `css`. The `settings` preset is limited to safe theme-owned subsets (`style`, `dock`, `dsa_theme`, and `visual_effects`) and appears in WordPress under `Kiwe > Theme > Installed themes`. Do not output or ask users to import a loose settings file for DSA themes.
+A Kiwe theme package is one JSON file with root `schema: "kiwe.theme-package.v1"`, root `theme`, root `settings`, and root `css`. The `settings` preset is limited to safe theme-owned subsets (`style`, `dock`, `dsa_theme`, `visual_effects`, `tokens`, and `screens`) and appears in WordPress under `Kiwe > Theme > Installed themes`. Do not output or ask users to import a loose settings file for DSA themes.
+
+Standalone website/page work may also ship a Kiwe Framework profile when it changes the shared design-token system without installing a DSA theme. A Framework profile uses `schema: "kiwe.framework-profile.v1"` and contains `settings.tokens` only: `tokens.enabled`, `tokens.profile_label`, official Kiwe universal `tokens.overrides`, and `tokens.bricks_theme_style`. Admins import/export this under `Kiwe > Framework`; AI staging clients may apply it with `kiwe.framework-profile.apply`, then separately push it to Bricks with `kiwe.framework.push-bricks`.
 
 Staging-aware clients can inspect the target site and run the first controlled staging executor:
 
@@ -87,6 +152,8 @@ POST /wp-json/dsa/v1/ai/stages/{stageId}/execute-staging
 - `bricks.template.create`
 - `bricks.template.upsert`
 - `bricks.settings.patch`
+- `kiwe.framework-profile.apply`
+- `kiwe.framework.push-bricks`
 - `kiwe.theme-package.install-activate`
 - `woocommerce.mutate`
 - `woocommerce.product.upsert`
@@ -97,7 +164,7 @@ POST /wp-json/dsa/v1/ai/stages/{stageId}/execute-staging
 - `auth.run`
 - `bricks.raw-meta-write`
 
-Page/post/template operations may include `html`, `bricksPasteHtml`, and optional `css`. The executor stores sanitized staging content and preserves safe preview CSS while refusing script-like payloads. `bricks.settings.patch` is limited to known Bricks settings/options, scalar or simple nested payloads, safe path keys, and an internal patch hash log. It exists for staging checks such as Bricks import/converter switches or global-class/variable setting probes; do not use it as a raw Bricks database writer.
+Page/post/template operations may include `html`, `bricksPasteHtml`, and optional `css`. The executor stores sanitized staging content and preserves safe preview CSS while refusing script-like payloads. `kiwe.framework-profile.apply` applies a sanitized Framework token profile to Kiwe settings only; `kiwe.framework.push-bricks` pushes the current Kiwe Framework design-token profile into Bricks as additive `kiwe-*` variables, Kiwe Universal palette, neutral Seam Class Vocabulary, and one safe global theme style while preserving non-Kiwe Bricks data. `bricks.settings.patch` is limited to known Bricks settings/options, scalar or simple nested payloads, safe path keys, and an internal patch hash log. It exists for staging checks such as Bricks import/converter switches or global setting probes; do not use it as a raw Bricks database writer.
 
 WooCommerce, cart, checkout, auth, and raw Bricks operations require extra explicit flags:
 
@@ -116,6 +183,22 @@ On WordPress 7+ with Abilities API available, Kiwe may also expose:
 
 ```text
 dsa/get-site-graph
+dsa/get-site-graph-data-schema
+dsa/query-site-graph-data
+dsa/get-securetrack-brief
+dsa/get-internal-ai-context
+dsa/run-internal-ai-advisor
+dsa/enrich-internal-ai-advisor
+dsa/get-companion-context
+dsa/ask-companion
+dsa/review-ai-output
+dsa/start-studio-project
+dsa/review-studio-output
+dsa/get-bricks-ai-context
+dsa/plan-bricks-ai-page
+dsa/validate-bindings
+dsa/prepare-apply-plan
+dsa/stage-apply-plan
 ```
 
 ## Preferred tool call
@@ -155,6 +238,7 @@ If MCP/tool calling is unavailable but shell execution is allowed:
 npm install --prefix kiwe-ai-toolkit
 node kiwe-ai-toolkit/bin/kiwe.js start auto --brief "Paste the human brief here."
 node kiwe-ai-toolkit/bin/kiwe.js dynamic-pass --brief "Paste the dynamic binding request here."
+node kiwe-ai-toolkit/tools/validate-framework-profile.cjs ./path/to/handoff --optional
 node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
 node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph ./site-graph.json
 ```
@@ -182,7 +266,7 @@ When called without the staging executor confirmation body, they return confirma
 
 `kiwe.controlled-executor.v1`, `kiwe.bricks-controlled-adapter.v1`, and `kiwe.post-apply-verification.v1` are still not saves. The executor records the future adapter interface. The adapter plan maps approved operation IDs to deterministic Bricks/Kiwe instructions. The post-apply proof selects the smallest future controlled run and proves rollback source/checks from the captured snapshot. These artifacts keep `actualApplyExecuted`/`actualSaveExecuted`, `actualRollbackExecuted`, and `mayExecuteMutationNow` false until a human starts a real staging-site controlled run.
 
-On WordPress 7+ / MCP Adapter capable sites, Kiwe also exposes safe connector abilities for the same early chain: `dsa/get-site-graph`, `dsa/validate-bindings`, `dsa/prepare-apply-plan`, and `dsa/stage-apply-plan`. These abilities do not save Bricks/page content; `dsa/stage-apply-plan` writes only a Kiwe internal review queue record.
+On WordPress 7+ / MCP Adapter capable sites, Kiwe also exposes safe connector abilities for the same early chain: `dsa/get-site-graph`, `dsa/get-site-graph-data-schema`, `dsa/query-site-graph-data`, `dsa/get-securetrack-brief`, `dsa/get-internal-ai-context`, `dsa/run-internal-ai-advisor`, `dsa/enrich-internal-ai-advisor`, `dsa/get-companion-context`, `dsa/ask-companion`, `dsa/review-ai-output`, `dsa/start-studio-project`, `dsa/review-studio-output`, `dsa/get-bricks-ai-context`, `dsa/plan-bricks-ai-page`, `dsa/validate-bindings`, `dsa/prepare-apply-plan`, and `dsa/stage-apply-plan`. These abilities do not save Bricks/page content or mutate security enforcement; `dsa/run-internal-ai-advisor` is deterministic/read-only, `dsa/enrich-internal-ai-advisor` prepares a model-optional read-only summary/envelope, `dsa/start-studio-project` returns a token-saving Studio packet, `dsa/get-bricks-ai-context` and `dsa/plan-bricks-ai-page` return read-only Bricks-native planning packets, and `dsa/stage-apply-plan` writes only a Kiwe internal review queue record.
 
 For apply-path requests, run `prepare-apply-plan` only after `validate-bindings` passes. The apply plan is dry-run and non-mutating. Do not claim WordPress, Bricks, WooCommerce, or Kiwe were changed unless a future trusted adapter actually performs the mutation with admin approval.
 

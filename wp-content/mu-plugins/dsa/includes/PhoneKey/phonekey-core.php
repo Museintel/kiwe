@@ -146,6 +146,7 @@ add_action( 'init', function () {
 		update_option( 'pk_db_ver', PK_VER, false );
 	}
 	pk_apply_policy_defaults_once();
+	pk_apply_session_timeout_default_off_once();
 	pk_ensure_visitor_cookie();
 	pk_enforce_session_timeout();
 }, 1 );
@@ -186,7 +187,7 @@ function pk_default_settings() {
 			'verification' => $high ? 'verify_now' : 'verify_later',
 			'login_mode'   => 'passkey',
 			'step_up'      => $high ? 'totp_optional' : 'none',
-			'timeout'      => $high ? 30 : 0,
+			'timeout'      => 0,
 			'device_days'  => $high ? 7 : 90,
 		);
 	}
@@ -215,7 +216,7 @@ function pk_default_settings() {
 		'ip_trust_threshold'   => 5,
 		'ip_trust_ttl'         => 45,
 		'ip_trust_roles'       => array( 'subscriber', 'customer', 'administrator', 'editor', 'shop_manager' ),
-		'admin_reauth_minutes' => 30,
+		'admin_reauth_minutes' => 0,
 		'otp_target_limit'     => 5,
 		'otp_target_window_min' => 60,
 		'role_matrix'          => $matrix,
@@ -349,7 +350,7 @@ function pk_apply_policy_defaults_once() {
 			if ( empty( $settings['role_matrix'][ $role ]['step_up'] ) || 'totp_required' === $settings['role_matrix'][ $role ]['step_up'] ) {
 				$settings['role_matrix'][ $role ]['step_up'] = 'totp_optional';
 			}
-			if ( empty( $settings['role_matrix'][ $role ]['timeout'] ) ) $settings['role_matrix'][ $role ]['timeout'] = 30;
+			if ( ! array_key_exists( 'timeout', $settings['role_matrix'][ $role ] ) ) $settings['role_matrix'][ $role ]['timeout'] = 0;
 			if ( empty( $settings['role_matrix'][ $role ]['device_days'] ) ) $settings['role_matrix'][ $role ]['device_days'] = 7;
 		} elseif ( empty( $settings['role_matrix'][ $role ]['step_up'] ) || 'totp_optional' === $settings['role_matrix'][ $role ]['step_up'] ) {
 			$settings['role_matrix'][ $role ]['login_mode'] = 'passkey';
@@ -358,6 +359,30 @@ function pk_apply_policy_defaults_once() {
 	}
 	update_option( 'pk_settings_v3', $settings, false );
 	update_option( 'pk_stage3_policy_defaults', 'high_privilege_passkey_first', false );
+}
+
+function pk_apply_session_timeout_default_off_once() {
+	if ( get_option( 'pk_session_timeout_default_off_v1' ) === 'done' ) return;
+	$settings = pk_settings();
+	$changed = false;
+
+	if ( isset( $settings['admin_reauth_minutes'] ) && 30 === absint( $settings['admin_reauth_minutes'] ) ) {
+		$settings['admin_reauth_minutes'] = 0;
+		$changed = true;
+	}
+
+	foreach ( wp_roles()->roles as $role => $info ) {
+		if ( ! pk_role_is_high_privilege_role( $role ) ) continue;
+		if ( isset( $settings['role_matrix'][ $role ]['timeout'] ) && 30 === absint( $settings['role_matrix'][ $role ]['timeout'] ) ) {
+			$settings['role_matrix'][ $role ]['timeout'] = 0;
+			$changed = true;
+		}
+	}
+
+	if ( $changed ) {
+		update_option( 'pk_settings_v3', $settings, false );
+	}
+	update_option( 'pk_session_timeout_default_off_v1', 'done', false );
 }
 
 function pk_save_settings_array( $raw ) {
@@ -389,7 +414,7 @@ function pk_save_settings_array( $raw ) {
 	$out['trusted_devices']      = ! empty( $raw['trusted_devices'] ) ? 1 : 0;
 	$out['ip_trust_threshold']   = max( 1, min( 50, absint( $raw['ip_trust_threshold'] ?? 5 ) ) );
 	$out['ip_trust_ttl']         = max( 1, min( 365, absint( $raw['ip_trust_ttl'] ?? 45 ) ) );
-	$out['admin_reauth_minutes'] = max( 5, min( 1440, absint( $raw['admin_reauth_minutes'] ?? 30 ) ) );
+	$out['admin_reauth_minutes'] = max( 0, min( 1440, absint( $raw['admin_reauth_minutes'] ?? 0 ) ) );
 	$out['otp_target_limit']     = max( 1, min( 50, absint( $raw['otp_target_limit'] ?? 5 ) ) );
 	$out['otp_target_window_min'] = max( 1, min( 1440, absint( $raw['otp_target_window_min'] ?? 60 ) ) );
 	$out['ip_trust_roles']       = array_map( 'sanitize_key', (array) ( $raw['ip_trust_roles'] ?? array() ) );
@@ -1579,7 +1604,8 @@ function pk_enforce_session_timeout() {
 	$user_id = get_current_user_id();
 	$policy = pk_role_policy( $user_id );
 	$timeout = absint( $policy['timeout'] ?? 0 );
-	if ( pk_is_privileged( $user_id ) ) $timeout = max( $timeout, absint( pk_settings()['admin_reauth_minutes'] ) );
+	$admin_reauth = absint( pk_settings()['admin_reauth_minutes'] ?? 0 );
+	if ( pk_is_privileged( $user_id ) && $admin_reauth > 0 ) $timeout = max( $timeout, $admin_reauth );
 	if ( ! $timeout ) return;
 	$start = (int) get_user_meta( $user_id, 'pk_session_started_at', true );
 	if ( ! $start ) {
@@ -2184,7 +2210,8 @@ function pk_rest_session_status() {
 	$user_id = get_current_user_id();
 	$policy = pk_role_policy( $user_id );
 	$timeout = absint( $policy['timeout'] ?? 0 );
-	if ( pk_is_privileged( $user_id ) ) $timeout = max( $timeout, absint( pk_settings()['admin_reauth_minutes'] ) );
+	$admin_reauth = absint( pk_settings()['admin_reauth_minutes'] ?? 0 );
+	if ( pk_is_privileged( $user_id ) && $admin_reauth > 0 ) $timeout = max( $timeout, $admin_reauth );
 	$start = (int) get_user_meta( $user_id, 'pk_session_started_at', true );
 	return rest_ensure_response( array( 'ok' => true, 'timeout' => $timeout, 'elapsed' => $start ? time() - $start : 0 ) );
 }
@@ -2395,7 +2422,7 @@ function pk_admin_settings( $s ) {
 				<p><label><input type="checkbox" name="pk[trusted_devices]" value="1" <?php checked( $s['trusted_devices'] ); ?>> Enable trusted devices</label></p>
 				<p><label>IP trust threshold<br><input type="number" min="1" max="50" name="pk[ip_trust_threshold]" value="<?php echo esc_attr( $s['ip_trust_threshold'] ); ?>"></label></p>
 				<p><label>Trusted IP TTL days<br><input type="number" min="1" max="365" name="pk[ip_trust_ttl]" value="<?php echo esc_attr( $s['ip_trust_ttl'] ); ?>"></label></p>
-				<p><label>Privileged reauth minutes<br><input type="number" min="5" max="1440" name="pk[admin_reauth_minutes]" value="<?php echo esc_attr( $s['admin_reauth_minutes'] ); ?>"></label></p>
+				<p><label>Privileged reauth minutes<br><input type="number" min="0" max="1440" name="pk[admin_reauth_minutes]" value="<?php echo esc_attr( $s['admin_reauth_minutes'] ); ?>"></label><br><span class="description">Set to 0 to disable Kiwe-initiated privileged-session logout. WordPress cookies may still expire normally.</span></p>
 				<p><label>OTP target limit<br><input type="number" min="1" max="50" name="pk[otp_target_limit]" value="<?php echo esc_attr( $s['otp_target_limit'] ); ?>"></label></p>
 				<p><label>OTP target window minutes<br><input type="number" min="1" max="1440" name="pk[otp_target_window_min]" value="<?php echo esc_attr( $s['otp_target_window_min'] ); ?>"></label></p>
 				<p class="description">Limits repeated OTP sends to one email or phone, even when requests rotate IPs.</p>

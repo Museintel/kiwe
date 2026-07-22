@@ -17,12 +17,15 @@ website-handoff/
   README.md
   bricks-paste.html  # open in browser for preview; paste/import through Bricks
   bricks-notes.md
+  framework/
+    kiwe-framework-profile.json # optional when the page defines a sitewide token profile
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
 - Produce `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, duplicate preview files, or hidden local files.
+- If the website/page establishes a brand system that should be reused by Bricks and future Kiwe pages, include `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. This imports at `Kiwe > Framework`, not `Kiwe > Theme`.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
@@ -88,14 +91,12 @@ combined-kiwe-handoff/
     import/
       theme-id/
         theme.json
+        theme-package.json # single Kiwe admin/API import file when settings change
         css/
           theme.css
     preview/
       index.html
       PLACEHOLDERS.md
-  kiwe-settings/
-    kiwe-appsite-profile.json   # optional, only when changing Kiwe settings
-    SETTINGS-NOTES.md
 ```
 
 Rules:
@@ -113,10 +114,11 @@ Rules:
 - Do not copy website page classes into DSA internals unless the AppShell adoption map allows it.
 - Do not use DSA theme CSS to style the whole website.
 - Do not use website CSS to restyle protected DSA internals.
+- In combined mode, put the live-intended design-token profile in `appshell-theme/import/theme-id/theme-package.json` under `settings.tokens` so the theme install keeps DSA, Seam page CSS, and Bricks global style aligned. Do not add a separate Framework profile unless the brief explicitly asks for a standalone `Kiwe > Framework` import artifact too.
 
-## Kiwe settings/profile lane
+## Kiwe theme package settings lane
 
-Combined handoffs may include `kiwe-settings/kiwe-appsite-profile.json` when the design intentionally changes Kiwe runtime settings.
+Combined handoffs should include `appshell-theme/import/theme-id/theme-package.json` when the design intentionally changes Kiwe runtime settings. Do not create a separate `kiwe-settings/` folder for DSA theme settings.
 
 This is useful when the design wants:
 
@@ -124,55 +126,76 @@ This is useful when the design wants:
 - Split compact dock on/off.
 - Dock shape: `pill`, `box`, or `square`.
 - Dock module visibility and order.
+- Dock focus item and custom URL-only dock links when required by the brief.
 - Dark/light mode action hidden from the dock because a page/header launcher will open it elsewhere.
 - Cart hidden from the dock for a non-commerce site.
 - Cart visible for a WooCommerce/ecommerce site.
+- Screen presentation copy, such as cart titles and FBT/checkout labels, when the preview copy is intended to appear in live Kiwe.
 - Sheet mode, sheet placement, sheet spacing, sheet origin, sheet width, and sheet height.
 - Visual profile: `legacy` or `kiwe2027`.
-- Active/hover/hero colors.
+- Design-token profile: palette, font stacks, heading scale, site background, line-height, spacing, radius, shadows, and the optional safe Bricks global theme-style export. Active/hover/hero colors remain compatibility settings for `color-brand`, `color-accent`, and `color-hero`.
 - WooCommerce or Search bridge settings when the website design requires them.
 
-Use only recognized Kiwe profile settings. Unknown keys are ignored by import.
+`theme.json` remains the manifest-only validator file. Put the settings preset in `theme-package.json` at root `settings`, beside root `theme` and root `css`.
 
-Safe high-level keys include:
+Use only recognized Kiwe theme settings. Unknown keys are ignored by import.
+
+Safe root `settings` keys inside `theme-package.json` include:
 
 ```json
 {
-  "type": "kiwe-appsite-profile",
-  "schemaVersion": 1,
-  "settings": {
+  "style": {
+    "visual_profile": "kiwe2027",
+    "mode": "sheet",
+    "sheet_position": "bottom",
+    "sheet_spacing": "inset",
+    "sheet_origin": "above_dock",
+    "sheet_width_percent": 78
+  },
+  "dock": {
+    "presentation": "dock",
+    "split_style": true,
+    "focus_item": "ai",
+    "shape": "pill",
+    "desktop_orientation": "auto",
+    "tablet_orientation": "auto",
+    "mobile_orientation": "auto",
+    "enabled_items": {
+      "menu": true,
+      "search": true,
+      "profile": true,
+      "links": true,
+      "saved": true,
+      "cart": true,
+      "theme": false,
+      "ai": true,
+      "link-home": true
+    },
+    "item_order": ["link-home", "menu", "search", "profile", "links", "saved", "cart", "theme", "ai"],
+    "custom_items": [
+      { "id": "link-home", "label": "Home", "url": "/", "icon": "home", "enabled": true }
+    ]
+  },
+  "dsa_theme": {
+    "active_color": "#8f8f98",
+    "hover_color": "#24c6a1",
+    "hero_text_color": "rgba(20,24,34,0.18)"
+  },
+  "tokens": {
     "enabled": true,
-    "style": {
-      "visual_profile": "kiwe2027",
-      "mode": "sheet",
-      "sheet_position": "bottom",
-      "sheet_spacing": "inset",
-      "sheet_origin": "above_dock",
-      "sheet_width_percent": 78
+    "profile_label": "Theme design tokens",
+    "overrides": {
+      "color-brand": "#8f8f98",
+      "color-accent": "#24c6a1",
+      "color-surface": "#f6f8f7",
+      "color-text": "#1f2933",
+      "font-display": "Inter, system-ui, sans-serif",
+      "font-body": "Inter, system-ui, sans-serif"
     },
-    "dock": {
-      "presentation": "dock",
-      "split_style": true,
-      "shape": "pill",
-      "desktop_orientation": "auto",
-      "tablet_orientation": "auto",
-      "mobile_orientation": "auto",
-      "enabled_items": {
-        "menu": true,
-        "search": true,
-        "profile": true,
-        "links": true,
-        "saved": true,
-        "cart": true,
-        "theme": false,
-        "ai": true
-      },
-      "item_order": ["menu", "search", "profile", "links", "saved", "cart", "theme", "ai"]
-    },
-    "dsa_theme": {
-      "active_color": "#8f8f98",
-      "hover_color": "#24c6a1",
-      "hero_text_color": "rgba(20,24,34,0.18)"
+    "bricks_theme_style": {
+      "enabled": true,
+      "id": "kiwe-global-design",
+      "label": "Kiwe Universal Design Tokens"
     }
   }
 }
@@ -183,7 +206,8 @@ Notes:
 - Hiding a dock item only hides the dock button. It does not delete the registered DSA module.
 - Bricks/Icon launchers may still open DSA modules through Kiwe's Bricks controls and `data-dsa-open-module`.
 - WooCommerce controls should match the assignment. A news/editorial design should not force cart UI unless requested. An ecommerce design should account for cart, checkout, product rails, and Woo-owned behavior.
-- The profile must not contain users, orders, credentials, tokens, logs, raw API keys, or private data.
+- `settings.screens` may provide live default presentation/copy labels for registered DSA screens/sheets such as Profile, Cart, Search, Menu, Saved, Links, Notifications, iOS Install, Games, and AI. `Kiwe > Theme` exposes manual DSA screen/sheet copy controls, and manual admin edits merge over package defaults. This lane is copy only; it must not contain products, orders, user identity, links, score values, search results, cart totals, checkout URLs, JavaScript, endpoints, or state authority.
+- The theme settings must not contain users, orders, credentials, logs, raw API keys, API secrets, or private data.
 
 ## What to ask the AI
 

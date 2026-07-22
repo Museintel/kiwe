@@ -49,6 +49,59 @@ final class Bricks_Integration {
 		add_filter( 'woocommerce_widget_cart_item_quantity', [ $this, 'render_mini_cart_quantity' ], 20, 3 );
 		add_action( 'woocommerce_widget_shopping_cart_before_buttons', [ $this, 'render_mini_cart_recommendations' ], 8 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_mini_cart_adapter' ] );
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_studio_editor_companion' ] );
+	}
+
+	public function enqueue_studio_editor_companion(): void {
+		$ai_settings = $this->settings->get( 'ai', [] );
+		$ai_settings = is_array( $ai_settings ) ? $ai_settings : [];
+
+		if ( empty( $ai_settings['studio_enabled'] ) || empty( $ai_settings['bricks_editor_companion_enabled'] ) || ! $this->is_bricks_builder_main() || ! is_user_logged_in() || ! current_user_can( 'edit_posts' ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'dsa-bricks-studio-ai',
+			DSA_URL . 'assets/css/bricks-studio-ai.css',
+			[],
+			DSA_VERSION
+		);
+		wp_enqueue_script(
+			'dsa-bricks-studio-ai',
+			DSA_URL . 'assets/js/bricks-studio-ai.js',
+			[],
+			DSA_VERSION,
+			true
+		);
+		wp_localize_script(
+			'dsa-bricks-studio-ai',
+			'kiweBricksStudio',
+			[
+				'restRoot'     => esc_url_raw( rest_url( 'dsa/v1' ) ),
+				'nonce'        => wp_create_nonce( 'wp_rest' ),
+				'nativeMode'   => 'native' === sanitize_key( (string) ( $ai_settings['studio_mode'] ?? 'browser_companion' ) ) && ! empty( $ai_settings['allow_native_generation'] ) && current_user_can( 'manage_options' ),
+				'contextRoute' => '/bricks/studio/context',
+				'startRoute'   => '/bricks/studio/start',
+				'draftRoute'   => '/bricks/studio/draft',
+				'postId'       => absint( get_the_ID() ?: get_queried_object_id() ),
+				'labels'       => [
+					'title'       => __( 'Kiwe Studio', 'dsa' ),
+					'subtitle'    => __( 'Bricks + Seam AI companion', 'dsa' ),
+					'placeholder' => __( 'Describe the page or section you want to build...', 'dsa' ),
+				],
+			]
+		);
+	}
+
+	private function is_bricks_builder_main(): bool {
+		if ( function_exists( 'bricks_is_builder_main' ) ) {
+			return (bool) bricks_is_builder_main();
+		}
+		if ( function_exists( 'bricks_is_builder' ) ) {
+			return (bool) bricks_is_builder();
+		}
+
+		return isset( $_GET['bricks'] ) && 'run' === sanitize_key( (string) wp_unslash( $_GET['bricks'] ) );
 	}
 
 	public function add_dynamic_tags( array $tags ): array {

@@ -71,11 +71,243 @@
     },
     "settings": {
       "type": "object",
-      "description": "Safe theme preset. Kiwe imports only the style, dock, dsa_theme, visual_effects, and screens subsets. screens may contain presentation/copy labels for registered panels; it may not contain behavior, JavaScript, endpoints, or state authority."
+      "description": "Safe theme preset. Kiwe imports only the style, dock, dsa_theme, visual_effects, tokens, and screens subsets. tokens may contain official Kiwe universal design-token overrides and safe Bricks global theme-style metadata. screens may contain presentation/copy labels for registered panels; it may not contain behavior, JavaScript, endpoints, or state authority.",
+      "properties": {
+        "tokens": {
+          "type": "object",
+          "description": "Optional design-token profile shared by live DSA theme CSS, Seam website CSS, and Bricks global theme style. Override names must be official Kiwe universal token names.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "profile_label": {
+              "type": "string"
+            },
+            "overrides": {
+              "type": "object",
+              "description": "Official Kiwe universal token overrides only, for example color-brand, color-accent, color-surface, color-text, font-display, font-body, type-h1, type-h2, leading-tight, space-md, radius-lg, shadow-md.",
+              "propertyNames": {
+                "pattern": "^[a-z0-9][a-z0-9_-]{1,80}$"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "bricks_theme_style": {
+              "type": "object",
+              "description": "Safe Bricks global theme-style metadata. Kiwe may export typography, colors, links, and site background only.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "screens": {
+          "type": "object",
+          "description": "Optional live-intended presentation/copy defaults for registered Kiwe DSA screens/sheets. This is the same lane manually editable in Kiwe > Theme > DSA screen/sheet copy. It may rename labels, titles, helper text, empty states, and safe CTA labels only. It must not contain products, orders, saved items, profile identity, social URLs, menu items, search results, notification state, AI messages/actions, checkout URLs, JavaScript, endpoints, or behavior authority.",
+          "additionalProperties": false,
+          "properties": {
+            "profile": { "$ref": "#/$defs/profileScreenCopy" },
+            "cart": { "$ref": "#/$defs/cartScreenCopy" },
+            "checkout": { "$ref": "#/$defs/checkoutScreenCopy" },
+            "search": { "$ref": "#/$defs/searchScreenCopy" },
+            "menu": { "$ref": "#/$defs/menuScreenCopy" },
+            "saved": { "$ref": "#/$defs/savedScreenCopy" },
+            "links": { "$ref": "#/$defs/linksScreenCopy" },
+            "notifications": { "$ref": "#/$defs/notificationsScreenCopy" },
+            "ios-install": { "$ref": "#/$defs/iosInstallScreenCopy" },
+            "games": { "$ref": "#/$defs/gamesScreenCopy" },
+            "ai": { "$ref": "#/$defs/aiScreenCopy" }
+          }
+        }
+      }
     },
     "css": {
       "type": "string",
       "maxLength": 81920
+    }
+  },
+  "$defs": {
+    "copyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 220
+    },
+    "profileScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "accountLabel": { "$ref": "#/$defs/copyString" },
+        "editLabel": { "$ref": "#/$defs/copyString" },
+        "ordersTitle": { "$ref": "#/$defs/copyString" },
+        "ordersText": { "$ref": "#/$defs/copyString" },
+        "downloadsTitle": { "$ref": "#/$defs/copyString" },
+        "downloadsText": { "$ref": "#/$defs/copyString" },
+        "notificationsTitle": { "$ref": "#/$defs/copyString" },
+        "notificationsText": { "$ref": "#/$defs/copyString" },
+        "addressesTitle": { "$ref": "#/$defs/copyString" },
+        "addressesText": { "$ref": "#/$defs/copyString" },
+        "passwordTitle": { "$ref": "#/$defs/copyString" },
+        "passwordText": { "$ref": "#/$defs/copyString" },
+        "signOutLabel": { "$ref": "#/$defs/copyString" },
+        "recentOrdersTitle": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "cartScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "emptyTitle": { "$ref": "#/$defs/copyString" },
+        "emptyText": { "$ref": "#/$defs/copyString" },
+        "fbtTitle": { "$ref": "#/$defs/copyString" },
+        "checkoutLabel": { "$ref": "#/$defs/copyString" },
+        "checkoutEmptyLabel": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "checkoutScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "loadingText": { "$ref": "#/$defs/copyString" },
+        "unavailableText": { "$ref": "#/$defs/copyString" },
+        "continueLabel": { "$ref": "#/$defs/copyString" },
+        "returnLabel": { "$ref": "#/$defs/copyString" },
+        "shippingToggleLabel": { "$ref": "#/$defs/copyString" },
+        "accountToggleLabel": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "searchScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "placeholder": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "menuScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "contextTitle": { "$ref": "#/$defs/copyString" },
+        "dashboardLabel": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "savedScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "emptyTitle": { "$ref": "#/$defs/copyString" },
+        "emptyText": { "$ref": "#/$defs/copyString" },
+        "wishlistLabel": { "$ref": "#/$defs/copyString" },
+        "bookmarksLabel": { "$ref": "#/$defs/copyString" },
+        "summaryWishlistLabel": { "$ref": "#/$defs/copyString" },
+        "summaryBookmarksLabel": { "$ref": "#/$defs/copyString" },
+        "summaryTotalLabel": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "linksScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "shopLabel": { "$ref": "#/$defs/copyString" },
+        "shopMeta": { "$ref": "#/$defs/copyString" },
+        "cartLabel": { "$ref": "#/$defs/copyString" },
+        "cartMeta": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "notificationsScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "topicsLegend": { "$ref": "#/$defs/copyString" },
+        "channelsLegend": { "$ref": "#/$defs/copyString" },
+        "appText": { "$ref": "#/$defs/copyString" },
+        "submitLabel": { "$ref": "#/$defs/copyString" },
+        "emailPlaceholder": { "$ref": "#/$defs/copyString" },
+        "phonePlaceholder": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "iosInstallScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "stepOneTitle": { "$ref": "#/$defs/copyString" },
+        "stepOneText": { "$ref": "#/$defs/copyString" },
+        "stepTwoTitle": { "$ref": "#/$defs/copyString" },
+        "stepTwoText": { "$ref": "#/$defs/copyString" },
+        "stepThreeTitle": { "$ref": "#/$defs/copyString" },
+        "stepThreeText": { "$ref": "#/$defs/copyString" },
+        "doneLabel": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "gamesScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "startTitle": { "$ref": "#/$defs/copyString" },
+        "startText": { "$ref": "#/$defs/copyString" },
+        "mobileStartText": { "$ref": "#/$defs/copyString" },
+        "chooseText": { "$ref": "#/$defs/copyString" },
+        "scoreLabel": { "$ref": "#/$defs/copyString" },
+        "bestLabel": { "$ref": "#/$defs/copyString" }
+      }
+    },
+    "aiScreenCopy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "$ref": "#/$defs/copyString" },
+        "eyebrow": { "$ref": "#/$defs/copyString" },
+        "title": { "$ref": "#/$defs/copyString" },
+        "intro": { "$ref": "#/$defs/copyString" },
+        "emptyTitle": { "$ref": "#/$defs/copyString" },
+        "emptyText": { "$ref": "#/$defs/copyString" },
+        "chatPlaceholder": { "$ref": "#/$defs/copyString" }
+      }
     }
   }
 }

@@ -118,7 +118,9 @@ Do not use htmx or Alpine for PhoneKey/auth, checkout/payment, cart reconciliati
 
 ## Color model
 
-For now, site owners control the primary brand state through Active and Hover colors. The theme system must consume the universal `kiwe-*` tokens and compatibility `dsa-*` aliases. A richer palette can be added later without breaking theme folders.
+`Kiwe > Framework` owns the shared design-token profile. Active and Hover colors remain compatibility controls for `--kiwe-color-brand` and `--kiwe-color-accent`, while modern themes may also carry official token overrides for surface/background color, text color, typography, fonts, spacing, radius, motion, and elevation inside `theme-package.json` at `settings.tokens`.
+
+Theme CSS should consume canonical `--kiwe-*` tokens and compatibility `dsa-*` aliases. Hidden private palettes, font systems, and heading scales should be promoted into official token overrides when they are intended to appear live.
 
 ## Package validation
 

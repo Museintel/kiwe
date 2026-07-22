@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.local/schemas/kiwe.framework-profile.v1.json",
+  "title": "Kiwe Framework Profile",
+  "description": "Standalone Kiwe Framework design-token profile. Imports under Kiwe > Framework and contains settings.tokens only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "settings"
+  ],
+  "properties": {
+    "type": {
+      "const": "kiwe-framework-profile"
+    },
+    "schema": {
+      "const": "kiwe.framework-profile.v1"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pluginVersion": {
+      "type": "string"
+    },
+    "exportedAt": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "siteName": {
+          "type": "string"
+        },
+        "siteUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tokens"
+      ],
+      "properties": {
+        "tokens": {
+          "$ref": "#/$defs/tokens"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "profile_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "propertyNames": {
+            "pattern": "^[a-z0-9][a-z0-9-]{0,79}$"
+          }
+        },
+        "bricks_theme_style": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,79}$"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        }
+      }
+    }
+  },
+  "not": {
+    "anyOf": [
+      { "required": [ "dock" ] },
+      { "required": [ "style" ] },
+      { "required": [ "screens" ] },
+      { "required": [ "theme_screens" ] },
+      { "required": [ "dsa_theme" ] },
+      { "required": [ "visual_effects" ] },
+      { "required": [ "commerce" ] },
+      { "required": [ "bricks" ] },
+      { "required": [ "css" ] },
+      { "required": [ "html" ] }
+    ]
+  }
+}

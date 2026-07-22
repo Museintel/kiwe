@@ -1,0 +1,24 @@
+{
+  "schema": "kiwe.surface-theme.v1",
+  "id": "invalid.dock-geometry",
+  "name": "Invalid Dock Geometry",
+  "version": "1.0.0",
+  "profile": "marketplace",
+  "mode": "css-only",
+  "description": "Fixture package that must fail because theme CSS owns dock spacing.",
+  "author": "Kiwe",
+  "css": ["css/theme.css"],
+  "screens": ["cart", "search", "menu"],
+  "requires": {
+    "uiContract": "kiwe.surface-ui.v2",
+    "tokenContract": "kiwe.universal",
+    "minKiwe": "0.6.10"
+  },
+  "supports": ["light", "dark", "sheet", "classic", "dock", "split-dock", "full-dock", "navigation-bar", "dock-shape-pill", "dock-shape-box", "dock-shape-square", "horizontal", "vertical", "reduced-motion"],
+  "budgets": {
+    "cssKb": 40,
+    "jsKb": 0,
+    "blockingAssets": 0
+  },
+  "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+}

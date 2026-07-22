@@ -264,7 +264,7 @@ final class Bricks_Html_Css_Converter_Service {
 		} elseif ( 'p' === $tag ) {
 			$name = 'text-basic';
 			$settings['tag']  = 'p';
-			$settings['text'] = wp_kses_post( $this->inner_html( $node ) );
+			$settings['text'] = $this->sanitize_inline_html( $this->inner_html( $node ) );
 		} elseif ( 'a' === $tag ) {
 			$name = 'text-link';
 			$settings['text'] = sanitize_text_field( trim( (string) $node->textContent ) );
@@ -286,16 +286,12 @@ final class Bricks_Html_Css_Converter_Service {
 					'url'           => $src,
 					'isPlaceholder' => true,
 				];
-				$settings['_importImage'] = [
-					'url' => $src,
-					'alt' => sanitize_text_field( (string) $node->getAttribute( 'alt' ) ),
-				];
 			}
 			$settings['altText'] = sanitize_text_field( (string) $node->getAttribute( 'alt' ) );
 		} elseif ( 'svg' === $tag ) {
 			$name = 'svg';
 			$settings['source'] = 'code';
-			$settings['code']   = wp_kses( $this->outer_html( $node ), $this->svg_allowlist() );
+			$settings['code']   = $this->sanitize_svg_html( $this->outer_html( $node ) );
 		} elseif ( in_array( $tag, [ 'section', 'header', 'footer', 'article', 'aside' ], true ) ) {
 			$name = 'section';
 			if ( 'section' !== $tag ) {
@@ -371,6 +367,24 @@ final class Bricks_Html_Css_Converter_Service {
 		}
 
 		return $settings;
+	}
+
+	private function sanitize_inline_html( string $html ): string {
+		$html = substr( $html, 0, 12000 );
+		$html = preg_replace( '/<\s*(script|style|iframe|object|embed|template|noscript)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $html );
+		$html = preg_replace( '/\s+on[a-z0-9_-]+\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/is', '', (string) $html );
+		$html = preg_replace( '/(href|src)\s*=\s*([\'"])\s*(javascript:|data:text\/html)[^\'"]*\2/is', '$1="#"', (string) $html );
+
+		return trim( (string) $html );
+	}
+
+	private function sanitize_svg_html( string $html ): string {
+		$html = substr( $html, 0, 30000 );
+		$html = preg_replace( '/<\s*(script|foreignObject|iframe|object|embed)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $html );
+		$html = preg_replace( '/\s+on[a-z0-9_-]+\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/is', '', (string) $html );
+		$html = preg_replace( '/(href|xlink:href)\s*=\s*([\'"])\s*(javascript:|data:text\/html)[^\'"]*\2/is', '$1="#"', (string) $html );
+
+		return trim( (string) $html );
 	}
 
 	private function add_element( array $element, bool $nestable ): ?string {

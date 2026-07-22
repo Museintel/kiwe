@@ -56,6 +56,26 @@ Do not create separate human review previews for website and AppShell. Combined 
 
 The combined preview may simulate save/cart/search/screen switching only as preview-only behavior. Production behavior remains Kiwe/WordPress/WooCommerce/Bricks-owned.
 
+## Optional target-site Studio / Companion
+
+If the human gives a target-site Kiwe AI key and Studio or Companion AI is enabled in `Kiwe > AI`, ask Kiwe for a token-saving Studio packet before guessing Kiwe details:
+
+```text
+GET      /wp-json/dsa/v1/ai/studio/status
+POST     /wp-json/dsa/v1/ai/studio/start
+POST     /wp-json/dsa/v1/ai/studio/draft
+POST     /wp-json/dsa/v1/ai/studio/review
+GET|POST /wp-json/dsa/v1/ai/bricks/context
+POST     /wp-json/dsa/v1/ai/bricks/plan
+GET|POST /wp-json/dsa/v1/ai/companion/context
+POST     /wp-json/dsa/v1/ai/companion/ask
+POST     /wp-json/dsa/v1/ai/companion/review-output
+```
+
+Studio AI has three operating modes: `native`, `browser_companion`, and `browser_only`. In `browser_companion` mode, the external AI should use `/ai/studio/start` for the compact context packet and `/ai/studio/review` after v1 output. In `native` mode, `/ai/studio/draft` may call the configured provider only if Kiwe > AI enables native generation and the key has `native_ai` scope. In `browser_only` mode, rely on this toolkit and do not expect internal Kiwe AI. The Companion is a compact context broker and deterministic reviewer, not a production behavior owner. It can return mode-aware context cards, site-specific hints, previous audit-failure fingerprints, and safe next-action guidance. It must not replace this contract, read the whole plugin, save Bricks, publish content, mutate WooCommerce, run cart/checkout/auth, or change SecureTrack enforcement. Redacted SecureTrack context is available only when `Kiwe > AI` enables it and the key has `all`, `security_brief`, or `companion_securetrack` scope.
+
+For Bricks-native planning, use `/ai/bricks/context` or `/ai/bricks/plan` when a target-site key has `bricks_ai`, `studio_ai`, or `all` scope. This gives the external AI a compact map of available Bricks elements, element controls, query loops, dynamic tags, conditions, interactions, Seam headless rules, and Kiwe launcher/runtime boundaries without reading Bricks or Kiwe source. The Bricks AI route is read-only and cannot save a page/template by itself.
+
 The combined preview must include controls in the same file for: desktop/tablet/mobile Geometry Engine profiles, narrow 320/360/390 stress widths, Sheet and Classic, full compact dock, split compact dock, Navigation bar, horizontal/vertical dock orientation, pill/rounded-box/square dock shapes, light/dark, and representative screen switching. Navigation bar is not horizontal dock; `navbar` is a separate presentation mode, while `horizontal` and `vertical` are orientations of compact dock.
 
 Classic mode must prove full app-viewport coverage unless a live Kiwe setting explicitly narrows it. Do not use a 390px side drawer as the only Classic proof.
@@ -109,6 +129,8 @@ The website/page may include Kiwe hooks, but must not implement Kiwe behavior it
 Preview-only JS may simulate these hooks inside `combined-preview/index.html`, but `website/bricks-paste.html` should keep the real attributes so the live plugin owns behavior after Bricks import.
 
 If the combined preview loads `website/bricks-paste.html` in an iframe, add preview-only bridge JavaScript so those canonical page/header launchers open the matching DSA screen/sheet in the preview. Do not claim Profile, Cart, Search, or Menu launcher proof unless you clicked or otherwise verified those launchers.
+
+Repeated launcher activation must be idempotent. Clicking/tapping the same dock or page/header launcher rapidly must leave one active Kiwe screen/sheet for that module, not stacked duplicate panels, doubled backdrops, or repeated "pop" animations. Preview-only JS should model this same single-active-surface behavior so the review catches accidental duplicate render paths.
 
 ## Authority boundaries
 
@@ -184,7 +206,9 @@ The import package must not contain JavaScript, TypeScript, PHP, HTML, WASM, rem
 
 The theme CSS is presentation-only. It may style existing DSA selectors and allowed public Seam classes. It must not create runtime authority. In production, Kiwe runtime-scopes installed theme CSS to the active `#dsa-surface[data-dsa-surface].dsa-installed-theme-[theme-id]` root so correct `[data-dsa-surface]` selectors have visual authority over core defaults while core keeps geometry/state ownership.
 
-The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, spacing inside content, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+The Geometry Engine owns AppShell placement and measurement. Importable theme CSS must not assign core geometry to dock, sheet, screen, or backdrop selectors. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `.dsa-dock-cluster`, `.dsa-phonekey-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those values belong in Kiwe core or preview-only CSS.
+
+Dock arrangement is especially protected because small CSS changes can make a centered shell look right-biased on mobile. Importable theme CSS must not set `gap`, `row-gap`, `column-gap`, `margin`, `padding`, `width`, `height`, `inline-size`, `block-size`, `min/max-*` sizing, `display`, `flex`, `grid`, `order`, `align-*`, `justify-*`, `place-*`, `transform`, `translate`, `scale`, `rotate`, or `overflow` on dock shell/control/focus selectors such as `[data-dsa-dock]`, `.dsa-dock`, `.dsa-dock-cluster`, `.dsa-phonekey-dock`, `[data-dsa-dock-focus]`, `[data-dsa-dock-primary]`, `.dsa-ai-launcher`, `.dsa-dock__button`, or `[data-dsa-module]`. Use `settings.dock`, official dock shapes, and Geometry Engine variables for composition. Theme CSS may style color, typography, border, radius, shadow, icons, badges, cards, buttons, content spacing, rails, and state appearance while consuming Geometry Engine variables. Visual effects must fit inside the Geometry Engine's safe gutters; do not use negative margins, transforms, or overflow clipping to create glow/shadow space.
 
 ## AppShell preview quick contract
 
@@ -209,7 +233,7 @@ Minimum preview shell requirements:
 - Link the importable CSS from `../import/[theme-id]/css/theme.css`; the preview must demonstrate the real import CSS.
 - Keep preview controls outside the app viewport, preferably using `kiwe-preview-toolbar` and `kiwe-preview-stage`.
 
-The importable `theme.css` must style live Kiwe roots and documented runtime internals. Do not make the installed theme depend on preview-fixture-only classes such as `.dsa-screen-head`, `.dsa-screen-body`, `.dsa-profile-card`, `.dsa-score-card`, `.dsa-links-identity`, `.dsa-account-rows`, `.dsa-link-list`, `.dsa-install-steps`, `.dsa-game-frame`, or `.dsa-ai-insight`. Those names may exist only in preview CSS if they are part of a standalone mock fixture. If `theme.json.screens` lists a screen, `theme.css` must target that screen's live root below.
+The importable `theme.css` must style live Kiwe roots and documented runtime internals. The primary combined preview must also use live-like DSA roots/internals so the review preview resembles the installed theme. Do not make the installed theme or primary combined preview depend on private fixture-only classes such as `.dsa-screen-head`, `.dsa-screen-body`, `.dsa-profile-card`, `.dsa-score-card`, `.dsa-links-identity`, `.dsa-account-rows`, `.dsa-link-list`, `.dsa-install-steps`, or `.dsa-game-frame`. Those names may exist only in an optional technical fixture that is clearly labelled preview-only, not in the main combined visual proof. If `theme.json.screens` lists a screen, `theme.css` must target that screen's live root below.
 
 Required screen selectors when the theme manifest lists these screens:
 
@@ -225,7 +249,9 @@ Required screen selectors when the theme manifest lists these screens:
 - `games`: `data-dsa-game-panel`
 - `ai`: `data-dsa-ai-panel`
 
-Cart FBT must be a horizontal rail. Include `data-dsa-cart-fbt-rail` on that rail. Do not render it as a stacked list.
+Search screen styling has one extra mobile rule because it is a common failure point. `data-dsa-search-form` is a semantic/runtime form hook, not the outer visual search container. Do not draw an extra pill/card/container on `[data-dsa-search-form]` that wraps an already-styled search field; style the actual field/control surface and keep the form wrapper visually neutral unless Kiwe core markup explicitly makes it the field. On narrow/touch Sheet surfaces, the search input must not autofocus and summon the mobile keyboard on open. The user should choose the input before the keyboard appears. Alphabet/search filter chips should remain centered circular/round controls; themes may change color and border treatment, but must not rely on loose padding/line-height that leaves letters off-center.
+
+Cart FBT must be a horizontal rail. Include `data-dsa-cart-fbt-rail` on that rail. Do not render it as a stacked list, and do not shrink mobile FBT cards so far that product names, the "Pairs well with"/FBT title, price/meta, or the View/Add action become unreadable. On narrow screens, prefer fewer readable rail cards in view over many cramped cards.
 
 Links site score is optional. The preview and README must show/document both:
 
@@ -234,7 +260,11 @@ Links site score is optional. The preview and README must show/document both:
 
 It is valid to create distinctive presentations for existing `ai` and `notifications` screens. They must use Kiwe-owned AI/notification payloads/actions and must not execute AI actions, notification permission requests, push subscription, dismiss state, or privacy/master-switch behavior from theme or preview code.
 
-Responsive fit is mandatory. Test desktop, tablet, and mobile Geometry Engine profiles, then narrow stress widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport.
+Transient Kiwe notifications/toasts are not dock attachments. In desktop Geometry Engine profiles they should render from a body-level notification viewport in the top-right safe area, independent of whether the `ai` or `notifications` dock icons are enabled. Multiple notifications should read as a compact cascade that expands on hover/focus so actions such as Dismiss, Apply, View, or Open remain reachable. On mobile/touch profiles the same notification stack appears from the top safe area rather than from the dock. For live/combined preview proof, use Kiwe's runtime hook `window.DSA.previewNotification({ title, body, actionLabel })` after the AppShell has booted; do not invent a separate notification fixture, dock-attached toast, push-permission simulator, or theme-owned notification JavaScript.
+
+External site/Bricks popups are not DSA screens. The Kiwe dock is persistent AppShell chrome, and Kiwe DSA sheets/screens are Geometry Engine-owned surfaces; a page login popup, Bricks popup, offcanvas, lightbox, search overlay, or third-party modal is page-owned. When an external modal is active, the live Kiwe runtime yields the dock instead of placing it above the popup. Theme CSS and combined previews must not raise dock z-index to compete with site popups or treat the dock as part of popup content. Preview simulations should prove that canonical page launchers open DSA surfaces, while ordinary page modals keep their own modal authority and do not have the dock visually sitting on top of them.
+
+Responsive fit is mandatory. Test desktop, tablet, and mobile Geometry Engine profiles, then narrow stress widths around 320px, 360px, and 390px. No DSA sheet/screen may create horizontal page or panel scrolling except intentional rails such as FBT, alphabet/search filters, or another documented horizontal rail. Decorative header stripes, badges, labels, and pseudo-elements must shrink, wrap, clip inside the panel, or stack; do not use non-shrinking flex decorations that can force the panel wider than the viewport. On mobile/touch Sheet surfaces, also test the Search screen with the input unfocused and focused/keyboard-reserved. Opening Search should not shrink the initial sheet because the keyboard was summoned automatically, and focusing the input should not push the dock off-screen or misalign the dock against the visual viewport.
 
 ## Kiwe theme package settings quick rules
 
@@ -350,8 +380,8 @@ Important dock settings:
 - `dock.split_style`: split compact dock on/off. It only applies when presentation is `dock`.
 - `dock.shape`: `pill`, `box`, or `square`.
 - `dock.enabled_items` and `dock.item_order`: visible built-in modules and their order.
-- `dock.focus_item`: the enabled item that becomes the emphasized/focus button and split-dock center. Default is `ai`, but a design may choose `search`, `cart`, or a custom link when justified.
-- `dock.custom_items`: safe URL navigation items such as Home. Custom dock links navigate only; they do not create new DSA screens.
+- `dock.focus_item`: the enabled item that becomes the emphasized/focus button and split-dock center. Default is `ai`, but a design may choose `search`, `cart`, or a custom link when justified. The live runtime marks that item with `data-dsa-dock-focus` / `data-dsa-dock-primary`; theme CSS should style those public attributes/classes as the persistent focus affordance instead of assuming the focus item is always AI or styling only `[aria-pressed="true"]`.
+- `dock.custom_items`: safe URL navigation items such as Home. Custom dock links navigate only; they do not create new DSA screens. Custom link icons should use safe available names such as `home`, `house`, `external-link`, `search`, `shopping-bag`, `bookmark`, `heart`, `share-2`, `user-round`, `package`, `map-pin`, `download`, `sparkles`, or `sun-moon`. A Home link is valid and should not render as a blank icon.
 - `tokens`: the design token profile that lets the live DSA theme, Seam website CSS, and Bricks global theme style share one visual personality. Use only known Kiwe universal token names such as `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `type-h2`, `leading-tight`, `space-md`, `radius-lg`, and `shadow-md`. Do not invent private token names when a Kiwe token can carry the design.
 - `tokens` must be shaped as `settings.tokens.enabled`, `settings.tokens.profile_label`, `settings.tokens.overrides`, and optional `settings.tokens.bricks_theme_style`. Do not put raw CSS variable keys at the top of `tokens`, and do not use `--kiwe-*` or `var(...)` keys inside `overrides`. Wrong: `"tokens": { "--kiwe-color-brand": "#d71920" }`. Right: `"tokens": { "enabled": true, "overrides": { "color-brand": "#d71920" } }`.
 - Importable `theme.css` should consume official CSS variables generated from those same tokens, such as `--kiwe-color-brand`, `--kiwe-color-accent`, `--kiwe-color-surface`, `--kiwe-color-surface-raised`, `--kiwe-color-text`, `--kiwe-font-display`, `--kiwe-type-h1`, `--kiwe-radius-xl`, `--kiwe-radius-full`, `--kiwe-shadow-md`, and `--kiwe-space-md`, or documented `--kiwe-theme-*` aliases. Do not use invented/obsolete CSS variables such as `--kiwe-color-background`, `--kiwe-radius-card`, `--kiwe-radius-control`, `--kiwe-shadow-panel`, or `--kiwe-space-unit`; they will not be driven by the live token profile.

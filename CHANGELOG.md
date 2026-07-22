@@ -2,6 +2,175 @@
 
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
+## Unreleased
+
+## 0.6.21 - 2026-07-22
+
+- Ran a focused Seam/token audit across theme/toolkit contracts, framework profiles, package validators, and core `surface.css`.
+- Fixed the Search alphabet chip alignment by removing the manual letter offset and moving chip sizing/gap onto DSA geometry tokens.
+- Tokenized desktop and mobile dock edge/context offsets so dock placement no longer depends on repeated component-level `18px`/safe-area magic values.
+- Recorded the remaining module-interior token-hardening debt instead of claiming the whole legacy surface CSS is already token-pure.
+
+## 0.6.20 - 2026-07-22
+
+- Replaced the Sheet grabber's local chrome offset and bar metrics with Geometry Engine tokens so the handle position, hit area, and visible bar size flow from Kiwe/Seam variables instead of component-level hard values.
+- Added `--dsa-sheet-chrome-inset-block-start`, `--dsa-sheet-grabber-hit-size`, `--dsa-sheet-grabber-bar-inline-size`, and `--dsa-sheet-grabber-bar-block-size` as shell-owned chrome tokens derived from existing dock/control geometry.
+- Clarified the architectural boundary: base tokens may have numeric source values, but AppShell/theme components should consume named tokens rather than embedding one-off magic numbers.
+
+## 0.6.19 - 2026-07-22
+
+- Tightened Companion review so direct protected AppShell surface geometry in importable `theme.css` is an error, not a missed case hidden behind dock-specific selectors.
+- Added Companion review coverage for private primary combined-preview fixture classes such as `.dsa-screen-head` and `.dsa-profile-card`, aligning the lightweight Companion audit with the official combined-output validator.
+- Added connector contracts so the Companion cannot drift away from the validator/audit loop used by browser AIs.
+
+## 0.6.18 - 2026-07-22
+
+- Anchored the Sheet close/drag handle to the sheet chrome instead of letting generous theme/module top padding push it down into the content area.
+- Verified staging `0.6.17` served the National Chikki theme and opened a single Cart sheet after the DSA entry layer was dismissed; the remaining grabber offset was confirmed as a core chrome-flow issue, not a National-theme-only defect.
+- Kept the National v4.8 preview/live mismatch classified as an AI handoff issue now caught by the tightened combined-output validator.
+
+## 0.6.17 - 2026-07-22
+
+- Moved the core sheet grabber/close handle closer to the sheet edge by decoupling it from large responsive panel top gutters, preserving the touch target while removing the excessive empty band above sheet content.
+- Tightened Studio native-token saving so context packets reserve provider prompt overhead before Gemini/OpenAI-compatible calls instead of only checking raw context JSON size.
+- Cleaned Site Graph Data envelopes so product/page reads report `resource: products` or `resource: pages` instead of forcing clients to infer those from a generic posts envelope.
+- Tightened the combined-mode handoff validator and lite audit/toolcall docs so the primary combined preview may not use private AppShell fixture wrappers that Kiwe core does not render live.
+- Verified the rule against National Chikki v4.8: the validator now fails previews that visually depend on `.dsa-screen-head`, `.dsa-screen-body`, `.dsa-profile-card`, `.dsa-score-card`, `.dsa-links-identity`, `.dsa-account-rows`, `.dsa-link-list`, `.dsa-install-steps`, or `.dsa-game-frame`.
+
+## 0.6.16 - 2026-07-22
+
+- Hardened the AI-less Site Graph Data route so headless clients can use simple query-string reads like `resource=products&limit=3` and documented batch POST reads without falling back to default posts.
+- Added a compact `resources` batch shorthand that expands into the same normalized Site Graph Data envelopes as explicit `queries`, keeping the strict GraphQL-like route and the lightweight external-AI route aligned.
+- Updated the Site Graph schema examples and rebuilt the package manifest after live staging showed `0.6.14` was still one upload behind the local AI/Companion hardening.
+
+## 0.6.15 - 2026-07-22
+
+- Hardened `Kiwe > AI` API-key creation so the one-time full secret reliably renders on shared hosts by using a short-lived option fallback beside the transient.
+- The plain key is still deleted immediately after display and never stored as the long-lived credential; Kiwe continues to store only the hash for authentication.
+- Clarified `/wp-json/dsa/v1/ai/themes` output with an explicit per-record `active` boolean for external AI/tool clients.
+- Tightened Studio native-context compaction so Bricks intelligence is reduced before native model calls, and added sanitized provider error details for empty/non-2xx AI responses.
+- Tightened Companion output review so protected AppShell geometry is caught for both `#dsa-surface` and `[data-dsa-surface]` theme selectors.
+- Added release proof and rebuilt the package manifest so external AI / Studio / Site Graph connector testing can start from a usable freshly created key instead of a prefix-only table value.
+
+## 0.6.14 - 2026-07-22
+
+- Simplified `Kiwe > AI` SecureTrack controls so SecureTrack is no longer presented as a separate provider/model/API-key lane.
+- Redacted SecureTrack brief sharing is now a Companion/API-scope toggle, while SecureTrack Site Brain cloud review syncs from the shared Native AI provider/key when the selected provider is supported by SecureTrack.
+- Kept SecureTrack-local Site Brain review mode, batch minutes, local auto-block recommendation, and future pattern-sharing settings available without creating a separate SecureTrack key field.
+- Updated docs/contracts/release proof and rebuilt the package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.13 - 2026-07-22
+
+- Added Bricks AI Intelligence as a read-only Bricks-native context service for external AI tools, exposing available elements, compact element controls, query-loop options, dynamic tags, conditions, interactions, Seam rules, and Kiwe launcher/runtime boundaries.
+- Added `bricks_ai` API-key scope plus `/wp-json/dsa/v1/ai/bricks/context` and `/wp-json/dsa/v1/ai/bricks/plan`; `studio_ai` keys can also read the Bricks intelligence packet for Studio workflows.
+- Embedded Bricks AI Intelligence into Kiwe Studio AI packets so native/browser companion flows can plan Bricks-native pages without crawling Bricks or Kiwe source.
+- Added an optional Kiwe Studio companion panel for the Bricks front-end editor under `Kiwe > AI`, with nonce-auth context, plan, and bounded native-draft buttons; the panel is read-only and does not save Bricks content.
+- Updated Kiwe AI docs, lite toolkit contexts, development plan, connector contracts, and release proof so browser AI, native Kiwe AI, and editor companion flows share one Bricks-aware planning contract.
+- Bumped the MU loader and nested Kiwe package to `0.6.13` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.12 - 2026-07-22
+
+- Added Kiwe Studio AI as the workflow layer above Companion, with `native`, `browser_companion`, and `browser_only` operating modes under `Kiwe > AI`.
+- Added encrypted native provider controls for WordPress AI Client detection, OpenAI-compatible chat completions, Gemini, Groq, and xAI, plus max context/output budgets and explicit native-generation consent.
+- Added `studio_ai` and `native_ai` API key scopes and `/wp-json/dsa/v1/ai/studio/status`, `/start`, `/draft`, and `/review` routes; normal Studio keys can request context/review while `native_ai` is required to spend provider tokens.
+- Added WordPress 7 ability mirrors for `dsa/start-studio-project` and `dsa/review-studio-output` and advertised Studio/Companion routes through the Site Graph connector map.
+- Updated Kiwe AI docs, toolkit lite contexts, development plan, and release proof so browser AI, IDE AI, and future GitHub/tool-call clients use token-saving Studio packets instead of reading the whole plugin.
+- Bumped the MU loader and nested Kiwe package to `0.6.12` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.11 - 2026-07-22
+
+- Added Kiwe Companion AI as a deterministic, token-efficient context broker and reviewer under `/wp-json/dsa/v1/ai/companion/*`, with compact mode cards, safe answers, review-output checks, and privacy-safe finding memory.
+- Added `companion` and `companion_securetrack` API key scopes so external AIs can be granted Companion access without WordPress admin credentials, and revoked instantly by deleting the key.
+- Moved SecureTrack cloud AI provider/model/key controls into `Kiwe > AI`, while `Kiwe > Secure` remains focused on security enforcement and local Site Brain controls.
+- Gated redacted SecureTrack AI briefs behind both `Kiwe > AI` consent and a security-capable key/ability path; internal AI context now emits a gated/off stub instead of silently including security context.
+- Mirrored Companion context, ask, and review surfaces through WordPress 7 Abilities where available, preserving REST as the fallback.
+- Updated Kiwe AI docs/toolkit lite contexts and the connector contract runner so external AI tools discover Companion without reading the whole codebase.
+- Bumped the MU loader and nested Kiwe package to `0.6.11` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.10 - 2026-07-22
+
+- Hardened the AppShell runtime contract guard so split compact dock spacing remains Geometry Engine-owned after installed theme CSS is applied.
+- Fixed mobile split dock right-bias where a later/generated theme gap could make the actual button span overflow the centered dock shell.
+- Kept the split focus/action button spacing tokenized through `--dsa-dock-split-focus-gap` and `--dsa-dock-split-focus-gap-narrow` while preventing themes from owning dock arrangement.
+- Bumped the MU loader and nested Kiwe package to `0.6.10` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.9 - 2026-07-22
+
+- Fixed the hidden PhoneKey privileged reauth timeout path that could still log out administrators while `Kiwe > Secure` Role-Based Auto Logout was off.
+- PhoneKey session timeout controls now consistently treat `0` as disabled, including the REST session-status response and the admin polling guard.
+- Added a one-time migration that turns the old 30-minute privileged-session defaults off unless the site owner re-enables a timeout intentionally.
+- Updated the PhoneKey admin copy so “Privileged reauth minutes” clearly says `0` disables Kiwe-initiated privileged-session logout; normal WordPress cookie expiry remains separate.
+- Bumped the MU loader and nested Kiwe package to `0.6.9` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.8 - 2026-07-22
+
+- Confirmed `Kiwe > Secure` Role-Based Auto Logout is disabled on Hostinger staging; the 30-minute field is inert unless `secure[auto_logout_enabled]` is checked.
+- Added the safe runtime proof hook `window.DSA.previewNotification(...)`, which seeds Kiwe's real body-level notification stack for deterministic browser/UI tests without creating push-permission, AI-action, or theme-owned notification authority.
+- Tightened notification-stack geometry so transient notices stay top-right on desktop, top-safe-area on mobile, collapse into a compact cascade, and expand on hover/focus for actions.
+- Polished sub-340px split compact dock geometry so the final dock control does not hang over the viewport edge on 320px stress checks.
+- Updated the AI Toolkit lite contexts so future combined/audit loops use Kiwe's live notification hook instead of inventing dock-attached notification fixtures.
+- Bumped the MU loader and nested Kiwe package to `0.6.8` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.7 - 2026-07-22
+
+- Added `site-graph-system/release-proof-0.6.7.md`, a built-in Hostinger/staging verification checklist for Site Graph, Site Graph Data, SecureTrack brief, internal advisor, advisor enrichment, WordPress 7 abilities, AI access keys, staging executor boundaries, dynamic handoffs, and browser smoke checks.
+- Closed the Site Graph + internal AI phase with explicit release boundaries: Kiwe may inspect, advise, enrich summaries, validate, prepare, stage, and controlled-execute on confirmed staging, but still must not silently publish, save Bricks, mutate WooCommerce, run checkout/cart/auth, process payments, or change security enforcement.
+- Bumped the MU loader and nested Kiwe package to `0.6.7` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.6 - 2026-07-22
+
+- Added `kiwe.internal-ai.enrichment.v1` through `/wp-json/dsa/v1/ai/advisor/enrich`, returning deterministic summaries, priority ordering, and the bounded model envelope for future WordPress AI Client enrichment without calling a model or mutating the site.
+- Added the WordPress 7 ability `dsa/enrich-internal-ai-advisor` and advertised it in Site Graph/internal context metadata so native AI clients can discover the enrichment seam beside the deterministic advisor.
+- Updated the `Kiwe > AI` Advisor panel with enrichment style controls, deterministic summary output, native-client readiness, and the matching route/ability references.
+- Bumped the MU loader and nested Kiwe package to `0.6.6` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.5 - 2026-07-22
+
+- Added a server-rendered Kiwe Advisor panel to `Kiwe > AI`, showing deterministic read-only findings, recommendations, safe next actions, model availability, context hash, focus filters, and the matching `/ai/advisor` route / `dsa/run-internal-ai-advisor` ability.
+- Styled the advisor as a first-class admin control surface while preserving the no-mutation boundary: refresh recomputes the safe context and advisor output only.
+- Bumped the MU loader and nested Kiwe package to `0.6.5` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.4 - 2026-07-21
+
+- Added the deterministic Kiwe internal AI advisor at `/wp-json/dsa/v1/ai/advisor`, producing read-only findings, recommendations, safe next actions, model availability, and mutation boundaries from the fused internal context packet.
+- Added the WordPress 7 ability `dsa/run-internal-ai-advisor` so native AI/tool clients can run the same advisor without crawling plugin code or inventing their own audit rules.
+- Updated Site Graph connector metadata, internal context route maps, AI toolkit docs, and Site Graph docs so browser AI clients discover the advisor alongside Site Graph Data, SecureTrack brief, and staging-plan lanes.
+- Bumped the MU loader and nested Kiwe package to `0.6.4` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.3 - 2026-07-21
+
+- Added the first Kiwe internal AI context pack at `/wp-json/dsa/v1/ai/internal-context`, combining Site Graph summary/hash, Site Graph Data schema, redacted SecureTrack intelligence, WordPress 7/Abilities availability, connector routes, and safe operating boundaries without calling a model.
+- Added redacted SecureTrack AI security brief support at `/wp-json/dsa/v1/ai/security-brief`, summarizing posture, local Site Brain status, AI queue status, threat lanes, alerts, and recommendations without exposing raw IPs, usernames, secrets, full URLs, request payloads, or visitor trails.
+- Added AI-key routes for Site Graph Data under `/wp-json/dsa/v1/ai/site-graph-data/schema` and `/wp-json/dsa/v1/ai/site-graph-data`, with new `site_graph_data`, `security_brief`, and `internal_ai` API scopes.
+- Expanded WordPress 7 Abilities integration with `dsa/get-site-graph-data-schema`, `dsa/query-site-graph-data`, `dsa/get-securetrack-brief`, and `dsa/get-internal-ai-context` so native WordPress AI/tool clients can discover the same read-only context surfaces.
+- Updated the Site Graph connector manifest, AI entrypoint, dynamic context, and Site Graph docs so future AIs discover the new routes instead of scraping frontend data or guessing security context.
+- Bumped the MU loader and nested Kiwe package to `0.6.3` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.6.2 - 2026-07-21
+
+- Added the public-safe Kiwe Site Graph Data API at `/wp-json/dsa/v1/site-graph/data`, allowing headless clients, Bricks tooling, browser AIs, and external frontends to fetch normalized WordPress/WooCommerce posts, pages, products, media, terms, menus, and site identity without using the AI-only route.
+- Added `/wp-json/dsa/v1/site-graph/data/schema` so clients can discover supported Site Graph Data resources, fields, examples, and boundaries without reading the plugin codebase.
+- Added batch data queries so one request can fetch page-ready datasets such as site identity, primary menu, category product rails, latest posts, and media-rich cards together in a GraphQL-like envelope.
+- Kept Site Graph Data read-only and public-safe by default: anonymous requests only return public/published data, authenticated administrators can request broader read fields, and all writes remain in the Controlled Executor.
+- Bumped the MU loader and nested Kiwe package to `0.6.2` and rebuilt the folder-based package manifest with 232 verified files for Hostinger MU-plugin deployment.
+
+## 0.5.93 - 2026-07-18
+
+- Centralized registered DSA screen/sheet copy under `Kiwe > Theme > DSA screen/sheet copy` for Profile, Cart, Checkout, Search, Menu, Saved, Links, Notifications, iOS Install, Games, and AI, replacing the prior Cart-only theme-copy lane.
+- Added a shared PHP screen-copy schema used by manual admin settings and installed theme packages, so `theme-package.json` `settings.screens` imports are sanitized consistently and remain presentation-only.
+- Wired live DSA runtime adapters to consume installed/manual screen copy across Profile, Cart, Checkout, Search, Menu, Saved, Links, Notifications, iOS Install, Games, and AI while preserving Kiwe/WordPress/WooCommerce authority for data, state, actions, totals, search results, links, and checkout.
+- Updated the theme-package schema, UI-system docs, Kiwe AI Toolkit lite contexts, and audit-output loop so browser AIs treat live-intended screen/sheet copy as part of the installed theme package instead of preview-only or Cart-only text.
+- Bumped the MU loader and nested Kiwe package to `0.5.93` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
+## 0.5.92 - 2026-07-18
+
+- Added standalone Kiwe Framework profile import/export under `Kiwe > Framework`, using `schema: "kiwe.framework-profile.v1"` with a narrow `settings.tokens` payload for official universal token overrides and safe Bricks global theme-style metadata.
+- Added the AI staging operation `kiwe.framework-profile.apply`, which applies a sanitized Framework token profile to Kiwe settings without implicitly pushing to Bricks; `kiwe.framework.push-bricks` remains the explicit Bricks mutation step.
+- Updated full Appsite profile export/import so the new `tokens` and `theme_screens` lanes are preserved instead of silently dropped.
+- Updated the Kiwe AI Toolkit, dynamic/audit lite contexts, handoff mode docs, source map, and audit-output tool so website-only Framework profiles, combined/theme `theme-package.json` token settings, and stale loose settings folders are clearly distinguished and checked.
+- Added schema-backed Framework profile validation to the Kiwe AI Toolkit, including mirrored Framework-system contracts, CLI support, valid/invalid fixtures, generic output-validator integration, and connector contract checks that reject custom/private token names or AppShell/theme/page leakage from standalone `Kiwe > Framework` profiles.
+- Bumped the MU loader and nested Kiwe package to `0.5.92` and rebuilt the folder-based package manifest for Hostinger MU-plugin deployment.
+
 ## 0.5.91 - 2026-07-18
 
 - Added a safe installed-theme screen-copy lane: theme packages may now import sanitized `settings.screens.cart` labels such as cart title, empty-state copy, FBT heading, and checkout labels, so live Kiwe cart sheets can match AI/combined-preview theme copy without giving themes cart, checkout, product, price, or WooCommerce authority.
