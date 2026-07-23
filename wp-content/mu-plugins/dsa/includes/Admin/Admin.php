@@ -6105,20 +6105,20 @@ final class Admin {
 				<input type="hidden" name="visual_effects[_classic_present]" value="1">
 				<input type="hidden" name="visual_effects[_transition_present]" value="1">
 				<input type="hidden" name="style[active_theme_id]" value="<?php echo esc_attr( $active_theme_id ); ?>">
-				<h2><?php esc_html_e( 'Visual profile', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Legacy preserves the ultra-light baseline. Kiwe 2027 is the built-in app UI track and can evolve without replacing Legacy.', 'dsa' ); ?></p>
+				<h2><?php esc_html_e( 'Base UI adapter', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Installed themes above are the AppShell theme packages. This adapter is the built-in Kiwe runtime layer underneath them: Legacy is the lightest fallback, while Kiwe 2027 exposes the modern sheet/dock/screen adapter that marketplace themes can skin.', 'dsa' ); ?></p>
 				<div class="dsa-theme-options">
 					<label class="dsa-theme-option dsa-theme-option--classic">
 						<input type="radio" name="style[visual_profile]" value="legacy" <?php checked( $visual_profile, 'legacy' ); ?>>
 						<span class="dsa-theme-option__preview" aria-hidden="true"><i></i><i></i><i></i><b></b></span>
-						<strong><?php esc_html_e( 'Legacy UI', 'dsa' ); ?></strong>
-						<small><?php esc_html_e( 'The preserved baseline for existing sites. This remains the safe default and lightest built-in theme.', 'dsa' ); ?></small>
+						<strong><?php esc_html_e( 'Legacy adapter', 'dsa' ); ?></strong>
+						<small><?php esc_html_e( 'The preserved baseline for existing sites. Use it when a package intentionally targets the ultra-light legacy runtime.', 'dsa' ); ?></small>
 					</label>
 					<label class="dsa-theme-option dsa-theme-option--sheet">
 						<input type="radio" name="style[visual_profile]" value="kiwe2027" <?php checked( $visual_profile, 'kiwe2027' ); ?>>
 						<span class="dsa-theme-option__preview" aria-hidden="true"><i></i><b></b></span>
-						<strong><?php esc_html_e( 'Kiwe 2027', 'dsa' ); ?></strong>
-						<small><?php esc_html_e( 'Modern app UI using the same token, geometry, dock, Bricks, cart, search, links, and AI contracts. Context rails stay disabled in this profile.', 'dsa' ); ?></small>
+						<strong><?php esc_html_e( 'Kiwe 2027 adapter', 'dsa' ); ?></strong>
+						<small><?php esc_html_e( 'Modern runtime adapter for Sheet, Classic, dock, Bricks, cart, search, links, and AI contracts. Most marketplace themes should use this adapter.', 'dsa' ); ?></small>
 					</label>
 				</div>
 				<h2><?php esc_html_e( 'Dock presentation', 'dsa' ); ?></h2>
@@ -6301,12 +6301,12 @@ final class Admin {
 							</td>
 						</tr>
 						<tr>
-							<th scope="row"><?php esc_html_e( 'Surface colors', 'dsa' ); ?></th>
+							<th scope="row"><?php esc_html_e( 'Built-in fallback colors', 'dsa' ); ?></th>
 							<td class="dsa-admin-inline-fields">
 								<label><span><?php esc_html_e( 'Active', 'dsa' ); ?></span><input type="color" name="dsa_theme[active_color]" value="<?php echo esc_attr( (string) ( $theme['active_color'] ?? '#8f8f98' ) ); ?>"></label>
 								<label><span><?php esc_html_e( 'Hover', 'dsa' ); ?></span><input type="color" name="dsa_theme[hover_color]" value="<?php echo esc_attr( (string) ( $theme['hover_color'] ?? '#24c6a1' ) ); ?>"></label>
 								<label><span><?php esc_html_e( 'Hero text', 'dsa' ); ?></span><input type="text" name="dsa_theme[hero_text_color]" value="<?php echo esc_attr( (string) ( $theme['hero_text_color'] ?? 'rgba(20,24,34,0.18)' ) ); ?>" placeholder="rgba(20,24,34,0.18)"></label>
-								<p class="description"><?php esc_html_e( 'These are the DSA runtime colors used by Classic and Sheet themes. Universal Kiwe framework tokens stay governed in Kiwe > Framework.', 'dsa' ); ?></p>
+								<p class="description"><?php esc_html_e( 'These legacy quick colors remain for built-in/fallback styling. Imported marketplace themes should carry their real design palette through theme-package settings.tokens and Kiwe Framework tokens.', 'dsa' ); ?></p>
 							</td>
 						</tr>
 					</tbody>

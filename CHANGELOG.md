@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.26 - 2026-07-23
+
+- Tightened the combined handoff validator, AI output audit, public lite contexts, and Audit Companion so primary combined previews fail when DSA screen/sheet visuals depend on preview-only `.kiwe-preview-panel-*` fixtures instead of live Kiwe runtime selectors.
+- Reclassified the BioVantage combined handoff as a failed preview/live AppShell match: its preview styled fake panel interiors that do not exist on Hostinger, while the installable theme only lightly skinned real Kiwe 2027 panels.
+- Clarified `Kiwe > Theme` admin copy so installed themes are the actual AppShell theme packages, while Legacy/Kiwe 2027 is labelled as the base UI adapter/fallback layer underneath marketplace themes.
+
 ## 0.6.25 - 2026-07-23
 
 - Aligned the static handoff audit with live AI screen selectors by allowing `.dsa-ai-insight` and `.dsa-ai-chat-placeholder` in importable AppShell theme CSS when they target Kiwe runtime markup instead of preview-only fixtures.

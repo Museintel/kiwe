@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.6.25",
+  "version": "0.6.26",
   "algorithm": "sha256",
   "file_count": 260,
   "files": {
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "a20ec744ddbd29251a95066ba9a327c4ec984698fc12b26fdb4e4eeafafcefdb"
+      "sha256": "8c9f445030623907031788d4e784bfe72c13b3121f478c1bc54d0827cae11ee2"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -341,8 +341,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 44251,
-      "sha256": "1d5d1d60afddf0d3720ee0a1a47e0b0b8edd9a6cd859dc815d6e7336fad2b64c"
+      "bytes": 44768,
+      "sha256": "386725324b4e22088186cb1c1473cc8d914001d768c25e8b1ec30e91a57e7430"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -469,8 +469,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 580030,
-      "sha256": "206161c345b7360272d1974e0525d1bc9199ca349826e3831993cb896dcad1a9"
+      "bytes": 580260,
+      "sha256": "a45e8dc8f170e290ed1f52332a47469ca6bb23b3c3696fd074dc65f4cf29a22d"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -929,8 +929,8 @@
       "sha256": "7fe266946b3b32c7a3c00ce01743187a2505b281e35fcd4c5eaf9ebf57b3e7d7"
     },
     "ui-system/README.md": {
-      "bytes": 51589,
-      "sha256": "f73377e963ae5002cb74d5c39463994e4671c98145a75d96820392b40490482e"
+      "bytes": 52148,
+      "sha256": "d0ce7989c593bdd6b0233a1248a35e7666d4a43e7387f46eddb43ba3dc9dfe37"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

@@ -972,6 +972,13 @@ final class AI_Companion_Service {
 				'message'  => 'Primary combined preview uses private AppShell fixture structure that Kiwe core does not render live. Use live-like DSA roots/internals for the primary proof.',
 			];
 		}
+		if ( preg_match( '/\\bkiwe-preview-(?:panel|panel-heading|alpha|fbt|score|empty|muted)\\b/i', $content ) && preg_match( '/\\bdata-dsa-screen\\b/i', $content ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'preview_panel_identity_mismatch',
+				'message'  => 'Primary combined preview styles DSA screens with preview-only panel classes. The approval preview must use live-like Kiwe DSA screen/sheet markup and put the visual identity in importable theme.css against live selectors.',
+			];
+		}
 		foreach ( [
 			'data-dsa-surface' => 'Combined preview must include the live AppShell surface root.',
 			'data-dsa-ui-contract="2"' => 'Combined preview must prove the current DSA UI contract.',

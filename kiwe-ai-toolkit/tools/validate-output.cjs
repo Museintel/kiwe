@@ -51,7 +51,14 @@ if (mode === 'combined') {
     'dsa-account-rows',
     'dsa-link-list',
     'dsa-install-steps',
-    'dsa-game-frame'
+    'dsa-game-frame',
+    'kiwe-preview-panel',
+    'kiwe-preview-panel-heading',
+    'kiwe-preview-alpha',
+    'kiwe-preview-fbt',
+    'kiwe-preview-score',
+    'kiwe-preview-empty',
+    'kiwe-preview-muted'
   ];
   const combinedFiles = [
     'combined-preview/index.html',

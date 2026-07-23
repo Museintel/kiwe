@@ -331,6 +331,18 @@ if (combinedPreviewPath) {
   if (websiteText && /\bdata-dsa-open-module\b/i.test(websiteText) && !/(manual smoke|smoke test|clicked|verified)[\s\S]{0,240}(?:profile|account)[\s\S]{0,240}(?:cart|bag|search|menu)|(?:profile|account)[\s\S]{0,240}(?:cart|bag|search|menu)[\s\S]{0,240}(?:manual smoke|smoke test|clicked|verified)/i.test(allText)) {
     add('warn', 'No manual smoke-test note found for page/header launchers. Combined handoffs with data-dsa-open-module should report that Profile/Account, Cart/Bag, Search, and Menu launchers were clicked or otherwise verified in combined-preview/index.html.', rel(combinedPreviewPath));
   }
+  const privatePreviewPanelClasses = [
+    'kiwe-preview-panel',
+    'kiwe-preview-panel-heading',
+    'kiwe-preview-alpha',
+    'kiwe-preview-fbt',
+    'kiwe-preview-score',
+    'kiwe-preview-empty',
+    'kiwe-preview-muted'
+  ].filter((className) => new RegExp(`\\b${className}\\b`, 'i').test(combinedPreviewText));
+  if (privatePreviewPanelClasses.length && /\bdata-dsa-screen\b/i.test(combinedPreviewText)) {
+    add('fail', `Primary combined preview styles AppShell screens with preview-only panel classes (${privatePreviewPanelClasses.join(', ')}). The human approval preview must use live-like Kiwe DSA screen/sheet markup and put visual identity in importable theme.css against live selectors; preview CSS may position the harness only.`, rel(combinedPreviewPath));
+  }
 }
 
 const allPreviewText = `${combinedPreviewText}\n${combinedPreviewSupportText}\n${appShellPreviewText}\n${appShellPreviewSupportText}`;

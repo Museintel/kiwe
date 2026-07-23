@@ -237,6 +237,8 @@ If `theme.json.screens` lists a registered screen, `appshell-theme/import/<theme
 
 The primary `combined-preview/index.html` must not use those private fixture-only DSA wrappers either. It is the human approval artifact, so it must resemble what Kiwe can render live after import. If custom mock wrappers are needed for optional selector experiments, put them only in an optional technical fixture and label them preview-only. Live core selectors such as `.dsa-ai-insight` are allowed when they exist in Kiwe runtime markup.
 
+The primary combined preview must also not style DSA screen/sheet interiors through preview-only panel classes such as `.kiwe-preview-panel`, `.kiwe-preview-panel-heading`, `.kiwe-preview-alpha`, `.kiwe-preview-fbt`, `.kiwe-preview-score`, `.kiwe-preview-empty`, or `.kiwe-preview-muted`. Those are harness conveniences, not live Kiwe markup. Preview CSS may position the review harness, but the AppShell visual identity that the user approves must be present in `appshell-theme/import/<theme-id>/css/theme.css` against live Kiwe selectors.
+
 Do not set AppShell geometry ownership in importable theme CSS on dock, screen, sheet, panel, or backdrop selectors:
 
 - `position: fixed`
