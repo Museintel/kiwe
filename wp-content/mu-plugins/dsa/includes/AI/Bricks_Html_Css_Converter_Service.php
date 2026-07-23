@@ -22,6 +22,7 @@ final class Bricks_Html_Css_Converter_Service {
 	private int $counter = 0;
 	private array $elements = [];
 	private array $warnings = [];
+	private array $query_templates = [];
 
 	public function available(): array {
 		return [
@@ -32,6 +33,7 @@ final class Bricks_Html_Css_Converter_Service {
 	}
 
 	public function convert( string $html, string $css = '', array $options = [] ): array {
+		$this->query_templates = $this->query_templates_from_options( $options );
 		$style_css = '';
 		$html = preg_replace_callback(
 			'/<style\b[^>]*>(.*?)<\/style>/is',
@@ -270,9 +272,10 @@ final class Bricks_Html_Css_Converter_Service {
 			$settings['text'] = sanitize_text_field( trim( (string) $node->textContent ) );
 			$href = trim( (string) $node->getAttribute( 'href' ) );
 			if ( '' !== $href && ! preg_match( '/^\s*javascript:/i', $href ) ) {
+				$link_url = $this->dynamic_tag( $href ) ? $href : esc_url_raw( $href );
 				$settings['link'] = [
 					'type' => str_starts_with( $href, '#' ) ? 'external' : 'external',
-					'url'  => esc_url_raw( $href ),
+					'url'  => $link_url,
 				];
 			}
 		} elseif ( 'button' === $tag ) {
@@ -280,7 +283,8 @@ final class Bricks_Html_Css_Converter_Service {
 			$settings['text'] = sanitize_text_field( trim( (string) $node->textContent ) );
 		} elseif ( 'img' === $tag ) {
 			$name = 'image';
-			$src  = esc_url_raw( (string) $node->getAttribute( 'src' ) );
+			$raw_src = trim( (string) $node->getAttribute( 'src' ) );
+			$src     = $this->dynamic_tag( $raw_src ) ? $raw_src : esc_url_raw( $raw_src );
 			if ( '' !== $src ) {
 				$settings['image'] = [
 					'url'           => $src,
@@ -365,8 +369,152 @@ final class Bricks_Html_Css_Converter_Service {
 		if ( [] !== $attributes ) {
 			$settings['_attributes'] = $attributes;
 		}
+		$query_template = trim( (string) $node->getAttribute( 'data-kiwe-query-template' ) );
+		if ( '' !== $query_template ) {
+			$query = $this->query_for_template( $query_template );
+			if ( [] !== $query ) {
+				$settings['query'] = $query;
+			} else {
+				$this->warnings[] = sprintf( 'No Kiwe binding query matched data-kiwe-query-template="%s".', sanitize_text_field( $query_template ) );
+			}
+		}
 
 		return $settings;
+	}
+
+	private function query_templates_from_options( array $options ): array {
+		$binding = [];
+		foreach ( [ 'kiweBindings', 'binding', 'bindings' ] as $key ) {
+			if ( isset( $options[ $key ] ) && is_array( $options[ $key ] ) ) {
+				$binding = $options[ $key ];
+				break;
+			}
+		}
+		if ( [] === $binding || empty( $binding['queries'] ) || ! is_array( $binding['queries'] ) ) {
+			return [];
+		}
+
+		$templates = [];
+		foreach ( $binding['queries'] as $query ) {
+			if ( ! is_array( $query ) || empty( $query['bricks'] ) || ! is_array( $query['bricks'] ) ) {
+				continue;
+			}
+			$bricks_query = $this->sanitize_query_settings( $query['bricks'] );
+			if ( [] === $bricks_query ) {
+				continue;
+			}
+			$keys = [];
+			$id   = sanitize_key( (string) ( $query['id'] ?? '' ) );
+			if ( '' !== $id ) {
+				$keys[] = $id;
+			}
+			$selector = (string) ( $query['selector'] ?? '' );
+			if ( preg_match( '/data-kiwe-query-template\s*=\s*["\']([^"\']+)["\']/i', $selector, $match ) ) {
+				$keys[] = (string) $match[1];
+			}
+			foreach ( $keys as $key ) {
+				$normalized = $this->normalize_binding_key( $key );
+				if ( '' !== $normalized ) {
+					$templates[ $normalized ] = $bricks_query;
+				}
+			}
+		}
+
+		return $templates;
+	}
+
+	private function query_for_template( string $template ): array {
+		$normalized = $this->normalize_binding_key( $template );
+		return '' !== $normalized && isset( $this->query_templates[ $normalized ] ) ? $this->query_templates[ $normalized ] : [];
+	}
+
+	private function normalize_binding_key( string $key ): string {
+		return strtolower( preg_replace( '/[^a-z0-9]+/i', '', $key ) ?: '' );
+	}
+
+	private function sanitize_query_settings( array $query ): array {
+		$allowed = [
+			'objectType',
+			'post_type',
+			'post_status',
+			'posts_per_page',
+			'orderby',
+			'order',
+			'ignore_sticky_posts',
+			'taxonomy',
+			'hide_empty',
+			'exclude',
+			'include',
+			'number',
+			'meta_query',
+			'tax_query',
+			'relation',
+		];
+		$out = [];
+		foreach ( $query as $key => $value ) {
+			$key = (string) $key;
+			if ( ! in_array( $key, $allowed, true ) ) {
+				continue;
+			}
+			$out[ $key ] = $this->sanitize_query_value( $value, $key );
+		}
+		if ( empty( $out['objectType'] ) ) {
+			return [];
+		}
+
+		return $out;
+	}
+
+	private function sanitize_query_value( mixed $value, string $key ): mixed {
+		if ( is_bool( $value ) || is_int( $value ) || is_float( $value ) || null === $value ) {
+			return $value;
+		}
+		if ( is_scalar( $value ) ) {
+			$value = (string) $value;
+			if ( in_array( $key, [ 'posts_per_page', 'number' ], true ) ) {
+				return max( 1, min( 24, absint( $value ) ) );
+			}
+			if ( in_array( $key, [ 'include', 'exclude' ], true ) ) {
+				return array_values( array_filter( array_map( 'absint', preg_split( '/\s*,\s*/', $value ) ?: [] ) ) );
+			}
+			return sanitize_text_field( substr( $value, 0, 180 ) );
+		}
+		if ( is_array( $value ) ) {
+			if ( in_array( $key, [ 'include', 'exclude' ], true ) ) {
+				return array_values( array_filter( array_map( 'absint', $value ) ) );
+			}
+			$out = [];
+			foreach ( $value as $child_key => $child_value ) {
+				if ( is_int( $child_key ) ) {
+					$out[] = is_array( $child_value ) ? $this->sanitize_query_clause( $child_value ) : $this->sanitize_query_value( $child_value, $key );
+				} else {
+					$child_key = sanitize_key( (string) $child_key );
+					if ( '' !== $child_key ) {
+						$out[ $child_key ] = is_array( $child_value ) ? $this->sanitize_query_clause( $child_value ) : $this->sanitize_query_value( $child_value, $child_key );
+					}
+				}
+			}
+			return $out;
+		}
+
+		return '';
+	}
+
+	private function sanitize_query_clause( array $clause ): array {
+		$allowed = [ 'key', 'value', 'compare', 'type', 'taxonomy', 'field', 'terms', 'operator', 'include_children', 'relation' ];
+		$out = [];
+		foreach ( $clause as $key => $value ) {
+			$key = sanitize_key( (string) $key );
+			if ( ! in_array( $key, $allowed, true ) ) {
+				continue;
+			}
+			$out[ $key ] = $this->sanitize_query_value( $value, $key );
+		}
+		return $out;
+	}
+
+	private function dynamic_tag( string $value ): bool {
+		return (bool) preg_match( '/^\{[a-zA-Z0-9_:\-]+\}$/', trim( $value ) );
 	}
 
 	private function sanitize_inline_html( string $html ): string {

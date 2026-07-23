@@ -4,8 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.25 - 2026-07-23
+
 - Aligned the static handoff audit with live AI screen selectors by allowing `.dsa-ai-insight` and `.dsa-ai-chat-placeholder` in importable AppShell theme CSS when they target Kiwe runtime markup instead of preview-only fixtures.
 - Neutralized brand-specific examples in the public combined-lite toolkit context so Audit Companion and browser AI guidance remain marketplace/general-purpose rather than biased toward prior National Chikki tests.
+- Hardened the controlled Bricks staging executor after the BioVantage combined-handoff live test exposed that dynamic query-loop bindings were validated but not consumed during fallback conversion.
+- Split embedded `<style>` blocks into the CSS lane before Bricks conversion so browser-AI handoffs can paste naturally while the executor still applies CSS through the controlled page-settings path.
+- Passed `kiweBindings` into the fallback Bricks converter, mapped `data-kiwe-query-template` to sanitized Bricks query settings, and preserved dynamic URL/image tags such as `{post_url}` and `{featured_image}` instead of flattening them into static text.
 
 ## 0.6.24 - 2026-07-23
 

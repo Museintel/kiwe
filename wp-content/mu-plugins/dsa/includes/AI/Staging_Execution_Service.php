@@ -336,6 +336,9 @@ final class Staging_Execution_Service {
 
 		$html = (string) ( $operation['html'] ?? $operation['bricksPasteHtml'] ?? '' );
 		$css  = (string) ( $operation['css'] ?? '' );
+		$style_split = $this->split_style_blocks( $html );
+		$html        = $style_split['html'];
+		$css         = trim( $style_split['css'] . "\n" . $css );
 		if ( strlen( $html ) > self::MAX_HTML_BYTES ) {
 			return $this->failure( 'html_too_large', 'HTML exceeds staging executor size budget.' );
 		}
@@ -351,6 +354,7 @@ final class Staging_Execution_Service {
 				'createGlobalClasses' => ! empty( $operation['createGlobalClasses'] ),
 				'extractVariables'    => ! empty( $operation['extractVariables'] ),
 				'pageSettings'        => isset( $operation['pageSettings'] ) && is_array( $operation['pageSettings'] ) ? $operation['pageSettings'] : [],
+				'kiweBindings'        => isset( $operation['kiweBindings'] ) && is_array( $operation['kiweBindings'] ) ? $operation['kiweBindings'] : ( isset( $operation['binding'] ) && is_array( $operation['binding'] ) ? $operation['binding'] : ( isset( $operation['bindings'] ) && is_array( $operation['bindings'] ) ? $operation['bindings'] : [] ) ),
 			]
 		);
 
@@ -420,6 +424,28 @@ final class Staging_Execution_Service {
 
 	private function bricks_managed_placeholder(): string {
 		return '<div hidden data-kiwe-bricks-managed="true" aria-hidden="true"></div>';
+	}
+
+	private function split_style_blocks( string $html ): array {
+		$css = '';
+		$out = $html;
+		while ( false !== ( $start = stripos( $out, '<style' ) ) ) {
+			$open_end = strpos( $out, '>', $start );
+			if ( false === $open_end ) {
+				break;
+			}
+			$close = stripos( $out, '</style>', $open_end );
+			if ( false === $close ) {
+				break;
+			}
+			$css .= "\n" . substr( $out, $open_end + 1, $close - $open_end - 1 );
+			$out = substr( $out, 0, $start ) . substr( $out, $close + 8 );
+		}
+
+		return [
+			'html' => trim( $out ),
+			'css'  => $css,
+		];
 	}
 
 	private function flush_bricks_template_cache( int $post_id ): void {

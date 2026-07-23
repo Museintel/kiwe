@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.6.24",
+  "version": "0.6.25",
   "algorithm": "sha256",
   "file_count": 260,
   "files": {
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "8a8b502a87473c215612ea42711b90a41c0ca9d8912cb2263c90e84b90f09e52"
+      "sha256": "a20ec744ddbd29251a95066ba9a327c4ec984698fc12b26fdb4e4eeafafcefdb"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -369,8 +369,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
-      "bytes": 17425,
-      "sha256": "b2a7d60df9e45c0b4f2a6f90cd3dfa03d2e43b351981ddd30e1f109acadaa825"
+      "bytes": 22224,
+      "sha256": "ff202751a5dc5dafc2b5f41da627cc9645dd60d4dd81e45ef98cd172c758fc9c"
     },
     "includes/AI/Controlled_Executor_Service.php": {
       "bytes": 11554,
@@ -445,8 +445,8 @@
       "sha256": "0b9fc2c223683afd8e5565852c6ba6e81d04ce1ffba59de2275088b796b3a7ba"
     },
     "includes/AI/Staging_Execution_Service.php": {
-      "bytes": 41306,
-      "sha256": "bbe1be2bf9d288e41fca09e5a7af476a9d59893c0e9f864868cce8cac1de5f25"
+      "bytes": 42352,
+      "sha256": "e4973f1978e9ea78ba48a0172487c21d72ed50500996bdbe87287b410fddbab6"
     },
     "includes/AI/Studio_AI_Service.php": {
       "bytes": 18703,
@@ -929,8 +929,8 @@
       "sha256": "7fe266946b3b32c7a3c00ce01743187a2505b281e35fcd4c5eaf9ebf57b3e7d7"
     },
     "ui-system/README.md": {
-      "bytes": 50737,
-      "sha256": "868bc9f5b8e90438b4bb6d93aaf5edae2c018770aa6e9c00fdeec7078cdb02bc"
+      "bytes": 51589,
+      "sha256": "f73377e963ae5002cb74d5c39463994e4671c98145a75d96820392b40490482e"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
