@@ -6,7 +6,10 @@
     "principle": "Kiwe owns screen data, behavior, accessibility, and geometry. Themes own visual arrangement by styling live AppShell and Seam hooks, not by inventing preview-only screen markup.",
     "screenRoot": "[data-dsa-screen][data-dsa-screen-name]",
     "partHook": "[data-dsa-part]",
-    "seamHooks": ["[data-seam-slot]", "[data-seam-role]", "[data-seam-flow]"],
+    "seamShadowMetadata": {
+      "selectors": ["[data-seam-slot]", "[data-seam-role]", "[data-seam-flow]"],
+      "themeCssPolicy": "Protected metadata for tooling, diagnostics, and AI understanding only. Importable theme CSS should style documented [data-dsa-part] hooks and public Seam vocabulary instead."
+    },
     "commonParts": ["screen", "title", "eyebrow", "identity", "summary", "rows", "row", "layout", "context", "grid", "items", "card", "cluster", "media", "action", "input", "field", "fbt", "fbt-rail", "score"],
     "examples": [
       "[data-dsa-screen-name=\"cart\"] [data-dsa-part=\"summary\"]",

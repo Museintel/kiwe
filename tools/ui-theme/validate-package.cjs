@@ -355,10 +355,32 @@ function isDockArrangementSelector(selector) {
 	return /\[data-dsa-dock(?:[\]=\s-])|\.dsa-dock(?![-_a-zA-Z0-9])|\.dsa-dock-cluster(?![-_a-zA-Z0-9])|\.dsa-phonekey-dock(?![-_a-zA-Z0-9])|\.dsa-dock__button(?![-_a-zA-Z0-9])|\.dsa-ai-launcher(?![-_a-zA-Z0-9])|\[data-dsa-module(?:[\]=\s])|\[data-dsa-dock-(?:focus|primary|cluster)(?:[\]=\s])/i.test(selector);
 }
 
+function selectorTargetsProtectedAppShellRoot(selector) {
+	return String(selector || '')
+		.split(',')
+		.map((part) => part.trim())
+		.filter(Boolean)
+		.some((part) => {
+			const match = part.match(/(?:#dsa-surface|\[data-dsa-surface\]|\.dsa-installed-theme-[a-z0-9_-]+)(.*)$/i);
+			if (!match) return false;
+			const after = String(match[1] || '');
+			return !/[>+~\s]/.test(after);
+		});
+}
+
 function validateGeometryOwnership(relative, body) {
 	for (const match of body.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
 		const selector = match[1].trim();
 		const declarations = match[2];
+		if (selectorTargetsProtectedAppShellRoot(selector)) {
+			const paintMatches = [];
+			if (/(?:^|;)\s*background(?:-color|-image)?\s*:/i.test(declarations)) paintMatches.push('background');
+			if (/(?:^|;)\s*border(?:-[a-z-]+)?\s*:/i.test(declarations)) paintMatches.push('border');
+			if (/(?:^|;)\s*(?:box-shadow|filter|backdrop-filter|opacity)\s*:/i.test(declarations)) paintMatches.push('paint/effect');
+			if (paintMatches.length) {
+				fail(`${relative} assigns ${[...new Set(paintMatches)].join(', ')} to protected AppShell root selector "${selector.slice(0, 140)}". The DSA surface root is transparent Kiwe runtime scaffolding; theme paint belongs on dock/sheet/screen/panel parts.`);
+			}
+		}
 		if (!isGeometrySelector(selector)) continue;
 		const geometryMatches = [];
 		if (/(?:^|;)\s*position\s*:\s*(?:fixed|absolute)\b/i.test(declarations)) geometryMatches.push('position');

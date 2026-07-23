@@ -915,6 +915,38 @@ final class AI_Companion_Service {
 		return $findings;
 	}
 
+	private function theme_selector_targets_protected_root( string $selector ): bool {
+		foreach ( explode( ',', $selector ) as $part ) {
+			$part = trim( $part );
+			if ( '' === $part || ! preg_match( '/(?:#dsa-surface|\[data-dsa-surface\]|\.dsa-installed-theme-[a-z0-9_-]+)(.*)$/i', $part, $match ) ) {
+				continue;
+			}
+			$after = isset( $match[1] ) ? (string) $match[1] : '';
+			if ( ! preg_match( '/[>+~\s]/', $after ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function theme_css_paints_protected_root( string $css ): bool {
+		$css = (string) preg_replace( '/\/\*[\s\S]*?\*\//', '', $css );
+		if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/s', $css, $matches, PREG_SET_ORDER ) ) {
+			return false;
+		}
+
+		foreach ( $matches as $rule ) {
+			$selector     = isset( $rule[1] ) ? (string) $rule[1] : '';
+			$declarations = isset( $rule[2] ) ? (string) $rule[2] : '';
+			if ( $this->theme_selector_targets_protected_root( $selector ) && preg_match( '/(?:^|;)\s*(?:background(?:-color|-image)?|border(?:-[a-z-]+)?|box-shadow|filter|backdrop-filter|opacity)\s*:/i', $declarations ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private function review_theme_css( string $css ): array {
 		$findings = [];
 		if ( preg_match( '/(?:^|[\\s,{])(?:\\.dsa-screen-head|\\.dsa-toolbar|\\.dsa-preview-|\\.dsa-fixture-|\\.dsa-dock-primary|\\.dsa-dock-secondary)\\b/i', $css ) ) {
@@ -922,6 +954,13 @@ final class AI_Companion_Service {
 				'severity' => 'error',
 				'code'     => 'fixture_selector_in_import_css',
 				'message'  => 'Importable theme.css includes preview/fixture selectors. Move them to combined-preview CSS.',
+			];
+		}
+		if ( $this->theme_css_paints_protected_root( $css ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'protected_surface_root_paint_in_theme_css',
+				'message'  => 'Importable theme.css paints the protected AppShell surface root. The DSA surface root is transparent Kiwe runtime scaffolding; theme CSS may set tokens/inherited typography on the root, but backgrounds, borders, shadows, opacity, and filters belong on dock/sheet/screen/panel parts.',
 			];
 		}
 		if ( preg_match( '/(?:#dsa-surface|\\[data-dsa-surface\\])\\s*{[^}]*(?:position\\s*:\\s*(?:fixed|absolute)|\\binset\\s*:|\\btop\\s*:|\\bright\\s*:|\\bbottom\\s*:|\\bleft\\s*:|\\bz-index\\s*:|100vw|100vh)/is', $css ) ) {
@@ -959,11 +998,11 @@ final class AI_Companion_Service {
 				'message'  => 'Importable theme.css owns dock geometry/arrangement/effect gutters. Kiwe Geometry Engine owns dock layout, sizing, spacing, transform, overflow, and split/focus placement.',
 			];
 		}
-		if ( ! preg_match( '/\\bdata-dsa-part\\b|\\bdata-seam-(?:slot|role|flow)\\b/i', $css ) ) {
+		if ( ! preg_match( '/\\bdata-dsa-part\\b/i', $css ) ) {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'missing_live_part_hooks_in_theme_css',
-				'message'  => 'Importable theme.css never targets live Seam/AppShell part hooks. Broad root/panel color styling alone makes installed themes collapse into the same live UI with only palette changes.',
+				'message'  => 'Importable theme.css never targets documented live AppShell part hooks. Broad root/panel color styling alone makes installed themes collapse into the same live UI with only palette changes.',
 			];
 		}
 
@@ -1018,7 +1057,7 @@ final class AI_Companion_Service {
 			'requiredShapeChecked' => ! isset( $codes['missing_required_file'] ) && [] !== $path_map,
 			'noSecretLeakagePattern' => ! isset( $codes['secret_like_content'] ),
 			'seamDataRolesChecked' => ! isset( $codes['unsupported_seam_data_role'] ),
-			'appshellGeometryChecked' => ! isset( $codes['protected_geometry_in_theme_css'] ) && ! isset( $codes['protected_surface_geometry_in_theme_css'] ) && ! isset( $codes['dock_geometry_or_arrangement_in_theme_css'] ),
+			'appshellGeometryChecked' => ! isset( $codes['protected_geometry_in_theme_css'] ) && ! isset( $codes['protected_surface_geometry_in_theme_css'] ) && ! isset( $codes['protected_surface_root_paint_in_theme_css'] ) && ! isset( $codes['dock_geometry_or_arrangement_in_theme_css'] ),
 			'themePackageChecked' => ! isset( $codes['theme_package_missing_root_key'] ) && ! isset( $codes['theme_package_css_not_inline'] ) && ! isset( $codes['theme_package_css_mismatch'] ),
 			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
 			'pageArtifactChecked' => ! isset( $codes['page_artifact_contains_appshell'] ),

@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.29 - 2026-07-23
+
+- Removed AppShell root painting from the BioVantage marketplace theme package and reinstalled the corrected `biovantage-clinical-botanics` theme on staging as `1.2.1`, so sheet mode no longer gets a page-sized background plate behind the sheet/dock.
+- Tightened `validate-output`, `audit-output`, `tools/ui-theme/validate-package.cjs`, public lite contexts, UI prompt guidance, `screen-payloads.json`, and Audit Companion so importable AppShell theme CSS may set tokens/inherited typography on the protected surface root but must not paint it with background, border, shadow, opacity, or filters.
+- Aligned the Seam/AppShell styling boundary: protected `data-seam-*` shadow metadata remains for tooling and AI understanding, while installable theme CSS must skin live DSA through documented `data-dsa-part` hooks and public Seam vocabulary.
+
 ## 0.6.28 - 2026-07-23
 
 - Completed the BioVantage TEST 2 staging gate through the live Kiwe AI API: installed/activated the corrected AppShell theme package, validated bindings, prepared the Bricks apply plan, and successfully created a UTF-8 Bricks staging page through `bricks.page.from-html`.

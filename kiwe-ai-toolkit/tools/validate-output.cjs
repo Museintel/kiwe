@@ -41,6 +41,36 @@ if (missing.length) {
   process.exit(1);
 }
 
+function stripCssComments(css) {
+  return String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+function selectorTargetsProtectedAppShellRoot(selector) {
+  return String(selector || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .some((part) => {
+      const match = part.match(/(?:#dsa-surface|\[data-dsa-surface\]|\.dsa-installed-theme-[a-z0-9_-]+)(.*)$/i);
+      if (!match) return false;
+      const after = String(match[1] || '');
+      return !/[>+~\s]/.test(after);
+    });
+}
+
+function protectedAppShellRootPaint(css) {
+  const findings = [];
+  const paintPattern = /(?:^|;)\s*(?:background(?:-color|-image)?|border(?:-[a-z-]+)?|box-shadow|filter|backdrop-filter|opacity)\s*:/i;
+  for (const match of stripCssComments(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = match[1].trim();
+    const declarations = match[2];
+    if (selectorTargetsProtectedAppShellRoot(selector) && paintPattern.test(declarations)) {
+      findings.push(selector);
+    }
+  }
+  return findings;
+}
+
 if (mode === 'combined') {
   const privatePreviewClasses = [
     'dsa-screen-head',
@@ -99,10 +129,18 @@ if (mode === 'theme' || mode === 'combined') {
       }
       const cssRel = `appshell-theme/import/${entry.name}/css/theme.css`;
       const css = fs.readFileSync(path.join(root, cssRel), 'utf8');
-      if (!/(data-dsa-part|data-seam-slot|data-seam-role|data-seam-flow)/.test(css)) {
+      const rootPaint = protectedAppShellRootPaint(css);
+      if (rootPaint.length) {
         console.error(`Kiwe handoff validation failed for ${root}`);
-        console.error(`${cssRel} does not target live Seam/AppShell part hooks.`);
-        console.error('Use documented live hooks such as [data-dsa-screen-name="cart"] [data-dsa-part="summary"], [data-dsa-part="card"], [data-seam-slot="context"], etc. Broad root/panel color styling alone is not enough for an installable DSA theme.');
+        console.error(`${cssRel} paints the protected AppShell surface root:`);
+        for (const selector of rootPaint) console.error(`Protected root paint: ${selector}`);
+        console.error('The DSA surface root is transparent Kiwe runtime scaffolding. Theme CSS may set tokens/inherited typography on the root, but backgrounds, borders, shadows, opacity, and filters belong on dock/sheet/screen/panel parts.');
+        process.exit(1);
+      }
+      if (!/data-dsa-part/.test(css)) {
+        console.error(`Kiwe handoff validation failed for ${root}`);
+        console.error(`${cssRel} does not target documented live AppShell part hooks.`);
+        console.error('Use documented live hooks such as [data-dsa-screen-name="cart"] [data-dsa-part="summary"], [data-dsa-part="card"], [data-dsa-part="context"], etc. Protected data-seam-* metadata is for tooling/diagnostics, not importable theme styling. Broad root/panel color styling alone is not enough for an installable DSA theme.');
         process.exit(1);
       }
     }

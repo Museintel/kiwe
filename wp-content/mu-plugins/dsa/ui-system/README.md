@@ -158,9 +158,11 @@ Batch 74 addresses the deeper "same UI, different colors" theme-authority failur
 
 Batch 75 records the BioVantage TEST 2 live-staging gate. The corrected `biovantage-clinical-botanics` AppShell package installs and activates through the live theme API at version `1.2.0`, the BioVantage binding file validates against staging Site Graph, and the controlled Bricks fallback converter successfully creates a UTF-8 staging page with 127 Bricks elements and page custom CSS via `bricks.page.from-html`. The test exposed one core mobile behavior issue: Search opened with its input focused, causing phone keyboards to shrink the sheet/screen. DSA Search now suppresses automatic input focus on narrow/coarse-pointer viewports unless config explicitly opts in. The test also confirmed that previous mojibake text came from a non-UTF-8 client request; AI/API clients must send JSON as UTF-8 or split CSS through the controlled executor. The MU loader and package entry are synchronized at `0.6.28`.
 
+Batch 76 closes the sheet-mode background leak found on Hostinger after BioVantage activation. The `biovantage-clinical-botanics` package no longer paints `[data-dsa-surface]` or the installed-theme root; only dock/sheet/screen/panel and documented part hooks may own visible surfaces. `validate-output`, `audit-output`, the REST Audit Companion, `tools/ui-theme/validate-package.cjs`, `combined-lite.md`, `audit-lite.md`, `screen-payloads.json`, and the theme prompt now fail or warn consistently when importable theme CSS paints the protected AppShell root. The same pass resolves the protected Seam styling ambiguity: `data-seam-*` remains shadow metadata for tooling/AI understanding, while installable theme CSS skins live UI through `data-dsa-part` and public Seam vocabulary. The corrected BioVantage theme was installed on staging as `1.2.1`, and live inspection confirmed the AppShell root computes to transparent in sheet mode. The MU loader and package entry are synchronized at `0.6.29`.
+
 Next release-prep steps:
 
-1. Upload/proof the `0.6.28` MU package on Hostinger so mobile Search no longer summons the keyboard on panel open while preserving the corrected live AppShell part hooks and BioVantage theme package flow.
+1. Upload/proof the `0.6.29` MU package on Hostinger so the root-paint gate, protected Seam boundary, and corrected BioVantage package flow are available to future AI/theme tests.
 
 ## Files
 

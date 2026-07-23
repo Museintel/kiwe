@@ -257,6 +257,34 @@ function validateImportCssNoRuntimeBridgeTokens(cssText, file) {
   }
 }
 
+function stripCssComments(cssText) {
+  return String(cssText || '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+function selectorTargetsProtectedAppShellRoot(selector) {
+  return String(selector || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .some((part) => {
+      const match = part.match(/(?:#dsa-surface|\[data-dsa-surface\]|\.dsa-installed-theme-[a-z0-9_-]+)(.*)$/i);
+      if (!match) return false;
+      const after = String(match[1] || '');
+      return !/[>+~\s]/.test(after);
+    });
+}
+
+function validateImportCssNoProtectedRootPaint(cssText, file) {
+  const paintPattern = /(?:^|;)\s*(?:background(?:-color|-image)?|border(?:-[a-z-]+)?|box-shadow|filter|backdrop-filter|opacity)\s*:/i;
+  for (const match of stripCssComments(cssText).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = match[1].trim();
+    const declarations = match[2];
+    if (selectorTargetsProtectedAppShellRoot(selector) && paintPattern.test(declarations)) {
+      add('fail', `Importable theme CSS paints the protected AppShell surface root "${selector.slice(0, 140)}". The DSA surface root is transparent Kiwe runtime scaffolding; theme CSS may set tokens/inherited typography on the root, but backgrounds, borders, shadows, opacity, and filters belong on dock/sheet/screen/panel parts.`, rel(file));
+    }
+  }
+}
+
 if (exists('package.json') || exists('vite.config.ts') || exists('tailwind.config.js') || exists('components.json')) {
   add('fail', 'Output looks like a React/Vite/Tailwind/shadcn app. Kiwe handoffs must be plain HTML/CSS with optional preview-only JS unless an app prototype was explicitly requested.');
 }
@@ -448,12 +476,13 @@ if (exists('appshell-theme') && importThemeCssText) {
   if (leakedSelectors.length) {
     add('fail', `Importable AppShell theme CSS relies on preview-fixture screen selectors (${leakedSelectors.join(', ')}). Move fixture-only selectors to combined-preview CSS and target live Kiwe runtime roots/internals in theme.css.`, importThemeCssFiles.map(rel).join(', '));
   }
-  if (!/(data-dsa-part|data-seam-slot|data-seam-role|data-seam-flow)/i.test(importThemeCssText)) {
-    add('fail', 'Importable AppShell theme CSS never targets live Seam/AppShell part hooks such as [data-dsa-part], [data-seam-slot], [data-seam-role], or [data-seam-flow]. Broad root/panel colors alone make installed themes collapse into the same live UI with only palette changes.', importThemeCssFiles.map(rel).join(', '));
+  if (!/data-dsa-part/i.test(importThemeCssText)) {
+    add('fail', 'Importable AppShell theme CSS never targets documented live AppShell part hooks such as [data-dsa-part]. Protected data-seam-* metadata is for tooling/diagnostics, not importable theme styling. Broad root/panel colors alone make installed themes collapse into the same live UI with only palette changes.', importThemeCssFiles.map(rel).join(', '));
   }
   for (const file of importThemeCssFiles) {
     validateImportCssKiweTokenReferences(read(file), file);
     validateImportCssNoRuntimeBridgeTokens(read(file), file);
+    validateImportCssNoProtectedRootPaint(read(file), file);
   }
 }
 
