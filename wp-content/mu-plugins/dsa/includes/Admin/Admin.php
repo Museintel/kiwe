@@ -6105,22 +6105,23 @@ final class Admin {
 				<input type="hidden" name="visual_effects[_classic_present]" value="1">
 				<input type="hidden" name="visual_effects[_transition_present]" value="1">
 				<input type="hidden" name="style[active_theme_id]" value="<?php echo esc_attr( $active_theme_id ); ?>">
-				<h2><?php esc_html_e( 'Base UI adapter', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Installed themes above are the AppShell theme packages. This adapter is the built-in Kiwe runtime layer underneath them: Legacy is the lightest fallback, while Kiwe 2027 exposes the modern sheet/dock/screen adapter that marketplace themes can skin.', 'dsa' ); ?></p>
-				<div class="dsa-theme-options">
-					<label class="dsa-theme-option dsa-theme-option--classic">
-						<input type="radio" name="style[visual_profile]" value="legacy" <?php checked( $visual_profile, 'legacy' ); ?>>
-						<span class="dsa-theme-option__preview" aria-hidden="true"><i></i><i></i><i></i><b></b></span>
-						<strong><?php esc_html_e( 'Legacy adapter', 'dsa' ); ?></strong>
-						<small><?php esc_html_e( 'The preserved baseline for existing sites. Use it when a package intentionally targets the ultra-light legacy runtime.', 'dsa' ); ?></small>
-					</label>
-					<label class="dsa-theme-option dsa-theme-option--sheet">
-						<input type="radio" name="style[visual_profile]" value="kiwe2027" <?php checked( $visual_profile, 'kiwe2027' ); ?>>
-						<span class="dsa-theme-option__preview" aria-hidden="true"><i></i><b></b></span>
-						<strong><?php esc_html_e( 'Kiwe 2027 adapter', 'dsa' ); ?></strong>
-						<small><?php esc_html_e( 'Modern runtime adapter for Sheet, Classic, dock, Bricks, cart, search, links, and AI contracts. Most marketplace themes should use this adapter.', 'dsa' ); ?></small>
-					</label>
-				</div>
+				<input type="hidden" name="style[visual_profile]" value="<?php echo esc_attr( $visual_profile ); ?>">
+				<h2><?php esc_html_e( 'Theme foundation', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Kiwe applies the correct built-in runtime foundation from the active theme. In normal use, select an installed theme above; do not choose a separate adapter.', 'dsa' ); ?></p>
+				<details class="dsa-admin-advanced">
+					<summary><?php esc_html_e( 'Advanced compatibility state', 'dsa' ); ?></summary>
+					<p>
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %s: active foundation profile. */
+								__( 'Current foundation: %s. Legacy is the ultra-light fallback. Kiwe 2027 is the modern AppShell runtime that installed marketplace themes skin through live Seam and DSA hooks.', 'dsa' ),
+								'kiwe2027' === $visual_profile ? __( 'Kiwe 2027', 'dsa' ) : __( 'Legacy', 'dsa' )
+							)
+						);
+						?>
+					</p>
+				</details>
 				<h2><?php esc_html_e( 'Dock presentation', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Theme owns how the registered dock is presented. Kiwe > Dock still owns which modules appear and their drag order.', 'dsa' ); ?></p>
 				<table class="form-table" role="presentation">

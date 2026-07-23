@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.27 - 2026-07-23
+
+- Exposed live DSA screen/sheet theme hooks by adding `data-dsa-screen-name` and `data-dsa-part` metadata alongside the existing protected Seam shadow landmarks after each AppShell panel render.
+- Tightened `validate-output`, `audit-output`, public lite contexts, `screen-payloads.json`, and Audit Companion so marketplace AppShell themes fail when importable `theme.css` only skins broad panels/colors and never targets live Seam/AppShell part hooks.
+- Demoted the confusing `Kiwe > Theme` adapter choice into an advanced compatibility state: normal users now choose installed themes, while custom marketplace themes default to the modern Kiwe 2027 runtime foundation unless they explicitly declare Legacy.
+
 ## 0.6.26 - 2026-07-23
 
 - Tightened the combined handoff validator, AI output audit, public lite contexts, and Audit Companion so primary combined previews fail when DSA screen/sheet visuals depend on preview-only `.kiwe-preview-panel-*` fixtures instead of live Kiwe runtime selectors.

@@ -1302,6 +1302,8 @@
 		const resolvedPanel = String( panelName || panel.getAttribute( 'data-dsa-lazy-panel' ) || 'surface' ).toLowerCase().replace( /[^a-z0-9_-]+/g, '-' );
 		panel.setAttribute( 'data-dsa-screen', '' );
 		panel.setAttribute( 'data-dsa-screen-module', resolvedPanel || 'surface' );
+		panel.setAttribute( 'data-dsa-screen-name', resolvedPanel || 'surface' );
+		panel.setAttribute( 'data-dsa-part', 'screen' );
 		panel.setAttribute( 'data-seam-root', 'kiwe-dsa' );
 		panel.setAttribute( 'data-seam-role', 'modal' );
 		panel.setAttribute( 'data-seam-flow', 'stack' );
@@ -1333,6 +1335,9 @@
 			}
 			node.setAttribute( 'data-seam-' + key, String( value ) );
 		} );
+		if ( meta.slot && !node.hasAttribute( 'data-dsa-part' ) ) {
+			node.setAttribute( 'data-dsa-part', String( meta.slot ).toLowerCase().replace( /[^a-z0-9_-]+/g, '-' ) );
+		}
 	}
 
 	function applySeamShadowLandmarks( panel ) {
@@ -1345,16 +1350,23 @@
 			{ selector: '.dsa-panel__meta, .dsa-notification-panel__intro, .dsa-ios-install-panel__lead', meta: { role: 'caption', tone: 'muted', classes: [ 'seam-caption', 'seam-tone-muted' ] } },
 			{ selector: '.dsa-panel__header, .dsa-auth-actions, .dsa-checkout-actions, .dsa-links-admin-bar, .dsa-notification-submit, .dsa-initial-preloader__actions, .dsa-game-hud', meta: { role: 'actions', flow: 'cluster', slot: 'actions' } },
 			{ selector: '.dsa-panel__list, .dsa-account-actions, .dsa-menu-links, .dsa-secure-list', meta: { role: 'nav', flow: 'stack', slot: 'navigation' } },
-			{ selector: '.dsa-social-grid, .dsa-saved-grid, .dsa-links-field-grid, .dsa-checkout-fields', meta: { role: 'container', flow: 'grid' } },
-			{ selector: '.dsa-cart-panel__items, .kiwe-cart-v2027__items, .dsa-discount-summary__lines, .dsa-notification-options, .dsa-ios-steps', meta: { role: 'container', flow: 'stack' } },
+			{ selector: '.kiwe-profile-v2027__identity, .kiwe-links-v2027__identity', meta: { role: 'container', flow: 'cluster', slot: 'identity' } },
+			{ selector: '.kiwe-profile-v2027__stats, .kiwe-saved-v2027__summary, .kiwe-cart-v2027__summary, .dsa-cart-panel__summary', meta: { role: 'stats', flow: 'cluster', slot: 'summary' } },
+			{ selector: '.kiwe-profile-v2027__rows, .kiwe-menu-v2027__nav, .dsa-menu-list', meta: { role: 'nav', flow: 'stack', slot: 'rows' } },
+			{ selector: '.kiwe-profile-v2027__row, .dsa-menu-link, .dsa-shop-link, .dsa-social-link', meta: { role: 'link', flow: 'cluster', slot: 'row' } },
+			{ selector: '.kiwe-menu-v2027__grid', meta: { role: 'container', flow: 'grid', slot: 'layout' } },
+			{ selector: '.kiwe-menu-v2027__context, .dsa-menu-context', meta: { role: 'toc', flow: 'stack', slot: 'context' } },
+			{ selector: '.dsa-links-score', meta: { role: 'badge', tone: 'accent', slot: 'score' } },
+			{ selector: '.dsa-social-grid, .dsa-saved-grid, .dsa-links-field-grid, .dsa-checkout-fields', meta: { role: 'container', flow: 'grid', slot: 'grid' } },
+			{ selector: '.dsa-cart-panel__items, .kiwe-cart-v2027__items, .dsa-discount-summary__lines, .dsa-notification-options, .dsa-ios-steps', meta: { role: 'container', flow: 'stack', slot: 'items' } },
 			{ selector: '.dsa-cart-fbt', meta: { role: 'section', flow: 'stack', slot: 'fbt' } },
 			{ selector: '.dsa-cart-fbt__rail', meta: { role: 'nav', flow: 'reel', slot: 'fbt-rail' } },
-			{ selector: '.dsa-cart-panel__item, .dsa-cart-fbt__card, .dsa-saved-card, .dsa-discount-summary, .dsa-saved-empty, .kiwe-saved-v2027__summary, .kiwe-cart-v2027__summary, .kiwe-cart-v2027__empty, .dsa-notification-choice, .dsa-game-start', meta: { role: 'card', flow: 'stack' } },
-			{ selector: '.dsa-links-hero, .dsa-links-commerce-actions, .dsa-health-row, .dsa-home-trust, .kiwe-cart-v2027__trust', meta: { role: 'container', flow: 'cluster' } },
-			{ selector: '.dsa-links-logo, .dsa-panel__avatar, .dsa-cart-panel__item img, .dsa-cart-fbt__card img, .dsa-saved-card img', meta: { role: 'media' } },
-			{ selector: '.dsa-panel__button, .dsa-cart-panel__checkout, .dsa-cart-fbt__action, .dsa-cart-fbt__view, .dsa-links-edit-button, .dsa-links-admin-link, .dsa-app-badge, [data-dsa-ios-install-done]', meta: { role: 'button', tone: 'brand' } },
-			{ selector: '.dsa-auth-field, [data-dsa-checkout-field], [data-dsa-notification-email], [data-dsa-notification-phone]', meta: { role: 'input' } },
-			{ selector: '.dsa-checkout-field, .dsa-links-logo-field, .dsa-notification-contact, .dsa-notification-categories', meta: { role: 'field', flow: 'stack' } },
+			{ selector: '.dsa-cart-panel__item, .dsa-cart-fbt__card, .dsa-saved-card, .dsa-discount-summary, .dsa-saved-empty, .kiwe-saved-v2027__summary, .kiwe-cart-v2027__summary, .kiwe-cart-v2027__empty, .dsa-notification-choice, .dsa-game-start', meta: { role: 'card', flow: 'stack', slot: 'card' } },
+			{ selector: '.dsa-links-hero, .dsa-links-commerce-actions, .dsa-health-row, .dsa-home-trust, .kiwe-cart-v2027__trust', meta: { role: 'container', flow: 'cluster', slot: 'cluster' } },
+			{ selector: '.dsa-links-logo, .dsa-panel__avatar, .dsa-cart-panel__item img, .dsa-cart-fbt__card img, .dsa-saved-card img', meta: { role: 'media', slot: 'media' } },
+			{ selector: '.dsa-panel__button, .dsa-cart-panel__checkout, .dsa-cart-fbt__action, .dsa-cart-fbt__view, .dsa-links-edit-button, .dsa-links-admin-link, .dsa-app-badge, [data-dsa-ios-install-done]', meta: { role: 'button', tone: 'brand', slot: 'action' } },
+			{ selector: '.dsa-auth-field, [data-dsa-checkout-field], [data-dsa-notification-email], [data-dsa-notification-phone]', meta: { role: 'input', slot: 'input' } },
+			{ selector: '.dsa-checkout-field, .dsa-links-logo-field, .dsa-notification-contact, .dsa-notification-categories', meta: { role: 'field', flow: 'stack', slot: 'field' } },
 			{ selector: 'form[data-dsa-checkout-form], form[data-dsa-notification-form], form[data-dsa-profile-form], form[data-dsa-links-form]', meta: { role: 'form', flow: 'stack', authority: 'kiwe-dsa' } },
 			{ selector: '.dsa-context-action__badge, .dsa-cart-panel__stock-badge, .dsa-home-trust__badge', meta: { role: 'badge', tone: 'accent' } },
 			{ selector: '.dsa-cart-panel__quantity, .dsa-notification-platforms', meta: { role: 'actions', flow: 'row' } },

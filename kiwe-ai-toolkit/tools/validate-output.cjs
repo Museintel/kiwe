@@ -97,6 +97,14 @@ if (mode === 'theme' || mode === 'combined') {
           process.exit(1);
         }
       }
+      const cssRel = `appshell-theme/import/${entry.name}/css/theme.css`;
+      const css = fs.readFileSync(path.join(root, cssRel), 'utf8');
+      if (!/(data-dsa-part|data-seam-slot|data-seam-role|data-seam-flow)/.test(css)) {
+        console.error(`Kiwe handoff validation failed for ${root}`);
+        console.error(`${cssRel} does not target live Seam/AppShell part hooks.`);
+        console.error('Use documented live hooks such as [data-dsa-screen-name="cart"] [data-dsa-part="summary"], [data-dsa-part="card"], [data-seam-slot="context"], etc. Broad root/panel color styling alone is not enough for an installable DSA theme.');
+        process.exit(1);
+      }
     }
   }
 }

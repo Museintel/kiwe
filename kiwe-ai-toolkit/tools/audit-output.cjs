@@ -448,6 +448,9 @@ if (exists('appshell-theme') && importThemeCssText) {
   if (leakedSelectors.length) {
     add('fail', `Importable AppShell theme CSS relies on preview-fixture screen selectors (${leakedSelectors.join(', ')}). Move fixture-only selectors to combined-preview CSS and target live Kiwe runtime roots/internals in theme.css.`, importThemeCssFiles.map(rel).join(', '));
   }
+  if (!/(data-dsa-part|data-seam-slot|data-seam-role|data-seam-flow)/i.test(importThemeCssText)) {
+    add('fail', 'Importable AppShell theme CSS never targets live Seam/AppShell part hooks such as [data-dsa-part], [data-seam-slot], [data-seam-role], or [data-seam-flow]. Broad root/panel colors alone make installed themes collapse into the same live UI with only palette changes.', importThemeCssFiles.map(rel).join(', '));
+  }
   for (const file of importThemeCssFiles) {
     validateImportCssKiweTokenReferences(read(file), file);
     validateImportCssNoRuntimeBridgeTokens(read(file), file);

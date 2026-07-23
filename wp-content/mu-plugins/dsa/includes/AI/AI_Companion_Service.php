@@ -959,6 +959,13 @@ final class AI_Companion_Service {
 				'message'  => 'Importable theme.css owns dock geometry/arrangement/effect gutters. Kiwe Geometry Engine owns dock layout, sizing, spacing, transform, overflow, and split/focus placement.',
 			];
 		}
+		if ( ! preg_match( '/\\bdata-dsa-part\\b|\\bdata-seam-(?:slot|role|flow)\\b/i', $css ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'missing_live_part_hooks_in_theme_css',
+				'message'  => 'Importable theme.css never targets live Seam/AppShell part hooks. Broad root/panel color styling alone makes installed themes collapse into the same live UI with only palette changes.',
+			];
+		}
 
 		return $findings;
 	}

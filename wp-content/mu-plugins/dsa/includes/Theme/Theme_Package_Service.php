@@ -145,6 +145,8 @@ final class Theme_Package_Service {
 			$style['visual_profile'] = 'legacy';
 		} elseif ( 'kiwe2027' === $id || in_array( $profile, [ 'kiwe-2027', 'kiwe2027', 'prototype' ], true ) ) {
 			$style['visual_profile'] = 'kiwe2027';
+		} elseif ( empty( $record['builtIn'] ) && ! isset( $settings['style']['visual_profile'] ) ) {
+			$style['visual_profile'] = 'kiwe2027';
 		}
 		$next['style'] = $style;
 

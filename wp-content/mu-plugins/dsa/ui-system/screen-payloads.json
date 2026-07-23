@@ -2,6 +2,23 @@
   "$schema": "https://kiwe.local/schemas/screen-payloads.json",
   "contract": "kiwe.surface-ui.v2",
   "principle": "Payloads expose capabilities and state. Themes may rearrange them but must preserve action ownership and data attributes.",
+  "liveThemeHooks": {
+    "principle": "Kiwe owns screen data, behavior, accessibility, and geometry. Themes own visual arrangement by styling live AppShell and Seam hooks, not by inventing preview-only screen markup.",
+    "screenRoot": "[data-dsa-screen][data-dsa-screen-name]",
+    "partHook": "[data-dsa-part]",
+    "seamHooks": ["[data-seam-slot]", "[data-seam-role]", "[data-seam-flow]"],
+    "commonParts": ["screen", "title", "eyebrow", "identity", "summary", "rows", "row", "layout", "context", "grid", "items", "card", "cluster", "media", "action", "input", "field", "fbt", "fbt-rail", "score"],
+    "examples": [
+      "[data-dsa-screen-name=\"cart\"] [data-dsa-part=\"summary\"]",
+      "[data-dsa-screen-name=\"cart\"] [data-dsa-part=\"fbt-rail\"]",
+      "[data-dsa-screen-name=\"menu\"] [data-dsa-part=\"context\"]",
+      "[data-dsa-screen-name=\"profile\"] [data-dsa-part=\"identity\"]",
+      "[data-dsa-screen-name=\"links\"] [data-dsa-part=\"score\"]",
+      "[data-dsa-part=\"card\"]",
+      "[data-dsa-part=\"action\"]"
+    ],
+    "audit": "Importable theme CSS that only styles broad roots, panels, buttons, and colors should be treated as a color skin rather than a full AppShell theme."
+  },
   "siteTypeGuidance": {
     "principle": "Supported screens are capabilities, not mandatory dock visibility. A full AppShell theme should provide resilient visual coverage for all registered core screens, while the Kiwe settings profile decides which screens/icons are visible for the current site.",
     "newsEditorialDefault": ["search", "menu", "saved", "links", "notifications", "ios-install", "ai"],

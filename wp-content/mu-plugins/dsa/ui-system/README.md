@@ -154,9 +154,11 @@ Batch 72 tightens the live Bricks apply loop after the BioVantage combined hando
 
 Batch 73 tightens the preview/live AppShell match after direct Hostinger inspection showed BioVantage's combined preview depended on `.kiwe-preview-panel-*` fake screen interiors while the installed theme only lightly skinned real Kiwe 2027 panels. `kiwe-ai-toolkit/tools/validate-output.cjs`, `audit-output.cjs`, `combined-lite.md`, `audit-lite.md`, and the REST Audit Companion now fail primary combined previews that put DSA screen/sheet visual identity into preview-only panel classes instead of importable `theme.css` targeting live Kiwe selectors. `Kiwe > Theme` admin copy now labels installed packages as the actual AppShell themes, relabels Legacy/Kiwe 2027 as the base UI adapter layer, and marks the old active/hover color controls as fallback colors so they no longer look like competing marketplace theme tokens. The MU loader and package entry are synchronized at `0.6.26`.
 
+Batch 74 addresses the deeper "same UI, different colors" theme-authority failure. Live DSA panels now receive `data-dsa-screen-name` and `data-dsa-part` metadata alongside the protected Seam shadow landmarks, so installable themes can style real live parts such as cart summary, profile identity, menu context, rows, cards, media, actions, FBT rails, and score badges without owning Kiwe behavior or geometry. `validate-output`, `audit-output`, `combined-lite.md`, `audit-lite.md`, `screen-payloads.json`, connector contracts, and Audit Companion now reject AppShell packages whose importable `theme.css` never targets `data-dsa-part` or public Seam part hooks, because broad root/panel colors are only a skin. `Kiwe > Theme` now treats the built-in foundation as an advanced compatibility state rather than a primary user choice, and custom marketplace themes default to the modern Kiwe 2027 foundation unless they explicitly declare Legacy. The MU loader and package entry are synchronized at `0.6.27`.
+
 Next release-prep steps:
 
-1. Upload/proof the `0.6.26` MU package on Hostinger so the Audit Companion rejects BioVantage-style preview/live AppShell mismatches before staging, while the Bricks apply layer can still consume `kiwe-bindings.json` query-loop intent for corrected combined handoffs.
+1. Upload/proof the `0.6.27` MU package on Hostinger so live DSA screens expose the new AppShell part hooks and the Audit Companion rejects both preview-only screen interiors and color-only AppShell skins before staging.
 
 ## Files
 
