@@ -491,7 +491,7 @@ export function mount( root, config ) {
 		if ( query.length === 1 ) {
 			closeAnchoredResults( root );
 			const status = root.querySelector( '[data-dsa-search-status]' );
-		if ( status ) {
+			if ( status ) {
 				status.textContent = 'Keep typing…';
 			}
 			return;
@@ -522,12 +522,14 @@ export function mount( root, config ) {
 }
 
 function shouldAutofocusSearchInput( root, config ) {
+	if ( config && config.autofocus === true ) return true;
 	if ( config && config.autofocus === false ) return false;
 	const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia( '(hover: none), (pointer: coarse)' ).matches;
 	const narrowViewport = Math.min(
 		window.innerWidth || 1024,
 		document.documentElement ? document.documentElement.clientWidth || 1024 : 1024
 	) <= 640;
+	if ( coarsePointer || narrowViewport ) return false;
 	const sheetSurface = root && root.closest && root.closest( '.dsa-theme-sheet, [data-dsa-surface].dsa-theme-sheet' );
 	return ! ( sheetSurface && ( coarsePointer || narrowViewport ) );
 }

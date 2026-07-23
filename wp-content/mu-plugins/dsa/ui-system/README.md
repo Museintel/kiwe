@@ -156,9 +156,11 @@ Batch 73 tightens the preview/live AppShell match after direct Hostinger inspect
 
 Batch 74 addresses the deeper "same UI, different colors" theme-authority failure. Live DSA panels now receive `data-dsa-screen-name` and `data-dsa-part` metadata alongside the protected Seam shadow landmarks, so installable themes can style real live parts such as cart summary, profile identity, menu context, rows, cards, media, actions, FBT rails, and score badges without owning Kiwe behavior or geometry. `validate-output`, `audit-output`, `combined-lite.md`, `audit-lite.md`, `screen-payloads.json`, connector contracts, and Audit Companion now reject AppShell packages whose importable `theme.css` never targets `data-dsa-part` or public Seam part hooks, because broad root/panel colors are only a skin. `Kiwe > Theme` now treats the built-in foundation as an advanced compatibility state rather than a primary user choice, and custom marketplace themes default to the modern Kiwe 2027 foundation unless they explicitly declare Legacy. The MU loader and package entry are synchronized at `0.6.27`.
 
+Batch 75 records the BioVantage TEST 2 live-staging gate. The corrected `biovantage-clinical-botanics` AppShell package installs and activates through the live theme API at version `1.2.0`, the BioVantage binding file validates against staging Site Graph, and the controlled Bricks fallback converter successfully creates a UTF-8 staging page with 127 Bricks elements and page custom CSS via `bricks.page.from-html`. The test exposed one core mobile behavior issue: Search opened with its input focused, causing phone keyboards to shrink the sheet/screen. DSA Search now suppresses automatic input focus on narrow/coarse-pointer viewports unless config explicitly opts in. The test also confirmed that previous mojibake text came from a non-UTF-8 client request; AI/API clients must send JSON as UTF-8 or split CSS through the controlled executor. The MU loader and package entry are synchronized at `0.6.28`.
+
 Next release-prep steps:
 
-1. Upload/proof the `0.6.27` MU package on Hostinger so live DSA screens expose the new AppShell part hooks and the Audit Companion rejects both preview-only screen interiors and color-only AppShell skins before staging.
+1. Upload/proof the `0.6.28` MU package on Hostinger so mobile Search no longer summons the keyboard on panel open while preserving the corrected live AppShell part hooks and BioVantage theme package flow.
 
 ## Files
 

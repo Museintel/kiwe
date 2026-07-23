@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.28 - 2026-07-23
+
+- Completed the BioVantage TEST 2 staging gate through the live Kiwe AI API: installed/activated the corrected AppShell theme package, validated bindings, prepared the Bricks apply plan, and successfully created a UTF-8 Bricks staging page through `bricks.page.from-html`.
+- Hardened DSA Search opening behavior so narrow/coarse-pointer viewports no longer autofocus the search input on panel open, preventing mobile keyboards from immediately shrinking the sheet/screen.
+- Confirmed the UTF-8 import path works when AI/API clients send JSON bodies as UTF-8 and split CSS through the controlled executor; the older mojibake staging artifact came from a non-UTF-8 client request, not the BioVantage source file.
+
 ## 0.6.27 - 2026-07-23
 
 - Exposed live DSA screen/sheet theme hooks by adding `data-dsa-screen-name` and `data-dsa-part` metadata alongside the existing protected Seam shadow landmarks after each AppShell panel render.
