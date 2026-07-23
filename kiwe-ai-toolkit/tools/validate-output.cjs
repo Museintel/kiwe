@@ -71,6 +71,14 @@ function protectedAppShellRootPaint(css) {
   return findings;
 }
 
+function anonymousPixelLiterals(css) {
+  const literals = new Set();
+  for (const match of stripCssComments(css).matchAll(/(^|[^-_a-zA-Z0-9.])((?:\d*\.)?\d+px)\b/gi)) {
+    literals.add(match[2].toLowerCase());
+  }
+  return Array.from(literals).sort();
+}
+
 if (mode === 'combined') {
   const privatePreviewClasses = [
     'dsa-screen-head',
@@ -129,6 +137,13 @@ if (mode === 'theme' || mode === 'combined') {
       }
       const cssRel = `appshell-theme/import/${entry.name}/css/theme.css`;
       const css = fs.readFileSync(path.join(root, cssRel), 'utf8');
+      const pixelLiterals = anonymousPixelLiterals(css);
+      if (pixelLiterals.length) {
+        console.error(`Kiwe handoff validation failed for ${root}`);
+        console.error(`${cssRel} contains anonymous pixel literal(s): ${pixelLiterals.join(', ')}`);
+        console.error('Importable AppShell theme CSS must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables. Concrete base values belong in theme-package.json settings.tokens or Kiwe core token registries, not installable theme.css.');
+        process.exit(1);
+      }
       const rootPaint = protectedAppShellRootPaint(css);
       if (rootPaint.length) {
         console.error(`Kiwe handoff validation failed for ${root}`);

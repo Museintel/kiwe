@@ -257,6 +257,16 @@ function validateImportCssNoRuntimeBridgeTokens(cssText, file) {
   }
 }
 
+function validateImportCssNoAnonymousPixelLiterals(cssText, file) {
+  const literals = new Set();
+  for (const match of stripCssComments(cssText).matchAll(/(^|[^-_a-zA-Z0-9.])((?:\d*\.)?\d+px)\b/gi)) {
+    literals.add(match[2].toLowerCase());
+  }
+  if (literals.size) {
+    add('fail', `Importable theme CSS contains anonymous pixel literal(s) ${Array.from(literals).sort().join(', ')}. Marketplace AppShell themes must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables. Concrete base values belong in theme-package.json settings.tokens or Kiwe core token registries, not installable theme.css.`, rel(file));
+  }
+}
+
 function stripCssComments(cssText) {
   return String(cssText || '').replace(/\/\*[\s\S]*?\*\//g, '');
 }
@@ -482,6 +492,7 @@ if (exists('appshell-theme') && importThemeCssText) {
   for (const file of importThemeCssFiles) {
     validateImportCssKiweTokenReferences(read(file), file);
     validateImportCssNoRuntimeBridgeTokens(read(file), file);
+    validateImportCssNoAnonymousPixelLiterals(read(file), file);
     validateImportCssNoProtectedRootPaint(read(file), file);
   }
 }

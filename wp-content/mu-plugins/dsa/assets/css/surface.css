@@ -8132,7 +8132,7 @@ html[data-kiwe-theme="dark"] .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-p
 
 .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-search-v2027 .dsa-search-panel__field input {
 	color: var(--dsa-runtime-token-0650);
-	font-weight: 850;
+	font-weight: 800;
 }
 
 .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-search-v2027 .dsa-search-panel__field button {

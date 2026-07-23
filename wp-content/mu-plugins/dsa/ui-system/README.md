@@ -160,6 +160,8 @@ Batch 75 records the BioVantage TEST 2 live-staging gate. The corrected `biovant
 
 Batch 76 closes the sheet-mode background leak found on Hostinger after BioVantage activation. The `biovantage-clinical-botanics` package no longer paints `[data-dsa-surface]` or the installed-theme root; only dock/sheet/screen/panel and documented part hooks may own visible surfaces. `validate-output`, `audit-output`, the REST Audit Companion, `tools/ui-theme/validate-package.cjs`, `combined-lite.md`, `audit-lite.md`, `screen-payloads.json`, and the theme prompt now fail or warn consistently when importable theme CSS paints the protected AppShell root. The same pass resolves the protected Seam styling ambiguity: `data-seam-*` remains shadow metadata for tooling/AI understanding, while installable theme CSS skins live UI through `data-dsa-part` and public Seam vocabulary. The corrected BioVantage theme was installed on staging as `1.2.1`, and live inspection confirmed the AppShell root computes to transparent in sheet mode. The MU loader and package entry are synchronized at `0.6.29`.
 
+Batch 77 hardens AppShell theme token purity at the marketplace boundary. Importable `theme.css` now fails validation when it contains anonymous raw pixel literals such as `22px`, `35px`, `1px`, or `999px`; concrete numeric values belong in `theme-package.json settings.tokens` or Kiwe core token registries, while installed theme CSS consumes official `--kiwe-*`, documented `--kiwe-theme-*`, or Kiwe/DSA Geometry Engine variables. The rule is enforced by `tools/ui-theme/validate-package.cjs`, `kiwe-ai-toolkit/tools/validate-output.cjs`, `kiwe-ai-toolkit/tools/audit-output.cjs`, and the REST Audit Companion so internal AI, browser AI, and human theme developers all receive the same deterministic feedback before staging. The MU loader and package entry are synchronized at `0.6.30`.
+
 Next release-prep steps:
 
 1. Upload/proof the `0.6.29` MU package on Hostinger so the root-paint gate, protected Seam boundary, and corrected BioVantage package flow are available to future AI/theme tests.
@@ -203,6 +205,8 @@ Do not use htmx or Alpine for PhoneKey/auth, checkout/payment, cart reconciliati
 `Kiwe > Framework` owns the shared design-token profile. Active and Hover colors remain compatibility controls for `--kiwe-color-brand` and `--kiwe-color-accent`, while modern themes may also carry official token overrides for surface/background color, text color, typography, fonts, spacing, radius, motion, and elevation inside `theme-package.json` at `settings.tokens`.
 
 Theme CSS should consume canonical `--kiwe-*` tokens and compatibility `dsa-*` aliases. Hidden private palettes, font systems, and heading scales should be promoted into official token overrides when they are intended to appear live.
+
+Installable AppShell `theme.css` is token-pure. It must not contain anonymous raw pixel literals such as `22px`, `35px`, `1px`, or `999px`; concrete numeric values belong in `theme-package.json settings.tokens` or Kiwe core token registries, and the CSS should consume the resulting `--kiwe-*`, documented `--kiwe-theme-*`, or Kiwe/DSA Geometry Engine variables.
 
 ## Package validation
 

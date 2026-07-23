@@ -1,8 +1,13 @@
 .dsa-visual-marketplace .dsa-panel {
-  border-radius: var(--kiwe-radius-panel, var(--dsa-sheet-radius, 24px));
-  color: var(--kiwe-color-text, var(--dsa-text-color, #202936));
+  border-radius: var(--kiwe-radius-panel, var(--dsa-sheet-radius, var(--kiwe-radius-xl)));
+  color: var(--kiwe-color-text, var(--dsa-text-color, currentColor));
 }
 
 .dsa-visual-marketplace [data-dsa-profile-panel] {
-  background: var(--kiwe-surface-panel, var(--dsa-panel-bg, #fff));
+  background: var(--kiwe-surface-panel, var(--dsa-panel-bg, var(--kiwe-color-surface-raised)));
+}
+
+.dsa-visual-marketplace [data-dsa-profile-panel] [data-dsa-part="identity"] {
+  border-radius: var(--kiwe-radius-lg);
+  box-shadow: var(--kiwe-shadow-sm);
 }

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "0.6.29",
+  "version": "0.6.30",
   "algorithm": "sha256",
   "file_count": 260,
   "files": {
@@ -22,7 +22,7 @@
     },
     "assets/css/surface.css": {
       "bytes": 272146,
-      "sha256": "00887d523abf481539c2fb15b7daff582180a0d8f7311f5e1a65491347cde69e"
+      "sha256": "ad386bad4d8c38f3a505ed079b2a8ebc5350e8005726b65fbd7e4dcf2fed64e5"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "d8b7b20456e90f203bf88acc3921e541d962a89b9ef03f83d36322498b65d381"
+      "sha256": "9554c6c826f925c48f18f85f39f1749a98252d8cbe3a3b617e502b4d96545ef6"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -341,8 +341,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 46845,
-      "sha256": "9d1a6d4dc2561104723256c6629e4f906adc173b6940a87815dfaf08c17e7cd1"
+      "bytes": 48385,
+      "sha256": "c78b77e421247dcfa4447ef3f41061a69053999fbd6237933d4baefd5ae4c1f8"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -929,8 +929,8 @@
       "sha256": "7fe266946b3b32c7a3c00ce01743187a2505b281e35fcd4c5eaf9ebf57b3e7d7"
     },
     "ui-system/README.md": {
-      "bytes": 54978,
-      "sha256": "641d5b46555e0dbb39f2efbea0e57f7f70331792e0d26251abf240e06a0a980e"
+      "bytes": 56132,
+      "sha256": "4d9e01ee0c634df81eca744ac55dd7b5e094ee6b413b30d282544510b91b466e"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
@@ -997,8 +997,8 @@
       "sha256": "628dcddfdcdfde38e6f4acb58ba0aa954a54be3b90802295dd9e4a10bde8dbd7"
     },
     "ui-system/prompt.md": {
-      "bytes": 24820,
-      "sha256": "1ede0da29d8c6182858a8ce80b5ce061ff3ee29b1820c028318116b6010c094c"
+      "bytes": 25613,
+      "sha256": "d3e1c019fc7e72dd43631e2a2c67da5a63e857369a3d3eec63b41b1aa1a2508a"
     },
     "ui-system/screen-payloads.json": {
       "bytes": 15881,

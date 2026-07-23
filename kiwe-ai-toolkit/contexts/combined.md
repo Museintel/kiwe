@@ -677,6 +677,8 @@ Do not create a hidden large palette, font system, or heading scale that cannot 
 
 Never copy generated `--dsa-runtime-token-####` variables into a theme package, combined preview, website CSS, or documentation. Those variables are private Kiwe core migration bridge tokens used by the runtime token-purity audit; they are not stable public Seam/AppShell vocabulary. Use official `--kiwe-*` variables, documented `--kiwe-theme-*` aliases, or request a missing generic token be promoted into the universal token library.
 
+Never place anonymous raw pixel values directly in importable AppShell `theme.css`. If a design needs a concrete size, radius, border width, shadow, or type scale, define it through `theme-package.json settings.tokens` or use an existing Kiwe/DSA Geometry Engine variable, then consume that variable in CSS. Examples: use `var(--kiwe-space-md)`, `var(--kiwe-radius-xl)`, `var(--kiwe-shadow-md)`, or `var(--dsa-geometry-dock-border, thin)`, not `24px`, `18px`, `0 18px 48px`, or `1px`.
+
 ## Output format
 
 Return a complete handoff folder shaped like this:
@@ -715,6 +717,8 @@ It must not contain:
 - preview-only mocks, simulator code, or placeholder product/account data
 
 Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns dock, sheet, screen, and backdrop placement and measurement. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those properties belong in core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, inner spacing, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+
+Importable theme CSS is also token-pure: it must consume named tokens/variables instead of anonymous raw `px` literals. Values such as `35px`, `22px`, `1px`, and `999px` are allowed only in token settings/core token definitions, not in installed theme CSS declarations or CSS custom-property declarations.
 
 Theme settings belong inside the theme package, not in a separate loose settings export/import. Keep `theme.json` as the manifest-only validator file. Put dock composition, focus item, shape, sheet behavior, active theme id, color settings, visual-effect presets, and safe screen copy settings in `theme-package.json` under root `settings`. Put the same CSS as `css/theme.css` in `theme-package.json` under root `css` so Kiwe can import one file and show it under `Kiwe > Theme > Installed themes`.
 

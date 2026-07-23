@@ -1,0 +1,25 @@
+{
+  "schema": "kiwe.surface-theme.v1",
+  "id": "invalid.anonymous-pixel-literal",
+  "name": "Invalid Anonymous Pixel Literal",
+  "version": "1.0.0",
+  "profile": "marketplace",
+  "mode": "css-only",
+  "description": "Invalid fixture proving raw px literals are rejected from importable AppShell theme CSS.",
+  "author": "Kiwe",
+  "css": ["css/theme.css"],
+  "assets": [],
+  "screens": ["profile"],
+  "requires": {
+    "uiContract": "kiwe.surface-ui.v2",
+    "tokenContract": "kiwe.universal",
+    "minKiwe": "0.6.30"
+  },
+  "supports": ["light", "sheet", "dock", "horizontal"],
+  "budgets": {
+    "cssKb": 40,
+    "jsKb": 0,
+    "blockingAssets": 0
+  },
+  "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+}

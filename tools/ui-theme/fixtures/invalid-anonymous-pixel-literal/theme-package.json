@@ -1,0 +1,44 @@
+{
+  "type": "kiwe-theme-package",
+  "schema": "kiwe.theme-package.v1",
+  "schemaVersion": 1,
+  "theme": {
+    "schema": "kiwe.surface-theme.v1",
+    "id": "invalid.anonymous-pixel-literal",
+    "name": "Invalid Anonymous Pixel Literal",
+    "version": "1.0.0",
+    "profile": "marketplace",
+    "mode": "css-only",
+    "description": "Invalid fixture proving raw px literals are rejected from importable AppShell theme CSS.",
+    "author": "Kiwe",
+    "css": ["css/theme.css"],
+    "assets": [],
+    "screens": ["profile"],
+    "requires": {
+      "uiContract": "kiwe.surface-ui.v2",
+      "tokenContract": "kiwe.universal",
+      "minKiwe": "0.6.30"
+    },
+    "supports": ["light", "sheet", "dock", "horizontal"],
+    "budgets": {
+      "cssKb": 40,
+      "jsKb": 0,
+      "blockingAssets": 0
+    },
+    "forbidden": ["remote-code", "trackers", "php", "service-worker", "history-owner", "cart-owner", "checkout-owner", "phonekey-owner", "bricks-owner"]
+  },
+  "settings": {
+    "tokens": {
+      "enabled": true,
+      "profile_label": "Invalid anonymous px fixture",
+      "overrides": {
+        "color-brand": "#0f766e",
+        "color-surface": "#f8fafc",
+        "color-text": "#0f172a",
+        "radius-lg": "18px",
+        "space-md": "24px"
+      }
+    }
+  },
+  "css": ".dsa-visual-marketplace [data-dsa-profile-panel] [data-dsa-part=\"identity\"] {\n  padding: 22px;\n}\n"
+}

@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.30 - 2026-07-23
+
+- Hardened the marketplace AppShell theme boundary so importable `theme.css` now fails on anonymous raw pixel literals such as `22px`, `35px`, `1px`, or `999px`; theme CSS must consume official Kiwe/Seam tokens, documented theme aliases, or Kiwe/DSA Geometry Engine variables instead.
+- Updated the package validator, combined output validator, broad AI audit, and REST Audit Companion to report the same token-purity error before staging or live install.
+- Clarified public toolkit contexts and UI-system prompts that concrete numeric values belong in `theme-package.json settings.tokens` or Kiwe core token registries, not inside installable AppShell theme declarations.
+- Normalized the prototype Search input font weight to a standard browser weight and refreshed the RC9 presentation contract around the current token-bridge/font-token architecture.
+
 ## 0.6.29 - 2026-07-23
 
 - Removed AppShell root painting from the BioVantage marketplace theme package and reinstalled the corrected `biovantage-clinical-botanics` theme on staging as `1.2.1`, so sheet mode no longer gets a page-sized background plate behind the sheet/dock.

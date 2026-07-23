@@ -180,6 +180,8 @@ Do not create a hidden large palette, font system, or heading scale that cannot 
 
 Never use generated `--dsa-runtime-token-####` variables in handoff CSS, preview CSS, or documentation. Those are private Kiwe core bridge tokens for runtime token-purity validation, not public design tokens. Use official `--kiwe-*` variables, documented `--kiwe-theme-*` aliases, or propose a missing generic token for promotion into the universal library.
 
+Never place anonymous raw pixel values directly in importable AppShell `theme.css`. If a design needs a concrete size, radius, border width, shadow, or type scale, define it through `theme-package.json settings.tokens` or use an existing Kiwe/DSA Geometry Engine variable, then consume that variable in CSS. Examples: use `var(--kiwe-space-md)`, `var(--kiwe-radius-xl)`, `var(--kiwe-shadow-md)`, or `var(--dsa-geometry-dock-border, thin)`, not `24px`, `18px`, `0 18px 48px`, or `1px`.
+
 ## Output format
 
 Return a complete handoff folder shaped like this:
@@ -223,6 +225,8 @@ Theme settings belong inside the theme package, not in a separate loose settings
 If your preview uses custom live-intended screen/sheet copy, declare the same copy in `theme-package.json` under `settings.screens`. Examples: "Your tea-time bag" belongs in `settings.screens.cart.title`, "Pairs well with" belongs in `settings.screens.cart.fbtTitle`, "Your account" variants belong in `settings.screens.profile.title`, Links action labels belong in `settings.screens.links`, Search placeholder belongs in `settings.screens.search.placeholder`, and AI chat copy belongs in `settings.screens.ai.chatPlaceholder`. This is copy only: do not place products, prices, totals, profile/user data, social URLs, search results, checkout URLs, cart state, JavaScript, or behavior there.
 
 Importable theme CSS must not own AppShell geometry. Kiwe's Geometry Engine owns dock, sheet, screen, and backdrop placement and measurement. Do not set `position: fixed`, `position: absolute`, `inset`, `top`, `right`, `bottom`, `left`, hardcoded `z-index`, `width: 100vw`, `height: 100vh`, or hardcoded viewport offsets on `[data-dsa-dock]`, `.dsa-dock`, `[data-dsa-screen]`, `.dsa-panel`, `.dsa-sheet`, `[data-dsa-screen-backdrop]`, or sheet/screen backdrop selectors. Those properties belong in core or preview-only CSS. Theme CSS may style color, typography, border, radius, shadow, inner spacing, icons, badges, cards, buttons, and state appearance while consuming Geometry Engine variables.
+
+Importable theme CSS is also token-pure: it must consume named tokens/variables instead of anonymous raw `px` literals. Values such as `35px`, `22px`, `1px`, and `999px` are allowed only in token settings/core token definitions, not in installed theme CSS declarations or CSS custom-property declarations.
 
 Importable theme CSS must also not paint the protected AppShell root itself. Do not set `background`, `background-color`, `background-image`, `border`, `box-shadow`, `filter`, `backdrop-filter`, or `opacity` directly on `[data-dsa-surface]`, `#dsa-surface`, or `.dsa-installed-theme-[theme-id]` root selectors. The DSA root is the transparent layer Kiwe uses to coordinate geometry, state, dock reserve, and external modal yield.
 

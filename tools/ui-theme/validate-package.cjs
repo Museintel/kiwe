@@ -242,6 +242,10 @@ function validateKiweCssTokenReferences(relative, body) {
 	}
 }
 
+function stripCssComments(css) {
+	return String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
 function validateNoRuntimeBridgeTokenReferences(relative, body) {
 	const seen = new Set();
 	for (const match of body.matchAll(/--dsa-runtime-token-\d{4}/gi)) {
@@ -249,6 +253,16 @@ function validateNoRuntimeBridgeTokenReferences(relative, body) {
 	}
 	if (seen.size) {
 		fail(`${relative} references Kiwe core runtime bridge token(s) ${Array.from(seen).sort().join(', ')}. These generated --dsa-runtime-token-* variables are private migration glue for Kiwe runtime CSS, not public Seam/Theme vocabulary. Use official --kiwe-* variables, documented --kiwe-theme-* aliases, or request promotion to the universal token library.`);
+	}
+}
+
+function validateNoAnonymousLiteralThemeValues(relative, body) {
+	const literals = new Set();
+	for (const match of stripCssComments(body).matchAll(/(^|[^-_a-zA-Z0-9.])((?:\d*\.)?\d+px)\b/gi)) {
+		literals.add(match[2].toLowerCase());
+	}
+	if (literals.size) {
+		fail(`${relative} contains anonymous pixel literal(s) ${Array.from(literals).sort().join(', ')}. Importable AppShell theme CSS must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables instead of hard-coded px values. Put concrete base values in theme-package.json settings.tokens or Kiwe core token registries, not in installable theme.css.`);
 	}
 }
 
@@ -492,6 +506,7 @@ function validatePackage() {
 		validateGeometryOwnership(css, body);
 		validateKiweCssTokenReferences(css, body);
 		validateNoRuntimeBridgeTokenReferences(css, body);
+		validateNoAnonymousLiteralThemeValues(css, body);
 		if (!/(--kiwe-|--dsa-|data-dsa-|dsa-visual-|kiwe-)/.test(body)) {
 			warn(`CSS file ${css} does not appear to use Kiwe tokens or scoped selectors`);
 		}
