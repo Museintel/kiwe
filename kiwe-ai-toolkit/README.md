@@ -24,6 +24,8 @@ For highest-quality work, use the phased workflow instead of one giant combined 
 
 One-shot `combined` still exists for fast experiments, but serious candidate work should be staged.
 
+Any phase can add `/usecompanion`, such as `/rebuild /seamframework /usecompanion` or `/audit /dsatheme /usecompanion`. Companion is optional and non-blocking: if a scoped Kiwe AI key and target REST base are available, use Companion once for compact phase cards or deterministic audit findings; if it is unavailable, disabled, slow, rate-limited, over budget, or inaccessible, continue with the same phase normally and report the fallback. Companion is a contract oracle/context broker, not a creative co-author or full-codebase dump.
+
 Current lane rule: combined output uses AppShell `theme-package.json` for live DSA theme settings and `settings.tokens`; standalone `kiwe.framework-profile.v1` files are for website/page-only Framework token profiles or explicit `Kiwe > Framework` imports, not loose AppShell settings profiles.
 
 Token authority rule: AI handoffs should use official universal token names in `settings.tokens.overrides` and consume generated public variables such as `--kiwe-color-brand`, `--kiwe-color-surface`, `--kiwe-radius-lg`, or documented `--kiwe-theme-*` aliases. Do not copy Kiwe core's generated `--dsa-runtime-token-####` bridge variables into themes, previews, docs, or Bricks page CSS; those names are private runtime migration glue and are rejected by the package/audit validators.
@@ -49,7 +51,7 @@ Giving the whole plugin to an AI wastes tokens and invites it to invent against 
 npm install
 node bin/kiwe.js modes
 node bin/kiwe.js workflow
-node bin/kiwe.js route --command "/rebuild /seamframework" --brief "Rebuild the approved draft with Seam"
+node bin/kiwe.js route --command "/rebuild /seamframework /usecompanion" --brief "Rebuild the approved draft with Seam"
 node bin/kiwe.js start combined --brief "Netflix-like ultra-modern news website for Indian startups and business news, with a matching Kiwe AppShell direction"
 node bin/kiwe.js context combined
 node bin/kiwe.js create combined ./out/my-kiwe-handoff --name my-kiwe-handoff
@@ -112,9 +114,10 @@ For phased work:
 {
   "tool": "kiwe_route_command",
   "arguments": {
-    "command": "/rebuild /seamframework",
+    "command": "/rebuild /seamframework /usecompanion",
     "brief": "Use the human's current phase request exactly.",
-    "artifactSummary": "Summarize the prior artifact if one was supplied."
+    "artifactSummary": "Summarize the prior artifact if one was supplied.",
+    "useCompanion": true
   }
 }
 ```
@@ -160,6 +163,8 @@ Some browser AIs can read public GitHub files but cannot connect MCP tools or sa
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
 Do not use web search to find these files; open the exact raw URL that matches the assignment mode.
 For revisions, read the mode context first, then `audit-lite.md`, and report what was found/fixed. If a target-site Kiwe AI key is available, call `/wp-json/dsa/v1/ai/audit-companion/review` with the actual generated file map before broad self-audit, fix every `mustFix` item, then rerun the same route. Do not claim the executable Kiwe CLI/audit ran unless it actually executed.
+
+When `/usecompanion` is present, include a compact `COMPANION-TRACE` with routes attempted, success/fallback state, contextHash/siteGraphHash when supplied, cards/findings used, and confirmation that Companion did not replace the selected Kiwe phase.
 
 ## MCP
 

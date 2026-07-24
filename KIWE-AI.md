@@ -25,6 +25,8 @@ Use the workflow file when the human wants high-quality output, fewer correction
 
 The workflow intentionally separates creativity from Kiwe contract compliance. A pure creative draft may happen first without Kiwe/Seam/DSA constraints; later commands rebuild, audit, package, and bind it.
 
+Any phase command may include `/usecompanion`, for example `/rebuild /seamframework /usecompanion` or `/audit /dsatheme /usecompanion`. This is optional and non-blocking. If the human supplies `KIWE_REST_BASE` and `KIWE_AI_KEY`, make one bounded call to Kiwe Companion for compact phase cards or Audit Companion findings. If Companion is unavailable, disabled, slow, rate-limited, over budget, or inaccessible, continue with the same command without `/usecompanion` and report the fallback. Do not use `/usecompanion` to make Companion co-author the whole output, dump full plugin files, or spend native model tokens; it is a deterministic contract oracle with hashes, rule IDs, memory fingerprints, and `mustFix` maps.
+
 If the human explicitly asks for one-shot output, read exactly one static context file after this entrypoint:
 
 - Workflow / command router: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md`
@@ -128,6 +130,8 @@ The same advisor/enrichment seam is visible to administrators at `Kiwe > AI` as 
 
 Kiwe Companion AI is the optional site-aware context broker for external AIs creating website/page, DSA/AppShell theme, combined, dynamic binding, audit, staging, or security-support outputs. Enable it in `Kiwe > AI`, then issue a revocable key with `companion` scope. The Companion returns compact context cards, route hints, validation diffs, rule IDs, and safe next-action plans rather than dumping the whole plugin or raw security logs. For revisions, browser AI should submit the actual file map to `/ai/audit-companion/review` first, fix every `mustFix` item, then run its own explanation/self-audit. This saves tokens because the deterministic Audit Companion identifies concrete contract failures without calling a model. Its local memory stores privacy-safe fingerprints, structured pass/fail finding codes, and counts only, never secrets, raw visitor trails, raw SecureTrack events, customer data, full handoff files, or unredacted transcripts. SecureTrack AI exposure is a toggle under `Kiwe > AI`: redacted SecureTrack briefs use Companion consent/scopes, and SecureTrack Site Brain cloud review syncs from the shared Native AI provider/key when that provider is supported. There is no separate SecureTrack API-key field in Kiwe AI. `Kiwe > Secure` remains focused on human security controls and enforcement.
 
+When a workflow command includes `/usecompanion`, pass `mode`, `phase`, `command`, `brief`, and a short `artifactSummary` if your client can send JSON. Generation/rebuild/create/assemble/dynamic phases should prefer `/ai/companion/context` or `/ai/companion/ask`; audit/revision phases should prefer `/ai/audit-companion/review` with the actual generated file map. Always produce a compact `COMPANION-TRACE` listing routes attempted, success/fallback state, contextHash/siteGraphHash when supplied, cards/findings used, and confirmation that Companion did not replace the selected Kiwe phase.
+
 Kiwe Studio AI is the higher-level companion workflow. Enable it in `Kiwe > AI` and choose one operating mode: `native` for bounded native drafting through the configured provider/API key, `browser_companion` for browser AI plus token-saving Studio packet and Companion review, or `browser_only` when the user wants public toolkit prompts with no internal AI support. Use `/wp-json/dsa/v1/ai/studio/start` first for a token-saving Studio packet, `/wp-json/dsa/v1/ai/studio/draft` only when native drafting is enabled and the Kiwe AI key has `native_ai` scope, and `/wp-json/dsa/v1/ai/studio/review` after v1 output. A normal `studio_ai` key can obtain packets and deterministic reviews; add `native_ai` only when the key may spend provider tokens. Studio does not save Bricks, publish WordPress content, mutate WooCommerce, run cart/checkout/auth, or change SecureTrack enforcement.
 
 Bricks AI Intelligence is the Bricks-native map for both browser AI and Kiwe Studio AI. External tool clients can use a key with `bricks_ai`, `studio_ai`, or `all` scope to call `/wp-json/dsa/v1/ai/bricks/context` before emitting Bricks JSON or dynamic binding plans, and `/wp-json/dsa/v1/ai/bricks/plan` for a compact planning packet. It reports available Bricks elements, compact element controls, query loops, dynamic tags, conditions, interactions, Seam headless rules, and Kiwe launcher/runtime boundaries. It is read-only. It does not paste content, save Bricks, publish pages, or create Woo/cart/auth behavior.
@@ -222,9 +226,10 @@ For capable MCP/tool clients, use the command router first when the user gives a
 {
   "tool": "kiwe_route_command",
   "arguments": {
-    "command": "/rebuild /seamframework",
+    "command": "/rebuild /seamframework /usecompanion",
     "brief": "Paste the human's short phase request here.",
-    "artifactSummary": "Briefly summarize the prior phase artifact when available."
+    "artifactSummary": "Briefly summarize the prior phase artifact when available.",
+    "useCompanion": true
   }
 }
 ```

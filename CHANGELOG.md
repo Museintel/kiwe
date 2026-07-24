@@ -4,8 +4,11 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.35 - 2026-07-24
+
 - Added the Kiwe AI phased workflow/router for higher-quality external AI outputs: `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/assemble /combined`, and `/dynamic /sitegraph` now route to smaller contexts before one-shot combined work.
 - Exposed the workflow through `KIWE-AI.md`, `kiwe-ai-toolkit/contexts/workflow-lite.md`, CLI commands (`workflow`, `route`), and MCP tools (`kiwe_get_workflow`, `kiwe_route_command`) so browser and IDE AIs can avoid reading the full repo or being overloaded with every contract at once.
+- Added `/usecompanion` as an optional phase flag: browser/IDE AI can ask Kiwe Companion for compact cards or Audit Companion findings at any command level, but failures fall back to the original route without blocking output or spending native model tokens.
 
 ## 0.6.34 - 2026-07-24
 

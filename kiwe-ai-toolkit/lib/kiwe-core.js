@@ -315,22 +315,108 @@ function routeKind(command) {
   const text = String(command || '').trim().toLowerCase();
   if (!text) return 'workflow';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
+  if (/(\/build|\/create)/.test(text) && /(dsathemeandhomepage|theme and homepage|homepage and theme)/.test(text)) return 'combined-assemble';
   if (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-rebuild';
   if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
   if (/(\/create|\/build)/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-create';
   if (/\/audit/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-audit';
   if (/(\/create|\/build)/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-create';
   if (/\/audit/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-audit';
-  if (/(\/assemble|\/combine|\/combined)/.test(text)) return 'combined-assemble';
   if (/\/audit/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-audit';
+  if (/(\/assemble|\/combine|\/combined)/.test(text)) return 'combined-assemble';
   if (/(\/dynamic|\/sitegraph|\/binding|\/bindings)/.test(text)) return 'dynamic';
   if (/(\/apply|\/staging)/.test(text)) return 'staging';
-  if (/(\/build|\/create)/.test(text) && /(dsathemeandhomepage|theme and homepage|homepage and theme)/.test(text)) return 'combined-assemble';
   return 'workflow';
 }
 
-export function routeCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '' } = {}) {
+function wantsCompanion(command, explicit = false) {
+  const text = String(command || '').trim().toLowerCase();
+  return Boolean(explicit) || /(?:^|\s)\/usecompanion\b/.test(text) || /\buse\s+companion\b/.test(text);
+}
+
+function commandWithoutCompanion(command) {
+  return String(command || '').replace(/(?:^|\s)\/usecompanion\b/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function companionModeForKind(kind) {
+  if (kind === 'dynamic') return 'dynamic';
+  if (kind === 'staging') return 'staging';
+  if (kind.includes('audit')) return 'audit';
+  if (kind.includes('theme')) return 'theme';
+  if (kind.includes('combined')) return 'combined';
+  return 'website';
+}
+
+function companionAssistContext(kind, command) {
+  const baseCommand = commandWithoutCompanion(command) || command;
+  const mode = companionModeForKind(kind);
+  const isAudit = kind.includes('audit');
+  const lines = [
+    '# Optional /usecompanion assist',
+    '',
+    '`/usecompanion` is a bounded assist flag, not a dependency and not a second creative author.',
+    '',
+    'If `KIWE_REST_BASE` and `KIWE_AI_KEY` are available and the target site has Companion enabled, make one short Companion attempt for this phase. If credentials are missing, the route fails, Companion is disabled, rate-limited, times out, returns unclear data, or the AI tool cannot call HTTP routes, continue with the same command without `/usecompanion` and report the fallback in `COMPANION-TRACE`.',
+    '',
+    'Do not retry repeatedly, do not browse the whole repository as a fallback, and do not ask Companion to write the whole output. Companion is a deterministic Kiwe contract oracle/context broker: compact cards, rule IDs, hashes, previous failure fingerprints, and safe next-action hints. It is intentionally not allowed to dump full plugin files line by line or spend native model tokens for this flag.',
+    '',
+    'Suggested bounded payload:',
+    '',
+    '```json',
+    JSON.stringify({
+      mode,
+      phase: kind,
+      command: baseCommand,
+      sampleLimit: kind === 'dynamic' ? 8 : 4,
+      brief: 'short human brief',
+      artifactSummary: 'short previous artifact summary when available'
+    }, null, 2),
+    '```',
+    ''
+  ];
+
+  if (isAudit) {
+    lines.push(
+      'Preferred Companion route for this audit phase:',
+      '',
+      '```text',
+      'POST ${KIWE_REST_BASE}/ai/audit-companion/review',
+      'Authorization: Bearer ${KIWE_AI_KEY}',
+      '```',
+      '',
+      'Send the actual generated file map within the byte budget. Fix every `mustFix` item, then rerun once if practical. If the route cannot be used, perform the normal audit for this phase from the toolkit context.'
+    );
+  } else {
+    lines.push(
+      'Preferred Companion routes for this generation/rebuild/planning phase:',
+      '',
+      '```text',
+      'GET|POST ${KIWE_REST_BASE}/ai/companion/context',
+      'POST     ${KIWE_REST_BASE}/ai/companion/ask',
+      '```',
+      '',
+      'Use the returned cards to sharpen the phase. Then execute the normal selected phase from this route. After output exists, `POST /ai/companion/review-output` or `/ai/audit-companion/review` may be used for a compact deterministic review.'
+    );
+  }
+
+  lines.push(
+    '',
+    'Required `COMPANION-TRACE` when `/usecompanion` appears:',
+    '',
+    '- routes attempted;',
+    '- whether each route succeeded, failed, or was skipped;',
+    '- contextHash / siteGraphHash when supplied;',
+    '- count of cards/findings used;',
+    '- fallback reason, if any;',
+    '- confirmation that Companion did not replace the selected Kiwe phase.'
+  );
+
+  return lines.join('\n').trim() + '\n';
+}
+
+export function routeCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '', useCompanion = false } = {}) {
   const kind = routeKind(command);
+  const companionRequested = wantsCompanion(command, useCompanion);
   const humanBrief = String(brief || '').trim() || 'No human brief supplied.';
   const artifact = String(artifactSummary || '').trim() || 'No previous artifact summary supplied. Ask the human for the prior phase output if this command depends on one.';
   const graph = String(siteGraphSummary || '').trim() || 'No Site Graph summary supplied. Ask for target-site Site Graph before dynamic binding.';
@@ -352,6 +438,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     '',
     'Do only the selected phase. Do not silently expand into website + DSA + Bricks + dynamic + staging work.',
     '',
+    companionRequested ? companionAssistContext(kind, command) : '',
     getWorkflowContext()
   ];
 

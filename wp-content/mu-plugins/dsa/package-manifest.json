@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "0.6.34",
+  "version": "0.6.35",
   "algorithm": "sha256",
-  "file_count": 256,
+  "file_count": 257,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "d615c80c5edb9e8609342c95d2f69493a04d4b98180d3a987c178b35bec44754"
+      "sha256": "e7119153078cc53a9d9f8354390960ba4cedeb9044b3d93c9fcd8d91d172765c"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -329,8 +329,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 50425,
-      "sha256": "529ff71000a2d5cfcbde7e6173398f19da8643c7a39d0f7aee524db286b3bc88"
+      "bytes": 56449,
+      "sha256": "5edd76ff5eb7dc9a435511e1423e1c172a7c2ae6036203fcc0e2470f67c3a163"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -895,6 +895,10 @@
     "site-graph-system/release-proof-0.6.22.md": {
       "bytes": 1368,
       "sha256": "cfc316e6efb198afe6a105b6b99a160775e4ee061f005d81be925ef3d902da01"
+    },
+    "site-graph-system/release-proof-0.6.35.md": {
+      "bytes": 1690,
+      "sha256": "6ff9e937b82aea2247f3210a36c889ca31a697b8c2b693b43f45c8df08658e7c"
     },
     "site-graph-system/release-proof-0.6.7.md": {
       "bytes": 4783,

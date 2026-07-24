@@ -26,6 +26,58 @@ This pipeline is preferred over one giant `combined` prompt for serious work.
 
 Humans should be able to write short commands. The toolkit supplies the rules.
 
+## Optional `/usecompanion` flag
+
+`/usecompanion` can be appended to any workflow command:
+
+```text
+/rebuild /seamframework /usecompanion
+/audit /dsatheme /usecompanion
+/dynamic /sitegraph /usecompanion
+```
+
+This flag means: use Kiwe Companion if it is available, then continue the selected phase. It must never become a blocker.
+
+If `KIWE_REST_BASE` and `KIWE_AI_KEY` are available, make one bounded Companion attempt. If the key is missing, Companion is disabled, the route fails, rate-limits, times out, returns unclear data, or HTTP/tool access is not available, ignore `/usecompanion` and run the command before it normally.
+
+Companion is not a wandering creative AI. It is a compact Kiwe contract oracle and deterministic reviewer:
+
+- mode/phase cards;
+- rule IDs;
+- context hashes;
+- Site Graph hashes;
+- prior audit-failure fingerprints;
+- `mustFix` / `shouldFix` / `passed` maps for file reviews;
+- safe next-action hints.
+
+Do not ask Companion to read or return the whole plugin line by line. Do not upload secrets, raw SecureTrack logs, customer data, or full repository files unless the route explicitly asks for the generated handoff file map inside its byte budget. The token-saving goal is to fetch the smallest route-specific truth, not to create another giant context window.
+
+For generation, rebuild, create, assemble, dynamic, and staging-planning phases, prefer:
+
+```text
+GET|POST /wp-json/dsa/v1/ai/companion/context
+POST     /wp-json/dsa/v1/ai/companion/ask
+```
+
+Use payload fields such as `mode`, `phase`, `command`, `brief`, `artifactSummary`, and `sampleLimit` when the client can send them. Unknown fields are advisory and should not be treated as production writes.
+
+For audit and revision phases, prefer:
+
+```text
+POST /wp-json/dsa/v1/ai/audit-companion/review
+```
+
+Submit the actual generated file map, fix every `mustFix`, then rerun once if practical. If the audit route is unavailable, perform the normal toolkit audit from this file and the relevant mode/audit context.
+
+When `/usecompanion` appears, the final response should include a compact `COMPANION-TRACE`:
+
+- routes attempted;
+- whether each route succeeded, failed, or was skipped;
+- contextHash / siteGraphHash when supplied;
+- number of cards or findings used;
+- fallback reason, if any;
+- confirmation that Companion did not replace the selected Kiwe phase.
+
 ### `/ideate /webdraft`
 
 Use when the human wants maximum visual creativity.

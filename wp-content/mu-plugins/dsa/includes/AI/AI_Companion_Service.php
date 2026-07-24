@@ -83,9 +83,11 @@ final class AI_Companion_Service {
 			];
 		}
 
+		$command      = sanitize_text_field( (string) ( $args['command'] ?? '' ) );
+		$phase        = $this->phase( (string) ( $args['phase'] ?? $command ) );
 		$sample_limit = max( 0, min( 12, absint( $args['sampleLimit'] ?? 4 ) ) );
 		$graph        = $this->site_graph->graph( [ 'sampleLimit' => $sample_limit ] );
-		$cards        = $this->cards_for_mode( $mode );
+		$cards        = array_merge( $this->cards_for_phase( $phase ), $this->cards_for_mode( $mode ) );
 		$cards        = array_slice( $cards, 0, max( 1, (int) $settings['max_context_cards'] ) );
 
 		return [
@@ -93,7 +95,15 @@ final class AI_Companion_Service {
 			'schema'      => 'kiwe.ai-companion.context.v1',
 			'generatedAt' => gmdate( 'c' ),
 			'mode'        => $mode,
+			'phase'       => $phase,
+			'command'     => $command,
 			'purpose'     => 'Compact Kiwe contract/context cards for external AI tools building website/page, DSA theme, combined, dynamic-binding, audit, staging, or security work.',
+			'useCompanion' => [
+				'optional' => true,
+				'fallback' => 'If this route is unavailable, disabled, rate-limited, over budget, or unclear, continue with the selected Kiwe command without Companion.',
+				'modelCalled' => false,
+				'role' => 'deterministic phase-aware contract oracle, not a creative co-author or full-codebase dump',
+			],
 			'siteGraph'   => [
 				'summary'   => $this->site_graph->summary(),
 				'graphHash' => substr( hash( 'sha256', (string) wp_json_encode( $graph ) ), 0, 32 ),
@@ -444,6 +454,117 @@ final class AI_Companion_Service {
 		$modes = isset( $settings['companion_modes'] ) && is_array( $settings['companion_modes'] ) ? $settings['companion_modes'] : [];
 
 		return ! empty( $modes[ $mode ] ) ? $mode : '';
+	}
+
+	private function phase( string $phase_or_command ): string {
+		$text = strtolower( trim( $phase_or_command ) );
+		if ( '' === $text ) {
+			return '';
+		}
+		if ( preg_match( '/(?:^|\s)(?:\/ideate|\/creative|\/webdraft)\b/', $text ) ) {
+			return 'ideate';
+		}
+		if ( preg_match( '/(?:\/build|\/create).*(?:dsathemeandhomepage|theme and homepage|homepage and theme)/', $text ) ) {
+			return 'combined-assemble';
+		}
+		if ( preg_match( '/(?:\/rebuild|\/convert|\/adapt).*(?:\/seamframework|\/seam|seam framework)/', $text ) ) {
+			return 'seam-rebuild';
+		}
+		if ( preg_match( '/\/audit.*(?:\/seamframework|\/seam|seam framework)/', $text ) ) {
+			return 'seam-audit';
+		}
+		if ( preg_match( '/(?:\/create|\/build).*(?:\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/', $text ) ) {
+			return 'framework-create';
+		}
+		if ( preg_match( '/\/audit.*(?:\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/', $text ) ) {
+			return 'framework-audit';
+		}
+		if ( preg_match( '/(?:\/create|\/build).*(?:\/dsatheme|\/appshell|\/dsa|app shell)/', $text ) ) {
+			return 'theme-create';
+		}
+		if ( preg_match( '/\/audit.*(?:\/dsatheme|\/appshell|\/dsa|app shell)/', $text ) ) {
+			return 'theme-audit';
+		}
+		if ( preg_match( '/\/audit.*(?:\/combined|\/combine)/', $text ) ) {
+			return 'combined-audit';
+		}
+		if ( preg_match( '/(?:\/assemble|\/combine|\/combined)/', $text ) ) {
+			return 'combined-assemble';
+		}
+		if ( preg_match( '/(?:\/dynamic|\/sitegraph|\/binding|\/bindings)/', $text ) ) {
+			return 'dynamic';
+		}
+		if ( preg_match( '/(?:\/apply|\/staging)/', $text ) ) {
+			return 'staging';
+		}
+
+		return sanitize_key( $phase_or_command );
+	}
+
+	private function cards_for_phase( string $phase ): array {
+		if ( '' === $phase ) {
+			return [];
+		}
+
+		$cards = [
+			'ideate' => [
+				'id'    => 'phase-ideate-no-kiwe-yet',
+				'title' => 'Pure creative draft phase',
+				'body'  => 'Do not bring in Kiwe, Seam, DSA, Bricks, WordPress, or WooCommerce unless the human independently requested them. This phase protects originality before contracts are applied.',
+			],
+			'seam-rebuild' => [
+				'id'    => 'phase-seam-rebuild-preserve-visual-thesis',
+				'title' => 'Rebuild with Seam without flattening design',
+				'body'  => 'Preserve the approved draft, replace arbitrary semantics with official Seam roles/classes/tokens, and keep page behavior free of Kiwe-owned cart/auth/search/save/AI authority.',
+			],
+			'seam-audit' => [
+				'id'    => 'phase-seam-audit-official-vocabulary',
+				'title' => 'Audit Seam vocabulary and page boundary',
+				'body'  => 'Check official data-role values, class vocabulary use, responsive fit, Bricks-friendly structure, and absence of duplicated app capability logic.',
+			],
+			'framework-create' => [
+				'id'    => 'phase-framework-profile-tokens-only',
+				'title' => 'Create only the global Framework token profile',
+				'body'  => 'Framework profile output is settings.tokens only: official Kiwe universal tokens and safe Bricks global style metadata. No AppShell, product, runtime, or element-level styling.',
+			],
+			'framework-audit' => [
+				'id'    => 'phase-framework-audit-token-lane',
+				'title' => 'Audit the token lane only',
+				'body'  => 'Reject raw private variables, AppShell settings, Bricks element-level styling, and non-token authority in kiwe.framework-profile.v1.',
+			],
+			'theme-create' => [
+				'id'    => 'phase-dsa-theme-live-parts',
+				'title' => 'Create a real AppShell theme, not color-only skin',
+				'body'  => 'Style documented live roots and data-dsa-part hooks for every registered screen while Kiwe core owns geometry, lifecycle, focus, cart, checkout, auth, search, save, and AI behavior.',
+			],
+			'theme-audit' => [
+				'id'    => 'phase-dsa-theme-audit-fixture-live-match',
+				'title' => 'Audit preview/live AppShell match',
+				'body'  => 'Reject preview-only selectors in import CSS, protected dock/sheet/screen geometry, anonymous raw literals, unreadable rails, blank dock icons, and duplicate stacked sheet launches.',
+			],
+			'combined-assemble' => [
+				'id'    => 'phase-combined-one-preview',
+				'title' => 'Assemble approved lanes into one combined proof',
+				'body'  => 'Use one combined preview with page behind AppShell, variation controls, page launchers, and the importable theme CSS linked. Do not redesign approved lanes unless asked.',
+			],
+			'combined-audit' => [
+				'id'    => 'phase-combined-audit-three-lanes',
+				'title' => 'Audit website, AppShell, and combined preview together',
+				'body'  => 'Review the page-only Bricks artifact, importable AppShell package, and combined preview as separate authority lanes that visually agree.',
+			],
+			'dynamic' => [
+				'id'    => 'phase-dynamic-sitegraph-truth',
+				'title' => 'Bind through Site Graph, not guesses',
+				'body'  => 'Use real Site Graph/Data facts for products, terms, pages, media, custom types, fields, Bricks query loops, dynamic tags, conditions, interactions, and Kiwe launchers. Do not mutate.',
+			],
+			'staging' => [
+				'id'    => 'phase-staging-controlled-executor-only',
+				'title' => 'Staging apply is controlled executor work',
+				'body'  => 'Only proceed with explicit staging confirmation, mutation flags, rollback capture, and executor routes. Browser AI should not bypass this with direct WordPress or Bricks writes.',
+			],
+		];
+
+		return isset( $cards[ $phase ] ) ? [ $cards[ $phase ] ] : [];
 	}
 
 	private function cards_for_mode( string $mode ): array {

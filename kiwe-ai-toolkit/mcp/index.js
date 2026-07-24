@@ -35,10 +35,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: 'object',
         properties: {
-          command: { type: 'string', description: 'Human command, e.g. /rebuild /seamframework.' },
+          command: { type: 'string', description: 'Human command, e.g. /rebuild /seamframework. May include /usecompanion.' },
           brief: { type: 'string', description: 'Plain-language human brief for this phase.' },
           artifactSummary: { type: 'string', description: 'Short summary of the previous phase artifact, if any.' },
-          siteGraphSummary: { type: 'string', description: 'Short target Site Graph summary for dynamic phases.' }
+          siteGraphSummary: { type: 'string', description: 'Short target Site Graph summary for dynamic phases.' },
+          useCompanion: { type: 'boolean', description: 'Optional equivalent of appending /usecompanion. Companion is bounded and non-blocking; if unavailable, continue with the normal route.' }
         },
         required: ['command']
       }

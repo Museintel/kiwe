@@ -16,7 +16,7 @@ Commands:
   kiwe modes
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
-  kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text]
+  kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
   kiwe validate <website|theme|combined> <output-dir>
@@ -54,7 +54,7 @@ try {
     const brief = briefIndex >= 0 ? args[briefIndex + 1] : '';
     const artifactSummary = artifactIndex >= 0 ? args[artifactIndex + 1] : '';
     const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
-    print(routeCommand({ command: commandText, brief, artifactSummary, siteGraphSummary }));
+    print(routeCommand({ command: commandText, brief, artifactSummary, siteGraphSummary, useCompanion: args.includes('--use-companion') }));
   } else if (command === 'context') {
     print(getContext(args[0] || 'website'));
   } else if (command === 'vocabulary') {
