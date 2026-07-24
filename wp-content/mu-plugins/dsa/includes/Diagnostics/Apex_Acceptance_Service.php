@@ -2,7 +2,6 @@
 
 namespace DSA\Diagnostics;
 
-use DSA\Delivery\Asset_Build_Service;
 use DSA\Settings;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -27,7 +26,6 @@ final class Apex_Acceptance_Service {
 		$settings = $this->settings->all();
 		$visual = is_array( $settings['visual_effects'] ?? null ) ? $settings['visual_effects'] : [];
 		$permissions = is_array( $settings['permissions'] ?? null ) ? $settings['permissions'] : [];
-		$diagnostics = is_array( $settings['diagnostics'] ?? null ) ? $settings['diagnostics'] : [];
 
 		return [
 			'schema' => 1,
@@ -46,7 +44,7 @@ final class Apex_Acceptance_Service {
 				'personalized' => 'network-only',
 				'transactional' => 'network-only',
 				'offlineEditorial' => ! empty( $permissions['offline_editorial_enabled'] ) ? 'public-editorial-v1-pilot' : 'disabled',
-				'generatedAssets' => ! empty( $diagnostics['asset_build_apply'] ) ? 'content-addressed-pilot' : 'packaged-authority',
+				'generatedAssets' => 'packaged-authority',
 			],
 			'edge' => [
 				'allowedNow' => [ 'versioned-static-assets', 'public-editorial-v1-contract' ],
@@ -58,14 +56,12 @@ final class Apex_Acceptance_Service {
 
 	public function report(): array {
 		$public = $this->public_profile();
-		$asset_build = Asset_Build_Service::status();
 		$css = DSA_DIR . 'assets/css/surface.css';
 		$js = DSA_DIR . 'assets/js/surface.js';
 		$game_module = DSA_DIR . 'assets/js/modules/games-engine.js';
 		$matrix = [
 			[ 'id' => 's16', 'label' => 'Navigation and fragment safety', 'code' => 'complete', 'proof' => 'partial', 'remaining' => 'Bricks/editorial morph, bfcache, comments, search, archives, forms, embeds, cache plugins, accessibility and SEO-head matrix.' ],
 			[ 'id' => 's17', 'label' => 'Offline public editorial', 'code' => 'complete', 'proof' => 'pending', 'remaining' => 'Airplane-mode replay, cache/media eviction, worker upgrade, iOS/Chromium and identity/cart isolation.' ],
-			[ 'id' => 's18', 'label' => 'Generated asset delivery', 'code' => 'complete', 'proof' => 'pending', 'remaining' => 'Cron build, generated URL, cache headers, checksum/fallback, theme/version invalidation, visual and performance parity.' ],
 			[ 'id' => 'production', 'label' => 'Production gates', 'code' => 'implemented', 'proof' => 'pending', 'remaining' => 'Commerce, PhoneKey, SecureTrack, Push, host/cache and release rollback matrices.' ],
 		];
 
@@ -86,7 +82,6 @@ final class Apex_Acceptance_Service {
 					'lazyModuleBytes' => [
 						'games' => is_file( $game_module ) ? (int) filesize( $game_module ) : 0,
 					],
-					'generatedBuild' => $asset_build,
 					'hardPerformanceGuarantee' => false,
 				],
 				'accessibilityContract' => [

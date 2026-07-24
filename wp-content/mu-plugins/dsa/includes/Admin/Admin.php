@@ -5800,10 +5800,7 @@ final class Admin {
 					<label><input type="checkbox" name="diagnostics[frontend_debug]" value="1" <?php checked( ! empty( $diagnostics['frontend_debug'] ) ); ?>> <?php esc_html_e( 'Expose debug state to the Surface runtime', 'dsa' ); ?></label><br>
 					<label><input type="checkbox" name="diagnostics[console_logs]" value="1" <?php checked( ! empty( $diagnostics['console_logs'] ) ); ?>> <?php esc_html_e( 'Write Kiwe Surface logs to the browser console', 'dsa' ); ?></label><br>
 					<label><input type="checkbox" name="diagnostics[performance_profile]" value="1" <?php checked( ! empty( $diagnostics['performance_profile'] ) ); ?>> <?php esc_html_e( 'Write observe-only runtime performance profiles to the debug log', 'dsa' ); ?></label><br>
-					<label><input type="checkbox" name="diagnostics[asset_manifest]" value="1" <?php checked( ! empty( $diagnostics['asset_manifest'] ) ); ?>> <?php esc_html_e( 'Write observe-only asset ownership manifests to the debug log', 'dsa' ); ?></label><br>
-					<label><input type="checkbox" name="diagnostics[asset_build_pilot]" value="1" <?php checked( ! empty( $diagnostics['asset_build_pilot'] ) ); ?>> <?php esc_html_e( 'Enable the content-addressed asset build pilot', 'dsa' ); ?></label><br>
-					<label><input type="checkbox" name="diagnostics[asset_build_apply]" value="1" <?php checked( ! empty( $diagnostics['asset_build_apply'] ) ); ?>> <?php esc_html_e( 'Serve the validated generated Kiwe stylesheet', 'dsa' ); ?></label><br>
-					<label><input type="checkbox" name="diagnostics[asset_build_hints]" value="1" <?php checked( ! empty( $diagnostics['asset_build_hints'] ) ); ?>> <?php esc_html_e( 'Emit validated same-origin preload hints', 'dsa' ); ?></label>
+					<label><input type="checkbox" name="diagnostics[asset_manifest]" value="1" <?php checked( ! empty( $diagnostics['asset_manifest'] ) ); ?>> <?php esc_html_e( 'Write observe-only asset ownership manifests to the debug log', 'dsa' ); ?></label>
 					<p class="description"><?php esc_html_e( 'Browser console traces only run when diagnostics, frontend debug, and console logs are enabled here. Keep them off on production sites unless actively investigating.', 'dsa' ); ?></p>
 					<?php submit_button( __( 'Save diagnostics', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
@@ -5829,34 +5826,6 @@ final class Admin {
 				</form>
 			</section>
 
-			<?php $asset_build = \DSA\Delivery\Asset_Build_Service::status(); ?>
-			<section class="dsa-admin__panel">
-				<h2><?php esc_html_e( 'S18 Asset Build', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Developer-gated content-addressed asset delivery proof. The generated stylesheet remains a pilot until cache, CDN, rollback, and live-host evidence are complete.', 'dsa' ); ?></p>
-				<table class="widefat striped">
-					<tbody>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Status', 'dsa' ); ?></th>
-							<td><?php echo esc_html( (string) $asset_build['state'] ); ?></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Build', 'dsa' ); ?></th>
-							<td><code><?php echo esc_html( $asset_build['buildId'] ?: '-' ); ?></code></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Payload', 'dsa' ); ?></th>
-							<td><?php echo esc_html( sprintf( __( '%1$d CSS bytes, %2$d font hints, %3$d media hints.', 'dsa' ), (int) $asset_build['bytes'], (int) $asset_build['fonts'], (int) $asset_build['media'] ) ); ?></td>
-						</tr>
-					</tbody>
-				</table>
-				<?php if ( $asset_build['message'] ) : ?><p class="description"><?php echo esc_html( $asset_build['message'] ); ?></p><?php endif; ?>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="dsa_queue_asset_build">
-					<?php wp_nonce_field( 'dsa_queue_asset_build' ); ?>
-					<?php submit_button( __( 'Queue S18 Build', 'dsa' ), 'secondary', 'submit', false ); ?>
-				</form>
-			</section>
-
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Architecture status', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'These are developer-owned gates, not production settings. They stay visible here so unfinished architecture is explicit without confusing site owners.', 'dsa' ); ?></p>
@@ -5869,10 +5838,6 @@ final class Admin {
 						<tr>
 							<th scope="row"><?php esc_html_e( 'Surface width fallback', 'dsa' ); ?></th>
 							<td><strong><?php echo esc_html( (string) (int) ( $settings['surface_width'] ?? 72 ) ); ?>px</strong><br><?php esc_html_e( 'Retained only as a legacy Phantom Viewport fallback for old integrations. Responsive Geometry Engine tokens are the production source of layout truth.', 'dsa' ); ?></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Generated asset pilot', 'dsa' ); ?></th>
-							<td><strong><?php echo ! empty( $diagnostics['asset_build_pilot'] ) ? esc_html__( 'Enabled for testing', 'dsa' ) : esc_html__( 'Off', 'dsa' ); ?></strong><br><?php esc_html_e( 'S18 content-addressed asset delivery remains a diagnostics-controlled pilot until release evidence proves it across cache/CDN hosts.', 'dsa' ); ?></td>
 						</tr>
 					</tbody>
 				</table>
@@ -8151,9 +8116,6 @@ final class Admin {
 				'console_logs'        => false,
 				'performance_profile' => false,
 				'asset_manifest'      => false,
-				'asset_build_pilot'   => false,
-				'asset_build_apply'   => false,
-				'asset_build_hints'   => false,
 			]
 		);
 
@@ -8167,9 +8129,7 @@ final class Admin {
 		$next['console_logs']   = $next['frontend_debug'] && ! empty( $input['console_logs'] );
 		$next['performance_profile'] = $next['enabled'] && ! empty( $input['performance_profile'] );
 		$next['asset_manifest']      = $next['enabled'] && ! empty( $input['asset_manifest'] );
-		$next['asset_build_pilot']   = $next['enabled'] && ! empty( $input['asset_build_pilot'] );
-		$next['asset_build_apply']   = $next['asset_build_pilot'] && ! empty( $input['asset_build_apply'] );
-		$next['asset_build_hints']   = $next['asset_build_pilot'] && ! empty( $input['asset_build_hints'] );
+		unset( $next['asset_build_pilot'], $next['asset_build_apply'], $next['asset_build_hints'] );
 
 		return $next;
 	}

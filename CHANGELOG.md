@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.32 - 2026-07-24
+
+- Retired the S18 generated asset delivery pilot from `Kiwe > Developer`: removed its diagnostics checkboxes, build-status card, queue action, architecture-status row, readiness check, and APEX generated-build evidence.
+- Stopped registering the S18 runtime service and removed the generated asset build service from the deployable package, so Kiwe always serves the packaged stylesheet authority while old generated uploads remain harmless inert files.
+- Scrubbed legacy `asset_build_*` diagnostics keys on save and updated release/operations docs so generated delivery is no longer presented as a pending production lane.
+
 ## 0.6.31 - 2026-07-24
 
 - Expanded AppShell theme token-purity validation from raw `px` literals to anonymous raw CSS literals, including hardcoded length units, color literals/functions, and literal shadow/effect recipes in importable `theme.css`.

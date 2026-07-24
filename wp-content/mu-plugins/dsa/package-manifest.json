@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "0.6.31",
+  "version": "0.6.32",
   "algorithm": "sha256",
-  "file_count": 260,
+  "file_count": 259,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "f35b53985e4dec398e18e5c10eb85f770b101b4b511659315f4115eb71af2314"
+      "sha256": "e70dcf9fa5b4abc956f2f6fdd4a3199d7b80961c43da774c84b8ec911f052c3b"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -469,8 +469,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 579712,
-      "sha256": "573d43f11c0e42f10e8a8576cef87523d2482e8f3947463df0b5578a63486a92"
+      "bytes": 576668,
+      "sha256": "6cd14ae3492b7573020abd142c43e50bdc9c33581ea8d60a1aec8fd1c19a99af"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -516,10 +516,6 @@
       "bytes": 3781,
       "sha256": "a3934b8c869e86cce4c308c9a5ea72ea2d52b95a14bc776598199915c6af89b8"
     },
-    "includes/Delivery/Asset_Build_Service.php": {
-      "bytes": 10624,
-      "sha256": "d0965dcad67da193956242586ed5496e60a7b9e64cc295f7ad0061a49fafed4b"
-    },
     "includes/Design/Seam_Token_Service.php": {
       "bytes": 39724,
       "sha256": "3ed5301e21ec0b963403a080bdbeb215b14ed61041f99eadad27a83998370b35"
@@ -533,16 +529,16 @@
       "sha256": "9667bd19a383c39acbcbcc12f92eb5eb7c3b93edd0f03e17f20c227c5dc90e21"
     },
     "includes/Diagnostics/Apex_Acceptance_Service.php": {
-      "bytes": 5615,
-      "sha256": "2a39aba04e2b1086e99a6447891847dc84bb46371cb74183779f780263f15aec"
+      "bytes": 5077,
+      "sha256": "f3aa955193ee1254f0ff8ef332a76cde4bdf3e6250e3bf2f5bdcc26d2fe97221"
     },
     "includes/Diagnostics/Asset_Manifest_Service.php": {
       "bytes": 7412,
       "sha256": "a9cb9d44b9658141694c34533c103f076d7be8adbe864bab08f45bb3b7a2ed85"
     },
     "includes/Diagnostics/Production_Readiness_Service.php": {
-      "bytes": 25475,
-      "sha256": "bf79fb296eb96a1df8cff2b354ee749d9af37a1b19146f732d37399ca6f4d3ec"
+      "bytes": 24556,
+      "sha256": "08828f17c87b11c2d137c8ac22d5c28d5da3195e349c2d42b277e588a8ba95eb"
     },
     "includes/Diagnostics/Runtime_Profiler.php": {
       "bytes": 6243,
@@ -605,8 +601,8 @@
       "sha256": "de93ffe7335d88579f3e5e487bd22ebd30c187a7ea13de607e670696887fd6a3"
     },
     "includes/Plugin.php": {
-      "bytes": 10397,
-      "sha256": "39b42f5810000d5771e4e528f4b65c1ec9ca39417673a825303466242c383d2c"
+      "bytes": 10235,
+      "sha256": "0dd987781e0d93d4165d9bbc7c27f5b4cc70598ab4dffe05642b03509ad8a950"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,
@@ -785,8 +781,8 @@
       "sha256": "ba8f795ff9d0a7523884d78557af43d21681ffe9d2577cd2b482e78877f06c8e"
     },
     "includes/Settings.php": {
-      "bytes": 21359,
-      "sha256": "34c51f65972b09aead684dd1b35bf90cda3350be51266cb4294cbdcaf9a7f01e"
+      "bytes": 21248,
+      "sha256": "8b576153111d3899092fc48ae29e11a4458680dd958f6bd1f5de31f3a34a7a38"
     },
     "includes/Site/Site_Identity_Service.php": {
       "bytes": 9193,

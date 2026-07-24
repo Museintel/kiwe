@@ -30,7 +30,7 @@ For Hostinger, use `docs/INSTALL-HOSTINGER.md`. For upgrades, incomplete uploads
 ## Safe Defaults
 
 - SecureTrack enforcement and automatic logout are off until deliberately configured and tested.
-- First-session Home, idle Home, morph navigation, offline editorial delivery, and generated delivery pilots remain governed or off by default.
+- First-session Home, idle Home, morph navigation, and offline editorial delivery pilots remain governed or off by default.
 - Personalized identity, cart, authority, and nonce state hydrates through private no-store REST responses instead of cacheable HTML.
 - Visitor-facing trust is rendered by deterministic services. AI may explain or suggest; it does not invent trust or authorize mutations.
 

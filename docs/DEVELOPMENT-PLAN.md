@@ -224,7 +224,7 @@ The calculated path is **14 focused batches**. RC1 through RC12 are code complet
 
 The optional style-preset experiment is retired. Neumorphic, Glassmorphism, Bold & Vibrant, and Minimal & Clean are not part of 1.0 because they created too much risk around geometry, contrast, and runtime ownership. `Kiwe > Theme` now exposes only two production presentation modes: Classic Surface and Sheet presentation. Both use the same modules, data, REST, PhoneKey, cart, search, AI, notification, dock, and geometry contracts.
 
-Admin ownership is explicit and the historical `Kiwe > Surface` page is no longer menu-visible. App owns shell render state and PWA/permission journeys; Theme owns Classic/Sheet presentation and DSA runtime colors; Dock owns module order, compact Dock or Navigation bar geometry, material, and visibility; Games and Links own their respective module settings; Developer owns diagnostics, readiness, attributes, runtime cleanup, S18 generated-asset pilot, export/reset, and architecture gates. The legacy fragment renderer is removed; its controlled editorial morph successor exists behind a Developer gate and remains off until live proof. S18 generated delivery likewise remains an off-by-default developer pilot until live cache/CDN/rollback evidence is recorded.
+Admin ownership is explicit and the historical `Kiwe > Surface` page is no longer menu-visible. App owns shell render state and PWA/permission journeys; Theme owns Classic/Sheet presentation and DSA runtime colors; Dock owns module order, compact Dock or Navigation bar geometry, material, and visibility; Games and Links own their respective module settings; Developer owns diagnostics, readiness, attributes, runtime cleanup, export/reset, and architecture gates. The legacy fragment renderer is removed; its controlled editorial morph successor exists behind a Developer gate and remains off until live proof. The former S18 generated delivery pilot is retired; packaged CSS remains the only live stylesheet authority.
 
 ### Dock Geometry Simplification (`0.5.40`)
 
@@ -238,7 +238,7 @@ The bottom Sheet now owns one continuous surface through the viewport safe-area 
 
 SEAM is intentionally parked by product decision. Its references stay bundled and documented, but **SEAM-1, SEAM-2, and SEAM-3 are not part of the 14-batch/18-attempt 1.0 calculation**. POS, restaurant/table ordering, customer score, partner SDK, marketplace, edge distribution, cross-site identity, background offline cart, and fleet telemetry are also post-1.0 product tracks.
 
-S15 morphing, S17 offline editorial, and S18 generated delivery may ship in 1.0 as **off-by-default, clearly labeled pilots**. Their broad enablement is not required for 1.0 and must not delay the safe SSR/full-navigation baseline.
+S15 morphing and S17 offline editorial may ship in 1.0 as **off-by-default, clearly labeled pilots**. Their broad enablement is not required for 1.0 and must not delay the safe SSR/full-navigation baseline.
 
 ## Release Rules
 

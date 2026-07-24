@@ -146,9 +146,6 @@ final class Settings {
 					'console_logs'        => false,
 					'performance_profile' => false,
 					'asset_manifest'      => false,
-					'asset_build_pilot'   => false,
-					'asset_build_apply'   => false,
-					'asset_build_hints'   => false,
 				],
 				'enhancements'        => [
 					'enabled' => false,

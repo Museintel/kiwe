@@ -80,9 +80,6 @@ final class Production_Readiness_Service {
 		$recent_fatal = is_array( $last_fatal )
 			&& ! empty( $last_fatal['time'] )
 			&& ( time() - absint( $last_fatal['time'] ) ) < WEEK_IN_SECONDS;
-		$asset_build = class_exists( '\\DSA\\Delivery\\Asset_Build_Service' ) ? \DSA\Delivery\Asset_Build_Service::status() : [];
-		$asset_pilot = ! empty( $diagnostics['asset_build_pilot'] );
-		$asset_apply = $asset_pilot && ! empty( $diagnostics['asset_build_apply'] );
 		$rate_store = Atomic_Rate_Limiter::diagnostics();
 
 		return [
@@ -160,16 +157,6 @@ final class Production_Readiness_Service {
 					? sprintf( __( 'Kiwe recorded a package fatal within the last seven days: %s', 'dsa' ), sanitize_text_field( (string) ( $last_fatal['message'] ?? 'Unknown error' ) ) )
 					: __( 'No recent Kiwe package fatal is recorded.', 'dsa' ),
 				__( 'The MU loader fails open and records only Kiwe-owned fatals. Replace incomplete uploads atomically and re-run readiness after recovery.', 'dsa' ),
-				'runtime'
-			),
-			$this->check(
-				'asset_build_pilot',
-				__( 'S18 generated asset delivery', 'dsa' ),
-				$asset_pilot && 'failed' === ( $asset_build['state'] ?? '' ) ? 'critical' : ( $asset_apply ? 'warning' : 'pass' ),
-				$asset_pilot
-					? sprintf( __( 'Build state: %1$s. Generated delivery: %2$s.', 'dsa' ), (string) ( $asset_build['state'] ?? 'not-built' ), $asset_apply ? __( 'enabled', 'dsa' ) : __( 'not applied', 'dsa' ) )
-					: __( 'The S18 asset build pilot is disabled.', 'dsa' ),
-				__( 'Apply generated delivery only after the build reports ready and the packaged stylesheet fallback has been verified on staging.', 'dsa' ),
 				'runtime'
 			),
 		];

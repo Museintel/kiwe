@@ -2,7 +2,7 @@
 
 **Reconciled:** 2026-07-03  
 **Code baseline:** `0.5.61`  
-**Scope:** canonical MU-plugin package, Surface REST/runtime, PhoneKey, SecureTrack, Woo commerce, PWA/Push, Saved, Analytics, controlled editorial delivery, and generated/edge contracts.
+**Scope:** canonical MU-plugin package, Surface REST/runtime, PhoneKey, SecureTrack, Woo commerce, PWA/Push, Saved, Analytics, controlled editorial delivery, and edge contracts.
 
 ## Current Security Boundaries
 
@@ -14,7 +14,7 @@
 - WooCommerce remains authoritative for cart, coupon, tax, checkout, payment, order, and refund state. Client UI never becomes money authority.
 - Push secrets use the versioned secret store, subscription removal is user/visitor-owned, and VAPID rotation moves affected devices into explicit re-enrollment.
 - Saved anonymous activity remains aggregate-only; registered-user collections require authorized access.
-- Editorial morphing, offline editorial caching, and generated delivery are gated and exclude protected, personalized, transactional, builder, and unknown routes.
+- Editorial morphing and offline editorial caching are gated and exclude protected, personalized, transactional, builder, and unknown routes.
 - Public manifests/APEX profiles expose contracts and classifications, not secrets, filesystem paths, private user data, or host internals.
 
 ## Open Production Proof
@@ -43,13 +43,13 @@ These findings do not invalidate the existing fail-open loader, proxy resolver, 
 | SecureTrack | Hostinger/Cloudflare provenance, enforcement recovery, CSP report-only observations, cron/scanner health, and break-glass drill. |
 | Push | VAPID/OpenSSL, subscription renewal/removal, server cron, vendor/browser delivery, owner alerts, and denied/revoked permission behavior. |
 | Runtime | No-cache and persistent-cache profiles, production quietness, safe-area/back-gesture behavior, and one staging loader-failure drill. |
-| APEX pilots | S16-S18 matrices before any pilot is broadly enabled. |
+| APEX pilots | S16-S17 matrices before any pilot is broadly enabled. |
 
 ## Remaining Hardening Tasks
 
 - Add optional PhoneKey step-up for destructive/high-risk SecureTrack administration.
 - Add explicit audit events for security-sensitive Kiwe settings changes.
-- Finish health reporting for SecureTrack tables, cron, scanner permissions, Push transport, and generated delivery.
+- Finish health reporting for SecureTrack tables, cron, scanner permissions, and Push transport.
 - Complete release-time dependency/package inventory and rollback verification.
 - Keep future cross-site identity, partner, POS, and edge features behind separate privacy and threat-model reviews.
 

@@ -17,7 +17,6 @@ use DSA\Diagnostics\Asset_Manifest_Service;
 use DSA\Diagnostics\Runtime_Profiler;
 use DSA\Diagnostics\Production_Readiness_Service;
 use DSA\Diagnostics\Apex_Acceptance_Service;
-use DSA\Delivery\Asset_Build_Service;
 use DSA\Communications\Email_Service;
 use DSA\Communications\Channel_Service;
 use DSA\Link_Hub\Review_Service;
@@ -105,7 +104,6 @@ final class Plugin {
 	private $search;
 	private $saved_items;
 	private $editorial_fragments;
-	private $asset_build;
 	private $apex_acceptance;
 	private $site_graph;
 
@@ -152,7 +150,6 @@ final class Plugin {
 		$this->search      = new Search_Service( $this->settings, $this->cart_payload );
 		$this->saved_items = new Saved_Items_Service( $this->store_analytics );
 		$this->editorial_fragments = new Editorial_Fragment_Service( $this->registry );
-		$this->asset_build = new Asset_Build_Service( $this->settings );
 		$this->apex_acceptance = new Apex_Acceptance_Service( $this->settings );
 	}
 
@@ -177,7 +174,6 @@ final class Plugin {
 		$service_profile = Runtime_Profiler::start( 'service.register_services' );
 		( new Asset_Manifest_Service( ! empty( $diagnostics['enabled'] ) && ! empty( $diagnostics['asset_manifest'] ) ) )->register();
 		Atomic_Rate_Limiter::register();
-		$this->asset_build->register();
 		$this->apex_acceptance->register();
 
 		$this->registry->register();

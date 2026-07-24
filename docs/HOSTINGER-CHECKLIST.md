@@ -43,14 +43,14 @@ Nice to have:
 - Confirm MU plugin loads.
 - Confirm Bricks builder still opens.
 - Confirm the Kiwe service-worker response is same-origin, JavaScript, and carries the intended scope header.
-- Confirm WordPress loopback/cron can execute the S18 build and Push queues when those gated features are enabled.
+- Confirm WordPress loopback/cron can execute Push queues when gated delivery features are enabled.
 - Confirm OpenSSL is available before enabling Web Push delivery.
 - Confirm WordPress mail handoff and actual inbox delivery separately; `wp_mail()` success does not prove delivery.
-- Confirm uploads are writable before enabling generated asset delivery.
+- Confirm uploads are writable before testing media, PWA assets, push-related files, or future generated delivery experiments.
 
 ## Cache
 
-Keep full-page caching disabled while diagnosing identity, checkout, cart, Push, or SecureTrack behavior. For release proof, capture one no-persistent-cache profile and one Redis/Memcached profile when available. Any LiteSpeed/CDN page cache must exclude checkout, cart, account, PhoneKey, DSA personalized responses, admin, and other protected routes. Controlled editorial and generated-asset pilots remain off until their separate proof matrices pass.
+Keep full-page caching disabled while diagnosing identity, checkout, cart, Push, or SecureTrack behavior. For release proof, capture one no-persistent-cache profile and one Redis/Memcached profile when available. Any LiteSpeed/CDN page cache must exclude checkout, cart, account, PhoneKey, DSA personalized responses, admin, and other protected routes. Controlled editorial pilots remain off until their separate proof matrices pass.
 
 ## Release Gate
 

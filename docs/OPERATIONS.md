@@ -46,9 +46,9 @@ Do not delete options or tables manually as a routine rollback. A code rollback 
 
 - Keep frontend debug and console logging off.
 - Keep runtime profiling off except during a bounded evidence collection.
-- Keep S15 morphing, S17 offline editorial, and S18 generated delivery off until certified.
+- Keep S15 morphing and S17 offline editorial off until certified.
 - Start SecureTrack in monitor mode and CSP in report-only mode.
-- Review cron health for Push, analytics maintenance, SecureTrack, bestseller/co-purchase jobs, and asset builds.
+- Review cron health for Push, analytics maintenance, SecureTrack, and bestseller/co-purchase jobs.
 - Treat `wp_mail()` success as transport handoff only; monitor actual inbox delivery.
 
 ## Bricks Safety
@@ -63,5 +63,4 @@ The Surface renderer skips Bricks builder requests. Kiwe Bricks integration is a
 - PR4 runtime/cache/device matrix
 - S16 editorial lifecycle proof if morphing will be enabled
 - S17 offline proof if offline editorial will be enabled
-- S18 delivery proof if generated assets will be enabled
 - Hostinger upload, rollback, and smoke checklist

@@ -53,7 +53,7 @@ The root loader is required. WordPress only auto-loads PHP files directly inside
 10. Confirm `Kiwe` is listed.
 11. Go to `Kiwe` in the wp-admin sidebar.
 12. Open `Kiwe > Auth` to manage PhoneKey settings, users, and activity.
-13. Keep controlled editorial morphing, offline editorial caching, and generated asset delivery disabled until their live proof tasks pass. Legacy fragment navigation cannot be enabled.
+13. Keep controlled editorial morphing and offline editorial caching disabled until their live proof tasks pass. Legacy fragment navigation cannot be enabled.
 14. Visit the public front end and confirm the Surface/PhoneKey dock appears.
 
 ## FTP/SFTP Steps
@@ -130,7 +130,7 @@ After upload:
 
 - Keep SecureTrack enforcement off until recovery and proxy tests pass.
 - Keep idle Home recall off unless intentionally configured.
-- Keep controlled editorial morphing, offline editorial caching, and generated delivery pilots off until their respective proof matrices pass.
+- Keep controlled editorial morphing and offline editorial caching pilots off until their respective proof matrices pass.
 - Configure SMTP and prove inbox delivery before relying on PhoneKey email OTP or abandoned-cart email.
 - Configure VAPID/OpenSSL and prove cron/vendor delivery before relying on Web Push.
 - Run real Woo checkout, gateway, tax, refund, Add & Save, cart, and Bricks mini-cart tests before production commerce use.
