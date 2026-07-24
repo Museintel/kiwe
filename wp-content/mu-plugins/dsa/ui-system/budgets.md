@@ -41,6 +41,9 @@ Recommended for a marketplace theme:
 
 ## htmx/Alpine budgets
 
-- htmx may request server-owned fragments only.
-- Alpine may own local display state only.
-- Neither may own PhoneKey/auth, checkout/payment, cart reconciliation, service-worker, focus trap, Surface lifecycle, or browser history.
+The broad htmx/Alpine pilot is retired as of Kiwe 0.6.34.
+
+- Current theme, website, combined, and marketplace outputs must not include htmx or Alpine.
+- Current Kiwe runtime/admin packages must not enqueue htmx or Alpine.
+- Future hybrid use must be a named Kiwe-owned adapter with a measurable benefit over native DSA/Seam/WordPress for that exact job.
+- Even an approved adapter may not own PhoneKey/auth, checkout/payment, cart reconciliation, service-worker policy, focus trap, Surface lifecycle, or browser history.

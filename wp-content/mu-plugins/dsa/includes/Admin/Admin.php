@@ -49,9 +49,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Admin {
-	private const HTMX_VERSION = '2.0.10';
-	private const ALPINE_VERSION = '3.15.12';
-
 	private $settings;
 	private $modules;
 	private $native;
@@ -132,7 +129,6 @@ final class Admin {
 		add_action( 'admin_post_dsa_developer_clear_runtime', [ $this, 'handle_developer_clear_runtime' ] );
 		add_action( 'admin_post_dsa_developer_reset_settings', [ $this, 'handle_developer_reset_settings' ] );
 		add_action( 'wp_ajax_dsa_search_menu_targets', [ $this, 'search_menu_targets' ] );
-		add_action( 'wp_ajax_dsa_developer_package_proof', [ $this, 'ajax_developer_package_proof' ] );
 	}
 
 	public function menu(): void {
@@ -343,26 +339,6 @@ final class Admin {
 
 		wp_enqueue_style( 'dsa-admin', DSA_URL . 'assets/css/admin.css', [], DSA_VERSION );
 		wp_enqueue_script( 'dsa-admin', DSA_URL . 'assets/js/admin.js', [], DSA_VERSION, true );
-		$enhancements = wp_parse_args( $this->settings->get( 'enhancements', [] ), $this->settings->defaults()['enhancements'] );
-		if ( 'kiwe_page_kiwe-developer' === $hook && ! empty( $enhancements['enabled'] ) && ! empty( $enhancements['htmx'] ) ) {
-			wp_enqueue_script(
-				'dsa-htmx',
-				DSA_URL . 'assets/vendor/htmx/htmx.min.js',
-				[],
-				self::HTMX_VERSION,
-				true
-			);
-		}
-		if ( 'kiwe_page_kiwe-developer' === $hook && ! empty( $enhancements['enabled'] ) && ! empty( $enhancements['alpine'] ) ) {
-			wp_enqueue_script(
-				'dsa-alpine',
-				DSA_URL . 'assets/vendor/alpine/alpine.min.js',
-				[],
-				self::ALPINE_VERSION,
-				true
-			);
-			wp_script_add_data( 'dsa-alpine', 'defer', true );
-		}
 		wp_localize_script(
 			'dsa-admin',
 			'DSA_ADMIN_DATA',
@@ -1298,7 +1274,6 @@ final class Admin {
 				: (int) $current['surface_width'],
 			'visual_effects'      => $this->sanitize_visual_effects( $_POST['visual_effects'] ?? null, $current['visual_effects'] ),
 			'diagnostics'         => $this->sanitize_diagnostics_settings( $_POST['diagnostics'] ?? null, $current['diagnostics'] ),
-			'enhancements'        => $this->sanitize_enhancement_settings( $_POST['enhancements'] ?? null, $current['enhancements'] ?? [] ),
 			'dock'                => $this->sanitize_dock_settings( $_POST['dock'] ?? null, $current['dock'] ),
 			'dsa_theme'           => $this->sanitize_dsa_theme( $_POST['dsa_theme'] ?? null, $current['dsa_theme'] ),
 			'schema_geo'          => $this->sanitize_schema_geo_settings( $_POST['schema_geo'] ?? null, $current['schema_geo'] ),
@@ -5682,21 +5657,6 @@ final class Admin {
 		<?php
 	}
 
-	public function ajax_developer_package_proof(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Forbidden', 'dsa' ), '', [ 'response' => 403 ] );
-		}
-
-		check_ajax_referer( 'dsa_developer_package_proof' );
-
-		\DSA\Runtime\Package_Manifest::clear_cached_proof();
-		$this->render_package_proof_fragment(
-			\DSA\Runtime\Package_Manifest::verify(),
-			defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : ''
-		);
-		wp_die();
-	}
-
 	private function render_package_proof_fragment( array $package_proof, string $loader_version ): void {
 		?>
 		<table class="widefat striped">
@@ -5736,7 +5696,6 @@ final class Admin {
 		$settings_reset  = sanitize_key( wp_unslash( $_GET['settings-reset'] ?? '' ) );
 		$settings        = $this->settings->all();
 		$diagnostics     = wp_parse_args( $settings['diagnostics'] ?? [], $this->settings->defaults()['diagnostics'] );
-		$enhancements    = wp_parse_args( $settings['enhancements'] ?? [], $this->settings->defaults()['enhancements'] );
 		$package_proof   = \DSA\Runtime\Package_Manifest::verify();
 		$loader_version  = defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : '';
 		?>
@@ -5755,24 +5714,10 @@ final class Admin {
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Installed build', 'dsa' ); ?></h2>
-				<div
-					id="dsa-package-proof"
-					<?php if ( ! empty( $enhancements['enabled'] ) && ! empty( $enhancements['htmx'] ) ) : ?>
-					hx-get="<?php echo esc_url( add_query_arg( [ 'action' => 'dsa_developer_package_proof', '_ajax_nonce' => wp_create_nonce( 'dsa_developer_package_proof' ) ], admin_url( 'admin-ajax.php' ) ) ); ?>"
-					hx-trigger="click from:#dsa-refresh-package-proof"
-					hx-target="this"
-					hx-swap="innerHTML"
-					<?php endif; ?>
-				>
+				<div id="dsa-package-proof">
 					<?php $this->render_package_proof_fragment( $package_proof, $loader_version ); ?>
 				</div>
-				<?php if ( ! empty( $enhancements['enabled'] ) && ! empty( $enhancements['htmx'] ) ) : ?>
-				<p>
-					<button type="button" class="button" id="dsa-refresh-package-proof"><?php esc_html_e( 'Refresh package proof', 'dsa' ); ?></button>
-				</p>
-				<?php else : ?>
-				<p class="description"><?php esc_html_e( 'Live package-proof refresh is available when the controlled htmx enhancement gate is enabled. The static proof above is still server-rendered.', 'dsa' ); ?></p>
-				<?php endif; ?>
+				<p class="description"><?php esc_html_e( 'Reload this page after replacing the MU plugin to refresh the server-rendered package proof.', 'dsa' ); ?></p>
 			</section>
 
 			<section class="dsa-admin__panel">
@@ -5802,26 +5747,6 @@ final class Admin {
 					<label><input type="checkbox" name="diagnostics[asset_manifest]" value="1" <?php checked( ! empty( $diagnostics['asset_manifest'] ) ); ?>> <?php esc_html_e( 'Write observe-only asset ownership manifests to the debug log', 'dsa' ); ?></label>
 					<p class="description"><?php esc_html_e( 'Browser console traces only run when diagnostics, frontend debug, and console logs are enabled here. Keep them off on production sites unless actively investigating.', 'dsa' ); ?></p>
 					<?php submit_button( __( 'Save diagnostics', 'dsa' ), 'secondary', 'submit', false ); ?>
-				</form>
-			</section>
-
-			<section
-				class="dsa-admin__panel"
-				x-data="<?php echo esc_attr( wp_json_encode( [ 'enabled' => ! empty( $enhancements['enabled'] ), 'htmx' => ! empty( $enhancements['htmx'] ), 'alpine' => ! empty( $enhancements['alpine'] ) ] ) ); ?>"
-			>
-				<h2><?php esc_html_e( 'Controlled web-app enhancements', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Developer-gated htmx and Alpine foundation. These libraries are local packaged assets only; they must not own PhoneKey, checkout/payment authority, service-worker policy, cart reconciliation, navigation history, focus trapping, or the core Surface lifecycle.', 'dsa' ); ?></p>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="dsa_save_settings">
-					<input type="hidden" name="_dsa_redirect" value="kiwe-developer">
-					<input type="hidden" name="enhancements[_present]" value="1">
-					<?php wp_nonce_field( 'dsa_save_settings' ); ?>
-					<label><input type="checkbox" name="enhancements[enabled]" value="1" x-model="enabled" <?php checked( ! empty( $enhancements['enabled'] ) ); ?>> <?php esc_html_e( 'Enable controlled web-app enhancement gates', 'dsa' ); ?></label><br>
-					<label><input type="checkbox" name="enhancements[htmx]" value="1" x-model="htmx" :disabled="!enabled" <?php checked( ! empty( $enhancements['htmx'] ) ); ?>> <?php esc_html_e( 'Load local htmx 2.0.10 for server-owned fragment pilots', 'dsa' ); ?></label><br>
-					<label><input type="checkbox" name="enhancements[alpine]" value="1" x-model="alpine" :disabled="!enabled" <?php checked( ! empty( $enhancements['alpine'] ) ); ?>> <?php esc_html_e( 'Load local Alpine 3.15.12 for isolated local-widget pilots', 'dsa' ); ?></label>
-					<p class="description"><?php esc_html_e( 'Default off. Batch 1 adds only the reversible foundation; Batch 2 and Batch 3 introduce specific pilot surfaces after contracts are in place.', 'dsa' ); ?></p>
-					<p class="description" x-show="enabled && (htmx || alpine)"><?php esc_html_e( 'Pilot mode selected. WordPress still owns persistence; these checkboxes only preview the local widget state before save.', 'dsa' ); ?></p>
-					<?php submit_button( __( 'Save enhancement gates', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
 			</section>
 
@@ -7712,7 +7637,6 @@ final class Admin {
 				'surface_bottom'      => (int) ( $settings['surface_bottom'] ?? 24 ),
 				'fragment_navigation' => false,
 				'diagnostics'         => $settings['diagnostics'] ?? [],
-				'enhancements'        => $settings['enhancements'] ?? [],
 				'dock'                => $settings['dock'] ?? [],
 				'visual_effects'      => $settings['visual_effects'] ?? [],
 				'app'                 => $settings['app'] ?? [],
@@ -7769,10 +7693,6 @@ final class Admin {
 
 		if ( isset( $input['diagnostics'] ) && is_array( $input['diagnostics'] ) ) {
 			$next['diagnostics'] = $this->sanitize_diagnostics_settings( $input['diagnostics'], $current['diagnostics'] );
-		}
-
-		if ( isset( $input['enhancements'] ) && is_array( $input['enhancements'] ) ) {
-			$next['enhancements'] = $this->sanitize_enhancement_settings( $input['enhancements'], $current['enhancements'] ?? [] );
 		}
 
 		if ( isset( $input['dock'] ) && is_array( $input['dock'] ) ) {
@@ -8103,28 +8023,6 @@ final class Admin {
 		$next['performance_profile'] = $next['enabled'] && ! empty( $input['performance_profile'] );
 		$next['asset_manifest']      = $next['enabled'] && ! empty( $input['asset_manifest'] );
 		unset( $next['asset_build_pilot'], $next['asset_build_apply'], $next['asset_build_hints'] );
-
-		return $next;
-	}
-
-	private function sanitize_enhancement_settings( $input, array $current ): array {
-		$next = wp_parse_args(
-			is_array( $current ) ? $current : [],
-			[
-				'enabled' => false,
-				'htmx'    => false,
-				'alpine'  => false,
-			]
-		);
-
-		if ( ! is_array( $input ) ) {
-			return $next;
-		}
-
-		$input = wp_unslash( $input );
-		$next['enabled'] = ! empty( $input['enabled'] );
-		$next['htmx']    = $next['enabled'] && ! empty( $input['htmx'] );
-		$next['alpine']  = $next['enabled'] && ! empty( $input['alpine'] );
 
 		return $next;
 	}

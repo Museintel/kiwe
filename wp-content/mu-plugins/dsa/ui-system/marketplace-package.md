@@ -108,7 +108,7 @@ An imported theme may add scoped CSS, static local image assets, and a safe them
 
 An imported theme must not add PHP, visitor-facing JavaScript, remote assets, tracking pixels, fonts, REST routes, service workers, arbitrary WordPress options, WooCommerce hooks, Bricks templates, dynamic tags, or database tables.
 
-If a future theme needs htmx or Alpine, it must be approved as a Kiwe-owned runtime feature first. Marketplace packages do not import their own htmx/Alpine runtime.
+htmx and Alpine are retired from the current marketplace contract. If a future theme needs one of them, it must be approved as a named Kiwe-owned adapter first. Marketplace packages never import their own htmx/Alpine runtime.
 
 ## Export rule
 

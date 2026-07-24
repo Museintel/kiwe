@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Settings {
-	private const SAFETY_MIGRATION_VERSION = 3;
+	private const SAFETY_MIGRATION_VERSION = 4;
 
 	private static bool $safety_migrations_checked = false;
 	private ?array $resolved_settings = null;
@@ -31,6 +31,7 @@ final class Settings {
 
 		$settings = $this->recursive_parse_args( $settings, $this->defaults() );
 		$settings['fragment_navigation'] = false;
+		unset( $settings['enhancements'] );
 
 		$this->resolved_settings = $settings;
 		Runtime_Profiler::finish( 'settings.all', $profile, false );
@@ -86,6 +87,11 @@ final class Settings {
 			}
 
 			update_option( 'dsa_link_score_legacy_default_blank_v3', 'done', false );
+		}
+
+		if ( array_key_exists( 'enhancements', $settings ) ) {
+			unset( $settings['enhancements'] );
+			$changed = true;
 		}
 
 		$search = isset( $settings['search'] ) && is_array( $settings['search'] ) ? $settings['search'] : null;
@@ -146,11 +152,6 @@ final class Settings {
 					'console_logs'        => false,
 					'performance_profile' => false,
 					'asset_manifest'      => false,
-				],
-				'enhancements'        => [
-					'enabled' => false,
-					'htmx'    => false,
-					'alpine'  => false,
 				],
 				'protected_flow'      => [
 					'rail_enabled' => false,

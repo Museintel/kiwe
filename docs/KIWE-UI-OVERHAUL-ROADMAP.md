@@ -10,7 +10,7 @@ The proposal identified real defects: no tablet profile, repeated placement logi
 
 It was not safe to merge wholesale. Its navbar fix added more than 200 lines of repeated profile selectors and important overrides, enlarged AI geometry independently of the Dock contract, and treated source/static checks as proof of interaction behavior. That approach would make marketplace themes brittle.
 
-HTMX and Alpine.js were rejected for the `0.5.43` geometry overhaul because that work needed fewer ownership layers, not more. As of the `0.5.54` lead track, they are reopened as controlled integration tools after non-deferred hardening. The boundary is narrow: htmx may own server-rendered, same-site fragments where WordPress remains authoritative; Alpine may own isolated local widget state. Neither library may own PhoneKey/auth, checkout/payment authority, persisted cross-account state, service-worker policy, navigation history, focus trapping, cart reconciliation authority, or the core Surface lifecycle.
+HTMX and Alpine.js were rejected for the `0.5.43` geometry overhaul because that work needed fewer ownership layers, not more. A later `0.5.54` pilot proved they could be packaged safely, but not that they improved Kiwe enough to stay in the default admin/runtime surface. As of `0.6.34`, the htmx/Alpine track is retired: DSA core remains the default authority, and Kiwe will adopt a hybrid library only for a specific future adapter where source and live-host evidence prove the library is materially better than the native DSA/Seam/WP stack for that narrow job. If such an adapter is approved, htmx may own only server-rendered, same-site fragments where WordPress remains authoritative; Alpine may own only isolated local widget state. Neither library may own PhoneKey/auth, checkout/payment authority, persisted cross-account state, service-worker policy, navigation history, focus trapping, cart reconciliation authority, or the core Surface lifecycle.
 
 ## Contract Decisions
 
@@ -23,17 +23,18 @@ HTMX and Alpine.js were rejected for the `0.5.43` geometry overhaul because that
 7. Sheet close always uses the existing Surface lifecycle, history release, focus restoration, and mode arbitration.
 8. AI uses the same geometry size as other Dock destinations. Color, motion, and badge communicate its role.
 9. Marketplace themes may style tokens and recipes but may not replace state, REST, history, or geometry ownership.
-10. Canonical code remains dependency-light by default; htmx/Alpine may be introduced only behind WordPress enqueue gates and only where they reduce custom glue without taking over security-sensitive state.
+10. Canonical code remains dependency-light by default. Future htmx/Alpine use requires a named adapter, a measurable weakness in native DSA, WordPress enqueue ownership, no bundled admin-wide gate, and proof that the dependency removes more risk/complexity than it adds.
 
-## H1 - Controlled htmx/Alpine Integration Track - Planned
+## H1 - htmx/Alpine Pilot - Retired in 0.6.34
 
 - [x] Batch 0: finish non-deferred hardening before introducing new runtime dependencies. PhoneKey auth/state-machine and privacy/master switches are deferred by product decision; SecureTrack optional-surface containment is complete.
 - [x] Batch 1: add htmx/Alpine foundation behind settings/capability gates, with local/vendor asset handling and no CDN dependency in production packaging.
 - [x] Batch 2: pilot htmx on low-risk server-owned fragment pilots such as selected admin/read-mostly panels and non-auth Surface partials. First pilot: Developer package-proof refresh.
 - [x] Batch 3: pilot Alpine on isolated local-widget pilots only, with no persisted account/cart/auth state. First pilot: Developer enhancement-gate preview state.
 - [x] Batch 4: remove redundant custom glue proven obsolete by the pilots, expand contracts, update docs, bump versions, and rebuild the package manifest. No redundant glue was removed from the first small pilots; source contracts, docs, version bump, and manifest rebuild are complete for folder-based MU deployment.
+- [x] Batch 5: retire the broad enhancement gates after lead review. The pilot did not beat DSA core for the tested admin/package-proof path, so the admin UI, settings lane, boot metadata, frontend/admin enqueues, AJAX refresh route, and vendored library assets were removed. Future use is adapter-specific, not a global toggle.
 
-The track is five batches including Batch 0. If Batch 0 grows, it splits before any htmx/Alpine integration lands.
+The closed pilot taught the boundary without leaving a permanent dependency. DSA core remains the product path unless a future integration wins on evidence.
 
 ## U1 - Responsive Shell Foundation - Complete (0.5.43)
 

@@ -1359,7 +1359,7 @@ Runtime ownership is deliberately split:
 - `Kiwe > Menu` owns WordPress menu sources, custom menu items, dashboard utility, and contextual table-of-contents behavior.
 - `Kiwe > Search` owns Search families, context awareness, alphabet index, quick-add, and Bricks search bridge behavior.
 - `Kiwe > App` owns install/adoption and notification journeys.
-- `Kiwe > Developer` owns diagnostics, runtime cache cleanup, enhancement gates, builder attributes, export/reset, and deployment tooling.
+- `Kiwe > Developer` owns diagnostics, runtime cache cleanup, builder attributes, export/reset, and deployment tooling.
 
 The old fragment navigation toggle and surface-width field are no longer site-owner controls and are no longer displayed as Developer-page status rows. The original fragment renderer is deleted and remains hard-disabled. Its controlled S13-S16 editorial successor is implemented behind a Developer gate, but cannot become a production default until live lifecycle, fallback, cache, advertising, SEO, and accessibility evidence passes. The legacy `surface_width` value is retained only as an internal fallback for old integrations; Responsive Geometry Engine tokens are the production layout source of truth.
 
@@ -1419,7 +1419,7 @@ The `0.5.27` first-paint rollback is historical rather than the current producti
 
 The admin information architecture now follows runtime ownership instead of historical build order. `Kiwe > Surface` no longer presents fragment navigation, surface width, dock presentation, or diagnostics as normal production settings. Those controls either moved to the owning page or were removed from admin status panels when they became historical/internal. This prevents a site owner from believing disabled fragment/morph work or fallback dimensions are production configuration.
 
-`Kiwe > Developer` now carries runtime recovery, diagnostics, enhancement gates, builder attributes, export/reset, and deployment tooling. The duplicate Architecture Status and Production Readiness panels are no longer surfaced there; readiness remains on the main Kiwe overview. The retired S18 Asset Build status and queue action are also no longer surfaced. `Kiwe > Dock` owns all dock geometry/material/visibility settings. `Kiwe > Theme` owns Classic versus Sheet presentation and shared DSA runtime colors. Sheet mode uses the same module contracts as Classic and reserves dock/context space inside one continuous Sheet panel so neither the page nor a detached footer layer can show through behind the dock.
+`Kiwe > Developer` now carries runtime recovery, diagnostics, builder attributes, export/reset, and deployment tooling. The duplicate Architecture Status and Production Readiness panels are no longer surfaced there; readiness remains on the main Kiwe overview. The retired S18 Asset Build status and queue action and the retired htmx/Alpine enhancement gates are also no longer surfaced. `Kiwe > Dock` owns all dock geometry/material/visibility settings. `Kiwe > Theme` owns Classic versus Sheet presentation and shared DSA runtime colors. Sheet mode uses the same module contracts as Classic and reserves dock/context space inside one continuous Sheet panel so neither the page nor a detached footer layer can show through behind the dock.
 
 ### Dock Geometry Simplification (`0.5.40`)
 
@@ -1455,7 +1455,7 @@ The old Surface admin page was a construction-era umbrella and is no longer a us
 - `Dock`: module order/visibility plus compact Dock or edge-attached Navigation bar geometry.
 - `Theme`: Classic-only styling, Sheet-only styling, shared semantic colors, and transition presentation.
 - `Games`, `Links`, `Search`, and `Menu`: their own content and behavior settings.
-- `Developer`: diagnostics, runtime recovery, enhancement gates, portable configuration, builder attributes, and deployment tooling.
+- `Developer`: diagnostics, runtime recovery, portable configuration, builder attributes, and deployment tooling.
 
 Navigation bar is a named geometry presentation, not an ambiguous style checkbox: horizontal bars use `100dvw`, vertical bars use the usable `100dvh`, the selected viewport edge has zero external gap, safe-area insets are internal padding, and the cross-axis reserve remains token-driven. Compact Dock behavior is unchanged. The renderer emits one presentation class and device-specific edge classes; no site-specific calculation or theme leakage is allowed.
 

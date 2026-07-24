@@ -4,9 +4,15 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.34 - 2026-07-24
+
+- Retired the htmx/Alpine enhancement pilot after lead review: DSA core remains the default authority, and future hybrid adoption requires a named adapter with evidence that it beats the native DSA/Seam/WordPress stack for that narrow job.
+- Removed the `Kiwe > Developer` controlled web-app enhancement card, htmx package-proof AJAX refresh, enhancement settings lane, appsite profile import/export support, frontend/admin enqueues, public boot metadata, and vendored htmx/Alpine assets.
+- Replaced the old htmx/Alpine source contract with a retirement contract that keeps those libraries out of runtime/admin/package manifests unless a future scoped adapter is deliberately introduced.
+
 ## 0.6.33 - 2026-07-24
 
-- Removed the duplicate `Architecture status` and `Production readiness` panels from `Kiwe > Developer`; Developer now stays focused on diagnostics, runtime recovery, enhancement gates, builder attributes, portable export/reset, and deployment tooling.
+- Removed the duplicate `Architecture status` and `Production readiness` panels from `Kiwe > Developer`; Developer now stays focused on diagnostics, runtime recovery, builder attributes, portable export/reset, and deployment tooling.
 - Kept the underlying production-readiness report on the main Kiwe overview, where it belongs as a release-support view rather than a Developer-page wall of legacy audit text.
 - Added a release regression check so the retired Developer-page architecture/readiness panels cannot quietly reappear.
 

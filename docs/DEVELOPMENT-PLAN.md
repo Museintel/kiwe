@@ -139,12 +139,12 @@ The current sequence is:
 | Batch | Scope | Status | Acceptance boundary |
 |---:|---|---|---|
 | 0 | Non-deferred hardening before htmx/Alpine | Code complete; verification limited by missing local PHP/Node/Git binaries | JSON-LD script breakout, browser debug leakage, service-worker opt-out, cart/checkout/panel async races, and SecureTrack optional-surface containment are addressed. PhoneKey auth/state-machine and privacy/master switches are explicitly deferred by product decision. |
-| 1 | htmx/Alpine foundation | Code complete; verification limited by missing local PHP/Node/Git binaries | Libraries are introduced through WordPress-owned enqueue gates, disabled by default until contracts pass, with no ownership over PhoneKey, checkout/payment authority, service-worker policy, or core Surface lifecycle. |
-| 2 | htmx server-fragment pilots | Code complete; verification limited by missing local PHP/Node/Git binaries | Low-risk admin and read-mostly Surface fragments move to server-owned partials with nonce/mutation contracts preserved. First pilot: Developer package-proof fragment. |
-| 3 | Alpine local-widget pilots | Code complete; verification limited by missing local PHP/Node/Git binaries | Only isolated local UI widgets use Alpine state; no persisted cross-account/account/cart/auth state moves into Alpine. First pilot: Developer enhancement-gate preview state. |
-| 4 | Cleanup, contracts, version bump, and package | Complete for source/package release; live proof remains external | Source boundary contract and docs are updated. Loader/package/cache-busting version is synchronized at `0.5.61`; manifest hashes may report drift until the local package is re-hashed, but required runtime-file verification remains the boot gate. |
+| 1 | htmx/Alpine foundation | Retired in `0.6.34` | The safe packaging experiment proved the boundary but did not beat DSA core enough to remain a generic admin/runtime toggle. |
+| 2 | htmx server-fragment pilots | Retired in `0.6.34` | The Developer package-proof refresh returned to a plain server-rendered snapshot; page reload is sufficient and avoids a dependency layer. |
+| 3 | Alpine local-widget pilots | Retired in `0.6.34` | The enhancement-gate preview widget disappeared with the gate itself; isolated local UI remains native DSA/admin JS unless a future adapter proves otherwise. |
+| 4 | Cleanup, contracts, version bump, and package | Complete for `0.6.34` | Admin UI, settings/profile lanes, boot metadata, enqueues, AJAX refresh, vendored assets, docs, source contracts, version, and manifest were cleaned together. |
 
-This makes the integration a five-batch track including Batch 0. SecureTrack containment stayed inside Batch 0, so Batch 1 can begin without splitting the track.
+The pilot is closed. Future htmx/Alpine use must be a named adapter with evidence that it improves DSA more than it taxes the appsite.
 
 ## Release Position
 
@@ -224,7 +224,7 @@ The calculated path is **14 focused batches**. RC1 through RC12 are code complet
 
 The optional style-preset experiment is retired. Neumorphic, Glassmorphism, Bold & Vibrant, and Minimal & Clean are not part of 1.0 because they created too much risk around geometry, contrast, and runtime ownership. `Kiwe > Theme` now exposes only two production presentation modes: Classic Surface and Sheet presentation. Both use the same modules, data, REST, PhoneKey, cart, search, AI, notification, dock, and geometry contracts.
 
-Admin ownership is explicit and the historical `Kiwe > Surface` page is no longer menu-visible. The main Kiwe overview owns build/readiness status; App owns shell render state and PWA/permission journeys; Theme owns Classic/Sheet presentation and DSA runtime colors; Dock owns module order, compact Dock or Navigation bar geometry, material, and visibility; Games and Links own their respective module settings; Developer owns diagnostics, attributes, runtime cleanup, enhancement gates, export/reset, and deployment tooling. The legacy fragment renderer is removed; its controlled editorial morph successor exists behind a Developer gate and remains off until live proof. The former S18 generated delivery pilot is retired; packaged CSS remains the only live stylesheet authority.
+Admin ownership is explicit and the historical `Kiwe > Surface` page is no longer menu-visible. The main Kiwe overview owns build/readiness status; App owns shell render state and PWA/permission journeys; Theme owns Classic/Sheet presentation and DSA runtime colors; Dock owns module order, compact Dock or Navigation bar geometry, material, and visibility; Games and Links own their respective module settings; Developer owns diagnostics, attributes, runtime cleanup, export/reset, and deployment tooling. The legacy fragment renderer is removed; its controlled editorial morph successor exists behind a Developer gate and remains off until live proof. The former S18 generated delivery pilot is retired; packaged CSS remains the only live stylesheet authority. The broad htmx/Alpine enhancement pilot is retired; future hybrid use must be adapter-specific and evidence-backed.
 
 ### Dock Geometry Simplification (`0.5.40`)
 
@@ -254,7 +254,7 @@ S15 morphing and S17 offline editorial may ship in 1.0 as **off-by-default, clea
 
 ## Admin Ownership And Navigation Bar (`0.5.43`)
 
-The historical `Kiwe > Surface` placeholder is removed from the admin menu. The main `Kiwe` overview owns build/readiness status. `Kiwe > App` owns shell enablement, first-session Home, PWA install, adoption, and permission journeys. `Kiwe > Dock` owns destination order, visibility, compact Dock geometry, and the full-axis Navigation bar presentation. `Kiwe > Theme` owns Classic-only visual controls, Sheet-only controls, shared semantic colors, and transition presentation. `Kiwe > Games` and `Kiwe > Links` are first-class owner pages. `Kiwe > Developer` owns diagnostics, recovery, enhancement gates, export/reset, deployment tools, and builder-neutral attributes.
+The historical `Kiwe > Surface` placeholder is removed from the admin menu. The main `Kiwe` overview owns build/readiness status. `Kiwe > App` owns shell enablement, first-session Home, PWA install, adoption, and permission journeys. `Kiwe > Dock` owns destination order, visibility, compact Dock geometry, and the full-axis Navigation bar presentation. `Kiwe > Theme` owns Classic-only visual controls, Sheet-only controls, shared semantic colors, and transition presentation. `Kiwe > Games` and `Kiwe > Links` are first-class owner pages. `Kiwe > Developer` owns diagnostics, recovery, export/reset, deployment tools, and builder-neutral attributes.
 
 Dock presentation is now an explicit choice rather than the old ambiguous `fill_axis` checkbox. `Dock` remains compact and positionable. `Navigation bar` attaches to a selected top, right, bottom, or left viewport edge with no external gap, fills only its orientation axis, and keeps safe-area padding inside. Both presentations use the same registered modules, actions, badges, context authority, geometry variables, and accessibility contract.
 

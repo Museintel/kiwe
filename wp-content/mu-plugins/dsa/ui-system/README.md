@@ -196,11 +196,13 @@ Next release-prep steps:
 
 ## htmx and Alpine
 
-Use htmx only for server-owned fragments where WordPress remains authoritative.
+htmx and Alpine are not part of the current Kiwe AppShell/theme output.
 
-Use Alpine only for local presentation state such as tabs, disclosure, preview toggles, and temporary local UI.
+The 0.5.54 pilot proved those libraries could be packaged safely, but the lead decision in 0.6.34 is to retire the broad admin/runtime enhancement gates because native DSA, Seam, WordPress, and the Geometry Engine remain lighter and clearer for the current shell.
 
-Do not use htmx or Alpine for PhoneKey/auth, checkout/payment, cart reconciliation authority, service-worker policy, navigation history, focus trapping, or the Surface lifecycle.
+Future use is adapter-specific only. A future adapter must name the exact weakness it solves, prove it beats native DSA for that narrow job, remain Kiwe-owned through WordPress enqueue/runtime policy, and stay out of PhoneKey/auth, checkout/payment, cart reconciliation authority, service-worker policy, navigation history, focus trapping, and the Surface lifecycle.
+
+Theme handoffs, marketplace themes, Bricks page handoffs, and combined handoffs must not import htmx or Alpine.
 
 ## Color model
 

@@ -30,9 +30,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Assets {
-	private const HTMX_VERSION = '2.0.10';
-	private const ALPINE_VERSION = '3.15.12';
-
 	private $settings;
 	private $registry;
 	private $modules;
@@ -168,26 +165,6 @@ final class Assets {
 			true
 		);
 
-		$enhancements = $this->enhancement_data( $settings );
-		if ( ! empty( $enhancements['htmx']['enabled'] ) ) {
-			wp_enqueue_script(
-				'dsa-htmx',
-				DSA_URL . 'assets/vendor/htmx/htmx.min.js',
-				[],
-				self::HTMX_VERSION,
-				true
-			);
-		}
-		if ( ! empty( $enhancements['alpine']['enabled'] ) ) {
-			wp_enqueue_script(
-				'dsa-alpine',
-				DSA_URL . 'assets/vendor/alpine/alpine.min.js',
-				[],
-				self::ALPINE_VERSION,
-				true
-			);
-			wp_script_add_data( 'dsa-alpine', 'defer', true );
-		}
 		$debug = $this->debug_data( $settings );
 		if ( ! empty( $debug['enabled'] ) && ! empty( $debug['console'] ) ) {
 			wp_enqueue_script(
@@ -332,7 +309,6 @@ final class Assets {
 				'permissions' => $this->permissions->public_config(),
 				'notificationPreferences' => $this->notification_preferences->public_config(),
 				'pwa'        => $this->pwa->public_config(),
-				'enhancements' => $enhancements,
 				'links'      => $this->links_data(),
 				'secure'     => $this->secure_data(),
 				'phonekey'   => $phonekey,
@@ -431,27 +407,6 @@ final class Assets {
 			'console'       => $enabled && ! empty( $diagnostics['console_logs'] ),
 			'label'         => 'Kiwe DSA',
 			'wpDebugActive' => (bool) ( defined( 'WP_DEBUG' ) && WP_DEBUG ),
-		];
-	}
-
-	private function enhancement_data( array $settings ): array {
-		$enhancements = isset( $settings['enhancements'] ) && is_array( $settings['enhancements'] )
-			? wp_parse_args( $settings['enhancements'], $this->settings->defaults()['enhancements'] )
-			: $this->settings->defaults()['enhancements'];
-		$enabled = ! empty( $enhancements['enabled'] );
-
-		return [
-			'version' => 1,
-			'htmx'    => [
-				'enabled' => $enabled && ! empty( $enhancements['htmx'] ),
-				'version' => self::HTMX_VERSION,
-				'scope'   => 'server-fragment-pilots',
-			],
-			'alpine'  => [
-				'enabled' => $enabled && ! empty( $enhancements['alpine'] ),
-				'version' => self::ALPINE_VERSION,
-				'scope'   => 'isolated-local-widget-pilots',
-			],
 		];
 	}
 
