@@ -43,6 +43,8 @@ const siteGraphData = read('wp-content/mu-plugins/dsa/includes/Site_Graph/Data_Q
 const manifest = read('wp-content/mu-plugins/dsa/package-manifest.json');
 const docs = read('KIWE-AI.md') + '\n' + read('kiwe-ai-toolkit/contexts/dynamic-lite.md');
 const toolkitCore = read('kiwe-ai-toolkit/lib/kiwe-core.js');
+const toolkitMcp = read('kiwe-ai-toolkit/mcp/index.js');
+const workflowLite = read('kiwe-ai-toolkit/contexts/workflow-lite.md');
 const frameworkProfileValidator = read('kiwe-ai-toolkit/lib/framework-profile-validator.js');
 const frameworkProfileCli = read('kiwe-ai-toolkit/tools/validate-framework-profile.cjs');
 const frameworkProfileSchema = read('kiwe-ai-toolkit/schemas/framework-profile.schema.json');
@@ -135,6 +137,7 @@ check('Toolkit ships a standalone Framework profile schema and validator', toolk
 check('Toolkit Framework profile fixtures prove valid and invalid boundaries', validFrameworkFixture.includes('"schema": "kiwe.framework-profile.v1"') && validFrameworkFixture.includes('"bricks_theme_style"') && invalidFrameworkFixture.includes('"--kiwe-color-brand"') && invalidFrameworkFixture.includes('"settings":') && invalidFrameworkFixture.includes('"dock"'));
 check('Toolkit and validators reject private runtime bridge token leakage', themeDocs.includes('--dsa-runtime-token-####') && auditOutput.includes('validateImportCssNoRuntimeBridgeTokens') && auditOutput.includes('--dsa-runtime-token-') && themePackageValidator.includes('validateNoRuntimeBridgeTokenReferences') && themePackageValidator.includes('--dsa-runtime-token-') && fs.existsSync(path.join(root, 'tools/ui-theme/fixtures/invalid-runtime-bridge-token/css/theme.css')));
 check('Toolkit and validators reject anonymous CSS literals in import CSS', themeDocs.includes('anonymous raw CSS literals') && auditOutput.includes('validateImportCssNoAnonymousLiterals') && validateOutput.includes('anonymousThemeLiterals') && themePackageValidator.includes('collectAnonymousThemeLiterals') && companion.includes('anonymous_literal_value_in_theme_css') && fs.existsSync(path.join(root, 'tools/ui-theme/fixtures/invalid-anonymous-pixel-literal/css/theme.css')));
+check('Kiwe AI Toolkit exposes phased workflow router before one-shot combined work', docs.includes('workflow-lite.md') && workflowLite.includes('/ideate /webdraft') && workflowLite.includes('/rebuild /seamframework') && workflowLite.includes('/create /brickstheme') && workflowLite.includes('/create /dsatheme') && workflowLite.includes('/assemble /combined') && workflowLite.includes('/dynamic /sitegraph') && toolkitCore.includes('routeCommand') && toolkitCore.includes('getWorkflowContext') && toolkitBin.includes('kiwe workflow') && toolkitBin.includes('kiwe route --command') && toolkitMcp.includes('kiwe_route_command') && toolkitMcp.includes('kiwe_get_workflow'));
 
 function settingsLike(haystack, needle) {
 	return haystack.includes(needle) || haystack.includes(needle.replaceAll("'", '"'));

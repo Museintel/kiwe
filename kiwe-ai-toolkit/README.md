@@ -10,6 +10,20 @@ It exposes only the compact contracts an AI needs:
 
 The full plugin remains the runtime authority. This toolkit is the public design/generation interface.
 
+For highest-quality work, use the phased workflow instead of one giant combined prompt:
+
+1. `/ideate /webdraft` for pure creative HTML/CSS/JS with no Kiwe constraints.
+2. `/rebuild /seamframework` after the human likes the draft.
+3. `/audit /seamframework`.
+4. `/create /brickstheme` or `/create /frameworkprofile` for global Kiwe/Bricks token personality.
+5. `/create /dsatheme`.
+6. `/audit /dsatheme`.
+7. `/assemble /combined`.
+8. `/audit /combined`.
+9. `/dynamic /sitegraph` after visual approval.
+
+One-shot `combined` still exists for fast experiments, but serious candidate work should be staged.
+
 Current lane rule: combined output uses AppShell `theme-package.json` for live DSA theme settings and `settings.tokens`; standalone `kiwe.framework-profile.v1` files are for website/page-only Framework token profiles or explicit `Kiwe > Framework` imports, not loose AppShell settings profiles.
 
 Token authority rule: AI handoffs should use official universal token names in `settings.tokens.overrides` and consume generated public variables such as `--kiwe-color-brand`, `--kiwe-color-surface`, `--kiwe-radius-lg`, or documented `--kiwe-theme-*` aliases. Do not copy Kiwe core's generated `--dsa-runtime-token-####` bridge variables into themes, previews, docs, or Bricks page CSS; those names are private runtime migration glue and are rejected by the package/audit validators.
@@ -34,6 +48,8 @@ Giving the whole plugin to an AI wastes tokens and invites it to invent against 
 ```bash
 npm install
 node bin/kiwe.js modes
+node bin/kiwe.js workflow
+node bin/kiwe.js route --command "/rebuild /seamframework" --brief "Rebuild the approved draft with Seam"
 node bin/kiwe.js start combined --brief "Netflix-like ultra-modern news website for Indian startups and business news, with a matching Kiwe AppShell direction"
 node bin/kiwe.js context combined
 node bin/kiwe.js create combined ./out/my-kiwe-handoff --name my-kiwe-handoff
@@ -51,6 +67,20 @@ The human prompt should stay short. The toolkit carries the rules.
 For browser AIs, give direct raw links so the model does not waste tokens searching GitHub.
 
 Good human prompts:
+
+```text
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
+Create a pure visual concept for a premium Indian startup news homepage. Do not use Kiwe yet. /ideate /webdraft
+```
+
+```text
+Use the Kiwe AI Toolkit. Read only:
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
+
+I have an approved creative HTML/CSS/JS draft. Rebuild it with Seam. /rebuild /seamframework
+```
 
 ```text
 Use the Kiwe AI Toolkit. Read only:
@@ -74,7 +104,22 @@ https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md
 Create a conversion-focused product landing page.
 ```
 
-The AI should then start with one tool call:
+The AI should then start with one tool call.
+
+For phased work:
+
+```json
+{
+  "tool": "kiwe_route_command",
+  "arguments": {
+    "command": "/rebuild /seamframework",
+    "brief": "Use the human's current phase request exactly.",
+    "artifactSummary": "Summarize the prior artifact if one was supplied."
+  }
+}
+```
+
+For fast one-shot work:
 
 ```json
 {
@@ -105,6 +150,7 @@ When a target site has Kiwe installed and a scoped Kiwe AI key is available, ext
 
 Some browser AIs can read public GitHub files but cannot connect MCP tools or safely execute repo code. In that case, do not clone or crawl the whole repo. Read one static context file:
 
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md` for phased command routing and best-quality generation/revision loops.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/website.md` for a normal website/page.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/theme.md` for a Kiwe DSA/AppShell theme.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md` for browser models that need a short website/page plus AppShell contract.
@@ -140,6 +186,8 @@ Example MCP client entry:
 ## MCP tools
 
 - `kiwe_start_project`
+- `kiwe_get_workflow`
+- `kiwe_route_command`
 - `kiwe_list_modes`
 - `kiwe_get_context`
 - `kiwe_create_handoff`

@@ -4,6 +4,9 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+- Added the Kiwe AI phased workflow/router for higher-quality external AI outputs: `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/assemble /combined`, and `/dynamic /sitegraph` now route to smaller contexts before one-shot combined work.
+- Exposed the workflow through `KIWE-AI.md`, `kiwe-ai-toolkit/contexts/workflow-lite.md`, CLI commands (`workflow`, `route`), and MCP tools (`kiwe_get_workflow`, `kiwe_route_command`) so browser and IDE AIs can avoid reading the full repo or being overloaded with every contract at once.
+
 ## 0.6.34 - 2026-07-24
 
 - Retired the htmx/Alpine enhancement pilot after lead review: DSA core remains the default authority, and future hybrid adoption requires a named adapter with evidence that it beats the native DSA/Seam/WordPress stack for that narrow job.

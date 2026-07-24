@@ -15,8 +15,19 @@ The toolkit gives compact context packs and validation rules so you do not waste
 If you are a browser-based AI and cannot connect the Kiwe MCP server or run the CLI, do not clone or crawl the full repository.
 Do not use web search to discover toolkit files. Use the exact raw links below.
 
-Read exactly one static context file after this entrypoint:
+Preferred path for serious work:
 
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
+```
+
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/assemble /combined`, or `/dynamic /sitegraph`.
+
+The workflow intentionally separates creativity from Kiwe contract compliance. A pure creative draft may happen first without Kiwe/Seam/DSA constraints; later commands rebuild, audit, package, and bind it.
+
+If the human explicitly asks for one-shot output, read exactly one static context file after this entrypoint:
+
+- Workflow / command router: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md`
 - Website/page only: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/website.md`
 - Kiwe DSA/AppShell theme only: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/theme.md`
 - Website/page + AppShell direction/settings, browser-short version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md`
@@ -24,7 +35,7 @@ Read exactly one static context file after this entrypoint:
 - Revision/audit pass: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md`
 - Dynamic WordPress/Bricks binding pass after an approved handoff: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md`
 
-For a prompt that asks for both a website/page and a Kiwe AppShell/DSA direction, read:
+For a fast prompt that asks for both a website/page and a Kiwe AppShell/DSA direction in one pass, read:
 
 ```text
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md
@@ -205,7 +216,20 @@ dsa/stage-apply-plan
 
 ## Preferred tool call
 
-Use this tool first:
+For capable MCP/tool clients, use the command router first when the user gives a phase command:
+
+```json
+{
+  "tool": "kiwe_route_command",
+  "arguments": {
+    "command": "/rebuild /seamframework",
+    "brief": "Paste the human's short phase request here.",
+    "artifactSummary": "Briefly summarize the prior phase artifact when available."
+  }
+}
+```
+
+If the user gives a broad one-shot request instead of a phased command, use:
 
 ```json
 {

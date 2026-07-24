@@ -201,6 +201,40 @@ export function getDynamicContext() {
   return context.trim() + '\n';
 }
 
+export function getWorkflowContext() {
+  const context = readMaybe('contexts/workflow-lite.md');
+  if (!context) {
+    throw new Error('Kiwe workflow context was not found.');
+  }
+  return context.trim() + '\n';
+}
+
+function frameworkProfileContext() {
+  const schema = readMaybe('schemas/framework-profile.schema.json');
+  return [
+    '# Kiwe Framework / Bricks theme profile context',
+    '',
+    'Use this only for `/create /brickstheme`, `/create /frameworkprofile`, `/audit /brickstheme`, or `/audit /frameworkprofile` phases.',
+    '',
+    'A Framework profile is a sitewide design-token profile for `Kiwe > Framework` and safe Bricks global theme-style export. It is not a DSA AppShell theme package.',
+    '',
+    'Expected file:',
+    '',
+    '```text',
+    'framework/kiwe-framework-profile.json',
+    'framework/FRAMEWORK-NOTES.md',
+    '```',
+    '',
+    schema ? '## JSON Schema\n\n```json\n' + schema.trim() + '\n```' : '',
+    '',
+    'If tools are available, validate with:',
+    '',
+    '```bash',
+    'node kiwe-ai-toolkit/tools/validate-framework-profile.cjs /path/to/handoff-or-profile',
+    '```'
+  ].filter(Boolean).join('\n').trim() + '\n';
+}
+
 export function listClassVocabulary() {
   const candidates = [
     'packs/website-builder/contracts/seam-class-vocabulary.json',
@@ -273,6 +307,111 @@ export function startProject({ mode = 'auto', brief = '', name = '' } = {}) {
     '',
     getContext(normalized)
   ];
+
+  return parts.filter(Boolean).join('\n').trim() + '\n';
+}
+
+function routeKind(command) {
+  const text = String(command || '').trim().toLowerCase();
+  if (!text) return 'workflow';
+  if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
+  if (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-rebuild';
+  if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
+  if (/(\/create|\/build)/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-create';
+  if (/\/audit/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-audit';
+  if (/(\/create|\/build)/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-create';
+  if (/\/audit/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-audit';
+  if (/(\/assemble|\/combine|\/combined)/.test(text)) return 'combined-assemble';
+  if (/\/audit/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-audit';
+  if (/(\/dynamic|\/sitegraph|\/binding|\/bindings)/.test(text)) return 'dynamic';
+  if (/(\/apply|\/staging)/.test(text)) return 'staging';
+  if (/(\/build|\/create)/.test(text) && /(dsathemeandhomepage|theme and homepage|homepage and theme)/.test(text)) return 'combined-assemble';
+  return 'workflow';
+}
+
+export function routeCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '' } = {}) {
+  const kind = routeKind(command);
+  const humanBrief = String(brief || '').trim() || 'No human brief supplied.';
+  const artifact = String(artifactSummary || '').trim() || 'No previous artifact summary supplied. Ask the human for the prior phase output if this command depends on one.';
+  const graph = String(siteGraphSummary || '').trim() || 'No Site Graph summary supplied. Ask for target-site Site Graph before dynamic binding.';
+
+  const parts = [
+    `# Kiwe command route: ${kind}`,
+    '',
+    `Command: ${String(command || '(none)').trim() || '(none)'}`,
+    '',
+    '## Human brief',
+    '',
+    humanBrief,
+    '',
+    '## Previous artifact summary',
+    '',
+    artifact,
+    '',
+    '## Route rule',
+    '',
+    'Do only the selected phase. Do not silently expand into website + DSA + Bricks + dynamic + staging work.',
+    '',
+    getWorkflowContext()
+  ];
+
+  if (kind === 'ideate') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Create a pure creative HTML/CSS/JS draft. Do not use Kiwe, DSA, Seam, Bricks, WordPress, WooCommerce, Site Graph, or AppShell constraints unless the human independently requested them. This phase optimizes for visual invention.'
+    );
+  } else if (kind === 'seam-rebuild') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Rebuild the approved creative draft with Seam Framework while preserving the visual thesis.',
+      '',
+      getContext('website')
+    );
+  } else if (kind === 'seam-audit') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Audit the Seam rebuild and revise the actual files.',
+      '',
+      getContext('website'),
+      '',
+      readMaybe('contexts/audit-lite.md')
+    );
+  } else if (kind === 'framework-create') {
+    parts.push(frameworkProfileContext());
+  } else if (kind === 'framework-audit') {
+    parts.push(frameworkProfileContext(), readMaybe('contexts/audit-lite.md'));
+  } else if (kind === 'theme-create') {
+    parts.push(getContext('theme'));
+  } else if (kind === 'theme-audit') {
+    parts.push(getContext('theme'), readMaybe('contexts/audit-lite.md'));
+  } else if (kind === 'combined-assemble') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Assemble the approved website/page lane and approved DSA theme lane. Do not redesign from scratch unless the human explicitly asks.',
+      '',
+      readMaybe('contexts/combined-lite.md')
+    );
+  } else if (kind === 'combined-audit') {
+    parts.push(readMaybe('contexts/combined-lite.md'), readMaybe('contexts/audit-lite.md'));
+  } else if (kind === 'dynamic') {
+    parts.push(
+      '# Site Graph summary',
+      '',
+      graph,
+      '',
+      getDynamicContext()
+    );
+  } else if (kind === 'staging') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Controlled staging apply is not a creative generation phase. Use it only with target Kiwe API access, explicit staging confirmation, explicit mutation authorization, and trusted executor routes. If those are missing, stop and ask for them.'
+    );
+  }
 
   return parts.filter(Boolean).join('\n').trim() + '\n';
 }

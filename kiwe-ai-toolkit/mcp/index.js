@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, prepareApplyPlan, startDynamicPass, startProject, validateBindings, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -22,6 +22,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           name: { type: 'string', description: 'Optional handoff/project name.' }
         },
         required: ['brief']
+      }
+    },
+    {
+      name: 'kiwe_get_workflow',
+      description: 'Return the Kiwe phased AI workflow and slash-command vocabulary. Use this before broad creative work so the model does one small phase at a time.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_route_command',
+      description: 'Route a short command such as /ideate /webdraft, /rebuild /seamframework, /audit /combined, /create /dsatheme, or /dynamic /sitegraph to the smallest relevant Kiwe context.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'Human command, e.g. /rebuild /seamframework.' },
+          brief: { type: 'string', description: 'Plain-language human brief for this phase.' },
+          artifactSummary: { type: 'string', description: 'Short summary of the previous phase artifact, if any.' },
+          siteGraphSummary: { type: 'string', description: 'Short target Site Graph summary for dynamic phases.' }
+        },
+        required: ['command']
       }
     },
     {
@@ -122,6 +141,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
     case 'kiwe_start_project':
       result = startProject(args);
+      break;
+    case 'kiwe_get_workflow':
+      result = getWorkflowContext();
+      break;
+    case 'kiwe_route_command':
+      result = routeCommand(args);
       break;
     case 'kiwe_list_modes':
       result = listModes();

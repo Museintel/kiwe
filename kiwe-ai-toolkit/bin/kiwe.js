@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, getContext, getDynamicContext, listClassVocabulary, listModes, prepareApplyPlan, startDynamicPass, startProject, validateBindings, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -15,6 +15,8 @@ function usage() {
 Commands:
   kiwe modes
   kiwe start [auto|website|theme|combined] --brief text [--name name]
+  kiwe workflow
+  kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
   kiwe validate <website|theme|combined> <output-dir>
@@ -41,6 +43,18 @@ try {
     const name = nameIndex >= 0 ? args[nameIndex + 1] : '';
     const brief = briefIndex >= 0 ? args.slice(briefIndex + 1).join(' ') : '';
     print(startProject({ mode, name, brief }));
+  } else if (command === 'workflow') {
+    print(getWorkflowContext());
+  } else if (command === 'route') {
+    const commandIndex = args.indexOf('--command');
+    const briefIndex = args.indexOf('--brief');
+    const artifactIndex = args.indexOf('--artifact-summary');
+    const graphIndex = args.indexOf('--site-graph-summary');
+    const commandText = commandIndex >= 0 ? args[commandIndex + 1] : args[0] || '';
+    const brief = briefIndex >= 0 ? args[briefIndex + 1] : '';
+    const artifactSummary = artifactIndex >= 0 ? args[artifactIndex + 1] : '';
+    const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
+    print(routeCommand({ command: commandText, brief, artifactSummary, siteGraphSummary }));
   } else if (command === 'context') {
     print(getContext(args[0] || 'website'));
   } else if (command === 'vocabulary') {
