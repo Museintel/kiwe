@@ -36,6 +36,15 @@ HTMX and Alpine.js were rejected for the `0.5.43` geometry overhaul because that
 
 The closed pilot taught the boundary without leaving a permanent dependency. DSA core remains the product path unless a future integration wins on evidence.
 
+### H1 evidence verdict
+
+- Frontend shell: htmx/Alpine did not add a pre-1.0 capability DSA lacked. Search, dock, sheet/classic presentation, notifications, menu context, cart reconciliation, focus, viewport sizing, and Surface lifecycle need one Kiwe-owned state machine rather than a second DOM/event owner.
+- Backend/admin: the only real htmx pilot was Developer package-proof refresh. Evidence showed page reload is enough for that low-frequency proof, while the extra AJAX route, nonce, enqueue gates, settings lane, and admin copy increased the surface area.
+- Local-widget state: the Alpine pilot only previewed enhancement checkboxes before save. Native admin JavaScript already handles local UI state without adding a permanent dependency.
+- Package/runtime: 0.6.34 verifies that Kiwe runs without htmx/Alpine enqueues, public boot metadata, vendored assets, or manifest entries.
+- 1.0 rule: no broad new JavaScript framework enters DSA core before 1.0. The work to 1.0 is strengthening the reactive AppShell, Geometry Engine, Seam framework, Site Graph, AI Companion, Bricks conversion, and theme/package loop.
+- Post-1.0 rule: table, restaurant, POS, and similar future verticals may reopen htmx/Alpine only as named adapters with a measurable, repeatable win over native DSA/Seam/WordPress for one narrow task. An adapter must be Kiwe-owned, locally packaged or explicitly dependency-managed, and it must never own PhoneKey/auth, checkout/payment, cart reconciliation authority, service-worker policy, browser history, focus trapping, or the Surface lifecycle.
+
 ## U1 - Responsive Shell Foundation - Complete (0.5.43)
 
 - [x] Add tablet defaults and persisted Dock settings.
