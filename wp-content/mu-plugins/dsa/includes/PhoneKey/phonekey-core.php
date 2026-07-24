@@ -1468,6 +1468,9 @@ function pk_backup_code_consume( $user_id, $code ) {
 function pk_redirect_url() {
 	$custom = get_option( 'pk_after_login_url', '' );
 	if ( $custom ) return esc_url_raw( $custom );
+	if ( is_user_logged_in() && pk_is_privileged( get_current_user_id() ) ) {
+		return admin_url();
+	}
 	if ( function_exists( 'wc_get_page_permalink' ) ) {
 		$url = wc_get_page_permalink( 'myaccount' );
 		if ( $url ) return $url;

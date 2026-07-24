@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.39",
+  "version": "6.40",
   "algorithm": "sha256",
-  "file_count": 262,
+  "file_count": 263,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -21,8 +21,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 272146,
-      "sha256": "ad386bad4d8c38f3a505ed079b2a8ebc5350e8005726b65fbd7e4dcf2fed64e5"
+      "bytes": 272298,
+      "sha256": "6a8180820a119c907636b11cb3c197b00bb7d496247d59c93b198dfcebec0662"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -165,8 +165,8 @@
       "sha256": "edf2567ee5994e5e41b54f6b7ecaac14bc9d04ec3c06be12baf657071f77544d"
     },
     "assets/js/surface.js": {
-      "bytes": 388426,
-      "sha256": "0fbe12025058f9600e0bbcdf95e0b802b299962c4579909ad8536493c7ac2029"
+      "bytes": 389836,
+      "sha256": "9ed83a7131d4a8fc89e53efcd53de80abb315a79203f7efa75d8b8d6798fc124"
     },
     "connector-system/BRICKS-DYNAMIC-BINDINGS.md": {
       "bytes": 9463,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "2cd6351cfa4b20a83490a2a95e9f27a4114c077d5828942c19be20cc2d61489e"
+      "sha256": "c0092254e1d7e9b81a65c46c947e60ba123057e98b807d6450eb3da4b648c51f"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3601,
@@ -461,8 +461,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 569816,
-      "sha256": "db92eae3c7b44c841034049a8782da8adc5f0ea17307ebd469ebb871105e191f"
+      "bytes": 571174,
+      "sha256": "92d3585105cbd68af93044ff43c5567d6cbc2023501ca652d9e02282b847c7fd"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -473,8 +473,8 @@
       "sha256": "9a611215d9594538339bf7b83428660b60dafa62543d3bdd16442255211676ce"
     },
     "includes/Commerce/Abandoned_Cart_Service.php": {
-      "bytes": 25737,
-      "sha256": "261f89ca725139d29e6774e105cfa209486971822659198d78eba7d26e2e777f"
+      "bytes": 34768,
+      "sha256": "8bc9475e113e8d17d753ecc0428e236742835098fc25bf075a6220f3ea453eec"
     },
     "includes/Commerce/COD_Gate_Service.php": {
       "bytes": 12334,
@@ -501,8 +501,8 @@
       "sha256": "c2871df757b3b2bde584691ac65d4b020275630452c7a490b204891c9233ba47"
     },
     "includes/Communications/Channel_Service.php": {
-      "bytes": 3030,
-      "sha256": "f5a01339c456a470ef4625b17633c8b37e3fe1fc866f52b73812f8c541f07f34"
+      "bytes": 3335,
+      "sha256": "30be0cd147f39718f33e510d97d829e28a3574eac8612fb2ee2ffc203c0bbb0a"
     },
     "includes/Communications/Email_Service.php": {
       "bytes": 3781,
@@ -589,8 +589,8 @@
       "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 129424,
-      "sha256": "de93ffe7335d88579f3e5e487bd22ebd30c187a7ea13de607e670696887fd6a3"
+      "bytes": 129524,
+      "sha256": "aee8e283a9355e3a2700510e5426ef81161fe9456fcd30bcbe0a2b23b53e04b5"
     },
     "includes/Plugin.php": {
       "bytes": 10235,
@@ -773,8 +773,8 @@
       "sha256": "ba8f795ff9d0a7523884d78557af43d21681ffe9d2577cd2b482e78877f06c8e"
     },
     "includes/Settings.php": {
-      "bytes": 21291,
-      "sha256": "24b0487ef26a348e0a6222c6e9b6559d3a1dfbb2cb12316fe53b18e8ffacd934"
+      "bytes": 21974,
+      "sha256": "a0247f0040bab3215de4db7ae18918ccf41e62dabf88944799401ac93e30dead"
     },
     "includes/Site/Site_Identity_Service.php": {
       "bytes": 9193,
@@ -931,6 +931,10 @@
     "site-graph-system/release-proof-6.39.md": {
       "bytes": 2684,
       "sha256": "4bbd1038616eb9bf03dea346d2e1c5da8316bb2ffbe26bc03cafcfe308e4a45d"
+    },
+    "site-graph-system/release-proof-6.40.md": {
+      "bytes": 4777,
+      "sha256": "194eba36e4c2e526386cb6e12a596d57093a196b9e8239a4c9730dbb7f19fa21"
     },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14580,

@@ -212,14 +212,17 @@ final class Settings {
 				'abandoned_cart'      => [
 					'enabled'                  => true,
 					'manual_reminders_enabled' => true,
+					'automatic_email_enabled'  => false,
+					'guest_email_reminders_enabled' => false,
 					'inactivity_minutes'       => 60,
 					'heartbeat_minutes'        => 5,
 					'cooldown_hours'           => 24,
 					'max_reminders'            => 3,
+					'automation_batch_limit'    => 25,
 					'recovery_link_days'       => 7,
 					'retention_days'           => 90,
 					'email_subject'             => 'You left something at {site_name}',
-					'email_message'             => "Your {item_count}-item cart is still waiting at {site_name}.\n\nCart total: {cart_total}\n\nRestore your cart: {recovery_url}",
+					'email_message'             => "Your cart is still saved at {site_name}.\n\nYou picked:\n{cart_items}\n\nCome back whenever you are ready — your saved cart can take you straight back to checkout.\n\nCart total: {cart_total}\n\nRestore your cart: {recovery_url}",
 					'sms_message'               => '{site_name}: your cart is waiting. Restore it here: {recovery_url}',
 					'whatsapp_message'          => '{site_name}: your cart is waiting. Restore it here: {recovery_url}',
 					'channels'                  => [
@@ -544,6 +547,13 @@ final class Settings {
 	private function recursive_parse_args( array $settings, array $defaults ): array {
 		foreach ( $defaults as $key => $default ) {
 			if ( is_array( $default ) ) {
+				if ( $this->is_list_array( $default ) ) {
+					$settings[ $key ] = array_key_exists( $key, $settings ) && is_array( $settings[ $key ] )
+						? array_values( $settings[ $key ] )
+						: $default;
+					continue;
+				}
+
 				$value = isset( $settings[ $key ] ) && is_array( $settings[ $key ] ) ? $settings[ $key ] : [];
 				$settings[ $key ] = $this->recursive_parse_args( $value, $default );
 				continue;
@@ -555,6 +565,22 @@ final class Settings {
 		}
 
 		return $settings;
+	}
+
+	private function is_list_array( array $value ): bool {
+		if ( [] === $value ) {
+			return false;
+		}
+
+		$index = 0;
+		foreach ( array_keys( $value ) as $key ) {
+			if ( $key !== $index ) {
+				return false;
+			}
+			$index++;
+		}
+
+		return true;
 	}
 
 	public function manifest(): array {

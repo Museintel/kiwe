@@ -4,6 +4,16 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.40 - 2026-07-24
+
+- Fixed sticky admin list settings by making submitted numeric/list settings replace the previous saved list instead of recursively merging old values back in. This addresses SecureTrack role checkboxes and similar admin options that appeared to save but could not be cleared.
+- Added opt-in abandoned-cart email automation with hourly-maintenance batching, campaign-safe email delivery, site-logo branded HTML recovery emails, cart item details via `{cart_items}`, and a stronger default recovery message to encourage revisit and checkout completion.
+- Added an explicit encrypted guest-checkout email recovery lane for abandoned carts, disabled by default, so live stores can choose guest reminders without storing plain-text checkout email in the cart table.
+- Updated Abandoned Cart admin settings with automatic-email, encrypted guest-email, and batch-limit controls while keeping tracking/manual reminders separate from automation.
+- Improved PhoneKey post-login routing so privileged users who complete the required high-assurance login path land back in WordPress admin instead of Woo/My Account. Admin access still intentionally requires the full privileged assurance policy, including verified phone setup where configured.
+- Hardened sheet-mode panel entry so Cart/Profile/Search panels cannot remain stuck partially offscreen or semi-transparent after dock opens, async rerenders, or theme animations.
+- Added staging evidence notes for public cart/checkout availability, mutation-proof rejection, same-site mutation protection, PhoneKey config reachability, and the confirmed Secure settings save regression found on live 6.39.
+
 ## 6.39 - 2026-07-24
 
 - Promoted Seam from “tokens/classes only” into a universal Appsite capability attribute layer, with canonical live hooks for DSA launchers, save/wishlist/bookmark, browser-notification journeys, outside-dock light/dark toggles, menu context sections, and Bricks dynamic/query-loop intent.

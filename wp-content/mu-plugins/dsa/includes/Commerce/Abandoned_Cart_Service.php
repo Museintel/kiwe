@@ -4,14 +4,16 @@ namespace DSA\Commerce;
 
 use DSA\Communications\Channel_Service;
 use DSA\Diagnostics\Runtime_Profiler;
+use DSA\Security\Secret_Store;
 use DSA\Settings;
+use DSA\Site\Site_Identity_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 final class Abandoned_Cart_Service {
-	private const DB_VERSION = '1';
+	private const DB_VERSION = '2';
 	private const DB_OPTION = 'dsa_abandoned_cart_db_version';
 	private const CRON_HOOK = 'dsa_abandoned_cart_maintenance';
 
@@ -58,6 +60,7 @@ final class Abandoned_Cart_Service {
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			contact_hash char(64) NOT NULL DEFAULT '',
 			contact_type varchar(24) NOT NULL DEFAULT '',
+			contact_email_enc text NULL,
 			phonekey_verified tinyint(1) NOT NULL DEFAULT 0,
 			cart_hash char(64) NOT NULL DEFAULT '',
 			items longtext NULL,
@@ -113,7 +116,10 @@ final class Abandoned_Cart_Service {
 	}
 
 	public function maintenance(): void {
-		if ( ! empty( $this->config()['enabled'] ) ) $this->refresh_abandoned_statuses();
+		if ( ! empty( $this->config()['enabled'] ) ) {
+			$this->refresh_abandoned_statuses();
+			$this->send_due_automatic_email_reminders();
+		}
 		$this->purge_old_rows();
 	}
 
@@ -172,6 +178,16 @@ final class Abandoned_Cart_Service {
 			'last_activity_at' => $now,
 			'updated_at'       => $now,
 		];
+		$guest_email = empty( $data['user_id'] ) && ! empty( $this->config()['guest_email_reminders_enabled'] )
+			? $this->current_checkout_email()
+			: '';
+		if ( is_email( $guest_email ) ) {
+			$data['contact_email_enc'] = Secret_Store::encrypt( $guest_email );
+			if ( '' === (string) $data['contact_hash'] ) {
+				$data['contact_hash'] = hash_hmac( 'sha256', 'email:' . $guest_email, wp_salt( 'auth' ) );
+				$data['contact_type'] = 'email';
+			}
+		}
 
 		global $wpdb;
 
@@ -190,7 +206,7 @@ final class Abandoned_Cart_Service {
 			}
 
 			if ( 'browse' === $reason && $same_cart ) {
-				$data = array_intersect_key( $data, array_flip( [ 'visitor_hash', 'customer_hash', 'user_id', 'contact_hash', 'contact_type', 'phonekey_verified', 'status', 'last_activity_at', 'updated_at', 'recovered_at' ] ) );
+				$data = array_intersect_key( $data, array_flip( [ 'visitor_hash', 'customer_hash', 'user_id', 'contact_hash', 'contact_type', 'contact_email_enc', 'phonekey_verified', 'status', 'last_activity_at', 'updated_at', 'recovered_at' ] ) );
 			}
 			$profile = Runtime_Profiler::start();
 			$wpdb->update( $this->carts_table(), $data, [ 'id' => (int) $existing['id'] ] );
@@ -334,7 +350,7 @@ final class Abandoned_Cart_Service {
 		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->logs_table()} ORDER BY created_at DESC LIMIT %d", $limit ), ARRAY_A ) ?: [];
 	}
 
-	public function send_reminder( int $cart_id, string $channel ) {
+	public function send_reminder( int $cart_id, string $channel, bool $automated = false ) {
 		global $wpdb;
 		$this->refresh_abandoned_statuses();
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->carts_table()} WHERE id=%d LIMIT 1", $cart_id ), ARRAY_A );
@@ -344,7 +360,11 @@ final class Abandoned_Cart_Service {
 			return new \WP_Error( 'dsa_cart_not_abandoned', __( 'That cart is no longer abandoned.', 'dsa' ) );
 		}
 
-		if ( ! $this->channels->available( $channel ) ) {
+		$channel_available = $automated
+			? $this->channels->available_for_campaign( $channel )
+			: $this->channels->available( $channel );
+
+		if ( ! $channel_available ) {
 			return new \WP_Error( 'dsa_cart_channel_unavailable', __( 'That reminder channel is not configured.', 'dsa' ) );
 		}
 
@@ -363,7 +383,7 @@ final class Abandoned_Cart_Service {
 			return new \WP_Error( 'dsa_cart_reminder_cooldown', __( 'This cart is still inside the reminder cooldown.', 'dsa' ) );
 		}
 
-		$contacts = $this->contact_channels_for_user( (int) $row['user_id'] );
+		$contacts = $this->contact_channels_for_row( $row );
 		$recipient = (string) ( $contacts[ $channel ]['value'] ?? '' );
 
 		if ( '' === $recipient ) {
@@ -372,21 +392,35 @@ final class Abandoned_Cart_Service {
 
 		$token = $this->issue_recovery_token( (int) $row['id'] );
 		$recovery_url = add_query_arg( 'dsa_cart_recover', $token, home_url( '/' ) );
+		$cart_items = $this->cart_items_text( $row );
 		$vars = [
 			'{site_name}'    => get_bloginfo( 'name' ),
 			'{item_count}'   => (string) (int) $row['item_count'],
+			'{cart_items}'   => $cart_items,
 			'{cart_total}'   => $this->money( (float) $row['cart_total'], (string) $row['currency'] ),
 			'{recovery_url}' => esc_url_raw( $recovery_url ),
+			'{site_logo_url}' => esc_url_raw( Site_Identity_Service::logo_url() ),
 		];
 		$subject = strtr( (string) ( $config['email_subject'] ?? '' ), $vars );
 		$template_key = 'email' === $channel ? 'email_message' : $channel . '_message';
 		$message = strtr( (string) ( $config[ $template_key ] ?? $config['email_message'] ?? '' ), $vars );
+		$context = [
+			'cart_id'      => (int) $row['id'],
+			'recovery_url' => esc_url_raw( $recovery_url ),
+			'purpose'      => $automated ? 'abandoned_cart_automation' : 'abandoned_cart_reminder',
+		];
+
+		if ( 'email' === $channel ) {
+			$context['headers'] = [ 'Content-Type: text/html; charset=UTF-8' ];
+			$message = $this->render_recovery_email( $row, $subject, $message, $recovery_url );
+		}
+
 		$result = $this->channels->send(
 			$channel,
 			$recipient,
 			$subject,
 			$message,
-			[ 'cart_id' => (int) $row['id'], 'recovery_url' => esc_url_raw( $recovery_url ) ]
+			$context
 		);
 
 		$recipient_hash = hash_hmac( 'sha256', strtolower( trim( $recipient ) ), wp_salt( 'auth' ) );
@@ -400,7 +434,7 @@ final class Abandoned_Cart_Service {
 				'recipient_hash' => $recipient_hash,
 				'status'         => $status,
 				'message'        => substr( sanitize_text_field( $log_message ), 0, 255 ),
-				'sent_by'        => get_current_user_id(),
+				'sent_by'        => $automated ? 0 : get_current_user_id(),
 				'created_at'     => current_time( 'mysql' ),
 			]
 		);
@@ -415,6 +449,39 @@ final class Abandoned_Cart_Service {
 		);
 
 		return true;
+	}
+
+	public function send_due_automatic_email_reminders(): int {
+		$config = $this->config();
+		if ( empty( $config['enabled'] ) || empty( $config['automatic_email_enabled'] ) || ! $this->channels->available_for_campaign( 'email' ) ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$this->maybe_install();
+		$max = max( 1, absint( $config['max_reminders'] ?? 3 ) );
+		$limit = max( 1, min( 250, absint( $config['automation_batch_limit'] ?? 25 ) ) );
+		$cooldown_hours = max( 1, absint( $config['cooldown_hours'] ?? 24 ) );
+		$before = wp_date( 'Y-m-d H:i:s', time() - ( $cooldown_hours * HOUR_IN_SECONDS ), wp_timezone() );
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id FROM {$this->carts_table()} WHERE status='abandoned' AND item_count > 0 AND (user_id > 0 OR contact_email_enc <> '') AND reminder_count < %d AND (last_reminder_at IS NULL OR last_reminder_at < %s) ORDER BY last_activity_at ASC LIMIT %d",
+				$max,
+				$before,
+				$limit
+			),
+			ARRAY_A
+		);
+
+		$sent = 0;
+		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
+			$result = $this->send_reminder( absint( $row['id'] ?? 0 ), 'email', true );
+			if ( ! is_wp_error( $result ) ) {
+				$sent++;
+			}
+		}
+
+		return $sent;
 	}
 
 	public function maybe_restore_cart(): void {
@@ -546,10 +613,98 @@ final class Abandoned_Cart_Service {
 		return $items;
 	}
 
+	private function cart_items_text( array $row ): string {
+		$items = json_decode( (string) ( $row['items'] ?? '' ), true );
+		$items = is_array( $items ) ? $items : [];
+		$lines = [];
+
+		foreach ( array_slice( $items, 0, 8 ) as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$name = trim( wp_strip_all_tags( (string) ( $item['name'] ?? '' ) ) );
+			if ( '' === $name ) {
+				$product_id = absint( $item['product_id'] ?? 0 );
+				$name = $product_id ? sprintf( __( 'Product #%d', 'dsa' ), $product_id ) : __( 'Cart item', 'dsa' );
+			}
+
+			$lines[] = sprintf( '- %1$s x %2$d', $name, max( 1, absint( $item['quantity'] ?? 1 ) ) );
+		}
+
+		if ( count( $items ) > 8 ) {
+			$lines[] = sprintf( __( '- %d more item(s)', 'dsa' ), count( $items ) - 8 );
+		}
+
+		if ( ! $lines ) {
+			return sprintf( _n( '%d item', '%d items', max( 1, (int) ( $row['item_count'] ?? 1 ) ), 'dsa' ), max( 1, (int) ( $row['item_count'] ?? 1 ) ) );
+		}
+
+		return implode( "\n", $lines );
+	}
+
+	private function cart_items_html( array $row ): string {
+		$items = json_decode( (string) ( $row['items'] ?? '' ), true );
+		$items = is_array( $items ) ? $items : [];
+		$html = '';
+
+		foreach ( array_slice( $items, 0, 8 ) as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$name = trim( wp_strip_all_tags( (string) ( $item['name'] ?? '' ) ) );
+			if ( '' === $name ) {
+				$product_id = absint( $item['product_id'] ?? 0 );
+				$name = $product_id ? sprintf( __( 'Product #%d', 'dsa' ), $product_id ) : __( 'Cart item', 'dsa' );
+			}
+
+			$html .= '<li style="display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid #eef0f3;"><span>' . esc_html( $name ) . '</span><strong>' . esc_html( sprintf( __( 'Qty %d', 'dsa' ), max( 1, absint( $item['quantity'] ?? 1 ) ) ) ) . '</strong></li>';
+		}
+
+		if ( count( $items ) > 8 ) {
+			$html .= '<li style="display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid #eef0f3;"><span>' . esc_html( sprintf( __( '%d more item(s)', 'dsa' ), count( $items ) - 8 ) ) . '</span><strong>+</strong></li>';
+		}
+
+		if ( '' === $html ) {
+			$html = '<li style="display:flex;justify-content:space-between;gap:16px;padding:12px 0;"><span>' . esc_html( sprintf( _n( '%d item', '%d items', max( 1, (int) ( $row['item_count'] ?? 1 ) ), 'dsa' ), max( 1, (int) ( $row['item_count'] ?? 1 ) ) ) ) . '</span><strong>' . esc_html( $this->money( (float) ( $row['cart_total'] ?? 0 ), (string) ( $row['currency'] ?? '' ) ) ) . '</strong></li>';
+		}
+
+		return '<ul style="list-style:none;margin:0;padding:0;">' . $html . '</ul>';
+	}
+
+	private function render_recovery_email( array $row, string $subject, string $message, string $recovery_url ): string {
+		$site_name = wp_strip_all_tags( get_bloginfo( 'name' ) );
+		$logo_url = Site_Identity_Service::logo_url();
+		$total = $this->money( (float) ( $row['cart_total'] ?? 0 ), (string) ( $row['currency'] ?? '' ) );
+		$message_html = wpautop( esc_html( $message ) );
+		$logo = $logo_url
+			? '<img src="' . esc_url( $logo_url ) . '" alt="' . esc_attr( $site_name ) . '" style="display:block;max-width:180px;max-height:72px;width:auto;height:auto;">'
+			: '<strong style="font-size:20px;line-height:1.2;color:#111827;">' . esc_html( $site_name ) . '</strong>';
+
+		return '<!doctype html><html><head><meta charset="utf-8"><title>' . esc_html( wp_strip_all_tags( $subject ) ) . '</title></head>'
+			. '<body style="margin:0;padding:0;background:#f7f7f8;color:#1f2937;font-family:Arial,Helvetica,sans-serif;">'
+			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f8;margin:0;padding:24px 12px;"><tr><td align="center">'
+			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e5e7eb;">'
+			. '<tr><td style="padding:28px 28px 10px;">' . $logo . '</td></tr>'
+			. '<tr><td style="padding:8px 28px 0;"><h1 style="margin:0;color:#111827;font-size:28px;line-height:1.12;">' . esc_html( wp_strip_all_tags( $subject ) ) . '</h1></td></tr>'
+			. '<tr><td style="padding:16px 28px 8px;font-size:16px;line-height:1.55;color:#374151;">' . $message_html . '</td></tr>'
+			. '<tr><td style="padding:8px 28px;"><div style="border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;">'
+			. '<div style="padding:12px 16px;background:#f9fafb;color:#6b7280;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">' . esc_html__( 'Your cart', 'dsa' ) . '</div>'
+			. '<div style="padding:0 16px;">' . $this->cart_items_html( $row ) . '</div>'
+			. '<div style="display:flex;justify-content:space-between;gap:16px;padding:14px 16px;border-top:1px solid #e5e7eb;font-size:16px;"><span>' . esc_html__( 'Cart total', 'dsa' ) . '</span><strong>' . esc_html( $total ) . '</strong></div>'
+			. '</div></td></tr>'
+			. '<tr><td style="padding:22px 28px 30px;"><a href="' . esc_url( $recovery_url ) . '" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;border-radius:999px;padding:14px 22px;font-weight:700;">' . esc_html__( 'Restore my cart', 'dsa' ) . '</a></td></tr>'
+			. '</table>'
+			. '<p style="max-width:640px;margin:12px auto 0;color:#6b7280;font-size:12px;line-height:1.5;">' . esc_html__( 'You are receiving this because this site saved a checkout cart for your verified account. If you already completed checkout, you can ignore this email.', 'dsa' ) . '</p>'
+			. '</td></tr></table>'
+			. '</body></html>';
+	}
+
 	private function hydrate_admin_row( array $row ): array {
 		$items = json_decode( (string) ( $row['items'] ?? '' ), true );
 		$items = is_array( $items ) ? $items : [];
-		$contacts = $this->contact_channels_for_user( (int) ( $row['user_id'] ?? 0 ) );
+		$contacts = $this->contact_channels_for_row( $row );
 		$names = array_filter( array_map( static function ( $item ) {
 			return is_array( $item ) ? sanitize_text_field( (string) ( $item['name'] ?? '' ) ) : '';
 		}, $items ) );
@@ -600,6 +755,37 @@ final class Abandoned_Cart_Service {
 		}
 
 		return $out;
+	}
+
+	private function contact_channels_for_row( array $row ): array {
+		$out = $this->contact_channels_for_user( (int) ( $row['user_id'] ?? 0 ) );
+		if ( '' === (string) ( $out['email']['value'] ?? '' ) && ! empty( $row['contact_email_enc'] ) ) {
+			$email = sanitize_email( Secret_Store::decrypt( (string) $row['contact_email_enc'] ) );
+			if ( is_email( $email ) ) {
+				$out['email'] = [ 'value' => $email, 'masked' => $this->mask_email( $email ) ];
+			}
+		}
+
+		return $out;
+	}
+
+	private function current_checkout_email(): string {
+		$email = '';
+		if ( function_exists( 'WC' ) && WC() && WC()->customer && method_exists( WC()->customer, 'get_billing_email' ) ) {
+			$email = (string) WC()->customer->get_billing_email();
+		}
+
+		if ( '' === trim( $email ) && isset( $_POST['billing_email'] ) ) {
+			$email = (string) wp_unslash( $_POST['billing_email'] );
+		}
+
+		if ( function_exists( 'pk_normalize_email' ) ) {
+			$email = (string) pk_normalize_email( $email );
+		} else {
+			$email = strtolower( sanitize_email( $email ) );
+		}
+
+		return is_email( $email ) ? $email : '';
 	}
 
 	private function verified_phonekey_phone( int $user_id ): string {

@@ -6890,6 +6890,12 @@ html.dsa-overlay-active .dsa-surface[data-dsa-ui-contract="2"][data-dsa-dock-mob
 	scrollbar-width: thin;
 }
 
+.dsa-theme-sheet .dsa-overlay-root:not(.is-closing) > .dsa-panel.is-sheet-entered {
+	animation: none;
+	opacity: 1;
+	transform: translate3d(0, 0, 0);
+}
+
 .dsa-theme-sheet .dsa-overlay-root > .dsa-panel::-webkit-scrollbar {
 	width: var(--dsa-runtime-token-0023);
 	height: var(--dsa-runtime-token-0023);

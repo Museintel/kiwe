@@ -859,7 +859,12 @@
 	function prepareSheetPanel() {
 		if ( ! usesSheetPresentation() || ! overlayRoot || overlayRoot.hidden ) return;
 		const panel = overlayRoot.querySelector( ':scope > [role="dialog"]' );
-		if ( ! panel || panel.dataset.dsaSheetReady === '1' ) return;
+		if ( ! panel ) return;
+		panel.classList.remove( 'is-sheet-entered' );
+		if ( panel.dataset.dsaSheetReady === '1' ) {
+			settleSheetPanel( panel );
+			return;
+		}
 		panel.dataset.dsaSheetReady = '1';
 		const grabber = document.createElement( 'button' );
 		grabber.type = 'button';
@@ -876,6 +881,34 @@
 		} );
 		panel.insertBefore( grabber, panel.firstChild );
 		bindSheetDrag( panel, grabber );
+		settleSheetPanel( panel );
+	}
+
+	function settleSheetPanel( panel ) {
+		if ( ! panel || ! overlayRoot ) return;
+		const settle = function () {
+			if ( ! overlayRoot || overlayRoot.hidden || overlayRoot.classList.contains( 'is-closing' ) ) return;
+			if ( panel.parentElement !== overlayRoot || panel.classList.contains( 'is-sheet-dragging' ) ) return;
+			panel.classList.add( 'is-sheet-entered' );
+		};
+		const style = window.getComputedStyle( panel );
+		const toMs = function ( value ) {
+			const parts = String( value || '' ).split( ',' );
+			return parts.reduce( function ( max, part ) {
+				part = part.trim();
+				if ( ! part ) return max;
+				const amount = parseFloat( part );
+				if ( ! isFinite( amount ) ) return max;
+				const ms = part.endsWith( 'ms' ) ? amount : amount * 1000;
+				return Math.max( max, ms );
+			}, 0 );
+		};
+		const duration = toMs( style.animationDuration ) + toMs( style.animationDelay );
+		const surfaceStyle = surface ? window.getComputedStyle( surface ) : null;
+		const tokenDuration = surfaceStyle ? parseFloat( surfaceStyle.getPropertyValue( '--dsa-sheet-duration' ) ) : 0;
+		const fallback = Math.max( 120, Math.min( 900, duration || tokenDuration || 320 ) );
+		panel.addEventListener( 'animationend', settle, { once: true } );
+		window.setTimeout( settle, fallback );
 	}
 
 	function cleanupSheetInteractionState() {

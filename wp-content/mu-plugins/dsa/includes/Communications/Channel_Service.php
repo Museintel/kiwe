@@ -43,7 +43,8 @@ final class Channel_Service {
 	}
 
 	public function send( string $channel, string $recipient, string $subject, string $message, array $context = [] ) {
-		$available = 'notification_campaign' === sanitize_key( (string) ( $context['purpose'] ?? '' ) )
+		$campaign_purposes = [ 'notification_campaign', 'abandoned_cart_automation' ];
+		$available = in_array( sanitize_key( (string) ( $context['purpose'] ?? '' ) ), $campaign_purposes, true )
 			? $this->available_for_campaign( $channel )
 			: $this->available( $channel );
 		if ( ! $available ) {
@@ -51,7 +52,12 @@ final class Channel_Service {
 		}
 
 		if ( 'email' === $channel ) {
-			return $this->email->send( $recipient, $subject, $message );
+			$headers = [];
+			if ( isset( $context['headers'] ) && is_array( $context['headers'] ) ) {
+				$headers = array_values( array_filter( array_map( 'sanitize_text_field', $context['headers'] ) ) );
+			}
+
+			return $this->email->send( $recipient, $subject, $message, $headers );
 		}
 
 		$config = $this->config()['channels'][ $channel ] ?? [];
