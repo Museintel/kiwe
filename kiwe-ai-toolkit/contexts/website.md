@@ -61,6 +61,17 @@ Seam roles are semantic/headless by default. `data-role="card"` tells tools what
 
 Use `data-role` only for official Seam role values from `contracts/seam-vocabulary.json`, such as `hero`, `card`, `nav`, `button`, `form`, `testimonial`, `price`, or `footer`. For specific ecommerce/editorial concepts, prefer Seam Class Vocabulary names such as `.seam-product-card`, `.seam-product-rail`, `.seam-category`, `.seam-story`, or project classes such as `.nc-product`. Do not invent custom `data-role` values like `product-card`, `site-header`, `save-placeholder`, or `add-to-cart-placeholder`; use a project-specific attribute such as `data-project-role` if extra preview semantics are needed.
 
+Universal Appsite capability attributes are part of Seam's public framework layer. When the draft already has matching UI intent, preserve the design and add live Kiwe attributes instead of duplicating runtime behavior:
+
+- `data-dsa-open-module` for AppShell screen/sheet launchers.
+- `data-kiwe-save` plus save metadata for wishlist/bookmark buttons.
+- `data-kiwe-notifications` for explicit notification-permission CTAs.
+- `data-kiwe-theme-toggle` for page/header light-dark controls.
+- real section IDs with official `data-role="section"` or `.seam-section` and standard labels for Menu context fallback.
+- `data-kiwe-query-template` and `data-kiwe-binding` for regions that should later become Bricks query loops/dynamic bindings.
+
+Do not use protected `data-seam-*` shadow metadata, admin-only attributes, or preview harness attributes as public website vocabulary. Roadmap attributes are not live unless the current contract marks them live.
+
 ## Bricks path
 
 Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:

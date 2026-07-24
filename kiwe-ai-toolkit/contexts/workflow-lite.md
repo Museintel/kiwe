@@ -154,7 +154,10 @@ Use after the human likes a pure draft and wants it rebuilt with Seam.
 - Rebuild into semantic HTML using official Seam roles/classes/tokens.
 - Seam is headless: do not make `data-role` invent visual components.
 - Project-specific ideas go into ordinary classes or `data-project-role`, not custom `data-role`.
+- Use the Seam capability attribute library when the draft already has matching UI intent: save/wishlist/bookmark, notification permission, light/dark toggle, AppShell launcher, menu/table-of-contents section, or dynamic/query sample rail.
+- Preserve the visible UI and add the smallest live Kiwe attribute. Do not replace good design with generic controls merely because an attribute exists.
 - Keep production behavior minimal and framework-safe.
+- Do not recreate Kiwe-owned capability behavior in page JavaScript when an attribute exists.
 - Do not add DSA AppShell markup.
 - Do not add Bricks JSON.
 
@@ -178,6 +181,12 @@ Audit for:
 - useful Seam Class Vocabulary usage;
 - no custom `data-role` values;
 - no duplicated app capabilities such as cart/auth/search/save/AI authority;
+- save/wishlist/bookmark controls use `data-kiwe-save` when the UI intent exists;
+- notification permission CTAs use `data-kiwe-notifications` and do not prompt without a visitor click;
+- light/dark controls outside the dock use `data-kiwe-theme-toggle`;
+- page/header DSA openers use canonical `data-dsa-open-module`;
+- menu context uses real semantic sections/headings, not hidden duplicate anchors;
+- sample rails meant for later live data use `data-kiwe-query-template` / `data-kiwe-binding`;
 - no frontend scraping dependency;
 - Bricks-friendly HTML/CSS;
 - readable responsive spacing;

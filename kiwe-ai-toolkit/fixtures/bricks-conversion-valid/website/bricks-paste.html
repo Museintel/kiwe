@@ -4,6 +4,7 @@
   <p class="seam-lead">Evidence-led supplements and wellness support.</p>
   <a class="seam-button" href="/shop">Shop products</a>
   <button class="seam-button" data-dsa-open-module="search" type="button">Search Kiwe</button>
+  <button class="seam-button" data-kiwe-theme-toggle type="button">Toggle theme</button>
 </section>
 
 <section id="featured-products" class="seam-section seam-reel" data-role="section" data-kiwe-query-template="featured-products">
@@ -13,5 +14,6 @@
     <h3>{post_title}</h3>
     <p>{post_excerpt}</p>
     <a href="{post_url}">View product</a>
+    <button data-kiwe-save="wishlist" data-kiwe-save-id="{post_id}" data-kiwe-save-title="{post_title}" data-kiwe-save-url="{post_url}" type="button">Wishlist</button>
   </article>
 </section>

@@ -29,6 +29,8 @@ Do not confuse these layers:
 7. `runtime/seam.css` and `runtime/seam.js` to understand the available framework CSS/runtime helpers.
 8. `bricks/bricks-capabilities.json` and `bricks/BRICKS-INTEGRATION.md` for Bricks support and boundaries.
 
+The `capabilityAttributes` lane inside `contracts/seam-vocabulary.json` is part of the framework contract. Use it when the page already has matching UI intent: wishlist/bookmark, notification permission, light/dark toggle, Kiwe DSA launcher, real section/table-of-contents context, or future dynamic Bricks/query-loop samples.
+
 ## What you may create
 
 - Bricks sections using `kiwe-*` variables and `seam-*` classes.
@@ -55,6 +57,8 @@ Do not create a second authority for:
 - Search or Bricks query ownership;
 - service workers, cache policy, browser history, focus trap, or scroll lock;
 - notification permission, Push subscription, AI actions, or privacy/master switches.
+
+If a live Kiwe capability attribute exists for the UI intent, preserve the UI and add the attribute instead of writing custom production JavaScript. Examples include `data-kiwe-save`, `data-kiwe-notifications`, `data-kiwe-theme-toggle`, `data-dsa-open-module`, `data-kiwe-query-template`, and `data-kiwe-binding`.
 
 ## DSA AppShell caution
 

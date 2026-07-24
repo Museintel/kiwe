@@ -218,6 +218,9 @@ The controlled executor skeleton defines the future adapter interface only. The 
 ## Kiwe AppShell launcher rules
 
 - Page/header buttons that open Kiwe surfaces should use canonical Kiwe launchers such as `data-dsa-open-module="cart"`, `profile`, `search`, or `menu`.
+- Wishlist/bookmark controls should use live Kiwe Saved attributes such as `data-kiwe-save="wishlist"` or `data-kiwe-save="bookmark"` with Bricks dynamic IDs/titles/URLs where available.
+- Browser notification CTAs should use `data-kiwe-notifications` and optional `data-kiwe-notification-status-target`; do not request permission except after the visitor clicks the control.
+- Light/dark controls outside the dock should use `data-kiwe-theme-toggle` rather than custom theme-switch JavaScript.
 - Do not create a second cart, checkout, saved, auth, search, AI, notification, or AppShell runtime in page JavaScript.
 - The AppShell remains Kiwe-owned and the page remains WordPress/Bricks-owned.
 

@@ -8,7 +8,7 @@ Give this folder to an AI, web developer, or Bricks designer when the job is:
 
 This is not a Kiwe AppShell theme handoff. AppShell themes use `ui-system/` and style DSA sheets/screens/dock around existing Kiwe capabilities.
 
-If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `combined-preview/`, and `appshell-theme/` folders. Theme settings belong inside `appshell-theme/import/<theme-id>/theme-package.json`, not a loose `kiwe-settings/` folder.
+If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `appshell-theme/`, and `combined-preview/` folders. AppShell theme settings belong inside `appshell-theme/import/<theme-id>/theme-package.json`.
 
 If a website/page-only handoff creates a reusable brand token system for Bricks and future Kiwe pages, add `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. That file imports under `Kiwe > Framework`.
 
@@ -38,6 +38,7 @@ Build a polished website/page. Seam is available, not mandatory. Good output may
 - Kiwe/Seam tokens where useful;
 - Seam roles/flows/tones where they describe structure;
 - Seam Class Vocabulary names where they match the intended component or variant;
+- live Kiwe capability attributes where the draft already has matching UI intent;
 - custom CSS for the actual visual style;
 - preview-only JavaScript clearly marked as preview-only.
 
@@ -52,6 +53,8 @@ Do not return a React, Vite, Next, Tailwind, shadcn, or other build-app project 
 Seam roles are semantic/headless by default. `data-role="card"` tells tools what something is; it must not force the page into generic cards. Seam core has no starter visual layer right now: no default card/button/modal padding, radius, border, shadow, or background. Use site CSS and searchable Seam Class Vocabulary names such as `.seam-card`, `.seam-accordion`, `.seam-table`, `.seam-horizontal-rail`, `.seam-size-xl`, or `.seam-density-spacious` for the actual look.
 
 Use `data-role` only for official Seam role values from `contracts/seam-vocabulary.json`, such as `hero`, `card`, `nav`, `button`, `form`, `testimonial`, `price`, or `footer`. For specific ecommerce/editorial concepts, prefer Seam Class Vocabulary names such as `.seam-product-card`, `.seam-product-rail`, `.seam-category`, `.seam-story`, or project classes such as `.nc-product`. Do not invent custom `data-role` values like `product-card`, `site-header`, `save-placeholder`, or `add-to-cart-placeholder`; use a project-specific attribute such as `data-project-role` if extra preview semantics are needed.
+
+Use `capabilityAttributes` from `contracts/seam-vocabulary.json` when the UI already asks for appsite behavior. Examples: `data-kiwe-save` for wishlist/bookmark buttons, `data-kiwe-notifications` for notification CTAs, `data-kiwe-theme-toggle` for page/header theme controls, `data-dsa-open-module` for Kiwe screen launchers, semantic section IDs/labels for Menu context, and `data-kiwe-query-template` / `data-kiwe-binding` for future Bricks dynamic/query-loop intent. Preserve the visible UI and add the smallest live attribute; do not recreate Kiwe runtime in page JavaScript.
 
 ## Bricks path
 

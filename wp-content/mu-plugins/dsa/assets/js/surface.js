@@ -7110,14 +7110,32 @@
 		return String( root.dataset.kiweTheme || '' ).toLowerCase() === 'dark' ? 'dark' : 'light';
 	}
 
-	function setThemeToggleState( button ) {
-		button = button || ( surface ? surface.querySelector( '[data-dsa-module="theme"]' ) : null );
+	function updateThemeToggleControl( button, dark, mode ) {
 		if ( ! button ) return;
-		const dark = document.documentElement.dataset.kiweTheme === 'dark';
 		button.classList.toggle( 'is-dark', dark );
 		button.setAttribute( 'aria-pressed', dark ? 'true' : 'false' );
 		button.setAttribute( 'aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode' );
 		button.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+		const selector = button.getAttribute( 'data-kiwe-theme-status-target' );
+		if ( selector ) {
+			try {
+				const target = document.querySelector( selector );
+				if ( target ) {
+					target.textContent = mode === 'dark' ? 'Dark mode is on.' : 'Light mode is on.';
+				}
+			} catch ( error ) {
+				debugLog( 'Theme status target is not a valid selector', { selector: selector } );
+			}
+		}
+	}
+
+	function setThemeToggleState( button ) {
+		const mode = document.documentElement.dataset.kiweTheme === 'dark' ? 'dark' : 'light';
+		const dark = mode === 'dark';
+		updateThemeToggleControl( button || ( surface ? surface.querySelector( '[data-dsa-module="theme"]' ) : null ), dark, mode );
+		document.querySelectorAll( '[data-kiwe-theme-toggle]' ).forEach( function ( trigger ) {
+			updateThemeToggleControl( trigger, dark, mode );
+		} );
 	}
 
 	function applyColorMode( mode, persist, source ) {
@@ -7143,9 +7161,9 @@
 		window.dispatchEvent( new CustomEvent( 'surface:theme:change', { detail: { mode: mode, source: source || 'kiwe' } } ) );
 	}
 
-	function toggleColorMode() {
+	function toggleColorMode( source ) {
 		const next = currentColorMode() === 'dark' ? 'light' : 'dark';
-		applyColorMode( next, true, 'dock' );
+		applyColorMode( next, true, source || 'dock' );
 		announce( next === 'dark' ? 'Dark mode on.' : 'Light mode on.' );
 		recordMetric( 'theme_change', next );
 	}
@@ -9439,8 +9457,22 @@
 		openOverlay( moduleId, launcher.getAttribute( 'aria-label' ) || '' );
 	}, true );
 
+	document.addEventListener( 'click', function ( event ) {
+		const trigger = closestEventTarget( event, '[data-kiwe-theme-toggle]' );
+		if ( ! trigger || trigger.closest( '[data-dsa-surface]' ) ) return;
+		event.preventDefault();
+		event.stopPropagation();
+		toggleColorMode( 'attribute' );
+	}, true );
+
 	document.addEventListener( 'keydown', function ( event ) {
 		if ( event.key !== 'Enter' && event.key !== ' ' ) return;
+		const themeTrigger = closestEventTarget( event, '[data-kiwe-theme-toggle]' );
+		if ( themeTrigger && ! themeTrigger.closest( '[data-dsa-surface]' ) ) {
+			event.preventDefault();
+			themeTrigger.click();
+			return;
+		}
 		const launcher = closestEventTarget( event, '[data-dsa-open-module]' );
 		if ( ! launcher || launcher.closest( '[data-dsa-surface]' ) ) return;
 		event.preventDefault();

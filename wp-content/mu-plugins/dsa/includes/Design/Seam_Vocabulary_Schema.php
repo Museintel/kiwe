@@ -133,6 +133,153 @@ final class Seam_Vocabulary_Schema {
 				'data-seam-show',
 				'data-seam-model',
 			],
+			'capabilityAttributes' => [
+				'purpose' => 'Builder-neutral Appsite capability hooks. Public page authors, Bricks layouts, block themes, and AI-generated HTML may use these attributes to call Kiwe-owned runtime journeys without recreating Kiwe behavior.',
+				'authorRule' => 'Use these attributes only on real interactive controls or semantic page regions. Preserve visible UI and add the smallest capability hook that matches the intent. Never create duplicate JavaScript authority for saved items, notifications, AppShell screens, theme switching, cart, checkout, auth, search, service workers, focus trapping, or browser history.',
+				'groups' => [
+					'appshellLaunchers' => [
+						'status' => 'live',
+						'authority' => 'kiwe-appshell',
+						'attributes' => [
+							[
+								'attribute' => 'data-dsa-open-module',
+								'values' => [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'notifications', 'ios-install', 'games' ],
+								'purpose' => 'Open a registered Kiwe DSA/AppShell screen from a page/header/Bricks/custom control. The value theme toggles light/dark mode instead of opening a sheet.',
+								'example' => '<button data-dsa-open-module="cart" type="button">Cart</button>',
+							],
+						],
+					],
+					'savedItems' => [
+						'status' => 'live',
+						'authority' => 'kiwe-saved-items',
+						'attributes' => [
+							[
+								'attribute' => 'data-kiwe-save',
+								'values' => [ 'wishlist', 'bookmark', 'auto' ],
+								'purpose' => 'Toggle the nearest item into Kiwe Saved. Use wishlist for WooCommerce product controls, bookmark for articles/pages, and auto only when the context is unambiguous.',
+								'example' => '<button data-kiwe-save="wishlist" data-kiwe-save-id="{post_id}" data-kiwe-save-title="{post_title}" data-kiwe-save-url="{post_url}" type="button">Wishlist</button>',
+							],
+							[
+								'attribute' => 'data-kiwe-save-id',
+								'purpose' => 'Stable post/product ID, recommended in Bricks query loops.',
+							],
+							[
+								'attribute' => 'data-kiwe-save-title',
+								'purpose' => 'Optional saved-item title override. Kiwe otherwise reads the nearest card heading.',
+							],
+							[
+								'attribute' => 'data-kiwe-save-url',
+								'purpose' => 'Optional saved-item URL override. Kiwe otherwise reads the nearest card link or current URL.',
+							],
+							[
+								'attribute' => 'data-kiwe-save-image',
+								'purpose' => 'Optional saved-item image URL. Kiwe otherwise reads the nearest card image.',
+							],
+						],
+					],
+					'browserNotifications' => [
+						'status' => 'live',
+						'authority' => 'kiwe-notification-journey',
+						'attributes' => [
+							[
+								'attribute' => 'data-kiwe-notifications',
+								'purpose' => 'Start the browser-notification preference journey after an explicit visitor click. Kiwe never prompts during a protected flow.',
+								'example' => '<button data-kiwe-notifications data-kiwe-notification-status-target="#notification-status" type="button">Turn on notifications</button>',
+							],
+							[
+								'attribute' => 'data-kiwe-notification-status-target',
+								'purpose' => 'Optional CSS selector for an on-page live-status element that receives the current notification-permission message.',
+							],
+							[
+								'attribute' => 'data-kiwe-notification-topic',
+								'purpose' => 'Optional topic hint for the notification preference screen. Use only real site topics exposed by Kiwe.',
+							],
+							[
+								'attribute' => 'data-dsa-native-notification-request',
+								'purpose' => 'Advanced direct browser-permission request for a real visitor-click control. Prefer data-kiwe-notifications unless the UI is explicitly asking for native permission now.',
+							],
+						],
+					],
+					'themeControls' => [
+						'status' => 'live',
+						'authority' => 'kiwe-theme-runtime',
+						'attributes' => [
+							[
+								'attribute' => 'data-kiwe-theme-toggle',
+								'purpose' => 'Toggle Kiwe/Bricks light-dark mode from a page/header/Bricks/custom control without adding the dock theme icon.',
+								'example' => '<button data-kiwe-theme-toggle type="button">Toggle theme</button>',
+							],
+							[
+								'attribute' => 'data-kiwe-theme-status-target',
+								'purpose' => 'Optional selector for a status element that receives the current light/dark state label.',
+							],
+						],
+					],
+					'menuContext' => [
+						'status' => 'live',
+						'authority' => 'kiwe-menu-context',
+						'attributes' => [
+							[
+								'attribute' => 'id + data-role="section" / .seam-section + aria-label|aria-labelledby|visible heading',
+								'purpose' => 'Expose real page sections to Kiwe Menu context without hidden duplicate anchors. Kiwe prefers semantic sections, then falls back to admin-selected heading levels.',
+								'example' => '<section id="heritage" class="seam-section" data-role="section" aria-labelledby="heritage-title"><h2 id="heritage-title">Heritage</h2></section>',
+							],
+						],
+					],
+					'dynamicAndBricksIntent' => [
+						'status' => 'live-contract',
+						'authority' => 'kiwe-bricks-dynamic-planning',
+						'attributes' => [
+							[
+								'attribute' => 'data-kiwe-query-template',
+								'purpose' => 'Marks a source region whose preview/sample cards should become a Bricks query loop or dynamic binding plan.',
+								'example' => '<section data-kiwe-query-template="featured-products" data-role="section" class="seam-section seam-horizontal-rail"></section>',
+							],
+							[
+								'attribute' => 'data-kiwe-binding',
+								'purpose' => 'Marks a repeated sample card or field that belongs to a named Kiwe dynamic binding plan.',
+							],
+						],
+					],
+				],
+				'candidateAttributes' => [
+					[
+						'attribute' => 'data-kiwe-share',
+						'status' => 'candidate-not-live',
+						'purpose' => 'Future Web Share / copy-link capability for products, posts, offers, and pages.',
+					],
+					[
+						'attribute' => 'data-kiwe-compare',
+						'status' => 'candidate-not-live',
+						'purpose' => 'Future product/content comparison tray.',
+					],
+					[
+						'attribute' => 'data-kiwe-recently-viewed',
+						'status' => 'candidate-not-live',
+						'purpose' => 'Future recently-viewed product/post rail and personalization signal.',
+					],
+					[
+						'attribute' => 'data-kiwe-follow',
+						'status' => 'candidate-not-live',
+						'purpose' => 'Future author, brand, topic, category, or product-subscription follow intent.',
+					],
+					[
+						'attribute' => 'data-kiwe-ai-context',
+						'status' => 'candidate-not-live',
+						'purpose' => 'Future safe context handoff to Kiwe AI from a selected section/card without exposing private data.',
+					],
+					[
+						'attribute' => 'data-kiwe-feedback',
+						'status' => 'candidate-not-live',
+						'purpose' => 'Future lightweight rating, helpful/not helpful, or report-an-issue intent.',
+					],
+					[
+						'attribute' => 'data-kiwe-offer',
+						'status' => 'candidate-not-live',
+						'purpose' => 'Future coupon, bundle, FBT, or personalization trigger that remains Woo/Kiwe-owned.',
+					],
+				],
+			],
 			'protectedShadowAttributes' => [
 				'purpose' => 'Kiwe DSA uses data-seam-* shadow metadata on live AppShell panels so tools can understand the framework role without generic Seam CSS restyling those panels.',
 				'attributes' => [

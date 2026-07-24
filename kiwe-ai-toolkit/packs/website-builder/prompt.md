@@ -29,6 +29,8 @@ Do not confuse these layers:
 7. `runtime/seam.css` and `runtime/seam.js` to understand the available framework CSS/runtime helpers.
 8. `bricks/bricks-capabilities.json` and `bricks/BRICKS-INTEGRATION.md` for Bricks support and boundaries.
 
+The `capabilityAttributes` lane inside `contracts/seam-vocabulary.json` is part of the framework contract. Use it when the page already has matching UI intent: wishlist/bookmark, notification permission, light/dark toggle, Kiwe DSA launcher, real section/table-of-contents context, or future dynamic Bricks/query-loop samples.
+
 ## What you may create
 
 - Bricks sections using `kiwe-*` variables and `seam-*` classes.
@@ -36,7 +38,7 @@ Do not confuse these layers:
 - Standalone previewable HTML pages that can be visually reviewed before being brought into Bricks.
 - Documentation for how a designer should use the framework.
 - Proposals for new framework roles/classes/tokens.
-- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md`, keep website/page output separate from the AppShell theme package, and place DSA theme settings inside `theme-package.json`.
+- A combined website/page + DSA AppShell theme handoff only when the assignment explicitly asks for both; follow `HANDOFF-MODES.md`, keep website/page output separate from the AppShell theme package, and place live AppShell theme settings inside `theme-package.json`.
 
 Custom CSS is allowed. Seam-native does not mean zero custom CSS; it means Kiwe/Seam tokens, vocabulary, and behavior boundaries stay authoritative.
 
@@ -55,6 +57,8 @@ Do not create a second authority for:
 - Search or Bricks query ownership;
 - service workers, cache policy, browser history, focus trap, or scroll lock;
 - notification permission, Push subscription, AI actions, or privacy/master switches.
+
+If a live Kiwe capability attribute exists for the UI intent, preserve the UI and add the attribute instead of writing custom production JavaScript. Examples include `data-kiwe-save`, `data-kiwe-notifications`, `data-kiwe-theme-toggle`, `data-dsa-open-module`, `data-kiwe-query-template`, and `data-kiwe-binding`.
 
 ## DSA AppShell caution
 

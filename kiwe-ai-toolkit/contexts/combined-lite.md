@@ -100,6 +100,19 @@ Seam is semantic/headless. Use Seam classes/attributes for meaning and structure
 
 If the paired design has a distinctive live-intended palette, type scale, font pairing, site background, spacing, radius, or shadow system, declare that design-token personality inside `appshell-theme/import/[theme-id]/theme-package.json` at `settings.tokens`. For combined marketplace AppShell themes this is required, not optional, because DSA, Seam page CSS, and Bricks global theme style must share the same token profile. Do not leave the brand system only inside preview CSS. A separate `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` is reserved for website/page-only handoffs or explicit standalone `Kiwe > Framework` imports; combined mode uses the theme package token lane.
 
+## Universal Appsite capability attributes
+
+Seam is also Kiwe's public Appsite attribute language. When a normal HTML/CSS/JS draft already contains a matching visible affordance, `/rebuild /seamframework` should keep the UI and add the smallest live Kiwe capability attribute instead of writing duplicate production JavaScript. The current live library is:
+
+- `data-dsa-open-module="menu|search|profile|links|saved|cart|theme|ai|notifications|ios-install|games"` for page/header/Bricks controls that open Kiwe screens/sheets.
+- `data-kiwe-save="wishlist|bookmark|auto"` plus optional `data-kiwe-save-id`, `data-kiwe-save-title`, `data-kiwe-save-url`, and `data-kiwe-save-image` for save controls.
+- `data-kiwe-notifications` plus optional `data-kiwe-notification-status-target` and `data-kiwe-notification-topic` for explicit visitor-click notification permission journeys.
+- `data-kiwe-theme-toggle` plus optional `data-kiwe-theme-status-target` for light/dark controls outside the dock.
+- `data-kiwe-query-template` and `data-kiwe-binding` for sample regions that should become Bricks query loops or dynamic bindings later.
+- Real page section semantics for Menu context: stable `id`, official `data-role="section"` or `.seam-section`, and standard labels from `aria-label`, `aria-labelledby`, or visible headings. Do not add Kiwe-only fake sections just to feed the menu.
+
+These attributes are public contracts; protected `data-seam-*` shadow metadata, admin media picker attributes, and preview harness attributes are not public page vocabulary. Candidate ideas such as share, compare, recently viewed, follow, feedback, AI context, and offer hooks are roadmap only until the contract marks them live.
+
 Useful website Seam vocabulary:
 
 - `seam-horizontal-rail`
@@ -123,7 +136,7 @@ Important: `data-role` is a controlled Seam vocabulary, not a free naming slot. 
 
 The website/page may include Kiwe hooks, but must not implement Kiwe behavior itself.
 
-- Page/header controls that open AppShell modules should use canonical `data-dsa-open-module="cart"`. Valid module values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
+- Page/header controls that open AppShell modules should use canonical `data-dsa-open-module="cart"`. Valid module values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, `ios-install`, and `games`.
 - Do not add Seam attributes only to feed the DSA Menu. Kiwe Menu context is heading-first and reads the admin-selected H1/H2/H3-style levels for classic table-of-contents behavior. If no configured headings exist, Kiwe may use existing semantic page sections (`data-role="section"` or `.seam-section`) with a stable `id` and standard label sources as fallback context. Build the page semantically for the page first; Kiwe consumes that meaning opportunistically.
 - Save/wishlist/bookmark affordances should use Kiwe save hooks from the toolkit/contracts. Do not create local storage or duplicate save authority except as clearly labelled preview-only behavior.
 - Example header buttons: `<button type="button" data-dsa-open-module="profile" aria-label="Open account">...</button>` and `<button type="button" data-dsa-open-module="cart" aria-label="Open cart">...</button>`.

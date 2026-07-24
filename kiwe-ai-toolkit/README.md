@@ -61,6 +61,7 @@ Giving the whole plugin to an AI wastes tokens and invites it to invent against 
 - preview rules;
 - Bricks boundaries;
 - Bricks AI Intelligence routes for elements, query loops, dynamic tags, conditions, and interactions;
+- Seam/Appsite capability attributes;
 - Kiwe settings/profile lane;
 - theme-package and Framework-profile boundaries;
 - validation expectations.
@@ -80,6 +81,8 @@ node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 node tools/validate-framework-profile.cjs ./out/my-website-handoff --optional
 node bin/kiwe.js dynamic-context
 node bin/kiwe.js dynamic-pass --brief "Turn approved product rails into Bricks query-loop binding plans using the supplied Site Graph."
+node bin/kiwe.js attributes
+node bin/kiwe.js seam-attributes-context
 node bin/kiwe.js bricks-conversion-context
 node bin/kiwe.js validate-bindings ./out/my-kiwe-handoff --site-graph ./site-graph.json
 node bin/kiwe.js validate-bricks-conversion ./out/my-kiwe-handoff --site-graph ./site-graph.json
@@ -182,6 +185,7 @@ Some browser AIs can read public GitHub files but cannot connect MCP tools or sa
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md` for browser models that need a short website/page plus AppShell contract.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md` for a website/page plus AppShell direction/settings.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md` for v2/v3/v4 revision and self-audit passes.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/seam-attributes-lite.md` for Seam/Appsite capability attributes during `/rebuild /seamframework`, `/audit /seamframework`, dynamic binding, and Bricks conversion.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md` for `/convert /bricks` and `/audit /bricksconversion`.
 
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
@@ -220,6 +224,8 @@ Example MCP client entry:
 - `kiwe_route_command`
 - `kiwe_list_modes`
 - `kiwe_get_context`
+- `kiwe_get_seam_attributes_context`
+- `kiwe_list_capability_attributes`
 - `kiwe_create_handoff`
 - `kiwe_validate_handoff`
 - `kiwe_validate_bindings`

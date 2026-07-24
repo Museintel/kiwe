@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.39 - 2026-07-24
+
+- Promoted Seam from “tokens/classes only” into a universal Appsite capability attribute layer, with canonical live hooks for DSA launchers, save/wishlist/bookmark, browser-notification journeys, outside-dock light/dark toggles, menu context sections, and Bricks dynamic/query-loop intent.
+- Wired the attribute library into `/rebuild /seamframework`, `/audit /seamframework`, `/dynamic /sitegraph`, `/convert /bricks`, Bricks AI context, Companion cards, MCP tools, CLI commands, framework handoffs, and Kiwe Developer docs.
+- Added frontend support for `data-kiwe-theme-toggle` so real page/header/Bricks controls can toggle Kiwe/Bricks light-dark state without duplicating runtime JavaScript.
+- Hardened Bricks conversion validation so live Kiwe/Appsite capability attributes from source HTML must survive conversion into the reviewable Bricks package.
+
 ## 0.6.38 - 2026-07-24
 
 - Added a deterministic Kiwe command gate (`kiwe.command-diagnostic.v1`) so invalid, missing-input, forbidden-lane, and no-op slash commands stop before browser/internal AI spends tokens on nonexistent or useless work.

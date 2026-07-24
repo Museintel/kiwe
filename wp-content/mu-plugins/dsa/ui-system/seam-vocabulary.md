@@ -79,6 +79,55 @@ Set these on `body` only when a site intentionally opts into a Seam-wide identit
 
 Seam no longer ships global body shape, density, or elevation modes because those implied hidden appearance. Shape is now an explicit local utility only: `data-shape="square"`, `data-shape="sharp"`, `data-shape="soft"`, `data-shape="rounded"`, `data-shape="pill"`, `data-shape="circle"`, or the matching `.seam-shape-*` classes.
 
+## Kiwe Appsite capability attributes
+
+Seam is not only a CSS/class library. It is the public Appsite vocabulary layer. Public page authors can add a small Kiwe capability attribute to a real button, link, Bricks element, or semantic page section and Kiwe supplies the app-like runtime behind it.
+
+This is the boundary:
+
+- Seam attributes/classes describe the page.
+- Kiwe capability attributes request a Kiwe-owned journey.
+- WordPress, Bricks, WooCommerce, PhoneKey, Search, Saved, notifications, PWA, cart, checkout, auth, service worker, focus trapping, and history remain authority-owned by their runtime.
+
+Live public capability groups:
+
+- AppShell launchers: `data-dsa-open-module="menu|search|profile|links|saved|cart|theme|ai|notifications|ios-install|games"`.
+- Saved items: `data-kiwe-save="wishlist|bookmark|auto"` plus `data-kiwe-save-id`, `data-kiwe-save-title`, `data-kiwe-save-url`, and `data-kiwe-save-image`.
+- Browser notifications: `data-kiwe-notifications`, optional `data-kiwe-notification-status-target`, optional `data-kiwe-notification-topic`, and advanced `data-dsa-native-notification-request`.
+- Theme controls outside the dock: `data-kiwe-theme-toggle` and optional `data-kiwe-theme-status-target`.
+- Menu context: real semantic `section[id]`, `data-role="section"`, `.seam-section`, `aria-label`, `aria-labelledby`, or visible headings. Do not add hidden duplicate anchors just to feed the menu.
+- Dynamic/Bricks planning: `data-kiwe-query-template` and `data-kiwe-binding` mark sample/preview regions that should become Bricks query loops or dynamic bindings later.
+
+Examples:
+
+```html
+<button data-dsa-open-module="cart" type="button">Open bag</button>
+
+<button data-kiwe-save="wishlist"
+  data-kiwe-save-id="{post_id}"
+  data-kiwe-save-title="{post_title}"
+  data-kiwe-save-url="{post_url}"
+  type="button">Wishlist</button>
+
+<button data-kiwe-notifications
+  data-kiwe-notification-status-target="#notification-status"
+  type="button">Turn on notifications</button>
+<p id="notification-status" aria-live="polite"></p>
+
+<button data-kiwe-theme-toggle
+  data-kiwe-theme-status-target="#theme-status"
+  type="button">Toggle theme</button>
+<p id="theme-status" aria-live="polite"></p>
+
+<section id="heritage" class="seam-section" data-role="section" aria-labelledby="heritage-title">
+  <h2 id="heritage-title">Heritage</h2>
+</section>
+```
+
+When `/rebuild /seamframework` sees an existing wishlist/bookmark/save control, notification permission button, theme toggle, DSA launcher, section navigation candidate, or repeated sample rail, it should preserve the UI and add the smallest live capability attribute. It must not recreate the runtime in page JavaScript.
+
+Candidate attributes such as `data-kiwe-share`, `data-kiwe-compare`, `data-kiwe-recently-viewed`, `data-kiwe-follow`, `data-kiwe-ai-context`, `data-kiwe-feedback`, and `data-kiwe-offer` are roadmap ideas only until the machine contract marks them live.
+
 ## Behavior attributes
 
 The old standalone Seam runtime had data-binding attributes such as `data-seam-bind` and `data-seam-each`. Those names are reserved, but marketplace themes and generated page sections must not use them to create cart, checkout, auth, PhoneKey, service-worker, browser-history, or Bricks-query authority.

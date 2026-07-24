@@ -21,7 +21,7 @@
       "id": "hero01",
       "name": "section",
       "parent": "0",
-      "children": ["hero02", "hero03", "hero04", "hero05", "hero06"],
+      "children": ["hero02", "hero03", "hero04", "hero05", "hero06", "hero07"],
       "settings": {
         "tag": "section",
         "_cssId": "hero",
@@ -83,6 +83,19 @@
       }
     },
     {
+      "id": "hero07",
+      "name": "button",
+      "parent": "hero01",
+      "settings": {
+        "text": "Toggle theme",
+        "_cssClasses": "seam-button",
+        "_attributes": [
+          { "name": "data-kiwe-theme-toggle", "value": "" },
+          { "name": "type", "value": "button" }
+        ]
+      }
+    },
+    {
       "id": "rail01",
       "name": "section",
       "parent": "0",
@@ -118,7 +131,7 @@
       "id": "rail03",
       "name": "block",
       "parent": "rail01",
-      "children": ["rail04", "rail05", "rail06", "rail07"],
+      "children": ["rail04", "rail05", "rail06", "rail07", "rail08"],
       "settings": {
         "tag": "article",
         "_cssClasses": "seam-card product-card",
@@ -160,6 +173,21 @@
       "settings": {
         "text": "View product",
         "link": { "type": "external", "url": "{post_url}" }
+      }
+    },
+    {
+      "id": "rail08",
+      "name": "button",
+      "parent": "rail03",
+      "settings": {
+        "text": "Wishlist",
+        "_attributes": [
+          { "name": "data-kiwe-save", "value": "wishlist" },
+          { "name": "data-kiwe-save-id", "value": "{post_id}" },
+          { "name": "data-kiwe-save-title", "value": "{post_title}" },
+          { "name": "data-kiwe-save-url", "value": "{post_url}" },
+          { "name": "type", "value": "button" }
+        ]
       }
     }
   ],

@@ -32,6 +32,7 @@ use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
 use DSA\Communications\Email_Service;
 use DSA\Design\Seam_Token_Service;
+use DSA\Design\Seam_Vocabulary_Schema;
 use DSA\Diagnostics\Production_Readiness_Service;
 use DSA\Modules\Module_Registry;
 use DSA\Notifications\Notification_Campaign_Service;
@@ -5618,31 +5619,57 @@ final class Admin {
 	}
 
 	private function render_app_developer_reference(): void {
+		$contract     = Seam_Vocabulary_Schema::contract();
+		$capabilities = is_array( $contract['capabilityAttributes'] ?? null ) ? $contract['capabilityAttributes'] : [];
+		$groups       = is_array( $capabilities['groups'] ?? null ) ? $capabilities['groups'] : [];
+		$candidates   = is_array( $capabilities['candidateAttributes'] ?? null ) ? $capabilities['candidateAttributes'] : [];
 		?>
 		<section class="dsa-admin__panel">
-			<h2><?php esc_html_e( 'Browser Notification Trigger', 'dsa' ); ?></h2>
-			<p><?php esc_html_e( 'Add the attribute to a real button, link, or Bricks element. Kiwe requests browser permission only after that explicit visitor click and never during a protected flow.', 'dsa' ); ?></p>
-			<table class="widefat striped">
-				<thead><tr><th><?php esc_html_e( 'Attribute', 'dsa' ); ?></th><th><?php esc_html_e( 'Purpose', 'dsa' ); ?></th></tr></thead>
-				<tbody>
-					<tr><td><code>data-kiwe-notifications</code></td><td><?php esc_html_e( 'Starts the browser-notification permission journey.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-notification-status-target="#notification-status"</code></td><td><?php esc_html_e( 'Optional selector for an on-page element that receives the current permission message.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-save="wishlist"</code></td><td><?php esc_html_e( 'Explicitly saves the item in Wishlist. Use this for WooCommerce product controls.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-save="bookmark"</code></td><td><?php esc_html_e( 'Explicitly saves the item in Bookmarks, including when the linked object is a product.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-save="auto"</code></td><td><?php esc_html_e( 'Convenience mode only: infers Wishlist from a product context and Bookmark elsewhere. Explicit attributes are recommended in loops.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-save-id="{post_id}"</code></td><td><?php esc_html_e( 'Recommended in Bricks query loops so Kiwe receives the loop product/post ID.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-save-title="{post_title}"</code></td><td><?php esc_html_e( 'Optional loop title override. Kiwe otherwise reads the nearest card heading.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-save-url="{post_url}"</code></td><td><?php esc_html_e( 'Optional loop URL override. Kiwe otherwise reads the nearest card link.', 'dsa' ); ?></td></tr>
-					<tr><td><code>data-kiwe-save-image="..."</code></td><td><?php esc_html_e( 'Optional image URL. Kiwe otherwise reads the nearest card image.', 'dsa' ); ?></td></tr>
-				</tbody>
-			</table>
+			<h2><?php esc_html_e( 'Universal Appsite attribute library', 'dsa' ); ?></h2>
+			<p><?php echo esc_html( (string) ( $capabilities['purpose'] ?? __( 'Builder-neutral capability hooks for Bricks, block themes, and custom HTML.', 'dsa' ) ) ); ?></p>
+			<p class="description"><?php echo esc_html( (string) ( $capabilities['authorRule'] ?? __( 'Use attributes only where the matching Kiwe runtime owns the capability.', 'dsa' ) ) ); ?></p>
+			<?php foreach ( $groups as $group_id => $group ) : ?>
+				<?php
+				$attributes = is_array( $group['attributes'] ?? null ) ? $group['attributes'] : [];
+				if ( [] === $attributes ) {
+					continue;
+				}
+				?>
+				<h3><?php echo esc_html( ucwords( preg_replace( '/(?<!^)[A-Z]/', ' $0', (string) $group_id ) ) ); ?> <code><?php echo esc_html( (string) ( $group['status'] ?? 'live' ) ); ?></code></h3>
+				<p class="description"><?php echo esc_html( sprintf( __( 'Authority: %s', 'dsa' ), (string) ( $group['authority'] ?? 'kiwe' ) ) ); ?></p>
+				<table class="widefat striped">
+					<thead><tr><th><?php esc_html_e( 'Attribute', 'dsa' ); ?></th><th><?php esc_html_e( 'Purpose', 'dsa' ); ?></th><th><?php esc_html_e( 'Values', 'dsa' ); ?></th></tr></thead>
+					<tbody>
+						<?php foreach ( $attributes as $attribute ) : ?>
+							<tr>
+								<td><code><?php echo esc_html( (string) ( $attribute['attribute'] ?? '' ) ); ?></code></td>
+								<td><?php echo esc_html( (string) ( $attribute['purpose'] ?? '' ) ); ?><?php if ( ! empty( $attribute['example'] ) ) : ?><br><code><?php echo esc_html( (string) $attribute['example'] ); ?></code><?php endif; ?></td>
+								<td><?php echo esc_html( implode( ', ', array_map( 'strval', (array) ( $attribute['values'] ?? [] ) ) ) ?: '-' ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endforeach; ?>
 			<h3><?php esc_html_e( 'Example', 'dsa' ); ?></h3>
 			<pre><code>&lt;button data-kiwe-notifications data-kiwe-notification-status-target="#notification-status"&gt;Turn on notifications&lt;/button&gt;
 &lt;p id="notification-status" aria-live="polite"&gt;&lt;/p&gt;</code></pre>
 			<h3><?php esc_html_e( 'Bricks Saved button', 'dsa' ); ?></h3>
 			<pre><code>&lt;button data-kiwe-save="wishlist" data-kiwe-save-id="{post_id}" data-kiwe-save-title="{post_title}" data-kiwe-save-url="{post_url}"&gt;Wishlist&lt;/button&gt;
 &lt;button data-kiwe-save="bookmark" data-kiwe-save-id="{post_id}" data-kiwe-save-title="{post_title}" data-kiwe-save-url="{post_url}"&gt;Bookmark&lt;/button&gt;</code></pre>
+			<h3><?php esc_html_e( 'Page/header DSA launcher', 'dsa' ); ?></h3>
+			<pre><code>&lt;button data-dsa-open-module="cart" type="button"&gt;Open bag&lt;/button&gt;
+&lt;button data-kiwe-theme-toggle data-kiwe-theme-status-target="#theme-status" type="button"&gt;Toggle theme&lt;/button&gt;
+&lt;p id="theme-status" aria-live="polite"&gt;&lt;/p&gt;</code></pre>
 			<p class="description"><?php esc_html_e( 'Journey One (PWA install) and Journey Two (offline push permission) are separate. This attribute starts Journey Two only.', 'dsa' ); ?></p>
+			<?php if ( [] !== $candidates ) : ?>
+				<h3><?php esc_html_e( 'Candidate attributes', 'dsa' ); ?></h3>
+				<p class="description"><?php esc_html_e( 'These are architectural candidates only. Do not use them in production output until their status becomes live in the contract.', 'dsa' ); ?></p>
+				<ul>
+					<?php foreach ( $candidates as $candidate ) : ?>
+						<li><code><?php echo esc_html( (string) ( $candidate['attribute'] ?? '' ) ); ?></code> — <?php echo esc_html( (string) ( $candidate['purpose'] ?? '' ) ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
 		</section>
 		<?php
 	}

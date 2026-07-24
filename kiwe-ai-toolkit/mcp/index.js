@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -147,6 +147,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: {} }
     },
     {
+      name: 'kiwe_get_seam_attributes_context',
+      description: 'Return the Seam capability attributes context for /rebuild /seamframework, dynamic binding, and Bricks conversion without reading the full plugin codebase.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_list_capability_attributes',
+      description: 'Return the live and candidate Seam/Kiwe Appsite capability attributes from the machine-readable vocabulary contract.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
       name: 'kiwe_get_dynamic_context',
       description: 'Return Kiwe dynamic binding context for revising a passed handoff with WordPress/Bricks/Woo query loops and dynamic data using a target Site Graph.',
       inputSchema: { type: 'object', properties: {} }
@@ -209,6 +219,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_list_class_vocabulary':
       result = listClassVocabulary();
+      break;
+    case 'kiwe_get_seam_attributes_context':
+      result = getSeamAttributesContext();
+      break;
+    case 'kiwe_list_capability_attributes':
+      result = listCapabilityAttributes();
       break;
     case 'kiwe_get_dynamic_context':
       result = getDynamicContext();

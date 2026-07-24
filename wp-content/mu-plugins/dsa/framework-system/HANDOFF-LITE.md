@@ -30,6 +30,7 @@ Ask for:
 - a single `bricks-paste.html` file that opens in a browser as the standalone preview and is ready to paste/import through Bricks HTML-to-Bricks;
 - CSS that consumes Kiwe/Seam variables from `token-map.css` and `runtime/seam.css`;
 - public Seam roles/flows/tones/states where they describe the structure;
+- live Kiwe capability attributes where the draft already has matching UI intent, such as `data-kiwe-save`, `data-kiwe-notifications`, `data-kiwe-theme-toggle`, `data-dsa-open-module`, `data-kiwe-query-template`, or `data-kiwe-binding`;
 - reusable generic component/layout classes from the Seam Class Vocabulary for the actual art direction;
 - no duplicate cart, search, save, checkout, auth, AI, or Bricks-query behavior.
 

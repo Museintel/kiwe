@@ -179,6 +179,7 @@ export function getContext(mode = 'website') {
     parts.push(readMaybe('packs/website-builder/README-FIRST.md'));
     parts.push(readMaybe('packs/website-builder/HANDOFF-LITE.md'));
     parts.push(readMaybe('packs/website-builder/prompt.md'));
+    parts.push(readMaybe('contexts/seam-attributes-lite.md'));
   }
 
   if (normalized === 'theme' || normalized === 'combined') {
@@ -199,7 +200,7 @@ export function getDynamicContext() {
   if (!context) {
     throw new Error('Dynamic binding context was not found.');
   }
-  return context.trim() + '\n';
+  return [context, readMaybe('contexts/seam-attributes-lite.md')].filter(Boolean).join('\n\n').trim() + '\n';
 }
 
 export function getBricksConversionContext() {
@@ -207,13 +208,21 @@ export function getBricksConversionContext() {
   if (!context) {
     throw new Error('Bricks conversion context was not found.');
   }
-  return context.trim() + '\n';
+  return [context, readMaybe('contexts/seam-attributes-lite.md')].filter(Boolean).join('\n\n').trim() + '\n';
 }
 
 export function getWorkflowContext() {
   const context = readMaybe('contexts/workflow-lite.md');
   if (!context) {
     throw new Error('Kiwe workflow context was not found.');
+  }
+  return context.trim() + '\n';
+}
+
+export function getSeamAttributesContext() {
+  const context = readMaybe('contexts/seam-attributes-lite.md');
+  if (!context) {
+    throw new Error('Seam capability attributes context was not found.');
   }
   return context.trim() + '\n';
 }
@@ -256,6 +265,22 @@ export function listClassVocabulary() {
     }
   }
   throw new Error('Seam class vocabulary was not found in toolkit packs.');
+}
+
+export function listCapabilityAttributes() {
+  const candidates = [
+    'packs/website-builder/contracts/seam-vocabulary.json',
+    'packs/appshell-theme/seam-vocabulary.json'
+  ];
+  for (const rel of candidates) {
+    const full = path.join(toolkitRoot, rel);
+    if (!fs.existsSync(full)) continue;
+    const vocabulary = JSON.parse(fs.readFileSync(full, 'utf8'));
+    if (vocabulary && vocabulary.capabilityAttributes) {
+      return vocabulary.capabilityAttributes;
+    }
+  }
+  throw new Error('Seam capability attributes were not found in toolkit vocabulary.');
 }
 
 export function validateBindings(targetDir, options = {}) {

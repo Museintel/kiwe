@@ -17,6 +17,7 @@ It includes:
 
 - universal `kiwe-*` tokens;
 - Seam roles, flows, tones, scenes, states, motion, shape, gap, align, and justify vocabulary;
+- Seam/Kiwe Appsite capability attributes for saved items, notifications, theme toggles, DSA launchers, menu context, and dynamic Bricks intent;
 - Seam Class Vocabulary: a broad neutral searchable class library for Bricks/global-class authoring;
 - production-safe `seam-*` CSS classes;
 - safe `window.Seam` runtime helpers;
@@ -46,7 +47,7 @@ Keep these layers separate:
 ## Folder contents
 
 - `contracts/seam-vocabulary.md` — human-readable Seam vocabulary and AppShell adoption rules.
-- `contracts/seam-vocabulary.json` — machine-readable vocabulary and `appShellAdoption` map.
+- `contracts/seam-vocabulary.json` — machine-readable vocabulary, `capabilityAttributes`, and `appShellAdoption` map.
 - `contracts/seam-class-vocabulary.md` — explains the neutral searchable class library.
 - `contracts/seam-class-vocabulary.json` — machine-readable class categories/classes pushed to Bricks.
 - `contracts/token-map.css` — portable public token map for designers and AI.
@@ -100,6 +101,7 @@ Bad:
 
 - Hardcoded generated Bricks IDs.
 - LocalStorage save/wishlist/search/cart logic replacing Kiwe/DSA/Woo behavior.
+- Custom JS for wishlist/bookmark, browser notifications, light/dark toggles, or DSA screen launchers when a live Kiwe capability attribute exists.
 - A private color/spacing/radius scale unrelated to Kiwe/Seam variables.
 - Public high-impact `seam-*` classes forced inside live DSA AppShell internals when the adoption map says `shadow-only`.
 

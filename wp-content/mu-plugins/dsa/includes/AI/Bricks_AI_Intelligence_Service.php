@@ -3,6 +3,7 @@
 namespace DSA\AI;
 
 use DSA\Design\Seam_Token_Service;
+use DSA\Design\Seam_Vocabulary_Schema;
 use DSA\Settings;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -43,6 +44,8 @@ final class Bricks_AI_Intelligence_Service {
 		$elements = $this->requested_elements( $args );
 		$settings = $this->settings->all();
 		$tokens = Seam_Token_Service::tokens_with_overrides( Seam_Token_Service::overrides_from_settings( $settings ) );
+		$seam_contract = Seam_Vocabulary_Schema::contract();
+		$capability_attributes = is_array( $seam_contract['capabilityAttributes'] ?? null ) ? $seam_contract['capabilityAttributes'] : [];
 
 		return [
 			'ok'               => true,
@@ -71,12 +74,13 @@ final class Bricks_AI_Intelligence_Service {
 					'Use Seam classes/attributes for meaning and reusable structure.',
 					'Do not make Seam roles own default padding, radius, shadow, or theme identity.',
 					'Bricks element settings and page/theme CSS own the visual design.',
-					'Preserve data-role, data-seam-*, data-dsa-open-module, IDs, ARIA, and classes through conversion.',
+					'Preserve public Seam and Kiwe capability attributes, IDs, ARIA, and classes through conversion.',
 				],
+				'capabilityAttributes' => $this->compact_capability_attributes( $capability_attributes ),
 			],
 			'kiwe'             => [
 				'launcherAttribute' => 'data-dsa-open-module',
-				'knownModules'      => [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'ai', 'theme' ],
+				'knownModules'      => [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'ai', 'theme', 'notifications', 'ios-install', 'games' ],
 				'bricksControls'    => [
 					'iconLauncher' => 'Bricks Icon elements can receive a Kiwe DSA launcher control when enabled.',
 					'filterSearch' => 'Bricks Filter Search can bridge to Kiwe Search when the DSA bridge control is enabled.',
@@ -85,6 +89,37 @@ final class Bricks_AI_Intelligence_Service {
 			],
 			'toolUseRules'     => $this->tool_use_rules(),
 		];
+	}
+
+	private function compact_capability_attributes( array $library ): array {
+		$groups = is_array( $library['groups'] ?? null ) ? $library['groups'] : [];
+		$out    = [
+			'schema' => 'kiwe.seam-capability-attributes.v1',
+			'rule'   => (string) ( $library['authorRule'] ?? 'Use the smallest live attribute that matches the UI intent; never recreate Kiwe runtime behavior.' ),
+			'groups' => [],
+		];
+
+		foreach ( $groups as $group_id => $group ) {
+			$attributes = is_array( $group['attributes'] ?? null ) ? $group['attributes'] : [];
+			$out['groups'][ sanitize_key( (string) $group_id ) ] = [
+				'status'     => sanitize_text_field( (string) ( $group['status'] ?? 'live' ) ),
+				'authority'  => sanitize_text_field( (string) ( $group['authority'] ?? 'kiwe' ) ),
+				'attributes' => array_values(
+					array_map(
+						static function ( array $attribute ): array {
+							return [
+								'attribute' => sanitize_text_field( (string) ( $attribute['attribute'] ?? '' ) ),
+								'values'    => array_values( array_map( 'sanitize_text_field', array_map( 'strval', (array) ( $attribute['values'] ?? [] ) ) ) ),
+								'purpose'   => sanitize_text_field( (string) ( $attribute['purpose'] ?? '' ) ),
+							];
+						},
+						$attributes
+					)
+				),
+			];
+		}
+
+		return $out;
 	}
 
 	public function planning_packet( array $args = [] ): array {

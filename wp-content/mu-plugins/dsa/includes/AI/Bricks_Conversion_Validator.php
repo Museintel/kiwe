@@ -26,6 +26,22 @@ final class Bricks_Conversion_Validator {
 		'{kiwe_site_logo_inverse}',
 	];
 
+	private const KIWE_CAPABILITY_ATTRIBUTES = [
+		'data-kiwe-save',
+		'data-kiwe-save-id',
+		'data-kiwe-save-title',
+		'data-kiwe-save-url',
+		'data-kiwe-save-image',
+		'data-kiwe-notifications',
+		'data-kiwe-notification-status-target',
+		'data-kiwe-notification-topic',
+		'data-dsa-native-notification-request',
+		'data-kiwe-theme-toggle',
+		'data-kiwe-theme-status-target',
+		'data-kiwe-query-template',
+		'data-kiwe-binding',
+	];
+
 	public function validate( array $conversion, array $site_graph = [], string $source_html = '', array $binding = [] ): array {
 		$findings = [];
 		$index    = $this->graph_index( $site_graph );
@@ -200,6 +216,24 @@ final class Bricks_Conversion_Validator {
 			foreach ( $launcher_matches[1] as $module ) {
 				if ( ! str_contains( $conversion_text, 'data-dsa-open-module' ) || ! str_contains( $conversion_text, (string) $module ) ) {
 					$this->add( $findings, 'fail', 'bricks_conversion_lost_kiwe_launcher', sprintf( 'Source launcher data-dsa-open-module="%s" was not preserved.', (string) $module ) );
+				}
+			}
+		}
+		$attribute_pattern = '/\b(' . implode( '|', array_map( static fn( string $name ): string => preg_quote( $name, '/' ), self::KIWE_CAPABILITY_ATTRIBUTES ) ) . ')(?:\s*=\s*["\']([^"\']*)["\'])?/i';
+		if ( preg_match_all( $attribute_pattern, $source_html, $attribute_matches, PREG_SET_ORDER ) ) {
+			$seen = [];
+			foreach ( $attribute_matches as $match ) {
+				$name  = (string) ( $match[1] ?? '' );
+				$value = trim( (string) ( $match[2] ?? '' ) );
+				$key   = $name . '=' . $value;
+				if ( isset( $seen[ $key ] ) ) {
+					continue;
+				}
+				$seen[ $key ] = true;
+				if ( ! str_contains( $conversion_text, $name ) ) {
+					$this->add( $findings, 'fail', 'bricks_conversion_lost_kiwe_capability_attribute', sprintf( 'Source Kiwe capability attribute %1$s%2$s was not preserved.', $name, '' !== $value ? '="' . $value . '"' : '' ) );
+				} elseif ( '' !== $value && ! str_contains( $conversion_text, $value ) ) {
+					$this->add( $findings, 'warn', 'bricks_conversion_kiwe_capability_value_not_visible', sprintf( 'Source Kiwe capability attribute %1$s value "%2$s" is not visible in the conversion package.', $name, $value ) );
 				}
 			}
 		}

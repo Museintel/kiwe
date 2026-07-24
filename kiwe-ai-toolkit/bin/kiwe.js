@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -22,6 +22,8 @@ Commands:
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
   kiwe validate <website|theme|combined> <output-dir>
   kiwe vocabulary
+  kiwe attributes
+  kiwe seam-attributes-context
   kiwe dynamic-context
   kiwe bricks-conversion-context
   kiwe dynamic-pass --brief text [--site-graph-summary text] [--handoff-summary text]
@@ -70,6 +72,10 @@ try {
     print(getContext(args[0] || 'website'));
   } else if (command === 'vocabulary') {
     print(listClassVocabulary());
+  } else if (command === 'attributes') {
+    print(listCapabilityAttributes());
+  } else if (command === 'seam-attributes-context') {
+    print(getSeamAttributesContext());
   } else if (command === 'dynamic-context') {
     print(getDynamicContext());
   } else if (command === 'bricks-conversion-context') {

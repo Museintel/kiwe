@@ -61,6 +61,8 @@ Seam roles are semantic/headless by default. `data-role="card"` tells tools what
 
 Use `data-role` only for official Seam role values from `contracts/seam-vocabulary.json`, such as `hero`, `card`, `nav`, `button`, `form`, `testimonial`, `price`, or `footer`. For specific ecommerce/editorial concepts, prefer Seam Class Vocabulary names such as `.seam-product-card`, `.seam-product-rail`, `.seam-category`, `.seam-story`, or project classes such as `.nc-product`. Do not invent custom `data-role` values like `product-card`, `site-header`, `save-placeholder`, or `add-to-cart-placeholder`; use a project-specific attribute such as `data-project-role` if extra preview semantics are needed.
 
+Universal Appsite capability attributes are part of Seam's public framework layer. When the draft already has matching UI intent, preserve the design and add live Kiwe attributes instead of duplicating runtime behavior: `data-dsa-open-module`, `data-kiwe-save`, `data-kiwe-notifications`, `data-kiwe-theme-toggle`, real semantic section IDs/labels for Menu context fallback, and `data-kiwe-query-template` / `data-kiwe-binding` for future Bricks query-loop/dynamic binding plans. Do not use protected `data-seam-*` shadow metadata, admin-only attributes, or preview harness attributes as public website vocabulary.
+
 ## Bricks path
 
 Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
@@ -1160,7 +1162,7 @@ Rules:
 
 Website/page markup may include Kiwe hooks, but must not implement Kiwe behavior itself.
 
-- Open a DSA module from a page/header control with canonical `data-dsa-open-module="cart"`. Valid values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, and `ios-install`.
+- Open a DSA module from a page/header control with canonical `data-dsa-open-module="cart"`. Valid values include `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, `ios-install`, and `games`.
 - Do not add Seam attributes only to feed the DSA Menu. Kiwe Menu context is heading-first: it reads the admin-selected heading levels for classic blog/page table-of-contents behavior. When no configured headings are available, Kiwe may opportunistically use existing semantic page sections (`data-role="section"` or `.seam-section`) with a stable `id` and standard labels (`aria-label`, `aria-labelledby`, or visible heading text) as contextual fallback.
 - Do not create duplicate cart/profile/search/save/auth behavior. Keep Kiwe hooks as handoff points to the live plugin.
 - Do not use website CSS to restyle protected DSA internals.

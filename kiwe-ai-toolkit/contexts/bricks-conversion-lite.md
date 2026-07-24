@@ -114,12 +114,12 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
 
 - Use Bricks-native elements where they carry real semantics or runtime capability: `section`, `container`, `block`, `heading`, `text-basic`, `text-link`, `button`, `image`, `icon`, `form`, `accordion`, `tabs-nested`, product/post elements, query result elements, and other elements listed by `/ai/bricks/context`.
 - Use neutral `div`/`block` only for real layout shells.
-- Preserve classes, IDs, ARIA, `data-role`, `data-seam-*`, `data-project-role`, and canonical Kiwe launchers such as `data-dsa-open-module="cart"`.
+- Preserve classes, IDs, ARIA, public Seam attributes, `data-project-role`, and live Kiwe/Appsite capability attributes such as `data-dsa-open-module`, `data-kiwe-save`, `data-kiwe-notifications`, `data-kiwe-theme-toggle`, `data-kiwe-query-template`, and `data-kiwe-binding`. Do not convert DSA/AppShell theme markup or `appshell-theme/` CSS to Bricks; `/convert /bricks` is for website/page HTML only.
 - Keep `website/bricks-paste.html` page-only. Do not put `data-dsa-surface`, dock, sheet, screen, or AppShell fixture markup into the Bricks page artifact.
 - Do not use `combined-preview`, `appshell-theme`, `theme-package.json`, `theme.css`, dock markup, sheet markup, or screen markup as conversion source.
 - Convert approved visual CSS into Bricks element settings, global classes, global variables, or safe page CSS. Do not hide the whole design in one giant Code element unless Bricks cannot represent it.
 - Preserve intentional CSS states and responsive behavior. If a pseudo-state, media query, mask, grid, interaction, or animation cannot be represented safely in Bricks controls, put it in `pageSettings.customCss` and list it under `fidelity.unsupported` or `report.manualReview`.
-- Executable JavaScript must not silently become production authority. Prefer Bricks interactions when safe, Kiwe launchers for Kiwe capabilities, or manual review.
+- Executable JavaScript must not silently become production authority. Prefer Bricks interactions when safe, Kiwe capability attributes for Kiwe-owned journeys, or manual review.
 - Use query loops and dynamic tags only when verified by Site Graph or `/ai/bricks/context`.
 - Do not convert placeholder product/category/media samples into hardcoded production content when a dynamic binding/query loop exists.
 - Do not claim WordPress/Bricks/WooCommerce writes. The conversion package is reviewable input for the controlled staging executor.

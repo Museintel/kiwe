@@ -19,6 +19,7 @@ This folder is a portable handoff. The real plugin sources live elsewhere.
 | PHP Bricks class vocabulary/export source | `wp-content/mu-plugins/dsa/includes/Design/Seam_Token_Service.php` |
 | Portable vocabulary JSON snapshot | `wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.json` |
 | Portable vocabulary docs | `wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.md` |
+| Public Appsite capability attributes | `wp-content/mu-plugins/dsa/includes/Design/Seam_Vocabulary_Schema.php` → `capabilityAttributes` |
 | Portable class vocabulary JSON snapshot | `wp-content/mu-plugins/dsa/ui-system/seam-class-vocabulary.json` |
 | Portable class vocabulary docs | `wp-content/mu-plugins/dsa/ui-system/seam-class-vocabulary.md` |
 | Universal token schema | `wp-content/mu-plugins/dsa/includes/Design/Token_Schema.php` |

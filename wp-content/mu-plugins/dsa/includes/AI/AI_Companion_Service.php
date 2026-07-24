@@ -796,6 +796,12 @@ final class AI_Companion_Service {
 				'applies' => [ 'website', 'combined', 'dynamic' ],
 			],
 			[
+				'id'      => 'seam-capability-attributes',
+				'title'   => 'Seam can call Kiwe Appsite capabilities by attribute',
+				'body'    => 'During /rebuild /seamframework, preserve the UI and add live attributes when intent exists: data-kiwe-save for wishlist/bookmark, data-kiwe-notifications for notification CTAs, data-kiwe-theme-toggle for light/dark controls, data-dsa-open-module for DSA launchers, semantic section IDs/labels for Menu context, and data-kiwe-query-template/data-kiwe-binding for future dynamic Bricks loops. Do not recreate Kiwe runtime behavior in page JS.',
+				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
+			],
+			[
 				'id'      => 'appshell-geometry-owned-by-core',
 				'title'   => 'AppShell geometry is Kiwe core authority',
 				'body'    => 'Theme CSS can style color, typography, borders, radii, shadows, states, cards, forms, and rails. It must not own dock/sheet/screen/backdrop fixed positioning, viewport offsets, or layout measurement.',
@@ -843,10 +849,17 @@ final class AI_Companion_Service {
 
 	private function answer_for_question( string $question, string $mode ): array {
 		$question_lc = strtolower( $question );
+		if ( str_contains( $question_lc, 'attribute' ) || str_contains( $question_lc, 'wishlist' ) || str_contains( $question_lc, 'bookmark' ) || str_contains( $question_lc, 'notification' ) || str_contains( $question_lc, 'dark mode' ) || str_contains( $question_lc, 'theme toggle' ) || str_contains( $question_lc, 'save button' ) ) {
+			return [
+				'summary' => 'Use Seam for meaning and Kiwe capability attributes for appsite behavior. Preserve the UI; add the smallest live attribute; do not recreate Kiwe runtime in page JavaScript.',
+				'do'      => [ 'Use data-kiwe-save="wishlist" or "bookmark" for save controls.', 'Use data-kiwe-notifications only on explicit visitor-click controls.', 'Use data-kiwe-theme-toggle for page/header light-dark controls.', 'Use data-dsa-open-module for Kiwe screen launchers.', 'Use semantic section IDs and labels for Menu context.' ],
+				'dont'    => [ 'Do not invent candidate attributes unless the contract marks them live.', 'Do not add DSA shell markup to website/bricks-paste.html.', 'Do not write duplicate cart/save/notification/theme JavaScript.' ],
+			];
+		}
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
-				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, data-seam attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.' ],
+				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.' ],
 				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
@@ -1281,6 +1294,42 @@ final class AI_Companion_Service {
 							'severity' => 'error',
 							'code'     => 'bricks_conversion_lost_kiwe_launcher',
 							'message'  => sprintf( 'Source launcher data-dsa-open-module="%s" was not preserved in the Bricks conversion package.', $module ),
+							'path'     => sanitize_text_field( $path ),
+						];
+					}
+				}
+			}
+			$capability_attributes = [
+				'data-kiwe-save',
+				'data-kiwe-save-id',
+				'data-kiwe-save-title',
+				'data-kiwe-save-url',
+				'data-kiwe-save-image',
+				'data-kiwe-notifications',
+				'data-kiwe-notification-status-target',
+				'data-kiwe-notification-topic',
+				'data-dsa-native-notification-request',
+				'data-kiwe-theme-toggle',
+				'data-kiwe-theme-status-target',
+				'data-kiwe-query-template',
+				'data-kiwe-binding',
+			];
+			$capability_pattern = '/\b(' . implode( '|', array_map( static fn( string $name ): string => preg_quote( $name, '/' ), $capability_attributes ) ) . ')(?:\s*=\s*["\']([^"\']*)["\'])?/i';
+			if ( preg_match_all( $capability_pattern, $website, $capability_matches, PREG_SET_ORDER ) ) {
+				$seen_capabilities = [];
+				foreach ( $capability_matches as $capability_match ) {
+					$name  = (string) ( $capability_match[1] ?? '' );
+					$value = trim( (string) ( $capability_match[2] ?? '' ) );
+					$key   = $name . '=' . $value;
+					if ( isset( $seen_capabilities[ $key ] ) ) {
+						continue;
+					}
+					$seen_capabilities[ $key ] = true;
+					if ( ! str_contains( $conversion_json, $name ) ) {
+						$findings[] = [
+							'severity' => 'error',
+							'code'     => 'bricks_conversion_lost_kiwe_capability_attribute',
+							'message'  => sprintf( 'Source Kiwe capability attribute %1$s%2$s was not preserved in the Bricks conversion package.', $name, '' !== $value ? '="' . $value . '"' : '' ),
 							'path'     => sanitize_text_field( $path ),
 						];
 					}

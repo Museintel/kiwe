@@ -133,6 +133,16 @@ Avoid huge inline base64 assets in Bricks paste files unless the human explicitl
 
 Seam is semantic/headless. Use page CSS/project CSS for visual art direction.
 
+Audit public Kiwe/Appsite capability attributes as part of Seam, not as unrelated plugin hooks:
+
+- If a page/header/button opens a Kiwe surface, it must use canonical `data-dsa-open-module` with a registered module value.
+- If the UI shows wishlist/bookmark/save intent, it should use `data-kiwe-save="wishlist"`, `bookmark`, or `auto` with stable IDs/titles/URLs/images where dynamic data is available.
+- If the UI asks for browser notifications, it should use `data-kiwe-notifications` and must not request permission until a real visitor click.
+- If the UI offers light/dark mode outside the dock, it should use `data-kiwe-theme-toggle` rather than custom production theme-toggle JavaScript.
+- If sample cards/rails are intended to become Bricks dynamic data, preserve `data-kiwe-query-template` and `data-kiwe-binding` or record equivalent dynamic intent in the Bricks conversion package.
+- Reject production/import artifacts that implement separate localStorage/sessionStorage state for Kiwe-owned save, notification, theme, AppShell launcher, cart, checkout, auth, search, or AI capabilities.
+- Treat candidate attributes such as `data-kiwe-share`, `data-kiwe-compare`, `data-kiwe-recently-viewed`, `data-kiwe-follow`, `data-kiwe-ai-context`, `data-kiwe-feedback`, and `data-kiwe-offer` as non-live roadmap ideas unless the current machine contract explicitly marks them live.
+
 ## DSA Menu / context audit
 
 Kiwe Menu context is heading-first.

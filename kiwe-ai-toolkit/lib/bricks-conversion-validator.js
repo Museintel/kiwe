@@ -146,6 +146,22 @@ const SAFE_INTERACTION_ACTIONS = new Set([
   'storageCount'
 ]);
 
+const KIWE_CAPABILITY_ATTRIBUTES = [
+  'data-kiwe-save',
+  'data-kiwe-save-id',
+  'data-kiwe-save-title',
+  'data-kiwe-save-url',
+  'data-kiwe-save-image',
+  'data-kiwe-notifications',
+  'data-kiwe-notification-status-target',
+  'data-kiwe-notification-topic',
+  'data-dsa-native-notification-request',
+  'data-kiwe-theme-toggle',
+  'data-kiwe-theme-status-target',
+  'data-kiwe-query-template',
+  'data-kiwe-binding'
+];
+
 function isPlainObject(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -254,6 +270,19 @@ function extractLaunchers(html) {
     out.add(String(match[1] || '').trim());
   }
   return out;
+}
+
+function extractCapabilityAttributes(html) {
+  const out = new Map();
+  const names = KIWE_CAPABILITY_ATTRIBUTES.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const pattern = new RegExp(`\\b(${names})(?:\\s*=\\s*["']([^"']*)["'])?`, 'gi');
+  for (const match of String(html || '').matchAll(pattern)) {
+    const name = String(match[1] || '').trim();
+    const value = String(match[2] || '').trim();
+    const key = `${name}=${value}`;
+    if (name) out.set(key, { name, value });
+  }
+  return Array.from(out.values());
 }
 
 function extractQueryTemplates(html) {
@@ -561,6 +590,14 @@ function validateSourceParity({ conversion, conversionText, website, bindingsPat
   for (const launcher of launchers) {
     if (!conversionText.includes('data-dsa-open-module') || !conversionText.includes(launcher)) {
       add(findings, 'fail', `Source launcher data-dsa-open-module="${launcher}" was not preserved in the Bricks conversion package.`, conversionRel);
+    }
+  }
+
+  for (const capability of extractCapabilityAttributes(website.text)) {
+    if (!conversionText.includes(capability.name)) {
+      add(findings, 'fail', `bricks_conversion_lost_kiwe_capability_attribute: Source Kiwe capability attribute ${capability.name}${capability.value ? `="${capability.value}"` : ''} was not preserved in the Bricks conversion package.`, conversionRel);
+    } else if (capability.value && !conversionText.includes(capability.value)) {
+      add(findings, 'warn', `Source Kiwe capability attribute ${capability.name} value "${capability.value}" is not visible in the conversion package.`, conversionRel);
     }
   }
 

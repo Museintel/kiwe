@@ -38,6 +38,12 @@
     { "name": "data-dsa-bricks-id", "meaning": "Stable runtime marker for observed Bricks element roots. Never hardcode across sites." },
     { "name": "data-dsa-bricks-type", "meaning": "Observed Bricks element type for registry/classification." },
     { "name": "data-dsa-open-module", "meaning": "Canonical Bricks/page launcher target for a registered DSA module such as cart, profile, search, menu, saved, links, theme, ai, notifications, or ios-install." },
+    { "name": "data-kiwe-save=\"wishlist|bookmark|auto\"", "meaning": "Live Kiwe Saved capability hook for Wishlist/Bookmarks. Use dynamic Bricks IDs/titles/URLs in loops." },
+    { "name": "data-kiwe-save-id / data-kiwe-save-title / data-kiwe-save-url / data-kiwe-save-image", "meaning": "Optional saved-item metadata. Prefer Bricks dynamic tags such as {post_id}, {post_title}, {post_url}, and {featured_image}." },
+    { "name": "data-kiwe-notifications", "meaning": "Starts the browser-notification preference journey only after explicit visitor click." },
+    { "name": "data-kiwe-notification-status-target / data-kiwe-notification-topic", "meaning": "Optional notification status selector and real Kiwe topic hint." },
+    { "name": "data-kiwe-theme-toggle", "meaning": "Live light/dark mode control outside the Kiwe dock, synchronized with Kiwe/Bricks theme state." },
+    { "name": "data-kiwe-query-template / data-kiwe-binding", "meaning": "Marks preview/sample regions that should become Bricks query loops or dynamic binding plans." },
     { "name": "data-role=\"section\" / .seam-section", "meaning": "Public Seam section meaning for page structure. Kiwe may read existing sections as menu-context fallback when configured heading TOC items are unavailable; do not add this solely for DSA Menu." },
     { "name": "data-dsa-search-bridge", "meaning": "Bricks Filter Search element that DSA Search may bridge into." }
   ],
@@ -51,29 +57,42 @@
   "exportsToBricks": {
     "variables": "Kiwe universal tokens are exported to Bricks global variables as kiwe-* variables.",
     "colors": "Kiwe universal color tokens are exported to the Bricks color palette as Kiwe Universal.",
-    "classes": "Kiwe Seam framework classes are exported to Bricks global classes under Kiwe Seam categories. Bricks stores names/categories; Kiwe still ships the actual framework CSS so the contract remains portable beyond Bricks."
+    "classes": "Kiwe Seam framework classes are exported to Bricks global classes under Kiwe Seam categories. The expanded Seam Class Vocabulary is neutral/searchable: Bricks stores names/categories and designers attach visual styles there; Kiwe only ships CSS for true framework primitives/utilities."
   },
   "seamGlobalClassCategories": [
     "Kiwe Seam Flow",
-    "Kiwe Seam Role",
+    "Kiwe Seam Role Core",
+    "Kiwe Seam Content",
+    "Kiwe Seam Commerce",
+    "Kiwe Seam Navigation",
+    "Kiwe Seam Disclosure",
+    "Kiwe Seam Data",
+    "Kiwe Seam Media",
+    "Kiwe Seam Form",
     "Kiwe Seam Tone",
+    "Kiwe Seam Size",
+    "Kiwe Seam Density",
+    "Kiwe Seam Emphasis",
     "Kiwe Seam Scene",
     "Kiwe Seam State",
     "Kiwe Seam Motion",
     "Kiwe Seam Shape",
+    "Kiwe Seam Placement",
+    "Kiwe Seam Aspect",
     "Kiwe Seam Flow Control",
     "Kiwe Seam Utility"
   ],
   "safeForThemes": [
     "Consume Kiwe tokens exported to Bricks variables.",
     "Style DSA surfaces with universal kiwe-* and compatibility dsa-* tokens.",
-    "Design Bricks pages that contain semantic DSA launchers.",
+    "Design Bricks pages that contain semantic DSA launchers and live Kiwe Appsite capability attributes.",
     "Use DSA Search bridge when Bricks owns the page query."
   ],
   "forbiddenForThemes": [
     "Do not parse or persist Bricks post meta from a theme.",
     "Do not copy generated Bricks IDs between websites.",
     "Do not replace Bricks query authority with DSA theme code.",
-    "Do not create alternate mini-cart/checkout/payment authority."
+    "Do not create alternate mini-cart/checkout/payment authority.",
+    "Do not recreate wishlist/bookmark, notification permission, theme toggle, or DSA launcher behavior in page JavaScript when live Kiwe attributes exist."
   ]
 }
