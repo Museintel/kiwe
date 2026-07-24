@@ -382,6 +382,19 @@ function validateRoot(conversion, findings, conversionRel) {
   if (conversion.schema !== SCHEMA) {
     add(findings, 'fail', `schema must be ${SCHEMA}.`, conversionRel, '$.schema');
   }
+  const source = conversion.source || {};
+  if (!isPlainObject(source)) {
+    add(findings, 'fail', 'source must be an object describing the page artifact being converted.', conversionRel, '$.source');
+  } else {
+    const sourceText = JSON.stringify(source);
+    const sourceHtml = String(source.html || source.path || '');
+    if (/(^|[\\/])(combined-preview|appshell-theme|ui-system)([\\/]|$)|theme-package\.json|css[\\/]theme\.css|\b(?:dsa\s*theme|appshell|app\s*shell)\b/i.test(sourceText)) {
+      add(findings, 'fail', '/convert /bricks source must be the page artifact only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.', conversionRel, '$.source');
+    }
+    if (sourceHtml && !sourceHtml.replace(/\\/g, '/').endsWith('website/bricks-paste.html')) {
+      add(findings, 'warn', 'source.html should point to website/bricks-paste.html. Combined previews and AppShell theme previews are never Bricks conversion sources.', conversionRel, '$.source.html');
+    }
+  }
   const target = conversion.target || {};
   if (!isPlainObject(target)) {
     add(findings, 'fail', 'target must be an object.', conversionRel, '$.target');

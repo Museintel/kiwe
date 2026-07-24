@@ -21,7 +21,9 @@ Preferred path for serious work:
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 ```
 
-Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/assemble /combined`, `/dynamic /sitegraph`, `/convert /bricks`, or `/audit /bricksconversion`.
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/dynamic /sitegraph`, `/convert /bricks`, or `/audit /bricksconversion`.
+
+Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
 
 The workflow intentionally separates creativity from Kiwe contract compliance. A pure creative draft may happen first without Kiwe/Seam/DSA constraints; later commands rebuild, audit, package, and bind it.
 
@@ -149,6 +151,8 @@ bricks-conversion/
 The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and must preserve the approved page hierarchy, Seam classes/attributes, canonical `data-dsa-open-module` launchers, query-loop intent, dynamic tags, conditions, interactions, and unsupported/manual-review evidence. Prefer Bricks 2.4 native HTML/CSS conversion when available, then add Kiwe's fidelity map. Validate with `validate-bricks-conversion` or MCP `kiwe_validate_bricks_conversion` before staging. The package does not mutate WordPress or Bricks by itself.
 
 Exact conversion file path: `bricks-conversion/kiwe-bricks-conversion.json`. REST/API-key validators can call `POST /wp-json/dsa/v1/ai/validate-bricks-conversion` with the conversion object, optional `sourceHtml`, optional `binding`, and optional `siteGraph`.
+
+`/convert /bricks` source is strictly page-only: `website/bricks-paste.html`. Never convert `combined-preview`, `appshell-theme`, DSA/AppShell previews, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css` into Bricks. Use `/create /preview /dsatheme` for AppShell preview proof and `/create /preview /combined` for page-plus-AppShell preview proof.
 
 When working inside the Bricks front-end editor, admins can enable the Kiwe Studio companion at `Kiwe > AI`. The editor panel uses WordPress nonce-auth routes (`/wp-json/dsa/v1/bricks/studio/context`, `/start`, `/draft`) to fetch the same Bricks + Seam context, plan a page/section, or call native AI when explicitly allowed. The panel is a planning/copilot surface, not a direct mutation surface; staging saves still go through the controlled executor.
 

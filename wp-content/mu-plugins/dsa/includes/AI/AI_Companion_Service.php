@@ -474,6 +474,12 @@ final class AI_Companion_Service {
 		if ( preg_match( '/(?:^|\s)(?:\/ideate|\/creative|\/webdraft)\b/', $text ) ) {
 			return 'ideate';
 		}
+		if ( preg_match( '/\/create.*\/preview.*(?:\/dsatheme|\/appshell|\/dsa|app shell)/', $text ) ) {
+			return 'theme-preview-create';
+		}
+		if ( preg_match( '/\/create.*\/preview.*(?:\/combined|\/combine)/', $text ) ) {
+			return 'combined-preview-create';
+		}
 		if ( preg_match( '/(?:\/build|\/create).*(?:dsathemeandhomepage|theme and homepage|homepage and theme)/', $text ) ) {
 			return 'combined-assemble';
 		}
@@ -553,10 +559,20 @@ final class AI_Companion_Service {
 				'title' => 'Create a real AppShell theme, not color-only skin',
 				'body'  => 'Style documented live roots and data-dsa-part hooks for every registered screen while Kiwe core owns geometry, lifecycle, focus, cart, checkout, auth, search, save, and AI behavior.',
 			],
+			'theme-preview-create' => [
+				'id'    => 'phase-theme-preview-proof',
+				'title' => 'Create DSA theme preview proof',
+				'body'  => 'Create or revise only appshell-theme/preview. Prove the AppShell theme against live-like DSA roots, screen/sheet internals, dock modes, Geometry Engine states, and installed theme.css. Do not convert this preview to Bricks.',
+			],
 			'theme-audit' => [
 				'id'    => 'phase-dsa-theme-audit-fixture-live-match',
 				'title' => 'Audit preview/live AppShell match',
 				'body'  => 'Reject preview-only selectors in import CSS, protected dock/sheet/screen geometry, anonymous raw literals, unreadable rails, blank dock icons, and duplicate stacked sheet launches.',
+			],
+			'combined-preview-create' => [
+				'id'    => 'phase-combined-preview-proof',
+				'title' => 'Create combined preview proof',
+				'body'  => 'Create or revise only combined-preview. It must show the page behind Kiwe AppShell with variation controls and must never be used as /convert /bricks source.',
 			],
 			'combined-assemble' => [
 				'id'    => 'phase-combined-one-preview',
@@ -883,6 +899,35 @@ final class AI_Companion_Service {
 				'message'  => 'kiwe-bricks-conversion.json schema must be kiwe.bricks-conversion.v1.',
 				'path'     => sanitize_text_field( $path ),
 			];
+		}
+
+		$source = isset( $data['source'] ) && is_array( $data['source'] ) ? $data['source'] : [];
+		if ( [] === $source ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_missing_source',
+				'message'  => 'kiwe-bricks-conversion.json source must describe the page artifact being converted.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		} else {
+			$source_text = (string) wp_json_encode( $source );
+			$source_html = str_replace( '\\', '/', (string) ( $source['html'] ?? $source['path'] ?? '' ) );
+			if ( preg_match( '#(^|[\\\\/])(combined-preview|appshell-theme|ui-system)([\\\\/]|$)|theme-package\.json|css[\\\\/]theme\.css|\b(?:dsa\s*theme|appshell|app\s*shell)\b#i', $source_text ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_forbidden_source_lane',
+					'message'  => '/convert /bricks source must be website/bricks-paste.html only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.',
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+			if ( '' !== $source_html && ! str_ends_with( $source_html, 'website/bricks-paste.html' ) ) {
+				$findings[] = [
+					'severity' => 'warning',
+					'code'     => 'bricks_conversion_noncanonical_source_path',
+					'message'  => 'source.html should point to website/bricks-paste.html. Combined previews and AppShell theme previews are never Bricks conversion sources.',
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
 		}
 
 		$target = isset( $data['target'] ) && is_array( $data['target'] ) ? $data['target'] : [];
@@ -1529,7 +1574,7 @@ final class AI_Companion_Service {
 			'themePackageChecked' => ! isset( $codes['theme_package_missing_root_key'] ) && ! isset( $codes['theme_package_css_not_inline'] ) && ! isset( $codes['theme_package_css_mismatch'] ),
 			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['anonymous_literal_px_in_theme_css'] ) && ! isset( $codes['anonymous_literal_value_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
 			'pageArtifactChecked' => ! isset( $codes['page_artifact_contains_appshell'] ),
-			'bricksConversionChecked' => '' !== $this->file_like( $path_map, 'kiwe-bricks-conversion.json' ) && ! isset( $codes['invalid_bricks_conversion_json'] ) && ! isset( $codes['bricks_conversion_missing_root_key'] ) && ! isset( $codes['invalid_bricks_conversion_schema'] ) && ! isset( $codes['bricks_conversion_missing_elements'] ) && ! isset( $codes['bricks_conversion_missing_fidelity_map'] ) && ! isset( $codes['bricks_conversion_source_contains_appshell'] ) && ! isset( $codes['bricks_conversion_contains_appshell_markup'] ) && ! isset( $codes['bricks_conversion_lost_seam_classes'] ) && ! isset( $codes['bricks_conversion_lost_kiwe_launcher'] ) && ! isset( $codes['bricks_conversion_missing_query_intent'] ) && ! isset( $codes['bricks_conversion_executable_code'] ) && ! isset( $codes['missing_bricks_conversion_notes'] ),
+			'bricksConversionChecked' => '' !== $this->file_like( $path_map, 'kiwe-bricks-conversion.json' ) && ! isset( $codes['invalid_bricks_conversion_json'] ) && ! isset( $codes['bricks_conversion_missing_root_key'] ) && ! isset( $codes['invalid_bricks_conversion_schema'] ) && ! isset( $codes['bricks_conversion_missing_source'] ) && ! isset( $codes['bricks_conversion_forbidden_source_lane'] ) && ! isset( $codes['bricks_conversion_missing_elements'] ) && ! isset( $codes['bricks_conversion_missing_fidelity_map'] ) && ! isset( $codes['bricks_conversion_source_contains_appshell'] ) && ! isset( $codes['bricks_conversion_contains_appshell_markup'] ) && ! isset( $codes['bricks_conversion_lost_seam_classes'] ) && ! isset( $codes['bricks_conversion_lost_kiwe_launcher'] ) && ! isset( $codes['bricks_conversion_missing_query_intent'] ) && ! isset( $codes['bricks_conversion_executable_code'] ) && ! isset( $codes['missing_bricks_conversion_notes'] ),
 		] as $label => $ok ) {
 			if ( $ok ) {
 				$passed[] = $label;

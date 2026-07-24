@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.37 - 2026-07-24
+
+- Hardened `/convert /bricks` so it can only convert the approved page lane, `website/bricks-paste.html`, and now rejects combined previews, AppShell theme previews/imports, screen/sheet/dock/navbar markup, `theme-package.json`, and `theme.css` as Bricks conversion sources.
+- Added canonical `/create /preview /dsatheme` and `/create /preview /combined` routes across toolkit routing, MCP, Companion phase cards, workflow docs, and smoke tests so preview-proof work does not get confused with Bricks conversion.
+- Added a negative Bricks conversion fixture and connector-contract checks proving the page-only Bricks boundary and normalized `/create` command language stay intact.
+
 ## 0.6.36 - 2026-07-24
 
 - Added the `/convert /bricks` and `/audit /bricksconversion` lanes so approved HTML/CSS/JS page artifacts can become reviewable Bricks-native JSON packages without reading the full codebase or mutating WordPress/Bricks.

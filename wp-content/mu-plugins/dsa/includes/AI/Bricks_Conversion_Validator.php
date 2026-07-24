@@ -64,6 +64,19 @@ final class Bricks_Conversion_Validator {
 		if ( 'kiwe.bricks-conversion.v1' !== (string) ( $conversion['schema'] ?? '' ) ) {
 			$this->add( $findings, 'fail', 'invalid_bricks_conversion_schema', 'schema must be kiwe.bricks-conversion.v1.', '$.schema' );
 		}
+		$source = isset( $conversion['source'] ) && is_array( $conversion['source'] ) ? $conversion['source'] : [];
+		if ( [] === $source ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_missing_source', 'source must describe the page artifact being converted.', '$.source' );
+		} else {
+			$source_text = (string) wp_json_encode( $source );
+			$source_html = str_replace( '\\', '/', (string) ( $source['html'] ?? $source['path'] ?? '' ) );
+			if ( preg_match( '#(^|[\\\\/])(combined-preview|appshell-theme|ui-system)([\\\\/]|$)|theme-package\.json|css[\\\\/]theme\.css|\b(?:dsa\s*theme|appshell|app\s*shell)\b#i', $source_text ) ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_forbidden_source_lane', '/convert /bricks source must be the page artifact only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.', '$.source' );
+			}
+			if ( '' !== $source_html && ! str_ends_with( $source_html, 'website/bricks-paste.html' ) ) {
+				$this->add( $findings, 'warn', 'bricks_conversion_noncanonical_source_path', 'source.html should point to website/bricks-paste.html. Combined previews and AppShell theme previews are never Bricks conversion sources.', '$.source.html' );
+			}
+		}
 		$target = isset( $conversion['target'] ) && is_array( $conversion['target'] ) ? $conversion['target'] : [];
 		if ( 'bricks' !== (string) ( $target['builder'] ?? '' ) ) {
 			$this->add( $findings, 'fail', 'bricks_conversion_wrong_builder', 'target.builder must be bricks.', '$.target.builder' );

@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "0.6.36",
+  "version": "0.6.37",
   "algorithm": "sha256",
-  "file_count": 259,
+  "file_count": 260,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "d9e567b8107e3dfa3ecd2f95491022b656daac9307e3cbdf781706c6457d22bd"
+      "sha256": "7a69b08c497ef2b994370c762df9af3cef06058a6800b2829e7d88d76a79515b"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -329,8 +329,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 70922,
-      "sha256": "42570211ef428660ff47b0f9cedb73a945f71205d4e25688bff83deac81d1da2"
+      "bytes": 73538,
+      "sha256": "85f3d4ce0747a3eb130aaa40b3a3a92b3fee8a022bdb028d2c4bfc590b4b5ee3"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -357,8 +357,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 14588,
-      "sha256": "53da2b17e5280f0e45a3943e94be0ce037435f3eb652c67595c1af8724d75ef1"
+      "bytes": 15850,
+      "sha256": "07783005b08d4d1beb344c321a170788b8f8266776865cf034387507502176e9"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22224,
@@ -907,6 +907,10 @@
     "site-graph-system/release-proof-0.6.36.md": {
       "bytes": 2578,
       "sha256": "0dfe55fe4b5318b2176f6b29fa2282b80d9d4d47c4cd23c86e179bc51db82879"
+    },
+    "site-graph-system/release-proof-0.6.37.md": {
+      "bytes": 1812,
+      "sha256": "8f016c5861c990494e3aef0a70a74063bedfc9d8c798dbfadf604bb56820f259"
     },
     "site-graph-system/release-proof-0.6.7.md": {
       "bytes": 4783,

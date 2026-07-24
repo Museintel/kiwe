@@ -28,6 +28,19 @@ This pipeline is preferred over one giant `combined` prompt for serious work.
 
 Humans should be able to write short commands. The toolkit supplies the rules.
 
+Canonical creation verb: `/create`.
+
+Do not teach mixed verbs such as `/build` for Kiwe handoff phases. If an older model or human writes `/build`, treat it as a legacy alias internally and answer back with the canonical `/create` command name.
+
+Canonical preview commands:
+
+```text
+/create /preview /dsatheme
+/create /preview /combined
+```
+
+`/create /preview /dsatheme` is only for the AppShell theme preview lane. `/create /preview /combined` is only for the primary combined preview lane. Neither command creates Bricks JSON, and neither preview is valid input for `/convert /bricks`.
+
 ## Optional `/usecompanion` flag
 
 `/usecompanion` can be appended to any workflow command:
@@ -35,6 +48,8 @@ Humans should be able to write short commands. The toolkit supplies the rules.
 ```text
 /rebuild /seamframework /usecompanion
 /audit /dsatheme /usecompanion
+/create /preview /dsatheme /usecompanion
+/create /preview /combined /usecompanion
 /dynamic /sitegraph /usecompanion
 /convert /bricks /usecompanion
 /audit /bricksconversion /usecompanion
@@ -228,6 +243,27 @@ appshell-theme/
     PLACEHOLDERS.md
 ```
 
+### `/create /preview /dsatheme`
+
+Use when the AppShell theme import package already exists or is being reviewed and the human needs a focused DSA preview proof.
+
+Create or revise only:
+
+```text
+appshell-theme/
+  preview/
+    index.html
+    PLACEHOLDERS.md
+```
+
+Rules:
+
+- The preview must load or faithfully apply the importable `appshell-theme/import/[theme-id]/css/theme.css`.
+- Prove live-like DSA roots, documented screen/sheet internals, dock modes, navbar mode, orientation, shape, light/dark, narrow widths, and every registered screen.
+- Mark all mock content as preview-only.
+- Do not create or convert a Bricks page.
+- Do not use this preview as `/convert /bricks` source.
+
 ### `/audit /dsatheme`
 
 Use after DSA theme creation.
@@ -288,6 +324,29 @@ Combined mode has one primary human preview: `combined-preview/index.html`.
 
 That preview must show the website/page behind the Kiwe AppShell and include variation controls for Geometry Engine profiles, narrow widths, Sheet/Classic, dock/navbar presentation, orientation, shape, light/dark, and representative screen switching.
 
+### `/create /preview /combined`
+
+Use when the website lane and AppShell theme lane exist and the human needs one proof that they work together.
+
+Create or revise only:
+
+```text
+combined-preview/
+  index.html
+  assets/
+    combined-preview.css
+    combined-preview.js
+```
+
+Rules:
+
+- The preview must show the page behind the Kiwe AppShell.
+- Use the real page lane as the backdrop/reference, but keep the preview itself preview-only.
+- Include variation controls for desktop, tablet, mobile, narrow widths, Sheet/Classic, full compact dock, split compact dock, Navigation Bar, horizontal/vertical orientation, pill/rounded-box/square shape, light/dark, and screen switching.
+- Keep page/header launchers live in the preview.
+- Do not create Bricks JSON.
+- Do not use `combined-preview/index.html` as `/convert /bricks` source.
+
 ### `/audit /combined`
 
 Use after combined assembly.
@@ -347,6 +406,7 @@ Purpose:
 - Prefer Bricks 2.4 native HTML/CSS-to-Bricks conversion when the target exposes it.
 - Carry Kiwe's no-loss proof for query loops, dynamic tags, conditions, interactions, unsupported features, and manual-review gates.
 - Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth.
+- Do not convert `combined-preview`, `appshell-theme`, DSA/AppShell theme packages, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css`.
 
 Expected output:
 
@@ -357,6 +417,8 @@ bricks-conversion/
 ```
 
 The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and contains top-level `source`, `target`, `conversion`, `elements`, `pageSettings`, `globalClasses`, `globalVariables`, `fidelity`, and `report` lanes.
+
+`source.html` must point to `website/bricks-paste.html`.
 
 Use `/wp-json/dsa/v1/ai/bricks/context` or MCP `kiwe_get_bricks_conversion_context` when available. That context describes real Bricks elements, query loops, dynamic tags, conditions, interactions, and the Kiwe conversion package.
 
@@ -402,14 +464,16 @@ For best output quality:
 5. Audit tokens with `/audit /brickstheme`.
 6. Create the DSA theme with `/create /dsatheme`.
 7. Audit the DSA theme with `/audit /dsatheme`.
-8. Assemble with `/assemble /combined`.
-9. Audit with `/audit /combined`.
-10. Add real WordPress/Bricks/WooCommerce bindings with `/dynamic /sitegraph`.
-11. Convert to Bricks with `/convert /bricks`.
-12. Audit conversion with `/audit /bricksconversion`.
-13. Apply to staging only through Kiwe controlled executor.
+8. Create or refresh DSA preview proof with `/create /preview /dsatheme` if needed.
+9. Assemble with `/assemble /combined`.
+10. Create or refresh the combined preview proof with `/create /preview /combined` if needed.
+11. Audit with `/audit /combined`.
+12. Add real WordPress/Bricks/WooCommerce bindings with `/dynamic /sitegraph`.
+13. Convert only `website/bricks-paste.html` to Bricks with `/convert /bricks`.
+14. Audit conversion with `/audit /bricksconversion`.
+15. Apply to staging only through Kiwe controlled executor.
 
-For fast rough experiments, `/build /dsathemeandhomepage` or mode `combined` is allowed, but expect more audit cycles.
+For fast rough experiments, `/create /dsathemeandhomepage` or mode `combined` is allowed, but expect more audit cycles.
 
 ## Model behavior rule
 

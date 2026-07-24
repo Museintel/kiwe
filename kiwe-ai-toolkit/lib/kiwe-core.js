@@ -328,6 +328,8 @@ function routeKind(command) {
   const text = String(command || '').trim().toLowerCase();
   if (!text) return 'workflow';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
+  if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
+  if (/\/create/.test(text) && /\/preview/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-preview-create';
   if (/(\/build|\/create)/.test(text) && /(dsathemeandhomepage|theme and homepage|homepage and theme)/.test(text)) return 'combined-assemble';
   if (/\/audit/.test(text) && /(\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|bricksjson|html-to-bricks)/.test(text)) return 'bricks-audit';
   if (/(\/convert|\/export|\/translate|\/rebuild|\/adapt)/.test(text) && /(\/bricks|bricks json|bricks conversion|html-to-bricks|html css to bricks)/.test(text)) return 'bricks-convert';
@@ -489,8 +491,28 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     parts.push(frameworkProfileContext(), readMaybe('contexts/audit-lite.md'));
   } else if (kind === 'theme-create') {
     parts.push(getContext('theme'));
+  } else if (kind === 'theme-preview-create') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Create or revise only the DSA AppShell theme preview lane: `appshell-theme/preview/index.html` and `appshell-theme/preview/PLACEHOLDERS.md`.',
+      '',
+      'The preview must prove the AppShell theme against live-like Kiwe DSA roots, screen/sheet internals, dock modes, Geometry Engine states, and installed `theme.css`. Do not create or convert a Bricks page in this phase.',
+      '',
+      getContext('theme')
+    );
   } else if (kind === 'theme-audit') {
     parts.push(getContext('theme'), readMaybe('contexts/audit-lite.md'));
+  } else if (kind === 'combined-preview-create') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Create or revise only the primary combined preview lane: `combined-preview/index.html` and optional `combined-preview/assets/*`.',
+      '',
+      'The preview must show the website/page behind the Kiwe AppShell with variation controls. It is not the Bricks import artifact and it must not be used as `/convert /bricks` source.',
+      '',
+      readMaybe('contexts/combined-lite.md')
+    );
   } else if (kind === 'combined-assemble') {
     parts.push(
       '# Selected phase guidance',

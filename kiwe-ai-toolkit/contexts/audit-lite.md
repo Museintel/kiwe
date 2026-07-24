@@ -80,6 +80,8 @@ If the handoff includes a `/convert /bricks` result, audit the conversion lane t
 
 - `bricks-conversion/kiwe-bricks-conversion.json` exists and uses `schema: "kiwe.bricks-conversion.v1"`.
 - `bricks-conversion/BRICKS-CONVERSION-NOTES.md` exists.
+- `source.html` points to `website/bricks-paste.html`.
+- Fail if the conversion source is `combined-preview`, `appshell-theme`, DSA/AppShell preview markup, sheet/screen/dock/navbar markup, `theme-package.json`, or `css/theme.css`.
 - `elements` is a non-empty Bricks element array with IDs, names, and valid parent references.
 - Source Seam classes, IDs, ARIA, `data-role`, `data-seam-*`, and `data-dsa-open-module` launchers are preserved in the conversion package.
 - Source `data-kiwe-query-template` markers have Bricks query settings or `fidelity.dynamicIntent`.

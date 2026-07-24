@@ -1,0 +1,58 @@
+{
+  "schema": "kiwe.bricks-conversion.v1",
+  "source": {
+    "html": "combined-preview/index.html",
+    "css": "combined-preview/assets/combined-preview.css",
+    "sourceHash": "invalid-appshell-source-fixture"
+  },
+  "target": {
+    "builder": "bricks",
+    "format": "bricks-elements-json",
+    "mode": "conversion-review",
+    "applyAuthority": "human-reviewed-kiwe-staging-adapter"
+  },
+  "conversion": {
+    "converter": "ai-authored",
+    "nativePreferred": true,
+    "containsExecutableJs": false
+  },
+  "elements": [
+    {
+      "id": "bad01",
+      "name": "section",
+      "parent": "0",
+      "settings": {
+        "tag": "section",
+        "_cssClasses": "seam-section"
+      }
+    }
+  ],
+  "pageSettings": {},
+  "globalClasses": [],
+  "globalVariables": [],
+  "fidelity": {
+    "sourceSelectors": [
+      {
+        "selector": "combined-preview/index.html",
+        "intent": "invalid preview source",
+        "mappedElementIds": ["bad01"],
+        "status": "blocked"
+      }
+    ],
+    "elementMapping": [],
+    "dynamicIntent": [],
+    "interactions": [],
+    "conditions": [],
+    "unsupported": [
+      {
+        "source": "combined-preview/index.html",
+        "reason": "DSA/AppShell preview lanes are not Bricks conversion sources."
+      }
+    ]
+  },
+  "report": {
+    "summary": "Invalid fixture proving /convert /bricks refuses combined-preview/AppShell source lanes.",
+    "manualReview": [],
+    "lostFeatures": []
+  }
+}

@@ -18,15 +18,19 @@ For highest-quality work, use the phased workflow instead of one giant combined 
 4. `/create /brickstheme` or `/create /frameworkprofile` for global Kiwe/Bricks token personality.
 5. `/create /dsatheme`.
 6. `/audit /dsatheme`.
-7. `/assemble /combined`.
-8. `/audit /combined`.
-9. `/dynamic /sitegraph` after visual approval.
-10. `/convert /bricks`.
-11. `/audit /bricksconversion`.
+7. `/create /preview /dsatheme` when a focused AppShell preview proof is needed.
+8. `/assemble /combined`.
+9. `/create /preview /combined` when the page-plus-AppShell preview needs revision.
+10. `/audit /combined`.
+11. `/dynamic /sitegraph` after visual approval.
+12. `/convert /bricks`.
+13. `/audit /bricksconversion`.
 
 One-shot `combined` still exists for fast experiments, but serious candidate work should be staged.
 
 Any phase can add `/usecompanion`, such as `/rebuild /seamframework /usecompanion` or `/audit /dsatheme /usecompanion`. Companion is optional and non-blocking: if a scoped Kiwe AI key and target REST base are available, use Companion once for compact phase cards or deterministic audit findings; if it is unavailable, disabled, slow, rate-limited, over budget, or inaccessible, continue with the same phase normally and report the fallback. Companion is a contract oracle/context broker, not a creative co-author or full-codebase dump.
+
+Canonical command language uses `/create` for creation phases. `/build` may be tolerated as an old alias by the router, but toolkit-facing output should normalize back to `/create`.
 
 Current lane rule: combined output uses AppShell `theme-package.json` for live DSA theme settings and `settings.tokens`; standalone `kiwe.framework-profile.v1` files are for website/page-only Framework token profiles or explicit `Kiwe > Framework` imports, not loose AppShell settings profiles.
 
@@ -276,6 +280,8 @@ bricks-conversion/
 ```
 
 This is the no-loss bridge between approved HTML/CSS and Bricks JSON. It should prefer Bricks 2.4 native HTML/CSS conversion where the target site exposes it, then add Kiwe fidelity evidence: source selectors, element mapping, query-loop/dynamic intent, conditions, interactions, unsupported features, manual-review notes, and preserved Seam/Kiwe attributes.
+
+`/convert /bricks` converts only `website/bricks-paste.html`. It must never convert `combined-preview`, `appshell-theme`, DSA/AppShell preview markup, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css`. Use `/create /preview /dsatheme` and `/create /preview /combined` for preview-proof work instead.
 
 Validate it before staging:
 

@@ -6,6 +6,21 @@ This is not a creative design phase. It starts only after a website/page artifac
 
 Goal: convert an approved `website/bricks-paste.html` HTML/CSS page into a reviewable Bricks-native element JSON package without losing layout, Seam vocabulary, Kiwe launchers, dynamic tags, query-loop intent, conditions, interactions, or unsupported/manual-review evidence.
 
+Hard boundary: `/convert /bricks` is page-only. Its source is `website/bricks-paste.html` and nothing else.
+
+Never convert these lanes into Bricks:
+
+- `combined-preview/index.html` or `combined-preview/assets/*`;
+- `appshell-theme/preview/*`;
+- `appshell-theme/import/*`;
+- `theme-package.json`;
+- `css/theme.css`;
+- DSA/AppShell sheet, screen, dock, navbar, backdrop, fixture, or preview markup.
+
+If a combined handoff is supplied, use only the `website/bricks-paste.html` lane as the conversion source. The AppShell theme remains a Kiwe theme package, not Bricks content.
+
+`source.html` must point to `website/bricks-paste.html`.
+
 Do not read the whole Kiwe repository. Do not scrape the public frontend. Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth. This phase produces a conversion package only.
 
 ## Preferred inputs
@@ -101,6 +116,7 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
 - Use neutral `div`/`block` only for real layout shells.
 - Preserve classes, IDs, ARIA, `data-role`, `data-seam-*`, `data-project-role`, and canonical Kiwe launchers such as `data-dsa-open-module="cart"`.
 - Keep `website/bricks-paste.html` page-only. Do not put `data-dsa-surface`, dock, sheet, screen, or AppShell fixture markup into the Bricks page artifact.
+- Do not use `combined-preview`, `appshell-theme`, `theme-package.json`, `theme.css`, dock markup, sheet markup, or screen markup as conversion source.
 - Convert approved visual CSS into Bricks element settings, global classes, global variables, or safe page CSS. Do not hide the whole design in one giant Code element unless Bricks cannot represent it.
 - Preserve intentional CSS states and responsive behavior. If a pseudo-state, media query, mask, grid, interaction, or animation cannot be represented safely in Bricks controls, put it in `pageSettings.customCss` and list it under `fidelity.unsupported` or `report.manualReview`.
 - Executable JavaScript must not silently become production authority. Prefer Bricks interactions when safe, Kiwe launchers for Kiwe capabilities, or manual review.
