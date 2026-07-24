@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.33 - 2026-07-24
+
+- Removed the duplicate `Architecture status` and `Production readiness` panels from `Kiwe > Developer`; Developer now stays focused on diagnostics, runtime recovery, enhancement gates, builder attributes, portable export/reset, and deployment tooling.
+- Kept the underlying production-readiness report on the main Kiwe overview, where it belongs as a release-support view rather than a Developer-page wall of legacy audit text.
+- Added a release regression check so the retired Developer-page architecture/readiness panels cannot quietly reappear.
+
 ## 0.6.32 - 2026-07-24
 
 - Retired the S18 generated asset delivery pilot from `Kiwe > Developer`: removed its diagnostics checkboxes, build-status card, queue action, architecture-status row, readiness check, and APEX generated-build evidence.

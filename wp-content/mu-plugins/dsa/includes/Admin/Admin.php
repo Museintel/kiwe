@@ -5737,7 +5737,6 @@ final class Admin {
 		$settings        = $this->settings->all();
 		$diagnostics     = wp_parse_args( $settings['diagnostics'] ?? [], $this->settings->defaults()['diagnostics'] );
 		$enhancements    = wp_parse_args( $settings['enhancements'] ?? [], $this->settings->defaults()['enhancements'] );
-		$readiness       = $this->readiness->report();
 		$package_proof   = \DSA\Runtime\Package_Manifest::verify();
 		$loader_version  = defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : '';
 		?>
@@ -5824,32 +5823,6 @@ final class Admin {
 					<p class="description" x-show="enabled && (htmx || alpine)"><?php esc_html_e( 'Pilot mode selected. WordPress still owns persistence; these checkboxes only preview the local widget state before save.', 'dsa' ); ?></p>
 					<?php submit_button( __( 'Save enhancement gates', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
-			</section>
-
-			<section class="dsa-admin__panel">
-				<h2><?php esc_html_e( 'Architecture status', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'These are developer-owned gates, not production settings. They stay visible here so unfinished architecture is explicit without confusing site owners.', 'dsa' ); ?></p>
-				<table class="widefat striped">
-					<tbody>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Legacy fragment navigation', 'dsa' ); ?></th>
-							<td><strong><?php esc_html_e( 'Removed and hard disabled', 'dsa' ); ?></strong><br><?php esc_html_e( 'The original partial-page renderer was deleted after audit. Production navigation is full-document plus the transition Surface. The separate S13-S16 controlled editorial morph pipeline is implemented behind a Developer gate but remains off until its live compatibility matrix passes.', 'dsa' ); ?></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Surface width fallback', 'dsa' ); ?></th>
-							<td><strong><?php echo esc_html( (string) (int) ( $settings['surface_width'] ?? 72 ) ); ?>px</strong><br><?php esc_html_e( 'Retained only as a legacy Phantom Viewport fallback for old integrations. Responsive Geometry Engine tokens are the production source of layout truth.', 'dsa' ); ?></td>
-						</tr>
-					</tbody>
-				</table>
-			</section>
-
-			<section class="dsa-admin__panel">
-				<h2><?php esc_html_e( 'Production readiness', 'dsa' ); ?></h2>
-				<p><strong><?php echo esc_html( (string) $readiness['score'] ); ?></strong> <?php echo esc_html( (string) $readiness['summary'] ); ?></p>
-				<p><?php echo esc_html( sprintf( __( '%1$d critical, %2$d warnings, %3$d passing.', 'dsa' ), (int) $readiness['counts']['critical'], (int) $readiness['counts']['warning'], (int) $readiness['counts']['pass'] ) ); ?></p>
-				<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Check', 'dsa' ); ?></th><th><?php esc_html_e( 'Status', 'dsa' ); ?></th><th><?php esc_html_e( 'Action', 'dsa' ); ?></th></tr></thead><tbody>
-				<?php foreach ( $readiness['checks'] as $check ) : ?><tr><td><?php echo esc_html( (string) $check['label'] ); ?></td><td><?php echo esc_html( (string) $check['status'] ); ?></td><td><?php echo esc_html( (string) $check['action'] ); ?></td></tr><?php endforeach; ?>
-				</tbody></table>
 			</section>
 
 			<section class="dsa-admin__panel">

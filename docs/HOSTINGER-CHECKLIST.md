@@ -54,7 +54,7 @@ Keep full-page caching disabled while diagnosing identity, checkout, cart, Push,
 
 ## Release Gate
 
-- Run `Kiwe > Developer > Production readiness` and record warnings rather than treating it as automatic certification.
+- Run the main `Kiwe` overview's Production Readiness report and record warnings rather than treating it as automatic certification.
 - Run `node tools/certification/rc13-public-live.cjs https://your-site.example` from the canonical project. This is a read-only/public-boundary preflight except for two deliberately rejected cart mutations using product ID `0`; it must not add an item or create an order.
 - On a staging/test store with at least one purchasable simple product, run `node tools/certification/rc13-commerce-live.cjs https://your-site.example`. It creates an isolated anonymous Woo session, adds one unit, verifies a separate read, exercises quantity when allowed, and removes the item in cleanup. It creates ordinary cart analytics events but no order, stock reduction, or payment.
 - Run `node tools/certification/rc14-public-live.cjs https://your-site.example` after disabling frontend diagnostics. It is read-only and checks document/feed/robots isolation, no-snippet protection, canonical count, service-worker scope, private hydration, deployed assets, and production quietness.
