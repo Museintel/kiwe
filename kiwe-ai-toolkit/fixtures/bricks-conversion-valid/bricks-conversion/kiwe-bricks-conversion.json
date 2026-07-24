@@ -1,0 +1,216 @@
+{
+  "schema": "kiwe.bricks-conversion.v1",
+  "source": {
+    "html": "website/bricks-paste.html",
+    "css": "pageSettings.customCss",
+    "sourceHash": "fixture"
+  },
+  "target": {
+    "builder": "bricks",
+    "format": "bricks-elements-json",
+    "mode": "conversion-review",
+    "applyAuthority": "human-reviewed-kiwe-staging-adapter"
+  },
+  "conversion": {
+    "converter": "ai-authored",
+    "nativePreferred": true,
+    "containsExecutableJs": false
+  },
+  "elements": [
+    {
+      "id": "hero01",
+      "name": "section",
+      "parent": "0",
+      "children": ["hero02", "hero03", "hero04", "hero05", "hero06"],
+      "settings": {
+        "tag": "section",
+        "_cssId": "hero",
+        "_cssClasses": "seam-section seam-stack biovantage-hero",
+        "_attributes": [
+          { "name": "data-role", "value": "section" },
+          { "name": "data-seam-purpose", "value": "hero" }
+        ]
+      }
+    },
+    {
+      "id": "hero02",
+      "name": "text-basic",
+      "parent": "hero01",
+      "settings": {
+        "text": "Wellness catalog",
+        "_cssClasses": "seam-eyebrow"
+      }
+    },
+    {
+      "id": "hero03",
+      "name": "heading",
+      "parent": "hero01",
+      "settings": {
+        "tag": "h1",
+        "text": "{site_title}"
+      }
+    },
+    {
+      "id": "hero04",
+      "name": "text-basic",
+      "parent": "hero01",
+      "settings": {
+        "text": "Evidence-led supplements and wellness support.",
+        "_cssClasses": "seam-lead"
+      }
+    },
+    {
+      "id": "hero05",
+      "name": "button",
+      "parent": "hero01",
+      "settings": {
+        "text": "Shop products",
+        "link": { "type": "external", "url": "/shop" },
+        "_cssClasses": "seam-button"
+      }
+    },
+    {
+      "id": "hero06",
+      "name": "button",
+      "parent": "hero01",
+      "settings": {
+        "text": "Search Kiwe",
+        "_cssClasses": "seam-button",
+        "_attributes": [
+          { "name": "data-dsa-open-module", "value": "search" },
+          { "name": "type", "value": "button" }
+        ]
+      }
+    },
+    {
+      "id": "rail01",
+      "name": "section",
+      "parent": "0",
+      "children": ["rail02", "rail03"],
+      "settings": {
+        "tag": "section",
+        "_cssId": "featured-products",
+        "_cssClasses": "seam-section seam-reel",
+        "_attributes": [
+          { "name": "data-role", "value": "section" },
+          { "name": "data-kiwe-query-template", "value": "featured-products" }
+        ],
+        "query": {
+          "objectType": "post",
+          "post_type": ["product"],
+          "posts_per_page": 4,
+          "tax_query": ["product_cat::123"],
+          "orderby": "menu_order",
+          "order": "ASC"
+        }
+      }
+    },
+    {
+      "id": "rail02",
+      "name": "heading",
+      "parent": "rail01",
+      "settings": {
+        "tag": "h2",
+        "text": "Featured products"
+      }
+    },
+    {
+      "id": "rail03",
+      "name": "block",
+      "parent": "rail01",
+      "children": ["rail04", "rail05", "rail06", "rail07"],
+      "settings": {
+        "tag": "article",
+        "_cssClasses": "seam-card product-card",
+        "_attributes": [
+          { "name": "data-role", "value": "card" },
+          { "name": "data-kiwe-binding", "value": "featured-products" }
+        ]
+      }
+    },
+    {
+      "id": "rail04",
+      "name": "image",
+      "parent": "rail03",
+      "settings": {
+        "image": "{featured_image}"
+      }
+    },
+    {
+      "id": "rail05",
+      "name": "heading",
+      "parent": "rail03",
+      "settings": {
+        "tag": "h3",
+        "text": "{post_title}"
+      }
+    },
+    {
+      "id": "rail06",
+      "name": "text-basic",
+      "parent": "rail03",
+      "settings": {
+        "text": "{post_excerpt}"
+      }
+    },
+    {
+      "id": "rail07",
+      "name": "text-link",
+      "parent": "rail03",
+      "settings": {
+        "text": "View product",
+        "link": { "type": "external", "url": "{post_url}" }
+      }
+    }
+  ],
+  "pageSettings": {
+    "customCss": ".biovantage-hero{min-block-size:var(--kiwe-space-4xl)}"
+  },
+  "globalClasses": [],
+  "globalVariables": [],
+  "fidelity": {
+    "sourceSelectors": [
+      {
+        "selector": "#hero",
+        "intent": "hero section",
+        "mappedElementIds": ["hero01"],
+        "status": "mapped"
+      },
+      {
+        "selector": "[data-kiwe-query-template=\"featured-products\"]",
+        "intent": "featured product query rail",
+        "mappedElementIds": ["rail01", "rail03"],
+        "status": "mapped"
+      }
+    ],
+    "elementMapping": [
+      {
+        "source": "section#hero",
+        "bricksElement": "section",
+        "id": "hero01"
+      },
+      {
+        "source": "article.product-card",
+        "bricksElement": "block",
+        "id": "rail03"
+      }
+    ],
+    "dynamicIntent": [
+      {
+        "sourceSelector": "[data-kiwe-query-template=\"featured-products\"]",
+        "bindingId": "featured-products",
+        "bricksElementId": "rail01",
+        "queryLoop": "product_cat::123",
+        "status": "mapped"
+      }
+    ],
+    "interactions": [],
+    "conditions": [],
+    "unsupported": []
+  },
+  "report": {
+    "summary": "Fixture converts a Seam page with a Kiwe search launcher and product query marker into Bricks element JSON.",
+    "manualReview": [],
+    "lostFeatures": []
+  }
+}

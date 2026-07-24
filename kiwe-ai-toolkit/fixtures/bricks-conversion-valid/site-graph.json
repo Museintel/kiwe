@@ -1,0 +1,92 @@
+{
+  "schema": "kiwe.site-graph.v1",
+  "generatedAt": "2026-07-24T00:00:00+05:30",
+  "authority": {
+    "readOnly": true,
+    "mayMutateWordPress": false
+  },
+  "wordpress": {
+    "postTypes": [
+      {
+        "name": "page",
+        "label": "Pages",
+        "public": true
+      },
+      {
+        "name": "product",
+        "label": "Products",
+        "public": true
+      }
+    ],
+    "taxonomies": [
+      {
+        "name": "product_cat",
+        "label": "Product categories",
+        "terms": [
+          {
+            "id": 123,
+            "name": "Featured",
+            "slug": "featured"
+          }
+        ]
+      }
+    ]
+  },
+  "woocommerce": {
+    "active": true,
+    "productCategories": [
+      {
+        "id": 123,
+        "name": "Featured",
+        "slug": "featured"
+      }
+    ]
+  },
+  "bricks": {
+    "active": true,
+    "version": "2.4-beta",
+    "queryLoopTypes": [
+      {
+        "objectType": "post",
+        "label": "Posts"
+      },
+      {
+        "objectType": "term",
+        "label": "Terms"
+      }
+    ],
+    "dynamicTags": [
+      {
+        "name": "{site_title}",
+        "label": "Site title"
+      },
+      {
+        "name": "{post_title}",
+        "label": "Post title"
+      },
+      {
+        "name": "{post_url}",
+        "label": "Post URL"
+      },
+      {
+        "name": "{post_excerpt}",
+        "label": "Post excerpt"
+      },
+      {
+        "name": "{featured_image}",
+        "label": "Featured image"
+      }
+    ],
+    "kiweDynamicTags": []
+  },
+  "kiwe": {
+    "modules": {
+      "items": [
+        {
+          "id": "search",
+          "label": "Search"
+        }
+      ]
+    }
+  }
+}

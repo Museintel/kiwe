@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -31,7 +31,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_route_command',
-      description: 'Route a short command such as /ideate /webdraft, /rebuild /seamframework, /audit /combined, /create /dsatheme, or /dynamic /sitegraph to the smallest relevant Kiwe context.',
+      description: 'Route a short command such as /ideate /webdraft, /rebuild /seamframework, /convert /bricks, /audit /bricksconversion, /audit /combined, /create /dsatheme, or /dynamic /sitegraph to the smallest relevant Kiwe context.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -93,6 +93,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           targetDir: { type: 'string', description: 'Handoff folder, bricks-bindings folder, or kiwe-bindings.json path.' },
           siteGraphPath: { type: 'string', description: 'Optional path to kiwe.site-graph.v1 JSON for deep validation.' },
           optional: { type: 'boolean', description: 'If true, missing binding plan is informational instead of failing.' }
+        },
+        required: ['targetDir']
+      }
+    },
+    {
+      name: 'kiwe_get_bricks_conversion_context',
+      description: 'Return the Kiwe Bricks conversion context for /convert /bricks and /audit /bricksconversion without reading the full plugin codebase.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_validate_bricks_conversion',
+      description: 'Validate a reviewable Bricks conversion package, optionally against a target-site Site Graph JSON file.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          targetDir: { type: 'string', description: 'Handoff folder, bricks-conversion folder, or kiwe-bricks-conversion.json path.' },
+          siteGraphPath: { type: 'string', description: 'Optional path to kiwe.site-graph.v1 JSON for deep validation.' },
+          optional: { type: 'boolean', description: 'If true, missing conversion package is informational instead of failing.' }
         },
         required: ['targetDir']
       }
@@ -163,6 +181,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_validate_bindings':
       result = validateBindings(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });
+      break;
+    case 'kiwe_get_bricks_conversion_context':
+      result = getBricksConversionContext();
+      break;
+    case 'kiwe_validate_bricks_conversion':
+      result = validateBricksConversion(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });
       break;
     case 'kiwe_prepare_apply_plan':
       result = prepareApplyPlan(args.targetDir, { siteGraphPath: args.siteGraphPath || '', write: Boolean(args.write) });

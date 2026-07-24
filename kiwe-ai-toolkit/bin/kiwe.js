@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -22,9 +22,11 @@ Commands:
   kiwe validate <website|theme|combined> <output-dir>
   kiwe vocabulary
   kiwe dynamic-context
+  kiwe bricks-conversion-context
   kiwe dynamic-pass --brief text [--site-graph-summary text] [--handoff-summary text]
   kiwe validate-framework-profile <profile-json-or-handoff-dir> [--optional]
   kiwe validate-bindings <handoff-or-bindings-dir-or-json> [--site-graph path/to/site-graph.json] [--optional]
+  kiwe validate-bricks-conversion <handoff-or-conversion-json> [--site-graph path/to/site-graph.json] [--optional]
   kiwe prepare-apply <handoff-or-bindings-dir-or-json> --site-graph path/to/site-graph.json [--write]
 `);
 }
@@ -61,6 +63,8 @@ try {
     print(listClassVocabulary());
   } else if (command === 'dynamic-context') {
     print(getDynamicContext());
+  } else if (command === 'bricks-conversion-context') {
+    print(getBricksConversionContext());
   } else if (command === 'dynamic-pass') {
     const briefIndex = args.indexOf('--brief');
     const graphIndex = args.indexOf('--site-graph-summary');
@@ -74,6 +78,13 @@ try {
     const targetDir = args[0] && !args[0].startsWith('--') ? args[0] : '.';
     const siteGraphPath = siteGraphIndex >= 0 ? args[siteGraphIndex + 1] : '';
     const result = validateBindings(targetDir, { siteGraphPath, optional: args.includes('--optional') });
+    print(result);
+    process.exitCode = result.ok ? 0 : 1;
+  } else if (command === 'validate-bricks-conversion') {
+    const siteGraphIndex = args.indexOf('--site-graph');
+    const targetDir = args[0] && !args[0].startsWith('--') ? args[0] : '.';
+    const siteGraphPath = siteGraphIndex >= 0 ? args[siteGraphIndex + 1] : '';
+    const result = validateBricksConversion(targetDir, { siteGraphPath, optional: args.includes('--optional') });
     print(result);
     process.exitCode = result.ok ? 0 : 1;
   } else if (command === 'validate-framework-profile') {

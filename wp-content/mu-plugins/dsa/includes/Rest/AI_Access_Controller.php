@@ -8,6 +8,7 @@ use DSA\AI\AI_Companion_Service;
 use DSA\AI\Bricks_AI_Intelligence_Service;
 use DSA\AI\Apply_Plan_Preparer;
 use DSA\AI\Binding_Plan_Validator;
+use DSA\AI\Bricks_Conversion_Validator;
 use DSA\AI\Bricks_Controlled_Adapter_Service;
 use DSA\AI\Controlled_Executor_Service;
 use DSA\AI\Final_Apply_Confirmation_Service;
@@ -81,6 +82,7 @@ final class AI_Access_Controller {
 			[ [ 'GET', 'POST' ], '/ai/bricks/context', 'bricks_ai_context', 'bricks_ai' ],
 			[ 'POST', '/ai/bricks/plan', 'bricks_ai_plan', 'bricks_ai' ],
 			[ 'POST', '/ai/validate-bindings', 'validate_bindings', 'validate_bindings' ],
+			[ 'POST', '/ai/validate-bricks-conversion', 'validate_bricks_conversion', 'validate_bricks_conversion' ],
 			[ 'POST', '/ai/prepare-apply-plan', 'prepare_apply_plan', 'prepare_apply_plan' ],
 			[ 'POST', '/ai/stage-apply-plan', 'stage_apply_plan', 'stage_apply_plan' ],
 			[ 'GET', '/ai/stages', 'stages', 'trusted_apply_chain' ],
@@ -170,6 +172,7 @@ final class AI_Access_Controller {
 					'readOnly'    => true,
 				],
 				'validateBindings'  => true,
+				'validateBricksConversion' => true,
 				'prepareApplyPlan'  => true,
 				'stageApplyPlan'    => true,
 				'trustedApplyChain' => true,
@@ -325,6 +328,18 @@ final class AI_Access_Controller {
 		$site_graph = $this->site_graph_from_request( $request );
 
 		return ( new Binding_Plan_Validator() )->validate( $binding, $site_graph );
+	}
+
+	private function validate_bricks_conversion( WP_REST_Request $request, array $auth ): array {
+		$conversion = $this->array_param( $request, 'conversion' );
+		if ( [] === $conversion ) {
+			return $this->bad_request( 'missing_conversion', 'Request body must include conversion.' );
+		}
+		$site_graph  = $this->site_graph_from_request( $request );
+		$source_html = (string) ( $request->get_param( 'sourceHtml' ) ?? $request->get_param( 'sourceHTML' ) ?? '' );
+		$binding     = $this->array_param( $request, 'binding' );
+
+		return ( new Bricks_Conversion_Validator() )->validate( $conversion, $site_graph, $source_html, $binding );
 	}
 
 	private function prepare_apply_plan( WP_REST_Request $request, array $auth ): array {

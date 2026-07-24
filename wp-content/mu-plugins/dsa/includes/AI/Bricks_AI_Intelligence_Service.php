@@ -62,6 +62,7 @@ final class Bricks_AI_Intelligence_Service {
 			'dynamicDataTags'  => $this->dynamic_data_tags( $args ),
 			'interactions'     => $this->interaction_controls(),
 			'conditions'       => $this->condition_controls(),
+			'conversion'       => $this->conversion_contract(),
 			'seam'             => [
 				'schema'       => 'kiwe.seam.headless.v1',
 				'tokenCount'   => count( $tokens ),
@@ -109,6 +110,9 @@ final class Bricks_AI_Intelligence_Service {
 				],
 				'conditions'        => [
 					'rule' => 'Use Bricks _conditions for element visibility such as logged-in state, post type, taxonomy, viewport, or commerce context when documented by Bricks controls.',
+				],
+				'conversion'        => [
+					'rule' => 'When the human asks /convert /bricks, emit bricks-conversion/kiwe-bricks-conversion.json plus notes. Preserve approved layout and source semantics while mapping live data intent to Bricks-native elements/settings.',
 				],
 				'seam'              => [
 					'rule' => 'Every semantic section/card/rail/tab/TOC candidate should carry Seam vocabulary and stable classes while visual style remains in Bricks settings or page CSS.',
@@ -553,11 +557,52 @@ final class Bricks_AI_Intelligence_Service {
 		];
 	}
 
+	private function conversion_contract(): array {
+		return [
+			'schema' => 'kiwe.bricks-conversion-context.v1',
+			'preferredNativeConverter' => class_exists( '\Bricks\Html_To_Bricks_Converter' ) || class_exists( '\Bricks\Abilities\Conversion' ),
+			'output' => [
+				'folder' => 'bricks-conversion/',
+				'files'  => [
+					'bricks-conversion/kiwe-bricks-conversion.json',
+					'bricks-conversion/BRICKS-CONVERSION-NOTES.md',
+				],
+				'jsonSchema' => 'kiwe.bricks-conversion.v1',
+			],
+			'rootKeys' => [ 'schema', 'source', 'target', 'conversion', 'elements', 'pageSettings', 'globalClasses', 'globalVariables', 'fidelity', 'report' ],
+			'authority' => [
+				'conversionIsReviewPackage' => true,
+				'conversionDoesNotMutate'   => true,
+				'applyAuthority'            => 'human-reviewed-kiwe-staging-adapter',
+				'controlledExecutorOps'     => [ 'bricks.page.from-html', 'bricks.template.from-html', 'bricks.raw-meta-write' ],
+			],
+			'fidelity' => [
+				'requireSourceSelectors' => true,
+				'requireSeamClassPreservation' => true,
+				'requireCanonicalLaunchers' => true,
+				'requireQueryIntentWhenSourceHasDataKiweQueryTemplate' => true,
+				'fields' => [ 'sourceSelectors', 'elementMapping', 'dynamicIntent', 'interactions', 'conditions', 'unsupported' ],
+			],
+			'forbidden' => [
+				'AppShell/DSA shell markup in website/bricks-paste.html or Bricks conversion JSON',
+				'duplicate cart/checkout/auth/search/save/AI runtime logic',
+				'Bricks javascript interactions unless explicitly manual-reviewed',
+				'direct WordPress/Bricks/WooCommerce write claims from the conversion package',
+			],
+			'validators' => [
+				'node kiwe-ai-toolkit/tools/validate-bindings.cjs <handoff> --site-graph <site-graph.json>',
+				'node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs <handoff> --site-graph <site-graph.json>',
+			],
+		];
+	}
+
 	private function tool_use_rules(): array {
 		return [
 			'Use /wp-json/dsa/v1/ai/bricks/context before emitting Bricks JSON when an API key is available.',
 			'Use /wp-json/dsa/v1/ai/site-graph and /ai/site-graph-data for real pages, products, posts, media, custom fields, post types, taxonomies, and term IDs.',
 			'Use /wp-json/dsa/v1/ai/studio/start before native/browser-AI collaboration so the model sees Kiwe + Bricks + Seam boundaries in one packet.',
+			'Use /convert /bricks only after the visual/Seam artifact is approved; output a reviewable bricks-conversion package, not a direct Bricks save.',
+			'Run /audit /bricksconversion or validate-bricks-conversion before staging.',
 			'Never paste runtime cart/checkout/auth logic into Bricks; use Kiwe/WordPress/WooCommerce authority instead.',
 		];
 	}

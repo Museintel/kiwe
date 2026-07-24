@@ -76,6 +76,22 @@ For combined mode, live-intended palette, typography, spacing, radius, shadow, a
 
 If the handoff is being applied to a real staging site through Kiwe AI, prefer the controlled `bricks.page.from-html` or `bricks.template.from-html` executor path over browser clipboard paste. The handoff author should still provide clean HTML/CSS, not raw Bricks JSON, unless a verified target explicitly asks for raw JSON. The auditor should check that the HTML/CSS is converter-friendly: semantic nesting, stable classes, preserved `data-dsa-open-module` launchers, no huge base64 payloads, no script-owned production behavior, and CSS that can safely live in Bricks page `customCss`.
 
+If the handoff includes a `/convert /bricks` result, audit the conversion lane too:
+
+- `bricks-conversion/kiwe-bricks-conversion.json` exists and uses `schema: "kiwe.bricks-conversion.v1"`.
+- `bricks-conversion/BRICKS-CONVERSION-NOTES.md` exists.
+- `elements` is a non-empty Bricks element array with IDs, names, and valid parent references.
+- Source Seam classes, IDs, ARIA, `data-role`, `data-seam-*`, and `data-dsa-open-module` launchers are preserved in the conversion package.
+- Source `data-kiwe-query-template` markers have Bricks query settings or `fidelity.dynamicIntent`.
+- Conditions/interactions are expressed through Bricks-supported settings and do not use unsafe JavaScript actions.
+- The conversion package does not claim direct Bricks/WordPress/WooCommerce write authority.
+
+When tools are available, run:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs <handoff> --site-graph <site-graph.json>
+```
+
 Converter-friendly also means human-readable after import. Audit the rendered page text at mobile and desktop widths for cramped or joined copy caused by missing inline spacing or over-compressed layout, such as `BestsellersThe`, `A century ofirresistible`, or `100+years`. Stat cards, category chips, hero eyebrow/title pairs, and CTA rows must preserve readable spacing and minimum legible type size after Bricks import.
 
 Page/header controls that open Kiwe modules must use canonical hooks:

@@ -18,7 +18,9 @@ Run them as separate phases:
 6. DSA audit.
 7. Combined assembly when both lanes are approved.
 8. Dynamic WordPress / Bricks / WooCommerce binding after the visual handoff passes.
-9. Controlled staging apply only when a trusted Kiwe site executor is explicitly authorized.
+9. Bricks conversion package after dynamic intent is approved.
+10. Bricks conversion audit.
+11. Controlled staging apply only when a trusted Kiwe site executor is explicitly authorized.
 
 This pipeline is preferred over one giant `combined` prompt for serious work.
 
@@ -34,6 +36,8 @@ Humans should be able to write short commands. The toolkit supplies the rules.
 /rebuild /seamframework /usecompanion
 /audit /dsatheme /usecompanion
 /dynamic /sitegraph /usecompanion
+/convert /bricks /usecompanion
+/audit /bricksconversion /usecompanion
 ```
 
 This flag means: use Kiwe Companion if it is available, then continue the selected phase. It must never become a blocker.
@@ -332,6 +336,55 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs /path/to/handoff --site-graph 
 
 `prepare-apply-plan` is dry-run planning, not mutation.
 
+### `/convert /bricks`
+
+Use only after the website/page visual artifact passes and, when the page should use live WordPress/Bricks/WooCommerce data, after `/dynamic /sitegraph` has mapped that intent.
+
+Purpose:
+
+- Convert the approved `website/bricks-paste.html` artifact into a reviewable Bricks-native element JSON package.
+- Preserve the approved layout, hierarchy, classes, IDs, ARIA, official Seam roles/classes, `data-seam-*`, `data-project-role`, and canonical Kiwe launchers such as `data-dsa-open-module`.
+- Prefer Bricks 2.4 native HTML/CSS-to-Bricks conversion when the target exposes it.
+- Carry Kiwe's no-loss proof for query loops, dynamic tags, conditions, interactions, unsupported features, and manual-review gates.
+- Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth.
+
+Expected output:
+
+```text
+bricks-conversion/
+  kiwe-bricks-conversion.json
+  BRICKS-CONVERSION-NOTES.md
+```
+
+The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and contains top-level `source`, `target`, `conversion`, `elements`, `pageSettings`, `globalClasses`, `globalVariables`, `fidelity`, and `report` lanes.
+
+Use `/wp-json/dsa/v1/ai/bricks/context` or MCP `kiwe_get_bricks_conversion_context` when available. That context describes real Bricks elements, query loops, dynamic tags, conditions, interactions, and the Kiwe conversion package.
+
+### `/audit /bricksconversion`
+
+Use after `/convert /bricks`.
+
+Audit for:
+
+- `bricks-conversion/kiwe-bricks-conversion.json` exists and uses `kiwe.bricks-conversion.v1`;
+- `BRICKS-CONVERSION-NOTES.md` exists;
+- Bricks elements are non-empty, have IDs/names, and parent references resolve;
+- `website/bricks-paste.html` remains page-only and contains no AppShell shell markup;
+- source Seam classes and canonical Kiwe launchers are preserved in the conversion package;
+- source `data-kiwe-query-template` markers have Bricks query settings or `fidelity.dynamicIntent`;
+- Bricks dynamic tags and query-loop targets are verified against Site Graph when supplied;
+- `_conditions` and `_interactions` are arrays and do not use unsafe JavaScript actions;
+- unsupported visual/behavioral pieces are explicitly listed for manual review;
+- no direct save/publish/write authority is claimed.
+
+If tools are available, run:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs /path/to/handoff --site-graph /path/to/site-graph.json
+```
+
+MCP clients should call `kiwe_validate_bricks_conversion`.
+
 ### `/apply /staging`
 
 Use only with a target Kiwe site API key, explicit staging confirmation, and explicit mutation authorization.
@@ -352,7 +405,9 @@ For best output quality:
 8. Assemble with `/assemble /combined`.
 9. Audit with `/audit /combined`.
 10. Add real WordPress/Bricks/WooCommerce bindings with `/dynamic /sitegraph`.
-11. Apply to staging only through Kiwe controlled executor.
+11. Convert to Bricks with `/convert /bricks`.
+12. Audit conversion with `/audit /bricksconversion`.
+13. Apply to staging only through Kiwe controlled executor.
 
 For fast rough experiments, `/build /dsathemeandhomepage` or mode `combined` is allowed, but expect more audit cycles.
 

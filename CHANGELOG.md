@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.36 - 2026-07-24
+
+- Added the `/convert /bricks` and `/audit /bricksconversion` lanes so approved HTML/CSS/JS page artifacts can become reviewable Bricks-native JSON packages without reading the full codebase or mutating WordPress/Bricks.
+- Added deterministic Bricks conversion validation across toolkit CLI, MCP, REST API, WordPress Abilities, Site Graph discovery, Bricks AI context, Companion review, and connector contracts.
+- Added a valid Bricks conversion fixture proving Seam class preservation, Kiwe launcher preservation, query-loop/dynamic intent, source-element fidelity maps, notes, and linked binding validation.
+
 ## 0.6.35 - 2026-07-24
 
 - Added the Kiwe AI phased workflow/router for higher-quality external AI outputs: `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/assemble /combined`, and `/dynamic /sitegraph` now route to smaller contexts before one-shot combined work.

@@ -21,6 +21,8 @@ For highest-quality work, use the phased workflow instead of one giant combined 
 7. `/assemble /combined`.
 8. `/audit /combined`.
 9. `/dynamic /sitegraph` after visual approval.
+10. `/convert /bricks`.
+11. `/audit /bricksconversion`.
 
 One-shot `combined` still exists for fast experiments, but serious candidate work should be staged.
 
@@ -59,7 +61,9 @@ node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 node tools/validate-framework-profile.cjs ./out/my-website-handoff --optional
 node bin/kiwe.js dynamic-context
 node bin/kiwe.js dynamic-pass --brief "Turn approved product rails into Bricks query-loop binding plans using the supplied Site Graph."
+node bin/kiwe.js bricks-conversion-context
 node bin/kiwe.js validate-bindings ./out/my-kiwe-handoff --site-graph ./site-graph.json
+node bin/kiwe.js validate-bricks-conversion ./out/my-kiwe-handoff --site-graph ./site-graph.json
 node bin/kiwe.js prepare-apply ./out/my-kiwe-handoff --site-graph ./site-graph.json
 ```
 
@@ -159,6 +163,7 @@ Some browser AIs can read public GitHub files but cannot connect MCP tools or sa
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md` for browser models that need a short website/page plus AppShell contract.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md` for a website/page plus AppShell direction/settings.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md` for v2/v3/v4 revision and self-audit passes.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md` for `/convert /bricks` and `/audit /bricksconversion`.
 
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
 Do not use web search to find these files; open the exact raw URL that matches the assignment mode.
@@ -198,6 +203,8 @@ Example MCP client entry:
 - `kiwe_create_handoff`
 - `kiwe_validate_handoff`
 - `kiwe_validate_bindings`
+- `kiwe_get_bricks_conversion_context`
+- `kiwe_validate_bricks_conversion`
 - `kiwe_prepare_apply_plan`
 - `kiwe_list_class_vocabulary`
 - `kiwe_get_dynamic_context`
@@ -257,6 +264,26 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 ```
 
 The same check is available to MCP clients as `kiwe_validate_bindings`. It validates `bricks-bindings/kiwe-bindings.json` against `kiwe.bricks-bindings.v1`, verifies real Site Graph post types/terms/query-loop object types/dynamic tags where supplied, and enforces canonical Kiwe launchers such as `data-dsa-open-module`.
+
+## Bricks conversion package
+
+After the dynamic binding pass is accepted, use `/convert /bricks` to create a reviewable Bricks-native element package:
+
+```text
+bricks-conversion/
+  kiwe-bricks-conversion.json
+  BRICKS-CONVERSION-NOTES.md
+```
+
+This is the no-loss bridge between approved HTML/CSS and Bricks JSON. It should prefer Bricks 2.4 native HTML/CSS conversion where the target site exposes it, then add Kiwe fidelity evidence: source selectors, element mapping, query-loop/dynamic intent, conditions, interactions, unsupported features, manual-review notes, and preserved Seam/Kiwe attributes.
+
+Validate it before staging:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs ./path/to/handoff --site-graph ./site-graph.json
+```
+
+MCP clients can call `kiwe_validate_bricks_conversion`. This validator is deterministic and non-mutating; it does not save Bricks or WordPress content.
 
 If Kiwe is installed on the target WordPress site, admins can also upload the produced `kiwe-bindings.json` at `Kiwe > AI > AI connector and Site Graph` for a live non-mutating validation report. The same admin report also previews/downloads the dry-run apply plan, can stage it as a `kiwe.trusted-apply-stage.v1` review candidate, can run `kiwe.trusted-adapter-proof.v1` against the current live Site Graph, can attach `kiwe.guarded-apply-authorization.v1`, can build `kiwe.pre-execution-gate.v1`, can build `kiwe.trusted-execution-preview.v1`, can attach `kiwe.final-apply-confirmation.v1`, can run `kiwe.fresh-sitegraph-revalidation.v1`, can build `kiwe.rollback-readiness-checkpoint.v1`, can attach `kiwe.target-resolution.v1`, can capture `kiwe.rollback-capture.v1`, can attach `kiwe.rendered-target-inspection.v1`, can build `kiwe.minimal-adapter-shell.v1`, can record `kiwe.final-save-approval.v1`, can build `kiwe.controlled-executor.v1`, can prepare `kiwe.bricks-controlled-adapter.v1`, and can build `kiwe.post-apply-verification.v1`, including preflight gates, Bricks/Kiwe operations, capability signals, blockers, manual-review items, rollback/render/final-confirmation requirements, live drift checks, target locking, target rollback snapshots, target baseline inspection, smallest-mutation route selection, final save approval, executor interface, adapter planning, post-apply verification planning, and rollback proof, without saving anything.
 

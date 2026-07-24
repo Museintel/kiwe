@@ -21,7 +21,7 @@ Preferred path for serious work:
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 ```
 
-Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/assemble /combined`, or `/dynamic /sitegraph`.
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/assemble /combined`, `/dynamic /sitegraph`, `/convert /bricks`, or `/audit /bricksconversion`.
 
 The workflow intentionally separates creativity from Kiwe contract compliance. A pure creative draft may happen first without Kiwe/Seam/DSA constraints; later commands rebuild, audit, package, and bind it.
 
@@ -36,6 +36,7 @@ If the human explicitly asks for one-shot output, read exactly one static contex
 - Website/page + AppShell direction/settings, full version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md`
 - Revision/audit pass: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md`
 - Dynamic WordPress/Bricks binding pass after an approved handoff: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md`
+- Bricks conversion package after dynamic binding approval: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md`
 
 For a fast prompt that asks for both a website/page and a Kiwe AppShell/DSA direction in one pass, read:
 
@@ -122,6 +123,7 @@ POST /wp-json/dsa/v1/ai/studio/draft
 POST /wp-json/dsa/v1/ai/studio/review
 GET|POST /wp-json/dsa/v1/ai/bricks/context
 POST /wp-json/dsa/v1/ai/bricks/plan
+POST /wp-json/dsa/v1/ai/validate-bricks-conversion
 ```
 
 `/ai/internal-context` returns the safe fused packet for Kiwe internal AI: Site Graph summary/hash, Site Graph Data schema, WordPress 7/Abilities signals, capability map, operating boundaries, and a SecureTrack status lane. SecureTrack brief details are off unless `Kiwe > AI` enables redacted SecureTrack sharing and the key has `all`, `security_brief`, or `companion_securetrack` scope. `/ai/advisor` runs the deterministic read-only advisor over that context and returns findings, recommendations, and safe next actions without calling a model or mutating the site. `/ai/advisor/enrich` returns the model-optional enrichment envelope: deterministic fallback summary, priority ordering, and the bounded model payload/schema a future WordPress AI Client adapter may use. It does not call a model in the current adapter. `/ai/security-brief` is redacted and separately gated: no raw IPs, usernames, secrets, full URLs, request payloads, or visitor trails.
@@ -135,6 +137,18 @@ When a workflow command includes `/usecompanion`, pass `mode`, `phase`, `command
 Kiwe Studio AI is the higher-level companion workflow. Enable it in `Kiwe > AI` and choose one operating mode: `native` for bounded native drafting through the configured provider/API key, `browser_companion` for browser AI plus token-saving Studio packet and Companion review, or `browser_only` when the user wants public toolkit prompts with no internal AI support. Use `/wp-json/dsa/v1/ai/studio/start` first for a token-saving Studio packet, `/wp-json/dsa/v1/ai/studio/draft` only when native drafting is enabled and the Kiwe AI key has `native_ai` scope, and `/wp-json/dsa/v1/ai/studio/review` after v1 output. A normal `studio_ai` key can obtain packets and deterministic reviews; add `native_ai` only when the key may spend provider tokens. Studio does not save Bricks, publish WordPress content, mutate WooCommerce, run cart/checkout/auth, or change SecureTrack enforcement.
 
 Bricks AI Intelligence is the Bricks-native map for both browser AI and Kiwe Studio AI. External tool clients can use a key with `bricks_ai`, `studio_ai`, or `all` scope to call `/wp-json/dsa/v1/ai/bricks/context` before emitting Bricks JSON or dynamic binding plans, and `/wp-json/dsa/v1/ai/bricks/plan` for a compact planning packet. It reports available Bricks elements, compact element controls, query loops, dynamic tags, conditions, interactions, Seam headless rules, and Kiwe launcher/runtime boundaries. It is read-only. It does not paste content, save Bricks, publish pages, or create Woo/cart/auth behavior.
+
+For `/convert /bricks`, produce a reviewable Bricks conversion package rather than a direct save:
+
+```text
+bricks-conversion/
+  kiwe-bricks-conversion.json
+  BRICKS-CONVERSION-NOTES.md
+```
+
+The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and must preserve the approved page hierarchy, Seam classes/attributes, canonical `data-dsa-open-module` launchers, query-loop intent, dynamic tags, conditions, interactions, and unsupported/manual-review evidence. Prefer Bricks 2.4 native HTML/CSS conversion when available, then add Kiwe's fidelity map. Validate with `validate-bricks-conversion` or MCP `kiwe_validate_bricks_conversion` before staging. The package does not mutate WordPress or Bricks by itself.
+
+Exact conversion file path: `bricks-conversion/kiwe-bricks-conversion.json`. REST/API-key validators can call `POST /wp-json/dsa/v1/ai/validate-bricks-conversion` with the conversion object, optional `sourceHtml`, optional `binding`, and optional `siteGraph`.
 
 When working inside the Bricks front-end editor, admins can enable the Kiwe Studio companion at `Kiwe > AI`. The editor panel uses WordPress nonce-auth routes (`/wp-json/dsa/v1/bricks/studio/context`, `/start`, `/draft`) to fetch the same Bricks + Seam context, plan a page/section, or call native AI when explicitly allowed. The panel is a planning/copilot surface, not a direct mutation surface; staging saves still go through the controlled executor.
 
@@ -214,6 +228,7 @@ dsa/review-studio-output
 dsa/get-bricks-ai-context
 dsa/plan-bricks-ai-page
 dsa/validate-bindings
+dsa/validate-bricks-conversion
 dsa/prepare-apply-plan
 dsa/stage-apply-plan
 ```
@@ -269,14 +284,16 @@ If MCP/tool calling is unavailable but shell execution is allowed:
 npm install --prefix kiwe-ai-toolkit
 node kiwe-ai-toolkit/bin/kiwe.js start auto --brief "Paste the human brief here."
 node kiwe-ai-toolkit/bin/kiwe.js dynamic-pass --brief "Paste the dynamic binding request here."
+node kiwe-ai-toolkit/bin/kiwe.js bricks-conversion-context
 node kiwe-ai-toolkit/tools/validate-framework-profile.cjs ./path/to/handoff --optional
 node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph ./site-graph.json
+node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs ./path/to/handoff --site-graph ./site-graph.json
 node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs ./path/to/handoff --site-graph ./site-graph.json
 ```
 
 If shell execution is not allowed, use the browser AI path above.
 
-For dynamic binding revisions, run `validate-bindings` when shell or MCP execution is available. If execution is not available, do not claim it ran; instead self-check the binding plan against `dynamic-lite.md` and report the limitation.
+For dynamic binding revisions, run `validate-bindings` when shell or MCP execution is available. For `/convert /bricks`, run `validate-bricks-conversion`. If execution is not available, do not claim it ran; instead self-check the binding/conversion plan against `dynamic-lite.md` and `bricks-conversion-lite.md` and report the limitation.
 
 If the human is using the WordPress admin UI, they can upload the produced `bricks-bindings/kiwe-bindings.json` at `Kiwe > AI > AI connector and Site Graph` to get a live non-mutating validation report against the target site's current Site Graph. The same admin report also shows the dry-run apply-plan preview, lets the human download the reviewed apply-plan JSON, can stage it as a Kiwe-owned `kiwe.trusted-apply-stage.v1` review candidate, can run `kiwe.trusted-adapter-proof.v1`, can attach `kiwe.guarded-apply-authorization.v1`, can build `kiwe.pre-execution-gate.v1`, can build `kiwe.trusted-execution-preview.v1`, can attach `kiwe.final-apply-confirmation.v1`, can run `kiwe.fresh-sitegraph-revalidation.v1`, can build `kiwe.rollback-readiness-checkpoint.v1`, can attach `kiwe.target-resolution.v1`, can capture `kiwe.rollback-capture.v1`, can attach `kiwe.rendered-target-inspection.v1`, can build `kiwe.minimal-adapter-shell.v1`, can record `kiwe.final-save-approval.v1`, can build `kiwe.controlled-executor.v1`, can prepare `kiwe.bricks-controlled-adapter.v1`, and can build `kiwe.post-apply-verification.v1` as non-mutating proof artifacts without running CLI tools.
 
@@ -297,7 +314,7 @@ When called without the staging executor confirmation body, they return confirma
 
 `kiwe.controlled-executor.v1`, `kiwe.bricks-controlled-adapter.v1`, and `kiwe.post-apply-verification.v1` are still not saves. The executor records the future adapter interface. The adapter plan maps approved operation IDs to deterministic Bricks/Kiwe instructions. The post-apply proof selects the smallest future controlled run and proves rollback source/checks from the captured snapshot. These artifacts keep `actualApplyExecuted`/`actualSaveExecuted`, `actualRollbackExecuted`, and `mayExecuteMutationNow` false until a human starts a real staging-site controlled run.
 
-On WordPress 7+ / MCP Adapter capable sites, Kiwe also exposes safe connector abilities for the same early chain: `dsa/get-site-graph`, `dsa/get-site-graph-data-schema`, `dsa/query-site-graph-data`, `dsa/get-securetrack-brief`, `dsa/get-internal-ai-context`, `dsa/run-internal-ai-advisor`, `dsa/enrich-internal-ai-advisor`, `dsa/get-companion-context`, `dsa/ask-companion`, `dsa/review-ai-output`, `dsa/start-studio-project`, `dsa/review-studio-output`, `dsa/get-bricks-ai-context`, `dsa/plan-bricks-ai-page`, `dsa/validate-bindings`, `dsa/prepare-apply-plan`, and `dsa/stage-apply-plan`. These abilities do not save Bricks/page content or mutate security enforcement; `dsa/run-internal-ai-advisor` is deterministic/read-only, `dsa/enrich-internal-ai-advisor` prepares a model-optional read-only summary/envelope, `dsa/start-studio-project` returns a token-saving Studio packet, `dsa/get-bricks-ai-context` and `dsa/plan-bricks-ai-page` return read-only Bricks-native planning packets, and `dsa/stage-apply-plan` writes only a Kiwe internal review queue record.
+On WordPress 7+ / MCP Adapter capable sites, Kiwe also exposes safe connector abilities for the same early chain: `dsa/get-site-graph`, `dsa/get-site-graph-data-schema`, `dsa/query-site-graph-data`, `dsa/get-securetrack-brief`, `dsa/get-internal-ai-context`, `dsa/run-internal-ai-advisor`, `dsa/enrich-internal-ai-advisor`, `dsa/get-companion-context`, `dsa/ask-companion`, `dsa/review-ai-output`, `dsa/start-studio-project`, `dsa/review-studio-output`, `dsa/get-bricks-ai-context`, `dsa/plan-bricks-ai-page`, `dsa/validate-bindings`, `dsa/validate-bricks-conversion`, `dsa/prepare-apply-plan`, and `dsa/stage-apply-plan`. These abilities do not save Bricks/page content or mutate security enforcement; `dsa/run-internal-ai-advisor` is deterministic/read-only, `dsa/enrich-internal-ai-advisor` prepares a model-optional read-only summary/envelope, `dsa/start-studio-project` returns a token-saving Studio packet, `dsa/get-bricks-ai-context` and `dsa/plan-bricks-ai-page` return read-only Bricks-native planning packets, and `dsa/stage-apply-plan` writes only a Kiwe internal review queue record.
 
 For apply-path requests, run `prepare-apply-plan` only after `validate-bindings` passes. The apply plan is dry-run and non-mutating. Do not claim WordPress, Bricks, WooCommerce, or Kiwe were changed unless a future trusted adapter actually performs the mutation with admin approval.
 

@@ -8,6 +8,7 @@ use DSA\AI\AI_Companion_Service;
 use DSA\AI\AI_Provider_Service;
 use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Bricks_AI_Intelligence_Service;
+use DSA\AI\Bricks_Conversion_Validator;
 use DSA\AI\Internal_AI_Advisor_Service;
 use DSA\AI\Internal_AI_Context_Service;
 use DSA\AI\Internal_AI_Enrichment_Service;
@@ -210,6 +211,23 @@ final class Abilities_Service {
 					'input_schema'        => $this->binding_validation_input_schema(),
 					'output_schema'       => $this->binding_validation_output_schema(),
 					'execute_callback'    => [ $this, 'execute_binding_validation' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/validate-bricks-conversion',
+				[
+					'label'               => __( 'Validate Kiwe Bricks conversion', 'dsa' ),
+					'description'         => __( 'Validates an AI-produced HTML/CSS-to-Bricks conversion package for fidelity, dynamic intent, query loops, interactions, conditions, Seam preservation, and safe apply authority without saving content.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->bricks_conversion_validation_input_schema(),
+					'output_schema'       => $this->bricks_conversion_validation_output_schema(),
+					'execute_callback'    => [ $this, 'execute_bricks_conversion_validation' ],
 					'permission_callback' => [ $this, 'can_manage' ],
 					'meta'                => [
 						'annotations' => [ 'readonly' => true ],
@@ -588,6 +606,30 @@ final class Abilities_Service {
 		return ( new Binding_Plan_Validator() )->validate( $binding, $site_graph );
 	}
 
+	public function execute_bricks_conversion_validation( array $input = [] ): array {
+		$conversion = isset( $input['conversion'] ) && is_array( $input['conversion'] ) ? $input['conversion'] : [];
+		if ( [] === $conversion ) {
+			return [
+				'ok'       => false,
+				'schema'   => 'kiwe.bricks-conversion-validation.v1',
+				'counts'   => [ 'error' => 1 ],
+				'findings' => [
+					[
+						'level'   => 'error',
+						'code'    => 'missing_conversion',
+						'message' => 'Input must include a conversion object.',
+					],
+				],
+			];
+		}
+
+		$site_graph  = $this->site_graph_from_input( $input );
+		$source_html = isset( $input['sourceHtml'] ) ? (string) $input['sourceHtml'] : ( isset( $input['sourceHTML'] ) ? (string) $input['sourceHTML'] : '' );
+		$binding     = isset( $input['binding'] ) && is_array( $input['binding'] ) ? $input['binding'] : [];
+
+		return ( new Bricks_Conversion_Validator() )->validate( $conversion, $site_graph, $source_html, $binding );
+	}
+
 	public function execute_prepare_apply_plan( array $input = [] ): array {
 		$binding = isset( $input['binding'] ) && is_array( $input['binding'] ) ? $input['binding'] : [];
 		if ( [] === $binding ) {
@@ -684,6 +726,7 @@ final class Abilities_Service {
 						$this->site_graph ? 'dsa/start-studio-project' : '',
 						$this->site_graph ? 'dsa/review-studio-output' : '',
 						$this->site_graph ? 'dsa/validate-bindings' : '',
+						$this->site_graph ? 'dsa/validate-bricks-conversion' : '',
 						$this->site_graph ? 'dsa/prepare-apply-plan' : '',
 						$this->site_graph ? 'dsa/stage-apply-plan' : '',
 					]
@@ -892,6 +935,49 @@ final class Abilities_Service {
 				'findings' => [ 'type' => 'array', 'items' => [ 'type' => 'object' ] ],
 			],
 			'required'   => [ 'ok', 'counts', 'findings' ],
+		];
+	}
+
+	private function bricks_conversion_validation_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'conversion' => [
+					'type'        => 'object',
+					'description' => __( 'The kiwe.bricks-conversion.v1 object to validate.', 'dsa' ),
+				],
+				'sourceHtml' => [
+					'type'        => 'string',
+					'description' => __( 'Optional source HTML used to verify Seam class, launcher, and query marker preservation.', 'dsa' ),
+				],
+				'binding'    => [
+					'type'        => 'object',
+					'description' => __( 'Optional kiwe.bricks-bindings.v1 object linked to the conversion.', 'dsa' ),
+				],
+				'siteGraph'  => [
+					'type'        => 'object',
+					'description' => __( 'Optional kiwe.site-graph.v1 object. If omitted, Kiwe uses the current live Site Graph.', 'dsa' ),
+				],
+				'sampleLimit' => [
+					'type'    => 'integer',
+					'minimum' => 0,
+					'maximum' => 24,
+				],
+			],
+			'required'   => [ 'conversion' ],
+		];
+	}
+
+	private function bricks_conversion_validation_output_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'ok'       => [ 'type' => 'boolean' ],
+				'schema'   => [ 'type' => 'string' ],
+				'counts'   => [ 'type' => 'object' ],
+				'findings' => [ 'type' => 'array', 'items' => [ 'type' => 'object' ] ],
+			],
+			'required'   => [ 'ok', 'schema', 'counts', 'findings' ],
 		];
 	}
 

@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "0.6.35",
+  "version": "0.6.36",
   "algorithm": "sha256",
-  "file_count": 257,
+  "file_count": 259,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2723,
-      "sha256": "e7119153078cc53a9d9f8354390960ba4cedeb9044b3d93c9fcd8d91d172765c"
+      "sha256": "d9e567b8107e3dfa3ecd2f95491022b656daac9307e3cbdf781706c6457d22bd"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3364,
@@ -329,16 +329,16 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 56449,
-      "sha256": "5edd76ff5eb7dc9a435511e1423e1c172a7c2ae6036203fcc0e2470f67c3a163"
+      "bytes": 70922,
+      "sha256": "42570211ef428660ff47b0f9cedb73a945f71205d4e25688bff83deac81d1da2"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
       "sha256": "fd2c06796ad0a1220c4ccaa6aa5c6b556acfb84826252de34bb16fc0af8cb346"
     },
     "includes/AI/Access_Key_Service.php": {
-      "bytes": 7640,
-      "sha256": "c7b7c12bc5a98d097c7cedc723f25689e98a43f2ed13c16af3b6716d8710f8e4"
+      "bytes": 7672,
+      "sha256": "b3bbe866b90f89fd394adf44991b9ce8cbb6e05f85bfe47b822e6f27ad708e4c"
     },
     "includes/AI/Apply_Plan_Preparer.php": {
       "bytes": 10430,
@@ -349,12 +349,16 @@
       "sha256": "22136ed40c4b8d4b25555aefa7c51ec9d301109a30059b944ed0895ff4e618f2"
     },
     "includes/AI/Bricks_AI_Intelligence_Service.php": {
-      "bytes": 21452,
-      "sha256": "62423696365024a16eb051e6a2db0164f7254ae5ea40d7f46308f7c7b20dddbe"
+      "bytes": 23854,
+      "sha256": "8aefcc729a05a23acfbc1c0ff6ae701f52348b35a5cad336cb048b8113cd166f"
     },
     "includes/AI/Bricks_Controlled_Adapter_Service.php": {
       "bytes": 17537,
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
+    },
+    "includes/AI/Bricks_Conversion_Validator.php": {
+      "bytes": 14588,
+      "sha256": "53da2b17e5280f0e45a3943e94be0ce037435f3eb652c67595c1af8724d75ef1"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22224,
@@ -393,8 +397,8 @@
       "sha256": "24c75f7792c3822c423829776dfae128843597f7335ea1e66fe9819d1fc80af1"
     },
     "includes/AI/Internal_AI_Context_Service.php": {
-      "bytes": 5460,
-      "sha256": "49f5d227ebc753d31c81a12495713668c1788a9af0ddfd051ae72df67f9a5fbc"
+      "bytes": 5667,
+      "sha256": "a28dc09e25b18472205aaa79d811ee9e00e56cd5eb05e248a873254d75733304"
     },
     "includes/AI/Internal_AI_Enrichment_Service.php": {
       "bytes": 9163,
@@ -425,8 +429,8 @@
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 26106,
-      "sha256": "dc5203788c423c41fa26fbf5e9721fb395aa8e0e3e9c19099e7a4988baa9ac9c"
+      "bytes": 26698,
+      "sha256": "69f59d3be088887273365cc013aa057ee9332ab32f51e39ac39df1b2eb48086a"
     },
     "includes/AI/Site_Introspection_Service.php": {
       "bytes": 13294,
@@ -613,8 +617,8 @@
       "sha256": "7eb8fb97e62cc295e6cb9ce342ec7ae2671528d1610035fab74fe710629409a0"
     },
     "includes/Rest/AI_Access_Controller.php": {
-      "bytes": 36272,
-      "sha256": "f36f8c8de644d6a51951cb6ddf3dfbb8f2ffce49bf72dd02afc99e62d4bdd327"
+      "bytes": 37095,
+      "sha256": "6d57f4e2e8d1d21b2e95394ce4a5c100912ed08b3cf62b9a44213fd55c7e724a"
     },
     "includes/Rest/Account_Controller.php": {
       "bytes": 14471,
@@ -813,8 +817,8 @@
       "sha256": "7b77565b4110da4ccee7013611d0ee44dc32a6069aa13a317b167b5d9a15eb58"
     },
     "includes/WP7/Abilities_Service.php": {
-      "bytes": 35954,
-      "sha256": "14fcac713b0e7f3ac1a7743a3a1d253818e951cb31a324b4dc1fbe1f33919c1f"
+      "bytes": 39282,
+      "sha256": "21dc2aaf6e79a51958c179058f843a6ae3b0ddcba742a582a87ebe47f9183a16"
     },
     "includes/WP7/Bindings_Service.php": {
       "bytes": 2548,
@@ -899,6 +903,10 @@
     "site-graph-system/release-proof-0.6.35.md": {
       "bytes": 1690,
       "sha256": "6ff9e937b82aea2247f3210a36c889ca31a697b8c2b693b43f45c8df08658e7c"
+    },
+    "site-graph-system/release-proof-0.6.36.md": {
+      "bytes": 2578,
+      "sha256": "0dfe55fe4b5318b2176f6b29fa2282b80d9d4d47c4cd23c86e179bc51db82879"
     },
     "site-graph-system/release-proof-0.6.7.md": {
       "bytes": 4783,

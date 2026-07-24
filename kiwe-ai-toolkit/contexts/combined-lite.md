@@ -94,7 +94,7 @@ The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page
 - Keep `website/bricks-paste.html` self-contained by default. Do not create duplicate `website/preview/index.html`, `site.css`, or `site.js` files unless the human explicitly asks for split files.
 - Do not require React, Vite, Tailwind, shadcn, Next, a build pipeline, generated Bricks IDs, or hidden local files.
 - Use semantic HTML, class-based CSS, reusable variables, minimal inline styles, and Bricks-friendly structure.
-- Do not hand-author raw Bricks `_bricks_page_content_2` JSON unless the human explicitly asks and provides a verified target contract. Kiwe's staging executor can convert clean HTML/CSS into Bricks JSON while preserving Seam classes/data attributes and storing safe CSS in Bricks page settings.
+- Do not hand-author raw Bricks `_bricks_page_content_2` JSON inside combined mode. If the human explicitly asks for a Bricks JSON artifact, route to `/convert /bricks` after visual/dynamic approval and produce a reviewable `bricks-conversion/kiwe-bricks-conversion.json` package. Kiwe's staging executor can convert clean HTML/CSS into Bricks JSON while preserving Seam classes/data attributes and storing safe CSS in Bricks page settings.
 
 Seam is semantic/headless. Use Seam classes/attributes for meaning and structure where helpful, but use custom page CSS for the actual visual art direction.
 

@@ -136,6 +136,15 @@ final class Site_Graph_Service {
 				'aiKeyScopes' => [ 'studio_ai', 'native_ai', 'all' ],
 				'useFor'      => [ 'website/page generation workflow', 'DSA theme generation workflow', 'combined website plus AppShell workflow', 'native AI draft envelopes', 'browser AI plus Companion flow' ],
 			],
+			'bricksConversion' => [
+				'schema'      => 'kiwe.bricks-conversion.v1',
+				'validationSchema' => 'kiwe.bricks-conversion-validation.v1',
+				'readOnly'    => true,
+				'mutatesContent' => false,
+				'restRoute'   => '/wp-json/dsa/v1/ai/validate-bricks-conversion',
+				'aiKeyScopes' => [ 'validate_bricks_conversion', 'all' ],
+				'useFor'      => [ 'HTML/CSS/JS to Bricks JSON review package', 'Seam and Kiwe launcher preservation', 'dynamic tag and query-loop fidelity', 'condition and interaction audit', 'pre-staging conversion gate' ],
+			],
 			'secureTrackBrief' => [
 				'schema'      => 'kiwe.securetrack.ai-brief.v1',
 				'readOnly'    => true,
@@ -158,6 +167,7 @@ final class Site_Graph_Service {
 					'dsa/start-studio-project',
 					'dsa/review-studio-output',
 					'dsa/validate-bindings',
+					'dsa/validate-bricks-conversion',
 					'dsa/prepare-apply-plan',
 					'dsa/stage-apply-plan',
 				],

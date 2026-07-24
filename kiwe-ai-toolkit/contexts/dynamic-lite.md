@@ -15,7 +15,7 @@ Do not read the whole Kiwe repo. Do not search GitHub. Do not guess the target s
 
 If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > AI > AI connector and Site Graph`.
 
-External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/bricks/context`, `/wp-json/dsa/v1/ai/bricks/plan`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, `/wp-json/dsa/v1/ai/stages/{stageId}/...`, and `/wp-json/dsa/v1/ai/themes`.
+External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/bricks/context`, `/wp-json/dsa/v1/ai/bricks/plan`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/validate-bricks-conversion`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, `/wp-json/dsa/v1/ai/stages/{stageId}/...`, and `/wp-json/dsa/v1/ai/themes`.
 
 For headless/content reads, prefer the AI-less Site Graph Data API instead of scraping a public website:
 
@@ -55,9 +55,10 @@ POST /wp-json/dsa/v1/ai/studio/draft
 POST /wp-json/dsa/v1/ai/studio/review
 GET|POST /wp-json/dsa/v1/ai/bricks/context
 POST /wp-json/dsa/v1/ai/bricks/plan
+POST /wp-json/dsa/v1/ai/validate-bricks-conversion
 ```
 
-Use `/ai/internal-context` when a tool needs one safe first-party packet containing Site Graph summary/hash, Site Graph Data schema, WordPress 7/Abilities signals, capability map, and operating boundaries. SecureTrack details are a separately gated redacted lane controlled from `Kiwe > AI` and by API key scope. Use `/ai/advisor` when a tool needs deterministic read-only findings, recommendations, and safe next actions before any model-enriched internal AI or staging plan. Use `/ai/advisor/enrich` when a tool needs the deterministic summary, priority order, and bounded model envelope for future WordPress AI Client enrichment; it does not grant mutation authority. Use `/ai/companion/context`, `/ai/companion/ask`, and `/ai/companion/review-output` when an external AI needs compact Kiwe context cards or a deterministic handoff review without reading the whole plugin. Prefer `/ai/audit-companion/review` for revision loops because it returns compact `mustFix`, `shouldFix`, and `passed` maps from actual file contents before the model spends another broad self-audit pass. Use `/ai/studio/start` when a target-site key is available and you need a token-saving Studio packet for website/theme/combined/dynamic/audit/staging work. Use `/ai/bricks/context` and `/ai/bricks/plan` when a standalone browser AI needs Bricks-native elements, element controls, query loops, dynamic tags, conditions, interactions, and Seam rules without reading Bricks or Kiwe source. Studio mode may be `native`, `browser_companion`, or `browser_only`; `/ai/studio/draft` spends native provider tokens only if Kiwe > AI allows it and the key has `native_ai` scope. Use `/ai/security-brief` for redacted security posture only; it does not expose raw IPs, usernames, secrets, full URLs, request payloads, or visitor trails.
+Use `/ai/internal-context` when a tool needs one safe first-party packet containing Site Graph summary/hash, Site Graph Data schema, WordPress 7/Abilities signals, capability map, and operating boundaries. SecureTrack details are a separately gated redacted lane controlled from `Kiwe > AI` and by API key scope. Use `/ai/advisor` when a tool needs deterministic read-only findings, recommendations, and safe next actions before any model-enriched internal AI or staging plan. Use `/ai/advisor/enrich` when a tool needs the deterministic summary, priority order, and bounded model envelope for future WordPress AI Client enrichment; it does not grant mutation authority. Use `/ai/companion/context`, `/ai/companion/ask`, and `/ai/companion/review-output` when an external AI needs compact Kiwe context cards or a deterministic handoff review without reading the whole plugin. Prefer `/ai/audit-companion/review` for revision loops because it returns compact `mustFix`, `shouldFix`, and `passed` maps from actual file contents before the model spends another broad self-audit pass. Use `/ai/studio/start` when a target-site key is available and you need a token-saving Studio packet for website/theme/combined/dynamic/audit/staging work. Use `/ai/bricks/context` and `/ai/bricks/plan` when a standalone browser AI needs Bricks-native elements, element controls, query loops, dynamic tags, conditions, interactions, Seam rules, and `/convert /bricks` conversion-package expectations without reading Bricks or Kiwe source. Studio mode may be `native`, `browser_companion`, or `browser_only`; `/ai/studio/draft` spends native provider tokens only if Kiwe > AI allows it and the key has `native_ai` scope. Use `/ai/security-brief` for redacted security posture only; it does not expose raw IPs, usernames, secrets, full URLs, request payloads, or visitor trails.
 
 Kiwe theme package install/activation is allowed through `/wp-json/dsa/v1/ai/themes/install` and `/wp-json/dsa/v1/ai/themes/{themeId}/activate` when the key has theme scope. A theme package is one JSON file containing `schema: "kiwe.theme-package.v1"`, `theme`, `settings`, and `css`; do not produce a loose settings import file for DSA themes. If a website-only or combined handoff changes the shared Seam/Kiwe design-token system outside a DSA theme package, use a Framework profile with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only.
 
@@ -134,6 +135,22 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs <handoff-or-bindings-dir-or-jso
 ```
 
 MCP clients should call `kiwe_validate_bindings` with `targetDir` and `siteGraphPath`.
+
+After the binding plan passes, use `/convert /bricks` to produce:
+
+```text
+bricks-conversion/
+  kiwe-bricks-conversion.json
+  BRICKS-CONVERSION-NOTES.md
+```
+
+Then validate it:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs <handoff-or-conversion-json> --site-graph <site-graph.json>
+```
+
+MCP clients should call `kiwe_validate_bricks_conversion`. The conversion package is still non-mutating; staging writes remain controlled executor work.
 
 If the human has WordPress admin access, they can also upload `bricks-bindings/kiwe-bindings.json` at `Kiwe > AI > AI connector and Site Graph` for a live non-mutating validation report.
 

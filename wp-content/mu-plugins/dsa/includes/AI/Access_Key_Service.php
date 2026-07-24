@@ -18,6 +18,7 @@ final class Access_Key_Service {
 		'site_graph',
 		'site_graph_data',
 		'validate_bindings',
+		'validate_bricks_conversion',
 		'prepare_apply_plan',
 		'stage_apply_plan',
 		'trusted_apply_chain',

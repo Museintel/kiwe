@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepareApplyPlan as prepareBricksApplyPlan } from './apply-planner.js';
 import { validateBindings as validateBindingsPlan } from './binding-validator.js';
+import { validateBricksConversion as validateBricksConversionPlan } from './bricks-conversion-validator.js';
 import { validateFrameworkProfile as validateFrameworkProfilePlan } from './framework-profile-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -201,6 +202,14 @@ export function getDynamicContext() {
   return context.trim() + '\n';
 }
 
+export function getBricksConversionContext() {
+  const context = readMaybe('contexts/bricks-conversion-lite.md');
+  if (!context) {
+    throw new Error('Bricks conversion context was not found.');
+  }
+  return context.trim() + '\n';
+}
+
 export function getWorkflowContext() {
   const context = readMaybe('contexts/workflow-lite.md');
   if (!context) {
@@ -251,6 +260,10 @@ export function listClassVocabulary() {
 
 export function validateBindings(targetDir, options = {}) {
   return validateBindingsPlan(targetDir, options);
+}
+
+export function validateBricksConversion(targetDir, options = {}) {
+  return validateBricksConversionPlan(targetDir, options);
 }
 
 export function validateFrameworkProfile(targetDir, options = {}) {
@@ -316,6 +329,8 @@ function routeKind(command) {
   if (!text) return 'workflow';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
   if (/(\/build|\/create)/.test(text) && /(dsathemeandhomepage|theme and homepage|homepage and theme)/.test(text)) return 'combined-assemble';
+  if (/\/audit/.test(text) && /(\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|bricksjson|html-to-bricks)/.test(text)) return 'bricks-audit';
+  if (/(\/convert|\/export|\/translate|\/rebuild|\/adapt)/.test(text) && /(\/bricks|bricks json|bricks conversion|html-to-bricks|html css to bricks)/.test(text)) return 'bricks-convert';
   if (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-rebuild';
   if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
   if (/(\/create|\/build)/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-create';
@@ -339,6 +354,8 @@ function commandWithoutCompanion(command) {
 }
 
 function companionModeForKind(kind) {
+  if (kind === 'bricks-convert') return 'dynamic';
+  if (kind === 'bricks-audit') return 'audit';
   if (kind === 'dynamic') return 'dynamic';
   if (kind === 'staging') return 'staging';
   if (kind.includes('audit')) return 'audit';
@@ -484,6 +501,24 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     );
   } else if (kind === 'combined-audit') {
     parts.push(readMaybe('contexts/combined-lite.md'), readMaybe('contexts/audit-lite.md'));
+  } else if (kind === 'bricks-convert') {
+    parts.push(
+      '# Site Graph summary',
+      '',
+      graph,
+      '',
+      getBricksConversionContext()
+    );
+  } else if (kind === 'bricks-audit') {
+    parts.push(
+      '# Site Graph summary',
+      '',
+      graph,
+      '',
+      getBricksConversionContext(),
+      '',
+      readMaybe('contexts/audit-lite.md')
+    );
   } else if (kind === 'dynamic') {
     parts.push(
       '# Site Graph summary',

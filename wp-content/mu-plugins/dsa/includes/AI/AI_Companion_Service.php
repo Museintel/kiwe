@@ -53,6 +53,7 @@ final class AI_Companion_Service {
 				'reviewOutput' => '/wp-json/dsa/v1/ai/companion/review-output',
 				'auditContext' => '/wp-json/dsa/v1/ai/audit-companion/context',
 				'auditReview'  => '/wp-json/dsa/v1/ai/audit-companion/review',
+				'validateBricksConversion' => '/wp-json/dsa/v1/ai/validate-bricks-conversion',
 				'memory'       => '/wp-json/dsa/v1/ai/companion/memory',
 			],
 			'boundaries'  => [
@@ -115,6 +116,7 @@ final class AI_Companion_Service {
 				'readFirst' => [
 					'https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md',
 					'https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md',
+					'https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md',
 				],
 				'fallback'  => 'Use GitHub blob fallback only if raw URLs are unavailable. Do not read the whole repository.',
 				'auditCompanion' => [
@@ -154,6 +156,7 @@ final class AI_Companion_Service {
 				'reviewOutput' => '/wp-json/dsa/v1/ai/companion/review-output',
 				'auditReview'  => '/wp-json/dsa/v1/ai/audit-companion/review',
 				'validateBindings' => '/wp-json/dsa/v1/ai/validate-bindings',
+				'validateBricksConversion' => '/wp-json/dsa/v1/ai/validate-bricks-conversion',
 				'stageExecution' => '/wp-json/dsa/v1/ai/staging/execute',
 			],
 		];
@@ -184,6 +187,7 @@ final class AI_Companion_Service {
 						'README.md' => 'file text',
 						'combined-preview/index.html' => 'file text',
 						'website/bricks-paste.html' => 'file text',
+						'bricks-conversion/kiwe-bricks-conversion.json' => 'optional conversion package JSON',
 						'appshell-theme/import/<theme-id>/theme-package.json' => 'file text',
 					],
 				],
@@ -197,6 +201,7 @@ final class AI_Companion_Service {
 				'combinedPreviewProof',
 				'customDockLinks',
 				'tokenPurity',
+				'bricksConversionFidelity',
 				'secretLeakage',
 				'encodingMojibake',
 			],
@@ -326,6 +331,11 @@ final class AI_Companion_Service {
 				'code'     => 'page_artifact_contains_appshell',
 				'message'  => 'website/bricks-paste.html must remain page-only; AppShell preview or DSA fixture markup belongs in combined-preview only.',
 			];
+		}
+
+		$conversion_json = $this->file_like( $path_map, 'kiwe-bricks-conversion.json' );
+		if ( '' !== $conversion_json ) {
+			$findings = array_merge( $findings, $this->review_bricks_conversion_package( $conversion_json, $path_map ) );
 		}
 
 		$package_json = $this->file_like( $path_map, 'theme-package.json' );
@@ -467,6 +477,12 @@ final class AI_Companion_Service {
 		if ( preg_match( '/(?:\/build|\/create).*(?:dsathemeandhomepage|theme and homepage|homepage and theme)/', $text ) ) {
 			return 'combined-assemble';
 		}
+		if ( preg_match( '/\/audit.*(?:\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|bricksjson|html-to-bricks)/', $text ) ) {
+			return 'bricks-audit';
+		}
+		if ( preg_match( '/(?:\/convert|\/export|\/translate|\/rebuild|\/adapt).*(?:\/bricks|bricks json|bricks conversion|html-to-bricks|html css to bricks)/', $text ) ) {
+			return 'bricks-convert';
+		}
 		if ( preg_match( '/(?:\/rebuild|\/convert|\/adapt).*(?:\/seamframework|\/seam|seam framework)/', $text ) ) {
 			return 'seam-rebuild';
 		}
@@ -557,6 +573,16 @@ final class AI_Companion_Service {
 				'title' => 'Bind through Site Graph, not guesses',
 				'body'  => 'Use real Site Graph/Data facts for products, terms, pages, media, custom types, fields, Bricks query loops, dynamic tags, conditions, interactions, and Kiwe launchers. Do not mutate.',
 			],
+			'bricks-convert' => [
+				'id'    => 'phase-bricks-convert-no-loss-json',
+				'title' => 'Convert to Bricks with no-loss proof',
+				'body'  => 'Produce bricks-conversion/kiwe-bricks-conversion.json plus notes. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and list unsupported behavior for review. Do not mutate WordPress or Bricks.',
+			],
+			'bricks-audit' => [
+				'id'    => 'phase-bricks-audit-conversion-fidelity',
+				'title' => 'Audit Bricks conversion fidelity',
+				'body'  => 'Reject page artifacts that include AppShell shell markup, lost Seam classes or data-dsa-open-module launchers, fake Bricks element names, broken parent/child references, unsafe JavaScript interactions, unverified dynamic tags, and query-template markers without Bricks query-loop intent.',
+			],
 			'staging' => [
 				'id'    => 'phase-staging-controlled-executor-only',
 				'title' => 'Staging apply is controlled executor work',
@@ -629,6 +655,13 @@ final class AI_Companion_Service {
 
 	private function answer_for_question( string $question, string $mode ): array {
 		$question_lc = strtolower( $question );
+		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
+			return [
+				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
+				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, data-seam attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.' ],
+				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
+			];
+		}
 		if ( str_contains( $question_lc, 'theme' ) || str_contains( $question_lc, 'dsa' ) || 'theme' === $mode ) {
 			return [
 				'summary' => 'Build theme packages as styling and safe settings only; Kiwe core owns AppShell geometry and runtime behavior.',
@@ -812,6 +845,263 @@ final class AI_Companion_Service {
 					'path'     => sanitize_text_field( (string) $path ),
 				];
 			}
+		}
+
+		return $findings;
+	}
+
+	private function review_bricks_conversion_package( string $conversion_json, array $path_map ): array {
+		$findings = [];
+		$path     = $this->path_like( $path_map, 'kiwe-bricks-conversion.json' );
+		$data     = json_decode( $conversion_json, true );
+		if ( ! is_array( $data ) ) {
+			return [
+				[
+					'severity' => 'error',
+					'code'     => 'invalid_bricks_conversion_json',
+					'message'  => 'kiwe-bricks-conversion.json is not valid JSON.',
+					'path'     => sanitize_text_field( $path ),
+				],
+			];
+		}
+
+		foreach ( [ 'schema', 'source', 'target', 'conversion', 'elements', 'fidelity', 'report' ] as $key ) {
+			if ( ! array_key_exists( $key, $data ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_missing_root_key',
+					'message'  => sprintf( 'kiwe-bricks-conversion.json is missing required root key "%s".', $key ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+		}
+
+		if ( (string) ( $data['schema'] ?? '' ) !== 'kiwe.bricks-conversion.v1' ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'invalid_bricks_conversion_schema',
+				'message'  => 'kiwe-bricks-conversion.json schema must be kiwe.bricks-conversion.v1.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$target = isset( $data['target'] ) && is_array( $data['target'] ) ? $data['target'] : [];
+		if ( (string) ( $target['builder'] ?? '' ) !== 'bricks' ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_wrong_builder',
+				'message'  => 'Bricks conversion target.builder must be bricks.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		if ( ! str_contains( strtolower( (string) ( $target['format'] ?? '' ) ), 'bricks' ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_missing_format',
+				'message'  => 'Bricks conversion target.format must identify Bricks element JSON.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		$authority = (string) ( $target['applyAuthority'] ?? '' );
+		if ( '' === $authority || ( preg_match( '/(?:auto|direct|save|publish|mutat|write)/i', $authority ) && ! preg_match( '/(?:human|review|trusted|adapter|staging)/i', $authority ) ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_unsafe_apply_authority',
+				'message'  => 'Bricks conversion applyAuthority must point to human review or the trusted Kiwe staging adapter, not direct unsupervised writes.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$elements = isset( $data['elements'] ) && is_array( $data['elements'] ) ? $data['elements'] : [];
+		if ( [] === $elements ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_missing_elements',
+				'message'  => 'Bricks conversion must include a non-empty top-level elements array.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		$ids = [];
+		foreach ( $elements as $index => $element ) {
+			if ( ! is_array( $element ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_invalid_element',
+					'message'  => 'Every Bricks conversion element must be an object.',
+					'path'     => sanitize_text_field( $path ),
+				];
+				continue;
+			}
+			$id = (string) ( $element['id'] ?? '' );
+			if ( '' === $id ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_element_missing_id',
+					'message'  => sprintf( 'Bricks conversion element at index %d is missing id.', (int) $index ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			} elseif ( isset( $ids[ $id ] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_duplicate_element_id',
+					'message'  => sprintf( 'Duplicate Bricks conversion element id "%s".', $id ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+			if ( '' !== $id ) {
+				$ids[ $id ] = true;
+			}
+			if ( '' === (string) ( $element['name'] ?? '' ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_element_missing_name',
+					'message'  => sprintf( 'Bricks conversion element "%s" is missing name.', '' !== $id ? $id : '#' . (int) $index ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+			$settings = isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : [];
+			if ( isset( $settings['_conditions'] ) && ! is_array( $settings['_conditions'] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_invalid_conditions',
+					'message'  => sprintf( 'Element "%s" has _conditions but it is not an array.', $id ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+			if ( isset( $settings['_interactions'] ) && ! is_array( $settings['_interactions'] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_invalid_interactions',
+					'message'  => sprintf( 'Element "%s" has _interactions but it is not an array.', $id ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			} elseif ( isset( $settings['_interactions'] ) ) {
+				foreach ( $settings['_interactions'] as $interaction ) {
+					if ( is_array( $interaction ) && 'javascript' === (string) ( $interaction['action'] ?? $interaction['actionType'] ?? '' ) ) {
+						$findings[] = [
+							'severity' => 'error',
+							'code'     => 'bricks_conversion_javascript_interaction',
+							'message'  => sprintf( 'Element "%s" uses the Bricks javascript interaction action. Use safe Bricks/Kiwe behavior or manual review.', $id ),
+							'path'     => sanitize_text_field( $path ),
+						];
+					}
+				}
+			}
+		}
+		foreach ( $elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+			$parent = (string) ( $element['parent'] ?? '' );
+			if ( '' !== $parent && '0' !== $parent && empty( $ids[ $parent ] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_missing_parent',
+					'message'  => sprintf( 'Element "%s" references missing parent "%s".', (string) ( $element['id'] ?? '' ), $parent ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+		}
+
+		$fidelity = isset( $data['fidelity'] ) && is_array( $data['fidelity'] ) ? $data['fidelity'] : [];
+		if ( empty( $fidelity['sourceSelectors'] ) || ! is_array( $fidelity['sourceSelectors'] ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_missing_fidelity_map',
+				'message'  => 'Bricks conversion must include fidelity.sourceSelectors mapping important source regions to Bricks element IDs.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$website = $this->file_like( $path_map, 'bricks-paste.html' );
+		if ( '' !== $website ) {
+			if ( preg_match( '/data-dsa-(?:surface|dock|screen|sheet|cart-panel|profile-panel)/i', $website ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_source_contains_appshell',
+					'message'  => 'Bricks conversion source must be page-only and must not include AppShell shell markup.',
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+			if ( preg_match_all( '/class\s*=\s*["\']([^"\']+)["\']/i', $website, $class_matches ) ) {
+				$seam_classes = [];
+				foreach ( $class_matches[1] as $classes ) {
+					foreach ( preg_split( '/\s+/', (string) $classes ) as $class ) {
+						if ( preg_match( '/^seam-/', $class ) ) {
+							$seam_classes[ $class ] = true;
+						}
+					}
+				}
+				if ( [] !== $seam_classes ) {
+					$missing = [];
+					foreach ( array_keys( $seam_classes ) as $class ) {
+						if ( ! str_contains( $conversion_json, $class ) ) {
+							$missing[] = $class;
+						}
+					}
+					if ( count( $missing ) === count( $seam_classes ) ) {
+						$findings[] = [
+							'severity' => 'error',
+							'code'     => 'bricks_conversion_lost_seam_classes',
+							'message'  => 'No source Seam classes are preserved in the Bricks conversion package.',
+							'path'     => sanitize_text_field( $path ),
+						];
+					} elseif ( [] !== $missing ) {
+						$findings[] = [
+							'severity' => 'warning',
+							'code'     => 'bricks_conversion_partial_seam_loss',
+							'message'  => sprintf( 'Some source Seam classes are not visible in the Bricks conversion package: %s.', implode( ', ', array_slice( $missing, 0, 12 ) ) ),
+							'path'     => sanitize_text_field( $path ),
+						];
+					}
+				}
+			}
+			if ( preg_match_all( '/data-dsa-open-module\s*=\s*["\']([^"\']+)["\']/i', $website, $launcher_matches ) ) {
+				foreach ( $launcher_matches[1] as $module ) {
+					$module = (string) $module;
+					if ( ! str_contains( $conversion_json, 'data-dsa-open-module' ) || ! str_contains( $conversion_json, $module ) ) {
+						$findings[] = [
+							'severity' => 'error',
+							'code'     => 'bricks_conversion_lost_kiwe_launcher',
+							'message'  => sprintf( 'Source launcher data-dsa-open-module="%s" was not preserved in the Bricks conversion package.', $module ),
+							'path'     => sanitize_text_field( $path ),
+						];
+					}
+				}
+			}
+			if ( preg_match( '/data-kiwe-query-template\s*=/i', $website ) && ! preg_match( '/"query"\s*:|"dynamicIntent"\s*:\s*\[[^\]]+\]/i', $conversion_json ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_missing_query_intent',
+					'message'  => 'Source has data-kiwe-query-template markers but conversion has no Bricks query settings or fidelity.dynamicIntent.',
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+		}
+
+		if ( preg_match( '/data-dsa-surface|data-dsa-screen|data-dsa-dock/i', $conversion_json ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_contains_appshell_markup',
+				'message'  => 'Bricks conversion JSON must remain page-only. AppShell/dock/sheet/screen markup belongs to Kiwe runtime and previews, not Bricks page conversion.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		if ( preg_match( '/<script\b|javascript:|on[a-z]+\s*=/i', $conversion_json ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_executable_code',
+				'message'  => 'Bricks conversion package appears to contain executable script or inline event code. Convert to safe Bricks interactions/Kiwe launchers or manual review.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		if ( ! $this->has_file_like( $path_map, 'BRICKS-CONVERSION-NOTES.md' ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'missing_bricks_conversion_notes',
+				'message'  => 'Bricks conversion output must include bricks-conversion/BRICKS-CONVERSION-NOTES.md.',
+				'path'     => 'bricks-conversion/BRICKS-CONVERSION-NOTES.md',
+			];
 		}
 
 		return $findings;
@@ -1239,6 +1529,7 @@ final class AI_Companion_Service {
 			'themePackageChecked' => ! isset( $codes['theme_package_missing_root_key'] ) && ! isset( $codes['theme_package_css_not_inline'] ) && ! isset( $codes['theme_package_css_mismatch'] ),
 			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['anonymous_literal_px_in_theme_css'] ) && ! isset( $codes['anonymous_literal_value_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
 			'pageArtifactChecked' => ! isset( $codes['page_artifact_contains_appshell'] ),
+			'bricksConversionChecked' => '' !== $this->file_like( $path_map, 'kiwe-bricks-conversion.json' ) && ! isset( $codes['invalid_bricks_conversion_json'] ) && ! isset( $codes['bricks_conversion_missing_root_key'] ) && ! isset( $codes['invalid_bricks_conversion_schema'] ) && ! isset( $codes['bricks_conversion_missing_elements'] ) && ! isset( $codes['bricks_conversion_missing_fidelity_map'] ) && ! isset( $codes['bricks_conversion_source_contains_appshell'] ) && ! isset( $codes['bricks_conversion_contains_appshell_markup'] ) && ! isset( $codes['bricks_conversion_lost_seam_classes'] ) && ! isset( $codes['bricks_conversion_lost_kiwe_launcher'] ) && ! isset( $codes['bricks_conversion_missing_query_intent'] ) && ! isset( $codes['bricks_conversion_executable_code'] ) && ! isset( $codes['missing_bricks_conversion_notes'] ),
 		] as $label => $ok ) {
 			if ( $ok ) {
 				$passed[] = $label;
