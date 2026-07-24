@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -16,6 +16,7 @@ Commands:
   kiwe modes
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
+  kiwe diagnose --command "/convert /bricks" [--artifact-summary text] [--site-graph-summary text]
   kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
@@ -47,6 +48,14 @@ try {
     print(startProject({ mode, name, brief }));
   } else if (command === 'workflow') {
     print(getWorkflowContext());
+  } else if (command === 'diagnose') {
+    const commandIndex = args.indexOf('--command');
+    const artifactIndex = args.indexOf('--artifact-summary');
+    const graphIndex = args.indexOf('--site-graph-summary');
+    const commandText = commandIndex >= 0 ? args[commandIndex + 1] : args[0] || '';
+    const artifactSummary = artifactIndex >= 0 ? args[artifactIndex + 1] : '';
+    const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
+    print(diagnoseCommand({ command: commandText, artifactSummary, siteGraphSummary }));
   } else if (command === 'route') {
     const commandIndex = args.indexOf('--command');
     const briefIndex = args.indexOf('--brief');

@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.38 - 2026-07-24
+
+- Added a deterministic Kiwe command gate (`kiwe.command-diagnostic.v1`) so invalid, missing-input, forbidden-lane, and no-op slash commands stop before browser/internal AI spends tokens on nonexistent or useless work.
+- Exposed command diagnostics through the toolkit CLI (`kiwe diagnose`), MCP (`kiwe_diagnose_command`), route output, and Companion `commandGate` cards/answers.
+- Documented stable diagnostic codes for command typos, unsupported preview targets, duplicate website preview requests, missing Bricks conversion sources, missing conversion artifacts, missing Site Graph context, and staging authority gaps.
+
 ## 0.6.37 - 2026-07-24
 
 - Hardened `/convert /bricks` so it can only convert the approved page lane, `website/bricks-paste.html`, and now rejects combined previews, AppShell theme previews/imports, screen/sheet/dock/navbar markup, `theme-package.json`, and `theme.css` as Bricks conversion sources.

@@ -32,6 +32,20 @@ Any phase can add `/usecompanion`, such as `/rebuild /seamframework /usecompanio
 
 Canonical command language uses `/create` for creation phases. `/build` may be tolerated as an old alias by the router, but toolkit-facing output should normalize back to `/create`.
 
+Run the command gate before expensive work when tools or CLI are available:
+
+```bash
+node bin/kiwe.js diagnose --command "/create /preview /brickstheme"
+```
+
+or MCP:
+
+```text
+kiwe_diagnose_command
+```
+
+It returns `ok`, `rejected`, `needs_input`, or `noop`. If `stop: true`, the AI should answer the human with the diagnostic instead of continuing into generation, conversion, audit, dynamic binding, or staging.
+
 Current lane rule: combined output uses AppShell `theme-package.json` for live DSA theme settings and `settings.tokens`; standalone `kiwe.framework-profile.v1` files are for website/page-only Framework token profiles or explicit `Kiwe > Framework` imports, not loose AppShell settings profiles.
 
 Token authority rule: AI handoffs should use official universal token names in `settings.tokens.overrides` and consume generated public variables such as `--kiwe-color-brand`, `--kiwe-color-surface`, `--kiwe-radius-lg`, or documented `--kiwe-theme-*` aliases. Do not copy Kiwe core's generated `--dsa-runtime-token-####` bridge variables into themes, previews, docs, or Bricks page CSS; those names are private runtime migration glue and are rejected by the package/audit validators.
@@ -57,6 +71,7 @@ Giving the whole plugin to an AI wastes tokens and invites it to invent against 
 npm install
 node bin/kiwe.js modes
 node bin/kiwe.js workflow
+node bin/kiwe.js diagnose --command "/create /preview /brickstheme"
 node bin/kiwe.js route --command "/rebuild /seamframework /usecompanion" --brief "Rebuild the approved draft with Seam"
 node bin/kiwe.js start combined --brief "Netflix-like ultra-modern news website for Indian startups and business news, with a matching Kiwe AppShell direction"
 node bin/kiwe.js context combined
@@ -201,6 +216,7 @@ Example MCP client entry:
 
 - `kiwe_start_project`
 - `kiwe_get_workflow`
+- `kiwe_diagnose_command`
 - `kiwe_route_command`
 - `kiwe_list_modes`
 - `kiwe_get_context`

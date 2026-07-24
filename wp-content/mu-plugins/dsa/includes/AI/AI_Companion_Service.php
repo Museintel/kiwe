@@ -85,10 +85,14 @@ final class AI_Companion_Service {
 		}
 
 		$command      = sanitize_text_field( (string) ( $args['command'] ?? '' ) );
-		$phase        = $this->phase( (string) ( $args['phase'] ?? $command ) );
+		$artifact_summary = sanitize_textarea_field( (string) ( $args['artifactSummary'] ?? '' ) );
+		$site_graph_summary = sanitize_textarea_field( (string) ( $args['siteGraphSummary'] ?? '' ) );
+		$command_gate = $this->command_gate( $command, $artifact_summary, $site_graph_summary );
+		$phase_input  = ! empty( $command_gate['stop'] ) ? (string) ( $command_gate['kind'] ?? 'command-diagnostic' ) : (string) ( $args['phase'] ?? ( $command_gate['normalizedCommand'] ?? $command ) );
+		$phase        = $this->phase( $phase_input );
 		$sample_limit = max( 0, min( 12, absint( $args['sampleLimit'] ?? 4 ) ) );
 		$graph        = $this->site_graph->graph( [ 'sampleLimit' => $sample_limit ] );
-		$cards        = array_merge( $this->cards_for_phase( $phase ), $this->cards_for_mode( $mode ) );
+		$cards        = array_merge( $this->cards_for_command_gate( $command_gate ), $this->cards_for_phase( $phase ), $this->cards_for_mode( $mode ) );
 		$cards        = array_slice( $cards, 0, max( 1, (int) $settings['max_context_cards'] ) );
 
 		return [
@@ -98,6 +102,7 @@ final class AI_Companion_Service {
 			'mode'        => $mode,
 			'phase'       => $phase,
 			'command'     => $command,
+			'commandGate' => $command_gate,
 			'purpose'     => 'Compact Kiwe contract/context cards for external AI tools building website/page, DSA theme, combined, dynamic-binding, audit, staging, or security work.',
 			'useCompanion' => [
 				'optional' => true,
@@ -141,6 +146,22 @@ final class AI_Companion_Service {
 		$context = $this->context( $args, $auth );
 		if ( empty( $context['ok'] ) ) {
 			return $context;
+		}
+
+		$gate = isset( $context['commandGate'] ) && is_array( $context['commandGate'] ) ? $context['commandGate'] : [];
+		if ( ! empty( $gate['stop'] ) ) {
+			return [
+				'ok'          => true,
+				'schema'      => 'kiwe.ai-companion.answer.v1',
+				'mode'        => (string) ( $context['mode'] ?? 'combined' ),
+				'answer'      => (string) ( $gate['message'] ?? 'The command cannot be executed as written.' ),
+				'commandGate' => $gate,
+				'contextHash' => substr( hash( 'sha256', (string) wp_json_encode( $context['cards'] ?? [] ) ), 0, 32 ),
+				'nextRoutes'  => [
+					'context' => '/wp-json/dsa/v1/ai/companion/context',
+					'auditReview' => '/wp-json/dsa/v1/ai/audit-companion/review',
+				],
+			];
 		}
 
 		$question = sanitize_textarea_field( (string) ( $args['question'] ?? '' ) );
@@ -464,6 +485,157 @@ final class AI_Companion_Service {
 		$modes = isset( $settings['companion_modes'] ) && is_array( $settings['companion_modes'] ) ? $settings['companion_modes'] : [];
 
 		return ! empty( $modes[ $mode ] ) ? $mode : '';
+	}
+
+	private function command_gate( string $command, string $artifact_summary = '', string $site_graph_summary = '' ): array {
+		$raw        = trim( $command );
+		$text       = strtolower( $raw );
+		$core       = preg_replace( '/(?:^|\s)\/usecompanion\b/i', ' ', $raw );
+		$core       = is_string( $core ) ? trim( preg_replace( '/\s+/', ' ', $core ) ?? $core ) : $raw;
+		$normalized = trim( preg_replace( '/\s+/', ' ', preg_replace( '/(?:^|\s)\/build\b/i', ' /create', $core ) ?? $core ) ?? $core );
+		$known      = [
+			'/adapt', '/apply', '/appshell', '/assemble', '/audit', '/binding', '/bindings', '/bricks', '/bricks-conversion', '/bricksconversion', '/brickstheme', '/build', '/combine', '/combined', '/convert', '/create', '/creative', '/dsa', '/dsatheme', '/dsathemeandhomepage', '/dynamic', '/export', '/framework', '/frameworkprofile', '/htmlcssjs', '/ideate', '/page', '/preview', '/rebuild', '/seam', '/seamframework', '/staging', '/theme', '/translate', '/usecompanion', '/webdraft', '/webpage', '/website',
+		];
+		$suggestions = [
+			'/buid' => '/create',
+			'/bild' => '/create',
+			'/bulid' => '/create',
+			'/creat' => '/create',
+			'/previe' => '/preview',
+			'/preveiw' => '/preview',
+			'/brikcs' => '/bricks',
+			'/dsathem' => '/dsatheme',
+			'/seamframwork' => '/seamframework',
+		];
+
+		if ( '' === $raw ) {
+			return $this->command_gate_result( 'ok', 'workflow_default', 'No slash command supplied; return the Kiwe workflow context.', 'workflow', '', [], [] );
+		}
+
+		preg_match_all( '/(?:^|\s)(\/[a-z0-9-]+)/i', $raw, $matches );
+		$tokens  = array_map( 'strtolower', $matches[1] ?? [] );
+		$unknown = array_values( array_filter( $tokens, static fn( $token ) => ! in_array( $token, $known, true ) ) );
+		if ( [] !== $unknown ) {
+			$next = [];
+			foreach ( $unknown as $token ) {
+				if ( isset( $suggestions[ $token ] ) ) {
+					$next[] = $suggestions[ $token ];
+				}
+			}
+			return $this->command_gate_result(
+				'rejected',
+				'unknown_command_token',
+				'Unknown Kiwe command token(s): ' . implode( ', ', $unknown ) . '. Do not guess or continue.',
+				'command-diagnostic',
+				$normalized,
+				[] !== $next ? array_values( array_unique( $next ) ) : [ '/rebuild /seamframework', '/create /dsatheme', '/convert /bricks', '/audit /combined' ],
+				[ 'Use only registered Kiwe slash-command tokens.', 'If the human made a typo, ask them to resend the corrected command.' ]
+			);
+		}
+
+		if ( str_contains( $text, '/preview' ) && ! str_contains( $text, '/create' ) ) {
+			return $this->command_gate_result( 'rejected', 'preview_requires_create', 'Preview proof commands must use the canonical creation verb `/create`.', 'command-diagnostic', $normalized, [ '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Do not invent `/preview` as a standalone command.' ] );
+		}
+
+		if ( str_contains( $text, '/create' ) && str_contains( $text, '/preview' ) && preg_match( '/\/(?:brickstheme|frameworkprofile|framework|bricks)\b|bricks theme/', $text ) ) {
+			return $this->command_gate_result( 'rejected', 'unsupported_preview_target', 'No `/create /preview /brickstheme` or Bricks-theme preview command exists. Framework/Bricks theme profiles are token JSON, not a separate preview lane.', 'command-diagnostic', $normalized, [ '/create /brickstheme', '/audit /brickstheme', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Previews exist for website/page HTML, DSA AppShell proof, and combined page-plus-AppShell proof.' ] );
+		}
+
+		if ( str_contains( $text, '/create' ) && str_contains( $text, '/preview' ) && preg_match( '/\/(?:website|webpage|page|htmlcssjs)\b/', $text ) ) {
+			$existing = $this->command_gate_has_page_artifact( $artifact_summary ) || preg_match( '/\bhtml\b.*\bcss\b|\bindex\.html\b|creative draft|website draft/i', $artifact_summary );
+			return $this->command_gate_result(
+				$existing ? 'noop' : 'rejected',
+				$existing ? 'website_preview_already_exists' : 'website_preview_is_page_artifact',
+				$existing ? 'A website/page preview already exists in the supplied artifact. Do not regenerate the same preview.' : 'There is no separate Kiwe website preview command. A website/page preview is the HTML/CSS/JS page artifact itself.',
+				'command-diagnostic',
+				$normalized,
+				$existing ? [ '/rebuild /seamframework', '/audit /seamframework', '/dynamic /sitegraph', '/convert /bricks' ] : [ '/ideate /webdraft', '/rebuild /seamframework' ],
+				[ 'Do not spend tokens recreating a preview that is already the artifact.' ]
+			);
+		}
+
+		if ( str_contains( $text, '/create' ) && str_contains( $text, '/preview' ) && ! preg_match( '/\/(?:dsatheme|appshell|dsa|combined|combine)\b|app shell/', $text ) ) {
+			return $this->command_gate_result( 'rejected', 'missing_preview_target', 'Preview creation needs an explicit supported target.', 'command-diagnostic', $normalized, [ '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Supported preview-proof targets are DSA/AppShell theme and combined page-plus-AppShell only.' ] );
+		}
+
+		if ( str_contains( $text, '/convert' ) && str_contains( $text, '/bricks' ) && $this->command_gate_forbidden_bricks_source( $raw ) ) {
+			return $this->command_gate_result( 'rejected', 'bricks_convert_forbidden_source_in_command', '`/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.', 'bricks-convert', $normalized, [ '/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Bricks conversion source is strictly `website/bricks-paste.html`.' ] );
+		}
+
+		if ( str_contains( $text, '/convert' ) && str_contains( $text, '/bricks' ) && ! $this->command_gate_has_page_artifact( $artifact_summary ) ) {
+			$theme_like = $this->command_gate_has_theme_artifact( $artifact_summary ) || $this->command_gate_forbidden_bricks_source( $artifact_summary );
+			return $this->command_gate_result(
+				$theme_like ? 'rejected' : 'needs_input',
+				$theme_like ? 'bricks_convert_missing_page_source_with_theme_artifact' : 'bricks_convert_missing_page_source',
+				$theme_like ? 'The supplied artifact summary looks like an AppShell/theme/preview lane and does not include `website/bricks-paste.html`. Stop; do not convert DSA theme material into Bricks.' : '`/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
+				'bricks-convert',
+				$normalized,
+				[ '/rebuild /seamframework to create website/bricks-paste.html', '/convert /bricks after website/bricks-paste.html exists' ],
+				[ 'Do not guess a Bricks source from a DSA theme or combined preview.' ]
+			);
+		}
+
+		if ( preg_match( '/\/audit.*(?:\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|html-to-bricks)/', $text ) && ! $this->command_gate_has_conversion_artifact( $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'bricks_audit_missing_conversion_artifact', '`/audit /bricksconversion` needs `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.', 'bricks-audit', $normalized, [ '/convert /bricks', '/audit /bricksconversion after kiwe-bricks-conversion.json exists' ], [ 'Audit phases inspect existing artifacts; they do not silently create missing outputs.' ] );
+		}
+
+		if ( preg_match( '/\/dynamic|\/sitegraph|\/binding|\/bindings/', $text ) && '' === trim( $site_graph_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'dynamic_missing_site_graph', '`/dynamic /sitegraph` needs a target Site Graph summary or API access. Do not guess product categories, pages, custom fields, dynamic tags, or Bricks query-loop types.', 'dynamic', $normalized, [ 'GET /wp-json/dsa/v1/ai/site-graph', 'GET|POST /wp-json/dsa/v1/ai/site-graph-data', '/dynamic /sitegraph after Site Graph is available' ], [ 'Dynamic binding must be grounded in target-site truth, not frontend scraping or assumptions.' ] );
+		}
+
+		if ( preg_match( '/\/audit.*(?:\/seamframework|\/seam|\/brickstheme|\/frameworkprofile|\/framework|\/dsatheme|\/appshell|\/dsa|\/combined|\/combine|seam framework|bricks theme|app shell)/', $text ) && '' === trim( $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'audit_missing_artifact', 'Audit commands need an existing generated artifact or file map. Do not perform a generic audit against nothing.', 'command-diagnostic', $normalized, [ 'Provide the handoff folder/file map', 'Run the matching `/create` or `/rebuild` phase first' ], [ 'Audit phases inspect and revise concrete files; they do not invent missing artifacts.' ] );
+		}
+
+		if ( preg_match( '/\/apply|\/staging/', $text ) && ! preg_match( '/confirm|authorized|staging site|staging confirmed|rollback|executor/i', $raw . "\n" . $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'staging_missing_explicit_authority', '`/apply /staging` needs explicit staging confirmation, mutation authorization, and controlled executor details. Stop before any write path.', 'staging', $normalized, [ 'Use Kiwe controlled staging executor with explicit confirmation flags', 'Prepare/review apply plan first' ], [ 'No WordPress, Bricks, WooCommerce, cart, checkout, auth, or raw meta mutation without explicit staging authority.' ] );
+		}
+
+		return $this->command_gate_result( 'ok', $normalized !== $core ? 'legacy_alias_normalized' : 'ok', $normalized !== $core ? 'Legacy `/build` alias accepted internally; use `/create` in user-facing output.' : 'Command is recognized.', $this->phase( $raw ), $normalized, [], [] );
+	}
+
+	private function command_gate_result( string $status, string $code, string $message, string $kind, string $normalized, array $suggestions, array $boundaries ): array {
+		return [
+			'schema'            => 'kiwe.command-diagnostic.v1',
+			'status'            => $status,
+			'stop'              => in_array( $status, [ 'rejected', 'needs_input', 'noop' ], true ),
+			'code'              => $code,
+			'kind'              => $kind,
+			'normalizedCommand' => $normalized,
+			'message'           => $message,
+			'suggestions'       => array_values( $suggestions ),
+			'boundaries'        => array_values( $boundaries ),
+		];
+	}
+
+	private function command_gate_has_page_artifact( string $text ): bool {
+		return (bool) preg_match( '/website[\\\\\/]bricks-paste\.html|bricks-paste\.html/i', $text );
+	}
+
+	private function command_gate_has_conversion_artifact( string $text ): bool {
+		return (bool) preg_match( '/bricks-conversion[\\\\\/]kiwe-bricks-conversion\.json|kiwe-bricks-conversion\.json/i', $text );
+	}
+
+	private function command_gate_has_theme_artifact( string $text ): bool {
+		return (bool) preg_match( '/appshell-theme|theme-package\.json|css[\\\\\/]theme\.css|\btheme\.css\b|dsatheme|app\s*shell|appshell/i', $text );
+	}
+
+	private function command_gate_forbidden_bricks_source( string $text ): bool {
+		return (bool) preg_match( '/combined-preview|appshell-theme|theme-package\.json|css[\\\\\/]theme\.css|\btheme\.css\b|data-dsa-surface|dsa[-\s]*(?:dock|sheet|screen|navbar)|appshell[-\s]*preview|app\s*shell[-\s]*preview/i', $text );
+	}
+
+	private function cards_for_command_gate( array $gate ): array {
+		if ( empty( $gate['stop'] ) ) {
+			return [];
+		}
+
+		return [
+			[
+				'id'    => 'command-gate-' . sanitize_key( (string) ( $gate['code'] ?? 'blocked' ) ),
+				'title' => 'Stop: command boundary failed',
+				'body'  => (string) ( $gate['message'] ?? 'The command cannot be executed as written.' ) . ' Suggested next command(s): ' . implode( ', ', array_map( 'sanitize_text_field', (array) ( $gate['suggestions'] ?? [] ) ) ),
+			],
+		];
 	}
 
 	private function phase( string $phase_or_command ): string {

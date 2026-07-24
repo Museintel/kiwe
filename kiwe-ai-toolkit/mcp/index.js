@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getWorkflowContext, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -40,6 +40,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           artifactSummary: { type: 'string', description: 'Short summary of the previous phase artifact, if any.' },
           siteGraphSummary: { type: 'string', description: 'Short target Site Graph summary for dynamic phases.' },
           useCompanion: { type: 'boolean', description: 'Optional equivalent of appending /usecompanion. Companion is bounded and non-blocking; if unavailable, continue with the normal route.' }
+        },
+        required: ['command']
+      }
+    },
+    {
+      name: 'kiwe_diagnose_command',
+      description: 'Cheaply validate a Kiwe slash command before generation. Returns ok, rejected, needs_input, or noop with exact next-command suggestions so the AI does not waste tokens on nonexistent or useless phases.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'Human slash command to diagnose.' },
+          artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts.' },
+          siteGraphSummary: { type: 'string', description: 'Short target Site Graph/API context summary.' }
         },
         required: ['command']
       }
@@ -166,6 +179,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_route_command':
       result = routeCommand(args);
+      break;
+    case 'kiwe_diagnose_command':
+      result = diagnoseCommand(args);
       break;
     case 'kiwe_list_modes':
       result = listModes();

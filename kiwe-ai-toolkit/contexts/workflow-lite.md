@@ -41,6 +41,42 @@ Canonical preview commands:
 
 `/create /preview /dsatheme` is only for the AppShell theme preview lane. `/create /preview /combined` is only for the primary combined preview lane. Neither command creates Bricks JSON, and neither preview is valid input for `/convert /bricks`.
 
+## Command gate / no-waste boundary
+
+Before doing real work for any slash command, validate the command cheaply.
+
+Tool-capable clients should call:
+
+```text
+kiwe_diagnose_command
+```
+
+CLI-capable clients can run:
+
+```bash
+node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifact-summary "website/bricks-paste.html exists"
+```
+
+The diagnostic result uses `schema: "kiwe.command-diagnostic.v1"` and returns one of:
+
+- `ok`: continue with the selected phase;
+- `rejected`: no such command or forbidden lane combination;
+- `needs_input`: command is real, but required artifact/context/authority is missing;
+- `noop`: command is real but useless because the requested output already exists or is the same artifact.
+
+If `stop: true`, stop the flow and answer the human with the diagnostic. Do not continue into generation, conversion, audit, dynamic binding, or staging work.
+
+Examples:
+
+- `/buid /preview /brickstheme` -> `rejected`, `unknown_command_token`; suggest canonical `/create` commands.
+- `/create /preview /brickstheme` -> `rejected`, `unsupported_preview_target`; Framework/Bricks theme profiles are token JSON and have no separate preview lane.
+- `/create /preview /website` when `website/bricks-paste.html` already exists -> `noop`, `website_preview_already_exists`; the page artifact is already the preview.
+- `/convert /bricks` without `website/bricks-paste.html` -> `needs_input`, `bricks_convert_missing_page_source`.
+- `/convert /bricks` against `combined-preview` or `appshell-theme` -> `rejected`, `bricks_convert_forbidden_source_in_command`.
+- `/audit /bricksconversion` without `bricks-conversion/kiwe-bricks-conversion.json` -> `needs_input`, `bricks_audit_missing_conversion_artifact`.
+- `/dynamic /sitegraph` without Site Graph/API context -> `needs_input`, `dynamic_missing_site_graph`.
+- `/apply /staging` without explicit staging confirmation/mutation authority -> `needs_input`, `staging_missing_explicit_authority`.
+
 ## Optional `/usecompanion` flag
 
 `/usecompanion` can be appended to any workflow command:

@@ -355,6 +355,312 @@ function commandWithoutCompanion(command) {
   return String(command || '').replace(/(?:^|\s)\/usecompanion\b/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
+const KNOWN_COMMAND_TOKENS = new Set([
+  '/adapt',
+  '/apply',
+  '/appshell',
+  '/assemble',
+  '/audit',
+  '/binding',
+  '/bindings',
+  '/bricks',
+  '/bricks-conversion',
+  '/bricksconversion',
+  '/brickstheme',
+  '/build',
+  '/combine',
+  '/combined',
+  '/convert',
+  '/create',
+  '/creative',
+  '/dsa',
+  '/dsatheme',
+  '/dsathemeandhomepage',
+  '/dynamic',
+  '/export',
+  '/framework',
+  '/frameworkprofile',
+  '/htmlcssjs',
+  '/ideate',
+  '/page',
+  '/preview',
+  '/rebuild',
+  '/seam',
+  '/seamframework',
+  '/staging',
+  '/theme',
+  '/translate',
+  '/usecompanion',
+  '/webdraft',
+  '/webpage',
+  '/website'
+]);
+
+const TYPO_TOKEN_SUGGESTIONS = new Map([
+  ['/buid', '/create'],
+  ['/bild', '/create'],
+  ['/bulid', '/create'],
+  ['/buld', '/create'],
+  ['/creat', '/create'],
+  ['/crate', '/create'],
+  ['/previe', '/preview'],
+  ['/preveiw', '/preview'],
+  ['/brick', '/bricks'],
+  ['/brikcs', '/bricks'],
+  ['/dsathem', '/dsatheme'],
+  ['/seamframwork', '/seamframework']
+]);
+
+const VALID_PHASE_COMMANDS = [
+  '/ideate /webdraft',
+  '/rebuild /seamframework',
+  '/audit /seamframework',
+  '/create /brickstheme',
+  '/audit /brickstheme',
+  '/create /dsatheme',
+  '/create /preview /dsatheme',
+  '/audit /dsatheme',
+  '/assemble /combined',
+  '/create /preview /combined',
+  '/audit /combined',
+  '/dynamic /sitegraph',
+  '/convert /bricks',
+  '/audit /bricksconversion',
+  '/apply /staging'
+];
+
+function slashTokens(text) {
+  return Array.from(String(text || '').matchAll(/(?:^|\s)(\/[a-z0-9-]+)/gi), (match) => match[1].toLowerCase());
+}
+
+function commandHas(text, pattern) {
+  return pattern.test(String(text || '').toLowerCase());
+}
+
+function hasPageArtifact(text) {
+  return /website[\\/]bricks-paste\.html|bricks-paste\.html/i.test(String(text || ''));
+}
+
+function hasConversionArtifact(text) {
+  return /bricks-conversion[\\/]kiwe-bricks-conversion\.json|kiwe-bricks-conversion\.json/i.test(String(text || ''));
+}
+
+function hasThemeArtifact(text) {
+  return /appshell-theme|theme-package\.json|css[\\/]theme\.css|\btheme\.css\b|dsatheme|app\s*shell|appshell/i.test(String(text || ''));
+}
+
+function hasForbiddenBricksSource(text) {
+  return /combined-preview|appshell-theme|theme-package\.json|css[\\/]theme\.css|\btheme\.css\b|data-dsa-surface|dsa[-\s]*(?:dock|sheet|screen|navbar)|appshell[-\s]*preview|app\s*shell[-\s]*preview/i.test(String(text || ''));
+}
+
+function commandDiagnostic({ status = 'ok', code = 'ok', message = '', kind = '', normalizedCommand = '', suggestions = [], boundaries = [] } = {}) {
+  const stop = ['rejected', 'needs_input', 'noop'].includes(status);
+  return {
+    schema: 'kiwe.command-diagnostic.v1',
+    status,
+    stop,
+    code,
+    kind,
+    normalizedCommand,
+    message,
+    suggestions,
+    boundaries
+  };
+}
+
+export function diagnoseCommand({ command = '', artifactSummary = '', siteGraphSummary = '' } = {}) {
+  const raw = String(command || '').trim();
+  const text = raw.toLowerCase();
+  const commandCore = commandWithoutCompanion(raw);
+  const normalizedCommand = commandCore.replace(/(?:^|\s)\/build\b/gi, ' /create').replace(/\s+/g, ' ').trim();
+  const tokens = slashTokens(raw);
+  const unknown = tokens.filter((token) => !KNOWN_COMMAND_TOKENS.has(token));
+
+  if (!raw) {
+    return commandDiagnostic({
+      status: 'ok',
+      code: 'workflow_default',
+      kind: 'workflow',
+      normalizedCommand: '',
+      message: 'No slash command supplied; return the Kiwe workflow context.'
+    });
+  }
+
+  if (unknown.length) {
+    const suggestions = unknown.map((token) => TYPO_TOKEN_SUGGESTIONS.get(token) || '').filter(Boolean);
+    return commandDiagnostic({
+      status: 'rejected',
+      code: 'unknown_command_token',
+      normalizedCommand,
+      message: `Unknown Kiwe command token${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}. Do not guess or continue.`,
+      suggestions: suggestions.length ? [...new Set(suggestions)] : VALID_PHASE_COMMANDS,
+      boundaries: ['Use only registered Kiwe slash-command tokens.', 'If the human made a typo, ask them to resend the corrected command.']
+    });
+  }
+
+  if (commandHas(text, /\/preview/) && !commandHas(text, /\/create/)) {
+    return commandDiagnostic({
+      status: 'rejected',
+      code: 'preview_requires_create',
+      normalizedCommand,
+      message: 'Preview proof commands must use the canonical creation verb `/create`.',
+      suggestions: ['/create /preview /dsatheme', '/create /preview /combined'],
+      boundaries: ['Do not invent `/preview` as a standalone command.']
+    });
+  }
+
+  if (commandHas(text, /\/create/) && commandHas(text, /\/preview/) && commandHas(text, /\/(?:brickstheme|frameworkprofile|framework|bricks)\b|bricks theme/)) {
+    return commandDiagnostic({
+      status: 'rejected',
+      code: 'unsupported_preview_target',
+      normalizedCommand,
+      message: 'No `/create /preview /brickstheme` or Bricks-theme preview command exists. Framework/Bricks theme profiles are token JSON, not a separate preview lane.',
+      suggestions: ['/create /brickstheme', '/audit /brickstheme', '/create /preview /dsatheme', '/create /preview /combined'],
+      boundaries: ['Previews exist for the website/page HTML artifact, DSA AppShell theme proof, and combined page-plus-AppShell proof.', 'Framework profiles are validated, not previewed as their own UI.']
+    });
+  }
+
+  if (commandHas(text, /\/create/) && commandHas(text, /\/preview/) && commandHas(text, /\/(?:website|webpage|page|htmlcssjs)\b/)) {
+    const existing = hasPageArtifact(artifactSummary) || /\bhtml\b.*\bcss\b|\bindex\.html\b|creative draft|website draft/i.test(String(artifactSummary || ''));
+    return commandDiagnostic({
+      status: existing ? 'noop' : 'rejected',
+      code: existing ? 'website_preview_already_exists' : 'website_preview_is_page_artifact',
+      normalizedCommand,
+      message: existing
+        ? 'A website/page preview already exists in the supplied artifact. Do not regenerate the same preview; move to `/rebuild /seamframework`, `/audit /seamframework`, or `/convert /bricks` when appropriate.'
+        : 'There is no separate Kiwe website preview command. A website/page preview is the HTML/CSS/JS page artifact itself, normally `website/bricks-paste.html` after the Seam rebuild.',
+      suggestions: existing ? ['/rebuild /seamframework', '/audit /seamframework', '/dynamic /sitegraph', '/convert /bricks'] : ['/ideate /webdraft', '/rebuild /seamframework'],
+      boundaries: ['Do not spend tokens recreating a preview that is already the artifact.']
+    });
+  }
+
+  if (commandHas(text, /\/create/) && commandHas(text, /\/preview/) && !commandHas(text, /\/(?:dsatheme|appshell|dsa|combined|combine)\b|app shell/)) {
+    return commandDiagnostic({
+      status: 'rejected',
+      code: 'missing_preview_target',
+      normalizedCommand,
+      message: 'Preview creation needs an explicit supported target.',
+      suggestions: ['/create /preview /dsatheme', '/create /preview /combined'],
+      boundaries: ['Supported preview-proof targets are DSA/AppShell theme and combined page-plus-AppShell only.']
+    });
+  }
+
+  if (commandHas(text, /\/convert/) && commandHas(text, /\/bricks/) && hasForbiddenBricksSource(raw)) {
+    return commandDiagnostic({
+      status: 'rejected',
+      code: 'bricks_convert_forbidden_source_in_command',
+      kind: 'bricks-convert',
+      normalizedCommand,
+      message: '`/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.',
+      suggestions: ['/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined'],
+      boundaries: ['Bricks conversion source is strictly `website/bricks-paste.html`.']
+    });
+  }
+
+  if (commandHas(text, /\/convert/) && commandHas(text, /\/bricks/)) {
+    const artifactText = String(artifactSummary || '');
+    if (!hasPageArtifact(artifactText)) {
+      return commandDiagnostic({
+        status: hasThemeArtifact(artifactText) || hasForbiddenBricksSource(artifactText) ? 'rejected' : 'needs_input',
+        code: hasThemeArtifact(artifactText) || hasForbiddenBricksSource(artifactText) ? 'bricks_convert_missing_page_source_with_theme_artifact' : 'bricks_convert_missing_page_source',
+        kind: 'bricks-convert',
+        normalizedCommand,
+        message: hasThemeArtifact(artifactText) || hasForbiddenBricksSource(artifactText)
+          ? 'The supplied artifact summary looks like an AppShell/theme/preview lane and does not include `website/bricks-paste.html`. Stop; do not convert DSA theme material into Bricks.'
+          : '`/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
+        suggestions: ['/rebuild /seamframework to create website/bricks-paste.html', '/convert /bricks after website/bricks-paste.html exists'],
+        boundaries: ['Do not guess a Bricks source from a DSA theme or combined preview.']
+      });
+    }
+  }
+
+  if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:bricksconversion|bricks-conversion)\b|bricks conversion|bricks json|html-to-bricks/) && !hasConversionArtifact(artifactSummary)) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'bricks_audit_missing_conversion_artifact',
+      kind: 'bricks-audit',
+      normalizedCommand,
+      message: '`/audit /bricksconversion` needs `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.',
+      suggestions: ['/convert /bricks', '/audit /bricksconversion after kiwe-bricks-conversion.json exists'],
+      boundaries: ['Audit phases inspect existing artifacts; they do not silently create missing outputs.']
+    });
+  }
+
+  if (commandHas(text, /\/dynamic|\/sitegraph|\/binding|\/bindings/) && !String(siteGraphSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'dynamic_missing_site_graph',
+      kind: 'dynamic',
+      normalizedCommand,
+      message: '`/dynamic /sitegraph` needs a target Site Graph summary or API access. Do not guess product categories, pages, custom fields, dynamic tags, or Bricks query-loop types.',
+      suggestions: ['GET /wp-json/dsa/v1/ai/site-graph', 'GET|POST /wp-json/dsa/v1/ai/site-graph-data', '/dynamic /sitegraph after Site Graph is available'],
+      boundaries: ['Dynamic binding must be grounded in target-site truth, not frontend scraping or assumptions.']
+    });
+  }
+
+  if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:seamframework|seam|brickstheme|frameworkprofile|framework|dsatheme|appshell|dsa|combined|combine)\b|seam framework|bricks theme|app shell/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'audit_missing_artifact',
+      normalizedCommand,
+      message: 'Audit commands need an existing generated artifact or file map. Do not perform a generic audit against nothing.',
+      suggestions: ['Provide the handoff folder/file map', 'Run the matching `/create` or `/rebuild` phase first'],
+      boundaries: ['Audit phases inspect and revise concrete files; they do not invent missing artifacts.']
+    });
+  }
+
+  if (commandHas(text, /\/apply|\/staging/) && !/confirm|authorized|staging site|staging confirmed|rollback|executor/i.test(`${raw}\n${artifactSummary}`)) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'staging_missing_explicit_authority',
+      kind: 'staging',
+      normalizedCommand,
+      message: '`/apply /staging` needs explicit staging confirmation, mutation authorization, and controlled executor details. Stop before any write path.',
+      suggestions: ['Use Kiwe controlled staging executor with explicit confirmation flags', 'Prepare/review apply plan first'],
+      boundaries: ['No WordPress, Bricks, WooCommerce, cart, checkout, auth, or raw meta mutation without explicit staging authority.']
+    });
+  }
+
+  return commandDiagnostic({
+    status: 'ok',
+    code: normalizedCommand !== commandCore ? 'legacy_alias_normalized' : 'ok',
+    kind: routeKind(raw),
+    normalizedCommand,
+    message: normalizedCommand !== commandCore ? 'Legacy `/build` alias accepted internally; use `/create` in user-facing output.' : 'Command is recognized.'
+  });
+}
+
+function commandDiagnosticResponse(diagnostic, command) {
+  const suggestions = Array.isArray(diagnostic.suggestions) && diagnostic.suggestions.length
+    ? diagnostic.suggestions.map((item) => `- ${item}`).join('\n')
+    : '- Re-run with a valid Kiwe phase command.';
+  const boundaries = Array.isArray(diagnostic.boundaries) && diagnostic.boundaries.length
+    ? diagnostic.boundaries.map((item) => `- ${item}`).join('\n')
+    : '- Stop this phase instead of guessing.';
+
+  return [
+    `# Kiwe command diagnostic: ${diagnostic.status}`,
+    '',
+    `Command: ${String(command || '(none)').trim() || '(none)'}`,
+    `Code: ${diagnostic.code}`,
+    diagnostic.normalizedCommand ? `Normalized command: ${diagnostic.normalizedCommand}` : '',
+    '',
+    '## What went wrong',
+    '',
+    diagnostic.message || 'The command cannot be executed as written.',
+    '',
+    '## Boundary',
+    '',
+    boundaries,
+    '',
+    '## What to do next',
+    '',
+    suggestions,
+    '',
+    'Do not continue into generation, conversion, audit, dynamic binding, or staging work until the command is corrected or the missing artifact/context is supplied.'
+  ].filter(Boolean).join('\n').trim() + '\n';
+}
+
 function companionModeForKind(kind) {
   if (kind === 'bricks-convert') return 'dynamic';
   if (kind === 'bricks-audit') return 'audit';
@@ -434,7 +740,11 @@ function companionAssistContext(kind, command) {
 }
 
 export function routeCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '', useCompanion = false } = {}) {
-  const kind = routeKind(command);
+  const diagnostic = diagnoseCommand({ command, artifactSummary, siteGraphSummary });
+  if (diagnostic.stop) {
+    return commandDiagnosticResponse(diagnostic, command);
+  }
+  const kind = diagnostic.kind || routeKind(command);
   const companionRequested = wantsCompanion(command, useCompanion);
   const humanBrief = String(brief || '').trim() || 'No human brief supplied.';
   const artifact = String(artifactSummary || '').trim() || 'No previous artifact summary supplied. Ask the human for the prior phase output if this command depends on one.';
@@ -456,6 +766,13 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     '## Route rule',
     '',
     'Do only the selected phase. Do not silently expand into website + DSA + Bricks + dynamic + staging work.',
+    '',
+    '## Command gate',
+    '',
+    `Status: ${diagnostic.status}`,
+    `Code: ${diagnostic.code}`,
+    diagnostic.normalizedCommand ? `Canonical command: ${diagnostic.normalizedCommand}` : '',
+    diagnostic.message || '',
     '',
     companionRequested ? companionAssistContext(kind, command) : '',
     getWorkflowContext()

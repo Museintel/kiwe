@@ -25,6 +25,20 @@ Use the workflow file when the human wants high-quality output, fewer correction
 
 Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
 
+Before spending tokens on a slash-command phase, run the Kiwe command gate when tools or CLI are available:
+
+```text
+kiwe_diagnose_command
+```
+
+or:
+
+```bash
+node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifact-summary "website/bricks-paste.html exists"
+```
+
+If the diagnostic returns `stop: true`, do not continue. Report the diagnostic to the human. This prevents non-existent commands, wrong-lane requests, missing artifacts, missing Site Graph context, and no-op preview requests from turning into token-wasting generation loops.
+
 The workflow intentionally separates creativity from Kiwe contract compliance. A pure creative draft may happen first without Kiwe/Seam/DSA constraints; later commands rebuild, audit, package, and bind it.
 
 Any phase command may include `/usecompanion`, for example `/rebuild /seamframework /usecompanion` or `/audit /dsatheme /usecompanion`. This is optional and non-blocking. If the human supplies `KIWE_REST_BASE` and `KIWE_AI_KEY`, make one bounded call to Kiwe Companion for compact phase cards or Audit Companion findings. If Companion is unavailable, disabled, slow, rate-limited, over budget, or inaccessible, continue with the same command without `/usecompanion` and report the fallback. Do not use `/usecompanion` to make Companion co-author the whole output, dump full plugin files, or spend native model tokens; it is a deterministic contract oracle with hashes, rule IDs, memory fingerprints, and `mustFix` maps.
