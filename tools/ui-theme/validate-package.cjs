@@ -256,13 +256,40 @@ function validateNoRuntimeBridgeTokenReferences(relative, body) {
 	}
 }
 
-function validateNoAnonymousLiteralThemeValues(relative, body) {
-	const literals = new Set();
-	for (const match of stripCssComments(body).matchAll(/(^|[^-_a-zA-Z0-9.])((?:\d*\.)?\d+px)\b/gi)) {
-		literals.add(match[2].toLowerCase());
+function cssDeclarationText(body) {
+	return Array.from(stripCssComments(body).matchAll(/([^{}]+)\{([^{}]*)\}/g)).map((match) => match[2]).join('\n');
+}
+
+function collectAnonymousThemeLiterals(body) {
+	const stripped = stripCssComments(body);
+	const declarations = cssDeclarationText(body);
+	const lengths = new Set();
+	const colors = new Set();
+	const effects = new Set();
+	const lengthPattern = /(^|[^-_a-zA-Z0-9.])(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc))\b/gi;
+	for (const match of stripped.matchAll(lengthPattern)) {
+		lengths.add(match[2].toLowerCase());
 	}
-	if (literals.size) {
-		fail(`${relative} contains anonymous pixel literal(s) ${Array.from(literals).sort().join(', ')}. Importable AppShell theme CSS must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables instead of hard-coded px values. Put concrete base values in theme-package.json settings.tokens or Kiwe core token registries, not in installable theme.css.`);
+	for (const match of declarations.matchAll(/(^|[^#_a-zA-Z0-9-])(#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b)/gi)) {
+		colors.add(match[2].toLowerCase());
+	}
+	for (const match of declarations.matchAll(/\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color-mix|light-dark|color)\s*\(/gi)) {
+		colors.add(match[0].replace(/\s+/g, '').toLowerCase());
+	}
+	for (const match of declarations.matchAll(/(?:^|;)\s*((?:box-shadow|text-shadow)\s*:\s*(?![^;]*\b(?:none|inherit|initial|unset|revert)\b)(?![^;]*var\()[^;]+)/gi)) {
+		effects.add(match[1].trim().replace(/\s+/g, ' ').slice(0, 120));
+	}
+	return { lengths, colors, effects };
+}
+
+function validateNoAnonymousLiteralThemeValues(relative, body) {
+	const literals = collectAnonymousThemeLiterals(body);
+	const details = [];
+	if (literals.lengths.size) details.push(`lengths ${Array.from(literals.lengths).sort().join(', ')}`);
+	if (literals.colors.size) details.push(`colors/functions ${Array.from(literals.colors).sort().join(', ')}`);
+	if (literals.effects.size) details.push(`effects ${Array.from(literals.effects).sort().join(' | ')}`);
+	if (details.length) {
+		fail(`${relative} contains anonymous CSS literal(s): ${details.join('; ')}. Importable AppShell theme CSS must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables instead of hard-coded lengths, color literals, or shadow/effect recipes. Put concrete base values in theme-package.json settings.tokens or Kiwe core token registries, not in installable theme.css.`);
 	}
 }
 

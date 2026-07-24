@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 0.6.31 - 2026-07-24
+
+- Expanded AppShell theme token-purity validation from raw `px` literals to anonymous raw CSS literals, including hardcoded length units, color literals/functions, and literal shadow/effect recipes in importable `theme.css`.
+- Updated `validate-package`, `validate-output`, `audit-output`, and the REST Audit Companion so browser AI, internal AI, and human theme authors receive the same deterministic failure before staging.
+- Refreshed the Kiwe AI Toolkit contexts, UI-system prompt, and invalid fixture so concrete design values are placed in `theme-package.json settings.tokens` or core token registries while installed theme CSS consumes official Kiwe/Seam tokens or Geometry Engine variables.
+
 ## 0.6.30 - 2026-07-23
 
 - Hardened the marketplace AppShell theme boundary so importable `theme.css` now fails on anonymous raw pixel literals such as `22px`, `35px`, `1px`, or `999px`; theme CSS must consume official Kiwe/Seam tokens, documented theme aliases, or Kiwe/DSA Geometry Engine variables instead.

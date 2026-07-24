@@ -434,7 +434,7 @@ Use canonical `--kiwe-*` tokens and aliases from `token-map.css` for palette, ty
 
 Do not create a hidden large palette, font system, or heading scale that cannot map back to Kiwe tokens. Importable `theme.css` should consume the token profile; it should not be the only place where the design personality exists.
 
-Never place anonymous raw pixel values directly in importable AppShell `theme.css`. If a design needs a concrete size, radius, border width, shadow, or type scale, define it through `theme-package.json settings.tokens` or use an existing Kiwe/DSA Geometry Engine variable, then consume that variable in CSS. Examples: use `var(--kiwe-space-md)`, `var(--kiwe-radius-xl)`, `var(--kiwe-shadow-md)`, or `var(--dsa-geometry-dock-border, thin)`, not `24px`, `18px`, `0 18px 48px`, or `1px`.
+Never place anonymous raw CSS literals directly in importable AppShell `theme.css`. If a design needs a concrete size, radius, border width, color, shadow, or type scale, define it through `theme-package.json settings.tokens` or use an existing Kiwe/DSA Geometry Engine variable, then consume that variable in CSS. Examples: use `var(--kiwe-space-md)`, `var(--kiwe-radius-xl)`, `var(--kiwe-color-text)`, `var(--kiwe-shadow-md)`, or `var(--dsa-geometry-dock-border, thin)`, not `24px`, `18px`, `#10231d`, `rgb(...)`, `0 18px 48px`, or `1px`.
 
 ## Output format
 

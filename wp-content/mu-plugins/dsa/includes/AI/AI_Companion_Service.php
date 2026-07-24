@@ -468,8 +468,8 @@ final class AI_Companion_Service {
 			],
 			[
 				'id'      => 'theme-css-token-purity',
-				'title'   => 'Theme CSS consumes tokens, not magic pixels',
-				'body'    => 'Concrete values belong in settings.tokens or Kiwe core token registries. Importable AppShell theme.css should consume official --kiwe-* variables, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables, and must not contain anonymous raw px literals.',
+				'title'   => 'Theme CSS consumes tokens, not magic literals',
+				'body'    => 'Concrete values belong in settings.tokens or Kiwe core token registries. Importable AppShell theme.css should consume official --kiwe-* variables, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables, and must not contain anonymous raw length, color, or shadow/effect literals.',
 				'applies' => [ 'theme', 'combined', 'audit' ],
 			],
 			[
@@ -512,7 +512,7 @@ final class AI_Companion_Service {
 			return [
 				'summary' => 'Build theme packages as styling and safe settings only; Kiwe core owns AppShell geometry and runtime behavior.',
 				'do'      => [ 'Use documented live roots/selectors.', 'Consume official Kiwe/Seam tokens and Geometry Engine variables in import CSS.', 'Put screen copy/settings inside the theme package when supported.' ],
-				'dont'    => [ 'Do not set fixed/inset/z-index/viewport geometry for dock/sheet/screen/backdrop.', 'Do not put anonymous raw px literals in importable theme.css.', 'Do not invent runtime modules.' ],
+				'dont'    => [ 'Do not set fixed/inset/z-index/viewport geometry for dock/sheet/screen/backdrop.', 'Do not put anonymous raw length/color/shadow literals in importable theme.css.', 'Do not invent runtime modules.' ],
 			];
 		}
 		if ( str_contains( $question_lc, 'bricks' ) || str_contains( $question_lc, 'dynamic' ) || 'dynamic' === $mode ) {
@@ -998,17 +998,54 @@ final class AI_Companion_Service {
 			];
 		}
 		$css_without_comments = (string) preg_replace( '/\/\*[\s\S]*?\*\//', '', $css );
-		if ( preg_match_all( '/(^|[^-_a-zA-Z0-9.])((?:\d*\.)?\d+px)\b/i', $css_without_comments, $literal_matches, PREG_SET_ORDER ) ) {
-			$literal_values = [];
-			foreach ( $literal_matches as $match ) {
-				$literal_values[] = strtolower( (string) $match[2] );
+		$declaration_text      = '';
+		if ( preg_match_all( '/[^{}]+\{([^{}]*)\}/', $css_without_comments, $declaration_matches ) ) {
+			$declaration_text = implode( "\n", array_map( 'strval', $declaration_matches[1] ) );
+		}
+		$literal_lengths = [];
+		$literal_colors  = [];
+		$literal_effects = [];
+		if ( preg_match_all( '/(^|[^-_a-zA-Z0-9.])(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc))\b/i', $css_without_comments, $length_matches, PREG_SET_ORDER ) ) {
+			foreach ( $length_matches as $match ) {
+				$literal_lengths[] = strtolower( (string) $match[2] );
 			}
-			$literal_values = array_values( array_unique( $literal_values ) );
-			sort( $literal_values );
+		}
+		if ( preg_match_all( '/(^|[^#_a-zA-Z0-9-])(#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b)/i', $declaration_text, $color_matches, PREG_SET_ORDER ) ) {
+			foreach ( $color_matches as $match ) {
+				$literal_colors[] = strtolower( (string) $match[2] );
+			}
+		}
+		if ( preg_match_all( '/\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color-mix|light-dark|color)\s*\(/i', $declaration_text, $color_fn_matches, PREG_SET_ORDER ) ) {
+			foreach ( $color_fn_matches as $match ) {
+				$literal_colors[] = strtolower( preg_replace( '/\s+/', '', (string) $match[0] ) );
+			}
+		}
+		if ( preg_match_all( '/(?:^|;)\s*((?:box-shadow|text-shadow)\s*:\s*(?![^;]*\b(?:none|inherit|initial|unset|revert)\b)(?![^;]*var\()[^;]+)/i', $declaration_text, $effect_matches, PREG_SET_ORDER ) ) {
+			foreach ( $effect_matches as $match ) {
+				$literal_effects[] = substr( preg_replace( '/\s+/', ' ', trim( (string) $match[1] ) ), 0, 120 );
+			}
+		}
+		$literal_lengths = array_values( array_unique( $literal_lengths ) );
+		$literal_colors  = array_values( array_unique( $literal_colors ) );
+		$literal_effects = array_values( array_unique( $literal_effects ) );
+		sort( $literal_lengths );
+		sort( $literal_colors );
+		sort( $literal_effects );
+		$literal_details = [];
+		if ( ! empty( $literal_lengths ) ) {
+			$literal_details[] = 'lengths ' . implode( ', ', $literal_lengths );
+		}
+		if ( ! empty( $literal_colors ) ) {
+			$literal_details[] = 'colors/functions ' . implode( ', ', $literal_colors );
+		}
+		if ( ! empty( $literal_effects ) ) {
+			$literal_details[] = 'effects ' . implode( ' | ', $literal_effects );
+		}
+		if ( ! empty( $literal_details ) ) {
 			$findings[] = [
 				'severity' => 'error',
-				'code'     => 'anonymous_literal_px_in_theme_css',
-				'message'  => sprintf( 'Importable theme.css contains anonymous pixel literal(s) %s. AppShell theme CSS must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables. Put concrete base values in theme-package.json settings.tokens or Kiwe core token registries, not installable theme.css.', implode( ', ', $literal_values ) ),
+				'code'     => 'anonymous_literal_value_in_theme_css',
+				'message'  => sprintf( 'Importable theme.css contains anonymous CSS literal(s): %s. AppShell theme CSS must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables. Put concrete base values in theme-package.json settings.tokens or Kiwe core token registries, not installable theme.css.', implode( '; ', $literal_details ) ),
 			];
 		}
 		if ( preg_match( '/(?:#dsa-surface|\\[data-dsa-surface\\])[^{}]*(?:data-dsa-dock|dsa-dock|data-dsa-dock-focus|data-dsa-dock-primary|dsa-ai-launcher|dsa-dock__button|data-dsa-module)[^{]*{[^}]*(?:\\bgap\\s*:|\\bmargin\\s*:|\\bpadding\\s*:|inline-size\\s*:|block-size\\s*:|min-width\\s*:|max-width\\s*:|min-height\\s*:|max-height\\s*:|\\bdisplay\\s*:|\\bflex\\s*:|\\border\\s*:|align-|justify-|place-|\\btransform\\s*:|\\btranslate\\s*:|\\bscale\\s*:|\\brotate\\s*:|\\boverflow)/is', $css ) ) {
@@ -1079,7 +1116,7 @@ final class AI_Companion_Service {
 			'seamDataRolesChecked' => ! isset( $codes['unsupported_seam_data_role'] ),
 			'appshellGeometryChecked' => ! isset( $codes['protected_geometry_in_theme_css'] ) && ! isset( $codes['protected_surface_geometry_in_theme_css'] ) && ! isset( $codes['protected_surface_root_paint_in_theme_css'] ) && ! isset( $codes['dock_geometry_or_arrangement_in_theme_css'] ),
 			'themePackageChecked' => ! isset( $codes['theme_package_missing_root_key'] ) && ! isset( $codes['theme_package_css_not_inline'] ) && ! isset( $codes['theme_package_css_mismatch'] ),
-			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['anonymous_literal_px_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
+			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['anonymous_literal_px_in_theme_css'] ) && ! isset( $codes['anonymous_literal_value_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
 			'pageArtifactChecked' => ! isset( $codes['page_artifact_contains_appshell'] ),
 		] as $label => $ok ) {
 			if ( $ok ) {

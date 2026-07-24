@@ -1,11 +1,11 @@
 {
   "schema": "kiwe.surface-theme.v1",
   "id": "invalid.anonymous-pixel-literal",
-  "name": "Invalid Anonymous Pixel Literal",
+  "name": "Invalid Anonymous Literal Values",
   "version": "1.0.0",
   "profile": "marketplace",
   "mode": "css-only",
-  "description": "Invalid fixture proving raw px literals are rejected from importable AppShell theme CSS.",
+  "description": "Invalid fixture proving raw lengths, colors, and effects are rejected from importable AppShell theme CSS.",
   "author": "Kiwe",
   "css": ["css/theme.css"],
   "assets": [],
@@ -13,7 +13,7 @@
   "requires": {
     "uiContract": "kiwe.surface-ui.v2",
     "tokenContract": "kiwe.universal",
-    "minKiwe": "0.6.30"
+    "minKiwe": "0.6.31"
   },
   "supports": ["light", "sheet", "dock", "horizontal"],
   "budgets": {

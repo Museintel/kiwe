@@ -1,3 +1,7 @@
 .dsa-visual-marketplace [data-dsa-profile-panel] [data-dsa-part="identity"] {
   padding: 22px;
+  margin-block: 1.25rem;
+  color: #123456;
+  background: rgb(255 255 255 / .9);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, .2);
 }

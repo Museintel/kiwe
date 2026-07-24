@@ -162,9 +162,11 @@ Batch 76 closes the sheet-mode background leak found on Hostinger after BioVanta
 
 Batch 77 hardens AppShell theme token purity at the marketplace boundary. Importable `theme.css` now fails validation when it contains anonymous raw pixel literals such as `22px`, `35px`, `1px`, or `999px`; concrete numeric values belong in `theme-package.json settings.tokens` or Kiwe core token registries, while installed theme CSS consumes official `--kiwe-*`, documented `--kiwe-theme-*`, or Kiwe/DSA Geometry Engine variables. The rule is enforced by `tools/ui-theme/validate-package.cjs`, `kiwe-ai-toolkit/tools/validate-output.cjs`, `kiwe-ai-toolkit/tools/audit-output.cjs`, and the REST Audit Companion so internal AI, browser AI, and human theme developers all receive the same deterministic feedback before staging. The MU loader and package entry are synchronized at `0.6.30`.
 
+Batch 78 expands that marketplace boundary from "no magic pixels" to "no magic literals." Importable AppShell `theme.css` now fails when it carries anonymous hardcoded lengths (`px`, `rem`, viewport units, container units, print units), color literals/functions (`#fff`, `rgb(...)`, `oklch(...)`), or literal shadow/effect recipes. Theme CSS must consume official Kiwe/Seam tokens, documented `--kiwe-theme-*` aliases, or Kiwe/DSA Geometry Engine variables; concrete design values live in `settings.tokens` or core token registries so Bricks export, DSA themes, internal AI, and browser-AI handoffs all operate from the same token brain. The MU loader and package entry are synchronized at `0.6.31`.
+
 Next release-prep steps:
 
-1. Upload/proof the `0.6.29` MU package on Hostinger so the root-paint gate, protected Seam boundary, and corrected BioVantage package flow are available to future AI/theme tests.
+1. Upload/proof the `0.6.31` MU package on Hostinger so the expanded theme literal-purity gate is available to future AI/theme tests.
 
 ## Files
 
@@ -206,7 +208,7 @@ Do not use htmx or Alpine for PhoneKey/auth, checkout/payment, cart reconciliati
 
 Theme CSS should consume canonical `--kiwe-*` tokens and compatibility `dsa-*` aliases. Hidden private palettes, font systems, and heading scales should be promoted into official token overrides when they are intended to appear live.
 
-Installable AppShell `theme.css` is token-pure. It must not contain anonymous raw pixel literals such as `22px`, `35px`, `1px`, or `999px`; concrete numeric values belong in `theme-package.json settings.tokens` or Kiwe core token registries, and the CSS should consume the resulting `--kiwe-*`, documented `--kiwe-theme-*`, or Kiwe/DSA Geometry Engine variables.
+Installable AppShell `theme.css` is token-pure. It must not contain anonymous raw CSS literals such as hardcoded lengths (`22px`, `1.25rem`, `100vw`), color literals/functions (`#fff`, `rgb(...)`, `oklch(...)`), or literal shadow/effect recipes; concrete base values belong in `theme-package.json settings.tokens` or Kiwe core token registries, and the CSS should consume the resulting `--kiwe-*`, documented `--kiwe-theme-*`, or Kiwe/DSA Geometry Engine variables.
 
 ## Package validation
 

@@ -5,11 +5,11 @@
   "theme": {
     "schema": "kiwe.surface-theme.v1",
     "id": "invalid.anonymous-pixel-literal",
-    "name": "Invalid Anonymous Pixel Literal",
+    "name": "Invalid Anonymous Literal Values",
     "version": "1.0.0",
     "profile": "marketplace",
     "mode": "css-only",
-    "description": "Invalid fixture proving raw px literals are rejected from importable AppShell theme CSS.",
+    "description": "Invalid fixture proving raw lengths, colors, and effects are rejected from importable AppShell theme CSS.",
     "author": "Kiwe",
     "css": ["css/theme.css"],
     "assets": [],
@@ -17,7 +17,7 @@
     "requires": {
       "uiContract": "kiwe.surface-ui.v2",
       "tokenContract": "kiwe.universal",
-      "minKiwe": "0.6.30"
+      "minKiwe": "0.6.31"
     },
     "supports": ["light", "sheet", "dock", "horizontal"],
     "budgets": {
@@ -40,5 +40,5 @@
       }
     }
   },
-  "css": ".dsa-visual-marketplace [data-dsa-profile-panel] [data-dsa-part=\"identity\"] {\n  padding: 22px;\n}\n"
+  "css": ".dsa-visual-marketplace [data-dsa-profile-panel] [data-dsa-part=\"identity\"] {\n  padding: 22px;\n  margin-block: 1.25rem;\n  color: #123456;\n  background: rgb(255 255 255 / .9);\n  box-shadow: 0 1rem 2rem rgba(0, 0, 0, .2);\n}\n"
 }

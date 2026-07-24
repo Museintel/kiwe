@@ -71,12 +71,34 @@ function protectedAppShellRootPaint(css) {
   return findings;
 }
 
-function anonymousPixelLiterals(css) {
-  const literals = new Set();
-  for (const match of stripCssComments(css).matchAll(/(^|[^-_a-zA-Z0-9.])((?:\d*\.)?\d+px)\b/gi)) {
-    literals.add(match[2].toLowerCase());
+function cssDeclarationText(css) {
+  return Array.from(stripCssComments(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)).map((match) => match[2]).join('\n');
+}
+
+function anonymousThemeLiterals(css) {
+  const stripped = stripCssComments(css);
+  const declarations = cssDeclarationText(css);
+  const lengths = new Set();
+  const colors = new Set();
+  const effects = new Set();
+  const lengthPattern = /(^|[^-_a-zA-Z0-9.])(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc))\b/gi;
+  for (const match of stripped.matchAll(lengthPattern)) {
+    lengths.add(match[2].toLowerCase());
   }
-  return Array.from(literals).sort();
+  for (const match of declarations.matchAll(/(^|[^#_a-zA-Z0-9-])(#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b)/gi)) {
+    colors.add(match[2].toLowerCase());
+  }
+  for (const match of declarations.matchAll(/\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color-mix|light-dark|color)\s*\(/gi)) {
+    colors.add(match[0].replace(/\s+/g, '').toLowerCase());
+  }
+  for (const match of declarations.matchAll(/(?:^|;)\s*((?:box-shadow|text-shadow)\s*:\s*(?![^;]*\b(?:none|inherit|initial|unset|revert)\b)(?![^;]*var\()[^;]+)/gi)) {
+    effects.add(match[1].trim().replace(/\s+/g, ' ').slice(0, 120));
+  }
+  const details = [];
+  if (lengths.size) details.push(`lengths ${Array.from(lengths).sort().join(', ')}`);
+  if (colors.size) details.push(`colors/functions ${Array.from(colors).sort().join(', ')}`);
+  if (effects.size) details.push(`effects ${Array.from(effects).sort().join(' | ')}`);
+  return details;
 }
 
 if (mode === 'combined') {
@@ -137,10 +159,10 @@ if (mode === 'theme' || mode === 'combined') {
       }
       const cssRel = `appshell-theme/import/${entry.name}/css/theme.css`;
       const css = fs.readFileSync(path.join(root, cssRel), 'utf8');
-      const pixelLiterals = anonymousPixelLiterals(css);
-      if (pixelLiterals.length) {
+      const anonymousLiterals = anonymousThemeLiterals(css);
+      if (anonymousLiterals.length) {
         console.error(`Kiwe handoff validation failed for ${root}`);
-        console.error(`${cssRel} contains anonymous pixel literal(s): ${pixelLiterals.join(', ')}`);
+        console.error(`${cssRel} contains anonymous CSS literal(s): ${anonymousLiterals.join('; ')}`);
         console.error('Importable AppShell theme CSS must consume official --kiwe-* universal tokens, documented --kiwe-theme-* aliases, or Kiwe/DSA geometry variables. Concrete base values belong in theme-package.json settings.tokens or Kiwe core token registries, not installable theme.css.');
         process.exit(1);
       }
