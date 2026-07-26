@@ -98,6 +98,10 @@ The Kiwe AppShell is runtime chrome around the page, not part of the Bricks page
 
 Seam is semantic/headless. Use Seam classes/attributes for meaning and structure where helpful, but use custom page CSS for the actual visual art direction.
 
+Use Seam classes/attributes in markup, but do not redefine bare Seam framework selectors in project CSS. For example, do not write `.seam-horizontal-rail { ... }`, `.seam-card { ... }`, or `[data-flow="reel"] { ... }` in page/theme CSS. Put visual rules on project-owned classes such as `.brand-rail`, `.nc-campaign-card`, or `.appsite-hero` so Seam remains a stable headless vocabulary and Bricks layouts do not accidentally shrink or rearrange when the same Seam class appears in another place.
+
+For rails, put `.seam-horizontal-rail` / `data-flow="horizontal-rail"` only on the actual item track. Do not put the rail flow on an outer sticky nav or wrapper that contains `.seam-container`; that wrapper can shrink the inner container into one rail item after Bricks import.
+
 If the paired design has a distinctive live-intended palette, type scale, font pairing, site background, spacing, radius, or shadow system, declare that design-token personality inside `appshell-theme/import/[theme-id]/theme-package.json` at `settings.tokens`. For combined marketplace AppShell themes this is required, not optional, because DSA, Seam page CSS, and Bricks global theme style must share the same token profile. Do not leave the brand system only inside preview CSS. A separate `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` is reserved for website/page-only handoffs or explicit standalone `Kiwe > Framework` imports; combined mode uses the theme package token lane.
 
 ## Universal Appsite capability attributes

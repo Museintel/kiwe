@@ -330,6 +330,7 @@ final class AI_Companion_Service {
 
 		$findings = array_merge( $findings, $this->review_required_shape( $mode, $path_map ) );
 		$findings = array_merge( $findings, $this->review_data_roles( $path_map ) );
+		$findings = array_merge( $findings, $this->review_seam_css_ownership( $path_map ) );
 		$findings = array_merge( $findings, $this->review_text_encoding( $path_map ) );
 
 		$theme_css = $this->file_like( $path_map, 'theme.css' );
@@ -1028,6 +1029,64 @@ final class AI_Companion_Service {
 							'path'     => sanitize_text_field( (string) $path ),
 						];
 					}
+				}
+			}
+		}
+
+		return $findings;
+	}
+
+	private function review_seam_css_ownership( array $path_map ): array {
+		$findings = [];
+		foreach ( $path_map as $path => $content ) {
+			if ( ! preg_match( '/\.(?:html|css|json)$/i', (string) $path ) ) {
+				continue;
+			}
+			$seen = [];
+			if ( preg_match_all( '/(?:^|[{},]|\\\\n|\\\\r|\n|\r)\s*((?:\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b)[^{,}]{0,240})\s*(?:,|\{)/i', (string) $content, $matches ) ) {
+				foreach ( $matches[1] as $selector ) {
+					$selector = trim( preg_replace( '/\/\*[\s\S]*?\*\//', '', (string) $selector ) );
+					if ( '' === $selector || isset( $seen[ $selector ] ) ) {
+						continue;
+					}
+					$seen[ $selector ] = true;
+					$findings[]        = [
+						'severity' => 'error',
+						'code'     => 'bare_seam_selector_redefined',
+						'message'  => 'Project CSS must not redefine bare Seam framework selectors. Use Seam classes/attributes in markup, but put visual CSS on project-owned classes so framework flow classes cannot shrink or rearrange Bricks layouts.',
+						'path'     => sanitize_text_field( (string) $path ),
+						'selector' => sanitize_text_field( $selector ),
+					];
+				}
+			}
+			if ( preg_match( '/\.html?$/i', (string) $path ) && preg_match( '/<[a-z][a-z0-9-]*\b[^>]*class\s*=\s*["\'][^"\']*\bseam-nav\b[^"\']*\bseam-horizontal-rail\b[^"\']*["\'][^>]*>/i', (string) $content ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'seam_nav_rail_wrapper',
+					'message'  => 'A seam-nav wrapper also carries seam-horizontal-rail. Keep nav/sticky/container shells as normal layout and put Seam rail flow only on the actual item track.',
+					'path'     => sanitize_text_field( (string) $path ),
+				];
+			}
+			if ( preg_match( '/\.html?$/i', (string) $path ) && preg_match( '/<[a-z][a-z0-9-]*\b[^>]*class\s*=\s*["\'][^"\']*\bseam-nav\b[^"\']*["\'][^>]*data-flow\s*=\s*["\'](?:reel|horizontal-rail)["\'][^>]*>/i', (string) $content ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'seam_nav_rail_flow',
+					'message'  => 'A seam-nav wrapper also carries data-flow="horizontal-rail". Keep nav/sticky/container shells as normal layout and put Seam rail flow only on the actual item track.',
+					'path'     => sanitize_text_field( (string) $path ),
+				];
+			}
+			if ( preg_match( '/\.html?$/i', (string) $path ) && preg_match_all( '/<([a-z][a-z0-9-]*)\b[^>]*(?:class\s*=\s*["\'][^"\']*\bseam-horizontal-rail\b[^"\']*["\']|data-flow\s*=\s*["\'](?:reel|horizontal-rail)["\'])[^>]*>([\s\S]{0,5200}?)(?:<\/\1>|$)/i', (string) $content, $rail_matches, PREG_SET_ORDER ) ) {
+				foreach ( $rail_matches as $rail_match ) {
+					$inner = (string) ( $rail_match[2] ?? '' );
+					if ( ! preg_match( '/(?:class\s*=\s*["\'][^"\']*\bseam-horizontal-rail\b[^"\']*["\']|data-flow\s*=\s*["\'](?:reel|horizontal-rail)["\']|class\s*=\s*["\'][^"\']*\bseam-container\b)/i', $inner ) ) {
+						continue;
+					}
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'seam_rail_on_wrapper',
+						'message'  => 'Seam rail flow is applied to a wrapper that contains a container or descendant rail. Keep outer nav/sticky/container shells as normal layout and put .seam-horizontal-rail or data-flow="horizontal-rail" only on the actual item track.',
+						'path'     => sanitize_text_field( (string) $path ),
+					];
 				}
 			}
 		}

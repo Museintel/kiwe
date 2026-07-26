@@ -189,6 +189,30 @@ final class Bricks_Conversion_Validator {
 		if ( preg_match( '/data-dsa-(?:surface|dock|screen|sheet|cart-panel|profile-panel)/i', $source_html ) ) {
 			$this->add( $findings, 'fail', 'bricks_conversion_source_contains_appshell', 'Source HTML must remain page-only and must not include AppShell shell markup.' );
 		}
+		if ( preg_match_all( '/(?:^|[{},]|\\\\n|\\\\r|\n|\r)\s*((?:\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b)[^{,}]{0,240})\s*(?:,|\{)/i', $source_html, $seam_selector_matches ) ) {
+			$selectors = [];
+			foreach ( $seam_selector_matches[1] as $selector ) {
+				$selector = trim( preg_replace( '/\/\*[\s\S]*?\*\//', '', (string) $selector ) );
+				if ( '' !== $selector ) {
+					$selectors[ $selector ] = true;
+				}
+			}
+			if ( [] !== $selectors ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_source_redefines_seam_selector', sprintf( 'Source CSS redefines bare Seam framework selectors (%s). Move visual rules to project classes before converting to Bricks.', implode( ', ', array_slice( array_keys( $selectors ), 0, 8 ) ) ) );
+			}
+		}
+		if ( preg_match( '/<[a-z][a-z0-9-]*\b[^>]*class\s*=\s*["\'][^"\']*\bseam-nav\b[^"\']*\bseam-horizontal-rail\b[^"\']*["\'][^>]*>/i', $source_html ) || preg_match( '/<[a-z][a-z0-9-]*\b[^>]*class\s*=\s*["\'][^"\']*\bseam-nav\b[^"\']*["\'][^>]*data-flow\s*=\s*["\'](?:reel|horizontal-rail)["\'][^>]*>/i', $source_html ) ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_source_nav_rail_wrapper', 'Source applies Seam rail flow to a seam-nav wrapper. Put .seam-horizontal-rail/data-flow="horizontal-rail" only on the actual item track before converting to Bricks.' );
+		}
+		if ( preg_match_all( '/<([a-z][a-z0-9-]*)\b[^>]*(?:class\s*=\s*["\'][^"\']*\bseam-horizontal-rail\b[^"\']*["\']|data-flow\s*=\s*["\'](?:reel|horizontal-rail)["\'])[^>]*>([\s\S]{0,5200}?)(?:<\/\1>|$)/i', $source_html, $rail_matches, PREG_SET_ORDER ) ) {
+			foreach ( $rail_matches as $rail_match ) {
+				$inner = (string) ( $rail_match[2] ?? '' );
+				if ( preg_match( '/(?:class\s*=\s*["\'][^"\']*\bseam-horizontal-rail\b[^"\']*["\']|data-flow\s*=\s*["\'](?:reel|horizontal-rail)["\']|class\s*=\s*["\'][^"\']*\bseam-container\b)/i', $inner ) ) {
+					$this->add( $findings, 'fail', 'bricks_conversion_source_rail_on_wrapper', 'Source applies Seam rail flow to a wrapper containing a container or descendant rail. Put .seam-horizontal-rail/data-flow="horizontal-rail" only on the actual item track before converting to Bricks.' );
+					break;
+				}
+			}
+		}
 		if ( preg_match_all( '/class\s*=\s*["\']([^"\']+)["\']/i', $source_html, $class_matches ) ) {
 			$seam = [];
 			foreach ( $class_matches[1] as $classes ) {

@@ -153,6 +153,42 @@ function selectorIsMentioned(selector, cssText) {
     .some((part) => cssText.includes(part));
 }
 
+function bareSeamSelectorDeclarations(cssText) {
+  const found = [];
+  const seen = new Set();
+  const body = String(cssText || '');
+  const pattern = /(?:^|[{},]|\\n|\\r|\n|\r)\s*((?:\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b)[^{,}]{0,240})\s*(?:,|\{)/gi;
+  for (const match of body.matchAll(pattern)) {
+    const selector = String(match[1] || '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    if (!selector || seen.has(selector)) continue;
+    seen.add(selector);
+    found.push(selector.slice(0, 180));
+  }
+  return found;
+}
+
+function nestedSeamRailMisuse(htmlText) {
+  const found = [];
+  const body = String(htmlText || '');
+  if (/<[a-z][a-z0-9-]*\b[^>]*class\s*=\s*["'][^"']*\bseam-nav\b[^"']*\bseam-horizontal-rail\b[^"']*["'][^>]*>/i.test(body)) {
+    found.push('a seam-nav wrapper also carries seam-horizontal-rail');
+  }
+  if (/<[a-z][a-z0-9-]*\b[^>]*class\s*=\s*["'][^"']*\bseam-nav\b[^"']*["'][^>]*data-flow\s*=\s*["'](?:reel|horizontal-rail)["'][^>]*>/i.test(body)) {
+    found.push('a seam-nav wrapper also carries data-flow="horizontal-rail"');
+  }
+  const outerPattern = /<([a-z][a-z0-9-]*)\b[^>]*(?:class\s*=\s*["'][^"']*\bseam-horizontal-rail\b[^"']*["']|data-flow\s*=\s*["'](?:reel|horizontal-rail)["'])[^>]*>([\s\S]{0,5200}?)(?:<\/\1>|$)/gi;
+  for (const match of body.matchAll(outerPattern)) {
+    const tag = String(match[1] || '').toLowerCase();
+    const inner = String(match[2] || '');
+    if (/(?:class\s*=\s*["'][^"']*\bseam-horizontal-rail\b[^"']*["']|data-flow\s*=\s*["'](?:reel|horizontal-rail)["'])/i.test(inner)) {
+      found.push(`<${tag}> has Seam rail flow on both wrapper and descendant track`);
+    } else if (/<(?:div|section|ul)\b[^>]*class\s*=\s*["'][^"']*\bseam-container\b/i.test(inner)) {
+      found.push(`<${tag}> applies Seam rail flow to a wrapper containing a seam-container; put the rail flow on the inner track instead`);
+    }
+  }
+  return Array.from(new Set(found)).slice(0, 12);
+}
+
 function isPlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -640,6 +676,18 @@ for (const file of themeJsonFiles) {
       if (requiredRoot && !selectorIsMentioned(requiredRoot, importThemeCssText)) {
         add('fail', `theme.json lists screen "${screen}" but importable theme.css does not target its live runtime root ${requiredRoot}. A preview may still look correct, but the installed theme can fall back to Kiwe defaults for that screen/sheet.`, rel(file));
       }
+    }
+  }
+}
+
+for (const file of textFiles.filter((item) => /\.(html?|css|json)$/i.test(item))) {
+  const badSelectors = bareSeamSelectorDeclarations(read(file));
+  for (const selector of badSelectors.slice(0, 12)) {
+    add('fail', `Project CSS redefines bare Seam framework selector "${selector}". Use Seam classes/attributes in markup, but put visual CSS on project-owned classes such as .brand-card, .nc-category-track, or .appsite-rail so framework flow classes cannot shrink or rearrange Bricks layouts.`, rel(file));
+  }
+  if (/\.(html?)$/i.test(file)) {
+    for (const misuse of nestedSeamRailMisuse(read(file))) {
+      add('fail', `Seam rail flow is applied to the wrong wrapper: ${misuse}. Outer nav/sticky/container shells should remain normal layout; only the actual item track should use .seam-horizontal-rail or data-flow="horizontal-rail".`, rel(file));
     }
   }
 }

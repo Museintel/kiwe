@@ -676,16 +676,43 @@ final class Assets {
 #dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock],
 #dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] .dsa-phonekey-dock {
 	gap: 0 !important;
+	background: transparent !important;
+	border-color: transparent !important;
+	box-shadow: none !important;
+	-webkit-backdrop-filter: none !important;
+	backdrop-filter: none !important;
 }
 #dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-focus],
 #dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-primary] {
-	margin-inline: var(--dsa-dock-split-focus-gap, 10px) !important;
+	margin-inline: var(--dsa-dock-split-focus-gap, var(--kiwe-space-xs, clamp(0.375rem, 0.54vw + 0.268rem, 0.75rem))) !important;
 }
 @media (max-width: 340px) {
 	#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-focus],
 	#dsa-surface[data-dsa-surface].dsa-dock-split[data-dsa-dock-presentation="dock"][data-dsa-dock-orientation="horizontal"] [data-dsa-dock-primary] {
-		margin-inline: var(--dsa-dock-split-focus-gap-narrow, 6px) !important;
+		margin-inline: var(--dsa-dock-split-focus-gap-narrow, var(--kiwe-space-xxs, clamp(0.25rem, 0.36vw + 0.18rem, 0.5rem))) !important;
 	}
+}
+#dsa-surface[data-dsa-surface].dsa-dock-material-glass {
+	--dsa-runtime-dock-control-material: color-mix(in srgb, var(--kiwe-color-surface, var(--dsa-ui-surface, #fff)) 72%, transparent);
+	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 58%, transparent);
+	--dsa-runtime-dock-control-filter: blur(var(--kiwe-glass-blur, var(--dsa-blur-strength, 0.625rem)));
+}
+html[data-kiwe-theme="dark"] #dsa-surface[data-dsa-surface].dsa-dock-material-glass,
+#dsa-surface[data-dsa-surface][data-kiwe-theme="dark"].dsa-dock-material-glass {
+	--dsa-runtime-dock-control-material: color-mix(in srgb, var(--kiwe-color-surface, var(--dsa-ui-surface, #111)) 48%, transparent);
+	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 50%, transparent);
+}
+#dsa-surface[data-dsa-surface].dsa-dock-material-solid {
+	--dsa-runtime-dock-control-material: var(--kiwe-color-surface-raised, var(--kiwe-color-surface, var(--dsa-ui-surface, #fff)));
+	--dsa-runtime-dock-control-border: var(--kiwe-color-border, color-mix(in srgb, currentColor 14%, transparent));
+	--dsa-runtime-dock-control-filter: none;
+}
+#dsa-surface[data-dsa-surface].dsa-dock-material-glass [data-dsa-dock] .dsa-dock__button:not([data-dsa-dock-focus]):not([data-dsa-dock-primary]),
+#dsa-surface[data-dsa-surface].dsa-dock-material-solid [data-dsa-dock] .dsa-dock__button:not([data-dsa-dock-focus]):not([data-dsa-dock-primary]) {
+	background: var(--dsa-runtime-dock-control-material) !important;
+	border-color: var(--dsa-runtime-dock-control-border) !important;
+	-webkit-backdrop-filter: var(--dsa-runtime-dock-control-filter) !important;
+	backdrop-filter: var(--dsa-runtime-dock-control-filter) !important;
 }
 #dsa-surface[data-dsa-surface] [data-dsa-dock-focus],
 #dsa-surface[data-dsa-surface] [data-dsa-dock-primary] {

@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.43 - 2026-07-27
+
+- Hardened Kiwe AI Toolkit, Companion review, and Bricks conversion validation against project CSS that redefines bare Seam framework selectors, keeping Seam classes/attributes as shared headless vocabulary instead of one-off design hooks.
+- Added rail-wrapper audit coverage so AIs cannot put `.seam-horizontal-rail` / `data-flow="horizontal-rail"` on an outer sticky nav/container and shrink the real Bricks rail into a single narrow item.
+- Added a runtime dock-material guard: split dock shells stay transparent while solid/glass material is applied to inactive dock controls, preventing the dark slab effect and making the material setting visually meaningful.
+- Updated public toolkit contexts and framework handoff notes with the project-class styling rule and rail-placement boundary for future AI/browser-tool workflows.
+
 ## 6.42 - 2026-07-27
 
 - Added the browser-AI terminal entry pattern `explore: https://github.com/Museintel/kiwe` followed by `/list`, so users can start Kiwe like a command shell without prompt-engineering the whole toolkit path.
