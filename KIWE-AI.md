@@ -15,6 +15,15 @@ The toolkit gives compact context packs and validation rules so you do not waste
 If you are a browser-based AI and cannot connect the Kiwe MCP server or run the CLI, do not clone or crawl the full repository.
 Do not use web search to discover toolkit files. Use the exact raw links below.
 
+Terminal-style entry pattern:
+
+```text
+explore: https://github.com/Museintel/kiwe
+/list
+```
+
+Treat `explore:` as a location pointer, not permission to browse the repository. For this exact pattern, read only this root entrypoint or its raw fallback at `https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md`, execute `/list`, then stop and wait for the next slash command. If a different slash command follows `explore:`, route that command through the workflow context or command gate below. Do not inspect the whole repo unless a later validated command explicitly gives a narrow file URL to read.
+
 Preferred path for serious work:
 
 ```text

@@ -231,6 +231,10 @@ export function listCommands() {
   return {
     schema: 'kiwe.command-list.v1',
     canonicalVerb: '/create',
+    terminalEntry: {
+      pattern: 'explore: https://github.com/Museintel/kiwe\\n/list',
+      meaning: '`explore:` is a location pointer to the Kiwe toolkit, not permission to crawl the whole repository. Read the public entrypoint, execute the next slash command, then stop when the command asks you to stop.'
+    },
     aliases: {
       '/build': 'Legacy alias accepted internally; user-facing output should say /create.',
       '/dynamic /sitegraph': 'Legacy alias for /usesitegraph.',
@@ -522,8 +526,15 @@ function wantsCompanion(command, explicit = false) {
   return Boolean(explicit) || /(?:^|\s)\/usecompanion\b/.test(text) || /\buse\s+companion\b/.test(text);
 }
 
+function commandWithoutExplore(command) {
+  return String(command || '')
+    .replace(/(?:^|\r?\n)\s*explore\s*:\s*\S+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function commandWithoutCompanion(command) {
-  return String(command || '').replace(/(?:^|\s)\/usecompanion\b/gi, ' ').replace(/\s+/g, ' ').trim();
+  return commandWithoutExplore(command).replace(/(?:^|\s)\/usecompanion\b/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
 const KNOWN_COMMAND_TOKENS = new Set([
@@ -662,7 +673,8 @@ function commandDiagnostic({ status = 'ok', code = 'ok', message = '', kind = ''
 
 export function diagnoseCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '' } = {}) {
   const raw = String(command || '').trim();
-  const text = raw.toLowerCase();
+  const commandText = commandWithoutExplore(raw);
+  const text = commandText.toLowerCase();
   const commandCore = commandWithoutCompanion(raw);
   const normalizedCommand = commandCore
     .replace(/(?:^|\s)\/build\b/gi, ' /create')
@@ -671,7 +683,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     .replace(/(?:^|\s)\/replacepreview\b/gi, ' /replacepreviewdata')
     .replace(/\s+/g, ' ')
     .trim();
-  const tokens = slashTokens(raw);
+  const tokens = slashTokens(commandText);
   const unknown = tokens.filter((token) => !KNOWN_COMMAND_TOKENS.has(token));
 
   if (!raw) {

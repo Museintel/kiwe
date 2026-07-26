@@ -34,6 +34,15 @@ Canonical command language uses `/create` for creation phases. `/build` may be t
 
 Use `/list` to see the command vocabulary and stop. Use `/fix` to repair an existing failed artifact lane without starting over. Use `/usesitegraph` for all Site Graph/API/export grounded passes; legacy `/dynamic /sitegraph` may be accepted internally but should not be taught in new prompts.
 
+Browser-AI terminal entry:
+
+```text
+explore: https://github.com/Museintel/kiwe
+/list
+```
+
+`explore:` is only a toolkit location pointer. It means: read the public Kiwe AI entrypoint, run the next slash command, and stop. It does not authorize crawling the repository or treating GitHub URL path segments as commands.
+
 Run the command gate before expensive work when tools or CLI are available:
 
 ```bash

@@ -28,6 +28,15 @@ This pipeline is preferred over one giant `combined` prompt for serious work.
 
 Humans should be able to write short commands. The toolkit supplies the rules.
 
+Terminal-style entry pattern:
+
+```text
+explore: https://github.com/Museintel/kiwe
+/list
+```
+
+`explore:` is not a command and is not permission to browse the repository. It is a location pointer to the Kiwe toolkit. Read the public entrypoint or this workflow file, execute the slash command that follows it, and stop when that command tells you to stop. GitHub URL path segments must never be interpreted as Kiwe slash commands.
+
 Canonical creation verb: `/create`.
 
 Do not teach mixed verbs such as `/build` for Kiwe handoff phases. If an older model or human writes `/build`, treat it as a legacy alias internally and answer back with the canonical `/create` command name.

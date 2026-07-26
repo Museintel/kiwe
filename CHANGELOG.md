@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.42 - 2026-07-27
+
+- Added the browser-AI terminal entry pattern `explore: https://github.com/Museintel/kiwe` followed by `/list`, so users can start Kiwe like a command shell without prompt-engineering the whole toolkit path.
+- Hardened slash-command parsing so `explore:` URL path segments are stripped before diagnostics, routing, and `/usecompanion` handling; GitHub paths cannot become fake Kiwe commands.
+- Documented the exact `explore:` flow in `KIWE-AI.md`, the toolkit README, and `workflow-lite.md`, with explicit boundaries against repo crawling and token-wasting discovery.
+
 ## 6.41 - 2026-07-26
 
 - Added first-class `/list` and `/fix` command routes to the Kiwe AI Toolkit so browser/IDE AIs can discover supported phases and repair failed artifacts without restarting creative work or creating unrelated packages.
