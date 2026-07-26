@@ -41,6 +41,23 @@ Canonical preview commands:
 
 `/create /preview /dsatheme` is only for the AppShell theme preview lane. `/create /preview /combined` is only for the primary combined preview lane. Neither command creates Bricks JSON, and neither preview is valid input for `/convert /bricks`.
 
+Canonical discovery and repair commands:
+
+```text
+/list
+/fix
+```
+
+`/list` returns the supported command vocabulary and stops. `/fix` repairs an existing failed artifact lane; it does not start over or create a new unrelated package.
+
+Canonical Site Graph command:
+
+```text
+/usesitegraph
+```
+
+Legacy `/dynamic /sitegraph` and shorthand `/sitegraph` may be accepted internally, but user-facing output should say `/usesitegraph`.
+
 ## Command gate / no-waste boundary
 
 Before doing real work for any slash command, validate the command cheaply.
@@ -74,7 +91,9 @@ Examples:
 - `/convert /bricks` without `website/bricks-paste.html` -> `needs_input`, `bricks_convert_missing_page_source`.
 - `/convert /bricks` against `combined-preview` or `appshell-theme` -> `rejected`, `bricks_convert_forbidden_source_in_command`.
 - `/audit /bricksconversion` without `bricks-conversion/kiwe-bricks-conversion.json` -> `needs_input`, `bricks_audit_missing_conversion_artifact`.
-- `/dynamic /sitegraph` without Site Graph/API context -> `needs_input`, `dynamic_missing_site_graph`.
+- `/usesitegraph` without Site Graph/API/export context -> `needs_input`, `dynamic_missing_site_graph`.
+- `/usesitegraph /replacepreviewdata` without an existing handoff -> `needs_input`, `sitegraph_replacepreview_missing_artifact`.
+- `/fix` without an existing artifact or audit output -> `needs_input`, `fix_missing_artifact`.
 - `/apply /staging` without explicit staging confirmation/mutation authority -> `needs_input`, `staging_missing_explicit_authority`.
 
 ## Optional `/usecompanion` flag
@@ -86,12 +105,14 @@ Examples:
 /audit /dsatheme /usecompanion
 /create /preview /dsatheme /usecompanion
 /create /preview /combined /usecompanion
-/dynamic /sitegraph /usecompanion
+/usesitegraph /usecompanion
 /convert /bricks /usecompanion
 /audit /bricksconversion /usecompanion
 ```
 
 This flag means: use Kiwe Companion if it is available, then continue the selected phase. It must never become a blocker.
+
+If `/nonai` appears with `/usesitegraph`, it overrides `/usecompanion`: use the AI-less Site Graph Data/export lane only.
 
 If `KIWE_REST_BASE` and `KIWE_AI_KEY` are available, make one bounded Companion attempt. If the key is missing, Companion is disabled, the route fails, rate-limits, times out, returns unclear data, or HTTP/tool access is not available, ignore `/usecompanion` and run the command before it normally.
 
@@ -132,6 +153,43 @@ When `/usecompanion` appears, the final response should include a compact `COMPA
 - number of cards or findings used;
 - fallback reason, if any;
 - confirmation that Companion did not replace the selected Kiwe phase.
+
+### `/list`
+
+Use when the human wants the available Kiwe command language before choosing a phase.
+
+- Return the command list, aliases, required inputs, expected outputs, and hard boundaries.
+- Do not start generation, audit, Site Graph, Bricks conversion, DSA theme work, or staging.
+- Tool-capable clients should call `kiwe_list_commands` when available.
+- CLI-capable clients can run:
+
+```bash
+node kiwe-ai-toolkit/bin/kiwe.js list
+```
+
+### `/fix`
+
+Use when an existing output failed audit, followed the wrong file shape, mixed lanes, or needs correction.
+
+`/fix` repairs the current artifact lane. It must not restart the creative process unless the human explicitly asks.
+
+Required input:
+
+- the generated artifact folder/file map or actual files;
+- the audit failure, error message, or short description of what failed.
+
+Rules:
+
+- Revise actual files, not only explanations.
+- Keep only files required by the current lane unless the human explicitly requested extras.
+- Do not create a new unrelated package to hide the failed one.
+- If the artifact is a Bricks conversion, require `bricks-conversion/kiwe-bricks-conversion.json`.
+- If the artifact is a Seam rebuild, keep `website/bricks-paste.html` as the single page preview/import artifact.
+- If the artifact is a DSA theme, keep AppShell theme CSS separate from Bricks/page CSS.
+- If the artifact is combined, keep `website/`, `appshell-theme/`, and `combined-preview/` separate.
+- Preserve Site Graph/dynamic intent instead of converting sampled preview data into production hardcoding.
+
+If the correct lane is unclear, diagnose first and ask for the missing artifact map.
 
 ### `/ideate /webdraft`
 
@@ -412,9 +470,11 @@ POST /wp-json/dsa/v1/ai/audit-companion/review
 
 Fix every `mustFix` item, then rerun the audit.
 
-### `/dynamic /sitegraph`
+### `/usesitegraph`
 
 Use only after the visual handoff passes.
+
+Legacy alias: `/dynamic /sitegraph`.
 
 Purpose:
 
@@ -422,6 +482,20 @@ Purpose:
 - Use query loops, dynamic tags, conditions, interactions, and Kiwe launchers where the target Site Graph/Bricks context supports them.
 - Do not guess product categories, page slugs, post types, custom fields, dynamic tags, or Bricks query-loop object types.
 - Do not mutate the site.
+
+Accepted target-site truth sources:
+
+1. `KIWE_REST_BASE` plus `KIWE_AI_KEY` with allowed Site Graph/Bricks scopes.
+2. Exported `kiwe.site-graph.v1` JSON.
+3. AI-less/public read-only Site Graph Data routes.
+
+If no Site Graph/API/export is available, stop and ask for it. Do not scrape the frontend as a fallback.
+
+Variants:
+
+- `/usesitegraph /replacepreviewdata`: replace preview-only sample content with real Site Graph samples, while keeping production/import artifacts dynamic through Bricks tags, query-loop intent, or bindings. Alias: `/usesitegraph /replacepreview`.
+- `/usesitegraph /websitename`: derive site name, logo, menu labels, identity, and broad tone from Site Graph identity/menu data only.
+- `/usesitegraph /nonai`: force the AI-less/read-only Site Graph Data or exported JSON lane. Do not call Companion, native AI, Advisor, Studio, or model-backed routes.
 
 Expected output:
 
@@ -442,7 +516,7 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs /path/to/handoff --site-graph 
 
 ### `/convert /bricks`
 
-Use only after the website/page visual artifact passes and, when the page should use live WordPress/Bricks/WooCommerce data, after `/dynamic /sitegraph` has mapped that intent.
+Use only after the website/page visual artifact passes and, when the page should use live WordPress/Bricks/WooCommerce data, after `/usesitegraph` has mapped that intent.
 
 Purpose:
 
@@ -513,7 +587,7 @@ For best output quality:
 9. Assemble with `/assemble /combined`.
 10. Create or refresh the combined preview proof with `/create /preview /combined` if needed.
 11. Audit with `/audit /combined`.
-12. Add real WordPress/Bricks/WooCommerce bindings with `/dynamic /sitegraph`.
+12. Add real WordPress/Bricks/WooCommerce bindings with `/usesitegraph`.
 13. Convert only `website/bricks-paste.html` to Bricks with `/convert /bricks`.
 14. Audit conversion with `/audit /bricksconversion`.
 15. Apply to staging only through Kiwe controlled executor.

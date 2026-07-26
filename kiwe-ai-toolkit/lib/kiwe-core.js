@@ -227,6 +227,150 @@ export function getSeamAttributesContext() {
   return context.trim() + '\n';
 }
 
+export function listCommands() {
+  return {
+    schema: 'kiwe.command-list.v1',
+    canonicalVerb: '/create',
+    aliases: {
+      '/build': 'Legacy alias accepted internally; user-facing output should say /create.',
+      '/dynamic /sitegraph': 'Legacy alias for /usesitegraph.',
+      '/sitegraph': 'Legacy shorthand for /usesitegraph when used as a workflow phase.',
+      '/usesitegraph /replacepreview': 'Legacy shorthand for /usesitegraph /replacepreviewdata.'
+    },
+    commands: [
+      {
+        command: '/list',
+        purpose: 'List the supported Kiwe workflow commands without starting generation.',
+        requires: [],
+        output: 'command list only'
+      },
+      {
+        command: '/fix',
+        purpose: 'Repair an existing generated artifact in place after a failed audit or wrong output shape.',
+        requires: ['existing artifact folder/file map'],
+        output: 'revised existing files; no unrelated new package'
+      },
+      {
+        command: '/ideate /webdraft',
+        purpose: 'Create a pure creative HTML/CSS/JS draft before Kiwe constraints are introduced.',
+        requires: ['plain design brief'],
+        output: 'creative draft only'
+      },
+      {
+        command: '/rebuild /seamframework',
+        purpose: 'Rebuild an approved creative draft with Seam Framework, Kiwe tokens, and capability attributes.',
+        requires: ['approved HTML/CSS/JS draft'],
+        output: 'website/bricks-paste.html and website/bricks-notes.md'
+      },
+      {
+        command: '/audit /seamframework',
+        purpose: 'Audit and revise a Seam rebuild.',
+        requires: ['website/bricks-paste.html'],
+        output: 'same website lane, corrected'
+      },
+      {
+        command: '/create /brickstheme',
+        aliases: ['/create /frameworkprofile'],
+        purpose: 'Create a Kiwe Framework / Bricks global token profile. This is not a DSA theme and not Bricks element JSON.',
+        requires: ['approved visual direction'],
+        output: 'framework/kiwe-framework-profile.json and framework/FRAMEWORK-NOTES.md'
+      },
+      {
+        command: '/audit /brickstheme',
+        aliases: ['/audit /frameworkprofile'],
+        purpose: 'Validate the framework profile against Kiwe token and safe Bricks global-style rules.',
+        requires: ['framework/kiwe-framework-profile.json'],
+        output: 'same framework lane, corrected'
+      },
+      {
+        command: '/create /dsatheme',
+        purpose: 'Create a Kiwe DSA/AppShell theme package. This styles Kiwe runtime chrome; it is not Bricks page content.',
+        requires: ['theme brief or approved website visual thesis'],
+        output: 'appshell-theme/import/[theme-id]/theme-package.json, theme.json, css/theme.css, README'
+      },
+      {
+        command: '/create /preview /dsatheme',
+        purpose: 'Create only the DSA theme technical preview lane.',
+        requires: ['existing or in-progress AppShell theme package'],
+        output: 'appshell-theme/preview/index.html and PLACEHOLDERS.md'
+      },
+      {
+        command: '/audit /dsatheme',
+        purpose: 'Audit and revise a DSA/AppShell theme package and optional preview.',
+        requires: ['appshell-theme/import/[theme-id]/theme-package.json'],
+        output: 'same AppShell theme lane, corrected'
+      },
+      {
+        command: '/assemble /combined',
+        purpose: 'Assemble approved website and AppShell theme lanes into one combined handoff.',
+        requires: ['approved website lane', 'approved AppShell theme lane'],
+        output: 'combined handoff with one combined preview'
+      },
+      {
+        command: '/create /preview /combined',
+        purpose: 'Create only the combined page-plus-AppShell preview.',
+        requires: ['website/bricks-paste.html', 'appshell-theme/import/[theme-id]/css/theme.css'],
+        output: 'combined-preview/index.html and optional assets'
+      },
+      {
+        command: '/audit /combined',
+        purpose: 'Audit website, AppShell theme, and combined preview lanes together.',
+        requires: ['combined handoff files'],
+        output: 'same combined handoff, corrected'
+      },
+      {
+        command: '/usesitegraph',
+        purpose: 'Use real target-site Site Graph/API facts for identity, preview samples, dynamic bindings, Bricks context, and query-loop intent.',
+        requires: ['KIWE_REST_BASE plus key, or exported kiwe.site-graph.v1 JSON, or public Site Graph Data route'],
+        output: 'bricks-bindings/kiwe-bindings.json and BINDING-NOTES.md when binding intent changes'
+      },
+      {
+        command: '/usesitegraph /replacepreviewdata',
+        aliases: ['/usesitegraph /replacepreview'],
+        purpose: 'Replace preview-only sample content with real Site Graph samples while keeping production/import artifacts dynamic.',
+        requires: ['existing handoff', 'Site Graph Data/API access'],
+        output: 'preview samples updated; production dynamic intent preserved'
+      },
+      {
+        command: '/usesitegraph /websitename',
+        purpose: 'Use Site Graph identity/name/logo/tone facts instead of scraping or guessing the brand.',
+        requires: ['Site Graph site identity data'],
+        output: 'identity-aware handoff revisions'
+      },
+      {
+        command: '/usesitegraph /nonai',
+        purpose: 'Force the AI-less/read-only Site Graph Data lane. Do not call Companion/native AI routes.',
+        requires: ['public or authenticated Site Graph Data API/export'],
+        output: 'read-only data-grounded revision'
+      },
+      {
+        command: '/convert /bricks',
+        purpose: 'Convert only website/bricks-paste.html into a reviewable Bricks-native conversion package.',
+        requires: ['website/bricks-paste.html', 'optional bricks-bindings/kiwe-bindings.json'],
+        output: 'bricks-conversion/kiwe-bricks-conversion.json and BRICKS-CONVERSION-NOTES.md'
+      },
+      {
+        command: '/audit /bricksconversion',
+        purpose: 'Audit and revise the canonical Bricks conversion package.',
+        requires: ['bricks-conversion/kiwe-bricks-conversion.json'],
+        output: 'same Bricks conversion lane, corrected'
+      },
+      {
+        command: '/apply /staging',
+        purpose: 'Use only the controlled staging executor after explicit staging and mutation authorization.',
+        requires: ['explicit staging confirmation', 'controlled executor details', 'rollback plan'],
+        output: 'staging execution report, never silent production mutation'
+      }
+    ],
+    flags: [
+      {
+        flag: '/usecompanion',
+        purpose: 'Optional bounded Kiwe Companion assist. If unavailable, continue without it and report fallback.'
+      }
+    ]
+  };
+}
+
 function frameworkProfileContext() {
   const schema = readMaybe('schemas/framework-profile.schema.json');
   return [
@@ -352,6 +496,8 @@ export function startProject({ mode = 'auto', brief = '', name = '' } = {}) {
 function routeKind(command) {
   const text = String(command || '').trim().toLowerCase();
   if (!text) return 'workflow';
+  if (/(?:^|\s)\/list\b/.test(text)) return 'command-list';
+  if (/(?:^|\s)\/fix\b/.test(text)) return 'fix';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-preview-create';
@@ -366,7 +512,7 @@ function routeKind(command) {
   if (/\/audit/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-audit';
   if (/\/audit/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-audit';
   if (/(\/assemble|\/combine|\/combined)/.test(text)) return 'combined-assemble';
-  if (/(\/dynamic|\/sitegraph|\/binding|\/bindings)/.test(text)) return 'dynamic';
+  if (/(\/usesitegraph|\/dynamic|\/sitegraph|\/binding|\/bindings)/.test(text)) return 'dynamic';
   if (/(\/apply|\/staging)/.test(text)) return 'staging';
   return 'workflow';
 }
@@ -403,22 +549,31 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/dsathemeandhomepage',
   '/dynamic',
   '/export',
+  '/fix',
   '/framework',
   '/frameworkprofile',
   '/htmlcssjs',
   '/ideate',
+  '/list',
+  '/nonai',
   '/page',
   '/preview',
+  '/replacepreview',
+  '/replacepreviewdata',
   '/rebuild',
   '/seam',
   '/seamframework',
   '/staging',
+  '/sitegraph',
   '/theme',
   '/translate',
+  '/usesitegraph',
   '/usecompanion',
   '/webdraft',
+  '/websitename',
   '/webpage',
-  '/website'
+  '/website',
+  '/ai'
 ]);
 
 const TYPO_TOKEN_SUGGESTIONS = new Map([
@@ -433,10 +588,15 @@ const TYPO_TOKEN_SUGGESTIONS = new Map([
   ['/brick', '/bricks'],
   ['/brikcs', '/bricks'],
   ['/dsathem', '/dsatheme'],
-  ['/seamframwork', '/seamframework']
+  ['/seamframwork', '/seamframework'],
+  ['/repalcepreview', '/replacepreviewdata'],
+  ['/usegraph', '/usesitegraph'],
+  ['/sitegrap', '/usesitegraph']
 ]);
 
 const VALID_PHASE_COMMANDS = [
+  '/list',
+  '/fix',
   '/ideate /webdraft',
   '/rebuild /seamframework',
   '/audit /seamframework',
@@ -448,7 +608,10 @@ const VALID_PHASE_COMMANDS = [
   '/assemble /combined',
   '/create /preview /combined',
   '/audit /combined',
-  '/dynamic /sitegraph',
+  '/usesitegraph',
+  '/usesitegraph /replacepreviewdata',
+  '/usesitegraph /websitename',
+  '/usesitegraph /nonai',
   '/convert /bricks',
   '/audit /bricksconversion',
   '/apply /staging'
@@ -478,6 +641,10 @@ function hasForbiddenBricksSource(text) {
   return /combined-preview|appshell-theme|theme-package\.json|css[\\/]theme\.css|\btheme\.css\b|data-dsa-surface|dsa[-\s]*(?:dock|sheet|screen|navbar)|appshell[-\s]*preview|app\s*shell[-\s]*preview/i.test(String(text || ''));
 }
 
+function hasSiteGraphAccess(text) {
+  return /kiwe\.site-graph\.v1|sitegraphhash|site graph json|site graph summary|siteGraphSummary|KIWE_REST_BASE|\/wp-json\/dsa\/v1|kiwe_ai_|X-Kiwe-AI-Key|Authorization:\s*Bearer|site-graph-data|site_graph_data/i.test(String(text || ''));
+}
+
 function commandDiagnostic({ status = 'ok', code = 'ok', message = '', kind = '', normalizedCommand = '', suggestions = [], boundaries = [] } = {}) {
   const stop = ['rejected', 'needs_input', 'noop'].includes(status);
   return {
@@ -493,11 +660,17 @@ function commandDiagnostic({ status = 'ok', code = 'ok', message = '', kind = ''
   };
 }
 
-export function diagnoseCommand({ command = '', artifactSummary = '', siteGraphSummary = '' } = {}) {
+export function diagnoseCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '' } = {}) {
   const raw = String(command || '').trim();
   const text = raw.toLowerCase();
   const commandCore = commandWithoutCompanion(raw);
-  const normalizedCommand = commandCore.replace(/(?:^|\s)\/build\b/gi, ' /create').replace(/\s+/g, ' ').trim();
+  const normalizedCommand = commandCore
+    .replace(/(?:^|\s)\/build\b/gi, ' /create')
+    .replace(/(?:^|\s)\/dynamic\s+\/sitegraph\b/gi, ' /usesitegraph')
+    .replace(/(?:^|\s)\/sitegraph\b/gi, ' /usesitegraph')
+    .replace(/(?:^|\s)\/replacepreview\b/gi, ' /replacepreviewdata')
+    .replace(/\s+/g, ' ')
+    .trim();
   const tokens = slashTokens(raw);
   const unknown = tokens.filter((token) => !KNOWN_COMMAND_TOKENS.has(token));
 
@@ -520,6 +693,28 @@ export function diagnoseCommand({ command = '', artifactSummary = '', siteGraphS
       message: `Unknown Kiwe command token${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}. Do not guess or continue.`,
       suggestions: suggestions.length ? [...new Set(suggestions)] : VALID_PHASE_COMMANDS,
       boundaries: ['Use only registered Kiwe slash-command tokens.', 'If the human made a typo, ask them to resend the corrected command.']
+    });
+  }
+
+  if (commandHas(text, /\/list/) && tokens.length === 1) {
+    return commandDiagnostic({
+      status: 'ok',
+      code: 'command_list',
+      kind: 'command-list',
+      normalizedCommand: '/list',
+      message: 'List the Kiwe command vocabulary only. Do not start generation.'
+    });
+  }
+
+  if (commandHas(text, /\/fix/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'fix_missing_artifact',
+      kind: 'fix',
+      normalizedCommand,
+      message: '`/fix` needs the failed output folder/file map, audit result, or artifact summary. It repairs an existing artifact; it does not start a new creative phase.',
+      suggestions: ['Provide the generated folder/file map plus the failed audit output.', '/fix /seamframework', '/fix /dsatheme', '/fix /combined', '/fix /bricksconversion'],
+      boundaries: ['Fix phases must revise actual files in the current artifact lane.', 'Do not create a new unrelated package to hide the failed one.']
     });
   }
 
@@ -554,7 +749,7 @@ export function diagnoseCommand({ command = '', artifactSummary = '', siteGraphS
       message: existing
         ? 'A website/page preview already exists in the supplied artifact. Do not regenerate the same preview; move to `/rebuild /seamframework`, `/audit /seamframework`, or `/convert /bricks` when appropriate.'
         : 'There is no separate Kiwe website preview command. A website/page preview is the HTML/CSS/JS page artifact itself, normally `website/bricks-paste.html` after the Seam rebuild.',
-      suggestions: existing ? ['/rebuild /seamframework', '/audit /seamframework', '/dynamic /sitegraph', '/convert /bricks'] : ['/ideate /webdraft', '/rebuild /seamframework'],
+      suggestions: existing ? ['/rebuild /seamframework', '/audit /seamframework', '/usesitegraph', '/convert /bricks'] : ['/ideate /webdraft', '/rebuild /seamframework'],
       boundaries: ['Do not spend tokens recreating a preview that is already the artifact.']
     });
   }
@@ -611,14 +806,26 @@ export function diagnoseCommand({ command = '', artifactSummary = '', siteGraphS
     });
   }
 
-  if (commandHas(text, /\/dynamic|\/sitegraph|\/binding|\/bindings/) && !String(siteGraphSummary || '').trim()) {
+  if (commandHas(text, /\/usesitegraph/) && commandHas(text, /\/(?:replacepreview|replacepreviewdata)/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'sitegraph_replacepreview_missing_artifact',
+      kind: 'dynamic',
+      normalizedCommand,
+      message: '`/usesitegraph /replacepreviewdata` needs an existing handoff to revise. It should replace preview-only samples from Site Graph data without hardcoding those samples into production/import artifacts.',
+      suggestions: ['Provide the handoff folder/file map and Site Graph API/export.', '/usesitegraph /replacepreviewdata after the handoff exists'],
+      boundaries: ['Preview data may become real samples; production lanes must keep dynamic tags/query-loop intent when available.']
+    });
+  }
+
+  if (commandHas(text, /\/usesitegraph|\/dynamic|\/sitegraph|\/binding|\/bindings/) && !hasSiteGraphAccess(`${raw}\n${brief}\n${artifactSummary}\n${siteGraphSummary}`)) {
     return commandDiagnostic({
       status: 'needs_input',
       code: 'dynamic_missing_site_graph',
       kind: 'dynamic',
       normalizedCommand,
-      message: '`/dynamic /sitegraph` needs a target Site Graph summary or API access. Do not guess product categories, pages, custom fields, dynamic tags, or Bricks query-loop types.',
-      suggestions: ['GET /wp-json/dsa/v1/ai/site-graph', 'GET|POST /wp-json/dsa/v1/ai/site-graph-data', '/dynamic /sitegraph after Site Graph is available'],
+      message: '`/usesitegraph` needs target-site truth. Ask for either KIWE_REST_BASE + KIWE_AI_KEY, an exported kiwe.site-graph.v1 JSON packet, or the public Site Graph Data endpoint. Do not guess product categories, pages, custom fields, dynamic tags, Bricks settings, or query-loop types.',
+      suggestions: ['Ask for KIWE_REST_BASE and KIWE_AI_KEY.', 'Ask for exported kiwe.site-graph.v1 JSON.', 'For AI-less public reads use /usesitegraph /nonai with /wp-json/dsa/v1/site-graph/data/schema and /site-graph/data.', '/usesitegraph after Site Graph is available'],
       boundaries: ['Dynamic binding must be grounded in target-site truth, not frontend scraping or assumptions.']
     });
   }
@@ -646,12 +853,18 @@ export function diagnoseCommand({ command = '', artifactSummary = '', siteGraphS
     });
   }
 
+  const normalizedMessage = normalizedCommand !== commandCore
+    ? /\/build\b/i.test(commandCore)
+      ? 'Legacy `/build` alias accepted internally; use `/create` in user-facing output.'
+      : 'Legacy command alias accepted internally; use the canonical command in user-facing output.'
+    : 'Command is recognized.';
+
   return commandDiagnostic({
     status: 'ok',
     code: normalizedCommand !== commandCore ? 'legacy_alias_normalized' : 'ok',
     kind: routeKind(raw),
     normalizedCommand,
-    message: normalizedCommand !== commandCore ? 'Legacy `/build` alias accepted internally; use `/create` in user-facing output.' : 'Command is recognized.'
+    message: normalizedMessage
   });
 }
 
@@ -764,16 +977,138 @@ function companionAssistContext(kind, command) {
   return lines.join('\n').trim() + '\n';
 }
 
+function commandListMarkdown() {
+  const list = listCommands();
+  const lines = [
+    '# Kiwe slash commands',
+    '',
+    'Use one small phase at a time. `/create` is the canonical creation verb; `/build` is only a legacy alias.',
+    '',
+    '## Commands'
+  ];
+  for (const entry of list.commands) {
+    lines.push(
+      '',
+      `### ${entry.command}`,
+      '',
+      entry.aliases ? `Aliases: ${entry.aliases.join(', ')}` : '',
+      '',
+      `Purpose: ${entry.purpose}`,
+      '',
+      `Requires: ${entry.requires.length ? entry.requires.join('; ') : 'nothing beyond the brief'}`,
+      '',
+      `Output: ${entry.output}`
+    );
+  }
+  lines.push(
+    '',
+    '## Flags',
+    '',
+    '- `/usecompanion`: optional bounded Companion assist. If unavailable, continue without it and report fallback.',
+    '',
+    '## Site Graph lane',
+    '',
+    '- `/usesitegraph` is the canonical Site Graph command.',
+    '- `/usesitegraph /nonai` forces public/read-only Site Graph Data or an exported packet. It must not call Companion/native AI.',
+    '- `/usesitegraph /replacepreviewdata` updates preview samples from real data but keeps production artifacts dynamic.',
+    '- `/usesitegraph /websitename` derives name/logo/identity from Site Graph only.',
+    '',
+    '## Bricks boundary',
+    '',
+    '- `/convert /bricks` only converts `website/bricks-paste.html`.',
+    '- It must not convert DSA themes, combined previews, AppShell sheets/screens/docks, or theme CSS.',
+    '- Its canonical output is `bricks-conversion/kiwe-bricks-conversion.json`, not loose page JSON files.'
+  );
+  return lines.filter(Boolean).join('\n').trim() + '\n';
+}
+
+function fixPhaseContext(command, artifactSummary) {
+  const text = `${command}\n${artifactSummary}`.toLowerCase();
+  const inferred = hasConversionArtifact(text)
+    ? '/audit /bricksconversion'
+    : /framework[\\/]kiwe-framework-profile\.json|kiwe\.framework-profile\.v1|\/brickstheme|framework profile/.test(text)
+      ? '/audit /brickstheme'
+      : hasThemeArtifact(text)
+        ? '/audit /dsatheme'
+        : /combined-preview|combined-kiwe-handoff|\/combined/.test(text)
+          ? '/audit /combined'
+          : hasPageArtifact(text)
+            ? '/audit /seamframework'
+            : '/list';
+  return [
+    '# Kiwe fix phase',
+    '',
+    '`/fix` repairs the existing artifact lane. It must not restart creative work, add unrelated output folders, or invent a new package shape.',
+    '',
+    `Suggested audit route for this artifact: ${inferred}`,
+    '',
+    '## Fix rules',
+    '',
+    '- Inspect the supplied files, not the whole Kiwe repository.',
+    '- Keep only files required by the current lane unless the human explicitly asked for extras.',
+    '- Revise the actual files that failed; do not only explain the failure.',
+    '- If the artifact is a Bricks conversion, require `bricks-conversion/kiwe-bricks-conversion.json`.',
+    '- If the artifact is a Seam rebuild, keep `website/bricks-paste.html` as the single page preview/import artifact.',
+    '- If the artifact is a DSA theme, keep AppShell theme CSS separate from Bricks/page CSS.',
+    '- If the artifact is combined, keep `website/`, `appshell-theme/`, and `combined-preview/` separate.',
+    '- Preserve Site Graph/dynamic intent instead of converting sampled preview data into production hardcoding.',
+    '',
+    '## Artifact summary',
+    '',
+    String(artifactSummary || '').trim(),
+    '',
+    'Run the matching audit context below, fix every blocking item, and report files changed/removed/kept.'
+  ].join('\n').trim() + '\n';
+}
+
+function siteGraphCommandGuidance(command) {
+  const text = String(command || '').toLowerCase();
+  const nonAi = commandHas(text, /\/nonai/);
+  const replacePreview = commandHas(text, /\/(?:replacepreview|replacepreviewdata)/);
+  const websiteName = commandHas(text, /\/websitename/);
+  const lines = [
+    '# `/usesitegraph` guidance',
+    '',
+    '`/usesitegraph` is the canonical Site Graph phase. Legacy `/dynamic /sitegraph` may be accepted internally, but user-facing output should say `/usesitegraph`.',
+    '',
+    nonAi
+      ? 'This command includes `/nonai`: use only exported `kiwe.site-graph.v1` JSON or the AI-less Site Graph Data routes. Do not call Companion, native AI, `/ai/advisor`, `/ai/studio`, or other model-backed routes.'
+      : 'Use the richest safe route available: API-key AI namespace when provided, otherwise exported Site Graph JSON, otherwise the AI-less public Site Graph Data route.',
+    '',
+    'If no Site Graph/API/export is available, stop and ask for it. Do not scrape the public frontend as a fallback.',
+    '',
+    replacePreview
+      ? 'This command includes `/replacepreviewdata`: update preview-only sample cards/images/text from real Site Graph Data, but keep production/import artifacts dynamic through Bricks tags, query-loop intent, or bindings.'
+      : '',
+    websiteName
+      ? 'This command includes `/websitename`: derive site name, logo, brand identity, menus, and tone from Site Graph identity/menu data only.'
+      : '',
+    '',
+    'Expected output when dynamic intent changes:',
+    '',
+    '```text',
+    'bricks-bindings/',
+    '  kiwe-bindings.json',
+    '  BINDING-NOTES.md',
+    '```'
+  ];
+  return lines.filter(Boolean).join('\n').trim() + '\n';
+}
+
 export function routeCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '', useCompanion = false } = {}) {
-  const diagnostic = diagnoseCommand({ command, artifactSummary, siteGraphSummary });
+  const diagnostic = diagnoseCommand({ command, brief, artifactSummary, siteGraphSummary });
   if (diagnostic.stop) {
     return commandDiagnosticResponse(diagnostic, command);
   }
   const kind = diagnostic.kind || routeKind(command);
-  const companionRequested = wantsCompanion(command, useCompanion);
+  const companionRequested = wantsCompanion(command, useCompanion) && !commandHas(command, /\/nonai/);
   const humanBrief = String(brief || '').trim() || 'No human brief supplied.';
   const artifact = String(artifactSummary || '').trim() || 'No previous artifact summary supplied. Ask the human for the prior phase output if this command depends on one.';
   const graph = String(siteGraphSummary || '').trim() || 'No Site Graph summary supplied. Ask for target-site Site Graph before dynamic binding.';
+
+  if (kind === 'command-list') {
+    return commandListMarkdown();
+  }
 
   const parts = [
     `# Kiwe command route: ${kind}`,
@@ -803,7 +1138,17 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     getWorkflowContext()
   ];
 
-  if (kind === 'ideate') {
+  if (kind === 'fix') {
+    parts.push(
+      fixPhaseContext(command, artifactSummary),
+      '',
+      readMaybe('contexts/audit-lite.md'),
+      '',
+      getBricksConversionContext(),
+      '',
+      getDynamicContext()
+    );
+  } else if (kind === 'ideate') {
     parts.push(
       '# Selected phase guidance',
       '',
@@ -885,6 +1230,8 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     );
   } else if (kind === 'dynamic') {
     parts.push(
+      siteGraphCommandGuidance(command),
+      '',
       '# Site Graph summary',
       '',
       graph,

@@ -4,6 +4,14 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.41 - 2026-07-26
+
+- Added first-class `/list` and `/fix` command routes to the Kiwe AI Toolkit so browser/IDE AIs can discover supported phases and repair failed artifacts without restarting creative work or creating unrelated packages.
+- Promoted `/usesitegraph` as the canonical Site Graph command, with explicit `/replacepreviewdata`, `/websitename`, and `/nonai` variants; legacy `/dynamic /sitegraph` remains accepted internally but is no longer the public command to teach.
+- Added `kiwe_list_commands` to the MCP surface and `kiwe list` / `kiwe commands` to the CLI, while keeping command diagnostics strict enough to reject typos with suggestions instead of guessing.
+- Tightened Site Graph routing so target-site truth may come from API-key routes, exported `kiwe.site-graph.v1` JSON, or the AI-less public Site Graph Data lane, and frontend scraping remains forbidden as a fallback.
+- Clarified `/create /brickstheme` as a Kiwe Framework / Bricks global token profile only, and restated `/convert /bricks` as a page-only conversion whose canonical output is `bricks-conversion/kiwe-bricks-conversion.json`.
+
 ## 6.40 - 2026-07-24
 
 - Fixed sticky admin list settings by making submitted numeric/list settings replace the previous saved list instead of recursively merging old values back in. This addresses SecureTrack role checkboxes and similar admin options that appeared to save but could not be cleared.

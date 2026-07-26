@@ -21,9 +21,11 @@ Preferred path for serious work:
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 ```
 
-Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/dynamic /sitegraph`, `/convert /bricks`, or `/audit /bricksconversion`.
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, or `/audit /bricksconversion`.
 
 Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
+
+Canonical Site Graph command is `/usesitegraph`. Legacy `/dynamic /sitegraph` may be accepted internally, but new user-facing output should use `/usesitegraph`. Useful variants are `/usesitegraph /replacepreviewdata`, `/usesitegraph /websitename`, and `/usesitegraph /nonai`.
 
 Before spending tokens on a slash-command phase, run the Kiwe command gate when tools or CLI are available:
 

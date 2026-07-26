@@ -6,6 +6,52 @@ Goal: revise the handoff into a WordPress/Bricks-aware version by using a real `
 
 Do not read the whole Kiwe repo. Do not search GitHub. Do not guess the target site's categories, pages, products, post types, dynamic tags, or Bricks query-loop object types.
 
+Canonical command: `/usesitegraph`.
+
+Legacy alias: `/dynamic /sitegraph`.
+
+## Command variants
+
+### `/usesitegraph`
+
+Use target-site truth for dynamic bindings, preview samples, site identity, Bricks query-loop intent, dynamic tags, conditions, interactions, custom post types, custom taxonomies, custom fields, WooCommerce products/terms, and Kiwe launchers.
+
+If no target-site truth is available, stop and ask for one of:
+
+- `KIWE_REST_BASE` plus `KIWE_AI_KEY`;
+- exported `kiwe.site-graph.v1` JSON;
+- AI-less public/read-only Site Graph Data schema/data routes.
+
+Do not browse or scrape the public frontend as a fallback.
+
+### `/usesitegraph /replacepreviewdata`
+
+Alias: `/usesitegraph /replacepreview`.
+
+Replace preview-only sample content with real Site Graph Data samples. Keep production/import artifacts dynamic:
+
+- Bricks query-loop regions stay query-loop intent;
+- Bricks dynamic tags stay dynamic tags;
+- `bricks-bindings/kiwe-bindings.json` records the mapping;
+- sampled preview cards/images/prices are marked preview-only.
+
+Do not turn sampled Site Graph data into hardcoded production product/category/media content when a dynamic binding exists.
+
+### `/usesitegraph /websitename`
+
+Use Site Graph identity/menu data for site name, logo, brand identity, menu labels, public pages, and broad tone.
+
+Do not infer the brand from the public homepage or external search.
+
+### `/usesitegraph /nonai`
+
+Force the AI-less/read-only lane:
+
+- use exported `kiwe.site-graph.v1` JSON, or;
+- use `/wp-json/dsa/v1/site-graph/data/schema` and `/wp-json/dsa/v1/site-graph/data`.
+
+Do not call Companion, native AI, Advisor, Studio, or other model-backed `/ai/*` routes when `/nonai` is present, even if `/usecompanion` is also present.
+
 ## Inputs you should ask for
 
 - The current Kiwe handoff folder or files.

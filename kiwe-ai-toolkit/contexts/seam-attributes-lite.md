@@ -1,6 +1,6 @@
 # Seam capability attributes lite context
 
-Use this context inside `/rebuild /seamframework`, `/audit /seamframework`, `/dynamic /sitegraph`, `/convert /bricks`, and `/audit /bricksconversion`.
+Use this context inside `/rebuild /seamframework`, `/audit /seamframework`, `/usesitegraph`, `/convert /bricks`, and `/audit /bricksconversion`.
 
 Seam is a neutral Appsite framework, not only a CSS class library. It has two public lanes:
 
@@ -140,4 +140,3 @@ These are roadmap candidates, not live production attributes. Do not use them in
 - `data-kiwe-ai-context`;
 - `data-kiwe-feedback`;
 - `data-kiwe-offer`.
-

@@ -2,7 +2,7 @@
 
 Use this context for `/convert /bricks` and `/audit /bricksconversion`.
 
-This is not a creative design phase. It starts only after a website/page artifact is visually approved and, when relevant, after `/dynamic /sitegraph` produced live binding intent.
+This is not a creative design phase. It starts only after a website/page artifact is visually approved and, when relevant, after `/usesitegraph` produced live binding intent.
 
 Goal: convert an approved `website/bricks-paste.html` HTML/CSS page into a reviewable Bricks-native element JSON package without losing layout, Seam vocabulary, Kiwe launchers, dynamic tags, query-loop intent, conditions, interactions, or unsupported/manual-review evidence.
 
@@ -26,7 +26,7 @@ Do not read the whole Kiwe repository. Do not scrape the public frontend. Do not
 ## Preferred inputs
 
 - `website/bricks-paste.html`
-- optional `bricks-bindings/kiwe-bindings.json` from `/dynamic /sitegraph`
+- optional `bricks-bindings/kiwe-bindings.json` from `/usesitegraph`
 - optional target `kiwe.site-graph.v1` JSON
 - optional `/wp-json/dsa/v1/ai/bricks/context` or MCP `kiwe_get_bricks_conversion_context`
 - optional `/usecompanion` for compact Kiwe/Bricks cards and deterministic review

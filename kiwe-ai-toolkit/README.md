@@ -22,7 +22,7 @@ For highest-quality work, use the phased workflow instead of one giant combined 
 8. `/assemble /combined`.
 9. `/create /preview /combined` when the page-plus-AppShell preview needs revision.
 10. `/audit /combined`.
-11. `/dynamic /sitegraph` after visual approval.
+11. `/usesitegraph` after visual approval.
 12. `/convert /bricks`.
 13. `/audit /bricksconversion`.
 
@@ -31,6 +31,8 @@ One-shot `combined` still exists for fast experiments, but serious candidate wor
 Any phase can add `/usecompanion`, such as `/rebuild /seamframework /usecompanion` or `/audit /dsatheme /usecompanion`. Companion is optional and non-blocking: if a scoped Kiwe AI key and target REST base are available, use Companion once for compact phase cards or deterministic audit findings; if it is unavailable, disabled, slow, rate-limited, over budget, or inaccessible, continue with the same phase normally and report the fallback. Companion is a contract oracle/context broker, not a creative co-author or full-codebase dump.
 
 Canonical command language uses `/create` for creation phases. `/build` may be tolerated as an old alias by the router, but toolkit-facing output should normalize back to `/create`.
+
+Use `/list` to see the command vocabulary and stop. Use `/fix` to repair an existing failed artifact lane without starting over. Use `/usesitegraph` for all Site Graph/API/export grounded passes; legacy `/dynamic /sitegraph` may be accepted internally but should not be taught in new prompts.
 
 Run the command gate before expensive work when tools or CLI are available:
 
@@ -71,6 +73,7 @@ Giving the whole plugin to an AI wastes tokens and invites it to invent against 
 ```bash
 npm install
 node bin/kiwe.js modes
+node bin/kiwe.js list
 node bin/kiwe.js workflow
 node bin/kiwe.js diagnose --command "/create /preview /brickstheme"
 node bin/kiwe.js route --command "/rebuild /seamframework /usecompanion" --brief "Rebuild the approved draft with Seam"

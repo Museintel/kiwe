@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -14,9 +14,11 @@ function usage() {
 
 Commands:
   kiwe modes
+  kiwe list
+  kiwe commands
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
-  kiwe diagnose --command "/convert /bricks" [--artifact-summary text] [--site-graph-summary text]
+  kiwe diagnose --command "/convert /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
   kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
@@ -41,6 +43,8 @@ try {
     usage();
   } else if (command === 'modes') {
     print(listModes());
+  } else if (command === 'list' || command === 'commands') {
+    print(listCommands());
   } else if (command === 'start') {
     const mode = args[0] && !args[0].startsWith('--') ? args[0] : 'auto';
     const nameIndex = args.indexOf('--name');
@@ -52,12 +56,14 @@ try {
     print(getWorkflowContext());
   } else if (command === 'diagnose') {
     const commandIndex = args.indexOf('--command');
+    const briefIndex = args.indexOf('--brief');
     const artifactIndex = args.indexOf('--artifact-summary');
     const graphIndex = args.indexOf('--site-graph-summary');
     const commandText = commandIndex >= 0 ? args[commandIndex + 1] : args[0] || '';
+    const brief = briefIndex >= 0 ? args[briefIndex + 1] : '';
     const artifactSummary = artifactIndex >= 0 ? args[artifactIndex + 1] : '';
     const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
-    print(diagnoseCommand({ command: commandText, artifactSummary, siteGraphSummary }));
+    print(diagnoseCommand({ command: commandText, brief, artifactSummary, siteGraphSummary }));
   } else if (command === 'route') {
     const commandIndex = args.indexOf('--command');
     const briefIndex = args.indexOf('--brief');

@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -30,8 +30,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: { type: 'object', properties: {} }
     },
     {
+      name: 'kiwe_list_commands',
+      description: 'Return the canonical Kiwe slash-command list, aliases, flags, required inputs, outputs, and boundaries. Use for /list before generation.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
       name: 'kiwe_route_command',
-      description: 'Route a short canonical command such as /ideate /webdraft, /rebuild /seamframework, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /dynamic /sitegraph, /convert /bricks, /audit /bricksconversion, or /audit /combined to the smallest relevant Kiwe context.',
+      description: 'Route a short canonical command such as /list, /fix, /ideate /webdraft, /rebuild /seamframework, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, or /audit /combined to the smallest relevant Kiwe context.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -51,6 +56,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: 'object',
         properties: {
           command: { type: 'string', description: 'Human slash command to diagnose.' },
+          brief: { type: 'string', description: 'Optional human brief. Site Graph/API details in the brief are recognized for /usesitegraph diagnostics.' },
           artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts.' },
           siteGraphSummary: { type: 'string', description: 'Short target Site Graph/API context summary.' }
         },
@@ -186,6 +192,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_get_workflow':
       result = getWorkflowContext();
+      break;
+    case 'kiwe_list_commands':
+      result = listCommands();
       break;
     case 'kiwe_route_command':
       result = routeCommand(args);
