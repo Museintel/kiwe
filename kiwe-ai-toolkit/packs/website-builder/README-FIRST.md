@@ -42,7 +42,7 @@ Build a polished website/page. Seam is available, not mandatory. Good output may
 - custom CSS for the actual visual style;
 - preview-only JavaScript clearly marked as preview-only.
 
-Use Seam classes/attributes in markup, but do not redefine bare Seam framework selectors in project CSS. For example, do not write `.seam-horizontal-rail { ... }`, `.seam-card { ... }`, or `[data-flow="reel"] { ... }` in the page/theme CSS. Put all visual rules on project-owned classes such as `.brand-rail`, `.nc-campaign-card`, or `.appsite-hero` so Seam remains the stable headless vocabulary and Bricks layouts do not accidentally shrink or rearrange when the same Seam class appears in another place.
+Use Seam classes/attributes in markup, but do not redefine Seam framework selectors in project CSS. For example, do not write `.seam-horizontal-rail { ... }`, `.brand .seam-card { ... }`, `.seam-visually-hidden { ... }`, or `[data-flow="reel"] { ... }` in the page/theme CSS. Put all visual rules on project-owned classes such as `.brand-rail`, `.nc-campaign-card`, or `.appsite-hero` so Seam remains the stable headless vocabulary and Bricks layouts do not accidentally shrink or rearrange when the same Seam class appears in another place.
 
 For rails, put `.seam-horizontal-rail` / `data-flow="horizontal-rail"` only on the actual item track. Do not put the rail flow on an outer sticky nav or wrapper that contains `.seam-container`; that wrapper can shrink the inner container into one rail item after Bricks import.
 

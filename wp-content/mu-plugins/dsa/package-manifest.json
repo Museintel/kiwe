@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.43",
+  "version": "6.44",
   "algorithm": "sha256",
-  "file_count": 266,
+  "file_count": 267,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "a35aef8e82cbc7f0f0c1d89497e534636cb4b0514f9544b988aeeed40b1aae4b"
+      "sha256": "2a5e1ab19ba780d293e579bf2531fba6a97c2ded10c897720132f0860185e2aa"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3601,
@@ -241,8 +241,8 @@
       "sha256": "0b78438241b73433f5011b2134d010cf12a558d0bfa1496047fa16a7b5424419"
     },
     "framework-system/handoffs/website-builder/README-FIRST.md": {
-      "bytes": 6335,
-      "sha256": "0a2a02e246edff648c99ea9e7b4b4af21ca1fc870c4d42dae56ebfbefd219620"
+      "bytes": 6370,
+      "sha256": "b07e02f7f754b4d59adeb0d6b06bfebf80c926d488ba95275bcd180f636b2fcb"
     },
     "framework-system/handoffs/website-builder/bricks/BRICKS-INTEGRATION.md": {
       "bytes": 8895,
@@ -329,8 +329,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 93159,
-      "sha256": "42c66e06d6bb58122f5ab67a010fca99ffcc1e56217b66a512bb529cd6d9eafb"
+      "bytes": 93434,
+      "sha256": "c60900051d4d4baff59ba6da4b55e095bd55d6e5957fa289f44608ea31274728"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -357,8 +357,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 19620,
-      "sha256": "feddc403265acd713ae25541848fed6a8a6517d5f64f21711690a2758e56ab16"
+      "bytes": 19864,
+      "sha256": "9c24103f84e364bc207d3394ed6116d8c66089b3da7bdb826c9975e06417b441"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22224,
@@ -947,6 +947,10 @@
     "site-graph-system/release-proof-6.43.md": {
       "bytes": 1565,
       "sha256": "a20dde1d4f2b4ef07d19c7035b38687cf85f05a84cc8a440af4ebd13d9ee6baa"
+    },
+    "site-graph-system/release-proof-6.44.md": {
+      "bytes": 1913,
+      "sha256": "c1161374362436124322c360d70a7fcd7306fa8616f9d269a7ab4c084c045857"
     },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14580,

@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.44 - 2026-07-27
+
+- Tightened Kiwe Bricks conversion audits so `/audit /bricksconversion` also rejects conversion JSON that misses the required `target`, `conversion`, `fidelity.sourceSelectors`, or `report.manualReview` contract lanes.
+- Hardened Seam selector purity checks to catch scoped project selectors such as `.brand .seam-card` or `.nc-page .seam-visually-hidden`, not just selectors that start directly with `.seam-*`.
+- Updated Bricks conversion validation for Bricks 2.4 by accepting the native `html` element while keeping unknown-element warnings for genuinely unsupported element names.
+- Clarified public toolkit contexts that Seam selector declarations remain invalid in project CSS even when scoped under a project class.
+
 ## 6.43 - 2026-07-27
 
 - Hardened Kiwe AI Toolkit, Companion review, and Bricks conversion validation against project CSS that redefines bare Seam framework selectors, keeping Seam classes/attributes as shared headless vocabulary instead of one-off design hooks.

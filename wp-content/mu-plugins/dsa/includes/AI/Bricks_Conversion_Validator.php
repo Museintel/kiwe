@@ -189,11 +189,15 @@ final class Bricks_Conversion_Validator {
 		if ( preg_match( '/data-dsa-(?:surface|dock|screen|sheet|cart-panel|profile-panel)/i', $source_html ) ) {
 			$this->add( $findings, 'fail', 'bricks_conversion_source_contains_appshell', 'Source HTML must remain page-only and must not include AppShell shell markup.' );
 		}
-		if ( preg_match_all( '/(?:^|[{},]|\\\\n|\\\\r|\n|\r)\s*((?:\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b)[^{,}]{0,240})\s*(?:,|\{)/i', $source_html, $seam_selector_matches ) ) {
+		if ( preg_match_all( '/(?:^|[{}]|\\\\n|\\\\r|\n|\r)\s*([^{}@]{0,760})\{/i', $source_html, $seam_selector_matches ) ) {
 			$selectors = [];
-			foreach ( $seam_selector_matches[1] as $selector ) {
-				$selector = trim( preg_replace( '/\/\*[\s\S]*?\*\//', '', (string) $selector ) );
-				if ( '' !== $selector ) {
+			foreach ( $seam_selector_matches[1] as $selector_group ) {
+				foreach ( explode( ',', (string) $selector_group ) as $selector ) {
+					$selector = trim( preg_replace( '/\/\*[\s\S]*?\*\//', '', (string) $selector ) );
+					$selector = trim( preg_replace( '/\s+/', ' ', str_replace( [ '\\n', '\\r' ], ' ', $selector ) ) );
+					if ( '' === $selector || ! preg_match( '/(?:^|[\s>+~(:])\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b/i', $selector ) ) {
+						continue;
+					}
 					$selectors[ $selector ] = true;
 				}
 			}

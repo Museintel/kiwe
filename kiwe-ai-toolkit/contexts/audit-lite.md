@@ -87,7 +87,7 @@ If the handoff includes a `/convert /bricks` result, audit the conversion lane t
 - Source `data-kiwe-query-template` markers have Bricks query settings or `fidelity.dynamicIntent`.
 - Conditions/interactions are expressed through Bricks-supported settings and do not use unsafe JavaScript actions.
 - The conversion package does not claim direct Bricks/WordPress/WooCommerce write authority.
-- Fail if project/page/theme CSS redefines bare Seam framework selectors such as `.seam-horizontal-rail`, `.seam-card`, `.seam-button`, `[data-flow="reel"]`, or `[data-role="card"]`. Seam classes and attributes may appear in markup, but visual CSS must target project-owned classes so the same framework vocabulary can be reused without unintended layout changes.
+- Fail if project/page/theme CSS redefines Seam framework selectors such as `.seam-horizontal-rail`, `.seam-card`, `.seam-button`, `.seam-visually-hidden`, `[data-flow="reel"]`, or `[data-role="card"]`, including when scoped as `.project .seam-card`. Seam classes and attributes may appear in markup, but visual CSS must target project-owned classes so the same framework vocabulary can be reused without unintended layout changes.
 - Fail if a nav/sticky/container wrapper uses `.seam-horizontal-rail` or `data-flow="horizontal-rail"` and then contains a `.seam-container` or another descendant rail. That shrinks the container into a rail item after Bricks import. The outer wrapper should be project/sticky/nav layout; only the inner item track should carry the Seam rail flow.
 
 When tools are available, run:
@@ -135,7 +135,7 @@ Avoid huge inline base64 assets in Bricks paste files unless the human explicitl
 
 Seam is semantic/headless. Use page CSS/project CSS for visual art direction.
 
-Bare Seam selector declarations are not project CSS. Reject `.seam-*`, `[data-flow]`, `[data-role]`, `[data-tone]`, and `[data-state]` selector definitions in generated handoff CSS unless the file is the official Seam runtime itself. Project appearance belongs on project classes, while Seam remains the shared vocabulary.
+Seam selector declarations are not project CSS. Reject `.seam-*`, `[data-flow]`, `[data-role]`, `[data-tone]`, and `[data-state]` selector definitions in generated handoff CSS unless the file is the official Seam runtime itself, even if a project selector scopes them. Project appearance belongs on project classes, while Seam remains the shared vocabulary.
 
 Audit public Kiwe/Appsite capability attributes as part of Seam, not as unrelated plugin hooks:
 

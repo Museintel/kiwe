@@ -22,6 +22,7 @@ const KNOWN_BRICKS_ELEMENTS = new Set([
   'audio',
   'divider',
   'form',
+  'html',
   'code',
   'accordion',
   'accordion-nested',

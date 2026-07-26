@@ -1043,20 +1043,23 @@ final class AI_Companion_Service {
 				continue;
 			}
 			$seen = [];
-			if ( preg_match_all( '/(?:^|[{},]|\\\\n|\\\\r|\n|\r)\s*((?:\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b)[^{,}]{0,240})\s*(?:,|\{)/i', (string) $content, $matches ) ) {
-				foreach ( $matches[1] as $selector ) {
-					$selector = trim( preg_replace( '/\/\*[\s\S]*?\*\//', '', (string) $selector ) );
-					if ( '' === $selector || isset( $seen[ $selector ] ) ) {
-						continue;
+			if ( preg_match_all( '/(?:^|[{}]|\\\\n|\\\\r|\n|\r)\s*([^{}@]{0,760})\{/i', (string) $content, $matches ) ) {
+				foreach ( $matches[1] as $selector_group ) {
+					foreach ( explode( ',', (string) $selector_group ) as $selector ) {
+						$selector = trim( preg_replace( '/\/\*[\s\S]*?\*\//', '', (string) $selector ) );
+						$selector = trim( preg_replace( '/\s+/', ' ', str_replace( [ '\\n', '\\r' ], ' ', $selector ) ) );
+						if ( '' === $selector || isset( $seen[ $selector ] ) || ! preg_match( '/(?:^|[\s>+~(:])\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b/i', $selector ) ) {
+							continue;
+						}
+						$seen[ $selector ] = true;
+						$findings[]        = [
+							'severity' => 'error',
+							'code'     => 'bare_seam_selector_redefined',
+							'message'  => 'Project CSS must not redefine Seam framework selectors, even when scoped under a project class. Use Seam classes/attributes in markup, but put visual CSS on project-owned classes so framework flow classes cannot shrink or rearrange Bricks layouts.',
+							'path'     => sanitize_text_field( (string) $path ),
+							'selector' => sanitize_text_field( $selector ),
+						];
 					}
-					$seen[ $selector ] = true;
-					$findings[]        = [
-						'severity' => 'error',
-						'code'     => 'bare_seam_selector_redefined',
-						'message'  => 'Project CSS must not redefine bare Seam framework selectors. Use Seam classes/attributes in markup, but put visual CSS on project-owned classes so framework flow classes cannot shrink or rearrange Bricks layouts.',
-						'path'     => sanitize_text_field( (string) $path ),
-						'selector' => sanitize_text_field( $selector ),
-					];
 				}
 			}
 			if ( preg_match( '/\.html?$/i', (string) $path ) && preg_match( '/<[a-z][a-z0-9-]*\b[^>]*class\s*=\s*["\'][^"\']*\bseam-nav\b[^"\']*\bseam-horizontal-rail\b[^"\']*["\'][^>]*>/i', (string) $content ) ) {

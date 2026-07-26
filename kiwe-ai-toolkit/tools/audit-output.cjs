@@ -157,14 +157,58 @@ function bareSeamSelectorDeclarations(cssText) {
   const found = [];
   const seen = new Set();
   const body = String(cssText || '');
-  const pattern = /(?:^|[{},]|\\n|\\r|\n|\r)\s*((?:\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b)[^{,}]{0,240})\s*(?:,|\{)/gi;
+  const pattern = /(?:^|[{}]|\\n|\\r|\n|\r)\s*([^{}@]{0,760})\{/gi;
   for (const match of body.matchAll(pattern)) {
-    const selector = String(match[1] || '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
-    if (!selector || seen.has(selector)) continue;
-    seen.add(selector);
-    found.push(selector.slice(0, 180));
+    const selectorText = String(match[1] || '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    for (const part of selectorText.split(',')) {
+      const selector = part.replace(/\\[nr]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!selector || seen.has(selector)) continue;
+      if (!/(?:^|[\s>+~(:])\.seam-[a-z0-9_-]+|\[data-(?:flow|role|tone|state)\b/i.test(selector)) continue;
+      seen.add(selector);
+      found.push(selector.slice(0, 180));
+    }
   }
   return found;
+}
+
+function validateBricksConversionJson(file) {
+  const out = [];
+  let json;
+  try {
+    json = JSON.parse(read(file));
+  } catch (error) {
+    out.push(`kiwe-bricks-conversion.json is invalid JSON: ${error.message}`);
+    return out;
+  }
+  if (!json || typeof json !== 'object' || Array.isArray(json)) {
+    out.push('kiwe-bricks-conversion.json must be an object.');
+    return out;
+  }
+  for (const key of ['schema', 'source', 'target', 'conversion', 'elements', 'fidelity', 'report']) {
+    if (!(key in json)) out.push(`kiwe-bricks-conversion.json missing required root key: ${key}`);
+  }
+  if (json.schema !== 'kiwe.bricks-conversion.v1') {
+    out.push('kiwe-bricks-conversion.json schema must be kiwe.bricks-conversion.v1.');
+  }
+  if (!Array.isArray(json.elements) || json.elements.length === 0) {
+    out.push('kiwe-bricks-conversion.json elements must be a non-empty array.');
+  }
+  if (!json.target || typeof json.target !== 'object' || json.target.builder !== 'bricks') {
+    out.push('kiwe-bricks-conversion.json target.builder must be "bricks".');
+  }
+  if (!json.target || typeof json.target !== 'object' || !/bricks/i.test(String(json.target.format || ''))) {
+    out.push('kiwe-bricks-conversion.json target.format must identify a Bricks element JSON artifact.');
+  }
+  if (!json.target || typeof json.target !== 'object' || !/(human|review|trusted|staging|adapter)/i.test(String(json.target.applyAuthority || ''))) {
+    out.push('kiwe-bricks-conversion.json target.applyAuthority must point to human review or a trusted Kiwe staging adapter.');
+  }
+  if (!json.fidelity || typeof json.fidelity !== 'object' || !Array.isArray(json.fidelity.sourceSelectors) || json.fidelity.sourceSelectors.length === 0) {
+    out.push('kiwe-bricks-conversion.json fidelity.sourceSelectors must map important source selectors to Bricks element IDs.');
+  }
+  if (!json.report || typeof json.report !== 'object' || !Array.isArray(json.report.manualReview)) {
+    out.push('kiwe-bricks-conversion.json report.manualReview must be an array, even when empty.');
+  }
+  return out;
 }
 
 function nestedSeamRailMisuse(htmlText) {
@@ -689,6 +733,12 @@ for (const file of textFiles.filter((item) => /\.(html?|css|json)$/i.test(item))
     for (const misuse of nestedSeamRailMisuse(read(file))) {
       add('fail', `Seam rail flow is applied to the wrong wrapper: ${misuse}. Outer nav/sticky/container shells should remain normal layout; only the actual item track should use .seam-horizontal-rail or data-flow="horizontal-rail".`, rel(file));
     }
+  }
+}
+
+for (const file of files.filter((item) => path.basename(item) === 'kiwe-bricks-conversion.json')) {
+  for (const message of validateBricksConversionJson(file)) {
+    add('fail', message, rel(file));
   }
 }
 
