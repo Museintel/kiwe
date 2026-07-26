@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class AI_Companion_Service {
 	private const MODES = [ 'website', 'theme', 'combined', 'dynamic', 'audit', 'staging', 'security' ];
+	private const BRICKS_RESPONSIVE_LAYOUT_KEY_PATTERN = '/^_(?:direction|display|grid|gridTemplate|gridTemplateColumns|gridTemplateRows|gridAuto|align|alignItems|alignContent|justify|justifyContent|justifyItems|flex|flexDirection|flexWrap|gap|rowGap|columnGap|order|width|height|minWidth|maxWidth|minHeight|maxHeight|position|top|right|bottom|left)[^:]*:(?:desktop|tablet|tablet_landscape|tablet_portrait|mobile|mobile_landscape|mobile_portrait)$/i';
+	private const BRICKS_COMPLEX_LAYOUT_PATTERN        = '/\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i';
 
 	public function __construct(
 		private Settings $settings,
@@ -936,6 +938,28 @@ final class AI_Companion_Service {
 		return '';
 	}
 
+	private function collect_bricks_responsive_layout_overrides( array $elements ): array {
+		$out = [];
+		foreach ( $elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+			$settings = isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : [];
+			foreach ( $settings as $key => $value ) {
+				if ( preg_match( self::BRICKS_RESPONSIVE_LAYOUT_KEY_PATTERN, (string) $key ) ) {
+					$out[] = [
+						'id'      => (string) ( $element['id'] ?? '' ),
+						'key'     => (string) $key,
+						'value'   => is_scalar( $value ) ? (string) $value : (string) wp_json_encode( $value ),
+						'classes' => (string) ( $settings['_cssClasses'] ?? '' ),
+						'cssId'   => (string) ( $settings['_cssId'] ?? '' ),
+					];
+				}
+			}
+		}
+		return $out;
+	}
+
 	private function review_required_shape( string $mode, array $path_map ): array {
 		$findings = [];
 		if ( [] === $path_map ) {
@@ -1303,6 +1327,72 @@ final class AI_Companion_Service {
 				'message'  => 'Bricks conversion must include fidelity.sourceSelectors mapping important source regions to Bricks element IDs.',
 				'path'     => sanitize_text_field( $path ),
 			];
+		}
+		foreach ( [ 'elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported' ] as $fidelity_key ) {
+			if ( isset( $fidelity[ $fidelity_key ] ) && ! is_array( $fidelity[ $fidelity_key ] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_invalid_fidelity_lane',
+					'message'  => sprintf( 'fidelity.%s must be an array when present.', $fidelity_key ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+		}
+
+		$website_for_layout = $this->file_like( $path_map, 'bricks-paste.html' );
+		$responsive        = isset( $fidelity['responsiveIntent'] ) && is_array( $fidelity['responsiveIntent'] ) ? $fidelity['responsiveIntent'] : [];
+		$overrides         = $this->collect_bricks_responsive_layout_overrides( $elements );
+		$has_complex       = (bool) preg_match( self::BRICKS_COMPLEX_LAYOUT_PATTERN, $website_for_layout . "\n" . $conversion_json );
+		if ( ( $has_complex || [] !== $overrides ) && [] === $responsive ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_missing_responsive_intent',
+				'message'  => 'fidelity.responsiveIntent must be a non-empty array when source/conversion uses complex bento/grid/campaign layout or Bricks breakpoint layout overrides.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		foreach ( $responsive as $index => $item ) {
+			$item_text = is_array( $item ) ? (string) wp_json_encode( $item ) : (string) $item;
+			if ( ! is_array( $item ) || ! preg_match( '/desktop|tablet|mobile|narrow|breakpoint|viewport|range/i', $item_text ) || ! preg_match( '/selector|source|element|bricks|mappedElementIds|id/i', $item_text ) || ! preg_match( '/grid|flex|direction|columns|rows|span|wrap|align|justify|flow/i', $item_text ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_invalid_responsive_intent',
+					'message'  => sprintf( 'fidelity.responsiveIntent[%d] must identify breakpoint/range, source selector to Bricks element mapping, and preserved grid/flex behavior.', (int) $index ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+		}
+		if ( $has_complex && ! preg_match( '/#home-campaigns|bento|campaign|grid-template|grid-column|grid-row/i', (string) wp_json_encode( $fidelity['sourceSelectors'] ?? [] ) ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_missing_complex_layout_fidelity',
+				'message'  => 'fidelity.sourceSelectors must explicitly include complex bento/grid/campaign regions such as #home-campaigns/.nc-bento and their mapped Bricks element IDs.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		if ( $has_complex && [] !== $responsive && ! preg_match( '/#home-campaigns|bento|campaign|grid|columns|rows|span/i', (string) wp_json_encode( $responsive ) ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_conversion_missing_complex_responsive_fidelity',
+				'message'  => 'fidelity.responsiveIntent must explicitly describe bento/grid/campaign responsive behavior so Bricks desktop/tablet/mobile layouts cannot silently drift.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		$responsive_text = (string) wp_json_encode( $responsive );
+		foreach ( $overrides as $override ) {
+			$key     = (string) ( $override['key'] ?? '' );
+			$value   = strtolower( (string) ( $override['value'] ?? '' ) );
+			$id      = (string) ( $override['id'] ?? '' );
+			$classes = (string) ( $override['classes'] ?? '' );
+			$css_id  = (string) ( $override['cssId'] ?? '' );
+			if ( preg_match( '/\bseam-spread\b/', $classes . ' ' . $css_id ) && str_contains( $key, '_direction:' ) && 'column' === $value && ! preg_match( '/' . preg_quote( '' !== $id ? $id : 'missing-id', '/' ) . '|' . preg_quote( '' !== $css_id ? $css_id : 'missing-css-id', '/' ) . '|seam-spread|section-head/i', $responsive_text ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_conversion_unproven_seam_spread_direction_override',
+					'message'  => sprintf( 'Element "%s" changes seam-spread to column at %s without a responsiveIntent entry tied to source evidence.', '' !== $id ? $id : 'unknown', $key ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
 		}
 
 		$website = $this->file_like( $path_map, 'bricks-paste.html' );
@@ -1857,7 +1947,7 @@ final class AI_Companion_Service {
 			'themePackageChecked' => ! isset( $codes['theme_package_missing_root_key'] ) && ! isset( $codes['theme_package_css_not_inline'] ) && ! isset( $codes['theme_package_css_mismatch'] ),
 			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['anonymous_literal_px_in_theme_css'] ) && ! isset( $codes['anonymous_literal_value_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
 			'pageArtifactChecked' => ! isset( $codes['page_artifact_contains_appshell'] ),
-			'bricksConversionChecked' => '' !== $this->file_like( $path_map, 'kiwe-bricks-conversion.json' ) && ! isset( $codes['invalid_bricks_conversion_json'] ) && ! isset( $codes['bricks_conversion_missing_root_key'] ) && ! isset( $codes['invalid_bricks_conversion_schema'] ) && ! isset( $codes['bricks_conversion_missing_source'] ) && ! isset( $codes['bricks_conversion_forbidden_source_lane'] ) && ! isset( $codes['bricks_conversion_missing_elements'] ) && ! isset( $codes['bricks_conversion_missing_fidelity_map'] ) && ! isset( $codes['bricks_conversion_source_contains_appshell'] ) && ! isset( $codes['bricks_conversion_contains_appshell_markup'] ) && ! isset( $codes['bricks_conversion_lost_seam_classes'] ) && ! isset( $codes['bricks_conversion_lost_kiwe_launcher'] ) && ! isset( $codes['bricks_conversion_missing_query_intent'] ) && ! isset( $codes['bricks_conversion_executable_code'] ) && ! isset( $codes['missing_bricks_conversion_notes'] ),
+			'bricksConversionChecked' => '' !== $this->file_like( $path_map, 'kiwe-bricks-conversion.json' ) && ! isset( $codes['invalid_bricks_conversion_json'] ) && ! isset( $codes['bricks_conversion_missing_root_key'] ) && ! isset( $codes['invalid_bricks_conversion_schema'] ) && ! isset( $codes['bricks_conversion_missing_source'] ) && ! isset( $codes['bricks_conversion_forbidden_source_lane'] ) && ! isset( $codes['bricks_conversion_missing_elements'] ) && ! isset( $codes['bricks_conversion_missing_fidelity_map'] ) && ! isset( $codes['bricks_conversion_invalid_fidelity_lane'] ) && ! isset( $codes['bricks_conversion_missing_responsive_intent'] ) && ! isset( $codes['bricks_conversion_invalid_responsive_intent'] ) && ! isset( $codes['bricks_conversion_missing_complex_layout_fidelity'] ) && ! isset( $codes['bricks_conversion_missing_complex_responsive_fidelity'] ) && ! isset( $codes['bricks_conversion_unproven_seam_spread_direction_override'] ) && ! isset( $codes['bricks_conversion_source_contains_appshell'] ) && ! isset( $codes['bricks_conversion_contains_appshell_markup'] ) && ! isset( $codes['bricks_conversion_lost_seam_classes'] ) && ! isset( $codes['bricks_conversion_lost_kiwe_launcher'] ) && ! isset( $codes['bricks_conversion_missing_query_intent'] ) && ! isset( $codes['bricks_conversion_executable_code'] ) && ! isset( $codes['missing_bricks_conversion_notes'] ),
 		] as $label => $ok ) {
 			if ( $ok ) {
 				$passed[] = $label;

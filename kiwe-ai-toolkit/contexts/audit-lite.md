@@ -85,6 +85,7 @@ If the handoff includes a `/convert /bricks` result, audit the conversion lane t
 - `elements` is a non-empty Bricks element array with IDs, names, and valid parent references.
 - Source Seam classes, IDs, ARIA, `data-role`, `data-seam-*`, and `data-dsa-open-module` launchers are preserved in the conversion package.
 - Source `data-kiwe-query-template` markers have Bricks query settings or `fidelity.dynamicIntent`.
+- Bento/campaign/editorial grids, CSS grid columns/rows/spans, media-query layout changes, and Bricks responsive layout overrides have `fidelity.responsiveIntent` entries naming breakpoint/range, source selector, mapped Bricks element IDs, and intended grid/flex behavior.
 - Conditions/interactions are expressed through Bricks-supported settings and do not use unsafe JavaScript actions.
 - The conversion package does not claim direct Bricks/WordPress/WooCommerce write authority.
 - Fail if project/page/theme CSS redefines Seam framework selectors such as `.seam-horizontal-rail`, `.seam-card`, `.seam-button`, `.seam-visually-hidden`, `[data-flow="reel"]`, or `[data-role="card"]`, including when scoped as `.project .seam-card`. Seam classes and attributes may appear in markup, but visual CSS must target project-owned classes so the same framework vocabulary can be reused without unintended layout changes.

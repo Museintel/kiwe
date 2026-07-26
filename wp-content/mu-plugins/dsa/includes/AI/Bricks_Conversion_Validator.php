@@ -42,6 +42,9 @@ final class Bricks_Conversion_Validator {
 		'data-kiwe-binding',
 	];
 
+	private const RESPONSIVE_LAYOUT_KEY_PATTERN = '/^_(?:direction|display|grid|gridTemplate|gridTemplateColumns|gridTemplateRows|gridAuto|align|alignItems|alignContent|justify|justifyContent|justifyItems|flex|flexDirection|flexWrap|gap|rowGap|columnGap|order|width|height|minWidth|maxWidth|minHeight|maxHeight|position|top|right|bottom|left)[^:]*:(?:desktop|tablet|tablet_landscape|tablet_portrait|mobile|mobile_landscape|mobile_portrait)$/i';
+	private const COMPLEX_LAYOUT_PATTERN        = '/\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i';
+
 	public function validate( array $conversion, array $site_graph = [], string $source_html = '', array $binding = [] ): array {
 		$findings = [];
 		$index    = $this->graph_index( $site_graph );
@@ -49,6 +52,7 @@ final class Bricks_Conversion_Validator {
 		$this->validate_root( $conversion, $findings );
 		$this->validate_elements( $conversion, $findings, $index );
 		$this->validate_source_parity( $conversion, $source_html, $findings );
+		$this->validate_responsive_layout_fidelity( $conversion, $source_html, $findings );
 		$this->validate_dynamic_tags( $conversion, $findings, $index, [] !== $site_graph );
 		if ( [] !== $binding ) {
 			$binding_report = ( new Binding_Plan_Validator() )->validate( $binding, $site_graph );
@@ -110,6 +114,11 @@ final class Bricks_Conversion_Validator {
 		$fidelity = isset( $conversion['fidelity'] ) && is_array( $conversion['fidelity'] ) ? $conversion['fidelity'] : [];
 		if ( empty( $fidelity['sourceSelectors'] ) || ! is_array( $fidelity['sourceSelectors'] ) ) {
 			$this->add( $findings, 'fail', 'bricks_conversion_missing_fidelity_map', 'fidelity.sourceSelectors must map important source regions to Bricks element IDs.', '$.fidelity.sourceSelectors' );
+		}
+		foreach ( [ 'elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported' ] as $key ) {
+			if ( isset( $fidelity[ $key ] ) && ! is_array( $fidelity[ $key ] ) ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_invalid_fidelity_lane', sprintf( 'fidelity.%s must be an array when present.', $key ), '$.fidelity.' . $key );
+			}
 		}
 		$report = isset( $conversion['report'] ) && is_array( $conversion['report'] ) ? $conversion['report'] : [];
 		if ( ! isset( $report['manualReview'] ) || ! is_array( $report['manualReview'] ) ) {
@@ -177,6 +186,79 @@ final class Bricks_Conversion_Validator {
 				$this->add( $findings, 'fail', 'bricks_conversion_query_post_type_missing', sprintf( 'Element "%s" uses post type "%s" missing from Site Graph.', $element_id, (string) $post_type ), '$.elements' );
 			}
 		}
+	}
+
+	private function validate_responsive_layout_fidelity( array $conversion, string $source_html, array &$findings ): void {
+		$conversion_text = wp_json_encode( $conversion );
+		$conversion_text = is_string( $conversion_text ) ? $conversion_text : '';
+		$elements        = isset( $conversion['elements'] ) && is_array( $conversion['elements'] ) ? $conversion['elements'] : [];
+		$overrides       = $this->collect_responsive_layout_overrides( $elements );
+		$has_complex     = (bool) preg_match( self::COMPLEX_LAYOUT_PATTERN, $source_html . "\n" . $conversion_text );
+		$fidelity        = isset( $conversion['fidelity'] ) && is_array( $conversion['fidelity'] ) ? $conversion['fidelity'] : [];
+		$responsive      = isset( $fidelity['responsiveIntent'] ) && is_array( $fidelity['responsiveIntent'] ) ? $fidelity['responsiveIntent'] : [];
+
+		if ( ( $has_complex || [] !== $overrides ) && [] === $responsive ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_missing_responsive_intent', 'fidelity.responsiveIntent must be a non-empty array when source/conversion uses complex bento/grid/campaign layout or Bricks breakpoint layout overrides.', '$.fidelity.responsiveIntent' );
+		}
+
+		foreach ( $responsive as $index => $item ) {
+			$item_text = is_array( $item ) ? (string) wp_json_encode( $item ) : (string) $item;
+			if ( ! is_array( $item ) ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_invalid_responsive_intent', sprintf( 'fidelity.responsiveIntent[%d] must be an object.', (int) $index ), '$.fidelity.responsiveIntent' );
+				continue;
+			}
+			if ( ! preg_match( '/desktop|tablet|mobile|narrow|breakpoint|viewport|range/i', $item_text ) ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_responsive_intent_missing_breakpoint', sprintf( 'fidelity.responsiveIntent[%d] must identify the breakpoint or viewport range.', (int) $index ), '$.fidelity.responsiveIntent' );
+			}
+			if ( ! preg_match( '/selector|source|element|bricks|mappedElementIds|id/i', $item_text ) ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_responsive_intent_missing_mapping', sprintf( 'fidelity.responsiveIntent[%d] must connect the source selector to Bricks element IDs/settings.', (int) $index ), '$.fidelity.responsiveIntent' );
+			}
+			if ( ! preg_match( '/grid|flex|direction|columns|rows|span|wrap|align|justify|flow/i', $item_text ) ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_responsive_intent_missing_behavior', sprintf( 'fidelity.responsiveIntent[%d] must state the preserved layout behavior.', (int) $index ), '$.fidelity.responsiveIntent' );
+			}
+		}
+
+		if ( $has_complex && ! preg_match( '/#home-campaigns|bento|campaign|grid-template|grid-column|grid-row/i', (string) wp_json_encode( $fidelity['sourceSelectors'] ?? [] ) ) ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_missing_complex_layout_fidelity', 'fidelity.sourceSelectors must explicitly include complex bento/grid/campaign regions such as #home-campaigns/.nc-bento and their mapped Bricks element IDs.', '$.fidelity.sourceSelectors' );
+		}
+
+		if ( $has_complex && [] !== $responsive && ! preg_match( '/#home-campaigns|bento|campaign|grid|columns|rows|span/i', (string) wp_json_encode( $responsive ) ) ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_missing_complex_responsive_fidelity', 'fidelity.responsiveIntent must explicitly describe bento/grid/campaign responsive behavior so Bricks desktop/tablet/mobile layouts cannot silently drift.', '$.fidelity.responsiveIntent' );
+		}
+
+		$responsive_text = (string) wp_json_encode( $responsive );
+		foreach ( $overrides as $override ) {
+			$key     = (string) ( $override['key'] ?? '' );
+			$value   = strtolower( (string) ( $override['value'] ?? '' ) );
+			$id      = (string) ( $override['id'] ?? '' );
+			$classes = (string) ( $override['classes'] ?? '' );
+			$css_id  = (string) ( $override['cssId'] ?? '' );
+			if ( preg_match( '/\bseam-spread\b/', $classes . ' ' . $css_id ) && str_contains( $key, '_direction:' ) && 'column' === $value && ! preg_match( '/' . preg_quote( '' !== $id ? $id : 'missing-id', '/' ) . '|' . preg_quote( '' !== $css_id ? $css_id : 'missing-css-id', '/' ) . '|seam-spread|section-head/i', $responsive_text ) ) {
+				$this->add( $findings, 'fail', 'bricks_conversion_unproven_seam_spread_direction_override', sprintf( 'Element "%s" changes seam-spread to column at %s without a responsiveIntent entry tied to source evidence.', '' !== $id ? $id : 'unknown', $key ), '$.fidelity.responsiveIntent' );
+			}
+		}
+	}
+
+	private function collect_responsive_layout_overrides( array $elements ): array {
+		$out = [];
+		foreach ( $elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+			$settings = isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : [];
+			foreach ( $settings as $key => $value ) {
+				if ( preg_match( self::RESPONSIVE_LAYOUT_KEY_PATTERN, (string) $key ) ) {
+					$out[] = [
+						'id'      => (string) ( $element['id'] ?? '' ),
+						'key'     => (string) $key,
+						'value'   => is_scalar( $value ) ? (string) $value : wp_json_encode( $value ),
+						'classes' => (string) ( $settings['_cssClasses'] ?? '' ),
+						'cssId'   => (string) ( $settings['_cssId'] ?? '' ),
+					];
+				}
+			}
+		}
+		return $out;
 	}
 
 	private function validate_source_parity( array $conversion, string $source_html, array &$findings ): void {

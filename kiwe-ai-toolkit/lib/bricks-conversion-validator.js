@@ -163,6 +163,10 @@ const KIWE_CAPABILITY_ATTRIBUTES = [
   'data-kiwe-binding'
 ];
 
+const RESPONSIVE_LAYOUT_KEY_RE = /^_(?:direction|display|grid|gridTemplate|gridTemplateColumns|gridTemplateRows|gridAuto|align|alignItems|alignContent|justify|justifyContent|justifyItems|flex|flexDirection|flexWrap|gap|rowGap|columnGap|order|width|height|minWidth|maxWidth|minHeight|maxHeight|position|top|right|bottom|left)[^:]*:(?:desktop|tablet|tablet_landscape|tablet_portrait|mobile|mobile_landscape|mobile_portrait)$/i;
+
+const COMPLEX_LAYOUT_RE = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i;
+
 function isPlainObject(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -401,6 +405,33 @@ function collectConditions(elements) {
   return conditions;
 }
 
+function collectResponsiveLayoutOverrides(elements) {
+  const overrides = [];
+  for (const element of elements) {
+    const settings = isPlainObject(element.settings) ? element.settings : {};
+    for (const [key, value] of Object.entries(settings)) {
+      if (RESPONSIVE_LAYOUT_KEY_RE.test(key)) {
+        overrides.push({
+          element,
+          key,
+          value,
+          classes: String(settings._cssClasses || ''),
+          cssId: String(settings._cssId || '')
+        });
+      }
+    }
+  }
+  return overrides;
+}
+
+function hasComplexLayoutEvidence(text) {
+  return COMPLEX_LAYOUT_RE.test(String(text || ''));
+}
+
+function fidelityMentions(fidelity, pattern) {
+  return pattern.test(JSON.stringify(fidelity || {}));
+}
+
 function validateRoot(conversion, findings, conversionRel) {
   if (!isPlainObject(conversion)) {
     add(findings, 'fail', 'Bricks conversion file must contain a JSON object.', conversionRel);
@@ -460,7 +491,7 @@ function validateRoot(conversion, findings, conversionRel) {
     if (!Array.isArray(fidelity.sourceSelectors) || fidelity.sourceSelectors.length === 0) {
       add(findings, 'fail', 'fidelity.sourceSelectors must map the important source sections/selectors to Bricks element IDs.', conversionRel, '$.fidelity.sourceSelectors');
     }
-    for (const key of ['elementMapping', 'dynamicIntent', 'interactions', 'conditions', 'unsupported']) {
+    for (const key of ['elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported']) {
       if (key in fidelity && !Array.isArray(fidelity[key])) {
         add(findings, 'fail', `fidelity.${key} must be an array when present.`, conversionRel, `$.fidelity.${key}`);
       }
@@ -471,6 +502,79 @@ function validateRoot(conversion, findings, conversionRel) {
     add(findings, 'fail', 'report must be an object.', conversionRel, '$.report');
   } else if (!Array.isArray(report.manualReview)) {
     add(findings, 'fail', 'report.manualReview must be an array, even when empty.', conversionRel, '$.report.manualReview');
+  }
+}
+
+function validateResponsiveLayoutFidelity({ conversion, conversionText, website, findings, conversionRel }) {
+  const elements = asArray(conversion.elements);
+  const fidelity = isPlainObject(conversion.fidelity) ? conversion.fidelity : {};
+  const responsiveIntent = asArray(fidelity.responsiveIntent);
+  const responsiveOverrides = collectResponsiveLayoutOverrides(elements);
+  const sourceText = website && website.text ? website.text : '';
+  const sourceIsComplex = hasComplexLayoutEvidence(sourceText);
+  const conversionIsComplex = hasComplexLayoutEvidence(conversionText);
+  const hasComplexLayout = sourceIsComplex || conversionIsComplex;
+
+  if ((hasComplexLayout || responsiveOverrides.length > 0) && responsiveIntent.length === 0) {
+    add(
+      findings,
+      'fail',
+      'fidelity.responsiveIntent must be a non-empty array when the source/conversion uses complex bento/grid/campaign layout or Bricks breakpoint layout overrides. Map desktop/tablet/mobile intent, source selectors, Bricks element IDs, and the intended grid/flex behavior.',
+      conversionRel,
+      '$.fidelity.responsiveIntent'
+    );
+  }
+
+  if (responsiveIntent.length > 0) {
+    responsiveIntent.forEach((item, index) => {
+      if (!isPlainObject(item)) {
+        add(findings, 'fail', 'Every fidelity.responsiveIntent item must be an object.', conversionRel, `$.fidelity.responsiveIntent[${index}]`);
+        return;
+      }
+      const itemText = JSON.stringify(item);
+      if (!/(desktop|tablet|mobile|narrow|breakpoint|viewport|range)/i.test(itemText)) {
+        add(findings, 'fail', 'fidelity.responsiveIntent items must identify the breakpoint or viewport range they describe.', conversionRel, `$.fidelity.responsiveIntent[${index}]`);
+      }
+      if (!/(selector|source|element|bricks|mappedElementIds|id)/i.test(itemText)) {
+        add(findings, 'fail', 'fidelity.responsiveIntent items must connect the source selector to Bricks element IDs/settings.', conversionRel, `$.fidelity.responsiveIntent[${index}]`);
+      }
+      if (!/(grid|flex|direction|columns|rows|span|wrap|align|justify|flow)/i.test(itemText)) {
+        add(findings, 'fail', 'fidelity.responsiveIntent items must state the preserved layout behavior, not only the visual label.', conversionRel, `$.fidelity.responsiveIntent[${index}]`);
+      }
+    });
+  }
+
+  if (hasComplexLayout && !fidelityMentions(fidelity.sourceSelectors, /(?:#home-campaigns|bento|campaign|grid-template|grid-column|grid-row)/i)) {
+    add(
+      findings,
+      'fail',
+      'fidelity.sourceSelectors must explicitly include complex bento/grid/campaign regions such as #home-campaigns/.nc-bento and their mapped Bricks element IDs.',
+      conversionRel,
+      '$.fidelity.sourceSelectors'
+    );
+  }
+
+  if (hasComplexLayout && responsiveIntent.length > 0 && !fidelityMentions(responsiveIntent, /(?:#home-campaigns|bento|campaign|grid|columns|rows|span)/i)) {
+    add(
+      findings,
+      'fail',
+      'fidelity.responsiveIntent must explicitly describe bento/grid/campaign responsive behavior so Bricks desktop/tablet/mobile layouts cannot silently drift.',
+      conversionRel,
+      '$.fidelity.responsiveIntent'
+    );
+  }
+
+  for (const override of responsiveOverrides) {
+    const classText = `${override.classes} ${override.cssId}`;
+    if (/seam-spread\b/.test(classText) && /_direction:/i.test(override.key) && String(override.value).toLowerCase() === 'column' && !fidelityMentions(responsiveIntent, new RegExp(`${override.element.id}|${override.cssId || 'no-css-id'}|seam-spread|section-head`, 'i'))) {
+      add(
+        findings,
+        'fail',
+        `Element "${override.element.id}" changes seam-spread to column at ${override.key.split(':')[1]} without a responsiveIntent entry tied to source evidence. This can invert section headings in Bricks mobile breakpoints.`,
+        conversionRel,
+        '$.fidelity.responsiveIntent'
+      );
+    }
   }
 }
 
@@ -696,16 +800,24 @@ export function validateBricksConversion(target = '.', options = {}) {
   if (conversion) {
     validateRoot(conversion, findings, conversionRel);
     validateElements(asArray(conversion.elements), findings, conversionRel, siteIndex);
+    const website = readWebsiteText(root);
     validateSourceParity({
       conversion,
       conversionText,
-      website: readWebsiteText(root),
+      website,
       bindingsPath: findBindingsPath(root),
       siteGraphPath,
       findings,
       conversionRel,
       siteIndex,
       root
+    });
+    validateResponsiveLayoutFidelity({
+      conversion,
+      conversionText,
+      website,
+      findings,
+      conversionRel
     });
   }
   validateNotes(root, findings);

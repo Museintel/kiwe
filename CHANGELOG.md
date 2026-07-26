@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.45 - 2026-07-27
+
+- Tightened Bricks conversion fidelity audits so bento/campaign/editorial grids, CSS grid placement, media-query layout changes, and Bricks breakpoint overrides require `fidelity.responsiveIntent`.
+- Added deterministic failures when complex bento/grid/campaign regions are not named in `fidelity.sourceSelectors`, preventing visually broken Bricks imports that still look structurally valid.
+- Synced the new responsive-grid rule across the Node validator, generic audit tool, REST validator, Companion review, Bricks AI context, and public `/convert /bricks` / `/audit /bricksconversion` contexts.
+
 ## 6.44 - 2026-07-27
 
 - Tightened Kiwe Bricks conversion audits so `/audit /bricksconversion` also rejects conversion JSON that misses the required `target`, `conversion`, `fidelity.sourceSelectors`, or `report.manualReview` contract lanes.

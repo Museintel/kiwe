@@ -616,7 +616,9 @@ final class Bricks_AI_Intelligence_Service {
 				'requireSeamClassPreservation' => true,
 				'requireCanonicalLaunchers' => true,
 				'requireQueryIntentWhenSourceHasDataKiweQueryTemplate' => true,
-				'fields' => [ 'sourceSelectors', 'elementMapping', 'dynamicIntent', 'interactions', 'conditions', 'unsupported' ],
+				'requireResponsiveIntentForComplexGridOrBreakpointOverrides' => true,
+				'responsiveIntentRule' => 'Bento/campaign/editorial grids, CSS grid columns/rows/spans, media-query layout changes, and Bricks responsive layout overrides must name breakpoint/range, source selector, mapped Bricks element IDs, and preserved grid/flex behavior.',
+				'fields' => [ 'sourceSelectors', 'elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported' ],
 			],
 			'forbidden' => [
 				'AppShell/DSA shell markup in website/bricks-paste.html or Bricks conversion JSON',

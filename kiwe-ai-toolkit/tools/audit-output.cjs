@@ -153,6 +153,36 @@ function selectorIsMentioned(selector, cssText) {
     .some((part) => cssText.includes(part));
 }
 
+const responsiveLayoutKeyPattern = /^_(?:direction|display|grid|gridTemplate|gridTemplateColumns|gridTemplateRows|gridAuto|align|alignItems|alignContent|justify|justifyContent|justifyItems|flex|flexDirection|flexWrap|gap|rowGap|columnGap|order|width|height|minWidth|maxWidth|minHeight|maxHeight|position|top|right|bottom|left)[^:]*:(?:desktop|tablet|tablet_landscape|tablet_portrait|mobile|mobile_landscape|mobile_portrait)$/i;
+const complexLayoutPattern = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i;
+
+function collectResponsiveLayoutOverrides(value, out = []) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectResponsiveLayoutOverrides(item, out);
+  } else if (value && typeof value === 'object') {
+    if (value.settings && typeof value.settings === 'object' && !Array.isArray(value.settings)) {
+      for (const [key, settingValue] of Object.entries(value.settings)) {
+        if (responsiveLayoutKeyPattern.test(key)) {
+          out.push({
+            id: String(value.id || ''),
+            key,
+            value: settingValue,
+            classes: String(value.settings._cssClasses || ''),
+            cssId: String(value.settings._cssId || '')
+          });
+        }
+      }
+    }
+    for (const item of Object.values(value)) collectResponsiveLayoutOverrides(item, out);
+  }
+  return out;
+}
+
+function conversionPackageRoot(file) {
+  const dir = path.dirname(file);
+  return path.basename(dir) === 'bricks-conversion' ? path.dirname(dir) : dir;
+}
+
 function bareSeamSelectorDeclarations(cssText) {
   const found = [];
   const seen = new Set();
@@ -207,6 +237,35 @@ function validateBricksConversionJson(file) {
   }
   if (!json.report || typeof json.report !== 'object' || !Array.isArray(json.report.manualReview)) {
     out.push('kiwe-bricks-conversion.json report.manualReview must be an array, even when empty.');
+  }
+  const packageRoot = conversionPackageRoot(file);
+  const sourceText = read(path.join(packageRoot, 'website', 'bricks-paste.html'));
+  const jsonText = JSON.stringify(json);
+  const responsiveOverrides = collectResponsiveLayoutOverrides(json.elements || []);
+  const hasComplexLayout = complexLayoutPattern.test(`${sourceText}\n${jsonText}`);
+  const fidelity = json.fidelity && typeof json.fidelity === 'object' ? json.fidelity : {};
+  const responsiveIntent = Array.isArray(fidelity.responsiveIntent) ? fidelity.responsiveIntent : [];
+  if ((hasComplexLayout || responsiveOverrides.length) && responsiveIntent.length === 0) {
+    out.push('kiwe-bricks-conversion.json fidelity.responsiveIntent must be a non-empty array when the source/conversion uses complex bento/grid/campaign layout or Bricks breakpoint layout overrides.');
+  }
+  if (responsiveIntent.length) {
+    for (const [index, item] of responsiveIntent.entries()) {
+      const itemText = JSON.stringify(item || {});
+      if (!/(desktop|tablet|mobile|narrow|breakpoint|viewport|range)/i.test(itemText)) out.push(`kiwe-bricks-conversion.json fidelity.responsiveIntent[${index}] must identify the breakpoint or viewport range.`);
+      if (!/(selector|source|element|bricks|mappedElementIds|id)/i.test(itemText)) out.push(`kiwe-bricks-conversion.json fidelity.responsiveIntent[${index}] must connect the source selector to Bricks element IDs/settings.`);
+      if (!/(grid|flex|direction|columns|rows|span|wrap|align|justify|flow)/i.test(itemText)) out.push(`kiwe-bricks-conversion.json fidelity.responsiveIntent[${index}] must state the preserved layout behavior.`);
+    }
+  }
+  if (hasComplexLayout && !/(#home-campaigns|bento|campaign|grid-template|grid-column|grid-row)/i.test(JSON.stringify(fidelity.sourceSelectors || []))) {
+    out.push('kiwe-bricks-conversion.json fidelity.sourceSelectors must explicitly include complex bento/grid/campaign regions such as #home-campaigns/.nc-bento and their mapped Bricks element IDs.');
+  }
+  if (hasComplexLayout && responsiveIntent.length && !/(#home-campaigns|bento|campaign|grid|columns|rows|span)/i.test(JSON.stringify(responsiveIntent))) {
+    out.push('kiwe-bricks-conversion.json fidelity.responsiveIntent must explicitly describe bento/grid/campaign responsive behavior so Bricks desktop/tablet/mobile layouts cannot silently drift.');
+  }
+  for (const override of responsiveOverrides) {
+    if (/\bseam-spread\b/.test(`${override.classes} ${override.cssId}`) && /_direction:/i.test(override.key) && String(override.value).toLowerCase() === 'column' && !new RegExp(`${override.id || 'missing-id'}|${override.cssId || 'missing-css-id'}|seam-spread|section-head`, 'i').test(JSON.stringify(responsiveIntent))) {
+      out.push(`kiwe-bricks-conversion.json changes seam-spread element "${override.id || 'unknown'}" to column at ${override.key.split(':')[1]} without a responsiveIntent entry tied to source evidence.`);
+    }
   }
   return out;
 }
