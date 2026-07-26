@@ -544,7 +544,7 @@ bricks-conversion/
   BRICKS-CONVERSION-NOTES.md
 ```
 
-The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and contains top-level `source`, `target`, `conversion`, `elements`, `pageSettings`, `globalClasses`, `globalVariables`, `fidelity`, and `report` lanes. `fidelity.responsiveIntent` is required whenever the conversion contains bento/campaign/editorial grids, CSS grid placement, media-query layout behavior, or Bricks breakpoint layout overrides.
+The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and contains top-level `source`, `target`, `conversion`, `elements`, `pageSettings`, `globalClasses`, `globalVariables`, `fidelity`, and `report` lanes. `fidelity.responsiveIntent` is required whenever the conversion contains bento/campaign/editorial grids, CSS grid placement, media-query layout behavior, or Bricks breakpoint layout overrides. Bricks 2.4 responsive controls are stored as `controlKey:breakpoint`, including `_direction:<breakpoint>`, `_flexDirection:<breakpoint>`, grid controls, `_cssCustom:<breakpoint>`, and custom site breakpoint keys.
 
 `source.html` must point to `website/bricks-paste.html`.
 
@@ -562,7 +562,7 @@ Audit for:
 - `website/bricks-paste.html` remains page-only and contains no AppShell shell markup;
 - source Seam classes and canonical Kiwe launchers are preserved in the conversion package;
 - source `data-kiwe-query-template` markers have Bricks query settings or `fidelity.dynamicIntent`;
-- bento/campaign/editorial grids, CSS grid columns/rows/spans, and Bricks responsive layout overrides have `fidelity.responsiveIntent` entries naming the breakpoint/range, source selector, mapped Bricks element IDs, and intended grid/flex behavior;
+- bento/campaign/editorial grids, CSS grid columns/rows/spans, and Bricks responsive layout overrides have `fidelity.responsiveIntent` entries naming the breakpoint/range, source selector, mapped Bricks element IDs, and intended grid/flex behavior; this includes both `_direction:<breakpoint>` and `_flexDirection:<breakpoint>` and any custom breakpoint key exposed by Bricks/Site Graph;
 - Bricks dynamic tags and query-loop targets are verified against Site Graph when supplied;
 - `_conditions` and `_interactions` are arrays and do not use unsafe JavaScript actions;
 - unsupported visual/behavioral pieces are explicitly listed for manual review;

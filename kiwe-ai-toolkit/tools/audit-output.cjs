@@ -153,7 +153,7 @@ function selectorIsMentioned(selector, cssText) {
     .some((part) => cssText.includes(part));
 }
 
-const responsiveLayoutKeyPattern = /^_(?:direction|display|grid|gridTemplate|gridTemplateColumns|gridTemplateRows|gridAuto|align|alignItems|alignContent|justify|justifyContent|justifyItems|flex|flexDirection|flexWrap|gap|rowGap|columnGap|order|width|height|minWidth|maxWidth|minHeight|maxHeight|position|top|right|bottom|left)[^:]*:(?:desktop|tablet|tablet_landscape|tablet_portrait|mobile|mobile_landscape|mobile_portrait)$/i;
+const responsiveLayoutKeyPattern = /^_(?:cssCustom|direction|display|grid|gridItem|gridTemplate|gridAuto|align|justify|place|flex|gap|rowGap|columnGap|order|width|widthMin|widthMax|height|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|aspectRatio|margin|padding|position|top|right|bottom|left|zIndex|overflow|masonry)[A-Za-z0-9_]*:[a-z][a-z0-9_-]{1,48}(?::[a-z-]+)?$/i;
 const complexLayoutPattern = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i;
 
 function collectResponsiveLayoutOverrides(value, out = []) {
@@ -263,7 +263,7 @@ function validateBricksConversionJson(file) {
     out.push('kiwe-bricks-conversion.json fidelity.responsiveIntent must explicitly describe bento/grid/campaign responsive behavior so Bricks desktop/tablet/mobile layouts cannot silently drift.');
   }
   for (const override of responsiveOverrides) {
-    if (/\bseam-spread\b/.test(`${override.classes} ${override.cssId}`) && /_direction:/i.test(override.key) && String(override.value).toLowerCase() === 'column' && !new RegExp(`${override.id || 'missing-id'}|${override.cssId || 'missing-css-id'}|seam-spread|section-head`, 'i').test(JSON.stringify(responsiveIntent))) {
+    if (/\bseam-spread\b/.test(`${override.classes} ${override.cssId}`) && /_(?:direction|flexDirection):/i.test(override.key) && String(override.value).toLowerCase() === 'column' && !new RegExp(`${override.id || 'missing-id'}|${override.cssId || 'missing-css-id'}|seam-spread|section-head`, 'i').test(JSON.stringify(responsiveIntent))) {
       out.push(`kiwe-bricks-conversion.json changes seam-spread element "${override.id || 'unknown'}" to column at ${override.key.split(':')[1]} without a responsiveIntent entry tied to source evidence.`);
     }
   }

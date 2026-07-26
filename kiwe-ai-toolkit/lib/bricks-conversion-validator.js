@@ -163,7 +163,7 @@ const KIWE_CAPABILITY_ATTRIBUTES = [
   'data-kiwe-binding'
 ];
 
-const RESPONSIVE_LAYOUT_KEY_RE = /^_(?:direction|display|grid|gridTemplate|gridTemplateColumns|gridTemplateRows|gridAuto|align|alignItems|alignContent|justify|justifyContent|justifyItems|flex|flexDirection|flexWrap|gap|rowGap|columnGap|order|width|height|minWidth|maxWidth|minHeight|maxHeight|position|top|right|bottom|left)[^:]*:(?:desktop|tablet|tablet_landscape|tablet_portrait|mobile|mobile_landscape|mobile_portrait)$/i;
+const RESPONSIVE_LAYOUT_KEY_RE = /^_(?:cssCustom|direction|display|grid|gridItem|gridTemplate|gridAuto|align|justify|place|flex|gap|rowGap|columnGap|order|width|widthMin|widthMax|height|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|aspectRatio|margin|padding|position|top|right|bottom|left|zIndex|overflow|masonry)[A-Za-z0-9_]*:[a-z][a-z0-9_-]{1,48}(?::[a-z-]+)?$/i;
 
 const COMPLEX_LAYOUT_RE = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i;
 
@@ -566,7 +566,7 @@ function validateResponsiveLayoutFidelity({ conversion, conversionText, website,
 
   for (const override of responsiveOverrides) {
     const classText = `${override.classes} ${override.cssId}`;
-    if (/seam-spread\b/.test(classText) && /_direction:/i.test(override.key) && String(override.value).toLowerCase() === 'column' && !fidelityMentions(responsiveIntent, new RegExp(`${override.element.id}|${override.cssId || 'no-css-id'}|seam-spread|section-head`, 'i'))) {
+    if (/seam-spread\b/.test(classText) && /_(?:direction|flexDirection):/i.test(override.key) && String(override.value).toLowerCase() === 'column' && !fidelityMentions(responsiveIntent, new RegExp(`${override.element.id}|${override.cssId || 'no-css-id'}|seam-spread|section-head`, 'i'))) {
       add(
         findings,
         'fail',

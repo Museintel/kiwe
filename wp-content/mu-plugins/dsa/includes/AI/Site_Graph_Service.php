@@ -143,7 +143,7 @@ final class Site_Graph_Service {
 				'mutatesContent' => false,
 				'restRoute'   => '/wp-json/dsa/v1/ai/validate-bricks-conversion',
 				'aiKeyScopes' => [ 'validate_bricks_conversion', 'all' ],
-				'useFor'      => [ 'HTML/CSS/JS to Bricks JSON review package', 'Seam and Kiwe launcher preservation', 'dynamic tag and query-loop fidelity', 'responsive/grid fidelity including bento and breakpoint overrides', 'condition and interaction audit', 'pre-staging conversion gate' ],
+				'useFor'      => [ 'HTML/CSS/JS to Bricks JSON review package', 'Seam and Kiwe launcher preservation', 'dynamic tag and query-loop fidelity', 'responsive/grid fidelity including bento, Bricks 2.4 controlKey:breakpoint overrides, and custom breakpoint keys', 'condition and interaction audit', 'pre-staging conversion gate' ],
 			],
 			'secureTrackBrief' => [
 				'schema'      => 'kiwe.securetrack.ai-brief.v1',

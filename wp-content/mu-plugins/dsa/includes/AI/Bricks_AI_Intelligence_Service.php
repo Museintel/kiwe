@@ -617,7 +617,7 @@ final class Bricks_AI_Intelligence_Service {
 				'requireCanonicalLaunchers' => true,
 				'requireQueryIntentWhenSourceHasDataKiweQueryTemplate' => true,
 				'requireResponsiveIntentForComplexGridOrBreakpointOverrides' => true,
-				'responsiveIntentRule' => 'Bento/campaign/editorial grids, CSS grid columns/rows/spans, media-query layout changes, and Bricks responsive layout overrides must name breakpoint/range, source selector, mapped Bricks element IDs, and preserved grid/flex behavior.',
+				'responsiveIntentRule' => 'Bento/campaign/editorial grids, CSS grid columns/rows/spans, media-query layout changes, and Bricks responsive layout overrides must name breakpoint/range, source selector, mapped Bricks element IDs, and preserved grid/flex behavior. Bricks 2.4 stores responsive controls as controlKey:breakpoint, including _direction:<breakpoint>, _flexDirection:<breakpoint>, grid controls, _cssCustom:<breakpoint>, and custom site breakpoint keys.',
 				'fields' => [ 'sourceSelectors', 'elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported' ],
 			],
 			'forbidden' => [

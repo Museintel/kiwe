@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.46 - 2026-07-27
+
+- Source-verified the Bricks conversion fidelity rules against the local Bricks 2.4 beta `html-to-bricks` converter, generated control index, and breakpoint manager.
+- Hardened `/convert /bricks` and `/audit /bricksconversion` so responsive Bricks layout controls are detected as `controlKey:breakpoint`, including native `_flexDirection:<breakpoint>`, grid controls, `_cssCustom:<breakpoint>`, spacing/sizing controls, and custom site breakpoint keys.
+- Updated the seam-spread mobile-direction guard so Bricks-native `_flexDirection:*` mistakes are rejected the same way as copied `_direction:*` mistakes, preventing approved row/spread layouts from silently becoming mobile columns.
+- Synced the stricter Bricks 2.4 responsive-control language across the Node validator, audit CLI, REST validator, Companion review, Bricks AI context, Site Graph capability copy, and public toolkit contexts.
+
 ## 6.45 - 2026-07-27
 
 - Tightened Bricks conversion fidelity audits so bento/campaign/editorial grids, CSS grid placement, media-query layout changes, and Bricks breakpoint overrides require `fidelity.responsiveIntent`.

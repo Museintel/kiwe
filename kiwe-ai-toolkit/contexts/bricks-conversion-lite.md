@@ -122,7 +122,7 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
 - Do not use `combined-preview`, `appshell-theme`, `theme-package.json`, `theme.css`, dock markup, sheet markup, or screen markup as conversion source.
 - Convert approved visual CSS into Bricks element settings, global classes, global variables, or safe page CSS. Do not hide the whole design in one giant Code element unless Bricks cannot represent it.
 - Preserve intentional CSS states and responsive behavior. If a pseudo-state, media query, mask, grid, interaction, or animation cannot be represented safely in Bricks controls, put it in `pageSettings.customCss` and list it under `fidelity.unsupported` or `report.manualReview`.
-- Preserve complex layout intent, not just markup. Bento/editorial grids, campaign cards, CSS grid columns/rows/spans, and any Bricks breakpoint settings such as `_direction:mobile_landscape` must be backed by `fidelity.responsiveIntent`. Do not flip a source row/spread layout into a mobile column layout unless the source CSS/media query proves that breakpoint behavior.
+- Preserve complex layout intent, not just markup. Bento/editorial grids, campaign cards, CSS grid columns/rows/spans, and any Bricks breakpoint layout settings must be backed by `fidelity.responsiveIntent`. Bricks 2.4 stores responsive controls as `controlKey:breakpoint`, including defaults such as `_direction:mobile_landscape`, native controls such as `_flexDirection:mobile_landscape`, grid controls such as `_gridTemplateColumns:tablet_portrait`, `_cssCustom:<breakpoint>`, and site-defined custom breakpoint keys. Do not flip a source row/spread layout into a mobile column layout unless the source CSS/media query proves that breakpoint behavior.
 - Executable JavaScript must not silently become production authority. Prefer Bricks interactions when safe, Kiwe capability attributes for Kiwe-owned journeys, or manual review.
 - Use query loops and dynamic tags only when verified by Site Graph or `/ai/bricks/context`.
 - Do not convert placeholder product/category/media samples into hardcoded production content when a dynamic binding/query loop exists.
@@ -155,7 +155,7 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
 
 `fidelity.interactions` and `fidelity.conditions` should describe Bricks `_interactions` and `_conditions` used, or state why behavior remains manual.
 
-`fidelity.responsiveIntent` is required when the source/conversion uses bento, campaign/editorial grids, CSS grid placement, media-query layout changes, or Bricks responsive layout overrides. Each item should identify the breakpoint/range, source selector, mapped Bricks element IDs, and preserved behavior:
+`fidelity.responsiveIntent` is required when the source/conversion uses bento, campaign/editorial grids, CSS grid placement, media-query layout changes, or Bricks responsive layout overrides. Treat both `_direction:<breakpoint>` and `_flexDirection:<breakpoint>` as direction controls. Treat custom breakpoint suffixes as valid Bricks breakpoints when Site Graph or Bricks context exposes them. Each item should identify the breakpoint/range, source selector, mapped Bricks element IDs, and preserved behavior:
 
 ```json
 {
