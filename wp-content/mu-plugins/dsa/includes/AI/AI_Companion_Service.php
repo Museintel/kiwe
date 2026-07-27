@@ -225,6 +225,7 @@ final class AI_Companion_Service {
 				'customDockLinks',
 				'tokenPurity',
 				'bricksConversionFidelity',
+				'accessibilityLightDarkContrast',
 				'secretLeakage',
 				'encodingMojibake',
 			],
@@ -334,6 +335,11 @@ final class AI_Companion_Service {
 		$findings = array_merge( $findings, $this->review_data_roles( $path_map ) );
 		$findings = array_merge( $findings, $this->review_seam_css_ownership( $path_map ) );
 		$findings = array_merge( $findings, $this->review_text_encoding( $path_map ) );
+		$accessibility_context = strtolower( (string) wp_json_encode( [ $args['command'] ?? '', $args['phase'] ?? '', $args['mode'] ?? '', array_keys( $path_map ) ] ) );
+		$accessibility_requested = (bool) preg_match( '/accessibility|a11y|kiwe-accessibility-plan\.json/', $accessibility_context );
+		if ( $accessibility_requested ) {
+			$findings = array_merge( $findings, $this->review_accessibility( $path_map, $accessibility_requested ) );
+		}
 
 		$theme_css = $this->file_like( $path_map, 'theme.css' );
 		if ( '' !== $theme_css ) {
@@ -497,7 +503,7 @@ final class AI_Companion_Service {
 		$core       = is_string( $core ) ? trim( preg_replace( '/\s+/', ' ', $core ) ?? $core ) : $raw;
 		$normalized = trim( preg_replace( '/\s+/', ' ', preg_replace( '/(?:^|\s)\/build\b/i', ' /create', $core ) ?? $core ) ?? $core );
 		$known      = [
-			'/adapt', '/apply', '/appshell', '/assemble', '/audit', '/binding', '/bindings', '/bricks', '/bricks-conversion', '/bricksconversion', '/brickstheme', '/build', '/combine', '/combined', '/convert', '/create', '/creative', '/dsa', '/dsatheme', '/dsathemeandhomepage', '/dynamic', '/export', '/framework', '/frameworkprofile', '/htmlcssjs', '/ideate', '/page', '/preview', '/rebuild', '/seam', '/seamframework', '/staging', '/theme', '/translate', '/usecompanion', '/webdraft', '/webpage', '/website',
+			'/a11y', '/accessibility', '/adapt', '/apply', '/appshell', '/assemble', '/audit', '/binding', '/bindings', '/bricks', '/bricks-conversion', '/bricksconversion', '/brickstheme', '/build', '/combine', '/combined', '/convert', '/create', '/creative', '/dsa', '/dsatheme', '/dsathemeandhomepage', '/dynamic', '/export', '/framework', '/frameworkprofile', '/htmlcssjs', '/ideate', '/page', '/preview', '/rebuild', '/seam', '/seamframework', '/staging', '/theme', '/translate', '/usecompanion', '/webdraft', '/webpage', '/website',
 		];
 		$suggestions = [
 			'/buid' => '/create',
@@ -509,6 +515,7 @@ final class AI_Companion_Service {
 			'/brikcs' => '/bricks',
 			'/dsathem' => '/dsatheme',
 			'/seamframwork' => '/seamframework',
+			'/accessibilty' => '/accessibility',
 		];
 
 		if ( '' === $raw ) {
@@ -582,11 +589,19 @@ final class AI_Companion_Service {
 			return $this->command_gate_result( 'needs_input', 'bricks_audit_missing_conversion_artifact', '`/audit /bricksconversion` needs `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.', 'bricks-audit', $normalized, [ '/convert /bricks', '/audit /bricksconversion after kiwe-bricks-conversion.json exists' ], [ 'Audit phases inspect existing artifacts; they do not silently create missing outputs.' ] );
 		}
 
+		if ( preg_match( '/\/(?:create|build).*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'accessibility_create_missing_artifact', '`/create /accessibility` needs an existing website/theme/combined artifact. It is a color-token, contrast, and light/dark-mode pass over real files, not a fresh creative website phase.', 'accessibility-create', $normalized, [ 'Provide the current handoff files or artifact summary', '/create /accessibility after /rebuild /seamframework or /create /combined' ], [ 'Do not redesign the page only to fix accessibility.', 'Do not invent dark mode outside Kiwe/Seam/Bricks token lanes.' ] );
+		}
+
+		if ( preg_match( '/\/audit.*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'accessibility_audit_missing_artifact', '`/audit /accessibility` needs the generated files or accessibility/kiwe-accessibility-plan.json. Do not audit empty air.', 'accessibility-audit', $normalized, [ 'Provide the handoff folder/file map', '/create /accessibility before /audit /accessibility when no plan exists' ], [ 'Audit phases inspect concrete files; they do not invent missing outputs.' ] );
+		}
+
 		if ( preg_match( '/\/dynamic|\/sitegraph|\/binding|\/bindings/', $text ) && '' === trim( $site_graph_summary ) ) {
 			return $this->command_gate_result( 'needs_input', 'dynamic_missing_site_graph', '`/dynamic /sitegraph` needs a target Site Graph summary or API access. Do not guess product categories, pages, custom fields, dynamic tags, or Bricks query-loop types.', 'dynamic', $normalized, [ 'GET /wp-json/dsa/v1/ai/site-graph', 'GET|POST /wp-json/dsa/v1/ai/site-graph-data', '/dynamic /sitegraph after Site Graph is available' ], [ 'Dynamic binding must be grounded in target-site truth, not frontend scraping or assumptions.' ] );
 		}
 
-		if ( preg_match( '/\/audit.*(?:\/seamframework|\/seam|\/brickstheme|\/frameworkprofile|\/framework|\/dsatheme|\/appshell|\/dsa|\/combined|\/combine|seam framework|bricks theme|app shell)/', $text ) && '' === trim( $artifact_summary ) ) {
+		if ( preg_match( '/\/audit.*(?:\/seamframework|\/seam|\/brickstheme|\/frameworkprofile|\/framework|\/dsatheme|\/appshell|\/dsa|\/combined|\/combine|\/accessibility|\/a11y|seam framework|bricks theme|app shell|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
 			return $this->command_gate_result( 'needs_input', 'audit_missing_artifact', 'Audit commands need an existing generated artifact or file map. Do not perform a generic audit against nothing.', 'command-diagnostic', $normalized, [ 'Provide the handoff folder/file map', 'Run the matching `/create` or `/rebuild` phase first' ], [ 'Audit phases inspect and revise concrete files; they do not invent missing artifacts.' ] );
 		}
 
@@ -660,6 +675,12 @@ final class AI_Companion_Service {
 		}
 		if ( preg_match( '/\/audit.*(?:\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|bricksjson|html-to-bricks)/', $text ) ) {
 			return 'bricks-audit';
+		}
+		if ( preg_match( '/(?:\/create|\/build).*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) ) {
+			return 'accessibility-create';
+		}
+		if ( preg_match( '/\/audit.*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) ) {
+			return 'accessibility-audit';
 		}
 		if ( preg_match( '/(?:\/convert|\/export|\/translate|\/rebuild|\/adapt).*(?:\/bricks|bricks json|bricks conversion|html-to-bricks|html css to bricks)/', $text ) ) {
 			return 'bricks-convert';
@@ -773,6 +794,16 @@ final class AI_Companion_Service {
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
 				'title' => 'Audit Bricks conversion fidelity',
 				'body'  => 'Reject page artifacts that include AppShell shell markup, lost Seam classes or data-dsa-open-module launchers, fake Bricks element names, broken parent/child references, unsafe JavaScript interactions, unverified dynamic tags, and query-template markers without Bricks query-loop intent.',
+			],
+			'accessibility-create' => [
+				'id'    => 'phase-accessibility-create-token-contrast',
+				'title' => 'Create the accessibility color lane over existing files',
+				'body'  => 'Add accessibility/kiwe-accessibility-plan.json and notes, map light/dark foreground-background token pairs, align Bricks theme-style colors, and revise only contrast/dark-mode defects. Do not redesign or create new content.',
+			],
+			'accessibility-audit' => [
+				'id'    => 'phase-accessibility-audit-light-dark-contrast',
+				'title' => 'Audit light/dark contrast deterministically',
+				'body'  => 'Fail obvious low-contrast literal pairs, missing dark-mode proof, missing accessibility plan fields, and color work that bypasses Kiwe/Seam tokens or Bricks global theme-style slots. Font-size audit is intentionally out of scope for now.',
 			],
 			'staging' => [
 				'id'    => 'phase-staging-controlled-executor-only',
@@ -1132,6 +1163,37 @@ final class AI_Companion_Service {
 					'path'     => sanitize_text_field( (string) $path ),
 				];
 			}
+		}
+
+		return $findings;
+	}
+
+	private function review_accessibility( array $path_map, bool $strict = false ): array {
+		$report = ( new Accessibility_Validator() )->validate_files(
+			$path_map,
+			[
+				'requirePlan' => $strict,
+				'strictDark'  => $strict,
+			]
+		);
+
+		$findings = [];
+		foreach ( (array) ( $report['findings'] ?? [] ) as $finding ) {
+			if ( ! is_array( $finding ) ) {
+				continue;
+			}
+			$normalized = [
+				'severity' => sanitize_key( (string) ( $finding['severity'] ?? 'info' ) ),
+				'code'     => sanitize_key( (string) ( $finding['code'] ?? 'accessibility_finding' ) ),
+				'message'  => sanitize_text_field( (string) ( $finding['message'] ?? 'Accessibility finding.' ) ),
+			];
+			if ( isset( $finding['path'] ) && '' !== (string) $finding['path'] ) {
+				$normalized['path'] = sanitize_text_field( (string) $finding['path'] );
+			}
+			if ( isset( $finding['selector'] ) && '' !== (string) $finding['selector'] ) {
+				$normalized['selector'] = sanitize_text_field( (string) $finding['selector'] );
+			}
+			$findings[] = $normalized;
 		}
 
 		return $findings;

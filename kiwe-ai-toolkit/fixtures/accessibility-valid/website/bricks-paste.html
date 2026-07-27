@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-kiwe-theme="light">
+<head>
+  <meta charset="utf-8">
+  <title>Kiwe accessibility valid fixture</title>
+  <style>
+    :root {
+      --kiwe-color-surface: #f7f3e8;
+      --kiwe-color-surface-raised: #ffffff;
+      --kiwe-color-text: #1f1a14;
+      --kiwe-color-text-muted: #5f554c;
+      --kiwe-color-brand: #9f171b;
+      --kiwe-color-accent: #006e68;
+      --kiwe-color-text-inverse: #ffffff;
+    }
+
+    [data-kiwe-theme="dark"] {
+      --kiwe-color-surface: #16120f;
+      --kiwe-color-surface-raised: #231e18;
+      --kiwe-color-text: #fff5e7;
+      --kiwe-color-text-muted: #d7c8b6;
+      --kiwe-color-brand: #ff6a6e;
+      --kiwe-color-accent: #35d5cd;
+      --kiwe-color-text-inverse: #16120f;
+    }
+
+    body {
+      color: var(--kiwe-color-text);
+      background: var(--kiwe-color-surface);
+    }
+
+    .card {
+      color: var(--kiwe-color-text);
+      background: var(--kiwe-color-surface-raised);
+    }
+
+    .pill {
+      color: #ffffff;
+      background: #9f171b;
+    }
+  </style>
+</head>
+<body>
+  <button data-kiwe-theme-toggle>Toggle theme</button>
+  <main class="seam-stack" data-role="section">
+    <article class="card" data-role="card">
+      <span class="pill" data-role="badge">Readable badge</span>
+      <h1>Accessible Kiwe fixture</h1>
+    </article>
+  </main>
+</body>
+</html>

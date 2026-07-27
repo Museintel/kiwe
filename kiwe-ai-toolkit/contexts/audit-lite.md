@@ -13,6 +13,7 @@ If you can run shell commands, also run:
 ```bash
 node kiwe-ai-toolkit/tools/validate-output.cjs /path/to/handoff --mode combined
 node kiwe-ai-toolkit/tools/validate-framework-profile.cjs /path/to/handoff --optional
+node kiwe-ai-toolkit/tools/validate-accessibility.cjs /path/to/handoff --optional
 node kiwe-ai-toolkit/tools/audit-output.cjs /path/to/handoff
 ```
 
@@ -64,6 +65,35 @@ For combined mode, do not duplicate the website inside the AppShell import packa
 Do not create separate human review previews for the website and AppShell in combined mode. The reviewer should open one combined preview and see the website/page behind the Kiwe AppShell.
 
 For combined mode, live-intended palette, typography, spacing, radius, shadow, and global Bricks style personality must live inside `appshell-theme/import/<theme-id>/theme-package.json` under `settings.tokens` for marketplace AppShell themes. Do not require a separate Framework profile unless the brief explicitly asks for a standalone `Kiwe > Framework` import artifact too.
+
+## Accessibility / dark-mode audit
+
+When the human asks for `/create /accessibility` or `/audit /accessibility`, also read `contexts/accessibility-lite.md`.
+
+For all modern Kiwe outputs, audit color contrast and native light/dark behavior:
+
+- literal text/background pairs must meet contrast; white-on-white, light-on-light, black-on-black, and dark-on-dark pills/cards/buttons are blocking failures;
+- badges, chips, pills, buttons, stats, product labels, rail cards, dock controls, and DSA screen/sheet labels need explicit readable foreground/background token pairs;
+- light and dark mode must be proven through native theme state such as `data-kiwe-theme`, `data-kiwe-theme-toggle`, or a clearly mapped standalone `data-theme`;
+- dark mode must not be a `filter: invert()` hack or a second unrelated palette;
+- text over gradients or images must have a solid fallback token or a manual-review note;
+- private project color variables must map back to Kiwe token pairs in `accessibility/kiwe-accessibility-plan.json`;
+- Bricks targets should align Kiwe tokens with Bricks root theme-style slots: `siteBackground`, `colorPrimary`, `colorSecondary`, `colorLight`, `colorDark`, `colorMuted`, and state colors;
+- DSA theme import CSS must not hide accessibility fixes in preview-only CSS; live import selectors and token settings should carry the same visual contrast.
+
+If an accessibility lane exists, verify:
+
+- `accessibility/kiwe-accessibility-plan.json` uses `schema: "kiwe.accessibility-plan.v1"`;
+- `modes` includes both `light` and `dark`;
+- `tokenPairs` is non-empty and covers the real surfaces present in the artifact;
+- `manualReview` exists, even when empty;
+- `ACCESSIBILITY-NOTES.md` records what was fixed and what was only manually reviewed.
+
+When tools are available, run:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff>
+```
 
 ## Website / Bricks audit
 

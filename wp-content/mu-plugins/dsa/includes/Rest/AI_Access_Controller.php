@@ -5,6 +5,7 @@ namespace DSA\Rest;
 use DSA\AI\Access_Key_Service;
 use DSA\AI\AI_Companion_Memory_Service;
 use DSA\AI\AI_Companion_Service;
+use DSA\AI\Accessibility_Validator;
 use DSA\AI\Bricks_AI_Intelligence_Service;
 use DSA\AI\Apply_Plan_Preparer;
 use DSA\AI\Binding_Plan_Validator;
@@ -83,6 +84,7 @@ final class AI_Access_Controller {
 			[ 'POST', '/ai/bricks/plan', 'bricks_ai_plan', 'bricks_ai' ],
 			[ 'POST', '/ai/validate-bindings', 'validate_bindings', 'validate_bindings' ],
 			[ 'POST', '/ai/validate-bricks-conversion', 'validate_bricks_conversion', 'validate_bricks_conversion' ],
+			[ 'POST', '/ai/validate-accessibility', 'validate_accessibility', 'validate_accessibility' ],
 			[ 'POST', '/ai/prepare-apply-plan', 'prepare_apply_plan', 'prepare_apply_plan' ],
 			[ 'POST', '/ai/stage-apply-plan', 'stage_apply_plan', 'stage_apply_plan' ],
 			[ 'GET', '/ai/stages', 'stages', 'trusted_apply_chain' ],
@@ -173,6 +175,12 @@ final class AI_Access_Controller {
 				],
 				'validateBindings'  => true,
 				'validateBricksConversion' => true,
+				'validateAccessibility' => [
+					'route' => '/wp-json/dsa/v1/ai/validate-accessibility',
+					'scope' => 'validate_accessibility or all',
+					'covers' => [ 'literal color contrast', 'native Kiwe light/dark proof', 'accessibility plan schema', 'Bricks theme-style token alignment' ],
+					'notCoveredYet' => [ 'font-size/readability sizing', 'full browser rendering proof' ],
+				],
 				'prepareApplyPlan'  => true,
 				'stageApplyPlan'    => true,
 				'trustedApplyChain' => true,
@@ -340,6 +348,28 @@ final class AI_Access_Controller {
 		$binding     = $this->array_param( $request, 'binding' );
 
 		return ( new Bricks_Conversion_Validator() )->validate( $conversion, $site_graph, $source_html, $binding );
+	}
+
+	private function validate_accessibility( WP_REST_Request $request, array $auth ): array {
+		$args  = $this->merged_request_args( $request );
+		$files = isset( $args['files'] ) && is_array( $args['files'] ) ? $args['files'] : [];
+		$plan  = isset( $args['plan'] ) && is_array( $args['plan'] ) ? $args['plan'] : [];
+
+		if ( [] !== $plan && ! isset( $files['accessibility/kiwe-accessibility-plan.json'] ) ) {
+			$files['accessibility/kiwe-accessibility-plan.json'] = wp_json_encode( $plan, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+		}
+
+		if ( [] === $files ) {
+			return $this->bad_request( 'missing_accessibility_files', 'Request body must include files and, for creation/audit phases, accessibility/kiwe-accessibility-plan.json.' );
+		}
+
+		return ( new Accessibility_Validator() )->validate_files(
+			$files,
+			[
+				'requirePlan' => ! empty( $args['requirePlan'] ),
+				'strictDark'  => ! empty( $args['strictDark'] ) || ! empty( $args['requirePlan'] ),
+			]
+		);
 	}
 
 	private function prepare_apply_plan( WP_REST_Request $request, array $auth ): array {

@@ -6,6 +6,7 @@ use DSA\AI\Apply_Plan_Preparer;
 use DSA\AI\AI_Companion_Memory_Service;
 use DSA\AI\AI_Companion_Service;
 use DSA\AI\AI_Provider_Service;
+use DSA\AI\Accessibility_Validator;
 use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Bricks_AI_Intelligence_Service;
 use DSA\AI\Bricks_Conversion_Validator;
@@ -228,6 +229,23 @@ final class Abilities_Service {
 					'input_schema'        => $this->bricks_conversion_validation_input_schema(),
 					'output_schema'       => $this->bricks_conversion_validation_output_schema(),
 					'execute_callback'    => [ $this, 'execute_bricks_conversion_validation' ],
+					'permission_callback' => [ $this, 'can_manage' ],
+					'meta'                => [
+						'annotations' => [ 'readonly' => true ],
+						'show_in_rest' => true,
+					],
+				]
+			);
+
+			wp_register_ability(
+				'dsa/validate-accessibility',
+				[
+					'label'               => __( 'Validate Kiwe accessibility color lane', 'dsa' ),
+					'description'         => __( 'Validates an AI-produced Kiwe accessibility plan and handoff files for literal color contrast, native light/dark proof, and Bricks theme-style token alignment without saving content.', 'dsa' ),
+					'category'            => self::CATEGORY,
+					'input_schema'        => $this->accessibility_validation_input_schema(),
+					'output_schema'       => $this->accessibility_validation_output_schema(),
+					'execute_callback'    => [ $this, 'execute_accessibility_validation' ],
 					'permission_callback' => [ $this, 'can_manage' ],
 					'meta'                => [
 						'annotations' => [ 'readonly' => true ],
@@ -630,6 +648,35 @@ final class Abilities_Service {
 		return ( new Bricks_Conversion_Validator() )->validate( $conversion, $site_graph, $source_html, $binding );
 	}
 
+	public function execute_accessibility_validation( array $input = [] ): array {
+		$files = isset( $input['files'] ) && is_array( $input['files'] ) ? $input['files'] : [];
+		if ( [] === $files && isset( $input['plan'] ) && is_array( $input['plan'] ) ) {
+			$files['accessibility/kiwe-accessibility-plan.json'] = wp_json_encode( $input['plan'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
+		}
+		if ( [] === $files ) {
+			return [
+				'ok'       => false,
+				'schema'   => 'kiwe.accessibility-validation.v1',
+				'counts'   => [ 'error' => 1 ],
+				'findings' => [
+					[
+						'severity' => 'error',
+						'code'     => 'missing_accessibility_files',
+						'message'  => 'Input must include files, normally including accessibility/kiwe-accessibility-plan.json.',
+					],
+				],
+			];
+		}
+
+		return ( new Accessibility_Validator() )->validate_files(
+			$files,
+			[
+				'requirePlan' => ! empty( $input['requirePlan'] ),
+				'strictDark'  => ! empty( $input['strictDark'] ) || ! empty( $input['requirePlan'] ),
+			]
+		);
+	}
+
 	public function execute_prepare_apply_plan( array $input = [] ): array {
 		$binding = isset( $input['binding'] ) && is_array( $input['binding'] ) ? $input['binding'] : [];
 		if ( [] === $binding ) {
@@ -976,6 +1023,39 @@ final class Abilities_Service {
 				'schema'   => [ 'type' => 'string' ],
 				'counts'   => [ 'type' => 'object' ],
 				'findings' => [ 'type' => 'array', 'items' => [ 'type' => 'object' ] ],
+			],
+			'required'   => [ 'ok', 'schema', 'counts', 'findings' ],
+		];
+	}
+
+	private function accessibility_validation_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'files'       => [
+					'type'        => 'object',
+					'description' => __( 'Map of handoff file paths to file contents. Include accessibility/kiwe-accessibility-plan.json for strict accessibility phases.', 'dsa' ),
+				],
+				'plan'        => [
+					'type'        => 'object',
+					'description' => __( 'Optional kiwe.accessibility-plan.v1 object. Kiwe will treat it as accessibility/kiwe-accessibility-plan.json.', 'dsa' ),
+				],
+				'requirePlan' => [ 'type' => 'boolean' ],
+				'strictDark'  => [ 'type' => 'boolean' ],
+			],
+			'required'   => [ 'files' ],
+		];
+	}
+
+	private function accessibility_validation_output_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'ok'       => [ 'type' => 'boolean' ],
+				'schema'   => [ 'type' => 'string' ],
+				'counts'   => [ 'type' => 'object' ],
+				'findings' => [ 'type' => 'array', 'items' => [ 'type' => 'object' ] ],
+				'summary'  => [ 'type' => 'object' ],
 			],
 			'required'   => [ 'ok', 'schema', 'counts', 'findings' ],
 		];

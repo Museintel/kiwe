@@ -1,0 +1,43 @@
+{
+  "schema": "kiwe.accessibility-plan.v1",
+  "source": {
+    "mode": "website",
+    "artifact": "website/bricks-paste.html"
+  },
+  "modes": ["light", "dark"],
+  "tokenPairs": [
+    {
+      "id": "page",
+      "purpose": "Body text over site background.",
+      "foreground": "var(--kiwe-color-text)",
+      "background": "var(--kiwe-color-surface)",
+      "modes": ["light", "dark"],
+      "minimumContrast": 4.5,
+      "status": "tokenized"
+    },
+    {
+      "id": "badge",
+      "purpose": "White badge text on National red.",
+      "foreground": "#ffffff",
+      "background": "#9f171b",
+      "modes": ["light", "dark"],
+      "minimumContrast": 4.5,
+      "status": "pass"
+    }
+  ],
+  "bricks": {
+    "themeStyle": {
+      "usesRootThemeStyle": true,
+      "maps": {
+        "siteBackground": "var(--kiwe-color-surface)",
+        "colorPrimary": "var(--kiwe-color-brand)",
+        "colorSecondary": "var(--kiwe-color-accent)",
+        "colorLight": "var(--kiwe-color-surface)",
+        "colorDark": "var(--kiwe-color-text)",
+        "colorMuted": "var(--kiwe-color-text-muted)"
+      }
+    }
+  },
+  "findings": [],
+  "manualReview": []
+}

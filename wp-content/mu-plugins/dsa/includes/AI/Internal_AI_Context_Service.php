@@ -53,6 +53,7 @@ final class Internal_AI_Context_Service {
 					'companionContext' => '/wp-json/dsa/v1/ai/companion/context',
 					'companionReview'  => '/wp-json/dsa/v1/ai/companion/review-output',
 					'bricksConversionValidation' => '/wp-json/dsa/v1/ai/validate-bricks-conversion',
+					'accessibilityValidation' => '/wp-json/dsa/v1/ai/validate-accessibility',
 				],
 			],
 			'dataLayer'   => [
@@ -74,7 +75,7 @@ final class Internal_AI_Context_Service {
 			'capabilityMap' => $this->capability_map(),
 			'operatingModel' => [
 				'read'       => [ 'site-graph', 'site-graph-data', 'site-inspection', 'securetrack-brief' ],
-				'plan'       => [ 'validate-bindings', 'validate-bricks-conversion', 'prepare-apply-plan', 'trusted-apply-stage' ],
+				'plan'       => [ 'validate-bindings', 'validate-bricks-conversion', 'validate-accessibility', 'prepare-apply-plan', 'trusted-apply-stage' ],
 				'execute'    => [ 'controlled-staging-executor-only-with-explicit-confirmation' ],
 				'neverSilent' => [ 'checkout', 'payment', 'auth', 'publish', 'WooCommerce mutation', 'raw Bricks writes', 'security enforcement changes' ],
 			],
@@ -112,6 +113,7 @@ final class Internal_AI_Context_Service {
 				'dsa/review-ai-output',
 				'dsa/validate-bindings',
 				'dsa/validate-bricks-conversion',
+				'dsa/validate-accessibility',
 				'dsa/prepare-apply-plan',
 				'dsa/stage-apply-plan',
 			],
@@ -128,6 +130,7 @@ final class Internal_AI_Context_Service {
 				'/wp-json/dsa/v1/ai/companion/ask',
 				'/wp-json/dsa/v1/ai/companion/review-output',
 				'/wp-json/dsa/v1/ai/validate-bricks-conversion',
+				'/wp-json/dsa/v1/ai/validate-accessibility',
 			],
 		];
 	}

@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.47 - 2026-07-27
+
+- Added first-class `/create /accessibility` and `/audit /accessibility` workflow lanes for existing page/theme/combined/framework/Bricks artifacts, focused on color contrast and native light/dark support while keeping font-size/readability scaling as a later lane.
+- Added `accessibility/kiwe-accessibility-plan.json` plus `ACCESSIBILITY-NOTES.md` as the canonical output contract, with Kiwe/Seam token-pair proof and safe Bricks global theme-style color mapping.
+- Added deterministic accessibility validation across toolkit CLI, MCP, REST API, WordPress Abilities, Site Graph discovery, Internal AI context, Companion review, Audit Companion, and valid/invalid fixtures.
+- Hardened the AI/tool loop against white-on-white, light-on-light, black-on-black, and dark-on-dark literal color pairs, missing dark-mode proof, unmapped private color variables, and isolated Bricks palettes.
+
 ## 6.46 - 2026-07-27
 
 - Source-verified the Bricks conversion fidelity rules against the local Bricks 2.4 beta `html-to-bricks` converter, generated control index, and breakpoint manager.

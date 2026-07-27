@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -36,7 +36,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_route_command',
-      description: 'Route a short canonical command such as /list, /fix, /ideate /webdraft, /rebuild /seamframework, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, or /audit /combined to the smallest relevant Kiwe context.',
+      description: 'Route a short canonical command such as /list, /fix, /ideate /webdraft, /rebuild /seamframework, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -135,6 +135,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       }
     },
     {
+      name: 'kiwe_get_accessibility_context',
+      description: 'Return the Kiwe accessibility context for /create /accessibility and /audit /accessibility without reading the full plugin codebase.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_validate_accessibility',
+      description: 'Validate a Kiwe accessibility plan and scan supplied HTML/CSS/JSON for literal contrast and dark-mode proof.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          targetDir: { type: 'string', description: 'Handoff folder, accessibility folder, or kiwe-accessibility-plan.json path.' },
+          optional: { type: 'boolean', description: 'If true, missing accessibility plan is informational instead of failing.' }
+        },
+        required: ['targetDir']
+      }
+    },
+    {
       name: 'kiwe_prepare_apply_plan',
       description: 'Prepare a dry-run, non-mutating Bricks apply plan from a validated Kiwe binding plan and target-site Site Graph.',
       inputSchema: {
@@ -222,6 +239,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_validate_bricks_conversion':
       result = validateBricksConversion(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });
+      break;
+    case 'kiwe_get_accessibility_context':
+      result = getAccessibilityContext();
+      break;
+    case 'kiwe_validate_accessibility':
+      result = validateAccessibility(args.targetDir, { optional: Boolean(args.optional) });
       break;
     case 'kiwe_prepare_apply_plan':
       result = prepareApplyPlan(args.targetDir, { siteGraphPath: args.siteGraphPath || '', write: Boolean(args.write) });

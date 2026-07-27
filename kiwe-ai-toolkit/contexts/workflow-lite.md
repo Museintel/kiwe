@@ -20,7 +20,8 @@ Run them as separate phases:
 8. Dynamic WordPress / Bricks / WooCommerce binding after the visual handoff passes.
 9. Bricks conversion package after dynamic intent is approved.
 10. Bricks conversion audit.
-11. Controlled staging apply only when a trusted Kiwe site executor is explicitly authorized.
+11. Accessibility plan/audit for color contrast and native light/dark mode.
+12. Controlled staging apply only when a trusted Kiwe site executor is explicitly authorized.
 
 This pipeline is preferred over one giant `combined` prompt for serious work.
 
@@ -117,6 +118,8 @@ Examples:
 /usesitegraph /usecompanion
 /convert /bricks /usecompanion
 /audit /bricksconversion /usecompanion
+/create /accessibility /usecompanion
+/audit /accessibility /usecompanion
 ```
 
 This flag means: use Kiwe Companion if it is available, then continue the selected phase. It must never become a blocker.
@@ -257,8 +260,54 @@ Audit for:
 - no frontend scraping dependency;
 - Bricks-friendly HTML/CSS;
 - readable responsive spacing;
+- no hardcoded production behavior that belongs to WordPress, Bricks, WooCommerce, or Kiwe;
 - no horizontal viewport overflow except intentional rails;
-- no hardcoded production behavior that belongs to WordPress, Bricks, WooCommerce, or Kiwe.
+
+### `/create /accessibility`
+
+Use after an artifact exists and the human wants light/dark and contrast support. This is not a creative redesign phase.
+
+Required input:
+
+- existing page/theme/combined/framework/conversion files or a clear artifact map.
+
+Expected output:
+
+```text
+accessibility/
+  kiwe-accessibility-plan.json
+  ACCESSIBILITY-NOTES.md
+```
+
+Rules:
+
+- Cover color contrast and native light/dark mode only. Font-size/readability scaling is a later lane.
+- Inspect the actual visual surfaces and text-bearing components: chips, badges, pills, buttons, cards, stats, product labels, rails, dock controls, and DSA screen/sheet copy.
+- Use official Kiwe/Seam color tokens first: `--kiwe-color-surface`, `--kiwe-color-surface-raised`, `--kiwe-color-text`, `--kiwe-color-text-muted`, `--kiwe-color-text-inverse`, `--kiwe-color-brand`, `--kiwe-color-accent`, state colors, and borders.
+- For Bricks targets, align with Bricks global theme-style lanes such as `siteBackground`, `colorPrimary`, `colorSecondary`, `colorLight`, `colorDark`, and `colorMuted`.
+- Add or preserve native theme state: `data-kiwe-theme`, `data-kiwe-theme-toggle`, or a clearly mapped standalone `data-theme`.
+- Do not create a new duplicate preview; revise the existing preview/page/theme lane if dark-mode proof is missing.
+
+### `/audit /accessibility`
+
+Use after `/create /accessibility` or whenever a page/theme/combined output has visible contrast problems.
+
+Audit for:
+
+- `accessibility/kiwe-accessibility-plan.json` exists and uses `schema: "kiwe.accessibility-plan.v1"`;
+- both light and dark modes are covered;
+- literal low-contrast pairs fail, including white-on-white, light-on-light, black-on-black, and dark-on-dark pills/cards/buttons;
+- gradients/images behind text have a solid fallback token or manual-review note;
+- private project color variables are mapped back to Kiwe token pairs;
+- Bricks outputs use Kiwe/Bricks theme-style color alignment instead of an isolated palette;
+- DSA themes do not hide contrast fixes in preview-only CSS;
+- production artifacts preserve dynamic tags/query loops and do not hardcode sampled preview data.
+
+Tool-capable clients should run:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff-or-accessibility-dir>
+```
 
 If tools are available, run the relevant Kiwe validators. If tools are not available, revise the actual files manually and report what changed.
 

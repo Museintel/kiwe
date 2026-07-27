@@ -144,6 +144,8 @@ dsa/get-internal-ai-context
 dsa/run-internal-ai-advisor
 dsa/enrich-internal-ai-advisor
 dsa/validate-bindings
+dsa/validate-bricks-conversion
+dsa/validate-accessibility
 dsa/prepare-apply-plan
 dsa/stage-apply-plan
 ```
@@ -168,4 +170,4 @@ SecureTrack data is redacted by design: no raw IPs, usernames, secrets, full URL
 
 ## Release proof
 
-The current phase-close proof lives at `site-graph-system/release-proof-0.6.7.md`. Use it after uploading the folder-based MU package to staging. It lists the expected local package commands, API proof routes, WordPress 7 ability proof, dynamic handoff proof, and browser smoke checks for this Site Graph + internal AI phase.
+The current phase-close proof lives at `site-graph-system/release-proof-6.47.md`. Use it after uploading the folder-based MU package to staging. It lists the expected local package commands, API proof routes, WordPress 7 ability proof, dynamic handoff proof, accessibility/dark-mode proof, and browser smoke checks for this Site Graph + internal AI phase.

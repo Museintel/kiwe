@@ -1,0 +1,19 @@
+{
+  "schema": "kiwe.accessibility-plan.v1",
+  "source": {
+    "mode": "website",
+    "artifact": "website/bricks-paste.html"
+  },
+  "modes": ["light"],
+  "tokenPairs": [
+    {
+      "id": "bad-pill",
+      "foreground": "#ffffff",
+      "background": "#ffffff",
+      "modes": ["light"],
+      "minimumContrast": 4.5,
+      "status": "fail"
+    }
+  ],
+  "manualReview": []
+}

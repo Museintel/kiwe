@@ -30,7 +30,7 @@ Preferred path for serious work:
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 ```
 
-Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, or `/audit /bricksconversion`.
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, or `/audit /accessibility`.
 
 Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
 
@@ -65,6 +65,7 @@ If the human explicitly asks for one-shot output, read exactly one static contex
 - Seam/Appsite capability attributes for `/rebuild /seamframework`: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/seam-attributes-lite.md`
 - Dynamic WordPress/Bricks binding pass after an approved handoff: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md`
 - Bricks conversion package after dynamic binding approval: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md`
+- Light/dark contrast and token-pair accessibility lane: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/accessibility-lite.md`
 
 For a fast prompt that asks for both a website/page and a Kiwe AppShell/DSA direction in one pass, read:
 
@@ -166,6 +167,8 @@ Kiwe Studio AI is the higher-level companion workflow. Enable it in `Kiwe > AI` 
 
 Bricks AI Intelligence is the Bricks-native map for both browser AI and Kiwe Studio AI. External tool clients can use a key with `bricks_ai`, `studio_ai`, or `all` scope to call `/wp-json/dsa/v1/ai/bricks/context` before emitting Bricks JSON or dynamic binding plans, and `/wp-json/dsa/v1/ai/bricks/plan` for a compact planning packet. It reports available Bricks elements, compact element controls, query loops, dynamic tags, conditions, interactions, Seam headless rules, and Kiwe launcher/runtime boundaries. It is read-only. It does not paste content, save Bricks, publish pages, or create Woo/cart/auth behavior.
 
+Kiwe Accessibility is a focused post-design lane for contrast and native light/dark support. Use `/create /accessibility` only after a website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion exists. It creates `accessibility/kiwe-accessibility-plan.json` and `accessibility/ACCESSIBILITY-NOTES.md`; it does not redesign the page or create Bricks JSON. Use `/audit /accessibility` to reject literal white-on-white/black-on-black pairs, missing dark-mode proof, unmapped private color variables, and Bricks outputs that do not align Kiwe tokens with Bricks root theme-style slots. CLI-capable clients can run `node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff>`. Browser AI clients can also submit file maps to `/wp-json/dsa/v1/ai/audit-companion/review`; Companion will return deterministic accessibility findings without calling a model.
+
 Seam's universal Appsite attribute layer is part of the framework brain. During `/rebuild /seamframework`, preserve the approved UI and add live capability attributes when the intent exists: `data-dsa-open-module` for Kiwe screens/theme toggle, `data-kiwe-save` for wishlist/bookmark controls, `data-kiwe-notifications` for browser-notification CTAs, `data-kiwe-theme-toggle` for light/dark controls outside the dock, real semantic sections for Kiwe Menu context, and `data-kiwe-query-template` / `data-kiwe-binding` for future Bricks query-loop and dynamic binding plans. Do not create duplicate JavaScript for these Kiwe-owned capabilities. Toolkit/MCP clients can call `kiwe_get_seam_attributes_context` or `kiwe_list_capability_attributes`.
 
 For `/convert /bricks`, produce a reviewable Bricks conversion package rather than a direct save:
@@ -184,7 +187,7 @@ Exact conversion file path: `bricks-conversion/kiwe-bricks-conversion.json`. RES
 
 When working inside the Bricks front-end editor, admins can enable the Kiwe Studio companion at `Kiwe > AI`. The editor panel uses WordPress nonce-auth routes (`/wp-json/dsa/v1/bricks/studio/context`, `/start`, `/draft`) to fetch the same Bricks + Seam context, plan a page/section, or call native AI when explicitly allowed. The panel is a planning/copilot surface, not a direct mutation surface; staging saves still go through the controlled executor.
 
-For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `0.6.14` records the Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, and mutation boundaries for the Site Graph + internal AI phase.
+For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `6.47` records the Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, mutation boundaries, and the deterministic `/create /accessibility` + `/audit /accessibility` color/dark-mode lane.
 
 Theme installers can use the same key to review, install, and activate Kiwe DSA theme packages:
 

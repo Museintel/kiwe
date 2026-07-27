@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { prepareApplyPlan as prepareBricksApplyPlan } from './apply-planner.js';
 import { validateBindings as validateBindingsPlan } from './binding-validator.js';
 import { validateBricksConversion as validateBricksConversionPlan } from './bricks-conversion-validator.js';
+import { validateAccessibility as validateAccessibilityPlan } from './accessibility-validator.js';
 import { validateFrameworkProfile as validateFrameworkProfilePlan } from './framework-profile-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -211,6 +212,18 @@ export function getBricksConversionContext() {
   return [context, readMaybe('contexts/seam-attributes-lite.md')].filter(Boolean).join('\n\n').trim() + '\n';
 }
 
+export function getAccessibilityContext() {
+  const context = readMaybe('contexts/accessibility-lite.md');
+  if (!context) {
+    throw new Error('Kiwe accessibility context was not found.');
+  }
+  return [
+    context,
+    readMaybe('contexts/seam-attributes-lite.md'),
+    frameworkProfileContext()
+  ].filter(Boolean).join('\n\n').trim() + '\n';
+}
+
 export function getWorkflowContext() {
   const context = readMaybe('contexts/workflow-lite.md');
   if (!context) {
@@ -360,6 +373,20 @@ export function listCommands() {
         output: 'same Bricks conversion lane, corrected'
       },
       {
+        command: '/create /accessibility',
+        aliases: ['/create /a11y'],
+        purpose: 'Create a light/dark accessibility plan for an existing website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion.',
+        requires: ['existing artifact folder/file map or approved visual output'],
+        output: 'accessibility/kiwe-accessibility-plan.json and accessibility/ACCESSIBILITY-NOTES.md'
+      },
+      {
+        command: '/audit /accessibility',
+        aliases: ['/audit /a11y'],
+        purpose: 'Audit and revise color contrast, token pairing, native dark-mode proof, and Bricks/Kiwe theme-token alignment.',
+        requires: ['existing artifact files and optional accessibility/kiwe-accessibility-plan.json'],
+        output: 'same artifact plus corrected accessibility lane'
+      },
+      {
         command: '/apply /staging',
         purpose: 'Use only the controlled staging executor after explicit staging and mutation authorization.',
         requires: ['explicit staging confirmation', 'controlled executor details', 'rollback plan'],
@@ -439,6 +466,10 @@ export function validateBricksConversion(targetDir, options = {}) {
   return validateBricksConversionPlan(targetDir, options);
 }
 
+export function validateAccessibility(targetDir, options = {}) {
+  return validateAccessibilityPlan(targetDir, options);
+}
+
 export function validateFrameworkProfile(targetDir, options = {}) {
   return validateFrameworkProfilePlan(targetDir, options);
 }
@@ -510,6 +541,8 @@ function routeKind(command) {
   if (/(\/convert|\/export|\/translate|\/rebuild|\/adapt)/.test(text) && /(\/bricks|bricks json|bricks conversion|html-to-bricks|html css to bricks)/.test(text)) return 'bricks-convert';
   if (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-rebuild';
   if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
+  if (/(\/create|\/build)/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-create';
+  if (/\/audit/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-audit';
   if (/(\/create|\/build)/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-create';
   if (/\/audit/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-audit';
   if (/(\/create|\/build)/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-create';
@@ -543,6 +576,8 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/appshell',
   '/assemble',
   '/audit',
+  '/a11y',
+  '/accessibility',
   '/binding',
   '/bindings',
   '/bricks',
@@ -625,6 +660,8 @@ const VALID_PHASE_COMMANDS = [
   '/usesitegraph /nonai',
   '/convert /bricks',
   '/audit /bricksconversion',
+  '/create /accessibility',
+  '/audit /accessibility',
   '/apply /staging'
 ];
 
@@ -646,6 +683,10 @@ function hasConversionArtifact(text) {
 
 function hasThemeArtifact(text) {
   return /appshell-theme|theme-package\.json|css[\\/]theme\.css|\btheme\.css\b|dsatheme|app\s*shell|appshell/i.test(String(text || ''));
+}
+
+function hasAccessibilityArtifact(text) {
+  return /accessibility[\\/]kiwe-accessibility-plan\.json|kiwe-accessibility-plan\.json|kiwe\.accessibility-plan\.v1|ACCESSIBILITY-NOTES\.md/i.test(String(text || ''));
 }
 
 function hasForbiddenBricksSource(text) {
@@ -818,6 +859,30 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
+  if (commandHas(text, /\/create/) && commandHas(text, /\/(?:accessibility|a11y)\b|accessibility/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'accessibility_create_missing_artifact',
+      kind: 'accessibility-create',
+      normalizedCommand,
+      message: '`/create /accessibility` needs an existing website/page, DSA theme, combined handoff, Framework profile, Bricks conversion, or approved visual output. It is a contrast/dark-mode/token pass, not a pure creative phase.',
+      suggestions: ['/rebuild /seamframework', '/create /dsatheme', '/assemble /combined', '/create /accessibility after artifact files exist'],
+      boundaries: ['Accessibility plans revise concrete visuals and token pairs. They should not invent a new website or DSA theme from nothing.']
+    });
+  }
+
+  if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:accessibility|a11y)\b|accessibility/) && !String(artifactSummary || '').trim() && !hasAccessibilityArtifact(artifactSummary)) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'accessibility_audit_missing_artifact',
+      kind: 'accessibility-audit',
+      normalizedCommand,
+      message: '`/audit /accessibility` needs existing artifact files and preferably `accessibility/kiwe-accessibility-plan.json`. Do not run a generic accessibility audit against nothing.',
+      suggestions: ['Provide the handoff folder/file map', '/create /accessibility after the website/theme/combined lane exists'],
+      boundaries: ['Accessibility audit inspects concrete color pairs, dark-mode selectors, Bricks theme-style tokens, and Kiwe/Seam token usage.']
+    });
+  }
+
   if (commandHas(text, /\/usesitegraph/) && commandHas(text, /\/(?:replacepreview|replacepreviewdata)/) && !String(artifactSummary || '').trim()) {
     return commandDiagnostic({
       status: 'needs_input',
@@ -842,7 +907,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:seamframework|seam|brickstheme|frameworkprofile|framework|dsatheme|appshell|dsa|combined|combine)\b|seam framework|bricks theme|app shell/) && !String(artifactSummary || '').trim()) {
+  if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:seamframework|seam|brickstheme|frameworkprofile|framework|dsatheme|appshell|dsa|combined|combine|accessibility|a11y)\b|seam framework|bricks theme|app shell/) && !String(artifactSummary || '').trim()) {
     return commandDiagnostic({
       status: 'needs_input',
       code: 'audit_missing_artifact',
@@ -914,6 +979,7 @@ function commandDiagnosticResponse(diagnostic, command) {
 function companionModeForKind(kind) {
   if (kind === 'bricks-convert') return 'dynamic';
   if (kind === 'bricks-audit') return 'audit';
+  if (kind.startsWith('accessibility')) return 'audit';
   if (kind === 'dynamic') return 'dynamic';
   if (kind === 'staging') return 'staging';
   if (kind.includes('audit')) return 'audit';
@@ -1025,6 +1091,12 @@ function commandListMarkdown() {
     '- `/usesitegraph /replacepreviewdata` updates preview samples from real data but keeps production artifacts dynamic.',
     '- `/usesitegraph /websitename` derives name/logo/identity from Site Graph only.',
     '',
+    '## Accessibility lane',
+    '',
+    '- `/create /accessibility` works only after there is an existing website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion to inspect.',
+    '- `/audit /accessibility` checks literal contrast pairs, light/dark proof, Kiwe/Seam token usage, Bricks theme-style alignment, and preview/import separation.',
+    '- This lane currently covers color contrast and native light/dark transitions. Font-size and reading-scale work are intentionally separate future phases.',
+    '',
     '## Bricks boundary',
     '',
     '- `/convert /bricks` only converts `website/bricks-paste.html`.',
@@ -1038,6 +1110,8 @@ function fixPhaseContext(command, artifactSummary) {
   const text = `${command}\n${artifactSummary}`.toLowerCase();
   const inferred = hasConversionArtifact(text)
     ? '/audit /bricksconversion'
+    : hasAccessibilityArtifact(text) || /accessibility|contrast|dark mode|light mode|a11y/.test(text)
+      ? '/audit /accessibility'
     : /framework[\\/]kiwe-framework-profile\.json|kiwe\.framework-profile\.v1|\/brickstheme|framework profile/.test(text)
       ? '/audit /brickstheme'
       : hasThemeArtifact(text)
@@ -1188,6 +1262,24 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     parts.push(frameworkProfileContext());
   } else if (kind === 'framework-audit') {
     parts.push(frameworkProfileContext(), readMaybe('contexts/audit-lite.md'));
+  } else if (kind === 'accessibility-create') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Create the accessibility lane over the supplied artifact. Do not redesign the page/theme or create Bricks JSON unless the existing artifact already includes that lane.',
+      '',
+      getAccessibilityContext()
+    );
+  } else if (kind === 'accessibility-audit') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Audit and revise actual files for color contrast, light/dark proof, Bricks global theme-style color alignment, and Kiwe/Seam token pairing.',
+      '',
+      getAccessibilityContext(),
+      '',
+      readMaybe('contexts/audit-lite.md')
+    );
   } else if (kind === 'theme-create') {
     parts.push(getContext('theme'));
   } else if (kind === 'theme-preview-create') {

@@ -40,6 +40,9 @@ combined-kiwe-handoff/
     preview/                      # optional technical fixture only
       index.html
       PLACEHOLDERS.md
+  accessibility/                  # required when the design introduces or revises light/dark/contrast tokens
+    kiwe-accessibility-plan.json
+    ACCESSIBILITY-NOTES.md
 ```
 
 ## Combined preview rule
@@ -103,6 +106,8 @@ Use Seam classes/attributes in markup, but do not redefine Seam framework select
 For rails, put `.seam-horizontal-rail` / `data-flow="horizontal-rail"` only on the actual item track. Do not put the rail flow on an outer sticky nav or wrapper that contains `.seam-container`; that wrapper can shrink the inner container into one rail item after Bricks import.
 
 If the paired design has a distinctive live-intended palette, type scale, font pairing, site background, spacing, radius, or shadow system, declare that design-token personality inside `appshell-theme/import/[theme-id]/theme-package.json` at `settings.tokens`. For combined marketplace AppShell themes this is required, not optional, because DSA, Seam page CSS, and Bricks global theme style must share the same token profile. Do not leave the brand system only inside preview CSS. A separate `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` is reserved for website/page-only handoffs or explicit standalone `Kiwe > Framework` imports; combined mode uses the theme package token lane.
+
+If the output creates or changes the color system, also include the accessibility lane. It proves that light and dark modes share readable token pairs instead of drifting into white-on-white pills or dark text on dark cards. Use `contexts/accessibility-lite.md` for `/create /accessibility` or `/audit /accessibility`.
 
 ## Universal Appsite capability attributes
 
