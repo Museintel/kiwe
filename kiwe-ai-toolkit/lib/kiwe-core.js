@@ -437,6 +437,8 @@ function frameworkProfileContext() {
     '',
     'Do not make the human spoon-feed missing CSS variables. `/audit /frameworkprofile` must independently verify that the profile covers the core live token foundation through `settings.tokens.overrides` or mapped `bricks_theme_style` slots: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md`. These map to official CSS variables such as `--kiwe-color-brand`, `--kiwe-color-accent`, `--kiwe-color-surface`, `--kiwe-font-body`, and `--kiwe-space-md`; do not invent non-canonical variables like `--kiwe-color-primary`.',
     '',
+    'Never treat `/audit /frameworkprofile` as an alias of `/audit /brickstheme`. The standalone `/brickstheme` file is a native Bricks Theme Styles JSON artifact; a Framework profile is a Kiwe import artifact with `settings.tokens`. In Framework profiles, safe `bricks_theme_style` global slots such as `siteBackground`, `colorPrimary`, `colorSecondary`, `colorLight`, `colorDark`, `colorMuted`, `fontDisplay`, `fontBody`, `typeBody`, `spaceMd`, `radiusLg`, and `shadowMd` are valid and must not be stripped.',
+    '',
     'Expected file:',
     '',
     '```text',

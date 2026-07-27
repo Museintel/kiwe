@@ -400,6 +400,8 @@ Audit for:
 - no AppShell settings;
 - no Bricks element-level styling;
 
+Do not treat `/audit /frameworkprofile` as an alias of `/audit /brickstheme`. A Framework profile is a Kiwe import file and may include safe `settings.tokens.bricks_theme_style` global slots such as `siteBackground`, `colorPrimary`, `colorSecondary`, `colorLight`, `colorDark`, `colorMuted`, `colorBorder`, `fontDisplay`, `fontBody`, `typeH1`, `typeBody`, `spaceMd`, `radiusLg`, and `shadowMd`. These slots are valid in Framework profiles because Kiwe normalizes them into official universal tokens and native Bricks Theme Style data during Kiwe > Framework push. Do not strip them down to only `enabled`, `id`, and `label`.
+
 ### `/create /brickstheme`
 
 Use only when the human asks for the standalone Bricks Theme Styles import file instead of the Kiwe > Framework profile.

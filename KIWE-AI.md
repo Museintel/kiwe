@@ -182,6 +182,12 @@ framework/
 
 This file is imported in `Kiwe > Framework`. From there the admin can push the profile to Bricks: variables, color palette, global classes, and Bricks theme-style data. This is the easiest setup path for most users. The profile must include a complete `settings.tokens.bricks_theme_style` object with `enabled: true`, safe `id`, human `label`, and only global style slots; Kiwe turns that into the native Bricks Theme Style during push. Do not output `FRAMEWORK-NOTES.md`, Bricks template JSON, AppShell theme packages, or duplicate docs unless `/document` is explicitly present.
 
+For `/audit /frameworkprofile` and `/fix /frameworkprofile`, do not treat Framework profiles as aliases of `/brickstheme`. They are different artifact lanes. A Framework profile is a Kiwe import file with `schema: "kiwe.framework-profile.v1"` and `settings.tokens`; a Bricks Theme Style is a native Bricks import file with root `{ "label": "...", "settings": { ... } }`.
+
+Inside a Framework profile, `settings.tokens.bricks_theme_style` is allowed to contain safe global style slots such as `siteBackground`, `colorPrimary`, `colorSecondary`, `colorLight`, `colorDark`, `colorMuted`, `colorBorder`, `fontDisplay`, `fontBody`, `typeH1`, `typeBody`, `spaceMd`, `radiusLg`, and `shadowMd`, in addition to `enabled`, `id`, and `label`. Do not remove those global slots as “unsupported.” They seed the Bricks Theme Style and normalize back into official Kiwe universal tokens during Kiwe > Framework push.
+
+`/audit /frameworkprofile` must also verify the core live token foundation without human spoon-feeding: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md` must be covered directly in `settings.tokens.overrides` or through mapped `bricks_theme_style` slots. Use the official token list from the Kiwe toolkit, not the tokens already present in the profile as a fake “official” universe.
+
 For `/create /brickstheme`, output only one native Bricks Theme Styles JSON file:
 
 ```text

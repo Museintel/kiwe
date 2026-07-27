@@ -4,6 +4,8 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+- Clarified that `/audit /frameworkprofile` is not an alias of `/audit /brickstheme`; Framework profile `bricks_theme_style` global slots are valid and must not be stripped down to only `enabled`, `id`, and `label`.
+
 ## 6.54 - 2026-07-28
 
 - Tightened `/audit /frameworkprofile` and `/fix /frameworkprofile` so browser/IDE AIs no longer need a spoon-fed list of missing live variables.
