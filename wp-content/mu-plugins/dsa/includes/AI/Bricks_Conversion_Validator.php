@@ -7,6 +7,74 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Bricks_Conversion_Validator {
+	private const KNOWN_BRICKS_ELEMENTS = [
+		'section',
+		'container',
+		'block',
+		'div',
+		'heading',
+		'text-basic',
+		'text',
+		'text-link',
+		'rich-text',
+		'button',
+		'icon',
+		'image',
+		'svg',
+		'video',
+		'audio',
+		'divider',
+		'form',
+		'html',
+		'code',
+		'accordion',
+		'accordion-nested',
+		'tabs',
+		'tabs-nested',
+		'slider',
+		'carousel',
+		'post-title',
+		'post-excerpt',
+		'post-content',
+		'post-featured-image',
+		'posts',
+		'query-results-summary',
+		'filter-search',
+		'product-title',
+		'product-price',
+		'product-add-to-cart',
+		'product-short-description',
+		'product-images',
+		'product-upsells',
+		'product-related',
+		'woocommerce-breadcrumbs',
+		'woocommerce-mini-cart',
+	];
+
+	private const SEMANTIC_HTML_ELEMENT_NAME_MISUSE = [
+		'nav',
+		'main',
+		'article',
+		'aside',
+		'header',
+		'footer',
+		'figure',
+		'figcaption',
+		'ul',
+		'ol',
+		'li',
+		'a',
+		'span',
+		'p',
+	];
+
+	private const BRICKS_IMPORT_METHODS = [
+		'review-only',
+		'bricks-clipboard-json',
+		'bricks-admin-template-upload',
+		'kiwe-staging-executor',
+	];
+
 	private const COMMON_DYNAMIC_TAGS = [
 		'{post_title}',
 		'{post_content}',
@@ -44,13 +112,25 @@ final class Bricks_Conversion_Validator {
 
 	private const RESPONSIVE_LAYOUT_KEY_PATTERN = '/^_(?:cssCustom|direction|display|grid|gridItem|gridTemplate|gridAuto|align|justify|place|flex|gap|rowGap|columnGap|order|width|widthMin|widthMax|height|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|aspectRatio|margin|padding|position|top|right|bottom|left|zIndex|overflow|masonry)[A-Za-z0-9_]*:[a-z][a-z0-9_-]{1,48}(?::[a-z-]+)?$/i';
 	private const COMPLEX_LAYOUT_PATTERN        = '/\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i';
+	private const NATIVE_STYLE_CONTROL_PATTERN  = '/^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/';
+	private const MAPPABLE_CSS_PATTERN          = '/\b(?:display|flex(?:-direction|-wrap|-grow|-shrink|-basis)?|align-items|align-self|justify-content|justify-items|align-content|gap|row-gap|column-gap|grid-template-columns|grid-template-rows|grid-auto-flow|grid-auto-columns|grid-auto-rows|grid-column|grid-row|width|max-width|min-width|height|max-height|min-height|aspect-ratio|margin(?:-(?:top|right|bottom|left))?|padding(?:-(?:top|right|bottom|left))?|position|top|right|bottom|left|z-index|overflow|opacity|background(?:-color|-image|-size|-position|-repeat)?|color|border(?:-(?:radius|color|width|style))?|box-shadow|font(?:-(?:family|size|weight|style))?|line-height|letter-spacing|text-align|text-transform|transform|filter|transition)\s*:/i';
+	private const TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES = 2500;
+	private const TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN = 12;
+	private const LARGE_TEMPLATE_ELEMENT_COUNT     = 180;
+	private const MIN_NATIVE_STYLE_CONTROLS        = 60;
 
 	public function validate( array $conversion, array $site_graph = [], string $source_html = '', array $binding = [] ): array {
 		$findings = [];
 		$index    = $this->graph_index( $site_graph );
 
+		if ( $this->is_likely_bricks_template_export( $conversion ) ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_native_template_supplied_directly', 'A native Bricks template export was supplied directly. Kiwe needs the full /convert /bricks package with bricks-conversion/kiwe-bricks-conversion.json plus a separate bricks-template/*.json upload file referenced by target.templateExportPath.' );
+			$this->validate_native_template_export( $conversion, $findings );
+		}
+
 		$this->validate_root( $conversion, $findings );
 		$this->validate_elements( $conversion, $findings, $index );
+		$this->validate_template_upload_conversion_css( $conversion, $findings );
 		$this->validate_source_parity( $conversion, $source_html, $findings );
 		$this->validate_responsive_layout_fidelity( $conversion, $source_html, $findings );
 		$this->validate_dynamic_tags( $conversion, $findings, $index, [] !== $site_graph );
@@ -104,6 +184,15 @@ final class Bricks_Conversion_Validator {
 		if ( ! str_contains( strtolower( (string) ( $target['format'] ?? '' ) ), 'bricks' ) ) {
 			$this->add( $findings, 'fail', 'bricks_conversion_missing_format', 'target.format must identify Bricks element JSON.', '$.target.format' );
 		}
+		$import_method = (string) ( $target['importMethod'] ?? '' );
+		if ( '' === $import_method ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_missing_import_method', 'target.importMethod is required. Use review-only, bricks-clipboard-json, bricks-admin-template-upload, or kiwe-staging-executor. Kiwe conversion JSON is not itself a Bricks My Templates upload file.', '$.target.importMethod' );
+		} elseif ( ! in_array( $import_method, self::BRICKS_IMPORT_METHODS, true ) ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_invalid_import_method', 'target.importMethod is not a supported Kiwe Bricks import method.', '$.target.importMethod' );
+		}
+		if ( 'bricks-admin-template-upload' === $import_method && '' === (string) ( $target['templateExportPath'] ?? '' ) ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_missing_template_export_path', 'target.templateExportPath is required when target.importMethod is bricks-admin-template-upload.', '$.target.templateExportPath' );
+		}
 		$authority = (string) ( $target['applyAuthority'] ?? '' );
 		if ( '' === $authority || ( preg_match( '/(?:auto|direct|save|publish|mutat|write)/i', $authority ) && ! preg_match( '/(?:human|review|trusted|adapter|staging)/i', $authority ) ) ) {
 			$this->add( $findings, 'fail', 'bricks_conversion_unsafe_apply_authority', 'applyAuthority must point to human review or a trusted Kiwe staging adapter.', '$.target.applyAuthority' );
@@ -123,6 +212,77 @@ final class Bricks_Conversion_Validator {
 		$report = isset( $conversion['report'] ) && is_array( $conversion['report'] ) ? $conversion['report'] : [];
 		if ( ! isset( $report['manualReview'] ) || ! is_array( $report['manualReview'] ) ) {
 			$this->add( $findings, 'fail', 'bricks_conversion_missing_manual_review_lane', 'report.manualReview must be an array, even when empty.', '$.report.manualReview' );
+		}
+	}
+
+	private function is_likely_bricks_template_export( array $data ): bool {
+		if ( 'kiwe.bricks-conversion.v1' === (string) ( $data['schema'] ?? '' ) || isset( $data['elements'] ) ) {
+			return false;
+		}
+		return isset( $data['content'] ) || isset( $data['header'] ) || isset( $data['footer'] ) || isset( $data['templateType'] ) || isset( $data['pageSettings'] ) || isset( $data['bundles'] );
+	}
+
+	private function validate_native_template_export( array $template, array &$findings ): void {
+		$title = trim( (string) ( $template['title'] ?? '' ) );
+		if ( '' === $title ) {
+			$this->add( $findings, 'fail', 'bricks_template_missing_title', 'Bricks template export is missing title. Bricks imports this as "(no title)".', '$.title' );
+		} elseif ( preg_match( '/^\(?\s*no\s+title\s*\)?$/i', $title ) ) {
+			$this->add( $findings, 'fail', 'bricks_template_no_title', 'Bricks template export title is "(no title)". Provide a real human-readable title before upload.', '$.title' );
+		}
+
+		$template_type = trim( (string) ( $template['templateType'] ?? '' ) );
+		if ( '' === $template_type ) {
+			$this->add( $findings, 'fail', 'bricks_template_missing_template_type', 'Bricks template export must include templateType so Bricks stores the imported template in the intended area/type.', '$.templateType' );
+		}
+
+		$elements = array_merge(
+			isset( $template['content'] ) && is_array( $template['content'] ) ? $template['content'] : [],
+			isset( $template['header'] ) && is_array( $template['header'] ) ? $template['header'] : [],
+			isset( $template['footer'] ) && is_array( $template['footer'] ) ? $template['footer'] : []
+		);
+		if ( [] === $elements ) {
+			$this->add( $findings, 'fail', 'bricks_template_missing_data', 'Bricks template export must contain a non-empty content, header, or footer array. Otherwise Bricks insert reports "This template has no data".' );
+		}
+
+		if ( empty( $template['version'] ) ) {
+			$this->add( $findings, 'warn', 'bricks_template_missing_version', 'Bricks template export should include the target Bricks version used to author/verify the native template.', '$.version' );
+		}
+
+		foreach ( $elements as $position => $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+			$name = (string) ( $element['name'] ?? '' );
+			if ( in_array( $name, self::SEMANTIC_HTML_ELEMENT_NAME_MISUSE, true ) ) {
+				$this->add( $findings, 'fail', 'bricks_template_semantic_tag_as_element', sprintf( 'Bricks template export uses semantic HTML tag "%s" as an element name. Use a supported Bricks element such as block/div/container and set tag/customTag to "%s"; otherwise Bricks can render "%s: PHP class does not exist".', $name, $name, $name ), '$.content/header/footer[' . (int) $position . '].name' );
+			} elseif ( '' !== $name && ! in_array( $name, self::KNOWN_BRICKS_ELEMENTS, true ) ) {
+				$this->add( $findings, 'warn', 'bricks_template_unknown_element', sprintf( 'Bricks template export uses element "%s" that is not in the Kiwe known Bricks element list. Confirm it exists on the target Bricks installation before upload.', $name ), '$.content/header/footer[' . (int) $position . '].name' );
+			}
+		}
+
+		$custom_css = $this->custom_css_text( [ 'pageSettings' => $template['pageSettings'] ?? [], 'settings' => $template['settings'] ?? [] ] );
+		$css_bytes  = strlen( $custom_css );
+		$mappable   = $this->count_mappable_css( $custom_css );
+		if ( $css_bytes >= self::TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES || $mappable >= self::TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN || preg_match( '/@media\b|#home-campaigns\b|\.nc-(?:bento|campaign|section-head)|grid-template|flex-direction/i', $custom_css ) ) {
+			$this->add( $findings, 'fail', 'bricks_template_depends_on_page_custom_css', sprintf( 'Bricks template export carries %1$d page/template custom CSS bytes and %2$d mappable declarations. Bricks My Templates insertion can leave pageSettings custom CSS behind or collide with stale target-page CSS; move ordinary layout/design into native element settings, importable globalClasses/globalVariables, or documented tiny exceptions.', $css_bytes, $mappable ), '$.pageSettings.customCss' );
+		}
+
+		$native_controls = $this->count_native_style_controls( array_merge( $elements, isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [] ) );
+		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $native_controls < self::MIN_NATIVE_STYLE_CONTROLS ) {
+			$this->add( $findings, 'fail', 'bricks_template_not_native_editable_enough', sprintf( 'Large Bricks template export has %1$d elements but only %2$d native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.', count( $elements ), $native_controls ), '$.content' );
+		}
+	}
+
+	private function validate_template_upload_conversion_css( array $conversion, array &$findings ): void {
+		$target = isset( $conversion['target'] ) && is_array( $conversion['target'] ) ? $conversion['target'] : [];
+		if ( 'bricks-admin-template-upload' !== (string) ( $target['importMethod'] ?? '' ) ) {
+			return;
+		}
+		$custom_css = $this->custom_css_text( [ 'pageSettings' => $conversion['pageSettings'] ?? [] ] );
+		$css_bytes  = strlen( $custom_css );
+		$mappable   = $this->count_mappable_css( $custom_css );
+		if ( $css_bytes >= self::TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES || $mappable >= self::TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN || preg_match( '/@media\b|#home-campaigns\b|\.nc-(?:bento|campaign|section-head)|grid-template|flex-direction/i', $custom_css ) ) {
+			$this->add( $findings, 'fail', 'bricks_conversion_template_upload_page_css_dependency', sprintf( 'target.importMethod is bricks-admin-template-upload, but the Kiwe conversion envelope carries %1$d pageSettings custom CSS bytes and %2$d mappable declarations. Template-upload handoffs must not rely on pageSettings.customCss for ordinary layout/design; use native element settings/globalClasses/globalVariables first.', $css_bytes, $mappable ), '$.pageSettings.customCss' );
 		}
 	}
 
@@ -422,6 +582,48 @@ final class Bricks_Conversion_Validator {
 
 	private function array_value( array $data, string $key ): array {
 		return isset( $data[ $key ] ) && is_array( $data[ $key ] ) ? $data[ $key ] : [];
+	}
+
+	private function custom_css_text( mixed $value ): string {
+		$out = [];
+		$this->collect_custom_css_text( $value, $out );
+		return implode( "\n", $out );
+	}
+
+	private function collect_custom_css_text( mixed $value, array &$out ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				if ( is_string( $item ) && '' !== trim( $item ) && ( 'customCss' === (string) $key || preg_match( '/^_cssCustom(?::|$)/', (string) $key ) ) ) {
+					$out[] = $item;
+				}
+				if ( is_array( $item ) ) {
+					$this->collect_custom_css_text( $item, $out );
+				}
+			}
+		}
+	}
+
+	private function count_mappable_css( string $css ): int {
+		if ( '' === $css ) {
+			return 0;
+		}
+		preg_match_all( self::MAPPABLE_CSS_PATTERN, $css, $matches );
+		return isset( $matches[0] ) ? count( $matches[0] ) : 0;
+	}
+
+	private function count_native_style_controls( array $items ): int {
+		$count = 0;
+		foreach ( $items as $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			foreach ( array_keys( $item['settings'] ) as $key ) {
+				if ( preg_match( self::NATIVE_STYLE_CONTROL_PATTERN, (string) $key ) && ! preg_match( '/^_cssCustom(?::|$)/', (string) $key ) ) {
+					++$count;
+				}
+			}
+		}
+		return $count;
 	}
 
 	private function add( array &$findings, string $level, string $code, string $message, string $path = '' ): void {

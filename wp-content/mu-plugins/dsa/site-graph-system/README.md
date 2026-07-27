@@ -170,4 +170,4 @@ SecureTrack data is redacted by design: no raw IPs, usernames, secrets, full URL
 
 ## Release proof
 
-The current phase-close proof lives at `site-graph-system/release-proof-6.47.md`. Use it after uploading the folder-based MU package to staging. It lists the expected local package commands, API proof routes, WordPress 7 ability proof, dynamic handoff proof, accessibility/dark-mode proof, and browser smoke checks for this Site Graph + internal AI phase.
+The current phase-close proof lives at `site-graph-system/release-proof-6.48.md`. Use it after uploading the folder-based MU package to staging. It lists the expected local package commands, API proof routes, WordPress 7 ability proof, dynamic handoff proof, accessibility/dark-mode proof, browser smoke checks, and Bricks template-upload validator checks for this Site Graph + internal AI phase.

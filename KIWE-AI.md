@@ -189,7 +189,7 @@ Exact conversion file path: `bricks-conversion/kiwe-bricks-conversion.json`. RES
 
 When working inside the Bricks front-end editor, admins can enable the Kiwe Studio companion at `Kiwe > AI`. The editor panel uses WordPress nonce-auth routes (`/wp-json/dsa/v1/bricks/studio/context`, `/start`, `/draft`) to fetch the same Bricks + Seam context, plan a page/section, or call native AI when explicitly allowed. The panel is a planning/copilot surface, not a direct mutation surface; staging saves still go through the controlled executor.
 
-For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `6.47` records the Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, mutation boundaries, and the deterministic `/create /accessibility` + `/audit /accessibility` color/dark-mode lane.
+For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `6.48` records the Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, mutation boundaries, deterministic `/create /accessibility` + `/audit /accessibility` color/dark-mode lane, and the tightened Bricks template-upload validator checks.
 
 Theme installers can use the same key to review, install, and activate Kiwe DSA theme packages:
 

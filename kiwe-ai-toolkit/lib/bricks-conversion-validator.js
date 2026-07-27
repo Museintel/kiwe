@@ -169,6 +169,23 @@ const COMPLEX_LAYOUT_RE = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|gr
 
 const BRICKS_LAYOUT_ELEMENT_NAMES = new Set(['container', 'div', 'section', 'block']);
 
+const SEMANTIC_HTML_ELEMENT_NAME_MISUSE = new Set([
+  'nav',
+  'main',
+  'article',
+  'aside',
+  'header',
+  'footer',
+  'figure',
+  'figcaption',
+  'ul',
+  'ol',
+  'li',
+  'a',
+  'span',
+  'p'
+]);
+
 const BRICKS_IMPORT_METHODS = new Set([
   'review-only',
   'bricks-clipboard-json',
@@ -502,6 +519,45 @@ function countMappableCssDeclarations(cssText) {
   return count;
 }
 
+function isLikelyBricksTemplateExport(value) {
+  if (!isPlainObject(value) || value.schema === SCHEMA || Array.isArray(value.elements)) return false;
+  return (
+    Array.isArray(value.content) ||
+    Array.isArray(value.header) ||
+    Array.isArray(value.footer) ||
+    'templateType' in value ||
+    'pageSettings' in value ||
+    'bundles' in value
+  );
+}
+
+function validateBricksTemplateElements(root, templatePath, templateElements, findings) {
+  const templateRel = rel(root, templatePath);
+  templateElements.forEach((element, index) => {
+    if (!isPlainObject(element)) return;
+    const name = String(element.name || '').trim();
+    if (!name) return;
+    const pointer = `$.content/header/footer[${index}].name`;
+    if (SEMANTIC_HTML_ELEMENT_NAME_MISUSE.has(name)) {
+      add(
+        findings,
+        'fail',
+        `Bricks template export uses semantic HTML tag "${name}" as an element name. Use a supported Bricks element such as block/div/container and set tag/customTag to "${name}"; otherwise Bricks can render "${name}: PHP class does not exist".`,
+        templateRel,
+        pointer
+      );
+    } else if (!KNOWN_BRICKS_ELEMENTS.has(name)) {
+      add(
+        findings,
+        'warn',
+        `Bricks template export uses element "${name}" that is not in the Kiwe known Bricks element list. Confirm it exists on the target Bricks installation before upload.`,
+        templateRel,
+        pointer
+      );
+    }
+  });
+}
+
 function validateBricksTemplateExport(root, templateRelPath, findings, conversionRel, pathPointer) {
   const relPath = String(templateRelPath || '').trim();
   if (!relPath) {
@@ -532,8 +588,11 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       rel(root, templatePath)
     );
   }
-  if (!String(templateData.title || '').trim()) {
+  const title = String(templateData.title || '').trim();
+  if (!title) {
     add(findings, 'fail', 'Bricks template export is missing title. Bricks imports this as "(no title)".', rel(root, templatePath), '$.title');
+  } else if (/^\(?\s*no\s+title\s*\)?$/i.test(title)) {
+    add(findings, 'fail', 'Bricks template export title is "(no title)". Provide a real human-readable title before upload.', rel(root, templatePath), '$.title');
   }
 
   const areaKeys = ['content', 'header', 'footer'];
@@ -589,6 +648,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     .concat(asArray(templateData.content))
     .concat(asArray(templateData.header))
     .concat(asArray(templateData.footer));
+  validateBricksTemplateElements(root, templatePath, templateElements, findings);
   const templateNativeControls = collectNativeStyleControlsFromItems(
     templateElements
       .concat(asArray(templateData.global_classes))
@@ -1147,6 +1207,15 @@ export function validateBricksConversion(target = '.', options = {}) {
   const siteIndex = graphIndex(siteGraph);
 
   if (conversion) {
+    if (isLikelyBricksTemplateExport(conversion)) {
+      add(
+        findings,
+        'fail',
+        'A native Bricks template export was supplied directly. Kiwe needs the full /convert /bricks package with bricks-conversion/kiwe-bricks-conversion.json plus a separate bricks-template/*.json upload file referenced by target.templateExportPath.',
+        conversionRel
+      );
+      validateBricksTemplateExport(root, path.basename(conversionPath), findings, conversionRel, '$');
+    }
     validateRoot(conversion, findings, conversionRel, root);
     validateElements(asArray(conversion.elements), findings, conversionRel, siteIndex);
     const website = readWebsiteText(root);
