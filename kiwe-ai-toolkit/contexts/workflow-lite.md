@@ -50,7 +50,7 @@ Canonical preview commands:
 /create /preview /combined
 ```
 
-`/create /preview /dsatheme` is only for the AppShell theme preview lane. `/create /preview /combined` is only for the primary combined preview lane. Neither command creates Bricks JSON, and neither preview is valid input for `/create /bricks` or `/convert /bricks`.
+`/create /preview /dsatheme` is only for the AppShell theme preview lane. `/create /preview /combined` is only for the primary combined preview lane. Neither command creates Bricks JSON, and neither preview is valid input for `/convert /bricks`.
 
 Canonical discovery and repair commands:
 
@@ -82,7 +82,7 @@ kiwe_diagnose_command
 CLI-capable clients can run:
 
 ```bash
-node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/create /bricks" --artifact-summary "website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists"
+node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifact-summary "website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists"
 ```
 
 The diagnostic result uses `schema: "kiwe.command-diagnostic.v1"` and returns one of:
@@ -99,9 +99,9 @@ Examples:
 - `/buid /preview /brickstheme` -> `rejected`, `unknown_command_token`; suggest canonical `/create` commands.
 - `/create /preview /brickstheme` -> `rejected`, `unsupported_preview_target`; Framework/Bricks theme profiles are token JSON and have no separate preview lane.
 - `/create /preview /website` when `website/bricks-paste.html` already exists -> `noop`, `website_preview_already_exists`; the page artifact is already the preview.
-- `/create /bricks` without `website/bricks-paste.html` -> `needs_input`, `bricks_convert_missing_page_source`.
-- `/create /bricks` with `website/bricks-paste.html` but no `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or human confirmation that Kiwe > Framework is already pushed -> `needs_input`, `bricks_convert_missing_framework_profile`.
-- `/create /bricks` against `combined-preview` or `appshell-theme` -> `rejected`, `bricks_convert_forbidden_source_in_command`.
+- `/convert /bricks` without `website/bricks-paste.html` -> `needs_input`, `bricks_convert_missing_page_source`.
+- `/convert /bricks` with `website/bricks-paste.html` but no `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or human confirmation that Kiwe > Framework is already pushed -> `needs_input`, `bricks_convert_missing_framework_profile`.
+- `/convert /bricks` against `combined-preview` or `appshell-theme` -> `rejected`, `bricks_convert_forbidden_source_in_command`.
 - `/audit /bricksconversion` without `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json` -> `needs_input`, `bricks_audit_missing_conversion_artifact`.
 - `/usesitegraph` without Site Graph/API/export context -> `needs_input`, `dynamic_missing_site_graph`.
 - `/usesitegraph /replacepreviewdata` without an existing handoff -> `needs_input`, `sitegraph_replacepreview_missing_artifact`.
@@ -495,7 +495,7 @@ Rules:
 - Prove live-like DSA roots, documented screen/sheet internals, dock modes, navbar mode, orientation, shape, light/dark, narrow widths, and every registered screen.
 - Mark all mock content as preview-only.
 - Do not create or convert a Bricks page.
-- Do not use this preview as `/create /bricks` or `/convert /bricks` source.
+- Do not use this preview as `/convert /bricks` source.
 
 ### `/audit /dsatheme`
 
@@ -578,7 +578,7 @@ Rules:
 - Include variation controls for desktop, tablet, mobile, narrow widths, Sheet/Classic, full compact dock, split compact dock, Navigation Bar, horizontal/vertical orientation, pill/rounded-box/square shape, light/dark, and screen switching.
 - Keep page/header launchers live in the preview.
 - Do not create Bricks JSON.
-- Do not use `combined-preview/index.html` as `/create /bricks` or `/convert /bricks` source.
+- Do not use `combined-preview/index.html` as `/convert /bricks` source.
 
 ### `/audit /combined`
 
@@ -645,14 +645,14 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs /path/to/handoff --site-graph 
 
 `prepare-apply-plan` is dry-run planning, not mutation.
 
-### `/create /bricks` and `/convert /bricks`
+### `/convert /bricks`
 
 Use only after the website/page visual artifact passes, and only after a Framework profile or Bricks theme style exists or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed. When the page should use live WordPress/Bricks/WooCommerce data, also run after `/usesitegraph` has mapped that intent.
 
 Purpose:
 
 - Convert the approved `website/bricks-paste.html` artifact into the Bricks-native JSON a human can upload in Bricks > My Templates.
-- `/create /bricks` is the preferred user-facing command. `/convert /bricks` is accepted as the same lane for backwards compatibility.
+- `/convert /bricks` is the only public Bricks conversion command.
 - Preserve the approved layout, hierarchy, classes, IDs, ARIA, official Seam roles/classes, `data-seam-*`, `data-project-role`, and canonical Kiwe launchers such as `data-dsa-open-module`.
 - Prefer Bricks 2.4 native HTML/CSS-to-Bricks conversion when the target exposes it.
 - Carry Kiwe's no-loss proof for query loops, dynamic tags, conditions, interactions, unsupported features, and manual-review gates inside the Bricks upload file when practical.
@@ -681,12 +681,12 @@ Use `/wp-json/dsa/v1/ai/bricks/context` or MCP `kiwe_get_bricks_conversion_conte
 
 ### `/audit /bricksconversion`
 
-Use after `/create /bricks` or `/convert /bricks`.
+Use after `/convert /bricks`.
 
 Audit for:
 
 - a native `bricks-template/*-template-upload.json` exists with non-empty `title`, `templateType`, and `content/header/footer`, or an older `bricks-conversion/kiwe-bricks-conversion.json` exists and points to that native template through `target.templateExportPath`;
-- documentation/report files exist only if `/document` was requested; missing `BRICKS-CONVERSION-NOTES.md` is not a failure for lean `/create /bricks`;
+- documentation/report files exist only if `/document` was requested; missing `BRICKS-CONVERSION-NOTES.md` is not a failure for lean `/convert /bricks`;
 - Bricks elements are non-empty, have IDs/names, and parent references resolve;
 - `website/bricks-paste.html` remains page-only and contains no AppShell shell markup;
 - source Seam classes and canonical Kiwe launchers are preserved in the conversion package;
@@ -730,7 +730,7 @@ For best output quality:
 10. Create or refresh the combined preview proof with `/create /preview /combined` if needed.
 11. Audit with `/audit /combined`.
 12. Add real WordPress/Bricks/WooCommerce bindings with `/usesitegraph`.
-13. Convert only `website/bricks-paste.html` to a Bricks template upload JSON with `/create /bricks` (`/convert /bricks` is accepted as a legacy alias).
+13. Convert only `website/bricks-paste.html` to a Bricks template upload JSON with `/convert /bricks`.
 14. Audit conversion with `/audit /bricksconversion`.
 15. Apply to staging only through Kiwe controlled executor.
 

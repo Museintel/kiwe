@@ -653,6 +653,13 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
   } else if (!['header', 'footer'].includes(templateType) && populatedArea && populatedArea !== 'content') {
     add(findings, 'fail', 'Non-header/footer Bricks templates should use a non-empty content array.', rel(root, templatePath), '$.content');
   }
+  const homepageHint = /(?:^|[\\/_-])home(?:page)?(?:[\\/_\-.]|$)/i.test(relPath) || /homepage|home\s+page/i.test(`${title} ${templateData.name || ''}`);
+  if (homepageHint && title && title !== 'Home') {
+    add(findings, 'warn', 'Homepage body template should normally use title "Home" so Bricks My Templates is easy to identify.', rel(root, templatePath), '$.title');
+  }
+  if (homepageHint && templateType && templateType !== 'content') {
+    add(findings, 'warn', 'Homepage body template should normally use templateType "content"; use section/header/footer only when that is the intended Bricks library type.', rel(root, templatePath), '$.templateType');
+  }
   if (!String(templateData.version || '').trim()) {
     add(findings, 'warn', 'Bricks template export should include the target Bricks version used to author/verify the native template.', rel(root, templatePath), '$.version');
   }
@@ -1231,7 +1238,7 @@ function validateEmbeddedKiweTemplateMeta(root, templatePath, templateData, find
 function validateNotes(root, findings, options = {}) {
   const notes = readNotesText(root);
   if (!notes.text) {
-    add(findings, 'info', 'BRICKS-CONVERSION-NOTES.md is absent. This is correct for lean `/create /bricks` or `/convert /bricks` output unless the human also requested `/document`.');
+    add(findings, 'info', 'BRICKS-CONVERSION-NOTES.md is absent. This is correct for lean `/convert /bricks` output unless the human also requested `/document`.');
     return;
   }
   if (!options.documented) {
@@ -1267,6 +1274,8 @@ function summarizeFindings(findings) {
 
 export function validateBricksConversion(target = '.', options = {}) {
   const findings = [];
+  const targetPath = path.resolve(target || '.');
+  const targetIsFile = fs.existsSync(targetPath) && fs.statSync(targetPath).isFile();
   const { root, conversionPath } = findConversionPath(target);
   if (!conversionPath) {
     const native = findNativeTemplatePath(target);
@@ -1276,7 +1285,7 @@ export function validateBricksConversion(target = '.', options = {}) {
       if (templateData && isPlainObject(templateData)) {
         validateEmbeddedKiweTemplateMeta(native.root, native.templatePath, templateData, findings);
       }
-      validateNotes(native.root, findings, options);
+      if (!targetIsFile) validateNotes(native.root, findings, options);
       const summary = summarizeFindings(findings);
       return {
         ok: summary.fail === 0,
@@ -1322,7 +1331,7 @@ export function validateBricksConversion(target = '.', options = {}) {
     if (isLikelyBricksTemplateExport(conversion)) {
       validateBricksTemplateExport(root, path.basename(conversionPath), findings, conversionRel, '$');
       validateEmbeddedKiweTemplateMeta(root, conversionPath, conversion, findings);
-      validateNotes(root, findings, options);
+      if (!targetIsFile) validateNotes(root, findings, options);
       const summary = summarizeFindings(findings);
       return {
         ok: summary.fail === 0,

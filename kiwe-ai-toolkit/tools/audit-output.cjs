@@ -3,11 +3,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  console.log('Usage: node tools/audit-output.cjs <handoff-or-ai-output-dir> [--documented]');
+  console.log('Usage: node tools/audit-output.cjs <handoff-or-ai-output-dir-or-bricks-template.json> [--documented]');
   process.exit(0);
 }
 
-const root = path.resolve(process.argv[2] || '.');
+const target = path.resolve(process.argv[2] || '.');
+const targetIsFile = fs.existsSync(target) && fs.statSync(target).isFile();
+const root = targetIsFile ? path.dirname(target) : target;
 const documented = process.argv.includes('--documented');
 
 function walk(dir, out = []) {
@@ -39,7 +41,7 @@ function exists(relPath) {
   return fs.existsSync(path.join(root, relPath));
 }
 
-const files = walk(root);
+const files = targetIsFile ? [target] : walk(root);
 const textFiles = files.filter((file) => /\.(html|css|js|json|md|txt|tsx|ts|jsx)$/i.test(file));
 const allText = textFiles.map((file) => `\n--- ${rel(file)} ---\n${read(file)}`).join('\n');
 const findings = [];
@@ -307,6 +309,7 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
   if (!String(templateData.title || '').trim()) {
     out.push(`Bricks template export ${relPath} is missing title. Bricks imports this as "(no title)".`);
   }
+  const title = String(templateData.title || '').trim();
   const populatedArea = ['content', 'header', 'footer'].find((key) => Array.isArray(templateData[key]) && templateData[key].length > 0);
   if (!populatedArea) {
     out.push(`Bricks template export ${relPath} must contain a non-empty content, header, or footer array. Otherwise Bricks insert reports "This template has no data".`);
@@ -320,6 +323,13 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
     out.push(`Bricks template export ${relPath} has templateType "footer" but no non-empty footer array.`);
   } else if (!['header', 'footer'].includes(templateType) && populatedArea && populatedArea !== 'content') {
     out.push(`Bricks template export ${relPath} is not header/footer, so it should use a non-empty content array.`);
+  }
+  const homepageHint = /(?:^|[\\/_-])home(?:page)?(?:[\\/_\-.]|$)/i.test(relPath) || /homepage|home\s+page/i.test(`${title} ${templateData.name || ''}`);
+  if (homepageHint && title && title !== 'Home') {
+    out.push(`Bricks template export ${relPath} should use title "Home" for a homepage body template.`);
+  }
+  if (homepageHint && templateType && templateType !== 'content') {
+    out.push(`Bricks template export ${relPath} should use templateType "content" for a homepage body template unless section/header/footer is intentional.`);
   }
   if (!String(templateData.version || '').trim()) {
     out.push(`Bricks template export ${relPath} should include the target Bricks version used to author/verify the native template.`);
@@ -399,7 +409,7 @@ function auditLeanBricksDocumentation(bricksArtifacts) {
     if (!docPattern.test(rel(file))) continue;
     add(
       'fail',
-      'Documentation/report files were emitted without `/document`. Lean `/create /bricks` and `/convert /bricks` output should hand back only the native Bricks upload JSON unless the human explicitly asks for docs.',
+      'Documentation/report files were emitted without `/document`. Lean `/convert /bricks` output should hand back only the native Bricks upload JSON unless the human explicitly asks for docs.',
       rel(file)
     );
   }
@@ -1131,7 +1141,8 @@ const bricksTemplateFiles = discoveredBricksTemplateFiles;
 
 for (const file of bricksConversionFiles) {
   for (const message of validateBricksConversionJson(file)) {
-    add('fail', message, rel(file));
+    const level = /should include the target Bricks version|should use title "Home"|should use templateType "content"/i.test(message) ? 'warn' : 'fail';
+    add(level, message, rel(file));
   }
 }
 
@@ -1139,7 +1150,8 @@ for (const file of bricksTemplateFiles) {
   const packageRoot = nativeBricksTemplatePackageRoot(file);
   const relativeTemplatePath = path.relative(packageRoot, file).replace(/\\/g, '/');
   for (const message of validateBricksTemplateExport(packageRoot, relativeTemplatePath)) {
-    add('fail', message, rel(file));
+    const level = /should include the target Bricks version|should use title "Home"|should use templateType "content"/i.test(message) ? 'warn' : 'fail';
+    add(level, message, rel(file));
   }
   const text = read(file);
   if (!/"kiwe"\s*:|"kiweConversion"\s*:/i.test(text)) {

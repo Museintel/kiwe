@@ -18,7 +18,7 @@ Commands:
   kiwe commands
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
-  kiwe diagnose --command "/create /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
+  kiwe diagnose --command "/convert /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
   kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]

@@ -104,9 +104,9 @@ node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff>
 - no `data-dsa-surface`, `.dsa-dock`, `.dsa-sheet`, or `.dsa-panel` AppShell shell markup;
 - no duplicate cart/search/profile/auth/save/AI runtime authority.
 
-If the handoff is being applied to a real staging site through Kiwe AI, prefer the controlled `bricks.page.from-html` or `bricks.template.from-html` executor path over browser clipboard paste. The handoff author should still provide clean HTML/CSS first. If a human explicitly asks for `/create /bricks` or `/convert /bricks`, the default human-facing artifact is a native Bricks My Templates upload JSON, not a Kiwe wrapper. The auditor should check that the source HTML/CSS is converter-friendly: semantic nesting, stable classes, preserved `data-dsa-open-module` launchers, no huge base64 payloads, no script-owned production behavior, and CSS that can be mapped into Bricks-native controls/global classes/variables.
+If the handoff is being applied to a real staging site through Kiwe AI, prefer the controlled `bricks.page.from-html` or `bricks.template.from-html` executor path over browser clipboard paste. The handoff author should still provide clean HTML/CSS first. If a human explicitly asks for `/convert /bricks`, the default human-facing artifact is a native Bricks My Templates upload JSON, not a Kiwe wrapper. The auditor should check that the source HTML/CSS is converter-friendly: semantic nesting, stable classes, preserved `data-dsa-open-module` launchers, no huge base64 payloads, no script-owned production behavior, and CSS that can be mapped into Bricks-native controls/global classes/variables.
 
-If the handoff includes a `/create /bricks` or `/convert /bricks` result, audit the conversion lane too:
+If the handoff includes a `/convert /bricks` result, audit the conversion lane too:
 
 - The primary human upload artifact is `bricks-template/<page-or-template-name>-template-upload.json`.
 - The primary upload file is a native Bricks template export with a non-empty `title`, a valid `templateType`, and a non-empty `content`, `header`, or `footer` array. For a homepage body, `title` should be `Home` and `templateType` should be `content`.

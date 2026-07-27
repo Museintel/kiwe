@@ -147,7 +147,7 @@ final class Bricks_AI_Intelligence_Service {
 					'rule' => 'Use Bricks _conditions for element visibility such as logged-in state, post type, taxonomy, viewport, or commerce context when documented by Bricks controls.',
 				],
 				'conversion'        => [
-					'rule' => 'When the human asks /create /bricks or /convert /bricks, emit one native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json by default. Preserve approved layout and source semantics while mapping live data intent to Bricks-native elements/settings. Do not emit notes/reports unless /document is present.',
+					'rule' => 'When the human asks /convert /bricks, emit one native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json by default. Preserve approved layout and source semantics while mapping live data intent to Bricks-native elements/settings. Do not emit notes/reports unless /document is present.',
 				],
 				'seam'              => [
 					'rule' => 'Every semantic section/card/rail/tab/TOC candidate should carry Seam vocabulary and stable classes while visual style remains in Bricks settings or page CSS.',
@@ -639,7 +639,7 @@ final class Bricks_AI_Intelligence_Service {
 			'Use /wp-json/dsa/v1/ai/bricks/context before emitting Bricks JSON when an API key is available.',
 			'Use /wp-json/dsa/v1/ai/site-graph and /ai/site-graph-data for real pages, products, posts, media, custom fields, post types, taxonomies, and term IDs.',
 			'Use /wp-json/dsa/v1/ai/studio/start before native/browser-AI collaboration so the model sees Kiwe + Bricks + Seam boundaries in one packet.',
-			'Use /create /bricks or /convert /bricks only after the visual/Seam artifact is approved; output a native Bricks My Templates upload JSON, not a Kiwe wrapper for human upload.',
+			'Use /convert /bricks only after the visual/Seam artifact is approved; output a native Bricks My Templates upload JSON, not a Kiwe wrapper for human upload.',
 			'Run /audit /bricksconversion or validate-bricks-conversion before staging.',
 			'Never paste runtime cart/checkout/auth logic into Bricks; use Kiwe/WordPress/WooCommerce authority instead.',
 		];

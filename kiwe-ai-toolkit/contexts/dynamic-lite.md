@@ -183,7 +183,7 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs <handoff-or-bindings-dir-or-jso
 
 MCP clients should call `kiwe_validate_bindings` with `targetDir` and `siteGraphPath`.
 
-After the binding plan passes, use `/create /bricks` to produce the Bricks-native upload artifact:
+After the binding plan passes, use `/convert /bricks` to produce the Bricks-native upload artifact:
 
 ```text
 bricks-template/

@@ -4,8 +4,9 @@ Date: 2026-07-27
 
 ## Changes in 6.52
 
-- `/create /bricks` is now the preferred user-facing Bricks conversion command.
-- `/convert /bricks` remains a compatibility alias, but both commands now default to one human upload artifact:
+- `/convert /bricks` is the public Bricks conversion command.
+- `/create /bricks` was briefly documented during 6.52 development and is now treated as a stale typo; use `/convert /bricks`.
+- The command defaults to one human upload artifact:
 
 ```text
 bricks-template/<page-or-template-name>-template-upload.json
@@ -58,7 +59,7 @@ node ../tools/release/verify-package.cjs
 1. Upload MU plugin version `6.52`.
 2. Confirm `/wp-json/dsa/v1/manifest` reports `6.52`.
 3. Ask a browser AI to run `explore: https://github.com/Museintel/kiwe` then `/list`.
-4. Give it an approved `website/bricks-paste.html` and run `/create /bricks`.
+4. Give it an approved `website/bricks-paste.html` and run `/convert /bricks`.
 5. Confirm the output is only `bricks-template/<page>-template-upload.json` unless `/document` was requested.
 6. Upload that JSON to Bricks My Templates and confirm:
    - template title is real, e.g. `Home`;
