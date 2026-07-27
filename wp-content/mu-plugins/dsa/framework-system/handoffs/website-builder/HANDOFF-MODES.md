@@ -16,7 +16,7 @@ Expected output:
 website-handoff/
   README.md
   bricks-paste.html  # open in browser for preview; paste/import through Bricks
-  bricks-notes.md
+  bricks-notes.md    # optional only when /document is requested
   framework/
     kiwe-framework-profile.json # optional when the page defines a sitewide token profile
 ```
@@ -86,7 +86,7 @@ combined-kiwe-handoff/
       combined-preview.js   # optional, preview-only
   website/
     bricks-paste.html      # Bricks artifact; also openable as the website/page preview
-    bricks-notes.md
+    bricks-notes.md        # optional only when /document is requested
   appshell-theme/
     import/
       theme-id/

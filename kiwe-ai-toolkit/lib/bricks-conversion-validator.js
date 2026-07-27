@@ -1159,7 +1159,7 @@ function validateSourceParity({ conversion, conversionText, website, bindingsPat
 function validateNotes(root, findings) {
   const notes = readNotesText(root);
   if (!notes.text) {
-    add(findings, 'fail', 'Bricks conversion output must include bricks-conversion/BRICKS-CONVERSION-NOTES.md.');
+    add(findings, 'info', 'BRICKS-CONVERSION-NOTES.md is absent. This is correct for lean `/convert /bricks` output unless the human also requested `/document`.');
     return;
   }
   const text = notes.text.toLowerCase();

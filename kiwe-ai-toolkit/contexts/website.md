@@ -353,7 +353,7 @@ combined-kiwe-handoff/
       combined-preview.js   # optional, preview-only
   website/
     bricks-paste.html      # Bricks artifact; also openable as the website/page preview
-    bricks-notes.md
+    bricks-notes.md        # optional only when /document is requested
   appshell-theme/
     import/
       theme-id/

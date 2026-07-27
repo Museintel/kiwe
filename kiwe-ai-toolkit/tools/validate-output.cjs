@@ -26,9 +26,6 @@ const root = path.resolve(target);
 const required = mode === 'website' ? [] : ['README.md'];
 if (mode === 'website' || mode === 'combined') {
   required.push('website/bricks-paste.html');
-  if (mode === 'combined') {
-    required.push('website/bricks-notes.md');
-  }
 }
 if (mode === 'theme') {
   required.push('appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
@@ -191,6 +188,24 @@ const frameworkProfilePresent = fs.existsSync(path.join(root, 'framework', 'kiwe
 if (frameworkProfilePresent) {
   try {
     execFileSync(process.execPath, [path.join(__dirname, 'validate-framework-profile.cjs'), root], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+  } catch (error) {
+    console.error(`Kiwe handoff validation failed for ${root}`);
+    const stdout = error && error.stdout ? String(error.stdout).trim() : '';
+    const stderr = error && error.stderr ? String(error.stderr).trim() : '';
+    if (stdout) console.error(stdout);
+    if (stderr) console.error(stderr);
+    process.exit(1);
+  }
+}
+
+const bricksThemeStylePresent = fs.existsSync(path.join(root, 'bricks-theme-style.json')) || fs.existsSync(path.join(root, 'bricks-theme', 'bricks-theme-style.json')) || fs.existsSync(path.join(root, 'framework', 'bricks-theme-style.json'));
+if (bricksThemeStylePresent) {
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, 'validate-bricks-theme-style.cjs'), root], {
       cwd: root,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe']

@@ -10,7 +10,7 @@ Usage:
 
 Looks for:
   bricks-conversion/kiwe-bricks-conversion.json
-  bricks-conversion/BRICKS-CONVERSION-NOTES.md
+  bricks-conversion/BRICKS-CONVERSION-NOTES.md only when /document was requested
 
 The validator is deterministic and non-mutating. It does not write to WordPress or Bricks.
 `);

@@ -4,6 +4,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.50 - 2026-07-27
+
+- Split the browser-AI command flow so `/create /frameworkprofile` produces the single Kiwe > Framework import/push artifact, `framework/kiwe-framework-profile.json`, while `/create /brickstheme` produces only a native Bricks Theme Styles JSON file for direct Bricks import.
+- Added Bricks Theme Styles context, schema, fixture, CLI validator, and MCP validator so browser/IDE AIs can generate a real Bricks global theme-style file instead of wrapping it in extra handoff folders.
+- Hardened `/convert /bricks` so conversion stops when the page artifact has no framework/profile/theme foundation, nudging the user to create or push the Framework profile first instead of producing Bricks JSON that renders without the intended Seam tokens, colors, and typography.
+- Extended the “documentation only when `/document` is requested” rule across framework profiles, Bricks theme styles, Site Graph bindings, Bricks conversion, accessibility, website, theme, and combined handoff contexts.
+
 ## 6.49 - 2026-07-27
 
 - Added a Kiwe > Framework clear action that resets the active Framework token profile and removes only Kiwe-owned Framework data from Bricks: `kiwe-*` variables, Kiwe Universal palette/category entries, the active/default Kiwe global theme style, and Seam Class Vocabulary classes/categories.

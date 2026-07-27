@@ -1,0 +1,54 @@
+{
+  "label": "Kiwe Lean Bricks Theme Style",
+  "settings": {
+    "_custom": true,
+    "conditions": {
+      "conditions": [
+        {
+          "id": "kiwe-global",
+          "main": "any"
+        }
+      ]
+    },
+    "general": {
+      "siteBackground": {
+        "color": {
+          "raw": "var(--kiwe-color-canvas)"
+        }
+      }
+    },
+    "colors": {
+      "colorPrimary": {
+        "raw": "var(--kiwe-color-brand)"
+      },
+      "colorSecondary": {
+        "raw": "var(--kiwe-color-accent)"
+      },
+      "colorLight": {
+        "raw": "var(--kiwe-color-surface)"
+      },
+      "colorDark": {
+        "raw": "var(--kiwe-color-text)"
+      }
+    },
+    "typography": {
+      "typographyBody": {
+        "font-family": "var(--kiwe-font-body)",
+        "font-size": "var(--kiwe-type-body)",
+        "line-height": "var(--kiwe-leading-normal)",
+        "color": "var(--kiwe-color-text)"
+      },
+      "typographyHeadings": {
+        "font-family": "var(--kiwe-font-display)",
+        "line-height": "var(--kiwe-leading-tight)",
+        "color": "var(--kiwe-color-heading)"
+      }
+    },
+    "links": {
+      "typography": {
+        "color": "var(--kiwe-color-link)",
+        "font-weight": "var(--kiwe-font-weight-link)"
+      }
+    }
+  }
+}

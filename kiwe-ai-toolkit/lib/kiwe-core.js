@@ -6,6 +6,7 @@ import { validateBindings as validateBindingsPlan } from './binding-validator.js
 import { validateBricksConversion as validateBricksConversionPlan } from './bricks-conversion-validator.js';
 import { validateAccessibility as validateAccessibilityPlan } from './accessibility-validator.js';
 import { validateFrameworkProfile as validateFrameworkProfilePlan } from './framework-profile-validator.js';
+import { validateBricksThemeStyle as validateBricksThemeStylePlan } from './bricks-theme-style-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -220,8 +221,13 @@ export function getAccessibilityContext() {
   return [
     context,
     readMaybe('contexts/seam-attributes-lite.md'),
-    frameworkProfileContext()
+    frameworkProfileContext(),
+    bricksThemeStyleContext()
   ].filter(Boolean).join('\n\n').trim() + '\n';
+}
+
+export function getBricksThemeStyleContext() {
+  return bricksThemeStyleContext();
 }
 
 export function getWorkflowContext() {
@@ -269,7 +275,7 @@ export function listCommands() {
       },
       {
         command: '/document',
-        purpose: 'Create compact lane-specific notes only after an artifact exists.',
+        purpose: 'Create compact lane-specific notes only after an artifact exists. Documentation is opt-in for every lane.',
         requires: ['existing artifact folder/file map'],
         output: 'documentation files only; no artifact redesign'
       },
@@ -292,18 +298,28 @@ export function listCommands() {
         output: 'same website lane, corrected'
       },
       {
-        command: '/create /brickstheme',
-        aliases: ['/create /frameworkprofile'],
-        purpose: 'Create a Kiwe Framework / Bricks global token profile. This is not a DSA theme and not Bricks element JSON.',
+        command: '/create /frameworkprofile',
+        purpose: 'Create the Kiwe > Framework import profile. Admin imports this file in Kiwe > Framework, then pushes variables, colors, classes, and Bricks theme-style data from there.',
         requires: ['approved visual direction'],
-        output: 'framework/kiwe-framework-profile.json and framework/FRAMEWORK-NOTES.md'
+        output: 'framework/kiwe-framework-profile.json only; add /document if notes are wanted'
+      },
+      {
+        command: '/audit /frameworkprofile',
+        purpose: 'Validate and revise the Kiwe > Framework import profile against Kiwe token and safe Bricks global-style rules.',
+        requires: ['framework/kiwe-framework-profile.json'],
+        output: 'same framework lane, corrected'
+      },
+      {
+        command: '/create /brickstheme',
+        purpose: 'Create one native Bricks Theme Styles JSON import file. This is not a Kiwe Framework profile, not Bricks template JSON, and not a DSA theme.',
+        requires: ['approved visual direction or framework profile intent'],
+        output: 'bricks-theme-style.json only; add /document if notes are wanted'
       },
       {
         command: '/audit /brickstheme',
-        aliases: ['/audit /frameworkprofile'],
-        purpose: 'Validate the framework profile against Kiwe token and safe Bricks global-style rules.',
-        requires: ['framework/kiwe-framework-profile.json'],
-        output: 'same framework lane, corrected'
+        purpose: 'Validate and revise the native Bricks Theme Styles JSON file only.',
+        requires: ['bricks-theme-style.json'],
+        output: 'same Bricks theme-style JSON, corrected'
       },
       {
         command: '/create /dsatheme',
@@ -345,7 +361,7 @@ export function listCommands() {
         command: '/usesitegraph',
         purpose: 'Use real target-site Site Graph/API facts for identity, preview samples, dynamic bindings, Bricks context, and query-loop intent.',
         requires: ['KIWE_REST_BASE plus key, or exported kiwe.site-graph.v1 JSON, or public Site Graph Data route'],
-        output: 'bricks-bindings/kiwe-bindings.json and BINDING-NOTES.md when binding intent changes'
+        output: 'bricks-bindings/kiwe-bindings.json when binding intent changes; add /document if notes are wanted'
       },
       {
         command: '/usesitegraph /replacepreviewdata',
@@ -369,8 +385,8 @@ export function listCommands() {
       {
         command: '/convert /bricks',
         purpose: 'Convert only website/bricks-paste.html into a reviewable Bricks-native conversion package.',
-        requires: ['website/bricks-paste.html', 'optional bricks-bindings/kiwe-bindings.json'],
-        output: 'bricks-conversion/kiwe-bricks-conversion.json and BRICKS-CONVERSION-NOTES.md'
+        requires: ['website/bricks-paste.html', 'framework/kiwe-framework-profile.json or confirmed Kiwe > Framework/Bricks theme-style already pushed', 'optional bricks-bindings/kiwe-bindings.json'],
+        output: 'bricks-conversion/kiwe-bricks-conversion.json and a native Bricks template JSON only when the conversion target requires template upload; add /document if notes are wanted'
       },
       {
         command: '/audit /bricksconversion',
@@ -383,7 +399,7 @@ export function listCommands() {
         aliases: ['/create /a11y'],
         purpose: 'Create a light/dark accessibility plan for an existing website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion.',
         requires: ['existing artifact folder/file map or approved visual output'],
-        output: 'accessibility/kiwe-accessibility-plan.json and accessibility/ACCESSIBILITY-NOTES.md'
+        output: 'accessibility/kiwe-accessibility-plan.json only; add /document if notes are wanted'
       },
       {
         command: '/audit /accessibility',
@@ -413,16 +429,17 @@ function frameworkProfileContext() {
   return [
     '# Kiwe Framework / Bricks theme profile context',
     '',
-    'Use this only for `/create /brickstheme`, `/create /frameworkprofile`, `/audit /brickstheme`, or `/audit /frameworkprofile` phases.',
+    'Use this only for `/create /frameworkprofile` or `/audit /frameworkprofile` phases.',
     '',
-    'A Framework profile is a sitewide design-token profile for `Kiwe > Framework` and safe Bricks global theme-style export. It is not a DSA AppShell theme package.',
+    'A Framework profile is the sitewide design-token import for `Kiwe > Framework`. After import, the admin can push variables, colors, global classes, and Bricks theme-style data to Bricks from Kiwe. It is not a DSA AppShell theme package, not a Bricks template, and not the standalone `/brickstheme` file.',
     '',
     'Expected file:',
     '',
     '```text',
     'framework/kiwe-framework-profile.json',
-    'framework/FRAMEWORK-NOTES.md',
     '```',
+    '',
+    'Do not emit `framework/FRAMEWORK-NOTES.md`, README files, reports, Bricks templates, or AppShell theme packages unless the command also includes `/document` or the human explicitly asks for documentation.',
     '',
     schema ? '## JSON Schema\n\n```json\n' + schema.trim() + '\n```' : '',
     '',
@@ -430,6 +447,52 @@ function frameworkProfileContext() {
     '',
     '```bash',
     'node kiwe-ai-toolkit/tools/validate-framework-profile.cjs /path/to/handoff-or-profile',
+    '```'
+  ].filter(Boolean).join('\n').trim() + '\n';
+}
+
+function bricksThemeStyleContext() {
+  const schema = readMaybe('schemas/bricks-theme-style.schema.json');
+  return [
+    '# Native Bricks Theme Styles context',
+    '',
+    'Use this only for `/create /brickstheme` or `/audit /brickstheme` phases.',
+    '',
+    '`/brickstheme` outputs exactly one native Bricks Theme Styles JSON import file. It is for Bricks\' front-end visual editor Theme Styles manager. It is not a Kiwe Framework profile, not Bricks template/page JSON, and not a DSA/AppShell theme package.',
+    '',
+    'Expected file:',
+    '',
+    '```text',
+    'bricks-theme-style.json',
+    '```',
+    '',
+    'Root shape, verified from Bricks Theme Styles behavior. `id` is optional for Bricks-export compatibility; if omitted, Bricks/Kiwe can generate one:',
+    '',
+    '```json',
+    '{',
+    '  "id": "optional-safe-id",',
+    '  "label": "Human readable style name",',
+    '  "settings": {',
+    '    "_custom": true,',
+    '    "conditions": { "conditions": [ { "id": "kiwe-global", "main": "any" } ] },',
+    '    "general": {},',
+    '    "colors": {},',
+    '    "typography": {},',
+    '    "links": {}',
+    '  }',
+    '}',
+    '```',
+    '',
+    'Output discipline: no notes, README, reports, Bricks page/template content, global classes, DSA/AppShell selectors, WooCommerce runtime data, checkout/cart/auth logic, or Kiwe Framework profile wrapper unless `/document` is explicitly present.',
+    '',
+    'Prefer Kiwe/Seam token variables and Bricks global color/theme slots where practical. The file may define site background, body text, links, typography, and global color identity; it must not style individual page components.',
+    '',
+    schema ? '## JSON Schema\n\n```json\n' + schema.trim() + '\n```' : '',
+    '',
+    'If tools are available, validate with:',
+    '',
+    '```bash',
+    'node kiwe-ai-toolkit/tools/validate-bricks-theme-style.cjs /path/to/bricks-theme-style.json',
     '```'
   ].filter(Boolean).join('\n').trim() + '\n';
 }
@@ -478,6 +541,10 @@ export function validateAccessibility(targetDir, options = {}) {
 
 export function validateFrameworkProfile(targetDir, options = {}) {
   return validateFrameworkProfilePlan(targetDir, options);
+}
+
+export function validateBricksThemeStyle(targetDir, options = {}) {
+  return validateBricksThemeStylePlan(targetDir, options);
 }
 
 export function prepareApplyPlan(targetDir, options = {}) {
@@ -550,8 +617,10 @@ function routeKind(command) {
   if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
   if (/(\/create|\/build)/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-create';
   if (/\/audit/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-audit';
-  if (/(\/create|\/build)/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-create';
-  if (/\/audit/.test(text) && /(\/brickstheme|\/frameworkprofile|\/framework|bricks theme)/.test(text)) return 'framework-audit';
+  if (/(\/create|\/build)/.test(text) && /(\/frameworkprofile|\bframework profile\b|\/framework\b)/.test(text)) return 'framework-profile-create';
+  if (/\/audit/.test(text) && /(\/frameworkprofile|\bframework profile\b|\/framework\b)/.test(text)) return 'framework-profile-audit';
+  if (/(\/create|\/build)/.test(text) && /(\/brickstheme|\bbricks theme\b|\btheme style\b)/.test(text)) return 'bricks-theme-create';
+  if (/\/audit/.test(text) && /(\/brickstheme|\bbricks theme\b|\btheme style\b)/.test(text)) return 'bricks-theme-audit';
   if (/(\/create|\/build)/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-create';
   if (/\/audit/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-audit';
   if (/\/audit/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-audit';
@@ -656,6 +725,8 @@ const VALID_PHASE_COMMANDS = [
   '/ideate /webdraft',
   '/rebuild /seamframework',
   '/audit /seamframework',
+  '/create /frameworkprofile',
+  '/audit /frameworkprofile',
   '/create /brickstheme',
   '/audit /brickstheme',
   '/create /dsatheme',
@@ -697,6 +768,18 @@ function hasThemeArtifact(text) {
 
 function hasAccessibilityArtifact(text) {
   return /accessibility[\\/]kiwe-accessibility-plan\.json|kiwe-accessibility-plan\.json|kiwe\.accessibility-plan\.v1|ACCESSIBILITY-NOTES\.md/i.test(String(text || ''));
+}
+
+function hasFrameworkProfileArtifact(text) {
+  return /framework[\\/]kiwe-framework-profile\.json|kiwe-framework-profile\.json|kiwe\.framework-profile\.v1|\/frameworkprofile|\bframework profile\b|kiwe\s*>\s*framework/i.test(String(text || ''));
+}
+
+function hasBricksThemeStyleArtifact(text) {
+  return /bricks-theme-style\.json|bricks theme style|theme styles? manager|theme-style import|theme_style|bricksThemeStyle|themeStyle/i.test(String(text || ''));
+}
+
+function hasFrameworkFoundation(text) {
+  return hasFrameworkProfileArtifact(text) || hasBricksThemeStyleArtifact(text) || /pushed to bricks|bricks variables installed|global theme style installed|kiwe framework installed|framework already pushed/i.test(String(text || ''));
 }
 
 function hasForbiddenBricksSource(text) {
@@ -809,8 +892,8 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       status: 'rejected',
       code: 'unsupported_preview_target',
       normalizedCommand,
-      message: 'No `/create /preview /brickstheme` or Bricks-theme preview command exists. Framework/Bricks theme profiles are token JSON, not a separate preview lane.',
-      suggestions: ['/create /brickstheme', '/audit /brickstheme', '/create /preview /dsatheme', '/create /preview /combined'],
+      message: 'No `/create /preview /brickstheme` or `/create /preview /frameworkprofile` command exists. Framework profiles and Bricks theme styles are import/config JSON, not separate preview lanes.',
+      suggestions: ['/create /frameworkprofile', '/audit /frameworkprofile', '/create /brickstheme', '/audit /brickstheme', '/create /preview /dsatheme', '/create /preview /combined'],
       boundaries: ['Previews exist for the website/page HTML artifact, DSA AppShell theme proof, and combined page-plus-AppShell proof.', 'Framework profiles are validated, not previewed as their own UI.']
     });
   }
@@ -867,6 +950,41 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
         boundaries: ['Do not guess a Bricks source from a DSA theme or combined preview.']
       });
     }
+    if (!hasFrameworkFoundation(`${artifactText}\n${siteGraphSummary}`)) {
+      return commandDiagnostic({
+        status: 'needs_input',
+        code: 'bricks_convert_missing_framework_profile',
+        kind: 'bricks-convert',
+        normalizedCommand,
+        message: '`/convert /bricks` should run after a Kiwe Framework profile or Bricks theme style exists and has been imported/pushed. Otherwise the Bricks page may reference Seam/Kiwe variables, colors, and font tokens that do not render on the frontend.',
+        suggestions: ['/create /frameworkprofile first', '/audit /frameworkprofile, then import it in Kiwe > Framework and push to Bricks', 'If already pushed, rerun `/convert /bricks` with artifactSummary saying Kiwe > Framework is already pushed to Bricks'],
+        boundaries: ['Do not silently convert a page that depends on missing sitewide tokens/theme style.', 'Do not create a Framework profile inside `/convert /bricks`; stop and ask for the missing foundation.']
+      });
+    }
+  }
+
+  if (commandHas(text, /\/audit/) && commandHas(text, /\/frameworkprofile|\bframework profile\b|\/framework\b/) && !hasFrameworkProfileArtifact(artifactSummary)) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'framework_profile_audit_missing_artifact',
+      kind: 'framework-profile-audit',
+      normalizedCommand,
+      message: '`/audit /frameworkprofile` needs `framework/kiwe-framework-profile.json`. Do not audit a Bricks theme-style file or DSA theme package as a Framework profile.',
+      suggestions: ['/create /frameworkprofile', '/audit /frameworkprofile after kiwe-framework-profile.json exists'],
+      boundaries: ['Framework profile audit is for the Kiwe > Framework import file only.']
+    });
+  }
+
+  if (commandHas(text, /\/audit/) && commandHas(text, /\/brickstheme|\bbricks theme\b|\btheme style\b/) && !hasBricksThemeStyleArtifact(artifactSummary)) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'bricks_theme_audit_missing_artifact',
+      kind: 'bricks-theme-audit',
+      normalizedCommand,
+      message: '`/audit /brickstheme` needs `bricks-theme-style.json`. Do not audit a Kiwe Framework profile, Bricks template, or DSA theme package as a native Bricks theme style.',
+      suggestions: ['/create /brickstheme', '/audit /brickstheme after bricks-theme-style.json exists'],
+      boundaries: ['Bricks theme-style audit is for the native Bricks Theme Styles JSON only.']
+    });
   }
 
   if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:bricksconversion|bricks-conversion)\b|bricks conversion|bricks json|html-to-bricks/) && !hasConversionArtifact(artifactSummary)) {
@@ -1122,8 +1240,15 @@ function commandListMarkdown() {
     '## Bricks boundary',
     '',
     '- `/convert /bricks` only converts `website/bricks-paste.html`.',
+    '- `/convert /bricks` should run only after `/create /frameworkprofile` has produced `framework/kiwe-framework-profile.json` or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed.',
     '- It must not convert DSA themes, combined previews, AppShell sheets/screens/docks, or theme CSS.',
-    '- Its canonical output is `bricks-conversion/kiwe-bricks-conversion.json`, not loose page JSON files.'
+    '- Its canonical output is the reviewable conversion manifest and the exact native Bricks template JSON requested by the conversion target, not loose extra page files.',
+    '',
+    '## Framework/theme-style boundary',
+    '',
+    '- `/create /frameworkprofile` creates `framework/kiwe-framework-profile.json` for Kiwe > Framework import/push.',
+    '- `/create /brickstheme` creates only `bricks-theme-style.json` for Bricks Theme Styles import.',
+    '- These are separate commands. Do not output both unless the human requested both commands.'
   );
   return lines.filter(Boolean).join('\n').trim() + '\n';
 }
@@ -1134,8 +1259,10 @@ function fixPhaseContext(command, artifactSummary) {
     ? '/audit /bricksconversion'
     : hasAccessibilityArtifact(text) || /accessibility|contrast|dark mode|light mode|a11y/.test(text)
       ? '/audit /accessibility'
-    : /framework[\\/]kiwe-framework-profile\.json|kiwe\.framework-profile\.v1|\/brickstheme|framework profile/.test(text)
+    : hasBricksThemeStyleArtifact(text)
       ? '/audit /brickstheme'
+    : hasFrameworkProfileArtifact(text)
+      ? '/audit /frameworkprofile'
       : hasThemeArtifact(text)
         ? '/audit /dsatheme'
         : /combined-preview|combined-kiwe-handoff|\/combined/.test(text)
@@ -1197,8 +1324,9 @@ function siteGraphCommandGuidance(command) {
     '```text',
     'bricks-bindings/',
     '  kiwe-bindings.json',
-    '  BINDING-NOTES.md',
-    '```'
+    '```',
+    '',
+    'Do not emit `BINDING-NOTES.md`, README files, reports, or extra docs unless the command also includes `/document` or the human explicitly asks for documentation.'
   ];
   return lines.filter(Boolean).join('\n').trim() + '\n';
 }
@@ -1329,10 +1457,14 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       '',
       readMaybe('contexts/audit-lite.md')
     );
-  } else if (kind === 'framework-create') {
+  } else if (kind === 'framework-profile-create') {
     parts.push(frameworkProfileContext());
-  } else if (kind === 'framework-audit') {
+  } else if (kind === 'framework-profile-audit') {
     parts.push(frameworkProfileContext(), readMaybe('contexts/audit-lite.md'));
+  } else if (kind === 'bricks-theme-create') {
+    parts.push(bricksThemeStyleContext());
+  } else if (kind === 'bricks-theme-audit') {
+    parts.push(bricksThemeStyleContext(), readMaybe('contexts/audit-lite.md'));
   } else if (kind === 'accessibility-create') {
     parts.push(
       '# Selected phase guidance',
@@ -1852,9 +1984,6 @@ export function validateHandoff(targetDir, mode = 'website') {
   const required = normalized === 'website' ? [] : ['README.md'];
   if (normalized === 'website' || normalized === 'combined') {
     required.push('website/bricks-paste.html');
-    if (normalized === 'combined') {
-      required.push('website/bricks-notes.md');
-    }
   }
   if (normalized === 'theme') {
     required.push('appshell-theme/README.md', 'appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
@@ -1886,11 +2015,14 @@ export function validateHandoff(targetDir, mode = 'website') {
   const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));
   const frameworkProfile = validateFrameworkProfilePlan(root, { optional: true });
   const frameworkErrors = frameworkProfile.ok ? [] : frameworkProfile.errors || [];
+  const bricksThemeStyle = validateBricksThemeStylePlan(root, { optional: true });
+  const bricksThemeErrors = bricksThemeStyle.ok ? [] : bricksThemeStyle.errors || [];
   return {
-    ok: missing.length === 0 && frameworkErrors.length === 0,
+    ok: missing.length === 0 && frameworkErrors.length === 0 && bricksThemeErrors.length === 0,
     mode: normalized,
     root,
     missing,
-    frameworkProfile
+    frameworkProfile,
+    bricksThemeStyle
   };
 }

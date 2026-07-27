@@ -169,10 +169,11 @@ Keep the handoff's existing mode shape. Add this optional folder:
 ```text
 bricks-bindings/
   kiwe-bindings.json
-  BINDING-NOTES.md
 ```
 
 The normal `website/bricks-paste.html` remains the page preview and Bricks paste/import artifact. The binding folder explains how static prototype regions map to Bricks query loops, dynamic tags, Kiwe launchers, and review requirements.
+
+Do not emit `BINDING-NOTES.md`, README files, reports, or extra docs unless the command also includes `/document` or the human explicitly asks for documentation.
 
 Validate the binding plan when a CLI or MCP tool is available:
 
@@ -187,7 +188,6 @@ After the binding plan passes, use `/convert /bricks` to produce:
 ```text
 bricks-conversion/
   kiwe-bricks-conversion.json
-  BRICKS-CONVERSION-NOTES.md
 ```
 
 Then validate it:
@@ -276,9 +276,9 @@ The controlled executor skeleton defines the future adapter interface only. The 
 - Seam attributes describe meaning; they are not hidden duplicate navigation data.
 - If a desired menu label does not exist in the page content/section semantics, report it rather than inventing hidden anchors.
 
-## Notes file
+## Optional `/document` notes file
 
-`BINDING-NOTES.md` must include:
+Create `BINDING-NOTES.md` only when `/document` was requested. When requested, it should include:
 
 - what changed from placeholders to dynamic bindings;
 - which Site Graph entries were used;

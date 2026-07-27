@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -36,7 +36,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_route_command',
-      description: 'Route a short canonical command such as /list, /fix, /document, /ideate /webdraft, /rebuild /seamframework, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
+      description: 'Route a short canonical command such as /list, /fix, /document, /ideate /webdraft, /rebuild /seamframework, /create /frameworkprofile, /create /brickstheme, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -120,6 +120,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: 'kiwe_get_bricks_conversion_context',
       description: 'Return the Kiwe Bricks conversion context for /convert /bricks and /audit /bricksconversion without reading the full plugin codebase.',
       inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_get_bricks_theme_style_context',
+      description: 'Return the native Bricks Theme Styles context for /create /brickstheme and /audit /brickstheme without reading the full plugin codebase.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_validate_bricks_theme_style',
+      description: 'Validate one native Bricks Theme Styles JSON file. This is separate from Kiwe Framework profile validation and Bricks template/page validation.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          targetDir: { type: 'string', description: 'Folder containing bricks-theme-style.json or the JSON file itself.' },
+          optional: { type: 'boolean', description: 'If true, missing theme-style file is informational instead of failing.' }
+        },
+        required: ['targetDir']
+      }
     },
     {
       name: 'kiwe_validate_bricks_conversion',
@@ -236,6 +253,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_get_bricks_conversion_context':
       result = getBricksConversionContext();
+      break;
+    case 'kiwe_get_bricks_theme_style_context':
+      result = getBricksThemeStyleContext();
+      break;
+    case 'kiwe_validate_bricks_theme_style':
+      result = validateBricksThemeStyle(args.targetDir, { optional: Boolean(args.optional) });
       break;
     case 'kiwe_validate_bricks_conversion':
       result = validateBricksConversion(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });

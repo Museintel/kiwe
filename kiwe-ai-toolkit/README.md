@@ -15,7 +15,8 @@ For highest-quality work, use the phased workflow instead of one giant combined 
 1. `/ideate /webdraft` for pure creative HTML/CSS/JS with no Kiwe constraints.
 2. `/rebuild /seamframework` after the human likes the draft.
 3. `/audit /seamframework`.
-4. `/create /brickstheme` or `/create /frameworkprofile` for global Kiwe/Bricks token personality.
+4. `/create /frameworkprofile` for the Kiwe > Framework import/push profile.
+4a. `/create /brickstheme` only when a standalone native Bricks Theme Styles JSON is specifically requested.
 5. `/create /dsatheme`.
 6. `/audit /dsatheme`.
 7. `/create /preview /dsatheme` when a focused AppShell preview proof is needed.
@@ -33,6 +34,8 @@ Any phase can add `/usecompanion`, such as `/rebuild /seamframework /usecompanio
 Canonical command language uses `/create` for creation phases. `/build` may be tolerated as an old alias by the router, but toolkit-facing output should normalize back to `/create`.
 
 Use `/list` to see the command vocabulary and stop. Use `/fix` to repair an existing failed artifact lane without starting over. Use `/usesitegraph` for all Site Graph/API/export grounded passes; legacy `/dynamic /sitegraph` may be accepted internally but should not be taught in new prompts.
+
+Documentation is opt-in for every command. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact file(s) for that command. Do not add README files, notes, audit reports, duplicate previews, ZIPs, or extra explanation files by default.
 
 Browser-AI terminal entry:
 
@@ -91,13 +94,16 @@ node bin/kiwe.js context combined
 node bin/kiwe.js create combined ./out/my-kiwe-handoff --name my-kiwe-handoff
 node tools/validate-output.cjs ./out/my-kiwe-handoff --mode combined
 node tools/validate-framework-profile.cjs ./out/my-website-handoff --optional
+node tools/validate-bricks-theme-style.cjs ./out/my-bricks-theme-style --optional
 node bin/kiwe.js dynamic-context
 node bin/kiwe.js dynamic-pass --brief "Turn approved product rails into Bricks query-loop binding plans using the supplied Site Graph."
 node bin/kiwe.js attributes
 node bin/kiwe.js seam-attributes-context
 node bin/kiwe.js bricks-conversion-context
+node bin/kiwe.js bricks-theme-style-context
 node bin/kiwe.js validate-bindings ./out/my-kiwe-handoff --site-graph ./site-graph.json
 node bin/kiwe.js validate-bricks-conversion ./out/my-kiwe-handoff --site-graph ./site-graph.json
+node bin/kiwe.js validate-bricks-theme-style ./out/my-bricks-theme-style
 node bin/kiwe.js prepare-apply ./out/my-kiwe-handoff --site-graph ./site-graph.json
 ```
 
@@ -290,7 +296,6 @@ dsa/stage-apply-plan
 ```text
 bricks-bindings/
   kiwe-bindings.json
-  BINDING-NOTES.md
 ```
 
 This is a binding plan, not a direct mutation. It maps placeholder rails/cards/buttons to Bricks query loops, dynamic data tags, and Kiwe launchers using real site terms/pages/products. Later trusted apply adapters can use Bricks 2.4 abilities to convert/import/apply after validation.
@@ -310,12 +315,13 @@ After the dynamic binding pass is accepted, use `/convert /bricks` to create a r
 ```text
 bricks-conversion/
   kiwe-bricks-conversion.json
-  BRICKS-CONVERSION-NOTES.md
+bricks-template/
+  page-or-template-name-template-upload.json # when target.importMethod is bricks-admin-template-upload
 ```
 
 This is the no-loss bridge between approved HTML/CSS and Bricks JSON. It should prefer Bricks 2.4 native HTML/CSS conversion where the target site exposes it, then add Kiwe fidelity evidence: source selectors, element mapping, query-loop/dynamic intent, conditions, interactions, unsupported features, manual-review notes, and preserved Seam/Kiwe attributes.
 
-`/convert /bricks` converts only `website/bricks-paste.html`. It must never convert `combined-preview`, `appshell-theme`, DSA/AppShell preview markup, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css`. Use `/create /preview /dsatheme` and `/create /preview /combined` for preview-proof work instead.
+`/convert /bricks` converts only `website/bricks-paste.html`. It must run after `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or a human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed. It must never convert `combined-preview`, `appshell-theme`, DSA/AppShell preview markup, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css`. Use `/create /preview /dsatheme` and `/create /preview /combined` for preview-proof work instead.
 
 Validate it before staging:
 
@@ -356,6 +362,7 @@ website-handoff/
     bricks-notes.md    # optional only when /document is requested
   framework/
     kiwe-framework-profile.json # optional sitewide Seam/Kiwe token profile
+  bricks-theme-style.json       # optional only for /create /brickstheme
 ```
 
 Use `framework/kiwe-framework-profile.json` only when a website/page-only handoff establishes a reusable brand token profile. It must use `schema: "kiwe.framework-profile.v1"` and contain `settings.tokens` only. Combined/AppShell theme work should normally put live-intended tokens inside `appshell-theme/import/theme-id/theme-package.json` under `settings.tokens`.
@@ -379,7 +386,7 @@ combined-kiwe-handoff/
   README.md
   combined-preview/index.html  # primary human review: website with DSA over it
   website/bricks-paste.html    # Bricks artifact; also website/page preview
-  website/bricks-notes.md
+  website/bricks-notes.md      # optional only when /document is requested
   appshell-theme/import/theme-id/theme.json
   appshell-theme/import/theme-id/theme-package.json # single Kiwe admin/API import file when settings change
   appshell-theme/import/theme-id/css/theme.css

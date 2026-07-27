@@ -30,9 +30,9 @@ Preferred path for serious work:
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 ```
 
-Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/document`, `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, or `/audit /accessibility`.
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/document`, `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /frameworkprofile`, `/audit /frameworkprofile`, `/create /brickstheme`, `/audit /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, or `/audit /accessibility`.
 
-Documentation is opt-in. `/rebuild /seamframework` should return only `website/bricks-paste.html` unless the human also uses `/document` or asks for notes.
+Documentation is opt-in for every lane. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact file(s) for that command. Do not add README files, notes, audit reports, duplicate previews, ZIPs, or polite explanation files by default.
 
 Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
 
@@ -47,7 +47,7 @@ kiwe_diagnose_command
 or:
 
 ```bash
-node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifact-summary "website/bricks-paste.html exists"
+node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifact-summary "website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists"
 ```
 
 If the diagnostic returns `stop: true`, do not continue. Report the diagnostic to the human. This prevents non-existent commands, wrong-lane requests, missing artifacts, missing Site Graph context, and no-op preview requests from turning into token-wasting generation loops.
@@ -169,19 +169,37 @@ Kiwe Studio AI is the higher-level companion workflow. Enable it in `Kiwe > AI` 
 
 Bricks AI Intelligence is the Bricks-native map for both browser AI and Kiwe Studio AI. External tool clients can use a key with `bricks_ai`, `studio_ai`, or `all` scope to call `/wp-json/dsa/v1/ai/bricks/context` before emitting Bricks JSON or dynamic binding plans, and `/wp-json/dsa/v1/ai/bricks/plan` for a compact planning packet. It reports available Bricks elements, compact element controls, query loops, dynamic tags, conditions, interactions, Seam headless rules, and Kiwe launcher/runtime boundaries. It is read-only. It does not paste content, save Bricks, publish pages, or create Woo/cart/auth behavior.
 
-Kiwe Accessibility is a focused post-design lane for contrast and native light/dark support. Use `/create /accessibility` only after a website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion exists. It creates `accessibility/kiwe-accessibility-plan.json` and `accessibility/ACCESSIBILITY-NOTES.md`; it does not redesign the page or create Bricks JSON. Use `/audit /accessibility` to reject literal white-on-white/black-on-black pairs, missing dark-mode proof, unmapped private color variables, and Bricks outputs that do not align Kiwe tokens with Bricks root theme-style slots. CLI-capable clients can run `node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff>`. Browser AI clients can also submit file maps to `/wp-json/dsa/v1/ai/audit-companion/review`; Companion will return deterministic accessibility findings without calling a model.
+Kiwe Accessibility is a focused post-design lane for contrast and native light/dark support. Use `/create /accessibility` only after a website/page, DSA theme, combined handoff, Framework profile, Bricks theme style, or Bricks conversion exists. It creates `accessibility/kiwe-accessibility-plan.json` only unless `/document` is requested; it does not redesign the page or create Bricks JSON. Use `/audit /accessibility` to reject literal white-on-white/black-on-black pairs, missing dark-mode proof, unmapped private color variables, and Bricks outputs that do not align Kiwe tokens with Bricks root theme-style slots. CLI-capable clients can run `node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff>`. Browser AI clients can also submit file maps to `/wp-json/dsa/v1/ai/audit-companion/review`; Companion will return deterministic accessibility findings without calling a model.
 
 Seam's universal Appsite attribute layer is part of the framework brain. During `/rebuild /seamframework`, preserve the approved UI and add live capability attributes when the intent exists: `data-dsa-open-module` for Kiwe screens/theme toggle, `data-kiwe-save` for wishlist/bookmark controls, `data-kiwe-notifications` for browser-notification CTAs, `data-kiwe-theme-toggle` for light/dark controls outside the dock, real semantic sections for Kiwe Menu context, and `data-kiwe-query-template` / `data-kiwe-binding` for future Bricks query-loop and dynamic binding plans. Do not create duplicate JavaScript for these Kiwe-owned capabilities. Toolkit/MCP clients can call `kiwe_get_seam_attributes_context` or `kiwe_list_capability_attributes`.
 
-For `/convert /bricks`, produce a reviewable Bricks conversion package rather than a direct save:
+For `/create /frameworkprofile`, output only the Kiwe Framework profile import file:
+
+```text
+framework/
+  kiwe-framework-profile.json
+```
+
+This file is imported in `Kiwe > Framework`. From there the admin can push the profile to Bricks: variables, color palette, global classes, and Bricks theme-style data. This is the easiest setup path for most users. Do not output `FRAMEWORK-NOTES.md`, Bricks template JSON, AppShell theme packages, or duplicate docs unless `/document` is explicitly present.
+
+For `/create /brickstheme`, output only one native Bricks Theme Styles JSON file:
+
+```text
+bricks-theme-style.json
+```
+
+The root shape is `{ "label": "...", "settings": { ... } }` with optional safe root `id` for Bricks-export compatibility, matching Bricks Theme Styles import/update behavior. This command is not a Kiwe Framework profile, not Bricks page/template JSON, and not a DSA/AppShell theme. Prefer `/create /frameworkprofile` when the goal is a complete Kiwe-to-Bricks setup. Use `/create /brickstheme` only when the human specifically wants the standalone Bricks Theme Styles import file.
+
+For `/convert /bricks`, produce a reviewable Bricks conversion package rather than a direct save. Run it only after a Framework profile or Bricks theme style exists, or after the human confirms Kiwe > Framework/Bricks Theme Styles have already been imported/pushed; otherwise stop and ask for `/create /frameworkprofile` first.
 
 ```text
 bricks-conversion/
   kiwe-bricks-conversion.json
-  BRICKS-CONVERSION-NOTES.md
 bricks-template/
   [page-or-template-name]-template-upload.json
 ```
+
+Do not output `BRICKS-CONVERSION-NOTES.md`, README files, reports, or other docs unless `/document` is explicitly present.
 
 The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and must preserve the approved page hierarchy, Seam classes/attributes, canonical `data-dsa-open-module` launchers, query-loop intent, dynamic tags, conditions, interactions, and unsupported/manual-review evidence. Prefer Bricks 2.4 native HTML/CSS conversion when available, then add Kiwe's fidelity map. The goal is an editable Bricks visual-builder handoff, not a page that only renders through one CSS dump: ordinary typography, colors/backgrounds/gradients, borders/radii, shadows, transforms, filters, transitions, spacing, sizing, grid/flex, responsive direction, alignment, query loops, conditions, interactions, and dynamic tags should become Bricks-native controls, global classes, or global variables first. Bricks-native controls include `_display`, `_direction`, `_justifyContent`, `_alignItems`, `_flexWrap`, `_columnGap`, `_rowGap`, `_gridTemplateColumns`, `_gridItemColumnSpan`, `_typography`, `_background`, `_gradient`, `_border`, `_boxShadow`, `_transform`, `_cssFilters`, and breakpoint forms such as `_direction:mobile_landscape`. Custom CSS is allowed only as an explicit exception, documented in `fidelity.nativeStyleIntent`, `fidelity.unsupported`, or `report.manualReview`; if custom CSS contains many mappable declarations, the audit expects enough native controls to prove those decisions remain editable in Bricks. `target.importMethod` is required and must be one of `review-only`, `bricks-clipboard-json`, `bricks-admin-template-upload`, or `kiwe-staging-executor`. For full pages and large sections, default to `bricks-admin-template-upload` and include a separate native Bricks template export JSON under `bricks-template/`; clipboard JSON is only for small fragments. `kiwe-bricks-conversion.json` is not a Bricks "My Templates" upload file; if Bricks admin template upload is claimed, include a separate native Bricks template export JSON at `target.templateExportPath` with non-empty `title`, `templateType`, and non-empty `content`, `header`, or `footer`. Template-upload exports that rely on importable class styles must provide Bricks' `global_classes` dependency key, not only copied-elements `globalClasses`. Do not rely on `pageSettings.customCss` as the main styling lane for template uploads because Bricks insertion can leave that CSS behind or collide with stale target-page CSS; template-upload handoffs must carry ordinary layout/design in native element settings, global classes, or global variables. Validate with `validate-bricks-conversion` or MCP `kiwe_validate_bricks_conversion` before staging. The package does not mutate WordPress or Bricks by itself.
 

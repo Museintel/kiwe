@@ -942,9 +942,6 @@ if (exists('bricks-bindings')) {
   if (!exists('bricks-bindings/kiwe-bindings.json')) {
     add('fail', 'bricks-bindings/ exists but bricks-bindings/kiwe-bindings.json is missing.');
   }
-  if (!exists('bricks-bindings/BINDING-NOTES.md')) {
-    add('warn', 'bricks-bindings/ exists but BINDING-NOTES.md is missing. Explain Site Graph sources, assumptions, review items, and apply authority.');
-  }
 
   if (exists('bricks-bindings/kiwe-bindings.json')) {
     const bindingPath = path.join(root, 'bricks-bindings/kiwe-bindings.json');

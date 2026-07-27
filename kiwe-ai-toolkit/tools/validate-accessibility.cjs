@@ -10,7 +10,7 @@ Usage:
 
 Looks for:
   accessibility/kiwe-accessibility-plan.json
-  accessibility/ACCESSIBILITY-NOTES.md
+  accessibility/ACCESSIBILITY-NOTES.md only when /document was requested
 
 Checks:
   - light and dark mode proof

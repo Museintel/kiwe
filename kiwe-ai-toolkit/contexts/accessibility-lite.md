@@ -31,8 +31,9 @@ Create or update this lane:
 ```text
 accessibility/
   kiwe-accessibility-plan.json
-  ACCESSIBILITY-NOTES.md
 ```
+
+Do not emit `ACCESSIBILITY-NOTES.md`, README files, reports, or duplicate documentation unless the command also includes `/document` or the human explicitly asks for notes.
 
 Do not add a duplicate website preview just for accessibility. The existing page/theme/combined preview remains the visual proof. If you need to demonstrate dark mode in a preview, revise the existing preview controls or the existing page artifact.
 
@@ -146,7 +147,7 @@ Do not write element-level Bricks styles into the Framework profile. Page-specif
 3. Add/repair Kiwe token usage where hardcoded colors would break light/dark.
 4. Add native dark-mode state proof to the existing preview/page.
 5. Create `accessibility/kiwe-accessibility-plan.json`.
-6. Create `accessibility/ACCESSIBILITY-NOTES.md` explaining:
+6. If `/document` was requested, create `accessibility/ACCESSIBILITY-NOTES.md` explaining:
    - source artifact;
    - token pairs;
    - light/dark behavior;

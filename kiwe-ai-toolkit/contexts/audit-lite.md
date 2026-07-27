@@ -47,7 +47,7 @@ For a combined handoff, verify:
 
 - `combined-preview/index.html` exists and is the primary human review artifact.
 - `website/bricks-paste.html` exists and is page-only.
-- `website/bricks-notes.md` exists.
+- `website/bricks-notes.md` is optional and should exist only when `/document` was requested.
 - `appshell-theme/import/<theme-id>/theme.json` exists.
 - `appshell-theme/import/<theme-id>/css/theme.css` exists.
 - `appshell-theme/import/<theme-id>/theme-package.json` exists when the theme changes dock composition, focus item, module visibility/order, presentation, shape, colors, visual effects, sheet behavior, or other Kiwe runtime theme settings.
@@ -87,7 +87,7 @@ If an accessibility lane exists, verify:
 - `modes` includes both `light` and `dark`;
 - `tokenPairs` is non-empty and covers the real surfaces present in the artifact;
 - `manualReview` exists, even when empty;
-- `ACCESSIBILITY-NOTES.md` records what was fixed and what was only manually reviewed.
+- `ACCESSIBILITY-NOTES.md` records what was fixed and what was only manually reviewed only when `/document` was requested.
 
 When tools are available, run:
 
@@ -109,8 +109,9 @@ If the handoff is being applied to a real staging site through Kiwe AI, prefer t
 If the handoff includes a `/convert /bricks` result, audit the conversion lane too:
 
 - `bricks-conversion/kiwe-bricks-conversion.json` exists and uses `schema: "kiwe.bricks-conversion.v1"`.
-- `bricks-conversion/BRICKS-CONVERSION-NOTES.md` exists.
+- `bricks-conversion/BRICKS-CONVERSION-NOTES.md` is optional and should exist only when `/document` was requested.
 - `source.html` points to `website/bricks-paste.html`.
+- A Framework foundation exists or is explicitly confirmed: `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or a human statement that Kiwe > Framework/Bricks Theme Styles are already pushed. Otherwise `/convert /bricks` should have stopped before conversion.
 - Fail if the conversion source is `combined-preview`, `appshell-theme`, DSA/AppShell preview markup, sheet/screen/dock/navbar markup, `theme-package.json`, or `css/theme.css`.
 - `elements` is a non-empty Bricks element array with IDs, names, and valid parent references.
 - Source Seam classes, IDs, ARIA, `data-role`, `data-seam-*`, and `data-dsa-open-module` launchers are preserved in the conversion package.

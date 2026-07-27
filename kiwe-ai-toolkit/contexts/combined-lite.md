@@ -4,6 +4,8 @@ Use this file when a browser AI needs to create a Kiwe website/page plus Kiwe DS
 
 Do not read the whole repo. Do not output a React/Vite/Tailwind/shadcn app. The output must be plain HTML/CSS with optional preview-only JS.
 
+Documentation is opt-in. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact files for the lane. Do not add duplicate notes, reports, screenshots, ZIP-only wrappers, or extra explanation files by default.
+
 ## Goal
 
 Create a combined Kiwe handoff:
@@ -28,7 +30,7 @@ combined-kiwe-handoff/
       combined-preview.js   # optional, preview-only
   website/
     bricks-paste.html       # open in browser for website/page preview; paste/import through Bricks
-    bricks-notes.md
+    bricks-notes.md         # optional only when /document is requested
   appshell-theme/
     README.md
     import/
@@ -42,7 +44,7 @@ combined-kiwe-handoff/
       PLACEHOLDERS.md
   accessibility/                  # required when the design introduces or revises light/dark/contrast tokens
     kiwe-accessibility-plan.json
-    ACCESSIBILITY-NOTES.md
+    ACCESSIBILITY-NOTES.md        # optional only when /document is requested
 ```
 
 ## Combined preview rule

@@ -2,7 +2,7 @@
 
 Use this context for `/convert /bricks` and `/audit /bricksconversion`.
 
-This is not a creative design phase. It starts only after a website/page artifact is visually approved and, when relevant, after `/usesitegraph` produced live binding intent.
+This is not a creative design phase. It starts only after a website/page artifact is visually approved, after a Framework profile or Bricks theme style exists/pushed, and, when relevant, after `/usesitegraph` produced live binding intent.
 
 Goal: convert an approved `website/bricks-paste.html` HTML/CSS page into a reviewable Bricks-native element JSON package without losing layout, Seam vocabulary, Kiwe launchers, dynamic tags, query-loop intent, conditions, interactions, or unsupported/manual-review evidence.
 
@@ -23,9 +23,12 @@ If a combined handoff is supplied, use only the `website/bricks-paste.html` lane
 
 Do not read the whole Kiwe repository. Do not scrape the public frontend. Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth. This phase produces a conversion package only.
 
+If the artifact summary does not include `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or explicit human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed, stop and ask the human to run `/create /frameworkprofile` first. Do not silently create a Framework profile inside `/convert /bricks`.
+
 ## Preferred inputs
 
 - `website/bricks-paste.html`
+- `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or confirmation that Kiwe > Framework/Bricks Theme Styles are already pushed
 - optional `bricks-bindings/kiwe-bindings.json` from `/usesitegraph`
 - optional target `kiwe.site-graph.v1` JSON
 - optional `/wp-json/dsa/v1/ai/bricks/context` or MCP `kiwe_get_bricks_conversion_context`
@@ -64,10 +67,11 @@ Keep the existing handoff files intact. Add:
 ```text
 bricks-conversion/
   kiwe-bricks-conversion.json
-  BRICKS-CONVERSION-NOTES.md
 bricks-template/
   [page-or-template-name]-template-upload.json   # required for Bricks My Templates/admin upload delivery
 ```
+
+Do not emit `BRICKS-CONVERSION-NOTES.md`, README files, reports, screenshots, duplicate previews, or extra docs unless the command also includes `/document` or the human explicitly asks for documentation.
 
 Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
 
@@ -237,9 +241,9 @@ POST /wp-json/dsa/v1/ai/audit-companion/review
 
 Fix every `mustFix`, then rerun once when practical.
 
-## Notes file
+## Optional `/document` notes file
 
-`BRICKS-CONVERSION-NOTES.md` must explain:
+Create `BRICKS-CONVERSION-NOTES.md` only when the command includes `/document` or the human explicitly asks for notes. When requested, it should explain:
 
 - source artifact converted;
 - whether Bricks native converter, Kiwe fallback, or AI-authored mapping was used;

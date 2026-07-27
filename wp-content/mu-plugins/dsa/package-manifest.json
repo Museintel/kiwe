@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.49",
+  "version": "6.50",
   "algorithm": "sha256",
-  "file_count": 273,
+  "file_count": 276,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,15 +182,15 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "d8e48c00ae4f372181bb578c77fbfa690fe9579ab7c31039a9f5881d3b27c20c"
+      "sha256": "d1a13e50f18bac344f2ee404947461dbdccd1da5f0318ab5646f7d136d056485"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3601,
       "sha256": "a32f337a88d3fd4e76f929532213efd11f3269128d9ef00be6cf74d9c70a7d64"
     },
     "framework-system/HANDOFF-MODES.md": {
-      "bytes": 14955,
-      "sha256": "0b78438241b73433f5011b2134d010cf12a558d0bfa1496047fa16a7b5424419"
+      "bytes": 15053,
+      "sha256": "e3417aeea47159957179dd879d7f78f865a38643441ac0c88774e70adb79baa7"
     },
     "framework-system/README.md": {
       "bytes": 8375,
@@ -203,6 +203,10 @@
     "framework-system/bricks/bricks-capabilities.json": {
       "bytes": 5550,
       "sha256": "20be047a90eae1754417b9ab9e2ee08ee96a4aa537ff9a4d5189570ce0c242fe"
+    },
+    "framework-system/contracts/bricks-theme-style.schema.json": {
+      "bytes": 2188,
+      "sha256": "6388e45c5b4caeaa6d0a836426fa8bcf0c02c1cbd78b35e64c84bbecd6941872"
     },
     "framework-system/contracts/framework-profile.schema.json": {
       "bytes": 2669,
@@ -237,12 +241,12 @@
       "sha256": "a32f337a88d3fd4e76f929532213efd11f3269128d9ef00be6cf74d9c70a7d64"
     },
     "framework-system/handoffs/website-builder/HANDOFF-MODES.md": {
-      "bytes": 14955,
-      "sha256": "0b78438241b73433f5011b2134d010cf12a558d0bfa1496047fa16a7b5424419"
+      "bytes": 15053,
+      "sha256": "e3417aeea47159957179dd879d7f78f865a38643441ac0c88774e70adb79baa7"
     },
     "framework-system/handoffs/website-builder/README-FIRST.md": {
-      "bytes": 6370,
-      "sha256": "b07e02f7f754b4d59adeb0d6b06bfebf80c926d488ba95275bcd180f636b2fcb"
+      "bytes": 6472,
+      "sha256": "7d7f8aab74dcbd06bf18490d23af0747fd28499e351af762e7d7a277ba2a2707"
     },
     "framework-system/handoffs/website-builder/bricks/BRICKS-INTEGRATION.md": {
       "bytes": 8895,
@@ -251,6 +255,10 @@
     "framework-system/handoffs/website-builder/bricks/bricks-capabilities.json": {
       "bytes": 5550,
       "sha256": "20be047a90eae1754417b9ab9e2ee08ee96a4aa537ff9a4d5189570ce0c242fe"
+    },
+    "framework-system/handoffs/website-builder/contracts/bricks-theme-style.schema.json": {
+      "bytes": 2188,
+      "sha256": "6388e45c5b4caeaa6d0a836426fa8bcf0c02c1cbd78b35e64c84bbecd6941872"
     },
     "framework-system/handoffs/website-builder/contracts/framework-profile.schema.json": {
       "bytes": 2669,
@@ -976,9 +984,13 @@
       "bytes": 2346,
       "sha256": "34eba5f9c8fd1b727e51982ddd32fb836f35cea3becb5a4c7aa624ed06888457"
     },
+    "site-graph-system/release-proof-6.50.md": {
+      "bytes": 3208,
+      "sha256": "0e9947cb82811625599e56f4a1e0aa341d3b813dba7ac211b6b411a8dc93eb89"
+    },
     "ui-system/HANDOFF-MODES.md": {
-      "bytes": 14580,
-      "sha256": "7fe266946b3b32c7a3c00ce01743187a2505b281e35fcd4c5eaf9ebf57b3e7d7"
+      "bytes": 14678,
+      "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
       "bytes": 58295,

@@ -13,7 +13,8 @@ Run them as separate phases:
 1. Pure creative draft.
 2. Seam rebuild.
 3. Seam audit.
-4. Framework / Bricks global theme-style profile.
+4. Framework profile for Kiwe > Framework import/push.
+4a. Optional standalone Bricks Theme Styles JSON when the human asks for `/brickstheme`.
 5. DSA AppShell theme.
 6. DSA audit.
 7. Combined assembly when both lanes are approved.
@@ -81,7 +82,7 @@ kiwe_diagnose_command
 CLI-capable clients can run:
 
 ```bash
-node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifact-summary "website/bricks-paste.html exists"
+node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifact-summary "website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists"
 ```
 
 The diagnostic result uses `schema: "kiwe.command-diagnostic.v1"` and returns one of:
@@ -99,6 +100,7 @@ Examples:
 - `/create /preview /brickstheme` -> `rejected`, `unsupported_preview_target`; Framework/Bricks theme profiles are token JSON and have no separate preview lane.
 - `/create /preview /website` when `website/bricks-paste.html` already exists -> `noop`, `website_preview_already_exists`; the page artifact is already the preview.
 - `/convert /bricks` without `website/bricks-paste.html` -> `needs_input`, `bricks_convert_missing_page_source`.
+- `/convert /bricks` with `website/bricks-paste.html` but no `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or human confirmation that Kiwe > Framework is already pushed -> `needs_input`, `bricks_convert_missing_framework_profile`.
 - `/convert /bricks` against `combined-preview` or `appshell-theme` -> `rejected`, `bricks_convert_forbidden_source_in_command`.
 - `/audit /bricksconversion` without `bricks-conversion/kiwe-bricks-conversion.json` -> `needs_input`, `bricks_audit_missing_conversion_artifact`.
 - `/usesitegraph` without Site Graph/API/export context -> `needs_input`, `dynamic_missing_site_graph`.
@@ -112,6 +114,8 @@ Examples:
 
 ```text
 /rebuild /seamframework /usecompanion
+/create /frameworkprofile /usecompanion
+/create /brickstheme /usecompanion
 /audit /dsatheme /usecompanion
 /create /preview /dsatheme /usecompanion
 /create /preview /combined /usecompanion
@@ -220,6 +224,8 @@ Rules:
 - For a DSA theme, document installed theme package identity, supported screen coverage, preview-only content, and geometry boundaries.
 - For combined handoffs, document how the already-created page, AppShell theme, preview, Site Graph/dynamic intent, and Bricks artifacts connect.
 
+Documentation is opt-in everywhere. If `/document` is absent, produce only the canonical artifact file(s) for the selected command and do not add README files, notes, reports, duplicate previews, ZIPs, or explanation files.
+
 ### `/ideate /webdraft`
 
 Use when the human wants maximum visual creativity.
@@ -293,7 +299,7 @@ Expected output:
 ```text
 accessibility/
   kiwe-accessibility-plan.json
-  ACCESSIBILITY-NOTES.md
+  ACCESSIBILITY-NOTES.md # optional only when /document is requested
 ```
 
 Rules:
@@ -328,20 +334,17 @@ node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff-or-accessibility-
 
 If tools are available, run the relevant Kiwe validators. If tools are not available, revise the actual files manually and report what changed.
 
-### `/create /brickstheme`
+### `/create /frameworkprofile`
 
-Alias: `/create /frameworkprofile`.
+Use after the Seam page direction is approved and the human wants the site personality turned into a Kiwe > Framework import profile.
 
-Use after the Seam page direction is approved and the human wants the site personality turned into reusable Kiwe / Bricks global tokens.
-
-Create a standalone Framework profile only when the output is website/page-first and not an AppShell theme package.
+The admin imports this file in Kiwe > Framework and pushes variables, color palette, global classes, and Bricks theme-style data from there. This is the preferred setup path for most users.
 
 Expected output:
 
 ```text
 framework/
   kiwe-framework-profile.json
-  FRAMEWORK-NOTES.md
 ```
 
 The profile must use:
@@ -365,10 +368,9 @@ Rules:
 - Use official Kiwe universal token names only, such as `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `space-md`, `radius-lg`, and `shadow-md`.
 - `bricks_theme_style` may cover global colors, typography, links, and site background only.
 - Do not put AppShell dock/sheet/screen settings, products, posts, raw Bricks JSON, WooCommerce behavior, or runtime JS here.
+- Do not output `FRAMEWORK-NOTES.md`, README files, reports, Bricks template JSON, or AppShell theme packages unless `/document` is explicitly present.
 
-### `/audit /brickstheme`
-
-Alias: `/audit /frameworkprofile`.
+### `/audit /frameworkprofile`
 
 Audit for:
 
@@ -378,6 +380,45 @@ Audit for:
 - no raw `--kiwe-*` or private `--dsa-runtime-token-*` keys;
 - no AppShell settings;
 - no Bricks element-level styling;
+
+### `/create /brickstheme`
+
+Use only when the human asks for the standalone Bricks Theme Styles import file instead of the Kiwe > Framework profile.
+
+Expected output:
+
+```text
+bricks-theme-style.json
+```
+
+The root shape is:
+
+```json
+{
+  "id": "optional-safe-id",
+  "label": "Human readable Bricks style name",
+  "settings": {}
+}
+```
+
+Rules:
+
+- This is native Bricks Theme Styles JSON for the Bricks visual editor.
+- Root `id` is optional for Bricks-export compatibility; if omitted, Bricks/Kiwe can generate one.
+- It is not a Kiwe Framework profile, not a Bricks page/template upload, and not a DSA/AppShell theme package.
+- Do not include `schema`, `theme-package.json`, `content`, `header`, `footer`, `globalClasses`, `global_classes`, AppShell screen/dock selectors, WooCommerce runtime data, cart/checkout/auth behavior, or docs unless `/document` is present.
+- Prefer Kiwe/Seam token variables and Bricks global color/theme slots where practical.
+
+### `/audit /brickstheme`
+
+Audit for:
+
+- exactly one `bricks-theme-style.json`;
+- root `label` and `settings`;
+- no Framework profile wrapper;
+- no Bricks template/page JSON;
+- no AppShell/DSA theme selectors or runtime authority;
+- global-only style scope: site background, colors, typography, and links.
 - no product/content/runtime authority.
 
 If tools are available, run:
@@ -487,7 +528,7 @@ combined-kiwe-handoff/
       combined-preview.js
   website/
     bricks-paste.html
-    bricks-notes.md
+    bricks-notes.md # optional only when /document is requested
   appshell-theme/
     README.md
     import/
@@ -577,8 +618,9 @@ Expected output:
 ```text
 bricks-bindings/
   kiwe-bindings.json
-  BINDING-NOTES.md
 ```
+
+Do not emit `BINDING-NOTES.md`, README files, reports, or extra docs unless the command also includes `/document` or the human explicitly asks for documentation.
 
 If tools are available:
 
@@ -591,7 +633,7 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs /path/to/handoff --site-graph 
 
 ### `/convert /bricks`
 
-Use only after the website/page visual artifact passes and, when the page should use live WordPress/Bricks/WooCommerce data, after `/usesitegraph` has mapped that intent.
+Use only after the website/page visual artifact passes, and only after a Framework profile or Bricks theme style exists or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed. When the page should use live WordPress/Bricks/WooCommerce data, also run after `/usesitegraph` has mapped that intent.
 
 Purpose:
 
@@ -601,14 +643,16 @@ Purpose:
 - Carry Kiwe's no-loss proof for query loops, dynamic tags, conditions, interactions, unsupported features, and manual-review gates.
 - Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth.
 - Do not convert `combined-preview`, `appshell-theme`, DSA/AppShell theme packages, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css`.
+- Do not create the missing Framework profile inside this command. If no `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or explicit "already pushed" confirmation exists, stop and ask for `/create /frameworkprofile` first.
 
 Expected output:
 
 ```text
 bricks-conversion/
   kiwe-bricks-conversion.json
-  BRICKS-CONVERSION-NOTES.md
 ```
+
+Do not emit `BRICKS-CONVERSION-NOTES.md`, README files, reports, or other docs unless `/document` is explicitly present.
 
 The conversion JSON uses `schema: "kiwe.bricks-conversion.v1"` and contains top-level `source`, `target`, `conversion`, `elements`, `pageSettings`, `globalClasses`, `globalVariables`, `fidelity`, and `report` lanes. `target.importMethod` is required and must be one of `review-only`, `bricks-clipboard-json`, `bricks-admin-template-upload`, or `kiwe-staging-executor`. `kiwe-bricks-conversion.json` is a Kiwe audit/executor envelope, not a Bricks "My Templates" upload file. For full pages and large sections, use `bricks-admin-template-upload` by default and include a separate native Bricks template export at `target.templateExportPath` with non-empty `title`, `templateType`, and non-empty `content`, `header`, or `footer`; clipboard JSON is only for small fragments. For template upload, put importable Bricks class dependencies under Bricks' `global_classes` key; `globalClasses` is the copied-elements/import-manager shape and is not enough by itself for the My Templates path. Template-upload handoffs must not depend on `pageSettings.customCss` for ordinary design, because inserted templates can lose that page CSS or be controlled by stale target-page CSS. Put typography, layout, responsive grid/flex, backgrounds, borders, shadows, sizing, spacing, and alignment into Bricks element settings/global classes/global variables first. `fidelity.responsiveIntent` is required whenever the conversion contains bento/campaign/editorial grids, CSS grid placement, media-query layout behavior, or Bricks breakpoint layout overrides. Bricks 2.4 responsive controls are stored as `controlKey:breakpoint`, including `_direction:<breakpoint>`, grid controls, `_cssCustom:<breakpoint>`, and custom site breakpoint keys. Bricks layout elements (`container`, `div`, `section`, `block`) use `_direction` / `_direction:<breakpoint>` for flex direction; `_flexDirection` is only for non-nestable elements. CSS-heavy or mappable-CSS-heavy conversions must include `fidelity.nativeStyleIntent` proving ordinary visual rules became editable Bricks controls/global classes/global variables before any custom-CSS exceptions; common layout/visual properties should be emitted as controls such as `_display`, `_direction`, `_justifyContent`, `_alignItems`, `_flexWrap`, `_columnGap`, `_rowGap`, `_gridTemplateColumns`, `_gridItemColumnSpan`, `_typography`, `_background`, `_gradient`, `_border`, `_boxShadow`, `_transform`, `_cssFilters`, and `_cssTransition`.
 
@@ -623,7 +667,7 @@ Use after `/convert /bricks`.
 Audit for:
 
 - `bricks-conversion/kiwe-bricks-conversion.json` exists and uses `kiwe.bricks-conversion.v1`;
-- `BRICKS-CONVERSION-NOTES.md` exists;
+- documentation exists only if `/document` was requested; missing `BRICKS-CONVERSION-NOTES.md` is not a failure for lean `/convert /bricks`;
 - Bricks elements are non-empty, have IDs/names, and parent references resolve;
 - `website/bricks-paste.html` remains page-only and contains no AppShell shell markup;
 - source Seam classes and canonical Kiwe launchers are preserved in the conversion package;
@@ -657,8 +701,8 @@ For best output quality:
 1. Ask any AI for a pure creative website/page draft. Do not mention Kiwe.
 2. When the visual idea is good, run `/rebuild /seamframework`.
 3. Run `/audit /seamframework`.
-4. Create global design tokens with `/create /brickstheme` if needed.
-5. Audit tokens with `/audit /brickstheme`.
+4. Create global design tokens with `/create /frameworkprofile` if needed, then import it in Kiwe > Framework and push to Bricks.
+5. Audit tokens with `/audit /frameworkprofile`. Use `/create /brickstheme` only when the human specifically wants the standalone Bricks Theme Styles JSON.
 6. Create the DSA theme with `/create /dsatheme`.
 7. Audit the DSA theme with `/audit /dsatheme`.
 8. Create or refresh DSA preview proof with `/create /preview /dsatheme` if needed.

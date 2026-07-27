@@ -20,14 +20,15 @@ If a website/page-only handoff creates a reusable brand token system for Bricks 
 4. `contracts/token-map.css`
 5. `contracts/tokens-reference.md`
 6. `contracts/framework-profile.schema.json`
-7. `contracts/seam-vocabulary.md`
-8. `contracts/seam-vocabulary.json`
-9. `contracts/seam-class-vocabulary.md`
-10. `contracts/seam-class-vocabulary.json`
-11. `runtime/seam.css`
-12. `runtime/seam.js`
-13. `bricks/bricks-capabilities.json`
-14. `bricks/BRICKS-INTEGRATION.md`
+7. `contracts/bricks-theme-style.schema.json`
+8. `contracts/seam-vocabulary.md`
+9. `contracts/seam-vocabulary.json`
+10. `contracts/seam-class-vocabulary.md`
+11. `contracts/seam-class-vocabulary.json`
+12. `runtime/seam.css`
+13. `runtime/seam.js`
+14. `bricks/bricks-capabilities.json`
+15. `bricks/BRICKS-INTEGRATION.md`
 
 ## What to build
 
@@ -49,7 +50,7 @@ For rails, put `.seam-horizontal-rail` / `data-flow="horizontal-rail"` only on t
 Required website artifacts:
 
 - `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks.
-- `bricks-notes.md` explaining how the preview maps to Bricks and which interactions remain Kiwe/WordPress/Woo/Bricks-owned.
+- `bricks-notes.md` only when `/document` is requested; if present, it should explain how the preview maps to Bricks and which interactions remain Kiwe/WordPress/Woo/Bricks-owned.
 - Optional `framework/kiwe-framework-profile.json` when the output defines a reusable sitewide token profile. Validate it with `node kiwe-ai-toolkit/tools/validate-framework-profile.cjs path/to/handoff --optional`.
 
 Do not return a React, Vite, Next, Tailwind, shadcn, or other build-app project as the primary output. Those can be inspirational prototypes only if separately requested. The Kiwe handoff must be plain HTML/CSS with optional preview-only JS so it can travel into Bricks.
