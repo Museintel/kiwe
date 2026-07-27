@@ -4,6 +4,18 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.49 - 2026-07-27
+
+- Added a Kiwe > Framework clear action that resets the active Framework token profile and removes only Kiwe-owned Framework data from Bricks: `kiwe-*` variables, Kiwe Universal palette/category entries, the active/default Kiwe global theme style, and Seam Class Vocabulary classes/categories.
+- Preserved non-Kiwe Bricks variables, classes, palettes, and theme styles during clear, with a safety backup stored before mutation.
+- Added `/document` as the explicit documentation phase and changed `/rebuild /seamframework` to emit only `website/bricks-paste.html` by default, reducing browser-AI token spend and preventing unnecessary `bricks-notes.md` output unless requested.
+- Synced the lean Seam rebuild output shape through the public workflow context, root AI entrypoint, MCP routing copy, toolkit command list, handoff scaffold, website validator, and generic audit tool.
+
+## 6.48 - 2026-07-27
+
+- Hardened Bricks template-upload validation after National Chikki testing exposed direct-template JSON that imported with no title, missing template type, custom-CSS dependency, unsupported semantic element names, and too few native Bricks style/layout controls.
+- Updated the Node validator, REST validator, Bricks conversion context, and audit context so `/audit /bricksconversion` rejects broken direct Bricks template objects instead of treating them like complete conversion packages.
+
 ## 6.47 - 2026-07-27
 
 - Added first-class `/create /accessibility` and `/audit /accessibility` workflow lanes for existing page/theme/combined/framework/Bricks artifacts, focused on color contrast and native light/dark support while keeping font-size/readability scaling as a later lane.

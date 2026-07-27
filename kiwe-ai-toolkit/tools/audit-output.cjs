@@ -938,10 +938,6 @@ if (websiteText && /(cart|bag|account|profile)[^<]{0,80}(<\/button>|<\/a>)|aria-
   add('warn', 'Website/header appears to include cart/account/profile affordances without the canonical Kiwe open hook. Use data-dsa-open-module="cart" or data-dsa-open-module="profile".');
 }
 
-if (!exists('website/bricks-notes.md') && !exists('bricks-notes.md')) {
-  add('warn', 'Missing bricks-notes.md explaining Bricks import mapping and capability boundaries.');
-}
-
 if (exists('bricks-bindings')) {
   if (!exists('bricks-bindings/kiwe-bindings.json')) {
     add('fail', 'bricks-bindings/ exists but bricks-bindings/kiwe-bindings.json is missing.');

@@ -57,7 +57,7 @@ For rails, put `.seam-horizontal-rail` / `data-flow="horizontal-rail"` only on t
 Required website artifacts:
 
 - `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks.
-- `bricks-notes.md` explaining how the preview maps to Bricks and which interactions remain Kiwe/WordPress/Woo/Bricks-owned.
+- Optional documentation only when the command includes `/document`: `bricks-notes.md` explaining how the preview maps to Bricks and which interactions remain Kiwe/WordPress/Woo/Bricks-owned.
 
 Do not return a React, Vite, Next, Tailwind, shadcn, or other build-app project as the primary output. Those can be inspirational prototypes only if separately requested. The Kiwe handoff must be plain HTML/CSS with optional preview-only JS so it can travel into Bricks.
 
@@ -282,9 +282,8 @@ Expected output:
 
 ```text
 website-handoff/
-  README.md
   bricks-paste.html  # open in browser for preview; paste/import through Bricks
-  bricks-notes.md
+  bricks-notes.md    # optional only when /document is requested
   framework/
     kiwe-framework-profile.json # optional when the page defines a sitewide token profile
 ```

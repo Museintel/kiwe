@@ -36,7 +36,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_route_command',
-      description: 'Route a short canonical command such as /list, /fix, /ideate /webdraft, /rebuild /seamframework, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
+      description: 'Route a short canonical command such as /list, /fix, /document, /ideate /webdraft, /rebuild /seamframework, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
       inputSchema: {
         type: 'object',
         properties: {

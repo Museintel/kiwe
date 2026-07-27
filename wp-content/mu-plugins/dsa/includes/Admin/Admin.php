@@ -103,6 +103,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_send_notification_campaign', [ $this, 'handle_notification_campaign' ] );
 		add_action( 'admin_post_dsa_export_bricks_tokens', [ $this, 'export_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_apply_bricks_tokens', [ $this, 'apply_bricks_tokens' ] );
+		add_action( 'admin_post_dsa_clear_framework', [ $this, 'clear_framework' ] );
 		add_action( 'admin_post_dsa_create_ai_access_key', [ $this, 'create_ai_access_key' ] );
 		add_action( 'admin_post_dsa_revoke_ai_access_key', [ $this, 'revoke_ai_access_key' ] );
 		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
@@ -2985,6 +2986,183 @@ final class Admin {
 		exit;
 	}
 
+	public function clear_framework(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to clear the Kiwe Framework profile.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_clear_framework' );
+
+		$settings               = $this->settings->all();
+		$defaults               = $this->settings->defaults();
+		$current_theme_style_id = $this->bricks_theme_style_options()['id'];
+		$default_theme_style_id = isset( $defaults['tokens']['bricks_theme_style']['id'] ) ? sanitize_key( (string) $defaults['tokens']['bricks_theme_style']['id'] ) : 'kiwe-global-design';
+
+		$settings['tokens'] = $defaults['tokens'];
+		$this->settings->update( $settings );
+
+		if ( ! defined( 'BRICKS_DB_GLOBAL_VARIABLES' ) || ! defined( 'BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES' ) ) {
+			wp_safe_redirect( add_query_arg( [ 'framework-cleared' => 'profile', 'tokens-exported' => 'no-bricks' ], admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+
+		$current_variables        = get_option( BRICKS_DB_GLOBAL_VARIABLES, [] );
+		$current_categories       = get_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, [] );
+		$current_palette          = defined( 'BRICKS_DB_COLOR_PALETTE' ) ? get_option( BRICKS_DB_COLOR_PALETTE, [] ) : [];
+		$current_theme_styles     = defined( 'BRICKS_DB_THEME_STYLES' ) ? get_option( BRICKS_DB_THEME_STYLES, [] ) : [];
+		$current_classes          = defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES, [] ) : [];
+		$current_class_categories = defined( 'BRICKS_DB_GLOBAL_CLASSES_CATEGORIES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES_CATEGORIES, [] ) : [];
+		$current_variables        = is_array( $current_variables ) ? $current_variables : [];
+		$current_categories       = is_array( $current_categories ) ? $current_categories : [];
+		$current_palette          = is_array( $current_palette ) ? $current_palette : [];
+		$current_theme_styles     = is_array( $current_theme_styles ) ? $current_theme_styles : [];
+		$current_classes          = is_array( $current_classes ) ? $current_classes : [];
+		$current_class_categories = is_array( $current_class_categories ) ? $current_class_categories : [];
+
+		update_option(
+			'dsa_bricks_tokens_backup',
+			[
+				'createdAt'       => gmdate( 'c' ),
+				'userId'          => get_current_user_id(),
+				'version'         => DSA_VERSION,
+				'action'          => 'clear-framework',
+				'variables'       => $current_variables,
+				'categories'      => $current_categories,
+				'palette'         => $current_palette,
+				'themeStyles'     => $current_theme_styles,
+				'classes'         => $current_classes,
+				'classCategories' => $current_class_categories,
+			],
+			false
+		);
+
+		$kiwe_class_export = Seam_Token_Service::framework_classes_for_bricks();
+		$kiwe_class_names  = array_flip(
+			array_filter(
+				array_map(
+					static function ( $class ): string {
+						return is_array( $class ) ? (string) ( $class['name'] ?? '' ) : '';
+					},
+					is_array( $kiwe_class_export['classes'] ?? null ) ? $kiwe_class_export['classes'] : []
+				)
+			)
+		);
+
+		$next_variables = array_values(
+			array_filter(
+				$current_variables,
+				static function ( $variable ): bool {
+					if ( ! is_array( $variable ) ) {
+						return false;
+					}
+
+					$name   = isset( $variable['name'] ) ? (string) $variable['name'] : '';
+					$source = isset( $variable['source'] ) ? (string) $variable['source'] : '';
+
+					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'kiwe-' );
+				}
+			)
+		);
+		$next_categories = array_values(
+			array_filter(
+				$current_categories,
+				static function ( $category ): bool {
+					if ( ! is_array( $category ) ) {
+						return false;
+					}
+
+					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
+					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
+
+					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'Kiwe ' );
+				}
+			)
+		);
+		$next_palette = array_values(
+			array_filter(
+				$current_palette,
+				static function ( $palette ): bool {
+					if ( ! is_array( $palette ) ) {
+						return false;
+					}
+
+					$name   = isset( $palette['name'] ) ? (string) $palette['name'] : '';
+					$source = isset( $palette['source'] ) ? (string) $palette['source'] : '';
+
+					return 'kiwe-universal' !== $source && 'Kiwe Universal' !== $name;
+				}
+			)
+		);
+		$next_classes = array_values(
+			array_filter(
+				$current_classes,
+				static function ( $class ) use ( $kiwe_class_names ): bool {
+					if ( ! is_array( $class ) ) {
+						return false;
+					}
+
+					$name   = isset( $class['name'] ) ? (string) $class['name'] : '';
+					$source = isset( $class['source'] ) ? (string) $class['source'] : '';
+
+					return 'kiwe-seam' !== $source && ! isset( $kiwe_class_names[ $name ] );
+				}
+			)
+		);
+		$next_class_categories = array_values(
+			array_filter(
+				$current_class_categories,
+				static function ( $category ): bool {
+					if ( ! is_array( $category ) ) {
+						return false;
+					}
+
+					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
+					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
+
+					return 'kiwe-seam' !== $source && ! str_starts_with( $name, 'Kiwe Seam ' );
+				}
+			)
+		);
+
+		$theme_style_ids = array_filter( array_unique( [ $current_theme_style_id, $default_theme_style_id ] ) );
+		foreach ( $theme_style_ids as $theme_style_id ) {
+			unset( $current_theme_styles[ $theme_style_id ] );
+		}
+
+		update_option( BRICKS_DB_GLOBAL_VARIABLES, $next_variables, false );
+		update_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $next_categories, false );
+		if ( defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
+			update_option( BRICKS_DB_COLOR_PALETTE, $next_palette, false );
+		}
+		if ( defined( 'BRICKS_DB_THEME_STYLES' ) ) {
+			update_option( BRICKS_DB_THEME_STYLES, $current_theme_styles, false );
+		}
+		if ( defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ) {
+			if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_classes_in_db' ) ) {
+				\Bricks\Helpers::save_global_classes_in_db( $next_classes );
+			} else {
+				update_option( BRICKS_DB_GLOBAL_CLASSES, $next_classes, false );
+			}
+		}
+		if ( defined( 'BRICKS_DB_GLOBAL_CLASSES_CATEGORIES' ) ) {
+			update_option( BRICKS_DB_GLOBAL_CLASSES_CATEGORIES, $next_class_categories, false );
+		}
+
+		if ( class_exists( '\Bricks\Assets_Global_Variables' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Global_Variables::generate_css_file( $next_variables );
+		}
+		if ( class_exists( '\Bricks\Assets_Color_Palettes' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Color_Palettes::generate_css_file( $next_palette );
+		}
+
+		wp_safe_redirect( add_query_arg( 'framework-cleared', '1', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		exit;
+	}
+
 	public function import_profile(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3409,6 +3587,14 @@ final class Admin {
 			<?php if ( isset( $_GET['framework-profile-imported'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Framework profile imported. Push Kiwe Framework to Bricks when you want those tokens/classes written to Bricks.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['framework-cleared'] ) ) : ?>
+				<?php $clear_status = sanitize_key( (string) wp_unslash( $_GET['framework-cleared'] ) ); ?>
+				<?php if ( 'profile' === $clear_status ) : ?>
+					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Framework profile was reset to the built-in Kiwe defaults. Bricks storage was not available, so no Bricks data was changed.', 'dsa' ); ?></p></div>
+				<?php else : ?>
+					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Framework profile was reset and Kiwe-owned Bricks variables, palettes, theme style, and Seam classes were cleared. Existing non-Kiwe Bricks design data was left untouched.', 'dsa' ); ?></p></div>
+				<?php endif; ?>
+			<?php endif; ?>
 			<?php if ( isset( $_GET['framework-profile-error'] ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->framework_profile_error_message( sanitize_key( (string) wp_unslash( $_GET['framework-profile-error'] ) ) ) ); ?></p></div>
 			<?php endif; ?>
@@ -3446,6 +3632,11 @@ final class Admin {
 					<input type="hidden" name="action" value="dsa_export_bricks_tokens">
 					<?php wp_nonce_field( 'dsa_export_bricks_tokens' ); ?>
 					<?php submit_button( __( 'Download Bricks Framework JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
+				</form>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_clear_framework">
+					<?php wp_nonce_field( 'dsa_clear_framework' ); ?>
+					<?php submit_button( __( 'Clear Framework + Bricks Push', 'dsa' ), 'delete', 'submit', false, [ 'onclick' => "return confirm('" . esc_js( __( 'Clear the active Framework profile and remove only Kiwe-owned Framework data from Bricks? Non-Kiwe Bricks variables, classes, palettes, and styles will be preserved.', 'dsa' ) ) . "');" ] ); ?>
 				</form>
 				<div class="dsa-admin-inline-fields" style="margin-top: 12px;">
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

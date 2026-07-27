@@ -351,10 +351,9 @@ This is still not a WordPress mutation. It exists so a later trusted adapter can
 
 ```text
 website-handoff/
-  README.md
   website/
     bricks-paste.html  # browser preview + Bricks paste/import artifact
-    bricks-notes.md
+    bricks-notes.md    # optional only when /document is requested
   framework/
     kiwe-framework-profile.json # optional sitewide Seam/Kiwe token profile
 ```

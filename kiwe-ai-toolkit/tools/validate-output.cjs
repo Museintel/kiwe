@@ -23,9 +23,12 @@ if (!validModes.has(mode)) {
 }
 
 const root = path.resolve(target);
-const required = ['README.md'];
+const required = mode === 'website' ? [] : ['README.md'];
 if (mode === 'website' || mode === 'combined') {
-  required.push('website/bricks-paste.html', 'website/bricks-notes.md');
+  required.push('website/bricks-paste.html');
+  if (mode === 'combined') {
+    required.push('website/bricks-notes.md');
+  }
 }
 if (mode === 'theme') {
   required.push('appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');

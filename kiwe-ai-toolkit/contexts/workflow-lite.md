@@ -203,6 +203,23 @@ Rules:
 
 If the correct lane is unclear, diagnose first and ask for the missing artifact map.
 
+### `/document`
+
+Use only when the human explicitly asks for notes, handoff documentation, mapping explanations, or a written summary for an already-created artifact.
+
+Required input:
+
+- the artifact folder/file map or actual files to document.
+
+Rules:
+
+- Do not create or revise the website/page, DSA theme, Bricks conversion, accessibility plan, or combined preview unless the human also supplied a matching create/fix command.
+- Keep documentation compact and lane-specific.
+- For a Seam rebuild, create `website/bricks-notes.md` only when this command is present.
+- For a Bricks conversion, document conversion assumptions, manual-review items, native element mapping, dynamic intent, and any unsupported source features.
+- For a DSA theme, document installed theme package identity, supported screen coverage, preview-only content, and geometry boundaries.
+- For combined handoffs, document how the already-created page, AppShell theme, preview, Site Graph/dynamic intent, and Bricks artifacts connect.
+
 ### `/ideate /webdraft`
 
 Use when the human wants maximum visual creativity.
@@ -236,10 +253,10 @@ Expected output:
 ```text
 website/
   bricks-paste.html
-  bricks-notes.md
 ```
 
 `website/bricks-paste.html` is both the preview and the Bricks paste/import artifact.
+Do not emit `website/bricks-notes.md`, README files, reports, or additional documentation in this phase unless the command also includes `/document` or the human asks for documentation.
 
 ### `/audit /seamframework`
 

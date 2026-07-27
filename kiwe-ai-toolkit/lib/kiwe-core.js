@@ -268,6 +268,12 @@ export function listCommands() {
         output: 'revised existing files; no unrelated new package'
       },
       {
+        command: '/document',
+        purpose: 'Create compact lane-specific notes only after an artifact exists.',
+        requires: ['existing artifact folder/file map'],
+        output: 'documentation files only; no artifact redesign'
+      },
+      {
         command: '/ideate /webdraft',
         purpose: 'Create a pure creative HTML/CSS/JS draft before Kiwe constraints are introduced.',
         requires: ['plain design brief'],
@@ -277,7 +283,7 @@ export function listCommands() {
         command: '/rebuild /seamframework',
         purpose: 'Rebuild an approved creative draft with Seam Framework, Kiwe tokens, and capability attributes.',
         requires: ['approved HTML/CSS/JS draft'],
-        output: 'website/bricks-paste.html and website/bricks-notes.md'
+        output: 'website/bricks-paste.html only; add /document if notes are wanted'
       },
       {
         command: '/audit /seamframework',
@@ -532,6 +538,7 @@ function routeKind(command) {
   const text = String(command || '').trim().toLowerCase();
   if (!text) return 'workflow';
   if (/(?:^|\s)\/list\b/.test(text)) return 'command-list';
+  if (/(?:^|\s)\/(?:document|notes)\b/.test(text)) return 'document';
   if (/(?:^|\s)\/fix\b/.test(text)) return 'fix';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
@@ -590,6 +597,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/convert',
   '/create',
   '/creative',
+  '/document',
   '/dsa',
   '/dsatheme',
   '/dsathemeandhomepage',
@@ -601,6 +609,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/htmlcssjs',
   '/ideate',
   '/list',
+  '/notes',
   '/nonai',
   '/page',
   '/preview',
@@ -642,6 +651,7 @@ const TYPO_TOKEN_SUGGESTIONS = new Map([
 
 const VALID_PHASE_COMMANDS = [
   '/list',
+  '/document',
   '/fix',
   '/ideate /webdraft',
   '/rebuild /seamframework',
@@ -768,6 +778,18 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       message: '`/fix` needs the failed output folder/file map, audit result, or artifact summary. It repairs an existing artifact; it does not start a new creative phase.',
       suggestions: ['Provide the generated folder/file map plus the failed audit output.', '/fix /seamframework', '/fix /dsatheme', '/fix /combined', '/fix /bricksconversion'],
       boundaries: ['Fix phases must revise actual files in the current artifact lane.', 'Do not create a new unrelated package to hide the failed one.']
+    });
+  }
+
+  if (commandHas(text, /\/(?:document|notes)\b/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'document_missing_artifact',
+      kind: 'document',
+      normalizedCommand,
+      message: '`/document` needs an existing artifact folder/file map. It writes compact notes for an artifact; it does not generate, rebuild, audit, convert, or redesign.',
+      suggestions: ['Provide the artifact folder/file map.', '/document after /rebuild /seamframework', '/document after /convert /bricks'],
+      boundaries: ['Documentation phases must not create or revise production artifacts unless paired with an explicit create/fix command.']
     });
   }
 
@@ -1181,6 +1203,45 @@ function siteGraphCommandGuidance(command) {
   return lines.filter(Boolean).join('\n').trim() + '\n';
 }
 
+function seamRebuildPhaseContext() {
+  return [
+    '# Seam rebuild compact contract',
+    '',
+    'Output only the page lane unless the human explicitly requests `/document`, `/convert /bricks`, DSA theme work, combined preview work, dynamic binding, or staging.',
+    '',
+    'Required output:',
+    '',
+    '```text',
+    'website/',
+    '  bricks-paste.html',
+    '```',
+    '',
+    'Do not emit `website/bricks-notes.md`, README files, reports, Bricks JSON, AppShell/DSA markup, combined previews, or split preview assets during plain `/rebuild /seamframework`.',
+    '',
+    '`website/bricks-paste.html` is both the standalone browser preview and the Bricks HTML/CSS paste/import artifact.',
+    '',
+    'Preserve the approved visual thesis, rebuild with official Seam roles/classes/tokens, keep `data-role` official and headless, put visual styling on project-owned classes, preserve real Kiwe capability intent through attributes, and do not duplicate Kiwe/WordPress/WooCommerce/Bricks runtime authority.',
+    '',
+    getSeamAttributesContext()
+  ].join('\n');
+}
+
+function workflowBoundaryContext(kind) {
+  return [
+    '# Kiwe workflow boundary',
+    '',
+    `Selected route kind: ${kind || 'workflow'}.`,
+    '',
+    'Do only the selected phase. Do not silently expand into website + DSA + Bricks + dynamic + staging work.',
+    '',
+    'Documentation is opt-in: create notes only when the command includes `/document` or the human explicitly asks for documentation.',
+    '',
+    'If the command is impossible, missing inputs, or targeting the wrong lane, stop and report the command-gate diagnostic instead of guessing.',
+    '',
+    'Use `/list` when the human wants the complete command vocabulary.'
+  ].join('\n');
+}
+
 export function routeCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '', useCompanion = false } = {}) {
   const diagnostic = diagnoseCommand({ command, brief, artifactSummary, siteGraphSummary });
   if (diagnostic.stop) {
@@ -1221,7 +1282,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     diagnostic.message || '',
     '',
     companionRequested ? companionAssistContext(kind, command) : '',
-    getWorkflowContext()
+    kind === 'workflow' ? getWorkflowContext() : workflowBoundaryContext(kind)
   ];
 
   if (kind === 'fix') {
@@ -1233,6 +1294,16 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       getBricksConversionContext(),
       '',
       getDynamicContext()
+    );
+  } else if (kind === 'document') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Create compact documentation for the supplied artifact only. Do not redesign, rebuild, audit, convert, or create extra artifact lanes.',
+      '',
+      'For a Seam rebuild, `website/bricks-notes.md` is allowed only in this `/document` phase. Keep it short: preview/import file, capability boundaries, preview-only notes, and next recommended command.',
+      '',
+      'For Bricks conversion, DSA theme, combined handoff, Site Graph/dynamic binding, or accessibility lanes, document only the files and assumptions already present in the supplied artifact.'
     );
   } else if (kind === 'ideate') {
     parts.push(
@@ -1246,7 +1317,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       '',
       'Rebuild the approved creative draft with Seam Framework while preserving the visual thesis.',
       '',
-      getContext('website')
+      seamRebuildPhaseContext()
     );
   } else if (kind === 'seam-audit') {
     parts.push(
@@ -1254,7 +1325,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       '',
       'Audit the Seam rebuild and revise the actual files.',
       '',
-      getContext('website'),
+      seamRebuildPhaseContext(),
       '',
       readMaybe('contexts/audit-lite.md')
     );
@@ -1445,7 +1516,6 @@ Paste/import it through Bricks HTML-to-Bricks.
 Replace scaffold content with the finished page.
 Do not require React/Vite/Tailwind build steps, generated Bricks IDs, or hidden local files. -->
 ${pageHtml}`);
-  writeFile(path.join(root, 'website/bricks-notes.md'), '# Bricks notes\n\n`bricks-paste.html` is the single website/page artifact: open it in a browser for preview, then paste/import the same file through Bricks HTML-to-Bricks. Document preview-only behavior and Kiwe/WordPress/Woo/Bricks-owned interactions. Do not include generated Bricks IDs.\n');
 }
 
 function themeScaffold(root, name, { includePreview = true } = {}) {
@@ -1779,9 +1849,12 @@ Run Kiwe validation before importing or installing anything.
 export function validateHandoff(targetDir, mode = 'website') {
   const normalized = normalizeMode(mode);
   const root = path.resolve(targetDir || '.');
-  const required = ['README.md'];
+  const required = normalized === 'website' ? [] : ['README.md'];
   if (normalized === 'website' || normalized === 'combined') {
-    required.push('website/bricks-paste.html', 'website/bricks-notes.md');
+    required.push('website/bricks-paste.html');
+    if (normalized === 'combined') {
+      required.push('website/bricks-notes.md');
+    }
   }
   if (normalized === 'theme') {
     required.push('appshell-theme/README.md', 'appshell-theme/preview/index.html', 'appshell-theme/preview/PLACEHOLDERS.md');
