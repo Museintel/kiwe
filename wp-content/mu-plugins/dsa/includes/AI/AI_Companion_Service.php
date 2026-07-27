@@ -210,7 +210,8 @@ final class AI_Companion_Service {
 						'README.md' => 'file text',
 						'combined-preview/index.html' => 'file text',
 						'website/bricks-paste.html' => 'file text',
-						'bricks-conversion/kiwe-bricks-conversion.json' => 'optional conversion package JSON',
+						'bricks-template/<page>-template-upload.json' => 'native Bricks My Templates upload JSON',
+						'bricks-conversion/kiwe-bricks-conversion.json' => 'optional conversion/audit envelope JSON',
 						'appshell-theme/import/<theme-id>/theme-package.json' => 'file text',
 					],
 				],
@@ -366,6 +367,13 @@ final class AI_Companion_Service {
 		$conversion_json = $this->file_like( $path_map, 'kiwe-bricks-conversion.json' );
 		if ( '' !== $conversion_json ) {
 			$findings = array_merge( $findings, $this->review_bricks_conversion_package( $conversion_json, $path_map ) );
+		}
+		$template_upload = $this->first_bricks_template_upload( $path_map );
+		if ( [] !== $template_upload ) {
+			$findings = array_merge( $findings, $this->review_bricks_template_upload( (string) $template_upload['content'], (string) $template_upload['path'] ) );
+		}
+		if ( '' !== $conversion_json || [] !== $template_upload ) {
+			$findings = array_merge( $findings, $this->review_lean_bricks_documentation( $path_map, (string) ( $args['command'] ?? '' ) ) );
 		}
 
 		$package_json = $this->file_like( $path_map, 'theme-package.json' );
@@ -538,7 +546,7 @@ final class AI_Companion_Service {
 				'Unknown Kiwe command token(s): ' . implode( ', ', $unknown ) . '. Do not guess or continue.',
 				'command-diagnostic',
 				$normalized,
-				[] !== $next ? array_values( array_unique( $next ) ) : [ '/rebuild /seamframework', '/create /dsatheme', '/convert /bricks', '/audit /combined' ],
+				[] !== $next ? array_values( array_unique( $next ) ) : [ '/rebuild /seamframework', '/create /dsatheme', '/create /bricks', '/audit /combined' ],
 				[ 'Use only registered Kiwe slash-command tokens.', 'If the human made a typo, ask them to resend the corrected command.' ]
 			);
 		}
@@ -559,7 +567,7 @@ final class AI_Companion_Service {
 				$existing ? 'A website/page preview already exists in the supplied artifact. Do not regenerate the same preview.' : 'There is no separate Kiwe website preview command. A website/page preview is the HTML/CSS/JS page artifact itself.',
 				'command-diagnostic',
 				$normalized,
-				$existing ? [ '/rebuild /seamframework', '/audit /seamframework', '/dynamic /sitegraph', '/convert /bricks' ] : [ '/ideate /webdraft', '/rebuild /seamframework' ],
+				$existing ? [ '/rebuild /seamframework', '/audit /seamframework', '/dynamic /sitegraph', '/create /bricks' ] : [ '/ideate /webdraft', '/rebuild /seamframework' ],
 				[ 'Do not spend tokens recreating a preview that is already the artifact.' ]
 			);
 		}
@@ -568,25 +576,27 @@ final class AI_Companion_Service {
 			return $this->command_gate_result( 'rejected', 'missing_preview_target', 'Preview creation needs an explicit supported target.', 'command-diagnostic', $normalized, [ '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Supported preview-proof targets are DSA/AppShell theme and combined page-plus-AppShell only.' ] );
 		}
 
-		if ( str_contains( $text, '/convert' ) && str_contains( $text, '/bricks' ) && $this->command_gate_forbidden_bricks_source( $raw ) ) {
-			return $this->command_gate_result( 'rejected', 'bricks_convert_forbidden_source_in_command', '`/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.', 'bricks-convert', $normalized, [ '/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Bricks conversion source is strictly `website/bricks-paste.html`.' ] );
+		$is_bricks_convert = preg_match( '/\/(?:create|convert)\b.*\/bricks\b|\/bricks\b.*\/(?:create|convert)\b/', $text ) && ! str_contains( $text, '/brickstheme' );
+
+		if ( $is_bricks_convert && $this->command_gate_forbidden_bricks_source( $raw ) ) {
+			return $this->command_gate_result( 'rejected', 'bricks_convert_forbidden_source_in_command', '`/create /bricks` and `/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.', 'bricks-convert', $normalized, [ '/create /bricks with source.html = website/bricks-paste.html', '/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Bricks conversion source is strictly `website/bricks-paste.html`.' ] );
 		}
 
-		if ( str_contains( $text, '/convert' ) && str_contains( $text, '/bricks' ) && ! $this->command_gate_has_page_artifact( $artifact_summary ) ) {
+		if ( $is_bricks_convert && ! $this->command_gate_has_page_artifact( $artifact_summary ) ) {
 			$theme_like = $this->command_gate_has_theme_artifact( $artifact_summary ) || $this->command_gate_forbidden_bricks_source( $artifact_summary );
 			return $this->command_gate_result(
 				$theme_like ? 'rejected' : 'needs_input',
 				$theme_like ? 'bricks_convert_missing_page_source_with_theme_artifact' : 'bricks_convert_missing_page_source',
-				$theme_like ? 'The supplied artifact summary looks like an AppShell/theme/preview lane and does not include `website/bricks-paste.html`. Stop; do not convert DSA theme material into Bricks.' : '`/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
+				$theme_like ? 'The supplied artifact summary looks like an AppShell/theme/preview lane and does not include `website/bricks-paste.html`. Stop; do not convert DSA theme material into Bricks.' : '`/create /bricks` or `/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
 				'bricks-convert',
 				$normalized,
-				[ '/rebuild /seamframework to create website/bricks-paste.html', '/convert /bricks after website/bricks-paste.html exists' ],
+				[ '/rebuild /seamframework to create website/bricks-paste.html', '/create /bricks after website/bricks-paste.html exists', '/convert /bricks after website/bricks-paste.html exists' ],
 				[ 'Do not guess a Bricks source from a DSA theme or combined preview.' ]
 			);
 		}
 
-		if ( preg_match( '/\/audit.*(?:\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|html-to-bricks)/', $text ) && ! $this->command_gate_has_conversion_artifact( $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'bricks_audit_missing_conversion_artifact', '`/audit /bricksconversion` needs `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.', 'bricks-audit', $normalized, [ '/convert /bricks', '/audit /bricksconversion after kiwe-bricks-conversion.json exists' ], [ 'Audit phases inspect existing artifacts; they do not silently create missing outputs.' ] );
+		if ( preg_match( '/\/audit.*(?:\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|html-to-bricks|bricks template|template upload)/', $text ) && ! $this->command_gate_has_conversion_artifact( $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'bricks_audit_missing_conversion_artifact', '`/audit /bricksconversion` needs a native `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.', 'bricks-audit', $normalized, [ '/create /bricks', '/convert /bricks', '/audit /bricksconversion after the Bricks template upload JSON exists' ], [ 'Audit phases inspect existing artifacts; they do not silently create missing outputs.' ] );
 		}
 
 		if ( preg_match( '/\/(?:create|build).*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
@@ -631,7 +641,7 @@ final class AI_Companion_Service {
 	}
 
 	private function command_gate_has_conversion_artifact( string $text ): bool {
-		return (bool) preg_match( '/bricks-conversion[\\\\\/]kiwe-bricks-conversion\.json|kiwe-bricks-conversion\.json/i', $text );
+		return (bool) preg_match( '/bricks-conversion[\\\\\/]kiwe-bricks-conversion\.json|kiwe-bricks-conversion\.json|bricks-template[\\\\\/][^\\\\\/\n]+\.json|template-upload\.json|"templateType"\s*:|"content"\s*:\s*\[/i', $text );
 	}
 
 	private function command_gate_has_theme_artifact( string $text ): bool {
@@ -788,7 +798,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce bricks-conversion/kiwe-bricks-conversion.json plus notes. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and list unsupported behavior for review. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and embed compact Kiwe fidelity metadata when practical. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -959,6 +969,16 @@ final class AI_Companion_Service {
 		return '' !== $this->file_like( $path_map, $needle );
 	}
 
+	private function has_path_matching( array $path_map, string $pattern ): bool {
+		foreach ( $path_map as $path => $content ) {
+			if ( preg_match( $pattern, str_replace( '\\', '/', (string) $path ) ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private function path_like( array $path_map, string $needle ): string {
 		foreach ( $path_map as $path => $content ) {
 			if ( str_ends_with( str_replace( '\\', '/', (string) $path ), $needle ) ) {
@@ -967,6 +987,44 @@ final class AI_Companion_Service {
 		}
 
 		return '';
+	}
+
+	private function is_likely_bricks_template_export( $data ): bool {
+		if ( ! is_array( $data ) || isset( $data['elements'] ) || 'kiwe.bricks-conversion.v1' === (string) ( $data['schema'] ?? '' ) ) {
+			return false;
+		}
+
+		return isset( $data['content'] ) || isset( $data['header'] ) || isset( $data['footer'] ) || isset( $data['templateType'] ) || isset( $data['pageSettings'] ) || isset( $data['bundles'] );
+	}
+
+	private function first_bricks_template_upload( array $path_map ): array {
+		foreach ( $path_map as $path => $content ) {
+			$normalized = str_replace( '\\', '/', (string) $path );
+			if ( ! preg_match( '#(?:^|/)bricks-template/[^/]+\.json$|template-upload\.json$|\.bricks-template\.json$#i', $normalized ) ) {
+				continue;
+			}
+			$data = json_decode( (string) $content, true );
+			if ( $this->is_likely_bricks_template_export( $data ) ) {
+				return [
+					'path'    => $normalized,
+					'content' => (string) $content,
+					'data'    => $data,
+				];
+			}
+		}
+
+		foreach ( $path_map as $path => $content ) {
+			$data = json_decode( (string) $content, true );
+			if ( $this->is_likely_bricks_template_export( $data ) ) {
+				return [
+					'path'    => str_replace( '\\', '/', (string) $path ),
+					'content' => (string) $content,
+					'data'    => $data,
+				];
+			}
+		}
+
+		return [];
 	}
 
 	private function collect_bricks_responsive_layout_overrides( array $elements ): array {
@@ -1197,6 +1255,200 @@ final class AI_Companion_Service {
 		}
 
 		return $findings;
+	}
+
+	private function review_lean_bricks_documentation( array $path_map, string $command ): array {
+		if ( preg_match( '#/(?:document|docs?)\b#i', $command ) ) {
+			return [];
+		}
+
+		$findings = [];
+		foreach ( array_keys( $path_map ) as $path ) {
+			$normalized = str_replace( '\\', '/', (string) $path );
+			if ( ! preg_match( '#(?:^|/)(?:BRICKS-CONVERSION-NOTES|FRAMEWORK-NOTES|BRICKS-CONVERSION-AUDIT|LOCAL-VALIDATION|CURRENT-MAIN-BRICKS-AUDIT|validation-report)[^/]*\.(?:md|json|txt)$#i', $normalized ) ) {
+				continue;
+			}
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_lean_output_emitted_docs_without_document',
+				'message'  => 'Lean `/create /bricks` and `/convert /bricks` output must not include notes, reports, validation files, or extra documentation unless `/document` is explicitly requested.',
+				'path'     => sanitize_text_field( $normalized ),
+			];
+		}
+
+		return $findings;
+	}
+
+	private function review_bricks_template_upload( string $template_json, string $path ): array {
+		$data = json_decode( $template_json, true );
+		if ( ! is_array( $data ) ) {
+			return [
+				[
+					'severity' => 'error',
+					'code'     => 'invalid_bricks_template_upload_json',
+					'message'  => 'Bricks template upload JSON is not valid JSON.',
+					'path'     => sanitize_text_field( $path ),
+				],
+			];
+		}
+
+		$findings = [];
+		if ( 'kiwe.bricks-conversion.v1' === (string) ( $data['schema'] ?? '' ) || isset( $data['elements'] ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_is_kiwe_wrapper',
+				'message'  => 'This is a Kiwe conversion/audit envelope, not a native Bricks My Templates upload file. Bricks reads top-level title plus content/header/footer, so wrappers import as `(no title)` and insert with no data.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$title = trim( (string) ( $data['title'] ?? '' ) );
+		if ( '' === $title || preg_match( '/^\(?\s*no\s+title\s*\)?$/i', $title ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_missing_title',
+				'message'  => 'Native Bricks template upload JSON must include a real top-level title. A homepage body should normally use `Home`.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$populated_area = '';
+		foreach ( [ 'content', 'header', 'footer' ] as $area ) {
+			if ( isset( $data[ $area ] ) && is_array( $data[ $area ] ) && [] !== $data[ $area ] ) {
+				$populated_area = $area;
+				break;
+			}
+		}
+		if ( '' === $populated_area ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_missing_data',
+				'message'  => 'Native Bricks template upload JSON must include non-empty content, header, or footer. Otherwise Bricks reports “This template has no data”.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$template_type = trim( (string) ( $data['templateType'] ?? '' ) );
+		if ( '' === $template_type ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_missing_template_type',
+				'message'  => 'Native Bricks template upload JSON must include templateType so Bricks stores the import in the intended template lane.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		} elseif ( 'header' === $template_type && 'header' !== $populated_area ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_header_area_mismatch',
+				'message'  => 'A header template must carry its elements in the top-level header array.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		} elseif ( 'footer' === $template_type && 'footer' !== $populated_area ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_footer_area_mismatch',
+				'message'  => 'A footer template must carry its elements in the top-level footer array.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		} elseif ( ! in_array( $template_type, [ 'header', 'footer' ], true ) && '' !== $populated_area && 'content' !== $populated_area ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_content_area_mismatch',
+				'message'  => 'A non-header/footer Bricks template should carry its elements in the top-level content array.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		if ( ! empty( $data['globalClasses'] ) && empty( $data['global_classes'] ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_missing_global_classes_dependency',
+				'message'  => 'Bricks My Templates import uses global_classes for template class dependencies. Do not rely only on copied-elements style globalClasses.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$template_text = (string) wp_json_encode( $data );
+		if ( preg_match( '/data-dsa-surface|data-dsa-screen|data-dsa-dock|data-dsa-sheet/i', $template_text ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_contains_appshell_markup',
+				'message'  => 'Bricks template uploads must remain page-only. DSA/AppShell dock, sheet, screen, and theme markup belongs to Kiwe runtime or previews.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		if ( preg_match( '/<script\b|javascript:|on[a-z]+\s*=/i', $template_text ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_executable_code',
+				'message'  => 'Bricks template upload JSON must not smuggle executable script or inline event handlers. Use safe Bricks interactions/Kiwe attributes or manual review.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$custom_css = $this->collect_bricks_custom_css_text(
+			[
+				'pageSettings' => $data['pageSettings'] ?? [],
+				'settings'     => $data['settings'] ?? [],
+			]
+		);
+		if ( strlen( $custom_css ) >= 2500 || preg_match( '/@media\b|#home-campaigns\b|\.nc-(?:bento|campaign|section-head)|grid-template|flex-direction/i', $custom_css ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_page_css_dependency',
+				'message'  => 'Bricks template upload depends on page/template custom CSS for ordinary layout/design. Template uploads must carry grid/flex, spacing, typography, color, radius, and shadows through native element settings, global_classes, or globalVariables first.',
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		$elements = [];
+		foreach ( [ 'content', 'header', 'footer' ] as $area ) {
+			if ( isset( $data[ $area ] ) && is_array( $data[ $area ] ) ) {
+				$elements = array_merge( $elements, $data[ $area ] );
+			}
+		}
+		$native_controls = $this->count_bricks_native_style_controls( array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ) );
+		if ( count( $elements ) >= 180 && $native_controls < 60 ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_too_few_native_controls',
+				'message'  => sprintf( 'Large Bricks template upload has %1$d elements but only %2$d native style/layout controls. Full-page templates must remain editable in Bricks, not render mainly through CSS dumps.', count( $elements ), $native_controls ),
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		return $findings;
+	}
+
+	private function collect_bricks_custom_css_text( $value ): string {
+		$out = '';
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				if ( ( 'customCss' === (string) $key || preg_match( '/^_cssCustom(?::|$)/', (string) $key ) ) && is_string( $item ) ) {
+					$out .= "\n" . $item;
+				}
+				$out .= $this->collect_bricks_custom_css_text( $item );
+			}
+		}
+
+		return $out;
+	}
+
+	private function count_bricks_native_style_controls( $value ): int {
+		$count = 0;
+		if ( is_array( $value ) ) {
+			$settings = isset( $value['settings'] ) && is_array( $value['settings'] ) ? $value['settings'] : [];
+			foreach ( array_keys( $settings ) as $key ) {
+				if ( preg_match( '/^_(?:typography|background|gradient|border|boxShadow|transform|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/', (string) $key ) && ! preg_match( '/^_cssCustom(?::|$)/', (string) $key ) ) {
+					$count++;
+				}
+			}
+			foreach ( $value as $item ) {
+				$count += $this->count_bricks_native_style_controls( $item );
+			}
+		}
+
+		return $count;
 	}
 
 	private function review_bricks_conversion_package( string $conversion_json, array $path_map ): array {
@@ -1575,15 +1827,6 @@ final class AI_Companion_Service {
 				'path'     => sanitize_text_field( $path ),
 			];
 		}
-		if ( ! $this->has_file_like( $path_map, 'BRICKS-CONVERSION-NOTES.md' ) ) {
-			$findings[] = [
-				'severity' => 'error',
-				'code'     => 'missing_bricks_conversion_notes',
-				'message'  => 'Bricks conversion output must include bricks-conversion/BRICKS-CONVERSION-NOTES.md.',
-				'path'     => 'bricks-conversion/BRICKS-CONVERSION-NOTES.md',
-			];
-		}
-
 		return $findings;
 	}
 
@@ -2009,7 +2252,7 @@ final class AI_Companion_Service {
 			'themePackageChecked' => ! isset( $codes['theme_package_missing_root_key'] ) && ! isset( $codes['theme_package_css_not_inline'] ) && ! isset( $codes['theme_package_css_mismatch'] ),
 			'tokenPurityChecked' => ! isset( $codes['private_runtime_bridge_token_in_theme_css'] ) && ! isset( $codes['anonymous_literal_px_in_theme_css'] ) && ! isset( $codes['anonymous_literal_value_in_theme_css'] ) && ! isset( $codes['token_css_variable_key'] ) && ! isset( $codes['invalid_token_override_name'] ),
 			'pageArtifactChecked' => ! isset( $codes['page_artifact_contains_appshell'] ),
-			'bricksConversionChecked' => '' !== $this->file_like( $path_map, 'kiwe-bricks-conversion.json' ) && ! isset( $codes['invalid_bricks_conversion_json'] ) && ! isset( $codes['bricks_conversion_missing_root_key'] ) && ! isset( $codes['invalid_bricks_conversion_schema'] ) && ! isset( $codes['bricks_conversion_missing_source'] ) && ! isset( $codes['bricks_conversion_forbidden_source_lane'] ) && ! isset( $codes['bricks_conversion_missing_elements'] ) && ! isset( $codes['bricks_conversion_missing_fidelity_map'] ) && ! isset( $codes['bricks_conversion_invalid_fidelity_lane'] ) && ! isset( $codes['bricks_conversion_missing_responsive_intent'] ) && ! isset( $codes['bricks_conversion_invalid_responsive_intent'] ) && ! isset( $codes['bricks_conversion_missing_complex_layout_fidelity'] ) && ! isset( $codes['bricks_conversion_missing_complex_responsive_fidelity'] ) && ! isset( $codes['bricks_conversion_unproven_seam_spread_direction_override'] ) && ! isset( $codes['bricks_conversion_source_contains_appshell'] ) && ! isset( $codes['bricks_conversion_contains_appshell_markup'] ) && ! isset( $codes['bricks_conversion_lost_seam_classes'] ) && ! isset( $codes['bricks_conversion_lost_kiwe_launcher'] ) && ! isset( $codes['bricks_conversion_missing_query_intent'] ) && ! isset( $codes['bricks_conversion_executable_code'] ) && ! isset( $codes['missing_bricks_conversion_notes'] ),
+			'bricksConversionChecked' => ( '' !== $this->file_like( $path_map, 'kiwe-bricks-conversion.json' ) || $this->has_path_matching( $path_map, '#(^|/)bricks-template/[^/]+-template-upload\.json$#i' ) ) && ! isset( $codes['invalid_bricks_conversion_json'] ) && ! isset( $codes['bricks_conversion_missing_root_key'] ) && ! isset( $codes['invalid_bricks_conversion_schema'] ) && ! isset( $codes['bricks_conversion_missing_source'] ) && ! isset( $codes['bricks_conversion_forbidden_source_lane'] ) && ! isset( $codes['bricks_conversion_missing_elements'] ) && ! isset( $codes['bricks_conversion_missing_fidelity_map'] ) && ! isset( $codes['bricks_conversion_invalid_fidelity_lane'] ) && ! isset( $codes['bricks_conversion_missing_responsive_intent'] ) && ! isset( $codes['bricks_conversion_invalid_responsive_intent'] ) && ! isset( $codes['bricks_conversion_missing_complex_layout_fidelity'] ) && ! isset( $codes['bricks_conversion_missing_complex_responsive_fidelity'] ) && ! isset( $codes['bricks_conversion_unproven_seam_spread_direction_override'] ) && ! isset( $codes['bricks_conversion_source_contains_appshell'] ) && ! isset( $codes['bricks_conversion_contains_appshell_markup'] ) && ! isset( $codes['bricks_conversion_lost_seam_classes'] ) && ! isset( $codes['bricks_conversion_lost_kiwe_launcher'] ) && ! isset( $codes['bricks_conversion_missing_query_intent'] ) && ! isset( $codes['bricks_conversion_executable_code'] ),
 		] as $label => $ok ) {
 			if ( $ok ) {
 				$passed[] = $label;

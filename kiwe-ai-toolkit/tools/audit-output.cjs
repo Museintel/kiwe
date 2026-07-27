@@ -3,11 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  console.log('Usage: node tools/audit-output.cjs <handoff-or-ai-output-dir>');
+  console.log('Usage: node tools/audit-output.cjs <handoff-or-ai-output-dir> [--documented]');
   process.exit(0);
 }
 
 const root = path.resolve(process.argv[2] || '.');
+const documented = process.argv.includes('--documented');
 
 function walk(dir, out = []) {
   if (!fs.existsSync(dir)) return out;
@@ -346,6 +347,9 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
     .concat(Array.isArray(templateData.content) ? templateData.content : [])
     .concat(Array.isArray(templateData.header) ? templateData.header : [])
     .concat(Array.isArray(templateData.footer) ? templateData.footer : []);
+  for (const message of collectBricksElementMisuse(templateElements)) {
+    out.push(`Bricks template export ${relPath} ${message}`);
+  }
   const templateNativeControls = countNativeStyleControls(
     templateElements
       .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
@@ -355,6 +359,50 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
     out.push(`Large Bricks template export ${relPath} has ${templateElements.length} elements but only ${templateNativeControls} native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.`);
   }
   return out;
+}
+
+function isLikelyBricksTemplateExport(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (value.schema === 'kiwe.bricks-conversion.v1' || Array.isArray(value.elements)) return false;
+  return (
+    Array.isArray(value.content) ||
+    Array.isArray(value.header) ||
+    Array.isArray(value.footer) ||
+    Object.prototype.hasOwnProperty.call(value, 'templateType') ||
+    Object.prototype.hasOwnProperty.call(value, 'pageSettings') ||
+    Object.prototype.hasOwnProperty.call(value, 'bundles')
+  );
+}
+
+function nativeBricksTemplatePackageRoot(file) {
+  const dir = path.dirname(file);
+  return path.basename(dir) === 'bricks-template' ? path.dirname(dir) : dir;
+}
+
+function nativeBricksTemplateFiles() {
+  const out = [];
+  for (const file of files.filter((item) => /\.json$/i.test(item) && path.basename(item) !== 'kiwe-bricks-conversion.json')) {
+    try {
+      const json = JSON.parse(read(file));
+      if (isLikelyBricksTemplateExport(json)) out.push(file);
+    } catch (_) {
+      // Other JSON validation reports elsewhere; this scanner only finds native template candidates.
+    }
+  }
+  return out;
+}
+
+function auditLeanBricksDocumentation(bricksArtifacts) {
+  if (!bricksArtifacts.length || documented) return;
+  const docPattern = /(?:^|\/)(?:BRICKS-CONVERSION-NOTES|FRAMEWORK-NOTES|BRICKS-CONVERSION-AUDIT|LOCAL-VALIDATION|CURRENT-MAIN-BRICKS-AUDIT|validation-report)[^/]*\.(?:md|json|txt)$/i;
+  for (const file of files) {
+    if (!docPattern.test(rel(file))) continue;
+    add(
+      'fail',
+      'Documentation/report files were emitted without `/document`. Lean `/create /bricks` and `/convert /bricks` output should hand back only the native Bricks upload JSON unless the human explicitly asks for docs.',
+      rel(file)
+    );
+  }
 }
 
 function bareSeamSelectorDeclarations(cssText) {
@@ -705,7 +753,10 @@ if (exists('package.json') || exists('vite.config.ts') || exists('tailwind.confi
   add('fail', 'Output looks like a React/Vite/Tailwind/shadcn app. Kiwe handoffs must be plain HTML/CSS with optional preview-only JS unless an app prototype was explicitly requested.');
 }
 
-if (!exists('website/bricks-paste.html') && !exists('bricks-paste.html')) {
+const discoveredBricksConversionFiles = files.filter((item) => path.basename(item) === 'kiwe-bricks-conversion.json');
+const discoveredBricksTemplateFiles = nativeBricksTemplateFiles();
+
+if (!exists('website/bricks-paste.html') && !exists('bricks-paste.html') && !discoveredBricksTemplateFiles.length) {
   add('fail', 'Missing bricks-paste.html. It is the single website/page artifact: browser preview and Bricks HTML-to-Bricks copy/paste file.');
 }
 
@@ -1075,11 +1126,28 @@ for (const file of textFiles.filter((item) => /\.(html?|css|json)$/i.test(item))
   }
 }
 
-for (const file of files.filter((item) => path.basename(item) === 'kiwe-bricks-conversion.json')) {
+const bricksConversionFiles = discoveredBricksConversionFiles;
+const bricksTemplateFiles = discoveredBricksTemplateFiles;
+
+for (const file of bricksConversionFiles) {
   for (const message of validateBricksConversionJson(file)) {
     add('fail', message, rel(file));
   }
 }
+
+for (const file of bricksTemplateFiles) {
+  const packageRoot = nativeBricksTemplatePackageRoot(file);
+  const relativeTemplatePath = path.relative(packageRoot, file).replace(/\\/g, '/');
+  for (const message of validateBricksTemplateExport(packageRoot, relativeTemplatePath)) {
+    add('fail', message, rel(file));
+  }
+  const text = read(file);
+  if (!/"kiwe"\s*:|"kiweConversion"\s*:/i.test(text)) {
+    add('warn', 'Native Bricks template upload JSON has no embedded Kiwe fidelity metadata. It may import, but `/audit /bricksconversion` has less source/parity proof.', rel(file));
+  }
+}
+
+auditLeanBricksDocumentation(bricksConversionFiles.concat(bricksTemplateFiles));
 
 if (exists('appshell-theme') && !themeJsonFiles.length) {
   add('fail', 'AppShell/DSA direction appears present but no importable theme.json was found.');

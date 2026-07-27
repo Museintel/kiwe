@@ -384,15 +384,16 @@ export function listCommands() {
       },
       {
         command: '/convert /bricks',
-        purpose: 'Convert only website/bricks-paste.html into a reviewable Bricks-native conversion package.',
+        aliases: ['/create /bricks'],
+        purpose: 'Convert only website/bricks-paste.html into one native Bricks My Templates upload JSON, with optional embedded Kiwe fidelity metadata.',
         requires: ['website/bricks-paste.html', 'framework/kiwe-framework-profile.json or confirmed Kiwe > Framework/Bricks theme-style already pushed', 'optional bricks-bindings/kiwe-bindings.json'],
-        output: 'bricks-conversion/kiwe-bricks-conversion.json and a native Bricks template JSON only when the conversion target requires template upload; add /document if notes are wanted'
+        output: 'bricks-template/[page-name]-template-upload.json only by default; add /document if notes or an external audit envelope are wanted'
       },
       {
         command: '/audit /bricksconversion',
         purpose: 'Audit and revise the canonical Bricks conversion package.',
-        requires: ['bricks-conversion/kiwe-bricks-conversion.json'],
-        output: 'same Bricks conversion lane, corrected'
+        requires: ['bricks-template/[page-name]-template-upload.json or bricks-conversion/kiwe-bricks-conversion.json'],
+        output: 'same Bricks artifact lane, corrected; no notes unless /document was requested'
       },
       {
         command: '/create /accessibility',
@@ -613,8 +614,8 @@ function routeKind(command) {
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-preview-create';
   if (/(\/build|\/create)/.test(text) && /(dsathemeandhomepage|theme and homepage|homepage and theme)/.test(text)) return 'combined-assemble';
-  if (/\/audit/.test(text) && /(\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|bricksjson|html-to-bricks)/.test(text)) return 'bricks-audit';
-  if (/(\/convert|\/export|\/translate|\/rebuild|\/adapt)/.test(text) && /(\/bricks|bricks json|bricks conversion|html-to-bricks|html css to bricks)/.test(text)) return 'bricks-convert';
+  if (/\/audit/.test(text) && /(\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|bricksjson|html-to-bricks|bricks template|template upload)/.test(text)) return 'bricks-audit';
+  if (/(\/convert|\/create|\/export|\/translate|\/rebuild|\/adapt)/.test(text) && /(\/bricks\b|bricks json|bricks conversion|bricks template|html-to-bricks|html css to bricks)/.test(text) && !/(\/brickstheme|\btheme style\b)/.test(text)) return 'bricks-convert';
   if (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-rebuild';
   if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
   if (/(\/create|\/build)/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-create';
@@ -761,7 +762,13 @@ function hasPageArtifact(text) {
 }
 
 function hasConversionArtifact(text) {
-  return /bricks-conversion[\\/]kiwe-bricks-conversion\.json|kiwe-bricks-conversion\.json/i.test(String(text || ''));
+  const value = String(text || '');
+  return /bricks-conversion[\\/]kiwe-bricks-conversion\.json|kiwe-bricks-conversion\.json|bricks-template[\\/][^\\/\n]+\.json|template-upload\.json|\"templateType\"\s*:|\"content\"\s*:\s*\[/i.test(value);
+}
+
+function isBricksConvertCommand(text) {
+  const value = String(text || '');
+  return commandHas(value, /\/(?:convert|create)\b/) && commandHas(value, /\/bricks\b|bricks json|bricks conversion|bricks template|html-to-bricks|html css to bricks/) && !commandHas(value, /\/brickstheme\b|\btheme style\b/);
 }
 
 function hasThemeArtifact(text) {
@@ -925,19 +932,19 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/convert/) && commandHas(text, /\/bricks/) && hasForbiddenBricksSource(raw)) {
+  if (isBricksConvertCommand(text) && hasForbiddenBricksSource(raw)) {
     return commandDiagnostic({
       status: 'rejected',
       code: 'bricks_convert_forbidden_source_in_command',
       kind: 'bricks-convert',
       normalizedCommand,
-      message: '`/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.',
-      suggestions: ['/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined'],
+      message: '`/create /bricks` and `/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.',
+      suggestions: ['/create /bricks with source.html = website/bricks-paste.html', '/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined'],
       boundaries: ['Bricks conversion source is strictly `website/bricks-paste.html`.']
     });
   }
 
-  if (commandHas(text, /\/convert/) && commandHas(text, /\/bricks/)) {
+  if (isBricksConvertCommand(text)) {
     const artifactText = String(artifactSummary || '');
     if (!hasPageArtifact(artifactText)) {
       return commandDiagnostic({
@@ -947,8 +954,8 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
         normalizedCommand,
         message: hasThemeArtifact(artifactText) || hasForbiddenBricksSource(artifactText)
           ? 'The supplied artifact summary looks like an AppShell/theme/preview lane and does not include `website/bricks-paste.html`. Stop; do not convert DSA theme material into Bricks.'
-          : '`/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
-        suggestions: ['/rebuild /seamframework to create website/bricks-paste.html', '/convert /bricks after website/bricks-paste.html exists'],
+          : '`/create /bricks` or `/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
+        suggestions: ['/rebuild /seamframework to create website/bricks-paste.html', '/create /bricks after website/bricks-paste.html exists', '/convert /bricks after website/bricks-paste.html exists'],
         boundaries: ['Do not guess a Bricks source from a DSA theme or combined preview.']
       });
     }
@@ -958,9 +965,9 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
         code: 'bricks_convert_missing_framework_profile',
         kind: 'bricks-convert',
         normalizedCommand,
-        message: '`/convert /bricks` should run after a Kiwe Framework profile or Bricks theme style exists and has been imported/pushed. Otherwise the Bricks page may reference Seam/Kiwe variables, colors, and font tokens that do not render on the frontend.',
-        suggestions: ['/create /frameworkprofile first', '/audit /frameworkprofile, then import it in Kiwe > Framework and push to Bricks', 'If already pushed, rerun `/convert /bricks` with artifactSummary saying Kiwe > Framework is already pushed to Bricks'],
-        boundaries: ['Do not silently convert a page that depends on missing sitewide tokens/theme style.', 'Do not create a Framework profile inside `/convert /bricks`; stop and ask for the missing foundation.']
+        message: '`/create /bricks` or `/convert /bricks` should run after a Kiwe Framework profile or Bricks theme style exists and has been imported/pushed. Otherwise the Bricks page may reference Seam/Kiwe variables, colors, and font tokens that do not render on the frontend.',
+        suggestions: ['/create /frameworkprofile first', '/audit /frameworkprofile, then import it in Kiwe > Framework and push to Bricks', 'If already pushed, rerun `/create /bricks` with artifactSummary saying Kiwe > Framework is already pushed to Bricks'],
+        boundaries: ['Do not silently convert a page that depends on missing sitewide tokens/theme style.', 'Do not create a Framework profile inside `/create /bricks` or `/convert /bricks`; stop and ask for the missing foundation.']
       });
     }
   }
@@ -989,14 +996,14 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:bricksconversion|bricks-conversion)\b|bricks conversion|bricks json|html-to-bricks/) && !hasConversionArtifact(artifactSummary)) {
+  if (commandHas(text, /\/audit/) && commandHas(text, /\/(?:bricksconversion|bricks-conversion)\b|bricks conversion|bricks json|html-to-bricks|bricks template|template upload/) && !hasConversionArtifact(artifactSummary)) {
     return commandDiagnostic({
       status: 'needs_input',
       code: 'bricks_audit_missing_conversion_artifact',
       kind: 'bricks-audit',
       normalizedCommand,
-      message: '`/audit /bricksconversion` needs `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.',
-      suggestions: ['/convert /bricks', '/audit /bricksconversion after kiwe-bricks-conversion.json exists'],
+      message: '`/audit /bricksconversion` needs a native `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.',
+      suggestions: ['/create /bricks', '/convert /bricks', '/audit /bricksconversion after the Bricks template upload JSON exists'],
       boundaries: ['Audit phases inspect existing artifacts; they do not silently create missing outputs.']
     });
   }
@@ -1241,10 +1248,13 @@ function commandListMarkdown() {
     '',
     '## Bricks boundary',
     '',
-    '- `/convert /bricks` only converts `website/bricks-paste.html`.',
-    '- `/convert /bricks` should run only after `/create /frameworkprofile` has produced `framework/kiwe-framework-profile.json` or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed.',
+    '- `/create /bricks` and `/convert /bricks` only convert `website/bricks-paste.html`.',
+    '- `/create /bricks` is the user-facing Bricks My Templates upload phase. `/convert /bricks` is accepted as the same lane for backwards compatibility.',
+    '- The lean default output is one native Bricks template upload JSON at `bricks-template/[page-name]-template-upload.json` with non-empty `title`, `templateType`, and `content/header/footer` data.',
+    '- Optional Kiwe fidelity proof may be embedded in that upload JSON under top-level `kiwe`; external notes/reports/wrappers require `/document`.',
+    '- `/create /bricks` should run only after `/create /frameworkprofile` has produced `framework/kiwe-framework-profile.json` or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed.',
     '- It must not convert DSA themes, combined previews, AppShell sheets/screens/docks, or theme CSS.',
-    '- Its canonical output is the reviewable conversion manifest and the exact native Bricks template JSON requested by the conversion target, not loose extra page files.',
+    '- It must not output `README.md`, `BRICKS-CONVERSION-NOTES.md`, validation reports, ZIP files, duplicated previews, or loose extra page files unless `/document` is explicitly present.',
     '',
     '## Framework/theme-style boundary',
     '',
@@ -1284,7 +1294,7 @@ function fixPhaseContext(command, artifactSummary) {
     '- Inspect the supplied files, not the whole Kiwe repository.',
     '- Keep only files required by the current lane unless the human explicitly asked for extras.',
     '- Revise the actual files that failed; do not only explain the failure.',
-    '- If the artifact is a Bricks conversion, require `bricks-conversion/kiwe-bricks-conversion.json`.',
+    '- If the artifact is a Bricks conversion/template upload, require `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json`.',
     '- If the artifact is a Seam rebuild, keep `website/bricks-paste.html` as the single page preview/import artifact.',
     '- If the artifact is a DSA theme, keep AppShell theme CSS separate from Bricks/page CSS.',
     '- If the artifact is combined, keep `website/`, `appshell-theme/`, and `combined-preview/` separate.',

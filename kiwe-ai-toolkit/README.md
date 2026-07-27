@@ -24,7 +24,7 @@ For highest-quality work, use the phased workflow instead of one giant combined 
 9. `/create /preview /combined` when the page-plus-AppShell preview needs revision.
 10. `/audit /combined`.
 11. `/usesitegraph` after visual approval.
-12. `/convert /bricks`.
+12. `/create /bricks` (`/convert /bricks` is accepted as a compatibility alias).
 13. `/audit /bricksconversion`.
 
 One-shot `combined` still exists for fast experiments, but serious candidate work should be staged.
@@ -204,7 +204,7 @@ Some browser AIs can read public GitHub files but cannot connect MCP tools or sa
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined.md` for a website/page plus AppShell direction/settings.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md` for v2/v3/v4 revision and self-audit passes.
 - `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/seam-attributes-lite.md` for Seam/Appsite capability attributes during `/rebuild /seamframework`, `/audit /seamframework`, dynamic binding, and Bricks conversion.
-- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md` for `/convert /bricks` and `/audit /bricksconversion`.
+- `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md` for `/create /bricks`, `/convert /bricks`, and `/audit /bricksconversion`.
 
 These files are generated from the toolkit context and exist specifically for ChatGPT/Claude/Grok/Kimi-style browser workflows.
 Do not use web search to find these files; open the exact raw URL that matches the assignment mode.
@@ -308,20 +308,20 @@ node kiwe-ai-toolkit/tools/validate-bindings.cjs ./path/to/handoff --site-graph 
 
 The same check is available to MCP clients as `kiwe_validate_bindings`. It validates `bricks-bindings/kiwe-bindings.json` against `kiwe.bricks-bindings.v1`, verifies real Site Graph post types/terms/query-loop object types/dynamic tags where supplied, and enforces canonical Kiwe launchers such as `data-dsa-open-module`.
 
-## Bricks conversion package
+## Bricks template conversion
 
-After the dynamic binding pass is accepted, use `/convert /bricks` to create a reviewable Bricks-native element package:
+After the dynamic binding pass is accepted, use `/create /bricks` to create the native Bricks My Templates upload JSON:
 
 ```text
-bricks-conversion/
-  kiwe-bricks-conversion.json
 bricks-template/
-  page-or-template-name-template-upload.json # when target.importMethod is bricks-admin-template-upload
+  page-or-template-name-template-upload.json
 ```
 
-This is the no-loss bridge between approved HTML/CSS and Bricks JSON. It should prefer Bricks 2.4 native HTML/CSS conversion where the target site exposes it, then add Kiwe fidelity evidence: source selectors, element mapping, query-loop/dynamic intent, conditions, interactions, unsupported features, manual-review notes, and preserved Seam/Kiwe attributes.
+This is the no-loss bridge between approved HTML/CSS and Bricks JSON. It should prefer Bricks 2.4 native HTML/CSS conversion where the target site exposes it, then add Kiwe fidelity evidence inside the upload JSON when practical: source selectors, element mapping, query-loop/dynamic intent, conditions, interactions, unsupported features, manual-review notes, and preserved Seam/Kiwe attributes.
 
-`/convert /bricks` converts only `website/bricks-paste.html`. It must run after `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or a human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed. It must never convert `combined-preview`, `appshell-theme`, DSA/AppShell preview markup, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css`. Use `/create /preview /dsatheme` and `/create /preview /combined` for preview-proof work instead.
+The file must match Bricks' import shape: a root `title`, `templateType`, and non-empty `content`, `header`, or `footer` array. For a homepage body use `title: "Home"` and `templateType: "content"`. Do not upload `bricks-conversion/kiwe-bricks-conversion.json` to Bricks; that optional wrapper is not a My Templates upload file and Bricks will import it as `(no title)` with no insertable data.
+
+`/create /bricks` and `/convert /bricks` convert only `website/bricks-paste.html`. They must run after `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or a human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed. They must never convert `combined-preview`, `appshell-theme`, DSA/AppShell preview markup, screen/sheet/dock/navbar markup, `theme-package.json`, or `css/theme.css`. Use `/create /preview /dsatheme` and `/create /preview /combined` for preview-proof work instead.
 
 Validate it before staging:
 

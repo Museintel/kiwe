@@ -196,6 +196,10 @@ Next release-prep steps:
 - `preview/standalone-preview.example.html` - copyable preview shell skeleton; not importable theme code.
 - `handoffs/legacy-ui-review/` - reviewer bundle for auditing the built-in Legacy UI profile.
 
+## Bricks handoff correction
+
+Batch 82 closes the `/create /bricks` browser-AI loop that produced many files and handed humans a `kiwe-bricks-conversion.json` wrapper that Bricks imported as `(no title)` and then rejected with `This template has no data`. The lead contract is now: `/create /bricks` is the preferred user-facing command, `/convert /bricks` is a compatibility alias, and the lean default output is exactly one native Bricks My Templates upload JSON at `bricks-template/<page>-template-upload.json`. Optional Kiwe source/fidelity proof may live in a top-level `kiwe` object inside that same upload file, while external notes, reports, wrappers, ZIPs, duplicate previews, and `FRAMEWORK-NOTES.md` are emitted only when `/document` is explicitly requested. The public workflow, Bricks conversion context, audit context, Node validator, generic audit tool, MCP schema, and Kiwe Companion/API review all now validate the native upload artifact directly.
+
 ## htmx and Alpine
 
 htmx and Alpine are not part of the current Kiwe AppShell/theme output.

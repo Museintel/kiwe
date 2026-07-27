@@ -18,7 +18,7 @@ Commands:
   kiwe commands
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
-  kiwe diagnose --command "/convert /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
+  kiwe diagnose --command "/create /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
   kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
@@ -35,7 +35,7 @@ Commands:
   kiwe validate-bricks-theme-style <bricks-theme-style-json-or-dir> [--optional]
   kiwe validate-accessibility <handoff-or-accessibility-dir> [--optional]
   kiwe validate-bindings <handoff-or-bindings-dir-or-json> [--site-graph path/to/site-graph.json] [--optional]
-  kiwe validate-bricks-conversion <handoff-or-conversion-json> [--site-graph path/to/site-graph.json] [--optional]
+  kiwe validate-bricks-conversion <handoff-or-conversion-json-or-native-template> [--site-graph path/to/site-graph.json] [--optional] [--documented]
   kiwe prepare-apply <handoff-or-bindings-dir-or-json> --site-graph path/to/site-graph.json [--write]
 `);
 }
@@ -113,7 +113,7 @@ try {
     const siteGraphIndex = args.indexOf('--site-graph');
     const targetDir = args[0] && !args[0].startsWith('--') ? args[0] : '.';
     const siteGraphPath = siteGraphIndex >= 0 ? args[siteGraphIndex + 1] : '';
-    const result = validateBricksConversion(targetDir, { siteGraphPath, optional: args.includes('--optional') });
+    const result = validateBricksConversion(targetDir, { siteGraphPath, optional: args.includes('--optional'), documented: args.includes('--documented') });
     print(result);
     process.exitCode = result.ok ? 0 : 1;
   } else if (command === 'validate-accessibility') {

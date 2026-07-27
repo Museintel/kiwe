@@ -1,0 +1,112 @@
+{
+  "title": "Home",
+  "templateType": "content",
+  "version": "2.3.7",
+  "content": [
+    {
+      "id": "home01",
+      "name": "section",
+      "parent": "0",
+      "children": ["home02", "home03"],
+      "settings": {
+        "tag": "section",
+        "_cssId": "home-hero",
+        "_cssClasses": "seam-section nc-home-hero",
+        "_display": "flex",
+        "_direction": "column",
+        "_direction:mobile_landscape": "column",
+        "_rowGap": "var(--kiwe-space-md)",
+        "_background": {
+          "color": {
+            "raw": "var(--kiwe-color-surface)"
+          }
+        },
+        "_border": {
+          "radius": {
+            "top": "var(--kiwe-radius-xl)",
+            "right": "var(--kiwe-radius-xl)",
+            "bottom": "var(--kiwe-radius-xl)",
+            "left": "var(--kiwe-radius-xl)"
+          }
+        },
+        "_attributes": [
+          {
+            "name": "data-role",
+            "value": "section"
+          }
+        ]
+      }
+    },
+    {
+      "id": "home02",
+      "name": "heading",
+      "parent": "home01",
+      "children": [],
+      "settings": {
+        "tag": "h1",
+        "text": "{site_title}",
+        "_cssClasses": "seam-title",
+        "_typography": {
+          "color": {
+            "raw": "var(--kiwe-color-text)"
+          }
+        }
+      }
+    },
+    {
+      "id": "home03",
+      "name": "button",
+      "parent": "home01",
+      "children": [],
+      "settings": {
+        "text": "Search",
+        "_cssClasses": "seam-button",
+        "_attributes": [
+          {
+            "name": "data-dsa-open-module",
+            "value": "search"
+          },
+          {
+            "name": "type",
+            "value": "button"
+          }
+        ]
+      }
+    }
+  ],
+  "global_classes": [],
+  "globalVariables": [],
+  "kiwe": {
+    "schema": "kiwe.bricks-template.v1",
+    "source": {
+      "html": "website/bricks-paste.html"
+    },
+    "target": {
+      "builder": "bricks",
+      "importMethod": "bricks-admin-template-upload"
+    },
+    "fidelity": {
+      "sourceSelectors": [
+        {
+          "selector": "#home-hero",
+          "mappedElementIds": ["home01"],
+          "status": "mapped"
+        }
+      ],
+      "dynamicIntent": [],
+      "responsiveIntent": [],
+      "nativeStyleIntent": [
+        {
+          "sourceSelector": "#home-hero",
+          "mappedElementIds": ["home01", "home02"],
+          "nativeControls": ["_display", "_direction", "_rowGap", "_background", "_border", "_typography"],
+          "customCssException": "none",
+          "status": "editable-native-first"
+        }
+      ]
+    },
+    "report": {
+      "manualReview": []
+    }
+  }
+}

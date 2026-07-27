@@ -1,12 +1,12 @@
 # Kiwe Bricks Conversion Lite Context
 
-Use this context for `/convert /bricks` and `/audit /bricksconversion`.
+Use this context for `/create /bricks`, `/convert /bricks`, and `/audit /bricksconversion`.
 
 This is not a creative design phase. It starts only after a website/page artifact is visually approved, after a Framework profile or Bricks theme style exists/pushed, and, when relevant, after `/usesitegraph` produced live binding intent.
 
-Goal: convert an approved `website/bricks-paste.html` HTML/CSS page into a reviewable Bricks-native element JSON package without losing layout, Seam vocabulary, Kiwe launchers, dynamic tags, query-loop intent, conditions, interactions, or unsupported/manual-review evidence.
+Goal: convert an approved `website/bricks-paste.html` HTML/CSS page into the native Bricks template JSON a human can upload to Bricks > My Templates, without losing layout, Seam vocabulary, Kiwe launchers, dynamic tags, query-loop intent, conditions, interactions, or unsupported/manual-review evidence.
 
-Hard boundary: `/convert /bricks` is page-only. Its source is `website/bricks-paste.html` and nothing else.
+Hard boundary: `/create /bricks` and `/convert /bricks` are page-only. Their source is `website/bricks-paste.html` and nothing else.
 
 Never convert these lanes into Bricks:
 
@@ -21,9 +21,9 @@ If a combined handoff is supplied, use only the `website/bricks-paste.html` lane
 
 `source.html` must point to `website/bricks-paste.html`.
 
-Do not read the whole Kiwe repository. Do not scrape the public frontend. Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth. This phase produces a conversion package only.
+Do not read the whole Kiwe repository. Do not scrape the public frontend. Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth. This phase produces upload/review artifacts only.
 
-If the artifact summary does not include `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or explicit human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed, stop and ask the human to run `/create /frameworkprofile` first. Do not silently create a Framework profile inside `/convert /bricks`.
+If the artifact summary does not include `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or explicit human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed, stop and ask the human to run `/create /frameworkprofile` first. Do not silently create a Framework profile inside `/create /bricks` or `/convert /bricks`.
 
 ## Preferred inputs
 
@@ -62,22 +62,57 @@ Kiwe adds the part the raw converter cannot safely infer:
 
 ## Required output
 
-Keep the existing handoff files intact. Add:
+Keep the existing handoff files intact. Add only the requested Bricks artifact:
 
 ```text
-bricks-conversion/
-  kiwe-bricks-conversion.json
 bricks-template/
-  [page-or-template-name]-template-upload.json   # required for Bricks My Templates/admin upload delivery
+  [page-or-template-name]-template-upload.json
 ```
 
 Do not emit `BRICKS-CONVERSION-NOTES.md`, README files, reports, screenshots, duplicate previews, or extra docs unless the command also includes `/document` or the human explicitly asks for documentation.
 
-Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
+Exact primary upload path: `bricks-template/[page-or-template-name]-template-upload.json`.
 
-For full pages, large sections, or anything too large to comfortably paste into the Bricks front-end editor, `bricks-admin-template-upload` is the default delivery target. In that case the package must include both lanes: the Kiwe audit envelope above and a separate native Bricks template upload JSON in `bricks-template/`. The native template file is what humans upload to Bricks. The Kiwe envelope is what validators, Companion, and future staging executors inspect.
+For full pages, large sections, or anything too large to comfortably paste into the Bricks front-end editor, `bricks-admin-template-upload` is the default delivery target. The native template file is what humans upload to Bricks. If no-loss proof is needed, embed it in a top-level `kiwe` object inside the same upload JSON so the artifact stays one-file and Bricks can ignore the metadata.
 
-`kiwe-bricks-conversion.json` quick contract:
+Optional only when `/document` or a controlled executor explicitly asks for an external envelope:
+
+```text
+bricks-conversion/
+  kiwe-bricks-conversion.json
+```
+
+That optional envelope is for Kiwe validators/Companion/staging executors. It is not the file a human uploads to Bricks.
+
+Native Bricks template quick contract:
+
+```json
+{
+  "title": "Home",
+  "templateType": "content",
+  "version": "2.3.7 or target Bricks version",
+  "content": [],
+  "pageSettings": {},
+  "global_classes": [],
+  "globalVariables": [],
+  "kiwe": {
+    "schema": "kiwe.bricks-template.v1",
+    "source": { "html": "website/bricks-paste.html" },
+    "target": { "builder": "bricks", "importMethod": "bricks-admin-template-upload" },
+    "fidelity": {
+      "sourceSelectors": [],
+      "dynamicIntent": [],
+      "responsiveIntent": [],
+      "nativeStyleIntent": []
+    },
+    "report": { "manualReview": [] }
+  }
+}
+```
+
+For a homepage body, use `title: "Home"` and `templateType: "content"` unless the human asks for a different page name. Do not output a template named `(no title)`, and do not upload `kiwe-bricks-conversion.json` to Bricks.
+
+Optional `kiwe-bricks-conversion.json` quick contract:
 
 ```json
 {
@@ -126,7 +161,7 @@ For full pages, large sections, or anything too large to comfortably paste into 
 
 - Use Bricks-native elements where they carry real semantics or runtime capability: `section`, `container`, `block`, `heading`, `text-basic`, `text-link`, `button`, `image`, `icon`, `form`, `accordion`, `tabs-nested`, product/post elements, query result elements, and other elements listed by `/ai/bricks/context`.
 - Use neutral `div`/`block` only for real layout shells.
-- Preserve classes, IDs, ARIA, public Seam attributes, `data-project-role`, and live Kiwe/Appsite capability attributes such as `data-dsa-open-module`, `data-kiwe-save`, `data-kiwe-notifications`, `data-kiwe-theme-toggle`, `data-kiwe-query-template`, and `data-kiwe-binding`. Do not convert DSA/AppShell theme markup or `appshell-theme/` CSS to Bricks; `/convert /bricks` is for website/page HTML only.
+- Preserve classes, IDs, ARIA, public Seam attributes, `data-project-role`, and live Kiwe/Appsite capability attributes such as `data-dsa-open-module`, `data-kiwe-save`, `data-kiwe-notifications`, `data-kiwe-theme-toggle`, `data-kiwe-query-template`, and `data-kiwe-binding`. Do not convert DSA/AppShell theme markup or `appshell-theme/` CSS to Bricks; `/create /bricks` and `/convert /bricks` are for website/page HTML only.
 - Fail the conversion source if project CSS redefines Seam framework selectors such as `.seam-horizontal-rail`, `.seam-card`, `.seam-visually-hidden`, or `[data-flow="reel"]`, including scoped selectors like `.project .seam-card`. Seam selectors are shared vocabulary. Visual rules must live on project-owned classes before conversion, otherwise Bricks imports can inherit rail/card/grid behavior in the wrong place.
 - Fail the conversion source if a wrapper/nav/sticky shell uses `.seam-horizontal-rail` or `data-flow="horizontal-rail"` while an inner descendant is the real rail track. Put rail flow only on the actual item track, not on the outer shell that contains `.seam-container`.
 - Keep `website/bricks-paste.html` page-only. Do not put `data-dsa-surface`, dock, sheet, screen, or AppShell fixture markup into the Bricks page artifact.
@@ -142,21 +177,21 @@ For full pages, large sections, or anything too large to comfortably paste into 
 
 ## Bricks delivery/import method
 
-`bricks-conversion/kiwe-bricks-conversion.json` is a Kiwe audit/executor artifact. It is not, by itself, a Bricks "My Templates" upload file.
+`bricks-template/[page-or-template-name]-template-upload.json` is the default human upload artifact. It must be a native Bricks template export, not a Kiwe wrapper.
 
-Set `target.importMethod` explicitly:
+When an external `bricks-conversion/kiwe-bricks-conversion.json` envelope is present, set `target.importMethod` explicitly:
 
 - `review-only` when the package is for audit/planning only.
 - `kiwe-staging-executor` when a trusted Kiwe site/API will create or update Bricks content after validation.
 - `bricks-clipboard-json` only for small fragments where the human can reasonably paste the native copied-elements JSON into the Bricks editor. Do not use this as the default for full pages.
-- `bricks-admin-template-upload` only when the package includes a separate native Bricks template export JSON at `target.templateExportPath`.
+- `bricks-admin-template-upload` only when the package includes or points to a native Bricks template export JSON at `target.templateExportPath`.
 
-If `target.importMethod` is `bricks-admin-template-upload`, the template export file must match Bricks' own import shape: it must be a JSON object with a non-empty `title`, a `templateType`, and a non-empty `content`, `header`, or `footer` array. Use Bricks' template dependency key `global_classes` for global class rows that must import with the template; copied-elements style `globalClasses` alone is not enough for the My Templates upload path. Do not upload `kiwe-bricks-conversion.json` to Bricks My Templates; Bricks will import it as `(no title)` and then fail insertion with "This template has no data" because it is missing native `content/header/footer`.
+The template export file must match Bricks' own import shape: it must be a JSON object with a non-empty `title`, a `templateType`, and a non-empty `content`, `header`, or `footer` array. Use Bricks' template dependency key `global_classes` for global class rows that must import with the template; copied-elements style `globalClasses` alone is not enough for the My Templates upload path. Do not upload `kiwe-bricks-conversion.json` to Bricks My Templates; Bricks will import it as `(no title)` and then fail insertion with "This template has no data" because it is missing native `content/header/footer`.
 
 The native Bricks template export must also carry the editable design itself. For full-page templates, Bricks-native element settings/global classes should include the layout and visual controls. A template whose `content` array is present but whose styling lives mainly in `pageSettings.customCss` is not a valid production-grade conversion, because it can import structurally and still render wrongly after insertion.
 - Use query loops and dynamic tags only when verified by Site Graph or `/ai/bricks/context`.
 - Do not convert placeholder product/category/media samples into hardcoded production content when a dynamic binding/query loop exists.
-- Do not claim WordPress/Bricks/WooCommerce writes. The conversion package is reviewable input for the controlled staging executor.
+- Do not claim WordPress/Bricks/WooCommerce writes. The template is importable input for Bricks, and any controlled staging executor work remains a separate explicitly authorized phase.
 
 ## Fidelity map expectations
 

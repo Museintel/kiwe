@@ -36,7 +36,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_route_command',
-      description: 'Route a short canonical command such as /list, /fix, /document, /ideate /webdraft, /rebuild /seamframework, /create /frameworkprofile, /create /brickstheme, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
+      description: 'Route a short canonical command such as /list, /fix, /document, /ideate /webdraft, /rebuild /seamframework, /create /frameworkprofile, /create /brickstheme, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /create /bricks, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -140,13 +140,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_validate_bricks_conversion',
-      description: 'Validate a reviewable Bricks conversion package, optionally against a target-site Site Graph JSON file.',
+      description: 'Validate a native Bricks template upload JSON or reviewable Bricks conversion package, optionally against a target-site Site Graph JSON file.',
       inputSchema: {
         type: 'object',
         properties: {
-          targetDir: { type: 'string', description: 'Handoff folder, bricks-conversion folder, or kiwe-bricks-conversion.json path.' },
+          targetDir: { type: 'string', description: 'Handoff folder, bricks-conversion folder, native bricks-template folder, native Bricks template JSON, or kiwe-bricks-conversion.json path.' },
           siteGraphPath: { type: 'string', description: 'Optional path to kiwe.site-graph.v1 JSON for deep validation.' },
-          optional: { type: 'boolean', description: 'If true, missing conversion package is informational instead of failing.' }
+          optional: { type: 'boolean', description: 'If true, missing conversion/template package is informational instead of failing.' },
+          documented: { type: 'boolean', description: 'Pass true only when the human command included /document and extra notes/reports are expected.' }
         },
         required: ['targetDir']
       }
@@ -261,7 +262,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = validateBricksThemeStyle(args.targetDir, { optional: Boolean(args.optional) });
       break;
     case 'kiwe_validate_bricks_conversion':
-      result = validateBricksConversion(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });
+      result = validateBricksConversion(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional), documented: Boolean(args.documented) });
       break;
     case 'kiwe_get_accessibility_context':
       result = getAccessibilityContext();

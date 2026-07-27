@@ -6,11 +6,12 @@ function usage() {
 	console.log(`Validate a Kiwe Bricks conversion package.
 
 Usage:
-  node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs <handoff-or-conversion-json> [--site-graph site-graph.json] [--optional]
+  node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs <handoff-or-conversion-json> [--site-graph site-graph.json] [--optional] [--documented]
 
 Looks for:
   bricks-conversion/kiwe-bricks-conversion.json
-  bricks-conversion/BRICKS-CONVERSION-NOTES.md only when /document was requested
+  bricks-template/*.json or a direct native Bricks template export JSON
+  documentation/report files only when /document was requested and --documented is passed
 
 The validator is deterministic and non-mutating. It does not write to WordPress or Bricks.
 `);
@@ -29,7 +30,8 @@ async function main() {
 	const mod = await import(pathToFileURL(modulePath).href);
 	const result = mod.validateBricksConversion(target, {
 		siteGraphPath,
-		optional: args.includes('--optional')
+		optional: args.includes('--optional'),
+		documented: args.includes('--documented')
 	});
 	console.log(JSON.stringify(result, null, 2));
 	process.exitCode = result.ok ? 0 : 1;

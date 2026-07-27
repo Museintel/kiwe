@@ -124,8 +124,21 @@ final class Bricks_Conversion_Validator {
 		$index    = $this->graph_index( $site_graph );
 
 		if ( $this->is_likely_bricks_template_export( $conversion ) ) {
-			$this->add( $findings, 'fail', 'bricks_conversion_native_template_supplied_directly', 'A native Bricks template export was supplied directly. Kiwe needs the full /convert /bricks package with bricks-conversion/kiwe-bricks-conversion.json plus a separate bricks-template/*.json upload file referenced by target.templateExportPath.' );
 			$this->validate_native_template_export( $conversion, $findings );
+
+			return [
+				'ok'       => ! $this->has_level( $findings, 'fail' ),
+				'schema'   => 'kiwe.bricks-conversion-validation.v1',
+				'mode'     => 'native-bricks-template',
+				'counts'   => $this->counts( $findings ),
+				'summary'  => [
+					'elements'       => $this->template_element_count( $conversion ),
+					'hasSourceHtml'  => '' !== trim( $source_html ),
+					'hasSiteGraph'   => [] !== $site_graph,
+					'hasBindingPlan' => [] !== $binding,
+				],
+				'findings' => $findings,
+			];
 		}
 
 		$this->validate_root( $conversion, $findings );
@@ -271,6 +284,16 @@ final class Bricks_Conversion_Validator {
 		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $native_controls < self::MIN_NATIVE_STYLE_CONTROLS ) {
 			$this->add( $findings, 'fail', 'bricks_template_not_native_editable_enough', sprintf( 'Large Bricks template export has %1$d elements but only %2$d native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.', count( $elements ), $native_controls ), '$.content' );
 		}
+	}
+
+	private function template_element_count( array $template ): int {
+		return count(
+			array_merge(
+				isset( $template['content'] ) && is_array( $template['content'] ) ? $template['content'] : [],
+				isset( $template['header'] ) && is_array( $template['header'] ) ? $template['header'] : [],
+				isset( $template['footer'] ) && is_array( $template['footer'] ) ? $template['footer'] : []
+			)
+		);
 	}
 
 	private function validate_template_upload_conversion_css( array $conversion, array &$findings ): void {

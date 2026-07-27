@@ -273,6 +273,11 @@ function readWebsiteText(root) {
 function readNotesText(root) {
   const candidates = [
     path.join(root, 'bricks-conversion', 'BRICKS-CONVERSION-NOTES.md'),
+    path.join(root, 'framework', 'FRAMEWORK-NOTES.md'),
+    path.join(root, 'README.md'),
+    path.join(root, 'LOCAL-VALIDATION.json'),
+    path.join(root, 'BRICKS-CONVERSION-AUDIT.md'),
+    path.join(root, 'BRICKS-CONVERSION-AUDIT.json'),
     path.join(root, 'BRICKS-CONVERSION-NOTES.md')
   ];
   for (const file of candidates) {
@@ -529,6 +534,44 @@ function isLikelyBricksTemplateExport(value) {
     'pageSettings' in value ||
     'bundles' in value
   );
+}
+
+function findNativeTemplatePath(target) {
+  const resolved = path.resolve(target || '.');
+  if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+    try {
+      const data = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+      if (isLikelyBricksTemplateExport(data)) return { root: path.dirname(resolved), templatePath: resolved };
+    } catch {
+      return { root: path.dirname(resolved), templatePath: '' };
+    }
+  }
+
+  const candidates = [];
+  const templateDir = path.join(resolved, 'bricks-template');
+  if (fs.existsSync(templateDir) && fs.statSync(templateDir).isDirectory()) {
+    for (const fileName of fs.readdirSync(templateDir)) {
+      if (/\.json$/i.test(fileName)) candidates.push(path.join(templateDir, fileName));
+    }
+  }
+  if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
+    for (const fileName of fs.readdirSync(resolved)) {
+      if (/template.*\.json$|\.bricks-template\.json$|bricks.*\.json$/i.test(fileName)) {
+        candidates.push(path.join(resolved, fileName));
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    try {
+      if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) continue;
+      const data = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      if (isLikelyBricksTemplateExport(data)) return { root: resolved, templatePath: candidate };
+    } catch {
+      // Ignore candidate parse errors here; readJson reports precise errors once a path is selected.
+    }
+  }
+  return { root: resolved, templatePath: '' };
 }
 
 function validateBricksTemplateElements(root, templatePath, templateElements, findings) {
@@ -1156,10 +1199,48 @@ function validateSourceParity({ conversion, conversionText, website, bindingsPat
   }
 }
 
-function validateNotes(root, findings) {
+function validateEmbeddedKiweTemplateMeta(root, templatePath, templateData, findings) {
+  const templateRel = rel(root, templatePath);
+  const meta = isPlainObject(templateData.kiwe) ? templateData.kiwe : (isPlainObject(templateData.kiweConversion) ? templateData.kiweConversion : null);
+  if (!meta) {
+    add(
+      findings,
+      'warn',
+      'Bricks template export has no embedded Kiwe fidelity metadata. It can be uploaded to Bricks, but /audit /bricksconversion has limited source/parity evidence. Prefer a top-level "kiwe" object for no-loss proof when tokens allow.',
+      templateRel,
+      '$.kiwe'
+    );
+    return;
+  }
+  const schema = String(meta.schema || '').trim();
+  if (schema && !/^kiwe\.bricks-(?:template|conversion)\.v\d+$/i.test(schema)) {
+    add(findings, 'warn', 'Embedded Kiwe metadata uses an unknown schema. Use kiwe.bricks-template.v1 for a one-file Bricks upload artifact.', templateRel, '$.kiwe.schema');
+  }
+  const sourceHtml = String(meta.source && (meta.source.html || meta.source.path) || '');
+  if (sourceHtml && !sourceHtml.replace(/\\/g, '/').endsWith('website/bricks-paste.html')) {
+    add(findings, 'warn', 'Embedded Kiwe metadata source.html should point to website/bricks-paste.html.', templateRel, '$.kiwe.source.html');
+  }
+  if (meta.target && isPlainObject(meta.target)) {
+    const importMethod = String(meta.target.importMethod || '').trim();
+    if (importMethod && importMethod !== 'bricks-admin-template-upload' && importMethod !== 'kiwe-staging-executor') {
+      add(findings, 'warn', 'Embedded Kiwe metadata for a Bricks template upload should use importMethod bricks-admin-template-upload or kiwe-staging-executor.', templateRel, '$.kiwe.target.importMethod');
+    }
+  }
+}
+
+function validateNotes(root, findings, options = {}) {
   const notes = readNotesText(root);
   if (!notes.text) {
-    add(findings, 'info', 'BRICKS-CONVERSION-NOTES.md is absent. This is correct for lean `/convert /bricks` output unless the human also requested `/document`.');
+    add(findings, 'info', 'BRICKS-CONVERSION-NOTES.md is absent. This is correct for lean `/create /bricks` or `/convert /bricks` output unless the human also requested `/document`.');
+    return;
+  }
+  if (!options.documented) {
+    add(
+      findings,
+      'fail',
+      'Documentation/report files were emitted without `/document`. Lean Bricks commands must output only the requested Bricks artifact(s); rerun with `/document` only when notes are explicitly requested.',
+      rel(root, notes.file)
+    );
     return;
   }
   const text = notes.text.toLowerCase();
@@ -1173,10 +1254,41 @@ function validateNotes(root, findings) {
   }
 }
 
+function summarizeFindings(findings) {
+  return findings.reduce(
+    (acc, item) => {
+      const level = item.level || 'info';
+      acc[level] = (acc[level] || 0) + 1;
+      return acc;
+    },
+    { fail: 0, warn: 0, info: 0 }
+  );
+}
+
 export function validateBricksConversion(target = '.', options = {}) {
   const findings = [];
   const { root, conversionPath } = findConversionPath(target);
   if (!conversionPath) {
+    const native = findNativeTemplatePath(target);
+    if (native.templatePath) {
+      validateBricksTemplateExport(native.root, rel(native.root, native.templatePath), findings, '', '$');
+      const templateData = readJson(native.templatePath, findings, `Bricks template export ${rel(native.root, native.templatePath)}`);
+      if (templateData && isPlainObject(templateData)) {
+        validateEmbeddedKiweTemplateMeta(native.root, native.templatePath, templateData, findings);
+      }
+      validateNotes(native.root, findings, options);
+      const summary = summarizeFindings(findings);
+      return {
+        ok: summary.fail === 0,
+        schema: 'kiwe.bricks-conversion-validation.v1',
+        target: path.resolve(target || '.'),
+        mode: 'native-bricks-template',
+        templatePath: native.templatePath,
+        siteGraphPath: options.siteGraphPath ? path.resolve(options.siteGraphPath) : '',
+        findings,
+        summary
+      };
+    }
     if (options.optional) {
       return {
         ok: true,
@@ -1191,7 +1303,7 @@ export function validateBricksConversion(target = '.', options = {}) {
       ok: false,
       schema: 'kiwe.bricks-conversion-validation.v1',
       target: path.resolve(target || '.'),
-      findings: [{ level: 'fail', message: 'Missing bricks-conversion/kiwe-bricks-conversion.json.' }],
+      findings: [{ level: 'fail', message: 'Missing native bricks-template/*-template-upload.json or bricks-conversion/kiwe-bricks-conversion.json.' }],
       summary: { fail: 1, warn: 0, info: 0 }
     };
   }
@@ -1208,13 +1320,20 @@ export function validateBricksConversion(target = '.', options = {}) {
 
   if (conversion) {
     if (isLikelyBricksTemplateExport(conversion)) {
-      add(
-        findings,
-        'fail',
-        'A native Bricks template export was supplied directly. Kiwe needs the full /convert /bricks package with bricks-conversion/kiwe-bricks-conversion.json plus a separate bricks-template/*.json upload file referenced by target.templateExportPath.',
-        conversionRel
-      );
       validateBricksTemplateExport(root, path.basename(conversionPath), findings, conversionRel, '$');
+      validateEmbeddedKiweTemplateMeta(root, conversionPath, conversion, findings);
+      validateNotes(root, findings, options);
+      const summary = summarizeFindings(findings);
+      return {
+        ok: summary.fail === 0,
+        schema: 'kiwe.bricks-conversion-validation.v1',
+        target: path.resolve(target || '.'),
+        mode: 'native-bricks-template',
+        templatePath: conversionPath,
+        siteGraphPath,
+        findings,
+        summary
+      };
     }
     validateRoot(conversion, findings, conversionRel, root);
     validateElements(asArray(conversion.elements), findings, conversionRel, siteIndex);
@@ -1248,16 +1367,9 @@ export function validateBricksConversion(target = '.', options = {}) {
       conversionRel
     });
   }
-  validateNotes(root, findings);
+  validateNotes(root, findings, options);
 
-  const summary = findings.reduce(
-    (acc, item) => {
-      const level = item.level || 'info';
-      acc[level] = (acc[level] || 0) + 1;
-      return acc;
-    },
-    { fail: 0, warn: 0, info: 0 }
-  );
+  const summary = summarizeFindings(findings);
 
   return {
     ok: summary.fail === 0,
