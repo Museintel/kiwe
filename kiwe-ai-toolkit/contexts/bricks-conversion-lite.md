@@ -65,9 +65,13 @@ Keep the existing handoff files intact. Add:
 bricks-conversion/
   kiwe-bricks-conversion.json
   BRICKS-CONVERSION-NOTES.md
+bricks-template/
+  [page-or-template-name]-template-upload.json   # required for Bricks My Templates/admin upload delivery
 ```
 
 Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
+
+For full pages, large sections, or anything too large to comfortably paste into the Bricks front-end editor, `bricks-admin-template-upload` is the default delivery target. In that case the package must include both lanes: the Kiwe audit envelope above and a separate native Bricks template upload JSON in `bricks-template/`. The native template file is what humans upload to Bricks. The Kiwe envelope is what validators, Companion, and future staging executors inspect.
 
 `kiwe-bricks-conversion.json` quick contract:
 
@@ -83,6 +87,8 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
     "builder": "bricks",
     "format": "bricks-elements-json",
     "mode": "conversion-review",
+    "importMethod": "review-only|bricks-clipboard-json|bricks-admin-template-upload|kiwe-staging-executor",
+    "templateExportPath": "optional/path/to/native-bricks-template-export.json",
     "applyAuthority": "human-reviewed-kiwe-staging-adapter"
   },
   "conversion": {
@@ -99,6 +105,7 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
     "elementMapping": [],
     "dynamicIntent": [],
     "responsiveIntent": [],
+    "nativeStyleIntent": [],
     "interactions": [],
     "conditions": [],
     "unsupported": []
@@ -121,9 +128,28 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
 - Keep `website/bricks-paste.html` page-only. Do not put `data-dsa-surface`, dock, sheet, screen, or AppShell fixture markup into the Bricks page artifact.
 - Do not use `combined-preview`, `appshell-theme`, `theme-package.json`, `theme.css`, dock markup, sheet markup, or screen markup as conversion source.
 - Convert approved visual CSS into Bricks element settings, global classes, global variables, or safe page CSS. Do not hide the whole design in one giant Code element unless Bricks cannot represent it.
+- Bricks conversion is an editable visual-builder handoff, not only a render handoff. Prefer Bricks-native controls for typography, color/background/gradient, border/radius, shadow, transform, filter, transition, spacing, sizing, grid/flex, responsive direction, alignment, conditions, interactions, query loops, and dynamic tags.
+- Do not park project-wide variables, `@media` rules, bento/campaign CSS, or global selectors inside one element's `_cssCustom`. Use `pageSettings.customCss`, global classes/variables, or native Bricks controls. Element `_cssCustom` is only for element-scoped exceptions.
+- For `bricks-admin-template-upload`, do not rely on `pageSettings.customCss` for ordinary page design. Bricks can store page settings on a template record, but insertion into a target page/template may not transfer that CSS the way a pasted page preview did; stale target-page CSS can then control the render. Put ordinary visual/layout decisions in native element settings, template-upload `global_classes`, and mapped/global variables. Keep only tiny documented CSS exceptions.
+- Custom CSS is allowed only as an explicit exception for things Bricks cannot express cleanly, such as pseudo-elements, advanced masks, very specific media-query exceptions, unusual browser features, or reviewed micro-interactions. If custom CSS remains, explain why it remains and what native controls were used first.
 - Preserve intentional CSS states and responsive behavior. If a pseudo-state, media query, mask, grid, interaction, or animation cannot be represented safely in Bricks controls, put it in `pageSettings.customCss` and list it under `fidelity.unsupported` or `report.manualReview`.
-- Preserve complex layout intent, not just markup. Bento/editorial grids, campaign cards, CSS grid columns/rows/spans, and any Bricks breakpoint layout settings must be backed by `fidelity.responsiveIntent`. Bricks 2.4 stores responsive controls as `controlKey:breakpoint`, including defaults such as `_direction:mobile_landscape`, native controls such as `_flexDirection:mobile_landscape`, grid controls such as `_gridTemplateColumns:tablet_portrait`, `_cssCustom:<breakpoint>`, and site-defined custom breakpoint keys. Do not flip a source row/spread layout into a mobile column layout unless the source CSS/media query proves that breakpoint behavior.
+- Preserve complex layout intent, not just markup. Bento/editorial grids, campaign cards, CSS grid columns/rows/spans, and any Bricks breakpoint layout settings must be backed by `fidelity.responsiveIntent`. Bricks 2.4 stores responsive controls as `controlKey:breakpoint`, including defaults such as `_direction:mobile_landscape`, grid controls such as `_gridTemplateColumns:tablet_portrait`, `_cssCustom:<breakpoint>`, and site-defined custom breakpoint keys. Bricks layout elements (`container`, `div`, `section`, `block`) use `_direction` / `_direction:<breakpoint>` for flex direction; `_flexDirection` is for non-nestable elements only. Do not flip a source row/spread layout into a mobile column layout unless the source CSS/media query proves that breakpoint behavior.
 - Executable JavaScript must not silently become production authority. Prefer Bricks interactions when safe, Kiwe capability attributes for Kiwe-owned journeys, or manual review.
+
+## Bricks delivery/import method
+
+`bricks-conversion/kiwe-bricks-conversion.json` is a Kiwe audit/executor artifact. It is not, by itself, a Bricks "My Templates" upload file.
+
+Set `target.importMethod` explicitly:
+
+- `review-only` when the package is for audit/planning only.
+- `kiwe-staging-executor` when a trusted Kiwe site/API will create or update Bricks content after validation.
+- `bricks-clipboard-json` only for small fragments where the human can reasonably paste the native copied-elements JSON into the Bricks editor. Do not use this as the default for full pages.
+- `bricks-admin-template-upload` only when the package includes a separate native Bricks template export JSON at `target.templateExportPath`.
+
+If `target.importMethod` is `bricks-admin-template-upload`, the template export file must match Bricks' own import shape: it must be a JSON object with a non-empty `title`, a `templateType`, and a non-empty `content`, `header`, or `footer` array. Use Bricks' template dependency key `global_classes` for global class rows that must import with the template; copied-elements style `globalClasses` alone is not enough for the My Templates upload path. Do not upload `kiwe-bricks-conversion.json` to Bricks My Templates; Bricks will import it as `(no title)` and then fail insertion with "This template has no data" because it is missing native `content/header/footer`.
+
+The native Bricks template export must also carry the editable design itself. For full-page templates, Bricks-native element settings/global classes should include the layout and visual controls. A template whose `content` array is present but whose styling lives mainly in `pageSettings.customCss` is not a valid production-grade conversion, because it can import structurally and still render wrongly after insertion.
 - Use query loops and dynamic tags only when verified by Site Graph or `/ai/bricks/context`.
 - Do not convert placeholder product/category/media samples into hardcoded production content when a dynamic binding/query loop exists.
 - Do not claim WordPress/Bricks/WooCommerce writes. The conversion package is reviewable input for the controlled staging executor.
@@ -155,7 +181,23 @@ Exact primary file path: `bricks-conversion/kiwe-bricks-conversion.json`.
 
 `fidelity.interactions` and `fidelity.conditions` should describe Bricks `_interactions` and `_conditions` used, or state why behavior remains manual.
 
-`fidelity.responsiveIntent` is required when the source/conversion uses bento, campaign/editorial grids, CSS grid placement, media-query layout changes, or Bricks responsive layout overrides. Treat both `_direction:<breakpoint>` and `_flexDirection:<breakpoint>` as direction controls. Treat custom breakpoint suffixes as valid Bricks breakpoints when Site Graph or Bricks context exposes them. Each item should identify the breakpoint/range, source selector, mapped Bricks element IDs, and preserved behavior:
+`fidelity.nativeStyleIntent` is required whenever the conversion carries substantial custom CSS or complex visual styling. It proves the page remains editable in Bricks. Each item should identify the selector, mapped element IDs, native Bricks controls/global classes/global variables used, and any remaining custom-CSS exception:
+
+```json
+{
+  "sourceSelector": ".nc-campaign--hero",
+  "mappedElementIds": ["f41933"],
+  "nativeControls": ["_background", "_border", "_boxShadow", "_padding", "_heightMin", "_gridItemColumnSpan"],
+  "customCssException": "decorative pseudo-element only",
+  "status": "editable-native-first"
+}
+```
+
+Native-first means the generated Bricks tree should use Bricks settings for ordinary visual decisions before CSS. Bricks 2.4 documents layout controls such as `_display`, `_direction`, `_justifyContent`, `_alignItems`, `_flexWrap`, `_columnGap`, `_rowGap`, grid controls such as `_gridTemplateColumns`, `_gridTemplateRows`, `_gridGap`, `_gridAutoFlow`, child span controls such as `_gridItemColumnSpan` and `_gridItemRowSpan`, and style controls such as `_typography`, `_background`, `_gradient`, `_border`, `_boxShadow`, `_transform`, `_cssFilters`, and `_cssTransition`. Breakpoint variants use `controlKey:breakpoint`, for example `_direction:mobile_landscape` or `_typography:mobile_portrait`.
+
+Do not hide editable layout/design intent inside `pageSettings.customCss` just because it renders. If custom CSS contains many mappable declarations such as `display`, `flex-direction`, `grid-template-columns`, `gap`, `padding`, `margin`, `font-size`, `background`, `border-radius`, or `box-shadow`, the conversion must expose a matching amount of native Bricks controls/global classes/global variables. Custom CSS remains acceptable for explicit exceptions: pseudo-elements, complex masks, unsupported art-direction details, browser fallbacks, or tiny glue CSS listed in `fidelity.nativeStyleIntent`, `fidelity.unsupported`, or `report.manualReview`.
+
+`fidelity.responsiveIntent` is required when the source/conversion uses bento, campaign/editorial grids, CSS grid placement, media-query layout changes, or Bricks responsive layout overrides. Use `_direction:<breakpoint>` for layout elements and `_flexDirection:<breakpoint>` only for non-nestable Bricks elements. Treat custom breakpoint suffixes as valid Bricks breakpoints when Site Graph or Bricks context exposes them. Each item should identify the breakpoint/range, source selector, mapped Bricks element IDs, Bricks controls, and preserved behavior:
 
 ```json
 {

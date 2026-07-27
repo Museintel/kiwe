@@ -9,6 +9,7 @@
     "builder": "bricks",
     "format": "bricks-elements-json",
     "mode": "conversion-review",
+    "importMethod": "review-only",
     "applyAuthority": "human-reviewed-kiwe-staging-adapter"
   },
   "conversion": {

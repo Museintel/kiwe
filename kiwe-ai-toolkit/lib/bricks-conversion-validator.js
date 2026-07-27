@@ -167,6 +167,26 @@ const RESPONSIVE_LAYOUT_KEY_RE = /^_(?:cssCustom|direction|display|grid|gridItem
 
 const COMPLEX_LAYOUT_RE = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i;
 
+const BRICKS_LAYOUT_ELEMENT_NAMES = new Set(['container', 'div', 'section', 'block']);
+
+const BRICKS_IMPORT_METHODS = new Set([
+  'review-only',
+  'bricks-clipboard-json',
+  'bricks-admin-template-upload',
+  'kiwe-staging-executor'
+]);
+
+const NATIVE_STYLE_CONTROL_RE = /^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/;
+const MAPPABLE_CSS_DECLARATION_RE = /\b(?:display|flex(?:-direction|-wrap|-grow|-shrink|-basis)?|align-items|align-self|justify-content|justify-items|align-content|gap|row-gap|column-gap|grid-template-columns|grid-template-rows|grid-auto-flow|grid-auto-columns|grid-auto-rows|grid-column|grid-row|width|max-width|min-width|height|max-height|min-height|aspect-ratio|margin(?:-(?:top|right|bottom|left))?|padding(?:-(?:top|right|bottom|left))?|position|top|right|bottom|left|z-index|overflow|opacity|background(?:-color|-image|-size|-position|-repeat)?|color|border(?:-(?:radius|color|width|style))?|box-shadow|font(?:-(?:family|size|weight|style))?|line-height|letter-spacing|text-align|text-transform|transform|filter|transition)\s*:/gi;
+
+const CUSTOM_CSS_HEAVY_BYTES = 12000;
+const CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS = 60;
+const MAPPABLE_CSS_DECLARATION_MIN = 40;
+const MAPPABLE_CSS_NATIVE_STYLE_RATIO = 0.45;
+const LARGE_CLIPBOARD_ELEMENT_COUNT = 180;
+const TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES = 2500;
+const TEMPLATE_UPLOAD_MAPPABLE_CSS_DECLARATION_MIN = 12;
+
 function isPlainObject(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -190,6 +210,12 @@ function readJson(file, findings, label) {
     add(findings, 'fail', `${label} is not valid JSON: ${error && error.message ? error.message : String(error)}`, file);
     return null;
   }
+}
+
+function resolvePackageFile(root, relPath) {
+  const rootPath = path.resolve(root || '.');
+  const fullPath = path.resolve(rootPath, String(relPath || ''));
+  return fullPath === rootPath || fullPath.startsWith(`${rootPath}${path.sep}`) ? fullPath : '';
 }
 
 function findConversionPath(target) {
@@ -432,7 +458,154 @@ function fidelityMentions(fidelity, pattern) {
   return pattern.test(JSON.stringify(fidelity || {}));
 }
 
-function validateRoot(conversion, findings, conversionRel) {
+function isBricksLayoutElement(element) {
+  return BRICKS_LAYOUT_ELEMENT_NAMES.has(String(element && element.name || '').toLowerCase());
+}
+
+function elementSettings(element) {
+  return isPlainObject(element && element.settings) ? element.settings : {};
+}
+
+function collectCustomCssBuckets(value, out = [], trail = '$') {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectCustomCssBuckets(item, out, `${trail}[${index}]`));
+  } else if (isPlainObject(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      const nextTrail = `${trail}.${key}`;
+      if ((/^_cssCustom(?::|$)/.test(key) || key === 'customCss') && typeof item === 'string' && item.trim()) {
+        out.push({ path: nextTrail, text: item });
+      }
+      collectCustomCssBuckets(item, out, nextTrail);
+    }
+  }
+  return out;
+}
+
+function collectNativeStyleControlsFromItems(items) {
+  const controls = [];
+  for (const element of asArray(items)) {
+    const settings = elementSettings(element);
+    for (const key of Object.keys(settings)) {
+      if (NATIVE_STYLE_CONTROL_RE.test(key) && !/^_cssCustom(?::|$)/.test(key)) {
+        controls.push({ element, key });
+      }
+    }
+  }
+  return controls;
+}
+
+function countMappableCssDeclarations(cssText) {
+  const text = String(cssText || '');
+  MAPPABLE_CSS_DECLARATION_RE.lastIndex = 0;
+  let count = 0;
+  while (MAPPABLE_CSS_DECLARATION_RE.exec(text)) count += 1;
+  return count;
+}
+
+function validateBricksTemplateExport(root, templateRelPath, findings, conversionRel, pathPointer) {
+  const relPath = String(templateRelPath || '').trim();
+  if (!relPath) {
+    add(findings, 'fail', 'target.templateExportPath is required when target.importMethod is bricks-admin-template-upload.', conversionRel, pathPointer);
+    return;
+  }
+
+  const templatePath = resolvePackageFile(root, relPath);
+  if (!templatePath) {
+    add(findings, 'fail', 'target.templateExportPath must stay inside the handoff package.', conversionRel, pathPointer);
+    return;
+  }
+  if (!fs.existsSync(templatePath) || !fs.statSync(templatePath).isFile()) {
+    add(findings, 'fail', `target.templateExportPath does not exist: ${relPath}`, conversionRel, pathPointer);
+    return;
+  }
+
+  const templateData = readJson(templatePath, findings, `Bricks template export ${relPath}`);
+  if (!templateData || !isPlainObject(templateData)) {
+    add(findings, 'fail', 'Bricks template export must be a JSON object.', rel(root, templatePath));
+    return;
+  }
+  if (templateData.schema === SCHEMA || Array.isArray(templateData.elements)) {
+    add(
+      findings,
+      'fail',
+      'Bricks template export must not be a Kiwe conversion/audit envelope. Bricks My Templates import expects a native export with title plus content/header/footer.',
+      rel(root, templatePath)
+    );
+  }
+  if (!String(templateData.title || '').trim()) {
+    add(findings, 'fail', 'Bricks template export is missing title. Bricks imports this as "(no title)".', rel(root, templatePath), '$.title');
+  }
+
+  const areaKeys = ['content', 'header', 'footer'];
+  const populatedArea = areaKeys.find((key) => Array.isArray(templateData[key]) && templateData[key].length > 0);
+  if (!populatedArea) {
+    add(findings, 'fail', 'Bricks template export must contain a non-empty content, header, or footer array. Otherwise Bricks insert reports "This template has no data".', rel(root, templatePath));
+  }
+  const templateType = String(templateData.templateType || '').trim();
+  if (!templateType) {
+    add(findings, 'fail', 'Bricks template export must include templateType so Bricks stores the imported template in the intended area/type.', rel(root, templatePath), '$.templateType');
+  } else if (templateType === 'header' && populatedArea && populatedArea !== 'header') {
+    add(findings, 'fail', 'Bricks templateType "header" must use a non-empty header array, not content/footer.', rel(root, templatePath), '$.header');
+  } else if (templateType === 'footer' && populatedArea && populatedArea !== 'footer') {
+    add(findings, 'fail', 'Bricks templateType "footer" must use a non-empty footer array, not content/header.', rel(root, templatePath), '$.footer');
+  } else if (!['header', 'footer'].includes(templateType) && populatedArea && populatedArea !== 'content') {
+    add(findings, 'fail', 'Non-header/footer Bricks templates should use a non-empty content array.', rel(root, templatePath), '$.content');
+  }
+  if (!String(templateData.version || '').trim()) {
+    add(findings, 'warn', 'Bricks template export should include the target Bricks version used to author/verify the native template.', rel(root, templatePath), '$.version');
+  }
+  if (Array.isArray(templateData.globalClasses) && templateData.globalClasses.length && !Array.isArray(templateData.global_classes)) {
+    add(
+      findings,
+      'fail',
+      'Bricks template export uses top-level globalClasses but not global_classes. Bricks My Templates import reads global_classes for template class dependencies; include native Bricks global_classes so imported elements do not lose their editable class styles.',
+      rel(root, templatePath),
+      '$.global_classes'
+    );
+  }
+
+  const templateCustomCss = collectCustomCssBuckets({
+    pageSettings: templateData.pageSettings,
+    settings: templateData.settings
+  });
+  const templateCssText = templateCustomCss.map((bucket) => bucket.text).join('\n');
+  const templateCssBytes = templateCustomCss.reduce((sum, bucket) => sum + String(bucket.text || '').length, 0);
+  const templateMappableCss = countMappableCssDeclarations(templateCssText);
+  if (
+    templateCssBytes >= TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES ||
+    templateMappableCss >= TEMPLATE_UPLOAD_MAPPABLE_CSS_DECLARATION_MIN ||
+    /@media\b|#home-campaigns\b|\.nc-(?:bento|campaign|section-head)|grid-template|flex-direction/i.test(templateCssText)
+  ) {
+    add(
+      findings,
+      'fail',
+      `Bricks template export carries ${templateCssBytes} page/template custom CSS bytes and ${templateMappableCss} mappable declarations. Bricks My Templates insertion can leave pageSettings custom CSS behind or collide with stale target-page CSS; move ordinary layout/design into native element settings, importable globalClasses/globalVariables, or documented tiny exceptions.`,
+      rel(root, templatePath),
+      '$.pageSettings.customCss'
+    );
+  }
+
+  const templateElements = []
+    .concat(asArray(templateData.content))
+    .concat(asArray(templateData.header))
+    .concat(asArray(templateData.footer));
+  const templateNativeControls = collectNativeStyleControlsFromItems(
+    templateElements
+      .concat(asArray(templateData.global_classes))
+      .concat(asArray(templateData.globalClasses))
+  );
+  if (templateElements.length >= LARGE_CLIPBOARD_ELEMENT_COUNT && templateNativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
+    add(
+      findings,
+      'fail',
+      `Large Bricks template export has ${templateElements.length} elements but only ${templateNativeControls.length} native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.`,
+      rel(root, templatePath),
+      '$.content'
+    );
+  }
+}
+
+function validateRoot(conversion, findings, conversionRel, root) {
   if (!isPlainObject(conversion)) {
     add(findings, 'fail', 'Bricks conversion file must contain a JSON object.', conversionRel);
     return;
@@ -462,6 +635,45 @@ function validateRoot(conversion, findings, conversionRel) {
   } else {
     if (target.builder !== 'bricks') add(findings, 'fail', 'target.builder must be "bricks".', conversionRel, '$.target.builder');
     if (!String(target.format || '').toLowerCase().includes('bricks')) add(findings, 'fail', 'target.format must identify a Bricks element JSON artifact.', conversionRel, '$.target.format');
+    const importMethod = String(target.importMethod || '').trim();
+    if (!importMethod) {
+      add(
+        findings,
+        'fail',
+        `target.importMethod is required. Use one of: ${Array.from(BRICKS_IMPORT_METHODS).join(', ')}. Kiwe conversion JSON is not itself a Bricks My Templates upload file.`,
+        conversionRel,
+        '$.target.importMethod'
+      );
+    } else if (!BRICKS_IMPORT_METHODS.has(importMethod)) {
+      add(
+        findings,
+        'fail',
+        `target.importMethod must be one of: ${Array.from(BRICKS_IMPORT_METHODS).join(', ')}.`,
+        conversionRel,
+        '$.target.importMethod'
+      );
+    }
+    if (/template|upload|library|my-templates/i.test(`${target.mode || ''} ${target.format || ''}`) && importMethod !== 'bricks-admin-template-upload') {
+      add(
+        findings,
+        'fail',
+        'Bricks template-library/My Templates delivery must use target.importMethod "bricks-admin-template-upload" and provide a native Bricks template export file.',
+        conversionRel,
+        '$.target.importMethod'
+      );
+    }
+    if (importMethod === 'bricks-admin-template-upload') {
+      validateBricksTemplateExport(root, target.templateExportPath, findings, conversionRel, '$.target.templateExportPath');
+    }
+    if (importMethod === 'bricks-clipboard-json' && asArray(conversion.elements).length >= LARGE_CLIPBOARD_ELEMENT_COUNT) {
+      add(
+        findings,
+        'fail',
+        `Large Bricks conversions (${asArray(conversion.elements).length} elements) must not default to clipboard paste. Use bricks-admin-template-upload with a separate native Bricks template export, or kiwe-staging-executor after validation.`,
+        conversionRel,
+        '$.target.importMethod'
+      );
+    }
     const authority = String(target.applyAuthority || '');
     if (!authority) {
       add(findings, 'fail', 'target.applyAuthority is required and must point to human review or a trusted Kiwe staging adapter.', conversionRel, '$.target.applyAuthority');
@@ -491,7 +703,7 @@ function validateRoot(conversion, findings, conversionRel) {
     if (!Array.isArray(fidelity.sourceSelectors) || fidelity.sourceSelectors.length === 0) {
       add(findings, 'fail', 'fidelity.sourceSelectors must map the important source sections/selectors to Bricks element IDs.', conversionRel, '$.fidelity.sourceSelectors');
     }
-    for (const key of ['elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported']) {
+    for (const key of ['elementMapping', 'dynamicIntent', 'responsiveIntent', 'nativeStyleIntent', 'interactions', 'conditions', 'unsupported']) {
       if (key in fidelity && !Array.isArray(fidelity[key])) {
         add(findings, 'fail', `fidelity.${key} must be an array when present.`, conversionRel, `$.fidelity.${key}`);
       }
@@ -502,6 +714,31 @@ function validateRoot(conversion, findings, conversionRel) {
     add(findings, 'fail', 'report must be an object.', conversionRel, '$.report');
   } else if (!Array.isArray(report.manualReview)) {
     add(findings, 'fail', 'report.manualReview must be an array, even when empty.', conversionRel, '$.report.manualReview');
+  }
+}
+
+function validateTemplateUploadConversionCss({ conversion, findings, conversionRel }) {
+  const importMethod = String(conversion && conversion.target && conversion.target.importMethod || '').trim();
+  if (importMethod !== 'bricks-admin-template-upload') return;
+
+  const customCssBuckets = collectCustomCssBuckets({
+    pageSettings: conversion.pageSettings
+  });
+  const customCssText = customCssBuckets.map((bucket) => bucket.text).join('\n');
+  const customCssBytes = customCssBuckets.reduce((sum, bucket) => sum + String(bucket.text || '').length, 0);
+  const mappableCss = countMappableCssDeclarations(customCssText);
+  if (
+    customCssBytes >= TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES ||
+    mappableCss >= TEMPLATE_UPLOAD_MAPPABLE_CSS_DECLARATION_MIN ||
+    /@media\b|#home-campaigns\b|\.nc-(?:bento|campaign|section-head)|grid-template|flex-direction/i.test(customCssText)
+  ) {
+    add(
+      findings,
+      'fail',
+      `target.importMethod is bricks-admin-template-upload, but the Kiwe conversion envelope still carries ${customCssBytes} pageSettings custom CSS bytes and ${mappableCss} mappable declarations. Template-upload handoffs must not rely on pageSettings.customCss for ordinary layout/design because Bricks insertion may not transfer it to the target page. Use native element settings/globalClasses/globalVariables first.`,
+      conversionRel,
+      '$.pageSettings.customCss'
+    );
   }
 }
 
@@ -526,6 +763,7 @@ function validateResponsiveLayoutFidelity({ conversion, conversionText, website,
   }
 
   if (responsiveIntent.length > 0) {
+    const byId = new Map(elements.map((element) => [String(element && element.id || ''), element]).filter(([id]) => id));
     responsiveIntent.forEach((item, index) => {
       if (!isPlainObject(item)) {
         add(findings, 'fail', 'Every fidelity.responsiveIntent item must be an object.', conversionRel, `$.fidelity.responsiveIntent[${index}]`);
@@ -540,6 +778,20 @@ function validateResponsiveLayoutFidelity({ conversion, conversionText, website,
       }
       if (!/(grid|flex|direction|columns|rows|span|wrap|align|justify|flow)/i.test(itemText)) {
         add(findings, 'fail', 'fidelity.responsiveIntent items must state the preserved layout behavior, not only the visual label.', conversionRel, `$.fidelity.responsiveIntent[${index}]`);
+      }
+      if (/_flexDirection\b/i.test(itemText)) {
+        for (const id of asArray(item.mappedElementIds)) {
+          const mapped = byId.get(String(id));
+          if (mapped && isBricksLayoutElement(mapped)) {
+            add(
+              findings,
+              'fail',
+              `fidelity.responsiveIntent[${index}] claims _flexDirection for Bricks layout element "${id}". Bricks layout elements (${Array.from(BRICKS_LAYOUT_ELEMENT_NAMES).join(', ')}) must use _direction / _direction:<breakpoint>; _flexDirection is for non-nestable elements.`,
+              conversionRel,
+              `$.fidelity.responsiveIntent[${index}]`
+            );
+          }
+        }
       }
     });
   }
@@ -578,6 +830,72 @@ function validateResponsiveLayoutFidelity({ conversion, conversionText, website,
   }
 }
 
+function validateNativeStyleFidelity({ conversion, findings, conversionRel }) {
+  const elements = asArray(conversion.elements);
+  const globalClasses = asArray(conversion.globalClasses);
+  const fidelity = isPlainObject(conversion.fidelity) ? conversion.fidelity : {};
+  const nativeStyleIntent = asArray(fidelity.nativeStyleIntent);
+  const customCssBuckets = collectCustomCssBuckets(conversion);
+  const customCssBytes = customCssBuckets.reduce((sum, bucket) => sum + String(bucket.text || '').length, 0);
+  const customCssText = customCssBuckets.map((bucket) => bucket.text).join('\n');
+  const nativeControls = collectNativeStyleControlsFromItems(elements.concat(globalClasses));
+  const mappableCssDeclarations = countMappableCssDeclarations(customCssText);
+  const isCustomCssHeavy = customCssBytes >= CUSTOM_CSS_HEAVY_BYTES || /@media\b[\s\S]{0,2400}(?:\.nc-|#home-campaigns|\.seam-|grid-template|flex-direction)/i.test(customCssText);
+
+  if (!isCustomCssHeavy && mappableCssDeclarations < MAPPABLE_CSS_DECLARATION_MIN) return;
+
+  if (nativeStyleIntent.length === 0) {
+    add(
+      findings,
+      'fail',
+      `Bricks conversion carries ${customCssBytes} custom CSS bytes and ${mappableCssDeclarations} mappable CSS declarations but has no fidelity.nativeStyleIntent. Prove which visual rules were mapped to editable Bricks native controls and which CSS remains an explicit exception.`,
+      conversionRel,
+      '$.fidelity.nativeStyleIntent'
+    );
+  }
+
+  if (isCustomCssHeavy && nativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
+    add(
+      findings,
+      'fail',
+      `Bricks conversion uses only ${nativeControls.length} native style/layout controls while carrying ${customCssBytes} custom CSS bytes. This is not editable enough for Bricks visual-editor handoff; map ordinary typography, spacing, backgrounds, borders, radii, shadows, grid/flex, sizing, and responsive controls to Bricks settings/global classes first.`,
+      conversionRel,
+      '$.elements'
+    );
+  }
+
+  const minimumNativeControlsForCss = Math.ceil(mappableCssDeclarations * MAPPABLE_CSS_NATIVE_STYLE_RATIO);
+  if (mappableCssDeclarations >= MAPPABLE_CSS_DECLARATION_MIN && nativeControls.length < minimumNativeControlsForCss) {
+    add(
+      findings,
+      'fail',
+      `Bricks conversion leaves ${mappableCssDeclarations} mappable CSS declarations in custom CSS but exposes only ${nativeControls.length} native Bricks style/layout controls. Ordinary design decisions must be editable through Bricks controls/global classes/global variables; keep custom CSS for explicit exceptions only.`,
+      conversionRel,
+      '$.elements'
+    );
+  }
+
+  nativeStyleIntent.forEach((item, index) => {
+    if (!isPlainObject(item)) {
+      add(findings, 'fail', 'Every fidelity.nativeStyleIntent item must be an object.', conversionRel, `$.fidelity.nativeStyleIntent[${index}]`);
+      return;
+    }
+    const itemText = JSON.stringify(item);
+    if (!/(selector|sourceSelector)/i.test(itemText)) {
+      add(findings, 'fail', 'fidelity.nativeStyleIntent items must identify the source selector being styled.', conversionRel, `$.fidelity.nativeStyleIntent[${index}]`);
+    }
+    if (!/(mappedElementIds|bricksElementIds|element)/i.test(itemText)) {
+      add(findings, 'fail', 'fidelity.nativeStyleIntent items must identify mapped Bricks element IDs.', conversionRel, `$.fidelity.nativeStyleIntent[${index}]`);
+    }
+    if (!/(nativeControls|bricksControls|globalClass|globalVariable)/i.test(itemText)) {
+      add(findings, 'fail', 'fidelity.nativeStyleIntent items must list editable Bricks native controls, global classes, or global variables used.', conversionRel, `$.fidelity.nativeStyleIntent[${index}]`);
+    }
+    if (!/(customCssException|unsupported|manualReview|native|editable)/i.test(itemText)) {
+      add(findings, 'fail', 'fidelity.nativeStyleIntent items must state what remains custom CSS versus what is editable natively.', conversionRel, `$.fidelity.nativeStyleIntent[${index}]`);
+    }
+  });
+}
+
 function validateElements(elements, findings, conversionRel, siteIndex) {
   const byId = new Map();
   const rootElements = [];
@@ -598,6 +916,37 @@ function validateElements(elements, findings, conversionRel, siteIndex) {
     }
     if ('settings' in element && !isPlainObject(element.settings)) {
       add(findings, 'fail', 'Bricks element settings must be an object when present.', conversionRel, `${pointer}.settings`);
+    } else if (isPlainObject(element.settings)) {
+      const settings = elementSettings(element);
+      if (isBricksLayoutElement(element)) {
+        for (const key of Object.keys(settings)) {
+          if (/^_flexDirection(?::|$)/.test(key)) {
+            add(
+              findings,
+              'fail',
+              `Bricks layout element "${id || '(missing id)'}" (${name}) uses ${key}. Bricks source documents that layout elements use _direction / _direction:<breakpoint>; _flexDirection is only for non-nestable elements.`,
+              conversionRel,
+              `${pointer}.settings.${key}`
+            );
+          }
+        }
+      }
+      for (const [key, value] of Object.entries(settings)) {
+        if (!/^_cssCustom(?::|$)/.test(key) || typeof value !== 'string') continue;
+        const text = value;
+        if (
+          text.length > 4000 &&
+          /(?:^|\n|\r)\s*:root\b|@media\b|#home-campaigns\b|\.nc-bento\b|\.nc-campaign\b/i.test(text)
+        ) {
+          add(
+            findings,
+            'fail',
+            `Element "${id || '(missing id)'}" stores project-wide variables/media/bento CSS in ${key}. Global or responsive page CSS must live in pageSettings.customCss, global classes/variables, or native Bricks controls; element _cssCustom is too fragile for conversion fidelity.`,
+            conversionRel,
+            `${pointer}.settings.${key}`
+          );
+        }
+      }
     }
     const parent = String(element.parent || '');
     if (!parent || parent === '0') rootElements.push(element);
@@ -798,7 +1147,7 @@ export function validateBricksConversion(target = '.', options = {}) {
   const siteIndex = graphIndex(siteGraph);
 
   if (conversion) {
-    validateRoot(conversion, findings, conversionRel);
+    validateRoot(conversion, findings, conversionRel, root);
     validateElements(asArray(conversion.elements), findings, conversionRel, siteIndex);
     const website = readWebsiteText(root);
     validateSourceParity({
@@ -816,6 +1165,16 @@ export function validateBricksConversion(target = '.', options = {}) {
       conversion,
       conversionText,
       website,
+      findings,
+      conversionRel
+    });
+    validateNativeStyleFidelity({
+      conversion,
+      findings,
+      conversionRel
+    });
+    validateTemplateUploadConversionCss({
+      conversion,
       findings,
       conversionRel
     });

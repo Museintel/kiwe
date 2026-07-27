@@ -1231,6 +1231,7 @@ S19 closes the approved architecture, not the product or production journey. Thi
 | **SEAM-1 Contract Reconciliation** | M | Parked; excluded from 1.0 count | Preserve the bundled references; resume only by product decision after the RC1-RC14 release path. |
 | **SEAM-2 Additive Bricks Framework Export** | L | Parked after SEAM-1 | Export remains additive and may never overwrite existing Bricks project data. |
 | **SEAM-3 Page Authoring Aids** | M/L | Parked after SEAM-2 | Page-authoring controls remain separate from DSA Surface appearance and authority. |
+| **ADAPTER-1 Builder-agnostic conversion contract** | L split | Architecture note recorded; implementation follows Bricks proof | Bricks is the first production adapter, not a core dependency. Define one builder-neutral responsive/data/capability intent contract, then map it into Bricks, block themes, Elementor, headless, and future platform adapters without leaking builder dialect into Seam or DSA core. |
 | **UI-1 Marketplace conformance harness** | M | Baseline complete; live proof pending | The 70-variant screenshot and contract harness is operational outside the deploy package. Extend it with actual safe-area/browser zoom emulation, keyboard/focus journeys, screen readers, reduced motion, forced colors, and third-party package fixtures before enforcing marketplace admission. Reject packages that add shell breakpoints, clone deterministic controls, hide slots, overflow reserves, or fail accessibility assertions. |
 | **PAYLOAD-1 Thin Surface shell** | L split | Presentation boundary complete; deeper event-domain splitting remains profile-led | Games, Profile, Cart/Checkout, Links/editor, and AI panel/inbox/report presentation load on first use. The resident shell is 347,324 raw / 75,495 gzip and retains geometry, lifecycle, history, event binding, cart reconciliation, identity gates, AI arbitration, and deterministic server authority. Further extraction requires production profiling and must not duplicate state or mutation ownership. |
 | **CLEAN-1 Runtime and migration cleanup** | S/M | After PR4 | Remove only proven unread flags, retire completed temporary probes, preserve migration readers, and reduce duplicate disabled-navigation plumbing. |
@@ -1239,6 +1240,34 @@ S19 closes the approved architecture, not the product or production journey. Thi
 | **DATA-1 Registry/Schema/Analytics refinement** | M/L split | After PR1/PR4 | Snapshot-keyed schema cache invalidation, GEO confidence evidence, revenue/session and permission attribution, and scalable Saved storage/migration. |
 | **PRODUCT-1 Commerce, rewards, and permissions v2** | M per workflow | After matching gates | Shipping/coupon confidence, leaderboards and campaign budgets, location/camera/scanner journeys, and richer deterministic AI notifications. |
 | **PLATFORM-1 Later network expansion** | XL split | After PR6 and product proof | POS, customer score, merchant-opt-in partners, marketplace, edge distribution, and cross-site identity remain separately approved milestone tracks. |
+
+### Builder- and Platform-Agnostic Adapter Doctrine
+
+Kiwe's near-term production path is Bricks-first because the first live sites are being built with Bricks and the local Bricks source can be inspected for exact element, query-loop, condition, interaction, dynamic-tag, global-variable, and responsive-control dialects. That does not make DSA, Kiwe, Seam, Site Graph, or the Geometry Engine Bricks-dependent.
+
+The architectural boundary is:
+
+- **Core truth:** Seam vocabulary, Kiwe attributes, universal tokens, Site Graph/Data, AppShell runtime, Surface lifecycle, Geometry Engine, protected commerce/auth boundaries, command contracts, audit contracts, accessibility rules, and responsive intent are builder-neutral.
+- **Adapter truth:** Bricks, Elementor, block themes, custom HTML, and headless frontends receive translated output through adapter-specific dialects. Bricks settings such as native element JSON, `_direction:mobile_landscape`, query-loop objects, dynamic-tag syntax, conditions, interactions, and template conditions belong only in the Bricks adapter lane.
+- **No upward leakage:** A Bricks-specific fix can improve the Bricks adapter and its audits, but it must not redefine Seam core, Kiwe AppShell markup, Site Graph semantics, or the general command language.
+- **No universal final-output transformer:** DSA still rejects a magical converter that mutates every builder's final output blindly. The safe model is one builder-neutral intent packet plus explicit adapters with capability declarations, unsupported-feature reporting, visual parity evidence, and rollback-safe import notes.
+- **DSA/AppShell is not page-builder content:** `/convert /bricks` and future builder-conversion commands operate on website/page/template artifacts. They must not convert DSA dock, sheet, screen, lifecycle, protected checkout, PhoneKey, or notification authority into builder elements.
+- **Platform expansion is staged:** WordPress, WooCommerce, and Bricks remain the first deeply supported host stack. Later block-theme, Elementor, headless WordPress, and non-WordPress adapters consume the same neutral contracts instead of forking the product into builder-specific cores.
+
+This resolves the Bricks responsiveness concern: using Bricks-native responsive controls is correct inside `/convert /bricks`, but the source-of-truth should be a Kiwe responsive-intent schema. Bricks maps that schema into Bricks controls; Elementor would map it into Elementor containers/breakpoints; block themes would map it into block supports and Interactivity/Bindings; headless exports would map it into component props and CSS variables.
+
+#### Pending ADAPTER-1 steps
+
+1. Define `kiwe.responsive-intent.v1` as a builder-neutral schema covering layout mode, flow, grid tracks, spans, rails, wrap behavior, ordering, alignment, visibility, overflow expectations, and desktop/tablet/mobile/narrow breakpoint intent.
+2. Refactor Bricks conversion guidance and audits so Bricks-specific fields are framed as the Bricks adapter's output dialect, not as Seam requirements.
+3. Add a builder-adapter registry to the Site Graph/API context. Each adapter should expose supported elements, dynamic tags, query-loop structures, condition systems, interaction systems, responsive controls, import format, and known unsupported mappings.
+4. Expand `/list` and command docs so `/convert /bricks` is explicitly one adapter command. Reserve future siblings such as `/convert /blocks`, `/convert /elementor`, `/convert /headless`, and `/audit /builderconversion`.
+5. Add a visual parity evidence lane to conversion packages. A schema pass must not imply visual pass; conversion artifacts need screenshot metadata, responsive comparison notes, or explicit "not browser-verified" limitations.
+6. Add fixtures for hard cases: bento grids, horizontal rails, nested reels, desktop-row/mobile-column flex changes, background media, sticky sections, accordions, tabs, query loops, dark-mode palettes, and Kiwe launcher attributes.
+7. Keep Seam headless and semantic. If a layout problem appears, solve it through neutral intent, tokens, attributes, and adapter mapping rather than adding hardcoded design defaults to Seam roles.
+8. Keep Kiwe attributes builder-neutral. Capabilities such as save/wishlist/bookmark, notification permission, page/menu context, DSA launchers, theme mode, and future appsite actions should work from normal HTML, Bricks, blocks, Elementor, and headless components through adapter-specific rendering only where required.
+9. Draft Elementor, block-theme, and headless adapter contracts as documentation-only stubs after Bricks proof stabilizes, so future work has a clean runway without distracting from the first live production adapter.
+10. Add CI/static checks that fail if Bricks-only vocabulary is introduced into Seam core contexts, AppShell theme contracts, or builder-neutral command documentation outside the Bricks adapter/tooling lane.
 
 **Historical completion interpretation (`0.5.11`, before the pre-1.0 audit):** implementation breadth was approximately **96%** of the present WordPress MVP, controlled production readiness approximately **84%**, approved APEX architecture **100%**, and the broader platform vision approximately **62%**. These dimensions must not be combined into one marketing percentage. The stricter release audit below supersedes the readiness percentage without erasing this historical measurement.
 
@@ -1460,3 +1489,24 @@ The old Surface admin page was a construction-era umbrella and is no longer a us
 Navigation bar is a named geometry presentation, not an ambiguous style checkbox: horizontal bars use `100dvw`, vertical bars use the usable `100dvh`, the selected viewport edge has zero external gap, safe-area insets are internal padding, and the cross-axis reserve remains token-driven. Compact Dock behavior is unchanged. The renderer emits one presentation class and device-specific edge classes; no site-specific calculation or theme leakage is allowed.
 
 Classic and Sheet remain presentation adapters over the same Surface lifecycle. Sheet does not receive Classic blur, glass intensity, screen material, or directional screen-motion classes. Saving settings on one owner page cannot reset another owner page's values.
+
+## Bricks Conversion Delivery Boundary (`0.5.43`)
+
+Kiwe/Seam remains builder-agnostic; Bricks is the first production adapter, not the core architecture. A `/convert /bricks` output is therefore a Bricks-adapter delivery artifact layered over the same Seam markup, tokens, capability attributes, and Site Graph intent that other future builders can consume through their own adapters.
+
+Bricks 2.4 source verification shows three different shapes that must not be confused:
+
+- **Kiwe conversion package:** `bricks-conversion/kiwe-bricks-conversion.json` with `schema: "kiwe.bricks-conversion.v1"`. This is a validation, audit, and controlled-executor envelope. It is not uploaded directly to Bricks "My Templates".
+- **Bricks native template export:** a Bricks import JSON with non-empty `title`, `templateType`, and a non-empty `content`, `header`, or `footer` array. Bricks imports `title` as the template post title; when title is absent it creates `(no title)`. Bricks inserts only `content`, `header`, or `footer`; when all are absent it reports "This template has no data". Template class dependencies use Bricks' `global_classes` key on this route; copied-elements `globalClasses` alone is not enough for a My Templates upload.
+- **Bricks ability/staging route:** WordPress/Bricks 2.4 AI abilities can create a template from `title`, `type`, `elements`, and `settings`, then insert it into a target page/template with revision safety. This is the preferred Kiwe staging executor route because it avoids browser clipboard fragility and makes mutations auditable.
+
+Every Bricks conversion must declare `target.importMethod`:
+
+- `review-only` for audit-only packages;
+- `bricks-clipboard-json` for manual builder clipboard/native paste;
+- `bricks-admin-template-upload` only when a separate native Bricks template export JSON is present at `target.templateExportPath`;
+- `kiwe-staging-executor` for controlled API application through Kiwe.
+
+The validator now rejects ambiguous output, including packages that ask a user to upload `kiwe-bricks-conversion.json` as a Bricks template, packages missing `target.importMethod`, and template-upload claims without Bricks-native `title` plus `content/header/footer` data. Native Bricks style controls remain the goal for editable pages; CSS-heavy render-only conversions are rejected unless `fidelity.nativeStyleIntent` proves what is editable in Bricks and what remains a justified custom-CSS exception. The audit also counts ordinary mappable CSS declarations, so a package cannot pass by keeping flex/grid/spacing/typography/color/border/shadow decisions in CSS while exposing too few Bricks controls for designers to edit visually.
+
+The National Chikki bento/grid import proved a second failure mode: a Bricks template can import structurally while rendering wrongly because the design lived mostly in `pageSettings.customCss`. Bricks can store page settings on the template record, but insertion into a target page/template may not carry those page-level rules forward, and stale target-page CSS can win. For `bricks-admin-template-upload`, Kiwe now treats page-level custom CSS as a small exception lane only. Full-page template-upload handoffs must carry ordinary layout, responsive grid/flex, spacing, sizing, typography, color, backgrounds, borders, radii, and shadows through native element settings, importable global classes, and global variables. Large clipboard JSON is also rejected as a default delivery because it is impractical for humans and increases paste/selection failure; large conversions should ship a native Bricks template upload file or use the controlled Kiwe staging executor.
