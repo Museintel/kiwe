@@ -62,7 +62,7 @@ It pushes the active Kiwe Framework into Bricks as:
 - Kiwe Universal color palette;
 - Kiwe Seam global classes/categories, including the expanded neutral Seam Class Vocabulary.
 
-It also imports/exports standalone Framework profiles using `schema: "kiwe.framework-profile.v1"`. A Framework profile contains `settings.tokens` only: official Kiwe universal token overrides and safe Bricks global theme-style metadata. DSA/AppShell theme packages remain separate and install under `Kiwe > Theme`.
+It also imports/exports standalone Framework profiles using `schema: "kiwe.framework-profile.v1"`. A Framework profile contains `settings.tokens` only: official Kiwe universal token overrides and complete safe Bricks global theme-style metadata (`enabled: true`, safe `id`, human `label`, global style slots only). DSA/AppShell theme packages remain separate and install under `Kiwe > Theme`.
 
 The old `Kiwe > Tokens` slug (`kiwe-tokens`) redirects to `kiwe-framework` for compatibility.
 

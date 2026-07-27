@@ -25,7 +25,16 @@
       "bricks_theme_style": {
         "enabled": true,
         "id": "kiwe-fixture-framework",
-        "label": "Kiwe Fixture Framework"
+        "label": "Kiwe Fixture Framework",
+        "siteBackground": "#fff8ea",
+        "colorPrimary": "#d6006f",
+        "colorSecondary": "#00cdc6",
+        "colorLight": "#fffdf8",
+        "colorDark": "#201713",
+        "colorMuted": "#6d625d",
+        "fontDisplay": "Inter, system-ui, sans-serif",
+        "fontBody": "Inter, system-ui, sans-serif",
+        "typeH1": "clamp(2.5rem, 6vw, 5rem)"
       }
     }
   }

@@ -250,7 +250,7 @@ Standalone Framework profiles must be narrow:
 - `settings.tokens.enabled`;
 - `settings.tokens.profile_label`;
 - `settings.tokens.overrides` using official Kiwe universal token names only;
-- optional `settings.tokens.bricks_theme_style` metadata.
+- complete `settings.tokens.bricks_theme_style` metadata with `enabled: true`, safe `id`, human `label`, and global style slots only when useful. Kiwe > Framework uses this lane to push the matching native Bricks Theme Style.
 
 Reject or mark for revision any Framework profile that carries custom token names, AppShell geometry, dock configuration, screen copy, products, posts, Bricks raw JSON, or runtime behavior.
 

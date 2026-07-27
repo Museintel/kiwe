@@ -204,6 +204,243 @@ final class Seam_Token_Service {
 		return $out;
 	}
 
+	public static function sanitize_framework_profile_tokens( array $input, array $current, array $defaults ): array {
+		$default_style = is_array( $defaults['bricks_theme_style'] ?? null )
+			? $defaults['bricks_theme_style']
+			: [
+				'enabled' => true,
+				'id'      => 'kiwe-global-design',
+				'label'   => 'Kiwe Universal Design Tokens',
+			];
+
+		$next = wp_parse_args( is_array( $current ) ? $current : [], $defaults );
+		$next['bricks_theme_style'] = wp_parse_args(
+			is_array( $next['bricks_theme_style'] ?? null ) ? $next['bricks_theme_style'] : [],
+			$default_style
+		);
+
+		$input = wp_unslash( $input );
+
+		if ( array_key_exists( 'enabled', $input ) ) {
+			$next['enabled'] = ! empty( $input['enabled'] );
+		}
+		if ( array_key_exists( 'profile_label', $input ) ) {
+			$label = sanitize_text_field( (string) $input['profile_label'] );
+			$next['profile_label'] = '' !== $label ? substr( $label, 0, 80 ) : (string) ( $defaults['profile_label'] ?? 'Kiwe Universal' );
+		}
+
+		if ( array_key_exists( 'overrides', $input ) && is_array( $input['overrides'] ) ) {
+			$next['overrides'] = self::sanitize_overrides( $input['overrides'] );
+		} else {
+			$next['overrides'] = self::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
+		}
+
+		if ( isset( $input['bricks_theme_style'] ) && is_array( $input['bricks_theme_style'] ) ) {
+			$style_input = $input['bricks_theme_style'];
+			$looks_like_theme_style = self::looks_like_framework_theme_style_metadata( $style_input );
+			$profile_label = (string) ( $next['profile_label'] ?? ( $defaults['profile_label'] ?? 'Kiwe Universal' ) );
+
+			if ( array_key_exists( 'enabled', $style_input ) ) {
+				$next['bricks_theme_style']['enabled'] = ! empty( $style_input['enabled'] );
+			} elseif ( $looks_like_theme_style ) {
+				$next['bricks_theme_style']['enabled'] = true;
+			}
+
+			if ( array_key_exists( 'id', $style_input ) ) {
+				$id = sanitize_key( (string) $style_input['id'] );
+				$next['bricks_theme_style']['id'] = '' !== $id ? substr( $id, 0, 80 ) : (string) ( $default_style['id'] ?? 'kiwe-global-design' );
+			} elseif ( $looks_like_theme_style ) {
+				$next['bricks_theme_style']['id'] = self::derive_framework_theme_style_id( $profile_label, (string) ( $default_style['id'] ?? 'kiwe-global-design' ) );
+			}
+
+			if ( array_key_exists( 'label', $style_input ) ) {
+				$label = sanitize_text_field( (string) $style_input['label'] );
+				$next['bricks_theme_style']['label'] = '' !== $label ? substr( $label, 0, 100 ) : (string) ( $default_style['label'] ?? 'Kiwe Universal Design Tokens' );
+			} elseif ( $looks_like_theme_style ) {
+				$next['bricks_theme_style']['label'] = substr( sanitize_text_field( $profile_label . ' Bricks Theme Style' ), 0, 100 );
+			}
+
+			$style_overrides = self::sanitize_overrides( self::framework_theme_style_token_overrides( $style_input ) );
+			foreach ( $style_overrides as $token_name => $value ) {
+				if ( ! array_key_exists( $token_name, $next['overrides'] ) ) {
+					$next['overrides'][ $token_name ] = $value;
+				}
+			}
+		}
+
+		$next['overrides'] = self::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
+
+		return $next;
+	}
+
+	public static function framework_theme_style_allowed_keys(): array {
+		return [
+			'enabled',
+			'id',
+			'label',
+			'siteBackground',
+			'site_background',
+			'background',
+			'colorPrimary',
+			'color_primary',
+			'primary',
+			'brand',
+			'colorSecondary',
+			'color_secondary',
+			'secondary',
+			'accent',
+			'colorSurface',
+			'color_surface',
+			'surface',
+			'colorSurfaceRaised',
+			'color_surface_raised',
+			'surfaceRaised',
+			'colorLight',
+			'color_light',
+			'light',
+			'colorDark',
+			'color_dark',
+			'dark',
+			'colorMuted',
+			'color_muted',
+			'muted',
+			'colorBorder',
+			'color_border',
+			'borderColor',
+			'border_color',
+			'linkColor',
+			'link_color',
+			'colorLink',
+			'color_link',
+			'linkHoverColor',
+			'link_hover_color',
+			'fontDisplay',
+			'font_display',
+			'displayFont',
+			'display_font',
+			'fontBody',
+			'font_body',
+			'bodyFont',
+			'body_font',
+			'typeH1',
+			'type_h1',
+			'typeH2',
+			'type_h2',
+			'typeBody',
+			'type_body',
+			'radiusLg',
+			'radius_lg',
+			'radiusLarge',
+			'radius_large',
+			'shadowMd',
+			'shadow_md',
+			'shadowMedium',
+			'shadow_medium',
+			'spaceMd',
+			'space_md',
+		];
+	}
+
+	private static function looks_like_framework_theme_style_metadata( array $style_input ): bool {
+		$allowed = array_flip( self::framework_theme_style_allowed_keys() );
+
+		foreach ( array_keys( $style_input ) as $key ) {
+			if ( isset( $allowed[ (string) $key ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static function framework_theme_style_token_overrides( array $style_input ): array {
+		$map = [
+			'siteBackground'     => 'color-surface',
+			'site_background'    => 'color-surface',
+			'background'         => 'color-surface',
+			'colorPrimary'       => 'color-brand',
+			'color_primary'      => 'color-brand',
+			'primary'            => 'color-brand',
+			'brand'              => 'color-brand',
+			'colorSecondary'     => 'color-accent',
+			'color_secondary'    => 'color-accent',
+			'secondary'          => 'color-accent',
+			'accent'             => 'color-accent',
+			'colorSurface'       => 'color-surface',
+			'color_surface'      => 'color-surface',
+			'surface'            => 'color-surface',
+			'colorSurfaceRaised' => 'color-surface-raised',
+			'color_surface_raised' => 'color-surface-raised',
+			'surfaceRaised'      => 'color-surface-raised',
+			'colorLight'         => 'color-surface-raised',
+			'color_light'        => 'color-surface-raised',
+			'light'              => 'color-surface-raised',
+			'colorDark'          => 'color-text',
+			'color_dark'         => 'color-text',
+			'dark'               => 'color-text',
+			'colorMuted'         => 'color-text-muted',
+			'color_muted'        => 'color-text-muted',
+			'muted'              => 'color-text-muted',
+			'colorBorder'        => 'color-border',
+			'color_border'       => 'color-border',
+			'borderColor'        => 'color-border',
+			'border_color'       => 'color-border',
+			'linkColor'          => 'color-brand',
+			'link_color'         => 'color-brand',
+			'colorLink'          => 'color-brand',
+			'color_link'         => 'color-brand',
+			'linkHoverColor'     => 'color-accent',
+			'link_hover_color'   => 'color-accent',
+			'fontDisplay'        => 'font-display',
+			'font_display'       => 'font-display',
+			'displayFont'        => 'font-display',
+			'display_font'       => 'font-display',
+			'fontBody'           => 'font-body',
+			'font_body'          => 'font-body',
+			'bodyFont'           => 'font-body',
+			'body_font'          => 'font-body',
+			'typeH1'             => 'type-h1',
+			'type_h1'            => 'type-h1',
+			'typeH2'             => 'type-h2',
+			'type_h2'            => 'type-h2',
+			'typeBody'           => 'type-body',
+			'type_body'          => 'type-body',
+			'radiusLg'           => 'radius-lg',
+			'radius_lg'          => 'radius-lg',
+			'radiusLarge'        => 'radius-lg',
+			'radius_large'       => 'radius-lg',
+			'shadowMd'           => 'shadow-md',
+			'shadow_md'          => 'shadow-md',
+			'shadowMedium'       => 'shadow-md',
+			'shadow_medium'      => 'shadow-md',
+			'spaceMd'            => 'space-md',
+			'space_md'           => 'space-md',
+		];
+		$out = [];
+
+		foreach ( $map as $style_key => $token_name ) {
+			if ( array_key_exists( $style_key, $style_input ) && is_scalar( $style_input[ $style_key ] ) ) {
+				$value = self::clean_value( (string) $style_input[ $style_key ] );
+				if ( '' !== $value ) {
+					$out[ $token_name ] = $value;
+				}
+			}
+		}
+
+		return $out;
+	}
+
+	private static function derive_framework_theme_style_id( string $profile_label, string $fallback ): string {
+		$id = sanitize_key( 'kiwe-' . $profile_label );
+		$id = trim( preg_replace( '/-+/', '-', $id ), '-' );
+
+		if ( '' === $id || 'kiwe' === $id ) {
+			$id = sanitize_key( $fallback ) ?: 'kiwe-global-design';
+		}
+
+		return substr( $id, 0, 80 );
+	}
+
 	public static function overrides_from_settings( array $settings ): array {
 		$theme  = isset( $settings['dsa_theme'] ) && is_array( $settings['dsa_theme'] ) ? $settings['dsa_theme'] : [];
 		$visual = isset( $settings['visual_effects'] ) && is_array( $settings['visual_effects'] ) ? $settings['visual_effects'] : [];

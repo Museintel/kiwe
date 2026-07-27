@@ -20,7 +20,7 @@ This is not a Kiwe AppShell theme handoff. AppShell themes use `ui-system/` and 
 
 If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `appshell-theme/`, and `combined-preview/` folders. AppShell theme settings belong inside `appshell-theme/import/<theme-id>/theme-package.json`.
 
-If a website/page-only handoff creates a reusable brand token system for Bricks and future Kiwe pages, add `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. That file imports under `Kiwe > Framework`.
+If a website/page-only handoff creates a reusable brand token system for Bricks and future Kiwe pages, add `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. That file imports under `Kiwe > Framework` and must include a complete `settings.tokens.bricks_theme_style` lane (`enabled: true`, safe `id`, human `label`, global style slots only) so Kiwe can push the matching Bricks Theme Style.
 
 ## Read order
 
@@ -1068,7 +1068,7 @@ Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
 - Produce `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, duplicate preview files, or hidden local files.
-- If the website/page establishes a brand system that should be reused by Bricks and future Kiwe pages, include `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. This imports at `Kiwe > Framework`, not `Kiwe > Theme`.
+- If the website/page establishes a brand system that should be reused by Bricks and future Kiwe pages, include `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. This imports at `Kiwe > Framework`, not `Kiwe > Theme`. The profile must include a complete `settings.tokens.bricks_theme_style` lane (`enabled: true`, safe `id`, human `label`, global style slots only) so Kiwe can create/update the matching Bricks Theme Style during the Framework push.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.

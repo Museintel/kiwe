@@ -61,6 +61,72 @@ function add(list, code, message, pathValue = '') {
   list.push({ code, message, path: pathValue });
 }
 
+const BRICKS_THEME_STYLE_KEYS = new Set([
+  'enabled',
+  'id',
+  'label',
+  'siteBackground',
+  'site_background',
+  'background',
+  'colorPrimary',
+  'color_primary',
+  'primary',
+  'brand',
+  'colorSecondary',
+  'color_secondary',
+  'secondary',
+  'accent',
+  'colorSurface',
+  'color_surface',
+  'surface',
+  'colorSurfaceRaised',
+  'color_surface_raised',
+  'surfaceRaised',
+  'colorLight',
+  'color_light',
+  'light',
+  'colorDark',
+  'color_dark',
+  'dark',
+  'colorMuted',
+  'color_muted',
+  'muted',
+  'colorBorder',
+  'color_border',
+  'borderColor',
+  'border_color',
+  'linkColor',
+  'link_color',
+  'colorLink',
+  'color_link',
+  'linkHoverColor',
+  'link_hover_color',
+  'fontDisplay',
+  'font_display',
+  'displayFont',
+  'display_font',
+  'fontBody',
+  'font_body',
+  'bodyFont',
+  'body_font',
+  'typeH1',
+  'type_h1',
+  'typeH2',
+  'type_h2',
+  'typeBody',
+  'type_body',
+  'radiusLg',
+  'radius_lg',
+  'radiusLarge',
+  'radius_large',
+  'shadowMd',
+  'shadow_md',
+  'shadowMedium',
+  'shadow_medium',
+  'spaceMd',
+  'space_md'
+]);
+
 export function validateFrameworkProfile(target, options = {}) {
   const profilePath = resolveProfilePath(target);
   const errors = [];
@@ -173,21 +239,34 @@ export function validateFrameworkProfile(target, options = {}) {
     }
   }
 
-  const style = tokens && isPlainObject(tokens.bricks_theme_style) ? tokens.bricks_theme_style : {};
+  const style = tokens && isPlainObject(tokens.bricks_theme_style) ? tokens.bricks_theme_style : null;
+  if (tokens && !style) {
+    add(errors, 'missing_bricks_theme_style', 'Framework profile must include settings.tokens.bricks_theme_style so Kiwe > Framework can push the matching Bricks global theme style.', 'settings.tokens.bricks_theme_style');
+  }
   if (style) {
-    const styleKeys = new Set(['enabled', 'id', 'label']);
     for (const key of Object.keys(style)) {
-      if (!styleKeys.has(key)) {
+      if (!BRICKS_THEME_STYLE_KEYS.has(key)) {
         add(errors, 'unknown_bricks_theme_style_key', `settings.tokens.bricks_theme_style contains unsupported key ${key}.`, `settings.tokens.bricks_theme_style.${key}`);
       }
     }
-    if (Object.prototype.hasOwnProperty.call(style, 'enabled') && typeof style.enabled !== 'boolean') {
-      add(errors, 'invalid_style_enabled', 'settings.tokens.bricks_theme_style.enabled must be boolean.', 'settings.tokens.bricks_theme_style.enabled');
+    if (Object.keys(style).length === 0) {
+      add(errors, 'empty_bricks_theme_style', 'settings.tokens.bricks_theme_style must not be empty. Include enabled, id, label, and safe global style slots where useful.', 'settings.tokens.bricks_theme_style');
     }
-    if (Object.prototype.hasOwnProperty.call(style, 'id') && !/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(String(style.id))) {
+    if (!Object.prototype.hasOwnProperty.call(style, 'enabled')) {
+      add(errors, 'missing_style_enabled', 'settings.tokens.bricks_theme_style.enabled must be true for a complete Kiwe > Framework profile.', 'settings.tokens.bricks_theme_style.enabled');
+    } else if (typeof style.enabled !== 'boolean') {
+      add(errors, 'invalid_style_enabled', 'settings.tokens.bricks_theme_style.enabled must be boolean.', 'settings.tokens.bricks_theme_style.enabled');
+    } else if (style.enabled !== true) {
+      add(errors, 'style_not_enabled', 'settings.tokens.bricks_theme_style.enabled must be true so the imported profile can create/update the Bricks theme style.', 'settings.tokens.bricks_theme_style.enabled');
+    }
+    if (!Object.prototype.hasOwnProperty.call(style, 'id')) {
+      add(errors, 'missing_style_id', 'settings.tokens.bricks_theme_style.id is required and must be a safe Bricks theme-style id.', 'settings.tokens.bricks_theme_style.id');
+    } else if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(String(style.id))) {
       add(errors, 'invalid_style_id', 'settings.tokens.bricks_theme_style.id must be a safe id up to 80 characters.', 'settings.tokens.bricks_theme_style.id');
     }
-    if (Object.prototype.hasOwnProperty.call(style, 'label') && (typeof style.label !== 'string' || style.label.trim() === '' || style.label.length > 100)) {
+    if (!Object.prototype.hasOwnProperty.call(style, 'label')) {
+      add(errors, 'missing_style_label', 'settings.tokens.bricks_theme_style.label is required so designers can find the generated Bricks theme style.', 'settings.tokens.bricks_theme_style.label');
+    } else if (typeof style.label !== 'string' || style.label.trim() === '' || style.label.length > 100) {
       add(errors, 'invalid_style_label', 'settings.tokens.bricks_theme_style.label must be a non-empty string up to 100 characters.', 'settings.tokens.bricks_theme_style.label');
     }
   }

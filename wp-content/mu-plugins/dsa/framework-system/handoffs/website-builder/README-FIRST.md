@@ -10,7 +10,7 @@ This is not a Kiwe AppShell theme handoff. AppShell themes use `ui-system/` and 
 
 If the assignment asks for both a website/page and a DSA AppShell theme, use `HANDOFF-MODES.md` and keep the output in separate `website/`, `appshell-theme/`, and `combined-preview/` folders. AppShell theme settings belong inside `appshell-theme/import/<theme-id>/theme-package.json`.
 
-If a website/page-only handoff creates a reusable brand token system for Bricks and future Kiwe pages, add `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. That file imports under `Kiwe > Framework`.
+If a website/page-only handoff creates a reusable brand token system for Bricks and future Kiwe pages, add `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. That file imports under `Kiwe > Framework` and must include a complete `settings.tokens.bricks_theme_style` lane (`enabled: true`, safe `id`, human `label`, global style slots only) so Kiwe can push the matching Bricks Theme Style.
 
 ## Read order
 

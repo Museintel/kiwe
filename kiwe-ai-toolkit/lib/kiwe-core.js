@@ -433,6 +433,8 @@ function frameworkProfileContext() {
     '',
     'A Framework profile is the sitewide design-token import for `Kiwe > Framework`. After import, the admin can push variables, colors, global classes, and Bricks theme-style data to Bricks from Kiwe. It is not a DSA AppShell theme package, not a Bricks template, and not the standalone `/brickstheme` file.',
     '',
+    '`settings.tokens.bricks_theme_style` must be complete for `/frameworkprofile`: `enabled: true`, a safe `id`, a human `label`, and only safe global style slots such as site background, palette, fonts, heading scale, links, radius, shadow, and spacing. Kiwe normalizes those slots into universal tokens and generates the native Bricks Theme Style during the Kiwe > Framework push.',
+    '',
     'Expected file:',
     '',
     '```text',

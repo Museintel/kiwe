@@ -357,7 +357,20 @@ The profile must use:
       "enabled": true,
       "profile_label": "Human readable name",
       "overrides": {},
-      "bricks_theme_style": {}
+      "bricks_theme_style": {
+        "enabled": true,
+        "id": "kiwe-human-readable-name",
+        "label": "Human Readable Name Bricks Theme Style",
+        "siteBackground": "#f6f8f7",
+        "colorPrimary": "#d6006f",
+        "colorSecondary": "#24c6a1",
+        "colorLight": "#ffffff",
+        "colorDark": "#1f2933",
+        "colorMuted": "#64717d",
+        "fontDisplay": "Inter, system-ui, sans-serif",
+        "fontBody": "Inter, system-ui, sans-serif",
+        "typeH1": "clamp(52px, 5vw + 36px, 108px)"
+      }
     }
   }
 }
@@ -366,7 +379,8 @@ The profile must use:
 Rules:
 
 - Use official Kiwe universal token names only, such as `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `space-md`, `radius-lg`, and `shadow-md`.
-- `bricks_theme_style` may cover global colors, typography, links, and site background only.
+- `bricks_theme_style` is required for a complete Framework profile. It must set `enabled: true`, a safe `id`, and a human `label`.
+- `bricks_theme_style` may carry safe global style slots only: site background, global colors, typography, links, radius, shadow, and spacing. Kiwe normalizes those slots back into universal tokens and then generates the native Bricks Theme Style during the Kiwe > Framework push.
 - Do not put AppShell dock/sheet/screen settings, products, posts, raw Bricks JSON, WooCommerce behavior, or runtime JS here.
 - Do not output `FRAMEWORK-NOTES.md`, README files, reports, Bricks template JSON, or AppShell theme packages unless `/document` is explicitly present.
 

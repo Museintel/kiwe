@@ -396,7 +396,7 @@ combined-kiwe-handoff/
 
 Combined mode has one primary visual review: `combined-preview/index.html`. It must show the website/page behind the Kiwe AppShell and include AppShell variation controls there. Do not make reviewers open a separate website preview and a separate AppShell preview to understand the paired design.
 
-Standalone Framework profiles import/export under `Kiwe > Framework`. Theme packages install under `Kiwe > Theme > Installed themes`. AI staging clients can apply a Framework profile with `kiwe.framework-profile.apply` and then explicitly push the active profile to Bricks with `kiwe.framework.push-bricks`.
+Standalone Framework profiles import/export under `Kiwe > Framework`. Theme packages install under `Kiwe > Theme > Installed themes`. AI staging clients can apply a Framework profile with `kiwe.framework-profile.apply` and then explicitly push the active profile to Bricks with `kiwe.framework.push-bricks`. A Framework profile must be self-contained for the Bricks foundation: `settings.tokens.bricks_theme_style.enabled` is `true`, with a safe `id`, human `label`, and only safe global style slots. Kiwe normalizes those slots into universal tokens and writes the native Bricks Theme Style during push.
 
 ## Naming
 

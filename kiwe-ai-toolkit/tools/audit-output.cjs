@@ -862,6 +862,48 @@ if (frameworkProfilePath) {
         }
       }
     }
+    if (tokens) {
+      const style = tokens.bricks_theme_style && typeof tokens.bricks_theme_style === 'object' && !Array.isArray(tokens.bricks_theme_style) ? tokens.bricks_theme_style : null;
+      const safeStyleKeys = new Set([
+        'enabled', 'id', 'label',
+        'siteBackground', 'site_background', 'background',
+        'colorPrimary', 'color_primary', 'primary', 'brand',
+        'colorSecondary', 'color_secondary', 'secondary', 'accent',
+        'colorSurface', 'color_surface', 'surface',
+        'colorSurfaceRaised', 'color_surface_raised', 'surfaceRaised',
+        'colorLight', 'color_light', 'light',
+        'colorDark', 'color_dark', 'dark',
+        'colorMuted', 'color_muted', 'muted',
+        'colorBorder', 'color_border', 'borderColor', 'border_color',
+        'linkColor', 'link_color', 'colorLink', 'color_link',
+        'linkHoverColor', 'link_hover_color',
+        'fontDisplay', 'font_display', 'displayFont', 'display_font',
+        'fontBody', 'font_body', 'bodyFont', 'body_font',
+        'typeH1', 'type_h1', 'typeH2', 'type_h2', 'typeBody', 'type_body',
+        'radiusLg', 'radius_lg', 'radiusLarge', 'radius_large',
+        'shadowMd', 'shadow_md', 'shadowMedium', 'shadow_medium',
+        'spaceMd', 'space_md'
+      ]);
+
+      if (!style) {
+        add('fail', 'Framework profile must include settings.tokens.bricks_theme_style so Kiwe > Framework can push the matching Bricks Theme Style.', rel(frameworkProfilePath));
+      } else {
+        for (const key of Object.keys(style)) {
+          if (!safeStyleKeys.has(key)) {
+            add('fail', `Framework profile bricks_theme_style contains unsupported key "${key}". Use only global style slots, not Bricks element-level styling.`, rel(frameworkProfilePath));
+          }
+        }
+        if (style.enabled !== true) {
+          add('fail', 'Framework profile bricks_theme_style.enabled must be true for the one-file Kiwe > Framework setup path.', rel(frameworkProfilePath));
+        }
+        if (typeof style.id !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(style.id)) {
+          add('fail', 'Framework profile bricks_theme_style.id must be a safe Bricks theme-style id.', rel(frameworkProfilePath));
+        }
+        if (typeof style.label !== 'string' || !style.label.trim() || style.label.length > 100) {
+          add('fail', 'Framework profile bricks_theme_style.label must be a human-readable label up to 100 characters.', rel(frameworkProfilePath));
+        }
+      }
+    }
   }
 }
 

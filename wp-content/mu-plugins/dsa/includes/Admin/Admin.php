@@ -2950,19 +2950,29 @@ final class Admin {
 		$merged_classes    = array_merge( $merged_classes, $kiwe_classes );
 		$merged_class_categories = array_merge( $merged_class_categories, $kiwe_class_categories );
 
-		update_option( BRICKS_DB_GLOBAL_VARIABLES, $merged_variables, false );
-		update_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories, false );
+		if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_variables_in_db' ) ) {
+			\Bricks\Helpers::save_global_variables_in_db( $merged_variables );
+		} else {
+			update_option( BRICKS_DB_GLOBAL_VARIABLES, $merged_variables, false );
+		}
+		if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_variables_array_option' ) ) {
+			\Bricks\Helpers::save_global_variables_array_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories );
+		} else {
+			update_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories, false );
+		}
 		if ( defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
 			update_option( BRICKS_DB_COLOR_PALETTE, $merged_palette, false );
 		}
 		$token_settings = $this->settings->get( 'tokens', [] );
 		$theme_style_settings = isset( $token_settings['bricks_theme_style'] ) && is_array( $token_settings['bricks_theme_style'] ) ? $token_settings['bricks_theme_style'] : [];
+		$theme_style_pushed = false;
 		if ( defined( 'BRICKS_DB_THEME_STYLES' ) && ! empty( $kiwe_theme_style['id'] ) && ! empty( $kiwe_theme_style['settings'] ) && ! empty( $theme_style_settings['enabled'] ) ) {
 			$current_theme_styles[ (string) $kiwe_theme_style['id'] ] = [
 				'label'    => sanitize_text_field( (string) ( $kiwe_theme_style['label'] ?? 'Kiwe Universal Design Tokens' ) ),
 				'settings' => $kiwe_theme_style['settings'],
 			];
 			update_option( BRICKS_DB_THEME_STYLES, $current_theme_styles, false );
+			$theme_style_pushed = true;
 		}
 		if ( defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ) {
 			if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_classes_in_db' ) ) {
@@ -2980,6 +2990,9 @@ final class Admin {
 		}
 		if ( class_exists( '\Bricks\Assets_Color_Palettes' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
 			\Bricks\Assets_Color_Palettes::generate_css_file( $merged_palette );
+		}
+		if ( $theme_style_pushed && class_exists( '\Bricks\Assets_Theme_Styles' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Theme_Styles::generate_css_file( $current_theme_styles );
 		}
 
 		wp_safe_redirect( add_query_arg( 'tokens-exported', 'bricks', admin_url( 'admin.php?page=kiwe-framework' ) ) );
@@ -3652,7 +3665,7 @@ final class Admin {
 						<?php submit_button( __( 'Import Framework Profile', 'dsa' ), 'secondary', 'submit', false ); ?>
 					</form>
 				</div>
-				<p class="description"><?php esc_html_e( 'Framework profiles carry only the shared Seam/Kiwe design-token profile and safe Bricks global theme style metadata. AppShell dock/sheet behavior belongs to Kiwe themes; AI/staging access belongs to Kiwe > AI.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Framework profiles carry the shared Seam/Kiwe design-token profile plus the safe Bricks global theme style foundation. Import once, then push variables, color palettes, Seam classes, and the matching Bricks Theme Style from here. AppShell dock/sheet behavior belongs to Kiwe themes; AI/staging access belongs to Kiwe > AI.', 'dsa' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_save_settings">
 					<input type="hidden" name="_dsa_redirect" value="kiwe-framework">
@@ -8613,37 +8626,7 @@ final class Admin {
 			return $next;
 		}
 
-		$input = wp_unslash( $input );
-
-		if ( array_key_exists( 'enabled', $input ) ) {
-			$next['enabled'] = ! empty( $input['enabled'] );
-		}
-		if ( array_key_exists( 'profile_label', $input ) ) {
-			$label = sanitize_text_field( (string) $input['profile_label'] );
-			$next['profile_label'] = '' !== $label ? substr( $label, 0, 80 ) : $defaults['profile_label'];
-		}
-		if ( array_key_exists( 'overrides', $input ) && is_array( $input['overrides'] ) ) {
-			$next['overrides'] = Seam_Token_Service::sanitize_overrides( $input['overrides'] );
-		} else {
-			$next['overrides'] = Seam_Token_Service::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
-		}
-
-		if ( isset( $input['bricks_theme_style'] ) && is_array( $input['bricks_theme_style'] ) ) {
-			$style_input = $input['bricks_theme_style'];
-			if ( array_key_exists( 'enabled', $style_input ) ) {
-				$next['bricks_theme_style']['enabled'] = ! empty( $style_input['enabled'] );
-			}
-			if ( array_key_exists( 'id', $style_input ) ) {
-				$id = sanitize_key( (string) $style_input['id'] );
-				$next['bricks_theme_style']['id'] = '' !== $id ? substr( $id, 0, 80 ) : $defaults['bricks_theme_style']['id'];
-			}
-			if ( array_key_exists( 'label', $style_input ) ) {
-				$label = sanitize_text_field( (string) $style_input['label'] );
-				$next['bricks_theme_style']['label'] = '' !== $label ? substr( $label, 0, 100 ) : $defaults['bricks_theme_style']['label'];
-			}
-		}
-
-		return $next;
+		return Seam_Token_Service::sanitize_framework_profile_tokens( $input, $next, $defaults );
 	}
 
 	private function sanitize_theme_screen_settings( $input, array $current ): array {

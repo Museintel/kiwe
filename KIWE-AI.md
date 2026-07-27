@@ -180,7 +180,7 @@ framework/
   kiwe-framework-profile.json
 ```
 
-This file is imported in `Kiwe > Framework`. From there the admin can push the profile to Bricks: variables, color palette, global classes, and Bricks theme-style data. This is the easiest setup path for most users. Do not output `FRAMEWORK-NOTES.md`, Bricks template JSON, AppShell theme packages, or duplicate docs unless `/document` is explicitly present.
+This file is imported in `Kiwe > Framework`. From there the admin can push the profile to Bricks: variables, color palette, global classes, and Bricks theme-style data. This is the easiest setup path for most users. The profile must include a complete `settings.tokens.bricks_theme_style` object with `enabled: true`, safe `id`, human `label`, and only global style slots; Kiwe turns that into the native Bricks Theme Style during push. Do not output `FRAMEWORK-NOTES.md`, Bricks template JSON, AppShell theme packages, or duplicate docs unless `/document` is explicitly present.
 
 For `/create /brickstheme`, output only one native Bricks Theme Styles JSON file:
 
@@ -221,7 +221,7 @@ POST /wp-json/dsa/v1/ai/themes/{themeId}/activate
 
 A Kiwe theme package is one JSON file with root `schema: "kiwe.theme-package.v1"`, root `theme`, root `settings`, and root `css`. The `settings` preset is limited to safe theme-owned subsets (`style`, `dock`, `dsa_theme`, `visual_effects`, `tokens`, and `screens`) and appears in WordPress under `Kiwe > Theme > Installed themes`. Do not output or ask users to import a loose settings file for DSA themes.
 
-Standalone website/page work may also ship a Kiwe Framework profile when it changes the shared design-token system without installing a DSA theme. A Framework profile uses `schema: "kiwe.framework-profile.v1"` and contains `settings.tokens` only: `tokens.enabled`, `tokens.profile_label`, official Kiwe universal `tokens.overrides`, and `tokens.bricks_theme_style`. Admins import/export this under `Kiwe > Framework`; AI staging clients may apply it with `kiwe.framework-profile.apply`, then separately push it to Bricks with `kiwe.framework.push-bricks`.
+Standalone website/page work may also ship a Kiwe Framework profile when it changes the shared design-token system without installing a DSA theme. A Framework profile uses `schema: "kiwe.framework-profile.v1"` and contains `settings.tokens` only: `tokens.enabled`, `tokens.profile_label`, official Kiwe universal `tokens.overrides`, and a complete `tokens.bricks_theme_style` lane with `enabled: true`, safe `id`, human `label`, and optional global-only style slots such as site background, palette, fonts, heading scale, links, radius, shadow, and spacing. Admins import/export this under `Kiwe > Framework`; AI staging clients may apply it with `kiwe.framework-profile.apply`, then separately push it to Bricks with `kiwe.framework.push-bricks`.
 
 Staging-aware clients can inspect the target site and run the first controlled staging executor:
 

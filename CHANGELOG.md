@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.51 - 2026-07-27
+
+- Made Kiwe Framework profile imports self-contained for Bricks: `settings.tokens.bricks_theme_style` now auto-enables the Bricks theme-style lane when a profile carries global style metadata, derives a safe id/label from the profile when missing, and normalizes safe global style slots back into official Kiwe universal token overrides.
+- Updated both Kiwe > Framework admin pushes and AI staging executor pushes to use Bricks global-variable helpers when available and explicitly regenerate Bricks theme-style CSS after writing `bricks_theme_styles`.
+- Tightened `/create /frameworkprofile`, `/audit /frameworkprofile`, and generic output audit contracts so browser/IDE AIs must produce a complete Bricks foundation profile instead of a partial style blob that imports but does not create the expected Bricks Theme Style.
+
 ## 6.50 - 2026-07-27
 
 - Split the browser-AI command flow so `/create /frameworkprofile` produces the single Kiwe > Framework import/push artifact, `framework/kiwe-framework-profile.json`, while `/create /brickstheme` produces only a native Bricks Theme Styles JSON file for direct Bricks import.

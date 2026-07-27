@@ -694,8 +694,16 @@ final class Staging_Execution_Service {
 		$merged_classes          = array_merge( $merged_classes, $kiwe_classes );
 		$merged_class_categories = array_merge( $merged_class_categories, $kiwe_class_categories );
 
-		update_option( BRICKS_DB_GLOBAL_VARIABLES, $merged_variables, false );
-		update_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories, false );
+		if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_variables_in_db' ) ) {
+			\Bricks\Helpers::save_global_variables_in_db( $merged_variables );
+		} else {
+			update_option( BRICKS_DB_GLOBAL_VARIABLES, $merged_variables, false );
+		}
+		if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_variables_array_option' ) ) {
+			\Bricks\Helpers::save_global_variables_array_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories );
+		} else {
+			update_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, $merged_categories, false );
+		}
 		if ( defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
 			update_option( BRICKS_DB_COLOR_PALETTE, $merged_palette, false );
 		}
@@ -717,6 +725,15 @@ final class Staging_Execution_Service {
 		}
 		if ( defined( 'BRICKS_DB_GLOBAL_CLASSES_CATEGORIES' ) ) {
 			update_option( BRICKS_DB_GLOBAL_CLASSES_CATEGORIES, $merged_class_categories, false );
+		}
+		if ( class_exists( '\Bricks\Assets_Global_Variables' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Global_Variables::generate_css_file( $merged_variables );
+		}
+		if ( class_exists( '\Bricks\Assets_Color_Palettes' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Color_Palettes::generate_css_file( $merged_palette );
+		}
+		if ( $theme_style_pushed && class_exists( '\Bricks\Assets_Theme_Styles' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Theme_Styles::generate_css_file( $current_theme_styles );
 		}
 
 		return [
@@ -820,35 +837,7 @@ final class Staging_Execution_Service {
 			is_array( $defaults['bricks_theme_style'] ?? null ) ? $defaults['bricks_theme_style'] : []
 		);
 
-		if ( array_key_exists( 'enabled', $input ) ) {
-			$next['enabled'] = ! empty( $input['enabled'] );
-		}
-		if ( array_key_exists( 'profile_label', $input ) ) {
-			$label = sanitize_text_field( (string) $input['profile_label'] );
-			$next['profile_label'] = '' !== $label ? substr( $label, 0, 80 ) : (string) ( $defaults['profile_label'] ?? 'Kiwe Universal' );
-		}
-		if ( isset( $input['overrides'] ) && is_array( $input['overrides'] ) ) {
-			$next['overrides'] = Seam_Token_Service::sanitize_overrides( $input['overrides'] );
-		} else {
-			$next['overrides'] = Seam_Token_Service::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
-		}
-
-		if ( isset( $input['bricks_theme_style'] ) && is_array( $input['bricks_theme_style'] ) ) {
-			$style_input = $input['bricks_theme_style'];
-			if ( array_key_exists( 'enabled', $style_input ) ) {
-				$next['bricks_theme_style']['enabled'] = ! empty( $style_input['enabled'] );
-			}
-			if ( array_key_exists( 'id', $style_input ) ) {
-				$id = sanitize_key( (string) $style_input['id'] );
-				$next['bricks_theme_style']['id'] = '' !== $id ? substr( $id, 0, 80 ) : (string) ( $defaults['bricks_theme_style']['id'] ?? 'kiwe-global-design' );
-			}
-			if ( array_key_exists( 'label', $style_input ) ) {
-				$label = sanitize_text_field( (string) $style_input['label'] );
-				$next['bricks_theme_style']['label'] = '' !== $label ? substr( $label, 0, 100 ) : (string) ( $defaults['bricks_theme_style']['label'] ?? 'Kiwe Universal Design Tokens' );
-			}
-		}
-
-		return $next;
+		return Seam_Token_Service::sanitize_framework_profile_tokens( $input, $next, $defaults );
 	}
 
 	private function sanitize_template_settings( array $settings ): array {

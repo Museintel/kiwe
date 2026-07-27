@@ -22,6 +22,7 @@ It includes:
 - production-safe `seam-*` CSS classes;
 - safe `window.Seam` runtime helpers;
 - Bricks export rules for variables, palette, and global classes;
+- Framework profile import rules for pushing the matching safe Bricks Theme Style from `Kiwe > Framework`;
 - protected Kiwe AppShell adoption rules so framework classes do not accidentally break DSA sheets/screens.
 
 ## What this folder is for
@@ -35,6 +36,18 @@ Give this folder to a developer when the assignment is:
 - propose framework additions without touching cart, checkout, PhoneKey, Search, service worker, history, focus trap, or Woo/Bricks authority.
 
 If the assignment is instead “design a new DSA AppShell theme,” give them `ui-system/` too.
+
+## Framework profile contract
+
+`/create /frameworkprofile` outputs one file: `framework/kiwe-framework-profile.json`.
+
+That file imports in `Kiwe > Framework` and is the preferred setup path before `/convert /bricks`. It carries:
+
+- official Kiwe universal token overrides only;
+- the complete `settings.tokens.bricks_theme_style` lane with `enabled: true`, a safe `id`, a human `label`, and global-only style slots;
+- enough design personality for Kiwe to push Bricks variables, color palette, Seam classes, and a native Bricks Theme Style.
+
+It must not contain Bricks page/template JSON, AppShell dock/sheet settings, products, posts, WooCommerce behavior, or runtime JavaScript.
 
 ## Layer split
 
