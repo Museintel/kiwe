@@ -435,6 +435,8 @@ function frameworkProfileContext() {
     '',
     '`settings.tokens.bricks_theme_style` must be complete for `/frameworkprofile`: `enabled: true`, a safe `id`, a human `label`, and only safe global style slots such as site background, palette, fonts, heading scale, links, radius, shadow, and spacing. Kiwe normalizes those slots into universal tokens and generates the native Bricks Theme Style during the Kiwe > Framework push.',
     '',
+    'Do not make the human spoon-feed missing CSS variables. `/audit /frameworkprofile` must independently verify that the profile covers the core live token foundation through `settings.tokens.overrides` or mapped `bricks_theme_style` slots: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md`. These map to official CSS variables such as `--kiwe-color-brand`, `--kiwe-color-accent`, `--kiwe-color-surface`, `--kiwe-font-body`, and `--kiwe-space-md`; do not invent non-canonical variables like `--kiwe-color-primary`.',
+    '',
     'Expected file:',
     '',
     '```text',

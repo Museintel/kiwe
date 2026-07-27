@@ -51,6 +51,22 @@ let screenPayloads = null;
 let officialTokenNames = null;
 
 const themeTokenTopLevelKeys = new Set(['enabled', 'profile_label', 'overrides', 'bricks_theme_style']);
+const frameworkCoreTokenCoverage = [
+  ['color-brand', '--kiwe-color-brand', ['colorPrimary', 'color_primary', 'primary', 'brand', 'linkColor', 'link_color', 'colorLink', 'color_link']],
+  ['color-accent', '--kiwe-color-accent', ['colorSecondary', 'color_secondary', 'secondary', 'accent', 'linkHoverColor', 'link_hover_color']],
+  ['color-surface', '--kiwe-color-surface', ['siteBackground', 'site_background', 'background', 'colorSurface', 'color_surface', 'surface', 'colorLight', 'color_light', 'light']],
+  ['color-surface-raised', '--kiwe-color-surface-raised', ['colorSurfaceRaised', 'color_surface_raised', 'surfaceRaised']],
+  ['color-text', '--kiwe-color-text', ['colorDark', 'color_dark', 'dark']],
+  ['color-text-muted', '--kiwe-color-text-muted', ['colorMuted', 'color_muted', 'muted']],
+  ['color-border', '--kiwe-color-border', ['colorBorder', 'color_border', 'borderColor', 'border_color']],
+  ['font-display', '--kiwe-font-display', ['fontDisplay', 'font_display', 'displayFont', 'display_font']],
+  ['font-body', '--kiwe-font-body', ['fontBody', 'font_body', 'bodyFont', 'body_font']],
+  ['type-h1', '--kiwe-type-h1', ['typeH1', 'type_h1']],
+  ['type-body', '--kiwe-type-body', ['typeBody', 'type_body']],
+  ['space-md', '--kiwe-space-md', ['spaceMd', 'space_md']],
+  ['radius-lg', '--kiwe-radius-lg', ['radiusLg', 'radius_lg', 'radiusLarge', 'radius_large']],
+  ['shadow-md', '--kiwe-shadow-md', ['shadowMd', 'shadow_md', 'shadowMedium', 'shadow_medium']]
+];
 const allowedThemeCssTokenAliases = new Set(['radius-panel', 'surface-panel']);
 const screenCopyFields = {
   profile: new Set(['label', 'eyebrow', 'title', 'intro', 'accountLabel', 'editLabel', 'ordersTitle', 'ordersText', 'downloadsTitle', 'downloadsText', 'notificationsTitle', 'notificationsText', 'addressesTitle', 'addressesText', 'passwordTitle', 'passwordText', 'signOutLabel', 'recentOrdersTitle']),
@@ -599,6 +615,13 @@ function isPlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
 }
 
+function hasMeaningfulObjectValue(container, key) {
+  return isPlainObject(container)
+    && Object.prototype.hasOwnProperty.call(container, key)
+    && ['string', 'number'].includes(typeof container[key])
+    && String(container[key]).trim() !== '';
+}
+
 function validateThemePackageTokenSettings(tokens, file) {
   if (!isPlainObject(tokens)) {
     add('fail', 'theme-package.json settings.tokens must be an object containing enabled, profile_label, overrides, and optional bricks_theme_style.', rel(file));
@@ -962,6 +985,14 @@ if (frameworkProfilePath) {
         }
         if (typeof style.label !== 'string' || !style.label.trim() || style.label.length > 100) {
           add('fail', 'Framework profile bricks_theme_style.label must be a human-readable label up to 100 characters.', rel(frameworkProfilePath));
+        }
+        const overrides = isPlainObject(tokens.overrides) ? tokens.overrides : {};
+        for (const [tokenName, cssVar, styleKeys] of frameworkCoreTokenCoverage) {
+          const covered = hasMeaningfulObjectValue(overrides, tokenName)
+            || styleKeys.some((styleKey) => hasMeaningfulObjectValue(style, styleKey));
+          if (!covered) {
+            add('fail', `Framework profile must cover official token "${tokenName}" (${cssVar}) through settings.tokens.overrides or a mapped bricks_theme_style global slot so Kiwe > Framework push does not leave live Seam/Bricks variables empty.`, rel(frameworkProfilePath));
+          }
         }
       }
     }

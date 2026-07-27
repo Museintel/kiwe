@@ -16,9 +16,15 @@
         "color-brand": "#d6006f",
         "color-accent": "#00cdc6",
         "color-surface": "#fff8ea",
+        "color-surface-raised": "#fffdf8",
         "color-text": "#201713",
+        "color-text-muted": "#6d625d",
+        "color-border": "rgba(32, 23, 19, 0.18)",
         "font-display": "Inter, system-ui, sans-serif",
+        "font-body": "Inter, system-ui, sans-serif",
         "type-h1": "clamp(2.5rem, 6vw, 5rem)",
+        "type-body": "clamp(1rem, 0.2vw + 0.95rem, 1.125rem)",
+        "space-md": "clamp(0.875rem, 1vw, 1.5rem)",
         "radius-lg": "24px",
         "shadow-md": "0 18px 40px rgba(32, 23, 19, 0.16)"
       },
@@ -32,9 +38,14 @@
         "colorLight": "#fffdf8",
         "colorDark": "#201713",
         "colorMuted": "#6d625d",
+        "colorBorder": "rgba(32, 23, 19, 0.18)",
         "fontDisplay": "Inter, system-ui, sans-serif",
         "fontBody": "Inter, system-ui, sans-serif",
-        "typeH1": "clamp(2.5rem, 6vw, 5rem)"
+        "typeH1": "clamp(2.5rem, 6vw, 5rem)",
+        "typeBody": "clamp(1rem, 0.2vw + 0.95rem, 1.125rem)",
+        "radiusLg": "24px",
+        "shadowMd": "0 18px 40px rgba(32, 23, 19, 0.16)",
+        "spaceMd": "clamp(0.875rem, 1vw, 1.5rem)"
       }
     }
   }

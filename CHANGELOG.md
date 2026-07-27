@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.54 - 2026-07-28
+
+- Tightened `/audit /frameworkprofile` and `/fix /frameworkprofile` so browser/IDE AIs no longer need a spoon-fed list of missing live variables.
+- Added deterministic core token coverage checks for Framework profiles: brand/accent/surface/text/border/font/type/spacing/radius/shadow tokens must be covered through official Kiwe universal token overrides or mapped Bricks theme-style slots.
+- Updated Kiwe Companion review to return the same `missing_core_token_coverage` errors as the local toolkit when a Framework profile would import but leave Bricks/Seam variables incomplete after push.
+
 ## 6.51 - 2026-07-27
 
 - Made Kiwe Framework profile imports self-contained for Bricks: `settings.tokens.bricks_theme_style` now auto-enables the Bricks theme-style lane when a profile carries global style metadata, derives a safe id/label from the profile when missing, and normalizes safe global style slots back into official Kiwe universal token overrides.

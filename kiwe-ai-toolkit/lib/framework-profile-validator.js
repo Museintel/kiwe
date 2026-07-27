@@ -127,6 +127,90 @@ const BRICKS_THEME_STYLE_KEYS = new Set([
   'space_md'
 ]);
 
+const CORE_TOKEN_COVERAGE = [
+  {
+    token: 'color-brand',
+    cssVar: '--kiwe-color-brand',
+    styleKeys: ['colorPrimary', 'color_primary', 'primary', 'brand', 'linkColor', 'link_color', 'colorLink', 'color_link']
+  },
+  {
+    token: 'color-accent',
+    cssVar: '--kiwe-color-accent',
+    styleKeys: ['colorSecondary', 'color_secondary', 'secondary', 'accent', 'linkHoverColor', 'link_hover_color']
+  },
+  {
+    token: 'color-surface',
+    cssVar: '--kiwe-color-surface',
+    styleKeys: ['siteBackground', 'site_background', 'background', 'colorSurface', 'color_surface', 'surface', 'colorLight', 'color_light', 'light']
+  },
+  {
+    token: 'color-surface-raised',
+    cssVar: '--kiwe-color-surface-raised',
+    styleKeys: ['colorSurfaceRaised', 'color_surface_raised', 'surfaceRaised']
+  },
+  {
+    token: 'color-text',
+    cssVar: '--kiwe-color-text',
+    styleKeys: ['colorDark', 'color_dark', 'dark']
+  },
+  {
+    token: 'color-text-muted',
+    cssVar: '--kiwe-color-text-muted',
+    styleKeys: ['colorMuted', 'color_muted', 'muted']
+  },
+  {
+    token: 'color-border',
+    cssVar: '--kiwe-color-border',
+    styleKeys: ['colorBorder', 'color_border', 'borderColor', 'border_color']
+  },
+  {
+    token: 'font-display',
+    cssVar: '--kiwe-font-display',
+    styleKeys: ['fontDisplay', 'font_display', 'displayFont', 'display_font']
+  },
+  {
+    token: 'font-body',
+    cssVar: '--kiwe-font-body',
+    styleKeys: ['fontBody', 'font_body', 'bodyFont', 'body_font']
+  },
+  {
+    token: 'type-h1',
+    cssVar: '--kiwe-type-h1',
+    styleKeys: ['typeH1', 'type_h1']
+  },
+  {
+    token: 'type-body',
+    cssVar: '--kiwe-type-body',
+    styleKeys: ['typeBody', 'type_body']
+  },
+  {
+    token: 'space-md',
+    cssVar: '--kiwe-space-md',
+    styleKeys: ['spaceMd', 'space_md']
+  },
+  {
+    token: 'radius-lg',
+    cssVar: '--kiwe-radius-lg',
+    styleKeys: ['radiusLg', 'radius_lg', 'radiusLarge', 'radius_large']
+  },
+  {
+    token: 'shadow-md',
+    cssVar: '--kiwe-shadow-md',
+    styleKeys: ['shadowMd', 'shadow_md', 'shadowMedium', 'shadow_medium']
+  }
+];
+
+function hasMeaningfulValue(container, key) {
+  if (!isPlainObject(container) || !Object.prototype.hasOwnProperty.call(container, key)) return false;
+  const value = container[key];
+  return ['string', 'number'].includes(typeof value) && String(value).trim() !== '';
+}
+
+function hasTokenCoverage(overrides, style, requirement) {
+  if (hasMeaningfulValue(overrides, requirement.token)) return true;
+  return requirement.styleKeys.some((key) => hasMeaningfulValue(style, key));
+}
+
 export function validateFrameworkProfile(target, options = {}) {
   const profilePath = resolveProfilePath(target);
   const errors = [];
@@ -268,6 +352,17 @@ export function validateFrameworkProfile(target, options = {}) {
       add(errors, 'missing_style_label', 'settings.tokens.bricks_theme_style.label is required so designers can find the generated Bricks theme style.', 'settings.tokens.bricks_theme_style.label');
     } else if (typeof style.label !== 'string' || style.label.trim() === '' || style.label.length > 100) {
       add(errors, 'invalid_style_label', 'settings.tokens.bricks_theme_style.label must be a non-empty string up to 100 characters.', 'settings.tokens.bricks_theme_style.label');
+    }
+
+    for (const requirement of CORE_TOKEN_COVERAGE) {
+      if (!hasTokenCoverage(overrides, style, requirement)) {
+        add(
+          errors,
+          'missing_core_token_coverage',
+          `Framework profile must cover official token "${requirement.token}" (${requirement.cssVar}) through settings.tokens.overrides or a mapped bricks_theme_style global slot so Kiwe > Framework push does not leave live Seam/Bricks variables empty.`,
+          `settings.tokens.overrides.${requirement.token}`
+        );
+      }
     }
   }
 

@@ -2071,6 +2071,45 @@ final class AI_Companion_Service {
 					'path'     => sanitize_text_field( $path ),
 				];
 			}
+
+			$core_token_coverage = [
+				'color-brand'          => [ '--kiwe-color-brand', [ 'colorPrimary', 'color_primary', 'primary', 'brand', 'linkColor', 'link_color', 'colorLink', 'color_link' ] ],
+				'color-accent'         => [ '--kiwe-color-accent', [ 'colorSecondary', 'color_secondary', 'secondary', 'accent', 'linkHoverColor', 'link_hover_color' ] ],
+				'color-surface'        => [ '--kiwe-color-surface', [ 'siteBackground', 'site_background', 'background', 'colorSurface', 'color_surface', 'surface', 'colorLight', 'color_light', 'light' ] ],
+				'color-surface-raised' => [ '--kiwe-color-surface-raised', [ 'colorSurfaceRaised', 'color_surface_raised', 'surfaceRaised' ] ],
+				'color-text'           => [ '--kiwe-color-text', [ 'colorDark', 'color_dark', 'dark' ] ],
+				'color-text-muted'     => [ '--kiwe-color-text-muted', [ 'colorMuted', 'color_muted', 'muted' ] ],
+				'color-border'         => [ '--kiwe-color-border', [ 'colorBorder', 'color_border', 'borderColor', 'border_color' ] ],
+				'font-display'         => [ '--kiwe-font-display', [ 'fontDisplay', 'font_display', 'displayFont', 'display_font' ] ],
+				'font-body'            => [ '--kiwe-font-body', [ 'fontBody', 'font_body', 'bodyFont', 'body_font' ] ],
+				'type-h1'              => [ '--kiwe-type-h1', [ 'typeH1', 'type_h1' ] ],
+				'type-body'            => [ '--kiwe-type-body', [ 'typeBody', 'type_body' ] ],
+				'space-md'             => [ '--kiwe-space-md', [ 'spaceMd', 'space_md' ] ],
+				'radius-lg'            => [ '--kiwe-radius-lg', [ 'radiusLg', 'radius_lg', 'radiusLarge', 'radius_large' ] ],
+				'shadow-md'            => [ '--kiwe-shadow-md', [ 'shadowMd', 'shadow_md', 'shadowMedium', 'shadow_medium' ] ],
+			];
+			$overrides           = isset( $tokens['overrides'] ) && is_array( $tokens['overrides'] ) ? $tokens['overrides'] : [];
+			foreach ( $core_token_coverage as $token_name => $requirement ) {
+				$css_var    = (string) $requirement[0];
+				$style_keys = is_array( $requirement[1] ) ? $requirement[1] : [];
+				$covered    = isset( $overrides[ $token_name ] ) && is_scalar( $overrides[ $token_name ] ) && '' !== trim( (string) $overrides[ $token_name ] );
+				if ( ! $covered ) {
+					foreach ( $style_keys as $style_key ) {
+						if ( isset( $style[ $style_key ] ) && is_scalar( $style[ $style_key ] ) && '' !== trim( (string) $style[ $style_key ] ) ) {
+							$covered = true;
+							break;
+						}
+					}
+				}
+				if ( ! $covered ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'missing_core_token_coverage',
+						'message'  => sprintf( 'Framework profile must cover official token "%1$s" (%2$s) through settings.tokens.overrides or a mapped bricks_theme_style global slot so Kiwe > Framework push does not leave live Seam/Bricks variables empty.', $token_name, $css_var ),
+						'path'     => sanitize_text_field( $path ),
+					];
+				}
+			}
 		}
 
 		return $findings;

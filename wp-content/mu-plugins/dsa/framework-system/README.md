@@ -45,6 +45,7 @@ That file imports in `Kiwe > Framework` and is the preferred setup path before `
 
 - official Kiwe universal token overrides only;
 - the complete `settings.tokens.bricks_theme_style` lane with `enabled: true`, a safe `id`, a human `label`, and global-only style slots;
+- complete live token coverage for Seam and Bricks after push: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md`, either in `settings.tokens.overrides` or mapped `bricks_theme_style` slots;
 - enough design personality for Kiwe to push Bricks variables, color palette, Seam classes, and a native Bricks Theme Style.
 
 It must not contain Bricks page/template JSON, AppShell dock/sheet settings, products, posts, WooCommerce behavior, or runtime JavaScript.

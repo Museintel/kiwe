@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.53",
+  "version": "6.54",
   "algorithm": "sha256",
-  "file_count": 279,
+  "file_count": 280,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "0e2aa345b2559d1b11e598b9843b2f2cf23c1c7743eb9b423565527ba3881652"
+      "sha256": "9e417263b777220337ea89e035e16dfb869a0380f5720cd76da5f5d26cded533"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 3601,
@@ -193,8 +193,8 @@
       "sha256": "6e82355375d4fad3f9e2ce856d38ce506105329ee1ff8289f5e1587dfb76ca26"
     },
     "framework-system/README.md": {
-      "bytes": 9165,
-      "sha256": "c7da0d9e4769ba60c6df32b3e326e5c5f045faa70d68299e194dde393d53911a"
+      "bytes": 9521,
+      "sha256": "9ee719655252a92614935e2631fae0e5085ca47cfb4d8e93a83270f5cbe7775e"
     },
     "framework-system/bricks/BRICKS-INTEGRATION.md": {
       "bytes": 9518,
@@ -337,8 +337,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 121815,
-      "sha256": "b7456f77ce8c7d80552c2b884da54b7be86c6088d4e1a677fc853bc70f17112d"
+      "bytes": 124695,
+      "sha256": "8af5ea1ea080aafee5dc30371b99fdb3b6e0eee6a2031b4c600e8979f8a88aec"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -999,6 +999,10 @@
     "site-graph-system/release-proof-6.53.md": {
       "bytes": 2573,
       "sha256": "b0805774f3055837e9a303e9316b6f330cc98c79426ba2f7ec63e374e382a428"
+    },
+    "site-graph-system/release-proof-6.54.md": {
+      "bytes": 2299,
+      "sha256": "f04de6fe466325f304b6a04544031c192329ca15275ba854f9468fbb385ae56d"
     },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,

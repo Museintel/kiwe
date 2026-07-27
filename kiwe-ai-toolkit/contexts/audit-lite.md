@@ -254,6 +254,9 @@ Standalone Framework profiles must be narrow:
 - `settings.tokens.profile_label`;
 - `settings.tokens.overrides` using official Kiwe universal token names only;
 - complete `settings.tokens.bricks_theme_style` metadata with `enabled: true`, safe `id`, human `label`, and global style slots only when useful. Kiwe > Framework uses this lane to push the matching native Bricks Theme Style.
+- complete core live token coverage so a pushed Framework profile does not leave the website or Bricks editor with empty Seam/Kiwe variables. Required coverage: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md`.
+- The coverage may be direct in `settings.tokens.overrides` or supplied through mapped `bricks_theme_style` slots, for example `colorPrimary`, `colorSecondary`, `siteBackground`, `colorDark`, `colorMuted`, `colorBorder`, `fontDisplay`, `fontBody`, `typeH1`, `typeBody`, `spaceMd`, `radiusLg`, and `shadowMd`.
+- Audit official token names, not invented CSS variables. `color-brand` maps to `--kiwe-color-brand`; `space-md` maps to `--kiwe-space-md`. Do not require or generate `--kiwe-color-primary`, `--kiwe-color-secondary`, or `--seam-color-primary`.
 
 Reject or mark for revision any Framework profile that carries custom token names, AppShell geometry, dock configuration, screen copy, products, posts, Bricks raw JSON, or runtime behavior.
 

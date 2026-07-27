@@ -381,6 +381,9 @@ Rules:
 - Use official Kiwe universal token names only, such as `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `space-md`, `radius-lg`, and `shadow-md`.
 - `bricks_theme_style` is required for a complete Framework profile. It must set `enabled: true`, a safe `id`, and a human `label`.
 - `bricks_theme_style` may carry safe global style slots only: site background, global colors, typography, links, radius, shadow, and spacing. Kiwe normalizes those slots back into universal tokens and then generates the native Bricks Theme Style during the Kiwe > Framework push.
+- `/audit /frameworkprofile` must not rely on the human to list missing live variables. It must independently verify the core live token foundation needed by Seam and Bricks after push: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md`.
+- The profile may cover those tokens either directly in `settings.tokens.overrides` or through mapped `bricks_theme_style` slots such as `colorPrimary`, `colorSecondary`, `siteBackground`, `colorDark`, `colorMuted`, `colorBorder`, `fontDisplay`, `fontBody`, `typeH1`, `typeBody`, `spaceMd`, `radiusLg`, and `shadowMd`.
+- Use official Kiwe variables implied by token names, for example `color-brand` -> `--kiwe-color-brand` and `space-md` -> `--kiwe-space-md`. Do not invent non-canonical variables such as `--kiwe-color-primary` or `--seam-color-primary`.
 - Do not put AppShell dock/sheet/screen settings, products, posts, raw Bricks JSON, WooCommerce behavior, or runtime JS here.
 - Do not output `FRAMEWORK-NOTES.md`, README files, reports, Bricks template JSON, or AppShell theme packages unless `/document` is explicitly present.
 
@@ -392,6 +395,8 @@ Audit for:
 - `settings.tokens` only;
 - official Kiwe token names only;
 - no raw `--kiwe-*` or private `--dsa-runtime-token-*` keys;
+- complete core token coverage for the live Seam/Bricks foundation listed above;
+- complete `bricks_theme_style.enabled`, `bricks_theme_style.id`, and `bricks_theme_style.label`;
 - no AppShell settings;
 - no Bricks element-level styling;
 
