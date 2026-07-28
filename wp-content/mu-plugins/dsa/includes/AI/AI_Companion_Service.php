@@ -20,6 +20,11 @@ final class AI_Companion_Service {
 	private const MODES = [ 'website', 'theme', 'combined', 'dynamic', 'audit', 'staging', 'security' ];
 	private const BRICKS_RESPONSIVE_LAYOUT_KEY_PATTERN = '/^_(?:cssCustom|direction|display|grid|gridItem|gridTemplate|gridAuto|align|justify|place|flex|gap|rowGap|columnGap|order|width|widthMin|widthMax|height|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|aspectRatio|margin|padding|position|top|right|bottom|left|zIndex|overflow|masonry)[A-Za-z0-9_]*:[a-z][a-z0-9_-]{1,48}(?::[a-z-]+)?$/i';
 	private const BRICKS_COMPLEX_LAYOUT_PATTERN        = '/\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i';
+	private const BRICKS_TOKEN_OWNED_CONTROL_PATTERN  = '/^_(?:typography|border|boxShadow|transform|grid|gridItem|gridTemplate|gridAuto|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/';
+	private const BRICKS_TOKEN_OWNED_NESTED_PATTERN   = '/^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i';
+	private const BRICKS_LITERAL_LENGTH_PATTERN       = '/-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i';
+	private const BRICKS_TOKENIZED_LENGTH_PATTERN     = '/var\(\s*--(?:kiwe|seam)-|clamp\(/i';
+	private const BRICKS_TOKEN_FINDING_LIMIT          = 40;
 
 	public function __construct(
 		private Settings $settings,
@@ -810,12 +815,12 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and embed compact Kiwe fidelity metadata when practical. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, consume Kiwe/Seam variables or tokenized clamp() values in native settings/global_classes, and embed compact Kiwe fidelity metadata when practical. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
 				'title' => 'Audit Bricks conversion fidelity',
-				'body'  => 'Reject page artifacts that include AppShell shell markup, lost Seam classes or data-dsa-open-module launchers, fake Bricks element names, broken parent/child references, unsafe JavaScript interactions, unverified dynamic tags, and query-template markers without Bricks query-loop intent.',
+				'body'  => 'Reject page artifacts that include AppShell shell markup, lost Seam classes or data-dsa-open-module launchers, fake Bricks element names, broken parent/child references, unsafe JavaScript interactions, unverified dynamic tags, query-template markers without Bricks query-loop intent, and native Bricks design controls that hardcode lengths instead of consuming Kiwe/Seam tokens.',
 			],
 			'accessibility-create' => [
 				'id'    => 'phase-accessibility-create-token-contrast',
@@ -855,6 +860,12 @@ final class AI_Companion_Service {
 				'id'      => 'seam-capability-attributes',
 				'title'   => 'Seam can call Kiwe Appsite capabilities by attribute',
 				'body'    => 'During /rebuild /seamframework, preserve the UI and add live attributes when intent exists: data-kiwe-save for wishlist/bookmark, data-kiwe-notifications for notification CTAs, data-kiwe-theme-toggle for light/dark controls, data-dsa-open-module for DSA launchers, semantic section IDs/labels for Menu context, and data-kiwe-query-template/data-kiwe-binding for future dynamic Bricks loops. Do not recreate Kiwe runtime behavior in page JS.',
+				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
+			],
+			[
+				'id'      => 'bricks-native-token-purity',
+				'title'   => 'Bricks-native controls must consume Framework tokens',
+				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use var(--kiwe-*), var(--seam-*), or tokenized clamp() values instead.',
 				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
 			],
 			[
@@ -915,8 +926,8 @@ final class AI_Companion_Service {
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
-				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.' ],
-				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
+				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables or tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout.' ],
+				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
 		if ( str_contains( $question_lc, 'theme' ) || str_contains( $question_lc, 'dsa' ) || 'theme' === $mode ) {
@@ -1420,6 +1431,14 @@ final class AI_Companion_Service {
 			}
 		}
 		$native_controls = $this->count_bricks_native_style_controls( array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ) );
+		$findings        = array_merge(
+			$findings,
+			$this->review_bricks_tokenized_native_lengths(
+				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.content/header/footer/global_classes'
+			)
+		);
 		if ( count( $elements ) >= 180 && $native_controls < 60 ) {
 			$findings[] = [
 				'severity' => 'error',
@@ -1463,6 +1482,68 @@ final class AI_Companion_Service {
 		return $count;
 	}
 
+	private function review_bricks_tokenized_native_lengths( array $items, string $path, string $base_path ): array {
+		$found = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$values = [];
+			$this->collect_bricks_untokenized_native_lengths( $item['settings'], $values, $base_path . '[' . (int) $index . '].settings' );
+			foreach ( $values as $value ) {
+				$value['label'] = $label;
+				$found[]        = $value;
+			}
+		}
+
+		$findings = [];
+		foreach ( array_slice( $found, 0, self::BRICKS_TOKEN_FINDING_LIMIT ) as $item ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_untokenized_native_length',
+				'message'  => sprintf(
+					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". A Framework profile supplies token values but does not rewrite hardcoded Bricks JSON; use var(--kiwe-*), var(--seam-*), or tokenized clamp() values.',
+					(string) ( $item['path'] ?? '' ),
+					(string) ( $item['label'] ?? '' ),
+					(string) ( $item['value'] ?? '' )
+				),
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		if ( count( $found ) > self::BRICKS_TOKEN_FINDING_LIMIT ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_untokenized_native_length_overflow',
+				'message'  => sprintf( 'Bricks native styles contain %d additional untokenized literal length values beyond the first %d. Fix the token source, then rerun /audit /bricksconversion.', count( $found ) - self::BRICKS_TOKEN_FINDING_LIMIT, self::BRICKS_TOKEN_FINDING_LIMIT ),
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+
+		return $findings;
+	}
+
+	private function collect_bricks_untokenized_native_lengths( $value, array &$out, string $path, bool $parent_owned = false ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$owned = $parent_owned || preg_match( self::BRICKS_TOKEN_OWNED_CONTROL_PATTERN, (string) $key ) || preg_match( self::BRICKS_TOKEN_OWNED_NESTED_PATTERN, (string) $key );
+				$this->collect_bricks_untokenized_native_lengths( $item, $out, $path . '.' . (string) $key, (bool) $owned );
+			}
+			return;
+		}
+
+		if ( ! $parent_owned || ! is_string( $value ) ) {
+			return;
+		}
+
+		if ( preg_match( self::BRICKS_LITERAL_LENGTH_PATTERN, $value ) && ! preg_match( self::BRICKS_TOKENIZED_LENGTH_PATTERN, $value ) ) {
+			$out[] = [
+				'path'  => $path,
+				'value' => $value,
+			];
+		}
+	}
+
 	private function review_bricks_conversion_package( string $conversion_json, array $path_map ): array {
 		$findings = [];
 		$path     = $this->path_like( $path_map, 'kiwe-bricks-conversion.json' );
@@ -1497,6 +1578,15 @@ final class AI_Companion_Service {
 				'path'     => sanitize_text_field( $path ),
 			];
 		}
+
+		$findings = array_merge(
+			$findings,
+			$this->review_bricks_tokenized_native_lengths(
+				array_merge( (array) ( $data['elements'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.elements/globalClasses'
+			)
+		);
 
 		$source = isset( $data['source'] ) && is_array( $data['source'] ) ? $data['source'] : [];
 		if ( [] === $source ) {

@@ -114,10 +114,15 @@ final class Bricks_Conversion_Validator {
 	private const COMPLEX_LAYOUT_PATTERN        = '/\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i';
 	private const NATIVE_STYLE_CONTROL_PATTERN  = '/^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/';
 	private const MAPPABLE_CSS_PATTERN          = '/\b(?:display|flex(?:-direction|-wrap|-grow|-shrink|-basis)?|align-items|align-self|justify-content|justify-items|align-content|gap|row-gap|column-gap|grid-template-columns|grid-template-rows|grid-auto-flow|grid-auto-columns|grid-auto-rows|grid-column|grid-row|width|max-width|min-width|height|max-height|min-height|aspect-ratio|margin(?:-(?:top|right|bottom|left))?|padding(?:-(?:top|right|bottom|left))?|position|top|right|bottom|left|z-index|overflow|opacity|background(?:-color|-image|-size|-position|-repeat)?|color|border(?:-(?:radius|color|width|style))?|box-shadow|font(?:-(?:family|size|weight|style))?|line-height|letter-spacing|text-align|text-transform|transform|filter|transition)\s*:/i';
+	private const TOKEN_OWNED_NATIVE_CONTROL_PATTERN = '/^_(?:typography|border|boxShadow|transform|grid|gridItem|gridTemplate|gridAuto|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/';
+	private const TOKEN_OWNED_NESTED_KEY_PATTERN     = '/^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i';
+	private const LITERAL_LENGTH_PATTERN             = '/-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i';
+	private const TOKENIZED_LENGTH_PATTERN           = '/var\(\s*--(?:kiwe|seam)-|clamp\(/i';
 	private const TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES = 2500;
 	private const TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN = 12;
 	private const LARGE_TEMPLATE_ELEMENT_COUNT     = 180;
 	private const MIN_NATIVE_STYLE_CONTROLS        = 60;
+	private const TOKEN_FINDING_LIMIT              = 40;
 
 	public function validate( array $conversion, array $site_graph = [], string $source_html = '', array $binding = [] ): array {
 		$findings = [];
@@ -143,6 +148,14 @@ final class Bricks_Conversion_Validator {
 
 		$this->validate_root( $conversion, $findings );
 		$this->validate_elements( $conversion, $findings, $index );
+		$this->validate_tokenized_native_lengths(
+			array_merge(
+				isset( $conversion['elements'] ) && is_array( $conversion['elements'] ) ? $conversion['elements'] : [],
+				isset( $conversion['globalClasses'] ) && is_array( $conversion['globalClasses'] ) ? $conversion['globalClasses'] : []
+			),
+			$findings,
+			'$.elements/globalClasses'
+		);
 		$this->validate_template_upload_conversion_css( $conversion, $findings );
 		$this->validate_source_parity( $conversion, $source_html, $findings );
 		$this->validate_responsive_layout_fidelity( $conversion, $source_html, $findings );
@@ -281,6 +294,15 @@ final class Bricks_Conversion_Validator {
 		}
 
 		$native_controls = $this->count_native_style_controls( array_merge( $elements, isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [] ) );
+		$this->validate_tokenized_native_lengths(
+			array_merge(
+				$elements,
+				isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
+				isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
+			),
+			$findings,
+			'$.content/header/footer/global_classes'
+		);
 		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $native_controls < self::MIN_NATIVE_STYLE_CONTROLS ) {
 			$this->add( $findings, 'fail', 'bricks_template_not_native_editable_enough', sprintf( 'Large Bricks template export has %1$d elements but only %2$d native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.', count( $elements ), $native_controls ), '$.content' );
 		}
@@ -647,6 +669,68 @@ final class Bricks_Conversion_Validator {
 			}
 		}
 		return $count;
+	}
+
+	private function validate_tokenized_native_lengths( array $items, array &$findings, string $path ): void {
+		$found = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$values = [];
+			$this->collect_untokenized_native_lengths( $item['settings'], $values, $path . '[' . (int) $index . '].settings' );
+			foreach ( $values as $value ) {
+				$value['label'] = $label;
+				$found[]        = $value;
+			}
+		}
+
+		foreach ( array_slice( $found, 0, self::TOKEN_FINDING_LIMIT ) as $item ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_untokenized_native_length',
+				sprintf(
+					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". /convert /bricks outputs must use Kiwe/Seam token variables or tokenized clamp() values for spacing, sizing, radius, type, shadow, transform, and responsive layout controls.',
+					(string) ( $item['path'] ?? '' ),
+					(string) ( $item['label'] ?? '' ),
+					(string) ( $item['value'] ?? '' )
+				),
+				(string) ( $item['path'] ?? '' )
+			);
+		}
+
+		if ( count( $found ) > self::TOKEN_FINDING_LIMIT ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_untokenized_native_length_overflow',
+				sprintf( 'Bricks native styles contain %d additional untokenized literal length values beyond the first %d. Fix the token source, then rerun /audit /bricksconversion.', count( $found ) - self::TOKEN_FINDING_LIMIT, self::TOKEN_FINDING_LIMIT ),
+				$path
+			);
+		}
+	}
+
+	private function collect_untokenized_native_lengths( mixed $value, array &$out, string $path, bool $parent_owned = false ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$owned = $parent_owned || preg_match( self::TOKEN_OWNED_NATIVE_CONTROL_PATTERN, (string) $key ) || preg_match( self::TOKEN_OWNED_NESTED_KEY_PATTERN, (string) $key );
+				$this->collect_untokenized_native_lengths( $item, $out, $path . '.' . (string) $key, (bool) $owned );
+			}
+			return;
+		}
+
+		if ( ! $parent_owned || ! is_string( $value ) ) {
+			return;
+		}
+
+		if ( preg_match( self::LITERAL_LENGTH_PATTERN, $value ) && ! preg_match( self::TOKENIZED_LENGTH_PATTERN, $value ) ) {
+			$out[] = [
+				'path'  => $path,
+				'value' => $value,
+			];
+		}
 	}
 
 	private function add( array &$findings, string $level, string $code, string $message, string $path = '' ): void {

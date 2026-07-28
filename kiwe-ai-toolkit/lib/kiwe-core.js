@@ -384,13 +384,13 @@ export function listCommands() {
       },
       {
         command: '/convert /bricks',
-        purpose: 'Convert only website/bricks-paste.html into one native Bricks My Templates upload JSON, with optional embedded Kiwe fidelity metadata.',
+        purpose: 'Convert only website/bricks-paste.html into one token-pure native Bricks My Templates upload JSON, with optional embedded Kiwe fidelity metadata.',
         requires: ['website/bricks-paste.html', 'framework/kiwe-framework-profile.json or confirmed Kiwe > Framework/Bricks theme-style already pushed', 'optional bricks-bindings/kiwe-bindings.json'],
         output: 'bricks-template/[page-name]-template-upload.json only by default; add /document if notes or an external audit envelope are wanted'
       },
       {
         command: '/audit /bricksconversion',
-        purpose: 'Audit and revise the canonical Bricks conversion package.',
+        purpose: 'Audit and revise the canonical Bricks conversion package, including native Bricks token purity.',
         requires: ['bricks-template/[page-name]-template-upload.json or bricks-conversion/kiwe-bricks-conversion.json'],
         output: 'same Bricks artifact lane, corrected; no notes unless /document was requested'
       },
@@ -1268,6 +1268,8 @@ function commandListMarkdown() {
     '- The lean default output is one native Bricks template upload JSON at `bricks-template/[page-name]-template-upload.json` with non-empty `title`, `templateType`, and `content/header/footer` data.',
     '- Optional Kiwe fidelity proof may be embedded in that upload JSON under top-level `kiwe`; external notes/reports/wrappers require `/document`.',
     '- `/convert /bricks` should run only after `/create /frameworkprofile` has produced `framework/kiwe-framework-profile.json` or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed.',
+    '- `/convert /bricks` must consume that Framework token layer inside native Bricks element settings and `global_classes`; a valid profile does not rewrite hardcoded Bricks JSON later.',
+    '- Treat hardcoded design lengths in native Bricks settings as audit failures: `_padding: 28px`, `_border.radius: 24px`, `_heightMin: 390px`, `_typography.font-size: 2.35rem`, `_rowGap: 20px`, `_transform.translateY: -7px`, and similar values must become Kiwe/Seam variables or tokenized `clamp(...)` expressions.',
     '- It must not convert DSA themes, combined previews, AppShell sheets/screens/docks, or theme CSS.',
     '- It must not output `README.md`, `BRICKS-CONVERSION-NOTES.md`, validation reports, ZIP files, duplicated previews, or loose extra page files unless `/document` is explicitly present.',
     '',

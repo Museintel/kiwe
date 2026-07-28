@@ -195,6 +195,11 @@ const BRICKS_IMPORT_METHODS = new Set([
 
 const NATIVE_STYLE_CONTROL_RE = /^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/;
 const MAPPABLE_CSS_DECLARATION_RE = /\b(?:display|flex(?:-direction|-wrap|-grow|-shrink|-basis)?|align-items|align-self|justify-content|justify-items|align-content|gap|row-gap|column-gap|grid-template-columns|grid-template-rows|grid-auto-flow|grid-auto-columns|grid-auto-rows|grid-column|grid-row|width|max-width|min-width|height|max-height|min-height|aspect-ratio|margin(?:-(?:top|right|bottom|left))?|padding(?:-(?:top|right|bottom|left))?|position|top|right|bottom|left|z-index|overflow|opacity|background(?:-color|-image|-size|-position|-repeat)?|color|border(?:-(?:radius|color|width|style))?|box-shadow|font(?:-(?:family|size|weight|style))?|line-height|letter-spacing|text-align|text-transform|transform|filter|transition)\s*:/gi;
+const TOKEN_OWNED_NATIVE_CONTROL_RE = /^_(?:typography|border|boxShadow|transform|grid|gridItem|gridTemplate|gridAuto|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/;
+const TOKEN_OWNED_NESTED_KEY_RE = /^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i;
+const LITERAL_LENGTH_RE = /-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i;
+const TOKENIZED_LENGTH_RE = /var\(\s*--(?:kiwe|seam)-|clamp\(/i;
+const TOKEN_FINDING_LIMIT = 40;
 
 const CUSTOM_CSS_HEAVY_BYTES = 12000;
 const CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS = 60;
@@ -516,6 +521,70 @@ function collectNativeStyleControlsFromItems(items) {
   return controls;
 }
 
+function hasLiteralLength(value) {
+  return typeof value === 'string' && LITERAL_LENGTH_RE.test(value);
+}
+
+function hasTokenizedLength(value) {
+  return typeof value === 'string' && TOKENIZED_LENGTH_RE.test(value);
+}
+
+function tokenOwnedChild(parentOwned, key) {
+  return parentOwned || TOKEN_OWNED_NATIVE_CONTROL_RE.test(String(key || '')) || TOKEN_OWNED_NESTED_KEY_RE.test(String(key || ''));
+}
+
+function collectUntokenizedNativeLengthValues(value, out = [], trail = '$', parentOwned = false) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectUntokenizedNativeLengthValues(item, out, `${trail}[${index}]`, parentOwned));
+    return out;
+  }
+
+  if (isPlainObject(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      const owned = tokenOwnedChild(parentOwned, key);
+      collectUntokenizedNativeLengthValues(item, out, `${trail}.${key}`, owned);
+    }
+    return out;
+  }
+
+  if (parentOwned && hasLiteralLength(value) && !hasTokenizedLength(value)) {
+    out.push({ path: trail, value: String(value) });
+  }
+  return out;
+}
+
+function validateTokenizedNativeLengths(items, findings, file, pathPointer) {
+  const findingsToAdd = [];
+  asArray(items).forEach((item, index) => {
+    if (!isPlainObject(item)) return;
+    const label = item.id || item.name || item.label || `item-${index}`;
+    const settings = elementSettings(item);
+    const values = collectUntokenizedNativeLengthValues(settings, [], `${pathPointer}[${index}].settings`);
+    for (const value of values) {
+      findingsToAdd.push({ label, ...value });
+    }
+  });
+
+  findingsToAdd.slice(0, TOKEN_FINDING_LIMIT).forEach((item) => {
+    add(
+      findings,
+      'fail',
+      `Bricks native style "${item.path}" on "${item.label}" uses literal length "${item.value}". /convert /bricks outputs must use Kiwe/Seam token variables or tokenized clamp() values for spacing, sizing, radius, type, shadow, transform, and responsive layout controls.`,
+      file,
+      item.path
+    );
+  });
+  if (findingsToAdd.length > TOKEN_FINDING_LIMIT) {
+    add(
+      findings,
+      'fail',
+      `Bricks native styles contain ${findingsToAdd.length - TOKEN_FINDING_LIMIT} additional untokenized literal length values beyond the first ${TOKEN_FINDING_LIMIT}. Fix the token source, then rerun /audit /bricksconversion.`,
+      file,
+      pathPointer
+    );
+  }
+}
+
 function countMappableCssDeclarations(cssText) {
   const text = String(cssText || '');
   MAPPABLE_CSS_DECLARATION_RE.lastIndex = 0;
@@ -703,6 +772,14 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     templateElements
       .concat(asArray(templateData.global_classes))
       .concat(asArray(templateData.globalClasses))
+  );
+  validateTokenizedNativeLengths(
+    templateElements
+      .concat(asArray(templateData.global_classes))
+      .concat(asArray(templateData.globalClasses)),
+    findings,
+    rel(root, templatePath),
+    '$.content/header/footer/global_classes'
   );
   if (templateElements.length >= LARGE_CLIPBOARD_ELEMENT_COUNT && templateNativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
     add(
@@ -951,6 +1028,13 @@ function validateNativeStyleFidelity({ conversion, findings, conversionRel }) {
   const nativeControls = collectNativeStyleControlsFromItems(elements.concat(globalClasses));
   const mappableCssDeclarations = countMappableCssDeclarations(customCssText);
   const isCustomCssHeavy = customCssBytes >= CUSTOM_CSS_HEAVY_BYTES || /@media\b[\s\S]{0,2400}(?:\.nc-|#home-campaigns|\.seam-|grid-template|flex-direction)/i.test(customCssText);
+
+  validateTokenizedNativeLengths(
+    elements.concat(globalClasses),
+    findings,
+    conversionRel,
+    '$.elements/globalClasses'
+  );
 
   if (!isCustomCssHeavy && mappableCssDeclarations < MAPPABLE_CSS_DECLARATION_MIN) return;
 
