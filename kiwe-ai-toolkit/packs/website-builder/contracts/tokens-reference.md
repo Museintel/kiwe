@@ -47,6 +47,22 @@ In the current Kiwe Framework architecture:
 
 That difference is expected. It does not mean the UI brain is missing the design tokens required to create a theme.
 
+## Token behavior roles
+
+Kiwe tokens now carry behavior metadata in addition to their visual group. This is how the Framework keeps the Phantom Viewport / Geometry Engine goal without forcing every primitive value to become a clamp:
+
+- `fluid-scale` — responsive values such as type and spacing scales. These normally use real `clamp(...)` values.
+- `fixed-primitive` — stable named constants such as a hairline border or radius step. Plain values are valid here because page/theme code consumes the token, not the raw number.
+- `geometry-input` — named control points consumed by Kiwe's Geometry Engine or runtime measurements, such as dock gaps, control sizes, and badge sizes.
+- `content-limit` — named content bounds such as compact/readable/default/wide widths. Use them inside responsive-safe `min(...)`, `max(...)`, `clamp(...)`, or `minmax(...)` formulas.
+- `responsive-guard` — minimum clearances and collapse guards such as viewport gutters and responsive grid minimums.
+- `semantic-token` — meaning-driven tokens such as colors, font stacks, motion curves, density, and state identity.
+- `alias` — compatibility or convenience variables that resolve to another Kiwe/Seam token.
+- `layer-token` — named layer/index values. These are for core/AppShell layer contracts, not ad-hoc theme z-index fights.
+- `project-token` — site-specific art direction declared by a Framework profile or conversion package.
+
+This means `--kiwe-grid-min-col: 240px` is valid as a named responsive guard, while `_gridAutoColumns: minmax(250px, 1fr)` in a Bricks template is not valid unless it uses an official token, a declared project token, or a proven calculated clamp.
+
 ## If a theme needs a missing token
 
 Do not invent a private replacement and do not reach into production internals blindly.

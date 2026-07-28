@@ -8,6 +8,11 @@
  * - Kiwe > Framework owns the design token profile.
  * - Active => --kiwe-color-brand => --dsa-active-color remains a legacy-compatible fallback.
  * - Hover  => --kiwe-color-accent => --dsa-hover-color remains a legacy-compatible fallback.
+ *
+ * Token values may be fixed primitives, fluid scales, Geometry Engine inputs,
+ * content limits, responsive guards, semantic tokens, aliases, or layer tokens.
+ * Plain values are valid in this named token layer; page/theme/Bricks output
+ * should consume the token instead of copying the raw value.
  */
 
 :where(.dsa-surface) {

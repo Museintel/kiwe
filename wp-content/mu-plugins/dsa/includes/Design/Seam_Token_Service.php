@@ -496,6 +496,7 @@ final class Seam_Token_Service {
 				'value'       => $value,
 				'category'    => $category_by_key[ $key ] ?? self::stable_id( 'kwc-' . $key ),
 				'source'      => 'kiwe-universal',
+				'tokenRole'   => self::token_behavior( $name, $value, $type, (string) ( $token['behavior'] ?? '' ) ),
 				'description' => sanitize_text_field( (string) ( $token['description'] ?? '' ) ),
 			];
 		}
@@ -1024,6 +1025,52 @@ final class Seam_Token_Service {
 		return $counts;
 	}
 
+	public static function behavior_counts( ?array $tokens = null ): array {
+		$counts = [];
+
+		foreach ( self::normalize_tokens( $tokens ?: self::universal_tokens() ) as $token ) {
+			$behavior = self::token_behavior(
+				(string) ( $token['name'] ?? '' ),
+				(string) ( $token['value'] ?? '' ),
+				(string) ( $token['type'] ?? '' ),
+				(string) ( $token['behavior'] ?? '' )
+			);
+			$counts[ $behavior ] = ( $counts[ $behavior ] ?? 0 ) + 1;
+		}
+
+		ksort( $counts );
+
+		return $counts;
+	}
+
+	public static function behavior_label( string $behavior ): string {
+		return match ( sanitize_key( $behavior ) ) {
+			'fluid-scale'      => __( 'Fluid scale', 'dsa' ),
+			'geometry-input'   => __( 'Geometry input', 'dsa' ),
+			'content-limit'    => __( 'Content limit', 'dsa' ),
+			'responsive-guard' => __( 'Responsive guard', 'dsa' ),
+			'semantic-token'   => __( 'Semantic token', 'dsa' ),
+			'alias'            => __( 'Alias', 'dsa' ),
+			'layer-token'      => __( 'Layer token', 'dsa' ),
+			'project-token'    => __( 'Project token', 'dsa' ),
+			default            => __( 'Fixed primitive', 'dsa' ),
+		};
+	}
+
+	public static function behavior_description( string $behavior ): string {
+		return match ( sanitize_key( $behavior ) ) {
+			'fluid-scale'      => __( 'Responsive value that should use a real clamp or an official fluid token.', 'dsa' ),
+			'geometry-input'   => __( 'Named control point consumed by Kiwe Geometry Engine or runtime measurements.', 'dsa' ),
+			'content-limit'    => __( 'Named page/content bound used inside responsive-safe width and grid formulas.', 'dsa' ),
+			'responsive-guard' => __( 'Named minimum/clearance guard used to prevent layout collapse at narrow viewports.', 'dsa' ),
+			'semantic-token'   => __( 'Meaningful design token such as color, font, state, or motion identity.', 'dsa' ),
+			'alias'            => __( 'Compatibility or convenience alias that resolves to another Kiwe/Seam token.', 'dsa' ),
+			'layer-token'      => __( 'Named layer/index token. Use only through Kiwe/AppShell layer contracts.', 'dsa' ),
+			'project-token'    => __( 'Site-specific art-direction token declared by a Framework profile or conversion package.', 'dsa' ),
+			default            => __( 'Stable named primitive. Plain values are valid here because themes/pages consume the token, not the raw number.', 'dsa' ),
+		};
+	}
+
 	public static function slider_value( array $token ): ?array {
 		$value = (string) ( $token['value'] ?? '' );
 
@@ -1103,15 +1150,19 @@ final class Seam_Token_Service {
 		return '#000000';
 	}
 
-	private static function token( string $name, string $value, string $type, string $description, string $seam_alias = '' ): array {
+	private static function token( string $name, string $value, string $type, string $description, string $seam_alias = '', string $behavior = '' ): array {
 		$name = self::clean_name( $name );
+		$value = self::clean_value( $value );
+		$type = sanitize_key( $type );
+		$behavior = self::token_behavior( $name, $value, $type, $behavior );
 
 		return [
 			'id'          => self::stable_id( 'token-' . $name ),
 			'name'        => $name,
 			'cssVar'      => '--kiwe-' . $name,
-			'value'       => self::clean_value( $value ),
+			'value'       => $value,
 			'type'        => $type,
+			'behavior'    => $behavior,
 			'source'      => 'kiwe.universal',
 			'description' => $description,
 			'seamAlias'   => $seam_alias,
@@ -1134,7 +1185,8 @@ final class Seam_Token_Service {
 				continue;
 			}
 
-			$type = (string) ( $token['type'] ?? self::classify( $name, $value ) );
+			$type     = sanitize_key( (string) ( $token['type'] ?? self::classify( $name, $value ) ) );
+			$behavior = self::token_behavior( $name, $value, $type, (string) ( $token['behavior'] ?? '' ) );
 
 			$out[ $name ] = [
 				'id'          => self::stable_id( 'token-' . $name ),
@@ -1142,6 +1194,7 @@ final class Seam_Token_Service {
 				'cssVar'      => '--kiwe-' . $name,
 				'value'       => $value,
 				'type'        => $type,
+				'behavior'    => $behavior,
 				'source'      => sanitize_text_field( (string) ( $token['source'] ?? 'kiwe.universal' ) ),
 				'description' => sanitize_text_field( (string) ( $token['description'] ?? '' ) ),
 				'seamAlias'   => sanitize_text_field( (string) ( $token['seamAlias'] ?? '' ) ),
@@ -1291,6 +1344,68 @@ final class Seam_Token_Service {
 		}
 
 		return 'project';
+	}
+
+	private static function token_behavior( string $name, string $value, string $type = '', string $explicit = '' ): string {
+		$name     = self::clean_name( $name );
+		$value    = self::clean_value( $value );
+		$type     = sanitize_key( $type );
+		$explicit = sanitize_key( $explicit );
+		$allowed  = [
+			'fixed-primitive',
+			'fluid-scale',
+			'geometry-input',
+			'content-limit',
+			'responsive-guard',
+			'semantic-token',
+			'alias',
+			'layer-token',
+			'project-token',
+		];
+
+		if ( in_array( $explicit, $allowed, true ) ) {
+			return $explicit;
+		}
+
+		if ( str_contains( $value, 'var(' ) ) {
+			return 'alias';
+		}
+
+		if ( preg_match( '/\bclamp\s*\(/i', $value ) ) {
+			return 'fluid-scale';
+		}
+
+		if ( str_starts_with( $name, 'z-' ) || 'z-index' === $type ) {
+			return 'layer-token';
+		}
+
+		if (
+			str_starts_with( $name, 'dock-' )
+			|| str_starts_with( $name, 'control-size' )
+			|| str_starts_with( $name, 'icon-size' )
+			|| str_starts_with( $name, 'badge-size' )
+			|| 'glass-blur' === $name
+		) {
+			return 'geometry-input';
+		}
+
+		if ( str_starts_with( $name, 'content-width' ) ) {
+			return 'content-limit';
+		}
+
+		if ( in_array( $name, [ 'viewport-gutter', 'grid-min-col', 'section-gap', 'stack-gap', 'grid-gap', 'cluster-gap' ], true ) ) {
+			return 'responsive-guard';
+		}
+
+		if ( in_array( $type, [ 'color', 'font', 'motion', 'scene' ], true ) || str_starts_with( $name, 'leading-' ) || str_starts_with( $name, 'tracking-' ) || str_starts_with( $name, 'opacity-' ) ) {
+			return 'semantic-token';
+		}
+
+		if ( 'project' === $type ) {
+			return 'project-token';
+		}
+
+		return 'fixed-primitive';
 	}
 
 	private static function clean_name( string $name ): string {

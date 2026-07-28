@@ -3582,6 +3582,7 @@ final class Admin {
 		$settings = $this->settings->all();
 		$items    = $this->universal_tokens();
 		$counts   = Seam_Token_Service::counts( $items );
+		$behavior_counts = Seam_Token_Service::behavior_counts( $items );
 		$class_export = Seam_Token_Service::framework_classes_for_bricks();
 		$class_count  = isset( $class_export['classes'] ) && is_array( $class_export['classes'] ) ? count( $class_export['classes'] ) : 0;
 		$token_defaults = $this->settings->defaults()['tokens'];
@@ -3633,6 +3634,13 @@ final class Admin {
 					<p class="dsa-admin-token-chips">
 						<?php foreach ( $counts as $type => $count ) : ?>
 							<span><?php echo esc_html( $type . ': ' . $count ); ?></span>
+						<?php endforeach; ?>
+					</p>
+				<?php endif; ?>
+				<?php if ( [] !== $behavior_counts ) : ?>
+					<p class="dsa-admin-token-chips">
+						<?php foreach ( $behavior_counts as $behavior => $count ) : ?>
+							<span title="<?php echo esc_attr( Seam_Token_Service::behavior_description( (string) $behavior ) ); ?>"><?php echo esc_html( Seam_Token_Service::behavior_label( (string) $behavior ) . ': ' . $count ); ?></span>
 						<?php endforeach; ?>
 					</p>
 				<?php endif; ?>
@@ -3702,6 +3710,7 @@ final class Admin {
 								<header>
 									<code><?php echo esc_html( (string) ( $token['cssVar'] ?? '' ) ); ?></code>
 									<span><?php echo esc_html( (string) ( $token['type'] ?? 'project' ) ); ?></span>
+									<span title="<?php echo esc_attr( Seam_Token_Service::behavior_description( (string) ( $token['behavior'] ?? '' ) ) ); ?>"><?php echo esc_html( Seam_Token_Service::behavior_label( (string) ( $token['behavior'] ?? '' ) ) ); ?></span>
 								</header>
 								<label class="screen-reader-text" for="kiwe-token-<?php echo esc_attr( $token_name ); ?>"><?php echo esc_html( sprintf( __( 'Override %s', 'dsa' ), (string) ( $token['cssVar'] ?? $token_name ) ) ); ?></label>
 								<input id="kiwe-token-<?php echo esc_attr( $token_name ); ?>" type="text" name="tokens[overrides][<?php echo esc_attr( $token_name ); ?>]" value="<?php echo esc_attr( (string) ( $token_overrides[ $token_name ] ?? '' ) ); ?>" placeholder="<?php echo esc_attr( (string) ( $token['value'] ?? '' ) ); ?>">

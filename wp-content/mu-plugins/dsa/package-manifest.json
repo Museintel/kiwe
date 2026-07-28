@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.55",
+  "version": "6.56",
   "algorithm": "sha256",
-  "file_count": 281,
+  "file_count": 282,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "7ecb2705ffecd1bfaa1929fb4a0621098d91d45fa10f184d6202501e923e72ac"
+      "sha256": "9e8112231aee42f82e31167275d1fe20c56c59695daba921a80e87ccf79ee679"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -369,8 +369,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 48016,
-      "sha256": "2b6112b0c0639c01da119d511eabb32a9bd8854415e5b2c87f9bae4c8d955c99"
+      "bytes": 48167,
+      "sha256": "9e230d64f408f7259d10d70b680f468ec6e20cbe6d0a28d2779c96775535563f"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22224,
@@ -473,8 +473,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 579047,
-      "sha256": "1af69a1deb8e7dd111521261acd516e5aa143b072979e4907bc78c226f593387"
+      "bytes": 579786,
+      "sha256": "37bd20cfe710e08bc1810b2f287358c9164a6d20ab3c4660f58028d068220835"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -521,8 +521,8 @@
       "sha256": "a3934b8c869e86cce4c308c9a5ea72ea2d52b95a14bc776598199915c6af89b8"
     },
     "includes/Design/Seam_Token_Service.php": {
-      "bytes": 48352,
-      "sha256": "6cfd557b2ab2d257c1413c89feb73afde31e77b5773b6a8427513f3d17d28938"
+      "bytes": 52749,
+      "sha256": "6c35a8f2f5dc1d45bfc78bd3878faa0446b1918331e5422f78e79867be64546e"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
       "bytes": 15391,
@@ -1008,6 +1008,10 @@
       "bytes": 3689,
       "sha256": "285190419656a3cc2d2bcc1d2d6631b561bb979283366c86730d349e86b279d4"
     },
+    "site-graph-system/release-proof-6.56.md": {
+      "bytes": 2951,
+      "sha256": "be61fcfa73a5b19342fabad700eac9840836901f6481fc187b94396689b85155"
+    },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
@@ -1121,12 +1125,12 @@
       "sha256": "06ee8dfd257d5847081e54ab8edd31743afb1938541430d6572277aadb12c0f0"
     },
     "ui-system/token-map.css": {
-      "bytes": 3410,
-      "sha256": "61eebd22edd350708ab0badfdde1ba822a013165c3b767d561c8d2b57f61429d"
+      "bytes": 3713,
+      "sha256": "fc9cddb69f0b281601f4a139195b707b32d5e7d61c9a769da0ab2a2ba2af84ec"
     },
     "ui-system/tokens-reference.md": {
-      "bytes": 5237,
-      "sha256": "17f023c83696a92443895e192a35b6392f657081603faf77d3008176ab5973b0"
+      "bytes": 6918,
+      "sha256": "a294079a964a84d7bbd16a3a25bdf08557e050cecd5dc2a2e01e42ae0206e03f"
     }
   }
 }

@@ -46,6 +46,8 @@ Seam roles are semantic/headless by default. `data-role="card"` or `.seam-card` 
 
 Prefer the Kiwe/Seam token library first. If a design genuinely needs a stable art-direction value that is not universal, declare a project token and use it consistently. Only propose promotion into the universal token library when the need is generic across many sites, not merely because one project uses it.
 
+Token behavior matters. Official tokens may be fixed primitives, fluid scales, geometry inputs, content limits, responsive guards, semantic tokens, aliases, layer tokens, or project tokens. A plain value is acceptable in the token definition layer when it is a named primitive/guard/input; it is not acceptable as an anonymous Bricks/page design value.
+
 Token fallback ladder:
 
 1. Use an exact official Kiwe/Seam token when the meaning and CSS property domain match.
