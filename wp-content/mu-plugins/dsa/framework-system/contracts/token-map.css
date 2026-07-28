@@ -30,6 +30,8 @@
 	--kiwe-theme-space-sm: var(--kiwe-space-sm, 12px);
 	--kiwe-theme-space-md: var(--kiwe-space-md, 18px);
 	--kiwe-theme-space-lg: var(--kiwe-space-lg, 28px);
+	--kiwe-theme-border-width-hairline: var(--kiwe-border-width-hairline, 1px);
+	--kiwe-theme-border-width-strong: var(--kiwe-border-width-strong, 2px);
 
 	--kiwe-theme-type-caption: var(--kiwe-type-caption, 12px);
 	--kiwe-theme-type-body: var(--kiwe-type-body, 16px);
@@ -47,6 +49,10 @@
 	--kiwe-theme-shadow-sm: var(--kiwe-shadow-sm, 0 1px 2px rgba(15,23,42,.08));
 	--kiwe-theme-shadow-md: var(--kiwe-shadow-md, 0 8px 24px rgba(15,23,42,.10));
 	--kiwe-theme-shadow-lg: var(--kiwe-shadow-lg, 0 18px 50px rgba(15,23,42,.14));
+	--kiwe-theme-content-width-compact: var(--kiwe-content-width-compact, 440px);
+	--kiwe-theme-content-width-readable: var(--kiwe-content-width-readable, 680px);
+	--kiwe-theme-content-width: var(--kiwe-content-width, 1120px);
+	--kiwe-theme-content-width-wide: var(--kiwe-content-width-wide, 1440px);
 
 	--kiwe-theme-dock-control: var(--dsa-dock-control-size, var(--kiwe-control-size, 48px));
 	--kiwe-theme-dock-ai: var(--dsa-dock-ai-size, var(--kiwe-control-size-ai, 54px));

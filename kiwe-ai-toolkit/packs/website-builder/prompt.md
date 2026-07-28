@@ -44,7 +44,16 @@ Custom CSS is allowed. Seam-native does not mean zero custom CSS; it means Kiwe/
 
 Seam roles are semantic/headless by default. `data-role="card"` or `.seam-card` should identify an element as a card-like thing, but must not be relied on to create the visual design. Seam core does not ship generic card/button/modal padding, radius, border, shadow, or background. Build the visual layer with neutral framework primitives, universal Kiwe/Seam tokens, and the searchable Seam Class Vocabulary. Prefer existing generic classes such as `seam-card`, `seam-accordion`, `seam-table`, `seam-horizontal-rail`, `seam-size-xl`, `seam-density-spacious`, and `seam-emphasis-featured` before inventing new names.
 
-Prefer the Kiwe/Seam token library first. If a design genuinely needs a missing art-direction variable, propose a generic addition to the universal token library instead of inventing project-locked token names. Temporary preview-only variables are allowed only when clearly documented.
+Prefer the Kiwe/Seam token library first. If a design genuinely needs a stable art-direction value that is not universal, declare a project token and use it consistently. Only propose promotion into the universal token library when the need is generic across many sites, not merely because one project uses it.
+
+Token fallback ladder:
+
+1. Use an exact official Kiwe/Seam token when the meaning and CSS property domain match.
+2. Use a declared project token for stable site-specific art direction.
+3. Use a real fluid `clamp()` only when the source proves different responsive values for the same property.
+4. Never use `clamp(v, v, v)` as a token substitute.
+
+The Kiwe fluid formula is `slope = (maxValue - minValue) / (maxViewport - minViewport) * 100`, `intercept = minValue - (slope / 100 * minViewport)`, then `clamp(minValue, calc(intercept + slope * 1vw), maxValue)`. CLI/MCP-capable tools may run `kiwe fluid-clamp --min 220px --max 390px --min-vw 478 --max-vw 1440`.
 
 Do not use generated `--dsa-runtime-token-####` variables. They are private Kiwe core bridge tokens for runtime token-purity migration, not public Seam/Framework vocabulary. Website CSS and theme CSS should use official `--kiwe-*`, documented `--kiwe-theme-*`, or a proposed generic universal token.
 

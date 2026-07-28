@@ -51,6 +51,8 @@ Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This m
 - no localStorage behavior for DSA-owned actions;
 - no hardcoded generated Bricks element IDs.
 
+Native Bricks controls and global classes must still consume the Framework token layer after conversion. Use an official `var(--kiwe-*)` or `var(--seam-*)` token when the property meaning matches, a declared project variable for stable art direction, or a real fluid `clamp(...)` only when the source proves different responsive min/max values for the same property. Do not emit bare values like `_padding: 28px`, `_heightMin: 390px`, `_typography.font-size: 2.35rem`, or no-op clamps like `clamp(22px, 22px, 22px)`.
+
 The `bricks-paste.html` preview is allowed to use mock content and placeholder interactions, but production handoff must say which interactions are placeholders and which are Kiwe/DSA-owned.
 
 Do not accept a React/Vite/Tailwind/shadcn application as the handoff unless the assignment explicitly asked for a separate app prototype. Kiwe website handoffs should be plain HTML/CSS with optional preview-only JS, because the target path is Bricks HTML-to-Bricks.

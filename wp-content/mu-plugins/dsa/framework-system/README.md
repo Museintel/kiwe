@@ -50,6 +50,25 @@ That file imports in `Kiwe > Framework` and is the preferred setup path before `
 
 It must not contain Bricks page/template JSON, AppShell dock/sheet settings, products, posts, WooCommerce behavior, or runtime JavaScript.
 
+## Token fallback ladder
+
+Seam prefers universal tokens, but visual correctness remains the goal. When converting or rebuilding a design:
+
+1. Use an exact official Kiwe/Seam token when the meaning and CSS property domain match.
+2. Use a declared project token for stable site-specific art direction.
+3. Use a real fluid `clamp()` only when the source proves different responsive values for the same property.
+4. Never use `clamp(v, v, v)` as a token substitute.
+
+Fluid clamp math:
+
+```text
+slope = (maxValue - minValue) / (maxViewport - minViewport) * 100
+intercept = minValue - (slope / 100 * minViewport)
+clamp(minValue, calc(intercept + slope * 1vw), maxValue)
+```
+
+CLI/MCP-capable tools may run `kiwe fluid-clamp --min 220px --max 390px --min-vw 478 --max-vw 1440`. Geometry Engine remains the authority for DSA/AppShell placement and measurement; this ladder is for page/Bricks/content design values.
+
 ## Layer split
 
 Keep these layers separate:

@@ -21,6 +21,7 @@ Lead implication for Kiwe Framework:
 - A standalone Kiwe/Seam preview is a useful Bricks handoff artifact.
 - The preview should be semantic and class-based so the converter can extract elements/classes/variables cleanly.
 - Kiwe should still push framework variables, palette, and Seam global classes through `Kiwe > Framework`; do not rely on a standalone preview to recreate the whole framework inside each Bricks page.
+- Converted native Bricks controls and global classes must consume the Framework token layer: official Kiwe/Seam variables when the property meaning matches, declared project variables for stable art direction, or real fluid `clamp(...)` values only for proven responsive min/max states. Bare design lengths and no-op clamps are audit failures.
 - Preview JavaScript must not become production authority for DSA-owned actions such as save, cart, checkout, search, auth, AI, or focus/scroll authority.
 - A Seam-built website/page is not a Kiwe AppShell theme. Kiwe AppShell themes remain the `ui-system/` concern.
 

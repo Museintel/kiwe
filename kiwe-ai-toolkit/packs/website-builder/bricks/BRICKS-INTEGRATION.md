@@ -21,6 +21,7 @@ Lead implication for Kiwe Framework:
 - A standalone Kiwe/Seam preview is a useful Bricks handoff artifact.
 - The preview should be semantic and class-based so the converter can extract elements/classes/variables cleanly.
 - Kiwe should still push framework variables, palette, and Seam global classes through `Kiwe > Framework`; do not rely on a standalone preview to recreate the whole framework inside each Bricks page.
+- Converted native Bricks controls and global classes must consume the Framework token layer: official Kiwe/Seam variables when the property meaning matches, declared project variables for stable art direction, or real fluid `clamp(...)` values only for proven responsive min/max states. Bare design lengths and no-op clamps are audit failures.
 - Preview JavaScript must not become production authority for DSA-owned actions such as save, cart, checkout, search, auth, AI, or focus/scroll authority.
 - A Seam-built website/page is not a Kiwe AppShell theme. Kiwe AppShell themes remain the `ui-system/` concern.
 
@@ -169,7 +170,9 @@ On Shop, product archive, and product taxonomy routes, DSA opens with **Products
 ## Kiwe Tokens And SEAM
 
 - `Design\Seam_Token_Service` is the canonical `kiwe-*` token source for the Surface and additive builder export.
-- Kiwe exports variables and the `Kiwe Universal` color palette without replacing existing Bricks variables, palettes, classes, or theme styles.
+- Kiwe exports variables, the `Kiwe Universal` color palette, the neutral Seam Class Vocabulary, and one safe global Kiwe Bricks theme style without replacing existing non-Kiwe Bricks variables, palettes, classes, or theme styles.
+- `Kiwe > Framework` owns the site design-token profile: palette, typography, heading scale, fonts, site background, spacing, radius, motion, and elevation. Active/Hover colors remain compatibility fallbacks for `color-brand` and `color-accent`, not the ceiling of the design system.
+- The generated Bricks theme style is intentionally narrow. It may own global body/headings, colors, links, and site background only. Element-level Bricks styling, recipes, query loops, cards, sections, and AppShell geometry remain designer/Kiwe owned.
 - The retained `references/seam/` files are non-executable inputs for the next SEAM framework batches.
 - Future SEAM layout/component classes must be namespaced and additive. Page-authoring controls must not become a second DSA Surface theme system.
 

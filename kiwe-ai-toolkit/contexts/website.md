@@ -86,6 +86,8 @@ Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview con
 - keep JS separate and minimal;
 - do not recreate Kiwe/DSA behavior authority.
 
+Native Bricks controls and global classes must still consume the Framework token layer after conversion. Use an official `var(--kiwe-*)` or `var(--seam-*)` token when the property meaning matches, a declared project variable for stable art direction, or a real fluid `clamp(...)` only when the source proves different responsive min/max values for the same property. Do not emit bare values like `_padding: 28px`, `_heightMin: 390px`, `_typography.font-size: 2.35rem`, or no-op clamps like `clamp(22px, 22px, 22px)`.
+
 Use `bricks-paste.html` as the preview and paste file. Keep it self-contained by default so browser AIs do not spend tokens maintaining duplicate `preview/index.html`, `site.css`, and `site.js` files. Only add separate assets when the human explicitly requests split files or when a real media asset is required.
 
 ## Kiwe capability boundaries

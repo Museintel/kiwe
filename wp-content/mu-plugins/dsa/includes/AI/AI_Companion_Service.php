@@ -816,7 +816,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, consume Kiwe/Seam variables, declared project variables, or real tokenized clamp() values in native settings/global_classes, and embed compact Kiwe fidelity metadata when practical. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native settings/global_classes: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -866,7 +866,7 @@ final class AI_Companion_Service {
 			[
 				'id'      => 'bricks-native-token-purity',
 				'title'   => 'Bricks-native controls must consume Framework tokens',
-				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use var(--kiwe-*), var(--seam-*), declared project variables, or real tokenized clamp() values instead. No-op clamps such as clamp(22px, 22px, 22px) do not count.',
+				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use official var(--kiwe-*)/var(--seam-*) tokens when the meaning and property domain match; use declared project variables for stable art-direction constants; use real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count.',
 				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
 			],
 			[
@@ -1505,7 +1505,7 @@ final class AI_Companion_Service {
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_untokenized_native_length',
 				'message'  => sprintf(
-					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". A Framework profile supplies token values but does not rewrite hardcoded Bricks JSON; use var(--kiwe-*), var(--seam-*), or real tokenized clamp() values. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.',
+					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". A Framework profile supplies token values but does not rewrite hardcoded Bricks JSON; use an official var(--kiwe-*)/var(--seam-*) token when the meaning and property domain match, a declared project variable for stable art direction, or a real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					(string) ( $item['value'] ?? '' )
@@ -1517,7 +1517,7 @@ final class AI_Companion_Service {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_untokenized_native_length_overflow',
-				'message'  => sprintf( 'Bricks native styles contain %d additional untokenized literal length values beyond the first %d. Fix the token source, then rerun /audit /bricksconversion.', count( $found ) - self::BRICKS_TOKEN_FINDING_LIMIT, self::BRICKS_TOKEN_FINDING_LIMIT ),
+				'message'  => sprintf( 'Bricks native styles contain %d additional untokenized literal length values beyond the first %d. Fix with official tokens, declared project variables, or real fluid clamps from proven responsive states, then rerun /audit /bricksconversion.', count( $found ) - self::BRICKS_TOKEN_FINDING_LIMIT, self::BRICKS_TOKEN_FINDING_LIMIT ),
 				'path'     => sanitize_text_field( $path ),
 			];
 		}

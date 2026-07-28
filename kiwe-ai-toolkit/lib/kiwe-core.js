@@ -42,6 +42,73 @@ export function listModes() {
   return Object.entries(modes).map(([key, value]) => ({ mode: key, ...value }));
 }
 
+function parseLength(value, label) {
+  const match = String(value || '').trim().match(/^(-?(?:\d+|\d*\.\d+))(px|rem|em|ch|vw|vh|vmin|vmax)$/i);
+  if (!match) {
+    throw new Error(`${label} must be a simple CSS length such as 220px, 2.5rem, or -7px.`);
+  }
+  return {
+    value: Number(match[1]),
+    unit: match[2].toLowerCase()
+  };
+}
+
+function roundCssNumber(value, precision = 4) {
+  const rounded = Number(value.toFixed(Math.max(0, Math.min(8, precision))));
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+function formatCssNumber(value, precision = 4) {
+  return String(roundCssNumber(value, precision));
+}
+
+export function calculateFluidClamp(options = {}) {
+  const min = parseLength(options.min ?? options.minValue, 'min');
+  const max = parseLength(options.max ?? options.maxValue, 'max');
+  const minViewport = Number(options.minViewport ?? options.minVw ?? 478);
+  const maxViewport = Number(options.maxViewport ?? options.maxVw ?? 1440);
+  const precision = Number.isInteger(options.precision) ? options.precision : 4;
+
+  if (min.unit !== max.unit) {
+    throw new Error('min and max must use the same CSS unit. Use a declared project token when units differ.');
+  }
+  if (!Number.isFinite(minViewport) || !Number.isFinite(maxViewport) || minViewport <= 0 || maxViewport <= 0 || minViewport === maxViewport) {
+    throw new Error('minViewport and maxViewport must be positive, different viewport widths.');
+  }
+  if (min.value === max.value) {
+    throw new Error('Refusing to generate clamp(v, v, v). Use an official token or declared project token for a stable value.');
+  }
+
+  const lowerViewport = Math.min(minViewport, maxViewport);
+  const upperViewport = Math.max(minViewport, maxViewport);
+  const lowerValue = minViewport <= maxViewport ? min.value : max.value;
+  const upperValue = minViewport <= maxViewport ? max.value : min.value;
+  const cssMin = Math.min(min.value, max.value);
+  const cssMax = Math.max(min.value, max.value);
+  const slope = ((upperValue - lowerValue) / (upperViewport - lowerViewport)) * 100;
+  const intercept = lowerValue - (slope / 100) * lowerViewport;
+
+  return {
+    schema: 'kiwe.fluid-clamp.v1',
+    input: {
+      min: `${formatCssNumber(min.value, precision)}${min.unit}`,
+      max: `${formatCssNumber(max.value, precision)}${max.unit}`,
+      minViewport: lowerViewport,
+      maxViewport: upperViewport
+    },
+    formula: 'clamp(minValue, calc(intercept + slope * 1vw), maxValue)',
+    slope: roundCssNumber(slope, precision),
+    intercept: roundCssNumber(intercept, precision),
+    css: `clamp(${formatCssNumber(cssMin, precision)}${min.unit}, calc(${formatCssNumber(intercept, precision)}${min.unit} + ${formatCssNumber(slope, precision)}vw), ${formatCssNumber(cssMax, precision)}${min.unit})`,
+    rules: [
+      'Use official Kiwe/Seam universal tokens first.',
+      'Use declared project tokens for stable art-direction constants.',
+      'Use this real fluid clamp only for proven responsive interpolation.',
+      'Never emit clamp(v, v, v).'
+    ]
+  };
+}
+
 function readMaybe(relPath) {
   const full = path.join(toolkitRoot, relPath);
   return fs.existsSync(full) ? fs.readFileSync(full, 'utf8') : '';
@@ -419,6 +486,12 @@ export function listCommands() {
       {
         flag: '/usecompanion',
         purpose: 'Optional bounded Kiwe Companion assist. If unavailable, continue without it and report fallback.'
+      }
+    ],
+    utilities: [
+      {
+        command: 'kiwe fluid-clamp --min 220px --max 390px --min-vw 478 --max-vw 1440',
+        purpose: 'Deterministically calculate a real responsive clamp for proven min/max responsive design states. Refuses clamp(v, v, v). Use inside /convert /bricks or /rebuild /seamframework when no official universal token fits and a declared project token is not the right shape.'
       }
     ]
   };

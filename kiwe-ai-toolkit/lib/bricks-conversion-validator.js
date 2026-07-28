@@ -193,12 +193,12 @@ const BRICKS_IMPORT_METHODS = new Set([
   'kiwe-staging-executor'
 ]);
 
-const NATIVE_STYLE_CONTROL_RE = /^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/;
+const NATIVE_STYLE_CONTROL_RE = /^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid(?:Template|Auto|Item)?[A-Za-z0-9_]*|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/;
 const MAPPABLE_CSS_DECLARATION_RE = /\b(?:display|flex(?:-direction|-wrap|-grow|-shrink|-basis)?|align-items|align-self|justify-content|justify-items|align-content|gap|row-gap|column-gap|grid-template-columns|grid-template-rows|grid-auto-flow|grid-auto-columns|grid-auto-rows|grid-column|grid-row|width|max-width|min-width|height|max-height|min-height|aspect-ratio|margin(?:-(?:top|right|bottom|left))?|padding(?:-(?:top|right|bottom|left))?|position|top|right|bottom|left|z-index|overflow|opacity|background(?:-color|-image|-size|-position|-repeat)?|color|border(?:-(?:radius|color|width|style))?|box-shadow|font(?:-(?:family|size|weight|style))?|line-height|letter-spacing|text-align|text-transform|transform|filter|transition)\s*:/gi;
-const TOKEN_OWNED_NATIVE_CONTROL_RE = /^_(?:typography|border|boxShadow|transform|grid|gridItem|gridTemplate|gridAuto|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/;
+const TOKEN_OWNED_NATIVE_CONTROL_RE = /^_(?:typography|border|boxShadow|transform|grid(?:Template|Auto|Item)?[A-Za-z0-9_]*|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/;
 const TOKEN_OWNED_NESTED_KEY_RE = /^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i;
 const LITERAL_LENGTH_RE = /-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i;
-const TOKENIZED_LENGTH_RE = /var\(\s*--(?:kiwe|seam)-|clamp\(/i;
+const OFFICIAL_TOKEN_VAR_RE = /var\(\s*--(?:kiwe|seam)-/i;
 const SELF_CLAMP_LENGTH_RE = /clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i;
 const TOKEN_FINDING_LIMIT = 40;
 
@@ -557,10 +557,83 @@ function usesDeclaredProjectVariable(value, declaredVariables = new Set()) {
   return false;
 }
 
+function extractCssFunctionCalls(value, functionName) {
+  const text = String(value || '');
+  const lower = text.toLowerCase();
+  const needle = `${String(functionName).toLowerCase()}(`;
+  const calls = [];
+  let index = 0;
+  while ((index = lower.indexOf(needle, index)) !== -1) {
+    let depth = 0;
+    let end = -1;
+    for (let i = index; i < text.length; i += 1) {
+      if (text[i] === '(') depth += 1;
+      if (text[i] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end === -1) break;
+    calls.push(text.slice(index + needle.length, end));
+    index = end + 1;
+  }
+  return calls;
+}
+
+function splitCssArgs(value) {
+  const text = String(value || '');
+  const args = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '(') depth += 1;
+    if (text[i] === ')') depth -= 1;
+    if (text[i] === ',' && depth === 0) {
+      args.push(text.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  args.push(text.slice(start).trim());
+  return args;
+}
+
+function parseSimpleCssLength(value) {
+  const match = String(value || '').trim().match(/^(-?(?:\d+|\d*\.\d+))(px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)$/i);
+  return match ? { value: Number(match[1]), unit: match[2].toLowerCase() } : null;
+}
+
+function isValidKiweFluidClampArgs(args) {
+  if (!Array.isArray(args) || args.length !== 3) return false;
+  const min = parseSimpleCssLength(args[0]);
+  const max = parseSimpleCssLength(args[2]);
+  if (!min || !max || min.unit !== max.unit || min.value === max.value) return false;
+  const unit = min.unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const preferred = String(args[1] || '').trim();
+  return new RegExp(`^calc\\(\\s*-?(?:\\d+|\\d*\\.\\d+)${unit}\\s*[+-]\\s*-?(?:\\d+|\\d*\\.\\d+)vw\\s*\\)$`, 'i').test(preferred);
+}
+
+function hasValidKiweFluidClamp(value) {
+  return extractCssFunctionCalls(value, 'clamp').some((call) => isValidKiweFluidClampArgs(splitCssArgs(call)));
+}
+
+function hasNoOpClamp(value) {
+  return SELF_CLAMP_LENGTH_RE.test(value) || extractCssFunctionCalls(value, 'clamp').some((call) => {
+    const args = splitCssArgs(call);
+    if (args.length !== 3) return false;
+    if (args[0] === args[1] && args[1] === args[2]) return true;
+    const min = parseSimpleCssLength(args[0]);
+    const max = parseSimpleCssLength(args[2]);
+    return Boolean(min && max && min.unit === max.unit && min.value === max.value);
+  });
+}
+
 function hasTokenizedLength(value, declaredVariables = new Set()) {
   if (typeof value !== 'string') return false;
-  if (SELF_CLAMP_LENGTH_RE.test(value)) return false;
-  return TOKENIZED_LENGTH_RE.test(value) || usesDeclaredProjectVariable(value, declaredVariables);
+  if (hasNoOpClamp(value)) return false;
+  return OFFICIAL_TOKEN_VAR_RE.test(value) || usesDeclaredProjectVariable(value, declaredVariables) || hasValidKiweFluidClamp(value);
 }
 
 function tokenOwnedChild(parentOwned, key) {
@@ -603,7 +676,7 @@ function validateTokenizedNativeLengths(items, findings, file, pathPointer, decl
     add(
       findings,
       'fail',
-      `Bricks native style "${item.path}" on "${item.label}" uses literal length "${item.value}". /convert /bricks outputs must use Kiwe/Seam token variables or real tokenized clamp() values for spacing, sizing, radius, type, shadow, transform, and responsive layout controls. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.`,
+      `Bricks native style "${item.path}" on "${item.label}" uses literal length "${item.value}". /convert /bricks outputs must follow the Kiwe token ladder for spacing, sizing, radius, type, shadow, transform, and responsive layout controls: use an official var(--kiwe-*)/var(--seam-*) token when the meaning and property domain match; otherwise use a declared project variable; otherwise use a real fluid clamp() only when source responsive states prove different min/max values. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.`,
       file,
       item.path
     );
@@ -612,7 +685,7 @@ function validateTokenizedNativeLengths(items, findings, file, pathPointer, decl
     add(
       findings,
       'fail',
-      `Bricks native styles contain ${findingsToAdd.length - TOKEN_FINDING_LIMIT} additional untokenized literal length values beyond the first ${TOKEN_FINDING_LIMIT}. Fix the token source, then rerun /audit /bricksconversion.`,
+      `Bricks native styles contain ${findingsToAdd.length - TOKEN_FINDING_LIMIT} additional untokenized literal length values beyond the first ${TOKEN_FINDING_LIMIT}. Fix with official tokens, declared project variables, or real fluid clamps from proven responsive states, then rerun /audit /bricksconversion.`,
       file,
       pathPointer
     );

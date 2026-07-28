@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -30,6 +30,7 @@ Commands:
   kiwe bricks-conversion-context
   kiwe bricks-theme-style-context
   kiwe accessibility-context
+  kiwe fluid-clamp --min 220px --max 390px [--min-vw 478] [--max-vw 1440]
   kiwe dynamic-pass --brief text [--site-graph-summary text] [--handoff-summary text]
   kiwe validate-framework-profile <profile-json-or-handoff-dir> [--optional]
   kiwe validate-bricks-theme-style <bricks-theme-style-json-or-dir> [--optional]
@@ -94,6 +95,19 @@ try {
     print(getBricksThemeStyleContext());
   } else if (command === 'accessibility-context') {
     print(getAccessibilityContext());
+  } else if (command === 'fluid-clamp') {
+    const minIndex = args.indexOf('--min');
+    const maxIndex = args.indexOf('--max');
+    const minVwIndex = args.indexOf('--min-vw');
+    const maxVwIndex = args.indexOf('--max-vw');
+    const precisionIndex = args.indexOf('--precision');
+    print(calculateFluidClamp({
+      min: minIndex >= 0 ? args[minIndex + 1] : args[0],
+      max: maxIndex >= 0 ? args[maxIndex + 1] : args[1],
+      minViewport: minVwIndex >= 0 ? Number(args[minVwIndex + 1]) : undefined,
+      maxViewport: maxVwIndex >= 0 ? Number(args[maxVwIndex + 1]) : undefined,
+      precision: precisionIndex >= 0 ? Number(args[precisionIndex + 1]) : undefined
+    }));
   } else if (command === 'dynamic-pass') {
     const briefIndex = args.indexOf('--brief');
     const graphIndex = args.indexOf('--site-graph-summary');

@@ -112,12 +112,12 @@ final class Bricks_Conversion_Validator {
 
 	private const RESPONSIVE_LAYOUT_KEY_PATTERN = '/^_(?:cssCustom|direction|display|grid|gridItem|gridTemplate|gridAuto|align|justify|place|flex|gap|rowGap|columnGap|order|width|widthMin|widthMax|height|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|aspectRatio|margin|padding|position|top|right|bottom|left|zIndex|overflow|masonry)[A-Za-z0-9_]*:[a-z][a-z0-9_-]{1,48}(?::[a-z-]+)?$/i';
 	private const COMPLEX_LAYOUT_PATTERN        = '/\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i';
-	private const NATIVE_STYLE_CONTROL_PATTERN  = '/^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/';
+	private const NATIVE_STYLE_CONTROL_PATTERN  = '/^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid(?:Template|Auto|Item)?[A-Za-z0-9_]*|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/';
 	private const MAPPABLE_CSS_PATTERN          = '/\b(?:display|flex(?:-direction|-wrap|-grow|-shrink|-basis)?|align-items|align-self|justify-content|justify-items|align-content|gap|row-gap|column-gap|grid-template-columns|grid-template-rows|grid-auto-flow|grid-auto-columns|grid-auto-rows|grid-column|grid-row|width|max-width|min-width|height|max-height|min-height|aspect-ratio|margin(?:-(?:top|right|bottom|left))?|padding(?:-(?:top|right|bottom|left))?|position|top|right|bottom|left|z-index|overflow|opacity|background(?:-color|-image|-size|-position|-repeat)?|color|border(?:-(?:radius|color|width|style))?|box-shadow|font(?:-(?:family|size|weight|style))?|line-height|letter-spacing|text-align|text-transform|transform|filter|transition)\s*:/i';
-	private const TOKEN_OWNED_NATIVE_CONTROL_PATTERN = '/^_(?:typography|border|boxShadow|transform|grid|gridItem|gridTemplate|gridAuto|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/';
+	private const TOKEN_OWNED_NATIVE_CONTROL_PATTERN = '/^_(?:typography|border|boxShadow|transform|grid(?:Template|Auto|Item)?[A-Za-z0-9_]*|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/';
 	private const TOKEN_OWNED_NESTED_KEY_PATTERN     = '/^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i';
 	private const LITERAL_LENGTH_PATTERN             = '/-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i';
-	private const TOKENIZED_LENGTH_PATTERN           = '/var\(\s*--(?:kiwe|seam)-|clamp\(/i';
+	private const OFFICIAL_TOKEN_VAR_PATTERN         = '/var\(\s*--(?:kiwe|seam)-/i';
 	private const SELF_CLAMP_LENGTH_PATTERN          = '/clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i';
 	private const TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES = 2500;
 	private const TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN = 12;
@@ -695,7 +695,7 @@ final class Bricks_Conversion_Validator {
 				'fail',
 				'bricks_conversion_untokenized_native_length',
 				sprintf(
-					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". /convert /bricks outputs must use Kiwe/Seam token variables or real tokenized clamp() values for spacing, sizing, radius, type, shadow, transform, and responsive layout controls. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.',
+					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". /convert /bricks outputs must follow the Kiwe token ladder for spacing, sizing, radius, type, shadow, transform, and responsive layout controls: use an official var(--kiwe-*)/var(--seam-*) token when the meaning and property domain match; otherwise use a declared project variable; otherwise use a real fluid clamp() only when source responsive states prove different min/max values. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					(string) ( $item['value'] ?? '' )
@@ -709,7 +709,7 @@ final class Bricks_Conversion_Validator {
 				$findings,
 				'fail',
 				'bricks_conversion_untokenized_native_length_overflow',
-				sprintf( 'Bricks native styles contain %d additional untokenized literal length values beyond the first %d. Fix the token source, then rerun /audit /bricksconversion.', count( $found ) - self::TOKEN_FINDING_LIMIT, self::TOKEN_FINDING_LIMIT ),
+				sprintf( 'Bricks native styles contain %d additional untokenized literal length values beyond the first %d. Fix with official tokens, declared project variables, or real fluid clamps from proven responsive states, then rerun /audit /bricksconversion.', count( $found ) - self::TOKEN_FINDING_LIMIT, self::TOKEN_FINDING_LIMIT ),
 				$path
 			);
 		}
@@ -749,6 +749,133 @@ final class Bricks_Conversion_Validator {
 		return false;
 	}
 
+	private function extract_css_function_calls( string $value, string $function_name ): array {
+		$text   = $value;
+		$lower  = strtolower( $text );
+		$needle = strtolower( $function_name ) . '(';
+		$calls  = [];
+		$index  = 0;
+
+		while ( false !== ( $index = strpos( $lower, $needle, $index ) ) ) {
+			$depth = 0;
+			$end   = -1;
+			$len   = strlen( $text );
+
+			for ( $i = $index; $i < $len; ++$i ) {
+				$char = $text[ $i ];
+				if ( '(' === $char ) {
+					++$depth;
+				} elseif ( ')' === $char ) {
+					--$depth;
+					if ( 0 === $depth ) {
+						$end = $i;
+						break;
+					}
+				}
+			}
+
+			if ( -1 === $end ) {
+				break;
+			}
+
+			$calls[] = substr( $text, $index + strlen( $needle ), $end - $index - strlen( $needle ) );
+			$index   = $end + 1;
+		}
+
+		return $calls;
+	}
+
+	private function split_css_args( string $value ): array {
+		$args  = [];
+		$depth = 0;
+		$start = 0;
+		$len   = strlen( $value );
+
+		for ( $i = 0; $i < $len; ++$i ) {
+			$char = $value[ $i ];
+			if ( '(' === $char ) {
+				++$depth;
+			} elseif ( ')' === $char ) {
+				--$depth;
+			} elseif ( ',' === $char && 0 === $depth ) {
+				$args[] = trim( substr( $value, $start, $i - $start ) );
+				$start  = $i + 1;
+			}
+		}
+
+		$args[] = trim( substr( $value, $start ) );
+		return $args;
+	}
+
+	private function parse_simple_css_length( string $value ): ?array {
+		if ( ! preg_match( '/^(-?(?:\d+|\d*\.\d+))(px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)$/i', trim( $value ), $match ) ) {
+			return null;
+		}
+
+		return [
+			'value' => (float) $match[1],
+			'unit'  => strtolower( (string) $match[2] ),
+		];
+	}
+
+	private function has_valid_kiwe_fluid_clamp( string $value ): bool {
+		foreach ( $this->extract_css_function_calls( $value, 'clamp' ) as $call ) {
+			$args = $this->split_css_args( $call );
+			if ( 3 !== count( $args ) ) {
+				continue;
+			}
+
+			$min = $this->parse_simple_css_length( (string) $args[0] );
+			$max = $this->parse_simple_css_length( (string) $args[2] );
+			if ( null === $min || null === $max || $min['unit'] !== $max['unit'] || (float) $min['value'] === (float) $max['value'] ) {
+				continue;
+			}
+
+			$unit      = preg_quote( (string) $min['unit'], '/' );
+			$preferred = trim( (string) $args[1] );
+			if ( preg_match( '/^calc\(\s*-?(?:\d+|\d*\.\d+)' . $unit . '\s*[+-]\s*-?(?:\d+|\d*\.\d+)vw\s*\)$/i', $preferred ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function has_noop_clamp( string $value ): bool {
+		if ( preg_match( self::SELF_CLAMP_LENGTH_PATTERN, $value ) ) {
+			return true;
+		}
+
+		foreach ( $this->extract_css_function_calls( $value, 'clamp' ) as $call ) {
+			$args = $this->split_css_args( $call );
+			if ( 3 !== count( $args ) ) {
+				continue;
+			}
+
+			if ( $args[0] === $args[1] && $args[1] === $args[2] ) {
+				return true;
+			}
+
+			$min = $this->parse_simple_css_length( (string) $args[0] );
+			$max = $this->parse_simple_css_length( (string) $args[2] );
+			if ( null !== $min && null !== $max && $min['unit'] === $max['unit'] && (float) $min['value'] === (float) $max['value'] ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function has_tokenized_length( string $value, array $declared_variables ): bool {
+		if ( $this->has_noop_clamp( $value ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( self::OFFICIAL_TOKEN_VAR_PATTERN, $value )
+			|| $this->uses_declared_project_variable( $value, $declared_variables )
+			|| $this->has_valid_kiwe_fluid_clamp( $value );
+	}
+
 	private function collect_untokenized_native_lengths( mixed $value, array &$out, string $path, bool $parent_owned = false, array $declared_variables = [] ): void {
 		if ( is_array( $value ) ) {
 			foreach ( $value as $key => $item ) {
@@ -762,7 +889,7 @@ final class Bricks_Conversion_Validator {
 			return;
 		}
 
-		if ( preg_match( self::LITERAL_LENGTH_PATTERN, $value ) && ( ( ! preg_match( self::TOKENIZED_LENGTH_PATTERN, $value ) && ! $this->uses_declared_project_variable( $value, $declared_variables ) ) || preg_match( self::SELF_CLAMP_LENGTH_PATTERN, $value ) ) ) {
+		if ( preg_match( self::LITERAL_LENGTH_PATTERN, $value ) && ! $this->has_tokenized_length( $value, $declared_variables ) ) {
 			$out[] = [
 				'path'  => $path,
 				'value' => $value,

@@ -13,7 +13,9 @@ It is intentionally not a raw dump of every CSS variable used inside production 
 - common radius aliases
 - spacing aliases
 - typography, heading scale, font, line-height, and tracking aliases
+- generic border widths
 - safe elevation/shadow aliases
+- compact, readable, default, narrow, and wide content widths
 - dock control, AI, icon, and badge sizes
 - compatibility aliases that bridge `--kiwe-*` tokens to `--dsa-*` runtime values
 
@@ -48,6 +50,31 @@ That difference is expected. It does not mean the UI brain is missing the design
 ## If a theme needs a missing token
 
 Do not invent a private replacement and do not reach into production internals blindly.
+
+Use this fallback ladder:
+
+1. Use an exact official Kiwe/Seam universal token when the token meaning and CSS property domain match.
+   - `border-radius: var(--kiwe-radius-xl)` is valid for a 20px panel radius.
+   - `padding: var(--kiwe-space-md)` is valid for normal layout spacing.
+   - Do not map by number alone. A `12px` radius is not a spacing token just because `space-xs` can resolve to 12px.
+2. Use a declared project token for real art direction that is not universal.
+   - Good: `--nc-promo-card-height`, `--nc-campaign-art-offset`, `--nc-hero-scrim`.
+   - Put the project token in the Framework profile/global variables before using it in Bricks JSON or page CSS.
+3. Use a real fluid `clamp()` only when the source design has different values across responsive states.
+   - Good: `clamp(220px, calc(135.53px + 17.64vw), 390px)` when the source proves a card should interpolate from 220px at a phone width to 390px at a desktop width.
+   - Bad: `clamp(680px, 680px, 680px)`. That is a hardcoded value disguised as a clamp and must fail audit.
+
+The Kiwe interpolation formula is:
+
+```text
+slope = (maxValue - minValue) / (maxViewport - minViewport) * 100
+intercept = minValue - (slope / 100 * minViewport)
+clamp(minValue, calc(intercept + slope * 1vw), maxValue)
+```
+
+Use compatible units only. If the min/max values use incompatible units, create a declared project token instead of guessing.
+
+Geometry Engine owns DSA/AppShell placement and measurement. This fluid-clamp ladder is for page/Bricks/content design values and for preview-only proof, not for overriding dock, sheet, screen, backdrop, safe-area, keyboard, or Surface lifecycle geometry.
 
 Instead, document the need in the handoff:
 

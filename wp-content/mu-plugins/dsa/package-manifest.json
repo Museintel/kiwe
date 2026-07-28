@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.54",
+  "version": "6.55",
   "algorithm": "sha256",
-  "file_count": 280,
+  "file_count": 281,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -13,8 +13,8 @@
       "sha256": "b6c448bd71151b9a42d9e9d05af403d9388b68d881b1d4c664e60fe63d9137dc"
     },
     "assets/css/seam.css": {
-      "bytes": 18175,
-      "sha256": "40b3187e8de573f5dbb0ff16d447d1b03de6d117ed05ce7679e603b68289ac47"
+      "bytes": 18759,
+      "sha256": "1b609722ae3bef2a25c47451ff74f64c6bfdc804d65777060a1482774f7cae7a"
     },
     "assets/css/surface-presets.css": {
       "bytes": 265,
@@ -182,23 +182,23 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "9e417263b777220337ea89e035e16dfb869a0380f5720cd76da5f5d26cded533"
+      "sha256": "7ecb2705ffecd1bfaa1929fb4a0621098d91d45fa10f184d6202501e923e72ac"
     },
     "framework-system/HANDOFF-LITE.md": {
-      "bytes": 3601,
-      "sha256": "a32f337a88d3fd4e76f929532213efd11f3269128d9ef00be6cf74d9c70a7d64"
+      "bytes": 4119,
+      "sha256": "27109795fef3a576a463f6d5a7d1d6f7bdd7c19b2a467f90c09d07dcb2e7f0a8"
     },
     "framework-system/HANDOFF-MODES.md": {
       "bytes": 15285,
       "sha256": "6e82355375d4fad3f9e2ce856d38ce506105329ee1ff8289f5e1587dfb76ca26"
     },
     "framework-system/README.md": {
-      "bytes": 9521,
-      "sha256": "9ee719655252a92614935e2631fae0e5085ca47cfb4d8e93a83270f5cbe7775e"
+      "bytes": 10428,
+      "sha256": "05207566f3de38ac6c62cfe1180b70d601991194878e48c7796106e5ee438336"
     },
     "framework-system/bricks/BRICKS-INTEGRATION.md": {
-      "bytes": 9518,
-      "sha256": "b048bd5038519a0dcc1a6b33352ac289a87b87ee1dd13307004893c6e9df3f1d"
+      "bytes": 9863,
+      "sha256": "41234191051eb8727f6543e821676c56ec24d068bec7aee1f1d8769c44f23737"
     },
     "framework-system/bricks/bricks-capabilities.json": {
       "bytes": 5550,
@@ -229,16 +229,16 @@
       "sha256": "c399ec9bc141895706b24aaaefc28d482006a1a10cdd36316bc6249aa2498c1a"
     },
     "framework-system/contracts/token-map.css": {
-      "bytes": 2962,
-      "sha256": "1fd65c4482eb32151ed94a459e005f66da8a5c4f3f318dd9fe6afe24ef5f9f2f"
+      "bytes": 3410,
+      "sha256": "61eebd22edd350708ab0badfdde1ba822a013165c3b767d561c8d2b57f61429d"
     },
     "framework-system/contracts/tokens-reference.md": {
-      "bytes": 3490,
-      "sha256": "59fceb894b58cffd13b269cdcaf8e458a2143d488cfcf8cb751f9ab5534453bf"
+      "bytes": 5237,
+      "sha256": "17f023c83696a92443895e192a35b6392f657081603faf77d3008176ab5973b0"
     },
     "framework-system/handoffs/website-builder/HANDOFF-LITE.md": {
-      "bytes": 3601,
-      "sha256": "a32f337a88d3fd4e76f929532213efd11f3269128d9ef00be6cf74d9c70a7d64"
+      "bytes": 4119,
+      "sha256": "27109795fef3a576a463f6d5a7d1d6f7bdd7c19b2a467f90c09d07dcb2e7f0a8"
     },
     "framework-system/handoffs/website-builder/HANDOFF-MODES.md": {
       "bytes": 15285,
@@ -249,8 +249,8 @@
       "sha256": "116890068120fa0e16dfa8711ea0ccb44b9a72d8872d08e04dbb9dfcf6d402be"
     },
     "framework-system/handoffs/website-builder/bricks/BRICKS-INTEGRATION.md": {
-      "bytes": 8895,
-      "sha256": "58ae3bc1de3500dc6eabf2247805aeebe7c127dcb654dc8ddfbcb273d55685eb"
+      "bytes": 9863,
+      "sha256": "41234191051eb8727f6543e821676c56ec24d068bec7aee1f1d8769c44f23737"
     },
     "framework-system/handoffs/website-builder/bricks/bricks-capabilities.json": {
       "bytes": 5550,
@@ -281,28 +281,28 @@
       "sha256": "c399ec9bc141895706b24aaaefc28d482006a1a10cdd36316bc6249aa2498c1a"
     },
     "framework-system/handoffs/website-builder/contracts/token-map.css": {
-      "bytes": 2055,
-      "sha256": "7dbebe71af6af64e7adc673d908b37c180c1a239b86aa6560a26917d785a1e85"
+      "bytes": 3410,
+      "sha256": "61eebd22edd350708ab0badfdde1ba822a013165c3b767d561c8d2b57f61429d"
     },
     "framework-system/handoffs/website-builder/contracts/tokens-reference.md": {
-      "bytes": 3490,
-      "sha256": "59fceb894b58cffd13b269cdcaf8e458a2143d488cfcf8cb751f9ab5534453bf"
+      "bytes": 5237,
+      "sha256": "17f023c83696a92443895e192a35b6392f657081603faf77d3008176ab5973b0"
     },
     "framework-system/handoffs/website-builder/prompt.md": {
-      "bytes": 7507,
-      "sha256": "7ed07bdde297717428bf76c4a8390efb0bc5802ed42a29db2a3f1cfda36cd46d"
+      "bytes": 8196,
+      "sha256": "d65b1bef2f5e311744f4cddce8fe54973e697d894025446648291786ac1b1f65"
     },
     "framework-system/handoffs/website-builder/runtime/seam.css": {
-      "bytes": 18175,
-      "sha256": "40b3187e8de573f5dbb0ff16d447d1b03de6d117ed05ce7679e603b68289ac47"
+      "bytes": 18759,
+      "sha256": "1b609722ae3bef2a25c47451ff74f64c6bfdc804d65777060a1482774f7cae7a"
     },
     "framework-system/handoffs/website-builder/runtime/seam.js": {
       "bytes": 7532,
       "sha256": "5d766c23963e03e73c93ce321bb5c30c7818d715f73ce28ca0e8028bc19deb74"
     },
     "framework-system/prompt.md": {
-      "bytes": 7507,
-      "sha256": "7ed07bdde297717428bf76c4a8390efb0bc5802ed42a29db2a3f1cfda36cd46d"
+      "bytes": 8196,
+      "sha256": "d65b1bef2f5e311744f4cddce8fe54973e697d894025446648291786ac1b1f65"
     },
     "framework-system/references/seam-enqueue.reference.php.txt": {
       "bytes": 34903,
@@ -317,8 +317,8 @@
       "sha256": "1a8581d908e9f059db86795bf7cfeaddf38a403accb5be4ab85cf3e6f8d2414c"
     },
     "framework-system/runtime/seam.css": {
-      "bytes": 18175,
-      "sha256": "40b3187e8de573f5dbb0ff16d447d1b03de6d117ed05ce7679e603b68289ac47"
+      "bytes": 18759,
+      "sha256": "1b609722ae3bef2a25c47451ff74f64c6bfdc804d65777060a1482774f7cae7a"
     },
     "framework-system/runtime/seam.js": {
       "bytes": 7532,
@@ -337,8 +337,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 124695,
-      "sha256": "8af5ea1ea080aafee5dc30371b99fdb3b6e0eee6a2031b4c600e8979f8a88aec"
+      "bytes": 132342,
+      "sha256": "cc2e94994394ab5a414c84f7d3212b564e0e03906fef2caac26fa0bec3759e60"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -361,16 +361,16 @@
       "sha256": "22136ed40c4b8d4b25555aefa7c51ec9d301109a30059b944ed0895ff4e618f2"
     },
     "includes/AI/Bricks_AI_Intelligence_Service.php": {
-      "bytes": 27017,
-      "sha256": "27044181aeb41f3422e76b26daa707265949d139f2fcb728ba257a7c6f6654b9"
+      "bytes": 28154,
+      "sha256": "4c10f9abd398752ea2f1c1c8ba44e98a363b439226b554155f75fdd2633839b4"
     },
     "includes/AI/Bricks_Controlled_Adapter_Service.php": {
       "bytes": 17537,
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 38469,
-      "sha256": "45a0476dabece14286d5a416a55b91a1deec8441a9ae779ff97257cad0a56e84"
+      "bytes": 48016,
+      "sha256": "2b6112b0c0639c01da119d511eabb32a9bd8854415e5b2c87f9bae4c8d955c99"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22224,
@@ -521,8 +521,8 @@
       "sha256": "a3934b8c869e86cce4c308c9a5ea72ea2d52b95a14bc776598199915c6af89b8"
     },
     "includes/Design/Seam_Token_Service.php": {
-      "bytes": 47752,
-      "sha256": "242140813811d62c5fdc76fb84c0d426598f8bd3690239234fe3e56d200518af"
+      "bytes": 48352,
+      "sha256": "6cfd557b2ab2d257c1413c89feb73afde31e77b5773b6a8427513f3d17d28938"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
       "bytes": 15391,
@@ -1004,6 +1004,10 @@
       "bytes": 2299,
       "sha256": "f04de6fe466325f304b6a04544031c192329ca15275ba854f9468fbb385ae56d"
     },
+    "site-graph-system/release-proof-6.55.md": {
+      "bytes": 3689,
+      "sha256": "285190419656a3cc2d2bcc1d2d6631b561bb979283366c86730d349e86b279d4"
+    },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
@@ -1117,12 +1121,12 @@
       "sha256": "06ee8dfd257d5847081e54ab8edd31743afb1938541430d6572277aadb12c0f0"
     },
     "ui-system/token-map.css": {
-      "bytes": 2962,
-      "sha256": "1fd65c4482eb32151ed94a459e005f66da8a5c4f3f318dd9fe6afe24ef5f9f2f"
+      "bytes": 3410,
+      "sha256": "61eebd22edd350708ab0badfdde1ba822a013165c3b767d561c8d2b57f61429d"
     },
     "ui-system/tokens-reference.md": {
-      "bytes": 3490,
-      "sha256": "59fceb894b58cffd13b269cdcaf8e458a2143d488cfcf8cb751f9ab5534453bf"
+      "bytes": 5237,
+      "sha256": "17f023c83696a92443895e192a35b6392f657081603faf77d3008176ab5973b0"
     }
   }
 }
