@@ -24,6 +24,7 @@ final class AI_Companion_Service {
 	private const BRICKS_TOKEN_OWNED_NESTED_PATTERN   = '/^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i';
 	private const BRICKS_LITERAL_LENGTH_PATTERN       = '/-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i';
 	private const BRICKS_TOKENIZED_LENGTH_PATTERN     = '/var\(\s*--(?:kiwe|seam)-|clamp\(/i';
+	private const BRICKS_SELF_CLAMP_LENGTH_PATTERN    = '/clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i';
 	private const BRICKS_TOKEN_FINDING_LIMIT          = 40;
 
 	public function __construct(
@@ -815,7 +816,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, consume Kiwe/Seam variables or tokenized clamp() values in native settings/global_classes, and embed compact Kiwe fidelity metadata when practical. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, consume Kiwe/Seam variables, declared project variables, or real tokenized clamp() values in native settings/global_classes, and embed compact Kiwe fidelity metadata when practical. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -865,7 +866,7 @@ final class AI_Companion_Service {
 			[
 				'id'      => 'bricks-native-token-purity',
 				'title'   => 'Bricks-native controls must consume Framework tokens',
-				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use var(--kiwe-*), var(--seam-*), or tokenized clamp() values instead.',
+				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use var(--kiwe-*), var(--seam-*), declared project variables, or real tokenized clamp() values instead. No-op clamps such as clamp(22px, 22px, 22px) do not count.',
 				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
 			],
 			[
@@ -926,7 +927,7 @@ final class AI_Companion_Service {
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
-				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables or tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout.' ],
+				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.' ],
 				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
@@ -1436,7 +1437,8 @@ final class AI_Companion_Service {
 			$this->review_bricks_tokenized_native_lengths(
 				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
 				$path,
-				'$.content/header/footer/global_classes'
+				'$.content/header/footer/global_classes',
+				$this->collect_bricks_declared_css_variables( $data )
 			)
 		);
 		if ( count( $elements ) >= 180 && $native_controls < 60 ) {
@@ -1482,7 +1484,7 @@ final class AI_Companion_Service {
 		return $count;
 	}
 
-	private function review_bricks_tokenized_native_lengths( array $items, string $path, string $base_path ): array {
+	private function review_bricks_tokenized_native_lengths( array $items, string $path, string $base_path, array $declared_variables = [] ): array {
 		$found = [];
 		foreach ( $items as $index => $item ) {
 			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
@@ -1490,7 +1492,7 @@ final class AI_Companion_Service {
 			}
 			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
 			$values = [];
-			$this->collect_bricks_untokenized_native_lengths( $item['settings'], $values, $base_path . '[' . (int) $index . '].settings' );
+			$this->collect_bricks_untokenized_native_lengths( $item['settings'], $values, $base_path . '[' . (int) $index . '].settings', false, $declared_variables );
 			foreach ( $values as $value ) {
 				$value['label'] = $label;
 				$found[]        = $value;
@@ -1503,7 +1505,7 @@ final class AI_Companion_Service {
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_untokenized_native_length',
 				'message'  => sprintf(
-					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". A Framework profile supplies token values but does not rewrite hardcoded Bricks JSON; use var(--kiwe-*), var(--seam-*), or tokenized clamp() values.',
+					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". A Framework profile supplies token values but does not rewrite hardcoded Bricks JSON; use var(--kiwe-*), var(--seam-*), or real tokenized clamp() values. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					(string) ( $item['value'] ?? '' )
@@ -1523,11 +1525,45 @@ final class AI_Companion_Service {
 		return $findings;
 	}
 
-	private function collect_bricks_untokenized_native_lengths( $value, array &$out, string $path, bool $parent_owned = false ): void {
+	private function collect_bricks_declared_css_variables( $value, array &$out = [] ): array {
+		if ( is_array( $value ) ) {
+			foreach ( [ 'name', 'variable', 'key', 'id' ] as $key ) {
+				if ( isset( $value[ $key ] ) && is_string( $value[ $key ] ) ) {
+					$clean = preg_replace( '/^--/', '', trim( $value[ $key ] ) );
+					if ( is_string( $clean ) && preg_match( '/^(?:kiwe|seam|[a-z][a-z0-9]*)-[a-z0-9][a-z0-9-]*$/i', $clean ) ) {
+						$out[ $clean ]       = true;
+						$out[ '--' . $clean ] = true;
+					}
+				}
+			}
+			foreach ( $value as $item ) {
+				$this->collect_bricks_declared_css_variables( $item, $out );
+			}
+		}
+
+		return $out;
+	}
+
+	private function bricks_uses_declared_project_variable( string $value, array $declared_variables ): bool {
+		if ( ! preg_match_all( '/var\(\s*--([a-z][a-z0-9]*-[a-z0-9][a-z0-9-]*)/i', $value, $matches ) ) {
+			return false;
+		}
+
+		foreach ( $matches[1] as $name ) {
+			$name = (string) $name;
+			if ( preg_match( '/^(?:kiwe|seam)-/i', $name ) || ! empty( $declared_variables[ $name ] ) || ! empty( $declared_variables[ '--' . $name ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function collect_bricks_untokenized_native_lengths( $value, array &$out, string $path, bool $parent_owned = false, array $declared_variables = [] ): void {
 		if ( is_array( $value ) ) {
 			foreach ( $value as $key => $item ) {
 				$owned = $parent_owned || preg_match( self::BRICKS_TOKEN_OWNED_CONTROL_PATTERN, (string) $key ) || preg_match( self::BRICKS_TOKEN_OWNED_NESTED_PATTERN, (string) $key );
-				$this->collect_bricks_untokenized_native_lengths( $item, $out, $path . '.' . (string) $key, (bool) $owned );
+				$this->collect_bricks_untokenized_native_lengths( $item, $out, $path . '.' . (string) $key, (bool) $owned, $declared_variables );
 			}
 			return;
 		}
@@ -1536,7 +1572,7 @@ final class AI_Companion_Service {
 			return;
 		}
 
-		if ( preg_match( self::BRICKS_LITERAL_LENGTH_PATTERN, $value ) && ! preg_match( self::BRICKS_TOKENIZED_LENGTH_PATTERN, $value ) ) {
+		if ( preg_match( self::BRICKS_LITERAL_LENGTH_PATTERN, $value ) && ( ( ! preg_match( self::BRICKS_TOKENIZED_LENGTH_PATTERN, $value ) && ! $this->bricks_uses_declared_project_variable( $value, $declared_variables ) ) || preg_match( self::BRICKS_SELF_CLAMP_LENGTH_PATTERN, $value ) ) ) {
 			$out[] = [
 				'path'  => $path,
 				'value' => $value,
@@ -1584,7 +1620,8 @@ final class AI_Companion_Service {
 			$this->review_bricks_tokenized_native_lengths(
 				array_merge( (array) ( $data['elements'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
 				$path,
-				'$.elements/globalClasses'
+				'$.elements/globalClasses',
+				$this->collect_bricks_declared_css_variables( $data )
 			)
 		);
 

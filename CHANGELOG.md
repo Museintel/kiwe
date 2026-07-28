@@ -7,6 +7,7 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Clarified that `/audit /frameworkprofile` is not an alias of `/audit /brickstheme`; Framework profile `bricks_theme_style` global slots are valid and must not be stripped down to only `enabled`, `id`, and `label`.
 - Tightened `/audit /bricksconversion` so both conversion envelopes and direct native Bricks template exports fail when Bricks-native settings or Kiwe-owned global classes contain untokenized literal design lengths such as raw `28px`, `2rem`, or fixed grid/flex measurements. Framework profiles provide the design tokens, but they do not magically rewrite hardcoded Bricks JSON after conversion.
 - Synced the native Bricks token-purity rule through the browser-AI workflow/context files, toolkit validator, WordPress REST validator, Bricks AI context, and Companion review cards so `/audit` and `/fix /bricksconversion` can identify the real grid/flex/token problem without spoon-fed symptoms.
+- Rejected no-op clamp wrappers such as `clamp(22px, 22px, 22px)` in `/audit /bricksconversion`; these are disguised literals, not real Seam/Geometry tokenization. Browser/IDE AIs must use existing universal tokens, declared project tokens, or real fluid clamps with distinct min/preferred/max behavior.
 
 ## 6.54 - 2026-07-28
 

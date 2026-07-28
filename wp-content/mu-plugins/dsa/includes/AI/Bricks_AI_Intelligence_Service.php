@@ -147,7 +147,7 @@ final class Bricks_AI_Intelligence_Service {
 					'rule' => 'Use Bricks _conditions for element visibility such as logged-in state, post type, taxonomy, viewport, or commerce context when documented by Bricks controls.',
 				],
 				'conversion'        => [
-					'rule' => 'When the human asks /convert /bricks, emit one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json by default. Preserve approved layout and source semantics while mapping live data intent to Bricks-native elements/settings. Native settings and global_classes must consume Kiwe/Seam token variables or tokenized clamp() values for spacing, sizing, radius, type, shadow, transform offsets, and responsive layout; do not emit bare design lengths such as 28px, 2.35rem, or 390px. Do not emit notes/reports unless /document is present.',
+					'rule' => 'When the human asks /convert /bricks, emit one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json by default. Preserve approved layout and source semantics while mapping live data intent to Bricks-native elements/settings. Native settings and global_classes must consume Kiwe/Seam token variables, declared project variables, or real tokenized clamp() values for spacing, sizing, radius, type, shadow, transform offsets, and responsive layout; do not emit bare design lengths such as 28px, 2.35rem, or 390px, and do not use no-op clamps such as clamp(22px, 22px, 22px). Do not emit notes/reports unless /document is present.',
 				],
 				'seam'              => [
 					'rule' => 'Every semantic section/card/rail/tab/TOC candidate should carry Seam vocabulary and stable classes while visual style remains in Bricks settings or page CSS.',
@@ -620,7 +620,7 @@ final class Bricks_AI_Intelligence_Service {
 				'requireResponsiveIntentForComplexGridOrBreakpointOverrides' => true,
 				'requireTokenizedNativeLengths' => true,
 				'responsiveIntentRule' => 'Bento/campaign/editorial grids, CSS grid columns/rows/spans, media-query layout changes, and Bricks responsive layout overrides must name breakpoint/range, source selector, mapped Bricks element IDs, and preserved grid/flex behavior. Bricks 2.4 stores responsive controls as controlKey:breakpoint, including _direction:<breakpoint>, _flexDirection:<breakpoint>, grid controls, _cssCustom:<breakpoint>, and custom site breakpoint keys.',
-				'tokenPurityRule' => 'Bricks-native does not mean hardcoded-native. Element settings and importable global_classes must not contain bare literal design lengths for padding/gaps/radius/min-height/type/shadows/transforms; use var(--kiwe-*), var(--seam-*), or tokenized clamp() values backed by the Kiwe Framework profile.',
+				'tokenPurityRule' => 'Bricks-native does not mean hardcoded-native. Element settings and importable global_classes must not contain bare literal design lengths for padding/gaps/radius/min-height/type/shadows/transforms; use var(--kiwe-*), var(--seam-*), declared project variables, or real tokenized clamp() values backed by the Kiwe Framework profile. No-op clamps such as clamp(22px, 22px, 22px) are disguised literals and must fail.',
 				'fields' => [ 'sourceSelectors', 'elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported' ],
 			],
 			'forbidden' => [
@@ -642,7 +642,7 @@ final class Bricks_AI_Intelligence_Service {
 			'Use /wp-json/dsa/v1/ai/site-graph and /ai/site-graph-data for real pages, products, posts, media, custom fields, post types, taxonomies, and term IDs.',
 			'Use /wp-json/dsa/v1/ai/studio/start before native/browser-AI collaboration so the model sees Kiwe + Bricks + Seam boundaries in one packet.',
 			'Use /convert /bricks only after the visual/Seam artifact is approved; output a token-pure native Bricks My Templates upload JSON, not a Kiwe wrapper for human upload.',
-			'Do not hardcode Bricks-native design lengths. Use Kiwe/Seam variables or tokenized clamp() values in element settings and global_classes so the Framework profile can actually drive the page.',
+			'Do not hardcode Bricks-native design lengths. Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() values in element settings and global_classes so the Framework profile can actually drive the page. Never use no-op clamp(v, v, v) wrappers to silence audits.',
 			'Run /audit /bricksconversion or validate-bricks-conversion before staging.',
 			'Never paste runtime cart/checkout/auth logic into Bricks; use Kiwe/WordPress/WooCommerce authority instead.',
 		];

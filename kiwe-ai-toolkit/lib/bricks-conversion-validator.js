@@ -199,6 +199,7 @@ const TOKEN_OWNED_NATIVE_CONTROL_RE = /^_(?:typography|border|boxShadow|transfor
 const TOKEN_OWNED_NESTED_KEY_RE = /^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i;
 const LITERAL_LENGTH_RE = /-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i;
 const TOKENIZED_LENGTH_RE = /var\(\s*--(?:kiwe|seam)-|clamp\(/i;
+const SELF_CLAMP_LENGTH_RE = /clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i;
 const TOKEN_FINDING_LIMIT = 40;
 
 const CUSTOM_CSS_HEAVY_BYTES = 12000;
@@ -525,41 +526,74 @@ function hasLiteralLength(value) {
   return typeof value === 'string' && LITERAL_LENGTH_RE.test(value);
 }
 
-function hasTokenizedLength(value) {
-  return typeof value === 'string' && TOKENIZED_LENGTH_RE.test(value);
+function collectDeclaredCssVariables(value, out = new Set()) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectDeclaredCssVariables(item, out));
+    return out;
+  }
+
+  if (!isPlainObject(value)) return out;
+
+  const rawName = value.name || value.variable || value.key || value.id;
+  if (typeof rawName === 'string') {
+    const clean = rawName.trim().replace(/^--/, '');
+    if (/^(?:kiwe|seam|[a-z][a-z0-9]*)-[a-z0-9][a-z0-9-]*$/i.test(clean)) {
+      out.add(clean);
+      out.add(`--${clean}`);
+    }
+  }
+
+  for (const item of Object.values(value)) collectDeclaredCssVariables(item, out);
+  return out;
+}
+
+function usesDeclaredProjectVariable(value, declaredVariables = new Set()) {
+  if (typeof value !== 'string') return false;
+  for (const match of value.matchAll(/var\(\s*--([a-z][a-z0-9]*-[a-z0-9][a-z0-9-]*)/gi)) {
+    const name = String(match[1] || '').trim();
+    if (/^(?:kiwe|seam)-/i.test(name)) return true;
+    if (declaredVariables.has(name) || declaredVariables.has(`--${name}`)) return true;
+  }
+  return false;
+}
+
+function hasTokenizedLength(value, declaredVariables = new Set()) {
+  if (typeof value !== 'string') return false;
+  if (SELF_CLAMP_LENGTH_RE.test(value)) return false;
+  return TOKENIZED_LENGTH_RE.test(value) || usesDeclaredProjectVariable(value, declaredVariables);
 }
 
 function tokenOwnedChild(parentOwned, key) {
   return parentOwned || TOKEN_OWNED_NATIVE_CONTROL_RE.test(String(key || '')) || TOKEN_OWNED_NESTED_KEY_RE.test(String(key || ''));
 }
 
-function collectUntokenizedNativeLengthValues(value, out = [], trail = '$', parentOwned = false) {
+function collectUntokenizedNativeLengthValues(value, out = [], trail = '$', parentOwned = false, declaredVariables = new Set()) {
   if (Array.isArray(value)) {
-    value.forEach((item, index) => collectUntokenizedNativeLengthValues(item, out, `${trail}[${index}]`, parentOwned));
+    value.forEach((item, index) => collectUntokenizedNativeLengthValues(item, out, `${trail}[${index}]`, parentOwned, declaredVariables));
     return out;
   }
 
   if (isPlainObject(value)) {
     for (const [key, item] of Object.entries(value)) {
       const owned = tokenOwnedChild(parentOwned, key);
-      collectUntokenizedNativeLengthValues(item, out, `${trail}.${key}`, owned);
+      collectUntokenizedNativeLengthValues(item, out, `${trail}.${key}`, owned, declaredVariables);
     }
     return out;
   }
 
-  if (parentOwned && hasLiteralLength(value) && !hasTokenizedLength(value)) {
+  if (parentOwned && hasLiteralLength(value) && !hasTokenizedLength(value, declaredVariables)) {
     out.push({ path: trail, value: String(value) });
   }
   return out;
 }
 
-function validateTokenizedNativeLengths(items, findings, file, pathPointer) {
+function validateTokenizedNativeLengths(items, findings, file, pathPointer, declaredVariables = new Set()) {
   const findingsToAdd = [];
   asArray(items).forEach((item, index) => {
     if (!isPlainObject(item)) return;
     const label = item.id || item.name || item.label || `item-${index}`;
     const settings = elementSettings(item);
-    const values = collectUntokenizedNativeLengthValues(settings, [], `${pathPointer}[${index}].settings`);
+    const values = collectUntokenizedNativeLengthValues(settings, [], `${pathPointer}[${index}].settings`, false, declaredVariables);
     for (const value of values) {
       findingsToAdd.push({ label, ...value });
     }
@@ -569,7 +603,7 @@ function validateTokenizedNativeLengths(items, findings, file, pathPointer) {
     add(
       findings,
       'fail',
-      `Bricks native style "${item.path}" on "${item.label}" uses literal length "${item.value}". /convert /bricks outputs must use Kiwe/Seam token variables or tokenized clamp() values for spacing, sizing, radius, type, shadow, transform, and responsive layout controls.`,
+      `Bricks native style "${item.path}" on "${item.label}" uses literal length "${item.value}". /convert /bricks outputs must use Kiwe/Seam token variables or real tokenized clamp() values for spacing, sizing, radius, type, shadow, transform, and responsive layout controls. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.`,
       file,
       item.path
     );
@@ -767,6 +801,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     .concat(asArray(templateData.content))
     .concat(asArray(templateData.header))
     .concat(asArray(templateData.footer));
+  const declaredVariables = collectDeclaredCssVariables(templateData);
   validateBricksTemplateElements(root, templatePath, templateElements, findings);
   const templateNativeControls = collectNativeStyleControlsFromItems(
     templateElements
@@ -779,7 +814,8 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       .concat(asArray(templateData.globalClasses)),
     findings,
     rel(root, templatePath),
-    '$.content/header/footer/global_classes'
+    '$.content/header/footer/global_classes',
+    declaredVariables
   );
   if (templateElements.length >= LARGE_CLIPBOARD_ELEMENT_COUNT && templateNativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
     add(
@@ -1020,6 +1056,7 @@ function validateResponsiveLayoutFidelity({ conversion, conversionText, website,
 function validateNativeStyleFidelity({ conversion, findings, conversionRel }) {
   const elements = asArray(conversion.elements);
   const globalClasses = asArray(conversion.globalClasses);
+  const declaredVariables = collectDeclaredCssVariables(conversion);
   const fidelity = isPlainObject(conversion.fidelity) ? conversion.fidelity : {};
   const nativeStyleIntent = asArray(fidelity.nativeStyleIntent);
   const customCssBuckets = collectCustomCssBuckets(conversion);
@@ -1033,7 +1070,8 @@ function validateNativeStyleFidelity({ conversion, findings, conversionRel }) {
     elements.concat(globalClasses),
     findings,
     conversionRel,
-    '$.elements/globalClasses'
+    '$.elements/globalClasses',
+    declaredVariables
   );
 
   if (!isCustomCssHeavy && mappableCssDeclarations < MAPPABLE_CSS_DECLARATION_MIN) return;
