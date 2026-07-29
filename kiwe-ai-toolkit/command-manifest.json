@@ -1,12 +1,20 @@
 {
   "schema": "kiwe.command-manifest.v1",
-  "purpose": "Fast machine-readable slash-command router for browser AIs, IDE AIs, MCP clients, and Companion-assisted Kiwe workflows.",
+  "productName": "SeamFlow",
+  "flowName": "seamflow",
+  "purpose": "Fast machine-readable SeamFlow slash-command router for browser AIs, IDE AIs, MCP clients, skill-capable agents, and Companion-assisted Kiwe workflows.",
   "entry": {
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.65",
-    "rule": "Read Kiwe Start first, report the contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
+    "contractVersion": "6.66",
+    "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
+  },
+  "architecture": {
+    "seamflow": "External AI command-central flow for Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, dynamic intent, and accessibility.",
+    "kiweInternalAi": "Bounded Kiwe Companion/Internal AI. It can assist when /usecompanion or API/MCP access exists, but browser-only SeamFlow must still work without it.",
+    "currentLaunchScope": "Close page-builder flow first: Seam Framework, Framework profile, Bricks pages/header/footer/templates, dynamic intent, accessibility.",
+    "nextPhase": "DSA/AppShell theme remains mapped, but full DSA theme production hardening comes after page-builder flow testing passes."
   },
   "globalRules": {
     "readPolicy": [
@@ -16,7 +24,7 @@
       "Do not search GitHub docs for hidden contracts. This manifest plus the listed context files are the contract for the matched command.",
       "Read only the context files listed for the matched command.",
       "Prefer this JSON manifest first when available because it is smaller and less ambiguous than prose.",
-      "When files are supplied without a slash command, run kiwe_plan_flow or use entry.json flowPlanner rules before generation.",
+      "When files are supplied without a slash command, run kiwe_seamflow_plan, compatibility alias kiwe_plan_flow, or use entry.json flowPlanner rules before generation.",
       "If a required artifact is missing, stop with a compact diagnostic instead of guessing."
     ],
     "documentation": "Documentation is opt-in. Do not create README, NOTES, reports, duplicate previews, ZIP files, or explanation documents unless /document is present or the human explicitly asks.",
@@ -25,8 +33,10 @@
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages."
   },
   "flowPlanner": {
-    "cli": "kiwe plan-flow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
-    "mcp": "kiwe_plan_flow",
+    "cli": "kiwe seamflow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
+    "mcp": "kiwe_seamflow_plan",
+    "compatibilityCli": "kiwe plan-flow",
+    "compatibilityMcp": "kiwe_plan_flow",
     "purpose": "Classify files and plan the smallest safe path across Seam rebuild, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility."
   },
   "contexts": {
@@ -93,7 +103,14 @@
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
       "requires": ["website/bricks-paste.html", "Framework profile or confirmed Bricks Theme Style already pushed"],
       "must": ["preserve all Seam classes/attributes and Kiwe capability attributes", "use Bricks-native editable controls/global classes/global variables before custom CSS", "native Bricks settings/global_classes must consume Framework tokens/project variables; direct component colors and hardcoded lengths are fail-level issues"],
-      "output": ["bricks-template/[page-name]-template-upload.json"],
+      "output": ["bricks-template/[page-or-template-name]-template-upload.json"],
+      "targetTypes": {
+        "homepageBody": "title Home, templateType content, content[]",
+        "pageBody": "templateType content, content[]",
+        "header": "templateType header, header[]",
+        "footer": "templateType footer, footer[]",
+        "section": "templateType section, content[]"
+      },
       "forbidden": ["DSA/AppShell markup", "combined preview", "Code element fallback when native Bricks elements are possible", "docs unless /document", "ZIP"],
       "finalResponse": "Return the native Bricks template upload JSON and compact validation status."
     },

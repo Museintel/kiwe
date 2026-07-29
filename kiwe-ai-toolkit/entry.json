@@ -1,9 +1,18 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.65",
+  "contractVersion": "6.66",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
-  "purpose": "Fast safe entrypoint and flow planner for browser AI, IDE AI, MCP clients, and Kiwe Companion-assisted Appsite workflows.",
+  "productName": "SeamFlow",
+  "flowName": "seamflow",
+  "compatibilityNames": ["Kiwe Start", "kiwe_plan_flow"],
+  "purpose": "Fast safe external-AI entrypoint and flow planner for browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.",
+  "architecture": {
+    "seamflow": "External AI command-central flow for creating, rebuilding, auditing, fixing, and converting Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, dynamic intent, and accessibility artifacts.",
+    "kiweInternalAi": "Plugin-native Companion/Internal AI. It is WordPress-aware, Bricks-aware, bounded, token-saving, and can assist SeamFlow through /usecompanion, API, or MCP routes without dumping the whole plugin.",
+    "currentLaunchScope": "Close Seam Framework and Bricks-powered webpages/header/footer/templates/accessibility first.",
+    "nextPhase": "DSA/AppShell theme is part of SeamFlow but full DSA theme production hardening follows after page-builder flow testing passes."
+  },
   "doNot": [
     "Do not browse, clone, or inspect the whole repository for startup.",
     "Do not search GitHub for hidden contracts.",
@@ -12,7 +21,7 @@
     "Do not convert DSA/AppShell theme files through /convert /bricks."
   ],
   "firstResponse": {
-    "mustReport": "Kiwe Start contract: 6.65",
+    "mustReport": "SeamFlow contract: 6.66",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants step-by-step flow or full-flow execution.",
@@ -49,6 +58,7 @@
     "sequence": [
       "kiwe_get_start",
       "kiwe_get_command_manifest",
+      "kiwe_seamflow_plan",
       "kiwe_plan_flow",
       "kiwe_diagnose_command",
       "kiwe_route_command",
@@ -59,8 +69,11 @@
   },
   "flowPlanner": {
     "cli": "kiwe plan-flow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
-    "mcp": "kiwe_plan_flow",
-    "purpose": "Classify artifacts and return the smallest safe command path through Seam, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility."
+    "cli": "kiwe seamflow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
+    "mcp": "kiwe_seamflow_plan",
+    "compatibilityCli": "kiwe plan-flow",
+    "compatibilityMcp": "kiwe_plan_flow",
+    "purpose": "Classify artifacts and return the smallest safe SeamFlow command path through Seam, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility."
   },
   "classifier": {
     "rule": "Classify by actual file content/code first, not by attachment name. If uncertain, ask permission to audit before fixing or continuing.",
@@ -76,7 +89,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "Kiwe Start contract: 6.65",
+      "SeamFlow contract: 6.66",
       "Commands: compact /list summary",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
@@ -97,6 +110,19 @@
       "/audit /frameworkprofile",
       "/fix /frameworkprofile if audit fails",
       "/convert /bricks",
+      "/audit /bricksconversion",
+      "/fix /bricksconversion if audit fails",
+      "/audit /accessibility",
+      "/fix /accessibility if audit fails"
+    ],
+    "rawHtmlCssJsToHeaderFooterTemplate": [
+      "/rebuild /seamframework",
+      "/audit /seamframework",
+      "/fix /seamframework if audit fails",
+      "/create /frameworkprofile",
+      "/audit /frameworkprofile",
+      "/fix /frameworkprofile if audit fails",
+      "/convert /bricks with target templateType content/header/footer/section",
       "/audit /bricksconversion",
       "/fix /bricksconversion if audit fails",
       "/audit /accessibility",
@@ -182,7 +208,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "Kiwe Start contract: 6.65",
+    "SeamFlow contract: 6.66",
     "Command:",
     "Artifact classification:",
     "Files returned:",

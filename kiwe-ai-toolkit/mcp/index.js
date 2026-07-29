@@ -13,8 +13,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: 'kiwe_get_start',
-      description: 'Return the tiny Kiwe Start entrypoint. Use this before /list or any slash command so the AI confirms contract version, avoids repo crawling, classifies files, and chooses step-by-step or full-flow mode.',
+      description: 'Return the SeamFlow Start entrypoint. KIWE-START.md is the compatibility URL. Use this before /list or any slash command so the AI confirms contract version, avoids repo crawling, classifies files, and chooses step-by-step or full-flow mode.',
       inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_seamflow_plan',
+      description: 'Classify supplied artifacts and plan the smallest safe SeamFlow path through Seam, Framework profile, Bricks page/header/footer/template conversion, DSA theme, combined handoff, and accessibility. Use when files are provided without a command or when the human asks for full-flow vs step-by-step guidance.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'Optional human slash command. If present, the planner routes it instead of asking for a flow choice.' },
+          artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts, filenames, schemas, or visible markers.' },
+          desiredOutcome: { type: 'string', description: 'Optional human target such as website/page, header, footer, Bricks template, DSA theme, combined Appsite, or accessibility fix.' },
+          useCompanion: { type: 'boolean', description: 'Whether Kiwe Internal AI/Companion should be used if available. It is non-blocking and must fall back cleanly.' }
+        }
+      }
     },
     {
       name: 'kiwe_start_project',
@@ -75,13 +88,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_plan_flow',
-      description: 'Classify supplied artifacts and plan the smallest safe Kiwe flow through Seam, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility. Use when files are provided without a command or when the human asks for full-flow vs step-by-step guidance.',
+      description: 'Compatibility alias for kiwe_seamflow_plan. Classify supplied artifacts and plan the smallest safe SeamFlow path.',
       inputSchema: {
         type: 'object',
         properties: {
           command: { type: 'string', description: 'Optional human slash command. If present, the planner routes it instead of asking for a flow choice.' },
           artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts, filenames, schemas, or visible markers.' },
-          desiredOutcome: { type: 'string', description: 'Optional human target such as website/page, Bricks template, DSA theme, combined Appsite, or accessibility fix.' },
+          desiredOutcome: { type: 'string', description: 'Optional human target such as website/page, header, footer, Bricks template, DSA theme, combined Appsite, or accessibility fix.' },
           useCompanion: { type: 'boolean', description: 'Whether Companion should be used if available. It is non-blocking and must fall back cleanly.' }
         }
       }
@@ -277,6 +290,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_diagnose_command':
       result = diagnoseCommand(args);
+      break;
+    case 'kiwe_seamflow_plan':
+      result = planFlow(args);
       break;
     case 'kiwe_plan_flow':
       result = planFlow(args);

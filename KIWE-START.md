@@ -1,9 +1,14 @@
-# Kiwe Start
+# SeamFlow Start
 
-Contract version: `6.65`
+Contract version: `6.66`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
-Purpose: fastest safe entrypoint for browser AI, IDE AI, MCP clients, and Kiwe Companion-assisted Appsite workflows.
+Product: `SeamFlow`
+Purpose: fastest safe entrypoint for external AI, browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.
+
+Compatibility: this file remains at `KIWE-START.md` so existing prompts keep working. The public flow name is now SeamFlow.
+
+SeamFlow is the external-AI command layer for Kiwe/Seam output. Kiwe Internal AI / Companion is separate: it is the plugin-native, WordPress-aware, Bricks-aware, token-saving assistant that can help SeamFlow when `/usecompanion`, API tools, or MCP routes are available.
 
 If you are an AI reading this file, treat it as the front door. Do not browse, clone, or inspect the whole repository.
 
@@ -12,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-Kiwe Start contract: 6.65
+SeamFlow contract: 6.66
 ```
 
 Then do one of these:
@@ -25,6 +30,8 @@ Then do one of these:
 4. If the human gave no files and no `/command`, return `/list` plus one short question asking what they want to create, rebuild, audit, fix, convert, or apply.
 
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
+
+Current launch scope: close Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, Bricks conversion, Site Graph/dynamic intent, and accessibility first. DSA/AppShell theme creation remains part of SeamFlow, but full DSA theme production hardening is the next phase after page-builder flow testing passes.
 
 ## Fast machine-readable router
 
@@ -65,7 +72,7 @@ If a Kiwe MCP server or tool is available, prefer tools over reading prose:
 
 1. `kiwe_get_start`
 2. `kiwe_get_command_manifest`
-3. `kiwe_plan_flow`
+3. `kiwe_seamflow_plan` or compatibility alias `kiwe_plan_flow`
 4. `kiwe_diagnose_command`
 5. `kiwe_route_command`
 6. The relevant validator tool for the lane, such as `kiwe_validate_framework_profile`, `kiwe_validate_bricks_conversion`, or `kiwe_validate_accessibility`.
@@ -94,7 +101,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-Kiwe Start contract: 6.65
+SeamFlow contract: 6.66
 STATUS: NEEDS_INPUT
 Commands: /list summary
 Attachments detected: yes/no
@@ -117,7 +124,7 @@ If the human supplied `/commands`, do those commands only. Do not add creative p
 
 ## Standard flow map
 
-For a raw HTML/CSS/JS draft, the recommended website-to-Bricks path is:
+For a raw HTML/CSS/JS draft, the recommended webpage/header/footer/template-to-Bricks path is:
 
 ```text
 /rebuild /seamframework
@@ -131,6 +138,15 @@ For a raw HTML/CSS/JS draft, the recommended website-to-Bricks path is:
 /fix /bricksconversion    # only if audit fails
 /audit /accessibility
 /fix /accessibility       # only if audit fails
+```
+
+For header, footer, and reusable template work, follow the same path but set the Bricks target type correctly during `/convert /bricks`:
+
+```text
+homepage/body -> templateType: "content", content[]
+header        -> templateType: "header", header[]
+footer        -> templateType: "footer", footer[]
+section       -> templateType: "section", content[]
 ```
 
 For an existing Bricks template or Bricks conversion artifact:
@@ -170,7 +186,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-Kiwe Start contract: 6.65
+SeamFlow contract: 6.66
 Command:
 Artifact classification:
 Files returned:

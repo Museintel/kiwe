@@ -448,16 +448,25 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
   }
 
   return {
-    schema: 'kiwe.flow-plan.v1',
-    contractVersion: '6.65',
-    purpose: 'Plan the smallest safe Kiwe command path for website/page, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
+    schema: 'kiwe.seamflow-plan.v1',
+    compatibilitySchema: 'kiwe.flow-plan.v1',
+    productName: 'SeamFlow',
+    flowName: 'seamflow',
+    contractVersion: '6.66',
+    purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
+    architecture: {
+      seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
+      kiweInternalAi: 'Bounded Kiwe Companion/Internal AI. It can assist through /usecompanion, API, or MCP routes, but SeamFlow must still work in browser-only mode.',
+      currentLaunchScope: 'Close Seam Framework plus Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, dynamic intent, and accessibility first.',
+      nextPhase: 'DSA/AppShell theme remains mapped but full DSA theme production hardening follows after page-builder flow testing passes.'
+    },
     status: hasCommand ? 'route' : 'needs_input',
     commandDetected: hasCommand,
     artifactTypes,
     recommendedMode,
     recommendedNextCommands,
     startResponse: {
-      mustReport: 'Kiwe Start contract: 6.65',
+      mustReport: 'SeamFlow contract: 6.66',
       includeCompactList: !hasCommand,
       includeAttachmentDiagnostic: !hasCommand,
       waitsForApprovalBefore: ['audit', 'fix', 'convert', 'create', 'assemble', 'live-api', 'companion-review'],
@@ -467,8 +476,9 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     capabilityCheck: {
       mcpPreferred: true,
       firstToolIfAvailable: 'kiwe_get_start',
-      flowPlannerTool: 'kiwe_plan_flow',
-      sequence: ['kiwe_get_start', 'kiwe_get_command_manifest', 'kiwe_plan_flow', 'kiwe_diagnose_command', 'kiwe_route_command', 'lane validator'],
+      flowPlannerTool: 'kiwe_seamflow_plan',
+      compatibilityFlowPlannerTool: 'kiwe_plan_flow',
+      sequence: ['kiwe_get_start', 'kiwe_get_command_manifest', 'kiwe_seamflow_plan', 'kiwe_diagnose_command', 'kiwe_route_command', 'lane validator'],
       nonBlockingFallback: 'Use raw KIWE-START.md / entry.json / command-manifest.json when MCP/tools are unavailable.',
       askToConnectWhen: 'Ask once only when the human wants full-flow execution, live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available.'
     },
@@ -493,10 +503,12 @@ export function getSeamAttributesContext() {
 export function listCommands() {
   return {
     schema: 'kiwe.command-list.v1',
+    productName: 'SeamFlow',
+    flowName: 'seamflow',
     canonicalVerb: '/create',
     terminalEntry: {
       pattern: 'read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md\\n/list',
-      meaning: 'Read the tiny Kiwe Start entrypoint first. It confirms the contract version, points to the machine-readable manifest, routes the next slash command, and forbids repository crawling.'
+      meaning: 'Read SeamFlow Start first. It confirms the SeamFlow contract version, points to the machine-readable manifest, routes the next slash command, and forbids repository crawling. KIWE-START.md is the compatibility URL.'
     },
     aliases: {
       '/build': 'Legacy alias accepted internally; user-facing output should say /create.',
@@ -628,9 +640,9 @@ export function listCommands() {
       },
       {
         command: '/convert /bricks',
-        purpose: 'Convert only website/bricks-paste.html into one token-pure native Bricks My Templates upload JSON, with optional embedded Kiwe fidelity metadata.',
+        purpose: 'Convert only website/bricks-paste.html into one token-pure native Bricks My Templates upload JSON for a page body, header, footer, or reusable section/template, with optional embedded Kiwe fidelity metadata.',
         requires: ['website/bricks-paste.html', 'framework/kiwe-framework-profile.json or confirmed Kiwe > Framework/Bricks theme-style already pushed', 'optional bricks-bindings/kiwe-bindings.json'],
-        output: 'bricks-template/[page-name]-template-upload.json only by default; add /document if notes or an external audit envelope are wanted'
+        output: 'bricks-template/[page-or-template-name]-template-upload.json only by default; target templateType must be content/header/footer/section; add /document if notes or an external audit envelope are wanted'
       },
       {
         command: '/audit /bricksconversion',
