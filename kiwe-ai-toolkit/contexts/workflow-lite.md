@@ -4,6 +4,14 @@ Use this file when the human wants better AI output quality, fewer correction lo
 
 Do not read the full Kiwe repository. The goal is to route the AI into the smallest useful phase instead of asking one model turn to be maximally creative, framework-compliant, Bricks-aware, AppShell-safe, and audit-ready all at once.
 
+Fast machine-readable command router:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json
+```
+
+Use the manifest first when available. It is intentionally smaller than this prose file and tells you the narrow context files, allowed outputs, forbidden outputs, and compact final response shape for each slash command.
+
 ## Core principle
 
 Creativity and contract compliance are different jobs.
@@ -21,7 +29,7 @@ Run them as separate phases:
 8. Dynamic WordPress / Bricks / WooCommerce binding after the visual handoff passes.
 9. Bricks conversion package after dynamic intent is approved.
 10. Bricks conversion audit.
-11. Accessibility plan/audit for color contrast and native light/dark mode.
+11. Accessibility plan/audit/fix for WCAG contrast, native light/dark mode, Kiwe/Seam token pairs, and visible text containment.
 12. Controlled staging apply only when a trusted Kiwe site executor is explicitly authorized.
 
 This pipeline is preferred over one giant `combined` prompt for serious work.
@@ -60,6 +68,8 @@ Canonical discovery and repair commands:
 ```
 
 `/list` returns the supported command vocabulary and stops. `/fix` repairs an existing failed artifact lane; it does not start over or create a new unrelated package.
+
+Unless the human includes `/document`, command output should be lean: emit only the requested artifact file(s), then answer with compact `PASS` / `FAIL` / `WARN`, files changed, and remaining warnings. Do not add notes, reports, ZIPs, duplicate previews, or long explanatory essays.
 
 Canonical Site Graph command:
 

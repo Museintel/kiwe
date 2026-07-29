@@ -305,6 +305,14 @@ export function getWorkflowContext() {
   return context.trim() + '\n';
 }
 
+export function getCommandManifest() {
+  const manifest = readMaybe('command-manifest.json');
+  if (!manifest) {
+    throw new Error('Kiwe command manifest was not found.');
+  }
+  return JSON.parse(manifest);
+}
+
 export function getSeamAttributesContext() {
   const context = readMaybe('contexts/seam-attributes-lite.md');
   if (!context) {
@@ -1308,6 +1316,10 @@ function commandListMarkdown() {
     '',
     'Use one small phase at a time. `/create` is the canonical creation verb; `/build` is only a legacy alias.',
     '',
+    'Fast machine-readable command manifest: `kiwe-ai-toolkit/command-manifest.json`.',
+    '',
+    'Documentation and long explanations are opt-in through `/document`; otherwise return only the requested artifact(s) and a compact PASS/FAIL/WARN summary.',
+    '',
     '## Commands'
   ];
   for (const entry of list.commands) {
@@ -1342,6 +1354,7 @@ function commandListMarkdown() {
     '- `/create /accessibility` works only after there is an existing website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion to inspect.',
     '- `/audit /accessibility` checks literal and token-resolved contrast pairs, light/dark proof, Kiwe/Seam token usage, Bricks theme-style alignment, preview/import separation, and visible text containment risks.',
     '- `/fix /accessibility` repairs only the existing failed artifact lane plus `accessibility/kiwe-accessibility-plan.json`; it must not redesign, reconvert to Bricks, create DSA themes, or add docs unless `/document` is present.',
+    '- `/fix /accessibility` should preserve Bricks element count, global class count, existing Seam classes, Kiwe/Appsite attributes, dynamic tags, query-loop intent, ARIA relationships, and DSA/AppShell boundaries unless a documented accessibility-token exception is necessary.',
     '- This lane covers color contrast, native light/dark transitions, and clipped/overflowing critical text. Full font-size/readability preference work remains a separate future phase.',
     '',
     '## Bricks boundary',
@@ -1388,6 +1401,8 @@ function fixPhaseContext(command, artifactSummary) {
     '- Revise the actual files that failed; do not only explain the failure.',
     inferred === '/audit /bricksconversion' ? '- If the artifact is a Bricks conversion/template upload, require `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json`.' : '',
     inferred === '/audit /accessibility' ? '- If the artifact is a Bricks template, treat it only as the accessibility target; do not run `/convert /bricks`, do not rebuild the template, and do not create a new Bricks conversion package unless the human separately asks.' : '',
+    inferred === '/audit /accessibility' ? '- Preserve Bricks element count, global class count, Seam classes, data-role/data-flow, data-kiwe-* attributes, data-dsa-* attributes, dynamic tags, query-loop intent, conditions, interactions, IDs, and ARIA relationships unless a documented accessibility-token exception is necessary.' : '',
+    inferred === '/audit /accessibility' ? '- Follow Kiwe/Seam token pairs and Framework/Bricks theme-style context before inventing new classes, colors, or tokens. Add project tokens only for genuine art-direction constants that official Kiwe tokens cannot express.' : '',
     '- If the artifact is a Seam rebuild, keep `website/bricks-paste.html` as the single page preview/import artifact.',
     '- If the artifact is a DSA theme, keep AppShell theme CSS separate from Bricks/page CSS.',
     '- If the artifact is combined, keep `website/`, `appshell-theme/`, and `combined-preview/` separate.',
@@ -1408,7 +1423,7 @@ function fixPhaseContext(command, artifactSummary) {
     '',
     String(artifactSummary || '').trim(),
     '',
-    'Run the matching audit context below, fix every blocking item, and report files changed/removed/kept.'
+    'Run the matching audit context below, fix every blocking item, and report compact PASS/FAIL/WARN, files changed, structural drift, validation run, and remaining warnings.'
   ].join('\n').trim() + '\n';
 }
 

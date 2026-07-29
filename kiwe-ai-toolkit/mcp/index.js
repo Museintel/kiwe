@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -27,6 +27,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'kiwe_get_workflow',
       description: 'Return the Kiwe phased AI workflow and slash-command vocabulary. Use this before broad creative work so the model does one small phase at a time.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_get_command_manifest',
+      description: 'Return the compact machine-readable Kiwe slash-command manifest. Prefer this before reading prose contexts so the model uses the smallest correct command lane.',
       inputSchema: { type: 'object', properties: {} }
     },
     {
@@ -227,6 +232,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_get_workflow':
       result = getWorkflowContext();
+      break;
+    case 'kiwe_get_command_manifest':
+      result = getCommandManifest();
       break;
     case 'kiwe_list_commands':
       result = listCommands();

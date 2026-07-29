@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -16,6 +16,7 @@ Commands:
   kiwe modes
   kiwe list
   kiwe commands
+  kiwe command-manifest
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
   kiwe diagnose --command "/convert /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
@@ -50,6 +51,8 @@ try {
     print(listModes());
   } else if (command === 'list' || command === 'commands') {
     print(listCommands());
+  } else if (command === 'command-manifest') {
+    print(getCommandManifest());
   } else if (command === 'start') {
     const mode = args[0] && !args[0].startsWith('--') ? args[0] : 'auto';
     const nameIndex = args.indexOf('--name');

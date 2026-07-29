@@ -10,6 +10,14 @@ kiwe-ai-toolkit/
 
 The toolkit gives compact context packs and validation rules so you do not waste tokens on plugin internals.
 
+Fast machine-readable command manifest:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json
+```
+
+When available, read this JSON manifest first. It is the shortest command contract and tells you which one or two context files to read for the requested slash command. Use the Markdown contexts only for the matched command lane.
+
 ## Browser AI path, no tool execution
 
 If you are a browser-based AI and cannot connect the Kiwe MCP server or run the CLI, do not clone or crawl the full repository.
@@ -24,6 +32,14 @@ explore: https://github.com/Museintel/kiwe
 
 Treat `explore:` as a location pointer, not permission to browse the repository. For this exact pattern, read only this root entrypoint or its raw fallback at `https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md`, execute `/list`, then stop and wait for the next slash command. If a different slash command follows `explore:`, route that command through the workflow context or command gate below. Do not inspect the whole repo unless a later validated command explicitly gives a narrow file URL to read.
 
+For fastest command routing after `explore:`, read only:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json
+```
+
+Then read only the context files listed for the matched command. If the manifest and a prose context disagree, fail closed: keep the narrower output shape, preserve existing artifacts, and do not create documentation unless `/document` is present.
+
 Preferred path for serious work:
 
 ```text
@@ -33,6 +49,8 @@ https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/w
 Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/document`, `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /frameworkprofile`, `/audit /frameworkprofile`, `/create /brickstheme`, `/audit /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, `/audit /accessibility`, or `/fix /accessibility`.
 
 Documentation is opt-in for every lane. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact file(s) for that command. Do not add README files, notes, audit reports, duplicate previews, ZIPs, or polite explanation files by default.
+
+Final chat responses are also lean by default. Return only a compact `PASS` / `FAIL` / `WARN` status, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long paragraphs unless `/document` or the human asks for explanation.
 
 Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
 
@@ -213,7 +231,7 @@ The conversion must preserve the approved page hierarchy, Seam classes/attribute
 
 When working inside the Bricks front-end editor, admins can enable the Kiwe Studio companion at `Kiwe > AI`. The editor panel uses WordPress nonce-auth routes (`/wp-json/dsa/v1/bricks/studio/context`, `/start`, `/draft`) to fetch the same Bricks + Seam context, plan a page/section, or call native AI when explicitly allowed. The panel is a planning/copilot surface, not a direct mutation surface; staging saves still go through the controlled executor.
 
-For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `6.53` records the canonical `/convert /bricks` command, native Bricks upload JSON validation, standalone-file audit support, Framework-profile Bricks Theme Style checks, Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, mutation boundaries, deterministic `/create /accessibility` + `/audit /accessibility` color/dark-mode lane, and the tightened Bricks template-upload validator checks.
+For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `6.58` records the compact command manifest, `/fix /accessibility` structural-preservation contract, canonical `/convert /bricks` command, native Bricks upload JSON validation, standalone-file audit support, Framework-profile Bricks Theme Style checks, Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, mutation boundaries, deterministic `/create /accessibility` + `/audit /accessibility` color/dark-mode/text-containment lane, and the tightened Bricks template-upload validator checks.
 
 Theme installers can use the same key to review, install, and activate Kiwe DSA theme packages:
 

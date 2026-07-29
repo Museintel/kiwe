@@ -27,6 +27,8 @@ It does not create a new page, theme, DSA shell, Bricks JSON, WooCommerce logic,
 
 `/fix /accessibility` revises only the existing artifact lane that failed. It must not recreate the website, convert to Bricks, create a DSA theme, create a combined preview, or add documentation unless `/document` is present.
 
+For browser AIs, this lane is not a generic accessibility-consultant essay. Use Kiwe/Seam context first, make the smallest safe file changes, and return a compact pass/fail summary.
+
 If no artifact/file map is supplied, stop and ask for the files.
 
 ## Required output
@@ -41,6 +43,32 @@ accessibility/
 Do not emit `ACCESSIBILITY-NOTES.md`, README files, reports, or duplicate documentation unless the command also includes `/document` or the human explicitly asks for notes.
 
 Do not add a duplicate website preview just for accessibility. The existing page/theme/combined preview remains the visual proof. If you need to demonstrate dark mode in a preview, revise the existing preview controls or the existing page artifact.
+
+## Structural preservation contract
+
+`/fix /accessibility` is an in-place repair lane. Preserve the design system and artifact structure unless the failure cannot be fixed otherwise.
+
+Default preservation requirements:
+
+- Do not add new Bricks elements.
+- Do not remove Bricks elements.
+- Do not replace a native Bricks element tree with a Code element.
+- Do not remove Seam classes such as `.seam-*`.
+- Do not remove `data-role`, `data-flow`, `data-kiwe-*`, or `data-dsa-*` attributes.
+- Do not remove Bricks dynamic tags, query-loop intent, conditions, interactions, ARIA labels, IDs, or relationships.
+- Do not create a DSA/AppShell theme or modify AppShell geometry while fixing a page/template accessibility issue.
+- Preserve content element count, global class count, and existing global variable names where possible.
+
+Allowed small changes:
+
+- change existing foreground/background token values when contrast fails;
+- add a missing accessibility plan;
+- add native light/dark token remap rules to the existing page/theme artifact;
+- add official Kiwe/Seam token references;
+- add clearly namespaced project tokens only when the value is a true project art-direction constant and no official token fits;
+- add wrapping/min-size/fluid sizing using Geometry/Seam variables or calculated `clamp(...)` when critical text is clipped.
+
+Any exception must be reported in the final compact structural-drift summary. If the fix adds classes, variables, or elements, explain why the existing Seam/Framework vocabulary could not solve the accessibility failure.
 
 ## Accessibility plan schema
 
@@ -211,7 +239,22 @@ When static validation cannot prove text over image/gradient/transparent layers,
 4. Replace unsafe literal color pairs with Kiwe/Seam token pairs or documented project tokens mapped in the accessibility plan.
 5. Replace clipped critical text surfaces with wrapping, fluid Geometry/Seam sizing, safer min-block sizing, rail item width tokens, or accessible full text.
 6. Preserve Bricks dynamic tags, query-loop intent, Kiwe launcher attributes, and DSA/AppShell boundaries.
-7. Output only the revised existing artifact file(s) plus `accessibility/kiwe-accessibility-plan.json`; do not output notes unless `/document` was requested.
+7. Preserve the structural counts listed above unless a documented accessibility-token exception is necessary.
+8. Output only the revised existing artifact file(s) plus `accessibility/kiwe-accessibility-plan.json`; do not output notes unless `/document` was requested.
+
+## Final response contract
+
+Keep the chat reply short unless `/document` is present.
+
+Required final fields:
+
+- `Status`: `PASS`, `FAIL`, or `PASS WITH WARNINGS`.
+- `Files changed`: exact file names only.
+- `Structural drift`: element/class/variable/attribute changes, or `none`.
+- `Validation`: command/tool actually run or `manual/static only`.
+- `Remaining`: blocking failures and warnings, if any.
+
+Do not include long WCAG tutorials, marketing paragraphs, or generic accessibility explanations in the final chat response. Put documentation in `ACCESSIBILITY-NOTES.md` only when `/document` is present.
 
 ## Validator
 

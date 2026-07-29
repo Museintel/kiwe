@@ -1,0 +1,139 @@
+{
+  "schema": "kiwe.command-manifest.v1",
+  "purpose": "Fast machine-readable slash-command router for browser AIs, IDE AIs, MCP clients, and Companion-assisted Kiwe workflows.",
+  "entry": {
+    "humanPattern": "explore: https://github.com/Museintel/kiwe",
+    "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md",
+    "rule": "Treat explore as a location pointer, not permission to crawl the repository. Read this manifest or KIWE-AI.md, then route the next slash command."
+  },
+  "globalRules": {
+    "readPolicy": [
+      "Do not read the whole repository.",
+      "Read only the context files listed for the matched command.",
+      "Prefer this JSON manifest first when available because it is smaller and less ambiguous than prose.",
+      "If a required artifact is missing, stop with a compact diagnostic instead of guessing."
+    ],
+    "documentation": "Documentation is opt-in. Do not create README, NOTES, reports, duplicate previews, ZIP files, or explanation documents unless /document is present or the human explicitly asks.",
+    "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
+    "companion": "/usecompanion is optional and non-blocking. Make one bounded call when credentials exist; if it fails, continue without it and report fallback.",
+    "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages."
+  },
+  "contexts": {
+    "workflow": "kiwe-ai-toolkit/contexts/workflow-lite.md",
+    "seamAttributes": "kiwe-ai-toolkit/contexts/seam-attributes-lite.md",
+    "bricksConversion": "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md",
+    "accessibility": "kiwe-ai-toolkit/contexts/accessibility-lite.md",
+    "dynamic": "kiwe-ai-toolkit/contexts/dynamic-lite.md",
+    "combined": "kiwe-ai-toolkit/contexts/combined-lite.md",
+    "audit": "kiwe-ai-toolkit/contexts/audit-lite.md"
+  },
+  "commands": {
+    "/list": {
+      "phase": "discover",
+      "read": ["KIWE-AI.md", "kiwe-ai-toolkit/command-manifest.json"],
+      "requires": [],
+      "output": ["compact command list"],
+      "forbidden": ["generation", "audit", "file creation", "repository crawl"],
+      "finalResponse": "List commands only, then stop."
+    },
+    "/rebuild /seamframework": {
+      "phase": "rebuild",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
+      "requires": ["existing HTML/CSS/JS page or visual draft"],
+      "output": ["website/bricks-paste.html"],
+      "forbidden": ["Bricks JSON", "DSA theme", "docs unless /document", "ZIP"],
+      "finalResponse": "Return the file and compact pass/fail summary."
+    },
+    "/create /frameworkprofile": {
+      "phase": "create",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md"],
+      "requires": ["approved design direction or existing page/theme tokens"],
+      "output": ["framework/kiwe-framework-profile.json"],
+      "forbidden": ["Bricks template JSON", "DSA theme package", "docs unless /document", "ZIP"],
+      "finalResponse": "Return the profile JSON and compact validation status."
+    },
+    "/audit /frameworkprofile": {
+      "phase": "audit",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md"],
+      "requires": ["framework/kiwe-framework-profile.json"],
+      "output": ["pass/fail findings only"],
+      "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
+      "finalResponse": "PASS/FAIL with blocking errors and warnings."
+    },
+    "/fix /frameworkprofile": {
+      "phase": "fix",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md"],
+      "requires": ["framework profile file and audit findings"],
+      "output": ["framework/kiwe-framework-profile.json"],
+      "forbidden": ["Bricks template JSON", "DSA theme package", "docs unless /document", "ZIP"],
+      "finalResponse": "Return fixed profile and compact pass/fail summary."
+    },
+    "/create /brickstheme": {
+      "phase": "create",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md"],
+      "requires": ["approved design token/style direction"],
+      "output": ["bricks-theme-style.json"],
+      "forbidden": ["Framework profile", "Bricks page/template JSON", "DSA theme package", "docs unless /document", "ZIP"],
+      "finalResponse": "Return only the Bricks theme style JSON and validation status."
+    },
+    "/convert /bricks": {
+      "phase": "convert",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
+      "requires": ["website/bricks-paste.html", "Framework profile or confirmed Bricks Theme Style already pushed"],
+      "output": ["bricks-template/[page-name]-template-upload.json"],
+      "forbidden": ["DSA/AppShell markup", "combined preview", "Code element fallback when native Bricks elements are possible", "docs unless /document", "ZIP"],
+      "finalResponse": "Return the native Bricks template upload JSON and compact validation status."
+    },
+    "/audit /bricksconversion": {
+      "phase": "audit",
+      "read": ["kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
+      "requires": ["Bricks conversion envelope or native Bricks template upload JSON"],
+      "output": ["pass/fail findings only"],
+      "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
+      "finalResponse": "PASS/FAIL with blocking errors and warnings."
+    },
+    "/fix /bricksconversion": {
+      "phase": "fix",
+      "read": ["kiwe-ai-toolkit/contexts/bricks-conversion-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
+      "requires": ["failed Bricks conversion/template artifact"],
+      "output": ["fixed Bricks conversion/template artifact only"],
+      "forbidden": ["DSA/AppShell conversion", "website redesign", "docs unless /document", "ZIP"],
+      "finalResponse": "Return fixed artifact and compact pass/fail summary."
+    },
+    "/create /accessibility": {
+      "phase": "create",
+      "read": ["kiwe-ai-toolkit/contexts/accessibility-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
+      "requires": ["existing website/page, DSA theme, combined handoff, Framework profile, Bricks theme style, or Bricks conversion"],
+      "output": ["accessibility/kiwe-accessibility-plan.json", "minimal existing artifact edits when needed for dark/light proof"],
+      "forbidden": ["new page design", "Bricks reconversion", "DSA theme creation", "docs unless /document", "ZIP"],
+      "finalResponse": "Return plan/artifact file(s) and compact pass/fail summary."
+    },
+    "/audit /accessibility": {
+      "phase": "audit",
+      "read": ["kiwe-ai-toolkit/contexts/accessibility-lite.md"],
+      "requires": ["existing artifact files and optional accessibility/kiwe-accessibility-plan.json"],
+      "output": ["pass/fail findings only"],
+      "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
+      "checks": ["WCAG contrast", "native light/dark proof", "Kiwe/Seam token pairs", "Bricks theme-style alignment", "critical text clipping/overflow", "Appsite capability attributes preserved"],
+      "finalResponse": "PASS/FAIL with blocking errors and warnings."
+    },
+    "/fix /accessibility": {
+      "phase": "fix",
+      "read": ["kiwe-ai-toolkit/contexts/accessibility-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
+      "requires": ["failed accessibility audit or existing artifact needing accessibility repair"],
+      "output": ["revised existing artifact file(s)", "accessibility/kiwe-accessibility-plan.json"],
+      "forbidden": ["new Bricks elements unless explicitly required and explained", "new classes unless official/project-token mapping cannot solve the failure", "removed Seam classes", "removed Kiwe/Appsite attributes", "DSA/AppShell structure changes", "Bricks reconversion", "website redesign", "docs unless /document", "ZIP"],
+      "preserve": ["element counts where possible", "global class counts where possible", "global variable names unless adding documented accessibility token mappings", "Seam classes", "data-role/data-flow", "data-kiwe-* attributes", "data-dsa-* attributes", "Bricks dynamic tags", "query-loop intent"],
+      "checks": ["WCAG contrast", "native light/dark proof", "Kiwe/Seam token pairs", "Bricks theme-style alignment", "critical text clipping/overflow", "reduced motion when motion exists"],
+      "finalResponse": "Return fixed file(s), PASS/FAIL/WARN, files changed, and structural-drift summary. Keep it compact."
+    },
+    "/document": {
+      "phase": "document",
+      "read": ["context for the already completed command lane"],
+      "requires": ["existing artifact"],
+      "output": ["the narrow notes/report file for that lane"],
+      "forbidden": ["redesign", "rebuild", "conversion", "theme creation", "ZIP unless explicitly requested"],
+      "finalResponse": "Return the requested documentation file and compact summary."
+    }
+  }
+}
