@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.73",
+  "contractVersion": "6.74",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -16,7 +16,8 @@
   "doNot": [
     "Do not browse, clone, or inspect the whole repository for startup.",
     "Do not search GitHub for hidden contracts.",
-    "Do not use general web search, arXiv, unrelated GitHub search, stale local examples, or prior accepted notes to complete SeamFlow.",
+    "Do not use general web search, arXiv, unrelated GitHub search, commit browsing, stale local examples, prior-output research, or prior accepted notes to complete SeamFlow.",
+    "Do not use search results when an exact raw URL/context route is required. If your environment starts a search instead of direct raw fetch/open, stop with ERROR: KIWE_SEARCH_DRIFT.",
     "Do not mark importable artifact lanes PASS from manual confidence when the official validator or exact validator logic was unavailable.",
     "Do not create docs, reports, ZIP files, duplicate previews, or long explanations unless /document is present.",
     "Do not start generation when no command/flow has been selected.",
@@ -24,7 +25,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.73",
+    "mustReport": "SeamFlow contract: 6.74",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /atend, and /usecompanion. Put the /list command hint last.",
@@ -70,7 +71,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.73",
+      "SeamFlow contract: 6.74",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -89,6 +90,7 @@
       "KIWE_CONTEXT_WINDOW_RISK": "Requested flow is too large for the current AI/session; suggest /execute /stepbystep /audit /eachstep.",
       "KIWE_TOKEN_BUDGET_RISK": "Command is likely to waste tokens; suggest a smaller command or /audit /allattached first.",
       "KIWE_TOOL_UNAVAILABLE": "MCP/API/browser/validator tool unavailable; use raw route if possible, otherwise stop.",
+      "KIWE_SEARCH_DRIFT": "A search engine, arXiv, GitHub search, commit browsing, or prior-example lookup was used or attempted instead of exact raw URL/context routing.",
       "KIWE_SITEGRAPH_REQUIRED": "Command explicitly requires live Site Graph/API data that was not supplied.",
       "KIWE_COMPANION_FALLBACK": "/usecompanion requested but unavailable; continue only if the base command can run without it."
     }
@@ -129,7 +131,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.73",
+      "SeamFlow contract: 6.74",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -298,7 +300,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.73",
+    "SeamFlow contract: 6.74",
     "Command:",
     "Artifact classification:",
     "Files returned:",

@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.73`
+Contract version: `6.74`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.73
+SeamFlow contract: 6.74
 ```
 
 Then do one of these:
@@ -34,7 +34,9 @@ Classification is read-only and allowed. Audits, fixes, conversion, creation, li
 
 Current-run evidence only: do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or "accepted" notes unless the human supplied those exact files in the current turn or explicitly asked you to compare against them. SeamFlow must classify and validate the current artifacts, not inherit conclusions from earlier tests.
 
-No wandering: do not use general web search, arXiv, unrelated GitHub search, or stale local examples to fill gaps. Use this Start file, the machine entry, the command manifest, and only the raw context/validator files named by the current command.
+No wandering: do not use general web search, arXiv, unrelated GitHub search, commit browsing, stale local examples, or prior-output research to fill gaps. Use this Start file, the machine entry, the command manifest, and only the exact raw context/validator files named by the current command.
+
+Search-drift hard stop: fetching/opening an exact raw URL from this contract is allowed. Searching for that URL, searching GitHub, searching arXiv, searching the web, opening search results, or looking for prior Kiwe/National/BioVantage examples is not allowed. If your environment starts a search instead of direct raw fetch, stop immediately with `ERROR: KIWE_SEARCH_DRIFT`; do not use the search results and do not continue the command.
 
 Validator authority: official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts. If a browser AI cannot run or exactly apply the relevant validator, it must report `WARN` or `UNVERIFIED`, not `PASS`, and must not say "no blocking findings" for that lane.
 
@@ -116,7 +118,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.73
+SeamFlow contract: 6.74
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -216,6 +218,7 @@ KIWE_PREVIOUS_OUTPUT_MISSING  -> /previousoutput was requested but the immediate
 KIWE_CONTEXT_WINDOW_RISK      -> requested full flow is too large for the current AI/session; suggest /execute /stepbystep /audit /eachstep
 KIWE_TOKEN_BUDGET_RISK        -> command is likely to waste tokens; suggest a smaller command or /audit /allattached first
 KIWE_TOOL_UNAVAILABLE         -> MCP/API/browser/validator tool unavailable; use raw route if possible, otherwise stop
+KIWE_SEARCH_DRIFT             -> a search engine, arXiv, GitHub search, commit browsing, or prior-example lookup was used or attempted instead of exact raw URL/context routing
 KIWE_SITEGRAPH_REQUIRED       -> command explicitly requires live Site Graph/API data that was not supplied
 KIWE_COMPANION_FALLBACK       -> /usecompanion requested but unavailable; continue only if the base command can run without it
 ```
@@ -224,7 +227,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.73
+SeamFlow contract: 6.74
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -294,7 +297,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.73
+SeamFlow contract: 6.74
 Command:
 Artifact classification:
 Files returned:
