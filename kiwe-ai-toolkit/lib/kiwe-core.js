@@ -427,28 +427,42 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       '/audit /accessibility',
       '/fix /accessibility if needed'
     ];
+  } else if (primary === 'unknown') {
+    recommendedMode = 'entry-orientation';
+    recommendedNextCommands = ['/list'];
   }
 
   const questions = [];
   if (!hasCommand) {
-    questions.push('Do you want step-by-step flow or full-flow execution?');
-    if (primary === 'bricks-template-upload') {
-      questions.push('Should I audit the existing Bricks template as-is, or should we return to the source HTML for a stricter Seam rebuild first?');
-    }
-    if (!wantsBricks && (primary === 'raw-html-css-js' || primary === 'seam-page-artifact')) {
-      questions.push('Is the target website/page-only Bricks output, DSA theme, or combined Appsite output?');
+    if (primary === 'unknown') {
+      questions.push('What do you want to create, rebuild, audit, fix, convert, or apply?');
+    } else {
+      questions.push('Do you want step-by-step flow or full-flow execution?');
+      if (primary === 'bricks-template-upload') {
+        questions.push('Should I audit the existing Bricks template as-is, or should we return to the source HTML for a stricter Seam rebuild first?');
+      }
+      if (!wantsBricks && (primary === 'raw-html-css-js' || primary === 'seam-page-artifact')) {
+        questions.push('Is the target website/page-only Bricks output, DSA theme, or combined Appsite output?');
+      }
     }
   }
 
   return {
     schema: 'kiwe.flow-plan.v1',
-    contractVersion: '6.64',
+    contractVersion: '6.65',
     purpose: 'Plan the smallest safe Kiwe command path for website/page, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     status: hasCommand ? 'route' : 'needs_input',
     commandDetected: hasCommand,
     artifactTypes,
     recommendedMode,
     recommendedNextCommands,
+    startResponse: {
+      mustReport: 'Kiwe Start contract: 6.65',
+      includeCompactList: !hasCommand,
+      includeAttachmentDiagnostic: !hasCommand,
+      waitsForApprovalBefore: ['audit', 'fix', 'convert', 'create', 'assemble', 'live-api', 'companion-review'],
+      permissionPolicy: 'Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval.'
+    },
     questions,
     capabilityCheck: {
       mcpPreferred: true,

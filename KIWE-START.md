@@ -1,6 +1,6 @@
 # Kiwe Start
 
-Contract version: `6.64`
+Contract version: `6.65`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Purpose: fastest safe entrypoint for browser AI, IDE AI, MCP clients, and Kiwe Companion-assisted Appsite workflows.
@@ -12,19 +12,19 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-Kiwe Start contract: 6.64
+Kiwe Start contract: 6.65
 ```
 
 Then do one of these:
 
 1. If the human gave `/list`, return the compact command list from the command manifest, then stop.
 2. If the human gave another `/command`, route only that command and read only the files listed for that command.
-3. If the human gave files but no `/command`, classify the files and ask which flow they want:
+3. If the human gave files but no `/command`, inspect the file contents, classify the current stage, return a compact diagnostic, recommend the next command, and ask which flow they want:
    - step-by-step flow, where each command returns its own artifact before the next command starts;
    - full-flow execution, where you run the complete path and return only final artifacts plus compact pass/fail status.
-4. If the human gave no files and no `/command`, ask what they want to create, rebuild, audit, fix, convert, or apply.
+4. If the human gave no files and no `/command`, return `/list` plus one short question asking what they want to create, rebuild, audit, fix, convert, or apply.
 
-Keep the question short. Do not start generation until the command or flow is clear.
+Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
 
 ## Fast machine-readable router
 
@@ -41,6 +41,23 @@ https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-ma
 ```
 
 Read only the context files named by the matched command. Do not search GitHub for hidden docs.
+
+## Fast navigation tree
+
+Use these direct raw URLs instead of searching:
+
+```text
+Start:              https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md
+Machine entry:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json
+Command manifest:   https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json
+Workflow:           https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
+Seam attributes:    https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/seam-attributes-lite.md
+Bricks conversion:  https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md
+Accessibility:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/accessibility-lite.md
+Dynamic/Site Graph: https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md
+Combined:           https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md
+Audit:              https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md
+```
 
 ## MCP / tool-capable route
 
@@ -59,7 +76,7 @@ Ask the human to connect or adopt a Kiwe MCP/skill only when they want live Site
 
 ## Attachment classifier
 
-Use this cheap classifier before deciding a flow:
+Use this cheap classifier before deciding a flow. Classify by actual code/content first, not by attachment name:
 
 - Raw HTML/CSS/JS draft: `.html` with `<html`, `<style`, visible page markup, and no Bricks template root.
 - Seam page artifact: `website/bricks-paste.html`, official `seam-*` classes, official `data-role`/`data-flow`, Kiwe capability attributes where needed.
@@ -71,6 +88,32 @@ Use this cheap classifier before deciding a flow:
 - Combined handoff: contains `combined-preview/`, `website/`, and `appshell-theme/`.
 
 When classification is uncertain, ask whether the human wants an audit first. Do not guess into the wrong lane.
+
+## No-command startup loop
+
+When the human gives only the Start URL, your first response should be:
+
+```text
+Kiwe Start contract: 6.65
+STATUS: NEEDS_INPUT
+Commands: /list summary
+Attachments detected: yes/no
+Artifact diagnostic: type/confidence/stage, if files are present and inspectable
+Recommended next command:
+Question: step-by-step, full-flow, or a specific /command?
+```
+
+If the human supplied attachments, inspect enough file content to determine stage:
+
+- raw creative draft -> recommend `/rebuild /seamframework`;
+- Seam page -> recommend `/audit /seamframework`;
+- Framework profile -> recommend `/audit /frameworkprofile`;
+- Bricks template or conversion -> recommend `/audit /bricksconversion`;
+- DSA theme -> recommend `/audit /dsatheme`;
+- combined handoff -> recommend `/audit /combined`;
+- any visual artifact after the above passes -> recommend `/audit /accessibility`.
+
+If the human supplied `/commands`, do those commands only. Do not add creative phases, audits, fixes, docs, or full-flow execution unless those commands require them or the human approves them.
 
 ## Standard flow map
 
@@ -127,7 +170,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-Kiwe Start contract: 6.64
+Kiwe Start contract: 6.65
 Command:
 Artifact classification:
 Files returned:

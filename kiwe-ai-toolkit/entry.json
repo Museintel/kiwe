@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.64",
+  "contractVersion": "6.65",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "purpose": "Fast safe entrypoint and flow planner for browser AI, IDE AI, MCP clients, and Kiwe Companion-assisted Appsite workflows.",
@@ -12,17 +12,37 @@
     "Do not convert DSA/AppShell theme files through /convert /bricks."
   ],
   "firstResponse": {
-    "mustReport": "Kiwe Start contract: 6.64",
+    "mustReport": "Kiwe Start contract: 6.65",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
-    "ifFilesNoCommand": "Classify supplied files and ask whether the human wants step-by-step flow or full-flow execution.",
-    "ifNoFilesNoCommand": "Ask what the human wants to create, rebuild, audit, fix, convert, or apply."
+    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants step-by-step flow or full-flow execution.",
+    "ifNoFilesNoCommand": "Return compact /list summary and ask what the human wants to create, rebuild, audit, fix, convert, or apply."
   },
   "rawFiles": {
     "markdownEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
     "commandManifest": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json",
     "workflow": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md"
+  },
+  "navigationTree": {
+    "start": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
+    "entry": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
+    "commandManifest": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json",
+    "contexts": {
+      "workflow": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md",
+      "seamAttributes": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/seam-attributes-lite.md",
+      "bricksConversion": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md",
+      "accessibility": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/accessibility-lite.md",
+      "dynamic": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md",
+      "combined": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md",
+      "audit": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md"
+    },
+    "tools": {
+      "bricksConversionValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs",
+      "accessibilityValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-accessibility.cjs",
+      "frameworkProfileValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-framework-profile.cjs",
+      "auditOutput": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/audit-output.cjs"
+    }
   },
   "mcpPreference": {
     "rule": "If Kiwe MCP/tools are available, use tools before reading prose.",
@@ -43,6 +63,7 @@
     "purpose": "Classify artifacts and return the smallest safe command path through Seam, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility."
   },
   "classifier": {
+    "rule": "Classify by actual file content/code first, not by attachment name. If uncertain, ask permission to audit before fixing or continuing.",
     "rawHtmlCssJs": ".html with <html, <style, visible page markup, and no Bricks template root",
     "seamPage": "website/bricks-paste.html with official seam-* classes, official data-role/data-flow, and Kiwe capability attributes where needed",
     "frameworkProfile": "JSON with schema kiwe.framework-profile.v1",
@@ -53,9 +74,19 @@
     "combinedHandoff": "contains combined-preview, website, and appshell-theme lanes"
   },
   "noCommandInteraction": {
+    "firstResponseShape": [
+      "STATUS: NEEDS_INPUT",
+      "Kiwe Start contract: 6.65",
+      "Commands: compact /list summary",
+      "Attachments detected: yes/no",
+      "Artifact diagnostic: type/confidence/stage if inspectable",
+      "Recommended next command:",
+      "Question: step-by-step, full-flow, or a specific /command?"
+    ],
     "stepByStepQuestion": "I found files but no command. Do you want step-by-step command outputs, or full-flow execution to final artifacts?",
     "targetQuestion": "Is the target page/Bricks only, DSA theme only, or combined Appsite?",
-    "auditFirstQuestion": "This looks like an existing generated artifact. Should I audit it first before fixing or continuing?"
+    "auditFirstQuestion": "This looks like an existing generated artifact. Should I audit it first before fixing or continuing?",
+    "permissionPolicy": "Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval."
   },
   "flows": {
     "rawHtmlCssJsToBricks": [
@@ -151,7 +182,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "Kiwe Start contract: 6.64",
+    "Kiwe Start contract: 6.65",
     "Command:",
     "Artifact classification:",
     "Files returned:",
