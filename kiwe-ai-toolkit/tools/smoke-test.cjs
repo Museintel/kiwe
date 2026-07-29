@@ -50,7 +50,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '6.68', 'entry contract mismatch');
+  assert(entry.contractVersion === '6.69', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
@@ -58,10 +58,12 @@ function assert(condition, message) {
   assert(entry.flows.auditClosure.byStartPoint['bricks-template-upload'].includes('/audit /bricksconversion'), 'entry missing Bricks closure audit');
   assert(entry.flows.auditClosure.byStartPoint['raw-html-css-js'].includes('/audit /accessibility'), 'entry missing raw flow accessibility closure');
   assert(JSON.stringify(entry).includes('Do not use prior Kiwe validation material'), 'missing current-run evidence boundary in entry');
+  assert(JSON.stringify(entry).includes('Full-flow means one final delivery, not one giant context load'), 'missing full-flow stepwise context boundary in entry');
+  assert(JSON.stringify(entry).includes('Missing Site Graph is not a blocker for static Bricks conversion'), 'missing Site Graph non-blocking boundary in entry');
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '6.68', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '6.69', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -72,8 +74,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '6.68', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.68', 'plan contract report mismatch');
+  assert(plan.contractVersion === '6.69', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.69', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.recommendedNextCommands.includes('/audit /accessibility'), 'plan missing accessibility audit');
   assert(plan.executionOptions.stepByStep === '/execute /stepbystep', 'plan missing step-by-step command');
@@ -131,9 +133,9 @@ function assert(condition, message) {
   runNode(['tools/validate-bricks-conversion.cjs', 'fixtures/bricks-template-valid']);
   runNode(['tools/validate-accessibility.cjs', 'fixtures/accessibility-valid']);
 
-  const contrast = m.validateAccessibility('fixtures/accessibility-invalid-contrast');
+  const contrast = m.validateAccessibility(path.join(root, 'fixtures/accessibility-invalid-contrast'));
   assert(!contrast.ok && JSON.stringify(contrast).includes('accessibility_low_contrast_literal_pair'), 'invalid contrast fixture did not fail');
-  const overflow = m.validateAccessibility('fixtures/accessibility-invalid-overflow');
+  const overflow = m.validateAccessibility(path.join(root, 'fixtures/accessibility-invalid-overflow'));
   assert(!overflow.ok && JSON.stringify(overflow).includes('accessibility_text_clipping_risk'), 'invalid overflow fixture did not fail');
 
   runNode(['tools/prepare-apply-plan.cjs', 'fixtures/bindings-valid', '--site-graph', 'fixtures/bindings-valid/site-graph.json']);

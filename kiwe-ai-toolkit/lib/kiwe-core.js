@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.68',
+    contractVersion: '6.69',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.68',
+      mustReport: 'SeamFlow contract: 6.69',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -564,14 +564,18 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       compatibilityFlowPlannerTool: 'kiwe_plan_flow',
       sequence: ['kiwe_get_start', 'kiwe_get_command_manifest', 'kiwe_seamflow_plan', 'kiwe_diagnose_command', 'kiwe_route_command', 'lane validator'],
       nonBlockingFallback: 'Use raw KIWE-START.md / entry.json / command-manifest.json when MCP/tools are unavailable.',
-      askToConnectWhen: 'Ask once only when the human wants full-flow execution, live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available.',
+      askToConnectWhen: 'Ask once only when the human wants live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available. Full-flow itself must still work through raw files when tools are unavailable.',
       companionHandshake: 'If /usecompanion is selected and no Kiwe MCP/tool is connected, ask for KIWE_REST_BASE and KIWE_AI_KEY. First call a bounded Companion status/context route. On success report COMPANION: connected with compact route/hash proof. On failure report COMPANION: fallback and continue without blocking.'
     },
     boundaries: [
       'Do not crawl the repository.',
+      'Do not use general web search, arXiv, unrelated GitHub search, stale local examples, or prior accepted notes to complete SeamFlow.',
       'Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly requested comparison.',
       'Do not create documentation unless /document is present.',
       'Do not convert DSA/AppShell theme files through /convert /bricks.',
+      'Do not create DSA/AppShell or combined output during page-builder full-flow unless the target explicitly requests DSA theme or combined mode.',
+      'Do not treat missing Site Graph as a blocker for static Bricks conversion; preserve dynamic intent/manual-review markers and suggest /usesitegraph.',
+      '/execute /fullflow is sequential internally: read and close one phase at a time, then return only final canonical artifacts.',
       'Do not claim a pass without running or following the matching lane audit.',
       'Stop at the first blocking failure that cannot be fixed from supplied artifacts.',
       'A SeamFlow phase, step-by-step run, full-flow run, or mid-stream resumed flow is complete only after every required current-lane audit returns PASS.'

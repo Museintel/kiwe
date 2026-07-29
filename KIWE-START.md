@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.68`
+Contract version: `6.69`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.68
+SeamFlow contract: 6.69
 ```
 
 Then do one of these:
@@ -33,6 +33,8 @@ Then do one of these:
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
 
 Current-run evidence only: do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or "accepted" notes unless the human supplied those exact files in the current turn or explicitly asked you to compare against them. SeamFlow must classify and validate the current artifacts, not inherit conclusions from earlier tests.
+
+No wandering: do not use general web search, arXiv, unrelated GitHub search, or stale local examples to fill gaps. Use this Start file, the machine entry, the command manifest, and only the raw context/validator files named by the current command.
 
 Current launch scope: close Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, Bricks conversion, Site Graph/dynamic intent, and accessibility first. DSA/AppShell theme creation remains part of SeamFlow, but full DSA theme production hardening is the next phase after page-builder flow testing passes.
 
@@ -106,7 +108,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.68
+SeamFlow contract: 6.69
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -229,7 +231,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.68
+SeamFlow contract: 6.69
 Command:
 Artifact classification:
 Files returned:
@@ -278,3 +280,7 @@ If full-flow succeeds from raw HTML/CSS/JS to Bricks, the final default artifact
 - `bricks-template/[page-name]-template-upload.json`
 
 Do not include AppShell/DSA theme files unless the human requested DSA theme or combined mode.
+
+Full-flow is sequential internally. Even when the human chooses `/execute /fullflow`, read and act phase-by-phase; do not load every context at once, do not jump directly to a final package, and do not move to the next phase until the current phase audit/fix loop closes.
+
+Site Graph is an enhancement lane, not a false hard gate for basic Bricks conversion. If no Site Graph/API/export is supplied, complete the static Seam + Framework + Bricks template conversion with dynamic intent/manual-review markers where needed, then suggest `/usesitegraph` as the next command. Stop for Site Graph only when the human explicitly requested `/usesitegraph`, real target-site IDs, live dynamic binding verification, or staging/apply authority.

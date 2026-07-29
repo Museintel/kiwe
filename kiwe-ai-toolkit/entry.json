@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.68",
+  "contractVersion": "6.69",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -16,13 +16,14 @@
   "doNot": [
     "Do not browse, clone, or inspect the whole repository for startup.",
     "Do not search GitHub for hidden contracts.",
+    "Do not use general web search, arXiv, unrelated GitHub search, stale local examples, or prior accepted notes to complete SeamFlow.",
     "Do not create docs, reports, ZIP files, duplicate previews, or long explanations unless /document is present.",
     "Do not start generation when no command/flow has been selected.",
     "Do not convert DSA/AppShell theme files through /convert /bricks.",
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.68",
+    "mustReport": "SeamFlow contract: 6.69",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /auditateachstep, /auditatend, and /usecompanion. Put the /list command hint last.",
@@ -90,7 +91,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.68",
+      "SeamFlow contract: 6.69",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -199,7 +200,8 @@
         "Do not use stale audit reports from previous attempts as closure proof."
       ]
     },
-    "fullFlowStopRule": "Stop at the first blocking audit failure that cannot be fixed from the supplied artifact; otherwise continue the /audit -> /fix -> /audit loop until required closure audits pass.",
+    "fullFlowStepRule": "Full-flow means one final delivery, not one giant context load. Internally run phase-by-phase, reading only the contexts/validators required by the current phase, then close that phase with /audit -> /fix -> /audit before continuing.",
+    "fullFlowStopRule": "Stop at the first blocking audit failure that cannot be fixed from the supplied artifact; otherwise continue the /audit -> /fix -> /audit loop until required closure audits pass. Missing Site Graph is not a blocker for static Bricks conversion; preserve dynamic intent/manual-review markers and suggest /usesitegraph unless the human explicitly requested live Site Graph binding or staging/apply authority.",
     "fullFlowDefaultFinalArtifacts": [
       "framework/kiwe-framework-profile.json",
       "bricks-template/[page-name]-template-upload.json"
@@ -246,7 +248,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.68",
+    "SeamFlow contract: 6.69",
     "Command:",
     "Artifact classification:",
     "Files returned:",
