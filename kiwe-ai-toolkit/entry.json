@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.69",
+  "contractVersion": "6.70",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -17,13 +17,14 @@
     "Do not browse, clone, or inspect the whole repository for startup.",
     "Do not search GitHub for hidden contracts.",
     "Do not use general web search, arXiv, unrelated GitHub search, stale local examples, or prior accepted notes to complete SeamFlow.",
+    "Do not mark importable artifact lanes PASS from manual confidence when the official validator or exact validator logic was unavailable.",
     "Do not create docs, reports, ZIP files, duplicate previews, or long explanations unless /document is present.",
     "Do not start generation when no command/flow has been selected.",
     "Do not convert DSA/AppShell theme files through /convert /bricks.",
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.69",
+    "mustReport": "SeamFlow contract: 6.70",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /auditateachstep, /auditatend, and /usecompanion. Put the /list command hint last.",
@@ -54,6 +55,16 @@
       "frameworkProfileValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-framework-profile.cjs",
       "auditOutput": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/audit-output.cjs"
     }
+  },
+  "validatorAuthority": {
+    "rule": "Official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts.",
+    "ifUnavailable": "Report WARN or UNVERIFIED for that lane. Do not write PASS, no blocking findings, or completed closure for Framework profile, Bricks conversion, DSA theme, combined handoff, or accessibility when the relevant validator was not run or exactly reproduced.",
+    "mustUseWhenPossible": [
+      "validate-framework-profile.cjs for /audit /frameworkprofile",
+      "validate-bricks-conversion.cjs for /audit /bricksconversion",
+      "validate-accessibility.cjs for /audit /accessibility",
+      "audit-output.cjs for whole-output sanity"
+    ]
   },
   "mcpPreference": {
     "rule": "If Kiwe MCP/tools are available, use tools before reading prose.",
@@ -91,7 +102,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.69",
+      "SeamFlow contract: 6.70",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -248,7 +259,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.69",
+    "SeamFlow contract: 6.70",
     "Command:",
     "Artifact classification:",
     "Files returned:",

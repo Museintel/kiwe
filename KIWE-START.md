@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.69`
+Contract version: `6.70`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.69
+SeamFlow contract: 6.70
 ```
 
 Then do one of these:
@@ -35,6 +35,8 @@ Classification is read-only and allowed. Audits, fixes, conversion, creation, li
 Current-run evidence only: do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or "accepted" notes unless the human supplied those exact files in the current turn or explicitly asked you to compare against them. SeamFlow must classify and validate the current artifacts, not inherit conclusions from earlier tests.
 
 No wandering: do not use general web search, arXiv, unrelated GitHub search, or stale local examples to fill gaps. Use this Start file, the machine entry, the command manifest, and only the raw context/validator files named by the current command.
+
+Validator authority: official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts. If a browser AI cannot run or exactly apply the relevant validator, it must report `WARN` or `UNVERIFIED`, not `PASS`, and must not say "no blocking findings" for that lane.
 
 Current launch scope: close Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, Bricks conversion, Site Graph/dynamic intent, and accessibility first. DSA/AppShell theme creation remains part of SeamFlow, but full DSA theme production hardening is the next phase after page-builder flow testing passes.
 
@@ -69,6 +71,10 @@ Accessibility:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-a
 Dynamic/Site Graph: https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/dynamic-lite.md
 Combined:           https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md
 Audit:              https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/audit-lite.md
+Framework validator:https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-framework-profile.cjs
+Bricks validator:   https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs
+Access validator:   https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-accessibility.cjs
+Output audit:       https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/audit-output.cjs
 ```
 
 ## MCP / tool-capable route
@@ -108,7 +114,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.69
+SeamFlow contract: 6.70
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -231,7 +237,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.69
+SeamFlow contract: 6.70
 Command:
 Artifact classification:
 Files returned:

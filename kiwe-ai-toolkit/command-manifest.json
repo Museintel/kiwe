@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.69",
+    "contractVersion": "6.70",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -23,6 +23,7 @@
       "Do not clone the repository for a slash-command lane unless the human explicitly asks you to inspect implementation source.",
       "Do not search GitHub docs for hidden contracts. This manifest plus the listed context files are the contract for the matched command.",
       "Do not use general web search, arXiv, unrelated GitHub search, stale local examples, or prior accepted notes to complete SeamFlow.",
+      "Do not mark importable artifact lanes PASS from manual confidence when the official validator or exact validator logic was unavailable.",
       "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison.",
       "Read only the context files listed for the matched command.",
       "Prefer this JSON manifest first when available because it is smaller and less ambiguous than prose.",
@@ -34,6 +35,7 @@
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
     "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /auditateachstep audits after each phase; /auditatend audits before final delivery. A failed audit requires /fix and the same /audit again until PASS or NEEDS_INPUT.",
+    "validatorAuthority": "Official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts. If unavailable, report WARN or UNVERIFIED for that lane; do not say PASS or no blocking findings.",
     "fullFlowDiscipline": "/execute /fullflow means one final delivery, not one giant context load. Execute phase-by-phase, read only the context/validator files for the current phase, close that phase with /audit -> /fix -> /audit, then continue.",
     "siteGraphBoundary": "Missing Site Graph/API/export is not a blocker for static Seam + Framework + Bricks template conversion. Preserve dynamic intent/manual-review markers and suggest /usesitegraph. Stop for Site Graph only when the human explicitly requested /usesitegraph, live target IDs, verified dynamic bindings, or staging/apply authority."
   },
