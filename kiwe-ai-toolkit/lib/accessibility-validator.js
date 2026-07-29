@@ -582,7 +582,7 @@ export function validateAccessibility(targetDir, options = {}) {
   const planModes = isPlainObject(plan) && Array.isArray(plan.modes) ? plan.modes.map((mode) => String(mode).toLowerCase()) : [];
   const hasDarkProof = DARK_PROOF_RE.test(allText) || planModes.includes('dark');
   if (!hasDarkProof) {
-    add(findings, 'fail', 'accessibility_missing_dark_mode_proof', 'Output must prove native dark-mode support through data-kiwe-theme/data-theme/prefers-color-scheme and token pairs. Do not ship light-only pages.', root);
+    add(findings, 'fail', 'accessibility_missing_dark_mode_proof', 'Output must prove native dark-mode support through data-kiwe-theme/data-theme/prefers-color-scheme and token pairs. Use accessibility-lite.md dark-mode token remap recipe; do not search repo docs or ship light-only pages.', root);
   }
   if (!BRICKS_THEME_STYLE_RE.test(allText)) {
     add(findings, 'warn', 'accessibility_missing_bricks_theme_style_alignment', 'No Bricks theme-style/color-palette alignment was found. If this output targets Bricks, map Kiwe tokens to Bricks root color/background/link lanes.', root);

@@ -9,6 +9,8 @@
   "globalRules": {
     "readPolicy": [
       "Do not read the whole repository.",
+      "Do not clone the repository for a slash-command lane unless the human explicitly asks you to inspect implementation source.",
+      "Do not search GitHub docs for hidden contracts. This manifest plus the listed context files are the contract for the matched command.",
       "Read only the context files listed for the matched command.",
       "Prefer this JSON manifest first when available because it is smaller and less ambiguous than prose.",
       "If a required artifact is missing, stop with a compact diagnostic instead of guessing."
@@ -124,6 +126,25 @@
       "output": ["revised existing artifact file(s)", "accessibility/kiwe-accessibility-plan.json"],
       "forbidden": ["new Bricks elements unless explicitly required and explained", "new classes unless official/project-token mapping cannot solve the failure", "removed Seam classes", "removed Kiwe/Appsite attributes", "DSA/AppShell structure changes", "Bricks reconversion", "website redesign", "docs unless /document", "ZIP"],
       "preserve": ["element counts where possible", "global class counts where possible", "global variable names unless adding documented accessibility token mappings", "Seam classes", "data-role/data-flow", "data-kiwe-* attributes", "data-dsa-* attributes", "Bricks dynamic tags", "query-loop intent"],
+      "darkModeRecipe": {
+        "sourceOfTruth": "Use this recipe; do not search repo docs for a separate dark-mode contract.",
+        "selectorPattern": [
+          ".page-root-class, [data-kiwe-theme=\"light\"] .page-root-class",
+          "html[data-kiwe-theme=\"dark\"] .page-root-class, [data-kiwe-theme=\"dark\"] .page-root-class, .page-root-class[data-kiwe-theme=\"dark\"]"
+        ],
+        "requiredKiweTokens": [
+          "--kiwe-color-surface",
+          "--kiwe-color-surface-raised",
+          "--kiwe-color-surface-sunken",
+          "--kiwe-color-text",
+          "--kiwe-color-text-muted",
+          "--kiwe-color-text-inverse",
+          "--kiwe-color-border",
+          "--kiwe-color-brand",
+          "--kiwe-color-accent"
+        ],
+        "rule": "Remap existing project variables such as --nc-paper, --nc-surface, --nc-ink, --nc-muted, --nc-line, --nc-brand, and --nc-accent to Kiwe tokens for light and dark states. Do not invent a second unrelated palette."
+      },
       "checks": ["WCAG contrast", "native light/dark proof", "Kiwe/Seam token pairs", "Bricks theme-style alignment", "critical text clipping/overflow", "reduced motion when motion exists"],
       "finalResponse": "Return fixed file(s), PASS/FAIL/WARN, files changed, and structural-drift summary. Keep it compact."
     },

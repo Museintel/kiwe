@@ -2,7 +2,7 @@
 
 Use this file when the human wants better AI output quality, fewer correction loops, or a slash-command style Kiwe workflow.
 
-Do not read the full Kiwe repository. The goal is to route the AI into the smallest useful phase instead of asking one model turn to be maximally creative, framework-compliant, Bricks-aware, AppShell-safe, and audit-ready all at once.
+Do not clone, crawl, or read the full Kiwe repository. The goal is to route the AI into the smallest useful phase instead of asking one model turn to be maximally creative, framework-compliant, Bricks-aware, AppShell-safe, and audit-ready all at once.
 
 Fast machine-readable command router:
 

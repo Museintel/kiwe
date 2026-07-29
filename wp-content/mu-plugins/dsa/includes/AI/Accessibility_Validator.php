@@ -45,7 +45,7 @@ final class Accessibility_Validator {
 				$findings,
 				$strict_dark ? 'error' : 'warning',
 				'accessibility_missing_dark_mode_proof',
-				'No native dark-mode proof was found. Provide data-kiwe-theme="dark", [data-kiwe-theme="dark"], data-kiwe-theme-toggle, or a documented Bricks/Kiwe dark-mode bridge.'
+				'No native dark-mode proof was found. Use the Kiwe accessibility-lite dark-mode token remap recipe: data-kiwe-theme="dark", [data-kiwe-theme="dark"], data-kiwe-theme-toggle, or a documented Bricks/Kiwe dark-mode bridge. Do not search repo docs for another contract.'
 			);
 		}
 

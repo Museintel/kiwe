@@ -147,6 +147,88 @@ Use Kiwe/Seam native theme state:
 
 Do not implement dark mode with filter/invert hacks. Do not create two unrelated palettes. Dark mode should be a controlled token remap of the same visual thesis.
 
+### Dark-mode token remap recipe
+
+This context is complete for `/fix /accessibility`; do not search the repository for a separate dark-mode contract.
+
+For a website/page or Bricks template, add dark proof to the existing root page class or root page element. Use the artifact's real page root class, for example `.nc-home`, `.bv-home`, or another existing root. Do not create a new wrapper just for dark mode.
+
+Pattern:
+
+```css
+.page-root-class,
+[data-kiwe-theme="light"] .page-root-class {
+  --kiwe-color-surface: <light page background>;
+  --kiwe-color-surface-raised: <light card/surface>;
+  --kiwe-color-surface-sunken: <light muted surface>;
+  --kiwe-color-text: <light readable text>;
+  --kiwe-color-text-muted: <light readable muted text>;
+  --kiwe-color-text-inverse: <text on dark/brand surfaces>;
+  --kiwe-color-border: <light border>;
+
+  /* Existing project variables map to Kiwe tokens. */
+  --project-page-bg: var(--kiwe-color-surface);
+  --project-card-bg: var(--kiwe-color-surface-raised);
+  --project-text: var(--kiwe-color-text);
+  --project-muted: var(--kiwe-color-text-muted);
+  --project-line: var(--kiwe-color-border);
+}
+
+html[data-kiwe-theme="dark"] .page-root-class,
+[data-kiwe-theme="dark"] .page-root-class,
+.page-root-class[data-kiwe-theme="dark"] {
+  --kiwe-color-surface: <dark page background>;
+  --kiwe-color-surface-raised: <dark card/surface>;
+  --kiwe-color-surface-sunken: <dark muted surface>;
+  --kiwe-color-text: <dark readable text>;
+  --kiwe-color-text-muted: <dark readable muted text>;
+  --kiwe-color-text-inverse: <text on light/brand surfaces>;
+  --kiwe-color-border: <dark border>;
+
+  --project-page-bg: var(--kiwe-color-surface);
+  --project-card-bg: var(--kiwe-color-surface-raised);
+  --project-text: var(--kiwe-color-text);
+  --project-muted: var(--kiwe-color-text-muted);
+  --project-line: var(--kiwe-color-border);
+}
+```
+
+For National-Chikki-style project variables, the expected mapping is:
+
+```css
+.nc-home,
+[data-kiwe-theme="light"] .nc-home {
+  --nc-paper: var(--kiwe-color-surface);
+  --nc-surface: var(--kiwe-color-surface-raised);
+  --nc-surface-soft: var(--kiwe-color-surface-sunken);
+  --nc-ink: var(--kiwe-color-text);
+  --nc-muted: var(--kiwe-color-text-muted);
+  --nc-line: var(--kiwe-color-border);
+  --nc-brand: var(--kiwe-color-brand);
+  --nc-accent: var(--kiwe-color-accent);
+}
+
+html[data-kiwe-theme="dark"] .nc-home,
+[data-kiwe-theme="dark"] .nc-home,
+.nc-home[data-kiwe-theme="dark"] {
+  --kiwe-color-surface: #14100d;
+  --kiwe-color-surface-raised: #201915;
+  --kiwe-color-surface-sunken: #2a211c;
+  --kiwe-color-text: #fff6ea;
+  --kiwe-color-text-muted: #d9c5b2;
+  --kiwe-color-text-inverse: #201b18;
+  --kiwe-color-border: rgba(255, 246, 234, .18);
+  --nc-paper: var(--kiwe-color-surface);
+  --nc-surface: var(--kiwe-color-surface-raised);
+  --nc-surface-soft: var(--kiwe-color-surface-sunken);
+  --nc-ink: var(--kiwe-color-text);
+  --nc-muted: var(--kiwe-color-text-muted);
+  --nc-line: var(--kiwe-color-border);
+}
+```
+
+The concrete hex values may differ by brand, but the structure should not. Brand/accent colors may be adjusted for contrast, but keep them as `--kiwe-color-brand`, `--kiwe-color-accent`, and existing project variables rather than creating an unrelated dark palette.
+
 ## Bricks native theme-style alignment
 
 Bricks 2.4 theme-style color controls map global color slots at `:where(:root)`, including:
