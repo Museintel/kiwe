@@ -7179,6 +7179,7 @@
 		root.style.colorScheme = mode;
 		if ( surface ) {
 			surface.dataset.kiweTheme = mode;
+			surface.dataset.brxTheme = mode;
 		}
 		if ( persist ) {
 			try {

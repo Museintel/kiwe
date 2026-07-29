@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.60",
+  "version": "6.61",
   "algorithm": "sha256",
-  "file_count": 286,
+  "file_count": 287,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -21,8 +21,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 272298,
-      "sha256": "6a8180820a119c907636b11cb3c197b00bb7d496247d59c93b198dfcebec0662"
+      "bytes": 273080,
+      "sha256": "d6d2fce471c0ad56eebceec0ab8ff403ab953b4f498ed6fb72aaa06e55b20e30"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -165,8 +165,8 @@
       "sha256": "edf2567ee5994e5e41b54f6b7ecaac14bc9d04ec3c06be12baf657071f77544d"
     },
     "assets/js/surface.js": {
-      "bytes": 389836,
-      "sha256": "9ed83a7131d4a8fc89e53efcd53de80abb315a79203f7efa75d8b8d6798fc124"
+      "bytes": 389872,
+      "sha256": "eaed35e4148fcb7d48f05c28b3e8cc7410ff13c6908565a580df38620cd9e687"
     },
     "connector-system/BRICKS-DYNAMIC-BINDINGS.md": {
       "bytes": 9463,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "978ea3e717c495b5288b446e0e0833b3f0c09a169cedcf942c77ff0701c9810f"
+      "sha256": "97e78ea8a4ca68b365b0c51feadbcc63d531d352940dbd23ecce7a5108618fc3"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -525,8 +525,8 @@
       "sha256": "6c35a8f2f5dc1d45bfc78bd3878faa0446b1918331e5422f78e79867be64546e"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
-      "bytes": 15391,
-      "sha256": "07d57283928d5edee07f67ecf0fe92c6fd783c40b99211f4eaf102b56b07c8ff"
+      "bytes": 15462,
+      "sha256": "e7849235ea81c02cfb3ab4c541a0f08ed1a9f6e2d9aae76cb91eca77594ef903"
     },
     "includes/Design/Token_Schema.php": {
       "bytes": 8257,
@@ -621,8 +621,8 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 57504,
-      "sha256": "7dc06e0d98736e16c3179dde01e0b36e6a0cf5c528448ce41a435416c41875c8"
+      "bytes": 57688,
+      "sha256": "7947ab8dd7e1efb5ba6b34ddb44bf74d4f835663501e7ceb2bea68199a644e5b"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
       "bytes": 17071,
@@ -1027,6 +1027,10 @@
     "site-graph-system/release-proof-6.60.md": {
       "bytes": 3363,
       "sha256": "7e03af1f0c9d882330f5b799a830ee069e5cc3d2659d43a528d2c5e2ee30c287"
+    },
+    "site-graph-system/release-proof-6.61.md": {
+      "bytes": 2395,
+      "sha256": "3bf7c998f8221bffd080ab35feab6a4ce5691f15566e55b0f2790276c9b9e05b"
     },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,

@@ -638,7 +638,7 @@ final class Assets {
 			esc_html( $hero ),
 			esc_html( $kiwe_css )
 		);
-		echo '<script id="dsa-color-mode-seed">(function(){try{var r=document.documentElement,s=localStorage.getItem("brx_mode")||localStorage.getItem("kiwe_color_mode")||"light";if(s==="auto"){s=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}if(s!=="dark"){s="light";}r.dataset.kiweTheme=s;r.dataset.kiweStyle="classic";r.dataset.kiweSurfaceTheme=' . wp_json_encode( $theme_mode ) . ';}catch(e){document.documentElement.dataset.kiweTheme="light";document.documentElement.dataset.kiweStyle="classic";document.documentElement.dataset.kiweSurfaceTheme=' . wp_json_encode( $theme_mode ) . ';}})();</script>' . "\n";
+		echo '<script id="dsa-color-mode-seed">(function(){try{var r=document.documentElement,s=localStorage.getItem("brx_mode")||localStorage.getItem("kiwe_color_mode")||"light";if(s==="auto"){s=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}if(s!=="dark"){s="light";}r.dataset.kiweTheme=s;r.dataset.brxTheme=s;r.dataset.kiweStyle="classic";r.dataset.kiweSurfaceTheme=' . wp_json_encode( $theme_mode ) . ';}catch(e){document.documentElement.dataset.kiweTheme="light";document.documentElement.dataset.brxTheme="light";document.documentElement.dataset.kiweStyle="classic";document.documentElement.dataset.kiweSurfaceTheme=' . wp_json_encode( $theme_mode ) . ';}})();</script>' . "\n";
 
 	}
 
@@ -697,8 +697,9 @@ final class Assets {
 	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 58%, transparent);
 	--dsa-runtime-dock-control-filter: blur(var(--kiwe-glass-blur, var(--dsa-blur-strength, 0.625rem)));
 }
-html[data-kiwe-theme="dark"] #dsa-surface[data-dsa-surface].dsa-dock-material-glass,
-#dsa-surface[data-dsa-surface][data-kiwe-theme="dark"].dsa-dock-material-glass {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) #dsa-surface[data-dsa-surface].dsa-dock-material-glass,
+#dsa-surface[data-dsa-surface][data-kiwe-theme="dark"].dsa-dock-material-glass,
+#dsa-surface[data-dsa-surface][data-brx-theme="dark"].dsa-dock-material-glass {
 	--dsa-runtime-dock-control-material: color-mix(in srgb, var(--kiwe-color-surface, var(--dsa-ui-surface, #111)) 48%, transparent);
 	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 50%, transparent);
 }

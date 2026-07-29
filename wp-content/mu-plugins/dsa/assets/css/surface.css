@@ -71,7 +71,7 @@
 	--dsa-danger-color: var(--kiwe-color-danger, #d83a52);
 }
 
-html[data-kiwe-theme="dark"] {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) {
 	--dsa-ui-bg: #10141b;
 	--dsa-ui-surface: rgba(17,22,29,0.96);
 	--dsa-ui-surface-strong: #11161d;
@@ -5959,25 +5959,25 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	}
 }
 
-html[data-kiwe-theme="dark"] .dsa-dock {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-dock {
 	border-color: var(--dsa-runtime-token-0538);
 	background: var(--dsa-runtime-token-0539);
 	box-shadow: var(--dsa-runtime-token-0540);
 	color: var(--dsa-runtime-token-0541);
 }
 
-html[data-kiwe-theme="dark"] .dsa-overlay-root {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-overlay-root {
 	background: var(--dsa-runtime-token-0542);
 	box-shadow: var(--dsa-runtime-token-0543);
 	color: var(--dsa-runtime-token-0544);
 }
 
-html[data-kiwe-theme="dark"] .dsa-overlay-root::before {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-overlay-root::before {
 	background: var(--dsa-runtime-token-0545);
 	opacity: 0.72;
 }
 
-html[data-kiwe-theme="dark"] :is(
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) :is(
 	.dsa-cart-panel__item,
 	.dsa-cart-panel__checkout,
 	.dsa-cart-fbt__card,
@@ -6003,7 +6003,7 @@ html[data-kiwe-theme="dark"] :is(
 	color: var(--dsa-runtime-token-0544);
 }
 
-html[data-kiwe-theme="dark"] :is(
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) :is(
 	.dsa-panel__meta,
 	.dsa-cart-panel__summary span,
 	.dsa-cart-panel__item-body span,
@@ -6017,23 +6017,23 @@ html[data-kiwe-theme="dark"] :is(
 	color: var(--dsa-runtime-token-0548);
 }
 
-html[data-kiwe-theme="dark"] :is(.dsa-cart-panel__product-link, .dsa-saved-card strong, .dsa-ai-insight__copy strong) {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) :is(.dsa-cart-panel__product-link, .dsa-saved-card strong, .dsa-ai-insight__copy strong) {
 	color: var(--dsa-runtime-token-0549);
 }
 
-html[data-kiwe-theme="dark"] .dsa-ai-popout {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-ai-popout {
 	border-color: var(--dsa-runtime-token-0550);
 	background: var(--dsa-runtime-token-0551);
 	box-shadow: var(--dsa-runtime-token-0552);
 	color: var(--dsa-runtime-token-0553);
 }
 
-html[data-kiwe-theme="dark"] .dsa-ai-chat-placeholder :is(input, button) {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-ai-chat-placeholder :is(input, button) {
 	background: var(--dsa-runtime-token-0554);
 	color: var(--dsa-runtime-token-0555);
 }
 
-html[data-kiwe-theme="dark"] .dsa-theme-glyph__moon {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-theme-glyph__moon {
 	box-shadow: var(--dsa-runtime-token-0556);
 	background: transparent;
 }
@@ -6058,21 +6058,21 @@ html[data-kiwe-theme="dark"] .dsa-theme-glyph__moon {
 	display: none;
 }
 
-html[data-kiwe-theme="dark"] .dsa-surface.dsa-dock-material-solid .dsa-dock {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-surface.dsa-dock-material-solid .dsa-dock {
 	border-color: var(--dsa-runtime-token-0538);
 	background: var(--dsa-runtime-token-0559);
 	box-shadow: var(--dsa-runtime-token-0560);
 	color: var(--dsa-runtime-token-0561);
 }
 
-html[data-kiwe-theme="dark"] .dsa-surface.dsa-screen-material-solid .dsa-overlay-root {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-surface.dsa-screen-material-solid .dsa-overlay-root {
 	background: var(--dsa-runtime-token-0562);
 	box-shadow: none;
 	color: var(--dsa-runtime-token-0544);
 }
 
 .dsa-surface.dsa-theme-sheet.dsa-screen-material-solid .dsa-overlay-root,
-html[data-kiwe-theme="dark"] .dsa-surface.dsa-theme-sheet.dsa-screen-material-solid .dsa-overlay-root {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-surface.dsa-theme-sheet.dsa-screen-material-solid .dsa-overlay-root {
 	background: transparent;
 	box-shadow: none;
 	color: var(--dsa-ui-text);
@@ -6456,14 +6456,14 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-dock-mobile="1"][data-dsa-do
 	backdrop-filter: none;
 }
 
-html[data-kiwe-theme="dark"] .dsa-dock-context {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-dock-context {
 	border-color: var(--dsa-runtime-token-0538);
 	background: var(--dsa-runtime-token-0539);
 	box-shadow: var(--dsa-runtime-token-0540);
 	color: var(--dsa-runtime-token-0561);
 }
 
-html[data-kiwe-theme="dark"] .dsa-surface.dsa-dock-material-solid .dsa-dock-context { background: var(--dsa-runtime-token-0559); }
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-surface.dsa-dock-material-solid .dsa-dock-context { background: var(--dsa-runtime-token-0559); }
 
 .dsa-surface[data-dsa-dock-orientation="vertical"] .dsa-dock-context {
 	top: var(--dsa-context-top, auto);
@@ -6477,11 +6477,11 @@ html[data-kiwe-theme="dark"] .dsa-surface.dsa-dock-material-solid .dsa-dock-cont
 	border: var(--dsa-runtime-token-0065);
 }
 
-html[data-kiwe-theme="dark"] .dsa-menu-link:not(.is-active) {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-menu-link:not(.is-active) {
 	color: var(--dsa-runtime-token-0591);
 }
 
-html[data-kiwe-theme="dark"] .dsa-menu-link:not(.is-active) .dsa-menu-link__body > span { color: inherit; }
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-menu-link:not(.is-active) .dsa-menu-link__body > span { color: inherit; }
 
 .dsa-recent-orders { display: grid; grid-column: 2; gap: 8px; min-width: 0; }
 .dsa-recent-orders__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; }
@@ -6495,9 +6495,9 @@ html[data-kiwe-theme="dark"] .dsa-menu-link:not(.is-active) .dsa-menu-link__body
 .dsa-order-status { padding: var(--dsa-runtime-token-0284); border-radius: 999px; background: color-mix(in srgb,var(--dsa-active-color) 12%,transparent); color: var(--dsa-active-color); font-size: var(--kiwe-type-micro,10px); font-weight: 800; }
 .dsa-recent-order__items { display: flex; gap: 4px; }
 .dsa-recent-order__items img { width: var(--dsa-runtime-token-0089); height: 30px; border-radius: 5px; object-fit: cover; background: rgba(15,23,42,0.08); }
-html[data-kiwe-theme="dark"] .dsa-recent-order { background: var(--dsa-runtime-token-0592); }
-html[data-kiwe-theme="dark"] .dsa-recent-orders__head span,
-html[data-kiwe-theme="dark"] .dsa-recent-order small { color: var(--dsa-runtime-token-0593); }
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-recent-order { background: var(--dsa-runtime-token-0592); }
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-recent-orders__head span,
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-recent-order small { color: var(--dsa-runtime-token-0593); }
 
 /* Surface UI Contract v2: measured layout states replace component breakpoints. */
 .dsa-surface[data-dsa-ui-contract="2"][data-dsa-dock-orientation="horizontal"] :is(.dsa-dock-cluster, .dsa-phonekey-dock) {
@@ -6621,7 +6621,7 @@ html[data-kiwe-theme="dark"] .dsa-recent-order small { color: var(--dsa-runtime-
 	color: var(--dsa-runtime-token-0600);
 }
 
-html[data-kiwe-theme="dark"] .dsa-surface[data-dsa-ui-contract="2"] .dsa-menu-dashboard {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-surface[data-dsa-ui-contract="2"] .dsa-menu-dashboard {
 	border-color: var(--dsa-runtime-token-0601);
 	background: var(--dsa-runtime-token-0602);
 	color: var(--dsa-runtime-token-0603);
@@ -7053,7 +7053,7 @@ html.dsa-overlay-active .dsa-surface[data-dsa-ui-contract="2"][data-dsa-dock-mob
 	animation-timing-function: cubic-bezier(.18,.9,.2,1.12);
 }
 
-html[data-kiwe-theme="dark"] .dsa-theme-sheet .dsa-overlay-root > .dsa-panel {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-theme-sheet .dsa-overlay-root > .dsa-panel {
 	border-color: var(--dsa-ui-border);
 	background: var(--dsa-ui-surface);
 	box-shadow: var(--dsa-ui-shadow);
@@ -7377,7 +7377,7 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-ui-contract="2"][data-dsa-do
 	--dsa-flat-shadow: var(--dsa-runtime-token-0641);
 }
 
-html[data-kiwe-theme="dark"] .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype {
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype {
 	--dsa-flat-line: var(--dsa-runtime-token-0642);
 	--dsa-flat-line-strong: var(--dsa-runtime-token-0643);
 	--dsa-flat-surface-alt: var(--dsa-runtime-token-0644);

@@ -114,7 +114,7 @@ final class Seam_Vocabulary_Schema {
 				'theme' => [
 					'attribute' => 'data-theme',
 					'values' => [ 'dark' ],
-					'notes' => 'Light is the implicit default. Kiwe AppShell dark mode remains html[data-kiwe-theme="dark"].',
+					'notes' => 'Light is the implicit default. Kiwe AppShell dark mode uses html[data-kiwe-theme="dark"] and bridges Bricks frontend dark mode through html[data-brx-theme="dark"].',
 				],
 			],
 			'bodyClasses' => [
