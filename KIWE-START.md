@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.76`
+Contract version: `6.77`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.76
+SeamFlow contract: 6.77
 ```
 
 Then do one of these:
@@ -31,6 +31,14 @@ Then do one of these:
 4. If the human gave no files and no `/command`, return `/list` plus one short question asking what they want to create, rebuild, audit, fix, convert, or apply.
 
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
+
+Command grammar: SeamFlow commands are composable shell-like tokens, not memorized fixed prompts. Parse the whole user command into:
+
+- one primary action token, such as `/execute`, `/rebuild`, `/create`, `/convert`, `/audit`, `/fix`, `/usesitegraph`, `/apply`, `/list`, or `/document`;
+- one phase/target token when needed, such as `/stepbystep`, `/fullflow`, `/seamframework`, `/frameworkprofile`, `/bricks`, `/bricksconversion`, `/accessibility`, `/dsatheme`, `/combined`, `/allattached`, `/allflow`, `/previousoutput`, or `/previousaudit`;
+- zero or more modifier tokens, such as `/audit`, `/fix`, `/eachstep`, `/atend`, `/report`, `/usecompanion`, `/nonai`, `/replacepreview`, or `/nopreviewdata`.
+
+Example: `/execute /fullflow /audit /fix /eachstep` is not one single hardcoded command. It means primary `/execute`, phase `/fullflow`, and modifiers `/audit`, `/fix`, `/eachstep`. Equivalent valid ordering may be normalized when unambiguous. Unknown, contradictory, or lane-invalid token combinations must stop with `ERROR: KIWE_UNKNOWN_COMMAND` or `ERROR: KIWE_WRONG_LANE`, not guess.
 
 Active-contract rule: after you read this Start file and return the first classification response, treat this loaded Start file as the active contract for the immediate next user `/command` in the same conversation. Do not reload the repository, README, GitHub pages, search results, arXiv, commits, old examples, or the Start file again for that next command. If additional command detail is truly required, fetch only the exact raw machine entry or exact raw command manifest URL from this Start file. If exact raw fetch is unavailable, stop with `ERROR: KIWE_TOOL_UNAVAILABLE` or `ERROR: KIWE_SEARCH_DRIFT`; do not search.
 
@@ -120,7 +128,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.76
+SeamFlow contract: 6.77
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -234,7 +242,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.76
+SeamFlow contract: 6.77
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -304,7 +312,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.76
+SeamFlow contract: 6.77
 Command:
 Artifact classification:
 Files returned:

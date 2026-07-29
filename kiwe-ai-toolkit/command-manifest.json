@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.76",
+    "contractVersion": "6.77",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -36,6 +36,7 @@
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
+    "commandGrammar": "SeamFlow commands are composable shell-like tokens, not fixed magic phrases. Parse the user line into one primary action, optional phase/target, and modifiers. Equivalent valid ordering may be normalized when unambiguous; unknown, contradictory, or lane-invalid combinations stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE.",
     "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /audit /eachstep audits after each phase; /audit /fix /eachstep explicitly runs phase -> audit -> fix actual artifact if needed -> same audit again until PASS or NEEDS_INPUT. /audit /atend audits before final delivery; /audit /fix /atend explicitly repairs failed final lanes and reruns audits until PASS or NEEDS_INPUT.",
     "validatorAuthority": "Official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts. If unavailable, report WARN or UNVERIFIED for that lane; do not say PASS or no blocking findings.",
     "fullFlowDiscipline": "/execute /fullflow means one final delivery, not one giant context load. Execute phase-by-phase, read only the context/validator files for the current phase, close that phase with /audit -> /fix -> /audit, then continue.",
@@ -44,7 +45,7 @@
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.76", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.77", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -77,6 +78,18 @@
     "dynamic": "kiwe-ai-toolkit/contexts/dynamic-lite.md",
     "combined": "kiwe-ai-toolkit/contexts/combined-lite.md",
     "audit": "kiwe-ai-toolkit/contexts/audit-lite.md"
+  },
+  "commandGrammar": {
+    "rule": "Tokens are independent and composable. Do not require a memorized full phrase when a command line is unambiguous.",
+    "primaryActions": ["/execute", "/rebuild", "/create", "/convert", "/audit", "/fix", "/usesitegraph", "/apply", "/list", "/document"],
+    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit"],
+    "modifiers": ["/audit", "/fix", "/eachstep", "/atend", "/report", "/usecompanion", "/nonai", "/replacepreview", "/nopreviewdata"],
+    "examples": {
+      "/execute /fullflow /audit /fix /eachstep": "primary /execute, phase /fullflow, modifiers /audit /fix /eachstep",
+      "/execute /stepbystep /audit /fix /eachstep /report": "primary /execute, phase /stepbystep, modifiers /audit /fix /eachstep /report",
+      "/audit /allattached /allflow": "primary /audit, targets /allattached and /allflow"
+    },
+    "invalid": "Unknown tokens, contradictory cadence tokens, or lane-invalid combinations must stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE."
   },
   "commands": {
     "/list": {

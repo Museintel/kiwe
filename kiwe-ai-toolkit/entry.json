@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.76",
+  "contractVersion": "6.77",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -26,7 +26,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.76",
+    "mustReport": "SeamFlow contract: 6.77",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Put the /list command hint last.",
@@ -72,7 +72,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.76",
+      "SeamFlow contract: 6.77",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -132,7 +132,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.76",
+      "SeamFlow contract: 6.77",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -148,6 +148,14 @@
     "doNotReturnCommandListUnless": "/list"
   },
   "flows": {
+    "commandGrammar": {
+      "rule": "SeamFlow commands are composable shell-like tokens, not fixed magic phrases. Parse the whole user command into one primary action, one optional phase/target, and zero or more modifiers.",
+      "primaryActions": ["/execute", "/rebuild", "/create", "/convert", "/audit", "/fix", "/usesitegraph", "/apply", "/list", "/document"],
+      "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit"],
+      "modifiers": ["/audit", "/fix", "/eachstep", "/atend", "/report", "/usecompanion", "/nonai", "/replacepreview", "/nopreviewdata"],
+      "normalization": "Equivalent valid ordering may be normalized when unambiguous. Example: /execute /fullflow /audit /fix /eachstep means primary /execute, phase /fullflow, modifiers /audit /fix /eachstep.",
+      "invalidCombinations": "Unknown, contradictory, or lane-invalid token combinations stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE instead of guessing."
+    },
     "executionCommands": {
       "/execute /stepbystep": "Run only the next safe phase, return the phase artifact, then stop.",
       "/execute /fullflow": "Run the complete safe path to final artifacts.",
@@ -307,7 +315,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.76",
+    "SeamFlow contract: 6.77",
     "Command:",
     "Artifact classification:",
     "Files returned:",
