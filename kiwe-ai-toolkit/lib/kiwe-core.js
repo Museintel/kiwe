@@ -313,6 +313,14 @@ export function getCommandManifest() {
   return JSON.parse(manifest);
 }
 
+export function getStartEntrypoint() {
+  const entry = readMaybe('entry.json');
+  if (!entry) {
+    throw new Error('Kiwe start entrypoint was not found.');
+  }
+  return JSON.parse(entry);
+}
+
 export function getSeamAttributesContext() {
   const context = readMaybe('contexts/seam-attributes-lite.md');
   if (!context) {
@@ -326,8 +334,8 @@ export function listCommands() {
     schema: 'kiwe.command-list.v1',
     canonicalVerb: '/create',
     terminalEntry: {
-      pattern: 'explore: https://github.com/Museintel/kiwe\\n/list',
-      meaning: '`explore:` is a location pointer to the Kiwe toolkit, not permission to crawl the whole repository. Read the public entrypoint, execute the next slash command, then stop when the command asks you to stop.'
+      pattern: 'read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md\\n/list',
+      meaning: 'Read the tiny Kiwe Start entrypoint first. It confirms the contract version, points to the machine-readable manifest, routes the next slash command, and forbids repository crawling.'
     },
     aliases: {
       '/build': 'Legacy alias accepted internally; user-facing output should say /create.',

@@ -2,12 +2,15 @@
   "schema": "kiwe.command-manifest.v1",
   "purpose": "Fast machine-readable slash-command router for browser AIs, IDE AIs, MCP clients, and Companion-assisted Kiwe workflows.",
   "entry": {
-    "humanPattern": "explore: https://github.com/Museintel/kiwe",
-    "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-AI.md",
-    "rule": "Treat explore as a location pointer, not permission to crawl the repository. Read this manifest or KIWE-AI.md, then route the next slash command."
+    "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
+    "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
+    "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
+    "contractVersion": "6.63",
+    "rule": "Read Kiwe Start first, report the contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "globalRules": {
     "readPolicy": [
+      "Read KIWE-START.md or entry.json first when the human gives only the Kiwe repo/link.",
       "Do not read the whole repository.",
       "Do not clone the repository for a slash-command lane unless the human explicitly asks you to inspect implementation source.",
       "Do not search GitHub docs for hidden contracts. This manifest plus the listed context files are the contract for the matched command.",

@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -11,6 +11,11 @@ const server = new Server(
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
+    {
+      name: 'kiwe_get_start',
+      description: 'Return the tiny Kiwe Start entrypoint. Use this before /list or any slash command so the AI confirms contract version, avoids repo crawling, classifies files, and chooses step-by-step or full-flow mode.',
+      inputSchema: { type: 'object', properties: {} }
+    },
     {
       name: 'kiwe_start_project',
       description: 'Start a Kiwe project from a plain-language human brief. Returns the correct compact context and output contract so the human prompt can stay short.',
@@ -227,6 +232,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const args = request.params.arguments || {};
   let result;
   switch (request.params.name) {
+    case 'kiwe_get_start':
+      result = getStartEntrypoint();
+      break;
     case 'kiwe_start_project':
       result = startProject(args);
       break;

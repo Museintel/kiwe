@@ -2,6 +2,20 @@
 
 If you are an AI, designer, or developer using this repository to create a website/page, Kiwe DSA AppShell theme, or combined handoff, do not read the whole codebase first.
 
+Fastest start file:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md
+```
+
+Fastest machine-readable start file:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json
+```
+
+Read one of those first when the human gives only the Kiwe repo/link, no slash command, or an attached artifact. It will confirm the Kiwe Start contract version, classify the artifact, route `/list` or the next `/command`, and ask whether the human wants step-by-step flow or full-flow execution when no command is supplied.
+
 Start with the public toolkit:
 
 ```text
@@ -231,7 +245,7 @@ The conversion must preserve the approved page hierarchy, Seam classes/attribute
 
 When working inside the Bricks front-end editor, admins can enable the Kiwe Studio companion at `Kiwe > AI`. The editor panel uses WordPress nonce-auth routes (`/wp-json/dsa/v1/bricks/studio/context`, `/start`, `/draft`) to fetch the same Bricks + Seam context, plan a page/section, or call native AI when explicitly allowed. The panel is a planning/copilot surface, not a direct mutation surface; staging saves still go through the controlled executor.
 
-For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `6.62` records the compact command manifest, no-clone command routing, `/fix /accessibility` dark-mode token remap recipe, Bricks 2.4 `data-brx-theme` dark-mode compatibility, DSA runtime dark-state sync across `data-kiwe-theme` and `data-brx-theme`, `/fix /accessibility` structural-preservation contract, canonical `/convert /bricks` command, native Bricks upload JSON validation, standalone-file audit support, Framework-profile Bricks Theme Style checks, Studio AI operating-mode routes, native-provider boundary, Bricks AI intelligence routes, Bricks editor companion toggle, SecureTrack shared AI settings boundary, API proof routes, WordPress 7 ability checks, dynamic handoff checks, browser smoke checks, mutation boundaries, deterministic `/create /accessibility` + `/audit /accessibility` color/dark-mode/text-containment lane, tightened Bricks template-upload validator checks, and fail-level `/convert /bricks` token-purity checks for direct component colors in native Bricks settings/global classes/custom CSS.
+For staging proof after uploading the MU folder, use the latest `wp-content/mu-plugins/dsa/site-graph-system/release-proof-*.md` file. Version `6.63` records the tiny `KIWE-START.md` / `entry.json` front door for browser AI, IDE AI, MCP clients, and Companion workflows; compact command manifest routing; no-clone command routing; `/fix /accessibility` dark-mode token remap recipe; Bricks 2.4 `data-brx-theme` dark-mode compatibility; DSA runtime dark-state sync across `data-kiwe-theme` and `data-brx-theme`; `/fix /accessibility` structural-preservation contract; canonical `/convert /bricks` command; native Bricks upload JSON validation; standalone-file audit support; Framework-profile Bricks Theme Style checks; Studio AI operating-mode routes; native-provider boundary; Bricks AI intelligence routes; Bricks editor companion toggle; SecureTrack shared AI settings boundary; API proof routes; WordPress 7 ability checks; dynamic handoff checks; browser smoke checks; mutation boundaries; deterministic `/create /accessibility` + `/audit /accessibility` color/dark-mode/text-containment lane; tightened Bricks template-upload validator checks; and fail-level `/convert /bricks` token-purity checks for direct component colors in native Bricks settings/global classes/custom CSS.
 
 Theme installers can use the same key to review, install, and activate Kiwe DSA theme packages:
 

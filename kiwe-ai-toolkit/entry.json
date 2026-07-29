@@ -1,0 +1,100 @@
+{
+  "schema": "kiwe.start.v1",
+  "contractVersion": "6.63",
+  "updated": "2026-07-29",
+  "repository": "Museintel/kiwe",
+  "purpose": "Fast safe entrypoint for browser AI, IDE AI, MCP clients, and Kiwe Companion-assisted workflows.",
+  "doNot": [
+    "Do not browse, clone, or inspect the whole repository for startup.",
+    "Do not search GitHub for hidden contracts.",
+    "Do not create docs, reports, ZIP files, duplicate previews, or long explanations unless /document is present.",
+    "Do not start generation when no command/flow has been selected."
+  ],
+  "firstResponse": {
+    "mustReport": "Kiwe Start contract: 6.63",
+    "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
+    "ifOtherCommand": "Route only that command; read only the listed context files.",
+    "ifFilesNoCommand": "Classify supplied files and ask whether the human wants step-by-step flow or full-flow execution.",
+    "ifNoFilesNoCommand": "Ask what the human wants to create, rebuild, audit, fix, or convert."
+  },
+  "rawFiles": {
+    "markdownEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
+    "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
+    "commandManifest": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json",
+    "workflow": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md"
+  },
+  "mcpPreference": {
+    "rule": "If Kiwe MCP/tools are available, use tools before reading prose.",
+    "sequence": [
+      "kiwe_get_start",
+      "kiwe_get_command_manifest",
+      "kiwe_diagnose_command",
+      "kiwe_route_command",
+      "lane validator such as kiwe_validate_bricks_conversion, kiwe_validate_accessibility, or kiwe_validate_framework_profile"
+    ],
+    "fallback": "If MCP/tool access fails, continue with rawFiles.machineEntrypoint and rawFiles.commandManifest."
+  },
+  "classifier": {
+    "rawHtmlCssJs": ".html with <html, <style, visible page markup, and no Bricks template root",
+    "seamPage": "website/bricks-paste.html with official seam-* classes, official data-role/data-flow, and Kiwe capability attributes where needed",
+    "frameworkProfile": "JSON with schema kiwe.framework-profile.v1",
+    "bricksThemeStyle": "Bricks Theme Style JSON with label and settings",
+    "bricksTemplateUpload": "JSON with title, templateType, and non-empty content/header/footer",
+    "bricksConversionEnvelope": "JSON with schema kiwe.bricks-conversion.v1",
+    "dsaThemePackage": "appshell-theme/import/[theme-id]/theme.json, theme-package.json, and css/theme.css",
+    "combinedHandoff": "contains combined-preview, website, and appshell-theme lanes"
+  },
+  "flows": {
+    "rawHtmlCssJsToBricks": [
+      "/rebuild /seamframework",
+      "/audit /seamframework",
+      "/fix /seamframework if audit fails",
+      "/create /frameworkprofile",
+      "/audit /frameworkprofile",
+      "/fix /frameworkprofile if audit fails",
+      "/convert /bricks",
+      "/audit /bricksconversion",
+      "/fix /bricksconversion if audit fails",
+      "/audit /accessibility",
+      "/fix /accessibility if audit fails"
+    ],
+    "fullFlowStopRule": "Stop at the first blocking audit failure that cannot be fixed from the supplied artifact.",
+    "fullFlowDefaultFinalArtifacts": [
+      "framework/kiwe-framework-profile.json",
+      "bricks-template/[page-name]-template-upload.json"
+    ]
+  },
+  "seamPurityRule": {
+    "appliesTo": [
+      "/rebuild /seamframework",
+      "/convert /bricks",
+      "/audit /bricksconversion",
+      "/fix /bricksconversion"
+    ],
+    "must": [
+      "Preserve design quality.",
+      "Use official Seam semantic roles/classes/flows.",
+      "Use Kiwe/Appsite capability attributes instead of duplicate runtime behavior.",
+      "Use Kiwe/Seam variables or declared project variables for visual values.",
+      "Use real fluid clamps only when source responsive states prove different min/max values."
+    ],
+    "fail": [
+      "no-op clamps such as clamp(22px, 22px, 22px)",
+      "direct component colors such as #fff, rgba(...), hardcoded gradient stops, or --pack-bg: #... in Bricks element settings/global classes/custom CSS",
+      "anonymous hardcoded lengths in token-owned Bricks settings/global classes"
+    ],
+    "allowed": [
+      "literal colors and fixed primitive values at token/global-variable definition layer",
+      "literal fallback values inside var(...), such as var(--kiwe-color-text, #201b18)"
+    ]
+  },
+  "defaultFinalResponse": [
+    "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
+    "Kiwe Start contract: 6.63",
+    "Command:",
+    "Files returned:",
+    "Blocking findings:",
+    "Warnings:",
+    "Next suggested command:"
+  ]
+}
