@@ -69,7 +69,7 @@ Universal Appsite capability attributes are part of Seam's public framework laye
 
 ## Bricks path
 
-Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
+Compatible Bricks targets may expose an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
 
 - avoid generated Bricks IDs;
 - avoid heavy inline styles;
@@ -141,7 +141,7 @@ Seam roles are semantic/headless by default. Do not ask an AI to maximize `data-
 
 ## Bricks path
 
-Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This means a good standalone preview should be built so it can travel into Bricks:
+Compatible Bricks targets may expose an HTML-to-Bricks converter pipeline. This means a good standalone preview should be built so it can travel into Bricks:
 
 - semantic HTML;
 - class-based CSS;
@@ -233,7 +233,7 @@ Do not attach high-impact classes such as `seam-card`, `seam-button`, `seam-inpu
 
 Use Bricks as the page-design authority. Do not hardcode site-specific Bricks element IDs or copy Bricks post meta between sites.
 
-Bricks 2.4 beta includes an HTML-to-Bricks converter pipeline. Make standalone previews conversion-friendly: semantic HTML, class-based CSS, reusable variables, limited inline styles, and clear separation between preview-only JavaScript and production behavior.
+Compatible Bricks targets may expose an HTML-to-Bricks converter pipeline. Make standalone previews conversion-friendly: semantic HTML, class-based CSS, reusable variables, limited inline styles, and clear separation between preview-only JavaScript and production behavior.
 
 ## Preview requirements
 
@@ -417,7 +417,7 @@ Batch 19 records the first external-AI theme intake audit at `theme-intake-audit
 
 Batch 20 begins the Seam framework merge. `assets/css/seam.css` is now the production-safe, opt-in Seam class/attribute layer for WordPress pages and future Bricks exports. `includes/Design/Seam_Vocabulary_Schema.php`, `seam-vocabulary.md`, and `seam-vocabulary.json` define the canonical vocabulary: roles, flows, tones, scenes, states, motion, shapes, body classes, and reserved behavior attributes. The old Seam runtime ideas remain reserved; Batch 20 does not create a second cart/auth/checkout/page-history authority.
 
-Batch 21 exports Seam into Bricks without making Bricks the framework authority. The existing Kiwe token export now also publishes curated Seam global classes/categories to Bricks 2.4 global class storage while Kiwe continues to ship `assets/css/seam.css` as the portable source of styling. Attribute/class parity was tightened for gap, alignment, justification, and hidden state helpers so page builders, AI handoffs, and raw HTML can use the same vocabulary.
+Batch 21 exports Seam into Bricks without making Bricks the framework authority. The existing Kiwe token export now also publishes curated Seam global classes/categories to Bricks global class storage while Kiwe continues to ship `assets/css/seam.css` as the portable source of styling. Attribute/class parity was tightened for gap, alignment, justification, and hidden state helpers so page builders, AI handoffs, and raw HTML can use the same vocabulary.
 
 Batch 22 adds the safe Seam runtime at `assets/js/seam.js`. It exposes `window.Seam.ready`, vocabulary-aware query/closest helpers, `setAttr`, `setState`, `toggleState`, `hasState`, and `describe`. It deliberately does not revive the old Seam binding/action system in production and does not own cart, checkout, auth, PhoneKey, service workers, page history, focus traps, or DSA surface lifecycle.
 
@@ -445,7 +445,7 @@ Batch 33 completes release prep for the Seam/Kiwe Framework track. `Kiwe > Token
 
 Batch 34 adds `framework-system/` as the portable Kiwe Framework handoff folder. It contains curated Seam vocabulary, token map, runtime snapshots, Bricks capability docs, framework prompt, source map, and reference audit tooling so web developers can use Kiwe/Seam without receiving the whole plugin. `ui-system/` remains the AppShell theme brain; `framework-system/` is the framework brain.
 
-Batch 35 tightens the framework after external developer review and AI website/page-output audits. `window.Seam` now validates against both nested and flat vocabulary contracts, mirrors the `collapsed` state class, and ships as 0.3.1. The Seam CSS no longer has a self-referential scene-intensity fallback, body heading identity classes now affect scene headings, and the debug linter flags shadow-only public Seam classes placed inside live Kiwe roots. `framework-system/HANDOFF-LITE.md` defines the smaller file set to give ordinary web developers/AIs, while the framework prompt and Bricks notes now explicitly separate Seam-built website/page work from Kiwe AppShell theme work. Seam is optional/additive for website pages; Kiwe AppShell themes remain `ui-system/`; DSA/Woo/Bricks behavior authority remains core-owned. Bricks 2.4 beta's `includes/html-to-bricks` converter is now documented as a real handoff target for standalone website previews.
+Batch 35 tightens the framework after external developer review and AI website/page-output audits. `window.Seam` now validates against both nested and flat vocabulary contracts, mirrors the `collapsed` state class, and ships as 0.3.1. The Seam CSS no longer has a self-referential scene-intensity fallback, body heading identity classes now affect scene headings, and the debug linter flags shadow-only public Seam classes placed inside live Kiwe roots. `framework-system/HANDOFF-LITE.md` defines the smaller file set to give ordinary web developers/AIs, while the framework prompt and Bricks notes now explicitly separate Seam-built website/page work from Kiwe AppShell theme work. Seam is optional/additive for website pages; Kiwe AppShell themes remain `ui-system/`; DSA/Woo/Bricks behavior authority remains core-owned. Verified Bricks converter/import abilities are documented as handoff targets for standalone website previews without making Bricks the framework authority.
 
 Batch 36 adds `framework-system/handoffs/website-builder/` as the one-folder website/page handoff. It copies only the practical framework prompt, handoff-lite instructions, token/vocabulary contracts, runtime CSS/JS, and Bricks capability docs needed by an AI/web developer to build a normal website/page with Kiwe/Seam. This avoids giving the full framework source/reference folder for ordinary website work while keeping AppShell theme work separate in `ui-system/`.
 

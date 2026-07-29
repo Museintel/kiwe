@@ -285,7 +285,7 @@ Create `BINDING-NOTES.md` only when `/document` was requested. When requested, i
 - any assumptions;
 - items requiring human/site-owner review;
 - which parts are still preview-only;
-- whether applying the plan requires Bricks 2.4 abilities, manual Bricks builder work, or a future Kiwe adapter.
+- whether applying the plan requires verified Bricks converter/import abilities, manual Bricks builder work, or a future Kiwe adapter.
 
 Do not claim that Bricks, WordPress, WooCommerce, or Kiwe were mutated unless an actual trusted apply tool ran.
 

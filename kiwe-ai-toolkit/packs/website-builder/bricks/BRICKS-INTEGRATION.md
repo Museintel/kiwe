@@ -3,12 +3,12 @@
 Primary source currently verified at:
 
 ```text
-C:\Users\shariq\Downloads\bricks.2.4-beta\bricks
+<optional local Bricks source checkout>
 ```
 
-## Bricks 2.4 HTML-to-Bricks converter
+## Bricks HTML-to-Bricks converter
 
-Bricks 2.4 beta includes an HTML-to-Bricks conversion pipeline under:
+Some compatible Bricks targets expose an HTML-to-Bricks conversion pipeline under:
 
 ```text
 includes/html-to-bricks/

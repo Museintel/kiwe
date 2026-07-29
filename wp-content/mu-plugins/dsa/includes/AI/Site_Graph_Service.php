@@ -143,7 +143,7 @@ final class Site_Graph_Service {
 				'mutatesContent' => false,
 				'restRoute'   => '/wp-json/dsa/v1/ai/validate-bricks-conversion',
 				'aiKeyScopes' => [ 'validate_bricks_conversion', 'all' ],
-				'useFor'      => [ 'HTML/CSS/JS to native Bricks My Templates upload JSON', 'optional embedded Kiwe fidelity metadata', 'Seam and Kiwe launcher preservation', 'dynamic tag and query-loop fidelity', 'responsive/grid fidelity including bento, Bricks 2.4 controlKey:breakpoint overrides, and custom breakpoint keys', 'condition and interaction audit', 'pre-staging conversion gate' ],
+				'useFor'      => [ 'HTML/CSS/JS to native Bricks My Templates upload JSON', 'optional embedded Kiwe fidelity metadata', 'Seam and Kiwe launcher preservation', 'dynamic tag and query-loop fidelity', 'responsive/grid fidelity including bento, Bricks controlKey:breakpoint overrides, and custom breakpoint keys', 'condition and interaction audit', 'pre-staging conversion gate' ],
 			],
 			'accessibility' => [
 				'schema'      => 'kiwe.accessibility-plan.v1',

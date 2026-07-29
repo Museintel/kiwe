@@ -213,6 +213,9 @@ const MAPPABLE_CSS_NATIVE_STYLE_RATIO = 0.45;
 const LARGE_CLIPBOARD_ELEMENT_COUNT = 180;
 const TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES = 2500;
 const TEMPLATE_UPLOAD_MAPPABLE_CSS_DECLARATION_MIN = 12;
+const TEMPLATE_UPLOAD_MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
+const TEMPLATE_UPLOAD_MAX_CLASS_ONLY_ELEMENT_RATIO = 0.25;
+const SUPPORTED_TEMPLATE_BRICKS_VERSION_RE = /^2\.3(?:\.|$)/;
 
 function isPlainObject(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -524,6 +527,32 @@ function collectNativeStyleControlsFromItems(items) {
     }
   }
   return controls;
+}
+
+function countNativeStyleControlsOnItem(item) {
+  const settings = elementSettings(item);
+  let count = 0;
+  for (const key of Object.keys(settings)) {
+    if (NATIVE_STYLE_CONTROL_RE.test(key) && !/^_cssCustom(?::|$)/.test(key)) count += 1;
+  }
+  return count;
+}
+
+function collectTemplateEditabilityStats(templateElements) {
+  const elements = asArray(templateElements);
+  const elementNativeControls = elements.reduce((sum, element) => sum + countNativeStyleControlsOnItem(element), 0);
+  const classOnlyElements = elements.filter((element) => {
+    const settings = elementSettings(element);
+    return countNativeStyleControlsOnItem(element) === 0 && asArray(settings._cssGlobalClasses).length > 0;
+  }).length;
+  const elementCount = elements.length;
+  return {
+    elementCount,
+    elementNativeControls,
+    classOnlyElements,
+    elementNativeControlsPerElement: elementCount ? elementNativeControls / elementCount : 0,
+    classOnlyElementRatio: elementCount ? classOnlyElements / elementCount : 0
+  };
 }
 
 function hasLiteralLength(value) {
@@ -946,6 +975,14 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
   }
   if (!String(templateData.version || '').trim()) {
     add(findings, 'warn', 'Bricks template export should include the target Bricks version used to author/verify the native template.', rel(root, templatePath), '$.version');
+  } else if (!SUPPORTED_TEMPLATE_BRICKS_VERSION_RE.test(String(templateData.version || '').trim())) {
+    add(
+      findings,
+      'fail',
+      `Bricks template export declares version "${String(templateData.version || '').trim()}". Kiwe production template uploads currently target the public Bricks 2.3.x importer/runtime; do not emit unreleased/beta 2.4 template metadata unless the contract is explicitly updated after a public Bricks release.`,
+      rel(root, templatePath),
+      '$.version'
+    );
   }
   if (Array.isArray(templateData.globalClasses) && templateData.globalClasses.length && !Array.isArray(templateData.global_classes)) {
     add(
@@ -1011,6 +1048,31 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       findings,
       'fail',
       `Large Bricks template export has ${templateElements.length} elements but only ${templateNativeControls.length} native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.`,
+      rel(root, templatePath),
+      '$.content'
+    );
+  }
+  const editabilityStats = collectTemplateEditabilityStats(templateElements);
+  if (
+    editabilityStats.elementCount >= LARGE_CLIPBOARD_ELEMENT_COUNT &&
+    editabilityStats.elementNativeControlsPerElement < TEMPLATE_UPLOAD_MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT
+  ) {
+    add(
+      findings,
+      'fail',
+      `Large Bricks template export has ${editabilityStats.elementNativeControls} element-level native style/layout controls across ${editabilityStats.elementCount} elements (${editabilityStats.elementNativeControlsPerElement.toFixed(2)} per element). This is too class-dependent for a visual-editor handoff: grid/flex, spacing, sizing, typography, color, borders, radius, shadows, and responsive overrides must be editable on elements where the source design depends on them, not only in importable global_classes.`,
+      rel(root, templatePath),
+      '$.content'
+    );
+  }
+  if (
+    editabilityStats.elementCount >= LARGE_CLIPBOARD_ELEMENT_COUNT &&
+    editabilityStats.classOnlyElementRatio > TEMPLATE_UPLOAD_MAX_CLASS_ONLY_ELEMENT_RATIO
+  ) {
+    add(
+      findings,
+      'fail',
+      `Large Bricks template export has ${editabilityStats.classOnlyElements} of ${editabilityStats.elementCount} elements (${Math.round(editabilityStats.classOnlyElementRatio * 100)}%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.`,
       rel(root, templatePath),
       '$.content'
     );

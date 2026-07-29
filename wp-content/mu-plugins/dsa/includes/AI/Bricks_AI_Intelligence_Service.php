@@ -621,8 +621,9 @@ final class Bricks_AI_Intelligence_Service {
 				'requireQueryIntentWhenSourceHasDataKiweQueryTemplate' => true,
 				'requireResponsiveIntentForComplexGridOrBreakpointOverrides' => true,
 				'requireTokenizedNativeLengths' => true,
-				'responsiveIntentRule' => 'Bento/campaign/editorial grids, CSS grid columns/rows/spans, media-query layout changes, and Bricks responsive layout overrides must name breakpoint/range, source selector, mapped Bricks element IDs, and preserved grid/flex behavior. Bricks 2.4 stores responsive controls as controlKey:breakpoint, including _direction:<breakpoint>, _flexDirection:<breakpoint>, grid controls, _cssCustom:<breakpoint>, and custom site breakpoint keys.',
+				'responsiveIntentRule' => 'Bento/campaign/editorial grids, CSS grid columns/rows/spans, media-query layout changes, and Bricks responsive layout overrides must name breakpoint/range, source selector, mapped Bricks element IDs, and preserved grid/flex behavior. Bricks stores responsive controls as controlKey:breakpoint, including _direction:<breakpoint>, _flexDirection:<breakpoint>, grid controls, _cssCustom:<breakpoint>, and custom site breakpoint keys.',
 				'tokenPurityRule' => 'Bricks-native does not mean hardcoded-native. Element settings and importable global_classes must not contain bare literal design lengths for padding/gaps/radius/min-height/type/shadows/transforms; use var(--kiwe-*), var(--seam-*), declared project variables, or real tokenized clamp() values backed by the Kiwe Framework profile. No-op clamps such as clamp(22px, 22px, 22px) are disguised literals and must fail.',
+				'editableImportRule' => 'Target public Bricks 2.3.x template import/runtime unless Site Graph confirms a newer public compatible version. Bricks My Templates can skip or remap global_classes when class names already exist, so full-page templates must include enough element-level native controls for rendered fidelity and visual-editor editability instead of depending mainly on class hydration.',
 				'fields' => [ 'sourceSelectors', 'elementMapping', 'dynamicIntent', 'responsiveIntent', 'interactions', 'conditions', 'unsupported' ],
 			],
 			'forbidden' => [
@@ -644,7 +645,9 @@ final class Bricks_AI_Intelligence_Service {
 			'Use /wp-json/dsa/v1/ai/site-graph and /ai/site-graph-data for real pages, products, posts, media, custom fields, post types, taxonomies, and term IDs.',
 			'Use /wp-json/dsa/v1/ai/studio/start before native/browser-AI collaboration so the model sees Kiwe + Bricks + Seam boundaries in one packet.',
 			'Use /convert /bricks only after the visual/Seam artifact is approved; output a token-pure native Bricks My Templates upload JSON, not a Kiwe wrapper for human upload.',
+			'Target public Bricks 2.3.x for production template uploads unless Site Graph confirms a newer public compatible version; do not emit beta/unreleased Bricks metadata.',
 			'Do not hardcode Bricks-native design lengths. Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() values in element settings and global_classes so the Framework profile can actually drive the page. Never use no-op clamp(v, v, v) wrappers to silence audits.',
+			'Do not rely mainly on global_classes hydration for full-page rendered fidelity; Bricks can skip/remap existing class names, so keep enough native controls directly on elements.',
 			'Run /audit /bricksconversion or validate-bricks-conversion before staging.',
 			'Never paste runtime cart/checkout/auth logic into Bricks; use Kiwe/WordPress/WooCommerce authority instead.',
 		];

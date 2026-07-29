@@ -298,7 +298,7 @@ bricks-bindings/
   kiwe-bindings.json
 ```
 
-This is a binding plan, not a direct mutation. It maps placeholder rails/cards/buttons to Bricks query loops, dynamic data tags, and Kiwe launchers using real site terms/pages/products. Later trusted apply adapters can use Bricks 2.4 abilities to convert/import/apply after validation.
+This is a binding plan, not a direct mutation. It maps placeholder rails/cards/buttons to Bricks query loops, dynamic data tags, and Kiwe launchers using real site terms/pages/products. Later trusted apply adapters can use verified Bricks abilities to convert/import/apply after validation.
 
 Validate the binding plan before accepting it:
 
@@ -317,7 +317,7 @@ bricks-template/
   page-or-template-name-template-upload.json
 ```
 
-This is the no-loss bridge between approved HTML/CSS and Bricks JSON. It should prefer Bricks 2.4 native HTML/CSS conversion where the target site exposes it, then add Kiwe fidelity evidence inside the upload JSON when practical: source selectors, element mapping, query-loop/dynamic intent, conditions, interactions, unsupported features, manual-review notes, and preserved Seam/Kiwe attributes.
+This is the no-loss bridge between approved HTML/CSS and Bricks JSON. It targets the public Bricks 2.3.x My Templates importer/runtime unless Site Graph or the human confirms a newer public compatible version, then adds Kiwe fidelity evidence inside the upload JSON when practical: source selectors, element mapping, query-loop/dynamic intent, conditions, interactions, unsupported features, manual-review notes, and preserved Seam/Kiwe attributes. The template must remain resilient if Bricks skips/remaps existing global class names, so full-page outputs need enough element-level native controls and cannot rely mainly on class hydration.
 
 The file must match Bricks' import shape: a root `title`, `templateType`, and non-empty `content`, `header`, or `footer` array. For a homepage body use `title: "Home"` and `templateType: "content"`. Do not upload `bricks-conversion/kiwe-bricks-conversion.json` to Bricks; that optional wrapper is not a My Templates upload file and Bricks will import it as `(no title)` with no insertable data.
 

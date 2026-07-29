@@ -63,7 +63,7 @@ Use `capabilityAttributes` from `contracts/seam-vocabulary.json` when the UI alr
 
 ## Bricks path
 
-Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
+Compatible Bricks targets may expose an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
 
 - avoid generated Bricks IDs;
 - avoid heavy inline styles;

@@ -126,6 +126,9 @@ final class Bricks_Conversion_Validator {
 	private const TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN = 12;
 	private const LARGE_TEMPLATE_ELEMENT_COUNT     = 180;
 	private const MIN_NATIVE_STYLE_CONTROLS        = 60;
+	private const MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
+	private const MAX_CLASS_ONLY_ELEMENT_RATIO            = 0.25;
+	private const SUPPORTED_TEMPLATE_BRICKS_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
 	private const TOKEN_FINDING_LIMIT              = 40;
 	private const COLOR_FINDING_LIMIT              = 40;
 
@@ -286,6 +289,8 @@ final class Bricks_Conversion_Validator {
 
 		if ( empty( $template['version'] ) ) {
 			$this->add( $findings, 'warn', 'bricks_template_missing_version', 'Bricks template export should include the target Bricks version used to author/verify the native template.', '$.version' );
+		} elseif ( ! preg_match( self::SUPPORTED_TEMPLATE_BRICKS_VERSION_PATTERN, (string) $template['version'] ) ) {
+			$this->add( $findings, 'fail', 'bricks_template_unsupported_target_version', sprintf( 'Bricks template export declares version "%s". Kiwe production template uploads currently target the public Bricks 2.3.x importer/runtime; do not emit unreleased/beta 2.4 template metadata unless the contract is explicitly updated after a public Bricks release.', (string) $template['version'] ), '$.version' );
 		}
 
 		foreach ( $elements as $position => $element ) {
@@ -329,6 +334,14 @@ final class Bricks_Conversion_Validator {
 		);
 		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $native_controls < self::MIN_NATIVE_STYLE_CONTROLS ) {
 			$this->add( $findings, 'fail', 'bricks_template_not_native_editable_enough', sprintf( 'Large Bricks template export has %1$d elements but only %2$d native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.', count( $elements ), $native_controls ), '$.content' );
+		}
+
+		$editability = $this->template_editability_stats( $elements );
+		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $editability['controls_per_element'] < self::MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT ) {
+			$this->add( $findings, 'fail', 'bricks_template_element_native_controls_too_low', sprintf( 'Large Bricks template export has %1$d element-level native style/layout controls across %2$d elements (%3$.2f per element). This is too class-dependent for a visual-editor handoff: grid/flex, spacing, sizing, typography, color, borders, radius, shadows, and responsive overrides must be editable on elements where the source design depends on them, not only in importable global_classes.', $editability['element_controls'], count( $elements ), $editability['controls_per_element'] ), '$.content' );
+		}
+		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $editability['class_only_ratio'] > self::MAX_CLASS_ONLY_ELEMENT_RATIO ) {
+			$this->add( $findings, 'fail', 'bricks_template_class_hydration_dependency', sprintf( 'Large Bricks template export has %1$d of %2$d elements (%3$d%%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.', $editability['class_only_elements'], count( $elements ), (int) round( $editability['class_only_ratio'] * 100 ) ), '$.content' );
 		}
 	}
 
@@ -693,6 +706,42 @@ final class Bricks_Conversion_Validator {
 			}
 		}
 		return $count;
+	}
+
+	private function count_native_style_controls_on_item( array $item ): int {
+		if ( ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+			return 0;
+		}
+		$count = 0;
+		foreach ( array_keys( $item['settings'] ) as $key ) {
+			if ( preg_match( self::NATIVE_STYLE_CONTROL_PATTERN, (string) $key ) && ! preg_match( '/^_cssCustom(?::|$)/', (string) $key ) ) {
+				++$count;
+			}
+		}
+		return $count;
+	}
+
+	private function template_editability_stats( array $elements ): array {
+		$element_controls    = 0;
+		$class_only_elements = 0;
+		foreach ( $elements as $element ) {
+			if ( ! is_array( $element ) ) {
+				continue;
+			}
+			$controls = $this->count_native_style_controls_on_item( $element );
+			$element_controls += $controls;
+			$classes = isset( $element['settings']['_cssGlobalClasses'] ) && is_array( $element['settings']['_cssGlobalClasses'] ) ? $element['settings']['_cssGlobalClasses'] : [];
+			if ( 0 === $controls && [] !== $classes ) {
+				++$class_only_elements;
+			}
+		}
+		$total = count( $elements );
+		return [
+			'element_controls'     => $element_controls,
+			'class_only_elements'  => $class_only_elements,
+			'controls_per_element' => $total > 0 ? $element_controls / $total : 0.0,
+			'class_only_ratio'     => $total > 0 ? $class_only_elements / $total : 0.0,
+		];
 	}
 
 	private function validate_tokenized_native_lengths( array $items, array &$findings, string $path, array $declared_variables = [] ): void {

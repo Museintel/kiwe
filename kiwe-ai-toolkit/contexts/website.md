@@ -78,7 +78,7 @@ Do not use protected `data-seam-*` shadow metadata, admin-only attributes, or pr
 
 ## Bricks path
 
-Bricks 2.4 beta has an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
+Compatible Bricks targets may expose an HTML-to-Bricks converter. Make the standalone preview conversion-friendly:
 
 - avoid generated Bricks IDs;
 - avoid heavy inline styles;
@@ -150,7 +150,7 @@ Seam roles are semantic/headless by default. Do not ask an AI to maximize `data-
 
 ## Bricks path
 
-Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This means a good standalone preview should be built so it can travel into Bricks:
+Compatible Bricks targets may expose an HTML-to-Bricks converter pipeline. This means a good standalone preview should be built so it can travel into Bricks:
 
 - semantic HTML;
 - class-based CSS;
@@ -242,7 +242,7 @@ Do not attach high-impact classes such as `seam-card`, `seam-button`, `seam-inpu
 
 Use Bricks as the page-design authority. Do not hardcode site-specific Bricks element IDs or copy Bricks post meta between sites.
 
-Bricks 2.4 beta includes an HTML-to-Bricks converter pipeline. Make standalone previews conversion-friendly: semantic HTML, class-based CSS, reusable variables, limited inline styles, and clear separation between preview-only JavaScript and production behavior.
+Compatible Bricks targets may expose an HTML-to-Bricks converter pipeline. Make standalone previews conversion-friendly: semantic HTML, class-based CSS, reusable variables, limited inline styles, and clear separation between preview-only JavaScript and production behavior.
 
 ## Preview requirements
 

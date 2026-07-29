@@ -142,7 +142,7 @@ Use Kiwe/Seam native theme state:
 
 - `data-kiwe-theme="light"` / `data-kiwe-theme="dark"` for Kiwe/AppShell-aware surfaces;
 - `data-kiwe-theme-toggle` for page controls that toggle the site/app theme outside the dock;
-- `data-brx-theme="light"` / `data-brx-theme="dark"` when the artifact targets Bricks' native frontend color mode; Bricks 2.4 sets this on `:root`/`html` and emits dark palette variables under `:root[data-brx-theme="dark"]`;
+- `data-brx-theme="light"` / `data-brx-theme="dark"` when the target Bricks site exposes native frontend color mode; Bricks may set this on `:root`/`html` and emit dark palette variables under `:root[data-brx-theme="dark"]`;
 - `data-theme="light"` / `data-theme="dark"` only when the artifact is standalone and clearly maps back to Kiwe theme state;
 - `prefers-color-scheme: dark` may be a fallback, not the only proof when Kiwe theme state exists.
 
@@ -240,7 +240,7 @@ The concrete hex values may differ by brand, but the structure should not. Brand
 
 ## Bricks native theme-style alignment
 
-Bricks 2.4 theme-style color controls map global color slots at `:where(:root)`, including:
+Bricks theme-style color controls map global color slots at `:where(:root)` on compatible sites, including:
 
 - `colorPrimary`;
 - `colorSecondary`;
@@ -254,7 +254,7 @@ Bricks 2.4 theme-style color controls map global color slots at `:where(:root)`,
 - `colorDanger`;
 - `siteBackground`.
 
-Bricks 2.4 frontend color mode is native but separate from Kiwe's AppShell state:
+Bricks frontend color mode is native but separate from Kiwe's AppShell state when available:
 
 - Bricks sets `document.documentElement.dataset.brxTheme` from `localStorage.brx_mode`, the Bricks default mode, or `prefers-color-scheme`;
 - Bricks emits light palette variables at `:root` and dark palette variables at `:root[data-brx-theme="dark"]`;

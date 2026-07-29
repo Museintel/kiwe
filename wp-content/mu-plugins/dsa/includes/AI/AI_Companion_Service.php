@@ -26,6 +26,9 @@ final class AI_Companion_Service {
 	private const BRICKS_TOKENIZED_LENGTH_PATTERN     = '/var\(\s*--(?:kiwe|seam)-|clamp\(/i';
 	private const BRICKS_SELF_CLAMP_LENGTH_PATTERN    = '/clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i';
 	private const BRICKS_TOKEN_FINDING_LIMIT          = 40;
+	private const BRICKS_SUPPORTED_TEMPLATE_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
+	private const BRICKS_MIN_ELEMENT_CONTROLS_PER_ELEMENT   = 1.15;
+	private const BRICKS_MAX_CLASS_ONLY_ELEMENT_RATIO       = 0.25;
 
 	public function __construct(
 		private Settings $settings,
@@ -816,7 +819,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Prefer Bricks native conversion when available, preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native settings/global_classes: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native settings/global_classes: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Bricks can skip or remap global class definitions when class names already exist, so full-page templates must keep enough element-level native controls for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides; do not depend mainly on global_classes hydration. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -927,8 +930,8 @@ final class AI_Companion_Service {
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
-				'do'      => [ 'Prefer Bricks 2.4 native conversion when available.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.' ],
-				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
+				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
+				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
 		if ( str_contains( $question_lc, 'theme' ) || str_contains( $question_lc, 'dsa' ) || 'theme' === $mode ) {
@@ -1391,6 +1394,14 @@ final class AI_Companion_Service {
 				'path'     => sanitize_text_field( $path ),
 			];
 		}
+		if ( ! empty( $data['version'] ) && ! preg_match( self::BRICKS_SUPPORTED_TEMPLATE_VERSION_PATTERN, (string) $data['version'] ) ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_unsupported_target_version',
+				'message'  => sprintf( 'Bricks template upload declares version "%s". Kiwe production template uploads currently target the public Bricks 2.3.x importer/runtime; do not emit unreleased/beta 2.4 template metadata unless the contract is explicitly updated after a public Bricks release.', (string) $data['version'] ),
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
 
 		$template_text = (string) wp_json_encode( $data );
 		if ( preg_match( '/data-dsa-surface|data-dsa-screen|data-dsa-dock|data-dsa-sheet/i', $template_text ) ) {
@@ -1449,6 +1460,23 @@ final class AI_Companion_Service {
 				'path'     => sanitize_text_field( $path ),
 			];
 		}
+		$editability = $this->bricks_template_editability_stats( $elements );
+		if ( count( $elements ) >= 180 && $editability['controls_per_element'] < self::BRICKS_MIN_ELEMENT_CONTROLS_PER_ELEMENT ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_element_native_controls_too_low',
+				'message'  => sprintf( 'Large Bricks template upload has %1$d element-level native style/layout controls across %2$d elements (%3$.2f per element). This is too class-dependent for a visual-editor handoff: grid/flex, spacing, sizing, typography, color, borders, radius, shadows, and responsive overrides must remain editable on elements where the source design depends on them, not only in importable global_classes.', $editability['element_controls'], count( $elements ), $editability['controls_per_element'] ),
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
+		if ( count( $elements ) >= 180 && $editability['class_only_ratio'] > self::BRICKS_MAX_CLASS_ONLY_ELEMENT_RATIO ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_class_hydration_dependency',
+				'message'  => sprintf( 'Large Bricks template upload has %1$d of %2$d elements (%3$d%%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.', $editability['class_only_elements'], count( $elements ), (int) round( $editability['class_only_ratio'] * 100 ) ),
+				'path'     => sanitize_text_field( $path ),
+			];
+		}
 
 		return $findings;
 	}
@@ -1482,6 +1510,42 @@ final class AI_Companion_Service {
 		}
 
 		return $count;
+	}
+
+	private function count_bricks_native_style_controls_on_item( array $item ): int {
+		$count    = 0;
+		$settings = isset( $item['settings'] ) && is_array( $item['settings'] ) ? $item['settings'] : [];
+		foreach ( array_keys( $settings ) as $key ) {
+			if ( preg_match( '/^_(?:typography|background|gradient|border|boxShadow|transform|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/', (string) $key ) && ! preg_match( '/^_cssCustom(?::|$)/', (string) $key ) ) {
+				$count++;
+			}
+		}
+
+		return $count;
+	}
+
+	private function bricks_template_editability_stats( array $elements ): array {
+		$element_controls    = 0;
+		$class_only_elements = 0;
+		foreach ( $elements as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+			$item_controls = $this->count_bricks_native_style_controls_on_item( $item );
+			$element_controls += $item_controls;
+			$classes = $item['settings']['_cssGlobalClasses'] ?? [];
+			if ( 0 === $item_controls && is_array( $classes ) && count( $classes ) > 0 ) {
+				$class_only_elements++;
+			}
+		}
+
+		$total = max( 1, count( $elements ) );
+		return [
+			'element_controls'     => $element_controls,
+			'controls_per_element' => $element_controls / $total,
+			'class_only_elements'  => $class_only_elements,
+			'class_only_ratio'     => $class_only_elements / $total,
+		];
 	}
 
 	private function review_bricks_tokenized_native_lengths( array $items, string $path, string $base_path, array $declared_variables = [] ): array {

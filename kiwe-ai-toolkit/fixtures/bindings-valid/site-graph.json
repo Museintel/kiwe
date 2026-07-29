@@ -45,7 +45,7 @@
   },
   "bricks": {
     "active": true,
-    "version": "2.4-beta",
+    "version": "2.3.10",
     "queryLoopTypes": [
       {
         "objectType": "post",

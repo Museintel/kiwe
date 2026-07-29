@@ -42,7 +42,7 @@ Seam roles are semantic/headless by default. Do not ask an AI to maximize `data-
 
 ## Bricks path
 
-Bricks 2.4 beta includes an `includes/html-to-bricks` converter pipeline. This means a good standalone preview should be built so it can travel into Bricks:
+Compatible Bricks targets may expose an HTML-to-Bricks converter pipeline. This means a good standalone preview should be built so it can travel into Bricks:
 
 - semantic HTML;
 - class-based CSS;

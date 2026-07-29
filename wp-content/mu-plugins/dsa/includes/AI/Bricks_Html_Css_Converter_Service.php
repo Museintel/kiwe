@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Converts trusted staging HTML/CSS handoffs into Bricks element JSON.
  *
- * Bricks 2.4+ ships a native server-side converter. Kiwe prefers that when it is
+ * Some Bricks builds expose a native server-side converter. Kiwe prefers that when it is
  * present. Older Bricks installs still need an AI-safe path that preserves Seam
  * classes, data attributes, ARIA, links, and page CSS without using the browser
  * clipboard route.
