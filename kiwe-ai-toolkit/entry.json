@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.67",
+  "contractVersion": "6.68",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -22,7 +22,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.67",
+    "mustReport": "SeamFlow contract: 6.68",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /auditateachstep, /auditatend, and /usecompanion. Put the /list command hint last.",
@@ -90,7 +90,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.67",
+      "SeamFlow contract: 6.68",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -172,7 +172,34 @@
       "/audit /accessibility",
       "/fix /accessibility if audit fails"
     ],
-    "fullFlowStopRule": "Stop at the first blocking audit failure that cannot be fixed from the supplied artifact.",
+    "auditClosure": {
+      "completionRule": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops.",
+      "loop": [
+        "Run the matching /audit command for the current lane.",
+        "If audit fails, run the matching /fix command on the actual current artifact.",
+        "Re-run the same /audit command.",
+        "Repeat until PASS, or stop as NEEDS_INPUT if the same blocker repeats or required source/authority is missing."
+      ],
+      "cadence": {
+        "/auditateachstep": "Each phase must pass its own audit before the next phase starts.",
+        "/auditatend": "Generation/conversion phases may proceed first, but final delivery still requires every relevant closing audit to pass."
+      },
+      "byStartPoint": {
+        "raw-html-css-js": ["/audit /seamframework", "/audit /frameworkprofile", "/audit /bricksconversion", "/audit /accessibility"],
+        "seam-page-artifact": ["/audit /seamframework", "/audit /frameworkprofile", "/audit /bricksconversion", "/audit /accessibility"],
+        "framework-profile": ["/audit /frameworkprofile"],
+        "bricks-template-upload": ["/audit /bricksconversion", "/audit /accessibility"],
+        "bricks-conversion-envelope": ["/audit /bricksconversion", "/audit /accessibility"],
+        "dsa-theme-package": ["/audit /dsatheme", "/audit /accessibility"],
+        "combined-handoff": ["/audit /combined", "/audit /accessibility"]
+      },
+      "notAllowed": [
+        "Do not close from visual confidence alone.",
+        "Do not skip /fix after a failed audit.",
+        "Do not use stale audit reports from previous attempts as closure proof."
+      ]
+    },
+    "fullFlowStopRule": "Stop at the first blocking audit failure that cannot be fixed from the supplied artifact; otherwise continue the /audit -> /fix -> /audit loop until required closure audits pass.",
     "fullFlowDefaultFinalArtifacts": [
       "framework/kiwe-framework-profile.json",
       "bricks-template/[page-name]-template-upload.json"
@@ -219,7 +246,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.67",
+    "SeamFlow contract: 6.68",
     "Command:",
     "Artifact classification:",
     "Files returned:",

@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.67",
+    "contractVersion": "6.68",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -31,7 +31,8 @@
     "documentation": "Documentation is opt-in. Do not create README, NOTES, reports, duplicate previews, ZIP files, or explanation documents unless /document is present or the human explicitly asks.",
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
-    "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages."
+    "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
+    "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /auditateachstep audits after each phase; /auditatend audits before final delivery. A failed audit requires /fix and the same /audit again until PASS or NEEDS_INPUT."
   },
   "flowPlanner": {
     "cli": "kiwe seamflow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
@@ -64,7 +65,7 @@
       "requires": ["classified current artifact or explicit current command path"],
       "output": ["the next safe phase artifact only"],
       "forbidden": ["running the whole flow", "using prior test material", "docs unless /document", "ZIP"],
-      "finalResponse": "Run only the next command in the current SeamFlow path, return its artifact, compact status, and next suggested command."
+      "finalResponse": "Run only the next command in the current SeamFlow path, run the matching audit/fix loop when /auditateachstep is selected, return its artifact, compact audit status, and next suggested command."
     },
     "/execute /fullflow": {
       "phase": "execute",
@@ -72,7 +73,7 @@
       "requires": ["classified current artifact and human approval for full-flow execution"],
       "output": ["final canonical artifacts for the selected flow"],
       "forbidden": ["using prior test material", "docs unless /document", "ZIP", "DSA/AppShell output unless target requests DSA or combined"],
-      "finalResponse": "Return only final canonical artifacts plus compact pass/fail/warn status."
+      "finalResponse": "Return only final canonical artifacts after every required closing audit for the detected start point has passed, plus compact pass/fail/warn status."
     },
     "/auditateachstep": {
       "phase": "flag",

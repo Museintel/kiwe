@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.67`
+Contract version: `6.68`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.67
+SeamFlow contract: 6.68
 ```
 
 Then do one of these:
@@ -106,7 +106,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.67
+SeamFlow contract: 6.68
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -140,6 +140,32 @@ Execution commands:
 ```
 
 Default audit cadence: when unsure, prefer `/auditateachstep` for production/importable files and `/auditatend` only for quick exploratory drafts.
+
+## Audit closure law
+
+SeamFlow does not close because an AI says the output "looks good." SeamFlow closes only when the required `/audit` command for the current artifact lane returns `PASS` after any needed `/fix` loops.
+
+The loop is:
+
+```text
+1. Run the matching /audit command for the current lane.
+2. If audit fails, run the matching /fix command on the actual current artifact.
+3. Re-run the same /audit command.
+4. Repeat until PASS, or stop as NEEDS_INPUT if the same blocker repeats or required source/authority is missing.
+```
+
+Required closure audits by detected start point:
+
+```text
+raw HTML/CSS/JS draft      -> /audit /seamframework, /audit /frameworkprofile, /audit /bricksconversion, /audit /accessibility
+Seam page artifact         -> /audit /seamframework, /audit /frameworkprofile, /audit /bricksconversion, /audit /accessibility
+Framework profile          -> /audit /frameworkprofile
+Bricks template/conversion -> /audit /bricksconversion, /audit /accessibility
+DSA theme package          -> /audit /dsatheme, /audit /accessibility
+combined handoff           -> /audit /combined, /audit /accessibility
+```
+
+`/auditateachstep` means each phase must pass its own audit before the next phase starts. `/auditatend` means generation/conversion can proceed first, but final delivery still requires every relevant closing audit to pass. In both modes, `/fix` is not optional after a failed audit.
 
 For a raw HTML/CSS/JS draft, the recommended webpage/header/footer/template-to-Bricks path is:
 
@@ -203,7 +229,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.67
+SeamFlow contract: 6.68
 Command:
 Artifact classification:
 Files returned:
@@ -243,6 +269,8 @@ Accessibility fixes should use existing tokens and classes first. Add new projec
 ## Full-flow mode
 
 If the human chooses full-flow execution, run phases in order and stop at the first blocking audit failure that cannot be fixed from the supplied artifact. Return only the current canonical artifact for the last completed/fixed phase and the compact status.
+
+Do not end a full-flow, step-by-step flow, or mid-stream resumed flow until the closure audits for the detected start point have passed. If a browser AI cannot run the official validator, it must still follow the lane audit context exactly and report that official execution was unavailable; it must not call the flow complete from visual confidence alone.
 
 If full-flow succeeds from raw HTML/CSS/JS to Bricks, the final default artifacts are:
 

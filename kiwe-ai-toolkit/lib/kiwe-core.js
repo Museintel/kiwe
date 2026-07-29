@@ -321,6 +321,66 @@ export function getStartEntrypoint() {
   return JSON.parse(entry);
 }
 
+function auditClosureForArtifact(type, { wantsDsa = false } = {}) {
+  const pairsByType = {
+    'raw-html-css-js': [
+      ['/audit /seamframework', '/fix /seamframework'],
+      ['/audit /frameworkprofile', '/fix /frameworkprofile'],
+      ['/audit /bricksconversion', '/fix /bricksconversion'],
+      ['/audit /accessibility', '/fix /accessibility']
+    ],
+    'seam-page-artifact': [
+      ['/audit /seamframework', '/fix /seamframework'],
+      ['/audit /frameworkprofile', '/fix /frameworkprofile'],
+      ['/audit /bricksconversion', '/fix /bricksconversion'],
+      ['/audit /accessibility', '/fix /accessibility']
+    ],
+    'framework-profile': [
+      ['/audit /frameworkprofile', '/fix /frameworkprofile']
+    ],
+    'bricks-template-upload': [
+      ['/audit /bricksconversion', '/fix /bricksconversion'],
+      ['/audit /accessibility', '/fix /accessibility']
+    ],
+    'bricks-conversion-envelope': [
+      ['/audit /bricksconversion', '/fix /bricksconversion'],
+      ['/audit /accessibility', '/fix /accessibility']
+    ],
+    'dsa-theme-package': [
+      ['/audit /dsatheme', '/fix /dsatheme'],
+      ['/audit /accessibility', '/fix /accessibility']
+    ],
+    'combined-handoff': [
+      ['/audit /combined', '/fix /combined'],
+      ['/audit /accessibility', '/fix /accessibility']
+    ],
+    unknown: []
+  };
+
+  const selected = [...(pairsByType[type] || pairsByType.unknown)];
+  if (wantsDsa && (type === 'raw-html-css-js' || type === 'seam-page-artifact')) {
+    selected.splice(2, 0, ['/audit /dsatheme', '/fix /dsatheme'], ['/audit /combined', '/fix /combined']);
+  }
+
+  return {
+    completionRule: 'SeamFlow closes only when every required current-lane /audit returns PASS after any needed /fix loops.',
+    startPoint: type,
+    requiredAudits: selected.map(([audit]) => audit),
+    matchingFixes: selected.map(([audit, fix]) => ({ audit, fix })),
+    loop: [
+      'Run the matching /audit command for the current lane.',
+      'If audit fails, run the matching /fix command on the actual current artifact.',
+      'Re-run the same /audit command.',
+      'Repeat until PASS, or stop as NEEDS_INPUT if the same blocker repeats or required source/authority is missing.'
+    ],
+    notAllowed: [
+      'Do not close from visual confidence alone.',
+      'Do not skip /fix after a failed audit.',
+      'Do not use stale audit reports or prior attempt notes as closure proof.'
+    ]
+  };
+}
+
 export function planFlow({ command = '', artifactSummary = '', desiredOutcome = '', useCompanion = false } = {}) {
   const text = [command, artifactSummary, desiredOutcome].join('\n').toLowerCase();
   const artifactTypes = [];
@@ -434,6 +494,8 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     recommendedNextCommands = ['/list'];
   }
 
+  const auditClosure = auditClosureForArtifact(primary, { wantsDsa });
+
   const questions = [];
   if (!hasCommand) {
     if (primary === 'unknown') {
@@ -454,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.67',
+    contractVersion: '6.68',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -471,10 +533,12 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       stepByStep: '/execute /stepbystep',
       fullFlow: '/execute /fullflow',
       auditCadence: wantsAuditEachStep ? '/auditateachstep' : wantsAuditAtEnd ? '/auditatend' : 'ask-or-default-/auditateachstep-for-production',
-      companion: wantsCompanion({ command, explicit: useCompanion }) ? '/usecompanion' : 'optional'
+      companion: wantsCompanion({ command, explicit: useCompanion }) ? '/usecompanion' : 'optional',
+      closureMode: wantsAuditEachStep ? 'audit-fix-repeat-after-each-phase' : wantsAuditAtEnd ? 'audit-fix-repeat-before-final-delivery' : 'ask'
     },
+    auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.67',
+      mustReport: 'SeamFlow contract: 6.68',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -509,7 +573,8 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       'Do not create documentation unless /document is present.',
       'Do not convert DSA/AppShell theme files through /convert /bricks.',
       'Do not claim a pass without running or following the matching lane audit.',
-      'Stop at the first blocking failure that cannot be fixed from supplied artifacts.'
+      'Stop at the first blocking failure that cannot be fixed from supplied artifacts.',
+      'A SeamFlow phase, step-by-step run, full-flow run, or mid-stream resumed flow is complete only after every required current-lane audit returns PASS.'
     ]
   };
 }
