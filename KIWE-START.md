@@ -194,6 +194,8 @@ These are not creative commands. They must not rebuild from scratch, redesign th
 
 `/fix /previousaudit` requires the previous audit findings to be present in the current conversation or supplied as a file. If the previous audit is missing, ambiguous, stale, or not tied to the current artifacts, stop with `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`.
 
+If the human writes non-canonical wording such as `/fix /previouspass`, do not execute it and do not treat it as a hidden alias. Return `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`, explain that the intended canonical command is `/fix /previousaudit`, and suggest `/audit /allattached /allflow` first when no previous audit findings exist.
+
 ## Command-central error handling
 
 Use these compact errors instead of improvising:

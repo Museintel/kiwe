@@ -1031,7 +1031,7 @@ function routeKind(command) {
   if (!text) return 'workflow';
   if (/(?:^|\s)\/list\b/.test(text)) return 'command-list';
   if (/(?:^|\s)\/(?:document|notes)\b/.test(text)) return 'document';
-  if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow|\/previousaudit)/.test(text)) return 'audit-all';
+  if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow|\/previousaudit|\/previouspass)/.test(text)) return 'audit-all';
   if (/(?:^|\s)\/fix\b/.test(text)) return 'fix';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
@@ -1114,6 +1114,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/page',
   '/preview',
   '/previousaudit',
+  '/previouspass',
   '/replacepreview',
   '/replacepreviewdata',
   '/rebuild',
@@ -1148,7 +1149,6 @@ const TYPO_TOKEN_SUGGESTIONS = new Map([
   ['/dsathem', '/dsatheme'],
   ['/seamframwork', '/seamframework'],
   ['/repalcepreview', '/replacepreviewdata'],
-  ['/previouspass', '/fix /previousaudit'],
   ['/usegraph', '/usesitegraph'],
   ['/sitegrap', '/usesitegraph']
 ]);
@@ -1344,6 +1344,20 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       message: '`/execute` needs the current artifact or file map. It must not use older Kiwe/National Chikki/BioVantage outputs or prior validation notes unless they were supplied in the current turn.',
       suggestions: ['Provide the current artifact/file map.', '/execute /stepbystep /audit /eachstep', '/execute /fullflow /audit /eachstep'],
       boundaries: ['Current-run artifacts only.', 'No prior test material unless explicitly supplied for comparison.']
+    });
+  }
+
+  if (commandHas(text, /\/fix/) && commandHas(text, /\/previouspass/)) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'previous_audit_missing',
+      kind: 'audit-all',
+      normalizedCommand: normalizedCommand.replace(/\/previouspass\b/i, '/previousaudit'),
+      message: '`/fix /previouspass` is not a canonical SeamFlow command. Interpreting the intent as `/fix /previousaudit`: no immediately previous audit result was supplied, so there is nothing safe to fix yet.',
+      suggestions: String(artifactSummary || '').trim()
+        ? ['/audit /allattached /allflow', '/fix /previousaudit after that audit returns failures']
+        : ['Attach the current output files.', '/audit /allattached /allflow after files are supplied', '/fix /previousaudit after that audit returns failures'],
+      boundaries: ['Do not fix from memory.', 'Do not infer previous failures from old conversations or stale files.', 'Run the relevant audit first, then fix the reported failures only.']
     });
   }
 

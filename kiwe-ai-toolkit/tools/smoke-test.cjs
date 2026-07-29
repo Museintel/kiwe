@@ -112,7 +112,7 @@ function assert(condition, message) {
   const fixAllMissing = m.diagnoseCommand({ command: '/fix /allflow' });
   const auditAllFlowOk = m.diagnoseCommand({ command: '/audit /allattached /allflow', artifactSummary: 'framework/kiwe-framework-profile.json exists; bricks-template/home-template-upload.json exists' });
   const previousAuditMissing = m.diagnoseCommand({ command: '/fix /previousaudit' });
-  const previousPassRejected = m.diagnoseCommand({ command: '/fix /previouspass', artifactSummary: 'previous audit findings exist; current artifact exists' });
+  const previousPassNeedsAudit = m.diagnoseCommand({ command: '/fix /previouspass', artifactSummary: 'current artifact exists but no previous audit findings exist' });
   const oldAuditAliasRejected = m.diagnoseCommand({ command: '/audit' + 'ateachstep', artifactSummary: 'website/bricks-paste.html exists' });
 
   assert(bad.stop && bad.code === 'unknown_command_token', 'bad typo diagnostic failed');
@@ -130,7 +130,7 @@ function assert(condition, message) {
   assert(fixAllMissing.stop && fixAllMissing.code === 'audit_all_missing_artifacts', 'fix all missing artifacts diagnostic failed');
   assert(!auditAllFlowOk.stop, 'combined allattached allflow audit should not stop with current artifacts');
   assert(previousAuditMissing.stop && previousAuditMissing.code === 'previous_audit_missing', 'previous audit missing diagnostic failed');
-  assert(previousPassRejected.stop && previousPassRejected.code === 'unknown_command_token', 'previouspass should be rejected');
+  assert(previousPassNeedsAudit.stop && previousPassNeedsAudit.code === 'previous_audit_missing', 'previouspass should request previous audit evidence');
   assert(oldAuditAliasRejected.stop && oldAuditAliasRejected.code === 'unknown_command_token', 'old audit cadence alias should be rejected');
 
   captureNode(['bin/kiwe.js', 'entry'], 'tmp/entry-smoke.json');

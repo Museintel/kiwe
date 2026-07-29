@@ -162,6 +162,14 @@
       "forbidden": ["creative rebuild", "redesign", "new lane creation", "docs unless /document", "ZIP", "stale files", "fixing from memory without previous findings"],
       "finalResponse": "Return corrected files only plus compact status after rerunning the exact previous audit scope."
     },
+    "/fix /previouspass": {
+      "phase": "diagnostic",
+      "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json"],
+      "requires": ["current artifacts and immediately previous audit findings if the human wants a fix"],
+      "output": ["ERROR: KIWE_PREVIOUS_AUDIT_MISSING when no previous audit findings exist"],
+      "forbidden": ["execution", "silent aliasing", "fixing from memory", "stale files"],
+      "finalResponse": "Do not execute. Explain that the canonical command is /fix /previousaudit and suggest /audit /allattached /allflow first when no previous audit findings exist."
+    },
     "/rebuild /seamframework": {
       "phase": "rebuild",
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],

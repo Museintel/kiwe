@@ -158,6 +158,7 @@
       "/fix /allflow": "Repair failed lanes across the detected flow, then rerun every closure audit.",
       "/audit /allattached /allflow": "Classify all supplied/current artifacts and run every closure audit required by the detected flow.",
       "/fix /previousaudit": "Fix only the failures from the immediately previous audit result, then rerun that same audit scope.",
+      "/fix /previouspass": "Non-canonical wording. Do not execute. If no previous audit findings exist, return KIWE_PREVIOUS_AUDIT_MISSING and suggest /audit /allattached /allflow.",
       "rule": "These commands are for second-pass repair. They must not rebuild creatively, redesign, add DSA/combined output, create docs, or use stale files."
     },
     "rawHtmlCssJsToBricks": [
