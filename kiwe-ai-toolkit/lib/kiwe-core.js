@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.72',
+    contractVersion: '6.73',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.72',
+      mustReport: 'SeamFlow contract: 6.73',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -650,6 +650,18 @@ export function listCommands() {
         purpose: 'Repair failed lanes across the detected current flow, then rerun every required closure audit until PASS or NEEDS_INPUT.',
         requires: ['classified current artifact/file map and failed audit findings or rerunnable validators'],
         output: 'corrected canonical artifacts for the detected current flow'
+      },
+      {
+        command: '/audit /previousoutput',
+        purpose: 'Audit the files generated in the immediate previous AI output in this same session.',
+        requires: ['immediate previous AI output files accessible in the current session'],
+        output: 'compact pass/fail per detected artifact lane in previous output'
+      },
+      {
+        command: '/fix /previousoutput',
+        purpose: 'Fix the files generated in the immediate previous AI output in this same session and rerun matching audits.',
+        requires: ['immediate previous AI output files accessible in the current session'],
+        output: 'corrected files for the previous output only'
       },
       {
         command: '/audit /allattached /allflow',
@@ -1031,7 +1043,7 @@ function routeKind(command) {
   if (!text) return 'workflow';
   if (/(?:^|\s)\/list\b/.test(text)) return 'command-list';
   if (/(?:^|\s)\/(?:document|notes)\b/.test(text)) return 'document';
-  if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow|\/previousaudit|\/previouspass)/.test(text)) return 'audit-all';
+  if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow|\/previousaudit|\/previouspass|\/previousoutput)/.test(text)) return 'audit-all';
   if (/(?:^|\s)\/fix\b/.test(text)) return 'fix';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
@@ -1114,6 +1126,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/page',
   '/preview',
   '/previousaudit',
+  '/previousoutput',
   '/previouspass',
   '/replacepreview',
   '/replacepreviewdata',
@@ -1163,6 +1176,8 @@ const VALID_PHASE_COMMANDS = [
   '/fix /allattached',
   '/audit /allflow',
   '/fix /allflow',
+  '/audit /previousoutput',
+  '/fix /previousoutput',
   '/audit /allattached /allflow',
   '/fix /previousaudit',
   '/document',
@@ -1263,6 +1278,7 @@ const KIWE_ERROR_CODES = {
   fix_missing_artifact: 'KIWE_MISSING_ARTIFACT',
   document_missing_artifact: 'KIWE_MISSING_ARTIFACT',
   previous_audit_missing: 'KIWE_PREVIOUS_AUDIT_MISSING',
+  previous_output_missing: 'KIWE_PREVIOUS_OUTPUT_MISSING',
   accessibility_audit_missing_artifact: 'KIWE_MISSING_ARTIFACT',
   bricks_convert_missing_framework_profile: 'KIWE_WRONG_LANE',
   bricks_convert_requires_convert_verb: 'KIWE_WRONG_LANE',
@@ -1358,6 +1374,18 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
         ? ['/audit /allattached /allflow', '/fix /previousaudit after that audit returns failures']
         : ['Attach the current output files.', '/audit /allattached /allflow after files are supplied', '/fix /previousaudit after that audit returns failures'],
       boundaries: ['Do not fix from memory.', 'Do not infer previous failures from old conversations or stale files.', 'Run the relevant audit first, then fix the reported failures only.']
+    });
+  }
+
+  if (commandHas(text, /\/previousoutput/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'previous_output_missing',
+      kind: 'audit-all',
+      normalizedCommand,
+      message: '`/previousoutput` means the files generated in the immediate previous AI output in this same session. Those files are not available to this command, so it cannot continue safely.',
+      suggestions: ['Attach the immediate previous output files.', 'Rerun the previous generation command if the AI cannot access its output files.', '/audit /allattached /allflow after files are supplied'],
+      boundaries: ['Do not search downloads, old sandboxes, old conversations, or previous project attempts.', 'Do not infer file contents from a summary.', 'Use only immediately previous output files that are directly accessible in this session.']
     });
   }
 
@@ -2054,9 +2082,11 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     parts.push(
       '# Selected phase guidance',
       '',
-      'Classify every supplied/current artifact by actual file content, then run every matching lane audit required by `/audit /allattached`, `/audit /allflow`, or `/audit /allattached /allflow`.',
+      'Classify every supplied/current artifact by actual file content, then run every matching lane audit required by `/audit /allattached`, `/audit /allflow`, `/audit /allattached /allflow`, or `/audit /previousoutput`.',
       '',
-      'Do not rebuild, redesign, create DSA/combined output, create docs, search for stale files, or use prior accepted notes. Audit-only commands return findings only. If `/fix /allattached`, `/fix /allflow`, or `/fix /previousaudit` is present, fix only failed current lanes and rerun the same audits until PASS or NEEDS_INPUT.',
+      'Do not rebuild, redesign, create DSA/combined output, create docs, search for stale files, or use prior accepted notes. Audit-only commands return findings only. If `/fix /allattached`, `/fix /allflow`, `/fix /previousoutput`, or `/fix /previousaudit` is present, fix only failed current lanes and rerun the same audits until PASS or NEEDS_INPUT.',
+      '',
+      '`/previousoutput` may use only the files generated in the immediate previous AI output in this same session. If those files are not directly accessible, stop with `ERROR: KIWE_PREVIOUS_OUTPUT_MISSING`.',
       '',
       '`/fix /previousaudit` may use only the immediately previous audit findings supplied in the current conversation/file set. If those findings are absent or stale, stop with `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`.',
       '',

@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.72",
+    "contractVersion": "6.73",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -41,7 +41,7 @@
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.72", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.73", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -50,6 +50,7 @@
       "KIWE_VALIDATOR_UNAVAILABLE": "Official validator or exact validator logic cannot run.",
       "KIWE_MANUAL_PASS_BLOCKED": "Only manual confidence is available for an importable lane.",
       "KIWE_PREVIOUS_AUDIT_MISSING": "/fix /previousaudit was requested without immediately previous audit findings.",
+      "KIWE_PREVIOUS_OUTPUT_MISSING": "/previousoutput was requested but immediate previous output files are not accessible.",
       "KIWE_CONTEXT_WINDOW_RISK": "Requested flow is too large for the current AI/session.",
       "KIWE_TOKEN_BUDGET_RISK": "Command is likely to waste tokens.",
       "KIWE_TOOL_UNAVAILABLE": "Required MCP/API/browser/validator tool unavailable.",
@@ -145,6 +146,22 @@
       "output": ["corrected canonical artifacts for the detected current flow"],
       "forbidden": ["creative rebuild", "redesign", "DSA/combined expansion unless already present or requested", "docs unless /document", "ZIP", "stale files"],
       "finalResponse": "Return corrected canonical artifacts only plus compact audit status after rerunning every required closure audit."
+    },
+    "/audit /previousoutput": {
+      "phase": "audit",
+      "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json", "lane contexts and validators for every artifact in the immediate previous AI output"],
+      "requires": ["files generated in the immediate previous AI output in this same session"],
+      "output": ["pass/fail findings for every detected lane in the previous output"],
+      "forbidden": ["fixes unless /fix is also present", "creative rebuild", "redesign", "docs unless /document", "ZIP", "stale files", "searching downloads or old conversations"],
+      "finalResponse": "Audit only the immediate previous AI output files. If unavailable, stop with ERROR: KIWE_PREVIOUS_OUTPUT_MISSING."
+    },
+    "/fix /previousoutput": {
+      "phase": "fix",
+      "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json", "lane contexts and validators for failed artifacts in the immediate previous AI output"],
+      "requires": ["files generated in the immediate previous AI output in this same session"],
+      "output": ["corrected files for the previous output only"],
+      "forbidden": ["creative rebuild", "redesign", "new lane creation", "docs unless /document", "ZIP", "stale files", "searching downloads or old conversations"],
+      "finalResponse": "Fix only the immediate previous AI output files and rerun matching audits. If unavailable, stop with ERROR: KIWE_PREVIOUS_OUTPUT_MISSING."
     },
     "/audit /allattached /allflow": {
       "phase": "audit",
