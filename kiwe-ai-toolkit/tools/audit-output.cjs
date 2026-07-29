@@ -176,6 +176,7 @@ const responsiveLayoutKeyPattern = /^_(?:cssCustom|direction|display|grid|gridIt
 const complexLayoutPattern = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i;
 const bricksLayoutElementNames = new Set(['container', 'div', 'section', 'block']);
 const nativeStyleControlPattern = /^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/;
+const tokenOwnedNestedKeyPattern = /^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i;
 const tokenOwnedColorControlPattern = /^_(?:typography|background|gradient|border|boxShadow|cssFilters|color|fill|stroke|cssCustom)(?::|$)/;
 const tokenOwnedColorNestedKeyPattern = /^(?:color|background|backgroundColor|background-color|backgroundImage|background-image|gradient|raw|hex|rgb|hsl|hue|saturation|lightness|fill|stroke|borderColor|border-color|shadowColor|shadow-color)$/i;
 const colorLiteralPattern = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|\b(?:white|black)\b/gi;
@@ -371,6 +372,91 @@ function collectBricksColorTokenMisuse(items, prefix) {
   return problems;
 }
 
+function splitCssFunctionArgs(value) {
+  const text = String(value || '');
+  const args = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === '(') depth += 1;
+    if (text[index] === ')') depth -= 1;
+    if (text[index] === ',' && depth === 0) {
+      args.push(text.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  args.push(text.slice(start).trim());
+  return args;
+}
+
+function extractCssFunctionCalls(value, functionName) {
+  const text = String(value || '');
+  const lower = text.toLowerCase();
+  const needle = `${String(functionName || '').toLowerCase()}(`;
+  const calls = [];
+  let index = 0;
+  while ((index = lower.indexOf(needle, index)) !== -1) {
+    let depth = 0;
+    let end = -1;
+    for (let i = index; i < text.length; i += 1) {
+      if (text[i] === '(') depth += 1;
+      if (text[i] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end === -1) break;
+    calls.push(text.slice(index + needle.length, end));
+    index = end + 1;
+  }
+  return calls;
+}
+
+function collectCssVariablesWithoutFallback(value, out = [], trail = '$', parentOwned = false) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectCssVariablesWithoutFallback(item, out, `${trail}[${index}]`, parentOwned));
+  } else if (value && typeof value === 'object') {
+    for (const [key, item] of Object.entries(value)) {
+      const owned = parentOwned || nativeStyleControlPattern.test(String(key || '')) || tokenOwnedNestedKeyPattern.test(String(key || '')) || tokenOwnedColorNestedKeyPattern.test(String(key || ''));
+      collectCssVariablesWithoutFallback(item, out, `${trail}.${key}`, owned);
+    }
+  } else if (parentOwned && typeof value === 'string') {
+    for (const call of extractCssFunctionCalls(value, 'var')) {
+      const args = splitCssFunctionArgs(call);
+      const variable = String(args[0] || '').trim();
+      const hasFallback = args.length >= 2 && args.slice(1).join(',').trim() !== '';
+      if (/^--[a-z][a-z0-9_-]*$/i.test(variable) && !hasFallback) {
+        out.push({ path: trail, value: String(value), variable });
+      }
+    }
+  }
+  return out;
+}
+
+function collectBricksVariableFallbackMisuse(items, prefix) {
+  const problems = [];
+  const limit = 40;
+  for (const [index, item] of (Array.isArray(items) ? items : []).entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const label = item.id || item.name || item.label || `item-${index}`;
+    const settings = elementSettings(item);
+    for (const problem of collectCssVariablesWithoutFallback(settings, [], `$[${index}].settings`)) {
+      problems.push(`${prefix} native style "${problem.path}" on "${label}" references "${problem.variable}" without a fallback in "${problem.value}". Bricks My Templates import cannot be trusted to install globalVariables from the same uploaded JSON; use var(${problem.variable}, fallback) and/or require Kiwe > Framework to be pushed before import.`);
+      if (problems.length >= limit) break;
+    }
+    if (problems.length >= limit) break;
+  }
+  const total = (Array.isArray(items) ? items : []).reduce((sum, item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return sum;
+    return sum + collectCssVariablesWithoutFallback(elementSettings(item)).length;
+  }, 0);
+  if (total > limit) problems.push(`${prefix} contains ${total - limit} additional CSS variable references without fallbacks beyond the first ${limit}. Add fallbacks or a supported variable-apply path, then rerun /audit /bricksconversion.`);
+  return problems;
+}
+
 function collectResponsiveLayoutOverrides(value, out = []) {
   if (Array.isArray(value)) {
     for (const item of value) collectResponsiveLayoutOverrides(item, out);
@@ -492,6 +578,12 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
     out.push(`Bricks template export ${relPath} ${message}`);
   }
   out.push(...collectBricksColorTokenMisuse(
+    templateElements
+      .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
+      .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : []),
+    `Bricks template export ${relPath}`
+  ));
+  out.push(...collectBricksVariableFallbackMisuse(
     templateElements
       .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
       .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : []),

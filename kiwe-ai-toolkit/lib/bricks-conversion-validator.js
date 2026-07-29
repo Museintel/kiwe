@@ -205,6 +205,7 @@ const TOKEN_OWNED_COLOR_CONTROL_RE = /^_(?:typography|background|gradient|border
 const TOKEN_OWNED_COLOR_NESTED_KEY_RE = /^(?:color|background|backgroundColor|background-color|backgroundImage|background-image|gradient|raw|hex|rgb|hsl|hue|saturation|lightness|fill|stroke|borderColor|border-color|shadowColor|shadow-color)$/i;
 const COLOR_LITERAL_RE = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|\b(?:white|black)\b/gi;
 const COLOR_FINDING_LIMIT = 40;
+const CSS_VAR_FINDING_LIMIT = 40;
 
 const CUSTOM_CSS_HEAVY_BYTES = 12000;
 const CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS = 60;
@@ -633,6 +634,72 @@ function splitCssArgs(value) {
   return args;
 }
 
+function collectCssVariableCalls(value) {
+  return extractCssFunctionCalls(value, 'var').map((call) => {
+    const args = splitCssArgs(call);
+    const name = String(args[0] || '').trim();
+    return {
+      name,
+      hasFallback: args.length >= 2 && args.slice(1).join(',').trim() !== ''
+    };
+  }).filter((item) => /^--[a-z][a-z0-9_-]*$/i.test(item.name));
+}
+
+function collectCssVariablesWithoutFallback(value, out = [], trail = '$', parentOwned = false) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectCssVariablesWithoutFallback(item, out, `${trail}[${index}]`, parentOwned));
+    return out;
+  }
+
+  if (isPlainObject(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      const owned = parentOwned || NATIVE_STYLE_CONTROL_RE.test(String(key || '')) || TOKEN_OWNED_NESTED_KEY_RE.test(String(key || '')) || TOKEN_OWNED_COLOR_NESTED_KEY_RE.test(String(key || ''));
+      collectCssVariablesWithoutFallback(item, out, `${trail}.${key}`, owned);
+    }
+    return out;
+  }
+
+  if (!parentOwned || typeof value !== 'string') return out;
+
+  for (const call of collectCssVariableCalls(value)) {
+    if (!call.hasFallback) {
+      out.push({ path: trail, value: String(value), variable: call.name });
+    }
+  }
+
+  return out;
+}
+
+function validateCssVariableFallbacks(items, findings, file, pathPointer) {
+  const findingsToAdd = [];
+  asArray(items).forEach((item, index) => {
+    if (!isPlainObject(item)) return;
+    const label = item.id || item.name || item.label || `item-${index}`;
+    const settings = elementSettings(item);
+    const values = collectCssVariablesWithoutFallback(settings, [], `${pathPointer}[${index}].settings`, false);
+    for (const value of values) findingsToAdd.push({ label, ...value });
+  });
+
+  findingsToAdd.slice(0, CSS_VAR_FINDING_LIMIT).forEach((item) => {
+    add(
+      findings,
+      'fail',
+      `Bricks native style "${item.path}" on "${item.label}" references "${item.variable}" without a fallback in "${item.value}". Bricks My Templates import cannot be trusted to install globalVariables from the same uploaded JSON; use var(${item.variable}, fallback) and/or require Kiwe > Framework to be pushed before import.`,
+      file,
+      item.path
+    );
+  });
+  if (findingsToAdd.length > CSS_VAR_FINDING_LIMIT) {
+    add(
+      findings,
+      'fail',
+      `Bricks native styles contain ${findingsToAdd.length - CSS_VAR_FINDING_LIMIT} additional CSS variable references without fallbacks beyond the first ${CSS_VAR_FINDING_LIMIT}. Add fallbacks or a supported variable-apply path, then rerun /audit /bricksconversion.`,
+      file,
+      pathPointer
+    );
+  }
+}
+
 function parseSimpleCssLength(value) {
   const match = String(value || '').trim().match(/^(-?(?:\d+|\d*\.\d+))(px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)$/i);
   return match ? { value: Number(match[1]), unit: match[2].toLowerCase() } : null;
@@ -1043,6 +1110,14 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     rel(root, templatePath),
     '$.content/header/footer/global_classes'
   );
+  validateCssVariableFallbacks(
+    templateElements
+      .concat(asArray(templateData.global_classes))
+      .concat(asArray(templateData.globalClasses)),
+    findings,
+    rel(root, templatePath),
+    '$.content/header/footer/global_classes'
+  );
   if (templateElements.length >= LARGE_CLIPBOARD_ELEMENT_COUNT && templateNativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
     add(
       findings,
@@ -1325,6 +1400,12 @@ function validateNativeStyleFidelity({ conversion, findings, conversionRel }) {
     declaredVariables
   );
   validateTokenizedNativeColors(
+    elements.concat(globalClasses),
+    findings,
+    conversionRel,
+    '$.elements/globalClasses'
+  );
+  validateCssVariableFallbacks(
     elements.concat(globalClasses),
     findings,
     conversionRel,

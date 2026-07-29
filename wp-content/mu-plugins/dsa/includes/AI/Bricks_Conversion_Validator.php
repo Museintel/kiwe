@@ -131,6 +131,7 @@ final class Bricks_Conversion_Validator {
 	private const SUPPORTED_TEMPLATE_BRICKS_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
 	private const TOKEN_FINDING_LIMIT              = 40;
 	private const COLOR_FINDING_LIMIT              = 40;
+	private const CSS_VAR_FINDING_LIMIT            = 40;
 
 	public function validate( array $conversion, array $site_graph = [], string $source_html = '', array $binding = [] ): array {
 		$findings = [];
@@ -166,6 +167,14 @@ final class Bricks_Conversion_Validator {
 			$this->collect_declared_css_variables( $conversion )
 		);
 		$this->validate_tokenized_native_colors(
+			array_merge(
+				isset( $conversion['elements'] ) && is_array( $conversion['elements'] ) ? $conversion['elements'] : [],
+				isset( $conversion['globalClasses'] ) && is_array( $conversion['globalClasses'] ) ? $conversion['globalClasses'] : []
+			),
+			$findings,
+			'$.elements/globalClasses'
+		);
+		$this->validate_css_variable_fallbacks(
 			array_merge(
 				isset( $conversion['elements'] ) && is_array( $conversion['elements'] ) ? $conversion['elements'] : [],
 				isset( $conversion['globalClasses'] ) && is_array( $conversion['globalClasses'] ) ? $conversion['globalClasses'] : []
@@ -324,6 +333,15 @@ final class Bricks_Conversion_Validator {
 			$this->collect_declared_css_variables( $template )
 		);
 		$this->validate_tokenized_native_colors(
+			array_merge(
+				$elements,
+				isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
+				isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
+			),
+			$findings,
+			'$.content/header/footer/global_classes'
+		);
+		$this->validate_css_variable_fallbacks(
 			array_merge(
 				$elements,
 				isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
@@ -826,6 +844,48 @@ final class Bricks_Conversion_Validator {
 		}
 	}
 
+	private function validate_css_variable_fallbacks( array $items, array &$findings, string $path ): void {
+		$found = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$values = [];
+			$this->collect_css_variables_without_fallback( $item['settings'], $values, $path . '[' . (int) $index . '].settings' );
+			foreach ( $values as $value ) {
+				$value['label'] = $label;
+				$found[]        = $value;
+			}
+		}
+
+		foreach ( array_slice( $found, 0, self::CSS_VAR_FINDING_LIMIT ) as $item ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_css_var_without_fallback',
+				sprintf(
+					'Bricks native style "%1$s" on "%2$s" references "%3$s" without a fallback in "%4$s". Bricks My Templates import cannot be trusted to install globalVariables from the same uploaded JSON; use var(%3$s, fallback) and/or require Kiwe > Framework to be pushed before import.',
+					(string) ( $item['path'] ?? '' ),
+					(string) ( $item['label'] ?? '' ),
+					(string) ( $item['variable'] ?? '' ),
+					(string) ( $item['value'] ?? '' )
+				),
+				(string) ( $item['path'] ?? '' )
+			);
+		}
+
+		if ( count( $found ) > self::CSS_VAR_FINDING_LIMIT ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_css_var_without_fallback_overflow',
+				sprintf( 'Bricks native styles contain %d additional CSS variable references without fallbacks beyond the first %d. Add fallbacks or a supported variable-apply path, then rerun /audit /bricksconversion.', count( $found ) - self::CSS_VAR_FINDING_LIMIT, self::CSS_VAR_FINDING_LIMIT ),
+				$path
+			);
+		}
+	}
+
 	private function collect_declared_css_variables( mixed $value, array &$out = [] ): array {
 		if ( is_array( $value ) ) {
 			foreach ( [ 'name', 'variable', 'key', 'id' ] as $key ) {
@@ -954,6 +1014,40 @@ final class Bricks_Conversion_Validator {
 				'path'     => $path,
 				'value'    => $value,
 				'literals' => $literals,
+			];
+		}
+	}
+
+	private function collect_css_variables_without_fallback( mixed $value, array &$out, string $path, bool $parent_owned = false ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$key_string = (string) $key;
+				$owned      = $parent_owned
+					|| preg_match( self::NATIVE_STYLE_CONTROL_PATTERN, $key_string )
+					|| preg_match( self::TOKEN_OWNED_NESTED_KEY_PATTERN, $key_string )
+					|| preg_match( self::TOKEN_OWNED_COLOR_NESTED_KEY_PATTERN, $key_string );
+				$this->collect_css_variables_without_fallback( $item, $out, $path . '.' . $key_string, (bool) $owned );
+			}
+			return;
+		}
+
+		if ( ! $parent_owned || ! is_string( $value ) || false === strpos( $value, 'var(' ) ) {
+			return;
+		}
+
+		foreach ( $this->extract_css_function_calls( $value, 'var' ) as $call ) {
+			$args = $this->split_css_args( $call );
+			if ( count( $args ) >= 2 ) {
+				continue;
+			}
+			$variable = trim( (string) ( $args[0] ?? '' ) );
+			if ( ! preg_match( '/^--[a-z][a-z0-9_-]*$/i', $variable ) ) {
+				continue;
+			}
+			$out[] = [
+				'path'     => $path,
+				'value'    => $value,
+				'variable' => $variable,
 			];
 		}
 	}

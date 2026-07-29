@@ -15,18 +15,18 @@
         "_display": "flex",
         "_direction": "column",
         "_direction:mobile_landscape": "column",
-        "_rowGap": "var(--kiwe-space-md)",
+        "_rowGap": "var(--kiwe-space-md, 1rem)",
         "_background": {
           "color": {
-            "raw": "var(--kiwe-color-surface)"
+            "raw": "var(--kiwe-color-surface, #fff8ef)"
           }
         },
         "_border": {
           "radius": {
-            "top": "var(--kiwe-radius-xl)",
-            "right": "var(--kiwe-radius-xl)",
-            "bottom": "var(--kiwe-radius-xl)",
-            "left": "var(--kiwe-radius-xl)"
+            "top": "var(--kiwe-radius-xl, 1.5rem)",
+            "right": "var(--kiwe-radius-xl, 1.5rem)",
+            "bottom": "var(--kiwe-radius-xl, 1.5rem)",
+            "left": "var(--kiwe-radius-xl, 1.5rem)"
           }
         },
         "_attributes": [
@@ -48,7 +48,7 @@
         "_cssClasses": "seam-title",
         "_typography": {
           "color": {
-            "raw": "var(--kiwe-color-text)"
+            "raw": "var(--kiwe-color-text, #201b18)"
           }
         }
       }

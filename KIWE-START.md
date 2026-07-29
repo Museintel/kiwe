@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.77`
+Contract version: `6.78`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.77
+SeamFlow contract: 6.78
 ```
 
 Then do one of these:
@@ -128,7 +128,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.77
+SeamFlow contract: 6.78
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -242,7 +242,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.77
+SeamFlow contract: 6.78
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -312,7 +312,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.77
+SeamFlow contract: 6.78
 Command:
 Artifact classification:
 Files returned:
