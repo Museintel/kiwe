@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.74`
+Contract version: `6.75`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.74
+SeamFlow contract: 6.75
 ```
 
 Then do one of these:
@@ -31,6 +31,8 @@ Then do one of these:
 4. If the human gave no files and no `/command`, return `/list` plus one short question asking what they want to create, rebuild, audit, fix, convert, or apply.
 
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
+
+Active-contract rule: after you read this Start file and return the first classification response, treat this loaded Start file as the active contract for the immediate next user `/command` in the same conversation. Do not reload the repository, README, GitHub pages, search results, arXiv, commits, old examples, or the Start file again for that next command. If additional command detail is truly required, fetch only the exact raw machine entry or exact raw command manifest URL from this Start file. If exact raw fetch is unavailable, stop with `ERROR: KIWE_TOOL_UNAVAILABLE` or `ERROR: KIWE_SEARCH_DRIFT`; do not search.
 
 Current-run evidence only: do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or "accepted" notes unless the human supplied those exact files in the current turn or explicitly asked you to compare against them. SeamFlow must classify and validate the current artifacts, not inherit conclusions from earlier tests.
 
@@ -118,7 +120,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.74
+SeamFlow contract: 6.75
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -227,7 +229,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.74
+SeamFlow contract: 6.75
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -297,7 +299,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.74
+SeamFlow contract: 6.75
 Command:
 Artifact classification:
 Files returned:
