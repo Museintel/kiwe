@@ -415,8 +415,8 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
 
   const wantsFull = /\/execute\s+\/fullflow|full[-\s]?flow|complete flow|all commands|through accessibility|final artifacts|end to end/.test(text);
   const wantsStep = /\/execute\s+\/stepbystep|step[-\s]?by[-\s]?step|one command|in parts|turns/.test(text);
-  const wantsAuditEachStep = /\/auditateachstep|audit at each step|audit each step|audit after each/.test(text);
-  const wantsAuditAtEnd = /\/auditatend|audit at end|final audit/.test(text);
+  const wantsAuditEachStep = /\/audit\s+\/eachstep|\/auditateachstep|audit at each step|audit each step|audit after each/.test(text);
+  const wantsAuditAtEnd = /\/audit\s+\/atend|\/audit\s+\/at-end|\/auditatend|audit at end|final audit/.test(text);
   const wantsDsa = /dsa|appshell|app shell|theme package|combined/.test(text);
   const wantsBricks = /bricks|template|builder|convert/.test(text);
   const hasCommand = /\/[a-z][a-z0-9_-]*(?:\s+\/[a-z][a-z0-9_-]*)*/i.test(String(command || ''));
@@ -501,7 +501,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     if (primary === 'unknown') {
       questions.push('What do you want to create, rebuild, audit, fix, convert, or apply?');
     } else {
-      questions.push('Choose `/execute /stepbystep`, `/execute /fullflow`, or a specific `/command`. Optional flags: `/auditateachstep`, `/auditatend`, `/usecompanion`.');
+      questions.push('Choose `/execute /stepbystep`, `/execute /fullflow`, or a specific `/command`. Optional flags: `/audit /eachstep`, `/audit /atend`, `/usecompanion`.');
       if (primary === 'bricks-template-upload') {
         questions.push('Should I audit the existing Bricks template as-is, or should we return to the source HTML for a stricter Seam rebuild first?');
       }
@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.70',
+    contractVersion: '6.71',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -532,13 +532,13 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     executionOptions: {
       stepByStep: '/execute /stepbystep',
       fullFlow: '/execute /fullflow',
-      auditCadence: wantsAuditEachStep ? '/auditateachstep' : wantsAuditAtEnd ? '/auditatend' : 'ask-or-default-/auditateachstep-for-production',
+      auditCadence: wantsAuditEachStep ? '/audit /eachstep' : wantsAuditAtEnd ? '/audit /atend' : 'ask-or-default-/audit-/eachstep-for-production',
       companion: wantsCompanion({ command, explicit: useCompanion }) ? '/usecompanion' : 'optional',
       closureMode: wantsAuditEachStep ? 'audit-fix-repeat-after-each-phase' : wantsAuditAtEnd ? 'audit-fix-repeat-before-final-delivery' : 'ask'
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.70',
+      mustReport: 'SeamFlow contract: 6.71',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -606,7 +606,9 @@ export function listCommands() {
       '/build': 'Legacy alias accepted internally; user-facing output should say /create.',
       '/dynamic /sitegraph': 'Legacy alias for /usesitegraph.',
       '/sitegraph': 'Legacy shorthand for /usesitegraph when used as a workflow phase.',
-      '/usesitegraph /replacepreview': 'Legacy shorthand for /usesitegraph /replacepreviewdata.'
+      '/usesitegraph /replacepreview': 'Legacy shorthand for /usesitegraph /replacepreviewdata.',
+      '/auditateachstep': 'Legacy alias for /audit /eachstep.',
+      '/auditatend': 'Legacy alias for /audit /atend.'
     },
     commands: [
       {
@@ -626,6 +628,30 @@ export function listCommands() {
         purpose: 'Run the complete approved SeamFlow path to final artifacts with compact pass/fail status.',
         requires: ['classified current artifact and human approval for full-flow execution'],
         output: 'final canonical artifacts only'
+      },
+      {
+        command: '/audit /allattached',
+        purpose: 'Second-pass audit: classify all attached/current files and run every matching lane audit without rebuilding or redesigning.',
+        requires: ['one or more current attached/supplied artifacts'],
+        output: 'compact pass/fail per detected artifact lane'
+      },
+      {
+        command: '/fix /allattached',
+        purpose: 'Second-pass repair: fix every failed attached/current lane, then rerun matching audits until PASS or NEEDS_INPUT.',
+        requires: ['current attached/supplied artifacts and failed audit findings or rerunnable validators'],
+        output: 'corrected current artifact files only'
+      },
+      {
+        command: '/audit /allflow',
+        purpose: 'Audit every closure lane required by the detected SeamFlow start point/current stage.',
+        requires: ['classified current artifact or file map'],
+        output: 'compact pass/fail across required closure audits'
+      },
+      {
+        command: '/fix /allflow',
+        purpose: 'Repair failed lanes across the detected current flow, then rerun every required closure audit until PASS or NEEDS_INPUT.',
+        requires: ['classified current artifact/file map and failed audit findings or rerunnable validators'],
+        output: 'corrected canonical artifacts for the detected current flow'
       },
       {
         command: '/fix',
@@ -788,11 +814,11 @@ export function listCommands() {
         purpose: 'Optional bounded Kiwe Companion assist. If unavailable, continue without it and report fallback.'
       },
       {
-        flag: '/auditateachstep',
+        flag: '/audit /eachstep',
         purpose: 'Audit and fix after each phase before continuing. Recommended for production/importable files.'
       },
       {
-        flag: '/auditatend',
+        flag: '/audit /atend',
         purpose: 'Run creation/conversion first, then audit/fix before delivery. Useful for quick exploratory drafts.'
       }
     ],
@@ -995,6 +1021,7 @@ function routeKind(command) {
   if (!text) return 'workflow';
   if (/(?:^|\s)\/list\b/.test(text)) return 'command-list';
   if (/(?:^|\s)\/(?:document|notes)\b/.test(text)) return 'document';
+  if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow)/.test(text)) return 'audit-all';
   if (/(?:^|\s)\/fix\b/.test(text)) return 'fix';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
@@ -1045,6 +1072,9 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/auditateachstep',
   '/a11y',
   '/accessibility',
+  '/allattached',
+  '/allflow',
+  '/atend',
   '/binding',
   '/bindings',
   '/bricks',
@@ -1062,6 +1092,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/dsatheme',
   '/dsathemeandhomepage',
   '/dynamic',
+  '/eachstep',
   '/export',
   '/execute',
   '/fix',
@@ -1116,6 +1147,12 @@ const VALID_PHASE_COMMANDS = [
   '/list',
   '/execute /stepbystep',
   '/execute /fullflow',
+  '/audit /eachstep',
+  '/audit /atend',
+  '/audit /allattached',
+  '/fix /allattached',
+  '/audit /allflow',
+  '/fix /allflow',
   '/document',
   '/fix',
   '/ideate /webdraft',
@@ -1216,6 +1253,8 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     .replace(/(?:^|\s)\/build\b/gi, ' /create')
     .replace(/(?:^|\s)\/dynamic\s+\/sitegraph\b/gi, ' /usesitegraph')
     .replace(/(?:^|\s)\/sitegraph\b/gi, ' /usesitegraph')
+    .replace(/(?:^|\s)\/auditateachstep\b/gi, ' /audit /eachstep')
+    .replace(/(?:^|\s)\/auditatend\b/gi, ' /audit /atend')
     .replace(/(?:^|\s)\/replacepreview\b/gi, ' /replacepreviewdata')
     .replace(/\s+/g, ' ')
     .trim();
@@ -1254,14 +1293,14 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/auditateachstep|\/auditatend/) && !commandHas(text, /\/execute/)) {
+  if (commandHas(text, /\/audit\s+\/(?:eachstep|atend)|\/auditateachstep|\/auditatend/) && !commandHas(text, /\/execute/) && !commandHas(text, /\/(?:allattached|allflow)/)) {
     return commandDiagnostic({
       status: 'needs_input',
       code: 'audit_cadence_requires_execute',
       kind: 'execute',
       normalizedCommand,
-      message: '`/auditateachstep` and `/auditatend` are execution flags. Pair them with `/execute /stepbystep` or `/execute /fullflow`.',
-      suggestions: ['/execute /stepbystep /auditateachstep', '/execute /fullflow /auditateachstep', '/execute /fullflow /auditatend'],
+      message: '`/audit /eachstep` and `/audit /atend` are execution flags. Pair them with `/execute /stepbystep` or `/execute /fullflow`.',
+      suggestions: ['/execute /stepbystep /audit /eachstep', '/execute /fullflow /audit /eachstep', '/execute /fullflow /audit /atend'],
       boundaries: ['Do not treat audit cadence flags as standalone generation or audit commands.']
     });
   }
@@ -1273,8 +1312,20 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       kind: 'execute',
       normalizedCommand,
       message: '`/execute` needs the current artifact or file map. It must not use older Kiwe/National Chikki/BioVantage outputs or prior validation notes unless they were supplied in the current turn.',
-      suggestions: ['Provide the current artifact/file map.', '/execute /stepbystep /auditateachstep', '/execute /fullflow /auditateachstep'],
+      suggestions: ['Provide the current artifact/file map.', '/execute /stepbystep /audit /eachstep', '/execute /fullflow /audit /eachstep'],
       boundaries: ['Current-run artifacts only.', 'No prior test material unless explicitly supplied for comparison.']
+    });
+  }
+
+  if (commandHas(text, /\/(?:audit|fix)/) && commandHas(text, /\/(?:allattached|allflow)/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'audit_all_missing_artifacts',
+      kind: 'audit-all',
+      normalizedCommand,
+      message: '`/audit /allattached`, `/fix /allattached`, `/audit /allflow`, and `/fix /allflow` need the current generated files, attached artifacts, or file map. They classify and audit real artifacts; they do not search for stale files.',
+      suggestions: ['Attach the current output files.', 'Provide the current artifact folder/file map.', '/audit /allattached after files are supplied', '/fix /allflow after failed current artifacts are supplied'],
+      boundaries: ['Current-run artifacts only.', 'Do not use prior National Chikki/BioVantage outputs unless supplied in this turn.', 'Do not rebuild during audit-all/fix-all commands.']
     });
   }
 
@@ -1936,6 +1987,24 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       '# Selected phase guidance',
       '',
       'Audit and revise actual files for color contrast, light/dark proof, Bricks global theme-style color alignment, Kiwe/Seam token pairing, and critical text containment.',
+      '',
+      getAccessibilityContext(),
+      '',
+      readMaybe('contexts/audit-lite.md')
+    );
+  } else if (kind === 'audit-all') {
+    parts.push(
+      '# Selected phase guidance',
+      '',
+      'Classify every supplied/current artifact by actual file content, then run every matching lane audit required by `/audit /allattached` or `/audit /allflow`.',
+      '',
+      'Do not rebuild, redesign, create DSA/combined output, create docs, search for stale files, or use prior accepted notes. Audit-only commands return findings only. If `/fix /allattached` or `/fix /allflow` is present, fix only failed current lanes and rerun the same audits until PASS or NEEDS_INPUT.',
+      '',
+      'Use validator authority: official validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts.',
+      '',
+      frameworkProfileContext(),
+      '',
+      getBricksConversionContext(),
       '',
       getAccessibilityContext(),
       '',

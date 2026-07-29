@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.70",
+  "contractVersion": "6.71",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -24,10 +24,10 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.70",
+    "mustReport": "SeamFlow contract: 6.71",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
-    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /auditateachstep, /auditatend, and /usecompanion. Put the /list command hint last.",
+    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /atend, and /usecompanion. Put the /list command hint last.",
     "ifNoFilesNoCommand": "Return compact /list summary and ask what the human wants to create, rebuild, audit, fix, convert, or apply."
   },
   "rawFiles": {
@@ -102,15 +102,15 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.70",
+      "SeamFlow contract: 6.71",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
-      "Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /auditateachstep, /auditatend, /usecompanion.",
+      "Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /audit /eachstep, /audit /atend, /usecompanion.",
       "Commands: use /list for the compact command list"
     ],
     "stepByStepQuestion": "I found files but no command. Choose /execute /stepbystep for one artifact per command or /execute /fullflow for final artifacts only.",
-    "auditCadenceQuestion": "Add /auditateachstep for production/importable rigor or /auditatend for a quicker exploratory pass.",
+    "auditCadenceQuestion": "Add /audit /eachstep for production/importable rigor or /audit /atend for a quicker exploratory pass.",
     "companionQuestion": "Add /usecompanion if you want Kiwe Companion assist. If credentials are not available, continue without it and report fallback.",
     "targetQuestion": "Is the target page/Bricks only, DSA theme only, or combined Appsite?",
     "auditFirstQuestion": "This looks like an existing generated artifact. Should I audit it first before fixing or continuing?",
@@ -121,9 +121,18 @@
     "executionCommands": {
       "/execute /stepbystep": "Run only the next safe phase, return the phase artifact, then stop.",
       "/execute /fullflow": "Run the complete safe path to final artifacts.",
-      "/auditateachstep": "Audit/fix after every phase before continuing.",
-      "/auditatend": "Run creation/conversion phases first, then final audits before delivery.",
+      "/audit /eachstep": "Audit/fix after every phase before continuing.",
+      "/audit /atend": "Run creation/conversion phases first, then final audits before delivery.",
+      "/auditateachstep": "Legacy alias for /audit /eachstep.",
+      "/auditatend": "Legacy alias for /audit /atend.",
       "/usecompanion": "Optional bounded Companion assist. If unavailable, continue without it and report fallback."
+    },
+    "secondPassCommands": {
+      "/audit /allattached": "Classify all supplied/current artifacts and run every matching lane audit.",
+      "/fix /allattached": "Fix every failed supplied/current artifact lane, then rerun matching audits.",
+      "/audit /allflow": "Run every closure audit required by the detected start point or current stage.",
+      "/fix /allflow": "Repair failed lanes across the detected flow, then rerun every closure audit.",
+      "rule": "These commands are for second-pass repair. They must not rebuild creatively, redesign, add DSA/combined output, create docs, or use stale files."
     },
     "rawHtmlCssJsToBricks": [
       "/rebuild /seamframework",
@@ -193,8 +202,10 @@
         "Repeat until PASS, or stop as NEEDS_INPUT if the same blocker repeats or required source/authority is missing."
       ],
       "cadence": {
-        "/auditateachstep": "Each phase must pass its own audit before the next phase starts.",
-        "/auditatend": "Generation/conversion phases may proceed first, but final delivery still requires every relevant closing audit to pass."
+        "/audit /eachstep": "Each phase must pass its own audit before the next phase starts.",
+        "/audit /atend": "Generation/conversion phases may proceed first, but final delivery still requires every relevant closing audit to pass.",
+        "/auditateachstep": "Legacy alias for /audit /eachstep.",
+        "/auditatend": "Legacy alias for /audit /atend."
       },
       "byStartPoint": {
         "raw-html-css-js": ["/audit /seamframework", "/audit /frameworkprofile", "/audit /bricksconversion", "/audit /accessibility"],
@@ -259,7 +270,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.70",
+    "SeamFlow contract: 6.71",
     "Command:",
     "Artifact classification:",
     "Files returned:",
