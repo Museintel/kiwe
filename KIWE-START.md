@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.75`
+Contract version: `6.76`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.75
+SeamFlow contract: 6.76
 ```
 
 Then do one of these:
@@ -27,7 +27,7 @@ Then do one of these:
 3. If the human gave files but no `/command`, inspect the file contents, classify the current stage, return a compact diagnostic, recommend the next command, and ask which explicit execution command they want:
    - `/execute /stepbystep`, where each command returns its own artifact before the next command starts;
    - `/execute /fullflow`, where you run the complete path and return only final artifacts plus compact pass/fail status.
-   The human may add `/audit /eachstep` or `/audit /atend`, and may add `/usecompanion` if they want Kiwe Companion assist.
+   The human may add `/audit /eachstep`, `/audit /fix /eachstep`, `/audit /atend`, `/audit /fix /atend`, `/report`, or `/usecompanion`.
 4. If the human gave no files and no `/command`, return `/list` plus one short question asking what they want to create, rebuild, audit, fix, convert, or apply.
 
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
@@ -120,12 +120,12 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.75
+SeamFlow contract: 6.76
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
 Recommended next command:
-Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /audit /eachstep, /audit /atend, /usecompanion.
+Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, /usecompanion.
 Commands: use /list for the compact command list
 ```
 
@@ -149,7 +149,10 @@ Execution commands:
 /execute /stepbystep   -> run the next safe phase only, return its artifact, then stop
 /execute /fullflow     -> run the complete safe path to the final artifact set
 /audit /eachstep       -> run audit/fix gates after every phase before continuing
+/audit /fix /eachstep  -> after each phase, audit; if failed, fix the actual artifact and re-audit until PASS or NEEDS_INPUT before moving on
 /audit /atend          -> run generation/conversion phases first, then final audits before delivery
+/audit /fix /atend     -> run generation/conversion phases first, then audit/fix/re-audit all required closure lanes until PASS or NEEDS_INPUT before delivery
+/report                -> in /execute /stepbystep, return the current phase file plus compact report and wait for the human to say continue
 /usecompanion          -> optional bounded Kiwe Companion assist; falls back without blocking
 ```
 
@@ -179,7 +182,9 @@ DSA theme package          -> /audit /dsatheme, /audit /accessibility
 combined handoff           -> /audit /combined, /audit /accessibility
 ```
 
-`/audit /eachstep` means each phase must pass its own audit before the next phase starts. `/audit /atend` means generation/conversion can proceed first, but final delivery still requires every relevant closing audit to pass. In both modes, `/fix` is not optional after a failed audit.
+`/audit /eachstep` means each phase must pass its own audit before the next phase starts. `/audit /fix /eachstep` makes the repair loop explicit: phase -> audit -> fix actual artifact if needed -> same audit again -> repeat until PASS or NEEDS_INPUT -> then move to the next phase. `/audit /atend` means generation/conversion can proceed first, but final delivery still requires every relevant closing audit to pass. `/audit /fix /atend` makes the final repair loop explicit across all required closing lanes. In all audit modes, a failed audit cannot be ignored.
+
+`/report` is an interaction flag. In `/execute /stepbystep`, it means stop after the current phase closes, return the phase artifact plus a compact report of what was generated, audited, fixed, and still warned, then wait for the human to say `continue` before the next phase. In `/execute /fullflow`, `/report` does not pause between phases unless the human explicitly asked for step-by-step; it only adds a compact final phase ledger.
 
 ## Second-pass audit and fix commands
 
@@ -229,7 +234,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.75
+SeamFlow contract: 6.76
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -299,7 +304,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.75
+SeamFlow contract: 6.76
 Command:
 Artifact classification:
 Files returned:

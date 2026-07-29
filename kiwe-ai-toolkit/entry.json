@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.75",
+  "contractVersion": "6.76",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -26,10 +26,10 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.75",
+    "mustReport": "SeamFlow contract: 6.76",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
-    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /atend, and /usecompanion. Put the /list command hint last.",
+    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Put the /list command hint last.",
     "ifNoFilesNoCommand": "Return compact /list summary and ask what the human wants to create, rebuild, audit, fix, convert, or apply."
   },
   "rawFiles": {
@@ -72,7 +72,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.75",
+      "SeamFlow contract: 6.76",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -132,15 +132,15 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.75",
+      "SeamFlow contract: 6.76",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
-      "Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /audit /eachstep, /audit /atend, /usecompanion.",
+      "Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, /usecompanion.",
       "Commands: use /list for the compact command list"
     ],
     "stepByStepQuestion": "I found files but no command. Choose /execute /stepbystep for one artifact per command or /execute /fullflow for final artifacts only.",
-    "auditCadenceQuestion": "Add /audit /eachstep for production/importable rigor or /audit /atend for a quicker exploratory pass.",
+    "auditCadenceQuestion": "Add /audit /eachstep for production/importable rigor, /audit /fix /eachstep to explicitly fix and re-audit before moving on, or /audit /atend for a quicker exploratory pass.",
     "companionQuestion": "Add /usecompanion if you want Kiwe Companion assist. If credentials are not available, continue without it and report fallback.",
     "targetQuestion": "Is the target page/Bricks only, DSA theme only, or combined Appsite?",
     "auditFirstQuestion": "This looks like an existing generated artifact. Should I audit it first before fixing or continuing?",
@@ -152,7 +152,10 @@
       "/execute /stepbystep": "Run only the next safe phase, return the phase artifact, then stop.",
       "/execute /fullflow": "Run the complete safe path to final artifacts.",
       "/audit /eachstep": "Audit/fix after every phase before continuing.",
+      "/audit /fix /eachstep": "After each phase, audit; if failed, fix the actual artifact and rerun the same audit until PASS or NEEDS_INPUT before moving on.",
       "/audit /atend": "Run creation/conversion phases first, then final audits before delivery.",
+      "/audit /fix /atend": "Run creation/conversion phases first, then audit/fix/re-audit all required closure lanes until PASS or NEEDS_INPUT before delivery.",
+      "/report": "In /execute /stepbystep, stop after the current phase closes, return the phase artifact plus compact generated/audited/fixed/warnings report, and wait for the human to say continue.",
       "/usecompanion": "Optional bounded Companion assist. If unavailable, continue without it and report fallback."
     },
     "secondPassCommands": {
@@ -236,7 +239,9 @@
       ],
       "cadence": {
         "/audit /eachstep": "Each phase must pass its own audit before the next phase starts.",
-        "/audit /atend": "Generation/conversion phases may proceed first, but final delivery still requires every relevant closing audit to pass."
+        "/audit /fix /eachstep": "Each phase runs phase -> audit -> fix actual artifact if needed -> same audit again until PASS or NEEDS_INPUT before moving on.",
+        "/audit /atend": "Generation/conversion phases may proceed first, but final delivery still requires every relevant closing audit to pass.",
+        "/audit /fix /atend": "Final delivery runs every required closure audit, fixes failed lanes, and reruns the same audits until PASS or NEEDS_INPUT."
       },
       "byStartPoint": {
         "raw-html-css-js": ["/audit /seamframework", "/audit /frameworkprofile", "/audit /bricksconversion", "/audit /accessibility"],
@@ -253,6 +258,7 @@
         "Do not use stale audit reports from previous attempts as closure proof."
       ]
     },
+    "reportRule": "/report is an interaction flag. In /execute /stepbystep, return the current phase file and a compact report after the audit/fix loop closes, then wait for the human to say continue. In /execute /fullflow, it adds a compact final phase ledger but does not pause unless the human chose step-by-step.",
     "fullFlowStepRule": "Full-flow means one final delivery, not one giant context load. Internally run phase-by-phase, reading only the contexts/validators required by the current phase, then close that phase with /audit -> /fix -> /audit before continuing.",
     "fullFlowStopRule": "Stop at the first blocking audit failure that cannot be fixed from the supplied artifact; otherwise continue the /audit -> /fix -> /audit loop until required closure audits pass. Missing Site Graph is not a blocker for static Bricks conversion; preserve dynamic intent/manual-review markers and suggest /usesitegraph unless the human explicitly requested live Site Graph binding or staging/apply authority.",
     "fullFlowDefaultFinalArtifacts": [
@@ -301,7 +307,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.75",
+    "SeamFlow contract: 6.76",
     "Command:",
     "Artifact classification:",
     "Files returned:",
