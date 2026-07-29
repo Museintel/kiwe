@@ -618,7 +618,7 @@ final class AI_Companion_Service {
 		}
 
 		if ( preg_match( '/\/(?:create|build).*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'accessibility_create_missing_artifact', '`/create /accessibility` needs an existing website/theme/combined artifact. It is a color-token, contrast, and light/dark-mode pass over real files, not a fresh creative website phase.', 'accessibility-create', $normalized, [ 'Provide the current handoff files or artifact summary', '/create /accessibility after /rebuild /seamframework or /create /combined' ], [ 'Do not redesign the page only to fix accessibility.', 'Do not invent dark mode outside Kiwe/Seam/Bricks token lanes.' ] );
+			return $this->command_gate_result( 'needs_input', 'accessibility_create_missing_artifact', '`/create /accessibility` needs an existing website/theme/combined artifact. It is a token-backed contrast, light/dark-mode, and critical text-containment pass over real files, not a fresh creative website phase.', 'accessibility-create', $normalized, [ 'Provide the current handoff files or artifact summary', '/create /accessibility after /rebuild /seamframework or /create /combined' ], [ 'Do not redesign the page only to fix accessibility.', 'Do not invent dark mode outside Kiwe/Seam/Bricks token lanes.' ] );
 		}
 
 		if ( preg_match( '/\/audit.*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
@@ -825,13 +825,13 @@ final class AI_Companion_Service {
 			],
 			'accessibility-create' => [
 				'id'    => 'phase-accessibility-create-token-contrast',
-				'title' => 'Create the accessibility color lane over existing files',
-				'body'  => 'Add accessibility/kiwe-accessibility-plan.json and notes, map light/dark foreground-background token pairs, align Bricks theme-style colors, and revise only contrast/dark-mode defects. Do not redesign or create new content.',
+				'title' => 'Create the accessibility lane over existing files',
+				'body'  => 'Add accessibility/kiwe-accessibility-plan.json and notes only when requested, map light/dark foreground-background token pairs, align Bricks theme-style colors, and revise contrast, dark-mode, and critical text-containment defects. Do not redesign or create new content.',
 			],
 			'accessibility-audit' => [
 				'id'    => 'phase-accessibility-audit-light-dark-contrast',
 				'title' => 'Audit light/dark contrast deterministically',
-				'body'  => 'Fail obvious low-contrast literal pairs, missing dark-mode proof, missing accessibility plan fields, and color work that bypasses Kiwe/Seam tokens or Bricks global theme-style slots. Font-size audit is intentionally out of scope for now.',
+				'body'  => 'Fail obvious low-contrast literal pairs, missing dark-mode proof, missing accessibility plan fields, color work that bypasses Kiwe/Seam tokens or Bricks global theme-style slots, and critical labels/titles/pills/buttons/cards clipped by constrained Geometry/Seam sizing. Full font-size preference audit is intentionally out of scope for now.',
 			],
 			'staging' => [
 				'id'    => 'phase-staging-controlled-executor-only',

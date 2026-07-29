@@ -15,8 +15,10 @@ Looks for:
 Checks:
   - light and dark mode proof
   - literal text/background contrast pairs
+  - token-resolved Bricks foreground/background pairs
   - Kiwe/Seam token pairing
   - Bricks theme-style/color-palette alignment hints
+  - critical text clipping and overflow risk in CSS/Bricks settings
 
 The validator is deterministic and non-mutating. It does not write to WordPress or Bricks.
 `);

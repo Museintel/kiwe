@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-kiwe-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <title>Kiwe accessibility overflow invalid fixture</title>
+  <style>
+    :root {
+      --kiwe-color-surface: #fffdf8;
+      --kiwe-color-text: #201b18;
+    }
+
+    .bad-pill-title {
+      color: var(--kiwe-color-text);
+      background: var(--kiwe-color-surface);
+      width: 72px;
+      height: 24px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <button type="button" data-kiwe-theme-toggle>Toggle theme</button>
+  <span class="bad-pill-title" data-role="title">National Chikki Festival Offer</span>
+</body>
+</html>

@@ -5,9 +5,10 @@ Use this context only for:
 ```text
 /create /accessibility
 /audit /accessibility
+/fix /accessibility
 ```
 
-This is a focused accessibility lane for color contrast, light/dark mode, Kiwe/Seam token pairing, and Bricks global theme-style alignment. Do not use this phase for font-size/readability scaling yet; that is a separate future lane.
+This is a focused accessibility lane for color contrast, light/dark mode, Kiwe/Seam token pairing, Bricks global theme-style alignment, and visible text containment. Do not use this phase for a full typography redesign or font-size preference system yet; that is a separate future lane. It may, however, fix text that is hidden, clipped, overlapped, unreadable, or forced into too-small pills/cards.
 
 ## Boundary
 
@@ -22,7 +23,11 @@ This is a focused accessibility lane for color contrast, light/dark mode, Kiwe/S
 
 It does not create a new page, theme, DSA shell, Bricks JSON, WooCommerce logic, cart runtime, checkout runtime, auth runtime, service worker, or staging mutation.
 
-`/audit /accessibility` inspects and revises concrete files. If no artifact/file map is supplied, stop and ask for the files.
+`/audit /accessibility` inspects concrete files and reports what fails.
+
+`/fix /accessibility` revises only the existing artifact lane that failed. It must not recreate the website, convert to Bricks, create a DSA theme, create a combined preview, or add documentation unless `/document` is present.
+
+If no artifact/file map is supplied, stop and ask for the files.
 
 ## Required output
 
@@ -146,8 +151,9 @@ Do not write element-level Bricks styles into the Framework profile. Page-specif
 2. Identify actual color surfaces and text-bearing components.
 3. Add/repair Kiwe token usage where hardcoded colors would break light/dark.
 4. Add native dark-mode state proof to the existing preview/page.
-5. Create `accessibility/kiwe-accessibility-plan.json`.
-6. If `/document` was requested, create `accessibility/ACCESSIBILITY-NOTES.md` explaining:
+5. Inspect visible containment risks: overlapping text, labels hidden by overflow, clipped pills/chips/buttons, text squeezed inside bento cards, and text over gradients/images with no readable fallback.
+6. Create `accessibility/kiwe-accessibility-plan.json`.
+7. If `/document` was requested, create `accessibility/ACCESSIBILITY-NOTES.md` explaining:
    - source artifact;
    - token pairs;
    - light/dark behavior;
@@ -166,6 +172,8 @@ Blocking failures:
 - literal low-contrast CSS pairs such as white on white or black on black;
 - dark-mode CSS that changes backgrounds but leaves text on the old light token;
 - badges/chips/pills/buttons with no readable `on-*` foreground;
+- text-bearing titles, labels, pills, chips, buttons, tabs, prices, stats, or critical card text that is clipped, hidden, nowrap-ellipsized, or line-clamped inside a constrained box without an accessible full-text path;
+- bento/card/product rail layouts where visible text is cut off at supported widths and the fix requires Geometry/Seam sizing rather than a manual one-screen patch;
 - `filter: invert()` dark mode;
 - hidden duplicate text layers used to fake contrast;
 - production/import artifacts containing preview-only color fixtures;
@@ -178,6 +186,32 @@ Warnings/manual review:
 - private project color variables not mapped in `tokenPairs`;
 - color literals that could be replaced with official Kiwe tokens;
 - dark mode proven only by `prefers-color-scheme` when Kiwe theme state exists.
+- cards/rails with `overflow:hidden`, `overflow:clip`, `white-space:nowrap`, `text-overflow:ellipsis`, or `line-clamp` on non-critical body/excerpt text; these can be acceptable only with desktop/tablet/mobile/narrow render proof and accessible full text.
+
+## Geometry / Seam accessibility rule
+
+Visible clipping is not just a cosmetic accessibility failure; it is also a Geometry Engine / Seam contract failure when the element declares what it is.
+
+Examples:
+
+- A `data-role="title"`, `.seam-title`, heading, badge, pill, chip, tab, button, price, or stat must remain readable at desktop, tablet, mobile, and narrow widths.
+- A card may crop decorative media, but it must not crop its own critical text.
+- A horizontal rail may scroll cards, but each visible card must have enough tokenized inline/block space for its own label and CTA.
+- If the source proves different responsive states, use a real Kiwe calculated `clamp(...)`.
+- If the value is a stable art-direction constant, declare a project token in the Framework profile or Bricks global variables.
+- Do not fix clipping by shrinking text until unreadable, hiding overflow, duplicate hidden text, or making a one-screen absolute-position patch.
+
+When static validation cannot prove text over image/gradient/transparent layers, the AI must run or request browser/render proof. Required proof widths are desktop, tablet, mobile, and narrow. If browser tools are unavailable, leave a blocking/manualReview item instead of claiming pass.
+
+## What `/fix /accessibility` should do
+
+1. Run or emulate `/audit /accessibility` on the supplied artifact.
+2. Fix only the files that failed the accessibility lane.
+3. Add native Kiwe light/dark token state, preferably with `[data-kiwe-theme="light"]`, `[data-kiwe-theme="dark"]`, and `data-kiwe-theme-toggle` when the artifact has a theme toggle.
+4. Replace unsafe literal color pairs with Kiwe/Seam token pairs or documented project tokens mapped in the accessibility plan.
+5. Replace clipped critical text surfaces with wrapping, fluid Geometry/Seam sizing, safer min-block sizing, rail item width tokens, or accessible full text.
+6. Preserve Bricks dynamic tags, query-loop intent, Kiwe launcher attributes, and DSA/AppShell boundaries.
+7. Output only the revised existing artifact file(s) plus `accessibility/kiwe-accessibility-plan.json`; do not output notes unless `/document` was requested.
 
 ## Validator
 

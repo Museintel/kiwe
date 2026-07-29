@@ -471,9 +471,16 @@ export function listCommands() {
       {
         command: '/audit /accessibility',
         aliases: ['/audit /a11y'],
-        purpose: 'Audit and revise color contrast, token pairing, native dark-mode proof, and Bricks/Kiwe theme-token alignment.',
+        purpose: 'Audit and revise color contrast, token pairing, native dark-mode proof, Bricks/Kiwe theme-token alignment, and visible text containment.',
         requires: ['existing artifact files and optional accessibility/kiwe-accessibility-plan.json'],
         output: 'same artifact plus corrected accessibility lane'
+      },
+      {
+        command: '/fix /accessibility',
+        aliases: ['/fix /a11y'],
+        purpose: 'Repair only the failed accessibility lane: contrast, dark/light token proof, Bricks theme-token alignment, and critical text clipping.',
+        requires: ['existing artifact files and accessibility findings'],
+        output: 'same artifact file(s) plus accessibility/kiwe-accessibility-plan.json; no docs unless /document was requested'
       },
       {
         command: '/apply /staging',
@@ -1333,8 +1340,9 @@ function commandListMarkdown() {
     '## Accessibility lane',
     '',
     '- `/create /accessibility` works only after there is an existing website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion to inspect.',
-    '- `/audit /accessibility` checks literal contrast pairs, light/dark proof, Kiwe/Seam token usage, Bricks theme-style alignment, and preview/import separation.',
-    '- This lane currently covers color contrast and native light/dark transitions. Font-size and reading-scale work are intentionally separate future phases.',
+    '- `/audit /accessibility` checks literal and token-resolved contrast pairs, light/dark proof, Kiwe/Seam token usage, Bricks theme-style alignment, preview/import separation, and visible text containment risks.',
+    '- `/fix /accessibility` repairs only the existing failed artifact lane plus `accessibility/kiwe-accessibility-plan.json`; it must not redesign, reconvert to Bricks, create DSA themes, or add docs unless `/document` is present.',
+    '- This lane covers color contrast, native light/dark transitions, and clipped/overflowing critical text. Full font-size/readability preference work remains a separate future phase.',
     '',
     '## Bricks boundary',
     '',
@@ -1359,10 +1367,10 @@ function commandListMarkdown() {
 
 function fixPhaseContext(command, artifactSummary) {
   const text = `${command}\n${artifactSummary}`.toLowerCase();
-  const inferred = hasConversionArtifact(text)
-    ? '/audit /bricksconversion'
-    : hasAccessibilityArtifact(text) || /accessibility|contrast|dark mode|light mode|a11y/.test(text)
+  const inferred = hasAccessibilityArtifact(text) || /\/(?:accessibility|a11y)\b|accessibility|contrast|dark mode|light mode|overflow|clipp/.test(text)
       ? '/audit /accessibility'
+    : hasConversionArtifact(text)
+      ? '/audit /bricksconversion'
     : hasBricksThemeStyleArtifact(text)
       ? '/audit /brickstheme'
     : hasFrameworkProfileArtifact(text)
@@ -1372,8 +1380,19 @@ function fixPhaseContext(command, artifactSummary) {
         : /combined-preview|combined-kiwe-handoff|\/combined/.test(text)
           ? '/audit /combined'
           : hasPageArtifact(text)
-            ? '/audit /seamframework'
+          ? '/audit /seamframework'
             : '/list';
+  const rules = [
+    '- Inspect the supplied files, not the whole Kiwe repository.',
+    '- Keep only files required by the current lane unless the human explicitly asked for extras.',
+    '- Revise the actual files that failed; do not only explain the failure.',
+    inferred === '/audit /bricksconversion' ? '- If the artifact is a Bricks conversion/template upload, require `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json`.' : '',
+    inferred === '/audit /accessibility' ? '- If the artifact is a Bricks template, treat it only as the accessibility target; do not run `/convert /bricks`, do not rebuild the template, and do not create a new Bricks conversion package unless the human separately asks.' : '',
+    '- If the artifact is a Seam rebuild, keep `website/bricks-paste.html` as the single page preview/import artifact.',
+    '- If the artifact is a DSA theme, keep AppShell theme CSS separate from Bricks/page CSS.',
+    '- If the artifact is combined, keep `website/`, `appshell-theme/`, and `combined-preview/` separate.',
+    '- Preserve Site Graph/dynamic intent instead of converting sampled preview data into production hardcoding.'
+  ].filter(Boolean);
   return [
     '# Kiwe fix phase',
     '',
@@ -1383,14 +1402,7 @@ function fixPhaseContext(command, artifactSummary) {
     '',
     '## Fix rules',
     '',
-    '- Inspect the supplied files, not the whole Kiwe repository.',
-    '- Keep only files required by the current lane unless the human explicitly asked for extras.',
-    '- Revise the actual files that failed; do not only explain the failure.',
-    '- If the artifact is a Bricks conversion/template upload, require `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json`.',
-    '- If the artifact is a Seam rebuild, keep `website/bricks-paste.html` as the single page preview/import artifact.',
-    '- If the artifact is a DSA theme, keep AppShell theme CSS separate from Bricks/page CSS.',
-    '- If the artifact is combined, keep `website/`, `appshell-theme/`, and `combined-preview/` separate.',
-    '- Preserve Site Graph/dynamic intent instead of converting sampled preview data into production hardcoding.',
+    rules.join('\n'),
     '',
     '## Artifact summary',
     '',
@@ -1518,15 +1530,16 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
   ];
 
   if (kind === 'fix') {
-    parts.push(
-      fixPhaseContext(command, artifactSummary),
-      '',
-      readMaybe('contexts/audit-lite.md'),
-      '',
-      getBricksConversionContext(),
-      '',
-      getDynamicContext()
-    );
+    const fixText = `${command}\n${artifactSummary}`.toLowerCase();
+    if (/accessibility|a11y|contrast|dark mode|light mode|overflow|clipp/.test(fixText)) {
+      parts.push(fixPhaseContext(command, artifactSummary), '', getAccessibilityContext());
+    } else if (hasConversionArtifact(fixText) || /bricksconversion|bricks conversion|bricks template|html-to-bricks|\/bricks\b/.test(fixText)) {
+      parts.push(fixPhaseContext(command, artifactSummary), '', readMaybe('contexts/audit-lite.md'), '', getBricksConversionContext());
+    } else if (/sitegraph|dynamic|binding|query loop|dynamic tag/.test(fixText)) {
+      parts.push(fixPhaseContext(command, artifactSummary), '', readMaybe('contexts/audit-lite.md'), '', getDynamicContext());
+    } else {
+      parts.push(fixPhaseContext(command, artifactSummary), '', readMaybe('contexts/audit-lite.md'));
+    }
   } else if (kind === 'document') {
     parts.push(
       '# Selected phase guidance',
@@ -1581,7 +1594,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     parts.push(
       '# Selected phase guidance',
       '',
-      'Audit and revise actual files for color contrast, light/dark proof, Bricks global theme-style color alignment, and Kiwe/Seam token pairing.',
+      'Audit and revise actual files for color contrast, light/dark proof, Bricks global theme-style color alignment, Kiwe/Seam token pairing, and critical text containment.',
       '',
       getAccessibilityContext(),
       '',

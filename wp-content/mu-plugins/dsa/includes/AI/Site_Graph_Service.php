@@ -153,7 +153,7 @@ final class Site_Graph_Service {
 				'restRoute'   => '/wp-json/dsa/v1/ai/validate-accessibility',
 				'aiKeyScopes' => [ 'validate_accessibility', 'companion', 'all' ],
 				'commands'    => [ '/create /accessibility', '/audit /accessibility' ],
-				'useFor'      => [ 'light/dark color token plan', 'literal foreground/background contrast failures', 'Bricks theme-style palette alignment', 'Kiwe native dark-mode toggle proof', 'pre-staging accessibility gate; font-size audit intentionally later' ],
+				'useFor'      => [ 'light/dark color token plan', 'literal and token-resolved foreground/background contrast failures', 'Bricks theme-style palette alignment', 'Kiwe native dark-mode toggle proof', 'critical text clipping and overflow risks', 'pre-staging accessibility gate; full font-size preference audit intentionally later' ],
 			],
 			'secureTrackBrief' => [
 				'schema'      => 'kiwe.securetrack.ai-brief.v1',

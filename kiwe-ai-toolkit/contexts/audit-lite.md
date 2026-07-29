@@ -87,6 +87,8 @@ If an accessibility lane exists, verify:
 - `modes` includes both `light` and `dark`;
 - `tokenPairs` is non-empty and covers the real surfaces present in the artifact;
 - `manualReview` exists, even when empty;
+- critical text-bearing titles, labels, pills, chips, buttons, tabs, prices, stats, and card headings are not clipped, hidden, nowrap-ellipsized, or line-clamped inside constrained boxes at desktop/tablet/mobile/narrow widths;
+- if the artifact targets Bricks, native Bricks settings and global classes preserve the same accessibility fixes instead of hiding them in preview-only CSS;
 - `ACCESSIBILITY-NOTES.md` records what was fixed and what was only manually reviewed only when `/document` was requested.
 
 When tools are available, run:

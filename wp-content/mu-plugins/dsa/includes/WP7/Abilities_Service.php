@@ -240,8 +240,8 @@ final class Abilities_Service {
 			wp_register_ability(
 				'dsa/validate-accessibility',
 				[
-					'label'               => __( 'Validate Kiwe accessibility color lane', 'dsa' ),
-					'description'         => __( 'Validates an AI-produced Kiwe accessibility plan and handoff files for literal color contrast, native light/dark proof, and Bricks theme-style token alignment without saving content.', 'dsa' ),
+					'label'               => __( 'Validate Kiwe accessibility lane', 'dsa' ),
+					'description'         => __( 'Validates an AI-produced Kiwe accessibility plan and handoff files for literal/token-resolved contrast, native light/dark proof, Bricks theme-style token alignment, and critical text containment without saving content.', 'dsa' ),
 					'category'            => self::CATEGORY,
 					'input_schema'        => $this->accessibility_validation_input_schema(),
 					'output_schema'       => $this->accessibility_validation_output_schema(),

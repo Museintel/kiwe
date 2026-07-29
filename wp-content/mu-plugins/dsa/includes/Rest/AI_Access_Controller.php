@@ -178,7 +178,7 @@ final class AI_Access_Controller {
 				'validateAccessibility' => [
 					'route' => '/wp-json/dsa/v1/ai/validate-accessibility',
 					'scope' => 'validate_accessibility or all',
-					'covers' => [ 'literal color contrast', 'native Kiwe light/dark proof', 'accessibility plan schema', 'Bricks theme-style token alignment' ],
+					'covers' => [ 'literal and token-resolved color contrast', 'native Kiwe light/dark proof', 'accessibility plan schema', 'Bricks theme-style token alignment', 'critical text clipping and overflow risks' ],
 					'notCoveredYet' => [ 'font-size/readability sizing', 'full browser rendering proof' ],
 				],
 				'prepareApplyPlan'  => true,

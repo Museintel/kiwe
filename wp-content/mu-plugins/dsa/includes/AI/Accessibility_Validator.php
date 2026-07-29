@@ -10,8 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Deterministic accessibility validator for browser-AI handoffs.
  *
  * This intentionally focuses on the launch-critical lane we are hardening now:
- * token-backed light/dark color proof and obvious contrast collisions. It is
- * not a full WCAG engine and does not make font-size or UX claims.
+ * token-backed light/dark color proof, obvious contrast collisions, Bricks
+ * token-pair evidence, and critical text containment risks. It is not a full
+ * WCAG engine and does not make broad font-size preference claims.
  */
 final class Accessibility_Validator {
 	private const SCHEMA = 'kiwe.accessibility-validation.v1';
@@ -62,6 +63,7 @@ final class Accessibility_Validator {
 			}
 
 			$this->review_css_fragments( $path, $content, $findings );
+			$this->review_bricks_json( $path, $content, $findings );
 		}
 
 		$counts = [ 'critical' => 0, 'error' => 0, 'warning' => 0, 'info' => 0 ];
@@ -223,6 +225,7 @@ final class Accessibility_Validator {
 			$declarations = $this->parse_declarations( (string) $match[2] );
 			$foregrounds  = $this->declared_colors( $declarations, [ 'color', 'fill' ] );
 			$backgrounds  = $this->declared_colors( $declarations, [ 'background', 'background-color' ] );
+			$this->review_text_fit_css( $path, $selector, $declarations, (string) $match[2], $findings );
 
 			foreach ( $foregrounds as $fg_raw => $fg ) {
 				foreach ( $backgrounds as $bg_raw => $bg ) {
@@ -239,6 +242,218 @@ final class Accessibility_Validator {
 					}
 				}
 			}
+		}
+	}
+
+	/**
+	 * @param array<int,array<string,mixed>> $findings
+	 */
+	private function review_bricks_json( string $path, string $content, array &$findings ): void {
+		if ( ! preg_match( '/\.json$/i', $path ) ) {
+			return;
+		}
+
+		$data = json_decode( $content, true );
+		if ( ! is_array( $data ) ) {
+			return;
+		}
+
+		$variables = $this->collect_json_variables( $data );
+		$nodes     = [];
+		foreach ( [ 'content', 'header', 'footer', 'elements', 'global_classes', 'globalClasses' ] as $lane ) {
+			if ( isset( $data[ $lane ] ) && is_array( $data[ $lane ] ) ) {
+				$nodes = array_merge( $nodes, $data[ $lane ] );
+			}
+		}
+
+		foreach ( $nodes as $node ) {
+			if ( ! is_array( $node ) ) {
+				continue;
+			}
+			$settings = isset( $node['settings'] ) && is_array( $node['settings'] ) ? $node['settings'] : [];
+			$selector = $this->describe_json_node( $node );
+			$fg       = $this->json_color_path( $settings, [ [ '_typography', 'color' ], [ 'typography', 'color' ], [ 'color' ], [ '_color' ] ] );
+			$bg       = $this->json_color_path( $settings, [ [ '_background', 'color' ], [ '_backgroundColor', 'color' ], [ 'background', 'color' ], [ '_background' ], [ 'background-color' ] ] );
+
+			if ( '' !== $fg && '' !== $bg ) {
+				$this->review_resolved_json_pair( $path, $selector, $fg, $bg, $variables, $findings );
+			} elseif ( '' !== $bg && $this->is_important_text_surface( $node, $settings ) ) {
+				$this->add( $findings, 'warning', 'accessibility_missing_explicit_foreground_for_surface', 'Text-bearing/interactive Bricks surface has a background but no explicit readable foreground token. In light/dark mode this can become white-on-white or dark-on-dark.', $path, $selector );
+			}
+
+			$this->review_bricks_text_fit( $path, $selector, $node, $settings, $findings );
+		}
+	}
+
+	/**
+	 * @return array<string,string>
+	 */
+	private function collect_json_variables( array $data ): array {
+		$variables = [];
+		foreach ( [ 'globalVariables', 'global_variables' ] as $lane ) {
+			if ( empty( $data[ $lane ] ) || ! is_array( $data[ $lane ] ) ) {
+				continue;
+			}
+			foreach ( $data[ $lane ] as $variable ) {
+				if ( ! is_array( $variable ) || empty( $variable['name'] ) || ! array_key_exists( 'value', $variable ) ) {
+					continue;
+				}
+				$name = strtolower( (string) $variable['name'] );
+				$name = str_starts_with( $name, '--' ) ? $name : '--' . $name;
+				$variables[ $name ] = (string) $variable['value'];
+			}
+		}
+
+		return $variables;
+	}
+
+	private function describe_json_node( array $node ): string {
+		$label = (string) ( $node['label'] ?? $node['name'] ?? $node['id'] ?? 'bricks-node' );
+		$id    = ! empty( $node['id'] ) ? '#' . (string) $node['id'] : '';
+		return trim( $label . $id );
+	}
+
+	/**
+	 * @param array<string,mixed> $settings
+	 * @param array<int,array<int,string>> $paths
+	 */
+	private function json_color_path( array $settings, array $paths ): string {
+		foreach ( $paths as $path ) {
+			$value = $settings;
+			foreach ( $path as $part ) {
+				if ( ! is_array( $value ) || ! array_key_exists( $part, $value ) ) {
+					$value = null;
+					break;
+				}
+				$value = $value[ $part ];
+			}
+			$color = $this->normalize_json_color( $value );
+			if ( '' !== $color ) {
+				return $color;
+			}
+		}
+
+		return '';
+	}
+
+	private function normalize_json_color( mixed $value ): string {
+		if ( is_string( $value ) ) {
+			return trim( $value );
+		}
+		if ( ! is_array( $value ) ) {
+			return '';
+		}
+		foreach ( [ 'raw', 'hex', 'rgb', 'hsl', 'value', 'color' ] as $key ) {
+			if ( isset( $value[ $key ] ) && is_string( $value[ $key ] ) && '' !== trim( $value[ $key ] ) ) {
+				return trim( $value[ $key ] );
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * @param array<string,string> $variables
+	 * @param array<int,array<string,mixed>> $findings
+	 */
+	private function review_resolved_json_pair( string $path, string $selector, string $fg, string $bg, array $variables, array &$findings ): void {
+		$resolved_fg = $this->resolve_css_vars( $fg, $variables );
+		$resolved_bg = $this->resolve_css_vars( $bg, $variables );
+		$fg_colors   = $this->colors_in_value( $resolved_fg );
+		$bg_colors   = $this->colors_in_value( $resolved_bg );
+
+		if ( [] === $fg_colors || [] === $bg_colors ) {
+			if ( preg_match( '/var\(/i', $fg . ' ' . $bg ) && ! preg_match( '/var\(\s*--kiwe-/i', $fg . ' ' . $bg ) ) {
+				$this->add( $findings, 'warning', 'accessibility_project_color_pair_needs_token_plan', 'Bricks foreground/background pair uses project variables that could not be resolved to Kiwe token pairs. Map this pair in accessibility/kiwe-accessibility-plan.json.', $path, $selector );
+			}
+			return;
+		}
+
+		foreach ( $fg_colors as $fg_raw => $fg_rgb ) {
+			foreach ( $bg_colors as $bg_raw => $bg_rgb ) {
+				$ratio = $this->contrast_ratio( $fg_rgb, $bg_rgb );
+				if ( $ratio < self::MIN_RATIO ) {
+					$this->add( $findings, 'error', 'accessibility_low_contrast_bricks_pair', sprintf( 'Bricks foreground/background contrast is %.2f:1, below 4.5:1 (%s on %s).', $ratio, $fg_raw, $bg_raw ), $path, $selector );
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param array<string,string> $variables
+	 */
+	private function resolve_css_vars( string $value, array $variables, int $depth = 0 ): string {
+		if ( $depth > 8 || '' === trim( $value ) ) {
+			return $value;
+		}
+
+		$resolved = preg_replace_callback(
+			'/var\(\s*(--[a-z0-9_-]+)\s*(?:,\s*([^)]+))?\)/i',
+			function ( array $matches ) use ( $variables, $depth ): string {
+				$name = strtolower( (string) $matches[1] );
+				if ( isset( $variables[ $name ] ) ) {
+					return $this->resolve_css_vars( $variables[ $name ], $variables, $depth + 1 );
+				}
+				return isset( $matches[2] ) ? $this->resolve_css_vars( (string) $matches[2], $variables, $depth + 1 ) : (string) $matches[0];
+			},
+			$value
+		);
+
+		return is_string( $resolved ) && $resolved !== $value ? $this->resolve_css_vars( $resolved, $variables, $depth + 1 ) : $value;
+	}
+
+	/**
+	 * @param array<string,mixed> $node
+	 * @param array<string,mixed> $settings
+	 */
+	private function is_important_text_surface( array $node, array $settings ): bool {
+		$context = strtolower( wp_json_encode( [ $node['name'] ?? '', $node['label'] ?? '', $settings['_cssClasses'] ?? '', $settings['_attributes'] ?? [] ] ) ?: '' );
+		return (bool) preg_match( '/(?:title|heading|headline|label|badge|chip|pill|button|btn|cta|tab|link|price|amount|stat)/i', $context );
+	}
+
+	/**
+	 * @param array<string,mixed> $node
+	 * @param array<string,mixed> $settings
+	 * @param array<int,array<string,mixed>> $findings
+	 */
+	private function review_bricks_text_fit( string $path, string $selector, array $node, array $settings, array &$findings ): void {
+		$context = strtolower( wp_json_encode( [ $node['name'] ?? '', $node['label'] ?? '', $settings['_cssClasses'] ?? '', $settings['_attributes'] ?? [], $settings['_cssCustom'] ?? '' ] ) ?: '' );
+		if ( ! preg_match( '/(?:title|heading|headline|eyebrow|label|badge|chip|pill|button|btn|cta|tab|link|text|copy|summary|excerpt|description|price|amount|stat|caption|card)/i', $context ) ) {
+			return;
+		}
+
+		$overflow       = strtolower( (string) ( $settings['_overflow'] ?? $settings['overflow'] ?? '' ) );
+		$custom         = (string) ( $settings['_cssCustom'] ?? '' );
+		$has_clip       = preg_match( '/(?:hidden|clip)/i', $overflow ) || preg_match( '/overflow\s*:\s*(?:hidden|clip)/i', $custom );
+		$has_strict_box = isset( $settings['_height'] ) || isset( $settings['_heightMax'] ) || isset( $settings['_maxHeight'] ) || isset( $settings['_gridTemplateRows'] );
+		$has_nowrap     = preg_match( '/nowrap/i', $custom );
+		$has_ellipsis   = preg_match( '/text-overflow\s*:\s*(?:ellipsis|clip)|line-clamp\s*:\s*[1-9]|-webkit-line-clamp\s*:\s*[1-9]/i', $custom );
+
+		if ( $has_clip && ( $has_strict_box || $has_nowrap || $has_ellipsis ) ) {
+			$severity = $this->is_important_text_surface( $node, $settings ) ? 'error' : 'warning';
+			$this->add( $findings, $severity, 'accessibility_bricks_text_clipping_risk', 'Bricks text-bearing UI is clipped/nowrap/ellipsized inside a constrained box. Fix with wrapping, fluid Geometry/Seam tokens, safer min-block sizing, or accessible full text before shipping.', $path, $selector );
+		}
+	}
+
+	/**
+	 * @param array<string,string> $declarations
+	 * @param array<int,array<string,mixed>> $findings
+	 */
+	private function review_text_fit_css( string $path, string $selector, array $declarations, string $body, array &$findings ): void {
+		$context = strtolower( $selector . "\n" . $body );
+		if ( ! preg_match( '/(?:title|heading|headline|eyebrow|label|badge|chip|pill|button|btn|cta|tab|link|text|copy|summary|excerpt|description|price|amount|stat|caption|card)/i', $context ) ) {
+			return;
+		}
+
+		$overflow       = (string) ( $declarations['overflow'] ?? $declarations['overflow-x'] ?? $declarations['overflow-y'] ?? '' );
+		$has_clip       = preg_match( '/(?:hidden|clip)/i', $overflow );
+		$has_strict_box = isset( $declarations['height'] ) || isset( $declarations['max-height'] ) || isset( $declarations['grid-template-rows'] );
+		$has_nowrap     = isset( $declarations['white-space'] ) && preg_match( '/nowrap/i', (string) $declarations['white-space'] );
+		$has_ellipsis   = preg_match( '/text-overflow\s*:\s*(?:ellipsis|clip)|line-clamp\s*:\s*[1-9]|-webkit-line-clamp\s*:\s*[1-9]/i', $body );
+		$critical       = preg_match( '/(?:title|heading|headline|label|badge|chip|pill|button|btn|cta|tab|link|price|amount|stat)/i', $context );
+
+		if ( $has_clip && ( $has_strict_box || $has_nowrap || $has_ellipsis ) ) {
+			$this->add( $findings, $critical ? 'error' : 'warning', 'accessibility_text_clipping_risk', 'Text-bearing UI uses clipping/nowrap/line-clamp inside a constrained box. Kiwe/Seam accessibility requires titles, labels, pills, chips, buttons, tabs, prices, and stats to remain readable across responsive states.', $path, $selector );
 		}
 	}
 

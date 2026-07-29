@@ -605,10 +605,12 @@ final class Bricks_AI_Intelligence_Service {
 			],
 			'uploadRootKeys' => [ 'title', 'templateType', 'content|header|footer' ],
 			'optionalKiweMetadataKeys' => [ 'schema', 'source', 'target', 'fidelity', 'report' ],
+			'optionalEnvelopePath' => 'bricks-conversion/kiwe-bricks-conversion.json',
 			'optionalEnvelopeRootKeys' => [ 'schema', 'source', 'target', 'conversion', 'elements', 'pageSettings', 'globalClasses', 'globalVariables', 'fidelity', 'report' ],
 			'authority' => [
 				'nativeTemplateIsHumanUploadArtifact' => true,
 				'conversionDoesNotMutate'   => true,
+				'conversionIsReviewPackage' => true,
 				'applyAuthority'            => 'human-reviewed-kiwe-staging-adapter',
 				'controlledExecutorOps'     => [ 'bricks.page.from-html', 'bricks.template.from-html', 'bricks.raw-meta-write' ],
 			],

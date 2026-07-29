@@ -304,7 +304,7 @@ accessibility/
 
 Rules:
 
-- Cover color contrast and native light/dark mode only. Font-size/readability scaling is a later lane.
+- Cover color contrast, native light/dark mode, and visible text containment. Full font-size/readability preference work is a later lane, but clipped or unreadable text is in scope now.
 - Inspect the actual visual surfaces and text-bearing components: chips, badges, pills, buttons, cards, stats, product labels, rails, dock controls, and DSA screen/sheet copy.
 - Use official Kiwe/Seam color tokens first: `--kiwe-color-surface`, `--kiwe-color-surface-raised`, `--kiwe-color-text`, `--kiwe-color-text-muted`, `--kiwe-color-text-inverse`, `--kiwe-color-brand`, `--kiwe-color-accent`, state colors, and borders.
 - For Bricks targets, align with Bricks global theme-style lanes such as `siteBackground`, `colorPrimary`, `colorSecondary`, `colorLight`, `colorDark`, and `colorMuted`.
@@ -320,6 +320,8 @@ Audit for:
 - `accessibility/kiwe-accessibility-plan.json` exists and uses `schema: "kiwe.accessibility-plan.v1"`;
 - both light and dark modes are covered;
 - literal low-contrast pairs fail, including white-on-white, light-on-light, black-on-black, and dark-on-dark pills/cards/buttons;
+- critical text-bearing titles, labels, pills, chips, buttons, tabs, prices, stats, and card headings are not clipped, hidden, nowrap-ellipsized, or line-clamped inside constrained boxes;
+- bento/card/product rail layouts do not cut visible text at desktop, tablet, mobile, or narrow widths;
 - gradients/images behind text have a solid fallback token or manual-review note;
 - private project color variables are mapped back to Kiwe token pairs;
 - Bricks outputs use Kiwe/Bricks theme-style color alignment instead of an isolated palette;

@@ -22,6 +22,12 @@ const DARK_PROOF_RE = /\b(?:data-kiwe-theme\s*=\s*["']dark["']|data-theme\s*=\s*
 const BRICKS_THEME_STYLE_RE = /\b(?:bricks_theme_style|themeStyle|themeStyles|colorPrimary|colorSecondary|colorLight|colorDark|siteBackground)\b/i;
 const KIWE_TOKEN_RE = /var\(\s*--kiwe-(?:color|theme|font|type|space|radius|shadow)-[a-z0-9-]+/i;
 const PRIVATE_PROJECT_COLOR_VAR_RE = /var\(\s*--(?!kiwe-|dsa-|wp--|bricks-)[a-z0-9_-]*(?:color|bg|surface|text|ink|muted|accent|brand)[a-z0-9_-]*/i;
+const TEXT_BEARING_RE = /\b(?:title|heading|headline|eyebrow|label|badge|chip|pill|button|btn|cta|tab|link|text|copy|summary|excerpt|description|price|amount|stat|kicker|caption|card)\b/i;
+const CRITICAL_TEXT_RE = /\b(?:title|heading|headline|label|badge|chip|pill|button|btn|cta|tab|link|price|amount|stat)\b/i;
+const CLIPPING_RE = /\b(?:hidden|clip)\b/i;
+const NOWRAP_RE = /\bnowrap\b/i;
+const LINE_CLAMP_RE = /(?:-webkit-line-clamp|line-clamp)\s*:\s*[1-9]/i;
+const TEXT_OVERFLOW_RE = /\btext-overflow\s*:\s*(?:ellipsis|clip)\b/i;
 
 function isPlainObject(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -171,9 +177,9 @@ function parseDeclarations(body) {
 }
 
 function scanCss(css, file, findings) {
-  const withoutComments = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
-  for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
-    const selector = String(match[1] || '').trim();
+	const withoutComments = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
+	for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
+		const selector = String(match[1] || '').trim();
     const body = String(match[2] || '');
     if (!selector || selector.startsWith('@')) continue;
     const declarations = parseDeclarations(body);
@@ -189,6 +195,54 @@ function scanCss(css, file, findings) {
     if (PRIVATE_PROJECT_COLOR_VAR_RE.test(combined) && !KIWE_TOKEN_RE.test(combined)) {
       add(findings, 'warn', 'accessibility_private_color_variable_without_kiwe_pair', 'Private project color variable appears without a nearby Kiwe token pair; map it through the accessibility plan or Framework profile.', file, selector);
     }
+    reviewTextFitCss(selector, declarations, body, file, findings);
+  }
+}
+
+function reviewTextFitCss(selector, declarations, body, file, findings) {
+  const context = `${selector}\n${body}`;
+  if (!TEXT_BEARING_RE.test(context)) return;
+
+  const overflow = declarations.overflow || declarations['overflow-x'] || declarations['overflow-y'] || '';
+  const hasClip = CLIPPING_RE.test(overflow);
+  const hasStrictBox = Boolean(declarations.height || declarations['max-height'] || declarations['grid-template-rows']);
+  const hasNoWrap = NOWRAP_RE.test(declarations['white-space'] || body);
+  const hasClamp = LINE_CLAMP_RE.test(body);
+  const hasTextOverflow = TEXT_OVERFLOW_RE.test(body);
+  const critical = CRITICAL_TEXT_RE.test(context);
+
+  if (hasClip && (hasStrictBox || hasNoWrap || hasClamp || hasTextOverflow) && critical) {
+    add(
+      findings,
+      'fail',
+      'accessibility_text_clipping_risk',
+      'Text-bearing UI uses clipping/nowrap/line-clamp inside a constrained box. Kiwe/Seam accessibility requires titles, labels, pills, chips, buttons, tabs, prices, and stats to remain readable across light/dark and responsive states.',
+      file,
+      selector
+    );
+    return;
+  }
+
+  if (hasClip && (hasStrictBox || hasNoWrap || hasClamp || hasTextOverflow)) {
+    add(
+      findings,
+      'warn',
+      'accessibility_text_overflow_manual_review',
+      'Text may be clipped or ellipsized in a constrained surface. Provide render proof at desktop/tablet/mobile/narrow or revise with fluid sizing, wrapping, or accessible full text.',
+      file,
+      selector
+    );
+  }
+
+  if (TEXT_BEARING_RE.test(selector) && declarations['line-height'] && /^0?\.\d+/.test(String(declarations['line-height']).trim())) {
+    add(
+      findings,
+      'warn',
+      'accessibility_tight_line_height_manual_review',
+      'Very tight line-height on a text-bearing selector needs render proof so descenders and multi-line text are not cut at narrow widths.',
+      file,
+      selector
+    );
   }
 }
 
@@ -213,6 +267,206 @@ function reviewColorPair(colorValue, bgValue, file, selector, findings) {
         add(findings, 'fail', 'accessibility_low_contrast_literal_pair', `Literal text/background contrast is ${ratio.toFixed(2)}:1, below ${DEFAULT_MIN_CONTRAST}:1. Use readable foreground/on-surface tokens for both light and dark modes.`, file, selector);
       }
     }
+  }
+}
+
+function scanJsonAccessibility(text, file, findings) {
+  if (path.extname(file).toLowerCase() !== '.json') return;
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return;
+  }
+
+  const variables = collectVariables(data);
+  const nodes = collectBricksNodes(data);
+  if (!nodes.length) return;
+
+  for (const node of nodes) {
+    if (!isPlainObject(node)) continue;
+    const settings = isPlainObject(node.settings) ? node.settings : {};
+    const selector = describeBricksNode(node);
+    const foreground = getBricksColor(settings, ['_typography.color', 'typography.color', 'color', '_color']);
+    const background = getBricksColor(settings, ['_background.color', '_backgroundColor.color', 'background.color', '_background', 'background-color']);
+
+    if (foreground && background) {
+      reviewResolvedColorPair(foreground, background, variables, file, selector, findings);
+    } else if (background && isImportantTextSurface(node, settings)) {
+      add(
+        findings,
+        'warn',
+        'accessibility_missing_explicit_foreground_for_surface',
+        'Text-bearing/interactive Bricks surface has a background but no explicit readable foreground token. In light/dark mode this can become white-on-white or dark-on-dark.',
+        file,
+        selector
+      );
+    }
+
+    reviewBricksTextFit(node, settings, file, selector, findings);
+  }
+}
+
+function collectVariables(data) {
+  const variables = new Map();
+  const addVar = (name, value) => {
+    const key = String(name || '').trim();
+    if (!key) return;
+    const cssKey = key.startsWith('--') ? key : `--${key}`;
+    variables.set(cssKey.toLowerCase(), String(value || '').trim());
+  };
+
+  const walk = (value) => {
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item);
+      return;
+    }
+    if (!isPlainObject(value)) return;
+
+    if (typeof value.name === 'string' && Object.prototype.hasOwnProperty.call(value, 'value')) {
+      addVar(value.name, value.value);
+    }
+    if (typeof value.id === 'string' && Object.prototype.hasOwnProperty.call(value, 'value')) {
+      addVar(value.id, value.value);
+    }
+    for (const child of Object.values(value)) {
+      if (child && typeof child === 'object') walk(child);
+    }
+  };
+
+  walk(data.globalVariables || data.global_variables || []);
+  walk(data.settings && data.settings.tokens && data.settings.tokens.overrides ? data.settings.tokens.overrides : []);
+  return variables;
+}
+
+function collectBricksNodes(data) {
+  const nodes = [];
+  const pushArray = (value) => {
+    if (Array.isArray(value)) nodes.push(...value.filter(isPlainObject));
+  };
+
+  pushArray(data.content);
+  pushArray(data.header);
+  pushArray(data.footer);
+  pushArray(data.elements);
+  pushArray(data.global_classes);
+  pushArray(data.globalClasses);
+  if (isPlainObject(data.target)) pushArray(data.target.elements);
+  if (isPlainObject(data.conversion)) pushArray(data.conversion.elements);
+
+  return nodes;
+}
+
+function describeBricksNode(node) {
+  const label = String(node.label || node.name || node.id || 'bricks-node').trim();
+  const id = node.id ? `#${node.id}` : '';
+  const classes = node.settings && node.settings._cssClasses ? `.${String(node.settings._cssClasses).trim().replace(/\s+/g, '.')}` : '';
+  return `${label}${id}${classes}`.trim();
+}
+
+function getBricksColor(settings, paths) {
+  for (const pathText of paths) {
+    const value = getPath(settings, pathText);
+    const color = normalizeColorCandidate(value);
+    if (color) return color;
+  }
+  return '';
+}
+
+function getPath(object, pathText) {
+  let current = object;
+  for (const part of String(pathText || '').split('.')) {
+    if (!isPlainObject(current) || !Object.prototype.hasOwnProperty.call(current, part)) return undefined;
+    current = current[part];
+  }
+  return current;
+}
+
+function normalizeColorCandidate(value) {
+  if (typeof value === 'string') return value.trim();
+  if (!isPlainObject(value)) return '';
+  for (const key of ['raw', 'hex', 'rgb', 'hsl', 'value', 'color']) {
+    if (typeof value[key] === 'string' && value[key].trim()) return value[key].trim();
+  }
+  return '';
+}
+
+function resolveCssVars(value, variables, depth = 0) {
+  const raw = String(value || '').trim();
+  if (!raw || depth > 8) return raw;
+
+  const replaced = raw.replace(/var\(\s*(--[a-z0-9_-]+)\s*(?:,\s*([^)]+))?\)/gi, (match, name, fallback = '') => {
+    const mapped = variables.get(String(name).toLowerCase());
+    if (mapped) return resolveCssVars(mapped, variables, depth + 1);
+    return fallback ? resolveCssVars(fallback, variables, depth + 1) : match;
+  });
+
+  return replaced === raw ? raw : resolveCssVars(replaced, variables, depth + 1);
+}
+
+function reviewResolvedColorPair(foreground, background, variables, file, selector, findings) {
+  const resolvedForeground = resolveCssVars(foreground, variables);
+  const resolvedBackground = resolveCssVars(background, variables);
+  const fgColors = colorsInValue(resolvedForeground);
+  const bgColors = colorsInValue(resolvedBackground);
+
+  if (fgColors.length && bgColors.length) {
+    reviewColorPair(resolvedForeground, resolvedBackground, file, selector, findings);
+    return;
+  }
+
+  if ((/var\(/i.test(foreground) || /var\(/i.test(background)) && !KIWE_TOKEN_RE.test(`${foreground} ${background}`)) {
+    add(
+      findings,
+      'warn',
+      'accessibility_project_color_pair_needs_token_plan',
+      'Bricks foreground/background pair uses project variables that could not be resolved to Kiwe token pairs. Map this pair in accessibility/kiwe-accessibility-plan.json.',
+      file,
+      selector
+    );
+  }
+}
+
+function isImportantTextSurface(node, settings) {
+  const context = `${node.name || ''}\n${node.label || ''}\n${settings._cssClasses || ''}\n${JSON.stringify(settings._attributes || [])}`;
+  return CRITICAL_TEXT_RE.test(context) || ['button', 'heading', 'text-basic', 'text', 'link'].includes(String(node.name || '').toLowerCase());
+}
+
+function reviewBricksTextFit(node, settings, file, selector, findings) {
+  const context = `${node.name || ''}\n${node.label || ''}\n${settings._cssClasses || ''}\n${JSON.stringify(settings._attributes || [])}\n${settings._cssCustom || ''}`;
+  if (!TEXT_BEARING_RE.test(context) && !['heading', 'text-basic', 'text', 'button', 'link'].includes(String(node.name || '').toLowerCase())) return;
+
+  const overflow = String(settings._overflow || settings.overflow || settings._overflowX || settings._overflowY || '').trim();
+  const cssCustom = String(settings._cssCustom || '');
+  const hasClip = CLIPPING_RE.test(overflow) || /\boverflow\s*:\s*(?:hidden|clip)\b/i.test(cssCustom);
+  const hasStrictBox = Boolean(settings._height || settings._heightMax || settings._maxHeight || settings._gridTemplateRows || settings._height?.value);
+  const hasNoWrap = NOWRAP_RE.test(cssCustom) || NOWRAP_RE.test(String(settings._whiteSpace || settings.whiteSpace || ''));
+  const hasTextOverflow = TEXT_OVERFLOW_RE.test(cssCustom);
+  const hasLineClamp = LINE_CLAMP_RE.test(cssCustom);
+  const critical = isImportantTextSurface(node, settings);
+
+  if (hasClip && (hasStrictBox || hasNoWrap || hasTextOverflow || hasLineClamp) && critical) {
+    add(
+      findings,
+      'fail',
+      'accessibility_bricks_text_clipping_risk',
+      'Bricks text-bearing UI is clipped/nowrap/ellipsized inside a constrained box. Fix with wrapping, fluid Geometry/Seam tokens, safer min-block sizing, or accessible full text before shipping.',
+      file,
+      selector
+    );
+    return;
+  }
+
+  if (hasClip && (hasStrictBox || hasNoWrap || hasTextOverflow || hasLineClamp)) {
+    add(
+      findings,
+      'warn',
+      'accessibility_bricks_text_overflow_manual_review',
+      'Bricks element may clip or ellipsize text under responsive pressure. Provide browser proof at desktop/tablet/mobile/narrow or revise the Geometry/Seam sizing.',
+      file,
+      selector
+    );
   }
 }
 
@@ -321,6 +575,7 @@ export function validateAccessibility(targetDir, options = {}) {
     for (const block of extractCssBlocks(text, file)) {
       scanCss(block.css, file, findings);
     }
+    scanJsonAccessibility(text, file, findings);
   }
 
   const allText = textByFile.map((item) => item.text).join('\n');

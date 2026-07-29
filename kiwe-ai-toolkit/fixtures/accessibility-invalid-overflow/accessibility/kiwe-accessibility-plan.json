@@ -1,0 +1,21 @@
+{
+  "schema": "kiwe.accessibility-plan.v1",
+  "source": {
+    "mode": "website",
+    "artifact": "website/bricks-paste.html"
+  },
+  "modes": ["light", "dark"],
+  "tokenPairs": [
+    {
+      "id": "page",
+      "purpose": "Body text over site background.",
+      "foreground": "var(--kiwe-color-text)",
+      "background": "var(--kiwe-color-surface)",
+      "modes": ["light", "dark"],
+      "minimumContrast": 4.5,
+      "status": "tokenized"
+    }
+  ],
+  "findings": [],
+  "manualReview": []
+}
