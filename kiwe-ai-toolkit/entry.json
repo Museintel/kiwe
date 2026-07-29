@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.71",
+  "contractVersion": "6.72",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -24,7 +24,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.71",
+    "mustReport": "SeamFlow contract: 6.72",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /atend, and /usecompanion. Put the /list command hint last.",
@@ -66,6 +66,32 @@
       "audit-output.cjs for whole-output sanity"
     ]
   },
+  "errorHandling": {
+    "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
+    "responseShape": [
+      "STATUS: NEEDS_INPUT | FAIL | WARN",
+      "SeamFlow contract: 6.72",
+      "ERROR: KIWE_...",
+      "Command:",
+      "Current artifact:",
+      "Why stopped:",
+      "Next valid command:"
+    ],
+    "codes": {
+      "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token; stop and suggest /list or nearest valid command.",
+      "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing; stop and ask for them.",
+      "KIWE_WRONG_LANE": "Supplied artifact does not qualify for the requested command; stop and suggest the matching command.",
+      "KIWE_STALE_SOURCE_BLOCKED": "Only stale/prior outputs are available; stop and request current files.",
+      "KIWE_VALIDATOR_UNAVAILABLE": "Official validator/exact validator logic cannot run; report WARN/UNVERIFIED, not PASS.",
+      "KIWE_MANUAL_PASS_BLOCKED": "Command needs deterministic audit but only manual confidence is available; stop or report WARN.",
+      "KIWE_PREVIOUS_AUDIT_MISSING": "/fix /previousaudit was requested without immediately previous audit findings.",
+      "KIWE_CONTEXT_WINDOW_RISK": "Requested flow is too large for the current AI/session; suggest /execute /stepbystep /audit /eachstep.",
+      "KIWE_TOKEN_BUDGET_RISK": "Command is likely to waste tokens; suggest a smaller command or /audit /allattached first.",
+      "KIWE_TOOL_UNAVAILABLE": "MCP/API/browser/validator tool unavailable; use raw route if possible, otherwise stop.",
+      "KIWE_SITEGRAPH_REQUIRED": "Command explicitly requires live Site Graph/API data that was not supplied.",
+      "KIWE_COMPANION_FALLBACK": "/usecompanion requested but unavailable; continue only if the base command can run without it."
+    }
+  },
   "mcpPreference": {
     "rule": "If Kiwe MCP/tools are available, use tools before reading prose.",
     "sequence": [
@@ -102,7 +128,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.71",
+      "SeamFlow contract: 6.72",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -123,8 +149,6 @@
       "/execute /fullflow": "Run the complete safe path to final artifacts.",
       "/audit /eachstep": "Audit/fix after every phase before continuing.",
       "/audit /atend": "Run creation/conversion phases first, then final audits before delivery.",
-      "/auditateachstep": "Legacy alias for /audit /eachstep.",
-      "/auditatend": "Legacy alias for /audit /atend.",
       "/usecompanion": "Optional bounded Companion assist. If unavailable, continue without it and report fallback."
     },
     "secondPassCommands": {
@@ -132,6 +156,8 @@
       "/fix /allattached": "Fix every failed supplied/current artifact lane, then rerun matching audits.",
       "/audit /allflow": "Run every closure audit required by the detected start point or current stage.",
       "/fix /allflow": "Repair failed lanes across the detected flow, then rerun every closure audit.",
+      "/audit /allattached /allflow": "Classify all supplied/current artifacts and run every closure audit required by the detected flow.",
+      "/fix /previousaudit": "Fix only the failures from the immediately previous audit result, then rerun that same audit scope.",
       "rule": "These commands are for second-pass repair. They must not rebuild creatively, redesign, add DSA/combined output, create docs, or use stale files."
     },
     "rawHtmlCssJsToBricks": [
@@ -203,9 +229,7 @@
       ],
       "cadence": {
         "/audit /eachstep": "Each phase must pass its own audit before the next phase starts.",
-        "/audit /atend": "Generation/conversion phases may proceed first, but final delivery still requires every relevant closing audit to pass.",
-        "/auditateachstep": "Legacy alias for /audit /eachstep.",
-        "/auditatend": "Legacy alias for /audit /atend."
+        "/audit /atend": "Generation/conversion phases may proceed first, but final delivery still requires every relevant closing audit to pass."
       },
       "byStartPoint": {
         "raw-html-css-js": ["/audit /seamframework", "/audit /frameworkprofile", "/audit /bricksconversion", "/audit /accessibility"],
@@ -270,7 +294,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.71",
+    "SeamFlow contract: 6.72",
     "Command:",
     "Artifact classification:",
     "Files returned:",

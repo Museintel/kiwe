@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.71",
+    "contractVersion": "6.72",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -34,10 +34,28 @@
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
-    "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /audit /eachstep audits after each phase; /audit /atend audits before final delivery. Legacy /auditateachstep and /auditatend are accepted aliases. A failed audit requires /fix and the same /audit again until PASS or NEEDS_INPUT.",
+    "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /audit /eachstep audits after each phase; /audit /atend audits before final delivery. A failed audit requires /fix and the same /audit again until PASS or NEEDS_INPUT.",
     "validatorAuthority": "Official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts. If unavailable, report WARN or UNVERIFIED for that lane; do not say PASS or no blocking findings.",
     "fullFlowDiscipline": "/execute /fullflow means one final delivery, not one giant context load. Execute phase-by-phase, read only the context/validator files for the current phase, close that phase with /audit -> /fix -> /audit, then continue.",
-    "siteGraphBoundary": "Missing Site Graph/API/export is not a blocker for static Seam + Framework + Bricks template conversion. Preserve dynamic intent/manual-review markers and suggest /usesitegraph. Stop for Site Graph only when the human explicitly requested /usesitegraph, live target IDs, verified dynamic bindings, or staging/apply authority."
+    "siteGraphBoundary": "Missing Site Graph/API/export is not a blocker for static Seam + Framework + Bricks template conversion. Preserve dynamic intent/manual-review markers and suggest /usesitegraph. Stop for Site Graph only when the human explicitly requested /usesitegraph, live target IDs, verified dynamic bindings, or staging/apply authority.",
+    "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
+  },
+  "errorCatalog": {
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.72", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "codes": {
+      "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
+      "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
+      "KIWE_WRONG_LANE": "Supplied artifact does not qualify for the requested command.",
+      "KIWE_STALE_SOURCE_BLOCKED": "Only stale/prior outputs are available.",
+      "KIWE_VALIDATOR_UNAVAILABLE": "Official validator or exact validator logic cannot run.",
+      "KIWE_MANUAL_PASS_BLOCKED": "Only manual confidence is available for an importable lane.",
+      "KIWE_PREVIOUS_AUDIT_MISSING": "/fix /previousaudit was requested without immediately previous audit findings.",
+      "KIWE_CONTEXT_WINDOW_RISK": "Requested flow is too large for the current AI/session.",
+      "KIWE_TOKEN_BUDGET_RISK": "Command is likely to waste tokens.",
+      "KIWE_TOOL_UNAVAILABLE": "Required MCP/API/browser/validator tool unavailable.",
+      "KIWE_SITEGRAPH_REQUIRED": "Live Site Graph/API data was explicitly required but not supplied.",
+      "KIWE_COMPANION_FALLBACK": "/usecompanion requested but unavailable."
+    }
   },
   "flowPlanner": {
     "cli": "kiwe seamflow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
@@ -86,7 +104,6 @@
       "requires": ["/execute /stepbystep or /execute /fullflow"],
       "output": ["audit/fix gates after each phase before continuing"],
       "forbidden": ["standalone generation"],
-      "aliases": ["/auditateachstep"],
       "finalResponse": "Use as an execution flag; do not treat as a standalone artifact command."
     },
     "/audit /atend": {
@@ -95,7 +112,6 @@
       "requires": ["/execute /fullflow"],
       "output": ["final audit/fix gates before delivery"],
       "forbidden": ["standalone generation"],
-      "aliases": ["/auditatend"],
       "finalResponse": "Use as an execution flag; do not treat as a standalone artifact command."
     },
     "/audit /allattached": {
@@ -129,6 +145,22 @@
       "output": ["corrected canonical artifacts for the detected current flow"],
       "forbidden": ["creative rebuild", "redesign", "DSA/combined expansion unless already present or requested", "docs unless /document", "ZIP", "stale files"],
       "finalResponse": "Return corrected canonical artifacts only plus compact audit status after rerunning every required closure audit."
+    },
+    "/audit /allattached /allflow": {
+      "phase": "audit",
+      "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json", "lane contexts and validators for every detected supplied artifact and every required closure audit"],
+      "requires": ["current attached/supplied artifacts or file map"],
+      "output": ["pass/fail findings per detected artifact lane and per required closure audit"],
+      "forbidden": ["fixes unless /fix is also present", "creative rebuild", "redesign", "docs unless /document", "ZIP", "stale files"],
+      "finalResponse": "Return compact PASS/FAIL/WARN for every detected artifact and every required closure audit."
+    },
+    "/fix /previousaudit": {
+      "phase": "fix",
+      "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json", "lane contexts and validators referenced by the immediately previous audit findings"],
+      "requires": ["immediately previous audit findings and current artifact files"],
+      "output": ["corrected files for the previously audited failed lanes only"],
+      "forbidden": ["creative rebuild", "redesign", "new lane creation", "docs unless /document", "ZIP", "stale files", "fixing from memory without previous findings"],
+      "finalResponse": "Return corrected files only plus compact status after rerunning the exact previous audit scope."
     },
     "/rebuild /seamframework": {
       "phase": "rebuild",

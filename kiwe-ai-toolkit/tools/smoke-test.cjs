@@ -50,7 +50,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '6.71', 'entry contract mismatch');
+  assert(entry.contractVersion === '6.72', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
@@ -58,6 +58,9 @@ function assert(condition, message) {
   assert(entry.flows.executionCommands['/audit /atend'], 'missing /audit /atend in entry');
   assert(entry.flows.secondPassCommands['/audit /allattached'], 'missing /audit /allattached in entry');
   assert(entry.flows.secondPassCommands['/fix /allflow'], 'missing /fix /allflow in entry');
+  assert(entry.flows.secondPassCommands['/audit /allattached /allflow'], 'missing /audit /allattached /allflow in entry');
+  assert(entry.flows.secondPassCommands['/fix /previousaudit'], 'missing /fix /previousaudit in entry');
+  assert(entry.errorHandling.codes.KIWE_PREVIOUS_AUDIT_MISSING, 'entry missing previous audit error code');
   assert(entry.flows.auditClosure, 'entry missing audit closure law');
   assert(entry.flows.auditClosure.byStartPoint['bricks-template-upload'].includes('/audit /bricksconversion'), 'entry missing Bricks closure audit');
   assert(entry.flows.auditClosure.byStartPoint['raw-html-css-js'].includes('/audit /accessibility'), 'entry missing raw flow accessibility closure');
@@ -68,7 +71,7 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '6.71', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '6.72', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -76,13 +79,16 @@ function assert(condition, message) {
   assert(manifest.commands['/audit /atend'], 'manifest missing /audit /atend');
   assert(manifest.commands['/audit /allattached'], 'manifest missing /audit /allattached');
   assert(manifest.commands['/fix /allflow'], 'manifest missing /fix /allflow');
+  assert(manifest.commands['/audit /allattached /allflow'], 'manifest missing /audit /allattached /allflow');
+  assert(manifest.commands['/fix /previousaudit'], 'manifest missing /fix /previousaudit');
+  assert(manifest.errorCatalog.codes.KIWE_MANUAL_PASS_BLOCKED, 'manifest missing command-central error catalog');
   assert(manifest.globalRules.auditClosure.includes('SeamFlow closes only when'), 'manifest missing audit closure rule');
   assert(manifest.commands['/fix /accessibility'].preserve.includes('Seam classes'), 'accessibility preservation contract missing Seam classes');
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '6.71', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.71', 'plan contract report mismatch');
+  assert(plan.contractVersion === '6.72', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.72', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.recommendedNextCommands.includes('/audit /accessibility'), 'plan missing accessibility audit');
   assert(plan.executionOptions.stepByStep === '/execute /stepbystep', 'plan missing step-by-step command');
@@ -104,6 +110,10 @@ function assert(condition, message) {
   const auditAllMissing = m.diagnoseCommand({ command: '/audit /allattached' });
   const auditAllOk = m.diagnoseCommand({ command: '/audit /allattached', artifactSummary: 'framework/kiwe-framework-profile.json exists; bricks-template/home-template-upload.json exists' });
   const fixAllMissing = m.diagnoseCommand({ command: '/fix /allflow' });
+  const auditAllFlowOk = m.diagnoseCommand({ command: '/audit /allattached /allflow', artifactSummary: 'framework/kiwe-framework-profile.json exists; bricks-template/home-template-upload.json exists' });
+  const previousAuditMissing = m.diagnoseCommand({ command: '/fix /previousaudit' });
+  const previousPassRejected = m.diagnoseCommand({ command: '/fix /previouspass', artifactSummary: 'previous audit findings exist; current artifact exists' });
+  const oldAuditAliasRejected = m.diagnoseCommand({ command: '/audit' + 'ateachstep', artifactSummary: 'website/bricks-paste.html exists' });
 
   assert(bad.stop && bad.code === 'unknown_command_token', 'bad typo diagnostic failed');
   assert(noop.stop && noop.status === 'noop', 'preview noop diagnostic failed');
@@ -118,6 +128,10 @@ function assert(condition, message) {
   assert(auditAllMissing.stop && auditAllMissing.code === 'audit_all_missing_artifacts', 'audit all missing artifacts diagnostic failed');
   assert(!auditAllOk.stop, 'audit all with current artifacts should not stop');
   assert(fixAllMissing.stop && fixAllMissing.code === 'audit_all_missing_artifacts', 'fix all missing artifacts diagnostic failed');
+  assert(!auditAllFlowOk.stop, 'combined allattached allflow audit should not stop with current artifacts');
+  assert(previousAuditMissing.stop && previousAuditMissing.code === 'previous_audit_missing', 'previous audit missing diagnostic failed');
+  assert(previousPassRejected.stop && previousPassRejected.code === 'unknown_command_token', 'previouspass should be rejected');
+  assert(oldAuditAliasRejected.stop && oldAuditAliasRejected.code === 'unknown_command_token', 'old audit cadence alias should be rejected');
 
   captureNode(['bin/kiwe.js', 'entry'], 'tmp/entry-smoke.json');
   captureNode(['bin/kiwe.js', 'command-manifest'], 'tmp/command-manifest-smoke.json');
@@ -134,6 +148,7 @@ function assert(condition, message) {
   captureNode(['bin/kiwe.js', 'route', '--command', '/create /accessibility', '--brief', 'Smoke', '--artifact-summary', 'website/bricks-paste.html exists'], 'tmp/route-accessibility-smoke.md');
   captureNode(['bin/kiwe.js', 'route', '--command', '/audit /allattached', '--brief', 'Smoke', '--artifact-summary', 'framework/kiwe-framework-profile.json exists; bricks-template/home-template-upload.json exists'], 'tmp/route-audit-allattached-smoke.md');
   captureNode(['bin/kiwe.js', 'route', '--command', '/fix /allflow', '--brief', 'Smoke', '--artifact-summary', 'website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists; bricks-template/home-template-upload.json exists'], 'tmp/route-fix-allflow-smoke.md');
+  captureNode(['bin/kiwe.js', 'diagnose', '--command', '/fix /previousaudit'], 'tmp/diagnose-previousaudit-smoke.json');
 
   runNode(['tools/validate-output.cjs', '--help']);
   runNode(['tools/audit-output.cjs', '--help']);

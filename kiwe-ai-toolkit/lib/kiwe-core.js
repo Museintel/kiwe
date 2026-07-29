@@ -415,8 +415,8 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
 
   const wantsFull = /\/execute\s+\/fullflow|full[-\s]?flow|complete flow|all commands|through accessibility|final artifacts|end to end/.test(text);
   const wantsStep = /\/execute\s+\/stepbystep|step[-\s]?by[-\s]?step|one command|in parts|turns/.test(text);
-  const wantsAuditEachStep = /\/audit\s+\/eachstep|\/auditateachstep|audit at each step|audit each step|audit after each/.test(text);
-  const wantsAuditAtEnd = /\/audit\s+\/atend|\/audit\s+\/at-end|\/auditatend|audit at end|final audit/.test(text);
+  const wantsAuditEachStep = /\/audit\s+\/eachstep|audit at each step|audit each step|audit after each/.test(text);
+  const wantsAuditAtEnd = /\/audit\s+\/atend|\/audit\s+\/at-end|audit at end|final audit/.test(text);
   const wantsDsa = /dsa|appshell|app shell|theme package|combined/.test(text);
   const wantsBricks = /bricks|template|builder|convert/.test(text);
   const hasCommand = /\/[a-z][a-z0-9_-]*(?:\s+\/[a-z][a-z0-9_-]*)*/i.test(String(command || ''));
@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.71',
+    contractVersion: '6.72',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.71',
+      mustReport: 'SeamFlow contract: 6.72',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -606,9 +606,7 @@ export function listCommands() {
       '/build': 'Legacy alias accepted internally; user-facing output should say /create.',
       '/dynamic /sitegraph': 'Legacy alias for /usesitegraph.',
       '/sitegraph': 'Legacy shorthand for /usesitegraph when used as a workflow phase.',
-      '/usesitegraph /replacepreview': 'Legacy shorthand for /usesitegraph /replacepreviewdata.',
-      '/auditateachstep': 'Legacy alias for /audit /eachstep.',
-      '/auditatend': 'Legacy alias for /audit /atend.'
+      '/usesitegraph /replacepreview': 'Legacy shorthand for /usesitegraph /replacepreviewdata.'
     },
     commands: [
       {
@@ -652,6 +650,18 @@ export function listCommands() {
         purpose: 'Repair failed lanes across the detected current flow, then rerun every required closure audit until PASS or NEEDS_INPUT.',
         requires: ['classified current artifact/file map and failed audit findings or rerunnable validators'],
         output: 'corrected canonical artifacts for the detected current flow'
+      },
+      {
+        command: '/audit /allattached /allflow',
+        purpose: 'Classify all current files and run every matching lane audit plus every closure audit required by the detected current flow.',
+        requires: ['current attached/supplied artifacts or file map'],
+        output: 'compact pass/fail for every detected artifact lane and required closure audit'
+      },
+      {
+        command: '/fix /previousaudit',
+        purpose: 'Fix only the failures from the immediately previous audit result, then rerun that same audit scope.',
+        requires: ['immediately previous audit findings and current artifact files'],
+        output: 'corrected files for the previously audited failed lanes only'
       },
       {
         command: '/fix',
@@ -1021,7 +1031,7 @@ function routeKind(command) {
   if (!text) return 'workflow';
   if (/(?:^|\s)\/list\b/.test(text)) return 'command-list';
   if (/(?:^|\s)\/(?:document|notes)\b/.test(text)) return 'document';
-  if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow)/.test(text)) return 'audit-all';
+  if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow|\/previousaudit)/.test(text)) return 'audit-all';
   if (/(?:^|\s)\/fix\b/.test(text)) return 'fix';
   if (/(\/ideate|\/creative|\/webdraft)/.test(text)) return 'ideate';
   if (/\/create/.test(text) && /\/preview/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-preview-create';
@@ -1068,8 +1078,6 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/appshell',
   '/assemble',
   '/audit',
-  '/auditatend',
-  '/auditateachstep',
   '/a11y',
   '/accessibility',
   '/allattached',
@@ -1105,6 +1113,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/nonai',
   '/page',
   '/preview',
+  '/previousaudit',
   '/replacepreview',
   '/replacepreviewdata',
   '/rebuild',
@@ -1139,6 +1148,7 @@ const TYPO_TOKEN_SUGGESTIONS = new Map([
   ['/dsathem', '/dsatheme'],
   ['/seamframwork', '/seamframework'],
   ['/repalcepreview', '/replacepreviewdata'],
+  ['/previouspass', '/fix /previousaudit'],
   ['/usegraph', '/usesitegraph'],
   ['/sitegrap', '/usesitegraph']
 ]);
@@ -1153,6 +1163,8 @@ const VALID_PHASE_COMMANDS = [
   '/fix /allattached',
   '/audit /allflow',
   '/fix /allflow',
+  '/audit /allattached /allflow',
+  '/fix /previousaudit',
   '/document',
   '/fix',
   '/ideate /webdraft',
@@ -1244,6 +1256,26 @@ function commandDiagnostic({ status = 'ok', code = 'ok', message = '', kind = ''
   };
 }
 
+const KIWE_ERROR_CODES = {
+  unknown_command_token: 'KIWE_UNKNOWN_COMMAND',
+  execute_missing_current_artifact: 'KIWE_MISSING_ARTIFACT',
+  audit_all_missing_artifacts: 'KIWE_MISSING_ARTIFACT',
+  fix_missing_artifact: 'KIWE_MISSING_ARTIFACT',
+  document_missing_artifact: 'KIWE_MISSING_ARTIFACT',
+  previous_audit_missing: 'KIWE_PREVIOUS_AUDIT_MISSING',
+  accessibility_audit_missing_artifact: 'KIWE_MISSING_ARTIFACT',
+  bricks_convert_missing_framework_profile: 'KIWE_WRONG_LANE',
+  bricks_convert_requires_convert_verb: 'KIWE_WRONG_LANE',
+  command_is_noop: 'KIWE_WRONG_LANE',
+  audit_cadence_requires_execute: 'KIWE_WRONG_LANE',
+  theme_convert_blocked: 'KIWE_WRONG_LANE',
+  sitegraph_required: 'KIWE_SITEGRAPH_REQUIRED'
+};
+
+function kiweErrorCode(code) {
+  return KIWE_ERROR_CODES[code] || `KIWE_${String(code || 'COMMAND_BLOCKED').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`;
+}
+
 export function diagnoseCommand({ command = '', brief = '', artifactSummary = '', siteGraphSummary = '' } = {}) {
   const raw = String(command || '').trim();
   const commandText = commandWithoutExplore(raw);
@@ -1253,8 +1285,6 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     .replace(/(?:^|\s)\/build\b/gi, ' /create')
     .replace(/(?:^|\s)\/dynamic\s+\/sitegraph\b/gi, ' /usesitegraph')
     .replace(/(?:^|\s)\/sitegraph\b/gi, ' /usesitegraph')
-    .replace(/(?:^|\s)\/auditateachstep\b/gi, ' /audit /eachstep')
-    .replace(/(?:^|\s)\/auditatend\b/gi, ' /audit /atend')
     .replace(/(?:^|\s)\/replacepreview\b/gi, ' /replacepreviewdata')
     .replace(/\s+/g, ' ')
     .trim();
@@ -1293,7 +1323,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/audit\s+\/(?:eachstep|atend)|\/auditateachstep|\/auditatend/) && !commandHas(text, /\/execute/) && !commandHas(text, /\/(?:allattached|allflow)/)) {
+  if (commandHas(text, /\/audit\s+\/(?:eachstep|atend)/) && !commandHas(text, /\/execute/) && !commandHas(text, /\/(?:allattached|allflow)/)) {
     return commandDiagnostic({
       status: 'needs_input',
       code: 'audit_cadence_requires_execute',
@@ -1314,6 +1344,18 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       message: '`/execute` needs the current artifact or file map. It must not use older Kiwe/National Chikki/BioVantage outputs or prior validation notes unless they were supplied in the current turn.',
       suggestions: ['Provide the current artifact/file map.', '/execute /stepbystep /audit /eachstep', '/execute /fullflow /audit /eachstep'],
       boundaries: ['Current-run artifacts only.', 'No prior test material unless explicitly supplied for comparison.']
+    });
+  }
+
+  if (commandHas(text, /\/fix/) && commandHas(text, /\/previousaudit/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'previous_audit_missing',
+      kind: 'audit-all',
+      normalizedCommand,
+      message: '`/fix /previousaudit` needs the immediately previous audit findings and current artifacts in this conversation or supplied as files. It must not fix from memory or prior accepted notes.',
+      suggestions: ['Attach the previous audit output plus current artifacts.', '/audit /allattached /allflow after current files are supplied'],
+      boundaries: ['Previous audit findings must be current-run evidence.', 'Do not use stale findings from old tests.', 'Do not redesign or rebuild during /fix /previousaudit.']
     });
   }
 
@@ -1584,6 +1626,8 @@ function commandDiagnosticResponse(diagnostic, command) {
 
   return [
     `# Kiwe command diagnostic: ${diagnostic.status}`,
+    '',
+    `ERROR: ${kiweErrorCode(diagnostic.code)}`,
     '',
     `Command: ${String(command || '(none)').trim() || '(none)'}`,
     `Code: ${diagnostic.code}`,
@@ -1996,9 +2040,11 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     parts.push(
       '# Selected phase guidance',
       '',
-      'Classify every supplied/current artifact by actual file content, then run every matching lane audit required by `/audit /allattached` or `/audit /allflow`.',
+      'Classify every supplied/current artifact by actual file content, then run every matching lane audit required by `/audit /allattached`, `/audit /allflow`, or `/audit /allattached /allflow`.',
       '',
-      'Do not rebuild, redesign, create DSA/combined output, create docs, search for stale files, or use prior accepted notes. Audit-only commands return findings only. If `/fix /allattached` or `/fix /allflow` is present, fix only failed current lanes and rerun the same audits until PASS or NEEDS_INPUT.',
+      'Do not rebuild, redesign, create DSA/combined output, create docs, search for stale files, or use prior accepted notes. Audit-only commands return findings only. If `/fix /allattached`, `/fix /allflow`, or `/fix /previousaudit` is present, fix only failed current lanes and rerun the same audits until PASS or NEEDS_INPUT.',
+      '',
+      '`/fix /previousaudit` may use only the immediately previous audit findings supplied in the current conversation/file set. If those findings are absent or stale, stop with `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`.',
       '',
       'Use validator authority: official validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts.',
       '',
