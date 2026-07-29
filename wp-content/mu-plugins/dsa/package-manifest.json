@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.66",
+  "version": "6.67",
   "algorithm": "sha256",
-  "file_count": 292,
+  "file_count": 293,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2719,
-      "sha256": "fbdee96051d07237517efcdb44f0eb10121ab7743de8bf85305150f25d206393"
+      "sha256": "ed63eae37107a83f0d8309a04e81f8a28afb5b0dac6f4da8e114af4884a1aa44"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1051,6 +1051,10 @@
     "site-graph-system/release-proof-6.66.md": {
       "bytes": 2931,
       "sha256": "21d0853331a75885f41e6ca651f359ba06a88955c4d71dc0293b12a4e547586b"
+    },
+    "site-graph-system/release-proof-6.67.md": {
+      "bytes": 2671,
+      "sha256": "1c9b687bc0097b880bd04576ab0a8f4def865e6663b2dbf00a2369c7ebd2f466"
     },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,

@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.66",
+    "contractVersion": "6.67",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -22,6 +22,7 @@
       "Do not read the whole repository.",
       "Do not clone the repository for a slash-command lane unless the human explicitly asks you to inspect implementation source.",
       "Do not search GitHub docs for hidden contracts. This manifest plus the listed context files are the contract for the matched command.",
+      "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison.",
       "Read only the context files listed for the matched command.",
       "Prefer this JSON manifest first when available because it is smaller and less ambiguous than prose.",
       "When files are supplied without a slash command, run kiwe_seamflow_plan, compatibility alias kiwe_plan_flow, or use entry.json flowPlanner rules before generation.",
@@ -29,7 +30,7 @@
     ],
     "documentation": "Documentation is opt-in. Do not create README, NOTES, reports, duplicate previews, ZIP files, or explanation documents unless /document is present or the human explicitly asks.",
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
-    "companion": "/usecompanion is optional and non-blocking. Make one bounded call when credentials exist; if it fails, continue without it and report fallback.",
+    "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages."
   },
   "flowPlanner": {
@@ -56,6 +57,38 @@
       "output": ["compact command list"],
       "forbidden": ["generation", "audit", "file creation", "repository crawl"],
       "finalResponse": "List commands only, then stop."
+    },
+    "/execute /stepbystep": {
+      "phase": "execute",
+      "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json"],
+      "requires": ["classified current artifact or explicit current command path"],
+      "output": ["the next safe phase artifact only"],
+      "forbidden": ["running the whole flow", "using prior test material", "docs unless /document", "ZIP"],
+      "finalResponse": "Run only the next command in the current SeamFlow path, return its artifact, compact status, and next suggested command."
+    },
+    "/execute /fullflow": {
+      "phase": "execute",
+      "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json", "only the contexts required by each phase"],
+      "requires": ["classified current artifact and human approval for full-flow execution"],
+      "output": ["final canonical artifacts for the selected flow"],
+      "forbidden": ["using prior test material", "docs unless /document", "ZIP", "DSA/AppShell output unless target requests DSA or combined"],
+      "finalResponse": "Return only final canonical artifacts plus compact pass/fail/warn status."
+    },
+    "/auditateachstep": {
+      "phase": "flag",
+      "read": ["kiwe-ai-toolkit/command-manifest.json"],
+      "requires": ["/execute /stepbystep or /execute /fullflow"],
+      "output": ["audit/fix gates after each phase before continuing"],
+      "forbidden": ["standalone generation"],
+      "finalResponse": "Use as an execution flag; do not treat as a standalone artifact command."
+    },
+    "/auditatend": {
+      "phase": "flag",
+      "read": ["kiwe-ai-toolkit/command-manifest.json"],
+      "requires": ["/execute /fullflow"],
+      "output": ["final audit/fix gates before delivery"],
+      "forbidden": ["standalone generation"],
+      "finalResponse": "Use as an execution flag; do not treat as a standalone artifact command."
     },
     "/rebuild /seamframework": {
       "phase": "rebuild",

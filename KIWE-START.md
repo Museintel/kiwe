@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.66`
+Contract version: `6.67`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,19 +17,22 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.66
+SeamFlow contract: 6.67
 ```
 
 Then do one of these:
 
 1. If the human gave `/list`, return the compact command list from the command manifest, then stop.
 2. If the human gave another `/command`, route only that command and read only the files listed for that command.
-3. If the human gave files but no `/command`, inspect the file contents, classify the current stage, return a compact diagnostic, recommend the next command, and ask which flow they want:
-   - step-by-step flow, where each command returns its own artifact before the next command starts;
-   - full-flow execution, where you run the complete path and return only final artifacts plus compact pass/fail status.
+3. If the human gave files but no `/command`, inspect the file contents, classify the current stage, return a compact diagnostic, recommend the next command, and ask which explicit execution command they want:
+   - `/execute /stepbystep`, where each command returns its own artifact before the next command starts;
+   - `/execute /fullflow`, where you run the complete path and return only final artifacts plus compact pass/fail status.
+   The human may add `/auditateachstep` or `/auditatend`, and may add `/usecompanion` if they want Kiwe Companion assist.
 4. If the human gave no files and no `/command`, return `/list` plus one short question asking what they want to create, rebuild, audit, fix, convert, or apply.
 
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
+
+Current-run evidence only: do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or "accepted" notes unless the human supplied those exact files in the current turn or explicitly asked you to compare against them. SeamFlow must classify and validate the current artifacts, not inherit conclusions from earlier tests.
 
 Current launch scope: close Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, Bricks conversion, Site Graph/dynamic intent, and accessibility first. DSA/AppShell theme creation remains part of SeamFlow, but full DSA theme production hardening is the next phase after page-builder flow testing passes.
 
@@ -81,6 +84,8 @@ If MCP/tool access fails, continue with the raw files above. Do not block unless
 
 Ask the human to connect or adopt a Kiwe MCP/skill only when they want live Site Graph/API access, Companion review, or direct validator execution and no Kiwe tool is available. Otherwise use the raw-file route.
 
+If the human chooses `/usecompanion` and no Kiwe MCP/tool is already connected, ask for `KIWE_REST_BASE` and `KIWE_AI_KEY`. First call a bounded Companion status/context route. If it succeeds, say `COMPANION: connected` with the compact route/hash proof before continuing. If it fails or credentials are missing, say `COMPANION: fallback` and continue without Companion.
+
 ## Attachment classifier
 
 Use this cheap classifier before deciding a flow. Classify by actual code/content first, not by attachment name:
@@ -101,13 +106,13 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.66
+SeamFlow contract: 6.67
 STATUS: NEEDS_INPUT
-Commands: /list summary
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
 Recommended next command:
-Question: step-by-step, full-flow, or a specific /command?
+Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /auditateachstep, /auditatend, /usecompanion.
+Commands: use /list for the compact command list
 ```
 
 If the human supplied attachments, inspect enough file content to determine stage:
@@ -123,6 +128,18 @@ If the human supplied attachments, inspect enough file content to determine stag
 If the human supplied `/commands`, do those commands only. Do not add creative phases, audits, fixes, docs, or full-flow execution unless those commands require them or the human approves them.
 
 ## Standard flow map
+
+Execution commands:
+
+```text
+/execute /stepbystep   -> run the next safe phase only, return its artifact, then stop
+/execute /fullflow     -> run the complete safe path to the final artifact set
+/auditateachstep       -> run audit/fix gates after every phase before continuing
+/auditatend            -> run generation/conversion phases first, then final audits before delivery
+/usecompanion          -> optional bounded Kiwe Companion assist; falls back without blocking
+```
+
+Default audit cadence: when unsure, prefer `/auditateachstep` for production/importable files and `/auditatend` only for quick exploratory drafts.
 
 For a raw HTML/CSS/JS draft, the recommended webpage/header/footer/template-to-Bricks path is:
 
@@ -186,7 +203,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.66
+SeamFlow contract: 6.67
 Command:
 Artifact classification:
 Files returned:

@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.66",
+  "contractVersion": "6.67",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -18,13 +18,14 @@
     "Do not search GitHub for hidden contracts.",
     "Do not create docs, reports, ZIP files, duplicate previews, or long explanations unless /document is present.",
     "Do not start generation when no command/flow has been selected.",
-    "Do not convert DSA/AppShell theme files through /convert /bricks."
+    "Do not convert DSA/AppShell theme files through /convert /bricks.",
+    "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.66",
+    "mustReport": "SeamFlow contract: 6.67",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
-    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants step-by-step flow or full-flow execution.",
+    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /auditateachstep, /auditatend, and /usecompanion. Put the /list command hint last.",
     "ifNoFilesNoCommand": "Return compact /list summary and ask what the human wants to create, rebuild, audit, fix, convert, or apply."
   },
   "rawFiles": {
@@ -65,10 +66,10 @@
       "lane validator such as kiwe_validate_framework_profile, kiwe_validate_bricks_conversion, or kiwe_validate_accessibility"
     ],
     "fallback": "If MCP/tool access fails, continue with rawFiles.machineEntrypoint and rawFiles.commandManifest.",
-    "askToConnectOnlyWhen": "Ask once only when the human wants live Site Graph/API access, Companion review, or direct validator/tool execution and no Kiwe tool is available."
+    "askToConnectOnlyWhen": "Ask once only when the human wants live Site Graph/API access, Companion review, or direct validator/tool execution and no Kiwe tool is available.",
+    "companionHandshake": "If /usecompanion is selected and no MCP/tool is connected, ask for KIWE_REST_BASE and KIWE_AI_KEY. First call a bounded Companion status/context route. On success report COMPANION: connected with compact route/hash proof. On failure report COMPANION: fallback and continue without blocking."
   },
   "flowPlanner": {
-    "cli": "kiwe plan-flow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
     "cli": "kiwe seamflow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
     "mcp": "kiwe_seamflow_plan",
     "compatibilityCli": "kiwe plan-flow",
@@ -89,19 +90,29 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.66",
-      "Commands: compact /list summary",
+      "SeamFlow contract: 6.67",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
-      "Question: step-by-step, full-flow, or a specific /command?"
+      "Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /auditateachstep, /auditatend, /usecompanion.",
+      "Commands: use /list for the compact command list"
     ],
-    "stepByStepQuestion": "I found files but no command. Do you want step-by-step command outputs, or full-flow execution to final artifacts?",
+    "stepByStepQuestion": "I found files but no command. Choose /execute /stepbystep for one artifact per command or /execute /fullflow for final artifacts only.",
+    "auditCadenceQuestion": "Add /auditateachstep for production/importable rigor or /auditatend for a quicker exploratory pass.",
+    "companionQuestion": "Add /usecompanion if you want Kiwe Companion assist. If credentials are not available, continue without it and report fallback.",
     "targetQuestion": "Is the target page/Bricks only, DSA theme only, or combined Appsite?",
     "auditFirstQuestion": "This looks like an existing generated artifact. Should I audit it first before fixing or continuing?",
-    "permissionPolicy": "Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval."
+    "permissionPolicy": "Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval.",
+    "doNotReturnCommandListUnless": "/list"
   },
   "flows": {
+    "executionCommands": {
+      "/execute /stepbystep": "Run only the next safe phase, return the phase artifact, then stop.",
+      "/execute /fullflow": "Run the complete safe path to final artifacts.",
+      "/auditateachstep": "Audit/fix after every phase before continuing.",
+      "/auditatend": "Run creation/conversion phases first, then final audits before delivery.",
+      "/usecompanion": "Optional bounded Companion assist. If unavailable, continue without it and report fallback."
+    },
     "rawHtmlCssJsToBricks": [
       "/rebuild /seamframework",
       "/audit /seamframework",
@@ -208,7 +219,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.66",
+    "SeamFlow contract: 6.67",
     "Command:",
     "Artifact classification:",
     "Files returned:",

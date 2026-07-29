@@ -353,8 +353,10 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     addType('unknown', 'low', 'No known Kiwe artifact shape was provided.');
   }
 
-  const wantsFull = /full[-\s]?flow|complete flow|all commands|through accessibility|final artifacts|end to end/.test(text);
-  const wantsStep = /step[-\s]?by[-\s]?step|one command|in parts|turns/.test(text);
+  const wantsFull = /\/execute\s+\/fullflow|full[-\s]?flow|complete flow|all commands|through accessibility|final artifacts|end to end/.test(text);
+  const wantsStep = /\/execute\s+\/stepbystep|step[-\s]?by[-\s]?step|one command|in parts|turns/.test(text);
+  const wantsAuditEachStep = /\/auditateachstep|audit at each step|audit each step|audit after each/.test(text);
+  const wantsAuditAtEnd = /\/auditatend|audit at end|final audit/.test(text);
   const wantsDsa = /dsa|appshell|app shell|theme package|combined/.test(text);
   const wantsBricks = /bricks|template|builder|convert/.test(text);
   const hasCommand = /\/[a-z][a-z0-9_-]*(?:\s+\/[a-z][a-z0-9_-]*)*/i.test(String(command || ''));
@@ -437,7 +439,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     if (primary === 'unknown') {
       questions.push('What do you want to create, rebuild, audit, fix, convert, or apply?');
     } else {
-      questions.push('Do you want step-by-step flow or full-flow execution?');
+      questions.push('Choose `/execute /stepbystep`, `/execute /fullflow`, or a specific `/command`. Optional flags: `/auditateachstep`, `/auditatend`, `/usecompanion`.');
       if (primary === 'bricks-template-upload') {
         questions.push('Should I audit the existing Bricks template as-is, or should we return to the source HTML for a stricter Seam rebuild first?');
       }
@@ -452,7 +454,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.66',
+    contractVersion: '6.67',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -465,9 +467,27 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     artifactTypes,
     recommendedMode,
     recommendedNextCommands,
+    executionOptions: {
+      stepByStep: '/execute /stepbystep',
+      fullFlow: '/execute /fullflow',
+      auditCadence: wantsAuditEachStep ? '/auditateachstep' : wantsAuditAtEnd ? '/auditatend' : 'ask-or-default-/auditateachstep-for-production',
+      companion: wantsCompanion({ command, explicit: useCompanion }) ? '/usecompanion' : 'optional'
+    },
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.66',
-      includeCompactList: !hasCommand,
+      mustReport: 'SeamFlow contract: 6.67',
+      order: [
+        'STATUS',
+        'SeamFlow contract',
+        'Attachments detected',
+        'Artifact diagnostic',
+        'Recommended next command',
+        'Question with /execute command choices and optional flags',
+        'Commands: use /list for the compact command list'
+      ],
+      includeCompactList: false,
+      includeCommandListHint: !hasCommand,
+      commandListHint: 'Commands: use /list for the compact command list',
+      doNotDumpCommandListUnless: '/list',
       includeAttachmentDiagnostic: !hasCommand,
       waitsForApprovalBefore: ['audit', 'fix', 'convert', 'create', 'assemble', 'live-api', 'companion-review'],
       permissionPolicy: 'Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval.'
@@ -480,10 +500,12 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       compatibilityFlowPlannerTool: 'kiwe_plan_flow',
       sequence: ['kiwe_get_start', 'kiwe_get_command_manifest', 'kiwe_seamflow_plan', 'kiwe_diagnose_command', 'kiwe_route_command', 'lane validator'],
       nonBlockingFallback: 'Use raw KIWE-START.md / entry.json / command-manifest.json when MCP/tools are unavailable.',
-      askToConnectWhen: 'Ask once only when the human wants full-flow execution, live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available.'
+      askToConnectWhen: 'Ask once only when the human wants full-flow execution, live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available.',
+      companionHandshake: 'If /usecompanion is selected and no Kiwe MCP/tool is connected, ask for KIWE_REST_BASE and KIWE_AI_KEY. First call a bounded Companion status/context route. On success report COMPANION: connected with compact route/hash proof. On failure report COMPANION: fallback and continue without blocking.'
     },
     boundaries: [
       'Do not crawl the repository.',
+      'Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly requested comparison.',
       'Do not create documentation unless /document is present.',
       'Do not convert DSA/AppShell theme files through /convert /bricks.',
       'Do not claim a pass without running or following the matching lane audit.',
@@ -522,6 +544,18 @@ export function listCommands() {
         purpose: 'List the supported Kiwe workflow commands without starting generation.',
         requires: [],
         output: 'command list only'
+      },
+      {
+        command: '/execute /stepbystep',
+        purpose: 'Run only the next safe SeamFlow phase for the current artifact, return that artifact, and stop for the next user command.',
+        requires: ['classified current artifact or explicit current command path'],
+        output: 'next phase artifact only'
+      },
+      {
+        command: '/execute /fullflow',
+        purpose: 'Run the complete approved SeamFlow path to final artifacts with compact pass/fail status.',
+        requires: ['classified current artifact and human approval for full-flow execution'],
+        output: 'final canonical artifacts only'
       },
       {
         command: '/fix',
@@ -682,6 +716,14 @@ export function listCommands() {
       {
         flag: '/usecompanion',
         purpose: 'Optional bounded Kiwe Companion assist. If unavailable, continue without it and report fallback.'
+      },
+      {
+        flag: '/auditateachstep',
+        purpose: 'Audit and fix after each phase before continuing. Recommended for production/importable files.'
+      },
+      {
+        flag: '/auditatend',
+        purpose: 'Run creation/conversion first, then audit/fix before delivery. Useful for quick exploratory drafts.'
       }
     ],
     utilities: [
@@ -929,6 +971,8 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/appshell',
   '/assemble',
   '/audit',
+  '/auditatend',
+  '/auditateachstep',
   '/a11y',
   '/accessibility',
   '/binding',
@@ -949,6 +993,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/dsathemeandhomepage',
   '/dynamic',
   '/export',
+  '/execute',
   '/fix',
   '/framework',
   '/frameworkprofile',
@@ -965,6 +1010,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/seam',
   '/seamframework',
   '/staging',
+  '/stepbystep',
   '/sitegraph',
   '/theme',
   '/translate',
@@ -974,6 +1020,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/websitename',
   '/webpage',
   '/website',
+  '/fullflow',
   '/ai'
 ]);
 
@@ -997,6 +1044,8 @@ const TYPO_TOKEN_SUGGESTIONS = new Map([
 
 const VALID_PHASE_COMMANDS = [
   '/list',
+  '/execute /stepbystep',
+  '/execute /fullflow',
   '/document',
   '/fix',
   '/ideate /webdraft',
@@ -1132,6 +1181,30 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       kind: 'command-list',
       normalizedCommand: '/list',
       message: 'List the Kiwe command vocabulary only. Do not start generation.'
+    });
+  }
+
+  if (commandHas(text, /\/auditateachstep|\/auditatend/) && !commandHas(text, /\/execute/)) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'audit_cadence_requires_execute',
+      kind: 'execute',
+      normalizedCommand,
+      message: '`/auditateachstep` and `/auditatend` are execution flags. Pair them with `/execute /stepbystep` or `/execute /fullflow`.',
+      suggestions: ['/execute /stepbystep /auditateachstep', '/execute /fullflow /auditateachstep', '/execute /fullflow /auditatend'],
+      boundaries: ['Do not treat audit cadence flags as standalone generation or audit commands.']
+    });
+  }
+
+  if (commandHas(text, /\/execute/) && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'execute_missing_current_artifact',
+      kind: 'execute',
+      normalizedCommand,
+      message: '`/execute` needs the current artifact or file map. It must not use older Kiwe/National Chikki/BioVantage outputs or prior validation notes unless they were supplied in the current turn.',
+      suggestions: ['Provide the current artifact/file map.', '/execute /stepbystep /auditateachstep', '/execute /fullflow /auditateachstep'],
+      boundaries: ['Current-run artifacts only.', 'No prior test material unless explicitly supplied for comparison.']
     });
   }
 
