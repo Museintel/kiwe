@@ -30,7 +30,7 @@ final class Accessibility_Validator {
 		$findings      = [];
 		$combined_text  = implode( "\n", $path_map );
 		$plan_path      = $this->find_plan_path( $path_map );
-		$has_dark_proof = (bool) preg_match( '/data-kiwe-theme\s*=\s*[\"\']dark[\"\']|data-theme\s*=\s*[\"\']dark[\"\']|\[data-kiwe-theme\s*=\s*[\"\']dark[\"\']\]|data-kiwe-theme-toggle|prefers-color-scheme\s*:\s*dark/i', $combined_text );
+		$has_dark_proof = (bool) preg_match( '/data-kiwe-theme\s*=\s*[\"\']dark[\"\']|data-brx-theme\s*=\s*[\"\']dark[\"\']|data-theme\s*=\s*[\"\']dark[\"\']|\[data-kiwe-theme\s*=\s*[\"\']dark[\"\']\]|\[data-brx-theme\s*=\s*[\"\']dark[\"\']\]|:root\[data-brx-theme\s*=\s*[\"\']dark[\"\']\]|data-kiwe-theme-toggle|prefers-color-scheme\s*:\s*dark/i', $combined_text );
 
 		if ( '' === $plan_path ) {
 			if ( $require_plan ) {
@@ -45,7 +45,7 @@ final class Accessibility_Validator {
 				$findings,
 				$strict_dark ? 'error' : 'warning',
 				'accessibility_missing_dark_mode_proof',
-				'No native dark-mode proof was found. Use the Kiwe accessibility-lite dark-mode token remap recipe: data-kiwe-theme="dark", [data-kiwe-theme="dark"], data-kiwe-theme-toggle, or a documented Bricks/Kiwe dark-mode bridge. Do not search repo docs for another contract.'
+				'No native dark-mode proof was found. Use the Kiwe accessibility-lite dark-mode token remap recipe: data-kiwe-theme="dark", Bricks data-brx-theme="dark", data-kiwe-theme-toggle, or a documented Bricks/Kiwe dark-mode bridge. Do not search repo docs for another contract.'
 			);
 		}
 

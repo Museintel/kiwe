@@ -142,6 +142,7 @@ Use Kiwe/Seam native theme state:
 
 - `data-kiwe-theme="light"` / `data-kiwe-theme="dark"` for Kiwe/AppShell-aware surfaces;
 - `data-kiwe-theme-toggle` for page controls that toggle the site/app theme outside the dock;
+- `data-brx-theme="light"` / `data-brx-theme="dark"` when the artifact targets Bricks' native frontend color mode; Bricks 2.4 sets this on `:root`/`html` and emits dark palette variables under `:root[data-brx-theme="dark"]`;
 - `data-theme="light"` / `data-theme="dark"` only when the artifact is standalone and clearly maps back to Kiwe theme state;
 - `prefers-color-scheme: dark` may be a fallback, not the only proof when Kiwe theme state exists.
 
@@ -157,7 +158,9 @@ Pattern:
 
 ```css
 .page-root-class,
-[data-kiwe-theme="light"] .page-root-class {
+[data-kiwe-theme="light"] .page-root-class,
+html[data-brx-theme="light"] .page-root-class,
+:root[data-brx-theme="light"] .page-root-class {
   --kiwe-color-surface: <light page background>;
   --kiwe-color-surface-raised: <light card/surface>;
   --kiwe-color-surface-sunken: <light muted surface>;
@@ -176,7 +179,9 @@ Pattern:
 
 html[data-kiwe-theme="dark"] .page-root-class,
 [data-kiwe-theme="dark"] .page-root-class,
-.page-root-class[data-kiwe-theme="dark"] {
+.page-root-class[data-kiwe-theme="dark"],
+html[data-brx-theme="dark"] .page-root-class,
+:root[data-brx-theme="dark"] .page-root-class {
   --kiwe-color-surface: <dark page background>;
   --kiwe-color-surface-raised: <dark card/surface>;
   --kiwe-color-surface-sunken: <dark muted surface>;
@@ -197,7 +202,9 @@ For National-Chikki-style project variables, the expected mapping is:
 
 ```css
 .nc-home,
-[data-kiwe-theme="light"] .nc-home {
+[data-kiwe-theme="light"] .nc-home,
+html[data-brx-theme="light"] .nc-home,
+:root[data-brx-theme="light"] .nc-home {
   --nc-paper: var(--kiwe-color-surface);
   --nc-surface: var(--kiwe-color-surface-raised);
   --nc-surface-soft: var(--kiwe-color-surface-sunken);
@@ -210,7 +217,9 @@ For National-Chikki-style project variables, the expected mapping is:
 
 html[data-kiwe-theme="dark"] .nc-home,
 [data-kiwe-theme="dark"] .nc-home,
-.nc-home[data-kiwe-theme="dark"] {
+.nc-home[data-kiwe-theme="dark"],
+html[data-brx-theme="dark"] .nc-home,
+:root[data-brx-theme="dark"] .nc-home {
   --kiwe-color-surface: #14100d;
   --kiwe-color-surface-raised: #201915;
   --kiwe-color-surface-sunken: #2a211c;
@@ -244,6 +253,13 @@ Bricks 2.4 theme-style color controls map global color slots at `:where(:root)`,
 - `colorWarning`;
 - `colorDanger`;
 - `siteBackground`.
+
+Bricks 2.4 frontend color mode is native but separate from Kiwe's AppShell state:
+
+- Bricks sets `document.documentElement.dataset.brxTheme` from `localStorage.brx_mode`, the Bricks default mode, or `prefers-color-scheme`;
+- Bricks emits light palette variables at `:root` and dark palette variables at `:root[data-brx-theme="dark"]`;
+- Kiwe/AppShell still owns `data-kiwe-theme` and `data-kiwe-theme-toggle`;
+- Bricks-ready accessibility fixes should support both selectors when a Bricks template/page is supplied, unless the artifact is explicitly not for Bricks.
 
 When the output includes a Framework / Bricks theme profile, map Kiwe tokens through `settings.tokens.bricks_theme_style` instead of inventing a separate Bricks palette. Keep this global and safe:
 
@@ -317,7 +333,7 @@ When static validation cannot prove text over image/gradient/transparent layers,
 
 1. Run or emulate `/audit /accessibility` on the supplied artifact.
 2. Fix only the files that failed the accessibility lane.
-3. Add native Kiwe light/dark token state, preferably with `[data-kiwe-theme="light"]`, `[data-kiwe-theme="dark"]`, and `data-kiwe-theme-toggle` when the artifact has a theme toggle.
+3. Add native Kiwe/Bricks light/dark token state, preferably with `[data-kiwe-theme="light"]`, `[data-kiwe-theme="dark"]`, `:root[data-brx-theme="dark"]`, and `data-kiwe-theme-toggle` when the artifact has a theme toggle.
 4. Replace unsafe literal color pairs with Kiwe/Seam token pairs or documented project tokens mapped in the accessibility plan.
 5. Replace clipped critical text surfaces with wrapping, fluid Geometry/Seam sizing, safer min-block sizing, rail item width tokens, or accessible full text.
 6. Preserve Bricks dynamic tags, query-loop intent, Kiwe launcher attributes, and DSA/AppShell boundaries.

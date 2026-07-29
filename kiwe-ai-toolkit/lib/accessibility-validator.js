@@ -18,7 +18,7 @@ const NAMED_COLORS = new Map([
   ['currentcolor', null]
 ]);
 
-const DARK_PROOF_RE = /\b(?:data-kiwe-theme\s*=\s*["']dark["']|data-theme\s*=\s*["']dark["']|data-kiwe-theme-toggle|prefers-color-scheme\s*:\s*dark|\[data-kiwe-theme=["']dark["']|\[data-theme=["']dark["'])/i;
+const DARK_PROOF_RE = /\b(?:data-kiwe-theme\s*=\s*["']dark["']|data-brx-theme\s*=\s*["']dark["']|data-theme\s*=\s*["']dark["']|data-kiwe-theme-toggle|prefers-color-scheme\s*:\s*dark|\[data-kiwe-theme=["']dark["']|\[data-brx-theme=["']dark["']|\[data-theme=["']dark["']|:root\[data-brx-theme=["']dark["']\])/i;
 const BRICKS_THEME_STYLE_RE = /\b(?:bricks_theme_style|themeStyle|themeStyles|colorPrimary|colorSecondary|colorLight|colorDark|siteBackground)\b/i;
 const KIWE_TOKEN_RE = /var\(\s*--kiwe-(?:color|theme|font|type|space|radius|shadow)-[a-z0-9-]+/i;
 const PRIVATE_PROJECT_COLOR_VAR_RE = /var\(\s*--(?!kiwe-|dsa-|wp--|bricks-)[a-z0-9_-]*(?:color|bg|surface|text|ink|muted|accent|brand)[a-z0-9_-]*/i;
@@ -582,7 +582,7 @@ export function validateAccessibility(targetDir, options = {}) {
   const planModes = isPlainObject(plan) && Array.isArray(plan.modes) ? plan.modes.map((mode) => String(mode).toLowerCase()) : [];
   const hasDarkProof = DARK_PROOF_RE.test(allText) || planModes.includes('dark');
   if (!hasDarkProof) {
-    add(findings, 'fail', 'accessibility_missing_dark_mode_proof', 'Output must prove native dark-mode support through data-kiwe-theme/data-theme/prefers-color-scheme and token pairs. Use accessibility-lite.md dark-mode token remap recipe; do not search repo docs or ship light-only pages.', root);
+    add(findings, 'fail', 'accessibility_missing_dark_mode_proof', 'Output must prove native dark-mode support through data-kiwe-theme, Bricks data-brx-theme, data-theme, prefers-color-scheme fallback, and token pairs. Use accessibility-lite.md dark-mode token remap recipe; do not search repo docs or ship light-only pages.', root);
   }
   if (!BRICKS_THEME_STYLE_RE.test(allText)) {
     add(findings, 'warn', 'accessibility_missing_bricks_theme_style_alignment', 'No Bricks theme-style/color-palette alignment was found. If this output targets Bricks, map Kiwe tokens to Bricks root color/background/link lanes.', root);

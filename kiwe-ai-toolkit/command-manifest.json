@@ -129,9 +129,10 @@
       "darkModeRecipe": {
         "sourceOfTruth": "Use this recipe; do not search repo docs for a separate dark-mode contract.",
         "selectorPattern": [
-          ".page-root-class, [data-kiwe-theme=\"light\"] .page-root-class",
-          "html[data-kiwe-theme=\"dark\"] .page-root-class, [data-kiwe-theme=\"dark\"] .page-root-class, .page-root-class[data-kiwe-theme=\"dark\"]"
+          ".page-root-class, [data-kiwe-theme=\"light\"] .page-root-class, html[data-brx-theme=\"light\"] .page-root-class, :root[data-brx-theme=\"light\"] .page-root-class",
+          "html[data-kiwe-theme=\"dark\"] .page-root-class, [data-kiwe-theme=\"dark\"] .page-root-class, .page-root-class[data-kiwe-theme=\"dark\"], html[data-brx-theme=\"dark\"] .page-root-class, :root[data-brx-theme=\"dark\"] .page-root-class"
         ],
+        "bricksCompatibility": "Bricks 2.4 sets document.documentElement.dataset.brxTheme on the frontend and emits palette variables at :root plus :root[data-brx-theme=\"dark\"]. Bricks-ready accessibility fixes must support data-brx-theme alongside Kiwe data-kiwe-theme; do not rely on Bricks editor dark UI alone.",
         "requiredKiweTokens": [
           "--kiwe-color-surface",
           "--kiwe-color-surface-raised",
