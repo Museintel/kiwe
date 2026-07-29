@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -21,6 +21,7 @@ Commands:
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
   kiwe diagnose --command "/convert /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
+  kiwe plan-flow [--command "/audit /accessibility"] [--artifact-summary text] [--desired-outcome text] [--use-companion]
   kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
@@ -75,6 +76,14 @@ try {
     const artifactSummary = artifactIndex >= 0 ? args[artifactIndex + 1] : '';
     const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
     print(diagnoseCommand({ command: commandText, brief, artifactSummary, siteGraphSummary }));
+  } else if (command === 'plan-flow') {
+    const commandIndex = args.indexOf('--command');
+    const artifactIndex = args.indexOf('--artifact-summary');
+    const outcomeIndex = args.indexOf('--desired-outcome');
+    const commandText = commandIndex >= 0 ? args[commandIndex + 1] : '';
+    const artifactSummary = artifactIndex >= 0 ? args[artifactIndex + 1] : '';
+    const desiredOutcome = outcomeIndex >= 0 ? args[outcomeIndex + 1] : '';
+    print(planFlow({ command: commandText, artifactSummary, desiredOutcome, useCompanion: args.includes('--use-companion') }));
   } else if (command === 'route') {
     const commandIndex = args.indexOf('--command');
     const briefIndex = args.indexOf('--brief');

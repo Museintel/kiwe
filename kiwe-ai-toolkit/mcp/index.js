@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -71,6 +71,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           siteGraphSummary: { type: 'string', description: 'Short target Site Graph/API context summary.' }
         },
         required: ['command']
+      }
+    },
+    {
+      name: 'kiwe_plan_flow',
+      description: 'Classify supplied artifacts and plan the smallest safe Kiwe flow through Seam, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility. Use when files are provided without a command or when the human asks for full-flow vs step-by-step guidance.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'Optional human slash command. If present, the planner routes it instead of asking for a flow choice.' },
+          artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts, filenames, schemas, or visible markers.' },
+          desiredOutcome: { type: 'string', description: 'Optional human target such as website/page, Bricks template, DSA theme, combined Appsite, or accessibility fix.' },
+          useCompanion: { type: 'boolean', description: 'Whether Companion should be used if available. It is non-blocking and must fall back cleanly.' }
+        }
       }
     },
     {
@@ -144,6 +157,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           targetDir: { type: 'string', description: 'Folder containing bricks-theme-style.json or the JSON file itself.' },
           optional: { type: 'boolean', description: 'If true, missing theme-style file is informational instead of failing.' }
+        },
+        required: ['targetDir']
+      }
+    },
+    {
+      name: 'kiwe_validate_framework_profile',
+      description: 'Validate a Kiwe Framework profile JSON or handoff folder before pushing tokens, variables, colors, and Bricks global theme style metadata from Kiwe > Framework.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          targetDir: { type: 'string', description: 'Folder containing framework/kiwe-framework-profile.json or the profile JSON file itself.' },
+          optional: { type: 'boolean', description: 'If true, missing profile is informational instead of failing.' }
         },
         required: ['targetDir']
       }
@@ -253,6 +278,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case 'kiwe_diagnose_command':
       result = diagnoseCommand(args);
       break;
+    case 'kiwe_plan_flow':
+      result = planFlow(args);
+      break;
     case 'kiwe_list_modes':
       result = listModes();
       break;
@@ -276,6 +304,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_validate_bricks_theme_style':
       result = validateBricksThemeStyle(args.targetDir, { optional: Boolean(args.optional) });
+      break;
+    case 'kiwe_validate_framework_profile':
+      result = validateFrameworkProfile(args.targetDir, { optional: Boolean(args.optional) });
       break;
     case 'kiwe_validate_bricks_conversion':
       result = validateBricksConversion(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional), documented: Boolean(args.documented) });

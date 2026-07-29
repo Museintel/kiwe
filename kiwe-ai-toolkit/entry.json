@@ -1,21 +1,22 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.63",
+  "contractVersion": "6.64",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
-  "purpose": "Fast safe entrypoint for browser AI, IDE AI, MCP clients, and Kiwe Companion-assisted workflows.",
+  "purpose": "Fast safe entrypoint and flow planner for browser AI, IDE AI, MCP clients, and Kiwe Companion-assisted Appsite workflows.",
   "doNot": [
     "Do not browse, clone, or inspect the whole repository for startup.",
     "Do not search GitHub for hidden contracts.",
     "Do not create docs, reports, ZIP files, duplicate previews, or long explanations unless /document is present.",
-    "Do not start generation when no command/flow has been selected."
+    "Do not start generation when no command/flow has been selected.",
+    "Do not convert DSA/AppShell theme files through /convert /bricks."
   ],
   "firstResponse": {
-    "mustReport": "Kiwe Start contract: 6.63",
+    "mustReport": "Kiwe Start contract: 6.64",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
-    "ifOtherCommand": "Route only that command; read only the listed context files.",
+    "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Classify supplied files and ask whether the human wants step-by-step flow or full-flow execution.",
-    "ifNoFilesNoCommand": "Ask what the human wants to create, rebuild, audit, fix, or convert."
+    "ifNoFilesNoCommand": "Ask what the human wants to create, rebuild, audit, fix, convert, or apply."
   },
   "rawFiles": {
     "markdownEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
@@ -28,11 +29,18 @@
     "sequence": [
       "kiwe_get_start",
       "kiwe_get_command_manifest",
+      "kiwe_plan_flow",
       "kiwe_diagnose_command",
       "kiwe_route_command",
-      "lane validator such as kiwe_validate_bricks_conversion, kiwe_validate_accessibility, or kiwe_validate_framework_profile"
+      "lane validator such as kiwe_validate_framework_profile, kiwe_validate_bricks_conversion, or kiwe_validate_accessibility"
     ],
-    "fallback": "If MCP/tool access fails, continue with rawFiles.machineEntrypoint and rawFiles.commandManifest."
+    "fallback": "If MCP/tool access fails, continue with rawFiles.machineEntrypoint and rawFiles.commandManifest.",
+    "askToConnectOnlyWhen": "Ask once only when the human wants live Site Graph/API access, Companion review, or direct validator/tool execution and no Kiwe tool is available."
+  },
+  "flowPlanner": {
+    "cli": "kiwe plan-flow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
+    "mcp": "kiwe_plan_flow",
+    "purpose": "Classify artifacts and return the smallest safe command path through Seam, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility."
   },
   "classifier": {
     "rawHtmlCssJs": ".html with <html, <style, visible page markup, and no Bricks template root",
@@ -43,6 +51,11 @@
     "bricksConversionEnvelope": "JSON with schema kiwe.bricks-conversion.v1",
     "dsaThemePackage": "appshell-theme/import/[theme-id]/theme.json, theme-package.json, and css/theme.css",
     "combinedHandoff": "contains combined-preview, website, and appshell-theme lanes"
+  },
+  "noCommandInteraction": {
+    "stepByStepQuestion": "I found files but no command. Do you want step-by-step command outputs, or full-flow execution to final artifacts?",
+    "targetQuestion": "Is the target page/Bricks only, DSA theme only, or combined Appsite?",
+    "auditFirstQuestion": "This looks like an existing generated artifact. Should I audit it first before fixing or continuing?"
   },
   "flows": {
     "rawHtmlCssJsToBricks": [
@@ -55,6 +68,39 @@
       "/convert /bricks",
       "/audit /bricksconversion",
       "/fix /bricksconversion if audit fails",
+      "/audit /accessibility",
+      "/fix /accessibility if audit fails"
+    ],
+    "seamPageToBricks": [
+      "/audit /seamframework",
+      "/fix /seamframework if audit fails",
+      "/create /frameworkprofile if missing",
+      "/audit /frameworkprofile",
+      "/convert /bricks",
+      "/audit /bricksconversion",
+      "/fix /bricksconversion if audit fails",
+      "/audit /accessibility",
+      "/fix /accessibility if audit fails"
+    ],
+    "bricksTemplateAudit": [
+      "/audit /bricksconversion",
+      "/fix /bricksconversion if audit fails",
+      "/audit /accessibility",
+      "/fix /accessibility if audit fails"
+    ],
+    "frameworkProfileAudit": [
+      "/audit /frameworkprofile",
+      "/fix /frameworkprofile if audit fails"
+    ],
+    "dsaThemeAudit": [
+      "/audit /dsatheme",
+      "/fix /dsatheme if audit fails",
+      "/audit /accessibility",
+      "/fix /accessibility if audit fails"
+    ],
+    "combinedAudit": [
+      "/audit /combined",
+      "/fix /combined if audit fails",
       "/audit /accessibility",
       "/fix /accessibility if audit fails"
     ],
@@ -76,6 +122,7 @@
       "Use official Seam semantic roles/classes/flows.",
       "Use Kiwe/Appsite capability attributes instead of duplicate runtime behavior.",
       "Use Kiwe/Seam variables or declared project variables for visual values.",
+      "Use Bricks-native editable controls/global classes/global variables before custom CSS when producing Bricks.",
       "Use real fluid clamps only when source responsive states prove different min/max values."
     ],
     "fail": [
@@ -88,10 +135,25 @@
       "literal fallback values inside var(...), such as var(--kiwe-color-text, #201b18)"
     ]
   },
+  "accessibilityRule": {
+    "appliesTo": [
+      "/audit /accessibility",
+      "/fix /accessibility"
+    ],
+    "checks": [
+      "WCAG contrast for text, pills, cards, controls, focus, and foreground/background pairs",
+      "native light/dark proof through data-kiwe-theme and data-brx-theme",
+      "critical text clipping and overflow",
+      "reduced motion where motion exists",
+      "preservation of Seam classes, Kiwe attributes, Bricks dynamic tags, query-loop intent, and DSA/AppShell boundaries"
+    ],
+    "fixPolicy": "Use existing tokens/classes first, declared project variables second, and only add new variables when a real design value is missing."
+  },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "Kiwe Start contract: 6.63",
+    "Kiwe Start contract: 6.64",
     "Command:",
+    "Artifact classification:",
     "Files returned:",
     "Blocking findings:",
     "Warnings:",

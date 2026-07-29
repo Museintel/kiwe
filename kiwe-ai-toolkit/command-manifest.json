@@ -5,7 +5,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.63",
+    "contractVersion": "6.64",
     "rule": "Read Kiwe Start first, report the contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "globalRules": {
@@ -16,12 +16,18 @@
       "Do not search GitHub docs for hidden contracts. This manifest plus the listed context files are the contract for the matched command.",
       "Read only the context files listed for the matched command.",
       "Prefer this JSON manifest first when available because it is smaller and less ambiguous than prose.",
+      "When files are supplied without a slash command, run kiwe_plan_flow or use entry.json flowPlanner rules before generation.",
       "If a required artifact is missing, stop with a compact diagnostic instead of guessing."
     ],
     "documentation": "Documentation is opt-in. Do not create README, NOTES, reports, duplicate previews, ZIP files, or explanation documents unless /document is present or the human explicitly asks.",
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. Make one bounded call when credentials exist; if it fails, continue without it and report fallback.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages."
+  },
+  "flowPlanner": {
+    "cli": "kiwe plan-flow [--command text] [--artifact-summary text] [--desired-outcome text] [--use-companion]",
+    "mcp": "kiwe_plan_flow",
+    "purpose": "Classify files and plan the smallest safe path across Seam rebuild, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility."
   },
   "contexts": {
     "workflow": "kiwe-ai-toolkit/contexts/workflow-lite.md",

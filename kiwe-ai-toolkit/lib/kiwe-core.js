@@ -321,6 +321,153 @@ export function getStartEntrypoint() {
   return JSON.parse(entry);
 }
 
+export function planFlow({ command = '', artifactSummary = '', desiredOutcome = '', useCompanion = false } = {}) {
+  const text = [command, artifactSummary, desiredOutcome].join('\n').toLowerCase();
+  const artifactTypes = [];
+  const addType = (type, confidence, reason) => {
+    if (!artifactTypes.some((item) => item.type === type)) artifactTypes.push({ type, confidence, reason });
+  };
+
+  if (/schema["']?\s*:\s*["']kiwe\.framework-profile\.v1|kiwe-framework-profile\.json|framework profile/.test(text)) {
+    addType('framework-profile', 'high', 'Framework profile schema/path is present.');
+  }
+  if (/schema["']?\s*:\s*["']kiwe\.bricks-conversion\.v1|kiwe-bricks-conversion\.json|bricks conversion envelope/.test(text)) {
+    addType('bricks-conversion-envelope', 'high', 'Bricks conversion envelope schema/path is present.');
+  }
+  if (/templatetype|template type|bricks-template|template-upload|top-level title|content\/header\/footer|native bricks template/.test(text)) {
+    addType('bricks-template-upload', 'medium', 'Bricks template upload indicators are present.');
+  }
+  if (/theme-package\.json|appshell-theme\/import|css\/theme\.css|dsa theme package|appshell theme package/.test(text)) {
+    addType('dsa-theme-package', 'high', 'DSA/AppShell theme package indicators are present.');
+  }
+  if (/combined-preview|combined handoff|appshell-theme.+website|website.+appshell-theme/.test(text)) {
+    addType('combined-handoff', 'high', 'Combined preview/theme/website lanes are present.');
+  }
+  if (/bricks-paste\.html|website\/bricks-paste\.html|seam-[a-z0-9_-]+|data-role|data-flow|data-kiwe-|data-dsa-open-module/.test(text)) {
+    addType('seam-page-artifact', 'medium', 'Seam/page artifact indicators are present.');
+  }
+  if (/<html|<!doctype html|\.html|<style|raw html|html\/css\/js|creative draft/.test(text) && !artifactTypes.some((item) => item.type === 'bricks-template-upload')) {
+    addType('raw-html-css-js', 'medium', 'Standalone HTML/CSS/JS draft indicators are present.');
+  }
+  if (!artifactTypes.length) {
+    addType('unknown', 'low', 'No known Kiwe artifact shape was provided.');
+  }
+
+  const wantsFull = /full[-\s]?flow|complete flow|all commands|through accessibility|final artifacts|end to end/.test(text);
+  const wantsStep = /step[-\s]?by[-\s]?step|one command|in parts|turns/.test(text);
+  const wantsDsa = /dsa|appshell|app shell|theme package|combined/.test(text);
+  const wantsBricks = /bricks|template|builder|convert/.test(text);
+  const hasCommand = /\/[a-z][a-z0-9_-]*(?:\s+\/[a-z][a-z0-9_-]*)*/i.test(String(command || ''));
+
+  let recommendedMode = 'needs-human-choice';
+  let recommendedNextCommands = [];
+  const primary = artifactTypes[0]?.type || 'unknown';
+
+  if (hasCommand) {
+    recommendedMode = 'route-command';
+    recommendedNextCommands = [String(command || '').trim()];
+  } else if (primary === 'raw-html-css-js') {
+    recommendedMode = wantsFull ? 'full-flow' : wantsStep ? 'step-by-step' : 'ask-flow-choice';
+    recommendedNextCommands = [
+      '/rebuild /seamframework',
+      '/audit /seamframework',
+      '/fix /seamframework if needed',
+      '/create /frameworkprofile',
+      '/audit /frameworkprofile',
+      '/fix /frameworkprofile if needed',
+      '/convert /bricks',
+      '/audit /bricksconversion',
+      '/fix /bricksconversion if needed',
+      '/audit /accessibility',
+      '/fix /accessibility if needed'
+    ];
+    if (wantsDsa) {
+      recommendedNextCommands.splice(6, 0, '/create /dsatheme', '/audit /dsatheme if requested', '/assemble /combined');
+    }
+  } else if (primary === 'seam-page-artifact') {
+    recommendedMode = wantsFull ? 'full-flow-from-seam' : 'ask-flow-choice';
+    recommendedNextCommands = [
+      '/audit /seamframework',
+      '/fix /seamframework if needed',
+      '/create /frameworkprofile',
+      '/audit /frameworkprofile',
+      '/convert /bricks',
+      '/audit /bricksconversion',
+      '/fix /bricksconversion if needed',
+      '/audit /accessibility',
+      '/fix /accessibility if needed'
+    ];
+  } else if (primary === 'bricks-template-upload' || primary === 'bricks-conversion-envelope') {
+    recommendedMode = 'audit-existing-bricks';
+    recommendedNextCommands = [
+      '/audit /bricksconversion',
+      '/fix /bricksconversion if needed',
+      '/audit /accessibility',
+      '/fix /accessibility if needed'
+    ];
+  } else if (primary === 'framework-profile') {
+    recommendedMode = 'audit-framework-profile';
+    recommendedNextCommands = [
+      '/audit /frameworkprofile',
+      '/fix /frameworkprofile if needed'
+    ];
+  } else if (primary === 'dsa-theme-package') {
+    recommendedMode = 'audit-dsa-theme';
+    recommendedNextCommands = [
+      '/audit /dsatheme',
+      '/fix /dsatheme if needed',
+      '/audit /accessibility',
+      '/fix /accessibility if needed'
+    ];
+  } else if (primary === 'combined-handoff') {
+    recommendedMode = 'audit-combined';
+    recommendedNextCommands = [
+      '/audit /combined',
+      '/fix /combined if needed',
+      '/audit /accessibility',
+      '/fix /accessibility if needed'
+    ];
+  }
+
+  const questions = [];
+  if (!hasCommand) {
+    questions.push('Do you want step-by-step flow or full-flow execution?');
+    if (primary === 'bricks-template-upload') {
+      questions.push('Should I audit the existing Bricks template as-is, or should we return to the source HTML for a stricter Seam rebuild first?');
+    }
+    if (!wantsBricks && (primary === 'raw-html-css-js' || primary === 'seam-page-artifact')) {
+      questions.push('Is the target website/page-only Bricks output, DSA theme, or combined Appsite output?');
+    }
+  }
+
+  return {
+    schema: 'kiwe.flow-plan.v1',
+    contractVersion: '6.64',
+    purpose: 'Plan the smallest safe Kiwe command path for website/page, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
+    status: hasCommand ? 'route' : 'needs_input',
+    commandDetected: hasCommand,
+    artifactTypes,
+    recommendedMode,
+    recommendedNextCommands,
+    questions,
+    capabilityCheck: {
+      mcpPreferred: true,
+      firstToolIfAvailable: 'kiwe_get_start',
+      flowPlannerTool: 'kiwe_plan_flow',
+      sequence: ['kiwe_get_start', 'kiwe_get_command_manifest', 'kiwe_plan_flow', 'kiwe_diagnose_command', 'kiwe_route_command', 'lane validator'],
+      nonBlockingFallback: 'Use raw KIWE-START.md / entry.json / command-manifest.json when MCP/tools are unavailable.',
+      askToConnectWhen: 'Ask once only when the human wants full-flow execution, live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available.'
+    },
+    boundaries: [
+      'Do not crawl the repository.',
+      'Do not create documentation unless /document is present.',
+      'Do not convert DSA/AppShell theme files through /convert /bricks.',
+      'Do not claim a pass without running or following the matching lane audit.',
+      'Stop at the first blocking failure that cannot be fixed from supplied artifacts.'
+    ]
+  };
+}
+
 export function getSeamAttributesContext() {
   const context = readMaybe('contexts/seam-attributes-lite.md');
   if (!context) {
