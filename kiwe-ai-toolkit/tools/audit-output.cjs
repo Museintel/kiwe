@@ -176,6 +176,9 @@ const responsiveLayoutKeyPattern = /^_(?:cssCustom|direction|display|grid|gridIt
 const complexLayoutPattern = /\b(?:bento|campaign-grid|masonry|editorial-grid)\b|grid-template-(?:columns|rows|areas)\s*:|grid-auto-(?:columns|rows|flow)\s*:|grid-column\s*:|grid-row\s*:|@media[\s\S]{0,1600}(?:grid-template|grid-column|grid-row|flex-direction|\.nc-section-head|\.seam-spread)/i;
 const bricksLayoutElementNames = new Set(['container', 'div', 'section', 'block']);
 const nativeStyleControlPattern = /^_(?:typography|background|gradient|border|boxShadow|transform|transformOrigin|cssFilters|cssTransition|display|grid|gridItem|gridTemplate|gridAuto|justifyItemsGrid|alignItemsGrid|justifyContentGrid|alignContentGrid|direction|alignSelf|alignItems|justifyContent|flexWrap|flexGrow|flexShrink|flexBasis|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|position|top|right|bottom|left|zIndex|overflow|objectFit|objectPosition|opacity|isolation|mixBlendMode|pointerEvents|perspective|perspectiveOrigin|color|textAlign|font|lineHeight|letterSpacing)(?::|$)/;
+const tokenOwnedColorControlPattern = /^_(?:typography|background|gradient|border|boxShadow|cssFilters|color|fill|stroke|cssCustom)(?::|$)/;
+const tokenOwnedColorNestedKeyPattern = /^(?:color|background|backgroundColor|background-color|backgroundImage|background-image|gradient|raw|hex|rgb|hsl|hue|saturation|lightness|fill|stroke|borderColor|border-color|shadowColor|shadow-color)$/i;
+const colorLiteralPattern = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|\b(?:white|black)\b/gi;
 const mappableCssDeclarationPattern = /\b(?:display|flex(?:-direction|-wrap|-grow|-shrink|-basis)?|align-items|align-self|justify-content|justify-items|align-content|gap|row-gap|column-gap|grid-template-columns|grid-template-rows|grid-auto-flow|grid-auto-columns|grid-auto-rows|grid-column|grid-row|width|max-width|min-width|height|max-height|min-height|aspect-ratio|margin(?:-(?:top|right|bottom|left))?|padding(?:-(?:top|right|bottom|left))?|position|top|right|bottom|left|z-index|overflow|opacity|background(?:-color|-image|-size|-position|-repeat)?|color|border(?:-(?:radius|color|width|style))?|box-shadow|font(?:-(?:family|size|weight|style))?|line-height|letter-spacing|text-align|text-transform|transform|filter|transition)\s*:/gi;
 const customCssHeavyBytes = 12000;
 const customCssNativeStyleMinControls = 60;
@@ -256,6 +259,88 @@ function countMappableCssDeclarations(cssText) {
   let count = 0;
   while (mappableCssDeclarationPattern.exec(text)) count += 1;
   return count;
+}
+
+function cssFunctionRanges(value, functionName) {
+  const text = String(value || '');
+  const lower = text.toLowerCase();
+  const needle = `${String(functionName || '').toLowerCase()}(`;
+  const ranges = [];
+  let index = 0;
+  while ((index = lower.indexOf(needle, index)) !== -1) {
+    let depth = 0;
+    let end = -1;
+    for (let i = index; i < text.length; i += 1) {
+      if (text[i] === '(') depth += 1;
+      if (text[i] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end === -1) break;
+    ranges.push({ start: index, end });
+    index = end + 1;
+  }
+  return ranges;
+}
+
+function indexInsideRanges(index, ranges) {
+  return ranges.some((range) => index >= range.start && index <= range.end);
+}
+
+function directColorLiterals(value) {
+  if (typeof value !== 'string') return [];
+  const varRanges = cssFunctionRanges(value, 'var');
+  const literals = [];
+  colorLiteralPattern.lastIndex = 0;
+  let match;
+  while ((match = colorLiteralPattern.exec(value))) {
+    const literal = String(match[0] || '').trim();
+    if (literal && !indexInsideRanges(match.index, varRanges)) literals.push(literal);
+  }
+  return literals;
+}
+
+function colorOwnedChild(parentOwned, key) {
+  return parentOwned || tokenOwnedColorControlPattern.test(String(key || '')) || tokenOwnedColorNestedKeyPattern.test(String(key || ''));
+}
+
+function collectUntokenizedColorValues(value, out = [], trail = '$', parentOwned = false) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectUntokenizedColorValues(item, out, `${trail}[${index}]`, parentOwned));
+  } else if (value && typeof value === 'object') {
+    for (const [key, item] of Object.entries(value)) {
+      collectUntokenizedColorValues(item, out, `${trail}.${key}`, colorOwnedChild(parentOwned, key));
+    }
+  } else if (parentOwned && typeof value === 'string') {
+    const literals = directColorLiterals(value);
+    if (literals.length) out.push({ path: trail, value: String(value), literals });
+  }
+  return out;
+}
+
+function collectBricksColorTokenMisuse(items, prefix) {
+  const problems = [];
+  const limit = 40;
+  for (const [index, item] of (Array.isArray(items) ? items : []).entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const label = item.id || item.name || item.label || `item-${index}`;
+    const settings = elementSettings(item);
+    for (const problem of collectUntokenizedColorValues(settings, [], `$[${index}].settings`)) {
+      problems.push(`${prefix} native style "${problem.path}" on "${label}" uses direct color literal(s) "${problem.literals.join(', ')}". /convert /bricks outputs must be 100% Seam/Framework integrated: component colors, gradients, borders, shadows, fills, and local CSS variables must consume var(--kiwe-*), var(--seam-*), or declared project variables. Literal colors are allowed only at token-definition/fallback layer, not direct component styling.`);
+      if (problems.length >= limit) break;
+    }
+    if (problems.length >= limit) break;
+  }
+  const total = (Array.isArray(items) ? items : []).reduce((sum, item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return sum;
+    return sum + collectUntokenizedColorValues(elementSettings(item)).length;
+  }, 0);
+  if (total > limit) problems.push(`${prefix} contains ${total - limit} additional direct color literal issues beyond the first ${limit}. Replace them with official Kiwe/Seam tokens or declared project variables, then rerun /audit /bricksconversion.`);
+  return problems;
 }
 
 function collectResponsiveLayoutOverrides(value, out = []) {
@@ -376,6 +461,12 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
   for (const message of collectBricksElementMisuse(templateElements)) {
     out.push(`Bricks template export ${relPath} ${message}`);
   }
+  out.push(...collectBricksColorTokenMisuse(
+    templateElements
+      .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
+      .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : []),
+    `Bricks template export ${relPath}`
+  ));
   const templateNativeControls = countNativeStyleControls(
     templateElements
       .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
@@ -546,6 +637,7 @@ function validateBricksConversionJson(file) {
   for (const message of collectBricksElementMisuse(json.elements || [])) {
     out.push(`kiwe-bricks-conversion.json ${message}`);
   }
+  out.push(...collectBricksColorTokenMisuse([].concat(json.elements || []).concat(json.globalClasses || []), 'kiwe-bricks-conversion.json'));
   const customCssBuckets = collectCustomCssBuckets(json);
   const customCssText = customCssBuckets.join('\n');
   const customCssBytes = customCssBuckets.reduce((sum, text) => sum + String(text || '').length, 0);

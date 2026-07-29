@@ -119,11 +119,15 @@ final class Bricks_Conversion_Validator {
 	private const LITERAL_LENGTH_PATTERN             = '/-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i';
 	private const OFFICIAL_TOKEN_VAR_PATTERN         = '/var\(\s*--(?:kiwe|seam)-/i';
 	private const SELF_CLAMP_LENGTH_PATTERN          = '/clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i';
+	private const TOKEN_OWNED_COLOR_CONTROL_PATTERN  = '/^_(?:typography|background|gradient|border|boxShadow|cssFilters|color|fill|stroke|cssCustom)(?::|$)/';
+	private const TOKEN_OWNED_COLOR_NESTED_KEY_PATTERN = '/^(?:color|background|backgroundColor|background-color|backgroundImage|background-image|gradient|raw|hex|rgb|hsl|hue|saturation|lightness|fill|stroke|borderColor|border-color|shadowColor|shadow-color)$/i';
+	private const COLOR_LITERAL_PATTERN              = '/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|\b(?:white|black)\b/i';
 	private const TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES = 2500;
 	private const TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN = 12;
 	private const LARGE_TEMPLATE_ELEMENT_COUNT     = 180;
 	private const MIN_NATIVE_STYLE_CONTROLS        = 60;
 	private const TOKEN_FINDING_LIMIT              = 40;
+	private const COLOR_FINDING_LIMIT              = 40;
 
 	public function validate( array $conversion, array $site_graph = [], string $source_html = '', array $binding = [] ): array {
 		$findings = [];
@@ -157,6 +161,14 @@ final class Bricks_Conversion_Validator {
 			$findings,
 			'$.elements/globalClasses',
 			$this->collect_declared_css_variables( $conversion )
+		);
+		$this->validate_tokenized_native_colors(
+			array_merge(
+				isset( $conversion['elements'] ) && is_array( $conversion['elements'] ) ? $conversion['elements'] : [],
+				isset( $conversion['globalClasses'] ) && is_array( $conversion['globalClasses'] ) ? $conversion['globalClasses'] : []
+			),
+			$findings,
+			'$.elements/globalClasses'
 		);
 		$this->validate_template_upload_conversion_css( $conversion, $findings );
 		$this->validate_source_parity( $conversion, $source_html, $findings );
@@ -305,6 +317,15 @@ final class Bricks_Conversion_Validator {
 			$findings,
 			'$.content/header/footer/global_classes',
 			$this->collect_declared_css_variables( $template )
+		);
+		$this->validate_tokenized_native_colors(
+			array_merge(
+				$elements,
+				isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
+				isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
+			),
+			$findings,
+			'$.content/header/footer/global_classes'
 		);
 		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $native_controls < self::MIN_NATIVE_STYLE_CONTROLS ) {
 			$this->add( $findings, 'fail', 'bricks_template_not_native_editable_enough', sprintf( 'Large Bricks template export has %1$d elements but only %2$d native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.', count( $elements ), $native_controls ), '$.content' );
@@ -715,6 +736,47 @@ final class Bricks_Conversion_Validator {
 		}
 	}
 
+	private function validate_tokenized_native_colors( array $items, array &$findings, string $path ): void {
+		$found = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$values = [];
+			$this->collect_untokenized_native_colors( $item['settings'], $values, $path . '[' . (int) $index . '].settings' );
+			foreach ( $values as $value ) {
+				$value['label'] = $label;
+				$found[]        = $value;
+			}
+		}
+
+		foreach ( array_slice( $found, 0, self::COLOR_FINDING_LIMIT ) as $item ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_untokenized_native_color',
+				sprintf(
+					'Bricks native style "%1$s" on "%2$s" uses direct color literal(s) "%3$s". /convert /bricks outputs must be 100%% Seam/Framework integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the token-definition layer as fallbacks, for example var(--kiwe-color-text, #201b18), but not as direct component styling such as color: #fff or --pack-bg: #f5b942.',
+					(string) ( $item['path'] ?? '' ),
+					(string) ( $item['label'] ?? '' ),
+					implode( ', ', array_map( 'strval', (array) ( $item['literals'] ?? [] ) ) )
+				),
+				(string) ( $item['path'] ?? '' )
+			);
+		}
+
+		if ( count( $found ) > self::COLOR_FINDING_LIMIT ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_untokenized_native_color_overflow',
+				sprintf( 'Bricks native styles contain %d additional untokenized direct color values beyond the first %d. Fix with official Kiwe/Seam tokens or declared project variables, then rerun /audit /bricksconversion.', count( $found ) - self::COLOR_FINDING_LIMIT, self::COLOR_FINDING_LIMIT ),
+				$path
+			);
+		}
+	}
+
 	private function collect_declared_css_variables( mixed $value, array &$out = [] ): array {
 		if ( is_array( $value ) ) {
 			foreach ( [ 'name', 'variable', 'key', 'id' ] as $key ) {
@@ -747,6 +809,104 @@ final class Bricks_Conversion_Validator {
 		}
 
 		return false;
+	}
+
+	private function extract_css_function_ranges( string $value, string $function_name ): array {
+		$text   = $value;
+		$lower  = strtolower( $text );
+		$needle = strtolower( $function_name ) . '(';
+		$ranges = [];
+		$index  = 0;
+		$len    = strlen( $text );
+
+		while ( false !== ( $index = strpos( $lower, $needle, $index ) ) ) {
+			$depth = 0;
+			$end   = -1;
+
+			for ( $i = $index; $i < $len; ++$i ) {
+				$char = $text[ $i ];
+				if ( '(' === $char ) {
+					++$depth;
+				} elseif ( ')' === $char ) {
+					--$depth;
+					if ( 0 === $depth ) {
+						$end = $i;
+						break;
+					}
+				}
+			}
+
+			if ( -1 === $end ) {
+				break;
+			}
+
+			$ranges[] = [ 'start' => $index, 'end' => $end ];
+			$index    = $end + 1;
+		}
+
+		return $ranges;
+	}
+
+	private function offset_inside_ranges( int $offset, array $ranges ): bool {
+		foreach ( $ranges as $range ) {
+			if ( ! is_array( $range ) ) {
+				continue;
+			}
+			$start = (int) ( $range['start'] ?? -1 );
+			$end   = (int) ( $range['end'] ?? -1 );
+			if ( $offset >= $start && $offset <= $end ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function collect_direct_color_literals( string $value ): array {
+		$var_ranges = $this->extract_css_function_ranges( $value, 'var' );
+		if ( ! preg_match_all( self::COLOR_LITERAL_PATTERN, $value, $matches, PREG_OFFSET_CAPTURE ) ) {
+			return [];
+		}
+
+		$literals = [];
+		foreach ( $matches[0] as $match ) {
+			if ( ! is_array( $match ) || ! isset( $match[0], $match[1] ) ) {
+				continue;
+			}
+			$literal = trim( (string) $match[0] );
+			if ( '' === $literal || $this->offset_inside_ranges( (int) $match[1], $var_ranges ) ) {
+				continue;
+			}
+			$literals[] = $literal;
+		}
+
+		return $literals;
+	}
+
+	private function color_owned_child( bool $parent_owned, string $key ): bool {
+		return $parent_owned || preg_match( self::TOKEN_OWNED_COLOR_CONTROL_PATTERN, $key ) || preg_match( self::TOKEN_OWNED_COLOR_NESTED_KEY_PATTERN, $key );
+	}
+
+	private function collect_untokenized_native_colors( mixed $value, array &$out, string $path, bool $parent_owned = false ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$this->collect_untokenized_native_colors( $item, $out, $path . '.' . (string) $key, $this->color_owned_child( $parent_owned, (string) $key ) );
+			}
+			return;
+		}
+
+		if ( ! $parent_owned || ! is_string( $value ) ) {
+			return;
+		}
+
+		$literals = $this->collect_direct_color_literals( $value );
+		if ( [] !== $literals ) {
+			$out[] = [
+				'path'     => $path,
+				'value'    => $value,
+				'literals' => $literals,
+			];
+		}
 	}
 
 	private function extract_css_function_calls( string $value, string $function_name ): array {

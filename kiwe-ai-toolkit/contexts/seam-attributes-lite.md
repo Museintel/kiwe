@@ -124,6 +124,8 @@ When rebuilding a pure HTML/CSS/JS draft with Seam:
 
 - preserve the approved visual direction;
 - add official Seam roles/classes/tokens for meaning and responsive structure;
+- keep the rebuilt page 100% Framework-token integrated: component colors, backgrounds, gradients, borders, shadows, fills, spacing, sizing, radius, type, and responsive layout values must consume `var(--kiwe-*)`, `var(--seam-*)`, declared project variables, or real fluid clamps from proven responsive states;
+- do not leave direct component values such as `color: #fff`, `background: #8deae5`, `rgba(...)` shadows, `--pack-bg: #f5b942`, `padding: 28px`, or `border-radius: 24px` in page CSS; literal colors/lengths belong in Framework/global variable definitions or `var(...)` fallbacks, not direct component styling;
 - add live Kiwe capability attributes only where the draft already has matching UI intent;
 - never create duplicate app runtime code for a Kiwe-owned capability;
 - do not add DSA AppShell shell markup;

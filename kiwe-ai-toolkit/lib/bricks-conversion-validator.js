@@ -201,6 +201,10 @@ const LITERAL_LENGTH_RE = /-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh
 const OFFICIAL_TOKEN_VAR_RE = /var\(\s*--(?:kiwe|seam)-/i;
 const SELF_CLAMP_LENGTH_RE = /clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i;
 const TOKEN_FINDING_LIMIT = 40;
+const TOKEN_OWNED_COLOR_CONTROL_RE = /^_(?:typography|background|gradient|border|boxShadow|cssFilters|color|fill|stroke|cssCustom)(?::|$)/;
+const TOKEN_OWNED_COLOR_NESTED_KEY_RE = /^(?:color|background|backgroundColor|background-color|backgroundImage|background-image|gradient|raw|hex|rgb|hsl|hue|saturation|lightness|fill|stroke|borderColor|border-color|shadowColor|shadow-color)$/i;
+const COLOR_LITERAL_RE = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|\b(?:white|black)\b/gi;
+const COLOR_FINDING_LIMIT = 40;
 
 const CUSTOM_CSS_HEAVY_BYTES = 12000;
 const CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS = 60;
@@ -619,6 +623,110 @@ function hasValidKiweFluidClamp(value) {
   return extractCssFunctionCalls(value, 'clamp').some((call) => isValidKiweFluidClampArgs(splitCssArgs(call)));
 }
 
+function cssFunctionRanges(value, functionName) {
+  const text = String(value || '');
+  const lower = text.toLowerCase();
+  const needle = `${String(functionName).toLowerCase()}(`;
+  const ranges = [];
+  let index = 0;
+  while ((index = lower.indexOf(needle, index)) !== -1) {
+    let depth = 0;
+    let end = -1;
+    for (let i = index; i < text.length; i += 1) {
+      if (text[i] === '(') depth += 1;
+      if (text[i] === ')') {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end === -1) break;
+    ranges.push({ start: index, end });
+    index = end + 1;
+  }
+  return ranges;
+}
+
+function indexInsideRanges(index, ranges) {
+  return ranges.some((range) => index >= range.start && index <= range.end);
+}
+
+function collectDirectColorLiterals(value) {
+  if (typeof value !== 'string') return [];
+  const varRanges = cssFunctionRanges(value, 'var');
+  const literals = [];
+  COLOR_LITERAL_RE.lastIndex = 0;
+  let match;
+  while ((match = COLOR_LITERAL_RE.exec(value))) {
+    const literal = String(match[0] || '').trim();
+    if (!literal) continue;
+    if (indexInsideRanges(match.index, varRanges)) continue;
+    literals.push(literal);
+  }
+  return literals;
+}
+
+function colorOwnedChild(parentOwned, key) {
+  return parentOwned || TOKEN_OWNED_COLOR_CONTROL_RE.test(String(key || '')) || TOKEN_OWNED_COLOR_NESTED_KEY_RE.test(String(key || ''));
+}
+
+function collectUntokenizedNativeColorValues(value, out = [], trail = '$', parentOwned = false) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectUntokenizedNativeColorValues(item, out, `${trail}[${index}]`, parentOwned));
+    return out;
+  }
+
+  if (isPlainObject(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      const owned = colorOwnedChild(parentOwned, key);
+      collectUntokenizedNativeColorValues(item, out, `${trail}.${key}`, owned);
+    }
+    return out;
+  }
+
+  if (parentOwned && typeof value === 'string') {
+    const literals = collectDirectColorLiterals(value);
+    if (literals.length) {
+      out.push({ path: trail, value: String(value), literals });
+    }
+  }
+  return out;
+}
+
+function validateTokenizedNativeColors(items, findings, file, pathPointer) {
+  const findingsToAdd = [];
+  asArray(items).forEach((item, index) => {
+    if (!isPlainObject(item)) return;
+    const label = item.id || item.name || item.label || `item-${index}`;
+    const settings = elementSettings(item);
+    const values = collectUntokenizedNativeColorValues(settings, [], `${pathPointer}[${index}].settings`, false);
+    for (const value of values) {
+      findingsToAdd.push({ label, ...value });
+    }
+  });
+
+  findingsToAdd.slice(0, COLOR_FINDING_LIMIT).forEach((item) => {
+    add(
+      findings,
+      'fail',
+      `Bricks native style "${item.path}" on "${item.label}" uses direct color literal(s) "${item.literals.join(', ')}". /convert /bricks outputs must be 100% Seam/Framework integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the token-definition layer as fallbacks, for example var(--kiwe-color-text, #201b18), but not as direct component styling such as color: #fff or --pack-bg: #f5b942.`,
+      file,
+      item.path
+    );
+  });
+  if (findingsToAdd.length > COLOR_FINDING_LIMIT) {
+    add(
+      findings,
+      'fail',
+      `Bricks native styles contain ${findingsToAdd.length - COLOR_FINDING_LIMIT} additional untokenized direct color values beyond the first ${COLOR_FINDING_LIMIT}. Fix with official Kiwe/Seam tokens or declared project variables, then rerun /audit /bricksconversion.`,
+      file,
+      pathPointer
+    );
+  }
+}
+
 function hasNoOpClamp(value) {
   return SELF_CLAMP_LENGTH_RE.test(value) || extractCssFunctionCalls(value, 'clamp').some((call) => {
     const args = splitCssArgs(call);
@@ -890,6 +998,14 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     '$.content/header/footer/global_classes',
     declaredVariables
   );
+  validateTokenizedNativeColors(
+    templateElements
+      .concat(asArray(templateData.global_classes))
+      .concat(asArray(templateData.globalClasses)),
+    findings,
+    rel(root, templatePath),
+    '$.content/header/footer/global_classes'
+  );
   if (templateElements.length >= LARGE_CLIPBOARD_ELEMENT_COUNT && templateNativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
     add(
       findings,
@@ -1145,6 +1261,12 @@ function validateNativeStyleFidelity({ conversion, findings, conversionRel }) {
     conversionRel,
     '$.elements/globalClasses',
     declaredVariables
+  );
+  validateTokenizedNativeColors(
+    elements.concat(globalClasses),
+    findings,
+    conversionRel,
+    '$.elements/globalClasses'
   );
 
   if (!isCustomCssHeavy && mappableCssDeclarations < MAPPABLE_CSS_DECLARATION_MIN) return;

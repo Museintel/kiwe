@@ -42,6 +42,7 @@
       "phase": "rebuild",
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
       "requires": ["existing HTML/CSS/JS page or visual draft"],
+      "must": ["100% Seam Framework integration for structure, roles, flows, capability attributes, and Framework-token driven visual values", "component colors, spacing, sizing, radius, type, shadows, and responsive geometry consume Kiwe/Seam variables, declared project variables, or real fluid clamps"],
       "output": ["website/bricks-paste.html"],
       "forbidden": ["Bricks JSON", "DSA theme", "docs unless /document", "ZIP"],
       "finalResponse": "Return the file and compact pass/fail summary."
@@ -82,6 +83,7 @@
       "phase": "convert",
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
       "requires": ["website/bricks-paste.html", "Framework profile or confirmed Bricks Theme Style already pushed"],
+      "must": ["preserve all Seam classes/attributes and Kiwe capability attributes", "use Bricks-native editable controls/global classes/global variables before custom CSS", "native Bricks settings/global_classes must consume Framework tokens/project variables; direct component colors and hardcoded lengths are fail-level issues"],
       "output": ["bricks-template/[page-name]-template-upload.json"],
       "forbidden": ["DSA/AppShell markup", "combined preview", "Code element fallback when native Bricks elements are possible", "docs unless /document", "ZIP"],
       "finalResponse": "Return the native Bricks template upload JSON and compact validation status."
@@ -90,6 +92,7 @@
       "phase": "audit",
       "read": ["kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
       "requires": ["Bricks conversion envelope or native Bricks template upload JSON"],
+      "must": ["fail direct component color literals such as #fff, rgba(...), gradients with literal stops, or local --project-token: #... declarations outside token/global variable definitions", "fail hardcoded native lengths and no-op clamps in token-owned Bricks settings/global_classes"],
       "output": ["pass/fail findings only"],
       "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
       "finalResponse": "PASS/FAIL with blocking errors and warnings."
@@ -98,6 +101,7 @@
       "phase": "fix",
       "read": ["kiwe-ai-toolkit/contexts/bricks-conversion-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
       "requires": ["failed Bricks conversion/template artifact"],
+      "must": ["fix the Bricks artifact itself; do not claim a Framework profile will repair hardcoded template JSON later", "use official tokens first, declared project variables second, and real fluid clamps only when source responsive states prove different min/max values"],
       "output": ["fixed Bricks conversion/template artifact only"],
       "forbidden": ["DSA/AppShell conversion", "website redesign", "docs unless /document", "ZIP"],
       "finalResponse": "Return fixed artifact and compact pass/fail summary."
