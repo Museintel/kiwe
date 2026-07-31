@@ -298,6 +298,14 @@ Audit for:
 - no hardcoded production behavior that belongs to WordPress, Bricks, WooCommerce, or Kiwe;
 - no horizontal viewport overflow except intentional rails;
 
+If tools are available, run:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-seamframework.cjs /path/to/website/bricks-paste.html
+```
+
+`validate-seamframework.cjs` is portable for browser AI. In a full checkout it delegates to `audit-output.cjs`; when downloaded alone, it runs bundled core Seam checks and reports `mode: "self-contained-fallback"`. Missing `audit-output.cjs` alone is not a blocker for `/audit /seamframework` once the current Seam validator file is present.
+
 ### `/create /accessibility`
 
 Use after an artifact exists and the human wants light/dark and contrast support. This is not a creative redesign phase.

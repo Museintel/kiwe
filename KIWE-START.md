@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.82`
+Contract version: `6.83`
 Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.82
+SeamFlow contract: 6.83
 ```
 
 Then do one of these:
@@ -49,6 +49,8 @@ No wandering: do not use general web search, arXiv, unrelated GitHub search, com
 Search-drift hard stop: fetching/opening an exact raw URL from this contract is allowed. Searching for that URL, searching GitHub, searching arXiv, searching the web, opening search results, or looking for prior Kiwe/National/BioVantage examples is not allowed. If your environment starts a search instead of direct raw fetch, stop immediately with `ERROR: KIWE_SEARCH_DRIFT`; do not use the search results and do not continue the command.
 
 Validator authority: only executed validator proof may close a lane as `PASS`. Valid proof is one of: an official Kiwe validator command that actually ran, a Kiwe MCP validator tool result, a Kiwe REST/plugin validator result, or a hosted/local Kiwe validator endpoint result. Copied, reconstructed, simulated, manually applied, or "equivalent" validator logic may guide a repair, but it is not PASS authority. If a browser AI cannot execute the relevant validator/tool/API, it must report `WARN` or `UNVERIFIED`, not `PASS`, and must not say "no blocking findings" or "phase closed" for that lane.
+
+Seam validator portability: `validate-seamframework.cjs` is intentionally self-contained for the website/page Seam lane. When it is downloaded without the rest of the toolkit, it must run its bundled fallback checks and report `mode: "self-contained-fallback"` instead of stopping because `audit-output.cjs` is absent. When `audit-output.cjs` is available beside it, it may delegate to the fuller output audit. Browser AI should not use missing `audit-output.cjs` as a blocker for `/audit /seamframework` once it has the current `validate-seamframework.cjs`.
 
 Validator proof shape: every `STATUS: PASS` for `/audit`, `/fix`, `/execute /stepbystep`, or `/execute /fullflow` must include a compact proof block with the validator command/tool/route used, contract/version, exit code or ok status, fail count, warning count, and the artifact path/hash when available. Missing proof is itself `ERROR: KIWE_VALIDATOR_PROOF_MISSING`.
 
@@ -131,7 +133,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.82
+SeamFlow contract: 6.83
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -246,7 +248,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.82
+SeamFlow contract: 6.83
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -316,7 +318,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.82
+SeamFlow contract: 6.83
 Command:
 Artifact classification:
 Files returned:

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "6.82",
+  "version": "6.83",
   "algorithm": "sha256",
   "file_count": 294,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "436ddb166c13e383971e991c58aa8bce4db7d4176272d1fcbd7ccf3233dfb5bf"
+      "sha256": "0fcc2b50c75e00ca7de1e0474d1704d1a9bfe726d9a142b44f868ae0eb6b5719"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1065,8 +1065,8 @@
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 64068,
-      "sha256": "9cce472303c4769403710fe93086a0cf87f4c02fc0e059be81ec4fc3607d0d0a"
+      "bytes": 64836,
+      "sha256": "be51d781d76168b929d6332a9144595f78738140869a9cfc3b5ad221929af507"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

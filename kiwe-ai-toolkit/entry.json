@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.82",
+  "contractVersion": "6.83",
   "updated": "2026-08-01",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -26,7 +26,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.82",
+    "mustReport": "SeamFlow contract: 6.83",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Put the /list command hint last.",
@@ -61,11 +61,12 @@
   },
   "validatorAuthority": {
     "rule": "Only executed validator proof may close a lane as PASS. Valid proof is an official Kiwe validator command that actually ran, a Kiwe MCP validator result, a Kiwe REST/plugin validator result, or a hosted/local Kiwe validator endpoint result.",
+    "seamFrameworkStandalone": "validate-seamframework.cjs is self-contained for /audit /seamframework. If downloaded without audit-output.cjs, it must run its bundled fallback checks and report mode self-contained-fallback instead of stopping on the missing dependency. When audit-output.cjs is present beside it, delegation is allowed.",
     "ifUnavailable": "Report WARN or UNVERIFIED for that lane. Do not write PASS, no blocking findings, or completed closure for Seam Framework, Framework profile, Bricks conversion, DSA theme, combined handoff, or accessibility when the relevant validator/tool/API did not execute.",
     "notPassAuthority": ["manual audit", "visual confidence", "copied validator logic", "reconstructed validator logic", "simulated validator logic", "equivalent checks", "prior accepted notes"],
     "proofShape": ["validator command/tool/route", "contract/version", "exit code or ok status", "fail count", "warning count", "artifact path/hash when available"],
     "mustUseWhenPossible": [
-      "validate-seamframework.cjs or audit-output.cjs for /audit /seamframework",
+      "validate-seamframework.cjs for /audit /seamframework; it is fallback-capable when audit-output.cjs is absent",
       "validate-framework-profile.cjs for /audit /frameworkprofile",
       "validate-bricks-conversion.cjs for /audit /bricksconversion",
       "validate-accessibility.cjs for /audit /accessibility",
@@ -76,7 +77,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.82",
+      "SeamFlow contract: 6.83",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -137,7 +138,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.82",
+      "SeamFlow contract: 6.83",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -322,7 +323,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.82",
+    "SeamFlow contract: 6.83",
     "Command:",
     "Artifact classification:",
     "Files returned:",

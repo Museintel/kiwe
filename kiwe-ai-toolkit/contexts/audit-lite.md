@@ -23,6 +23,8 @@ For a website/page Seam artifact, run the named wrapper when available:
 node kiwe-ai-toolkit/tools/validate-seamframework.cjs /path/to/website/bricks-paste.html
 ```
 
+The Seam validator is standalone-capable for browser AI. If `validate-seamframework.cjs` is downloaded without the rest of the toolkit, it runs bundled core Seam checks and reports `mode: "self-contained-fallback"`. Missing `audit-output.cjs` alone is not a valid blocker for `/audit /seamframework` once the current Seam validator file is present.
+
 PASS requires executable validator proof. If you cannot run code, MCP validator tools, REST/plugin validator routes, or a hosted/local Kiwe validator endpoint, perform the manual audit below only as advisory review and report `WARN` or `UNVERIFIED`, not `PASS`. Copied, reconstructed, simulated, or "equivalent" validator logic may guide fixes but cannot close a lane.
 
 If the human gives a target-site Kiwe AI key and Companion AI is enabled in `Kiwe > AI`, you may also run the deterministic site Companion audit:
