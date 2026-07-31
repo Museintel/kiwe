@@ -38,6 +38,7 @@ function assert(condition, message) {
   'lib/framework-profile-validator.js',
   'lib/bricks-theme-style-validator.js',
   'tools/validate-seamframework.cjs',
+  'tools/compile-seamframework.cjs',
   'tools/validate-bricks-theme-style.cjs',
   'mcp/index.js',
   'tools/smoke-test.cjs'
@@ -51,7 +52,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '6.83', 'entry contract mismatch');
+  assert(entry.contractVersion === '6.84', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
@@ -73,11 +74,12 @@ function assert(condition, message) {
   assert(JSON.stringify(entry).includes('Missing Site Graph is not a blocker for static Bricks conversion'), 'missing Site Graph non-blocking boundary in entry');
   assert(JSON.stringify(entry).includes('PASS requires executable validator proof'), 'missing validator proof boundary in entry');
   assert(JSON.stringify(entry).includes('self-contained-fallback'), 'missing standalone Seam validator boundary in entry');
+  assert(JSON.stringify(entry).includes('compile-seamframework.cjs'), 'missing deterministic Seam compiler in entry');
   assert(entry.errorHandling.codes.KIWE_VALIDATOR_PROOF_MISSING, 'entry missing validator proof error code');
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '6.83', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '6.84', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -92,13 +94,14 @@ function assert(condition, message) {
   assert(manifest.errorCatalog.codes.KIWE_MANUAL_PASS_BLOCKED, 'manifest missing command-central error catalog');
   assert(manifest.errorCatalog.codes.KIWE_VALIDATOR_PROOF_MISSING, 'manifest missing validator proof error catalog');
   assert(manifest.globalRules.validatorAuthority.includes('self-contained-fallback'), 'manifest missing standalone Seam validator boundary');
+  assert(JSON.stringify(manifest.commands['/rebuild /seamframework']).includes('compile-seamframework.cjs'), 'manifest missing deterministic Seam compiler route');
   assert(manifest.globalRules.auditClosure.includes('SeamFlow closes only when'), 'manifest missing audit closure rule');
   assert(manifest.commands['/fix /accessibility'].preserve.includes('Seam classes'), 'accessibility preservation contract missing Seam classes');
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '6.83', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.83', 'plan contract report mismatch');
+  assert(plan.contractVersion === '6.84', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.84', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.recommendedNextCommands.includes('/audit /accessibility'), 'plan missing accessibility audit');
   assert(plan.executionOptions.stepByStep === '/execute /stepbystep', 'plan missing step-by-step command');
@@ -168,6 +171,11 @@ function assert(condition, message) {
   captureNode(['bin/kiwe.js', 'route', '--command', '/fix /allflow', '--brief', 'Smoke', '--artifact-summary', 'website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists; bricks-template/home-template-upload.json exists'], 'tmp/route-fix-allflow-smoke.md');
   captureNode(['bin/kiwe.js', 'diagnose', '--command', '/fix /previousaudit'], 'tmp/diagnose-previousaudit-smoke.json');
   captureNode(['bin/kiwe.js', 'diagnose', '--command', '/audit /previousoutput'], 'tmp/diagnose-previousoutput-smoke.json');
+  captureNode(['bin/kiwe.js', 'compile-seamframework', 'fixtures/seam-compile-raw/index.html', 'tmp/seam-compile-smoke'], 'tmp/compile-seamframework-smoke.json');
+  const compileSmoke = JSON.parse(fs.readFileSync(path.join(root, 'tmp/compile-seamframework-smoke.json'), 'utf8'));
+  assert(compileSmoke.ok, 'compile-seamframework smoke did not pass');
+  assert(compileSmoke.validator.exitCode === 0, 'compiled Seam artifact validator did not pass');
+  assert(fs.existsSync(path.join(root, 'tmp/seam-compile-smoke/website/bricks-paste.html')), 'compiled Seam artifact missing');
 
   runNode(['tools/validate-output.cjs', '--help']);
   runNode(['tools/audit-output.cjs', '--help']);

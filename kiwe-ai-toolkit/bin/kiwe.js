@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
@@ -24,6 +27,7 @@ Commands:
   kiwe diagnose --command "/convert /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
   kiwe plan-flow [--command "/audit /accessibility"] [--artifact-summary text] [--desired-outcome text] [--use-companion]  # compatibility alias
   kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
+  kiwe compile-seamframework <input.html> [output-dir]
   kiwe context <website|theme|combined>
   kiwe create <website|theme|combined> <output-dir> [--name name] [--brief text]
   kiwe validate <website|theme|combined> <output-dir>
@@ -95,6 +99,19 @@ try {
     const artifactSummary = artifactIndex >= 0 ? args[artifactIndex + 1] : '';
     const siteGraphSummary = graphIndex >= 0 ? args[graphIndex + 1] : '';
     print(routeCommand({ command: commandText, brief, artifactSummary, siteGraphSummary, useCompanion: args.includes('--use-companion') }));
+  } else if (command === 'compile-seamframework') {
+    const input = args[0] || '';
+    const outputDir = args[1] || '.';
+    const binDir = dirname(fileURLToPath(import.meta.url));
+    const compiler = resolve(binDir, '..', 'tools', 'compile-seamframework.cjs');
+    const result = spawnSync(process.execPath, [compiler, input, outputDir], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    process.exitCode = result.status === null ? 1 : result.status;
   } else if (command === 'context') {
     print(getContext(args[0] || 'website'));
   } else if (command === 'vocabulary') {

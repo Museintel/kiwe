@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.83',
+    contractVersion: '6.84',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.83',
+      mustReport: 'SeamFlow contract: 6.84',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -562,6 +562,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       firstToolIfAvailable: 'kiwe_get_start',
       flowPlannerTool: 'kiwe_seamflow_plan',
       compatibilityFlowPlannerTool: 'kiwe_plan_flow',
+      seamCompilerCli: 'node kiwe-ai-toolkit/tools/compile-seamframework.cjs <input.html> <output-dir>',
       sequence: ['kiwe_get_start', 'kiwe_get_command_manifest', 'kiwe_seamflow_plan', 'kiwe_diagnose_command', 'kiwe_route_command', 'lane validator'],
       nonBlockingFallback: 'Use raw KIWE-START.md / entry.json / command-manifest.json when MCP/tools are unavailable.',
       askToConnectWhen: 'Ask once only when the human wants live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available. Full-flow itself must still work through raw files when tools are unavailable.',
@@ -695,7 +696,7 @@ export function listCommands() {
       },
       {
         command: '/rebuild /seamframework',
-        purpose: 'Rebuild an approved creative draft with Seam Framework, Kiwe tokens, and capability attributes.',
+        purpose: 'Compile an approved creative draft into Seam Framework with Kiwe tokens and capability attributes; use compile-seamframework.cjs when tools/Node are available.',
         requires: ['approved HTML/CSS/JS draft'],
         output: 'website/bricks-paste.html only; add /document if notes are wanted'
       },
@@ -1945,6 +1946,8 @@ function seamRebuildPhaseContext() {
     '```',
     '',
     'Do not emit `website/bricks-notes.md`, README files, reports, Bricks JSON, AppShell/DSA markup, combined previews, or split preview assets during plain `/rebuild /seamframework`.',
+    '',
+    'Tool-capable route: run `node kiwe-ai-toolkit/tools/compile-seamframework.cjs <input.html> <output-dir>` before attempting a manual rebuild. The compiler emits `website/bricks-paste.html` and runs `validate-seamframework.cjs`. Manual rebuild is fallback only when the compiler cannot run.',
     '',
     '`website/bricks-paste.html` is both the standalone browser preview and the Bricks HTML/CSS paste/import artifact.',
     '',

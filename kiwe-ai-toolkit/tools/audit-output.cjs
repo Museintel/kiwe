@@ -1295,7 +1295,10 @@ if (/\bdsa-dock-primary\b|data-dsa-dock-focus-id|focus button|split-dock center/
   add('warn', 'The AppShell appears to choose a dock focus/primary item, but no theme-package.json settings.dock.focus_item was found. Add focus_item so the live split dock matches the preview.');
 }
 
-if (websiteText && /(cart|bag|account|profile)[^<]{0,80}(<\/button>|<\/a>)|aria-label\s*=\s*["'][^"']*(cart|bag|account|profile)/i.test(websiteText) && !/\bdata-dsa-open-module\b/.test(websiteText)) {
+const websiteTextWithoutCartPlaceholders = websiteText
+  ? websiteText.replace(/<button\b(?=[^>]*\bdata-project-role\s*=\s*["']add-to-cart-placeholder["'])[\s\S]*?<\/button>/gi, '')
+  : '';
+if (websiteTextWithoutCartPlaceholders && (/(cart|bag|account|profile)[^<]{0,80}(<\/button>|<\/a>)|aria-label\s*=\s*["'][^"']*(cart|bag|account|profile)/i.test(websiteTextWithoutCartPlaceholders)) && !/\bdata-dsa-open-module\b/.test(websiteTextWithoutCartPlaceholders)) {
   add('warn', 'Website/header appears to include cart/account/profile affordances without the canonical Kiwe open hook. Use data-dsa-open-module="cart" or data-dsa-open-module="profile".');
 }
 

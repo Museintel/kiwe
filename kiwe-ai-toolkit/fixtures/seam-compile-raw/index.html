@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Compiler Smoke Storefront</title>
+  <style>
+    :root {
+      --ink: #18120f;
+      --surface: #fff8ec;
+    }
+    body {
+      margin: 0;
+      background: #f6ead8;
+      color: var(--ink);
+      font-family: Inter, sans-serif;
+    }
+    main {
+      padding: 32px;
+    }
+    .hero {
+      display: grid;
+      gap: 18px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #ba2329, #f7c65a);
+      padding: 40px;
+    }
+    .product-track {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 220px;
+      overflow-x: auto;
+      gap: 14px;
+    }
+    .product-card {
+      padding: 18px;
+      border: 1px solid rgba(24, 18, 15, .16);
+      border-radius: 18px;
+      box-shadow: 0 18px 48px rgba(24, 18, 15, .14);
+      background: var(--surface);
+    }
+    @media (max-width: 640px) {
+      main {
+        padding: 16px;
+      }
+      .hero {
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <p>Good taste, delivered</p>
+      <h1 id="hero-title">Lonavala in your pocket.</h1>
+      <a href="/shop/">Open shop</a>
+    </section>
+    <section aria-labelledby="popular-title">
+      <h2 id="popular-title">Popular now</h2>
+      <div class="product-track">
+        <article class="product-card">
+          <button type="button" aria-label="Save Groundnut Chikki">♡</button>
+          <h3>Groundnut Chikki</h3>
+          <p>Roasted peanut crunch.</p>
+          <button type="button" data-project-role="add-to-cart-placeholder" disabled aria-label="Add Groundnut Chikki to cart">+</button>
+        </article>
+        <article class="product-card">
+          <button type="button" aria-label="Save Mango Fudge">♡</button>
+          <h3>Mango Fudge</h3>
+          <p>Soft tropical fudge.</p>
+          <button type="button" data-project-role="add-to-cart-placeholder" disabled aria-label="Add Mango Fudge to cart">+</button>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

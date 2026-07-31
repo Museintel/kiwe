@@ -254,6 +254,8 @@ This phase exists because starting with constraints can flatten creativity.
 
 Use after the human likes a pure draft and wants it rebuilt with Seam.
 
+- Tool-capable route: run `node kiwe-ai-toolkit/tools/compile-seamframework.cjs /path/to/input.html /path/to/output-dir` first. The compiler emits `website/bricks-paste.html` and immediately runs `validate-seamframework.cjs`.
+- Manual rebuild is the fallback only when the compiler cannot run; it must still close with `/audit /seamframework`.
 - Input is the approved creative draft.
 - Preserve the visual thesis, content rhythm, layout intent, and art direction.
 - Rebuild into semantic HTML using official Seam roles/classes/tokens.
