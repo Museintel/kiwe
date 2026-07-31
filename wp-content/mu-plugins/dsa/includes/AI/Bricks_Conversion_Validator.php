@@ -129,6 +129,15 @@ final class Bricks_Conversion_Validator {
 	private const MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
 	private const MAX_CLASS_ONLY_ELEMENT_RATIO            = 0.25;
 	private const SUPPORTED_TEMPLATE_BRICKS_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
+	private const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_PATTERN = '/^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i';
+	private const TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST = [
+		'is-active',
+		'is-current',
+		'is-disabled',
+		'is-loading',
+		'is-empty',
+		'is-hidden',
+	];
 	private const TOKEN_FINDING_LIMIT              = 40;
 	private const COLOR_FINDING_LIMIT              = 40;
 	private const CSS_VAR_FINDING_LIMIT            = 40;
@@ -300,6 +309,31 @@ final class Bricks_Conversion_Validator {
 			$this->add( $findings, 'warn', 'bricks_template_missing_version', 'Bricks template export should include the target Bricks version used to author/verify the native template.', '$.version' );
 		} elseif ( ! preg_match( self::SUPPORTED_TEMPLATE_BRICKS_VERSION_PATTERN, (string) $template['version'] ) ) {
 			$this->add( $findings, 'fail', 'bricks_template_unsupported_target_version', sprintf( 'Bricks template export declares version "%s". Kiwe production template uploads currently target the public Bricks 2.3.x importer/runtime; do not emit unreleased/beta 2.4 template metadata unless the contract is explicitly updated after a public Bricks release.', (string) $template['version'] ), '$.version' );
+		}
+
+		$unsafe_class_names = [];
+		if ( isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ) {
+			foreach ( $template['global_classes'] as $template_class ) {
+				$name = is_array( $template_class ) ? trim( (string) ( $template_class['name'] ?? '' ) ) : '';
+				if ( '' !== $name && ! $this->is_collision_safe_template_class_name( $name ) ) {
+					$unsafe_class_names[] = $name;
+				}
+			}
+		}
+
+		if ( [] !== $unsafe_class_names ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_unscoped_global_class_names',
+				sprintf(
+					'Bricks template upload contains %1$d unscoped global class name(s): %2$s%3$s. Bricks My Templates skips or remaps imported class styles when a local class has the same id or name, so /convert /bricks must namespace project visual global classes (for example nc-promo-card, bv-product-card, sf-hero-grid) and keep plain semantic names only in _cssClasses/attributes, not importable global_classes.',
+					count( $unsafe_class_names ),
+					implode( ', ', array_map( static fn( $name ) => '"' . $name . '"', array_slice( $unsafe_class_names, 0, 12 ) ) ),
+					count( $unsafe_class_names ) > 12 ? ', ...' : ''
+				),
+				'$.global_classes'
+			);
 		}
 
 		foreach ( $elements as $position => $element ) {
@@ -760,6 +794,17 @@ final class Bricks_Conversion_Validator {
 			'controls_per_element' => $total > 0 ? $element_controls / $total : 0.0,
 			'class_only_ratio'     => $total > 0 ? $class_only_elements / $total : 0.0,
 		];
+	}
+
+	private function is_collision_safe_template_class_name( string $name ): bool {
+		$name = trim( $name );
+		if ( '' === $name ) {
+			return true;
+		}
+		if ( in_array( $name, self::TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST, true ) ) {
+			return true;
+		}
+		return 1 === preg_match( self::TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_PATTERN, $name );
 	}
 
 	private function validate_tokenized_native_lengths( array $items, array &$findings, string $path, array $declared_variables = [] ): void {

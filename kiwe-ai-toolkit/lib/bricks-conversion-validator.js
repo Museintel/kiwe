@@ -217,6 +217,15 @@ const TEMPLATE_UPLOAD_MAPPABLE_CSS_DECLARATION_MIN = 12;
 const TEMPLATE_UPLOAD_MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
 const TEMPLATE_UPLOAD_MAX_CLASS_ONLY_ELEMENT_RATIO = 0.25;
 const SUPPORTED_TEMPLATE_BRICKS_VERSION_RE = /^2\.3(?:\.|$)/;
+const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_RE = /^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i;
+const TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST = new Set([
+  'is-active',
+  'is-current',
+  'is-disabled',
+  'is-loading',
+  'is-empty',
+  'is-hidden'
+]);
 
 function isPlainObject(value) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -228,6 +237,13 @@ function asArray(value) {
 
 function add(findings, level, message, file = '', pathPointer = '') {
   findings.push({ level, message, file, path: pathPointer });
+}
+
+function isCollisionSafeTemplateClassName(name) {
+  const value = String(name || '').trim();
+  if (!value) return true;
+  if (TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST.has(value)) return true;
+  return TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_RE.test(value);
 }
 
 function rel(root, file) {
@@ -1059,6 +1075,23 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       rel(root, templatePath),
       '$.global_classes'
     );
+  }
+  if (Array.isArray(templateData.global_classes)) {
+    const unsafeNames = [];
+    templateData.global_classes.forEach((globalClass, index) => {
+      const name = String(globalClass?.name || '').trim();
+      if (name && !isCollisionSafeTemplateClassName(name)) unsafeNames.push({ name, index });
+    });
+    if (unsafeNames.length) {
+      const preview = unsafeNames.slice(0, 12).map((item) => `"${item.name}"`).join(', ');
+      add(
+        findings,
+        'fail',
+        `Bricks template upload contains ${unsafeNames.length} unscoped global class name(s): ${preview}${unsafeNames.length > 12 ? ', ...' : ''}. Bricks My Templates skips or remaps imported class styles when a local class has the same id or name, so /convert /bricks must namespace project visual global classes (for example nc-promo-card, bv-product-card, sf-hero-grid) and keep plain semantic names only in _cssClasses/attributes, not importable global_classes.`,
+        rel(root, templatePath),
+        '$.global_classes'
+      );
+    }
   }
 
   const templateCustomCss = collectCustomCssBuckets({
