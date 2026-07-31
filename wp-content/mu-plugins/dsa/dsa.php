@@ -50,7 +50,7 @@ if ( empty( $dsa_package_proof['valid'] ) ) {
 		]
 	);
 	$kiwe_missing_sample = array_slice( (array) ( $dsa_package_proof['blocking_missing'] ?? [] ), 0, 5 );
-	kiwe_mu_admin_notice( 'Kiwe found missing required runtime files and disabled itself without stopping WordPress. Upload the complete dsa folder from the same release. Missing: ' . implode( ', ', $kiwe_missing_sample ) );
+	kiwe_mu_admin_notice( 'Kiwe found missing, stale, or invalid required runtime files and disabled itself without stopping WordPress. Upload both wp-content/mu-plugins/dsa.php and the complete dsa folder from the same release. First issue(s): ' . implode( ', ', $kiwe_missing_sample ) );
 	return;
 }
 

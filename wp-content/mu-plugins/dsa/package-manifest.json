@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "6.68",
+  "version": "6.78",
   "algorithm": "sha256",
   "file_count": 294,
   "files": {
@@ -181,8 +181,8 @@
       "sha256": "5249fe2db16151cccf4897c85af6e21e03a8602098f76818f4fd66acdcab0743"
     },
     "dsa.php": {
-      "bytes": 2719,
-      "sha256": "bb12c5cb8cebe6694c95a85bd786c8e54d8284244dece71ea5e15c3d714d5996"
+      "bytes": 2784,
+      "sha256": "aa96c019ce2c5e8c3bd68c83a0ebaf2f8a1bd9629b775b84f61132660c2cd6a3"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -337,8 +337,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 132510,
-      "sha256": "d713aa56c6ca10a05070cbb8ed64c6f862b842839fae081683393a5d37b9beeb"
+      "bytes": 143782,
+      "sha256": "466a40a7ca73f397a3f5a7af986c9038a90eb88cfb7fccc4a7b016449531ab99"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -361,20 +361,20 @@
       "sha256": "22136ed40c4b8d4b25555aefa7c51ec9d301109a30059b944ed0895ff4e618f2"
     },
     "includes/AI/Bricks_AI_Intelligence_Service.php": {
-      "bytes": 28264,
-      "sha256": "5f6e2c430f74af9f54832aceb58d538e16528e0e728b8b8f9ddbc4b77358b208"
+      "bytes": 29738,
+      "sha256": "654dab055bc5cef8f92bfb0eda4cc70eb27f49eb392cc98c5d19ebef21c9d278"
     },
     "includes/AI/Bricks_Controlled_Adapter_Service.php": {
       "bytes": 17537,
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 54135,
-      "sha256": "313202091fa369a57d00f0538557afd854465ed817d67442b45722968d72584c"
+      "bytes": 61423,
+      "sha256": "571b307998b184e1692e027840c110ea2c31a705cb946b8f7c0a865cc75da435"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
-      "bytes": 22224,
-      "sha256": "ff202751a5dc5dafc2b5f41da627cc9645dd60d4dd81e45ef98cd172c758fc9c"
+      "bytes": 22232,
+      "sha256": "d8f5a604ed79fcc3afc651c72071250fa588e054b5f0c093d5056acb94788eda"
     },
     "includes/AI/Controlled_Executor_Service.php": {
       "bytes": 11554,
@@ -441,8 +441,8 @@
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 27655,
-      "sha256": "1472fb6e248a225a2202a43346220a37fb2e16903d2354b6434059e7aa907753"
+      "bytes": 27651,
+      "sha256": "3c682de61a7b04a98be7e78b3ab626b04bb598f2b171f30baa6ef3ff823ab48e"
     },
     "includes/AI/Site_Introspection_Service.php": {
       "bytes": 13294,
@@ -1065,8 +1065,8 @@
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 59454,
-      "sha256": "985df36ae79e89004f5c279b2a9c8adc71e12dc2c33630ff21b7e831027296a1"
+      "bytes": 60451,
+      "sha256": "c092f59f31c6d5997011df274c0f7170d3e8fd59d27bd55d624a98db18603c22"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
