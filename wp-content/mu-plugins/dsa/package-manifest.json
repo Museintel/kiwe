@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "6.87",
+  "version": "6.88",
   "algorithm": "sha256",
   "file_count": 295,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "13db0340e2594ada0c43e75bce0ab1eaaa32170c897900f3732db99391fd7b1c"
+      "sha256": "575168ef1f29419fb4083462aa84b20de4eb353ea391c6512722d71ddfbd4974"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,

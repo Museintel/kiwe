@@ -52,7 +52,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '6.87', 'entry contract mismatch');
+  assert(entry.contractVersion === '6.88', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
@@ -75,6 +75,7 @@ function assert(condition, message) {
   assert(JSON.stringify(entry).includes('PASS requires executable validator proof'), 'missing validator proof boundary in entry');
   assert(JSON.stringify(entry).includes('self-contained-fallback'), 'missing standalone Seam validator boundary in entry');
   assert(JSON.stringify(entry).includes('compile-seamframework.cjs'), 'missing deterministic Seam compiler in entry');
+  assert(entry.validatorAuthority.routeFallbackLadder.includes('validate-framework-profile') || entry.validatorAuthority.routeFallbackLadder.includes('official matching validator'), 'entry missing cross-phase REST-to-Git fallback ladder');
   assert(entry.pluginApi && entry.pluginApi.routes && entry.pluginApi.routes.execute.includes('/ai/seamflow/execute'), 'entry missing plugin SeamFlow execute route');
   assert(entry.pluginApi.auth.includes('seamflow'), 'entry missing plugin SeamFlow scope');
   assert(entry.pluginApi.askWhenMissing.includes('WordPress Admin'), 'entry missing plugin API key creation prompt');
@@ -85,7 +86,7 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '6.87', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '6.88', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -105,19 +106,21 @@ function assert(condition, message) {
   assert(manifest.pluginApi.askWhenMissing.includes('WordPress Admin'), 'manifest missing plugin API key creation prompt');
   assert(manifest.globalRules.firstInteractionRoutes.includes('Route D'), 'manifest missing first-interaction route menu');
   assert(manifest.globalRules.firstInteractionRoutes.includes('/execute /stepbystep /audit /fix /eachstep /report'), 'manifest missing raw-draft guided SeamFlow default');
+  assert(manifest.globalRules.routeFallbackLadder.includes('Route B'), 'manifest missing cross-phase REST-to-Git fallback ladder');
   assert(JSON.stringify(manifest.commands['/rebuild /seamframework']).includes('compile-seamframework.cjs'), 'manifest missing deterministic Seam compiler route');
   assert(manifest.globalRules.auditClosure.includes('SeamFlow closes only when'), 'manifest missing audit closure rule');
   assert(manifest.commands['/fix /accessibility'].preserve.includes('Seam classes'), 'accessibility preservation contract missing Seam classes');
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '6.87', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.87', 'plan contract report mismatch');
+  assert(plan.contractVersion === '6.88', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.88', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
   assert(plan.startResponse.rawDraftDefaultCommand === '/execute /stepbystep /audit /fix /eachstep /report', 'plan missing raw-draft guided SeamFlow default');
   assert(plan.firstInteractionDefaults.rawHtmlCssJsDraft.recommendedCommand === '/execute /stepbystep /audit /fix /eachstep /report', 'plan missing structured raw-draft default');
+  assert(plan.capabilityCheck.routeFallbackLadder.includes('Route B'), 'plan missing cross-phase REST-to-Git fallback ladder');
   assert(plan.recommendedNextCommands.includes('/audit /accessibility'), 'plan missing accessibility audit');
   assert(plan.executionOptions.stepByStep === '/execute /stepbystep', 'plan missing step-by-step command');
   assert(plan.executionOptions.fullFlow === '/execute /fullflow', 'plan missing full-flow command');

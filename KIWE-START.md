@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.87`
+Contract version: `6.88`
 Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.87
+SeamFlow contract: 6.88
 ```
 
 Then do one of these:
@@ -63,6 +63,8 @@ Seam validator portability: `validate-seamframework.cjs` is intentionally self-c
 Seam compiler route: when a tool-capable AI can run Node, `/rebuild /seamframework` should call `compile-seamframework.cjs` on the supplied raw HTML/CSS page instead of manually rewriting the page. The compiler emits `website/bricks-paste.html`, strips unsafe page runtime, preserves the visual draft, routes anonymous styling through project tokens, adds Seam/Kiwe semantic hooks, and immediately runs `validate-seamframework.cjs`. If the compiler is unavailable, the AI may rebuild manually, but it must still close with the Seam validator.
 
 Validator proof shape: every `STATUS: PASS` for `/audit`, `/fix`, `/execute /stepbystep`, or `/execute /fullflow` must include a compact proof block with the validator command/tool/route used, contract/version, exit code or ok status, fail count, warning count, and the artifact path/hash when available. Missing proof is itself `ERROR: KIWE_VALIDATOR_PROOF_MISSING`.
+
+Route fallback ladder: apply this to every phase, not only `/rebuild /seamframework`. Prefer Route D when `/usecompanion` and Plugin REST are reachable. If Companion fails, continue as Route C. If Plugin REST fails or the host cannot resolve, and the AI can run shell/Node/Git tools, immediately fall back to Route B and run the official phase compiler/validator listed in the navigation tree. Only return `WARN/UNVERIFIED` after Plugin REST failed and no official Git/Node/MCP/hosted validator route can execute. Do not treat REST failure as the final blocker while `validate-framework-profile.cjs`, `validate-bricks-conversion.cjs`, `validate-accessibility.cjs`, or another matching official validator can run.
 
 Command-central error behavior: if the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact `STATUS: NEEDS_INPUT`, `FAIL`, or `WARN` response. Include `ERROR:` with a Kiwe error code, the blocker, and the next valid command. Do not invent a manual pass, do not wander through unrelated sources, and do not keep working just to produce something.
 
@@ -161,7 +163,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.87
+SeamFlow contract: 6.88
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -282,7 +284,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.87
+SeamFlow contract: 6.88
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -352,7 +354,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.87
+SeamFlow contract: 6.88
 Command:
 Artifact classification:
 Files returned:

@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.87',
+    contractVersion: '6.88',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.87',
+      mustReport: 'SeamFlow contract: 6.88',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -570,7 +570,8 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       sequence: ['kiwe_get_start', 'kiwe_get_command_manifest', 'kiwe_seamflow_plan', 'kiwe_diagnose_command', 'kiwe_route_command', 'lane validator'],
       nonBlockingFallback: 'Use raw KIWE-START.md / entry.json / command-manifest.json when MCP/tools are unavailable.',
       askToConnectWhen: 'Ask once only when the human wants live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available. Full-flow itself must still work through raw files when tools are unavailable.',
-      companionHandshake: 'If /usecompanion is selected and no Kiwe MCP/tool is connected, ask for KIWE_REST_BASE and KIWE_AI_KEY. First call a bounded Companion status/context route. On success report COMPANION: connected with compact route/hash proof. On failure report COMPANION: fallback and continue without blocking.'
+      companionHandshake: 'If /usecompanion is selected and no Kiwe MCP/tool is connected, ask for KIWE_REST_BASE and KIWE_AI_KEY. First call a bounded Companion status/context route. On success report COMPANION: connected with compact route/hash proof. On failure report COMPANION: fallback and continue without blocking.',
+      routeFallbackLadder: 'Applies to every phase: Route D if Companion + Plugin REST work; Route C if Companion fails; Route B Git/Node official compiler/validator if Plugin REST fails and tools are available; WARN/UNVERIFIED only when no official REST/MCP/Git/Node/hosted validator can execute.'
     },
     routeOptions: {
       browserRaw: 'Route A — Browser/raw: exact raw Start/manifest/context files only; PASS only when validators execute.',

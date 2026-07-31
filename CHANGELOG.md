@@ -9,6 +9,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Synced the native Bricks token-purity rule through the browser-AI workflow/context files, toolkit validator, WordPress REST validator, Bricks AI context, and Companion review cards so `/audit` and `/fix /bricksconversion` can identify the real grid/flex/token problem without spoon-fed symptoms.
 - Rejected no-op clamp wrappers such as `clamp(22px, 22px, 22px)` in `/audit /bricksconversion`; these are disguised literals, not real Seam/Geometry tokenization. Browser/IDE AIs must use existing universal tokens, declared project tokens, or real fluid clamps with distinct min/preferred/max behavior.
 
+## 6.88 - 2026-08-01
+
+- Added a cross-phase route fallback ladder: if Plugin REST or Companion cannot be reached, tool-capable AIs must fall back to the official Git/Node compiler or validator for the current phase before returning `WARN/UNVERIFIED`.
+- Applied the fallback law to Framework Profile, Bricks conversion, Accessibility, and every other validator-backed phase, not only `/rebuild /seamframework`.
+- Synced the rule through Start, machine entry, command manifest, planner output, and smoke tests so browser AI cannot treat REST failure as a final blocker when `validate-framework-profile.cjs`, `validate-bricks-conversion.cjs`, or `validate-accessibility.cjs` can run.
+
 ## 6.87 - 2026-08-01
 
 - Made the no-command SeamFlow startup smarter for non-technical users: raw HTML/CSS/JS drafts now recommend `/execute /stepbystep /audit /fix /eachstep /report` as the safest default instead of the low-level `/rebuild /seamframework` phase.
