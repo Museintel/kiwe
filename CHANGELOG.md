@@ -9,6 +9,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Synced the native Bricks token-purity rule through the browser-AI workflow/context files, toolkit validator, WordPress REST validator, Bricks AI context, and Companion review cards so `/audit` and `/fix /bricksconversion` can identify the real grid/flex/token problem without spoon-fed symptoms.
 - Rejected no-op clamp wrappers such as `clamp(22px, 22px, 22px)` in `/audit /bricksconversion`; these are disguised literals, not real Seam/Geometry tokenization. Browser/IDE AIs must use existing universal tokens, declared project tokens, or real fluid clamps with distinct min/preferred/max behavior.
 
+## 6.87 - 2026-08-01
+
+- Made the no-command SeamFlow startup smarter for non-technical users: raw HTML/CSS/JS drafts now recommend `/execute /stepbystep /audit /fix /eachstep /report` as the safest default instead of the low-level `/rebuild /seamframework` phase.
+- Clarified that `/rebuild /seamframework` is the first internal phase of the guided command, so browser AI can start the full audited SeamFlow path without making the human choose lanes manually.
+- Synced the raw-draft default through `KIWE-START.md`, `entry.json`, the command manifest, the local planner, and smoke tests.
+
 ## 6.86 - 2026-08-01
 
 - Tightened the SeamFlow first interaction so browser/IDE AIs classify supplied artifacts, recommend the next command, then present route choices: Browser/raw, Git/Node, Plugin REST, or Plugin REST + Companion.

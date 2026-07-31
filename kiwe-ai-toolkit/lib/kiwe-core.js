@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.86',
+    contractVersion: '6.87',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,13 +538,13 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.86',
+      mustReport: 'SeamFlow contract: 6.87',
       order: [
         'STATUS',
         'SeamFlow contract',
         'Attachments detected',
         'Artifact diagnostic',
-        'Recommended next command',
+        'Recommended next command; for raw HTML/CSS/JS drafts use /execute /stepbystep /audit /fix /eachstep /report and note /rebuild /seamframework is the first internal phase',
         'Question with /execute command choices and optional flags',
         'Route options: Route A Browser/raw; Route B Git/Node; Route C Plugin REST; Route D Plugin REST + Companion',
         'API needed for Route C/D: ask for KIWE_REST_BASE and KIWE_AI_KEY and explain WordPress Admin → Kiwe → AI → API access keys',
@@ -556,7 +556,9 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       doNotDumpCommandListUnless: '/list',
       includeAttachmentDiagnostic: !hasCommand,
       waitsForApprovalBefore: ['audit', 'fix', 'convert', 'create', 'assemble', 'live-api', 'companion-review'],
-      permissionPolicy: 'Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval.'
+      permissionPolicy: 'Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval.',
+      rawDraftDefaultCommand: '/execute /stepbystep /audit /fix /eachstep /report',
+      rawDraftFirstInternalPhase: '/rebuild /seamframework'
     },
     questions,
     capabilityCheck: {
@@ -576,6 +578,14 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       pluginRest: 'Route C — Plugin REST: use KIWE_REST_BASE + KIWE_AI_KEY for /ai/seamflow/* proof inside Kiwe.',
       pluginRestCompanion: 'Route D — Plugin REST + Companion: Route C plus /usecompanion.',
       apiPrompt: 'For Route C/D, ask for KIWE_REST_BASE and KIWE_AI_KEY. Create the key in WordPress Admin → Kiwe → AI → API access keys with seamflow, studio_ai, bricks_ai, or all.'
+    },
+    firstInteractionDefaults: {
+      rawHtmlCssJsDraft: {
+        recommendedCommand: '/execute /stepbystep /audit /fix /eachstep /report',
+        explanation: 'Safest default for a raw creative draft. It starts with /rebuild /seamframework internally, audits, fixes, re-audits until PASS or NEEDS_INPUT, returns the phase artifact/report, and waits before the next phase.',
+        alternativeFinalOnly: '/execute /fullflow /audit /fix /eachstep',
+        lowLevelPhaseOnly: '/rebuild /seamframework'
+      }
     },
     boundaries: [
       'Do not crawl the repository.',

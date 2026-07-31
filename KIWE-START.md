@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.86`
+Contract version: `6.87`
 Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,17 +17,18 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.86
+SeamFlow contract: 6.87
 ```
 
 Then do one of these:
 
 1. If the human gave `/list`, return the compact command list from the command manifest, then stop.
 2. If the human gave another `/command`, route only that command and read only the files listed for that command.
-3. If the human gave files but no `/command`, inspect the file contents, classify the current stage, return a compact diagnostic, recommend the next command, and ask which explicit execution command they want:
+3. If the human gave files but no `/command`, inspect the file contents, classify the current stage, return a compact diagnostic, recommend the safest complete command for that stage, and ask which explicit execution route they want:
    - `/execute /stepbystep`, where each command returns its own artifact before the next command starts;
    - `/execute /fullflow`, where you run the complete path and return only final artifacts plus compact pass/fail status.
    The human may add `/audit /eachstep`, `/audit /fix /eachstep`, `/audit /atend`, `/audit /fix /atend`, `/report`, or `/usecompanion`.
+   If the file is a raw HTML/CSS/JS draft with no Seam/Bricks root, the best default recommendation is `/execute /stepbystep /audit /fix /eachstep /report`. Explain that this starts with `/rebuild /seamframework` internally, then stops after the first closed phase. Do not make a non-technical human choose the low-level phase command unless they explicitly ask for a specific command.
    Then show the available route choices:
    - `Route A — Browser/raw`: use exact raw Start/manifest/context files and only validators the browser AI can actually execute.
    - `Route B — Git/Node`: use the local Kiwe toolkit compiler/validators if this AI has shell or code-execution access.
@@ -160,7 +161,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.86
+SeamFlow contract: 6.87
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -175,9 +176,9 @@ API needed for Route C/D: create a key in WordPress Admin → Kiwe → AI → AP
 Commands: use /list for the compact command list
 ```
 
-If the human supplied attachments, inspect enough file content to determine stage:
+If the human supplied attachments, inspect enough file content to determine stage and recommend the safest next command:
 
-- raw creative draft -> recommend `/rebuild /seamframework`;
+- raw creative draft -> recommend `/execute /stepbystep /audit /fix /eachstep /report`; say the first internal phase is `/rebuild /seamframework`;
 - Seam page -> recommend `/audit /seamframework`;
 - Framework profile -> recommend `/audit /frameworkprofile`;
 - Bricks template or conversion -> recommend `/audit /bricksconversion`;
@@ -202,7 +203,7 @@ Execution commands:
 /usecompanion          -> optional bounded Kiwe Companion assist; falls back without blocking
 ```
 
-Default audit cadence: when unsure, prefer `/audit /eachstep` for production/importable files and `/audit /atend` only for quick exploratory drafts.
+Default audit cadence: when unsure, prefer `/execute /stepbystep /audit /fix /eachstep /report` for raw creative drafts and production/importable files. Use `/audit /atend` only for quick exploratory drafts where the human explicitly accepts a less interactive run.
 
 ## Audit closure law
 
@@ -281,7 +282,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.86
+SeamFlow contract: 6.87
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -351,7 +352,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.86
+SeamFlow contract: 6.87
 Command:
 Artifact classification:
 Files returned:
