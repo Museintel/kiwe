@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.85',
+    contractVersion: '6.86',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.85',
+      mustReport: 'SeamFlow contract: 6.86',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -546,6 +546,8 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
         'Artifact diagnostic',
         'Recommended next command',
         'Question with /execute command choices and optional flags',
+        'Route options: Route A Browser/raw; Route B Git/Node; Route C Plugin REST; Route D Plugin REST + Companion',
+        'API needed for Route C/D: ask for KIWE_REST_BASE and KIWE_AI_KEY and explain WordPress Admin → Kiwe → AI → API access keys',
         'Commands: use /list for the compact command list'
       ],
       includeCompactList: false,
@@ -567,6 +569,13 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       nonBlockingFallback: 'Use raw KIWE-START.md / entry.json / command-manifest.json when MCP/tools are unavailable.',
       askToConnectWhen: 'Ask once only when the human wants live Site Graph/API use, Companion review, or direct validator/tool execution and no Kiwe MCP/tool is available. Full-flow itself must still work through raw files when tools are unavailable.',
       companionHandshake: 'If /usecompanion is selected and no Kiwe MCP/tool is connected, ask for KIWE_REST_BASE and KIWE_AI_KEY. First call a bounded Companion status/context route. On success report COMPANION: connected with compact route/hash proof. On failure report COMPANION: fallback and continue without blocking.'
+    },
+    routeOptions: {
+      browserRaw: 'Route A — Browser/raw: exact raw Start/manifest/context files only; PASS only when validators execute.',
+      gitNode: 'Route B — Git/Node: local Kiwe compiler/validators if this AI can run tools.',
+      pluginRest: 'Route C — Plugin REST: use KIWE_REST_BASE + KIWE_AI_KEY for /ai/seamflow/* proof inside Kiwe.',
+      pluginRestCompanion: 'Route D — Plugin REST + Companion: Route C plus /usecompanion.',
+      apiPrompt: 'For Route C/D, ask for KIWE_REST_BASE and KIWE_AI_KEY. Create the key in WordPress Admin → Kiwe → AI → API access keys with seamflow, studio_ai, bricks_ai, or all.'
     },
     boundaries: [
       'Do not crawl the repository.',

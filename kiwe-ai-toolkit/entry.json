@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.85",
+  "contractVersion": "6.86",
   "updated": "2026-08-01",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -26,10 +26,10 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.85",
+    "mustReport": "SeamFlow contract: 6.86",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
-    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Put the /list command hint last.",
+    "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Show Route A Browser/raw, Route B Git/Node, Route C Plugin REST, and Route D Plugin REST + Companion. If Route C/D is possible but credentials are missing, ask for KIWE_REST_BASE and KIWE_AI_KEY and explain where to create the key in WordPress Admin → Kiwe → AI → API access keys. Put the /list command hint last.",
     "ifNoFilesNoCommand": "Return compact /list summary and ask what the human wants to create, rebuild, audit, fix, convert, or apply."
   },
   "rawFiles": {
@@ -41,6 +41,7 @@
   "pluginApi": {
     "rule": "When KIWE_REST_BASE and KIWE_AI_KEY are supplied, prefer plugin-hosted SeamFlow REST routes before manual generation or reconstructed validators.",
     "auth": "Use Authorization: Bearer {KIWE_AI_KEY} or X-Kiwe-AI-Key: {KIWE_AI_KEY}. Key scope must include seamflow, studio_ai, bricks_ai, or all.",
+    "askWhenMissing": "If the human selected /usecompanion, Route C, Route D, plugin validation, or live Site Graph/API proof and credentials are missing, ask for KIWE_REST_BASE and KIWE_AI_KEY. Tell the human to create the key at WordPress Admin → Kiwe → AI → API access keys with seamflow, studio_ai, bricks_ai, or all.",
     "routes": {
       "status": "{KIWE_REST_BASE}/ai/seamflow/status",
       "classify": "{KIWE_REST_BASE}/ai/seamflow/classify",
@@ -96,7 +97,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.85",
+      "SeamFlow contract: 6.86",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -157,11 +158,13 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.85",
+      "SeamFlow contract: 6.86",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
       "Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, /usecompanion.",
+      "Route options: Route A Browser/raw; Route B Git/Node; Route C Plugin REST with KIWE_REST_BASE + KIWE_AI_KEY; Route D Plugin REST + Companion.",
+      "API needed for Route C/D: create a key in WordPress Admin → Kiwe → AI → API access keys with seamflow, studio_ai, bricks_ai, or all.",
       "Commands: use /list for the compact command list"
     ],
     "stepByStepQuestion": "I found files but no command. Choose /execute /stepbystep for one artifact per command or /execute /fullflow for final artifacts only.",
@@ -342,7 +345,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.85",
+    "SeamFlow contract: 6.86",
     "Command:",
     "Artifact classification:",
     "Files returned:",

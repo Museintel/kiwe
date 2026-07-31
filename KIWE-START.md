@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.85`
+Contract version: `6.86`
 Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.85
+SeamFlow contract: 6.86
 ```
 
 Then do one of these:
@@ -28,6 +28,13 @@ Then do one of these:
    - `/execute /stepbystep`, where each command returns its own artifact before the next command starts;
    - `/execute /fullflow`, where you run the complete path and return only final artifacts plus compact pass/fail status.
    The human may add `/audit /eachstep`, `/audit /fix /eachstep`, `/audit /atend`, `/audit /fix /atend`, `/report`, or `/usecompanion`.
+   Then show the available route choices:
+   - `Route A — Browser/raw`: use exact raw Start/manifest/context files and only validators the browser AI can actually execute.
+   - `Route B — Git/Node`: use the local Kiwe toolkit compiler/validators if this AI has shell or code-execution access.
+   - `Route C — Plugin REST`: use `KIWE_REST_BASE` + `KIWE_AI_KEY` and call `/ai/seamflow/*`; this is preferred for proven PASS because it runs inside the live Kiwe/WordPress/Bricks environment.
+   - `Route D — Plugin REST + Companion`: same as Route C plus `/usecompanion` for compact Kiwe Companion/Audit Companion guidance.
+   If Route C or D is possible but credentials are missing, ask for `KIWE_REST_BASE` and `KIWE_AI_KEY`, and say the key must include `seamflow`, `studio_ai`, `bricks_ai`, or `all`. Also tell the human where to create it: `WordPress Admin → Kiwe → AI → API access keys`.
+   Put the `/list` hint last.
 4. If the human gave no files and no `/command`, return `/list` plus one short question asking what they want to create, rebuild, audit, fix, convert, or apply.
 
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
@@ -153,12 +160,18 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.85
+SeamFlow contract: 6.86
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
 Recommended next command:
 Question: choose /execute /stepbystep, /execute /fullflow, or a specific /command. Optional flags: /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, /usecompanion.
+Route options:
+- Route A — Browser/raw: exact raw Start/manifest/context files only.
+- Route B — Git/Node: local Kiwe compiler/validators if this AI can run tools.
+- Route C — Plugin REST: provide KIWE_REST_BASE and KIWE_AI_KEY for /ai/seamflow/* proof.
+- Route D — Plugin REST + Companion: Route C plus /usecompanion.
+API needed for Route C/D: create a key in WordPress Admin → Kiwe → AI → API access keys with seamflow, studio_ai, bricks_ai, or all.
 Commands: use /list for the compact command list
 ```
 
@@ -268,7 +281,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.85
+SeamFlow contract: 6.86
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -338,7 +351,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.85
+SeamFlow contract: 6.86
 Command:
 Artifact classification:
 Files returned:
