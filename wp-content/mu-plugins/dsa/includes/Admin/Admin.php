@@ -1509,8 +1509,11 @@ final class Admin {
 			exit;
 		}
 
-		$site = sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' );
-		$file = sprintf( 'kiwe-seam-bricks-tokens-%s-%s.json', $site, gmdate( 'Ymd-His' ) );
+		$tokens        = $this->settings->get( 'tokens', [] );
+		$profile_label = isset( $tokens['profile_label'] ) ? sanitize_title( (string) $tokens['profile_label'] ) : '';
+		$site          = sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' );
+		$file_subject  = '' !== $profile_label ? $profile_label : $site;
+		$file          = sprintf( 'kiwe-seam-bricks-tokens-%s-%s.json', $file_subject, gmdate( 'Ymd-His' ) );
 
 		nocache_headers();
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
@@ -1539,7 +1542,10 @@ final class Admin {
 		}
 
 		$site = sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' );
-		$file = sprintf( 'kiwe-framework-profile-%s-%s.json', $site, gmdate( 'Ymd-His' ) );
+		$tokens        = $this->settings->get( 'tokens', [] );
+		$profile_label = isset( $tokens['profile_label'] ) ? sanitize_title( (string) $tokens['profile_label'] ) : '';
+		$file_subject  = '' !== $profile_label ? $profile_label : $site;
+		$file          = sprintf( 'kiwe-framework-profile-%s-%s.json', $file_subject, gmdate( 'Ymd-His' ) );
 
 		nocache_headers();
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
@@ -2867,7 +2873,7 @@ final class Admin {
 					$name   = isset( $variable['name'] ) ? (string) $variable['name'] : '';
 					$source = isset( $variable['source'] ) ? (string) $variable['source'] : '';
 
-					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'kiwe-' );
+					return ! self::is_kiwe_managed_bricks_variable( $variable );
 				}
 			)
 		);
@@ -2883,7 +2889,7 @@ final class Admin {
 					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
 					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
 
-					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'Kiwe ' );
+					return ! self::is_kiwe_managed_bricks_variable_category( $category );
 				}
 			)
 		);
@@ -2899,7 +2905,7 @@ final class Admin {
 					$name   = isset( $palette['name'] ) ? (string) $palette['name'] : '';
 					$source = isset( $palette['source'] ) ? (string) $palette['source'] : '';
 
-					return 'kiwe-universal' !== $source && 'Kiwe Universal' !== $name;
+					return ! self::is_kiwe_managed_bricks_palette( $palette );
 				}
 			)
 		);
@@ -2924,7 +2930,7 @@ final class Admin {
 					$name   = isset( $class['name'] ) ? (string) $class['name'] : '';
 					$source = isset( $class['source'] ) ? (string) $class['source'] : '';
 
-					return 'kiwe-seam' !== $source && ! isset( $kiwe_class_names[ $name ] );
+					return ! self::is_kiwe_managed_bricks_class( $class, $kiwe_class_names );
 				}
 			)
 		);
@@ -2939,7 +2945,7 @@ final class Admin {
 					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
 					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
 
-					return 'kiwe-seam' !== $source && ! str_starts_with( $name, 'Kiwe Seam ' );
+					return ! self::is_kiwe_managed_bricks_class_category( $category );
 				}
 			)
 		);
@@ -2967,6 +2973,12 @@ final class Admin {
 		$theme_style_settings = isset( $token_settings['bricks_theme_style'] ) && is_array( $token_settings['bricks_theme_style'] ) ? $token_settings['bricks_theme_style'] : [];
 		$theme_style_pushed = false;
 		if ( defined( 'BRICKS_DB_THEME_STYLES' ) && ! empty( $kiwe_theme_style['id'] ) && ! empty( $kiwe_theme_style['settings'] ) && ! empty( $theme_style_settings['enabled'] ) ) {
+			foreach ( array_keys( $current_theme_styles ) as $theme_style_id ) {
+				$style = is_array( $current_theme_styles[ $theme_style_id ] ?? null ) ? $current_theme_styles[ $theme_style_id ] : [];
+				if ( self::is_kiwe_managed_bricks_theme_style( $style, (string) $theme_style_id ) ) {
+					unset( $current_theme_styles[ $theme_style_id ] );
+				}
+			}
 			$current_theme_styles[ (string) $kiwe_theme_style['id'] ] = [
 				'label'    => sanitize_text_field( (string) ( $kiwe_theme_style['label'] ?? 'Kiwe Universal Design Tokens' ) ),
 				'settings' => $kiwe_theme_style['settings'],
@@ -3076,7 +3088,7 @@ final class Admin {
 					$name   = isset( $variable['name'] ) ? (string) $variable['name'] : '';
 					$source = isset( $variable['source'] ) ? (string) $variable['source'] : '';
 
-					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'kiwe-' );
+					return ! self::is_kiwe_managed_bricks_variable( $variable );
 				}
 			)
 		);
@@ -3091,7 +3103,7 @@ final class Admin {
 					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
 					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
 
-					return 'kiwe-universal' !== $source && ! str_starts_with( $name, 'Kiwe ' );
+					return ! self::is_kiwe_managed_bricks_variable_category( $category );
 				}
 			)
 		);
@@ -3106,7 +3118,7 @@ final class Admin {
 					$name   = isset( $palette['name'] ) ? (string) $palette['name'] : '';
 					$source = isset( $palette['source'] ) ? (string) $palette['source'] : '';
 
-					return 'kiwe-universal' !== $source && 'Kiwe Universal' !== $name;
+					return ! self::is_kiwe_managed_bricks_palette( $palette );
 				}
 			)
 		);
@@ -3121,7 +3133,7 @@ final class Admin {
 					$name   = isset( $class['name'] ) ? (string) $class['name'] : '';
 					$source = isset( $class['source'] ) ? (string) $class['source'] : '';
 
-					return 'kiwe-seam' !== $source && ! isset( $kiwe_class_names[ $name ] );
+					return ! self::is_kiwe_managed_bricks_class( $class, $kiwe_class_names );
 				}
 			)
 		);
@@ -3136,7 +3148,7 @@ final class Admin {
 					$name   = isset( $category['name'] ) ? (string) $category['name'] : '';
 					$source = isset( $category['source'] ) ? (string) $category['source'] : '';
 
-					return 'kiwe-seam' !== $source && ! str_starts_with( $name, 'Kiwe Seam ' );
+					return ! self::is_kiwe_managed_bricks_class_category( $category );
 				}
 			)
 		);
@@ -3144,6 +3156,12 @@ final class Admin {
 		$theme_style_ids = array_filter( array_unique( [ $current_theme_style_id, $default_theme_style_id ] ) );
 		foreach ( $theme_style_ids as $theme_style_id ) {
 			unset( $current_theme_styles[ $theme_style_id ] );
+		}
+		foreach ( array_keys( $current_theme_styles ) as $theme_style_id ) {
+			$style = is_array( $current_theme_styles[ $theme_style_id ] ?? null ) ? $current_theme_styles[ $theme_style_id ] : [];
+			if ( self::is_kiwe_managed_bricks_theme_style( $style, (string) $theme_style_id ) ) {
+				unset( $current_theme_styles[ $theme_style_id ] );
+			}
 		}
 
 		update_option( BRICKS_DB_GLOBAL_VARIABLES, $next_variables, false );
@@ -3174,6 +3192,171 @@ final class Admin {
 
 		wp_safe_redirect( add_query_arg( 'framework-cleared', '1', admin_url( 'admin.php?page=kiwe-framework' ) ) );
 		exit;
+	}
+
+	private static function is_kiwe_managed_bricks_variable( array $variable ): bool {
+		$name     = self::normalize_bricks_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? $variable['id'] ?? '' ) );
+		$source   = sanitize_key( (string) ( $variable['source'] ?? '' ) );
+		$category = sanitize_key( (string) ( $variable['category'] ?? $variable['categoryId'] ?? $variable['group'] ?? $variable['type'] ?? '' ) );
+
+		if ( in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'seamflow' ], true ) ) {
+			return true;
+		}
+
+		if ( '' !== $category && in_array( $category, self::legacy_kiwe_bricks_variable_category_keys(), true ) ) {
+			return true;
+		}
+
+		if ( preg_match( '/^(?:kiwe|seam|sf|nc|app|text)-/i', $name ) ) {
+			return true;
+		}
+
+		return in_array(
+			$name,
+			[
+				'accent',
+				'accent-h',
+				'c-a',
+				'c-b',
+				'c-m',
+				'c-e',
+				'c-s',
+				'edge',
+				'cw',
+				'csw',
+				'bg',
+				's1',
+				's2',
+				's3',
+				'bd',
+				'bd2',
+				't1',
+				't2',
+				't3',
+				't4',
+				'shadow-color',
+				'card-shadow',
+				'hero-fade-top',
+				'hero-fade-mid',
+				'hero-fade-floor',
+				'hero-fade-side',
+				'hero-card-bg',
+				'hero-card-bd',
+				'hero-strip-bd',
+				'nav-scrolled-bg',
+				'nav-scrolled-bd',
+				'drawer-bg',
+				'bnav-bg',
+				'nl-bg',
+				'scroll-cue-color',
+				'scroll-cue-text',
+				'paper',
+				'surface',
+				'surface-2',
+				'ink',
+				'muted',
+				'red',
+				'red-dark',
+				'yellow',
+				'aqua',
+				'aqua-dark',
+				'line',
+				'shadow',
+				'radius',
+				'rail',
+				'top',
+			],
+			true
+		);
+	}
+
+	private static function is_kiwe_managed_bricks_variable_category( array $category ): bool {
+		$name   = sanitize_text_field( (string) ( $category['name'] ?? $category['label'] ?? $category['id'] ?? '' ) );
+		$source = sanitize_key( (string) ( $category['source'] ?? '' ) );
+		$key    = sanitize_key( $name );
+		$id     = sanitize_key( (string) ( $category['id'] ?? '' ) );
+
+		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'seamflow' ], true )
+			|| str_starts_with( $name, 'Kiwe ' )
+			|| in_array( $key, self::legacy_kiwe_bricks_variable_category_keys(), true )
+			|| in_array( $id, self::legacy_kiwe_bricks_variable_category_keys(), true );
+	}
+
+	private static function is_kiwe_managed_bricks_palette( array $palette ): bool {
+		$name   = sanitize_text_field( (string) ( $palette['name'] ?? $palette['label'] ?? $palette['id'] ?? '' ) );
+		$source = sanitize_key( (string) ( $palette['source'] ?? '' ) );
+
+		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'seamflow' ], true )
+			|| in_array( $name, [ 'Kiwe Universal', 'Kiwe Framework', 'Kiwe Seam' ], true )
+			|| str_starts_with( sanitize_key( $name ), 'kiwe-' );
+	}
+
+	private static function is_kiwe_managed_bricks_theme_style( array $style, string $id = '' ): bool {
+		$id       = sanitize_key( $id );
+		$label    = sanitize_text_field( (string) ( $style['label'] ?? $style['name'] ?? '' ) );
+		$settings = isset( $style['settings'] ) && is_array( $style['settings'] ) ? $style['settings'] : [];
+		$seam     = isset( $settings['seam'] ) && is_array( $settings['seam'] ) ? $settings['seam'] : [];
+		$source   = sanitize_key( (string) ( $seam['source'] ?? $style['source'] ?? '' ) );
+
+		return in_array( $source, [ 'kiwe-framework', 'kiwe-universal', 'kiwe-seam', 'seamflow' ], true )
+			|| str_starts_with( $id, 'kiwe-' )
+			|| str_starts_with( $id, 'national-chikki-' )
+			|| str_contains( strtolower( $label ), 'kiwe' )
+			|| str_contains( strtolower( $label ), 'seam' )
+			|| isset( $seam['contract'] );
+	}
+
+	private static function is_kiwe_managed_bricks_class( array $class, array $kiwe_class_names = [] ): bool {
+		$name   = sanitize_html_class( (string) ( $class['name'] ?? '' ) );
+		$source = sanitize_key( (string) ( $class['source'] ?? '' ) );
+
+		return in_array( $source, [ 'kiwe-seam', 'kiwe-framework', 'kiwe-universal', 'seamflow' ], true )
+			|| isset( $kiwe_class_names[ $name ] )
+			|| str_starts_with( $name, 'seam-' )
+			|| str_starts_with( $name, 'kiwe-' );
+	}
+
+	private static function is_kiwe_managed_bricks_class_category( array $category ): bool {
+		$name   = sanitize_text_field( (string) ( $category['name'] ?? $category['label'] ?? $category['id'] ?? '' ) );
+		$source = sanitize_key( (string) ( $category['source'] ?? '' ) );
+
+		return in_array( $source, [ 'kiwe-seam', 'kiwe-framework', 'kiwe-universal', 'seamflow' ], true )
+			|| str_starts_with( $name, 'Kiwe Seam ' )
+			|| str_starts_with( $name, 'Kiwe Framework' );
+	}
+
+	/**
+	 * Bricks variable names may be stored as "kiwe-color-brand" or "--kiwe-color-brand".
+	 */
+	private static function normalize_bricks_variable_name( string $name ): string {
+		$name = trim( $name );
+		$name = preg_replace( '/^--/', '', $name );
+		$name = sanitize_key( (string) $name );
+		return $name;
+	}
+
+	private static function legacy_kiwe_bricks_variable_category_keys(): array {
+		return [
+			'appradius',
+			'apptypography',
+			'appspacing',
+			'appeffects',
+			'fluidtypography',
+			'applayout',
+			'appzindex',
+			'appicon',
+			'kiwe-color',
+			'kiwe-component',
+			'kiwe-project',
+			'kiwe-layout',
+			'kiwe-scene',
+			'kiwe-font',
+			'kiwe-type',
+			'kiwe-motion',
+			'kiwe-radius',
+			'kiwe-space',
+			'kiwe-z',
+		];
 	}
 
 	public function import_profile(): void {
@@ -3615,20 +3798,20 @@ final class Admin {
 			<?php if ( isset( $_GET['tokens-exported'] ) ) : ?>
 				<?php $export_status = sanitize_key( (string) wp_unslash( $_GET['tokens-exported'] ) ); ?>
 				<?php if ( 'bricks' === $export_status ) : ?>
-					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Kiwe Framework was pushed to Bricks as additive kiwe-* variables, the Kiwe Universal color palette, the neutral Seam Class Vocabulary, and one safe global Kiwe theme style. Existing non-Kiwe Bricks variables, classes, palettes, and theme styles were left untouched.', 'dsa' ); ?></p></div>
+					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Kiwe Framework was pushed to Bricks as a clean Kiwe-owned set: official framework variables, Kiwe Universal color palette, neutral Seam Class Vocabulary, and one safe global Kiwe theme style. Legacy Kiwe/Appsite/SeamFlow variables were removed; unrelated human Bricks design data was preserved.', 'dsa' ); ?></p></div>
 				<?php elseif ( 'no-bricks' === $export_status ) : ?>
 					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks framework storage was not available. Use the JSON download and import it after Bricks is active.', 'dsa' ); ?></p></div>
 				<?php endif; ?>
 			<?php endif; ?>
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Kiwe Framework for builders', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Kiwe ships one universal framework vocabulary. The DSA Surface consumes these same kiwe-* variables and Seam classes, and web designers can push the active framework into Bricks as additive variables, a Kiwe Universal color palette, and a searchable neutral Seam Class Vocabulary. Existing Bricks token sets and classes are not overwritten.', 'dsa' ); ?></p>
+				<p><?php esc_html_e( 'Kiwe ships one universal framework vocabulary. The DSA Surface consumes these same kiwe-* variables and Seam classes, and web designers can push the active framework into dedicated Bricks spaces as one clean Kiwe-owned variable set, a Kiwe Universal color palette, a safe global theme style, and a searchable neutral Seam Class Vocabulary.', 'dsa' ); ?></p>
 				<p class="description"><?php esc_html_e( 'SEAM informs the framework: fluid type, spacing, radius, scene density, motion, semantic colors, layout geometry, neutral component naming, and variant grammar. The class vocabulary is searchable naming infrastructure for Bricks styling, not a starter visual recipe kit. Legacy dsa-* variables remain compatibility aliases only; Kiwe Framework is the public contract.', 'dsa' ); ?></p>
 				<div class="dsa-admin-token-summary">
 					<div><strong><?php echo esc_html( (string) count( $items ) ); ?></strong><span><?php esc_html_e( 'framework tokens', 'dsa' ); ?></span></div>
 					<div><strong><?php echo esc_html( (string) $class_count ); ?></strong><span><?php esc_html_e( 'Bricks classes', 'dsa' ); ?></span></div>
 					<div><strong><?php esc_html_e( 'Built in', 'dsa' ); ?></strong><span><?php esc_html_e( 'source', 'dsa' ); ?></span></div>
-					<div><strong><?php esc_html_e( 'Additive', 'dsa' ); ?></strong><span><?php esc_html_e( 'Bricks framework push', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Clean', 'dsa' ); ?></strong><span><?php esc_html_e( 'Bricks framework push', 'dsa' ); ?></span></div>
 				</div>
 				<?php if ( [] !== $counts ) : ?>
 					<p class="dsa-admin-token-chips">
