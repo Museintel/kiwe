@@ -9,6 +9,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Synced the native Bricks token-purity rule through the browser-AI workflow/context files, toolkit validator, WordPress REST validator, Bricks AI context, and Companion review cards so `/audit` and `/fix /bricksconversion` can identify the real grid/flex/token problem without spoon-fed symptoms.
 - Rejected no-op clamp wrappers such as `clamp(22px, 22px, 22px)` in `/audit /bricksconversion`; these are disguised literals, not real Seam/Geometry tokenization. Browser/IDE AIs must use existing universal tokens, declared project tokens, or real fluid clamps with distinct min/preferred/max behavior.
 
+## 6.85 - 2026-08-01
+
+- Added plugin-hosted SeamFlow REST routes under `/wp-json/dsa/v1/ai/seamflow/*` for deterministic artifact classification, Seam rebuild, Framework profile generation, Bricks conversion handoff, accessibility plan/audit, and step/full-flow orchestration.
+- Added the `seamflow` AI key scope, with `studio_ai`, `bricks_ai`, and `all` accepted for broader AI workflows.
+- Updated `KIWE-START.md`, `entry.json`, and the command manifest so browser/IDE AIs can prefer the plugin validator routes when `KIWE_REST_BASE` and `KIWE_AI_KEY` are supplied, avoiding manual-only PASS claims when local validators are unavailable.
+- Regenerated the MU-plugin package manifest for the folder-based Hostinger upload path.
+
 ## 6.54 - 2026-07-28
 
 - Tightened `/audit /frameworkprofile` and `/fix /frameworkprofile` so browser/IDE AIs no longer need a spoon-fed list of missing live variables.

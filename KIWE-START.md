@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.84`
+Contract version: `6.85`
 Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.84
+SeamFlow contract: 6.85
 ```
 
 Then do one of these:
@@ -99,6 +99,23 @@ Seam compiler:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-a
 Output audit:       https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/audit-output.cjs
 ```
 
+## Plugin REST SeamFlow route
+
+When the human supplies `KIWE_REST_BASE` and `KIWE_AI_KEY`, prefer the plugin-hosted deterministic route before manual generation:
+
+```text
+GET  {KIWE_REST_BASE}/ai/seamflow/status
+POST {KIWE_REST_BASE}/ai/seamflow/classify
+POST {KIWE_REST_BASE}/ai/seamflow/rebuild
+POST {KIWE_REST_BASE}/ai/seamflow/audit
+POST {KIWE_REST_BASE}/ai/seamflow/framework-profile
+POST {KIWE_REST_BASE}/ai/seamflow/convert-bricks
+POST {KIWE_REST_BASE}/ai/seamflow/accessibility
+POST {KIWE_REST_BASE}/ai/seamflow/execute
+```
+
+Use header `Authorization: Bearer {KIWE_AI_KEY}` or `X-Kiwe-AI-Key: {KIWE_AI_KEY}`. The key must include `seamflow`, `studio_ai`, `bricks_ai`, or `all`. These routes are PASS authority because they run inside the Kiwe plugin against the current WordPress/Bricks environment. If they are unavailable, fall back to exact raw validators; if those are unavailable, report `WARN` or `UNVERIFIED`, not `PASS`.
+
 ## MCP / tool-capable route
 
 If a Kiwe MCP server or tool is available, prefer tools over reading prose:
@@ -136,7 +153,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.84
+SeamFlow contract: 6.85
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -251,7 +268,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.84
+SeamFlow contract: 6.85
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -321,7 +338,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.84
+SeamFlow contract: 6.85
 Command:
 Artifact classification:
 Files returned:

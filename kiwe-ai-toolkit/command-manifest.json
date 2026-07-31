@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.84",
+    "contractVersion": "6.85",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -15,6 +15,20 @@
     "kiweInternalAi": "Bounded Kiwe Companion/Internal AI. It can assist when /usecompanion or API/MCP access exists, but browser-only SeamFlow must still work without it.",
     "currentLaunchScope": "Close page-builder flow first: Seam Framework, Framework profile, Bricks pages/header/footer/templates, dynamic intent, accessibility.",
     "nextPhase": "DSA/AppShell theme remains mapped, but full DSA theme production hardening comes after page-builder flow testing passes."
+  },
+  "pluginApi": {
+    "rule": "When KIWE_REST_BASE and KIWE_AI_KEY are supplied, call the plugin SeamFlow REST routes instead of reconstructing validators or manually claiming closure.",
+    "scope": "seamflow, studio_ai, bricks_ai, or all",
+    "routes": {
+      "status": "{KIWE_REST_BASE}/ai/seamflow/status",
+      "classify": "{KIWE_REST_BASE}/ai/seamflow/classify",
+      "rebuild": "{KIWE_REST_BASE}/ai/seamflow/rebuild",
+      "audit": "{KIWE_REST_BASE}/ai/seamflow/audit",
+      "frameworkProfile": "{KIWE_REST_BASE}/ai/seamflow/framework-profile",
+      "convertBricks": "{KIWE_REST_BASE}/ai/seamflow/convert-bricks",
+      "accessibility": "{KIWE_REST_BASE}/ai/seamflow/accessibility",
+      "execute": "{KIWE_REST_BASE}/ai/seamflow/execute"
+    }
   },
   "globalRules": {
     "readPolicy": [
@@ -45,7 +59,7 @@
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.84", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.85", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",

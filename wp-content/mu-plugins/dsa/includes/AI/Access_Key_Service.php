@@ -20,6 +20,7 @@ final class Access_Key_Service {
 		'validate_bindings',
 		'validate_bricks_conversion',
 		'validate_accessibility',
+		'seamflow',
 		'prepare_apply_plan',
 		'stage_apply_plan',
 		'trusted_apply_chain',
@@ -154,6 +155,9 @@ final class Access_Key_Service {
 			return true;
 		}
 		if ( 'bricks_ai' === $required_scope && in_array( 'studio_ai', $scopes, true ) ) {
+			return true;
+		}
+		if ( 'seamflow' === $required_scope && ( in_array( 'studio_ai', $scopes, true ) || in_array( 'bricks_ai', $scopes, true ) ) ) {
 			return true;
 		}
 

@@ -26,6 +26,7 @@ use DSA\AI\Rendered_Target_Inspection_Service;
 use DSA\AI\Rollback_Capture_Service;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
 use DSA\AI\AI_Provider_Service;
+use DSA\AI\SeamFlow_Service;
 use DSA\AI\Site_Introspection_Service;
 use DSA\AI\Site_Graph_Service;
 use DSA\AI\Staging_Execution_Service;
@@ -85,6 +86,14 @@ final class AI_Access_Controller {
 			[ 'POST', '/ai/validate-bindings', 'validate_bindings', 'validate_bindings' ],
 			[ 'POST', '/ai/validate-bricks-conversion', 'validate_bricks_conversion', 'validate_bricks_conversion' ],
 			[ 'POST', '/ai/validate-accessibility', 'validate_accessibility', 'validate_accessibility' ],
+			[ 'GET', '/ai/seamflow/status', 'seamflow_status', 'seamflow' ],
+			[ 'POST', '/ai/seamflow/classify', 'seamflow_classify', 'seamflow' ],
+			[ 'POST', '/ai/seamflow/rebuild', 'seamflow_rebuild', 'seamflow' ],
+			[ 'POST', '/ai/seamflow/audit', 'seamflow_audit', 'seamflow' ],
+			[ 'POST', '/ai/seamflow/framework-profile', 'seamflow_framework_profile', 'seamflow' ],
+			[ 'POST', '/ai/seamflow/convert-bricks', 'seamflow_convert_bricks', 'seamflow' ],
+			[ 'POST', '/ai/seamflow/accessibility', 'seamflow_accessibility', 'seamflow' ],
+			[ 'POST', '/ai/seamflow/execute', 'seamflow_execute', 'seamflow' ],
 			[ 'POST', '/ai/prepare-apply-plan', 'prepare_apply_plan', 'prepare_apply_plan' ],
 			[ 'POST', '/ai/stage-apply-plan', 'stage_apply_plan', 'stage_apply_plan' ],
 			[ 'GET', '/ai/stages', 'stages', 'trusted_apply_chain' ],
@@ -180,6 +189,12 @@ final class AI_Access_Controller {
 					'scope' => 'validate_accessibility or all',
 					'covers' => [ 'literal and token-resolved color contrast', 'native Kiwe light/dark proof', 'accessibility plan schema', 'Bricks theme-style token alignment', 'critical text clipping and overflow risks' ],
 					'notCoveredYet' => [ 'font-size/readability sizing', 'full browser rendering proof' ],
+				],
+				'seamFlow'          => [
+					'route'       => '/wp-json/dsa/v1/ai/seamflow/status',
+					'scope'       => 'seamflow, studio_ai, bricks_ai, or all',
+					'covers'      => [ 'artifact classification', 'raw HTML to Seam page rebuild', 'Framework profile generation', 'Bricks conversion handoff', 'accessibility plan and audit orchestration', 'step-by-step/full-flow command grammar' ],
+					'truthModel'  => 'deterministic-plugin-routes-first; no manual-only PASS',
 				],
 				'prepareApplyPlan'  => true,
 				'stageApplyPlan'    => true,
@@ -370,6 +385,38 @@ final class AI_Access_Controller {
 				'strictDark'  => ! empty( $args['strictDark'] ) || ! empty( $args['requirePlan'] ),
 			]
 		);
+	}
+
+	private function seamflow_status( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->status();
+	}
+
+	private function seamflow_classify( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->classify( $this->merged_request_args( $request ) );
+	}
+
+	private function seamflow_rebuild( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->rebuild( $this->merged_request_args( $request ) );
+	}
+
+	private function seamflow_audit( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->audit( $this->merged_request_args( $request ) );
+	}
+
+	private function seamflow_framework_profile( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->framework_profile( $this->merged_request_args( $request ) );
+	}
+
+	private function seamflow_convert_bricks( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->convert_bricks( $this->merged_request_args( $request ) );
+	}
+
+	private function seamflow_accessibility( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->accessibility( $this->merged_request_args( $request ) );
+	}
+
+	private function seamflow_execute( WP_REST_Request $request, array $auth ): array {
+		return ( new SeamFlow_Service() )->execute( $this->merged_request_args( $request ) );
 	}
 
 	private function prepare_apply_plan( WP_REST_Request $request, array $auth ): array {

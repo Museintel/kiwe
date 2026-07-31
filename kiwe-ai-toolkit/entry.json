@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.84",
+  "contractVersion": "6.85",
   "updated": "2026-08-01",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -26,7 +26,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.84",
+    "mustReport": "SeamFlow contract: 6.85",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Put the /list command hint last.",
@@ -37,6 +37,21 @@
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
     "commandManifest": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json",
     "workflow": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md"
+  },
+  "pluginApi": {
+    "rule": "When KIWE_REST_BASE and KIWE_AI_KEY are supplied, prefer plugin-hosted SeamFlow REST routes before manual generation or reconstructed validators.",
+    "auth": "Use Authorization: Bearer {KIWE_AI_KEY} or X-Kiwe-AI-Key: {KIWE_AI_KEY}. Key scope must include seamflow, studio_ai, bricks_ai, or all.",
+    "routes": {
+      "status": "{KIWE_REST_BASE}/ai/seamflow/status",
+      "classify": "{KIWE_REST_BASE}/ai/seamflow/classify",
+      "rebuild": "{KIWE_REST_BASE}/ai/seamflow/rebuild",
+      "audit": "{KIWE_REST_BASE}/ai/seamflow/audit",
+      "frameworkProfile": "{KIWE_REST_BASE}/ai/seamflow/framework-profile",
+      "convertBricks": "{KIWE_REST_BASE}/ai/seamflow/convert-bricks",
+      "accessibility": "{KIWE_REST_BASE}/ai/seamflow/accessibility",
+      "execute": "{KIWE_REST_BASE}/ai/seamflow/execute"
+    },
+    "passAuthority": "Plugin route proof is PASS authority because it executes inside Kiwe against the current WordPress/Bricks environment."
   },
   "navigationTree": {
     "start": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
@@ -81,7 +96,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.84",
+      "SeamFlow contract: 6.85",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -142,7 +157,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.84",
+      "SeamFlow contract: 6.85",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -327,7 +342,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.84",
+    "SeamFlow contract: 6.85",
     "Command:",
     "Artifact classification:",
     "Files returned:",

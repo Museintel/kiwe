@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.84",
+  "version": "6.85",
   "algorithm": "sha256",
-  "file_count": 294,
+  "file_count": 295,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "8777e40387fe244768497bd9480ffab7c9064b59118cc007e03369e1b52244ea"
+      "sha256": "5391638c1b8ba9006ffb20831dd6468fbfee98647034b07fbf48e6c608a805da"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -345,8 +345,8 @@
       "sha256": "fd2c06796ad0a1220c4ccaa6aa5c6b556acfb84826252de34bb16fc0af8cb346"
     },
     "includes/AI/Access_Key_Service.php": {
-      "bytes": 7700,
-      "sha256": "d7f577162ded9e1d8c11021c68d2a848901e7359e760d9b98fdc089e1b00430d"
+      "bytes": 7864,
+      "sha256": "0002aef95ac107897cda9982ea7514c67248336fba0bc3454eb498d11149763c"
     },
     "includes/AI/Accessibility_Validator.php": {
       "bytes": 24350,
@@ -439,6 +439,10 @@
     "includes/AI/Rollback_Readiness_Checkpoint_Service.php": {
       "bytes": 8255,
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
+    },
+    "includes/AI/SeamFlow_Service.php": {
+      "bytes": 31647,
+      "sha256": "8a73e95f2a20b312ad3ad038557b183986daf66994b315618a4062326a50fc6b"
     },
     "includes/AI/Site_Graph_Service.php": {
       "bytes": 28500,
@@ -629,8 +633,8 @@
       "sha256": "7eb8fb97e62cc295e6cb9ce342ec7ae2671528d1610035fab74fe710629409a0"
     },
     "includes/Rest/AI_Access_Controller.php": {
-      "bytes": 38680,
-      "sha256": "f28e612a033a6239ac3d7778095d0a667ec7a857adb5e7d644b9329d4414ceba"
+      "bytes": 41211,
+      "sha256": "7d1a20171ca71c0021f84eb9d9dc63a98ff6e6dfe4ade06837f14fd37ae98e30"
     },
     "includes/Rest/Account_Controller.php": {
       "bytes": 14471,
