@@ -782,6 +782,13 @@ final class Staging_Execution_Service {
 				'id'      => 'kiwe-global-design',
 				'label'   => 'Kiwe Universal Design Tokens',
 			],
+			'project'            => [
+				'enabled'   => false,
+				'id'        => '',
+				'label'     => '',
+				'variables' => [],
+				'classes'   => [],
+			],
 		];
 		$next = $this->sanitize_framework_token_settings( $tokens_input, $current, $defaults );
 
@@ -811,6 +818,13 @@ final class Staging_Execution_Service {
 				'id'      => (string) ( $next['bricks_theme_style']['id'] ?? 'kiwe-global-design' ),
 				'label'   => (string) ( $next['bricks_theme_style']['label'] ?? 'Kiwe Universal Design Tokens' ),
 			],
+			'project'            => [
+				'enabled'   => ! empty( $next['project']['enabled'] ),
+				'id'        => (string) ( $next['project']['id'] ?? '' ),
+				'label'     => (string) ( $next['project']['label'] ?? '' ),
+				'variables' => count( is_array( $next['project']['variables'] ?? null ) ? $next['project']['variables'] : [] ),
+				'classes'   => count( is_array( $next['project']['classes'] ?? null ) ? $next['project']['classes'] : [] ),
+			],
 			'pushToBricksNeeded' => true,
 			'requestedBy'        => sanitize_text_field( (string) ( $operation['reason'] ?? '' ) ),
 		];
@@ -823,7 +837,7 @@ final class Staging_Execution_Service {
 		if ( isset( $payload['tokens'] ) && is_array( $payload['tokens'] ) ) {
 			return $payload['tokens'];
 		}
-		if ( array_intersect( [ 'enabled', 'profile_label', 'overrides', 'bricks_theme_style' ], array_keys( $payload ) ) ) {
+		if ( array_intersect( [ 'enabled', 'profile_label', 'overrides', 'bricks_theme_style', 'project' ], array_keys( $payload ) ) ) {
 			return $payload;
 		}
 

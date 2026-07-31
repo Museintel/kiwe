@@ -2259,7 +2259,7 @@ final class AI_Companion_Service {
 				],
 			];
 		}
-		$allowed_top = [ 'enabled' => true, 'profile_label' => true, 'overrides' => true, 'bricks_theme_style' => true ];
+		$allowed_top = [ 'enabled' => true, 'profile_label' => true, 'overrides' => true, 'bricks_theme_style' => true, 'project' => true ];
 		foreach ( $tokens as $key => $value ) {
 			$key = (string) $key;
 			if ( str_starts_with( $key, '--' ) || str_contains( $key, 'var(' ) ) {
@@ -2445,6 +2445,64 @@ final class AI_Companion_Service {
 						'path'     => sanitize_text_field( $path ),
 					];
 				}
+			}
+		}
+
+		if ( isset( $tokens['project'] ) ) {
+			$findings = array_merge( $findings, $this->review_project_token_extensions( $tokens['project'], $path . '.project' ) );
+		}
+
+		return $findings;
+	}
+
+	private function review_project_token_extensions( $project, string $path ): array {
+		$findings = [];
+		if ( ! is_array( $project ) ) {
+			return [
+				[
+					'severity' => 'error',
+					'code'     => 'invalid_project_extensions',
+					'message'  => 'settings.tokens.project must be an object when present.',
+					'path'     => sanitize_text_field( $path ),
+				],
+			];
+		}
+
+		$allowed = [ 'enabled' => true, 'id' => true, 'label' => true, 'name' => true, 'variables' => true, 'classes' => true ];
+		foreach ( $project as $key => $value ) {
+			if ( empty( $allowed[ (string) $key ] ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'unsupported_project_key',
+					'message'  => sprintf( 'Unsupported settings.tokens.project key "%s". Use id, label, variables, and classes only.', (string) $key ),
+					'path'     => sanitize_text_field( $path ),
+				];
+			}
+		}
+
+		$variables = isset( $project['variables'] ) && is_array( $project['variables'] ) ? $project['variables'] : [];
+		foreach ( $variables as $index => $variable ) {
+			$name = is_array( $variable ) ? strtolower( trim( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? '' ) ) ) : '';
+			if ( ! preg_match( '/^--[a-z][a-z0-9]*-[a-z0-9][a-z0-9_-]{0,80}$/', $name ) || preg_match( '/^--(?:kiwe|seam)-/', $name ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'invalid_project_variable_name',
+					'message'  => 'Project variables must be prefixed CSS custom properties such as --nc-card-radius and must not use reserved --kiwe-* or --seam-* names.',
+					'path'     => sanitize_text_field( $path . '.variables.' . $index ),
+				];
+			}
+		}
+
+		$classes = isset( $project['classes'] ) && is_array( $project['classes'] ) ? $project['classes'] : [];
+		foreach ( $classes as $index => $class ) {
+			$name = is_array( $class ) ? sanitize_html_class( (string) ( $class['name'] ?? '' ) ) : '';
+			if ( ! preg_match( '/^(?!(?:kiwe|seam)-)(?:[a-z][a-z0-9]{1,12})-[a-z0-9][a-z0-9_-]{1,80}$/', $name ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'invalid_project_class_name',
+					'message'  => 'Project classes must be prefixed and collision-safe, for example nc-promo-card or bv-product-card. Universal seam-* classes belong to the Seam library, not the project lane.',
+					'path'     => sanitize_text_field( $path . '.classes.' . $index ),
+				];
 			}
 		}
 

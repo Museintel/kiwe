@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.80`
+Contract version: `6.81`
 Updated: `2026-07-29`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.80
+SeamFlow contract: 6.81
 ```
 
 Then do one of these:
@@ -128,7 +128,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.80
+SeamFlow contract: 6.81
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -242,7 +242,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.80
+SeamFlow contract: 6.81
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -312,7 +312,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.80
+SeamFlow contract: 6.81
 Command:
 Artifact classification:
 Files returned:
@@ -336,6 +336,8 @@ The output must preserve design quality and express it through Kiwe/Seam Framewo
 - no direct component colors such as `#fff`, `rgba(...)`, hardcoded gradients, or `--pack-bg: #...` inside Bricks element settings/global classes/custom CSS.
 
 Literal colors and fixed values are allowed at the token/global-variable definition layer when they are named design inputs. Page and Bricks output must consume those names instead of copying anonymous values.
+
+Project-specific values are allowed, but they must be disciplined SeamFlow extensions. Universal values belong in `settings.tokens.overrides` as official Kiwe token names. Stable project art-direction values/classes that are not universal concepts belong in `settings.tokens.project`, then Kiwe > Framework pushes them into dedicated Bricks categories named `Kiwe Project — [Project]` and `Kiwe Project Classes — [Project]`. Do not rely on Bricks template import alone to install project variables.
 
 ## Accessibility flow
 

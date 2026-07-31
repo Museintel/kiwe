@@ -26,6 +26,7 @@ final class Site_Graph_Service {
 		$tokens   = Seam_Token_Service::tokens_with_overrides( Seam_Token_Service::overrides_from_settings( $settings ) );
 		$token_settings = isset( $settings['tokens'] ) && is_array( $settings['tokens'] ) ? $settings['tokens'] : [];
 		$theme_style_settings = isset( $token_settings['bricks_theme_style'] ) && is_array( $token_settings['bricks_theme_style'] ) ? $token_settings['bricks_theme_style'] : [];
+		$project_settings = Seam_Token_Service::sanitize_project_extensions( isset( $token_settings['project'] ) && is_array( $token_settings['project'] ) ? $token_settings['project'] : [] );
 
 		return [
 			'schema'        => 'kiwe.site-graph.v1',
@@ -53,6 +54,14 @@ final class Site_Graph_Service {
 						'id'      => sanitize_key( (string) ( $theme_style_settings['id'] ?? 'kiwe-global-design' ) ),
 						'label'   => sanitize_text_field( (string) ( $theme_style_settings['label'] ?? 'Kiwe Universal Design Tokens' ) ),
 						'safeLanes' => [ 'typography', 'colors', 'links', 'general.siteBackground' ],
+					],
+					'project' => [
+						'enabled'   => ! empty( $project_settings['enabled'] ),
+						'id'        => sanitize_key( (string) ( $project_settings['id'] ?? '' ) ),
+						'label'     => sanitize_text_field( (string) ( $project_settings['label'] ?? '' ) ),
+						'variables' => count( is_array( $project_settings['variables'] ?? null ) ? $project_settings['variables'] : [] ),
+						'classes'   => count( is_array( $project_settings['classes'] ?? null ) ? $project_settings['classes'] : [] ),
+						'bricksCategory' => ! empty( $project_settings['label'] ) ? sprintf( 'Kiwe Project — %s', sanitize_text_field( (string) $project_settings['label'] ) ) : '',
 					],
 					'overrideNames' => array_keys( Seam_Token_Service::overrides_from_settings( $settings ) ),
 				],

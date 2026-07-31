@@ -1,0 +1,54 @@
+{
+  "type": "kiwe-framework-profile",
+  "schema": "kiwe.framework-profile.v1",
+  "schemaVersion": 1,
+  "settings": {
+    "tokens": {
+      "enabled": true,
+      "profile_label": "Fixture Project",
+      "overrides": {
+        "color-brand": "#85181c",
+        "color-accent": "#19c7bd",
+        "color-surface": "#f7f0e7",
+        "color-surface-raised": "#fffaf2",
+        "color-text": "#201b18",
+        "color-text-muted": "#665a52",
+        "color-border": "rgba(32,27,24,.18)",
+        "font-display": "Fraunces, Georgia, serif",
+        "font-body": "Inter, system-ui, sans-serif",
+        "type-h1": "clamp(3rem, 2rem + 5vw, 7rem)",
+        "type-body": "clamp(1rem, .94rem + .18vw, 1.125rem)",
+        "space-md": "clamp(.75rem, .68rem + .35vw, 1rem)",
+        "radius-lg": "clamp(1rem, .8rem + .7vw, 1.5rem)",
+        "shadow-md": "0 18px 44px rgba(32,27,24,.16)"
+      },
+      "bricks_theme_style": {
+        "enabled": true,
+        "id": "fixture-project",
+        "label": "Fixture Project"
+      },
+      "project": {
+        "enabled": true,
+        "id": "fixture-project",
+        "label": "Fixture Project",
+        "variables": [
+          {
+            "name": "--fx-promo-min",
+            "value": "clamp(220px, calc(135.54px + 17.68vw), 390px)",
+            "type": "component",
+            "behavior": "fluid-scale",
+            "description": "Project promo-card minimum height."
+          }
+        ],
+        "classes": [
+          {
+            "name": "fx-promo-card",
+            "settings": {
+              "_heightMin": "var(--fx-promo-min, 320px)"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

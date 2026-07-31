@@ -438,6 +438,13 @@ final class Settings {
 						'id'      => 'kiwe-global-design',
 						'label'   => 'Kiwe Universal Design Tokens',
 					],
+					'project'            => [
+						'enabled'   => false,
+						'id'        => '',
+						'label'     => '',
+						'variables' => [],
+						'classes'   => [],
+					],
 				],
 				'theme_screens'       => [],
 				'schema_geo'          => [

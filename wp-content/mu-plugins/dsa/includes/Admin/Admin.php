@@ -2833,6 +2833,12 @@ final class Admin {
 		$kiwe_theme_style   = isset( $export['themeStyle'] ) && is_array( $export['themeStyle'] ) ? $export['themeStyle'] : [];
 		$kiwe_classes       = isset( $export['classes'] ) && is_array( $export['classes'] ) ? $export['classes'] : [];
 		$kiwe_class_categories = isset( $export['classCategories'] ) && is_array( $export['classCategories'] ) ? $export['classCategories'] : [];
+		$token_settings     = $this->settings->get( 'tokens', [] );
+		$project_export     = Seam_Token_Service::project_extensions_for_bricks( isset( $token_settings['project'] ) && is_array( $token_settings['project'] ) ? $token_settings['project'] : [] );
+		$project_variables  = isset( $project_export['variables'] ) && is_array( $project_export['variables'] ) ? $project_export['variables'] : [];
+		$project_categories = isset( $project_export['categories'] ) && is_array( $project_export['categories'] ) ? $project_export['categories'] : [];
+		$project_classes    = isset( $project_export['classes'] ) && is_array( $project_export['classes'] ) ? $project_export['classes'] : [];
+		$project_class_categories = isset( $project_export['classCategories'] ) && is_array( $project_export['classCategories'] ) ? $project_export['classCategories'] : [];
 		$current_variables  = get_option( BRICKS_DB_GLOBAL_VARIABLES, [] );
 		$current_categories = get_option( BRICKS_DB_GLOBAL_VARIABLES_CATEGORIES, [] );
 		$current_palette    = defined( 'BRICKS_DB_COLOR_PALETTE' ) ? get_option( BRICKS_DB_COLOR_PALETTE, [] ) : [];
@@ -2950,11 +2956,11 @@ final class Admin {
 			)
 		);
 
-		$merged_variables  = array_merge( $merged_variables, $kiwe_variables );
-		$merged_categories = array_merge( $merged_categories, $kiwe_categories );
+		$merged_variables  = array_merge( $merged_variables, $kiwe_variables, $project_variables );
+		$merged_categories = array_merge( $merged_categories, $kiwe_categories, $project_categories );
 		$merged_palette    = array_merge( $merged_palette, $kiwe_palette );
-		$merged_classes    = array_merge( $merged_classes, $kiwe_classes );
-		$merged_class_categories = array_merge( $merged_class_categories, $kiwe_class_categories );
+		$merged_classes    = array_merge( $merged_classes, $kiwe_classes, $project_classes );
+		$merged_class_categories = array_merge( $merged_class_categories, $kiwe_class_categories, $project_class_categories );
 
 		if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'save_global_variables_in_db' ) ) {
 			\Bricks\Helpers::save_global_variables_in_db( $merged_variables );
@@ -2969,7 +2975,6 @@ final class Admin {
 		if ( defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
 			update_option( BRICKS_DB_COLOR_PALETTE, $merged_palette, false );
 		}
-		$token_settings = $this->settings->get( 'tokens', [] );
 		$theme_style_settings = isset( $token_settings['bricks_theme_style'] ) && is_array( $token_settings['bricks_theme_style'] ) ? $token_settings['bricks_theme_style'] : [];
 		$theme_style_pushed = false;
 		if ( defined( 'BRICKS_DB_THEME_STYLES' ) && ! empty( $kiwe_theme_style['id'] ) && ! empty( $kiwe_theme_style['settings'] ) && ! empty( $theme_style_settings['enabled'] ) ) {
@@ -3199,7 +3204,7 @@ final class Admin {
 		$source   = sanitize_key( (string) ( $variable['source'] ?? '' ) );
 		$category = sanitize_key( (string) ( $variable['category'] ?? $variable['categoryId'] ?? $variable['group'] ?? $variable['type'] ?? '' ) );
 
-		if ( in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'seamflow' ], true ) ) {
+		if ( in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'kiwe-project', 'seamflow' ], true ) ) {
 			return true;
 		}
 
@@ -3276,7 +3281,7 @@ final class Admin {
 		$key    = sanitize_key( $name );
 		$id     = sanitize_key( (string) ( $category['id'] ?? '' ) );
 
-		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'seamflow' ], true )
+		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'kiwe-project', 'seamflow' ], true )
 			|| str_starts_with( $name, 'Kiwe ' )
 			|| in_array( $key, self::legacy_kiwe_bricks_variable_category_keys(), true )
 			|| in_array( $id, self::legacy_kiwe_bricks_variable_category_keys(), true );
@@ -3286,7 +3291,7 @@ final class Admin {
 		$name   = sanitize_text_field( (string) ( $palette['name'] ?? $palette['label'] ?? $palette['id'] ?? '' ) );
 		$source = sanitize_key( (string) ( $palette['source'] ?? '' ) );
 
-		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'seamflow' ], true )
+		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'kiwe-project', 'seamflow' ], true )
 			|| in_array( $name, [ 'Kiwe Universal', 'Kiwe Framework', 'Kiwe Seam' ], true )
 			|| str_starts_with( sanitize_key( $name ), 'kiwe-' );
 	}
@@ -3310,7 +3315,7 @@ final class Admin {
 		$name   = sanitize_html_class( (string) ( $class['name'] ?? '' ) );
 		$source = sanitize_key( (string) ( $class['source'] ?? '' ) );
 
-		return in_array( $source, [ 'kiwe-seam', 'kiwe-framework', 'kiwe-universal', 'seamflow' ], true )
+		return in_array( $source, [ 'kiwe-seam', 'kiwe-framework', 'kiwe-universal', 'kiwe-project', 'seamflow' ], true )
 			|| isset( $kiwe_class_names[ $name ] )
 			|| str_starts_with( $name, 'seam-' )
 			|| str_starts_with( $name, 'kiwe-' );
@@ -3320,9 +3325,10 @@ final class Admin {
 		$name   = sanitize_text_field( (string) ( $category['name'] ?? $category['label'] ?? $category['id'] ?? '' ) );
 		$source = sanitize_key( (string) ( $category['source'] ?? '' ) );
 
-		return in_array( $source, [ 'kiwe-seam', 'kiwe-framework', 'kiwe-universal', 'seamflow' ], true )
+		return in_array( $source, [ 'kiwe-seam', 'kiwe-framework', 'kiwe-universal', 'kiwe-project', 'seamflow' ], true )
 			|| str_starts_with( $name, 'Kiwe Seam ' )
-			|| str_starts_with( $name, 'Kiwe Framework' );
+			|| str_starts_with( $name, 'Kiwe Framework' )
+			|| str_starts_with( $name, 'Kiwe Project' );
 	}
 
 	/**
@@ -3774,6 +3780,7 @@ final class Admin {
 			is_array( $token_settings['bricks_theme_style'] ?? null ) ? $token_settings['bricks_theme_style'] : [],
 			$token_defaults['bricks_theme_style']
 		);
+		$project_settings = Seam_Token_Service::sanitize_project_extensions( is_array( $token_settings['project'] ?? null ) ? $token_settings['project'] : [] );
 		$token_overrides = Seam_Token_Service::sanitize_overrides( isset( $token_settings['overrides'] ) && is_array( $token_settings['overrides'] ) ? $token_settings['overrides'] : [] );
 		?>
 		<div class="wrap dsa-admin">
@@ -3856,7 +3863,22 @@ final class Admin {
 						<?php submit_button( __( 'Import Framework Profile', 'dsa' ), 'secondary', 'submit', false ); ?>
 					</form>
 				</div>
-				<p class="description"><?php esc_html_e( 'Framework profiles carry the shared Seam/Kiwe design-token profile plus the safe Bricks global theme style foundation. Import once, then push variables, color palettes, Seam classes, and the matching Bricks Theme Style from here. AppShell dock/sheet behavior belongs to Kiwe themes; AI/staging access belongs to Kiwe > AI.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Framework profiles carry the shared Seam/Kiwe design-token profile, optional project-specific SeamFlow extensions, and the safe Bricks global theme style foundation. Import once, then push variables, color palettes, Seam classes, project classes, and the matching Bricks Theme Style from here. AppShell dock/sheet behavior belongs to Kiwe themes; AI/staging access belongs to Kiwe > AI.', 'dsa' ); ?></p>
+				<?php if ( ! empty( $project_settings['enabled'] ) ) : ?>
+					<p class="description">
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: 1: project label, 2: variable count, 3: class count. */
+								__( 'Active project lane: %1$s (%2$d project variables, %3$d project classes). These are pushed to dedicated Kiwe Project categories in Bricks and are not promoted into universal Seam automatically.', 'dsa' ),
+								(string) ( $project_settings['label'] ?: $project_settings['id'] ),
+								count( $project_settings['variables'] ),
+								count( $project_settings['classes'] )
+							)
+						);
+						?>
+					</p>
+				<?php endif; ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_save_settings">
 					<input type="hidden" name="_dsa_redirect" value="kiwe-framework">
@@ -8218,7 +8240,7 @@ final class Admin {
 		if ( isset( $payload['tokens'] ) && is_array( $payload['tokens'] ) ) {
 			return $payload['tokens'];
 		}
-		if ( array_intersect( [ 'enabled', 'profile_label', 'overrides', 'bricks_theme_style' ], array_keys( $payload ) ) ) {
+		if ( array_intersect( [ 'enabled', 'profile_label', 'overrides', 'bricks_theme_style', 'project' ], array_keys( $payload ) ) ) {
 			return $payload;
 		}
 

@@ -285,7 +285,7 @@ export function validateFrameworkProfile(target, options = {}) {
     add(errors, 'missing_tokens', 'Framework profile must contain settings.tokens.', 'settings.tokens');
   }
 
-  const tokenKeys = new Set(['enabled', 'profile_label', 'overrides', 'bricks_theme_style']);
+  const tokenKeys = new Set(['enabled', 'profile_label', 'overrides', 'bricks_theme_style', 'project']);
   if (tokens) {
     for (const key of Object.keys(tokens)) {
       if (!tokenKeys.has(key)) {
@@ -305,6 +305,9 @@ export function validateFrameworkProfile(target, options = {}) {
     }
     if (Object.prototype.hasOwnProperty.call(tokens, 'bricks_theme_style') && !isPlainObject(tokens.bricks_theme_style)) {
       add(errors, 'invalid_bricks_theme_style', 'settings.tokens.bricks_theme_style must be an object.', 'settings.tokens.bricks_theme_style');
+    }
+    if (Object.prototype.hasOwnProperty.call(tokens, 'project') && !isPlainObject(tokens.project)) {
+      add(errors, 'invalid_project_extensions', 'settings.tokens.project must be an object when present.', 'settings.tokens.project');
     }
   }
 
@@ -370,6 +373,95 @@ export function validateFrameworkProfile(target, options = {}) {
     add(warnings, 'empty_overrides', 'Framework profile has no token overrides. That is valid, but it may not change the live visual system.', 'settings.tokens.overrides');
   }
 
+  const project = tokens && isPlainObject(tokens.project) ? tokens.project : null;
+  let projectVariableCount = 0;
+  let projectClassCount = 0;
+  if (project) {
+    const allowedProjectKeys = new Set(['enabled', 'id', 'label', 'name', 'variables', 'classes']);
+    for (const key of Object.keys(project)) {
+      if (!allowedProjectKeys.has(key)) {
+        add(errors, 'unknown_project_key', `settings.tokens.project contains unsupported key ${key}.`, `settings.tokens.project.${key}`);
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(project, 'enabled') && typeof project.enabled !== 'boolean') {
+      add(errors, 'invalid_project_enabled', 'settings.tokens.project.enabled must be boolean.', 'settings.tokens.project.enabled');
+    }
+    if (Object.prototype.hasOwnProperty.call(project, 'id') && (typeof project.id !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,59}$/i.test(project.id))) {
+      add(errors, 'invalid_project_id', 'settings.tokens.project.id must be a safe project id up to 60 characters.', 'settings.tokens.project.id');
+    }
+    if (Object.prototype.hasOwnProperty.call(project, 'label') && (typeof project.label !== 'string' || project.label.trim() === '' || project.label.length > 80)) {
+      add(errors, 'invalid_project_label', 'settings.tokens.project.label must be a non-empty string up to 80 characters.', 'settings.tokens.project.label');
+    }
+
+    const variables = Array.isArray(project.variables) ? project.variables : [];
+    if (Object.prototype.hasOwnProperty.call(project, 'variables') && !Array.isArray(project.variables)) {
+      add(errors, 'invalid_project_variables', 'settings.tokens.project.variables must be an array.', 'settings.tokens.project.variables');
+    }
+    const seenVariables = new Set();
+    variables.forEach((variable, index) => {
+      if (!isPlainObject(variable)) {
+        add(errors, 'invalid_project_variable', 'Project variables must be objects.', `settings.tokens.project.variables[${index}]`);
+        return;
+      }
+      const allowedVariableKeys = new Set(['name', 'variable', 'key', 'value', 'type', 'behavior', 'category', 'description']);
+      for (const key of Object.keys(variable)) {
+        if (!allowedVariableKeys.has(key)) {
+          add(errors, 'unknown_project_variable_key', `Project variable contains unsupported key ${key}.`, `settings.tokens.project.variables[${index}].${key}`);
+        }
+      }
+      const name = String(variable.name || variable.variable || variable.key || '').trim().toLowerCase();
+      if (!/^--[a-z][a-z0-9]*-[a-z0-9][a-z0-9_-]{0,80}$/.test(name)) {
+        add(errors, 'invalid_project_variable_name', 'Project variable names must be CSS custom properties such as --nc-card-radius or --bv-hero-gap.', `settings.tokens.project.variables[${index}].name`);
+      } else if (/^--(?:kiwe|seam)-/.test(name)) {
+        add(errors, 'reserved_project_variable_name', 'Project variables must not use reserved --kiwe-* or --seam-* names. Use settings.tokens.overrides for official tokens.', `settings.tokens.project.variables[${index}].name`);
+      } else if (seenVariables.has(name)) {
+        add(errors, 'duplicate_project_variable_name', `Duplicate project variable ${name}.`, `settings.tokens.project.variables[${index}].name`);
+      } else {
+        seenVariables.add(name);
+      }
+      if (!['string', 'number'].includes(typeof variable.value) || String(variable.value).trim() === '') {
+        add(errors, 'invalid_project_variable_value', 'Project variable values must be non-empty strings or numbers.', `settings.tokens.project.variables[${index}].value`);
+      }
+    });
+    projectVariableCount = seenVariables.size;
+
+    const classes = Array.isArray(project.classes) ? project.classes : [];
+    if (Object.prototype.hasOwnProperty.call(project, 'classes') && !Array.isArray(project.classes)) {
+      add(errors, 'invalid_project_classes', 'settings.tokens.project.classes must be an array.', 'settings.tokens.project.classes');
+    }
+    const seenClasses = new Set();
+    classes.forEach((classItem, index) => {
+      if (!isPlainObject(classItem)) {
+        add(errors, 'invalid_project_class', 'Project classes must be objects.', `settings.tokens.project.classes[${index}]`);
+        return;
+      }
+      const allowedClassKeys = new Set(['name', 'settings', 'category', 'description']);
+      for (const key of Object.keys(classItem)) {
+        if (!allowedClassKeys.has(key)) {
+          add(errors, 'unknown_project_class_key', `Project class contains unsupported key ${key}.`, `settings.tokens.project.classes[${index}].${key}`);
+        }
+      }
+      const name = String(classItem.name || '').trim();
+      if (!/^(?:[a-z][a-z0-9]{1,12})-[a-z0-9][a-z0-9_-]{1,80}$/i.test(name)) {
+        add(errors, 'invalid_project_class_name', 'Project class names must be prefixed and collision-safe, for example nc-promo-card or bv-product-card.', `settings.tokens.project.classes[${index}].name`);
+      } else if (/^(?:kiwe|seam)-/i.test(name)) {
+        add(errors, 'reserved_project_class_name', 'Project classes must not use reserved kiwe-* or seam-* names. Use official Seam classes for universal vocabulary.', `settings.tokens.project.classes[${index}].name`);
+      } else if (seenClasses.has(name)) {
+        add(errors, 'duplicate_project_class_name', `Duplicate project class ${name}.`, `settings.tokens.project.classes[${index}].name`);
+      } else {
+        seenClasses.add(name);
+      }
+      if (Object.prototype.hasOwnProperty.call(classItem, 'settings') && !isPlainObject(classItem.settings)) {
+        add(errors, 'invalid_project_class_settings', 'Project class settings must be an object when present.', `settings.tokens.project.classes[${index}].settings`);
+      }
+    });
+    projectClassCount = seenClasses.size;
+
+    if (project.enabled === true && projectVariableCount === 0 && projectClassCount === 0) {
+      add(errors, 'empty_project_extensions', 'settings.tokens.project.enabled is true but no project variables or classes are declared.', 'settings.tokens.project');
+    }
+  }
+
   return {
     ok: errors.length === 0,
     schema: 'kiwe.framework-profile.validation-result.v1',
@@ -378,6 +470,8 @@ export function validateFrameworkProfile(target, options = {}) {
     warnings,
     counts: {
       overrides: Object.keys(overrides).length,
+      projectVariables: projectVariableCount,
+      projectClasses: projectClassCount,
       officialTokensKnown: official.size
     }
   };

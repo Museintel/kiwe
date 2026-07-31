@@ -239,6 +239,11 @@ final class Seam_Token_Service {
 			$next['overrides'] = self::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
 		}
 
+		$next['project'] = self::sanitize_project_extensions( is_array( $next['project'] ?? null ) ? $next['project'] : [] );
+		if ( isset( $input['project'] ) && is_array( $input['project'] ) ) {
+			$next['project'] = self::sanitize_project_extensions( $input['project'] );
+		}
+
 		if ( isset( $input['bricks_theme_style'] ) && is_array( $input['bricks_theme_style'] ) ) {
 			$style_input = $input['bricks_theme_style'];
 			$looks_like_theme_style = self::looks_like_framework_theme_style_metadata( $style_input );
@@ -273,8 +278,161 @@ final class Seam_Token_Service {
 		}
 
 		$next['overrides'] = self::sanitize_overrides( is_array( $next['overrides'] ?? null ) ? $next['overrides'] : [] );
+		$next['project']   = self::sanitize_project_extensions( is_array( $next['project'] ?? null ) ? $next['project'] : [] );
 
 		return $next;
+	}
+
+	public static function sanitize_project_extensions( array $input ): array {
+		$label = sanitize_text_field( (string) ( $input['label'] ?? $input['name'] ?? '' ) );
+		$id    = self::clean_theme_style_id( (string) ( $input['id'] ?? $label ) );
+
+		$out = [
+			'enabled'   => ! empty( $input['enabled'] ),
+			'id'        => substr( $id, 0, 60 ),
+			'label'     => substr( $label, 0, 80 ),
+			'variables' => [],
+			'classes'   => [],
+		];
+
+		if ( '' === $out['label'] && '' !== $out['id'] ) {
+			$out['label'] = ucwords( str_replace( [ '-', '_' ], ' ', $out['id'] ) );
+		}
+
+		foreach ( is_array( $input['variables'] ?? null ) ? $input['variables'] : [] as $variable ) {
+			if ( ! is_array( $variable ) ) {
+				continue;
+			}
+
+			$name = self::clean_project_css_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? '' ) );
+			$value = self::clean_value( is_scalar( $variable['value'] ?? null ) ? (string) $variable['value'] : '' );
+			if ( '' === $name || '' === $value ) {
+				continue;
+			}
+
+			$out['variables'][] = [
+				'name'        => $name,
+				'value'       => substr( $value, 0, 240 ),
+				'type'        => sanitize_key( (string) ( $variable['type'] ?? self::classify( ltrim( $name, '-' ), $value ) ) ),
+				'behavior'    => sanitize_key( (string) ( $variable['behavior'] ?? '' ) ),
+				'category'    => substr( sanitize_text_field( (string) ( $variable['category'] ?? '' ) ), 0, 80 ),
+				'description' => substr( sanitize_text_field( (string) ( $variable['description'] ?? '' ) ), 0, 180 ),
+			];
+		}
+
+		foreach ( is_array( $input['classes'] ?? null ) ? $input['classes'] : [] as $class ) {
+			if ( ! is_array( $class ) ) {
+				continue;
+			}
+
+			$name = sanitize_html_class( (string) ( $class['name'] ?? '' ) );
+			if ( '' === $name || ! self::is_project_class_name( $name ) ) {
+				continue;
+			}
+
+			$out['classes'][] = [
+				'name'        => $name,
+				'category'    => substr( sanitize_text_field( (string) ( $class['category'] ?? '' ) ), 0, 80 ),
+				'description' => substr( sanitize_text_field( (string) ( $class['description'] ?? '' ) ), 0, 180 ),
+				'settings'    => self::sanitize_bricks_settings_array( is_array( $class['settings'] ?? null ) ? $class['settings'] : [] ),
+			];
+		}
+
+		if ( empty( $out['variables'] ) && empty( $out['classes'] ) ) {
+			$out['enabled'] = false;
+		}
+
+		return $out;
+	}
+
+	public static function project_extensions_for_bricks( array $project ): array {
+		$project = self::sanitize_project_extensions( $project );
+		if ( empty( $project['enabled'] ) || ( empty( $project['variables'] ) && empty( $project['classes'] ) ) ) {
+			return [
+				'variables'       => [],
+				'categories'      => [],
+				'classes'         => [],
+				'classCategories' => [],
+			];
+		}
+
+		$project_id    = '' !== $project['id'] ? $project['id'] : self::clean_theme_style_id( $project['label'] );
+		$project_label = '' !== $project['label'] ? $project['label'] : ucwords( str_replace( [ '-', '_' ], ' ', $project_id ) );
+		$variable_category_id = self::stable_id( 'kw-project-variable-category-' . $project_id );
+		$class_category_id    = self::stable_id( 'kw-project-class-category-' . $project_id );
+		$variable_category_name = sprintf(
+			/* translators: %s: project label. */
+			__( 'Kiwe Project — %s', 'dsa' ),
+			$project_label
+		);
+		$class_category_name = sprintf(
+			/* translators: %s: project label. */
+			__( 'Kiwe Project Classes — %s', 'dsa' ),
+			$project_label
+		);
+
+		$variables = [];
+		foreach ( $project['variables'] as $variable ) {
+			$name = self::clean_project_css_variable_name( (string) ( $variable['name'] ?? '' ) );
+			$value = self::clean_value( (string) ( $variable['value'] ?? '' ) );
+			if ( '' === $name || '' === $value ) {
+				continue;
+			}
+
+			$bare = ltrim( $name, '-' );
+			$variables[] = [
+				'id'          => self::stable_id( 'kwpv-' . $project_id . '-' . $bare ),
+				'name'        => $name,
+				'value'       => $value,
+				'category'    => $variable_category_id,
+				'source'      => 'kiwe-project',
+				'project'     => $project_id,
+				'tokenRole'   => self::token_behavior( $bare, $value, (string) ( $variable['type'] ?? '' ), (string) ( $variable['behavior'] ?? 'project-token' ) ),
+				'description' => sanitize_text_field( (string) ( $variable['description'] ?? '' ) ),
+			];
+		}
+
+		$classes = [];
+		foreach ( $project['classes'] as $class ) {
+			$name = sanitize_html_class( (string) ( $class['name'] ?? '' ) );
+			if ( '' === $name || ! self::is_project_class_name( $name ) ) {
+				continue;
+			}
+
+			$classes[] = [
+				'id'          => self::stable_id( 'kwpc-' . $project_id . '-' . $name ),
+				'name'        => $name,
+				'category'    => $class_category_id,
+				'settings'    => is_array( $class['settings'] ?? null ) ? $class['settings'] : [],
+				'source'      => 'kiwe-project',
+				'project'     => $project_id,
+				'description' => sanitize_text_field( (string) ( $class['description'] ?? '' ) ),
+			];
+		}
+
+		return [
+			'variables'       => $variables,
+			'categories'      => empty( $variables ) ? [] : [
+				[
+					'id'          => $variable_category_id,
+					'name'        => $variable_category_name,
+					'description' => __( 'Project-specific SeamFlow variables installed from the active Kiwe Framework profile. Promote only proven repeats into universal Seam.', 'dsa' ),
+					'source'      => 'kiwe-project',
+					'project'     => $project_id,
+					'scale'       => array_map( static fn( array $variable ): string => (string) $variable['name'], $variables ),
+				],
+			],
+			'classes'         => $classes,
+			'classCategories' => empty( $classes ) ? [] : [
+				[
+					'id'          => $class_category_id,
+					'name'        => $class_category_name,
+					'description' => __( 'Project-specific SeamFlow classes installed from the active Kiwe Framework profile.', 'dsa' ),
+					'source'      => 'kiwe-project',
+					'project'     => $project_id,
+				],
+			],
+		];
 	}
 
 	public static function framework_theme_style_allowed_keys(): array {
@@ -1420,6 +1578,52 @@ final class Seam_Token_Service {
 		}
 
 		return $name;
+	}
+
+	private static function clean_project_css_variable_name( string $name ): string {
+		$name = strtolower( trim( $name ) );
+		if ( ! str_starts_with( $name, '--' ) ) {
+			$name = '--' . ltrim( $name, '-' );
+		}
+
+		if ( ! preg_match( '/^--[a-z][a-z0-9]*-[a-z0-9][a-z0-9_-]{0,80}$/', $name ) ) {
+			return '';
+		}
+
+		if ( preg_match( '/^--(?:kiwe|seam)-/i', $name ) ) {
+			return '';
+		}
+
+		return $name;
+	}
+
+	private static function is_project_class_name( string $name ): bool {
+		$name = sanitize_html_class( $name );
+		if ( '' === $name || str_starts_with( $name, 'kiwe-' ) || str_starts_with( $name, 'seam-' ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '/^(?:[a-z][a-z0-9]{1,12})-[a-z0-9][a-z0-9_-]{1,80}$/', $name );
+	}
+
+	private static function sanitize_bricks_settings_array( array $settings ): array {
+		$out = [];
+		foreach ( $settings as $key => $value ) {
+			$key = is_string( $key ) ? preg_replace( '/[^a-zA-Z0-9_:-]+/', '', $key ) : $key;
+			if ( '' === $key || null === $key ) {
+				continue;
+			}
+
+			if ( is_array( $value ) ) {
+				$out[ $key ] = self::sanitize_bricks_settings_array( $value );
+			} elseif ( is_bool( $value ) || is_int( $value ) || is_float( $value ) ) {
+				$out[ $key ] = $value;
+			} elseif ( is_scalar( $value ) ) {
+				$out[ $key ] = substr( self::clean_value( (string) $value ), 0, 500 );
+			}
+		}
+
+		return $out;
 	}
 
 	private static function clean_value( string $value ): string {

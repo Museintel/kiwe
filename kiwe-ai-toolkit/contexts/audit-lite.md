@@ -261,12 +261,13 @@ Standalone Framework profiles must be narrow:
 - `settings.tokens.profile_label`;
 - `settings.tokens.overrides` using official Kiwe universal token names only;
 - complete `settings.tokens.bricks_theme_style` metadata with `enabled: true`, safe `id`, human `label`, and global style slots only when useful. Kiwe > Framework uses this lane to push the matching native Bricks Theme Style.
+- optional `settings.tokens.project` for project-specific SeamFlow extensions that should be pushed to Bricks before template import. Project variables must be prefixed CSS custom properties such as `--nc-promo-min` or `--bv-card-bg`, never reserved `--kiwe-*` or `--seam-*`; project classes must be collision-safe names such as `nc-promo-card`, never generic names such as `card`, `hero`, `display`, or `button`.
 - complete core live token coverage so a pushed Framework profile does not leave the website or Bricks editor with empty Seam/Kiwe variables. Required coverage: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md`.
 - The coverage may be direct in `settings.tokens.overrides` or supplied through mapped `bricks_theme_style` slots, for example `colorPrimary`, `colorSecondary`, `siteBackground`, `colorDark`, `colorMuted`, `colorBorder`, `fontDisplay`, `fontBody`, `typeH1`, `typeBody`, `spaceMd`, `radiusLg`, and `shadowMd`.
 - Audit official token names, not invented CSS variables. `color-brand` maps to `--kiwe-color-brand`; `space-md` maps to `--kiwe-space-md`. Do not require or generate `--kiwe-color-primary`, `--kiwe-color-secondary`, or `--seam-color-primary`.
 - Do not alias Framework profile audit to Bricks Theme Style audit. A standalone `/brickstheme` file has native Bricks root shape, while a Framework profile has Kiwe root `settings.tokens`. In a Framework profile, safe `bricks_theme_style` global slots are valid and must not be removed merely because a standalone Bricks Theme Style file has a different root shape.
 
-Reject or mark for revision any Framework profile that carries custom token names, AppShell geometry, dock configuration, screen copy, products, posts, Bricks raw JSON, or runtime behavior.
+Reject or mark for revision any Framework profile that carries custom token names in `overrides`, AppShell geometry, dock configuration, screen copy, products, posts, Bricks raw JSON, or runtime behavior. Project-specific variables/classes are valid only inside `settings.tokens.project`; they are not universal Seam tokens and are not automatically promoted into the universal library.
 
 ## AppShell theme manifest audit
 

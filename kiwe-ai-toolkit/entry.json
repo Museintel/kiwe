@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.80",
+  "contractVersion": "6.81",
   "updated": "2026-07-29",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -26,7 +26,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.80",
+    "mustReport": "SeamFlow contract: 6.81",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Put the /list command hint last.",
@@ -72,7 +72,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.80",
+      "SeamFlow contract: 6.81",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -132,7 +132,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.80",
+      "SeamFlow contract: 6.81",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -286,6 +286,7 @@
       "Use official Seam semantic roles/classes/flows.",
       "Use Kiwe/Appsite capability attributes instead of duplicate runtime behavior.",
       "Use Kiwe/Seam variables or declared project variables for visual values.",
+      "Declare reusable project variables/classes in framework profile settings.tokens.project so Kiwe > Framework can push them to Bricks project categories.",
       "Use Bricks-native editable controls/global classes/global variables before custom CSS when producing Bricks.",
       "Use real fluid clamps only when source responsive states prove different min/max values."
     ],
@@ -296,7 +297,8 @@
     ],
     "allowed": [
       "literal colors and fixed primitive values at token/global-variable definition layer",
-      "literal fallback values inside var(...), such as var(--kiwe-color-text, #201b18)"
+      "literal fallback values inside var(...), such as var(--kiwe-color-text, #201b18)",
+      "project-specific variables/classes when prefixed, collision-safe, and declared under settings.tokens.project rather than universal overrides"
     ]
   },
   "accessibilityRule": {
@@ -315,7 +317,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.80",
+    "SeamFlow contract: 6.81",
     "Command:",
     "Artifact classification:",
     "Files returned:",

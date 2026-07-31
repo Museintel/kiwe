@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.80",
+    "contractVersion": "6.81",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -45,7 +45,7 @@
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.80", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.81", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -242,6 +242,7 @@
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md"],
       "requires": ["approved design direction or existing page/theme tokens"],
       "output": ["framework/kiwe-framework-profile.json"],
+      "must": ["official Kiwe universal values go in settings.tokens.overrides", "project-specific variables/classes required by Bricks templates go in settings.tokens.project and are pushed to dedicated Kiwe Project categories in Bricks"],
       "forbidden": ["Bricks template JSON", "DSA theme package", "docs unless /document", "ZIP"],
       "finalResponse": "Return the profile JSON and compact validation status."
     },
@@ -250,6 +251,7 @@
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md"],
       "requires": ["framework/kiwe-framework-profile.json"],
       "output": ["pass/fail findings only"],
+      "must": ["reject custom token names in overrides", "allow project-specific variables/classes only in settings.tokens.project", "verify project variable/class names are prefixed and collision-safe"],
       "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
       "finalResponse": "PASS/FAIL with blocking errors and warnings."
     },

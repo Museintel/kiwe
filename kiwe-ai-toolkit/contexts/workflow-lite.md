@@ -382,6 +382,26 @@ The profile must use:
         "fontDisplay": "Inter, system-ui, sans-serif",
         "fontBody": "Inter, system-ui, sans-serif",
         "typeH1": "clamp(52px, 5vw + 36px, 108px)"
+      },
+      "project": {
+        "enabled": true,
+        "id": "national-chikki",
+        "label": "National Chikki",
+        "variables": [
+          {
+            "name": "--nc-promo-min",
+            "value": "clamp(220px, calc(135.54px + 17.68vw), 390px)",
+            "type": "component",
+            "behavior": "fluid-scale",
+            "description": "Project-specific promo-card minimum height proven by source responsive states."
+          }
+        ],
+        "classes": [
+          {
+            "name": "nc-promo-card",
+            "settings": {}
+          }
+        ]
       }
     }
   }
@@ -393,6 +413,8 @@ Rules:
 - Use official Kiwe universal token names only, such as `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `space-md`, `radius-lg`, and `shadow-md`.
 - `bricks_theme_style` is required for a complete Framework profile. It must set `enabled: true`, a safe `id`, and a human `label`.
 - `bricks_theme_style` may carry safe global style slots only: site background, global colors, typography, links, radius, shadow, and spacing. Kiwe normalizes those slots back into universal tokens and then generates the native Bricks Theme Style during the Kiwe > Framework push.
+- If the page/conversion needs stable art-direction values that are not universal Seam concepts, declare them in `settings.tokens.project`, not in `overrides`. Project variables must be prefixed CSS custom properties such as `--nc-card-radius`, `--bv-product-gap`, or `--sf-hero-side-min`; they must not use reserved `--kiwe-*` or `--seam-*` names. Project classes must be collision-safe names such as `nc-promo-card` or `bv-product-card`, not generic names like `card`, `hero`, `display`, or `button`.
+- `settings.tokens.project` is the handoff between AI-created project design and Bricks. Kiwe > Framework pushes those variables/classes into dedicated Bricks categories named `Kiwe Project — [Project]` and `Kiwe Project Classes — [Project]`. Bricks template import alone must not be trusted to hydrate project variables.
 - `/audit /frameworkprofile` must not rely on the human to list missing live variables. It must independently verify the core live token foundation needed by Seam and Bricks after push: `color-brand`, `color-accent`, `color-surface`, `color-surface-raised`, `color-text`, `color-text-muted`, `color-border`, `font-display`, `font-body`, `type-h1`, `type-body`, `space-md`, `radius-lg`, and `shadow-md`.
 - The profile may cover those tokens either directly in `settings.tokens.overrides` or through mapped `bricks_theme_style` slots such as `colorPrimary`, `colorSecondary`, `siteBackground`, `colorDark`, `colorMuted`, `colorBorder`, `fontDisplay`, `fontBody`, `typeH1`, `typeBody`, `spaceMd`, `radiusLg`, and `shadowMd`.
 - Use official Kiwe variables implied by token names, for example `color-brand` -> `--kiwe-color-brand` and `space-md` -> `--kiwe-space-md`. Do not invent non-canonical variables such as `--kiwe-color-primary` or `--seam-color-primary`.
@@ -409,6 +431,9 @@ Audit for:
 - no raw `--kiwe-*` or private `--dsa-runtime-token-*` keys;
 - complete core token coverage for the live Seam/Bricks foundation listed above;
 - complete `bricks_theme_style.enabled`, `bricks_theme_style.id`, and `bricks_theme_style.label`;
+- valid `settings.tokens.project` when project variables/classes are needed by `/convert /bricks`;
+- no reserved `--kiwe-*` or `--seam-*` names inside project variables, because those belong to universal tokens;
+- no unprefixed or generic project class names;
 - no AppShell settings;
 - no Bricks element-level styling;
 
