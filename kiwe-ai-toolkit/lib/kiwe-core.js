@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.81',
+    contractVersion: '6.82',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.81',
+      mustReport: 'SeamFlow contract: 6.82',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -570,7 +570,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     boundaries: [
       'Do not crawl the repository.',
       'Do not use general web search, arXiv, unrelated GitHub search, stale local examples, or prior accepted notes to complete SeamFlow.',
-      'Do not mark importable artifact lanes PASS from manual confidence when the official validator or exact validator logic was unavailable; report WARN or UNVERIFIED instead.',
+      'Do not mark artifact lanes PASS from manual confidence, copied/reconstructed validator logic, simulated validator logic, or equivalent checks. PASS requires executable validator proof; report WARN or UNVERIFIED instead.',
       'Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly requested comparison.',
       'Do not create documentation unless /document is present.',
       'Do not convert DSA/AppShell theme files through /convert /bricks.',
@@ -701,9 +701,15 @@ export function listCommands() {
       },
       {
         command: '/audit /seamframework',
-        purpose: 'Audit and revise a Seam rebuild.',
+        purpose: 'Audit a Seam rebuild with executable validator proof. Does not revise unless paired with /fix.',
         requires: ['website/bricks-paste.html'],
-        output: 'same website lane, corrected'
+        output: 'PASS/FAIL/WARN findings only'
+      },
+      {
+        command: '/fix /seamframework',
+        purpose: 'Repair only the failed Seam Framework page lane, then rerun the Seam validator until PASS or NEEDS_INPUT.',
+        requires: ['website/bricks-paste.html and failed /audit /seamframework findings'],
+        output: 'website/bricks-paste.html only'
       },
       {
         command: '/create /frameworkprofile',
@@ -713,9 +719,9 @@ export function listCommands() {
       },
       {
         command: '/audit /frameworkprofile',
-        purpose: 'Validate and revise the Kiwe > Framework import profile against Kiwe token and safe Bricks global-style rules.',
+        purpose: 'Validate the Kiwe > Framework import profile against Kiwe token and safe Bricks global-style rules.',
         requires: ['framework/kiwe-framework-profile.json'],
-        output: 'same framework lane, corrected'
+        output: 'PASS/FAIL/WARN findings only'
       },
       {
         command: '/create /brickstheme',
@@ -2090,7 +2096,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       '',
       '`/fix /previousaudit` may use only the immediately previous audit findings supplied in the current conversation/file set. If those findings are absent or stale, stop with `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`.',
       '',
-      'Use validator authority: official validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts.',
+      'Use validator authority: only executed validator proof may close a lane as PASS. Official Kiwe validator commands, Kiwe MCP validator tools, Kiwe REST/plugin validators, or hosted/local Kiwe validator endpoints count; copied/reconstructed validator logic does not.',
       '',
       frameworkProfileContext(),
       '',

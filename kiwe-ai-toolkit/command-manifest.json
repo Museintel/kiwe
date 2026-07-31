@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.81",
+    "contractVersion": "6.82",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -25,7 +25,7 @@
       "Do not use general web search, arXiv, unrelated GitHub search, commit browsing, stale local examples, prior-output research, or prior accepted notes to complete SeamFlow.",
       "Do not use search results when an exact raw URL/context route is required. If your environment starts a search instead of direct raw fetch/open, stop with ERROR: KIWE_SEARCH_DRIFT.",
       "After the first Start classification response, treat the loaded Start file as the active contract for the immediate next /command in the same conversation. Do not reload the repository, README, GitHub pages, commits, arXiv, search results, old examples, or Start again for that next command.",
-      "Do not mark importable artifact lanes PASS from manual confidence when the official validator or exact validator logic was unavailable.",
+      "Do not mark artifact lanes PASS from manual confidence, copied/reconstructed validator logic, simulated validator logic, or equivalent checks. PASS requires executable validator proof.",
       "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison.",
       "Read only the context files listed for the matched command.",
       "Prefer this JSON manifest first when available because it is smaller and less ambiguous than prose.",
@@ -38,20 +38,21 @@
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
     "commandGrammar": "SeamFlow commands are composable shell-like tokens, not fixed magic phrases. Parse the user line into one primary action, optional phase/target, and modifiers. Equivalent valid ordering may be normalized when unambiguous; unknown, contradictory, or lane-invalid combinations stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE.",
     "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /audit /eachstep audits after each phase; /audit /fix /eachstep explicitly runs phase -> audit -> fix actual artifact if needed -> same audit again until PASS or NEEDS_INPUT. /audit /atend audits before final delivery; /audit /fix /atend explicitly repairs failed final lanes and reruns audits until PASS or NEEDS_INPUT.",
-    "validatorAuthority": "Official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts. If unavailable, report WARN or UNVERIFIED for that lane; do not say PASS or no blocking findings.",
+    "validatorAuthority": "Only executed validator proof may close a lane as PASS: official Kiwe validator command, Kiwe MCP validator tool, Kiwe REST/plugin validator, or hosted/local Kiwe validator endpoint. Copied/reconstructed validator logic may guide fixes but cannot produce PASS. If unavailable, report WARN or UNVERIFIED for that lane; do not say PASS or no blocking findings.",
     "fullFlowDiscipline": "/execute /fullflow means one final delivery, not one giant context load. Execute phase-by-phase, read only the context/validator files for the current phase, close that phase with /audit -> /fix -> /audit, then continue.",
     "reportDiscipline": "/report is an interaction flag. In /execute /stepbystep, stop after the current phase closes, return the phase artifact plus compact generated/audited/fixed/warnings report, and wait for the human to say continue. In /execute /fullflow, /report adds a compact final phase ledger but does not pause between phases.",
     "siteGraphBoundary": "Missing Site Graph/API/export is not a blocker for static Seam + Framework + Bricks template conversion. Preserve dynamic intent/manual-review markers and suggest /usesitegraph. Stop for Site Graph only when the human explicitly requested /usesitegraph, live target IDs, verified dynamic bindings, or staging/apply authority.",
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.81", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.82", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
       "KIWE_WRONG_LANE": "Supplied artifact does not qualify for the requested command.",
       "KIWE_STALE_SOURCE_BLOCKED": "Only stale/prior outputs are available.",
-      "KIWE_VALIDATOR_UNAVAILABLE": "Official validator or exact validator logic cannot run.",
+      "KIWE_VALIDATOR_UNAVAILABLE": "Official validator/tool/API cannot execute.",
+      "KIWE_VALIDATOR_PROOF_MISSING": "PASS was claimed without executable validator proof.",
       "KIWE_MANUAL_PASS_BLOCKED": "Only manual confidence is available for an importable lane.",
       "KIWE_PREVIOUS_AUDIT_MISSING": "/fix /previousaudit was requested without immediately previous audit findings.",
       "KIWE_PREVIOUS_OUTPUT_MISSING": "/previousoutput was requested but immediate previous output files are not accessible.",
@@ -236,6 +237,24 @@
       "output": ["website/bricks-paste.html"],
       "forbidden": ["Bricks JSON", "DSA theme", "docs unless /document", "ZIP"],
       "finalResponse": "Return the file and compact pass/fail summary."
+    },
+    "/audit /seamframework": {
+      "phase": "audit",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md", "kiwe-ai-toolkit/tools/validate-seamframework.cjs"],
+      "requires": ["website/bricks-paste.html or current Seam page artifact"],
+      "output": ["pass/fail findings only"],
+      "must": ["execute validate-seamframework.cjs, audit-output.cjs, Kiwe MCP validator, or Kiwe REST/plugin validator", "include validator proof in any PASS response", "fail bare Seam selector ownership such as .project .seam-container"],
+      "forbidden": ["manual-only PASS", "copied/reconstructed validator PASS", "fixes unless /fix is also present", "docs unless /document", "ZIP"],
+      "finalResponse": "PASS/FAIL/WARN with validator proof, blocking errors, and warnings."
+    },
+    "/fix /seamframework": {
+      "phase": "fix",
+      "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md", "kiwe-ai-toolkit/tools/validate-seamframework.cjs"],
+      "requires": ["failed Seam page artifact and audit findings"],
+      "output": ["website/bricks-paste.html"],
+      "must": ["fix the actual Seam page artifact", "move visual CSS off bare seam-* selectors and onto project-owned classes", "rerun the same Seam validator until PASS or NEEDS_INPUT"],
+      "forbidden": ["Bricks JSON", "DSA theme", "redesign", "docs unless /document", "ZIP"],
+      "finalResponse": "Return fixed Seam page artifact and compact validator-proof status."
     },
     "/create /frameworkprofile": {
       "phase": "create",

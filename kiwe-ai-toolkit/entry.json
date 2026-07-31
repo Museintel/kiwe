@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.81",
-  "updated": "2026-07-29",
+  "contractVersion": "6.82",
+  "updated": "2026-08-01",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
   "flowName": "seamflow",
@@ -19,14 +19,14 @@
     "Do not use general web search, arXiv, unrelated GitHub search, commit browsing, stale local examples, prior-output research, or prior accepted notes to complete SeamFlow.",
     "Do not use search results when an exact raw URL/context route is required. If your environment starts a search instead of direct raw fetch/open, stop with ERROR: KIWE_SEARCH_DRIFT.",
     "After the first Start classification response, treat the loaded Start file as the active contract for the immediate next /command in the same conversation. Do not reload the repository, README, GitHub pages, commits, arXiv, search results, old examples, or Start again for that next command.",
-    "Do not mark importable artifact lanes PASS from manual confidence when the official validator or exact validator logic was unavailable.",
+    "Do not mark artifact lanes PASS from manual confidence, copied validator logic, reconstructed validator logic, simulated validator logic, or equivalent checks. PASS requires executable validator proof.",
     "Do not create docs, reports, ZIP files, duplicate previews, or long explanations unless /document is present.",
     "Do not start generation when no command/flow has been selected.",
     "Do not convert DSA/AppShell theme files through /convert /bricks.",
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.81",
+    "mustReport": "SeamFlow contract: 6.82",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Put the /list command hint last.",
@@ -54,14 +54,18 @@
     "tools": {
       "bricksConversionValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs",
       "accessibilityValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-accessibility.cjs",
+      "seamFrameworkValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-seamframework.cjs",
       "frameworkProfileValidator": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-framework-profile.cjs",
       "auditOutput": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/audit-output.cjs"
     }
   },
   "validatorAuthority": {
-    "rule": "Official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts.",
-    "ifUnavailable": "Report WARN or UNVERIFIED for that lane. Do not write PASS, no blocking findings, or completed closure for Framework profile, Bricks conversion, DSA theme, combined handoff, or accessibility when the relevant validator was not run or exactly reproduced.",
+    "rule": "Only executed validator proof may close a lane as PASS. Valid proof is an official Kiwe validator command that actually ran, a Kiwe MCP validator result, a Kiwe REST/plugin validator result, or a hosted/local Kiwe validator endpoint result.",
+    "ifUnavailable": "Report WARN or UNVERIFIED for that lane. Do not write PASS, no blocking findings, or completed closure for Seam Framework, Framework profile, Bricks conversion, DSA theme, combined handoff, or accessibility when the relevant validator/tool/API did not execute.",
+    "notPassAuthority": ["manual audit", "visual confidence", "copied validator logic", "reconstructed validator logic", "simulated validator logic", "equivalent checks", "prior accepted notes"],
+    "proofShape": ["validator command/tool/route", "contract/version", "exit code or ok status", "fail count", "warning count", "artifact path/hash when available"],
     "mustUseWhenPossible": [
+      "validate-seamframework.cjs or audit-output.cjs for /audit /seamframework",
       "validate-framework-profile.cjs for /audit /frameworkprofile",
       "validate-bricks-conversion.cjs for /audit /bricksconversion",
       "validate-accessibility.cjs for /audit /accessibility",
@@ -72,7 +76,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.81",
+      "SeamFlow contract: 6.82",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -84,7 +88,8 @@
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing; stop and ask for them.",
       "KIWE_WRONG_LANE": "Supplied artifact does not qualify for the requested command; stop and suggest the matching command.",
       "KIWE_STALE_SOURCE_BLOCKED": "Only stale/prior outputs are available; stop and request current files.",
-      "KIWE_VALIDATOR_UNAVAILABLE": "Official validator/exact validator logic cannot run; report WARN/UNVERIFIED, not PASS.",
+      "KIWE_VALIDATOR_UNAVAILABLE": "Official validator/tool/API cannot execute; report WARN/UNVERIFIED, not PASS.",
+      "KIWE_VALIDATOR_PROOF_MISSING": "A command claimed PASS without executable validator proof; downgrade to FAIL/WARN and rerun the validator.",
       "KIWE_MANUAL_PASS_BLOCKED": "Command needs deterministic audit but only manual confidence is available; stop or report WARN.",
       "KIWE_PREVIOUS_AUDIT_MISSING": "/fix /previousaudit was requested without immediately previous audit findings.",
       "KIWE_PREVIOUS_OUTPUT_MISSING": "/previousoutput was requested but immediate previous output files are not accessible.",
@@ -132,7 +137,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.81",
+      "SeamFlow contract: 6.82",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command:",
@@ -317,7 +322,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-    "SeamFlow contract: 6.81",
+    "SeamFlow contract: 6.82",
     "Command:",
     "Artifact classification:",
     "Files returned:",

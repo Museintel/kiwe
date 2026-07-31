@@ -37,6 +37,7 @@ function assert(condition, message) {
   'lib/apply-planner.js',
   'lib/framework-profile-validator.js',
   'lib/bricks-theme-style-validator.js',
+  'tools/validate-seamframework.cjs',
   'tools/validate-bricks-theme-style.cjs',
   'mcp/index.js',
   'tools/smoke-test.cjs'
@@ -50,7 +51,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '6.81', 'entry contract mismatch');
+  assert(entry.contractVersion === '6.82', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
@@ -70,11 +71,12 @@ function assert(condition, message) {
   assert(JSON.stringify(entry).includes('Do not use prior Kiwe validation material'), 'missing current-run evidence boundary in entry');
   assert(JSON.stringify(entry).includes('Full-flow means one final delivery, not one giant context load'), 'missing full-flow stepwise context boundary in entry');
   assert(JSON.stringify(entry).includes('Missing Site Graph is not a blocker for static Bricks conversion'), 'missing Site Graph non-blocking boundary in entry');
-  assert(JSON.stringify(entry).includes('Official lane validators'), 'missing validator authority boundary in entry');
+  assert(JSON.stringify(entry).includes('PASS requires executable validator proof'), 'missing validator proof boundary in entry');
+  assert(entry.errorHandling.codes.KIWE_VALIDATOR_PROOF_MISSING, 'entry missing validator proof error code');
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '6.81', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '6.82', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -87,13 +89,14 @@ function assert(condition, message) {
   assert(manifest.commands['/audit /previousoutput'], 'manifest missing /audit /previousoutput');
   assert(manifest.commands['/fix /previousoutput'], 'manifest missing /fix /previousoutput');
   assert(manifest.errorCatalog.codes.KIWE_MANUAL_PASS_BLOCKED, 'manifest missing command-central error catalog');
+  assert(manifest.errorCatalog.codes.KIWE_VALIDATOR_PROOF_MISSING, 'manifest missing validator proof error catalog');
   assert(manifest.globalRules.auditClosure.includes('SeamFlow closes only when'), 'manifest missing audit closure rule');
   assert(manifest.commands['/fix /accessibility'].preserve.includes('Seam classes'), 'accessibility preservation contract missing Seam classes');
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '6.81', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.81', 'plan contract report mismatch');
+  assert(plan.contractVersion === '6.82', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 6.82', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.recommendedNextCommands.includes('/audit /accessibility'), 'plan missing accessibility audit');
   assert(plan.executionOptions.stepByStep === '/execute /stepbystep', 'plan missing step-by-step command');

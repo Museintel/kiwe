@@ -69,7 +69,9 @@ Canonical discovery and repair commands:
 
 `/list` returns the supported command vocabulary and stops. `/fix` repairs an existing failed artifact lane; it does not start over or create a new unrelated package.
 
-Unless the human includes `/document`, command output should be lean: emit only the requested artifact file(s), then answer with compact `PASS` / `FAIL` / `WARN`, files changed, and remaining warnings. Do not add notes, reports, ZIPs, duplicate previews, or long explanatory essays.
+Unless the human includes `/document`, command output should be lean: emit only the requested artifact file(s), then answer with compact `PASS` / `FAIL` / `WARN`, files changed, validator proof, and remaining warnings. Do not add notes, reports, ZIPs, duplicate previews, or long explanatory essays.
+
+`PASS` is not a prose confidence word. A SeamFlow phase may report `PASS` only when an official Kiwe validator command, Kiwe MCP validator, Kiwe REST/plugin validator, or hosted/local Kiwe validator endpoint actually executed and returned no fail-level findings. Manual review, copied validator code, reconstructed validator logic, simulated checks, or "equivalent" checks may guide repairs but must report `WARN` or `UNVERIFIED`, not `PASS`.
 
 Canonical Site Graph command:
 

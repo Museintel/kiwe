@@ -17,7 +17,13 @@ node kiwe-ai-toolkit/tools/validate-accessibility.cjs /path/to/handoff --optiona
 node kiwe-ai-toolkit/tools/audit-output.cjs /path/to/handoff
 ```
 
-If you cannot run code, perform the manual audit below and report every issue you found and fixed.
+For a website/page Seam artifact, run the named wrapper when available:
+
+```bash
+node kiwe-ai-toolkit/tools/validate-seamframework.cjs /path/to/website/bricks-paste.html
+```
+
+PASS requires executable validator proof. If you cannot run code, MCP validator tools, REST/plugin validator routes, or a hosted/local Kiwe validator endpoint, perform the manual audit below only as advisory review and report `WARN` or `UNVERIFIED`, not `PASS`. Copied, reconstructed, simulated, or "equivalent" validator logic may guide fixes but cannot close a lane.
 
 If the human gives a target-site Kiwe AI key and Companion AI is enabled in `Kiwe > AI`, you may also run the deterministic site Companion audit:
 
@@ -512,4 +518,4 @@ When revising a handoff, include a concise audit report:
 4. What remains intentionally preview-only.
 5. Any limitations or proposed core/plugin changes.
 
-Do not claim the official Kiwe CLI/audit ran unless you actually executed it. If you performed a manual audit from this file, say that.
+Do not claim the official Kiwe CLI/audit ran unless you actually executed it. If you performed a manual audit from this file, say that and do not report `STATUS: PASS`; use `WARN` or `UNVERIFIED` until executable validator proof exists.

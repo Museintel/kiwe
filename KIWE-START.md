@@ -1,7 +1,7 @@
 # SeamFlow Start
 
-Contract version: `6.81`
-Updated: `2026-07-29`
+Contract version: `6.82`
+Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
 Purpose: fastest safe entrypoint for external AI, browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.81
+SeamFlow contract: 6.82
 ```
 
 Then do one of these:
@@ -48,7 +48,9 @@ No wandering: do not use general web search, arXiv, unrelated GitHub search, com
 
 Search-drift hard stop: fetching/opening an exact raw URL from this contract is allowed. Searching for that URL, searching GitHub, searching arXiv, searching the web, opening search results, or looking for prior Kiwe/National/BioVantage examples is not allowed. If your environment starts a search instead of direct raw fetch, stop immediately with `ERROR: KIWE_SEARCH_DRIFT`; do not use the search results and do not continue the command.
 
-Validator authority: official lane validators, Kiwe MCP validator tools, or exact copied validator logic are the only PASS authority for importable artifacts. If a browser AI cannot run or exactly apply the relevant validator, it must report `WARN` or `UNVERIFIED`, not `PASS`, and must not say "no blocking findings" for that lane.
+Validator authority: only executed validator proof may close a lane as `PASS`. Valid proof is one of: an official Kiwe validator command that actually ran, a Kiwe MCP validator tool result, a Kiwe REST/plugin validator result, or a hosted/local Kiwe validator endpoint result. Copied, reconstructed, simulated, manually applied, or "equivalent" validator logic may guide a repair, but it is not PASS authority. If a browser AI cannot execute the relevant validator/tool/API, it must report `WARN` or `UNVERIFIED`, not `PASS`, and must not say "no blocking findings" or "phase closed" for that lane.
+
+Validator proof shape: every `STATUS: PASS` for `/audit`, `/fix`, `/execute /stepbystep`, or `/execute /fullflow` must include a compact proof block with the validator command/tool/route used, contract/version, exit code or ok status, fail count, warning count, and the artifact path/hash when available. Missing proof is itself `ERROR: KIWE_VALIDATOR_PROOF_MISSING`.
 
 Command-central error behavior: if the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact `STATUS: NEEDS_INPUT`, `FAIL`, or `WARN` response. Include `ERROR:` with a Kiwe error code, the blocker, and the next valid command. Do not invent a manual pass, do not wander through unrelated sources, and do not keep working just to produce something.
 
@@ -88,6 +90,7 @@ Audit:              https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-a
 Framework validator:https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-framework-profile.cjs
 Bricks validator:   https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs
 Access validator:   https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-accessibility.cjs
+Seam validator:     https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/validate-seamframework.cjs
 Output audit:       https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/audit-output.cjs
 ```
 
@@ -128,7 +131,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.81
+SeamFlow contract: 6.82
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -226,7 +229,8 @@ KIWE_UNKNOWN_COMMAND          -> unknown or misspelled command token; stop and s
 KIWE_MISSING_ARTIFACT         -> required current files/attachments are missing; stop and ask for them
 KIWE_WRONG_LANE               -> supplied artifact does not qualify for the requested command; stop and suggest the matching command
 KIWE_STALE_SOURCE_BLOCKED     -> only stale/prior outputs are available; stop and request current files
-KIWE_VALIDATOR_UNAVAILABLE    -> official validator/exact validator logic cannot run; report WARN/UNVERIFIED, not PASS
+KIWE_VALIDATOR_UNAVAILABLE    -> official validator/tool/API cannot execute; report WARN/UNVERIFIED, not PASS
+KIWE_VALIDATOR_PROOF_MISSING  -> command claims PASS without executable validator proof; downgrade to FAIL/WARN and rerun the validator
 KIWE_MANUAL_PASS_BLOCKED      -> command needs deterministic audit but only manual confidence is available; stop or report WARN
 KIWE_PREVIOUS_AUDIT_MISSING   -> /fix /previousaudit was requested without the immediately previous audit findings
 KIWE_PREVIOUS_OUTPUT_MISSING  -> /previousoutput was requested but the immediate previous output files are not accessible
@@ -242,7 +246,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.81
+SeamFlow contract: 6.82
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -312,7 +316,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.81
+SeamFlow contract: 6.82
 Command:
 Artifact classification:
 Files returned:
@@ -355,7 +359,7 @@ Accessibility fixes should use existing tokens and classes first. Add new projec
 
 If the human chooses full-flow execution, run phases in order and stop at the first blocking audit failure that cannot be fixed from the supplied artifact. Return only the current canonical artifact for the last completed/fixed phase and the compact status.
 
-Do not end a full-flow, step-by-step flow, or mid-stream resumed flow until the closure audits for the detected start point have passed. If a browser AI cannot run the official validator, it must still follow the lane audit context exactly and report that official execution was unavailable; it must not call the flow complete from visual confidence alone.
+Do not end a full-flow, step-by-step flow, or mid-stream resumed flow until the closure audits for the detected start point have passed with executable validator proof. If a browser AI cannot run the official validator, MCP validator, REST/plugin validator, or hosted/local Kiwe validator endpoint, it must stop or return `WARN/UNVERIFIED`; it must not call the flow complete from visual confidence, manual review, or reconstructed validator logic.
 
 If full-flow succeeds from raw HTML/CSS/JS to Bricks, the final default artifacts are:
 
