@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.94`
+Contract version: `6.95`
 Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.94
+SeamFlow contract: 6.95
 ```
 
 Then do one of these:
@@ -163,7 +163,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.94
+SeamFlow contract: 6.95
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -278,13 +278,14 @@ KIWE_TOOL_UNAVAILABLE         -> MCP/API/browser/validator tool unavailable; use
 KIWE_SEARCH_DRIFT             -> a search engine, arXiv, GitHub search, commit browsing, or prior-example lookup was used or attempted instead of exact raw URL/context routing
 KIWE_SITEGRAPH_REQUIRED       -> command explicitly requires live Site Graph/API data that was not supplied
 KIWE_COMPANION_FALLBACK       -> /usecompanion requested but unavailable; continue only if the base command can run without it
+KIWE_STALE_BRICKS_PAGE_CSS    -> live Bricks preview/builder proof is contaminated by existing page-level Bricks custom CSS or old matching selectors; test on a clean page or clear Bricks page settings custom CSS before blaming the template
 ```
 
 Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.94
+SeamFlow contract: 6.95
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -354,7 +355,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.94
+SeamFlow contract: 6.95
 Command:
 Artifact classification:
 Files returned:
@@ -382,6 +383,17 @@ The output must preserve design quality and express it through Kiwe/Seam Framewo
 Literal colors and fixed values are allowed at the token/global-variable definition layer when they are named design inputs. Page and Bricks output must consume those names instead of copying anonymous values.
 
 Project-specific values are allowed, but they must be disciplined SeamFlow extensions. Universal values belong in `settings.tokens.overrides` as official Kiwe token names. Stable project art-direction values/classes that are not universal concepts belong in `settings.tokens.project`, then Kiwe > Framework pushes them into dedicated Bricks categories named `Kiwe Project — [Project]` and `Kiwe Project Classes — [Project]`. Do not rely on Bricks template import alone to install project variables.
+
+## Bricks live-preview contamination rule
+
+When the human supplies a live Bricks preview/builder URL as proof, treat the target WordPress page as part of the evidence. Before saying a template passes or fails visually, inspect the rendered page for Bricks page-level custom CSS and stale selectors:
+
+- `#bricks-inline-css-page`, `#bricks-frontend-inline-inline-css`, `#dynamic-element-css`, and any `bricks-inline-css-*` style blocks;
+- page settings `customCss` or `_cssCustom*` buckets when page JSON is available;
+- old project selectors such as `.nc-*`, `.bv-*`, `.promo-card`, `.product-card`, `.screen`, `.bento`, or previous test classes that are not present in the current attached artifact;
+- root variables injected by Kiwe runtime seed (`dsa-phantom-seed`, `dsa-seam-inline-css`) versus variables installed by Kiwe > Framework/Bricks Style Manager.
+
+If a supposedly cleared Style Manager page still renders styled because `bricks-inline-css-page` or old page custom CSS is present, stop with `ERROR: KIWE_STALE_BRICKS_PAGE_CSS`. Do not claim the new Bricks template is the cause until the test page is clean or the page custom CSS is included in the current artifact and audited. A clean Bricks conversion proof must say whether it was tested on a blank page, an existing page with cleared Bricks page settings, or a contaminated page.
 
 ## Accessibility flow
 

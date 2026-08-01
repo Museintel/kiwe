@@ -25,6 +25,20 @@ Do not read the whole Kiwe repository. Do not scrape the public frontend. Do not
 
 If the artifact summary does not include `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or explicit human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed, stop and ask the human to run `/create /frameworkprofile` first. Do not silently create a Framework profile inside `/convert /bricks`.
 
+## Live Bricks preview contamination gate
+
+If the human supplies a live Bricks preview/builder URL as evidence, inspect the target page before judging the current template. A page can remain styled even after Kiwe > Framework, Bricks variables, classes, colors, and theme styles are cleared because Bricks also emits page/content CSS from the current WordPress page.
+
+Check for:
+
+- `#bricks-inline-css-page`, especially `/* PAGE: DESKTOP */ /* CUSTOM CSS */`;
+- `#bricks-frontend-inline-inline-css`, `#dynamic-element-css`, and other `bricks-inline-css-*` style blocks;
+- page settings `customCss` or `_cssCustom*` if page/template JSON is available;
+- stale selectors from earlier imports, such as `.nc-*`, `.bv-*`, `.promo-card`, `.product-card`, `.screen`, `.bento`, `.quick-grid`, `.story-card`, or other project classes not proven by the current artifact;
+- Kiwe runtime seed variables from `dsa-phantom-seed` or `dsa-seam-inline-css` versus Framework/Style Manager variables.
+
+If stale page custom CSS or old matching selectors are present and are not part of the current attached artifact, return `ERROR: KIWE_STALE_BRICKS_PAGE_CSS`. Do not claim the new template is broken or visually passed from that contaminated preview. Retest on a blank page or on a page whose Bricks page settings custom CSS has been cleared.
+
 ## Preferred inputs
 
 - `website/bricks-paste.html`
