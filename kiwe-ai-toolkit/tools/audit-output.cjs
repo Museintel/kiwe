@@ -191,6 +191,8 @@ const templateUploadMappableCssDeclarationMin = 12;
 const templateUploadMinElementNativeControlsPerElement = 1.15;
 const templateUploadMaxClassOnlyElementRatio = 0.25;
 const supportedTemplateBricksVersionPattern = /^2\.3(?:\.|$)/;
+const bricksCompileUnsafeControlPattern = /^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/;
+const bricksFontFamilyTokenPattern = /var\(\s*--/i;
 const bricksImportMethods = new Set(['review-only', 'bricks-clipboard-json', 'bricks-admin-template-upload', 'kiwe-staging-executor']);
 
 function isBricksLayoutElement(value) {
@@ -280,6 +282,42 @@ function templateEditabilityStats(elements) {
     elementNativeControlsPerElement: list.length ? elementNativeControls / list.length : 0,
     classOnlyElementRatio: list.length ? classOnlyElements / list.length : 0
   };
+}
+
+function collectBricksTemplateVariableNameMisuse(templateData, relPath) {
+  const problems = [];
+  for (const lane of ['global_variables', 'globalVariables']) {
+    const variables = Array.isArray(templateData?.[lane]) ? templateData[lane] : [];
+    variables.forEach((variable, index) => {
+      if (!variable || typeof variable !== 'object' || Array.isArray(variable)) return;
+      const name = String(variable.name || '').trim();
+      if (name.startsWith('--')) {
+        problems.push(`Bricks template export ${relPath} global variable "${name}" at $.${lane}[${index}].name includes leading "--". Native Bricks variable records must store names without the CSS custom-property prefix because Bricks emits it during CSS compilation; otherwise "${name}" becomes "----${name.replace(/^--/, '')}" and controls consuming var(${name}, ...) disconnect from the token.`);
+      }
+    });
+  }
+  return problems;
+}
+
+function collectBricksCompilerUnsafeControls(items, prefix) {
+  const problems = [];
+  const list = Array.isArray(items) ? items : [];
+  list.forEach((item, index) => {
+    const settings = elementSettings(item);
+    const label = String(item?.id || item?.name || item?.label || `item-${index}`);
+    for (const [key, value] of Object.entries(settings)) {
+      if (bricksCompileUnsafeControlPattern.test(key)) {
+        problems.push(`${prefix} native control "${key}" on "${label}" is not compiler-safe for My Templates output. Use Bricks source-backed controls _widthMin/_widthMax/_heightMin/_heightMax instead of _minWidth/_maxWidth/_minHeight/_maxHeight; otherwise Bricks can keep the JSON but silently omit the frontend CSS rule.`);
+      }
+      if ((key === '_typography' || /^_typography:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value)) {
+        const fontFamily = value['font-family'] ?? value.fontFamily ?? value.font_family;
+        if (typeof fontFamily === 'string' && bricksFontFamilyTokenPattern.test(fontFamily)) {
+          problems.push(`${prefix} typography control "${key}" on "${label}" stores font-family as "${fontFamily}". Bricks quotes typography font-family output, so CSS-variable font stacks become invalid literal families like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.`);
+        }
+      }
+    }
+  });
+  return problems;
 }
 
 function countMappableCssDeclarations(cssText) {
@@ -554,6 +592,7 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
   if (Array.isArray(templateData.globalClasses) && templateData.globalClasses.length && !Array.isArray(templateData.global_classes)) {
     out.push(`Bricks template export ${relPath} uses top-level globalClasses but not global_classes. Bricks My Templates import reads global_classes for template class dependencies; include native Bricks global_classes so imported elements do not lose their editable class styles.`);
   }
+  out.push(...collectBricksTemplateVariableNameMisuse(templateData, relPath));
 
   const templateCustomCssBuckets = collectCustomCssBuckets({
     pageSettings: templateData.pageSettings,
@@ -577,22 +616,20 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
   for (const message of collectBricksElementMisuse(templateElements)) {
     out.push(`Bricks template export ${relPath} ${message}`);
   }
+  const templateStyleItems = templateElements
+    .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
+    .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : []);
+  out.push(...collectBricksCompilerUnsafeControls(templateStyleItems, `Bricks template export ${relPath}`));
   out.push(...collectBricksColorTokenMisuse(
-    templateElements
-      .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
-      .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : []),
+    templateStyleItems,
     `Bricks template export ${relPath}`
   ));
   out.push(...collectBricksVariableFallbackMisuse(
-    templateElements
-      .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
-      .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : []),
+    templateStyleItems,
     `Bricks template export ${relPath}`
   ));
   const templateNativeControls = countNativeStyleControls(
-    templateElements
-      .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
-      .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : [])
+    templateStyleItems
   );
   if (templateElements.length >= largeClipboardElementCount && templateNativeControls < customCssNativeStyleMinControls) {
     out.push(`Large Bricks template export ${relPath} has ${templateElements.length} elements but only ${templateNativeControls} native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.`);

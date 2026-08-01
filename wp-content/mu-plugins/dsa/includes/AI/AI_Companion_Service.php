@@ -32,6 +32,8 @@ final class AI_Companion_Service {
 	private const BRICKS_SUPPORTED_TEMPLATE_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
 	private const BRICKS_MIN_ELEMENT_CONTROLS_PER_ELEMENT   = 1.15;
 	private const BRICKS_MAX_CLASS_ONLY_ELEMENT_RATIO       = 0.25;
+	private const BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN     = '/^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/';
+	private const BRICKS_FONT_FAMILY_TOKEN_PATTERN          = '/var\(\s*--/i';
 
 	public function __construct(
 		private Settings $settings,
@@ -822,7 +824,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native settings/global_classes: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Bricks can skip or remap global class definitions when class names already exist, so full-page templates must keep enough element-level native controls for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides; do not depend mainly on global_classes hydration. Do not use no-op clamps such as clamp(22px, 22px, 22px). For human My Templates upload, every CSS variable consumed by native settings/global_classes must include a fallback because top-level globalVariables may not hydrate on import. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native settings/global_classes: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Bricks can skip or remap global class definitions when class names already exist, so full-page templates must keep enough element-level native controls for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides; do not depend mainly on global_classes hydration. Do not use no-op clamps such as clamp(22px, 22px, 22px). For human My Templates upload, every CSS variable consumed by native settings/global_classes must include a fallback because top-level globalVariables may not hydrate on import. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), and keep var(...) font stacks out of _typography.font-family because Bricks quotes them. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -933,7 +935,7 @@ final class AI_Companion_Service {
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
-				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Give every CSS variable consumed by native settings/global_classes a fallback for human My Templates upload, because top-level globalVariables may not hydrate during import.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
+				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Give every CSS variable consumed by native settings/global_classes a fallback for human My Templates upload, because top-level globalVariables may not hydrate during import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, and do not put var(...) font stacks in _typography.font-family.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
 				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
@@ -1463,6 +1465,18 @@ final class AI_Companion_Service {
 				'$.content/header/footer/global_classes'
 			)
 		);
+		$findings        = array_merge(
+			$findings,
+			$this->review_bricks_template_variable_names( $data, $path )
+		);
+		$findings        = array_merge(
+			$findings,
+			$this->review_bricks_compiler_safe_controls(
+				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.content/header/footer/global_classes'
+			)
+		);
 		if ( count( $elements ) >= 180 && $native_controls < 60 ) {
 			$findings[] = [
 				'severity' => 'error',
@@ -1489,6 +1503,61 @@ final class AI_Companion_Service {
 			];
 		}
 
+		return $findings;
+	}
+
+	private function review_bricks_template_variable_names( array $data, string $path ): array {
+		$findings = [];
+		foreach ( [ 'global_variables', 'globalVariables' ] as $lane ) {
+			$variables = isset( $data[ $lane ] ) && is_array( $data[ $lane ] ) ? $data[ $lane ] : [];
+			foreach ( $variables as $index => $variable ) {
+				if ( ! is_array( $variable ) ) {
+					continue;
+				}
+				$name = trim( (string) ( $variable['name'] ?? '' ) );
+				if ( str_starts_with( $name, '--' ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_variable_name_has_css_prefix',
+						'message'  => sprintf( 'Bricks global variable "%1$s" includes leading "--". Bricks emits that prefix during CSS compilation, so this compiles into a disconnected "----%2$s" variable while controls consume var(%1$s, ...). Store native Bricks variable names as "%2$s".', $name, ltrim( $name, '-' ) ),
+						'path'     => sanitize_text_field( $path . '#$.' . $lane . '[' . (int) $index . '].name' ),
+					];
+				}
+			}
+		}
+		return $findings;
+	}
+
+	private function review_bricks_compiler_safe_controls( array $items, string $path, string $base_path ): array {
+		$findings = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			foreach ( $item['settings'] as $key => $value ) {
+				$key = (string) $key;
+				if ( preg_match( self::BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN, $key ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_compiler_unsafe_control',
+						'message'  => sprintf( 'Bricks native control "%1$s" on "%2$s" is not compiler-safe for My Templates output. Use _widthMin/_widthMax/_heightMin/_heightMax instead of _minWidth/_maxWidth/_minHeight/_maxHeight; otherwise Bricks can preserve the JSON while silently omitting the frontend CSS rule.', $key, $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key ),
+					];
+				}
+				if ( ( '_typography' === $key || preg_match( '/^_typography:/', $key ) ) && is_array( $value ) ) {
+					$font_family = $value['font-family'] ?? $value['fontFamily'] ?? $value['font_family'] ?? null;
+					if ( is_string( $font_family ) && preg_match( self::BRICKS_FONT_FAMILY_TOKEN_PATTERN, $font_family ) ) {
+						$findings[] = [
+							'severity' => 'error',
+							'code'     => 'bricks_template_upload_typography_font_family_token',
+							'message'  => sprintf( 'Bricks typography control "%1$s" on "%2$s" stores font-family as "%3$s". Bricks quotes typography font-family output, so CSS-variable font stacks become invalid literal font families. Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.', $key, $label, $font_family ),
+							'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.font-family' ),
+						];
+					}
+				}
+			}
+		}
 		return $findings;
 	}
 

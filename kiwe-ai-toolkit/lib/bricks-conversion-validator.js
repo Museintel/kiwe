@@ -218,6 +218,8 @@ const TEMPLATE_UPLOAD_MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
 const TEMPLATE_UPLOAD_MAX_CLASS_ONLY_ELEMENT_RATIO = 0.25;
 const SUPPORTED_TEMPLATE_BRICKS_VERSION_RE = /^2\.3(?:\.|$)/;
 const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_RE = /^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i;
+const BRICKS_COMPILE_UNSAFE_CONTROL_RE = /^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/;
+const BRICKS_FONT_FAMILY_TOKEN_RE = /var\(\s*--/i;
 const TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST = new Set([
   'is-active',
   'is-current',
@@ -595,6 +597,58 @@ function collectDeclaredCssVariables(value, out = new Set()) {
 
   for (const item of Object.values(value)) collectDeclaredCssVariables(item, out);
   return out;
+}
+
+function collectTemplateVariableNameFindings(templateData) {
+  const findings = [];
+  for (const lane of ['global_variables', 'globalVariables']) {
+    const variables = asArray(templateData?.[lane]);
+    variables.forEach((variable, index) => {
+      if (!isPlainObject(variable)) return;
+      const name = String(variable.name || '').trim();
+      if (name.startsWith('--')) {
+        findings.push({
+          lane,
+          index,
+          name,
+          path: `$.${lane}[${index}].name`
+        });
+      }
+    });
+  }
+  return findings;
+}
+
+function collectBricksCompilerUnsafeControls(items) {
+  const findings = [];
+  asArray(items).forEach((item, index) => {
+    const settings = elementSettings(item);
+    const label = String(item?.id || item?.name || item?.label || `item-${index}`);
+    for (const [key, value] of Object.entries(settings)) {
+      if (BRICKS_COMPILE_UNSAFE_CONTROL_RE.test(key)) {
+        findings.push({
+          type: 'unsupported-control',
+          label,
+          key,
+          value,
+          path: `$.content/header/footer/global_classes[${index}].settings.${key}`
+        });
+      }
+      if ((key === '_typography' || /^_typography:/.test(key)) && isPlainObject(value)) {
+        const fontFamily = value['font-family'] ?? value.fontFamily ?? value.font_family;
+        if (typeof fontFamily === 'string' && BRICKS_FONT_FAMILY_TOKEN_RE.test(fontFamily)) {
+          findings.push({
+            type: 'font-family-token',
+            label,
+            key,
+            value: fontFamily,
+            path: `$.content/header/footer/global_classes[${index}].settings.${key}.font-family`
+          });
+        }
+      }
+    }
+  });
+  return findings;
 }
 
 function usesDeclaredProjectVariable(value, declaredVariables = new Set()) {
@@ -1093,6 +1147,25 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       );
     }
   }
+  const variableNameFindings = collectTemplateVariableNameFindings(templateData);
+  for (const item of variableNameFindings.slice(0, 20)) {
+    add(
+      findings,
+      'fail',
+      `Bricks global variable "${item.name}" includes the CSS custom-property prefix. Native Bricks global_variables/globalVariables names must be stored without leading "--" because Bricks emits the "--" prefix when compiling CSS. Keeping it here compiles to "----${item.name.replace(/^--/, '')}", while page controls consume "var(${item.name})", leaving the frontend disconnected from the token.`,
+      rel(root, templatePath),
+      item.path
+    );
+  }
+  if (variableNameFindings.length > 20) {
+    add(
+      findings,
+      'fail',
+      `Bricks template export contains ${variableNameFindings.length - 20} additional global variable names with leading "--". Store names as "kiwe-color-brand" or "nc-app-max", not "--kiwe-color-brand" or "--nc-app-max".`,
+      rel(root, templatePath),
+      '$.global_variables'
+    );
+  }
 
   const templateCustomCss = collectCustomCssBuckets({
     pageSettings: templateData.pageSettings,
@@ -1119,34 +1192,48 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     .concat(asArray(templateData.content))
     .concat(asArray(templateData.header))
     .concat(asArray(templateData.footer));
+  const templateStyleItems = templateElements
+    .concat(asArray(templateData.global_classes))
+    .concat(asArray(templateData.globalClasses));
   const declaredVariables = collectDeclaredCssVariables(templateData);
   validateBricksTemplateElements(root, templatePath, templateElements, findings);
   const templateNativeControls = collectNativeStyleControlsFromItems(
-    templateElements
-      .concat(asArray(templateData.global_classes))
-      .concat(asArray(templateData.globalClasses))
+    templateStyleItems
   );
+  for (const item of collectBricksCompilerUnsafeControls(templateStyleItems).slice(0, 40)) {
+    if (item.type === 'unsupported-control') {
+      add(
+        findings,
+        'fail',
+        `Bricks native control "${item.key}" on "${item.label}" is not compiler-safe for My Templates output. Use Bricks' source-backed controls "_widthMin", "_widthMax", "_heightMin", or "_heightMax" instead of "_minWidth", "_maxWidth", "_minHeight", or "_maxHeight"; otherwise the frontend CSS silently drops the intended rule.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'font-family-token') {
+      add(
+        findings,
+        'fail',
+        `Bricks typography control "${item.key}" on "${item.label}" stores font-family as "${item.value}". Bricks compiles typography font families as quoted values, so CSS-variable font stacks become invalid like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.`,
+        rel(root, templatePath),
+        item.path
+      );
+    }
+  }
   validateTokenizedNativeLengths(
-    templateElements
-      .concat(asArray(templateData.global_classes))
-      .concat(asArray(templateData.globalClasses)),
+    templateStyleItems,
     findings,
     rel(root, templatePath),
     '$.content/header/footer/global_classes',
     declaredVariables
   );
   validateTokenizedNativeColors(
-    templateElements
-      .concat(asArray(templateData.global_classes))
-      .concat(asArray(templateData.globalClasses)),
+    templateStyleItems,
     findings,
     rel(root, templatePath),
     '$.content/header/footer/global_classes'
   );
   validateCssVariableFallbacks(
-    templateElements
-      .concat(asArray(templateData.global_classes))
-      .concat(asArray(templateData.globalClasses)),
+    templateStyleItems,
     findings,
     rel(root, templatePath),
     '$.content/header/footer/global_classes'

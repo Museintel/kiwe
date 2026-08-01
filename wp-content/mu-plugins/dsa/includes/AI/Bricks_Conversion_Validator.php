@@ -130,6 +130,8 @@ final class Bricks_Conversion_Validator {
 	private const MAX_CLASS_ONLY_ELEMENT_RATIO            = 0.25;
 	private const SUPPORTED_TEMPLATE_BRICKS_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
 	private const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_PATTERN = '/^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i';
+	private const BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN = '/^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/';
+	private const BRICKS_FONT_FAMILY_TOKEN_PATTERN = '/var\(\s*--/i';
 	private const TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST = [
 		'is-active',
 		'is-current',
@@ -336,6 +338,30 @@ final class Bricks_Conversion_Validator {
 			);
 		}
 
+		$variable_name_findings = $this->template_variable_name_findings( $template );
+		foreach ( array_slice( $variable_name_findings, 0, 20 ) as $item ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_variable_name_has_css_prefix',
+				sprintf(
+					'Bricks global variable "%1$s" includes the CSS custom-property prefix. Native Bricks global_variables/globalVariables names must be stored without leading "--" because Bricks emits the "--" prefix when compiling CSS. Keeping it here compiles to "----%2$s", while page controls consume "var(%1$s)", leaving the frontend disconnected from the token.',
+					(string) ( $item['name'] ?? '' ),
+					ltrim( (string) ( $item['name'] ?? '' ), '-' )
+				),
+				(string) ( $item['path'] ?? '$.global_variables' )
+			);
+		}
+		if ( count( $variable_name_findings ) > 20 ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_variable_name_prefix_overflow',
+				sprintf( 'Bricks template export contains %d additional global variable names with leading "--". Store names as "kiwe-color-brand" or "nc-app-max", not "--kiwe-color-brand" or "--nc-app-max".', count( $variable_name_findings ) - 20 ),
+				'$.global_variables'
+			);
+		}
+
 		foreach ( $elements as $position => $element ) {
 			if ( ! is_array( $element ) ) {
 				continue;
@@ -355,32 +381,44 @@ final class Bricks_Conversion_Validator {
 			$this->add( $findings, 'fail', 'bricks_template_depends_on_page_custom_css', sprintf( 'Bricks template export carries %1$d page/template custom CSS bytes and %2$d mappable declarations. Bricks My Templates insertion can leave pageSettings custom CSS behind or collide with stale target-page CSS; move ordinary layout/design into native element settings, importable globalClasses/globalVariables, or documented tiny exceptions.', $css_bytes, $mappable ), '$.pageSettings.customCss' );
 		}
 
+		$template_style_items = array_merge(
+			$elements,
+			isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
+			isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
+		);
 		$native_controls = $this->count_native_style_controls( array_merge( $elements, isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [] ) );
+		foreach ( array_slice( $this->bricks_compiler_unsafe_controls( $template_style_items ), 0, 40 ) as $item ) {
+			if ( 'unsupported-control' === (string) ( $item['type'] ?? '' ) ) {
+				$this->add(
+					$findings,
+					'fail',
+					'bricks_template_compiler_unsafe_control',
+					sprintf( 'Bricks native control "%1$s" on "%2$s" is not compiler-safe for My Templates output. Use Bricks source-backed controls "_widthMin", "_widthMax", "_heightMin", or "_heightMax" instead of "_minWidth", "_maxWidth", "_minHeight", or "_maxHeight"; otherwise the frontend CSS silently drops the intended rule.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ) ),
+					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
+				);
+			} elseif ( 'font-family-token' === (string) ( $item['type'] ?? '' ) ) {
+				$this->add(
+					$findings,
+					'fail',
+					'bricks_template_typography_font_family_token',
+					sprintf( 'Bricks typography control "%1$s" on "%2$s" stores font-family as "%3$s". Bricks compiles typography font families as quoted values, so CSS-variable font stacks become invalid like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
+					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
+				);
+			}
+		}
 		$this->validate_tokenized_native_lengths(
-			array_merge(
-				$elements,
-				isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
-				isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
-			),
+			$template_style_items,
 			$findings,
 			'$.content/header/footer/global_classes',
 			$this->collect_declared_css_variables( $template )
 		);
 		$this->validate_tokenized_native_colors(
-			array_merge(
-				$elements,
-				isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
-				isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
-			),
+			$template_style_items,
 			$findings,
 			'$.content/header/footer/global_classes'
 		);
 		$this->validate_css_variable_fallbacks(
-			array_merge(
-				$elements,
-				isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [],
-				isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
-			),
+			$template_style_items,
 			$findings,
 			'$.content/header/footer/global_classes'
 		);
@@ -743,6 +781,63 @@ final class Bricks_Conversion_Validator {
 		}
 		preg_match_all( self::MAPPABLE_CSS_PATTERN, $css, $matches );
 		return isset( $matches[0] ) ? count( $matches[0] ) : 0;
+	}
+
+	private function template_variable_name_findings( array $template ): array {
+		$findings = [];
+		foreach ( [ 'global_variables', 'globalVariables' ] as $lane ) {
+			$variables = isset( $template[ $lane ] ) && is_array( $template[ $lane ] ) ? $template[ $lane ] : [];
+			foreach ( $variables as $index => $variable ) {
+				if ( ! is_array( $variable ) ) {
+					continue;
+				}
+				$name = trim( (string) ( $variable['name'] ?? '' ) );
+				if ( str_starts_with( $name, '--' ) ) {
+					$findings[] = [
+						'lane'  => $lane,
+						'index' => (int) $index,
+						'name'  => $name,
+						'path'  => '$.' . $lane . '[' . (int) $index . '].name',
+					];
+				}
+			}
+		}
+		return $findings;
+	}
+
+	private function bricks_compiler_unsafe_controls( array $items ): array {
+		$findings = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			foreach ( $item['settings'] as $key => $value ) {
+				$key = (string) $key;
+				if ( preg_match( self::BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN, $key ) ) {
+					$findings[] = [
+						'type'  => 'unsupported-control',
+						'label' => $label,
+						'key'   => $key,
+						'value' => $value,
+						'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key,
+					];
+				}
+				if ( ( '_typography' === $key || preg_match( '/^_typography:/', $key ) ) && is_array( $value ) ) {
+					$font_family = $value['font-family'] ?? $value['fontFamily'] ?? $value['font_family'] ?? null;
+					if ( is_string( $font_family ) && preg_match( self::BRICKS_FONT_FAMILY_TOKEN_PATTERN, $font_family ) ) {
+						$findings[] = [
+							'type'  => 'font-family-token',
+							'label' => $label,
+							'key'   => $key,
+							'value' => $font_family,
+							'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.font-family',
+						];
+					}
+				}
+			}
+		}
+		return $findings;
 	}
 
 	private function count_native_style_controls( array $items ): int {

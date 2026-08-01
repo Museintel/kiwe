@@ -214,6 +214,8 @@ Batch 88 makes that direct Seam validator portable enough for constrained browse
 
 Batch 89 starts the deterministic compiler path for first-pass SeamFlow. `compile-seamframework.cjs` accepts a raw HTML/CSS page draft, emits the canonical `website/bricks-paste.html`, removes page-owned scripts/backdrop filters, scopes project selectors, routes anonymous design values through project tokens, adds Seam/Kiwe semantic hooks, and immediately runs `validate-seamframework.cjs`. Browser AI can still be creative before SeamFlow, but once `/rebuild /seamframework` is called, Kiwe should act like the compiler: command in, canonical artifact plus validator proof out. This reduces the endless manual-audit loop and gives non-Companion/browser-only users a deterministic first pass.
 
+Batch 90 hardens Bricks template-upload fidelity after a live National Chikki import rendered as partially unstyled HTML even though `/convert /bricks` reported PASS. Bricks source review showed three compiler/import hazards: native `global_variables`/`globalVariables` names must be stored without leading `--` because Bricks emits the CSS custom-property prefix itself; max/min sizing must use source-backed controls such as `_widthMax`, not `_maxWidth`; and `_typography.font-family` must not contain `var(...)` because Bricks quotes font-family output. `/audit /bricksconversion`, the generic output audit, Kiwe Companion, and the REST/PHP validator now fail these shapes. The SeamFlow contract and MU loader/package entry are synchronized at `6.89`.
+
 ## htmx and Alpine
 
 htmx and Alpine are not part of the current Kiwe AppShell/theme output.
