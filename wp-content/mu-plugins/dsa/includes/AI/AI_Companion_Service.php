@@ -826,7 +826,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native element settings: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Reserved prefixes are not enough: every var(--kiwe-*) or var(--seam-*) consumed by a template must exist in Kiwe’s real universal token registry/runtime. If it does not, map to an existing official token or declare a project variable such as --nc-* in the paired Framework profile. Use a single visual owner: element-native controls own render/edit fidelity in full-page template uploads, while imported global_classes are semantic/name-only. Do not duplicate paint, layout, radius, spacing, shadows, or typography into styled global_classes because that creates Bricks ghost styling after designers remove or change one visible layer. Do not use no-op clamps such as clamp(22px, 22px, 22px). For human My Templates upload, every CSS variable consumed by native settings needs a fallback because top-level globalVariables may not hydrate on import. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), keep var(...) font stacks out of _typography.font-family because Bricks quotes them, store background/border/typography colors as Bricks color objects ({ raw: "var(--kiwe-color-text, #111)" }) rather than plain strings, use _gradient for gradients instead of _background.color, and store border radius as _border.radius.top/right/bottom/left rather than CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Reusable styled project classes belong in the Framework profile push or a dedicated class-library artifact, not duplicated inside the page template upload. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native element settings: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Reserved prefixes are not enough: every var(--kiwe-*) or var(--seam-*) consumed by a template must exist in Kiwe’s real universal token registry/runtime. If it does not, map to an existing official token or declare a project variable such as --nc-* in the paired Framework profile. Use a single visual owner: element-native controls own render/edit fidelity in full-page template uploads, while imported global_classes are semantic/name-only. Do not duplicate paint, layout, radius, spacing, shadows, or typography into styled global_classes because that creates Bricks ghost styling after designers remove or change one visible layer. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not put fallback values in Bricks render-owner CSS variables: use var(--token), not var(--token, fallback). SeamFlow requires Kiwe > Framework profile push before template import so missing variables fail visibly instead of rendering from hidden fallback values. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), keep var(...) font stacks out of _typography.font-family because Bricks quotes them, store background/border/typography colors as Bricks color objects ({ raw: "var(--kiwe-color-text)" }) rather than plain strings, use _gradient for gradients instead of _background.color, and store border radius as _border.radius.top/right/bottom/left rather than CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Reusable styled project classes belong in the Framework profile push or a dedicated class-library artifact, not duplicated inside the page template upload. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -876,7 +876,7 @@ final class AI_Companion_Service {
 			[
 				'id'      => 'bricks-native-token-purity',
 				'title'   => 'Bricks-native controls must consume Framework tokens',
-				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use official var(--kiwe-*)/var(--seam-*) tokens when the meaning and property domain match; use declared project variables for stable art-direction constants; use real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count. For native Bricks template uploads, bare var(--token) is not enough; use var(--token, fallback) unless the flow applies Kiwe > Framework before template import. Bricks border radius must be stored as _border.radius.top/right/bottom/left, not CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Semantic Bricks Heading elements tagged h1-h6 must not carry local official heading-token font-size locks such as var(--kiwe-type-h3, 2rem); H1-H6 scale belongs in Kiwe > Framework / Bricks Theme Style so designers can change the heading tag and get the matching Bricks heading size.',
+				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use official var(--kiwe-*)/var(--seam-*) tokens when the meaning and property domain match; use declared project variables for stable art-direction constants; use real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count. For native Bricks template uploads, inline fallbacks are not allowed; use bare var(--token) and require Kiwe > Framework profile push before template import. Bricks border radius must be stored as _border.radius.top/right/bottom/left, not CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Semantic Bricks Heading elements tagged h1-h6 must not carry local official heading-token font-size locks such as var(--kiwe-type-h3, 2rem); H1-H6 scale belongs in Kiwe > Framework / Bricks Theme Style so designers can change the heading tag and get the matching Bricks heading size.',
 				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
 			],
 			[
@@ -937,7 +937,7 @@ final class AI_Companion_Service {
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
-				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Give every CSS variable consumed by native settings/global_classes a fallback for human My Templates upload, because top-level globalVariables may not hydrate during import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, do not put var(...) font stacks in _typography.font-family, store colors as Bricks color objects, use _gradient for gradients, and store border radius as _border.radius.top/right/bottom/left.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
+				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Use bare CSS variables in native settings/global_classes, e.g. var(--nc-card-radius), never var(--nc-card-radius, 24px). Require Kiwe > Framework profile push before template import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, do not put var(...) font stacks in _typography.font-family, store colors as Bricks color objects, use _gradient for gradients, and store border radius as _border.radius.top/right/bottom/left.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
 				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not duplicate visual styles in both element-native controls and styled global_classes for a full-page template upload.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not put official H1-H6 token font-size locks directly on semantic Bricks Heading elements.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
@@ -1590,7 +1590,7 @@ final class AI_Companion_Service {
 					$findings[] = [
 						'severity' => 'error',
 						'code'     => 'bricks_template_upload_color_string_shape',
-						'message'  => sprintf( 'Bricks color control "%1$s" on "%2$s" stores color as a plain string. Use Bricks color objects such as { "raw": "var(--kiwe-color-surface, #fff)" }; otherwise Bricks can keep the JSON while omitting frontend CSS.', $key, $label ),
+						'message'  => sprintf( 'Bricks color control "%1$s" on "%2$s" stores color as a plain string. Use Bricks color objects such as { "raw": "var(--kiwe-color-surface)" }; otherwise Bricks can keep the JSON while omitting frontend CSS.', $key, $label ),
 						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.color' ),
 					];
 				}
@@ -1606,7 +1606,7 @@ final class AI_Companion_Service {
 					$findings[] = [
 						'severity' => 'error',
 						'code'     => 'bricks_template_upload_color_string_shape',
-						'message'  => sprintf( 'Bricks border control "%1$s" on "%2$s" stores color as a plain string. Use a Bricks color object such as { "raw": "var(--kiwe-color-border, rgba(...))" }.', $key, $label ),
+						'message'  => sprintf( 'Bricks border control "%1$s" on "%2$s" stores color as a plain string. Use a Bricks color object such as { "raw": "var(--kiwe-color-border)" }.', $key, $label ),
 						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.color' ),
 					];
 				}
@@ -1630,7 +1630,7 @@ final class AI_Companion_Service {
 					$findings[] = [
 						'severity' => 'error',
 						'code'     => 'bricks_template_upload_color_string_shape',
-						'message'  => sprintf( 'Bricks typography control "%1$s" on "%2$s" stores color as a plain string. Use a Bricks color object such as { "raw": "var(--kiwe-color-text, #111)" }.', $key, $label ),
+						'message'  => sprintf( 'Bricks typography control "%1$s" on "%2$s" stores color as a plain string. Use a Bricks color object such as { "raw": "var(--kiwe-color-text)" }.', $key, $label ),
 						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.color' ),
 					];
 				}
@@ -1755,7 +1755,7 @@ final class AI_Companion_Service {
 			}
 			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
 			$values = [];
-			$this->collect_bricks_css_variables_without_fallback( $item['settings'], $values, $base_path . '[' . (int) $index . '].settings' );
+			$this->collect_bricks_css_variables_with_fallback( $item['settings'], $values, $base_path . '[' . (int) $index . '].settings' );
 			foreach ( $values as $value ) {
 				$value['label'] = $label;
 				$found[]        = $value;
@@ -1766,9 +1766,9 @@ final class AI_Companion_Service {
 		foreach ( array_slice( $found, 0, self::BRICKS_CSS_VAR_FINDING_LIMIT ) as $item ) {
 			$findings[] = [
 				'severity' => 'error',
-				'code'     => 'bricks_template_upload_css_var_without_fallback',
+				'code'     => 'bricks_template_upload_css_var_has_fallback',
 				'message'  => sprintf(
-					'Bricks native style "%1$s" on "%2$s" references "%3$s" without a fallback in "%4$s". Bricks My Templates import cannot be trusted to install globalVariables from the same uploaded JSON; use var(%3$s, fallback) and/or require Kiwe > Framework push before template import.',
+					'Bricks native style "%1$s" on "%2$s" references "%3$s" with an inline fallback in "%4$s". SeamFlow template render-owner settings must consume bare Framework/project variables only, e.g. var(%3$s). Put the actual value in the paired Kiwe Framework profile / Bricks variable push so missing profile setup fails visibly instead of silently rendering from hidden fallback values.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					(string) ( $item['variable'] ?? '' ),
@@ -1780,8 +1780,8 @@ final class AI_Companion_Service {
 		if ( count( $found ) > self::BRICKS_CSS_VAR_FINDING_LIMIT ) {
 			$findings[] = [
 				'severity' => 'error',
-				'code'     => 'bricks_template_upload_css_var_without_fallback_overflow',
-				'message'  => sprintf( 'Bricks native styles contain %d additional CSS variable references without fallbacks beyond the first %d. Add fallbacks or a supported Kiwe > Framework variable-apply step, then rerun /audit /bricksconversion.', count( $found ) - self::BRICKS_CSS_VAR_FINDING_LIMIT, self::BRICKS_CSS_VAR_FINDING_LIMIT ),
+				'code'     => 'bricks_template_upload_css_var_has_fallback_overflow',
+				'message'  => sprintf( 'Bricks native styles contain %d additional CSS variable references with inline fallbacks beyond the first %d. Remove fallbacks from Bricks render-owner settings and define those values in the paired Framework profile, then rerun /audit /bricksconversion.', count( $found ) - self::BRICKS_CSS_VAR_FINDING_LIMIT, self::BRICKS_CSS_VAR_FINDING_LIMIT ),
 				'path'     => sanitize_text_field( $path ),
 			];
 		}
@@ -2100,12 +2100,12 @@ final class AI_Companion_Service {
 		}
 	}
 
-	private function collect_bricks_css_variables_without_fallback( $value, array &$out, string $path, bool $parent_owned = false ): void {
+	private function collect_bricks_css_variables_with_fallback( $value, array &$out, string $path, bool $parent_owned = false ): void {
 		if ( is_array( $value ) ) {
 			foreach ( $value as $key => $item ) {
 				$key_string = (string) $key;
 				$owned      = $parent_owned || preg_match( self::BRICKS_STYLE_CONTROL_PATTERN, $key_string ) || preg_match( self::BRICKS_STYLE_NESTED_PATTERN, $key_string );
-				$this->collect_bricks_css_variables_without_fallback( $item, $out, $path . '.' . $key_string, (bool) $owned );
+				$this->collect_bricks_css_variables_with_fallback( $item, $out, $path . '.' . $key_string, (bool) $owned );
 			}
 			return;
 		}
@@ -2116,7 +2116,7 @@ final class AI_Companion_Service {
 
 		foreach ( $this->extract_bricks_css_function_calls( $value, 'var' ) as $call ) {
 			$args = $this->split_bricks_css_args( $call );
-			if ( count( $args ) >= 2 ) {
+			if ( count( $args ) < 2 ) {
 				continue;
 			}
 			$variable = trim( (string) ( $args[0] ?? '' ) );

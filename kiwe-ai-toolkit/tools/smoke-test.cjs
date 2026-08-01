@@ -52,7 +52,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '6.95', 'entry contract mismatch');
+  assert(entry.contractVersion === '6.96', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
@@ -86,7 +86,7 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '6.95', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '6.96', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -212,7 +212,7 @@ function assert(condition, message) {
   assert(!unsafeBricksTemplate.ok && unsafeBricksTemplateText.includes('not compiler-safe'), 'invalid Bricks unsafe-control fixture did not fail');
   assert(!unsafeBricksTemplate.ok && unsafeBricksTemplateText.includes('CSS-variable font stacks become invalid'), 'invalid Bricks font-family token fixture did not fail');
   assert(!unsafeBricksTemplate.ok && unsafeBricksTemplateText.includes('stores color as a plain string'), 'invalid Bricks color-control shape fixture did not fail');
-  assert(!unsafeBricksTemplate.ok && unsafeBricksTemplateText.includes('without a fallback'), 'invalid Bricks global variable fallback fixture did not fail');
+  assert(!unsafeBricksTemplate.ok && unsafeBricksTemplateText.includes('inline fallback'), 'invalid Bricks CSS-variable fallback fixture did not fail');
   const multiOwnerDir = path.join(tmp, 'bricks-template-invalid-multi-owner');
   fs.mkdirSync(path.join(multiOwnerDir, 'bricks-template'), { recursive: true });
   const multiOwnerElements = Array.from({ length: 180 }, (_, index) => ({
@@ -223,7 +223,7 @@ function assert(condition, message) {
     settings: {
       _cssGlobalClasses: ['gdup1'],
       _display: 'flex',
-      _background: { color: { raw: 'var(--kiwe-color-surface, #fff8ef)' } }
+      _background: { color: { raw: 'var(--kiwe-color-surface)' } }
     }
   }));
   multiOwnerElements[0].children = multiOwnerElements.slice(1).map((item) => item.id);
@@ -237,11 +237,11 @@ function assert(condition, message) {
         id: 'gdup1',
         name: 'nc-duplicate-owner',
         settings: {
-          _background: { color: { raw: 'var(--kiwe-color-surface, #fff8ef)' } },
+          _background: { color: { raw: 'var(--kiwe-color-surface)' } },
           _border: {
-            color: { raw: 'var(--kiwe-color-border, rgba(32, 27, 24, .12))' },
-            width: { top: 'var(--kiwe-border-width-hairline, 1px)', right: 'var(--kiwe-border-width-hairline, 1px)', bottom: 'var(--kiwe-border-width-hairline, 1px)', left: 'var(--kiwe-border-width-hairline, 1px)' },
-            radius: { top: 'var(--kiwe-radius-lg, 24px)', right: 'var(--kiwe-radius-lg, 24px)', bottom: 'var(--kiwe-radius-lg, 24px)', left: 'var(--kiwe-radius-lg, 24px)' }
+            color: { raw: 'var(--kiwe-color-border)' },
+            width: { top: 'var(--kiwe-border-width-hairline)', right: 'var(--kiwe-border-width-hairline)', bottom: 'var(--kiwe-border-width-hairline)', left: 'var(--kiwe-border-width-hairline)' },
+            radius: { top: 'var(--kiwe-radius-lg)', right: 'var(--kiwe-radius-lg)', bottom: 'var(--kiwe-radius-lg)', left: 'var(--kiwe-radius-lg)' }
           }
         }
       }

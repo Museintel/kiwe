@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "6.95",
+  "contractVersion": "6.96",
   "updated": "2026-08-01",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -26,7 +26,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 6.95",
+    "mustReport": "SeamFlow contract: 6.96",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, return compact diagnostic and recommended next command, then ask whether the human wants /execute /stepbystep or /execute /fullflow. For a raw HTML/CSS/JS draft with no Seam/Bricks root, recommend /execute /stepbystep /audit /fix /eachstep /report as the best default and explain that /rebuild /seamframework is the first internal phase. Mention optional /audit /eachstep, /audit /fix /eachstep, /audit /atend, /audit /fix /atend, /report, and /usecompanion. Show Route A Browser/raw, Route B Git/Node, Route C Plugin REST, and Route D Plugin REST + Companion. If Route C/D is possible but credentials are missing, ask for KIWE_REST_BASE and KIWE_AI_KEY and explain where to create the key in WordPress Admin → Kiwe → AI → API access keys. Put the /list command hint last.",
@@ -98,7 +98,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 6.95",
+      "SeamFlow contract: 6.96",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -160,7 +160,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 6.95",
+      "SeamFlow contract: 6.96",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command: for raw HTML/CSS/JS drafts use /execute /stepbystep /audit /fix /eachstep /report; note that /rebuild /seamframework is the first internal phase.",
@@ -324,12 +324,13 @@
       "no-op clamps such as clamp(22px, 22px, 22px)",
       "direct component colors such as #fff, rgba(...), hardcoded gradient stops, or --pack-bg: #... in Bricks element settings/custom CSS",
       "anonymous hardcoded lengths in token-owned Bricks settings",
+      "CSS variable fallbacks in Bricks render-owner settings such as var(--nc-color-brand-dark, #85181c)",
       "duplicate visual ownership where element-native controls and styled imported global_classes both carry paint/layout/radius/spacing/typography",
       "live Bricks preview proof on a target page that still contains old pageSettings.customCss, #bricks-inline-css-page, or stale project selectors from previous imports"
     ],
     "allowed": [
       "literal colors and fixed primitive values at token/global-variable definition layer",
-      "literal fallback values inside var(...), such as var(--kiwe-color-text, #201b18)",
+      "bare CSS variable consumption in Bricks render-owner settings when paired Framework profile proof exists",
       "project-specific variables/classes when prefixed, collision-safe, and declared under settings.tokens.project rather than universal overrides"
     ],
     "livePreviewProof": "If a live Bricks preview/builder URL is used as evidence, inspect the target page for #bricks-inline-css-page, #bricks-frontend-inline-inline-css, #dynamic-element-css, bricks-inline-css-* style blocks, page settings customCss/_cssCustom buckets, and old matching .nc-*/.bv-*/promo-card/product-card/screen/bento selectors. If stale page CSS is present and not part of the current attached artifact, stop with KIWE_STALE_BRICKS_PAGE_CSS. A clean proof must say whether the test used a blank page, a page with cleared Bricks page settings, or a contaminated page."
@@ -350,7 +351,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-      "SeamFlow contract: 6.95",
+      "SeamFlow contract: 6.96",
     "Command:",
     "Artifact classification:",
     "Files returned:",

@@ -344,13 +344,13 @@ final class Bricks_Conversion_Validator {
 		$prefixed_variable_name_findings = array_values(
 			array_filter(
 				$variable_name_findings,
-				static fn( $item ) => 'variable-value-missing-fallback' !== ( $item['type'] ?? '' )
+				static fn( $item ) => 'variable-value-has-fallback' !== ( $item['type'] ?? '' )
 			)
 		);
 		$variable_value_fallback_findings = array_values(
 			array_filter(
 				$variable_name_findings,
-				static fn( $item ) => 'variable-value-missing-fallback' === ( $item['type'] ?? '' )
+				static fn( $item ) => 'variable-value-has-fallback' === ( $item['type'] ?? '' )
 			)
 		);
 		foreach ( array_slice( $prefixed_variable_name_findings, 0, 20 ) as $item ) {
@@ -379,9 +379,9 @@ final class Bricks_Conversion_Validator {
 			$this->add(
 				$findings,
 				'fail',
-				'bricks_template_variable_value_missing_fallback',
+				'bricks_template_variable_value_has_fallback',
 				sprintf(
-					'Bricks global variable "%1$s" references "%2$s" without a fallback in "%3$s". Global variable definitions are emitted before/alongside imported template CSS and must be self-contained: use var(%2$s, fallback) inside project variables too.',
+					'Bricks global variable "%1$s" references "%2$s" with an inline fallback in "%3$s". Template variables must not smuggle render values through fallbacks; define the real value in the paired Kiwe Framework profile / Bricks variable push and consume bare variables in the template.',
 					(string) ( $item['name'] ?? '' ),
 					(string) ( $item['variable'] ?? '' ),
 					(string) ( $item['value'] ?? '' )
@@ -393,8 +393,8 @@ final class Bricks_Conversion_Validator {
 			$this->add(
 				$findings,
 				'fail',
-				'bricks_template_variable_value_missing_fallback_overflow',
-				sprintf( 'Bricks template export contains %d additional global variable values with CSS variable references that lack fallbacks.', count( $variable_value_fallback_findings ) - 20 ),
+				'bricks_template_variable_value_has_fallback_overflow',
+				sprintf( 'Bricks template export contains %d additional global variable values with inline CSS-variable fallbacks. Remove the fallbacks and keep the values in the Framework profile.', count( $variable_value_fallback_findings ) - 20 ),
 				'$.global_variables'
 			);
 		}
@@ -454,7 +454,7 @@ final class Bricks_Conversion_Validator {
 					$findings,
 					'fail',
 					'bricks_template_color_control_string_shape',
-					sprintf( 'Bricks color control "%1$s" on "%2$s" stores color as a plain string "%3$s". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-surface, #fff)" } for background, border, typography and related native controls; plain strings can remain in JSON but be omitted from frontend CSS.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
+					sprintf( 'Bricks color control "%1$s" on "%2$s" stores color as a plain string "%3$s". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-surface)" } for background, border, typography and related native controls; plain strings can remain in JSON but be omitted from frontend CSS.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
 					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
 				);
 			} elseif ( 'radius-shape' === (string) ( $item['type'] ?? '' ) ) {
@@ -896,7 +896,7 @@ final class Bricks_Conversion_Validator {
 				if ( '' !== $value && false !== strpos( $value, 'var(' ) ) {
 					foreach ( $this->extract_css_function_calls( $value, 'var' ) as $call ) {
 						$args = $this->split_css_args( $call );
-						if ( count( $args ) >= 2 ) {
+						if ( count( $args ) < 2 ) {
 							continue;
 						}
 						$css_variable = trim( (string) ( $args[0] ?? '' ) );
@@ -910,7 +910,7 @@ final class Bricks_Conversion_Validator {
 							'variable' => $css_variable,
 							'value'    => $value,
 							'path'     => '$.' . $lane . '[' . (int) $index . '].value',
-							'type'     => 'variable-value-missing-fallback',
+							'type'     => 'variable-value-has-fallback',
 						];
 					}
 				}
@@ -1161,7 +1161,7 @@ final class Bricks_Conversion_Validator {
 				'fail',
 				'bricks_conversion_untokenized_native_color',
 				sprintf(
-					'Bricks native style "%1$s" on "%2$s" uses direct color literal(s) "%3$s". /convert /bricks outputs must be 100%% Seam/Framework integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the token-definition layer as fallbacks, for example var(--kiwe-color-text, #201b18), but not as direct component styling such as color: #fff or --pack-bg: #f5b942.',
+					'Bricks native style "%1$s" on "%2$s" uses direct color literal(s) "%3$s". /convert /bricks outputs must be 100%% Seam/Framework integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume bare var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the Framework/global-variable definition layer, but not as direct component styling, CSS-variable fallbacks, color: #fff, or --pack-bg: #f5b942.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					implode( ', ', array_map( 'strval', (array) ( $item['literals'] ?? [] ) ) )
@@ -1189,7 +1189,7 @@ final class Bricks_Conversion_Validator {
 			}
 			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
 			$values = [];
-			$this->collect_css_variables_without_fallback( $item['settings'], $values, $path . '[' . (int) $index . '].settings' );
+			$this->collect_css_variables_with_fallback( $item['settings'], $values, $path . '[' . (int) $index . '].settings' );
 			foreach ( $values as $value ) {
 				$value['label'] = $label;
 				$found[]        = $value;
@@ -1200,9 +1200,9 @@ final class Bricks_Conversion_Validator {
 			$this->add(
 				$findings,
 				'fail',
-				'bricks_conversion_css_var_without_fallback',
+				'bricks_conversion_css_var_has_fallback',
 				sprintf(
-					'Bricks native style "%1$s" on "%2$s" references "%3$s" without a fallback in "%4$s". Bricks My Templates import cannot be trusted to install globalVariables from the same uploaded JSON; use var(%3$s, fallback) and/or require Kiwe > Framework to be pushed before import.',
+					'Bricks native style "%1$s" on "%2$s" references "%3$s" with an inline fallback in "%4$s". SeamFlow template render-owner settings must consume bare Framework/project variables only, e.g. var(%3$s). Put the actual value in the paired Kiwe Framework profile / Bricks variable push so missing profile setup fails visibly instead of silently rendering from hidden fallback values.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					(string) ( $item['variable'] ?? '' ),
@@ -1216,8 +1216,8 @@ final class Bricks_Conversion_Validator {
 			$this->add(
 				$findings,
 				'fail',
-				'bricks_conversion_css_var_without_fallback_overflow',
-				sprintf( 'Bricks native styles contain %d additional CSS variable references without fallbacks beyond the first %d. Add fallbacks or a supported variable-apply path, then rerun /audit /bricksconversion.', count( $found ) - self::CSS_VAR_FINDING_LIMIT, self::CSS_VAR_FINDING_LIMIT ),
+				'bricks_conversion_css_var_has_fallback_overflow',
+				sprintf( 'Bricks native styles contain %d additional CSS variable references with inline fallbacks beyond the first %d. Remove fallbacks from Bricks render-owner settings and define those values in the paired Framework profile, then rerun /audit /bricksconversion.', count( $found ) - self::CSS_VAR_FINDING_LIMIT, self::CSS_VAR_FINDING_LIMIT ),
 				$path
 			);
 		}
@@ -1544,7 +1544,7 @@ final class Bricks_Conversion_Validator {
 		}
 	}
 
-	private function collect_css_variables_without_fallback( mixed $value, array &$out, string $path, bool $parent_owned = false ): void {
+	private function collect_css_variables_with_fallback( mixed $value, array &$out, string $path, bool $parent_owned = false ): void {
 		if ( is_array( $value ) ) {
 			foreach ( $value as $key => $item ) {
 				$key_string = (string) $key;
@@ -1552,7 +1552,7 @@ final class Bricks_Conversion_Validator {
 					|| preg_match( self::NATIVE_STYLE_CONTROL_PATTERN, $key_string )
 					|| preg_match( self::TOKEN_OWNED_NESTED_KEY_PATTERN, $key_string )
 					|| preg_match( self::TOKEN_OWNED_COLOR_NESTED_KEY_PATTERN, $key_string );
-				$this->collect_css_variables_without_fallback( $item, $out, $path . '.' . $key_string, (bool) $owned );
+				$this->collect_css_variables_with_fallback( $item, $out, $path . '.' . $key_string, (bool) $owned );
 			}
 			return;
 		}
@@ -1563,7 +1563,7 @@ final class Bricks_Conversion_Validator {
 
 		foreach ( $this->extract_css_function_calls( $value, 'var' ) as $call ) {
 			$args = $this->split_css_args( $call );
-			if ( count( $args ) >= 2 ) {
+			if ( count( $args ) < 2 ) {
 				continue;
 			}
 			$variable = trim( (string) ( $args[0] ?? '' ) );

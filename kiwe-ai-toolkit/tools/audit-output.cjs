@@ -312,8 +312,8 @@ function collectBricksTemplateVariableNameMisuse(templateData, relPath) {
           const args = splitCssFunctionArgs(call);
           const cssVariable = String(args[0] || '').trim();
           const hasFallback = args.length >= 2 && args.slice(1).join(',').trim() !== '';
-          if (/^--[a-z][a-z0-9_-]*$/i.test(cssVariable) && !hasFallback) {
-            problems.push(`Bricks template export ${relPath} global variable "${name}" at $.${lane}[${index}].value references "${cssVariable}" without a fallback in "${value}". Project/global variable definitions must be self-contained for Bricks template imports; use var(${cssVariable}, fallback).`);
+          if (/^--[a-z][a-z0-9_-]*$/i.test(cssVariable) && hasFallback) {
+            problems.push(`Bricks template export ${relPath} global variable "${name}" at $.${lane}[${index}].value references "${cssVariable}" with an inline fallback in "${value}". Template variables must not smuggle render values through fallbacks; define the real value in the paired Kiwe Framework profile / Bricks variable push and consume bare variables in the template.`);
           }
         }
       }
@@ -344,7 +344,7 @@ function collectBricksCompilerUnsafeControls(items, prefix) {
         }
       }
       if ((key === '_background' || /^_background:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && typeof value.color === 'string') {
-        problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-surface, #fff)" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
+        problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-surface)" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
       }
       if ((key === '_background' || /^_background:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && value.color && typeof value.color === 'object' && !Array.isArray(value.color) && typeof value.color.raw === 'string' && /gradient\(/i.test(value.color.raw)) {
         problems.push(`${prefix} background color control "${key}" on "${label}" stores a gradient in color.raw. Bricks compiles _background.color to background-color, where gradients are invalid; use the native _gradient control with tokenized color stops and keep _background.color as a solid fallback.`);
@@ -359,7 +359,7 @@ function collectBricksCompilerUnsafeControls(items, prefix) {
         }
       }
       if ((key === '_typography' || /^_typography:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && typeof value.color === 'string') {
-        problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-text, #111)" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
+        problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-text)" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
       }
     }
   });
@@ -512,7 +512,7 @@ function collectCssVariablesWithoutFallback(value, out = [], trail = '$', parent
       const args = splitCssFunctionArgs(call);
       const variable = String(args[0] || '').trim();
       const hasFallback = args.length >= 2 && args.slice(1).join(',').trim() !== '';
-      if (/^--[a-z][a-z0-9_-]*$/i.test(variable) && !hasFallback) {
+      if (/^--[a-z][a-z0-9_-]*$/i.test(variable) && hasFallback) {
         out.push({ path: trail, value: String(value), variable });
       }
     }
@@ -528,7 +528,7 @@ function collectBricksVariableFallbackMisuse(items, prefix) {
     const label = item.id || item.name || item.label || `item-${index}`;
     const settings = elementSettings(item);
     for (const problem of collectCssVariablesWithoutFallback(settings, [], `$[${index}].settings`)) {
-      problems.push(`${prefix} native style "${problem.path}" on "${label}" references "${problem.variable}" without a fallback in "${problem.value}". Bricks My Templates import cannot be trusted to install globalVariables from the same uploaded JSON; use var(${problem.variable}, fallback) and/or require Kiwe > Framework to be pushed before import.`);
+      problems.push(`${prefix} native style "${problem.path}" on "${label}" references "${problem.variable}" with an inline fallback in "${problem.value}". SeamFlow template render-owner settings must consume bare Framework/project variables only, e.g. var(${problem.variable}). Put the actual value in the paired Kiwe Framework profile / Bricks variable push so missing profile setup fails visibly instead of silently rendering from hidden fallback values.`);
       if (problems.length >= limit) break;
     }
     if (problems.length >= limit) break;
@@ -537,7 +537,7 @@ function collectBricksVariableFallbackMisuse(items, prefix) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return sum;
     return sum + collectCssVariablesWithoutFallback(elementSettings(item)).length;
   }, 0);
-  if (total > limit) problems.push(`${prefix} contains ${total - limit} additional CSS variable references without fallbacks beyond the first ${limit}. Add fallbacks or a supported variable-apply path, then rerun /audit /bricksconversion.`);
+  if (total > limit) problems.push(`${prefix} contains ${total - limit} additional CSS variable references with inline fallbacks beyond the first ${limit}. Remove fallbacks from Bricks render-owner settings and define those values in the paired Framework profile, then rerun /audit /bricksconversion.`);
   return problems;
 }
 

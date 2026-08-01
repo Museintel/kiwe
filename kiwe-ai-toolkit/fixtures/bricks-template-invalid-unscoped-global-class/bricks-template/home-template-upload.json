@@ -14,10 +14,10 @@
         "_display": "flex",
         "_direction": "column",
         "_padding": {
-          "top": "var(--kiwe-space-md, 1rem)",
-          "right": "var(--kiwe-space-md, 1rem)",
-          "bottom": "var(--kiwe-space-md, 1rem)",
-          "left": "var(--kiwe-space-md, 1rem)"
+          "top": "var(--kiwe-space-md)",
+          "right": "var(--kiwe-space-md)",
+          "bottom": "var(--kiwe-space-md)",
+          "left": "var(--kiwe-space-md)"
         }
       }
     }
@@ -29,7 +29,7 @@
       "settings": {
         "_background": {
           "color": {
-            "raw": "var(--kiwe-color-surface, #fff8ef)"
+            "raw": "var(--kiwe-color-surface)"
           }
         }
       }
