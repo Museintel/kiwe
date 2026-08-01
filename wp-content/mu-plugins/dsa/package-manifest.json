@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "6.97",
+  "version": "6.98",
   "algorithm": "sha256",
   "file_count": 295,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "2c91b7d3ffd4b395bbb59db7ee4ae686ffea77c17ed216689a98035a9cfdc479"
+      "sha256": "4b1315800688e5a97905ea75d043305211f5418351738784df44eabea6c6bff7"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -337,8 +337,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 173773,
-      "sha256": "79a7c87a50892352d7fd96456d8177bc5ece51976943d54b807b6f2ff4e16c56"
+      "bytes": 177259,
+      "sha256": "c28fc85f3c0a4afc44e246d4bdfe2dcfb2f9d4e187a63e55619e39653269a09b"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -369,8 +369,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 93079,
-      "sha256": "daf0f21c288395b1461d87e2b159e7d664dfa6c823e3ebfc3e291629e9779e9f"
+      "bytes": 97311,
+      "sha256": "501b18a0f6b19575438324170140eb54db686ef3163c6e3cd1f7af337fee7e99"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,
@@ -1069,8 +1069,8 @@
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 72688,
-      "sha256": "ec1df34a007b67244b11b44859cf8fde23e2ad977286cda84947908a9c1d43f8"
+      "bytes": 73747,
+      "sha256": "02aba7203c044b839c16cbf6911c332d78ff2d38fd9d34718f12d4da1145fa88"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

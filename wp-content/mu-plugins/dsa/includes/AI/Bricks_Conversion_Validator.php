@@ -129,6 +129,7 @@ final class Bricks_Conversion_Validator {
 	private const MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
 	private const MAX_CLASS_ONLY_ELEMENT_RATIO            = 0.25;
 	private const SUPPORTED_TEMPLATE_BRICKS_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
+	private const REVIEW_ONLY_CODE_ELEMENT_ALLOWANCE_PATTERN = '/\b(?:review-only|manual-review|unsupported|code-exception)\b/i';
 	private const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_PATTERN = '/^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i';
 	private const BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN = '/^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/';
 	private const BRICKS_FONT_FAMILY_TOKEN_PATTERN = '/var\(\s*--/i';
@@ -170,6 +171,25 @@ final class Bricks_Conversion_Validator {
 
 		$this->validate_root( $conversion, $findings );
 		$this->validate_elements( $conversion, $findings, $index );
+		$runtime_code_elements = $this->bricks_runtime_code_elements( isset( $conversion['elements'] ) && is_array( $conversion['elements'] ) ? $conversion['elements'] : [] );
+		foreach ( array_slice( $runtime_code_elements, 0, 20 ) as $item ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_runtime_code_element',
+				sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). /convert /bricks must not ship representable page layout/design or JavaScript authority as a Code element; use native Bricks elements, controls, interactions, Kiwe capability attributes, or an explicit review-only unsupported exception.', (string) ( $item['label'] ?? '' ), implode( ', ', (array) ( $item['keys'] ?? [] ) ) ),
+				str_replace( '$.content/header/footer', '$.elements', (string) ( $item['path'] ?? '$.elements' ) )
+			);
+		}
+		if ( count( $runtime_code_elements ) > 20 ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_conversion_runtime_code_element_overflow',
+				sprintf( 'Bricks conversion contains %d additional runtime Code elements. Treat external-converter output as scaffold/review-only until normalized.', count( $runtime_code_elements ) - 20 ),
+				'$.elements'
+			);
+		}
 		$this->validate_tokenized_native_lengths(
 			array_merge(
 				isset( $conversion['elements'] ) && is_array( $conversion['elements'] ) ? $conversion['elements'] : [],
@@ -424,6 +444,25 @@ final class Bricks_Conversion_Validator {
 			isset( $template['globalClasses'] ) && is_array( $template['globalClasses'] ) ? $template['globalClasses'] : []
 		);
 		$native_controls = $this->count_native_style_controls( array_merge( $elements, isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [] ) );
+		$runtime_code_elements = $this->bricks_runtime_code_elements( $elements );
+		foreach ( array_slice( $runtime_code_elements, 0, 20 ) as $item ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_runtime_code_element',
+				sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). External converters may park CSS/JS in Code elements for manual review, but Kiwe /convert /bricks production output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.', (string) ( $item['label'] ?? '' ), implode( ', ', (array) ( $item['keys'] ?? [] ) ) ),
+				(string) ( $item['path'] ?? '$.content/header/footer' )
+			);
+		}
+		if ( count( $runtime_code_elements ) > 20 ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_runtime_code_element_overflow',
+				sprintf( 'Bricks template export contains %d additional runtime Code elements. Treat external-converter output as scaffold/review-only until those Code elements are normalized or documented as explicit unsupported exceptions.', count( $runtime_code_elements ) - 20 ),
+				'$.content/header/footer'
+			);
+		}
 		foreach ( array_slice( $this->bricks_implicit_layout_controls( $template_style_items ), 0, 40 ) as $item ) {
 			$type = (string) ( $item['type'] ?? '' );
 			if ( 'missing-flex-direction' === $type ) {
@@ -1061,6 +1100,59 @@ final class Bricks_Conversion_Validator {
 			}
 		}
 		return false;
+	}
+
+	private function bricks_runtime_code_elements( array $items ): array {
+		$findings = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || 'code' !== strtolower( (string) ( $item['name'] ?? '' ) ) ) {
+				continue;
+			}
+			$settings    = isset( $item['settings'] ) && is_array( $item['settings'] ) ? $item['settings'] : [];
+			$review_text = wp_json_encode(
+				[
+					'classes'    => $settings['_cssClasses'] ?? '',
+					'attributes' => $settings['_attributes'] ?? [],
+					'kiwe'       => $item['kiwe'] ?? [],
+				]
+			);
+			if ( is_string( $review_text ) && preg_match( self::REVIEW_ONLY_CODE_ELEMENT_ALLOWANCE_PATTERN, $review_text ) ) {
+				continue;
+			}
+			$runtime_keys = [];
+			foreach ( $settings as $key => $value ) {
+				$key = (string) $key;
+				if ( ! preg_match( '/^(?:code|css|cssCode|javascriptCode|js|html|php|executeCode)$/i', $key ) ) {
+					continue;
+				}
+				if ( 'executeCode' === $key && true === $value ) {
+					$runtime_keys[] = $key;
+					continue;
+				}
+				if ( is_array( $value ) ) {
+					if ( [] !== $value ) {
+						$runtime_keys[] = $key;
+					}
+					continue;
+				}
+				if ( is_object( $value ) ) {
+					$runtime_keys[] = $key;
+					continue;
+				}
+				if ( '' !== trim( (string) $value ) ) {
+					$runtime_keys[] = $key;
+				}
+			}
+			if ( [] === $runtime_keys ) {
+				continue;
+			}
+			$findings[] = [
+				'label' => (string) ( $item['id'] ?? $item['label'] ?? $item['name'] ?? 'item-' . (int) $index ),
+				'keys'  => array_values( array_unique( $runtime_keys ) ),
+				'path'  => '$.content/header/footer[' . (int) $index . '].settings',
+			];
+		}
+		return $findings;
 	}
 
 	private function bricks_compiler_unsafe_controls( array $items ): array {

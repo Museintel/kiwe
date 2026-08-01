@@ -191,6 +191,7 @@ const templateUploadMappableCssDeclarationMin = 12;
 const templateUploadMinElementNativeControlsPerElement = 1.15;
 const templateUploadMaxClassOnlyElementRatio = 0.25;
 const supportedTemplateBricksVersionPattern = /^2\.3(?:\.|$)/;
+const reviewOnlyCodeElementAllowancePattern = /\b(?:review-only|manual-review|unsupported|code-exception)\b/i;
 const bricksCompileUnsafeControlPattern = /^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/;
 const bricksFontFamilyTokenPattern = /var\(\s*--/i;
 const semanticHeadingTagPattern = /^h[1-6]$/i;
@@ -212,6 +213,23 @@ function collectBricksElementMisuse(value, out = []) {
     for (const item of value) collectBricksElementMisuse(item, out);
   } else if (value && typeof value === 'object') {
     const settings = elementSettings(value);
+    if (String(value.name || '').toLowerCase() === 'code') {
+      const reviewText = JSON.stringify({
+        classes: settings._cssClasses || '',
+        attributes: settings._attributes || [],
+        kiwe: value.kiwe || {}
+      });
+      const runtimeKeys = Object.entries(settings)
+        .filter(([key, settingValue]) => {
+          if (!/^(?:code|css|cssCode|javascriptCode|js|html|php|executeCode)$/i.test(String(key))) return false;
+          if (key === 'executeCode' && settingValue === true) return true;
+          return String(settingValue || '').trim() !== '';
+        })
+        .map(([key]) => key);
+      if (runtimeKeys.length && !reviewOnlyCodeElementAllowancePattern.test(reviewText)) {
+        out.push(`Bricks Code element "${value.id || value.label || 'unknown'}" contains runtime/custom-code settings (${Array.from(new Set(runtimeKeys)).join(', ')}). External converter output may use Code elements as a temporary scaffold, but Kiwe /convert /bricks must decompose representable layout/design into native Bricks controls or mark the artifact review-only.`);
+      }
+    }
     if (isBricksLayoutElement(value)) {
       for (const [key] of Object.entries(settings)) {
         if (/^_flexDirection(?::|$)/.test(key)) {

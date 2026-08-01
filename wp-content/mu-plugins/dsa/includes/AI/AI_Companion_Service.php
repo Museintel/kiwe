@@ -32,6 +32,7 @@ final class AI_Companion_Service {
 	private const BRICKS_SUPPORTED_TEMPLATE_VERSION_PATTERN = '/^2\.3(?:\.|$)/';
 	private const BRICKS_MIN_ELEMENT_CONTROLS_PER_ELEMENT   = 1.15;
 	private const BRICKS_MAX_CLASS_ONLY_ELEMENT_RATIO       = 0.25;
+	private const BRICKS_REVIEW_ONLY_CODE_ELEMENT_ALLOWANCE_PATTERN = '/\b(?:review-only|manual-review|unsupported|code-exception)\b/i';
 	private const BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN     = '/^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/';
 	private const BRICKS_FONT_FAMILY_TOKEN_PATTERN          = '/var\(\s*--/i';
 	private const BRICKS_SEMANTIC_HEADING_TAG_PATTERN       = '/^h[1-6]$/i';
@@ -826,7 +827,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native element settings: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Reserved prefixes are not enough: every var(--kiwe-*) or var(--seam-*) consumed by a template must exist in Kiwe’s real universal token registry/runtime. If it does not, map to an existing official token or declare a project variable such as --nc-* in the paired Framework profile. Use a single visual owner: element-native controls own render/edit fidelity in full-page template uploads, while imported global_classes are semantic/name-only. Do not duplicate paint, layout, radius, spacing, shadows, or typography into styled global_classes because that creates Bricks ghost styling after designers remove or change one visible layer. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not put fallback values in Bricks render-owner CSS variables: use var(--token), not var(--token, fallback). SeamFlow requires Kiwe > Framework profile push before template import so missing variables fail visibly instead of rendering from hidden fallback values. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), keep var(...) font stacks out of _typography.font-family because Bricks quotes them, store background/border/typography colors as Bricks color objects ({ raw: "var(--kiwe-color-text)" }) rather than plain strings, use _gradient for gradients instead of _background.color, and store border radius as _border.radius.top/right/bottom/left rather than CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Reusable styled project classes belong in the Framework profile push or a dedicated class-library artifact, not duplicated inside the page template upload. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Bricks native converter output, Code2Bricks-style output, and third-party Bricks AI skills may be used as scaffold/reference only; final Kiwe output must normalize representable design into native Bricks elements, controls, variables, attributes, interactions, conditions, and query intent. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native element settings: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Reserved prefixes are not enough: every var(--kiwe-*) or var(--seam-*) consumed by a template must exist in Kiwe’s real universal token registry/runtime. If it does not, map to an existing official token or declare a project variable such as --nc-* in the paired Framework profile. Use a single visual owner: element-native controls own render/edit fidelity in full-page template uploads, while imported global_classes are semantic/name-only. Do not duplicate paint, layout, radius, spacing, shadows, or typography into styled global_classes because that creates Bricks ghost styling after designers remove or change one visible layer. Do not use no-op clamps such as clamp(22px, 22px, 22px). Do not put fallback values in Bricks render-owner CSS variables: use var(--token), not var(--token, fallback). SeamFlow requires Kiwe > Framework profile push before template import so missing variables fail visibly instead of rendering from hidden fallback values. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), keep var(...) font stacks out of _typography.font-family because Bricks quotes them, store background/border/typography colors as Bricks color objects ({ raw: "var(--kiwe-color-text)" }) rather than plain strings, use _gradient for gradients instead of _background.color, and store border radius as _border.radius.top/right/bottom/left rather than CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Reusable styled project classes belong in the Framework profile push or a dedicated class-library artifact, not duplicated inside the page template upload. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -938,7 +939,7 @@ final class AI_Companion_Service {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
 				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Use bare CSS variables in native settings/global_classes, e.g. var(--nc-card-radius), never var(--nc-card-radius, 24px). Require Kiwe > Framework profile push before template import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, do not put var(...) font stacks in _typography.font-family, store colors as Bricks color objects, use _gradient for gradients, and store border radius as _border.radius.top/right/bottom/left.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
-				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not duplicate visual styles in both element-native controls and styled global_classes for a full-page template upload.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not put official H1-H6 token font-size locks directly on semantic Bricks Heading elements.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
+				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not ship CSS/JS Code elements from Bricks native converter, Code2Bricks, or another external converter as production output unless explicitly marked review-only unsupported.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not duplicate visual styles in both element-native controls and styled global_classes for a full-page template upload.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not put official H1-H6 token font-size locks directly on semantic Bricks Heading elements.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
 		if ( str_contains( $question_lc, 'theme' ) || str_contains( $question_lc, 'dsa' ) || 'theme' === $mode ) {
@@ -1449,6 +1450,18 @@ final class AI_Companion_Service {
 				$elements = array_merge( $elements, $data[ $area ] );
 			}
 		}
+		$runtime_code_elements = $this->review_bricks_runtime_code_elements( $elements, $path, '$.content/header/footer' );
+		foreach ( array_slice( $runtime_code_elements, 0, 20 ) as $finding ) {
+			$findings[] = $finding;
+		}
+		if ( count( $runtime_code_elements ) > 20 ) {
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_runtime_code_element_overflow',
+				'message'  => sprintf( 'Bricks template upload contains %d additional runtime Code elements. Treat external-converter output as scaffold/review-only until normalized.', count( $runtime_code_elements ) - 20 ),
+				'path'     => sanitize_text_field( $path . '#$.content/header/footer' ),
+			];
+		}
 		$native_controls = $this->count_bricks_native_style_controls( array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ) );
 		$findings        = array_merge(
 			$findings,
@@ -1552,6 +1565,60 @@ final class AI_Companion_Service {
 					];
 				}
 			}
+		}
+		return $findings;
+	}
+
+	private function review_bricks_runtime_code_elements( array $items, string $path, string $base_path ): array {
+		$findings = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || 'code' !== strtolower( (string) ( $item['name'] ?? '' ) ) ) {
+				continue;
+			}
+			$settings    = isset( $item['settings'] ) && is_array( $item['settings'] ) ? $item['settings'] : [];
+			$review_text = wp_json_encode(
+				[
+					'classes'    => $settings['_cssClasses'] ?? '',
+					'attributes' => $settings['_attributes'] ?? [],
+					'kiwe'       => $item['kiwe'] ?? [],
+				]
+			);
+			if ( is_string( $review_text ) && preg_match( self::BRICKS_REVIEW_ONLY_CODE_ELEMENT_ALLOWANCE_PATTERN, $review_text ) ) {
+				continue;
+			}
+			$runtime_keys = [];
+			foreach ( $settings as $key => $value ) {
+				$key = (string) $key;
+				if ( ! preg_match( '/^(?:code|css|cssCode|javascriptCode|js|html|php|executeCode)$/i', $key ) ) {
+					continue;
+				}
+				if ( 'executeCode' === $key && true === $value ) {
+					$runtime_keys[] = $key;
+					continue;
+				}
+				if ( is_array( $value ) ) {
+					if ( [] !== $value ) {
+						$runtime_keys[] = $key;
+					}
+					continue;
+				}
+				if ( is_object( $value ) ) {
+					$runtime_keys[] = $key;
+					continue;
+				}
+				if ( '' !== trim( (string) $value ) ) {
+					$runtime_keys[] = $key;
+				}
+			}
+			if ( [] === $runtime_keys ) {
+				continue;
+			}
+			$findings[] = [
+				'severity' => 'error',
+				'code'     => 'bricks_template_upload_runtime_code_element',
+				'message'  => sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). External converters may park CSS/JS in Code elements for manual review, but Kiwe /convert /bricks production output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.', (string) ( $item['id'] ?? $item['label'] ?? $item['name'] ?? 'item-' . (int) $index ), implode( ', ', array_unique( $runtime_keys ) ) ),
+				'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings' ),
+			];
 		}
 		return $findings;
 	}

@@ -217,6 +217,7 @@ const TEMPLATE_UPLOAD_MAPPABLE_CSS_DECLARATION_MIN = 12;
 const TEMPLATE_UPLOAD_MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
 const TEMPLATE_UPLOAD_MAX_CLASS_ONLY_ELEMENT_RATIO = 0.25;
 const SUPPORTED_TEMPLATE_BRICKS_VERSION_RE = /^2\.3(?:\.|$)/;
+const REVIEW_ONLY_CODE_ELEMENT_ALLOWANCE_RE = /\b(?:review-only|manual-review|unsupported|code-exception)\b/i;
 const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_RE = /^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i;
 const BRICKS_COMPILE_UNSAFE_CONTROL_RE = /^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/;
 const BRICKS_FONT_FAMILY_TOKEN_RE = /var\(\s*--/i;
@@ -610,6 +611,43 @@ function collectDeclaredCssVariables(value, out = new Set()) {
 
   for (const item of Object.values(value)) collectDeclaredCssVariables(item, out);
   return out;
+}
+
+function collectRuntimeCodeElements(items) {
+  const findings = [];
+  asArray(items).forEach((item, index) => {
+    if (!isPlainObject(item)) return;
+    if (String(item.name || '').toLowerCase() !== 'code') return;
+
+    const settings = elementSettings(item);
+    const label = String(item.id || item.label || item.name || `item-${index}`);
+    const reviewText = JSON.stringify({
+      classes: settings._cssClasses || '',
+      attributes: settings._attributes || [],
+      kiwe: item.kiwe || {}
+    });
+    const hasReviewOnlyAllowance = REVIEW_ONLY_CODE_ELEMENT_ALLOWANCE_RE.test(reviewText);
+    const runtimeKeys = [];
+
+    for (const [key, value] of Object.entries(settings)) {
+      const keyName = String(key);
+      if (/^(?:code|css|cssCode|javascriptCode|js|html|php|executeCode)$/i.test(keyName) && String(value || '').trim() !== '') {
+        runtimeKeys.push(keyName);
+      }
+      if (keyName === 'executeCode' && value === true) {
+        runtimeKeys.push(keyName);
+      }
+    }
+
+    if (runtimeKeys.length && !hasReviewOnlyAllowance) {
+      findings.push({
+        label,
+        keys: Array.from(new Set(runtimeKeys)),
+        path: `$.content/header/footer[${index}].settings`,
+      });
+    }
+  });
+  return findings;
 }
 
 function collectTemplateVariableNameFindings(templateData) {
@@ -1532,6 +1570,25 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     .concat(asArray(templateData.globalClasses));
   const declaredVariables = collectDeclaredCssVariables(templateData);
   validateBricksTemplateElements(root, templatePath, templateElements, findings);
+  const runtimeCodeElements = collectRuntimeCodeElements(templateElements);
+  for (const item of runtimeCodeElements.slice(0, 20)) {
+    add(
+      findings,
+      'fail',
+      `Bricks Code element "${item.label}" contains runtime/custom-code settings (${item.keys.join(', ')}). External converters may park CSS/JS in Code elements for manual review, but Kiwe /convert /bricks production output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.`,
+      rel(root, templatePath),
+      item.path
+    );
+  }
+  if (runtimeCodeElements.length > 20) {
+    add(
+      findings,
+      'fail',
+      `Bricks template export contains ${runtimeCodeElements.length - 20} additional runtime Code elements. Treat external-converter output as scaffold/review-only until those Code elements are normalized or documented as explicit unsupported exceptions.`,
+      rel(root, templatePath),
+      '$.content/header/footer'
+    );
+  }
   const templateNativeControls = collectNativeStyleControlsFromItems(
     templateStyleItems
   );
@@ -2363,6 +2420,25 @@ export function validateBricksConversion(target = '.', options = {}) {
     }
     validateRoot(conversion, findings, conversionRel, root);
     validateElements(asArray(conversion.elements), findings, conversionRel, siteIndex);
+    const conversionRuntimeCodeElements = collectRuntimeCodeElements(asArray(conversion.elements));
+    for (const item of conversionRuntimeCodeElements.slice(0, 20)) {
+      add(
+        findings,
+        'fail',
+        `Bricks Code element "${item.label}" contains runtime/custom-code settings (${item.keys.join(', ')}). /convert /bricks must not ship representable page layout/design or JavaScript authority as a Code element; use native Bricks elements, controls, interactions, Kiwe capability attributes, or an explicit review-only unsupported exception.`,
+        conversionRel,
+        item.path.replace('$.content/header/footer', '$.elements')
+      );
+    }
+    if (conversionRuntimeCodeElements.length > 20) {
+      add(
+        findings,
+        'fail',
+        `Bricks conversion contains ${conversionRuntimeCodeElements.length - 20} additional runtime Code elements. Treat external-converter output as scaffold/review-only until normalized.`,
+        conversionRel,
+        '$.elements'
+      );
+    }
     const website = readWebsiteText(root);
     validateSourceParity({
       conversion,

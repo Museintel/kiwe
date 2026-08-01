@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "6.97",
+    "contractVersion": "6.98",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -62,7 +62,7 @@
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.97", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 6.98", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -312,7 +312,7 @@
       "phase": "convert",
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md", "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"],
       "requires": ["website/bricks-paste.html", "Framework profile or confirmed Bricks Theme Style already pushed"],
-      "must": ["preserve all Seam classes/attributes and Kiwe capability attributes", "use Bricks-native element controls as the full-page template render/edit owner before custom CSS", "use Bricks global variables for token definitions", "keep imported global_classes semantic/name-only unless the command explicitly targets a class-library artifact", "native Bricks settings must consume Framework tokens/project variables without inline fallbacks; direct component colors, hardcoded lengths, and var(--token, fallback) render-owner values are fail-level issues", "fail duplicate visual ownership where styled global_classes and element-native controls both carry paint/layout/radius/spacing/typography", "when live Bricks preview/builder proof is used, check for stale page custom CSS and old matching selectors before judging the current template"],
+      "must": ["preserve all Seam classes/attributes and Kiwe capability attributes", "use Bricks-native element controls as the full-page template render/edit owner before custom CSS", "use Bricks global variables for token definitions", "keep imported global_classes semantic/name-only unless the command explicitly targets a class-library artifact", "native Bricks settings must consume Framework tokens/project variables without inline fallbacks; direct component colors, hardcoded lengths, and var(--token, fallback) render-owner values are fail-level issues", "fail duplicate visual ownership where styled global_classes and element-native controls both carry paint/layout/radius/spacing/typography", "treat Bricks native converter, Code2Bricks-style tools, and third-party Bricks skills as candidate/scaffold input only until Kiwe normalizes them into native controls and validator proof", "when live Bricks preview/builder proof is used, check for stale page custom CSS and old matching selectors before judging the current template"],
       "output": ["bricks-template/[page-or-template-name]-template-upload.json"],
       "targetTypes": {
         "homepageBody": "title Home, templateType content, content[]",
@@ -328,7 +328,7 @@
       "phase": "audit",
       "read": ["kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
       "requires": ["Bricks conversion envelope or native Bricks template upload JSON"],
-      "must": ["fail direct component color literals such as #fff, rgba(...), gradients with literal stops, local --project-token: #... declarations outside token/global variable definitions, and var(--token, fallback) values in Bricks render-owner settings", "fail hardcoded native lengths and no-op clamps in token-owned Bricks settings", "fail styled importable global_classes in full-page template uploads when element-native controls already own visual fidelity"],
+      "must": ["fail direct component color literals such as #fff, rgba(...), gradients with literal stops, local --project-token: #... declarations outside token/global variable definitions, and var(--token, fallback) values in Bricks render-owner settings", "fail hardcoded native lengths and no-op clamps in token-owned Bricks settings", "fail runtime Code elements or CSS/JS Code-element buckets unless explicitly marked review-only unsupported exceptions", "fail styled importable global_classes in full-page template uploads when element-native controls already own visual fidelity"],
       "output": ["pass/fail findings only"],
       "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
       "finalResponse": "PASS/FAIL with blocking errors and warnings."
