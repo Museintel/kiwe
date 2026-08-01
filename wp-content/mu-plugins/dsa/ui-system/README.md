@@ -220,6 +220,8 @@ Batch 91 closes the second Bricks native-template render gap from the same live 
 
 Batch 92 closes the third Bricks native-template render gap from the same live test. Bricks source review of `includes/assets.php` confirmed that border radius is compiled from `_border.radius.top`, `_border.radius.right`, `_border.radius.bottom`, and `_border.radius.left`; CSS-corner keys such as `topLeft`, `topRight`, `bottomRight`, and `bottomLeft` can survive JSON import while compiling to no visible radius. `/audit /bricksconversion`, the generic output audit, Kiwe Companion, and the REST/PHP validator now fail those radius shapes and direct external AI to Bricks' source-backed radius key contract. The SeamFlow contract and MU loader/package entry are synchronized at `6.91`.
 
+Batch 93 closes the semantic-heading editability gap from the National Chikki SeamFlow test. A Bricks template can render while still freezing heading scale by putting `_typography.font-size: var(--kiwe-type-h3, ...)` directly on a semantic `heading` element tagged `h3`; that defeats the visual-editor promise because changing the tag to h2/h4 no longer lets Bricks Theme Style control the size. `/audit /bricksconversion`, the generic output audit, Kiwe Companion, and the REST/PHP validator now fail official H1-H6 token font-size locks on semantic Bricks Heading elements. H1-H6 scale belongs in `Kiwe > Framework` / Bricks Theme Style; component-specific display or card-title art direction may still use project classes/tokens, but it must not masquerade as the semantic heading scale. The SeamFlow contract and MU loader/package entry are synchronized at `6.92`.
+
 ## htmx and Alpine
 
 htmx and Alpine are not part of the current Kiwe AppShell/theme output.

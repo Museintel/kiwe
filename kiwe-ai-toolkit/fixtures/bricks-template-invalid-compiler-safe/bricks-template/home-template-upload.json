@@ -8,7 +8,8 @@
       "name": "section",
       "parent": "0",
       "children": [
-        "bad002"
+        "bad002",
+        "bad003"
       ],
       "settings": {
         "_cssClasses": "seam-section nc-bad-section",
@@ -41,6 +42,19 @@
         "tag": "h1",
         "text": "Broken compiler shape",
         "_cssClasses": "seam-title"
+      }
+    },
+    {
+      "id": "bad003",
+      "name": "heading",
+      "parent": "bad001",
+      "children": [],
+      "settings": {
+        "tag": "h3",
+        "text": "Locked semantic heading",
+        "_typography": {
+          "font-size": "var(--kiwe-type-h3, 2rem)"
+        }
       }
     }
   ],

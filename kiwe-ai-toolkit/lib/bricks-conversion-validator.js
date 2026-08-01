@@ -220,6 +220,8 @@ const SUPPORTED_TEMPLATE_BRICKS_VERSION_RE = /^2\.3(?:\.|$)/;
 const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_RE = /^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i;
 const BRICKS_COMPILE_UNSAFE_CONTROL_RE = /^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/;
 const BRICKS_FONT_FAMILY_TOKEN_RE = /var\(\s*--/i;
+const SEMANTIC_HEADING_TAG_RE = /^h[1-6]$/i;
+const SEMANTIC_HEADING_TYPE_TOKEN_RE = /var\(\s*--(?:kiwe|seam)-type-h[1-6]\b/i;
 const TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST = new Set([
   'is-active',
   'is-current',
@@ -637,6 +639,7 @@ function collectBricksCompilerUnsafeControls(items) {
   asArray(items).forEach((item, index) => {
     const settings = elementSettings(item);
     const label = String(item?.id || item?.name || item?.label || `item-${index}`);
+    const isSemanticHeading = String(item?.name || '').toLowerCase() === 'heading' && SEMANTIC_HEADING_TAG_RE.test(String(settings.tag || ''));
     for (const [key, value] of Object.entries(settings)) {
       if (BRICKS_COMPILE_UNSAFE_CONTROL_RE.test(key)) {
         findings.push({
@@ -648,6 +651,17 @@ function collectBricksCompilerUnsafeControls(items) {
         });
       }
       if ((key === '_typography' || /^_typography:/.test(key)) && isPlainObject(value)) {
+        const fontSize = value['font-size'] ?? value.fontSize ?? value.font_size;
+        if (isSemanticHeading && typeof fontSize === 'string' && SEMANTIC_HEADING_TYPE_TOKEN_RE.test(fontSize)) {
+          findings.push({
+            type: 'semantic-heading-font-size-lock',
+            label,
+            key,
+            value: fontSize,
+            tag: String(settings.tag || ''),
+            path: `$.content/header/footer/global_classes[${index}].settings.${key}.font-size`
+          });
+        }
         const fontFamily = value['font-family'] ?? value.fontFamily ?? value.font_family;
         if (typeof fontFamily === 'string' && BRICKS_FONT_FAMILY_TOKEN_RE.test(fontFamily)) {
           findings.push({
@@ -1302,6 +1316,14 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
         findings,
         'fail',
         `Bricks typography control "${item.key}" on "${item.label}" stores font-family as "${item.value}". Bricks compiles typography font families as quoted values, so CSS-variable font stacks become invalid like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'semantic-heading-font-size-lock') {
+      add(
+        findings,
+        'fail',
+        `Bricks semantic heading "${item.label}" is tagged "${item.tag}" but locks its own font-size to "${item.value}". Semantic heading scale belongs in Kiwe > Framework / Bricks Theme Style; remove local heading-token font-size so changing h3 to h2/h4 in Bricks uses the selected heading level.`,
         rel(root, templatePath),
         item.path
       );

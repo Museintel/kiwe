@@ -193,6 +193,8 @@ const templateUploadMaxClassOnlyElementRatio = 0.25;
 const supportedTemplateBricksVersionPattern = /^2\.3(?:\.|$)/;
 const bricksCompileUnsafeControlPattern = /^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/;
 const bricksFontFamilyTokenPattern = /var\(\s*--/i;
+const semanticHeadingTagPattern = /^h[1-6]$/i;
+const semanticHeadingTypeTokenPattern = /var\(\s*--(?:kiwe|seam)-type-h[1-6]\b/i;
 const bricksImportMethods = new Set(['review-only', 'bricks-clipboard-json', 'bricks-admin-template-upload', 'kiwe-staging-executor']);
 
 function isBricksLayoutElement(value) {
@@ -316,11 +318,16 @@ function collectBricksCompilerUnsafeControls(items, prefix) {
   list.forEach((item, index) => {
     const settings = elementSettings(item);
     const label = String(item?.id || item?.name || item?.label || `item-${index}`);
+    const isSemanticHeading = String(item?.name || '').toLowerCase() === 'heading' && semanticHeadingTagPattern.test(String(settings.tag || ''));
     for (const [key, value] of Object.entries(settings)) {
       if (bricksCompileUnsafeControlPattern.test(key)) {
         problems.push(`${prefix} native control "${key}" on "${label}" is not compiler-safe for My Templates output. Use Bricks source-backed controls _widthMin/_widthMax/_heightMin/_heightMax instead of _minWidth/_maxWidth/_minHeight/_maxHeight; otherwise Bricks can keep the JSON but silently omit the frontend CSS rule.`);
       }
       if ((key === '_typography' || /^_typography:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value)) {
+        const fontSize = value['font-size'] ?? value.fontSize ?? value.font_size;
+        if (isSemanticHeading && typeof fontSize === 'string' && semanticHeadingTypeTokenPattern.test(fontSize)) {
+          problems.push(`${prefix} semantic heading "${label}" is tagged "${String(settings.tag || '')}" but locks its own font-size to "${fontSize}". Semantic heading scale belongs in Kiwe > Framework / Bricks Theme Style; remove local heading-token font-size so changing h3 to h2/h4 in Bricks uses the selected heading level.`);
+        }
         const fontFamily = value['font-family'] ?? value.fontFamily ?? value.font_family;
         if (typeof fontFamily === 'string' && bricksFontFamilyTokenPattern.test(fontFamily)) {
           problems.push(`${prefix} typography control "${key}" on "${label}" stores font-family as "${fontFamily}". Bricks quotes typography font-family output, so CSS-variable font stacks become invalid literal families like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.`);

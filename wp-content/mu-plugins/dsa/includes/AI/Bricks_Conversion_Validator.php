@@ -132,6 +132,8 @@ final class Bricks_Conversion_Validator {
 	private const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_PATTERN = '/^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i';
 	private const BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN = '/^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/';
 	private const BRICKS_FONT_FAMILY_TOKEN_PATTERN = '/var\(\s*--/i';
+	private const SEMANTIC_HEADING_TAG_PATTERN = '/^h[1-6]$/i';
+	private const SEMANTIC_HEADING_TYPE_TOKEN_PATTERN = '/var\(\s*--(?:kiwe|seam)-type-h[1-6]\b/i';
 	private const TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST = [
 		'is-active',
 		'is-current',
@@ -437,6 +439,14 @@ final class Bricks_Conversion_Validator {
 					'fail',
 					'bricks_template_typography_font_family_token',
 					sprintf( 'Bricks typography control "%1$s" on "%2$s" stores font-family as "%3$s". Bricks compiles typography font families as quoted values, so CSS-variable font stacks become invalid like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
+					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
+				);
+			} elseif ( 'semantic-heading-font-size-lock' === (string) ( $item['type'] ?? '' ) ) {
+				$this->add(
+					$findings,
+					'fail',
+					'bricks_template_semantic_heading_font_size_lock',
+					sprintf( 'Bricks semantic heading "%1$s" is tagged "%2$s" but locks its own font-size to "%3$s". Semantic heading scale belongs in Kiwe > Framework / Bricks Theme Style; remove local heading-token font-size so changing h3 to h2/h4 in Bricks uses the selected heading level.', (string) ( $item['label'] ?? '' ), (string) ( $item['tag'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
 					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
 				);
 			} elseif ( 'color-shape' === (string) ( $item['type'] ?? '' ) ) {
@@ -892,7 +902,8 @@ final class Bricks_Conversion_Validator {
 			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
 				continue;
 			}
-			$label = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$label               = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$is_semantic_heading = 'heading' === strtolower( (string) ( $item['name'] ?? '' ) ) && preg_match( self::SEMANTIC_HEADING_TAG_PATTERN, (string) ( $item['settings']['tag'] ?? '' ) );
 			foreach ( $item['settings'] as $key => $value ) {
 				$key = (string) $key;
 				if ( preg_match( self::BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN, $key ) ) {
@@ -905,6 +916,17 @@ final class Bricks_Conversion_Validator {
 					];
 				}
 				if ( ( '_typography' === $key || preg_match( '/^_typography:/', $key ) ) && is_array( $value ) ) {
+					$font_size = $value['font-size'] ?? $value['fontSize'] ?? $value['font_size'] ?? null;
+					if ( $is_semantic_heading && is_string( $font_size ) && preg_match( self::SEMANTIC_HEADING_TYPE_TOKEN_PATTERN, $font_size ) ) {
+						$findings[] = [
+							'type'  => 'semantic-heading-font-size-lock',
+							'label' => $label,
+							'key'   => $key,
+							'value' => $font_size,
+							'tag'   => (string) ( $item['settings']['tag'] ?? '' ),
+							'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.font-size',
+						];
+					}
 					$font_family = $value['font-family'] ?? $value['fontFamily'] ?? $value['font_family'] ?? null;
 					if ( is_string( $font_family ) && preg_match( self::BRICKS_FONT_FAMILY_TOKEN_PATTERN, $font_family ) ) {
 						$findings[] = [

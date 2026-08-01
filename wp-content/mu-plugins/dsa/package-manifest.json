@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "6.91",
+  "version": "6.92",
   "algorithm": "sha256",
   "file_count": 295,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "66e2da27f9f1f3378aabb19715207d572897c51431dc4f8e6b1c9c5acb54410e"
+      "sha256": "8e0ae26ecbe300fb4a86da6c5e977235b79feaf1c7594b5a3d3f69d282dd4892"
     },
     "framework-system/bricks/bricks-capabilities.json": {
       "bytes": 5550,
@@ -349,8 +349,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 154840,
-      "sha256": "3e58c755de88249d362e759abe4cbf9d797963a07cb463ffd89fa0726ed5ca40"
+      "bytes": 156477,
+      "sha256": "764e7b44cad77af5d66569902c797643a3abd41e78e3a229ec7de0d8ea778521"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -365,16 +365,16 @@
       "sha256": "22136ed40c4b8d4b25555aefa7c51ec9d301109a30059b944ed0895ff4e618f2"
     },
     "includes/AI/Bricks_AI_Intelligence_Service.php": {
-      "bytes": 30595,
-      "sha256": "89de89e650e64f369e452f6be9723a943b099d4366591d9765d312a81c4e4556"
+      "bytes": 30864,
+      "sha256": "5584a02e915b674e555f87d39a3f801a029aec83487fcac8a9c35218440465fb"
     },
     "includes/AI/Bricks_Controlled_Adapter_Service.php": {
       "bytes": 17537,
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 74489,
-      "sha256": "3c44dd2438d837ed7387ee2845a1d46d9a06c73abbc0da9b01de1f7f4339d961"
+      "bytes": 76078,
+      "sha256": "8de48cd7b09dedad4b55527aaa2b4e82f8f7e0974af7fb7d66ab9d90c25c28e8"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,
@@ -1137,8 +1137,8 @@
       "sha256": "4bb106ea6ce32ef3ac46e7e8ba6fe6a9e33957dcf0c6dc35793c91a52f5f6c0f"
     },
     "ui-system/README.md": {
-      "bytes": 68063,
-      "sha256": "f6263c1e72de2148b829c039e75496dfd37331843ebacfaf86e7385db117bedd"
+      "bytes": 68934,
+      "sha256": "7dea187a62f06f4316cedc4bc1f3380e74e6a4459aa0dad9cfae79289b5e0467"
     },
     "ui-system/screen-payloads.json": {
       "bytes": 15881,

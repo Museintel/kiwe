@@ -34,6 +34,8 @@ final class AI_Companion_Service {
 	private const BRICKS_MAX_CLASS_ONLY_ELEMENT_RATIO       = 0.25;
 	private const BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN     = '/^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/';
 	private const BRICKS_FONT_FAMILY_TOKEN_PATTERN          = '/var\(\s*--/i';
+	private const BRICKS_SEMANTIC_HEADING_TAG_PATTERN       = '/^h[1-6]$/i';
+	private const BRICKS_SEMANTIC_HEADING_TYPE_TOKEN_PATTERN = '/var\(\s*--(?:kiwe|seam)-type-h[1-6]\b/i';
 
 	public function __construct(
 		private Settings $settings,
@@ -874,7 +876,7 @@ final class AI_Companion_Service {
 			[
 				'id'      => 'bricks-native-token-purity',
 				'title'   => 'Bricks-native controls must consume Framework tokens',
-				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use official var(--kiwe-*)/var(--seam-*) tokens when the meaning and property domain match; use declared project variables for stable art-direction constants; use real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count. For native Bricks template uploads, bare var(--token) is not enough; use var(--token, fallback) unless the flow applies Kiwe > Framework before template import. Bricks border radius must be stored as _border.radius.top/right/bottom/left, not CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft.',
+				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use official var(--kiwe-*)/var(--seam-*) tokens when the meaning and property domain match; use declared project variables for stable art-direction constants; use real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count. For native Bricks template uploads, bare var(--token) is not enough; use var(--token, fallback) unless the flow applies Kiwe > Framework before template import. Bricks border radius must be stored as _border.radius.top/right/bottom/left, not CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Semantic Bricks Heading elements tagged h1-h6 must not carry local official heading-token font-size locks such as var(--kiwe-type-h3, 2rem); H1-H6 scale belongs in Kiwe > Framework / Bricks Theme Style so designers can change the heading tag and get the matching Bricks heading size.',
 				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
 			],
 			[
@@ -936,7 +938,7 @@ final class AI_Companion_Service {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
 				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Give every CSS variable consumed by native settings/global_classes a fallback for human My Templates upload, because top-level globalVariables may not hydrate during import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, do not put var(...) font stacks in _typography.font-family, store colors as Bricks color objects, use _gradient for gradients, and store border radius as _border.radius.top/right/bottom/left.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
-				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
+				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not put official H1-H6 token font-size locks directly on semantic Bricks Heading elements.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
 		if ( str_contains( $question_lc, 'theme' ) || str_contains( $question_lc, 'dsa' ) || 'theme' === $mode ) {
@@ -1534,7 +1536,8 @@ final class AI_Companion_Service {
 			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
 				continue;
 			}
-			$label = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$label               = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$is_semantic_heading = 'heading' === strtolower( (string) ( $item['name'] ?? '' ) ) && preg_match( self::BRICKS_SEMANTIC_HEADING_TAG_PATTERN, (string) ( $item['settings']['tag'] ?? '' ) );
 			foreach ( $item['settings'] as $key => $value ) {
 				$key = (string) $key;
 				if ( preg_match( self::BRICKS_COMPILE_UNSAFE_CONTROL_PATTERN, $key ) ) {
@@ -1546,6 +1549,15 @@ final class AI_Companion_Service {
 					];
 				}
 				if ( ( '_typography' === $key || preg_match( '/^_typography:/', $key ) ) && is_array( $value ) ) {
+					$font_size = $value['font-size'] ?? $value['fontSize'] ?? $value['font_size'] ?? null;
+					if ( $is_semantic_heading && is_string( $font_size ) && preg_match( self::BRICKS_SEMANTIC_HEADING_TYPE_TOKEN_PATTERN, $font_size ) ) {
+						$findings[] = [
+							'severity' => 'error',
+							'code'     => 'bricks_template_upload_semantic_heading_font_size_lock',
+							'message'  => sprintf( 'Bricks semantic heading "%1$s" is tagged "%2$s" but locks its own font-size to "%3$s". Semantic heading scale belongs in Kiwe > Framework / Bricks Theme Style; remove local heading-token font-size so changing h3 to h2/h4 in Bricks uses the selected heading level.', $label, (string) ( $item['settings']['tag'] ?? '' ), $font_size ),
+							'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.font-size' ),
+						];
+					}
 					$font_family = $value['font-family'] ?? $value['fontFamily'] ?? $value['font_family'] ?? null;
 					if ( is_string( $font_family ) && preg_match( self::BRICKS_FONT_FAMILY_TOKEN_PATTERN, $font_family ) ) {
 						$findings[] = [
