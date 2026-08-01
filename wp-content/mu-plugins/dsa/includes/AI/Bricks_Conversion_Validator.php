@@ -502,6 +502,23 @@ final class Bricks_Conversion_Validator {
 		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $editability['class_only_ratio'] > self::MAX_CLASS_ONLY_ELEMENT_RATIO ) {
 			$this->add( $findings, 'fail', 'bricks_template_class_hydration_dependency', sprintf( 'Large Bricks template export has %1$d of %2$d elements (%3$d%%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.', $editability['class_only_elements'], count( $elements ), (int) round( $editability['class_only_ratio'] * 100 ) ), '$.content' );
 		}
+
+		$styled_global_classes = $this->styled_template_global_classes( isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [] );
+		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && [] !== $styled_global_classes ) {
+			$names = array_map(
+				static function ( array $item ): string {
+					return '' !== (string) ( $item['name'] ?? '' ) ? (string) $item['name'] : ( '' !== (string) ( $item['id'] ?? '' ) ? (string) $item['id'] : '(unnamed)' );
+				},
+				array_slice( $styled_global_classes, 0, 12 )
+			);
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_multi_owner_global_class_styles',
+				sprintf( 'Large Bricks template export imports %1$d styled global_classes (%2$s%3$s) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. /convert /bricks template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.', count( $styled_global_classes ), implode( ', ', $names ), count( $styled_global_classes ) > 12 ? ', ...' : '' ),
+				'$.global_classes'
+			);
+		}
 	}
 
 	private function template_element_count( array $template ): int {
@@ -1022,6 +1039,24 @@ final class Bricks_Conversion_Validator {
 			}
 		}
 		return $count;
+	}
+
+	private function styled_template_global_classes( array $global_classes ): array {
+		$styled = [];
+		foreach ( $global_classes as $global_class ) {
+			if ( ! is_array( $global_class ) ) {
+				continue;
+			}
+			$controls = $this->count_native_style_controls_on_item( $global_class );
+			if ( $controls > 0 ) {
+				$styled[] = [
+					'id'       => (string) ( $global_class['id'] ?? '' ),
+					'name'     => (string) ( $global_class['name'] ?? '' ),
+					'controls' => $controls,
+				];
+			}
+		}
+		return $styled;
 	}
 
 	private function template_editability_stats( array $elements ): array {

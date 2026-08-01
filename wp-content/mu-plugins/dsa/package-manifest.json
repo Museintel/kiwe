@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "6.92",
+  "version": "6.93",
   "algorithm": "sha256",
   "file_count": 295,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "8e0ae26ecbe300fb4a86da6c5e977235b79feaf1c7594b5a3d3f69d282dd4892"
+      "sha256": "77bcb2924c69838a240fab0d3b444ab82aea2a680ac42b3fa10b15e272fa5a68"
     },
     "framework-system/bricks/bricks-capabilities.json": {
       "bytes": 5550,
@@ -336,21 +336,21 @@
       "bytes": 588189,
       "sha256": "6e1b8a640ffaacba1bfc7850ec99585864c792dead3ce91b9dd94ef531510e06"
     },
-    "includes/AI/Access_Key_Service.php": {
-      "bytes": 7864,
-      "sha256": "0002aef95ac107897cda9982ea7514c67248336fba0bc3454eb498d11149763c"
-    },
     "includes/AI/Accessibility_Validator.php": {
       "bytes": 24350,
       "sha256": "6d3aafd3caf06339beced973380d68e5399ad75648850e4a1982c89c4a21f2a4"
+    },
+    "includes/AI/Access_Key_Service.php": {
+      "bytes": 7864,
+      "sha256": "0002aef95ac107897cda9982ea7514c67248336fba0bc3454eb498d11149763c"
     },
     "includes/AI/AI_Companion_Memory_Service.php": {
       "bytes": 3948,
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 156477,
-      "sha256": "764e7b44cad77af5d66569902c797643a3abd41e78e3a229ec7de0d8ea778521"
+      "bytes": 156787,
+      "sha256": "a9d5abfe529b1efd70f065f2e2ad7ff71d2be81d3140bb4386728f63ccd01d4c"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -365,16 +365,16 @@
       "sha256": "22136ed40c4b8d4b25555aefa7c51ec9d301109a30059b944ed0895ff4e618f2"
     },
     "includes/AI/Bricks_AI_Intelligence_Service.php": {
-      "bytes": 30864,
-      "sha256": "5584a02e915b674e555f87d39a3f801a029aec83487fcac8a9c35218440465fb"
+      "bytes": 31246,
+      "sha256": "6bbbcdd162794fb2c9812ed683d3ed94263d0c2572286fb49954fcc98e740e56"
     },
     "includes/AI/Bricks_Controlled_Adapter_Service.php": {
       "bytes": 17537,
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 76078,
-      "sha256": "8de48cd7b09dedad4b55527aaa2b4e82f8f7e0974af7fb7d66ab9d90c25c28e8"
+      "bytes": 77996,
+      "sha256": "94ad4c3f81beac69ec350ddb6abadc5ab451ba9166437a193c129294fddf67fb"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,
@@ -592,6 +592,10 @@
       "bytes": 10712,
       "sha256": "96a75d9fdadd8a0edca9008f25aff591ccda8e67230b179078139f26d4bedba9"
     },
+    "includes/PhoneKey/phonekey-core.php": {
+      "bytes": 129524,
+      "sha256": "aee8e283a9355e3a2700510e5426ef81161fe9456fcd30bcbe0a2b23b53e04b5"
+    },
     "includes/PhoneKey/PhoneKey_Bridge.php": {
       "bytes": 5793,
       "sha256": "918fe0ce5cd01340cbe0b150d044da781dcb4c1ce3c7d5615766022ebc797feb"
@@ -599,10 +603,6 @@
     "includes/PhoneKey/PhoneKey_Core_Loader.php": {
       "bytes": 400,
       "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
-    },
-    "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 129524,
-      "sha256": "aee8e283a9355e3a2700510e5426ef81161fe9456fcd30bcbe0a2b23b53e04b5"
     },
     "includes/Plugin.php": {
       "bytes": 10235,
@@ -732,6 +732,22 @@
       "bytes": 18161,
       "sha256": "609bd835ad5afc7cc70a1155ae19f378b74991f5be0317e27e30ee7d213de206"
     },
+    "includes/Secure/securetrack-admin-core.php": {
+      "bytes": 137052,
+      "sha256": "3434267efa6b06d08db0881ff8a7a32f660338fc04b780172dba23d364a1757f"
+    },
+    "includes/Secure/securetrack-admin-extended.php": {
+      "bytes": 62603,
+      "sha256": "dfb9df925c4036ee247303934abe175601a98b5ca3422a7ed16c76625aa9cae3"
+    },
+    "includes/Secure/securetrack-core.php": {
+      "bytes": 152867,
+      "sha256": "6c5711d5a4ffc486927a7b7a29a76af4432a1b9c50b45212322ec5522d6addd0"
+    },
+    "includes/Secure/securetrack-site-brain.php": {
+      "bytes": 34543,
+      "sha256": "1b99ea0a352337f255aa0f24a09482c8ed88a50aa5e7d90be33a633bd375619f"
+    },
     "includes/Secure/SecureTrack_Admin_Data_Service.php": {
       "bytes": 2545,
       "sha256": "fbdefcbc10841f69b501113e23f3d72864ef1459488d7d315741eb08957e8bb1"
@@ -768,22 +784,6 @@
       "bytes": 5543,
       "sha256": "4a5c00c8d4ec43334e7ebdf4d5bff726b824d7706bc570aa173dca1884d2b999"
     },
-    "includes/Secure/securetrack-admin-core.php": {
-      "bytes": 137052,
-      "sha256": "3434267efa6b06d08db0881ff8a7a32f660338fc04b780172dba23d364a1757f"
-    },
-    "includes/Secure/securetrack-admin-extended.php": {
-      "bytes": 62603,
-      "sha256": "dfb9df925c4036ee247303934abe175601a98b5ca3422a7ed16c76625aa9cae3"
-    },
-    "includes/Secure/securetrack-core.php": {
-      "bytes": 152867,
-      "sha256": "6c5711d5a4ffc486927a7b7a29a76af4432a1b9c50b45212322ec5522d6addd0"
-    },
-    "includes/Secure/securetrack-site-brain.php": {
-      "bytes": 34543,
-      "sha256": "1b99ea0a352337f255aa0f24a09482c8ed88a50aa5e7d90be33a633bd375619f"
-    },
     "includes/Security/Secret_Store.php": {
       "bytes": 6774,
       "sha256": "ba8f795ff9d0a7523884d78557af43d21681ffe9d2577cd2b482e78877f06c8e"
@@ -792,6 +792,10 @@
       "bytes": 22141,
       "sha256": "086b5a96adeff40e8cc6421bce0fb20cd5dedae818c231ce3e5afe6dd7e1495e"
     },
+    "includes/Site/Site_Identity_Service.php": {
+      "bytes": 9193,
+      "sha256": "3e2c3113152248b667b33d9954da649919e599b9b2c6a76ee3245d423717ee2b"
+    },
     "includes/Site_Graph/Data_Query_Service.php": {
       "bytes": 23001,
       "sha256": "e877522368de6748bc8e1f82b3cf382543baa8338a69c892dc3fa131d4d86e86"
@@ -799,10 +803,6 @@
     "includes/Site_Graph/Query_Service.php": {
       "bytes": 3459,
       "sha256": "582200fef51476925b48750d8f3475a625772c752171ee946308840cb85d723f"
-    },
-    "includes/Site/Site_Identity_Service.php": {
-      "bytes": 9193,
-      "sha256": "3e2c3113152248b667b33d9954da649919e599b9b2c6a76ee3245d423717ee2b"
     },
     "includes/Theme/Screen_Copy_Schema.php": {
       "bytes": 15201,
@@ -1116,13 +1116,13 @@
       "bytes": 8327,
       "sha256": "6b80803773e1850c0e752545b00808809b25a5809c2bdb64a5962f213460d5f6"
     },
-    "ui-system/preview-handoff.md": {
-      "bytes": 10605,
-      "sha256": "45850a9d9560ae0097af9e37fadacdca3daca8a60fd9204efcc78a6d3707cded"
-    },
     "ui-system/preview/standalone-preview.example.html": {
       "bytes": 6624,
       "sha256": "6e3943c59e70d4fa621e3cc264463784097218bd73e54914ebcc2b7926f2f8e5"
+    },
+    "ui-system/preview-handoff.md": {
+      "bytes": 10605,
+      "sha256": "45850a9d9560ae0097af9e37fadacdca3daca8a60fd9204efcc78a6d3707cded"
     },
     "ui-system/profiles/kiwe-2027.css": {
       "bytes": 1953,
@@ -1137,8 +1137,8 @@
       "sha256": "4bb106ea6ce32ef3ac46e7e8ba6fe6a9e33957dcf0c6dc35793c91a52f5f6c0f"
     },
     "ui-system/README.md": {
-      "bytes": 68934,
-      "sha256": "7dea187a62f06f4316cedc4bc1f3380e74e6a4459aa0dad9cfae79289b5e0467"
+      "bytes": 70100,
+      "sha256": "12c2c46a86ce1bab8328e270032940b3f919269bb66b1801ded06ef3612a6ce4"
     },
     "ui-system/screen-payloads.json": {
       "bytes": 15881,

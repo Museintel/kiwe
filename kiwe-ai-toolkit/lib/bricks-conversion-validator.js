@@ -550,6 +550,16 @@ function collectNativeStyleControlsFromItems(items) {
   return controls;
 }
 
+function collectStyledTemplateGlobalClasses(globalClasses) {
+  return asArray(globalClasses)
+    .filter((globalClass) => countNativeStyleControlsOnItem(globalClass) > 0)
+    .map((globalClass) => ({
+      id: String(globalClass.id || ''),
+      name: String(globalClass.name || ''),
+      controls: countNativeStyleControlsOnItem(globalClass)
+    }));
+}
+
 function countNativeStyleControlsOnItem(item) {
   const settings = elementSettings(item);
   let count = 0;
@@ -1404,6 +1414,18 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       `Large Bricks template export has ${editabilityStats.classOnlyElements} of ${editabilityStats.elementCount} elements (${Math.round(editabilityStats.classOnlyElementRatio * 100)}%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.`,
       rel(root, templatePath),
       '$.content'
+    );
+  }
+
+  const styledGlobalClasses = collectStyledTemplateGlobalClasses(templateData.global_classes);
+  if (editabilityStats.elementCount >= LARGE_CLIPBOARD_ELEMENT_COUNT && styledGlobalClasses.length) {
+    const preview = styledGlobalClasses.slice(0, 12).map((item) => item.name || item.id || '(unnamed)').join(', ');
+    add(
+      findings,
+      'fail',
+      `Large Bricks template export imports ${styledGlobalClasses.length} styled global_classes (${preview}${styledGlobalClasses.length > 12 ? ', ...' : ''}) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. /convert /bricks template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.`,
+      rel(root, templatePath),
+      '$.global_classes'
     );
   }
 }

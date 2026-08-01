@@ -270,6 +270,16 @@ function countNativeStyleControlsOnItem(value) {
   return count;
 }
 
+function collectStyledTemplateGlobalClasses(globalClasses) {
+  return (Array.isArray(globalClasses) ? globalClasses : [])
+    .filter((globalClass) => countNativeStyleControlsOnItem(globalClass) > 0)
+    .map((globalClass) => ({
+      id: String(globalClass.id || ''),
+      name: String(globalClass.name || ''),
+      controls: countNativeStyleControlsOnItem(globalClass)
+    }));
+}
+
 function templateEditabilityStats(elements) {
   const list = Array.isArray(elements) ? elements : [];
   const elementNativeControls = list.reduce((sum, element) => sum + countNativeStyleControlsOnItem(element), 0);
@@ -682,6 +692,11 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
     editabilityStats.classOnlyElementRatio > templateUploadMaxClassOnlyElementRatio
   ) {
     out.push(`Large Bricks template export ${relPath} has ${editabilityStats.classOnlyElements} of ${editabilityStats.elementCount} elements (${Math.round(editabilityStats.classOnlyElementRatio * 100)}%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.`);
+  }
+  const styledGlobalClasses = collectStyledTemplateGlobalClasses(templateData.global_classes);
+  if (editabilityStats.elementCount >= largeClipboardElementCount && styledGlobalClasses.length) {
+    const preview = styledGlobalClasses.slice(0, 12).map((item) => item.name || item.id || '(unnamed)').join(', ');
+    out.push(`Large Bricks template export ${relPath} imports ${styledGlobalClasses.length} styled global_classes (${preview}${styledGlobalClasses.length > 12 ? ', ...' : ''}) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. /convert /bricks template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.`);
   }
   return out;
 }

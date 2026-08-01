@@ -516,7 +516,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '6.92',
+    contractVersion: '6.93',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +538,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 6.92',
+      mustReport: 'SeamFlow contract: 6.93',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -1852,9 +1852,10 @@ function commandListMarkdown() {
     '- The lean default output is one native Bricks template upload JSON at `bricks-template/[page-name]-template-upload.json` with non-empty `title`, `templateType`, and `content/header/footer` data.',
     '- Optional Kiwe fidelity proof may be embedded in that upload JSON under top-level `kiwe`; external notes/reports/wrappers require `/document`.',
     '- `/convert /bricks` should run only after `/create /frameworkprofile` has produced `framework/kiwe-framework-profile.json` or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed.',
-    '- `/convert /bricks` must consume that Framework token layer inside native Bricks element settings and `global_classes`; a valid profile does not rewrite hardcoded Bricks JSON later.',
+    '- `/convert /bricks` must consume that Framework token layer inside native Bricks element settings. For My Templates upload, element-native controls are the default render/edit owner; imported `global_classes` must be semantic/name-only unless the command explicitly targets a class-library artifact.',
     '- Treat hardcoded design lengths in native Bricks settings as audit failures: `_padding: 28px`, `_border.radius: 24px`, `_heightMin: 390px`, `_typography.font-size: 2.35rem`, `_rowGap: 20px`, `_transform.translateY: -7px`, and similar values must become Kiwe/Seam variables or tokenized `clamp(...)` expressions.',
     '- Treat direct component colors in native Bricks settings/global classes/custom CSS as audit failures too: `color: #fff`, `_background.color.raw: #8deae5`, `linear-gradient(#201b18, #514238)`, and `--pack-bg: #f5b942` must consume `var(--kiwe-*)`, `var(--seam-*)`, or declared project variables. Literal colors are allowed only in Framework/global variable definitions or as fallbacks inside `var(...)`.',
+    '- Treat duplicate visual ownership as an audit failure: a full-page template upload must not import styled `global_classes` while element-native controls also own the same design. This creates Bricks ghost styling where removing a class or element value does not remove the visible color/radius/spacing.',
     '- It must not convert DSA themes, combined previews, AppShell sheets/screens/docks, or theme CSS.',
     '- It must not output `README.md`, `BRICKS-CONVERSION-NOTES.md`, validation reports, ZIP files, duplicated previews, or loose extra page files unless `/document` is explicitly present.',
     '',

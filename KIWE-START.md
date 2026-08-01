@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `6.92`
+Contract version: `6.93`
 Updated: `2026-08-01`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 6.92
+SeamFlow contract: 6.93
 ```
 
 Then do one of these:
@@ -163,7 +163,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 6.92
+SeamFlow contract: 6.93
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -284,7 +284,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 6.92
+SeamFlow contract: 6.93
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -354,7 +354,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 6.92
+SeamFlow contract: 6.93
 Command:
 Artifact classification:
 Files returned:
@@ -372,10 +372,12 @@ The output must preserve design quality and express it through Kiwe/Seam Framewo
 - official Seam semantic roles/classes/flows;
 - Kiwe/Appsite capability attributes instead of duplicate runtime behavior;
 - Kiwe/Seam variables or declared project variables for visual values;
-- Bricks-native settings/global classes/global variables before custom CSS when producing Bricks;
+- Bricks-native element settings as the render/edit owner when producing full-page Bricks template uploads;
+- Bricks global variables as token definitions, and template `global_classes` as semantic/name-only references unless the command explicitly targets a class-library artifact;
 - real fluid clamps only when source responsive states prove different min/max values;
 - no no-op clamps such as `clamp(22px, 22px, 22px)`;
 - no direct component colors such as `#fff`, `rgba(...)`, hardcoded gradients, or `--pack-bg: #...` inside Bricks element settings/global classes/custom CSS.
+- no duplicate visual ownership where element-native settings and imported styled global classes both carry the same paint/layout/radius/spacing/typography. That creates Bricks ghost styling and must fail `/audit /bricksconversion`.
 
 Literal colors and fixed values are allowed at the token/global-variable definition layer when they are named design inputs. Page and Bricks output must consume those names instead of copying anonymous values.
 
