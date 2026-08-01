@@ -55,6 +55,8 @@ No ZIP is required for the canonical Hostinger copy workflow. Do not mix files f
 
 The architecture and decisions live in `docs/DSA-ARCHITECTURE.md`. The short execution truth is `docs/DEVELOPMENT-PLAN.md`; security acceptance lives in `docs/SECURITY-AUDIT.md`; the UI marketplace contract lives in `docs/DSA-UI-CONTRACT.md`.
 
+The next-generation deterministic HTML/CSS/JS-to-AppSite direction, including the SEAM Compiler (formerly BRX Shift), SiteGraph binding, Geometry inference, native Bricks compilation, visual proof, and controlled deployment, is defined in `docs/SEAM-APPSITE-PLATFORM.md`.
+
 Contract runners are grouped under `tools/`. CI checks PHP platform metadata across 8.2-8.4 and runs the canonical green source baseline for package integrity, token purity, fixtures, toolkit/connector contracts, release contracts, and JavaScript syntax. Local PHP lint remains intentionally excluded unless the project owner explicitly resumes it.
 
 ## Emergency Disable
