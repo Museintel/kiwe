@@ -1,0 +1,63 @@
+{
+  "schema": "seam.capture.v1",
+  "source": {
+    "kind": "html",
+    "entry": "source.html",
+    "contentHash": "sha256:5f30ccee4510b0283ee23a6db6f7f587e377b359ca7ab868e629ed8d4c64ecb0"
+  },
+  "viewports": [
+    { "id": "desktop", "width": 1280, "height": 900, "theme": "light", "state": "default" },
+    { "id": "mobile", "width": 375, "height": 812, "theme": "light", "state": "default" }
+  ],
+  "nodes": [
+    {
+      "id": "hero", "parentId": null, "tag": "main", "role": "main", "text": "", "attributes": { "class": "hero" },
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 40, "y": 40, "width": 1200, "height": 620 }, "computed": { "display": "flex", "flex-direction": "row", "flex-wrap": "nowrap", "gap": "var(--kiwe-space-xl)", "padding-top": "var(--kiwe-space-xl)", "padding-right": "var(--kiwe-space-xl)", "padding-bottom": "var(--kiwe-space-xl)", "padding-left": "var(--kiwe-space-xl)", "background-color": "var(--kiwe-color-surface)", "border-radius": "var(--kiwe-radius-lg)", "max-width": "var(--kiwe-content-width-wide)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 16, "y": 16, "width": 343, "height": 720 }, "computed": { "display": "flex", "flex-direction": "column", "flex-wrap": "nowrap", "gap": "var(--kiwe-space-lg)", "padding-top": "var(--kiwe-space-lg)", "padding-right": "var(--kiwe-space-lg)", "padding-bottom": "var(--kiwe-space-lg)", "padding-left": "var(--kiwe-space-lg)", "background-color": "var(--kiwe-color-surface)", "border-radius": "var(--kiwe-radius-lg)", "width": "100%" } }
+      ],
+      "provenance": { "selector": ".hero", "domPath": "html>body>main.hero" }
+    },
+    {
+      "id": "copy", "parentId": "hero", "tag": "div", "role": null, "text": "", "attributes": { "class": "hero__copy" },
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 96, "y": 120, "width": 520, "height": 380 }, "computed": { "display": "flex", "flex-direction": "column", "flex-wrap": "nowrap", "gap": "var(--kiwe-space-sm)", "justify-content": "center" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 40, "y": 40, "width": 295, "height": 310 }, "computed": { "display": "flex", "flex-direction": "column", "flex-wrap": "nowrap", "gap": "var(--kiwe-space-xs)", "width": "100%" } }
+      ],
+      "provenance": { "selector": ".hero__copy", "domPath": "html>body>main.hero>div.hero__copy" }
+    },
+    {
+      "id": "title", "parentId": "copy", "tag": "h1", "role": "heading", "text": "Design systems that ship", "attributes": {},
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 96, "y": 120, "width": 520, "height": 132 }, "computed": { "display": "block", "font-family": "var(--kiwe-font-display)", "font-size": "var(--kiwe-type-h1)", "font-weight": "700", "line-height": "var(--kiwe-leading-tight)", "color": "var(--kiwe-color-text)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 40, "y": 40, "width": 295, "height": 104 }, "computed": { "display": "block", "font-family": "var(--kiwe-font-display)", "font-size": "var(--kiwe-type-h4)", "font-weight": "700", "line-height": "var(--kiwe-leading-tight)", "color": "var(--kiwe-color-text)" } }
+      ],
+      "provenance": { "selector": ".hero__copy > h1", "domPath": "html>body>main.hero>div.hero__copy>h1" }
+    },
+    {
+      "id": "intro", "parentId": "copy", "tag": "p", "role": null, "text": "One semantic system from first sketch to production.", "attributes": {},
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 96, "y": 276, "width": 480, "height": 64 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-lead)", "line-height": "var(--kiwe-leading-normal)", "color": "var(--kiwe-color-text-muted)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 40, "y": 164, "width": 295, "height": 72 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-body)", "line-height": "var(--kiwe-leading-normal)", "color": "var(--kiwe-color-text-muted)" } }
+      ],
+      "provenance": { "selector": ".hero__copy > p", "domPath": "html>body>main.hero>div.hero__copy>p" }
+    },
+    {
+      "id": "cta", "parentId": "copy", "tag": "a", "role": "link", "text": "See our work", "attributes": { "href": "/work" },
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 96, "y": 368, "width": 160, "height": 48 }, "computed": { "display": "inline-block", "padding-top": "var(--kiwe-space-xs)", "padding-right": "var(--kiwe-space-sm)", "padding-bottom": "var(--kiwe-space-xs)", "padding-left": "var(--kiwe-space-sm)", "background-color": "var(--kiwe-color-brand)", "color": "var(--kiwe-color-text-inverse)", "border-radius": "var(--kiwe-radius-sm)", "font-weight": "600" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 40, "y": 260, "width": 160, "height": 48 }, "computed": { "display": "inline-block", "padding-top": "var(--kiwe-space-xs)", "padding-right": "var(--kiwe-space-sm)", "padding-bottom": "var(--kiwe-space-xs)", "padding-left": "var(--kiwe-space-sm)", "background-color": "var(--kiwe-color-brand)", "color": "var(--kiwe-color-text-inverse)", "border-radius": "var(--kiwe-radius-sm)", "font-weight": "600" } }
+      ],
+      "provenance": { "selector": ".hero__copy > a", "domPath": "html>body>main.hero>div.hero__copy>a" }
+    },
+    {
+      "id": "visual", "parentId": "hero", "tag": "img", "role": "img", "text": "", "attributes": { "src": "images/orbit.webp", "alt": "Abstract orbital forms" },
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 672, "y": 96, "width": 512, "height": 508 }, "computed": { "display": "block", "width": "100%", "height": "100%", "object-fit": "cover", "border-radius": "var(--kiwe-radius-lg)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 40, "y": 382, "width": 295, "height": 330 }, "computed": { "display": "block", "width": "100%", "height": "330px", "object-fit": "cover", "border-radius": "var(--kiwe-radius-lg)" } }
+      ],
+      "provenance": { "selector": ".hero > img", "domPath": "html>body>main.hero>img" }
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,12 @@
+{
+  "package": "@kiwe/seam-contracts",
+  "version": "0.1.0",
+  "contracts": [
+    { "name": "capture", "schema": "seam.capture.v1", "file": "schemas/seam.capture.v1.schema.json", "type": "SeamCaptureV1" },
+    { "name": "pageIr", "schema": "seam.page-ir.v1", "file": "schemas/seam.page-ir.v1.schema.json", "type": "SeamPageIrV1" },
+    { "name": "behaviorIr", "schema": "seam.behavior-ir.v1", "file": "schemas/seam.behavior-ir.v1.schema.json", "type": "SeamBehaviorIrV1" },
+    { "name": "assetManifest", "schema": "seam.asset-manifest.v1", "file": "schemas/seam.asset-manifest.v1.schema.json", "type": "SeamAssetManifestV1" },
+    { "name": "bricksPlan", "schema": "seam.bricks-plan.v1", "file": "schemas/seam.bricks-plan.v1.schema.json", "type": "SeamBricksPlanV1" },
+    { "name": "appsitePackage", "schema": "kiwe.appsite-package.v1", "file": "schemas/kiwe.appsite-package.v1.schema.json", "type": "KiweAppsitePackageV1" }
+  ]
+}

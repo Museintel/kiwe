@@ -7,6 +7,10 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Added `tools/release/verify-green-baseline.cjs` as the canonical local and CI source gate, including package integrity, Seam/token audits, positive and negative fixtures, toolkit/connector contracts, RC contracts, and JavaScript syntax.
 - Made the SeamFlow source contract derive the active package version instead of pinning an obsolete release number, preventing routine version changes from creating false failures.
 - Taught the runtime token-purity audit that the combined Kiwe/legacy dark-theme selector is a legitimate token authority while keeping component-level literals fail-closed.
+- Added the M1 SEAM Compiler foundation with six strict versioned contracts, dependency-free validation, generated TypeScript/PHP declarations, and a generated 108-token catalog tied to Kiwe's canonical token service.
+- Added deterministic Capture IR to Page/Behavior/Asset IR compilation, a Bricks 2.3.10 capability profile extracted from the supplied source, capability-proven native Bricks serialization, AppSite package output, a valid SEAM Framework Profile, and Page Geometry evidence.
+- Quarantined the former browser converter as a legacy scaffold and made AI-direct Bricks JSON an explicit unsupported path; supported output can only serialize from a validated `seam.bricks-plan.v1` with provenance.
+- Added two unrelated compiler fixtures plus the supplied National Chikki homepage as a hash-tracked golden source pending the M2 rendered capture engine.
 
 ## 6.98 - 2026-08-01
 

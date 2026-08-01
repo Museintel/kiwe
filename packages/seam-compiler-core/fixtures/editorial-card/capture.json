@@ -1,0 +1,55 @@
+{
+  "schema": "seam.capture.v1",
+  "source": {
+    "kind": "html",
+    "entry": "source.html",
+    "contentHash": "sha256:03ec3233173d6a82f7a55d1abc484055233e32b3eba300b052eb816b18a07ddc"
+  },
+  "viewports": [
+    { "id": "desktop", "width": 1440, "height": 900, "theme": "light", "state": "default" },
+    { "id": "mobile", "width": 375, "height": 812, "theme": "light", "state": "default" }
+  ],
+  "nodes": [
+    {
+      "id": "card", "parentId": null, "tag": "article", "role": "article", "text": "", "attributes": { "class": "story-card" },
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 220, "y": 140, "width": 1000, "height": 420 }, "computed": { "display": "grid", "grid-template-columns": "1fr 2fr", "gap": "var(--kiwe-space-lg)", "padding-top": "var(--kiwe-space-lg)", "padding-right": "var(--kiwe-space-lg)", "padding-bottom": "var(--kiwe-space-lg)", "padding-left": "var(--kiwe-space-lg)", "border-width": "var(--kiwe-border-width-hairline)", "border-style": "solid", "border-color": "var(--kiwe-color-border)", "border-radius": "var(--kiwe-radius-md)", "background-color": "var(--kiwe-color-surface)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 20, "y": 80, "width": 335, "height": 460 }, "computed": { "display": "block", "padding-top": "var(--kiwe-space-sm)", "padding-right": "var(--kiwe-space-sm)", "padding-bottom": "var(--kiwe-space-sm)", "padding-left": "var(--kiwe-space-sm)", "border-width": "var(--kiwe-border-width-hairline)", "border-style": "solid", "border-color": "var(--kiwe-color-border)", "border-radius": "var(--kiwe-radius-md)", "background-color": "var(--kiwe-color-surface)" } }
+      ],
+      "provenance": { "selector": ".story-card", "domPath": "html>body>article.story-card" }
+    },
+    {
+      "id": "eyebrow", "parentId": "card", "tag": "p", "role": null, "text": "Field notes", "attributes": { "class": "story-card__eyebrow" },
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 276, "y": 196, "width": 280, "height": 24 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-caption)", "font-weight": "700", "letter-spacing": "var(--kiwe-tracking-normal)", "text-transform": "uppercase", "color": "var(--kiwe-color-brand)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 44, "y": 104, "width": 287, "height": 24 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-caption)", "font-weight": "700", "letter-spacing": "var(--kiwe-tracking-normal)", "text-transform": "uppercase", "color": "var(--kiwe-color-brand)" } }
+      ],
+      "provenance": { "selector": ".story-card__eyebrow", "domPath": "html>body>article.story-card>p.story-card__eyebrow" }
+    },
+    {
+      "id": "story-title", "parentId": "card", "tag": "h2", "role": "heading", "text": "Building with local materials", "attributes": {},
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 620, "y": 196, "width": 520, "height": 90 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-h3)", "font-weight": "650", "line-height": "var(--kiwe-leading-tight)", "color": "var(--kiwe-color-text)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 44, "y": 156, "width": 287, "height": 84 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-h4)", "font-weight": "650", "line-height": "var(--kiwe-leading-tight)", "color": "var(--kiwe-color-text)" } }
+      ],
+      "provenance": { "selector": ".story-card > h2", "domPath": "html>body>article.story-card>h2" }
+    },
+    {
+      "id": "story-copy", "parentId": "card", "tag": "p", "role": null, "text": "A practical record of low-impact construction.", "attributes": {},
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 620, "y": 312, "width": 500, "height": 58 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-body)", "line-height": "var(--kiwe-leading-normal)", "color": "var(--kiwe-color-text-muted)" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 44, "y": 264, "width": 287, "height": 68 }, "computed": { "display": "block", "font-size": "var(--kiwe-type-body)", "line-height": "var(--kiwe-leading-normal)", "color": "var(--kiwe-color-text-muted)" } }
+      ],
+      "provenance": { "selector": ".story-card > p:not(.story-card__eyebrow)", "domPath": "html>body>article.story-card>p:nth-of-type(2)" }
+    },
+    {
+      "id": "story-link", "parentId": "card", "tag": "a", "role": "link", "text": "Read the story", "attributes": { "href": "/journal/local-materials" },
+      "observations": [
+        { "viewportId": "desktop", "visible": true, "box": { "x": 620, "y": 402, "width": 132, "height": 28 }, "computed": { "display": "inline", "font-weight": "700", "color": "var(--kiwe-color-brand)", "text-decoration": "underline" } },
+        { "viewportId": "mobile", "visible": true, "box": { "x": 44, "y": 368, "width": 132, "height": 28 }, "computed": { "display": "inline", "font-weight": "700", "color": "var(--kiwe-color-brand)", "text-decoration": "underline" } }
+      ],
+      "provenance": { "selector": ".story-card > a", "domPath": "html>body>article.story-card>a" }
+    }
+  ],
+  "diagnostics": []
+}

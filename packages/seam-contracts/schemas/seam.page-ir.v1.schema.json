@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.page-ir.v1.schema.json",
+  "title": "SEAM page intermediate representation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sourceHash", "nodes", "residuals"],
+  "properties": {
+    "schema": { "const": "seam.page-ir.v1" },
+    "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "parentId", "kind", "tag", "text", "attributes", "layout", "style", "provenance"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "parentId": { "type": ["string", "null"] },
+          "kind": { "enum": ["section", "container", "heading", "text", "link", "button", "image", "video", "list", "list-item", "form", "input", "table", "generic"] },
+          "tag": { "type": "string", "minLength": 1 },
+          "text": { "type": "string" },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+          "layout": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["display", "direction", "wrap", "gap", "widthMode"],
+            "properties": {
+              "display": { "type": "string" }, "direction": { "type": "string" }, "wrap": { "type": "string" },
+              "gap": { "type": "string" }, "widthMode": { "enum": ["intrinsic", "fixed", "fluid", "unknown"] }
+            }
+          },
+          "style": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["native", "tokenBindings", "residuals"],
+            "properties": {
+              "native": { "type": "object", "additionalProperties": true },
+              "tokenBindings": { "type": "object", "additionalProperties": { "type": "string" } },
+              "residuals": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["captureNodeIds", "viewportIds", "selector"],
+            "properties": {
+              "captureNodeIds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "viewportIds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "selector": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "residuals": { "type": "array", "items": { "type": "string" } }
+  }
+}

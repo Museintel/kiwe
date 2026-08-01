@@ -93,6 +93,7 @@ const gates = [
 	['Invalid runtime bridge token fixture', 'tools/ui-theme/validate-package.cjs', ['tools/ui-theme/fixtures/invalid-runtime-bridge-token'], { expectedFailure: true, failurePattern: /runtime bridge token/i }],
 	['Valid Framework profile fixture', 'kiwe-ai-toolkit/tools/validate-framework-profile.cjs', ['kiwe-ai-toolkit/fixtures/framework-profile-valid']],
 	['Invalid Framework profile fixture', 'kiwe-ai-toolkit/tools/validate-framework-profile.cjs', ['kiwe-ai-toolkit/fixtures/framework-profile-invalid'], { expectedFailure: true, failurePattern: /unknown_root_key/ }],
+	['SEAM compiler foundation contracts', 'packages/seam-compiler-core/test/compiler-foundation.cjs'],
 	['Kiwe AI Toolkit smoke contracts', 'kiwe-ai-toolkit/tools/smoke-test.cjs'],
 	['AI API source contracts', 'tools/connector/ai-api-contracts.cjs'],
 	['RC4 security contracts', 'tools/security/rc4-contracts.cjs'],
@@ -116,6 +117,7 @@ checkSyntax(
 	true
 );
 checkSyntax('Tool JavaScript syntax', filesUnder('tools', '.cjs'));
+checkSyntax('Compiler package JavaScript syntax', filesUnder('packages', '.cjs'));
 
 if (failures.length > 0) {
 	console.error(`\nKiwe green baseline failed (${failures.length} gate${failures.length === 1 ? '' : 's'}):`);

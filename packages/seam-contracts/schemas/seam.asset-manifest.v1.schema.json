@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.asset-manifest.v1.schema.json",
+  "title": "SEAM asset manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sourceHash", "assets"],
+  "properties": {
+    "schema": { "const": "seam.asset-manifest.v1" },
+    "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "source", "contentHash", "mime", "bytes", "policy", "usedBy"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "kind": { "enum": ["image", "font", "video", "audio", "document", "script", "stylesheet", "other"] },
+          "source": { "type": "string", "minLength": 1 }, "contentHash": { "type": ["string", "null"] },
+          "mime": { "type": ["string", "null"] }, "bytes": { "type": ["integer", "null"], "minimum": 0 },
+          "policy": { "enum": ["import", "external", "inline", "blocked", "review"] },
+          "usedBy": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

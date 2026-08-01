@@ -59,6 +59,18 @@ The next-generation deterministic HTML/CSS/JS-to-AppSite direction, including th
 
 Contract runners are grouped under `tools/`. CI checks PHP platform metadata across 8.2-8.4 and runs the canonical green source baseline for package integrity, token purity, fixtures, toolkit/connector contracts, release contracts, and JavaScript syntax. Local PHP lint remains intentionally excluded unless the project owner explicitly resumes it.
 
+### SEAM Compiler foundation
+
+The compiler plane now starts under `packages/`: strict Capture/Page/Behavior/Asset/Bricks Plan/AppSite schemas, generated TypeScript and PHP declarations, the deterministic IR compiler, a Bricks capability extractor, and the native Bricks serializer. It does not run on public WordPress requests.
+
+```text
+node packages/seam-compiler-core/test/compiler-foundation.cjs
+node packages/seam-bricks-adapter/tools/extract-bricks-capabilities.cjs /path/to/bricks packages/seam-bricks-adapter/profiles/bricks-version.json
+node packages/seam-compiler-core/tools/compile-capture.cjs capture.json bricks-profile.json output-directory "Template title"
+```
+
+The former browser converter is quarantined under `packages/seam-bricks-adapter/scaffold/` and is not imported by the supported pipeline. The supplied National Chikki homepage is recorded as a golden source; its real multi-viewport capture begins in M2.
+
 ## Emergency Disable
 
 Rename `wp-content/mu-plugins/dsa.php` to `dsa.disabled.php`. Restore it only with a complete, matching loader/package release. Do not delete Kiwe tables or options as a routine rollback.

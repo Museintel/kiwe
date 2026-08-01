@@ -1,0 +1,22 @@
+{
+  "schema": "seam.golden-source.v1",
+  "id": "national-chikki-homepage",
+  "label": "National Chikki homepage AppSite preview",
+  "source": "source.html",
+  "suppliedArtifact": {
+    "filename": "homepage-appsite-v3-main-only-preview.html",
+    "bytes": 96684,
+    "sha256": "e196f8a3947f7932b95e55c346d648aa659b193259325669c569fdb6137d56f9"
+  },
+  "repositoryNormalization": {
+    "encoding": "utf-8",
+    "lineEndings": "lf",
+    "bytes": 96800,
+    "sha256": "8e9376a3c2f99e8762e6bc4e268acd8376658b4ca657000cc38751ea03f8b9e5"
+  },
+  "captureStatus": "pending-m2",
+  "notes": [
+    "This is a golden input, not a fixture-specific mapping template.",
+    "M1 preserves the source and provenance only; M2 must create rendered multi-viewport evidence before compilation."
+  ]
+}

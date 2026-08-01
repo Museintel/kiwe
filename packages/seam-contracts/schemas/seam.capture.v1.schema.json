@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.capture.v1.schema.json",
+  "title": "SEAM rendered capture v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source", "viewports", "nodes", "diagnostics"],
+  "properties": {
+    "schema": { "const": "seam.capture.v1" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "entry", "contentHash"],
+      "properties": {
+        "kind": { "enum": ["html", "url", "bundle"] },
+        "entry": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "viewports": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "width", "height", "theme", "state"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "width": { "type": "integer", "minimum": 240 },
+          "height": { "type": "integer", "minimum": 240 },
+          "theme": { "enum": ["light", "dark", "system"] },
+          "state": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "parentId", "tag", "role", "text", "attributes", "observations", "provenance"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "parentId": { "type": ["string", "null"] },
+          "tag": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "role": { "type": ["string", "null"] },
+          "text": { "type": "string" },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+          "observations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["viewportId", "visible", "box", "computed"],
+              "properties": {
+                "viewportId": { "type": "string", "minLength": 1 },
+                "visible": { "type": "boolean" },
+                "box": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["x", "y", "width", "height"],
+                  "properties": {
+                    "x": { "type": "number" }, "y": { "type": "number" },
+                    "width": { "type": "number", "minimum": 0 }, "height": { "type": "number", "minimum": 0 }
+                  }
+                },
+                "computed": { "type": "object", "additionalProperties": { "type": "string" } }
+              }
+            }
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["selector", "domPath"],
+            "properties": {
+              "selector": { "type": "string", "minLength": 1 },
+              "domPath": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": { "type": "array", "items": { "type": "string" } }
+  }
+}

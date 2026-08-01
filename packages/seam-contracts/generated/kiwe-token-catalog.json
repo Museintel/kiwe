@@ -1,0 +1,546 @@
+{
+  "schema": "kiwe.seam-token-catalog.v1",
+  "pluginVersion": "6.98",
+  "tokens": {
+    "color-brand": {
+      "value": "#d6006f",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-brand"
+    },
+    "color-accent": {
+      "value": "#24c6a1",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-accent"
+    },
+    "color-hero": {
+      "value": "rgba(20,24,34,0.18)",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-hero"
+    },
+    "color-neutral": {
+      "value": "#64717d",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-neutral"
+    },
+    "color-surface": {
+      "value": "#f6f8f7",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-surface"
+    },
+    "color-surface-raised": {
+      "value": "color-mix(in oklch, var(--kiwe-color-surface) 88%, white)",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-surface-raised"
+    },
+    "color-surface-sunken": {
+      "value": "color-mix(in oklch, var(--kiwe-color-surface) 82%, black)",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-surface-sunken"
+    },
+    "color-surface-overlay": {
+      "value": "rgba(246,248,247,0.72)",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-surface-overlay"
+    },
+    "color-text": {
+      "value": "#1f2933",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-text"
+    },
+    "color-text-muted": {
+      "value": "#64717d",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-text-muted"
+    },
+    "color-text-disabled": {
+      "value": "#9aa4af",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-text-disabled"
+    },
+    "color-text-inverse": {
+      "value": "#ffffff",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-text-inverse"
+    },
+    "color-border": {
+      "value": "rgba(31,41,51,0.16)",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-border"
+    },
+    "color-shadow": {
+      "value": "rgba(31,41,51,0.18)",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-shadow"
+    },
+    "color-success": {
+      "value": "#12a66a",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-success"
+    },
+    "color-warning": {
+      "value": "#c98600",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-warning"
+    },
+    "color-danger": {
+      "value": "#d83a52",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-danger"
+    },
+    "color-info": {
+      "value": "#2d7ff9",
+      "domain": "color",
+      "cssVariable": "--kiwe-color-info"
+    },
+    "type-micro": {
+      "value": "clamp(10px, 0.08vw + 9.7px, 10.8px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-micro"
+    },
+    "type-caption": {
+      "value": "clamp(11px, 0.12vw + 10.6px, 12px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-caption"
+    },
+    "type-sm": {
+      "value": "clamp(12.8px, 0.14vw + 12.4px, 14px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-sm"
+    },
+    "type-body": {
+      "value": "clamp(15px, 0.18vw + 14.4px, 16px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-body"
+    },
+    "type-lead": {
+      "value": "clamp(18px, 0.45vw + 16.6px, 23px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-lead"
+    },
+    "type-h6": {
+      "value": "clamp(18px, 0.45vw + 16.6px, 23px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-h6"
+    },
+    "type-h5": {
+      "value": "clamp(20px, 0.75vw + 17.6px, 28px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-h5"
+    },
+    "type-h4": {
+      "value": "clamp(24px, 1.1vw + 20.5px, 36px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-h4"
+    },
+    "type-h3": {
+      "value": "clamp(30px, 1.8vw + 24.2px, 50px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-h3"
+    },
+    "type-h2": {
+      "value": "clamp(38px, 3vw + 28.4px, 72px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-h2"
+    },
+    "type-h1": {
+      "value": "clamp(52px, 5vw + 36px, 108px)",
+      "domain": "type",
+      "cssVariable": "--kiwe-type-h1"
+    },
+    "font-display": {
+      "value": "Inter, system-ui, sans-serif",
+      "domain": "font",
+      "cssVariable": "--kiwe-font-display"
+    },
+    "font-body": {
+      "value": "Inter, system-ui, sans-serif",
+      "domain": "font",
+      "cssVariable": "--kiwe-font-body"
+    },
+    "font-mono": {
+      "value": "ui-monospace, Menlo, monospace",
+      "domain": "font",
+      "cssVariable": "--kiwe-font-mono"
+    },
+    "leading-tight": {
+      "value": "1.05",
+      "domain": "type",
+      "cssVariable": "--kiwe-leading-tight"
+    },
+    "leading-snug": {
+      "value": "1.16",
+      "domain": "type",
+      "cssVariable": "--kiwe-leading-snug"
+    },
+    "leading-normal": {
+      "value": "1.5",
+      "domain": "type",
+      "cssVariable": "--kiwe-leading-normal"
+    },
+    "leading-relaxed": {
+      "value": "1.75",
+      "domain": "type",
+      "cssVariable": "--kiwe-leading-relaxed"
+    },
+    "tracking-tight": {
+      "value": "-0.025em",
+      "domain": "type",
+      "cssVariable": "--kiwe-tracking-tight"
+    },
+    "tracking-normal": {
+      "value": "0",
+      "domain": "type",
+      "cssVariable": "--kiwe-tracking-normal"
+    },
+    "border-width-hairline": {
+      "value": "1px",
+      "domain": "component",
+      "cssVariable": "--kiwe-border-width-hairline"
+    },
+    "border-width-strong": {
+      "value": "2px",
+      "domain": "component",
+      "cssVariable": "--kiwe-border-width-strong"
+    },
+    "space-xxs": {
+      "value": "clamp(4px, 0.36vw + 2.86px, 8px)",
+      "domain": "space",
+      "cssVariable": "--kiwe-space-xxs"
+    },
+    "space-xs": {
+      "value": "clamp(6px, 0.54vw + 4.29px, 12px)",
+      "domain": "space",
+      "cssVariable": "--kiwe-space-xs"
+    },
+    "space-sm": {
+      "value": "clamp(9px, 0.8vw + 6.43px, 18px)",
+      "domain": "space",
+      "cssVariable": "--kiwe-space-sm"
+    },
+    "space-md": {
+      "value": "clamp(13.5px, 1.21vw + 9.64px, 27px)",
+      "domain": "space",
+      "cssVariable": "--kiwe-space-md"
+    },
+    "space-lg": {
+      "value": "clamp(20.25px, 1.81vw + 14.46px, 40.5px)",
+      "domain": "space",
+      "cssVariable": "--kiwe-space-lg"
+    },
+    "space-xl": {
+      "value": "clamp(30px, 2.7vw + 21.4px, 60px)",
+      "domain": "space",
+      "cssVariable": "--kiwe-space-xl"
+    },
+    "radius-xs": {
+      "value": "2.5px",
+      "domain": "radius",
+      "cssVariable": "--kiwe-radius-xs"
+    },
+    "radius-sm": {
+      "value": "5px",
+      "domain": "radius",
+      "cssVariable": "--kiwe-radius-sm"
+    },
+    "radius-md": {
+      "value": "10px",
+      "domain": "radius",
+      "cssVariable": "--kiwe-radius-md"
+    },
+    "radius-lg": {
+      "value": "15px",
+      "domain": "radius",
+      "cssVariable": "--kiwe-radius-lg"
+    },
+    "radius-xl": {
+      "value": "20px",
+      "domain": "radius",
+      "cssVariable": "--kiwe-radius-xl"
+    },
+    "radius-full": {
+      "value": "9999px",
+      "domain": "radius",
+      "cssVariable": "--kiwe-radius-full"
+    },
+    "card-radius": {
+      "value": "var(--kiwe-radius-md)",
+      "domain": "radius",
+      "cssVariable": "--kiwe-card-radius"
+    },
+    "density": {
+      "value": "1",
+      "domain": "scene",
+      "cssVariable": "--kiwe-density"
+    },
+    "scene-intensity": {
+      "value": "1",
+      "domain": "scene",
+      "cssVariable": "--kiwe-scene-intensity"
+    },
+    "scene-dramatic": {
+      "value": "1.4",
+      "domain": "scene",
+      "cssVariable": "--kiwe-scene-dramatic"
+    },
+    "scene-elevated": {
+      "value": "1.15",
+      "domain": "scene",
+      "cssVariable": "--kiwe-scene-elevated"
+    },
+    "scene-standard": {
+      "value": "1",
+      "domain": "scene",
+      "cssVariable": "--kiwe-scene-standard"
+    },
+    "scene-compact": {
+      "value": "0.85",
+      "domain": "scene",
+      "cssVariable": "--kiwe-scene-compact"
+    },
+    "scene-micro": {
+      "value": "0.7",
+      "domain": "scene",
+      "cssVariable": "--kiwe-scene-micro"
+    },
+    "motion-duration-instant": {
+      "value": "50ms",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-duration-instant"
+    },
+    "motion-duration-fast": {
+      "value": "150ms",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-duration-fast"
+    },
+    "motion-duration-normal": {
+      "value": "300ms",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-duration-normal"
+    },
+    "motion-duration-slow": {
+      "value": "600ms",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-duration-slow"
+    },
+    "motion-duration-crawl": {
+      "value": "1000ms",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-duration-crawl"
+    },
+    "motion-easing-standard": {
+      "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-easing-standard"
+    },
+    "motion-easing-enter": {
+      "value": "cubic-bezier(0, 0, 0.2, 1)",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-easing-enter"
+    },
+    "motion-easing-exit": {
+      "value": "cubic-bezier(0.4, 0, 1, 1)",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-easing-exit"
+    },
+    "motion-easing-spring": {
+      "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+      "domain": "motion",
+      "cssVariable": "--kiwe-motion-easing-spring"
+    },
+    "shadow-sm": {
+      "value": "0 1px 2px rgba(15,23,42,.08)",
+      "domain": "component",
+      "cssVariable": "--kiwe-shadow-sm"
+    },
+    "shadow-md": {
+      "value": "0 8px 24px rgba(15,23,42,.10)",
+      "domain": "component",
+      "cssVariable": "--kiwe-shadow-md"
+    },
+    "shadow-lg": {
+      "value": "0 18px 50px rgba(15,23,42,.14)",
+      "domain": "component",
+      "cssVariable": "--kiwe-shadow-lg"
+    },
+    "opacity-disabled": {
+      "value": ".5",
+      "domain": "component",
+      "cssVariable": "--kiwe-opacity-disabled"
+    },
+    "glass-blur": {
+      "value": "10px",
+      "domain": "component",
+      "cssVariable": "--kiwe-glass-blur"
+    },
+    "control-size-sm": {
+      "value": "30px",
+      "domain": "component",
+      "cssVariable": "--kiwe-control-size-sm"
+    },
+    "control-size": {
+      "value": "48px",
+      "domain": "component",
+      "cssVariable": "--kiwe-control-size"
+    },
+    "control-size-ai-sm": {
+      "value": "40px",
+      "domain": "component",
+      "cssVariable": "--kiwe-control-size-ai-sm"
+    },
+    "control-size-ai": {
+      "value": "54px",
+      "domain": "component",
+      "cssVariable": "--kiwe-control-size-ai"
+    },
+    "icon-size-sm": {
+      "value": "18px",
+      "domain": "component",
+      "cssVariable": "--kiwe-icon-size-sm"
+    },
+    "icon-size": {
+      "value": "23px",
+      "domain": "component",
+      "cssVariable": "--kiwe-icon-size"
+    },
+    "badge-size-sm": {
+      "value": "16px",
+      "domain": "component",
+      "cssVariable": "--kiwe-badge-size-sm"
+    },
+    "badge-size": {
+      "value": "18px",
+      "domain": "component",
+      "cssVariable": "--kiwe-badge-size"
+    },
+    "dock-gap-min": {
+      "value": "1px",
+      "domain": "component",
+      "cssVariable": "--kiwe-dock-gap-min"
+    },
+    "dock-gap": {
+      "value": "2px",
+      "domain": "component",
+      "cssVariable": "--kiwe-dock-gap"
+    },
+    "dock-padding-min": {
+      "value": "6px",
+      "domain": "component",
+      "cssVariable": "--kiwe-dock-padding-min"
+    },
+    "dock-padding": {
+      "value": "8px",
+      "domain": "component",
+      "cssVariable": "--kiwe-dock-padding"
+    },
+    "dock-border": {
+      "value": "1px",
+      "domain": "component",
+      "cssVariable": "--kiwe-dock-border"
+    },
+    "dock-cluster-gap-min": {
+      "value": "6px",
+      "domain": "component",
+      "cssVariable": "--kiwe-dock-cluster-gap-min"
+    },
+    "dock-cluster-gap": {
+      "value": "14px",
+      "domain": "component",
+      "cssVariable": "--kiwe-dock-cluster-gap"
+    },
+    "viewport-gutter": {
+      "value": "12px",
+      "domain": "layout",
+      "cssVariable": "--kiwe-viewport-gutter"
+    },
+    "content-width-compact": {
+      "value": "440px",
+      "domain": "layout",
+      "cssVariable": "--kiwe-content-width-compact"
+    },
+    "content-width-readable": {
+      "value": "680px",
+      "domain": "layout",
+      "cssVariable": "--kiwe-content-width-readable"
+    },
+    "content-width": {
+      "value": "1120px",
+      "domain": "layout",
+      "cssVariable": "--kiwe-content-width"
+    },
+    "content-width-narrow": {
+      "value": "760px",
+      "domain": "layout",
+      "cssVariable": "--kiwe-content-width-narrow"
+    },
+    "content-width-wide": {
+      "value": "1440px",
+      "domain": "layout",
+      "cssVariable": "--kiwe-content-width-wide"
+    },
+    "grid-min-col": {
+      "value": "240px",
+      "domain": "layout",
+      "cssVariable": "--kiwe-grid-min-col"
+    },
+    "section-gap": {
+      "value": "var(--kiwe-space-xl)",
+      "domain": "layout",
+      "cssVariable": "--kiwe-section-gap"
+    },
+    "stack-gap": {
+      "value": "var(--kiwe-space-md)",
+      "domain": "layout",
+      "cssVariable": "--kiwe-stack-gap"
+    },
+    "grid-gap": {
+      "value": "var(--kiwe-space-md)",
+      "domain": "layout",
+      "cssVariable": "--kiwe-grid-gap"
+    },
+    "z-base": {
+      "value": "0",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-base"
+    },
+    "z-raised": {
+      "value": "10",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-raised"
+    },
+    "z-sticky": {
+      "value": "100",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-sticky"
+    },
+    "z-overlay": {
+      "value": "1000",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-overlay"
+    },
+    "z-dock": {
+      "value": "9000",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-dock"
+    },
+    "z-drawer": {
+      "value": "9100",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-drawer"
+    },
+    "z-modal": {
+      "value": "9200",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-modal"
+    },
+    "z-toast": {
+      "value": "9300",
+      "domain": "z-index",
+      "cssVariable": "--kiwe-z-toast"
+    },
+    "cluster-gap": {
+      "value": "var(--kiwe-space-sm)",
+      "domain": "layout",
+      "cssVariable": "--kiwe-cluster-gap"
+    }
+  }
+}
