@@ -744,6 +744,80 @@ function collectBricksCompilerUnsafeControls(items) {
   return findings;
 }
 
+function settingHasAttribute(settings, name, valuePattern = null) {
+  const wanted = String(name || '').toLowerCase();
+  return asArray(settings && settings._attributes).some((attribute) => {
+    if (!isPlainObject(attribute)) return false;
+    if (String(attribute.name || '').toLowerCase() !== wanted) return false;
+    return valuePattern ? valuePattern.test(String(attribute.value || '')) : true;
+  });
+}
+
+function collectImplicitBricksLayoutControls(items) {
+  const findings = [];
+  asArray(items).forEach((item, index) => {
+    if (!isPlainObject(item)) return;
+    const settings = elementSettings(item);
+    const label = String(item.id || item.name || item.label || `item-${index}`);
+    const classes = String(settings._cssClasses || '');
+    const isLayout = isBricksLayoutElement(item);
+    const display = String(settings._display || '').toLowerCase();
+    const isRail = /\bseam-horizontal-rail\b/.test(classes) || settingHasAttribute(settings, 'data-flow', /^horizontal-rail$/i);
+
+    if (isLayout && display === 'flex' && !Object.prototype.hasOwnProperty.call(settings, '_direction')) {
+      findings.push({
+        type: 'missing-flex-direction',
+        label,
+        path: `$.content/header/footer/global_classes[${index}].settings._direction`
+      });
+    }
+
+    if (isLayout && display === 'grid') {
+      const hasColumns = Object.keys(settings).some((key) => /^_grid(?:TemplateColumns|AutoColumns)(?::|$)/.test(key));
+      if (!hasColumns) {
+        findings.push({
+          type: 'missing-grid-columns',
+          label,
+          path: `$.content/header/footer/global_classes[${index}].settings._gridTemplateColumns`
+        });
+      }
+    }
+
+    if (isRail) {
+      if (display !== 'flex') {
+        findings.push({
+          type: 'rail-missing-flex-display',
+          label,
+          path: `$.content/header/footer/global_classes[${index}].settings._display`
+        });
+      }
+      if (String(settings._direction || '').toLowerCase() !== 'row') {
+        findings.push({
+          type: 'rail-missing-row-direction',
+          label,
+          path: `$.content/header/footer/global_classes[${index}].settings._direction`
+        });
+      }
+      if (!/(auto|scroll)/i.test(String(settings._overflow || ''))) {
+        findings.push({
+          type: 'rail-missing-overflow',
+          label,
+          path: `$.content/header/footer/global_classes[${index}].settings._overflow`
+        });
+      }
+      const hasGap = Object.prototype.hasOwnProperty.call(settings, '_columnGap') || Object.prototype.hasOwnProperty.call(settings, '_gap');
+      if (!hasGap) {
+        findings.push({
+          type: 'rail-missing-gap',
+          label,
+          path: `$.content/header/footer/global_classes[${index}].settings._columnGap`
+        });
+      }
+    }
+  });
+  return findings;
+}
+
 function usesDeclaredProjectVariable(value, declaredVariables = new Set()) {
   if (typeof value !== 'string') return false;
   for (const match of value.matchAll(/var\(\s*--([a-z][a-z0-9]*-[a-z0-9][a-z0-9-]*)/gi)) {
@@ -1461,6 +1535,57 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
   const templateNativeControls = collectNativeStyleControlsFromItems(
     templateStyleItems
   );
+  for (const item of collectImplicitBricksLayoutControls(templateStyleItems).slice(0, 40)) {
+    if (item.type === 'missing-flex-direction') {
+      add(
+        findings,
+        'fail',
+        `Bricks layout element "${item.label}" sets _display:flex but omits _direction. Bricks source-backed layout controls must explicitly own flex direction; relying on browser defaults causes rail/card drift and makes the visual editor ambiguous.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'missing-grid-columns') {
+      add(
+        findings,
+        'fail',
+        `Bricks layout element "${item.label}" sets _display:grid but omits _gridTemplateColumns/_gridAutoColumns. Grid layout must be represented by Bricks-native grid controls, not implicit CSS/default behavior.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'rail-missing-flex-display') {
+      add(
+        findings,
+        'fail',
+        `Seam horizontal rail "${item.label}" must set Bricks _display:flex on the actual item track. Rail semantics alone do not create Bricks-native layout ownership.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'rail-missing-row-direction') {
+      add(
+        findings,
+        'fail',
+        `Seam horizontal rail "${item.label}" must set Bricks _direction:row. This is the source-backed control that preserves category/product rail orientation in Bricks 2.3.x/2.4.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'rail-missing-overflow') {
+      add(
+        findings,
+        'fail',
+        `Seam horizontal rail "${item.label}" must set Bricks _overflow:auto or scroll so the actual rail track remains scrollable after import.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'rail-missing-gap') {
+      add(
+        findings,
+        'fail',
+        `Seam horizontal rail "${item.label}" must expose a tokenized Bricks _columnGap or _gap control; spacing cannot be hidden in defaults or external CSS.`,
+        rel(root, templatePath),
+        item.path
+      );
+    }
+  }
   for (const item of collectBricksCompilerUnsafeControls(templateStyleItems).slice(0, 40)) {
     if (item.type === 'unsupported-control') {
       add(

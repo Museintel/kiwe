@@ -233,6 +233,55 @@ function collectBricksElementMisuse(value, out = []) {
   return out;
 }
 
+function settingHasAttribute(settings, name, valuePattern = null) {
+  const wanted = String(name || '').toLowerCase();
+  return (Array.isArray(settings?._attributes) ? settings._attributes : []).some((attribute) => {
+    if (!attribute || typeof attribute !== 'object' || Array.isArray(attribute)) return false;
+    if (String(attribute.name || '').toLowerCase() !== wanted) return false;
+    return valuePattern ? valuePattern.test(String(attribute.value || '')) : true;
+  });
+}
+
+function collectImplicitBricksLayoutControls(items, prefix) {
+  const problems = [];
+  const list = Array.isArray(items) ? items : [];
+  list.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const settings = elementSettings(item);
+    const label = String(item.id || item.name || item.label || `item-${index}`);
+    const classes = String(settings._cssClasses || '');
+    const display = String(settings._display || '').toLowerCase();
+    const isRail = /\bseam-horizontal-rail\b/.test(classes) || settingHasAttribute(settings, 'data-flow', /^horizontal-rail$/i);
+
+    if (isBricksLayoutElement(item) && display === 'flex' && !Object.prototype.hasOwnProperty.call(settings, '_direction')) {
+      problems.push(`${prefix} layout element "${label}" sets _display:flex but omits _direction. Bricks source-backed layout controls must explicitly own flex direction; relying on browser defaults causes rail/card drift and makes the visual editor ambiguous.`);
+    }
+
+    if (isBricksLayoutElement(item) && display === 'grid') {
+      const hasColumns = Object.keys(settings).some((key) => /^_grid(?:TemplateColumns|AutoColumns)(?::|$)/.test(key));
+      if (!hasColumns) {
+        problems.push(`${prefix} layout element "${label}" sets _display:grid but omits _gridTemplateColumns/_gridAutoColumns. Grid layout must be represented by Bricks-native grid controls, not implicit CSS/default behavior.`);
+      }
+    }
+
+    if (isRail) {
+      if (display !== 'flex') {
+        problems.push(`${prefix} Seam horizontal rail "${label}" must set Bricks _display:flex on the actual item track. Rail semantics alone do not create Bricks-native layout ownership.`);
+      }
+      if (String(settings._direction || '').toLowerCase() !== 'row') {
+        problems.push(`${prefix} Seam horizontal rail "${label}" must set Bricks _direction:row. This is the source-backed control that preserves category/product rail orientation in Bricks 2.3.x/2.4.`);
+      }
+      if (!/(auto|scroll)/i.test(String(settings._overflow || ''))) {
+        problems.push(`${prefix} Seam horizontal rail "${label}" must set Bricks _overflow:auto or scroll so the actual rail track remains scrollable after import.`);
+      }
+      if (!Object.prototype.hasOwnProperty.call(settings, '_columnGap') && !Object.prototype.hasOwnProperty.call(settings, '_gap')) {
+        problems.push(`${prefix} Seam horizontal rail "${label}" must expose a tokenized Bricks _columnGap or _gap control; spacing cannot be hidden in defaults or external CSS.`);
+      }
+    }
+  });
+  return problems;
+}
+
 function collectCustomCssBuckets(value, out = []) {
   if (Array.isArray(value)) {
     for (const item of value) collectCustomCssBuckets(item, out);
@@ -665,6 +714,7 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
   const templateStyleItems = templateElements
     .concat(Array.isArray(templateData.global_classes) ? templateData.global_classes : [])
     .concat(Array.isArray(templateData.globalClasses) ? templateData.globalClasses : []);
+  out.push(...collectImplicitBricksLayoutControls(templateStyleItems, `Bricks template export ${relPath}`));
   out.push(...collectBricksCompilerUnsafeControls(templateStyleItems, `Bricks template export ${relPath}`));
   out.push(...collectBricksColorTokenMisuse(
     templateStyleItems,

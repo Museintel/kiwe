@@ -1497,6 +1497,14 @@ final class AI_Companion_Service {
 				'$.content/header/footer/global_classes'
 			)
 		);
+		$findings        = array_merge(
+			$findings,
+			$this->review_bricks_implicit_layout_controls(
+				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.content/header/footer/global_classes'
+			)
+		);
 		if ( count( $elements ) >= 180 && $native_controls < 60 ) {
 			$findings[] = [
 				'severity' => 'error',
@@ -1637,6 +1645,104 @@ final class AI_Companion_Service {
 			}
 		}
 		return $findings;
+	}
+
+	private function review_bricks_implicit_layout_controls( array $items, string $path, string $base_path ): array {
+		$findings = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$settings = $item['settings'];
+			$label    = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$name     = strtolower( (string) ( $item['name'] ?? '' ) );
+			$display  = strtolower( (string) ( $settings['_display'] ?? '' ) );
+			$classes  = (string) ( $settings['_cssClasses'] ?? '' );
+			$is_layout = in_array( $name, [ 'section', 'container', 'block', 'div' ], true );
+			$is_rail   = preg_match( '/\bseam-horizontal-rail\b/', $classes ) || $this->bricks_setting_has_attribute( $settings, 'data-flow', '/^horizontal-rail$/i' );
+
+			if ( $is_layout && 'flex' === $display && ! array_key_exists( '_direction', $settings ) ) {
+				$findings[] = [
+					'severity' => 'error',
+					'code'     => 'bricks_template_upload_missing_flex_direction',
+					'message'  => sprintf( 'Bricks layout element "%s" sets _display:flex but omits _direction. Bricks source-backed layout controls must explicitly own flex direction; relying on browser defaults causes rail/card drift and makes the visual editor ambiguous.', $label ),
+					'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings._direction' ),
+				];
+			}
+
+			if ( $is_layout && 'grid' === $display ) {
+				$has_columns = false;
+				foreach ( array_keys( $settings ) as $key ) {
+					if ( preg_match( '/^_grid(?:TemplateColumns|AutoColumns)(?::|$)/', (string) $key ) ) {
+						$has_columns = true;
+						break;
+					}
+				}
+				if ( ! $has_columns ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_missing_grid_columns',
+						'message'  => sprintf( 'Bricks layout element "%s" sets _display:grid but omits _gridTemplateColumns/_gridAutoColumns. Grid layout must be represented by Bricks-native grid controls, not implicit CSS/default behavior.', $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings._gridTemplateColumns' ),
+					];
+				}
+			}
+
+			if ( $is_rail ) {
+				if ( 'flex' !== $display ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_rail_missing_flex_display',
+						'message'  => sprintf( 'Seam horizontal rail "%s" must set Bricks _display:flex on the actual item track. Rail semantics alone do not create Bricks-native layout ownership.', $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings._display' ),
+					];
+				}
+				if ( 'row' !== strtolower( (string) ( $settings['_direction'] ?? '' ) ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_rail_missing_row_direction',
+						'message'  => sprintf( 'Seam horizontal rail "%s" must set Bricks _direction:row. This is the source-backed control that preserves category/product rail orientation in Bricks 2.3.x/2.4.', $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings._direction' ),
+					];
+				}
+				if ( ! preg_match( '/(?:auto|scroll)/i', (string) ( $settings['_overflow'] ?? '' ) ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_rail_missing_overflow',
+						'message'  => sprintf( 'Seam horizontal rail "%s" must set Bricks _overflow:auto or scroll so the actual rail track remains scrollable after import.', $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings._overflow' ),
+					];
+				}
+				if ( ! array_key_exists( '_columnGap', $settings ) && ! array_key_exists( '_gap', $settings ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_rail_missing_gap',
+						'message'  => sprintf( 'Seam horizontal rail "%s" must expose a tokenized Bricks _columnGap or _gap control; spacing cannot be hidden in defaults or external CSS.', $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings._columnGap' ),
+					];
+				}
+			}
+		}
+		return $findings;
+	}
+
+	private function bricks_setting_has_attribute( array $settings, string $name, ?string $pattern = null ): bool {
+		if ( ! isset( $settings['_attributes'] ) || ! is_array( $settings['_attributes'] ) ) {
+			return false;
+		}
+		$wanted = strtolower( $name );
+		foreach ( $settings['_attributes'] as $attribute ) {
+			if ( ! is_array( $attribute ) ) {
+				continue;
+			}
+			if ( strtolower( (string) ( $attribute['name'] ?? '' ) ) !== $wanted ) {
+				continue;
+			}
+			if ( null === $pattern || preg_match( $pattern, (string) ( $attribute['value'] ?? '' ) ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private function collect_bricks_custom_css_text( $value ): string {
