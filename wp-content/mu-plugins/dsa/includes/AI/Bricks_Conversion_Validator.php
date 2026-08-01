@@ -447,6 +447,14 @@ final class Bricks_Conversion_Validator {
 					sprintf( 'Bricks color control "%1$s" on "%2$s" stores color as a plain string "%3$s". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-surface, #fff)" } for background, border, typography and related native controls; plain strings can remain in JSON but be omitted from frontend CSS.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
 					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
 				);
+			} elseif ( 'radius-shape' === (string) ( $item['type'] ?? '' ) ) {
+				$this->add(
+					$findings,
+					'fail',
+					'bricks_template_border_radius_corner_shape',
+					sprintf( 'Bricks border-radius control "%1$s" on "%2$s" uses CSS corner keys "%3$s". Bricks frontend CSS generation reads radius.top, radius.right, radius.bottom, and radius.left, then maps them to the four CSS corners; topLeft/topRight/bottomRight/bottomLeft can remain in JSON but silently compile to no radius.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
+					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
+				);
 			} elseif ( 'background-gradient-color' === (string) ( $item['type'] ?? '' ) ) {
 				$this->add(
 					$findings,
@@ -934,6 +942,23 @@ final class Bricks_Conversion_Validator {
 						'value' => $value['color'],
 						'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.color',
 					];
+				}
+				if ( ( '_border' === $key || preg_match( '/^_border:/', $key ) ) && is_array( $value ) && isset( $value['radius'] ) && is_array( $value['radius'] ) ) {
+					$invalid_radius_keys = [];
+					foreach ( [ 'topLeft', 'topRight', 'bottomRight', 'bottomLeft' ] as $radius_key ) {
+						if ( array_key_exists( $radius_key, $value['radius'] ) ) {
+							$invalid_radius_keys[] = $radius_key;
+						}
+					}
+					if ( $invalid_radius_keys ) {
+						$findings[] = [
+							'type'  => 'radius-shape',
+							'label' => $label,
+							'key'   => $key,
+							'value' => implode( ', ', $invalid_radius_keys ),
+							'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.radius',
+						];
+					}
 				}
 				if ( ( '_typography' === $key || preg_match( '/^_typography:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_string( $value['color'] ) ) {
 					$findings[] = [

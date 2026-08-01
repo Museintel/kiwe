@@ -17,7 +17,13 @@
           "color": "var(--kiwe-color-surface, #fff8ef)"
         },
         "_border": {
-          "color": "transparent"
+          "color": "transparent",
+          "radius": {
+            "topLeft": "var(--kiwe-radius-xl, 20px)",
+            "topRight": "var(--kiwe-radius-xl, 20px)",
+            "bottomRight": "var(--kiwe-radius-xl, 20px)",
+            "bottomLeft": "var(--kiwe-radius-xl, 20px)"
+          }
         },
         "_typography": {
           "font-family": "var(--kiwe-font-display, Georgia, serif)",

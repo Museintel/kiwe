@@ -335,6 +335,12 @@ function collectBricksCompilerUnsafeControls(items, prefix) {
       if ((key === '_border' || /^_border:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && typeof value.color === 'string') {
         problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-border, rgba(...))" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
       }
+      if ((key === '_border' || /^_border:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && value.radius && typeof value.radius === 'object' && !Array.isArray(value.radius)) {
+        const invalidRadiusKeys = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'].filter((radiusKey) => Object.prototype.hasOwnProperty.call(value.radius, radiusKey));
+        if (invalidRadiusKeys.length) {
+          problems.push(`${prefix} border-radius control "${key}" on "${label}" uses CSS corner keys "${invalidRadiusKeys.join(', ')}". Bricks frontend CSS generation reads radius.top, radius.right, radius.bottom, and radius.left; topLeft/topRight/bottomRight/bottomLeft can remain in JSON but compile to no radius.`);
+        }
+      }
       if ((key === '_typography' || /^_typography:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && typeof value.color === 'string') {
         problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-text, #111)" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
       }

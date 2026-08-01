@@ -689,6 +689,21 @@ function collectBricksCompilerUnsafeControls(items) {
           expected: '_border.color.raw'
         });
       }
+      if ((key === '_border' || /^_border:/.test(key)) && isPlainObject(value) && isPlainObject(value.radius)) {
+        const invalidRadiusKeys = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'].filter((radiusKey) =>
+          Object.prototype.hasOwnProperty.call(value.radius, radiusKey)
+        );
+        if (invalidRadiusKeys.length) {
+          findings.push({
+            type: 'radius-shape',
+            label,
+            key,
+            value: invalidRadiusKeys.join(', '),
+            path: `$.content/header/footer/global_classes[${index}].settings.${key}.radius`,
+            expected: '_border.radius.top/right/bottom/left'
+          });
+        }
+      }
       if ((key === '_typography' || /^_typography:/.test(key)) && isPlainObject(value) && typeof value.color === 'string') {
         findings.push({
           type: 'color-shape',
@@ -1295,6 +1310,14 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
         findings,
         'fail',
         `Bricks color control "${item.key}" on "${item.label}" stores color as a plain string "${item.value}". Bricks' frontend CSS generator expects color objects such as { "raw": "var(--kiwe-color-surface, #fff)" } for background, border, typography and related native controls; plain strings can be kept in JSON but silently omitted from frontend CSS.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'radius-shape') {
+      add(
+        findings,
+        'fail',
+        `Bricks border-radius control "${item.key}" on "${item.label}" uses CSS corner keys "${item.value}". Bricks' frontend CSS generator reads radius.top, radius.right, radius.bottom, and radius.left, then maps them to the four CSS corners; topLeft/topRight/bottomRight/bottomLeft can remain in JSON but silently compile to no radius.`,
         rel(root, templatePath),
         item.path
       );
