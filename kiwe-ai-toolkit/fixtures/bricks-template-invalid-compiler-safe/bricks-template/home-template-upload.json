@@ -7,12 +7,21 @@
       "id": "bad001",
       "name": "section",
       "parent": "0",
-      "children": ["bad002"],
+      "children": [
+        "bad002"
+      ],
       "settings": {
         "_cssClasses": "seam-section nc-bad-section",
         "_maxWidth": "var(--nc-bad-width, 72rem)",
+        "_background": {
+          "color": "var(--kiwe-color-surface, #fff8ef)"
+        },
+        "_border": {
+          "color": "transparent"
+        },
         "_typography": {
           "font-family": "var(--kiwe-font-display, Georgia, serif)",
+          "color": "var(--kiwe-color-text, #111)",
           "font-size": "var(--kiwe-type-h1, clamp(2rem, 5vw, 5rem))"
         }
       }
@@ -35,6 +44,11 @@
       "id": "gvbad1",
       "name": "--nc-bad-width",
       "value": "72rem"
+    },
+    {
+      "name": "unsafe-global-var",
+      "value": "1px solid var(--kiwe-color-accent)",
+      "type": "component"
     }
   ],
   "kiwe": {
@@ -53,8 +67,13 @@
       "nativeStyleIntent": [
         {
           "sourceSelector": ".nc-bad-section",
-          "mappedElementIds": ["bad001"],
-          "nativeControls": ["_maxWidth", "_typography"],
+          "mappedElementIds": [
+            "bad001"
+          ],
+          "nativeControls": [
+            "_maxWidth",
+            "_typography"
+          ],
           "customCssException": "none",
           "status": "editable-native-first"
         }

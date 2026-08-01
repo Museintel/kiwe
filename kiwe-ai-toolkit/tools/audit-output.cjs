@@ -294,6 +294,17 @@ function collectBricksTemplateVariableNameMisuse(templateData, relPath) {
       if (name.startsWith('--')) {
         problems.push(`Bricks template export ${relPath} global variable "${name}" at $.${lane}[${index}].name includes leading "--". Native Bricks variable records must store names without the CSS custom-property prefix because Bricks emits it during CSS compilation; otherwise "${name}" becomes "----${name.replace(/^--/, '')}" and controls consuming var(${name}, ...) disconnect from the token.`);
       }
+      const value = String(variable.value || '').trim();
+      if (value.includes('var(')) {
+        for (const call of extractCssFunctionCalls(value, 'var')) {
+          const args = splitCssFunctionArgs(call);
+          const cssVariable = String(args[0] || '').trim();
+          const hasFallback = args.length >= 2 && args.slice(1).join(',').trim() !== '';
+          if (/^--[a-z][a-z0-9_-]*$/i.test(cssVariable) && !hasFallback) {
+            problems.push(`Bricks template export ${relPath} global variable "${name}" at $.${lane}[${index}].value references "${cssVariable}" without a fallback in "${value}". Project/global variable definitions must be self-contained for Bricks template imports; use var(${cssVariable}, fallback).`);
+          }
+        }
+      }
     });
   }
   return problems;
@@ -314,6 +325,18 @@ function collectBricksCompilerUnsafeControls(items, prefix) {
         if (typeof fontFamily === 'string' && bricksFontFamilyTokenPattern.test(fontFamily)) {
           problems.push(`${prefix} typography control "${key}" on "${label}" stores font-family as "${fontFamily}". Bricks quotes typography font-family output, so CSS-variable font stacks become invalid literal families like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.`);
         }
+      }
+      if ((key === '_background' || /^_background:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && typeof value.color === 'string') {
+        problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-surface, #fff)" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
+      }
+      if ((key === '_background' || /^_background:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && value.color && typeof value.color === 'object' && !Array.isArray(value.color) && typeof value.color.raw === 'string' && /gradient\(/i.test(value.color.raw)) {
+        problems.push(`${prefix} background color control "${key}" on "${label}" stores a gradient in color.raw. Bricks compiles _background.color to background-color, where gradients are invalid; use the native _gradient control with tokenized color stops and keep _background.color as a solid fallback.`);
+      }
+      if ((key === '_border' || /^_border:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && typeof value.color === 'string') {
+        problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-border, rgba(...))" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
+      }
+      if ((key === '_typography' || /^_typography:/.test(key)) && value && typeof value === 'object' && !Array.isArray(value) && typeof value.color === 'string') {
+        problems.push(`${prefix} color control "${key}" on "${label}" stores color as a plain string "${value.color}". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-text, #111)" }; plain strings can remain in JSON but be omitted from compiled frontend CSS.`);
       }
     }
   });

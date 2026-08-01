@@ -339,7 +339,19 @@ final class Bricks_Conversion_Validator {
 		}
 
 		$variable_name_findings = $this->template_variable_name_findings( $template );
-		foreach ( array_slice( $variable_name_findings, 0, 20 ) as $item ) {
+		$prefixed_variable_name_findings = array_values(
+			array_filter(
+				$variable_name_findings,
+				static fn( $item ) => 'variable-value-missing-fallback' !== ( $item['type'] ?? '' )
+			)
+		);
+		$variable_value_fallback_findings = array_values(
+			array_filter(
+				$variable_name_findings,
+				static fn( $item ) => 'variable-value-missing-fallback' === ( $item['type'] ?? '' )
+			)
+		);
+		foreach ( array_slice( $prefixed_variable_name_findings, 0, 20 ) as $item ) {
 			$this->add(
 				$findings,
 				'fail',
@@ -352,12 +364,35 @@ final class Bricks_Conversion_Validator {
 				(string) ( $item['path'] ?? '$.global_variables' )
 			);
 		}
-		if ( count( $variable_name_findings ) > 20 ) {
+		if ( count( $prefixed_variable_name_findings ) > 20 ) {
 			$this->add(
 				$findings,
 				'fail',
 				'bricks_template_variable_name_prefix_overflow',
-				sprintf( 'Bricks template export contains %d additional global variable names with leading "--". Store names as "kiwe-color-brand" or "nc-app-max", not "--kiwe-color-brand" or "--nc-app-max".', count( $variable_name_findings ) - 20 ),
+				sprintf( 'Bricks template export contains %d additional global variable names with leading "--". Store names as "kiwe-color-brand" or "nc-app-max", not "--kiwe-color-brand" or "--nc-app-max".', count( $prefixed_variable_name_findings ) - 20 ),
+				'$.global_variables'
+			);
+		}
+		foreach ( array_slice( $variable_value_fallback_findings, 0, 20 ) as $item ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_variable_value_missing_fallback',
+				sprintf(
+					'Bricks global variable "%1$s" references "%2$s" without a fallback in "%3$s". Global variable definitions are emitted before/alongside imported template CSS and must be self-contained: use var(%2$s, fallback) inside project variables too.',
+					(string) ( $item['name'] ?? '' ),
+					(string) ( $item['variable'] ?? '' ),
+					(string) ( $item['value'] ?? '' )
+				),
+				(string) ( $item['path'] ?? '$.global_variables' )
+			);
+		}
+		if ( count( $variable_value_fallback_findings ) > 20 ) {
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_variable_value_missing_fallback_overflow',
+				sprintf( 'Bricks template export contains %d additional global variable values with CSS variable references that lack fallbacks.', count( $variable_value_fallback_findings ) - 20 ),
 				'$.global_variables'
 			);
 		}
@@ -402,6 +437,22 @@ final class Bricks_Conversion_Validator {
 					'fail',
 					'bricks_template_typography_font_family_token',
 					sprintf( 'Bricks typography control "%1$s" on "%2$s" stores font-family as "%3$s". Bricks compiles typography font families as quoted values, so CSS-variable font stacks become invalid like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
+					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
+				);
+			} elseif ( 'color-shape' === (string) ( $item['type'] ?? '' ) ) {
+				$this->add(
+					$findings,
+					'fail',
+					'bricks_template_color_control_string_shape',
+					sprintf( 'Bricks color control "%1$s" on "%2$s" stores color as a plain string "%3$s". Bricks frontend CSS generation expects color objects such as { "raw": "var(--kiwe-color-surface, #fff)" } for background, border, typography and related native controls; plain strings can remain in JSON but be omitted from frontend CSS.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ), (string) ( $item['value'] ?? '' ) ),
+					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
+				);
+			} elseif ( 'background-gradient-color' === (string) ( $item['type'] ?? '' ) ) {
+				$this->add(
+					$findings,
+					'fail',
+					'bricks_template_background_gradient_in_color',
+					sprintf( 'Bricks background color control "%1$s" on "%2$s" stores a gradient in color.raw. Bricks compiles _background.color to background-color, where gradients are invalid; use the native "_gradient" control with tokenized color stops and keep _background.color as a solid fallback.', (string) ( $item['key'] ?? '' ), (string) ( $item['label'] ?? '' ) ),
 					(string) ( $item['path'] ?? '$.content/header/footer/global_classes' )
 				);
 			}
@@ -800,6 +851,28 @@ final class Bricks_Conversion_Validator {
 						'path'  => '$.' . $lane . '[' . (int) $index . '].name',
 					];
 				}
+				$value = trim( (string) ( $variable['value'] ?? '' ) );
+				if ( '' !== $value && false !== strpos( $value, 'var(' ) ) {
+					foreach ( $this->extract_css_function_calls( $value, 'var' ) as $call ) {
+						$args = $this->split_css_args( $call );
+						if ( count( $args ) >= 2 ) {
+							continue;
+						}
+						$css_variable = trim( (string) ( $args[0] ?? '' ) );
+						if ( ! preg_match( '/^--[a-z][a-z0-9_-]*$/i', $css_variable ) ) {
+							continue;
+						}
+						$findings[] = [
+							'lane'     => $lane,
+							'index'    => (int) $index,
+							'name'     => $name,
+							'variable' => $css_variable,
+							'value'    => $value,
+							'path'     => '$.' . $lane . '[' . (int) $index . '].value',
+							'type'     => 'variable-value-missing-fallback',
+						];
+					}
+				}
 			}
 		}
 		return $findings;
@@ -834,6 +907,42 @@ final class Bricks_Conversion_Validator {
 							'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.font-family',
 						];
 					}
+				}
+				if ( ( '_background' === $key || preg_match( '/^_background:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_string( $value['color'] ) ) {
+					$findings[] = [
+						'type'  => 'color-shape',
+						'label' => $label,
+						'key'   => $key,
+						'value' => $value['color'],
+						'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.color',
+					];
+				}
+				if ( ( '_background' === $key || preg_match( '/^_background:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_array( $value['color'] ) && isset( $value['color']['raw'] ) && is_string( $value['color']['raw'] ) && preg_match( '/gradient\(/i', $value['color']['raw'] ) ) {
+					$findings[] = [
+						'type'  => 'background-gradient-color',
+						'label' => $label,
+						'key'   => $key,
+						'value' => $value['color']['raw'],
+						'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.color.raw',
+					];
+				}
+				if ( ( '_border' === $key || preg_match( '/^_border:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_string( $value['color'] ) ) {
+					$findings[] = [
+						'type'  => 'color-shape',
+						'label' => $label,
+						'key'   => $key,
+						'value' => $value['color'],
+						'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.color',
+					];
+				}
+				if ( ( '_typography' === $key || preg_match( '/^_typography:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_string( $value['color'] ) ) {
+					$findings[] = [
+						'type'  => 'color-shape',
+						'label' => $label,
+						'key'   => $key,
+						'value' => $value['color'],
+						'path'  => '$.content/header/footer/global_classes[' . (int) $index . '].settings.' . $key . '.color',
+					];
 				}
 			}
 		}

@@ -382,7 +382,7 @@ final class Seam_Token_Service {
 			$bare = ltrim( $name, '-' );
 			$variables[] = [
 				'id'          => self::stable_id( 'kwpv-' . $project_id . '-' . $bare ),
-				'name'        => $name,
+				'name'        => $bare,
 				'value'       => $value,
 				'category'    => $variable_category_id,
 				'source'      => 'kiwe-project',

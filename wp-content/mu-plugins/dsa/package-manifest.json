@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "6.89",
+  "version": "6.90",
   "algorithm": "sha256",
   "file_count": 295,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "f337db759edc14c0aef9a80590229d82558a93b45ee5452d76586a7707471778"
+      "sha256": "5c69c30299cae946b1e64f634629798a9c0e021a366fa04c3dabb8c7ecb4c597"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -337,8 +337,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 150546,
-      "sha256": "46a5fd86c31c4976479e08df296aa65588340e3747469d840cd77f330a342c19"
+      "bytes": 153507,
+      "sha256": "a184ccc95d1365b429b935ffb4598961024a948980df477a697a1a3277cebc9c"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -361,16 +361,16 @@
       "sha256": "22136ed40c4b8d4b25555aefa7c51ec9d301109a30059b944ed0895ff4e618f2"
     },
     "includes/AI/Bricks_AI_Intelligence_Service.php": {
-      "bytes": 30247,
-      "sha256": "29e9a01e1c00f8274acda26c93d4b99798e30e54b30b5e4ae23b5a121a0ec220"
+      "bytes": 30428,
+      "sha256": "cb700b6482f92befa68dc0176b9032af3f655d8622fdbe716607f4798482c9b2"
     },
     "includes/AI/Bricks_Controlled_Adapter_Service.php": {
       "bytes": 17537,
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 67715,
-      "sha256": "7d2bb2ceb0fbbe0dcdf8b959a60a18e341479393a4a13bec8a2ac4dfc0410fb3"
+      "bytes": 73081,
+      "sha256": "b03916f02574dbeb415cfaf75b3591ad6378da71280a1c4515bd6dda648b8aa0"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,
@@ -526,7 +526,7 @@
     },
     "includes/Design/Seam_Token_Service.php": {
       "bytes": 60411,
-      "sha256": "4ca3f7868be80cf12f5f37bb56211e10df04c583ffc2cb3358f1b26c8f203129"
+      "sha256": "3924df7b9ec043cc4cb070835d292b49189656d90c0e3bbe7a3c971fa5dc9f4d"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
       "bytes": 15462,
@@ -1069,8 +1069,8 @@
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 66286,
-      "sha256": "0900127fce53db9fdcce9305661ffba369929eba1a52a2617b4b81b039c3f2ab"
+      "bytes": 67373,
+      "sha256": "674b27c390eb3a9531dfbf4b24fca736ec4bc6a96ead9de6ee4966d71a9f8b2d"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

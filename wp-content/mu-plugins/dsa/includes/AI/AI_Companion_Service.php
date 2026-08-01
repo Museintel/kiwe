@@ -824,7 +824,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native settings/global_classes: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Bricks can skip or remap global class definitions when class names already exist, so full-page templates must keep enough element-level native controls for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides; do not depend mainly on global_classes hydration. Do not use no-op clamps such as clamp(22px, 22px, 22px). For human My Templates upload, every CSS variable consumed by native settings/global_classes must include a fallback because top-level globalVariables may not hydrate on import. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), and keep var(...) font stacks out of _typography.font-family because Bricks quotes them. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native settings/global_classes: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Bricks can skip or remap global class definitions when class names already exist, so full-page templates must keep enough element-level native controls for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides; do not depend mainly on global_classes hydration. Do not use no-op clamps such as clamp(22px, 22px, 22px). For human My Templates upload, every CSS variable consumed by native settings/global_classes must include a fallback because top-level globalVariables may not hydrate on import. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), keep var(...) font stacks out of _typography.font-family because Bricks quotes them, store background/border/typography colors as Bricks color objects ({ raw: "var(--kiwe-color-text, #111)" }) rather than plain strings, and use _gradient for gradients instead of _background.color. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -935,7 +935,7 @@ final class AI_Companion_Service {
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
-				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Give every CSS variable consumed by native settings/global_classes a fallback for human My Templates upload, because top-level globalVariables may not hydrate during import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, and do not put var(...) font stacks in _typography.font-family.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
+				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Give every CSS variable consumed by native settings/global_classes a fallback for human My Templates upload, because top-level globalVariables may not hydrate during import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, do not put var(...) font stacks in _typography.font-family, store colors as Bricks color objects, and use _gradient for gradients.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
 				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
 			];
 		}
@@ -1555,6 +1555,38 @@ final class AI_Companion_Service {
 							'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.font-family' ),
 						];
 					}
+				}
+				if ( ( '_background' === $key || preg_match( '/^_background:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_string( $value['color'] ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_color_string_shape',
+						'message'  => sprintf( 'Bricks color control "%1$s" on "%2$s" stores color as a plain string. Use Bricks color objects such as { "raw": "var(--kiwe-color-surface, #fff)" }; otherwise Bricks can keep the JSON while omitting frontend CSS.', $key, $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.color' ),
+					];
+				}
+				if ( ( '_background' === $key || preg_match( '/^_background:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_array( $value['color'] ) && isset( $value['color']['raw'] ) && is_string( $value['color']['raw'] ) && preg_match( '/gradient\(/i', $value['color']['raw'] ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_gradient_in_background_color',
+						'message'  => sprintf( 'Bricks background color control "%1$s" on "%2$s" stores a gradient in color.raw. Use the native _gradient control with tokenized color stops and keep _background.color as a solid fallback.', $key, $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.color.raw' ),
+					];
+				}
+				if ( ( '_border' === $key || preg_match( '/^_border:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_string( $value['color'] ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_color_string_shape',
+						'message'  => sprintf( 'Bricks border control "%1$s" on "%2$s" stores color as a plain string. Use a Bricks color object such as { "raw": "var(--kiwe-color-border, rgba(...))" }.', $key, $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.color' ),
+					];
+				}
+				if ( ( '_typography' === $key || preg_match( '/^_typography:/', $key ) ) && is_array( $value ) && isset( $value['color'] ) && is_string( $value['color'] ) ) {
+					$findings[] = [
+						'severity' => 'error',
+						'code'     => 'bricks_template_upload_color_string_shape',
+						'message'  => sprintf( 'Bricks typography control "%1$s" on "%2$s" stores color as a plain string. Use a Bricks color object such as { "raw": "var(--kiwe-color-text, #111)" }.', $key, $label ),
+						'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings.' . $key . '.color' ),
+					];
 				}
 			}
 		}

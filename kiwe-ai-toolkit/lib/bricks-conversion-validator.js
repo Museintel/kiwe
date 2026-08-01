@@ -614,6 +614,19 @@ function collectTemplateVariableNameFindings(templateData) {
           path: `$.${lane}[${index}].name`
         });
       }
+      const value = String(variable.value || '').trim();
+      for (const call of collectCssVariableCalls(value)) {
+        if (call.hasFallback) continue;
+        findings.push({
+          lane,
+          index,
+          name,
+          variable: call.name,
+          value,
+          path: `$.${lane}[${index}].value`,
+          type: 'variable-value-missing-fallback'
+        });
+      }
     });
   }
   return findings;
@@ -645,6 +658,46 @@ function collectBricksCompilerUnsafeControls(items) {
             path: `$.content/header/footer/global_classes[${index}].settings.${key}.font-family`
           });
         }
+      }
+      if ((key === '_background' || /^_background:/.test(key)) && isPlainObject(value) && typeof value.color === 'string') {
+        findings.push({
+          type: 'color-shape',
+          label,
+          key,
+          value: value.color,
+          path: `$.content/header/footer/global_classes[${index}].settings.${key}.color`,
+          expected: '_background.color.raw'
+        });
+      }
+      if ((key === '_background' || /^_background:/.test(key)) && isPlainObject(value) && isPlainObject(value.color) && typeof value.color.raw === 'string' && /gradient\(/i.test(value.color.raw)) {
+        findings.push({
+          type: 'background-gradient-color',
+          label,
+          key,
+          value: value.color.raw,
+          path: `$.content/header/footer/global_classes[${index}].settings.${key}.color.raw`,
+          expected: '_gradient'
+        });
+      }
+      if ((key === '_border' || /^_border:/.test(key)) && isPlainObject(value) && typeof value.color === 'string') {
+        findings.push({
+          type: 'color-shape',
+          label,
+          key,
+          value: value.color,
+          path: `$.content/header/footer/global_classes[${index}].settings.${key}.color`,
+          expected: '_border.color.raw'
+        });
+      }
+      if ((key === '_typography' || /^_typography:/.test(key)) && isPlainObject(value) && typeof value.color === 'string') {
+        findings.push({
+          type: 'color-shape',
+          label,
+          key,
+          value: value.color,
+          path: `$.content/header/footer/global_classes[${index}].settings.${key}.color`,
+          expected: '_typography.color.raw'
+        });
       }
     }
   });
@@ -1148,7 +1201,9 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     }
   }
   const variableNameFindings = collectTemplateVariableNameFindings(templateData);
-  for (const item of variableNameFindings.slice(0, 20)) {
+  const prefixedVariableNameFindings = variableNameFindings.filter((item) => item.type !== 'variable-value-missing-fallback');
+  const variableValueFallbackFindings = variableNameFindings.filter((item) => item.type === 'variable-value-missing-fallback');
+  for (const item of prefixedVariableNameFindings.slice(0, 20)) {
     add(
       findings,
       'fail',
@@ -1157,11 +1212,29 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       item.path
     );
   }
-  if (variableNameFindings.length > 20) {
+  if (prefixedVariableNameFindings.length > 20) {
     add(
       findings,
       'fail',
-      `Bricks template export contains ${variableNameFindings.length - 20} additional global variable names with leading "--". Store names as "kiwe-color-brand" or "nc-app-max", not "--kiwe-color-brand" or "--nc-app-max".`,
+      `Bricks template export contains ${prefixedVariableNameFindings.length - 20} additional global variable names with leading "--". Store names as "kiwe-color-brand" or "nc-app-max", not "--kiwe-color-brand" or "--nc-app-max".`,
+      rel(root, templatePath),
+      '$.global_variables'
+    );
+  }
+  for (const item of variableValueFallbackFindings.slice(0, 20)) {
+    add(
+      findings,
+      'fail',
+      `Bricks global variable "${item.name}" references "${item.variable}" without a fallback in "${item.value}". Global variable definitions are emitted before/alongside imported template CSS and must be self-contained: use var(${item.variable}, fallback) inside project variables too.`,
+      rel(root, templatePath),
+      item.path
+    );
+  }
+  if (variableValueFallbackFindings.length > 20) {
+    add(
+      findings,
+      'fail',
+      `Bricks template export contains ${variableValueFallbackFindings.length - 20} additional global variable values with CSS variable references that lack fallbacks.`,
       rel(root, templatePath),
       '$.global_variables'
     );
@@ -1214,6 +1287,22 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
         findings,
         'fail',
         `Bricks typography control "${item.key}" on "${item.label}" stores font-family as "${item.value}". Bricks compiles typography font families as quoted values, so CSS-variable font stacks become invalid like font-family: "var(--kiwe-font-body, ...)". Use a concrete Bricks font-family value in _typography and keep tokenized font families in the Framework/theme layer.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'color-shape') {
+      add(
+        findings,
+        'fail',
+        `Bricks color control "${item.key}" on "${item.label}" stores color as a plain string "${item.value}". Bricks' frontend CSS generator expects color objects such as { "raw": "var(--kiwe-color-surface, #fff)" } for background, border, typography and related native controls; plain strings can be kept in JSON but silently omitted from frontend CSS.`,
+        rel(root, templatePath),
+        item.path
+      );
+    } else if (item.type === 'background-gradient-color') {
+      add(
+        findings,
+        'fail',
+        `Bricks background color control "${item.key}" on "${item.label}" stores a gradient in color.raw. Bricks compiles _background.color to background-color, where gradients are invalid; use the native "_gradient" control with tokenized color stops and keep _background.color as a solid fallback.`,
         rel(root, templatePath),
         item.path
       );
