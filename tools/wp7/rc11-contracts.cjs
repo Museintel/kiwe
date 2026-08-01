@@ -17,10 +17,26 @@ const abilityCount = ( abilities.match(/wp_register_ability\(/g) || [] ).length;
 const expectedAbilities = [
 	'dsa/audit-trust',
 	'dsa/summarize-route',
+	'dsa/get-site-graph-data-schema',
+	'dsa/query-site-graph-data',
+	'dsa/get-securetrack-brief',
+	'dsa/get-bricks-ai-context',
+	'dsa/plan-bricks-ai-page',
 	'dsa/get-site-graph',
 	'dsa/validate-bindings',
+	'dsa/validate-bricks-conversion',
+	'dsa/validate-accessibility',
 	'dsa/prepare-apply-plan',
 	'dsa/stage-apply-plan',
+	'dsa/get-internal-ai-context',
+	'dsa/run-internal-ai-advisor',
+	'dsa/enrich-internal-ai-advisor',
+	'dsa/get-companion-context',
+	'dsa/ask-companion',
+	'dsa/review-ai-output',
+	'dsa/audit-kiwe-handoff',
+	'dsa/start-studio-project',
+	'dsa/review-studio-output',
 ];
 
 check( 'Abilities register on official category and ability hooks', abilities.includes( "wp_abilities_api_categories_init" ) && abilities.includes( "wp_abilities_api_init" ) );

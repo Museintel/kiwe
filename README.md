@@ -41,10 +41,13 @@ For Hostinger, use `docs/INSTALL-HOSTINGER.md`. For upgrades, incomplete uploads
 Release commands:
 
 ```text
+node tools/release/verify-green-baseline.cjs
 node tools/release/build-package-manifest.cjs
 node tools/release/verify-package.cjs
 node tools/release/rc12-contracts.cjs
 ```
+
+`verify-green-baseline.cjs` is the mandatory source gate before a release commit. Browser accessibility and responsive geometry remain a separate Playwright-backed CI contract because they require Chromium.
 
 No ZIP is required for the canonical Hostinger copy workflow. Do not mix files from historical folders.
 
@@ -52,7 +55,7 @@ No ZIP is required for the canonical Hostinger copy workflow. Do not mix files f
 
 The architecture and decisions live in `docs/DSA-ARCHITECTURE.md`. The short execution truth is `docs/DEVELOPMENT-PLAN.md`; security acceptance lives in `docs/SECURITY-AUDIT.md`; the UI marketplace contract lives in `docs/DSA-UI-CONTRACT.md`.
 
-Contract runners are grouped under `tools/`. CI checks PHP platform metadata across 8.2-8.4, package integrity, JavaScript syntax, and the established release contracts. Local PHP lint remains intentionally excluded unless the project owner explicitly resumes it.
+Contract runners are grouped under `tools/`. CI checks PHP platform metadata across 8.2-8.4 and runs the canonical green source baseline for package integrity, token purity, fixtures, toolkit/connector contracts, release contracts, and JavaScript syntax. Local PHP lint remains intentionally excluded unless the project owner explicitly resumes it.
 
 ## Emergency Disable
 

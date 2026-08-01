@@ -13,6 +13,7 @@ const files = [
 			':root',
 			'html[data-kiwe-theme="dark"]',
 			"html[data-kiwe-theme='dark']",
+			':is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"])',
 		]),
 	},
 	{

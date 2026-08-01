@@ -11,6 +11,7 @@ const runtime = read('wp-content/mu-plugins/dsa/includes/Runtime/Package_Manifes
 const readme = read('README.md');
 const runbook = read('docs/RELEASE-RUNBOOK.md');
 const workflow = read('.github/workflows/quality.yml');
+const greenBaseline = read('tools/release/verify-green-baseline.cjs');
 const themeValidator = read('tools/ui-theme/validate-package.cjs');
 const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const settings = read('wp-content/mu-plugins/dsa/includes/Settings.php');
@@ -35,8 +36,8 @@ check('compatibility matrix covers PHP 8.2-8.4', ['8.2', '8.3', '8.4'].every((ve
 check('compatibility claims keep live proof separate', matrix.notes.includes('does not claim'));
 check('CI matrix covers PHP 8.2-8.4', ['8.2', '8.3', '8.4'].every((version) => workflow.includes(version)));
 check('CI does not silently resume PHP lint', !workflow.includes('php -l'));
-check('CI verifies generated package', workflow.includes('verify-package.cjs'));
-check('CI enforces Seam runtime token purity', workflow.includes('audit-runtime-token-purity.cjs') && workflow.includes('audit-seam-adoption.cjs'));
+check('CI verifies generated package', workflow.includes('verify-green-baseline.cjs') && greenBaseline.includes('verify-package.cjs'));
+check('CI enforces Seam runtime token purity', workflow.includes('verify-green-baseline.cjs') && greenBaseline.includes('audit-runtime-token-purity.cjs') && greenBaseline.includes('audit-seam-adoption.cjs'));
 check('theme validator rejects private runtime bridge token leakage', themeValidator.includes('validateNoRuntimeBridgeTokenReferences') && themeValidator.includes('--dsa-runtime-token-') && fs.existsSync(path.join(root, 'tools/ui-theme/fixtures/invalid-runtime-bridge-token/css/theme.css')));
 check('theme validator rejects anonymous CSS literals in import CSS', themeValidator.includes('validateNoAnonymousLiteralThemeValues') && themeValidator.includes('anonymous CSS literal') && themeValidator.includes('collectAnonymousThemeLiterals') && fs.existsSync(path.join(root, 'tools/ui-theme/fixtures/invalid-anonymous-pixel-literal/css/theme.css')));
 check('retired S18 asset build pilot stays out of runtime and admin', !fs.existsSync(path.join(root, 'wp-content/mu-plugins/dsa/includes/Delivery/Asset_Build_Service.php')) && !packageManifest.includes('Asset_Build_Service.php') && !plugin.includes('Asset_Build_Service') && !admin.includes('S18 Asset Build') && !admin.includes('dsa_queue_asset_build') && !settings.includes('asset_build_pilot') && !readiness.includes('asset_build_pilot') && !apex.includes('generatedBuild'));

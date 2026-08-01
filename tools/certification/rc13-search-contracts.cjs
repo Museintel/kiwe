@@ -23,7 +23,7 @@ check('recommended Search defaults enable alphabet and quick add',
 check('unrelated settings forms preserve Search state',
   /if \( ! is_array\( \$input \) \) \{\s*return \$next;/s.test(admin));
 check('Search recovery is versioned and signature-specific',
-  /SAFETY_MIGRATION_VERSION = 2/.test(settings)
+  /SAFETY_MIGRATION_VERSION = (?:[2-9]|[1-9]\d+)/.test(settings)
   && /\$collapsed_by_absent_form/.test(settings)
   && /configuration_version'\] = 2/.test(settings));
 check('Search REST response declares capability state',

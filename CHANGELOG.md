@@ -4,6 +4,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+- Added `tools/release/verify-green-baseline.cjs` as the canonical local and CI source gate, including package integrity, Seam/token audits, positive and negative fixtures, toolkit/connector contracts, RC contracts, and JavaScript syntax.
+- Made the SeamFlow source contract derive the active package version instead of pinning an obsolete release number, preventing routine version changes from creating false failures.
+- Taught the runtime token-purity audit that the combined Kiwe/legacy dark-theme selector is a legitimate token authority while keeping component-level literals fail-closed.
+
+## 6.98 - 2026-08-01
+
 - Clarified that `/audit /frameworkprofile` is not an alias of `/audit /brickstheme`; Framework profile `bricks_theme_style` global slots are valid and must not be stripped down to only `enabled`, `id`, and `label`.
 - Tightened `/audit /bricksconversion` so both conversion envelopes and direct native Bricks template exports fail when Bricks-native settings or Kiwe-owned global classes contain untokenized literal design lengths such as raw `28px`, `2rem`, or fixed grid/flex measurements. Framework profiles provide the design tokens, but they do not magically rewrite hardcoded Bricks JSON after conversion.
 - Synced the native Bricks token-purity rule through the browser-AI workflow/context files, toolkit validator, WordPress REST validator, Bricks AI context, and Companion review cards so `/audit` and `/fix /bricksconversion` can identify the real grid/flex/token problem without spoon-fed symptoms.
