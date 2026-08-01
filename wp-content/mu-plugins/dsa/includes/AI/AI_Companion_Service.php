@@ -386,7 +386,7 @@ final class AI_Companion_Service {
 		}
 		$template_upload = $this->first_bricks_template_upload( $path_map );
 		if ( [] !== $template_upload ) {
-			$findings = array_merge( $findings, $this->review_bricks_template_upload( (string) $template_upload['content'], (string) $template_upload['path'] ) );
+			$findings = array_merge( $findings, $this->review_bricks_template_upload( (string) $template_upload['content'], (string) $template_upload['path'], $path_map ) );
 		}
 		if ( '' !== $conversion_json || [] !== $template_upload ) {
 			$findings = array_merge( $findings, $this->review_lean_bricks_documentation( $path_map, (string) ( $args['command'] ?? '' ) ) );
@@ -826,7 +826,7 @@ final class AI_Companion_Service {
 			'bricks-convert' => [
 				'id'    => 'phase-bricks-convert-no-loss-json',
 				'title' => 'Convert to Bricks with no-loss proof',
-				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native element settings: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Use a single visual owner: element-native controls own render/edit fidelity in full-page template uploads, while imported global_classes are semantic/name-only. Do not duplicate paint, layout, radius, spacing, shadows, or typography into styled global_classes because that creates Bricks ghost styling after designers remove or change one visible layer. Do not use no-op clamps such as clamp(22px, 22px, 22px). For human My Templates upload, every CSS variable consumed by native settings needs a fallback because top-level globalVariables may not hydrate on import. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), keep var(...) font stacks out of _typography.font-family because Bricks quotes them, store background/border/typography colors as Bricks color objects ({ raw: "var(--kiwe-color-text, #111)" }) rather than plain strings, use _gradient for gradients instead of _background.color, and store border radius as _border.radius.top/right/bottom/left rather than CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Reusable styled project classes belong in the Framework profile push or a dedicated class-library artifact, not duplicated inside the page template upload. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
+				'body'  => 'Produce one token-pure native Bricks My Templates upload JSON at bricks-template/[page]-template-upload.json. Target the public Bricks 2.3.x importer/runtime unless Site Graph reports a newer public compatible version. Preserve Seam classes/data attributes/ARIA/Kiwe launchers, map query-loop/dynamic/condition/interaction intent, and follow the Kiwe token ladder in native element settings: official Kiwe/Seam token first, declared project variable second, real fluid clamp only for proven responsive min/max states. Reserved prefixes are not enough: every var(--kiwe-*) or var(--seam-*) consumed by a template must exist in Kiwe’s real universal token registry/runtime. If it does not, map to an existing official token or declare a project variable such as --nc-* in the paired Framework profile. Use a single visual owner: element-native controls own render/edit fidelity in full-page template uploads, while imported global_classes are semantic/name-only. Do not duplicate paint, layout, radius, spacing, shadows, or typography into styled global_classes because that creates Bricks ghost styling after designers remove or change one visible layer. Do not use no-op clamps such as clamp(22px, 22px, 22px). For human My Templates upload, every CSS variable consumed by native settings needs a fallback because top-level globalVariables may not hydrate on import. Store native Bricks global variable names without leading --, use source-backed sizing controls (_widthMax/_widthMin/_heightMax/_heightMin), keep var(...) font stacks out of _typography.font-family because Bricks quotes them, store background/border/typography colors as Bricks color objects ({ raw: "var(--kiwe-color-text, #111)" }) rather than plain strings, use _gradient for gradients instead of _background.color, and store border radius as _border.radius.top/right/bottom/left rather than CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Reusable styled project classes belong in the Framework profile push or a dedicated class-library artifact, not duplicated inside the page template upload. Do not emit notes/reports unless /document is present. Do not mutate WordPress or Bricks.',
 			],
 			'bricks-audit' => [
 				'id'    => 'phase-bricks-audit-conversion-fidelity',
@@ -1313,7 +1313,7 @@ final class AI_Companion_Service {
 		return $findings;
 	}
 
-	private function review_bricks_template_upload( string $template_json, string $path ): array {
+	private function review_bricks_template_upload( string $template_json, string $path, array $path_map = [] ): array {
 		$data = json_decode( $template_json, true );
 		if ( ! is_array( $data ) ) {
 			return [
@@ -1465,6 +1465,24 @@ final class AI_Companion_Service {
 				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
 				$path,
 				'$.content/header/footer/global_classes'
+			)
+		);
+		$findings        = array_merge(
+			$findings,
+			$this->review_bricks_unknown_framework_variables(
+				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.content/header/footer/global_classes'
+			)
+		);
+		$findings        = array_merge(
+			$findings,
+			$this->review_bricks_project_variable_framework_proof(
+				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.content/header/footer/global_classes',
+				$data,
+				$path_map
 			)
 		);
 		$findings        = array_merge(
@@ -1771,6 +1789,176 @@ final class AI_Companion_Service {
 		return $findings;
 	}
 
+	private function review_bricks_unknown_framework_variables( array $items, string $path, string $base_path ): array {
+		$found = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$values = [];
+			$this->collect_bricks_native_owned_css_variables( $item['settings'], $values, $base_path . '[' . (int) $index . '].settings' );
+			foreach ( $values as $value ) {
+				$variable = $this->normalize_css_variable_name( (string) ( $value['variable'] ?? '' ) );
+				if ( '' === $variable || ! preg_match( '/^--(?:kiwe|seam)-/i', $variable ) || $this->bricks_is_official_framework_variable( $variable ) ) {
+					continue;
+				}
+				$value['label']    = $label;
+				$value['variable'] = $variable;
+				$found[]           = $value;
+			}
+		}
+
+		$names = array_values( array_unique( array_map( static fn( array $item ): string => (string) ( $item['variable'] ?? '' ), $found ) ) );
+		sort( $names );
+		if ( [] === $names ) {
+			return [];
+		}
+
+		return [
+			[
+				'severity' => 'error',
+				'code'     => 'bricks_template_unknown_framework_variable',
+				'message'  => sprintf(
+					'Bricks template uses %1$d reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: %2$s%3$s. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the token to Kiwe universal registry before /convert /bricks can pass.',
+					count( $names ),
+					implode( ', ', array_slice( $names, 0, 20 ) ),
+					count( $names ) > 20 ? ', ...' : ''
+				),
+				'path'     => sanitize_text_field( $path ),
+			],
+		];
+	}
+
+	private function review_bricks_project_variable_framework_proof( array $items, string $path, string $base_path, array $data, array $path_map ): array {
+		$usage = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$values = [];
+			$this->collect_bricks_native_owned_css_variables( $item['settings'], $values, $base_path . '[' . (int) $index . '].settings' );
+			foreach ( $values as $value ) {
+				$variable = $this->normalize_css_variable_name( (string) ( $value['variable'] ?? '' ) );
+				if ( '' === $variable || $this->bricks_is_official_framework_variable( $variable ) || preg_match( '/^--(?:kiwe|seam)-/i', $variable ) ) {
+					continue;
+				}
+				$value['label']    = $label;
+				$value['variable'] = $variable;
+				$usage[]           = $value;
+			}
+		}
+
+		$required = array_values( array_unique( array_map( static fn( array $item ): string => (string) ( $item['variable'] ?? '' ), $usage ) ) );
+		sort( $required );
+		if ( [] === $required ) {
+			return [];
+		}
+
+		$proof = $this->collect_bricks_framework_project_variable_proof( $data, $path_map );
+		$missing = array_values(
+			array_filter(
+				$required,
+				static fn( string $name ): bool => empty( $proof[ strtolower( $name ) ] )
+			)
+		);
+		if ( [] === $missing ) {
+			return [];
+		}
+
+		$template_declared = $this->collect_bricks_template_declared_variable_names( $data );
+		$template_only = array_values(
+			array_filter(
+				$missing,
+				static fn( string $name ): bool => ! empty( $template_declared[ strtolower( $name ) ] )
+			)
+		);
+		$first = null;
+		foreach ( $usage as $item ) {
+			if ( in_array( (string) ( $item['variable'] ?? '' ), $missing, true ) ) {
+				$first = $item;
+				break;
+			}
+		}
+
+		return [
+			[
+				'severity' => 'error',
+				'code'     => 'bricks_template_project_variable_missing_framework_profile_proof',
+				'message'  => sprintf(
+					'Bricks template consumes %1$d project CSS variable(s) in native controls, but Framework-profile proof is missing for %2$d: %3$s%4$s. %5$s/convert /bricks must pair project variables with framework/kiwe-framework-profile.json or embedded kiwe.frameworkProfile.projectVariables proof; template-local globalVariables alone are not reliable Bricks foundation install proof.',
+					count( $required ),
+					count( $missing ),
+					implode( ', ', array_slice( $missing, 0, 20 ) ),
+					count( $missing ) > 20 ? ', ...' : '',
+					[] !== $template_only ? sprintf( 'These variable(s) appear only in the template globalVariables lane: %s%s. ', implode( ', ', array_slice( $template_only, 0, 12 ) ), count( $template_only ) > 12 ? ', ...' : '' ) : ''
+				),
+				'path'     => sanitize_text_field( (string) ( $first['path'] ?? $path ) ),
+			],
+		];
+	}
+
+	private function collect_bricks_framework_project_variable_proof( array $data, array $path_map ): array {
+		$proof = [];
+		$framework = [];
+		if ( isset( $data['kiwe']['frameworkProfile'] ) && is_array( $data['kiwe']['frameworkProfile'] ) ) {
+			$framework = $data['kiwe']['frameworkProfile'];
+		} elseif ( isset( $data['frameworkProfile'] ) && is_array( $data['frameworkProfile'] ) ) {
+			$framework = $data['frameworkProfile'];
+		}
+		foreach ( [ 'projectVariables', 'variables', 'requiredVariables' ] as $key ) {
+			$items = isset( $framework[ $key ] ) && is_array( $framework[ $key ] ) ? $framework[ $key ] : [];
+			foreach ( $items as $item ) {
+				$name = $this->normalize_css_variable_name( is_array( $item ) ? (string) ( $item['name'] ?? $item['variable'] ?? $item['key'] ?? $item['id'] ?? '' ) : (string) $item );
+				if ( '' !== $name ) {
+					$proof[ strtolower( $name ) ] = true;
+				}
+			}
+		}
+
+		foreach ( $path_map as $candidate_path => $content ) {
+			$normalized_path = str_replace( '\\', '/', (string) $candidate_path );
+			if ( ! preg_match( '#(^|/)framework/kiwe-framework-profile\.json$|(^|/)kiwe-framework-profile\.json$#', $normalized_path ) ) {
+				continue;
+			}
+			$profile = json_decode( (string) $content, true );
+			if ( ! is_array( $profile ) ) {
+				continue;
+			}
+			$project = $profile['settings']['tokens']['project'] ?? $profile['tokens']['project'] ?? $profile['project'] ?? [];
+			$variables = is_array( $project ) && isset( $project['variables'] ) && is_array( $project['variables'] ) ? $project['variables'] : [];
+			foreach ( $variables as $variable ) {
+				if ( ! is_array( $variable ) ) {
+					continue;
+				}
+				$name = $this->normalize_css_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? $variable['id'] ?? '' ) );
+				if ( '' !== $name ) {
+					$proof[ strtolower( $name ) ] = true;
+				}
+			}
+		}
+
+		return $proof;
+	}
+
+	private function collect_bricks_template_declared_variable_names( array $data ): array {
+		$names = [];
+		foreach ( [ 'global_variables', 'globalVariables' ] as $lane ) {
+			$variables = isset( $data[ $lane ] ) && is_array( $data[ $lane ] ) ? $data[ $lane ] : [];
+			foreach ( $variables as $variable ) {
+				if ( ! is_array( $variable ) ) {
+					continue;
+				}
+				$name = $this->normalize_css_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? $variable['id'] ?? '' ) );
+				if ( '' !== $name ) {
+					$names[ strtolower( $name ) ] = true;
+				}
+			}
+		}
+		return $names;
+	}
+
 	private function collect_bricks_declared_css_variables( $value, array &$out = [] ): array {
 		if ( is_array( $value ) ) {
 			foreach ( [ 'name', 'variable', 'key', 'id' ] as $key ) {
@@ -1797,12 +1985,70 @@ final class AI_Companion_Service {
 
 		foreach ( $matches[1] as $name ) {
 			$name = (string) $name;
-			if ( preg_match( '/^(?:kiwe|seam)-/i', $name ) || ! empty( $declared_variables[ $name ] ) || ! empty( $declared_variables[ '--' . $name ] ) ) {
+			if ( $this->bricks_is_official_framework_variable( '--' . $name ) || ! empty( $declared_variables[ $name ] ) || ! empty( $declared_variables[ '--' . $name ] ) ) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	private function bricks_uses_official_framework_variable( string $value ): bool {
+		if ( ! preg_match_all( '/var\(\s*(--[a-z][a-z0-9_-]*)/i', $value, $matches ) ) {
+			return false;
+		}
+
+		foreach ( $matches[1] as $name ) {
+			if ( $this->bricks_is_official_framework_variable( (string) $name ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function bricks_is_official_framework_variable( string $name ): bool {
+		$normalized = strtolower( $this->normalize_css_variable_name( $name ) );
+		if ( '' === $normalized ) {
+			return false;
+		}
+		$official = $this->bricks_official_framework_variable_names();
+		return ! empty( $official[ $normalized ] );
+	}
+
+	private function bricks_official_framework_variable_names(): array {
+		static $official = null;
+
+		if ( is_array( $official ) ) {
+			return $official;
+		}
+
+		$official = [];
+		if ( class_exists( '\DSA\Design\Seam_Token_Service' ) && method_exists( '\DSA\Design\Seam_Token_Service', 'universal_tokens' ) ) {
+			foreach ( \DSA\Design\Seam_Token_Service::universal_tokens() as $token ) {
+				if ( ! is_array( $token ) ) {
+					continue;
+				}
+				$css_var = strtolower( $this->normalize_css_variable_name( (string) ( $token['cssVar'] ?? '' ) ) );
+				if ( '' !== $css_var ) {
+					$official[ $css_var ] = true;
+				}
+				$alias = strtolower( $this->normalize_css_variable_name( (string) ( $token['seamAlias'] ?? '' ) ) );
+				if ( '' !== $alias && 0 === strpos( $alias, '--seam-' ) ) {
+					$official[ $alias ] = true;
+				}
+			}
+		}
+
+		return $official;
+	}
+
+	private function normalize_css_variable_name( string $name ): string {
+		$clean = preg_replace( '/^--/', '', trim( $name ) );
+		if ( ! is_string( $clean ) || ! preg_match( '/^[a-z][a-z0-9_-]*$/i', $clean ) ) {
+			return '';
+		}
+		return '--' . $clean;
 	}
 
 	private function collect_bricks_untokenized_native_lengths( $value, array &$out, string $path, bool $parent_owned = false, array $declared_variables = [] ): void {
@@ -1818,10 +2064,38 @@ final class AI_Companion_Service {
 			return;
 		}
 
-		if ( preg_match( self::BRICKS_LITERAL_LENGTH_PATTERN, $value ) && ( ( ! preg_match( self::BRICKS_TOKENIZED_LENGTH_PATTERN, $value ) && ! $this->bricks_uses_declared_project_variable( $value, $declared_variables ) ) || preg_match( self::BRICKS_SELF_CLAMP_LENGTH_PATTERN, $value ) ) ) {
+		if ( preg_match( self::BRICKS_LITERAL_LENGTH_PATTERN, $value ) && ( ( ! $this->bricks_uses_official_framework_variable( $value ) && ! $this->bricks_uses_declared_project_variable( $value, $declared_variables ) && false === stripos( $value, 'clamp(' ) ) || preg_match( self::BRICKS_SELF_CLAMP_LENGTH_PATTERN, $value ) ) ) {
 			$out[] = [
 				'path'  => $path,
 				'value' => $value,
+			];
+		}
+	}
+
+	private function collect_bricks_native_owned_css_variables( $value, array &$out, string $path, bool $parent_owned = false ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$key_string = (string) $key;
+				$owned      = $parent_owned || preg_match( self::BRICKS_STYLE_CONTROL_PATTERN, $key_string ) || preg_match( self::BRICKS_STYLE_NESTED_PATTERN, $key_string );
+				$this->collect_bricks_native_owned_css_variables( $item, $out, $path . '.' . $key_string, (bool) $owned );
+			}
+			return;
+		}
+
+		if ( ! $parent_owned || ! is_string( $value ) || false === strpos( $value, 'var(' ) ) {
+			return;
+		}
+
+		foreach ( $this->extract_css_function_calls( $value, 'var' ) as $call ) {
+			$args     = $this->split_css_args( $call );
+			$variable = $this->normalize_css_variable_name( (string) ( $args[0] ?? '' ) );
+			if ( '' === $variable ) {
+				continue;
+			}
+			$out[] = [
+				'path'     => $path,
+				'value'    => $value,
+				'variable' => $variable,
 			];
 		}
 	}
@@ -1960,6 +2234,24 @@ final class AI_Companion_Service {
 				array_merge( (array) ( $data['elements'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
 				$path,
 				'$.elements/globalClasses'
+			)
+		);
+		$findings = array_merge(
+			$findings,
+			$this->review_bricks_unknown_framework_variables(
+				array_merge( (array) ( $data['elements'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.elements/globalClasses'
+			)
+		);
+		$findings = array_merge(
+			$findings,
+			$this->review_bricks_project_variable_framework_proof(
+				array_merge( (array) ( $data['elements'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
+				$path,
+				'$.elements/globalClasses',
+				$data,
+				$path_map
 			)
 		);
 

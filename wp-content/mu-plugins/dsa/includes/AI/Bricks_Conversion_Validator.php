@@ -491,6 +491,12 @@ final class Bricks_Conversion_Validator {
 			$findings,
 			'$.content/header/footer/global_classes'
 		);
+		$this->validate_project_variable_framework_proof(
+			$template,
+			$template_style_items,
+			$findings,
+			'$.content/header/footer/global_classes'
+		);
 		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $native_controls < self::MIN_NATIVE_STYLE_CONTROLS ) {
 			$this->add( $findings, 'fail', 'bricks_template_not_native_editable_enough', sprintf( 'Large Bricks template export has %1$d elements but only %2$d native style/layout controls. Full-page template uploads must preserve editable Bricks controls instead of relying on source/page CSS that may not follow insertion.', count( $elements ), $native_controls ), '$.content' );
 		}
@@ -1217,6 +1223,195 @@ final class Bricks_Conversion_Validator {
 		}
 	}
 
+	private function validate_project_variable_framework_proof( array $template, array $items, array &$findings, string $path ): void {
+		$uses = [];
+		$unknown_reserved = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['settings'] ) || ! is_array( $item['settings'] ) ) {
+				continue;
+			}
+			$label  = (string) ( $item['id'] ?? $item['name'] ?? $item['label'] ?? 'item-' . (int) $index );
+			$values = [];
+			$this->collect_native_owned_css_variables( $item['settings'], $values, $path . '[' . (int) $index . '].settings' );
+			foreach ( $values as $value ) {
+				$variable = $this->normalize_css_variable_name( (string) ( $value['variable'] ?? '' ) );
+				if ( '' === $variable || $this->is_official_framework_variable( $variable ) ) {
+					continue;
+				}
+				if ( $this->is_reserved_framework_variable_name( $variable ) ) {
+					$value['label']    = $label;
+					$value['variable'] = $variable;
+					$unknown_reserved[] = $value;
+					continue;
+				}
+				$value['label'] = $label;
+				$value['variable'] = $variable;
+				$uses[] = $value;
+			}
+		}
+
+		$unknown_names = array_values( array_unique( array_map( static fn( array $item ): string => (string) ( $item['variable'] ?? '' ), $unknown_reserved ) ) );
+		sort( $unknown_names );
+		if ( [] !== $unknown_names ) {
+			$first_use = $unknown_reserved[0] ?? [];
+			$this->add(
+				$findings,
+				'fail',
+				'bricks_template_unknown_framework_variable',
+				sprintf(
+					'Bricks template uses %1$d reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: %2$s%3$s. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the new token to Kiwe universal registry before /convert /bricks can pass.',
+					count( $unknown_names ),
+					implode( ', ', array_slice( $unknown_names, 0, 20 ) ),
+					count( $unknown_names ) > 20 ? ', ...' : ''
+				),
+				(string) ( $first_use['path'] ?? '$.content' )
+			);
+		}
+
+		$required = array_values( array_unique( array_map( static fn( array $item ): string => (string) ( $item['variable'] ?? '' ), $uses ) ) );
+		sort( $required );
+		if ( [] === $required ) {
+			return;
+		}
+
+		$proof = $this->framework_profile_project_variable_names_from_template_metadata( $template );
+		$missing = array_values( array_filter( $required, static fn( string $name ): bool => empty( $proof[ $name ] ) ) );
+		if ( [] === $missing ) {
+			return;
+		}
+
+		$template_declared = $this->template_declared_variable_names( $template );
+		$template_only = array_values( array_filter( $missing, static fn( string $name ): bool => ! empty( $template_declared[ $name ] ) ) );
+		$first_use = $uses[0] ?? [];
+		$message = sprintf(
+			'Bricks template consumes %1$d project CSS variable(s) in native element controls, but Framework-profile proof is missing for %2$d: %3$s%4$s. ',
+			count( $required ),
+			count( $missing ),
+			implode( ', ', array_slice( $missing, 0, 20 ) ),
+			count( $missing ) > 20 ? ', ...' : ''
+		);
+		if ( [] !== $template_only ) {
+			$message .= sprintf(
+				'These variable(s) appear only in the template globalVariables lane (%1$s%2$s), but Bricks My Templates import does not reliably install template-local globalVariables into the site variable manager. ',
+				implode( ', ', array_slice( $template_only, 0, 12 ) ),
+				count( $template_only ) > 12 ? ', ...' : ''
+			);
+		}
+		$message .= '/convert /bricks must pair project variables with Kiwe > Framework profile output/push proof, or use only official --kiwe-/--seam- variables already installed by the Framework.';
+
+		$this->add(
+			$findings,
+			'fail',
+			'bricks_template_missing_framework_project_variable_proof',
+			$message,
+			(string) ( $first_use['path'] ?? '$.content' )
+		);
+	}
+
+	private function normalize_css_variable_name( string $name ): string {
+		$clean = preg_replace( '/^--/', '', trim( $name ) );
+		if ( ! is_string( $clean ) || ! preg_match( '/^[a-z][a-z0-9_-]*$/i', $clean ) ) {
+			return '';
+		}
+		return '--' . $clean;
+	}
+
+	private function is_reserved_framework_variable_name( string $name ): bool {
+		return (bool) preg_match( '/^--(?:kiwe|seam)-/i', $name );
+	}
+
+	private function is_official_framework_variable( string $name ): bool {
+		$normalized = strtolower( $this->normalize_css_variable_name( $name ) );
+		if ( '' === $normalized ) {
+			return false;
+		}
+		$official = $this->official_framework_variable_names();
+		return ! empty( $official[ $normalized ] );
+	}
+
+	private function official_framework_variable_names(): array {
+		static $official = null;
+
+		if ( is_array( $official ) ) {
+			return $official;
+		}
+
+		$official = [];
+		if ( class_exists( '\DSA\Design\Seam_Token_Service' ) && method_exists( '\DSA\Design\Seam_Token_Service', 'universal_tokens' ) ) {
+			foreach ( \DSA\Design\Seam_Token_Service::universal_tokens() as $token ) {
+				if ( ! is_array( $token ) ) {
+					continue;
+				}
+				$css_var = strtolower( $this->normalize_css_variable_name( (string) ( $token['cssVar'] ?? '' ) ) );
+				if ( '' !== $css_var ) {
+					$official[ $css_var ] = true;
+				}
+				$alias = strtolower( $this->normalize_css_variable_name( (string) ( $token['seamAlias'] ?? '' ) ) );
+				if ( '' !== $alias && 0 === strpos( $alias, '--seam-' ) ) {
+					$official[ $alias ] = true;
+				}
+			}
+		}
+
+		return $official;
+	}
+
+	private function uses_official_framework_variable( string $value ): bool {
+		if ( ! preg_match_all( '/var\(\s*(--[a-z][a-z0-9_-]*)/i', $value, $matches ) ) {
+			return false;
+		}
+
+		foreach ( $matches[1] as $name ) {
+			if ( $this->is_official_framework_variable( (string) $name ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private function template_declared_variable_names( array $template ): array {
+		$names = [];
+		foreach ( [ 'global_variables', 'globalVariables' ] as $lane ) {
+			foreach ( isset( $template[ $lane ] ) && is_array( $template[ $lane ] ) ? $template[ $lane ] : [] as $variable ) {
+				if ( ! is_array( $variable ) ) {
+					continue;
+				}
+				$name = $this->normalize_css_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? $variable['id'] ?? '' ) );
+				if ( '' !== $name ) {
+					$names[ $name ] = true;
+				}
+			}
+		}
+		return $names;
+	}
+
+	private function framework_profile_project_variable_names_from_template_metadata( array $template ): array {
+		$names = [];
+		$framework = [];
+		if ( isset( $template['kiwe']['frameworkProfile'] ) && is_array( $template['kiwe']['frameworkProfile'] ) ) {
+			$framework = $template['kiwe']['frameworkProfile'];
+		} elseif ( isset( $template['frameworkProfile'] ) && is_array( $template['frameworkProfile'] ) ) {
+			$framework = $template['frameworkProfile'];
+		}
+
+		foreach ( [ 'projectVariables', 'variables', 'requiredVariables' ] as $key ) {
+			foreach ( isset( $framework[ $key ] ) && is_array( $framework[ $key ] ) ? $framework[ $key ] : [] as $variable ) {
+				$name = '';
+				if ( is_array( $variable ) ) {
+					$name = $this->normalize_css_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? $variable['id'] ?? '' ) );
+				} elseif ( is_scalar( $variable ) ) {
+					$name = $this->normalize_css_variable_name( (string) $variable );
+				}
+				if ( '' !== $name ) {
+					$names[ $name ] = true;
+				}
+			}
+		}
+
+		return $names;
+	}
+
 	private function collect_declared_css_variables( mixed $value, array &$out = [] ): array {
 		if ( is_array( $value ) ) {
 			foreach ( [ 'name', 'variable', 'key', 'id' ] as $key ) {
@@ -1243,7 +1438,7 @@ final class Bricks_Conversion_Validator {
 
 		foreach ( $matches[1] as $name ) {
 			$name = (string) $name;
-			if ( preg_match( '/^(?:kiwe|seam)-/i', $name ) || ! empty( $declared_variables[ $name ] ) || ! empty( $declared_variables[ '--' . $name ] ) ) {
+			if ( $this->is_official_framework_variable( '--' . $name ) || ! empty( $declared_variables[ $name ] ) || ! empty( $declared_variables[ '--' . $name ] ) ) {
 				return true;
 			}
 		}
@@ -1383,6 +1578,38 @@ final class Bricks_Conversion_Validator {
 		}
 	}
 
+	private function collect_native_owned_css_variables( mixed $value, array &$out, string $path, bool $parent_owned = false ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $key => $item ) {
+				$key_string = (string) $key;
+				$owned      = $parent_owned
+					|| preg_match( self::NATIVE_STYLE_CONTROL_PATTERN, $key_string )
+					|| preg_match( self::TOKEN_OWNED_NESTED_KEY_PATTERN, $key_string )
+					|| preg_match( self::TOKEN_OWNED_COLOR_NESTED_KEY_PATTERN, $key_string );
+				$this->collect_native_owned_css_variables( $item, $out, $path . '.' . $key_string, (bool) $owned );
+			}
+			return;
+		}
+
+		if ( ! $parent_owned || ! is_string( $value ) || false === strpos( $value, 'var(' ) ) {
+			return;
+		}
+
+		foreach ( $this->extract_css_function_calls( $value, 'var' ) as $call ) {
+			$args     = $this->split_css_args( $call );
+			$variable = $this->normalize_css_variable_name( (string) ( $args[0] ?? '' ) );
+			if ( '' === $variable ) {
+				continue;
+			}
+			$out[] = [
+				'path'        => $path,
+				'value'       => $value,
+				'variable'    => $variable,
+				'hasFallback' => count( $args ) >= 2,
+			];
+		}
+	}
+
 	private function extract_css_function_calls( string $value, string $function_name ): array {
 		$text   = $value;
 		$lower  = strtolower( $text );
@@ -1505,7 +1732,7 @@ final class Bricks_Conversion_Validator {
 			return false;
 		}
 
-		return (bool) preg_match( self::OFFICIAL_TOKEN_VAR_PATTERN, $value )
+		return $this->uses_official_framework_variable( $value )
 			|| $this->uses_declared_project_variable( $value, $declared_variables )
 			|| $this->has_valid_kiwe_fluid_clamp( $value );
 	}

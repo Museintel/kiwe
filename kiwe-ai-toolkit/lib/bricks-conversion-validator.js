@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { validateBindings } from './binding-validator.js';
+import { officialFrameworkCssVariableNames } from './framework-profile-validator.js';
 
 const SCHEMA = 'kiwe.bricks-conversion.v1';
 
@@ -198,7 +199,6 @@ const MAPPABLE_CSS_DECLARATION_RE = /\b(?:display|flex(?:-direction|-wrap|-grow|
 const TOKEN_OWNED_NATIVE_CONTROL_RE = /^_(?:typography|border|boxShadow|transform|grid(?:Template|Auto|Item)?[A-Za-z0-9_]*|columnGap|rowGap|gap|width|widthMin|widthMax|height|heightMin|heightMax|margin|padding|top|right|bottom|left|font|lineHeight|letterSpacing)(?::|$)/;
 const TOKEN_OWNED_NESTED_KEY_RE = /^(?:font-size|fontSize|line-height|lineHeight|letter-spacing|letterSpacing|top|right|bottom|left|width|height|widthMin|widthMax|heightMin|heightMax|minWidth|maxWidth|minHeight|maxHeight|radius|offsetX|offsetY|blur|spread|translateX|translateY|translateZ|x|y|gap|rowGap|columnGap)$/i;
 const LITERAL_LENGTH_RE = /-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b/i;
-const OFFICIAL_TOKEN_VAR_RE = /var\(\s*--(?:kiwe|seam)-/i;
 const SELF_CLAMP_LENGTH_RE = /clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i;
 const TOKEN_FINDING_LIMIT = 40;
 const TOKEN_OWNED_COLOR_CONTROL_RE = /^_(?:typography|background|gradient|border|boxShadow|cssFilters|color|fill|stroke|cssCustom)(?::|$)/;
@@ -222,6 +222,7 @@ const BRICKS_COMPILE_UNSAFE_CONTROL_RE = /^_(?:minWidth|maxWidth|minHeight|maxHe
 const BRICKS_FONT_FAMILY_TOKEN_RE = /var\(\s*--/i;
 const SEMANTIC_HEADING_TAG_RE = /^h[1-6]$/i;
 const SEMANTIC_HEADING_TYPE_TOKEN_RE = /var\(\s*--(?:kiwe|seam)-type-h[1-6]\b/i;
+const OFFICIAL_FRAMEWORK_CSS_VARIABLES = officialFrameworkCssVariableNames();
 const TEMPLATE_UPLOAD_GENERIC_CLASS_ALLOWLIST = new Set([
   'is-active',
   'is-current',
@@ -747,7 +748,7 @@ function usesDeclaredProjectVariable(value, declaredVariables = new Set()) {
   if (typeof value !== 'string') return false;
   for (const match of value.matchAll(/var\(\s*--([a-z][a-z0-9]*-[a-z0-9][a-z0-9-]*)/gi)) {
     const name = String(match[1] || '').trim();
-    if (/^(?:kiwe|seam)-/i.test(name)) return true;
+    if (isOfficialFrameworkVariable(`--${name}`)) return true;
     if (declaredVariables.has(name) || declaredVariables.has(`--${name}`)) return true;
   }
   return false;
@@ -805,6 +806,154 @@ function collectCssVariableCalls(value) {
       hasFallback: args.length >= 2 && args.slice(1).join(',').trim() !== ''
     };
   }).filter((item) => /^--[a-z][a-z0-9_-]*$/i.test(item.name));
+}
+
+function normalizeCssVariableName(name) {
+  const clean = String(name || '').trim().replace(/^--/, '');
+  return /^[a-z][a-z0-9_-]*$/i.test(clean) ? `--${clean}` : '';
+}
+
+function isReservedFrameworkVariableName(name) {
+  return /^--(?:kiwe|seam)-/i.test(String(name || ''));
+}
+
+function isOfficialFrameworkVariable(name) {
+  const normalized = normalizeCssVariableName(name).toLowerCase();
+  return normalized ? OFFICIAL_FRAMEWORK_CSS_VARIABLES.has(normalized) : false;
+}
+
+function usesOfficialFrameworkVariable(value) {
+  return collectCssVariableCalls(value).some((call) => isOfficialFrameworkVariable(call.name));
+}
+
+function collectNativeOwnedCssVariableCalls(value, out = [], trail = '$', parentOwned = false) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectNativeOwnedCssVariableCalls(item, out, `${trail}[${index}]`, parentOwned));
+    return out;
+  }
+
+  if (isPlainObject(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      const owned = parentOwned || NATIVE_STYLE_CONTROL_RE.test(String(key || '')) || TOKEN_OWNED_NESTED_KEY_RE.test(String(key || '')) || TOKEN_OWNED_COLOR_NESTED_KEY_RE.test(String(key || ''));
+      collectNativeOwnedCssVariableCalls(item, out, `${trail}.${key}`, owned);
+    }
+    return out;
+  }
+
+  if (!parentOwned || typeof value !== 'string') return out;
+
+  for (const call of collectCssVariableCalls(value)) {
+    const variable = normalizeCssVariableName(call.name);
+    if (variable) out.push({ path: trail, value: String(value), variable, hasFallback: call.hasFallback });
+  }
+
+  return out;
+}
+
+function collectTemplateDeclaredVariableNames(templateData) {
+  const names = new Set();
+  for (const lane of ['global_variables', 'globalVariables']) {
+    asArray(templateData?.[lane]).forEach((variable) => {
+      if (!isPlainObject(variable)) return;
+      const normalized = normalizeCssVariableName(variable.name || variable.variable || variable.key || variable.id);
+      if (normalized) names.add(normalized);
+    });
+  }
+  return names;
+}
+
+function collectFrameworkProjectVariableNamesFromProfile(profile) {
+  const names = new Set();
+  const project = profile?.settings?.tokens?.project || profile?.tokens?.project || profile?.project || {};
+  asArray(project?.variables).forEach((variable) => {
+    if (!isPlainObject(variable)) return;
+    const normalized = normalizeCssVariableName(variable.name || variable.variable || variable.key || variable.id);
+    if (normalized) names.add(normalized);
+  });
+  return names;
+}
+
+function collectFrameworkProjectVariableNamesFromMetadata(metadata) {
+  const names = new Set();
+  const framework = metadata?.kiwe?.frameworkProfile || metadata?.frameworkProfile || {};
+  for (const key of ['projectVariables', 'variables', 'requiredVariables']) {
+    asArray(framework?.[key]).forEach((variable) => {
+      const normalized = normalizeCssVariableName(isPlainObject(variable) ? (variable.name || variable.variable || variable.key || variable.id) : variable);
+      if (normalized) names.add(normalized);
+    });
+  }
+  return names;
+}
+
+function collectFrameworkProjectVariableProof(root, templateData) {
+  const names = collectFrameworkProjectVariableNamesFromMetadata(templateData);
+  const candidatePaths = [];
+  const metaPath = templateData?.kiwe?.frameworkProfile?.path || templateData?.frameworkProfile?.path;
+  if (typeof metaPath === 'string' && metaPath.trim()) candidatePaths.push(metaPath.trim());
+  candidatePaths.push('framework/kiwe-framework-profile.json', 'kiwe-framework-profile.json');
+
+  for (const candidate of candidatePaths) {
+    const profilePath = resolvePackageFile(root, candidate);
+    if (!profilePath || !fs.existsSync(profilePath) || !fs.statSync(profilePath).isFile()) continue;
+    try {
+      const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+      collectFrameworkProjectVariableNamesFromProfile(profile).forEach((name) => names.add(name));
+    } catch {
+      // The main JSON reader reports canonical JSON errors elsewhere. This proof
+      // collector stays non-fatal and lets the missing-proof failure explain the
+      // actionable Bricks import problem.
+    }
+  }
+
+  return names;
+}
+
+function validateProjectVariableFrameworkProof(root, templateData, templateStyleItems, findings, file) {
+  const projectUsage = [];
+  const unknownReservedUsage = [];
+  asArray(templateStyleItems).forEach((item, index) => {
+    if (!isPlainObject(item)) return;
+    const label = item.id || item.name || item.label || `item-${index}`;
+    const values = collectNativeOwnedCssVariableCalls(elementSettings(item), [], `$.content/header/footer/global_classes[${index}].settings`, false);
+    values.forEach((value) => {
+      if (isOfficialFrameworkVariable(value.variable)) return;
+      if (isReservedFrameworkVariableName(value.variable)) {
+        unknownReservedUsage.push({ label, ...value });
+        return;
+      }
+      projectUsage.push({ label, ...value });
+    });
+  });
+
+  const unknownReserved = [...new Set(unknownReservedUsage.map((item) => item.variable))].sort();
+  if (unknownReserved.length) {
+    const firstUse = unknownReservedUsage.find((item) => unknownReserved.includes(item.variable));
+    add(
+      findings,
+      'fail',
+      `Bricks template uses ${unknownReserved.length} reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: ${unknownReserved.slice(0, 20).join(', ')}${unknownReserved.length > 20 ? ', ...' : ''}. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the new token to Kiwe's universal registry before /convert /bricks can pass.`,
+      file,
+      firstUse?.path || '$.content'
+    );
+  }
+
+  const required = [...new Set(projectUsage.map((item) => item.variable))].sort();
+  if (!required.length) return;
+
+  const proof = collectFrameworkProjectVariableProof(root, templateData);
+  const missing = required.filter((name) => !proof.has(name));
+  if (!missing.length) return;
+
+  const templateDeclared = collectTemplateDeclaredVariableNames(templateData);
+  const templateOnly = missing.filter((name) => templateDeclared.has(name));
+  const firstUse = projectUsage.find((item) => missing.includes(item.variable));
+  add(
+    findings,
+    'fail',
+    `Bricks template consumes ${required.length} project CSS variable(s) in native element controls, but Framework-profile proof is missing for ${missing.length}: ${missing.slice(0, 20).join(', ')}${missing.length > 20 ? ', ...' : ''}. ${templateOnly.length ? `These variable(s) appear only in the template globalVariables lane (${templateOnly.slice(0, 12).join(', ')}${templateOnly.length > 12 ? ', ...' : ''}), but Bricks My Templates import does not reliably install template-local globalVariables into the site variable manager. ` : ''}/convert /bricks must pair project variables with Kiwe > Framework profile output/push proof, or use only official --kiwe-/--seam- variables already installed by the Framework.`,
+    file,
+    firstUse?.path || '$.content'
+  );
 }
 
 function collectCssVariablesWithoutFallback(value, out = [], trail = '$', parentOwned = false) {
@@ -999,7 +1148,7 @@ function hasNoOpClamp(value) {
 function hasTokenizedLength(value, declaredVariables = new Set()) {
   if (typeof value !== 'string') return false;
   if (hasNoOpClamp(value)) return false;
-  return OFFICIAL_TOKEN_VAR_RE.test(value) || usesDeclaredProjectVariable(value, declaredVariables) || hasValidKiweFluidClamp(value);
+  return usesOfficialFrameworkVariable(value) || usesDeclaredProjectVariable(value, declaredVariables) || hasValidKiweFluidClamp(value);
 }
 
 function tokenOwnedChild(parentOwned, key) {
@@ -1381,6 +1530,13 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     findings,
     rel(root, templatePath),
     '$.content/header/footer/global_classes'
+  );
+  validateProjectVariableFrameworkProof(
+    root,
+    templateData,
+    templateStyleItems,
+    findings,
+    rel(root, templatePath)
   );
   if (templateElements.length >= LARGE_CLIPBOARD_ELEMENT_COUNT && templateNativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
     add(

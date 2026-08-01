@@ -30,7 +30,7 @@ function resolveProfilePath(target) {
   return candidates.find((file) => fs.existsSync(file)) || candidates[0];
 }
 
-function officialTokenNames() {
+export function officialTokenNames() {
   const names = new Set();
   const candidates = [
     path.join(repoRoot, 'wp-content', 'mu-plugins', 'dsa', 'includes', 'Design', 'Seam_Token_Service.php'),
@@ -42,19 +42,44 @@ function officialTokenNames() {
   for (const file of candidates) {
     if (!fs.existsSync(file)) continue;
     const body = readMaybe(file);
-    for (const match of body.matchAll(/['"]name['"]\s*=>\s*['"]([^'"]+)['"]/g)) {
-      names.add(String(match[1]));
-    }
     for (const match of body.matchAll(/self::token\(\s*['"]([^'"]+)['"]/g)) {
       names.add(String(match[1]));
     }
-    for (const match of body.matchAll(/--kiwe-([a-z0-9-]+)/g)) {
+    for (const match of body.matchAll(/--kiwe-([a-z0-9]+(?:-[a-z0-9]+)*)(?![-\w])/g)) {
       const name = String(match[1]);
       if (!name.startsWith('theme-')) names.add(name);
     }
   }
 
   return names;
+}
+
+export function officialFrameworkCssVariableNames() {
+  const variables = new Set();
+
+  officialTokenNames().forEach((name) => {
+    if (name) variables.add(`--kiwe-${name}`);
+  });
+
+  const candidates = [
+    path.join(repoRoot, 'wp-content', 'mu-plugins', 'dsa', 'includes', 'Design', 'Seam_Token_Service.php'),
+    path.join(repoRoot, 'wp-content', 'mu-plugins', 'dsa', 'framework-system', 'runtime', 'seam.css'),
+    path.join(repoRoot, 'wp-content', 'mu-plugins', 'dsa', 'assets', 'css', 'seam.css'),
+    path.join(toolkitRoot, 'packs', 'website-builder', 'runtime', 'seam.css'),
+    path.join(toolkitRoot, 'packs', 'website-builder', 'contracts', 'token-map.css'),
+    path.join(toolkitRoot, 'packs', 'appshell-theme', 'token-map.css')
+  ];
+
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    const body = readMaybe(file);
+    for (const match of body.matchAll(/--(?:kiwe|seam)-[a-z0-9_]+(?:-[a-z0-9_]+)*(?![-\w])/gi)) {
+      const variable = String(match[0]).toLowerCase();
+      if (!variable.startsWith('--kiwe-theme-')) variables.add(variable);
+    }
+  }
+
+  return variables;
 }
 
 function add(list, code, message, pathValue = '') {
