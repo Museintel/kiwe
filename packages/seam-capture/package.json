@@ -1,0 +1,14 @@
+{
+  "name": "@kiwe/seam-capture",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Isolated rendered-page capture plane for SEAM Compiler",
+  "type": "commonjs",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node test/render-capture.cjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.53.2"
+  }
+}

@@ -23,7 +23,7 @@ function safeName(value) {
 	return String(value || 'seam-page').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'seam-page';
 }
 
-function buildFrameworkProfile(title) {
+function buildFrameworkProfile(title, projectVariables = []) {
 	const bricksThemeStyle = { enabled: true, id: `seam-${safeName(title)}`, label: `${title} SEAM Framework` };
 	for (const [slot, tokenName] of Object.entries(SLOT_TOKENS)) {
 		const token = tokenCatalog.tokens[tokenName];
@@ -36,7 +36,12 @@ function buildFrameworkProfile(title) {
 		settings: {
 			tokens: {
 				enabled: true, profile_label: `${title} SEAM Framework`, overrides: {},
-				bricks_theme_style: bricksThemeStyle
+				bricks_theme_style: bricksThemeStyle,
+				project: {
+					variables: projectVariables.map((variable) => ({
+						name: `--${String(variable.name).replace(/^--/, '')}`, value: variable.value
+					}))
+				}
 			}
 		}
 	};

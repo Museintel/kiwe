@@ -8,6 +8,13 @@
   "properties": {
     "schema": { "const": "seam.page-ir.v1" },
     "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "value"],
+        "properties": { "name": { "type": "string", "pattern": "^--[a-zA-Z][a-zA-Z0-9_-]*$" }, "value": { "type": "string" } }
+      }
+    },
     "nodes": {
       "type": "array",
       "minItems": 1,
@@ -28,7 +35,18 @@
             "required": ["display", "direction", "wrap", "gap", "widthMode"],
             "properties": {
               "display": { "type": "string" }, "direction": { "type": "string" }, "wrap": { "type": "string" },
-              "gap": { "type": "string" }, "widthMode": { "enum": ["intrinsic", "fixed", "fluid", "unknown"] }
+              "gap": { "type": "string" }, "widthMode": { "enum": ["intrinsic", "fixed", "fluid", "clamped", "unknown"] },
+              "responsive": {
+                "type": "array",
+                "items": {
+                  "type": "object", "additionalProperties": false, "required": ["viewportId", "viewportWidth", "breakpoint", "visible", "display", "direction", "wrap", "gap", "width", "height"],
+                  "properties": {
+                    "viewportId": { "type": "string" }, "viewportWidth": { "type": "integer", "minimum": 240 }, "breakpoint": { "type": ["string", "null"] }, "visible": { "type": "boolean" },
+                    "display": { "type": "string" }, "direction": { "type": "string" }, "wrap": { "type": "string" }, "gap": { "type": "string" },
+                    "width": { "type": "number", "minimum": 0 }, "height": { "type": "number", "minimum": 0 }
+                  }
+                }
+              }
             }
           },
           "style": {
@@ -38,7 +56,14 @@
             "properties": {
               "native": { "type": "object", "additionalProperties": true },
               "tokenBindings": { "type": "object", "additionalProperties": { "type": "string" } },
-              "residuals": { "type": "array", "items": { "type": "string" } }
+              "residuals": { "type": "array", "items": { "type": "string" } },
+              "responsive": {
+                "type": "array",
+                "items": {
+                  "type": "object", "additionalProperties": false, "required": ["viewportId", "viewportWidth", "breakpoint", "native"],
+                  "properties": { "viewportId": { "type": "string" }, "viewportWidth": { "type": "integer", "minimum": 240 }, "breakpoint": { "type": ["string", "null"] }, "native": { "type": "object", "additionalProperties": true } }
+                }
+              }
             }
           },
           "provenance": {

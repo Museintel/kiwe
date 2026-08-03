@@ -1,0 +1,247 @@
+{
+  "schema": "seam.golden-evidence.v1",
+  "fixture": "national-chikki-homepage",
+  "sourceHash": "sha256:e196f8a3947f7932b95e55c346d648aa659b193259325669c569fdb6137d56f9",
+  "storage": {
+    "policy": "content-addressed-external-artifacts",
+    "rawCaptureCheckedIn": false,
+    "note": "The compact manifest is versioned; raw capture, screenshots, and compiled package are retained by their SHA-256 proofs."
+  },
+  "capture": {
+    "artifact": {
+      "file": "seam-capture.json",
+      "bytes": 12319042,
+      "sha256": "ebc2fb8d5114f0fab1d97376277cdfd12085adb9bfe60be92d181b31964fecdc"
+    },
+    "engine": {
+      "engine": "chromium",
+      "engineVersion": "150.0.7871.184",
+      "scriptsExecuted": true,
+      "remoteAssetsAllowed": false,
+      "deterministicClock": true
+    },
+    "nodes": 279,
+    "viewports": [
+      {
+        "id": "desktop-1440",
+        "width": 1440,
+        "height": 1000,
+        "file": "screenshots/desktop-1440.png",
+        "bytes": 947426,
+        "sha256": "c35e5688ccbd00dccfa239885c51f1acb1916c257f8ae8b59794781cb5d79d6b"
+      },
+      {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900,
+        "file": "screenshots/desktop-1280.png",
+        "bytes": 801898,
+        "sha256": "e6fe4c113248c577fdff39e1027260e543a4c9c1424491077edf63f9a0fedb90"
+      },
+      {
+        "id": "tablet-991",
+        "width": 991,
+        "height": 900,
+        "file": "screenshots/tablet-991.png",
+        "bytes": 609025,
+        "sha256": "3e8e059921b9083a6c529c9a85e75612bbeb7c5a9fd03a0365e3901efbf66fc4"
+      },
+      {
+        "id": "tablet-768",
+        "width": 768,
+        "height": 900,
+        "file": "screenshots/tablet-768.png",
+        "bytes": 506842,
+        "sha256": "f804962b1ad532af893ca7370bfd50602bf0f2c21f8e67eda486b8f73f255db4"
+      },
+      {
+        "id": "mobile-478",
+        "width": 478,
+        "height": 900,
+        "file": "screenshots/mobile-478.png",
+        "bytes": 345958,
+        "sha256": "37c49b705e7ffa76823de10842115c3cadd863dcd59c84ce42a7553c14514729"
+      },
+      {
+        "id": "mobile-375",
+        "width": 375,
+        "height": 812,
+        "file": "screenshots/mobile-375.png",
+        "bytes": 302316,
+        "sha256": "fdd51a495e2ea489c5b2508ecb2f22fda9a6d6b4385165a477d7194459ad299b"
+      },
+      {
+        "id": "mobile-320",
+        "width": 320,
+        "height": 720,
+        "file": "screenshots/mobile-320.png",
+        "bytes": 275586,
+        "sha256": "af4ba58ad679a34c2e26bf4d02aac5b1db48d62988537ecc74b003b3f1957263"
+      }
+    ],
+    "stylesheets": 1,
+    "stylesheetRules": 109,
+    "resources": {
+      "total": 13,
+      "blocked": 0,
+      "hashed": 13
+    },
+    "diagnostics": []
+  },
+  "geometry": {
+    "artifact": {
+      "file": "geometry/page-geometry.json",
+      "bytes": 841489,
+      "sha256": "2526ad7a334b1e13b62e9198b2d99c915a7a6140be453d73b78d0a538a5be995"
+    },
+    "nodes": 279,
+    "responsiveNodes": 240,
+    "visibilityChangingNodes": 15,
+    "widthModes": {
+      "fluid": 132,
+      "intrinsic": 20,
+      "clamped": 105,
+      "fixed": 22
+    }
+  },
+  "compilation": {
+    "compiler": {
+      "name": "SEAM Compiler",
+      "version": "0.2.0",
+      "deterministic": true,
+      "aiDirectJson": false
+    },
+    "target": {
+      "bricksVersion": "2.3.10",
+      "capabilityProfileHash": "sha256:bd8d36183d80c4ce066d7457e6b34098f552e5aa0c559fbeb4dadc7983c14cbf"
+    },
+    "elements": 279,
+    "elementTypes": {
+      "button": 12,
+      "div": 117,
+      "heading": 22,
+      "image": 24,
+      "section": 25,
+      "text-basic": 76,
+      "text-link": 3
+    },
+    "responsiveElements": 179,
+    "behaviorIntents": 21,
+    "assets": 12,
+    "projectVariables": 138,
+    "codeElements": 0,
+    "metrics": {
+      "nativeCoverage": 99.9,
+      "residualCount": 3,
+      "customCssDeclarations": 3
+    },
+    "residuals": [
+      "node-1og3g1z: scroll-behavior: smooth",
+      "node-1og3g1z: overflow-x: hidden",
+      "node-1p2cam3: backdrop-filter: blur(18px)"
+    ],
+    "customCss": "#brxe-1dbxpg { scroll-behavior: smooth; overflow-x: hidden; }\n#brxe-nh4z8v { backdrop-filter: var(--appsite-auto-value-b4a47cb0bf); }",
+    "artifacts": {
+      "capture": {
+        "file": "seam-capture.json",
+        "bytes": 12319042,
+        "sha256": "ebc2fb8d5114f0fab1d97376277cdfd12085adb9bfe60be92d181b31964fecdc"
+      },
+      "pageIr": {
+        "file": "ir/page-ir.json",
+        "bytes": 1287674,
+        "sha256": "fa96e62b55400e570ff591d0c49ae01098dda3fb47ce57dd9339de74b041b711"
+      },
+      "behaviorIr": {
+        "file": "ir/behavior-ir.json",
+        "bytes": 5680,
+        "sha256": "6093e0896cdf3ecf7739e889347a725f56e5edea023969357e8fc86eb729ae1d"
+      },
+      "assets": {
+        "file": "assets/asset-manifest.json",
+        "bytes": 35330,
+        "sha256": "7a3248e3af2afe62c67fe32e6899929f0edda34fc121e41598485365704f8b4d"
+      },
+      "frameworkProfile": {
+        "file": "framework/kiwe-framework-profile.json",
+        "bytes": 16580,
+        "sha256": "849171b65034baf1f6ebf999ec68dc87111965f0cb24797456211f99cda47f13"
+      },
+      "geometry": {
+        "file": "geometry/page-geometry.json",
+        "bytes": 841489,
+        "sha256": "2526ad7a334b1e13b62e9198b2d99c915a7a6140be453d73b78d0a538a5be995"
+      },
+      "bricksPlan": {
+        "file": "bricks/bricks-plan.json",
+        "bytes": 627636,
+        "sha256": "c466952c5b1e3ce05e9bd0d879a51e0ebac294d4d0479cbd56cb9db565b2e0b3"
+      },
+      "bricksTemplate": {
+        "file": "bricks/templates/content.json",
+        "bytes": 475176,
+        "sha256": "a956f76843a8cf381a22c704e6968b2ec915602f2dc9fcab52ae9fbf97b0034d"
+      },
+      "appsitePackage": {
+        "file": "appsite-package.json",
+        "bytes": 1961,
+        "sha256": "5aec881e002e0e580bb13bd9d046422eaf2a7034c85af6f71366c23c4fb6e897"
+      }
+    }
+  },
+  "validation": {
+    "contracts": {
+      "capture": {
+        "ok": true,
+        "errors": 0
+      },
+      "pageIr": {
+        "ok": true,
+        "errors": 0
+      },
+      "behaviorIr": {
+        "ok": true,
+        "errors": 0
+      },
+      "assetManifest": {
+        "ok": true,
+        "errors": 0
+      },
+      "geometry": {
+        "ok": true,
+        "errors": 0
+      },
+      "bricksPlan": {
+        "ok": true,
+        "errors": 0
+      },
+      "appsitePackage": {
+        "ok": true,
+        "errors": 0
+      }
+    },
+    "bricksConversion": {
+      "ok": true,
+      "summary": {
+        "fail": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "counts": null,
+      "errors": 0,
+      "warnings": 0
+    },
+    "frameworkProfile": {
+      "ok": true,
+      "summary": null,
+      "counts": {
+        "overrides": 0,
+        "projectVariables": 138,
+        "projectClasses": 0,
+        "officialTokensKnown": 108
+      },
+      "errors": 0,
+      "warnings": 1
+    }
+  }
+}

@@ -4,7 +4,7 @@
   "title": "SEAM native Bricks plan v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "compiler", "aiGenerated", "sourceHash", "target", "elements", "globalClasses", "variables", "residuals", "metrics"],
+  "required": ["schema", "compiler", "aiGenerated", "sourceHash", "target", "elements", "globalClasses", "variables", "customCss", "residuals", "metrics"],
   "properties": {
     "schema": { "const": "seam.bricks-plan.v1" },
     "compiler": { "const": "seam-compiler" },
@@ -35,10 +35,15 @@
     },
     "globalClasses": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
     "variables": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "customCss": { "type": "string" },
     "residuals": { "type": "array", "items": { "type": "string" } },
     "metrics": {
-      "type": "object", "additionalProperties": false, "required": ["nativeCoverage", "residualCount"],
-      "properties": { "nativeCoverage": { "type": "number", "minimum": 0, "maximum": 100 }, "residualCount": { "type": "integer", "minimum": 0 } }
+      "type": "object", "additionalProperties": false, "required": ["nativeCoverage", "residualCount", "customCssDeclarations"],
+      "properties": {
+        "nativeCoverage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "residualCount": { "type": "integer", "minimum": 0 },
+        "customCssDeclarations": { "type": "integer", "minimum": 0 }
+      }
     }
   }
 }

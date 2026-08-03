@@ -59,17 +59,21 @@ The next-generation deterministic HTML/CSS/JS-to-AppSite direction, including th
 
 Contract runners are grouped under `tools/`. CI checks PHP platform metadata across 8.2-8.4 and runs the canonical green source baseline for package integrity, token purity, fixtures, toolkit/connector contracts, release contracts, and JavaScript syntax. Local PHP lint remains intentionally excluded unless the project owner explicitly resumes it.
 
-### SEAM Compiler foundation
+### SEAM Compiler and rendered capture
 
 The compiler plane now starts under `packages/`: strict Capture/Page/Behavior/Asset/Bricks Plan/AppSite schemas, generated TypeScript and PHP declarations, the deterministic IR compiler, a Bricks capability extractor, and the native Bricks serializer. It does not run on public WordPress requests.
 
 ```text
 node packages/seam-compiler-core/test/compiler-foundation.cjs
+npm ci --prefix packages/seam-capture --no-audit --no-fund
+node packages/seam-capture/test/render-capture.cjs
+node packages/seam-capture/tools/capture-page.cjs input.html output-directory
 node packages/seam-bricks-adapter/tools/extract-bricks-capabilities.cjs /path/to/bricks packages/seam-bricks-adapter/profiles/bricks-version.json
 node packages/seam-compiler-core/tools/compile-capture.cjs capture.json bricks-profile.json output-directory "Template title"
+node packages/seam-capture/tools/summarize-evidence.cjs capture-directory compile-directory evidence.json
 ```
 
-The former browser converter is quarantined under `packages/seam-bricks-adapter/scaffold/` and is not imported by the supported pipeline. The supplied National Chikki homepage is recorded as a golden source; its real multi-viewport capture begins in M2.
+The former browser converter is quarantined under `packages/seam-bricks-adapter/scaffold/` and is not imported by the supported pipeline. Rendered capture is a compiler-plane job, never a WordPress request: it records computed style, cascade evidence, accessibility semantics, resources, screenshots, and a canonical responsive matrix before deterministic geometry and Bricks compilation. The National Chikki golden page currently compiles to 279 native Bricks elements with zero Code elements, 99.9% native-control coverage, and three explicitly reported scoped-CSS declarations where Bricks 2.3.10 has no equivalent control. These are compiler metrics, not yet a claim of pixel-perfect visual proof.
 
 ## Emergency Disable
 

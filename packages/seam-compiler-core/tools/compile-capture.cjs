@@ -27,19 +27,10 @@ function compileCaptureFile(captureFile, capabilityFile, outputDirectory, title 
 	const capture = JSON.parse(fs.readFileSync(path.resolve(captureFile), 'utf8'));
 	const capabilityProfile = JSON.parse(fs.readFileSync(path.resolve(capabilityFile), 'utf8'));
 	const output = path.resolve(outputDirectory);
-	const { pageIr, behaviorIr, assetManifest } = normalizeCapture(capture);
+	const { pageIr, behaviorIr, assetManifest, geometry } = normalizeCapture(capture);
 	const bricksPlan = compileBricksPlan(pageIr, capabilityProfile);
 	const template = serializeBricksTemplate(bricksPlan, title);
-	const frameworkProfile = buildFrameworkProfile(title);
-	const geometry = {
-		schema: 'seam.geometry-evidence.v1', solver: { name: 'SEAM Page Geometry Solver', version: '0.1.0', status: 'm1-constraint-scaffold' },
-		sourceHash: pageIr.sourceHash,
-		nodes: pageIr.nodes.map((node) => ({
-			id: node.id, display: node.layout.display, direction: node.layout.direction, wrap: node.layout.wrap,
-			gap: node.layout.gap, widthMode: node.layout.widthMode, viewportIds: node.provenance.viewportIds
-		})),
-		limitations: ['M1 records normalized layout evidence; multi-viewport responsive constraint solving begins in M2.']
-	};
+	const frameworkProfile = buildFrameworkProfile(title, bricksPlan.variables);
 	const integrity = {};
 
 	writeJson(output, 'capture/seam-capture.json', capture, integrity);
@@ -55,8 +46,8 @@ function compileCaptureFile(captureFile, capabilityFile, outputDirectory, title 
 		schema: 'kiwe.appsite-package.v1',
 		packageId: safeName(title),
 		sourceHash: capture.source.contentHash,
-		compiler: { name: 'SEAM Compiler', version: '0.1.0', deterministic: true, aiDirectJson: false },
-		contracts: ['seam.capture.v1', 'seam.page-ir.v1', 'seam.behavior-ir.v1', 'seam.asset-manifest.v1', 'seam.bricks-plan.v1', 'kiwe.appsite-package.v1'],
+		compiler: { name: 'SEAM Compiler', version: '0.2.0', deterministic: true, aiDirectJson: false },
+		contracts: ['seam.capture.v1', 'seam.page-ir.v1', 'seam.behavior-ir.v1', 'seam.asset-manifest.v1', 'seam.geometry.v1', 'seam.bricks-plan.v1', 'kiwe.appsite-package.v1'],
 		artifacts: {
 			capture: 'capture/seam-capture.json', pageIr: 'ir/page-ir.json', behaviorIr: 'ir/behavior-ir.json',
 			assets: 'assets/asset-manifest.json', frameworkProfile: 'framework/kiwe-framework-profile.json',
@@ -79,7 +70,7 @@ if (require.main === module) {
 	}
 	try {
 		const result = compileCaptureFile(capture, capability, output, titleParts.join(' ') || 'SEAM compiled page');
-		console.log(`Compiled ${result.bricksPlan.elements.length} native Bricks elements with ${result.bricksPlan.metrics.nativeCoverage}% native ownership.`);
+		console.log(`Compiled ${result.bricksPlan.elements.length} Bricks elements with ${result.bricksPlan.metrics.nativeCoverage}% native-control coverage.`);
 		console.log(`AppSite package: ${path.resolve(output, 'appsite-package.json')}`);
 	} catch (error) {
 		console.error(error instanceof Error ? error.stack || error.message : String(error));

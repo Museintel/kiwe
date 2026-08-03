@@ -399,6 +399,8 @@ Generated portable handoff copies must come from canonical schemas/runtime sourc
 
 **Exit:** three unrelated static pages compile without fixture-specific rules.
 
+**Implemented on `compiler/render-capture-geometry`:** isolated Chromium capture, the canonical seven-viewport matrix, computed/cascade/pseudo/resource evidence, responsive Geometry inference, native responsive Bricks controls, Framework project variables, and compact content-addressed proof manifests. Two unrelated synthetic fixtures plus the supplied National Chikki homepage are compiler regressions. The real homepage produces 279 elements, 99.9% native-control coverage, zero Code elements, and three declared scoped-CSS exceptions. Pixel-level comparison and interaction-state capture remain M5 proof work; this milestone does not claim universal HTML parity.
+
 ### M3 — Framework and native ownership compiler
 
 - compile official/project tokens and Framework Profiles;

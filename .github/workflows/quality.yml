@@ -42,3 +42,16 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run responsive accessibility and geometry contract
         run: node tools/ui-contract/run.cjs
+
+  seam-render-capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install isolated compiler capture dependencies
+        working-directory: packages/seam-capture
+        run: npm ci --no-audit --no-fund
+      - name: Run rendered capture and responsive geometry contract
+        run: node packages/seam-capture/test/render-capture.cjs

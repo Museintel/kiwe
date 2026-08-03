@@ -28,6 +28,12 @@ function extractCapabilities(bricksRoot) {
 
 	const files = fs.readdirSync(elementsDirectory).filter((file) => file.endsWith('.php')).sort();
 	const sourceParts = [functionsSource];
+	const settingsPageFile = path.join(resolved, 'includes', 'settings', 'settings-page.php');
+	const settingsPageSource = fs.existsSync(settingsPageFile) ? fs.readFileSync(settingsPageFile, 'utf8') : '';
+	if (settingsPageSource) sourceParts.push(`\n/* includes/settings/settings-page.php */\n${settingsPageSource}`);
+	const dynamicElementControls = values(settingsPageSource, /\$this->controls\[['"](scrollSnap[^'"]+)['"]\]/g)
+		.filter((control) => control !== 'scrollSnapSelector')
+		.map((control) => `_${control}`);
 	const classRecords = new Map();
 	let baseControls = [];
 	const warnings = [];
@@ -40,10 +46,12 @@ function extractCapabilities(bricksRoot) {
 		if (!classMatch) continue;
 		const [, className, parentClass = ''] = classMatch;
 		const name = source.match(/public\s+\$name\s*=\s*'([^']+)'/)?.[1] || '';
-		classRecords.set(className, { className, parentClass, name, controls, source, file });
+		const record = { className, parentClass, name, controls, source, file };
 		if (file === 'base.php') {
-			baseControls = controls;
+			baseControls = [...new Set([...controls, ...dynamicElementControls])].sort();
+			record.controls = baseControls;
 		}
+		classRecords.set(className, record);
 	}
 
 	const resolving = new Set();

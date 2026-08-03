@@ -9,6 +9,7 @@ const { validateContract } = require('../../seam-contracts/lib/validator.cjs');
 const { compileAiDirectJson } = require('../lib/ai-direct-json.cjs');
 const { compileCaptureFile } = require('../tools/compile-capture.cjs');
 const { serializeBricksTemplate } = require('../../seam-bricks-adapter/lib/serialize-template.cjs');
+const { createNativeVariableRegistry } = require('../../seam-bricks-adapter/lib/compile-plan.cjs');
 const { extractCapabilities } = require('../../seam-bricks-adapter/tools/extract-bricks-capabilities.cjs');
 
 const root = path.resolve(__dirname, '..', '..', '..');
@@ -46,13 +47,15 @@ try {
 	check('capability extractor resolves inherited controls without executing Bricks PHP', () => {
 		const mini = path.join(temp, 'bricks-mini');
 		fs.mkdirSync(path.join(mini, 'includes/elements'), { recursive: true });
+		fs.mkdirSync(path.join(mini, 'includes/settings'), { recursive: true });
 		fs.writeFileSync(path.join(mini, 'functions.php'), "<?php define( 'BRICKS_VERSION', '9.9.9' );\n");
 		fs.writeFileSync(path.join(mini, 'includes/elements/base.php'), "<?php abstract class Element { public function controls(){ $this->controls['_background'] = []; } }\n");
 		fs.writeFileSync(path.join(mini, 'includes/elements/container.php'), "<?php class Element_Container extends Element { public $name = 'container'; public function controls(){ $this->controls['_direction'] = []; } }\n");
 		fs.writeFileSync(path.join(mini, 'includes/elements/section.php'), "<?php class Element_Section extends Element_Container { public $name = 'section'; public $nestable = true; }\n");
+		fs.writeFileSync(path.join(mini, 'includes/settings/settings-page.php'), "<?php $this->controls['scrollSnapType'] = []; $this->controls['scrollSnapSelector'] = [];\n");
 		const extracted = extractCapabilities(mini);
 		assert.equal(extracted.bricksVersion, '9.9.9');
-		assert.deepEqual(extracted.elements.find((element) => element.name === 'section').controls, ['_background', '_direction']);
+		assert.deepEqual(extracted.elements.find((element) => element.name === 'section').controls, ['_background', '_direction', '_scrollSnapType']);
 	});
 
 	check('Bricks 2.3.10 capability profile is deterministic and inheritance-aware', () => {
@@ -71,6 +74,22 @@ try {
 		assert.equal(profileHash, `sha256:${sha256(JSON.stringify(core))}`);
 	});
 
+	check('source CSS variables become valid collision-safe Framework project variables', () => {
+		const registry = createNativeVariableRegistry({
+			sourceHash: `sha256:${'0'.repeat(64)}`,
+			variables: [
+				{ name: '--aqua', value: '#0ff' }, { name: '--Foo', value: '1rem' },
+				{ name: '--foo', value: '2rem' }, { name: '--seam-accent', value: '#f00' }
+			]
+		});
+		const names = registry.records.map((variable) => variable.name);
+		assert.equal(new Set(names).size, names.length);
+		assert.ok(names.every((name) => /^[a-z][a-z0-9]*-[a-z0-9][a-z0-9_-]{0,80}$/.test(name)));
+		assert.ok(names.every((name) => !/^(?:kiwe|seam)-/.test(name)));
+		assert.notEqual(registry.tokenFor('var(--Foo)'), registry.tokenFor('var(--foo)'));
+		assert.equal(registry.tokenFor('var(--aqua)'), 'var(--appsite-aqua)');
+	});
+
 	for (const fixture of fixtures) {
 		check(`${fixture} compiles through all typed contracts`, () => {
 			const capture = path.join(root, `packages/seam-compiler-core/fixtures/${fixture}/capture.json`);
@@ -81,13 +100,15 @@ try {
 			for (const [contract, value] of [
 				['capture', JSON.parse(fs.readFileSync(capture, 'utf8'))], ['pageIr', first.pageIr],
 				['behaviorIr', first.behaviorIr], ['assetManifest', first.assetManifest],
-				['bricksPlan', first.bricksPlan], ['appsitePackage', first.appsitePackage]
+				['geometry', first.geometry], ['bricksPlan', first.bricksPlan], ['appsitePackage', first.appsitePackage]
 			]) {
 				const validation = validateContract(contract, value);
 				assert.equal(validation.ok, true, JSON.stringify(validation.errors));
 			}
 			assert.deepEqual(first, second);
 			assert.equal(first.bricksPlan.aiGenerated, false);
+			assert.equal(typeof first.bricksPlan.customCss, 'string');
+			assert.equal(first.bricksPlan.metrics.customCssDeclarations, 0);
 			assert.equal(first.bricksPlan.elements.length, first.pageIr.nodes.length);
 			assert.ok(first.bricksPlan.elements.every((element) => element.provenance.captureNodeIds.length > 0));
 			assert.ok(first.template.content.every((element) => element.name !== 'code'));
@@ -95,7 +116,7 @@ try {
 			assert.equal(first.template.generator.aiDirectJson, false);
 			assert.equal(first.appsitePackage.artifacts.frameworkProfile, 'framework/kiwe-framework-profile.json');
 			assert.equal(first.appsitePackage.artifacts.geometry, 'geometry/page-geometry.json');
-			assert.equal(first.geometry.solver.status, 'm1-constraint-scaffold');
+			assert.equal(first.geometry.solver.version, '0.2.0');
 			const frameworkValidation = spawnSync(
 				process.execPath,
 				['kiwe-ai-toolkit/tools/validate-framework-profile.cjs', path.join(firstDirectory, 'framework')],
@@ -139,13 +160,26 @@ try {
 		}
 	});
 
-	check('supplied National Chikki homepage is preserved as a pending M2 golden source', () => {
+	check('supplied National Chikki homepage has canonical M2 capture and compilation evidence', () => {
 		const directory = path.join(root, 'packages/seam-compiler-core/fixtures/golden/national-chikki');
 		const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'fixture.json'), 'utf8'));
+		const evidence = JSON.parse(fs.readFileSync(path.join(directory, manifest.evidence), 'utf8'));
 		const source = fs.readFileSync(path.join(directory, 'source.html'));
-		assert.equal(manifest.captureStatus, 'pending-m2');
+		assert.equal(manifest.captureStatus, 'captured-m2');
 		assert.equal(source.length, manifest.repositoryNormalization.bytes);
 		assert.equal(sha256(source), manifest.repositoryNormalization.sha256);
+		assert.equal(evidence.sourceHash, `sha256:${manifest.repositoryNormalization.sha256}`);
+		assert.equal(evidence.capture.nodes, 279);
+		assert.equal(evidence.capture.viewports.length, 7);
+		assert.equal(evidence.capture.diagnostics.length, 0);
+		assert.equal(evidence.geometry.nodes, 279);
+		assert.equal(evidence.compilation.elements, 279);
+		assert.equal(evidence.compilation.codeElements, 0);
+		assert.equal(evidence.compilation.metrics.nativeCoverage, 99.9);
+		assert.equal(evidence.compilation.metrics.customCssDeclarations, 3);
+		assert.ok(Object.values(evidence.validation.contracts).every((result) => result.ok));
+		assert.equal(evidence.validation.bricksConversion.ok, true);
+		assert.equal(evidence.validation.frameworkProfile.ok, true);
 		assert.match(source.toString('utf8'), /Lonavala in your pocket/i);
 	});
 } finally {

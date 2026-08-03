@@ -22,11 +22,15 @@ function serializeBricksTemplate(plan, title = 'SEAM compiled page') {
 		})),
 		global_classes: plan.globalClasses,
 		globalVariables: plan.variables,
-		pageSettings: {},
+		pageSettings: plan.customCss ? { customCss: plan.customCss } : {},
 		kiwe: {
 			schema: 'kiwe.bricks-template.v1',
 			target: { importMethod: 'kiwe-staging-executor', bricksVersion: plan.target.bricksVersion },
-			provenance: { planSchema: plan.schema, sourceHash: plan.sourceHash, planHash }
+			provenance: { planSchema: plan.schema, sourceHash: plan.sourceHash, planHash },
+			frameworkProfile: {
+				path: '../../framework/kiwe-framework-profile.json',
+				projectVariables: plan.variables.map((variable) => `--${String(variable.name).replace(/^--/, '')}`)
+			}
 		},
 		generator: {
 			name: 'SEAM Compiler',

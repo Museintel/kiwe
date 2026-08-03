@@ -26,6 +26,12 @@ final class SeamAssetManifestV1 {
 	public function __construct( public readonly array $value ) {}
 }
 
+final class SeamGeometryV1 {
+	public const SCHEMA = 'seam.geometry.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
 final class SeamBricksPlanV1 {
 	public const SCHEMA = 'seam.bricks-plan.v1';
 	/** @param array<string, mixed> $value */

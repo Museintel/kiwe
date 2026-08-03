@@ -29,7 +29,11 @@
           "width": { "type": "integer", "minimum": 240 },
           "height": { "type": "integer", "minimum": 240 },
           "theme": { "enum": ["light", "dark", "system"] },
-          "state": { "type": "string", "minLength": 1 }
+          "state": { "type": "string", "minLength": 1 },
+          "screenshot": {
+            "type": "object", "additionalProperties": false, "required": ["file", "bytes", "sha256"],
+            "properties": { "file": { "type": "string" }, "bytes": { "type": "integer", "minimum": 1 }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+          }
         }
       }
     },
@@ -45,6 +49,7 @@
           "parentId": { "type": ["string", "null"] },
           "tag": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
           "role": { "type": ["string", "null"] },
+          "accessibleName": { "type": "string" },
           "text": { "type": "string" },
           "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
           "observations": {
@@ -67,6 +72,26 @@
                   }
                 },
                 "computed": { "type": "object", "additionalProperties": { "type": "string" } }
+                ,"customProperties": { "type": "object", "additionalProperties": { "type": "string" } },
+                "scroll": {
+                  "type": "object", "additionalProperties": false, "required": ["width", "height", "left", "top"],
+                  "properties": { "width": { "type": "number", "minimum": 0 }, "height": { "type": "number", "minimum": 0 }, "left": { "type": "number" }, "top": { "type": "number" } }
+                },
+                "stacking": {
+                  "type": "object", "additionalProperties": false, "required": ["position", "zIndex", "createsContext"],
+                  "properties": { "position": { "type": "string" }, "zIndex": { "type": "string" }, "createsContext": { "type": "boolean" } }
+                },
+                "pseudo": { "type": "object", "additionalProperties": true },
+                "matchedRules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object", "additionalProperties": false, "required": ["selector", "source", "media", "declarations"],
+                    "properties": {
+                      "selector": { "type": "string" }, "source": { "type": "string" }, "media": { "type": "string" },
+                      "declarations": { "type": "object", "additionalProperties": { "type": "string" } }
+                    }
+                  }
+                }
               }
             }
           },
@@ -82,6 +107,35 @@
         }
       }
     },
-    "diagnostics": { "type": "array", "items": { "type": "string" } }
+    "diagnostics": { "type": "array", "items": { "type": "string" } },
+    "capture": {
+      "type": "object", "additionalProperties": false, "required": ["engine", "engineVersion", "scriptsExecuted", "remoteAssetsAllowed", "deterministicClock"],
+      "properties": {
+        "engine": { "const": "chromium" }, "engineVersion": { "type": "string" }, "scriptsExecuted": { "type": "boolean" },
+        "remoteAssetsAllowed": { "type": "boolean" }, "deterministicClock": { "type": "boolean" }
+      }
+    },
+    "stylesheets": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "href", "inline", "media", "disabled", "ruleCount", "accessible"],
+        "properties": {
+          "id": { "type": "string" }, "href": { "type": ["string", "null"] }, "inline": { "type": "boolean" },
+          "media": { "type": "string" }, "disabled": { "type": "boolean" }, "ruleCount": { "type": "integer", "minimum": 0 },
+          "accessible": { "type": "boolean" }, "contentHash": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["url", "kind", "status", "mime", "bytes", "sha256", "blocked"],
+        "properties": {
+          "url": { "type": "string" }, "kind": { "type": "string" }, "status": { "type": ["integer", "null"] },
+          "mime": { "type": ["string", "null"] }, "bytes": { "type": ["integer", "null"], "minimum": 0 },
+          "sha256": { "type": ["string", "null"] }, "blocked": { "type": "boolean" }, "content": { "type": "string" }
+        }
+      }
+    }
   }
 }

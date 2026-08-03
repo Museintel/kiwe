@@ -10,13 +10,14 @@
   },
   "repositoryNormalization": {
     "encoding": "utf-8",
-    "lineEndings": "lf",
-    "bytes": 96800,
-    "sha256": "8e9376a3c2f99e8762e6bc4e268acd8376658b4ca657000cc38751ea03f8b9e5"
+    "lineEndings": "source-preserved",
+    "bytes": 96684,
+    "sha256": "e196f8a3947f7932b95e55c346d648aa659b193259325669c569fdb6137d56f9"
   },
-  "captureStatus": "pending-m2",
+  "captureStatus": "captured-m2",
+  "evidence": "evidence.json",
   "notes": [
     "This is a golden input, not a fixture-specific mapping template.",
-    "M1 preserves the source and provenance only; M2 must create rendered multi-viewport evidence before compilation."
+    "The repository source is byte-identical to the supplied UTF-8 artifact; evidence.json records the rendered M2 capture and compilation proofs without committing the 12 MB raw capture."
   ]
 }
