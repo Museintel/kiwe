@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.repair-plan.v1.schema.json",
+  "title": "SEAM bounded repair plan v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "sourceHash", "targetHash", "mode", "authority", "mutatesArtifacts", "items", "limitations"],
+  "properties": {
+    "schema": { "const": "seam.repair-plan.v1" }, "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, "targetHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "mode": { "const": "deterministic-proposal" }, "authority": { "const": "recompile-from-ir-after-review" }, "mutatesArtifacts": { "const": false },
+    "items": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "viewportId", "nodeId", "category", "priority", "reason", "evidence", "action", "autoApplicable"], "properties": { "id": { "type": "string" }, "viewportId": { "type": ["string", "null"] }, "nodeId": { "type": ["string", "null"] }, "category": { "enum": ["capture", "anchor", "geometry", "style", "accessibility", "pixel", "diagnostic"] }, "priority": { "enum": ["blocker", "high", "medium", "low"] }, "reason": { "type": "string" }, "evidence": { "type": "object" }, "action": { "type": "string" }, "autoApplicable": { "const": false } } } },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  }
+}

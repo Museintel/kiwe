@@ -128,6 +128,7 @@ try {
 			assert.ok(first.bricksPlan.elements.every((element) => element.provenance.captureNodeIds.length > 0));
 			assert.ok(first.template.content.every((element) => element.name !== 'code'));
 			assert.ok(first.template.content.every((element) => !Object.keys(element.settings).some((key) => key.startsWith('_cssCustom'))));
+			assert.ok(first.template.content.every((element) => element.settings._attributes.some((attribute) => attribute.name === 'data-seam-proof-node')));
 			assert.equal(first.template.generator.aiDirectJson, false);
 			assert.equal(first.appsitePackage.artifacts.frameworkProfile, 'framework/kiwe-framework-profile.json');
 			assert.equal(first.appsitePackage.artifacts.geometry, 'geometry/page-geometry.json');

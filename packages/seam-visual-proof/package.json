@@ -1,0 +1,9 @@
+{
+  "name": "@kiwe/seam-visual-proof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic rendered-reference versus staged-candidate proof for SEAM AppSite packages",
+  "type": "commonjs",
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node test/visual-proof.cjs" }
+}

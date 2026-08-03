@@ -12,6 +12,8 @@ Initial contracts:
 - `seam.sitegraph-snapshot.v1` — sanitized target capability evidence derived from `kiwe.site-graph.v1`.
 - `kiwe.bricks-bindings.v1` — target-proven query, dynamic-data, menu and AppShell launcher bindings.
 - `seam.deployment-plan.v1` — non-mutating staging sequence and executor boundaries.
+- `seam.visual-proof.v1` — matrix-scoped pixel, geometry, computed-style, accessibility, and diagnostic comparison.
+- `seam.repair-plan.v1` — bounded proposal-only diagnostics that must be applied through IR/compiler rules.
 - `seam.bricks-plan.v1` — native Bricks element/control ownership before serialization.
 - `kiwe.appsite-package.v1` — deployable package inventory and compatibility boundary.
 

@@ -7,6 +7,7 @@ const { capturePage } = require('../lib/capture.cjs');
 const { validateContract } = require('../../seam-contracts/lib/validator.cjs');
 const { normalizeCapture } = require('../../seam-compiler-core/lib/normalize-capture.cjs');
 const { compileBricksPlan } = require('../../seam-bricks-adapter/lib/compile-plan.cjs');
+const { decodePng } = require('../../seam-visual-proof/lib/png.cjs');
 
 const root = path.resolve(__dirname, '..', '..', '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwe-seam-capture-'));
@@ -31,6 +32,11 @@ async function main() {
 		assert.equal(capture.source.entry, 'responsive.html');
 		assert.equal(capture.viewports.length, 2);
 		assert.ok(capture.viewports.every((viewport) => fs.existsSync(path.join(temp, 'capture', viewport.screenshot.file))));
+		for (const viewport of capture.viewports) {
+			const decoded = decodePng(fs.readFileSync(path.join(temp, 'capture', viewport.screenshot.file)));
+			assert.equal(decoded.width, viewport.width);
+			assert.ok(decoded.height >= viewport.height);
+		}
 		assert.ok(capture.resources.some((resource) => resource.url === 'https://example.invalid/blocked.png' && resource.blocked));
 		assert.ok(capture.resources.some((resource) => resource.url.startsWith('data:image/svg+xml') && resource.sha256));
 		const content = capture.nodes.find((node) => node.attributes.id === 'content');

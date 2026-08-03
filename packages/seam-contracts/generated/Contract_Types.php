@@ -50,6 +50,18 @@ final class SeamDeploymentPlanV1 {
 	public function __construct( public readonly array $value ) {}
 }
 
+final class SeamVisualProofV1 {
+	public const SCHEMA = 'seam.visual-proof.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
+final class SeamRepairPlanV1 {
+	public const SCHEMA = 'seam.repair-plan.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
 final class SeamGeometryV1 {
 	public const SCHEMA = 'seam.geometry.v1';
 	/** @param array<string, mixed> $value */

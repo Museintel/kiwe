@@ -16,6 +16,13 @@ function fileProof(file) {
 	return { bytes: content.length, sha256: crypto.createHash('sha256').update(content).digest('hex') };
 }
 
+function safeArtifact(rootDirectory, relative) {
+	const root = path.resolve(rootDirectory);
+	const file = path.resolve(root, String(relative || ''));
+	if (file !== root && !file.startsWith(`${root}${path.sep}`)) throw new Error(`Artifact path leaves evidence root: ${relative}`);
+	return file;
+}
+
 function validator(script, target) {
 	const result = spawnSync(process.execPath, [script, target], { cwd: root, encoding: 'utf8' });
 	let report;
@@ -39,7 +46,7 @@ function summarize(captureDirectory, compileDirectory) {
 		appsitePackage: 'appsite-package.json'
 	};
 	const capture = readJson(captureFile);
-	const artifacts = Object.fromEntries(Object.entries(files).map(([name, relative]) => [name, readJson(path.join(compileDirectory, relative))]));
+	const artifacts = Object.fromEntries(Object.entries(files).map(([name, relative]) => [name, readJson(safeArtifact(compileDirectory, relative))]));
 	const contractInputs = {
 		capture, pageIr: artifacts.pageIr, behaviorIr: artifacts.behaviorIr, assetManifest: artifacts.assets,
 		assetImportPlan: artifacts.assetImportPlan,
@@ -49,15 +56,29 @@ function summarize(captureDirectory, compileDirectory) {
 		const relative = artifacts.appsitePackage.artifacts[artifactKey];
 		if (!relative) continue;
 		files[name] = relative;
-		artifacts[name] = readJson(path.join(compileDirectory, relative));
+		artifacts[name] = readJson(safeArtifact(compileDirectory, relative));
 		contractInputs[contract] = artifacts[name];
+	}
+	if (artifacts.appsitePackage.artifacts.proof) {
+		files.visualProof = artifacts.appsitePackage.artifacts.proof;
+		artifacts.visualProof = readJson(safeArtifact(compileDirectory, files.visualProof));
+		contractInputs.visualProof = artifacts.visualProof;
+		if (artifacts.visualProof.repairPlan) {
+			files.repairPlan = artifacts.visualProof.repairPlan;
+			artifacts.repairPlan = readJson(safeArtifact(compileDirectory, files.repairPlan));
+			contractInputs.repairPlan = artifacts.repairPlan;
+		}
+	}
+	for (const [relative, expected] of Object.entries(artifacts.appsitePackage.integrity.files)) {
+		const proof = fileProof(safeArtifact(compileDirectory, relative));
+		if (proof.sha256 !== expected) throw new Error(`AppSite package integrity mismatch: ${relative}`);
 	}
 	const contractValidation = Object.fromEntries(Object.entries(contractInputs).map(([name, value]) => {
 		const result = validateContract(name, value);
 		return [name, { ok: result.ok, errors: result.errors.length }];
 	}));
 	const screenshotProof = capture.viewports.map((viewport) => {
-		const proof = fileProof(path.join(captureDirectory, viewport.screenshot.file));
+		const proof = fileProof(safeArtifact(captureDirectory, viewport.screenshot.file));
 		if (proof.bytes !== viewport.screenshot.bytes || proof.sha256 !== viewport.screenshot.sha256) {
 			throw new Error(`Screenshot integrity mismatch: ${viewport.screenshot.file}`);
 		}
@@ -65,7 +86,7 @@ function summarize(captureDirectory, compileDirectory) {
 	});
 	const artifactProof = {
 		capture: { file: 'seam-capture.json', ...fileProof(captureFile) },
-		...Object.fromEntries(Object.entries(files).map(([name, relative]) => [name, { file: relative, ...fileProof(path.join(compileDirectory, relative)) }]))
+		...Object.fromEntries(Object.entries(files).map(([name, relative]) => [name, { file: relative, ...fileProof(safeArtifact(compileDirectory, relative)) }]))
 	};
 	const typeCounts = artifacts.bricksPlan.elements.reduce((counts, element) => {
 		counts[element.type] = (counts[element.type] || 0) + 1;
@@ -76,9 +97,9 @@ function summarize(captureDirectory, compileDirectory) {
 		counts[adapter] = (counts[adapter] || 0) + 1;
 		return counts;
 	}, {});
-	const bricksValidation = validator('kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs', path.join(compileDirectory, files.bricksTemplate));
+	const bricksValidation = validator('kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs', safeArtifact(compileDirectory, files.bricksTemplate));
 	const frameworkValidation = validator('kiwe-ai-toolkit/tools/validate-framework-profile.cjs', path.join(compileDirectory, 'framework'));
-	if (!Object.values(contractValidation).every((result) => result.ok) || !bricksValidation.ok || !frameworkValidation.ok) {
+	if (!Object.values(contractValidation).every((result) => result.ok) || !bricksValidation.ok || !frameworkValidation.ok || (artifacts.visualProof && artifacts.visualProof.status !== 'passed')) {
 		throw new Error('Refusing to publish golden evidence for an invalid compilation.');
 	}
 	return {
@@ -113,7 +134,10 @@ function summarize(captureDirectory, compileDirectory) {
 			customCss: artifacts.bricksPlan.customCss,
 			artifacts: artifactProof
 		},
-		validation: { contracts: contractValidation, bricksConversion: bricksValidation, frameworkProfile: frameworkValidation }
+		validation: {
+			contracts: contractValidation, bricksConversion: bricksValidation, frameworkProfile: frameworkValidation,
+			visualProof: artifacts.visualProof ? { status: artifacts.visualProof.status, grade: artifacts.visualProof.grade, summary: artifacts.visualProof.summary } : null
+		}
 	};
 }
 

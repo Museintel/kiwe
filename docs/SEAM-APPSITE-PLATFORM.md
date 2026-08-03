@@ -432,6 +432,8 @@ Generated portable handoff copies must come from canonical schemas/runtime sourc
 
 **Exit:** repeatable conversion results from a clean checkout and identical input hashes.
 
+**Foundation implementation on `compiler/visual-proof-foundation`:** compiled native Bricks elements now expose stable `data-seam-proof-node` provenance. The dependency-free proof engine validates PNG integrity, computes deterministic YIQ pixel diffs, compares Bricks-plan anchor boxes, selected computed styles, semantic roles/accessibility names and new capture diagnostics, and emits per-viewport diff images plus `seam.visual-proof.v1`. Grades are deliberately matrix-scoped: missing or mismatched viewport/state evidence blocks proof, and no report authorizes a universal 100% claim. `seam.repair-plan.v1` turns failed regions into bounded, proposal-only compiler/IR actions; it cannot mutate generated JSON. Proof attachment verifies the package and Bricks-plan anchor hashes, copies verified diff evidence, updates package integrity, and refuses tampered or capture-only evidence. The M5 exit remains open until the first approved WordPress staging render supplies a real candidate capture and passes the canonical seven-viewport matrix.
+
 ### M6 — Six-site pilot
 
 - convert representative templates from all six sites;

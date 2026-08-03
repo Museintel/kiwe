@@ -244,11 +244,12 @@ function contentSettings(node, type) {
 		if (node.attributes.alt) settings.altText = node.attributes.alt;
 	}
 	if (['section', 'div', 'block'].includes(type) && !['div', 'section'].includes(node.tag)) settings.tag = node.tag;
-	const reserved = new Set(['src', 'alt', 'href', 'class', 'id', 'style']);
+	const reserved = new Set(['src', 'alt', 'href', 'class', 'id', 'style', 'data-seam-proof-node']);
 	const attributes = Object.entries(node.attributes)
 		.filter(([name]) => !reserved.has(name) && !name.startsWith('on'))
 		.map(([name, value], index) => ({ id: shortId(`${node.id}:${name}:${index}`), name, value }));
-	if (attributes.length) settings._attributes = attributes;
+	attributes.push({ id: shortId(`${node.id}:data-seam-proof-node`), name: 'data-seam-proof-node', value: node.id });
+	settings._attributes = attributes;
 	if (node.attributes.id) settings._cssId = node.attributes.id;
 	return settings;
 }

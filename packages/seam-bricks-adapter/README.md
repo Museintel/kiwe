@@ -11,3 +11,5 @@ This package owns the only supported `seam.bricks-plan.v1` to native Bricks seri
 - `scaffold/legacy-browser-converter.ts` preserves the former browser converter for regression archaeology only. It is excluded from the supported compiler path.
 
 Navigation and tables keep semantic tags on native layout elements when a specialized Bricks widget would invent behavior. Arbitrary form submission, unknown embeds, and unsanitized vectors remain review boundaries rather than being silently changed. No AI output can enter at the plan or template boundary.
+
+Every compiled native element carries `data-seam-proof-node` through Bricks' native custom-attributes control. The visual-proof plane uses that stable Page IR provenance to compare staged Bricks geometry and semantics without DOM-position guessing or custom runtime JavaScript.

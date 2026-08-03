@@ -10,6 +10,8 @@
     { "name": "bindings", "schema": "kiwe.bricks-bindings.v1", "file": "../../kiwe-ai-toolkit/schemas/bricks-bindings.schema.json", "type": "KiweBricksBindingsV1" },
     { "name": "assetImportPlan", "schema": "seam.asset-import-plan.v1", "file": "schemas/seam.asset-import-plan.v1.schema.json", "type": "SeamAssetImportPlanV1" },
     { "name": "deploymentPlan", "schema": "seam.deployment-plan.v1", "file": "schemas/seam.deployment-plan.v1.schema.json", "type": "SeamDeploymentPlanV1" },
+    { "name": "visualProof", "schema": "seam.visual-proof.v1", "file": "schemas/seam.visual-proof.v1.schema.json", "type": "SeamVisualProofV1" },
+    { "name": "repairPlan", "schema": "seam.repair-plan.v1", "file": "schemas/seam.repair-plan.v1.schema.json", "type": "SeamRepairPlanV1" },
     { "name": "geometry", "schema": "seam.geometry.v1", "file": "schemas/seam.geometry.v1.schema.json", "type": "SeamGeometryV1" },
     { "name": "bricksPlan", "schema": "seam.bricks-plan.v1", "file": "schemas/seam.bricks-plan.v1.schema.json", "type": "SeamBricksPlanV1" },
     { "name": "appsitePackage", "schema": "kiwe.appsite-package.v1", "file": "schemas/kiwe.appsite-package.v1.schema.json", "type": "KiweAppsitePackageV1" }

@@ -67,8 +67,8 @@ function compileCaptureFile(captureFile, capabilityFile, outputDirectory, title 
 		schema: 'kiwe.appsite-package.v1',
 		packageId: safeName(title),
 		sourceHash: capture.source.contentHash,
-		compiler: { name: 'SEAM Compiler', version: '0.4.0', deterministic: true, aiDirectJson: false },
-		contracts: ['seam.capture.v1', 'seam.page-ir.v1', 'seam.behavior-ir.v1', 'seam.asset-manifest.v1', 'seam.asset-import-plan.v1', 'seam.sitegraph-snapshot.v1', 'kiwe.bricks-bindings.v1', 'seam.deployment-plan.v1', 'seam.geometry.v1', 'seam.bricks-plan.v1', 'kiwe.appsite-package.v1'],
+		compiler: { name: 'SEAM Compiler', version: '0.5.0', deterministic: true, aiDirectJson: false },
+		contracts: ['seam.capture.v1', 'seam.page-ir.v1', 'seam.behavior-ir.v1', 'seam.asset-manifest.v1', 'seam.asset-import-plan.v1', 'seam.sitegraph-snapshot.v1', 'kiwe.bricks-bindings.v1', 'seam.deployment-plan.v1', 'seam.visual-proof.v1', 'seam.repair-plan.v1', 'seam.geometry.v1', 'seam.bricks-plan.v1', 'kiwe.appsite-package.v1'],
 		artifacts: {
 			capture: 'capture/seam-capture.json', pageIr: 'ir/page-ir.json', behaviorIr: 'ir/behavior-ir.json',
 			assets: 'assets/asset-manifest.json', assetImportPlan: 'assets/import-plan.json', siteGraph: siteGraphSnapshot ? 'sitegraph/snapshot.json' : null,
