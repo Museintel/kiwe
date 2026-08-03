@@ -112,7 +112,11 @@ async function collectPageEvidence(page, viewportId) {
 		};
 		const declarations = (style) => {
 			const result = {};
-			for (const property of style) result[property] = style.getPropertyValue(property).trim() + (style.getPropertyPriority(property) ? ' !important' : '');
+			for (const property of style) {
+				const value = style.getPropertyValue(property).trim();
+				if (!value) continue;
+				result[property] = value + (style.getPropertyPriority(property) ? ' !important' : '');
+			}
 			for (const property of ['background', 'border', 'border-radius', 'font', 'margin', 'overflow', 'padding', 'text-decoration', 'transition']) {
 				const value = style.getPropertyValue(property).trim();
 				if (value) result[property] = value + (style.getPropertyPriority(property) ? ' !important' : '');
@@ -124,13 +128,48 @@ async function collectPageEvidence(page, viewportId) {
 			}
 			return result;
 		};
+		const selectorParts = (selector) => {
+			const parts = [];
+			let start = 0;
+			let depth = 0;
+			let quote = '';
+			for (let index = 0; index < selector.length; index += 1) {
+				const char = selector[index];
+				if (quote) {
+					if (char === quote && selector[index - 1] !== '\\') quote = '';
+					continue;
+				}
+				if (char === '"' || char === "'") { quote = char; continue; }
+				if (char === '(' || char === '[') depth += 1;
+				else if (char === ')' || char === ']') depth = Math.max(0, depth - 1);
+				else if (char === ',' && depth === 0) { parts.push(selector.slice(start, index).trim()); start = index + 1; }
+			}
+			parts.push(selector.slice(start).trim());
+			return parts.filter(Boolean);
+		};
+		const selectorSpecificity = (element, selector) => {
+			const score = (part) => {
+				let text = part.replace(/:where\((?:[^()]|\([^()]*\))*\)/g, '');
+				const ids = (text.match(/#[a-zA-Z0-9_-]+/g) || []).length;
+				const classes = (text.match(/\.[a-zA-Z0-9_-]+|\[[^\]]+\]|:(?!:)[a-zA-Z0-9_-]+(?:\([^)]*\))?/g) || []).length;
+				text = text.replace(/#[a-zA-Z0-9_-]+|\.[a-zA-Z0-9_-]+|\[[^\]]+\]|::?[a-zA-Z0-9_-]+(?:\([^)]*\))?|\*/g, ' ');
+				const types = (text.match(/(?:^|[\s>+~|])([a-zA-Z][a-zA-Z0-9_-]*)/g) || []).length + (part.match(/::[a-zA-Z0-9_-]+/g) || []).length;
+				return [ids, classes, types];
+			};
+			const matches = selectorParts(selector).filter((part) => {
+				try { return element.matches(part); } catch { return false; }
+			}).map(score);
+			return matches.sort((left, right) => right[0] - left[0] || right[1] - left[1] || right[2] - left[2])[0] || [0, 0, 0];
+		};
 		const matchingRules = (element) => {
 			const matches = [];
+			let sourceOrder = 0;
 			const walk = (rules, source, media = '') => {
 				for (const rule of [...rules]) {
+					sourceOrder += 1;
 					if (rule.type === CSSRule.STYLE_RULE) {
 						try {
-							if (element.matches(rule.selectorText)) matches.push({ selector: rule.selectorText, source, media, declarations: declarations(rule.style) });
+							if (element.matches(rule.selectorText)) matches.push({ selector: rule.selectorText, source, media, specificity: selectorSpecificity(element, rule.selectorText), order: sourceOrder, declarations: declarations(rule.style) });
 						} catch { /* unsupported selector evidence is represented by computed style */ }
 					} else if (rule.cssRules && (!rule.conditionText || matchMedia(rule.conditionText).matches)) {
 						walk(rule.cssRules, source, rule.conditionText || media);
@@ -142,7 +181,7 @@ async function collectPageEvidence(page, viewportId) {
 				try { walk(sheet.cssRules, sheet.href || 'inline', sheet.media?.mediaText || ''); } catch { /* cross-origin stylesheet */ }
 				if (matches.length >= 80) break;
 			}
-			if (element.style?.length) matches.push({ selector: '<inline-style>', source: 'inline-attribute', media: '', declarations: declarations(element.style) });
+			if (element.style?.length) matches.push({ selector: '<inline-style>', source: 'inline-attribute', media: '', specificity: [1, 0, 0], order: Number.MAX_SAFE_INTEGER, declarations: declarations(element.style) });
 			return matches;
 		};
 		const pseudo = (element, name) => {

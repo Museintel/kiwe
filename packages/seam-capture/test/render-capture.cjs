@@ -16,9 +16,10 @@ const pixel = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" widt
 fs.writeFileSync(source, `<!doctype html><html><head><meta charset="utf-8"><style>
 :root{--seam-accent:#921d21}*{box-sizing:border-box}body{margin:0;background:#fff;color:#171717}
 main{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:min(100%,720px);margin:auto;padding:24px}
+main .card:first-child{min-height:80px;background:linear-gradient(135deg,var(--seam-accent),#b7272e)}.card{min-height:40px}
 h1{font:700 40px/1.1 Georgia,serif;color:var(--seam-accent)}img{display:block;width:40px;height:20px}
 @media(max-width:600px){main{display:flex;flex-direction:column;gap:8px;padding:12px}h1{font-size:28px}}
-</style></head><body><main id="content"><section><h1>Rendered evidence</h1><p>Native responsive capture.</p></section><img alt="pixel" src="${pixel}"><img alt="blocked" src="https://example.invalid/blocked.png"></main></body></html>`);
+</style></head><body><main id="content"><section class="card"><h1>Rendered evidence</h1><p>Native responsive capture.</p></section><img alt="pixel" src="${pixel}"><img alt="blocked" src="https://example.invalid/blocked.png"></main></body></html>`);
 
 const viewports = [
 	{ id: 'desktop-1280', width: 1280, height: 720, theme: 'light', state: 'default' },
@@ -44,6 +45,7 @@ async function main() {
 		assert.equal(content.observations[0].computed.display, 'grid');
 		assert.equal(content.observations[1].computed.display, 'flex');
 		assert.ok(content.observations[1].matchedRules.some((rule) => rule.media.includes('max-width')));
+		assert.ok(content.observations[0].matchedRules.every((rule) => Array.isArray(rule.specificity) && Number.isInteger(rule.order)));
 
 		const normalized = normalizeCapture(capture);
 		assert.equal(validateContract('geometry', normalized.geometry).ok, true);
@@ -51,11 +53,16 @@ async function main() {
 		assert.ok(normalized.geometry.summary.responsiveNodes > 0);
 		const pageNode = normalized.pageIr.nodes.find((node) => node.id === content.id);
 		assert.ok(pageNode.layout.responsive.some((state) => state.breakpoint === 'mobile_portrait' && state.display === 'flex'));
+		const cascadeCard = normalized.pageIr.nodes.find((node) => node.attributes.class === 'card');
+		assert.equal(cascadeCard.style.native['min-height'], '80px');
+		assert.match(cascadeCard.style.native['background-image'], /^linear-gradient\(/);
 
 		const profile = JSON.parse(fs.readFileSync(path.join(root, 'packages/seam-bricks-adapter/profiles/bricks-2.3.10.json'), 'utf8'));
 		const plan = compileBricksPlan(normalized.pageIr, profile);
 		const element = plan.elements.find((candidate) => candidate.provenance.pageNodeId === content.id);
 		assert.equal(element.settings['_display:mobile_portrait'], 'flex');
+		const cardElement = plan.elements.find((candidate) => candidate.provenance.pageNodeId === cascadeCard.id);
+		assert.ok(cardElement.settings._gradient);
 		assert.equal(plan.aiGenerated, false);
 		console.log(`PASS rendered capture: ${capture.nodes.length} nodes, ${normalized.geometry.summary.responsiveNodes} responsive, ${capture.resources.length} resources.`);
 	} finally {

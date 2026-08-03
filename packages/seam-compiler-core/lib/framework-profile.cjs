@@ -24,7 +24,8 @@ function safeName(value) {
 }
 
 function buildFrameworkProfile(title, projectVariables = []) {
-	const bricksThemeStyle = { enabled: true, id: `seam-${safeName(title)}`, label: `${title} SEAM Framework` };
+	const projectId = `seam-${safeName(title)}`;
+	const bricksThemeStyle = { enabled: true, id: projectId, label: `${title} SEAM Framework` };
 	for (const [slot, tokenName] of Object.entries(SLOT_TOKENS)) {
 		const token = tokenCatalog.tokens[tokenName];
 		if (!token) throw new Error(`Missing required Kiwe token ${tokenName} in generated catalog.`);
@@ -38,6 +39,9 @@ function buildFrameworkProfile(title, projectVariables = []) {
 				enabled: true, profile_label: `${title} SEAM Framework`, overrides: {},
 				bricks_theme_style: bricksThemeStyle,
 				project: {
+					enabled: projectVariables.length > 0,
+					id: projectId,
+					label: `${title} SEAM Project`,
 					variables: projectVariables.map((variable) => ({
 						name: `--${String(variable.name).replace(/^--/, '')}`, value: variable.value
 					}))

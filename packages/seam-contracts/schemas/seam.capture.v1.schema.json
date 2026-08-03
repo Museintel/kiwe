@@ -88,6 +88,8 @@
                     "type": "object", "additionalProperties": false, "required": ["selector", "source", "media", "declarations"],
                     "properties": {
                       "selector": { "type": "string" }, "source": { "type": "string" }, "media": { "type": "string" },
+                      "specificity": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "integer", "minimum": 0 } },
+                      "order": { "type": "integer", "minimum": 0 },
                       "declarations": { "type": "object", "additionalProperties": { "type": "string" } }
                     }
                   }

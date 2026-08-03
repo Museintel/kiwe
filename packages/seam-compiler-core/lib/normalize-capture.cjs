@@ -39,18 +39,28 @@ function kindFor(node) {
 }
 
 function authoredValue(node, observation, property) {
-	const inline = node.attributes?.style || '';
-	const inlineMatch = inline.match(new RegExp(`(?:^|;)\\s*${property.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*:\\s*([^;]+)`, 'i'));
-	if (inlineMatch) return inlineMatch[1].trim().replace(/\s*!important\s*$/i, '');
-	for (const rule of [...(observation.matchedRules || [])].reverse()) {
-		if (rule.declarations[property]) return rule.declarations[property].replace(/\s*!important\s*$/i, '');
-	}
-	return null;
+	const candidates = (observation.matchedRules || []).map((rule, index) => {
+		const raw = rule.declarations?.[property];
+		if (!raw) return null;
+		const specificity = Array.isArray(rule.specificity) && rule.specificity.length === 3 ? rule.specificity.map(Number) : [0, 0, 0];
+		return { raw, important: /\s*!important\s*$/i.test(raw), specificity, order: Number.isInteger(rule.order) ? rule.order : index };
+	}).filter(Boolean);
+	if (!candidates.length) return null;
+	candidates.sort((left, right) => Number(right.important) - Number(left.important)
+		|| right.specificity[0] - left.specificity[0]
+		|| right.specificity[1] - left.specificity[1]
+		|| right.specificity[2] - left.specificity[2]
+		|| right.order - left.order);
+	return candidates[0].raw.replace(/\s*!important\s*$/i, '');
 }
 
-function authoredDeclarations(observation) {
+function authoredDeclarations(node, observation) {
 	const declarations = {};
-	for (const rule of observation.matchedRules || []) Object.assign(declarations, rule.declarations);
+	const properties = new Set((observation.matchedRules || []).flatMap((rule) => Object.keys(rule.declarations || {})));
+	for (const property of properties) {
+		const value = authoredValue(node, observation, property);
+		if (value) declarations[property] = value;
+	}
 	return declarations;
 }
 
@@ -74,12 +84,20 @@ function normalizeStyle(node, observation, geometryNode) {
 	const tokenBindings = {};
 	const residuals = [];
 	const enhancedEvidence = Array.isArray(observation.matchedRules);
-	const declarations = authoredDeclarations(observation);
+	const declarations = authoredDeclarations(node, observation);
 	if (enhancedEvidence) {
 		for (const property of NATIVE_STYLE_PROPERTIES) {
 			if (['width', 'max-width', 'height', 'min-height'].includes(property)) continue;
 			const value = authoredValue(node, observation, property);
 			if (value) native[property] = value;
+		}
+		// CSSOM often retains only an authored `background` shorthand while its
+		// longhands are empty. Bricks needs the decomposed render values for its
+		// native background and gradient controls, so use the browser-computed
+		// longhands only when that shorthand actually owns the background.
+		if (authoredValue(node, observation, 'background')) {
+			if (!native['background-color'] && observation.computed['background-color']) native['background-color'] = observation.computed['background-color'];
+			if (!native['background-image'] && observation.computed['background-image'] && observation.computed['background-image'] !== 'none') native['background-image'] = observation.computed['background-image'];
 		}
 		for (const [property, rawValue] of Object.entries(declarations)) {
 			const value = rawValue.replace(/\s*!important\s*$/i, '');

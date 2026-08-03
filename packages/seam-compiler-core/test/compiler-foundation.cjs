@@ -131,6 +131,10 @@ try {
 			assert.ok(first.template.content.every((element) => element.settings._attributes.some((attribute) => attribute.name === 'data-seam-proof-node')));
 			assert.equal(first.template.generator.aiDirectJson, false);
 			assert.equal(first.appsitePackage.artifacts.frameworkProfile, 'framework/kiwe-framework-profile.json');
+			assert.equal(first.frameworkProfile.settings.tokens.project.enabled, first.bricksPlan.variables.length > 0);
+			assert.equal(first.frameworkProfile.settings.tokens.project.id, `seam-${fixture}`);
+			assert.equal(first.frameworkProfile.settings.tokens.project.label, `${fixture} SEAM Project`);
+			assert.equal(first.frameworkProfile.settings.tokens.project.variables.length, first.bricksPlan.variables.length);
 			assert.equal(first.appsitePackage.artifacts.geometry, 'geometry/page-geometry.json');
 			assert.equal(first.appsitePackage.artifacts.assetImportPlan, 'assets/import-plan.json');
 			for (const [relative, expectedHash] of Object.entries(first.appsitePackage.integrity.files)) {
