@@ -107,21 +107,22 @@
   "compilation": {
     "compiler": {
       "name": "SEAM Compiler",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "deterministic": true,
       "aiDirectJson": false
     },
     "target": {
       "bricksVersion": "2.3.10",
-      "capabilityProfileHash": "sha256:bd8d36183d80c4ce066d7457e6b34098f552e5aa0c559fbeb4dadc7983c14cbf"
+      "capabilityProfileHash": "sha256:1f08da8b85dd064d3a5686d725564cc37fe4bf36587471e2a4bb97698f71ccc1"
     },
-    "elements": 279,
+    "elements": 267,
     "elementTypes": {
       "button": 12,
-      "div": 117,
+      "div": 93,
       "heading": 22,
       "image": 24,
       "section": 25,
+      "svg": 12,
       "text-basic": 76,
       "text-link": 3
     },
@@ -130,10 +131,28 @@
     "assets": 12,
     "projectVariables": 138,
     "codeElements": 0,
+    "nativeSvgElements": 12,
+    "componentAdapters": {
+      "aggregate-svg": 12,
+      "direct": 192,
+      "semantic-layout": 63
+    },
+    "ownership": {
+      "policy": "element-native-single-owner",
+      "elementNativeControls": 2313,
+      "frameworkVariables": 138,
+      "customCssDeclarations": 3,
+      "conflicts": []
+    },
     "metrics": {
       "nativeCoverage": 99.9,
       "residualCount": 3,
-      "customCssDeclarations": 3
+      "customCssDeclarations": 3,
+      "sourceNodeCount": 279,
+      "nativeElementCount": 267,
+      "aggregatedNodeCount": 12,
+      "semanticCoverage": 100,
+      "reviewComponentCount": 0
     },
     "residuals": [
       "node-1og3g1z: scroll-behavior: smooth",
@@ -149,8 +168,8 @@
       },
       "pageIr": {
         "file": "ir/page-ir.json",
-        "bytes": 1287674,
-        "sha256": "fa96e62b55400e570ff591d0c49ae01098dda3fb47ce57dd9339de74b041b711"
+        "bytes": 1354620,
+        "sha256": "2a11d3108d5f4f0781326eff852cf0de3f480e8dcf7b4f584698b491ea72b8b3"
       },
       "behaviorIr": {
         "file": "ir/behavior-ir.json",
@@ -174,18 +193,18 @@
       },
       "bricksPlan": {
         "file": "bricks/bricks-plan.json",
-        "bytes": 627636,
-        "sha256": "c466952c5b1e3ce05e9bd0d879a51e0ebac294d4d0479cbd56cb9db565b2e0b3"
+        "bytes": 672207,
+        "sha256": "e1eaf7bbd622f5b5072527f45a1f3e55b11f4a0981ab4526634fa93af8550575"
       },
       "bricksTemplate": {
         "file": "bricks/templates/content.json",
-        "bytes": 475176,
-        "sha256": "a956f76843a8cf381a22c704e6968b2ec915602f2dc9fcab52ae9fbf97b0034d"
+        "bytes": 473863,
+        "sha256": "9b6f7f1d36d7f1627f26ac590b83ec7b31a2b520272f85dba97ae82c51f064d3"
       },
       "appsitePackage": {
         "file": "appsite-package.json",
         "bytes": 1961,
-        "sha256": "5aec881e002e0e580bb13bd9d046422eaf2a7034c85af6f71366c23c4fb6e897"
+        "sha256": "bb2289b370dfcfaef93a01b9c17ca5ff424ba5bf9957d6eca327a1ca82718f7d"
       }
     }
   },

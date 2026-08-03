@@ -410,6 +410,8 @@ Generated portable handoff copies must come from canonical schemas/runtime sourc
 
 **Exit:** native coverage and visual proof meet the declared grade on the first corpus set.
 
+**Compiler-plane implementation on `compiler/framework-native-ownership`:** every Page IR node carries deterministic semantic classification, adapter choice, confidence, evidence and limitations. The Bricks plan enforces element-native single ownership, registers Framework project variables, aggregates plain lists/media/vector subtrees only when behavior is equivalent, sanitizes inline SVG into native Bricks SVG elements, and retains navigation/table semantics without inventing widget behavior. Arbitrary form actions and unknown embeds remain explicit review residuals. The National Chikki proof compiles 279 capture nodes into 267 native elements with 12 SVG aggregates, zero Code elements, 100% semantic coverage and 99.9% native-control coverage. M3's visual-proof exit remains open until the M5 staged render/diff lane executes; compiler metrics alone do not certify pixels.
+
 ### M4 — SiteGraph binding and asset deployment
 
 - bind menus, posts, products, taxonomies, media and Kiwe capabilities;

@@ -41,7 +41,11 @@ function extractCapabilities(bricksRoot) {
 	for (const file of files) {
 		const source = fs.readFileSync(path.join(elementsDirectory, file), 'utf8');
 		sourceParts.push(`\n/* ${file} */\n${source}`);
-		const controls = values(source, /\$this->controls\[['"]([^'"]+)['"]\]/g);
+		const directControls = values(source, /\$this->controls\[['"]([^'"]+)['"]\]/g);
+		const mergedLocalControls = /array_merge\(\s*\$this->controls\s*,\s*\$controls\s*\)/.test(source)
+			? values(source, /(?<!->)\$controls\[['"]([^'"]+)['"]\]/g)
+			: [];
+		const controls = [...new Set([...directControls, ...mergedLocalControls])].sort();
 		const classMatch = source.match(/(?:abstract\s+)?class\s+([A-Za-z0-9_]+)(?:\s+extends\s+([A-Za-z0-9_]+))?/);
 		if (!classMatch) continue;
 		const [, className, parentClass = ''] = classMatch;

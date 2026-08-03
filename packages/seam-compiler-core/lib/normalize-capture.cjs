@@ -1,6 +1,7 @@
 const { createHash } = require('node:crypto');
 const { validateContract } = require('../../seam-contracts/lib/validator.cjs');
 const { breakpointFor, solveGeometry } = require('../../seam-geometry/lib/solve.cjs');
+const { classifyCapture } = require('./classify-component.cjs');
 
 const NATIVE_STYLE_PROPERTIES = new Set([
 	'align-content', 'align-items', 'align-self', 'background-color', 'background-image', 'border-color', 'border-radius', 'border-style', 'border-width',
@@ -186,10 +187,12 @@ function normalizeCapture(capture) {
 	const geometry = solveGeometry(capture);
 	const geometryById = new Map(geometry.nodes.map((node) => [node.id, node]));
 	const viewportById = new Map(capture.viewports.map((viewport) => [viewport.id, viewport]));
+	const components = classifyCapture(capture);
 	const residuals = [];
 	const nodes = capture.nodes.map((node) => {
 		const observation = node.observations.find((item) => item.visible) || node.observations[0];
 		const geometryNode = geometryById.get(node.id);
+		const component = components.get(node.id);
 		const style = normalizeStyle(node, observation, geometryNode);
 		style.responsive = node.observations
 			.filter((item) => item !== observation)
@@ -199,6 +202,9 @@ function normalizeCapture(capture) {
 			})
 			.filter((item) => Object.keys(item.native).length > 0);
 		for (const residual of style.residuals) residuals.push(`${node.id}: ${residual}`);
+		if (component.adapter === 'review' || ['embed', 'form', 'field'].includes(component.semanticType)) {
+			for (const limitation of component.limitations) residuals.push(`${node.id}: component: ${limitation}`);
+		}
 		return {
 			id: node.id,
 			parentId: node.parentId,
@@ -206,6 +212,7 @@ function normalizeCapture(capture) {
 			tag: node.tag,
 			text: node.text,
 			attributes: node.attributes,
+			component,
 			layout: {
 				display: observation.computed.display || 'block',
 				direction: observation.computed['flex-direction'] || 'row',

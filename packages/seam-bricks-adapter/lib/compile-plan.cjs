@@ -1,5 +1,6 @@
 const { createHash } = require('node:crypto');
 const { assertContract } = require('../../seam-compiler-core/lib/normalize-capture.cjs');
+const { planComponentAdapters } = require('./component-adapters.cjs');
 
 const KIND_TO_ELEMENT = {
 	section: 'section', container: 'div', heading: 'heading', text: 'text-basic', link: 'text-link',
@@ -319,22 +320,31 @@ function compileBricksPlan(pageIr, capabilityProfile) {
 	assertContract('pageIr', pageIr);
 	if (!capabilityProfile || capabilityProfile.schema !== 'seam.bricks-capability-profile.v1') throw new Error('A SEAM Bricks capability profile is required.');
 	const available = new Map(capabilityProfile.elements.map((element) => [element.name, element]));
-	const ids = new Map(pageIr.nodes.map((node) => [node.id, shortId(`element:${pageIr.sourceHash}:${node.id}`)]));
+	const { adapters, consumedBy } = planComponentAdapters(pageIr);
+	const activeNodes = pageIr.nodes.filter((node) => !consumedBy.has(node.id));
+	const ids = new Map(activeNodes.map((node) => [node.id, shortId(`element:${pageIr.sourceHash}:${node.id}`)]));
 	if (new Set(ids.values()).size !== ids.size) {
 		const error = new Error('Deterministic Bricks element ID collision; compilation stopped before serialization.');
 		error.code = 'SEAM_BRICKS_ID_COLLISION';
 		throw error;
 	}
-	const children = new Map(pageIr.nodes.map((node) => [node.id, []]));
-	for (const node of pageIr.nodes) if (node.parentId && children.has(node.parentId)) children.get(node.parentId).push(ids.get(node.id));
+	const children = new Map(activeNodes.map((node) => [node.id, []]));
+	for (const node of activeNodes) if (node.parentId && children.has(node.parentId)) children.get(node.parentId).push(ids.get(node.id));
 	const residuals = [...pageIr.residuals];
 	const variables = createNativeVariableRegistry(pageIr);
+	const adapterReviewNodeIds = new Set(pageIr.nodes.filter((node) => node.component.adapter === 'review').map((node) => node.id));
 	let ownedControlCount = 0;
 
-	const elements = pageIr.nodes.map((node) => {
+	const elements = activeNodes.map((node) => {
 		const nodeChildren = children.get(node.id) || [];
-		let preferred = KIND_TO_ELEMENT[node.kind] || 'div';
-		if (nodeChildren.length && available.get(preferred)?.nestable === false && available.has('div')) preferred = 'div';
+		const adapter = adapters.get(node.id);
+		const failedSpecializedAdapter = !adapter && ['aggregate-svg', 'direct-media'].includes(node.component.adapter);
+		if (failedSpecializedAdapter) {
+			adapterReviewNodeIds.add(node.id);
+			residuals.push(`${node.id}: component: ${node.component.adapter} preconditions were not met; semantic fallback requires review.`);
+		}
+		let preferred = adapter?.type || node.component?.preferredElement || KIND_TO_ELEMENT[node.kind] || 'div';
+		if (!adapter && nodeChildren.length && available.get(preferred)?.nestable === false && available.has('div')) preferred = 'div';
 		const type = available.has(preferred) ? preferred : available.has('div') ? 'div' : preferred;
 		if (type !== preferred) residuals.push(`${node.id}: Bricks element ${preferred} unavailable; used ${type}.`);
 		const styleNode = { ...node, hasChildren: nodeChildren.length > 0 };
@@ -355,25 +365,46 @@ function compileBricksPlan(pageIr, capabilityProfile) {
 			}
 			else residuals.push(`${node.id}: control ${key} is absent from Bricks ${capabilityProfile.bricksVersion} capability profile.`);
 		}
-		const settings = { ...contentSettings(node, type), ...variables.tokenize(provenStyle) };
+		const settings = { ...contentSettings(node, type), ...(adapter?.settings || {}), ...variables.tokenize(provenStyle) };
 		const ownedControls = [...new Set([...Object.keys(settings), ...owned.filter((key) => Object.prototype.hasOwnProperty.call(provenStyle, key))])].sort();
 		ownedControlCount += ownedControls.length;
 		return {
 			id: ids.get(node.id), type, parentId: node.parentId ? ids.get(node.parentId) : null,
 			children: nodeChildren, settings,
-			provenance: { pageNodeId: node.id, captureNodeIds: node.provenance.captureNodeIds, selector: node.provenance.selector, ownedControls }
+			provenance: {
+				pageNodeId: node.id,
+				captureNodeIds: adapter?.captureNodeIds || node.provenance.captureNodeIds,
+				selector: node.provenance.selector,
+				ownedControls,
+				component: {
+					semanticType: node.component.semanticType,
+					adapter: failedSpecializedAdapter ? 'review-fallback' : node.component.adapter,
+					confidence: node.component.confidence,
+					evidence: node.component.evidence
+				}
+			}
 		};
 	});
 
 	const customCss = compileCustomCss(residuals, elements, variables);
+	const reviewComponentCount = adapterReviewNodeIds.size;
 	const plan = {
 		schema: 'seam.bricks-plan.v1', compiler: 'seam-compiler', aiGenerated: false, sourceHash: pageIr.sourceHash,
 		target: { bricksVersion: capabilityProfile.bricksVersion, capabilityProfileHash: capabilityProfile.profileHash },
 		elements, globalClasses: [], variables: variables.records, customCss: customCss.css, residuals,
+		ownership: {
+			policy: 'element-native-single-owner', elementNativeControls: ownedControlCount,
+			frameworkVariables: variables.records.length, customCssDeclarations: customCss.declarations, conflicts: []
+		},
 		metrics: {
 			nativeCoverage: Math.round((ownedControlCount / Math.max(ownedControlCount + residuals.length, 1)) * 1000) / 10,
 			residualCount: residuals.length,
-			customCssDeclarations: customCss.declarations
+			customCssDeclarations: customCss.declarations,
+			sourceNodeCount: pageIr.nodes.length,
+			nativeElementCount: elements.length,
+			aggregatedNodeCount: pageIr.nodes.length - elements.length,
+			semanticCoverage: Math.round(((pageIr.nodes.length - reviewComponentCount) / pageIr.nodes.length) * 1000) / 10,
+			reviewComponentCount
 		}
 	};
 	assertContract('bricksPlan', plan);

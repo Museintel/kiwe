@@ -46,7 +46,7 @@ function compileCaptureFile(captureFile, capabilityFile, outputDirectory, title 
 		schema: 'kiwe.appsite-package.v1',
 		packageId: safeName(title),
 		sourceHash: capture.source.contentHash,
-		compiler: { name: 'SEAM Compiler', version: '0.2.0', deterministic: true, aiDirectJson: false },
+		compiler: { name: 'SEAM Compiler', version: '0.3.0', deterministic: true, aiDirectJson: false },
 		contracts: ['seam.capture.v1', 'seam.page-ir.v1', 'seam.behavior-ir.v1', 'seam.asset-manifest.v1', 'seam.geometry.v1', 'seam.bricks-plan.v1', 'kiwe.appsite-package.v1'],
 		artifacts: {
 			capture: 'capture/seam-capture.json', pageIr: 'ir/page-ir.json', behaviorIr: 'ir/behavior-ir.json',

@@ -62,6 +62,11 @@ function summarize(captureDirectory, compileDirectory) {
 		counts[element.type] = (counts[element.type] || 0) + 1;
 		return counts;
 	}, {});
+	const adapterCounts = artifacts.bricksPlan.elements.reduce((counts, element) => {
+		const adapter = element.provenance.component.adapter;
+		counts[adapter] = (counts[adapter] || 0) + 1;
+		return counts;
+	}, {});
 	const bricksValidation = validator('kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs', path.join(compileDirectory, files.bricksTemplate));
 	const frameworkValidation = validator('kiwe-ai-toolkit/tools/validate-framework-profile.cjs', path.join(compileDirectory, 'framework'));
 	if (!Object.values(contractValidation).every((result) => result.ok) || !bricksValidation.ok || !frameworkValidation.ok) {
@@ -92,6 +97,9 @@ function summarize(captureDirectory, compileDirectory) {
 			behaviorIntents: artifacts.behaviorIr.behaviors.length, assets: artifacts.assets.assets.length,
 			projectVariables: artifacts.bricksPlan.variables.length,
 			codeElements: artifacts.bricksTemplate.content.filter((element) => element.name === 'code').length,
+			nativeSvgElements: artifacts.bricksTemplate.content.filter((element) => element.name === 'svg').length,
+			componentAdapters: Object.fromEntries(Object.entries(adapterCounts).sort()),
+			ownership: artifacts.bricksPlan.ownership,
 			metrics: artifacts.bricksPlan.metrics, residuals: artifacts.bricksPlan.residuals,
 			customCss: artifacts.bricksPlan.customCss,
 			artifacts: artifactProof

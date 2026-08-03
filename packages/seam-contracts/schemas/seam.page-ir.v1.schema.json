@@ -21,7 +21,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "parentId", "kind", "tag", "text", "attributes", "layout", "style", "provenance"],
+        "required": ["id", "parentId", "kind", "tag", "text", "attributes", "component", "layout", "style", "provenance"],
         "properties": {
           "id": { "type": "string", "minLength": 1 },
           "parentId": { "type": ["string", "null"] },
@@ -29,6 +29,18 @@
           "tag": { "type": "string", "minLength": 1 },
           "text": { "type": "string" },
           "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+          "component": {
+            "type": "object", "additionalProperties": false,
+            "required": ["semanticType", "adapter", "preferredElement", "confidence", "evidence", "limitations"],
+            "properties": {
+              "semanticType": { "enum": ["landmark", "navigation", "layout", "heading", "text", "link", "button", "image", "video", "audio", "embed", "separator", "list", "list-item", "form", "field", "table", "vector", "vector-part", "media-source", "other"] },
+              "adapter": { "enum": ["direct", "direct-media", "aggregate-list", "aggregate-svg", "semantic-layout", "media-child", "svg-child", "review"] },
+              "preferredElement": { "type": "string", "minLength": 1 },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+              "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "limitations": { "type": "array", "items": { "type": "string" } }
+            }
+          },
           "layout": {
             "type": "object",
             "additionalProperties": false,

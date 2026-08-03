@@ -30,7 +30,8 @@ function serializeBricksTemplate(plan, title = 'SEAM compiled page') {
 			frameworkProfile: {
 				path: '../../framework/kiwe-framework-profile.json',
 				projectVariables: plan.variables.map((variable) => `--${String(variable.name).replace(/^--/, '')}`)
-			}
+			},
+			ownership: plan.ownership
 		},
 		generator: {
 			name: 'SEAM Compiler',

@@ -15,9 +15,10 @@
     "sha256": "e196f8a3947f7932b95e55c346d648aa659b193259325669c569fdb6137d56f9"
   },
   "captureStatus": "captured-m2",
+  "compilationStatus": "compiled-m3",
   "evidence": "evidence.json",
   "notes": [
     "This is a golden input, not a fixture-specific mapping template.",
-    "The repository source is byte-identical to the supplied UTF-8 artifact; evidence.json records the rendered M2 capture and compilation proofs without committing the 12 MB raw capture."
+    "The repository source is byte-identical to the supplied UTF-8 artifact; evidence.json records the rendered M2 capture and M3 native-ownership compilation proofs without committing the 12 MB raw capture."
   ]
 }
