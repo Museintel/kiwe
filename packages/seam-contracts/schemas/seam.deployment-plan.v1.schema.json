@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.deployment-plan.v1.schema.json",
+  "title": "SEAM rollback-safe deployment plan v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "sourceHash", "siteGraphHash", "target", "safety", "preflight", "operations", "rollback", "limitations"],
+  "properties": {
+    "schema": { "const": "seam.deployment-plan.v1" }, "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, "siteGraphHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "target": { "type": "object", "additionalProperties": false, "required": ["builder", "mode", "authority", "stagingOnly", "mutatesWordPress"], "properties": { "builder": { "const": "bricks" }, "mode": { "const": "dry-run-deployment-plan" }, "authority": { "const": "admin-approved-kiwe-staging-executor" }, "stagingOnly": { "const": true }, "mutatesWordPress": { "const": false } } },
+    "safety": { "type": "object", "additionalProperties": false, "required": ["requiresFreshSiteGraph", "requiresRevision", "requiresExplicitConfirmation", "publishes"], "properties": { "requiresFreshSiteGraph": { "const": true }, "requiresRevision": { "const": true }, "requiresExplicitConfirmation": { "const": true }, "publishes": { "const": false } } },
+    "preflight": { "type": "array", "items": { "type": "string" } },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "type", "status", "inputArtifact", "executorBoundary"],
+        "properties": {
+          "id": { "type": "string" }, "type": { "type": "string" }, "status": { "enum": ["planned", "blocked"] },
+          "inputArtifact": { "type": "string" }, "executorBoundary": { "type": "string" }
+        }
+      }
+    },
+    "rollback": {
+      "type": "object", "additionalProperties": false, "required": ["strategy", "requiredEvidence"],
+      "properties": {
+        "strategy": { "const": "restore-pre-apply-revision-and-delete-new-content-addressed-assets" },
+        "requiredEvidence": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  }
+}

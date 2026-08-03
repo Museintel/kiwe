@@ -11,12 +11,12 @@
       "provenance": { "selector": "main", "domPath": "html>body>main" }
     },
     {
-      "id": "title", "parentId": "main", "tag": "h1", "role": "heading", "text": "Native semantic adapters", "attributes": {},
+      "id": "title", "parentId": "main", "tag": "h1", "role": "heading", "text": "Native semantic adapters", "attributes": { "id": "native-adapters", "data-kiwe-dynamic-tag": "{post_title}", "data-kiwe-dynamic-field": "text", "data-kiwe-menu-label": "Native adapters" },
       "observations": [{ "viewportId": "desktop", "visible": true, "box": { "x": 40, "y": 40, "width": 600, "height": 60 }, "computed": { "display": "block" } }],
       "provenance": { "selector": "h1", "domPath": "html>body>main>h1" }
     },
     {
-      "id": "features", "parentId": "main", "tag": "ul", "role": "list", "text": "", "attributes": { "aria-label": "Features" },
+      "id": "features", "parentId": "main", "tag": "ul", "role": "list", "text": "", "attributes": { "aria-label": "Features", "data-kiwe-binding": "feature-posts", "data-kiwe-object-type": "post", "data-kiwe-post-type": "post", "data-kiwe-posts-per-page": "2", "data-kiwe-bindings": "{\"title\":\"{post_title}\",\"url\":\"{post_url}\"}" },
       "observations": [{ "viewportId": "desktop", "visible": true, "box": { "x": 40, "y": 120, "width": 500, "height": 100 }, "computed": { "display": "block" } }],
       "provenance": { "selector": "ul", "domPath": "html>body>main>ul" }
     },
@@ -71,7 +71,7 @@
       "provenance": { "selector": "nav", "domPath": "html>body>main>nav" }
     },
     {
-      "id": "nav-link", "parentId": "nav", "tag": "a", "role": "link", "text": "Home", "attributes": { "href": "/" },
+      "id": "nav-link", "parentId": "nav", "tag": "a", "role": "link", "text": "Search", "attributes": { "href": "#", "data-dsa-open-module": "search" },
       "observations": [{ "viewportId": "desktop", "visible": true, "box": { "x": 40, "y": 710, "width": 60, "height": 40 }, "computed": { "display": "block" } }],
       "provenance": { "selector": "nav>a", "domPath": "html>body>main>nav>a" }
     },

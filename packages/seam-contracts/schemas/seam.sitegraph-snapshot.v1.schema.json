@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.sitegraph-snapshot.v1.schema.json",
+  "title": "SEAM sanitized SiteGraph snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sourceSchema", "sourceHash", "authority", "wordpress", "bricks", "kiwe"],
+  "properties": {
+    "schema": { "const": "seam.sitegraph-snapshot.v1" },
+    "sourceSchema": { "const": "kiwe.site-graph.v1" },
+    "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "authority": {
+      "type": "object", "additionalProperties": false, "required": ["readOnly", "mayMutateWordPress", "secretsIncluded"],
+      "properties": { "readOnly": { "const": true }, "mayMutateWordPress": { "const": false }, "secretsIncluded": { "const": false } }
+    },
+    "wordpress": {
+      "type": "object", "additionalProperties": false, "required": ["postTypes", "taxonomies"],
+      "properties": {
+        "postTypes": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["name", "label", "public"], "properties": { "name": { "type": "string" }, "label": { "type": "string" }, "public": { "type": "boolean" } } } },
+        "taxonomies": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["name", "label", "terms"], "properties": { "name": { "type": "string" }, "label": { "type": "string" }, "terms": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "name", "slug"], "properties": { "id": { "type": "integer" }, "name": { "type": "string" }, "slug": { "type": "string" } } } } } } }
+      }
+    },
+    "bricks": {
+      "type": "object", "additionalProperties": false, "required": ["active", "version", "queryLoopTypes", "dynamicTags", "trustedAdapterLikelyAvailable"],
+      "properties": {
+        "active": { "type": "boolean" }, "version": { "type": "string" }, "trustedAdapterLikelyAvailable": { "type": "boolean" },
+        "queryLoopTypes": { "type": "array", "items": { "type": "string" } }, "dynamicTags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "kiwe": { "type": "object", "additionalProperties": false, "required": ["version", "modules"], "properties": { "version": { "type": "string" }, "modules": { "type": "array", "items": { "type": "string" } } } }
+  }
+}

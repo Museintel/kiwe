@@ -1,0 +1,22 @@
+{
+  "schema": "kiwe.site-graph.v1",
+  "generatedAt": "2026-08-03T00:00:00Z",
+  "authority": { "readOnly": true, "mayMutateWordPress": false },
+  "wordpress": {
+    "postTypes": [
+      { "name": "post", "label": "Posts", "public": true },
+      { "name": "product", "label": "Products", "public": true }
+    ],
+    "taxonomies": []
+  },
+  "woocommerce": { "active": true, "productCategories": [], "productTags": [] },
+  "bricks": {
+    "active": true,
+    "version": "2.3.10",
+    "abilities": { "wpAbilitiesApiPresent": true, "bricksAbilityManager": true, "mcpLikelyAvailable": false },
+    "queryLoopTypes": [{ "objectType": "post", "label": "Posts" }],
+    "dynamicTags": [{ "name": "{post_title}", "label": "Post title" }, { "name": "{post_url}", "label": "Post URL" }],
+    "kiweDynamicTags": []
+  },
+  "kiwe": { "version": "0.15.0", "modules": { "items": [{ "id": "search", "label": "Search" }] } }
+}

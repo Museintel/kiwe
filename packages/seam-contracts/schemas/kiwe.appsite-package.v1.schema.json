@@ -19,11 +19,11 @@
     "contracts": { "type": "array", "minItems": 6, "items": { "type": "string" } },
     "artifacts": {
       "type": "object", "additionalProperties": false,
-      "required": ["capture", "pageIr", "behaviorIr", "assets", "frameworkProfile", "geometry", "bindings", "bricksPlan", "bricksTemplates", "proof"],
+      "required": ["capture", "pageIr", "behaviorIr", "assets", "assetImportPlan", "siteGraph", "frameworkProfile", "geometry", "bindings", "deploymentPlan", "bricksPlan", "bricksTemplates", "proof"],
       "properties": {
         "capture": { "type": "string" }, "pageIr": { "type": "string" }, "behaviorIr": { "type": "string" },
-        "assets": { "type": "string" }, "frameworkProfile": { "type": "string" }, "geometry": { "type": "string" },
-        "bindings": { "type": ["string", "null"] }, "bricksPlan": { "type": "string" },
+        "assets": { "type": "string" }, "assetImportPlan": { "type": "string" }, "siteGraph": { "type": ["string", "null"] }, "frameworkProfile": { "type": "string" }, "geometry": { "type": "string" },
+        "bindings": { "type": ["string", "null"] }, "deploymentPlan": { "type": ["string", "null"] }, "bricksPlan": { "type": "string" },
         "bricksTemplates": { "type": "array", "minItems": 1, "items": { "type": "string" } }, "proof": { "type": ["string", "null"] }
       }
     },

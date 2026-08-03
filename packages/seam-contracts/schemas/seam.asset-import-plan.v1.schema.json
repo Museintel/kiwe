@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.asset-import-plan.v1.schema.json",
+  "title": "SEAM asset import plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sourceHash", "mode", "mutatesWordPress", "operations", "summary"],
+  "properties": {
+    "schema": { "const": "seam.asset-import-plan.v1" }, "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "mode": { "const": "dry-run" }, "mutatesWordPress": { "const": false },
+    "operations": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "assetId", "action", "source", "contentHash", "mime", "bytes", "target", "status", "preconditions", "rollback"], "properties": {
+      "id": { "type": "string" }, "assetId": { "type": "string" }, "action": { "enum": ["reuse", "import", "inline", "external", "blocked", "review"] }, "source": { "type": "string" },
+      "contentHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "mime": { "type": ["string", "null"] }, "bytes": { "type": ["integer", "null"], "minimum": 0 }, "target": { "type": ["string", "null"] },
+      "status": { "enum": ["planned", "review-required", "blocked"] }, "preconditions": { "type": "array", "items": { "type": "string" } }, "rollback": { "type": "string" }
+    } } },
+    "summary": { "type": "object", "additionalProperties": false, "required": ["total", "planned", "reviewRequired", "blocked"], "properties": { "total": { "type": "integer" }, "planned": { "type": "integer" }, "reviewRequired": { "type": "integer" }, "blocked": { "type": "integer" } } }
+  }
+}

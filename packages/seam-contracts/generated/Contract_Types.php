@@ -26,6 +26,30 @@ final class SeamAssetManifestV1 {
 	public function __construct( public readonly array $value ) {}
 }
 
+final class SeamSitegraphSnapshotV1 {
+	public const SCHEMA = 'seam.sitegraph-snapshot.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
+final class KiweBricksBindingsV1 {
+	public const SCHEMA = 'kiwe.bricks-bindings.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
+final class SeamAssetImportPlanV1 {
+	public const SCHEMA = 'seam.asset-import-plan.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
+final class SeamDeploymentPlanV1 {
+	public const SCHEMA = 'seam.deployment-plan.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
 final class SeamGeometryV1 {
 	public const SCHEMA = 'seam.geometry.v1';
 	/** @param array<string, mixed> $value */

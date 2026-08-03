@@ -33,6 +33,7 @@ function summarize(captureDirectory, compileDirectory) {
 	const captureFile = path.join(captureDirectory, 'seam-capture.json');
 	const files = {
 		pageIr: 'ir/page-ir.json', behaviorIr: 'ir/behavior-ir.json', assets: 'assets/asset-manifest.json',
+		assetImportPlan: 'assets/import-plan.json',
 		frameworkProfile: 'framework/kiwe-framework-profile.json', geometry: 'geometry/page-geometry.json',
 		bricksPlan: 'bricks/bricks-plan.json', bricksTemplate: 'bricks/templates/content.json',
 		appsitePackage: 'appsite-package.json'
@@ -41,8 +42,16 @@ function summarize(captureDirectory, compileDirectory) {
 	const artifacts = Object.fromEntries(Object.entries(files).map(([name, relative]) => [name, readJson(path.join(compileDirectory, relative))]));
 	const contractInputs = {
 		capture, pageIr: artifacts.pageIr, behaviorIr: artifacts.behaviorIr, assetManifest: artifacts.assets,
+		assetImportPlan: artifacts.assetImportPlan,
 		geometry: artifacts.geometry, bricksPlan: artifacts.bricksPlan, appsitePackage: artifacts.appsitePackage
 	};
+	for (const [name, contract, artifactKey] of [['siteGraphSnapshot', 'siteGraphSnapshot', 'siteGraph'], ['bindings', 'bindings', 'bindings'], ['deploymentPlan', 'deploymentPlan', 'deploymentPlan']]) {
+		const relative = artifacts.appsitePackage.artifacts[artifactKey];
+		if (!relative) continue;
+		files[name] = relative;
+		artifacts[name] = readJson(path.join(compileDirectory, relative));
+		contractInputs[contract] = artifacts[name];
+	}
 	const contractValidation = Object.fromEntries(Object.entries(contractInputs).map(([name, value]) => {
 		const result = validateContract(name, value);
 		return [name, { ok: result.ok, errors: result.errors.length }];

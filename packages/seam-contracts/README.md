@@ -8,6 +8,10 @@ Initial contracts:
 - `seam.page-ir.v1` — normalized semantic, layout, style, and provenance tree.
 - `seam.behavior-ir.v1` — classified events, state transitions, and authority.
 - `seam.asset-manifest.v1` — hashed importable and external assets.
+- `seam.asset-import-plan.v1` — content-addressed, dry-run asset decisions with preconditions and rollback intent.
+- `seam.sitegraph-snapshot.v1` — sanitized target capability evidence derived from `kiwe.site-graph.v1`.
+- `kiwe.bricks-bindings.v1` — target-proven query, dynamic-data, menu and AppShell launcher bindings.
+- `seam.deployment-plan.v1` — non-mutating staging sequence and executor boundaries.
 - `seam.bricks-plan.v1` — native Bricks element/control ownership before serialization.
 - `kiwe.appsite-package.v1` — deployable package inventory and compatibility boundary.
 

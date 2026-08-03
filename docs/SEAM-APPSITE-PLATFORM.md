@@ -421,6 +421,8 @@ Generated portable handoff copies must come from canonical schemas/runtime sourc
 
 **Exit:** one corpus site deploys to staging without invented IDs or manual JSON edits.
 
+**Compiler-plane implementation on `compiler/sitegraph-asset-deployment`:** target-specific compilation now consumes the existing read-only `kiwe.site-graph.v1` contract and emits a sanitized, hashed SiteGraph snapshot; toolkit-compatible `kiwe.bricks-bindings.v1`; a content-addressed asset import plan; and a rollback-safe dry-run deployment plan. Binding inference is intentionally evidence-led: only explicit `data-kiwe-*` and `data-dsa-open-module` intent is compiled, and references absent from SiteGraph become review blockers rather than invented IDs. Assets without verified bytes, MIME and SHA-256 hashes are not import-ready. The emitted Bricks template operation points at the existing Kiwe staging executor, while asset and binding operations remain explicitly blocked behind future trusted adapters. This completes the non-mutating compiler/package half of M4; the milestone exit remains open until a corpus package is applied to an approved staging site, visually audited, and rolled back successfully.
+
 ### M5 — Visual proof and bounded repair
 
 - build reference/staged screenshot and geometry comparison;

@@ -13,6 +13,7 @@ const { serializeBricksTemplate } = require('../../seam-bricks-adapter/lib/seria
 const { createNativeVariableRegistry } = require('../../seam-bricks-adapter/lib/compile-plan.cjs');
 const { youtubeId, vimeoId } = require('../../seam-bricks-adapter/lib/component-adapters.cjs');
 const { extractCapabilities } = require('../../seam-bricks-adapter/tools/extract-bricks-capabilities.cjs');
+const { buildAssetImportPlan, buildBindingPlan, buildDeploymentPlan, sanitizeSiteGraph } = require('../lib/sitegraph-deployment.cjs');
 
 const root = path.resolve(__dirname, '..', '..', '..');
 const profileFile = path.join(root, 'packages/seam-bricks-adapter/profiles/bricks-2.3.10.json');
@@ -105,11 +106,13 @@ try {
 			const capture = path.join(root, `packages/seam-compiler-core/fixtures/${fixture}/capture.json`);
 			const firstDirectory = path.join(temp, `${fixture}-first`);
 			const secondDirectory = path.join(temp, `${fixture}-second`);
-			const first = compileCaptureFile(capture, profileFile, firstDirectory, fixture);
-			const second = compileCaptureFile(capture, profileFile, secondDirectory, fixture);
+			const siteGraphFile = fixture === 'semantic-native' ? path.join(root, 'packages/seam-compiler-core/fixtures/semantic-native/site-graph.json') : null;
+			const first = compileCaptureFile(capture, profileFile, firstDirectory, fixture, siteGraphFile);
+			const second = compileCaptureFile(capture, profileFile, secondDirectory, fixture, siteGraphFile);
 			for (const [contract, value] of [
 				['capture', JSON.parse(fs.readFileSync(capture, 'utf8'))], ['pageIr', first.pageIr],
 				['behaviorIr', first.behaviorIr], ['assetManifest', first.assetManifest],
+				['assetImportPlan', first.assetImportPlan],
 				['geometry', first.geometry], ['bricksPlan', first.bricksPlan], ['appsitePackage', first.appsitePackage]
 			]) {
 				const validation = validateContract(contract, value);
@@ -128,12 +131,34 @@ try {
 			assert.equal(first.template.generator.aiDirectJson, false);
 			assert.equal(first.appsitePackage.artifacts.frameworkProfile, 'framework/kiwe-framework-profile.json');
 			assert.equal(first.appsitePackage.artifacts.geometry, 'geometry/page-geometry.json');
+			assert.equal(first.appsitePackage.artifacts.assetImportPlan, 'assets/import-plan.json');
+			for (const [relative, expectedHash] of Object.entries(first.appsitePackage.integrity.files)) {
+				assert.equal(path.isAbsolute(relative), false);
+				assert.equal(sha256(fs.readFileSync(path.join(firstDirectory, relative))), expectedHash, `Integrity mismatch for ${relative}`);
+			}
+			assert.equal(first.appsitePackage.artifacts.siteGraph === null, !siteGraphFile);
+			assert.equal(first.appsitePackage.artifacts.bindings === null, !siteGraphFile);
+			assert.equal(first.appsitePackage.artifacts.deploymentPlan === null, !siteGraphFile);
 			assert.equal(first.geometry.solver.version, '0.2.0');
 			assert.equal(first.bricksPlan.ownership.policy, 'element-native-single-owner');
 			assert.deepEqual(first.bricksPlan.ownership.conflicts, []);
 			assert.equal(first.bricksPlan.ownership.elementNativeControls, first.bricksPlan.elements.reduce((count, element) => count + element.provenance.ownedControls.length, 0));
 			assert.equal(first.bricksPlan.ownership.customCssDeclarations, first.bricksPlan.metrics.customCssDeclarations);
 			if (fixture === 'semantic-native') {
+				for (const [contract, value] of [['siteGraphSnapshot', first.siteGraphSnapshot], ['bindings', first.bindings], ['deploymentPlan', first.deploymentPlan]]) {
+					const validation = validateContract(contract, value);
+					assert.equal(validation.ok, true, JSON.stringify(validation.errors));
+				}
+				assert.equal(first.siteGraphSnapshot.authority.mayMutateWordPress, false);
+				assert.equal(first.siteGraphSnapshot.bricks.trustedAdapterLikelyAvailable, true);
+				assert.equal(first.bindings.queries[0].id, 'feature-posts');
+				assert.equal(first.bindings.dynamicFields[0].tag, '{post_title}');
+				assert.equal(first.bindings.launchers[0].value, 'search');
+				assert.equal(first.bindings.menuContext[0].id, 'native-adapters');
+				assert.deepEqual(first.bindings.requiresHumanReview, []);
+				assert.equal(first.assetImportPlan.summary.reviewRequired, 3);
+				assert.equal(first.deploymentPlan.target.mutatesWordPress, false);
+				assert.equal(first.deploymentPlan.operations.find((item) => item.id === 'assets:content-addressed-import').status, 'blocked');
 				const list = first.bricksPlan.elements.find((element) => element.type === 'list');
 				const video = first.bricksPlan.elements.find((element) => element.type === 'video');
 				const audio = first.bricksPlan.elements.find((element) => element.type === 'audio');
@@ -156,6 +181,13 @@ try {
 				assert.ok(first.bricksPlan.residuals.some((item) => item.includes('form submission authority')));
 				assert.ok(first.behaviorIr.residuals.some((item) => item.includes('safe-icon-path')));
 			}
+			if (siteGraphFile) {
+				const bindingsValidation = spawnSync(process.execPath, ['kiwe-ai-toolkit/tools/validate-bindings.cjs', path.join(firstDirectory, 'bindings/kiwe-bindings.json'), '--site-graph', siteGraphFile], { cwd: root, encoding: 'utf8' });
+				assert.equal(bindingsValidation.status, 0, `${bindingsValidation.stdout}\n${bindingsValidation.stderr}`);
+				const applyPlan = spawnSync(process.execPath, ['kiwe-ai-toolkit/tools/prepare-apply-plan.cjs', path.join(firstDirectory, 'bindings/kiwe-bindings.json'), '--site-graph', siteGraphFile], { cwd: root, encoding: 'utf8' });
+				assert.equal(applyPlan.status, 0, `${applyPlan.stdout}\n${applyPlan.stderr}`);
+				assert.equal(JSON.parse(applyPlan.stdout).plan.target.mutatesWordPress, false);
+			}
 			const frameworkValidation = spawnSync(
 				process.execPath,
 				['kiwe-ai-toolkit/tools/validate-framework-profile.cjs', path.join(firstDirectory, 'framework')],
@@ -170,6 +202,31 @@ try {
 			assert.equal(validationResult.status, 0, `${validationResult.stdout}\n${validationResult.stderr}`);
 		});
 	}
+
+	check('SiteGraph and deployment planners reject invented authority and unresolved assets', () => {
+		const capture = JSON.parse(fs.readFileSync(path.join(root, 'packages/seam-compiler-core/fixtures/semantic-native/capture.json'), 'utf8'));
+		const siteGraph = JSON.parse(fs.readFileSync(path.join(root, 'packages/seam-compiler-core/fixtures/semantic-native/site-graph.json'), 'utf8'));
+		const snapshot = sanitizeSiteGraph(siteGraph);
+		const refreshedSnapshot = sanitizeSiteGraph({ ...siteGraph, generatedAt: '2099-01-01T00:00:00Z' });
+		assert.equal(refreshedSnapshot.sourceHash, snapshot.sourceHash, 'Volatile SiteGraph generation timestamps must not invalidate an unchanged capability snapshot.');
+		const bindings = buildBindingPlan(capture, snapshot);
+		const manifest = { schema: 'seam.asset-manifest.v1', sourceHash: capture.source.contentHash, assets: [{ id: 'unknown-image', kind: 'image', source: 'image.webp', contentHash: null, mime: null, bytes: null, policy: 'import', usedBy: ['main'] }] };
+		const assets = buildAssetImportPlan(manifest);
+		const deployment = buildDeploymentPlan(capture.source.contentHash, snapshot, assets, bindings);
+		assert.equal(assets.operations[0].action, 'review');
+		assert.equal(assets.operations[0].status, 'review-required');
+		assert.equal(deployment.operations[0].status, 'blocked');
+		assert.equal(deployment.target.authority, 'admin-approved-kiwe-staging-executor');
+		assert.throws(() => sanitizeSiteGraph({ schema: 'invented.sitegraph' }), /kiwe\.site-graph\.v1/);
+	});
+
+	check('compiler refuses to mix a new package with stale output artifacts', () => {
+		const output = path.join(temp, 'non-empty-output');
+		fs.mkdirSync(output, { recursive: true });
+		fs.writeFileSync(path.join(output, 'user-owned.txt'), 'preserve');
+		assert.throws(() => compileCaptureFile(path.join(root, 'packages/seam-compiler-core/fixtures/landing-hero/capture.json'), profileFile, output, 'must-fail'), (error) => error && error.code === 'SEAM_OUTPUT_NOT_EMPTY');
+		assert.equal(fs.readFileSync(path.join(output, 'user-owned.txt'), 'utf8'), 'preserve');
+	});
 
 	check('AI-direct Bricks JSON is an explicit unsupported path', () => {
 		assert.throws(compileAiDirectJson, (error) => error && error.code === 'SEAM_AI_DIRECT_JSON_UNSUPPORTED');
