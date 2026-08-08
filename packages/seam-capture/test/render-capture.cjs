@@ -17,7 +17,7 @@ fs.writeFileSync(source, `<!doctype html><html><head><meta charset="utf-8"><styl
 :root{--seam-accent:#921d21}*{box-sizing:border-box}body{margin:0;background:#fff;color:#171717}
 main{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:min(100%,720px);margin:auto;padding:24px;overflow-x:auto;scroll-behavior:smooth}
 main .card:first-child{min-height:80px;background:linear-gradient(135deg,var(--seam-accent),#b7272e)}.card{min-height:40px}
-h1{font:700 40px/1.1 Georgia,serif;color:var(--seam-accent)}img{display:block;width:40px;height:20px}
+h1{font:700 40px/1.1 Georgia,serif;color:var(--seam-accent)}p{font-size:.7rem}img{display:block;width:40px;height:20px}
 @media(max-width:600px){main{display:flex;flex-direction:column;gap:8px;padding:12px}h1{font-size:28px}}
 </style></head><body><main id="content"><section class="card"><h1>Rendered evidence</h1><p>Native responsive capture.</p></section><img alt="pixel" src="${pixel}"><img alt="blocked" src="https://example.invalid/blocked.png"></main></body></html>`);
 
@@ -58,6 +58,8 @@ async function main() {
 		const cascadeCard = normalized.pageIr.nodes.find((node) => node.attributes.class === 'card');
 		assert.equal(cascadeCard.style.native['min-height'], '80px');
 		assert.match(cascadeCard.style.native['background-image'], /^linear-gradient\(/);
+		const paragraph = normalized.pageIr.nodes.find((node) => node.tag === 'p');
+		assert.equal(paragraph.style.native['font-size'], '11.2px');
 
 		const profile = JSON.parse(fs.readFileSync(path.join(root, 'packages/seam-bricks-adapter/profiles/bricks-2.3.10.json'), 'utf8'));
 		const plan = compileBricksPlan(normalized.pageIr, profile);

@@ -64,6 +64,14 @@ function authoredDeclarations(node, observation) {
 	return declarations;
 }
 
+function normalizeRootRelativeValue(value, rootFontSize) {
+	if (typeof value !== 'string' || !/rem\b/i.test(value) || !Number.isFinite(rootFontSize) || rootFontSize <= 0) return value;
+	return value.replace(/(-?(?:\d+(?:\.\d+)?|\.\d+))rem\b/gi, (match, number) => {
+		const pixels = Math.round(Number(number) * rootFontSize * 1000) / 1000;
+		return `${pixels}px`;
+	});
+}
+
 function isExpandedDeclarationOwned(property, declarations) {
 	if (property === 'box-sizing') return true;
 	if (/^border-(?:top|right|bottom|left)-(?:color|style|width)$/.test(property) && (declarations.border || declarations['border-color'] || declarations['border-style'] || declarations['border-width'])) return true;
@@ -79,17 +87,18 @@ function isExpandedDeclarationOwned(property, declarations) {
 	return false;
 }
 
-function normalizeStyle(node, observation, geometryNode) {
+function normalizeStyle(node, observation, geometryNode, rootFontSize = 16) {
 	const native = {};
 	const tokenBindings = {};
 	const residuals = [];
 	const enhancedEvidence = Array.isArray(observation.matchedRules);
 	const declarations = authoredDeclarations(node, observation);
+	const normalizeValue = (value) => normalizeRootRelativeValue(value, rootFontSize);
 	if (enhancedEvidence) {
 		for (const property of NATIVE_STYLE_PROPERTIES) {
 			if (['width', 'max-width', 'height', 'min-height'].includes(property)) continue;
 			const value = authoredValue(node, observation, property);
-			if (value) native[property] = value;
+			if (value) native[property] = normalizeValue(value);
 		}
 		// CSSOM often retains only an authored `background` shorthand while its
 		// longhands are empty. Bricks needs the decomposed render values for its
@@ -108,7 +117,7 @@ function normalizeStyle(node, observation, geometryNode) {
 			if (computedOverflow && computedOverflow !== 'visible') native.overflow = computedOverflow;
 		}
 		for (const [property, rawValue] of Object.entries(declarations)) {
-			const value = rawValue.replace(/\s*!important\s*$/i, '');
+			const value = normalizeValue(rawValue.replace(/\s*!important\s*$/i, ''));
 			if (property.startsWith('--') || NATIVE_STYLE_PROPERTIES.has(property) || LAYOUT_DECLARATIONS.has(property) || SUPPORTED_SHORTHANDS.has(property) || isExpandedDeclarationOwned(property, declarations)) continue;
 			if (value && !['initial', 'inherit', 'unset', 'normal', 'none', 'auto', 'static', 'visible', '0s', '0px'].includes(value)) residuals.push(`${property}: ${value}`);
 		}
@@ -119,10 +128,10 @@ function normalizeStyle(node, observation, geometryNode) {
 			else if (value && !['normal', 'none', 'auto', 'static', 'visible'].includes(value)) residuals.push(`${property}: ${value}`);
 		}
 	}
-	const authoredWidth = authoredValue(node, observation, 'width');
-	const authoredMaxWidth = authoredValue(node, observation, 'max-width');
-	const authoredHeight = authoredValue(node, observation, 'height');
-	const authoredMinHeight = authoredValue(node, observation, 'min-height');
+	const authoredWidth = normalizeValue(authoredValue(node, observation, 'width'));
+	const authoredMaxWidth = normalizeValue(authoredValue(node, observation, 'max-width'));
+	const authoredHeight = normalizeValue(authoredValue(node, observation, 'height'));
+	const authoredMinHeight = normalizeValue(authoredValue(node, observation, 'min-height'));
 	if (authoredWidth && authoredWidth !== 'auto') native.width = authoredWidth;
 	else if (geometryNode.widthMode === 'clamped') native.width = '100%';
 	else if (geometryNode.widthMode === 'fixed' && ['img', 'video', 'iframe', 'input', 'button'].includes(node.tag)) native.width = `${Math.round(observation.box.width * 1000) / 1000}px`;
@@ -141,9 +150,9 @@ function normalizeStyle(node, observation, geometryNode) {
 	return { native, tokenBindings, residuals };
 }
 
-function responsiveStyle(node, geometryNode, base, observation) {
-	const normalized = normalizeStyle(node, observation, geometryNode).native;
-	const baseNative = normalizeStyle(node, base, geometryNode).native;
+function responsiveStyle(node, geometryNode, base, observation, rootFontSizes) {
+	const normalized = normalizeStyle(node, observation, geometryNode, rootFontSizes.get(observation.viewportId) || 16).native;
+	const baseNative = normalizeStyle(node, base, geometryNode, rootFontSizes.get(base.viewportId) || 16).native;
 	return Object.fromEntries(Object.entries(normalized).filter(([property, value]) => baseNative[property] !== value));
 }
 
@@ -213,18 +222,24 @@ function normalizeCapture(capture) {
 	const geometry = solveGeometry(capture);
 	const geometryById = new Map(geometry.nodes.map((node) => [node.id, node]));
 	const viewportById = new Map(capture.viewports.map((viewport) => [viewport.id, viewport]));
+	const rootFontSizes = new Map();
+	const rootNode = capture.nodes.find((node) => node.tag === 'html');
+	for (const observation of rootNode?.observations || []) {
+		const pixels = Number.parseFloat(observation.computed?.['font-size']);
+		if (Number.isFinite(pixels) && pixels > 0) rootFontSizes.set(observation.viewportId, pixels);
+	}
 	const components = classifyCapture(capture);
 	const residuals = [];
 	const nodes = capture.nodes.map((node) => {
 		const observation = node.observations.find((item) => item.visible) || node.observations[0];
 		const geometryNode = geometryById.get(node.id);
 		const component = components.get(node.id);
-		const style = normalizeStyle(node, observation, geometryNode);
+		const style = normalizeStyle(node, observation, geometryNode, rootFontSizes.get(observation.viewportId) || 16);
 		style.responsive = node.observations
 			.filter((item) => item !== observation)
 			.map((item) => {
 				const viewport = viewportById.get(item.viewportId);
-				return { viewportId: item.viewportId, viewportWidth: viewport.width, breakpoint: breakpointFor(viewport.width), native: responsiveStyle(node, geometryNode, observation, item) };
+				return { viewportId: item.viewportId, viewportWidth: viewport.width, breakpoint: breakpointFor(viewport.width), native: responsiveStyle(node, geometryNode, observation, item, rootFontSizes) };
 			})
 			.filter((item) => Object.keys(item.native).length > 0);
 		for (const residual of style.residuals) residuals.push(`${node.id}: ${residual}`);
@@ -267,7 +282,7 @@ function normalizeCapture(capture) {
 	for (const node of capture.nodes) for (const observation of node.observations) {
 		for (const [name, value] of Object.entries(observation.customProperties || {})) {
 			if (/^--(?:kiwe|seam)-/i.test(name) || !/^--[a-z]/i.test(name)) continue;
-			if (!variables.has(name) && value) variables.set(name, value);
+			if (!variables.has(name) && value) variables.set(name, normalizeRootRelativeValue(value, rootFontSizes.get(observation.viewportId) || 16));
 		}
 	}
 	const pageIr = {
