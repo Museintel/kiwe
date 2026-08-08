@@ -99,6 +99,14 @@ function normalizeStyle(node, observation, geometryNode) {
 			if (!native['background-color'] && observation.computed['background-color']) native['background-color'] = observation.computed['background-color'];
 			if (!native['background-image'] && observation.computed['background-image'] && observation.computed['background-image'] !== 'none') native['background-image'] = observation.computed['background-image'];
 		}
+		// Bricks exposes a native overflow control, while authored horizontal
+		// scrollers commonly declare only overflow-x. Preserve their effective
+		// computed shorthand so template insertion cannot turn a rail into page
+		// overflow.
+		if (!native.overflow && (authoredValue(node, observation, 'overflow-x') || authoredValue(node, observation, 'overflow-y'))) {
+			const computedOverflow = observation.computed.overflow;
+			if (computedOverflow && computedOverflow !== 'visible') native.overflow = computedOverflow;
+		}
 		for (const [property, rawValue] of Object.entries(declarations)) {
 			const value = rawValue.replace(/\s*!important\s*$/i, '');
 			if (property.startsWith('--') || NATIVE_STYLE_PROPERTIES.has(property) || LAYOUT_DECLARATIONS.has(property) || SUPPORTED_SHORTHANDS.has(property) || isExpandedDeclarationOwned(property, declarations)) continue;

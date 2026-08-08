@@ -91,6 +91,19 @@ try {
 		assert.ok(names.every((name) => !/^(?:kiwe|seam)-/.test(name)));
 		assert.notEqual(registry.tokenFor('var(--Foo)'), registry.tokenFor('var(--foo)'));
 		assert.equal(registry.tokenFor('var(--aqua)'), 'var(--appsite-aqua)');
+		const aqua = registry.records.find((variable) => variable.name === 'appsite-aqua');
+		assert.ok(aqua.dark);
+		assert.notEqual(aqua.dark.toLowerCase(), aqua.value.toLowerCase());
+		assert.equal(registry.records.find((variable) => variable.name === 'appsite-foo').dark, undefined);
+	});
+
+	check('Framework push preserves native Bricks light and dark palettes', () => {
+		const tokenService = fs.readFileSync(path.join(root, 'wp-content/mu-plugins/dsa/includes/Design/Seam_Token_Service.php'), 'utf8');
+		const admin = fs.readFileSync(path.join(root, 'wp-content/mu-plugins/dsa/includes/Admin/Admin.php'), 'utf8');
+		assert.ok(tokenService.includes("'dark'   => self::dark_color_value_for_bricks"));
+		assert.ok(tokenService.includes("'colorPalette'    => empty( $palette_colors )"));
+		assert.ok(tokenService.includes("'raw'     => 'var(--' . $bare . ')'"));
+		assert.ok(admin.includes('array_merge( $merged_palette, $kiwe_palette, $project_palette )'));
 	});
 
 	check('semantic classifier selects equivalent media adapters and rejects lossy compound media', () => {

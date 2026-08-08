@@ -477,8 +477,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 588189,
-      "sha256": "6e1b8a640ffaacba1bfc7850ec99585864c792dead3ce91b9dd94ef531510e06"
+      "bytes": 588359,
+      "sha256": "e6e367ef043c50cb6eb421e691f166d0c4fdf9c919dc87c2ca357693d4fadf6f"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -525,8 +525,8 @@
       "sha256": "a3934b8c869e86cce4c308c9a5ea72ea2d52b95a14bc776598199915c6af89b8"
     },
     "includes/Design/Seam_Token_Service.php": {
-      "bytes": 60411,
-      "sha256": "3924df7b9ec043cc4cb070835d292b49189656d90c0e3bbe7a3c971fa5dc9f4d"
+      "bytes": 62031,
+      "sha256": "6ff0d692dc4fc29d2d5c912f46244eff18594460265394433fa35e10ef515399"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
       "bytes": 15462,

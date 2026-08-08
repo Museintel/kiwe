@@ -304,8 +304,9 @@ final class Seam_Token_Service {
 				continue;
 			}
 
-			$name = self::clean_project_css_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? '' ) );
+			$name  = self::clean_project_css_variable_name( (string) ( $variable['name'] ?? $variable['variable'] ?? $variable['key'] ?? '' ) );
 			$value = self::clean_value( is_scalar( $variable['value'] ?? null ) ? (string) $variable['value'] : '' );
+			$dark  = self::clean_value( is_scalar( $variable['dark'] ?? null ) ? (string) $variable['dark'] : '' );
 			if ( '' === $name || '' === $value ) {
 				continue;
 			}
@@ -313,6 +314,7 @@ final class Seam_Token_Service {
 			$out['variables'][] = [
 				'name'        => $name,
 				'value'       => substr( $value, 0, 240 ),
+				'dark'        => '' !== $dark ? substr( $dark, 0, 240 ) : '',
 				'type'        => sanitize_key( (string) ( $variable['type'] ?? self::classify( ltrim( $name, '-' ), $value ) ) ),
 				'behavior'    => sanitize_key( (string) ( $variable['behavior'] ?? '' ) ),
 				'category'    => substr( sanitize_text_field( (string) ( $variable['category'] ?? '' ) ), 0, 80 ),
@@ -351,6 +353,7 @@ final class Seam_Token_Service {
 			return [
 				'variables'       => [],
 				'categories'      => [],
+				'colorPalette'    => [],
 				'classes'         => [],
 				'classCategories' => [],
 			];
@@ -371,7 +374,8 @@ final class Seam_Token_Service {
 			$project_label
 		);
 
-		$variables = [];
+		$variables      = [];
+		$palette_colors = [];
 		foreach ( $project['variables'] as $variable ) {
 			$name = self::clean_project_css_variable_name( (string) ( $variable['name'] ?? '' ) );
 			$value = self::clean_value( (string) ( $variable['value'] ?? '' ) );
@@ -380,6 +384,19 @@ final class Seam_Token_Service {
 			}
 
 			$bare = ltrim( $name, '-' );
+			$dark = self::clean_value( (string) ( $variable['dark'] ?? '' ) );
+			if ( '' !== $dark ) {
+				$palette_colors[] = [
+					'id'      => self::stable_id( 'kwpc-color-' . $project_id . '-' . $bare ),
+					'name'    => $bare,
+					'light'   => $value,
+					'dark'    => $dark,
+					'raw'     => 'var(--' . $bare . ')',
+					'source'  => 'kiwe-project',
+					'project' => $project_id,
+				];
+			}
+
 			$variables[] = [
 				'id'          => self::stable_id( 'kwpv-' . $project_id . '-' . $bare ),
 				'name'        => $bare,
@@ -420,6 +437,15 @@ final class Seam_Token_Service {
 					'source'      => 'kiwe-project',
 					'project'     => $project_id,
 					'scale'       => array_map( static fn( array $variable ): string => (string) $variable['name'], $variables ),
+				],
+			],
+			'colorPalette'    => empty( $palette_colors ) ? [] : [
+				[
+					'id'      => self::stable_id( 'kw-project-palette-' . $project_id ),
+					'name'    => 'Kiwe Project - ' . $project_label,
+					'source'  => 'kiwe-project',
+					'project' => $project_id,
+					'colors'  => $palette_colors,
 				],
 			],
 			'classes'         => $classes,
@@ -1137,23 +1163,14 @@ final class Seam_Token_Service {
 				continue;
 			}
 
-			$color = [
+			$colors[] = [
 				'id'     => self::stable_id( 'kw-color-' . $name ),
 				'name'   => 'kiwe-' . $name,
+				'light'  => $value,
+				'dark'   => self::dark_color_value_for_bricks( $name, $value ),
+				'raw'    => 'var(--kiwe-' . $name . ')',
 				'source' => 'kiwe-universal',
 			];
-
-			if ( preg_match( '/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i', $value ) ) {
-				$color['light'] = $value;
-				$color['raw']   = 'var(--kiwe-' . $name . ')';
-			} elseif ( preg_match( '/^rgba?\([^)]+\)$/i', $value ) || preg_match( '/^hsla?\([^)]+\)$/i', $value ) || preg_match( '/^oklch\([^)]+\)$/i', $value ) ) {
-				$color['light'] = $value;
-				$color['raw']   = $value;
-			} else {
-				$color['raw'] = $value;
-			}
-
-			$colors[] = $color;
 		}
 
 		if ( empty( $colors ) ) {
@@ -1168,6 +1185,30 @@ final class Seam_Token_Service {
 				'colors' => $colors,
 			],
 		];
+	}
+
+	private static function dark_color_value_for_bricks( string $name, string $fallback ): string {
+		return match ( self::clean_name( $name ) ) {
+			'color-brand'           => '#ff4fa3',
+			'color-accent'          => '#43ddbc',
+			'color-hero'            => 'rgba(237,241,246,0.18)',
+			'color-neutral'         => '#9aa6b2',
+			'color-surface'         => '#10141b',
+			'color-surface-raised'  => '#11161d',
+			'color-surface-sunken'  => '#090d12',
+			'color-surface-overlay' => 'rgba(17,22,29,0.82)',
+			'color-text'            => '#edf1f6',
+			'color-text-muted'      => '#aab5c0',
+			'color-text-disabled'   => '#788391',
+			'color-text-inverse'    => '#10141b',
+			'color-border'          => 'rgba(255,255,255,0.16)',
+			'color-shadow'          => 'rgba(0,0,0,0.48)',
+			'color-success'         => '#40d394',
+			'color-warning'         => '#ffbd45',
+			'color-danger'          => '#ff667a',
+			'color-info'            => '#69a7ff',
+			default                 => $fallback,
+		};
 	}
 
 	public static function counts( ?array $tokens = null ): array {

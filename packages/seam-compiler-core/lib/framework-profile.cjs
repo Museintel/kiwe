@@ -43,7 +43,9 @@ function buildFrameworkProfile(title, projectVariables = []) {
 					id: projectId,
 					label: `${title} SEAM Project`,
 					variables: projectVariables.map((variable) => ({
-						name: `--${String(variable.name).replace(/^--/, '')}`, value: variable.value
+						name: `--${String(variable.name).replace(/^--/, '')}`,
+						value: variable.value,
+						...(variable.dark ? { dark: variable.dark } : {})
 					}))
 				}
 			}

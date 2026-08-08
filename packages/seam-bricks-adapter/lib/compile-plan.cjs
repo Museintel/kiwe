@@ -254,6 +254,120 @@ function contentSettings(node, type) {
 	return settings;
 }
 
+function clamp(value, minimum, maximum) {
+	return Math.max(minimum, Math.min(maximum, value));
+}
+
+function parseThemeColor(value) {
+	const input = String(value || '').trim();
+	const hex = input.match(/^#([a-f0-9]{3,8})$/i);
+	if (hex) {
+		let digits = hex[1];
+		if (digits.length === 3 || digits.length === 4) digits = digits.split('').map((digit) => digit + digit).join('');
+		if (digits.length !== 6 && digits.length !== 8) return null;
+		return {
+			r: Number.parseInt(digits.slice(0, 2), 16),
+			g: Number.parseInt(digits.slice(2, 4), 16),
+			b: Number.parseInt(digits.slice(4, 6), 16),
+			a: digits.length === 8 ? Number.parseInt(digits.slice(6, 8), 16) / 255 : 1,
+			format: 'hex'
+		};
+	}
+	const rgb = input.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)$/i);
+	if (!rgb) return null;
+	return {
+		r: clamp(Number(rgb[1]), 0, 255), g: clamp(Number(rgb[2]), 0, 255), b: clamp(Number(rgb[3]), 0, 255),
+		a: rgb[4] === undefined ? 1 : clamp(Number(rgb[4]), 0, 1), format: rgb[4] === undefined ? 'rgb' : 'rgba'
+	};
+}
+
+function rgbToHsl({ r, g, b }) {
+	const red = r / 255;
+	const green = g / 255;
+	const blue = b / 255;
+	const maximum = Math.max(red, green, blue);
+	const minimum = Math.min(red, green, blue);
+	const delta = maximum - minimum;
+	let hue = 0;
+	if (delta) {
+		if (maximum === red) hue = ((green - blue) / delta) % 6;
+		else if (maximum === green) hue = (blue - red) / delta + 2;
+		else hue = (red - green) / delta + 4;
+		hue *= 60;
+		if (hue < 0) hue += 360;
+	}
+	const lightness = (maximum + minimum) / 2;
+	const saturation = delta ? delta / (1 - Math.abs(2 * lightness - 1)) : 0;
+	return { hue, saturation, lightness };
+}
+
+function hslToRgb({ hue, saturation, lightness }) {
+	const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+	const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+	const offset = lightness - chroma / 2;
+	let red = 0;
+	let green = 0;
+	let blue = 0;
+	if (hue < 60) [red, green] = [chroma, x];
+	else if (hue < 120) [red, green] = [x, chroma];
+	else if (hue < 180) [green, blue] = [chroma, x];
+	else if (hue < 240) [green, blue] = [x, chroma];
+	else if (hue < 300) [red, blue] = [x, chroma];
+	else [red, blue] = [chroma, x];
+	return { r: Math.round((red + offset) * 255), g: Math.round((green + offset) * 255), b: Math.round((blue + offset) * 255) };
+}
+
+function formatThemeColor(rgb, original) {
+	const red = clamp(Math.round(rgb.r), 0, 255);
+	const green = clamp(Math.round(rgb.g), 0, 255);
+	const blue = clamp(Math.round(rgb.b), 0, 255);
+	if (original.format === 'hex' && original.a === 1) {
+		return '#' + [red, green, blue].map((channel) => channel.toString(16).padStart(2, '0')).join('');
+	}
+	if (original.a < 1 || original.format === 'rgba') {
+		return 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + Math.round(original.a * 1000) / 1000 + ')';
+	}
+	return 'rgb(' + red + ', ' + green + ', ' + blue + ')';
+}
+
+function darkThemeColor(raw, name) {
+	const parsed = parseThemeColor(raw);
+	if (!parsed || parsed.a === 0) return raw;
+	const hsl = rgbToHsl(parsed);
+	const role = String(name || '').toLowerCase();
+	let targetLightness;
+	if (/(?:brand|accent|aqua|red|primary|secondary|success|warning|danger|info)/.test(role)) {
+		targetLightness = clamp(hsl.lightness < 0.52 ? hsl.lightness + 0.26 : hsl.lightness, 0.56, 0.72);
+	} else if (/(?:text|ink|muted|foreground|(^|[-_])fg|black|dark)/.test(role)) {
+		targetLightness = /(?:muted|disabled|quiet)/.test(role) ? 0.72 : 0.9;
+	} else if (/(?:surface|background|(^|[-_])bg|cream|light|white|card|sheet|panel)/.test(role)) {
+		targetLightness = 0.12;
+	} else {
+		targetLightness = clamp(1 - hsl.lightness, 0.12, 0.88);
+	}
+	const saturation = hsl.saturation ? clamp(hsl.saturation * (targetLightness < 0.3 ? 0.72 : 0.88), 0.08, 0.88) : 0;
+	return formatThemeColor({ ...hslToRgb({ hue: hsl.hue, saturation, lightness: targetLightness }), a: parsed.a }, parsed);
+}
+
+function darkThemeValue(value, name) {
+	const input = String(value || '').trim();
+	const standalone = /^(?:#[a-f0-9]{3,8}|rgba?\([^)]+\))$/i.test(input);
+	if (!standalone && !/(?:linear|radial|conic)-gradient\(/i.test(input)) return null;
+	let changed = false;
+	const output = input.replace(/#[a-f0-9]{3,8}\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+(?:\s*,\s*[\d.]+)?\s*\)/gi, (color) => {
+		const mapped = darkThemeColor(color, name);
+		if (mapped !== color) changed = true;
+		return mapped;
+	});
+	return changed ? output : null;
+}
+
+function nativeVariableRecord(id, name, value) {
+	const record = { id, name, value };
+	const dark = darkThemeValue(value, name);
+	if (dark) record.dark = dark;
+	return record;
+}
 function createNativeVariableRegistry(pageIr) {
 	const names = new Set();
 	const sourceToName = new Map();
@@ -266,7 +380,7 @@ function createNativeVariableRegistry(pageIr) {
 		if (names.has(name)) name = `${name.slice(0, 69)}-${createHash('sha256').update(sourceName).digest('hex').slice(0, 10)}`;
 		names.add(name);
 		sourceToName.set(sourceName, name);
-		return { id: shortId(`variable:${pageIr.sourceHash}:${variable.name}`), name, value: variable.value };
+		return nativeVariableRecord(shortId(`variable:${pageIr.sourceHash}:${variable.name}`), name, variable.value);
 	});
 	const valueToName = new Map(records.map((record) => [String(record.value).trim().replace(/\s+/g, ' '), record.name]));
 	function tokenFor(value) {
@@ -289,7 +403,7 @@ function createNativeVariableRegistry(pageIr) {
 			while (names.has(name)) name = `appsite-auto-${domain}-${digest}-${suffix++}`;
 			names.add(name);
 			valueToName.set(normalized, name);
-			records.push({ id: shortId(`variable:${pageIr.sourceHash}:--${name}`), name, value: normalized });
+			records.push(nativeVariableRecord(shortId(`variable:${pageIr.sourceHash}:--${name}`), name, normalized));
 		}
 		return `var(--${name})`;
 	}
@@ -303,16 +417,16 @@ function createNativeVariableRegistry(pageIr) {
 }
 
 function compileCustomCss(residuals, elements, variables = { tokenFor: (value) => value }) {
-	const elementIdByNode = new Map(elements.map((element) => [element.provenance.pageNodeId, element.id]));
+	const validNodeIds = new Set(elements.map((element) => element.provenance.pageNodeId));
 	const declarationsByElement = new Map();
 	for (const residual of residuals) {
 		const match = residual.match(/^([^:]+):\s*([a-z-]+):\s*(.+)$/i);
-		if (!match || !CUSTOM_CSS_EXCEPTIONS.has(match[2]) || !elementIdByNode.has(match[1])) continue;
+		if (!match || !CUSTOM_CSS_EXCEPTIONS.has(match[2]) || !validNodeIds.has(match[1])) continue;
 		if (!declarationsByElement.has(match[1])) declarationsByElement.set(match[1], []);
 		declarationsByElement.get(match[1]).push(`${match[2]}: ${variables.tokenFor(match[3])};`);
 	}
 	const rules = [...declarationsByElement].map(([nodeId, declarations]) =>
-		`#brxe-${elementIdByNode.get(nodeId)} { ${declarations.join(' ')} }`
+		`[data-seam-proof-node="${nodeId}"] { ${declarations.join(' ')} }`
 	);
 	return { css: rules.join('\n'), declarations: [...declarationsByElement.values()].reduce((count, items) => count + items.length, 0) };
 }

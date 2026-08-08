@@ -2837,6 +2837,7 @@ final class Admin {
 		$project_export     = Seam_Token_Service::project_extensions_for_bricks( isset( $token_settings['project'] ) && is_array( $token_settings['project'] ) ? $token_settings['project'] : [] );
 		$project_variables  = isset( $project_export['variables'] ) && is_array( $project_export['variables'] ) ? $project_export['variables'] : [];
 		$project_categories = isset( $project_export['categories'] ) && is_array( $project_export['categories'] ) ? $project_export['categories'] : [];
+		$project_palette    = isset( $project_export['colorPalette'] ) && is_array( $project_export['colorPalette'] ) ? $project_export['colorPalette'] : [];
 		$project_classes    = isset( $project_export['classes'] ) && is_array( $project_export['classes'] ) ? $project_export['classes'] : [];
 		$project_class_categories = isset( $project_export['classCategories'] ) && is_array( $project_export['classCategories'] ) ? $project_export['classCategories'] : [];
 		$current_variables  = get_option( BRICKS_DB_GLOBAL_VARIABLES, [] );
@@ -2958,7 +2959,7 @@ final class Admin {
 
 		$merged_variables  = array_merge( $merged_variables, $kiwe_variables, $project_variables );
 		$merged_categories = array_merge( $merged_categories, $kiwe_categories, $project_categories );
-		$merged_palette    = array_merge( $merged_palette, $kiwe_palette );
+		$merged_palette    = array_merge( $merged_palette, $kiwe_palette, $project_palette );
 		$merged_classes    = array_merge( $merged_classes, $kiwe_classes, $project_classes );
 		$merged_class_categories = array_merge( $merged_class_categories, $kiwe_class_categories, $project_class_categories );
 
