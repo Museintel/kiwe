@@ -3350,7 +3350,7 @@ final class Admin {
 	private static function is_kiwe_managed_bricks_class( array $class, array $kiwe_class_names = [] ): bool {
 		$name   = sanitize_html_class( (string) ( $class['name'] ?? '' ) );
 		$source = sanitize_key( (string) ( $class['source'] ?? '' ) );
-		if ( Compiler_Batch_Cleanup_Service::compiler_namespace( $name ) ) {
+		if ( Compiler_Batch_Cleanup_Service::is_recognized_compiler_class( $class ) ) {
 			return false;
 		}
 
@@ -6227,7 +6227,7 @@ final class Admin {
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Bricks compiler batches', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Imported compiler templates use isolated hashed class namespaces. This cleanup is separate from Kiwe Framework: it backs up Bricks classes, preserves the selected current batch, refuses to remove classes referenced by live content, moves only unused older classes to Bricks trash, and queues Bricks CSS regeneration.', 'dsa' ); ?></p>
+				<p><?php esc_html_e( 'Imported compiler templates use isolated hashed class namespaces. Only namespaces proven by SEAM Compiler class metadata or an active template tagged SEAM Compiler appear here; name shape alone is never ownership proof. Cleanup is separate from Kiwe Framework: it backs up Bricks classes, preserves the selected current batch, refuses to remove classes referenced by live content, moves only unused older classes to Bricks trash, and queues Bricks CSS regeneration.', 'dsa' ); ?></p>
 				<?php if ( ! $batch_report['available'] ) : ?>
 					<p class="description"><?php esc_html_e( 'Bricks global classes are not available on this site.', 'dsa' ); ?></p>
 				<?php elseif ( empty( $batch_report['namespaces'] ) ) : ?>

@@ -4,6 +4,10 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 7.00 - 2026-08-09
+
+- Made compiler-batch ownership evidence-based after live 6.99 inventory proved that ordinary five-letter Seam utility segments such as `seam-align-*` can resemble generated hashes. A namespace is now registered only through explicit compiler class metadata or class-ID references from an active Bricks template tagged `SEAM Compiler`; name shape alone can never authorize deletion or exclude Framework ownership.
+
 ## 6.99 - 2026-08-09
 
 - Added a reference-aware Bricks compiler batch manager to Kiwe Developer: it inventories exact hashed `seam-xxxxx-` namespaces, backs up the active/trash registries, preserves the selected current batch, protects classes referenced by live Bricks content, moves only unused older classes to Bricks trash, and queues native Bricks CSS regeneration.
