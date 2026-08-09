@@ -4,6 +4,11 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+## 6.99 - 2026-08-09
+
+- Added a reference-aware Bricks compiler batch manager to Kiwe Developer: it inventories exact hashed `seam-xxxxx-` namespaces, backs up the active/trash registries, preserves the selected current batch, protects classes referenced by live Bricks content, moves only unused older classes to Bricks trash, and queues native Bricks CSS regeneration.
+- Separated compiler-template ownership from Kiwe Framework ownership so Framework push/clear operations can no longer delete isolated converter classes merely because their names begin with `seam-`.
+
 - Added `tools/release/verify-green-baseline.cjs` as the canonical local and CI source gate, including package integrity, Seam/token audits, positive and negative fixtures, toolkit/connector contracts, RC contracts, and JavaScript syntax.
 - Made the SeamFlow source contract derive the active package version instead of pinning an obsolete release number, preventing routine version changes from creating false failures.
 - Taught the runtime token-purity audit that the combined Kiwe/legacy dark-theme selector is a legitimate token authority while keeping component-level literals fail-closed.

@@ -95,6 +95,7 @@ const gates = [
 	['Invalid Framework profile fixture', 'kiwe-ai-toolkit/tools/validate-framework-profile.cjs', ['kiwe-ai-toolkit/fixtures/framework-profile-invalid'], { expectedFailure: true, failurePattern: /unknown_root_key/ }],
 	['SEAM compiler foundation contracts', 'packages/seam-compiler-core/test/compiler-foundation.cjs'],
 	['SEAM visual proof contracts', 'packages/seam-visual-proof/test/visual-proof.cjs'],
+	['Bricks compiler batch cleanup contracts', 'tools/bricks/compiler-batch-cleanup-contracts.cjs'],
 	['Kiwe AI Toolkit smoke contracts', 'kiwe-ai-toolkit/tools/smoke-test.cjs'],
 	['AI API source contracts', 'tools/connector/ai-api-contracts.cjs'],
 	['RC4 security contracts', 'tools/security/rc4-contracts.cjs'],

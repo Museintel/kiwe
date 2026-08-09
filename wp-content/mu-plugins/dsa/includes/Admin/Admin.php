@@ -27,6 +27,7 @@ use DSA\AI\Final_Save_Approval_Service;
 use DSA\AI\Controlled_Executor_Service;
 use DSA\AI\Bricks_Controlled_Adapter_Service;
 use DSA\AI\Post_Apply_Verification_Service;
+use DSA\Bricks\Compiler_Batch_Cleanup_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -129,6 +130,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
 		add_action( 'admin_post_dsa_developer_clear_runtime', [ $this, 'handle_developer_clear_runtime' ] );
+		add_action( 'admin_post_dsa_developer_cleanup_bricks_batches', [ $this, 'handle_developer_cleanup_bricks_batches' ] );
 		add_action( 'admin_post_dsa_developer_reset_settings', [ $this, 'handle_developer_reset_settings' ] );
 		add_action( 'wp_ajax_dsa_search_menu_targets', [ $this, 'search_menu_targets' ] );
 	}
@@ -1333,6 +1335,39 @@ final class Admin {
 				admin_url( 'admin.php' )
 			)
 		);
+		exit;
+	}
+
+	public function handle_developer_cleanup_bricks_batches(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_developer_cleanup_bricks_batches' );
+		if ( '1' !== (string) ( $_POST['confirm_cleanup'] ?? '' ) ) {
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-developer', 'bricks-cleanup' => 'cancelled' ], admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		try {
+			$result = ( new Compiler_Batch_Cleanup_Service() )->cleanup( sanitize_text_field( wp_unslash( $_POST['keep_namespace'] ?? '' ) ) );
+			$args   = [
+				'page'           => 'kiwe-developer',
+				'bricks-cleanup' => '1',
+				'removed'        => $result['removed'],
+				'protected'      => $result['protected'],
+				'kept'           => $result['kept'],
+				'css-queued'     => $result['css_queued'] ? '1' : '0',
+			];
+		} catch ( \Throwable $error ) {
+			$args = [
+				'page'           => 'kiwe-developer',
+				'bricks-cleanup' => 'error',
+				'cleanup-error'  => rawurlencode( $error->getMessage() ),
+			];
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 
@@ -3315,6 +3350,9 @@ final class Admin {
 	private static function is_kiwe_managed_bricks_class( array $class, array $kiwe_class_names = [] ): bool {
 		$name   = sanitize_html_class( (string) ( $class['name'] ?? '' ) );
 		$source = sanitize_key( (string) ( $class['source'] ?? '' ) );
+		if ( Compiler_Batch_Cleanup_Service::compiler_namespace( $name ) ) {
+			return false;
+		}
 
 		return in_array( $source, [ 'kiwe-seam', 'kiwe-framework', 'kiwe-universal', 'kiwe-project', 'seamflow' ], true )
 			|| isset( $kiwe_class_names[ $name ] )
@@ -6140,10 +6178,12 @@ final class Admin {
 	public function render_developer_page(): void {
 		$runtime_cleared = isset( $_GET['runtime-cleared'] ) && '1' === sanitize_key( wp_unslash( $_GET['runtime-cleared'] ) );
 		$settings_reset  = sanitize_key( wp_unslash( $_GET['settings-reset'] ?? '' ) );
+		$bricks_cleanup  = sanitize_key( wp_unslash( $_GET['bricks-cleanup'] ?? '' ) );
 		$settings        = $this->settings->all();
 		$diagnostics     = wp_parse_args( $settings['diagnostics'] ?? [], $this->settings->defaults()['diagnostics'] );
 		$package_proof   = \DSA\Runtime\Package_Manifest::verify();
 		$loader_version  = defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : '';
+		$batch_report    = ( new Compiler_Batch_Cleanup_Service() )->report();
 		?>
 		<div class="wrap dsa-admin" data-dsa-developer-tools data-auto-clear-browser="<?php echo $runtime_cleared ? '1' : '0'; ?>">
 			<h1><?php esc_html_e( 'Kiwe Developer', 'dsa' ); ?></h1>
@@ -6156,6 +6196,13 @@ final class Admin {
 				<div class="notice notice-success"><p><?php esc_html_e( 'Kiwe configuration was reset to defaults. Site content and customer data were preserved.', 'dsa' ); ?></p></div>
 			<?php elseif ( 'cancelled' === $settings_reset ) : ?>
 				<div class="notice notice-warning"><p><?php esc_html_e( 'Settings reset was cancelled because confirmation was not checked.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( '1' === $bricks_cleanup ) : ?>
+				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( 'Bricks compiler cleanup removed %1$d unused older classes, protected %2$d referenced classes, and kept %3$d current-batch classes. Bricks CSS regeneration was %4$s.', 'dsa' ), absint( $_GET['removed'] ?? 0 ), absint( $_GET['protected'] ?? 0 ), absint( $_GET['kept'] ?? 0 ), '1' === sanitize_key( wp_unslash( $_GET['css-queued'] ?? '' ) ) ? __( 'queued', 'dsa' ) : __( 'not required', 'dsa' ) ) ); ?></p></div>
+			<?php elseif ( 'cancelled' === $bricks_cleanup ) : ?>
+				<div class="notice notice-warning"><p><?php esc_html_e( 'Bricks compiler cleanup was cancelled because confirmation was not checked.', 'dsa' ); ?></p></div>
+			<?php elseif ( 'error' === $bricks_cleanup ) : ?>
+				<div class="notice notice-error"><p><?php echo esc_html( rawurldecode( (string) ( $_GET['cleanup-error'] ?? __( 'Compiler cleanup failed.', 'dsa' ) ) ) ); ?></p></div>
 			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
@@ -6176,6 +6223,32 @@ final class Admin {
 					<button type="button" class="button" data-dsa-clear-browser><?php esc_html_e( 'Clear this browser only', 'dsa' ); ?></button>
 				</form>
 				<p data-dsa-developer-status aria-live="polite"></p>
+			</section>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Bricks compiler batches', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Imported compiler templates use isolated hashed class namespaces. This cleanup is separate from Kiwe Framework: it backs up Bricks classes, preserves the selected current batch, refuses to remove classes referenced by live content, moves only unused older classes to Bricks trash, and queues Bricks CSS regeneration.', 'dsa' ); ?></p>
+				<?php if ( ! $batch_report['available'] ) : ?>
+					<p class="description"><?php esc_html_e( 'Bricks global classes are not available on this site.', 'dsa' ); ?></p>
+				<?php elseif ( empty( $batch_report['namespaces'] ) ) : ?>
+					<p class="description"><?php esc_html_e( 'No SEAM compiler class batches were detected.', 'dsa' ); ?></p>
+				<?php else : ?>
+					<table class="widefat striped" style="max-width:760px">
+						<thead><tr><th><?php esc_html_e( 'Namespace', 'dsa' ); ?></th><th><?php esc_html_e( 'Classes', 'dsa' ); ?></th><th><?php esc_html_e( 'Referenced', 'dsa' ); ?></th><th><?php esc_html_e( 'Removable', 'dsa' ); ?></th></tr></thead>
+						<tbody>
+						<?php foreach ( $batch_report['namespaces'] as $namespace => $counts ) : ?>
+							<tr><td><code><?php echo esc_html( $namespace ); ?></code></td><td><?php echo esc_html( (string) $counts['classes'] ); ?></td><td><?php echo esc_html( (string) $counts['referenced'] ); ?></td><td><?php echo esc_html( (string) $counts['removable'] ); ?></td></tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:16px">
+						<input type="hidden" name="action" value="dsa_developer_cleanup_bricks_batches">
+						<?php wp_nonce_field( 'dsa_developer_cleanup_bricks_batches' ); ?>
+						<p><label><?php esc_html_e( 'Keep current namespace', 'dsa' ); ?> <input type="text" class="regular-text code" name="keep_namespace" value="<?php echo esc_attr( $batch_report['current'] ); ?>" pattern="seam-[a-z0-9]{5}-" required></label></p>
+						<label><input type="checkbox" name="confirm_cleanup" value="1" required> <?php esc_html_e( 'I checked the current namespace and want to remove only unreferenced classes from older compiler batches.', 'dsa' ); ?></label>
+						<?php submit_button( __( 'Clean older batches + regenerate Bricks CSS', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</form>
+				<?php endif; ?>
 			</section>
 
 			<section class="dsa-admin__panel">

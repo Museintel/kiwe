@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "6.98",
+  "version": "6.99",
   "algorithm": "sha256",
-  "file_count": 295,
+  "file_count": 296,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "4b1315800688e5a97905ea75d043305211f5418351738784df44eabea6c6bff7"
+      "sha256": "4d0b9a1b5ebf931a95d379b09dd5e5469f02c476b22fea758be63d3943ef2537"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -477,8 +477,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 588359,
-      "sha256": "e6e367ef043c50cb6eb421e691f166d0c4fdf9c919dc87c2ca357693d4fadf6f"
+      "bytes": 593459,
+      "sha256": "a7fc76bfa2c5e9c8c43aaf85de2ff451c6331e500a1f32e46617b592297eb0b5"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -487,6 +487,10 @@
     "includes/Bricks/Bricks_Integration.php": {
       "bytes": 94162,
       "sha256": "9a611215d9594538339bf7b83428660b60dafa62543d3bdd16442255211676ce"
+    },
+    "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
+      "bytes": 8667,
+      "sha256": "0be991fde1c2ac7f7d5dc12ff0105b01612cda4f69b6f110c32630f7b9bdce81"
     },
     "includes/Commerce/Abandoned_Cart_Service.php": {
       "bytes": 34768,
@@ -1070,7 +1074,7 @@
     },
     "ui-system/README.md": {
       "bytes": 73747,
-      "sha256": "02aba7203c044b839c16cbf6911c332d78ff2d38fd9d34718f12d4da1145fa88"
+      "sha256": "f3eb5bacc88aafa758020b950c6751a5407a45c099d285809dc382fbf8e1fd93"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
