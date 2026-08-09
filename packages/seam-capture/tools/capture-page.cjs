@@ -18,7 +18,7 @@ function parseArguments(argv) {
 async function main() {
 	const { positional: [input, output], flags, widths } = parseArguments(process.argv.slice(2));
 	if (!input || !output) {
-		console.error('Usage: node capture-page.cjs <html-file|url> <output-directory> [--viewports 320,478,768,991,1280,1440] [--allow-remote-assets] [--no-scripts]');
+		console.error('Usage: node capture-page.cjs <html-file|url> <output-directory> [--viewports 320,478,768,991,1280,1440] [--allow-remote-assets] [--no-scripts] [--proof-mode]');
 		process.exit(2);
 	}
 	const viewports = widths ? widths.map((width) => {
@@ -28,7 +28,7 @@ async function main() {
 	const capture = await capturePage({
 		input, outputDirectory: output, viewports,
 		allowRemoteAssets: flags.has('--allow-remote-assets'), scriptsExecuted: !flags.has('--no-scripts'),
-		deterministicClock: !flags.has('--no-deterministic-clock')
+		deterministicClock: !flags.has('--no-deterministic-clock'), proofMode: flags.has('--proof-mode')
 	});
 	const destination = path.resolve(output, 'seam-capture.json');
 	fs.writeFileSync(destination, `${JSON.stringify(capture, null, 2)}\n`);

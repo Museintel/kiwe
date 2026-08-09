@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { capturePage } = require('../lib/capture.cjs');
+const { mergeCaptures } = require('../lib/merge.cjs');
 const { validateContract } = require('../../seam-contracts/lib/validator.cjs');
 const { normalizeCapture } = require('../../seam-compiler-core/lib/normalize-capture.cjs');
 const { compileBricksPlan } = require('../../seam-bricks-adapter/lib/compile-plan.cjs');
@@ -71,6 +72,28 @@ async function main() {
 		const cardElement = plan.elements.find((candidate) => candidate.provenance.pageNodeId === cascadeCard.id);
 		assert.ok(cardElement.settings._gradient);
 		assert.equal(plan.aiGenerated, false);
+		const proofCapture = await capturePage({ input: source, outputDirectory: path.join(temp, 'proof-capture'), viewports: [viewports[0]], proofMode: true });
+		assert.equal(validateContract('capture', proofCapture).ok, true);
+		assert.ok(proofCapture.nodes.every((node) => node.observations.every((observation) => observation.matchedRules.length === 0)));
+		assert.ok(proofCapture.nodes.every((node) => node.observations.every((observation) => Object.keys(observation.customProperties).length === 0)));
+		const shards = viewports.map((viewport) => {
+			const shardDirectory = path.join(temp, `shard-${viewport.id}`);
+			fs.mkdirSync(path.join(shardDirectory, 'screenshots'), { recursive: true });
+			const screenshot = capture.viewports.find((item) => item.id === viewport.id).screenshot;
+			fs.copyFileSync(path.join(temp, 'capture', screenshot.file), path.join(shardDirectory, screenshot.file));
+			const shard = {
+				...capture,
+				viewports: capture.viewports.filter((item) => item.id === viewport.id),
+				nodes: capture.nodes.map((node) => ({ ...node, observations: node.observations.filter((item) => item.viewportId === viewport.id) }))
+			};
+			const file = path.join(shardDirectory, 'seam-capture.json');
+			fs.writeFileSync(file, `${JSON.stringify(shard, null, 2)}\n`);
+			return file;
+		});
+		const merged = mergeCaptures({ captureFiles: shards, outputDirectory: path.join(temp, 'merged-capture') });
+		assert.equal(validateContract('capture', merged.capture).ok, true);
+		assert.deepEqual(merged.capture.viewports.map((viewport) => viewport.id), viewports.map((viewport) => viewport.id));
+		assert.ok(merged.capture.nodes.every((node) => node.observations.length === 2));
 		console.log(`PASS rendered capture: ${capture.nodes.length} nodes, ${normalized.geometry.summary.responsiveNodes} responsive, ${capture.resources.length} resources.`);
 	} finally {
 		fs.rmSync(temp, { recursive: true, force: true });

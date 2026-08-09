@@ -9,9 +9,14 @@ The launcher uses `SEAM_CHROME_PATH` when set, then discovers system Chrome/Edge
 ```text
 npm install --prefix packages/seam-capture
 node packages/seam-capture/tools/capture-page.cjs input.html output-directory
+node packages/seam-capture/tools/merge-captures.cjs merged-output capture-1440/seam-capture.json capture-390/seam-capture.json
 npm test --prefix packages/seam-capture
 node packages/seam-capture/tools/summarize-evidence.cjs capture-directory compile-directory evidence.json
 ```
+
+Use `--proof-mode` for screenshot/geometry/style/accessibility comparison runs. It retains the rendered pixels, computed properties, boxes, semantics, diagnostics, and resource integrity required by SEAM Visual Proof while omitting compiler-only cascade provenance, custom-property inventories, and pseudo-element details. Full compiler captures remain the default.
+
+Large matrices may be captured one viewport per worker and combined with `merge-captures.cjs`. The merge validates matching source and engine identities, rejects duplicate viewport evidence, verifies every screenshot hash, and refuses resources whose bytes changed between workers.
 
 Remote asset requests are blocked for local bundles unless `--allow-remote-assets` is explicitly supplied. Local bundle paths are served from a loopback-only ephemeral server with traversal protection.
 

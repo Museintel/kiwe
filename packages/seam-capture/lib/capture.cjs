@@ -72,8 +72,8 @@ function validateCapture(capture) {
 	}
 }
 
-async function collectPageEvidence(page, viewportId) {
-	return page.evaluate(({ viewportId: activeViewport, computedProperties }) => {
+async function collectPageEvidence(page, viewportId, options = {}) {
+	return page.evaluate(({ viewportId: activeViewport, computedProperties, proofMode }) => {
 		const excluded = new Set(['script', 'style', 'link', 'meta', 'noscript', 'template']);
 		const simpleHash = (input) => {
 			let hash = 2166136261;
@@ -161,26 +161,34 @@ async function collectPageEvidence(page, viewportId) {
 			}).map(score);
 			return matches.sort((left, right) => right[0] - left[0] || right[1] - left[1] || right[2] - left[2])[0] || [0, 0, 0];
 		};
-		const matchingRules = (element) => {
-			const matches = [];
-			let sourceOrder = 0;
-			const walk = (rules, source, media = '') => {
-				for (const rule of [...rules]) {
-					sourceOrder += 1;
-					if (rule.type === CSSRule.STYLE_RULE) {
-						try {
-							if (element.matches(rule.selectorText)) matches.push({ selector: rule.selectorText, source, media, specificity: selectorSpecificity(element, rule.selectorText), order: sourceOrder, declarations: declarations(rule.style) });
-						} catch { /* unsupported selector evidence is represented by computed style */ }
-					} else if (rule.cssRules && (!rule.conditionText || matchMedia(rule.conditionText).matches)) {
-						walk(rule.cssRules, source, rule.conditionText || media);
-					}
-					if (matches.length >= 80) return;
+		const all = [document.body, ...document.body.querySelectorAll('*')].filter((element) => !excluded.has(element.localName) && !element.closest('script,style,noscript,template'));
+		const capturedElements = new Set(all);
+		const matchedRuleIndex = new Map(all.map((element) => [element, []]));
+		let sourceOrder = 0;
+		const indexRules = (rules, source, media = '') => {
+			for (const rule of [...rules]) {
+				sourceOrder += 1;
+				if (rule.type === CSSRule.STYLE_RULE) {
+					try {
+						const ruleDeclarations = declarations(rule.style);
+						for (const element of document.querySelectorAll(rule.selectorText)) {
+							if (!capturedElements.has(element)) continue;
+							const matches = matchedRuleIndex.get(element);
+							if (matches.length >= 80) continue;
+							matches.push({ selector: rule.selectorText, source, media, specificity: selectorSpecificity(element, rule.selectorText), order: sourceOrder, declarations: ruleDeclarations });
+						}
+					} catch { /* unsupported selector evidence is represented by computed style */ }
+				} else if (rule.cssRules && (!rule.conditionText || matchMedia(rule.conditionText).matches)) {
+					indexRules(rule.cssRules, source, rule.conditionText || media);
 				}
-			};
-			for (const sheet of [...document.styleSheets]) {
-				try { walk(sheet.cssRules, sheet.href || 'inline', sheet.media?.mediaText || ''); } catch { /* cross-origin stylesheet */ }
-				if (matches.length >= 80) break;
 			}
+		};
+		if (!proofMode) for (const sheet of [...document.styleSheets]) {
+			try { indexRules(sheet.cssRules, sheet.href || 'inline', sheet.media?.mediaText || ''); } catch { /* cross-origin stylesheet */ }
+		}
+		const matchingRules = (element) => {
+			if (proofMode) return [];
+			const matches = [...(matchedRuleIndex.get(element) || [])];
 			if (element.style?.length) matches.push({ selector: '<inline-style>', source: 'inline-attribute', media: '', specificity: [1, 0, 0], order: Number.MAX_SAFE_INTEGER, declarations: declarations(element.style) });
 			return matches;
 		};
@@ -189,14 +197,13 @@ async function collectPageEvidence(page, viewportId) {
 			if (!style || ['none', 'normal', ''].includes(style.content)) return null;
 			return { content: style.content, display: style.display, position: style.position, color: style.color, background: style.background, font: style.font, width: style.width, height: style.height };
 		};
-		const all = [document.body, ...document.body.querySelectorAll('*')].filter((element) => !excluded.has(element.localName) && !element.closest('script,style,noscript,template'));
 		const ids = new Map(all.map((element) => [element, `node-${simpleHash(domPath(element))}`]));
 		const nodes = all.map((element) => {
 			const style = getComputedStyle(element);
 			const rect = element.getBoundingClientRect();
 			const computed = Object.fromEntries(computedProperties.map((property) => [property, style.getPropertyValue(property).trim()]));
 			const customProperties = {};
-			for (const property of style) if (property.startsWith('--')) customProperties[property] = style.getPropertyValue(property).trim();
+			if (!proofMode) for (const property of style) if (property.startsWith('--')) customProperties[property] = style.getPropertyValue(property).trim();
 			const visible = style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) !== 0 && rect.width > 0 && rect.height > 0;
 			const createsContext = style.position === 'fixed' || style.position === 'sticky' || (style.position !== 'static' && style.zIndex !== 'auto') || style.opacity !== '1' || style.transform !== 'none' || style.filter !== 'none' || style.isolation === 'isolate';
 			return {
@@ -208,7 +215,7 @@ async function collectPageEvidence(page, viewportId) {
 					box: { x: rect.x + scrollX, y: rect.y + scrollY, width: rect.width, height: rect.height }, computed, customProperties,
 					scroll: { width: element.scrollWidth, height: element.scrollHeight, left: element.scrollLeft, top: element.scrollTop },
 					stacking: { position: style.position, zIndex: style.zIndex, createsContext },
-					pseudo: { before: pseudo(element, '::before'), after: pseudo(element, '::after') },
+					pseudo: proofMode ? { before: null, after: null } : { before: pseudo(element, '::before'), after: pseudo(element, '::after') },
 					matchedRules: matchingRules(element)
 				},
 				provenance: { selector: element.id ? `#${CSS.escape(element.id)}` : domPath(element), domPath: domPath(element) }
@@ -228,7 +235,7 @@ async function collectPageEvidence(page, viewportId) {
 			}
 		}
 		return { nodes, stylesheets, assetReferences };
-	}, { viewportId, computedProperties: COMPUTED_PROPERTIES });
+	}, { viewportId, computedProperties: COMPUTED_PROPERTIES, proofMode: options.proofMode === true });
 }
 
 async function capturePage(options) {
@@ -318,11 +325,46 @@ async function capturePage(options) {
 			const response = await page.goto(entryUrl, { waitUntil: 'load', timeout: options.navigationTimeout || 30_000 });
 			if (!response) throw new Error(`Navigation produced no response for ${entryUrl}`);
 			if (!sourceHash && viewport === viewports[0]) sourceHash = `sha256:${sha256(await response.body())}`;
-			await page.evaluate(async () => {
-				if (document.fonts?.ready) await document.fonts.ready;
-				await Promise.all([...document.images].map((image) => image.complete ? image.decode?.().catch(() => {}) : new Promise((resolve) => { image.addEventListener('load', resolve, { once: true }); image.addEventListener('error', resolve, { once: true }); })));
-			});
-			const evidence = await collectPageEvidence(page, viewport.id);
+			const settle = await page.evaluate(async ({ timeoutMs }) => {
+				const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+				const lazyImages = [...document.images].map((image) => ({ image, loading: image.getAttribute('loading') }));
+				const scrollBehavior = {
+					html: document.documentElement.style.getPropertyValue('scroll-behavior'),
+					htmlPriority: document.documentElement.style.getPropertyPriority('scroll-behavior'),
+					body: document.body.style.getPropertyValue('scroll-behavior'),
+					bodyPriority: document.body.style.getPropertyPriority('scroll-behavior')
+				};
+				document.documentElement.style.setProperty('scroll-behavior', 'auto', 'important');
+				document.body.style.setProperty('scroll-behavior', 'auto', 'important');
+				for (const item of lazyImages) item.image.loading = 'eager';
+				const maximum = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+				for (let y = 0; y < maximum; y += Math.max(320, innerHeight)) {
+					scrollTo(0, y);
+					await delay(75);
+				}
+				scrollTo(0, 0);
+				await delay(150);
+				const imagesReady = Promise.all([...document.images].map((image) => image.complete ? image.decode?.().catch(() => {}) : new Promise((resolve) => {
+					image.addEventListener('load', resolve, { once: true });
+					image.addEventListener('error', resolve, { once: true });
+				})));
+				let timedOut = false;
+				await Promise.race([
+					Promise.all([document.fonts?.ready?.catch(() => {}) || Promise.resolve(), imagesReady]),
+					delay(timeoutMs).then(() => { timedOut = true; })
+				]);
+				for (const item of lazyImages) {
+					if (item.loading === null) item.image.removeAttribute('loading');
+					else item.image.setAttribute('loading', item.loading);
+				}
+				if (scrollBehavior.html) document.documentElement.style.setProperty('scroll-behavior', scrollBehavior.html, scrollBehavior.htmlPriority);
+				else document.documentElement.style.removeProperty('scroll-behavior');
+				if (scrollBehavior.body) document.body.style.setProperty('scroll-behavior', scrollBehavior.body, scrollBehavior.bodyPriority);
+				else document.body.style.removeProperty('scroll-behavior');
+				return { timedOut, pendingImages: [...document.images].filter((image) => !image.complete).length };
+			}, { timeoutMs: options.assetSettleTimeout || 10_000 });
+			if (settle.timedOut) diagnostics.push(`${viewport.id} asset settle timeout: ${settle.pendingImages} image(s) remained pending.`);
+			const evidence = await collectPageEvidence(page, viewport.id, { proofMode: options.proofMode === true });
 			for (const captured of evidence.nodes) {
 				const existing = nodes.get(captured.id);
 				if (existing) existing.observations.push(captured.observation);
