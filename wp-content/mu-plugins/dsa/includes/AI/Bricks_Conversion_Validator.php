@@ -121,7 +121,7 @@ final class Bricks_Conversion_Validator {
 	private const SELF_CLAMP_LENGTH_PATTERN          = '/clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|ic|lh|rlh|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc)\b)\s*,\s*\1\s*,\s*\1\s*\)/i';
 	private const TOKEN_OWNED_COLOR_CONTROL_PATTERN  = '/^_(?:typography|background|gradient|border|boxShadow|cssFilters|color|fill|stroke|cssCustom)(?::|$)/';
 	private const TOKEN_OWNED_COLOR_NESTED_KEY_PATTERN = '/^(?:color|background|backgroundColor|background-color|backgroundImage|background-image|gradient|raw|hex|rgb|hsl|hue|saturation|lightness|fill|stroke|borderColor|border-color|shadowColor|shadow-color)$/i';
-	private const COLOR_LITERAL_PATTERN              = '/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|\b(?:white|black)\b/i';
+	private const COLOR_LITERAL_PATTERN              = '/#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|(?<![-\w])(?:white|black)(?![-\w])/i';
 	private const TEMPLATE_UPLOAD_CUSTOM_CSS_BYTES = 2500;
 	private const TEMPLATE_UPLOAD_MAPPABLE_CSS_MIN = 12;
 	private const LARGE_TEMPLATE_ELEMENT_COUNT     = 180;

@@ -203,7 +203,7 @@ const SELF_CLAMP_LENGTH_RE = /clamp\(\s*(-?(?:\d*\.)?\d+(?:px|rem|em|ch|ex|cap|i
 const TOKEN_FINDING_LIMIT = 40;
 const TOKEN_OWNED_COLOR_CONTROL_RE = /^_(?:typography|background|gradient|border|boxShadow|cssFilters|color|fill|stroke|cssCustom)(?::|$)/;
 const TOKEN_OWNED_COLOR_NESTED_KEY_RE = /^(?:color|background|backgroundColor|background-color|backgroundImage|background-image|gradient|raw|hex|rgb|hsl|hue|saturation|lightness|fill|stroke|borderColor|border-color|shadowColor|shadow-color)$/i;
-const COLOR_LITERAL_RE = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|\b(?:white|black)\b/gi;
+const COLOR_LITERAL_RE = /#[0-9a-fA-F]{3,8}\b|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]*\)|(?<![-\w])(?:white|black)(?![-\w])/gi;
 const COLOR_FINDING_LIMIT = 40;
 const CSS_VAR_FINDING_LIMIT = 40;
 
