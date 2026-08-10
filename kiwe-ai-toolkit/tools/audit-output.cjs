@@ -275,7 +275,7 @@ function collectImplicitBricksLayoutControls(items, prefix) {
       problems.push(`${prefix} layout element "${label}" sets _display:flex but omits _direction. Bricks source-backed layout controls must explicitly own flex direction; relying on browser defaults causes rail/card drift and makes the visual editor ambiguous.`);
     }
 
-    if (isBricksLayoutElement(item) && display === 'grid') {
+    if (isBricksLayoutElement(item) && display === 'grid' && !(Array.isArray(item.children) && item.children.length === 0)) {
       const hasColumns = Object.keys(settings).some((key) => /^_grid(?:TemplateColumns|AutoColumns)(?::|$)/.test(key));
       if (!hasColumns) {
         problems.push(`${prefix} layout element "${label}" sets _display:grid but omits _gridTemplateColumns/_gridAutoColumns. Grid layout must be represented by Bricks-native grid controls, not implicit CSS/default behavior.`);

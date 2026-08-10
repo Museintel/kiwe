@@ -20,6 +20,6 @@ Large matrices may be captured one viewport per worker and combined with `merge-
 
 Remote asset requests are blocked for local bundles unless `--allow-remote-assets` is explicitly supplied. Local bundle paths are served from a loopback-only ephemeral server with traversal protection.
 
-The canonical matrix is 1440, 1280, 991, 768, 478, 375, and 320 CSS pixels. Use `--viewports 1280,478` for a smaller diagnostic run. Capture IDs, bundle-relative resource URLs, source hashes, and deterministic clock/randomness make evidence reproducible; screenshots remain the browser-render truth used by later visual-difference gates.
+The canonical matrix is 1440, 1280, 991, 768, 767, 478, 375, and 320 CSS pixels. The adjacent 768/767 samples prove both sides of Bricks' mobile-landscape breakpoint instead of leaving that native responsive lane unobserved. Use `--viewports 1280,478` for a smaller diagnostic run. Capture IDs, bundle-relative resource URLs, source hashes, and deterministic clock/randomness make evidence reproducible; screenshots remain the browser-render truth used by later visual-difference gates.
 
 The evidence summarizer refuses invalid compiler output, verifies every screenshot against its declared byte length and SHA-256, runs the typed-contract, Framework-profile, and native-Bricks validators, and writes a path-independent compact proof manifest. Raw captures and screenshots can therefore remain content-addressed build artifacts instead of large Git blobs.

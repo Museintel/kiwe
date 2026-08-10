@@ -810,7 +810,7 @@ function collectImplicitBricksLayoutControls(items) {
       });
     }
 
-    if (isLayout && display === 'grid') {
+    if (isLayout && display === 'grid' && !(Array.isArray(item.children) && item.children.length === 0)) {
       const hasColumns = Object.keys(settings).some((key) => /^_grid(?:TemplateColumns|AutoColumns)(?::|$)/.test(key));
       if (!hasColumns) {
         findings.push({
@@ -1066,6 +1066,29 @@ function validateProjectVariableFrameworkProof(root, templateData, templateStyle
     file,
     firstUse?.path || '$.content'
   );
+}
+
+function validateSelfContainedNativeValues(templateStyleItems, findings, file) {
+  const unresolved = [];
+  asArray(templateStyleItems).forEach((item, index) => {
+    if (!isPlainObject(item)) return;
+    const label = item.id || item.name || item.label || `item-${index}`;
+    collectNativeOwnedCssVariableCalls(elementSettings(item), [], `$.content/header/footer/global_classes[${index}].settings`, false)
+      .filter((value) => !isOfficialFrameworkVariable(value.variable))
+      .forEach((value) => unresolved.push({ label, ...value }));
+  });
+  unresolved.slice(0, CSS_VAR_FINDING_LIMIT).forEach((item) => {
+    add(
+      findings,
+      'fail',
+      `Raw self-contained Bricks template still references CSS variable "${item.variable}" in native style "${item.path}" on "${item.label}". The Convert stage must resolve source/local variables to literal native Bricks values; variable consumption belongs to the separate Seam Framework stage.`,
+      file,
+      item.path
+    );
+  });
+  if (unresolved.length > CSS_VAR_FINDING_LIMIT) {
+    add(findings, 'fail', `Raw self-contained Bricks template contains ${unresolved.length - CSS_VAR_FINDING_LIMIT} additional unresolved native CSS-variable references.`, file, '$.content');
+  }
 }
 
 function collectCssVariablesWithFallback(value, out = [], trail = '$', parentOwned = false) {
@@ -1569,6 +1592,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     .concat(asArray(templateData.global_classes))
     .concat(asArray(templateData.globalClasses));
   const declaredVariables = collectDeclaredCssVariables(templateData);
+  const rawSelfContained = templateData?.kiwe?.renderMode === 'raw-self-contained';
   validateBricksTemplateElements(root, templatePath, templateElements, findings);
   const runtimeCodeElements = collectRuntimeCodeElements(templateElements);
   for (const item of runtimeCodeElements.slice(0, 20)) {
@@ -1694,32 +1718,36 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       );
     }
   }
-  validateTokenizedNativeLengths(
-    templateStyleItems,
-    findings,
-    rel(root, templatePath),
-    '$.content/header/footer/global_classes',
-    declaredVariables
-  );
-  validateTokenizedNativeColors(
-    templateStyleItems,
-    findings,
-    rel(root, templatePath),
-    '$.content/header/footer/global_classes'
-  );
-  validateCssVariableFallbacks(
-    templateStyleItems,
-    findings,
-    rel(root, templatePath),
-    '$.content/header/footer/global_classes'
-  );
-  validateProjectVariableFrameworkProof(
-    root,
-    templateData,
-    templateStyleItems,
-    findings,
-    rel(root, templatePath)
-  );
+  if (rawSelfContained) {
+    validateSelfContainedNativeValues(templateStyleItems, findings, rel(root, templatePath));
+  } else {
+    validateTokenizedNativeLengths(
+      templateStyleItems,
+      findings,
+      rel(root, templatePath),
+      '$.content/header/footer/global_classes',
+      declaredVariables
+    );
+    validateTokenizedNativeColors(
+      templateStyleItems,
+      findings,
+      rel(root, templatePath),
+      '$.content/header/footer/global_classes'
+    );
+    validateCssVariableFallbacks(
+      templateStyleItems,
+      findings,
+      rel(root, templatePath),
+      '$.content/header/footer/global_classes'
+    );
+    validateProjectVariableFrameworkProof(
+      root,
+      templateData,
+      templateStyleItems,
+      findings,
+      rel(root, templatePath)
+    );
+  }
   if (templateElements.length >= LARGE_CLIPBOARD_ELEMENT_COUNT && templateNativeControls.length < CUSTOM_CSS_NATIVE_STYLE_MIN_CONTROLS) {
     add(
       findings,

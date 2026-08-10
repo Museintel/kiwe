@@ -11,6 +11,7 @@ const CANONICAL_VIEWPORTS = [
 	{ id: 'desktop-1280', width: 1280, height: 900, theme: 'light', state: 'default' },
 	{ id: 'tablet-991', width: 991, height: 900, theme: 'light', state: 'default' },
 	{ id: 'tablet-768', width: 768, height: 900, theme: 'light', state: 'default' },
+	{ id: 'mobile-landscape-767', width: 767, height: 900, theme: 'light', state: 'default' },
 	{ id: 'mobile-478', width: 478, height: 900, theme: 'light', state: 'default' },
 	{ id: 'mobile-375', width: 375, height: 812, theme: 'light', state: 'default' },
 	{ id: 'mobile-320', width: 320, height: 720, theme: 'light', state: 'default' }

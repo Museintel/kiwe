@@ -5,7 +5,7 @@ const { classifyCapture } = require('./classify-component.cjs');
 
 const NATIVE_STYLE_PROPERTIES = new Set([
 	'align-content', 'align-items', 'align-self', 'background-color', 'background-image', 'border-color', 'border-radius', 'border-style', 'border-width',
-	'color', 'column-gap', 'cursor', 'font-family', 'font-size', 'font-style', 'font-weight', 'height',
+	'box-shadow', 'color', 'column-gap', 'cursor', 'font-family', 'font-size', 'font-style', 'font-weight', 'height',
 	'filter', 'flex-grow', 'flex-shrink', 'grid-auto-columns', 'grid-auto-flow', 'grid-auto-rows', 'grid-column', 'justify-content', 'letter-spacing', 'line-height', 'margin-bottom', 'margin-left', 'margin-right',
 	'margin-top', 'max-height', 'max-width', 'min-height', 'min-width', 'object-fit', 'object-position', 'opacity', 'overflow', 'padding-bottom',
 	'padding-left', 'padding-right', 'padding-top', 'row-gap', 'text-align', 'text-decoration',
@@ -64,6 +64,40 @@ function authoredDeclarations(node, observation) {
 	return declarations;
 }
 
+function splitVariableArguments(value) {
+	let depth = 0;
+	for (let index = 0; index < value.length; index += 1) {
+		if (value[index] === '(') depth += 1;
+		else if (value[index] === ')') depth -= 1;
+		else if (value[index] === ',' && depth === 0) return [value.slice(0, index).trim(), value.slice(index + 1).trim()];
+	}
+	return [value.trim(), null];
+}
+
+function resolveCssVariables(value, customProperties = {}, stack = new Set()) {
+	if (typeof value !== 'string' || !value.includes('var(')) return value;
+	let output = value;
+	for (let pass = 0; pass < 32 && output.includes('var('); pass += 1) {
+		const start = output.indexOf('var(');
+		let depth = 1;
+		let end = start + 4;
+		for (; end < output.length && depth; end += 1) {
+			if (output[end] === '(') depth += 1;
+			else if (output[end] === ')') depth -= 1;
+		}
+		if (depth) break;
+		const expression = output.slice(start + 4, end - 1);
+		const [name, fallback] = splitVariableArguments(expression);
+		let replacement = Object.prototype.hasOwnProperty.call(customProperties, name) ? customProperties[name] : fallback;
+		if (replacement === null || replacement === undefined || stack.has(name)) break;
+		const nextStack = new Set(stack);
+		nextStack.add(name);
+		replacement = resolveCssVariables(String(replacement).trim(), customProperties, nextStack);
+		output = `${output.slice(0, start)}${replacement}${output.slice(end)}`;
+	}
+	return output;
+}
+
 function normalizeRootRelativeValue(value, rootFontSize) {
 	if (typeof value !== 'string' || !/rem\b/i.test(value) || !Number.isFinite(rootFontSize) || rootFontSize <= 0) return value;
 	return value.replace(/(-?(?:\d+(?:\.\d+)?|\.\d+))rem\b/gi, (match, number) => {
@@ -93,7 +127,7 @@ function normalizeStyle(node, observation, geometryNode, rootFontSize = 16) {
 	const residuals = [];
 	const enhancedEvidence = Array.isArray(observation.matchedRules);
 	const declarations = authoredDeclarations(node, observation);
-	const normalizeValue = (value) => normalizeRootRelativeValue(value, rootFontSize);
+	const normalizeValue = (value) => normalizeRootRelativeValue(resolveCssVariables(value, observation.customProperties || {}), rootFontSize);
 	if (enhancedEvidence) {
 		for (const property of NATIVE_STYLE_PROPERTIES) {
 			if (['width', 'max-width', 'height', 'min-height'].includes(property)) continue;
@@ -107,6 +141,13 @@ function normalizeStyle(node, observation, geometryNode, rootFontSize = 16) {
 		if (authoredValue(node, observation, 'background')) {
 			if (!native['background-color'] && observation.computed['background-color']) native['background-color'] = observation.computed['background-color'];
 			if (!native['background-image'] && observation.computed['background-image'] && observation.computed['background-image'] !== 'none') native['background-image'] = observation.computed['background-image'];
+		}
+		// CSSOM retains an authored border shorthand without exposing authored
+		// longhands. Bricks' native border control needs the resolved longhands.
+		if (authoredValue(node, observation, 'border')) {
+			for (const property of ['border-width', 'border-style', 'border-color']) {
+				if (!native[property] && observation.computed[property]) native[property] = normalizeValue(observation.computed[property]);
+			}
 		}
 		// Bricks exposes a native overflow control, while authored horizontal
 		// scrollers commonly declare only overflow-x. Preserve their effective
@@ -331,4 +372,4 @@ function normalizeCapture(capture) {
 	return { pageIr, behaviorIr, assetManifest, geometry };
 }
 
-module.exports = { assertContract, deterministicId, normalizeCapture };
+module.exports = { assertContract, deterministicId, normalizeCapture, resolveCssVariables };

@@ -24,6 +24,46 @@ function box(value) {
 	return { top: normalized, right: normalized, bottom: normalized, left: normalized };
 }
 
+function splitWhitespaceTopLevel(value) {
+	const parts = [];
+	let depth = 0;
+	let start = null;
+	for (let index = 0; index <= value.length; index += 1) {
+		const character = value[index];
+		if (character === '(') depth += 1;
+		else if (character === ')') depth -= 1;
+		if (index === value.length || (/\s/.test(character) && depth === 0)) {
+			if (start !== null) parts.push(value.slice(start, index));
+			start = null;
+		} else if (start === null) start = index;
+	}
+	return parts.filter(Boolean);
+}
+
+function cornerBox(value) {
+	const values = splitWhitespaceTopLevel(String(value || '').trim());
+	if (!values.length || values.length > 4 || values.some((item) => item.includes('/'))) return box(value);
+	const [top, right = top, bottom = top, left = right] = values;
+	return { top, right, bottom, left };
+}
+
+function parseBoxShadow(value) {
+	const shadows = splitTopLevel(String(value || ''));
+	if (shadows.length !== 1 || !shadows[0] || shadows[0] === 'none') return null;
+	const tokens = splitWhitespaceTopLevel(shadows[0]);
+	const insetIndex = tokens.findIndex((token) => token.toLowerCase() === 'inset');
+	const inset = insetIndex !== -1;
+	if (inset) tokens.splice(insetIndex, 1);
+	const colorIndex = tokens.findIndex((token) => /^(?:#[a-f0-9]{3,8}|(?:rgb|hsl)a?\(|[a-z]+$)/i.test(token) && !/^(?:calc|min|max|clamp)$/i.test(token));
+	const shadowColor = colorIndex === -1 ? null : tokens.splice(colorIndex, 1)[0];
+	if (tokens.length < 2 || tokens.length > 4) return null;
+	const [offsetX, offsetY, blur = 0, spread = 0] = tokens;
+	const shadow = { values: { offsetX, offsetY, blur, spread } };
+	if (inset) shadow.inset = true;
+	if (shadowColor) shadow.color = color(shadowColor);
+	return shadow;
+}
+
 function splitTopLevel(value, separator = ',') {
 	const parts = [];
 	let depth = 0;
@@ -167,6 +207,7 @@ function mapStyle(node) {
 	set('_transform', parseTransform(source.transform));
 	set('_cssFilters', parseFilters(source.filter));
 	set('_opacity', source.opacity);
+	set('_boxShadow', parseBoxShadow(source['box-shadow']));
 	set('_objectFit', source['object-fit']);
 	set('_objectPosition', source['object-position']);
 
@@ -197,7 +238,7 @@ function mapStyle(node) {
 	if (source['border-width'] && source['border-width'] !== '0px') border.width = box(source['border-width']);
 	if (source['border-style'] && source['border-style'] !== 'none') border.style = source['border-style'];
 	if (source['border-color'] && source['border-color'] !== 'transparent') border.color = color(source['border-color']);
-	if (source['border-radius'] && source['border-radius'] !== '0px') border.radius = box(source['border-radius']);
+	if (source['border-radius'] && source['border-radius'] !== '0px') border.radius = cornerBox(source['border-radius']);
 	if (Object.keys(border).length) set('_border', border);
 
 	return { settings, owned, frameworkOwned };
@@ -207,9 +248,27 @@ function responsiveSettings(node, baseSettings) {
 	const layoutStates = (node.layout.responsive || [])
 		.filter((state) => state.breakpoint)
 		.sort((left, right) => right.viewportWidth - left.viewportWidth);
-	const representative = new Map();
-	for (const state of layoutStates) if (!representative.has(state.breakpoint)) representative.set(state.breakpoint, state);
 	const styleByViewport = new Map((node.style.responsive || []).map((state) => [state.viewportId, state.native]));
+	const statesByBreakpoint = new Map();
+	for (const state of layoutStates) {
+		if (!statesByBreakpoint.has(state.breakpoint)) statesByBreakpoint.set(state.breakpoint, []);
+		statesByBreakpoint.get(state.breakpoint).push(state);
+	}
+	const representative = new Map();
+	for (const [breakpoint, states] of statesByBreakpoint) {
+		const signatures = new Map();
+		for (const state of states) {
+			const signature = JSON.stringify({
+				display: state.display, direction: state.direction, wrap: state.wrap, gap: state.gap,
+				style: styleByViewport.get(state.viewportId) || {}
+			});
+			if (!signatures.has(signature)) signatures.set(signature, []);
+			signatures.get(signature).push(state);
+		}
+		const winner = [...signatures.values()]
+			.sort((left, right) => right.length - left.length || Math.min(...left.map((state) => state.viewportWidth)) - Math.min(...right.map((state) => state.viewportWidth)))[0];
+		representative.set(breakpoint, [...winner].sort((left, right) => left.viewportWidth - right.viewportWidth)[0]);
+	}
 	const settings = {};
 	const owned = [];
 	const frameworkOwned = [];
@@ -431,7 +490,7 @@ function compileCustomCss(residuals, elements, variables = { tokenFor: (value) =
 	return { css: rules.join('\n'), declarations: [...declarationsByElement.values()].reduce((count, items) => count + items.length, 0) };
 }
 
-function compileBricksPlan(pageIr, capabilityProfile) {
+function compileBricksPlan(pageIr, capabilityProfile, options = {}) {
 	assertContract('pageIr', pageIr);
 	if (!capabilityProfile || capabilityProfile.schema !== 'seam.bricks-capability-profile.v1') throw new Error('A SEAM Bricks capability profile is required.');
 	const available = new Map(capabilityProfile.elements.map((element) => [element.name, element]));
@@ -446,7 +505,13 @@ function compileBricksPlan(pageIr, capabilityProfile) {
 	const children = new Map(activeNodes.map((node) => [node.id, []]));
 	for (const node of activeNodes) if (node.parentId && children.has(node.parentId)) children.get(node.parentId).push(ids.get(node.id));
 	const residuals = [...pageIr.residuals];
-	const variables = createNativeVariableRegistry(pageIr);
+	// Raw Convert output must survive the standard Bricks template importer,
+	// which does not import globalVariables. Framework tokenization is an
+	// explicit later stage and may opt in; literals are self-contained by default.
+	const variableMode = options.variableMode || 'literal';
+	const variables = variableMode === 'framework'
+		? createNativeVariableRegistry(pageIr)
+		: { records: [], tokenFor: (value) => value, tokenize: (value) => value };
 	const adapterReviewNodeIds = new Set(pageIr.nodes.filter((node) => node.component.adapter === 'review').map((node) => node.id));
 	let ownedControlCount = 0;
 
@@ -526,4 +591,4 @@ function compileBricksPlan(pageIr, capabilityProfile) {
 	return plan;
 }
 
-module.exports = { compileBricksPlan, compileCustomCss, createNativeVariableRegistry, cssFunctions, mapStyle, parseFilters, parseGradient, parseTransform, responsiveSettings, shortId, splitTopLevel };
+module.exports = { compileBricksPlan, compileCustomCss, cornerBox, createNativeVariableRegistry, cssFunctions, mapStyle, parseBoxShadow, parseFilters, parseGradient, parseTransform, responsiveSettings, shortId, splitTopLevel, splitWhitespaceTopLevel };

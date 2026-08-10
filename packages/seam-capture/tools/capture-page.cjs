@@ -18,7 +18,7 @@ function parseArguments(argv) {
 async function main() {
 	const { positional: [input, output], flags, widths } = parseArguments(process.argv.slice(2));
 	if (!input || !output) {
-		console.error('Usage: node capture-page.cjs <html-file|url> <output-directory> [--viewports 320,478,768,991,1280,1440] [--allow-remote-assets] [--no-scripts] [--proof-mode]');
+		console.error('Usage: node capture-page.cjs <html-file|url> <output-directory> [--viewports 320,478,767,768,991,1280,1440] [--allow-remote-assets] [--no-scripts] [--proof-mode]');
 		process.exit(2);
 	}
 	const viewports = widths ? widths.map((width) => {

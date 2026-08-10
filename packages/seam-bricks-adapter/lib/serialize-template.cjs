@@ -25,6 +25,7 @@ function serializeBricksTemplate(plan, title = 'SEAM compiled page') {
 		pageSettings: plan.customCss ? { customCss: plan.customCss } : {},
 		kiwe: {
 			schema: 'kiwe.bricks-template.v1',
+			renderMode: plan.variables.length ? 'framework-tokenized' : 'raw-self-contained',
 			target: { importMethod: 'kiwe-staging-executor', bricksVersion: plan.target.bricksVersion },
 			provenance: { planSchema: plan.schema, sourceHash: plan.sourceHash, planHash },
 			frameworkProfile: {

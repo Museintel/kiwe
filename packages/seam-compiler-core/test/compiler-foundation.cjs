@@ -10,7 +10,8 @@ const { compileAiDirectJson } = require('../lib/ai-direct-json.cjs');
 const { classifyComponent } = require('../lib/classify-component.cjs');
 const { compileCaptureFile } = require('../tools/compile-capture.cjs');
 const { serializeBricksTemplate } = require('../../seam-bricks-adapter/lib/serialize-template.cjs');
-const { createNativeVariableRegistry } = require('../../seam-bricks-adapter/lib/compile-plan.cjs');
+const { compileBricksPlan, cornerBox, createNativeVariableRegistry, parseBoxShadow } = require('../../seam-bricks-adapter/lib/compile-plan.cjs');
+const { normalizeCapture, resolveCssVariables } = require('../lib/normalize-capture.cjs');
 const { youtubeId, vimeoId } = require('../../seam-bricks-adapter/lib/component-adapters.cjs');
 const { extractCapabilities } = require('../../seam-bricks-adapter/tools/extract-bricks-capabilities.cjs');
 const { buildAssetImportPlan, buildBindingPlan, buildDeploymentPlan, sanitizeSiteGraph } = require('../lib/sitegraph-deployment.cjs');
@@ -95,6 +96,31 @@ try {
 		assert.ok(aqua.dark);
 		assert.notEqual(aqua.dark.toLowerCase(), aqua.value.toLowerCase());
 		assert.equal(registry.records.find((variable) => variable.name === 'appsite-foo').dark, undefined);
+	});
+
+	check('raw Convert is self-contained while Framework tokenization remains opt-in', () => {
+		const capture = JSON.parse(fs.readFileSync(path.join(root, 'packages/seam-compiler-core/fixtures/landing-hero/capture.json'), 'utf8'));
+		const pageIr = normalizeCapture(capture).pageIr;
+		pageIr.variables = [{ name: '--brand', value: '#123456' }];
+		pageIr.nodes[0].style.native.width = '20px';
+		const rawPlan = compileBricksPlan(pageIr, profile);
+		const frameworkPlan = compileBricksPlan(pageIr, profile, { variableMode: 'framework' });
+		assert.deepEqual(rawPlan.variables, []);
+		assert.equal(rawPlan.ownership.frameworkVariables, 0);
+		assert.match(JSON.stringify(rawPlan.elements), /20px/);
+		assert.doesNotMatch(JSON.stringify(rawPlan.elements), /var\(--appsite-/);
+		assert.ok(frameworkPlan.variables.length > 0);
+		assert.match(JSON.stringify(frameworkPlan.elements), /var\(--appsite-auto-/);
+	});
+
+	check('raw Convert resolves element-scoped CSS variables and native visual controls', () => {
+		assert.equal(resolveCssVariables('1px solid var(--line)', { '--line': 'rgba(1,2,3,.2)' }), '1px solid rgba(1,2,3,.2)');
+		assert.equal(resolveCssVariables('calc(var(--space, 4px) * 2)', { '--space': '8px' }), 'calc(8px * 2)');
+		assert.deepEqual(cornerBox('6px 6px 8px 8px'), { top: '6px', right: '6px', bottom: '8px', left: '8px' });
+		assert.deepEqual(parseBoxShadow('0 20px 60px rgba(32,31,24,.08)'), {
+			values: { offsetX: '0', offsetY: '20px', blur: '60px', spread: 0 },
+			color: { raw: 'rgba(32,31,24,.08)' }
+		});
 	});
 
 	check('Framework push preserves native Bricks light and dark palettes', () => {
