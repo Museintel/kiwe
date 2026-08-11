@@ -369,8 +369,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 97311,
-      "sha256": "501b18a0f6b19575438324170140eb54db686ef3163c6e3cd1f7af337fee7e99"
+      "bytes": 97326,
+      "sha256": "b98814f8f93de961a11be04233a01c1de9914c6bd23a383a6bac097f32772a81"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,
@@ -477,8 +477,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 593619,
-      "sha256": "02ff616a84da749d7f8bc475aee8be66e488834e41a58dbb4ac31b620ce38fbb"
+      "bytes": 594300,
+      "sha256": "5b69dc19ad65f7f90571e0ddbc37477185f73bd536b59490fb1d0b3e68a1a235"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -629,12 +629,12 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 57688,
-      "sha256": "7947ab8dd7e1efb5ba6b34ddb44bf74d4f835663501e7ceb2bea68199a644e5b"
+      "bytes": 57928,
+      "sha256": "98b2d24cd14f9a2822cd68023229dd6de5ab4b7f7aeb005acec7da0c1da2cd16"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
-      "bytes": 17071,
-      "sha256": "7eb8fb97e62cc295e6cb9ce342ec7ae2671528d1610035fab74fe710629409a0"
+      "bytes": 17309,
+      "sha256": "9897a6a48f15a92edfc85b1df9aa855404a82b812eda42cf6d9416f0cb398eb6"
     },
     "includes/Rest/AI_Access_Controller.php": {
       "bytes": 41211,
@@ -793,8 +793,8 @@
       "sha256": "ba8f795ff9d0a7523884d78557af43d21681ffe9d2577cd2b482e78877f06c8e"
     },
     "includes/Settings.php": {
-      "bytes": 22141,
-      "sha256": "086b5a96adeff40e8cc6421bce0fb20cd5dedae818c231ce3e5afe6dd7e1495e"
+      "bytes": 22180,
+      "sha256": "10b3fda4dc24a01996cc0221d155d43506cfc2320a55909950951e00f427cdf5"
     },
     "includes/Site/Site_Identity_Service.php": {
       "bytes": 9193,

@@ -152,6 +152,7 @@ final class Settings {
 					'console_logs'        => false,
 					'performance_profile' => false,
 					'asset_manifest'      => false,
+					'raw_convert_test_mode' => false,
 				],
 				'protected_flow'      => [
 					'rail_enabled' => false,

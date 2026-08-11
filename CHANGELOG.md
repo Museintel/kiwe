@@ -4,6 +4,9 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 
 ## Unreleased
 
+- Added an explicit Raw Convert Test Mode in Kiwe Developer that suppresses public AppShell assets and Surface markup while leaving WordPress and native Bricks page content active for uncontaminated source-to-output visual acceptance.
+- Kept the mode independent from diagnostic logging so a test site can isolate conversion output without enabling frontend debug data or console traces.
+
 ## 7.00 - 2026-08-09
 
 - Made compiler-batch ownership evidence-based after live 6.99 inventory proved that ordinary five-letter Seam utility segments such as `seam-align-*` can resemble generated hashes. A namespace is now registered only through explicit compiler class metadata or class-ID references from an active Bricks template tagged `SEAM Compiler`; name shape alone can never authorize deletion or exclude Framework ownership.

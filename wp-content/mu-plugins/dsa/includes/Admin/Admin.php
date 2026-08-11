@@ -6263,7 +6263,9 @@ final class Admin {
 					<label><input type="checkbox" name="diagnostics[frontend_debug]" value="1" <?php checked( ! empty( $diagnostics['frontend_debug'] ) ); ?>> <?php esc_html_e( 'Expose debug state to the Surface runtime', 'dsa' ); ?></label><br>
 					<label><input type="checkbox" name="diagnostics[console_logs]" value="1" <?php checked( ! empty( $diagnostics['console_logs'] ) ); ?>> <?php esc_html_e( 'Write Kiwe Surface logs to the browser console', 'dsa' ); ?></label><br>
 					<label><input type="checkbox" name="diagnostics[performance_profile]" value="1" <?php checked( ! empty( $diagnostics['performance_profile'] ) ); ?>> <?php esc_html_e( 'Write observe-only runtime performance profiles to the debug log', 'dsa' ); ?></label><br>
-					<label><input type="checkbox" name="diagnostics[asset_manifest]" value="1" <?php checked( ! empty( $diagnostics['asset_manifest'] ) ); ?>> <?php esc_html_e( 'Write observe-only asset ownership manifests to the debug log', 'dsa' ); ?></label>
+					<label><input type="checkbox" name="diagnostics[asset_manifest]" value="1" <?php checked( ! empty( $diagnostics['asset_manifest'] ) ); ?>> <?php esc_html_e( 'Write observe-only asset ownership manifests to the debug log', 'dsa' ); ?></label><br>
+					<label><input type="checkbox" name="diagnostics[raw_convert_test_mode]" value="1" <?php checked( ! empty( $diagnostics['raw_convert_test_mode'] ) ); ?>> <?php esc_html_e( 'Raw Convert Test Mode: do not load or render Kiwe AppShell chrome on the public frontend', 'dsa' ); ?></label>
+					<p class="description"><?php esc_html_e( 'Use Raw Convert Test Mode only for source-to-Bricks visual acceptance. It leaves WordPress and Bricks page content active while removing Kiwe Surface assets and dock markup from the measurement environment.', 'dsa' ); ?></p>
 					<p class="description"><?php esc_html_e( 'Browser console traces only run when diagnostics, frontend debug, and console logs are enabled here. Keep them off on production sites unless actively investigating.', 'dsa' ); ?></p>
 					<?php submit_button( __( 'Save diagnostics', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
@@ -8528,6 +8530,7 @@ final class Admin {
 				'console_logs'        => false,
 				'performance_profile' => false,
 				'asset_manifest'      => false,
+				'raw_convert_test_mode' => false,
 			]
 		);
 
@@ -8541,6 +8544,7 @@ final class Admin {
 		$next['console_logs']   = $next['frontend_debug'] && ! empty( $input['console_logs'] );
 		$next['performance_profile'] = $next['enabled'] && ! empty( $input['performance_profile'] );
 		$next['asset_manifest']      = $next['enabled'] && ! empty( $input['asset_manifest'] );
+		$next['raw_convert_test_mode'] = ! empty( $input['raw_convert_test_mode'] );
 		unset( $next['asset_build_pilot'], $next['asset_build_apply'], $next['asset_build_hints'] );
 
 		return $next;
