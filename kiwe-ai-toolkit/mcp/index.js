@@ -2,7 +2,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getIdeationContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 const server = new Server(
   { name: 'kiwe', version: '0.1.0' },
@@ -45,6 +45,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'kiwe_get_workflow',
       description: 'Return the Kiwe phased AI workflow and slash-command vocabulary. Use this before broad creative work so the model does one small phase at a time.',
+      inputSchema: { type: 'object', properties: {} }
+    },
+    {
+      name: 'kiwe_get_ideation_context',
+      description: 'Return the adaptive /ideate questionnaire and homepage HTML/CSS/JS output contract, including the optional headless Seam branch and Geometry fallback ladder.',
       inputSchema: { type: 'object', properties: {} }
     },
     {
@@ -278,6 +283,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     case 'kiwe_get_workflow':
       result = getWorkflowContext();
+      break;
+    case 'kiwe_get_ideation_context':
+      result = getIdeationContext();
       break;
     case 'kiwe_get_command_manifest':
       result = getCommandManifest();

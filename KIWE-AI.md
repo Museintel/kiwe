@@ -66,7 +66,7 @@ Preferred path for serious work:
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 ```
 
-Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/document`, `/ideate /webdraft`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /frameworkprofile`, `/audit /frameworkprofile`, `/create /brickstheme`, `/audit /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, `/audit /accessibility`, or `/fix /accessibility`.
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/document`, `/ideate`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /frameworkprofile`, `/audit /frameworkprofile`, `/create /brickstheme`, `/audit /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, `/audit /accessibility`, or `/fix /accessibility`.
 
 Documentation is opt-in for every lane. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact file(s) for that command. Do not add README files, notes, audit reports, duplicate previews, ZIPs, or polite explanation files by default.
 
@@ -90,13 +90,14 @@ node kiwe-ai-toolkit/bin/kiwe.js diagnose --command "/convert /bricks" --artifac
 
 If the diagnostic returns `stop: true`, do not continue. Report the diagnostic to the human. This prevents non-existent commands, wrong-lane requests, missing artifacts, missing Site Graph context, and no-op preview requests from turning into token-wasting generation loops.
 
-The workflow intentionally separates creativity from Kiwe contract compliance. A pure creative draft may happen first without Kiwe/Seam/DSA constraints; later commands rebuild, audit, package, and bind it.
+The workflow intentionally separates creativity from conversion and compliance. `/ideate` gathers the brief and creates one original homepage; it is framework-neutral by default and may optionally add only headless Seam context and Geometry fallback without influencing the design. Later commands rebuild or migrate, audit, package, and bind the approved result.
 
 Any phase command may include `/usecompanion`, for example `/rebuild /seamframework /usecompanion` or `/audit /dsatheme /usecompanion`. This is optional and non-blocking. If the human supplies `KIWE_REST_BASE` and `KIWE_AI_KEY`, make one bounded call to Kiwe Companion for compact phase cards or Audit Companion findings. If Companion is unavailable, disabled, slow, rate-limited, over budget, or inaccessible, continue with the same command without `/usecompanion` and report the fallback. Do not use `/usecompanion` to make Companion co-author the whole output, dump full plugin files, or spend native model tokens; it is a deterministic contract oracle with hashes, rule IDs, memory fingerprints, and `mustFix` maps.
 
 If the human explicitly asks for one-shot output, read exactly one static context file after this entrypoint:
 
 - Workflow / command router: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md`
+- Ideation questionnaire and homepage output: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/ideate-lite.md`
 - Website/page only: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/website.md`
 - Kiwe DSA/AppShell theme only: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/theme.md`
 - Website/page + AppShell direction/settings, browser-short version: `https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/combined-lite.md`

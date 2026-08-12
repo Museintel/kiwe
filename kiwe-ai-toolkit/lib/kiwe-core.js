@@ -305,6 +305,14 @@ export function getWorkflowContext() {
   return context.trim() + '\n';
 }
 
+export function getIdeationContext() {
+  const context = readMaybe('contexts/ideate-lite.md');
+  if (!context) {
+    throw new Error('SeamFlow ideation context was not found.');
+  }
+  return context.trim() + '\n';
+}
+
 export function getCommandManifest() {
   const manifest = readMaybe('command-manifest.json');
   if (!manifest) {
@@ -516,7 +524,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.00',
+    contractVersion: '7.01',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -538,7 +546,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.00',
+      mustReport: 'SeamFlow contract: 7.01',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -1209,7 +1217,7 @@ const VALID_PHASE_COMMANDS = [
   '/fix /previousaudit',
   '/document',
   '/fix',
-  '/ideate /webdraft',
+  '/ideate',
   '/rebuild /seamframework',
   '/audit /seamframework',
   '/create /frameworkprofile',
@@ -2060,11 +2068,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       'For Bricks conversion, DSA theme, combined handoff, Site Graph/dynamic binding, or accessibility lanes, document only the files and assumptions already present in the supplied artifact.'
     );
   } else if (kind === 'ideate') {
-    parts.push(
-      '# Selected phase guidance',
-      '',
-      'Create a pure creative HTML/CSS/JS draft. Do not use Kiwe, DSA, Seam, Bricks, WordPress, WooCommerce, Site Graph, or AppShell constraints unless the human independently requested them. This phase optimizes for visual invention.'
-    );
+    parts.push(getIdeationContext());
   } else if (kind === 'seam-rebuild') {
     parts.push(
       '# Selected phase guidance',

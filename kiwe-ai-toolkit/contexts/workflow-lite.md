@@ -18,7 +18,7 @@ Creativity and contract compliance are different jobs.
 
 Run them as separate phases:
 
-1. Pure creative draft.
+1. `/ideate`: adaptive creative brief and one homepage draft, framework-neutral by default or optionally Seam-ready without changing the visual thesis.
 2. Seam rebuild.
 3. Seam audit.
 4. Framework profile for Kiwe > Framework import/push.
@@ -238,17 +238,18 @@ Rules:
 
 Documentation is opt-in everywhere. If `/document` is absent, produce only the canonical artifact file(s) for the selected command and do not add README files, notes, reports, duplicate previews, ZIPs, or explanation files.
 
-### `/ideate /webdraft`
+### `/ideate`
 
-Use when the human wants maximum visual creativity.
+Use when the human wants to start a new website from a guided brief. Read `contexts/ideate-lite.md`; `/ideate /webdraft`, `/creative`, and `/webdraft` remain accepted aliases.
 
-- Do not mention Kiwe, DSA, Seam, Bricks, WordPress, or WooCommerce unless the human independently asked for them.
-- Produce a pure HTML/CSS/JS website/page draft.
-- Optimize for concept, visual hierarchy, motion idea, editorial/commercial personality, and layout invention.
-- Output can be a single `index.html` with embedded CSS/JS or a simple preview folder.
-- Do not try to make it import-ready.
+- Interview adaptively in groups of no more than three questions. Collect project identity, defined website type, audience, goal, logo/brand evidence, visual direction, homepage content, and constraints.
+- If a logo is attached, inspect it before proposing a palette; do not guess unreadable brand colors.
+- Ask framework-neutral versus Seam-ready last. Framework-neutral emits no Seam/Kiwe/DSA/Bricks metadata. Seam-ready adds only headless semantic attributes, matching universal/project tokens, and real Geometry fallback math where a variable is absent.
+- Produce only one original homepage as `index.html`, `styles.css`, and `script.js`.
+- After the first draft, accept refinements through normal conversation without another Start link or command.
+- Do not create Bricks JSON, Site Graph bindings, AppShell output, Framework profiles, accessibility plans, reports, or ZIPs.
 
-This phase exists because starting with constraints can flatten creativity.
+This phase protects creativity: Seam-ready context must never become a component recipe or make different projects look alike.
 
 ### `/rebuild /seamframework`
 

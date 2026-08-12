@@ -1,7 +1,7 @@
 # SeamFlow Start
 
-Contract version: `7.00`
-Updated: `2026-08-01`
+Contract version: `7.01`
+Updated: `2026-08-12`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
 Purpose: fastest safe entrypoint for external AI, browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.00
+SeamFlow contract: 7.01
 ```
 
 Then do one of these:
@@ -42,7 +42,7 @@ Classification is read-only and allowed. Audits, fixes, conversion, creation, li
 
 Command grammar: SeamFlow commands are composable shell-like tokens, not memorized fixed prompts. Parse the whole user command into:
 
-- one primary action token, such as `/execute`, `/rebuild`, `/create`, `/convert`, `/audit`, `/fix`, `/usesitegraph`, `/apply`, `/list`, or `/document`;
+- one primary action token, such as `/ideate`, `/execute`, `/rebuild`, `/create`, `/convert`, `/audit`, `/fix`, `/usesitegraph`, `/apply`, `/list`, or `/document`;
 - one phase/target token when needed, such as `/stepbystep`, `/fullflow`, `/seamframework`, `/frameworkprofile`, `/bricks`, `/bricksconversion`, `/accessibility`, `/dsatheme`, `/combined`, `/allattached`, `/allflow`, `/previousoutput`, or `/previousaudit`;
 - zero or more modifier tokens, such as `/audit`, `/fix`, `/eachstep`, `/atend`, `/report`, `/usecompanion`, `/nonai`, `/replacepreview`, or `/nopreviewdata`.
 
@@ -95,6 +95,7 @@ Start:              https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-S
 Machine entry:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json
 Command manifest:   https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json
 Workflow:           https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
+Ideation:           https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/ideate-lite.md
 Seam attributes:    https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/seam-attributes-lite.md
 Bricks conversion:  https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/bricks-conversion-lite.md
 Accessibility:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/accessibility-lite.md
@@ -108,6 +109,12 @@ Seam validator:     https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-a
 Seam compiler:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/compile-seamframework.cjs
 Output audit:       https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/tools/audit-output.cjs
 ```
+
+## `/ideate` — creativity-first homepage intake
+
+When the human gives `/ideate`, read only the Ideation context above. Ask a short adaptive questionnaire covering project identity, defined website type, audience, goal, logo/brand evidence, art direction, homepage content, and constraints. Ask framework-neutral versus Seam-ready last, then create only `index.html`, `styles.css`, and `script.js` for the first homepage.
+
+Seam-ready remains headless: it may add proven canonical attributes, matching universal tokens, project tokens, and real Geometry Engine clamp fallback when a suitable variable does not exist, but it must not influence the creative visual thesis. Framework-neutral emits no Seam/Kiwe/DSA/Bricks metadata. After the first draft, normal conversation handles refinements; do not require another Start link or slash command.
 
 ## Plugin REST SeamFlow route
 
@@ -163,7 +170,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.00
+SeamFlow contract: 7.01
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -285,7 +292,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.00
+SeamFlow contract: 7.01
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -355,7 +362,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.00
+SeamFlow contract: 7.01
 Command:
 Artifact classification:
 Files returned:

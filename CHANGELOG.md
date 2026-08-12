@@ -7,6 +7,12 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Added an explicit Raw Convert Test Mode in Kiwe Developer that suppresses public AppShell assets and Surface markup while leaving WordPress and native Bricks page content active for uncontaminated source-to-output visual acceptance.
 - Kept the mode independent from diagnostic logging so a test site can isolate conversion output without enabling frontend debug data or console traces.
 
+## 7.01 - 2026-08-12
+
+- Added `/ideate` as a first-class adaptive Start-link workflow: it collects project identity, site type, audience, goal, logo/brand evidence, art direction, homepage content, and constraints before generating one HTML/CSS/JS homepage.
+- Added a final explicit framework choice. Framework-neutral output remains free of Seam/Kiwe metadata; Seam-ready output adds only headless semantic context, exact universal/project tokens, and Geometry Engine fluid fallback without influencing the creative visual thesis.
+- Added normal conversational refinement after the initial draft plus matching CLI, MCP, machine-manifest, and Kiwe Companion routes.
+
 ## 7.00 - 2026-08-09
 
 - Made compiler-batch ownership evidence-based after live 6.99 inventory proved that ordinary five-letter Seam utility segments such as `seam-align-*` can resemble generated hashes. A namespace is now registered only through explicit compiler class metadata or class-ID references from an active Bricks template tagged `SEAM Compiler`; name shape alone can never authorize deletion or exclude Framework ownership.

@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import { calculateFluidClamp, createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getIdeationContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
 
 function print(value) {
   if (typeof value === 'string') {
@@ -24,6 +24,7 @@ Commands:
   kiwe seamflow [--command "/audit /accessibility"] [--artifact-summary text] [--desired-outcome text] [--use-companion]
   kiwe start [auto|website|theme|combined] --brief text [--name name]
   kiwe workflow
+  kiwe ideate-context
   kiwe diagnose --command "/convert /bricks" [--brief text] [--artifact-summary text] [--site-graph-summary text]
   kiwe plan-flow [--command "/audit /accessibility"] [--artifact-summary text] [--desired-outcome text] [--use-companion]  # compatibility alias
   kiwe route --command "/rebuild /seamframework" [--brief text] [--artifact-summary text] [--site-graph-summary text] [--use-companion]
@@ -71,6 +72,8 @@ try {
     print(startProject({ mode, name, brief }));
   } else if (command === 'workflow') {
     print(getWorkflowContext());
+  } else if (command === 'ideate-context') {
+    print(getIdeationContext());
   } else if (command === 'diagnose') {
     const commandIndex = args.indexOf('--command');
     const briefIndex = args.indexOf('--brief');

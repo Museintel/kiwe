@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.00",
+    "contractVersion": "7.01",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -48,6 +48,7 @@
       "If a required artifact is missing, stop with a compact diagnostic instead of guessing."
     ],
     "documentation": "Documentation is opt-in. Do not create README, NOTES, reports, duplicate previews, ZIP files, or explanation documents unless /document is present or the human explicitly asks.",
+    "ideation": "For /ideate, ask the adaptive intake from ideate-lite.md, analyze an attached logo before proposing its palette, ask framework-neutral versus headless Seam last, create only the first homepage HTML/CSS/JS, and continue small refinements through normal conversation without another command.",
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
     "firstInteractionRoutes": "When files are supplied without a command, always show route choices after the recommended next command: Route A Browser/raw, Route B Git/Node, Route C Plugin REST, Route D Plugin REST + Companion. For raw HTML/CSS/JS drafts with no Seam/Bricks root, recommend /execute /stepbystep /audit /fix /eachstep /report as the best default and explain that /rebuild /seamframework is the first internal phase. Ask for API credentials only for Route C/D or /usecompanion/plugin proof.",
@@ -62,7 +63,7 @@
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources."
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.00", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.01", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -91,6 +92,7 @@
   },
   "contexts": {
     "workflow": "kiwe-ai-toolkit/contexts/workflow-lite.md",
+    "ideation": "kiwe-ai-toolkit/contexts/ideate-lite.md",
     "seamAttributes": "kiwe-ai-toolkit/contexts/seam-attributes-lite.md",
     "bricksConversion": "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md",
     "accessibility": "kiwe-ai-toolkit/contexts/accessibility-lite.md",
@@ -100,7 +102,7 @@
   },
   "commandGrammar": {
     "rule": "Tokens are independent and composable. Do not require a memorized full phrase when a command line is unambiguous.",
-    "primaryActions": ["/execute", "/rebuild", "/create", "/convert", "/audit", "/fix", "/usesitegraph", "/apply", "/list", "/document"],
+    "primaryActions": ["/ideate", "/execute", "/rebuild", "/create", "/convert", "/audit", "/fix", "/usesitegraph", "/apply", "/list", "/document"],
     "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit"],
     "modifiers": ["/audit", "/fix", "/eachstep", "/atend", "/report", "/usecompanion", "/nonai", "/replacepreview", "/nopreviewdata"],
     "examples": {
@@ -111,6 +113,16 @@
     "invalid": "Unknown tokens, contradictory cadence tokens, or lane-invalid combinations must stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE."
   },
   "commands": {
+    "/ideate": {
+      "phase": "ideate",
+      "aliases": ["/ideate /webdraft", "/creative", "/webdraft"],
+      "read": ["kiwe-ai-toolkit/contexts/ideate-lite.md"],
+      "requires": ["adaptive answers to the project, site-type, audience, goal, brand, art-direction, content, constraints, and final framework-choice questions"],
+      "output": ["one original homepage as index.html, styles.css, and script.js"],
+      "frameworkChoices": ["framework-neutral HTML/CSS/JS", "Seam-ready headless HTML/CSS/JS", "preserve a named existing framework through the framework-neutral branch"],
+      "forbidden": ["Bricks JSON", "Site Graph binding", "AppShell or DSA output", "post-conversion Seam migration", "framework-driven visual homogenization", "more than three questions at once", "restarting the interview during normal refinements"],
+      "finalResponse": "Interview adaptively, ask framework-neutral versus Seam-ready last, generate one homepage, then accept subsequent refinements through normal conversation without another slash command."
+    },
     "/list": {
       "phase": "discover",
       "read": ["KIWE-AI.md", "kiwe-ai-toolkit/command-manifest.json"],

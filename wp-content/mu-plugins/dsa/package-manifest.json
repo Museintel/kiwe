@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "7.00",
+  "version": "7.01",
   "algorithm": "sha256",
   "file_count": 297,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "fafab206501b5e31a81e10de324334a226a7020220362baff7d34120d4aea121"
+      "sha256": "456e9fa57e98a31723d9e20a36e5fb924ef6f879298753cc77db85bb7023f1e9"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -337,8 +337,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 177259,
-      "sha256": "c28fc85f3c0a4afc44e246d4bdfe2dcfb2f9d4e187a63e55619e39653269a09b"
+      "bytes": 177534,
+      "sha256": "d4799815d14c444484674240f9c5ab2b1f4c8db21a0043d86b08156f8ff11392"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -1078,7 +1078,7 @@
     },
     "ui-system/README.md": {
       "bytes": 73747,
-      "sha256": "073f952b10e5c9230c945b547aa88fcddc49ca1854e2124a17e0f1af871c003b"
+      "sha256": "8fcba4f76de66ecc274d6b05643a9b208a5e2aeb4e69d5b1a879daa3dfa77482"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

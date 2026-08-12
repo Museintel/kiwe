@@ -765,9 +765,9 @@ final class AI_Companion_Service {
 
 		$cards = [
 			'ideate' => [
-				'id'    => 'phase-ideate-no-kiwe-yet',
-				'title' => 'Pure creative draft phase',
-				'body'  => 'Do not bring in Kiwe, Seam, DSA, Bricks, WordPress, or WooCommerce unless the human independently requested them. This phase protects originality before contracts are applied.',
+				'id'    => 'phase-ideate-adaptive-intake',
+				'title' => 'Interview first, then create one homepage',
+				'body'  => 'Collect project identity, defined site type, audience, goal, logo/brand evidence, visual direction, required sections, and constraints in short groups. Ask framework-neutral versus headless Seam last. Seam may add canonical semantic attributes, exact universal tokens, project tokens, and real Geometry clamp fallback without changing the visual thesis. After delivery, refine through normal conversation; do not restart the interview.',
 			],
 			'seam-rebuild' => [
 				'id'    => 'phase-seam-rebuild-preserve-visual-thesis',

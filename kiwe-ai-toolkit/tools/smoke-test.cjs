@@ -52,9 +52,11 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.00', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.01', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
+  assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
+  assert(entry.navigationTree.contexts.ideation.includes('ideate-lite.md'), 'entry missing ideation context route');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
   assert(entry.flows.executionCommands['/audit /eachstep'], 'missing /audit /eachstep in entry');
   assert(entry.flows.executionCommands['/audit /atend'], 'missing /audit /atend in entry');
@@ -86,9 +88,12 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.00', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.01', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
+  assert(manifest.commands['/ideate'], 'manifest missing /ideate');
+  assert(manifest.commandGrammar.primaryActions.includes('/ideate'), 'manifest missing /ideate primary action');
+  assert(manifest.contexts.ideation === 'kiwe-ai-toolkit/contexts/ideate-lite.md', 'manifest missing ideation context');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
   assert(manifest.commands['/audit /eachstep'], 'manifest missing /audit /eachstep');
   assert(manifest.commands['/audit /atend'], 'manifest missing /audit /atend');
@@ -113,8 +118,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.00', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.00', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.01', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.01', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -129,6 +134,8 @@ function assert(condition, message) {
   assert(plan.auditClosure.requiredAudits.includes('/audit /accessibility'), 'plan missing accessibility closure audit');
 
   const bad = m.diagnoseCommand({ command: '/buid /preview /brickstheme' });
+  const ideate = m.diagnoseCommand({ command: '/ideate' });
+  const ideateRoute = m.routeCommand({ command: '/ideate', brief: 'A distinct editorial portal' });
   const noop = m.diagnoseCommand({ command: '/create /preview /website', artifactSummary: 'website/bricks-paste.html exists' });
   const missingProfile = m.diagnoseCommand({ command: '/convert /bricks', artifactSummary: 'website/bricks-paste.html exists' });
   const ok = m.diagnoseCommand({ command: '/convert /bricks', artifactSummary: 'website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists' });
@@ -149,6 +156,11 @@ function assert(condition, message) {
   const previousOutputOk = m.diagnoseCommand({ command: '/audit /previousoutput', artifactSummary: 'immediate previous AI output files: framework/kiwe-framework-profile.json; bricks-template/home-template-upload.json' });
 
   assert(bad.stop && bad.code === 'unknown_command_token', 'bad typo diagnostic failed');
+  assert(!ideate.stop && ideate.kind === 'ideate', '/ideate diagnostic failed');
+  assert(ideateRoute.includes('Ask no more than three short questions at a time.'), '/ideate route missing adaptive interview');
+  assert(ideateRoute.includes('Should this draft be (1) framework-neutral HTML/CSS/JS, or (2) Seam-ready HTML/CSS/JS?'), '/ideate route missing final framework choice');
+  assert(ideateRoute.includes('Geometry fallback ladder'), '/ideate route missing Geometry fallback');
+  assert(ideateRoute.includes('ordinary conversation is the refinement interface'), '/ideate route missing conversational refinement');
   assert(noop.stop && noop.status === 'noop', 'preview noop diagnostic failed');
   assert(missingProfile.stop && missingProfile.code === 'bricks_convert_missing_framework_profile', 'missing framework diagnostic failed');
   assert(!ok.stop, 'valid bricks conversion diagnostic stopped');
@@ -177,6 +189,8 @@ function assert(condition, message) {
   captureNode(['bin/kiwe.js', 'seamflow', '--artifact-summary', 'homepage-appsite-v3-main-only-preview.html raw html css js'], 'tmp/seamflow-smoke.json');
   captureNode(['bin/kiwe.js', 'plan-flow', '--artifact-summary', 'native Bricks template upload JSON with title templateType header and seam classes'], 'tmp/flow-plan-smoke.json');
   captureNode(['bin/kiwe.js', 'workflow'], 'tmp/workflow-smoke.md');
+  captureNode(['bin/kiwe.js', 'ideate-context'], 'tmp/ideate-context-smoke.md');
+  captureNode(['bin/kiwe.js', 'route', '--command', '/ideate', '--brief', 'A distinct editorial portal'], 'tmp/route-ideate-smoke.md');
   captureNode(['bin/kiwe.js', 'diagnose', '--command', '/create /preview /brickstheme'], 'tmp/diagnose-invalid-preview-smoke.json');
   captureNode(['bin/kiwe.js', 'route', '--command', '/rebuild /seamframework', '--brief', 'Smoke'], 'tmp/route-smoke.md');
   captureNode(['bin/kiwe.js', 'route', '--command', '/create /frameworkprofile', '--brief', 'Smoke'], 'tmp/route-framework-profile-smoke.md');
