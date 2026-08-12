@@ -173,7 +173,9 @@ final class Site_Graph_Controller {
 		if ( ! Origin_Checker::transient_rate_limit( 'dsa_sitegraph_calibration_pair', 20 ) ) {
 			return new \WP_Error( 'dsa_calibration_rate_limited', __( 'Too many calibration attempts. Wait one minute.', 'dsa' ), [ 'status' => 429 ] );
 		}
-		$payload = $this->pairing->consume( sanitize_key( (string) $request['pair_id'] ), sanitize_text_field( (string) $request->get_header( 'x-kiwe-calibration-key' ) ), $origin );
+		$authorization = trim( (string) $request->get_header( 'authorization' ) );
+		$secret        = preg_match( '/^Bearer\s+([a-f0-9]{64})$/i', $authorization, $matches ) ? strtolower( $matches[1] ) : '';
+		$payload       = $this->pairing->consume( sanitize_key( (string) $request['pair_id'] ), $secret, $origin );
 		if ( is_wp_error( $payload ) ) {
 			$data = $payload->get_error_data();
 			$response = new WP_REST_Response(
@@ -192,7 +194,7 @@ final class Site_Graph_Controller {
 		$this->no_store( $response );
 		$response->header( 'Access-Control-Allow-Origin', $origin );
 		$response->header( 'Access-Control-Allow-Methods', 'GET, OPTIONS' );
-		$response->header( 'Access-Control-Allow-Headers', 'X-Kiwe-Calibration-Key' );
+		$response->header( 'Access-Control-Allow-Headers', 'Authorization, Content-Type' );
 		$response->header( 'Vary', 'Origin' );
 		$response->header( 'Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; sandbox" );
 	}

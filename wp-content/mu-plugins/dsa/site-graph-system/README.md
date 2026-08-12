@@ -108,7 +108,7 @@ Those actions stay in the Controlled Executor and require explicit scoped author
 
 Kiwe > AI also provides **Download compiler calibration JSON** for an offline handoff. The compiler validates the `kiwe.sitegraph-calibration.v1` authority block and fails closed unless the profile is read-only, content-free, visitor-free, secret-free and unable to mutate WordPress.
 
-An administrator can instead download a one-time pairing file. Its 256-bit capability expires after ten minutes, is deleted before the response is produced, is accepted only from the exact configured compiler origin, is rate-limited, and cannot reach any content or write route. The pairing file contains an ephemeral bearer capability and must be treated as sensitive until used or expired; it contains no permanent WordPress credential.
+An administrator can instead download a one-time pairing file. Its 256-bit capability expires after ten minutes, is deleted before the response is produced, is accepted only from the exact configured compiler origin, is rate-limited, and cannot reach any content or write route. The browser sends it through the standard `Authorization: Bearer` header so WordPress and managed-host CORS policies can approve the preflight without custom-header exceptions. The pairing file contains an ephemeral bearer capability and must be treated as sensitive until used or expired; it contains no permanent WordPress credential.
 
 ## Why this exists
 

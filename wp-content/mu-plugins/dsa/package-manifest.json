@@ -705,8 +705,8 @@
       "sha256": "3ab792238313388bfa620772223f86c08b10687b2cb799b9239706ad4b531300"
     },
     "includes/Rest/Site_Graph_Controller.php": {
-      "bytes": 7753,
-      "sha256": "1bb4f1a8300b7c74c68743e321cfa3fab8f530d04a2c9e73a989f60b517f54a7"
+      "bytes": 7892,
+      "sha256": "6327056c4c5b74754922d167f11a24d1246c5695fe17af23bdaabe47c9b01328"
     },
     "includes/Rewards/Reward_Service.php": {
       "bytes": 16408,
@@ -869,8 +869,8 @@
       "sha256": "e17e78f78d6713087227529977200f8d8fd5b734af5b953b4946a7f66f4250a1"
     },
     "site-graph-system/README.md": {
-      "bytes": 9168,
-      "sha256": "96a970858b5c653e1ef53836a6e6dde9113990c66b4b8bcffbe9bd90252f188e"
+      "bytes": 9345,
+      "sha256": "7c900be7cdc30e28dff7363228a9ac9021f146ce0ecd95686a6233abb484fbe4"
     },
     "site-graph-system/release-proof-0.6.10.md": {
       "bytes": 1084,
