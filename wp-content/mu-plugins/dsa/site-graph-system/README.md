@@ -18,6 +18,8 @@ Site Graph has two lanes:
 ```text
 GET /wp-json/dsa/v1/site-graph
 GET /wp-json/dsa/v1/site-graph/summary
+GET /wp-json/dsa/v1/site-graph/calibration
+GET /wp-json/dsa/v1/site-graph/calibration/pair/{pair_id}
 GET /wp-json/dsa/v1/site-graph/query?select=site,woocommerce.productCategories,bricks.dynamicTags
 POST /wp-json/dsa/v1/site-graph/query
 
@@ -99,6 +101,14 @@ Site Graph does not mutate:
 - cart, checkout, auth, AI, notifications, saved state, or payment flows
 
 Those actions stay in the Controlled Executor and require explicit scoped authorization.
+
+## Deterministic compiler calibration
+
+`/site-graph/calibration` is an administrator-only, GET-only profile for the standalone SEAM Compiler. It deliberately excludes posts, products, media, users, orders, visitor state, settings values, secrets and credentials. It publishes only target-environment facts: WordPress/Bricks/Kiwe versions, exact Bricks breakpoint keys and widths, existing global class and variable names, theme-style count, query-loop types and dynamic-tag names.
+
+Kiwe > AI also provides **Download compiler calibration JSON** for an offline handoff. The compiler validates the `kiwe.sitegraph-calibration.v1` authority block and fails closed unless the profile is read-only, content-free, visitor-free, secret-free and unable to mutate WordPress.
+
+An administrator can instead download a one-time pairing file. Its 256-bit capability expires after ten minutes, is deleted before the response is produced, is accepted only from the exact configured compiler origin, is rate-limited, and cannot reach any content or write route. The pairing file contains an ephemeral bearer capability and must be treated as sensitive until used or expired; it contains no permanent WordPress credential.
 
 ## Why this exists
 

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/kiwe.sitegraph-calibration-pair.v1.schema.json",
+  "title": "Kiwe SiteGraph compiler calibration pair",
+  "type": "object",
+  "required": ["schema", "endpoint", "secret", "allowedOrigin", "expiresAt", "authority"],
+  "properties": {
+    "schema": { "const": "kiwe.sitegraph-calibration-pair.v1" },
+    "endpoint": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "secret": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "allowedOrigin": { "type": "string", "format": "uri" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "authority": {
+      "type": "object",
+      "required": ["readOnly", "singleUse", "mayMutateWordPress", "contentIncluded", "containsOneTimeCapability", "permanentCredentialsIncluded"],
+      "properties": {
+        "readOnly": { "const": true }, "singleUse": { "const": true },
+        "mayMutateWordPress": { "const": false }, "contentIncluded": { "const": false },
+        "containsOneTimeCapability": { "const": true }, "permanentCredentialsIncluded": { "const": false }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

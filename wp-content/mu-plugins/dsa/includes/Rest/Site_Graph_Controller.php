@@ -5,6 +5,8 @@ namespace DSA\Rest;
 use DSA\AI\Site_Graph_Service;
 use DSA\Site_Graph\Data_Query_Service;
 use DSA\Site_Graph\Query_Service;
+use DSA\Site_Graph\Calibration_Pairing_Service;
+use DSA\Utilities\Origin_Checker;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -15,10 +17,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Site_Graph_Controller {
 	private Data_Query_Service $data_query;
 	private Query_Service $query;
+	private Calibration_Pairing_Service $pairing;
 
 	public function __construct( private Site_Graph_Service $site_graph, ?Query_Service $query = null, ?Data_Query_Service $data_query = null ) {
 		$this->query      = $query ?: new Query_Service();
 		$this->data_query = $data_query ?: new Data_Query_Service();
+		$this->pairing    = new Calibration_Pairing_Service( $site_graph );
 	}
 
 	public function register(): void {
@@ -53,6 +57,26 @@ final class Site_Graph_Controller {
 				'callback'            => [ $this, 'summary' ],
 				'permission_callback' => [ $this, 'can_manage_options' ],
 			]
+		);
+
+		register_rest_route(
+			'dsa/v1',
+			'/site-graph/calibration',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'calibration' ],
+				'permission_callback' => [ $this, 'can_manage_options' ],
+			]
+		);
+
+		register_rest_route(
+			'dsa/v1',
+			'/site-graph/calibration/pair/(?P<pair_id>[a-f0-9]{24})',
+			[
+				'methods'             => [ 'GET', 'OPTIONS' ],
+				'callback'            => [ $this, 'paired_calibration' ],
+				'permission_callback' => '__return_true',
+			],
 		);
 
 		register_rest_route(
@@ -126,6 +150,51 @@ final class Site_Graph_Controller {
 		$this->no_store( $response );
 
 		return $response;
+	}
+
+	public function calibration(): WP_REST_Response {
+		$response = new WP_REST_Response( $this->site_graph->calibration_profile(), 200 );
+		$this->no_store( $response );
+		$response->header( 'Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; sandbox" );
+		return $response;
+	}
+
+	public function paired_calibration( WP_REST_Request $request ) {
+		$origin = untrailingslashit( esc_url_raw( (string) $request->get_header( 'origin' ) ) );
+		$allowed = $this->pairing->allowed_origin();
+		if ( 'OPTIONS' === $request->get_method() ) {
+			if ( ! hash_equals( $allowed, $origin ) ) {
+				return new \WP_Error( 'dsa_calibration_origin_denied', __( 'This origin cannot pair with Kiwe.', 'dsa' ), [ 'status' => 403 ] );
+			}
+			$response = new WP_REST_Response( null, 204 );
+			$this->pairing_headers( $response, $allowed );
+			return $response;
+		}
+		if ( ! Origin_Checker::transient_rate_limit( 'dsa_sitegraph_calibration_pair', 20 ) ) {
+			return new \WP_Error( 'dsa_calibration_rate_limited', __( 'Too many calibration attempts. Wait one minute.', 'dsa' ), [ 'status' => 429 ] );
+		}
+		$payload = $this->pairing->consume( sanitize_key( (string) $request['pair_id'] ), sanitize_text_field( (string) $request->get_header( 'x-kiwe-calibration-key' ) ), $origin );
+		if ( is_wp_error( $payload ) ) {
+			$data = $payload->get_error_data();
+			$response = new WP_REST_Response(
+				[ 'code' => $payload->get_error_code(), 'message' => $payload->get_error_message() ],
+				is_array( $data ) ? (int) ( $data['status'] ?? 403 ) : 403
+			);
+			$this->pairing_headers( $response, $allowed );
+			return $response;
+		}
+		$response = new WP_REST_Response( $payload, 200 );
+		$this->pairing_headers( $response, $allowed );
+		return $response;
+	}
+
+	private function pairing_headers( WP_REST_Response $response, string $origin ): void {
+		$this->no_store( $response );
+		$response->header( 'Access-Control-Allow-Origin', $origin );
+		$response->header( 'Access-Control-Allow-Methods', 'GET, OPTIONS' );
+		$response->header( 'Access-Control-Allow-Headers', 'X-Kiwe-Calibration-Key' );
+		$response->header( 'Vary', 'Origin' );
+		$response->header( 'Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; sandbox" );
 	}
 
 	public function query( WP_REST_Request $request ): WP_REST_Response {

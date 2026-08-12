@@ -41,6 +41,7 @@ use DSA\Notifications\Notification_Preference_Service;
 use DSA\Security\Secret_Store;
 use DSA\Saved\Saved_Items_Service;
 use DSA\Search\Search_Service;
+use DSA\Site_Graph\Calibration_Pairing_Service;
 use DSA\Settings;
 use DSA\Theme\Screen_Copy_Schema;
 use DSA\Theme\Theme_Package_Service;
@@ -108,6 +109,8 @@ final class Admin {
 		add_action( 'admin_post_dsa_create_ai_access_key', [ $this, 'create_ai_access_key' ] );
 		add_action( 'admin_post_dsa_revoke_ai_access_key', [ $this, 'revoke_ai_access_key' ] );
 		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
+		add_action( 'admin_post_dsa_export_site_graph_calibration', [ $this, 'export_site_graph_calibration' ] );
+		add_action( 'admin_post_dsa_create_site_graph_calibration_pair', [ $this, 'create_site_graph_calibration_pair' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
 		add_action( 'admin_post_dsa_stage_apply_plan', [ $this, 'stage_apply_plan' ] );
@@ -1725,6 +1728,46 @@ final class Admin {
 		nocache_headers();
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
 		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'X-Robots-Tag: noindex, nofollow' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function export_site_graph_calibration(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to export SiteGraph calibration.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_export_site_graph_calibration' );
+		$payload = ( new Site_Graph_Service( $this->settings, $this->modules ) )->calibration_profile();
+		$json    = wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! $json ) {
+			wp_die( esc_html__( 'Kiwe could not encode the calibration profile.', 'dsa' ) );
+		}
+
+		$file = sprintf( 'kiwe-sitegraph-calibration-%s-%s.json', sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' ), gmdate( 'Ymd-His' ) );
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'X-Robots-Tag: noindex, nofollow' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function create_site_graph_calibration_pair(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to pair SiteGraph.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_create_site_graph_calibration_pair' );
+		$service = new Site_Graph_Service( $this->settings, $this->modules );
+		$payload = ( new Calibration_Pairing_Service( $service ) )->issue();
+		$json    = wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! $json ) wp_die( esc_html__( 'Kiwe could not create a pairing file.', 'dsa' ) );
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="kiwe-compiler-pair-' . gmdate( 'Ymd-His' ) . '.json"' );
 		header( 'X-Content-Type-Options: nosniff' );
 		header( 'X-Robots-Tag: noindex, nofollow' );
 		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -4146,6 +4189,18 @@ final class Admin {
 						</label>
 						<?php submit_button( __( 'Download Site Graph JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
 					</p>
+				</form>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:.5rem;">
+					<input type="hidden" name="action" value="dsa_export_site_graph_calibration">
+					<?php wp_nonce_field( 'dsa_export_site_graph_calibration' ); ?>
+					<?php submit_button( __( 'Download compiler calibration JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
+					<p class="description"><?php esc_html_e( 'Content-free target profile for deterministic SEAM Compiler calibration: Bricks version, exact breakpoints, collision names and supported native capabilities. It contains no credentials, posts, products, users, orders or visitor data.', 'dsa' ); ?></p>
+				</form>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:.5rem;">
+					<input type="hidden" name="action" value="dsa_create_site_graph_calibration_pair">
+					<?php wp_nonce_field( 'dsa_create_site_graph_calibration_pair' ); ?>
+					<?php submit_button( __( 'Create one-time compiler pairing file', 'dsa' ), 'primary', 'submit', false ); ?>
+					<p class="description"><?php esc_html_e( 'Expires after 10 minutes and one successful read. It grants only content-free, read-only calibration access; it cannot write WordPress or expose posts, products, users, orders, credentials, or visitor data.', 'dsa' ); ?></p>
 				</form>
 				<h3><?php esc_html_e( 'Validate AI binding plan', 'dsa' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Upload an AI-produced bricks-bindings/kiwe-bindings.json file. Kiwe validates it against this site\'s current Site Graph and shows a report only; it does not save Bricks data or apply changes.', 'dsa' ); ?></p>

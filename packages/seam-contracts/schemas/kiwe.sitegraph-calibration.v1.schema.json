@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/kiwe.sitegraph-calibration.v1.schema.json",
+  "title": "Kiwe content-free compiler calibration profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "generatedAt", "authority", "target", "bricks"],
+  "properties": {
+    "schema": { "const": "kiwe.sitegraph-calibration.v1" },
+    "generatedAt": { "type": "string" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readOnly", "mayMutateWordPress", "secretsIncluded", "contentIncluded", "visitorDataIncluded"],
+      "properties": {
+        "readOnly": { "const": true },
+        "mayMutateWordPress": { "const": false },
+        "secretsIncluded": { "const": false },
+        "contentIncluded": { "const": false },
+        "visitorDataIncluded": { "const": false }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wordpressVersion", "bricksVersion", "kiweVersion", "isMultisite"],
+      "properties": {
+        "wordpressVersion": { "type": "string", "maxLength": 32 },
+        "bricksVersion": { "type": "string", "maxLength": 32 },
+        "kiweVersion": { "type": "string", "maxLength": 32 },
+        "isMultisite": { "type": "boolean" }
+      }
+    },
+    "bricks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active", "breakpoints", "globalClassNames", "globalVariableNames", "themeStyleCount", "queryLoopTypes", "dynamicTags"],
+      "properties": {
+        "active": { "type": "boolean" },
+        "breakpoints": { "type": "array", "maxItems": 32, "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "width", "base", "widthBuilder"], "properties": { "key": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,127}$" }, "label": { "type": "string", "maxLength": 80 }, "width": { "type": "integer", "minimum": 240, "maximum": 7680 }, "base": { "type": "boolean" }, "widthBuilder": { "type": "integer", "minimum": 240, "maximum": 7680 } } } },
+        "globalClassNames": { "type": "array", "maxItems": 5000, "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,127}$" }, "uniqueItems": true },
+        "globalVariableNames": { "type": "array", "maxItems": 5000, "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,127}$" }, "uniqueItems": true },
+        "themeStyleCount": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "queryLoopTypes": { "type": "array", "maxItems": 500, "items": { "type": "string" }, "uniqueItems": true },
+        "dynamicTags": { "type": "array", "maxItems": 500, "items": { "type": "string", "maxLength": 160 }, "uniqueItems": true }
+      }
+    }
+  }
+}

@@ -67,6 +67,7 @@ final class Site_Graph_Service {
 				],
 			],
 			'bindingTargets' => $this->binding_targets(),
+			'calibration'    => $this->calibration_profile(),
 			'guardrails'     => [
 				'readOnly'             => true,
 				'noSecrets'            => true,
@@ -77,6 +78,100 @@ final class Site_Graph_Service {
 				'woocommerceOwnsMoney' => true,
 			],
 		];
+	}
+
+	/**
+	 * Return only deterministic builder-environment facts that an offline
+	 * compiler needs to target this exact Bricks installation. The profile is
+	 * deliberately content-free, secret-free, read-only, and non-authoritative.
+	 */
+	public function calibration_profile(): array {
+		$global_classes   = defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES, [] ) : get_option( 'bricks_global_classes', [] );
+		$global_variables = defined( 'BRICKS_DB_GLOBAL_VARIABLES' ) ? get_option( BRICKS_DB_GLOBAL_VARIABLES, [] ) : get_option( 'bricks_global_variables', [] );
+		$theme_styles     = defined( 'BRICKS_DB_THEME_STYLES' ) ? get_option( BRICKS_DB_THEME_STYLES, [] ) : get_option( 'bricks_theme_styles', [] );
+		$breakpoints      = class_exists( '\\Bricks\\Breakpoints' ) && is_callable( [ '\\Bricks\\Breakpoints', 'get_breakpoints' ] )
+			? \Bricks\Breakpoints::get_breakpoints()
+			: [];
+
+		return [
+			'schema'      => 'kiwe.sitegraph-calibration.v1',
+			'generatedAt' => gmdate( 'c' ),
+			'authority'   => [
+				'readOnly'            => true,
+				'mayMutateWordPress'  => false,
+				'secretsIncluded'     => false,
+				'contentIncluded'     => false,
+				'visitorDataIncluded' => false,
+			],
+			'target'      => [
+				'wordpressVersion' => sanitize_text_field( (string) get_bloginfo( 'version' ) ),
+				'bricksVersion'    => defined( 'BRICKS_VERSION' ) ? sanitize_text_field( (string) BRICKS_VERSION ) : '',
+				'kiweVersion'      => defined( 'DSA_VERSION' ) ? sanitize_text_field( (string) DSA_VERSION ) : '',
+				'isMultisite'      => is_multisite(),
+			],
+			'bricks'      => [
+				'active'            => defined( 'BRICKS_VERSION' ) || class_exists( '\\Bricks\\Setup' ),
+				'breakpoints'       => $this->calibration_breakpoints( is_array( $breakpoints ) ? $breakpoints : [] ),
+				'globalClassNames'  => $this->calibration_names( is_array( $global_classes ) ? $global_classes : [] ),
+				'globalVariableNames' => $this->calibration_names( is_array( $global_variables ) ? $global_variables : [] ),
+				'themeStyleCount'   => is_array( $theme_styles ) ? count( $theme_styles ) : 0,
+				'queryLoopTypes'    => array_values( array_unique( array_filter( array_map( static fn( $item ): string => sanitize_key( (string) ( is_array( $item ) ? ( $item['objectType'] ?? $item['name'] ?? '' ) : $item ) ), $this->bricks_query_loop_types() ) ) ) ),
+				'dynamicTags'       => $this->calibration_dynamic_tags(),
+			],
+		];
+	}
+
+	private function calibration_names( array $records ): array {
+		$names = [];
+		foreach ( $records as $record ) {
+			$name = is_array( $record ) ? (string) ( $record['name'] ?? '' ) : '';
+			$name = sanitize_html_class( $name );
+			if ( '' !== $name ) {
+				$names[] = $name;
+			}
+		}
+
+		$names = array_values( array_unique( $names ) );
+		sort( $names, SORT_STRING );
+		return array_slice( $names, 0, 5000 );
+	}
+
+	private function calibration_breakpoints( array $breakpoints ): array {
+		$out = [];
+		foreach ( $breakpoints as $breakpoint ) {
+			if ( ! is_array( $breakpoint ) ) {
+				continue;
+			}
+			$key   = sanitize_key( (string) ( $breakpoint['key'] ?? '' ) );
+			$width = isset( $breakpoint['width'] ) ? absint( $breakpoint['width'] ) : 0;
+			if ( '' === $key || $width < 240 || $width > 7680 ) {
+				continue;
+			}
+			$out[] = [
+				'key'          => $key,
+				'label'        => sanitize_text_field( (string) ( $breakpoint['label'] ?? $key ) ),
+				'width'        => $width,
+				'base'         => ! empty( $breakpoint['base'] ),
+				'widthBuilder' => isset( $breakpoint['widthBuilder'] ) ? absint( $breakpoint['widthBuilder'] ) : $width,
+			];
+		}
+
+		return $out;
+	}
+
+	private function calibration_dynamic_tags(): array {
+		$out = [];
+		foreach ( array_merge( $this->bricks_dynamic_tags(), $this->kiwe_dynamic_tags() ) as $tag ) {
+			$name = is_array( $tag ) ? (string) ( $tag['name'] ?? $tag['tag'] ?? '' ) : (string) $tag;
+			$name = sanitize_text_field( $name );
+			if ( '' !== $name ) {
+				$out[] = $name;
+			}
+		}
+
+		$out = array_values( array_unique( $out ) );
+		sort( $out, SORT_STRING );
+		return array_slice( $out, 0, 500 );
 	}
 
 	public function summary(): array {

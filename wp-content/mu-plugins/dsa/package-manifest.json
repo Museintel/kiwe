@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "7.00",
   "algorithm": "sha256",
-  "file_count": 296,
+  "file_count": 297,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -445,8 +445,8 @@
       "sha256": "8a73e95f2a20b312ad3ad038557b183986daf66994b315618a4062326a50fc6b"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 28500,
-      "sha256": "228c943e32829239403d1d229faa710004e4094af9151dd70a9fbf4dacac1b62"
+      "bytes": 32647,
+      "sha256": "aa89290a658e69bca58310c67a1b6484615457cb4c6cc8558d16f0db8a03e3c8"
     },
     "includes/AI/Site_Introspection_Service.php": {
       "bytes": 13294,
@@ -477,8 +477,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 594300,
-      "sha256": "5b69dc19ad65f7f90571e0ddbc37477185f73bd536b59490fb1d0b3e68a1a235"
+      "bytes": 598175,
+      "sha256": "b510f370f07b4d7bee6816188f8ffca82f2e83e6842fdfad35a1c40f54293084"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -705,8 +705,8 @@
       "sha256": "3ab792238313388bfa620772223f86c08b10687b2cb799b9239706ad4b531300"
     },
     "includes/Rest/Site_Graph_Controller.php": {
-      "bytes": 4816,
-      "sha256": "72dc2782699583efe34574a43243c38d7fab66bbab408792316365c436cf5f68"
+      "bytes": 7753,
+      "sha256": "1bb4f1a8300b7c74c68743e321cfa3fab8f530d04a2c9e73a989f60b517f54a7"
     },
     "includes/Rewards/Reward_Service.php": {
       "bytes": 16408,
@@ -800,6 +800,10 @@
       "bytes": 9193,
       "sha256": "3e2c3113152248b667b33d9954da649919e599b9b2c6a76ee3245d423717ee2b"
     },
+    "includes/Site_Graph/Calibration_Pairing_Service.php": {
+      "bytes": 2859,
+      "sha256": "5b2a9e5c3ed0572d645caf5820ebd5055de54646a115695132d28b36e3e8425e"
+    },
     "includes/Site_Graph/Data_Query_Service.php": {
       "bytes": 23001,
       "sha256": "e877522368de6748bc8e1f82b3cf382543baa8338a69c892dc3fa131d4d86e86"
@@ -865,8 +869,8 @@
       "sha256": "e17e78f78d6713087227529977200f8d8fd5b734af5b953b4946a7f66f4250a1"
     },
     "site-graph-system/README.md": {
-      "bytes": 7860,
-      "sha256": "60ab3680b5584667f0dbaef72b251a0892977c5afdfc2360bbb5071857bff80c"
+      "bytes": 9168,
+      "sha256": "96a970858b5c653e1ef53836a6e6dde9113990c66b4b8bcffbe9bd90252f188e"
     },
     "site-graph-system/release-proof-0.6.10.md": {
       "bytes": 1084,
