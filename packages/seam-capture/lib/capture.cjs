@@ -326,7 +326,7 @@ async function capturePage(options) {
 			const response = await page.goto(entryUrl, { waitUntil: 'load', timeout: options.navigationTimeout || 30_000 });
 			if (!response) throw new Error(`Navigation produced no response for ${entryUrl}`);
 			if (!sourceHash && viewport === viewports[0]) sourceHash = `sha256:${sha256(await response.body())}`;
-			const settle = await page.evaluate(async ({ timeoutMs }) => {
+			const settle = await page.evaluate(async ({ timeoutMs, proofMode }) => {
 				const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 				const lazyImages = [...document.images].map((image) => ({ image, loading: image.getAttribute('loading') }));
 				const scrollBehavior = {
@@ -362,8 +362,18 @@ async function capturePage(options) {
 				else document.documentElement.style.removeProperty('scroll-behavior');
 				if (scrollBehavior.body) document.body.style.setProperty('scroll-behavior', scrollBehavior.body, scrollBehavior.bodyPriority);
 				else document.body.style.removeProperty('scroll-behavior');
+				if (proofMode) {
+					for (const element of document.querySelectorAll('.bricks-lazy-hidden')) {
+						if (element.dataset.style) {
+							element.setAttribute('style', `${element.getAttribute('style') || ''}${element.dataset.style}`);
+							if (!element.classList.contains('splide__slide')) delete element.dataset.style;
+						}
+						element.classList.remove('bricks-lazy-hidden', 'wait');
+					}
+					await delay(50);
+				}
 				return { timedOut, pendingImages: [...document.images].filter((image) => !image.complete).length };
-			}, { timeoutMs: options.assetSettleTimeout || 10_000 });
+			}, { timeoutMs: options.assetSettleTimeout || 10_000, proofMode: options.proofMode === true });
 			if (settle.timedOut) diagnostics.push(`${viewport.id} asset settle timeout: ${settle.pendingImages} image(s) remained pending.`);
 			const evidence = await collectPageEvidence(page, viewport.id, { proofMode: options.proofMode === true });
 			for (const captured of evidence.nodes) {

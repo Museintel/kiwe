@@ -20,7 +20,7 @@ main{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:min(100%,720px);m
 main .card:first-child{min-height:80px;background:linear-gradient(135deg,var(--seam-accent),#b7272e)}.card{min-height:40px}
 h1{font:700 40px/1.1 Georgia,serif;color:var(--seam-accent)}p{font-size:.7rem}img{display:block;width:40px;height:20px}
 @media(max-width:600px){main{display:flex;flex-direction:column;gap:8px;padding:12px}h1{font-size:28px}}
-</style></head><body><main id="content"><section class="card"><h1>Rendered evidence</h1><p>Native responsive capture.</p></section><img alt="pixel" src="${pixel}"><img alt="blocked" src="https://example.invalid/blocked.png"></main></body></html>`);
+</style></head><body><main id="content"><section class="card"><h1>Rendered evidence</h1><p>Native responsive capture.</p></section><div id="lazy-proof" class="bricks-lazy-hidden" data-style="background-image:linear-gradient(90deg,#123456,#abcdef);min-height:24px"></div><img alt="pixel" src="${pixel}"><img alt="blocked" src="https://example.invalid/blocked.png"></main></body></html>`);
 
 const viewports = [
 	{ id: 'desktop-1280', width: 1280, height: 720, theme: 'light', state: 'default' },
@@ -76,6 +76,10 @@ async function main() {
 		assert.equal(validateContract('capture', proofCapture).ok, true);
 		assert.ok(proofCapture.nodes.every((node) => node.observations.every((observation) => observation.matchedRules.length === 0)));
 		assert.ok(proofCapture.nodes.every((node) => node.observations.every((observation) => Object.keys(observation.customProperties).length === 0)));
+		const lazyProof = proofCapture.nodes.find((node) => node.attributes.id === 'lazy-proof');
+		assert.ok(lazyProof);
+		assert.doesNotMatch(lazyProof.attributes.class || '', /bricks-lazy-hidden/);
+		assert.match(lazyProof.observations[0].computed['background-image'], /^linear-gradient\(/);
 		const shards = viewports.map((viewport) => {
 			const shardDirectory = path.join(temp, `shard-${viewport.id}`);
 			fs.mkdirSync(path.join(shardDirectory, 'screenshots'), { recursive: true });
