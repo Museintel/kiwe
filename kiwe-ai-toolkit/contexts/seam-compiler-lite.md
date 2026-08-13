@@ -1,6 +1,6 @@
 # SEAM Compiler authority
 
-Use this context for `/convert /bricks`, `/seamframework`, `/audit /bricksconversion`, and `/audit /seamframework`.
+Use this context for `/convert /bricks`, `/convert /bricks /seamframework`, `/seamframework`, `/audit /bricksconversion`, and `/audit /seamframework`.
 
 The production authority is the deterministic SEAM Compiler contract in `kiwe-ai-toolkit/contracts/seam-compiler-contract.json`. Browser AI may create and refine source HTML/CSS/JS, explain findings, and request missing proof. It must not manually recreate the compiler, author production Bricks JSON, guess Framework variables/classes, or claim a manual visual PASS.
 
@@ -10,9 +10,9 @@ The production authority is the deterministic SEAM Compiler contract in `kiwe-ai
 
 The source is the visual contract. A defect already present in the source is reported as source parity, not repaired or counted as a converter defect.
 
-## Stage 2 — optional Framework
+## Mode 2 — optional one-pass Framework
 
-`/seamframework` runs only on successful raw conversion output. It does not redesign the source and does not change raw Convert behavior. It emits one project-wide `framework/kiwe-framework-profile.json` plus Framework-dependent Bricks templates.
+`/convert /bricks /seamframework` is preferred when the source is available: it retains the complete rendered DOM, authored class cascade, variables, attributes, responsive states, and compiler-only evidence until Framework ownership is finished. `/seamframework` remains valid for a successful raw result retained in the same compiler session. Neither path redesigns the source or changes raw Convert behavior. Both emit one project-wide `framework/kiwe-framework-profile.json`, an install-order manifest, and Framework-dependent Bricks templates.
 
 Install order is mandatory:
 

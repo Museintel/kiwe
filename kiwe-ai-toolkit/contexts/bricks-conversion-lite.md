@@ -1,15 +1,15 @@
 # Kiwe Bricks Conversion Lite Context
 
-Use this context for `/convert /bricks`, `/seamframework`, `/audit /bricksconversion`, and `/audit /seamframework` together with `seam-compiler-lite.md`.
+Use this context for `/convert /bricks`, `/convert /bricks /seamframework`, `/seamframework`, `/audit /bricksconversion`, and `/audit /seamframework` together with `seam-compiler-lite.md`.
 
-This is not a creative design phase. It starts after an HTML/CSS/JS source is visually approved. A Framework Profile is never required for raw `/convert /bricks`; it is produced only by the optional post-conversion `/seamframework` stage.
+This is not a creative design phase. It starts after an HTML/CSS/JS source is visually approved. A Framework Profile is never required for raw `/convert /bricks`; it is produced only by the optional one-pass `/convert /bricks /seamframework` mode or `/seamframework` while full raw compiler evidence is retained.
 
 Goal: deterministically convert an arbitrary approved HTML/CSS/JS project, folder, archive, or standalone document into native Bricks template JSON that a human can upload to Bricks > My Templates, without route-name assumptions or AI-authored production JSON.
 
 Mode precedence:
 
 - Raw `/convert /bricks` is Framework-neutral. Source literals and authored classes may remain native when that is required for 1:1 fidelity.
-- Optional `/seamframework` emits one Framework Profile plus dependent templates. Only that mode requires token-pure values, Theme Style ownership, project variables/classes, and profile-before-template import.
+- Optional `/convert /bricks /seamframework` is the preferred one-pass path and emits one Framework Profile plus dependent templates before raw evidence can be discarded. `/seamframework` remains a compatible retained-session stage. Only Framework mode requires token-pure values, Theme Style ownership, project variables/classes, and profile-before-template import.
 - `/audit /bricksconversion` audits raw fidelity and native coverage. `/audit /seamframework` audits the profile and dependent templates as one package.
 - When an older rule below mentions mandatory Framework variables, profile proof, token purity, or name-only global classes, apply it to `/seamframework` only—not raw Convert.
 

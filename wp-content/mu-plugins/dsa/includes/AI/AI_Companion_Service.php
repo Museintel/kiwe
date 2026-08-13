@@ -763,7 +763,7 @@ final class AI_Companion_Service {
 			return [];
 		}
 		$compiler_cards = [
-			'bricks-convert' => [ 'id' => 'phase-seam-compiler-raw', 'title' => 'Run deterministic raw Bricks conversion', 'body' => 'Run SEAM Compiler 0.12.0 on the arbitrary HTML/CSS/JS project. Raw Convert is Framework-neutral, discovers any number of pages, may split header/footer/content, and uses native Bricks controls before scoped CSS. Browser AI must not author production JSON.' ],
+			'bricks-convert' => [ 'id' => 'phase-seam-compiler-raw', 'title' => 'Run deterministic Bricks conversion', 'body' => 'Run SEAM Compiler 0.13.0 on the arbitrary HTML/CSS/JS project. Choose Framework-neutral raw output or one-pass Bricks + SEAM Framework; both discover any number of pages, may split header/footer/content, and use native Bricks controls before scoped CSS. Browser AI must not author production JSON.' ],
 			'bricks-audit'   => [ 'id' => 'phase-seam-compiler-audit', 'title' => 'Audit raw conversion with valid proof', 'body' => 'Audit hierarchy, native coverage, safe behavior, and source parity. Require matching viewport provenance before a visual percentage. Source defects remain source parity; stale CSS, foreign overlays, or mismatched canvases make visual proof INCOMPLETE.' ],
 			'seam-rebuild'   => [ 'id' => 'phase-seam-framework-optional', 'title' => 'Optimize the raw conversion with Framework', 'body' => 'Run optional /seamframework after raw Convert. Emit one Framework Profile first and dependent templates second. Do not redesign or ask AI to invent tokens and classes.' ],
 			'seam-audit'     => [ 'id' => 'phase-seam-framework-package-audit', 'title' => 'Audit profile and templates together', 'body' => 'Verify profile-before-template installation, defined variables/classes, Theme Style ownership, element exceptions, unsupported CSS, and unchanged visual intent as one deterministic package.' ],
@@ -963,7 +963,7 @@ final class AI_Companion_Service {
 		}
 		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
 			return [
-				'summary' => 'Run deterministic raw SEAM Compiler conversion first. Add Framework only as an explicit post-conversion stage.',
+				'summary' => 'Choose deterministic raw SEAM Compiler conversion or the one-pass Bricks + SEAM Framework mode. Browser AI must not author either production artifact.',
 				'do'      => [ 'Accept arbitrary HTML/CSS/JS projects.', 'Discover all pages without route-name assumptions.', 'Use native Bricks controls before scoped CSS.', 'Treat source defects as parity, not converter failures.', 'Require matching viewport provenance for visual scores.' ],
 				'dont'    => [ 'Do not require a Framework Profile for raw Convert.', 'Do not let browser AI author production JSON.', 'Do not inject Seam tokens/classes into raw conversion.', 'Do not score contaminated or mismatched screenshots.' ],
 			];

@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SeamFlow_Service {
 	private const SCHEMA = 'kiwe.seamflow-api.v1';
 	private const DEFAULT_BRICKS_VERSION = '2.3.10';
-	private const COMPILER_CONTRACT = '0.12.0';
+	private const COMPILER_CONTRACT = '0.13.0';
 	private const COMPILER_URL = 'https://seam-compiler-native-v2.koshrr4u.chatgpt.site/';
 
 	public function status(): array {
@@ -35,6 +35,7 @@ final class SeamFlow_Service {
 				'/audit /seamframework',
 				'/create /frameworkprofile',
 				'/convert /bricks',
+				'/convert /bricks /seamframework',
 				'/seamframework',
 				'/create /accessibility',
 				'/audit /accessibility',
@@ -63,7 +64,7 @@ final class SeamFlow_Service {
 			'truthRules'      => [
 				'No manual-only PASS for /audit, /fix, /execute /stepbystep, or /execute /fullflow.',
 				'The plugin never substitutes its legacy fallback converter for SEAM Compiler production output.',
-				'Raw /convert /bricks is Framework-neutral; /seamframework is an optional post-conversion stage.',
+				'Raw /convert /bricks is Framework-neutral; /convert /bricks /seamframework is the preferred one-pass Framework mode and /seamframework remains available while the raw evidence is retained.',
 				'Generated output is limited to requested phase files unless /document or /report is present.',
 				'Site Graph remains the gate for real WooCommerce IDs, media IDs, query objects, and dynamic tags.',
 			],
@@ -124,7 +125,7 @@ final class SeamFlow_Service {
 	public function rebuild( array $args ): array {
 		return $this->compiler_required(
 			'KIWE_LEGACY_REBUILD_RETIRED',
-			'Legacy HTML token substitution is not production Framework authority. Run raw Convert in SEAM Compiler, then choose its optional Framework stage.',
+			'Legacy HTML token substitution is not production Framework authority. Use SEAM Compiler raw mode or its preferred one-pass Bricks + SEAM Framework mode.',
 			'/convert /bricks'
 		);
 	}

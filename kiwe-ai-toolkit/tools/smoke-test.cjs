@@ -53,7 +53,7 @@ function assert(condition, message) {
   const compilerContract = JSON.parse(fs.readFileSync(path.join(root, 'contracts/seam-compiler-contract.json'), 'utf8'));
   const plan = m.planFlow({ artifactSummary: 'homepage-appsite-v3-main-only-preview.html raw html css js' });
 
-  assert(compilerContract.version === '0.12.0', 'compiler contract mismatch');
+  assert(compilerContract.version === '0.13.0', 'compiler contract mismatch');
   assert(compilerContract.stages.convert.frameworkNeutral === true, 'raw Convert must remain Framework-neutral');
   assert(compilerContract.stages.framework.profileInstallRequiredBeforeTemplateImport === true, 'Framework install order missing');
   assert(compilerContract.stages.framework.output.includes('/audit /seamframework'), 'Framework audit artifact contract missing');

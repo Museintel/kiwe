@@ -12,8 +12,8 @@
   },
   "architecture": {
     "seamflow": "External AI command-central flow for Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, dynamic intent, and accessibility.",
-    "compilerAuthority": "SEAM Compiler 0.12.0 is the deterministic authority for raw Bricks conversion, optional Framework optimization, and executable conversion proof. Browser AI must not manually recreate production Bricks JSON or Framework Profile data.",
-    "stageBoundary": "Raw /convert /bricks is Framework-neutral. Optional /seamframework runs after raw conversion and emits one project-wide Framework Profile, stable profile-installed class IDs, dependent templates, and executable package audit proof. Accessibility is deferred to its own later phase.",
+    "compilerAuthority": "SEAM Compiler 0.13.0 is the deterministic authority for raw Bricks conversion, optional one-pass Framework optimization, and executable conversion proof. Browser AI must not manually recreate production Bricks JSON or Framework Profile data.",
+    "stageBoundary": "Raw /convert /bricks is Framework-neutral. Optional /convert /bricks /seamframework is the preferred one-pass Framework mode; /seamframework remains valid while raw evidence is retained. Both emit one project-wide Framework Profile, stable profile-installed class IDs, dependent templates, and executable package audit proof. Accessibility is deferred to its own later phase.",
     "kiweInternalAi": "Bounded Kiwe Companion/Internal AI. It can assist when /usecompanion or API/MCP access exists, but browser-only SeamFlow must still work without it.",
     "currentLaunchScope": "Close page-builder flow through Seam Framework first: Framework profile, Bricks pages/header/footer/templates, stable class and variable ownership, and executable /audit /seamframework proof. Accessibility follows as a separate later phase.",
     "nextPhase": "DSA/AppShell theme remains mapped, but full DSA theme production hardening comes after page-builder flow testing passes."
@@ -53,7 +53,7 @@
     "ideation": "For /ideate, ask the adaptive intake from ideate-lite.md, analyze an attached logo before proposing its palette, ask framework-neutral versus headless Seam last, create only the first homepage HTML/CSS/JS, and continue small refinements through normal conversation without another command.",
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
-    "firstInteractionRoutes": "When files are supplied without a command, always show route choices after the recommended next command: Route A hosted SEAM Compiler, Route B local deterministic compiler, Route C Plugin REST authority bridge, Route D Plugin REST + Companion review. For raw HTML/CSS/JS, /convert /bricks is the first production phase. /seamframework and /accessibility are optional post-conversion stages. Ask for API credentials only for Route C/D or /usecompanion/plugin proof.",
+    "firstInteractionRoutes": "When files are supplied without a command, always show route choices after the recommended next command: Route A hosted SEAM Compiler, Route B local deterministic compiler, Route C Plugin REST authority bridge, Route D Plugin REST + Companion review. For raw HTML/CSS/JS, choose raw /convert /bricks or one-pass /convert /bricks /seamframework. Accessibility is a separate later stage. Ask for API credentials only for Route C/D or /usecompanion/plugin proof.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
     "commandGrammar": "SeamFlow commands are composable shell-like tokens, not fixed magic phrases. Parse the user line into one primary action, optional phase/target, and modifiers. Equivalent valid ordering may be normalized when unambiguous; unknown, contradictory, or lane-invalid combinations stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE.",
     "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /audit /eachstep audits after each phase; /audit /fix /eachstep explicitly runs phase -> audit -> fix actual artifact if needed -> same audit again until PASS or NEEDS_INPUT. /audit /atend audits before final delivery; /audit /fix /atend explicitly repairs failed final lanes and reruns audits until PASS or NEEDS_INPUT.",
@@ -272,6 +272,15 @@
       "forbidden": ["source redesign", "AI-authored production JSON", "inline variable fallbacks", "duplicate Theme Style/class/element ownership", "DSA theme", "docs unless /document", "ZIP"],
       "finalResponse": "Return the Framework Profile first, dependent templates second, and compact executable proof."
     },
+    "/convert /bricks /seamframework": {
+      "phase": "framework",
+      "read": ["kiwe-ai-toolkit/contracts/seam-compiler-contract.json", "kiwe-ai-toolkit/contexts/seam-compiler-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
+      "requires": ["arbitrary HTML/CSS/JS project, folder, archive, or standalone document"],
+      "must": ["run SEAM Compiler 0.13.0 in one-pass Framework mode", "capture raw rendered evidence before Framework ownership", "emit one project-wide Framework Profile before dependent templates", "emit an explicit install-order manifest", "run /audit /seamframework and require PASS at 100% integration"],
+      "output": ["framework/kiwe-framework-profile.json", "framework/audit-seamframework.json", "manifest-seam-framework.json", "bricks-template/[name]-template-upload.json"],
+      "forbidden": ["source redesign", "AI-authored production JSON", "inline variable fallbacks", "discarding raw compiler evidence before Framework mapping", "docs unless /document", "ZIP"],
+      "finalResponse": "Return the audited one-pass package with profile-first install order."
+    },
     "/rebuild /seamframework": {
       "phase": "compatibility",
       "aliases": ["/seamframework"],
@@ -338,7 +347,7 @@
       "phase": "convert",
       "read": ["kiwe-ai-toolkit/contracts/seam-compiler-contract.json", "kiwe-ai-toolkit/contexts/seam-compiler-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
       "requires": ["arbitrary HTML/CSS/JS project, folder, archive, or standalone document"],
-      "must": ["run SEAM Compiler 0.12.0 or a compatible deterministic compiler endpoint; browser AI must not author production JSON", "keep raw conversion Framework-neutral", "discover arbitrary pages without home/shop route assumptions", "split a complete standalone document into header, footer and content templates when applicable", "preserve source defects as 1:1 parity instead of redesigning them", "use Bricks-native element controls before scoped CSS", "preserve authored classes, attributes, interactions and executable behavior only within the compiler safety contract", "when live Bricks proof is used, reject stale page CSS, mismatched viewport provenance and foreign overlay contamination before scoring"],
+      "must": ["run SEAM Compiler 0.13.0 or a compatible deterministic compiler endpoint; browser AI must not author production JSON", "keep raw conversion Framework-neutral", "discover arbitrary pages without home/shop route assumptions", "split a complete standalone document into header, footer and content templates when applicable", "preserve source defects as 1:1 parity instead of redesigning them", "use Bricks-native element controls before scoped CSS", "preserve authored classes, attributes, interactions and executable behavior only within the compiler safety contract", "when live Bricks proof is used, reject stale page CSS, mismatched viewport provenance and foreign overlay contamination before scoring"],
       "output": ["bricks-template/[page-or-template-name]-template-upload.json"],
       "targetTypes": {
         "homepageBody": "title Home, templateType content, content[]",
