@@ -158,13 +158,14 @@ function assert(condition, message) {
   assert(bad.stop && bad.code === 'unknown_command_token', 'bad typo diagnostic failed');
   assert(!ideate.stop && ideate.kind === 'ideate', '/ideate diagnostic failed');
   assert(ideateRoute.includes('Ask no more than three short questions at a time.'), '/ideate route missing adaptive interview');
-  assert(ideateRoute.includes('Should this draft be (1) framework-neutral HTML/CSS/JS, or (2) Seam-ready HTML/CSS/JS?'), '/ideate route missing final framework choice');
+  assert(ideateRoute.includes('/ideate` output is always framework-neutral'), '/ideate route must be framework-neutral');
+  assert(!ideateRoute.includes('Should this draft be (1) framework-neutral HTML/CSS/JS, or (2) Seam-ready HTML/CSS/JS?'), '/ideate route must not ask for a framework choice');
   assert(ideateRoute.includes('existing client website URL'), '/ideate route missing broader project-resource intake');
   assert(ideateRoute.includes('inspiration or moodboard material'), '/ideate route missing inspiration and moodboard intake');
   assert(ideateRoute.includes('reuse') && ideateRoute.includes('inspiration only'), '/ideate route must distinguish reusable assets from directional references');
-  assert(ideateRoute.includes('verify every emitted Seam attribute value against the current canonical Seam schema'), '/ideate route must validate Seam-ready claims against the canonical schema');
-  assert(ideateRoute.includes('Never invent a role/flow/scene/tone/state/shape value'), '/ideate route must prohibit invented Seam attribute vocabulary');
-  assert(ideateRoute.includes('Geometry fallback ladder'), '/ideate route missing Geometry fallback');
+  assert(!ideateRoute.includes('## Seam-ready branch'), '/ideate route must not contain a Seam-ready output branch');
+  assert(ideateRoute.includes('Framework Profile JSON'), '/ideate route must reserve registered tokens for the later Framework Profile flow');
+  assert(ideateRoute.includes('Responsive geometry ladder'), '/ideate route missing responsive geometry guidance');
   assert(ideateRoute.includes('ordinary conversation is the refinement interface'), '/ideate route missing conversational refinement');
   assert(noop.stop && noop.status === 'noop', 'preview noop diagnostic failed');
   assert(missingProfile.stop && missingProfile.code === 'bricks_convert_missing_framework_profile', 'missing framework diagnostic failed');

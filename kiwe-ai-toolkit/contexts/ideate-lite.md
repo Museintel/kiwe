@@ -9,7 +9,7 @@ Use this context only when the human starts with `/ideate` (or the accepted lega
 3. Offer concise choices but always accept a free-form answer.
 4. If the human attached a logo, inspect the actual image before proposing colors. Extract a small candidate palette and explain which colors appear primary, accent, surface, and text. Never claim exact brand colors from an unreadable image.
 5. Inspect every supplied project resource or reference that the environment can actually open before deriving content or art direction from it. State briefly what is reusable source material and what is inspiration only. A reference is never permission to copy protected text, imagery, code, or a complete design.
-6. Do not generate the homepage until the required brief is complete. When it is complete, ask the framework question last and then generate directly; do not add another confirmation gate unless a material ambiguity remains.
+6. Do not generate the homepage until the required brief is complete. When it is complete, generate directly; do not add another confirmation gate unless a material ambiguity remains.
 7. After the first draft, ordinary conversation is the refinement interface. The human does not need another slash command or Start link for small corrections. Preserve accepted decisions and edit only what the human asks to change.
 
 ## Intake sequence
@@ -57,14 +57,6 @@ Collect these fields adaptively:
 
 Do not turn the style choices into a template menu. They are vocabulary for the brief, not layout recipes. Create a distinct visual thesis from the full project context.
 
-### Stage 4 — framework choice (ask last)
-
-Ask exactly this decision in plain language:
-
-> Should this draft be (1) framework-neutral HTML/CSS/JS, or (2) Seam-ready HTML/CSS/JS? Seam-ready adds semantic attributes, universal tokens where they fit, and Geometry fallback math, but it must not change the visual concept. If you already use another framework, choose framework-neutral and name it so I preserve it.
-
-Default to framework-neutral if the human declines Seam. Never assume Seam merely because the Start link belongs to Kiwe.
-
 ## Output contract
 
 Generate only the first homepage draft:
@@ -84,30 +76,22 @@ The draft must:
 - avoid fake production authority for cart, checkout, authentication, payments, inventory, search indexes, saved items, or user accounts;
 - remain straightforward for the standalone Seam Compiler to render and convert later.
 
-## Framework-neutral branch
+## Framework boundary
 
+- `/ideate` output is always framework-neutral. Do not ask the human to make a Seam decision during creative ideation.
 - Do not emit Seam classes, `data-role`, `data-flow`, `data-scene`, `data-tone`, `data-state`, `data-shape`, Kiwe tokens, DSA attributes, AppShell markup, or Bricks metadata.
 - A project-owned token layer such as `--brand-*`, `--color-*`, `--space-*`, and `--type-*` is allowed when it serves this design.
 - Preserve any explicitly named existing framework instead of translating it.
+- Seam is a separate, deterministic post-design migration. `/seamframework` may later transform an approved raw design or converted Bricks template and must emit the matching Framework Profile JSON so Kiwe can register variables, classes, and palettes in Bricks before they are relied upon.
+- Never describe project-local variables as registered Bricks variables. Never introduce Seam variable references without their canonical Framework Profile.
 
-## Seam-ready branch
+### Responsive geometry ladder
 
-Seam-ready is headless context, not a visual preset:
+When a responsive value is needed:
 
-- Preserve the exact same creative freedom, art direction, layout, and project-specific CSS that a framework-neutral draft would receive.
-- Add only canonical Seam attributes whose meaning is proven by the element: `data-role`, `data-flow`, `data-scene`, `data-tone`, `data-state`, and `data-shape`.
-- Use official universal Seam/Kiwe tokens where the semantic value genuinely matches. Keep unique art-direction constants in declared project tokens. Do not rename every class or force the full universal class vocabulary onto the page.
-- Do not add AppShell/DSA capability markup or runtime authority.
-- Do not use Site Graph during ideation. Static representative content is allowed; target-site binding happens later.
-- Before describing a draft as Seam-ready, verify every emitted Seam attribute value against the current canonical Seam schema, verify that universal values use official tokens, and verify that project-only constants are declared project tokens. Never invent a role/flow/scene/tone/state/shape value merely because it sounds descriptive; omit an unproven attribute instead.
-
-### Geometry fallback ladder
-
-When a needed value has no suitable universal variable:
-
-1. use an official exact token when its semantic domain matches;
-2. otherwise declare a project token for a stable art-direction constant;
-3. only when the design intentionally changes between two responsive states, calculate a real fluid fallback:
+1. use a declared project token for a repeated, stable art-direction constant;
+2. use a literal value for a unique constant that gains no semantic value from tokenisation;
+3. only when the design intentionally changes between two responsive states, calculate a real fluid value:
 
 ```text
 slope = (maxValue - minValue) / (maxViewport - minViewport) * 100
@@ -115,8 +99,8 @@ intercept = minValue - (slope / 100 * minViewport)
 clamp(minValue, calc(intercept + slope * 1vw), maxValue)
 ```
 
-Use compatible units and documented viewport endpoints. Never emit `clamp(v, v, v)`, never manufacture fluid math for a stable value, and never override Geometry Engine ownership of AppShell dock/sheet/screen placement.
+Use compatible units and documented viewport endpoints. Never emit `clamp(v, v, v)` or manufacture fluid math for a stable value.
 
 ## Refinement contract
 
-After delivery, respond to normal instructions such as “make the hero quieter,” “change the product rail,” or “use the attached photography.” Keep a compact internal decision ledger of project identity, content, accepted visual direction, framework choice, and approved sections. Do not restart the interview or reintroduce Seam if the human chose framework-neutral. When the human says the design is ready, direct them to the standalone Seam Compiler for raw HTML/CSS/JS to Bricks conversion. Post-conversion Seam migration is a separate future phase.
+After delivery, respond to normal instructions such as “make the hero quieter,” “change the product rail,” or “use the attached photography.” Keep a compact internal decision ledger of project identity, content, accepted visual direction, and approved sections. Do not restart the interview or introduce Seam during ideation. When the human says the design is ready, direct them to the standalone Seam Compiler for raw HTML/CSS/JS to Bricks conversion. `/seamframework` is the later opt-in migration and must produce the matching Framework Profile for Kiwe to register in Bricks.
