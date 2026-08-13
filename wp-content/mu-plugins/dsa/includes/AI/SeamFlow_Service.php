@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SeamFlow_Service {
 	private const SCHEMA = 'kiwe.seamflow-api.v1';
 	private const DEFAULT_BRICKS_VERSION = '2.3.10';
-	private const COMPILER_CONTRACT = '0.11.0';
+	private const COMPILER_CONTRACT = '0.12.0';
 	private const COMPILER_URL = 'https://seam-compiler-native-v2.koshrr4u.chatgpt.site/';
 
 	public function status(): array {

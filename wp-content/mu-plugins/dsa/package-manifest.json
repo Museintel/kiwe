@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "7.01",
+  "version": "7.03",
   "algorithm": "sha256",
-  "file_count": 297,
+  "file_count": 298,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "456e9fa57e98a31723d9e20a36e5fb924ef6f879298753cc77db85bb7023f1e9"
+      "sha256": "6343bbf575559f319cc1f54d6ce8807ab6b3c61ae2adf97be71e0341fdb86359"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -219,6 +219,10 @@
     "framework-system/contracts/seam-class-vocabulary.md": {
       "bytes": 2809,
       "sha256": "a3f47accc195aa380fe52f97e9bb6c79789871487f13349a2699fd15d578309a"
+    },
+    "framework-system/contracts/seam-compiler-contract.json": {
+      "bytes": 2347,
+      "sha256": "c4a41278c17394a8e57624340be6c2b14863d99c77d9748050680b713a8ae79d"
     },
     "framework-system/contracts/seam-vocabulary.json": {
       "bytes": 12083,
@@ -337,8 +341,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 177534,
-      "sha256": "d4799815d14c444484674240f9c5ab2b1f4c8db21a0043d86b08156f8ff11392"
+      "bytes": 180837,
+      "sha256": "9dcbd39c8dddeb5659bbaf5e8785e07cdb36c8e579689b7d301dc8b9bd3b7ce4"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12738,
@@ -441,8 +445,8 @@
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
     },
     "includes/AI/SeamFlow_Service.php": {
-      "bytes": 31647,
-      "sha256": "8a73e95f2a20b312ad3ad038557b183986daf66994b315618a4062326a50fc6b"
+      "bytes": 31214,
+      "sha256": "453d8446c2049b7b096aeeb743feb81d271062fd97db769ffb4c11c5af67de7a"
     },
     "includes/AI/Site_Graph_Service.php": {
       "bytes": 32647,
@@ -529,8 +533,8 @@
       "sha256": "a3934b8c869e86cce4c308c9a5ea72ea2d52b95a14bc776598199915c6af89b8"
     },
     "includes/Design/Seam_Token_Service.php": {
-      "bytes": 62031,
-      "sha256": "6ff0d692dc4fc29d2d5c912f46244eff18594460265394433fa35e10ef515399"
+      "bytes": 62206,
+      "sha256": "ff1216c16c4201ce264d48a98e6690aa9aa444ec86537577f54353dd51cfcf3e"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
       "bytes": 15462,

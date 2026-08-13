@@ -7,6 +7,13 @@ All notable pre-1.0 release-candidate changes are recorded here. Architectural h
 - Added an explicit Raw Convert Test Mode in Kiwe Developer that suppresses public AppShell assets and Surface markup while leaving WordPress and native Bricks page content active for uncontaminated source-to-output visual acceptance.
 - Kept the mode independent from diagnostic logging so a test site can isolate conversion output without enabling frontend debug data or console traces.
 
+## 7.03 - 2026-08-13
+
+- Aligned Kiwe with SEAM Compiler 0.12.0: raw conversion remains self-contained and Framework-neutral, while `/seamframework` emits one project-wide profile, stable Bricks class IDs, dependent templates, and executable audit proof.
+- Added the deterministic Framework package validator used by `/audit /seamframework`. It fails unless package integration is 100%, raw structure/content parity passes, references resolve, no variable fallback is present, and Theme Style, project classes, and elements have single style ownership.
+- Updated Kiwe Framework import/push to preserve compiler-issued project-class IDs so dependent Bricks templates bind to the exact classes installed in Bricks Style Manager.
+- Deferred accessibility from this release gate; it remains a separate later phase.
+
 ## 7.01 - 2026-08-12
 
 - Added `/ideate` as a first-class adaptive Start-link workflow: it collects project identity, site type, audience, goal, logo/brand evidence, art direction, homepage content, and constraints before generating one HTML/CSS/JS homepage.

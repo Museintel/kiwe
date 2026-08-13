@@ -381,6 +381,10 @@
         "name"
       ],
       "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{4,79}$"
+        },
         "name": {
           "type": "string",
           "pattern": "^(?!(?:kiwe|seam)-)(?:[a-z][a-z0-9]{1,12})-[a-z0-9][a-z0-9_-]{1,80}$"

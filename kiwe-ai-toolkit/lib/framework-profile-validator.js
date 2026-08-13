@@ -460,11 +460,15 @@ export function validateFrameworkProfile(target, options = {}) {
         add(errors, 'invalid_project_class', 'Project classes must be objects.', `settings.tokens.project.classes[${index}]`);
         return;
       }
-      const allowedClassKeys = new Set(['name', 'settings', 'category', 'description']);
+      const allowedClassKeys = new Set(['id', 'name', 'settings', 'category', 'description']);
       for (const key of Object.keys(classItem)) {
         if (!allowedClassKeys.has(key)) {
           add(errors, 'unknown_project_class_key', `Project class contains unsupported key ${key}.`, `settings.tokens.project.classes[${index}].${key}`);
         }
+      }
+      const id = String(classItem.id || '').trim();
+      if (id && !/^[a-z0-9][a-z0-9_-]{4,79}$/i.test(id)) {
+        add(errors, 'invalid_project_class_id', 'Project class id must be a safe stable Bricks class id when supplied.', `settings.tokens.project.classes[${index}].id`);
       }
       const name = String(classItem.name || '').trim();
       if (!/^(?:[a-z][a-z0-9]{1,12})-[a-z0-9][a-z0-9_-]{1,80}$/i.test(name)) {

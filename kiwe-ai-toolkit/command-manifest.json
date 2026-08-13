@@ -7,15 +7,15 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.02",
+    "contractVersion": "7.03",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
     "seamflow": "External AI command-central flow for Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, dynamic intent, and accessibility.",
-    "compilerAuthority": "SEAM Compiler 0.11.0 is the deterministic authority for raw Bricks conversion, optional Framework optimization, and executable conversion proof. Browser AI must not manually recreate production Bricks JSON or Framework Profile data.",
-    "stageBoundary": "Raw /convert /bricks is Framework-neutral. Optional /seamframework runs after raw conversion and emits one project-wide Framework Profile plus dependent templates. Accessibility remains a separate optional stage.",
+    "compilerAuthority": "SEAM Compiler 0.12.0 is the deterministic authority for raw Bricks conversion, optional Framework optimization, and executable conversion proof. Browser AI must not manually recreate production Bricks JSON or Framework Profile data.",
+    "stageBoundary": "Raw /convert /bricks is Framework-neutral. Optional /seamframework runs after raw conversion and emits one project-wide Framework Profile, stable profile-installed class IDs, dependent templates, and executable package audit proof. Accessibility is deferred to its own later phase.",
     "kiweInternalAi": "Bounded Kiwe Companion/Internal AI. It can assist when /usecompanion or API/MCP access exists, but browser-only SeamFlow must still work without it.",
-    "currentLaunchScope": "Close page-builder flow first: Seam Framework, Framework profile, Bricks pages/header/footer/templates, dynamic intent, accessibility.",
+    "currentLaunchScope": "Close page-builder flow through Seam Framework first: Framework profile, Bricks pages/header/footer/templates, stable class and variable ownership, and executable /audit /seamframework proof. Accessibility follows as a separate later phase.",
     "nextPhase": "DSA/AppShell theme remains mapped, but full DSA theme production hardening comes after page-builder flow testing passes."
   },
   "pluginApi": {
@@ -66,7 +66,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.02", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.03", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -268,7 +268,7 @@
       "read": ["kiwe-ai-toolkit/contracts/seam-compiler-contract.json", "kiwe-ai-toolkit/contexts/seam-compiler-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
       "requires": ["successful raw SEAM Compiler conversion result or project batch"],
       "must": ["run the deterministic SEAM Compiler Framework stage; do not ask browser AI to rewrite the design", "emit one project-wide Framework Profile before dependent templates", "move body, H1-H6, link and site background ownership into Bricks Theme Style", "move repeated values/classes into universal or project profile layers", "keep genuine one-off exceptions element-native", "keep scoped CSS only where Bricks 2.3.10 lacks a faithful native control", "require the profile to be pushed in Kiwe > Framework before importing templates"],
-      "output": ["framework/kiwe-framework-profile.json", "bricks-template/[name]-template-upload.json"],
+      "output": ["framework/kiwe-framework-profile.json", "framework/audit-seamframework.json", "bricks-template/[name]-template-upload.json"],
       "forbidden": ["source redesign", "AI-authored production JSON", "inline variable fallbacks", "duplicate Theme Style/class/element ownership", "DSA theme", "docs unless /document", "ZIP"],
       "finalResponse": "Return the Framework Profile first, dependent templates second, and compact executable proof."
     },
@@ -286,8 +286,8 @@
       "phase": "audit",
       "read": ["kiwe-ai-toolkit/contracts/seam-compiler-contract.json", "kiwe-ai-toolkit/contexts/seam-compiler-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
       "requires": ["Framework Profile plus every dependent Bricks template"],
-      "output": ["pass/fail findings only"],
-      "must": ["execute the SEAM Compiler package audit or the official Kiwe package validator", "verify profile-before-template install order", "verify every consumed variable and reusable class is defined by the profile", "fail duplicate Theme Style/project-class/element visual ownership", "fail local H1-H6 locks that should inherit Bricks Theme Style", "compare the raw and Framework templates to prove no redesign", "include validator proof in any PASS response"],
+      "output": ["framework/audit-seamframework.json", "pass/fail findings only"],
+      "must": ["execute validate-seamframework.cjs or the SEAM Compiler package audit; never reuse the older raw-page adoption audit for a Framework package", "require status PASS and integration 100", "verify profile-before-template install order", "verify every consumed variable and reusable class is defined by the profile", "verify profile class IDs exactly match every dependent template _cssGlobalClasses reference", "fail duplicate Theme Style/project-class/element visual ownership", "fail local H1-H6 locks that should inherit Bricks Theme Style", "compare the raw and Framework templates to prove no redesign", "include validator proof in any PASS response"],
       "forbidden": ["manual-only PASS", "copied/reconstructed validator PASS", "fixes unless /fix is also present", "docs unless /document", "ZIP"],
       "finalResponse": "PASS/FAIL/INCOMPLETE with package proof, blocking errors, warnings, and install order."
     },
@@ -338,7 +338,7 @@
       "phase": "convert",
       "read": ["kiwe-ai-toolkit/contracts/seam-compiler-contract.json", "kiwe-ai-toolkit/contexts/seam-compiler-lite.md", "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"],
       "requires": ["arbitrary HTML/CSS/JS project, folder, archive, or standalone document"],
-      "must": ["run SEAM Compiler 0.11.0 or a compatible deterministic compiler endpoint; browser AI must not author production JSON", "keep raw conversion Framework-neutral", "discover arbitrary pages without home/shop route assumptions", "split a complete standalone document into header, footer and content templates when applicable", "preserve source defects as 1:1 parity instead of redesigning them", "use Bricks-native element controls before scoped CSS", "preserve authored classes, attributes, interactions and executable behavior only within the compiler safety contract", "when live Bricks proof is used, reject stale page CSS, mismatched viewport provenance and foreign overlay contamination before scoring"],
+      "must": ["run SEAM Compiler 0.12.0 or a compatible deterministic compiler endpoint; browser AI must not author production JSON", "keep raw conversion Framework-neutral", "discover arbitrary pages without home/shop route assumptions", "split a complete standalone document into header, footer and content templates when applicable", "preserve source defects as 1:1 parity instead of redesigning them", "use Bricks-native element controls before scoped CSS", "preserve authored classes, attributes, interactions and executable behavior only within the compiler safety contract", "when live Bricks proof is used, reject stale page CSS, mismatched viewport provenance and foreign overlay contamination before scoring"],
       "output": ["bricks-template/[page-or-template-name]-template-upload.json"],
       "targetTypes": {
         "homepageBody": "title Home, templateType content, content[]",

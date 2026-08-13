@@ -4,10 +4,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  console.log('Usage: node tools/validate-seamframework.cjs <website/bricks-paste.html-or-handoff-dir>');
+  console.log('Usage: node tools/validate-seamframework.cjs <framework-package-dir-or-raw-page>');
   console.log('');
-  console.log('Validates the Seam Framework website/page lane. It delegates to audit-output.cjs when present,');
-  console.log('and otherwise runs the bundled self-contained Seam page checks so browser AI can execute one raw file.');
+  console.log('Auto-detects a compiler Framework package and runs the package integration validator.');
+  console.log('For legacy raw-page artifacts it delegates to audit-output.cjs when present, then falls back');
+  console.log('to the bundled self-contained Seam page checks.');
   process.exit(0);
 }
 
@@ -16,6 +17,17 @@ const targetExists = fs.existsSync(target);
 const targetIsFile = targetExists && fs.statSync(target).isFile();
 const root = targetIsFile ? path.dirname(target) : target;
 const auditTool = path.join(__dirname, 'audit-output.cjs');
+const packageTool = path.join(__dirname, 'validate-seamframework-package.cjs');
+const frameworkProfile = path.join(root, 'framework', 'kiwe-framework-profile.json');
+
+if (fs.existsSync(frameworkProfile) && fs.existsSync(packageTool)) {
+  const result = spawnSync(process.execPath, [packageTool, root], { cwd: path.resolve(__dirname, '..'), stdio: 'inherit' });
+  if (result.error) {
+    console.error(JSON.stringify({ ok: false, error: 'KIWE_FRAMEWORK_PACKAGE_VALIDATOR_UNAVAILABLE', message: result.error.message }, null, 2));
+    process.exit(1);
+  }
+  process.exit(typeof result.status === 'number' ? result.status : 1);
+}
 
 if (fs.existsSync(auditTool)) {
   const result = spawnSync(process.execPath, [auditTool, target], {

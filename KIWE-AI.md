@@ -10,7 +10,7 @@ Current launch scope: close Seam Framework + Bricks-powered webpages, headers, f
 
 ## Deterministic compiler authority
 
-SEAM Compiler 0.11.0 is the production authority for `/convert /bricks`, optional `/seamframework`, and their executable audits. Browser AI may create or refine the source design and explain findings, but it must not manually author production Bricks JSON, guess Framework variables/classes, or claim a manual visual PASS.
+SEAM Compiler 0.12.0 is the production authority for `/convert /bricks`, optional `/seamframework`, and their executable audits. Browser AI may create or refine the source design and explain findings, but it must not manually author production Bricks JSON, guess Framework variables/classes, or claim a manual visual PASS.
 
 Raw `/convert /bricks` accepts arbitrary HTML/CSS/JS projects and is Framework-neutral. Optional `/seamframework` runs only after raw conversion and returns one Framework Profile plus dependent templates. In Framework mode, Bricks Theme Style owns body/headings/links/site background; universal variables and palette own shared primitives; project variables/classes own repeated project design; element settings own genuine exceptions; scoped CSS owns only unsupported behavior. The profile must be pushed from Kiwe > Framework before the dependent templates are imported.
 

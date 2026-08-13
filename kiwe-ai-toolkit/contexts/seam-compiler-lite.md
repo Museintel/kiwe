@@ -32,6 +32,6 @@ Do not duplicate the same visual property in Theme Style, a project class, and a
 
 ## Audits
 
-`/audit /bricksconversion` audits raw native mapping and editability. `/audit /seamframework` audits the profile and every dependent template as one package, including install order, consumed-variable definitions, project-class references, duplicate ownership, and local heading locks that should belong to Theme Style.
+`/audit /bricksconversion` audits raw native mapping and editability. `/audit /seamframework` executes `validate-seamframework.cjs` against the profile and every dependent template as one package, including install order, consumed-variable definitions, exact profile-installed class IDs, duplicate ownership, local heading locks that should belong to Theme Style, and the compiler-produced `framework/audit-seamframework.json`. A Framework PASS requires 100% package integration; it does not replace raw visual-parity proof.
 
 Visual comparison is valid only when source and candidate captures prove the same CSS viewport, height policy, DPR, and page identity. Browser/hosting overlays must be explicitly masked and reported. A mismatched or contaminated capture is `INCOMPLETE`, never a numeric accuracy score. A PASS requires executable validator proof.

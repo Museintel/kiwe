@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.02',
+    contractVersion: '7.03',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -528,7 +528,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.02',
+      mustReport: 'SeamFlow contract: 7.03',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -815,7 +815,7 @@ export function listCommands() {
       },
       {
         command: '/convert /bricks',
-        purpose: 'Run SEAM Compiler 0.11.0 for Framework-neutral raw native Bricks conversion of an arbitrary HTML/CSS/JS project. Discover all pages and split standalone header/footer/content when applicable.',
+        purpose: 'Run SEAM Compiler 0.12.0 for Framework-neutral raw native Bricks conversion of an arbitrary HTML/CSS/JS project. Discover all pages and split standalone header/footer/content when applicable.',
         requires: ['approved HTML/CSS/JS project, folder, archive, or standalone document'],
         output: 'one raw bricks-template file per discovered page/template plus executable compiler proof'
       },
@@ -1831,7 +1831,7 @@ function commandListMarkdown() {
     '',
     '## Bricks boundary',
     '',
-    '- `/convert /bricks` runs deterministic SEAM Compiler 0.11.0 on an arbitrary approved HTML/CSS/JS project, folder, archive, or standalone document.',
+    '- `/convert /bricks` runs deterministic SEAM Compiler 0.12.0 on an arbitrary approved HTML/CSS/JS project, folder, archive, or standalone document.',
     '- Raw Convert is Framework-neutral and discovers any number of pages without Home/Shop route assumptions.',
     '- A complete standalone document may be split into dedicated header, footer, and content templates.',
     '- The default output is one native Bricks template upload JSON per discovered page/template with non-empty `title`, `templateType`, and `content/header/footer` data.',
@@ -1956,7 +1956,7 @@ function seamRebuildPhaseContext() {
     '',
     'Do not use legacy regex/token substitution or manual browser-AI rewriting as production authority.',
     '',
-    'Run SEAM Compiler 0.11.0. Raw Convert stays Framework-neutral; the Framework stage emits one profile before dependent templates.',
+    'Run SEAM Compiler 0.12.0. Raw Convert stays Framework-neutral; the Framework stage emits one profile before dependent templates and must pass `/audit /seamframework` at 100% package integration.',
     '',
     'Push the Framework Profile from Kiwe > Framework before importing dependent templates.',
     '',

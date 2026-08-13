@@ -333,6 +333,7 @@ final class Seam_Token_Service {
 			}
 
 			$out['classes'][] = [
+				'id'          => sanitize_key( (string) ( $class['id'] ?? '' ) ),
 				'name'        => $name,
 				'category'    => substr( sanitize_text_field( (string) ( $class['category'] ?? '' ) ), 0, 80 ),
 				'description' => substr( sanitize_text_field( (string) ( $class['description'] ?? '' ) ), 0, 180 ),
@@ -417,7 +418,7 @@ final class Seam_Token_Service {
 			}
 
 			$classes[] = [
-				'id'          => self::stable_id( 'kwpc-' . $project_id . '-' . $name ),
+				'id'          => preg_match( '/^[a-z0-9][a-z0-9_-]{4,79}$/i', (string) ( $class['id'] ?? '' ) ) ? (string) $class['id'] : self::stable_id( 'kwpc-' . $project_id . '-' . $name ),
 				'name'        => $name,
 				'category'    => $class_category_id,
 				'settings'    => is_array( $class['settings'] ?? null ) ? $class['settings'] : [],

@@ -75,6 +75,10 @@ node packages/seam-capture/tools/summarize-evidence.cjs capture-directory compil
 
 The former browser converter is quarantined under `packages/seam-bricks-adapter/scaffold/` and is not imported by the supported pipeline. Rendered capture is a compiler-plane job, never a WordPress request: it records computed style, cascade evidence, accessibility semantics, resources, screenshots, and a canonical responsive matrix before deterministic geometry and Bricks compilation. The M3 component compiler uses capability-proven direct, aggregate, semantic-layout, or review adapters instead of guessing. The National Chikki golden page currently compiles 279 source nodes to 267 native Bricks elements, including 12 sanitized native SVG elements, with zero Code elements, 100% semantic coverage, 99.9% native-control coverage, and three explicitly reported scoped-CSS declarations where Bricks 2.3.10 has no equivalent control. These are compiler metrics, not yet a claim of pixel-perfect visual proof.
 
+### SEAM Framework package boundary
+
+Kiwe 7.03 consumes SEAM Compiler 0.12.0 Framework packages. Raw `/convert /bricks` output remains self-contained and Framework-neutral. `/seamframework` then emits one project-wide Framework Profile, stable Bricks class IDs, profile-dependent templates, and `framework/audit-seamframework.json`. The profile must be pushed from Kiwe > Framework before its templates are imported. `/audit /seamframework` fails closed unless integration is 100%, source structure/content parity passes, every class and variable reference is installed, and each visual setting has one owner. Accessibility is deliberately outside this release gate and remains a later, separate phase.
+
 ## Emergency Disable
 
 Rename `wp-content/mu-plugins/dsa.php` to `dsa.disabled.php`. Restore it only with a complete, matching loader/package release. Do not delete Kiwe tables or options as a routine rollback.
