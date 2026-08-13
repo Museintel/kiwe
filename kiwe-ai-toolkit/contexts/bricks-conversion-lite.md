@@ -1,12 +1,23 @@
 # Kiwe Bricks Conversion Lite Context
 
-Use this context for `/convert /bricks` and `/audit /bricksconversion`.
+Use this context for `/convert /bricks`, `/seamframework`, `/audit /bricksconversion`, and `/audit /seamframework` together with `seam-compiler-lite.md`.
 
-This is not a creative design phase. It starts only after a website/page artifact is visually approved, after a Framework profile or Bricks theme style exists/pushed, and, when relevant, after `/usesitegraph` produced live binding intent.
+This is not a creative design phase. It starts after an HTML/CSS/JS source is visually approved. A Framework Profile is never required for raw `/convert /bricks`; it is produced only by the optional post-conversion `/seamframework` stage.
 
-Goal: convert an approved `website/bricks-paste.html` HTML/CSS page into the native Bricks template JSON a human can upload to Bricks > My Templates, without losing layout, Seam vocabulary, Kiwe launchers, dynamic tags, query-loop intent, conditions, interactions, or unsupported/manual-review evidence.
+Goal: deterministically convert an arbitrary approved HTML/CSS/JS project, folder, archive, or standalone document into native Bricks template JSON that a human can upload to Bricks > My Templates, without route-name assumptions or AI-authored production JSON.
 
-Hard boundary: `/convert /bricks` is page-only. Its source is `website/bricks-paste.html` and nothing else.
+Mode precedence:
+
+- Raw `/convert /bricks` is Framework-neutral. Source literals and authored classes may remain native when that is required for 1:1 fidelity.
+- Optional `/seamframework` emits one Framework Profile plus dependent templates. Only that mode requires token-pure values, Theme Style ownership, project variables/classes, and profile-before-template import.
+- `/audit /bricksconversion` audits raw fidelity and native coverage. `/audit /seamframework` audits the profile and dependent templates as one package.
+- When an older rule below mentions mandatory Framework variables, profile proof, token purity, or name-only global classes, apply it to `/seamframework` only—not raw Convert.
+
+The deterministic SEAM Compiler is the production authority. Browser AI may explain findings but must not manually recreate Bricks JSON, Framework data, or validator PASS.
+
+Source discovery is general-purpose. A complete standalone document may become three outputs: dedicated header, content, and footer templates. A multi-file project may produce any number of discovered page/template outputs. Do not assume only Home or Shop.
+
+Do not convert Kiwe DSA/AppShell control chrome into page content when it is explicitly supplied as a separate AppShell lane:
 
 Never convert these lanes into Bricks:
 
@@ -17,13 +28,11 @@ Never convert these lanes into Bricks:
 - `css/theme.css`;
 - DSA/AppShell sheet, screen, dock, navbar, backdrop, fixture, or preview markup.
 
-If a combined handoff is supplied, use only the `website/bricks-paste.html` lane as the conversion source. The AppShell theme remains a Kiwe theme package, not Bricks content.
-
-`source.html` must point to `website/bricks-paste.html`.
+If a combined handoff is supplied, discover the actual website source files and exclude the separately identified AppShell theme lane. The AppShell theme remains a Kiwe theme package, not Bricks content.
 
 Do not read the whole Kiwe repository. Do not scrape the public frontend. Do not mutate WordPress, Bricks, WooCommerce, cart, checkout, or auth. This phase produces upload/review artifacts only.
 
-If the artifact summary does not include `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or explicit human confirmation that Kiwe > Framework/Bricks Theme Styles have already been imported/pushed, stop and ask the human to run `/create /frameworkprofile` first. Do not silently create a Framework profile inside `/convert /bricks`.
+Never stop raw Convert because a Framework Profile is absent. When `/seamframework` is explicitly requested, generate its profile deterministically and require the human to push that profile before importing its dependent templates.
 
 ## Live Bricks preview contamination gate
 
@@ -41,8 +50,9 @@ If stale page custom CSS or old matching selectors are present and are not part 
 
 ## Preferred inputs
 
-- `website/bricks-paste.html`
-- `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or confirmation that Kiwe > Framework/Bricks Theme Styles are already pushed
+- arbitrary HTML/CSS/JS files, project folder, archive, or standalone document
+- optional raw compiler result when the requested stage is `/seamframework`
+- optional Framework Profile only when auditing or repairing an existing Framework package
 - optional `bricks-bindings/kiwe-bindings.json` from `/usesitegraph`
 - optional target `kiwe.site-graph.v1` JSON
 - optional `/wp-json/dsa/v1/ai/bricks/context` or MCP `kiwe_get_bricks_conversion_context`

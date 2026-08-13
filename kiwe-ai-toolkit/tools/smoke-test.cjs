@@ -48,11 +48,16 @@ function assert(condition, message) {
   const m = await import(pathToFileURL(path.join(root, 'lib/kiwe-core.js')).href);
   const entry = m.getStartEntrypoint();
   const manifest = m.getCommandManifest();
+  const compilerContract = JSON.parse(fs.readFileSync(path.join(root, 'contracts/seam-compiler-contract.json'), 'utf8'));
   const plan = m.planFlow({ artifactSummary: 'homepage-appsite-v3-main-only-preview.html raw html css js' });
+
+  assert(compilerContract.version === '0.11.0', 'compiler contract mismatch');
+  assert(compilerContract.stages.convert.frameworkNeutral === true, 'raw Convert must remain Framework-neutral');
+  assert(compilerContract.stages.framework.profileInstallRequiredBeforeTemplateImport === true, 'Framework install order missing');
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.01', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.02', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
@@ -70,7 +75,7 @@ function assert(condition, message) {
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_OUTPUT_MISSING, 'entry missing previous output error code');
   assert(entry.flows.auditClosure, 'entry missing audit closure law');
   assert(entry.flows.auditClosure.byStartPoint['bricks-template-upload'].includes('/audit /bricksconversion'), 'entry missing Bricks closure audit');
-  assert(entry.flows.auditClosure.byStartPoint['raw-html-css-js'].includes('/audit /accessibility'), 'entry missing raw flow accessibility closure');
+  assert(entry.flows.auditClosure.byStartPoint['raw-html-css-js'].includes('/audit /bricksconversion'), 'entry missing raw Bricks closure');
   assert(JSON.stringify(entry).includes('Do not use prior Kiwe validation material'), 'missing current-run evidence boundary in entry');
   assert(JSON.stringify(entry).includes('Full-flow means one final delivery, not one giant context load'), 'missing full-flow stepwise context boundary in entry');
   assert(JSON.stringify(entry).includes('Missing Site Graph is not a blocker for static Bricks conversion'), 'missing Site Graph non-blocking boundary in entry');
@@ -81,14 +86,14 @@ function assert(condition, message) {
   assert(entry.pluginApi && entry.pluginApi.routes && entry.pluginApi.routes.execute.includes('/ai/seamflow/execute'), 'entry missing plugin SeamFlow execute route');
   assert(entry.pluginApi.auth.includes('seamflow'), 'entry missing plugin SeamFlow scope');
   assert(entry.pluginApi.askWhenMissing.includes('WordPress Admin'), 'entry missing plugin API key creation prompt');
-  assert(entry.noCommandInteraction.firstResponseShape.some((line) => line.includes('Route A Browser/raw')), 'entry missing first-interaction route options');
-  assert(entry.firstResponse.ifFilesNoCommand.includes('/execute /stepbystep /audit /fix /eachstep /report'), 'entry missing raw-draft guided SeamFlow default');
-  assert(entry.noCommandInteraction.firstResponseShape.some((line) => line.includes('/execute /stepbystep /audit /fix /eachstep /report')), 'entry first response missing raw-draft recommended command');
+  assert(entry.noCommandInteraction.firstResponseShape.some((line) => line.includes('Route A hosted SEAM Compiler')), 'entry missing compiler route options');
+  assert(entry.firstResponse.ifFilesNoCommand.includes('/convert /bricks'), 'entry missing raw deterministic conversion default');
+  assert(entry.noCommandInteraction.firstResponseShape.some((line) => line.includes('/convert /bricks')), 'entry first response missing raw conversion command');
   assert(entry.errorHandling.codes.KIWE_VALIDATOR_PROOF_MISSING, 'entry missing validator proof error code');
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.01', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.02', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
@@ -105,33 +110,32 @@ function assert(condition, message) {
   assert(manifest.commands['/fix /previousoutput'], 'manifest missing /fix /previousoutput');
   assert(manifest.errorCatalog.codes.KIWE_MANUAL_PASS_BLOCKED, 'manifest missing command-central error catalog');
   assert(manifest.errorCatalog.codes.KIWE_VALIDATOR_PROOF_MISSING, 'manifest missing validator proof error catalog');
-  assert(manifest.globalRules.validatorAuthority.includes('self-contained-fallback'), 'manifest missing standalone Seam validator boundary');
+  assert(manifest.globalRules.validatorAuthority.includes('SEAM Compiler'), 'manifest missing SEAM Compiler proof authority');
   assert(manifest.pluginApi && manifest.pluginApi.routes && manifest.pluginApi.routes.status.includes('/ai/seamflow/status'), 'manifest missing plugin SeamFlow status route');
   assert(manifest.pluginApi.scope.includes('seamflow'), 'manifest missing plugin SeamFlow scope');
   assert(manifest.pluginApi.askWhenMissing.includes('WordPress Admin'), 'manifest missing plugin API key creation prompt');
   assert(manifest.globalRules.firstInteractionRoutes.includes('Route D'), 'manifest missing first-interaction route menu');
-  assert(manifest.globalRules.firstInteractionRoutes.includes('/execute /stepbystep /audit /fix /eachstep /report'), 'manifest missing raw-draft guided SeamFlow default');
+  assert(manifest.globalRules.firstInteractionRoutes.includes('/convert /bricks'), 'manifest missing raw conversion default');
   assert(manifest.globalRules.routeFallbackLadder.includes('Route B'), 'manifest missing cross-phase REST-to-Git fallback ladder');
-  assert(JSON.stringify(manifest.commands['/rebuild /seamframework']).includes('compile-seamframework.cjs'), 'manifest missing deterministic Seam compiler route');
+  assert(manifest.commands['/seamframework'], 'manifest missing optional Framework stage');
+  assert(JSON.stringify(manifest.commands['/rebuild /seamframework']).includes('legacy'), 'manifest missing legacy normalization boundary');
   assert(manifest.globalRules.auditClosure.includes('SeamFlow closes only when'), 'manifest missing audit closure rule');
   assert(manifest.commands['/fix /accessibility'].preserve.includes('Seam classes'), 'accessibility preservation contract missing Seam classes');
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.01', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.01', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.02', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.02', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
-  assert(plan.startResponse.rawDraftDefaultCommand === '/execute /stepbystep /audit /fix /eachstep /report', 'plan missing raw-draft guided SeamFlow default');
-  assert(plan.firstInteractionDefaults.rawHtmlCssJsDraft.recommendedCommand === '/execute /stepbystep /audit /fix /eachstep /report', 'plan missing structured raw-draft default');
+  assert(plan.startResponse.rawDraftDefaultCommand === '/convert /bricks', 'plan missing raw conversion default');
+  assert(plan.firstInteractionDefaults.rawHtmlCssJsDraft.recommendedCommand === '/convert /bricks', 'plan missing structured raw conversion default');
   assert(plan.capabilityCheck.routeFallbackLadder.includes('Route B'), 'plan missing cross-phase REST-to-Git fallback ladder');
-  assert(plan.recommendedNextCommands.includes('/audit /accessibility'), 'plan missing accessibility audit');
+  assert(plan.recommendedNextCommands.includes('/seamframework if Framework output is wanted'), 'plan missing optional Framework stage');
   assert(plan.executionOptions.stepByStep === '/execute /stepbystep', 'plan missing step-by-step command');
   assert(plan.executionOptions.fullFlow === '/execute /fullflow', 'plan missing full-flow command');
-  assert(plan.auditClosure.requiredAudits.includes('/audit /seamframework'), 'plan missing seam closure audit');
   assert(plan.auditClosure.requiredAudits.includes('/audit /bricksconversion'), 'plan missing bricks closure audit');
-  assert(plan.auditClosure.requiredAudits.includes('/audit /accessibility'), 'plan missing accessibility closure audit');
 
   const bad = m.diagnoseCommand({ command: '/buid /preview /brickstheme' });
   const ideate = m.diagnoseCommand({ command: '/ideate' });
@@ -168,7 +172,7 @@ function assert(condition, message) {
   assert(ideateRoute.includes('Responsive geometry ladder'), '/ideate route missing responsive geometry guidance');
   assert(ideateRoute.includes('ordinary conversation is the refinement interface'), '/ideate route missing conversational refinement');
   assert(noop.stop && noop.status === 'noop', 'preview noop diagnostic failed');
-  assert(missingProfile.stop && missingProfile.code === 'bricks_convert_missing_framework_profile', 'missing framework diagnostic failed');
+  assert(!missingProfile.stop, 'raw conversion must not require a Framework profile');
   assert(!ok.stop, 'valid bricks conversion diagnostic stopped');
   assert(wrongVerb.stop && wrongVerb.code === 'bricks_convert_requires_convert_verb', 'wrong verb diagnostic failed');
   assert(!a11y.stop, 'accessibility create diagnostic stopped unexpectedly');

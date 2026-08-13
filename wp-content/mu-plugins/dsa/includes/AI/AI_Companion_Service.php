@@ -584,7 +584,7 @@ final class AI_Companion_Service {
 				$existing ? 'A website/page preview already exists in the supplied artifact. Do not regenerate the same preview.' : 'There is no separate Kiwe website preview command. A website/page preview is the HTML/CSS/JS page artifact itself.',
 				'command-diagnostic',
 				$normalized,
-				$existing ? [ '/rebuild /seamframework', '/audit /seamframework', '/dynamic /sitegraph', '/convert /bricks' ] : [ '/ideate /webdraft', '/rebuild /seamframework' ],
+				$existing ? [ '/convert /bricks', '/audit /bricksconversion', '/seamframework', '/dynamic /sitegraph' ] : [ '/ideate /webdraft', '/convert /bricks' ],
 				[ 'Do not spend tokens recreating a preview that is already the artifact.' ]
 			);
 		}
@@ -608,7 +608,7 @@ final class AI_Companion_Service {
 		$is_bricks_convert = preg_match( '/\/convert\b.*\/bricks\b|\/bricks\b.*\/convert\b/', $text ) && ! str_contains( $text, '/brickstheme' );
 
 		if ( $is_bricks_convert && $this->command_gate_forbidden_bricks_source( $raw ) ) {
-			return $this->command_gate_result( 'rejected', 'bricks_convert_forbidden_source_in_command', '`/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.', 'bricks-convert', $normalized, [ '/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Bricks conversion source is strictly `website/bricks-paste.html`.' ] );
+			return $this->command_gate_result( 'rejected', 'bricks_convert_forbidden_source_in_command', '`/convert /bricks` cannot convert a separately identified AppShell theme, DSA screen/sheet/dock/navbar lane, theme package, or theme CSS into page content.', 'bricks-convert', $normalized, [ '/convert /bricks with the actual website HTML/CSS/JS project', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'SEAM Compiler discovers arbitrary website pages but keeps explicit AppShell control chrome out of Bricks content.' ] );
 		}
 
 		if ( $is_bricks_convert && ! $this->command_gate_has_page_artifact( $artifact_summary ) ) {
@@ -616,10 +616,10 @@ final class AI_Companion_Service {
 			return $this->command_gate_result(
 				$theme_like ? 'rejected' : 'needs_input',
 				$theme_like ? 'bricks_convert_missing_page_source_with_theme_artifact' : 'bricks_convert_missing_page_source',
-				$theme_like ? 'The supplied artifact summary looks like an AppShell/theme/preview lane and does not include `website/bricks-paste.html`. Stop; do not convert DSA theme material into Bricks.' : '`/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
+				$theme_like ? 'The supplied artifact summary looks like an AppShell/theme lane without an actual website source. Stop; do not convert DSA theme material into Bricks.' : '`/convert /bricks` needs an approved HTML/CSS/JS project, folder, archive, or standalone document.',
 				'bricks-convert',
 				$normalized,
-				[ '/rebuild /seamframework to create website/bricks-paste.html', '/convert /bricks after website/bricks-paste.html exists' ],
+				[ '/convert /bricks after supplying the website source', '/seamframework only after raw conversion if Framework output is wanted' ],
 				[ 'Do not guess a Bricks source from a DSA theme or combined preview.' ]
 			);
 		}
@@ -666,7 +666,7 @@ final class AI_Companion_Service {
 	}
 
 	private function command_gate_has_page_artifact( string $text ): bool {
-		return (bool) preg_match( '/website[\\\\\/]bricks-paste\.html|bricks-paste\.html/i', $text );
+		return (bool) preg_match( '/website[\\\\\/]bricks-paste\.html|bricks-paste\.html|(?:^|[\\s\\\\\/])[^\\s\\\\\/]+\.html?\\b|index\.html|html\\s*[,+&/]\\s*css|html\/css\/js|source project|website folder|webpage/i', $text );
 	}
 
 	private function command_gate_has_conversion_artifact( string $text ): bool {
@@ -724,7 +724,7 @@ final class AI_Companion_Service {
 		if ( preg_match( '/(?:\/convert|\/export|\/translate|\/rebuild|\/adapt).*(?:\/bricks|bricks json|bricks conversion|html-to-bricks|html css to bricks)/', $text ) ) {
 			return 'bricks-convert';
 		}
-		if ( preg_match( '/(?:\/rebuild|\/convert|\/adapt).*(?:\/seamframework|\/seam|seam framework)/', $text ) ) {
+		if ( preg_match( '/(?:^|\s)\/seamframework\b|(?:\/rebuild|\/convert|\/adapt).*(?:\/seamframework|\/seam|seam framework)/', $text ) ) {
 			return 'seam-rebuild';
 		}
 		if ( preg_match( '/\/audit.*(?:\/seamframework|\/seam|seam framework)/', $text ) ) {
@@ -761,6 +761,15 @@ final class AI_Companion_Service {
 	private function cards_for_phase( string $phase ): array {
 		if ( '' === $phase ) {
 			return [];
+		}
+		$compiler_cards = [
+			'bricks-convert' => [ 'id' => 'phase-seam-compiler-raw', 'title' => 'Run deterministic raw Bricks conversion', 'body' => 'Run SEAM Compiler 0.11.0 on the arbitrary HTML/CSS/JS project. Raw Convert is Framework-neutral, discovers any number of pages, may split header/footer/content, and uses native Bricks controls before scoped CSS. Browser AI must not author production JSON.' ],
+			'bricks-audit'   => [ 'id' => 'phase-seam-compiler-audit', 'title' => 'Audit raw conversion with valid proof', 'body' => 'Audit hierarchy, native coverage, safe behavior, and source parity. Require matching viewport provenance before a visual percentage. Source defects remain source parity; stale CSS, foreign overlays, or mismatched canvases make visual proof INCOMPLETE.' ],
+			'seam-rebuild'   => [ 'id' => 'phase-seam-framework-optional', 'title' => 'Optimize the raw conversion with Framework', 'body' => 'Run optional /seamframework after raw Convert. Emit one Framework Profile first and dependent templates second. Do not redesign or ask AI to invent tokens and classes.' ],
+			'seam-audit'     => [ 'id' => 'phase-seam-framework-package-audit', 'title' => 'Audit profile and templates together', 'body' => 'Verify profile-before-template installation, defined variables/classes, Theme Style ownership, element exceptions, unsupported CSS, and unchanged visual intent as one deterministic package.' ],
+		];
+		if ( isset( $compiler_cards[ $phase ] ) ) {
+			return [ $compiler_cards[ $phase ] ];
 		}
 
 		$cards = [
@@ -871,7 +880,7 @@ final class AI_Companion_Service {
 			[
 				'id'      => 'seam-capability-attributes',
 				'title'   => 'Seam can call Kiwe Appsite capabilities by attribute',
-				'body'    => 'During /rebuild /seamframework, preserve the UI and add live attributes when intent exists: data-kiwe-save for wishlist/bookmark, data-kiwe-notifications for notification CTAs, data-kiwe-theme-toggle for light/dark controls, data-dsa-open-module for DSA launchers, semantic section IDs/labels for Menu context, and data-kiwe-query-template/data-kiwe-binding for future dynamic Bricks loops. Do not recreate Kiwe runtime behavior in page JS.',
+				'body'    => 'During optional /seamframework, use the deterministic compiler to preserve the raw conversion while producing one Framework Profile plus dependent templates. Theme Style owns body/headings/links/background; project classes own repeated design; elements keep true exceptions. Push the profile before importing templates.',
 				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
 			],
 			[
@@ -918,12 +927,22 @@ final class AI_Companion_Service {
 			],
 		];
 
-		return array_values(
+		$common = array_values(
 			array_filter(
 				$common,
-				static fn( array $card ): bool => in_array( $mode, $card['applies'], true )
+				static fn( array $card ): bool => 'bricks-native-token-purity' !== (string) ( $card['id'] ?? '' ) && in_array( $mode, $card['applies'], true )
 			)
 		);
+		array_unshift(
+			$common,
+			[
+				'id'      => 'seam-compiler-stage-boundary',
+				'title'   => 'Raw Convert first; Framework only when requested',
+				'body'    => 'SEAM Compiler is deterministic authority. Raw conversion is Framework-neutral. Optional Framework moves repeated design into Theme Style, universal tokens/palette, and project variables/classes while elements keep genuine exceptions.',
+				'applies' => [ $mode ],
+			]
+		);
+		return $common;
 	}
 
 	private function answer_for_question( string $question, string $mode ): array {
@@ -940,6 +959,13 @@ final class AI_Companion_Service {
 				'summary' => 'Treat Bricks conversion as a reviewable no-loss package: native Bricks elements plus a Kiwe fidelity manifest, not a direct save.',
 				'do'      => [ 'Target public Bricks 2.3.x template import/runtime unless Site Graph proves a newer public compatible version.', 'Preserve Seam classes, data-role, public Kiwe capability attributes, ARIA, IDs, and canonical data-dsa-open-module launchers.', 'Map query loops, dynamic tags, conditions, and interactions from Site Graph and /ai/bricks/context.', 'Use Kiwe/Seam variables, declared project variables, or real tokenized clamp() expressions inside Bricks-native settings and global_classes for spacing, sizing, radius, type, shadows, transform offsets, and responsive layout; never use no-op clamp(v, v, v) wrappers.', 'Use bare CSS variables in native settings/global_classes, e.g. var(--nc-card-radius), never var(--nc-card-radius, 24px). Require Kiwe > Framework profile push before template import. Store global variable names without leading --, use _widthMax/_widthMin/_heightMax/_heightMin for sizing, do not put var(...) font stacks in _typography.font-family, store colors as Bricks color objects, use _gradient for gradients, and store border radius as _border.radius.top/right/bottom/left.', 'Keep full-page template visuals resilient when Bricks skips/remaps existing global class names by placing enough editable native controls on elements, especially for grid/flex, spacing, sizing, typography, paint, radius, shadows, and responsive overrides.' ],
 				'dont'    => [ 'Do not put AppShell shell markup in website/bricks-paste.html.', 'Do not hide the whole page in one Code element when native Bricks elements can represent it.', 'Do not ship CSS/JS Code elements from Bricks native converter, Code2Bricks, or another external converter as production output unless explicitly marked review-only unsupported.', 'Do not rely mainly on global_classes hydration for rendered design.', 'Do not duplicate visual styles in both element-native controls and styled global_classes for a full-page template upload.', 'Do not hardcode native Bricks design lengths such as 28px padding, 390px min-height, or 2.35rem font-size.', 'Do not put official H1-H6 token font-size locks directly on semantic Bricks Heading elements.', 'Do not claim WordPress/Bricks/Woo writes without controlled executor evidence.' ],
+			];
+		}
+		if ( str_contains( $question_lc, 'bricks conversion' ) || str_contains( $question_lc, 'bricks json' ) || str_contains( $question_lc, 'html-to-bricks' ) || str_contains( $question_lc, 'convert to bricks' ) ) {
+			return [
+				'summary' => 'Run deterministic raw SEAM Compiler conversion first. Add Framework only as an explicit post-conversion stage.',
+				'do'      => [ 'Accept arbitrary HTML/CSS/JS projects.', 'Discover all pages without route-name assumptions.', 'Use native Bricks controls before scoped CSS.', 'Treat source defects as parity, not converter failures.', 'Require matching viewport provenance for visual scores.' ],
+				'dont'    => [ 'Do not require a Framework Profile for raw Convert.', 'Do not let browser AI author production JSON.', 'Do not inject Seam tokens/classes into raw conversion.', 'Do not score contaminated or mismatched screenshots.' ],
 			];
 		}
 		if ( str_contains( $question_lc, 'theme' ) || str_contains( $question_lc, 'dsa' ) || 'theme' === $mode ) {
@@ -1412,6 +1438,8 @@ final class AI_Companion_Service {
 		}
 
 		$template_text = (string) wp_json_encode( $data );
+		$generator = isset( $data['generator'] ) && is_array( $data['generator'] ) ? $data['generator'] : [];
+		$framework_mode = ! empty( $generator['seamFramework'] ) || 'framework-profile-dependent' === (string) ( $generator['renderMode'] ?? '' );
 		if ( preg_match( '/data-dsa-surface|data-dsa-screen|data-dsa-dock|data-dsa-sheet/i', $template_text ) ) {
 			$findings[] = [
 				'severity' => 'error',
@@ -1463,7 +1491,8 @@ final class AI_Companion_Service {
 			];
 		}
 		$native_controls = $this->count_bricks_native_style_controls( array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ) );
-		$findings        = array_merge(
+		if ( $framework_mode ) {
+			$findings = array_merge(
 			$findings,
 			$this->review_bricks_tokenized_native_lengths(
 				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
@@ -1472,7 +1501,7 @@ final class AI_Companion_Service {
 				$this->collect_bricks_declared_css_variables( $data )
 			)
 		);
-		$findings        = array_merge(
+			$findings = array_merge(
 			$findings,
 			$this->review_bricks_css_variable_fallbacks(
 				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
@@ -1480,7 +1509,7 @@ final class AI_Companion_Service {
 				'$.content/header/footer/global_classes'
 			)
 		);
-		$findings        = array_merge(
+			$findings = array_merge(
 			$findings,
 			$this->review_bricks_unknown_framework_variables(
 				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
@@ -1488,7 +1517,7 @@ final class AI_Companion_Service {
 				'$.content/header/footer/global_classes'
 			)
 		);
-		$findings        = array_merge(
+			$findings = array_merge(
 			$findings,
 			$this->review_bricks_project_variable_framework_proof(
 				array_merge( $elements, (array) ( $data['global_classes'] ?? [] ), (array) ( $data['globalClasses'] ?? [] ) ),
@@ -1498,6 +1527,7 @@ final class AI_Companion_Service {
 				$path_map
 			)
 		);
+		}
 		$findings        = array_merge(
 			$findings,
 			$this->review_bricks_template_variable_names( $data, $path )
@@ -1518,7 +1548,7 @@ final class AI_Companion_Service {
 				'$.content/header/footer/global_classes'
 			)
 		);
-		if ( count( $elements ) >= 180 && $native_controls < 60 ) {
+		if ( ! $framework_mode && count( $elements ) >= 180 && $native_controls < 60 ) {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_too_few_native_controls',
@@ -1527,7 +1557,7 @@ final class AI_Companion_Service {
 			];
 		}
 		$editability = $this->bricks_template_editability_stats( $elements );
-		if ( count( $elements ) >= 180 && $editability['controls_per_element'] < self::BRICKS_MIN_ELEMENT_CONTROLS_PER_ELEMENT ) {
+		if ( ! $framework_mode && count( $elements ) >= 180 && $editability['controls_per_element'] < self::BRICKS_MIN_ELEMENT_CONTROLS_PER_ELEMENT ) {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_element_native_controls_too_low',
@@ -1535,7 +1565,7 @@ final class AI_Companion_Service {
 				'path'     => sanitize_text_field( $path ),
 			];
 		}
-		if ( count( $elements ) >= 180 && $editability['class_only_ratio'] > self::BRICKS_MAX_CLASS_ONLY_ELEMENT_RATIO ) {
+		if ( ! $framework_mode && count( $elements ) >= 180 && $editability['class_only_ratio'] > self::BRICKS_MAX_CLASS_ONLY_ELEMENT_RATIO ) {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_class_hydration_dependency',

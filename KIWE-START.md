@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.01`
+Contract version: `7.02`
 Updated: `2026-08-12`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.01
+SeamFlow contract: 7.02
 ```
 
 Then do one of these:
@@ -28,7 +28,7 @@ Then do one of these:
    - `/execute /stepbystep`, where each command returns its own artifact before the next command starts;
    - `/execute /fullflow`, where you run the complete path and return only final artifacts plus compact pass/fail status.
    The human may add `/audit /eachstep`, `/audit /fix /eachstep`, `/audit /atend`, `/audit /fix /atend`, `/report`, or `/usecompanion`.
-   If the file is a raw HTML/CSS/JS draft with no Seam/Bricks root, the best default recommendation is `/execute /stepbystep /audit /fix /eachstep /report`. Explain that this starts with `/rebuild /seamframework` internally, then stops after the first closed phase. Do not make a non-technical human choose the low-level phase command unless they explicitly ask for a specific command.
+   If the file is raw HTML/CSS/JS, recommend deterministic `/convert /bricks` first. Explain that `/seamframework` and accessibility are optional post-conversion stages.
    Then show the available route choices:
    - `Route A — Browser/raw`: use exact raw Start/manifest/context files and only validators the browser AI can actually execute.
    - `Route B — Git/Node`: use the local Kiwe toolkit compiler/validators if this AI has shell or code-execution access.
@@ -60,7 +60,7 @@ Validator authority: only executed validator proof may close a lane as `PASS`. V
 
 Seam validator portability: `validate-seamframework.cjs` is intentionally self-contained for the website/page Seam lane. When it is downloaded without the rest of the toolkit, it must run its bundled fallback checks and report `mode: "self-contained-fallback"` instead of stopping because `audit-output.cjs` is absent. When `audit-output.cjs` is available beside it, it may delegate to the fuller output audit. Browser AI should not use missing `audit-output.cjs` as a blocker for `/audit /seamframework` once it has the current `validate-seamframework.cjs`.
 
-Seam compiler route: when a tool-capable AI can run Node, `/rebuild /seamframework` should call `compile-seamframework.cjs` on the supplied raw HTML/CSS page instead of manually rewriting the page. The compiler emits `website/bricks-paste.html`, strips unsafe page runtime, preserves the visual draft, routes anonymous styling through project tokens, adds Seam/Kiwe semantic hooks, and immediately runs `validate-seamframework.cjs`. If the compiler is unavailable, the AI may rebuild manually, but it must still close with the Seam validator.
+SEAM Compiler authority: version 0.11.0 deterministically owns `/convert /bricks`, optional `/seamframework`, and executable conversion proof. Browser AI may create/refine source designs and explain findings, but it must not manually author production Bricks JSON, invent Framework Profile data, or claim manual visual PASS. Raw Convert is Framework-neutral. `/seamframework` runs only after raw conversion and emits one project-wide Framework Profile plus dependent templates.
 
 Validator proof shape: every `STATUS: PASS` for `/audit`, `/fix`, `/execute /stepbystep`, or `/execute /fullflow` must include a compact proof block with the validator command/tool/route used, contract/version, exit code or ok status, fail count, warning count, and the artifact path/hash when available. Missing proof is itself `ERROR: KIWE_VALIDATOR_PROOF_MISSING`.
 
@@ -170,7 +170,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.01
+SeamFlow contract: 7.02
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -187,8 +187,8 @@ Commands: use /list for the compact command list
 
 If the human supplied attachments, inspect enough file content to determine stage and recommend the safest next command:
 
-- raw creative draft -> recommend `/execute /stepbystep /audit /fix /eachstep /report`; say the first internal phase is `/rebuild /seamframework`;
-- Seam page -> recommend `/audit /seamframework`;
+- raw creative draft -> recommend deterministic `/convert /bricks`;
+- raw Bricks conversion -> recommend `/audit /bricksconversion`, then optional `/seamframework` or accessibility;
 - Framework profile -> recommend `/audit /frameworkprofile`;
 - Bricks template or conversion -> recommend `/audit /bricksconversion`;
 - DSA theme -> recommend `/audit /dsatheme`;
@@ -292,7 +292,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.01
+SeamFlow contract: 7.02
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -303,20 +303,15 @@ Next valid command:
 For a raw HTML/CSS/JS draft, the recommended webpage/header/footer/template-to-Bricks path is:
 
 ```text
-/rebuild /seamframework
-/audit /seamframework
-/fix /seamframework       # only if audit fails
-/create /frameworkprofile
-/audit /frameworkprofile
-/fix /frameworkprofile    # only if audit fails
 /convert /bricks
 /audit /bricksconversion
 /fix /bricksconversion    # only if audit fails
-/audit /accessibility
-/fix /accessibility       # only if audit fails
+/seamframework            # optional Framework Profile + dependent templates
+/audit /seamframework     # only when Framework output was created
+/create /accessibility    # optional separate accessibility stage
 ```
 
-For header, footer, and reusable template work, follow the same path but set the Bricks target type correctly during `/convert /bricks`:
+SEAM Compiler discovers arbitrary pages without Home/Shop assumptions. A complete standalone document may be split automatically:
 
 ```text
 homepage/body -> templateType: "content", content[]
@@ -362,7 +357,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.01
+SeamFlow contract: 7.02
 Command:
 Artifact classification:
 Files returned:
@@ -371,18 +366,19 @@ Warnings:
 Next suggested command:
 ```
 
-## 100% Seam rule
+## Compiler and Framework ownership rule
 
-For `/rebuild /seamframework`, `/convert /bricks`, `/audit /bricksconversion`, and `/fix /bricksconversion`, do not settle for "renders okay."
+Raw `/convert /bricks` must preserve 1:1 source fidelity through native Bricks controls plus scoped unsupported CSS, without requiring or injecting Framework. Source defects remain source parity and are not silently repaired.
 
-The output must preserve design quality and express it through Kiwe/Seam Framework integration:
+Optional `/seamframework` preserves that raw result while applying this ownership order:
 
-- official Seam semantic roles/classes/flows;
-- Kiwe/Appsite capability attributes instead of duplicate runtime behavior;
-- Kiwe/Seam variables or declared project variables for visual values;
-- Bricks-native element settings as the render/edit owner when producing full-page Bricks template uploads;
-- Bricks global variables as token definitions, and template `global_classes` as semantic/name-only references unless the command explicitly targets a class-library artifact;
-- real fluid clamps only when source responsive states prove different min/max values;
+- Bricks Theme Style owns body, H1-H6, links, and site background;
+- universal Kiwe/Seam variables and palette own shared primitives;
+- project variables and reusable project classes own repeated project design;
+- element-native settings own genuine one-off exceptions;
+- scoped CSS owns only unsupported behavior.
+
+Push the Framework Profile from Kiwe > Framework before importing Framework-dependent templates. Missing profile data must fail closed; do not hide it with CSS variable fallbacks.
 - no no-op clamps such as `clamp(22px, 22px, 22px)`;
 - no direct component colors such as `#fff`, `rgba(...)`, hardcoded gradients, or `--pack-bg: #...` inside Bricks element settings/global classes/custom CSS.
 - no duplicate visual ownership where element-native settings and imported styled global classes both carry the same paint/layout/radius/spacing/typography. That creates Bricks ghost styling and must fail `/audit /bricksconversion`.

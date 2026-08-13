@@ -332,27 +332,19 @@ export function getStartEntrypoint() {
 function auditClosureForArtifact(type, { wantsDsa = false } = {}) {
   const pairsByType = {
     'raw-html-css-js': [
-      ['/audit /seamframework', '/fix /seamframework'],
-      ['/audit /frameworkprofile', '/fix /frameworkprofile'],
-      ['/audit /bricksconversion', '/fix /bricksconversion'],
-      ['/audit /accessibility', '/fix /accessibility']
+      ['/audit /bricksconversion', '/fix /bricksconversion']
     ],
     'seam-page-artifact': [
-      ['/audit /seamframework', '/fix /seamframework'],
-      ['/audit /frameworkprofile', '/fix /frameworkprofile'],
-      ['/audit /bricksconversion', '/fix /bricksconversion'],
-      ['/audit /accessibility', '/fix /accessibility']
+      ['/audit /bricksconversion', '/fix /bricksconversion']
     ],
     'framework-profile': [
       ['/audit /frameworkprofile', '/fix /frameworkprofile']
     ],
     'bricks-template-upload': [
-      ['/audit /bricksconversion', '/fix /bricksconversion'],
-      ['/audit /accessibility', '/fix /accessibility']
+      ['/audit /bricksconversion', '/fix /bricksconversion']
     ],
     'bricks-conversion-envelope': [
-      ['/audit /bricksconversion', '/fix /bricksconversion'],
-      ['/audit /accessibility', '/fix /accessibility']
+      ['/audit /bricksconversion', '/fix /bricksconversion']
     ],
     'dsa-theme-package': [
       ['/audit /dsatheme', '/fix /dsatheme'],
@@ -439,17 +431,12 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
   } else if (primary === 'raw-html-css-js') {
     recommendedMode = wantsFull ? 'full-flow' : wantsStep ? 'step-by-step' : 'ask-flow-choice';
     recommendedNextCommands = [
-      '/rebuild /seamframework',
-      '/audit /seamframework',
-      '/fix /seamframework if needed',
-      '/create /frameworkprofile',
-      '/audit /frameworkprofile',
-      '/fix /frameworkprofile if needed',
       '/convert /bricks',
       '/audit /bricksconversion',
       '/fix /bricksconversion if needed',
-      '/audit /accessibility',
-      '/fix /accessibility if needed'
+      '/seamframework if Framework output is wanted',
+      '/audit /seamframework if Framework output was created',
+      '/create /accessibility if accessibility output is wanted'
     ];
     if (wantsDsa) {
       recommendedNextCommands.splice(6, 0, '/create /dsatheme', '/audit /dsatheme if requested', '/assemble /combined');
@@ -457,15 +444,10 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
   } else if (primary === 'seam-page-artifact') {
     recommendedMode = wantsFull ? 'full-flow-from-seam' : 'ask-flow-choice';
     recommendedNextCommands = [
-      '/audit /seamframework',
-      '/fix /seamframework if needed',
-      '/create /frameworkprofile',
-      '/audit /frameworkprofile',
       '/convert /bricks',
       '/audit /bricksconversion',
       '/fix /bricksconversion if needed',
-      '/audit /accessibility',
-      '/fix /accessibility if needed'
+      '/seamframework if Framework output is wanted'
     ];
   } else if (primary === 'bricks-template-upload' || primary === 'bricks-conversion-envelope') {
     recommendedMode = 'audit-existing-bricks';
@@ -524,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.01',
+    contractVersion: '7.02',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -546,15 +528,15 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.01',
+      mustReport: 'SeamFlow contract: 7.02',
       order: [
         'STATUS',
         'SeamFlow contract',
         'Attachments detected',
         'Artifact diagnostic',
-        'Recommended next command; for raw HTML/CSS/JS drafts use /execute /stepbystep /audit /fix /eachstep /report and note /rebuild /seamframework is the first internal phase',
+        'Recommended next command: deterministic /convert /bricks; /seamframework and /accessibility are optional post-conversion stages',
         'Question with /execute command choices and optional flags',
-        'Route options: Route A Browser/raw; Route B Git/Node; Route C Plugin REST; Route D Plugin REST + Companion',
+        'Route options: Route A hosted SEAM Compiler; Route B local deterministic compiler; Route C Plugin REST authority bridge; Route D Plugin REST + Companion review',
         'API needed for Route C/D: ask for KIWE_REST_BASE and KIWE_AI_KEY and explain WordPress Admin → Kiwe → AI → API access keys',
         'Commands: use /list for the compact command list'
       ],
@@ -565,8 +547,8 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
       includeAttachmentDiagnostic: !hasCommand,
       waitsForApprovalBefore: ['audit', 'fix', 'convert', 'create', 'assemble', 'live-api', 'companion-review'],
       permissionPolicy: 'Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit /command or human approval.',
-      rawDraftDefaultCommand: '/execute /stepbystep /audit /fix /eachstep /report',
-      rawDraftFirstInternalPhase: '/rebuild /seamframework'
+      rawDraftDefaultCommand: '/convert /bricks',
+      rawDraftFirstInternalPhase: '/convert /bricks'
     },
     questions,
     capabilityCheck: {
@@ -590,10 +572,10 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     firstInteractionDefaults: {
       rawHtmlCssJsDraft: {
-        recommendedCommand: '/execute /stepbystep /audit /fix /eachstep /report',
-        explanation: 'Safest default for a raw creative draft. It starts with /rebuild /seamframework internally, audits, fixes, re-audits until PASS or NEEDS_INPUT, returns the phase artifact/report, and waits before the next phase.',
+        recommendedCommand: '/convert /bricks',
+        explanation: 'Run deterministic Framework-neutral raw conversion first. Framework and accessibility are explicit optional post-conversion stages.',
         alternativeFinalOnly: '/execute /fullflow /audit /fix /eachstep',
-        lowLevelPhaseOnly: '/rebuild /seamframework'
+        lowLevelPhaseOnly: '/convert /bricks'
       }
     },
     boundaries: [
@@ -724,15 +706,21 @@ export function listCommands() {
       },
       {
         command: '/rebuild /seamframework',
-        purpose: 'Compile an approved creative draft into Seam Framework with Kiwe tokens and capability attributes; use compile-seamframework.cjs when tools/Node are available.',
-        requires: ['approved HTML/CSS/JS draft'],
-        output: 'website/bricks-paste.html only; add /document if notes are wanted'
+        purpose: 'Compatibility alias. Normalize to deterministic raw Convert followed by optional Framework; never use legacy regex substitution as production authority.',
+        requires: ['approved HTML/CSS/JS source or raw conversion output'],
+        output: 'same output as /convert /bricks then /seamframework'
+      },
+      {
+        command: '/seamframework',
+        purpose: 'Optimize successful raw conversion with one project-wide Framework Profile plus dependent Bricks templates. Theme Style and project classes take repeated load off elements without redesigning the source.',
+        requires: ['successful raw SEAM Compiler conversion output'],
+        output: 'framework/kiwe-framework-profile.json first, then dependent bricks-template files'
       },
       {
         command: '/audit /seamframework',
-        purpose: 'Audit a Seam rebuild with executable validator proof. Does not revise unless paired with /fix.',
-        requires: ['website/bricks-paste.html'],
-        output: 'PASS/FAIL/WARN findings only'
+        purpose: 'Audit the Framework Profile and all dependent templates as one package with executable proof.',
+        requires: ['framework/kiwe-framework-profile.json and dependent templates'],
+        output: 'PASS/FAIL/INCOMPLETE findings only'
       },
       {
         command: '/fix /seamframework',
@@ -827,15 +815,15 @@ export function listCommands() {
       },
       {
         command: '/convert /bricks',
-        purpose: 'Convert only website/bricks-paste.html into one token-pure native Bricks My Templates upload JSON for a page body, header, footer, or reusable section/template, with optional embedded Kiwe fidelity metadata.',
-        requires: ['website/bricks-paste.html', 'framework/kiwe-framework-profile.json or confirmed Kiwe > Framework/Bricks theme-style already pushed', 'optional bricks-bindings/kiwe-bindings.json'],
-        output: 'bricks-template/[page-or-template-name]-template-upload.json only by default; target templateType must be content/header/footer/section; add /document if notes or an external audit envelope are wanted'
+        purpose: 'Run SEAM Compiler 0.11.0 for Framework-neutral raw native Bricks conversion of an arbitrary HTML/CSS/JS project. Discover all pages and split standalone header/footer/content when applicable.',
+        requires: ['approved HTML/CSS/JS project, folder, archive, or standalone document'],
+        output: 'one raw bricks-template file per discovered page/template plus executable compiler proof'
       },
       {
         command: '/audit /bricksconversion',
-        purpose: 'Audit and revise the canonical Bricks conversion package, including native Bricks token purity.',
-        requires: ['bricks-template/[page-name]-template-upload.json or bricks-conversion/kiwe-bricks-conversion.json'],
-        output: 'same Bricks artifact lane, corrected; no notes unless /document was requested'
+        purpose: 'Audit raw native mapping, editability, unsupported exceptions, and source parity. Visual scores require matching viewport provenance.',
+        requires: ['raw source plus bricks-template files or compiler proof bundle'],
+        output: 'PASS/FAIL/INCOMPLETE proof; no notes unless /document was requested'
       },
       {
         command: '/create /accessibility',
@@ -1086,7 +1074,7 @@ function routeKind(command) {
   if (/(\/build|\/create)/.test(text) && /(dsathemeandhomepage|theme and homepage|homepage and theme)/.test(text)) return 'combined-assemble';
   if (/\/audit/.test(text) && /(\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|bricksjson|html-to-bricks|bricks template|template upload)/.test(text)) return 'bricks-audit';
   if (/(\/convert|\/export|\/translate|\/rebuild|\/adapt)/.test(text) && /(\/bricks\b|bricks json|bricks conversion|bricks template|html-to-bricks|html css to bricks)/.test(text) && !/(\/brickstheme|\btheme style\b)/.test(text)) return 'bricks-convert';
-  if (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-rebuild';
+  if (/(?:^|\s)\/seamframework\b/.test(text) || (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text))) return 'seam-rebuild';
   if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
   if (/(\/create|\/build)/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-create';
   if (/\/audit/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-audit';
@@ -1250,7 +1238,7 @@ function commandHas(text, pattern) {
 }
 
 function hasPageArtifact(text) {
-  return /website[\\/]bricks-paste\.html|bricks-paste\.html/i.test(String(text || ''));
+  return /website[\\/]bricks-paste\.html|bricks-paste\.html|(?:^|[\s\\/])[^\s\\/]+\.html?\b|index\.html|html\s*[,+&/]\s*css|html\/css\/js|source project|website folder|webpage/i.test(String(text || ''));
 }
 
 function hasConversionArtifact(text) {
@@ -1315,7 +1303,6 @@ const KIWE_ERROR_CODES = {
   previous_audit_missing: 'KIWE_PREVIOUS_AUDIT_MISSING',
   previous_output_missing: 'KIWE_PREVIOUS_OUTPUT_MISSING',
   accessibility_audit_missing_artifact: 'KIWE_MISSING_ARTIFACT',
-  bricks_convert_missing_framework_profile: 'KIWE_WRONG_LANE',
   bricks_convert_requires_convert_verb: 'KIWE_WRONG_LANE',
   command_is_noop: 'KIWE_WRONG_LANE',
   audit_cadence_requires_execute: 'KIWE_WRONG_LANE',
@@ -1537,9 +1524,9 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       code: 'bricks_convert_forbidden_source_in_command',
       kind: 'bricks-convert',
       normalizedCommand,
-      message: '`/convert /bricks` cannot convert combined previews, AppShell themes, DSA screen/sheet/dock/navbar markup, theme packages, or theme CSS.',
-      suggestions: ['/convert /bricks with source.html = website/bricks-paste.html', '/create /preview /dsatheme', '/create /preview /combined'],
-      boundaries: ['Bricks conversion source is strictly `website/bricks-paste.html`.']
+      message: '`/convert /bricks` cannot convert a separately identified AppShell theme, DSA screen/sheet/dock/navbar lane, theme package, or theme CSS into page content.',
+      suggestions: ['/convert /bricks with the actual website HTML/CSS/JS project', '/create /preview /dsatheme', '/create /preview /combined'],
+      boundaries: ['SEAM Compiler discovers arbitrary website pages while excluding explicit AppShell control chrome.']
     });
   }
 
@@ -1552,21 +1539,10 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
         kind: 'bricks-convert',
         normalizedCommand,
         message: hasThemeArtifact(artifactText) || hasForbiddenBricksSource(artifactText)
-          ? 'The supplied artifact summary looks like an AppShell/theme/preview lane and does not include `website/bricks-paste.html`. Stop; do not convert DSA theme material into Bricks.'
-          : '`/convert /bricks` needs the approved page artifact summary first: `website/bricks-paste.html`.',
-        suggestions: ['/rebuild /seamframework to create website/bricks-paste.html', '/convert /bricks after website/bricks-paste.html exists'],
+          ? 'The supplied artifact summary looks like an AppShell/theme lane without an actual website source. Stop; do not convert DSA theme material into Bricks.'
+          : '`/convert /bricks` needs an approved HTML/CSS/JS project, folder, archive, or standalone document.',
+        suggestions: ['/convert /bricks after supplying the website source', '/seamframework only after raw conversion if Framework output is wanted'],
         boundaries: ['Do not guess a Bricks source from a DSA theme or combined preview.']
-      });
-    }
-    if (!hasFrameworkFoundation(`${artifactText}\n${siteGraphSummary}`)) {
-      return commandDiagnostic({
-        status: 'needs_input',
-        code: 'bricks_convert_missing_framework_profile',
-        kind: 'bricks-convert',
-        normalizedCommand,
-        message: '`/convert /bricks` should run after a Kiwe Framework profile or Bricks theme style exists and has been imported/pushed. Otherwise the Bricks page may reference Seam/Kiwe variables, colors, and font tokens that do not render on the frontend.',
-        suggestions: ['/create /frameworkprofile first', '/audit /frameworkprofile, then import it in Kiwe > Framework and push to Bricks', 'If already pushed, rerun `/convert /bricks` with artifactSummary saying Kiwe > Framework is already pushed to Bricks'],
-        boundaries: ['Do not silently convert a page that depends on missing sitewide tokens/theme style.', 'Do not create a Framework profile inside `/convert /bricks`; stop and ask for the missing foundation.']
       });
     }
   }
@@ -1855,12 +1831,15 @@ function commandListMarkdown() {
     '',
     '## Bricks boundary',
     '',
-    '- `/convert /bricks` converts only `website/bricks-paste.html`.',
-    '- `/convert /bricks` is the user-facing Bricks My Templates upload phase.',
-    '- The lean default output is one native Bricks template upload JSON at `bricks-template/[page-name]-template-upload.json` with non-empty `title`, `templateType`, and `content/header/footer` data.',
+    '- `/convert /bricks` runs deterministic SEAM Compiler 0.11.0 on an arbitrary approved HTML/CSS/JS project, folder, archive, or standalone document.',
+    '- Raw Convert is Framework-neutral and discovers any number of pages without Home/Shop route assumptions.',
+    '- A complete standalone document may be split into dedicated header, footer, and content templates.',
+    '- The default output is one native Bricks template upload JSON per discovered page/template with non-empty `title`, `templateType`, and `content/header/footer` data.',
     '- Optional Kiwe fidelity proof may be embedded in that upload JSON under top-level `kiwe`; external notes/reports/wrappers require `/document`.',
-    '- `/convert /bricks` should run only after `/create /frameworkprofile` has produced `framework/kiwe-framework-profile.json` or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed.',
-    '- `/convert /bricks` must consume that Framework token layer inside native Bricks element settings. For My Templates upload, element-native controls are the default render/edit owner; imported `global_classes` must be semantic/name-only unless the command explicitly targets a class-library artifact.',
+    '- Raw Convert does not require a Framework Profile. Source literals and authored classes are allowed when required for 1:1 fidelity.',
+    '- Optional `/seamframework` runs after raw Convert and creates one project-wide profile plus dependent templates.',
+    '- Framework ownership order is Theme Style, universal variables/palette, project variables/classes, element exceptions, then scoped unsupported CSS.',
+    '- The following token-purity rules apply only to Framework-dependent templates, never raw Convert.',
     '- Treat hardcoded design lengths in native Bricks settings as audit failures: `_padding: 28px`, `_border.radius: 24px`, `_heightMin: 390px`, `_typography.font-size: 2.35rem`, `_rowGap: 20px`, `_transform.translateY: -7px`, and similar values must become Kiwe/Seam variables or tokenized `clamp(...)` expressions.',
     '- Treat direct component colors in native Bricks settings/global classes/custom CSS as audit failures too: `color: #fff`, `_background.color.raw: #8deae5`, `linear-gradient(#201b18, #514238)`, `--pack-bg: #f5b942`, and `var(--token, fallback)` must consume bare `var(--kiwe-*)`, `var(--seam-*)`, or declared project variables. Literal colors are allowed only in Framework/global variable definitions, not as Bricks render-owner fallbacks.',
     '- Reserved Framework variable prefixes are not enough. `var(--kiwe-*)` and `var(--seam-*)` names must exist in Kiwe’s universal token registry/runtime. If the token is not registered, map to an existing official token or declare a project variable such as `--nc-*` in the paired Framework profile.',
@@ -1964,24 +1943,24 @@ function siteGraphCommandGuidance(command) {
 
 function seamRebuildPhaseContext() {
   return [
-    '# Seam rebuild compact contract',
+    '# Legacy Seam rebuild compatibility contract',
     '',
-    'Output only the page lane unless the human explicitly requests `/document`, `/convert /bricks`, DSA theme work, combined preview work, dynamic binding, or staging.',
+    '`/rebuild /seamframework` normalizes to deterministic raw `/convert /bricks` followed by optional `/seamframework`.',
     '',
     'Required output:',
     '',
     '```text',
-    'website/',
-    '  bricks-paste.html',
+    'framework/kiwe-framework-profile.json',
+    'bricks-template/[name]-template-upload.json',
     '```',
     '',
-    'Do not emit `website/bricks-notes.md`, README files, reports, Bricks JSON, AppShell/DSA markup, combined previews, or split preview assets during plain `/rebuild /seamframework`.',
+    'Do not use legacy regex/token substitution or manual browser-AI rewriting as production authority.',
     '',
-    'Tool-capable route: run `node kiwe-ai-toolkit/tools/compile-seamframework.cjs <input.html> <output-dir>` before attempting a manual rebuild. The compiler emits `website/bricks-paste.html` and runs `validate-seamframework.cjs`. Manual rebuild is fallback only when the compiler cannot run.',
+    'Run SEAM Compiler 0.11.0. Raw Convert stays Framework-neutral; the Framework stage emits one profile before dependent templates.',
     '',
-    '`website/bricks-paste.html` is both the standalone browser preview and the Bricks HTML/CSS paste/import artifact.',
+    'Push the Framework Profile from Kiwe > Framework before importing dependent templates.',
     '',
-    'Preserve the approved visual thesis, rebuild with official Seam roles/classes/tokens, keep `data-role` official and headless, put visual styling on project-owned classes, preserve real Kiwe capability intent through attributes, and do not duplicate Kiwe/WordPress/WooCommerce/Bricks runtime authority.',
+    'Preserve the approved visual thesis. Theme Style owns body/headings/links/background; project classes own repeated design; elements keep genuine exceptions; scoped CSS owns only unsupported behavior.',
     '',
     getSeamAttributesContext()
   ].join('\n');
@@ -2073,17 +2052,17 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     parts.push(
       '# Selected phase guidance',
       '',
-      'Rebuild the approved creative draft with Seam Framework while preserving the visual thesis.',
+      'Run the optional deterministic Framework stage on successful raw SEAM Compiler conversion output. Do not rewrite the source or author production JSON manually.',
       '',
-      seamRebuildPhaseContext()
+      readMaybe('contexts/seam-compiler-lite.md')
     );
   } else if (kind === 'seam-audit') {
     parts.push(
       '# Selected phase guidance',
       '',
-      'Audit the Seam rebuild and revise the actual files.',
+      'Audit the Framework Profile and all dependent templates together. Do not accept HTML-only or manual PASS proof.',
       '',
-      seamRebuildPhaseContext(),
+      readMaybe('contexts/seam-compiler-lite.md'),
       '',
       readMaybe('contexts/audit-lite.md')
     );

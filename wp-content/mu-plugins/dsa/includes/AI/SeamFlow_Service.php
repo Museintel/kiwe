@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SeamFlow_Service {
 	private const SCHEMA = 'kiwe.seamflow-api.v1';
 	private const DEFAULT_BRICKS_VERSION = '2.3.10';
+	private const COMPILER_CONTRACT = '0.11.0';
+	private const COMPILER_URL = 'https://seam-compiler-native-v2.koshrr4u.chatgpt.site/';
 
 	public function status(): array {
 		$base = '/wp-json/dsa/v1/ai/seamflow';
@@ -33,6 +35,7 @@ final class SeamFlow_Service {
 				'/audit /seamframework',
 				'/create /frameworkprofile',
 				'/convert /bricks',
+				'/seamframework',
 				'/create /accessibility',
 				'/audit /accessibility',
 				'/fix /previousaudit',
@@ -49,9 +52,18 @@ final class SeamFlow_Service {
 				'execute'          => $base . '/execute',
 			],
 			'bricksConverter' => $converter->available(),
+			'compilerAuthority' => [
+				'name'                => 'SEAM Compiler',
+				'contractVersion'     => self::COMPILER_CONTRACT,
+				'url'                 => self::COMPILER_URL,
+				'rawFrameworkNeutral' => true,
+				'frameworkOptional'   => true,
+				'aiRequired'          => false,
+			],
 			'truthRules'      => [
 				'No manual-only PASS for /audit, /fix, /execute /stepbystep, or /execute /fullflow.',
-				'If native Bricks conversion is unavailable, /convert /bricks returns WARN/FAIL proof instead of production PASS.',
+				'The plugin never substitutes its legacy fallback converter for SEAM Compiler production output.',
+				'Raw /convert /bricks is Framework-neutral; /seamframework is an optional post-conversion stage.',
 				'Generated output is limited to requested phase files unless /document or /report is present.',
 				'Site Graph remains the gate for real WooCommerce IDs, media IDs, query objects, and dynamic tags.',
 			],
@@ -70,11 +82,11 @@ final class SeamFlow_Service {
 			if ( preg_match( '/\bseam-[a-z0-9-]+\b|data-flow\s*=|data-role\s*=/i', $html ) ) {
 				$type       = 'seam-page';
 				$confidence = 'high';
-				$next       = '/create /frameworkprofile';
+				$next       = '/convert /bricks';
 			} else {
 				$type       = 'raw-html-css-webpage';
 				$confidence = 'high';
-				$next       = '/rebuild /seamframework';
+				$next       = '/convert /bricks';
 			}
 		} elseif ( is_array( $json ) ) {
 			$schema = (string) ( $json['schema'] ?? $json['kiwe']['schema'] ?? '' );
@@ -110,28 +122,11 @@ final class SeamFlow_Service {
 	}
 
 	public function rebuild( array $args ): array {
-		$files = $this->files_from_args( $args );
-		$html  = $this->html_from_args( $args, $files );
-		if ( '' === trim( $html ) ) {
-			return $this->error( 'KIWE_MISSING_SOURCE_HTML', 'Request must include html, sourceHtml, or files with a .html artifact.', '/rebuild /seamframework' );
-		}
-
-		$artifact = $this->compile_seam_html( $html, $args );
-		$audit    = $this->audit_seam_html( $artifact );
-		$ok       = empty( $audit['counts']['fail'] );
-
-		return [
-			'ok'              => $ok,
-			'schema'          => self::SCHEMA,
-			'contractVersion' => $this->contract_version(),
-			'status'          => $ok ? 'PASS' : 'FAIL',
-			'command'         => '/rebuild /seamframework',
-			'files'           => [
-				'website/bricks-paste.html' => $artifact,
-			],
-			'proof'           => $this->proof( 'plugin:SeamFlow_Service::audit_seam_html', $ok, $audit ),
-			'nextCommand'     => $ok ? '/create /frameworkprofile' : '/fix /seamframework',
-		];
+		return $this->compiler_required(
+			'KIWE_LEGACY_REBUILD_RETIRED',
+			'Legacy HTML token substitution is not production Framework authority. Run raw Convert in SEAM Compiler, then choose its optional Framework stage.',
+			'/convert /bricks'
+		);
 	}
 
 	public function audit( array $args ): array {
@@ -162,53 +157,24 @@ final class SeamFlow_Service {
 			return $this->audit_response( '/audit /bricksconversion', $result, 'plugin:Bricks_Conversion_Validator::validate' );
 		}
 
-		$html = $this->html_from_args( $args, $files );
-		if ( '' === trim( $html ) ) {
-			return $this->error( 'KIWE_MISSING_SEAM_HTML', 'Request must include website/bricks-paste.html or sourceHtml for Seam audit.', '/audit /seamframework' );
-		}
-		$result = $this->audit_seam_html( $html );
-		return $this->audit_response( '/audit /seamframework', $result, 'plugin:SeamFlow_Service::audit_seam_html' );
+		return $this->compiler_required(
+			'KIWE_SEAM_COMPILER_AUDIT_REQUIRED',
+			'Framework audit must validate the Framework Profile and all dependent templates together in SEAM Compiler. Legacy HTML-only Seam audit cannot close this lane.',
+			'/audit /seamframework in SEAM Compiler'
+		);
 	}
 
 	public function framework_profile( array $args ): array {
 		$files = $this->files_from_args( $args );
-		$html  = $this->html_from_args( $args, $files );
-		$label = $this->profile_label( $args, $html );
-		$overrides = $this->token_overrides_from_html( $html );
-		$overrides = array_replace(
-			[
-				'color-brand'   => '#8f1d22',
-				'color-accent'  => '#12c9c2',
-				'color-surface' => '#f7efe1',
-				'color-text'    => '#211b16',
-				'color-border'  => '#e4d8c8',
-				'font-display'  => 'Georgia, serif',
-				'font-body'     => 'Inter, system-ui, sans-serif',
-				'type-h1'       => 'clamp(3rem, 6vw + 1rem, 6.8rem)',
-				'type-body'     => 'clamp(1rem, 0.35vw + 0.92rem, 1.125rem)',
-				'space-md'      => 'clamp(0.75rem, 0.45vw + 0.65rem, 1.25rem)',
-				'radius-lg'     => 'clamp(1rem, 0.6vw + 0.85rem, 1.5rem)',
-				'shadow-md'     => '0 18px 50px rgba(31, 24, 18, 0.14)',
-			],
-			$overrides
-		);
+		$profile = $this->framework_profile_from_args( $args, $files );
+		if ( ! is_array( $profile ) || 'kiwe.framework-profile.v1' !== (string) ( $profile['schema'] ?? '' ) ) {
+			return $this->compiler_required(
+				'KIWE_SEAM_COMPILER_PROFILE_REQUIRED',
+				'Framework Profiles must be generated from successful raw conversion by the deterministic SEAM Compiler. The plugin no longer invents default brand values.',
+				'/seamframework in SEAM Compiler'
+			);
+		}
 
-		$profile = [
-			'schema'   => 'kiwe.framework-profile.v1',
-			'version'  => $this->contract_version(),
-			'settings' => [
-				'tokens' => [
-					'enabled'            => true,
-					'profile_label'      => $label,
-					'overrides'          => $overrides,
-					'bricks_theme_style' => [
-						'enabled' => true,
-						'id'      => $this->slug( $label ),
-						'label'   => $label,
-					],
-				],
-			],
-		];
 		$audit = $this->audit_framework_profile( $profile );
 		$ok    = empty( $audit['counts']['fail'] );
 
@@ -217,57 +183,49 @@ final class SeamFlow_Service {
 			'schema'          => self::SCHEMA,
 			'contractVersion' => $this->contract_version(),
 			'status'          => $ok ? 'PASS' : 'FAIL',
-			'command'         => '/create /frameworkprofile',
+			'command'         => '/seamframework',
 			'files'           => [
 				'framework/kiwe-framework-profile.json' => wp_json_encode( $profile, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ),
 			],
 			'proof'           => $this->proof( 'plugin:SeamFlow_Service::audit_framework_profile', $ok, $audit ),
-			'nextCommand'     => $ok ? '/convert /bricks' : '/fix /frameworkprofile',
+			'nextCommand'     => $ok ? 'Push this profile in Kiwe > Framework before importing its dependent templates.' : '/fix /frameworkprofile',
 		];
 	}
 
 	public function convert_bricks( array $args ): array {
 		$files = $this->files_from_args( $args );
-		$html  = $this->html_from_args( $args, $files );
-		if ( '' === trim( $html ) ) {
-			return $this->error( 'KIWE_MISSING_SEAM_HTML', 'Request must include the approved Seam page artifact before /convert /bricks.', '/convert /bricks' );
+		$template = $this->template_from_args( $args, $files );
+		if ( [] !== $template && $this->is_seam_compiler_template( $template ) ) {
+			$html = $this->html_from_args( $args, $files );
+			$validation = ( new Bricks_Conversion_Validator() )->validate( $template, $this->array_arg( $args, 'siteGraph' ), $html, $this->array_arg( $args, 'binding' ) );
+			$ok = ! empty( $validation['ok'] );
+
+			return [
+				'ok'               => $ok,
+				'schema'           => self::SCHEMA,
+				'contractVersion'  => $this->contract_version(),
+				'compilerContract' => self::COMPILER_CONTRACT,
+				'status'           => $ok ? 'PASS' : 'FAIL',
+				'command'          => '/convert /bricks',
+				'bricksConverter'  => [ 'authority' => 'SEAM Compiler', 'mode' => 'validated-authority-bridge' ],
+				'files'            => [
+					'bricks-template/' . $this->slug( (string) ( $template['title'] ?? 'template' ) ) . '-template-upload.json' => wp_json_encode( $template, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ),
+				],
+				'proof'            => $this->proof( 'plugin:Bricks_Conversion_Validator::validate-seam-compiler-output', $ok, $validation ),
+				'nextCommand'      => $ok ? '/seamframework or /create /accessibility' : '/fix /bricksconversion',
+			];
 		}
 
-		$converter = new Bricks_Html_Css_Converter_Service();
-		$availability = $converter->available();
-		$result = $converter->convert(
-			$html,
-			'',
-			[
-				'createGlobalClasses' => true,
-				'extractVariables'    => true,
-			]
+		$html  = $this->html_from_args( $args, $files );
+		if ( '' === trim( $html ) ) {
+			return $this->error( 'KIWE_MISSING_SOURCE_HTML', 'Request must include HTML/CSS/JS source or a SEAM Compiler template.', '/convert /bricks' );
+		}
+
+		return $this->compiler_required(
+			'KIWE_SEAM_COMPILER_REQUIRED',
+			'Raw HTML conversion must run through the deterministic SEAM Compiler. The plugin fallback is intentionally not used for production output.',
+			'/convert /bricks in SEAM Compiler'
 		);
-
-		$template = $this->bricks_template_from_conversion( $result, $args, $html );
-		$validation = ( new Bricks_Conversion_Validator() )->validate( $template, $this->array_arg( $args, 'siteGraph' ), $html, $this->array_arg( $args, 'binding' ) );
-		$native = 'bricks-native' === (string) ( $result['converter'] ?? '' );
-		$ok = ! empty( $validation['ok'] ) && $native;
-		$status = $ok ? 'PASS' : ( $native ? 'FAIL' : 'WARN' );
-
-		return [
-			'ok'                => $ok,
-			'schema'            => self::SCHEMA,
-			'contractVersion'   => $this->contract_version(),
-			'status'            => $status,
-			'command'           => '/convert /bricks',
-			'bricksConverter'   => $availability,
-			'converterResult'   => [
-				'converter' => (string) ( $result['converter'] ?? 'none' ),
-				'warnings'  => isset( $result['warnings'] ) && is_array( $result['warnings'] ) ? $result['warnings'] : [],
-				'errors'    => isset( $result['errors'] ) && is_array( $result['errors'] ) ? $result['errors'] : [],
-			],
-			'files'             => [
-				'bricks-template/home-template-upload.json' => wp_json_encode( $template, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ),
-			],
-			'proof'             => $this->proof( 'plugin:Bricks_Conversion_Validator::validate', (bool) $validation['ok'], $validation ),
-			'nextCommand'       => $ok ? '/create /accessibility' : ( $native ? '/fix /bricksconversion' : 'Use a WordPress/Bricks site with Bricks native converter available, or treat this as review-only.' ),
-		];
 	}
 
 	public function accessibility( array $args ): array {
@@ -300,36 +258,16 @@ final class SeamFlow_Service {
 	public function execute( array $args ): array {
 		$classification = $this->classify( $args );
 		$type = (string) ( $classification['artifactDiagnostic']['type'] ?? 'unknown' );
-		$full = str_contains( strtolower( (string) ( $args['command'] ?? '' ) ), '/fullflow' ) || ! empty( $args['fullFlow'] );
 		$report = ! empty( $args['report'] ) || str_contains( strtolower( (string) ( $args['command'] ?? '' ) ), '/report' );
 		$phase_results = [];
 
-		if ( 'raw-html-css-webpage' === $type ) {
-			$phase_results[] = $this->rebuild( $args );
-			if ( ! $full || empty( end( $phase_results )['ok'] ) ) {
-				return $this->execute_response( $phase_results, $report );
-			}
-			$last_files = end( $phase_results )['files'] ?? [];
-			$args['files'] = array_merge( $this->files_from_args( $args ), is_array( $last_files ) ? $last_files : [] );
-			$type = 'seam-page';
+		if ( in_array( $type, [ 'raw-html-css-webpage', 'seam-page', 'bricks-template' ], true ) ) {
+			$phase_results[] = $this->convert_bricks( $args );
+			return $this->execute_response( $phase_results, $report );
 		}
 
-		if ( 'seam-page' === $type ) {
+		if ( 'framework-profile' === $type ) {
 			$phase_results[] = $this->framework_profile( $args );
-			if ( ! $full || empty( end( $phase_results )['ok'] ) ) {
-				return $this->execute_response( $phase_results, $report );
-			}
-			$last_files = end( $phase_results )['files'] ?? [];
-			$args['files'] = array_merge( $this->files_from_args( $args ), is_array( $last_files ) ? $last_files : [] );
-
-			$phase_results[] = $this->convert_bricks( $args );
-			if ( ! $full || empty( end( $phase_results )['ok'] ) ) {
-				return $this->execute_response( $phase_results, $report );
-			}
-			$last_files = end( $phase_results )['files'] ?? [];
-			$args['files'] = array_merge( $this->files_from_args( $args ), is_array( $last_files ) ? $last_files : [] );
-
-			$phase_results[] = $this->accessibility( $args );
 			return $this->execute_response( $phase_results, $report );
 		}
 
@@ -552,6 +490,26 @@ final class SeamFlow_Service {
 		];
 	}
 
+	private function is_seam_compiler_template( array $template ): bool {
+		$generator = isset( $template['generator'] ) && is_array( $template['generator'] ) ? $template['generator'] : [];
+		$name = strtolower( trim( (string) ( $generator['name'] ?? '' ) ) );
+		return 'seam compiler' === $name
+			&& '' !== trim( (string) ( $template['title'] ?? '' ) )
+			&& ( isset( $template['content'] ) || isset( $template['header'] ) || isset( $template['footer'] ) );
+	}
+
+	private function compiler_required( string $code, string $message, string $next ): array {
+		$response = $this->error( $code, $message, $next );
+		$response['status'] = 'NEEDS_INPUT';
+		$response['compilerAuthority'] = [
+			'name'            => 'SEAM Compiler',
+			'contractVersion' => self::COMPILER_CONTRACT,
+			'url'             => self::COMPILER_URL,
+			'aiRequired'      => false,
+		];
+		return $response;
+	}
+
 	private function error( string $code, string $message, string $next ): array {
 		return [
 			'ok'              => false,
@@ -605,8 +563,34 @@ final class SeamFlow_Service {
 				return $args[ $key ];
 			}
 		}
-		$json = $this->first_json_from_files( $files );
-		return is_array( $json ) ? $json : [];
+		foreach ( $files as $path => $content ) {
+			if ( ! preg_match( '/\.json$/i', (string) $path ) ) {
+				continue;
+			}
+			$json = json_decode( (string) $content, true );
+			if ( is_array( $json ) && ( isset( $json['templateType'] ) || isset( $json['content'] ) || isset( $json['header'] ) || isset( $json['footer'] ) ) ) {
+				return $json;
+			}
+		}
+		return [];
+	}
+
+	private function framework_profile_from_args( array $args, array $files ): array {
+		foreach ( [ 'frameworkProfile', 'profile' ] as $key ) {
+			if ( isset( $args[ $key ] ) && is_array( $args[ $key ] ) && 'kiwe.framework-profile.v1' === (string) ( $args[ $key ]['schema'] ?? '' ) ) {
+				return $args[ $key ];
+			}
+		}
+		foreach ( $files as $path => $content ) {
+			if ( ! preg_match( '/\.json$/i', (string) $path ) ) {
+				continue;
+			}
+			$json = json_decode( (string) $content, true );
+			if ( is_array( $json ) && 'kiwe.framework-profile.v1' === (string) ( $json['schema'] ?? '' ) ) {
+				return $json;
+			}
+		}
+		return [];
 	}
 
 	private function first_json_from_files( array $files ): ?array {

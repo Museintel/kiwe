@@ -1,0 +1,50 @@
+{
+  "schema": "seam.compiler-contract.v1",
+  "version": "0.11.0",
+  "authority": "deterministic-seam-compiler",
+  "aiRequired": false,
+  "stages": {
+    "convert": {
+      "command": "/convert /bricks",
+      "input": "arbitrary HTML/CSS/JS project or standalone document",
+      "output": "raw native Bricks 2.3.10 templates",
+      "frameworkNeutral": true,
+      "maySplitDocumentChrome": true,
+      "ownership": "Bricks element-native controls plus scoped unsupported CSS"
+    },
+    "framework": {
+      "command": "/seamframework",
+      "input": "successful raw Bricks conversion result",
+      "output": "one Framework Profile plus profile-dependent Bricks templates",
+      "optional": true,
+      "profileInstallRequiredBeforeTemplateImport": true,
+      "ownershipOrder": [
+        "Bricks Theme Style for body, headings, links and site background",
+        "universal Kiwe and Seam variables and palette",
+        "project variables and reusable project classes",
+        "element-native settings for genuine exceptions",
+        "scoped CSS only for unsupported behavior"
+      ]
+    },
+    "accessibility": {
+      "command": "/accessibility",
+      "input": "raw or framework-enhanced conversion result",
+      "output": "accessibility-enhanced Bricks templates",
+      "optional": true
+    },
+    "audit": {
+      "commands": ["/audit /bricksconversion", "/audit /seamframework"],
+      "requiresExecutableProof": true,
+      "visualProofRequiresMatchingViewportProvenance": true,
+      "sourceDefectsAreNotConverterDefects": true,
+      "invalidOrContaminatedCaptureStatus": "INCOMPLETE"
+    }
+  },
+  "invariants": [
+    "Raw Convert never injects or requires Seam Framework.",
+    "Framework is a post-conversion optimization and ownership stage, not a redesign.",
+    "A missing Framework Profile must fail closed; templates must not depend on CSS variable fallbacks.",
+    "Browser AI may create or refine the source design but must not author production Bricks JSON or Framework Profile data.",
+    "No project-specific selector or route-name rule may enter the compiler core."
+  ]
+}
