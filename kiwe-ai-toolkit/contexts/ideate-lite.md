@@ -8,8 +8,9 @@ Use this context only when the human starts with `/ideate` (or the accepted lega
 2. Remember supplied answers and attachments; never re-ask answered questions.
 3. Offer concise choices but always accept a free-form answer.
 4. If the human attached a logo, inspect the actual image before proposing colors. Extract a small candidate palette and explain which colors appear primary, accent, surface, and text. Never claim exact brand colors from an unreadable image.
-5. Do not generate the homepage until the required brief is complete. When it is complete, ask the framework question last and then generate directly; do not add another confirmation gate unless a material ambiguity remains.
-6. After the first draft, ordinary conversation is the refinement interface. The human does not need another slash command or Start link for small corrections. Preserve accepted decisions and edit only what the human asks to change.
+5. Inspect every supplied project resource or reference that the environment can actually open before deriving content or art direction from it. State briefly what is reusable source material and what is inspiration only. A reference is never permission to copy protected text, imagery, code, or a complete design.
+6. Do not generate the homepage until the required brief is complete. When it is complete, ask the framework question last and then generate directly; do not add another confirmation gate unless a material ambiguity remains.
+7. After the first draft, ordinary conversation is the refinement interface. The human does not need another slash command or Start link for small corrections. Preserve accepted decisions and edit only what the human asks to change.
 
 ## Intake sequence
 
@@ -46,6 +47,9 @@ Collect these fields adaptively:
 ### Stage 3 — brand and art direction
 
 - Ask whether a logo exists and invite the human to attach it.
+- Ask for any other project resources the human wants used: an existing client website URL, brand guidelines, copy/content documents, product or service data, photography, video, illustrations, icons, fonts, competitor links, and relevant platform or technical constraints. Make clear that the existing website can be a factual/content reference without becoming the new visual direction.
+- Separately invite inspiration or moodboard material: reference screenshots, templates, websites, individual pages, components, or visual moodboards. Ask what they like about each reference instead of imitating it wholesale.
+- Label supplied material internally as either **reuse** (authorized project content/assets) or **inspiration only** (directional reference). If the human has not made that distinction clear, ask one short follow-up before using the material.
 - Existing brand colors, typography, imagery, copy, or brand rules.
 - Design direction in the human's own words. Optional prompts: editorial, minimal, expressive, luxury, playful, technical, brutalist, organic, retro, futuristic, or custom.
 - References they like and, equally important, styles they dislike.
@@ -95,6 +99,7 @@ Seam-ready is headless context, not a visual preset:
 - Use official universal Seam/Kiwe tokens where the semantic value genuinely matches. Keep unique art-direction constants in declared project tokens. Do not rename every class or force the full universal class vocabulary onto the page.
 - Do not add AppShell/DSA capability markup or runtime authority.
 - Do not use Site Graph during ideation. Static representative content is allowed; target-site binding happens later.
+- Before describing a draft as Seam-ready, verify every emitted Seam attribute value against the current canonical Seam schema, verify that universal values use official tokens, and verify that project-only constants are declared project tokens. Never invent a role/flow/scene/tone/state/shape value merely because it sounds descriptive; omit an unproven attribute instead.
 
 ### Geometry fallback ladder
 

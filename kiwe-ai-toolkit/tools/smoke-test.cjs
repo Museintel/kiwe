@@ -159,6 +159,11 @@ function assert(condition, message) {
   assert(!ideate.stop && ideate.kind === 'ideate', '/ideate diagnostic failed');
   assert(ideateRoute.includes('Ask no more than three short questions at a time.'), '/ideate route missing adaptive interview');
   assert(ideateRoute.includes('Should this draft be (1) framework-neutral HTML/CSS/JS, or (2) Seam-ready HTML/CSS/JS?'), '/ideate route missing final framework choice');
+  assert(ideateRoute.includes('existing client website URL'), '/ideate route missing broader project-resource intake');
+  assert(ideateRoute.includes('inspiration or moodboard material'), '/ideate route missing inspiration and moodboard intake');
+  assert(ideateRoute.includes('reuse') && ideateRoute.includes('inspiration only'), '/ideate route must distinguish reusable assets from directional references');
+  assert(ideateRoute.includes('verify every emitted Seam attribute value against the current canonical Seam schema'), '/ideate route must validate Seam-ready claims against the canonical schema');
+  assert(ideateRoute.includes('Never invent a role/flow/scene/tone/state/shape value'), '/ideate route must prohibit invented Seam attribute vocabulary');
   assert(ideateRoute.includes('Geometry fallback ladder'), '/ideate route missing Geometry fallback');
   assert(ideateRoute.includes('ordinary conversation is the refinement interface'), '/ideate route missing conversational refinement');
   assert(noop.stop && noop.status === 'noop', 'preview noop diagnostic failed');
