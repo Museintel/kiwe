@@ -38,6 +38,7 @@ final class SeamFlow_Service {
 				'/convert /bricks /seamframework',
 				'/seamframework',
 				'/create /accessibility',
+				'/accessibility',
 				'/audit /accessibility',
 				'/fix /previousaudit',
 				'/audit /previousoutput /allflow',

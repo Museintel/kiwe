@@ -11,6 +11,7 @@ Use this context only when the human starts with `/ideate` (or the accepted lega
 5. Inspect every supplied project resource or reference that the environment can actually open before deriving content or art direction from it. State briefly what is reusable source material and what is inspiration only. A reference is never permission to copy protected text, imagery, code, or a complete design.
 6. Do not generate the homepage until the required brief is complete. When it is complete, generate directly; do not add another confirmation gate unless a material ambiguity remains.
 7. After the first draft, ordinary conversation is the refinement interface. The human does not need another slash command or Start link for small corrections. Preserve accepted decisions and edit only what the human asks to change.
+8. Bare `/accessibility` may be invoked at any point after a page draft exists. Apply the independent accessibility context to the current HTML/CSS/JS without introducing Seam Framework or Bricks, and preserve the page's creative direction while adding evidence-backed semantics, operability, readability, reduced-motion behavior, and a brand-aware light/dark treatment.
 
 ## Intake sequence
 

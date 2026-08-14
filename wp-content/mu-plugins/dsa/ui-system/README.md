@@ -259,3 +259,5 @@ node tools/ui-theme/validate-package.cjs path/to/theme-folder
 ```
 
 The validator is intentionally conservative. Passing it does not mean a design is visually approved; failing it means the package crossed the first marketplace safety boundary.
+
+Batch 99 makes accessibility an independent, non-destructive lane. Bare `/accessibility` can act on the current raw `/ideate` page without introducing Seam Framework or Bricks; the compiler can score and package either raw Bricks or Framework output. Kiwe now derives missing dark colors from the active brand and semantic color roles, enforces measured contrast targets, preserves explicit designer dark values, imports raw accessibility palettes separately, and exposes an explicit dock accessibility-preview override without weakening default Raw Convert visual-capture isolation. The SeamFlow contract and canonical MU loader/package entry are synchronized at `7.05`.

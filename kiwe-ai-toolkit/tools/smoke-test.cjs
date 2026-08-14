@@ -63,7 +63,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.04', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.05', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
@@ -100,7 +100,7 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.04', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.05', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
@@ -125,14 +125,16 @@ function assert(condition, message) {
   assert(manifest.globalRules.firstInteractionRoutes.includes('/convert /bricks'), 'manifest missing raw conversion default');
   assert(manifest.globalRules.routeFallbackLadder.includes('Route B'), 'manifest missing cross-phase REST-to-Git fallback ladder');
   assert(manifest.commands['/seamframework'], 'manifest missing optional Framework stage');
+  assert(manifest.commands['/accessibility'], 'manifest missing independent bare /accessibility lane');
+  assert(manifest.commands['/accessibility'].forbidden.includes('forcing Seam Framework'), 'bare accessibility must remain Framework-independent');
   assert(JSON.stringify(manifest.commands['/rebuild /seamframework']).includes('legacy'), 'manifest missing legacy normalization boundary');
   assert(manifest.globalRules.auditClosure.includes('SeamFlow closes only when'), 'manifest missing audit closure rule');
   assert(manifest.commands['/fix /accessibility'].preserve.includes('Seam classes'), 'accessibility preservation contract missing Seam classes');
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.04', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.04', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.05', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.05', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -152,6 +154,7 @@ function assert(condition, message) {
   const ok = m.diagnoseCommand({ command: '/convert /bricks', artifactSummary: 'website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists' });
   const wrongVerb = m.diagnoseCommand({ command: '/create /bricks', artifactSummary: 'website/bricks-paste.html exists; framework/kiwe-framework-profile.json exists' });
   const a11y = m.diagnoseCommand({ command: '/create /accessibility', artifactSummary: 'website/bricks-paste.html exists' });
+  const bareA11y = m.diagnoseCommand({ command: '/accessibility', artifactSummary: 'current /ideate HTML/CSS/JS page exists' });
   const missing = m.diagnoseCommand({ command: '/audit /accessibility' });
   const auditCadence = m.diagnoseCommand({ command: '/audit /eachstep', artifactSummary: 'website/bricks-paste.html exists' });
   const executeMissing = m.diagnoseCommand({ command: '/execute /fullflow /audit /eachstep' });
@@ -183,6 +186,7 @@ function assert(condition, message) {
   assert(!ok.stop, 'valid bricks conversion diagnostic stopped');
   assert(wrongVerb.stop && wrongVerb.code === 'bricks_convert_requires_convert_verb', 'wrong verb diagnostic failed');
   assert(!a11y.stop, 'accessibility create diagnostic stopped unexpectedly');
+  assert(!bareA11y.stop && bareA11y.kind === 'accessibility-create', 'bare /accessibility should route the current artifact without forcing another lane');
   assert(missing.stop && missing.code === 'accessibility_audit_missing_artifact', 'missing accessibility audit diagnostic failed');
   assert(auditCadence.stop && auditCadence.code === 'audit_cadence_requires_execute', 'audit cadence flag diagnostic failed');
   assert(executeMissing.stop && executeMissing.code === 'execute_missing_current_artifact', 'execute missing artifact diagnostic failed');

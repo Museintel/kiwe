@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.04",
+    "contractVersion": "7.05",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -50,7 +50,7 @@
       "If a required artifact is missing, stop with a compact diagnostic instead of guessing."
     ],
     "documentation": "Documentation is opt-in. Do not create README, NOTES, reports, duplicate previews, ZIP files, or explanation documents unless /document is present or the human explicitly asks.",
-    "ideation": "For /ideate, ask the adaptive intake from ideate-lite.md, analyze an attached logo before proposing its palette, ask framework-neutral versus headless Seam last, create only the first homepage HTML/CSS/JS, and continue small refinements through normal conversation without another command.",
+    "ideation": "For /ideate, ask the adaptive intake from ideate-lite.md, analyze an attached logo before proposing its palette, ask framework-neutral versus headless Seam last, create only the first homepage HTML/CSS/JS, and continue small refinements through normal conversation without another command. Bare /accessibility may then improve the current raw page without introducing Seam Framework or Bricks.",
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
     "firstInteractionRoutes": "When files are supplied without a command, always show route choices after the recommended next command: Route A hosted SEAM Compiler, Route B local deterministic compiler, Route C Plugin REST authority bridge, Route D Plugin REST + Companion review. For raw HTML/CSS/JS, choose raw /convert /bricks or one-pass /convert /bricks /seamframework. Accessibility is a separate active stage after conversion or Framework, using /create /accessibility and /audit. Ask for API credentials only for Route C/D or /usecompanion/plugin proof.",
@@ -67,7 +67,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.04", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.05", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -377,6 +377,14 @@
       "output": ["fixed Bricks conversion/template artifact only"],
       "forbidden": ["DSA/AppShell conversion", "website redesign", "docs unless /document", "ZIP"],
       "finalResponse": "Return fixed artifact and compact pass/fail summary."
+    },
+    "/accessibility": {
+      "phase": "accessibility-current-artifact",
+      "read": ["kiwe-ai-toolkit/contexts/accessibility-lite.md"],
+      "requires": ["current page, preview, artifact, or file map; the active /ideate page qualifies"],
+      "output": ["SEAM automated accessibility score with automated coverage", "manual checks listed outside the score", "minimal same-lane repairs when needed"],
+      "forbidden": ["forcing Seam Framework", "forcing Bricks conversion", "generic redesign", "dark-mode inversion", "unmeasured compliance claims", "ZIP"],
+      "finalResponse": "Return score/evidence, files changed, structural drift, and remaining manual checks."
     },
     "/create /accessibility": {
       "phase": "create",

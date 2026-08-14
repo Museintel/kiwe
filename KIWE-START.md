@@ -1,7 +1,7 @@
 # SeamFlow Start
 
-Contract version: `7.04`
-Updated: `2026-08-12`
+Contract version: `7.05`
+Updated: `2026-08-14`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
 Purpose: fastest safe entrypoint for external AI, browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.04
+SeamFlow contract: 7.05
 ```
 
 Then do one of these:
@@ -28,7 +28,7 @@ Then do one of these:
    - `/execute /stepbystep`, where each command returns its own artifact before the next command starts;
    - `/execute /fullflow`, where you run the complete path and return only final artifacts plus compact pass/fail status.
    The human may add `/audit /eachstep`, `/audit /fix /eachstep`, `/audit /atend`, `/audit /fix /atend`, `/report`, or `/usecompanion`.
-   If the file is raw HTML/CSS/JS, recommend deterministic `/convert /bricks` first. Explain that `/seamframework` and accessibility are optional post-conversion stages.
+   If the file is raw HTML/CSS/JS, recommend deterministic `/convert /bricks` first. Explain that `/seamframework` is optional and bare `/accessibility` is independent: it may run on the current `/ideate` page, raw Bricks output, or Framework output.
    Then show the available route choices:
    - `Route A — Browser/raw`: use exact raw Start/manifest/context files and only validators the browser AI can actually execute.
    - `Route B — Git/Node`: use the local Kiwe toolkit compiler/validators if this AI has shell or code-execution access.
@@ -170,7 +170,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.04
+SeamFlow contract: 7.05
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -187,7 +187,7 @@ Commands: use /list for the compact command list
 
 If the human supplied attachments, inspect enough file content to determine stage and recommend the safest next command:
 
-- raw creative draft -> recommend deterministic `/convert /bricks`;
+- raw creative draft -> recommend deterministic `/convert /bricks`, or bare `/accessibility` when the human wants to improve the current page first;
 - raw Bricks conversion -> recommend `/audit /bricksconversion`, then optional `/seamframework` or accessibility;
 - Framework profile -> recommend `/audit /frameworkprofile`;
 - Bricks template or conversion -> recommend `/audit /bricksconversion`;
@@ -292,7 +292,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.04
+SeamFlow contract: 7.05
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -308,7 +308,8 @@ For a raw HTML/CSS/JS draft, the recommended webpage/header/footer/template-to-B
 /fix /bricksconversion    # only if audit fails
 /seamframework            # optional Framework Profile + dependent templates
 /audit /seamframework     # only when Framework output was created
-/create /accessibility    # optional separate accessibility stage
+/accessibility            # optional independent audit/improvement on the current raw, Bricks, or Framework artifact
+/create /accessibility    # create its measured accessibility package
 ```
 
 SEAM Compiler discovers arbitrary pages without Home/Shop assumptions. A complete standalone document may be split automatically:
@@ -357,7 +358,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.04
+SeamFlow contract: 7.05
 Command:
 Artifact classification:
 Files returned:
@@ -401,7 +402,7 @@ If a supposedly cleared Style Manager page still renders styled because `bricks-
 
 ## Accessibility flow
 
-`/audit /accessibility` and `/fix /accessibility` are final-stage and mid-stage tools. They must check:
+Bare `/accessibility`, `/audit /accessibility`, and `/fix /accessibility` are independent raw-, Bricks-, and Framework-stage tools. They must check:
 
 - WCAG contrast for text, pills, cards, focus, controls, and foreground/background pairs;
 - light and dark proof using Kiwe `data-kiwe-theme` and Bricks `data-brx-theme`;

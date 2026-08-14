@@ -256,7 +256,7 @@ final class Site_Graph_Service {
 				'mutatesContent' => false,
 				'restRoute'   => '/wp-json/dsa/v1/ai/validate-accessibility',
 				'aiKeyScopes' => [ 'validate_accessibility', 'companion', 'all' ],
-				'commands'    => [ '/create /accessibility', '/audit /accessibility' ],
+				'commands'    => [ '/accessibility', '/create /accessibility', '/audit /accessibility' ],
 				'useFor'      => [ 'light/dark color token plan', 'literal and token-resolved foreground/background contrast failures', 'Bricks theme-style palette alignment', 'Kiwe native dark-mode toggle proof', 'critical text clipping and overflow risks', 'pre-staging accessibility gate; full font-size preference audit intentionally later' ],
 			],
 			'secureTrackBrief' => [

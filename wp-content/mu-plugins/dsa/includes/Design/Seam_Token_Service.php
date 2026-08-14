@@ -375,6 +375,15 @@ final class Seam_Token_Service {
 			$project_label
 		);
 
+		$project_brand  = '';
+		foreach ( $project['variables'] as $candidate ) {
+			$candidate_name = self::clean_project_css_variable_name( (string) ( $candidate['name'] ?? '' ) );
+			if ( preg_match( '/(?:^|[-_])(brand|primary)(?:$|[-_])/i', $candidate_name ) && null !== self::parse_css_color( (string) ( $candidate['value'] ?? '' ) ) ) {
+				$project_brand = self::clean_value( (string) $candidate['value'] );
+				break;
+			}
+		}
+
 		$variables      = [];
 		$palette_colors = [];
 		foreach ( $project['variables'] as $variable ) {
@@ -386,6 +395,9 @@ final class Seam_Token_Service {
 
 			$bare = ltrim( $name, '-' );
 			$dark = self::clean_value( (string) ( $variable['dark'] ?? '' ) );
+			if ( '' === $dark && null !== self::parse_css_color( $value ) ) {
+				$dark = self::adaptive_dark_color_for_bricks( $bare, $value, $project_brand );
+			}
 			if ( '' !== $dark ) {
 				$palette_colors[] = [
 					'id'      => self::stable_id( 'kwpc-color-' . $project_id . '-' . $bare ),
@@ -1154,8 +1166,16 @@ final class Seam_Token_Service {
 
 	public static function color_palette_for_bricks( ?array $tokens = null ): array {
 		$colors = [];
+		$normalized = self::normalize_tokens( $tokens ?: self::universal_tokens() );
+		$brand = '';
+		foreach ( $normalized as $candidate ) {
+			if ( 'color-brand' === self::clean_name( $candidate['name'] ?? '' ) ) {
+				$brand = self::clean_value( $candidate['value'] ?? '' );
+				break;
+			}
+		}
 
-		foreach ( self::normalize_tokens( $tokens ?: self::universal_tokens() ) as $token ) {
+		foreach ( $normalized as $token ) {
 			$name  = self::clean_name( $token['name'] ?? '' );
 			$value = self::clean_value( $token['value'] ?? '' );
 			$type  = (string) ( $token['type'] ?? self::classify( $name, $value ) );
@@ -1168,7 +1188,7 @@ final class Seam_Token_Service {
 				'id'     => self::stable_id( 'kw-color-' . $name ),
 				'name'   => 'kiwe-' . $name,
 				'light'  => $value,
-				'dark'   => self::dark_color_value_for_bricks( $name, $value ),
+				'dark'   => self::adaptive_dark_color_for_bricks( $name, $value, $brand ),
 				'raw'    => 'var(--kiwe-' . $name . ')',
 				'source' => 'kiwe-universal',
 			];
@@ -1188,28 +1208,106 @@ final class Seam_Token_Service {
 		];
 	}
 
-	private static function dark_color_value_for_bricks( string $name, string $fallback ): string {
-		return match ( self::clean_name( $name ) ) {
-			'color-brand'           => '#ff4fa3',
-			'color-accent'          => '#43ddbc',
-			'color-hero'            => 'rgba(237,241,246,0.18)',
-			'color-neutral'         => '#9aa6b2',
-			'color-surface'         => '#10141b',
-			'color-surface-raised'  => '#11161d',
-			'color-surface-sunken'  => '#090d12',
-			'color-surface-overlay' => 'rgba(17,22,29,0.82)',
-			'color-text'            => '#edf1f6',
-			'color-text-muted'      => '#aab5c0',
-			'color-text-disabled'   => '#788391',
-			'color-text-inverse'    => '#10141b',
-			'color-border'          => 'rgba(255,255,255,0.16)',
-			'color-shadow'          => 'rgba(0,0,0,0.48)',
-			'color-success'         => '#40d394',
-			'color-warning'         => '#ffbd45',
-			'color-danger'          => '#ff667a',
-			'color-info'            => '#69a7ff',
-			default                 => $fallback,
-		};
+	private static function adaptive_dark_color_for_bricks( string $name, string $fallback, string $brand = '' ): string {
+		$name       = self::clean_name( $name );
+		$source     = self::parse_css_color( $fallback );
+		$brand_rgb  = self::parse_css_color( $brand );
+		$brand_rgb  = $brand_rgb ?: ( $source ?: [ 94, 92, 230 ] );
+		$surface    = self::mix_rgb( [ 8, 12, 17 ], $brand_rgb, 0.08 );
+
+		if ( str_contains( $name, 'surface-overlay' ) ) {
+			$raised = self::mix_rgb( [ 12, 17, 24 ], $brand_rgb, 0.13 );
+			return sprintf( 'rgba(%d,%d,%d,0.88)', $raised[0], $raised[1], $raised[2] );
+		}
+		if ( preg_match( '/surface-raised|card|panel/', $name ) ) {
+			return self::rgb_hex( self::mix_rgb( [ 13, 18, 25 ], $brand_rgb, 0.13 ) );
+		}
+		if ( preg_match( '/surface-sunken|surface-low|canvas-sunken/', $name ) ) {
+			return self::rgb_hex( self::mix_rgb( [ 5, 8, 12 ], $brand_rgb, 0.05 ) );
+		}
+		if ( preg_match( '/surface|background|canvas|paper|(?:^|-)bg(?:$|-)/', $name ) ) {
+			return self::rgb_hex( $surface );
+		}
+		if ( str_contains( $name, 'text-disabled' ) ) {
+			return self::rgb_hex( self::ensure_contrast( [ 139, 151, 164 ], $surface, 3.0 ) );
+		}
+		if ( preg_match( '/text-muted|muted|secondary-text/', $name ) ) {
+			return self::rgb_hex( self::ensure_contrast( [ 177, 188, 200 ], $surface, 4.5 ) );
+		}
+		if ( preg_match( '/text-inverse|on-brand|on-accent/', $name ) ) {
+			$brand_dark = self::ensure_contrast( $brand_rgb, $surface, 3.0 );
+			return self::rgb_hex( self::ensure_contrast( [ 12, 16, 22 ], $brand_dark, 4.5 ) );
+		}
+		if ( preg_match( '/text|foreground|(?:^|-)fg(?:$|-)|ink|heading/', $name ) ) {
+			return self::rgb_hex( self::ensure_contrast( [ 239, 243, 247 ], $surface, 7.0 ) );
+		}
+		if ( preg_match( '/border|line|stroke/', $name ) ) {
+			return 'rgba(239,243,247,0.20)';
+		}
+		if ( str_contains( $name, 'shadow' ) ) {
+			return 'rgba(0,0,0,0.58)';
+		}
+		if ( $source ) {
+			return self::rgb_hex( self::ensure_contrast( self::mix_rgb( $source, [ 255, 255, 255 ], 0.10 ), $surface, 3.0 ) );
+		}
+
+		return $fallback;
+	}
+
+	private static function parse_css_color( string $value ): ?array {
+		$value = strtolower( trim( $value ) );
+		if ( preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})(?:[0-9a-f]{2})?$/i', $value, $matches ) ) {
+			$hex = $matches[1];
+			if ( 3 === strlen( $hex ) ) {
+				$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+			}
+			return [ hexdec( substr( $hex, 0, 2 ) ), hexdec( substr( $hex, 2, 2 ) ), hexdec( substr( $hex, 4, 2 ) ) ];
+		}
+		if ( preg_match( '/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i', $value, $matches ) ) {
+			return [ max( 0, min( 255, (int) round( (float) $matches[1] ) ) ), max( 0, min( 255, (int) round( (float) $matches[2] ) ) ), max( 0, min( 255, (int) round( (float) $matches[3] ) ) ) ];
+		}
+		return null;
+	}
+
+	private static function mix_rgb( array $from, array $to, float $amount ): array {
+		return array_map( static fn( $index ): int => (int) round( $from[ $index ] + ( $to[ $index ] - $from[ $index ] ) * $amount ), [ 0, 1, 2 ] );
+	}
+
+	private static function rgb_hex( array $rgb ): string {
+		return sprintf( '#%02x%02x%02x', $rgb[0], $rgb[1], $rgb[2] );
+	}
+
+	private static function relative_luminance( array $rgb ): float {
+		$channels = array_map(
+			static function ( $value ): float {
+				$value = $value / 255;
+				return $value <= 0.04045 ? $value / 12.92 : pow( ( $value + 0.055 ) / 1.055, 2.4 );
+			},
+			$rgb
+		);
+		return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+	}
+
+	private static function contrast_ratio( array $first, array $second ): float {
+		$light = max( self::relative_luminance( $first ), self::relative_luminance( $second ) );
+		$dark  = min( self::relative_luminance( $first ), self::relative_luminance( $second ) );
+		return ( $light + 0.05 ) / ( $dark + 0.05 );
+	}
+
+	private static function ensure_contrast( array $color, array $background, float $minimum ): array {
+		if ( self::contrast_ratio( $color, $background ) >= $minimum ) {
+			return $color;
+		}
+		$black  = [ 8, 11, 15 ];
+		$white  = [ 247, 249, 252 ];
+		$target = self::contrast_ratio( $black, $background ) > self::contrast_ratio( $white, $background ) ? $black : $white;
+		for ( $step = 1; $step <= 24; $step++ ) {
+			$candidate = self::mix_rgb( $color, $target, $step / 24 );
+			if ( self::contrast_ratio( $candidate, $background ) >= $minimum ) {
+				return $candidate;
+			}
+		}
+		return $target;
 	}
 
 	public static function counts( ?array $tokens = null ): array {

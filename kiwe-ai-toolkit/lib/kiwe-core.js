@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.04',
+    contractVersion: '7.05',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -528,7 +528,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.04',
+      mustReport: 'SeamFlow contract: 7.05',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -826,9 +826,16 @@ export function listCommands() {
         output: 'PASS/FAIL/INCOMPLETE proof; no notes unless /document was requested'
       },
       {
+        command: '/accessibility',
+        aliases: ['/a11y'],
+        purpose: 'Audit and minimally improve the current raw HTML/CSS/JS, Bricks, or Framework artifact without forcing another lane. Return measured automated coverage and separate manual checks.',
+        requires: ['current page, preview, artifact, or file map; the active /ideate page qualifies'],
+        output: 'same-lane artifact plus SEAM automated accessibility score and manual-review list'
+      },
+      {
         command: '/create /accessibility',
         aliases: ['/create /a11y'],
-        purpose: 'Create a light/dark accessibility plan for an existing website/page, DSA theme, combined handoff, Framework profile, or Bricks conversion.',
+        purpose: 'Create a non-destructive accessibility plan and brand-aware light/dark treatment for an existing raw page, DSA theme, combined handoff, Framework profile, or Bricks conversion.',
         requires: ['existing artifact folder/file map or approved visual output'],
         output: 'accessibility/kiwe-accessibility-plan.json only; add /document if notes are wanted'
       },
@@ -1078,6 +1085,7 @@ function routeKind(command) {
   if (/(?:^|\s)\/seamframework\b/.test(text) || (/(\/rebuild|\/convert|\/adapt)/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text))) return 'seam-rebuild';
   if (/\/audit/.test(text) && /(\/seamframework|\/seam|seam framework)/.test(text)) return 'seam-audit';
   if (/(\/create|\/build)/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-create';
+  if (/^\s*\/(?:accessibility|a11y)\b/.test(text)) return 'accessibility-create';
   if (/\/audit/.test(text) && /(\/accessibility|\/a11y|accessibility)/.test(text)) return 'accessibility-audit';
   if (/(\/create|\/build)/.test(text) && /(\/frameworkprofile|\bframework profile\b|\/framework\b)/.test(text)) return 'framework-profile-create';
   if (/\/audit/.test(text) && /(\/frameworkprofile|\bframework profile\b|\/framework\b)/.test(text)) return 'framework-profile-audit';
@@ -1590,9 +1598,9 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       code: 'accessibility_create_missing_artifact',
       kind: 'accessibility-create',
       normalizedCommand,
-      message: '`/create /accessibility` needs an existing website/page, DSA theme, combined handoff, Framework profile, Bricks conversion, or approved visual output. It is a contrast/dark-mode/token pass, not a pure creative phase.',
-      suggestions: ['/rebuild /seamframework', '/create /dsatheme', '/assemble /combined', '/create /accessibility after artifact files exist'],
-      boundaries: ['Accessibility plans revise concrete visuals and token pairs. They should not invent a new website or DSA theme from nothing.']
+      message: '`/create /accessibility` needs a current page or artifact. The active HTML/CSS/JS page from `/ideate` qualifies; Seam Framework and Bricks do not.',
+      suggestions: ['Provide the current page, preview, handoff files, or artifact summary', '/accessibility while refining the current /ideate page'],
+      boundaries: ['Preserve the accepted design and composition.', 'Do not claim compliance from an automated score.']
     });
   }
 
@@ -2079,7 +2087,7 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
     parts.push(
       '# Selected phase guidance',
       '',
-      'Create the accessibility lane over the supplied artifact. Do not redesign the page/theme or create Bricks JSON unless the existing artifact already includes that lane.',
+      'Audit and minimally improve the current artifact without changing lanes. Raw HTML/CSS/JS remains raw, Bricks remains Bricks, and Framework remains Framework. Preserve the accepted art direction; report automated evidence separately from manual checks.',
       '',
       getAccessibilityContext()
     );

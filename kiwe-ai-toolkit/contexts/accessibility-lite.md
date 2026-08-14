@@ -3,16 +3,19 @@
 Use this context only for:
 
 ```text
+/accessibility
 /create /accessibility
 /audit /accessibility
 /fix /accessibility
 ```
 
-This is a focused accessibility lane for color contrast, light/dark mode, Kiwe/Seam token pairing, Bricks global theme-style alignment, and visible text containment. Do not use this phase for a full typography redesign or font-size preference system yet; that is a separate future lane. It may, however, fix text that is hidden, clipped, overlapped, unreadable, or forced into too-small pills/cards.
+This is an independent accessibility lane. It works on the current raw HTML/CSS/JS page during or after `/ideate`, on a framework-neutral Bricks conversion, or on a Seam Framework/Bricks package. It never requires Seam Framework or Bricks. It covers semantics, keyboard/focus behavior, readable text, contrast, reflow/spacing resilience, reduced motion, touch targets, and a deliberate brand-aware light/dark color system.
+
+Bare `/accessibility` means: inspect the current working page/artifact, report the automated evidence score and manual checks separately, then make the smallest safe improvements to that same artifact when the human is actively refining it. During `/ideate`, preserve the accepted composition, content, motion language, and art direction. Do not replace the design with a generic accessibility template or a black-background inversion.
 
 ## Boundary
 
-`/create /accessibility` needs an existing artifact:
+`/accessibility` and `/create /accessibility` need a current artifact, which may be the HTML/CSS/JS page already present in the active AI conversation:
 
 - a pure HTML/CSS/JS page draft;
 - `website/bricks-paste.html`;
@@ -29,7 +32,23 @@ It does not create a new page, theme, DSA shell, Bricks JSON, WooCommerce logic,
 
 For browser AIs, this lane is not a generic accessibility-consultant essay. Use Kiwe/Seam context first, make the smallest safe file changes, and return a compact pass/fail summary.
 
-If no artifact/file map is supplied, stop and ask for the files.
+If no current page, preview, artifact, or file map exists, stop and ask for it. Do not require a downloaded handoff when the AI is already working on the page in the same conversation.
+
+## Evidence and score contract
+
+- Automated checks may produce a `SEAM automated accessibility score` only from code/DOM/render evidence actually inspected.
+- Report passed checks, failed checks, and automated coverage. Keep manual review outside the numeric score.
+- Never label the score “WCAG compliant,” “certified,” or complete accessibility proof.
+- Complex image/gradient contrast, screen-reader usability, cognitive clarity, zoom/reflow, keyboard flow, and real assistive-technology behavior remain manual/browser checks unless they were actually exercised.
+- If the page already passes the available automated checks, preserve it and return the score plus remaining manual checks; do not manufacture edits.
+
+## Non-destructive dark-mode contract
+
+- Treat dark mode as a designed second expression of the same brand, not literal inversion and not a monotonous near-black preset.
+- Derive semantic roles first: canvas, raised/sunken surface, body/secondary/inverse text, brand/accent, borders, and status colors.
+- Preserve the brand hue where it remains usable, reduce glare with tiered tinted surfaces, and verify foreground/background contrast numerically.
+- Explicit light/dark values in an existing Framework profile remain authoritative. Generated dark values fill missing roles; they do not overwrite deliberate supplied values.
+- At Bricks level, use native light/dark palette values and `data-brx-theme`. At Kiwe level, bridge the same state to `data-kiwe-theme`. At raw HTML level, use semantic CSS custom properties and a visible, keyboard-operable toggle when requested.
 
 ## Required output
 

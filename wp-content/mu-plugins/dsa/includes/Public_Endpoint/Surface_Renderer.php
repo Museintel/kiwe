@@ -24,7 +24,7 @@ final class Surface_Renderer {
 	public function register(): void {
 		$settings    = $this->settings->all();
 		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
-		if ( ! empty( $diagnostics['raw_convert_test_mode'] ) ) {
+		if ( ! empty( $diagnostics['raw_convert_test_mode'] ) && empty( $diagnostics['accessibility_preview_mode'] ) ) {
 			return;
 		}
 		add_action( 'wp_footer', [ $this, 'render' ], 5 );

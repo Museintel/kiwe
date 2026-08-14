@@ -31,10 +31,10 @@
       ]
     },
     "accessibility": {
-      "command": "/create /accessibility",
-      "commands": ["/create /accessibility", "/audit /accessibility", "/fix /accessibility"],
-      "input": "successful raw or Framework-enhanced conversion result, with the Framework Profile when Bricks theme alignment is required",
-      "output": "measured accessibility plan, coordinated light/dark Framework values, accessibility-enhanced dependent templates, and executable audit proof",
+      "command": "/accessibility",
+      "commands": ["/accessibility", "/create /accessibility", "/audit /accessibility", "/fix /accessibility"],
+      "input": "successful raw or Framework-enhanced conversion result",
+      "output": "SEAM automated accessibility score with manual checks separated, a measured plan, and either an independent raw Bricks light/dark palette or coordinated Framework values",
       "optional": true,
       "phase": "separate",
       "currentCompletionGate": true,

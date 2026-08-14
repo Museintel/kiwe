@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.05
+
+- Made `/accessibility` an independent current-artifact command for raw `/ideate` HTML/CSS/JS, framework-neutral Bricks output, and Seam Framework packages. Automated evidence scores now exclude named manual checks and never claim WCAG conformance.
+- Added adaptive brand-aware Bricks dark palettes with tiered tinted surfaces and measured foreground contrast. Explicit project dark values remain authoritative.
+- Added Kiwe > Framework actions to generate/push dark palettes, import the standalone compiler palette without installing Seam Framework, and explicitly enable the Kiwe dock for light/dark preview while Raw Convert Test Mode remains active.
+- Kept visual-difference testing isolated by leaving the dock-preview override off by default and warning designers to disable it before clean captures.
+
 ## 7.04
 
 - Aligned SeamFlow browser-AI fallback with SEAM Compiler 0.13.0: hosted, official local, and Kiwe REST routes share one fail-closed authority contract; browser AI may never synthesize production Bricks JSON, converted-project Framework Profiles, measured accessibility ratios, or PASS proof.

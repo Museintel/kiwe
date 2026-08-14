@@ -89,6 +89,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_import_profile', [ $this, 'import_profile' ] );
 		add_action( 'admin_post_dsa_export_framework_profile', [ $this, 'export_framework_profile' ] );
 		add_action( 'admin_post_dsa_import_framework_profile', [ $this, 'import_framework_profile' ] );
+		add_action( 'admin_post_dsa_import_accessibility_palette', [ $this, 'import_accessibility_palette' ] );
 		add_action( 'admin_post_dsa_export_theme', [ $this, 'export_theme' ] );
 		add_action( 'admin_post_dsa_import_theme', [ $this, 'import_theme' ] );
 		add_action( 'admin_post_dsa_activate_theme', [ $this, 'activate_theme' ] );
@@ -105,6 +106,8 @@ final class Admin {
 		add_action( 'admin_post_dsa_send_notification_campaign', [ $this, 'handle_notification_campaign' ] );
 		add_action( 'admin_post_dsa_export_bricks_tokens', [ $this, 'export_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_apply_bricks_tokens', [ $this, 'apply_bricks_tokens' ] );
+		add_action( 'admin_post_dsa_apply_bricks_dark_palette', [ $this, 'apply_bricks_dark_palette' ] );
+		add_action( 'admin_post_dsa_toggle_accessibility_preview', [ $this, 'toggle_accessibility_preview' ] );
 		add_action( 'admin_post_dsa_clear_framework', [ $this, 'clear_framework' ] );
 		add_action( 'admin_post_dsa_create_ai_access_key', [ $this, 'create_ai_access_key' ] );
 		add_action( 'admin_post_dsa_revoke_ai_access_key', [ $this, 'revoke_ai_access_key' ] );
@@ -1637,6 +1640,64 @@ final class Admin {
 		exit;
 	}
 
+	public function import_accessibility_palette(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to import accessibility palettes.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_import_accessibility_palette' );
+		$file = $_FILES['dsa_accessibility_palette_file'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( ! is_array( $file ) || empty( $file['tmp_name'] ) || ! empty( $file['error'] ) || ! is_uploaded_file( (string) $file['tmp_name'] ) || (int) ( $file['size'] ?? 0 ) > 1024 * 1024 || ! preg_match( '/\.json$/i', sanitize_file_name( $file['name'] ?? '' ) ) ) {
+			wp_safe_redirect( add_query_arg( 'accessibility-palette-imported', 'invalid', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+		$payload = json_decode( (string) file_get_contents( (string) $file['tmp_name'] ), true );
+		$palette = is_array( $payload ) && 'kiwe.accessibility-palette.v1' === (string) ( $payload['schema'] ?? '' ) && is_array( $payload['palette'] ?? null ) ? $payload['palette'] : [];
+		$colors  = is_array( $palette['colors'] ?? null ) ? $palette['colors'] : [];
+		if ( [] === $palette || [] === $colors || ! defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
+			wp_safe_redirect( add_query_arg( 'accessibility-palette-imported', 'invalid', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+		$clean_colors = [];
+		foreach ( array_slice( $colors, 0, 500 ) as $color ) {
+			$name  = sanitize_key( (string) ( $color['name'] ?? '' ) );
+			$light = sanitize_text_field( (string) ( $color['light'] ?? '' ) );
+			$dark  = sanitize_text_field( (string) ( $color['dark'] ?? '' ) );
+			$valid_color = static fn( string $value ): bool => (bool) preg_match( '/^(?:#[0-9a-f]{3,8}|rgba?\(\s*[\d.]+(?:%?)[,\s]+[\d.]+(?:%?)[,\s]+[\d.]+(?:%?)(?:\s*[,\/]\s*[\d.]+%?)?\s*\))$/i', $value );
+			if ( '' === $name || ! $valid_color( $light ) || ! $valid_color( $dark ) ) {
+				continue;
+			}
+			$clean_colors[] = [
+				'id' => sanitize_key( (string) ( $color['id'] ?? 'kiwe-accessibility-' . $name ) ),
+				'name' => $name,
+				'light' => $light,
+				'dark' => $dark,
+				'raw' => 'var(--' . $name . ')',
+				'source' => 'kiwe-accessibility',
+			];
+		}
+		if ( [] === $clean_colors ) {
+			wp_safe_redirect( add_query_arg( 'accessibility-palette-imported', 'invalid', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+		$clean_palette = [
+			'id' => sanitize_key( (string) ( $palette['id'] ?? 'kiwe-accessibility-palette' ) ),
+			'name' => sanitize_text_field( (string) ( $palette['name'] ?? __( 'Kiwe Accessible Project', 'dsa' ) ) ),
+			'source' => 'kiwe-accessibility',
+			'colors' => $clean_colors,
+		];
+		$current = get_option( BRICKS_DB_COLOR_PALETTE, [] );
+		$current = is_array( $current ) ? $current : [];
+		$current = array_values( array_filter( $current, static fn( $item ): bool => ! is_array( $item ) || 'kiwe-accessibility' !== sanitize_key( (string) ( $item['source'] ?? '' ) ) ) );
+		$current[] = $clean_palette;
+		update_option( BRICKS_DB_COLOR_PALETTE, $current, false );
+		if ( class_exists( '\Bricks\Assets_Color_Palettes' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Color_Palettes::generate_css_file( $current );
+		}
+		wp_safe_redirect( add_query_arg( 'accessibility-palette-imported', '1', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		exit;
+	}
+
 	public function create_ai_access_key(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3095,6 +3156,59 @@ final class Admin {
 		exit;
 	}
 
+	public function apply_bricks_dark_palette(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to generate the Bricks dark palette.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_apply_bricks_dark_palette' );
+		if ( ! defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
+			wp_safe_redirect( add_query_arg( 'dark-palette', 'no-bricks', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+
+		$token_settings  = $this->settings->get( 'tokens', [] );
+		$universal       = Seam_Token_Service::color_palette_for_bricks( $this->universal_tokens() );
+		$project_export  = Seam_Token_Service::project_extensions_for_bricks( isset( $token_settings['project'] ) && is_array( $token_settings['project'] ) ? $token_settings['project'] : [] );
+		$project_palette = isset( $project_export['colorPalette'] ) && is_array( $project_export['colorPalette'] ) ? $project_export['colorPalette'] : [];
+		$current          = get_option( BRICKS_DB_COLOR_PALETTE, [] );
+		$current          = is_array( $current ) ? $current : [];
+
+		update_option( 'dsa_bricks_accessibility_palette_backup', [ 'createdAt' => gmdate( 'c' ), 'userId' => get_current_user_id(), 'palette' => $current ], false );
+		$preserved = array_values(
+			array_filter(
+				$current,
+				static fn( $palette ): bool => is_array( $palette ) && ! self::is_kiwe_managed_bricks_palette( $palette )
+			)
+		);
+		$merged = array_merge( $preserved, $universal, $project_palette );
+		update_option( BRICKS_DB_COLOR_PALETTE, $merged, false );
+		if ( class_exists( '\Bricks\Assets_Color_Palettes' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+			\Bricks\Assets_Color_Palettes::generate_css_file( $merged );
+		}
+
+		wp_safe_redirect( add_query_arg( 'dark-palette', 'bricks', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		exit;
+	}
+
+	public function toggle_accessibility_preview(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to change accessibility preview mode.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_toggle_accessibility_preview' );
+		$settings    = $this->settings->all();
+		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
+		$enabled     = empty( $diagnostics['accessibility_preview_mode'] );
+		$diagnostics['accessibility_preview_mode'] = $enabled;
+		$settings['diagnostics'] = $diagnostics;
+		$settings['enabled'] = true;
+		$this->settings->update( $settings );
+
+		wp_safe_redirect( add_query_arg( 'accessibility-preview', $enabled ? 'enabled' : 'disabled', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		exit;
+	}
+
 	public function clear_framework(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
@@ -3360,7 +3474,7 @@ final class Admin {
 		$key    = sanitize_key( $name );
 		$id     = sanitize_key( (string) ( $category['id'] ?? '' ) );
 
-		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'kiwe-project', 'seamflow' ], true )
+		return in_array( $source, [ 'kiwe-universal', 'kiwe-framework', 'kiwe-seam', 'kiwe-ai', 'kiwe-project', 'kiwe-accessibility', 'seamflow' ], true )
 			|| str_starts_with( $name, 'Kiwe ' )
 			|| in_array( $key, self::legacy_kiwe_bricks_variable_category_keys(), true )
 			|| in_array( $id, self::legacy_kiwe_bricks_variable_category_keys(), true );
@@ -3864,6 +3978,8 @@ final class Admin {
 		);
 		$project_settings = Seam_Token_Service::sanitize_project_extensions( is_array( $token_settings['project'] ?? null ) ? $token_settings['project'] : [] );
 		$token_overrides = Seam_Token_Service::sanitize_overrides( isset( $token_settings['overrides'] ) && is_array( $token_settings['overrides'] ) ? $token_settings['overrides'] : [] );
+		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
+		$accessibility_preview_enabled = ! empty( $diagnostics['accessibility_preview_mode'] );
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe Framework', 'dsa' ); ?></h1>
@@ -3872,6 +3988,13 @@ final class Admin {
 			<?php endif; ?>
 			<?php if ( isset( $_GET['framework-profile-imported'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Framework profile imported. Push Kiwe Framework to Bricks when you want those tokens/classes written to Bricks.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['accessibility-palette-imported'] ) ) : ?>
+				<?php if ( '1' === (string) wp_unslash( $_GET['accessibility-palette-imported'] ) ) : ?>
+					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'The standalone accessibility palette was imported into Bricks without installing Seam Framework.', 'dsa' ); ?></p></div>
+				<?php else : ?>
+					<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'The accessibility palette was invalid or Bricks palette storage was unavailable.', 'dsa' ); ?></p></div>
+				<?php endif; ?>
 			<?php endif; ?>
 			<?php if ( isset( $_GET['framework-cleared'] ) ) : ?>
 				<?php $clear_status = sanitize_key( (string) wp_unslash( $_GET['framework-cleared'] ) ); ?>
@@ -3891,6 +4014,16 @@ final class Admin {
 				<?php elseif ( 'no-bricks' === $export_status ) : ?>
 					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks framework storage was not available. Use the JSON download and import it after Bricks is active.', 'dsa' ); ?></p></div>
 				<?php endif; ?>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['dark-palette'] ) ) : ?>
+				<?php if ( 'bricks' === sanitize_key( (string) wp_unslash( $_GET['dark-palette'] ) ) ) : ?>
+					<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Brand-aware light/dark palettes were generated and pushed to Bricks. Explicit project dark values were preserved and unrelated Bricks palettes were left untouched.', 'dsa' ); ?></p></div>
+				<?php else : ?>
+					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks color palette storage is not available.', 'dsa' ); ?></p></div>
+				<?php endif; ?>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['accessibility-preview'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( 'enabled' === sanitize_key( (string) wp_unslash( $_GET['accessibility-preview'] ) ) ? __( 'Accessibility preview is enabled. The Kiwe dock and light/dark switch are available even while Raw Convert Test Mode remains on.', 'dsa' ) : __( 'Accessibility preview is disabled. Raw Convert Test Mode can isolate future visual captures again.', 'dsa' ) ); ?></p></div>
 			<?php endif; ?>
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Kiwe Framework for builders', 'dsa' ); ?></h2>
@@ -3922,6 +4055,17 @@ final class Admin {
 					<?php submit_button( __( 'Push Kiwe Framework to Bricks', 'dsa' ), 'primary', 'submit', false ); ?>
 				</form>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_apply_bricks_dark_palette">
+					<?php wp_nonce_field( 'dsa_apply_bricks_dark_palette' ); ?>
+					<?php submit_button( __( 'Generate + Push Accessible Dark Palettes', 'dsa' ), 'secondary', 'submit', false ); ?>
+				</form>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_toggle_accessibility_preview">
+					<?php wp_nonce_field( 'dsa_toggle_accessibility_preview' ); ?>
+					<?php submit_button( $accessibility_preview_enabled ? __( 'Disable Dock Accessibility Preview', 'dsa' ) : __( 'Enable Dock Accessibility Preview', 'dsa' ), 'secondary', 'submit', false ); ?>
+				</form>
+				<p class="description"><?php esc_html_e( 'Dark palettes preserve the active brand hue, create tiered dark surfaces, and enforce measured contrast targets. Accessibility preview deliberately overrides Raw Convert Test Mode only for the dock; turn it off before clean visual-difference captures.', 'dsa' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_export_bricks_tokens">
 					<?php wp_nonce_field( 'dsa_export_bricks_tokens' ); ?>
 					<?php submit_button( __( 'Download Bricks Framework JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
@@ -3943,6 +4087,13 @@ final class Admin {
 						<label class="screen-reader-text" for="dsa-framework-profile-file"><?php esc_html_e( 'Import Framework Profile JSON', 'dsa' ); ?></label>
 						<input id="dsa-framework-profile-file" type="file" name="dsa_framework_profile_file" accept="application/json,.json" required>
 						<?php submit_button( __( 'Import Framework Profile', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</form>
+					<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_import_accessibility_palette">
+						<?php wp_nonce_field( 'dsa_import_accessibility_palette' ); ?>
+						<label class="screen-reader-text" for="dsa-accessibility-palette-file"><?php esc_html_e( 'Import standalone accessibility palette JSON', 'dsa' ); ?></label>
+						<input id="dsa-accessibility-palette-file" type="file" name="dsa_accessibility_palette_file" accept="application/json,.json" required>
+						<?php submit_button( __( 'Import Accessibility Palette', 'dsa' ), 'secondary', 'submit', false ); ?>
 					</form>
 				</div>
 				<p class="description"><?php esc_html_e( 'Framework profiles carry the shared Seam/Kiwe design-token profile, optional project-specific SeamFlow extensions, and the safe Bricks global theme style foundation. Import once, then push variables, color palettes, Seam classes, project classes, and the matching Bricks Theme Style from here. AppShell dock/sheet behavior belongs to Kiwe themes; AI/staging access belongs to Kiwe > AI.', 'dsa' ); ?></p>
@@ -6320,6 +6471,7 @@ final class Admin {
 					<label><input type="checkbox" name="diagnostics[performance_profile]" value="1" <?php checked( ! empty( $diagnostics['performance_profile'] ) ); ?>> <?php esc_html_e( 'Write observe-only runtime performance profiles to the debug log', 'dsa' ); ?></label><br>
 					<label><input type="checkbox" name="diagnostics[asset_manifest]" value="1" <?php checked( ! empty( $diagnostics['asset_manifest'] ) ); ?>> <?php esc_html_e( 'Write observe-only asset ownership manifests to the debug log', 'dsa' ); ?></label><br>
 					<label><input type="checkbox" name="diagnostics[raw_convert_test_mode]" value="1" <?php checked( ! empty( $diagnostics['raw_convert_test_mode'] ) ); ?>> <?php esc_html_e( 'Raw Convert Test Mode: do not load or render Kiwe AppShell chrome on the public frontend', 'dsa' ); ?></label>
+					<label><input type="checkbox" name="diagnostics[accessibility_preview_mode]" value="1" <?php checked( ! empty( $diagnostics['accessibility_preview_mode'] ) ); ?>> <?php esc_html_e( 'Accessibility Preview Mode: allow the Kiwe dock and light/dark switch while Raw Convert Test Mode remains enabled', 'dsa' ); ?></label>
 					<p class="description"><?php esc_html_e( 'Use Raw Convert Test Mode only for source-to-Bricks visual acceptance. It leaves WordPress and Bricks page content active while removing Kiwe Surface assets and dock markup from the measurement environment.', 'dsa' ); ?></p>
 					<p class="description"><?php esc_html_e( 'Browser console traces only run when diagnostics, frontend debug, and console logs are enabled here. Keep them off on production sites unless actively investigating.', 'dsa' ); ?></p>
 					<?php submit_button( __( 'Save diagnostics', 'dsa' ), 'secondary', 'submit', false ); ?>
@@ -8586,6 +8738,7 @@ final class Admin {
 				'performance_profile' => false,
 				'asset_manifest'      => false,
 				'raw_convert_test_mode' => false,
+				'accessibility_preview_mode' => false,
 			]
 		);
 
@@ -8600,6 +8753,7 @@ final class Admin {
 		$next['performance_profile'] = $next['enabled'] && ! empty( $input['performance_profile'] );
 		$next['asset_manifest']      = $next['enabled'] && ! empty( $input['asset_manifest'] );
 		$next['raw_convert_test_mode'] = ! empty( $input['raw_convert_test_mode'] );
+		$next['accessibility_preview_mode'] = ! empty( $input['accessibility_preview_mode'] );
 		unset( $next['asset_build_pilot'], $next['asset_build_apply'], $next['asset_build_hints'] );
 
 		return $next;

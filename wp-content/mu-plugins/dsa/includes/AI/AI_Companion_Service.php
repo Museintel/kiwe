@@ -629,7 +629,7 @@ final class AI_Companion_Service {
 		}
 
 		if ( preg_match( '/\/(?:create|build).*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'accessibility_create_missing_artifact', '`/create /accessibility` needs an existing website/theme/combined artifact. It is a token-backed contrast, light/dark-mode, and critical text-containment pass over real files, not a fresh creative website phase.', 'accessibility-create', $normalized, [ 'Provide the current handoff files or artifact summary', '/create /accessibility after /rebuild /seamframework or /create /combined' ], [ 'Do not redesign the page only to fix accessibility.', 'Do not invent dark mode outside Kiwe/Seam/Bricks token lanes.' ] );
+			return $this->command_gate_result( 'needs_input', 'accessibility_create_missing_artifact', '`/create /accessibility` needs a current page or artifact. The active HTML/CSS/JS page from `/ideate` qualifies; Seam Framework and Bricks do not.', 'accessibility-create', $normalized, [ 'Provide the current page, preview, handoff files, or artifact summary', '/accessibility while refining the current /ideate page' ], [ 'Preserve the accepted design and composition.', 'Do not claim compliance from an automated score.' ] );
 		}
 
 		if ( preg_match( '/\/audit.*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
@@ -716,6 +716,9 @@ final class AI_Companion_Service {
 			return 'bricks-audit';
 		}
 		if ( preg_match( '/(?:\/create|\/build).*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) ) {
+			return 'accessibility-create';
+		}
+		if ( preg_match( '/^\s*\/(?:accessibility|a11y)\b/', $text ) ) {
 			return 'accessibility-create';
 		}
 		if ( preg_match( '/\/audit.*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) ) {
@@ -845,8 +848,8 @@ final class AI_Companion_Service {
 			],
 			'accessibility-create' => [
 				'id'    => 'phase-accessibility-create-token-contrast',
-				'title' => 'Create the accessibility lane over existing files',
-				'body'  => 'Add accessibility/kiwe-accessibility-plan.json and notes only when requested, map light/dark foreground-background token pairs, align Bricks theme-style colors, and revise contrast, dark-mode, and critical text-containment defects. Do not redesign or create new content.',
+				'title' => 'Improve the current artifact without changing lanes',
+				'body'  => 'Audit semantics, keyboard/focus behavior, readable text, reflow, reduced motion, targets, and measured light/dark foreground-background pairs. Preserve creative art direction. Raw HTML/CSS/JS remains raw; Bricks remains Bricks; Framework remains Framework. Report automated evidence separately from manual checks and never call the score WCAG compliance.',
 			],
 			'accessibility-audit' => [
 				'id'    => 'phase-accessibility-audit-light-dark-contrast',

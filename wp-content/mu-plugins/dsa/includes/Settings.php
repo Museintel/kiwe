@@ -153,6 +153,7 @@ final class Settings {
 					'performance_profile' => false,
 					'asset_manifest'      => false,
 					'raw_convert_test_mode' => false,
+					'accessibility_preview_mode' => false,
 				],
 				'protected_flow'      => [
 					'rail_enabled' => false,
