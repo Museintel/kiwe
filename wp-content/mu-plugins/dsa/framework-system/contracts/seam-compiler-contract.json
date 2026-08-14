@@ -40,7 +40,7 @@
       "currentCompletionGate": true,
       "requiresExecutableProof": true,
       "browserAiMayNotInventContrastRatios": true,
-      "bricksDarkModeBinding": ":root[data-brx-theme=\"dark\"] %root%",
+      "bricksDarkModeBinding": ":root[data-brx-theme=\"dark\"] #brxe-<template-root-id>",
       "scopeRule": "Enhanced templates bind coordinated values at their own root so source-scoped variables cannot shadow Bricks native dark mode."
     },
     "audit": {
