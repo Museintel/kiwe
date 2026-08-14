@@ -21,8 +21,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 273080,
-      "sha256": "d6d2fce471c0ad56eebceec0ab8ff403ab953b4f498ed6fb72aaa06e55b20e30"
+      "bytes": 273232,
+      "sha256": "c53d14a613a4f4c497b556a0737376619439322b3f8c311eb932a85ccdf2de21"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -165,8 +165,8 @@
       "sha256": "edf2567ee5994e5e41b54f6b7ecaac14bc9d04ec3c06be12baf657071f77544d"
     },
     "assets/js/surface.js": {
-      "bytes": 389872,
-      "sha256": "eaed35e4148fcb7d48f05c28b3e8cc7410ff13c6908565a580df38620cd9e687"
+      "bytes": 391227,
+      "sha256": "82b223053f302caba15747b2ddb53e79a01e14c1760c87c3e5cdb8b5e4b0f2ad"
     },
     "connector-system/BRICKS-DYNAMIC-BINDINGS.md": {
       "bytes": 9463,
@@ -481,8 +481,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 613588,
-      "sha256": "1d84333c4b7aab7393271a060ac735817e896ed3355ac9e44055cfa627081206"
+      "bytes": 613590,
+      "sha256": "08f8b3d2f548e7300e745ab68f9ba898bfa3655e96d482041201a967b2e81c97"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -493,8 +493,8 @@
       "sha256": "9a611215d9594538339bf7b83428660b60dafa62543d3bdd16442255211676ce"
     },
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
-      "bytes": 12936,
-      "sha256": "6c558b3ce6f33c002e4dbe21f464900d78217cd9d5cd29123aa50c75d236dd18"
+      "bytes": 13091,
+      "sha256": "5ce4d8e8ef210d826c6c2930cfbe6f13e37ad6816a5bce38f152b4305ade6c59"
     },
     "includes/Commerce/Abandoned_Cart_Service.php": {
       "bytes": 34768,
@@ -633,8 +633,8 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 57983,
-      "sha256": "af751f0b17916ac055fc95f807e0bf28043a9a8f38397f0a5be913607dde93c4"
+      "bytes": 58588,
+      "sha256": "1e4191866f2b042855310d24b90bc541425813a97eb18f7a6b0d9f6db6e21db0"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
       "bytes": 17364,

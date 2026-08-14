@@ -9,7 +9,7 @@ const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
 
-check('compiler batches use exact five-character namespace recognition', service.includes("'/^seam-([a-z0-9]{5})-/'") && service.includes("'/^seam-[a-z0-9]{5}-$/'"));
+check('compiler batches recognize the legacy five- and current six-character namespaces', service.includes("'/^seam-([a-z0-9]{5,6})-/'") && service.includes("'/^seam-[a-z0-9]{5,6}-$/'"));
 check('name shape alone is never compiler ownership proof', service.includes('NAMESPACE_REGISTRY_OPTION') && service.includes("t.slug = 'seam-compiler'") && service.includes("'seam-compiler-template'") && service.includes("'class-source'"));
 check('Framework-owned Seam utilities cannot enter the compiler registry', service.includes('$framework_owned') && service.includes('! $framework_owned'));
 check('cleanup mutates only registered compiler namespaces', service.includes("! isset( $recognized[ $namespace ] ) || $keep_namespace === $namespace") && service.includes('The keep namespace has no SEAM Compiler ownership evidence.'));

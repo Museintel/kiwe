@@ -128,12 +128,12 @@ final class Assets {
 			'dsa-seam',
 			DSA_URL . 'assets/css/seam.css',
 			[],
-			DSA_VERSION
+			$this->asset_version( 'assets/css/seam.css' )
 		);
 		wp_add_inline_style( 'dsa-seam', Seam_Token_Service::seam_alias_stylesheet( $seam_token_overrides ) );
 
 		$surface_stylesheet = (string) apply_filters( 'dsa_surface_stylesheet_url', DSA_URL . 'assets/css/surface.css' );
-		$surface_stylesheet_version = (string) apply_filters( 'dsa_surface_stylesheet_version', DSA_VERSION );
+		$surface_stylesheet_version = (string) apply_filters( 'dsa_surface_stylesheet_version', $this->asset_version( 'assets/css/surface.css' ) );
 		wp_enqueue_style(
 			'dsa-surface',
 			$surface_stylesheet,
@@ -158,7 +158,7 @@ final class Assets {
 			'dsa-seam',
 			DSA_URL . 'assets/js/seam.js',
 			[],
-			DSA_VERSION,
+			$this->asset_version( 'assets/js/seam.js' ),
 			true
 		);
 
@@ -166,7 +166,7 @@ final class Assets {
 			'dsa-surface',
 			DSA_URL . 'assets/js/surface.js',
 			[ 'dsa-seam' ],
-			DSA_VERSION,
+			$this->asset_version( 'assets/js/surface.js' ),
 			true
 		);
 
@@ -176,7 +176,7 @@ final class Assets {
 				'dsa-seam-dev',
 				DSA_URL . 'assets/js/seam-dev.js',
 				[ 'dsa-surface' ],
-				DSA_VERSION,
+				$this->asset_version( 'assets/js/seam-dev.js' ),
 				true
 			);
 		}
@@ -225,11 +225,12 @@ final class Assets {
 				'dsa-native-islands',
 				DSA_URL . 'assets/js/modules/native-islands.js',
 				[ '@wordpress/interactivity' ],
-				DSA_VERSION
+				$this->asset_version( 'assets/js/modules/native-islands.js' )
 			);
 		} else {
 			foreach ( [ 'ai', 'app', 'data' ] as $island ) {
-				wp_enqueue_script( 'dsa-' . $island . '-island', DSA_URL . 'assets/js/' . $island . '-island.js', [ 'dsa-surface' ], DSA_VERSION, true );
+				$relative_path = 'assets/js/' . $island . '-island.js';
+				wp_enqueue_script( 'dsa-' . $island . '-island', DSA_URL . $relative_path, [ 'dsa-surface' ], $this->asset_version( $relative_path ), true );
 			}
 		}
 
@@ -284,7 +285,7 @@ final class Assets {
 				'app'        => $this->app_data(),
 				'search'     => [
 					'endpoint'  => esc_url_raw( rest_url( 'dsa/v1/search' ) ),
-					'moduleUrl' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/search.js' ) ),
+					'moduleUrl' => esc_url_raw( $this->asset_url( 'assets/js/search.js' ) ),
 					'limit'     => max( 1, min( 12, absint( $this->settings->get( 'search', [] )['result_limit'] ?? 6 ) ) ),
 					'context'   => $this->search_context(),
 					'alphabetEnabled' => ! empty( $this->settings->get( 'search', [] )['alphabet_enabled'] ),
@@ -292,17 +293,17 @@ final class Assets {
 					'bricksBridgeEnabled' => ! empty( $this->settings->get( 'search', [] )['bricks_bridge_enabled'] ),
 				],
 				'presentationModules' => [
-					'profile' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/profile-panel.js' ) ),
-					'cart' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/commerce-panels.js' ) ),
-					'checkout' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/commerce-panels.js' ) ),
-					'links' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/links-panel.js' ) ),
-					'ai' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/ai-panel.js' ) ),
-					'saved' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/surface-panels.js' ) ),
-					'notifications' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/surface-panels.js' ) ),
-					'ios-install' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/surface-panels.js' ) ),
-					'appsite-home' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/surface-panels.js' ) ),
-					'games' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/surface-panels.js' ) ),
-					'menu' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/surface-panels.js' ) ),
+					'profile' => esc_url_raw( $this->asset_url( 'assets/js/modules/profile-panel.js' ) ),
+					'cart' => esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ),
+					'checkout' => esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ),
+					'links' => esc_url_raw( $this->asset_url( 'assets/js/modules/links-panel.js' ) ),
+					'ai' => esc_url_raw( $this->asset_url( 'assets/js/modules/ai-panel.js' ) ),
+					'saved' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
+					'notifications' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
+					'ios-install' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
+					'appsite-home' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
+					'games' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
+					'menu' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
 				],
 				'games'      => $this->games_data(),
 				'ai'         => $this->ai_data(),
@@ -335,7 +336,7 @@ final class Assets {
 						'observeOnly' => true,
 						'applyEnabled' => ! empty( $settings['visual_effects']['editorial_morph_navigation'] ),
 						'endpoint' => esc_url_raw( rest_url( 'dsa/v1/editorial-envelope' ) ),
-						'moduleUrl' => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/reconciliation.js' ) ),
+						'moduleUrl' => esc_url_raw( $this->asset_url( 'assets/js/reconciliation.js' ) ),
 					],
 				],
 			]
@@ -782,7 +783,7 @@ CSS;
 		}
 
 		return [
-			'moduleUrl'       => esc_url_raw( add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/games-engine.js' ) ),
+			'moduleUrl'       => esc_url_raw( $this->asset_url( 'assets/js/modules/games-engine.js' ) ),
 			'surfaceEnabled'  => ! empty( $config['surface_enabled'] ),
 			'showOnPageLoad'  => ! empty( $config['show_on_page_load'] ),
 			'triggerPath'     => sanitize_text_field( $config['trigger_path'] ?? '/shop' ),
@@ -1260,6 +1261,26 @@ CSS;
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Keep browser and edge caches aligned with the files that are actually
+	 * installed. The plugin release can remain stable while a canonical
+	 * MU-plugin folder is replaced during development or recovery.
+	 */
+	private function asset_version( string $relative_path ): string {
+		$path     = DSA_DIR . ltrim( $relative_path, '/\\' );
+		$modified = is_file( $path ) ? filemtime( $path ) : false;
+
+		return false !== $modified ? DSA_VERSION . '.' . (string) $modified : DSA_VERSION;
+	}
+
+	private function asset_url( string $relative_path ): string {
+		return (string) add_query_arg(
+			'ver',
+			$this->asset_version( $relative_path ),
+			DSA_URL . ltrim( $relative_path, '/\\' )
+		);
 	}
 
 }

@@ -10379,11 +10379,56 @@
 		}, delay );
 	}
 
+	function enhanceFormMessageAccessibility( root ) {
+		if ( ! root || typeof root.querySelectorAll !== 'function' ) {
+			return;
+		}
+
+		const messages = [];
+		if ( root.matches && root.matches( '.brxe-form .message' ) ) {
+			messages.push( root );
+		}
+		root.querySelectorAll( '.brxe-form .message' ).forEach( function ( message ) {
+			messages.push( message );
+		} );
+
+		messages.forEach( function ( message ) {
+			const isError = message.classList.contains( 'error' );
+			if ( ! message.hasAttribute( 'role' ) ) {
+				message.setAttribute( 'role', isError ? 'alert' : 'status' );
+			}
+			if ( ! message.hasAttribute( 'aria-live' ) ) {
+				message.setAttribute( 'aria-live', isError ? 'assertive' : 'polite' );
+			}
+			if ( ! message.hasAttribute( 'aria-atomic' ) ) {
+				message.setAttribute( 'aria-atomic', 'true' );
+			}
+		} );
+	}
+
+	function bindFormMessageAccessibility() {
+		enhanceFormMessageAccessibility( document );
+		if ( ! window.MutationObserver || ! document.body ) {
+			return;
+		}
+
+		new MutationObserver( function ( mutations ) {
+			mutations.forEach( function ( mutation ) {
+				mutation.addedNodes.forEach( function ( node ) {
+					if ( node.nodeType === 1 ) {
+						enhanceFormMessageAccessibility( node );
+					}
+				} );
+			} );
+		} ).observe( document.body, { childList: true, subtree: true } );
+	}
+
 	function wait( ms ) {
 		return new Promise( function ( resolve ) {
 			window.setTimeout( resolve, Math.max( 0, ms ) );
 		} );
 	}
 
+	bindFormMessageAccessibility();
 	window.setTimeout( openScheduledGameSurface, 180 );
 } )();
