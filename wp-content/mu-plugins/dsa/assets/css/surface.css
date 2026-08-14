@@ -202,7 +202,9 @@
 	--dsa-runtime-token-0108: -4px;
 	--dsa-runtime-token-0109: 0 5px;
 	--dsa-runtime-token-0110: 1px solid rgba(255,255,255,0.9);
-	--dsa-runtime-token-0111: color-mix(in srgb, var(--dsa-hover-color) 88%, #f43f5e);
+	/* Notification counts are 10px text, so their surface must remain AA-safe
+	 * even when a project supplies a very light brand/accent color. */
+	--dsa-runtime-token-0111: color-mix(in srgb, var(--dsa-hover-color) 38%, #111827);
 	--dsa-runtime-token-0112: 1px solid rgba(255,255,255,0.86);
 	--dsa-runtime-token-0113: color-mix(in srgb, var(--dsa-active-color) 86%, #6547f5);
 	--dsa-runtime-token-0114: 0 18px 42px color-mix(in srgb, var(--dsa-active-color) 26%, rgba(20,24,34,0.2)), inset 0 1px 0 rgba(255,255,255,0.58);
@@ -7558,7 +7560,7 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-ui-contract="2"][data-dsa-do
 	height: var(--dsa-runtime-token-0664);
 	border: var(--dsa-runtime-token-0665);
 	border-radius: var(--dsa-runtime-token-0666);
-	background: var(--dsa-flat-accent);
+	background: var(--dsa-runtime-token-0111);
 	color: var(--dsa-runtime-token-0115);
 	box-shadow: none;
 	font-size: var(--dsa-runtime-token-0667);
