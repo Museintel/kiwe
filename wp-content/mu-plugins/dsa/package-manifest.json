@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "7.05",
+  "version": "7.06",
   "algorithm": "sha256",
   "file_count": 298,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "8bcde21d8484fc7f9a041223370b9446f53f89574dd1217438205263ae266693"
+      "sha256": "4e9efb356b37cafba4c34c12225412e3c85575db1bac0237b1f5b8f1a7470da0"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -481,8 +481,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 609062,
-      "sha256": "99e22daab126d696d46d14c0492c930504dc69f46279d67a4803406f1029a46e"
+      "bytes": 613588,
+      "sha256": "1d84333c4b7aab7393271a060ac735817e896ed3355ac9e44055cfa627081206"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -533,8 +533,8 @@
       "sha256": "a3934b8c869e86cce4c308c9a5ea72ea2d52b95a14bc776598199915c6af89b8"
     },
     "includes/Design/Seam_Token_Service.php": {
-      "bytes": 66489,
-      "sha256": "e0aea99892b3a0301738c288f210cb02bd3a05eef45696890a75a6b77e8f9d7f"
+      "bytes": 69541,
+      "sha256": "313abe4492897d15b085f31107616eee21a3ec192433f72b67f724f0a85c1e58"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
       "bytes": 15462,
@@ -1081,8 +1081,8 @@
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 74419,
-      "sha256": "ad976be5a5c40eb6ab45cfe678a2e5730f401a0e9053cc05dbbc3e1a05391ea1"
+      "bytes": 74338,
+      "sha256": "8684088ca82b2b60eb6c8f74c7556c717b557b856d228dc807a0bbb6c0cb40b8"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

@@ -1208,6 +1208,87 @@ final class Seam_Token_Service {
 		];
 	}
 
+	/**
+	 * Add missing native Bricks dark-mode values to one existing Color Manager palette.
+	 *
+	 * This deliberately does not create palettes, variables, classes, or Framework data.
+	 * Existing designer-authored dark values and every unrelated color property are
+	 * preserved verbatim. Legacy colors without Bricks' current `light` value are
+	 * reported as skipped because adding `dark` beside an authoritative `hex`/`rgb`
+	 * field would not be consumed reliably by Bricks.
+	 *
+	 * @param array<string,mixed> $palette Existing Bricks palette.
+	 * @return array{palette:array<string,mixed>,generated:int,preserved:int,skipped:int}
+	 */
+	public static function add_missing_dark_values_to_bricks_palette( array $palette ): array {
+		$colors = isset( $palette['colors'] ) && is_array( $palette['colors'] ) ? $palette['colors'] : [];
+		$brand  = '';
+
+		foreach ( $colors as $color ) {
+			if ( ! is_array( $color ) ) {
+				continue;
+			}
+			$name  = self::bricks_color_semantic_name( $color );
+			$light = isset( $color['light'] ) && is_string( $color['light'] ) ? trim( $color['light'] ) : '';
+			if ( '' !== $light && self::parse_css_color( $light ) && preg_match( '/(?:^|-)(?:brand|primary|accent)(?:$|-)/', $name ) ) {
+				$brand = $light;
+				break;
+			}
+		}
+
+		$generated = 0;
+		$preserved = 0;
+		$skipped   = 0;
+		foreach ( $colors as $index => $color ) {
+			if ( ! is_array( $color ) ) {
+				$skipped++;
+				continue;
+			}
+			if ( isset( $color['dark'] ) && is_string( $color['dark'] ) && '' !== trim( $color['dark'] ) ) {
+				$preserved++;
+				continue;
+			}
+			if ( self::bricks_color_has_legacy_override( $color ) ) {
+				$skipped++;
+				continue;
+			}
+
+			$light = isset( $color['light'] ) && is_string( $color['light'] ) ? trim( $color['light'] ) : '';
+			if ( '' === $light || ! self::parse_css_color( $light ) ) {
+				$skipped++;
+				continue;
+			}
+
+			$color['dark']   = self::adaptive_dark_color_for_bricks( self::bricks_color_semantic_name( $color ), $light, $brand );
+			$colors[ $index ] = $color;
+			$generated++;
+		}
+
+		$palette['colors'] = $colors;
+		return compact( 'palette', 'generated', 'preserved', 'skipped' );
+	}
+
+	/** @param array<string,mixed> $color */
+	private static function bricks_color_semantic_name( array $color ): string {
+		$name = isset( $color['name'] ) && is_string( $color['name'] ) ? $color['name'] : '';
+		if ( '' === trim( $name ) && isset( $color['raw'] ) && is_string( $color['raw'] ) ) {
+			$name = preg_replace( '/^var\(\s*--|\s*\)$/', '', trim( $color['raw'] ) ) ?: '';
+		}
+		if ( '' === trim( $name ) && isset( $color['id'] ) && is_scalar( $color['id'] ) ) {
+			$name = (string) $color['id'];
+		}
+		return self::clean_name( $name );
+	}
+
+	/** @param array<string,mixed> $color */
+	private static function bricks_color_has_legacy_override( array $color ): bool {
+		if ( ! empty( $color['rgb'] ) || ! empty( $color['hex'] ) ) {
+			return true;
+		}
+		$raw = isset( $color['raw'] ) && is_string( $color['raw'] ) ? trim( $color['raw'] ) : '';
+		return '' !== $raw && false === strpos( $raw, 'var(' );
+	}
+
 	private static function adaptive_dark_color_for_bricks( string $name, string $fallback, string $brand = '' ): string {
 		$name       = self::clean_name( $name );
 		$source     = self::parse_css_color( $fallback );

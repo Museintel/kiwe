@@ -107,6 +107,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_export_bricks_tokens', [ $this, 'export_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_apply_bricks_tokens', [ $this, 'apply_bricks_tokens' ] );
 		add_action( 'admin_post_dsa_apply_bricks_dark_palette', [ $this, 'apply_bricks_dark_palette' ] );
+		add_action( 'admin_post_dsa_apply_bricks_native_dark_colors', [ $this, 'apply_bricks_native_dark_colors' ] );
 		add_action( 'admin_post_dsa_toggle_accessibility_preview', [ $this, 'toggle_accessibility_preview' ] );
 		add_action( 'admin_post_dsa_clear_framework', [ $this, 'clear_framework' ] );
 		add_action( 'admin_post_dsa_create_ai_access_key', [ $this, 'create_ai_access_key' ] );
@@ -3191,6 +3192,73 @@ final class Admin {
 		exit;
 	}
 
+	public function apply_bricks_native_dark_colors(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to generate native Bricks dark colors.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_apply_bricks_native_dark_colors' );
+		if ( ! defined( 'BRICKS_DB_COLOR_PALETTE' ) ) {
+			wp_safe_redirect( add_query_arg( 'native-dark-palette', 'no-bricks', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+			exit;
+		}
+
+		$current = get_option( BRICKS_DB_COLOR_PALETTE, [] );
+		$current = is_array( $current ) ? $current : [];
+		$next             = $current;
+		$generated        = 0;
+		$preserved        = 0;
+		$skipped          = 0;
+		$managed_palettes = 0;
+
+		foreach ( $current as $index => $palette ) {
+			if ( ! is_array( $palette ) ) {
+				$skipped++;
+				continue;
+			}
+			if ( self::is_kiwe_managed_bricks_palette( $palette ) ) {
+				$managed_palettes++;
+				continue;
+			}
+
+			$result = Seam_Token_Service::add_missing_dark_values_to_bricks_palette( $palette );
+			$next[ $index ] = $result['palette'];
+			$generated     += (int) $result['generated'];
+			$preserved     += (int) $result['preserved'];
+			$skipped       += (int) $result['skipped'];
+		}
+
+		update_option(
+			'dsa_bricks_native_dark_palette_backup',
+			[
+				'createdAt' => gmdate( 'c' ),
+				'userId'    => get_current_user_id(),
+				'palette'   => $current,
+			],
+			false
+		);
+		if ( $generated > 0 ) {
+			update_option( BRICKS_DB_COLOR_PALETTE, $next, false );
+			if ( class_exists( '\Bricks\Assets_Color_Palettes' ) && class_exists( '\Bricks\Assets' ) && ! empty( \Bricks\Assets::$css_dir ) ) {
+				\Bricks\Assets_Color_Palettes::generate_css_file( $next );
+			}
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'native-dark-palette'          => $generated > 0 ? 'updated' : 'unchanged',
+					'native-dark-generated'        => $generated,
+					'native-dark-preserved'        => $preserved,
+					'native-dark-skipped'          => $skipped,
+					'native-dark-managed-palettes' => $managed_palettes,
+				],
+				admin_url( 'admin.php?page=kiwe-framework' )
+			)
+		);
+		exit;
+	}
+
 	public function toggle_accessibility_preview(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to change accessibility preview mode.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
@@ -4022,6 +4090,20 @@ final class Admin {
 					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks color palette storage is not available.', 'dsa' ); ?></p></div>
 				<?php endif; ?>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['native-dark-palette'] ) ) : ?>
+				<?php $native_dark_status = sanitize_key( (string) wp_unslash( $_GET['native-dark-palette'] ) ); ?>
+				<?php if ( 'no-bricks' === $native_dark_status ) : ?>
+					<div class="notice notice-warning is-dismissible"><p><?php esc_html_e( 'Bricks Color Manager storage is not available.', 'dsa' ); ?></p></div>
+				<?php else : ?>
+					<?php
+					$native_dark_generated = isset( $_GET['native-dark-generated'] ) ? absint( $_GET['native-dark-generated'] ) : 0;
+					$native_dark_preserved = isset( $_GET['native-dark-preserved'] ) ? absint( $_GET['native-dark-preserved'] ) : 0;
+					$native_dark_skipped = isset( $_GET['native-dark-skipped'] ) ? absint( $_GET['native-dark-skipped'] ) : 0;
+					$native_dark_managed = isset( $_GET['native-dark-managed-palettes'] ) ? absint( $_GET['native-dark-managed-palettes'] ) : 0;
+					?>
+					<div class="notice notice-success is-dismissible"><p><?php echo esc_html( sprintf( __( 'Native Bricks dark-color pass complete: %1$d generated, %2$d existing dark values preserved, %3$d unsupported colors skipped, and %4$d Kiwe-managed palettes left untouched.', 'dsa' ), $native_dark_generated, $native_dark_preserved, $native_dark_skipped, $native_dark_managed ) ); ?></p></div>
+				<?php endif; ?>
+			<?php endif; ?>
 			<?php if ( isset( $_GET['accessibility-preview'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( 'enabled' === sanitize_key( (string) wp_unslash( $_GET['accessibility-preview'] ) ) ? __( 'Accessibility preview is enabled. The Kiwe dock and light/dark switch are available even while Raw Convert Test Mode remains on.', 'dsa' ) : __( 'Accessibility preview is disabled. Raw Convert Test Mode can isolate future visual captures again.', 'dsa' ) ); ?></p></div>
 			<?php endif; ?>
@@ -4057,8 +4139,15 @@ final class Admin {
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_apply_bricks_dark_palette">
 					<?php wp_nonce_field( 'dsa_apply_bricks_dark_palette' ); ?>
-					<?php submit_button( __( 'Generate + Push Accessible Dark Palettes', 'dsa' ), 'secondary', 'submit', false ); ?>
+					<?php submit_button( __( 'Generate Framework Accessible Dark Palettes', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
+				<p class="description"><?php esc_html_e( 'Framework lane: creates or refreshes the Kiwe Universal and project palettes from the active Framework profile. Existing non-Kiwe palettes remain untouched.', 'dsa' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_apply_bricks_native_dark_colors">
+					<?php wp_nonce_field( 'dsa_apply_bricks_native_dark_colors' ); ?>
+					<?php submit_button( __( 'Generate Dark Values for Existing Bricks Colors', 'dsa' ), 'secondary', 'submit', false ); ?>
+				</form>
+				<p class="description"><?php esc_html_e( 'Framework-free lane: fills only missing Bricks-native dark values in existing non-Kiwe Color Manager palettes. It preserves palette IDs, names, order, light colors, explicit dark colors, variables, classes, and Theme Styles, and creates a backup before writing.', 'dsa' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_toggle_accessibility_preview">
 					<?php wp_nonce_field( 'dsa_toggle_accessibility_preview' ); ?>

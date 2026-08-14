@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.06
+
+- Added a Framework-free Bricks accessibility lane that fills only missing native `dark` values in existing non-Kiwe Color Manager palettes. It preserves palette identity and order, every light value, every explicit designer dark value, and all variables, classes, and Theme Styles.
+- Added an independent pre-write backup and an exact generated/preserved/skipped report. Legacy colors that Bricks has not converted to its current `light`/`dark` model are skipped instead of being rewritten ambiguously.
+- Renamed the existing dark-palette action to identify it explicitly as the Framework lane, preventing a plain Bricks project from accidentally installing Kiwe palette data.
+
 ## 7.05
 
 - Made `/accessibility` an independent current-artifact command for raw `/ideate` HTML/CSS/JS, framework-neutral Bricks output, and Seam Framework packages. Automated evidence scores now exclude named manual checks and never claim WCAG conformance.

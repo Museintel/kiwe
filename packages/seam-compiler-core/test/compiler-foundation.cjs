@@ -126,10 +126,12 @@ try {
 	check('Framework push preserves native Bricks light and dark palettes', () => {
 		const tokenService = fs.readFileSync(path.join(root, 'wp-content/mu-plugins/dsa/includes/Design/Seam_Token_Service.php'), 'utf8');
 		const admin = fs.readFileSync(path.join(root, 'wp-content/mu-plugins/dsa/includes/Admin/Admin.php'), 'utf8');
-		assert.ok(tokenService.includes("'dark'   => self::dark_color_value_for_bricks"));
+		assert.ok(tokenService.includes("'dark'   => self::adaptive_dark_color_for_bricks"));
+		assert.ok(tokenService.includes('add_missing_dark_values_to_bricks_palette'));
 		assert.ok(tokenService.includes("'colorPalette'    => empty( $palette_colors )"));
 		assert.ok(tokenService.includes("'raw'     => 'var(--' . $bare . ')'"));
 		assert.ok(admin.includes('array_merge( $merged_palette, $kiwe_palette, $project_palette )'));
+		assert.ok(admin.includes('dsa_apply_bricks_native_dark_colors'));
 	});
 
 	check('semantic classifier selects equivalent media adapters and rejects lossy compound media', () => {
