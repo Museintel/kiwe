@@ -6539,7 +6539,7 @@ final class Admin {
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:16px">
 						<input type="hidden" name="action" value="dsa_developer_cleanup_bricks_batches">
 						<?php wp_nonce_field( 'dsa_developer_cleanup_bricks_batches' ); ?>
-						<p><label><?php esc_html_e( 'Keep current namespace', 'dsa' ); ?> <input type="text" class="regular-text code" name="keep_namespace" value="<?php echo esc_attr( $batch_report['current'] ); ?>" pattern="seam-[a-z0-9]{5}-" required></label></p>
+						<p><label><?php esc_html_e( 'Keep current namespace', 'dsa' ); ?> <input type="text" class="regular-text code" name="keep_namespace" value="<?php echo esc_attr( $batch_report['current'] ); ?>" pattern="seam-[a-z0-9]{5,6}-" required></label></p>
 						<label><input type="checkbox" name="confirm_cleanup" value="1" required> <?php esc_html_e( 'I checked the current namespace and want to remove only unreferenced classes from older compiler batches.', 'dsa' ); ?></label>
 						<?php submit_button( __( 'Clean older batches + regenerate Bricks CSS', 'dsa' ), 'secondary', 'submit', false ); ?>
 					</form>

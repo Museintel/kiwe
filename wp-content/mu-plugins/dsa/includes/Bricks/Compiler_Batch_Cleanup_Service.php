@@ -9,7 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Safely inventories and removes superseded SEAM compiler global-style groups.
  *
- * Compiler output uses a collision-resistant namespace such as `seam-qrbj6-*`.
+ * Compiler output uses a collision-resistant namespace such as `seam-qrbj6-*`
+ * or `seam-152qsk-*`. Five-character namespaces remain valid for older
+ * compiler exports; current exports use six characters.
  * These classes belong to imported templates, not to Kiwe Framework, and must be
  * cleaned only after Bricks content no longer references their IDs.
  */
@@ -20,7 +22,7 @@ final class Compiler_Batch_Cleanup_Service {
 
 	public static function compiler_namespace( string $class_name ): string {
 		$class_name = sanitize_html_class( $class_name );
-		if ( 1 !== preg_match( '/^seam-([a-z0-9]{5})-/', $class_name, $matches ) ) {
+		if ( 1 !== preg_match( '/^seam-([a-z0-9]{5,6})-/', $class_name, $matches ) ) {
 			return '';
 		}
 
@@ -28,12 +30,12 @@ final class Compiler_Batch_Cleanup_Service {
 	}
 
 	public static function is_valid_namespace( string $namespace ): bool {
-		return 1 === preg_match( '/^seam-[a-z0-9]{5}-$/', $namespace );
+		return 1 === preg_match( '/^seam-[a-z0-9]{5,6}-$/', $namespace );
 	}
 
 	/**
 	 * A name-shaped match is not proof: normal Framework utilities can also use
-	 * five-letter segments (for example seam-align-*). Recognition requires an
+	 * five- or six-letter segment (for example seam-align-*). Recognition requires an
 	 * explicit compiler source marker or class-ID evidence from a template tagged
 	 * SEAM Compiler. Observed namespaces remain registered for cleanup after the
 	 * originating template is later moved to trash.
@@ -102,7 +104,7 @@ final class Compiler_Batch_Cleanup_Service {
 	public function cleanup( string $keep_namespace ): array {
 		$keep_namespace = sanitize_html_class( $keep_namespace );
 		if ( ! self::is_valid_namespace( $keep_namespace ) ) {
-			throw new \InvalidArgumentException( 'A valid compiler namespace such as seam-qrbj6- is required.' );
+			throw new \InvalidArgumentException( 'A valid compiler namespace such as seam-qrbj6- or seam-152qsk- is required.' );
 		}
 		if ( ! defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ) {
 			throw new \RuntimeException( 'Bricks global classes are unavailable.' );
