@@ -4,6 +4,8 @@ Use this context for `/convert /bricks`, `/convert /bricks /seamframework`, `/se
 
 The production authority is the deterministic SEAM Compiler contract in `kiwe-ai-toolkit/contracts/seam-compiler-contract.json`. Browser AI may create and refine source HTML/CSS/JS, explain findings, and request missing proof. It must not manually recreate the compiler, author production Bricks JSON, guess Framework variables/classes, or claim a manual visual PASS.
 
+If the hosted compiler is unavailable, use the official local compiler/runtime from this repository. If that cannot execute, use the Kiwe REST bridge to validate already generated artifacts. A browser AI without any executable authority must return `WARN/UNVERIFIED`; it must not fill the gap by generating plausible JSON, contrast ratios, or audit proof.
+
 ## Stage 1 — raw Convert
 
 `/convert /bricks` accepts an arbitrary HTML/CSS/JS project or standalone document. It is Framework-neutral: it neither requires nor injects Seam Framework. It discovers pages without route-name assumptions and may split a complete document into dedicated Bricks header, footer, and content templates. It maps authored layout, paint, type, responsive rules, semantic elements, safe interactions, and supported form controls into native Bricks controls. Scoped CSS remains only where Bricks 2.3.10 cannot faithfully represent the source.

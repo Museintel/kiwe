@@ -18,7 +18,7 @@ final class SeamFlow_Service {
 	private const SCHEMA = 'kiwe.seamflow-api.v1';
 	private const DEFAULT_BRICKS_VERSION = '2.3.10';
 	private const COMPILER_CONTRACT = '0.13.0';
-	private const COMPILER_URL = 'https://seam-compiler-native-v2.koshrr4u.chatgpt.site/';
+	private const COMPILER_URL = 'https://seam-compiler-native.munaf-m-patni.chatgpt.site/';
 
 	public function status(): array {
 		$base = '/wp-json/dsa/v1/ai/seamflow';
@@ -60,6 +60,12 @@ final class SeamFlow_Service {
 				'rawFrameworkNeutral' => true,
 				'frameworkOptional'   => true,
 				'aiRequired'          => false,
+				'fallbackOrder'       => [
+					'hosted SEAM Compiler',
+					'official local SEAM Compiler source/runtime',
+					'Kiwe plugin REST validation bridge',
+					'WARN/UNVERIFIED when none can execute',
+				],
 			],
 			'truthRules'      => [
 				'No manual-only PASS for /audit, /fix, /execute /stepbystep, or /execute /fullflow.',
@@ -231,7 +237,14 @@ final class SeamFlow_Service {
 
 	public function accessibility( array $args ): array {
 		$files = $this->files_from_args( $args );
-		$plan  = $this->accessibility_plan( $args, $files );
+		$plan  = $this->accessibility_plan_from_args( $args, $files );
+		if ( [] === $plan ) {
+			return $this->compiler_required(
+				'KIWE_ACCESSIBILITY_ENGINE_REQUIRED',
+				'Accessibility creation must analyze the supplied project and emit measured foreground/background pairs plus real light/dark evidence. The plugin will validate an actual plan, but it will not invent generic colors or contrast ratios.',
+				'/create /accessibility in SEAM Compiler or the official local accessibility engine'
+			);
+		}
 		$files['accessibility/kiwe-accessibility-plan.json'] = wp_json_encode( $plan, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT );
 		$validation = ( new Accessibility_Validator() )->validate_files(
 			$files,
@@ -415,26 +428,24 @@ final class SeamFlow_Service {
 		];
 	}
 
-	private function accessibility_plan( array $args, array $files ): array {
-		return [
-			'schema'       => 'kiwe.accessibility-plan.v1',
-			'version'      => $this->contract_version(),
-			'modes'        => [ 'light', 'dark' ],
-			'tokenPairs'   => [
-				[ 'foreground' => 'var(--kiwe-color-text)', 'background' => 'var(--kiwe-color-surface)', 'ratio' => 9.8 ],
-				[ 'foreground' => 'var(--kiwe-color-surface)', 'background' => 'var(--kiwe-color-primary)', 'ratio' => 7.1 ],
-				[ 'foreground' => 'var(--kiwe-color-text)', 'background' => 'var(--kiwe-color-secondary)', 'ratio' => 6.3 ],
-				[ 'foreground' => 'var(--kiwe-color-secondary)', 'background' => 'var(--kiwe-color-text)', 'ratio' => 6.3 ],
-			],
-			'darkModeProof' => [
-				'kiwe'  => '[data-kiwe-theme="dark"]',
-				'bricks'=> '[data-brx-theme="dark"]',
-			],
-			'manualReview' => [
-				'Gradients, product artwork, and image overlays require rendered review on the target Bricks page after import.',
-				'WooCommerce query loops and Add to Cart actions require /usesitegraph and target-site verification.',
-			],
-		];
+	private function accessibility_plan_from_args( array $args, array $files ): array {
+		foreach ( [ 'accessibilityPlan', 'plan' ] as $key ) {
+			if ( isset( $args[ $key ] ) && is_array( $args[ $key ] ) && 'kiwe.accessibility-plan.v1' === (string) ( $args[ $key ]['schema'] ?? '' ) ) {
+				return $args[ $key ];
+			}
+		}
+
+		foreach ( $files as $path => $content ) {
+			if ( ! preg_match( '#(?:^|[\\/])kiwe-accessibility-plan\.json$#i', (string) $path ) ) {
+				continue;
+			}
+			$plan = json_decode( (string) $content, true );
+			if ( is_array( $plan ) && 'kiwe.accessibility-plan.v1' === (string) ( $plan['schema'] ?? '' ) ) {
+				return $plan;
+			}
+		}
+
+		return [];
 	}
 
 	private function bricks_template_from_conversion( array $result, array $args, string $html ): array {

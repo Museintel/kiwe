@@ -357,11 +357,11 @@ Tool-capable clients should run:
 node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff-or-accessibility-dir>
 ```
 
-If tools are available, run the relevant Kiwe validators. If tools are not available, revise the actual files manually and report what changed.
+Run the relevant Kiwe validators whenever a lane produces an importable artifact. If no official validator can execute, the browser AI may revise source files and report what changed, but the result remains `WARN/UNVERIFIED`; it must not claim PASS or invent measured accessibility ratios.
 
 ### `/create /frameworkprofile`
 
-Use after the Seam page direction is approved and the human wants the site personality turned into a Kiwe > Framework import profile.
+Use for a new blank foundation only when the human supplied explicit approved token values. For an HTML/CSS/JS conversion, use `/convert /bricks /seamframework` so the deterministic compiler derives the Framework Profile from the complete rendered evidence before serialization loses context. Browser AI must not infer a production profile from screenshots, prose, or a serialized Bricks template.
 
 The admin imports this file in Kiwe > Framework and pushes variables, color palette, global classes, and Bricks theme-style data from there. This is the preferred setup path for most users.
 
@@ -423,6 +423,7 @@ The profile must use:
 
 Rules:
 
+- Run the official framework-profile generator and `validate-framework-profile.cjs`, Kiwe MCP validator, or Kiwe REST validator before reporting PASS. Without executable authority, return `WARN/UNVERIFIED` rather than a plausible importable profile.
 - Use official Kiwe universal token names only, such as `color-brand`, `color-accent`, `color-surface`, `color-text`, `font-display`, `font-body`, `type-h1`, `space-md`, `radius-lg`, and `shadow-md`.
 - `bricks_theme_style` is required for a complete Framework profile. It must set `enabled: true`, a safe `id`, and a human `label`.
 - `bricks_theme_style` may carry safe global style slots only: site background, global colors, typography, links, radius, shadow, and spacing. Kiwe normalizes those slots back into universal tokens and then generates the native Bricks Theme Style during the Kiwe > Framework push.

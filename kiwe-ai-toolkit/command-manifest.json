@@ -7,15 +7,15 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.03",
+    "contractVersion": "7.04",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
     "seamflow": "External AI command-central flow for Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, dynamic intent, and accessibility.",
     "compilerAuthority": "SEAM Compiler 0.13.0 is the deterministic authority for raw Bricks conversion, optional one-pass Framework optimization, and executable conversion proof. Browser AI must not manually recreate production Bricks JSON or Framework Profile data.",
-    "stageBoundary": "Raw /convert /bricks is Framework-neutral. Optional /convert /bricks /seamframework is the preferred one-pass Framework mode; /seamframework remains valid while raw evidence is retained. Both emit one project-wide Framework Profile, stable profile-installed class IDs, dependent templates, and executable package audit proof. Accessibility is deferred to its own later phase.",
+    "stageBoundary": "Raw /convert /bricks is Framework-neutral. Optional /convert /bricks /seamframework is the preferred one-pass Framework mode; /seamframework remains valid while raw evidence is retained. Both emit one project-wide Framework Profile, stable profile-installed class IDs, dependent templates, and executable package audit proof. Accessibility is a separate explicit stage after Framework and has its own executable audit gate.",
     "kiweInternalAi": "Bounded Kiwe Companion/Internal AI. It can assist when /usecompanion or API/MCP access exists, but browser-only SeamFlow must still work without it.",
-    "currentLaunchScope": "Close page-builder flow through Seam Framework first: Framework profile, Bricks pages/header/footer/templates, stable class and variable ownership, and executable /audit /seamframework proof. Accessibility follows as a separate later phase.",
+    "currentLaunchScope": "Close page-builder flow through Seam Framework first: Framework profile, Bricks pages/header/footer/templates, stable class and variable ownership, and executable /audit /seamframework proof. Accessibility follows as a separate active phase with measured evidence and executable audit proof.",
     "nextPhase": "DSA/AppShell theme remains mapped, but full DSA theme production hardening comes after page-builder flow testing passes."
   },
   "pluginApi": {
@@ -53,11 +53,12 @@
     "ideation": "For /ideate, ask the adaptive intake from ideate-lite.md, analyze an attached logo before proposing its palette, ask framework-neutral versus headless Seam last, create only the first homepage HTML/CSS/JS, and continue small refinements through normal conversation without another command.",
     "finalResponse": "Return a compact result: PASS/FAIL/WARN, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long essays.",
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
-    "firstInteractionRoutes": "When files are supplied without a command, always show route choices after the recommended next command: Route A hosted SEAM Compiler, Route B local deterministic compiler, Route C Plugin REST authority bridge, Route D Plugin REST + Companion review. For raw HTML/CSS/JS, choose raw /convert /bricks or one-pass /convert /bricks /seamframework. Accessibility is a separate later stage. Ask for API credentials only for Route C/D or /usecompanion/plugin proof.",
+    "firstInteractionRoutes": "When files are supplied without a command, always show route choices after the recommended next command: Route A hosted SEAM Compiler, Route B local deterministic compiler, Route C Plugin REST authority bridge, Route D Plugin REST + Companion review. For raw HTML/CSS/JS, choose raw /convert /bricks or one-pass /convert /bricks /seamframework. Accessibility is a separate active stage after conversion or Framework, using /create /accessibility and /audit. Ask for API credentials only for Route C/D or /usecompanion/plugin proof.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
     "commandGrammar": "SeamFlow commands are composable shell-like tokens, not fixed magic phrases. Parse the user line into one primary action, optional phase/target, and modifiers. Equivalent valid ordering may be normalized when unambiguous; unknown, contradictory, or lane-invalid combinations stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE.",
     "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /audit /eachstep audits after each phase; /audit /fix /eachstep explicitly runs phase -> audit -> fix actual artifact if needed -> same audit again until PASS or NEEDS_INPUT. /audit /atend audits before final delivery; /audit /fix /atend explicitly repairs failed final lanes and reruns audits until PASS or NEEDS_INPUT.",
     "validatorAuthority": "Only executed validator proof may close a lane as PASS: SEAM Compiler, official Kiwe validator command, Kiwe MCP validator tool, Kiwe REST/plugin validator, or hosted/local Kiwe validator endpoint. Copied/reconstructed or AI-authored converter/validator logic may guide diagnosis but cannot produce PASS. If unavailable, report WARN or UNVERIFIED. Visual accuracy is INCOMPLETE when viewport provenance differs or foreign overlays contaminate either capture.",
+    "browserAiFallback": "When the hosted SEAM Compiler is unavailable, browser AI must use the official local compiler/runtime from the Kiwe source, then the Kiwe REST validation bridge when available. It may invoke tools, prepare source files, interpret executable proof, and fix source defects, but it must never replace the compiler by writing production Bricks JSON, Framework Profiles, measured accessibility ratios, or PASS reports from prose. If no official executable route is available, return WARN/UNVERIFIED with KIWE_VALIDATOR_UNAVAILABLE.",
     "routeFallbackLadder": "Applies to every phase. Prefer Route D when /usecompanion and Plugin REST are reachable. If Companion fails, continue as Route C. If Plugin REST fails or the host cannot resolve, and shell/Node/Git tools are available, immediately fall back to Route B and run the official matching validator/compiler. Only return WARN/UNVERIFIED after Plugin REST failed and no official Git/Node/MCP/hosted validator can execute.",
     "fullFlowDiscipline": "/execute /fullflow means one final delivery, not one giant context load. Execute phase-by-phase, read only the context/validator files for the current phase, close that phase with /audit -> /fix -> /audit, then continue.",
     "reportDiscipline": "/report is an interaction flag. In /execute /stepbystep, stop after the current phase closes, return the phase artifact plus compact generated/audited/fixed/warnings report, and wait for the human to say continue. In /execute /fullflow, /report adds a compact final phase ledger but does not pause between phases.",
@@ -66,7 +67,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.03", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.04", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -312,11 +313,11 @@
     "/create /frameworkprofile": {
       "phase": "create",
       "read": ["kiwe-ai-toolkit/contexts/workflow-lite.md"],
-      "requires": ["approved design direction or existing page/theme tokens"],
+      "requires": ["explicit approved foundation tokens for a new blank profile, or deterministic SEAM Compiler evidence for a converted project"],
       "output": ["framework/kiwe-framework-profile.json"],
-      "must": ["official Kiwe universal values go in settings.tokens.overrides", "project-specific variables/classes required by Bricks templates go in settings.tokens.project and are pushed to dedicated Kiwe Project categories in Bricks"],
-      "forbidden": ["Bricks template JSON", "DSA theme package", "docs unless /document", "ZIP"],
-      "finalResponse": "Return the profile JSON and compact validation status."
+      "must": ["for converted HTML/CSS/JS use /convert /bricks /seamframework; do not infer an importable profile from screenshots, prose, or serialized Bricks alone", "run the official framework-profile generator and validate-framework-profile.cjs, Kiwe MCP, or Kiwe REST validator before PASS", "official Kiwe universal values go in settings.tokens.overrides", "project-specific variables/classes required by Bricks templates go in settings.tokens.project and are pushed to dedicated Kiwe Project categories in Bricks"],
+      "forbidden": ["browser-AI-authored production profile inferred from a converted webpage", "manual-only PASS", "Bricks template JSON", "DSA theme package", "docs unless /document", "ZIP"],
+      "finalResponse": "Return the deterministically generated profile and executable validation status; otherwise return WARN/UNVERIFIED and route converted projects to /convert /bricks /seamframework."
     },
     "/audit /frameworkprofile": {
       "phase": "audit",

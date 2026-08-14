@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.03`
+Contract version: `7.04`
 Updated: `2026-08-12`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.03
+SeamFlow contract: 7.04
 ```
 
 Then do one of these:
@@ -68,7 +68,7 @@ Route fallback ladder: apply this to every phase, not only `/rebuild /seamframew
 
 Command-central error behavior: if the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact `STATUS: NEEDS_INPUT`, `FAIL`, or `WARN` response. Include `ERROR:` with a Kiwe error code, the blocker, and the next valid command. Do not invent a manual pass, do not wander through unrelated sources, and do not keep working just to produce something.
 
-Current launch scope: close raw Bricks conversion through SEAM Framework for webpages, headers, footers, reusable templates, Framework profiles, stable variable/class ownership, and executable package proof. Accessibility is a separate later phase and is not part of the current completion gate.
+Current launch scope: close raw Bricks conversion through SEAM Framework first, then run Accessibility as a separate explicit gate for measured contrast, coordinated Kiwe/Bricks light-dark values, text containment, and executable proof.
 
 ## Fast machine-readable router
 
@@ -170,7 +170,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.03
+SeamFlow contract: 7.04
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -292,7 +292,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.03
+SeamFlow contract: 7.04
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -357,7 +357,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.03
+SeamFlow contract: 7.04
 Command:
 Artifact classification:
 Files returned:

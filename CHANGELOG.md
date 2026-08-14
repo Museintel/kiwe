@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.04
+
+- Aligned SeamFlow browser-AI fallback with SEAM Compiler 0.13.0: hosted, official local, and Kiwe REST routes share one fail-closed authority contract; browser AI may never synthesize production Bricks JSON, converted-project Framework Profiles, measured accessibility ratios, or PASS proof.
+- Updated the plugin authority bridge to the Munaf-owned public compiler and removed its generic accessibility-plan fabrication path. Accessibility creation now requires real project evidence and executable validation.
+- Restricted `/create /frameworkprofile` to explicit blank-foundation work; converted projects use the one-pass deterministic `/convert /bricks /seamframework` path so raw rendered evidence is not lost.
+
 All notable pre-1.0 release-candidate changes are recorded here. Architectural history remains in `docs/DSA-ARCHITECTURE.md`.
 
 ## Unreleased

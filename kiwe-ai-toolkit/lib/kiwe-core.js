@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.03',
+    contractVersion: '7.04',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -528,7 +528,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.03',
+      mustReport: 'SeamFlow contract: 7.04',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -573,7 +573,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     firstInteractionDefaults: {
       rawHtmlCssJsDraft: {
         recommendedCommand: '/convert /bricks',
-        explanation: 'Choose deterministic Framework-neutral raw conversion or one-pass Bricks + SEAM Framework. Accessibility remains a separate later stage.',
+        explanation: 'Choose deterministic Framework-neutral raw conversion or one-pass Bricks + SEAM Framework. Accessibility is a separate active stage after conversion or Framework, using /create /accessibility and /audit.',
         alternativeFinalOnly: '/execute /fullflow /audit /fix /eachstep',
         lowLevelPhaseOnly: '/convert /bricks'
       }
@@ -730,8 +730,8 @@ export function listCommands() {
       },
       {
         command: '/create /frameworkprofile',
-        purpose: 'Create the Kiwe > Framework import profile. Admin imports this file in Kiwe > Framework, then pushes variables, colors, classes, and Bricks theme-style data from there.',
-        requires: ['approved visual direction'],
+        purpose: 'Create a new blank Kiwe > Framework foundation from explicit approved tokens. Converted projects must use deterministic /convert /bricks /seamframework evidence instead of browser-AI inference.',
+        requires: ['explicit approved foundation tokens, or deterministic compiler evidence for a converted project'],
         output: 'framework/kiwe-framework-profile.json only; add /document if notes are wanted'
       },
       {
@@ -881,7 +881,8 @@ function frameworkProfileContext() {
   return [
     '# Kiwe Framework / Bricks theme profile context',
     '',
-    'Use this only for `/create /frameworkprofile` or `/audit /frameworkprofile` phases.',
+    'Use this only for `/create /frameworkprofile` or `/audit /frameworkprofile` phases. For a converted HTML/CSS/JS project, run `/convert /bricks /seamframework`; do not infer an importable Framework Profile from screenshots, prose, or serialized Bricks alone.',
+    'An importable profile may be marked PASS only after the official framework-profile generator plus validate-framework-profile.cjs, Kiwe MCP, or Kiwe REST validation actually executes. Otherwise return WARN/UNVERIFIED.',
     '',
     'A Framework profile is the sitewide design-token import for `Kiwe > Framework`. After import, the admin can push variables, colors, global classes, and Bricks theme-style data to Bricks from Kiwe. It is not a DSA AppShell theme package, not a Bricks template, and not the standalone `/brickstheme` file.',
     '',
