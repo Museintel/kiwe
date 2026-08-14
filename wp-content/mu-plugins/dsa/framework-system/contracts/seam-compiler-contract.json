@@ -39,7 +39,9 @@
       "phase": "separate",
       "currentCompletionGate": true,
       "requiresExecutableProof": true,
-      "browserAiMayNotInventContrastRatios": true
+      "browserAiMayNotInventContrastRatios": true,
+      "bricksDarkModeBinding": ":root[data-brx-theme=\"dark\"] %root%",
+      "scopeRule": "Enhanced templates bind coordinated values at their own root so source-scoped variables cannot shadow Bricks native dark mode."
     },
     "audit": {
       "commands": ["/audit /bricksconversion", "/audit /seamframework"],

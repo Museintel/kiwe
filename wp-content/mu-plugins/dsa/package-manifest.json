@@ -221,8 +221,8 @@
       "sha256": "a3f47accc195aa380fe52f97e9bb6c79789871487f13349a2699fd15d578309a"
     },
     "framework-system/contracts/seam-compiler-contract.json": {
-      "bytes": 3503,
-      "sha256": "2af5abaed54870bf2a08dc9cb62703440f2699c6a310dab9643b9cde0603610a"
+      "bytes": 3724,
+      "sha256": "cf839f59d6b8187d88477543ebc4395687927ab893c4c2aa9b8a165c14d70c0e"
     },
     "framework-system/contracts/seam-vocabulary.json": {
       "bytes": 12083,

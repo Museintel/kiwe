@@ -49,6 +49,7 @@ If no current page, preview, artifact, or file map exists, stop and ask for it. 
 - Preserve the brand hue where it remains usable, reduce glare with tiered tinted surfaces, and verify foreground/background contrast numerically.
 - Explicit light/dark values in an existing Framework profile remain authoritative. Generated dark values fill missing roles; they do not overwrite deliberate supplied values.
 - At Bricks level, use native light/dark palette values and `data-brx-theme`. At Kiwe level, bridge the same state to `data-kiwe-theme`. At raw HTML level, use semantic CSS custom properties and a visible, keyboard-operable toggle when requested.
+- Bind enhanced Bricks variables at the converted template root under `:root[data-brx-theme="dark"]` so source-scoped variables cannot shadow the native Bricks palette.
 
 ## Required output
 

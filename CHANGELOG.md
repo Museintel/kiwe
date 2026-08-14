@@ -6,6 +6,7 @@
 - Added adaptive brand-aware Bricks dark palettes with tiered tinted surfaces and measured foreground contrast. Explicit project dark values remain authoritative.
 - Added Kiwe > Framework actions to generate/push dark palettes, import the standalone compiler palette without installing Seam Framework, and explicitly enable the Kiwe dock for light/dark preview while Raw Convert Test Mode remains active.
 - Kept visual-difference testing isolated by leaving the dock-preview override off by default and warning designers to disable it before clean captures.
+- Bound accessibility-enhanced template variables to Bricks' native dark-mode root state so source-scoped variables cannot shadow the installed light/dark palette.
 
 ## 7.04
 
