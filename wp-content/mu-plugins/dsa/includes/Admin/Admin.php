@@ -4151,9 +4151,9 @@ final class Admin {
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_toggle_accessibility_preview">
 					<?php wp_nonce_field( 'dsa_toggle_accessibility_preview' ); ?>
-					<?php submit_button( $accessibility_preview_enabled ? __( 'Disable Dock Accessibility Preview', 'dsa' ) : __( 'Enable Dock Accessibility Preview', 'dsa' ), 'secondary', 'submit', false ); ?>
+					<?php submit_button( $accessibility_preview_enabled ? __( 'Disable Accessibility Preview', 'dsa' ) : __( 'Enable Accessibility Preview', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
-				<p class="description"><?php esc_html_e( 'Dark palettes preserve the active brand hue, create tiered dark surfaces, and enforce measured contrast targets. Accessibility preview deliberately overrides Raw Convert Test Mode only for the dock; turn it off before clean visual-difference captures.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Dark palettes preserve the active brand hue, create tiered dark surfaces, and enforce measured contrast targets. Accessibility Preview deliberately overrides Raw Convert Test Mode, enables the dock, and adds page-wide keyboard focus, control-size, forced-colors, and reduced-motion safeguards. Turn it off before clean visual-difference captures.', 'dsa' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_export_bricks_tokens">
 					<?php wp_nonce_field( 'dsa_export_bricks_tokens' ); ?>

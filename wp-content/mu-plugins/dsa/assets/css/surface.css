@@ -813,6 +813,12 @@
 	--dsa-runtime-token-0711: minmax(0, 1.2fr) minmax(220px, .8fr);
 	--dsa-runtime-token-0712: 76px minmax(0, 1fr);
 	--dsa-runtime-token-0713: min(220px, 100%);
+	--dsa-runtime-token-0714: max(2px, .14em) solid #fff;
+	--dsa-runtime-token-0715: max(2px, .14em);
+	--dsa-runtime-token-0716: .01ms;
+	--dsa-runtime-token-0717: 1;
+	--dsa-runtime-token-0718: 0s;
+	--dsa-runtime-token-0719: 0 0 0 max(4px, .28em) #000;
 }
 
 /* Notification preference journey */
@@ -8580,5 +8586,43 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-ui-contract="2"][data-dsa-do
 	.dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype :is([data-dsa-module], .dsa-panel__button, .dsa-cart-panel__checkout, .dsa-app-badge, .dsa-menu-link, .dsa-search-result-card) {
 		transition: none !important;
 		transform: none !important;
+	}
+}
+
+/* Accessibility Preview is intentionally opt-in. It supplies safe operability
+ * defaults for existing Bricks pages that predate a compiler accessibility
+ * artifact, without changing the normal raw-conversion rendering lane. */
+body.kiwe-accessibility-preview :where(a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [tabindex]:not([tabindex="-1"])):focus-visible {
+	outline: var(--dsa-runtime-token-0714) !important;
+	outline-offset: var(--dsa-runtime-token-0715) !important;
+	box-shadow: var(--dsa-runtime-token-0719) !important;
+}
+
+body.kiwe-accessibility-preview :where(button, input:not([type="hidden"]), select, textarea, [role="button"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"]) {
+	min-block-size: var(--dsa-geometry-control-min);
+	touch-action: manipulation;
+}
+
+@media (forced-colors: active) {
+	body.kiwe-accessibility-preview :where(a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [tabindex]:not([tabindex="-1"])):focus-visible {
+		outline-color: CanvasText !important;
+		box-shadow: none !important;
+	}
+}
+
+body.kiwe-accessibility-preview :where(input[type="checkbox"], input[type="radio"]) {
+	min-inline-size: var(--dsa-geometry-control-min);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body.kiwe-accessibility-preview,
+	body.kiwe-accessibility-preview *,
+	body.kiwe-accessibility-preview *::before,
+	body.kiwe-accessibility-preview *::after {
+		scroll-behavior: auto !important;
+		animation-duration: var(--dsa-runtime-token-0716) !important;
+		animation-iteration-count: var(--dsa-runtime-token-0717) !important;
+		transition-duration: var(--dsa-runtime-token-0716) !important;
+		transition-delay: var(--dsa-runtime-token-0718) !important;
 	}
 }

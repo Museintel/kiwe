@@ -13,6 +13,7 @@ const settings = read('wp-content/mu-plugins/dsa/includes/Settings.php');
 const plugin = read('wp-content/mu-plugins/dsa/includes/Plugin.php');
 const autoloader = read('wp-content/mu-plugins/dsa/includes/Autoloader.php');
 const assets = read('wp-content/mu-plugins/dsa/includes/Public_Endpoint/Assets.php');
+const surfaceCss = read('wp-content/mu-plugins/dsa/assets/css/surface.css');
 const manifest = read('wp-content/mu-plugins/dsa/includes/Runtime/Package_Manifest.php');
 
 const loaderVersion = (loader.match(/KIWE_MU_LOADER_VERSION',\s*'([^']+)'/) || [])[1];
@@ -26,6 +27,8 @@ check('settings constructor performs no migration I/O', !/function __construct\s
 check('settings migration is explicit', settings.includes('public function run_migrations(): void') && plugin.indexOf('$this->settings->run_migrations();') < plugin.indexOf('$settings    = $this->settings->all();'));
 check('autoloading is exact and scan-free', !autoloader.includes('glob(') && !autoloader.includes('resolve_case_insensitive'));
 check('admin bar policy is shell-gated', assets.includes("[ $this, 'filter_admin_bar' ]") && assets.includes('Environment::should_render_frontend()') && assets.includes("hide_frontend_admin_bar"));
+check('accessibility preview is explicitly body-scoped', assets.includes("[ $this, 'filter_body_classes' ]") && assets.includes("'kiwe-accessibility-preview'") && surfaceCss.includes('body.kiwe-accessibility-preview'));
+check('accessibility preview supplies operability safeguards', surfaceCss.includes(':focus-visible') && surfaceCss.includes('box-shadow: var(--dsa-runtime-token-0719)') && surfaceCss.includes('forced-colors: active') && surfaceCss.includes('min-block-size: var(--dsa-geometry-control-min)') && surfaceCss.includes('prefers-reduced-motion: reduce') && surfaceCss.includes('animation-duration: var(--dsa-runtime-token-0716)'));
 
 const classMismatches = [];
 function walk(dir) {

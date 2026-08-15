@@ -21,8 +21,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 273232,
-      "sha256": "c53d14a613a4f4c497b556a0737376619439322b3f8c311eb932a85ccdf2de21"
+      "bytes": 275393,
+      "sha256": "09750ba08f7bc6aac9c43231f152141877eff01bc227c95924bbb80eeb712ac5"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -481,8 +481,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 613590,
-      "sha256": "08f8b3d2f548e7300e745ab68f9ba898bfa3655e96d482041201a967b2e81c97"
+      "bytes": 613675,
+      "sha256": "fca1ec9af42c86680fca3c91f38d2a6099cb85fe10ecef5d1f98389c233e0406"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -633,8 +633,8 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 58588,
-      "sha256": "1e4191866f2b042855310d24b90bc541425813a97eb18f7a6b0d9f6db6e21db0"
+      "bytes": 58975,
+      "sha256": "f01752dc32f870d8e2a7dd5ac151cb75f1057ab3a987c1d7341c1d99be333495"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
       "bytes": 17364,

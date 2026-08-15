@@ -74,6 +74,7 @@ final class Assets {
 			return;
 		}
 		add_filter( 'show_admin_bar', [ $this, 'filter_admin_bar' ], 1000 );
+		add_filter( 'body_class', [ $this, 'filter_body_classes' ] );
 		add_action( 'wp_head', [ $this, 'print_phantom_viewport_seed' ], 0 );
 		add_action( 'wp_head', [ $this, 'print_boot_seed' ], 1 );
 		add_action( 'wp_head', [ $this, 'print_initial_preloader_style' ], 2 );
@@ -81,6 +82,15 @@ final class Assets {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 		add_action( 'wp_footer', [ $this, 'print_initial_preloader_fallback' ], 0 );
 		add_action( 'wp_footer', [ $this, 'print_token_cascade_guard' ], 999 );
+	}
+
+	public function filter_body_classes( array $classes ): array {
+		$diagnostics = $this->settings->get( 'diagnostics', [] );
+		if ( is_array( $diagnostics ) && ! empty( $diagnostics['accessibility_preview_mode'] ) ) {
+			$classes[] = 'kiwe-accessibility-preview';
+		}
+
+		return array_values( array_unique( $classes ) );
 	}
 
 	public function filter_admin_bar( bool $show ): bool {
