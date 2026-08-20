@@ -22,6 +22,7 @@ final class Bricks_Integration {
 	private $linked_products;
 	private $store_analytics;
 	private array $mini_cart_context = [];
+	private bool $popup_resolution_queued = false;
 
 	public function __construct( Element_Registry $registry, Settings $settings, ?Linked_Products_Service $linked_products = null, ?Store_Analytics_Service $store_analytics = null ) {
 		$this->registry        = $registry;
@@ -50,6 +51,139 @@ final class Bricks_Integration {
 		add_action( 'woocommerce_widget_shopping_cart_before_buttons', [ $this, 'render_mini_cart_recommendations' ], 8 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_mini_cart_adapter' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_studio_editor_companion' ] );
+		add_action( 'added_post_meta', [ $this, 'maybe_resolve_compiler_popup_meta' ], 30, 4 );
+		add_action( 'updated_post_meta', [ $this, 'maybe_resolve_compiler_popup_meta' ], 30, 4 );
+	}
+
+	public function maybe_resolve_compiler_popup_meta( int $meta_id, int $object_id, string $meta_key, $meta_value ): void {
+		unset( $meta_id, $meta_value );
+		if ( 'bricks_template' !== get_post_type( $object_id ) ) {
+			return;
+		}
+		$keys = array_filter(
+			[
+				defined( 'BRICKS_DB_TEMPLATE_TYPE' ) ? BRICKS_DB_TEMPLATE_TYPE : '_bricks_template_type',
+				defined( 'BRICKS_DB_PAGE_CONTENT' ) ? BRICKS_DB_PAGE_CONTENT : '_bricks_page_content_2',
+				defined( 'BRICKS_DB_PAGE_HEADER' ) ? BRICKS_DB_PAGE_HEADER : '_bricks_page_header_2',
+				defined( 'BRICKS_DB_PAGE_FOOTER' ) ? BRICKS_DB_PAGE_FOOTER : '_bricks_page_footer_2',
+			]
+		);
+		if ( in_array( $meta_key, $keys, true ) && ! $this->popup_resolution_queued ) {
+			$this->popup_resolution_queued = true;
+			add_action( 'shutdown', [ $this, 'resolve_compiler_popup_references' ], 5 );
+		}
+	}
+
+	/**
+	 * Resolve SEAM Compiler popup references after Bricks assigns WordPress IDs.
+	 *
+	 * Cross-template Bricks interactions require a numeric popup template ID,
+	 * which cannot exist in a browser-generated export. The compiler therefore
+	 * emits `seam-popup:<reference>` temporarily. Importing either side runs this
+	 * resolver, so arbitrary import order converges to a native Bricks popup
+	 * interaction without keeping a frontend compatibility runtime.
+	 */
+	public function resolve_compiler_popup_references( int $post_id = 0, ?\WP_Post $post = null, bool $update = false ): void {
+		unset( $post_id, $post, $update );
+		$this->popup_resolution_queued = false;
+
+		static $resolving = false;
+		if ( $resolving || ! class_exists( '\\Bricks\\Database' ) || ! defined( 'BRICKS_DB_TEMPLATE_TYPE' ) ) {
+			return;
+		}
+
+		$resolving = true;
+		try {
+			$template_ids = get_posts(
+				[
+					'post_type'        => 'bricks_template',
+					'post_status'      => [ 'publish', 'draft', 'private', 'pending' ],
+					'posts_per_page'   => -1,
+					'fields'           => 'ids',
+					'no_found_rows'    => true,
+					'suppress_filters' => true,
+				]
+			);
+			$popup_ids = [];
+			foreach ( $template_ids as $template_id ) {
+				if ( 'popup' !== (string) get_post_meta( (int) $template_id, BRICKS_DB_TEMPLATE_TYPE, true ) ) {
+					continue;
+				}
+				$content = \Bricks\Database::get_data( (int) $template_id, 'popup' );
+				foreach ( $this->compiler_popup_references_in_value( $content ) as $reference ) {
+					$popup_ids[ $reference ] = (int) $template_id;
+				}
+			}
+
+			$resolved = 0;
+			$pending  = 0;
+			foreach ( $template_ids as $template_id ) {
+				$type    = (string) get_post_meta( (int) $template_id, BRICKS_DB_TEMPLATE_TYPE, true );
+				$area    = in_array( $type, [ 'header', 'footer' ], true ) ? $type : 'content';
+				$content = \Bricks\Database::get_data( (int) $template_id, $area );
+				$changed = $this->resolve_compiler_popup_value( $content, $popup_ids, $resolved, $pending );
+				if ( $changed ) {
+					update_post_meta( (int) $template_id, \Bricks\Database::get_bricks_data_key( $area ), wp_slash( $content ) );
+				}
+			}
+
+			update_option(
+				'dsa_bricks_compiler_popup_resolution',
+				[
+					'checked_at' => time(),
+					'popups'     => count( $popup_ids ),
+					'resolved'   => $resolved,
+					'pending'    => $pending,
+				],
+				false
+			);
+		} finally {
+			$resolving = false;
+		}
+	}
+
+	/** @return string[] */
+	private function compiler_popup_references_in_value( $value ): array {
+		$references = [];
+		if ( is_array( $value ) ) {
+			if ( isset( $value['name'], $value['value'] ) && 'data-seam-popup-ref' === $value['name'] ) {
+				$reference = strtolower( trim( (string) $value['value'] ) );
+				if ( 1 === preg_match( '/^[a-z0-9][a-z0-9:-]{0,190}$/', $reference ) ) {
+					$references[] = $reference;
+				}
+			}
+			foreach ( $value as $child ) {
+				$references = array_merge( $references, $this->compiler_popup_references_in_value( $child ) );
+			}
+		}
+
+		return array_values( array_unique( $references ) );
+	}
+
+	private function resolve_compiler_popup_value( &$value, array $popup_ids, int &$resolved, int &$pending ): bool {
+		$changed = false;
+		if ( ! is_array( $value ) ) {
+			return false;
+		}
+		foreach ( $value as $key => &$child ) {
+			if ( 'templateId' === $key && is_string( $child ) && str_starts_with( $child, 'seam-popup:' ) ) {
+				$reference = substr( $child, strlen( 'seam-popup:' ) );
+				if ( isset( $popup_ids[ $reference ] ) ) {
+					$child   = $popup_ids[ $reference ];
+					$changed = true;
+					++$resolved;
+				} else {
+					++$pending;
+				}
+				continue;
+			}
+			if ( $this->resolve_compiler_popup_value( $child, $popup_ids, $resolved, $pending ) ) {
+				$changed = true;
+			}
+		}
+		unset( $child );
+
+		return $changed;
 	}
 
 	public function enqueue_studio_editor_companion(): void {

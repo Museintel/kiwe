@@ -489,8 +489,8 @@
       "sha256": "ddd5427c6bb2188aefd0dd143b1cfd4ce2a4655015a4bbb66208573099876310"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 94162,
-      "sha256": "9a611215d9594538339bf7b83428660b60dafa62543d3bdd16442255211676ce"
+      "bytes": 99022,
+      "sha256": "96345dd82b77a78bf2fb6ff5149c3accbe9ec4790809d2288694cf69c370237e"
     },
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
       "bytes": 13091,
