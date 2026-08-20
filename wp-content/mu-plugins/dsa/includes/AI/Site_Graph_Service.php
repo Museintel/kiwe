@@ -107,6 +107,9 @@ final class Site_Graph_Service {
 				'wordpressVersion' => sanitize_text_field( (string) get_bloginfo( 'version' ) ),
 				'bricksVersion'    => defined( 'BRICKS_VERSION' ) ? sanitize_text_field( (string) BRICKS_VERSION ) : '',
 				'kiweVersion'      => defined( 'DSA_VERSION' ) ? sanitize_text_field( (string) DSA_VERSION ) : '',
+				'kiweActive'       => defined( 'DSA_VERSION' ),
+				'woocommerceVersion' => defined( 'WC_VERSION' ) ? sanitize_text_field( (string) WC_VERSION ) : '',
+				'woocommerceActive'  => class_exists( 'WooCommerce' ) || function_exists( 'WC' ),
 				'isMultisite'      => is_multisite(),
 			],
 			'bricks'      => [
