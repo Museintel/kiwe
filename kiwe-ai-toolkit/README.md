@@ -29,6 +29,8 @@ For highest-quality work, use the phased workflow instead of one giant combined 
 
 The standalone SEAM Compiler may perform step 12 deterministically when the project upload contains both the approved raw source and the validated `bricks-bindings/kiwe-bindings.json` produced by step 11. SiteGraph remains read-only context; the compiler applies declared bindings and reports unmatched selectors rather than inventing site data.
 
+That conversion can additionally emit `kiwe.sitegraph-post-import-verification.v1`, which preserves binding-to-element proof and recommends—but never activates—Bricks template conditions. This keeps target-specific route IDs, existing header/footer ownership, and global archive/single scope behind explicit review.
+
 One-shot `combined` still exists for fast experiments, but serious candidate work should be staged.
 
 Any phase can add `/usecompanion`, such as `/rebuild /seamframework /usecompanion` or `/audit /dsatheme /usecompanion`. Companion is optional and non-blocking: if a scoped Kiwe AI key and target REST base are available, use Companion once for compact phase cards or deterministic audit findings; if it is unavailable, disabled, slow, rate-limited, over budget, or inaccessible, continue with the same phase normally and report the fallback. Companion is a contract oracle/context broker, not a creative co-author or full-codebase dump.

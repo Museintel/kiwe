@@ -192,6 +192,8 @@ bricks-template/
 
 For the standalone SEAM Compiler lane, upload the approved raw HTML/CSS/JS project and the same validated `bricks-bindings/kiwe-bindings.json` together. The compiler applies only the plan's declared source selectors before native Bricks conversion, reports unmatched or conflicting bindings, and does not fetch, copy, or mutate target-site content. This is still the `/usesitegraph` then `/convert /bricks` sequence; `/convert /usesitegraph` is not a command.
 
+The compiler may also emit `sitegraph-<project>-post-import-verification.json` with schema `kiwe.sitegraph-post-import-verification.v1`. It maps each validated binding to the expected native Bricks element ID and a rendered DOM proof marker, reports unmatched or multi-target selectors, and provides non-applying Bricks template-condition recommendations. It is a read-only verification contract: it must declare `mayMutateWordPress: false` and `mayActivateTemplateConditions: false`. Header/footer, single/archive and route-specific conditions always require target review or route-ID resolution; dedicated WooCommerce runtime template types remain Bricks-managed.
+
 Then validate it:
 
 ```bash
