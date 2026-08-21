@@ -790,28 +790,41 @@ export function listCommands() {
       },
       {
         command: '/usesitegraph',
-        purpose: 'Use real target-site Site Graph/API facts for identity, preview samples, dynamic bindings, Bricks context, and query-loop intent.',
+        purpose: 'Select real target-site SiteGraph/API facts as the evidence source. Add `/for` plus explicit targets; this broad token does not choose what changes.',
         requires: ['KIWE_REST_BASE plus key, or exported kiwe.site-graph.v1 JSON, or public Site Graph Data route'],
-        output: 'bricks-bindings/kiwe-bindings.json when binding intent changes; add /document if notes are wanted'
+        output: 'needs-input target prompt when used alone'
       },
       {
-        command: '/usesitegraph /replacepreviewdata',
-        aliases: ['/usesitegraph /replacepreview'],
-        purpose: 'Replace preview-only sample content with real Site Graph samples while keeping production/import artifacts dynamic.',
+        command: '/usesitegraph /for /previewdata',
+        aliases: ['/usesitegraph /replacepreviewdata', '/usesitegraph /replacepreview'],
+        purpose: 'Replace preview-only sample content with real SiteGraph records and change nothing else.',
         requires: ['existing handoff', 'Site Graph Data/API access'],
-        output: 'preview samples updated; production dynamic intent preserved'
+        output: 'same raw project with preview samples updated; no binding file unless a binding target is also present'
       },
       {
-        command: '/usesitegraph /websitename',
-        purpose: 'Use Site Graph identity/name/logo/tone facts instead of scraping or guessing the brand.',
+        command: '/usesitegraph /for /siteidentity',
+        aliases: ['/usesitegraph /websitename'],
+        purpose: 'Use SiteGraph identity/name/logo/menu facts instead of scraping or guessing the brand.',
         requires: ['Site Graph site identity data'],
         output: 'identity-aware handoff revisions'
       },
       {
-        command: '/usesitegraph /nonai',
-        purpose: 'Force the AI-less/read-only Site Graph Data lane. Do not call Companion/native AI routes.',
+        command: '/usesitegraph /for /bricksbindings',
+        purpose: 'Create target-grounded Bricks query-loop, dynamic-tag and Kiwe-launcher bindings without changing preview content unless `/previewdata` is also present.',
+        requires: ['existing raw artifact', 'SiteGraph/API/export'],
+        output: 'bricks-bindings/kiwe-bindings.json plus minimally annotated raw source'
+      },
+      {
+        command: '/usebrickscontext /for /bricksbindings',
+        purpose: 'Create generic Bricks query-loop/dynamic-tag/Kiwe-launcher intent from verified builder capabilities without SiteGraph or site content.',
+        requires: ['existing raw artifact', 'verified Bricks/Kiwe capability context'],
+        output: 'bricks-bindings/kiwe-bindings.json with target-specific unknowns in requiresHumanReview'
+      },
+      {
+        command: '/usesitegraph /for /previewdata /nonai',
+        purpose: 'Use only the AI-less/read-only SiteGraph Data lane for the selected target. `/nonai` is not valid with `/usebrickscontext`.',
         requires: ['public or authenticated Site Graph Data API/export'],
-        output: 'read-only data-grounded revision'
+        output: 'read-only data-grounded target revision'
       },
       {
         command: '/convert /bricks',
@@ -1095,7 +1108,7 @@ function routeKind(command) {
   if (/\/audit/.test(text) && /(\/dsatheme|\/appshell|\/dsa|app shell)/.test(text)) return 'theme-audit';
   if (/\/audit/.test(text) && /(\/combined|\/combine)/.test(text)) return 'combined-audit';
   if (/(\/assemble|\/combine|\/combined)/.test(text)) return 'combined-assemble';
-  if (/(\/usesitegraph|\/dynamic|\/sitegraph|\/binding|\/bindings)/.test(text)) return 'dynamic';
+  if (/(\/usesitegraph|\/usebrickscontext|\/dynamic|\/sitegraph|\/binding|\/bindings|\/bricksbindings|\/dynamictags|\/queryloops)/.test(text)) return 'dynamic';
   if (/(\/apply|\/staging)/.test(text)) return 'staging';
   return 'workflow';
 }
@@ -1155,6 +1168,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/list',
   '/notes',
   '/nonai',
+  '/for',
   '/page',
   '/preview',
   '/previousaudit',
@@ -1162,6 +1176,12 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/previouspass',
   '/replacepreview',
   '/replacepreviewdata',
+  '/previewdata',
+  '/bricksbindings',
+  '/dynamictags',
+  '/queryloops',
+  '/kiwelaunchers',
+  '/siteidentity',
   '/rebuild',
   '/seam',
   '/seamframework',
@@ -1171,6 +1191,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/theme',
   '/translate',
   '/usesitegraph',
+  '/usebrickscontext',
   '/usecompanion',
   '/webdraft',
   '/websitename',
@@ -1227,10 +1248,13 @@ const VALID_PHASE_COMMANDS = [
   '/assemble /combined',
   '/create /preview /combined',
   '/audit /combined',
-  '/usesitegraph',
-  '/usesitegraph /replacepreviewdata',
-  '/usesitegraph /websitename',
-  '/usesitegraph /nonai',
+  '/usesitegraph /for /previewdata',
+  '/usesitegraph /for /siteidentity',
+  '/usesitegraph /for /bricksbindings',
+  '/usesitegraph /for /bricksbindings /nonai',
+  '/usebrickscontext /for /bricksbindings',
+  '/usebrickscontext /for /dynamictags',
+  '/usebrickscontext /for /queryloops',
   '/convert /bricks',
   '/audit /bricksconversion',
   '/create /accessibility',
@@ -1333,6 +1357,8 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     .replace(/(?:^|\s)\/dynamic\s+\/sitegraph\b/gi, ' /usesitegraph')
     .replace(/(?:^|\s)\/sitegraph\b/gi, ' /usesitegraph')
     .replace(/(?:^|\s)\/replacepreview\b/gi, ' /replacepreviewdata')
+    .replace(/(?:^|\s)\/usesitegraph\s+\/replacepreviewdata\b/gi, ' /usesitegraph /for /previewdata')
+    .replace(/(?:^|\s)\/usesitegraph\s+\/websitename\b/gi, ' /usesitegraph /for /siteidentity')
     .replace(/\s+/g, ' ')
     .trim();
   const tokens = slashTokens(commandText);
@@ -1468,7 +1494,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/preview/) && !commandHas(text, /\/create/)) {
+  if (commandHas(text, /\/preview\b/) && !commandHas(text, /\/create/)) {
     return commandDiagnostic({
       status: 'rejected',
       code: 'preview_requires_create',
@@ -1479,7 +1505,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/create/) && commandHas(text, /\/preview/) && commandHas(text, /\/(?:brickstheme|frameworkprofile|framework|bricks)\b|bricks theme/)) {
+  if (commandHas(text, /\/create/) && commandHas(text, /\/preview\b/) && commandHas(text, /\/(?:brickstheme|frameworkprofile|framework|bricks)\b|bricks theme/)) {
     return commandDiagnostic({
       status: 'rejected',
       code: 'unsupported_preview_target',
@@ -1490,7 +1516,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/create/) && commandHas(text, /\/preview/) && commandHas(text, /\/(?:website|webpage|page|htmlcssjs)\b/)) {
+  if (commandHas(text, /\/create/) && commandHas(text, /\/preview\b/) && commandHas(text, /\/(?:website|webpage|page|htmlcssjs)\b/)) {
     const existing = hasPageArtifact(artifactSummary) || /\bhtml\b.*\bcss\b|\bindex\.html\b|creative draft|website draft/i.test(String(artifactSummary || ''));
     return commandDiagnostic({
       status: existing ? 'noop' : 'rejected',
@@ -1504,7 +1530,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/create/) && commandHas(text, /\/preview/) && !commandHas(text, /\/(?:dsatheme|appshell|dsa|combined|combine)\b|app shell/)) {
+  if (commandHas(text, /\/create/) && commandHas(text, /\/preview\b/) && !commandHas(text, /\/(?:dsatheme|appshell|dsa|combined|combine)\b|app shell/)) {
     return commandDiagnostic({
       status: 'rejected',
       code: 'missing_preview_target',
@@ -1616,26 +1642,80 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     });
   }
 
-  if (commandHas(text, /\/usesitegraph/) && commandHas(text, /\/(?:replacepreview|replacepreviewdata)/) && !String(artifactSummary || '').trim()) {
+  const usesSiteGraph = commandHas(text, /\/usesitegraph/);
+  const usesBricksContext = commandHas(text, /\/usebrickscontext/);
+  const dynamicTargets = slashTokens(normalizedCommand).filter((token) => ['/previewdata', '/bricksbindings', '/dynamictags', '/queryloops', '/kiwelaunchers', '/siteidentity'].includes(token));
+
+  if ((usesSiteGraph || usesBricksContext) && !dynamicTargets.length) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'dynamic_target_missing',
+      kind: 'dynamic',
+      normalizedCommand,
+      message: 'The context source is clear, but the requested target is not. Add `/for` plus one or more targets: `/previewdata`, `/bricksbindings`, `/dynamictags`, `/queryloops`, `/kiwelaunchers`, or `/siteidentity`.',
+      suggestions: usesSiteGraph
+        ? ['/usesitegraph /for /previewdata', '/usesitegraph /for /bricksbindings', '/usesitegraph /for /siteidentity']
+        : ['/usebrickscontext /for /bricksbindings', '/usebrickscontext /for /dynamictags', '/usebrickscontext /for /queryloops'],
+      boundaries: ['Context commands select evidence; `/for` targets select exactly what may change.']
+    });
+  }
+
+  if (commandHas(normalizedCommand, /\/previewdata/) && usesBricksContext) {
+    return commandDiagnostic({
+      status: 'rejected',
+      code: 'preview_data_requires_sitegraph',
+      kind: 'dynamic',
+      normalizedCommand,
+      message: '`/previewdata` needs real site records, so use `/usesitegraph`. Bricks context describes builder capabilities, not site content.',
+      suggestions: ['/usesitegraph /for /previewdata'],
+      boundaries: ['Do not invent preview records from Bricks schemas.']
+    });
+  }
+
+  if (commandHas(text, /\/nonai/) && !usesSiteGraph) {
+    return commandDiagnostic({
+      status: 'rejected',
+      code: 'nonai_requires_sitegraph',
+      kind: 'dynamic',
+      normalizedCommand,
+      message: '`/nonai` only selects the AI-less SiteGraph data route. It has no role with `/usebrickscontext`.',
+      suggestions: ['/usebrickscontext /for /bricksbindings', '/usesitegraph /for /bricksbindings /nonai'],
+      boundaries: ['Do not add meaningless modifiers to a lane.']
+    });
+  }
+
+  if (usesSiteGraph && commandHas(normalizedCommand, /\/previewdata/) && !String(artifactSummary || '').trim()) {
     return commandDiagnostic({
       status: 'needs_input',
       code: 'sitegraph_replacepreview_missing_artifact',
       kind: 'dynamic',
       normalizedCommand,
-      message: '`/usesitegraph /replacepreviewdata` needs an existing handoff to revise. It should replace preview-only samples from Site Graph data without hardcoding those samples into production/import artifacts.',
-      suggestions: ['Provide the handoff folder/file map and Site Graph API/export.', '/usesitegraph /replacepreviewdata after the handoff exists'],
-      boundaries: ['Preview data may become real samples; production lanes must keep dynamic tags/query-loop intent when available.']
+      message: '`/usesitegraph /for /previewdata` needs an existing raw handoff to revise. It changes preview samples only; it does not create query loops or dynamic bindings unless those targets are also present.',
+      suggestions: ['Provide the current raw folder/file map and SiteGraph API/export.', '/usesitegraph /for /previewdata after the raw handoff exists'],
+      boundaries: ['Preview data is static demonstration content. Dynamic bindings are a separate explicit target.']
     });
   }
 
-  if (commandHas(text, /\/usesitegraph|\/dynamic|\/sitegraph|\/binding|\/bindings/) && !hasSiteGraphAccess(`${raw}\n${brief}\n${artifactSummary}\n${siteGraphSummary}`)) {
+  if (usesBricksContext && dynamicTargets.length && !String(artifactSummary || '').trim()) {
+    return commandDiagnostic({
+      status: 'needs_input',
+      code: 'bricks_context_missing_artifact',
+      kind: 'dynamic',
+      normalizedCommand,
+      message: '`/usebrickscontext` needs the current HTML/CSS/JS artifact whose dynamic regions should be annotated.',
+      suggestions: ['Attach the current raw project.', '/usebrickscontext /for /dynamictags after the raw artifact exists'],
+      boundaries: ['Bricks context supplies builder capabilities, not target-site content or IDs.']
+    });
+  }
+
+  if (usesSiteGraph && !hasSiteGraphAccess(`${raw}\n${brief}\n${artifactSummary}\n${siteGraphSummary}`)) {
     return commandDiagnostic({
       status: 'needs_input',
       code: 'dynamic_missing_site_graph',
       kind: 'dynamic',
       normalizedCommand,
       message: '`/usesitegraph` needs target-site truth. Ask for either KIWE_REST_BASE + KIWE_AI_KEY, an exported kiwe.site-graph.v1 JSON packet, or the public Site Graph Data endpoint. Do not guess product categories, pages, custom fields, dynamic tags, Bricks settings, or query-loop types.',
-      suggestions: ['Ask for KIWE_REST_BASE and KIWE_AI_KEY.', 'Ask for exported kiwe.site-graph.v1 JSON.', 'For AI-less public reads use /usesitegraph /nonai with /wp-json/dsa/v1/site-graph/data/schema and /site-graph/data.', '/usesitegraph after Site Graph is available'],
+      suggestions: ['Ask for KIWE_REST_BASE and KIWE_AI_KEY.', 'Ask for exported kiwe.site-graph.v1 JSON.', 'For AI-less public reads append /nonai to the same targeted command.', '/usesitegraph /for /previewdata after SiteGraph is available'],
       boundaries: ['Dynamic binding must be grounded in target-site truth, not frontend scraping or assumptions.']
     });
   }
@@ -1825,10 +1905,12 @@ function commandListMarkdown() {
     '',
     '## Site Graph lane',
     '',
-    '- `/usesitegraph` is the canonical Site Graph command.',
-    '- `/usesitegraph /nonai` forces public/read-only Site Graph Data or an exported packet. It must not call Companion/native AI.',
-    '- `/usesitegraph /replacepreviewdata` updates preview samples from real data but keeps production artifacts dynamic.',
-    '- `/usesitegraph /websitename` derives name/logo/identity from Site Graph only.',
+    '- `/usesitegraph` selects real target-site evidence; `/usebrickscontext` selects general verified builder capabilities without SiteGraph.',
+    '- Add `/for` plus explicit targets. Context alone is incomplete and must not trigger every dynamic operation.',
+    '- `/usesitegraph /for /previewdata` changes preview samples only.',
+    '- `/usesitegraph /for /bricksbindings` creates target-grounded bindings only.',
+    '- `/usebrickscontext /for /dynamictags` or `/queryloops` needs no SiteGraph and leaves target-specific unknowns for review.',
+    '- `/nonai` is meaningful only with `/usesitegraph` and a selected target.',
     '',
     '## Accessibility lane',
     '',
@@ -1917,33 +1999,50 @@ function fixPhaseContext(command, artifactSummary) {
 
 function siteGraphCommandGuidance(command) {
   const text = String(command || '').toLowerCase();
+  const siteGraph = commandHas(text, /\/usesitegraph/);
+  const bricksContext = commandHas(text, /\/usebrickscontext/);
   const nonAi = commandHas(text, /\/nonai/);
-  const replacePreview = commandHas(text, /\/(?:replacepreview|replacepreviewdata)/);
-  const websiteName = commandHas(text, /\/websitename/);
+  const previewData = commandHas(text, /\/(?:previewdata|replacepreview|replacepreviewdata)/);
+  const websiteName = commandHas(text, /\/(?:siteidentity|websitename)/);
+  const bindings = commandHas(text, /\/bricksbindings/);
+  const dynamicTags = bindings || commandHas(text, /\/dynamictags/);
+  const queryLoops = bindings || commandHas(text, /\/queryloops/);
+  const launchers = bindings || commandHas(text, /\/kiwelaunchers/);
   const lines = [
-    '# `/usesitegraph` guidance',
+    '# Contextual dynamic guidance',
     '',
-    '`/usesitegraph` is the canonical Site Graph phase. Legacy `/dynamic /sitegraph` may be accepted internally, but user-facing output should say `/usesitegraph`.',
+    'Interpret the slash tokens as a bounded contract: the context source says what evidence may be used; `/for` targets say exactly what may change. The human should not have to restate the implementation rules in prose.',
     '',
-    nonAi
-      ? 'This command includes `/nonai`: use only exported `kiwe.site-graph.v1` JSON or the AI-less Site Graph Data routes. Do not call Companion, native AI, `/ai/advisor`, `/ai/studio`, or other model-backed routes.'
-      : 'Use the richest safe route available: API-key AI namespace when provided, otherwise exported Site Graph JSON, otherwise the AI-less public Site Graph Data route.',
+    siteGraph
+      ? (nonAi
+        ? 'Evidence source `/usesitegraph /nonai`: use only exported `kiwe.site-graph.v1`/SiteGraph Data or AI-less read-only data routes. Do not call Companion, native AI, Advisor, or Studio.'
+        : 'Evidence source `/usesitegraph`: use only the supplied target SiteGraph/API/export. Ask for it when missing; never scrape the public frontend or invent target IDs.')
+      : '',
+    bricksContext
+      ? 'Evidence source `/usebrickscontext`: use the verified Bricks/Kiwe capability context only. SiteGraph is not required. Standard dynamic tags and query settings may be mapped where source intent is clear; site-specific post types, terms, fields, IDs, and content remain unchanged or require review.'
+      : '',
     '',
-    'If no Site Graph/API/export is available, stop and ask for it. Do not scrape the public frontend as a fallback.',
-    '',
-    replacePreview
-      ? 'This command includes `/replacepreviewdata`: update preview-only sample cards/images/text from real Site Graph Data, but keep production/import artifacts dynamic through Bricks tags, query-loop intent, or bindings.'
+    previewData
+      ? 'Target `/previewdata`: replace only visible preview samples with real site records. Do not add query loops, dynamic tags, launchers, or a binding plan unless their target tokens are also present.'
       : '',
     websiteName
-      ? 'This command includes `/websitename`: derive site name, logo, brand identity, menus, and tone from Site Graph identity/menu data only.'
+      ? 'Target `/siteidentity`: revise only site name, logo, menu labels, and identity fields proven by SiteGraph.'
+      : '',
+    dynamicTags
+      ? 'Target `/dynamictags`: annotate only source-evidenced text, links, images, prices, metadata, and fields with verified Bricks dynamic tags.'
+      : '',
+    queryLoops
+      ? 'Target `/queryloops`: annotate only source-evidenced repeating collections with verified Bricks query settings. Without SiteGraph, do not invent target taxonomies, term IDs, CPTs, or custom fields.'
+      : '',
+    launchers
+      ? 'Target `/kiwelaunchers`: map only unambiguous existing controls to canonical Kiwe attributes; do not replace authored popups or create a second runtime.'
       : '',
     '',
-    'Expected output when dynamic intent changes:',
+    (dynamicTags || queryLoops || launchers)
+      ? 'When any binding target changes, emit the validated plan below. Preview-data and identity-only commands must not emit it:'
+      : '',
     '',
-    '```text',
-    'bricks-bindings/',
-    '  kiwe-bindings.json',
-    '```',
+    (dynamicTags || queryLoops || launchers) ? '```text\nbricks-bindings/\n  kiwe-bindings.json\n```' : '',
     '',
     'Do not emit `BINDING-NOTES.md`, README files, reports, or extra docs unless the command also includes `/document` or the human explicitly asks for documentation.'
   ];

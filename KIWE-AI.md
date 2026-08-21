@@ -72,7 +72,7 @@ Preferred path for serious work:
 https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 ```
 
-Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/document`, `/ideate`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /frameworkprofile`, `/audit /frameworkprofile`, `/create /brickstheme`, `/audit /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, `/audit /accessibility`, or `/fix /accessibility`.
+Use the workflow file when the human wants high-quality output, fewer correction loops, or command-style phases such as `/list`, `/fix`, `/document`, `/ideate`, `/rebuild /seamframework`, `/audit /seamframework`, `/create /frameworkprofile`, `/audit /frameworkprofile`, `/create /brickstheme`, `/audit /brickstheme`, `/create /dsatheme`, `/create /preview /dsatheme`, `/assemble /combined`, `/create /preview /combined`, `/usesitegraph /for /bricksbindings`, `/usebrickscontext /for /dynamictags`, `/convert /bricks`, `/audit /bricksconversion`, `/create /accessibility`, `/audit /accessibility`, or `/fix /accessibility`.
 
 Documentation is opt-in for every lane. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact file(s) for that command. Do not add README files, notes, audit reports, duplicate previews, ZIPs, or polite explanation files by default.
 
@@ -80,7 +80,7 @@ Final chat responses are also lean by default. Return only a compact `PASS` / `F
 
 Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
 
-Canonical Site Graph command is `/usesitegraph`. Legacy `/dynamic /sitegraph` may be accepted internally, but new user-facing output should use `/usesitegraph`. Useful variants are `/usesitegraph /replacepreviewdata`, `/usesitegraph /websitename`, and `/usesitegraph /nonai`.
+Canonical dynamic commands combine a context source and explicit target: `/usesitegraph /for /previewdata`, `/usesitegraph /for /bricksbindings`, or `/usebrickscontext /for /dynamictags`. Context alone never implies every operation. Legacy `/dynamic /sitegraph`, `/usesitegraph /replacepreviewdata`, and `/usesitegraph /websitename` may normalize internally, but new output must teach targeted forms. `/nonai` is meaningful only with `/usesitegraph`.
 
 Before spending tokens on a slash-command phase, run the Kiwe command gate when tools or CLI are available:
 

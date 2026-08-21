@@ -62,7 +62,7 @@
     "routeFallbackLadder": "Applies to every phase. Prefer Route D when /usecompanion and Plugin REST are reachable. If Companion fails, continue as Route C. If Plugin REST fails or the host cannot resolve, and shell/Node/Git tools are available, immediately fall back to Route B and run the official matching validator/compiler. Only return WARN/UNVERIFIED after Plugin REST failed and no official Git/Node/MCP/hosted validator can execute.",
     "fullFlowDiscipline": "/execute /fullflow means one final delivery, not one giant context load. Execute phase-by-phase, read only the context/validator files for the current phase, close that phase with /audit -> /fix -> /audit, then continue.",
     "reportDiscipline": "/report is an interaction flag. In /execute /stepbystep, stop after the current phase closes, return the phase artifact plus compact generated/audited/fixed/warnings report, and wait for the human to say continue. In /execute /fullflow, /report adds a compact final phase ledger but does not pause between phases.",
-    "siteGraphBoundary": "Missing Site Graph/API/export is not a blocker for static Seam + Framework + Bricks template conversion. Preserve dynamic intent/manual-review markers and suggest /usesitegraph. Stop for Site Graph only when the human explicitly requested /usesitegraph, live target IDs, verified dynamic bindings, or staging/apply authority.",
+    "siteGraphBoundary": "Missing SiteGraph/API/export is not a blocker for static conversion or /usebrickscontext targets. /usesitegraph is an evidence source and requires /for plus explicit targets. Stop for SiteGraph only when a selected target needs real site content/identity/IDs, live binding verification, or staging/apply authority.",
     "errorHandling": "SeamFlow is a command central. If a command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with STATUS plus ERROR: KIWE_* and the next valid command. Do not invent a manual pass or wander into unrelated sources.",
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
@@ -107,9 +107,10 @@
   },
   "commandGrammar": {
     "rule": "Tokens are independent and composable. Do not require a memorized full phrase when a command line is unambiguous.",
-    "primaryActions": ["/ideate", "/execute", "/rebuild", "/create", "/convert", "/seamframework", "/audit", "/fix", "/usesitegraph", "/apply", "/list", "/document"],
-    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit"],
-    "modifiers": ["/audit", "/fix", "/eachstep", "/atend", "/report", "/usecompanion", "/nonai", "/replacepreview", "/nopreviewdata"],
+    "primaryActions": ["/ideate", "/execute", "/rebuild", "/create", "/convert", "/seamframework", "/audit", "/fix", "/apply", "/list", "/document"],
+    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity"],
+    "contextSources": ["/usesitegraph", "/usebrickscontext"],
+    "modifiers": ["/for", "/audit", "/fix", "/eachstep", "/atend", "/report", "/usecompanion", "/nonai", "/nopreviewdata"],
     "examples": {
       "/execute /fullflow /audit /fix /eachstep": "primary /execute, phase /fullflow, modifiers /audit /fix /eachstep",
       "/execute /stepbystep /audit /fix /eachstep /report": "primary /execute, phase /stepbystep, modifiers /audit /fix /eachstep /report",

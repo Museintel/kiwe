@@ -73,13 +73,14 @@ Unless the human includes `/document`, command output should be lean: emit only 
 
 `PASS` is not a prose confidence word. A SeamFlow phase may report `PASS` only when an official Kiwe validator command, Kiwe MCP validator, Kiwe REST/plugin validator, or hosted/local Kiwe validator endpoint actually executed and returned no fail-level findings. Manual review, copied validator code, reconstructed validator logic, simulated checks, or "equivalent" checks may guide repairs but must report `WARN` or `UNVERIFIED`, not `PASS`.
 
-Canonical Site Graph command:
+Canonical dynamic context forms:
 
 ```text
-/usesitegraph
+/usesitegraph /for <explicit-target>
+/usebrickscontext /for <explicit-target>
 ```
 
-Legacy `/dynamic /sitegraph` and shorthand `/sitegraph` may be accepted internally, but user-facing output should say `/usesitegraph`.
+Use `/usesitegraph` for real site evidence and `/usebrickscontext` for general verified Bricks/Kiwe capabilities without site data. Valid targets include `/previewdata`, `/siteidentity`, `/bricksbindings`, `/dynamictags`, `/queryloops`, and `/kiwelaunchers`. Legacy `/dynamic /sitegraph` and shorthand `/sitegraph` may be accepted internally, but user-facing output should use a targeted canonical form.
 
 ## Command gate / no-waste boundary
 
@@ -115,8 +116,11 @@ Examples:
 - `/convert /bricks` with `website/bricks-paste.html` but no `framework/kiwe-framework-profile.json`, `bricks-theme-style.json`, or human confirmation that Kiwe > Framework is already pushed -> `needs_input`, `bricks_convert_missing_framework_profile`.
 - `/convert /bricks` against `combined-preview` or `appshell-theme` -> `rejected`, `bricks_convert_forbidden_source_in_command`.
 - `/audit /bricksconversion` without `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json` -> `needs_input`, `bricks_audit_missing_conversion_artifact`.
-- `/usesitegraph` without Site Graph/API/export context -> `needs_input`, `dynamic_missing_site_graph`.
-- `/usesitegraph /replacepreviewdata` without an existing handoff -> `needs_input`, `sitegraph_replacepreview_missing_artifact`.
+- `/usesitegraph` without a `/for` target -> `needs_input`, `dynamic_target_missing`.
+- `/usesitegraph /for /previewdata` without an existing handoff -> `needs_input`, `sitegraph_replacepreview_missing_artifact`.
+- `/usebrickscontext /for /dynamictags` without an existing raw artifact -> `needs_input`, `bricks_context_missing_artifact`.
+- `/usebrickscontext /for /previewdata` -> `rejected`, `preview_data_requires_sitegraph`.
+- `/usebrickscontext ... /nonai` -> `rejected`, `nonai_requires_sitegraph`.
 - `/fix` without an existing artifact or audit output -> `needs_input`, `fix_missing_artifact`.
 - `/apply /staging` without explicit staging confirmation/mutation authority -> `needs_input`, `staging_missing_explicit_authority`.
 
@@ -131,7 +135,7 @@ Examples:
 /audit /dsatheme /usecompanion
 /create /preview /dsatheme /usecompanion
 /create /preview /combined /usecompanion
-/usesitegraph /usecompanion
+/usesitegraph /for /bricksbindings /usecompanion
 /convert /bricks /usecompanion
 /audit /bricksconversion /usecompanion
 /create /accessibility /usecompanion
@@ -664,6 +668,8 @@ Use only after the visual handoff passes.
 
 Legacy alias: `/dynamic /sitegraph`.
 
+`/usesitegraph` selects real site evidence; it does not select every possible mutation. Require `/for` plus one or more explicit targets. If the target is missing, ask one short command question and stop.
+
 Purpose:
 
 - Convert approved static rails/cards/buttons into a dynamic binding plan using real WordPress, Bricks, WooCommerce, and Kiwe Site Graph facts.
@@ -679,13 +685,17 @@ Accepted target-site truth sources:
 
 If no Site Graph/API/export is available, stop and ask for it. Do not scrape the frontend as a fallback.
 
-Variants:
+Contextual targets:
 
-- `/usesitegraph /replacepreviewdata`: replace preview-only sample content with real Site Graph samples, while keeping production/import artifacts dynamic through Bricks tags, query-loop intent, or bindings. Alias: `/usesitegraph /replacepreview`.
-- `/usesitegraph /websitename`: derive site name, logo, menu labels, identity, and broad tone from Site Graph identity/menu data only.
-- `/usesitegraph /nonai`: force the AI-less/read-only Site Graph Data or exported JSON lane. Do not call Companion, native AI, Advisor, Studio, or model-backed routes.
+- `/usesitegraph /for /previewdata`: replace only preview samples with real SiteGraph records. Do not add bindings unless a binding target is also present.
+- `/usesitegraph /for /siteidentity`: change only site identity, logo, menu labels, and broad tone proven by SiteGraph.
+- `/usesitegraph /for /bricksbindings`: create all source-evidenced target-grounded query-loop, dynamic-tag, and Kiwe-launcher bindings. Narrow with `/dynamictags`, `/queryloops`, or `/kiwelaunchers` when only one family is wanted.
+- `/usebrickscontext /for /bricksbindings`: use verified general Bricks/Kiwe capabilities without SiteGraph. Never invent target-specific CPTs, terms, fields, IDs, or content.
+- `/usesitegraph ... /nonai`: force AI-less/read-only SiteGraph Data or exported JSON for the selected target. `/nonai` is invalid with `/usebrickscontext`.
 
-Expected output:
+Legacy `/usesitegraph /replacepreviewdata` normalizes to `/usesitegraph /for /previewdata`; legacy `/usesitegraph /websitename` normalizes to `/usesitegraph /for /siteidentity`.
+
+Expected output only when a binding target is present:
 
 ```text
 bricks-bindings/
@@ -705,7 +715,7 @@ node kiwe-ai-toolkit/tools/prepare-apply-plan.cjs /path/to/handoff --site-graph 
 
 ### `/convert /bricks`
 
-Use only after the website/page visual artifact passes, and only after a Framework profile or Bricks theme style exists or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed. When the page should use live WordPress/Bricks/WooCommerce data, also run after `/usesitegraph` has mapped that intent.
+Use only after the website/page visual artifact passes, and only after a Framework profile or Bricks theme style exists or the human confirms Kiwe > Framework/Bricks Theme Styles are already pushed. When the page should use live WordPress/Bricks/WooCommerce data, first run `/usesitegraph /for /bricksbindings`; for generic builder intent without site data, use `/usebrickscontext /for /bricksbindings`.
 
 Purpose:
 
@@ -793,7 +803,7 @@ For best output quality:
 9. Assemble with `/assemble /combined`.
 10. Create or refresh the combined preview proof with `/create /preview /combined` if needed.
 11. Audit with `/audit /combined`.
-12. Add real WordPress/Bricks/WooCommerce bindings with `/usesitegraph`.
+12. Add real WordPress/Bricks/WooCommerce bindings with `/usesitegraph /for /bricksbindings`, or general builder intent with `/usebrickscontext /for /bricksbindings`.
 13. Convert only `website/bricks-paste.html` to a Bricks template upload JSON with `/convert /bricks`.
 14. Audit conversion with `/audit /bricksconversion`.
 15. Apply to staging only through Kiwe controlled executor.

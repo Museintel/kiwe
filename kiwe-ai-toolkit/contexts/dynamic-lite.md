@@ -2,19 +2,19 @@
 
 Use this context only after the website/page and optional Kiwe AppShell theme already pass the normal Kiwe audit.
 
-Goal: revise the handoff into a WordPress/Bricks-aware version by using a real `kiwe.site-graph.v1` JSON snapshot from the target site and, when useful, public-safe Site Graph Data API responses from that same site.
+Goal: perform only the dynamic/data target named by the command, using either real SiteGraph evidence or general verified Bricks context.
 
 Do not read the whole Kiwe repo. Do not search GitHub. Do not guess the target site's categories, pages, products, post types, dynamic tags, or Bricks query-loop object types.
 
-Canonical command: `/usesitegraph`.
+Canonical context sources: `/usesitegraph` and `/usebrickscontext`.
 
 Legacy alias: `/dynamic /sitegraph`.
 
-## Command variants
+## Contextual command grammar
 
 ### `/usesitegraph`
 
-Use target-site truth for dynamic bindings, preview samples, site identity, Bricks query-loop intent, dynamic tags, conditions, interactions, custom post types, custom taxonomies, custom fields, WooCommerce products/terms, and Kiwe launchers.
+Select target-site truth as the evidence source. It does not authorize every possible change. Require `/for` plus one or more explicit targets. If no target is supplied, ask one short command question and stop.
 
 If no target-site truth is available, stop and ask for one of:
 
@@ -24,26 +24,33 @@ If no target-site truth is available, stop and ask for one of:
 
 Do not browse or scrape the public frontend as a fallback.
 
-### `/usesitegraph /replacepreviewdata`
+### `/usesitegraph /for /previewdata`
 
-Alias: `/usesitegraph /replacepreview`.
+Legacy aliases: `/usesitegraph /replacepreviewdata`, `/usesitegraph /replacepreview`.
 
-Replace preview-only sample content with real Site Graph Data samples. Keep production/import artifacts dynamic:
+Replace preview-only sample content with real SiteGraph Data samples and change nothing else. This target does not add query loops, dynamic tags, launchers, conditions, or `kiwe-bindings.json` unless their explicit target tokens are also present.
 
-- Bricks query-loop regions stay query-loop intent;
-- Bricks dynamic tags stay dynamic tags;
-- `bricks-bindings/kiwe-bindings.json` records the mapping;
-- sampled preview cards/images/prices are marked preview-only.
+Sampled preview cards/images/prices must remain marked preview-only. Existing production dynamic intent remains unchanged.
 
-Do not turn sampled Site Graph data into hardcoded production product/category/media content when a dynamic binding exists.
+### `/usesitegraph /for /siteidentity`
 
-### `/usesitegraph /websitename`
+Legacy alias: `/usesitegraph /websitename`.
 
 Use Site Graph identity/menu data for site name, logo, brand identity, menu labels, public pages, and broad tone.
 
 Do not infer the brand from the public homepage or external search.
 
-### `/usesitegraph /nonai`
+### `/usesitegraph /for /bricksbindings`
+
+Create the complete target-grounded binding plan from the current raw artifact. Use `/dynamictags`, `/queryloops`, or `/kiwelaunchers` instead of `/bricksbindings` when only one binding family should change. Do not replace preview data or site identity unless those targets are also present.
+
+### `/usebrickscontext /for /bricksbindings`
+
+Use verified Bricks/Kiwe capabilities without SiteGraph. This lane may map standard dynamic tags, generic post/product query settings, and canonical Kiwe launcher attributes when source intent is clear. It must not invent target-specific post types, taxonomies, terms, IDs, custom fields, media, products, posts, or site identity; place those unknowns in `requiresHumanReview`.
+
+The same source may be narrowed with `/dynamictags`, `/queryloops`, or `/kiwelaunchers`.
+
+### `/usesitegraph ... /nonai`
 
 Force the AI-less/read-only lane:
 
@@ -52,12 +59,16 @@ Force the AI-less/read-only lane:
 
 Do not call Companion, native AI, Advisor, Studio, or other model-backed `/ai/*` routes when `/nonai` is present, even if `/usecompanion` is also present.
 
+`/nonai` is invalid with `/usebrickscontext`; that context contains deterministic builder capabilities and does not use a SiteGraph AI/data route.
+
 ## Inputs you should ask for
 
 - The current Kiwe handoff folder or files.
-- The target site's `kiwe.site-graph.v1` JSON.
-- Optional target data responses from `/wp-json/dsa/v1/site-graph/data` for real public posts, products, terms, menus, media, and site identity.
-- The plain-language dynamic request, for example: "turn placeholder product rails into Bricks query loops and dynamic product cards."
+- For `/usesitegraph`: the target site's `kiwe.site-graph.v1` JSON or authorized API route.
+- For `/previewdata` or `/siteidentity`: target data responses containing the requested real records.
+- For `/usebrickscontext`: verified Bricks/Kiwe capability context; no SiteGraph is required.
+
+The slash targets are the request. Do not require the human to repeat their meaning as a long prose prompt. Ask only for a missing artifact, missing evidence source, or an ambiguous target selector.
 
 If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > AI > AI connector and Site Graph`.
 
@@ -190,7 +201,7 @@ bricks-template/
   <page-or-template-name>-template-upload.json
 ```
 
-For the standalone SEAM Compiler lane, upload the approved raw HTML/CSS/JS project and the same validated `bricks-bindings/kiwe-bindings.json` together. The compiler applies only the plan's declared source selectors before native Bricks conversion, reports unmatched or conflicting bindings, and does not fetch, copy, or mutate target-site content. This is still the `/usesitegraph` then `/convert /bricks` sequence; `/convert /usesitegraph` is not a command.
+For the standalone SEAM Compiler lane, upload the approved raw HTML/CSS/JS project and the same validated `bricks-bindings/kiwe-bindings.json` together. The compiler applies only the plan's declared source selectors before native Bricks conversion, reports unmatched or conflicting bindings, and does not fetch, copy, or mutate target-site content. The binding plan may come from `/usesitegraph /for /bricksbindings` or `/usebrickscontext /for /bricksbindings`; then run `/convert /bricks`. `/convert /usesitegraph` is not a command.
 
 The compiler may also emit `sitegraph-<project>-post-import-verification.json` with schema `kiwe.sitegraph-post-import-verification.v1`. It maps each validated binding to the expected native Bricks element ID and a rendered DOM proof marker, reports unmatched or multi-target selectors, and provides non-applying Bricks template-condition recommendations. It is a read-only verification contract: it must declare `mayMutateWordPress: false` and `mayActivateTemplateConditions: false`. Header/footer, single/archive and route-specific conditions always require target review or route-ID resolution; dedicated WooCommerce runtime template types remain Bricks-managed.
 

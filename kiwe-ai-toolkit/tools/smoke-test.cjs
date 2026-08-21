@@ -67,6 +67,8 @@ function assert(condition, message) {
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
+  assert(entry.flows.commandGrammar.contextSources.includes('/usesitegraph') && entry.flows.commandGrammar.contextSources.includes('/usebrickscontext'), 'entry missing contextual dynamic evidence sources');
+  assert(entry.flows.commandGrammar.phaseTargets.includes('/previewdata') && entry.flows.commandGrammar.phaseTargets.includes('/bricksbindings'), 'entry missing contextual dynamic targets');
   assert(entry.navigationTree.contexts.ideation.includes('ideate-lite.md'), 'entry missing ideation context route');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
   assert(entry.flows.executionCommands['/audit /eachstep'], 'missing /audit /eachstep in entry');
@@ -84,7 +86,7 @@ function assert(condition, message) {
   assert(entry.flows.auditClosure.byStartPoint['raw-html-css-js'].includes('/audit /bricksconversion'), 'entry missing raw Bricks closure');
   assert(JSON.stringify(entry).includes('Do not use prior Kiwe validation material'), 'missing current-run evidence boundary in entry');
   assert(JSON.stringify(entry).includes('Full-flow means one final delivery, not one giant context load'), 'missing full-flow stepwise context boundary in entry');
-  assert(JSON.stringify(entry).includes('Missing Site Graph is not a blocker for static Bricks conversion'), 'missing Site Graph non-blocking boundary in entry');
+  assert(JSON.stringify(entry).includes('Missing SiteGraph is not a blocker for static Bricks conversion or /usebrickscontext targets'), 'missing contextual SiteGraph non-blocking boundary in entry');
   assert(JSON.stringify(entry).includes('PASS requires executable validator proof'), 'missing validator proof boundary in entry');
   assert(JSON.stringify(entry).includes('self-contained fallback'), 'missing standalone Seam validator boundary in entry');
   assert(JSON.stringify(entry).includes('auto-detects Framework packages'), 'missing Framework package validator routing in entry');
@@ -105,6 +107,8 @@ function assert(condition, message) {
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
   assert(manifest.commandGrammar.primaryActions.includes('/ideate'), 'manifest missing /ideate primary action');
+  assert(manifest.commandGrammar.contextSources.includes('/usesitegraph') && manifest.commandGrammar.contextSources.includes('/usebrickscontext'), 'manifest missing contextual dynamic evidence sources');
+  assert(manifest.commandGrammar.phaseTargets.includes('/dynamictags') && manifest.commandGrammar.phaseTargets.includes('/queryloops'), 'manifest missing narrow Bricks dynamic targets');
   assert(manifest.contexts.ideation === 'kiwe-ai-toolkit/contexts/ideate-lite.md', 'manifest missing ideation context');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
   assert(manifest.commands['/audit /eachstep'], 'manifest missing /audit /eachstep');
@@ -168,6 +172,13 @@ function assert(condition, message) {
   const oldAuditAliasRejected = m.diagnoseCommand({ command: '/audit' + 'ateachstep', artifactSummary: 'website/bricks-paste.html exists' });
   const previousOutputMissing = m.diagnoseCommand({ command: '/audit /previousoutput' });
   const previousOutputOk = m.diagnoseCommand({ command: '/audit /previousoutput', artifactSummary: 'immediate previous AI output files: framework/kiwe-framework-profile.json; bricks-template/home-template-upload.json' });
+  const broadSiteGraph = m.diagnoseCommand({ command: '/usesitegraph', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export' });
+  const previewOnly = m.diagnoseCommand({ command: '/usesitegraph /for /previewdata /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
+  const genericDynamic = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags', artifactSummary: 'current raw index.html' });
+  const invalidPreviewContext = m.diagnoseCommand({ command: '/usebrickscontext /for /previewdata', artifactSummary: 'current raw index.html' });
+  const invalidNonAi = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags /nonai', artifactSummary: 'current raw index.html' });
+  const previewRoute = m.routeCommand({ command: '/usesitegraph /for /previewdata /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
+  const genericDynamicRoute = m.routeCommand({ command: '/usebrickscontext /for /dynamictags', artifactSummary: 'current raw index.html' });
 
   assert(bad.stop && bad.code === 'unknown_command_token', 'bad typo diagnostic failed');
   assert(!ideate.stop && ideate.kind === 'ideate', '/ideate diagnostic failed');
@@ -200,6 +211,15 @@ function assert(condition, message) {
   assert(oldAuditAliasRejected.stop && oldAuditAliasRejected.code === 'unknown_command_token', 'old audit cadence alias should be rejected');
   assert(previousOutputMissing.stop && previousOutputMissing.code === 'previous_output_missing', 'previous output missing diagnostic failed');
   assert(!previousOutputOk.stop, 'previous output with immediate output summary should not stop');
+  assert(broadSiteGraph.stop && broadSiteGraph.code === 'dynamic_target_missing', 'broad /usesitegraph must ask for an explicit /for target');
+  assert(!previewOnly.stop, 'targeted preview-data SiteGraph command should pass with artifact and evidence');
+  assert(!genericDynamic.stop, 'generic Bricks dynamic tags must not require SiteGraph');
+  assert(invalidPreviewContext.stop && invalidPreviewContext.code === 'preview_data_requires_sitegraph', 'preview data must require SiteGraph evidence');
+  assert(invalidNonAi.stop && invalidNonAi.code === 'nonai_requires_sitegraph', '/nonai must not leak into Bricks-context commands');
+  assert(previewRoute.includes('does not add query loops, dynamic tags, launchers'), 'preview-only route must not silently create bindings');
+  assert(!previewRoute.includes('Expected output when dynamic intent changes:'), 'preview-only route must not require a binding artifact');
+  assert(genericDynamicRoute.includes('SiteGraph is not required'), 'Bricks-context route must explicitly remain independent of SiteGraph');
+  assert(genericDynamicRoute.includes('annotate only source-evidenced'), 'dynamic-tag target contract missing');
 
   const seamValidatorSource = fs.readFileSync(path.join(root, 'tools/validate-seamframework.cjs'), 'utf8');
   assert(seamValidatorSource.includes('self-contained-fallback'), 'Seam validator missing standalone fallback mode');

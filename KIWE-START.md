@@ -40,13 +40,16 @@ Then do one of these:
 
 Classification is read-only and allowed. Audits, fixes, conversion, creation, live API calls, and Companion review require an explicit `/command` or human approval. Keep questions short. Do not start generation until the command or flow is clear.
 
-Command grammar: SeamFlow commands are composable shell-like tokens, not memorized fixed prompts. Parse the whole user command into:
+Command grammar: SeamFlow commands are composable shell-like tokens, not memorized fixed prompts. Parse the whole user command into what should happen, where it should happen, which evidence/context may be used, and optional modifiers:
 
-- one primary action token, such as `/ideate`, `/execute`, `/rebuild`, `/create`, `/convert`, `/audit`, `/fix`, `/usesitegraph`, `/apply`, `/list`, or `/document`;
-- one phase/target token when needed, such as `/stepbystep`, `/fullflow`, `/seamframework`, `/frameworkprofile`, `/bricks`, `/bricksconversion`, `/accessibility`, `/dsatheme`, `/combined`, `/allattached`, `/allflow`, `/previousoutput`, or `/previousaudit`;
-- zero or more modifier tokens, such as `/audit`, `/fix`, `/eachstep`, `/atend`, `/report`, `/usecompanion`, `/nonai`, `/replacepreview`, or `/nopreviewdata`.
+- one primary action token when applicable, such as `/ideate`, `/execute`, `/rebuild`, `/create`, `/convert`, `/audit`, `/fix`, `/apply`, `/list`, or `/document`;
+- one or more explicit target tokens when needed, including `/previewdata`, `/bricksbindings`, `/dynamictags`, `/queryloops`, `/kiwelaunchers`, or `/siteidentity` for dynamic work;
+- an evidence/context source such as `/usesitegraph` or `/usebrickscontext`; a context source never implies every possible target;
+- zero or more relationship/modifier tokens such as `/for`, `/audit`, `/fix`, `/eachstep`, `/atend`, `/report`, `/usecompanion`, `/nonai`, or `/nopreviewdata`.
 
 Example: `/execute /fullflow /audit /fix /eachstep` is not one single hardcoded command. It means primary `/execute`, phase `/fullflow`, and modifiers `/audit`, `/fix`, `/eachstep`. Equivalent valid ordering may be normalized when unambiguous. Unknown, contradictory, or lane-invalid token combinations must stop with `ERROR: KIWE_UNKNOWN_COMMAND` or `ERROR: KIWE_WRONG_LANE`, not guess.
+
+Dynamic examples: `/usesitegraph /for /previewdata` changes preview samples only; `/usesitegraph /for /bricksbindings` creates target-grounded bindings only; `/usebrickscontext /for /dynamictags` uses generic verified Bricks capabilities without SiteGraph. The AI must derive the full implementation contract from these tokens and ask only for a missing artifact or evidence source.
 
 Active-contract rule: after you read this Start file and return the first classification response, treat this loaded Start file as the active contract for the immediate next user `/command` in the same conversation. Do not reload the repository, README, GitHub pages, search results, arXiv, commits, old examples, or the Start file again for that next command. If additional command detail is truly required, fetch only the exact raw machine entry or exact raw command manifest URL from this Start file. If exact raw fetch is unavailable, stop with `ERROR: KIWE_TOOL_UNAVAILABLE` or `ERROR: KIWE_SEARCH_DRIFT`; do not search.
 
@@ -427,4 +430,4 @@ Do not include AppShell/DSA theme files unless the human requested DSA theme or 
 
 Full-flow is sequential internally. Even when the human chooses `/execute /fullflow`, read and act phase-by-phase; do not load every context at once, do not jump directly to a final package, and do not move to the next phase until the current phase audit/fix loop closes.
 
-Site Graph is an enhancement lane, not a false hard gate for basic Bricks conversion. If no Site Graph/API/export is supplied, complete the static Seam + Framework + Bricks template conversion with dynamic intent/manual-review markers where needed, then suggest `/usesitegraph` as the next command. Stop for Site Graph only when the human explicitly requested `/usesitegraph`, real target-site IDs, live dynamic binding verification, or staging/apply authority.
+Site Graph is an optional evidence source, not a false hard gate for Bricks conversion. `/usesitegraph` alone is intentionally incomplete: ask which `/for` target is wanted. `/usesitegraph /for /previewdata` changes only preview samples; `/usesitegraph /for /bricksbindings` creates target-grounded bindings; `/usebrickscontext /for /dynamictags` or `/queryloops` uses verified general Bricks capabilities without SiteGraph. If no SiteGraph/API/export is supplied, continue any `/usebrickscontext` or static conversion lane and leave site-specific IDs/fields for review. Stop for SiteGraph only when the human selected `/usesitegraph`, real target-site IDs/content, live binding verification, or staging/apply authority.
