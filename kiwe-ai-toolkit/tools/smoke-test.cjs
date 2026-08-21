@@ -237,7 +237,7 @@ function assert(condition, message) {
   const ideateDesignContextRoute = m.routeCommand({ command: '/ideate /usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
   assert(designContextRoute.includes('complete public-only design evidence packet'), 'design-context route missing public-only evidence contract');
   assert(designContextRoute.includes('does not emit Bricks JSON'), 'design-context route must preserve phase boundaries');
-  assert(ideateDesignContextRoute.includes('complete public-only design evidence packet') && ideateDesignContextRoute.includes('Ask no more than three short questions at a time.'), '/ideate must combine design evidence with the adaptive interview');
+  assert(ideateDesignContextRoute.includes('public-only design-context packet') && ideateDesignContextRoute.includes('Ask no more than three short questions at a time.'), '/ideate must combine design evidence with the adaptive interview');
 
   const seamValidatorSource = fs.readFileSync(path.join(root, 'tools/validate-seamframework.cjs'), 'utf8');
   assert(seamValidatorSource.includes('self-contained-fallback'), 'Seam validator missing standalone fallback mode');

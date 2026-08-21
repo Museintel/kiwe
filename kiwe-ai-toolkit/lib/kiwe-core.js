@@ -2041,7 +2041,7 @@ function siteGraphCommandGuidance(command) {
     '',
     siteGraph
       ? (nonAi
-        ? 'Evidence source `/usesitegraph /nonai`: use only exported `kiwe.site-graph.v1`/SiteGraph Data or AI-less read-only data routes. Do not call Companion, native AI, Advisor, or Studio.'
+        ? 'Evidence source `/usesitegraph /nonai`: use only exported `kiwe.site-graph.v1`, exported `kiwe.sitegraph-design-context.v1`, SiteGraph Data, or AI-less read-only data routes. Do not call Companion, native AI, Advisor, or Studio.'
         : 'Evidence source `/usesitegraph`: use only the supplied target SiteGraph/API/export. Ask for it when missing; never scrape the public frontend or invent target IDs.')
       : '',
     bricksContext
