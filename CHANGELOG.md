@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.09
+
+- Corrected clean-run template isolation to use Bricks 2.3.10's actual `bricks/database/bricks_get_all_templates_by_type_args` query hook. The previous similarly named hook was never called, so legacy default headers and footers could still win even when a newly imported product template was active.
+- Kept the fix project-neutral and query-only: every pre-run header, footer, product, archive, popup, and other Bricks template remains published and unchanged, while only templates imported inside the acceptance window can resolve until exact restoration.
+- Updated the deterministic isolation regression and synchronized the MU loader, package entry, SeamFlow contract, generated token catalog, and release proof to 7.09.
+
 ## 7.08
 
 - Extended Clean Conversion Test Run from global-style isolation to Bricks template-resolution isolation. Every published template that existed before the snapshot remains published and editable but is excluded from Bricks' active-template query for the duration of the run, preventing an older project's header, footer, product, archive, or default condition from contaminating the current conversion.

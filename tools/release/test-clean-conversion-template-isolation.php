@@ -79,7 +79,7 @@ namespace {
 
 	\DSA\Bricks\Clean_Conversion_Test_Service::register_runtime_isolation();
 	$args = apply_filters(
-		'bricks/database/get_all_templates_by_type_args',
+		'bricks/database/bricks_get_all_templates_by_type_args',
 		[ 'post_type' => 'bricks_template', 'post__not_in' => [ 33 ] ]
 	);
 	if ( [ 33, 11, 22 ] !== $args['post__not_in'] ) {

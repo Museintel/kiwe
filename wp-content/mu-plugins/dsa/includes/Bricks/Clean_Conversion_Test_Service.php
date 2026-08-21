@@ -169,7 +169,10 @@ final class Clean_Conversion_Test_Service {
 		}
 
 		add_filter(
-			'bricks/database/get_all_templates_by_type_args',
+			// Bricks 2.x exposes the active-template WP_Query arguments on this
+			// (intentionally redundant) hook name. Using the similarly named
+			// after-query action prefix does not intercept header/footer defaults.
+			'bricks/database/bricks_get_all_templates_by_type_args',
 			static function ( array $args ) use ( $excluded ): array {
 				$current             = array_filter( array_map( 'absint', (array) ( $args['post__not_in'] ?? [] ) ) );
 				$args['post__not_in'] = array_values( array_unique( array_merge( $current, $excluded ) ) );

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "7.08",
+  "version": "7.09",
   "algorithm": "sha256",
   "file_count": 299,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "9545990859df9fdcddf6a65be1c848387ef616d7ae6d8c9b1e8d7a04dd3113ca"
+      "sha256": "161e8dc5f17d50ba597f44f0521951e7987c9d8cf40ae7f639e95bb7735661b4"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -493,8 +493,8 @@
       "sha256": "96345dd82b77a78bf2fb6ff5149c3accbe9ec4790809d2288694cf69c370237e"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
-      "bytes": 16031,
-      "sha256": "7c83dc37ea66b2d43e4b2503e4de2c06a4de447c84ec657fdefe2a26a3db8279"
+      "bytes": 16254,
+      "sha256": "b718ffedf1f0d58161371ebd48aee60e353e2e67af534dc069eb406c5874fb12"
     },
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
       "bytes": 13091,
@@ -1086,7 +1086,7 @@
     },
     "ui-system/README.md": {
       "bytes": 74338,
-      "sha256": "100d70eb127981c253fd1dad74e751bf05b7cd5be67ecaee6b962a2560d38f11"
+      "sha256": "f4d45177529ac08f9974210e032cc6a6aed31b300a6c70bc0f6c6e63340a2fce"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
