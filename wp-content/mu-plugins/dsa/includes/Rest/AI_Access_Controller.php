@@ -41,6 +41,7 @@ use DSA\AI\Trusted_Execution_Preview_Service;
 use DSA\Secure\SecureTrack_AI_Brief_Service;
 use DSA\Settings;
 use DSA\Site_Graph\Data_Query_Service;
+use DSA\Site_Graph\Design_Context_Service;
 use DSA\Theme\Theme_Package_Service;
 use DSA\Utilities\Atomic_Rate_Limiter;
 use WP_REST_Request;
@@ -71,6 +72,7 @@ final class AI_Access_Controller {
 			[ 'GET', '/ai/site-graph', 'site_graph', 'site_graph' ],
 			[ 'GET', '/ai/site-graph-data/schema', 'site_graph_data_schema', 'site_graph_data' ],
 			[ [ 'GET', 'POST' ], '/ai/site-graph-data', 'site_graph_data', 'site_graph_data' ],
+			[ [ 'GET', 'POST' ], '/ai/design-context', 'design_context', 'site_graph_data' ],
 			[ 'GET', '/ai/security-brief', 'security_brief', 'security_brief' ],
 			[ 'GET', '/ai/internal-context', 'internal_context', 'internal_ai' ],
 			[ [ 'GET', 'POST' ], '/ai/advisor', 'advisor', 'internal_ai' ],
@@ -217,6 +219,12 @@ final class AI_Access_Controller {
 			'capability' => [
 				'siteGraph'         => true,
 				'siteGraphData'     => true,
+				'designContext'     => [
+					'route'      => '/wp-json/dsa/v1/ai/design-context',
+					'schema'     => 'kiwe.sitegraph-design-context.v1',
+					'publicOnly' => true,
+					'readOnly'   => true,
+				],
 				'securityBrief'     => $this->securetrack_brief_allowed( $auth ) ? true : 'requires Kiwe > AI SecureTrack sharing plus security_brief or companion_securetrack scope',
 				'internalAiContext' => true,
 				'internalAiAdvisor' => true,
@@ -307,6 +315,27 @@ final class AI_Access_Controller {
 		unset( $args['publicOnly'] );
 
 		return ( new Data_Query_Service() )->query( $args, $private );
+	}
+
+	private function design_context( WP_REST_Request $request, array $auth ): array {
+		$args = $request->get_params();
+		$body = $request->get_json_params();
+		if ( is_array( $body ) ) {
+			$args = array_replace_recursive( $args, $body );
+		}
+		unset( $args['rest_route'] );
+
+		if ( 'task_capsule' === (string) ( $auth['kind'] ?? '' ) ) {
+			$policy    = is_array( $auth['policy'] ?? null ) ? $auth['policy'] : [];
+			$resources = array_values( array_intersect( Task_Capsule_Service::RESOURCES, array_map( 'sanitize_key', (array) ( $policy['resources'] ?? Task_Capsule_Service::RESOURCES ) ) ) );
+			$max_rows  = max( 1, min( 100, absint( $policy['maxRows'] ?? 25 ) ) );
+			$args['resources']    = $resources;
+			$args['productLimit'] = in_array( 'products', $resources, true ) ? min( $max_rows, absint( $args['productLimit'] ?? $max_rows ) ) : 0;
+			$args['mediaLimit']   = in_array( 'media', $resources, true ) ? min( $max_rows, absint( $args['mediaLimit'] ?? $max_rows ) ) : 0;
+			$args['contentLimit'] = array_intersect( [ 'posts', 'pages' ], $resources ) ? min( $max_rows, absint( $args['contentLimit'] ?? min( 12, $max_rows ) ) ) : 0;
+		}
+
+		return ( new Design_Context_Service( $this->site_graph ) )->context( $args, false );
 	}
 
 	private function security_brief( WP_REST_Request $request, array $auth ): array {

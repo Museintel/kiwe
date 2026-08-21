@@ -105,8 +105,9 @@ final class External_Client_OpenAPI_Service {
 				'fileOnly' => 'Download SiteGraph JSON when the client cannot store authentication securely.',
 			],
 			'publicData' => [
-				'schema' => rest_url( 'dsa/v1/site-graph/data/schema' ),
-				'query'  => rest_url( 'dsa/v1/site-graph/data' ),
+				'schema'        => rest_url( 'dsa/v1/site-graph/data/schema' ),
+				'query'         => rest_url( 'dsa/v1/site-graph/data' ),
+				'designContext' => rest_url( 'dsa/v1/site-graph/design-context' ),
 			],
 			'boundaries' => [
 				'taskCapsules are public-data-only, expire automatically and have request budgets.',
@@ -134,6 +135,12 @@ final class External_Client_OpenAPI_Service {
 		}
 		if ( 'site_graph_data' === $callback ) {
 			$parameters[] = [ 'name' => 'publicOnly', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'boolean' ], 'description' => 'Always forced true for task capsules.' ];
+		}
+		if ( 'design_context' === $callback ) {
+			$parameters[] = [ 'name' => 'productLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
+			$parameters[] = [ 'name' => 'mediaLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
+			$parameters[] = [ 'name' => 'contentLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
+			$parameters[] = [ 'name' => 'mediaSearch', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'string', 'maxLength' => 200 ] ];
 		}
 		return $parameters;
 	}

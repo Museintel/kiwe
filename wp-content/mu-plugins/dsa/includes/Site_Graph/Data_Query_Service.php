@@ -54,7 +54,7 @@ final class Data_Query_Service {
 				],
 				'media'      => [
 					'description' => 'Published/inherited media, primarily images for headless previews.',
-					'args'        => [ 'limit', 'page', 'mimeType' ],
+					'args'        => [ 'limit', 'page', 'mimeType', 'search', 'include' ],
 				],
 				'batch'      => [
 					'description' => 'Run up to 20 named data queries in one request via the queries object/array, or use resources as a compact shorthand.',
@@ -64,7 +64,7 @@ final class Data_Query_Service {
 			'fields'      => [
 				'post' => [ 'id', 'type', 'slug', 'status', 'title', 'url', 'excerpt', 'date', 'modified', 'content', 'featuredImage', 'terms', 'product', 'meta' ],
 				'term' => [ 'id', 'taxonomy', 'name', 'slug', 'description', 'count', 'url' ],
-				'media' => [ 'id', 'url', 'alt', 'title', 'width', 'height', 'sizes' ],
+				'media' => [ 'id', 'url', 'alt', 'title', 'caption', 'description', 'mimeType', 'filename', 'width', 'height', 'aspectRatio', 'orientation', 'sizes', 'parent' ],
 			],
 			'examples'    => [
 				[
@@ -330,6 +330,28 @@ final class Data_Query_Service {
 		}
 
 		if ( $product ) {
+			$gallery = [];
+			foreach ( array_slice( array_values( array_filter( array_map( 'absint', (array) $product->get_gallery_image_ids() ) ) ), 0, 24 ) as $image_id ) {
+				$image = $this->image_node( $image_id );
+				if ( $image ) {
+					$gallery[] = $image;
+				}
+			}
+			$attributes = [];
+			foreach ( array_slice( (array) $product->get_attributes(), 0, 32, true ) as $attribute ) {
+				if ( ! is_object( $attribute ) || ! is_callable( [ $attribute, 'get_name' ] ) ) {
+					continue;
+				}
+				$name = sanitize_text_field( (string) $attribute->get_name() );
+				$options = is_callable( [ $attribute, 'get_options' ] ) ? (array) $attribute->get_options() : [];
+				$attributes[] = [
+					'name'      => $name,
+					'label'     => function_exists( 'wc_attribute_label' ) ? sanitize_text_field( (string) wc_attribute_label( $name ) ) : $name,
+					'options'   => array_slice( array_values( array_map( 'sanitize_text_field', $options ) ), 0, 64 ),
+					'visible'   => is_callable( [ $attribute, 'get_visible' ] ) ? (bool) $attribute->get_visible() : true,
+					'variation' => is_callable( [ $attribute, 'get_variation' ] ) ? (bool) $attribute->get_variation() : false,
+				];
+			}
 			$node['product'] = [
 				'id'           => (int) $product->get_id(),
 				'type'         => sanitize_key( (string) $product->get_type() ),
@@ -340,6 +362,8 @@ final class Data_Query_Service {
 				'inStock'      => $product->is_in_stock(),
 				'purchasable'  => $product->is_purchasable(),
 				'sku'          => sanitize_text_field( (string) $product->get_sku() ),
+				'gallery'      => $gallery,
+				'attributes'   => $attributes,
 			];
 		}
 
@@ -352,17 +376,45 @@ final class Data_Query_Service {
 
 	private function media( array $args, bool $private ): array {
 		$limit = $this->limit( $args, $private );
-		$query = new \WP_Query(
-			[
+		$page  = max( 1, absint( $args['page'] ?? 1 ) );
+		$query_args = [
 				'post_type'      => 'attachment',
 				'post_status'    => $private ? $this->status( $args, [ 'inherit', 'private' ] ) : 'inherit',
 				'post_mime_type' => sanitize_text_field( (string) ( $args['mimeType'] ?? $args['mime'] ?? 'image' ) ),
 				'posts_per_page' => $limit,
-				'paged'          => max( 1, absint( $args['page'] ?? 1 ) ),
+				'paged'          => $page,
 				'orderby'        => 'date',
 				'order'          => 'DESC',
-			]
-		);
+			];
+		$include = $this->ids( $args['include'] ?? [] );
+		if ( $include ) {
+			$query_args['post__in'] = $include;
+			$query_args['orderby']  = 'post__in';
+		}
+		$search_filter = null;
+		$search = trim( sanitize_text_field( (string) ( $args['search'] ?? '' ) ) );
+		if ( '' !== $search ) {
+			$search_filter = static function ( string $sql, \WP_Query $wp_query ) use ( $search ): string {
+				if ( ! $wp_query->get( 'kiwe_media_search' ) ) {
+					return $sql;
+				}
+				global $wpdb;
+				$like = '%' . $wpdb->esc_like( $search ) . '%';
+				return $wpdb->prepare(
+					" AND ({$wpdb->posts}.post_title LIKE %s OR {$wpdb->posts}.post_excerpt LIKE %s OR {$wpdb->posts}.post_content LIKE %s OR EXISTS (SELECT 1 FROM {$wpdb->postmeta} kiwe_alt WHERE kiwe_alt.post_id = {$wpdb->posts}.ID AND kiwe_alt.meta_key = '_wp_attachment_image_alt' AND kiwe_alt.meta_value LIKE %s))",
+					$like,
+					$like,
+					$like,
+					$like
+				);
+			};
+			$query_args['kiwe_media_search'] = 1;
+			add_filter( 'posts_search', $search_filter, 20, 2 );
+		}
+		$query = new \WP_Query( $query_args );
+		if ( $search_filter ) {
+			remove_filter( 'posts_search', $search_filter, 20 );
+		}
 		$nodes = [];
 
 		foreach ( $query->posts as $post ) {
@@ -373,7 +425,19 @@ final class Data_Query_Service {
 
 		wp_reset_postdata();
 
-		return $this->envelope( 'media', [ 'limit' => $limit, 'private' => $private ], array_values( array_filter( $nodes ) ) );
+		return $this->envelope(
+			'media',
+			[ 'limit' => $limit, 'page' => $page, 'private' => $private, 'search' => $search ],
+			array_values( array_filter( $nodes ) ),
+			[
+				'pageInfo' => [
+					'total'      => (int) $query->found_posts,
+					'totalPages' => (int) $query->max_num_pages,
+					'page'       => $page,
+					'limit'      => $limit,
+				],
+			]
+		);
 	}
 
 	private function terms( array $args, bool $private ): array {
@@ -494,14 +558,33 @@ final class Data_Query_Service {
 			}
 		}
 
+		$width       = absint( $meta['width'] ?? 0 );
+		$height      = absint( $meta['height'] ?? 0 );
+		$parent_id   = absint( wp_get_post_parent_id( $id ) );
+		$parent_type = $parent_id ? sanitize_key( (string) get_post_type( $parent_id ) ) : '';
+		$ratio       = $height > 0 ? round( $width / $height, 4 ) : 0;
+		$orientation = 0 === $width || 0 === $height ? 'unknown' : ( abs( $width - $height ) <= max( 12, (int) round( min( $width, $height ) * 0.05 ) ) ? 'square' : ( $width > $height ? 'landscape' : 'portrait' ) );
+
 		return [
 			'id'     => $id,
 			'url'    => esc_url_raw( $url ),
 			'alt'    => sanitize_text_field( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ),
 			'title'  => sanitize_text_field( (string) get_the_title( $id ) ),
-			'width'  => absint( $meta['width'] ?? 0 ),
-			'height' => absint( $meta['height'] ?? 0 ),
+			'caption' => wp_strip_all_tags( (string) wp_get_attachment_caption( $id ) ),
+			'description' => wp_strip_all_tags( (string) get_post_field( 'post_content', $id ) ),
+			'mimeType' => sanitize_text_field( (string) get_post_mime_type( $id ) ),
+			'filename' => sanitize_file_name( (string) wp_basename( (string) get_attached_file( $id ) ) ),
+			'width'  => $width,
+			'height' => $height,
+			'aspectRatio' => $ratio,
+			'orientation' => $orientation,
 			'sizes'  => $sizes,
+			'parent' => [
+				'id'    => $parent_id,
+				'type'  => $parent_type,
+				'title' => $parent_id ? sanitize_text_field( (string) get_the_title( $parent_id ) ) : '',
+				'url'   => $parent_id && 'publish' === get_post_status( $parent_id ) ? esc_url_raw( (string) get_permalink( $parent_id ) ) : '',
+			],
 		];
 	}
 

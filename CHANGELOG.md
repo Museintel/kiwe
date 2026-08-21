@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.16
+
+- Added `kiwe.sitegraph-design-context.v1`, a public-only, read-only design evidence packet covering site identity/logo, menus, products, galleries/attributes, searchable media metadata, public content and target builder capabilities.
+- Added downloadable browser-AI export, bounded public and task-capsule REST routes, MCP and WordPress Abilities surfaces, without credentials, private commerce/customer data, filesystem paths or mutation authority.
+- Added canonical `/usesitegraph /for /designcontext` and file-only `/usesitegraph /for /designcontext /nonai` command contracts while keeping design context framework-neutral and separate from Bricks binding/conversion phases.
+- Added stable raw-source media/dynamic markers, request/row/resource/rate budgets, package drift gates and release proof for the complete design-context lane.
+
 ## 7.15
 
 - Added a reduced task-capsule-only OpenAPI contract so ordinary browser-AI, IDE and conversion clients cannot even discover staging, publishing, runtime or mutation tools.

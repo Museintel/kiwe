@@ -18,8 +18,9 @@ Select target-site truth as the evidence source. It does not authorize every pos
 
 If no target-site truth is available, stop and ask for one of:
 
-- `KIWE_REST_BASE` plus `KIWE_AI_KEY`;
+- `KIWE_REST_BASE` plus a short-lived task connection stored outside model context;
 - exported `kiwe.site-graph.v1` JSON;
+- exported `kiwe.sitegraph-design-context.v1` JSON;
 - AI-less public/read-only Site Graph Data schema/data routes.
 
 Do not browse or scrape the public frontend as a fallback.
@@ -40,6 +41,22 @@ Use Site Graph identity/menu data for site name, logo, brand identity, menu labe
 
 Do not infer the brand from the public homepage or external search.
 
+### `/usesitegraph /for /designcontext`
+
+Legacy shorthand: `/usesitegraph /designcontext`.
+
+Use the complete public-only design evidence packet: site identity and logo, menus, public products and their galleries/attributes, searchable media metadata, public pages/posts, taxonomy facts, and verified Bricks/Kiwe capabilities. The target describes what evidence the AI should use; it does not enable Kiwe AI and does not grant WordPress writes.
+
+- Live tool clients use `GET|POST /wp-json/dsa/v1/ai/design-context` with a short-lived task capsule.
+- Ordinary/free browser chats use the `kiwe.sitegraph-design-context.v1` file downloaded from `Kiwe > SiteGraph`; append `/nonai`.
+- A public read-only alternative exists at `GET|POST /wp-json/dsa/v1/site-graph/design-context` for clients that cannot store secrets. Treat it as public website data and do not mistake it for admin authority.
+
+At `/ideate`, this evidence may guide an original layout and select appropriate real imagery. For an existing approved HTML/CSS/JS artifact, preserve its design thesis, layout, responsiveness and JavaScript; ground identity/content/assets only unless the human explicitly requests a redesign. Static media must retain its public URL plus `data-kiwe-media-id` and a stable selector. Dynamic production collections stay dynamic and require an explicit binding target before `kiwe-bindings.json` is emitted.
+
+This target is framework-neutral: it must not add Seam Framework, Bricks JSON, query loops, dynamic tags, conditions, interactions or Kiwe launchers unless their separate target/phase is present.
+
+Canonical file-only form: `/usesitegraph /for /designcontext /nonai`.
+
 ### `/usesitegraph /for /bricksbindings`
 
 Create the complete target-grounded binding plan from the current raw artifact. Use `/dynamictags`, `/queryloops`, or `/kiwelaunchers` instead of `/bricksbindings` when only one binding family should change. Do not replace preview data or site identity unless those targets are also present.
@@ -55,6 +72,7 @@ The same source may be narrowed with `/dynamictags`, `/queryloops`, or `/kiwelau
 Force the AI-less/read-only lane:
 
 - use exported `kiwe.site-graph.v1` JSON, or;
+- use exported `kiwe.sitegraph-design-context.v1` JSON, or;
 - use `/wp-json/dsa/v1/site-graph/data/schema` and `/wp-json/dsa/v1/site-graph/data`.
 
 Do not call Companion, native AI, Advisor, Studio, or other model-backed `/ai/*` routes when `/nonai` is present, even if `/usecompanion` is also present.
@@ -64,7 +82,7 @@ Do not call Companion, native AI, Advisor, Studio, or other model-backed `/ai/*`
 ## Inputs you should ask for
 
 - The current Kiwe handoff folder or files.
-- For `/usesitegraph`: the target site's `kiwe.site-graph.v1` JSON or authorized API route.
+- For `/usesitegraph`: the target site's `kiwe.site-graph.v1`/`kiwe.sitegraph-design-context.v1` JSON or authorized API route.
 - For `/previewdata` or `/siteidentity`: target data responses containing the requested real records.
 - For `/usebrickscontext`: verified Bricks/Kiwe capability context; no SiteGraph is required.
 
@@ -76,6 +94,8 @@ If Kiwe is installed on the target site, the admin can download SiteGraph from `
 
 External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/bricks/context`, `/wp-json/dsa/v1/ai/bricks/plan`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/validate-bricks-conversion`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, `/wp-json/dsa/v1/ai/stages/{stageId}/...`, and `/wp-json/dsa/v1/ai/themes`.
 
+For design evidence, prefer a short-lived task capsule with `/wp-json/dsa/v1/ai/design-context`. Permanent keys are unnecessary for this read-only operation.
+
 For ordinary external content, conversion and validation work, prefer the vendor-neutral connection package from `Kiwe > SiteGraph`. It uses schema `kiwe.external-client-connection.v1`, points to `kiwe.external-client-manifest.v1`, the reduced `/wp-json/dsa/v1/ai/openapi.task.json`, and the secret-safe `/wp-json/dsa/v1/ai/client-adapters` catalog, and contains a one-time-visible `kiwe_task_...` bearer capsule. Configure the bearer value in the client's secret/action/tool/MCP/IDE layer; never paste it into model conversation context. Capsules are short-lived, hash-only at rest, public-data-only, field/resource/row/request-budgeted, and exclude staging, runtime, theme, publishing and mutation scopes. Claude, Cursor and other MCP clients can run `kiwe-ai-toolkit/mcp/sitegraph-client.js`; it refuses permanent keys, plaintext remote HTTP and redirects. Clients that cannot store authenticated secrets must use exported SiteGraph JSON or the public SiteGraph Data endpoints instead.
 
 For headless/content reads, prefer the AI-less Site Graph Data API instead of scraping a public website:
@@ -84,6 +104,7 @@ For headless/content reads, prefer the AI-less Site Graph Data API instead of sc
 GET  /wp-json/dsa/v1/site-graph/data/schema
 GET  /wp-json/dsa/v1/site-graph/data?resource=products&taxonomy=product_cat&term=fudge&limit=4
 POST /wp-json/dsa/v1/site-graph/data
+GET|POST /wp-json/dsa/v1/site-graph/design-context
 ```
 
 Anonymous/public calls return only public/published objects. Authenticated administrators can receive broader private read data. `POST` may use the strict `queries` object or a compact `resources` shorthand:

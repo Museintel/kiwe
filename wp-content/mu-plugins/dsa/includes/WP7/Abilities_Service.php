@@ -20,6 +20,7 @@ use DSA\Element_Registry;
 use DSA\Secure\SecureTrack_AI_Brief_Service;
 use DSA\Settings;
 use DSA\Site_Graph\Data_Query_Service;
+use DSA\Site_Graph\Design_Context_Service;
 use DSA\Trust\Trust_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -126,6 +127,23 @@ final class Abilities_Service {
 				'input_schema'        => $this->site_graph_data_input_schema(),
 				'output_schema'       => $this->generic_object_schema(),
 				'execute_callback'    => [ $this, 'execute_site_graph_data' ],
+				'permission_callback' => [ $this, 'can_manage' ],
+				'meta'                => [
+					'annotations' => [ 'readonly' => true ],
+					'show_in_rest' => true,
+				],
+			]
+		);
+
+		wp_register_ability(
+			'dsa/get-sitegraph-design-context',
+			[
+				'label'               => __( 'Get Kiwe SiteGraph design context', 'dsa' ),
+				'description'         => __( 'Returns one public-only design evidence packet containing site identity, products, media, public content, menus and target builder capabilities.', 'dsa' ),
+				'category'            => self::CATEGORY,
+				'input_schema'        => $this->design_context_input_schema(),
+				'output_schema'       => $this->generic_object_schema(),
+				'execute_callback'    => [ $this, 'execute_sitegraph_design_context' ],
 				'permission_callback' => [ $this, 'can_manage' ],
 				'meta'                => [
 					'annotations' => [ 'readonly' => true ],
@@ -514,6 +532,15 @@ final class Abilities_Service {
 		return $this->data_query->query( $input, $private );
 	}
 
+	public function execute_sitegraph_design_context( array $input = [] ): array {
+		if ( ! $this->site_graph ) {
+			return [ 'schema' => 'kiwe.sitegraph-design-context.v1', 'error' => 'site_graph_unavailable' ];
+		}
+		unset( $input['abilityInvocationId'] );
+
+		return ( new Design_Context_Service( $this->site_graph, $this->data_query ) )->context( $input, true );
+	}
+
 	public function execute_securetrack_brief( array $input = [] ): array {
 		if ( ! $this->securetrack_brief_allowed() ) {
 			return [
@@ -760,6 +787,7 @@ final class Abilities_Service {
 						'dsa/summarize-route',
 						'dsa/get-site-graph-data-schema',
 						'dsa/query-site-graph-data',
+						'dsa/get-sitegraph-design-context',
 						'dsa/get-securetrack-brief',
 						'dsa/get-bricks-ai-context',
 						'dsa/plan-bricks-ai-page',
@@ -899,6 +927,19 @@ final class Abilities_Service {
 				'fields'     => [ 'type' => [ 'string', 'array' ] ],
 				'queries'    => [ 'type' => 'object' ],
 				'publicOnly' => [ 'type' => 'boolean' ],
+			],
+		];
+	}
+
+	private function design_context_input_schema(): array {
+		return [
+			'type'       => 'object',
+			'properties' => [
+				'productLimit' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 200 ],
+				'mediaLimit'   => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 500 ],
+				'contentLimit' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ],
+				'mediaSearch'  => [ 'type' => 'string' ],
+				'resources'    => [ 'type' => 'array', 'items' => [ 'type' => 'string' ] ],
 			],
 		];
 	}

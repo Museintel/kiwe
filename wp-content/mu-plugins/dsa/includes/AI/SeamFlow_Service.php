@@ -42,6 +42,8 @@ final class SeamFlow_Service {
 				'/audit /accessibility',
 				'/fix /previousaudit',
 				'/audit /previousoutput /allflow',
+				'/usesitegraph /for /designcontext',
+				'/usesitegraph /for /designcontext /nonai',
 			],
 			'routes'          => [
 				'status'           => $base . '/status',

@@ -63,12 +63,12 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.15', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.16', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
   assert(entry.flows.commandGrammar.contextSources.includes('/usesitegraph') && entry.flows.commandGrammar.contextSources.includes('/usebrickscontext'), 'entry missing contextual dynamic evidence sources');
-  assert(entry.flows.commandGrammar.phaseTargets.includes('/previewdata') && entry.flows.commandGrammar.phaseTargets.includes('/bricksbindings'), 'entry missing contextual dynamic targets');
+  assert(entry.flows.commandGrammar.phaseTargets.includes('/previewdata') && entry.flows.commandGrammar.phaseTargets.includes('/bricksbindings') && entry.flows.commandGrammar.phaseTargets.includes('/designcontext'), 'entry missing contextual dynamic targets');
   assert(entry.flows.commandGrammar.entityScopes.includes('/products') && entry.flows.commandGrammar.fieldScopes.includes('/images'), 'entry missing entity/field narrowing tokens');
   assert(entry.navigationTree.contexts.ideation.includes('ideate-lite.md'), 'entry missing ideation context route');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
@@ -103,13 +103,13 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.15', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.16', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
   assert(manifest.commandGrammar.primaryActions.includes('/ideate'), 'manifest missing /ideate primary action');
   assert(manifest.commandGrammar.contextSources.includes('/usesitegraph') && manifest.commandGrammar.contextSources.includes('/usebrickscontext'), 'manifest missing contextual dynamic evidence sources');
-  assert(manifest.commandGrammar.phaseTargets.includes('/dynamictags') && manifest.commandGrammar.phaseTargets.includes('/queryloops'), 'manifest missing narrow Bricks dynamic targets');
+  assert(manifest.commandGrammar.phaseTargets.includes('/dynamictags') && manifest.commandGrammar.phaseTargets.includes('/queryloops') && manifest.commandGrammar.phaseTargets.includes('/designcontext'), 'manifest missing narrow Bricks dynamic targets');
   assert(manifest.commandGrammar.entityScopes.includes('/products') && manifest.commandGrammar.fieldScopes.includes('/titles'), 'manifest missing dynamic scope tokens');
   assert(manifest.contexts.ideation === 'kiwe-ai-toolkit/contexts/ideate-lite.md', 'manifest missing ideation context');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -139,8 +139,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.15', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.15', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.16', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.16', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -176,6 +176,8 @@ function assert(condition, message) {
   const previousOutputOk = m.diagnoseCommand({ command: '/audit /previousoutput', artifactSummary: 'immediate previous AI output files: framework/kiwe-framework-profile.json; bricks-template/home-template-upload.json' });
   const broadSiteGraph = m.diagnoseCommand({ command: '/usesitegraph', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export' });
   const previewOnly = m.diagnoseCommand({ command: '/usesitegraph /for /previewdata /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
+  const designContext = m.diagnoseCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
+  const designContextAlias = m.diagnoseCommand({ command: '/usesitegraph /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
   const genericDynamic = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags', artifactSummary: 'current raw index.html' });
   const invalidPreviewContext = m.diagnoseCommand({ command: '/usebrickscontext /for /previewdata', artifactSummary: 'current raw index.html' });
   const invalidNonAi = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags /nonai', artifactSummary: 'current raw index.html' });
@@ -217,6 +219,8 @@ function assert(condition, message) {
   assert(!previousOutputOk.stop, 'previous output with immediate output summary should not stop');
   assert(broadSiteGraph.stop && broadSiteGraph.code === 'dynamic_target_missing', 'broad /usesitegraph must ask for an explicit /for target');
   assert(!previewOnly.stop, 'targeted preview-data SiteGraph command should pass with artifact and evidence');
+  assert(!designContext.stop, 'file-only design-context command should pass with its export');
+  assert(!designContextAlias.stop && designContextAlias.normalizedCommand.includes('/for /designcontext'), 'design-context shorthand should normalize to canonical /for syntax');
   assert(!scopedPreview.stop, 'entity/field-scoped preview command should pass without prose');
   assert(!genericDynamic.stop, 'generic Bricks dynamic tags must not require SiteGraph');
   assert(invalidPreviewContext.stop && invalidPreviewContext.code === 'preview_data_requires_sitegraph', 'preview data must require SiteGraph evidence');
@@ -227,6 +231,9 @@ function assert(condition, message) {
   assert(scopedPreviewRoute.includes('Field scope: change only `/titles`, `/images` values'), 'preview route must honor exact field scopes');
   assert(genericDynamicRoute.includes('SiteGraph is not required'), 'Bricks-context route must explicitly remain independent of SiteGraph');
   assert(genericDynamicRoute.includes('annotate only source-evidenced'), 'dynamic-tag target contract missing');
+  const designContextRoute = m.routeCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
+  assert(designContextRoute.includes('complete public-only design evidence packet'), 'design-context route missing public-only evidence contract');
+  assert(designContextRoute.includes('does not emit Bricks JSON'), 'design-context route must preserve phase boundaries');
 
   const seamValidatorSource = fs.readFileSync(path.join(root, 'tools/validate-seamframework.cjs'), 'utf8');
   assert(seamValidatorSource.includes('self-contained-fallback'), 'Seam validator missing standalone fallback mode');

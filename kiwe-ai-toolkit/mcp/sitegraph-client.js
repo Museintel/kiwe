@@ -36,6 +36,20 @@ export const SITEGRAPH_TOOLS = Object.freeze({
       }
     }
   },
+  kiwe_sitegraph_design_context: {
+    description: 'Read one public-only SiteGraph design evidence packet: identity, menus, products, media metadata, public content and target Bricks/Kiwe capabilities. This never grants writes.',
+    method: 'POST', path: '/design-context',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productLimit: { type: 'integer', minimum: 0, maximum: 100, default: 24 },
+        mediaLimit: { type: 'integer', minimum: 0, maximum: 100, default: 48 },
+        contentLimit: { type: 'integer', minimum: 0, maximum: 100, default: 12 },
+        mediaSearch: { type: 'string' },
+        resources: { type: 'array', items: { type: 'string', enum: ['site', 'menus', 'products', 'media', 'pages', 'posts', 'terms'] } }
+      }
+    }
+  },
   kiwe_bricks_context: {
     description: 'Read verified Bricks, WooCommerce and Kiwe dynamic-tag/query-loop capabilities for planning; this does not save content.',
     method: 'POST', path: '/bricks/context', inputSchema: { type: 'object', properties: { intent: { type: 'string' }, sourceSummary: { type: 'string' } } }

@@ -49,6 +49,7 @@ use DSA\Security\Secret_Store;
 use DSA\Saved\Saved_Items_Service;
 use DSA\Search\Search_Service;
 use DSA\Site_Graph\Calibration_Pairing_Service;
+use DSA\Site_Graph\Design_Context_Service;
 use DSA\Settings;
 use DSA\Theme\Screen_Copy_Schema;
 use DSA\Theme\Theme_Package_Service;
@@ -121,6 +122,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_create_ai_access_key', [ $this, 'create_ai_access_key' ] );
 		add_action( 'admin_post_dsa_revoke_ai_access_key', [ $this, 'revoke_ai_access_key' ] );
 		add_action( 'admin_post_dsa_export_site_graph', [ $this, 'export_site_graph' ] );
+		add_action( 'admin_post_dsa_export_sitegraph_design_context', [ $this, 'export_sitegraph_design_context' ] );
 		add_action( 'admin_post_dsa_save_site_graph_settings', [ $this, 'save_site_graph_settings' ] );
 		add_action( 'admin_post_dsa_export_site_graph_calibration', [ $this, 'export_site_graph_calibration' ] );
 		add_action( 'admin_post_dsa_create_site_graph_calibration_pair', [ $this, 'create_site_graph_calibration_pair' ] );
@@ -2012,6 +2014,42 @@ final class Admin {
 		$site = sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' );
 		$file = sprintf( 'kiwe-site-graph-%s-%s.json', $site, gmdate( 'Ymd-His' ) );
 
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'X-Robots-Tag: noindex, nofollow' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function export_sitegraph_design_context(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have permission to export SiteGraph design context.', 'dsa' ),
+				esc_html__( 'Permission denied', 'dsa' ),
+				[ 'response' => 403 ]
+			);
+		}
+
+		check_admin_referer( 'dsa_export_sitegraph_design_context' );
+
+		$args = [
+			'productLimit' => max( 0, min( 200, absint( $_POST['productLimit'] ?? 100 ) ) ),
+			'mediaLimit'   => max( 0, min( 500, absint( $_POST['mediaLimit'] ?? 100 ) ) ),
+			'contentLimit' => max( 0, min( 100, absint( $_POST['contentLimit'] ?? 24 ) ) ),
+			'mediaSearch'  => isset( $_POST['mediaSearch'] ) ? sanitize_text_field( wp_unslash( $_POST['mediaSearch'] ) ) : '',
+		];
+		$site_graph = new Site_Graph_Service( $this->settings, $this->modules );
+		$payload    = ( new Design_Context_Service( $site_graph ) )->context( $args, true );
+		$json       = wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+
+		if ( ! $json ) {
+			wp_safe_redirect( add_query_arg( 'sitegraph-design-context-exported', 'encode-error', admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		}
+
+		$file = sprintf( 'kiwe-design-context-%s-%s.json', sanitize_title( get_bloginfo( 'name' ) ?: 'appsite' ), gmdate( 'Ymd-His' ) );
 		nocache_headers();
 		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
 		header( 'Content-Disposition: attachment; filename="' . $file . '"' );
@@ -4618,6 +4656,9 @@ final class Admin {
 			<?php if ( isset( $_GET['site-graph-exported'] ) && 'encode-error' === sanitize_key( (string) wp_unslash( $_GET['site-graph-exported'] ) ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Kiwe could not encode the SiteGraph JSON. Try a smaller sample size and check server logs if it continues.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['sitegraph-design-context-exported'] ) && 'encode-error' === sanitize_key( (string) wp_unslash( $_GET['sitegraph-design-context-exported'] ) ) ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'Kiwe could not encode the SiteGraph design-context JSON. Try smaller catalog limits and check server logs if it continues.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
 			<?php if ( isset( $_GET['binding-plan'] ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->binding_plan_error_message( sanitize_key( (string) wp_unslash( $_GET['binding-plan'] ) ) ) ); ?></p></div>
 			<?php endif; ?>
@@ -4657,6 +4698,19 @@ final class Admin {
 					<input type="hidden" name="action" value="dsa_export_site_graph">
 					<?php wp_nonce_field( 'dsa_export_site_graph' ); ?>
 					<p class="dsa-admin-inline-fields"><label><span><?php esc_html_e( 'Samples per content type', 'dsa' ); ?></span><select name="sampleLimit"><?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label><?php submit_button( __( 'Download SiteGraph JSON', 'dsa' ), 'secondary', 'submit', false ); ?></p>
+				</form>
+				<h3><?php esc_html_e( 'Design context for browser AI', 'dsa' ); ?></h3>
+				<p><?php esc_html_e( 'Download one public-only evidence bundle containing site identity, logo, menus, product facts, image metadata, public content, Bricks capabilities and binding targets. Attach it to an ordinary AI chat with /usesitegraph /for /designcontext /nonai. It contains no API key, customer, order, draft, visitor or filesystem data.', 'dsa' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_export_sitegraph_design_context">
+					<?php wp_nonce_field( 'dsa_export_sitegraph_design_context' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label><span><?php esc_html_e( 'Products', 'dsa' ); ?></span><select name="productLimit"><?php foreach ( [ 0, 24, 50, 100, 200 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 100, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
+						<label><span><?php esc_html_e( 'Images', 'dsa' ); ?></span><select name="mediaLimit"><?php foreach ( [ 0, 48, 100, 250, 500 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 100, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
+						<label><span><?php esc_html_e( 'Pages/posts each', 'dsa' ); ?></span><select name="contentLimit"><?php foreach ( [ 0, 12, 24, 50, 100 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 24, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
+						<label><span><?php esc_html_e( 'Image search (optional)', 'dsa' ); ?></span><input type="search" name="mediaSearch" placeholder="<?php esc_attr_e( 'owner, factory, logo…', 'dsa' ); ?>"></label>
+						<?php submit_button( __( 'Download AI design context', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</p>
 				</form>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:.5rem;">
 					<input type="hidden" name="action" value="dsa_export_site_graph_calibration"><?php wp_nonce_field( 'dsa_export_site_graph_calibration' ); ?><?php submit_button( __( 'Download compiler calibration JSON', 'dsa' ), 'secondary', 'submit', false ); ?>
@@ -4714,7 +4768,7 @@ final class Admin {
 				<?php $this->render_trusted_apply_stages(); ?>
 				<h3><?php esc_html_e( 'REST endpoints for tool clients', 'dsa' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Base API namespace (not a webpage):', 'dsa' ); ?> <code><?php echo esc_html( $rest_base ); ?></code></p>
-				<ul class="ul-disc"><li><code>GET /status</code></li><li><code>GET /site-graph?sampleLimit=8</code></li><li><code>POST /validate-bindings</code></li><li><code>POST /prepare-apply-plan</code></li><li><code>POST /stage-apply-plan</code> and <code>/stages/{stageId}/...</code></li></ul>
+				<ul class="ul-disc"><li><code>GET /status</code></li><li><code>GET /site-graph?sampleLimit=8</code></li><li><code>GET|POST /design-context</code></li><li><code>POST /validate-bindings</code></li><li><code>POST /prepare-apply-plan</code></li><li><code>POST /stage-apply-plan</code> and <code>/stages/{stageId}/...</code></li></ul>
 				<p class="description"><?php esc_html_e( 'Safe sequence: connect with a task capsule for read/convert/validate work. Use a separate narrowly scoped permanent key only when a human intentionally enters the trusted staging chain. A base URL and secret pasted into a normal chat are not a secure connection.', 'dsa' ); ?></p>
 			</section>
 		</div>

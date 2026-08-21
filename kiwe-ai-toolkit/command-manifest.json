@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.15",
+    "contractVersion": "7.16",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -67,7 +67,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.15", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.16", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -108,7 +108,7 @@
   "commandGrammar": {
     "rule": "Tokens are independent and composable. Do not require a memorized full phrase when a command line is unambiguous.",
     "primaryActions": ["/ideate", "/execute", "/rebuild", "/create", "/convert", "/seamframework", "/audit", "/fix", "/apply", "/list", "/document"],
-    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity"],
+    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity", "/designcontext"],
     "contextSources": ["/usesitegraph", "/usebrickscontext"],
     "entityScopes": ["/products", "/posts", "/pages", "/media", "/menus"],
     "fieldScopes": ["/titles", "/images", "/prices", "/links", "/excerpts", "/metadata"],

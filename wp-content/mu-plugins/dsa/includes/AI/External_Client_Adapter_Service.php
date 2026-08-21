@@ -69,7 +69,7 @@ final class External_Client_Adapter_Service {
 				'genericHttp' => [
 					'baseUrl' => $base,
 					'headers' => [ 'Authorization' => 'Bearer ${KIWE_SITEGRAPH_TASK_TOKEN}', 'Accept' => 'application/json' ],
-					'allowedDiscovery' => [ '/status', '/site-graph', '/site-graph-data/schema', '/site-graph-data', '/bricks/context', '/seamflow/status' ],
+					'allowedDiscovery' => [ '/status', '/site-graph', '/site-graph-data/schema', '/site-graph-data', '/design-context', '/bricks/context', '/seamflow/status' ],
 				],
 				'mcp' => [
 					'transport'  => 'stdio',

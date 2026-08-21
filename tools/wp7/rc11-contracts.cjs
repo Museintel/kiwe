@@ -19,6 +19,7 @@ const expectedAbilities = [
 	'dsa/summarize-route',
 	'dsa/get-site-graph-data-schema',
 	'dsa/query-site-graph-data',
+	'dsa/get-sitegraph-design-context',
 	'dsa/get-securetrack-brief',
 	'dsa/get-bricks-ai-context',
 	'dsa/plan-bricks-ai-page',
