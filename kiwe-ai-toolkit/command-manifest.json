@@ -110,6 +110,8 @@
     "primaryActions": ["/ideate", "/execute", "/rebuild", "/create", "/convert", "/seamframework", "/audit", "/fix", "/apply", "/list", "/document"],
     "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity"],
     "contextSources": ["/usesitegraph", "/usebrickscontext"],
+    "entityScopes": ["/products", "/posts", "/pages", "/media", "/menus"],
+    "fieldScopes": ["/titles", "/images", "/prices", "/links", "/excerpts", "/metadata"],
     "modifiers": ["/for", "/audit", "/fix", "/eachstep", "/atend", "/report", "/usecompanion", "/nonai", "/nopreviewdata"],
     "examples": {
       "/execute /fullflow /audit /fix /eachstep": "primary /execute, phase /fullflow, modifiers /audit /fix /eachstep",

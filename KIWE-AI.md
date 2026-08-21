@@ -80,7 +80,7 @@ Final chat responses are also lean by default. Return only a compact `PASS` / `F
 
 Canonical command language uses `/create` for creation phases. If an older prompt says `/build`, treat it as a legacy alias and answer back with the canonical `/create` wording so the command vocabulary stays stable.
 
-Canonical dynamic commands combine a context source and explicit target: `/usesitegraph /for /previewdata`, `/usesitegraph /for /bricksbindings`, or `/usebrickscontext /for /dynamictags`. Context alone never implies every operation. Legacy `/dynamic /sitegraph`, `/usesitegraph /replacepreviewdata`, and `/usesitegraph /websitename` may normalize internally, but new output must teach targeted forms. `/nonai` is meaningful only with `/usesitegraph`.
+Canonical dynamic commands combine a context source and explicit target: `/usesitegraph /for /previewdata`, `/usesitegraph /for /bricksbindings`, or `/usebrickscontext /for /dynamictags`. Optional entity and field scopes narrow the target without prose; for example `/usesitegraph /for /previewdata /products /titles /images /nonai`. Context alone never implies every operation. Legacy `/dynamic /sitegraph`, `/usesitegraph /replacepreviewdata`, and `/usesitegraph /websitename` may normalize internally, but new output must teach targeted forms. `/nonai` is meaningful only with `/usesitegraph`.
 
 Before spending tokens on a slash-command phase, run the Kiwe command gate when tools or CLI are available:
 

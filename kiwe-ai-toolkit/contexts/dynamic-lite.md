@@ -70,6 +70,8 @@ Do not call Companion, native AI, Advisor, Studio, or other model-backed `/ai/*`
 
 The slash targets are the request. Do not require the human to repeat their meaning as a long prose prompt. Ask only for a missing artifact, missing evidence source, or an ambiguous target selector.
 
+Optional entity scopes are `/products`, `/posts`, `/pages`, `/media`, and `/menus`. Optional field scopes are `/titles`, `/images`, `/prices`, `/links`, `/excerpts`, and `/metadata`. When scopes are supplied, change only the intersection they name. Example: `/usesitegraph /for /previewdata /products /titles /images /nonai` replaces product names and product images only. When no scope is supplied, process every eligible region for the selected target. Never treat a scope token as permission to alter another target.
+
 If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > AI > AI connector and Site Graph`.
 
 External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/bricks/context`, `/wp-json/dsa/v1/ai/bricks/plan`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/validate-bricks-conversion`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, `/wp-json/dsa/v1/ai/stages/{stageId}/...`, and `/wp-json/dsa/v1/ai/themes`.

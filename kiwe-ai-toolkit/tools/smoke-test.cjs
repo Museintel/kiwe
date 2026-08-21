@@ -69,6 +69,7 @@ function assert(condition, message) {
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
   assert(entry.flows.commandGrammar.contextSources.includes('/usesitegraph') && entry.flows.commandGrammar.contextSources.includes('/usebrickscontext'), 'entry missing contextual dynamic evidence sources');
   assert(entry.flows.commandGrammar.phaseTargets.includes('/previewdata') && entry.flows.commandGrammar.phaseTargets.includes('/bricksbindings'), 'entry missing contextual dynamic targets');
+  assert(entry.flows.commandGrammar.entityScopes.includes('/products') && entry.flows.commandGrammar.fieldScopes.includes('/images'), 'entry missing entity/field narrowing tokens');
   assert(entry.navigationTree.contexts.ideation.includes('ideate-lite.md'), 'entry missing ideation context route');
   assert(entry.flows.executionCommands['/execute /fullflow'], 'missing /execute /fullflow in entry');
   assert(entry.flows.executionCommands['/audit /eachstep'], 'missing /audit /eachstep in entry');
@@ -109,6 +110,7 @@ function assert(condition, message) {
   assert(manifest.commandGrammar.primaryActions.includes('/ideate'), 'manifest missing /ideate primary action');
   assert(manifest.commandGrammar.contextSources.includes('/usesitegraph') && manifest.commandGrammar.contextSources.includes('/usebrickscontext'), 'manifest missing contextual dynamic evidence sources');
   assert(manifest.commandGrammar.phaseTargets.includes('/dynamictags') && manifest.commandGrammar.phaseTargets.includes('/queryloops'), 'manifest missing narrow Bricks dynamic targets');
+  assert(manifest.commandGrammar.entityScopes.includes('/products') && manifest.commandGrammar.fieldScopes.includes('/titles'), 'manifest missing dynamic scope tokens');
   assert(manifest.contexts.ideation === 'kiwe-ai-toolkit/contexts/ideate-lite.md', 'manifest missing ideation context');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
   assert(manifest.commands['/audit /eachstep'], 'manifest missing /audit /eachstep');
@@ -178,6 +180,8 @@ function assert(condition, message) {
   const invalidPreviewContext = m.diagnoseCommand({ command: '/usebrickscontext /for /previewdata', artifactSummary: 'current raw index.html' });
   const invalidNonAi = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags /nonai', artifactSummary: 'current raw index.html' });
   const previewRoute = m.routeCommand({ command: '/usesitegraph /for /previewdata /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
+  const scopedPreview = m.diagnoseCommand({ command: '/usesitegraph /for /previewdata /products /titles /images /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
+  const scopedPreviewRoute = m.routeCommand({ command: '/usesitegraph /for /previewdata /products /titles /images /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
   const genericDynamicRoute = m.routeCommand({ command: '/usebrickscontext /for /dynamictags', artifactSummary: 'current raw index.html' });
 
   assert(bad.stop && bad.code === 'unknown_command_token', 'bad typo diagnostic failed');
@@ -213,11 +217,14 @@ function assert(condition, message) {
   assert(!previousOutputOk.stop, 'previous output with immediate output summary should not stop');
   assert(broadSiteGraph.stop && broadSiteGraph.code === 'dynamic_target_missing', 'broad /usesitegraph must ask for an explicit /for target');
   assert(!previewOnly.stop, 'targeted preview-data SiteGraph command should pass with artifact and evidence');
+  assert(!scopedPreview.stop, 'entity/field-scoped preview command should pass without prose');
   assert(!genericDynamic.stop, 'generic Bricks dynamic tags must not require SiteGraph');
   assert(invalidPreviewContext.stop && invalidPreviewContext.code === 'preview_data_requires_sitegraph', 'preview data must require SiteGraph evidence');
   assert(invalidNonAi.stop && invalidNonAi.code === 'nonai_requires_sitegraph', '/nonai must not leak into Bricks-context commands');
   assert(previewRoute.includes('does not add query loops, dynamic tags, launchers'), 'preview-only route must not silently create bindings');
   assert(!previewRoute.includes('Expected output when dynamic intent changes:'), 'preview-only route must not require a binding artifact');
+  assert(scopedPreviewRoute.includes('Entity scope: change only `/products` regions.'), 'preview route must honor the product entity scope');
+  assert(scopedPreviewRoute.includes('Field scope: change only `/titles`, `/images` values'), 'preview route must honor exact field scopes');
   assert(genericDynamicRoute.includes('SiteGraph is not required'), 'Bricks-context route must explicitly remain independent of SiteGraph');
   assert(genericDynamicRoute.includes('annotate only source-evidenced'), 'dynamic-tag target contract missing');
 

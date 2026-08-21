@@ -82,6 +82,8 @@ Canonical dynamic context forms:
 
 Use `/usesitegraph` for real site evidence and `/usebrickscontext` for general verified Bricks/Kiwe capabilities without site data. Valid targets include `/previewdata`, `/siteidentity`, `/bricksbindings`, `/dynamictags`, `/queryloops`, and `/kiwelaunchers`. Legacy `/dynamic /sitegraph` and shorthand `/sitegraph` may be accepted internally, but user-facing output should use a targeted canonical form.
 
+Optional entity scopes (`/products`, `/posts`, `/pages`, `/media`, `/menus`) and field scopes (`/titles`, `/images`, `/prices`, `/links`, `/excerpts`, `/metadata`) narrow the selected target. Example: `/usesitegraph /for /previewdata /products /titles /images /nonai`. If no scope is present, process every eligible region for that target. If the scoped source region is ambiguous, ask one short question instead of requesting a prose implementation prompt.
+
 ## Command gate / no-waste boundary
 
 Before doing real work for any slash command, validate the command cheaply.

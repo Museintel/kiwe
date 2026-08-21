@@ -37,7 +37,7 @@ Any phase can add `/usecompanion`, such as `/rebuild /seamframework /usecompanio
 
 Canonical command language uses `/create` for creation phases. `/build` may be tolerated as an old alias by the router, but toolkit-facing output should normalize back to `/create`.
 
-Use `/list` to see the command vocabulary and stop. Use `/fix` to repair an existing failed artifact lane without starting over. Use `/usesitegraph /for <target>` for SiteGraph-grounded work and `/usebrickscontext /for <target>` for general Bricks dynamic/query planning without site data. The command tokens carry the complete general contract; the human should not have to restate it as a long prompt. Legacy `/dynamic /sitegraph` may be accepted internally but should not be taught in new prompts.
+Use `/list` to see the command vocabulary and stop. Use `/fix` to repair an existing failed artifact lane without starting over. Use `/usesitegraph /for <target>` for SiteGraph-grounded work and `/usebrickscontext /for <target>` for general Bricks dynamic/query planning without site data. Add universal entity/field scopes when needed; `/usesitegraph /for /previewdata /products /titles /images /nonai` changes only product names and images. The command tokens carry the complete general contract; the human should not have to restate it as a long prompt. Legacy `/dynamic /sitegraph` may be accepted internally but should not be taught in new prompts.
 
 Documentation is opt-in for every command. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact file(s) for that command. Do not add README files, notes, audit reports, duplicate previews, ZIPs, or extra explanation files by default.
 

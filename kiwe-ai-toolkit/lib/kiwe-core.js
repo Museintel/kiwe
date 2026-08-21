@@ -1182,6 +1182,17 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/queryloops',
   '/kiwelaunchers',
   '/siteidentity',
+  '/products',
+  '/posts',
+  '/pages',
+  '/media',
+  '/menus',
+  '/titles',
+  '/images',
+  '/prices',
+  '/links',
+  '/excerpts',
+  '/metadata',
   '/rebuild',
   '/seam',
   '/seamframework',
@@ -2008,6 +2019,8 @@ function siteGraphCommandGuidance(command) {
   const dynamicTags = bindings || commandHas(text, /\/dynamictags/);
   const queryLoops = bindings || commandHas(text, /\/queryloops/);
   const launchers = bindings || commandHas(text, /\/kiwelaunchers/);
+  const entityScopes = slashTokens(text).filter((token) => ['/products', '/posts', '/pages', '/media', '/menus'].includes(token));
+  const fieldScopes = slashTokens(text).filter((token) => ['/titles', '/images', '/prices', '/links', '/excerpts', '/metadata'].includes(token));
   const lines = [
     '# Contextual dynamic guidance',
     '',
@@ -2036,6 +2049,15 @@ function siteGraphCommandGuidance(command) {
       : '',
     launchers
       ? 'Target `/kiwelaunchers`: map only unambiguous existing controls to canonical Kiwe attributes; do not replace authored popups or create a second runtime.'
+      : '',
+    entityScopes.length
+      ? `Entity scope: change only ${entityScopes.map((token) => `\`${token}\``).join(', ')} regions.`
+      : '',
+    fieldScopes.length
+      ? `Field scope: change only ${fieldScopes.map((token) => `\`${token}\``).join(', ')} values inside the selected target and entity scope.`
+      : '',
+    (entityScopes.length || fieldScopes.length)
+      ? 'Scope tokens narrow a target; they never authorize another target. If a scoped source region is ambiguous, ask one short selector question.'
       : '',
     '',
     (dynamicTags || queryLoops || launchers)
