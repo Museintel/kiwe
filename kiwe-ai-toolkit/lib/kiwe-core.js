@@ -2193,7 +2193,19 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       'For Bricks conversion, DSA theme, combined handoff, Site Graph/dynamic binding, or accessibility lanes, document only the files and assumptions already present in the supplied artifact.'
     );
   } else if (kind === 'ideate') {
-    parts.push(getIdeationContext());
+    if (commandHas(command, /\/designcontext/)) {
+      parts.push(
+        siteGraphCommandGuidance(command),
+        '',
+        '# Site Graph design evidence',
+        '',
+        graph,
+        '',
+        getIdeationContext()
+      );
+    } else {
+      parts.push(getIdeationContext());
+    }
   } else if (kind === 'seam-rebuild') {
     parts.push(
       '# Selected phase guidance',

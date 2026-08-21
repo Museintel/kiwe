@@ -178,6 +178,7 @@ function assert(condition, message) {
   const previewOnly = m.diagnoseCommand({ command: '/usesitegraph /for /previewdata /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
   const designContext = m.diagnoseCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
   const designContextAlias = m.diagnoseCommand({ command: '/usesitegraph /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
+  const ideateDesignContext = m.diagnoseCommand({ command: '/ideate /usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
   const genericDynamic = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags', artifactSummary: 'current raw index.html' });
   const invalidPreviewContext = m.diagnoseCommand({ command: '/usebrickscontext /for /previewdata', artifactSummary: 'current raw index.html' });
   const invalidNonAi = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags /nonai', artifactSummary: 'current raw index.html' });
@@ -221,6 +222,7 @@ function assert(condition, message) {
   assert(!previewOnly.stop, 'targeted preview-data SiteGraph command should pass with artifact and evidence');
   assert(!designContext.stop, 'file-only design-context command should pass with its export');
   assert(!designContextAlias.stop && designContextAlias.normalizedCommand.includes('/for /designcontext'), 'design-context shorthand should normalize to canonical /for syntax');
+  assert(!ideateDesignContext.stop && ideateDesignContext.kind === 'ideate', 'design context must compose directly with /ideate');
   assert(!scopedPreview.stop, 'entity/field-scoped preview command should pass without prose');
   assert(!genericDynamic.stop, 'generic Bricks dynamic tags must not require SiteGraph');
   assert(invalidPreviewContext.stop && invalidPreviewContext.code === 'preview_data_requires_sitegraph', 'preview data must require SiteGraph evidence');
@@ -232,8 +234,10 @@ function assert(condition, message) {
   assert(genericDynamicRoute.includes('SiteGraph is not required'), 'Bricks-context route must explicitly remain independent of SiteGraph');
   assert(genericDynamicRoute.includes('annotate only source-evidenced'), 'dynamic-tag target contract missing');
   const designContextRoute = m.routeCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
+  const ideateDesignContextRoute = m.routeCommand({ command: '/ideate /usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
   assert(designContextRoute.includes('complete public-only design evidence packet'), 'design-context route missing public-only evidence contract');
   assert(designContextRoute.includes('does not emit Bricks JSON'), 'design-context route must preserve phase boundaries');
+  assert(ideateDesignContextRoute.includes('complete public-only design evidence packet') && ideateDesignContextRoute.includes('Ask no more than three short questions at a time.'), '/ideate must combine design evidence with the adaptive interview');
 
   const seamValidatorSource = fs.readFileSync(path.join(root, 'tools/validate-seamframework.cjs'), 'utf8');
   assert(seamValidatorSource.includes('self-contained-fallback'), 'Seam validator missing standalone fallback mode');
