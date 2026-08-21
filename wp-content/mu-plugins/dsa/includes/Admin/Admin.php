@@ -6594,10 +6594,10 @@ final class Admin {
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Clean conversion test run', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Creates a reversible acceptance window with empty Bricks classes, variables, palettes, and theme styles. It also forces Raw Convert Test Mode and removes Kiwe chrome from screenshots. WordPress content, templates, products, orders, users, and media are never deleted.', 'dsa' ); ?></p>
+				<p><?php esc_html_e( 'Creates a reversible acceptance window with empty Bricks classes, variables, palettes, and theme styles. Existing published Bricks templates are also excluded from active-template resolution without changing their status or conditions, so an older project cannot supply the current header, footer, product, or archive. It also forces Raw Convert Test Mode and removes Kiwe chrome from screenshots. WordPress content, templates, products, orders, users, and media are never deleted.', 'dsa' ); ?></p>
 				<?php if ( $clean_status['active'] ) : ?>
 					<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'A clean test is active.', 'dsa' ); ?></strong> <?php echo esc_html( sprintf( __( 'Profile: %1$s · Snapshot: %2$s · Started: %3$s', 'dsa' ), $clean_status['profile'], $clean_status['hash'], $clean_status['created_at'] ) ); ?></p></div>
-					<p><?php echo esc_html( sprintf( __( 'Current isolated state: %1$d classes, %2$d variables, %3$d palettes, %4$d theme styles.', 'dsa' ), $clean_status['counts']['classes'], $clean_status['counts']['variables'], $clean_status['counts']['palettes'], $clean_status['counts']['themes'] ) ); ?></p>
+					<p><?php echo esc_html( sprintf( __( 'Current isolated state: %1$d classes, %2$d variables, %3$d palettes, %4$d theme styles, and %5$d pre-run templates excluded from active resolution.', 'dsa' ), $clean_status['counts']['classes'], $clean_status['counts']['variables'], $clean_status['counts']['palettes'], $clean_status['counts']['themes'], $clean_status['isolated_templates'] ) ); ?></p>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 						<input type="hidden" name="action" value="dsa_developer_restore_clean_conversion_test">
 						<?php wp_nonce_field( 'dsa_developer_restore_clean_conversion_test' ); ?>

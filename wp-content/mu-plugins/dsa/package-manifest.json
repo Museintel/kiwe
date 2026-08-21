@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "7.07",
+  "version": "7.08",
   "algorithm": "sha256",
   "file_count": 299,
   "files": {
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "fb43f09a5c4f02115ec13b9db520d60c4e88c5bc8ee307e06239aa7a2dd39a39"
+      "sha256": "9545990859df9fdcddf6a65be1c848387ef616d7ae6d8c9b1e8d7a04dd3113ca"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -481,8 +481,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 620276,
-      "sha256": "4f7556ae9927707ab1bc7a5c55e742c58b36327183110ae2cadcd87e914fd6eb"
+      "bytes": 620587,
+      "sha256": "f4bd6877b4d646070a85b6ece5f9326e0225d73e24c99e7733cea00c54bb5c78"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -493,8 +493,8 @@
       "sha256": "96345dd82b77a78bf2fb6ff5149c3accbe9ec4790809d2288694cf69c370237e"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
-      "bytes": 13188,
-      "sha256": "1d19694bd787f85ccf25b94b36e67670a52019194cf3b09ce4defc47e3439602"
+      "bytes": 16031,
+      "sha256": "7c83dc37ea66b2d43e4b2503e4de2c06a4de447c84ec657fdefe2a26a3db8279"
     },
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
       "bytes": 13091,
@@ -621,8 +621,8 @@
       "sha256": "aee8e283a9355e3a2700510e5426ef81161fe9456fcd30bcbe0a2b23b53e04b5"
     },
     "includes/Plugin.php": {
-      "bytes": 10235,
-      "sha256": "0dd987781e0d93d4165d9bbc7c27f5b4cc70598ab4dffe05642b03509ad8a950"
+      "bytes": 10344,
+      "sha256": "a536435398a6a92b820610643d66da9be4ab34bc4189cecfcdb1d3e75ef4265c"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,
@@ -1086,7 +1086,7 @@
     },
     "ui-system/README.md": {
       "bytes": 74338,
-      "sha256": "8684088ca82b2b60eb6c8f74c7556c717b557b856d228dc807a0bbb6c0cb40b8"
+      "sha256": "100d70eb127981c253fd1dad74e751bf05b7cd5be67ecaee6b962a2560d38f11"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

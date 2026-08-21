@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.08
+
+- Extended Clean Conversion Test Run from global-style isolation to Bricks template-resolution isolation. Every published template that existed before the snapshot remains published and editable but is excluded from Bricks' active-template query for the duration of the run, preventing an older project's header, footer, product, archive, or default condition from contaminating the current conversion.
+- Kept the isolation query-only and hash-verified: no template status, content, condition, product, order, user, or media record is changed, and restoring the snapshot immediately returns the exact pre-test resolution state.
+- Added a deterministic release test for template snapshot, exclusion merging, cache invalidation, and exact restoration; synchronized SeamFlow, generated contracts, package proof, and release metadata to 7.08.
+
 ## 7.07
 
 - Added a hash-verified, reversible Clean Conversion Test Run to Kiwe Developer with isolated Raw, Woo native, and Woo native + Kiwe profiles. It snapshots and exactly restores Bricks classes, variables, palettes, theme styles, the element manager, and Kiwe settings without deleting content or commerce data.

@@ -6,6 +6,7 @@ use DSA\Admin\Admin;
 use DSA\AI\Copilot_Service;
 use DSA\AI\Site_Graph_Service;
 use DSA\Bricks\Bricks_Integration;
+use DSA\Bricks\Clean_Conversion_Test_Service;
 use DSA\Commerce\Cart_Payload_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
 use DSA\Commerce\Checkout_Service;
@@ -158,6 +159,7 @@ final class Plugin {
 	}
 
 	public function register_services(): void {
+		Clean_Conversion_Test_Service::register_runtime_isolation();
 		$this->settings->run_migrations();
 		$settings    = $this->settings->all();
 		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
