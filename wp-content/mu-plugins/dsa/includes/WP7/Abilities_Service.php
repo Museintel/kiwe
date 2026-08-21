@@ -5,7 +5,7 @@ namespace DSA\WP7;
 use DSA\AI\Apply_Plan_Preparer;
 use DSA\AI\AI_Companion_Memory_Service;
 use DSA\AI\AI_Companion_Service;
-use DSA\AI\AI_Provider_Service;
+use DSA\AI\AI_Broker_Service;
 use DSA\AI\Accessibility_Validator;
 use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Bricks_AI_Intelligence_Service;
@@ -799,7 +799,7 @@ final class Abilities_Service {
 			$this->settings,
 			$this->site_graph,
 			$this->companion(),
-			new AI_Provider_Service( $this->settings )
+			new AI_Broker_Service( $this->settings )
 		);
 	}
 

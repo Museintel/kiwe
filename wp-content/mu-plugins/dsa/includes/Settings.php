@@ -244,6 +244,7 @@ final class Settings {
 						'security' => false,
 					],
 					'securetrack_brief_enabled' => false,
+					'sitegraph_ai_enabled'      => false,
 					'memory_enabled'           => true,
 					'memory_retention_days'    => 90,
 					'max_context_cards'        => 12,

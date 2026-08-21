@@ -178,8 +178,9 @@ function stp_ai_queue_maybe( $event_id, $type, $args, $risk, $ip_str ) {
 	$score = (int) ( $risk['score'] ?? 0 );
 	if ( $score < (int) $cfg['v2_uncertain_low'] || $score > (int) $cfg['v2_uncertain_high'] ) return 0;
 	global $wpdb;
-	$provider = sanitize_key( $cfg['v2_ai_provider'] ?? 'none' );
-	$status = ( $provider !== 'none' && ! empty( $cfg['v2_ai_key'] ) ) ? 'pending' : 'local_only';
+	$broker_status = stp_ai_shared_broker_status();
+	$provider = sanitize_key( $broker_status['provider'] ?? 'none' );
+	$status = ! empty( $broker_status['ready'] ) ? 'pending' : 'local_only';
 	$event_extra = is_array( $args['extra'] ?? null ) ? (array) $args['extra'] : array();
 	$sub = sanitize_key( $args['sub'] ?? '' );
 	$contained = stp_is_containment_event( $type, $sub );
@@ -333,81 +334,6 @@ function stp_ai_openai_provider_meta( $provider ) {
 	return array();
 }
 
-function stp_ai_fetch_provider_models( $provider = '', $key = '' ) {
-	$cfg = stp_cfg( true );
-	$provider = sanitize_key( $provider ?: ( $cfg['v2_ai_provider'] ?? 'gemini' ) );
-	if ( $provider === 'gemini' ) return stp_ai_fetch_gemini_models( $key );
-	if ( ! in_array( $provider, array( 'groq', 'xai' ), true ) ) {
-		return new WP_Error( 'stp_ai_provider_models', 'This provider does not expose a supported model fetcher yet.' );
-	}
-	$meta = stp_ai_openai_provider_meta( $provider );
-	$key = $key !== '' ? $key : (string) ( $cfg['v2_ai_key'] ?? '' );
-	if ( $key === '' ) return new WP_Error( 'stp_ai_no_key', $meta['label'] . ' API key is missing.' );
-
-	$res = wp_remote_get( $meta['models_url'], array(
-		'timeout' => 15,
-		'headers' => array( 'Authorization' => 'Bearer ' . $key ),
-	) );
-	if ( is_wp_error( $res ) ) return $res;
-	$code = (int) wp_remote_retrieve_response_code( $res );
-	$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
-	if ( $code < 200 || $code >= 300 ) {
-		$msg = $body['error']['message'] ?? ( $body['message'] ?? ( 'HTTP ' . $code ) );
-		return new WP_Error( 'stp_ai_models_http', $msg, array( 'http' => $code ) );
-	}
-
-	$models = array();
-	foreach ( (array) ( $body['data'] ?? array() ) as $m ) {
-		$name = preg_replace( '#^models/#', '', (string) ( $m['id'] ?? ( $m['name'] ?? '' ) ) );
-		$name = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', $name );
-		if ( $name === '' ) continue;
-		$models[] = array(
-			'name' => $name,
-			'label' => $name,
-			'tier' => stp_ai_model_tier_label( $provider, $name ),
-		);
-	}
-	usort( $models, function( $a, $b ) { return strcmp( $a['name'], $b['name'] ); } );
-	update_option( stp_ai_models_option_key( $provider ), $models, false );
-	stp_ai_models_status( array( 'provider' => $provider, 'count' => count( $models ), 'message' => count( $models ) ? 'Models fetched.' : 'No models returned.' ) );
-	return $models;
-}
-
-function stp_ai_fetch_gemini_models( $key = '' ) {
-	$cfg = stp_cfg( true );
-	$key = $key !== '' ? $key : (string) ( $cfg['v2_ai_key'] ?? '' );
-	if ( $key === '' ) return new WP_Error( 'stp_ai_no_key', 'Gemini API key is missing.' );
-	$res = wp_remote_get( 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', array(
-		'timeout' => 15,
-		'headers' => array( 'x-goog-api-key' => $key ),
-	) );
-	if ( is_wp_error( $res ) ) return $res;
-	$code = (int) wp_remote_retrieve_response_code( $res );
-	$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
-	if ( $code < 200 || $code >= 300 ) {
-		$msg = $body['error']['message'] ?? ( 'HTTP ' . $code );
-		return new WP_Error( 'stp_ai_models_http', $msg, array( 'http' => $code ) );
-	}
-	$models = array();
-	foreach ( (array) ( $body['models'] ?? array() ) as $m ) {
-		$methods = (array) ( $m['supportedGenerationMethods'] ?? array() );
-		if ( ! in_array( 'generateContent', $methods, true ) ) continue;
-		$name = preg_replace( '#^models/#', '', (string) ( $m['name'] ?? '' ) );
-		if ( $name === '' ) continue;
-		$models[] = array(
-			'name' => $name,
-			'label' => (string) ( $m['displayName'] ?? $name ),
-			'tier' => stp_ai_model_tier_label( 'gemini', $name ),
-			'input' => (int) ( $m['inputTokenLimit'] ?? 0 ),
-			'output' => (int) ( $m['outputTokenLimit'] ?? 0 ),
-		);
-	}
-	usort( $models, function( $a, $b ) { return strcmp( $a['name'], $b['name'] ); } );
-	update_option( stp_ai_models_option_key( 'gemini' ), $models, false );
-	stp_ai_models_status( array( 'provider' => 'gemini', 'count' => count( $models ), 'message' => count( $models ) ? 'Models fetched.' : 'No generateContent models returned.' ) );
-	return $models;
-}
-
 function stp_ai_sanitize_review_result( $parsed, $provider, $model ) {
 	if ( ! is_array( $parsed ) ) return new WP_Error( 'stp_ai_bad_json', 'AI provider returned unreadable JSON.' );
 	$label = sanitize_key( $parsed['label'] ?? 'suspicious' );
@@ -423,90 +349,6 @@ function stp_ai_sanitize_review_result( $parsed, $provider, $model ) {
 		'reason' => substr( sanitize_text_field( $parsed['reason'] ?? '' ), 0, 120 ),
 		'model' => (string) $model,
 	);
-}
-
-function stp_ai_call_gemini( $packet, $cfg ) {
-	$key = (string) ( $cfg['v2_ai_key'] ?? '' );
-	$model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $cfg['v2_ai_model'] ?? 'gemini-2.5-flash' ) );
-	$model = preg_replace( '#^models/#', '', $model );
-	if ( $key === '' ) return new WP_Error( 'stp_ai_no_key', 'Gemini API key is missing.' );
-	if ( $model === '' ) $model = 'gemini-2.5-flash';
-	$url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $model ) . ':generateContent';
-	$prompt = 'Return JSON only {"score":0-100,"label":"clean|protected|suspicious|critical","reason":"max8words"}. Rules: clean=benign expected; protected=SecureTrack already contained/denied; suspicious=watch; critical=missed attack/compromise. Do not label contained protection_block suspicious unless bypass evidence. STP=' . wp_json_encode( $packet );
-	$res = wp_remote_post( $url, array(
-		'timeout' => 15,
-		'headers' => array(
-			'Content-Type' => 'application/json',
-			'x-goog-api-key' => $key,
-		),
-		'body' => wp_json_encode( array(
-			'contents' => array( array( 'parts' => array( array( 'text' => $prompt ) ) ) ),
-			'generationConfig' => array(
-				'temperature' => 0,
-				'maxOutputTokens' => 80,
-				'responseMimeType' => 'application/json',
-			),
-		) ),
-	) );
-	if ( is_wp_error( $res ) ) return $res;
-	$code = (int) wp_remote_retrieve_response_code( $res );
-	$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
-	if ( $code < 200 || $code >= 300 ) {
-		$msg = $body['error']['message'] ?? ( 'HTTP ' . $code );
-		$err_code = stp_ai_is_quota_error( $msg ) ? 'stp_ai_quota' : 'stp_ai_http';
-		return new WP_Error( $err_code, $msg, array( 'http' => $code ) );
-	}
-	$texts = stp_ai_extract_texts( $body );
-	$text = trim( implode( "\n", array_filter( $texts ) ) );
-	$parsed = stp_ai_parse_json_text( $text );
-	if ( ! $parsed ) {
-		$finish = $body['candidates'][0]['finishReason'] ?? ( $body['promptFeedback']['blockReason'] ?? 'no-text' );
-		$snippet = substr( wp_json_encode( $body ), 0, 220 );
-		return new WP_Error( 'stp_ai_bad_json', 'Gemini response could not be parsed. Finish: ' . $finish . '. Body: ' . $snippet );
-	}
-	return stp_ai_sanitize_review_result( $parsed, 'gemini', $model );
-}
-
-function stp_ai_call_openai_compat( $packet, $cfg, $provider ) {
-	$provider = sanitize_key( $provider );
-	$meta = stp_ai_openai_provider_meta( $provider );
-	if ( empty( $meta ) ) return new WP_Error( 'stp_ai_provider', 'Unsupported AI provider.' );
-	$key = (string) ( $cfg['v2_ai_key'] ?? '' );
-	if ( $key === '' ) return new WP_Error( 'stp_ai_no_key', $meta['label'] . ' API key is missing.' );
-	$model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $cfg['v2_ai_model'] ?? $meta['default_model'] ) );
-	if ( $model === '' ) $model = $meta['default_model'];
-	$prompt = 'Return JSON only {"score":0-100,"label":"clean|protected|suspicious|critical","reason":"max8words"}. Rules: clean=benign expected; protected=SecureTrack already contained/denied; suspicious=watch; critical=missed attack/compromise. Do not label contained protection_block suspicious unless bypass evidence. STP=' . wp_json_encode( $packet );
-	$res = wp_remote_post( $meta['chat_url'], array(
-		'timeout' => 15,
-		'headers' => array(
-			'Content-Type' => 'application/json',
-			'Authorization' => 'Bearer ' . $key,
-		),
-		'body' => wp_json_encode( array(
-			'model' => $model,
-			'messages' => array(
-				array( 'role' => 'system', 'content' => 'Return strict JSON only with score,label,reason. Allowed labels: clean, protected, suspicious, critical.' ),
-				array( 'role' => 'user', 'content' => $prompt ),
-			),
-			'temperature' => 0,
-			'max_tokens' => 80,
-		) ),
-	) );
-	if ( is_wp_error( $res ) ) return $res;
-	$code = (int) wp_remote_retrieve_response_code( $res );
-	$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
-	if ( $code < 200 || $code >= 300 ) {
-		$msg = $body['error']['message'] ?? ( $body['message'] ?? ( 'HTTP ' . $code ) );
-		$err_code = stp_ai_is_quota_error( $msg ) ? 'stp_ai_quota' : 'stp_ai_http';
-		return new WP_Error( $err_code, $msg, array( 'http' => $code ) );
-	}
-	$text = (string) ( $body['choices'][0]['message']['content'] ?? '' );
-	$parsed = stp_ai_parse_json_text( $text );
-	if ( ! $parsed ) {
-		$snippet = substr( wp_json_encode( $body ), 0, 220 );
-		return new WP_Error( 'stp_ai_bad_json', $meta['label'] . ' response could not be parsed. Body: ' . $snippet );
-	}
-	return stp_ai_sanitize_review_result( $parsed, $provider, $model );
 }
 
 function stp_ai_apply_review_result( $queue_row, $review ) {
@@ -545,17 +387,46 @@ function stp_ai_apply_review_result( $queue_row, $review ) {
 }
 
 function stp_ai_review_packet( $packet, $cfg ) {
-	$provider = sanitize_key( $cfg['v2_ai_provider'] ?? 'none' );
-	if ( $provider === 'gemini' ) return stp_ai_call_gemini( $packet, $cfg );
-	if ( in_array( $provider, array( 'groq', 'xai' ), true ) ) return stp_ai_call_openai_compat( $packet, $cfg, $provider );
-	return new WP_Error( 'stp_ai_adapter_pending', 'Provider adapter is not implemented yet.' );
+	if ( ! class_exists( '\\DSA\\AI\\AI_Broker_Service' ) || ! class_exists( '\\DSA\\Settings' ) ) {
+		return new WP_Error( 'stp_ai_broker_unavailable', 'Kiwe AI broker is unavailable.' );
+	}
+
+	$broker = new \DSA\AI\AI_Broker_Service( new \DSA\Settings() );
+	$result = $broker->request(
+		array(
+			'service'    => 'securetrack',
+			'capability' => 'classify_security',
+			'operation'  => 'site_brain_review',
+			'system'     => 'Return strict JSON only: {"score":0-100,"label":"clean|protected|suspicious|critical","reason":"max 8 words"}. clean=benign; protected=already contained; suspicious=watch; critical=missed attack or compromise. Never call an already-contained protection block suspicious without bypass evidence.',
+			'user'       => 'SECURETRACK_PACKET=' . wp_json_encode( $packet ),
+		)
+	);
+	if ( empty( $result['called'] ) || empty( $result['ok'] ) ) {
+		$message = (string) ( $result['error']['message'] ?? $result['reason'] ?? 'Kiwe AI broker did not complete the review.' );
+		return new WP_Error( sanitize_key( (string) ( $result['error']['code'] ?? 'stp_ai_broker' ) ), $message );
+	}
+
+	$parsed = $result['validation']['data'] ?? stp_ai_parse_json_text( (string) ( $result['output'] ?? '' ) );
+	return stp_ai_sanitize_review_result( $parsed, (string) ( $result['provider'] ?? 'kiwe_broker' ), (string) ( $result['model'] ?? '' ) );
+}
+
+function stp_ai_shared_broker_status() {
+	$out = array( 'ready' => false, 'provider' => 'none', 'model' => '' );
+	if ( ! class_exists( '\\DSA\\AI\\AI_Broker_Service' ) || ! class_exists( '\\DSA\\Settings' ) ) return $out;
+	$status = ( new \DSA\AI\AI_Broker_Service( new \DSA\Settings() ) )->status( 'securetrack' );
+	$provider = is_array( $status['provider'] ?? null ) ? $status['provider'] : array();
+	$out['provider'] = sanitize_key( (string) ( $provider['provider'] ?? 'none' ) );
+	$out['model'] = sanitize_text_field( (string) ( $provider['model'] ?? '' ) );
+	$out['ready'] = ! empty( $status['profile']['enabled'] ) && ! empty( $provider['nativeGeneration'] ) && ! empty( $provider['configured'] );
+	return $out;
 }
 
 function stp_ai_process_queue_item( $queue_id ) {
 	global $wpdb;
 	$cfg = stp_cfg();
-	if ( empty( $cfg['v2_site_brain'] ) || empty( $cfg['v2_ai_key'] ) || ( $cfg['v2_ai_provider'] ?? 'none' ) === 'none' || ! stp_table_exists( 'ai_queue' ) ) {
-		return new WP_Error( 'stp_ai_not_ready', 'AI provider/key is not configured.' );
+	$broker_status = stp_ai_shared_broker_status();
+	if ( empty( $cfg['v2_site_brain'] ) || empty( $broker_status['ready'] ) || ! stp_table_exists( 'ai_queue' ) ) {
+		return new WP_Error( 'stp_ai_not_ready', 'Shared Kiwe AI broker is not configured for SecureTrack.' );
 	}
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . stp_t( 'ai_queue' ) . " WHERE id=%d AND status='pending'", (int) $queue_id ) );
 	if ( ! $row ) return new WP_Error( 'stp_ai_queue_missing', 'Pending AI queue item was not found.' );
@@ -572,12 +443,12 @@ function stp_ai_process_queue_item( $queue_id ) {
 		} else {
 			$wpdb->update( stp_t( 'ai_queue' ), array( 'status' => 'error', 'ai_reason' => substr( $res->get_error_message(), 0, 500 ), 'reviewed_at' => current_time( 'mysql' ) ), array( 'id' => $row->id ) );
 		}
-		stp_ai_status( array( 'connected' => 0, 'provider' => $cfg['v2_ai_provider'], 'model' => $cfg['v2_ai_model'] ?? '', 'message' => $res->get_error_message() ) );
+		stp_ai_status( array( 'connected' => 0, 'provider' => $broker_status['provider'], 'model' => $broker_status['model'], 'message' => $res->get_error_message() ) );
 		return $res;
 	}
 	$wpdb->update( stp_t( 'ai_queue' ), array( 'status' => 'reviewed', 'ai_score' => (int) $res['score'], 'ai_label' => $res['label'], 'ai_reason' => $res['reason'], 'reviewed_at' => current_time( 'mysql' ) ), array( 'id' => $row->id ) );
 	stp_ai_apply_review_result( $row, $res );
-	stp_ai_status( array( 'connected' => 1, 'provider' => $cfg['v2_ai_provider'], 'model' => $res['model'] ?? ( $cfg['v2_ai_model'] ?? '' ), 'message' => 'Last AI review succeeded.', 'last_score' => (int) $res['score'], 'last_label' => $res['label'] ) );
+	stp_ai_status( array( 'connected' => 1, 'provider' => $broker_status['provider'], 'model' => $res['model'] ?? $broker_status['model'], 'message' => 'Last isolated broker review succeeded.', 'last_score' => (int) $res['score'], 'last_label' => $res['label'] ) );
 	return $res;
 }
 
@@ -603,18 +474,19 @@ function stp_ai_process_pending_queue( $limit = 10 ) {
 
 function stp_ai_test_connection() {
 	$cfg = stp_cfg( true );
-	$provider = sanitize_key( $cfg['v2_ai_provider'] ?? 'none' );
-	if ( $provider === 'none' ) {
-		stp_ai_status( array( 'connected' => 0, 'provider' => 'none', 'message' => 'AI provider is set to None.' ) );
-		return new WP_Error( 'stp_ai_none', 'AI provider is set to None.' );
+	$broker_status = stp_ai_shared_broker_status();
+	$provider = $broker_status['provider'];
+	if ( empty( $broker_status['ready'] ) ) {
+		stp_ai_status( array( 'connected' => 0, 'provider' => $provider, 'message' => 'Shared Kiwe AI broker is not ready for SecureTrack.' ) );
+		return new WP_Error( 'stp_ai_none', 'Shared Kiwe AI broker is not ready for SecureTrack.' );
 	}
 	$packet = array( 'v' => 1, 'e' => 'connection_test', 'ip' => '0.0.0.0', 'p' => '/', 's' => 35, 'r' => 'test', 'x' => 'stp' );
 	$res = stp_ai_review_packet( $packet, $cfg );
 	if ( is_wp_error( $res ) ) {
-		stp_ai_status( array( 'connected' => 0, 'provider' => $provider, 'model' => $cfg['v2_ai_model'] ?? '', 'message' => $res->get_error_message() ) );
+		stp_ai_status( array( 'connected' => 0, 'provider' => $provider, 'model' => $broker_status['model'], 'message' => $res->get_error_message() ) );
 		return $res;
 	}
-	stp_ai_status( array( 'connected' => 1, 'provider' => $provider, 'model' => $res['model'] ?? ( $cfg['v2_ai_model'] ?? '' ), 'message' => 'Connected and returned structured JSON.', 'last_score' => (int) $res['score'], 'last_label' => $res['label'] ) );
+	stp_ai_status( array( 'connected' => 1, 'provider' => $provider, 'model' => $res['model'] ?? $broker_status['model'], 'message' => 'Shared broker connected and returned validated JSON.', 'last_score' => (int) $res['score'], 'last_label' => $res['label'] ) );
 	return $res;
 }
 

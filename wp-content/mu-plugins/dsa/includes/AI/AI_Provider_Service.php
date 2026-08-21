@@ -24,11 +24,11 @@ final class AI_Provider_Service {
 
 		return [
 			'schema'              => 'kiwe.ai-provider.status.v1',
-			'enabled'             => ! empty( $settings['studio_enabled'] ),
+			'enabled'             => ! empty( $settings['allow_native_generation'] ),
 			'nativeGeneration'    => ! empty( $settings['allow_native_generation'] ),
 			'provider'            => $provider,
 			'model'               => $this->model(),
-			'configured'          => 'wordpress_ai_client' === $provider ? $wp_ai->available() : 'ok' === $key_status['status'],
+			'configured'          => 'wordpress_ai_client' === $provider ? $wp_ai->text_generation_available() : 'ok' === $key_status['status'],
 			'keyStatus'           => [
 				'status'    => $key_status['status'],
 				'stored'    => $key_status['stored'],
@@ -54,7 +54,7 @@ final class AI_Provider_Service {
 		$provider = $this->provider();
 		$model = $this->model();
 
-		if ( empty( $settings['studio_enabled'] ) || empty( $settings['allow_native_generation'] ) ) {
+		if ( empty( $settings['allow_native_generation'] ) ) {
 			return $this->not_called( 'native_generation_disabled', $provider, $model );
 		}
 		if ( 'none' === $provider ) {
@@ -62,15 +62,10 @@ final class AI_Provider_Service {
 		}
 		if ( 'wordpress_ai_client' === $provider ) {
 			$wp_ai = new AI_Client_Service();
-			return [
-				'ok'        => true,
-				'called'    => false,
-				'provider'  => $provider,
-				'model'     => $model,
-				'reason'    => $wp_ai->available() ? 'wordpress_ai_client_detected_but_not_invoked_by_adapter' : 'wordpress_ai_client_unavailable',
-				'envelope'  => $this->public_envelope( $envelope ),
-				'estimates' => $this->estimates( $envelope ),
-			];
+			$result = $wp_ai->generate( $envelope, max( 200, absint( $settings['max_native_tokens'] ?? 1200 ) ), $model );
+			$result['envelope']  = $this->public_envelope( $envelope );
+			$result['estimates'] = $this->estimates( $envelope );
+			return $result;
 		}
 
 		$key = $this->api_key();

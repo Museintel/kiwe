@@ -43,6 +43,13 @@ final class SecureTrack_Settings_Policy {
 			$changed = true;
 		}
 
+		if ( get_option( 'stp_ai_broker_secret_cleanup_v1' ) !== 'done' ) {
+			$stored_settings['v2_ai_key'] = '';
+			$stored_settings['v2_ai_key_enc'] = '';
+			update_option( 'stp_ai_broker_secret_cleanup_v1', 'done', false );
+			$changed = true;
+		}
+
 		if ( $changed ) {
 			update_option( 'stp_settings', $stored_settings, false );
 		}
@@ -53,13 +60,13 @@ final class SecureTrack_Settings_Policy {
 	public static function normalize_runtime_config( array $config ): array {
 		$config['break_glass_slug'] = stp_sanitize_break_glass_slug( $config['break_glass_slug'] ?? '' );
 		$config['v2_ai_provider'] = sanitize_key( $config['v2_ai_provider'] ?? 'none' );
-		if ( ! in_array( $config['v2_ai_provider'], [ 'none', 'gemini', 'groq', 'xai' ], true ) ) {
+		if ( ! in_array( $config['v2_ai_provider'], [ 'none', 'wordpress_ai_client', 'openai_compatible', 'gemini', 'groq', 'xai' ], true ) ) {
 			$config['v2_ai_provider'] = 'none';
 		}
 
 		$config['v2_ai_model'] = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $config['v2_ai_model'] ?? 'gemini-2.5-flash' ) );
 		$config['v2_ai_model'] = preg_replace( '#^models/#', '', $config['v2_ai_model'] );
-		if ( $config['v2_ai_model'] === '' ) {
+		if ( $config['v2_ai_model'] === '' && in_array( $config['v2_ai_provider'], [ 'gemini', 'groq', 'xai' ], true ) ) {
 			$config['v2_ai_model'] = 'gemini-2.5-flash';
 		}
 

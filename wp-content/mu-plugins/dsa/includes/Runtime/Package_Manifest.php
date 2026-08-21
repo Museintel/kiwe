@@ -92,6 +92,7 @@ final class Package_Manifest {
 			'assets/js/modules/native-islands.js',
 			'includes/Plugin.php',
 			'includes/Settings.php',
+			'includes/AI/AI_Broker_Service.php',
 			'includes/Site/Site_Identity_Service.php',
 			'includes/Element_Registry.php',
 			'includes/Diagnostics/Runtime_Profiler.php',

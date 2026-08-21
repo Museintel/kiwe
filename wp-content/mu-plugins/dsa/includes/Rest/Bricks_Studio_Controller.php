@@ -4,7 +4,7 @@ namespace DSA\Rest;
 
 use DSA\AI\AI_Companion_Memory_Service;
 use DSA\AI\AI_Companion_Service;
-use DSA\AI\AI_Provider_Service;
+use DSA\AI\AI_Broker_Service;
 use DSA\AI\Bricks_AI_Intelligence_Service;
 use DSA\AI\Site_Graph_Service;
 use DSA\AI\Studio_AI_Service;
@@ -67,7 +67,7 @@ final class Bricks_Studio_Controller {
 			$this->settings,
 			$this->site_graph,
 			new AI_Companion_Service( $this->settings, $this->site_graph, new AI_Companion_Memory_Service() ),
-			new AI_Provider_Service( $this->settings )
+			new AI_Broker_Service( $this->settings )
 		);
 	}
 

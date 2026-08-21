@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.13
+
+- Added Kiwe > SiteGraph as the single admin control plane for graph export, content-free compiler pairing, binding validation, and trusted apply staging; SiteGraph actions now return to that workspace.
+- Added a shared, stateless Kiwe AI broker with isolated Studio, SiteGraph, SecureTrack, and Bricks service profiles, per-service capabilities, data boundaries, prompt budgets, rate limits, output validation, correlation IDs, and metadata-only audit records.
+- Connected WordPress 7's provider-agnostic AI Client through its official server-side prompt API, allowing WordPress Settings > Connectors to own provider credentials. Kiwe's encrypted provider transport remains a compatibility fallback.
+- Removed SecureTrack's duplicated AI credential and direct cloud-provider request path. SecureTrack now submits only hashed/redacted security packets through its broker profile and retains deterministic local enforcement authority.
+- Added an extension hook and Plugin broker accessor so approved plugins can register least-privilege AI profiles and request bounded results without reading the configured provider secret.
+- Added mandatory release contracts proving SiteGraph relocation, request isolation, credential boundaries, WordPress 7 routing, SecureTrack broker use, and absence of direct SecureTrack provider calls.
+
 ## 7.12
 
 - Added Kiwe > Database & Cache as a dedicated evidence-first workspace and moved persistence, residue, inode, runtime-recovery, and cache controls out of the Developer workflow.

@@ -288,14 +288,6 @@ function stp_cfg( $refresh = false ) {
 		'v2_share_patterns'    => 0,
 	);
 	$stored_settings = (array) get_option( 'stp_settings', array() );
-	if ( ! empty( $stored_settings['v2_ai_key'] ) && empty( $stored_settings['v2_ai_key_enc'] ) ) {
-		$migrated = stp_encrypt_secret( (string) $stored_settings['v2_ai_key'] );
-		if ( '' !== $migrated ) {
-			$stored_settings['v2_ai_key_enc'] = $migrated;
-			$stored_settings['v2_ai_key'] = '';
-			update_option( 'stp_settings', $stored_settings );
-		}
-	}
 	if ( empty( $stored_settings['break_glass_slug'] ) || strlen( (string) $stored_settings['break_glass_slug'] ) < 24 ) {
 		$stored_settings['break_glass_slug'] = stp_break_glass_generate_slug();
 		update_option( 'stp_settings', $stored_settings );

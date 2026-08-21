@@ -72,7 +72,7 @@ The slash targets are the request. Do not require the human to repeat their mean
 
 Optional entity scopes are `/products`, `/posts`, `/pages`, `/media`, and `/menus`. Optional field scopes are `/titles`, `/images`, `/prices`, `/links`, `/excerpts`, and `/metadata`. When scopes are supplied, change only the intersection they name. Example: `/usesitegraph /for /previewdata /products /titles /images /nonai` replaces product names and product images only. When no scope is supplied, process every eligible region for the selected target. Never treat a scope token as permission to alter another target.
 
-If Kiwe is installed on the target site, the admin can download the Site Graph from `Kiwe > AI > AI connector and Site Graph`.
+If Kiwe is installed on the target site, the admin can download SiteGraph from `Kiwe > SiteGraph`.
 
 External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/bricks/context`, `/wp-json/dsa/v1/ai/bricks/plan`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/validate-bricks-conversion`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, `/wp-json/dsa/v1/ai/stages/{stageId}/...`, and `/wp-json/dsa/v1/ai/themes`.
 
@@ -215,7 +215,7 @@ node kiwe-ai-toolkit/tools/validate-bricks-conversion.cjs <handoff-or-conversion
 
 MCP clients should call `kiwe_validate_bricks_conversion`. The conversion package is still non-mutating; staging writes remain controlled executor work.
 
-If the human has WordPress admin access, they can also upload `bricks-bindings/kiwe-bindings.json` at `Kiwe > AI > AI connector and Site Graph` for a live non-mutating validation report.
+If the human has WordPress admin access, they can also upload `bricks-bindings/kiwe-bindings.json` at `Kiwe > SiteGraph` for a live non-mutating validation report.
 
 On WordPress 7+ / MCP Adapter capable sites, Kiwe may expose the same early connector path as abilities: `dsa/get-site-graph`, `dsa/get-site-graph-data-schema`, `dsa/query-site-graph-data`, `dsa/get-securetrack-brief`, `dsa/get-internal-ai-context`, `dsa/run-internal-ai-advisor`, `dsa/enrich-internal-ai-advisor`, `dsa/get-companion-context`, `dsa/ask-companion`, `dsa/review-ai-output`, `dsa/start-studio-project`, `dsa/review-studio-output`, `dsa/get-bricks-ai-context`, `dsa/plan-bricks-ai-page`, `dsa/validate-bindings`, `dsa/prepare-apply-plan`, and `dsa/stage-apply-plan`. These are safe connector surfaces. `dsa/run-internal-ai-advisor` is deterministic/read-only. `dsa/enrich-internal-ai-advisor` prepares model-optional summary/enrichment output while preserving advisor truth. `dsa/start-studio-project` returns a token-saving Studio packet. `dsa/get-bricks-ai-context` and `dsa/plan-bricks-ai-page` return read-only Bricks-native planning packets. `dsa/stage-apply-plan` writes only Kiwe internal review metadata and does not save Bricks, WordPress page content, WooCommerce, security enforcement, or publish state.
 

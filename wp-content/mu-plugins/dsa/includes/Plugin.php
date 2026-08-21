@@ -3,6 +3,7 @@
 namespace DSA;
 
 use DSA\Admin\Admin;
+use DSA\AI\AI_Broker_Service;
 use DSA\AI\Copilot_Service;
 use DSA\AI\Site_Graph_Service;
 use DSA\Bricks\Bricks_Integration;
@@ -107,6 +108,7 @@ final class Plugin {
 	private $editorial_fragments;
 	private $apex_acceptance;
 	private $site_graph;
+	private $ai_broker;
 
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
@@ -132,6 +134,7 @@ final class Plugin {
 		$this->flow_guard = new Flow_Guard();
 		$this->triggers   = new Trigger_Service();
 		$this->site_graph = new Site_Graph_Service( $this->settings, $this->modules );
+		$this->ai_broker = new AI_Broker_Service( $this->settings );
 		$this->native     = new Native_Service( $this->settings, $this->registry, $this->trust, $this->site_graph );
 		$this->copilot    = new Copilot_Service( $this->settings, $this->registry, $this->trust, $this->native );
 		$this->commerce   = new Commerce_Context_Service( $this->linked_products );
@@ -201,6 +204,8 @@ final class Plugin {
 			( new PhoneKey_Core_Loader() )->register();
 		}
 		$this->native->register();
+		/** Third-party integrations receive the broker object, never provider credentials. */
+		do_action( 'kiwe_ai_broker_ready', $this->ai_broker );
 		( new Site_Identity_Service() )->register();
 
 		$this->modules->register_defaults();
@@ -288,6 +293,11 @@ final class Plugin {
 
 	public function settings(): Settings {
 		return $this->settings;
+	}
+
+	/** Shared, credential-blind AI broker for Kiwe and approved integrations. */
+	public function ai_broker(): AI_Broker_Service {
+		return $this->ai_broker;
 	}
 
 	public function modules(): Module_Registry {

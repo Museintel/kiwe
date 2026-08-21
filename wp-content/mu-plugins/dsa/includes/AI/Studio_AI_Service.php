@@ -16,7 +16,7 @@ final class Studio_AI_Service {
 		private Settings $settings,
 		private Site_Graph_Service $site_graph,
 		private AI_Companion_Service $companion,
-		private AI_Provider_Service $provider
+		private AI_Broker_Service $provider
 	) {}
 
 	public function status( array $auth = [] ): array {

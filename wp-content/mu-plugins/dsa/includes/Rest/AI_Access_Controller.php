@@ -25,7 +25,7 @@ use DSA\AI\Pre_Execution_Gate_Service;
 use DSA\AI\Rendered_Target_Inspection_Service;
 use DSA\AI\Rollback_Capture_Service;
 use DSA\AI\Rollback_Readiness_Checkpoint_Service;
-use DSA\AI\AI_Provider_Service;
+use DSA\AI\AI_Broker_Service;
 use DSA\AI\SeamFlow_Service;
 use DSA\AI\Site_Introspection_Service;
 use DSA\AI\Site_Graph_Service;
@@ -868,7 +868,7 @@ final class AI_Access_Controller {
 			$this->settings_service(),
 			$this->site_graph,
 			$this->companion(),
-			new AI_Provider_Service( $this->settings_service() )
+			new AI_Broker_Service( $this->settings_service() )
 		);
 	}
 

@@ -1333,11 +1333,7 @@ function stp_pg_settings() {
 				? '<div class="notice notice-error is-dismissible"><p>AI connection test failed: ' . esc_html( $res->get_error_message() ) . '</p></div>'
 				: '<div class="notice notice-success is-dismissible"><p>AI connection test succeeded. Provider returned structured JSON.</p></div>';
 		} elseif ( $action === 'fetchmodels' ) {
-			$model_provider = sanitize_key( stp_cfg( true )['v2_ai_provider'] ?? 'gemini' );
-			$res = stp_ai_fetch_provider_models( $model_provider );
-			echo is_wp_error( $res )
-				? '<div class="notice notice-error is-dismissible"><p>Model fetch failed: ' . esc_html( $res->get_error_message() ) . '</p></div>'
-				: '<div class="notice notice-success is-dismissible"><p>Fetched ' . number_format_i18n( count( $res ) ) . ' model(s) for ' . esc_html( strtoupper( $model_provider ) ) . '.</p></div>';
+			echo '<div class="notice notice-info is-dismissible"><p>Provider and model discovery is owned by Kiwe &gt; AI or WordPress Settings &gt; Connectors. SecureTrack has no separate provider catalogue.</p></div>';
 		} elseif ( $action === 'processai' ) {
 			$res = stp_ai_process_pending_queue( 25 );
 			$msg = 'AI queue processed. Reviewed ' . number_format_i18n( (int) $res['reviewed'] ) . ' item(s), errors ' . number_format_i18n( (int) $res['errors'] ) . '.';
@@ -1366,22 +1362,11 @@ function stp_pg_settings() {
 	} elseif ( isset( $_POST['stp_save'] ) ) {
 		$raw_old_settings = (array) get_option( 'stp_settings', array() );
 		$old_settings = stp_cfg();
-		$provider = sanitize_key( $_POST['v2_ai_provider'] ?? 'none' );
-		if ( ! in_array( $provider, array( 'none', 'gemini', 'groq', 'xai' ), true ) ) $provider = 'none';
+		$broker_status = function_exists( 'stp_ai_shared_broker_status' ) ? stp_ai_shared_broker_status() : array( 'provider' => 'none', 'model' => '' );
+		$provider = sanitize_key( $broker_status['provider'] ?? 'none' );
 		$ai_mode = sanitize_key( $_POST['v2_ai_mode'] ?? 'batch' );
 		if ( ! in_array( $ai_mode, array( 'batch', 'always' ), true ) ) $ai_mode = 'batch';
-		$ai_key = trim( (string) ( $_POST['v2_ai_key'] ?? '' ) );
-		$stored_ai_key = $ai_key !== '' ? sanitize_text_field( $ai_key ) : (string) ( $old_settings['v2_ai_key'] ?? '' );
-		$stored_ai_key_enc = (string) ( $raw_old_settings['v2_ai_key_enc'] ?? '' );
-		if ( $stored_ai_key !== '' ) {
-			$candidate_ai_key = stp_encrypt_secret( $stored_ai_key );
-			if ( '' !== $candidate_ai_key ) $stored_ai_key_enc = $candidate_ai_key;
-		}
-		$posted_ai_model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $_POST['v2_ai_model'] ?? ( $old_settings['v2_ai_model'] ?? '' ) ) );
-		if ( $provider !== ( $old_settings['v2_ai_provider'] ?? 'none' ) || $posted_ai_model === '' ) {
-			$provider_defaults = stp_ai_default_models( $provider );
-			$posted_ai_model = ! empty( $provider_defaults[0]['name'] ) ? (string) $provider_defaults[0]['name'] : '';
-		}
+		$posted_ai_model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $broker_status['model'] ?? '' ) );
 		$posted_idle_roles = isset( $_POST['idle_timeout_roles'] ) && is_array( $_POST['idle_timeout_roles'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['idle_timeout_roles'] ) ) : array();
 		$valid_idle_roles = function_exists( 'wp_roles' ) ? array_keys( wp_roles()->get_names() ) : array();
 		$posted_idle_roles = array_values( array_intersect( $posted_idle_roles, $valid_idle_roles ) );
@@ -1440,7 +1425,7 @@ function stp_pg_settings() {
 			'v2_ai_model'          => $posted_ai_model,
 			'v2_ai_mode'           => $ai_mode,
 			'v2_ai_key'            => '',
-			'v2_ai_key_enc'        => $stored_ai_key_enc,
+			'v2_ai_key_enc'        => '',
 			'v2_ai_batch_mins'     => max( 1, min( 60, (int) ( $_POST['v2_ai_batch_mins'] ?? 5 ) ) ),
 			'v2_uncertain_low'     => max( 1, min( 95, (int) ( $_POST['v2_uncertain_low'] ?? 30 ) ) ),
 			'v2_uncertain_high'    => max( 2, min( 99, (int) ( $_POST['v2_uncertain_high'] ?? 70 ) ) ),
@@ -1455,11 +1440,8 @@ function stp_pg_settings() {
 		}
 		update_option( 'stp_settings', $new );
 		wp_cache_delete( 'settings', 'securetrack_pro' );
-		if ( $new['v2_ai_provider'] !== ( $old_settings['v2_ai_provider'] ?? 'none' ) || $new['v2_ai_model'] !== ( $old_settings['v2_ai_model'] ?? '' ) || $ai_key !== '' ) {
-			stp_ai_status( array( 'connected' => 0, 'provider' => $new['v2_ai_provider'], 'model' => $new['v2_ai_model'], 'message' => $new['v2_ai_provider'] === 'none' ? 'AI provider is set to None.' : 'Key/model saved. Run Test AI Connection.' ) );
-		}
-		if ( in_array( $new['v2_ai_provider'], array( 'gemini', 'groq', 'xai' ), true ) && $ai_key !== '' ) {
-			stp_ai_fetch_provider_models( $new['v2_ai_provider'], $stored_ai_key );
+		if ( $new['v2_ai_provider'] !== ( $old_settings['v2_ai_provider'] ?? 'none' ) || $new['v2_ai_model'] !== ( $old_settings['v2_ai_model'] ?? '' ) || '' !== (string) ( $raw_old_settings['v2_ai_key_enc'] ?? '' ) ) {
+			stp_ai_status( array( 'connected' => 0, 'provider' => $new['v2_ai_provider'], 'model' => $new['v2_ai_model'], 'message' => 'SecureTrack uses the shared Kiwe AI broker. No local provider key is stored.' ) );
 		}
 		/* Save webhook fields encrypted because webhook URLs often contain bearer tokens. */
 		if ( ! empty( $_POST['stp_webhook_clear'] ) ) {
@@ -1610,19 +1592,20 @@ function stp_pg_settings() {
         <input type="hidden" name="v2_ai_batch_mins" value="<?php echo esc_attr( $s['v2_ai_batch_mins'] ); ?>">
         <input type="hidden" name="v2_auto_block_local" value="<?php echo ! empty( $s['v2_auto_block_local'] ) ? '1' : ''; ?>">
         <input type="hidden" name="v2_share_patterns" value="<?php echo ! empty( $s['v2_share_patterns'] ) ? '1' : ''; ?>">
-        <p><strong>AI provider settings live in Kiwe &gt; AI.</strong> SecureTrack still owns local Site Brain learning and security enforcement. Redacted security context uses Companion consent/scopes, and optional cloud review uses the shared Native AI provider/key when supported; there is no separate SecureTrack API key field.</p>
+		<?php $broker_ai_status = function_exists( 'stp_ai_shared_broker_status' ) ? stp_ai_shared_broker_status() : array( 'ready' => false, 'provider' => 'none' ); ?>
+        <p><strong>AI provider settings live in Kiwe &gt; AI.</strong> SecureTrack still owns local Site Brain learning and security enforcement. Redacted packets use an isolated, stateless SecureTrack broker profile; there is no separate SecureTrack key or shared conversation memory.</p>
         <p><a href="<?php echo esc_url( admin_url( 'admin.php?page=kiwe-ai' ) ); ?>" class="button button-small">Open Kiwe AI settings</a></p>
         <strong>AI status:</strong>
-        <?php if ( ! empty( $ai_status['connected'] ) && ( $ai_status['provider'] ?? '' ) === ( $s['v2_ai_provider'] ?? '' ) ): ?>
+		<?php if ( ! empty( $ai_status['connected'] ) && ! empty( $broker_ai_status['ready'] ) ): ?>
           <span style="color:#059669;font-weight:700">Connected</span>
-        <?php elseif ( empty( $s['v2_ai_key'] ) || ( $s['v2_ai_provider'] ?? 'none' ) === 'none' ): ?>
+		<?php elseif ( empty( $broker_ai_status['ready'] ) ): ?>
           <span style="color:#64748b;font-weight:700">Not configured</span>
         <?php else: ?>
-          <span style="color:#d97706;font-weight:700">Key stored, not verified</span>
+		  <span style="color:#d97706;font-weight:700">Broker ready, not verified</span>
         <?php endif; ?>
         <small><?php echo ! empty( $ai_status['message'] ) ? esc_html( ' - ' . $ai_status['message'] . ' (' . ( $ai_status['updated_at'] ?? '' ) . ')' ) : ''; ?></small>
         <a href="<?php echo esc_url( wp_nonce_url( '?page=stp-settings&stp_do=testai', 'stp_do' ) ); ?>" class="button button-small">Test AI Connection</a><br>
-        <p class="description">Batch/realtime review mode, local auto-block recommendation policy, and future pattern-sharing consent are controlled from Kiwe &gt; AI. Provider/model/API-key authority comes from the shared Native AI settings.</p>
+		<p class="description">Batch/realtime review mode, local auto-block recommendation policy, and future pattern-sharing consent are controlled from Kiwe &gt; AI. Provider/model authority comes from the shared broker; SecureTrack never receives the provider credential.</p>
       </td>
     </tr>
 

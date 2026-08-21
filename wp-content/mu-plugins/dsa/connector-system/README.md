@@ -38,7 +38,7 @@ Create or revoke API keys from `Kiwe > AI > API access keys`. The same-site admi
 Admins can also download the same graph from:
 
 ```text
-Kiwe > AI > AI connector and Site Graph > Download Site Graph JSON
+Kiwe > SiteGraph > Download SiteGraph JSON
 ```
 
 The admin download path is useful for browser-based AI workflows where REST cookie/nonces or external connectors are inconvenient.
@@ -93,7 +93,7 @@ WordPress 7+/MCP Adapter clients can call `dsa/validate-bindings`.
 Admins can also validate an AI-produced `bricks-bindings/kiwe-bindings.json` directly against the live target site from:
 
 ```text
-Kiwe > AI > AI connector and Site Graph > Validate AI binding plan
+Kiwe > SiteGraph > Validate binding plan
 ```
 
 That admin intake is non-mutating. It reports failures/warnings and now also shows the dry-run apply-plan preview for the same upload: preflight gates, prepared Bricks query/dynamic-field operations, Kiwe launcher/menu-context operations, and manual-review items. Admins can download that reviewed `kiwe.bricks-apply-plan.v1` JSON from the report or stage it as a capped Kiwe-owned `kiwe.trusted-apply-stage.v1` review candidate. It still does not save WordPress, WooCommerce, or Bricks content.
