@@ -10,13 +10,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class External_Client_OpenAPI_Service {
 	public function __construct( private array $routes ) {}
 
-	public function specification(): array {
+	public function specification( bool $task_only = false ): array {
 		$paths = [];
 		foreach ( $this->routes as $definition ) {
 			if ( ! is_array( $definition ) || count( $definition ) < 4 ) {
 				continue;
 			}
 			[ $methods, $route, $callback, $scope ] = $definition;
+			if ( $task_only && 'status' !== (string) $scope && ! in_array( (string) $scope, Task_Capsule_Service::SCOPES, true ) ) {
+				continue;
+			}
 			$path = $this->openapi_path( (string) $route );
 			foreach ( (array) $methods as $method ) {
 				$method = strtolower( (string) $method );
@@ -50,12 +53,14 @@ final class External_Client_OpenAPI_Service {
 		}
 
 		$paths['/openapi.json']['get'] = $this->public_operation( 'kiwe_openapi', 'Discover the Kiwe external-client API contract.' );
+		$paths['/openapi.task.json']['get'] = $this->public_operation( 'kiwe_task_openapi', 'Discover the task-capsule-only external-client API contract.' );
 		$paths['/client-manifest']['get'] = $this->public_operation( 'kiwe_client_manifest', 'Discover vendor-neutral connection options and safety boundaries.' );
+		$paths['/client-adapters']['get'] = $this->public_operation( 'kiwe_client_adapters', 'Discover secret-safe client adapter configuration templates.' );
 
 		return [
 			'openapi' => '3.1.0',
 			'info'    => [
-				'title'       => 'Kiwe SiteGraph and SEAM Tool API',
+				'title'       => $task_only ? 'Kiwe SiteGraph Task API' : 'Kiwe SiteGraph and SEAM Tool API',
 				'version'     => defined( 'DSA_VERSION' ) ? DSA_VERSION : '1.0.0',
 				'description' => 'Vendor-neutral, scoped access to deterministic SiteGraph, Bricks context, SEAM conversion validation and the separately gated trusted staging chain. A SiteGraph task capsule can never mutate WordPress, Bricks, WooCommerce or Kiwe runtime state.',
 			],
@@ -71,6 +76,7 @@ final class External_Client_OpenAPI_Service {
 				'taskCapsule' => 'Recommended for external AI/IDE content, conversion and validation work. Short-lived, public-data-only and mutation-forbidden.',
 				'apiKey'      => 'Required for separately approved staging, controlled execution or mutation capabilities.',
 			],
+			'x-kiwe-task-only' => $task_only,
 		];
 	}
 
@@ -82,6 +88,8 @@ final class External_Client_OpenAPI_Service {
 			'vendorNeutral' => true,
 			'baseUrl'       => $base,
 			'openapiUrl'    => $base . '/openapi.json',
+			'taskOpenapiUrl'=> $base . '/openapi.task.json',
+			'adaptersUrl'   => $base . '/client-adapters',
 			'statusUrl'     => $base . '/status',
 			'authentication'=> [
 				'header'      => 'Authorization',
@@ -90,7 +98,7 @@ final class External_Client_OpenAPI_Service {
 				'never'       => [ 'URL query string', 'raw HTML/CSS/JS', 'Git', 'public prompt', 'screenshot' ],
 			],
 			'clients'       => [
-				'openapi'  => 'Use the OpenAPI URL in any client that supports authenticated OpenAPI tools or actions.',
+				'openapi'  => 'Use the task-only OpenAPI URL for ordinary external content, conversion and validation work.',
 				'mcp'      => 'Use a local or hosted adapter that keeps the credential outside model context.',
 				'ide'      => 'Use an HTTP/OpenAPI/MCP integration with environment or secret-vault storage.',
 				'browser'  => 'Use a trusted extension or action connector; normal browsing alone cannot securely add a bearer credential.',

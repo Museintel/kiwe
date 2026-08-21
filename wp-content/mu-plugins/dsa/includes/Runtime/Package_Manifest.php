@@ -95,6 +95,7 @@ final class Package_Manifest {
 			'includes/AI/AI_Broker_Service.php',
 			'includes/AI/Task_Capsule_Service.php',
 			'includes/AI/External_Client_OpenAPI_Service.php',
+			'includes/AI/External_Client_Adapter_Service.php',
 			'includes/Site/Site_Identity_Service.php',
 			'includes/Element_Registry.php',
 			'includes/Diagnostics/Runtime_Profiler.php',

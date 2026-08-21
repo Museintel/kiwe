@@ -13,6 +13,7 @@ use DSA\AI\Bricks_Conversion_Validator;
 use DSA\AI\Bricks_Controlled_Adapter_Service;
 use DSA\AI\Controlled_Executor_Service;
 use DSA\AI\External_Client_OpenAPI_Service;
+use DSA\AI\External_Client_Adapter_Service;
 use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\AI\Final_Save_Approval_Service;
 use DSA\AI\Fresh_Site_Graph_Revalidator;
@@ -132,6 +133,7 @@ final class AI_Access_Controller {
 		];
 
 		$discovery = new External_Client_OpenAPI_Service( $routes );
+		$adapters  = new External_Client_Adapter_Service();
 		register_rest_route(
 			'dsa/v1',
 			'/ai/openapi.json',
@@ -143,10 +145,28 @@ final class AI_Access_Controller {
 		);
 		register_rest_route(
 			'dsa/v1',
+			'/ai/openapi.task.json',
+			[
+				'methods'             => 'GET',
+				'callback'            => fn() => $this->discovery_response( $discovery->specification( true ) ),
+				'permission_callback' => '__return_true',
+			]
+		);
+		register_rest_route(
+			'dsa/v1',
 			'/ai/client-manifest',
 			[
 				'methods'             => 'GET',
 				'callback'            => fn() => $this->discovery_response( $discovery->client_manifest() ),
+				'permission_callback' => '__return_true',
+			]
+		);
+		register_rest_route(
+			'dsa/v1',
+			'/ai/client-adapters',
+			[
+				'methods'             => 'GET',
+				'callback'            => fn() => $this->discovery_response( $adapters->catalog() ),
 				'permission_callback' => '__return_true',
 			]
 		);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.15
+
+- Added a reduced task-capsule-only OpenAPI contract so ordinary browser-AI, IDE and conversion clients cannot even discover staging, publishing, runtime or mutation tools.
+- Added a public secret-free adapter catalog and included OpenAPI, generic HTTP, MCP, Claude, Cursor and maintained Chrome-extension setup descriptors in each downloaded SiteGraph connection.
+- Added a local stdio MCP bridge that accepts only short-lived `kiwe_task_*` capsules, requires HTTPS outside localhost, refuses redirects, caps response/time budgets and exposes only read/convert/validate tools.
+- Added adapter/runtime drift gates proving that every client remains subordinate to Kiwe's one task-capsule authority and cannot silently gain permanent-key or mutation capability.
+
 ## 7.14
 
 - Added vendor-neutral OpenAPI 3.1 and client-manifest discovery routes for ChatGPT-compatible actions, Claude/Cursor adapters, MCP clients, IDEs and standards-based HTTP tools.

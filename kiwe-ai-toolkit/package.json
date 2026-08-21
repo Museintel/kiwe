@@ -4,7 +4,8 @@
   "description": "AI toolkit for creating Kiwe website, AppShell theme, and combined handoffs without reading the full plugin codebase.",
   "type": "module",
   "bin": {
-    "kiwe": "./bin/kiwe.js"
+    "kiwe": "./bin/kiwe.js",
+    "kiwe-sitegraph-mcp": "./mcp/sitegraph-client.js"
   },
   "scripts": {
     "test": "node tools/smoke-test.cjs"

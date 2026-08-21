@@ -7,6 +7,7 @@ use DSA\AI\AI_Companion_Service;
 use DSA\AI\AI_Broker_Service;
 use DSA\AI\Site_Graph_Service;
 use DSA\AI\Task_Capsule_Service;
+use DSA\AI\External_Client_Adapter_Service;
 use DSA\AI\Internal_AI_Advisor_Service;
 use DSA\AI\Internal_AI_Context_Service;
 use DSA\AI\Internal_AI_Enrichment_Service;
@@ -2116,6 +2117,7 @@ final class Admin {
 				'purpose'        => (string) ( $record['purpose'] ?? '' ),
 				'baseUrl'        => $base,
 				'openapiUrl'     => $base . '/openapi.json',
+				'taskOpenapiUrl' => $base . '/openapi.task.json',
 				'manifestUrl'    => $base . '/client-manifest',
 				'verificationUrl'=> $base . '/status',
 				'authentication' => [
@@ -2142,6 +2144,7 @@ final class Admin {
 				'requestBudget'  => true,
 			],
 		];
+		$package['adapters'] = ( new External_Client_Adapter_Service() )->connection_bundle( $package['connection'] );
 		$json = wp_json_encode( $package, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		if ( ! $json ) {
 			$capsule_service->revoke( (string) ( $record['id'] ?? '' ), get_current_user_id() );
@@ -4690,7 +4693,7 @@ final class Admin {
 						<p><strong><?php esc_html_e( 'Fields', 'dsa' ); ?></strong></p><p class="dsa-admin-token-chips"><?php foreach ( Task_Capsule_Service::FIELDS as $field ) : ?><label><input type="checkbox" name="fields[]" value="<?php echo esc_attr( $field ); ?>" checked> <code><?php echo esc_html( $field ); ?></code></label><?php endforeach; ?></p>
 					</details>
 				</form>
-				<p class="description"><a href="<?php echo esc_url( rest_url( 'dsa/v1/ai/openapi.json' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open OpenAPI JSON', 'dsa' ); ?></a> · <a href="<?php echo esc_url( rest_url( 'dsa/v1/ai/client-manifest' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open client manifest', 'dsa' ); ?></a> · <?php esc_html_e( 'The connection package contains the secret once; Kiwe stores only its hash.', 'dsa' ); ?></p>
+				<p class="description"><a href="<?php echo esc_url( rest_url( 'dsa/v1/ai/openapi.task.json' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open safe task OpenAPI JSON', 'dsa' ); ?></a> · <a href="<?php echo esc_url( rest_url( 'dsa/v1/ai/client-adapters' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open adapter catalog', 'dsa' ); ?></a> · <a href="<?php echo esc_url( rest_url( 'dsa/v1/ai/client-manifest' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open client manifest', 'dsa' ); ?></a> · <?php esc_html_e( 'The connection package contains the secret once; Kiwe stores only its hash.', 'dsa' ); ?></p>
 
 				<?php if ( [] !== $capsules ) : ?>
 					<h4><?php esc_html_e( 'Task capsules', 'dsa' ); ?></h4>

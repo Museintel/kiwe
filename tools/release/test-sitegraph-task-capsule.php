@@ -30,10 +30,13 @@ function wp_unslash( $value ) { return $value; }
 function __( string $value, string $domain = '' ): string { return $value; }
 function rest_url( string $path = '' ): string { return 'https://example.test/wp-json/' . ltrim( $path, '/' ); }
 function untrailingslashit( string $value ): string { return rtrim( $value, '/\\' ); }
+function esc_url_raw( string $value ): string { return filter_var( $value, FILTER_SANITIZE_URL ) ?: ''; }
 
 require dirname( __DIR__, 2 ) . '/wp-content/mu-plugins/dsa/includes/AI/Task_Capsule_Service.php';
 require dirname( __DIR__, 2 ) . '/wp-content/mu-plugins/dsa/includes/AI/External_Client_OpenAPI_Service.php';
+require dirname( __DIR__, 2 ) . '/wp-content/mu-plugins/dsa/includes/AI/External_Client_Adapter_Service.php';
 
+use DSA\AI\External_Client_Adapter_Service;
 use DSA\AI\External_Client_OpenAPI_Service;
 use DSA\AI\Task_Capsule_Service;
 
@@ -105,5 +108,27 @@ assert_true( 'kiwe_site_graph_data_site_graph_data_get' === $openapi['paths']['/
 assert_true( isset( $openapi['paths']['/stages/{stageId}/authorize']['post'] ), 'WordPress regex path was not converted to OpenAPI syntax.' );
 assert_true( 'high-authority-permanent-key-only' !== $openapi['paths']['/site-graph-data']['get']['x-kiwe-boundary'], 'Read-only SiteGraph route was classified as high authority.' );
 assert_true( 'separately-authorized-staging' === $openapi['paths']['/stages/{stageId}/authorize']['post']['x-kiwe-boundary'], 'Trusted staging boundary is missing from OpenAPI.' );
+$task_openapi = ( new External_Client_OpenAPI_Service(
+	[
+		[ 'GET', '/ai/status', 'status', 'status' ],
+		[ 'GET', '/ai/site-graph', 'site_graph', 'site_graph' ],
+		[ 'POST', '/ai/stages/(?P<stageId>[a-zA-Z0-9:_-]+)/authorize', 'authorize_stage', 'trusted_apply_chain' ],
+		[ 'POST', '/ai/mutations/wordpress-publish', 'locked_mutation', 'controlled_mutation' ],
+	]
+) )->specification( true );
+assert_true( true === $task_openapi['x-kiwe-task-only'], 'Task OpenAPI did not declare its reduced authority.' );
+assert_true( isset( $task_openapi['paths']['/site-graph']['get'] ), 'Task OpenAPI omitted an allowed SiteGraph route.' );
+assert_true( ! isset( $task_openapi['paths']['/stages/{stageId}/authorize'], $task_openapi['paths']['/mutations/wordpress-publish'] ), 'Task OpenAPI exposed staging or mutation operations.' );
 
-echo "PASS SiteGraph task capsule and OpenAPI runtime contracts\n";
+$connection = [
+	'baseUrl' => 'https://example.test/wp-json/dsa/v1/ai',
+	'authentication' => [ 'token' => $token ],
+];
+$bundle = ( new External_Client_Adapter_Service() )->connection_bundle( $connection );
+assert_true( 'kiwe.external-client-adapters.v1' === $bundle['schema'], 'Adapter bundle schema is invalid.' );
+assert_true( str_ends_with( $bundle['adapters']['chatgptOpenAPI']['openapiUrl'], '/openapi.task.json' ), 'OpenAPI adapter did not use the task-only schema.' );
+assert_true( 'chrome.storage.local' === $bundle['adapters']['chromeExtension']['secretStorage'], 'Chrome adapter did not require local-only secret storage.' );
+assert_true( ! str_contains( serialize( $bundle['adapters']['mcp']['config'] ), $token ), 'MCP configuration copied the raw task secret.' );
+assert_true( ! str_contains( serialize( $bundle ), $token ), 'Adapter bundle duplicated the raw task secret instead of referencing the connection secret.' );
+
+echo "PASS SiteGraph task capsule, task OpenAPI and adapter runtime contracts\n";

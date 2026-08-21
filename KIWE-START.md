@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.14`
+Contract version: `7.15`
 Updated: `2026-08-21`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.14
+SeamFlow contract: 7.15
 ```
 
 Then do one of these:
@@ -433,4 +433,4 @@ Full-flow is sequential internally. Even when the human chooses `/execute /fullf
 
 Site Graph is an optional evidence source, not a false hard gate for Bricks conversion. `/usesitegraph` alone is intentionally incomplete: ask which `/for` target is wanted. `/usesitegraph /for /previewdata` changes only preview samples; `/usesitegraph /for /bricksbindings` creates target-grounded bindings; `/usebrickscontext /for /dynamictags` or `/queryloops` uses verified general Bricks capabilities without SiteGraph. If no SiteGraph/API/export is supplied, continue any `/usebrickscontext` or static conversion lane and leave site-specific IDs/fields for review. Stop for SiteGraph only when the human selected `/usesitegraph`, real target-site IDs/content, live binding verification, or staging/apply authority.
 
-External-client connection is vendor-neutral. The URL ending in `/wp-json/dsa/v1/ai` is a base API namespace, not a webpage or a complete connection. Standards-based clients should discover `GET /wp-json/dsa/v1/ai/openapi.json` and `GET /wp-json/dsa/v1/ai/client-manifest`. Prefer a short-lived SiteGraph task capsule downloaded from `Kiwe > SiteGraph` for browser-AI, IDE, HTTP or MCP adapter work. A task capsule is public-data-only, request-budgeted, hash-only at rest, and permits read/convert/validate scopes only; it can never stage, publish, execute runtime operations or mutate WordPress, Bricks, WooCommerce or Kiwe state. Configure its bearer value in the client's action/tool/secret store, never in an ordinary chat message, URL, source file, repository or screenshot. Use a separate narrowly scoped permanent Kiwe API key only when the human explicitly enters the trusted staging chain.
+External-client connection is vendor-neutral. The URL ending in `/wp-json/dsa/v1/ai` is a base API namespace, not a webpage or a complete connection. Ordinary external work must use the reduced `GET /wp-json/dsa/v1/ai/openapi.task.json`; `GET /wp-json/dsa/v1/ai/client-manifest` and `GET /wp-json/dsa/v1/ai/client-adapters` describe the shared contract and thin client configurations. Prefer a short-lived SiteGraph task capsule downloaded from `Kiwe > SiteGraph` for browser-AI, IDE, HTTP or MCP adapter work. A task capsule is public-data-only, request-budgeted, hash-only at rest, and permits read/convert/validate scopes only; it can never stage, publish, execute runtime operations or mutate WordPress, Bricks, WooCommerce or Kiwe state. Configure its bearer value in the client's action/tool/secret store, never in an ordinary chat message, URL, source file, repository or screenshot. The local MCP adapter additionally refuses permanent keys and credential-bearing redirects. Use a separate narrowly scoped permanent Kiwe API key only when the human explicitly enters the trusted staging chain.
