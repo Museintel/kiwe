@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "7.11",
+  "version": "7.12",
   "algorithm": "sha256",
-  "file_count": 300,
+  "file_count": 302,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "918c91638b6c8bb86c3dd7968e21fb1c6c93f617eb947566e1e653dd3ffdff61"
+      "sha256": "13ee299566e69960c739fb82dd146ede1ede00f4aca7f71180daef40b49b7b77"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -481,8 +481,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 632962,
-      "sha256": "9346764695476fe05cc400aefbdf08a876e7f82695f81d7c883b4ade5554a418"
+      "bytes": 652010,
+      "sha256": "7822ba378de130dca939f9b4ef770730aeff79a858c5755681e4973bf49cf1eb"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -556,6 +556,14 @@
       "bytes": 7412,
       "sha256": "a9cb9d44b9658141694c34533c103f076d7be8adbe864bab08f45bb3b7a2ed85"
     },
+    "includes/Diagnostics/Cache_Maintenance_Service.php": {
+      "bytes": 5748,
+      "sha256": "4ca54e9640fbcc1dc55f610a6181fb8220dc14e95771c1e535a074eb1368f03f"
+    },
+    "includes/Diagnostics/Database_Inventory_Service.php": {
+      "bytes": 6870,
+      "sha256": "be5d5fa7fdb82f4a4a6587b8ebd0c12ab65c9336f1a4b9b6cdd10b8ac2323c93"
+    },
     "includes/Diagnostics/Persistence_Maintenance_Service.php": {
       "bytes": 13338,
       "sha256": "21fb1591c6d3a30bc5fe9fffbe35cb28db35f37dacb606bf45c53ce4ff4a8e40"
@@ -605,8 +613,8 @@
       "sha256": "49a11453e323f0b9c403cf1b7c6c446ea14181ef86d7739ae712be6f9df10015"
     },
     "includes/PWA/PWA_Service.php": {
-      "bytes": 22657,
-      "sha256": "fb0e994a1d0bdb6acad250db3175392cb0c583b902a733008e719e99ee080e1c"
+      "bytes": 22822,
+      "sha256": "6f6ab897587e32018a439d00d030b305b7e297d0faac5c254a596b5316a3c7c0"
     },
     "includes/Permissions/Permission_Journey_Service.php": {
       "bytes": 10712,
@@ -641,8 +649,8 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 58975,
-      "sha256": "f01752dc32f870d8e2a7dd5ac151cb75f1057ab3a987c1d7341c1d99be333495"
+      "bytes": 59121,
+      "sha256": "95d65020ea67d5e394276096bee149cb6ef0936f49ec64cc71224fb1c634c3b2"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
       "bytes": 17364,
@@ -729,8 +737,8 @@
       "sha256": "7aff79fcc358ac72c68057351d37d5313ae71672a703ea25d8552eb27494d0db"
     },
     "includes/Runtime/Package_Manifest.php": {
-      "bytes": 7038,
-      "sha256": "ed976ed126fb7acdc83ca304727b63847d4a8f287b0487e46d1b4ae34cdbac3b"
+      "bytes": 7153,
+      "sha256": "ecb2df061c6e256e66dae18829b484b527fec188b0dd8ab2fbe56c519b690249"
     },
     "includes/Runtime/Route_Capability_Service.php": {
       "bytes": 4157,
@@ -1090,7 +1098,7 @@
     },
     "ui-system/README.md": {
       "bytes": 74338,
-      "sha256": "4795ad6770526f26411a957ca68fe7917a97285e5f67014b6e4f909c5d2fdd76"
+      "sha256": "6303aeed9d7bca5645e0cf14bb8344d6773a4a60f3bffd16acff8395bc0530f8"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

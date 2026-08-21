@@ -120,12 +120,13 @@ final class PWA_Service {
 		}
 
 		$permissions = $this->settings->get( 'permissions', [] );
+		$runtime_version = DSA_VERSION . '.' . (string) max( 0, (int) get_option( 'dsa_runtime_cache_epoch', 0 ) );
 		$config = wp_json_encode(
 			[
-				'version'        => DSA_VERSION,
-				'cache'          => 'kiwe-appsite-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', DSA_VERSION ),
-				'editorialCache' => 'kiwe-editorial-v1-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', DSA_VERSION ),
-				'mediaCache'     => 'kiwe-editorial-media-v1-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', DSA_VERSION ),
+				'version'        => $runtime_version,
+				'cache'          => 'kiwe-appsite-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', $runtime_version ),
+				'editorialCache' => 'kiwe-editorial-v1-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', $runtime_version ),
+				'mediaCache'     => 'kiwe-editorial-media-v1-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', $runtime_version ),
 				'pushMetaCache'  => 'kiwe-push-meta-v1',
 				'editorialFreshSeconds' => 15 * MINUTE_IN_SECONDS,
 				'home'           => home_url( '/' ),
@@ -138,13 +139,13 @@ final class PWA_Service {
 				'offlineRest'    => rest_url( 'dsa/v1/offline-editorial' ),
 				'offlineEditorialEnabled' => is_array( $permissions ) && ! empty( $permissions['offline_editorial_enabled'] ),
 				'assets'         => [
-					add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/css/surface.css' ),
-					add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/surface.js' ),
-					add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/ai-island.js' ),
-					add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/app-island.js' ),
-					add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/data-island.js' ),
-					add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/games-engine.js' ),
-					add_query_arg( 'ver', DSA_VERSION, DSA_URL . 'assets/js/modules/profile-panel.js' ),
+					add_query_arg( 'ver', $runtime_version, DSA_URL . 'assets/css/surface.css' ),
+					add_query_arg( 'ver', $runtime_version, DSA_URL . 'assets/js/surface.js' ),
+					add_query_arg( 'ver', $runtime_version, DSA_URL . 'assets/js/ai-island.js' ),
+					add_query_arg( 'ver', $runtime_version, DSA_URL . 'assets/js/app-island.js' ),
+					add_query_arg( 'ver', $runtime_version, DSA_URL . 'assets/js/data-island.js' ),
+					add_query_arg( 'ver', $runtime_version, DSA_URL . 'assets/js/modules/games-engine.js' ),
+					add_query_arg( 'ver', $runtime_version, DSA_URL . 'assets/js/modules/profile-panel.js' ),
 				],
 			]
 		);

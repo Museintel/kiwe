@@ -1281,8 +1281,10 @@ CSS;
 	private function asset_version( string $relative_path ): string {
 		$path     = DSA_DIR . ltrim( $relative_path, '/\\' );
 		$modified = is_file( $path ) ? filemtime( $path ) : false;
+		$epoch    = max( 0, (int) get_option( 'dsa_runtime_cache_epoch', 0 ) );
+		$version  = false !== $modified ? DSA_VERSION . '.' . (string) $modified : DSA_VERSION;
 
-		return false !== $modified ? DSA_VERSION . '.' . (string) $modified : DSA_VERSION;
+		return $epoch > 0 ? $version . '.' . (string) $epoch : $version;
 	}
 
 	private function asset_url( string $relative_path ): string {

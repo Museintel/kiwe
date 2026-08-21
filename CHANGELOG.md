@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.12
+
+- Added Kiwe > Database & Cache as a dedicated evidence-first workspace and moved persistence, residue, inode, runtime-recovery, and cache controls out of the Developer workflow.
+- Added whole-site database inventory with exact WordPress Core and Kiwe ownership, strong WooCommerce-prefix evidence, active/inactive plugin-slug heuristics, unknown-owner protection, table sizes, autoload budget reporting, and read-only cleanup candidates.
+- Added layered cache purging for Kiwe runtime data, expired WordPress transients, persistent object cache, and registered page-cache adapters. Every result reports completed, skipped, and failed layers instead of claiming an unsupported purge.
+- Restricted native WordPress cache layers to all-device scope. Desktop/tablet/mobile choices activate only when an evidence-backed adapter proves it has a corresponding device namespace.
+- Added a Kiwe Cache admin-toolbar entry and bound Kiwe asset plus service-worker cache generations to the runtime epoch so an all-device Kiwe purge produces real cache-busting URLs and cache names.
+- Added high-impact object-cache confirmation, shared-host warm-up warnings, and mandatory database/cache release contracts.
+
 ## 7.11
 
 - Added a read-only Kiwe persistence and inode-residue inventory under Kiwe > Developer, covering current and unknown legacy Kiwe/SecureTrack/PhoneKey tables, option and meta footprints, cron events, unexpected canonical-package files, and possible old top-level MU-plugin copies.

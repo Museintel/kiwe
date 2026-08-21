@@ -97,6 +97,7 @@ const gates = [
 	['SEAM visual proof contracts', 'packages/seam-visual-proof/test/visual-proof.cjs'],
 	['Bricks compiler batch cleanup contracts', 'tools/bricks/compiler-batch-cleanup-contracts.cjs'],
 	['Persistence maintenance contracts', 'tools/release/persistence-maintenance-contracts.cjs'],
+	['Database and cache contracts', 'tools/release/database-cache-contracts.cjs'],
 	['Kiwe AI Toolkit smoke contracts', 'kiwe-ai-toolkit/tools/smoke-test.cjs'],
 	['AI API source contracts', 'tools/connector/ai-api-contracts.cjs'],
 	['RC4 security contracts', 'tools/security/rc4-contracts.cjs'],

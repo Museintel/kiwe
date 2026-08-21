@@ -98,6 +98,8 @@ final class Package_Manifest {
 			'includes/Utilities/Atomic_Rate_Limiter.php',
 			'includes/Diagnostics/Asset_Manifest_Service.php',
 			'includes/Diagnostics/Persistence_Maintenance_Service.php',
+			'includes/Diagnostics/Database_Inventory_Service.php',
+			'includes/Diagnostics/Cache_Maintenance_Service.php',
 			'includes/Design/Token_Schema.php',
 			'includes/Design/Seam_Token_Service.php',
 			'includes/Design/Seam_Vocabulary_Schema.php',

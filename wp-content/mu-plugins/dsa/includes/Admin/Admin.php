@@ -37,6 +37,8 @@ use DSA\Design\Seam_Token_Service;
 use DSA\Design\Seam_Vocabulary_Schema;
 use DSA\Diagnostics\Production_Readiness_Service;
 use DSA\Diagnostics\Persistence_Maintenance_Service;
+use DSA\Diagnostics\Database_Inventory_Service;
+use DSA\Diagnostics\Cache_Maintenance_Service;
 use DSA\Modules\Module_Registry;
 use DSA\Notifications\Notification_Campaign_Service;
 use DSA\Notifications\Notification_Preference_Service;
@@ -85,6 +87,7 @@ final class Admin {
 	public function register(): void {
 		add_action( 'admin_init', [ $this, 'redirect_legacy_tokens_page' ] );
 		add_action( 'admin_menu', [ $this, 'menu' ] );
+		add_action( 'admin_bar_menu', [ $this, 'database_admin_bar' ], 95 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'assets' ] );
 		add_action( 'admin_post_dsa_save_settings', [ $this, 'save_settings' ] );
 		add_action( 'admin_post_dsa_export_profile', [ $this, 'export_profile' ] );
@@ -146,6 +149,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_developer_safe_persistence_cleanup', [ $this, 'handle_developer_safe_persistence_cleanup' ] );
 		add_action( 'admin_post_dsa_developer_drop_legacy_tables', [ $this, 'handle_developer_drop_legacy_tables' ] );
 		add_action( 'admin_post_dsa_developer_remove_orphan_files', [ $this, 'handle_developer_remove_orphan_files' ] );
+		add_action( 'admin_post_dsa_database_purge_cache', [ $this, 'handle_database_purge_cache' ] );
 		add_action( 'wp_ajax_dsa_search_menu_targets', [ $this, 'search_menu_targets' ] );
 	}
 
@@ -212,6 +216,15 @@ final class Admin {
 			'manage_options',
 			'kiwe-developer',
 			[ $this, 'render_developer_page' ]
+		);
+
+		add_submenu_page(
+			'kiwe',
+			__( 'Kiwe Database & Cache', 'dsa' ),
+			__( 'Database & Cache', 'dsa' ),
+			'manage_options',
+			'kiwe-database',
+			[ $this, 'render_database_page' ]
 		);
 
 		add_submenu_page(
@@ -329,6 +342,21 @@ final class Admin {
 		remove_submenu_page( 'kiwe', 'kiwe' );
 	}
 
+	public function database_admin_bar( \WP_Admin_Bar $admin_bar ): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$admin_bar->add_node(
+			[
+				'id'    => 'kiwe-database-cache',
+				'title' => __( 'Kiwe Cache', 'dsa' ),
+				'href'  => admin_url( 'admin.php?page=kiwe-database' ),
+				'meta'  => [ 'title' => __( 'Open evidence-first cache and database controls', 'dsa' ) ],
+			]
+		);
+	}
+
 	public function redirect_legacy_tokens_page(): void {
 		if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -351,7 +379,7 @@ final class Admin {
 	}
 
 	public function assets( string $hook ): void {
-		if ( ! in_array( $hook, [ 'toplevel_page_kiwe', 'kiwe_page_kiwe-auth', 'kiwe_page_kiwe-app', 'kiwe_page_kiwe-framework', 'kiwe_page_kiwe-ai', 'kiwe_page_kiwe-tokens', 'kiwe_page_kiwe-developer', 'kiwe_page_kiwe-dock', 'kiwe_page_kiwe-theme', 'kiwe_page_kiwe-games', 'kiwe_page_kiwe-links', 'kiwe_page_kiwe-search', 'kiwe_page_kiwe-menu', 'kiwe_page_kiwe-secure', 'kiwe_page_kiwe-email', 'kiwe_page_kiwe-woocommerce', 'kiwe_page_kiwe-analytics', 'kiwe_page_kiwe-abandoned-cart', 'kiwe_page_kiwe-bricks' ], true ) ) {
+		if ( ! in_array( $hook, [ 'toplevel_page_kiwe', 'kiwe_page_kiwe-auth', 'kiwe_page_kiwe-app', 'kiwe_page_kiwe-framework', 'kiwe_page_kiwe-ai', 'kiwe_page_kiwe-tokens', 'kiwe_page_kiwe-developer', 'kiwe_page_kiwe-database', 'kiwe_page_kiwe-dock', 'kiwe_page_kiwe-theme', 'kiwe_page_kiwe-games', 'kiwe_page_kiwe-links', 'kiwe_page_kiwe-search', 'kiwe_page_kiwe-menu', 'kiwe_page_kiwe-secure', 'kiwe_page_kiwe-email', 'kiwe_page_kiwe-woocommerce', 'kiwe_page_kiwe-analytics', 'kiwe_page_kiwe-abandoned-cart', 'kiwe_page_kiwe-bricks' ], true ) ) {
 			return;
 		}
 
@@ -1323,7 +1351,7 @@ final class Admin {
 		if ( 'kiwe-tokens' === $redirect_page ) {
 			$redirect_page = 'kiwe-framework';
 		}
-		if ( ! in_array( $redirect_page, [ 'kiwe', 'kiwe-app', 'kiwe-haptic', 'kiwe-framework', 'kiwe-ai', 'kiwe-dock', 'kiwe-theme', 'kiwe-games', 'kiwe-links', 'kiwe-search', 'kiwe-menu', 'kiwe-secure', 'kiwe-email', 'kiwe-woocommerce', 'kiwe-analytics', 'kiwe-abandoned-cart', 'kiwe-bricks', 'kiwe-developer' ], true ) ) {
+		if ( ! in_array( $redirect_page, [ 'kiwe', 'kiwe-app', 'kiwe-haptic', 'kiwe-framework', 'kiwe-ai', 'kiwe-dock', 'kiwe-theme', 'kiwe-games', 'kiwe-links', 'kiwe-search', 'kiwe-menu', 'kiwe-secure', 'kiwe-email', 'kiwe-woocommerce', 'kiwe-analytics', 'kiwe-abandoned-cart', 'kiwe-bricks', 'kiwe-developer', 'kiwe-database' ], true ) ) {
 			$redirect_page = 'kiwe';
 		}
 
@@ -1342,7 +1370,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'            => 'kiwe-developer',
+					'page'            => 'kiwe-database',
 					'runtime-cleared' => '1',
 					'deleted'         => $deleted,
 				],
@@ -1476,7 +1504,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'                 => 'kiwe-developer',
+					'page'                 => 'kiwe-database',
 					'persistence-cleanup'  => '1',
 					'transients'           => absint( $result['expiredTransients'] ?? 0 ),
 					'expired-rows'         => $expired_rows,
@@ -1497,7 +1525,7 @@ final class Admin {
 		$confirmed = '1' === (string) ( $_POST['confirm_legacy_tables'] ?? '' );
 		$phrase    = sanitize_text_field( wp_unslash( $_POST['confirmation_phrase'] ?? '' ) );
 		if ( ! $confirmed || 'CLEAN LEGACY TABLES' !== $phrase ) {
-			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-developer', 'legacy-tables' => 'cancelled' ], admin_url( 'admin.php' ) ) );
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'legacy-tables' => 'cancelled' ], admin_url( 'admin.php' ) ) );
 			exit;
 		}
 
@@ -1505,7 +1533,7 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'          => 'kiwe-developer',
+					'page'          => 'kiwe-database',
 					'legacy-tables' => empty( $result['failed'] ) ? '1' : 'partial',
 					'dropped'       => count( (array) ( $result['dropped'] ?? [] ) ),
 					'failed'        => count( (array) ( $result['failed'] ?? [] ) ),
@@ -1525,7 +1553,7 @@ final class Admin {
 		$confirmed = '1' === (string) ( $_POST['confirm_orphan_files'] ?? '' );
 		$phrase    = sanitize_text_field( wp_unslash( $_POST['confirmation_phrase'] ?? '' ) );
 		if ( ! $confirmed || 'REMOVE ORPHAN FILES' !== $phrase ) {
-			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-developer', 'orphan-files' => 'cancelled' ], admin_url( 'admin.php' ) ) );
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'orphan-files' => 'cancelled' ], admin_url( 'admin.php' ) ) );
 			exit;
 		}
 
@@ -1533,10 +1561,46 @@ final class Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'page'         => 'kiwe-developer',
+					'page'         => 'kiwe-database',
 					'orphan-files' => empty( $result['failed'] ) ? '1' : 'partial',
 					'removed'      => count( (array) ( $result['removed'] ?? [] ) ),
 					'failed'       => count( (array) ( $result['failed'] ?? [] ) ),
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	public function handle_database_purge_cache(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_database_purge_cache' );
+		$scope  = sanitize_key( wp_unslash( $_POST['cache_scope'] ?? 'all' ) );
+		$layers = array_map( 'sanitize_key', (array) ( $_POST['cache_layers'] ?? [] ) );
+		if ( empty( $layers ) || '1' !== (string) ( $_POST['confirm_cache_purge'] ?? '' ) ) {
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'cache-purge' => 'cancelled' ], admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		if ( in_array( 'object_cache', $layers, true ) ) {
+			$phrase = sanitize_text_field( wp_unslash( $_POST['object_cache_phrase'] ?? '' ) );
+			if ( 'FLUSH OBJECT CACHE' !== $phrase ) {
+				wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'cache-purge' => 'object-confirmation-required' ], admin_url( 'admin.php' ) ) );
+				exit;
+			}
+		}
+
+		$result = ( new Cache_Maintenance_Service() )->purge( $scope, $layers );
+		set_transient( 'dsa_database_cache_result_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS );
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'            => 'kiwe-database',
+					'cache-purge'     => empty( $result['failed'] ) ? '1' : 'partial',
+					'runtime-cleared' => isset( $result['completed']['kiwe_runtime'] ) ? '1' : '0',
 				],
 				admin_url( 'admin.php' )
 			)
@@ -6616,6 +6680,133 @@ final class Admin {
 		<?php
 	}
 
+	public function render_database_page(): void {
+		$runtime_cleared    = isset( $_GET['runtime-cleared'] ) && '1' === sanitize_key( wp_unslash( $_GET['runtime-cleared'] ) );
+		$persistence_status = sanitize_key( wp_unslash( $_GET['persistence-cleanup'] ?? '' ) );
+		$legacy_tables      = sanitize_key( wp_unslash( $_GET['legacy-tables'] ?? '' ) );
+		$orphan_files       = sanitize_key( wp_unslash( $_GET['orphan-files'] ?? '' ) );
+		$cache_status       = sanitize_key( wp_unslash( $_GET['cache-purge'] ?? '' ) );
+		$persistence        = ( new Persistence_Maintenance_Service( $this->settings ) )->report();
+		$database           = ( new Database_Inventory_Service() )->report();
+		$cache              = ( new Cache_Maintenance_Service() )->report();
+		$cache_result       = get_transient( 'dsa_database_cache_result_' . get_current_user_id() );
+		$cache_result       = is_array( $cache_result ) ? $cache_result : [];
+		?>
+		<div class="wrap dsa-admin" data-dsa-developer-tools data-auto-clear-browser="<?php echo $runtime_cleared ? '1' : '0'; ?>">
+			<h1><?php esc_html_e( 'Kiwe Database & Cache', 'dsa' ); ?></h1>
+			<p><?php esc_html_e( 'Evidence-first database health, residue analysis, and cache control for ordinary shared hosting. Every action reports the layer it actually reached; Kiwe never claims that a server, CDN, or visitor cache was purged without an adapter proving it.', 'dsa' ); ?></p>
+
+			<?php if ( $runtime_cleared ) : ?>
+				<div class="notice notice-success"><p><?php esc_html_e( 'Kiwe runtime cache records were cleared. This browser is also removing its Kiwe service worker and Cache Storage entries.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( '1' === $cache_status || 'partial' === $cache_status ) : ?>
+				<div class="notice <?php echo '1' === $cache_status ? 'notice-success' : 'notice-warning'; ?>"><p><?php echo esc_html( sprintf( __( 'Cache request finished: %1$d layer(s) completed, %2$d skipped, %3$d failed.', 'dsa' ), count( (array) ( $cache_result['completed'] ?? [] ) ), count( (array) ( $cache_result['skipped'] ?? [] ) ), count( (array) ( $cache_result['failed'] ?? [] ) ) ) ); ?></p></div>
+			<?php elseif ( 'cancelled' === $cache_status ) : ?>
+				<div class="notice notice-warning"><p><?php esc_html_e( 'Cache purge was cancelled because no layer was selected or the risk confirmation was missing.', 'dsa' ); ?></p></div>
+			<?php elseif ( 'object-confirmation-required' === $cache_status ) : ?>
+				<div class="notice notice-error"><p><?php esc_html_e( 'Object-cache flushing requires the exact confirmation phrase.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( '1' === $persistence_status ) : ?>
+				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( 'Safe maintenance removed %1$d expired transient records and %2$d expired operational rows, and cleared %3$d disabled-feature cron events.', 'dsa' ), absint( $_GET['transients'] ?? 0 ), absint( $_GET['expired-rows'] ?? 0 ), absint( $_GET['cron-events'] ?? 0 ) ) ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( '1' === $legacy_tables || 'partial' === $legacy_tables ) : ?>
+				<div class="notice <?php echo '1' === $legacy_tables ? 'notice-success' : 'notice-warning'; ?>"><p><?php echo esc_html( sprintf( __( 'Legacy-table cleanup dropped %1$d table(s); %2$d could not be removed.', 'dsa' ), absint( $_GET['dropped'] ?? 0 ), absint( $_GET['failed'] ?? 0 ) ) ); ?></p></div>
+			<?php elseif ( 'cancelled' === $legacy_tables ) : ?>
+				<div class="notice notice-warning"><p><?php esc_html_e( 'Legacy-table cleanup was cancelled because both confirmations were not supplied.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( '1' === $orphan_files || 'partial' === $orphan_files ) : ?>
+				<div class="notice <?php echo '1' === $orphan_files ? 'notice-success' : 'notice-warning'; ?>"><p><?php echo esc_html( sprintf( __( 'Orphan-file cleanup removed %1$d file(s); %2$d could not be removed.', 'dsa' ), absint( $_GET['removed'] ?? 0 ), absint( $_GET['failed'] ?? 0 ) ) ); ?></p></div>
+			<?php elseif ( 'cancelled' === $orphan_files ) : ?>
+				<div class="notice notice-warning"><p><?php esc_html_e( 'Orphan-file cleanup was cancelled because both confirmations were not supplied.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Cache control plane', 'dsa' ); ?></h2>
+				<table class="widefat striped" style="max-width:900px">
+					<tbody>
+						<tr><th><?php esc_html_e( 'Persistent object cache', 'dsa' ); ?></th><td><?php echo ! empty( $cache['objectCache']['persistent'] ) ? esc_html__( 'Detected', 'dsa' ) : esc_html__( 'Not detected', 'dsa' ); ?></td><td><?php esc_html_e( 'WordPress supports all-cache flush only.', 'dsa' ); ?></td></tr>
+						<tr><th><?php esc_html_e( 'Page-cache drop-in', 'dsa' ); ?></th><td><?php echo ! empty( $cache['pageCache']['dropIn'] ) || ! empty( $cache['pageCache']['wpCacheFlag'] ) ? esc_html__( 'Detected', 'dsa' ) : esc_html__( 'Not detected', 'dsa' ); ?></td><td><?php echo esc_html( sprintf( _n( '%d evidence-backed purge adapter', '%d evidence-backed purge adapters', count( (array) $cache['pageCache']['adapters'] ), 'dsa' ), count( (array) $cache['pageCache']['adapters'] ) ) ); ?></td></tr>
+						<tr><th><?php esc_html_e( 'Kiwe runtime epoch', 'dsa' ); ?></th><td><code><?php echo esc_html( (string) absint( $cache['kiweRuntime']['epoch'] ) ); ?></code></td><td><?php esc_html_e( 'Advancing it invalidates Kiwe-owned runtime assets and local caches.', 'dsa' ); ?></td></tr>
+					</tbody>
+				</table>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:16px">
+					<input type="hidden" name="action" value="dsa_database_purge_cache">
+					<?php wp_nonce_field( 'dsa_database_purge_cache' ); ?>
+					<p><strong><?php esc_html_e( 'Layers', 'dsa' ); ?></strong></p>
+					<label><input type="checkbox" name="cache_layers[]" value="kiwe_runtime" checked> <?php esc_html_e( 'Kiwe runtime, service-worker generation, and Kiwe transients', 'dsa' ); ?></label><br>
+					<label><input type="checkbox" name="cache_layers[]" value="expired_transients"> <?php esc_html_e( 'All expired WordPress transients', 'dsa' ); ?></label><br>
+					<label><input type="checkbox" name="cache_layers[]" value="page_cache" <?php disabled( empty( $cache['pageCache']['adapters'] ) ); ?>> <?php esc_html_e( 'Detected page-cache adapters', 'dsa' ); ?></label><br>
+					<label><input type="checkbox" name="cache_layers[]" value="object_cache"> <?php esc_html_e( 'Entire WordPress object cache (high impact)', 'dsa' ); ?></label>
+					<p><label><strong><?php esc_html_e( 'Scope', 'dsa' ); ?></strong> <select name="cache_scope">
+						<option value="all"><?php esc_html_e( 'All devices', 'dsa' ); ?></option>
+						<?php foreach ( [ 'desktop', 'tablet', 'mobile' ] as $scope ) : ?>
+							<option value="<?php echo esc_attr( $scope ); ?>" <?php disabled( ! in_array( $scope, (array) $cache['pageCache']['scopes'], true ) ); ?>><?php echo esc_html( ucfirst( $scope ) ); ?><?php echo in_array( $scope, (array) $cache['pageCache']['scopes'], true ) ? '' : esc_html__( ' — unavailable', 'dsa' ); ?></option>
+						<?php endforeach; ?>
+					</select></label></p>
+					<p class="description"><?php esc_html_e( 'Device-specific purge is enabled only when a cache adapter proves that it has separate device namespaces. WordPress object cache and transients are global, so Kiwe will not fake a mobile/tablet/desktop purge.', 'dsa' ); ?></p>
+					<p><label><?php esc_html_e( 'If object cache is selected, type FLUSH OBJECT CACHE', 'dsa' ); ?> <input type="text" class="regular-text code" name="object_cache_phrase" autocomplete="off"></label></p>
+					<label><input type="checkbox" name="confirm_cache_purge" value="1" required> <?php esc_html_e( 'I understand that clearing cache can temporarily increase CPU/database load while caches warm again.', 'dsa' ); ?></label>
+					<?php submit_button( __( 'Purge selected cache layers', 'dsa' ), 'primary', 'submit', false ); ?>
+				</form>
+				<p data-dsa-developer-status aria-live="polite"></p>
+			</section>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Whole-site database evidence', 'dsa' ); ?></h2>
+				<p><?php echo esc_html( sprintf( __( '%1$d tables use approximately %2$s. Autoloaded options use %3$s against Kiwe’s %4$s review threshold.', 'dsa' ), count( (array) $database['tables'] ), size_format( (int) $database['totalBytes'] ), size_format( (int) $database['autoload']['bytes'] ), size_format( (int) $database['autoload']['budget'] ) ) ); ?></p>
+				<table class="widefat striped" style="max-width:1000px">
+					<thead><tr><th><?php esc_html_e( 'Table', 'dsa' ); ?></th><th><?php esc_html_e( 'Owner evidence', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Rows', 'dsa' ); ?></th><th><?php esc_html_e( 'Size', 'dsa' ); ?></th></tr></thead>
+					<tbody>
+						<?php foreach ( array_slice( (array) $database['tables'], 0, 30 ) as $table ) : ?>
+							<tr><td><code><?php echo esc_html( $table['name'] ); ?></code></td><td><?php echo esc_html( $table['owner'] . ' · ' . $table['evidence'] . ' · ' . $table['confidence'] ); ?></td><td><?php echo esc_html( $table['ownerState'] ); ?></td><td><?php echo esc_html( (string) absint( $table['rows'] ) ); ?></td><td><?php echo esc_html( size_format( (int) $table['bytes'] ) ); ?></td></tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<p class="description"><?php esc_html_e( 'Exact Core/Kiwe ownership is proven. WooCommerce prefix ownership is strong evidence. Plugin-slug matches are heuristic and unknown tables remain protected. Neither category is an automatic deletion permission.', 'dsa' ); ?></p>
+				<h3><?php esc_html_e( 'Cleanup candidates — read-only in this release', 'dsa' ); ?></h3>
+				<p><?php echo esc_html( sprintf( __( 'Revisions: %1$d · Auto-drafts: %2$d · Trashed posts: %3$d · Spam comments: %4$d · Trashed comments: %5$d · Orphan post meta: %6$d · Expired transients: %7$d', 'dsa' ), absint( $database['cleanupCandidates']['revisions'] ), absint( $database['cleanupCandidates']['autoDrafts'] ), absint( $database['cleanupCandidates']['trashedPosts'] ), absint( $database['cleanupCandidates']['spamComments'] ), absint( $database['cleanupCandidates']['trashComments'] ), absint( $database['cleanupCandidates']['orphanPostMeta'] ), absint( $database['cleanupCandidates']['expiredTransients'] ) ) ); ?></p>
+				<p class="description"><?php esc_html_e( 'Kiwe reports destructive WordPress cleanup candidates but does not delete revisions, trash, comments, or orphan metadata in this safety release. Expired transients can be removed from Cache control above.', 'dsa' ); ?></p>
+			</section>
+
+			<?php $this->render_persistence_maintenance_panel( $persistence ); ?>
+		</div>
+		<?php
+	}
+
+	private function render_persistence_maintenance_panel( array $persistence ): void {
+		?>
+		<section class="dsa-admin__panel">
+			<h2><?php esc_html_e( 'Kiwe storage and legacy residue', 'dsa' ); ?></h2>
+			<p><?php esc_html_e( 'Database rows affect MySQL size and query cost; files and directories consume hosting inodes. This inventory keeps those resource classes separate.', 'dsa' ); ?></p>
+			<table class="widefat striped" style="max-width:900px"><tbody>
+				<tr><th><?php esc_html_e( 'Current Kiwe-owned tables', 'dsa' ); ?></th><td><?php echo esc_html( sprintf( '%1$d · %2$s', count( (array) $persistence['tables']['current'] ), size_format( (int) $persistence['tables']['currentBytes'] ) ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Unknown legacy Kiwe-prefix tables', 'dsa' ); ?></th><td><?php echo esc_html( sprintf( '%1$d · %2$s', count( (array) $persistence['tables']['legacy'] ), size_format( (int) $persistence['tables']['legacyBytes'] ) ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Kiwe-prefixed options', 'dsa' ); ?></th><td><?php echo esc_html( sprintf( '%1$d · %2$s (%3$s autoloaded)', absint( $persistence['options']['records'] ), size_format( (int) $persistence['options']['bytes'] ), size_format( (int) $persistence['options']['autoloadBytes'] ) ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Kiwe cron events', 'dsa' ); ?></th><td><?php echo esc_html( (string) absint( $persistence['cron']['events'] ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Unexpected canonical-package files', 'dsa' ); ?></th><td><?php echo esc_html( sprintf( '%1$d · %2$s', absint( $persistence['packageFiles']['count'] ), size_format( (int) $persistence['packageFiles']['bytes'] ) ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Possible old top-level MU copies', 'dsa' ); ?></th><td><?php echo esc_html( sprintf( '%1$d entries · %2$d estimated inodes', count( (array) $persistence['packageFiles']['muPluginResidue']['entries'] ), absint( $persistence['packageFiles']['muPluginResidue']['inodes'] ) ) ); ?></td></tr>
+			</tbody></table>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:16px">
+				<input type="hidden" name="action" value="dsa_developer_safe_persistence_cleanup"><?php wp_nonce_field( 'dsa_developer_safe_persistence_cleanup' ); ?>
+				<?php submit_button( __( 'Run safe Kiwe persistence maintenance', 'dsa' ), 'secondary', 'submit', false ); ?>
+			</form>
+			<?php if ( ! empty( $persistence['tables']['legacy'] ) ) : ?>
+				<h3><?php esc_html_e( 'Unknown legacy Kiwe-prefix tables', 'dsa' ); ?></h3><ul>
+				<?php foreach ( $persistence['tables']['legacy'] as $table ) : ?><li><code><?php echo esc_html( $table['name'] ); ?></code> — <?php echo esc_html( size_format( (int) $table['bytes'] ) ); ?></li><?php endforeach; ?>
+				</ul><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_developer_drop_legacy_tables"><?php wp_nonce_field( 'dsa_developer_drop_legacy_tables' ); ?><p><label><input type="checkbox" name="confirm_legacy_tables" value="1" required> <?php esc_html_e( 'I reviewed every listed table.', 'dsa' ); ?></label></p><p><label><?php esc_html_e( 'Type CLEAN LEGACY TABLES', 'dsa' ); ?> <input type="text" class="regular-text code" name="confirmation_phrase" required></label></p><?php submit_button( __( 'Drop only listed legacy tables', 'dsa' ), 'delete', 'submit', false ); ?></form>
+			<?php endif; ?>
+			<?php if ( ! empty( $persistence['packageFiles']['unexpected'] ) ) : ?>
+				<h3><?php esc_html_e( 'Manifest-proven orphan files', 'dsa' ); ?></h3><ul><?php foreach ( $persistence['packageFiles']['unexpected'] as $file ) : ?><li><code><?php echo esc_html( $file['path'] ); ?></code> — <?php echo esc_html( size_format( (int) $file['bytes'] ) ); ?></li><?php endforeach; ?></ul>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_developer_remove_orphan_files"><?php wp_nonce_field( 'dsa_developer_remove_orphan_files' ); ?><p><label><input type="checkbox" name="confirm_orphan_files" value="1" required> <?php esc_html_e( 'I reviewed every listed path.', 'dsa' ); ?></label></p><p><label><?php esc_html_e( 'Type REMOVE ORPHAN FILES', 'dsa' ); ?> <input type="text" class="regular-text code" name="confirmation_phrase" required></label></p><?php submit_button( __( 'Remove only listed orphan files', 'dsa' ), 'delete', 'submit', false ); ?></form>
+			<?php endif; ?>
+			<?php if ( ! empty( $persistence['packageFiles']['muPluginResidue']['entries'] ) ) : ?>
+				<h3><?php esc_html_e( 'Manual review: possible old top-level copies', 'dsa' ); ?></h3><ul><?php foreach ( $persistence['packageFiles']['muPluginResidue']['entries'] as $entry ) : ?><li><code><?php echo esc_html( $entry['name'] ); ?></code> — <?php echo esc_html( sprintf( '%1$d estimated inodes · %2$s', absint( $entry['inodes'] ), size_format( (int) $entry['bytes'] ) ) ); ?></li><?php endforeach; ?></ul>
+				<p class="description"><?php esc_html_e( 'These remain report-only because filename similarity alone is not ownership proof.', 'dsa' ); ?></p>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
 	public function render_developer_page(): void {
 		$runtime_cleared = isset( $_GET['runtime-cleared'] ) && '1' === sanitize_key( wp_unslash( $_GET['runtime-cleared'] ) );
 		$settings_reset  = sanitize_key( wp_unslash( $_GET['settings-reset'] ?? '' ) );
@@ -6630,7 +6821,6 @@ final class Admin {
 		$loader_version  = defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : '';
 		$batch_report    = ( new Compiler_Batch_Cleanup_Service() )->report();
 		$clean_status    = ( new Clean_Conversion_Test_Service() )->status();
-		$persistence     = ( new Persistence_Maintenance_Service( $this->settings ) )->report();
 		?>
 		<div class="wrap dsa-admin" data-dsa-developer-tools data-auto-clear-browser="<?php echo $runtime_cleared ? '1' : '0'; ?>">
 			<h1><?php esc_html_e( 'Kiwe Developer', 'dsa' ); ?></h1>
@@ -6682,6 +6872,13 @@ final class Admin {
 				<p class="description"><?php esc_html_e( 'Reload this page after replacing the MU plugin to refresh the server-rendered package proof.', 'dsa' ); ?></p>
 			</section>
 
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Database and cache tools moved', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Persistence inventory, legacy residue, inode evidence, runtime recovery, and cache purging now have a dedicated evidence-first workspace.', 'dsa' ); ?></p>
+				<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=kiwe-database' ) ); ?>"><?php esc_html_e( 'Open Database & Cache', 'dsa' ); ?></a>
+			</section>
+
+			<?php if ( false ) : // Retained for one-release markup compatibility; controls moved to Kiwe > Database & Cache. ?>
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Runtime recovery', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Use after replacing the MU plugin or when the browser still loads an older Kiwe version. This clears Kiwe transients, unregisters this browser’s Kiwe service worker, and removes Kiwe Cache Storage and local runtime keys.', 'dsa' ); ?></p>
@@ -6759,6 +6956,7 @@ final class Admin {
 					<p class="description"><?php esc_html_e( 'Kiwe reports these names but does not delete them because filename similarity alone is not ownership proof. Confirm each item in Hostinger File Manager first.', 'dsa' ); ?></p>
 				<?php endif; ?>
 			</section>
+			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Clean conversion test run', 'dsa' ); ?></h2>
