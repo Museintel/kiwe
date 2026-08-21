@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.10
+
+- Added a fail-closed fresh-install profile: every optional Kiwe runtime capability starts disabled while the read-only SiteGraph remains available for browser-AI and export workflows.
+- Preserved existing installations by applying the profile only when Kiwe has never stored its primary settings option; upgrades keep their configured and historical fallback behavior.
+- Added release coverage proving the dock, AppShell, SecureTrack, PWA, commerce, communications, tracking, metrics, schema, tokens, Bricks enhancements, and all other boolean settings cannot activate on a fresh installation.
+
 ## 7.09
 
 - Corrected clean-run template isolation to use Bricks 2.3.10's actual `bricks/database/bricks_get_all_templates_by_type_args` query hook. The previous similarly named hook was never called, so legacy default headers and footers could still win even when a newly imported product template was active.

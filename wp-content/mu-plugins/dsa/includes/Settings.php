@@ -9,7 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Settings {
-	private const SAFETY_MIGRATION_VERSION = 4;
+	private const SAFETY_MIGRATION_VERSION = 5;
+	private const INSTALL_PROFILE_OPTION = 'dsa_install_profile';
+	private const SITE_GRAPH_ONLY_PROFILE = 'sitegraph_only_v1';
 
 	private static bool $safety_migrations_checked = false;
 	private ?array $resolved_settings = null;
@@ -45,6 +47,7 @@ final class Settings {
 		}
 
 		self::$safety_migrations_checked = true;
+		$this->initialize_fresh_install_profile();
 
 		if ( (int) get_option( 'dsa_safety_migration_version', 0 ) >= self::SAFETY_MIGRATION_VERSION ) {
 			return;
@@ -121,6 +124,54 @@ final class Settings {
 		}
 
 		update_option( 'dsa_safety_migration_version', self::SAFETY_MIGRATION_VERSION, true );
+	}
+
+	/**
+	 * Build the fail-closed settings used only when Kiwe has never stored its
+	 * primary settings option. Every optional runtime boolean is disabled and
+	 * SiteGraph is explicitly retained as the sole enabled capability.
+	 *
+	 * Existing installations continue to resolve missing keys against the
+	 * historical defaults below, so an update cannot silently switch off a
+	 * configured production AppShell.
+	 */
+	public function fresh_install_defaults(): array {
+		$settings = $this->disable_boolean_tree( $this->defaults() );
+		$settings['site_graph'] = [
+			'enabled' => true,
+			'mode'    => 'read_only',
+		];
+
+		return $settings;
+	}
+
+	private function initialize_fresh_install_profile(): void {
+		$missing = '__kiwe_settings_option_missing__';
+		$stored  = get_option( DSA_OPTION_SETTINGS, $missing );
+
+		if ( $missing !== $stored ) {
+			return;
+		}
+
+		update_option( DSA_OPTION_SETTINGS, $this->fresh_install_defaults(), false );
+		update_option( self::INSTALL_PROFILE_OPTION, self::SITE_GRAPH_ONLY_PROFILE, false );
+		$this->resolved_settings = null;
+		$this->resolved_manifest = null;
+	}
+
+	private function disable_boolean_tree( array $settings ): array {
+		foreach ( $settings as $key => $value ) {
+			if ( is_bool( $value ) ) {
+				$settings[ $key ] = false;
+				continue;
+			}
+
+			if ( is_array( $value ) ) {
+				$settings[ $key ] = $this->disable_boolean_tree( $value );
+			}
+		}
+
+		return $settings;
 	}
 
 	public function defaults(): array {

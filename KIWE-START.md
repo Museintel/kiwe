@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.09`
+Contract version: `7.10`
 Updated: `2026-08-14`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.09
+SeamFlow contract: 7.10
 ```
 
 Then do one of these:
