@@ -190,6 +190,8 @@ bricks-template/
   <page-or-template-name>-template-upload.json
 ```
 
+For the standalone SEAM Compiler lane, upload the approved raw HTML/CSS/JS project and the same validated `bricks-bindings/kiwe-bindings.json` together. The compiler applies only the plan's declared source selectors before native Bricks conversion, reports unmatched or conflicting bindings, and does not fetch, copy, or mutate target-site content. This is still the `/usesitegraph` then `/convert /bricks` sequence; `/convert /usesitegraph` is not a command.
+
 Then validate it:
 
 ```bash
