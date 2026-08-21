@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.13",
+    "contractVersion": "7.14",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -67,7 +67,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.13", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.14", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",

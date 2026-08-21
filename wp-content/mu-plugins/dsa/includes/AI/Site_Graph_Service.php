@@ -20,6 +20,7 @@ final class Site_Graph_Service {
 	public function graph( array $args = [] ): array {
 		$sample_limit = isset( $args['sampleLimit'] ) ? absint( $args['sampleLimit'] ) : self::DEFAULT_SAMPLE_LIMIT;
 		$sample_limit = max( 0, min( self::MAX_SAMPLE_LIMIT, $sample_limit ) );
+		$public_only  = ! empty( $args['publicOnly'] );
 
 		$settings = $this->settings->all();
 		$dock     = isset( $settings['dock'] ) && is_array( $settings['dock'] ) ? $settings['dock'] : [];
@@ -32,10 +33,10 @@ final class Site_Graph_Service {
 			'schema'        => 'kiwe.site-graph.v1',
 			'generatedAt'   => gmdate( 'c' ),
 			'site'          => $this->site_summary(),
-			'wordpress'     => $this->wordpress_summary( $sample_limit ),
-			'woocommerce'   => $this->woocommerce_summary( $sample_limit ),
+			'wordpress'     => $this->wordpress_summary( $sample_limit, $public_only ),
+			'woocommerce'   => $this->woocommerce_summary( $sample_limit, $public_only ),
 			'bricks'        => $this->bricks_summary(),
-			'customContent' => $this->custom_content_summary( $sample_limit ),
+			'customContent' => $this->custom_content_summary( $sample_limit, $public_only ),
 			'connectors'    => $this->connectors_summary(),
 			'kiwe'          => [
 				'version'       => defined( 'DSA_VERSION' ) ? DSA_VERSION : '',
@@ -70,6 +71,7 @@ final class Site_Graph_Service {
 			'calibration'    => $this->calibration_profile(),
 			'guardrails'     => [
 				'readOnly'             => true,
+				'publicDataOnly'        => $public_only,
 				'noSecrets'            => true,
 				'noVisitorState'       => true,
 				'noMutationAuthority'  => true,
@@ -211,6 +213,19 @@ final class Site_Graph_Service {
 
 	private function connectors_summary(): array {
 		return [
+			'externalClients' => [
+				'manifestSchema' => 'kiwe.external-client-manifest.v1',
+				'connectionSchema' => 'kiwe.external-client-connection.v1',
+				'vendorNeutral'  => true,
+				'openapi'        => '/wp-json/dsa/v1/ai/openapi.json',
+				'manifest'       => '/wp-json/dsa/v1/ai/client-manifest',
+				'taskCapsule'    => [
+					'prefix'         => 'kiwe_task_',
+					'publicDataOnly' => true,
+					'expiring'       => true,
+					'mutation'       => 'forbidden',
+				],
+			],
 			'siteGraphData' => [
 				'schema'      => 'kiwe.site-graph.data.v1',
 				'publicSafe'  => true,
@@ -222,6 +237,7 @@ final class Site_Graph_Service {
 					'/wp-json/dsa/v1/ai/site-graph-data',
 				],
 				'aiKeyScopes' => [ 'site_graph_data', 'all' ],
+				'taskCapsuleScope' => 'site_graph_data',
 				'useFor'      => [ 'headless page data', 'real product rails', 'real post rails', 'menus', 'terms', 'media', 'site identity' ],
 			],
 			'internalAI' => [
@@ -330,7 +346,7 @@ final class Site_Graph_Service {
 		];
 	}
 
-	private function wordpress_summary( int $sample_limit ): array {
+	private function wordpress_summary( int $sample_limit, bool $public_only = false ): array {
 		$post_types = [];
 		$objects    = get_post_types( [ 'public' => true ], 'objects' );
 
@@ -344,7 +360,7 @@ final class Site_Graph_Service {
 				'label'      => sanitize_text_field( (string) ( $object->label ?? $name ) ),
 				'restBase'   => sanitize_key( (string) ( $object->rest_base ?? $name ) ),
 				'hasArchive' => ! empty( $object->has_archive ),
-				'counts'     => $this->post_counts( (string) $name ),
+				'counts'     => $this->post_counts( (string) $name, $public_only ),
 				'samples'    => $sample_limit ? $this->post_samples( (string) $name, $sample_limit ) : [],
 			];
 		}
@@ -357,7 +373,7 @@ final class Site_Graph_Service {
 		];
 	}
 
-	private function woocommerce_summary( int $sample_limit ): array {
+	private function woocommerce_summary( int $sample_limit, bool $public_only = false ): array {
 		$active = class_exists( 'WooCommerce' ) || function_exists( 'WC' );
 		$pages  = [];
 
@@ -380,10 +396,10 @@ final class Site_Graph_Service {
 		return [
 			'active'            => $active,
 			'pages'             => $pages,
-			'productCounts'     => $this->post_counts( 'product' ),
+			'productCounts'     => $this->post_counts( 'product', $public_only ),
 			'productCategories' => taxonomy_exists( 'product_cat' ) && $sample_limit ? $this->terms_for_taxonomy( 'product_cat', $sample_limit * 2 ) : [],
 			'productTags'       => taxonomy_exists( 'product_tag' ) && $sample_limit ? $this->terms_for_taxonomy( 'product_tag', $sample_limit ) : [],
-			'store'             => [
+			'store'             => $public_only ? [ 'privateSettingsRedacted' => true ] : [
 				'address1'          => sanitize_text_field( (string) get_option( 'woocommerce_store_address', '' ) ),
 				'address2'          => sanitize_text_field( (string) get_option( 'woocommerce_store_address_2', '' ) ),
 				'city'              => sanitize_text_field( (string) get_option( 'woocommerce_store_city', '' ) ),
@@ -446,12 +462,15 @@ final class Site_Graph_Service {
 		];
 	}
 
-	private function post_counts( string $post_type ): array {
+	private function post_counts( string $post_type, bool $public_only = false ): array {
 		if ( ! post_type_exists( $post_type ) ) {
 			return [];
 		}
 
 		$counts = wp_count_posts( $post_type );
+		if ( $public_only ) {
+			return [ 'publish' => max( 0, (int) ( $counts->publish ?? 0 ) ) ];
+		}
 		$out    = [];
 
 		foreach ( get_object_vars( $counts ) as $status => $count ) {
@@ -519,23 +538,28 @@ final class Site_Graph_Service {
 		return $taxonomies;
 	}
 
-	private function custom_content_summary( int $sample_limit ): array {
+	private function custom_content_summary( int $sample_limit, bool $public_only = false ): array {
 		return [
-			'postTypes'    => $this->custom_post_types( $sample_limit ),
-			'taxonomies'   => $this->custom_taxonomies( $sample_limit ),
-			'customFields' => $this->custom_field_summary( $sample_limit ),
+			'postTypes'    => $this->custom_post_types( $sample_limit, $public_only ),
+			'taxonomies'   => $this->custom_taxonomies( $sample_limit, $public_only ),
+			'customFields' => $this->custom_field_summary( $sample_limit, $public_only ),
 			'guardrails'   => [
 				'valuesRedacted'      => true,
 				'secretKeysExcluded'  => true,
 				'bricksMetaSeparated' => true,
+				'publicDataOnly'      => $public_only,
 				'useFor'              => 'AI dynamic binding and Bricks query-loop planning without exposing private field values.',
 			],
 		];
 	}
 
-	private function custom_post_types( int $sample_limit ): array {
+	private function custom_post_types( int $sample_limit, bool $public_only = false ): array {
 		$out     = [];
-		$objects = get_post_types( [ '_builtin' => false ], 'objects' );
+		$query   = [ '_builtin' => false ];
+		if ( $public_only ) {
+			$query['public'] = true;
+		}
+		$objects = get_post_types( $query, 'objects' );
 		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
 			if ( ! is_object( $object ) ) {
 				continue;
@@ -548,7 +572,7 @@ final class Site_Graph_Service {
 				'showInRest' => ! empty( $object->show_in_rest ),
 				'restBase'   => sanitize_key( (string) ( $object->rest_base ?? $name ) ),
 				'taxonomies' => array_values( array_map( 'sanitize_key', get_object_taxonomies( (string) $name ) ) ),
-				'counts'     => $this->post_counts( (string) $name ),
+				'counts'     => $this->post_counts( (string) $name, $public_only ),
 				'samples'    => $sample_limit ? $this->post_samples( (string) $name, min( $sample_limit, 8 ) ) : [],
 			];
 		}
@@ -556,9 +580,13 @@ final class Site_Graph_Service {
 		return $out;
 	}
 
-	private function custom_taxonomies( int $sample_limit ): array {
+	private function custom_taxonomies( int $sample_limit, bool $public_only = false ): array {
 		$out     = [];
-		$objects = get_taxonomies( [ '_builtin' => false ], 'objects' );
+		$query   = [ '_builtin' => false ];
+		if ( $public_only ) {
+			$query['public'] = true;
+		}
+		$objects = get_taxonomies( $query, 'objects' );
 		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
 			if ( ! is_object( $object ) ) {
 				continue;
@@ -577,13 +605,16 @@ final class Site_Graph_Service {
 		return $out;
 	}
 
-	private function custom_field_summary( int $sample_limit ): array {
-		$post_types = get_post_types( [], 'names' );
+	private function custom_field_summary( int $sample_limit, bool $public_only = false ): array {
+		$post_types = get_post_types( $public_only ? [ 'public' => true ] : [], 'names' );
 		$registered = [];
 		foreach ( is_array( $post_types ) ? $post_types : [] as $post_type ) {
 			$keys = function_exists( 'get_registered_meta_keys' ) ? get_registered_meta_keys( 'post', (string) $post_type ) : [];
 			foreach ( is_array( $keys ) ? $keys : [] as $key => $schema ) {
 				if ( $this->is_secretish_key( (string) $key ) ) {
+					continue;
+				}
+				if ( $public_only && ( str_starts_with( (string) $key, '_' ) || empty( $schema['show_in_rest'] ) ) ) {
 					continue;
 				}
 				$registered[] = [
@@ -599,18 +630,18 @@ final class Site_Graph_Service {
 
 		return [
 			'registered' => array_slice( $registered, 0, 160 ),
-			'observed'   => $this->observed_custom_fields( $sample_limit ),
+			'observed'   => $this->observed_custom_fields( $sample_limit, $public_only ),
 		];
 	}
 
-	private function observed_custom_fields( int $sample_limit ): array {
+	private function observed_custom_fields( int $sample_limit, bool $public_only = false ): array {
 		$out = [];
 		$post_types = get_post_types( [ 'public' => true ], 'names' );
 		foreach ( is_array( $post_types ) ? $post_types : [] as $post_type ) {
 			$ids = get_posts(
 				[
 					'post_type'              => (string) $post_type,
-					'post_status'            => [ 'publish', 'draft', 'private' ],
+					'post_status'            => $public_only ? 'publish' : [ 'publish', 'draft', 'private' ],
 					'posts_per_page'         => max( 1, min( 8, $sample_limit ) ),
 					'fields'                 => 'ids',
 					'no_found_rows'          => true,
@@ -623,6 +654,9 @@ final class Site_Graph_Service {
 				foreach ( is_array( $meta ) ? $meta : [] as $key => $values ) {
 					$key = (string) $key;
 					if ( $this->is_secretish_key( $key ) ) {
+						continue;
+					}
+					if ( $public_only && str_starts_with( $key, '_' ) ) {
 						continue;
 					}
 					$bucket = sanitize_key( (string) $post_type ) . '|' . $key;

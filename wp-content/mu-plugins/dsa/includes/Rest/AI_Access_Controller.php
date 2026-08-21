@@ -12,6 +12,7 @@ use DSA\AI\Binding_Plan_Validator;
 use DSA\AI\Bricks_Conversion_Validator;
 use DSA\AI\Bricks_Controlled_Adapter_Service;
 use DSA\AI\Controlled_Executor_Service;
+use DSA\AI\External_Client_OpenAPI_Service;
 use DSA\AI\Final_Apply_Confirmation_Service;
 use DSA\AI\Final_Save_Approval_Service;
 use DSA\AI\Fresh_Site_Graph_Revalidator;
@@ -32,6 +33,7 @@ use DSA\AI\Site_Graph_Service;
 use DSA\AI\Staging_Execution_Service;
 use DSA\AI\Studio_AI_Service;
 use DSA\AI\Target_Resolution_Service;
+use DSA\AI\Task_Capsule_Service;
 use DSA\AI\Trusted_Adapter_Proof_Service;
 use DSA\AI\Trusted_Apply_Stager;
 use DSA\AI\Trusted_Execution_Preview_Service;
@@ -39,6 +41,7 @@ use DSA\Secure\SecureTrack_AI_Brief_Service;
 use DSA\Settings;
 use DSA\Site_Graph\Data_Query_Service;
 use DSA\Theme\Theme_Package_Service;
+use DSA\Utilities\Atomic_Rate_Limiter;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -50,9 +53,11 @@ final class AI_Access_Controller {
 	public function __construct(
 		private Site_Graph_Service $site_graph,
 		private ?Settings $settings = null,
-		private ?Access_Key_Service $keys = null
+		private ?Access_Key_Service $keys = null,
+		private ?Task_Capsule_Service $capsules = null
 	) {
-		$this->keys = $this->keys ?: new Access_Key_Service();
+		$this->keys     = $this->keys ?: new Access_Key_Service();
+		$this->capsules = $this->capsules ?: new Task_Capsule_Service();
 	}
 
 	public function register(): void {
@@ -126,6 +131,26 @@ final class AI_Access_Controller {
 			[ 'POST', '/ai/runtime/auth', 'locked_runtime', 'controlled_mutation' ],
 		];
 
+		$discovery = new External_Client_OpenAPI_Service( $routes );
+		register_rest_route(
+			'dsa/v1',
+			'/ai/openapi.json',
+			[
+				'methods'             => 'GET',
+				'callback'            => fn() => $this->discovery_response( $discovery->specification() ),
+				'permission_callback' => '__return_true',
+			]
+		);
+		register_rest_route(
+			'dsa/v1',
+			'/ai/client-manifest',
+			[
+				'methods'             => 'GET',
+				'callback'            => fn() => $this->discovery_response( $discovery->client_manifest() ),
+				'permission_callback' => '__return_true',
+			]
+		);
+
 		foreach ( $routes as [ $method, $route, $callback, $scope ] ) {
 			register_rest_route(
 				'dsa/v1',
@@ -140,9 +165,20 @@ final class AI_Access_Controller {
 	}
 
 	public function guarded( WP_REST_Request $request, string $scope, string $callback ): WP_REST_Response {
-		$auth = $this->keys->authenticate_request( $request, $scope );
+		$ip = $this->client_ip();
+		if ( ! Atomic_Rate_Limiter::allow( 'kiwe-ai-auth:' . $ip, 180, MINUTE_IN_SECONDS ) ) {
+			return $this->rate_limited( 'origin_rate_limited', 'This client sent too many Kiwe authentication requests.' );
+		}
+
+		$auth = 'task_capsule' === $this->credential_kind( $request )
+			? $this->capsules->authenticate_request( $request, $scope )
+			: $this->keys->authenticate_request( $request, $scope );
 		if ( empty( $auth['ok'] ) ) {
 			return $this->response( [ 'ok' => false, 'error' => $auth ], (int) ( $auth['status'] ?? 401 ) );
+		}
+		$client_id = sanitize_key( (string) ( $auth['record']['id'] ?? 'unknown' ) );
+		if ( ! Atomic_Rate_Limiter::allow( 'kiwe-ai-client:' . $client_id . ':' . $scope, $this->scope_rate_limit( $scope ), MINUTE_IN_SECONDS ) ) {
+			return $this->rate_limited( 'credential_rate_limited', 'This Kiwe credential exceeded its operation budget.' );
 		}
 		$result = $this->{$callback}( $request, $auth );
 		$status = isset( $result['httpStatus'] ) ? max( 100, min( 599, (int) $result['httpStatus'] ) ) : 200;
@@ -155,7 +191,9 @@ final class AI_Access_Controller {
 		return [
 			'ok'         => true,
 			'schema'     => 'kiwe.ai-access-status.v1',
+			'accessKind' => (string) ( $auth['kind'] ?? 'api_key' ),
 			'key'        => $auth['record'],
+			'policy'     => is_array( $auth['policy'] ?? null ) ? $auth['policy'] : null,
 			'capability' => [
 				'siteGraph'         => true,
 				'siteGraphData'     => true,
@@ -214,7 +252,14 @@ final class AI_Access_Controller {
 	}
 
 	private function site_graph( WP_REST_Request $request, array $auth ): array {
-		return $this->site_graph->graph( [ 'sampleLimit' => absint( $request->get_param( 'sampleLimit' ) ?: 8 ) ] );
+		$sample_limit = absint( $request->get_param( 'sampleLimit' ) ?: 8 );
+		if ( 'task_capsule' === (string) ( $auth['kind'] ?? '' ) ) {
+			$sample_limit = min( $sample_limit, absint( $auth['policy']['sampleLimit'] ?? 8 ) );
+		}
+		return $this->site_graph->graph( [
+			'sampleLimit' => $sample_limit,
+			'publicOnly'  => 'task_capsule' === (string) ( $auth['kind'] ?? '' ),
+		] );
 	}
 
 	private function site_graph_data_schema( WP_REST_Request $request, array $auth ): array {
@@ -228,8 +273,17 @@ final class AI_Access_Controller {
 			$args = array_replace_recursive( $args, $body );
 		}
 		unset( $args['rest_route'] );
+		$authorization = $this->capsules->authorize_data_args( $args, $auth );
+		if ( empty( $authorization['ok'] ) ) {
+			return [
+				'ok'         => false,
+				'httpStatus' => (int) ( $authorization['status'] ?? 403 ),
+				'error'      => is_array( $authorization['error'] ?? null ) ? $authorization['error'] : [ 'code' => 'capsule_policy_denied', 'message' => 'Task capsule policy denied this data request.' ],
+			];
+		}
+		$args = is_array( $authorization['args'] ?? null ) ? $authorization['args'] : $args;
 
-		$private = empty( $args['publicOnly'] );
+		$private = 'task_capsule' !== (string) ( $auth['kind'] ?? '' ) && empty( $args['publicOnly'] );
 		unset( $args['publicOnly'] );
 
 		return ( new Data_Query_Service() )->query( $args, $private );
@@ -978,6 +1032,56 @@ final class AI_Access_Controller {
 				'message' => $message,
 			],
 		];
+	}
+
+	private function credential_kind( WP_REST_Request $request ): string {
+		$authorization = trim( (string) $request->get_header( 'authorization' ) );
+		$credential    = preg_match( '/^Bearer\s+(.+)$/i', $authorization, $matches )
+			? trim( (string) $matches[1] )
+			: trim( (string) $request->get_header( 'x-kiwe-ai-key' ) );
+
+		return str_starts_with( $credential, 'kiwe_task_' ) ? 'task_capsule' : 'api_key';
+	}
+
+	private function scope_rate_limit( string $scope ): int {
+		if ( in_array( $scope, [ 'controlled_mutation', 'staging_execute', 'themes' ], true ) ) {
+			return 6;
+		}
+		if ( in_array( $scope, [ 'trusted_apply_chain', 'stage_apply_plan', 'prepare_apply_plan' ], true ) ) {
+			return 15;
+		}
+		if ( in_array( $scope, [ 'validate_bindings', 'validate_bricks_conversion', 'validate_accessibility', 'seamflow', 'bricks_ai' ], true ) ) {
+			return 40;
+		}
+
+		return 120;
+	}
+
+	private function client_ip(): string {
+		foreach ( [ 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' ] as $key ) {
+			$value = isset( $_SERVER[ $key ] ) ? (string) wp_unslash( $_SERVER[ $key ] ) : '';
+			$first = trim( explode( ',', $value )[0] );
+			if ( filter_var( $first, FILTER_VALIDATE_IP ) ) {
+				return $first;
+			}
+		}
+
+		return 'unknown';
+	}
+
+	private function rate_limited( string $code, string $message ): WP_REST_Response {
+		$response = $this->response( [ 'ok' => false, 'error' => [ 'code' => $code, 'message' => $message, 'status' => 429 ] ], 429 );
+		$response->header( 'Retry-After', '60' );
+		return $response;
+	}
+
+	private function discovery_response( array $payload ): WP_REST_Response {
+		$response = new WP_REST_Response( $payload, 200 );
+		$response->header( 'Cache-Control', 'public, max-age=300' );
+		$response->header( 'X-Robots-Tag', 'noindex, nofollow' );
+		$response->header( 'X-Content-Type-Options', 'nosniff' );
+
+		return $response;
 	}
 
 	private function response( array $payload, int $status = 200 ): WP_REST_Response {

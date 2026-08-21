@@ -29,11 +29,21 @@ POST /wp-json/dsa/v1/site-graph/data
 
 GET /wp-json/dsa/v1/ai/site-graph-data/schema
 GET|POST /wp-json/dsa/v1/ai/site-graph-data
+GET /wp-json/dsa/v1/ai/openapi.json
+GET /wp-json/dsa/v1/ai/client-manifest
 GET /wp-json/dsa/v1/ai/security-brief
 GET /wp-json/dsa/v1/ai/internal-context
 GET|POST /wp-json/dsa/v1/ai/advisor
 GET|POST /wp-json/dsa/v1/ai/advisor/enrich
 ```
+
+## External AI, IDE and tool connections
+
+`/wp-json/dsa/v1/ai` is a base namespace, not a webpage or complete connection. Kiwe publishes a vendor-neutral OpenAPI 3.1 contract at `/ai/openapi.json` and a compact client manifest at `/ai/client-manifest` so ChatGPT-compatible actions, Claude/Cursor adapters, MCP clients, IDEs and ordinary HTTP tools can discover the same capability surface without vendor-specific plugin code.
+
+For read, conversion and validation work, create a downloadable task capsule under `Kiwe > SiteGraph`. The secret is shown only in that downloaded connection document; Kiwe stores a password hash. Capsules expire, have request/row/field/resource budgets, force SiteGraph Data to public objects, and can use only SiteGraph, Bricks context, SEAM and validator scopes. They categorically exclude staging, themes, publishing, runtime operations and controlled mutation. Configure the bearer value in a client secret store or adapter and delete the connection file afterward. A normal AI prompt is not a secret store.
+
+The `/ai/*` guard also applies per-origin authentication throttling and per-credential operation throttling. Trusted staging remains on separate narrowly scoped permanent API keys so compromising a temporary content capsule cannot become a WordPress write path.
 
 Example graph selector body:
 

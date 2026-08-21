@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.14
+
+- Added vendor-neutral OpenAPI 3.1 and client-manifest discovery routes for ChatGPT-compatible actions, Claude/Cursor adapters, MCP clients, IDEs and standards-based HTTP tools.
+- Added downloadable SiteGraph client connection packages containing short-lived, hash-only task capsules with expiry, request, row, field, resource and sample budgets.
+- Enforced a hard public-data/read-convert-validate boundary for task capsules; staging, themes, publishing, runtime execution and controlled mutation remain permanent-key-only capabilities.
+- Added per-origin authentication throttling and per-credential/per-scope rate limiting across the complete Kiwe AI REST surface.
+- Clarified in Kiwe > SiteGraph that `/wp-json/dsa/v1/ai` is an API namespace rather than a webpage, added active capsule usage/revocation diagnostics, and documented safe secret handling.
+- Added runtime and release contracts for capsule hashing, revocation, expiry, request budgets, data-policy enforcement, OpenAPI path conversion, authority annotations and documentation drift.
+
 ## 7.13
 
 - Added Kiwe > SiteGraph as the single admin control plane for graph export, content-free compiler pairing, binding validation, and trusted apply staging; SiteGraph actions now return to that workspace.

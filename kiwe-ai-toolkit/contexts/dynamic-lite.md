@@ -76,6 +76,8 @@ If Kiwe is installed on the target site, the admin can download SiteGraph from `
 
 External tool clients can use a revocable key created in `Kiwe > AI > API access keys` with `Authorization: Bearer kiwe_ai_...` or `X-Kiwe-AI-Key` against `/wp-json/dsa/v1/ai/site-graph`, `/wp-json/dsa/v1/ai/bricks/context`, `/wp-json/dsa/v1/ai/bricks/plan`, `/wp-json/dsa/v1/ai/validate-bindings`, `/wp-json/dsa/v1/ai/validate-bricks-conversion`, `/wp-json/dsa/v1/ai/prepare-apply-plan`, `/wp-json/dsa/v1/ai/stage-apply-plan`, `/wp-json/dsa/v1/ai/stages/{stageId}/...`, and `/wp-json/dsa/v1/ai/themes`.
 
+For ordinary external content, conversion and validation work, prefer the vendor-neutral connection package from `Kiwe > SiteGraph`. It uses schema `kiwe.external-client-connection.v1`, points to public discovery contract `kiwe.external-client-manifest.v1` and `/wp-json/dsa/v1/ai/openapi.json`, and contains a one-time-visible `kiwe_task_...` bearer capsule. Configure the bearer value in the client's secret/action/tool/MCP/IDE layer; never paste it into model conversation context. Capsules are short-lived, hash-only at rest, public-data-only, field/resource/row/request-budgeted, and exclude staging, runtime, theme, publishing and mutation scopes. Clients that cannot store authenticated secrets must use exported SiteGraph JSON or the public SiteGraph Data endpoints instead.
+
 For headless/content reads, prefer the AI-less Site Graph Data API instead of scraping a public website:
 
 ```text

@@ -6,6 +6,7 @@ use DSA\AI\AI_Companion_Memory_Service;
 use DSA\AI\AI_Companion_Service;
 use DSA\AI\AI_Broker_Service;
 use DSA\AI\Site_Graph_Service;
+use DSA\AI\Task_Capsule_Service;
 use DSA\AI\Internal_AI_Advisor_Service;
 use DSA\AI\Internal_AI_Context_Service;
 use DSA\AI\Internal_AI_Enrichment_Service;
@@ -122,6 +123,8 @@ final class Admin {
 		add_action( 'admin_post_dsa_save_site_graph_settings', [ $this, 'save_site_graph_settings' ] );
 		add_action( 'admin_post_dsa_export_site_graph_calibration', [ $this, 'export_site_graph_calibration' ] );
 		add_action( 'admin_post_dsa_create_site_graph_calibration_pair', [ $this, 'create_site_graph_calibration_pair' ] );
+		add_action( 'admin_post_dsa_create_sitegraph_client_package', [ $this, 'create_sitegraph_client_package' ] );
+		add_action( 'admin_post_dsa_revoke_sitegraph_task_capsule', [ $this, 'revoke_sitegraph_task_capsule' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
 		add_action( 'admin_post_dsa_stage_apply_plan', [ $this, 'stage_apply_plan' ] );
@@ -2069,6 +2072,100 @@ final class Admin {
 		header( 'X-Content-Type-Options: nosniff' );
 		header( 'X-Robots-Tag: noindex, nofollow' );
 		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function create_sitegraph_client_package(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to create SiteGraph client connections.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_create_sitegraph_client_package' );
+
+		$purpose = isset( $_POST['purpose'] ) ? sanitize_key( (string) wp_unslash( $_POST['purpose'] ) ) : 'convert_validate';
+		$label   = isset( $_POST['label'] ) ? sanitize_text_field( (string) wp_unslash( $_POST['label'] ) ) : '';
+		$minutes = isset( $_POST['expiresMinutes'] ) ? absint( $_POST['expiresMinutes'] ) : 60;
+		$resources = isset( $_POST['resources'] ) && is_array( $_POST['resources'] )
+			? array_values( array_filter( array_map( static fn( $value ): string => is_scalar( $value ) ? sanitize_key( (string) $value ) : '', wp_unslash( $_POST['resources'] ) ) ) )
+			: Task_Capsule_Service::RESOURCES;
+		$fields = isset( $_POST['fields'] ) && is_array( $_POST['fields'] )
+			? array_values( array_filter( array_map( static fn( $value ): string => is_scalar( $value ) ? sanitize_key( (string) $value ) : '', wp_unslash( $_POST['fields'] ) ) ) )
+			: Task_Capsule_Service::FIELDS;
+		$capsule_service = new Task_Capsule_Service();
+		$issued = $capsule_service->issue(
+			$label,
+			$purpose,
+			[
+				'ttl'         => max( 5, min( 1440, $minutes ) ) * MINUTE_IN_SECONDS,
+				'maxUses'     => isset( $_POST['maxUses'] ) ? absint( $_POST['maxUses'] ) : 100,
+				'maxRows'     => isset( $_POST['maxRows'] ) ? absint( $_POST['maxRows'] ) : 25,
+				'sampleLimit' => isset( $_POST['sampleLimit'] ) ? absint( $_POST['sampleLimit'] ) : 8,
+				'resources'   => $resources,
+				'fields'      => $fields,
+			],
+			[ 'userId' => get_current_user_id() ]
+		);
+		$record = is_array( $issued['record'] ?? null ) ? $issued['record'] : [];
+		$base   = untrailingslashit( rest_url( 'dsa/v1/ai' ) );
+		$package = [
+			'schema'        => 'kiwe.external-client-connection.v1',
+			'generatedAt'   => gmdate( 'c' ),
+			'vendorNeutral' => true,
+			'connection'    => [
+				'id'             => (string) ( $record['id'] ?? '' ),
+				'label'          => (string) ( $record['label'] ?? '' ),
+				'purpose'        => (string) ( $record['purpose'] ?? '' ),
+				'baseUrl'        => $base,
+				'openapiUrl'     => $base . '/openapi.json',
+				'manifestUrl'    => $base . '/client-manifest',
+				'verificationUrl'=> $base . '/status',
+				'authentication' => [
+					'type'   => 'http-bearer',
+					'header' => 'Authorization',
+					'scheme' => 'Bearer',
+					'token'  => (string) ( $issued['token'] ?? '' ),
+					'headerValue' => 'Bearer ' . (string) ( $issued['token'] ?? '' ),
+				],
+				'scopes'         => (array) ( $record['scopes'] ?? [] ),
+				'policy'         => (array) ( $record['policy'] ?? [] ),
+				'expiresAt'      => (string) ( $record['expiresAt'] ?? '' ),
+			],
+			'handling' => [
+				'Configure the bearer value in the client secret store, action, tool, MCP adapter or IDE environment.',
+				'Do not paste the bearer value into an ordinary AI conversation, webpage, repository, URL or screenshot.',
+				'Delete this downloaded file after the client is configured and revoke the capsule when the task finishes.',
+			],
+			'guarantees' => [
+				'publicDataOnly' => true,
+				'mutation'       => 'forbidden',
+				'staging'        => 'forbidden',
+				'expiring'       => true,
+				'requestBudget'  => true,
+			],
+		];
+		$json = wp_json_encode( $package, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! $json ) {
+			$capsule_service->revoke( (string) ( $record['id'] ?? '' ), get_current_user_id() );
+			wp_die( esc_html__( 'Kiwe could not encode the external-client connection package.', 'dsa' ) );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+		header( 'Content-Disposition: attachment; filename="kiwe-sitegraph-client-' . gmdate( 'Ymd-His' ) . '.json"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'X-Robots-Tag: noindex, nofollow' );
+		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		exit;
+	}
+
+	public function revoke_sitegraph_task_capsule(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to revoke SiteGraph task capsules.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		$id = isset( $_POST['capsuleId'] ) ? sanitize_key( (string) wp_unslash( $_POST['capsuleId'] ) ) : '';
+		check_admin_referer( 'dsa_revoke_sitegraph_task_capsule_' . $id );
+		$revoked = '' !== $id && ( new Task_Capsule_Service() )->revoke( $id, get_current_user_id() );
+
+		wp_safe_redirect( add_query_arg( 'sitegraph-capsule-revoked', $revoked ? '1' : '0', admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
 		exit;
 	}
 
@@ -4506,6 +4603,7 @@ final class Admin {
 		$ai_settings    = array_replace_recursive( $this->settings->defaults()['ai'] ?? [], is_array( $settings['ai'] ?? null ) ? $settings['ai'] : [] );
 		$broker_status  = ( new AI_Broker_Service( $this->settings ) )->status( 'sitegraph' );
 		$profile        = is_array( $broker_status['profile'] ?? null ) ? $broker_status['profile'] : [];
+		$capsules       = ( new Task_Capsule_Service() )->public_records();
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe SiteGraph', 'dsa' ); ?></h1>
@@ -4519,6 +4617,10 @@ final class Admin {
 			<?php endif; ?>
 			<?php if ( isset( $_GET['binding-plan'] ) ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $this->binding_plan_error_message( sanitize_key( (string) wp_unslash( $_GET['binding-plan'] ) ) ) ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['sitegraph-capsule-revoked'] ) ) : ?>
+				<?php $capsule_revoked = '1' === sanitize_key( (string) wp_unslash( $_GET['sitegraph-capsule-revoked'] ) ); ?>
+				<div class="notice <?php echo $capsule_revoked ? 'notice-success' : 'notice-warning'; ?> is-dismissible"><p><?php echo $capsule_revoked ? esc_html__( 'SiteGraph task capsule revoked.', 'dsa' ) : esc_html__( 'SiteGraph task capsule could not be revoked.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
@@ -4561,6 +4663,44 @@ final class Admin {
 					<input type="hidden" name="action" value="dsa_create_site_graph_calibration_pair"><?php wp_nonce_field( 'dsa_create_site_graph_calibration_pair' ); ?><?php submit_button( __( 'Create one-time compiler pairing file', 'dsa' ), 'primary', 'submit', false ); ?>
 					<p class="description"><?php esc_html_e( 'Expires after 10 minutes and one successful read. It grants content-free, read-only calibration access only.', 'dsa' ); ?></p>
 				</form>
+
+				<h3><?php esc_html_e( 'Connect an external AI, IDE or tool', 'dsa' ); ?></h3>
+				<p><?php esc_html_e( 'The base URL below is an API namespace, not a webpage. A client also needs the OpenAPI contract and authenticated requests. Download a short-lived task capsule for ChatGPT-compatible actions, Claude/Cursor adapters, MCP clients, IDE tools or any standards-based HTTP client.', 'dsa' ); ?></p>
+				<p><strong><?php esc_html_e( 'Do not paste the capsule secret into an ordinary AI chat.', 'dsa' ); ?></strong> <?php esc_html_e( 'Configure it in the client action, tool, secret store, MCP adapter or IDE environment, then delete the downloaded connection file.', 'dsa' ); ?></p>
+				<div class="dsa-admin-token-summary">
+					<div><strong><?php esc_html_e( 'Vendor-neutral', 'dsa' ); ?></strong><span><?php esc_html_e( 'OpenAPI 3.1', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Short-lived', 'dsa' ); ?></strong><span><?php esc_html_e( 'task token', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Public only', 'dsa' ); ?></strong><span><?php esc_html_e( 'content data', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'No writes', 'dsa' ); ?></strong><span><?php esc_html_e( 'hard boundary', 'dsa' ); ?></span></div>
+				</div>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_create_sitegraph_client_package">
+					<?php wp_nonce_field( 'dsa_create_sitegraph_client_package' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label><span><?php esc_html_e( 'Connection label', 'dsa' ); ?></span><input type="text" name="label" placeholder="<?php esc_attr_e( 'Homepage content conversion', 'dsa' ); ?>" required></label>
+						<label><span><?php esc_html_e( 'Purpose', 'dsa' ); ?></span><select name="purpose"><option value="convert_validate"><?php esc_html_e( 'Read + convert + validate', 'dsa' ); ?></option><option value="content_read"><?php esc_html_e( 'Read content and Bricks context', 'dsa' ); ?></option></select></label>
+						<label><span><?php esc_html_e( 'Expires', 'dsa' ); ?></span><select name="expiresMinutes"><option value="15">15 minutes</option><option value="60" selected>1 hour</option><option value="240">4 hours</option><option value="1440">24 hours</option></select></label>
+						<label><span><?php esc_html_e( 'Request budget', 'dsa' ); ?></span><select name="maxUses"><option value="25">25</option><option value="100" selected>100</option><option value="250">250</option></select></label>
+						<?php submit_button( __( 'Download client connection', 'dsa' ), 'primary', 'submit', false ); ?>
+					</p>
+					<details>
+						<summary><?php esc_html_e( 'Data budget', 'dsa' ); ?></summary>
+						<p class="dsa-admin-inline-fields"><label><span><?php esc_html_e( 'Rows per query', 'dsa' ); ?></span><select name="maxRows"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="100">100</option></select></label><label><span><?php esc_html_e( 'SiteGraph samples', 'dsa' ); ?></span><select name="sampleLimit"><option value="0">0</option><option value="4">4</option><option value="8" selected>8</option><option value="16">16</option><option value="24">24</option></select></label></p>
+						<p><strong><?php esc_html_e( 'Resources', 'dsa' ); ?></strong></p><p class="dsa-admin-token-chips"><?php foreach ( Task_Capsule_Service::RESOURCES as $resource ) : ?><label><input type="checkbox" name="resources[]" value="<?php echo esc_attr( $resource ); ?>" checked> <code><?php echo esc_html( $resource ); ?></code></label><?php endforeach; ?></p>
+						<p><strong><?php esc_html_e( 'Fields', 'dsa' ); ?></strong></p><p class="dsa-admin-token-chips"><?php foreach ( Task_Capsule_Service::FIELDS as $field ) : ?><label><input type="checkbox" name="fields[]" value="<?php echo esc_attr( $field ); ?>" checked> <code><?php echo esc_html( $field ); ?></code></label><?php endforeach; ?></p>
+					</details>
+				</form>
+				<p class="description"><a href="<?php echo esc_url( rest_url( 'dsa/v1/ai/openapi.json' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open OpenAPI JSON', 'dsa' ); ?></a> · <a href="<?php echo esc_url( rest_url( 'dsa/v1/ai/client-manifest' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open client manifest', 'dsa' ); ?></a> · <?php esc_html_e( 'The connection package contains the secret once; Kiwe stores only its hash.', 'dsa' ); ?></p>
+
+				<?php if ( [] !== $capsules ) : ?>
+					<h4><?php esc_html_e( 'Task capsules', 'dsa' ); ?></h4>
+					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Label', 'dsa' ); ?></th><th><?php esc_html_e( 'Purpose', 'dsa' ); ?></th><th><?php esc_html_e( 'Expires', 'dsa' ); ?></th><th><?php esc_html_e( 'Usage', 'dsa' ); ?></th><th><?php esc_html_e( 'Last used', 'dsa' ); ?></th><th><?php esc_html_e( 'Status', 'dsa' ); ?></th><th><?php esc_html_e( 'Action', 'dsa' ); ?></th></tr></thead><tbody>
+					<?php foreach ( $capsules as $capsule ) : ?>
+						<?php $inactive = ! empty( $capsule['expired'] ) || '' !== (string) ( $capsule['revokedAt'] ?? '' ) || absint( $capsule['usesRemaining'] ?? 0 ) < 1; ?>
+						<tr><td><?php echo esc_html( (string) ( $capsule['label'] ?? '' ) ); ?><br><code><?php echo esc_html( (string) ( $capsule['prefix'] ?? '' ) ); ?>...<?php echo esc_html( (string) ( $capsule['last4'] ?? '' ) ); ?></code></td><td><code><?php echo esc_html( (string) ( $capsule['purpose'] ?? '' ) ); ?></code></td><td><?php echo esc_html( (string) ( $capsule['expiresAt'] ?? '' ) ); ?></td><td><?php echo esc_html( sprintf( '%1$d used / %2$d left', absint( $capsule['uses'] ?? 0 ), absint( $capsule['usesRemaining'] ?? 0 ) ) ); ?></td><td><?php echo esc_html( (string) ( $capsule['lastUsedAt'] ?? '' ) ?: __( 'Never', 'dsa' ) ); ?></td><td><?php echo $inactive ? esc_html__( 'Inactive', 'dsa' ) : esc_html__( 'Active', 'dsa' ); ?></td><td><?php if ( ! $inactive ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_revoke_sitegraph_task_capsule"><input type="hidden" name="capsuleId" value="<?php echo esc_attr( (string) ( $capsule['id'] ?? '' ) ); ?>"><?php wp_nonce_field( 'dsa_revoke_sitegraph_task_capsule_' . (string) ( $capsule['id'] ?? '' ) ); ?><button class="button button-secondary" type="submit"><?php esc_html_e( 'Revoke', 'dsa' ); ?></button></form><?php else : ?>—<?php endif; ?></td></tr>
+					<?php endforeach; ?>
+					</tbody></table>
+				<?php endif; ?>
 				<h3><?php esc_html_e( 'Validate binding plan', 'dsa' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Upload bricks-bindings/kiwe-bindings.json. Kiwe validates it against the current SiteGraph; it does not save Bricks data or apply changes.', 'dsa' ); ?></p>
 				<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -4570,9 +4710,9 @@ final class Admin {
 				<?php $this->render_binding_plan_report( $binding_report ); ?>
 				<?php $this->render_trusted_apply_stages(); ?>
 				<h3><?php esc_html_e( 'REST endpoints for tool clients', 'dsa' ); ?></h3>
-				<p class="description"><?php esc_html_e( 'Base endpoint:', 'dsa' ); ?> <code><?php echo esc_html( $rest_base ); ?></code></p>
+				<p class="description"><?php esc_html_e( 'Base API namespace (not a webpage):', 'dsa' ); ?> <code><?php echo esc_html( $rest_base ); ?></code></p>
 				<ul class="ul-disc"><li><code>GET /status</code></li><li><code>GET /site-graph?sampleLimit=8</code></li><li><code>POST /validate-bindings</code></li><li><code>POST /prepare-apply-plan</code></li><li><code>POST /stage-apply-plan</code> and <code>/stages/{stageId}/...</code></li></ul>
-				<p class="description"><?php esc_html_e( 'Safe sequence: export or pair, validate bindings, prepare a dry-run plan, then use the trusted staging chain. AI never receives direct save authority.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Safe sequence: connect with a task capsule for read/convert/validate work. Use a separate narrowly scoped permanent key only when a human intentionally enters the trusted staging chain. A base URL and secret pasted into a normal chat are not a secure connection.', 'dsa' ); ?></p>
 			</section>
 		</div>
 		<?php
@@ -4666,14 +4806,14 @@ final class Admin {
 							<input type="text" name="label" value="" placeholder="<?php esc_attr_e( 'Claude / ChatGPT / Codex testing', 'dsa' ); ?>">
 						</label>
 						<label>
-							<input type="checkbox" name="scopes[]" value="all" checked>
+							<input type="checkbox" name="scopes[]" value="all">
 							<span><?php esc_html_e( 'All Kiwe AI connector access', 'dsa' ); ?></span>
 						</label>
 						<?php submit_button( __( 'Create API Key', 'dsa' ), 'primary', 'submit', false ); ?>
 					</p>
 					<details>
 						<summary><?php esc_html_e( 'Advanced scopes', 'dsa' ); ?></summary>
-						<p class="description"><?php esc_html_e( 'If “all” is checked, Kiwe stores only the all scope. Uncheck it to create a narrower key.', 'dsa' ); ?></p>
+						<p class="description"><?php esc_html_e( '“All” is intentionally unchecked because it includes high-authority staging, execution and mutation routes. Select only the scopes the client needs. If none are selected, Kiwe creates a site_graph-only key.', 'dsa' ); ?></p>
 						<p class="dsa-admin-token-chips">
 							<?php foreach ( Access_Key_Service::SCOPES as $scope ) : ?>
 								<?php if ( 'all' === $scope ) { continue; } ?>

@@ -1,5 +1,13 @@
 # Kiwe SeamFlow AI entrypoint
 
+## External SiteGraph clients
+
+Kiwe exposes a vendor-neutral OpenAPI 3.1 contract at `/wp-json/dsa/v1/ai/openapi.json` and a compact connection manifest at `/wp-json/dsa/v1/ai/client-manifest`. The `/wp-json/dsa/v1/ai` URL itself is an API namespace, not a browsable tool or complete AI connection.
+
+Use `Kiwe > SiteGraph > Download client connection` for ChatGPT-compatible actions, Claude/Cursor adapters, MCP clients, IDEs and other authenticated tools. The downloaded `kiwe.external-client-connection.v1` document contains a short-lived task capsule that is public-data-only and limited to SiteGraph, Bricks context, SEAM conversion and validators. It has expiry, row, field, resource and request budgets; Kiwe stores only its hash. It never grants staging, publishing, runtime or mutation access. Configure the secret in the client's secure tool/action layer and delete the downloaded connection file afterward.
+
+Use a separate permanent API key only for a human-approved trusted staging chain. Never put either credential in a prompt, URL, source project, repository or screenshot.
+
 If you are an AI, designer, or developer using this repository to create a website/page, Kiwe DSA AppShell theme, or combined handoff, do not read the whole codebase first.
 
 **SeamFlow** is the external-AI command-central flow for browser AIs, IDE/app AIs, MCP clients, and skill-capable agents. It helps external models create, rebuild, audit, fix, and convert Seam Framework + Bricks-powered webpages, headers, footers, reusable templates, Framework profiles, dynamic intent, and accessibility artifacts without wasting tokens or wandering the repo.
