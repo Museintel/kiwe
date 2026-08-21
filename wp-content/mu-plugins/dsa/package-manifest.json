@@ -398,7 +398,7 @@
     },
     "includes/AI/External_Client_Adapter_Service.php": {
       "bytes": 3978,
-      "sha256": "d6c100f5c1b4c89fc71edb7bf3bf8b367665cd074a2638e0fde3d0bb3e01de9a"
+      "sha256": "432d9d3803da9485f6402c6da3fda0650e9e19739ce22ea86376e12d5f931de4"
     },
     "includes/AI/External_Client_OpenAPI_Service.php": {
       "bytes": 9414,

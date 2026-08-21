@@ -90,7 +90,7 @@ final class External_Client_Adapter_Service {
 				'chromeExtension' => [
 					'kind'             => 'local-secret-proxy',
 					'importSchema'     => 'kiwe.external-client-connection.v1',
-					'minimumVersion'   => '0.16.0',
+					'minimumVersion'   => '0.17.0',
 					'secretStorage'    => 'chrome.storage.local',
 					'hostPermission'   => 'requested only for the imported WordPress origin',
 				],
