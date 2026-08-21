@@ -97,7 +97,7 @@ final class External_Client_Adapter_Service {
 			],
 			'verification' => [
 				'endpoint' => $base . '/status',
-				'expected' => [ 'authenticated' => true, 'credentialKind' => 'task_capsule' ],
+				'expected' => [ 'ok' => true, 'schema' => 'kiwe.ai-access-status.v1', 'accessKind' => 'task_capsule' ],
 			],
 		];
 	}

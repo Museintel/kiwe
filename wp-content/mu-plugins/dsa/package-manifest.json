@@ -397,8 +397,8 @@
       "sha256": "9e70c0275416656661bf3140262e925fcdead9b0ced8191a0f12b807f8b365e6"
     },
     "includes/AI/External_Client_Adapter_Service.php": {
-      "bytes": 3934,
-      "sha256": "dc140ac2c6f6909214887fe47f1006f16ee08e660166c99814af94d4046862c2"
+      "bytes": 3959,
+      "sha256": "afe4010ae4800d629a024f8d4ff563cd2ec3c932b9bc33d4fe42190bd8cdf562"
     },
     "includes/AI/External_Client_OpenAPI_Service.php": {
       "bytes": 8669,
