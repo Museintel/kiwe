@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.07
+
+- Added a hash-verified, reversible Clean Conversion Test Run to Kiwe Developer with isolated Raw, Woo native, and Woo native + Kiwe profiles. It snapshots and exactly restores Bricks classes, variables, palettes, theme styles, the element manager, and Kiwe settings without deleting content or commerce data.
+- Extended the content-free SiteGraph calibration contract with disabled Bricks element names, allowing SEAM Compiler to report target capability blockers instead of misdiagnosing missing WooCommerce output as a CSS conversion defect.
+- Woo test profiles temporarily activate the native Bricks commerce elements needed by product, archive, cart, checkout, and account templates while preserving all pre-test element-manager permissions and state for restoration.
+- Synchronized the MU loader, package entry, command contract version, and package manifest for folder-based Hostinger deployment.
+
 ## 7.06
 
 - Added a Framework-free Bricks accessibility lane that fills only missing native `dark` values in existing non-Kiwe Color Manager palettes. It preserves palette identity and order, every light value, every explicit designer dark value, and all variables, classes, and Theme Styles.

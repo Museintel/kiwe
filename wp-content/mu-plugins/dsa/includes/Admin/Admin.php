@@ -28,6 +28,7 @@ use DSA\AI\Controlled_Executor_Service;
 use DSA\AI\Bricks_Controlled_Adapter_Service;
 use DSA\AI\Post_Apply_Verification_Service;
 use DSA\Bricks\Compiler_Batch_Cleanup_Service;
+use DSA\Bricks\Clean_Conversion_Test_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Commerce\Abandoned_Cart_Service;
@@ -137,6 +138,8 @@ final class Admin {
 		add_action( 'admin_post_dsa_save_menu_settings', [ $this, 'save_menu_settings' ] );
 		add_action( 'admin_post_dsa_save_dock_settings', [ $this, 'save_dock_settings' ] );
 		add_action( 'admin_post_dsa_developer_clear_runtime', [ $this, 'handle_developer_clear_runtime' ] );
+		add_action( 'admin_post_dsa_developer_begin_clean_conversion_test', [ $this, 'handle_developer_begin_clean_conversion_test' ] );
+		add_action( 'admin_post_dsa_developer_restore_clean_conversion_test', [ $this, 'handle_developer_restore_clean_conversion_test' ] );
 		add_action( 'admin_post_dsa_developer_cleanup_bricks_batches', [ $this, 'handle_developer_cleanup_bricks_batches' ] );
 		add_action( 'admin_post_dsa_developer_reset_settings', [ $this, 'handle_developer_reset_settings' ] );
 		add_action( 'wp_ajax_dsa_search_menu_targets', [ $this, 'search_menu_targets' ] );
@@ -1342,6 +1345,64 @@ final class Admin {
 				admin_url( 'admin.php' )
 			)
 		);
+		exit;
+	}
+
+	public function handle_developer_begin_clean_conversion_test(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_developer_begin_clean_conversion_test' );
+		if ( '1' !== (string) ( $_POST['confirm_clean_test'] ?? '' ) ) {
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-developer', 'clean-test' => 'cancelled' ], admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		try {
+			$result = ( new Clean_Conversion_Test_Service() )->begin( sanitize_key( wp_unslash( $_POST['test_profile'] ?? 'raw' ) ) );
+			$args   = [
+				'page'       => 'kiwe-developer',
+				'clean-test' => 'started',
+				'profile'    => $result['profile'],
+				'activated'  => $result['activated_woocommerce_elements'],
+				'css-queued' => $result['css_queued'] ? '1' : '0',
+			];
+		} catch ( \Throwable $error ) {
+			$args = [
+				'page'             => 'kiwe-developer',
+				'clean-test'       => 'error',
+				'clean-test-error' => rawurlencode( $error->getMessage() ),
+			];
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	public function handle_developer_restore_clean_conversion_test(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_developer_restore_clean_conversion_test' );
+		try {
+			$result = ( new Clean_Conversion_Test_Service() )->restore();
+			$args   = [
+				'page'       => 'kiwe-developer',
+				'clean-test' => 'restored',
+				'profile'    => $result['profile'],
+				'css-queued' => $result['css_queued'] ? '1' : '0',
+			];
+		} catch ( \Throwable $error ) {
+			$args = [
+				'page'             => 'kiwe-developer',
+				'clean-test'       => 'error',
+				'clean-test-error' => rawurlencode( $error->getMessage() ),
+			];
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 
@@ -6474,11 +6535,13 @@ final class Admin {
 		$runtime_cleared = isset( $_GET['runtime-cleared'] ) && '1' === sanitize_key( wp_unslash( $_GET['runtime-cleared'] ) );
 		$settings_reset  = sanitize_key( wp_unslash( $_GET['settings-reset'] ?? '' ) );
 		$bricks_cleanup  = sanitize_key( wp_unslash( $_GET['bricks-cleanup'] ?? '' ) );
+		$clean_test      = sanitize_key( wp_unslash( $_GET['clean-test'] ?? '' ) );
 		$settings        = $this->settings->all();
 		$diagnostics     = wp_parse_args( $settings['diagnostics'] ?? [], $this->settings->defaults()['diagnostics'] );
 		$package_proof   = \DSA\Runtime\Package_Manifest::verify();
 		$loader_version  = defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : '';
 		$batch_report    = ( new Compiler_Batch_Cleanup_Service() )->report();
+		$clean_status    = ( new Clean_Conversion_Test_Service() )->status();
 		?>
 		<div class="wrap dsa-admin" data-dsa-developer-tools data-auto-clear-browser="<?php echo $runtime_cleared ? '1' : '0'; ?>">
 			<h1><?php esc_html_e( 'Kiwe Developer', 'dsa' ); ?></h1>
@@ -6499,6 +6562,15 @@ final class Admin {
 			<?php elseif ( 'error' === $bricks_cleanup ) : ?>
 				<div class="notice notice-error"><p><?php echo esc_html( rawurldecode( (string) ( $_GET['cleanup-error'] ?? __( 'Compiler cleanup failed.', 'dsa' ) ) ) ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( 'started' === $clean_test ) : ?>
+				<div class="notice notice-warning"><p><?php echo esc_html( sprintf( __( 'Clean %1$s conversion test started. %2$d disabled WooCommerce elements were temporarily activated. Import and inspect one project, then restore the snapshot.', 'dsa' ), sanitize_key( wp_unslash( $_GET['profile'] ?? '' ) ), absint( $_GET['activated'] ?? 0 ) ) ); ?></p></div>
+			<?php elseif ( 'restored' === $clean_test ) : ?>
+				<div class="notice notice-success"><p><?php esc_html_e( 'The exact pre-test Bricks and Kiwe configuration was restored and Bricks CSS regeneration was queued.', 'dsa' ); ?></p></div>
+			<?php elseif ( 'cancelled' === $clean_test ) : ?>
+				<div class="notice notice-warning"><p><?php esc_html_e( 'Clean conversion test was cancelled because confirmation was not checked.', 'dsa' ); ?></p></div>
+			<?php elseif ( 'error' === $clean_test ) : ?>
+				<div class="notice notice-error"><p><?php echo esc_html( rawurldecode( (string) ( $_GET['clean-test-error'] ?? __( 'Clean conversion test failed.', 'dsa' ) ) ) ); ?></p></div>
+			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Installed build', 'dsa' ); ?></h2>
@@ -6518,6 +6590,37 @@ final class Admin {
 					<button type="button" class="button" data-dsa-clear-browser><?php esc_html_e( 'Clear this browser only', 'dsa' ); ?></button>
 				</form>
 				<p data-dsa-developer-status aria-live="polite"></p>
+			</section>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Clean conversion test run', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Creates a reversible acceptance window with empty Bricks classes, variables, palettes, and theme styles. It also forces Raw Convert Test Mode and removes Kiwe chrome from screenshots. WordPress content, templates, products, orders, users, and media are never deleted.', 'dsa' ); ?></p>
+				<?php if ( $clean_status['active'] ) : ?>
+					<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'A clean test is active.', 'dsa' ); ?></strong> <?php echo esc_html( sprintf( __( 'Profile: %1$s · Snapshot: %2$s · Started: %3$s', 'dsa' ), $clean_status['profile'], $clean_status['hash'], $clean_status['created_at'] ) ); ?></p></div>
+					<p><?php echo esc_html( sprintf( __( 'Current isolated state: %1$d classes, %2$d variables, %3$d palettes, %4$d theme styles.', 'dsa' ), $clean_status['counts']['classes'], $clean_status['counts']['variables'], $clean_status['counts']['palettes'], $clean_status['counts']['themes'] ) ); ?></p>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_developer_restore_clean_conversion_test">
+						<?php wp_nonce_field( 'dsa_developer_restore_clean_conversion_test' ); ?>
+						<?php submit_button( __( 'Restore exact pre-test state', 'dsa' ), 'primary', 'submit', false ); ?>
+					</form>
+				<?php else : ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_developer_begin_clean_conversion_test">
+						<?php wp_nonce_field( 'dsa_developer_begin_clean_conversion_test' ); ?>
+						<p><label><?php esc_html_e( 'Test profile', 'dsa' ); ?>
+							<select name="test_profile">
+								<option value="raw"><?php esc_html_e( 'Raw Bricks conversion (no Woo/Kiwe enhancement)', 'dsa' ); ?></option>
+								<option value="woo_native"><?php esc_html_e( 'WooCommerce native (required Bricks elements active)', 'dsa' ); ?></option>
+								<option value="woo_kiwe"><?php esc_html_e( 'WooCommerce native + Kiwe controls', 'dsa' ); ?></option>
+							</select>
+						</label></p>
+						<label><input type="checkbox" name="confirm_clean_test" value="1" required> <?php esc_html_e( 'I understand that pages relying on existing global styles can look different until I restore the snapshot.', 'dsa' ); ?></label>
+						<?php submit_button( __( 'Snapshot + start clean test', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</form>
+					<?php if ( ! empty( $clean_status['disabled_woocommerce_elements'] ) ) : ?>
+						<p class="description"><?php echo esc_html( sprintf( __( '%d required Bricks WooCommerce elements are currently disabled; either Woo test profile activates them temporarily.', 'dsa' ), count( $clean_status['disabled_woocommerce_elements'] ) ) ); ?></p>
+					<?php endif; ?>
+				<?php endif; ?>
 			</section>
 
 			<section class="dsa-admin__panel">

@@ -89,6 +89,7 @@ final class Site_Graph_Service {
 		$global_classes   = defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ? get_option( BRICKS_DB_GLOBAL_CLASSES, [] ) : get_option( 'bricks_global_classes', [] );
 		$global_variables = defined( 'BRICKS_DB_GLOBAL_VARIABLES' ) ? get_option( BRICKS_DB_GLOBAL_VARIABLES, [] ) : get_option( 'bricks_global_variables', [] );
 		$theme_styles     = defined( 'BRICKS_DB_THEME_STYLES' ) ? get_option( BRICKS_DB_THEME_STYLES, [] ) : get_option( 'bricks_theme_styles', [] );
+		$element_manager  = defined( 'BRICKS_DB_ELEMENT_MANAGER' ) ? get_option( BRICKS_DB_ELEMENT_MANAGER, [] ) : get_option( 'bricks_element_manager', [] );
 		$breakpoints      = class_exists( '\\Bricks\\Breakpoints' ) && is_callable( [ '\\Bricks\\Breakpoints', 'get_breakpoints' ] )
 			? \Bricks\Breakpoints::get_breakpoints()
 			: [];
@@ -120,8 +121,28 @@ final class Site_Graph_Service {
 				'themeStyleCount'   => is_array( $theme_styles ) ? count( $theme_styles ) : 0,
 				'queryLoopTypes'    => array_values( array_unique( array_filter( array_map( static fn( $item ): string => sanitize_key( (string) ( is_array( $item ) ? ( $item['objectType'] ?? $item['name'] ?? '' ) : $item ) ), $this->bricks_query_loop_types() ) ) ) ),
 				'dynamicTags'       => $this->calibration_dynamic_tags(),
+				'elementManager'    => $this->calibration_element_manager( is_array( $element_manager ) ? $element_manager : [] ),
 			],
 		];
+	}
+
+	/**
+	 * Element availability affects whether a valid native template can render at
+	 * all. Export only names and states; never export roles or user permissions.
+	 *
+	 * @return array{disabled:string[]}
+	 */
+	private function calibration_element_manager( array $manager ): array {
+		$disabled = [];
+		foreach ( $manager as $name => $record ) {
+			$name = sanitize_key( (string) $name );
+			if ( '' !== $name && is_array( $record ) && 'disabled' === ( $record['status'] ?? '' ) ) {
+				$disabled[] = $name;
+			}
+		}
+		$disabled = array_values( array_unique( $disabled ) );
+		sort( $disabled, SORT_STRING );
+		return [ 'disabled' => array_slice( $disabled, 0, 1000 ) ];
 	}
 
 	private function calibration_names( array $records ): array {
