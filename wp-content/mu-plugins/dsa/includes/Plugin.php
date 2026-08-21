@@ -163,6 +163,24 @@ final class Plugin {
 		$this->settings->run_migrations();
 		$settings    = $this->settings->all();
 		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
+		$permissions = isset( $settings['permissions'] ) && is_array( $settings['permissions'] ) ? $settings['permissions'] : [];
+		$commerce    = isset( $settings['commerce'] ) && is_array( $settings['commerce'] ) ? $settings['commerce'] : [];
+		$bricks      = isset( $settings['bricks'] ) && is_array( $settings['bricks'] ) ? $settings['bricks'] : [];
+		$surface_enabled   = ! empty( $settings['enabled'] );
+		$phonekey_enabled  = ! empty( $settings['phonekey']['enabled'] );
+		$push_enabled      = ! empty( $permissions['enabled'] ) && ! empty( $permissions['notifications_enabled'] );
+		$preferences_enabled = ! empty( $permissions['enabled'] ) && ! empty( $permissions['notification_preferences_enabled'] );
+		$abandoned_enabled = ! empty( $settings['abandoned_cart']['enabled'] );
+		$linked_enabled    = ! empty( $commerce['linked_products_enabled'] );
+		$analytics_enabled = ! empty( $settings['metrics']['enabled'] ) || $abandoned_enabled || $linked_enabled;
+		$commerce_enabled  = $surface_enabled && ( ! empty( $commerce['cart_surface_enabled'] ) || ! empty( $commerce['checkout_surface_enabled'] ) );
+		$bricks_enabled    = ! empty( $bricks['mini_cart_adapter_enabled'] )
+			|| ! empty( $bricks['add_to_cart_enhancer_enabled'] )
+			|| ! empty( $bricks['dynamic_tags_enabled'] )
+			|| ! empty( $bricks['dsa_icon_launcher_enabled'] )
+			|| ! empty( $bricks['linked_products_controls_enabled'] )
+			|| ! empty( $bricks['quantity_stepper_enabled'] )
+			|| ! empty( $bricks['stock_badge_enabled'] );
 		Runtime_Profiler::configure( ! empty( $diagnostics['enabled'] ) && ! empty( $diagnostics['performance_profile'] ) );
 		Runtime_Profiler::mark(
 			'route.context',
@@ -179,47 +197,91 @@ final class Plugin {
 		$this->apex_acceptance->register();
 
 		$this->registry->register();
-		( new PhoneKey_Core_Loader() )->register();
+		if ( $phonekey_enabled ) {
+			( new PhoneKey_Core_Loader() )->register();
+		}
 		$this->native->register();
 		( new Site_Identity_Service() )->register();
 
 		$this->modules->register_defaults();
 
-		$this->email->register();
-		$this->pwa->register();
-		$this->push->register();
-		$this->admin_notifications->register();
+		if ( ! empty( $settings['email']['enabled'] ) ) {
+			$this->email->register();
+		}
+		if ( $surface_enabled && ! empty( $permissions['enabled'] ) && ! empty( $permissions['pwa_enabled'] ) ) {
+			$this->pwa->register();
+		}
+		if ( $push_enabled ) {
+			$this->push->register();
+			$this->admin_notifications->register();
+		}
 		( new Admin( $this->settings, $this->modules, $this->native, $this->readiness, $this->store_analytics, $this->linked_products, $this->email, $this->abandoned_carts, $this->notification_preferences, $this->notification_campaigns, $this->saved_items, $this->search ) )->register();
 		( new SecureTrack_Loader() )->register();
-		( new Assets( $this->settings, $this->registry, $this->modules, $this->phonekey, $this->trust, $this->flow_guard, $this->triggers, $this->native, $this->commerce, $this->rewards, $this->metrics, $this->permissions, $this->notification_preferences, $this->pwa, $this->reviews, $this->route_capabilities ) )->register();
-		( new Surface_Renderer( $this->settings, $this->modules, $this->registry, $this->phonekey ) )->register();
-		( new Account_Controller() )->register();
-		( new Runtime_Hydration_Controller( $this->settings, $this->phonekey, $this->trust, $this->flow_guard, $this->commerce ) )->register();
-		( new Cart_Controller( $this->cart_payload, $this->store_analytics ) )->register();
-		( new Checkout_Controller( $this->checkout ) )->register();
+		if ( $surface_enabled ) {
+			( new Assets( $this->settings, $this->registry, $this->modules, $this->phonekey, $this->trust, $this->flow_guard, $this->triggers, $this->native, $this->commerce, $this->rewards, $this->metrics, $this->permissions, $this->notification_preferences, $this->pwa, $this->reviews, $this->route_capabilities ) )->register();
+			( new Surface_Renderer( $this->settings, $this->modules, $this->registry, $this->phonekey ) )->register();
+			( new Runtime_Hydration_Controller( $this->settings, $this->phonekey, $this->trust, $this->flow_guard, $this->commerce ) )->register();
+		}
+		if ( $phonekey_enabled ) {
+			( new Account_Controller() )->register();
+		}
+		if ( $commerce_enabled ) {
+			( new Cart_Controller( $this->cart_payload, $this->store_analytics ) )->register();
+			( new Checkout_Controller( $this->checkout ) )->register();
+		}
 		( new Rewards_Controller( $this->rewards ) )->register();
-		( new Metrics_Controller( $this->metrics ) )->register();
-		( new Permissions_Controller( $this->permissions ) )->register();
-		( new Notification_Preferences_Controller( $this->notification_preferences ) )->register();
-		( new Push_Controller( $this->push ) )->register();
-		( new Admin_Notifications_Controller( $this->admin_notifications ) )->register();
+		if ( $analytics_enabled ) {
+			( new Metrics_Controller( $this->metrics ) )->register();
+		}
+		if ( $surface_enabled && ! empty( $permissions['enabled'] ) ) {
+			( new Permissions_Controller( $this->permissions ) )->register();
+		}
+		if ( $preferences_enabled ) {
+			( new Notification_Preferences_Controller( $this->notification_preferences ) )->register();
+		}
+		if ( $push_enabled ) {
+			( new Push_Controller( $this->push ) )->register();
+			( new Admin_Notifications_Controller( $this->admin_notifications ) )->register();
+		}
 		( new Settings_Controller( $this->settings, $this->registry, $this->trust, $this->modules, $this->native, $this->copilot, $this->reviews ) )->register();
 		( new Site_Graph_Controller( $this->site_graph ) )->register();
 		( new AI_Access_Controller( $this->site_graph, $this->settings ) )->register();
 		( new Bricks_Studio_Controller( $this->settings, $this->site_graph ) )->register();
-		( new Search_Controller( $this->search ) )->register();
-		( new Saved_Items_Controller( $this->saved_items ) )->register();
-		( new Editorial_Envelope_Controller( $this->editorial_fragments ) )->register();
+		if ( $surface_enabled && ! empty( $settings['search']['context_aware'] ) ) {
+			( new Search_Controller( $this->search ) )->register();
+		}
+		if ( $surface_enabled ) {
+			( new Saved_Items_Controller( $this->saved_items ) )->register();
+			( new Editorial_Envelope_Controller( $this->editorial_fragments ) )->register();
+		}
 		( new Apex_Profile_Controller( $this->apex_acceptance ) )->register();
-		$this->search->register();
-		( new Bricks_Integration( $this->registry, $this->settings, $this->linked_products, $this->store_analytics ) )->register();
-		$this->linked_products->register();
-		$this->store_analytics->register();
-		$this->notification_preferences->register();
-		$this->abandoned_carts->register();
-		$this->checkout->register();
-		$this->cod_gate->register();
-		$this->schema_geo->register();
+		if ( $surface_enabled && ! empty( $settings['search']['context_aware'] ) ) {
+			$this->search->register();
+		}
+		if ( $bricks_enabled ) {
+			( new Bricks_Integration( $this->registry, $this->settings, $this->linked_products, $this->store_analytics ) )->register();
+		}
+		if ( $linked_enabled ) {
+			$this->linked_products->register();
+		}
+		if ( $analytics_enabled ) {
+			$this->store_analytics->register();
+		}
+		if ( $preferences_enabled ) {
+			$this->notification_preferences->register();
+		}
+		if ( $abandoned_enabled ) {
+			$this->abandoned_carts->register();
+		}
+		if ( $commerce_enabled ) {
+			$this->checkout->register();
+		}
+		if ( ! empty( $commerce['cod_gate']['enabled'] ) ) {
+			$this->cod_gate->register();
+		}
+		if ( $surface_enabled && ! empty( $settings['schema_geo']['enabled'] ) ) {
+			$this->schema_geo->register();
+		}
 
 		Runtime_Profiler::finish( 'service.register_services', $service_profile );
 	}

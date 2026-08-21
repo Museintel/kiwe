@@ -97,6 +97,7 @@ final class Package_Manifest {
 			'includes/Diagnostics/Runtime_Profiler.php',
 			'includes/Utilities/Atomic_Rate_Limiter.php',
 			'includes/Diagnostics/Asset_Manifest_Service.php',
+			'includes/Diagnostics/Persistence_Maintenance_Service.php',
 			'includes/Design/Token_Schema.php',
 			'includes/Design/Seam_Token_Service.php',
 			'includes/Design/Seam_Vocabulary_Schema.php',
@@ -132,6 +133,49 @@ final class Package_Manifest {
 
 	public static function clear_cached_proof(): void {
 		delete_option( self::CACHE_OPTION );
+	}
+
+	/**
+	 * Files left behind by merged/partial MU-plugin uploads are not covered by
+	 * the integrity manifest and still consume hosting inodes. Report only
+	 * entries inside the canonical Kiwe package directory.
+	 *
+	 * @return array<int,array{path:string,bytes:int,link:bool}>
+	 */
+	public static function unexpected_files(): array {
+		$manifest = self::read_manifest();
+		if ( null === $manifest || ! is_dir( DSA_DIR ) ) {
+			return [];
+		}
+
+		$expected = array_fill_keys( array_keys( $manifest['files'] ), true );
+		$expected[ self::MANIFEST ] = true;
+		$unexpected = [];
+		$iterator = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( DSA_DIR, \FilesystemIterator::SKIP_DOTS ),
+			\RecursiveIteratorIterator::LEAVES_ONLY
+		);
+
+		foreach ( $iterator as $file ) {
+			if ( ! $file->isFile() && ! $file->isLink() ) {
+				continue;
+			}
+
+			$absolute = wp_normalize_path( $file->getPathname() );
+			$relative = ltrim( substr( $absolute, strlen( wp_normalize_path( DSA_DIR ) ) ), '/' );
+			if ( '' === $relative || isset( $expected[ $relative ] ) ) {
+				continue;
+			}
+
+			$unexpected[] = [
+				'path'  => $relative,
+				'bytes' => $file->isLink() ? 0 : max( 0, (int) $file->getSize() ),
+				'link'  => $file->isLink(),
+			];
+		}
+
+		usort( $unexpected, static fn( array $a, array $b ): int => strcmp( $a['path'], $b['path'] ) );
+		return $unexpected;
 	}
 
 	private static function stamp(): string {

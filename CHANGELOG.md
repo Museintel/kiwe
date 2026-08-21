@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.11
+
+- Added a read-only Kiwe persistence and inode-residue inventory under Kiwe > Developer, covering current and unknown legacy Kiwe/SecureTrack/PhoneKey tables, option and meta footprints, cron events, unexpected canonical-package files, and possible old top-level MU-plugin copies.
+- Added a conservative maintenance action for expired Kiwe-family transients, expired operational rows, and cron events owned by disabled features. Content, orders, users, consent, logs, and active PhoneKey credentials/factors remain outside this cleanup boundary.
+- Added separately confirmed removal for only listed unknown legacy tables and manifest-proven unexpected package files; possible old top-level copies remain report-only because filename similarity is not sufficient ownership proof.
+- Corrected fresh-install lifecycle registration so disabled PhoneKey, push, preferences, analytics, abandoned-cart, commerce, surface, and Bricks features do not silently install storage or runtime hooks. The SiteGraph security rate-limit table remains the single bounded persistence dependency of the default read-only SiteGraph lane.
+- Changed Developer reset to the SiteGraph-only safe baseline and added mandatory persistence-maintenance and fresh/existing-install release contracts.
+
 ## 7.10
 
 - Added a fail-closed fresh-install profile: every optional Kiwe runtime capability starts disabled while the read-only SiteGraph remains available for browser-AI and export workflows.

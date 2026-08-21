@@ -82,6 +82,7 @@ namespace {
 	}
 
 	if ( ! empty( $resolved['enabled'] )
+		|| ! empty( $resolved['phonekey']['enabled'] )
 		|| ! empty( $resolved['secure']['enabled'] )
 		|| ! empty( array_filter( $resolved['dock']['enabled_items'] ?? [] ) )
 		|| ! empty( $resolved['tokens']['enabled'] )

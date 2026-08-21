@@ -209,6 +209,9 @@ final class Settings {
 				'protected_flow'      => [
 					'rail_enabled' => false,
 				],
+				'phonekey'           => [
+					'enabled' => true,
+				],
 				'secure'              => [
 					'enabled'             => false,
 					'auto_logout_enabled' => false,

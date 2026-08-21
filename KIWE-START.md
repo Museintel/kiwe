@@ -1,7 +1,7 @@
 # SeamFlow Start
 
-Contract version: `7.10`
-Updated: `2026-08-14`
+Contract version: `7.11`
+Updated: `2026-08-21`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
 Purpose: fastest safe entrypoint for external AI, browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.10
+SeamFlow contract: 7.11
 ```
 
 Then do one of these:
