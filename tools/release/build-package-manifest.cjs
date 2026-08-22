@@ -5,6 +5,13 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '../..');
 const packageRoot = path.join(root, 'wp-content', 'mu-plugins', 'dsa');
 const output = path.join(packageRoot, 'package-manifest.json');
+const textExtensions = new Set(['.css', '.html', '.js', '.json', '.md', '.php', '.svg', '.txt', '.xml']);
+
+function canonicalBody(absolute) {
+  const body = fs.readFileSync(absolute);
+  if (!textExtensions.has(path.extname(absolute).toLowerCase())) return body;
+  return Buffer.from(body.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8');
+}
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -22,7 +29,7 @@ const files = {};
 for (const absolute of walk(packageRoot).sort()) {
   if (absolute === output) continue;
   const relative = path.relative(packageRoot, absolute).split(path.sep).join('/');
-  const body = fs.readFileSync(absolute);
+  const body = canonicalBody(absolute);
   files[relative] = {
     bytes: body.length,
     sha256: crypto.createHash('sha256').update(body).digest('hex'),

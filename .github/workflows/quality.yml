@@ -8,6 +8,16 @@ permissions:
   contents: read
 
 jobs:
+  command-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify public SEAM command registry has no drift
+        run: node tools/release/build-command-registry.cjs --check
+
   source-contracts:
     runs-on: ubuntu-latest
     strategy:
@@ -26,15 +36,15 @@ jobs:
       - name: Confirm PHP platform
         run: |
           php -r "exit(PHP_VERSION_ID >= 80200 && PHP_VERSION_ID < 80500 ? 0 : 1);"
+      - name: Install Kiwe AI Toolkit dependencies
+        working-directory: kiwe-ai-toolkit
+        run: npm ci --no-audit --no-fund
       - name: Verify green source baseline
         run: node tools/release/verify-green-baseline.cjs
       - name: Verify SiteGraph-only fresh-install profile
         run: |
           php tools/release/test-sitegraph-only-fresh-install.php
           php tools/release/test-sitegraph-only-fresh-install.php existing
-      - name: Verify public SEAM command registry has no drift
-        run: node tools/release/build-command-registry.cjs --check
-
   ui-contract:
     runs-on: ubuntu-latest
     steps:

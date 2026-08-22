@@ -7,6 +7,13 @@ const packageRoot = path.join(root, 'wp-content', 'mu-plugins', 'dsa');
 const manifestPath = path.join(packageRoot, 'package-manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const failures = [];
+const textExtensions = new Set(['.css', '.html', '.js', '.json', '.md', '.php', '.svg', '.txt', '.xml']);
+
+function canonicalBody(absolute) {
+  const body = fs.readFileSync(absolute);
+  if (!textExtensions.has(path.extname(absolute).toLowerCase())) return body;
+  return Buffer.from(body.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8');
+}
 
 function version(file, pattern, label) {
   const match = fs.readFileSync(file, 'utf8').match(pattern);
@@ -28,7 +35,7 @@ for (const [relative, expected] of Object.entries(manifest.files || {})) {
     failures.push(`missing: ${relative}`);
     continue;
   }
-  const body = fs.readFileSync(absolute);
+  const body = canonicalBody(absolute);
   const hash = crypto.createHash('sha256').update(body).digest('hex');
   if (body.length !== expected.bytes || hash !== expected.sha256) failures.push(`changed: ${relative}`);
 }
