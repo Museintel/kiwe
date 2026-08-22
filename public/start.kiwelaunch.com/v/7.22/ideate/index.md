@@ -4,11 +4,17 @@ SeamFlow contract: 7.22
 
 Canonical URL: https://start.kiwelaunch.com/ideate/
 Machine contract: https://start.kiwelaunch.com/ideate/contract.json
+Pinned machine contract: https://start.kiwelaunch.com/v/7.22/ideate/contract.json
 Source hash: sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3
 
 ## Phase
 
 ideate
+
+## Hosted resources
+
+- https://start.kiwelaunch.com/contexts/ideate-lite.md
+  - Pinned: https://start.kiwelaunch.com/v/7.22/contexts/ideate-lite.md
 
 ## Requirements
 

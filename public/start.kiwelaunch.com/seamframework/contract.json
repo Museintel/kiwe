@@ -3,6 +3,25 @@
   "contractVersion": "7.22",
   "command": "/seamframework",
   "route": "/seamframework",
+  "canonicalUrl": "https://start.kiwelaunch.com/seamframework/contract.json",
+  "immutableUrl": "https://start.kiwelaunch.com/v/7.22/seamframework/contract.json",
+  "resources": [
+    {
+      "source": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",
+      "url": "https://start.kiwelaunch.com/contracts/seam-compiler-contract.json",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/contracts/seam-compiler-contract.json"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/seam-compiler-lite.md",
+      "url": "https://start.kiwelaunch.com/contexts/seam-compiler-lite.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/contexts/seam-compiler-lite.md"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md",
+      "url": "https://start.kiwelaunch.com/contexts/bricks-conversion-lite.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/contexts/bricks-conversion-lite.md"
+    }
+  ],
   "sourceHash": "sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3",
   "phase": "framework",
   "read": [

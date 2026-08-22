@@ -4,11 +4,21 @@ SeamFlow contract: 7.22
 
 Canonical URL: https://start.kiwelaunch.com/audit/seamframework/
 Machine contract: https://start.kiwelaunch.com/audit/seamframework/contract.json
+Pinned machine contract: https://start.kiwelaunch.com/v/7.22/audit/seamframework/contract.json
 Source hash: sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3
 
 ## Phase
 
 audit
+
+## Hosted resources
+
+- https://start.kiwelaunch.com/contracts/seam-compiler-contract.json
+  - Pinned: https://start.kiwelaunch.com/v/7.22/contracts/seam-compiler-contract.json
+- https://start.kiwelaunch.com/contexts/seam-compiler-lite.md
+  - Pinned: https://start.kiwelaunch.com/v/7.22/contexts/seam-compiler-lite.md
+- https://start.kiwelaunch.com/contexts/bricks-conversion-lite.md
+  - Pinned: https://start.kiwelaunch.com/v/7.22/contexts/bricks-conversion-lite.md
 
 ## Requirements
 

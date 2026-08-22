@@ -4,11 +4,17 @@ SeamFlow contract: 7.22
 
 Canonical URL: https://start.kiwelaunch.com/list/
 Machine contract: https://start.kiwelaunch.com/list/contract.json
+Pinned machine contract: https://start.kiwelaunch.com/v/7.22/list/contract.json
 Source hash: sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3
 
 ## Phase
 
 discover
+
+## Hosted resources
+
+- https://start.kiwelaunch.com/command-manifest.json
+  - Pinned: https://start.kiwelaunch.com/v/7.22/command-manifest.json
 
 ## Requirements
 

@@ -3,6 +3,9 @@
   "contractVersion": "7.22",
   "command": "/document",
   "route": "/document",
+  "canonicalUrl": "https://start.kiwelaunch.com/document/contract.json",
+  "immutableUrl": "https://start.kiwelaunch.com/v/7.22/document/contract.json",
+  "resources": [],
   "sourceHash": "sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3",
   "phase": "document",
   "read": [

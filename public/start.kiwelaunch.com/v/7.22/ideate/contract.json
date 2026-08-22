@@ -3,6 +3,15 @@
   "contractVersion": "7.22",
   "command": "/ideate",
   "route": "/ideate",
+  "canonicalUrl": "https://start.kiwelaunch.com/ideate/contract.json",
+  "immutableUrl": "https://start.kiwelaunch.com/v/7.22/ideate/contract.json",
+  "resources": [
+    {
+      "source": "kiwe-ai-toolkit/contexts/ideate-lite.md",
+      "url": "https://start.kiwelaunch.com/contexts/ideate-lite.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/contexts/ideate-lite.md"
+    }
+  ],
   "sourceHash": "sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3",
   "phase": "ideate",
   "aliases": [

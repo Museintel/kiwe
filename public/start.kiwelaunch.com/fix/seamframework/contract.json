@@ -3,6 +3,25 @@
   "contractVersion": "7.22",
   "command": "/fix /seamframework",
   "route": "/fix/seamframework",
+  "canonicalUrl": "https://start.kiwelaunch.com/fix/seamframework/contract.json",
+  "immutableUrl": "https://start.kiwelaunch.com/v/7.22/fix/seamframework/contract.json",
+  "resources": [
+    {
+      "source": "kiwe-ai-toolkit/contexts/workflow-lite.md",
+      "url": "https://start.kiwelaunch.com/contexts/workflow-lite.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/contexts/workflow-lite.md"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/seam-attributes-lite.md",
+      "url": "https://start.kiwelaunch.com/contexts/seam-attributes-lite.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/contexts/seam-attributes-lite.md"
+    },
+    {
+      "source": "kiwe-ai-toolkit/tools/validate-seamframework.cjs",
+      "url": "https://start.kiwelaunch.com/validators/validate-seamframework.cjs",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/validators/validate-seamframework.cjs"
+    }
+  ],
   "sourceHash": "sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3",
   "phase": "fix",
   "read": [

@@ -3,6 +3,15 @@
   "contractVersion": "7.22",
   "command": "/accessibility",
   "route": "/accessibility",
+  "canonicalUrl": "https://start.kiwelaunch.com/accessibility/contract.json",
+  "immutableUrl": "https://start.kiwelaunch.com/v/7.22/accessibility/contract.json",
+  "resources": [
+    {
+      "source": "kiwe-ai-toolkit/contexts/accessibility-lite.md",
+      "url": "https://start.kiwelaunch.com/contexts/accessibility-lite.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/contexts/accessibility-lite.md"
+    }
+  ],
   "sourceHash": "sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3",
   "phase": "accessibility-current-artifact",
   "read": [

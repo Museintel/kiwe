@@ -3,6 +3,20 @@
   "contractVersion": "7.22",
   "command": "/execute /stepbystep",
   "route": "/execute/stepbystep",
+  "canonicalUrl": "https://start.kiwelaunch.com/execute/stepbystep/contract.json",
+  "immutableUrl": "https://start.kiwelaunch.com/v/7.22/execute/stepbystep/contract.json",
+  "resources": [
+    {
+      "source": "kiwe-ai-toolkit/entry.json",
+      "url": "https://start.kiwelaunch.com/entry.json",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/entry.json"
+    },
+    {
+      "source": "kiwe-ai-toolkit/command-manifest.json",
+      "url": "https://start.kiwelaunch.com/command-manifest.json",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/7.22/command-manifest.json"
+    }
+  ],
   "sourceHash": "sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3",
   "phase": "execute",
   "read": [

@@ -57,6 +57,13 @@ function routeFor(command) {
     .join('/');
 }
 
+function publicResourcePath(resource) {
+  if (resource === 'KIWE-START.md') return 'start.md';
+  if (!resource.startsWith('kiwe-ai-toolkit/')) return null;
+  const relative = resource.slice('kiwe-ai-toolkit/'.length);
+  return relative.startsWith('tools/') ? `validators/${relative.slice('tools/'.length)}` : relative;
+}
+
 function renderPage({ title, eyebrow, summary, body, machineUrl, canonicalUrl, contractVersion }) {
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
@@ -92,8 +99,8 @@ function renderPage({ title, eyebrow, summary, body, machineUrl, canonicalUrl, c
 </article></main></body></html>`;
 }
 
-function markdownFor(command, route, spec, version, sourceHash) {
-  return `# ${command}\n\nSeamFlow contract: ${version}\n\nCanonical URL: ${baseUrl}/${route}/\nMachine contract: ${baseUrl}/${route}/contract.json\nSource hash: sha256:${sourceHash}\n\n## Phase\n\n${spec.phase || 'command'}\n\n## Requirements\n\n${(spec.requires || []).map((item) => `- ${item}`).join('\n') || '- None'}\n\n## Required behavior\n\n${(spec.must || []).map((item) => `- ${item}`).join('\n') || '- Follow the canonical SeamFlow Start and command manifest.'}\n\n## Outputs\n\n${(spec.output || []).map((item) => `- ${item}`).join('\n') || '- Follow the command contract.'}\n\n## Forbidden\n\n${(spec.forbidden || []).map((item) => `- ${item}`).join('\n') || '- Do not invent missing authority, artifacts, or PASS evidence.'}\n\n## Final response\n\n${spec.finalResponse || 'Use the canonical SeamFlow response shape.'}\n`;
+function markdownFor(command, route, spec, version, sourceHash, resources) {
+  return `# ${command}\n\nSeamFlow contract: ${version}\n\nCanonical URL: ${baseUrl}/${route}/\nMachine contract: ${baseUrl}/${route}/contract.json\nPinned machine contract: ${baseUrl}/v/${version}/${route}/contract.json\nSource hash: sha256:${sourceHash}\n\n## Phase\n\n${spec.phase || 'command'}\n\n## Hosted resources\n\n${resources.map((item) => `- ${item.url}\n  - Pinned: ${item.pinnedUrl}`).join('\n') || '- No additional hosted resource is required.'}\n\n## Requirements\n\n${(spec.requires || []).map((item) => `- ${item}`).join('\n') || '- None'}\n\n## Required behavior\n\n${(spec.must || []).map((item) => `- ${item}`).join('\n') || '- Follow the canonical SeamFlow Start and command manifest.'}\n\n## Outputs\n\n${(spec.output || []).map((item) => `- ${item}`).join('\n') || '- Follow the command contract.'}\n\n## Forbidden\n\n${(spec.forbidden || []).map((item) => `- ${item}`).join('\n') || '- Do not invent missing authority, artifacts, or PASS evidence.'}\n\n## Final response\n\n${spec.finalResponse || 'Use the canonical SeamFlow response shape.'}\n`;
 }
 
 function walkFiles(root) {
@@ -149,6 +156,7 @@ function build(targetRoot) {
     sourceRepository: 'https://github.com/Museintel/kiwe',
     sourceHash: `sha256:${sourceHash}`,
     commands: Object.fromEntries(routes.map(({ command, route }) => [command, `${baseUrl}/${route}/contract.json`])),
+    immutableCommands: Object.fromEntries(routes.map(({ command, route }) => [command, `${baseUrl}/v/${version}/${route}/contract.json`])),
   };
 
   const listItems = routes.map(({ command, route, spec }) => `<li><a href="/${escapeHtml(route)}/"><code>${escapeHtml(command)}</code></a> — ${escapeHtml(spec.phase || 'command')}</li>`).join('\n');
@@ -161,12 +169,17 @@ function build(targetRoot) {
   copy(targetRoot, manifestPath, 'command-manifest.json');
 
   for (const { command, spec, route } of routes) {
-    const machine = { schema: 'kiwe.command-route.v1', contractVersion: version, command, route: `/${route}`, sourceHash: `sha256:${sourceHash}`, ...spec };
+    const resources = (spec.read || []).map((source) => {
+      const publicPath = publicResourcePath(source);
+      return publicPath ? { source, url: `${baseUrl}/${publicPath}`, pinnedUrl: `${baseUrl}/v/${version}/${publicPath}` } : null;
+    }).filter(Boolean);
+    const machine = { schema: 'kiwe.command-route.v1', contractVersion: version, command, route: `/${route}`, canonicalUrl: `${baseUrl}/${route}/contract.json`, immutableUrl: `${baseUrl}/v/${version}/${route}/contract.json`, resources, sourceHash: `sha256:${sourceHash}`, ...spec };
     const requirementList = (spec.requires || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Follow the canonical Start contract.</li>';
     const outputList = (spec.output || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Follow the canonical command contract.</li>';
-    const body = `<h2>Command</h2><pre>${escapeHtml(command)}</pre><h2>Requires</h2><ul>${requirementList}</ul><h2>Outputs</h2><ul>${outputList}</ul><h2>Execution rule</h2><p>${escapeHtml(spec.finalResponse || 'Use the canonical SeamFlow response shape.')}</p>`;
+    const resourceList = resources.map((item) => `<li><a href="${escapeHtml(item.url)}">${escapeHtml(item.source)}</a> · <a href="${escapeHtml(item.pinnedUrl)}">pinned ${escapeHtml(version)}</a></li>`).join('') || '<li>No additional hosted resource is required.</li>';
+    const body = `<h2>Command</h2><pre>${escapeHtml(command)}</pre><h2>Hosted resources</h2><ul>${resourceList}</ul><h2>Requires</h2><ul>${requirementList}</ul><h2>Outputs</h2><ul>${outputList}</ul><h2>Execution rule</h2><p>${escapeHtml(spec.finalResponse || 'Use the canonical SeamFlow response shape.')}</p>`;
     write(targetRoot, `${route}/contract.json`, `${JSON.stringify(machine, null, 2)}\n`);
-    write(targetRoot, `${route}/index.md`, markdownFor(command, route, spec, version, sourceHash));
+    write(targetRoot, `${route}/index.md`, markdownFor(command, route, spec, version, sourceHash, resources));
     write(targetRoot, `${route}/index.html`, renderPage({ title: command, eyebrow: spec.phase || 'command', summary: spec.finalResponse || `Canonical SeamFlow route for ${command}.`, body, machineUrl: `${baseUrl}/${route}/contract.json`, canonicalUrl: `${baseUrl}/${route}/`, contractVersion: version }));
   }
 
@@ -184,6 +197,16 @@ function build(targetRoot) {
     const relative = path.relative(targetRoot, file);
     copy(versionRoot, file, relative);
   }
+  const versionDiscovery = {
+    ...discovery,
+    canonicalBase: `${baseUrl}/v/${version}`,
+    start: `${baseUrl}/v/${version}/start.md`,
+    entry: `${baseUrl}/v/${version}/entry.json`,
+    commandManifest: `${baseUrl}/v/${version}/command-manifest.json`,
+    commands: discovery.immutableCommands,
+  };
+  write(versionRoot, '.well-known/kiwe.json', `${JSON.stringify(versionDiscovery, null, 2)}\n`);
+  write(versionRoot, 'registry.json', `${JSON.stringify(versionDiscovery, null, 2)}\n`);
 
   const urls = [`${baseUrl}/`, ...routes.map(({ route }) => `${baseUrl}/${route}/`)];
   write(targetRoot, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${escapeHtml(url)}</loc></url>`).join('\n')}\n</urlset>\n`);
