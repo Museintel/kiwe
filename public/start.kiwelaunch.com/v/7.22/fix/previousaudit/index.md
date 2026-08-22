@@ -4,7 +4,7 @@ SeamFlow contract: 7.22
 
 Canonical URL: https://start.kiwelaunch.com/fix/previousaudit/
 Machine contract: https://start.kiwelaunch.com/fix/previousaudit/contract.json
-Source hash: sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b
+Source hash: sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3
 
 ## Phase
 

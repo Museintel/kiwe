@@ -3,7 +3,7 @@
   "contractVersion": "7.22",
   "command": "/seamframework",
   "route": "/seamframework",
-  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "sourceHash": "sha256:132bf1a5aa3485fb3326739ec749f9f45166927bb2054501b4307573dc7091f3",
   "phase": "framework",
   "read": [
     "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",

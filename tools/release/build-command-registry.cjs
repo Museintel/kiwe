@@ -9,9 +9,20 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const publicRoot = path.join(repoRoot, 'public', 'start.kiwelaunch.com');
 const baseUrl = 'https://start.kiwelaunch.com';
 const checkOnly = process.argv.includes('--check');
+const textExtensions = new Set(['.cjs', '.css', '.html', '.js', '.json', '.md', '.txt', '.xml']);
+
+function canonicalText(value) {
+  return String(value).replace(/\r\n?/g, '\n');
+}
+
+function canonicalFile(file) {
+  const body = fs.readFileSync(file);
+  if (!textExtensions.has(path.extname(file).toLowerCase())) return body;
+  return Buffer.from(canonicalText(body.toString('utf8')), 'utf8');
+}
 
 function readJson(file) {
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  return JSON.parse(canonicalFile(file).toString('utf8'));
 }
 
 function sha256(value) {
@@ -25,7 +36,7 @@ function write(root, relative, value) {
 }
 
 function copy(root, source, relative) {
-  write(root, relative, fs.readFileSync(source));
+  write(root, relative, canonicalFile(source));
 }
 
 function escapeHtml(value) {
@@ -113,12 +124,12 @@ function build(targetRoot) {
   const toolkitRoot = path.join(repoRoot, 'kiwe-ai-toolkit');
   const entryPath = path.join(toolkitRoot, 'entry.json');
   const manifestPath = path.join(toolkitRoot, 'command-manifest.json');
-  const start = fs.readFileSync(startPath, 'utf8');
+  const start = canonicalFile(startPath).toString('utf8');
   const entry = readJson(entryPath);
   const manifest = readJson(manifestPath);
   const commands = manifest.commands || {};
   const version = String(entry.contractVersion || manifest.contractVersion || 'unknown');
-  const sourceHash = sha256([start, fs.readFileSync(entryPath), fs.readFileSync(manifestPath)].join('\n'));
+  const sourceHash = sha256([start, canonicalFile(entryPath), canonicalFile(manifestPath)].join('\n'));
   const generatedAt = entry.updated || manifest.updated || 'unknown';
 
   const routes = Object.entries(commands).map(([command, spec]) => ({ command, spec, route: routeFor(command) }));
