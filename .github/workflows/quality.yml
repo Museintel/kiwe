@@ -24,7 +24,8 @@ jobs:
         with:
           node-version: '24'
       - name: Confirm PHP platform
-        run: php -r "exit(PHP_VERSION_ID >= 80200 && PHP_VERSION_ID < 80500 ? 0 : 1);"
+        run: |
+          php -r "exit(PHP_VERSION_ID >= 80200 && PHP_VERSION_ID < 80500 ? 0 : 1);"
       - name: Verify green source baseline
         run: node tools/release/verify-green-baseline.cjs
       - name: Verify SiteGraph-only fresh-install profile
