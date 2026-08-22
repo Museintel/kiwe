@@ -140,6 +140,8 @@ final class External_Client_OpenAPI_Service {
 			$parameters[] = [ 'name' => 'productLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
 			$parameters[] = [ 'name' => 'mediaLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
 			$parameters[] = [ 'name' => 'contentLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
+			$parameters[] = [ 'name' => 'customContentLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
+			$parameters[] = [ 'name' => 'termLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 300 ] ];
 			$parameters[] = [ 'name' => 'mediaSearch', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'string', 'maxLength' => 200 ] ];
 		}
 		return $parameters;

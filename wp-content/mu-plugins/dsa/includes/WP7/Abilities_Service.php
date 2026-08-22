@@ -938,6 +938,8 @@ final class Abilities_Service {
 				'productLimit' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 200 ],
 				'mediaLimit'   => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 500 ],
 				'contentLimit' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ],
+				'customContentLimit' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 200 ],
+				'termLimit'    => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 300 ],
 				'mediaSearch'  => [ 'type' => 'string' ],
 				'resources'    => [ 'type' => 'array', 'items' => [ 'type' => 'string' ] ],
 			],

@@ -2,6 +2,8 @@
 
 namespace DSA\Site_Graph;
 
+use DSA\Site\Site_Identity_Service;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -38,7 +40,7 @@ final class Data_Query_Service {
 				],
 				'posts'      => [
 					'description' => 'Public WordPress posts or any public post type.',
-					'args'        => [ 'postType', 'limit', 'page', 'search', 'slug', 'include', 'taxonomy', 'term', 'fields' ],
+					'args'        => [ 'postType', 'limit', 'page', 'search', 'slug', 'include', 'taxonomy', 'term', 'fields', 'publicMeta', 'metaKeys' ],
 				],
 				'pages'      => [
 					'description' => 'Public WordPress pages.',
@@ -203,7 +205,12 @@ final class Data_Query_Service {
 				'homeUrl'     => esc_url_raw( home_url( '/' ) ),
 				'language'    => sanitize_text_field( (string) get_bloginfo( 'language' ) ),
 				'timezone'    => sanitize_text_field( (string) wp_timezone_string() ),
-				'logo'        => $custom_logo ? $this->image_node( (int) $custom_logo ) : null,
+				'logo'        => Site_Identity_Service::attachment_id() ? $this->image_node( Site_Identity_Service::attachment_id() ) : ( $custom_logo ? $this->image_node( (int) $custom_logo ) : null ),
+				'logoInverse' => Site_Identity_Service::attachment_id( Site_Identity_Service::OPTION_LOGO_INVERSE ) ? $this->image_node( Site_Identity_Service::attachment_id( Site_Identity_Service::OPTION_LOGO_INVERSE ) ) : null,
+				'publicContact' => [
+					'phone' => Site_Identity_Service::store_phone(),
+					'email' => Site_Identity_Service::store_email(),
+				],
 			]
 		);
 	}
@@ -352,23 +359,35 @@ final class Data_Query_Service {
 					'variation' => is_callable( [ $attribute, 'get_variation' ] ) ? (bool) $attribute->get_variation() : false,
 				];
 			}
+			$children = is_callable( [ $product, 'get_children' ] ) ? $this->public_product_references( (array) $product->get_children(), 40 ) : [];
+			$cross_sells = is_callable( [ $product, 'get_cross_sell_ids' ] ) ? $this->public_product_references( (array) $product->get_cross_sell_ids(), 40 ) : [];
+			$upsells = is_callable( [ $product, 'get_upsell_ids' ] ) ? $this->public_product_references( (array) $product->get_upsell_ids(), 40 ) : [];
 			$node['product'] = [
 				'id'           => (int) $product->get_id(),
 				'type'         => sanitize_key( (string) $product->get_type() ),
+				'parentId'     => is_callable( [ $product, 'get_parent_id' ] ) ? absint( $product->get_parent_id() ) : 0,
 				'price'        => wp_strip_all_tags( (string) $product->get_price() ),
 				'regularPrice' => wp_strip_all_tags( (string) $product->get_regular_price() ),
 				'salePrice'    => wp_strip_all_tags( (string) $product->get_sale_price() ),
+				'priceHtml'    => is_callable( [ $product, 'get_price_html' ] ) ? wp_strip_all_tags( (string) $product->get_price_html() ) : '',
 				'currency'     => function_exists( 'get_woocommerce_currency' ) ? sanitize_text_field( get_woocommerce_currency() ) : '',
 				'inStock'      => $product->is_in_stock(),
 				'purchasable'  => $product->is_purchasable(),
 				'sku'          => sanitize_text_field( (string) $product->get_sku() ),
 				'gallery'      => $gallery,
 				'attributes'   => $attributes,
+				'children'     => $children,
+				'crossSells'   => $cross_sells,
+				'upsells'      => $upsells,
+				'bundleItems'  => $this->bundle_items( $product ),
+				'kiweMerchandising' => $this->kiwe_merchandising( $product ),
 			];
 		}
 
 		if ( $private && ! empty( $args['metaKeys'] ) ) {
 			$node['meta'] = $this->selected_meta( $post->ID, $args['metaKeys'] );
+		} elseif ( ! $private && ! empty( $args['publicMeta'] ) ) {
+			$node['meta'] = $this->public_registered_meta( $post->ID, (string) $post->post_type );
 		}
 
 		return $this->pick_fields( $node, $fields );
@@ -685,11 +704,124 @@ final class Data_Query_Service {
 		$out  = [];
 
 		foreach ( array_slice( $keys, 0, 30 ) as $key ) {
-			$key = sanitize_key( (string) $key );
-			if ( '' === $key ) {
+			$key = sanitize_text_field( (string) $key );
+			if ( '' === $key || $this->is_secretish_meta_key( $key ) || str_starts_with( $key, '_bricks' ) ) {
 				continue;
 			}
-			$out[ $key ] = get_post_meta( $post_id, $key, true );
+			$value = $this->safe_meta_value( get_post_meta( $post_id, $key, true ) );
+			if ( null !== $value ) {
+				$out[ $key ] = $value;
+			}
+		}
+
+		return $out;
+	}
+
+	private function public_registered_meta( int $post_id, string $post_type ): array {
+		$registered = function_exists( 'get_registered_meta_keys' ) ? get_registered_meta_keys( 'post', $post_type ) : [];
+		$keys = [];
+		foreach ( is_array( $registered ) ? $registered : [] as $key => $schema ) {
+			if ( empty( $schema['show_in_rest'] ) || str_starts_with( (string) $key, '_' ) || $this->is_secretish_meta_key( (string) $key ) ) {
+				continue;
+			}
+			$keys[] = (string) $key;
+		}
+
+		return $this->selected_meta( $post_id, array_slice( $keys, 0, 30 ) );
+	}
+
+	private function public_product_references( array $ids, int $limit ): array {
+		$out = [];
+		foreach ( array_slice( array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) ), 0, $limit ) as $id ) {
+			if ( 'publish' !== get_post_status( $id ) || 'product' !== get_post_type( $id ) ) {
+				continue;
+			}
+			$out[] = [
+				'id'    => $id,
+				'title' => html_entity_decode( wp_strip_all_tags( get_the_title( $id ) ), ENT_QUOTES ),
+				'url'   => esc_url_raw( (string) get_permalink( $id ) ),
+			];
+		}
+
+		return $out;
+	}
+
+	private function bundle_items( $product ): array {
+		if ( ! is_object( $product ) || ! is_callable( [ $product, 'get_bundled_items' ] ) ) {
+			return [];
+		}
+		$out = [];
+		foreach ( array_slice( (array) $product->get_bundled_items(), 0, 40 ) as $item ) {
+			if ( ! is_object( $item ) ) {
+				continue;
+			}
+			$id = is_callable( [ $item, 'get_product_id' ] ) ? absint( $item->get_product_id() ) : 0;
+			if ( ! $id || 'publish' !== get_post_status( $id ) ) {
+				continue;
+			}
+			$out[] = [
+				'product' => $this->public_product_references( [ $id ], 1 )[0] ?? [ 'id' => $id ],
+				'quantity' => is_callable( [ $item, 'get_quantity' ] ) ? max( 0, (float) $item->get_quantity() ) : null,
+			];
+		}
+
+		return $out;
+	}
+
+	private function kiwe_merchandising( $product ): array {
+		$id = is_object( $product ) && is_callable( [ $product, 'get_id' ] ) ? absint( $product->get_id() ) : 0;
+		if ( ! $id ) {
+			return [];
+		}
+		$offer_id = absint( get_post_meta( $id, '_sc_upsell_product_id', true ) );
+		$offer = $offer_id ? ( $this->public_product_references( [ $offer_id ], 1 )[0] ?? null ) : null;
+		$discount_type = sanitize_key( (string) get_post_meta( $id, '_sc_upsell_discount_type', true ) );
+		$discount_type = 'fixed' === $discount_type ? 'fixed' : 'percent';
+		$discount = max( 0, (float) get_post_meta( $id, '_sc_upsell_discount', true ) );
+		if ( 'percent' === $discount_type ) {
+			$discount = min( 100, $discount );
+		}
+		$scope = sanitize_key( (string) get_post_meta( $id, '_sc_upsell_discount_scope', true ) );
+		$scope = in_array( $scope, [ 'single_lowest', 'upsell_only', 'trigger_only', 'pair' ], true ) ? $scope : 'single_lowest';
+
+		return [
+			'offerProduct' => $offer,
+			'discount'     => $offer ? $discount : 0,
+			'discountType' => $offer ? $discount_type : '',
+			'discountScope'=> $offer ? $scope : '',
+			'bestsellerTerms' => array_values(
+				array_filter(
+					$this->post_terms( get_post( $id ) ),
+					static fn( array $term ): bool => 'product_cat' === ( $term['taxonomy'] ?? '' ) && str_contains( (string) ( $term['slug'] ?? '' ), 'bestseller' )
+				)
+			),
+		];
+	}
+
+	private function is_secretish_meta_key( string $key ): bool {
+		return '' === $key || (bool) preg_match( '/password|secret|token|nonce|session|cookie|license|consumer|private|payment|stripe|paypal|credential|authorization|api[_-]?key|webhook/i', $key );
+	}
+
+	private function safe_meta_value( $value, int $depth = 0 ) {
+		if ( $depth > 3 ) {
+			return null;
+		}
+		if ( is_scalar( $value ) || null === $value ) {
+			$text = is_string( $value ) ? wp_strip_all_tags( $value ) : $value;
+			return is_string( $text ) ? substr( $text, 0, 2000 ) : $text;
+		}
+		if ( ! is_array( $value ) ) {
+			return null;
+		}
+		$out = [];
+		foreach ( array_slice( $value, 0, 40, true ) as $key => $item ) {
+			if ( is_string( $key ) && $this->is_secretish_meta_key( $key ) ) {
+				continue;
+			}
+			$clean = $this->safe_meta_value( $item, $depth + 1 );
+			if ( null !== $clean ) {
+				$out[ is_string( $key ) ? sanitize_text_field( $key ) : $key ] = $clean;
+			}
 		}
 
 		return $out;

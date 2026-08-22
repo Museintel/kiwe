@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "7.16",
+  "version": "7.17",
   "algorithm": "sha256",
-  "file_count": 310,
+  "file_count": 311,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -182,7 +182,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "f66f64136145e772ffffea1e18e49958b8c9a0da68276e4e4c53e0a4f9d2f5e2"
+      "sha256": "f6c1f11c2b6f054f33ba14e9fa0f87c9baaf4fcb63b018ba9fefaa9eba930f31"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -401,8 +401,8 @@
       "sha256": "432d9d3803da9485f6402c6da3fda0650e9e19739ce22ea86376e12d5f931de4"
     },
     "includes/AI/External_Client_OpenAPI_Service.php": {
-      "bytes": 9414,
-      "sha256": "048c4ebcf7cbb39e5219125e9ecf80232c28a094ed5765ea42bc1a69cc83fb02"
+      "bytes": 9733,
+      "sha256": "4a2a396466bcb7d70a6e6a29a9cefa1e63796c32af35a9a759052e00a8d95989"
     },
     "includes/AI/Final_Apply_Confirmation_Service.php": {
       "bytes": 9267,
@@ -461,8 +461,8 @@
       "sha256": "a34564c78c3f42af4d77724d09e832559c3f86ea23935a0f3c4f59213ab513ab"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 36084,
-      "sha256": "4a84e5062d2a29575b23c41a66de31e81f97d4d5e554fedf313120504bf3d45f"
+      "bytes": 37362,
+      "sha256": "b6c088e203f11ab151b0eb9f0ee753e3bebc01080ccdb8ab37fc21977a065a92"
     },
     "includes/AI/Site_Introspection_Service.php": {
       "bytes": 13294,
@@ -481,8 +481,8 @@
       "sha256": "f40359b2e2380d7cd3866490da8bffde0406bf21aa576c80e75d26fc8984243d"
     },
     "includes/AI/Task_Capsule_Service.php": {
-      "bytes": 13149,
-      "sha256": "c58722f4840536c4336eefb90cf50d38a54c4fbd53c20008f18788ff16bc839f"
+      "bytes": 13220,
+      "sha256": "27339b011998be32766f8cfa82a6d0018574cfa41a8f308dced87283f2da8fb3"
     },
     "includes/AI/Trusted_Adapter_Proof_Service.php": {
       "bytes": 7466,
@@ -497,8 +497,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 673500,
-      "sha256": "79604b1862970ef16cda4a4f65f24c62a55c89617b8e1a288ddd94170de230bf"
+      "bytes": 674449,
+      "sha256": "8f40ae0e349a6b9b127468e057c355ef01da3feb5a2be3c436ffc7dc085a54cf"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -673,8 +673,8 @@
       "sha256": "3e422692372795e064476e3301cdcdb034e206d32be934bdaf657c878ef04016"
     },
     "includes/Rest/AI_Access_Controller.php": {
-      "bytes": 47732,
-      "sha256": "ce70678e29c3fe39a67b8a591d7143fc53e69a8247e2beadf2ea8078444e4013"
+      "bytes": 48046,
+      "sha256": "f277e653852d8c59575a1bf293cc07fa6f40b4d4a84bdc5e851f82f3f97eed85"
     },
     "includes/Rest/Account_Controller.php": {
       "bytes": 14471,
@@ -841,12 +841,12 @@
       "sha256": "5b2a9e5c3ed0572d645caf5820ebd5055de54646a115695132d28b36e3e8425e"
     },
     "includes/Site_Graph/Data_Query_Service.php": {
-      "bytes": 26936,
-      "sha256": "7913d252518dff118db99ab2855584971d5f33ef207467b149cb5a30ac6b645a"
+      "bytes": 32844,
+      "sha256": "8ac8eb9141a2ead606fa5f6645d85119dce5051e3587f8536c032a8c8b831e78"
     },
     "includes/Site_Graph/Design_Context_Service.php": {
-      "bytes": 8262,
-      "sha256": "e5211f6f6c6c3b16e70486ac7c14c748175b4f961f3417d1021947282f96afec"
+      "bytes": 23724,
+      "sha256": "2d17978698c1477fb94e29f3b29a8bdf232c3783a4adf82e369fa718452275e8"
     },
     "includes/Site_Graph/Query_Service.php": {
       "bytes": 3459,
@@ -881,8 +881,8 @@
       "sha256": "5af92ca2a8fb5b8b07bf523660d892a8664aaf4ed63475cfbae7e20faaf2a5e3"
     },
     "includes/WP7/Abilities_Service.php": {
-      "bytes": 44109,
-      "sha256": "241e7b2e6a338119ca46f58a8459eaa62aa4a3c20fc4a02e4ae7c558d2be2e65"
+      "bytes": 44277,
+      "sha256": "ad078090086b246e033fcd12e7e400f9e0ed94fb776fb762fef17b054f7600b7"
     },
     "includes/WP7/Bindings_Service.php": {
       "bytes": 2548,
@@ -1124,13 +1124,17 @@
       "bytes": 1381,
       "sha256": "8a8bebc61455a4ac284b5fd53485a9a4cb9299d2ac03caf1f476d0ec15e6d6c0"
     },
+    "site-graph-system/release-proof-7.17.md": {
+      "bytes": 1366,
+      "sha256": "a3dcac19b60dd0d6a39ef61aaffa4cd42cb1d96583c2d42ffa574ed785da9c9e"
+    },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 74902,
-      "sha256": "7663bb2f096136824a2902b88316d5c2eb6f0f4ebc0db075feb42937f2cb321f"
+      "bytes": 75171,
+      "sha256": "ddee8dcf0b5cf97708cad84248ec8812a4bc93b2777061f77e2cc884cc485d35"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

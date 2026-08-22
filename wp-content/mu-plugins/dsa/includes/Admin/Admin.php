@@ -2038,6 +2038,8 @@ final class Admin {
 			'productLimit' => max( 0, min( 200, absint( $_POST['productLimit'] ?? 100 ) ) ),
 			'mediaLimit'   => max( 0, min( 500, absint( $_POST['mediaLimit'] ?? 100 ) ) ),
 			'contentLimit' => max( 0, min( 100, absint( $_POST['contentLimit'] ?? 24 ) ) ),
+			'customContentLimit' => max( 0, min( 200, absint( $_POST['customContentLimit'] ?? 48 ) ) ),
+			'termLimit'    => max( 0, min( 300, absint( $_POST['termLimit'] ?? 150 ) ) ),
 			'mediaSearch'  => isset( $_POST['mediaSearch'] ) ? sanitize_text_field( wp_unslash( $_POST['mediaSearch'] ) ) : '',
 		];
 		$site_graph = new Site_Graph_Service( $this->settings, $this->modules );
@@ -4700,7 +4702,7 @@ final class Admin {
 					<p class="dsa-admin-inline-fields"><label><span><?php esc_html_e( 'Samples per content type', 'dsa' ); ?></span><select name="sampleLimit"><?php foreach ( [ 0, 4, 8, 16, 24 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 8, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label><?php submit_button( __( 'Download SiteGraph JSON', 'dsa' ), 'secondary', 'submit', false ); ?></p>
 				</form>
 				<h3><?php esc_html_e( 'Design context for browser AI', 'dsa' ); ?></h3>
-				<p><?php esc_html_e( 'Download one public-only evidence bundle containing site identity, logo, menus, product facts, image metadata, public content, Bricks capabilities and binding targets. Attach it to an ordinary AI chat with /usesitegraph /for /designcontext /nonai. It contains no API key, customer, order, draft, visitor or filesystem data.', 'dsa' ); ?></p>
+				<p><?php esc_html_e( 'Download one public-only evidence bundle containing business identity, public contact details, menus, products, Kiwe merchandising, images, public content, custom post types, taxonomies, safe custom fields, Bricks capabilities and binding targets. Attach it to an ordinary AI chat with /usesitegraph /for /designcontext /nonai. It contains no API key, customer, order, draft, visitor or filesystem data.', 'dsa' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_export_sitegraph_design_context">
 					<?php wp_nonce_field( 'dsa_export_sitegraph_design_context' ); ?>
@@ -4708,6 +4710,8 @@ final class Admin {
 						<label><span><?php esc_html_e( 'Products', 'dsa' ); ?></span><select name="productLimit"><?php foreach ( [ 0, 24, 50, 100, 200 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 100, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
 						<label><span><?php esc_html_e( 'Images', 'dsa' ); ?></span><select name="mediaLimit"><?php foreach ( [ 0, 48, 100, 250, 500 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 100, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
 						<label><span><?php esc_html_e( 'Pages/posts each', 'dsa' ); ?></span><select name="contentLimit"><?php foreach ( [ 0, 12, 24, 50, 100 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 24, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
+						<label><span><?php esc_html_e( 'Custom records total', 'dsa' ); ?></span><select name="customContentLimit"><?php foreach ( [ 0, 24, 48, 100, 200 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 48, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
+						<label><span><?php esc_html_e( 'Taxonomy terms total', 'dsa' ); ?></span><select name="termLimit"><?php foreach ( [ 0, 50, 100, 150, 300 ] as $limit ) : ?><option value="<?php echo esc_attr( (string) $limit ); ?>" <?php selected( 150, $limit ); ?>><?php echo esc_html( (string) $limit ); ?></option><?php endforeach; ?></select></label>
 						<label><span><?php esc_html_e( 'Image search (optional)', 'dsa' ); ?></span><input type="search" name="mediaSearch" placeholder="<?php esc_attr_e( 'owner, factory, logo…', 'dsa' ); ?>"></label>
 						<?php submit_button( __( 'Download AI design context', 'dsa' ), 'secondary', 'submit', false ); ?>
 					</p>

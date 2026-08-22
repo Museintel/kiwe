@@ -333,6 +333,8 @@ final class AI_Access_Controller {
 			$args['productLimit'] = in_array( 'products', $resources, true ) ? min( $max_rows, absint( $args['productLimit'] ?? $max_rows ) ) : 0;
 			$args['mediaLimit']   = in_array( 'media', $resources, true ) ? min( $max_rows, absint( $args['mediaLimit'] ?? $max_rows ) ) : 0;
 			$args['contentLimit'] = array_intersect( [ 'posts', 'pages' ], $resources ) ? min( $max_rows, absint( $args['contentLimit'] ?? min( 12, $max_rows ) ) ) : 0;
+			$args['customContentLimit'] = in_array( 'customcontent', $resources, true ) ? min( $max_rows, absint( $args['customContentLimit'] ?? min( 24, $max_rows ) ) ) : 0;
+			$args['termLimit'] = array_intersect( [ 'taxonomies', 'terms' ], $resources ) ? min( $max_rows, absint( $args['termLimit'] ?? $max_rows ) ) : 0;
 		}
 
 		return ( new Design_Context_Service( $this->site_graph ) )->context( $args, false );

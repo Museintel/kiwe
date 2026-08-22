@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.16',
+    contractVersion: '7.17',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -528,7 +528,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.16',
+      mustReport: 'SeamFlow contract: 7.17',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -2055,7 +2055,7 @@ function siteGraphCommandGuidance(command) {
       ? 'Target `/siteidentity`: revise only site name, logo, menu labels, and identity fields proven by SiteGraph.'
       : '',
     designContext
-      ? 'Target `/designcontext`: use the public-only design-context packet as an evidence palette for identity, product/content facts, suitable media, menus and target capabilities. During `/ideate`, it may guide original composition. For an approved artifact, preserve its visual thesis and make only evidence-grounding changes unless the human explicitly requests redesign. Static media must retain public URLs and `data-kiwe-media-id`; repeating production regions remain dynamic. This target alone does not emit Bricks JSON, query loops, dynamic tags or Kiwe launchers.'
+      ? 'Target `/designcontext`: use the public-only design-context packet as an evidence palette for business identity and public contact details, product/content facts, suitable media, menus, every proven public custom post type and taxonomy, safe custom-field schemas/values, WooCommerce pricing, grouped/bundled relationships, Kiwe offers/discounts, bestseller terms and target capabilities. During `/ideate`, it may guide original composition. For an approved artifact, preserve its visual thesis and make only evidence-grounding changes unless the human explicitly requests redesign. Static media must retain public URLs and `data-kiwe-media-id`; repeating production regions remain dynamic. This target alone does not emit Bricks JSON, query loops, dynamic tags or Kiwe launchers.'
       : '',
     dynamicTags
       ? 'Target `/dynamictags`: annotate only source-evidenced text, links, images, prices, metadata, and fields with verified Bricks dynamic tags.'

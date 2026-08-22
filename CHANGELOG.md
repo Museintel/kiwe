@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.17
+
+- Expanded SiteGraph design context from standard posts/pages/products into the full bounded public data model: public custom post types, all public taxonomies, safe custom-field contracts, bounded published values and safe term metadata.
+- Added explicit public Kiwe business identity and contact data while continuing to exclude WordPress administrator email, credentials, drafts, orders, visitors, payment data, filesystem paths and arbitrary protected metadata.
+- Added WooCommerce grouped/bundled product relationships, cross-sells, upsells, price facts, Kiwe linked offers/discounts and configured bestseller taxonomy evidence without transferring money or cart authority away from WooCommerce.
+- Extended file exports, task capsules, OpenAPI, WordPress Abilities and command guidance with independent custom-content and taxonomy budgets plus contract gates for the expanded context.
+
 ## 7.16
 
 - Added `kiwe.sitegraph-design-context.v1`, a public-only, read-only design evidence packet covering site identity/logo, menus, products, galleries/attributes, searchable media metadata, public content and target builder capabilities.

@@ -31,7 +31,7 @@ final class Task_Capsule_Service {
 		'validate_accessibility',
 	];
 
-	public const RESOURCES = [ 'site', 'menus', 'posts', 'pages', 'products', 'terms', 'media' ];
+	public const RESOURCES = [ 'site', 'business', 'menus', 'posts', 'pages', 'products', 'commerce', 'customcontent', 'customfields', 'taxonomies', 'terms', 'media' ];
 	public const FIELDS    = [ 'id', 'type', 'slug', 'status', 'title', 'url', 'excerpt', 'date', 'modified', 'content', 'featuredImage', 'terms', 'product' ];
 
 	public function issue( string $label, string $purpose = 'convert_validate', array $policy = [], array $context = [] ): array {

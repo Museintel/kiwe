@@ -355,6 +355,10 @@ final class Site_Graph_Service {
 			'siteIcon'      => esc_url_raw( get_site_icon_url( 192 ) ?: '' ),
 			'logo'          => esc_url_raw( Site_Identity_Service::logo_url() ),
 			'logoInverse'   => esc_url_raw( Site_Identity_Service::logo_url( 'inverse' ) ),
+			'publicContact' => [
+				'phone' => Site_Identity_Service::store_phone(),
+				'email' => Site_Identity_Service::store_email(),
+			],
 			'permalinkMode' => get_option( 'permalink_structure' ) ? 'pretty' : 'plain',
 			'multisite'     => is_multisite(),
 		];
@@ -390,6 +394,9 @@ final class Site_Graph_Service {
 	private function woocommerce_summary( int $sample_limit, bool $public_only = false ): array {
 		$active = class_exists( 'WooCommerce' ) || function_exists( 'WC' );
 		$pages  = [];
+		$commerce = $this->settings->get( 'commerce', [] );
+		$commerce = is_array( $commerce ) ? $commerce : [];
+		$bestseller_slug = sanitize_title( (string) ( $commerce['bestseller_parent_slug'] ?? 'bestseller' ) );
 
 		foreach (
 			[
@@ -409,11 +416,25 @@ final class Site_Graph_Service {
 
 		return [
 			'active'            => $active,
+			'currency'          => function_exists( 'get_woocommerce_currency' ) ? sanitize_text_field( (string) get_woocommerce_currency() ) : '',
+			'currencySymbol'    => function_exists( 'get_woocommerce_currency_symbol' ) ? wp_strip_all_tags( (string) get_woocommerce_currency_symbol() ) : '',
+			'productTypes'      => function_exists( 'wc_get_product_types' ) ? array_map( 'sanitize_text_field', (array) wc_get_product_types() ) : [],
 			'pages'             => $pages,
 			'productCounts'     => $this->post_counts( 'product', $public_only ),
 			'productCategories' => taxonomy_exists( 'product_cat' ) && $sample_limit ? $this->terms_for_taxonomy( 'product_cat', $sample_limit * 2 ) : [],
 			'productTags'       => taxonomy_exists( 'product_tag' ) && $sample_limit ? $this->terms_for_taxonomy( 'product_tag', $sample_limit ) : [],
-			'store'             => $public_only ? [ 'privateSettingsRedacted' => true ] : [
+			'merchandising'     => [
+				'kiweLinkedOffersAvailable' => true,
+				'kiweDiscountsEnabled' => ! empty( $commerce['cart_upsell_discounts_enabled'] ),
+				'bestsellerEnabled' => ! empty( $commerce['bestseller_enabled'] ),
+				'bestsellerParentSlug' => $bestseller_slug,
+				'bestsellerTaxonomy' => 'product_cat',
+				'woocommerceOwnsPricing' => true,
+			],
+			'store'             => $public_only ? [
+				'publicContact' => [ 'phone' => Site_Identity_Service::store_phone(), 'email' => Site_Identity_Service::store_email() ],
+				'operationalAddressRedacted' => true,
+			] : [
 				'address1'          => sanitize_text_field( (string) get_option( 'woocommerce_store_address', '' ) ),
 				'address2'          => sanitize_text_field( (string) get_option( 'woocommerce_store_address_2', '' ) ),
 				'city'              => sanitize_text_field( (string) get_option( 'woocommerce_store_city', '' ) ),

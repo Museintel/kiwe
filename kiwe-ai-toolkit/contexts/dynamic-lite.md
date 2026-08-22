@@ -49,6 +49,7 @@ Use the complete public-only design evidence packet: site identity and logo, men
 
 - Live tool clients use `GET|POST /wp-json/dsa/v1/ai/design-context` with a short-lived task capsule.
 - Ordinary/free browser chats use the `kiwe.sitegraph-design-context.v1` file downloaded from `Kiwe > SiteGraph`; append `/nonai`.
+- The design-context packet covers the public data model, not only standard posts/pages/products: it includes public custom post types and taxonomies, safe custom-field contracts and bounded published values, public Kiwe business identity/contact data, WooCommerce pricing and product relationships, Kiwe merchandising offers/discounts, and configured bestseller terms. Secret-like, visitor, order, draft, payment, credential, filesystem and arbitrary protected meta values remain excluded.
 - A public read-only alternative exists at `GET|POST /wp-json/dsa/v1/site-graph/design-context` for clients that cannot store secrets. Treat it as public website data and do not mistake it for admin authority.
 
 At `/ideate`, this evidence may guide an original layout and select appropriate real imagery. For an existing approved HTML/CSS/JS artifact, preserve its design thesis, layout, responsiveness and JavaScript; ground identity/content/assets only unless the human explicitly requests a redesign. Static media must retain its public URL plus `data-kiwe-media-id` and a stable selector. Dynamic production collections stay dynamic and require an explicit binding target before `kiwe-bindings.json` is emitted.
