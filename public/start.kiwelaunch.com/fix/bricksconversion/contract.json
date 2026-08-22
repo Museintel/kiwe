@@ -1,0 +1,29 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/fix /bricksconversion",
+  "route": "/fix/bricksconversion",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "fix",
+  "read": [
+    "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md",
+    "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"
+  ],
+  "requires": [
+    "failed Bricks conversion/template artifact"
+  ],
+  "must": [
+    "fix the Bricks artifact itself; do not claim a Framework profile will repair hardcoded template JSON later",
+    "use official tokens first, declared project variables second, and real fluid clamps only when source responsive states prove different min/max values"
+  ],
+  "output": [
+    "fixed Bricks conversion/template artifact only"
+  ],
+  "forbidden": [
+    "DSA/AppShell conversion",
+    "website redesign",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "Return fixed artifact and compact pass/fail summary."
+}

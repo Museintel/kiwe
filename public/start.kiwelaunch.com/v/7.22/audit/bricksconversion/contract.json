@@ -1,0 +1,34 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/audit /bricksconversion",
+  "route": "/audit/bricksconversion",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "audit",
+  "read": [
+    "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",
+    "kiwe-ai-toolkit/contexts/seam-compiler-lite.md",
+    "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"
+  ],
+  "requires": [
+    "raw source plus native Bricks template upload JSON or compiler proof bundle"
+  ],
+  "must": [
+    "run executable structural/native-coverage validation",
+    "treat the source as the visual contract even when it contains its own responsive defect",
+    "require equal viewport provenance before any visual percentage",
+    "mark mismatched canvas, DPR, page identity, scrollbar geometry, stale target CSS, or foreign overlay contamination INCOMPLETE",
+    "report native coverage and scoped CSS exceptions separately",
+    "fail runtime Code elements unless explicitly marked review-only unsupported exceptions",
+    "fail framework-dependent settings in raw mode"
+  ],
+  "output": [
+    "pass/fail findings only"
+  ],
+  "forbidden": [
+    "fixes unless /fix is also present",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "PASS/FAIL/INCOMPLETE with executable proof, valid visual score when available, blocking errors, and warnings."
+}

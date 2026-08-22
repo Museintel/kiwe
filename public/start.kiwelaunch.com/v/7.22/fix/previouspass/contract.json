@@ -1,0 +1,25 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/fix /previouspass",
+  "route": "/fix/previouspass",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "diagnostic",
+  "read": [
+    "kiwe-ai-toolkit/entry.json",
+    "kiwe-ai-toolkit/command-manifest.json"
+  ],
+  "requires": [
+    "current artifacts and immediately previous audit findings if the human wants a fix"
+  ],
+  "output": [
+    "ERROR: KIWE_PREVIOUS_AUDIT_MISSING when no previous audit findings exist"
+  ],
+  "forbidden": [
+    "execution",
+    "silent aliasing",
+    "fixing from memory",
+    "stale files"
+  ],
+  "finalResponse": "Do not execute. Explain that the canonical command is /fix /previousaudit and suggest /audit /allattached /allflow first when no previous audit findings exist."
+}

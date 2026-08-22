@@ -1,0 +1,28 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/audit /allattached /allflow",
+  "route": "/audit/allattached/allflow",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "audit",
+  "read": [
+    "kiwe-ai-toolkit/entry.json",
+    "kiwe-ai-toolkit/command-manifest.json",
+    "lane contexts and validators for every detected supplied artifact and every required closure audit"
+  ],
+  "requires": [
+    "current attached/supplied artifacts or file map"
+  ],
+  "output": [
+    "pass/fail findings per detected artifact lane and per required closure audit"
+  ],
+  "forbidden": [
+    "fixes unless /fix is also present",
+    "creative rebuild",
+    "redesign",
+    "docs unless /document",
+    "ZIP",
+    "stale files"
+  ],
+  "finalResponse": "Return compact PASS/FAIL/WARN for every detected artifact and every required closure audit."
+}

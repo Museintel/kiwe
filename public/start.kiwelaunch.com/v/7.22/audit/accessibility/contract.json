@@ -1,0 +1,31 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/audit /accessibility",
+  "route": "/audit/accessibility",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "audit",
+  "read": [
+    "kiwe-ai-toolkit/contexts/accessibility-lite.md"
+  ],
+  "requires": [
+    "existing artifact files and optional accessibility/kiwe-accessibility-plan.json"
+  ],
+  "output": [
+    "pass/fail findings only"
+  ],
+  "forbidden": [
+    "fixes unless /fix is also present",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "checks": [
+    "WCAG contrast",
+    "native light/dark proof",
+    "Kiwe/Seam token pairs",
+    "Bricks theme-style alignment",
+    "critical text clipping/overflow",
+    "Appsite capability attributes preserved"
+  ],
+  "finalResponse": "PASS/FAIL with blocking errors and warnings."
+}

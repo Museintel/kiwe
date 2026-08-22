@@ -1,0 +1,32 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/fix /seamframework",
+  "route": "/fix/seamframework",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "fix",
+  "read": [
+    "kiwe-ai-toolkit/contexts/workflow-lite.md",
+    "kiwe-ai-toolkit/contexts/seam-attributes-lite.md",
+    "kiwe-ai-toolkit/tools/validate-seamframework.cjs"
+  ],
+  "requires": [
+    "failed Seam page artifact and audit findings"
+  ],
+  "output": [
+    "website/bricks-paste.html"
+  ],
+  "must": [
+    "fix the actual Seam page artifact",
+    "move visual CSS off bare seam-* selectors and onto project-owned classes",
+    "rerun the same Seam validator until PASS or NEEDS_INPUT"
+  ],
+  "forbidden": [
+    "Bricks JSON",
+    "DSA theme",
+    "redesign",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "Return fixed Seam page artifact and compact validator-proof status."
+}

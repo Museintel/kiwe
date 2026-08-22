@@ -1,0 +1,70 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/fix /accessibility",
+  "route": "/fix/accessibility",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "fix",
+  "read": [
+    "kiwe-ai-toolkit/contexts/accessibility-lite.md",
+    "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"
+  ],
+  "requires": [
+    "failed accessibility audit or existing artifact needing accessibility repair"
+  ],
+  "output": [
+    "revised existing artifact file(s)",
+    "accessibility/kiwe-accessibility-plan.json"
+  ],
+  "forbidden": [
+    "new Bricks elements unless explicitly required and explained",
+    "new classes unless official/project-token mapping cannot solve the failure",
+    "removed Seam classes",
+    "removed Kiwe/Appsite attributes",
+    "DSA/AppShell structure changes",
+    "Bricks reconversion",
+    "website redesign",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "preserve": [
+    "element counts where possible",
+    "global class counts where possible",
+    "global variable names unless adding documented accessibility token mappings",
+    "Seam classes",
+    "data-role/data-flow",
+    "data-kiwe-* attributes",
+    "data-dsa-* attributes",
+    "Bricks dynamic tags",
+    "query-loop intent"
+  ],
+  "darkModeRecipe": {
+    "sourceOfTruth": "Use this recipe; do not search repo docs for a separate dark-mode contract.",
+    "selectorPattern": [
+      ".page-root-class, [data-kiwe-theme=\"light\"] .page-root-class, html[data-brx-theme=\"light\"] .page-root-class, :root[data-brx-theme=\"light\"] .page-root-class",
+      "html[data-kiwe-theme=\"dark\"] .page-root-class, [data-kiwe-theme=\"dark\"] .page-root-class, .page-root-class[data-kiwe-theme=\"dark\"], html[data-brx-theme=\"dark\"] .page-root-class, :root[data-brx-theme=\"dark\"] .page-root-class"
+    ],
+    "bricksCompatibility": "When the target Bricks site exposes frontend color mode, Bricks may set document.documentElement.dataset.brxTheme on the frontend and emit palette variables at :root plus :root[data-brx-theme=\"dark\"]. Bricks-ready accessibility fixes must support data-brx-theme alongside Kiwe data-kiwe-theme when available; do not rely on Bricks editor dark UI alone.",
+    "requiredKiweTokens": [
+      "--kiwe-color-surface",
+      "--kiwe-color-surface-raised",
+      "--kiwe-color-surface-sunken",
+      "--kiwe-color-text",
+      "--kiwe-color-text-muted",
+      "--kiwe-color-text-inverse",
+      "--kiwe-color-border",
+      "--kiwe-color-brand",
+      "--kiwe-color-accent"
+    ],
+    "rule": "Remap existing project variables such as --nc-paper, --nc-surface, --nc-ink, --nc-muted, --nc-line, --nc-brand, and --nc-accent to Kiwe tokens for light and dark states. Do not invent a second unrelated palette."
+  },
+  "checks": [
+    "WCAG contrast",
+    "native light/dark proof",
+    "Kiwe/Seam token pairs",
+    "Bricks theme-style alignment",
+    "critical text clipping/overflow",
+    "reduced motion when motion exists"
+  ],
+  "finalResponse": "Return fixed file(s), PASS/FAIL/WARN, files changed, and structural-drift summary. Keep it compact."
+}

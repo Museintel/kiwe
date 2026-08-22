@@ -1,0 +1,38 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/convert /bricks /seamframework",
+  "route": "/convert/bricks/seamframework",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "framework",
+  "read": [
+    "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",
+    "kiwe-ai-toolkit/contexts/seam-compiler-lite.md",
+    "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"
+  ],
+  "requires": [
+    "arbitrary HTML/CSS/JS project, folder, archive, or standalone document"
+  ],
+  "must": [
+    "run SEAM Compiler 0.13.0 in one-pass Framework mode",
+    "capture raw rendered evidence before Framework ownership",
+    "emit one project-wide Framework Profile before dependent templates",
+    "emit an explicit install-order manifest",
+    "run /audit /seamframework and require PASS at 100% integration"
+  ],
+  "output": [
+    "framework/kiwe-framework-profile.json",
+    "framework/audit-seamframework.json",
+    "manifest-seam-framework.json",
+    "bricks-template/[name]-template-upload.json"
+  ],
+  "forbidden": [
+    "source redesign",
+    "AI-authored production JSON",
+    "inline variable fallbacks",
+    "discarding raw compiler evidence before Framework mapping",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "Return the audited one-pass package with profile-first install order."
+}

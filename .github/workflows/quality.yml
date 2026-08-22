@@ -31,6 +31,8 @@ jobs:
         run: |
           php tools/release/test-sitegraph-only-fresh-install.php
           php tools/release/test-sitegraph-only-fresh-install.php existing
+      - name: Verify public SEAM command registry has no drift
+        run: node tools/release/build-command-registry.cjs --check
 
   ui-contract:
     runs-on: ubuntu-latest

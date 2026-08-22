@@ -1,0 +1,27 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/create /accessibility",
+  "route": "/create/accessibility",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "create",
+  "read": [
+    "kiwe-ai-toolkit/contexts/accessibility-lite.md",
+    "kiwe-ai-toolkit/contexts/seam-attributes-lite.md"
+  ],
+  "requires": [
+    "existing website/page, DSA theme, combined handoff, Framework profile, Bricks theme style, or Bricks conversion"
+  ],
+  "output": [
+    "accessibility/kiwe-accessibility-plan.json",
+    "minimal existing artifact edits when needed for dark/light proof"
+  ],
+  "forbidden": [
+    "new page design",
+    "Bricks reconversion",
+    "DSA theme creation",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "Return plan/artifact file(s) and compact pass/fail summary."
+}

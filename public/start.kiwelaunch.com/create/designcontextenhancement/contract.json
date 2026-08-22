@@ -1,0 +1,36 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/create /designcontextenhancement",
+  "route": "/create/designcontextenhancement",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "design-context-enhancement",
+  "read": [
+    "kiwe-ai-toolkit/contexts/dynamic-lite.md",
+    "the attached kiwe.sitegraph-design-context.v1 export and its embedded designContextEnhancementContract"
+  ],
+  "requires": [
+    "a current kiwe.sitegraph-design-context.v1 export containing ownerContextHash and designContextEnhancementContract"
+  ],
+  "must": [
+    "copy the exact sourceContextHash",
+    "set authority.mayOverwriteOwnerEvidence to false",
+    "preserve every locked path and owner-selected color",
+    "suggest colors only for semantic roles the owner left empty",
+    "keep factual claims grounded in owner/SiteGraph evidence",
+    "put uncertainty in requiresHumanReview"
+  ],
+  "output": [
+    "kiwe-design-context-enhancement.json using schema kiwe.design-context-enhancement.v1"
+  ],
+  "forbidden": [
+    "overwriting owner evidence",
+    "inventing contacts addresses products legal facts awards or dates",
+    "meta keywords",
+    "keyword stuffing",
+    "Bricks JSON",
+    "automatically enabling Seam Framework",
+    "browser-AI-authored production Framework Profile"
+  ],
+  "finalResponse": "Return the enhancement JSON only plus compact locked/preserved/review counts. The administrator imports it in Kiwe > Framework."
+}

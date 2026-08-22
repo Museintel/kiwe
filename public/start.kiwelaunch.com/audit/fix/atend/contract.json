@@ -1,0 +1,22 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/audit /fix /atend",
+  "route": "/audit/fix/atend",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "flag",
+  "read": [
+    "kiwe-ai-toolkit/command-manifest.json"
+  ],
+  "requires": [
+    "/execute /fullflow"
+  ],
+  "output": [
+    "final audit/fix/re-audit gates before delivery"
+  ],
+  "forbidden": [
+    "standalone generation",
+    "skipping re-audit after a fix"
+  ],
+  "finalResponse": "Use as an execution flag. After generation/conversion, run required closure audits, fix failed lanes, and rerun the same audits until PASS or NEEDS_INPUT."
+}

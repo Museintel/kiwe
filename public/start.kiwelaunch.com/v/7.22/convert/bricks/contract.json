@@ -1,0 +1,46 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/convert /bricks",
+  "route": "/convert/bricks",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "convert",
+  "read": [
+    "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",
+    "kiwe-ai-toolkit/contexts/seam-compiler-lite.md",
+    "kiwe-ai-toolkit/contexts/bricks-conversion-lite.md"
+  ],
+  "requires": [
+    "arbitrary HTML/CSS/JS project, folder, archive, or standalone document"
+  ],
+  "must": [
+    "run SEAM Compiler 0.13.0 or a compatible deterministic compiler endpoint; browser AI must not author production JSON",
+    "keep raw conversion Framework-neutral",
+    "discover arbitrary pages without home/shop route assumptions",
+    "split a complete standalone document into header, footer and content templates when applicable",
+    "preserve source defects as 1:1 parity instead of redesigning them",
+    "use Bricks-native element controls before scoped CSS",
+    "preserve authored classes, attributes, interactions and executable behavior only within the compiler safety contract",
+    "when live Bricks proof is used, reject stale page CSS, mismatched viewport provenance and foreign overlay contamination before scoring"
+  ],
+  "output": [
+    "bricks-template/[page-or-template-name]-template-upload.json"
+  ],
+  "targetTypes": {
+    "homepageBody": "title Home, templateType content, content[]",
+    "pageBody": "templateType content, content[]",
+    "header": "templateType header, header[]",
+    "footer": "templateType footer, footer[]",
+    "section": "templateType section, content[]"
+  },
+  "forbidden": [
+    "mandatory Framework Profile",
+    "automatic Seam token/class injection",
+    "AI-authored production JSON",
+    "project-specific compiler rules",
+    "Code element fallback when native Bricks elements are possible",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "Return every discovered raw native Bricks template and compact executable conversion proof."
+}

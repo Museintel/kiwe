@@ -1,0 +1,29 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/audit /previousoutput",
+  "route": "/audit/previousoutput",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "audit",
+  "read": [
+    "kiwe-ai-toolkit/entry.json",
+    "kiwe-ai-toolkit/command-manifest.json",
+    "lane contexts and validators for every artifact in the immediate previous AI output"
+  ],
+  "requires": [
+    "files generated in the immediate previous AI output in this same session"
+  ],
+  "output": [
+    "pass/fail findings for every detected lane in the previous output"
+  ],
+  "forbidden": [
+    "fixes unless /fix is also present",
+    "creative rebuild",
+    "redesign",
+    "docs unless /document",
+    "ZIP",
+    "stale files",
+    "searching downloads or old conversations"
+  ],
+  "finalResponse": "Audit only the immediate previous AI output files. If unavailable, stop with ERROR: KIWE_PREVIOUS_OUTPUT_MISSING."
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/document",
+  "route": "/document",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "document",
+  "read": [
+    "context for the already completed command lane"
+  ],
+  "requires": [
+    "existing artifact"
+  ],
+  "output": [
+    "the narrow notes/report file for that lane"
+  ],
+  "forbidden": [
+    "redesign",
+    "rebuild",
+    "conversion",
+    "theme creation",
+    "ZIP unless explicitly requested"
+  ],
+  "finalResponse": "Return the requested documentation file and compact summary."
+}

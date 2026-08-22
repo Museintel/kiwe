@@ -1,0 +1,34 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/rebuild /seamframework",
+  "route": "/rebuild/seamframework",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "compatibility",
+  "aliases": [
+    "/seamframework"
+  ],
+  "read": [
+    "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",
+    "kiwe-ai-toolkit/contexts/seam-compiler-lite.md"
+  ],
+  "requires": [
+    "raw HTML/CSS/JS or an existing raw conversion result"
+  ],
+  "must": [
+    "normalize this legacy command to deterministic raw /convert /bricks followed by optional /seamframework",
+    "never manually rewrite source HTML or production Bricks JSON"
+  ],
+  "output": [
+    "framework/kiwe-framework-profile.json",
+    "bricks-template/[name]-template-upload.json"
+  ],
+  "forbidden": [
+    "legacy regex/token substitution as production authority",
+    "AI-authored production JSON",
+    "source redesign",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "Report that the legacy command was normalized to Convert then Framework and return executable proof."
+}

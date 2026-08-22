@@ -1,0 +1,28 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/audit /frameworkprofile",
+  "route": "/audit/frameworkprofile",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "audit",
+  "read": [
+    "kiwe-ai-toolkit/contexts/workflow-lite.md"
+  ],
+  "requires": [
+    "framework/kiwe-framework-profile.json"
+  ],
+  "output": [
+    "pass/fail findings only"
+  ],
+  "must": [
+    "reject custom token names in overrides",
+    "allow project-specific variables/classes only in settings.tokens.project",
+    "verify project variable/class names are prefixed and collision-safe"
+  ],
+  "forbidden": [
+    "fixes unless /fix is also present",
+    "docs unless /document",
+    "ZIP"
+  ],
+  "finalResponse": "PASS/FAIL with blocking errors and warnings."
+}

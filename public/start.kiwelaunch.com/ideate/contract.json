@@ -1,0 +1,32 @@
+{
+  "schema": "kiwe.command-route.v1",
+  "contractVersion": "7.22",
+  "command": "/ideate",
+  "route": "/ideate",
+  "sourceHash": "sha256:c36274d2436f38e3742e20ea6561722faa11b217a92cf06fc7e8686e62b3880b",
+  "phase": "ideate",
+  "aliases": [
+    "/ideate /webdraft",
+    "/creative",
+    "/webdraft"
+  ],
+  "read": [
+    "kiwe-ai-toolkit/contexts/ideate-lite.md"
+  ],
+  "requires": [
+    "an attached Kiwe Design Context or adaptive answers for facts it does not supply; project relationship; reusable versus inspiration references; any material creative constraints"
+  ],
+  "output": [
+    "one original homepage as index.html, styles.css, and script.js"
+  ],
+  "forbidden": [
+    "Bricks JSON",
+    "Site Graph binding",
+    "AppShell or DSA output",
+    "post-conversion Seam migration",
+    "framework-driven visual homogenization",
+    "more than three questions at once",
+    "restarting the interview during normal refinements"
+  ],
+  "finalResponse": "Auto-detect Design Context, ask only unanswered project-specific creative questions, generate one Framework-neutral homepage, then accept subsequent refinements through normal conversation without another slash command."
+}
