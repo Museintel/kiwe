@@ -60,6 +60,14 @@ The word `SEAM` in `seamDesignContext` names the semantic owner brief, not an in
 
 Canonical file-only form: `/usesitegraph /for /designcontext /nonai`.
 
+### `/create /designcontextenhancement`
+
+Use this after the owner/developer exports the current `kiwe.sitegraph-design-context.v1` file. Read its embedded `designContextEnhancementContract`; do not ask the human to restate the contract as a long prompt. Return exactly one `kiwe.design-context-enhancement.v1` JSON artifact with the export's exact `ownerContextHash` as `sourceContextHash` and `authority.mayOverwriteOwnerEvidence: false`.
+
+Owner identity, contact, location, commerce, legal facts, content records and every owner-selected color are locked. AI may propose improved editorial wording, a concise homepage search description, search-intent/content priorities, design direction, and colors for semantic roles the owner left empty. Never fabricate a fact, add meta-keyword stuffing, or replace an owner color. Put uncertainty in `requiresHumanReview`.
+
+The administrator imports the result in `Kiwe > Framework`. Import stores a separate approved enhancement layer and rejects stale hashes. It does not silently enable Seam Framework. A production Framework Profile remains deterministic compiler output; if a combined file includes one, Kiwe applies it only with explicit `frameworkOptIn: true` and rejects owner-color conflicts.
+
 ### `/usesitegraph /for /bricksbindings`
 
 Create the complete target-grounded binding plan from the current raw artifact. Use `/dynamictags`, `/queryloops`, or `/kiwelaunchers` instead of `/bricksbindings` when only one binding family should change. Do not replace preview data or site identity unless those targets are also present.

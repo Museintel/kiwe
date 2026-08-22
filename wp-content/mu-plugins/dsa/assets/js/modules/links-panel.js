@@ -76,11 +76,11 @@ function linksViewData( payload ) {
 	const hasScore = rawScore !== '' && Number.isFinite( Number( rawScore ) );
 	const score = hasScore ? Math.max( 0, Math.min( 100, Number( rawScore ) ) ) : null;
 
-	return { payload: payload, copy: copy, hub: hub, editor: editor, socials: socials, actions: actions, logo: logo, name: name, items: items, checks: checks, hasScore: hasScore, score: score };
+	return { payload: payload, copy: copy, hub: hub, editor: editor, socials: socials, actions: actions, logo: logo, name: name, items: items, checks: checks, hasScore: hasScore, score: score, scoreLabel: hub.scoreLabel || 'site score' };
 }
 
 function linksHero( data ) {
-	return '<div class="dsa-links-hero' + ( data.hasScore ? '' : ' dsa-links-hero--no-score' ) + '">' + ( data.logo ? '<img class="dsa-links-logo" src="' + escapeHtml( data.logo ) + '" data-dsa-theme-logo data-light-src="' + escapeHtml( data.hub.logo || '' ) + '" data-dark-src="' + escapeHtml( data.payload.logoDark || data.hub.logo || '' ) + '" alt="' + escapeHtml( data.name ) + '">' : '<div class="dsa-links-logo dsa-links-logo--text">' + escapeHtml( data.name.charAt( 0 ) || 'K' ) + '</div>' ) + ( data.hasScore ? '<div class="dsa-links-score" aria-label="Site score ' + escapeHtml( data.score ) + ' out of 100"><span>' + escapeHtml( data.score ) + '</span><small>site score</small></div>' : '' ) + '</div>';
+	return '<div class="dsa-links-hero' + ( data.hasScore ? '' : ' dsa-links-hero--no-score' ) + '">' + ( data.logo ? '<img class="dsa-links-logo" src="' + escapeHtml( data.logo ) + '" data-dsa-theme-logo data-light-src="' + escapeHtml( data.hub.logo || '' ) + '" data-dark-src="' + escapeHtml( data.payload.logoDark || data.hub.logo || '' ) + '" alt="' + escapeHtml( data.name ) + '">' : '<div class="dsa-links-logo dsa-links-logo--text">' + escapeHtml( data.name.charAt( 0 ) || 'K' ) + '</div>' ) + ( data.hasScore ? '<div class="dsa-links-score" aria-label="' + escapeHtml( data.scoreLabel || 'Site score' ) + ' ' + escapeHtml( data.score ) + ' out of 100"><span>' + escapeHtml( data.score ) + '</span><small>' + escapeHtml( data.scoreLabel || 'site score' ) + '</small></div>' : '' ) + '</div>';
 }
 
 function renderLegacyLinks( payload ) {

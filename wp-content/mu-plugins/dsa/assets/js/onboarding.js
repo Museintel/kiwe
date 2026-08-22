@@ -67,6 +67,31 @@
 		if ( clearTone ) {
 			root.querySelectorAll( 'input[name="context[brand][tone]"]' ).forEach( function ( input ) { input.checked = false; } );
 		}
+		const addPlannedPage = event.target.closest( '[data-kiwe-add-planned-page]' );
+		if ( addPlannedPage ) {
+			const list = root.querySelector( '[data-kiwe-planned-pages]' );
+			const template = root.querySelector( '[data-kiwe-planned-page-template]' );
+			if ( list && template && list.children.length < 20 ) {
+				const index = Array.from( list.querySelectorAll( '[data-kiwe-planned-page-row]' ) ).reduce( function ( highest, row ) {
+					const input = row.querySelector( 'input[name]' );
+					const match = input ? input.name.match( /plannedPages\]\[(\d+)\]/ ) : null;
+					return match ? Math.max( highest, Number( match[1] ) ) : highest;
+				}, -1 ) + 1;
+				const holder = document.createElement( 'div' );
+				holder.innerHTML = template.innerHTML.replaceAll( '__INDEX__', String( index ) );
+				const row = holder.firstElementChild;
+				if ( row ) { list.appendChild( row ); row.querySelector( 'input' ).focus(); }
+			}
+		}
+		const removePlannedPage = event.target.closest( '[data-kiwe-remove-planned-page]' );
+		if ( removePlannedPage ) {
+			const list = root.querySelector( '[data-kiwe-planned-pages]' );
+			const row = removePlannedPage.closest( '[data-kiwe-planned-page-row]' );
+			if ( list && row ) {
+				if ( list.querySelectorAll( '[data-kiwe-planned-page-row]' ).length > 1 ) row.remove();
+				else { row.querySelector( 'input' ).value = ''; row.querySelector( 'select' ).value = 'primary'; }
+			}
+		}
 	} );
 
 	const timezone = root.querySelector( '[data-kiwe-timezone]' );

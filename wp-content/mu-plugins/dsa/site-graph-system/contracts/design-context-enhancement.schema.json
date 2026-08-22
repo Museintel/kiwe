@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.invalid/schemas/kiwe.design-context-enhancement.v1.json",
+  "title": "Kiwe Design Context Enhancement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sourceContextHash", "authority", "suggestions"],
+  "properties": {
+    "schema": { "const": "kiwe.design-context-enhancement.v1" },
+    "sourceContextHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "authority": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["mayOverwriteOwnerEvidence"],
+      "properties": { "mayOverwriteOwnerEvidence": { "const": false } }
+    },
+    "suggestions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "brand": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tone": { "enum": ["", "pastel", "vibrant", "muted", "natural", "dark", "light", "luxury", "playful", "minimal"] },
+            "colors": {
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "required": ["role", "hex"],
+                "properties": {
+                  "role": { "enum": ["brand", "accent", "hero", "neutral", "surface"] },
+                  "hex": { "type": "string", "pattern": "^#[a-fA-F0-9]{6}$" }
+                }
+              }
+            }
+          }
+        },
+        "copy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "businessDescription": { "type": "string", "maxLength": 2000 },
+            "brandStory": { "type": "string", "maxLength": 3000 },
+            "audienceSummary": { "type": "string", "maxLength": 1600 }
+          }
+        },
+        "seo": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "homepageDescription": { "type": "string", "maxLength": 320 },
+            "searchIntent": { "type": "string", "maxLength": 240 },
+            "contentPriorities": { "type": "array", "maxItems": 12, "items": { "type": "string", "maxLength": 200 } }
+          }
+        },
+        "design": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "typographyDirection": { "type": "string", "maxLength": 1000 },
+            "imageryDirection": { "type": "string", "maxLength": 1000 },
+            "layoutDirection": { "type": "string", "maxLength": 1000 }
+          }
+        }
+      }
+    },
+    "assumptions": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 500 } },
+    "requiresHumanReview": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 500 } },
+    "frameworkOptIn": { "type": "boolean" },
+    "frameworkProfile": { "type": "object" }
+  }
+}

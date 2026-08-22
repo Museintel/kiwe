@@ -4,6 +4,7 @@ namespace DSA\Site_Graph;
 
 use DSA\AI\Site_Graph_Service;
 use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\Onboarding\Design_Context_Enhancement_Service;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
 
@@ -77,7 +78,10 @@ final class Design_Context_Service {
 		$business          = $allows( 'business' ) || $allows( 'site' ) ? $this->business_identity( $administrator ) : [];
 		$commerce          = $allows( 'commerce' ) || $allows( 'products' ) ? $this->commerce_context( $graph, $products ) : [];
 		$field_registry     = $allows( 'customfields' ) || $allows( 'customcontent' ) ? $this->field_registry( $administrator ) : [];
-		$owner_context      = ( new Design_Context_Profile_Service() )->public_context( $administrator );
+		$profiles           = new Design_Context_Profile_Service();
+		$enhancements       = new Design_Context_Enhancement_Service( $profiles );
+		$owner_context      = $profiles->public_context( $administrator );
+		$resolved_context   = $enhancements->resolved_public_context( $administrator );
 
 		$catalog = [
 			'site'       => is_array( $site['data'] ?? null ) ? $site['data'] : [],
@@ -127,10 +131,13 @@ final class Design_Context_Service {
 			],
 			'business'    => $business,
 			'seamDesignContext' => $owner_context,
+			'resolvedDesignContext' => $resolved_context,
+			'designContextEnhancementContract' => $enhancements->handoff_contract(),
 			'commerce'    => $commerce,
 			'catalog'     => $catalog,
 			'catalogHash' => hash( 'sha256', (string) wp_json_encode( $catalog, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ),
-			'contextHash' => hash( 'sha256', (string) wp_json_encode( [ 'business'=>$business, 'seamDesignContext'=>$owner_context, 'commerce'=>$commerce, 'catalog'=>$catalog ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ),
+			'contextHash' => hash( 'sha256', (string) wp_json_encode( [ 'business'=>$business, 'seamDesignContext'=>$owner_context, 'resolvedDesignContext'=>$resolved_context, 'commerce'=>$commerce, 'catalog'=>$catalog ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ),
+			'ownerContextHash' => $enhancements->owner_context_hash(),
 			'counts'      => array_map( 'count', array_filter( $catalog, 'is_array' ) ),
 			'query'       => [
 				'mediaSearch'  => $media_search,
@@ -150,7 +157,7 @@ final class Design_Context_Service {
 				'command' => '/usesitegraph /for /designcontext',
 				'fileOnlyCommand' => '/usesitegraph /for /designcontext /nonai',
 				'entityScopes' => [ '/products', '/posts', '/pages', '/media', '/menus', '/customcontent', '/taxonomies', '/business', '/commerce', '/seamdesigncontext' ],
-				'fieldScopes'  => [ '/titles', '/images', '/prices', '/links', '/excerpts', '/metadata', '/customfields', '/contact', '/brand', '/audience', '/contentplan', '/bundles', '/discounts', '/bestsellers' ],
+				'fieldScopes'  => [ '/titles', '/images', '/prices', '/links', '/excerpts', '/metadata', '/customfields', '/contact', '/brand', '/audience', '/contentplan', '/bundles', '/discounts', '/bestsellers', '/designcontextenhancement' ],
 				'rule' => 'Use this evidence to improve design choices and binding precision without redesigning an approved artifact or hardcoding production collections.',
 			],
 		];

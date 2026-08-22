@@ -59,6 +59,12 @@ final class Design_Context_Profile_Service {
 		return ! empty( $this->status()['completed'] );
 	}
 
+	public static function saved_seo_strength(): ?int {
+		$status = get_option( self::OPTION_STATUS, [] );
+		if ( ! is_array( $status ) || empty( $status['completed'] ) || ! isset( $status['scores']['seoStrength'] ) ) return null;
+		return max( 0, min( 100, absint( $status['scores']['seoStrength'] ) ) );
+	}
+
 	public function save( array $raw, int $user_id, string $invitation_id = '' ) {
 		$profile = $this->sanitize( $raw );
 		$errors  = $this->required_errors( $profile );
@@ -177,6 +183,8 @@ final class Design_Context_Profile_Service {
 			! empty( $p['seo']['homepageDescription'] ), ! empty( $p['identity']['logoId'] ),
 			! empty( $p['identity']['siteIconId'] ), ! empty( $p['contact']['email'] ),
 			! empty( $p['contact']['phone'] ), ! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
+			! empty( $p['seo']['legalName'] ), ! empty( $p['seo']['primaryGoal'] ),
+			! empty( $p['seo']['searchIntent'] ), ! empty( $p['seo']['proofPoints'] ),
 		];
 		$design_checks = [
 			! empty( $p['identity']['siteName'] ), ! empty( $p['identity']['description'] ),
@@ -226,7 +234,7 @@ final class Design_Context_Profile_Service {
 			'brand' => [ 'tone' => '', 'colors' => [], 'notes' => '' ],
 			'contentPlan' => [ 'existingPages' => $pages, 'plannedPages' => [] ],
 			'commerce' => $product_plan,
-			'seo' => [ 'homepageDescription' => '', 'allowIndexing' => '0' !== (string) get_option( 'blog_public', '1' ) ],
+			'seo' => [ 'homepageDescription' => '', 'legalName' => '', 'foundedYear' => 0, 'primaryGoal' => '', 'searchIntent' => '', 'proofPoints' => '', 'allowIndexing' => '0' !== (string) get_option( 'blog_public', '1' ) ],
 			'scores' => [ 'seoStrength' => 0, 'designContextStrength' => 0 ],
 			'meta' => [ 'schema' => 'kiwe.seam-design-context.v1' ],
 		];
@@ -338,7 +346,15 @@ final class Design_Context_Profile_Service {
 				'shippingModel' => in_array( $commerce['shippingModel'] ?? '', [ 'free', 'flat', 'calculated', 'pickup', 'mixed', '' ], true ) ? $commerce['shippingModel'] : '',
 				'typicalShippingCharge' => max( 0, (float) ( $commerce['typicalShippingCharge'] ?? 0 ) ),
 			],
-			'seo' => [ 'homepageDescription' => substr( sanitize_textarea_field( (string) ( $seo['homepageDescription'] ?? '' ) ), 0, 320 ), 'allowIndexing' => ! empty( $seo['allowIndexing'] ) ],
+			'seo' => [
+				'homepageDescription' => substr( sanitize_textarea_field( (string) ( $seo['homepageDescription'] ?? '' ) ), 0, 320 ),
+				'legalName' => substr( sanitize_text_field( (string) ( $seo['legalName'] ?? '' ) ), 0, 200 ),
+				'foundedYear' => ( static function ( int $year ): int { $current_year = (int) gmdate( 'Y' ); return $year >= 1000 && $year <= $current_year ? $year : 0; } )( absint( $seo['foundedYear'] ?? 0 ) ),
+				'primaryGoal' => in_array( $seo['primaryGoal'] ?? '', [ '', 'buy', 'contact', 'book', 'visit', 'subscribe', 'donate', 'read' ], true ) ? $seo['primaryGoal'] : '',
+				'searchIntent' => substr( sanitize_text_field( (string) ( $seo['searchIntent'] ?? '' ) ), 0, 240 ),
+				'proofPoints' => substr( sanitize_textarea_field( (string) ( $seo['proofPoints'] ?? '' ) ), 0, 1600 ),
+				'allowIndexing' => ! empty( $seo['allowIndexing'] ),
+			],
 			'scores' => [ 'seoStrength' => 0, 'designContextStrength' => 0 ], 'meta' => [ 'schema' => 'kiwe.seam-design-context.v1' ],
 		];
 	}

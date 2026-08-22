@@ -7,7 +7,7 @@ use DSA\Commerce\Store_Analytics_Service;
 use DSA\Element_Registry;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
-use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\Onboarding\Design_Context_Enhancement_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -378,7 +378,7 @@ final class Bricks_Integration {
 
 	private function design_context_tag_value( string $name, string $context ): string {
 		if ( in_array( $context, [ 'image', 'media' ], true ) ) return '';
-		$profile = ( new Design_Context_Profile_Service() )->current();
+		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
 		if ( 'kiwe_business_description' === $name ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
 		if ( 'kiwe_whatsapp' === $name ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
 		if ( 'kiwe_brand_tone' === $name ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );

@@ -2,7 +2,7 @@
 
 namespace DSA\WP7;
 
-use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\Onboarding\Design_Context_Enhancement_Service;
 use DSA\Site\Site_Identity_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -133,7 +133,7 @@ final class Bindings_Service {
 	}
 
 	private function design_context_value( string $key ): string {
-		$profile = ( new Design_Context_Profile_Service() )->current();
+		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
 		if ( 'business_description' === $key ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
 		if ( 'whatsapp' === $key ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
 		if ( 'brand_tone' === $key ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );

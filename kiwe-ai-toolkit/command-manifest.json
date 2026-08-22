@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.19",
+    "contractVersion": "7.20",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -67,7 +67,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.19", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.20", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -108,7 +108,7 @@
   "commandGrammar": {
     "rule": "Tokens are independent and composable. Do not require a memorized full phrase when a command line is unambiguous.",
     "primaryActions": ["/ideate", "/execute", "/rebuild", "/create", "/convert", "/seamframework", "/audit", "/fix", "/apply", "/list", "/document"],
-    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity", "/designcontext"],
+    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity", "/designcontext", "/designcontextenhancement"],
     "contextSources": ["/usesitegraph", "/usebrickscontext"],
     "entityScopes": ["/products", "/posts", "/pages", "/media", "/menus"],
     "fieldScopes": ["/titles", "/images", "/prices", "/links", "/excerpts", "/metadata"],
@@ -266,6 +266,15 @@
       "output": ["ERROR: KIWE_PREVIOUS_AUDIT_MISSING when no previous audit findings exist"],
       "forbidden": ["execution", "silent aliasing", "fixing from memory", "stale files"],
       "finalResponse": "Do not execute. Explain that the canonical command is /fix /previousaudit and suggest /audit /allattached /allflow first when no previous audit findings exist."
+    },
+    "/create /designcontextenhancement": {
+      "phase": "design-context-enhancement",
+      "read": ["kiwe-ai-toolkit/contexts/dynamic-lite.md", "the attached kiwe.sitegraph-design-context.v1 export and its embedded designContextEnhancementContract"],
+      "requires": ["a current kiwe.sitegraph-design-context.v1 export containing ownerContextHash and designContextEnhancementContract"],
+      "must": ["copy the exact sourceContextHash", "set authority.mayOverwriteOwnerEvidence to false", "preserve every locked path and owner-selected color", "suggest colors only for semantic roles the owner left empty", "keep factual claims grounded in owner/SiteGraph evidence", "put uncertainty in requiresHumanReview"],
+      "output": ["kiwe-design-context-enhancement.json using schema kiwe.design-context-enhancement.v1"],
+      "forbidden": ["overwriting owner evidence", "inventing contacts addresses products legal facts awards or dates", "meta keywords", "keyword stuffing", "Bricks JSON", "automatically enabling Seam Framework", "browser-AI-authored production Framework Profile"],
+      "finalResponse": "Return the enhancement JSON only plus compact locked/preserved/review counts. The administrator imports it in Kiwe > Framework."
     },
     "/seamframework": {
       "phase": "framework",

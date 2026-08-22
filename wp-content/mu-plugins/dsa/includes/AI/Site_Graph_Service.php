@@ -5,6 +5,7 @@ namespace DSA\AI;
 use DSA\Design\Seam_Token_Service;
 use DSA\Modules\Module_Registry;
 use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\Onboarding\Design_Context_Enhancement_Service;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
 
@@ -368,7 +369,8 @@ final class Site_Graph_Service {
 
 	private function design_context_summary(): array {
 		$profiles = new Design_Context_Profile_Service();
-		$context = $profiles->public_context( false );
+		$enhancements = new Design_Context_Enhancement_Service( $profiles );
+		$context = $enhancements->resolved_public_context( false );
 		return [
 			'schema' => 'kiwe.seam-design-context.v1',
 			'complete' => ! empty( $context['complete'] ),
@@ -377,6 +379,8 @@ final class Site_Graph_Service {
 			'brandColors' => is_array( $context['brand']['colors'] ?? null ) ? $context['brand']['colors'] : [],
 			'socialProfileCount' => count( array_filter( is_array( $context['contact']['socialLinks'] ?? null ) ? $context['contact']['socialLinks'] : [] ) ),
 			'plannedPageCount' => count( is_array( $context['contentPlan']['plannedPages'] ?? null ) ? $context['contentPlan']['plannedPages'] : [] ),
+			'ownerContextHash' => $enhancements->owner_context_hash(),
+			'enhancementStatus' => (string) ( $context['enhancement']['status'] ?? ( isset( $context['enhancement']['approvedAt'] ) ? 'approved' : 'none' ) ),
 			'publicBusinessContextOnly' => true,
 		];
 	}

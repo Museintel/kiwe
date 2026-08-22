@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.start.v1",
-  "contractVersion": "7.19",
+  "contractVersion": "7.20",
   "updated": "2026-08-01",
   "repository": "Museintel/kiwe",
   "productName": "SeamFlow",
@@ -28,7 +28,7 @@
     "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison."
   ],
   "firstResponse": {
-    "mustReport": "SeamFlow contract: 7.19",
+    "mustReport": "SeamFlow contract: 7.20",
     "ifListCommand": "Read command-manifest.json, return compact command list, then stop.",
     "ifOtherCommand": "Route only that command; read only the listed context files and validators.",
     "ifFilesNoCommand": "Inspect supplied file contents, classify current artifact stage, and offer deterministic raw /convert /bricks or one-pass /convert /bricks /seamframework for raw HTML/CSS/JS. Explain that accessibility is independent: bare /accessibility works on the current raw /ideate page, and /create /accessibility plus /audit work on raw, Bricks, or Framework artifacts. Show Route A hosted SEAM Compiler, Route B local deterministic compiler, Route C Plugin REST authority bridge, and Route D Plugin REST + Companion review. Ask for credentials only for Route C/D or live plugin proof.",
@@ -108,7 +108,7 @@
     "rule": "SeamFlow is a command central. If the command, artifact, validator, route, token budget, context window, or requested lane is not valid enough to continue, stop immediately with a compact error instead of improvising.",
     "responseShape": [
       "STATUS: NEEDS_INPUT | FAIL | WARN",
-      "SeamFlow contract: 7.19",
+      "SeamFlow contract: 7.20",
       "ERROR: KIWE_...",
       "Command:",
       "Current artifact:",
@@ -170,7 +170,7 @@
   "noCommandInteraction": {
     "firstResponseShape": [
       "STATUS: NEEDS_INPUT",
-      "SeamFlow contract: 7.19",
+      "SeamFlow contract: 7.20",
       "Attachments detected: yes/no",
       "Artifact diagnostic: type/confidence/stage if inspectable",
       "Recommended next command: for raw HTML/CSS/JS choose deterministic raw /convert /bricks or one-pass /convert /bricks /seamframework; bare /accessibility may independently audit/improve the current raw page, and /create /accessibility plus /audit work after any artifact stage.",
@@ -343,7 +343,7 @@
   },
   "defaultFinalResponse": [
     "STATUS: PASS | FAIL | WARN | NEEDS_INPUT",
-      "SeamFlow contract: 7.19",
+      "SeamFlow contract: 7.20",
     "Command:",
     "Artifact classification:",
     "Files returned:",

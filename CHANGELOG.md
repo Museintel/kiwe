@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.20
+
+- Replaced the eight always-visible planned-page inputs with a progressive one-row repeater that supports up to 20 clean, removable page intentions.
+- Added bounded nontechnical SEO evidence for legal name, founding year, primary website goal, likely customer search intent and verifiable proof points without meta-keyword stuffing or invented claims.
+- Added the hash-bound `kiwe.design-context-enhancement.v1` proposal/import lane: SiteGraph exports its locked/writable contract, Kiwe > Framework validates and approves it, and stale or owner-authority-violating files fail closed.
+- Kept owner evidence in a separate immutable layer. Approved AI wording/design suggestions and missing semantic colors resolve for SiteGraph, native SEO, Bricks and WordPress 7 bindings without rewriting owner data or silently enabling Seam Framework.
+- Blocked Framework profile imports that conflict with owner-selected semantic colors, while permitting explicit nested Framework opt-in from a validated enhancement artifact.
+- Connected completed onboarding SEO readiness to the DSA Links score only as a labelled fallback; a manually configured Site Score remains authoritative.
+- Added canonical `/create /designcontextenhancement` command routing and synchronized Kiwe, SeamFlow and generated SEAM Compiler contracts to 7.20.
+
 ## 7.19
 
 - Refined Owner Onboarding after the first Mishtanna live export: optional mood can be cleared, save/validation returns to the relevant step with visible progress, and saved journeys remain on the review screen.

@@ -2,6 +2,8 @@
 
 namespace DSA\Rest;
 
+use DSA\Onboarding\Design_Context_Profile_Service;
+
 use DSA\AI\Copilot_Service;
 use DSA\Design\Seam_Token_Service;
 use DSA\Design\Token_Schema;
@@ -258,9 +260,13 @@ final class Settings_Controller {
 		$commerce = $this->settings->get( 'commerce', [] );
 		$commerce_available = $this->links_commerce_available();
 
+		$manual_score = '' === trim( (string) ( $config['site_score'] ?? '' ) ) ? null : max( 0, min( 100, (int) $config['site_score'] ) );
+		$score = null !== $manual_score ? $manual_score : Design_Context_Profile_Service::saved_seo_strength();
 		return [
 			'logo'    => $this->site_logo_url(),
-			'score'   => '' === trim( (string) ( $config['site_score'] ?? '' ) ) ? null : max( 0, min( 100, (int) $config['site_score'] ) ),
+			'score'   => $score,
+			'scoreLabel' => null !== $manual_score ? __( 'site score', 'dsa' ) : __( 'SEO readiness', 'dsa' ),
+			'scoreSource' => null !== $manual_score ? 'manual' : ( null !== $score ? 'kiwe-onboarding' : 'none' ),
 			'socials' => $this->social_links( $config ),
 			'shop'    => [
 				'label' => sanitize_text_field( $config['shop_label'] ?? __( 'Shop', 'dsa' ) ),

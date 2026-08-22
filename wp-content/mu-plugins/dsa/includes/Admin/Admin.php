@@ -45,6 +45,7 @@ use DSA\Diagnostics\Cache_Maintenance_Service;
 use DSA\Modules\Module_Registry;
 use DSA\Notifications\Notification_Campaign_Service;
 use DSA\Notifications\Notification_Preference_Service;
+use DSA\Onboarding\Design_Context_Enhancement_Service;
 use DSA\Security\Secret_Store;
 use DSA\Saved\Saved_Items_Service;
 use DSA\Search\Search_Service;
@@ -98,6 +99,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_import_profile', [ $this, 'import_profile' ] );
 		add_action( 'admin_post_dsa_export_framework_profile', [ $this, 'export_framework_profile' ] );
 		add_action( 'admin_post_dsa_import_framework_profile', [ $this, 'import_framework_profile' ] );
+		add_action( 'admin_post_dsa_import_design_context_enhancement', [ $this, 'import_design_context_enhancement' ] );
 		add_action( 'admin_post_dsa_import_accessibility_palette', [ $this, 'import_accessibility_palette' ] );
 		add_action( 'admin_post_dsa_export_theme', [ $this, 'export_theme' ] );
 		add_action( 'admin_post_dsa_import_theme', [ $this, 'import_theme' ] );
@@ -1095,7 +1097,7 @@ final class Admin {
 								<th scope="row"><label for="dsa-link-score"><?php esc_html_e( 'Site Score', 'dsa' ); ?></label></th>
 								<td>
 									<input id="dsa-link-score" class="small-text" type="number" min="0" max="100" name="link_hub[site_score]" value="<?php echo esc_attr( (string) ( $link_hub['site_score'] ?? '' ) ); ?>" placeholder="<?php esc_attr_e( 'Optional', 'dsa' ); ?>">
-									<span><?php esc_html_e( 'Optional. When blank, no score badge is rendered in the Links Surface.', 'dsa' ); ?></span>
+									<span><?php esc_html_e( 'Optional manual override. When blank, completed owner onboarding can supply the SEO-readiness badge.', 'dsa' ); ?></span>
 								</td>
 							</tr>
 							<tr>
@@ -1859,12 +1861,46 @@ final class Admin {
 		if ( ! is_array( $tokens ) ) {
 			$this->redirect_framework_profile_error( 'invalid' );
 		}
+		$owner_color_check = ( new Design_Context_Enhancement_Service() )->validate_framework_tokens( $tokens );
+		if ( is_wp_error( $owner_color_check ) ) $this->redirect_framework_profile_error( 'enhancement-color-conflict' );
+		$tokens = ( new Design_Context_Enhancement_Service() )->apply_owner_colors_to_framework_tokens( $tokens );
 
 		$settings           = $this->settings->all();
 		$settings['tokens'] = $this->sanitize_token_settings( $tokens, $settings['tokens'] ?? [] );
 		$this->settings->update( $settings );
 
 		wp_safe_redirect( add_query_arg( 'framework-profile-imported', '1', admin_url( 'admin.php?page=kiwe-framework' ) ) );
+		exit;
+	}
+
+	public function import_design_context_enhancement(): void {
+		if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'You do not have permission to approve Design Context enhancements.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response'=>403 ] );
+		check_admin_referer( 'dsa_import_design_context_enhancement' );
+		$file = $_FILES['dsa_design_context_enhancement_file'] ?? null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( ! is_array( $file ) || empty( $file['tmp_name'] ) || ! empty( $file['error'] ) || ! is_uploaded_file( (string) $file['tmp_name'] ) ) $this->redirect_framework_profile_error( 'enhancement-missing' );
+		if ( (int) ( $file['size'] ?? 0 ) > 1024 * 1024 ) $this->redirect_framework_profile_error( 'enhancement-size' );
+		if ( ! preg_match( '/\.json$/i', sanitize_file_name( $file['name'] ?? '' ) ) ) $this->redirect_framework_profile_error( 'enhancement-type' );
+		$payload = json_decode( (string) file_get_contents( (string) $file['tmp_name'] ), true );
+		if ( ! is_array( $payload ) ) $this->redirect_framework_profile_error( 'enhancement-json' );
+
+		$enhancements = new Design_Context_Enhancement_Service();
+		$tokens = null;
+		if ( isset( $payload['frameworkProfile'] ) ) {
+			if ( empty( $payload['frameworkOptIn'] ) || ! is_array( $payload['frameworkProfile'] ) ) $this->redirect_framework_profile_error( 'enhancement-framework-optin' );
+			$tokens = $this->framework_profile_tokens_input( $payload['frameworkProfile'] );
+			if ( ! is_array( $tokens ) ) $this->redirect_framework_profile_error( 'enhancement-framework' );
+			$valid = $enhancements->validate_framework_tokens( $tokens );
+			if ( is_wp_error( $valid ) ) $this->redirect_framework_profile_error( 'enhancement-color-conflict' );
+			$tokens = $enhancements->apply_owner_colors_to_framework_tokens( $tokens );
+		}
+		$result = $enhancements->import( $payload, get_current_user_id() );
+		if ( is_wp_error( $result ) ) $this->redirect_framework_profile_error( 'enhancement-' . sanitize_key( $result->get_error_code() ) );
+		if ( is_array( $tokens ) ) {
+			$settings = $this->settings->all();
+			$settings['tokens'] = $this->sanitize_token_settings( $tokens, $settings['tokens'] ?? [] );
+			$this->settings->update( $settings );
+		}
+		wp_safe_redirect( add_query_arg( 'design-context-enhancement-imported', is_array( $tokens ) ? 'with-framework' : 'context-only', admin_url( 'admin.php?page=kiwe-framework' ) ) );
 		exit;
 	}
 
@@ -4332,7 +4368,7 @@ final class Admin {
 				<input type="hidden" name="action" value="dsa_save_settings"><input type="hidden" name="_dsa_redirect" value="kiwe-links">
 				<?php wp_nonce_field( 'dsa_save_settings' ); ?>
 				<table class="form-table" role="presentation"><tbody>
-					<tr><th scope="row"><?php esc_html_e( 'Site score', 'dsa' ); ?></th><td><input class="small-text" type="number" min="0" max="100" name="link_hub[site_score]" value="<?php echo esc_attr( (string) ( $link_hub['site_score'] ?? '' ) ); ?>" placeholder="<?php esc_attr_e( 'Optional', 'dsa' ); ?>"><p class="description"><?php esc_html_e( 'Leave blank to hide the score badge on the frontend.', 'dsa' ); ?></p></td></tr>
+					<tr><th scope="row"><?php esc_html_e( 'Site score', 'dsa' ); ?></th><td><input class="small-text" type="number" min="0" max="100" name="link_hub[site_score]" value="<?php echo esc_attr( (string) ( $link_hub['site_score'] ?? '' ) ); ?>" placeholder="<?php esc_attr_e( 'Optional', 'dsa' ); ?>"><p class="description"><?php esc_html_e( 'A manual value stays authoritative. When blank, a completed owner onboarding may show its calculated SEO readiness; otherwise the badge stays hidden.', 'dsa' ); ?></p></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Social links', 'dsa' ); ?></th><td class="dsa-admin-link-grid"><?php foreach ( $this->social_link_labels() as $id => $label ) : ?><label><span><?php echo esc_html( $label ); ?></span><input type="url" name="link_hub[social_links][<?php echo esc_attr( $id ); ?>]" value="<?php echo esc_url( (string) ( $link_hub['social_links'][ $id ] ?? '' ) ); ?>" placeholder="https://"></label><?php endforeach; ?></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Shop action', 'dsa' ); ?></th><td class="dsa-admin-inline-fields"><input type="text" name="link_hub[shop_label]" value="<?php echo esc_attr( (string) ( $link_hub['shop_label'] ?? 'Shop' ) ); ?>"><input class="regular-text" type="url" name="link_hub[shop_url]" value="<?php echo esc_url( (string) ( $link_hub['shop_url'] ?? '' ) ); ?>" placeholder="<?php echo esc_attr__( 'Blank uses WooCommerce shop', 'dsa' ); ?>"></td></tr>
 					<tr><th scope="row"><?php esc_html_e( 'Editorial rail', 'dsa' ); ?></th><td class="dsa-admin-inline-fields"><input type="text" name="link_hub[posts_title]" value="<?php echo esc_attr( (string) ( $link_hub['posts_title'] ?? '' ) ); ?>" placeholder="<?php echo esc_attr__( 'Category name or Latest Posts', 'dsa' ); ?>"><select name="link_hub[posts_category]"><option value="0"><?php esc_html_e( 'First available category', 'dsa' ); ?></option><?php foreach ( $categories as $category ) : ?><option value="<?php echo esc_attr( (string) $category->term_id ); ?>" <?php selected( (int) ( $link_hub['posts_category'] ?? 0 ), (int) $category->term_id ); ?>><?php echo esc_html( $category->name ); ?></option><?php endforeach; ?></select></td></tr>
@@ -4432,6 +4468,10 @@ final class Admin {
 			<?php endif; ?>
 			<?php if ( isset( $_GET['framework-profile-imported'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Framework profile imported. Push Kiwe Framework to Bricks when you want those tokens/classes written to Bricks.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['design-context-enhancement-imported'] ) ) : ?>
+				<?php $enhancement_mode = sanitize_key( (string) wp_unslash( $_GET['design-context-enhancement-imported'] ) ); ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html( 'with-framework' === $enhancement_mode ? __( 'AI Design Context enhancement approved and its explicitly opted-in Framework profile imported. Owner facts and owner-selected colors were preserved.', 'dsa' ) : __( 'AI Design Context enhancement approved. It is now available to SiteGraph, native bindings and future design work; Seam Framework was not enabled or changed.', 'dsa' ) ); ?></p></div>
 			<?php endif; ?>
 			<?php if ( isset( $_GET['accessibility-palette-imported'] ) ) : ?>
 				<?php if ( '1' === (string) wp_unslash( $_GET['accessibility-palette-imported'] ) ) : ?>
@@ -4562,6 +4602,19 @@ final class Admin {
 					</form>
 				</div>
 				<p class="description"><?php esc_html_e( 'Framework profiles carry the shared Seam/Kiwe design-token profile, optional project-specific SeamFlow extensions, and the safe Bricks global theme style foundation. Import once, then push variables, color palettes, Seam classes, project classes, and the matching Bricks Theme Style from here. AppShell dock/sheet behavior belongs to Kiwe themes; AI/staging access belongs to Kiwe > AI.', 'dsa' ); ?></p>
+				<?php $design_enhancement = ( new Design_Context_Enhancement_Service() )->approved(); ?>
+				<hr style="margin:24px 0">
+				<h2><?php esc_html_e( 'AI Design Context enhancement', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Import an AI proposal created from the current SiteGraph Design Context export. Kiwe requires an exact owner-context hash, rejects stale files, keeps owner facts immutable, and permits derived colors only for semantic roles the owner left empty.', 'dsa' ); ?></p>
+				<form method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="dsa_import_design_context_enhancement">
+					<?php wp_nonce_field( 'dsa_import_design_context_enhancement' ); ?>
+					<label class="screen-reader-text" for="dsa-design-context-enhancement-file"><?php esc_html_e( 'Import AI Design Context enhancement JSON', 'dsa' ); ?></label>
+					<input id="dsa-design-context-enhancement-file" type="file" name="dsa_design_context_enhancement_file" accept="application/json,.json" required>
+					<?php submit_button( __( 'Validate & approve Design Context enhancement', 'dsa' ), 'secondary', 'submit', false ); ?>
+				</form>
+				<p class="description"><?php esc_html_e( 'The enhancement layer can improve approved copy, homepage SEO description, design direction, and missing palette roles. It cannot invent or overwrite identity, contacts, addresses, store facts, content records, legal facts, or owner-selected colors. A nested Framework profile is applied only when the file explicitly contains frameworkOptIn: true.', 'dsa' ); ?></p>
+				<?php if ( $design_enhancement ) : ?><p><strong><?php esc_html_e( 'Approved enhancement:', 'dsa' ); ?></strong> <?php echo esc_html( (string) ( $design_enhancement['authority']['approvedAt'] ?? __( 'stored', 'dsa' ) ) ); ?> · <?php echo esc_html( count( (array) ( $design_enhancement['requiresHumanReview'] ?? [] ) ) ); ?> <?php esc_html_e( 'items require human review', 'dsa' ); ?></p><?php endif; ?>
 				<?php if ( ! empty( $project_settings['enabled'] ) ) : ?>
 					<p class="description">
 						<?php
@@ -9352,6 +9405,18 @@ final class Admin {
 			'empty'   => __( 'Framework profile was empty.', 'dsa' ),
 			'json'    => __( 'Framework profile was not valid JSON.', 'dsa' ),
 			'invalid' => __( 'Framework profile must contain settings.tokens or a raw tokens object.', 'dsa' ),
+			'enhancement-missing' => __( 'Choose a Kiwe Design Context enhancement JSON file.', 'dsa' ),
+			'enhancement-size' => __( 'Design Context enhancement is too large. Use a JSON file under 1 MB.', 'dsa' ),
+			'enhancement-type' => __( 'Design Context enhancement import only accepts .json files.', 'dsa' ),
+			'enhancement-json' => __( 'Design Context enhancement was not valid JSON.', 'dsa' ),
+			'enhancement-schema' => __( 'The file is not a kiwe.design-context-enhancement.v1 artifact.', 'dsa' ),
+			'enhancement-shape' => __( 'The Design Context enhancement contains unsupported root fields.', 'dsa' ),
+			'enhancement-stale' => __( 'Owner context has changed. Export fresh SiteGraph Design Context and regenerate the AI enhancement.', 'dsa' ),
+			'enhancement-authority' => __( 'The enhancement attempted to claim authority over owner evidence.', 'dsa' ),
+			'enhancement-empty' => __( 'The enhancement contains no usable suggestions.', 'dsa' ),
+			'enhancement-framework-optin' => __( 'A nested Framework profile requires explicit frameworkOptIn: true.', 'dsa' ),
+			'enhancement-framework' => __( 'The nested Framework profile is invalid.', 'dsa' ),
+			'enhancement-color-conflict' => __( 'The nested Framework profile conflicts with an owner-selected color.', 'dsa' ),
 		];
 
 		return $messages[ $code ] ?? __( 'Framework profile could not be processed.', 'dsa' );

@@ -10,6 +10,11 @@ const plugin = read('wp-content/mu-plugins/dsa/includes/Plugin.php');
 const graph = read('wp-content/mu-plugins/dsa/includes/Site_Graph/Design_Context_Service.php');
 const bricks = read('wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php');
 const js = read('wp-content/mu-plugins/dsa/assets/js/onboarding.js');
+const enhancement = read('wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Enhancement_Service.php');
+const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
+const linksEndpoint = read('wp-content/mu-plugins/dsa/includes/Public_Endpoint/Assets.php');
+const linksPanel = read('wp-content/mu-plugins/dsa/assets/js/modules/links-panel.js');
+const enhancementSchema = JSON.parse(read('wp-content/mu-plugins/dsa/site-graph-system/contracts/design-context-enhancement.schema.json'));
 
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -35,6 +40,13 @@ check('WhatsApp can explicitly share the public phone authority', onboarding.inc
 check('social profiles update Kiwe public link context and bindings', ['facebook','instagram','x','youtube','pinterest','linkedin'].every((network) => profile.includes(`'${network}'`)) && profile.includes("$link_hub['social_links']") && bricks.includes('kiwe_instagram_url'));
 check('WooCommerce market and display settings are owner configurable', ['woocommerce_allowed_countries','woocommerce_ship_to_countries','woocommerce_currency_pos','woocommerce_weight_unit','woocommerce_dimension_unit'].every((option) => profile.includes(option)) && onboarding.includes('Countries you sell to'));
 check('brand story and audience remain outside SEO metadata authority', seo.includes("'description' => $description") && !seo.includes("$identity['description']"));
+check('planned pages start as one progressive repeater instead of eight empty rows', onboarding.includes('data-kiwe-planned-page-template') && onboarding.includes('Add another planned page') && !onboarding.includes('for ( $i = 0; $i < 8; $i++') && js.includes('data-kiwe-add-planned-page') && js.includes('length < 20'));
+check('owner onboarding captures bounded nontechnical SEO evidence', ['legalName','foundedYear','primaryGoal','searchIntent','proofPoints'].every((field) => onboarding.includes(field) && profile.includes(field)) && seo.includes("'legalName'") && seo.includes("'foundingDate'"));
+check('AI enhancement is hash-bound and never rewrites owner evidence', enhancement.includes('kiwe.design-context-enhancement.v1') && enhancement.includes('owner_context_hash') && enhancement.includes('mayOverwriteOwnerEvidence') && enhancement.includes('update_option( self::OPTION') && !enhancement.includes('update_option( Design_Context_Profile_Service::OPTION_PROFILE'));
+check('AI enhancement wire schema rejects owner-write authority', enhancementSchema.properties.schema.const === 'kiwe.design-context-enhancement.v1' && enhancementSchema.properties.authority.properties.mayOverwriteOwnerEvidence.const === false && enhancementSchema.additionalProperties === false);
+check('owner-selected colors win over enhancement and Framework imports', enhancement.includes("in_array( $role, $owner_roles, true )") && enhancement.includes('validate_framework_tokens') && admin.includes('enhancement-color-conflict'));
+check('Framework admin exposes explicit validated enhancement import', admin.includes('dsa_import_design_context_enhancement') && admin.includes('Validate & approve Design Context enhancement') && admin.includes('frameworkOptIn'));
+check('DSA score surface uses onboarding SEO readiness only when no manual score exists', profile.includes('saved_seo_strength') && linksEndpoint.includes('Design_Context_Profile_Service::saved_seo_strength()') && linksEndpoint.includes("'scoreSource'") && linksPanel.includes('data.scoreLabel'));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

@@ -39,7 +39,7 @@ final class SEO_Context_Service {
 
 	public function head(): void {
 		if ( $this->dedicated_seo_plugin_active() ) return;
-		$context = $this->profiles->public_context( false );
+		$context = ( new Design_Context_Enhancement_Service( $this->profiles ) )->resolved_public_context( false );
 		$description = trim( (string) ( $context['seo']['homepageDescription'] ?? '' ) );
 		if ( is_front_page() && '' !== $description ) {
 			echo '<meta name="description" content="' . esc_attr( $description ) . '">' . "\n";
@@ -52,6 +52,8 @@ final class SEO_Context_Service {
 			'@type' => 'ecommerce' === ( $identity['siteType'] ?? '' ) ? 'OnlineStore' : 'Organization',
 			'name' => (string) ( $identity['siteName'] ?? '' ), 'url' => home_url( '/' ),
 			'description' => $description, 'logo' => (string) ( $identity['logo'] ?? '' ),
+			'legalName' => (string) ( $context['seo']['legalName'] ?? '' ),
+			'foundingDate' => ! empty( $context['seo']['foundedYear'] ) ? (string) absint( $context['seo']['foundedYear'] ) : '',
 			'email' => (string) ( $contact['email'] ?? '' ), 'telephone' => (string) ( $contact['phone'] ?? '' ),
 			'sameAs' => $socials,
 		];

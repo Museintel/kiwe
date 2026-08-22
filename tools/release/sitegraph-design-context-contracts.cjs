@@ -17,6 +17,7 @@ const mcp = read('kiwe-ai-toolkit/mcp/sitegraph-client.js');
 const core = read('kiwe-ai-toolkit/lib/kiwe-core.js');
 const dynamic = read('kiwe-ai-toolkit/contexts/dynamic-lite.md');
 const manifest = JSON.parse(read('kiwe-ai-toolkit/command-manifest.json'));
+const enhancement = read('wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Enhancement_Service.php');
 
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -43,6 +44,8 @@ check('command grammar registers designcontext and canonical shorthand normaliza
 check('command documentation keeps design context framework-neutral and file-capable', dynamic.includes('kiwe.sitegraph-design-context.v1') && dynamic.includes('must not add Seam Framework') && dynamic.includes('/usesitegraph /for /designcontext /nonai'));
 check('raw-source contract preserves stable media and dynamic intent', service.includes('data-kiwe-media-id') && service.includes('data-kiwe-query-template') && service.includes('bricks-bindings/kiwe-bindings.json'));
 check('owner context exposes social and complete market coverage without secrets', service.includes("'socials'") && service.includes("'marketCoverage'") && graph.includes("'socialProfileCount'") && !service.includes('consumer_secret'));
+check('design context embeds a hash-bound AI enhancement contract and resolved layer', service.includes("'designContextEnhancementContract'") && service.includes("'resolvedDesignContext'") && service.includes("'ownerContextHash'") && enhancement.includes('lockedPaths'));
+check('AI enhancement command is compact vendor-neutral and framework-safe', manifest.commandGrammar.phaseTargets.includes('/designcontextenhancement') && manifest.commands['/create /designcontextenhancement'] && dynamic.includes('/create /designcontextenhancement') && dynamic.includes('does not silently enable Seam Framework'));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);
