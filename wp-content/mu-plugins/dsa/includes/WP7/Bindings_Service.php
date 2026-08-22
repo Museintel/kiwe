@@ -58,6 +58,15 @@ final class Bindings_Service {
 						'brand_tone',
 						'brand_color',
 						'accent_color',
+						'hero_color',
+						'neutral_color',
+						'surface_color',
+						'facebook_url',
+						'instagram_url',
+						'x_url',
+						'youtube_url',
+						'pinterest_url',
+						'linkedin_url',
 					],
 					'mutations'  => false,
 				],
@@ -108,6 +117,15 @@ final class Bindings_Service {
 			case 'brand_tone':
 			case 'brand_color':
 			case 'accent_color':
+			case 'hero_color':
+			case 'neutral_color':
+			case 'surface_color':
+			case 'facebook_url':
+			case 'instagram_url':
+			case 'x_url':
+			case 'youtube_url':
+			case 'pinterest_url':
+			case 'linkedin_url':
 				return $this->design_context_value( $key );
 			default:
 				return '';
@@ -119,7 +137,11 @@ final class Bindings_Service {
 		if ( 'business_description' === $key ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
 		if ( 'whatsapp' === $key ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
 		if ( 'brand_tone' === $key ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );
-		$role = 'accent_color' === $key ? 'accent' : 'brand';
+		if ( preg_match( '/^(facebook|instagram|x|youtube|pinterest|linkedin)_url$/', $key, $match ) ) {
+			return esc_url_raw( (string) ( $profile['contact']['socialLinks'][ $match[1] ] ?? '' ) );
+		}
+		$role_map = [ 'brand_color'=>'brand', 'accent_color'=>'accent', 'hero_color'=>'hero', 'neutral_color'=>'neutral', 'surface_color'=>'surface' ];
+		$role = $role_map[ $key ] ?? 'brand';
 		foreach ( is_array( $profile['brand']['colors'] ?? null ) ? $profile['brand']['colors'] : [] as $color ) {
 			if ( $role === ( $color['role'] ?? '' ) ) return (string) sanitize_hex_color( (string) ( $color['hex'] ?? '' ) );
 		}

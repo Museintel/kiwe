@@ -42,6 +42,7 @@ check('MCP and WordPress Abilities expose the read-only contract', mcp.includes(
 check('command grammar registers designcontext and canonical shorthand normalization', manifest.commandGrammar.phaseTargets.includes('/designcontext') && core.includes('/usesitegraph /for /designcontext') && core.includes("/usesitegraph\\s+\\/designcontext"));
 check('command documentation keeps design context framework-neutral and file-capable', dynamic.includes('kiwe.sitegraph-design-context.v1') && dynamic.includes('must not add Seam Framework') && dynamic.includes('/usesitegraph /for /designcontext /nonai'));
 check('raw-source contract preserves stable media and dynamic intent', service.includes('data-kiwe-media-id') && service.includes('data-kiwe-query-template') && service.includes('bricks-bindings/kiwe-bindings.json'));
+check('owner context exposes social and complete market coverage without secrets', service.includes("'socials'") && service.includes("'marketCoverage'") && graph.includes("'socialProfileCount'") && !service.includes('consumer_secret'));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

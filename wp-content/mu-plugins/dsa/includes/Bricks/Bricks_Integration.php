@@ -308,6 +308,15 @@ final class Bricks_Integration {
 			'kiwe_brand_tone'         => __( 'Brand tone', 'dsa' ),
 			'kiwe_brand_color'        => __( 'Brand color', 'dsa' ),
 			'kiwe_accent_color'       => __( 'Accent color', 'dsa' ),
+			'kiwe_hero_color'         => __( 'Decorative hero color', 'dsa' ),
+			'kiwe_neutral_color'      => __( 'Neutral UI color', 'dsa' ),
+			'kiwe_surface_color'      => __( 'Page surface color', 'dsa' ),
+			'kiwe_facebook_url'       => __( 'Facebook URL', 'dsa' ),
+			'kiwe_instagram_url'      => __( 'Instagram URL', 'dsa' ),
+			'kiwe_x_url'              => __( 'X URL', 'dsa' ),
+			'kiwe_youtube_url'        => __( 'YouTube URL', 'dsa' ),
+			'kiwe_pinterest_url'      => __( 'Pinterest URL', 'dsa' ),
+			'kiwe_linkedin_url'       => __( 'LinkedIn URL', 'dsa' ),
 			'kiwe_selling_locations'  => __( 'Selling locations', 'dsa' ),
 			'kiwe_shipping_locations' => __( 'Shipping locations', 'dsa' ),
 			'woo_product_weight'      => __( 'Product weight', 'dsa' ),
@@ -343,6 +352,15 @@ final class Bricks_Integration {
 			case 'kiwe_brand_tone':
 			case 'kiwe_brand_color':
 			case 'kiwe_accent_color':
+			case 'kiwe_hero_color':
+			case 'kiwe_neutral_color':
+			case 'kiwe_surface_color':
+			case 'kiwe_facebook_url':
+			case 'kiwe_instagram_url':
+			case 'kiwe_x_url':
+			case 'kiwe_youtube_url':
+			case 'kiwe_pinterest_url':
+			case 'kiwe_linkedin_url':
 				return $this->design_context_tag_value( $name, $context );
 			case 'kiwe_selling_locations':
 				return $this->woo_locations_label( 'selling' );
@@ -364,7 +382,11 @@ final class Bricks_Integration {
 		if ( 'kiwe_business_description' === $name ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
 		if ( 'kiwe_whatsapp' === $name ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
 		if ( 'kiwe_brand_tone' === $name ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );
-		$role = 'kiwe_accent_color' === $name ? 'accent' : 'brand';
+		if ( preg_match( '/^kiwe_(facebook|instagram|x|youtube|pinterest|linkedin)_url$/', $name, $match ) ) {
+			return esc_url_raw( (string) ( $profile['contact']['socialLinks'][ $match[1] ] ?? '' ) );
+		}
+		$role_map = [ 'kiwe_brand_color'=>'brand', 'kiwe_accent_color'=>'accent', 'kiwe_hero_color'=>'hero', 'kiwe_neutral_color'=>'neutral', 'kiwe_surface_color'=>'surface' ];
+		$role = $role_map[ $name ] ?? 'brand';
 		foreach ( is_array( $profile['brand']['colors'] ?? null ) ? $profile['brand']['colors'] : [] as $color ) {
 			if ( $role === ( $color['role'] ?? '' ) ) return (string) sanitize_hex_color( (string) ( $color['hex'] ?? '' ) );
 		}

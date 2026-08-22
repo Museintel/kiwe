@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kiwe
  * Description: Kiwe Surface, PhoneKey auth, and appsite layer for WordPress.
- * Version: 7.18
+ * Version: 7.19
  * Requires PHP: 8.2
  * Author: Kiwelauch
  */
@@ -21,7 +21,7 @@ if ( PHP_VERSION_ID < 80200 ) {
 	return;
 }
 
-define( 'DSA_VERSION', '7.18' );
+define( 'DSA_VERSION', '7.19' );
 define( 'DSA_FILE', __FILE__ );
 define( 'DSA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DSA_URL', plugin_dir_url( __FILE__ ) );

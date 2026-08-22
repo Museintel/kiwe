@@ -46,14 +46,16 @@ final class SEO_Context_Service {
 		}
 		if ( ! is_front_page() || empty( $context['complete'] ) ) return;
 		$identity = $context['identity']; $contact = $context['contact'];
+		$socials = array_values( array_filter( is_array( $contact['socialLinks'] ?? null ) ? $contact['socialLinks'] : [], static fn( $url ): bool => is_string( $url ) && '' !== $url ) );
 		$schema = [
 			'@context' => 'https://schema.org',
 			'@type' => 'ecommerce' === ( $identity['siteType'] ?? '' ) ? 'OnlineStore' : 'Organization',
 			'name' => (string) ( $identity['siteName'] ?? '' ), 'url' => home_url( '/' ),
-			'description' => (string) ( $identity['description'] ?? '' ), 'logo' => (string) ( $identity['logo'] ?? '' ),
+			'description' => $description, 'logo' => (string) ( $identity['logo'] ?? '' ),
 			'email' => (string) ( $contact['email'] ?? '' ), 'telephone' => (string) ( $contact['phone'] ?? '' ),
+			'sameAs' => $socials,
 		];
-		$schema = array_filter( $schema, static fn( $value ): bool => '' !== $value && null !== $value );
+		$schema = array_filter( $schema, static fn( $value ): bool => '' !== $value && null !== $value && [] !== $value );
 		echo '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 

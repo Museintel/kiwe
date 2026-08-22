@@ -189,6 +189,7 @@ final class Design_Context_Service {
 
 	private function business_identity( bool $administrator ): array {
 		$address = [];
+		$owner_contact = ( new Design_Context_Profile_Service() )->public_context( false )['contact'] ?? [];
 		if ( $administrator && ( class_exists( 'WooCommerce' ) || function_exists( 'WC' ) ) ) {
 			$address = [
 				'address1' => sanitize_text_field( (string) get_option( 'woocommerce_store_address', '' ) ),
@@ -209,7 +210,9 @@ final class Design_Context_Service {
 			'publicContact' => [
 				'phone' => Site_Identity_Service::store_phone(),
 				'email' => Site_Identity_Service::store_email(),
+				'whatsapp' => sanitize_text_field( (string) ( $owner_contact['whatsapp'] ?? '' ) ),
 			],
+			'socialProfiles' => array_filter( is_array( $owner_contact['socialLinks'] ?? null ) ? $owner_contact['socialLinks'] : [] ),
 			'storeAddress' => $address,
 			'dynamicTags' => [
 				'logo' => '{kiwe_site_logo}',
@@ -221,6 +224,13 @@ final class Design_Context_Service {
 				'brandTone' => '{kiwe_brand_tone}',
 				'brandColor' => '{kiwe_brand_color}',
 				'accentColor' => '{kiwe_accent_color}',
+				'heroColor' => '{kiwe_hero_color}',
+				'neutralColor' => '{kiwe_neutral_color}',
+				'surfaceColor' => '{kiwe_surface_color}',
+				'socials' => [
+					'facebook' => '{kiwe_facebook_url}', 'instagram' => '{kiwe_instagram_url}', 'x' => '{kiwe_x_url}',
+					'youtube' => '{kiwe_youtube_url}', 'pinterest' => '{kiwe_pinterest_url}', 'linkedin' => '{kiwe_linkedin_url}',
+				],
 				'address' => [ '{kiwe_store_address_1}', '{kiwe_store_address_2}', '{kiwe_store_city}', '{kiwe_store_state}', '{kiwe_store_country}', '{kiwe_store_postcode}' ],
 			],
 			'privacy' => [

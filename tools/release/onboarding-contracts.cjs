@@ -29,6 +29,12 @@ check('owner context has native Bricks and WordPress binding surfaces', ['kiwe_b
 check('anonymous design context redacts operational address detail', profile.includes('if ( ! $administrator )') && profile.includes("'operationalAddressIncluded' => $administrator") && profile.includes("'adminIdentityExcluded' => true"));
 check('readiness reports separate SEO and design-context scores', profile.includes("'seoStrength'") && profile.includes("'designContextStrength'"));
 check('browser timezone detection is local and requires no geolocation service', js.includes('Intl.DateTimeFormat().resolvedOptions().timeZone') && !js.includes('geolocation') && !js.includes('fetch('));
+check('optional mood can be cleared and save state remains visible', onboarding.includes('Clear mood preference') && js.includes('data-kiwe-clear-tone') && js.includes('Saving owner context') && js.includes('config.startStep'));
+check('owner color anchors align to official SEAM token roles', ['brand','accent','hero','neutral','surface'].every((role) => onboarding.includes(`'${role}'=>`)) && profile.includes("'token' => 'color-' . $role") && !onboarding.includes("'support'=>'Supporting color'"));
+check('WhatsApp can explicitly share the public phone authority', onboarding.includes('whatsappSameAsPhone') && profile.includes('$whatsapp_same ? $phone') && js.includes('data-kiwe-whatsapp-same'));
+check('social profiles update Kiwe public link context and bindings', ['facebook','instagram','x','youtube','pinterest','linkedin'].every((network) => profile.includes(`'${network}'`)) && profile.includes("$link_hub['social_links']") && bricks.includes('kiwe_instagram_url'));
+check('WooCommerce market and display settings are owner configurable', ['woocommerce_allowed_countries','woocommerce_ship_to_countries','woocommerce_currency_pos','woocommerce_weight_unit','woocommerce_dimension_unit'].every((option) => profile.includes(option)) && onboarding.includes('Countries you sell to'));
+check('brand story and audience remain outside SEO metadata authority', seo.includes("'description' => $description") && !seo.includes("$identity['description']"));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

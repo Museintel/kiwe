@@ -36,6 +36,17 @@ final class Design_Context_Profile_Service {
 		);
 		$profile['contentPlan']['plannedPages'] = is_array( $stored['contentPlan']['plannedPages'] ?? null ) ? array_values( $stored['contentPlan']['plannedPages'] ) : [];
 		$profile['brand']['colors'] = is_array( $stored['brand']['colors'] ?? null ) ? array_values( $stored['brand']['colors'] ) : [];
+		foreach ( $profile['brand']['colors'] as &$color ) {
+			if ( is_array( $color ) && 'support' === ( $color['role'] ?? '' ) ) {
+				$color['role']  = 'neutral';
+				$color['token'] = 'color-neutral';
+			}
+		}
+		unset( $color );
+		$profile['contact']['socialLinks'] = array_replace(
+			$this->empty_social_links(),
+			is_array( $stored['contact']['socialLinks'] ?? null ) ? $stored['contact']['socialLinks'] : $inferred['contact']['socialLinks']
+		);
 		return $profile;
 	}
 
@@ -58,6 +69,7 @@ final class Design_Context_Profile_Service {
 		update_option( 'blogname', $profile['identity']['siteName'] );
 		update_option( 'blogdescription', $profile['identity']['tagline'] );
 		update_option( Site_Identity_Service::OPTION_LOGO, $profile['identity']['logoId'], false );
+		update_option( Site_Identity_Service::OPTION_LOGO_INVERSE, $profile['identity']['logoInverseId'], false );
 		set_theme_mod( 'custom_logo', $profile['identity']['logoId'] );
 		update_option( Site_Identity_Service::OPTION_STORE_PHONE, $profile['contact']['phone'], false );
 		update_option( Site_Identity_Service::OPTION_STORE_EMAIL, $profile['contact']['email'], false );
@@ -70,6 +82,7 @@ final class Design_Context_Profile_Service {
 		}
 
 		$this->apply_page_visibility( $profile['contentPlan']['existingPages'] );
+		$this->apply_kiwe_public_context( $profile );
 		if ( $profile['commerce']['enabled'] ) {
 			$this->apply_woocommerce( $profile );
 		}
@@ -119,12 +132,15 @@ final class Design_Context_Profile_Service {
 				'industry'    => $profile['identity']['industry'],
 				'siteType'    => $profile['identity']['siteType'],
 				'logo'        => Site_Identity_Service::logo_url(),
+				'logoInverse' => Site_Identity_Service::logo_url( 'inverse' ),
 				'siteIcon'    => get_site_icon_url( 512 ) ?: '',
 			],
 			'contact' => [
 				'phone'    => $profile['contact']['phone'],
 				'email'    => $profile['contact']['email'],
 				'whatsapp' => $profile['contact']['whatsapp'],
+				'whatsappSameAsPhone' => ! empty( $profile['contact']['whatsappSameAsPhone'] ),
+				'socialLinks' => array_filter( $profile['contact']['socialLinks'] ),
 				'address'  => $address,
 			],
 			'brand'       => $profile['brand'],
@@ -137,6 +153,12 @@ final class Design_Context_Profile_Service {
 				'hasBundles'           => $profile['commerce']['hasBundles'],
 				'shippingModel'        => $profile['commerce']['shippingModel'],
 				'typicalShippingCharge'=> $profile['commerce']['typicalShippingCharge'],
+				'currency'              => $profile['commerce']['currency'],
+				'currencyPosition'      => $profile['commerce']['currencyPosition'],
+				'weightUnit'            => $profile['commerce']['weightUnit'],
+				'dimensionUnit'         => $profile['commerce']['dimensionUnit'],
+				'sellingLocations'      => [ 'mode' => $profile['commerce']['sellingLocationMode'], 'countries' => $profile['commerce']['sellingCountries'], 'excludedCountries' => $profile['commerce']['excludedSellingCountries'] ],
+				'shippingLocations'     => [ 'mode' => $profile['commerce']['shippingLocationMode'], 'countries' => $profile['commerce']['shippingCountries'] ],
 			],
 			'seo'    => $profile['seo'],
 			'scores' => $this->scores( $profile ),
@@ -152,9 +174,9 @@ final class Design_Context_Profile_Service {
 		$p = $profile ?: $this->current();
 		$seo_checks = [
 			! empty( $p['identity']['siteName'] ), ! empty( $p['identity']['tagline'] ),
-			! empty( $p['identity']['description'] ), ! empty( $p['identity']['logoId'] ),
+			! empty( $p['seo']['homepageDescription'] ), ! empty( $p['identity']['logoId'] ),
 			! empty( $p['identity']['siteIconId'] ), ! empty( $p['contact']['email'] ),
-			! empty( $p['seo']['homepageDescription'] ), ! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
+			! empty( $p['contact']['phone'] ), ! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
 		];
 		$design_checks = [
 			! empty( $p['identity']['siteName'] ), ! empty( $p['identity']['description'] ),
@@ -187,10 +209,11 @@ final class Design_Context_Profile_Service {
 				'siteName' => wp_strip_all_tags( (string) get_bloginfo( 'name' ) ),
 				'tagline' => wp_strip_all_tags( (string) get_bloginfo( 'description' ) ),
 				'description' => '', 'industry' => '', 'siteType' => function_exists( 'WC' ) ? 'ecommerce' : 'business',
-				'logoId' => Site_Identity_Service::attachment_id(), 'siteIconId' => (int) get_option( 'site_icon', 0 ),
+				'logoId' => Site_Identity_Service::attachment_id(), 'logoInverseId' => Site_Identity_Service::attachment_id( Site_Identity_Service::OPTION_LOGO_INVERSE ), 'siteIconId' => (int) get_option( 'site_icon', 0 ),
 			],
 			'contact' => [
-				'phone' => Site_Identity_Service::store_phone(), 'email' => Site_Identity_Service::store_email(), 'whatsapp' => '',
+				'phone' => Site_Identity_Service::store_phone(), 'email' => Site_Identity_Service::store_email(), 'whatsapp' => '', 'whatsappSameAsPhone' => false,
+				'socialLinks' => $this->stored_social_links(),
 				'address' => [
 					'line1' => sanitize_text_field( (string) get_option( 'woocommerce_store_address', '' ) ),
 					'line2' => sanitize_text_field( (string) get_option( 'woocommerce_store_address_2', '' ) ),
@@ -224,8 +247,17 @@ final class Design_Context_Profile_Service {
 			'expectedPriceRange' => [ 'min' => $min, 'max' => $max ],
 			'hasBundles' => 'yes' === get_option( 'kiwe_onboarding_has_bundles', 'no' ),
 			'currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'INR',
+			'currencyPosition' => sanitize_key( (string) get_option( 'woocommerce_currency_pos', 'left' ) ),
+			'priceDecimals' => min( 6, absint( get_option( 'woocommerce_price_num_decimals', 2 ) ) ),
+			'weightUnit' => sanitize_key( (string) get_option( 'woocommerce_weight_unit', 'kg' ) ),
+			'dimensionUnit' => sanitize_key( (string) get_option( 'woocommerce_dimension_unit', 'cm' ) ),
 			'taxEnabled' => 'yes' === get_option( 'woocommerce_calc_taxes', 'no' ),
 			'pricesIncludeTax' => 'yes' === get_option( 'woocommerce_prices_include_tax', 'no' ),
+			'sellingLocationMode' => sanitize_key( (string) get_option( 'woocommerce_allowed_countries', 'all' ) ),
+			'sellingCountries' => array_values( array_map( 'sanitize_text_field', (array) get_option( 'woocommerce_specific_allowed_countries', [] ) ) ),
+			'excludedSellingCountries' => array_values( array_map( 'sanitize_text_field', (array) get_option( 'woocommerce_all_except_countries', [] ) ) ),
+			'shippingLocationMode' => sanitize_key( (string) get_option( 'woocommerce_ship_to_countries', '' ) ),
+			'shippingCountries' => array_values( array_map( 'sanitize_text_field', (array) get_option( 'woocommerce_specific_ship_to_countries', [] ) ) ),
 			'shippingModel' => '', 'typicalShippingCharge' => '',
 		];
 	}
@@ -244,12 +276,23 @@ final class Design_Context_Profile_Service {
 
 		$colors = [];
 		$color_names = [ '#dc2626'=>'red','#f97360'=>'coral','#f97316'=>'orange','#f59e0b'=>'amber','#eab308'=>'yellow','#84cc16'=>'lime','#16a34a'=>'green','#059669'=>'emerald','#0d9488'=>'teal','#0891b2'=>'cyan','#0284c7'=>'sky','#2563eb'=>'blue','#4f46e5'=>'indigo','#7c3aed'=>'violet','#9333ea'=>'purple','#c026d3'=>'magenta','#db2777'=>'pink','#e11d48'=>'rose','#92400e'=>'brown','#c4a574'=>'sand','#6b7b3e'=>'olive','#1e3a5f'=>'navy','#64748b'=>'grey','#171717'=>'black' ];
-		foreach ( array_slice( is_array( $brand['colors'] ?? null ) ? $brand['colors'] : [], 0, 3 ) as $color ) {
+		foreach ( array_slice( is_array( $brand['colors'] ?? null ) ? $brand['colors'] : [], 0, 5 ) as $color ) {
 			if ( ! is_array( $color ) || ! sanitize_hex_color( (string) ( $color['hex'] ?? '' ) ) ) continue;
-			$role = in_array( $color['role'] ?? '', [ 'brand', 'accent', 'support' ], true ) ? $color['role'] : 'support';
+			$submitted_role = 'support' === ( $color['role'] ?? '' ) ? 'neutral' : ( $color['role'] ?? '' );
+			$role = in_array( $submitted_role, [ 'brand', 'accent', 'hero', 'neutral', 'surface' ], true ) ? $submitted_role : 'neutral';
 			$hex = strtolower( (string) sanitize_hex_color( (string) $color['hex'] ) );
-			$colors[] = [ 'role' => $role, 'name' => $color_names[ $hex ] ?? 'custom', 'hex' => $hex ];
+			$colors[] = [ 'role' => $role, 'token' => 'color-' . $role, 'name' => $color_names[ $hex ] ?? 'custom', 'hex' => $hex, 'ownerSelected' => true ];
 		}
+		$social_links = [];
+		foreach ( $this->empty_social_links() as $network => $empty ) {
+			$social_links[ $network ] = esc_url_raw( (string) ( $contact['socialLinks'][ $network ] ?? '' ) );
+		}
+		$phone = sanitize_text_field( (string) ( $contact['phone'] ?? '' ) );
+		$whatsapp_same = ! empty( $contact['whatsappSameAsPhone'] );
+		$whatsapp = $whatsapp_same ? $phone : sanitize_text_field( (string) ( $contact['whatsapp'] ?? '' ) );
+		$country_codes = static function ( $values ): array {
+			return array_values( array_unique( array_filter( array_map( static fn( $code ): string => strtoupper( substr( sanitize_key( (string) $code ), 0, 2 ) ), is_array( $values ) ? $values : [] ) ) ) );
+		};
 		$existing = [];
 		foreach ( is_array( $content['existingPages'] ?? null ) ? $content['existingPages'] : [] as $page ) {
 			$id = absint( $page['id'] ?? 0 );
@@ -268,10 +311,10 @@ final class Design_Context_Profile_Service {
 				'siteName' => sanitize_text_field( (string) ( $identity['siteName'] ?? '' ) ), 'tagline' => sanitize_text_field( (string) ( $identity['tagline'] ?? '' ) ),
 				'description' => sanitize_textarea_field( (string) ( $identity['description'] ?? '' ) ), 'industry' => sanitize_text_field( (string) ( $identity['industry'] ?? '' ) ),
 				'siteType' => in_array( $identity['siteType'] ?? '', [ 'business', 'ecommerce', 'publication', 'portfolio', 'nonprofit', 'community', 'education', 'service', 'other' ], true ) ? $identity['siteType'] : 'business',
-				'logoId' => absint( $identity['logoId'] ?? 0 ), 'siteIconId' => absint( $identity['siteIconId'] ?? 0 ),
+				'logoId' => absint( $identity['logoId'] ?? 0 ), 'logoInverseId' => absint( $identity['logoInverseId'] ?? 0 ), 'siteIconId' => absint( $identity['siteIconId'] ?? 0 ),
 			],
 			'contact' => [
-				'phone' => sanitize_text_field( (string) ( $contact['phone'] ?? '' ) ), 'email' => sanitize_email( (string) ( $contact['email'] ?? '' ) ), 'whatsapp' => sanitize_text_field( (string) ( $contact['whatsapp'] ?? '' ) ),
+				'phone' => $phone, 'email' => sanitize_email( (string) ( $contact['email'] ?? '' ) ), 'whatsapp' => $whatsapp, 'whatsappSameAsPhone' => $whatsapp_same, 'socialLinks' => $social_links,
 				'address' => [ 'line1' => sanitize_text_field( (string) ( $address['line1'] ?? '' ) ), 'line2' => sanitize_text_field( (string) ( $address['line2'] ?? '' ) ), 'city' => sanitize_text_field( (string) ( $address['city'] ?? '' ) ), 'state' => sanitize_text_field( (string) ( $address['state'] ?? '' ) ), 'postcode' => sanitize_text_field( (string) ( $address['postcode'] ?? '' ) ), 'country' => strtoupper( substr( sanitize_key( (string) ( $address['country'] ?? '' ) ), 0, 2 ) ) ],
 			],
 			'localization' => [ 'timezone' => sanitize_text_field( (string) ( $localization['timezone'] ?? $current['localization']['timezone'] ) ), 'language' => sanitize_text_field( (string) get_bloginfo( 'language' ) ) ],
@@ -282,7 +325,16 @@ final class Design_Context_Profile_Service {
 				'enabled' => ! empty( $commerce['enabled'] ), 'expectedProductCount' => min( 1000000, absint( $commerce['expectedProductCount'] ?? 0 ) ),
 				'expectedPriceRange' => [ 'min' => max( 0, (float) ( $commerce['expectedPriceRange']['min'] ?? 0 ) ), 'max' => max( 0, (float) ( $commerce['expectedPriceRange']['max'] ?? 0 ) ) ],
 				'hasBundles' => ! empty( $commerce['hasBundles'] ), 'currency' => strtoupper( substr( sanitize_key( (string) ( $commerce['currency'] ?? 'INR' ) ), 0, 3 ) ),
+				'currencyPosition' => in_array( $commerce['currencyPosition'] ?? '', [ 'left', 'right', 'left_space', 'right_space' ], true ) ? $commerce['currencyPosition'] : 'left',
+				'priceDecimals' => min( 6, absint( $commerce['priceDecimals'] ?? 2 ) ),
+				'weightUnit' => in_array( $commerce['weightUnit'] ?? '', [ 'kg', 'g', 'lbs', 'oz' ], true ) ? $commerce['weightUnit'] : 'kg',
+				'dimensionUnit' => in_array( $commerce['dimensionUnit'] ?? '', [ 'm', 'cm', 'mm', 'in', 'yd' ], true ) ? $commerce['dimensionUnit'] : 'cm',
 				'taxEnabled' => ! empty( $commerce['taxEnabled'] ), 'pricesIncludeTax' => ! empty( $commerce['pricesIncludeTax'] ),
+				'sellingLocationMode' => in_array( $commerce['sellingLocationMode'] ?? '', [ 'all', 'all_except', 'specific' ], true ) ? $commerce['sellingLocationMode'] : 'all',
+				'sellingCountries' => $country_codes( $commerce['sellingCountries'] ?? [] ),
+				'excludedSellingCountries' => $country_codes( $commerce['excludedSellingCountries'] ?? [] ),
+				'shippingLocationMode' => in_array( $commerce['shippingLocationMode'] ?? '', [ '', 'all', 'specific', 'disabled' ], true ) ? $commerce['shippingLocationMode'] : '',
+				'shippingCountries' => $country_codes( $commerce['shippingCountries'] ?? [] ),
 				'shippingModel' => in_array( $commerce['shippingModel'] ?? '', [ 'free', 'flat', 'calculated', 'pickup', 'mixed', '' ], true ) ? $commerce['shippingModel'] : '',
 				'typicalShippingCharge' => max( 0, (float) ( $commerce['typicalShippingCharge'] ?? 0 ) ),
 			],
@@ -316,8 +368,37 @@ final class Design_Context_Profile_Service {
 		update_option( 'woocommerce_store_city', $a['city'] ); update_option( 'woocommerce_store_postcode', $a['postcode'] );
 		update_option( 'woocommerce_default_country', $a['country'] . ( $a['state'] ? ':' . $a['state'] : '' ) );
 		update_option( 'woocommerce_currency', $profile['commerce']['currency'] );
+		update_option( 'woocommerce_currency_pos', $profile['commerce']['currencyPosition'] );
+		update_option( 'woocommerce_price_num_decimals', $profile['commerce']['priceDecimals'] );
+		update_option( 'woocommerce_weight_unit', $profile['commerce']['weightUnit'] );
+		update_option( 'woocommerce_dimension_unit', $profile['commerce']['dimensionUnit'] );
 		update_option( 'woocommerce_calc_taxes', $profile['commerce']['taxEnabled'] ? 'yes' : 'no' );
 		update_option( 'woocommerce_prices_include_tax', $profile['commerce']['pricesIncludeTax'] ? 'yes' : 'no' );
+		update_option( 'woocommerce_allowed_countries', $profile['commerce']['sellingLocationMode'] );
+		update_option( 'woocommerce_specific_allowed_countries', $profile['commerce']['sellingCountries'] );
+		update_option( 'woocommerce_all_except_countries', $profile['commerce']['excludedSellingCountries'] );
+		update_option( 'woocommerce_ship_to_countries', $profile['commerce']['shippingLocationMode'] );
+		update_option( 'woocommerce_specific_ship_to_countries', $profile['commerce']['shippingCountries'] );
 		update_option( 'kiwe_onboarding_has_bundles', $profile['commerce']['hasBundles'] ? 'yes' : 'no', false );
+	}
+
+	private function empty_social_links(): array {
+		return [ 'facebook'=>'', 'instagram'=>'', 'x'=>'', 'youtube'=>'', 'pinterest'=>'', 'linkedin'=>'' ];
+	}
+
+	private function stored_social_links(): array {
+		$settings = defined( 'DSA_OPTION_SETTINGS' ) ? get_option( DSA_OPTION_SETTINGS, [] ) : [];
+		$links = is_array( $settings['link_hub']['social_links'] ?? null ) ? $settings['link_hub']['social_links'] : [];
+		return array_replace( $this->empty_social_links(), array_intersect_key( $links, $this->empty_social_links() ) );
+	}
+
+	private function apply_kiwe_public_context( array $profile ): void {
+		if ( ! defined( 'DSA_OPTION_SETTINGS' ) ) return;
+		$settings = get_option( DSA_OPTION_SETTINGS, [] );
+		$settings = is_array( $settings ) ? $settings : [];
+		$link_hub = is_array( $settings['link_hub'] ?? null ) ? $settings['link_hub'] : [];
+		$link_hub['social_links'] = $profile['contact']['socialLinks'];
+		$settings['link_hub'] = $link_hub;
+		update_option( DSA_OPTION_SETTINGS, $settings, false );
 	}
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.19
+
+- Refined Owner Onboarding after the first Mishtanna live export: optional mood can be cleared, save/validation returns to the relevant step with visible progress, and saved journeys remain on the review screen.
+- Expanded native owner context with inverse logo, WhatsApp phone reuse, Facebook/Instagram/X/YouTube/Pinterest/LinkedIn URLs, and corresponding SiteGraph, Bricks and WordPress binding surfaces.
+- Aligned selectable colors to the real SEAM anchors (`color-brand`, `color-accent`, `color-hero`, `color-neutral`, and `color-surface`); technical contrast, state, border, raised/sunken and dark-mode colors remain derived rather than owner-engineered.
+- Added WooCommerce-native selling/shipping country coverage, currency position/decimals and measurement units while preserving WooCommerce authority for products, rates, zones and checkout behavior.
+- Separated brand story/audience from SEO metadata authority. Only the dedicated homepage search description may populate homepage meta/schema description when no recognized SEO suite is active.
+
 ## 7.18
 
 - Added the seven-step Kiwe Owner Onboarding journey for native WordPress identity, public contact, SEO foundations, nontechnical brand preferences, page search roles and WooCommerce-aware store planning.

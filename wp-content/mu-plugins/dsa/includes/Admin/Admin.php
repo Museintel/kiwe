@@ -9024,10 +9024,10 @@ final class Admin {
 								<td>
 									<label>
 										<input type="checkbox" name="bricks[dynamic_tags_enabled]" value="1" <?php checked( ! empty( $bricks['dynamic_tags_enabled'] ) ); ?>>
-									<?php esc_html_e( 'Expose Kiwe site identity, Woo store settings, product weight, and saved menus in Bricks', 'dsa' ); ?>
+									<?php esc_html_e( 'Expose Kiwe site identity, owner design context, public social profiles, Woo store settings, product weight, and saved menus in Bricks', 'dsa' ); ?>
 									</label>
 									<p class="description"><?php esc_html_e( 'Tags appear in the Kiwe group. Bricks already exposes site title and tagline; Kiwe exposes full-size logo assets plus public WooCommerce store address/location settings. Store phone and email are configured in Settings > General.', 'dsa' ); ?></p>
-								<p class="description"><code>{kiwe_site_logo}</code> <code>{kiwe_site_logo_inverse}</code> <code>{kiwe_store_address_1}</code> <code>{kiwe_store_address_2}</code> <code>{kiwe_store_city}</code> <code>{kiwe_store_country}</code> <code>{kiwe_store_state}</code> <code>{kiwe_store_postcode}</code> <code>{kiwe_store_phone}</code> <code>{kiwe_store_email}</code> <code>{kiwe_selling_locations}</code> <code>{kiwe_shipping_locations}</code> <code>{woo_product_weight}</code></p>
+								<p class="description"><code>{kiwe_site_logo}</code> <code>{kiwe_site_logo_inverse}</code> <code>{kiwe_store_address_1}</code> <code>{kiwe_store_address_2}</code> <code>{kiwe_store_city}</code> <code>{kiwe_store_country}</code> <code>{kiwe_store_state}</code> <code>{kiwe_store_postcode}</code> <code>{kiwe_store_phone}</code> <code>{kiwe_store_email}</code> <code>{kiwe_business_description}</code> <code>{kiwe_whatsapp}</code> <code>{kiwe_brand_tone}</code> <code>{kiwe_brand_color}</code> <code>{kiwe_accent_color}</code> <code>{kiwe_hero_color}</code> <code>{kiwe_neutral_color}</code> <code>{kiwe_surface_color}</code> <code>{kiwe_facebook_url}</code> <code>{kiwe_instagram_url}</code> <code>{kiwe_x_url}</code> <code>{kiwe_youtube_url}</code> <code>{kiwe_pinterest_url}</code> <code>{kiwe_linkedin_url}</code> <code>{kiwe_selling_locations}</code> <code>{kiwe_shipping_locations}</code> <code>{woo_product_weight}</code></p>
 								</td>
 							</tr>
 							<tr>
