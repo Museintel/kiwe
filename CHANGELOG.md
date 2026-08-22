@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.22
+
+- Made bare `/ideate` automatically recognize attached `kiwe.sitegraph-design-context.v1` and `kiwe.seam-design-context.v1` files, without requiring users to restate SiteGraph command tokens.
+- Added an explicit three-layer ideation authority model: owner facts stay locked, owner preferences stay preserved, and layout/art direction remain AI-writable only for the current draft.
+- Reduced Design-Context-led ideation to missing project relationship, reuse-versus-inspiration references, and material creative gaps; answered identity, audience, brand, commerce, SEO and content-plan questions may not be repeated.
+- Embedded a read-only `kiwe.ideation-context.v1` contract in future Design Context exports so browser AIs can understand the attachment without a long prompt.
+- Removed stale Framework-neutral-versus-Seam-ready choices from `/ideate`; creative output is always Framework-neutral and Seam Framework remains a later explicit migration.
+
 ## 7.21
 
 - Expanded the live SEAM Appsite vocabulary with canonical `data-kiwe-contact` and `data-kiwe-social` actions for phone, email, WhatsApp, directions, and public business profiles.

@@ -46,6 +46,7 @@ check('raw-source contract preserves stable media and dynamic intent', service.i
 check('owner context exposes social and complete market coverage without secrets', service.includes("'socials'") && service.includes("'marketCoverage'") && graph.includes("'socialProfileCount'") && !service.includes('consumer_secret'));
 check('design context embeds a hash-bound AI enhancement contract and resolved layer', service.includes("'designContextEnhancementContract'") && service.includes("'resolvedDesignContext'") && service.includes("'ownerContextHash'") && enhancement.includes('lockedPaths'));
 check('AI enhancement command is compact vendor-neutral and framework-safe', manifest.commandGrammar.phaseTargets.includes('/designcontextenhancement') && manifest.commands['/create /designcontextenhancement'] && dynamic.includes('/create /designcontextenhancement') && dynamic.includes('does not silently enable Seam Framework'));
+check('design context is self-describing for bare ideate without granting write authority', service.includes("'ideationContract'") && service.includes("'autoComposeCommands' => [ '/ideate' ]") && service.includes("'ownerFacts' => 'locked'") && service.includes("'ownerPreferences' => 'preserve-unless-human-explicitly-revises'") && service.includes("'mayMutateDesignContext' => false") && service.includes("'ideateCommand' => '/ideate'"));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

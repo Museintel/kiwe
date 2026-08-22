@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.21`
+Contract version: `7.22`
 Updated: `2026-08-21`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.21
+SeamFlow contract: 7.22
 ```
 
 Then do one of these:
@@ -116,9 +116,9 @@ Output audit:       https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-a
 
 ## `/ideate` — creativity-first homepage intake
 
-When the human gives `/ideate`, read only the Ideation context above. Ask a short adaptive questionnaire covering project identity, defined website type, audience, goal, logo/brand evidence, art direction, homepage content, and constraints. Ask framework-neutral versus Seam-ready last, then create only `index.html`, `styles.css`, and `script.js` for the first homepage.
+When the human gives `/ideate`, read only the Ideation context above. First inspect attachments for `kiwe.sitegraph-design-context.v1` or `kiwe.seam-design-context.v1`; bare `/ideate` composes with either automatically. Owner facts are locked, owner preferences are preserved, and creative layout/art direction remains AI-writable for the draft. Ask only for the new/redesign/extension relationship, reusable versus inspiration references, and material creative gaps not already answered. Then create only `index.html`, `styles.css`, and `script.js` for the first homepage.
 
-Seam-ready remains headless: it may add proven canonical attributes, matching universal tokens, project tokens, and real Geometry Engine clamp fallback when a suitable variable does not exist, but it must not influence the creative visual thesis. Framework-neutral emits no Seam/Kiwe/DSA/Bricks metadata. After the first draft, normal conversation handles refinements; do not require another Start link or slash command.
+The `/ideate` draft is always Framework-neutral and emits no Seam/Kiwe/DSA/Bricks metadata. Seam Framework remains the later opt-in migration after the visual direction is approved. After the first draft, normal conversation handles refinements; do not require another Start link or slash command.
 
 ## Plugin REST SeamFlow route
 
@@ -174,7 +174,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.21
+SeamFlow contract: 7.22
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -296,7 +296,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.21
+SeamFlow contract: 7.22
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -362,7 +362,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.21
+SeamFlow contract: 7.22
 Command:
 Artifact classification:
 Files returned:

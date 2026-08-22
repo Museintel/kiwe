@@ -18,7 +18,7 @@ Creativity and contract compliance are different jobs.
 
 Run them as separate phases:
 
-1. `/ideate`: adaptive creative brief and one homepage draft, framework-neutral by default or optionally Seam-ready without changing the visual thesis.
+1. `/ideate`: attachment-aware adaptive creative brief and one Framework-neutral homepage draft. A Kiwe Design Context attachment pre-answers owner facts and preferences without constraining the AI's creative visual thesis.
 2. Seam rebuild.
 3. Seam audit.
 4. Framework profile for Kiwe > Framework import/push.
@@ -82,7 +82,7 @@ Canonical dynamic context forms:
 
 Use `/usesitegraph` for real site evidence and `/usebrickscontext` for general verified Bricks/Kiwe capabilities without site data. Valid targets include `/designcontext`, `/previewdata`, `/siteidentity`, `/bricksbindings`, `/dynamictags`, `/queryloops`, and `/kiwelaunchers`. `/designcontext` gives the AI public identity, catalog, media, content and target-capability evidence; it does not itself authorize bindings, Bricks JSON, Seam Framework or writes. Legacy `/dynamic /sitegraph`, shorthand `/sitegraph`, and `/usesitegraph /designcontext` may be accepted internally, but user-facing output should use a targeted canonical form.
 
-For a new project, `/ideate /usesitegraph /for /designcontext` composes the adaptive creative interview with target-site evidence. Append `/nonai` when the evidence is the attached downloadable design-context JSON rather than a configured live tool.
+Bare `/ideate` automatically recognizes an attached `kiwe.sitegraph-design-context.v1` or `kiwe.seam-design-context.v1` file and composes it with the adaptive creative interview. `/ideate /usesitegraph /for /designcontext` remains a valid explicit live-tool form; append `/nonai` only for older clients that cannot auto-detect an attached export.
 
 Optional entity scopes (`/products`, `/posts`, `/pages`, `/media`, `/menus`) and field scopes (`/titles`, `/images`, `/prices`, `/links`, `/excerpts`, `/metadata`) narrow the selected target. Example: `/usesitegraph /for /previewdata /products /titles /images /nonai`. If no scope is present, process every eligible region for that target. If the scoped source region is ambiguous, ask one short question instead of requesting a prose implementation prompt.
 
@@ -249,16 +249,16 @@ Documentation is opt-in everywhere. If `/document` is absent, produce only the c
 
 ### `/ideate`
 
-Use when the human wants to start a new website from a guided brief. Read `contexts/ideate-lite.md`; `/ideate /webdraft`, `/creative`, and `/webdraft` remain accepted aliases.
+Use when the human wants a new website, an existing-site redesign, or a new visual direction from a guided brief. Read `contexts/ideate-lite.md`; `/ideate /webdraft`, `/creative`, and `/webdraft` remain accepted aliases.
 
-- Interview adaptively in groups of no more than three questions. Collect project identity, defined website type, audience, goal, logo/brand evidence, visual direction, homepage content, and constraints.
+- Auto-detect an attached Kiwe Design Context. Treat owner facts as locked, owner preferences as preserved constraints, and the visual thesis/layout/typography/imagery/missing palette roles as the creative workspace.
+- Interview adaptively in groups of no more than three questions. With Design Context attached, ask only project relationship, reusable versus inspiration references, and material creative gaps not already answered.
 - If a logo is attached, inspect it before proposing a palette; do not guess unreadable brand colors.
-- Ask framework-neutral versus Seam-ready last. Framework-neutral emits no Seam/Kiwe/DSA/Bricks metadata. Seam-ready adds only headless semantic attributes, matching universal/project tokens, and real Geometry fallback math where a variable is absent.
 - Produce only one original homepage as `index.html`, `styles.css`, and `script.js`.
 - After the first draft, accept refinements through normal conversation without another Start link or command.
 - Do not create Bricks JSON, Site Graph bindings, AppShell output, Framework profiles, accessibility plans, reports, or ZIPs.
 
-This phase protects creativity: Seam-ready context must never become a component recipe or make different projects look alike.
+This phase protects creativity: Design Context supplies evidence and preferences, not a component recipe. Seam remains a later opt-in migration and must never make different projects look alike.
 
 ### `/rebuild /seamframework`
 

@@ -116,6 +116,15 @@ node bin/kiwe.js prepare-apply ./out/my-kiwe-handoff --site-graph ./site-graph.j
 The human prompt should stay short. The toolkit carries the rules.
 For browser AIs, give direct raw links so the model does not waste tokens searching GitHub.
 
+For a Design-Context-led ideation session, attach the current Kiwe export and send only:
+
+```text
+https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md
+/ideate
+```
+
+The attachment is auto-detected. The AI must not repeat owner questions already answered by the file; it asks only whether this is a new site/redesign/brand extension, what supplied material is reusable versus inspiration, and any material creative requirement missing from the context.
+
 Good human prompts:
 
 ```text

@@ -54,6 +54,8 @@ Use the complete public-only design evidence packet: site identity and logo, men
 
 At `/ideate`, this evidence may guide an original layout and select appropriate real imagery. For an existing approved HTML/CSS/JS artifact, preserve its design thesis, layout, responsiveness and JavaScript; ground identity/content/assets only unless the human explicitly requests a redesign. Static media must retain its public URL plus `data-kiwe-media-id` and a stable selector. Dynamic production collections stay dynamic and require an explicit binding target before `kiwe-bindings.json` is emitted.
 
+Bare `/ideate` auto-detects an attached `kiwe.sitegraph-design-context.v1` file and does not require the human to repeat `/usesitegraph /for /designcontext /nonai`. The explicit form remains available for live tools and older clients. During ideation, owner facts are locked, owner preferences are preserved, and visual composition remains a draft-only creative workspace.
+
 This target is framework-neutral: it must not add Seam Framework, Bricks JSON, query loops, dynamic tags, conditions, interactions or Kiwe launchers unless their separate target/phase is present.
 
 The word `SEAM` in `seamDesignContext` names the semantic owner brief, not an installed Framework profile. Brand preferences guide design only. Never assume SEAM variables/classes exist unless `/seamframework` is separately present and its profile is installed.

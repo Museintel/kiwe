@@ -133,6 +133,43 @@ final class Design_Context_Service {
 			'seamDesignContext' => $owner_context,
 			'resolvedDesignContext' => $resolved_context,
 			'designContextEnhancementContract' => $enhancements->handoff_contract(),
+			'ideationContract' => [
+				'schema' => 'kiwe.ideation-context.v1',
+				'autoComposeCommands' => [ '/ideate' ],
+				'purpose' => 'Pre-answer verified client facts and preferences while leaving original visual direction to the creative AI.',
+				'authority' => [
+					'ownerFacts' => 'locked',
+					'ownerPreferences' => 'preserve-unless-human-explicitly-revises',
+					'creativeWorkspace' => 'draft-only',
+					'mayMutateDesignContext' => false,
+					'mayMutateWordPress' => false,
+				],
+				'ownerFactPaths' => [
+					'seamDesignContext.identity', 'seamDesignContext.contact', 'seamDesignContext.localization',
+					'seamDesignContext.contentPlan', 'seamDesignContext.commercePlan',
+					'seamDesignContext.seo.legalName', 'seamDesignContext.seo.foundedYear', 'seamDesignContext.seo.allowIndexing',
+				],
+				'ownerPreferencePaths' => [
+					'seamDesignContext.brand', 'seamDesignContext.audience',
+					'seamDesignContext.seo.primaryGoal', 'seamDesignContext.seo.searchIntent', 'seamDesignContext.seo.proofPoints',
+				],
+				'creativeWorkspace' => [
+					'visual thesis', 'layout composition', 'section rhythm', 'typography direction',
+					'imagery direction', 'motion language', 'colors for unfilled semantic roles', 'draft copy that does not invent facts',
+				],
+				'askOnlyWhenMissing' => [
+					'new website, existing-site redesign, or existing-brand extension',
+					'different existing URL when authority.source is not the intended reference',
+					'which supplied resources are authorized for reuse versus inspiration only',
+					'material homepage must-keep, required interaction, or hard dislike absent from owner notes',
+				],
+				'doNotReaskWhenPresent' => [
+					'identity', 'site type', 'purpose', 'audience', 'goal', 'logo', 'brand preferences',
+					'public contact', 'location', 'catalog scale', 'price range', 'page plan', 'SEO intent',
+				],
+				'output' => [ 'index.html', 'styles.css', 'script.js' ],
+				'frameworkNeutral' => true,
+			],
 			'commerce'    => $commerce,
 			'catalog'     => $catalog,
 			'catalogHash' => hash( 'sha256', (string) wp_json_encode( $catalog, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ),
@@ -156,9 +193,10 @@ final class Design_Context_Service {
 			'usage'       => [
 				'command' => '/usesitegraph /for /designcontext',
 				'fileOnlyCommand' => '/usesitegraph /for /designcontext /nonai',
+				'ideateCommand' => '/ideate',
 				'entityScopes' => [ '/products', '/posts', '/pages', '/media', '/menus', '/customcontent', '/taxonomies', '/business', '/commerce', '/seamdesigncontext' ],
 				'fieldScopes'  => [ '/titles', '/images', '/prices', '/links', '/excerpts', '/metadata', '/customfields', '/contact', '/brand', '/audience', '/contentplan', '/bundles', '/discounts', '/bestsellers', '/designcontextenhancement' ],
-				'rule' => 'Use this evidence to improve design choices and binding precision without redesigning an approved artifact or hardcoding production collections.',
+				'rule' => 'Bare /ideate auto-detects this file. Use owner facts as locked evidence, preserve owner preferences, and keep creative decisions draft-only. For an approved artifact, improve binding precision without redesigning it or hardcoding production collections.',
 			],
 		];
 	}

@@ -49,7 +49,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'kiwe_get_ideation_context',
-      description: 'Return the adaptive /ideate questionnaire and homepage HTML/CSS/JS output contract, including the optional headless Seam branch and Geometry fallback ladder.',
+      description: 'Return the Design-Context-aware /ideate questionnaire and Framework-neutral homepage HTML/CSS/JS output contract, including owner/AI authority boundaries and the responsive Geometry fallback ladder.',
       inputSchema: { type: 'object', properties: {} }
     },
     {

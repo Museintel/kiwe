@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "7.21",
+  "version": "7.22",
   "algorithm": "sha256",
-  "file_count": 323,
+  "file_count": 324,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -190,7 +190,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "73f3a4e3ad38e456cc00ff8017a1272d8c6c1f4a47b0d96abcf94fabb8291082"
+      "sha256": "17bb2839627bc063e11fc5fe5b5ff495aa86e676824300c249da43866280a50d"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -645,8 +645,8 @@
       "sha256": "a38de5d44de45513bcaf97f42fa4d0b3b0e947f0c3dc2f823be32f83aea5eff1"
     },
     "includes/Onboarding/Onboarding_Service.php": {
-      "bytes": 41471,
-      "sha256": "9241644abfa37745abd11d83c68d83429c5e62044e81ae4e005b81da78614ce7"
+      "bytes": 41590,
+      "sha256": "a261880a657f0e7e556b9a2a12d3df9089f1392190f22765190e2cff831350cb"
     },
     "includes/Onboarding/README.md": {
       "bytes": 2695,
@@ -873,8 +873,8 @@
       "sha256": "8ac8eb9141a2ead606fa5f6645d85119dce5051e3587f8536c032a8c8b831e78"
     },
     "includes/Site_Graph/Design_Context_Service.php": {
-      "bytes": 25808,
-      "sha256": "65bbdb0acd940401a56807e8690d2cdb484db666d6f1321fcc3ab31737f0c5e4"
+      "bytes": 27923,
+      "sha256": "aabdc5c3539695072aeaa1bceab595a03f996443d414a6deba0b91679a130122"
     },
     "includes/Site_Graph/Query_Service.php": {
       "bytes": 3459,
@@ -1176,13 +1176,17 @@
       "bytes": 1724,
       "sha256": "3a4908fbf48f83177b72f579eb4073b62ca5dc29f9c6479d2f1cf7d93b596b46"
     },
+    "site-graph-system/release-proof-7.22.md": {
+      "bytes": 1417,
+      "sha256": "8ae49efd2c772d77ee14877a995b73e93234d470f4148b52ff79b664c08c9e09"
+    },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 76342,
-      "sha256": "4a30a66d26cdf7d62c88b56e897641af0be34832efef03989225c9bbe5b84f9a"
+      "bytes": 76563,
+      "sha256": "bb550efab71199c2ca35dccde9b17d7b583e2d672e8d063908baece45465f0f3"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

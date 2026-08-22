@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.21',
+    contractVersion: '7.22',
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -528,7 +528,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.21',
+      mustReport: 'SeamFlow contract: 7.22',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -700,8 +700,8 @@ export function listCommands() {
       },
       {
         command: '/ideate /webdraft',
-        purpose: 'Create a pure creative HTML/CSS/JS draft before Kiwe constraints are introduced.',
-        requires: ['plain design brief'],
+        purpose: 'Create a pure creative Framework-neutral HTML/CSS/JS draft. Auto-detect an attached Kiwe Design Context so verified owner facts and preferences are not re-asked.',
+        requires: ['attached Kiwe Design Context or a short adaptive design brief'],
         output: 'creative draft only'
       },
       {
