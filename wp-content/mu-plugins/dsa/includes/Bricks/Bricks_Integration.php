@@ -7,6 +7,7 @@ use DSA\Commerce\Store_Analytics_Service;
 use DSA\Element_Registry;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
+use DSA\Onboarding\Design_Context_Profile_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -302,6 +303,11 @@ final class Bricks_Integration {
 			'kiwe_store_postcode'     => __( 'Store postcode / ZIP', 'dsa' ),
 			'kiwe_store_phone'        => __( 'Store phone', 'dsa' ),
 			'kiwe_store_email'        => __( 'Store email', 'dsa' ),
+			'kiwe_business_description' => __( 'Business description', 'dsa' ),
+			'kiwe_whatsapp'           => __( 'WhatsApp number', 'dsa' ),
+			'kiwe_brand_tone'         => __( 'Brand tone', 'dsa' ),
+			'kiwe_brand_color'        => __( 'Brand color', 'dsa' ),
+			'kiwe_accent_color'       => __( 'Accent color', 'dsa' ),
 			'kiwe_selling_locations'  => __( 'Selling locations', 'dsa' ),
 			'kiwe_shipping_locations' => __( 'Shipping locations', 'dsa' ),
 			'woo_product_weight'      => __( 'Product weight', 'dsa' ),
@@ -332,6 +338,12 @@ final class Bricks_Integration {
 				return Site_Identity_Service::store_phone();
 			case 'kiwe_store_email':
 				return Site_Identity_Service::store_email();
+			case 'kiwe_business_description':
+			case 'kiwe_whatsapp':
+			case 'kiwe_brand_tone':
+			case 'kiwe_brand_color':
+			case 'kiwe_accent_color':
+				return $this->design_context_tag_value( $name, $context );
 			case 'kiwe_selling_locations':
 				return $this->woo_locations_label( 'selling' );
 			case 'kiwe_shipping_locations':
@@ -344,6 +356,19 @@ final class Bricks_Integration {
 				}
 				return '';
 		}
+	}
+
+	private function design_context_tag_value( string $name, string $context ): string {
+		if ( in_array( $context, [ 'image', 'media' ], true ) ) return '';
+		$profile = ( new Design_Context_Profile_Service() )->current();
+		if ( 'kiwe_business_description' === $name ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
+		if ( 'kiwe_whatsapp' === $name ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
+		if ( 'kiwe_brand_tone' === $name ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );
+		$role = 'kiwe_accent_color' === $name ? 'accent' : 'brand';
+		foreach ( is_array( $profile['brand']['colors'] ?? null ) ? $profile['brand']['colors'] : [] as $color ) {
+			if ( $role === ( $color['role'] ?? '' ) ) return (string) sanitize_hex_color( (string) ( $color['hex'] ?? '' ) );
+		}
+		return '';
 	}
 
 	private function product_weight_tag_value( $post, string $context ): string {

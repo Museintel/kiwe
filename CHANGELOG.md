@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.18
+
+- Added the seven-step Kiwe Owner Onboarding journey for native WordPress identity, public contact, SEO foundations, nontechnical brand preferences, page search roles and WooCommerce-aware store planning.
+- Added secure seven-day, account-bound onboarding invitations deliverable through WordPress email, configured Kiwe SMS/WhatsApp channels, or manual copy.
+- Added separate SEO-strength and SEAM Design Context readiness scores, native WordPress sitemap/noindex handling for secondary utility pages, and conflict-aware homepage metadata/schema output.
+- Added `kiwe.seam-design-context.v1` to SiteGraph design-context exports while keeping SEAM Framework strictly opt-in and operational/private data redacted from anonymous reads.
+- Added onboarding release contracts covering required fields, native authority ownership, invitation security, SEO-plugin coexistence, SiteGraph safety and the no-page/no-product/no-shipping-zone mutation boundary.
+
 ## 7.17
 
 - Expanded SiteGraph design context from standard posts/pages/products into the full bounded public data model: public custom post types, all public taxonomies, safe custom-field contracts, bounded published values and safe term metadata.

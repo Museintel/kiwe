@@ -3,6 +3,7 @@
 namespace DSA\Site_Graph;
 
 use DSA\AI\Site_Graph_Service;
+use DSA\Onboarding\Design_Context_Profile_Service;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
 
@@ -76,6 +77,7 @@ final class Design_Context_Service {
 		$business          = $allows( 'business' ) || $allows( 'site' ) ? $this->business_identity( $administrator ) : [];
 		$commerce          = $allows( 'commerce' ) || $allows( 'products' ) ? $this->commerce_context( $graph, $products ) : [];
 		$field_registry     = $allows( 'customfields' ) || $allows( 'customcontent' ) ? $this->field_registry( $administrator ) : [];
+		$owner_context      = ( new Design_Context_Profile_Service() )->public_context( $administrator );
 
 		$catalog = [
 			'site'       => is_array( $site['data'] ?? null ) ? $site['data'] : [],
@@ -124,9 +126,11 @@ final class Design_Context_Service {
 				'calibration'    => is_array( $graph['calibration'] ?? null ) ? $graph['calibration'] : [],
 			],
 			'business'    => $business,
+			'seamDesignContext' => $owner_context,
 			'commerce'    => $commerce,
 			'catalog'     => $catalog,
 			'catalogHash' => hash( 'sha256', (string) wp_json_encode( $catalog, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ),
+			'contextHash' => hash( 'sha256', (string) wp_json_encode( [ 'business'=>$business, 'seamDesignContext'=>$owner_context, 'commerce'=>$commerce, 'catalog'=>$catalog ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) ),
 			'counts'      => array_map( 'count', array_filter( $catalog, 'is_array' ) ),
 			'query'       => [
 				'mediaSearch'  => $media_search,
@@ -145,8 +149,8 @@ final class Design_Context_Service {
 			'usage'       => [
 				'command' => '/usesitegraph /for /designcontext',
 				'fileOnlyCommand' => '/usesitegraph /for /designcontext /nonai',
-				'entityScopes' => [ '/products', '/posts', '/pages', '/media', '/menus', '/customcontent', '/taxonomies', '/business', '/commerce' ],
-				'fieldScopes'  => [ '/titles', '/images', '/prices', '/links', '/excerpts', '/metadata', '/customfields', '/contact', '/bundles', '/discounts', '/bestsellers' ],
+				'entityScopes' => [ '/products', '/posts', '/pages', '/media', '/menus', '/customcontent', '/taxonomies', '/business', '/commerce', '/seamdesigncontext' ],
+				'fieldScopes'  => [ '/titles', '/images', '/prices', '/links', '/excerpts', '/metadata', '/customfields', '/contact', '/brand', '/audience', '/contentplan', '/bundles', '/discounts', '/bestsellers' ],
 				'rule' => 'Use this evidence to improve design choices and binding precision without redesigning an approved artifact or hardcoding production collections.',
 			],
 		];
@@ -212,6 +216,11 @@ final class Design_Context_Service {
 				'logoInverse' => '{kiwe_site_logo_inverse}',
 				'phone' => '{kiwe_store_phone}',
 				'email' => '{kiwe_store_email}',
+				'businessDescription' => '{kiwe_business_description}',
+				'whatsapp' => '{kiwe_whatsapp}',
+				'brandTone' => '{kiwe_brand_tone}',
+				'brandColor' => '{kiwe_brand_color}',
+				'accentColor' => '{kiwe_accent_color}',
 				'address' => [ '{kiwe_store_address_1}', '{kiwe_store_address_2}', '{kiwe_store_city}', '{kiwe_store_state}', '{kiwe_store_country}', '{kiwe_store_postcode}' ],
 			],
 			'privacy' => [

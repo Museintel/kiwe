@@ -33,6 +33,7 @@ For Hostinger, use `docs/INSTALL-HOSTINGER.md`. For upgrades, incomplete uploads
 - First-session Home, idle Home, morph navigation, and offline editorial delivery pilots remain governed or off by default.
 - Personalized identity, cart, authority, and nonce state hydrates through private no-store REST responses instead of cacheable HTML.
 - Visitor-facing trust is rendered by deterministic services. AI may explain or suggest; it does not invent trust or authorize mutations.
+- A fresh install opens the owner-facing `Kiwe > Onboarding` journey once. It keeps optional Kiwe runtimes disabled, writes identity/store values to their native WordPress/WooCommerce owners, and makes the additional SEO/design brief available through read-only SiteGraph.
 
 ## Release Integrity
 

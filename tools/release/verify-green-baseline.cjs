@@ -102,6 +102,7 @@ const gates = [
 	['SiteGraph external-client contracts', 'tools/release/sitegraph-client-contracts.cjs'],
 	['SiteGraph universal adapter contracts', 'tools/release/sitegraph-adapter-contracts.cjs'],
 	['SiteGraph design-context contracts', 'tools/release/sitegraph-design-context-contracts.cjs'],
+	['Owner onboarding contracts', 'tools/release/onboarding-contracts.cjs'],
 	['Kiwe AI Toolkit smoke contracts', 'kiwe-ai-toolkit/tools/smoke-test.cjs'],
 	['AI API source contracts', 'tools/connector/ai-api-contracts.cjs'],
 	['RC4 security contracts', 'tools/security/rc4-contracts.cjs'],

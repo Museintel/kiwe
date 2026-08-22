@@ -4,6 +4,7 @@ namespace DSA\AI;
 
 use DSA\Design\Seam_Token_Service;
 use DSA\Modules\Module_Registry;
+use DSA\Onboarding\Design_Context_Profile_Service;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
 
@@ -33,6 +34,7 @@ final class Site_Graph_Service {
 			'schema'        => 'kiwe.site-graph.v1',
 			'generatedAt'   => gmdate( 'c' ),
 			'site'          => $this->site_summary(),
+			'designContext' => $this->design_context_summary(),
 			'wordpress'     => $this->wordpress_summary( $sample_limit, $public_only ),
 			'woocommerce'   => $this->woocommerce_summary( $sample_limit, $public_only ),
 			'bricks'        => $this->bricks_summary(),
@@ -361,6 +363,20 @@ final class Site_Graph_Service {
 			],
 			'permalinkMode' => get_option( 'permalink_structure' ) ? 'pretty' : 'plain',
 			'multisite'     => is_multisite(),
+		];
+	}
+
+	private function design_context_summary(): array {
+		$profiles = new Design_Context_Profile_Service();
+		$context = $profiles->public_context( false );
+		return [
+			'schema' => 'kiwe.seam-design-context.v1',
+			'complete' => ! empty( $context['complete'] ),
+			'scores' => is_array( $context['scores'] ?? null ) ? $context['scores'] : [],
+			'brandTone' => sanitize_key( (string) ( $context['brand']['tone'] ?? '' ) ),
+			'brandColors' => is_array( $context['brand']['colors'] ?? null ) ? $context['brand']['colors'] : [],
+			'plannedPageCount' => count( is_array( $context['contentPlan']['plannedPages'] ?? null ) ? $context['contentPlan']['plannedPages'] : [] ),
+			'publicBusinessContextOnly' => true,
 		];
 	}
 
@@ -906,6 +922,11 @@ final class Site_Graph_Service {
 			'{kiwe_store_postcode}',
 			'{kiwe_store_phone}',
 			'{kiwe_store_email}',
+			'{kiwe_business_description}',
+			'{kiwe_whatsapp}',
+			'{kiwe_brand_tone}',
+			'{kiwe_brand_color}',
+			'{kiwe_accent_color}',
 			'{kiwe_selling_locations}',
 			'{kiwe_shipping_locations}',
 			'{woo_product_weight}',

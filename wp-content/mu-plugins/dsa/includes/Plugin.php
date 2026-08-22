@@ -28,6 +28,9 @@ use DSA\Notifications\Notification_Preference_Service;
 use DSA\Notifications\Notification_Campaign_Service;
 use DSA\Notifications\Push_Service;
 use DSA\Notifications\Admin_Event_Notification_Service;
+use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\Onboarding\Onboarding_Service;
+use DSA\Onboarding\SEO_Context_Service;
 use DSA\Permissions\Permission_Journey_Service;
 use DSA\PWA\PWA_Service;
 use DSA\PhoneKey\PhoneKey_Bridge;
@@ -109,6 +112,9 @@ final class Plugin {
 	private $apex_acceptance;
 	private $site_graph;
 	private $ai_broker;
+	private $design_context_profile;
+	private $onboarding;
+	private $seo_context;
 
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
@@ -126,6 +132,9 @@ final class Plugin {
 		$this->store_analytics = new Store_Analytics_Service( $this->settings );
 		$this->email        = new Email_Service( $this->settings );
 		$this->channels     = new Channel_Service( $this->settings, $this->email );
+		$this->design_context_profile = new Design_Context_Profile_Service();
+		$this->onboarding   = new Onboarding_Service( $this->design_context_profile, $this->channels );
+		$this->seo_context  = new SEO_Context_Service( $this->design_context_profile );
 		$this->abandoned_carts = new Abandoned_Cart_Service( $this->settings, $this->store_analytics, $this->channels );
 		$this->cart_payload = new Cart_Payload_Service( $this->settings, $this->linked_products, $this->store_analytics );
 		$this->checkout    = new Checkout_Service( $this->settings, $this->cart_payload );
@@ -221,6 +230,8 @@ final class Plugin {
 			$this->admin_notifications->register();
 		}
 		( new Admin( $this->settings, $this->modules, $this->native, $this->readiness, $this->store_analytics, $this->linked_products, $this->email, $this->abandoned_carts, $this->notification_preferences, $this->notification_campaigns, $this->saved_items, $this->search ) )->register();
+		$this->onboarding->register();
+		$this->seo_context->register();
 		( new SecureTrack_Loader() )->register();
 		if ( $surface_enabled ) {
 			( new Assets( $this->settings, $this->registry, $this->modules, $this->phonekey, $this->trust, $this->flow_guard, $this->triggers, $this->native, $this->commerce, $this->rewards, $this->metrics, $this->permissions, $this->notification_preferences, $this->pwa, $this->reviews, $this->route_capabilities ) )->register();

@@ -2,6 +2,7 @@
 
 namespace DSA\WP7;
 
+use DSA\Onboarding\Design_Context_Profile_Service;
 use DSA\Site\Site_Identity_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -50,6 +51,13 @@ final class Bindings_Service {
 						'site_icon',
 						'logo',
 						'logo_inverse',
+						'public_phone',
+						'public_email',
+						'business_description',
+						'whatsapp',
+						'brand_tone',
+						'brand_color',
+						'accent_color',
 					],
 					'mutations'  => false,
 				],
@@ -89,8 +97,32 @@ final class Bindings_Service {
 			case 'logo_dark':
 			case 'site_logo_dark':
 				return Site_Identity_Service::logo_url( 'inverse' );
+			case 'public_phone':
+			case 'store_phone':
+				return Site_Identity_Service::store_phone();
+			case 'public_email':
+			case 'store_email':
+				return Site_Identity_Service::store_email();
+			case 'business_description':
+			case 'whatsapp':
+			case 'brand_tone':
+			case 'brand_color':
+			case 'accent_color':
+				return $this->design_context_value( $key );
 			default:
 				return '';
 		}
+	}
+
+	private function design_context_value( string $key ): string {
+		$profile = ( new Design_Context_Profile_Service() )->current();
+		if ( 'business_description' === $key ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
+		if ( 'whatsapp' === $key ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
+		if ( 'brand_tone' === $key ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );
+		$role = 'accent_color' === $key ? 'accent' : 'brand';
+		foreach ( is_array( $profile['brand']['colors'] ?? null ) ? $profile['brand']['colors'] : [] as $color ) {
+			if ( $role === ( $color['role'] ?? '' ) ) return (string) sanitize_hex_color( (string) ( $color['hex'] ?? '' ) );
+		}
+		return '';
 	}
 }
