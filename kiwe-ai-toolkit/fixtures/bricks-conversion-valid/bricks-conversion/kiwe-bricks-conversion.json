@@ -22,7 +22,7 @@
       "id": "hero01",
       "name": "section",
       "parent": "0",
-      "children": ["hero02", "hero03", "hero04", "hero05", "hero06", "hero07"],
+      "children": ["hero02", "hero03", "hero04", "hero05", "hero06", "hero07", "hero08"],
       "settings": {
         "tag": "section",
         "_cssId": "hero",
@@ -93,6 +93,20 @@
         "_attributes": [
           { "name": "data-kiwe-theme-toggle", "value": "" },
           { "name": "type", "value": "button" }
+        ]
+      }
+    },
+    {
+      "id": "hero08",
+      "name": "button",
+      "parent": "hero01",
+      "settings": {
+        "text": "WhatsApp",
+        "link": { "type": "external", "url": "{kiwe_whatsapp_url}" },
+        "_cssClasses": "seam-button",
+        "_attributes": [
+          { "name": "data-kiwe-contact", "value": "whatsapp" },
+          { "name": "data-kiwe-contact-message", "value": "Hello" }
         ]
       }
     },

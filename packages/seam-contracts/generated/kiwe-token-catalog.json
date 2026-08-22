@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.seam-token-catalog.v1",
-  "pluginVersion": "7.20",
+  "pluginVersion": "7.21",
   "tokens": {
     "color-brand": {
       "value": "#d6006f",

@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.21
+
+- Expanded the live SEAM Appsite vocabulary with canonical `data-kiwe-contact` and `data-kiwe-social` actions for phone, email, WhatsApp, directions, and public business profiles.
+- Added Bricks-native URL tags for phone, email, WhatsApp, and directions plus native Icon, Button, and Text Link controls backed by the approved Kiwe Design Context.
+- Kept native Bricks Map authority: map elements compose their address from Kiwe store-address dynamic tags instead of receiving an iframe or competing JavaScript runtime.
+- Added safe frontend resolution with enumerated actions, missing-destination fail-closed behavior, bounded WhatsApp starter messages, and server-owned public destinations.
+- Added deterministic SEAM compiler inference for existing telephone, email, WhatsApp, map/directions, and recognized social links, plus no-loss Bricks conversion validation.
+- Clarified that business social profiles are stored once in DSA Links/Design Context; visitor Profile remains account authority and does not duplicate store identity.
+
 ## 7.20
 
 - Replaced the eight always-visible planned-page inputs with a progressive one-row repeater that supports up to 20 clean, removable page intentions.

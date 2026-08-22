@@ -95,6 +95,20 @@ Live public capability groups:
 - Saved items: `data-kiwe-save="wishlist|bookmark|auto"` plus `data-kiwe-save-id`, `data-kiwe-save-title`, `data-kiwe-save-url`, and `data-kiwe-save-image`.
 - Browser notifications: `data-kiwe-notifications`, optional `data-kiwe-notification-status-target`, optional `data-kiwe-notification-topic`, and advanced `data-dsa-native-notification-request`.
 - Theme controls outside the dock: `data-kiwe-theme-toggle` and optional `data-kiwe-theme-status-target`.
+
+Contact and public-identity controls bind to the canonical owner context instead of duplicating business data in every page:
+
+```html
+<a data-kiwe-contact="phone" href="{kiwe_store_phone_url}">Call us</a>
+<a data-kiwe-contact="email" href="{kiwe_store_email_url}">Email us</a>
+<a data-kiwe-contact="whatsapp"
+  data-kiwe-contact-message="Hello, I would like to know more."
+  href="{kiwe_whatsapp_url}">Chat on WhatsApp</a>
+<a data-kiwe-contact="directions" href="{kiwe_directions_url}">Get directions</a>
+<a data-kiwe-social="instagram" href="{kiwe_instagram_url}">Instagram</a>
+```
+
+`data-kiwe-contact` accepts `phone`, `email`, `whatsapp`, and `directions`. `data-kiwe-social` accepts `facebook`, `instagram`, `x`, `youtube`, `pinterest`, and `linkedin`. Unknown values and missing destinations fail closed. Use native Bricks link controls with the corresponding URL dynamic tags. Native Bricks Map elements should compose their address control from the existing `{kiwe_store_address_*}` tags; do not introduce an iframe or competing page JavaScript.
 - Menu context: real semantic `section[id]`, `data-role="section"`, `.seam-section`, `aria-label`, `aria-labelledby`, or visible headings. Do not add hidden duplicate anchors just to feed the menu.
 - Dynamic/Bricks planning: `data-kiwe-query-template` and `data-kiwe-binding` mark sample/preview regions that should become Bricks query loops or dynamic bindings later.
 

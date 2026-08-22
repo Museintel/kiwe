@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "7.20",
+  "version": "7.21",
   "algorithm": "sha256",
-  "file_count": 322,
+  "file_count": 323,
   "files": {
     "assets/css/admin.css": {
       "bytes": 20181,
@@ -173,8 +173,8 @@
       "sha256": "edf2567ee5994e5e41b54f6b7ecaac14bc9d04ec3c06be12baf657071f77544d"
     },
     "assets/js/surface.js": {
-      "bytes": 391227,
-      "sha256": "82b223053f302caba15747b2ddb53e79a01e14c1760c87c3e5cdb8b5e4b0f2ad"
+      "bytes": 392852,
+      "sha256": "4ae3b395261e0c5870d360750a4755d6422a13e380189b07d8c6f342d5af665d"
     },
     "connector-system/BRICKS-DYNAMIC-BINDINGS.md": {
       "bytes": 9415,
@@ -190,7 +190,7 @@
     },
     "dsa.php": {
       "bytes": 2784,
-      "sha256": "fa410e24534d3d9ac9e09a98fa5a085b19ec7a0004104bd50d2c544117d0b11b"
+      "sha256": "73f3a4e3ad38e456cc00ff8017a1272d8c6c1f4a47b0d96abcf94fabb8291082"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -205,12 +205,12 @@
       "sha256": "05207566f3de38ac6c62cfe1180b70d601991194878e48c7796106e5ee438336"
     },
     "framework-system/bricks/BRICKS-INTEGRATION.md": {
-      "bytes": 9863,
-      "sha256": "41234191051eb8727f6543e821676c56ec24d068bec7aee1f1d8769c44f23737"
+      "bytes": 10796,
+      "sha256": "b5e496db1343a6b6deba5d28245b3b692c90060b86fbdd453d5c39e18c5ce1bf"
     },
     "framework-system/bricks/bricks-capabilities.json": {
-      "bytes": 5923,
-      "sha256": "08cc6d03bd3683a44414cc367ec6fa17ed1366ac12968c97acba95bc3c0e59fa"
+      "bytes": 6611,
+      "sha256": "be77475d5ec5457b4f165a0db82b6ca213d40c4d87986b12f5c0fe39548f0f21"
     },
     "framework-system/contracts/bricks-theme-style.schema.json": {
       "bytes": 2188,
@@ -233,12 +233,12 @@
       "sha256": "ee81ecdc30f553b4eca028163a6cf6e72f8e0747ecbf53a9f9244c17d3b57095"
     },
     "framework-system/contracts/seam-vocabulary.json": {
-      "bytes": 12083,
-      "sha256": "1097d9158cd452fd8e7046c0ee0bdc1100a6f07b645c59f1412e8539db87e432"
+      "bytes": 14302,
+      "sha256": "2acd23475f97f7866521297943cb4d8a493583c5daeb38aa12ad4d6a9c681126"
     },
     "framework-system/contracts/seam-vocabulary.md": {
-      "bytes": 9628,
-      "sha256": "c399ec9bc141895706b24aaaefc28d482006a1a10cdd36316bc6249aa2498c1a"
+      "bytes": 10682,
+      "sha256": "f67b974ca9333b70e4f118eafc9c45c8e740082348614bd19721d6368a09cb67"
     },
     "framework-system/contracts/token-map.css": {
       "bytes": 3410,
@@ -261,12 +261,12 @@
       "sha256": "116890068120fa0e16dfa8711ea0ccb44b9a72d8872d08e04dbb9dfcf6d402be"
     },
     "framework-system/handoffs/website-builder/bricks/BRICKS-INTEGRATION.md": {
-      "bytes": 9863,
-      "sha256": "41234191051eb8727f6543e821676c56ec24d068bec7aee1f1d8769c44f23737"
+      "bytes": 10796,
+      "sha256": "b5e496db1343a6b6deba5d28245b3b692c90060b86fbdd453d5c39e18c5ce1bf"
     },
     "framework-system/handoffs/website-builder/bricks/bricks-capabilities.json": {
-      "bytes": 5923,
-      "sha256": "08cc6d03bd3683a44414cc367ec6fa17ed1366ac12968c97acba95bc3c0e59fa"
+      "bytes": 6611,
+      "sha256": "be77475d5ec5457b4f165a0db82b6ca213d40c4d87986b12f5c0fe39548f0f21"
     },
     "framework-system/handoffs/website-builder/contracts/bricks-theme-style.schema.json": {
       "bytes": 2188,
@@ -285,12 +285,12 @@
       "sha256": "a3f47accc195aa380fe52f97e9bb6c79789871487f13349a2699fd15d578309a"
     },
     "framework-system/handoffs/website-builder/contracts/seam-vocabulary.json": {
-      "bytes": 12083,
-      "sha256": "1097d9158cd452fd8e7046c0ee0bdc1100a6f07b645c59f1412e8539db87e432"
+      "bytes": 14302,
+      "sha256": "2acd23475f97f7866521297943cb4d8a493583c5daeb38aa12ad4d6a9c681126"
     },
     "framework-system/handoffs/website-builder/contracts/seam-vocabulary.md": {
-      "bytes": 9628,
-      "sha256": "c399ec9bc141895706b24aaaefc28d482006a1a10cdd36316bc6249aa2498c1a"
+      "bytes": 10682,
+      "sha256": "f67b974ca9333b70e4f118eafc9c45c8e740082348614bd19721d6368a09cb67"
     },
     "framework-system/handoffs/website-builder/contracts/token-map.css": {
       "bytes": 3410,
@@ -353,8 +353,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 181013,
-      "sha256": "cda3881569b2ed64676a3a73b0b0340277cf21b0999311df8f14a05ddc038612"
+      "bytes": 181268,
+      "sha256": "080abf5892b4b26bf475843cab4b2a5ee42dc4f0ac69f6283aa35f3b6b5c3010"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12608,
@@ -385,8 +385,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 97326,
-      "sha256": "b98814f8f93de961a11be04233a01c1de9914c6bd23a383a6bac097f32772a81"
+      "bytes": 97510,
+      "sha256": "3399b04a2cdc2175dba3f381d6625be2bce5125c136c0f418a57d8bc0d087c9e"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,
@@ -469,8 +469,8 @@
       "sha256": "a34564c78c3f42af4d77724d09e832559c3f86ea23935a0f3c4f59213ab513ab"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 39044,
-      "sha256": "a6f5f1c161cae66d9a7dfbd8d04ac689038b9549baf48178c7502664195f2fe5"
+      "bytes": 39156,
+      "sha256": "d9349de75f4b468c82c895afc653f5bda4146387eb0fe0ea77fd6e0abe32d4fd"
     },
     "includes/AI/Site_Introspection_Service.php": {
       "bytes": 13294,
@@ -513,8 +513,8 @@
       "sha256": "ddd5427c6bb2188aefd0dd143b1cfd4ce2a4655015a4bbb66208573099876310"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 101680,
-      "sha256": "0e5d90eea7a0efc450de9291c5bb1cf3d3c9cd6064e6350f0a9f71dbb98d82b8"
+      "bytes": 106018,
+      "sha256": "f2401f48fda2300523e224d703bca1def97bb282bb6eb689f6b3a1e0447d171e"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 16254,
@@ -565,8 +565,8 @@
       "sha256": "313abe4492897d15b085f31107616eee21a3ec192433f72b67f724f0a85c1e58"
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
-      "bytes": 15462,
-      "sha256": "e7849235ea81c02cfb3ab4c541a0f08ed1a9f6e2d9aae76cb91eca77594ef903"
+      "bytes": 17665,
+      "sha256": "d40984d64e8009ac4acb1c72abab49f0896180c49a3de68cc815e0a3c0ec8925"
     },
     "includes/Design/Token_Schema.php": {
       "bytes": 8257,
@@ -693,8 +693,8 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 59522,
-      "sha256": "fcb82c2dec7eb9ddafcae2c6ce711ed1bbcfa6d61209c5ecdab71c9c38f48527"
+      "bytes": 61497,
+      "sha256": "6c811bf3f04a46604bee41ea03f8bc39ab83852aa3bcda1625bb6ae1f3dbe674"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
       "bytes": 17364,
@@ -873,8 +873,8 @@
       "sha256": "8ac8eb9141a2ead606fa5f6645d85119dce5051e3587f8536c032a8c8b831e78"
     },
     "includes/Site_Graph/Design_Context_Service.php": {
-      "bytes": 25624,
-      "sha256": "556fae8afa6ceb32cdd51712b6f7e7f685cdbc096955aa385d080d26e2f54d80"
+      "bytes": 25808,
+      "sha256": "65bbdb0acd940401a56807e8690d2cdb484db666d6f1321fcc3ab31737f0c5e4"
     },
     "includes/Site_Graph/Query_Service.php": {
       "bytes": 3459,
@@ -913,8 +913,8 @@
       "sha256": "ad078090086b246e033fcd12e7e400f9e0ed94fb776fb762fef17b054f7600b7"
     },
     "includes/WP7/Bindings_Service.php": {
-      "bytes": 4642,
-      "sha256": "d8b3b4332c698cccdb691b5003faddcd7e34fc224ea2328c721e7293953dd8dc"
+      "bytes": 5641,
+      "sha256": "cffe4b5d6bc01126387c39d79053805e9c13f7b2573c80a8a1a89fa492f6665b"
     },
     "includes/WP7/DataViews_Service.php": {
       "bytes": 827,
@@ -1172,13 +1172,17 @@
       "bytes": 1512,
       "sha256": "93eb85f98342bfa0d48a4da66cb085adab764d206cad5f2117ba631d4d61e7ec"
     },
+    "site-graph-system/release-proof-7.21.md": {
+      "bytes": 1724,
+      "sha256": "3a4908fbf48f83177b72f579eb4073b62ca5dc29f9c6479d2f1cf7d93b596b46"
+    },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 76066,
-      "sha256": "3a4b3aa6f8d78c36e9ddbd3762809b3d0d70497bd4e1a78b4230fae73c73774d"
+      "bytes": 76342,
+      "sha256": "4a30a66d26cdf7d62c88b56e897641af0be34832efef03989225c9bbe5b84f9a"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
@@ -1189,8 +1193,8 @@
       "sha256": "f5b7a5fc811d267caf0615368f18bd15456113c506883db7639209a77bd3dfd9"
     },
     "ui-system/bricks-capabilities.json": {
-      "bytes": 5923,
-      "sha256": "08cc6d03bd3683a44414cc367ec6fa17ed1366ac12968c97acba95bc3c0e59fa"
+      "bytes": 6611,
+      "sha256": "be77475d5ec5457b4f165a0db82b6ca213d40c4d87986b12f5c0fe39548f0f21"
     },
     "ui-system/budgets.md": {
       "bytes": 2681,
@@ -1261,12 +1265,12 @@
       "sha256": "a3f47accc195aa380fe52f97e9bb6c79789871487f13349a2699fd15d578309a"
     },
     "ui-system/seam-vocabulary.json": {
-      "bytes": 12083,
-      "sha256": "1097d9158cd452fd8e7046c0ee0bdc1100a6f07b645c59f1412e8539db87e432"
+      "bytes": 14302,
+      "sha256": "2acd23475f97f7866521297943cb4d8a493583c5daeb38aa12ad4d6a9c681126"
     },
     "ui-system/seam-vocabulary.md": {
-      "bytes": 9628,
-      "sha256": "c399ec9bc141895706b24aaaefc28d482006a1a10cdd36316bc6249aa2498c1a"
+      "bytes": 10682,
+      "sha256": "f67b974ca9333b70e4f118eafc9c45c8e740082348614bd19721d6368a09cb67"
     },
     "ui-system/slots.md": {
       "bytes": 2942,

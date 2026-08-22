@@ -125,7 +125,11 @@ const COMMON_DYNAMIC_TAGS = new Set([
   '{woo_product_weight}',
   '{woo_product_url}',
   '{kiwe_site_logo}',
-  '{kiwe_site_logo_inverse}'
+  '{kiwe_site_logo_inverse}',
+  '{kiwe_store_phone_url}',
+  '{kiwe_store_email_url}',
+  '{kiwe_whatsapp_url}',
+  '{kiwe_directions_url}'
 ]);
 
 const SAFE_INTERACTION_ACTIONS = new Set([
@@ -160,6 +164,9 @@ const KIWE_CAPABILITY_ATTRIBUTES = [
   'data-dsa-native-notification-request',
   'data-kiwe-theme-toggle',
   'data-kiwe-theme-status-target',
+  'data-kiwe-contact',
+  'data-kiwe-contact-message',
+  'data-kiwe-social',
   'data-kiwe-query-template',
   'data-kiwe-binding'
 ];

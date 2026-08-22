@@ -65,6 +65,7 @@
 	const viewTransitionIntentKey = 'kiwe_editorial_view_transition';
 	const designTokens = data.designTokens || {};
 	const kiweTokens = data.kiweTokens || data.seamTokens || {};
+	const contactActions = data.contactActions && typeof data.contactActions === 'object' ? data.contactActions : {};
 	let linksHub = data.links || {};
 	const savedStorageKey = 'dsa_saved_items_v2';
 	let savedItems = [];
@@ -9476,6 +9477,35 @@
 			closeOverlay();
 		} );
 	}
+
+	document.addEventListener( 'click', function ( event ) {
+		const trigger = closestEventTarget( event, '[data-kiwe-contact], [data-kiwe-social]' );
+		if ( ! trigger || trigger.closest( '[data-dsa-surface]' ) ) return;
+		const contactIntent = String( trigger.dataset.kiweContact || '' ).toLowerCase();
+		const socialIntent = String( trigger.dataset.kiweSocial || '' ).toLowerCase();
+		const allowedContacts = [ 'phone', 'email', 'whatsapp', 'directions' ];
+		const allowedSocials = [ 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin' ];
+		let destination = '';
+		if ( allowedContacts.indexOf( contactIntent ) !== -1 ) {
+			destination = String( contactActions[ contactIntent ] || '' );
+			if ( destination && contactIntent === 'whatsapp' ) {
+				const message = String( trigger.dataset.kiweContactMessage || '' ).trim().slice( 0, 500 );
+				if ( message ) destination += ( destination.indexOf( '?' ) === -1 ? '?' : '&' ) + 'text=' + encodeURIComponent( message );
+			}
+		} else if ( allowedSocials.indexOf( socialIntent ) !== -1 ) {
+			destination = String( ( contactActions.socials || {} )[ socialIntent ] || '' );
+		}
+		if ( ! destination ) return;
+		event.preventDefault();
+		event.stopPropagation();
+		if ( contactIntent === 'phone' || contactIntent === 'email' ) {
+			window.location.href = destination;
+			return;
+		}
+		const opened = window.open( destination, '_blank', 'noopener,noreferrer' );
+		if ( opened ) opened.opener = null;
+		else window.location.href = destination;
+	}, true );
 
 	document.addEventListener( 'click', function ( event ) {
 		const launcher = closestEventTarget( event, '[data-dsa-open-module]' );

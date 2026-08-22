@@ -226,8 +226,12 @@ final class Design_Context_Service {
 				'logoInverse' => '{kiwe_site_logo_inverse}',
 				'phone' => '{kiwe_store_phone}',
 				'email' => '{kiwe_store_email}',
+				'phoneUrl' => '{kiwe_store_phone_url}',
+				'emailUrl' => '{kiwe_store_email_url}',
 				'businessDescription' => '{kiwe_business_description}',
 				'whatsapp' => '{kiwe_whatsapp}',
+				'whatsappUrl' => '{kiwe_whatsapp_url}',
+				'directionsUrl' => '{kiwe_directions_url}',
 				'brandTone' => '{kiwe_brand_tone}',
 				'brandColor' => '{kiwe_brand_color}',
 				'accentColor' => '{kiwe_accent_color}',
@@ -303,7 +307,7 @@ final class Design_Context_Service {
 			'dynamicAuthority' => [
 				'price' => 'WooCommerce product dynamic data',
 				'cart' => 'WooCommerce or data-dsa-open-module="cart" when Kiwe AppShell is selected',
-				'wishlist' => 'data-dsa-save-product',
+				'wishlist' => 'data-kiwe-save="wishlist"',
 			],
 		];
 	}

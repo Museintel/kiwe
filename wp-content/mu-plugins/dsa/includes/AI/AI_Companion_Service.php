@@ -953,7 +953,7 @@ final class AI_Companion_Service {
 		if ( str_contains( $question_lc, 'attribute' ) || str_contains( $question_lc, 'wishlist' ) || str_contains( $question_lc, 'bookmark' ) || str_contains( $question_lc, 'notification' ) || str_contains( $question_lc, 'dark mode' ) || str_contains( $question_lc, 'theme toggle' ) || str_contains( $question_lc, 'save button' ) ) {
 			return [
 				'summary' => 'Use Seam for meaning and Kiwe capability attributes for appsite behavior. Preserve the UI; add the smallest live attribute; do not recreate Kiwe runtime in page JavaScript.',
-				'do'      => [ 'Use data-kiwe-save="wishlist" or "bookmark" for save controls.', 'Use data-kiwe-notifications only on explicit visitor-click controls.', 'Use data-kiwe-theme-toggle for page/header light-dark controls.', 'Use data-dsa-open-module for Kiwe screen launchers.', 'Use semantic section IDs and labels for Menu context.' ],
+				'do'      => [ 'Use data-kiwe-save="wishlist" or "bookmark" for save controls.', 'Use data-kiwe-notifications only on explicit visitor-click controls.', 'Use data-kiwe-theme-toggle for page/header light-dark controls.', 'Use data-kiwe-contact and data-kiwe-social with canonical Kiwe dynamic URLs for public contact, directions, WhatsApp, and social CTAs.', 'Use native Bricks Map elements with Kiwe address dynamic tags instead of map iframes or page-owned map JavaScript.', 'Use data-dsa-open-module for Kiwe screen launchers.', 'Use semantic section IDs and labels for Menu context.' ],
 				'dont'    => [ 'Do not invent candidate attributes unless the contract marks them live.', 'Do not add DSA shell markup to website/bricks-paste.html.', 'Do not write duplicate cart/save/notification/theme JavaScript.' ],
 			];
 		}

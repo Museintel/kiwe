@@ -41,6 +41,9 @@ final class Bricks_Integration {
 		add_filter( 'bricks/elements/woocommerce-mini-cart/controls', [ $this, 'add_mini_cart_controls' ], 20 );
 		add_filter( 'bricks/elements/filter-search/controls', [ $this, 'add_search_bridge_controls' ], 20 );
 		add_filter( 'bricks/elements/icon/controls', [ $this, 'add_dsa_icon_launcher_controls' ], 20 );
+		foreach ( [ 'icon', 'button', 'text-link' ] as $contact_element ) {
+			add_filter( 'bricks/elements/' . $contact_element . '/controls', [ $this, 'add_context_action_controls' ], 30 );
+		}
 		add_filter( 'bricks/elements/product-add-to-cart/control_groups', [ $this, 'add_add_to_cart_control_group' ], 20 );
 		add_filter( 'bricks/elements/product-add-to-cart/controls', [ $this, 'add_add_to_cart_controls' ], 20 );
 		add_filter( 'bricks/elements/product-upsells/control_groups', [ $this, 'add_linked_products_control_group' ], 20 );
@@ -303,8 +306,12 @@ final class Bricks_Integration {
 			'kiwe_store_postcode'     => __( 'Store postcode / ZIP', 'dsa' ),
 			'kiwe_store_phone'        => __( 'Store phone', 'dsa' ),
 			'kiwe_store_email'        => __( 'Store email', 'dsa' ),
+			'kiwe_store_phone_url'    => __( 'Store phone link', 'dsa' ),
+			'kiwe_store_email_url'    => __( 'Store email link', 'dsa' ),
 			'kiwe_business_description' => __( 'Business description', 'dsa' ),
 			'kiwe_whatsapp'           => __( 'WhatsApp number', 'dsa' ),
+			'kiwe_whatsapp_url'       => __( 'WhatsApp chat link', 'dsa' ),
+			'kiwe_directions_url'     => __( 'Store directions link', 'dsa' ),
 			'kiwe_brand_tone'         => __( 'Brand tone', 'dsa' ),
 			'kiwe_brand_color'        => __( 'Brand color', 'dsa' ),
 			'kiwe_accent_color'       => __( 'Accent color', 'dsa' ),
@@ -347,6 +354,27 @@ final class Bricks_Integration {
 				return Site_Identity_Service::store_phone();
 			case 'kiwe_store_email':
 				return Site_Identity_Service::store_email();
+			case 'kiwe_store_phone_url':
+				$phone = preg_replace( '/[^0-9+]/', '', Site_Identity_Service::store_phone() );
+				return $phone ? esc_url_raw( 'tel:' . $phone ) : '';
+			case 'kiwe_store_email_url':
+				$email = sanitize_email( Site_Identity_Service::store_email() );
+				return $email ? esc_url_raw( 'mailto:' . $email ) : '';
+			case 'kiwe_whatsapp_url':
+				$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
+				$number = preg_replace( '/\D+/', '', (string) ( $profile['contact']['whatsapp'] ?? '' ) );
+				return $number ? esc_url_raw( 'https://wa.me/' . $number ) : '';
+			case 'kiwe_directions_url':
+				$location = $this->woo_store_country_state();
+				$address = array_filter( [
+					$this->woo_store_option( 'woocommerce_store_address' ),
+					$this->woo_store_option( 'woocommerce_store_address_2' ),
+					$this->woo_store_option( 'woocommerce_store_city' ),
+					$location['state_label'],
+					$this->woo_store_option( 'woocommerce_store_postcode' ),
+					$location['country_label'],
+				] );
+				return $address ? esc_url_raw( 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode( implode( ', ', $address ) ) ) : '';
 			case 'kiwe_business_description':
 			case 'kiwe_whatsapp':
 			case 'kiwe_brand_tone':
@@ -601,6 +629,22 @@ final class Bricks_Integration {
 			}
 		}
 
+		$context_capable = in_array( (string) ( $element->name ?? '' ), [ 'icon', 'button', 'text-link' ], true );
+		$has_launcher = isset( $attributes['_root']['data-dsa-open-module'] );
+		if ( $context_capable && ! $has_launcher ) {
+			$contact = sanitize_key( (string) ( $element->settings['kiweContactAction'] ?? '' ) );
+			$social  = sanitize_key( (string) ( $element->settings['kiweSocialProfile'] ?? '' ) );
+			if ( in_array( $contact, [ 'phone', 'email', 'whatsapp', 'directions' ], true ) ) {
+				$attributes['_root']['data-kiwe-contact'] = $contact;
+				if ( 'whatsapp' === $contact ) {
+					$message = sanitize_text_field( (string) ( $element->settings['kiweContactMessage'] ?? '' ) );
+					if ( '' !== $message ) $attributes['_root']['data-kiwe-contact-message'] = function_exists( 'mb_substr' ) ? mb_substr( $message, 0, 500 ) : substr( $message, 0, 500 );
+				}
+			} elseif ( in_array( $social, [ 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin' ], true ) ) {
+				$attributes['_root']['data-kiwe-social'] = $social;
+			}
+		}
+
 		return $attributes;
 	}
 
@@ -627,6 +671,46 @@ final class Bricks_Integration {
 				'theme' => esc_html__( 'Light / dark mode', 'dsa' ),
 			],
 			'description' => esc_html__( 'Opens the selected registered Kiwe destination even when its dock icon is hidden.', 'dsa' ),
+		];
+		return $controls;
+	}
+
+	public function add_context_action_controls( array $controls ): array {
+		$controls['kiweContextActionSep'] = [
+			'tab' => 'content',
+			'type' => 'separator',
+			'label' => esc_html__( 'Kiwe Design Context', 'dsa' ),
+		];
+		$controls['kiweContactAction'] = [
+			'tab' => 'content',
+			'type' => 'select',
+			'label' => esc_html__( 'Contact action', 'dsa' ),
+			'placeholder' => esc_html__( 'No contact action', 'dsa' ),
+			'options' => [
+				'phone' => esc_html__( 'Call public phone', 'dsa' ),
+				'email' => esc_html__( 'Email public address', 'dsa' ),
+				'whatsapp' => esc_html__( 'Open WhatsApp', 'dsa' ),
+				'directions' => esc_html__( 'Open store directions', 'dsa' ),
+			],
+			'description' => esc_html__( 'Uses the approved Kiwe Design Context. This wins over Social profile when both are selected.', 'dsa' ),
+		];
+		$controls['kiweContactMessage'] = [
+			'tab' => 'content',
+			'type' => 'text',
+			'label' => esc_html__( 'WhatsApp starter message', 'dsa' ),
+			'required' => [ 'kiweContactAction', '=', 'whatsapp' ],
+			'description' => esc_html__( 'Optional public text. Do not include private data or secrets.', 'dsa' ),
+		];
+		$controls['kiweSocialProfile'] = [
+			'tab' => 'content',
+			'type' => 'select',
+			'label' => esc_html__( 'Public social profile', 'dsa' ),
+			'placeholder' => esc_html__( 'No social action', 'dsa' ),
+			'options' => [
+				'facebook' => 'Facebook', 'instagram' => 'Instagram', 'x' => 'X',
+				'youtube' => 'YouTube', 'pinterest' => 'Pinterest', 'linkedin' => 'LinkedIn',
+			],
+			'description' => esc_html__( 'Uses the public profile stored in DSA Links/Design Context.', 'dsa' ),
 		];
 		return $controls;
 	}

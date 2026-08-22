@@ -89,6 +89,22 @@ If the draft has a light/dark switch outside the Kiwe dock, preserve it and add:
 
 Do not write custom theme-switch JavaScript when this attribute can call Kiwe's shared theme runtime.
 
+### Contact, WhatsApp, directions, and public social profiles
+
+Public business identity is stored once by Kiwe Design Context/DSA Links. Do not copy the current phone number, email address, store address, WhatsApp number, or social URL into every page. Preserve the visible CTA and add the smallest capability:
+
+```html
+<a data-kiwe-contact="phone" href="{kiwe_store_phone_url}">Call us</a>
+<a data-kiwe-contact="email" href="{kiwe_store_email_url}">Email us</a>
+<a data-kiwe-contact="whatsapp" data-kiwe-contact-message="Hello, I would like to know more." href="{kiwe_whatsapp_url}">Chat on WhatsApp</a>
+<a data-kiwe-contact="directions" href="{kiwe_directions_url}">Get directions</a>
+<a data-kiwe-social="instagram" href="{kiwe_instagram_url}">Instagram</a>
+```
+
+`data-kiwe-contact` accepts `phone`, `email`, `whatsapp`, or `directions`. `data-kiwe-social` accepts `facebook`, `instagram`, `x`, `youtube`, `pinterest`, or `linkedin`. Unknown values and missing destinations fail closed. `data-kiwe-contact-message` is optional, limited to a short non-private WhatsApp starter message, and is URL-encoded only after visitor activation.
+
+In Bricks, use native link controls with the URL dynamic tags above. For a native Bricks Map element, compose its address control from `{kiwe_store_address_1}`, `{kiwe_store_address_2}`, `{kiwe_store_city}`, `{kiwe_store_state}`, `{kiwe_store_postcode}`, and `{kiwe_store_country}`. Do not replace the Map element with an iframe or page-owned mapping JavaScript.
+
 ### Menu context / table of contents
 
 Do not add hidden Kiwe-only anchors just to feed the menu.

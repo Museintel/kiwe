@@ -53,8 +53,12 @@ final class Bindings_Service {
 						'logo_inverse',
 						'public_phone',
 						'public_email',
+						'phone_url',
+						'email_url',
 						'business_description',
 						'whatsapp',
+						'whatsapp_url',
+						'directions_url',
 						'brand_tone',
 						'brand_color',
 						'accent_color',
@@ -112,8 +116,18 @@ final class Bindings_Service {
 			case 'public_email':
 			case 'store_email':
 				return Site_Identity_Service::store_email();
+			case 'phone_url':
+			case 'store_phone_url':
+				$phone = preg_replace( '/[^0-9+]/', '', Site_Identity_Service::store_phone() );
+				return $phone ? esc_url_raw( 'tel:' . $phone ) : '';
+			case 'email_url':
+			case 'store_email_url':
+				$email = sanitize_email( Site_Identity_Service::store_email() );
+				return $email ? esc_url_raw( 'mailto:' . $email ) : '';
 			case 'business_description':
 			case 'whatsapp':
+			case 'whatsapp_url':
+			case 'directions_url':
 			case 'brand_tone':
 			case 'brand_color':
 			case 'accent_color':
@@ -136,6 +150,14 @@ final class Bindings_Service {
 		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
 		if ( 'business_description' === $key ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
 		if ( 'whatsapp' === $key ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
+		if ( 'whatsapp_url' === $key ) {
+			$number = preg_replace( '/\D+/', '', (string) ( $profile['contact']['whatsapp'] ?? '' ) );
+			return $number ? esc_url_raw( 'https://wa.me/' . $number ) : '';
+		}
+		if ( 'directions_url' === $key ) {
+			$address = is_array( $profile['contact']['address'] ?? null ) ? array_filter( $profile['contact']['address'] ) : [];
+			return $address ? esc_url_raw( 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode( implode( ', ', $address ) ) ) : '';
+		}
 		if ( 'brand_tone' === $key ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );
 		if ( preg_match( '/^(facebook|instagram|x|youtube|pinterest|linkedin)_url$/', $key, $match ) ) {
 			return esc_url_raw( (string) ( $profile['contact']['socialLinks'][ $match[1] ] ?? '' ) );

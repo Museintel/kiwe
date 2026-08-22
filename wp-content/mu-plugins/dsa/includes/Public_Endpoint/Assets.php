@@ -3,6 +3,7 @@
 namespace DSA\Public_Endpoint;
 
 use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\Onboarding\Design_Context_Enhancement_Service;
 
 use DSA\Element_Registry;
 use DSA\Commerce\Commerce_Context_Service;
@@ -328,6 +329,7 @@ final class Assets {
 				'notificationPreferences' => $this->notification_preferences->public_config(),
 				'pwa'        => $this->pwa->public_config(),
 				'links'      => $this->links_data(),
+				'contactActions' => $this->contact_actions_data(),
 				'secure'     => $this->secure_data(),
 				'phonekey'   => $phonekey,
 				'debug'      => $debug,
@@ -353,6 +355,43 @@ final class Assets {
 				],
 			]
 		);
+	}
+
+	/**
+	 * Public destinations used by SEAM contact/social capability attributes.
+	 *
+	 * The browser receives resolved public destinations only. Page markup names
+	 * the intent and cannot substitute a different phone, email, address, or
+	 * social profile through the Kiwe capability lane.
+	 */
+	private function contact_actions_data(): array {
+		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
+		$contact = is_array( $profile['contact'] ?? null ) ? $profile['contact'] : [];
+		$phone   = preg_replace( '/[^0-9+]/', '', Site_Identity_Service::store_phone() );
+		$email   = sanitize_email( Site_Identity_Service::store_email() );
+		$whatsapp = preg_replace( '/\D+/', '', (string) ( $contact['whatsapp'] ?? '' ) );
+		$address = array_filter(
+			[
+				sanitize_text_field( (string) get_option( 'woocommerce_store_address', '' ) ),
+				sanitize_text_field( (string) get_option( 'woocommerce_store_address_2', '' ) ),
+				sanitize_text_field( (string) get_option( 'woocommerce_store_city', '' ) ),
+				sanitize_text_field( (string) get_option( 'woocommerce_store_postcode', '' ) ),
+				sanitize_text_field( str_replace( ':', ', ', (string) get_option( 'woocommerce_default_country', '' ) ) ),
+			]
+		);
+		$socials = [];
+		foreach ( [ 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin' ] as $network ) {
+			$url = esc_url_raw( (string) ( $contact['socialLinks'][ $network ] ?? '' ) );
+			if ( $url ) $socials[ $network ] = $url;
+		}
+
+		return [
+			'phone' => $phone ? esc_url_raw( 'tel:' . $phone ) : '',
+			'email' => $email ? esc_url_raw( 'mailto:' . $email ) : '',
+			'whatsapp' => $whatsapp ? esc_url_raw( 'https://wa.me/' . $whatsapp ) : '',
+			'directions' => $address ? esc_url_raw( 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode( implode( ', ', $address ) ) ) : '',
+			'socials' => $socials,
+		];
 	}
 
 	private function search_context(): array {

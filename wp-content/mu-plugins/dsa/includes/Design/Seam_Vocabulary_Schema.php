@@ -215,6 +215,40 @@ final class Seam_Vocabulary_Schema {
 							],
 						],
 					],
+					'contactActions' => [
+						'status' => 'live',
+						'authority' => 'kiwe-design-context',
+						'attributes' => [
+							[
+								'attribute' => 'data-kiwe-contact',
+								'values' => [ 'phone', 'email', 'whatsapp', 'directions' ],
+								'purpose' => 'Turn a real link or button into a contact action backed by the approved Kiwe Design Context. Kiwe resolves the destination; page markup must not duplicate phone, email, WhatsApp, or address values.',
+								'example' => '<a data-kiwe-contact="whatsapp" data-kiwe-contact-message="Hello, I would like to know more." href="{kiwe_whatsapp_url}">Chat on WhatsApp</a>',
+							],
+							[
+								'attribute' => 'data-kiwe-contact-message',
+								'purpose' => 'Optional human-visible WhatsApp starter message. Kiwe URL-encodes it only after a visitor activates the control. Do not place private data or secrets here.',
+							],
+						],
+						'nativeRecipes' => [
+							'phone' => 'Prefer a Bricks-native link whose URL is {kiwe_store_phone_url}; retain data-kiwe-contact="phone" as semantic capability metadata.',
+							'email' => 'Prefer a Bricks-native link whose URL is {kiwe_store_email_url}; retain data-kiwe-contact="email" as semantic capability metadata.',
+							'whatsapp' => 'Prefer a Bricks-native link whose URL is {kiwe_whatsapp_url}; data-kiwe-contact-message may add a prefilled message at runtime.',
+							'directions' => 'Prefer a Bricks-native link whose URL is {kiwe_directions_url}. For a Bricks Map element, compose its native address control from the kiwe_store_address_* dynamic tags instead of embedding a map iframe.',
+						],
+					],
+					'socialProfiles' => [
+						'status' => 'live',
+						'authority' => 'kiwe-public-identity',
+						'attributes' => [
+							[
+								'attribute' => 'data-kiwe-social',
+								'values' => [ 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin' ],
+								'purpose' => 'Open the selected public business profile from Kiwe Design Context/DSA Links. Use only on a real link or button; Kiwe ignores unknown networks and missing URLs.',
+								'example' => '<a data-kiwe-social="instagram" href="{kiwe_instagram_url}">Instagram</a>',
+							],
+						],
+					],
 					'menuContext' => [
 						'status' => 'live',
 						'authority' => 'kiwe-menu-context',

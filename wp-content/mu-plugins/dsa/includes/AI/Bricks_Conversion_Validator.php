@@ -92,6 +92,10 @@ final class Bricks_Conversion_Validator {
 		'{woo_product_weight}',
 		'{kiwe_site_logo}',
 		'{kiwe_site_logo_inverse}',
+		'{kiwe_store_phone_url}',
+		'{kiwe_store_email_url}',
+		'{kiwe_whatsapp_url}',
+		'{kiwe_directions_url}',
 	];
 
 	private const KIWE_CAPABILITY_ATTRIBUTES = [
@@ -106,6 +110,9 @@ final class Bricks_Conversion_Validator {
 		'data-dsa-native-notification-request',
 		'data-kiwe-theme-toggle',
 		'data-kiwe-theme-status-target',
+		'data-kiwe-contact',
+		'data-kiwe-contact-message',
+		'data-kiwe-social',
 		'data-kiwe-query-template',
 		'data-kiwe-binding',
 	];

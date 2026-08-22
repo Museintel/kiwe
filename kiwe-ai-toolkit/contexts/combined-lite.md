@@ -119,6 +119,8 @@ Seam is also Kiwe's public Appsite attribute language. When a normal HTML/CSS/JS
 - `data-kiwe-save="wishlist|bookmark|auto"` plus optional `data-kiwe-save-id`, `data-kiwe-save-title`, `data-kiwe-save-url`, and `data-kiwe-save-image` for save controls.
 - `data-kiwe-notifications` plus optional `data-kiwe-notification-status-target` and `data-kiwe-notification-topic` for explicit visitor-click notification permission journeys.
 - `data-kiwe-theme-toggle` plus optional `data-kiwe-theme-status-target` for light/dark controls outside the dock.
+- `data-kiwe-contact="phone|email|whatsapp|directions"` plus optional `data-kiwe-contact-message` for canonical Design Context contact CTAs; use native Kiwe URL dynamic tags in Bricks.
+- `data-kiwe-social="facebook|instagram|x|youtube|pinterest|linkedin"` for canonical public business profiles stored in DSA Links/Design Context.
 - `data-kiwe-query-template` and `data-kiwe-binding` for sample regions that should become Bricks query loops or dynamic bindings later.
 - Real page section semantics for Menu context: stable `id`, official `data-role="section"` or `.seam-section`, and standard labels from `aria-label`, `aria-labelledby`, or visible headings. Do not add Kiwe-only fake sections just to feed the menu.
 

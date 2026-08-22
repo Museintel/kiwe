@@ -63,7 +63,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.20', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.21', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
@@ -103,7 +103,7 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.20', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.21', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
@@ -139,8 +139,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.20', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.20', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.21', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.21', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -266,7 +266,10 @@ function assert(condition, message) {
   const compileSmoke = JSON.parse(fs.readFileSync(path.join(root, 'tmp/compile-seamframework-smoke.json'), 'utf8'));
   assert(compileSmoke.ok, 'compile-seamframework smoke did not pass');
   assert(compileSmoke.validator.exitCode === 0, 'compiled Seam artifact validator did not pass');
-  assert(fs.existsSync(path.join(root, 'tmp/seam-compile-smoke/website/bricks-paste.html')), 'compiled Seam artifact missing');
+  const compiledSeamPath = path.join(root, 'tmp/seam-compile-smoke/website/bricks-paste.html');
+  assert(fs.existsSync(compiledSeamPath), 'compiled Seam artifact missing');
+  const compiledSeam = fs.readFileSync(compiledSeamPath, 'utf8');
+  assert(compiledSeam.includes('data-kiwe-contact="phone"') && compiledSeam.includes('data-kiwe-contact="whatsapp"') && compiledSeam.includes('data-kiwe-social="instagram"'), 'compiled Seam artifact did not infer safe contact/social capabilities');
 
   runNode(['tools/validate-output.cjs', '--help']);
   runNode(['tools/audit-output.cjs', '--help']);

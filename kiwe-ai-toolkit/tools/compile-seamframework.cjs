@@ -248,6 +248,28 @@ function enhanceMarkup(html, rootClass) {
   body = body.replace(/<((?:a|button))\b([^>]*)>([\s\S]{0,120}?)(account|profile|login)([\s\S]{0,120}?)<\/\1>/gi, (match) => /\bdata-dsa-open-module\s*=/i.test(match) ? match : match.replace(/^<([a-z]+)/i, '<$1 data-dsa-open-module="profile"'));
   body = body.replace(/<((?:a|button))\b([^>]*)>([\s\S]{0,120}?)(search)([\s\S]{0,120}?)<\/\1>/gi, (match) => /\bdata-dsa-open-module\s*=/i.test(match) ? match : match.replace(/^<([a-z]+)/i, '<$1 data-dsa-open-module="search"'));
   body = body.replace(/<((?:a|button))\b([^>]*)>([\s\S]{0,120}?)(menu)([\s\S]{0,120}?)<\/\1>/gi, (match) => /\bdata-dsa-open-module\s*=/i.test(match) ? match : match.replace(/^<([a-z]+)/i, '<$1 data-dsa-open-module="menu"'));
+  body = body.replace(/<a\b([^>]*)>/gi, (tag, attrs) => {
+    if (/\bdata-kiwe-(?:contact|social)\s*=/i.test(tag)) return tag;
+    const href = String(attrs || '').match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1] || '';
+    let contact = '';
+    if (/^tel:/i.test(href)) contact = 'phone';
+    else if (/^mailto:/i.test(href)) contact = 'email';
+    else if (/(?:wa\.me|api\.whatsapp\.com|whatsapp:\/\/)/i.test(href)) contact = 'whatsapp';
+    else if (/(?:google\.[^/]+\/maps|maps\.apple\.com|openstreetmap\.org)/i.test(href)) contact = 'directions';
+    if (contact) return addAttr(tag, 'data-kiwe-contact', contact);
+    const networks = [
+      ['instagram', /(?:^|\.)instagram\.com/i], ['facebook', /(?:^|\.)facebook\.com/i],
+      ['x', /(?:^|\.)(?:x|twitter)\.com/i], ['youtube', /(?:^|\.)(?:youtube\.com|youtu\.be)/i],
+      ['pinterest', /(?:^|\.)pinterest\.[a-z.]+/i], ['linkedin', /(?:^|\.)linkedin\.com/i]
+    ];
+    try {
+      const host = new URL(href, 'https://kiwe.invalid').hostname;
+      const network = networks.find((entry) => entry[1].test(host));
+      return network ? addAttr(tag, 'data-kiwe-social', network[0]) : tag;
+    } catch (_error) {
+      return tag;
+    }
+  });
   body = body.replace(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi, (match, attrs, inner) => {
     if (/\bdata-kiwe-save\s*=/i.test(match)) return match;
     if (/(?:wishlist|bookmark|\bsave\b|♡|♥)/i.test(`${attrs} ${inner}`)) {

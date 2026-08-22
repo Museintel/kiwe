@@ -25,6 +25,18 @@ Lead implication for Kiwe Framework:
 - Preview JavaScript must not become production authority for DSA-owned actions such as save, cart, checkout, search, auth, AI, or focus/scroll authority.
 - A Seam-built website/page is not a Kiwe AppShell theme. Kiwe AppShell themes remain the `ui-system/` concern.
 
+## Design Context contact and location bindings
+
+Keep these as native Bricks controls. Button, Text Link, and Icon elements may select a Kiwe Design Context action; the rendered element receives the matching public SEAM capability attribute.
+
+- phone: `data-kiwe-contact="phone"` with `{kiwe_store_phone_url}`;
+- email: `data-kiwe-contact="email"` with `{kiwe_store_email_url}`;
+- WhatsApp: `data-kiwe-contact="whatsapp"` with `{kiwe_whatsapp_url}` and optional `data-kiwe-contact-message`;
+- directions: `data-kiwe-contact="directions"` with `{kiwe_directions_url}`;
+- public profiles: `data-kiwe-social` with the matching `{kiwe_*_url}` social tag.
+
+For a Map element, keep the native Bricks Map element and compose its address from `{kiwe_store_address_1}`, `{kiwe_store_address_2}`, `{kiwe_store_city}`, `{kiwe_store_state}`, `{kiwe_store_postcode}`, and `{kiwe_store_country}`. Do not emit an iframe or page-owned map runtime.
+
 ## Relevant Bricks Anchors
 
 - `page.php` calls `Bricks\Frontend::render_content( $bricks_data )`.
