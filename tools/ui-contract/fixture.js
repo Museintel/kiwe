@@ -46,12 +46,14 @@
 			? '<div class="dsa-account-actions"><button class="dsa-panel__button">Downloads</button><button class="dsa-panel__button">Addresses</button><button class="dsa-panel__button">Password</button></div><button class="dsa-panel__button dsa-logout-button" aria-label="Log out">↪</button>'
 			: '<div class="fixture-context"><strong>' + ( screen === 'cart' ? 'Checkout' : 'Primary action' ) + '</strong><span>' + ( screen === 'cart' ? '$130.25' : 'Ready' ) + '</span></div>' );
 
-	if ( orientation === 'vertical' ) {
-		window.requestAnimationFrame( function () {
-			const panel = viewport.querySelector( ':scope > .dsa-panel' ).getBoundingClientRect();
-			surface.style.setProperty( '--dsa-context-left', panel.left.toFixed( 2 ) + 'px' );
-			surface.style.setProperty( '--dsa-context-width', panel.width.toFixed( 2 ) + 'px' );
-			surface.style.setProperty( '--dsa-context-top', Math.min( window.innerHeight - context.offsetHeight - 12, panel.bottom + 4 ).toFixed( 2 ) + 'px' );
-		} );
-	}
+	window.requestAnimationFrame( function () {
+		const anchor = orientation === 'vertical'
+			? viewport.querySelector( ':scope > .dsa-panel' ).getBoundingClientRect()
+			: dock.getBoundingClientRect();
+		surface.style.setProperty( '--dsa-context-left', anchor.left.toFixed( 2 ) + 'px' );
+		surface.style.setProperty( '--dsa-context-width', anchor.width.toFixed( 2 ) + 'px' );
+		if ( orientation === 'vertical' ) {
+			surface.style.setProperty( '--dsa-context-top', Math.min( window.innerHeight - context.offsetHeight - 12, anchor.bottom + 4 ).toFixed( 2 ) + 'px' );
+		}
+	} );
 }() );

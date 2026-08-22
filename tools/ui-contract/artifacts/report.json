@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-05T20:36:15.002Z",
+  "generatedAt": "2026-08-22T20:07:34.064Z",
   "results": [
     {
       "id": "phone-320-horizontal-menu-light",
@@ -17,15 +17,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 111.09375,
+          "left": 14,
+          "right": 113.09375,
           "top": 500,
           "bottom": 550,
           "width": 99.09375,
@@ -77,15 +77,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 111.09375,
+          "left": 14,
+          "right": 113.09375,
           "top": 500,
           "bottom": 550,
           "width": 99.09375,
@@ -137,15 +137,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 494,
           "bottom": 550,
           "width": 296,
@@ -197,15 +197,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 494,
           "bottom": 550,
           "width": 296,
@@ -257,15 +257,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 502,
           "bottom": 550,
           "width": 296,
@@ -274,8 +274,8 @@
         "panel": {
           "left": 12,
           "right": 308,
-          "top": 27.75,
-          "bottom": 474.25
+          "top": 19.75,
+          "bottom": 482.25
         },
         "viewport": {
           "width": 320,
@@ -317,15 +317,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 502,
           "bottom": 550,
           "width": 296,
@@ -334,8 +334,8 @@
         "panel": {
           "left": 12,
           "right": 308,
-          "top": 27.75,
-          "bottom": 474.25
+          "top": 19.75,
+          "bottom": 482.25
         },
         "viewport": {
           "width": 320,
@@ -377,15 +377,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 502,
           "bottom": 550,
           "width": 296,
@@ -437,15 +437,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 502,
           "bottom": 550,
           "width": 296,
@@ -497,15 +497,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 502,
           "bottom": 550,
           "width": 296,
@@ -562,15 +562,15 @@
       },
       "geometry": {
         "dock": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 570,
           "bottom": 626,
           "width": 296
         },
         "context": {
-          "left": 12,
-          "right": 308,
+          "left": 14,
+          "right": 310,
           "top": 502,
           "bottom": 550,
           "width": 296,
@@ -884,8 +884,8 @@
         "panel": {
           "left": 12,
           "right": 378,
-          "top": 176.25,
-          "bottom": 529.75
+          "top": 171.25,
+          "bottom": 534.75
         },
         "viewport": {
           "width": 390,
@@ -944,8 +944,8 @@
         "panel": {
           "left": 12,
           "right": 378,
-          "top": 176.25,
-          "bottom": 529.75
+          "top": 171.25,
+          "bottom": 534.75
         },
         "viewport": {
           "width": 390,
@@ -1494,8 +1494,8 @@
         "panel": {
           "left": 12,
           "right": 479,
-          "top": 142.25,
-          "bottom": 495.75
+          "top": 137.25,
+          "bottom": 500.75
         },
         "viewport": {
           "width": 491,
@@ -1554,8 +1554,8 @@
         "panel": {
           "left": 12,
           "right": 479,
-          "top": 142.25,
-          "bottom": 495.75
+          "top": 137.25,
+          "bottom": 500.75
         },
         "viewport": {
           "width": 491,
@@ -1916,16 +1916,16 @@
         "context": {
           "left": 12,
           "right": 111.09375,
-          "top": 645.5,
-          "bottom": 695.5,
+          "top": 580.5,
+          "bottom": 630.5,
           "width": 99.09375,
           "policy": "content"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 98.5,
-          "bottom": 613.5
+          "right": 756,
+          "top": 33.5,
+          "bottom": 548.5
         },
         "viewport": {
           "width": 768,
@@ -2036,16 +2036,16 @@
         "context": {
           "left": 12,
           "right": 111.09375,
-          "top": 645.5,
-          "bottom": 695.5,
+          "top": 580.5,
+          "bottom": 630.5,
           "width": 99.09375,
           "policy": "content"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 98.5,
-          "bottom": 613.5
+          "right": 756,
+          "top": 33.5,
+          "bottom": 548.5
         },
         "viewport": {
           "width": 768,
@@ -2155,17 +2155,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 581.5,
-          "bottom": 637.5,
-          "width": 674,
+          "right": 756,
+          "top": 516.5,
+          "bottom": 572.5,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 162.5,
-          "bottom": 549.5
+          "right": 756,
+          "top": 97.5,
+          "bottom": 484.5
         },
         "viewport": {
           "width": 768,
@@ -2275,17 +2275,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 581.5,
-          "bottom": 637.5,
-          "width": 674,
+          "right": 756,
+          "top": 516.5,
+          "bottom": 572.5,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 162.5,
-          "bottom": 549.5
+          "right": 756,
+          "top": 97.5,
+          "bottom": 484.5
         },
         "viewport": {
           "width": 768,
@@ -2344,8 +2344,8 @@
         "panel": {
           "left": 12,
           "right": 756,
-          "top": 91.25,
-          "bottom": 490.75
+          "top": 88.25,
+          "bottom": 493.75
         },
         "viewport": {
           "width": 768,
@@ -2395,17 +2395,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 587.75,
-          "bottom": 635.75,
-          "width": 674,
+          "right": 756,
+          "top": 525.75,
+          "bottom": 573.75,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 156.25,
-          "bottom": 555.75
+          "right": 756,
+          "top": 88.25,
+          "bottom": 493.75
         },
         "viewport": {
           "width": 768,
@@ -2464,8 +2464,8 @@
         "panel": {
           "left": 12,
           "right": 756,
-          "top": 91.25,
-          "bottom": 490.75
+          "top": 88.25,
+          "bottom": 493.75
         },
         "viewport": {
           "width": 768,
@@ -2515,17 +2515,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 587.75,
-          "bottom": 635.75,
-          "width": 674,
+          "right": 756,
+          "top": 525.75,
+          "bottom": 573.75,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 156.25,
-          "bottom": 555.75
+          "right": 756,
+          "top": 88.25,
+          "bottom": 493.75
         },
         "viewport": {
           "width": 768,
@@ -2635,17 +2635,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 616.015625,
-          "bottom": 664.015625,
-          "width": 674,
+          "right": 756,
+          "top": 551.015625,
+          "bottom": 599.015625,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 127.96875,
-          "bottom": 584.03125
+          "right": 756,
+          "top": 62.96875,
+          "bottom": 519.03125
         },
         "viewport": {
           "width": 768,
@@ -2755,17 +2755,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 616.015625,
-          "bottom": 664.015625,
-          "width": 674,
+          "right": 756,
+          "top": 551.015625,
+          "bottom": 599.015625,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 127.96875,
-          "bottom": 584.03125
+          "right": 756,
+          "top": 62.96875,
+          "bottom": 519.03125
         },
         "viewport": {
           "width": 768,
@@ -2880,17 +2880,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 603.71875,
-          "bottom": 651.71875,
-          "width": 674,
+          "right": 756,
+          "top": 531.828125,
+          "bottom": 579.828125,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 140.265625,
-          "bottom": 571.71875
+          "right": 756,
+          "top": 82.140625,
+          "bottom": 499.84375
         },
         "viewport": {
           "width": 768,
@@ -3010,17 +3010,17 @@
         },
         "context": {
           "left": 12,
-          "right": 686,
-          "top": 603.71875,
-          "bottom": 651.71875,
-          "width": 674,
+          "right": 756,
+          "top": 531.828125,
+          "bottom": 579.828125,
+          "width": 744,
           "policy": "dock"
         },
         "panel": {
           "left": 12,
-          "right": 686,
-          "top": 140.265625,
-          "bottom": 571.71875
+          "right": 756,
+          "top": 82.140625,
+          "bottom": 499.84375
         },
         "viewport": {
           "width": 768,
@@ -3134,18 +3134,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 257.09375,
-          "top": 750.1875,
-          "bottom": 800.1875,
+          "left": 193,
+          "right": 292.09375,
+          "top": 685.1875,
+          "bottom": 735.1875,
           "width": 99.09375,
           "policy": "content"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 173.796875,
-          "bottom": 718.1875
+          "left": 193,
+          "right": 1173,
+          "top": 108.796875,
+          "bottom": 653.1875
         },
         "viewport": {
           "width": 1366,
@@ -3254,18 +3254,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 257.09375,
-          "top": 750.1875,
-          "bottom": 800.1875,
+          "left": 193,
+          "right": 292.09375,
+          "top": 685.1875,
+          "bottom": 735.1875,
           "width": 99.09375,
           "policy": "content"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 173.796875,
-          "bottom": 718.1875
+          "left": 193,
+          "right": 1173,
+          "top": 108.796875,
+          "bottom": 653.1875
         },
         "viewport": {
           "width": 1366,
@@ -3374,18 +3374,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 645,
-          "bottom": 701,
+          "left": 193,
+          "right": 1173,
+          "top": 580,
+          "bottom": 636,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 279,
-          "bottom": 613
+          "left": 193,
+          "right": 1173,
+          "top": 214,
+          "bottom": 548
         },
         "viewport": {
           "width": 1366,
@@ -3494,18 +3494,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 645,
-          "bottom": 701,
+          "left": 193,
+          "right": 1173,
+          "top": 580,
+          "bottom": 636,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 279,
-          "bottom": 613
+          "left": 193,
+          "right": 1173,
+          "top": 214,
+          "bottom": 548
         },
         "viewport": {
           "width": 1366,
@@ -3614,18 +3614,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 666.71875,
-          "bottom": 714.71875,
+          "left": 193,
+          "right": 1173,
+          "top": 601.71875,
+          "bottom": 649.71875,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 257.25,
-          "bottom": 634.734375
+          "left": 193,
+          "right": 1173,
+          "top": 192.25,
+          "bottom": 569.734375
         },
         "viewport": {
           "width": 1366,
@@ -3734,18 +3734,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 666.71875,
-          "bottom": 714.71875,
+          "left": 193,
+          "right": 1173,
+          "top": 601.71875,
+          "bottom": 649.71875,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 257.25,
-          "bottom": 634.734375
+          "left": 193,
+          "right": 1173,
+          "top": 192.25,
+          "bottom": 569.734375
         },
         "viewport": {
           "width": 1366,
@@ -3854,18 +3854,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 710.875,
-          "bottom": 758.875,
+          "left": 193,
+          "right": 1173,
+          "top": 645.875,
+          "bottom": 693.875,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 213.09375,
-          "bottom": 678.890625
+          "left": 193,
+          "right": 1173,
+          "top": 148.09375,
+          "bottom": 613.890625
         },
         "viewport": {
           "width": 1366,
@@ -3974,18 +3974,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 710.875,
-          "bottom": 758.875,
+          "left": 193,
+          "right": 1173,
+          "top": 645.875,
+          "bottom": 693.875,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 213.09375,
-          "bottom": 678.890625
+          "left": 193,
+          "right": 1173,
+          "top": 148.09375,
+          "bottom": 613.890625
         },
         "viewport": {
           "width": 1366,
@@ -4099,18 +4099,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 701.5,
-          "bottom": 749.5,
+          "left": 193,
+          "right": 1173,
+          "top": 636.5,
+          "bottom": 684.5,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 222.484375,
-          "bottom": 669.5
+          "left": 193,
+          "right": 1173,
+          "top": 157.484375,
+          "bottom": 604.5
         },
         "viewport": {
           "width": 1366,
@@ -4229,18 +4229,18 @@
           "width": 56
         },
         "context": {
-          "left": 158,
-          "right": 1138,
-          "top": 701.5,
-          "bottom": 749.5,
+          "left": 193,
+          "right": 1173,
+          "top": 636.5,
+          "bottom": 684.5,
           "width": 980,
           "policy": "dock"
         },
         "panel": {
-          "left": 158,
-          "right": 1138,
-          "top": 222.484375,
-          "bottom": 669.5
+          "left": 193,
+          "right": 1173,
+          "top": 157.484375,
+          "bottom": 604.5
         },
         "viewport": {
           "width": 1366,
