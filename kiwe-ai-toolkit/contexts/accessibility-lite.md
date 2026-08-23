@@ -30,6 +30,8 @@ It does not create a new page, theme, DSA shell, Bricks JSON, WooCommerce logic,
 
 `/fix /accessibility` revises only the existing artifact lane that failed. It must not recreate the website, convert to Bricks, create a DSA theme, create a combined preview, or add documentation unless `/document` is present.
 
+`/audit /fix /accessibility` is one closed pass: inspect the complete current artifact, record findings, repair all safely discoverable failures, render the result in both modes at supported widths, and re-audit the repaired artifact. The human does not have to enumerate visible symptoms such as a clipped capsule label, an uneven card footer, or an overflowing heading when those defects can be discovered from the files or rendered page.
+
 For browser AIs, this lane is not a generic accessibility-consultant essay. Use Kiwe/Seam context first, make the smallest safe file changes, and return a compact pass/fail summary.
 
 If no current page, preview, artifact, or file map exists, stop and ask for it. Do not require a downloaded handoff when the AI is already working on the page in the same conversation.
@@ -46,10 +48,14 @@ If no current page, preview, artifact, or file map exists, stop and ask for it. 
 
 - Treat dark mode as a designed second expression of the same brand, not literal inversion and not a monotonous near-black preset.
 - Derive semantic roles first: canvas, raised/sunken surface, body/secondary/inverse text, brand/accent, borders, and status colors.
-- Preserve the brand hue where it remains usable, reduce glare with tiered tinted surfaces, and verify foreground/background contrast numerically.
+- Inspect the approved light design's personality before choosing dark values: brand-color distribution, warm/cool bias, imagery, hierarchy, decorative layers, borders, shadows, translucency, and focal accents.
+- Preserve the brand hue where it remains usable, retain meaningful accent distribution, reduce glare with tiered tinted surfaces, and verify foreground/background contrast numerically. Do not collapse every section, card, chip, and control into charcoal merely because the contrast score passes.
+- Rebalance borders, shadows, translucency, illustrations, and decorative layers for dark surfaces without recoloring protected logos or product imagery. The dark result must still be recognizably the same project.
 - Explicit light/dark values in an existing Framework profile remain authoritative. Generated dark values fill missing roles; they do not overwrite deliberate supplied values.
-- At Bricks level, use native light/dark palette values and `data-brx-theme`. At Kiwe level, bridge the same state to `data-kiwe-theme`. At raw HTML level, use semantic CSS custom properties and a visible, keyboard-operable toggle when requested.
+- At Bricks level, use native light/dark palette values and `data-brx-theme`. At Kiwe level, bridge the same state to `data-kiwe-theme`. At raw HTML level, use semantic CSS custom properties, honor the system preference, and provide a visible keyboard-operable toggle unless the human explicitly requests system-only behavior.
 - Bind enhanced Bricks variables at the converted template root under `:root[data-brx-theme="dark"]` so source-scoped variables cannot shadow the native Bricks palette.
+
+The deterministic validator measures evidence and rejects known hazards; it does not choose the art direction. The browser AI must use visual judgement to design and inspect the second mode while preserving the accepted light mode.
 
 ## Required output
 
@@ -158,12 +164,12 @@ Every visible text-bearing pill, badge, chip, button, card, tab, rail card, stat
 
 ## Native light/dark requirement
 
-Use Kiwe/Seam native theme state:
+Use the theme state native to the artifact:
 
 - `data-kiwe-theme="light"` / `data-kiwe-theme="dark"` for Kiwe/AppShell-aware surfaces;
 - `data-kiwe-theme-toggle` for page controls that toggle the site/app theme outside the dock;
 - `data-brx-theme="light"` / `data-brx-theme="dark"` when the target Bricks site exposes native frontend color mode; Bricks may set this on `:root`/`html` and emit dark palette variables under `:root[data-brx-theme="dark"]`;
-- `data-theme="light"` / `data-theme="dark"` only when the artifact is standalone and clearly maps back to Kiwe theme state;
+- `data-theme="light"` / `data-theme="dark"` for a framework-neutral standalone artifact; do not introduce Kiwe or Seam solely to implement accessibility;
 - `prefers-color-scheme: dark` may be a fallback, not the only proof when Kiwe theme state exists.
 
 Do not implement dark mode with filter/invert hacks. Do not create two unrelated palettes. Dark mode should be a controlled token remap of the same visual thesis.
@@ -172,7 +178,11 @@ Do not implement dark mode with filter/invert hacks. Do not create two unrelated
 
 This context is complete for `/fix /accessibility`; do not search the repository for a separate dark-mode contract.
 
-For a website/page or Bricks template, add dark proof to the existing root page class or root page element. Use the artifact's real page root class, for example `.nc-home`, `.bv-home`, or another existing root. Do not create a new wrapper just for dark mode.
+Add dark proof to the existing root page class or root page element. Use the artifact's real page root class; do not create a new wrapper just for dark mode.
+
+For framework-neutral raw HTML/CSS/JS, preserve and remap the project's own semantic variables under `html[data-theme="dark"]` (plus `prefers-color-scheme` fallback when appropriate). Do not add `--kiwe-*`, Seam classes, or Bricks selectors.
+
+For an artifact that already targets Kiwe, Seam, AppShell, or Bricks, use the integrated pattern below:
 
 Pattern:
 
@@ -218,45 +228,7 @@ html[data-brx-theme="dark"] .page-root-class,
 }
 ```
 
-For National-Chikki-style project variables, the expected mapping is:
-
-```css
-.nc-home,
-[data-kiwe-theme="light"] .nc-home,
-html[data-brx-theme="light"] .nc-home,
-:root[data-brx-theme="light"] .nc-home {
-  --nc-paper: var(--kiwe-color-surface);
-  --nc-surface: var(--kiwe-color-surface-raised);
-  --nc-surface-soft: var(--kiwe-color-surface-sunken);
-  --nc-ink: var(--kiwe-color-text);
-  --nc-muted: var(--kiwe-color-text-muted);
-  --nc-line: var(--kiwe-color-border);
-  --nc-brand: var(--kiwe-color-brand);
-  --nc-accent: var(--kiwe-color-accent);
-}
-
-html[data-kiwe-theme="dark"] .nc-home,
-[data-kiwe-theme="dark"] .nc-home,
-.nc-home[data-kiwe-theme="dark"],
-html[data-brx-theme="dark"] .nc-home,
-:root[data-brx-theme="dark"] .nc-home {
-  --kiwe-color-surface: #14100d;
-  --kiwe-color-surface-raised: #201915;
-  --kiwe-color-surface-sunken: #2a211c;
-  --kiwe-color-text: #fff6ea;
-  --kiwe-color-text-muted: #d9c5b2;
-  --kiwe-color-text-inverse: #201b18;
-  --kiwe-color-border: rgba(255, 246, 234, .18);
-  --nc-paper: var(--kiwe-color-surface);
-  --nc-surface: var(--kiwe-color-surface-raised);
-  --nc-surface-soft: var(--kiwe-color-surface-sunken);
-  --nc-ink: var(--kiwe-color-text);
-  --nc-muted: var(--kiwe-color-text-muted);
-  --nc-line: var(--kiwe-color-border);
-}
-```
-
-The concrete hex values may differ by brand, but the structure should not. Brand/accent colors may be adjusted for contrast, but keep them as `--kiwe-color-brand`, `--kiwe-color-accent`, and existing project variables rather than creating an unrelated dark palette.
+The concrete values differ by project. In integrated artifacts, brand/accent colors may be adjusted for contrast but remain mapped through `--kiwe-color-brand`, `--kiwe-color-accent`, and the artifact's existing project variables. In framework-neutral artifacts, retain the equivalent project-owned semantic variables without inventing Kiwe names.
 
 ## Bricks native theme-style alignment
 
@@ -295,11 +267,13 @@ Do not write element-level Bricks styles into the Framework profile. Page-specif
 
 1. Inspect only the supplied artifact files.
 2. Identify actual color surfaces and text-bearing components.
-3. Add/repair Kiwe token usage where hardcoded colors would break light/dark.
+3. Add or repair semantic color-token usage where hardcoded colors would break light/dark. Preserve project-local tokens in framework-neutral raw pages; use Kiwe/Seam tokens only when the artifact already targets Kiwe, Seam, AppShell, Framework, or Bricks integration.
 4. Add native dark-mode state proof to the existing preview/page.
 5. Inspect visible containment risks: overlapping text, labels hidden by overflow, clipped pills/chips/buttons, text squeezed inside bento cards, and text over gradients/images with no readable fallback.
-6. Create `accessibility/kiwe-accessibility-plan.json`.
-7. If `/document` was requested, create `accessibility/ACCESSIBILITY-NOTES.md` explaining:
+6. Compare every repeated component family—cards, product tiles, rail items, pills, tabs, and CTA groups—for consistent internal alignment. Different copy lengths must not arbitrarily move equivalent actions unless the source design intentionally proves that behavior.
+7. Inspect the complete page in light and dark modes at desktop, tablet, mobile, and narrow widths when render/browser tools are available; do not approve only the currently visible viewport.
+8. Create `accessibility/kiwe-accessibility-plan.json`.
+9. If `/document` was requested, create `accessibility/ACCESSIBILITY-NOTES.md` explaining:
    - source artifact;
    - token pairs;
    - light/dark behavior;
@@ -320,7 +294,9 @@ Blocking failures:
 - badges/chips/pills/buttons with no readable `on-*` foreground;
 - text-bearing titles, labels, pills, chips, buttons, tabs, prices, stats, or critical card text that is clipped, hidden, nowrap-ellipsized, or line-clamped inside a constrained box without an accessible full-text path;
 - bento/card/product rail layouts where visible text is cut off at supported widths and the fix requires Geometry/Seam sizing rather than a manual one-screen patch;
+- repeated card/rail/product components whose equivalent CTAs or footers drift because their content bodies do not share resilient flex/grid sizing;
 - `filter: invert()` dark mode;
+- a contrast-passing dark mode that erases the approved brand/accent hierarchy into a generic near-black palette;
 - hidden duplicate text layers used to fake contrast;
 - production/import artifacts containing preview-only color fixtures;
 - a Bricks target with no Kiwe/Bricks theme-style alignment when the output claims Bricks readiness.
@@ -329,8 +305,8 @@ Warnings/manual review:
 
 - gradients or images behind text without a solid fallback token;
 - semi-transparent text/background pairs that require composed contrast proof;
-- private project color variables not mapped in `tokenPairs`;
-- color literals that could be replaced with official Kiwe tokens;
+- project color variables not mapped in `tokenPairs` when their foreground/background relationship cannot otherwise be proven;
+- color literals that could be replaced with the artifact's existing semantic project tokens, or official Kiwe tokens when the artifact already targets Kiwe/Seam;
 - dark mode proven only by `prefers-color-scheme` when Kiwe theme state exists.
 - cards/rails with `overflow:hidden`, `overflow:clip`, `white-space:nowrap`, `text-overflow:ellipsis`, or `line-clamp` on non-critical body/excerpt text; these can be acceptable only with desktop/tablet/mobile/narrow render proof and accessible full text.
 
@@ -353,12 +329,14 @@ When static validation cannot prove text over image/gradient/transparent layers,
 
 1. Run or emulate `/audit /accessibility` on the supplied artifact.
 2. Fix only the files that failed the accessibility lane.
-3. Add native Kiwe/Bricks light/dark token state, preferably with `[data-kiwe-theme="light"]`, `[data-kiwe-theme="dark"]`, `:root[data-brx-theme="dark"]`, and `data-kiwe-theme-toggle` when the artifact has a theme toggle.
-4. Replace unsafe literal color pairs with Kiwe/Seam token pairs or documented project tokens mapped in the accessibility plan.
+3. Add the artifact-native light/dark token state: standalone `data-theme` plus system preference for framework-neutral raw pages; Kiwe/Bricks selectors and state bridges only for artifacts already targeting those systems.
+4. Replace unsafe literal color pairs with documented project tokens, or Kiwe/Seam tokens when that framework is already in scope, and map the pairs in the accessibility plan.
 5. Replace clipped critical text surfaces with wrapping, fluid Geometry/Seam sizing, safer min-block sizing, rail item width tokens, or accessible full text.
-6. Preserve Bricks dynamic tags, query-loop intent, Kiwe launcher attributes, and DSA/AppShell boundaries.
-7. Preserve the structural counts listed above unless a documented accessibility-token exception is necessary.
-8. Output only the revised existing artifact file(s) plus `accessibility/kiwe-accessibility-plan.json`; do not output notes unless `/document` was requested.
+6. Repair repeated-component alignment with resilient flex/grid structure, content growth, and shared footer placement; do not use fixed coordinates or copy-specific offsets.
+7. Preserve Bricks dynamic tags, query-loop intent, Kiwe launcher attributes, and DSA/AppShell boundaries.
+8. Preserve the structural counts listed above unless a documented accessibility-token exception is necessary.
+9. Render and inspect the complete repaired page in light and dark at desktop, tablet, mobile, and narrow widths when tools exist, then re-run the accessibility audit. If rendering is unavailable, report that proof as remaining manual review instead of claiming it passed.
+10. Output only the revised existing artifact file(s) plus `accessibility/kiwe-accessibility-plan.json`; do not output notes unless `/document` was requested.
 
 ## Final response contract
 

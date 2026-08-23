@@ -203,6 +203,8 @@ function assert(condition, message) {
   assert(ideateRoute.includes('Framework Profile JSON'), '/ideate route must reserve registered tokens for the later Framework Profile flow');
   assert(ideateRoute.includes('Responsive geometry ladder'), '/ideate route missing responsive geometry guidance');
   assert(ideateRoute.includes('ordinary conversation is the refinement interface'), '/ideate route missing conversational refinement');
+  assert(ideateRoute.includes('Creative independence guard') && ideateRoute.includes('have no house visual style'), '/ideate route missing creative-independence guard');
+  assert(ideateRoute.includes('self-contained `index.html`'), '/ideate route must support single-file browser artifacts');
   assert(noop.stop && noop.status === 'noop', 'preview noop diagnostic failed');
   assert(!missingProfile.stop, 'raw conversion must not require a Framework profile');
   assert(!ok.stop, 'valid bricks conversion diagnostic stopped');
@@ -336,6 +338,28 @@ function assert(condition, message) {
   assert(!contrast.ok && JSON.stringify(contrast).includes('accessibility_low_contrast_literal_pair'), 'invalid contrast fixture did not fail');
   const overflow = m.validateAccessibility(path.join(root, 'fixtures/accessibility-invalid-overflow'));
   assert(!overflow.ok && JSON.stringify(overflow).includes('accessibility_text_clipping_risk'), 'invalid overflow fixture did not fail');
+
+  const commandManifest = JSON.parse(fs.readFileSync(path.join(root, 'command-manifest.json'), 'utf8'));
+  const accessibilityChecks = commandManifest.commands['/fix /accessibility'].checks;
+  assert(accessibilityChecks.includes('brand-preserving dark art direction'), 'accessibility command missing brand-preserving dark-mode gate');
+  assert(accessibilityChecks.includes('repeated-component CTA and internal alignment'), 'accessibility command missing repeated-component alignment gate');
+  assert(accessibilityChecks.includes('full-page light/dark rendered inspection at desktop/tablet/mobile/narrow'), 'accessibility command missing full-page multi-viewport render gate');
+  assert(accessibilityChecks.some((check) => check.includes('only when that framework is already in scope')), 'accessibility command must not force Kiwe/Seam tokens into raw pages');
+
+  const largeArtifactDir = path.join(tmp, 'accessibility-large-embedded-artifact');
+  fs.mkdirSync(path.join(largeArtifactDir, 'accessibility'), { recursive: true });
+  fs.writeFileSync(path.join(largeArtifactDir, 'index.html'), `<!doctype html><html data-kiwe-theme="dark"><head><style>.button-label{height:24px;overflow:hidden;white-space:nowrap;color:#fff;background:#fff}</style></head><body><div>${'data:image/png;base64,' + 'A'.repeat(900_000)}</div><button class="button-label">Critical action label</button></body></html>`);
+  fs.writeFileSync(path.join(largeArtifactDir, 'accessibility/kiwe-accessibility-plan.json'), JSON.stringify({
+    schema: 'kiwe.accessibility-plan.v1',
+    source: { mode: 'website', artifact: 'large embedded browser artifact' },
+    modes: ['light', 'dark'],
+    tokenPairs: [],
+    manualReview: []
+  }));
+  const largeArtifact = m.validateAccessibility(largeArtifactDir);
+  const largeArtifactText = JSON.stringify(largeArtifact);
+  assert(!largeArtifact.ok && largeArtifactText.includes('accessibility_low_contrast_literal_pair'), 'large self-contained HTML was not scanned for contrast');
+  assert(!largeArtifact.ok && largeArtifactText.includes('accessibility_text_clipping_risk'), 'large self-contained HTML was not scanned for clipping');
 
   runNode(['tools/prepare-apply-plan.cjs', 'fixtures/bindings-valid', '--site-graph', 'fixtures/bindings-valid/site-graph.json']);
   runNode(['tools/validate-framework-profile.cjs', 'fixtures/framework-profile-valid']);

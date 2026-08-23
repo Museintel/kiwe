@@ -5,7 +5,10 @@ const PLAN_SCHEMA = 'kiwe.accessibility-plan.v1';
 const REPORT_SCHEMA = 'kiwe.accessibility-validation.v1';
 const TEXT_EXTENSIONS = new Set(['.html', '.htm', '.css', '.json']);
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'vendor', 'dist', 'build', '.next']);
-const MAX_FILE_BYTES = 700_000;
+// AI browser artifacts frequently embed image payloads in one self-contained HTML
+// file. Keep a bounded input limit, but scan their actual markup after removing
+// opaque data-URI bodies instead of silently skipping the complete artifact.
+const MAX_FILE_BYTES = 12_000_000;
 const DEFAULT_MIN_CONTRAST = 4.5;
 
 const NAMED_COLORS = new Map([
@@ -45,7 +48,10 @@ function readTextIfExists(file) {
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return '';
   const stat = fs.statSync(file);
   if (stat.size > MAX_FILE_BYTES) return '';
-  return fs.readFileSync(file, 'utf8');
+  return fs.readFileSync(file, 'utf8').replace(
+    /data:(?:image|audio|video|font)\/[a-z0-9.+-]+(?:;[a-z0-9=._-]+)*;base64,[a-z0-9+/=\s]+/gi,
+    'data:application/octet-stream;base64,[embedded-asset-omitted]'
+  );
 }
 
 function findPlanPath(target) {
@@ -120,8 +126,8 @@ function validatePlan(plan, planPath, findings) {
       add(findings, 'fail', 'accessibility_plan_pair_missing_foreground_background', `tokenPairs[${index}] must include foreground and background.`, planPath, `$.tokenPairs[${index}]`);
       continue;
     }
-    if (!/var\(\s*--kiwe-|^#|^rgb|^hsl|^oklch|^color-mix/i.test(fg) || !/var\(\s*--kiwe-|^#|^rgb|^hsl|^oklch|^color-mix/i.test(bg)) {
-      add(findings, 'warn', 'accessibility_plan_pair_not_tokenized', `tokenPairs[${index}] should use Kiwe/Seam token variables when possible.`, planPath, `$.tokenPairs[${index}]`);
+    if (!/var\(\s*--[a-z0-9_-]+|^#|^rgb|^hsl|^oklch|^color-mix/i.test(fg) || !/var\(\s*--[a-z0-9_-]+|^#|^rgb|^hsl|^oklch|^color-mix/i.test(bg)) {
+      add(findings, 'warn', 'accessibility_plan_pair_not_tokenized', `tokenPairs[${index}] should use semantic project or Kiwe/Seam token variables when possible.`, planPath, `$.tokenPairs[${index}]`);
     }
     const parsedFg = firstColor(fg);
     const parsedBg = firstColor(bg);
@@ -176,7 +182,7 @@ function parseDeclarations(body) {
   return declarations;
 }
 
-function scanCss(css, file, findings) {
+function scanCss(css, file, findings, options = {}) {
 	const withoutComments = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
 	for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
 		const selector = String(match[1] || '').trim();
@@ -192,7 +198,7 @@ function scanCss(css, file, findings) {
       add(findings, 'warn', 'accessibility_background_requires_manual_review', 'Text over image/gradient background needs an explicit audited solid fallback token.', file, selector);
     }
     const combined = `${selector}{${body}}`;
-    if (PRIVATE_PROJECT_COLOR_VAR_RE.test(combined) && !KIWE_TOKEN_RE.test(combined)) {
+    if (options.frameworkTarget && PRIVATE_PROJECT_COLOR_VAR_RE.test(combined) && !KIWE_TOKEN_RE.test(combined)) {
       add(findings, 'warn', 'accessibility_private_color_variable_without_kiwe_pair', 'Private project color variable appears without a nearby Kiwe token pair; map it through the accessibility plan or Framework profile.', file, selector);
     }
     reviewTextFitCss(selector, declarations, body, file, findings);
@@ -572,22 +578,29 @@ export function validateAccessibility(targetDir, options = {}) {
     const text = readTextIfExists(file);
     if (!text) continue;
     textByFile.push({ file, text });
+  }
+
+  const allText = textByFile.map((item) => item.text).join('\n');
+  const sourceMode = isPlainObject(plan) && isPlainObject(plan.source) ? String(plan.source.mode || '').toLowerCase() : '';
+  const bricksTarget = /bricks/.test(sourceMode) || /"(?:global_classes|global_variables|templateType)"\s*:|\bdata-brx-theme\b/i.test(allText);
+  const frameworkTarget = /^(?:theme|combined|framework|bricks-conversion)$/.test(sourceMode) || bricksTarget || KIWE_TOKEN_RE.test(allText);
+
+  for (const { file, text } of textByFile) {
     for (const block of extractCssBlocks(text, file)) {
-      scanCss(block.css, file, findings);
+      scanCss(block.css, file, findings, { frameworkTarget });
     }
     scanJsonAccessibility(text, file, findings);
   }
 
-  const allText = textByFile.map((item) => item.text).join('\n');
   const planModes = isPlainObject(plan) && Array.isArray(plan.modes) ? plan.modes.map((mode) => String(mode).toLowerCase()) : [];
   const hasDarkProof = DARK_PROOF_RE.test(allText) || planModes.includes('dark');
   if (!hasDarkProof) {
-    add(findings, 'fail', 'accessibility_missing_dark_mode_proof', 'Output must prove native dark-mode support through data-kiwe-theme, Bricks data-brx-theme, data-theme, prefers-color-scheme fallback, and token pairs. Use accessibility-lite.md dark-mode token remap recipe; do not search repo docs or ship light-only pages.', root);
+    add(findings, 'fail', 'accessibility_missing_dark_mode_proof', 'Output must prove dark-mode support through an artifact-native theme selector/toggle or system preference plus audited token pairs. Bricks/Kiwe targets must also bridge data-brx-theme/data-kiwe-theme as applicable; do not ship a light-only page.', root);
   }
-  if (!BRICKS_THEME_STYLE_RE.test(allText)) {
+  if (bricksTarget && !BRICKS_THEME_STYLE_RE.test(allText)) {
     add(findings, 'warn', 'accessibility_missing_bricks_theme_style_alignment', 'No Bricks theme-style/color-palette alignment was found. If this output targets Bricks, map Kiwe tokens to Bricks root color/background/link lanes.', root);
   }
-  if (!KIWE_TOKEN_RE.test(allText)) {
+  if (frameworkTarget && !KIWE_TOKEN_RE.test(allText)) {
     add(findings, 'warn', 'accessibility_missing_kiwe_color_tokens', 'No Kiwe/Seam token variables were found near color usage. Prefer official --kiwe-color-* tokens over isolated project color systems.', root);
   }
 

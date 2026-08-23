@@ -91,6 +91,14 @@ Tell the human once that a Kiwe Design Context export can pre-answer verified cl
 
 Do not turn the style choices into a template menu. They are vocabulary for the brief, not layout recipes. Create a distinct visual thesis from the full project context.
 
+## Creative independence guard
+
+- Kiwe, Seam, Appsite, Bricks, and the command vocabulary have no house visual style. Their presence must never imply bento grids, rounded cards, oversized editorial type, glass effects, marquees, gradients, dark canvases, or any other recurring composition.
+- Do not reuse an unrelated project's hero, section order, card geometry, typography pairing, motion language, or decorative motif merely because it worked before.
+- Avoid generic AI defaults unless the actual brief or references support them. Familiar components are allowed, but their composition, hierarchy, rhythm, and art direction must be justified by this project.
+- Synthesize one project-specific visual thesis from owner facts, preferences, reusable assets, references, and the requested outcome. State that thesis briefly before delivery so the human can judge the design direction rather than only its polish.
+- When refining an accepted draft, preserve its approved identity. Do not use a later command such as `/accessibility` as permission to normalize it into a Kiwe-looking or generic accessible template.
+
 ## Output contract
 
 Generate only the first homepage draft:
@@ -100,6 +108,8 @@ Generate only the first homepage draft:
 - `script.js`
 
 If the environment cannot return separate files, use three clearly labelled code blocks containing the complete files. Keep asset paths portable and relative. Use supplied assets when available; otherwise use honest placeholders that are easy to replace. Do not create Bricks JSON, Framework profiles, accessibility plans, Site Graph bindings, AppShell themes, reports, or ZIP files in `/ideate`.
+
+When the environment's artifact/canvas can preview or download only one file, one complete self-contained `index.html` with embedded CSS and JavaScript is also a valid raw-project output. This is a delivery format, not permission to flatten semantics or replace real assets with opaque runtime code. The standalone SEAM Compiler accepts combined or separate HTML/CSS/JS inputs.
 
 The draft must:
 

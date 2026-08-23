@@ -411,7 +411,7 @@
       "requires": ["existing artifact files and optional accessibility/kiwe-accessibility-plan.json"],
       "output": ["pass/fail findings only"],
       "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
-      "checks": ["WCAG contrast", "native light/dark proof", "Kiwe/Seam token pairs", "Bricks theme-style alignment", "critical text clipping/overflow", "Appsite capability attributes preserved"],
+      "checks": ["WCAG contrast", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text clipping/overflow", "repeated-component CTA and internal alignment", "Appsite capability attributes preserved when present"],
       "finalResponse": "PASS/FAIL with blocking errors and warnings."
     },
     "/fix /accessibility": {
@@ -439,9 +439,9 @@
           "--kiwe-color-brand",
           "--kiwe-color-accent"
         ],
-        "rule": "Remap existing project variables such as --nc-paper, --nc-surface, --nc-ink, --nc-muted, --nc-line, --nc-brand, and --nc-accent to Kiwe tokens for light and dark states. Do not invent a second unrelated palette."
+        "rule": "For artifacts already targeting Kiwe, Seam, AppShell, or Bricks, remap their existing project variables to Kiwe tokens for light and dark states without inventing a second palette. For framework-neutral raw HTML/CSS/JS, preserve project-owned semantic variables and use artifact-native data-theme state; do not introduce Kiwe, Seam, or Bricks solely for accessibility."
       },
-      "checks": ["WCAG contrast", "native light/dark proof", "Kiwe/Seam token pairs", "Bricks theme-style alignment", "critical text clipping/overflow", "reduced motion when motion exists"],
+      "checks": ["WCAG contrast", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text clipping/overflow", "repeated-component CTA and internal alignment", "reduced motion when motion exists"],
       "finalResponse": "Return fixed file(s), PASS/FAIL/WARN, files changed, and structural-drift summary. Keep it compact."
     },
     "/document": {
