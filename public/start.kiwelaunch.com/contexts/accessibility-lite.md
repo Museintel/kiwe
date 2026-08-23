@@ -9,9 +9,9 @@ Use this context only for:
 /fix /accessibility
 ```
 
-This is an independent accessibility lane. It works on the current raw HTML/CSS/JS page during or after `/ideate`, on a framework-neutral Bricks conversion, or on a Seam Framework/Bricks package. It never requires Seam Framework or Bricks. It covers semantics, keyboard/focus behavior, readable text, contrast, reflow/spacing resilience, reduced motion, touch targets, and a deliberate brand-aware light/dark color system.
+This is an independent accessibility lane. It works on the current raw HTML/CSS/JS page during or after `/ideate`, on a framework-neutral Bricks conversion, or on a Seam Framework/Bricks package. It never requires Seam Framework or Bricks. Accessibility is not shorthand for dark mode: it covers semantics, keyboard/focus behavior, readable text, contrast, responsive reflow and alignment, card flex/grid growth, overflow and overlap, reduced motion, touch targets, and a deliberate brand-aware light/dark color system.
 
-Bare `/accessibility` means: inspect the current working page/artifact, report the automated evidence score and manual checks separately, then make the smallest safe improvements to that same artifact when the human is actively refining it. During `/ideate`, preserve the accepted composition, content, motion language, and art direction. Do not replace the design with a generic accessibility template or a black-background inversion.
+Bare `/accessibility` means: inspect the complete current working page/artifact in light and dark at desktop, tablet, mobile, and narrow widths; report automated evidence and manual checks separately; then make the smallest safe improvements to that same artifact when the human is actively refining it. It must discover responsive defects without waiting for the human to name them—for example overflowing capsule text, clipped headings, overlapping layers, cards that cannot grow with content, inconsistent repeated-card CTA/footer alignment, unreachable horizontal content, or touch controls that collide. During `/ideate`, preserve the accepted composition, content, motion language, and art direction. Do not replace the design with a generic accessibility template or a black-background inversion.
 
 ## Boundary
 

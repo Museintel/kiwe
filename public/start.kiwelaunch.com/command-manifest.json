@@ -8,7 +8,7 @@
     "rawEntrypoint": "https://start.kiwelaunch.com/start.md",
     "machineEntrypoint": "https://start.kiwelaunch.com/entry.json",
     "freshDiscovery": "https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}",
-    "contractVersion": "7.24",
+    "contractVersion": "7.25",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -56,7 +56,7 @@
     "companion": "/usecompanion is optional and non-blocking. If MCP/tool access is absent, ask for KIWE_REST_BASE and KIWE_AI_KEY, call one bounded Companion status/context route, report COMPANION: connected with compact route/hash proof on success, or COMPANION: fallback and continue without it on failure.",
     "firstInteractionRoutes": "When files are supplied without a command, always show route choices after the recommended next command: Route A hosted SEAM Compiler, Route B local deterministic compiler, Route C Plugin REST authority bridge, Route D Plugin REST + Companion review. For raw HTML/CSS/JS, choose raw /convert /bricks or one-pass /convert /bricks /seamframework. Accessibility is a separate active stage after conversion or Framework, using /create /accessibility and /audit. Ask for API credentials only for Route C/D or /usecompanion/plugin proof.",
     "structure": "Fix commands preserve the existing artifact lane. They must not restart creative work, silently change lanes, or create unrelated packages.",
-    "redo": "/redo replaces the immediate previous command's generated candidate by rerunning that same canonical command from its original approved input snapshot under the freshly discovered current release. It is not /fix, must not use the failed output as source, and stops when the command/input snapshot is unavailable.",
+    "redo": "/redo declares that the immediate previous output failed. The token itself is sufficient failure notice: do not ask the human to diagnose it. Discard that candidate and rerun the same output-producing instruction from its original approved input snapshot under the freshly discovered current release. Inspect the failed candidate only as negative evidence, never as source. It is not localized /fix and stops when the instruction/input snapshot is unavailable.",
     "cacheFreshness": "Canonical start.kiwelaunch.com responses are no-store. Every later slash command must use fresh discovery with a unique nonce, then content-hash immutable routes. Verify route sourceHash and each resource sha256; never mix releases or trust a URL already opened in the conversation.",
     "commandGrammar": "SeamFlow commands are composable shell-like tokens, not fixed magic phrases. Parse the user line into one primary action, optional phase/target, and modifiers. Equivalent valid ordering may be normalized when unambiguous; unknown, contradictory, or lane-invalid combinations stop with KIWE_UNKNOWN_COMMAND or KIWE_WRONG_LANE.",
     "auditClosure": "SeamFlow closes only when the required /audit command for the detected current artifact lane returns PASS after any needed /fix loops. /audit /eachstep audits after each phase; /audit /fix /eachstep explicitly runs phase -> audit -> fix actual artifact if needed -> same audit again until PASS or NEEDS_INPUT. /audit /atend audits before final delivery; /audit /fix /atend explicitly repairs failed final lanes and reruns audits until PASS or NEEDS_INPUT.",
@@ -70,7 +70,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.24", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.25", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -81,7 +81,7 @@
       "KIWE_MANUAL_PASS_BLOCKED": "Only manual confidence is available for an importable lane.",
       "KIWE_PREVIOUS_AUDIT_MISSING": "/fix /previousaudit was requested without immediately previous audit findings.",
       "KIWE_PREVIOUS_OUTPUT_MISSING": "/previousoutput was requested but immediate previous output files are not accessible.",
-      "KIWE_PREVIOUS_COMMAND_MISSING": "/redo was requested but the immediate previous canonical command or its approved input snapshot is not accessible.",
+      "KIWE_PREVIOUS_COMMAND_MISSING": "/redo was requested but the immediate previous output-producing instruction or its approved input snapshot is not accessible.",
       "KIWE_CONTEXT_WINDOW_RISK": "Requested flow is too large for the current AI/session.",
       "KIWE_TOKEN_BUDGET_RISK": "Command is likely to waste tokens.",
       "KIWE_TOOL_UNAVAILABLE": "Required MCP/API/browser/validator tool unavailable.",
@@ -147,11 +147,11 @@
     "/redo": {
       "phase": "redo",
       "read": ["kiwe-ai-toolkit/entry.json", "kiwe-ai-toolkit/command-manifest.json"],
-      "requires": ["the immediate previous canonical slash command", "that command's exact approved input/source snapshot, attachments, brief, refinements and target scope in the current conversation"],
-      "must": ["fetch fresh discovery with a unique nonce", "load the current content-hash release route for the previous canonical command", "discard the previous generated candidate as authority", "rerun from the preserved approved input snapshot", "run the same validators required by the refreshed route"],
-      "output": ["one replacement candidate for the immediate previous command"],
-      "forbidden": ["localized patching that belongs to /fix", "using the failed candidate as source", "changing command scope", "searching old conversations or downloads", "mixing command releases", "claiming PASS without current validator proof"],
-      "finalResponse": "Replace only the immediate previous command's candidate and report the refreshed release/validator proof. If the previous command or approved input snapshot is unavailable or ambiguous, stop with ERROR: KIWE_PREVIOUS_COMMAND_MISSING."
+      "requires": ["the immediate previous output-producing instruction or canonical slash command", "that instruction's exact approved input/source snapshot, attachments, brief, refinements and target scope in the current conversation"],
+      "must": ["treat /redo itself as sufficient notice that the last output failed; do not request a failure explanation", "fetch fresh discovery with a unique nonce", "load the current content-hash release route for the previous producing instruction", "discard the previous generated candidate as authority", "inspect the failed candidate only as negative evidence to avoid repeating its observable failure", "regenerate from the preserved approved input snapshot", "run every validator and render proof required by the refreshed route"],
+      "output": ["one newly generated replacement candidate for the immediate previous output"],
+      "forbidden": ["asking the human why the output failed before rerunning", "localized patching that belongs to /fix", "using the failed candidate as source", "changing instruction scope", "searching old conversations or downloads", "mixing command releases", "returning the same candidate without new execution", "claiming PASS without current validator proof"],
+      "finalResponse": "Replace only the immediate previous output and report the refreshed release/validator proof. If the previous producing instruction or approved input snapshot is unavailable or ambiguous, stop with ERROR: KIWE_PREVIOUS_COMMAND_MISSING."
     },
     "/execute /stepbystep": {
       "phase": "execute",
@@ -408,9 +408,10 @@
       "phase": "accessibility-current-artifact",
       "read": ["kiwe-ai-toolkit/contexts/accessibility-lite.md"],
       "requires": ["current page, preview, artifact, or file map; the active /ideate page qualifies"],
-      "output": ["SEAM automated accessibility score with automated coverage", "manual checks listed outside the score", "minimal same-lane repairs when needed"],
+      "must": ["inspect the complete artifact in light and dark at desktop, tablet, mobile and narrow widths when render tools are available", "discover responsive defects without requiring the human to name them", "check card flex/grid growth, repeated-component sizing and CTA/footer alignment", "check wrapping, clipping, overlap, viewport overflow and touch-control collisions", "preserve accepted composition and art direction"],
+      "output": ["SEAM automated accessibility score with automated coverage", "responsive reflow/alignment findings", "manual checks listed outside the score", "minimal same-lane repairs when needed"],
       "forbidden": ["forcing Seam Framework", "forcing Bricks conversion", "generic redesign", "dark-mode inversion", "unmeasured compliance claims", "ZIP"],
-      "finalResponse": "Return score/evidence, files changed, structural drift, and remaining manual checks."
+      "finalResponse": "Return score/evidence across standards, responsive usability and light/dark modes; include files changed, structural drift, and remaining manual checks."
     },
     "/create /accessibility": {
       "phase": "create",
@@ -426,7 +427,7 @@
       "requires": ["existing artifact files and optional accessibility/kiwe-accessibility-plan.json"],
       "output": ["pass/fail findings only"],
       "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
-      "checks": ["WCAG contrast", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text clipping/overflow", "repeated-component CTA and internal alignment", "Appsite capability attributes preserved when present"],
+      "checks": ["WCAG contrast and semantic interaction", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text wrapping, clipping, overlap and viewport overflow", "card flex/grid growth and equal-height resilience", "repeated-component CTA/footer and internal alignment", "touch target size and collision", "Appsite capability attributes preserved when present"],
       "closureValidator": "For combined /audit /fix /accessibility, run validate-accessibility.cjs <artifact-root> --closure after the repair and re-audit. A non-zero or unavailable result must not be labelled PASS or complete; return any corrected candidate artifact as STATUS: NEEDS_INPUT with the missing proof.",
       "finalResponse": "PASS/FAIL with blocking errors and warnings."
     },
@@ -457,7 +458,7 @@
         ],
         "rule": "For artifacts already targeting Kiwe, Seam, AppShell, or Bricks, remap their existing project variables to Kiwe tokens for light and dark states without inventing a second palette. For framework-neutral raw HTML/CSS/JS, preserve project-owned semantic variables and use artifact-native data-theme state; do not introduce Kiwe, Seam, or Bricks solely for accessibility."
       },
-      "checks": ["WCAG contrast", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text clipping/overflow", "repeated-component CTA and internal alignment", "reduced motion when motion exists"],
+      "checks": ["WCAG contrast and semantic interaction", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text wrapping, clipping, overlap and viewport overflow", "card flex/grid growth and equal-height resilience", "repeated-component CTA/footer and internal alignment", "touch target size and collision", "reduced motion when motion exists"],
       "closureValidator": "Run validate-accessibility.cjs <artifact-root> --closure. Require plan.closure, brand-preserving dark review, repeated-component review, and passed light/dark proof at desktop/tablet/mobile/narrow. A non-zero or unavailable result must not be labelled PASS or complete; return the corrected candidate artifact as STATUS: NEEDS_INPUT with the missing proof.",
       "finalResponse": "Return fixed file(s), PASS/FAIL/WARN, files changed, and structural-drift summary. Keep it compact."
     },

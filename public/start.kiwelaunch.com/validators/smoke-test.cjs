@@ -63,7 +63,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.24', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.25', 'entry contract mismatch');
   assert(entry.freshness.discoveryTemplate.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'entry missing nonce-based fresh discovery');
   assert(entry.freshness.integrity.includes('sha256'), 'entry missing pinned-resource integrity rule');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
@@ -82,6 +82,9 @@ function assert(condition, message) {
   assert(entry.flows.secondPassCommands['/fix /previousaudit'], 'missing /fix /previousaudit in entry');
   assert(entry.flows.secondPassCommands['/audit /previousoutput'], 'missing /audit /previousoutput in entry');
   assert(entry.flows.secondPassCommands['/fix /previousoutput'], 'missing /fix /previousoutput in entry');
+  assert(entry.flows.secondPassCommands['/redo'].includes('previous output failed') && entry.flows.secondPassCommands['/redo'].includes('Do not ask why'), '/redo must treat the command itself as sufficient failure notice');
+  assert(entry.accessibilityRule.appliesTo.includes('/accessibility') && entry.accessibilityRule.appliesTo.includes('/create /accessibility'), 'accessibility rule must cover bare and create commands');
+  assert(entry.accessibilityRule.checks.some((item) => item.includes('card flex/grid growth')) && entry.accessibilityRule.checks.some((item) => item.includes('viewport overflow')), 'accessibility rule missing responsive usability checks');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_AUDIT_MISSING, 'entry missing previous audit error code');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_OUTPUT_MISSING, 'entry missing previous output error code');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_COMMAND_MISSING, 'entry missing previous command error code');
@@ -109,7 +112,7 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.24', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.25', 'manifest contract mismatch');
   assert(manifest.entry.freshDiscovery.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'manifest missing nonce-based discovery URL');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
@@ -122,6 +125,8 @@ function assert(condition, message) {
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
   assert(manifest.commands['/audit /eachstep'], 'manifest missing /audit /eachstep');
   assert(manifest.commands['/audit /atend'], 'manifest missing /audit /atend');
+  assert(manifest.commands['/redo'].must.some((item) => item.includes('do not request a failure explanation')), '/redo manifest must not require user diagnosis');
+  assert(manifest.commands['/accessibility'].must.some((item) => item.includes('card flex/grid growth')) && manifest.commands['/accessibility'].must.some((item) => item.includes('viewport overflow')), 'bare accessibility manifest missing responsive layout checks');
   assert(manifest.commands['/audit /allattached'], 'manifest missing /audit /allattached');
   assert(manifest.commands['/fix /allflow'], 'manifest missing /fix /allflow');
   assert(manifest.commands['/audit /allattached /allflow'], 'manifest missing /audit /allattached /allflow');
@@ -150,8 +155,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.24', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.24', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.25', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.25', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -242,7 +247,7 @@ function assert(condition, message) {
   assert(redoMissing.stop && redoMissing.code === 'previous_command_missing', '/redo must stop without a previous command input snapshot');
   assert(!redoOk.stop && redoOk.kind === 'redo', '/redo should accept an accessible immediate previous command snapshot');
   assert(redoScopeChange.stop && redoScopeChange.code === 'redo_scope_change_blocked', '/redo must reject appended scope changes');
-  assert(redoRoute.includes('fresh discovery') && redoRoute.includes('content-hash release') && redoRoute.includes('KIWE_PREVIOUS_COMMAND_MISSING'), '/redo route missing fresh replacement contract');
+  assert(redoRoute.includes('sufficient notice') && redoRoute.includes('negative evidence') && redoRoute.includes('fresh discovery') && redoRoute.includes('content-hash') && redoRoute.includes('KIWE_PREVIOUS_COMMAND_MISSING'), '/redo route missing failure-signal and fresh replacement contract');
   assert(broadSiteGraph.stop && broadSiteGraph.code === 'dynamic_target_missing', 'broad /usesitegraph must ask for an explicit /for target');
   assert(!previewOnly.stop, 'targeted preview-data SiteGraph command should pass with artifact and evidence');
   assert(!designContext.stop, 'file-only design-context command should pass with its export');
@@ -393,7 +398,8 @@ function assert(condition, message) {
   const commandManifest = JSON.parse(fs.readFileSync(path.join(root, 'command-manifest.json'), 'utf8'));
   const accessibilityChecks = commandManifest.commands['/fix /accessibility'].checks;
   assert(accessibilityChecks.includes('brand-preserving dark art direction'), 'accessibility command missing brand-preserving dark-mode gate');
-  assert(accessibilityChecks.includes('repeated-component CTA and internal alignment'), 'accessibility command missing repeated-component alignment gate');
+  assert(accessibilityChecks.some((check) => check.includes('repeated-component CTA/footer')), 'accessibility command missing repeated-component alignment gate');
+  assert(accessibilityChecks.some((check) => check.includes('card flex/grid growth')), 'accessibility command missing card growth/reflow gate');
   assert(accessibilityChecks.includes('full-page light/dark rendered inspection at desktop/tablet/mobile/narrow'), 'accessibility command missing full-page multi-viewport render gate');
   assert(accessibilityChecks.some((check) => check.includes('only when that framework is already in scope')), 'accessibility command must not force Kiwe/Seam tokens into raw pages');
 

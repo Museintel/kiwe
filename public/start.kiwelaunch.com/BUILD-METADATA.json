@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-registry-build.v1",
-  "contractVersion": "7.24",
-  "releaseId": "7.24-058046711fd6",
-  "sourceHash": "sha256:058046711fd68bc5727b762dd38019ad3cd59ab429e80e509bf69128195ea69d",
+  "contractVersion": "7.25",
+  "releaseId": "7.25-a818d0ce1642",
+  "sourceHash": "sha256:a818d0ce1642aed2f712ee4fd6f7a967e5d945511d1fa72f85d3c4de4660dd81",
   "generatedFrom": [
     "kiwe-ai-toolkit/command-manifest.json",
     "kiwe-ai-toolkit/contexts/accessibility-lite.md",

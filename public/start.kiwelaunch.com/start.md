@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.24`
+Contract version: `7.25`
 Updated: `2026-08-23`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.24
+SeamFlow contract: 7.25
 ```
 
 Then do one of these:
@@ -178,7 +178,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.24
+SeamFlow contract: 7.25
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -263,7 +263,7 @@ When a browser AI has already produced one or more output files, the human shoul
 /audit /previousoutput -> audit the files generated in the immediate previous AI output in this same session
 /fix /previousoutput  -> fix the files generated in the immediate previous AI output, using matching audit/fix loops
 /fix /previousaudit   -> fix only the failures from the immediately previous audit result, then rerun that same audit scope
-/redo                 -> discard the immediate previous command's generated candidate and rerun that same canonical command from its original approved input snapshot under the freshly discovered current release
+/redo                 -> declare that the immediate previous output failed, discard it, and rerun the same output-producing instruction from its original approved input snapshot under the freshly discovered current release
 ```
 
 These are not creative commands. They must not rebuild from scratch, redesign the page, add DSA/combined output, create docs, or use stale files. They are the browser-AI second-try loop: inspect current files, audit all relevant lanes, fix actual failures, and stop only at PASS or NEEDS_INPUT.
@@ -272,7 +272,7 @@ These are not creative commands. They must not rebuild from scratch, redesign th
 
 `/fix /previousaudit` requires the previous audit findings to be present in the current conversation or supplied as a file. If the previous audit is missing, ambiguous, stale, or not tied to the current artifacts, stop with `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`.
 
-`/redo` is replacement, not repair. It reruns only the immediately previous canonical slash command from the exact input/source snapshot, brief, attachments, approved refinements, and target scope that command received. It must first perform fresh discovery and load the current content-hash release route. Discard the previous command's generated candidate as authority, but do not discard the approved input snapshot. Do not broaden scope, silently redesign accepted earlier work, reuse the failed output as source, or interpret `/redo` as `/fix`. If the previous command or its input snapshot is unavailable, ambiguous, mutated, or outside the current conversation, stop with `ERROR: KIWE_PREVIOUS_COMMAND_MISSING`. Use `/fix` instead when the human wants localized changes to the existing output.
+`/redo` is the human's complete failure signal: the immediately previous output failed and must be replaced. Do not require the human to diagnose, explain, or itemize the failure. Rerun only the immediately previous output-producing instruction or canonical slash command from the exact input/source snapshot, brief, attachments, approved refinements, and target scope it received. First perform fresh discovery and load the current content-hash release route. Discard the previous candidate as authority; it may be inspected only as negative evidence so the same observable failure is not repeated. Regenerate from the approved input snapshot and rerun every validator/render proof required by the refreshed route. Do not broaden scope, silently redesign accepted earlier work, reuse the failed output as source, or interpret `/redo` as a localized `/fix`. If the previous producing instruction or its input snapshot is unavailable, ambiguous, mutated, or outside the current conversation, stop with `ERROR: KIWE_PREVIOUS_COMMAND_MISSING`. Use `/fix` instead when the human wants to preserve and locally patch the existing output.
 
 If the human writes non-canonical wording such as `/fix /previouspass`, do not execute it and do not treat it as a hidden alias. Return `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`, explain that the intended canonical command is `/fix /previousaudit`, and suggest `/audit /allattached /allflow` first when no previous audit findings exist.
 
@@ -290,7 +290,7 @@ KIWE_VALIDATOR_PROOF_MISSING  -> command claims PASS without executable validato
 KIWE_MANUAL_PASS_BLOCKED      -> command needs deterministic audit but only manual confidence is available; stop or report WARN
 KIWE_PREVIOUS_AUDIT_MISSING   -> /fix /previousaudit was requested without the immediately previous audit findings
 KIWE_PREVIOUS_OUTPUT_MISSING  -> /previousoutput was requested but the immediate previous output files are not accessible
-KIWE_PREVIOUS_COMMAND_MISSING -> /redo was requested but the immediate previous canonical command or its approved input snapshot is not accessible
+KIWE_PREVIOUS_COMMAND_MISSING -> /redo was requested but the immediate previous output-producing instruction or its approved input snapshot is not accessible
 KIWE_CONTEXT_WINDOW_RISK      -> requested full flow is too large for the current AI/session; suggest /execute /stepbystep /audit /eachstep
 KIWE_TOKEN_BUDGET_RISK        -> command is likely to waste tokens; suggest a smaller command or /audit /allattached first
 KIWE_TOOL_UNAVAILABLE         -> MCP/API/browser/validator tool unavailable; use raw route if possible, otherwise stop
@@ -306,7 +306,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.24
+SeamFlow contract: 7.25
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -372,7 +372,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.24
+SeamFlow contract: 7.25
 Command:
 Artifact classification:
 Files returned:
@@ -416,12 +416,12 @@ If a supposedly cleared Style Manager page still renders styled because `bricks-
 
 ## Accessibility flow
 
-Bare `/accessibility`, `/audit /accessibility`, and `/fix /accessibility` are independent raw-, Bricks-, and Framework-stage tools. They must check:
+Bare `/accessibility`, `/create /accessibility`, `/audit /accessibility`, and `/fix /accessibility` are independent raw-, Bricks-, and Framework-stage tools. Accessibility here means standards, inclusive interaction, visually readable light/dark modes, and responsive usability—not dark mode alone. They must check:
 
 - WCAG contrast for text, pills, cards, focus, controls, and foreground/background pairs;
 - light and dark proof using Kiwe `data-kiwe-theme` and Bricks `data-brx-theme`;
 - reduced motion when motion exists;
-- critical clipping/overflow where visible text becomes unreadable or unreachable;
+- responsive reflow at desktop, tablet, mobile, and narrow widths, including card flex/grid growth, equal-height component behavior, CTA/footer alignment, wrapping, min-size, viewport overflow, overlap, and critical clipping where visible text becomes unreadable or unreachable;
 - preservation of Seam classes, Kiwe capability attributes, Bricks dynamic tags, query-loop intent, DSA selectors, and AppShell boundaries.
 
 Accessibility fixes should use existing tokens and classes first. Add new project variables only when a real design value is missing and name them clearly.

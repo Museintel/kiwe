@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.24',
+    contractVersion: '7.25',
     freshness: {
       discoveryTemplate: 'https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}',
       rule: 'Before every later slash command, fetch fresh discovery with a new nonce and use only its content-hash immutable command route and pinned resource hashes.'
@@ -532,7 +532,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.24',
+      mustReport: 'SeamFlow contract: 7.25',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -632,9 +632,9 @@ export function listCommands() {
       },
       {
         command: '/redo',
-        purpose: 'Replace the immediate previous command candidate by rerunning that same canonical command from its preserved approved input snapshot under the freshly discovered current release.',
-        requires: ['immediate previous canonical command and its approved input snapshot accessible in the current conversation'],
-        output: 'one replacement candidate; not a localized /fix'
+        purpose: 'Declare that the immediate previous output failed, discard it, and newly rerun the same output-producing instruction from its preserved approved input snapshot under the freshly discovered current release without asking the human to diagnose it.',
+        requires: ['immediate previous output-producing instruction and its approved input snapshot accessible in the current conversation'],
+        output: 'one newly generated replacement candidate; not a localized /fix'
       },
       {
         command: '/execute /stepbystep',
@@ -1440,7 +1440,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
         code: 'redo_scope_change_blocked',
         kind: 'redo',
         normalizedCommand: '/redo',
-        message: '`/redo` reruns the immediate previous canonical command exactly. Do not append a new lane or target; use the new command directly when scope should change.',
+        message: '`/redo` declares that the immediate previous output failed and reruns its producing instruction exactly. Do not append a new lane or target; use the new command directly when scope should change.',
         suggestions: ['/redo', 'Use /fix for localized repair.', 'Send the intended new canonical command when changing scope.'],
         boundaries: ['Redo is replacement, not repair or scope expansion.', 'Do not combine command releases or use the failed candidate as source.']
       });
@@ -1451,7 +1451,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
         code: 'previous_command_missing',
         kind: 'redo',
         normalizedCommand: '/redo',
-        message: '`/redo` needs the immediate previous canonical command and the exact approved input/source snapshot that command received in this conversation.',
+        message: '`/redo` needs the immediate previous output-producing instruction and the exact approved input/source snapshot it received in this conversation.',
         suggestions: ['Restore or attach the previous command input snapshot.', 'Resend the original canonical command.', 'Use /fix if the existing candidate should be repaired in place.'],
         boundaries: ['Do not search old conversations, downloads, or stale output.', 'Do not treat the previous generated candidate as the approved source snapshot.']
       });
@@ -1461,7 +1461,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       code: 'redo_current_release',
       kind: 'redo',
       normalizedCommand: '/redo',
-      message: 'Freshly discover the current content-hash release, recover the immediate previous canonical command and its approved input snapshot, discard its generated candidate, and rerun the same command with current route validators.'
+      message: 'Treat /redo as sufficient notice that the immediate previous output failed. Freshly discover the current content-hash release, recover its producing instruction and approved input snapshot, discard the candidate, inspect it only as negative evidence, and newly rerun the instruction with current route validators and render proof.'
     });
   }
 
@@ -2200,11 +2200,11 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       '',
       'Before doing any work, perform fresh discovery by fetching `https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}` with a nonce not used earlier in this conversation.',
       '',
-      'Verify its `contractVersion`, `releaseId`, and `sourceHash`. Recover the immediate previous canonical slash command and its exact approved input/source snapshot, attachments, brief, accepted refinements, and target scope. Load that command from its content-hash release URL in `immutableCommands` and verify every listed resource `sha256`.',
+      'Treat `/redo` itself as sufficient notice that the immediate previous output failed; do not ask the human to diagnose it. Verify discovery `contractVersion`, `releaseId`, and `sourceHash`. Recover the previous output-producing instruction or canonical slash command and its exact approved input/source snapshot, attachments, brief, accepted refinements, and target scope. Load its command route from the content-hash URL in `immutableCommands` and verify every listed resource `sha256`.',
       '',
-      'Discard the previous command\'s generated candidate as authority, but preserve the approved input snapshot. Rerun the same command under the newly discovered release and execute the same current validators. Do not convert `/redo` into `/fix`, do not patch the failed candidate, and do not broaden scope.',
+      'Discard the previous candidate as authority, but preserve the approved input snapshot. Inspect the failed candidate only as negative evidence so its observable failure is not repeated. Newly regenerate from the approved input under the discovered release and execute every required validator/render proof. Do not convert `/redo` into localized `/fix`, do not use the failed candidate as source, and do not broaden scope.',
       '',
-      'If the previous command or input snapshot is unavailable, ambiguous, mutated, or outside this conversation, stop with `STATUS: NEEDS_INPUT` and `ERROR: KIWE_PREVIOUS_COMMAND_MISSING`.'
+      'If the previous producing instruction or input snapshot is unavailable, ambiguous, mutated, or outside this conversation, stop with `STATUS: NEEDS_INPUT` and `ERROR: KIWE_PREVIOUS_COMMAND_MISSING`.'
     ].join('\n').trim() + '\n';
   }
 

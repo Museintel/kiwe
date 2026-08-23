@@ -14,7 +14,7 @@ Use the manifest first when available. It is intentionally smaller than this pro
 
 For every later slash command in a continuing AI conversation, first fetch `https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={new-nonce}` with a nonce never used earlier in that conversation. Verify `contractVersion`, `releaseId`, and `sourceHash`, then load only the chosen content-hash URL from `immutableCommands` and verify each listed resource `sha256`. Never mix canonical cache responses, old release URLs, or remembered command context.
 
-`/redo` reruns the immediately previous canonical slash command from its exact approved input/source snapshot under that freshly discovered release. The previous generated candidate is discarded as authority. `/redo` is not `/fix`; it does not patch the failed candidate or change scope. If the previous command/input snapshot is unavailable, stop with `KIWE_PREVIOUS_COMMAND_MISSING`.
+`/redo` declares that the immediately previous output failed. That one token is enough; do not ask the human to diagnose the failure. Rerun the previous output-producing instruction or canonical slash command from its exact approved input/source snapshot under the freshly discovered release. Discard the previous candidate as authority; inspect it only as negative evidence to avoid repeating the same visible failure. Regenerate from the approved input and rerun the refreshed route's validator/render proof. `/redo` is not localized `/fix` and does not change scope. If the prior producing instruction or input snapshot is unavailable, stop with `KIWE_PREVIOUS_COMMAND_MISSING`.
 
 ## Core principle
 
