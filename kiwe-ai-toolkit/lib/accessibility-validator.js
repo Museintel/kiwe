@@ -57,7 +57,8 @@ function readTextIfExists(file) {
 function findPlanPath(target) {
   const resolved = path.resolve(target || '.');
   if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
-    return path.basename(resolved).toLowerCase().includes('accessibility') ? resolved : '';
+    const basename = path.basename(resolved).toLowerCase();
+    return path.extname(resolved).toLowerCase() === '.json' && basename.includes('accessibility') ? resolved : '';
   }
   const candidates = [
     path.join(resolved, 'accessibility', 'kiwe-accessibility-plan.json'),
@@ -99,7 +100,51 @@ function parseJson(file, findings) {
   }
 }
 
-function validatePlan(plan, planPath, findings) {
+function validateClosure(plan, planPath, findings) {
+  const closure = isPlainObject(plan.closure) ? plan.closure : null;
+  if (!closure) {
+    add(findings, 'fail', 'accessibility_closure_missing', 'A closure audit requires plan.closure evidence for audit -> fix -> render -> re-audit.', planPath, '$.closure');
+    return;
+  }
+
+  if (String(closure.command || '').trim() !== '/audit /fix /accessibility') {
+    add(findings, 'fail', 'accessibility_closure_command_invalid', 'plan.closure.command must be /audit /fix /accessibility.', planPath, '$.closure.command');
+  }
+  if (String(closure.auditFixReaudit || '').toLowerCase() !== 'passed') {
+    add(findings, 'fail', 'accessibility_closure_reaudit_missing', 'Closure must record auditFixReaudit as passed after repairing the actual artifact.', planPath, '$.closure.auditFixReaudit');
+  }
+  if (String(closure.darkModeArtDirection || '').toLowerCase() !== 'passed') {
+    add(findings, 'fail', 'accessibility_closure_dark_art_direction_missing', 'Closure must record a passed brand-preserving dark-mode art-direction review.', planPath, '$.closure.darkModeArtDirection');
+  }
+  if (closure.repeatedComponentsReviewed !== true) {
+    add(findings, 'fail', 'accessibility_closure_repeated_components_missing', 'Closure must confirm repeatedComponentsReviewed after comparing cards, rails, pills, tabs, and CTA alignment.', planPath, '$.closure.repeatedComponentsReviewed');
+  }
+
+  const renderProof = Array.isArray(closure.renderProof) ? closure.renderProof : [];
+  const requiredViewports = ['desktop', 'tablet', 'mobile', 'narrow'];
+  for (const viewport of requiredViewports) {
+    const proof = renderProof.find((item) => isPlainObject(item) && String(item.viewport || '').toLowerCase() === viewport);
+    if (!proof) {
+      add(findings, 'fail', 'accessibility_closure_viewport_missing', `Closure renderProof is missing ${viewport}.`, planPath, '$.closure.renderProof');
+      continue;
+    }
+    const modes = Array.isArray(proof.modes) ? proof.modes.map((mode) => String(mode).toLowerCase()) : [];
+    if (!modes.includes('light') || !modes.includes('dark')) {
+      add(findings, 'fail', 'accessibility_closure_viewport_modes_missing', `${viewport} render proof must cover both light and dark.`, planPath, '$.closure.renderProof');
+    }
+    if (!Number.isFinite(Number(proof.width)) || Number(proof.width) <= 0) {
+      add(findings, 'fail', 'accessibility_closure_viewport_width_invalid', `${viewport} render proof must record a positive viewport width.`, planPath, '$.closure.renderProof');
+    }
+    if (String(proof.status || '').toLowerCase() !== 'passed') {
+      add(findings, 'fail', 'accessibility_closure_viewport_not_passed', `${viewport} render proof must be passed.`, planPath, '$.closure.renderProof');
+    }
+    if (!String(proof.evidence || '').trim()) {
+      add(findings, 'fail', 'accessibility_closure_viewport_evidence_missing', `${viewport} render proof must identify the screenshot, browser result, or concrete rendered evidence inspected.`, planPath, '$.closure.renderProof');
+    }
+  }
+}
+
+function validatePlan(plan, planPath, findings, options = {}) {
   if (!isPlainObject(plan)) {
     add(findings, 'fail', 'accessibility_plan_not_object', 'Accessibility plan must be a JSON object.', planPath);
     return;
@@ -142,6 +187,7 @@ function validatePlan(plan, planPath, findings) {
   if (!Array.isArray(plan.manualReview)) {
     add(findings, 'fail', 'accessibility_plan_missing_manual_review', 'Accessibility plan must include manualReview as an array, even when empty.', planPath, '$.manualReview');
   }
+  if (options.requireClosure) validateClosure(plan, planPath, findings);
 }
 
 function extractCssBlocks(text, file) {
@@ -569,7 +615,7 @@ export function validateAccessibility(targetDir, options = {}) {
 
   if (planPath) {
     plan = parseJson(planPath, findings);
-    if (plan) validatePlan(plan, planPath, findings);
+    if (plan) validatePlan(plan, planPath, findings, options);
   } else if (!options.optional) {
     add(findings, 'fail', 'accessibility_plan_missing', 'Expected accessibility/kiwe-accessibility-plan.json for /create or /audit /accessibility.', root);
   }

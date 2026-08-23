@@ -63,7 +63,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.22', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.23', 'entry contract mismatch');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
@@ -100,10 +100,12 @@ function assert(condition, message) {
   assert(entry.firstResponse.ifFilesNoCommand.includes('/convert /bricks'), 'entry missing raw deterministic conversion default');
   assert(entry.noCommandInteraction.firstResponseShape.some((line) => line.includes('/convert /bricks')), 'entry first response missing raw conversion command');
   assert(entry.errorHandling.codes.KIWE_VALIDATOR_PROOF_MISSING, 'entry missing validator proof error code');
+  assert(entry.errorHandling.codes.KIWE_STALE_CONTRACT, 'entry missing stale command-contract error code');
+  assert(entry.firstResponse.ifOtherCommand.includes('refresh this exact raw entry'), 'entry missing later-command contract refresh rule');
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.22', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.23', 'manifest contract mismatch');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
@@ -123,6 +125,8 @@ function assert(condition, message) {
   assert(manifest.commands['/fix /previousoutput'], 'manifest missing /fix /previousoutput');
   assert(manifest.errorCatalog.codes.KIWE_MANUAL_PASS_BLOCKED, 'manifest missing command-central error catalog');
   assert(manifest.errorCatalog.codes.KIWE_VALIDATOR_PROOF_MISSING, 'manifest missing validator proof error catalog');
+  assert(manifest.errorCatalog.codes.KIWE_STALE_CONTRACT, 'manifest missing stale command-contract error code');
+  assert(JSON.stringify(manifest.globalRules).includes('Never execute a later command from memorized stale context'), 'manifest missing later-command freshness rule');
   assert(manifest.globalRules.validatorAuthority.includes('SEAM Compiler'), 'manifest missing SEAM Compiler proof authority');
   assert(manifest.pluginApi && manifest.pluginApi.routes && manifest.pluginApi.routes.status.includes('/ai/seamflow/status'), 'manifest missing plugin SeamFlow status route');
   assert(manifest.pluginApi.scope.includes('seamflow'), 'manifest missing plugin SeamFlow scope');
@@ -139,8 +143,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.22', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.22', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.23', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.23', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -338,6 +342,38 @@ function assert(condition, message) {
   assert(!contrast.ok && JSON.stringify(contrast).includes('accessibility_low_contrast_literal_pair'), 'invalid contrast fixture did not fail');
   const overflow = m.validateAccessibility(path.join(root, 'fixtures/accessibility-invalid-overflow'));
   assert(!overflow.ok && JSON.stringify(overflow).includes('accessibility_text_clipping_risk'), 'invalid overflow fixture did not fail');
+
+  const namedHtmlDir = path.join(tmp, 'accessibility-html-name');
+  fs.mkdirSync(namedHtmlDir, { recursive: true });
+  const namedHtmlPath = path.join(namedHtmlDir, 'mishtanna-v2-accessibility-fixed.html');
+  fs.writeFileSync(namedHtmlPath, '<!doctype html><html><head><style>.page{color:#111;background:#fff}</style></head><body class="page">Light only</body></html>');
+  const namedHtml = m.validateAccessibility(namedHtmlPath, { optional: true });
+  const namedHtmlText = JSON.stringify(namedHtml);
+  assert(!namedHtmlText.includes('accessibility_plan_invalid_json'), 'HTML whose filename contains accessibility must not be parsed as a JSON plan');
+  assert(namedHtmlText.includes('accessibility_missing_dark_mode_proof'), 'named HTML fixture should still receive ordinary page validation');
+
+  const missingClosure = m.validateAccessibility(path.join(root, 'fixtures/accessibility-valid'), { requireClosure: true });
+  assert(!missingClosure.ok && JSON.stringify(missingClosure).includes('accessibility_closure_missing'), 'closure mode must reject a plan without closure evidence');
+
+  const closureDir = path.join(tmp, 'accessibility-closure-valid');
+  fs.mkdirSync(path.join(closureDir, 'accessibility'), { recursive: true });
+  fs.writeFileSync(path.join(closureDir, 'index.html'), '<!doctype html><html data-theme="dark"><head><style>.page{color:#111;background:#fff}</style></head><body class="page">Closure proof</body></html>');
+  fs.writeFileSync(path.join(closureDir, 'accessibility/kiwe-accessibility-plan.json'), JSON.stringify({
+    schema: 'kiwe.accessibility-plan.v1',
+    source: { mode: 'website', artifact: 'closure fixture' },
+    modes: ['light', 'dark'],
+    tokenPairs: [{ id: 'page', foreground: '#111111', background: '#ffffff', modes: ['light', 'dark'], minimumContrast: 4.5 }],
+    closure: {
+      command: '/audit /fix /accessibility',
+      auditFixReaudit: 'passed',
+      darkModeArtDirection: 'passed',
+      repeatedComponentsReviewed: true,
+      renderProof: ['desktop', 'tablet', 'mobile', 'narrow'].map((viewport, index) => ({ viewport, width: [1440, 1024, 390, 320][index], modes: ['light', 'dark'], status: 'passed', evidence: `${viewport} browser screenshot inspected` }))
+    },
+    manualReview: []
+  }));
+  const closureValid = m.validateAccessibility(closureDir, { requireClosure: true });
+  assert(closureValid.ok, `valid closure evidence failed: ${JSON.stringify(closureValid)}`);
 
   const commandManifest = JSON.parse(fs.readFileSync(path.join(root, 'command-manifest.json'), 'utf8'));
   const accessibilityChecks = commandManifest.commands['/fix /accessibility'].checks;

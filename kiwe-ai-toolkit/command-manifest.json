@@ -7,7 +7,7 @@
     "humanPattern": "read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "rawEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
     "machineEntrypoint": "https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json",
-    "contractVersion": "7.22",
+    "contractVersion": "7.23",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -41,7 +41,7 @@
       "Do not search GitHub docs for hidden contracts. This manifest plus the listed context files are the contract for the matched command.",
       "Do not use general web search, arXiv, unrelated GitHub search, commit browsing, stale local examples, prior-output research, or prior accepted notes to complete SeamFlow.",
       "Do not use search results when an exact raw URL/context route is required. If your environment starts a search instead of direct raw fetch/open, stop with ERROR: KIWE_SEARCH_DRIFT.",
-      "After the first Start classification response, treat the loaded Start file as the active contract for the immediate next /command in the same conversation. Do not reload the repository, README, GitHub pages, commits, arXiv, search results, old examples, or Start again for that next command.",
+      "Use the loaded Start contract for the immediate next /command. After any artifact generation, free-form refinement, non-command message, or completed command, refresh the exact raw entry and manifest before a later /command and load only that route's named context/validator. Never execute a later command from memorized stale context.",
       "Do not mark artifact lanes PASS from manual confidence, copied/reconstructed validator logic, simulated validator logic, or equivalent checks. PASS requires executable validator proof.",
       "Do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or accepted notes unless the human supplied those exact files in the current turn or explicitly asked for comparison.",
       "Read only the context files listed for the matched command.",
@@ -67,7 +67,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.22", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.23", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -81,6 +81,7 @@
       "KIWE_CONTEXT_WINDOW_RISK": "Requested flow is too large for the current AI/session.",
       "KIWE_TOKEN_BUDGET_RISK": "Command is likely to waste tokens.",
       "KIWE_TOOL_UNAVAILABLE": "Required MCP/API/browser/validator tool unavailable.",
+      "KIWE_STALE_CONTRACT": "A later command follows refinement/output but the current exact raw entry, manifest, or routed context could not be refreshed.",
       "KIWE_SEARCH_DRIFT": "Search engine, arXiv, GitHub search, commit browsing, or prior-example lookup was used or attempted instead of exact raw URL/context routing.",
       "KIWE_SITEGRAPH_REQUIRED": "Live Site Graph/API data was explicitly required but not supplied.",
       "KIWE_COMPANION_FALLBACK": "/usecompanion requested but unavailable.",
@@ -412,6 +413,7 @@
       "output": ["pass/fail findings only"],
       "forbidden": ["fixes unless /fix is also present", "docs unless /document", "ZIP"],
       "checks": ["WCAG contrast", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text clipping/overflow", "repeated-component CTA and internal alignment", "Appsite capability attributes preserved when present"],
+      "closureValidator": "For combined /audit /fix /accessibility, run validate-accessibility.cjs <artifact-root> --closure after the repair and re-audit. A non-zero or unavailable result must not be labelled PASS or complete; return any corrected candidate artifact as STATUS: NEEDS_INPUT with the missing proof.",
       "finalResponse": "PASS/FAIL with blocking errors and warnings."
     },
     "/fix /accessibility": {
@@ -442,6 +444,7 @@
         "rule": "For artifacts already targeting Kiwe, Seam, AppShell, or Bricks, remap their existing project variables to Kiwe tokens for light and dark states without inventing a second palette. For framework-neutral raw HTML/CSS/JS, preserve project-owned semantic variables and use artifact-native data-theme state; do not introduce Kiwe, Seam, or Bricks solely for accessibility."
       },
       "checks": ["WCAG contrast", "native light/dark proof", "brand-preserving dark art direction", "full-page light/dark rendered inspection at desktop/tablet/mobile/narrow", "semantic project token pairs; Kiwe/Seam pairs only when that framework is already in scope", "Bricks theme-style alignment only for a Bricks target", "critical text clipping/overflow", "repeated-component CTA and internal alignment", "reduced motion when motion exists"],
+      "closureValidator": "Run validate-accessibility.cjs <artifact-root> --closure. Require plan.closure, brand-preserving dark review, repeated-component review, and passed light/dark proof at desktop/tablet/mobile/narrow. A non-zero or unavailable result must not be labelled PASS or complete; return the corrected candidate artifact as STATUS: NEEDS_INPUT with the missing proof.",
       "finalResponse": "Return fixed file(s), PASS/FAIL/WARN, files changed, and structural-drift summary. Keep it compact."
     },
     "/document": {

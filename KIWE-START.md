@@ -1,7 +1,7 @@
 # SeamFlow Start
 
-Contract version: `7.22`
-Updated: `2026-08-21`
+Contract version: `7.23`
+Updated: `2026-08-23`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
 Purpose: fastest safe entrypoint for external AI, browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.22
+SeamFlow contract: 7.23
 ```
 
 Then do one of these:
@@ -52,7 +52,7 @@ Example: `/execute /fullflow /audit /fix /eachstep` is not one single hardcoded 
 
 Dynamic examples: `/usesitegraph /for /previewdata` changes all eligible preview samples only; `/usesitegraph /for /previewdata /products /titles /images /nonai` changes only product names and images using the read-only SiteGraph lane; `/usesitegraph /for /bricksbindings` creates target-grounded bindings only; `/usebrickscontext /for /dynamictags` uses generic verified Bricks capabilities without SiteGraph. The AI must derive the full implementation contract from these tokens and ask only for a missing artifact, evidence source, or ambiguous source region.
 
-Active-contract rule: after you read this Start file and return the first classification response, treat this loaded Start file as the active contract for the immediate next user `/command` in the same conversation. Do not reload the repository, README, GitHub pages, search results, arXiv, commits, old examples, or the Start file again for that next command. If additional command detail is truly required, fetch only the exact raw machine entry or exact raw command manifest URL from this Start file. If exact raw fetch is unavailable, stop with `ERROR: KIWE_TOOL_UNAVAILABLE` or `ERROR: KIWE_SEARCH_DRIFT`; do not search.
+Active-contract and freshness rule: after you read this Start file and return the first classification response, treat it as the active contract for the immediate next user `/command`. For that immediate command, do not reload Start. After any generated artifact, ordinary free-form refinement, non-command message, or completed command, the next later `/command` must refresh the exact raw machine entry and exact raw command manifest, then read only the context files and validator named by that current manifest route. Never rely on a memorized earlier command context in a long-running conversation. Do not reload or crawl the repository, README, GitHub pages, commits, search results, arXiv, or old examples. If an exact raw contract file cannot be fetched, stop with `ERROR: KIWE_STALE_CONTRACT` or `ERROR: KIWE_TOOL_UNAVAILABLE`; do not improvise from stale context.
 
 Current-run evidence only: do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or "accepted" notes unless the human supplied those exact files in the current turn or explicitly asked you to compare against them. SeamFlow must classify and validate the current artifacts, not inherit conclusions from earlier tests.
 
@@ -174,7 +174,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.22
+SeamFlow contract: 7.23
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -286,6 +286,7 @@ KIWE_PREVIOUS_OUTPUT_MISSING  -> /previousoutput was requested but the immediate
 KIWE_CONTEXT_WINDOW_RISK      -> requested full flow is too large for the current AI/session; suggest /execute /stepbystep /audit /eachstep
 KIWE_TOKEN_BUDGET_RISK        -> command is likely to waste tokens; suggest a smaller command or /audit /allattached first
 KIWE_TOOL_UNAVAILABLE         -> MCP/API/browser/validator tool unavailable; use raw route if possible, otherwise stop
+KIWE_STALE_CONTRACT           -> a later command follows refinements/output but the exact current entry/manifest/context could not be refreshed; stop instead of using memorized command rules
 KIWE_SEARCH_DRIFT             -> a search engine, arXiv, GitHub search, commit browsing, or prior-example lookup was used or attempted instead of exact raw URL/context routing
 KIWE_SITEGRAPH_REQUIRED       -> command explicitly requires live Site Graph/API data that was not supplied
 KIWE_COMPANION_FALLBACK       -> /usecompanion requested but unavailable; continue only if the base command can run without it
@@ -296,7 +297,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.22
+SeamFlow contract: 7.23
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -362,7 +363,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.22
+SeamFlow contract: 7.23
 Command:
 Artifact classification:
 Files returned:

@@ -119,6 +119,24 @@ Use this JSON shape:
       "status": "tokenized"
     }
   ],
+  "closure": {
+    "command": "/audit /fix /accessibility",
+    "auditFixReaudit": "passed",
+    "darkModeArtDirection": "passed",
+    "repeatedComponentsReviewed": true,
+    "renderProof": [
+      {
+        "viewport": "desktop",
+        "width": 1440,
+        "modes": ["light", "dark"],
+        "status": "passed",
+        "evidence": "screenshot path, browser result, or concrete rendered evidence inspected"
+      },
+      { "viewport": "tablet", "width": 1024, "modes": ["light", "dark"], "status": "passed", "evidence": "..." },
+      { "viewport": "mobile", "width": 390, "modes": ["light", "dark"], "status": "passed", "evidence": "..." },
+      { "viewport": "narrow", "width": 320, "modes": ["light", "dark"], "status": "passed", "evidence": "..." }
+    ]
+  },
   "bricks": {
     "themeStyle": {
       "usesRootThemeStyle": true,
@@ -144,6 +162,8 @@ The plan may include extra explanatory fields, but these keys must exist:
 - `modes` containing both `light` and `dark`;
 - `tokenPairs`;
 - `manualReview`.
+
+`closure` is optional for a score-only `/accessibility` or `/create /accessibility` pass. It is mandatory for `/audit /fix /accessibility`, and `renderProof` must contain separate passed entries for desktop, tablet, mobile, and narrow widths. Every entry must cover light and dark, record a positive width, and identify the concrete rendered evidence inspected. If render tools are unavailable, the command must return `NEEDS_INPUT`; it must not claim closure.
 
 ## Required token-pair coverage
 
@@ -335,8 +355,9 @@ When static validation cannot prove text over image/gradient/transparent layers,
 6. Repair repeated-component alignment with resilient flex/grid structure, content growth, and shared footer placement; do not use fixed coordinates or copy-specific offsets.
 7. Preserve Bricks dynamic tags, query-loop intent, Kiwe launcher attributes, and DSA/AppShell boundaries.
 8. Preserve the structural counts listed above unless a documented accessibility-token exception is necessary.
-9. Render and inspect the complete repaired page in light and dark at desktop, tablet, mobile, and narrow widths when tools exist, then re-run the accessibility audit. If rendering is unavailable, report that proof as remaining manual review instead of claiming it passed.
-10. Output only the revised existing artifact file(s) plus `accessibility/kiwe-accessibility-plan.json`; do not output notes unless `/document` was requested.
+9. Render and inspect the complete repaired page in light and dark at desktop, tablet, mobile, and narrow widths, then re-run the accessibility audit. For combined `/audit /fix /accessibility`, unavailable rendering is `STATUS: NEEDS_INPUT`, not a warning or manual PASS. A score-only `/accessibility` pass may still list unexecuted render work under `manualReview`.
+10. Record the closure evidence in `plan.closure` and run `node kiwe-ai-toolkit/tools/validate-accessibility.cjs <artifact-root> --closure`. A non-zero or unavailable validator result must not be labelled PASS or complete. Return any corrected candidate artifact as `STATUS: NEEDS_INPUT` with the exact missing proof so the repair work is not discarded.
+11. Output only the revised existing artifact file(s) plus `accessibility/kiwe-accessibility-plan.json`; do not output notes unless `/document` was requested.
 
 ## Final response contract
 

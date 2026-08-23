@@ -6,7 +6,7 @@ function usage() {
 	console.log(`Validate a Kiwe accessibility lane.
 
 Usage:
-  node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff-or-accessibility-dir> [--optional]
+  node kiwe-ai-toolkit/tools/validate-accessibility.cjs <handoff-or-accessibility-dir> [--optional] [--closure]
 
 Looks for:
   accessibility/kiwe-accessibility-plan.json
@@ -19,6 +19,9 @@ Checks:
   - Kiwe/Seam token pairing
   - Bricks theme-style/color-palette alignment hints
   - critical text clipping and overflow risk in CSS/Bricks settings
+  - with --closure: audit/fix/re-audit proof, brand-aware dark review,
+    repeated-component review, and light/dark render proof at desktop,
+    tablet, mobile, and narrow widths
 
 The validator is deterministic and non-mutating. It does not write to WordPress or Bricks.
 `);
@@ -34,7 +37,8 @@ async function main() {
 	const modulePath = path.resolve(__dirname, '..', 'lib', 'accessibility-validator.js');
 	const mod = await import(pathToFileURL(modulePath).href);
 	const result = mod.validateAccessibility(target, {
-		optional: args.includes('--optional')
+		optional: args.includes('--optional'),
+		requireClosure: args.includes('--closure')
 	});
 	console.log(JSON.stringify(result, null, 2));
 	process.exitCode = result.ok ? 0 : 1;
