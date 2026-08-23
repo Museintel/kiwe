@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.25',
+    contractVersion: '7.26',
     freshness: {
       discoveryTemplate: 'https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}',
       rule: 'Before every later slash command, fetch fresh discovery with a new nonce and use only its content-hash immutable command route and pinned resource hashes.'
@@ -532,7 +532,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.25',
+      mustReport: 'SeamFlow contract: 7.26',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -858,9 +858,9 @@ export function listCommands() {
       {
         command: '/accessibility',
         aliases: ['/a11y'],
-        purpose: 'Audit and minimally improve the current raw HTML/CSS/JS, Bricks, or Framework artifact without forcing another lane. Return measured automated coverage and separate manual checks.',
+        purpose: 'Run a closed inspect, audit, minimal-fix, render, and re-audit pass on the approved current raw HTML/CSS/JS, Bricks, or Framework artifact. Preserve its light-mode art direction; use bounded design judgment only for an intentional peer dark appearance.',
         requires: ['current page, preview, artifact, or file map; the active /ideate page qualifies'],
-        output: 'same-lane artifact plus SEAM automated accessibility score and manual-review list'
+        output: 'revised same-lane artifact, measured SEAM accessibility proof, responsive findings, separate dark-mode parity review, and manual-review list'
       },
       {
         command: '/create /accessibility',
@@ -872,14 +872,14 @@ export function listCommands() {
       {
         command: '/audit /accessibility',
         aliases: ['/audit /a11y'],
-        purpose: 'Audit and revise color contrast, token pairing, native dark-mode proof, Bricks/Kiwe theme-token alignment, and visible text containment.',
+        purpose: 'Audit measurable accessibility, responsive containment, approved-design preservation, and native light/dark proof without claiming that subjective beauty is scientifically certifiable.',
         requires: ['existing artifact files and optional accessibility/kiwe-accessibility-plan.json'],
         output: 'same artifact plus corrected accessibility lane'
       },
       {
         command: '/fix /accessibility',
         aliases: ['/fix /a11y'],
-        purpose: 'Repair only the failed accessibility lane: contrast, dark/light token proof, Bricks theme-token alignment, and critical text clipping.',
+        purpose: 'Repair only evidence-backed accessibility and responsive failures while preserving the approved light design; dark mode may receive bounded semantic art direction for experiential parity.',
         requires: ['existing artifact files and accessibility findings'],
         output: 'same artifact file(s) plus accessibility/kiwe-accessibility-plan.json; no docs unless /document was requested'
       },

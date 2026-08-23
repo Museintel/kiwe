@@ -63,7 +63,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.25', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.26', 'entry contract mismatch');
   assert(entry.freshness.discoveryTemplate.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'entry missing nonce-based fresh discovery');
   assert(entry.freshness.integrity.includes('sha256'), 'entry missing pinned-resource integrity rule');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
@@ -85,6 +85,8 @@ function assert(condition, message) {
   assert(entry.flows.secondPassCommands['/redo'].includes('previous output failed') && entry.flows.secondPassCommands['/redo'].includes('Do not ask why'), '/redo must treat the command itself as sufficient failure notice');
   assert(entry.accessibilityRule.appliesTo.includes('/accessibility') && entry.accessibilityRule.appliesTo.includes('/create /accessibility'), 'accessibility rule must cover bare and create commands');
   assert(entry.accessibilityRule.checks.some((item) => item.includes('card flex/grid growth')) && entry.accessibilityRule.checks.some((item) => item.includes('viewport overflow')), 'accessibility rule missing responsive usability checks');
+  assert(entry.architecture.creativeAuthority.includes('No Kiwe aesthetic influence during /ideate'), 'entry must preserve ideation creative neutrality');
+  assert(entry.accessibilityRule.checks.some((item) => item.includes('peer expression')) && entry.accessibilityRule.checks.some((item) => item.includes('subjective visual-parity')), 'entry missing bounded dark-mode creative aperture');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_AUDIT_MISSING, 'entry missing previous audit error code');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_OUTPUT_MISSING, 'entry missing previous output error code');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_COMMAND_MISSING, 'entry missing previous command error code');
@@ -112,7 +114,7 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.25', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.26', 'manifest contract mismatch');
   assert(manifest.entry.freshDiscovery.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'manifest missing nonce-based discovery URL');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
@@ -127,6 +129,8 @@ function assert(condition, message) {
   assert(manifest.commands['/audit /atend'], 'manifest missing /audit /atend');
   assert(manifest.commands['/redo'].must.some((item) => item.includes('do not request a failure explanation')), '/redo manifest must not require user diagnosis');
   assert(manifest.commands['/accessibility'].must.some((item) => item.includes('card flex/grid growth')) && manifest.commands['/accessibility'].must.some((item) => item.includes('viewport overflow')), 'bare accessibility manifest missing responsive layout checks');
+  assert(manifest.architecture.creativeAuthority.includes('does not influence /ideate aesthetics'), 'manifest must preserve ideation creative neutrality');
+  assert(manifest.commands['/accessibility'].must.some((item) => item.includes('peer hierarchy')) && manifest.commands['/accessibility'].forbidden.some((item) => item.includes('subjective beauty')), 'manifest missing bounded dark-mode parity contract');
   assert(manifest.commands['/audit /allattached'], 'manifest missing /audit /allattached');
   assert(manifest.commands['/fix /allflow'], 'manifest missing /fix /allflow');
   assert(manifest.commands['/audit /allattached /allflow'], 'manifest missing /audit /allattached /allflow');
@@ -155,8 +159,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.25', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.25', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.26', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.26', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -386,7 +390,11 @@ function assert(condition, message) {
     closure: {
       command: '/audit /fix /accessibility',
       auditFixReaudit: 'passed',
+      approvedDesignPreserved: true,
+      lightModeArtDirectionPreserved: true,
       darkModeArtDirection: 'passed',
+      darkModeParityReview: 'passed',
+      responsiveUsabilityReviewed: true,
       repeatedComponentsReviewed: true,
       renderProof: ['desktop', 'tablet', 'mobile', 'narrow'].map((viewport, index) => ({ viewport, width: [1440, 1024, 390, 320][index], modes: ['light', 'dark'], status: 'passed', evidence: `${viewport} browser screenshot inspected` }))
     },
@@ -394,6 +402,12 @@ function assert(condition, message) {
   }));
   const closureValid = m.validateAccessibility(closureDir, { requireClosure: true });
   assert(closureValid.ok, `valid closure evidence failed: ${JSON.stringify(closureValid)}`);
+  const closurePlanPath = path.join(closureDir, 'accessibility/kiwe-accessibility-plan.json');
+  const missingParityPlan = JSON.parse(fs.readFileSync(closurePlanPath, 'utf8'));
+  delete missingParityPlan.closure.darkModeParityReview;
+  fs.writeFileSync(closurePlanPath, JSON.stringify(missingParityPlan));
+  const closureMissingParity = m.validateAccessibility(closureDir, { requireClosure: true });
+  assert(!closureMissingParity.ok && closureMissingParity.findings.some((finding) => finding.code === 'accessibility_closure_dark_parity_missing'), 'closure must reject missing dark-mode parity review');
 
   const commandManifest = JSON.parse(fs.readFileSync(path.join(root, 'command-manifest.json'), 'utf8'));
   const accessibilityChecks = commandManifest.commands['/fix /accessibility'].checks;

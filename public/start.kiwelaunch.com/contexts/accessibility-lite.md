@@ -11,7 +11,30 @@ Use this context only for:
 
 This is an independent accessibility lane. It works on the current raw HTML/CSS/JS page during or after `/ideate`, on a framework-neutral Bricks conversion, or on a Seam Framework/Bricks package. It never requires Seam Framework or Bricks. Accessibility is not shorthand for dark mode: it covers semantics, keyboard/focus behavior, readable text, contrast, responsive reflow and alignment, card flex/grid growth, overflow and overlap, reduced motion, touch targets, and a deliberate brand-aware light/dark color system.
 
-Bare `/accessibility` means: inspect the complete current working page/artifact in light and dark at desktop, tablet, mobile, and narrow widths; report automated evidence and manual checks separately; then make the smallest safe improvements to that same artifact when the human is actively refining it. It must discover responsive defects without waiting for the human to name them—for example overflowing capsule text, clipped headings, overlapping layers, cards that cannot grow with content, inconsistent repeated-card CTA/footer alignment, unreachable horizontal content, or touch controls that collide. During `/ideate`, preserve the accepted composition, content, motion language, and art direction. Do not replace the design with a generic accessibility template or a black-background inversion.
+Bare `/accessibility` means a closed refinement pass over an already approved design: inspect -> audit -> make the smallest safe fixes -> render -> re-audit. Inspect the complete current working page/artifact in light and dark at desktop, tablet, mobile, and narrow widths. Report automated evidence and manual checks separately. Discover responsive defects without waiting for the human to name them—for example overflowing capsule text, clipped headings, overlapping layers, cards that cannot grow with content, inconsistent repeated-card CTA/footer alignment, unreachable horizontal content, or touch controls that collide. Preserve the accepted composition, content, information hierarchy, interaction intent, light-mode visual thesis, motion language, brand identity, and distinctive art direction. Do not replace the design with a generic accessibility template or a black-background inversion.
+
+## Creative-authority boundary
+
+- `/ideate` belongs to the human and their chosen AI. This context must not influence ideation with a Kiwe house style, layout recipe, component vocabulary, Framework token system, or preferred aesthetic.
+- `/convert /bricks` and `/seamframework` are deterministic preservation/translation lanes. They do not gain creative authority from this context.
+- `/accessibility` is the only bounded design-aware refinement lane. The approved current artifact is source authority; it may be changed only to resolve evidence-backed accessibility, responsive usability, readable spacing/alignment, or light/dark failures.
+- Outside dark mode, choose the least visually disruptive correction that closes the failure. Do not rewrite copy, reorder storytelling, replace imagery, normalize distinctive shapes, or homogenize the layout merely because another design pattern is more familiar.
+- Dark mode has a wider but still bounded creative aperture. AI may design semantic dark roles, surface hierarchy, elevation, border/shadow behavior, translucency, imagery treatment, and accent distribution so the dark appearance is a deliberate peer of the approved light appearance.
+- “Equally enjoyable” is the experiential target, not a mathematical claim. Executable checks can prove defined accessibility constraints; rendered comparison and human/device review assess visual parity. Never label subjective beauty, user preference, or design-school perfection as scientifically certified.
+
+## Standards and research basis
+
+Apply the current contract directly; do not browse during each command. Its measurable gates are derived from primary guidance including:
+
+- W3C WCAG 2.2: https://www.w3.org/TR/WCAG22/
+- W3C Reflow understanding: https://www.w3.org/WAI/WCAG22/Understanding/reflow
+- W3C Resize Text understanding: https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html
+- W3C Text Spacing understanding: https://www.w3.org/WAI/WCAG22/Understanding/text-spacing
+- W3C Target Size understanding: https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
+- W3C Focus Appearance understanding: https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance
+- Apple Human Interface Guidelines — Dark Mode and Color: https://developer.apple.com/design/human-interface-guidelines/dark-mode and https://developer.apple.com/design/human-interface-guidelines/color
+
+These sources establish measurable accessibility requirements and adaptive semantic color roles. They do not establish a universal aesthetic formula, so visual parity remains evidence-backed design review rather than a compliance score.
 
 ## Boundary
 
@@ -55,7 +78,7 @@ If no current page, preview, artifact, or file map exists, stop and ask for it. 
 - At Bricks level, use native light/dark palette values and `data-brx-theme`. At Kiwe level, bridge the same state to `data-kiwe-theme`. At raw HTML level, use semantic CSS custom properties, honor the system preference, and provide a visible keyboard-operable toggle unless the human explicitly requests system-only behavior.
 - Bind enhanced Bricks variables at the converted template root under `:root[data-brx-theme="dark"]` so source-scoped variables cannot shadow the native Bricks palette.
 
-The deterministic validator measures evidence and rejects known hazards; it does not choose the art direction. The browser AI must use visual judgement to design and inspect the second mode while preserving the accepted light mode.
+The deterministic validator measures evidence and rejects known hazards; it does not choose the art direction. The browser AI must use visual judgment to design and inspect the second mode while preserving the accepted light mode. Closure requires explicit approved-design preservation, light-mode preservation, responsive-usability review, and dark-mode parity review in addition to technical proof.
 
 ## Required output
 
@@ -122,7 +145,11 @@ Use this JSON shape:
   "closure": {
     "command": "/audit /fix /accessibility",
     "auditFixReaudit": "passed",
+    "approvedDesignPreserved": true,
+    "lightModeArtDirectionPreserved": true,
     "darkModeArtDirection": "passed",
+    "darkModeParityReview": "passed",
+    "responsiveUsabilityReviewed": true,
     "repeatedComponentsReviewed": true,
     "renderProof": [
       {
@@ -163,7 +190,7 @@ The plan may include extra explanatory fields, but these keys must exist:
 - `tokenPairs`;
 - `manualReview`.
 
-`closure` is optional for a score-only `/accessibility` or `/create /accessibility` pass. It is mandatory for `/audit /fix /accessibility`, and `renderProof` must contain separate passed entries for desktop, tablet, mobile, and narrow widths. Every entry must cover light and dark, record a positive width, and identify the concrete rendered evidence inspected. If render tools are unavailable, the command must return `NEEDS_INPUT`; it must not claim closure.
+`closure` is optional for `/create /accessibility` when the command is explicitly plan-only. It is mandatory for bare `/accessibility` and `/audit /fix /accessibility`. `renderProof` must contain separate passed entries for desktop, tablet, mobile, and narrow widths. Every entry must cover light and dark, record a positive width, and identify the concrete rendered evidence inspected. If render tools are unavailable, the command may return corrected candidate files but must return `NEEDS_INPUT`; it must not claim closure.
 
 ## Required token-pair coverage
 

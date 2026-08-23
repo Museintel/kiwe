@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.25`
+Contract version: `7.26`
 Updated: `2026-08-23`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.25
+SeamFlow contract: 7.26
 ```
 
 Then do one of these:
@@ -178,7 +178,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.25
+SeamFlow contract: 7.26
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -306,7 +306,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.25
+SeamFlow contract: 7.26
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -372,7 +372,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.25
+SeamFlow contract: 7.26
 Command:
 Artifact classification:
 Files returned:
@@ -425,6 +425,10 @@ Bare `/accessibility`, `/create /accessibility`, `/audit /accessibility`, and `/
 - preservation of Seam classes, Kiwe capability attributes, Bricks dynamic tags, query-loop intent, DSA selectors, and AppShell boundaries.
 
 Accessibility fixes should use existing tokens and classes first. Add new project variables only when a real design value is missing and name them clearly.
+
+Creative-authority boundary: the human-approved current artifact is the design authority. `/ideate` remains unrestricted collaboration between the human and their chosen AI; Kiwe must not inject a house style, layout recipe, component library, Framework vocabulary, or aesthetic preference into it. `/convert /bricks` and `/seamframework` are deterministic preservation/translation lanes and have no creative authority. Bare `/accessibility` is the sole bounded design-aware refinement lane: it runs audit -> minimal fix -> render -> re-audit while preserving content, information hierarchy, brand identity, accepted light-mode composition, interaction intent, and distinctive art direction. It may change spacing, wrapping, sizing, alignment, focus, motion, semantics, and color roles only as needed to correct evidence-backed accessibility/usability failures.
+
+Dark-mode aperture: AI may creatively art-direct a second semantic palette and rebalance dark surfaces, elevation, borders, shadows, translucency, imagery treatment, and accent distribution so dark mode feels intentionally designed—not inverted, flattened, or merely compliant. The goal is experiential parity: neither mode should feel like the inferior fallback. This must still preserve brand recognition and information hierarchy and pass the same rendered accessibility gates in both modes. Do not claim that aesthetic preference or “eye pleasing” quality is scientifically certified; report standards compliance separately from visual parity review and remaining human/device review.
 
 ## Full-flow mode
 

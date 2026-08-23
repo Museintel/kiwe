@@ -113,8 +113,20 @@ function validateClosure(plan, planPath, findings) {
   if (String(closure.auditFixReaudit || '').toLowerCase() !== 'passed') {
     add(findings, 'fail', 'accessibility_closure_reaudit_missing', 'Closure must record auditFixReaudit as passed after repairing the actual artifact.', planPath, '$.closure.auditFixReaudit');
   }
+  if (closure.approvedDesignPreserved !== true) {
+    add(findings, 'fail', 'accessibility_closure_approved_design_preservation_missing', 'Closure must confirm approvedDesignPreserved so accessibility refinement does not become an undocumented redesign.', planPath, '$.closure.approvedDesignPreserved');
+  }
+  if (closure.lightModeArtDirectionPreserved !== true) {
+    add(findings, 'fail', 'accessibility_closure_light_art_direction_missing', 'Closure must confirm lightModeArtDirectionPreserved because the approved light design remains source authority.', planPath, '$.closure.lightModeArtDirectionPreserved');
+  }
   if (String(closure.darkModeArtDirection || '').toLowerCase() !== 'passed') {
     add(findings, 'fail', 'accessibility_closure_dark_art_direction_missing', 'Closure must record a passed brand-preserving dark-mode art-direction review.', planPath, '$.closure.darkModeArtDirection');
+  }
+  if (String(closure.darkModeParityReview || '').toLowerCase() !== 'passed') {
+    add(findings, 'fail', 'accessibility_closure_dark_parity_missing', 'Closure must record darkModeParityReview as passed after comparing hierarchy, brand recognition, surfaces, accents, and visual comfort with the approved light appearance.', planPath, '$.closure.darkModeParityReview');
+  }
+  if (closure.responsiveUsabilityReviewed !== true) {
+    add(findings, 'fail', 'accessibility_closure_responsive_usability_missing', 'Closure must confirm responsiveUsabilityReviewed after checking reflow, wrapping, overflow, overlap, card growth, alignment, and touch-target collisions.', planPath, '$.closure.responsiveUsabilityReviewed');
   }
   if (closure.repeatedComponentsReviewed !== true) {
     add(findings, 'fail', 'accessibility_closure_repeated_components_missing', 'Closure must confirm repeatedComponentsReviewed after comparing cards, rails, pills, tabs, and CTA alignment.', planPath, '$.closure.repeatedComponentsReviewed');

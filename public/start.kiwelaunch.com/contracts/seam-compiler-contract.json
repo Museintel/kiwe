@@ -33,13 +33,16 @@
     "accessibility": {
       "command": "/accessibility",
       "commands": ["/accessibility", "/create /accessibility", "/audit /accessibility", "/fix /accessibility"],
-      "input": "successful raw or Framework-enhanced conversion result",
-      "output": "SEAM automated accessibility score with manual checks separated, a measured plan, and either an independent raw Bricks light/dark palette or coordinated Framework values",
+      "input": "approved raw HTML/CSS/JS, raw Bricks, or Framework-enhanced artifact",
+      "output": "revised same-lane artifact, SEAM automated accessibility score with manual checks separated, responsive proof, a measured plan, and an intentional peer dark appearance using either independent raw/Bricks semantic values or coordinated Framework values",
       "optional": true,
       "phase": "separate",
       "currentCompletionGate": true,
       "requiresExecutableProof": true,
       "browserAiMayNotInventContrastRatios": true,
+      "creativeAuthority": "Accessibility is the only bounded design-aware refinement lane. It preserves the approved content, hierarchy, identity, distinctive composition and light-mode art direction; outside dark mode it makes only the least disruptive evidence-backed repair. Dark mode may receive wider but bounded semantic art direction for experiential parity.",
+      "closure": ["approvedDesignPreserved", "lightModeArtDirectionPreserved", "darkModeArtDirection", "darkModeParityReview", "responsiveUsabilityReviewed", "repeatedComponentsReviewed", "light/dark desktop/tablet/mobile/narrow render proof"],
+      "truthBoundary": "Standards compliance and rendered responsive proof are measurable. Beauty, equal enjoyment and mode preference are visual-design goals requiring separate parity and human/device review, not scientifically certifiable validator claims.",
       "bricksDarkModeBinding": ":root[data-brx-theme=\"dark\"] #brxe-<template-root-id>",
       "scopeRule": "Enhanced templates bind coordinated values at their own root so source-scoped variables cannot shadow Bricks native dark mode."
     },
@@ -58,7 +61,9 @@
     "A missing Framework Profile must fail closed; templates must not depend on CSS variable fallbacks.",
     "Browser AI may create or refine the source design but must not author production Bricks JSON or Framework Profile data.",
     "If the hosted compiler is unavailable, browser AI must invoke the official local compiler/runtime or Kiwe REST validation bridge; without executable authority the lane is WARN/UNVERIFIED, never PASS.",
-    "Accessibility is a separate deterministic stage: it preserves the approved design, measures real token pairs, coordinates Kiwe and Bricks light/dark values, and never invents generic contrast evidence.",
+    "Ideation has no Kiwe aesthetic authority: the human and their chosen AI determine the source design without a house style, layout system, component library, or Framework influence.",
+    "Conversion and Framework stages have no creative authority: they preserve and translate the approved source rather than redesign it.",
+    "Accessibility is the sole bounded design-aware stage: it preserves the approved light design, measures real token pairs and responsive behavior, coordinates Kiwe and Bricks light/dark values, and may art-direct a peer dark appearance without inventing generic contrast evidence or claiming subjective beauty is scientifically certified.",
     "No project-specific selector or route-name rule may enter the compiler core."
   ]
 }

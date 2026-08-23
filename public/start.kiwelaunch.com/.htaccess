@@ -22,6 +22,6 @@ DirectoryIndex index.html
   Header always set Pragma "no-cache" env=!KIWE_IMMUTABLE
   Header always set Expires "0" env=!KIWE_IMMUTABLE
   Header always set Cache-Control "public, max-age=31536000, immutable" env=KIWE_IMMUTABLE
-  Header always set X-Kiwe-Contract-Version "7.25"
-  Header always set X-Kiwe-Release "7.25-a818d0ce1642"
+  Header always set X-Kiwe-Contract-Version "7.26"
+  Header always set X-Kiwe-Release "7.26-23ba1257d101"
 </IfModule>
