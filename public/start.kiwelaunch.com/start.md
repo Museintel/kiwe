@@ -1,6 +1,6 @@
 # SeamFlow Start
 
-Contract version: `7.26`
+Contract version: `7.27`
 Updated: `2026-08-23`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.26
+SeamFlow contract: 7.27
 ```
 
 Then do one of these:
@@ -178,7 +178,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.26
+SeamFlow contract: 7.27
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -306,7 +306,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.26
+SeamFlow contract: 7.27
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -372,7 +372,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.26
+SeamFlow contract: 7.27
 Command:
 Artifact classification:
 Files returned:
@@ -425,6 +425,10 @@ Bare `/accessibility`, `/create /accessibility`, `/audit /accessibility`, and `/
 - preservation of Seam classes, Kiwe capability attributes, Bricks dynamic tags, query-loop intent, DSA selectors, and AppShell boundaries.
 
 Accessibility fixes should use existing tokens and classes first. Add new project variables only when a real design value is missing and name them clearly.
+
+Bare-command execution identity: `/accessibility` is not an alias for `/audit /accessibility`, not a score-only pass, and not an advice/report command. It means the closed sequence `/audit /fix /accessibility`: inspect the approved artifact, repair every safely discoverable failure in that artifact, create or complete a designed peer dark mode when one is missing, render both modes at desktop/tablet/mobile/narrow, run the official closure validator, and return the revised artifact. If no failure exists, return the unchanged proven artifact. Never silently rewrite the command as `/audit /accessibility`, set `mutation_performed: false` while open failures remain, or end with “audit complete.” When editing, rendering, or executable validation is unavailable, return `STATUS: NEEDS_INPUT` with any corrected candidate; never `PASS` or `complete`.
+
+Execution receipt: every bare `/accessibility` result must record `execution.command`, `execution.contractVersion`, `execution.releaseId`, `execution.sourceHash`, `execution.mode`, `execution.artifactDisposition`, and `execution.darkModeDisposition` in `accessibility/kiwe-accessibility-plan.json`. The command must be `/accessibility`; mode must be `closed-refinement`; artifact disposition must be `revised` or `unchanged-passed`; dark-mode disposition must be `created`, `enhanced`, or `preserved-authored`. A plan whose workflow is only `/audit /accessibility`, whose dark mode is “not implemented,” or whose open failures were not repaired is failed output and must not be presented as the result of bare `/accessibility`.
 
 Creative-authority boundary: the human-approved current artifact is the design authority. `/ideate` remains unrestricted collaboration between the human and their chosen AI; Kiwe must not inject a house style, layout recipe, component library, Framework vocabulary, or aesthetic preference into it. `/convert /bricks` and `/seamframework` are deterministic preservation/translation lanes and have no creative authority. Bare `/accessibility` is the sole bounded design-aware refinement lane: it runs audit -> minimal fix -> render -> re-audit while preserving content, information hierarchy, brand identity, accepted light-mode composition, interaction intent, and distinctive art direction. It may change spacing, wrapping, sizing, alignment, focus, motion, semantics, and color roles only as needed to correct evidence-backed accessibility/usability failures.
 

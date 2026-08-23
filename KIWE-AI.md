@@ -86,6 +86,8 @@ For every later slash command in an existing AI conversation, fetch `https://sta
 
 Kiwe has no creative authority during `/ideate`; the human and their chosen AI own that exploration. Conversion and Framework commands preserve/translate programmatically. Bare `/accessibility` is the only bounded design-aware refinement command: treat the accepted current artifact and light appearance as authoritative, correct evidence-backed standards/responsive defects, and use visual judgment only to make dark mode a deliberate peer expression of the same brand. Never market subjective beauty or equal preference as scientifically certified; keep executable accessibility proof distinct from visual-parity and human/device review.
 
+Bare `/accessibility` must never degrade into `/audit /accessibility`. It is a closed audit -> fix -> render -> re-audit execution that returns the revised current artifact and an execution receipt tied to the freshly discovered contract release. If open failures remain with `mutation_performed: false`, dark mode remains unimplemented, or closure/render proof is unavailable, the only valid status is `NEEDS_INPUT` or `FAIL`; “audit complete” is invalid.
+
 Documentation is opt-in for every lane. Unless the command includes `/document` or the human explicitly asks for notes, output only the canonical artifact file(s) for that command. Do not add README files, notes, audit reports, duplicate previews, ZIPs, or polite explanation files by default.
 
 Final chat responses are also lean by default. Return only a compact `PASS` / `FAIL` / `WARN` status, files changed, files kept/removed when relevant, validator/audit status, and remaining warnings. Do not write long paragraphs unless `/document` or the human asks for explanation.

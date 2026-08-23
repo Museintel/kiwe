@@ -8,7 +8,7 @@
     "rawEntrypoint": "https://start.kiwelaunch.com/start.md",
     "machineEntrypoint": "https://start.kiwelaunch.com/entry.json",
     "freshDiscovery": "https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}",
-    "contractVersion": "7.26",
+    "contractVersion": "7.27",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -71,7 +71,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.26", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.27", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -409,11 +409,12 @@
       "phase": "accessibility-current-artifact",
       "read": ["kiwe-ai-toolkit/contexts/accessibility-lite.md"],
       "requires": ["current page, preview, artifact, or file map; the active /ideate page qualifies"],
-      "must": ["treat the approved current artifact and light appearance as design authority", "run inspect -> audit -> minimal fix -> render -> re-audit", "inspect the complete artifact in light and dark at desktop, tablet, mobile and narrow widths", "discover responsive defects without requiring the human to name them", "check card flex/grid growth, repeated-component sizing and CTA/footer alignment", "check wrapping, clipping, overlap, viewport overflow and touch-control collisions", "preserve content, hierarchy, identity, interaction intent, distinctive composition and light-mode art direction", "use bounded visual judgment to create a semantic dark appearance with peer hierarchy, brand recognition and intentional surface/accent distribution", "run validate-accessibility.cjs <artifact-root> --closure before PASS"],
-      "output": ["revised existing artifact file(s)", "accessibility/kiwe-accessibility-plan.json", "SEAM automated accessibility score with automated coverage", "responsive reflow/alignment findings", "separate dark-mode visual-parity review", "manual checks outside the score"],
-      "forbidden": ["influencing /ideate art direction", "forcing Seam Framework", "forcing Bricks conversion", "generic redesign", "copy or storytelling rewrite", "light-mode redesign", "dark-mode inversion", "claiming subjective beauty or user preference is scientifically certified", "unmeasured compliance claims", "ZIP"],
-      "closureValidator": "Bare /accessibility is a closed audit/fix/re-audit pass. Require approvedDesignPreserved, lightModeArtDirectionPreserved, darkModeArtDirection, darkModeParityReview, responsiveUsabilityReviewed, repeatedComponentsReviewed and light/dark render proof at desktop/tablet/mobile/narrow. If render or validator proof is unavailable, return corrected candidates as NEEDS_INPUT rather than PASS.",
-      "finalResponse": "Return technical accessibility status separately from dark-mode visual-parity review; include files changed, structural drift, validator/render proof, and remaining human/device checks."
+      "executionIdentity": "Bare /accessibility is exactly one closed audit -> fix -> render -> re-audit refinement. It is not /audit /accessibility, score-only analysis, advice, or a plan-only response.",
+      "must": ["freshly discover the current release and record its contractVersion, releaseId and sourceHash in plan.execution", "keep execution.command exactly /accessibility and execution.mode closed-refinement", "treat the approved current artifact and light appearance as design authority", "run inspect -> audit -> minimal fix -> render -> re-audit", "repair safely discoverable failures in the artifact rather than merely recommend fixes", "create or complete a deliberate peer dark appearance when dark mode is absent", "inspect the complete artifact in light and dark at desktop, tablet, mobile and narrow widths", "discover responsive defects without requiring the human to name them", "check card flex/grid growth, repeated-component sizing and CTA/footer alignment", "check wrapping, clipping, overlap, viewport overflow and touch-control collisions", "preserve content, hierarchy, identity, interaction intent, distinctive composition and light-mode art direction", "use bounded visual judgment to create a semantic dark appearance with peer hierarchy, brand recognition and intentional surface/accent distribution", "run validate-accessibility.cjs <artifact-root> --closure before PASS"],
+      "output": ["revised existing artifact file(s), or the unchanged proven artifact only when no failure exists", "accessibility/kiwe-accessibility-plan.json with execution receipt and closure", "SEAM automated accessibility score with automated coverage", "responsive reflow/alignment findings", "separate dark-mode visual-parity review", "manual checks outside the score"],
+      "forbidden": ["routing or labelling bare /accessibility as /audit /accessibility", "mutation_performed false while safely fixable failures remain open", "dark mode not implemented/proven as a completed outcome", "audit complete without returned artifact and closure proof", "influencing /ideate art direction", "forcing Seam Framework", "forcing Bricks conversion", "generic redesign", "copy or storytelling rewrite", "light-mode redesign", "dark-mode inversion", "claiming subjective beauty or user preference is scientifically certified", "unmeasured compliance claims", "ZIP"],
+      "closureValidator": "Bare /accessibility is a closed audit/fix/re-audit pass. Require an execution receipt bound to fresh discovery, artifactDisposition revised or unchanged-passed, darkModeDisposition created/enhanced/preserved-authored, approvedDesignPreserved, lightModeArtDirectionPreserved, darkModeArtDirection, darkModeParityReview, responsiveUsabilityReviewed, repeatedComponentsReviewed and light/dark render proof at desktop/tablet/mobile/narrow. If editing, render, or validator proof is unavailable, return corrected candidates as NEEDS_INPUT rather than PASS.",
+      "finalResponse": "Never say audit complete for bare /accessibility. Return the artifact, technical accessibility status separately from dark-mode visual-parity review, fresh execution receipt, structural drift, validator/render proof, and remaining human/device checks."
     },
     "/create /accessibility": {
       "phase": "create",

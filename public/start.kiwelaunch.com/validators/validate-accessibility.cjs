@@ -19,7 +19,7 @@ Checks:
   - Kiwe/Seam token pairing
   - Bricks theme-style/color-palette alignment hints
   - critical text clipping and overflow risk in CSS/Bricks settings
-  - with --closure: audit/fix/re-audit proof, approved/light design preservation,
+  - with --closure: fresh execution receipt, audit/fix/re-audit proof, approved/light design preservation,
     brand-aware peer dark-mode review, responsive-usability and repeated-component
     review, and light/dark render proof at desktop, tablet, mobile, and narrow widths
 

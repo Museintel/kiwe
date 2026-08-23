@@ -101,6 +101,28 @@ function parseJson(file, findings) {
 }
 
 function validateClosure(plan, planPath, findings) {
+  const execution = isPlainObject(plan.execution) ? plan.execution : null;
+  if (!execution) {
+    add(findings, 'fail', 'accessibility_execution_receipt_missing', 'Closure requires plan.execution from fresh command discovery so audit-only or stale-context substitution cannot be presented as bare /accessibility.', planPath, '$.execution');
+  } else {
+    const command = String(execution.command || '').trim();
+    if (!['/accessibility', '/audit /fix /accessibility'].includes(command)) {
+      add(findings, 'fail', 'accessibility_execution_command_invalid', 'plan.execution.command must be /accessibility for the bare command or /audit /fix /accessibility for the explicit combined command; /audit /accessibility is not a closed refinement.', planPath, '$.execution.command');
+    }
+    if (!String(execution.contractVersion || '').trim() || !String(execution.releaseId || '').trim() || !/^sha256:/i.test(String(execution.sourceHash || '').trim())) {
+      add(findings, 'fail', 'accessibility_execution_freshness_receipt_invalid', 'plan.execution must record the freshly discovered contractVersion, releaseId, and sha256 sourceHash.', planPath, '$.execution');
+    }
+    if (String(execution.mode || '').trim().toLowerCase() !== 'closed-refinement') {
+      add(findings, 'fail', 'accessibility_execution_mode_invalid', 'plan.execution.mode must be closed-refinement; audit-only and plan-only modes cannot close bare /accessibility.', planPath, '$.execution.mode');
+    }
+    if (!['revised', 'unchanged-passed'].includes(String(execution.artifactDisposition || '').trim().toLowerCase())) {
+      add(findings, 'fail', 'accessibility_execution_artifact_disposition_invalid', 'plan.execution.artifactDisposition must be revised or unchanged-passed.', planPath, '$.execution.artifactDisposition');
+    }
+    if (!['created', 'enhanced', 'preserved-authored'].includes(String(execution.darkModeDisposition || '').trim().toLowerCase())) {
+      add(findings, 'fail', 'accessibility_execution_dark_mode_disposition_invalid', 'plan.execution.darkModeDisposition must be created, enhanced, or preserved-authored; not implemented is not closure.', planPath, '$.execution.darkModeDisposition');
+    }
+  }
+
   const closure = isPlainObject(plan.closure) ? plan.closure : null;
   if (!closure) {
     add(findings, 'fail', 'accessibility_closure_missing', 'A closure audit requires plan.closure evidence for audit -> fix -> render -> re-audit.', planPath, '$.closure');

@@ -13,6 +13,16 @@ This is an independent accessibility lane. It works on the current raw HTML/CSS/
 
 Bare `/accessibility` means a closed refinement pass over an already approved design: inspect -> audit -> make the smallest safe fixes -> render -> re-audit. Inspect the complete current working page/artifact in light and dark at desktop, tablet, mobile, and narrow widths. Report automated evidence and manual checks separately. Discover responsive defects without waiting for the human to name them—for example overflowing capsule text, clipped headings, overlapping layers, cards that cannot grow with content, inconsistent repeated-card CTA/footer alignment, unreachable horizontal content, or touch controls that collide. Preserve the accepted composition, content, information hierarchy, interaction intent, light-mode visual thesis, motion language, brand identity, and distinctive art direction. Do not replace the design with a generic accessibility template or a black-background inversion.
 
+## Bare-command execution law
+
+- `/accessibility` is not `/audit /accessibility`. Do not rename, route, summarize, or execute it as an audit-only workflow.
+- Bare `/accessibility` equals one closed `/audit /fix /accessibility` pass. When the artifact is writable, repair the artifact rather than merely recommending fixes.
+- If dark mode is absent, create a deliberate peer dark appearance in the existing artifact. “Dark mode not implemented/proven” is a finding to fix, not an acceptable completed result.
+- If discoverable failures remain open, `mutation_performed: false`, an audit-only plan, a score-only response, or “audit complete” is invalid output.
+- When no fix is necessary, preserve the artifact and prove `unchanged-passed`. Do not manufacture edits.
+- When file editing, rendered comparison, or the official closure validator cannot run, return corrected candidates when possible but use `STATUS: NEEDS_INPUT`; never claim PASS or completion.
+- Before execution, perform fresh discovery with a new nonce and use the selected immutable release route. The plan's execution receipt must report the exact discovery values used so stale-context drift is visible.
+
 ## Creative-authority boundary
 
 - `/ideate` belongs to the human and their chosen AI. This context must not influence ideation with a Kiwe house style, layout recipe, component vocabulary, Framework token system, or preferred aesthetic.
@@ -126,6 +136,15 @@ Use this JSON shape:
 ```json
 {
   "schema": "kiwe.accessibility-plan.v1",
+  "execution": {
+    "command": "/accessibility",
+    "contractVersion": "current freshly discovered version",
+    "releaseId": "current freshly discovered content-hash release",
+    "sourceHash": "sha256 from fresh discovery",
+    "mode": "closed-refinement",
+    "artifactDisposition": "revised|unchanged-passed",
+    "darkModeDisposition": "created|enhanced|preserved-authored"
+  },
   "source": {
     "mode": "website|theme|combined|framework|bricks-conversion",
     "artifact": "short human-readable artifact summary"
@@ -189,6 +208,8 @@ The plan may include extra explanatory fields, but these keys must exist:
 - `modes` containing both `light` and `dark`;
 - `tokenPairs`;
 - `manualReview`.
+
+`execution` is mandatory for bare `/accessibility` and `/audit /fix /accessibility` closure. It binds the result to fresh discovery and proves that the model did not silently substitute an audit-only workflow. For bare `/accessibility`, `execution.command` must be exactly `/accessibility`.
 
 `closure` is optional for `/create /accessibility` when the command is explicitly plan-only. It is mandatory for bare `/accessibility` and `/audit /fix /accessibility`. `renderProof` must contain separate passed entries for desktop, tablet, mobile, and narrow widths. Every entry must cover light and dark, record a positive width, and identify the concrete rendered evidence inspected. If render tools are unavailable, the command may return corrected candidate files but must return `NEEDS_INPUT`; it must not claim closure.
 
