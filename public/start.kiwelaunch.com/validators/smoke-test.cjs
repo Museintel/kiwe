@@ -63,7 +63,9 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.22', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.24', 'entry contract mismatch');
+  assert(entry.freshness.discoveryTemplate.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'entry missing nonce-based fresh discovery');
+  assert(entry.freshness.integrity.includes('sha256'), 'entry missing pinned-resource integrity rule');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
   assert(entry.flows.executionCommands['/execute /stepbystep'], 'missing /execute /stepbystep in entry');
   assert(entry.flows.executionCommands['/ideate'], 'missing /ideate in entry');
@@ -82,6 +84,8 @@ function assert(condition, message) {
   assert(entry.flows.secondPassCommands['/fix /previousoutput'], 'missing /fix /previousoutput in entry');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_AUDIT_MISSING, 'entry missing previous audit error code');
   assert(entry.errorHandling.codes.KIWE_PREVIOUS_OUTPUT_MISSING, 'entry missing previous output error code');
+  assert(entry.errorHandling.codes.KIWE_PREVIOUS_COMMAND_MISSING, 'entry missing previous command error code');
+  assert(entry.errorHandling.codes.KIWE_CONTRACT_INTEGRITY_FAILED, 'entry missing contract-integrity error code');
   assert(entry.flows.auditClosure, 'entry missing audit closure law');
   assert(entry.flows.auditClosure.byStartPoint['bricks-template-upload'].includes('/audit /bricksconversion'), 'entry missing Bricks closure audit');
   assert(entry.flows.auditClosure.byStartPoint['raw-html-css-js'].includes('/audit /bricksconversion'), 'entry missing raw Bricks closure');
@@ -100,10 +104,13 @@ function assert(condition, message) {
   assert(entry.firstResponse.ifFilesNoCommand.includes('/convert /bricks'), 'entry missing raw deterministic conversion default');
   assert(entry.noCommandInteraction.firstResponseShape.some((line) => line.includes('/convert /bricks')), 'entry first response missing raw conversion command');
   assert(entry.errorHandling.codes.KIWE_VALIDATOR_PROOF_MISSING, 'entry missing validator proof error code');
+  assert(entry.errorHandling.codes.KIWE_STALE_CONTRACT, 'entry missing stale command-contract error code');
+  assert(entry.firstResponse.ifOtherCommand.includes('fresh discovery') && entry.firstResponse.ifOtherCommand.includes('releaseId'), 'entry missing later-command release refresh rule');
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.22', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.24', 'manifest contract mismatch');
+  assert(manifest.entry.freshDiscovery.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'manifest missing nonce-based discovery URL');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
@@ -121,8 +128,12 @@ function assert(condition, message) {
   assert(manifest.commands['/fix /previousaudit'], 'manifest missing /fix /previousaudit');
   assert(manifest.commands['/audit /previousoutput'], 'manifest missing /audit /previousoutput');
   assert(manifest.commands['/fix /previousoutput'], 'manifest missing /fix /previousoutput');
+  assert(manifest.commands['/redo'], 'manifest missing /redo');
   assert(manifest.errorCatalog.codes.KIWE_MANUAL_PASS_BLOCKED, 'manifest missing command-central error catalog');
   assert(manifest.errorCatalog.codes.KIWE_VALIDATOR_PROOF_MISSING, 'manifest missing validator proof error catalog');
+  assert(manifest.errorCatalog.codes.KIWE_STALE_CONTRACT, 'manifest missing stale command-contract error code');
+  assert(manifest.errorCatalog.codes.KIWE_CONTRACT_INTEGRITY_FAILED, 'manifest missing contract-integrity error code');
+  assert(JSON.stringify(manifest.globalRules).includes('content-hash immutable'), 'manifest missing content-hash command freshness rule');
   assert(manifest.globalRules.validatorAuthority.includes('SEAM Compiler'), 'manifest missing SEAM Compiler proof authority');
   assert(manifest.pluginApi && manifest.pluginApi.routes && manifest.pluginApi.routes.status.includes('/ai/seamflow/status'), 'manifest missing plugin SeamFlow status route');
   assert(manifest.pluginApi.scope.includes('seamflow'), 'manifest missing plugin SeamFlow scope');
@@ -139,8 +150,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.22', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.22', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.24', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.24', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -174,6 +185,10 @@ function assert(condition, message) {
   const oldAuditAliasRejected = m.diagnoseCommand({ command: '/audit' + 'ateachstep', artifactSummary: 'website/bricks-paste.html exists' });
   const previousOutputMissing = m.diagnoseCommand({ command: '/audit /previousoutput' });
   const previousOutputOk = m.diagnoseCommand({ command: '/audit /previousoutput', artifactSummary: 'immediate previous AI output files: framework/kiwe-framework-profile.json; bricks-template/home-template-upload.json' });
+  const redoMissing = m.diagnoseCommand({ command: '/redo' });
+  const redoOk = m.diagnoseCommand({ command: '/redo', artifactSummary: 'immediate previous command /audit /fix /accessibility; approved input snapshot and attachments are accessible' });
+  const redoScopeChange = m.diagnoseCommand({ command: '/redo /accessibility', artifactSummary: 'previous command snapshot exists' });
+  const redoRoute = m.routeCommand({ command: '/redo', artifactSummary: 'immediate previous command and approved input snapshot are accessible' });
   const broadSiteGraph = m.diagnoseCommand({ command: '/usesitegraph', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export' });
   const previewOnly = m.diagnoseCommand({ command: '/usesitegraph /for /previewdata /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
   const designContext = m.diagnoseCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
@@ -203,6 +218,8 @@ function assert(condition, message) {
   assert(ideateRoute.includes('Framework Profile JSON'), '/ideate route must reserve registered tokens for the later Framework Profile flow');
   assert(ideateRoute.includes('Responsive geometry ladder'), '/ideate route missing responsive geometry guidance');
   assert(ideateRoute.includes('ordinary conversation is the refinement interface'), '/ideate route missing conversational refinement');
+  assert(ideateRoute.includes('Creative independence guard') && ideateRoute.includes('have no house visual style'), '/ideate route missing creative-independence guard');
+  assert(ideateRoute.includes('self-contained `index.html`'), '/ideate route must support single-file browser artifacts');
   assert(noop.stop && noop.status === 'noop', 'preview noop diagnostic failed');
   assert(!missingProfile.stop, 'raw conversion must not require a Framework profile');
   assert(!ok.stop, 'valid bricks conversion diagnostic stopped');
@@ -222,6 +239,10 @@ function assert(condition, message) {
   assert(oldAuditAliasRejected.stop && oldAuditAliasRejected.code === 'unknown_command_token', 'old audit cadence alias should be rejected');
   assert(previousOutputMissing.stop && previousOutputMissing.code === 'previous_output_missing', 'previous output missing diagnostic failed');
   assert(!previousOutputOk.stop, 'previous output with immediate output summary should not stop');
+  assert(redoMissing.stop && redoMissing.code === 'previous_command_missing', '/redo must stop without a previous command input snapshot');
+  assert(!redoOk.stop && redoOk.kind === 'redo', '/redo should accept an accessible immediate previous command snapshot');
+  assert(redoScopeChange.stop && redoScopeChange.code === 'redo_scope_change_blocked', '/redo must reject appended scope changes');
+  assert(redoRoute.includes('fresh discovery') && redoRoute.includes('content-hash release') && redoRoute.includes('KIWE_PREVIOUS_COMMAND_MISSING'), '/redo route missing fresh replacement contract');
   assert(broadSiteGraph.stop && broadSiteGraph.code === 'dynamic_target_missing', 'broad /usesitegraph must ask for an explicit /for target');
   assert(!previewOnly.stop, 'targeted preview-data SiteGraph command should pass with artifact and evidence');
   assert(!designContext.stop, 'file-only design-context command should pass with its export');
@@ -336,6 +357,60 @@ function assert(condition, message) {
   assert(!contrast.ok && JSON.stringify(contrast).includes('accessibility_low_contrast_literal_pair'), 'invalid contrast fixture did not fail');
   const overflow = m.validateAccessibility(path.join(root, 'fixtures/accessibility-invalid-overflow'));
   assert(!overflow.ok && JSON.stringify(overflow).includes('accessibility_text_clipping_risk'), 'invalid overflow fixture did not fail');
+
+  const namedHtmlDir = path.join(tmp, 'accessibility-html-name');
+  fs.mkdirSync(namedHtmlDir, { recursive: true });
+  const namedHtmlPath = path.join(namedHtmlDir, 'mishtanna-v2-accessibility-fixed.html');
+  fs.writeFileSync(namedHtmlPath, '<!doctype html><html><head><style>.page{color:#111;background:#fff}</style></head><body class="page">Light only</body></html>');
+  const namedHtml = m.validateAccessibility(namedHtmlPath, { optional: true });
+  const namedHtmlText = JSON.stringify(namedHtml);
+  assert(!namedHtmlText.includes('accessibility_plan_invalid_json'), 'HTML whose filename contains accessibility must not be parsed as a JSON plan');
+  assert(namedHtmlText.includes('accessibility_missing_dark_mode_proof'), 'named HTML fixture should still receive ordinary page validation');
+
+  const missingClosure = m.validateAccessibility(path.join(root, 'fixtures/accessibility-valid'), { requireClosure: true });
+  assert(!missingClosure.ok && JSON.stringify(missingClosure).includes('accessibility_closure_missing'), 'closure mode must reject a plan without closure evidence');
+
+  const closureDir = path.join(tmp, 'accessibility-closure-valid');
+  fs.mkdirSync(path.join(closureDir, 'accessibility'), { recursive: true });
+  fs.writeFileSync(path.join(closureDir, 'index.html'), '<!doctype html><html data-theme="dark"><head><style>.page{color:#111;background:#fff}</style></head><body class="page">Closure proof</body></html>');
+  fs.writeFileSync(path.join(closureDir, 'accessibility/kiwe-accessibility-plan.json'), JSON.stringify({
+    schema: 'kiwe.accessibility-plan.v1',
+    source: { mode: 'website', artifact: 'closure fixture' },
+    modes: ['light', 'dark'],
+    tokenPairs: [{ id: 'page', foreground: '#111111', background: '#ffffff', modes: ['light', 'dark'], minimumContrast: 4.5 }],
+    closure: {
+      command: '/audit /fix /accessibility',
+      auditFixReaudit: 'passed',
+      darkModeArtDirection: 'passed',
+      repeatedComponentsReviewed: true,
+      renderProof: ['desktop', 'tablet', 'mobile', 'narrow'].map((viewport, index) => ({ viewport, width: [1440, 1024, 390, 320][index], modes: ['light', 'dark'], status: 'passed', evidence: `${viewport} browser screenshot inspected` }))
+    },
+    manualReview: []
+  }));
+  const closureValid = m.validateAccessibility(closureDir, { requireClosure: true });
+  assert(closureValid.ok, `valid closure evidence failed: ${JSON.stringify(closureValid)}`);
+
+  const commandManifest = JSON.parse(fs.readFileSync(path.join(root, 'command-manifest.json'), 'utf8'));
+  const accessibilityChecks = commandManifest.commands['/fix /accessibility'].checks;
+  assert(accessibilityChecks.includes('brand-preserving dark art direction'), 'accessibility command missing brand-preserving dark-mode gate');
+  assert(accessibilityChecks.includes('repeated-component CTA and internal alignment'), 'accessibility command missing repeated-component alignment gate');
+  assert(accessibilityChecks.includes('full-page light/dark rendered inspection at desktop/tablet/mobile/narrow'), 'accessibility command missing full-page multi-viewport render gate');
+  assert(accessibilityChecks.some((check) => check.includes('only when that framework is already in scope')), 'accessibility command must not force Kiwe/Seam tokens into raw pages');
+
+  const largeArtifactDir = path.join(tmp, 'accessibility-large-embedded-artifact');
+  fs.mkdirSync(path.join(largeArtifactDir, 'accessibility'), { recursive: true });
+  fs.writeFileSync(path.join(largeArtifactDir, 'index.html'), `<!doctype html><html data-kiwe-theme="dark"><head><style>.button-label{height:24px;overflow:hidden;white-space:nowrap;color:#fff;background:#fff}</style></head><body><div>${'data:image/png;base64,' + 'A'.repeat(900_000)}</div><button class="button-label">Critical action label</button></body></html>`);
+  fs.writeFileSync(path.join(largeArtifactDir, 'accessibility/kiwe-accessibility-plan.json'), JSON.stringify({
+    schema: 'kiwe.accessibility-plan.v1',
+    source: { mode: 'website', artifact: 'large embedded browser artifact' },
+    modes: ['light', 'dark'],
+    tokenPairs: [],
+    manualReview: []
+  }));
+  const largeArtifact = m.validateAccessibility(largeArtifactDir);
+  const largeArtifactText = JSON.stringify(largeArtifact);
+  assert(!largeArtifact.ok && largeArtifactText.includes('accessibility_low_contrast_literal_pair'), 'large self-contained HTML was not scanned for contrast');
+  assert(!largeArtifact.ok && largeArtifactText.includes('accessibility_text_clipping_risk'), 'large self-contained HTML was not scanned for clipping');
 
   runNode(['tools/prepare-apply-plan.cjs', 'fixtures/bindings-valid', '--site-graph', 'fixtures/bindings-valid/site-graph.json']);
   runNode(['tools/validate-framework-profile.cjs', 'fixtures/framework-profile-valid']);

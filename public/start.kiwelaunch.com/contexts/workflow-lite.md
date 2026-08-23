@@ -12,6 +12,10 @@ https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-ma
 
 Use the manifest first when available. It is intentionally smaller than this prose file and tells you the narrow context files, allowed outputs, forbidden outputs, and compact final response shape for each slash command.
 
+For every later slash command in a continuing AI conversation, first fetch `https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={new-nonce}` with a nonce never used earlier in that conversation. Verify `contractVersion`, `releaseId`, and `sourceHash`, then load only the chosen content-hash URL from `immutableCommands` and verify each listed resource `sha256`. Never mix canonical cache responses, old release URLs, or remembered command context.
+
+`/redo` reruns the immediately previous canonical slash command from its exact approved input/source snapshot under that freshly discovered release. The previous generated candidate is discarded as authority. `/redo` is not `/fix`; it does not patch the failed candidate or change scope. If the previous command/input snapshot is unavailable, stop with `KIWE_PREVIOUS_COMMAND_MISSING`.
+
 ## Core principle
 
 Creativity and contract compliance are different jobs.

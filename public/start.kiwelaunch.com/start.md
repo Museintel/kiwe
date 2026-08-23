@@ -1,7 +1,7 @@
 # SeamFlow Start
 
-Contract version: `7.22`
-Updated: `2026-08-21`
+Contract version: `7.24`
+Updated: `2026-08-23`
 Repository: `Museintel/kiwe`
 Product: `SeamFlow`
 Purpose: fastest safe entrypoint for external AI, browser AI, IDE AI, MCP clients, skill-capable agents, and Kiwe Companion-assisted Appsite workflows.
@@ -17,7 +17,7 @@ If you are an AI reading this file, treat it as the front door. Do not browse, c
 Start by reporting this exact contract version:
 
 ```text
-SeamFlow contract: 7.22
+SeamFlow contract: 7.24
 ```
 
 Then do one of these:
@@ -42,7 +42,7 @@ Classification is read-only and allowed. Audits, fixes, conversion, creation, li
 
 Command grammar: SeamFlow commands are composable shell-like tokens, not memorized fixed prompts. Parse the whole user command into what should happen, where it should happen, which evidence/context may be used, and optional modifiers:
 
-- one primary action token when applicable, such as `/ideate`, `/execute`, `/rebuild`, `/create`, `/convert`, `/audit`, `/fix`, `/apply`, `/list`, or `/document`;
+- one primary action token when applicable, such as `/ideate`, `/execute`, `/rebuild`, `/create`, `/convert`, `/audit`, `/fix`, `/redo`, `/apply`, `/list`, or `/document`;
 - one or more explicit target tokens when needed, including `/previewdata`, `/bricksbindings`, `/dynamictags`, `/queryloops`, `/kiwelaunchers`, or `/siteidentity` for dynamic work;
 - an evidence/context source such as `/usesitegraph` or `/usebrickscontext`; a context source never implies every possible target;
 - zero or more universal scope tokens: entities such as `/products`, `/posts`, `/pages`, `/media`, `/menus`, and fields such as `/titles`, `/images`, `/prices`, `/links`, `/excerpts`, `/metadata`;
@@ -52,7 +52,9 @@ Example: `/execute /fullflow /audit /fix /eachstep` is not one single hardcoded 
 
 Dynamic examples: `/usesitegraph /for /previewdata` changes all eligible preview samples only; `/usesitegraph /for /previewdata /products /titles /images /nonai` changes only product names and images using the read-only SiteGraph lane; `/usesitegraph /for /bricksbindings` creates target-grounded bindings only; `/usebrickscontext /for /dynamictags` uses generic verified Bricks capabilities without SiteGraph. The AI must derive the full implementation contract from these tokens and ask only for a missing artifact, evidence source, or ambiguous source region.
 
-Active-contract rule: after you read this Start file and return the first classification response, treat this loaded Start file as the active contract for the immediate next user `/command` in the same conversation. Do not reload the repository, README, GitHub pages, search results, arXiv, commits, old examples, or the Start file again for that next command. If additional command detail is truly required, fetch only the exact raw machine entry or exact raw command manifest URL from this Start file. If exact raw fetch is unavailable, stop with `ERROR: KIWE_TOOL_UNAVAILABLE` or `ERROR: KIWE_SEARCH_DRIFT`; do not search.
+Active-contract and freshness rule: before every slash command, including the first command after Start classification, fetch `https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}` using a new nonce that has not appeared earlier in the conversation. Read `contractVersion`, `releaseId`, `sourceHash`, and the selected command's URL from `immutableCommands`; then fetch that content-hash release route and only its listed pinned resources. The release URL changes whenever any published command, context, schema, or validator changes. Do not reuse browser/model memory, an earlier canonical response, an earlier release ID, or a URL already opened in the conversation. If fresh discovery, the release route, any resource hash, or their shared `sourceHash` disagrees or cannot be fetched, stop with `ERROR: KIWE_STALE_CONTRACT` or `ERROR: KIWE_CONTRACT_INTEGRITY_FAILED`; do not improvise from stale context.
+
+Cache boundary: canonical `start.kiwelaunch.com` discovery, Start, entry, manifest, route, context, schema, and validator responses are `no-store`; `/v/{releaseId}/...` responses are immutable. A continuing AI conversation must still append a new discovery nonce because model/tool URL caches may ignore HTTP freshness. GitHub raw URLs are fallback-only when the hosted registry is unavailable; append `?refresh={nonce}`, verify the reported contract version, and never use a previously opened raw URL as current proof.
 
 Current-run evidence only: do not use prior Kiwe validation material, old National Chikki/BioVantage attempts, previous browser-AI outputs, local downloads, search results, or "accepted" notes unless the human supplied those exact files in the current turn or explicitly asked you to compare against them. SeamFlow must classify and validate the current artifacts, not inherit conclusions from earlier tests.
 
@@ -76,28 +78,30 @@ Current launch scope: close raw Bricks conversion through SEAM Framework first, 
 
 ## Fast machine-readable router
 
-Preferred raw file:
+Preferred fresh discovery file:
 
 ```text
-https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json
+https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}
 ```
 
-Then read:
+Then read the `entry`, `commandManifest`, or matching `immutableCommands` URL declared by that discovery response. For the immediate first command only, the canonical machine files are:
 
 ```text
-https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json
+https://start.kiwelaunch.com/entry.json
+https://start.kiwelaunch.com/command-manifest.json
 ```
 
 Read only the context files named by the matched command. Do not search GitHub for hidden docs.
 
 ## Fast navigation tree
 
-Use these direct raw URLs instead of searching:
+Use the content-hash URLs returned by fresh discovery. These canonical URLs are the no-store front doors; GitHub raw remains fallback-only:
 
 ```text
-Start:              https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md
-Machine entry:      https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/entry.json
-Command manifest:   https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/command-manifest.json
+Fresh discovery:    https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}
+Start:              https://start.kiwelaunch.com/start.md
+Machine entry:      https://start.kiwelaunch.com/entry.json
+Command manifest:   https://start.kiwelaunch.com/command-manifest.json
 Workflow:           https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/workflow-lite.md
 Ideation:           https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/ideate-lite.md
 Seam attributes:    https://raw.githubusercontent.com/Museintel/kiwe/main/kiwe-ai-toolkit/contexts/seam-attributes-lite.md
@@ -174,7 +178,7 @@ When classification is uncertain, ask whether the human wants an audit first. Do
 When the human gives only the Start URL, your first response should be:
 
 ```text
-SeamFlow contract: 7.22
+SeamFlow contract: 7.24
 STATUS: NEEDS_INPUT
 Attachments detected: yes/no
 Artifact diagnostic: type/confidence/stage, if files are present and inspectable
@@ -259,6 +263,7 @@ When a browser AI has already produced one or more output files, the human shoul
 /audit /previousoutput -> audit the files generated in the immediate previous AI output in this same session
 /fix /previousoutput  -> fix the files generated in the immediate previous AI output, using matching audit/fix loops
 /fix /previousaudit   -> fix only the failures from the immediately previous audit result, then rerun that same audit scope
+/redo                 -> discard the immediate previous command's generated candidate and rerun that same canonical command from its original approved input snapshot under the freshly discovered current release
 ```
 
 These are not creative commands. They must not rebuild from scratch, redesign the page, add DSA/combined output, create docs, or use stale files. They are the browser-AI second-try loop: inspect current files, audit all relevant lanes, fix actual failures, and stop only at PASS or NEEDS_INPUT.
@@ -266,6 +271,8 @@ These are not creative commands. They must not rebuild from scratch, redesign th
 `/previousoutput` is a source selector, not a memory search. It means only the files generated by the AI in its immediate previous output in the same conversation/session. If those files are not directly accessible, stop with `ERROR: KIWE_PREVIOUS_OUTPUT_MISSING` and ask the human to attach the output files or rerun the previous command. Do not search downloads, old sandboxes, old chat messages, or previous project attempts.
 
 `/fix /previousaudit` requires the previous audit findings to be present in the current conversation or supplied as a file. If the previous audit is missing, ambiguous, stale, or not tied to the current artifacts, stop with `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`.
+
+`/redo` is replacement, not repair. It reruns only the immediately previous canonical slash command from the exact input/source snapshot, brief, attachments, approved refinements, and target scope that command received. It must first perform fresh discovery and load the current content-hash release route. Discard the previous command's generated candidate as authority, but do not discard the approved input snapshot. Do not broaden scope, silently redesign accepted earlier work, reuse the failed output as source, or interpret `/redo` as `/fix`. If the previous command or its input snapshot is unavailable, ambiguous, mutated, or outside the current conversation, stop with `ERROR: KIWE_PREVIOUS_COMMAND_MISSING`. Use `/fix` instead when the human wants localized changes to the existing output.
 
 If the human writes non-canonical wording such as `/fix /previouspass`, do not execute it and do not treat it as a hidden alias. Return `ERROR: KIWE_PREVIOUS_AUDIT_MISSING`, explain that the intended canonical command is `/fix /previousaudit`, and suggest `/audit /allattached /allflow` first when no previous audit findings exist.
 
@@ -283,9 +290,12 @@ KIWE_VALIDATOR_PROOF_MISSING  -> command claims PASS without executable validato
 KIWE_MANUAL_PASS_BLOCKED      -> command needs deterministic audit but only manual confidence is available; stop or report WARN
 KIWE_PREVIOUS_AUDIT_MISSING   -> /fix /previousaudit was requested without the immediately previous audit findings
 KIWE_PREVIOUS_OUTPUT_MISSING  -> /previousoutput was requested but the immediate previous output files are not accessible
+KIWE_PREVIOUS_COMMAND_MISSING -> /redo was requested but the immediate previous canonical command or its approved input snapshot is not accessible
 KIWE_CONTEXT_WINDOW_RISK      -> requested full flow is too large for the current AI/session; suggest /execute /stepbystep /audit /eachstep
 KIWE_TOKEN_BUDGET_RISK        -> command is likely to waste tokens; suggest a smaller command or /audit /allattached first
 KIWE_TOOL_UNAVAILABLE         -> MCP/API/browser/validator tool unavailable; use raw route if possible, otherwise stop
+KIWE_STALE_CONTRACT           -> a later command follows refinements/output but the exact current entry/manifest/context could not be refreshed; stop instead of using memorized command rules
+KIWE_CONTRACT_INTEGRITY_FAILED -> discovery, release, source hash, or pinned resource hash disagrees; stop instead of mixing command releases
 KIWE_SEARCH_DRIFT             -> a search engine, arXiv, GitHub search, commit browsing, or prior-example lookup was used or attempted instead of exact raw URL/context routing
 KIWE_SITEGRAPH_REQUIRED       -> command explicitly requires live Site Graph/API data that was not supplied
 KIWE_COMPANION_FALLBACK       -> /usecompanion requested but unavailable; continue only if the base command can run without it
@@ -296,7 +306,7 @@ Error response shape:
 
 ```text
 STATUS: NEEDS_INPUT | FAIL | WARN
-SeamFlow contract: 7.22
+SeamFlow contract: 7.24
 ERROR: KIWE_...
 Command:
 Current artifact:
@@ -362,7 +372,7 @@ Default final response shape:
 
 ```text
 STATUS: PASS | FAIL | WARN | NEEDS_INPUT
-SeamFlow contract: 7.22
+SeamFlow contract: 7.24
 Command:
 Artifact classification:
 Files returned:

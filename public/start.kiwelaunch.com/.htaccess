@@ -15,4 +15,13 @@ DirectoryIndex index.html
   <FilesMatch "\.(json|md|cjs)$">
     Header always set Access-Control-Allow-Origin "*"
   </FilesMatch>
+  <IfModule mod_setenvif.c>
+    SetEnvIf Request_URI "^/v/" KIWE_IMMUTABLE=1
+  </IfModule>
+  Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0" env=!KIWE_IMMUTABLE
+  Header always set Pragma "no-cache" env=!KIWE_IMMUTABLE
+  Header always set Expires "0" env=!KIWE_IMMUTABLE
+  Header always set Cache-Control "public, max-age=31536000, immutable" env=KIWE_IMMUTABLE
+  Header always set X-Kiwe-Contract-Version "7.24"
+  Header always set X-Kiwe-Release "7.24-058046711fd6"
 </IfModule>

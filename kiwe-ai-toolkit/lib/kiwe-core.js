@@ -506,7 +506,11 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.23',
+    contractVersion: '7.24',
+    freshness: {
+      discoveryTemplate: 'https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}',
+      rule: 'Before every later slash command, fetch fresh discovery with a new nonce and use only its content-hash immutable command route and pinned resource hashes.'
+    },
     purpose: 'Plan the smallest safe SeamFlow command path for website/page, header, footer, template, Framework profile, Bricks conversion, DSA theme, combined handoff, and accessibility flows.',
     architecture: {
       seamflow: 'External AI command-central flow for browser AI, IDE AI, MCP clients, and skill-capable agents.',
@@ -528,7 +532,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.23',
+      mustReport: 'SeamFlow contract: 7.24',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -610,8 +614,8 @@ export function listCommands() {
     flowName: 'seamflow',
     canonicalVerb: '/create',
     terminalEntry: {
-      pattern: 'read https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md\\n/list',
-      meaning: 'Read SeamFlow Start first. It confirms the SeamFlow contract version, points to the machine-readable manifest, routes the next slash command, and forbids repository crawling. KIWE-START.md is the compatibility URL.'
+      pattern: 'read https://start.kiwelaunch.com/start.md\\n/list',
+      meaning: 'Read SeamFlow Start first. It confirms the contract and freshness rules. Every later slash command refreshes the nonce-based discovery document and uses its content-hash immutable route.'
     },
     aliases: {
       '/build': 'Legacy alias accepted internally; user-facing output should say /create.',
@@ -625,6 +629,12 @@ export function listCommands() {
         purpose: 'List the supported Kiwe workflow commands without starting generation.',
         requires: [],
         output: 'command list only'
+      },
+      {
+        command: '/redo',
+        purpose: 'Replace the immediate previous command candidate by rerunning that same canonical command from its preserved approved input snapshot under the freshly discovered current release.',
+        requires: ['immediate previous canonical command and its approved input snapshot accessible in the current conversation'],
+        output: 'one replacement candidate; not a localized /fix'
       },
       {
         command: '/execute /stepbystep',
@@ -1093,6 +1103,7 @@ function routeKind(command) {
   const text = String(command || '').trim().toLowerCase();
   if (!text) return 'workflow';
   if (/(?:^|\s)\/list\b/.test(text)) return 'command-list';
+  if (/(?:^|\s)\/redo\b/.test(text)) return 'redo';
   if (/(?:^|\s)\/(?:document|notes)\b/.test(text)) return 'document';
   if (/(\/audit|\/fix)/.test(text) && /(\/allattached|\/allflow|\/previousaudit|\/previouspass|\/previousoutput)/.test(text)) return 'audit-all';
   if (/(?:^|\s)\/fix\b/.test(text)) return 'fix';
@@ -1202,6 +1213,7 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/excerpts',
   '/metadata',
   '/rebuild',
+  '/redo',
   '/seam',
   '/seamframework',
   '/staging',
@@ -1240,6 +1252,7 @@ const TYPO_TOKEN_SUGGESTIONS = new Map([
 
 const VALID_PHASE_COMMANDS = [
   '/list',
+  '/redo',
   '/execute /stepbystep',
   '/execute /fullflow',
   '/audit /eachstep',
@@ -1356,6 +1369,7 @@ const KIWE_ERROR_CODES = {
   document_missing_artifact: 'KIWE_MISSING_ARTIFACT',
   previous_audit_missing: 'KIWE_PREVIOUS_AUDIT_MISSING',
   previous_output_missing: 'KIWE_PREVIOUS_OUTPUT_MISSING',
+  previous_command_missing: 'KIWE_PREVIOUS_COMMAND_MISSING',
   accessibility_audit_missing_artifact: 'KIWE_MISSING_ARTIFACT',
   bricks_convert_requires_convert_verb: 'KIWE_WRONG_LANE',
   command_is_noop: 'KIWE_WRONG_LANE',
@@ -1415,6 +1429,39 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       kind: 'command-list',
       normalizedCommand: '/list',
       message: 'List the Kiwe command vocabulary only. Do not start generation.'
+    });
+  }
+
+  if (commandHas(text, /\/redo\b/)) {
+    const incompatible = tokens.filter((token) => !['/redo', '/usecompanion'].includes(token));
+    if (incompatible.length || tokens.filter((token) => token === '/redo').length !== 1) {
+      return commandDiagnostic({
+        status: 'rejected',
+        code: 'redo_scope_change_blocked',
+        kind: 'redo',
+        normalizedCommand: '/redo',
+        message: '`/redo` reruns the immediate previous canonical command exactly. Do not append a new lane or target; use the new command directly when scope should change.',
+        suggestions: ['/redo', 'Use /fix for localized repair.', 'Send the intended new canonical command when changing scope.'],
+        boundaries: ['Redo is replacement, not repair or scope expansion.', 'Do not combine command releases or use the failed candidate as source.']
+      });
+    }
+    if (!String(artifactSummary || brief || '').trim()) {
+      return commandDiagnostic({
+        status: 'needs_input',
+        code: 'previous_command_missing',
+        kind: 'redo',
+        normalizedCommand: '/redo',
+        message: '`/redo` needs the immediate previous canonical command and the exact approved input/source snapshot that command received in this conversation.',
+        suggestions: ['Restore or attach the previous command input snapshot.', 'Resend the original canonical command.', 'Use /fix if the existing candidate should be repaired in place.'],
+        boundaries: ['Do not search old conversations, downloads, or stale output.', 'Do not treat the previous generated candidate as the approved source snapshot.']
+      });
+    }
+    return commandDiagnostic({
+      status: 'ok',
+      code: 'redo_current_release',
+      kind: 'redo',
+      normalizedCommand: '/redo',
+      message: 'Freshly discover the current content-hash release, recover the immediate previous canonical command and its approved input snapshot, discard its generated candidate, and rerun the same command with current route validators.'
     });
   }
 
@@ -1901,6 +1948,8 @@ function commandListMarkdown() {
     '',
     'Fast machine-readable command manifest: `kiwe-ai-toolkit/command-manifest.json`.',
     '',
+    'Before every later slash command, reload `https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={new-nonce}` and use its content-hash immutable route. Never reuse an earlier command URL or mixed release.',
+    '',
     'Documentation and long explanations are opt-in through `/document`; otherwise return only the requested artifact(s) and a compact PASS/FAIL/WARN summary.',
     '',
     '## Commands'
@@ -2141,6 +2190,22 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
 
   if (kind === 'command-list') {
     return commandListMarkdown();
+  }
+
+  if (kind === 'redo') {
+    return [
+      '# Kiwe command route: redo',
+      '',
+      'Command: /redo',
+      '',
+      'Before doing any work, perform fresh discovery by fetching `https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}` with a nonce not used earlier in this conversation.',
+      '',
+      'Verify its `contractVersion`, `releaseId`, and `sourceHash`. Recover the immediate previous canonical slash command and its exact approved input/source snapshot, attachments, brief, accepted refinements, and target scope. Load that command from its content-hash release URL in `immutableCommands` and verify every listed resource `sha256`.',
+      '',
+      'Discard the previous command\'s generated candidate as authority, but preserve the approved input snapshot. Rerun the same command under the newly discovered release and execute the same current validators. Do not convert `/redo` into `/fix`, do not patch the failed candidate, and do not broaden scope.',
+      '',
+      'If the previous command or input snapshot is unavailable, ambiguous, mutated, or outside this conversation, stop with `STATUS: NEEDS_INPUT` and `ERROR: KIWE_PREVIOUS_COMMAND_MISSING`.'
+    ].join('\n').trim() + '\n';
   }
 
   const parts = [
