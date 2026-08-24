@@ -9,7 +9,7 @@ import { DisconnectReason } from "@whiskeysockets/baileys";
 const servers = [];
 afterEach(async () => { while (servers.length) await new Promise((resolve) => servers.pop().close(resolve)); });
 
-async function fixture(ready = true) {
+async function fixture(ready = true, stateOverride = "") {
   const sent = [];
   const events = [];
   const config = {
@@ -17,13 +17,14 @@ async function fixture(ready = true) {
     memoryLimitMb: 384, rcObservability: { enabled: false },
     tenants: { client: { secret: "x".repeat(40), sites: ["https://example.com"], label: "Example" } },
   };
+  let resetCount = 0;
   const transport = {
     name: "test",
     ready: async () => ready,
     sendText: async (phone, text) => { sent.push({ phone, text }); return { id: "message-1" }; },
     selfTest: async () => { sent.push({ selfTest: true }); return { id: "self-test-1", target: "919876543210" }; },
     setup: () => ({
-      state: ready ? "open" : "pairing-timeout",
+      state: stateOverride || (ready ? "open" : "pairing-timeout"),
       qr: "",
       libraryVersion: "7.0.0-rc14",
       protocolVersion: "2.3000.1045862343",
@@ -34,10 +35,11 @@ async function fixture(ready = true) {
     close: async () => {},
   };
   const history = { record: async (event) => { events.push(event); }, list: () => events };
-  const server = createServer(createApp(config, transport, () => 1720000000000, history));
+  const operator = { resetSession: async () => { resetCount += 1; } };
+  const server = createServer(createApp(config, transport, () => 1720000000000, history, operator));
   servers.push(server);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return { config, sent, events, url: `http://127.0.0.1:${server.address().port}` };
+  return { config, sent, events, get resetCount() { return resetCount; }, url: `http://127.0.0.1:${server.address().port}` };
 }
 
 function signed(config, payload, overrides = {}) {
@@ -135,6 +137,23 @@ test("runs a protected connected-account self-test without exposing its target",
   assert.equal(JSON.stringify(result).includes("919876543210"), false);
   assert.equal(app.sent.some((entry) => entry.selfTest), true);
   assert.equal(app.events.at(-1).summary, "Connected-account RC self-test");
+});
+
+test("requires the protected explicit operator action before resetting a replaced session", async () => {
+  const app = await fixture(false, "session-replaced");
+  const setup = await fetch(`${app.url}/setup?token=${"s".repeat(32)}`);
+  const html = await setup.text();
+  assert.match(html, /Reset linked device/);
+  assert.match(setup.headers.get("content-security-policy"), /form-action 'self'/);
+  assert.equal((await fetch(`${app.url}/setup/reset-session`, { method: "POST" })).status, 404);
+  assert.equal((await fetch(`${app.url}/setup/reset-session?token=${"s".repeat(32)}`, { method: "POST", body: "confirm=no" })).status, 400);
+  const response = await fetch(`${app.url}/setup/reset-session?token=${"s".repeat(32)}`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: "confirm=reset-linked-device",
+  });
+  assert.equal(response.status, 202);
+  assert.equal(app.resetCount, 1);
 });
 
 test("accepts bounded consented notifications through the same tenant", async () => {

@@ -7,11 +7,11 @@ const json = (response, status, payload, headers = {}) => {
   response.end(body);
 };
 
-const text = (response, status, body, type = "text/plain; charset=utf-8") => {
+const text = (response, status, body, type = "text/plain; charset=utf-8", allowSameOriginForm = false) => {
   response.writeHead(status, {
     "content-type": type,
     "cache-control": "no-store",
-    "content-security-policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+    "content-security-policy": `default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action ${allowSameOriginForm ? "'self'" : "'none'"}`,
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
     "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
@@ -39,7 +39,7 @@ function message(site, code) {
   return `${site}: Your PhoneKey verification code is ${code}. It expires in 10 minutes. Never share this code.`;
 }
 
-export function createApp(config, transport, clock = () => Date.now(), history = null) {
+export function createApp(config, transport, clock = () => Date.now(), history = null, operator = {}) {
   const nonces = new ExpiringSet(10000);
   const idempotency = new ExpiringSet(10000);
   const tenantLimiter = new SlidingLimiter(120, 60 * 60 * 1000);
@@ -47,6 +47,7 @@ export function createApp(config, transport, clock = () => Date.now(), history =
   const messageTenantLimiter = new SlidingLimiter(500, 60 * 60 * 1000);
   const messageTargetLimiter = new SlidingLimiter(60, 24 * 60 * 60 * 1000);
   const operatorSelfTestLimiter = new SlidingLimiter(3, 60 * 60 * 1000);
+  const operatorResetLimiter = new SlidingLimiter(3, 60 * 60 * 1000);
   const record = (event) => history?.record(event).catch(() => {});
 
   function authenticate(request, raw) {
@@ -93,11 +94,25 @@ export function createApp(config, transport, clock = () => Date.now(), history =
       const compatibilityNotice = setup.registered === false
         ? `<aside><strong>New-device compatibility notice</strong><br>WhatsApp may currently reject unofficial linked-device sessions after a valid scan. If the phone says it could not link, stop retrying. PhoneKey will keep email fallback active while WhatsApp is unavailable.</aside>`
         : "";
+      const recoverable = ["session-replaced", "logged-out", "reconnect-failed"].includes(setup.state);
+      const resetAction = recoverable && typeof operator.resetSession === "function"
+        ? `<aside><strong>Linked-device recovery required</strong><br>The stored WhatsApp device session is no longer usable. Reset only the linked-device credentials, then scan one fresh QR.<form method="post" action="/setup/reset-session?token=${encodeURIComponent(config.setupToken)}"><input type="hidden" name="confirm" value="reset-linked-device"><button type="submit">Reset linked device</button></form></aside>`
+        : "";
       const setupBody = image
         ? `<p>Open WhatsApp → Linked devices → Link a device, then scan this fresh QR once.</p><img alt="WhatsApp pairing QR" src="${image}">`
         : `<p>${setup.state === "open" ? "The WhatsApp sender is connected." : (setup.state === "pairing-timeout" ? "The pairing window ended without a completed WhatsApp handshake. PhoneKey will prepare a fresh session after a guarded cooldown." : "Reload shortly while PhoneKey prepares the pairing session.")}</p>`;
-      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><meta http-equiv="refresh" content="15"><title>PhoneKey WhatsApp setup</title><style>body{font:16px system-ui;max-width:620px;margin:8vh auto;padding:24px;background:#f5f7f4;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:18px;padding:28px}img{display:block;max-width:100%;margin:20px auto}code{padding:4px 7px;background:#edf3ef;border-radius:5px}.metrics{display:flex;gap:10px;flex-wrap:wrap;color:#52645d;font-size:13px}.diagnostic{font-size:13px;color:#52645d}aside{margin:18px 0;padding:14px 16px;border:1px solid #d5a72e;border-radius:12px;background:#fff8df;color:#5b4300;line-height:1.45}a{color:#075b3a}</style></head><body><main><h1>PhoneKey WhatsApp</h1><p>State: <code>${escapeHtml(setup.state)}</code></p><p class="metrics"><span>Transport: ${escapeHtml(transport.name)}</span>${library}${protocol}<span>Memory: ${rssMb} MB / ${config.memoryLimitMb} MB</span><span>Uptime: ${Math.floor(process.uptime() / 60)} min</span></p>${compatibilityNotice}${lastDisconnect}${setupBody}${historyLink}</main></body></html>`;
-      return text(response, 200, html, "text/html; charset=utf-8");
+      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'"><meta http-equiv="refresh" content="15"><title>PhoneKey WhatsApp setup</title><style>body{font:16px system-ui;max-width:620px;margin:8vh auto;padding:24px;background:#f5f7f4;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:18px;padding:28px}img{display:block;max-width:100%;margin:20px auto}code{padding:4px 7px;background:#edf3ef;border-radius:5px}.metrics{display:flex;gap:10px;flex-wrap:wrap;color:#52645d;font-size:13px}.diagnostic{font-size:13px;color:#52645d}aside{margin:18px 0;padding:14px 16px;border:1px solid #d5a72e;border-radius:12px;background:#fff8df;color:#5b4300;line-height:1.45}form{margin-top:14px}button{appearance:none;border:0;border-radius:9px;background:#10251d;color:#fff;font:inherit;font-weight:700;padding:10px 14px;cursor:pointer}a{color:#075b3a}</style></head><body><main><h1>PhoneKey WhatsApp</h1><p>State: <code>${escapeHtml(setup.state)}</code></p><p class="metrics"><span>Transport: ${escapeHtml(transport.name)}</span>${library}${protocol}<span>Memory: ${rssMb} MB / ${config.memoryLimitMb} MB</span><span>Uptime: ${Math.floor(process.uptime() / 60)} min</span></p>${compatibilityNotice}${resetAction}${lastDisconnect}${setupBody}${historyLink}</main></body></html>`;
+      return text(response, 200, html, "text/html; charset=utf-8", true);
+    }
+    if (request.method === "POST" && url.pathname === "/setup/reset-session") {
+      if (!config.setupToken || url.searchParams.get("token") !== config.setupToken || typeof operator.resetSession !== "function") return text(response, 404, "Not found.");
+      if (!operatorResetLimiter.allow("linked-device", clock())) return json(response, 429, { ok: false, error: "rate_limited" }, { "retry-after": "3600" });
+      const raw = await body(request, 256);
+      if (new URLSearchParams(raw).get("confirm") !== "reset-linked-device") return json(response, 400, { ok: false, error: "confirmation_required" });
+      const setup = transport.setup();
+      if (!["session-replaced", "logged-out", "reconnect-failed"].includes(setup.state)) return json(response, 409, { ok: false, error: "reset_not_required", state: setup.state });
+      await operator.resetSession();
+      return text(response, 202, "<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width\"><meta http-equiv=\"refresh\" content=\"4;url=/setup?token=" + encodeURIComponent(config.setupToken) + "\"><title>PhoneKey reset</title></head><body><main><h1>Linked device reset</h1><p>PhoneKey is restarting. A fresh pairing QR will appear shortly.</p></main></body></html>", "text/html; charset=utf-8");
     }
     if (request.method === "GET" && url.pathname === "/rc") {
       if (!config.rcObservability.enabled || !config.setupToken || url.searchParams.get("token") !== config.setupToken) return text(response, 404, "Not found.");

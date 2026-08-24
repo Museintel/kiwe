@@ -19,6 +19,8 @@ Neither unofficial WhatsApp Web nor email can promise delivery. The implementati
 
 The pairing page is `GET /setup?token=...` and is protected by a separate high-entropy setup token. It reports the audited library version, negotiated protocol version, bounded disconnect reason, and email-fallback state so operators are not encouraged to loop a rejected QR. The public health endpoint contains no account, phone, QR, token, or message information.
 
+When WhatsApp explicitly replaces or logs out the linked device, the protected setup page exposes a deliberate **Reset linked device** action. It moves only the Baileys session state into a timestamped recovery backup, preserves RC delivery history, restarts the supervised process, and then presents one fresh QR. Tenant secrets and Kiwe configuration are never reset.
+
 Run `npm run check:compat` before deployment. CI fails if the manifest, lockfile, displayed runtime version, or npm `latest` tag diverges; upstream changes therefore require an explicit compatibility review rather than silently entering production.
 
 ## RC observability
