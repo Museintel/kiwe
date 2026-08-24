@@ -66,7 +66,15 @@ export function createApp(config, transport, clock = () => Date.now(), history =
     const url = new URL(request.url || "/", "http://phonekey.local");
     if (request.method === "GET" && url.pathname === "/health") {
       const available = await transport.ready().catch(() => false);
-      return json(response, available ? 200 : 503, { ok: available, service: "kiwe-phonekey", transport: transport.name, state: available ? "ready" : "unavailable" });
+      const setup = transport.setup();
+      return json(response, available ? 200 : 503, {
+        ok: available,
+        service: "kiwe-phonekey",
+        transport: transport.name,
+        state: setup.state || (available ? "ready" : "unavailable"),
+        ...(setup.libraryVersion ? { libraryVersion: setup.libraryVersion } : {}),
+        ...(setup.protocolVersion ? { protocolVersion: setup.protocolVersion, protocolSource: setup.protocolSource } : {}),
+      });
     }
     if (request.method === "GET" && url.pathname === "/setup") {
       if (!config.setupToken || url.searchParams.get("token") !== config.setupToken) return text(response, 404, "Not found.");
@@ -74,7 +82,18 @@ export function createApp(config, transport, clock = () => Date.now(), history =
       const image = setup.qr ? await QRCode.toDataURL(setup.qr, { margin: 2, width: 320 }) : "";
       const rssMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
       const historyLink = config.rcObservability.enabled ? `<p><a href="/rc?token=${encodeURIComponent(config.setupToken)}">Open RC delivery history</a></p>` : "";
-      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="refresh" content="15"><title>PhoneKey WhatsApp setup</title><style>body{font:16px system-ui;max-width:560px;margin:8vh auto;padding:24px;background:#f5f7f4;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:18px;padding:28px}img{display:block;max-width:100%;margin:20px auto}code{padding:4px 7px;background:#edf3ef;border-radius:5px}.metrics{display:flex;gap:10px;flex-wrap:wrap;color:#52645d;font-size:13px}a{color:#075b3a}</style></head><body><main><h1>PhoneKey WhatsApp</h1><p>State: <code>${escapeHtml(setup.state)}</code></p><p class="metrics"><span>Transport: ${escapeHtml(transport.name)}</span><span>Memory: ${rssMb} MB / ${config.memoryLimitMb} MB</span><span>Uptime: ${Math.floor(process.uptime() / 60)} min</span></p>${image ? `<p>Open WhatsApp → Linked devices → Link a device, then scan this QR.</p><img alt="WhatsApp pairing QR" src="${image}">` : `<p>${setup.state === "open" ? "The WhatsApp sender is connected." : "Reload shortly while PhoneKey prepares the pairing session."}</p>`}${historyLink}</main></body></html>`;
+      const protocol = setup.protocolVersion ? `<span>Protocol: ${escapeHtml(setup.protocolVersion)} (${escapeHtml(setup.protocolSource)})</span>` : "";
+      const library = setup.libraryVersion ? `<span>Baileys: ${escapeHtml(setup.libraryVersion)}</span>` : "";
+      const lastDisconnect = setup.lastDisconnect?.at
+        ? `<p class="diagnostic">Last disconnect: <code>${escapeHtml(setup.lastDisconnect.reason)}</code> · ${new Date(setup.lastDisconnect.at).toISOString()}</p>`
+        : "";
+      const compatibilityNotice = setup.registered === false
+        ? `<aside><strong>New-device compatibility notice</strong><br>WhatsApp may currently reject unofficial linked-device sessions after a valid scan. If the phone says it could not link, stop retrying. PhoneKey will keep email fallback active while WhatsApp is unavailable.</aside>`
+        : "";
+      const setupBody = image
+        ? `<p>Open WhatsApp → Linked devices → Link a device, then scan this fresh QR once.</p><img alt="WhatsApp pairing QR" src="${image}">`
+        : `<p>${setup.state === "open" ? "The WhatsApp sender is connected." : (setup.state === "pairing-timeout" ? "The pairing window ended without a completed WhatsApp handshake. PhoneKey will prepare a fresh session after a guarded cooldown." : "Reload shortly while PhoneKey prepares the pairing session.")}</p>`;
+      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="refresh" content="15"><title>PhoneKey WhatsApp setup</title><style>body{font:16px system-ui;max-width:620px;margin:8vh auto;padding:24px;background:#f5f7f4;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:18px;padding:28px}img{display:block;max-width:100%;margin:20px auto}code{padding:4px 7px;background:#edf3ef;border-radius:5px}.metrics{display:flex;gap:10px;flex-wrap:wrap;color:#52645d;font-size:13px}.diagnostic{font-size:13px;color:#52645d}aside{margin:18px 0;padding:14px 16px;border:1px solid #d5a72e;border-radius:12px;background:#fff8df;color:#5b4300;line-height:1.45}a{color:#075b3a}</style></head><body><main><h1>PhoneKey WhatsApp</h1><p>State: <code>${escapeHtml(setup.state)}</code></p><p class="metrics"><span>Transport: ${escapeHtml(transport.name)}</span>${library}${protocol}<span>Memory: ${rssMb} MB / ${config.memoryLimitMb} MB</span><span>Uptime: ${Math.floor(process.uptime() / 60)} min</span></p>${compatibilityNotice}${lastDisconnect}${setupBody}${historyLink}</main></body></html>`;
       return text(response, 200, html, "text/html; charset=utf-8");
     }
     if (request.method === "GET" && url.pathname === "/rc") {

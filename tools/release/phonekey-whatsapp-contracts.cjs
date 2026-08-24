@@ -13,6 +13,8 @@ const carts = read('wp-content/mu-plugins/dsa/includes/Commerce/Abandoned_Cart_S
 const orders = read('wp-content/mu-plugins/dsa/includes/Notifications/Order_Notification_Service.php');
 const owners = read('wp-content/mu-plugins/dsa/includes/Notifications/Admin_Event_Notification_Service.php');
 const bridge = read('wp-content/mu-plugins/dsa/includes/PhoneKey/PhoneKey_Bridge.php');
+const gatewayPackage = JSON.parse(read('services/phonekey-gateway/package.json'));
+const baileys = read('services/phonekey-gateway/src/transports/baileys.mjs');
 const checks = [
   ['PhoneKey signs exact request bodies', core.includes("X-PhoneKey-Signature") && core.includes("$timestamp . '.' . $nonce . '.' . $body")],
   ['PhoneKey validates provider status', core.includes('wp_remote_retrieve_response_code') && core.includes('$status >= 200 && $status < 300')],
@@ -33,6 +35,8 @@ const checks = [
   ['Abandoned-cart automation can prefer WhatsApp without duplicate sends', carts.includes("'automatic_whatsapp_enabled'") && carts.includes("$channel = 'whatsapp'")],
   ['WooCommerce status changes use opted-in notification channels', orders.includes('woocommerce_order_status_changed') && orders.includes("'order_status'")],
   ['Owner events use selected external channels', owners.includes('deliver_channels') && owners.includes("'admin_new_order'")],
+  ['Gateway pins the audited Baileys RC', gatewayPackage.dependencies['@whiskeysockets/baileys'] === '7.0.0-rc14' && baileys.includes('const BAILEYS_VERSION = "7.0.0-rc14"')],
+  ['Gateway negotiates WhatsApp protocol and reports bounded diagnostics', baileys.includes('fetchLatestWaWebVersion') && baileys.includes('lastDisconnect') && app.includes('New-device compatibility notice')],
   ['VPS profile pins Evolution and bounded data services', compose.includes('evoapicloud/evolution-api:v2.3.7') && compose.includes('postgres:15-alpine') && compose.includes('redis:7-alpine')],
 ];
 let failed = false;

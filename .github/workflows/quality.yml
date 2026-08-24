@@ -85,6 +85,9 @@ jobs:
       - name: Install the resource-capped gateway
         working-directory: services/phonekey-gateway
         run: npm ci --no-audit --no-fund
+      - name: Detect Baileys package, lockfile and upstream drift
+        working-directory: services/phonekey-gateway
+        run: npm run check:compat
       - name: Test signed delivery, replay protection and fallback
         working-directory: services/phonekey-gateway
         run: npm test

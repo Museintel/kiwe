@@ -12,9 +12,24 @@ async function fixture(ready = true) {
   const events = [];
   const config = {
     setupToken: "s".repeat(32), requestWindowSeconds: 90, sendTimeoutMs: 1000,
+    memoryLimitMb: 384, rcObservability: { enabled: false },
     tenants: { client: { secret: "x".repeat(40), sites: ["https://example.com"], label: "Example" } },
   };
-  const transport = { name: "test", ready: async () => ready, sendText: async (phone, text) => { sent.push({ phone, text }); return { id: "message-1" }; }, setup: () => ({ state: ready ? "open" : "closed", qr: "" }), close: async () => {} };
+  const transport = {
+    name: "test",
+    ready: async () => ready,
+    sendText: async (phone, text) => { sent.push({ phone, text }); return { id: "message-1" }; },
+    setup: () => ({
+      state: ready ? "open" : "pairing-timeout",
+      qr: "",
+      libraryVersion: "7.0.0-rc14",
+      protocolVersion: "2.3000.1045862343",
+      protocolSource: "wa-web",
+      registered: ready,
+      lastDisconnect: ready ? { code: 0, reason: "", at: 0 } : { code: 408, reason: "timed-out", at: 1720000000000 },
+    }),
+    close: async () => {},
+  };
   const history = { record: async (event) => { events.push(event); }, list: () => events };
   const server = createServer(createApp(config, transport, () => 1720000000000, history));
   servers.push(server);
@@ -67,6 +82,24 @@ test("returns an explicit email fallback signal while WhatsApp is unavailable", 
   assert.equal((await response.json()).fallback, "email");
   assert.equal(app.sent.length, 0);
   assert.equal(app.events.some((event) => event.status === "fallback_required"), true);
+});
+
+test("exposes bounded pairing diagnostics without hiding the email fallback state", async () => {
+  const app = await fixture(false);
+  const health = await fetch(`${app.url}/health`);
+  const status = await health.json();
+  assert.equal(health.status, 503);
+  assert.equal(status.state, "pairing-timeout");
+  assert.equal(status.libraryVersion, "7.0.0-rc14");
+  assert.equal(status.protocolSource, "wa-web");
+
+  const setup = await fetch(`${app.url}/setup?token=${"s".repeat(32)}`);
+  const html = await setup.text();
+  assert.equal(setup.status, 200);
+  assert.match(html, /New-device compatibility notice/);
+  assert.match(html, /email fallback active/);
+  assert.match(html, /7\.0\.0-rc14/);
+  assert.doesNotMatch(html, /request_1234567890123456|135790/);
 });
 
 test("accepts signed email fallback outcomes without OTP content", async () => {

@@ -6,7 +6,7 @@ The shared-hosting transport uses the unofficial WhatsApp Web protocol. It accep
 
 ## Deployment profiles
 
-- **Shared-hosting RC:** one Baileys session, bounded memory, synchronous delivery acknowledgement, and immediate WordPress email fallback on eligible non-2xx responses. Optional RC observability stores a capped encrypted timeline in one state file. OTP bodies are never retained; consented notification content is encrypted at rest only when the RC capture switch is enabled.
+- **Shared-hosting RC:** one exactly pinned Baileys 7 RC session, bounded memory, synchronous delivery acknowledgement, and immediate WordPress email fallback on eligible non-2xx responses. PhoneKey negotiates the current WhatsApp Web protocol version at startup, exposes only bounded connection diagnostics, and uses guarded reconnect backoff. Optional RC observability stores a capped encrypted timeline in one state file. OTP bodies are never retained; consented notification content is encrypted at rest only when the RC capture switch is enabled.
 - **VPS:** the same public gateway contract in front of pinned Evolution API 2.3.7, PostgreSQL 15, and Redis 7. Evolution's global API is kept off the public network.
 
 Neither unofficial WhatsApp Web nor email can promise delivery. The implementation therefore promises deterministic channel handling: it reports WhatsApp success only after the transport accepts the send; every unavailable, rejected, timed-out, malformed, or non-2xx attempt tells PhoneKey to send the same OTP by email immediately.
@@ -17,7 +17,9 @@ Neither unofficial WhatsApp Web nor email can promise delivery. The implementati
 
 `POST /v1/message` uses the same signed tenant and origin boundary. It accepts only bounded text, a unique request id, and one of the compiled Kiwe notification purposes. Kiwe performs user/topic/channel consent checks before calling it; the gateway adds independent tenant and target rate limits.
 
-The pairing page is `GET /setup?token=...` and is protected by a separate high-entropy setup token. The public health endpoint contains no account or phone information.
+The pairing page is `GET /setup?token=...` and is protected by a separate high-entropy setup token. It reports the audited library version, negotiated protocol version, bounded disconnect reason, and email-fallback state so operators are not encouraged to loop a rejected QR. The public health endpoint contains no account, phone, QR, token, or message information.
+
+Run `npm run check:compat` before deployment. CI fails if the manifest, lockfile, displayed runtime version, or npm `latest` tag diverges; upstream changes therefore require an explicit compatibility review rather than silently entering production.
 
 ## RC observability
 
