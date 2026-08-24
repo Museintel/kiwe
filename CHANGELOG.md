@@ -7,6 +7,7 @@
 - Added WooCommerce order-status notifications, PhoneKey-first abandoned-cart automation without duplicate channel sends, and owner delivery for orders, comments, live visitors, and visitor summaries.
 - Added encrypted-at-rest RC capture for explicitly consented outbound notification text while preserving permanent OTP redaction, recipient hashing/masking, capped retention, and the protected operator timeline.
 - Unified notification readiness in Kiwe admin, retained generic WhatsApp webhooks only as a legacy fallback, and kept fresh installations fail-closed with SiteGraph as the sole enabled capability.
+- Added an explicit Email + phone two-field Kiwe Auth mode with sequential email and WhatsApp/SMS verification, restored true phone-first signup for the existing Phone-only and Email-or-phone modes, and corrected post-verification routing for returning passkey users.
 
 ## 7.24
 

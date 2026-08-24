@@ -13,6 +13,7 @@ const carts = read('wp-content/mu-plugins/dsa/includes/Commerce/Abandoned_Cart_S
 const orders = read('wp-content/mu-plugins/dsa/includes/Notifications/Order_Notification_Service.php');
 const owners = read('wp-content/mu-plugins/dsa/includes/Notifications/Admin_Event_Notification_Service.php');
 const bridge = read('wp-content/mu-plugins/dsa/includes/PhoneKey/PhoneKey_Bridge.php');
+const surface = read('wp-content/mu-plugins/dsa/assets/js/surface.js');
 const gatewayPackage = JSON.parse(read('services/phonekey-gateway/package.json'));
 const baileys = read('services/phonekey-gateway/src/transports/baileys.mjs');
 const checks = [
@@ -20,7 +21,9 @@ const checks = [
   ['PhoneKey validates provider status', core.includes('wp_remote_retrieve_response_code') && core.includes('$status >= 200 && $status < 300')],
   ['PhoneKey has explicit same-code email fallback', core.includes('pk_send_phone_fallback_email') && core.includes('WhatsApp was unavailable; the code was sent by email.')],
   ['PhoneKey uses Woo billing email as a fallback address', core.includes("get_user_meta( $user_id, 'billing_email', true )")],
-  ['PhoneKey requires an email bootstrap when fallback is mandatory', core.includes("'email_bootstrap_required'") && core.includes("'whatsapp_email_fallback'")],
+  ['Phone-only signup is not silently replaced by email bootstrap', !core.includes("'email_bootstrap_required'") && core.includes("pk_create_user_for_identifier( $identifier, $type )")],
+  ['Dual identifier mode is saved and rendered as two fields', core.includes("'email_and_phone'") && surface.includes("identifierMode === 'email_and_phone'") && surface.includes('id="dsa-pk-email"') && surface.includes('id="dsa-pk-phone"')],
+  ['Dual identifier flow verifies email before phone', core.includes("$flow_meta['pending_phone'] = pk_encrypt( $pending_phone )") && core.includes("'next' => 'verify_phone'") && surface.includes("response.next === 'verify_phone'")],
   ['provider secret uses Kiwe Secret Store', core.includes('Secret_Store::encrypt') && core.includes('Secret_Store::decrypt')],
   ['gateway enforces HMAC freshness and replay defense', app.includes('verifySignature') && app.includes('expired_request') && app.includes('replayed_request')],
   ['gateway never returns OTP content', !app.includes('code: code') && !app.includes('phone: phone')],

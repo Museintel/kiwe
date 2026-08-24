@@ -173,8 +173,8 @@
       "sha256": "edf2567ee5994e5e41b54f6b7ecaac14bc9d04ec3c06be12baf657071f77544d"
     },
     "assets/js/surface.js": {
-      "bytes": 393584,
-      "sha256": "bf126198b3698eeb86f183aee18619f86f3042f01c28a181d65cc7529c334cd4"
+      "bytes": 396497,
+      "sha256": "cc97ed17d52c10d30959b44fcb29787caadf18694d15039e0937650dd2333769"
     },
     "connector-system/BRICKS-DYNAMIC-BINDINGS.md": {
       "bytes": 9415,
@@ -677,8 +677,8 @@
       "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 140510,
-      "sha256": "576b3b7b5c294257ac3418bd9267b0d79725ca6a1879a36877a27593dcc09a36"
+      "bytes": 145946,
+      "sha256": "7933d5087bfa7b9616680213236c2914e32fb834f46ae25f7901c4ed0abff90f"
     },
     "includes/Plugin.php": {
       "bytes": 14290,

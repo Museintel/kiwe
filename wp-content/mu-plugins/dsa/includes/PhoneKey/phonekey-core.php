@@ -397,8 +397,8 @@ function pk_save_settings_array( $raw ) {
 	$out['popup_dismissal']      = in_array( $raw['popup_dismissal'] ?? '', array( 'outside_close', 'close_only', 'mandatory' ), true ) ? $raw['popup_dismissal'] : $defaults['popup_dismissal'];
 	$out['mandatory_scope']      = in_array( $raw['mandatory_scope'] ?? '', array( 'all_public', 'patterns' ), true ) ? $raw['mandatory_scope'] : $defaults['mandatory_scope'];
 	$out['mandatory_patterns']   = sanitize_textarea_field( $raw['mandatory_patterns'] ?? '' );
-	$out['identifier_mode']      = in_array( $raw['identifier_mode'] ?? '', array( 'email', 'phone', 'email_or_phone' ), true ) ? $raw['identifier_mode'] : $defaults['identifier_mode'];
-	$out['app_identifier_mode']  = in_array( $raw['app_identifier_mode'] ?? '', array( 'email', 'phone', 'email_or_phone' ), true ) ? $raw['app_identifier_mode'] : $defaults['app_identifier_mode'];
+	$out['identifier_mode']      = in_array( $raw['identifier_mode'] ?? '', array( 'email', 'phone', 'email_or_phone', 'email_and_phone' ), true ) ? $raw['identifier_mode'] : $defaults['identifier_mode'];
+	$out['app_identifier_mode']  = in_array( $raw['app_identifier_mode'] ?? '', array( 'email', 'phone', 'email_or_phone', 'email_and_phone' ), true ) ? $raw['app_identifier_mode'] : $defaults['app_identifier_mode'];
 	$out['app_verification_timing'] = in_array( $raw['app_verification_timing'] ?? '', array( 'verify_now', 'verify_later', 'progressive' ), true ) ? $raw['app_verification_timing'] : $defaults['app_verification_timing'];
 	$out['default_country_code'] = preg_replace( '/[^0-9+]/', '', $raw['default_country_code'] ?? '+91' ) ?: '+91';
 	$out['signup_role']          = sanitize_key( $raw['signup_role'] ?? pk_default_role() );
@@ -725,7 +725,7 @@ function pk_detect_identifier( $identifier ) {
 function pk_identifier_allowed( $type, $app_context = false ) {
 	$settings = pk_settings();
 	$mode = $app_context ? ( $settings['app_identifier_mode'] ?? $settings['identifier_mode'] ) : $settings['identifier_mode'];
-	return ( 'email_or_phone' === $mode ) || ( 'email' === $mode && 'email' === $type ) || ( 'phone' === $mode && 'phone' === $type );
+	return ( 'email_or_phone' === $mode ) || ( 'email_and_phone' === $mode && 'email' === $type ) || ( 'email' === $mode && 'email' === $type ) || ( 'phone' === $mode && 'phone' === $type );
 }
 
 function pk_find_user( $identifier, $type ) {
@@ -1866,21 +1866,38 @@ function pk_visit_count( $anchor_hash, $user_id = 0 ) {
 
 function pk_rest_identify( WP_REST_Request $r ) {
 	if ( ! pk_rate_limit( 'identify', 40, 300 ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many attempts. Try again shortly.' ), 429 );
-	$id = pk_detect_identifier( sanitize_text_field( $r->get_param( 'identifier' ) ) );
 	$app_context = (bool) $r->get_param( 'appContext' );
+	$s = pk_settings();
+	$identifier_mode = $app_context ? ( $s['app_identifier_mode'] ?? $s['identifier_mode'] ) : $s['identifier_mode'];
+	$dual_identifier = 'email_and_phone' === $identifier_mode;
+	$pending_phone = '';
+
+	if ( $dual_identifier ) {
+		$email = pk_normalize_email( $r->get_param( 'email' ) );
+		$pending_phone = pk_normalize_phone( sanitize_text_field( $r->get_param( 'phone' ) ) );
+		$phone_digits = preg_replace( '/[^0-9]/', '', $pending_phone );
+		if ( ! is_email( $email ) || strlen( $phone_digits ) < 7 ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => 'Enter a valid email address and phone number.' ), 400 );
+		}
+		if ( ! pk_phone_provider_ready() ) {
+			return new WP_REST_Response( array( 'ok' => false, 'code' => 'phone_delivery_unavailable', 'message' => 'Email + phone sign-in needs a working WhatsApp or SMS provider. Ask the site administrator to configure PhoneKey.' ), 503 );
+		}
+		$id = array( 'type' => 'email', 'value' => $email );
+	} else {
+		$id = pk_detect_identifier( sanitize_text_field( $r->get_param( 'identifier' ) ) );
+	}
+
 	if ( ! $id['type'] || ! pk_identifier_allowed( $id['type'], $app_context ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Enter a valid allowed email or phone.' ), 400 );
 	$type = $id['type']; $identifier = $id['value'];
 	$user_id = pk_find_user( $identifier, $type );
+	if ( $dual_identifier ) {
+		$phone_user_id = pk_find_user( $pending_phone, 'phone' );
+		if ( $phone_user_id && ( ! $user_id || $phone_user_id !== $user_id ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'code' => 'identifier_pair_conflict', 'message' => 'That email and phone cannot be used together. Sign in with the existing account or use account recovery.' ), 409 );
+		}
+	}
 	$is_new = false;
 	if ( ! $user_id ) {
-		$identify_settings = pk_settings();
-		if ( 'phone' === $type && ! empty( $identify_settings['whatsapp_email_fallback'] ) ) {
-			return new WP_REST_Response( array(
-				'ok'      => false,
-				'code'    => 'email_bootstrap_required',
-				'message' => 'Start with your email once, then add and verify this phone from your Kiwe profile. This keeps a recovery path available if WhatsApp cannot deliver.',
-			), 409 );
-		}
 		$user_id = pk_create_user_for_identifier( $identifier, $type );
 		$is_new = true;
 	}
@@ -1890,7 +1907,6 @@ function pk_rest_identify( WP_REST_Request $r ) {
 	$verified = pk_account_verified( $user_id );
 	$creds = pk_credential_count( $user_id );
 	$policy = pk_role_policy( $user_id );
-	$s = pk_settings();
 	$visit_count = pk_visit_count( pk_hmac( $identifier ), $user_id );
 	$timing = $policy['verification'] ?: $s['verification_timing'];
 	if ( $app_context && ! pk_is_privileged( $user_id ) ) {
@@ -1915,33 +1931,63 @@ function pk_rest_identify( WP_REST_Request $r ) {
 	if ( pk_is_privileged( $user_id ) && ( $creds < 1 || ! get_user_meta( $user_id, 'pk_admin_password_bound_at', true ) || get_user_meta( $user_id, 'pk_force_reenroll', true ) ) ) $mode = 'privileged_setup';
 	elseif ( $creds > 0 && $verified && ! $known_device ) $mode = 'new_device_verify';
 
-	$flow = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, array(
+	$dual_stage = '';
+	if ( $dual_identifier && ! pk_is_privileged( $user_id ) ) {
+		$email_verified = pk_factor_verified( $user_id, 'email' );
+		$phone_factor = pk_factor( $user_id, 'phone', pk_hmac( $pending_phone ) );
+		$phone_verified = $phone_factor && 'verified' === $phone_factor['status'];
+		if ( ! $email_verified || ! $phone_verified ) {
+			// A fresh email proof is required before attaching or replacing a phone on an existing account.
+			$dual_stage = 'email';
+			$mode = 'verify_required';
+		}
+	}
+
+	$flow_meta = array(
 		'anchor_hash' => pk_hmac( $identifier ),
 		'anchor_type' => $type,
 		'identifier'  => $identifier,
 		'is_new'      => $is_new ? 1 : 0,
 		'mode'        => $mode,
-	) );
+	);
+	if ( $dual_identifier ) {
+		$flow_meta['dual_identifier'] = 1;
+		$flow_meta['dual_stage'] = $dual_stage;
+		$flow_meta['pending_phone'] = pk_encrypt( $pending_phone );
+	}
+	$flow = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $flow_meta );
 
 	$email_accepted = null;
-	if ( 'email' === $type && ( $is_new || in_array( $mode, array( 'verify_required', 'unverified_return', 'new_device_verify' ), true ) ) && ! pk_recent_otp_send_exists( $user_id, 'email_otp' ) && pk_otp_target_allowed( $identifier ) ) {
-		$email_delivery = pk_send_email_otp_or_link( $user_id, $identifier, $flow, 'new_device_verify' === $mode ? 'otp' : '' );
+	if ( 'email' === $type && ( $is_new || in_array( $mode, array( 'verify_required', 'unverified_return', 'new_device_verify' ), true ) ) && ( ! $dual_identifier || 'email' === $dual_stage ) && pk_otp_target_allowed( $identifier ) ) {
+		$email_delivery = pk_send_email_otp_or_link( $user_id, $identifier, $flow, ( $dual_identifier || 'new_device_verify' === $mode ) ? 'otp' : '' );
 		$email_accepted = ! empty( $email_delivery['accepted'] );
 	}
 	$phone_delivery = null;
-	if ( 'phone' === $type && in_array( $mode, array( 'verify_required', 'new_device_verify' ), true ) && pk_phone_provider_ready() && ! pk_recent_otp_send_exists( $user_id, 'phone_otp' ) && pk_otp_target_allowed( $identifier ) ) {
-		$phone_delivery = pk_send_phone_otp( $user_id, $identifier, $flow );
+	$phone_target = $dual_identifier ? $pending_phone : $identifier;
+	$send_phone = ( 'phone' === $type && in_array( $mode, array( 'verify_required', 'new_device_verify' ), true ) ) || ( $dual_identifier && 'phone' === $dual_stage );
+	if ( $send_phone && pk_phone_provider_ready() && pk_otp_target_allowed( $phone_target ) ) {
+		update_user_meta( $user_id, 'pk_phone_hash', pk_hmac( $phone_target ) );
+		update_user_meta( $user_id, 'pk_phone_last4', substr( preg_replace( '/[^0-9]/', '', $phone_target ), -4 ) );
+		pk_upsert_factor( $user_id, 'phone', 'pending', pk_hmac( $phone_target ), array( 'last4' => substr( preg_replace( '/[^0-9]/', '', $phone_target ), -4 ) ), $phone_target );
+		$phone_delivery = pk_send_phone_otp( $user_id, $phone_target, $flow );
+		if ( empty( $phone_delivery['ok'] ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'code' => 'phone_delivery_failed', 'message' => $phone_delivery['message'] ?? 'The phone code could not be delivered. Try again shortly.' ), 503 );
+		}
 	}
 
 	$name = $user ? ( $user->display_name ?: $user->user_login ) : '';
 	$backup = pk_factor( $user_id, 'backup_code', 'backup' );
+	$response_type = $dual_stage ?: $type;
+	$response_identifier = 'phone' === $response_type ? 'phone ending ' . substr( preg_replace( '/[^0-9]/', '', $phone_target ), -4 ) : $identifier;
 	return rest_ensure_response( array(
 		'ok'           => true,
 		'token'        => $flow,
 		'mode'         => $mode,
 		'displayName'  => $known_device ? $name : '',
-		'identifier'   => 'email' === $type ? $identifier : 'phone ending ' . substr( preg_replace( '/[^0-9]/', '', $identifier ), -4 ),
-		'identifierType' => $type,
+		'identifier'   => $response_identifier,
+		'identifierType' => $response_type,
+		'dualIdentifier' => $dual_identifier,
+		'dualStage'     => $dual_stage,
 		'knownDevice'   => $known_device,
 		'verified'     => $known_device ? $verified : false,
 		'hasPasskey'   => $known_device ? ( $creds > 0 ) : false,
@@ -1949,7 +1995,7 @@ function pk_rest_identify( WP_REST_Request $r ) {
 		'phoneReady'   => pk_phone_provider_ready(),
 		'phoneDeliveryProvider' => is_array( $phone_delivery ) ? sanitize_key( $phone_delivery['provider'] ?? '' ) : '',
 		'phoneDeliveryMessage' => is_array( $phone_delivery ) ? sanitize_text_field( $phone_delivery['message'] ?? '' ) : '',
-		'emailDelivery'=> 'new_device_verify' === $mode ? 'otp' : $s['email_delivery'],
+		'emailDelivery'=> ( $dual_identifier || 'new_device_verify' === $mode ) ? 'otp' : $s['email_delivery'],
 		'emailAccepted'=> $email_accepted,
 		'canEmailRecovery' => (bool) ( $user && $user->user_email && pk_factor_verified( $user_id, 'email' ) ),
 		'hasTotp'      => $known_device && (bool) pk_totp_factor( $user_id ),
@@ -1998,6 +2044,43 @@ function pk_rest_verify_email( WP_REST_Request $r ) {
 	$wpdb->update( pk_t( 'challenges' ), array( 'used' => 1, 'used_at' => pk_now() ), array( 'id' => (int) $row['id'] ) );
 	$user = get_userdata( $user_id );
 	pk_mark_factor_verified( $user_id, 'email', $user ? $user->user_email : '' );
+	if ( ! empty( $flow_meta['dual_identifier'] ) && ! empty( $flow_meta['pending_phone'] ) ) {
+		$phone = pk_normalize_phone( pk_decrypt( (string) $flow_meta['pending_phone'] ) );
+		$phone_digits = preg_replace( '/[^0-9]/', '', $phone );
+		if ( strlen( $phone_digits ) < 7 ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => 'The phone step could not be resumed. Start sign-in again.' ), 400 );
+		}
+		$phone_factor = pk_factor( $user_id, 'phone', pk_hmac( $phone ) );
+		if ( ! $phone_factor || 'verified' !== $phone_factor['status'] ) {
+			if ( ! pk_phone_provider_ready() ) {
+				return new WP_REST_Response( array( 'ok' => false, 'message' => 'Email is verified, but phone delivery is unavailable. Ask the site administrator to configure PhoneKey.' ), 503 );
+			}
+			$flow_meta['anchor_hash'] = pk_hmac( $phone );
+			$flow_meta['anchor_type'] = 'phone';
+			$flow_meta['identifier'] = $phone;
+			$flow_meta['dual_stage'] = 'phone';
+			$flow_meta['mode'] = 'verify_required';
+			$phone_flow = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $flow_meta );
+			update_user_meta( $user_id, 'pk_phone_hash', pk_hmac( $phone ) );
+			update_user_meta( $user_id, 'pk_phone_last4', substr( $phone_digits, -4 ) );
+			pk_upsert_factor( $user_id, 'phone', 'pending', pk_hmac( $phone ), array( 'last4' => substr( $phone_digits, -4 ) ), $phone );
+			$sent = pk_send_phone_otp( $user_id, $phone, $phone_flow );
+			if ( empty( $sent['ok'] ) ) {
+				return new WP_REST_Response( array( 'ok' => false, 'message' => $sent['message'] ?? 'Email is verified, but the phone code could not be delivered.' ), 503 );
+			}
+			global $wpdb;
+			$wpdb->update( pk_t( 'challenges' ), array( 'used' => 1, 'used_at' => pk_now() ), array( 'id' => (int) $flow['id'] ) );
+			return rest_ensure_response( array(
+				'ok' => true,
+				'next' => 'verify_phone',
+				'token' => $phone_flow,
+				'identifier' => 'phone ending ' . substr( $phone_digits, -4 ),
+				'identifierType' => 'phone',
+				'phoneDeliveryProvider' => sanitize_key( $sent['provider'] ?? 'phone' ),
+				'phoneDeliveryMessage' => sanitize_text_field( $sent['message'] ?? '' ),
+			) );
+		}
+	}
 	if ( 'new_device_verify' === ( $flow_meta['mode'] ?? '' ) ) {
 		$flow_meta['mode'] = 'device_passkey_enroll';
 		$flow_meta['device_recovery_verified_at'] = time();
@@ -2028,6 +2111,9 @@ function pk_rest_verify_phone( WP_REST_Request $r ) {
 	$f = pk_factor( $user_id, 'phone' );
 	$fmeta = $f ? pk_meta_decode( $f['meta'] ?? '' ) : array();
 	$verified_phone = (string) ( $fmeta['phone'] ?? '' );
+	if ( '' === $verified_phone && $f && ! empty( $f['factor_value'] ) ) {
+		$verified_phone = pk_decrypt( (string) $f['factor_value'] );
+	}
 	pk_mark_factor_verified( $user_id, 'phone', $verified_phone );
 	if ( '' !== $verified_phone && class_exists( '\\DSA\\Commerce\\COD_Gate_Service' ) ) {
 		\DSA\Commerce\COD_Gate_Service::confirm_phone_for_cod( pk_hmac( $verified_phone ) );
@@ -2071,6 +2157,9 @@ function pk_rest_resend_otp( WP_REST_Request $r ) {
 	if ( 'phone' === $type ) {
 		if ( ! pk_phone_provider_ready() ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Phone delivery is not configured.' ), 400 );
 		$phone = sanitize_text_field( $meta['identifier'] ?? '' );
+		if ( ! $phone && ! empty( $meta['pending_phone'] ) ) {
+			$phone = pk_normalize_phone( pk_decrypt( (string) $meta['pending_phone'] ) );
+		}
 		if ( ! $phone ) {
 			$f = pk_factor( $user_id, 'phone' );
 			$fmeta = $f ? pk_meta_decode( $f['meta'] ?? '' ) : array();
@@ -2536,7 +2625,7 @@ function pk_admin_page() {
 
 function pk_admin_notices_inline( $s ) {
 	$phone_modes = array( $s['identifier_mode'], $s['app_identifier_mode'] ?? $s['identifier_mode'] );
-	if ( array_intersect( $phone_modes, array( 'phone', 'email_or_phone' ) ) && ! pk_phone_provider_ready() ) {
+	if ( array_intersect( $phone_modes, array( 'phone', 'email_or_phone', 'email_and_phone' ) ) && ! pk_phone_provider_ready() ) {
 		echo '<div class="notice notice-warning"><p><strong>Kiwe Auth:</strong> Phone identifiers are enabled, but no SMS or WhatsApp webhook is configured. Configure PhoneKey before allowing phone verification.</p></div>';
 	}
 	$email_test = get_option( 'dsa_email_last_test', array() );
@@ -2571,8 +2660,9 @@ function pk_admin_settings( $s ) {
 				<p><label>Mandatory URL patterns<br><textarea name="pk[mandatory_patterns]" rows="4" class="large-text"><?php echo esc_textarea( $s['mandatory_patterns'] ); ?></textarea></label></p>
 			</div>
 			<div class="pk-card"><h2>Identifier And Signup</h2>
-				<p><label>Website visitor identifier<br><select name="pk[identifier_mode]"><?php pk_select_options( array( 'email'=>'Email only', 'phone'=>'Phone only', 'email_or_phone'=>'Single field email or phone' ), $s['identifier_mode'] ); ?></select></label></p>
-				<p><label>Installed app visitor identifier<br><select name="pk[app_identifier_mode]"><?php pk_select_options( array( 'email'=>'Email only', 'phone'=>'Phone only', 'email_or_phone'=>'Single field email or phone' ), $s['app_identifier_mode'] ?? $s['identifier_mode'] ); ?></select></label></p>
+				<p><label>Website visitor identifier<br><select name="pk[identifier_mode]"><?php pk_select_options( array( 'email'=>'Email only', 'phone'=>'Phone only', 'email_or_phone'=>'Email or phone (one field)', 'email_and_phone'=>'Email + phone (two fields)' ), $s['identifier_mode'] ); ?></select></label></p>
+				<p><label>Installed app visitor identifier<br><select name="pk[app_identifier_mode]"><?php pk_select_options( array( 'email'=>'Email only', 'phone'=>'Phone only', 'email_or_phone'=>'Email or phone (one field)', 'email_and_phone'=>'Email + phone (two fields)' ), $s['app_identifier_mode'] ?? $s['identifier_mode'] ); ?></select></label></p>
+				<p class="description">Email + phone visibly collects both identifiers, verifies email first, then sends a WhatsApp or SMS code. Phone only and email-or-phone honor phone-first signup without forcing an email address.</p>
 				<p><label>Installed app verification<br><select name="pk[app_verification_timing]"><?php pk_select_options( array( 'verify_now'=>'Verify on first app launch', 'verify_later'=>'Allow setup later', 'progressive'=>'Progressive after visits' ), $s['app_verification_timing'] ?? 'verify_now' ); ?></select></label><br><span class="description">Applies to non-privileged app visitors. Administrator and manager accounts still follow their role policy for password/passkey protection.</span></p>
 				<p><label>Default country code<br><input name="pk[default_country_code]" value="<?php echo esc_attr( $s['default_country_code'] ); ?>"></label></p>
 				<p><label>New signup role<br><select name="pk[signup_role]"><?php foreach ( $roles as $role => $info ) { if ( pk_role_is_high_privilege_role( $role ) ) continue; echo '<option value="' . esc_attr( $role ) . '" ' . selected( $s['signup_role'], $role, false ) . '>' . esc_html( translate_user_role( $info['name'] ) ) . '</option>'; } ?></select></label></p>

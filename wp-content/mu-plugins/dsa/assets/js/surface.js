@@ -611,6 +611,8 @@
 		name: '',
 		identifier: '',
 		identifierType: '',
+		emailDraft: '',
+		phoneDraft: '',
 		loginToken: '',
 		error: '',
 		canEmailRecovery: false,
@@ -3087,6 +3089,8 @@
 			name: '',
 			identifier: '',
 			identifierType: '',
+			emailDraft: '',
+			phoneDraft: '',
 			loginToken: '',
 			error: '',
 			canEmailRecovery: false,
@@ -5425,14 +5429,22 @@
 		}
 	}
 
+	function phoneKeyIdentifierMode() {
+		return isStandaloneApp() ? ( phonekeyConfig.appIdentifierMode || phonekeyConfig.identifierMode ) : phonekeyConfig.identifierMode;
+	}
+
 	function phoneKeyInputLabel() {
-		const identifierMode = isStandaloneApp() ? ( phonekeyConfig.appIdentifierMode || phonekeyConfig.identifierMode ) : phonekeyConfig.identifierMode;
+		const identifierMode = phoneKeyIdentifierMode();
 		if ( identifierMode === 'email' ) {
 			return 'Email address';
 		}
 
 		if ( identifierMode === 'phone' ) {
 			return 'Phone number';
+		}
+
+		if ( identifierMode === 'email_and_phone' ) {
+			return 'Email address and phone number';
 		}
 
 		return 'Email or phone';
@@ -5447,7 +5459,11 @@
 		}
 
 		const label = phoneKeyInputLabel();
-		const appPrefill = appPhoneKeyGate && label !== 'Phone number' ? ( ( phonekey.user || {} ).email || '' ) : '';
+		const identifierMode = phoneKeyIdentifierMode();
+		const dualIdentifier = identifierMode === 'email_and_phone';
+		const appPrefill = appPhoneKeyGate && identifierMode !== 'phone' ? ( ( phonekey.user || {} ).email || '' ) : '';
+		const dualEmailPrefill = String( notificationIdentityIntent || '' ).indexOf( '@' ) > 0 ? notificationIdentityIntent : appPrefill;
+		const singleInputAttributes = identifierMode === 'phone' ? 'type="tel" autocomplete="tel" inputmode="tel"' : ( identifierMode === 'email' ? 'type="email" autocomplete="email"' : 'autocomplete="username"' );
 
 		const appWelcome = isStandaloneApp() && ( !( phonekey.user || {} ).loggedIn || appPhoneKeyGate ) && ! notificationIdentityIntent;
 		return [
@@ -5455,8 +5471,8 @@
 			notificationIdentityIntent ? '<p>Confirm ' + escapeHtml( label.toLowerCase() ) + ' once so your Appsite choices can follow you securely.</p>' : ( appWelcome ? '<p>Use ' + escapeHtml( label.toLowerCase() ) + ' once to keep this app, your preferences, and future notifications together.</p>' : '<p>Use ' + escapeHtml( label.toLowerCase() ) + ' to continue. If this device supports passkeys, Kiwe Auth will use the secure login built into your device.</p>' ),
 			renderPhoneKeyError(),
 			'<form class="dsa-auth-form" data-dsa-pk-start>',
-			'<label class="dsa-auth-label" for="dsa-pk-ident">' + escapeHtml( label ) + '</label>',
-			'<input class="dsa-auth-field" id="dsa-pk-ident" autocomplete="username" placeholder="' + escapeHtml( label ) + '" value="' + escapeHtml( notificationIdentityIntent || phonekeyState.identifier || appPrefill ) + '">',
+			dualIdentifier ? '<label class="dsa-auth-label" for="dsa-pk-email">Email address</label><input class="dsa-auth-field" id="dsa-pk-email" type="email" autocomplete="email" placeholder="Email address" value="' + escapeHtml( phonekeyState.emailDraft || dualEmailPrefill ) + '"><label class="dsa-auth-label" for="dsa-pk-phone">Phone number</label><input class="dsa-auth-field" id="dsa-pk-phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="Phone number" value="' + escapeHtml( phonekeyState.phoneDraft || '' ) + '">' : '<label class="dsa-auth-label" for="dsa-pk-ident">' + escapeHtml( label ) + '</label><input class="dsa-auth-field" id="dsa-pk-ident" ' + singleInputAttributes + ' placeholder="' + escapeHtml( label ) + '" value="' + escapeHtml( notificationIdentityIntent || phonekeyState.identifier || appPrefill ) + '">',
+			dualIdentifier ? '<p class="dsa-panel__meta">We verify your recovery email first, then send a one-time code to your phone.</p>' : '',
 			'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" type="submit" data-dsa-pk-identify>Continue</button></div>',
 			'</form>',
 			renderHomeTrustBadges(),
@@ -5553,17 +5569,26 @@
 
 	function identifyPhoneKey() {
 		const root = phoneKeyRoot();
+		const dualIdentifier = phoneKeyIdentifierMode() === 'email_and_phone';
 		const input = root ? root.querySelector( '#dsa-pk-ident' ) : null;
+		const emailInput = root ? root.querySelector( '#dsa-pk-email' ) : null;
+		const phoneInput = root ? root.querySelector( '#dsa-pk-phone' ) : null;
 		const value = input ? input.value.trim() : '';
+		const email = emailInput ? emailInput.value.trim() : '';
+		const phone = phoneInput ? phoneInput.value.trim() : '';
+		if ( dualIdentifier ) {
+			phonekeyState.emailDraft = email;
+			phonekeyState.phoneDraft = phone;
+		}
 
-		if ( ! value ) {
-			phonekeyState.error = 'Enter your ' + phoneKeyInputLabel().toLowerCase() + '.';
+		if ( ( dualIdentifier && ( ! email || ! phone ) ) || ( ! dualIdentifier && ! value ) ) {
+			phonekeyState.error = dualIdentifier ? 'Enter both your email address and phone number.' : 'Enter your ' + phoneKeyInputLabel().toLowerCase() + '.';
 			renderPhoneKeyStep( renderPhoneKeyStart(), bindPhoneKeyAuth );
 			return;
 		}
 
 		setPhoneKeyBusy( true );
-		phoneKeyPost( 'identify', { identifier: value, appContext: isStandaloneApp() } )
+		phoneKeyPost( 'identify', dualIdentifier ? { email: email, phone: phone, appContext: isStandaloneApp() } : { identifier: value, appContext: isStandaloneApp() } )
 			.then( function ( response ) {
 				phonekeyState = Object.assign( phonekeyState, {
 					token: response.token,
@@ -5581,6 +5606,8 @@
 					phoneDeliveryMessage: response.phoneDeliveryMessage || '',
 					otpResendLockedUntil: 0,
 					error: '',
+					emailDraft: '',
+					phoneDraft: '',
 				} );
 
 				if ( response.mode === 'login_passkey' ) {
@@ -5758,6 +5785,23 @@
 
 				phonekeyState.token = response.token || phonekeyState.token;
 				phonekeyState.mode = response.next || 'enroll_passkey';
+				if ( response.next === 'verify_phone' ) {
+					phonekeyState.identifier = response.identifier || phonekeyState.identifier;
+					phonekeyState.identifierType = 'phone';
+					phonekeyState.emailDelivery = 'otp';
+					phonekeyState.phoneDeliveryProvider = response.phoneDeliveryProvider || '';
+					phonekeyState.phoneDeliveryMessage = response.phoneDeliveryMessage || '';
+					phonekeyState.otpResendLockedUntil = 0;
+					phonekeyState.error = '';
+					renderVerify( { identifierType: 'phone', emailDelivery: 'otp', phoneDeliveryProvider: response.phoneDeliveryProvider, phoneDeliveryMessage: response.phoneDeliveryMessage } );
+					return;
+				}
+				if ( response.next === 'login_passkey' ) {
+					phonekeyState.identifierType = isPhone ? 'phone' : 'email';
+					phonekeyState.error = '';
+					renderPasskeyLogin();
+					return;
+				}
 				renderEnroll( { verified: true, newDevice: Boolean( response.newDevice ) } );
 			} )
 			.catch( function ( error ) {
