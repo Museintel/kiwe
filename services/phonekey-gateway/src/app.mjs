@@ -42,6 +42,8 @@ export function createApp(config, transport, clock = () => Date.now(), history =
   const idempotency = new ExpiringSet(10000);
   const tenantLimiter = new SlidingLimiter(120, 60 * 60 * 1000);
   const targetLimiter = new SlidingLimiter(6, 60 * 60 * 1000);
+  const messageTenantLimiter = new SlidingLimiter(500, 60 * 60 * 1000);
+  const messageTargetLimiter = new SlidingLimiter(60, 24 * 60 * 60 * 1000);
   const record = (event) => history?.record(event).catch(() => {});
 
   function authenticate(request, raw) {
@@ -79,10 +81,10 @@ export function createApp(config, transport, clock = () => Date.now(), history =
       if (!config.rcObservability.enabled || !config.setupToken || url.searchParams.get("token") !== config.setupToken) return text(response, 404, "Not found.");
       const entries = history?.list({ tenant: url.searchParams.get("tenant") || "", limit: url.searchParams.get("limit") || 200 }) || [];
       const rows = entries.map((entry) => `<tr><td>${new Date(entry.at).toISOString()}</td><td>${escapeHtml(entry.tenant)}</td><td>${escapeHtml(entry.direction)}</td><td>${escapeHtml(entry.status)}</td><td>••••${escapeHtml(entry.targetLast4)}</td><td>${escapeHtml(entry.content || entry.summary)}</td><td>${escapeHtml(entry.error)}</td></tr>`).join("");
-      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="refresh" content="20"><title>PhoneKey RC history</title><style>body{font:14px system-ui;margin:24px;background:#f4f7f5;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:16px;padding:22px;overflow:auto}table{border-collapse:collapse;width:100%;min-width:920px}th,td{text-align:left;padding:9px;border-bottom:1px solid #e0e8e3;vertical-align:top}th{position:sticky;top:0;background:#edf4ef}.note{color:#52645d}</style></head><body><main><h1>PhoneKey RC delivery history</h1><p class="note">Capped at ${config.rcObservability.maxEvents} events for ${config.rcObservability.retentionDays} days. OTP codes are never stored. Inbound text capture: ${config.rcObservability.captureInboundText ? "enabled" : "disabled"}.</p><table><thead><tr><th>Time</th><th>Tenant</th><th>Direction</th><th>Status</th><th>Target</th><th>Summary</th><th>Error</th></tr></thead><tbody>${rows || '<tr><td colspan="7">No events yet.</td></tr>'}</tbody></table></main></body></html>`;
+      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="refresh" content="20"><title>PhoneKey RC history</title><style>body{font:14px system-ui;margin:24px;background:#f4f7f5;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:16px;padding:22px;overflow:auto}table{border-collapse:collapse;width:100%;min-width:920px}th,td{text-align:left;padding:9px;border-bottom:1px solid #e0e8e3;vertical-align:top}th{position:sticky;top:0;background:#edf4ef}.note{color:#52645d}</style></head><body><main><h1>PhoneKey RC delivery history</h1><p class="note">Capped at ${config.rcObservability.maxEvents} events for ${config.rcObservability.retentionDays} days. OTP codes are never stored. Inbound text capture: ${config.rcObservability.captureInboundText ? "enabled" : "disabled"}. Consented outbound notification capture: ${config.rcObservability.captureOutboundText ? "enabled" : "disabled"}.</p><table><thead><tr><th>Time</th><th>Tenant</th><th>Direction</th><th>Status</th><th>Target</th><th>Summary</th><th>Error</th></tr></thead><tbody>${rows || '<tr><td colspan="7">No events yet.</td></tr>'}</tbody></table></main></body></html>`;
       return text(response, 200, html, "text/html; charset=utf-8");
     }
-    if (request.method !== "POST" || !["/v1/otp", "/v1/event"].includes(url.pathname)) return json(response, 404, { ok: false, error: "not_found" });
+    if (request.method !== "POST" || !["/v1/otp", "/v1/message", "/v1/event"].includes(url.pathname)) return json(response, 404, { ok: false, error: "not_found" });
     if (!String(request.headers["content-type"] || "").toLowerCase().startsWith("application/json")) return json(response, 415, { ok: false, error: "json_required" });
 
     try {
@@ -98,6 +100,28 @@ export function createApp(config, transport, clock = () => Date.now(), history =
         if (!phone || !/^[a-zA-Z0-9._:-]{16,128}$/.test(requestId) || !["email_fallback_accepted", "email_fallback_failed"].includes(event)) return json(response, 422, { ok: false, error: "invalid_payload" });
         await record({ tenant: keyId, phone, requestId, direction: "outbound", channel: "email", status: event, summary: event === "email_fallback_accepted" ? "Email fallback accepted by WordPress mail transport" : "Email fallback failed at WordPress mail transport" });
         return json(response, 202, { ok: true });
+      }
+      if (url.pathname === "/v1/message") {
+        const messageBody = String(payload.message || "").trim();
+        const purpose = String(payload.purpose || "");
+        const allowedPurposes = new Set(["notification_campaign", "abandoned_cart_reminder", "abandoned_cart_automation", "order_status", "admin_new_order", "admin_new_comment", "admin_visitor_summary", "admin_live_visitor"]);
+        if (!phone || !messageBody || messageBody.length > 1600 || !allowedPurposes.has(purpose) || !/^[a-zA-Z0-9._:-]{16,128}$/.test(requestId)) return json(response, 422, { ok: false, error: "invalid_payload" });
+        if (idempotency.has(`${keyId}:${requestId}`, now)) return json(response, 200, { ok: true, duplicate: true, provider: "whatsapp" });
+        const messageTarget = opaque(`${keyId}:message:${phone}`);
+        if (!messageTenantLimiter.allow(keyId, now) || !messageTargetLimiter.allow(messageTarget, now)) return json(response, 429, { ok: false, error: "rate_limited" }, { "retry-after": "3600" });
+        if (!(await transport.ready())) {
+          await record({ tenant: keyId, phone, requestId, direction: "outbound", status: "fallback_required", summary: `${purpose}: WhatsApp unavailable; consent-aware fallback may be used` });
+          return json(response, 503, { ok: false, error: "whatsapp_unavailable", fallback: "email" });
+        }
+        try {
+          const sent = await transport.sendText(phone, messageBody);
+          idempotency.add(`${keyId}:${requestId}`, 24 * 60 * 60 * 1000, now);
+          await record({ tenant: keyId, phone, requestId, receipt: sent.id, direction: "outbound", status: "accepted", summary: purpose, content: messageBody, allowContent: true });
+          return json(response, 202, { ok: true, provider: "whatsapp", receipt: opaque(sent.id || requestId) });
+        } catch (error) {
+          await record({ tenant: keyId, phone, requestId, direction: "outbound", status: "failed", summary: purpose, error: "provider_send_failure" });
+          throw error;
+        }
       }
       const code = String(payload.code || "");
       const site = String(payload.site || tenant.label).trim().slice(0, 80);

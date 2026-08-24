@@ -19,6 +19,24 @@ final class PhoneKey_Bridge {
 		return function_exists( 'pk_account_verified' ) || defined( 'PK_STAGE3_LOADED' );
 	}
 
+	public function notification_ready(): bool {
+		return function_exists( 'pk_whatsapp_notification_ready' ) && pk_whatsapp_notification_ready();
+	}
+
+	public function send_notification( string $phone, string $message, string $purpose, array $context = [] ) {
+		if ( ! $this->notification_ready() || ! function_exists( 'pk_send_whatsapp_message' ) ) {
+			return new \WP_Error( 'phonekey_whatsapp_unavailable', __( 'PhoneKey WhatsApp is not configured.', 'dsa' ) );
+		}
+
+		return pk_send_whatsapp_message( $phone, $message, $purpose, $context );
+	}
+
+	public function report_fallback( string $phone, string $request_id, bool $accepted ): void {
+		if ( function_exists( 'pk_report_whatsapp_fallback_event' ) ) {
+			pk_report_whatsapp_fallback_event( $phone, $request_id, $accepted );
+		}
+	}
+
 	public function public_data(): array {
 		return [
 			'available' => $this->is_available(),

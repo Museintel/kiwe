@@ -3,6 +3,7 @@
 namespace DSA\Communications;
 
 use DSA\Security\Secret_Store;
+use DSA\PhoneKey\PhoneKey_Bridge;
 use DSA\Settings;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -12,10 +13,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Channel_Service {
 	private $settings;
 	private $email;
+	private $phonekey;
 
-	public function __construct( Settings $settings, Email_Service $email ) {
+	public function __construct( Settings $settings, Email_Service $email, PhoneKey_Bridge $phonekey ) {
 		$this->settings = $settings;
 		$this->email = $email;
+		$this->phonekey = $phonekey;
 	}
 
 	public function available( string $channel ): bool {
@@ -24,6 +27,10 @@ final class Channel_Service {
 		if ( 'email' === $channel ) {
 			$email = $this->settings->all()['email'] ?? [];
 			return ! empty( $config['manual_reminders_enabled'] ) && ! empty( $email['enabled'] );
+		}
+
+		if ( 'whatsapp' === $channel && $this->phonekey_available() ) {
+			return ! empty( $config['manual_reminders_enabled'] );
 		}
 
 		$channel_config = $config['channels'][ $channel ] ?? [];
@@ -38,12 +45,24 @@ final class Channel_Service {
 			return ! empty( $email['enabled'] );
 		}
 
+		if ( 'whatsapp' === $channel && $this->phonekey_available() ) {
+			return true;
+		}
+
 		$config = $this->config()['channels'][ $channel ] ?? [];
 		return ! empty( $config['enabled'] ) && wp_http_validate_url( (string) ( $config['webhook_url'] ?? '' ) );
 	}
 
 	public function send( string $channel, string $recipient, string $subject, string $message, array $context = [] ) {
-		$campaign_purposes = [ 'notification_campaign', 'abandoned_cart_automation' ];
+		$campaign_purposes = [
+			'notification_campaign',
+			'abandoned_cart_automation',
+			'order_status',
+			'admin_new_order',
+			'admin_new_comment',
+			'admin_visitor_summary',
+			'admin_live_visitor',
+		];
 		$available = in_array( sanitize_key( (string) ( $context['purpose'] ?? '' ) ), $campaign_purposes, true )
 			? $this->available_for_campaign( $channel )
 			: $this->available( $channel );
@@ -58,6 +77,16 @@ final class Channel_Service {
 			}
 
 			return $this->email->send( $recipient, $subject, $message, $headers );
+		}
+
+		if ( 'whatsapp' === $channel && $this->phonekey_available() ) {
+			$purpose = sanitize_key( (string) ( $context['purpose'] ?? 'notification_campaign' ) );
+			$result = $this->phonekey->send_notification( $recipient, $message, $purpose, $context );
+			if ( ! is_wp_error( $result ) ) {
+				return $result;
+			}
+
+			return $this->maybe_email_fallback( $result, $recipient, $subject, $message, $context );
 		}
 
 		$config = $this->config()['channels'][ $channel ] ?? [];
@@ -104,5 +133,34 @@ final class Channel_Service {
 		$all = $this->settings->all();
 		$defaults = $this->settings->defaults();
 		return wp_parse_args( $all['abandoned_cart'] ?? [], $defaults['abandoned_cart'] ?? [] );
+	}
+
+	private function phonekey_available(): bool {
+		return $this->phonekey->notification_ready();
+	}
+
+	private function maybe_email_fallback( \WP_Error $error, string $phone, string $subject, string $message, array $context ) {
+		$email = sanitize_email( (string) ( $context['fallback_email'] ?? '' ) );
+		$allowed = ! empty( $context['fallback_email_allowed'] ) && is_email( $email );
+		if ( ! $allowed || ! $this->available_for_campaign( 'email' ) ) {
+			return $error;
+		}
+
+		$headers = isset( $context['fallback_headers'] ) && is_array( $context['fallback_headers'] )
+			? array_values( array_filter( array_map( 'sanitize_text_field', $context['fallback_headers'] ) ) )
+			: [];
+		$fallback_message = isset( $context['fallback_message'] ) ? (string) $context['fallback_message'] : $message;
+		$accepted = $this->email->send( $email, $subject, $fallback_message, $headers );
+		$error_data = $error->get_error_data();
+		$request_id = sanitize_text_field( (string) ( is_array( $error_data ) ? ( $error_data['request_id'] ?? '' ) : '' ) );
+		if ( '' !== $request_id ) {
+			$this->phonekey->report_fallback( $phone, $request_id, ! is_wp_error( $accepted ) && false !== $accepted );
+		}
+
+		if ( is_wp_error( $accepted ) || false === $accepted ) {
+			return is_wp_error( $accepted ) ? $accepted : $error;
+		}
+
+		return [ 'ok' => true, 'provider' => 'email_fallback', 'request_id' => $request_id ];
 	}
 }

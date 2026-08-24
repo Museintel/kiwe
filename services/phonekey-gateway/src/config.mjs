@@ -47,6 +47,7 @@ export function loadConfig(environment = process.env) {
     rcObservability: {
       enabled: rcHistoryEnabled,
       captureInboundText: String(environment.PHONEKEY_RC_CAPTURE_INBOUND ?? file.rcObservability?.captureInboundText ?? "false") === "true",
+      captureOutboundText: String(environment.PHONEKEY_RC_CAPTURE_OUTBOUND ?? file.rcObservability?.captureOutboundText ?? "false") === "true",
       retentionDays: integer(environment.PHONEKEY_RC_RETENTION_DAYS || file.rcObservability?.retentionDays, 14, 1, 30),
       maxEvents: integer(environment.PHONEKEY_RC_MAX_EVENTS || file.rcObservability?.maxEvents, 3000, 100, 10000),
       path: resolve(environment.PHONEKEY_RC_HISTORY_PATH || file.rcObservability?.path || "../.phonekey-state/rc-history.json"),

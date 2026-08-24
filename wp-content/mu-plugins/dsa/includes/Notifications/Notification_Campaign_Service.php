@@ -46,7 +46,12 @@ final class Notification_Campaign_Service {
 				continue;
 			}
 			$delivery_message = 'email' === $channel || '' === $subject ? $message : $subject . "\n\n" . $message;
-			$result = $this->channels->send( $channel, $recipient, $subject, $delivery_message, [ 'purpose' => 'notification_campaign', 'user_id' => (int) $user_id ] );
+			$context = [ 'purpose' => 'notification_campaign', 'user_id' => (int) $user_id ];
+			if ( 'whatsapp' === $channel && $this->preferences->user_accepts( (int) $user_id, 'email' ) ) {
+				$context['fallback_email'] = $this->preferences->contact_for_user( (int) $user_id, 'email' );
+				$context['fallback_email_allowed'] = true;
+			}
+			$result = $this->channels->send( $channel, $recipient, $subject, $delivery_message, $context );
 			is_wp_error( $result ) ? $failed++ : $sent++;
 		}
 		$result = [
@@ -66,6 +71,10 @@ final class Notification_Campaign_Service {
 
 	public function push_summary(): array {
 		return $this->push->audience_summary();
+	}
+
+	public function channel_ready( string $channel ): bool {
+		return 'app' === $channel ? ! empty( $this->push->audience_summary()['ready'] ) : $this->channels->available_for_campaign( sanitize_key( $channel ) );
 	}
 
 	private function remember( string $channel, string $subject, array $result ): void {

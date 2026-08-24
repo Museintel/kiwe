@@ -77,3 +77,13 @@ test("accepts signed email fallback outcomes without OTP content", async () => {
   assert.equal(app.events.at(-1).status, "email_fallback_accepted");
   assert.equal(JSON.stringify(app.events).includes(payload.code), false);
 });
+
+test("accepts bounded consented notifications through the same tenant", async () => {
+  const app = await fixture();
+  const notification = { phone: payload.phone, origin: payload.origin, requestId: "notification_1234567890123456", purpose: "order_status", message: "Example: Order #42 is ready." };
+  const response = await fetch(`${app.url}/v1/message`, signed(app.config, notification));
+  assert.equal(response.status, 202);
+  assert.equal(app.sent.at(-1).text, notification.message);
+  assert.equal(app.events.at(-1).summary, "order_status");
+  assert.equal(app.events.at(-1).allowContent, true);
+});

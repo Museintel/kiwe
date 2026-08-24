@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "7.24",
+  "version": "7.25",
   "algorithm": "sha256",
-  "file_count": 324,
+  "file_count": 325,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -190,7 +190,7 @@
     },
     "dsa.php": {
       "bytes": 2754,
-      "sha256": "531c2b5295d7fea48ee59f24313fbce0305726be6e67dc02a594399f6da3b89e"
+      "sha256": "c3e0b7b863b6b0f434234f49d7b8086aee8b3286dca93dd556865f8ed73eb289"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -505,8 +505,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 683626,
-      "sha256": "595c0dc18e687f248054c30a3b1d9804decb6c93c2cba7a09ab8feb1bdad69dc"
+      "bytes": 685203,
+      "sha256": "5409859758ec09410bf80127e6368337389007412e7b21b90e7f3f8106dfaaaf"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -525,8 +525,8 @@
       "sha256": "5ce4d8e8ef210d826c6c2930cfbe6f13e37ad6816a5bce38f152b4305ade6c59"
     },
     "includes/Commerce/Abandoned_Cart_Service.php": {
-      "bytes": 34768,
-      "sha256": "8bc9475e113e8d17d753ecc0428e236742835098fc25bf075a6220f3ea453eec"
+      "bytes": 36806,
+      "sha256": "ee246b13b2ecb634a857ec84eceb3469190bf0eb4f78f2a2d16b2cd796b7bc55"
     },
     "includes/Commerce/COD_Gate_Service.php": {
       "bytes": 12334,
@@ -553,8 +553,8 @@
       "sha256": "c2871df757b3b2bde584691ac65d4b020275630452c7a490b204891c9233ba47"
     },
     "includes/Communications/Channel_Service.php": {
-      "bytes": 3335,
-      "sha256": "30be0cd147f39718f33e510d97d829e28a3574eac8612fb2ee2ffc203c0bbb0a"
+      "bytes": 5596,
+      "sha256": "657919ff9b50838ccd1ba8cb67472de3de67dd64499560386e47c4888baad16b"
     },
     "includes/Communications/Email_Service.php": {
       "bytes": 4035,
@@ -621,16 +621,20 @@
       "sha256": "32d97cb9bc6d536318a7008f42497c831836be1fe2b944b71199281168df1bcb"
     },
     "includes/Notifications/Admin_Event_Notification_Service.php": {
-      "bytes": 16270,
-      "sha256": "4953592238a8faac6e780e325a2a377e73f4cfa2ab10a3d3a12dbda1ae7ea440"
+      "bytes": 17862,
+      "sha256": "e20340eddd187722b0225e07ec24a94e117bc9d2b273706bf15d6be368ab3d4d"
     },
     "includes/Notifications/Notification_Campaign_Service.php": {
-      "bytes": 2968,
-      "sha256": "eb101615a6c95c78a1e9ea1545616a7b3de520c29fd7386d13a87f52c1954503"
+      "bytes": 3456,
+      "sha256": "f5df5053a39fb992a71e1469aae86fb21bf3bf9969e541d1e3456569aedfd366"
     },
     "includes/Notifications/Notification_Preference_Service.php": {
-      "bytes": 22323,
-      "sha256": "a3dd6ded76abfc8e64cdbd676ddd71aeff358da88cb00b42100afaebfe98a662"
+      "bytes": 23231,
+      "sha256": "3898624937c91b60b03a50ab32eaba725838aab61589a8e7f3588b5e16ccb8ed"
+    },
+    "includes/Notifications/Order_Notification_Service.php": {
+      "bytes": 2487,
+      "sha256": "2885844a142c439b172ec6c8629e1e3ac14e0fd516e55a7ca09babfc6b4c06e0"
     },
     "includes/Notifications/Push_Service.php": {
       "bytes": 30919,
@@ -665,20 +669,20 @@
       "sha256": "96a75d9fdadd8a0edca9008f25aff591ccda8e67230b179078139f26d4bedba9"
     },
     "includes/PhoneKey/PhoneKey_Bridge.php": {
-      "bytes": 5793,
-      "sha256": "918fe0ce5cd01340cbe0b150d044da781dcb4c1ce3c7d5615766022ebc797feb"
+      "bytes": 6579,
+      "sha256": "cfa8c9af0f9dd6f345304643e39ac0e30c62c4443db3a931f7e9daf39c901bea"
     },
     "includes/PhoneKey/PhoneKey_Core_Loader.php": {
       "bytes": 400,
       "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 137557,
-      "sha256": "eb23105adfe5ebbe36c8e1c08fb6ab6eea28078a775af52a5aa0eb59f15dc00d"
+      "bytes": 140510,
+      "sha256": "576b3b7b5c294257ac3418bd9267b0d79725ca6a1879a36877a27593dcc09a36"
     },
     "includes/Plugin.php": {
-      "bytes": 13854,
-      "sha256": "e8089de22cd4abf22b681c1b63014f3d852ac127878efd18c59e4ed32fb7945e"
+      "bytes": 14290,
+      "sha256": "c9fd9adbe9a899dcd8c98846e1cf798eb5d97178b4b20d9bb21a0dce816edb84"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,
@@ -857,8 +861,8 @@
       "sha256": "ba8f795ff9d0a7523884d78557af43d21681ffe9d2577cd2b482e78877f06c8e"
     },
     "includes/Settings.php": {
-      "bytes": 23450,
-      "sha256": "28f5dae2bc3186c49bfd3eb53cf16e60d38a5b671186adca648f637993809cab"
+      "bytes": 23494,
+      "sha256": "38cb9ed37af19a8b41db75f995aacd2d50e034d23882c3589f9c7a6e54d8f236"
     },
     "includes/Site/Site_Identity_Service.php": {
       "bytes": 9193,

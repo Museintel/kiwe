@@ -3,6 +3,7 @@
 namespace DSA\Notifications;
 
 use DSA\Commerce\Store_Analytics_Service;
+use DSA\Communications\Channel_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -13,11 +14,13 @@ final class Admin_Event_Notification_Service {
 	private $preferences;
 	private $push;
 	private $analytics;
+	private $channels;
 
-	public function __construct( Notification_Preference_Service $preferences, Push_Service $push, ?Store_Analytics_Service $analytics = null ) {
+	public function __construct( Notification_Preference_Service $preferences, Push_Service $push, ?Store_Analytics_Service $analytics = null, ?Channel_Service $channels = null ) {
 		$this->preferences = $preferences;
 		$this->push        = $push;
 		$this->analytics   = $analytics;
+		$this->channels    = $channels;
 	}
 
 	public function register(): void {
@@ -116,6 +119,7 @@ final class Admin_Event_Notification_Service {
 		];
 
 		$this->store_inbox( $this->admin_user_ids( 'manage_options' ), $item );
+		$this->deliver_channels( 'admin_live_visitor', $title, $message, (string) $item['actionUrl'] );
 	}
 
 	public function queue_visitor_activity( array $event ): void {
@@ -172,6 +176,7 @@ final class Admin_Event_Notification_Service {
 				'createdAt'   => time(),
 			]
 		);
+		$this->deliver_channels( 'admin_live_visitor', $title, $message, admin_url( 'admin.php?page=kiwe-analytics&tab=funnel&days=1' ) );
 	}
 
 	public function dispatch( string $event, int $object_id ): void {
@@ -262,6 +267,7 @@ final class Admin_Event_Notification_Service {
 				'aiMessage' => __( 'Open the order in WordPress to review payment, products, and fulfilment.', 'dsa' ),
 			]
 		);
+		$this->deliver_channels( 'admin_new_order', (string) $inbox['title'], (string) $inbox['message'], $url );
 	}
 
 	private function dispatch_comment( int $comment_id ): void {
@@ -301,6 +307,7 @@ final class Admin_Event_Notification_Service {
 				'aiMessage' => $body,
 			]
 		);
+		$this->deliver_channels( 'admin_new_comment', $title, $body, $url );
 	}
 
 	private function dispatch_visitor_summary(): void {
@@ -344,6 +351,34 @@ final class Admin_Event_Notification_Service {
 		];
 
 		$this->store_inbox( $this->admin_user_ids( 'manage_options' ), $item );
+		$this->deliver_channels( 'admin_visitor_summary', (string) $item['title'], (string) $item['message'], (string) $item['actionUrl'] );
+	}
+
+	private function deliver_channels( string $topic, string $title, string $message, string $url ): void {
+		if ( ! $this->channels ) {
+			return;
+		}
+
+		$purpose = sanitize_key( $topic );
+		$delivery_message = trim( $title . "\n\n" . $message . ( $url ? "\n\n" . $url : '' ) );
+		foreach ( [ 'whatsapp', 'email', 'sms' ] as $channel ) {
+			if ( ! $this->channels->available_for_campaign( $channel ) ) {
+				continue;
+			}
+			foreach ( array_slice( $this->preferences->audience_user_ids_for_topic( $channel, $topic ), 0, 100 ) as $user_id ) {
+				$recipient = $this->preferences->contact_for_user( (int) $user_id, $channel );
+				if ( '' === $recipient ) {
+					continue;
+				}
+				$this->channels->send(
+					$channel,
+					$recipient,
+					$title,
+					'email' === $channel ? $message . ( $url ? "\n\n" . $url : '' ) : $delivery_message,
+					[ 'purpose' => $purpose, 'user_id' => (int) $user_id ]
+				);
+			}
+		}
 	}
 
 	private function admin_user_ids( string $capability ): array {

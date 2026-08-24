@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.25
+
+- Promoted PhoneKey from OTP-only transport to Kiwe's bounded, signed WhatsApp channel for opted-in campaigns, saved-cart recovery, WooCommerce order status, and private owner events.
+- Added per-user topic/channel consent enforcement, verified contact resolution, independent gateway tenant/recipient limits, and email fallback only when the same recipient also opted into email.
+- Added WooCommerce order-status notifications, PhoneKey-first abandoned-cart automation without duplicate channel sends, and owner delivery for orders, comments, live visitors, and visitor summaries.
+- Added encrypted-at-rest RC capture for explicitly consented outbound notification text while preserving permanent OTP redaction, recipient hashing/masking, capped retention, and the protected operator timeline.
+- Unified notification readiness in Kiwe admin, retained generic WhatsApp webhooks only as a legacy fallback, and kept fresh installations fail-closed with SiteGraph as the sole enabled capability.
+
 ## 7.24
 
 - Added opt-in RC PhoneKey observability with a bounded single-file timeline, AES-256-GCM encryption for consented inbound test text, hashed recipients, delivery receipts, and strict non-retention of OTP bodies.

@@ -22,3 +22,12 @@ test("encrypts inbound RC text and permanently redacts outbound OTP content", as
   assert.equal(entries.find((entry) => entry.direction === "inbound").content, "Please resend my code");
   assert.equal(entries.find((entry) => entry.direction === "outbound").content, "");
 });
+
+test("stores consented outbound RC notification text only as ciphertext", async () => {
+  const path = join(tmpdir(), `phonekey-history-${randomUUID()}.json`);
+  paths.push(path);
+  const store = await new RcHistoryStore({ enabled: true, captureInboundText: false, captureOutboundText: true, path, maxEvents: 100, retentionDays: 14, key: Buffer.alloc(32, 9).toString("base64url") }).load();
+  await store.record({ tenant: "client", direction: "outbound", phone: "+919876543210", status: "accepted", content: "Order 42 is ready", allowContent: true, summary: "order_status" });
+  assert.equal((await readFile(path, "utf8")).includes("Order 42 is ready"), false);
+  assert.equal(store.list()[0].content, "Order 42 is ready");
+});

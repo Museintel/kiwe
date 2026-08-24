@@ -28,6 +28,7 @@ use DSA\Notifications\Notification_Preference_Service;
 use DSA\Notifications\Notification_Campaign_Service;
 use DSA\Notifications\Push_Service;
 use DSA\Notifications\Admin_Event_Notification_Service;
+use DSA\Notifications\Order_Notification_Service;
 use DSA\Onboarding\Design_Context_Profile_Service;
 use DSA\Onboarding\Onboarding_Service;
 use DSA\Onboarding\SEO_Context_Service;
@@ -102,6 +103,7 @@ final class Plugin {
 	private $notification_campaigns;
 	private $push;
 	private $admin_notifications;
+	private $order_notifications;
 	private $pwa;
 	private $readiness;
 	private $reviews;
@@ -130,15 +132,15 @@ final class Plugin {
 		$this->registry   = new Element_Registry();
 		$this->linked_products = new Linked_Products_Service( $this->settings );
 		$this->store_analytics = new Store_Analytics_Service( $this->settings );
+		$this->cart_payload = new Cart_Payload_Service( $this->settings, $this->linked_products, $this->store_analytics );
+		$this->phonekey   = new PhoneKey_Bridge( $this->cart_payload );
 		$this->email        = new Email_Service( $this->settings );
-		$this->channels     = new Channel_Service( $this->settings, $this->email );
+		$this->channels     = new Channel_Service( $this->settings, $this->email, $this->phonekey );
 		$this->design_context_profile = new Design_Context_Profile_Service();
 		$this->onboarding   = new Onboarding_Service( $this->design_context_profile, $this->channels );
 		$this->seo_context  = new SEO_Context_Service( $this->design_context_profile );
 		$this->abandoned_carts = new Abandoned_Cart_Service( $this->settings, $this->store_analytics, $this->channels );
-		$this->cart_payload = new Cart_Payload_Service( $this->settings, $this->linked_products, $this->store_analytics );
 		$this->checkout    = new Checkout_Service( $this->settings, $this->cart_payload );
-		$this->phonekey   = new PhoneKey_Bridge( $this->cart_payload );
 		$this->trust      = new Trust_Service();
 		$this->flow_guard = new Flow_Guard();
 		$this->triggers   = new Trigger_Service();
@@ -153,8 +155,10 @@ final class Plugin {
 		$this->metrics    = new Metrics_Service( $this->settings, $this->store_analytics );
 		$this->permissions = new Permission_Journey_Service( $this->settings );
 		$this->notification_preferences = new Notification_Preference_Service( $this->settings, $this->trust );
+		$this->abandoned_carts->set_preferences( $this->notification_preferences );
 		$this->push = new Push_Service();
-		$this->admin_notifications = new Admin_Event_Notification_Service( $this->notification_preferences, $this->push, $this->store_analytics );
+		$this->admin_notifications = new Admin_Event_Notification_Service( $this->notification_preferences, $this->push, $this->store_analytics, $this->channels );
+		$this->order_notifications = new Order_Notification_Service( $this->notification_preferences, $this->channels, $this->push );
 		$this->notification_campaigns = new Notification_Campaign_Service( $this->notification_preferences, $this->channels, $this->push );
 		$this->pwa        = new PWA_Service( $this->settings, $this->push );
 		$this->readiness  = new Production_Readiness_Service( $this->settings, $this->trust, $this->push );
@@ -227,7 +231,10 @@ final class Plugin {
 		}
 		if ( $push_enabled ) {
 			$this->push->register();
+		}
+		if ( $preferences_enabled ) {
 			$this->admin_notifications->register();
+			$this->order_notifications->register();
 		}
 		( new Admin( $this->settings, $this->modules, $this->native, $this->readiness, $this->store_analytics, $this->linked_products, $this->email, $this->abandoned_carts, $this->notification_preferences, $this->notification_campaigns, $this->saved_items, $this->search ) )->register();
 		$this->onboarding->register();
@@ -257,6 +264,8 @@ final class Plugin {
 		}
 		if ( $push_enabled ) {
 			( new Push_Controller( $this->push ) )->register();
+		}
+		if ( $preferences_enabled ) {
 			( new Admin_Notifications_Controller( $this->admin_notifications ) )->register();
 		}
 		( new Settings_Controller( $this->settings, $this->registry, $this->trust, $this->modules, $this->native, $this->copilot, $this->reviews ) )->register();

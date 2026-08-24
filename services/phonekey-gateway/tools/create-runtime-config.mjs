@@ -18,6 +18,7 @@ const config = {
   rcObservability: {
     enabled: true,
     captureInboundText: true,
+    captureOutboundText: true,
     retentionDays: 14,
     maxEvents: 3000,
     path: "../../.phonekey-state/rc-history.json",

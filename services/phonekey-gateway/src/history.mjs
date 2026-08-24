@@ -13,6 +13,7 @@ export class RcHistoryStore {
   constructor(config, clock = () => Date.now()) {
     this.enabled = Boolean(config.enabled);
     this.captureInboundText = Boolean(config.captureInboundText);
+    this.captureOutboundText = Boolean(config.captureOutboundText);
     this.path = config.path;
     this.maximum = config.maxEvents;
     this.retentionMs = config.retentionDays * 24 * 60 * 60 * 1000;
@@ -64,7 +65,8 @@ export class RcHistoryStore {
     if (!this.enabled) return;
     const phone = String(event.phone || "").replace(/\D/g, "");
     const direction = event.direction === "inbound" ? "inbound" : "outbound";
-    const contentAllowed = direction === "inbound" && this.captureInboundText;
+    const contentAllowed = (direction === "inbound" && this.captureInboundText)
+      || (direction === "outbound" && this.captureOutboundText && event.allowContent === true);
     const entry = {
       id: randomUUID(),
       at: this.clock(),

@@ -227,9 +227,23 @@ final class Notification_Preference_Service {
 		$phone = sanitize_text_field( (string) get_user_meta( $user_id, 'billing_phone', true ) );
 		if ( '' === $phone && function_exists( 'pk_factor' ) && function_exists( 'pk_decrypt' ) ) {
 			$factor = pk_factor( $user_id, 'phone' );
-			$phone = is_array( $factor ) ? sanitize_text_field( (string) pk_decrypt( $factor['factor_value'] ?? '' ) ) : '';
+			$phone = is_array( $factor ) && 'verified' === ( $factor['status'] ?? '' ) ? sanitize_text_field( (string) pk_decrypt( $factor['factor_value'] ?? '' ) ) : '';
 		}
-		return $phone;
+		return function_exists( 'pk_normalize_phone' ) ? (string) pk_normalize_phone( $phone ) : preg_replace( '/[^0-9+]/', '', $phone );
+	}
+
+	public function user_accepts( int $user_id, string $channel, string $topic = '' ): bool {
+		if ( $user_id < 1 ) {
+			return false;
+		}
+
+		$stored = get_user_meta( $user_id, self::USER_META, true );
+		$preferences = $this->sanitize_preferences( is_array( $stored ) ? $stored : [] );
+		if ( ! in_array( sanitize_key( $channel ), $preferences['channels'], true ) ) {
+			return false;
+		}
+
+		return '' === $topic || in_array( sanitize_key( $topic ), $preferences['topics'], true );
 	}
 
 	public function loop_button_text( string $text, $product ): string {
@@ -364,7 +378,7 @@ final class Notification_Preference_Service {
 		return [
 			[ 'id' => 'app', 'label' => __( 'App', 'dsa' ), 'description' => __( 'Offline browser notifications on this device.', 'dsa' ), 'available' => true ],
 			[ 'id' => 'email', 'label' => __( 'Email', 'dsa' ), 'description' => ! empty( $email['enabled'] ) ? __( 'Useful updates in your inbox.', 'dsa' ) : __( 'Save email preferences now; delivery begins when site email is configured.', 'dsa' ), 'available' => true ],
-			[ 'id' => 'whatsapp', 'label' => __( 'WhatsApp', 'dsa' ), 'description' => __( 'Updates through the configured WhatsApp provider.', 'dsa' ), 'available' => $this->channel_ready( $provider_channels['whatsapp'] ?? [] ) ],
+			[ 'id' => 'whatsapp', 'label' => __( 'WhatsApp', 'dsa' ), 'description' => __( 'Consent-aware updates through Kiwe PhoneKey.', 'dsa' ), 'available' => ( function_exists( 'pk_whatsapp_notification_ready' ) && pk_whatsapp_notification_ready() ) || $this->channel_ready( $provider_channels['whatsapp'] ?? [] ) ],
 			[ 'id' => 'sms', 'label' => __( 'SMS', 'dsa' ), 'description' => __( 'Text messages through the configured SMS provider.', 'dsa' ), 'available' => $this->channel_ready( $provider_channels['sms'] ?? [] ) ],
 		];
 	}
@@ -399,6 +413,7 @@ final class Notification_Preference_Service {
 			[ 'id' => 'stock_update', 'label' => __( 'Stock updates', 'dsa' ), 'description' => __( 'Know when unavailable products return.', 'dsa' ) ],
 			[ 'id' => 'new_product', 'label' => __( 'New products', 'dsa' ), 'description' => __( 'New arrivals from selected categories.', 'dsa' ) ],
 			[ 'id' => 'order_status', 'label' => __( 'Order status', 'dsa' ), 'description' => __( 'Progress after checkout and fulfilment updates.', 'dsa' ) ],
+			[ 'id' => 'cart_reminder', 'label' => __( 'Saved cart reminders', 'dsa' ), 'description' => __( 'A limited reminder when a cart you started is still waiting.', 'dsa' ) ],
 		], $admin_topics );
 	}
 

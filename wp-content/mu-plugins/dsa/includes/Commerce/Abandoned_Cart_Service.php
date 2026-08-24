@@ -4,6 +4,7 @@ namespace DSA\Commerce;
 
 use DSA\Communications\Channel_Service;
 use DSA\Diagnostics\Runtime_Profiler;
+use DSA\Notifications\Notification_Preference_Service;
 use DSA\Security\Secret_Store;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
@@ -20,6 +21,7 @@ final class Abandoned_Cart_Service {
 	private $settings;
 	private $analytics;
 	private $channels;
+	private $preferences;
 	private $capturing = false;
 	private string $request_capture_signature = '';
 
@@ -27,6 +29,10 @@ final class Abandoned_Cart_Service {
 		$this->settings = $settings;
 		$this->analytics = $analytics;
 		$this->channels = $channels;
+	}
+
+	public function set_preferences( Notification_Preference_Service $preferences ): void {
+		$this->preferences = $preferences;
 	}
 
 	public function register(): void {
@@ -118,7 +124,7 @@ final class Abandoned_Cart_Service {
 	public function maintenance(): void {
 		if ( ! empty( $this->config()['enabled'] ) ) {
 			$this->refresh_abandoned_statuses();
-			$this->send_due_automatic_email_reminders();
+			$this->send_due_automatic_reminders();
 		}
 		$this->purge_old_rows();
 	}
@@ -360,6 +366,11 @@ final class Abandoned_Cart_Service {
 			return new \WP_Error( 'dsa_cart_not_abandoned', __( 'That cart is no longer abandoned.', 'dsa' ) );
 		}
 
+		$user_id = absint( $row['user_id'] ?? 0 );
+		if ( $user_id && ( ! $this->preferences || ! $this->preferences->user_accepts( $user_id, $channel, 'cart_reminder' ) ) ) {
+			return new \WP_Error( 'dsa_cart_consent_missing', __( 'That customer has not opted into saved-cart reminders on this channel.', 'dsa' ) );
+		}
+
 		$channel_available = $automated
 			? $this->channels->available_for_campaign( $channel )
 			: $this->channels->available( $channel );
@@ -409,6 +420,15 @@ final class Abandoned_Cart_Service {
 			'recovery_url' => esc_url_raw( $recovery_url ),
 			'purpose'      => $automated ? 'abandoned_cart_automation' : 'abandoned_cart_reminder',
 		];
+		if ( 'whatsapp' === $channel && $user_id && $this->preferences && $this->preferences->user_accepts( $user_id, 'email', 'cart_reminder' ) ) {
+			$fallback_email = (string) ( $contacts['email']['value'] ?? '' );
+			if ( is_email( $fallback_email ) ) {
+				$context['fallback_email'] = $fallback_email;
+				$context['fallback_email_allowed'] = true;
+				$context['fallback_headers'] = [ 'Content-Type: text/html; charset=UTF-8' ];
+				$context['fallback_message'] = $this->render_recovery_email( $row, $subject, strtr( (string) ( $config['email_message'] ?? '' ), $vars ), $recovery_url );
+			}
+		}
 
 		if ( 'email' === $channel ) {
 			$context['headers'] = [ 'Content-Type: text/html; charset=UTF-8' ];
@@ -451,9 +471,11 @@ final class Abandoned_Cart_Service {
 		return true;
 	}
 
-	public function send_due_automatic_email_reminders(): int {
+	public function send_due_automatic_reminders(): int {
 		$config = $this->config();
-		if ( empty( $config['enabled'] ) || empty( $config['automatic_email_enabled'] ) || ! $this->channels->available_for_campaign( 'email' ) ) {
+		$email_enabled = ! empty( $config['automatic_email_enabled'] ) && $this->channels->available_for_campaign( 'email' );
+		$whatsapp_enabled = ! empty( $config['automatic_whatsapp_enabled'] ) && $this->channels->available_for_campaign( 'whatsapp' );
+		if ( empty( $config['enabled'] ) || ( ! $email_enabled && ! $whatsapp_enabled ) ) {
 			return 0;
 		}
 
@@ -465,7 +487,7 @@ final class Abandoned_Cart_Service {
 		$before = wp_date( 'Y-m-d H:i:s', time() - ( $cooldown_hours * HOUR_IN_SECONDS ), wp_timezone() );
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id FROM {$this->carts_table()} WHERE status='abandoned' AND item_count > 0 AND (user_id > 0 OR contact_email_enc <> '') AND reminder_count < %d AND (last_reminder_at IS NULL OR last_reminder_at < %s) ORDER BY last_activity_at ASC LIMIT %d",
+				"SELECT id,user_id,contact_email_enc FROM {$this->carts_table()} WHERE status='abandoned' AND item_count > 0 AND (user_id > 0 OR contact_email_enc <> '') AND reminder_count < %d AND (last_reminder_at IS NULL OR last_reminder_at < %s) ORDER BY last_activity_at ASC LIMIT %d",
 				$max,
 				$before,
 				$limit
@@ -475,13 +497,28 @@ final class Abandoned_Cart_Service {
 
 		$sent = 0;
 		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
-			$result = $this->send_reminder( absint( $row['id'] ?? 0 ), 'email', true );
+			$cart_id = absint( $row['id'] ?? 0 );
+			$user_id = absint( $row['user_id'] ?? 0 );
+			$channel = '';
+			if ( $whatsapp_enabled && $user_id && $this->preferences && $this->preferences->user_accepts( $user_id, 'whatsapp', 'cart_reminder' ) ) {
+				$channel = 'whatsapp';
+			} elseif ( $email_enabled && ( ( $user_id && $this->preferences && $this->preferences->user_accepts( $user_id, 'email', 'cart_reminder' ) ) || ( ! $user_id && ! empty( $config['guest_email_reminders_enabled'] ) && ! empty( $row['contact_email_enc'] ) ) ) ) {
+				$channel = 'email';
+			}
+			if ( '' === $channel ) {
+				continue;
+			}
+			$result = $this->send_reminder( $cart_id, $channel, true );
 			if ( ! is_wp_error( $result ) ) {
 				$sent++;
 			}
 		}
 
 		return $sent;
+	}
+
+	public function send_due_automatic_email_reminders(): int {
+		return $this->send_due_automatic_reminders();
 	}
 
 	public function maybe_restore_cart(): void {

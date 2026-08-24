@@ -1151,6 +1151,59 @@ function pk_report_gateway_event( array $settings, $gateway_url, $phone, $reques
 	) );
 }
 
+function pk_whatsapp_notification_ready() {
+	$s = pk_settings();
+	return 'phonekey_gateway' === ( $s['whatsapp_mode'] ?? '' )
+		&& ! empty( $s['whatsapp_webhook'] )
+		&& ! empty( $s['whatsapp_key_id'] )
+		&& '' !== pk_whatsapp_secret( $s );
+}
+
+function pk_send_whatsapp_message( $phone, $message, $purpose = 'notification_campaign', array $context = array() ) {
+	$s = pk_settings();
+	if ( ! pk_whatsapp_notification_ready() ) return new WP_Error( 'phonekey_whatsapp_unavailable', 'PhoneKey WhatsApp is not configured.' );
+	$allowed = array( 'notification_campaign', 'abandoned_cart_reminder', 'abandoned_cart_automation', 'order_status', 'admin_new_order', 'admin_new_comment', 'admin_visitor_summary', 'admin_live_visitor' );
+	$purpose = sanitize_key( $purpose );
+	$phone = pk_normalize_phone( $phone );
+	$message = trim( wp_strip_all_tags( (string) $message ) );
+	if ( ! in_array( $purpose, $allowed, true ) || strlen( preg_replace( '/\D/', '', $phone ) ) < 7 || '' === $message ) {
+		return new WP_Error( 'phonekey_whatsapp_invalid', 'PhoneKey rejected an invalid WhatsApp notification.' );
+	}
+	if ( function_exists( 'mb_substr' ) ) $message = mb_substr( $message, 0, 1600 );
+	else $message = substr( $message, 0, 1600 );
+	$request_id = pk_hmac( $purpose . '|' . $phone . '|' . $message . '|' . wp_generate_uuid4() );
+	$payload = array(
+		'phone'     => $phone,
+		'message'   => $message,
+		'purpose'   => $purpose,
+		'site'      => get_bloginfo( 'name' ),
+		'origin'    => untrailingslashit( home_url() ),
+		'requestId' => $request_id,
+	);
+	$body = wp_json_encode( $payload );
+	$headers = pk_gateway_signed_headers( $s, $body );
+	$url = preg_replace( '#/v1/otp/?$#', '/v1/message', (string) $s['whatsapp_webhook'] );
+	if ( empty( $headers ) || ! $url || $url === $s['whatsapp_webhook'] ) return new WP_Error( 'phonekey_whatsapp_contract', 'PhoneKey WhatsApp gateway settings are incomplete.', array( 'request_id' => $request_id ) );
+	$response = wp_safe_remote_post( $url, array(
+		'timeout'     => 10,
+		'redirection' => 0,
+		'headers'     => $headers,
+		'body'        => $body,
+	) );
+	$status = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+	$result = is_wp_error( $response ) ? array() : json_decode( (string) wp_remote_retrieve_body( $response ), true );
+	$accepted = $status >= 200 && $status < 300 && is_array( $result ) && ! empty( $result['ok'] );
+	if ( ! $accepted ) {
+		return new WP_Error( 'phonekey_whatsapp_delivery', 'PhoneKey WhatsApp did not accept the notification.', array( 'request_id' => $request_id, 'status' => $status ) );
+	}
+	return array( 'ok' => true, 'request_id' => $request_id, 'provider' => 'phonekey_whatsapp' );
+}
+
+function pk_report_whatsapp_fallback_event( $phone, $request_id, $accepted ) {
+	$s = pk_settings();
+	pk_report_gateway_event( $s, (string) ( $s['whatsapp_webhook'] ?? '' ), $phone, $request_id, $accepted ? 'email_fallback_accepted' : 'email_fallback_failed' );
+}
+
 function pk_send_phone_otp( $user_id, $phone, $flow_token = '' ) {
 	$s = pk_settings();
 	$url = ! empty( $s['whatsapp_webhook'] ) ? $s['whatsapp_webhook'] : $s['sms_webhook'];

@@ -270,6 +270,7 @@ final class Settings {
 					'enabled'                  => true,
 					'manual_reminders_enabled' => true,
 					'automatic_email_enabled'  => false,
+					'automatic_whatsapp_enabled' => false,
 					'guest_email_reminders_enabled' => false,
 					'inactivity_minutes'       => 60,
 					'heartbeat_minutes'        => 5,
