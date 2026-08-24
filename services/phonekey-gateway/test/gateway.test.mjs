@@ -3,6 +3,8 @@ import { createServer } from "node:http";
 import { afterEach, test } from "node:test";
 import { createApp } from "../src/app.mjs";
 import { signature } from "../src/security.mjs";
+import { reconnectDelayFor } from "../src/transports/baileys.mjs";
+import { DisconnectReason } from "@whiskeysockets/baileys";
 
 const servers = [];
 afterEach(async () => { while (servers.length) await new Promise((resolve) => servers.pop().close(resolve)); });
@@ -53,6 +55,14 @@ function signed(config, payload, overrides = {}) {
 }
 
 const payload = { phone: "+919876543210", code: "135790", site: "Example", origin: "https://example.com", requestId: "request_1234567890123456" };
+
+test("backs off replaced sessions while keeping ordinary reconnects bounded", () => {
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.connectionReplaced, attempts: 1, registered: true }), 120000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.restartRequired, attempts: 4, registered: true }), 1000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.timedOut, attempts: 1, registered: false }), 60000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.connectionLost, attempts: 1, registered: true }), 2000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.connectionLost, attempts: 10, registered: true }), 30000);
+});
 
 test("accepts a signed bounded OTP without exposing it in the response", async () => {
   const app = await fixture();

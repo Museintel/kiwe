@@ -9,6 +9,7 @@ import pino from "pino";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const BAILEYS_VERSION = "7.0.0-rc14";
+const REPLACED_RECONNECT_DELAY_MS = 120000;
 
 function disconnectLabel(status) {
   const labels = new Map([
@@ -21,6 +22,13 @@ function disconnectLabel(status) {
     [DisconnectReason.timedOut, "timed-out"],
   ]);
   return labels.get(status) || (status ? `status-${status}` : "unknown");
+}
+
+export function reconnectDelayFor({ status, attempts, registered }) {
+  if (status === DisconnectReason.connectionReplaced) return REPLACED_RECONNECT_DELAY_MS;
+  if (status === DisconnectReason.restartRequired) return 1000;
+  if (!registered && status === DisconnectReason.timedOut) return 60000;
+  return Math.min(30000, 2000 * (2 ** Math.min(Math.max(0, attempts - 1), 4)));
 }
 
 async function resolveProtocolVersion() {
@@ -55,6 +63,7 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
   let closing = false;
   let reconnectTimer;
   let reconnectAttempts = 0;
+  let connectionGeneration = 0;
   let qrRefreshes = 0;
   let qrIssuedAt = 0;
   let connectedAt = 0;
@@ -62,20 +71,22 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
   const auth = await useMultiFileAuthState(config.stateDirectory);
   const protocol = await resolveProtocolVersion();
 
-  function scheduleReconnect(delayMs) {
+  function scheduleReconnect(delayMs, generation) {
     if (closing || reconnectTimer) return;
-    state = state === "pairing-timeout" ? state : "reconnecting";
+    if (!new Set(["pairing-timeout", "session-replaced"]).has(state)) state = "reconnecting";
     reconnectTimer = setTimeout(() => {
       reconnectTimer = undefined;
+      if (closing || generation !== connectionGeneration) return;
       connect().catch(() => {
         state = "reconnect-failed";
-        scheduleReconnect(Math.min(60000, Math.max(5000, delayMs * 2)));
+        scheduleReconnect(Math.min(120000, Math.max(5000, delayMs * 2)), connectionGeneration);
       });
     }, delayMs);
     reconnectTimer.unref?.();
   }
 
   async function connect() {
+    const generation = ++connectionGeneration;
     const options = {
       auth: auth.state,
       logger,
@@ -92,9 +103,11 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
       getMessage: async () => undefined,
     };
     if (protocol.version) options.version = protocol.version;
-    socket = makeWASocket(options);
-    socket.ev.on("creds.update", auth.saveCreds);
-    socket.ev.on("connection.update", async (update) => {
+    const activeSocket = makeWASocket(options);
+    socket = activeSocket;
+    activeSocket.ev.on("creds.update", auth.saveCreds);
+    activeSocket.ev.on("connection.update", async (update) => {
+      if (closing || generation !== connectionGeneration) return;
       if (update.qr) {
         if (update.qr !== qr) qrRefreshes += 1;
         qr = update.qr;
@@ -102,6 +115,10 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
         state = "pairing";
       }
       if (update.connection === "open") {
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = undefined;
+        }
         qr = "";
         state = "open";
         connectedAt = Date.now();
@@ -118,14 +135,15 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
         }
         reconnectAttempts += 1;
         const pairingTimedOut = !auth.state.creds.registered && status === DisconnectReason.timedOut;
-        state = pairingTimedOut ? "pairing-timeout" : "closed";
-        const delay = status === DisconnectReason.restartRequired
-          ? 1000
-          : (pairingTimedOut ? 60000 : Math.min(30000, 2000 * (2 ** Math.min(reconnectAttempts - 1, 4))));
-        scheduleReconnect(delay);
+        state = pairingTimedOut
+          ? "pairing-timeout"
+          : (status === DisconnectReason.connectionReplaced ? "session-replaced" : "closed");
+        const delay = reconnectDelayFor({ status, attempts: reconnectAttempts, registered: auth.state.creds.registered });
+        scheduleReconnect(delay, generation);
       }
     });
-    socket.ev.on("messages.upsert", async ({ messages = [], type }) => {
+    activeSocket.ev.on("messages.upsert", async ({ messages = [], type }) => {
+      if (closing || generation !== connectionGeneration) return;
       if (type !== "notify") return;
       for (const item of messages) {
         if (item.key?.fromMe || !item.message) continue;
@@ -140,7 +158,8 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
         }).catch(() => {});
       }
     });
-    socket.ev.on("messages.update", async (updates = []) => {
+    activeSocket.ev.on("messages.update", async (updates = []) => {
+      if (closing || generation !== connectionGeneration) return;
       for (const item of updates) {
         if (!item.key?.fromMe) continue;
         const status = Number(item.update?.status);
@@ -195,6 +214,7 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
     }),
     async close() {
       closing = true;
+      connectionGeneration += 1;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       try { socket?.ws?.close(); } catch {}
     },
