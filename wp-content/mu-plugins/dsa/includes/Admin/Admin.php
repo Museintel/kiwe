@@ -508,6 +508,9 @@ final class Admin {
 		$message = $sent ? __( 'Test email handed to the configured transport.', 'dsa' ) : $result->get_error_message();
 
 		update_option( 'dsa_email_last_test', [ 'recipient_hash' => hash_hmac( 'sha256', strtolower( $recipient ), wp_salt( 'auth' ) ), 'success' => $sent, 'message' => $message, 'time' => current_time( 'mysql' ) ], false );
+		if ( $sent ) {
+			delete_option( 'dsa_email_last_failure' );
+		}
 		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-email', 'tab' => 'diagnostics', 'email-test' => $sent ? 'sent' : 'failed', 'message' => $message ], admin_url( 'admin.php' ) ) );
 		exit;
 	}

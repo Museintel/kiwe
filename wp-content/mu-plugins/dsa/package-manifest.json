@@ -505,8 +505,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 685203,
-      "sha256": "5409859758ec09410bf80127e6368337389007412e7b21b90e7f3f8106dfaaaf"
+      "bytes": 685270,
+      "sha256": "ac3f1047ae29eac7f25df6551b1dad5e58a729dafcbcfca3ecd60f3fe711ecad"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
