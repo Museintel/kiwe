@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "7.23",
+  "version": "7.24",
   "algorithm": "sha256",
   "file_count": 324,
   "files": {
@@ -190,7 +190,7 @@
     },
     "dsa.php": {
       "bytes": 2754,
-      "sha256": "8c3d4293aad82dd906e72c3427a5c6ca26efbe1d78be21aef0441d2a91920914"
+      "sha256": "531c2b5295d7fea48ee59f24313fbce0305726be6e67dc02a594399f6da3b89e"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -505,8 +505,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 682057,
-      "sha256": "819efb7882b1b1bd54c091db10ed5585d5adcd8bf6915df43304f40dd7412621"
+      "bytes": 683626,
+      "sha256": "595c0dc18e687f248054c30a3b1d9804decb6c93c2cba7a09ab8feb1bdad69dc"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -557,8 +557,8 @@
       "sha256": "30be0cd147f39718f33e510d97d829e28a3574eac8612fb2ee2ffc203c0bbb0a"
     },
     "includes/Communications/Email_Service.php": {
-      "bytes": 3781,
-      "sha256": "a3934b8c869e86cce4c308c9a5ea72ea2d52b95a14bc776598199915c6af89b8"
+      "bytes": 4035,
+      "sha256": "aef206ec4e2ca82744bfab810a4d3b5bc11bf9f46319ac5ef88d0e4e82f533e6"
     },
     "includes/Design/Seam_Token_Service.php": {
       "bytes": 69541,
@@ -673,8 +673,8 @@
       "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 135946,
-      "sha256": "05ca93f29ddc99f43d356507e91351ddca1760ac3afde8b120e6fc0c035f31c2"
+      "bytes": 137557,
+      "sha256": "eb23105adfe5ebbe36c8e1c08fb6ab6eea28078a775af52a5aa0eb59f15dc00d"
     },
     "includes/Plugin.php": {
       "bytes": 13854,

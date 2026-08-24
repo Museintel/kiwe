@@ -30,6 +30,11 @@ export function loadConfig(environment = process.env) {
   }
   const setupToken = String(environment.PHONEKEY_SETUP_TOKEN || file.setupToken || "");
   if (transport === "baileys" && setupToken.length < 32) throw new Error("PhoneKey setup token must contain at least 32 characters.");
+  const rcHistoryKey = String(environment.PHONEKEY_RC_HISTORY_KEY || file.rcObservability?.key || "");
+  const rcHistoryEnabled = String(environment.PHONEKEY_RC_HISTORY ?? file.rcObservability?.enabled ?? "false") === "true";
+  if (rcHistoryEnabled && Buffer.from(rcHistoryKey, "base64url").length !== 32) {
+    throw new Error("RC history requires a 32-byte base64url encryption key.");
+  }
   return {
     port: integer(environment.PORT || file.port, 3000, 1, 65535),
     host: String(environment.HOST || file.host || "0.0.0.0"),
@@ -39,6 +44,15 @@ export function loadConfig(environment = process.env) {
     memoryLimitMb: integer(environment.PHONEKEY_MEMORY_LIMIT_MB || file.memoryLimitMb, 256, 128, 2048),
     requestWindowSeconds: integer(environment.PHONEKEY_REQUEST_WINDOW_SECONDS || file.requestWindowSeconds, 90, 30, 300),
     sendTimeoutMs: integer(environment.PHONEKEY_SEND_TIMEOUT_MS || file.sendTimeoutMs, 7000, 2000, 15000),
+    rcObservability: {
+      enabled: rcHistoryEnabled,
+      captureInboundText: String(environment.PHONEKEY_RC_CAPTURE_INBOUND ?? file.rcObservability?.captureInboundText ?? "false") === "true",
+      retentionDays: integer(environment.PHONEKEY_RC_RETENTION_DAYS || file.rcObservability?.retentionDays, 14, 1, 30),
+      maxEvents: integer(environment.PHONEKEY_RC_MAX_EVENTS || file.rcObservability?.maxEvents, 3000, 100, 10000),
+      path: resolve(environment.PHONEKEY_RC_HISTORY_PATH || file.rcObservability?.path || "../.phonekey-state/rc-history.json"),
+      key: rcHistoryKey,
+      tenant: String(environment.PHONEKEY_RC_TENANT || file.rcObservability?.tenant || Object.keys(tenants)[0] || ""),
+    },
     tenants,
     evolution: {
       baseUrl: String(environment.EVOLUTION_BASE_URL || file.evolution?.baseUrl || "").replace(/\/$/, ""),

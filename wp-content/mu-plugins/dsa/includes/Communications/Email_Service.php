@@ -91,13 +91,17 @@ final class Email_Service {
 	public function diagnostics(): array {
 		$config = $this->config();
 		$smtp = is_array( $config['smtp'] ?? null ) ? $config['smtp'] : [];
+		$last_test = get_option( 'dsa_email_last_test', [] );
+		$smtp_ready = ! empty( $smtp['host'] ) && ( empty( $smtp['auth'] ) || ( ! empty( $smtp['username'] ) && ! empty( $smtp['password'] ) ) );
+		$transport_ready = 'smtp' !== ( $config['transport'] ?? 'wordpress' ) || $smtp_ready;
 
 		return [
 			'enabled'      => ! empty( $config['enabled'] ),
 			'transport'    => 'smtp' === ( $config['transport'] ?? 'wordpress' ) ? 'smtp' : 'wordpress',
 			'from_email'   => sanitize_email( (string) ( $config['from_email'] ?? '' ) ),
-			'smtp_ready'   => ! empty( $smtp['host'] ) && ( empty( $smtp['auth'] ) || ( ! empty( $smtp['username'] ) && ! empty( $smtp['password'] ) ) ),
-			'last_test'    => get_option( 'dsa_email_last_test', [] ),
+			'smtp_ready'   => $smtp_ready,
+			'fallback_ready' => ! empty( $config['enabled'] ) && $transport_ready && ! empty( $last_test['success'] ),
+			'last_test'    => $last_test,
 			'last_failure' => get_option( 'dsa_email_last_failure', [] ),
 		];
 	}

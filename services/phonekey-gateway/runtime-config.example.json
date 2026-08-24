@@ -4,6 +4,15 @@
   "stateDirectory": "../.phonekey-state",
   "setupToken": "replace-with-at-least-32-random-characters",
   "memoryLimitMb": 256,
+  "rcObservability": {
+    "enabled": false,
+    "captureInboundText": false,
+    "retentionDays": 14,
+    "maxEvents": 3000,
+    "path": "../.phonekey-state/rc-history.json",
+    "key": "replace-with-a-32-byte-base64url-key",
+    "tenant": "example-site"
+  },
   "tenants": {
     "example-site": {
       "secret": "replace-with-at-least-32-random-characters",

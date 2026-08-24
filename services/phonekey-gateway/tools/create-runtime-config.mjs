@@ -15,8 +15,17 @@ const config = {
   stateDirectory: "../../.phonekey-state",
   setupToken: secret(),
   memoryLimitMb: 160,
+  rcObservability: {
+    enabled: true,
+    captureInboundText: true,
+    retentionDays: 14,
+    maxEvents: 3000,
+    path: "../../.phonekey-state/rc-history.json",
+    key: secret(),
+    tenant: keyId,
+  },
   tenants: { [keyId]: { secret: secret(), sites: [site], label } },
   evolution: { baseUrl: "http://evolution:8080", instance: "phonekey", apiKey: "" },
 };
-writeFileSync("runtime-config.json", `${JSON.stringify(config, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
-console.log("Created ignored runtime-config.json with fresh setup and tenant secrets.");
+writeFileSync("runtime-config.json", `${JSON.stringify(config, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: args.rotate ? "w" : "wx" });
+console.log(`${args.rotate ? "Rotated" : "Created"} ignored runtime-config.json with fresh setup, history, and tenant secrets.`);

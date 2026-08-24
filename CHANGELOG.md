@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.24
+
+- Added opt-in RC PhoneKey observability with a bounded single-file timeline, AES-256-GCM encryption for consented inbound test text, hashed recipients, delivery receipts, and strict non-retention of OTP bodies.
+- Added signed WordPress-to-PhoneKey outcome reporting so the central RC view distinguishes WhatsApp unavailability from email-fallback acceptance or failure without receiving the OTP.
+- Added Hostinger Email and Titan SMTP presets, encrypted credential reuse, a tested fallback-readiness diagnostic, and an explicit PhoneKey warning until Kiwe Email passes a live delivery test.
+- Kept public-mode privacy as the target default: RC history is configurable, time/event capped, protected, and can disable inbound content independently.
+
 ## 7.23
 
 - Added the Kiwe PhoneKey WhatsApp Gateway RC1: one low-memory WhatsApp session, no chat/history persistence, strict site/tenant allowlists, signed fresh requests, replay protection, idempotency, bounded rate limits, and no OTP or full-phone logging.

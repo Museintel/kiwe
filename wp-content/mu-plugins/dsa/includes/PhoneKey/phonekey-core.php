@@ -1117,6 +1117,40 @@ function pk_send_phone_fallback_email( $user_id, $code ) {
 	return (bool) $accepted;
 }
 
+function pk_gateway_signed_headers( array $settings, $body ) {
+	$secret = pk_whatsapp_secret( $settings );
+	if ( '' === $secret || empty( $settings['whatsapp_key_id'] ) ) return array();
+	$timestamp = (string) round( microtime( true ) * 1000 );
+	$nonce = wp_generate_password( 32, false, false );
+	return array(
+		'Content-Type'             => 'application/json',
+		'X-PhoneKey-Key-Id'        => (string) $settings['whatsapp_key_id'],
+		'X-PhoneKey-Timestamp'     => $timestamp,
+		'X-PhoneKey-Nonce'         => $nonce,
+		'X-PhoneKey-Signature'     => hash_hmac( 'sha256', $timestamp . '.' . $nonce . '.' . $body, $secret ),
+	);
+}
+
+function pk_report_gateway_event( array $settings, $gateway_url, $phone, $request_id, $event ) {
+	if ( ! in_array( $event, array( 'email_fallback_accepted', 'email_fallback_failed' ), true ) ) return;
+	$event_url = preg_replace( '#/v1/otp/?$#', '/v1/event', (string) $gateway_url );
+	if ( ! $event_url || $event_url === $gateway_url ) return;
+	$body = wp_json_encode( array(
+		'phone'     => $phone,
+		'origin'    => untrailingslashit( home_url() ),
+		'requestId' => $request_id,
+		'event'     => $event,
+	) );
+	$headers = pk_gateway_signed_headers( $settings, $body );
+	if ( empty( $headers ) ) return;
+	wp_remote_post( $event_url, array(
+		'timeout'     => 3,
+		'redirection' => 0,
+		'headers'     => $headers,
+		'body'        => $body,
+	) );
+}
+
 function pk_send_phone_otp( $user_id, $phone, $flow_token = '' ) {
 	$s = pk_settings();
 	$url = ! empty( $s['whatsapp_webhook'] ) ? $s['whatsapp_webhook'] : $s['sms_webhook'];
@@ -1128,28 +1162,23 @@ function pk_send_phone_otp( $user_id, $phone, $flow_token = '' ) {
 		'anchor_hash' => pk_hmac( $phone ),
 		'anchor_type' => 'phone',
 	) );
+	$request_id = pk_hmac( $flow_token . '|' . $phone . '|' . $code );
 	$payload = array(
 		'phone' => $phone,
 		'code' => $code,
 		'site' => get_bloginfo( 'name' ),
 		'origin' => untrailingslashit( home_url() ),
 		'purpose' => 'phonekey_verify',
-		'requestId' => pk_hmac( $flow_token . '|' . $phone . '|' . $code ),
+		'requestId' => $request_id,
 	);
 	$body = wp_json_encode( $payload );
 	$headers = array( 'Content-Type' => 'application/json' );
 	if ( ! empty( $s['whatsapp_webhook'] ) && 'phonekey_gateway' === ( $s['whatsapp_mode'] ?? 'generic_webhook' ) ) {
-		$secret = pk_whatsapp_secret( $s );
-		$timestamp = (string) round( microtime( true ) * 1000 );
-		$nonce = wp_generate_password( 32, false, false );
-		if ( '' === $secret || empty( $s['whatsapp_key_id'] ) ) {
+		$headers = pk_gateway_signed_headers( $s, $body );
+		if ( empty( $headers ) ) {
 			$fallback = ! empty( $s['whatsapp_email_fallback'] ) && pk_send_phone_fallback_email( $user_id, $code );
 			return array( 'ok' => $fallback, 'provider' => $fallback ? 'email_fallback' : 'none', 'message' => $fallback ? 'WhatsApp was unavailable; the code was sent by email.' : 'WhatsApp credentials are incomplete and no email fallback is available.' );
 		}
-		$headers['X-PhoneKey-Key-Id'] = (string) $s['whatsapp_key_id'];
-		$headers['X-PhoneKey-Timestamp'] = $timestamp;
-		$headers['X-PhoneKey-Nonce'] = $nonce;
-		$headers['X-PhoneKey-Signature'] = hash_hmac( 'sha256', $timestamp . '.' . $nonce . '.' . $body, $secret );
 	}
 	$res = wp_remote_post( $url, array(
 		'timeout' => 8,
@@ -1163,6 +1192,9 @@ function pk_send_phone_otp( $user_id, $phone, $flow_token = '' ) {
 	if ( ! $accepted ) {
 		pk_log( 'phone_otp_send_failed', $user_id, array( 'status' => $status, 'provider' => ! empty( $s['whatsapp_webhook'] ) ? 'whatsapp' : 'sms' ), 'warning' );
 		$fallback = ! empty( $s['whatsapp_email_fallback'] ) && pk_send_phone_fallback_email( $user_id, $code );
+		if ( 'phonekey_gateway' === ( $s['whatsapp_mode'] ?? 'generic_webhook' ) ) {
+			pk_report_gateway_event( $s, $url, $phone, $request_id, $fallback ? 'email_fallback_accepted' : 'email_fallback_failed' );
+		}
 		return array( 'ok' => $fallback, 'provider' => $fallback ? 'email_fallback' : 'none', 'message' => $fallback ? 'WhatsApp was unavailable; the code was sent by email.' : 'Phone delivery failed and no email fallback is available.' );
 	}
 	pk_log( 'phone_otp_sent', $user_id, array( 'provider' => ! empty( $s['whatsapp_webhook'] ) ? 'whatsapp' : 'sms' ), 'info' );
@@ -2452,7 +2484,11 @@ function pk_admin_page() {
 function pk_admin_notices_inline( $s ) {
 	$phone_modes = array( $s['identifier_mode'], $s['app_identifier_mode'] ?? $s['identifier_mode'] );
 	if ( array_intersect( $phone_modes, array( 'phone', 'email_or_phone' ) ) && ! pk_phone_provider_ready() ) {
-		echo '<div class="notice notice-warning"><p><strong>Kiwe Auth:</strong> Phone identifiers are enabled, but no SMS or WhatsApp webhook is configured. Phone accounts can be created and passkey-enrolled, but phone verification remains pending.</p></div>';
+		echo '<div class="notice notice-warning"><p><strong>Kiwe Auth:</strong> Phone identifiers are enabled, but no SMS or WhatsApp webhook is configured. Configure PhoneKey before allowing phone verification.</p></div>';
+	}
+	$email_test = get_option( 'dsa_email_last_test', array() );
+	if ( ! empty( $s['whatsapp_email_fallback'] ) && empty( $email_test['success'] ) ) {
+		echo '<div class="notice notice-warning"><p><strong>PhoneKey fallback:</strong> Email delivery has not passed a Kiwe test. <a href="' . esc_url( admin_url( 'admin.php?page=kiwe-email&tab=diagnostics' ) ) . '">Configure and test Kiwe Email</a> before client use.</p></div>';
 	}
 	if ( ! function_exists( 'openssl_verify' ) ) {
 		echo '<div class="notice notice-error"><p><strong>Kiwe Auth:</strong> OpenSSL is required for passkey signature verification.</p></div>';

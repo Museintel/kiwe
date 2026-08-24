@@ -9,15 +9,17 @@ afterEach(async () => { while (servers.length) await new Promise((resolve) => se
 
 async function fixture(ready = true) {
   const sent = [];
+  const events = [];
   const config = {
     setupToken: "s".repeat(32), requestWindowSeconds: 90, sendTimeoutMs: 1000,
     tenants: { client: { secret: "x".repeat(40), sites: ["https://example.com"], label: "Example" } },
   };
   const transport = { name: "test", ready: async () => ready, sendText: async (phone, text) => { sent.push({ phone, text }); return { id: "message-1" }; }, setup: () => ({ state: ready ? "open" : "closed", qr: "" }), close: async () => {} };
-  const server = createServer(createApp(config, transport, () => 1720000000000));
+  const history = { record: async (event) => { events.push(event); }, list: () => events };
+  const server = createServer(createApp(config, transport, () => 1720000000000, history));
   servers.push(server);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return { config, sent, url: `http://127.0.0.1:${server.address().port}` };
+  return { config, sent, events, url: `http://127.0.0.1:${server.address().port}` };
 }
 
 function signed(config, payload, overrides = {}) {
@@ -34,7 +36,7 @@ function signed(config, payload, overrides = {}) {
   };
 }
 
-const payload = { phone: "+919876543210", code: "123456", site: "Example", origin: "https://example.com", requestId: "request_1234567890123456" };
+const payload = { phone: "+919876543210", code: "135790", site: "Example", origin: "https://example.com", requestId: "request_1234567890123456" };
 
 test("accepts a signed bounded OTP without exposing it in the response", async () => {
   const app = await fixture();
@@ -42,7 +44,7 @@ test("accepts a signed bounded OTP without exposing it in the response", async (
   const result = await response.json();
   assert.equal(response.status, 202);
   assert.equal(result.ok, true);
-  assert.equal(JSON.stringify(result).includes("123456"), false);
+  assert.equal(JSON.stringify(result).includes(payload.code), false);
   assert.deepEqual(app.sent.map((item) => item.phone), ["919876543210"]);
 });
 
@@ -64,4 +66,14 @@ test("returns an explicit email fallback signal while WhatsApp is unavailable", 
   assert.equal(response.status, 503);
   assert.equal((await response.json()).fallback, "email");
   assert.equal(app.sent.length, 0);
+  assert.equal(app.events.some((event) => event.status === "fallback_required"), true);
+});
+
+test("accepts signed email fallback outcomes without OTP content", async () => {
+  const app = await fixture(false);
+  const outcome = { phone: payload.phone, origin: payload.origin, requestId: payload.requestId, event: "email_fallback_accepted" };
+  const response = await fetch(`${app.url}/v1/event`, signed(app.config, outcome));
+  assert.equal(response.status, 202);
+  assert.equal(app.events.at(-1).status, "email_fallback_accepted");
+  assert.equal(JSON.stringify(app.events).includes(payload.code), false);
 });
