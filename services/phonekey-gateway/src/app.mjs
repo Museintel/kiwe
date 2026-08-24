@@ -13,6 +13,8 @@ const text = (response, status, body, type = "text/plain; charset=utf-8") => {
     "cache-control": "no-store",
     "content-security-policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
     "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
     "referrer-policy": "no-referrer",
   });
   response.end(body);
@@ -44,6 +46,7 @@ export function createApp(config, transport, clock = () => Date.now(), history =
   const targetLimiter = new SlidingLimiter(6, 60 * 60 * 1000);
   const messageTenantLimiter = new SlidingLimiter(500, 60 * 60 * 1000);
   const messageTargetLimiter = new SlidingLimiter(60, 24 * 60 * 60 * 1000);
+  const operatorSelfTestLimiter = new SlidingLimiter(3, 60 * 60 * 1000);
   const record = (event) => history?.record(event).catch(() => {});
 
   function authenticate(request, raw) {
@@ -93,15 +96,28 @@ export function createApp(config, transport, clock = () => Date.now(), history =
       const setupBody = image
         ? `<p>Open WhatsApp → Linked devices → Link a device, then scan this fresh QR once.</p><img alt="WhatsApp pairing QR" src="${image}">`
         : `<p>${setup.state === "open" ? "The WhatsApp sender is connected." : (setup.state === "pairing-timeout" ? "The pairing window ended without a completed WhatsApp handshake. PhoneKey will prepare a fresh session after a guarded cooldown." : "Reload shortly while PhoneKey prepares the pairing session.")}</p>`;
-      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="refresh" content="15"><title>PhoneKey WhatsApp setup</title><style>body{font:16px system-ui;max-width:620px;margin:8vh auto;padding:24px;background:#f5f7f4;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:18px;padding:28px}img{display:block;max-width:100%;margin:20px auto}code{padding:4px 7px;background:#edf3ef;border-radius:5px}.metrics{display:flex;gap:10px;flex-wrap:wrap;color:#52645d;font-size:13px}.diagnostic{font-size:13px;color:#52645d}aside{margin:18px 0;padding:14px 16px;border:1px solid #d5a72e;border-radius:12px;background:#fff8df;color:#5b4300;line-height:1.45}a{color:#075b3a}</style></head><body><main><h1>PhoneKey WhatsApp</h1><p>State: <code>${escapeHtml(setup.state)}</code></p><p class="metrics"><span>Transport: ${escapeHtml(transport.name)}</span>${library}${protocol}<span>Memory: ${rssMb} MB / ${config.memoryLimitMb} MB</span><span>Uptime: ${Math.floor(process.uptime() / 60)} min</span></p>${compatibilityNotice}${lastDisconnect}${setupBody}${historyLink}</main></body></html>`;
+      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><meta http-equiv="refresh" content="15"><title>PhoneKey WhatsApp setup</title><style>body{font:16px system-ui;max-width:620px;margin:8vh auto;padding:24px;background:#f5f7f4;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:18px;padding:28px}img{display:block;max-width:100%;margin:20px auto}code{padding:4px 7px;background:#edf3ef;border-radius:5px}.metrics{display:flex;gap:10px;flex-wrap:wrap;color:#52645d;font-size:13px}.diagnostic{font-size:13px;color:#52645d}aside{margin:18px 0;padding:14px 16px;border:1px solid #d5a72e;border-radius:12px;background:#fff8df;color:#5b4300;line-height:1.45}a{color:#075b3a}</style></head><body><main><h1>PhoneKey WhatsApp</h1><p>State: <code>${escapeHtml(setup.state)}</code></p><p class="metrics"><span>Transport: ${escapeHtml(transport.name)}</span>${library}${protocol}<span>Memory: ${rssMb} MB / ${config.memoryLimitMb} MB</span><span>Uptime: ${Math.floor(process.uptime() / 60)} min</span></p>${compatibilityNotice}${lastDisconnect}${setupBody}${historyLink}</main></body></html>`;
       return text(response, 200, html, "text/html; charset=utf-8");
     }
     if (request.method === "GET" && url.pathname === "/rc") {
       if (!config.rcObservability.enabled || !config.setupToken || url.searchParams.get("token") !== config.setupToken) return text(response, 404, "Not found.");
       const entries = history?.list({ tenant: url.searchParams.get("tenant") || "", limit: url.searchParams.get("limit") || 200 }) || [];
       const rows = entries.map((entry) => `<tr><td>${new Date(entry.at).toISOString()}</td><td>${escapeHtml(entry.tenant)}</td><td>${escapeHtml(entry.direction)}</td><td>${escapeHtml(entry.status)}</td><td>••••${escapeHtml(entry.targetLast4)}</td><td>${escapeHtml(entry.content || entry.summary)}</td><td>${escapeHtml(entry.error)}</td></tr>`).join("");
-      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="refresh" content="20"><title>PhoneKey RC history</title><style>body{font:14px system-ui;margin:24px;background:#f4f7f5;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:16px;padding:22px;overflow:auto}table{border-collapse:collapse;width:100%;min-width:920px}th,td{text-align:left;padding:9px;border-bottom:1px solid #e0e8e3;vertical-align:top}th{position:sticky;top:0;background:#edf4ef}.note{color:#52645d}</style></head><body><main><h1>PhoneKey RC delivery history</h1><p class="note">Capped at ${config.rcObservability.maxEvents} events for ${config.rcObservability.retentionDays} days. OTP codes are never stored. Inbound text capture: ${config.rcObservability.captureInboundText ? "enabled" : "disabled"}. Consented outbound notification capture: ${config.rcObservability.captureOutboundText ? "enabled" : "disabled"}.</p><table><thead><tr><th>Time</th><th>Tenant</th><th>Direction</th><th>Status</th><th>Target</th><th>Summary</th><th>Error</th></tr></thead><tbody>${rows || '<tr><td colspan="7">No events yet.</td></tr>'}</tbody></table></main></body></html>`;
+      const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><meta http-equiv="refresh" content="20"><title>PhoneKey RC history</title><style>body{font:14px system-ui;margin:24px;background:#f4f7f5;color:#10251d}main{background:#fff;border:1px solid #ccd8d1;border-radius:16px;padding:22px;overflow:auto}table{border-collapse:collapse;width:100%;min-width:920px}th,td{text-align:left;padding:9px;border-bottom:1px solid #e0e8e3;vertical-align:top}th{position:sticky;top:0;background:#edf4ef}.note{color:#52645d}</style></head><body><main><h1>PhoneKey RC delivery history</h1><p class="note">Capped at ${config.rcObservability.maxEvents} events for ${config.rcObservability.retentionDays} days. OTP codes are never stored. Inbound text capture: ${config.rcObservability.captureInboundText ? "enabled" : "disabled"}. Consented outbound notification capture: ${config.rcObservability.captureOutboundText ? "enabled" : "disabled"}.</p><table><thead><tr><th>Time</th><th>Tenant</th><th>Direction</th><th>Status</th><th>Target</th><th>Summary</th><th>Error</th></tr></thead><tbody>${rows || '<tr><td colspan="7">No events yet.</td></tr>'}</tbody></table></main></body></html>`;
       return text(response, 200, html, "text/html; charset=utf-8");
+    }
+    if (request.method === "POST" && url.pathname === "/setup/self-test") {
+      if (!config.setupToken || url.searchParams.get("token") !== config.setupToken) return text(response, 404, "Not found.");
+      if (!operatorSelfTestLimiter.allow("connected-account", clock())) return json(response, 429, { ok: false, error: "rate_limited" }, { "retry-after": "3600" });
+      if (!(await transport.ready().catch(() => false)) || typeof transport.selfTest !== "function") return json(response, 503, { ok: false, error: "whatsapp_unavailable", fallback: "email" });
+      try {
+        const sent = await transport.selfTest();
+        await record({ tenant: config.rcObservability.tenant, phone: sent.target, receipt: sent.id, direction: "outbound", channel: "whatsapp", status: "accepted", summary: "Connected-account RC self-test" });
+        return json(response, 202, { ok: true, provider: "whatsapp", receipt: opaque(sent.id || "self-test") });
+      } catch {
+        await record({ tenant: config.rcObservability.tenant, direction: "outbound", channel: "whatsapp", status: "failed", summary: "Connected-account RC self-test", error: "provider_send_failure" });
+        return json(response, 503, { ok: false, error: "delivery_unavailable", fallback: "email" });
+      }
     }
     if (request.method !== "POST" || !["/v1/otp", "/v1/message", "/v1/event"].includes(url.pathname)) return json(response, 404, { ok: false, error: "not_found" });
     if (!String(request.headers["content-type"] || "").toLowerCase().startsWith("application/json")) return json(response, 415, { ok: false, error: "json_required" });

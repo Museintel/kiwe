@@ -45,7 +45,7 @@ function messageText(message = {}) {
     || "";
 }
 
-const jidPhone = (jid) => String(jid || "").split("@")[0].replace(/\D/g, "");
+const jidPhone = (jid) => String(jid || "").split("@")[0].split(":")[0].replace(/\D/g, "");
 
 export async function createBaileysTransport(config, onEvent = async () => {}) {
   const logger = pino({ level: process.env.PHONEKEY_LOG_LEVEL || "warn" });
@@ -169,6 +169,16 @@ export async function createBaileysTransport(config, onEvent = async () => {}) {
         wait(config.sendTimeoutMs).then(() => { throw new Error("WhatsApp send timed out."); }),
       ]);
       return { id: result?.key?.id || "accepted" };
+    },
+    async selfTest() {
+      if (state !== "open" || !socket) throw new Error("WhatsApp session is not connected.");
+      const target = jidPhone(socket.user?.phoneNumber || auth.state.creds.me?.phoneNumber || socket.user?.id || auth.state.creds.me?.id);
+      if (!target) throw new Error("The connected WhatsApp account has no self-test target.");
+      const result = await Promise.race([
+        socket.sendMessage(`${target}@s.whatsapp.net`, { text: "Kiwe PhoneKey RC self-test passed. The connected WhatsApp delivery path is operational." }),
+        wait(config.sendTimeoutMs).then(() => { throw new Error("WhatsApp self-test timed out."); }),
+      ]);
+      return { id: result?.key?.id || "accepted", target };
     },
     setup: () => ({
       state,

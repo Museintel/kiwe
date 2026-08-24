@@ -19,6 +19,7 @@ async function fixture(ready = true) {
     name: "test",
     ready: async () => ready,
     sendText: async (phone, text) => { sent.push({ phone, text }); return { id: "message-1" }; },
+    selfTest: async () => { sent.push({ selfTest: true }); return { id: "self-test-1", target: "919876543210" }; },
     setup: () => ({
       state: ready ? "open" : "pairing-timeout",
       qr: "",
@@ -96,7 +97,10 @@ test("exposes bounded pairing diagnostics without hiding the email fallback stat
   const setup = await fetch(`${app.url}/setup?token=${"s".repeat(32)}`);
   const html = await setup.text();
   assert.equal(setup.status, 200);
+  assert.equal(setup.headers.get("x-frame-options"), "DENY");
+  assert.match(setup.headers.get("permissions-policy"), /camera=\(\)/);
   assert.match(html, /New-device compatibility notice/);
+  assert.match(html, /http-equiv="Content-Security-Policy"/);
   assert.match(html, /email fallback active/);
   assert.match(html, /7\.0\.0-rc14/);
   assert.doesNotMatch(html, /request_1234567890123456|135790/);
@@ -109,6 +113,18 @@ test("accepts signed email fallback outcomes without OTP content", async () => {
   assert.equal(response.status, 202);
   assert.equal(app.events.at(-1).status, "email_fallback_accepted");
   assert.equal(JSON.stringify(app.events).includes(payload.code), false);
+});
+
+test("runs a protected connected-account self-test without exposing its target", async () => {
+  const app = await fixture();
+  assert.equal((await fetch(`${app.url}/setup/self-test`, { method: "POST" })).status, 404);
+  const response = await fetch(`${app.url}/setup/self-test?token=${"s".repeat(32)}`, { method: "POST" });
+  const result = await response.json();
+  assert.equal(response.status, 202);
+  assert.equal(result.ok, true);
+  assert.equal(JSON.stringify(result).includes("919876543210"), false);
+  assert.equal(app.sent.some((entry) => entry.selfTest), true);
+  assert.equal(app.events.at(-1).summary, "Connected-account RC self-test");
 });
 
 test("accepts bounded consented notifications through the same tenant", async () => {
