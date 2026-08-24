@@ -12,3 +12,6 @@ kiwe-ai-toolkit/node_modules/
 kiwe-ai-toolkit/tmp/
 kiwe-ai-toolkit/out/
 ui/
+services/phonekey-gateway/runtime-config.json
+services/phonekey-gateway/.phonekey-state/
+services/phonekey-gateway/.phonekey-runtime/

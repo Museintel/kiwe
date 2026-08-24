@@ -1,0 +1,19 @@
+{
+  "port": 3000,
+  "transport": "baileys",
+  "stateDirectory": "../.phonekey-state",
+  "setupToken": "replace-with-at-least-32-random-characters",
+  "memoryLimitMb": 256,
+  "tenants": {
+    "example-site": {
+      "secret": "replace-with-at-least-32-random-characters",
+      "sites": ["https://example.com"],
+      "label": "Example Store"
+    }
+  },
+  "evolution": {
+    "baseUrl": "http://evolution:8080",
+    "instance": "phonekey",
+    "apiKey": "replace-on-vps"
+  }
+}

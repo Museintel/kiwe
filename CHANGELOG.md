@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.23
+
+- Added the Kiwe PhoneKey WhatsApp Gateway RC1: one low-memory WhatsApp session, no chat/history persistence, strict site/tenant allowlists, signed fresh requests, replay protection, idempotency, bounded rate limits, and no OTP or full-phone logging.
+- Replaced PhoneKey's unauthenticated success-assuming WhatsApp webhook path with an encrypted tenant secret, exact-body HMAC, nonces, timestamps, redirect refusal, strict 2xx/result validation, and an immediate same-code email fallback whenever WhatsApp is unavailable, rejected, or times out.
+- Added an isolated shared-hosting profile for current client-only use and a parallel pinned VPS profile using Evolution API 2.3.7, PostgreSQL 15, and Redis 7 without exposing Evolution's global management API publicly.
+- Added CI contracts and behavioral tests for valid delivery, invalid signatures, stale/replayed requests, unapproved site origins, resource boundaries, and deterministic email-fallback signals.
+- Provisioned `phonekey.kiwelaunch.com` as an independent Node.js service so PhoneKey transport load cannot share a PHP/WordPress request lifecycle or overwrite an active website.
+
 ## 7.22
 
 - Made bare `/ideate` automatically recognize attached `kiwe.sitegraph-design-context.v1` and `kiwe.seam-design-context.v1` files, without requiring users to restate SiteGraph command tokens.

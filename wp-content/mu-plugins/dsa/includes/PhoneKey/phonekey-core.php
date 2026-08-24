@@ -209,6 +209,10 @@ function pk_default_settings() {
 		'sms_webhook'          => '',
 		'whatsapp_provider'    => '',
 		'whatsapp_webhook'     => '',
+		'whatsapp_mode'        => 'phonekey_gateway',
+		'whatsapp_key_id'      => '',
+		'whatsapp_secret'      => '',
+		'whatsapp_email_fallback' => 1,
 		'return_message'       => 'Hey {name}, welcome back. You have not verified your account yet.',
 		'return_seconds'       => 8,
 		'return_action'        => 'prompt',
@@ -387,6 +391,7 @@ function pk_apply_session_timeout_default_off_once() {
 
 function pk_save_settings_array( $raw ) {
 	$defaults = pk_default_settings();
+	$current  = pk_settings();
 	$out = array();
 	$out['popup_display']        = in_array( $raw['popup_display'] ?? '', array( 'disabled', 'logged_out', 'new_visitors', 'every_visit' ), true ) ? $raw['popup_display'] : $defaults['popup_display'];
 	$out['popup_dismissal']      = in_array( $raw['popup_dismissal'] ?? '', array( 'outside_close', 'close_only', 'mandatory' ), true ) ? $raw['popup_dismissal'] : $defaults['popup_dismissal'];
@@ -408,6 +413,15 @@ function pk_save_settings_array( $raw ) {
 	$out['sms_webhook']          = esc_url_raw( $raw['sms_webhook'] ?? '' );
 	$out['whatsapp_provider']    = sanitize_text_field( $raw['whatsapp_provider'] ?? '' );
 	$out['whatsapp_webhook']     = esc_url_raw( $raw['whatsapp_webhook'] ?? '' );
+	$out['whatsapp_mode']        = in_array( $raw['whatsapp_mode'] ?? '', array( 'phonekey_gateway', 'generic_webhook' ), true ) ? $raw['whatsapp_mode'] : 'phonekey_gateway';
+	$out['whatsapp_key_id']      = preg_replace( '/[^a-zA-Z0-9._-]/', '', (string) ( $raw['whatsapp_key_id'] ?? '' ) );
+	$out['whatsapp_email_fallback'] = ! empty( $raw['whatsapp_email_fallback'] ) ? 1 : 0;
+	$secret_input = trim( (string) ( $raw['whatsapp_secret'] ?? '' ) );
+	$out['whatsapp_secret'] = (string) ( $current['whatsapp_secret'] ?? '' );
+	if ( '' !== $secret_input && class_exists( '\\DSA\\Security\\Secret_Store' ) ) {
+		$encrypted = \DSA\Security\Secret_Store::encrypt( $secret_input );
+		if ( '' !== $encrypted ) $out['whatsapp_secret'] = $encrypted;
+	}
 	$out['return_message']       = sanitize_text_field( $raw['return_message'] ?? $defaults['return_message'] );
 	$out['return_seconds']       = max( 1, min( 60, absint( $raw['return_seconds'] ?? 8 ) ) );
 	$out['return_action']        = in_array( $raw['return_action'] ?? '', array( 'none', 'prompt', 'progressive' ), true ) ? $raw['return_action'] : 'prompt';
@@ -782,7 +796,17 @@ function pk_is_privileged( $user_id ) {
 
 function pk_phone_provider_ready() {
 	$s = pk_settings();
-	return ! empty( $s['sms_webhook'] ) || ! empty( $s['whatsapp_webhook'] );
+	if ( ! empty( $s['sms_webhook'] ) ) return true;
+	if ( empty( $s['whatsapp_webhook'] ) ) return false;
+	if ( 'phonekey_gateway' !== ( $s['whatsapp_mode'] ?? 'generic_webhook' ) ) return true;
+	return ! empty( $s['whatsapp_key_id'] ) && '' !== pk_whatsapp_secret( $s );
+}
+
+function pk_whatsapp_secret( $settings = null ) {
+	$settings = is_array( $settings ) ? $settings : pk_settings();
+	$stored = (string) ( $settings['whatsapp_secret'] ?? '' );
+	if ( '' === $stored || ! class_exists( '\\DSA\\Security\\Secret_Store' ) ) return '';
+	return \DSA\Security\Secret_Store::decrypt( $stored );
 }
 
 function pk_create_user_for_identifier( $identifier, $type ) {
@@ -1072,6 +1096,27 @@ function pk_complete_account_email_change( $user_id, $token, $code ) {
 	return array( 'email' => $email );
 }
 
+function pk_send_phone_fallback_email( $user_id, $code ) {
+	$user = get_userdata( $user_id );
+	$email = $user && is_email( $user->user_email ) ? $user->user_email : '';
+	if ( ! $email ) {
+		$billing_email = sanitize_email( (string) get_user_meta( $user_id, 'billing_email', true ) );
+		$email = is_email( $billing_email ) ? $billing_email : '';
+	}
+	if ( ! $email ) {
+		pk_log( 'phone_otp_email_fallback_unavailable', $user_id, array( 'reason' => 'account_email_missing' ), 'warning' );
+		return false;
+	}
+	$site = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+	$accepted = wp_mail(
+		$email,
+		sprintf( '[%s] PhoneKey verification code', $site ),
+		sprintf( "Your PhoneKey verification code is %s. It expires in 10 minutes.\n\nWhatsApp delivery was unavailable, so Kiwe used the configured email fallback. Never share this code.", $code )
+	);
+	pk_log( $accepted ? 'phone_otp_email_fallback_accepted' : 'phone_otp_email_fallback_failed', $user_id, array( 'provider' => 'wp_mail' ), $accepted ? 'info' : 'warning' );
+	return (bool) $accepted;
+}
+
 function pk_send_phone_otp( $user_id, $phone, $flow_token = '' ) {
 	$s = pk_settings();
 	$url = ! empty( $s['whatsapp_webhook'] ) ? $s['whatsapp_webhook'] : $s['sms_webhook'];
@@ -1083,22 +1128,45 @@ function pk_send_phone_otp( $user_id, $phone, $flow_token = '' ) {
 		'anchor_hash' => pk_hmac( $phone ),
 		'anchor_type' => 'phone',
 	) );
+	$payload = array(
+		'phone' => $phone,
+		'code' => $code,
+		'site' => get_bloginfo( 'name' ),
+		'origin' => untrailingslashit( home_url() ),
+		'purpose' => 'phonekey_verify',
+		'requestId' => pk_hmac( $flow_token . '|' . $phone . '|' . $code ),
+	);
+	$body = wp_json_encode( $payload );
+	$headers = array( 'Content-Type' => 'application/json' );
+	if ( ! empty( $s['whatsapp_webhook'] ) && 'phonekey_gateway' === ( $s['whatsapp_mode'] ?? 'generic_webhook' ) ) {
+		$secret = pk_whatsapp_secret( $s );
+		$timestamp = (string) round( microtime( true ) * 1000 );
+		$nonce = wp_generate_password( 32, false, false );
+		if ( '' === $secret || empty( $s['whatsapp_key_id'] ) ) {
+			$fallback = ! empty( $s['whatsapp_email_fallback'] ) && pk_send_phone_fallback_email( $user_id, $code );
+			return array( 'ok' => $fallback, 'provider' => $fallback ? 'email_fallback' : 'none', 'message' => $fallback ? 'WhatsApp was unavailable; the code was sent by email.' : 'WhatsApp credentials are incomplete and no email fallback is available.' );
+		}
+		$headers['X-PhoneKey-Key-Id'] = (string) $s['whatsapp_key_id'];
+		$headers['X-PhoneKey-Timestamp'] = $timestamp;
+		$headers['X-PhoneKey-Nonce'] = $nonce;
+		$headers['X-PhoneKey-Signature'] = hash_hmac( 'sha256', $timestamp . '.' . $nonce . '.' . $body, $secret );
+	}
 	$res = wp_remote_post( $url, array(
 		'timeout' => 8,
-		'headers' => array( 'Content-Type' => 'application/json' ),
-		'body' => wp_json_encode( array(
-			'phone' => $phone,
-			'code' => $code,
-			'site' => get_bloginfo( 'name' ),
-			'purpose' => 'phonekey_verify',
-		) ),
+		'redirection' => 0,
+		'headers' => $headers,
+		'body' => $body,
 	) );
-	if ( is_wp_error( $res ) ) {
-		pk_log( 'phone_otp_send_failed', $user_id, array( 'error' => $res->get_error_message() ), 'warning' );
-		return array( 'ok' => false, 'message' => 'Phone delivery failed.' );
+	$status = is_wp_error( $res ) ? 0 : (int) wp_remote_retrieve_response_code( $res );
+	$response_body = is_wp_error( $res ) ? array() : json_decode( (string) wp_remote_retrieve_body( $res ), true );
+	$accepted = $status >= 200 && $status < 300 && ( ! is_array( $response_body ) || ! array_key_exists( 'ok', $response_body ) || ! empty( $response_body['ok'] ) );
+	if ( ! $accepted ) {
+		pk_log( 'phone_otp_send_failed', $user_id, array( 'status' => $status, 'provider' => ! empty( $s['whatsapp_webhook'] ) ? 'whatsapp' : 'sms' ), 'warning' );
+		$fallback = ! empty( $s['whatsapp_email_fallback'] ) && pk_send_phone_fallback_email( $user_id, $code );
+		return array( 'ok' => $fallback, 'provider' => $fallback ? 'email_fallback' : 'none', 'message' => $fallback ? 'WhatsApp was unavailable; the code was sent by email.' : 'Phone delivery failed and no email fallback is available.' );
 	}
 	pk_log( 'phone_otp_sent', $user_id, array( 'provider' => ! empty( $s['whatsapp_webhook'] ) ? 'whatsapp' : 'sms' ), 'info' );
-	return array( 'ok' => true );
+	return array( 'ok' => true, 'provider' => ! empty( $s['whatsapp_webhook'] ) ? 'whatsapp' : 'sms' );
 }
 
 add_action( 'template_redirect', function () {
@@ -1720,6 +1788,14 @@ function pk_rest_identify( WP_REST_Request $r ) {
 	$user_id = pk_find_user( $identifier, $type );
 	$is_new = false;
 	if ( ! $user_id ) {
+		$identify_settings = pk_settings();
+		if ( 'phone' === $type && ! empty( $identify_settings['whatsapp_email_fallback'] ) ) {
+			return new WP_REST_Response( array(
+				'ok'      => false,
+				'code'    => 'email_bootstrap_required',
+				'message' => 'Start with your email once, then add and verify this phone from your Kiwe profile. This keeps a recovery path available if WhatsApp cannot deliver.',
+			), 409 );
+		}
 		$user_id = pk_create_user_for_identifier( $identifier, $type );
 		$is_new = true;
 	}
@@ -1767,8 +1843,9 @@ function pk_rest_identify( WP_REST_Request $r ) {
 		$email_delivery = pk_send_email_otp_or_link( $user_id, $identifier, $flow, 'new_device_verify' === $mode ? 'otp' : '' );
 		$email_accepted = ! empty( $email_delivery['accepted'] );
 	}
+	$phone_delivery = null;
 	if ( 'phone' === $type && in_array( $mode, array( 'verify_required', 'new_device_verify' ), true ) && pk_phone_provider_ready() && ! pk_recent_otp_send_exists( $user_id, 'phone_otp' ) && pk_otp_target_allowed( $identifier ) ) {
-		pk_send_phone_otp( $user_id, $identifier, $flow );
+		$phone_delivery = pk_send_phone_otp( $user_id, $identifier, $flow );
 	}
 
 	$name = $user ? ( $user->display_name ?: $user->user_login ) : '';
@@ -1785,6 +1862,8 @@ function pk_rest_identify( WP_REST_Request $r ) {
 		'hasPasskey'   => $known_device ? ( $creds > 0 ) : false,
 		'canLater'     => ! $strict_now,
 		'phoneReady'   => pk_phone_provider_ready(),
+		'phoneDeliveryProvider' => is_array( $phone_delivery ) ? sanitize_key( $phone_delivery['provider'] ?? '' ) : '',
+		'phoneDeliveryMessage' => is_array( $phone_delivery ) ? sanitize_text_field( $phone_delivery['message'] ?? '' ) : '',
 		'emailDelivery'=> 'new_device_verify' === $mode ? 'otp' : $s['email_delivery'],
 		'emailAccepted'=> $email_accepted,
 		'canEmailRecovery' => (bool) ( $user && $user->user_email && pk_factor_verified( $user_id, 'email' ) ),
@@ -1916,7 +1995,7 @@ function pk_rest_resend_otp( WP_REST_Request $r ) {
 		if ( ! pk_otp_target_allowed( $phone ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many codes were sent to this number. Try again later.' ), 429 );
 		$sent = pk_send_phone_otp( $user_id, $phone, $flow_token );
 		if ( empty( $sent['ok'] ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => $sent['message'] ?? 'Phone delivery failed.' ), 400 );
-		return rest_ensure_response( array( 'ok' => true, 'method' => 'otp', 'message' => 'A new code was sent.' ) );
+		return rest_ensure_response( array( 'ok' => true, 'method' => 'otp', 'provider' => sanitize_key( $sent['provider'] ?? 'phone' ), 'message' => $sent['message'] ?? 'A new code was sent.' ) );
 	}
 
 	return new WP_REST_Response( array( 'ok' => false, 'message' => 'This session cannot resend an OTP.' ), 400 );
@@ -2418,8 +2497,13 @@ function pk_admin_settings( $s ) {
 			<div class="pk-card"><h2>Phone Providers</h2>
 				<p><label>SMS provider label<br><input class="regular-text" name="pk[sms_provider]" value="<?php echo esc_attr( $s['sms_provider'] ); ?>"></label></p>
 				<p><label>SMS webhook URL<br><input class="large-text" name="pk[sms_webhook]" value="<?php echo esc_attr( $s['sms_webhook'] ); ?>"></label></p>
-				<p><label>WhatsApp provider label<br><input class="regular-text" name="pk[whatsapp_provider]" value="<?php echo esc_attr( $s['whatsapp_provider'] ); ?>"></label></p>
-				<p><label>WhatsApp webhook URL<br><input class="large-text" name="pk[whatsapp_webhook]" value="<?php echo esc_attr( $s['whatsapp_webhook'] ); ?>"></label></p>
+				<p><label>WhatsApp adapter<br><select name="pk[whatsapp_mode]"><?php pk_select_options( array( 'phonekey_gateway'=>'Kiwe PhoneKey Gateway (signed)', 'generic_webhook'=>'Legacy generic webhook' ), $s['whatsapp_mode'] ?? 'phonekey_gateway' ); ?></select></label></p>
+				<p><label>WhatsApp provider label<br><input class="regular-text" name="pk[whatsapp_provider]" value="<?php echo esc_attr( $s['whatsapp_provider'] ); ?>" placeholder="Kiwe WhatsApp"></label></p>
+				<p><label>WhatsApp gateway URL<br><input class="large-text" type="url" name="pk[whatsapp_webhook]" value="<?php echo esc_attr( $s['whatsapp_webhook'] ); ?>" placeholder="https://phonekey.kiwelaunch.com/v1/otp"></label></p>
+				<p><label>Gateway tenant key ID<br><input class="regular-text" name="pk[whatsapp_key_id]" value="<?php echo esc_attr( $s['whatsapp_key_id'] ?? '' ); ?>"></label></p>
+				<p><label>Gateway signing secret<br><input class="regular-text" type="password" autocomplete="new-password" name="pk[whatsapp_secret]" value="" placeholder="<?php echo ! empty( $s['whatsapp_secret'] ) ? 'Stored securely — leave blank to keep' : 'Paste the tenant secret'; ?>"></label></p>
+				<p><label><input type="checkbox" name="pk[whatsapp_email_fallback]" value="1" <?php checked( ! empty( $s['whatsapp_email_fallback'] ) ); ?>> Immediately email the same OTP when WhatsApp is unavailable or rejected</label></p>
+				<p class="description">Signed mode uses a short-lived HMAC request, nonce, site allowlist and idempotency key. The secret is encrypted with Kiwe Secret Store and is never rendered back into this page.</p>
 			</div>
 			<div class="pk-card"><h2>Trusted Devices And IP</h2>
 				<p><label><input type="checkbox" name="pk[trusted_devices]" value="1" <?php checked( $s['trusted_devices'] ); ?>> Enable trusted devices</label></p>

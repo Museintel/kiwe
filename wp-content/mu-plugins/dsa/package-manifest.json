@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "7.22",
+  "version": "7.23",
   "algorithm": "sha256",
   "file_count": 324,
   "files": {
@@ -173,8 +173,8 @@
       "sha256": "edf2567ee5994e5e41b54f6b7ecaac14bc9d04ec3c06be12baf657071f77544d"
     },
     "assets/js/surface.js": {
-      "bytes": 392852,
-      "sha256": "4ae3b395261e0c5870d360750a4755d6422a13e380189b07d8c6f342d5af665d"
+      "bytes": 393584,
+      "sha256": "bf126198b3698eeb86f183aee18619f86f3042f01c28a181d65cc7529c334cd4"
     },
     "connector-system/BRICKS-DYNAMIC-BINDINGS.md": {
       "bytes": 9415,
@@ -190,7 +190,7 @@
     },
     "dsa.php": {
       "bytes": 2754,
-      "sha256": "fd0d20065cae1b37031eef14e75a3a5e6a2e01827bf48416f1377bb960384751"
+      "sha256": "8c3d4293aad82dd906e72c3427a5c6ca26efbe1d78be21aef0441d2a91920914"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -673,8 +673,8 @@
       "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 129522,
-      "sha256": "326f3d2348765c2a578d6eded2da2b444ac925bd88a9de9a6c5fc0332665d67e"
+      "bytes": 135946,
+      "sha256": "05ca93f29ddc99f43d356507e91351ddca1760ac3afde8b120e6fc0c035f31c2"
     },
     "includes/Plugin.php": {
       "bytes": 13854,

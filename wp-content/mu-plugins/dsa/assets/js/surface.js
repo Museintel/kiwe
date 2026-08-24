@@ -5577,6 +5577,8 @@
 					hasBackup: Boolean( response.hasBackup ),
 					emailDelivery: response.emailDelivery || 'magic_link',
 					emailAccepted: typeof response.emailAccepted === 'boolean' ? response.emailAccepted : null,
+					phoneDeliveryProvider: response.phoneDeliveryProvider || '',
+					phoneDeliveryMessage: response.phoneDeliveryMessage || '',
 					otpResendLockedUntil: 0,
 					error: '',
 				} );
@@ -5640,6 +5642,8 @@
 
 	function renderVerify( response ) {
 		const isPhone = ( response.identifierType || phonekeyState.identifierType ) === 'phone';
+		const phoneProvider = response.phoneDeliveryProvider || phonekeyState.phoneDeliveryProvider || '';
+		const phoneDestination = phoneProvider === 'email_fallback' ? 'email fallback.' : 'phone.';
 		const useOtp = isPhone || ( response.emailDelivery || phonekeyState.emailDelivery ) === 'otp';
 		const canResend = useOtp && Date.now() >= Number( phonekeyState.otpResendLockedUntil || 0 );
 		const newDevice = Boolean( response.newDevice || phonekeyState.mode === 'new_device_verify' );
@@ -5647,7 +5651,8 @@
 		renderPhoneKeyStep(
 			[
 				'<h2>' + ( newDevice ? 'A new device' : 'Verify first' ) + '</h2>',
-				'<p>' + ( newDevice ? 'It looks like you are using a new device. Enter the six digit code, then set up a passkey for this device.' : ( useOtp ? 'Enter the six digit code sent to your ' + ( isPhone ? 'phone.' : 'email.' ) : 'We sent a verification link to your email. Open it to continue, or request a recovery code.' ) ) + '</p>',
+				'<p>' + ( newDevice ? 'It looks like you are using a new device. Enter the six digit code, then set up a passkey for this device.' : ( useOtp ? 'Enter the six digit code sent to your ' + ( isPhone ? phoneDestination : 'email.' ) : 'We sent a verification link to your email. Open it to continue, or request a recovery code.' ) ) + '</p>',
+				isPhone && ( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) ? '<p class="dsa-panel__meta">' + escapeHtml( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) + '</p>' : '',
 				! isPhone && phonekeyState.emailAccepted === false ? '<p class="dsa-panel__meta dsa-auth-error">WordPress could not hand this message to its mail transport. The site administrator needs to check Kiwe Email and SMTP.</p>' : '',
 				renderPhoneKeyError(),
 				useOtp ? '<input class="dsa-auth-field" id="dsa-pk-code" inputmode="numeric" placeholder="123456"><div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-verify>Verify</button><button class="dsa-panel__button" data-dsa-pk-resend' + ( canResend ? '' : ' disabled' ) + '>' + ( canResend ? 'Resend code' : 'Wait before retry' ) + '</button></div>' : '<div class="dsa-auth-actions"><button class="dsa-panel__button" data-dsa-pk-recovery>Send recovery code</button></div>',
@@ -5782,8 +5787,10 @@
 	function resendOtp( isPhone ) {
 		setPhoneKeyBusy( true );
 		phoneKeyPost( 'resend-otp', { token: phonekeyState.token, type: isPhone ? 'phone' : 'email' } )
-			.then( function () {
+			.then( function ( response ) {
 				phonekeyState.error = '';
+				phonekeyState.phoneDeliveryProvider = response.provider || phonekeyState.phoneDeliveryProvider || '';
+				phonekeyState.phoneDeliveryMessage = response.message || '';
 				phonekeyState.otpResendLockedUntil = Date.now() + 60000;
 				renderVerify( { identifierType: isPhone ? 'phone' : 'email', emailDelivery: 'otp' } );
 				window.setTimeout( function () {
