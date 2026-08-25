@@ -39,7 +39,7 @@ final class Studio_AI_Service {
 				'preferCompanion'      => ! empty( $settings['prefer_companion_context'] ),
 				'maxContextCards'      => max( 4, absint( $settings['max_context_cards'] ?? 12 ) ),
 				'maxNativeContextBytes'=> max( 10000, absint( $settings['max_native_context_bytes'] ?? 60000 ) ),
-				'maxNativeTokens'      => max( 200, absint( $settings['max_native_tokens'] ?? 1200 ) ),
+				'maxNativeTokens'      => max( 200, absint( $settings['max_native_tokens'] ?? 3000 ) ),
 			],
 			'routes'         => [
 				'status' => '/wp-json/dsa/v1/ai/studio/status',

@@ -4970,7 +4970,7 @@ final class Admin {
 									</label>
 									<label>
 										<span><?php esc_html_e( 'Max output tokens', 'dsa' ); ?></span>
-										<input type="number" name="ai[max_native_tokens]" value="<?php echo esc_attr( (string) absint( $ai_settings['max_native_tokens'] ?? 1200 ) ); ?>" min="200" max="12000" step="100">
+										<input type="number" name="ai[max_native_tokens]" value="<?php echo esc_attr( (string) absint( $ai_settings['max_native_tokens'] ?? 3000 ) ); ?>" min="200" max="12000" step="100">
 									</label>
 									<label>
 										<span><?php esc_html_e( 'Context bytes', 'dsa' ); ?></span>
@@ -10082,7 +10082,7 @@ final class Admin {
 			'token_saver_enabled'      => ! empty( $input['token_saver_enabled'] ),
 			'prefer_companion_context' => ! empty( $input['prefer_companion_context'] ),
 			'bricks_editor_companion_enabled' => ! empty( $input['bricks_editor_companion_enabled'] ),
-			'max_native_tokens'        => max( 200, min( 12000, absint( $input['max_native_tokens'] ?? ( $current['max_native_tokens'] ?? 1200 ) ) ) ),
+			'max_native_tokens'        => max( 200, min( 12000, absint( $input['max_native_tokens'] ?? ( $current['max_native_tokens'] ?? 3000 ) ) ) ),
 			'max_native_context_bytes' => max( 10000, min( 200000, absint( $input['max_native_context_bytes'] ?? ( $current['max_native_context_bytes'] ?? 60000 ) ) ) ),
 			'allow_browser_handoff_export' => ! empty( $input['allow_browser_handoff_export'] ),
 			'companion_enabled'         => ! empty( $input['companion_enabled'] ),

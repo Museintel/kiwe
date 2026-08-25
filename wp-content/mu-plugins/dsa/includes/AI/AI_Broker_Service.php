@@ -90,6 +90,8 @@ final class AI_Broker_Service {
 		$envelope = [
 			'system' => $this->service_instruction( $service, $capability, $profile ) . "\n\n" . $system,
 			'user'   => $user,
+			'responseMimeType' => in_array( sanitize_key( (string) ( $profile['output'] ?? 'text' ) ), [ 'json','securetrack_review_json' ], true ) ? 'application/json' : 'text/plain',
+			'thinkingLevel' => in_array( sanitize_key( (string) ( $profile['output'] ?? 'text' ) ), [ 'json','securetrack_review_json' ], true ) ? 'low' : 'medium',
 		];
 		$result = $this->transport->generate( $envelope );
 		$result['schema']        = 'kiwe.ai-broker.result.v1';

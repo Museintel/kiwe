@@ -36,7 +36,7 @@ final class AI_Provider_Service {
 			],
 			'wordpressAiClient'   => $wp_ai->summary(),
 			'baseUrlConfigured'   => '' !== $this->base_url(),
-			'maxNativeTokens'     => max( 200, absint( $settings['max_native_tokens'] ?? 1200 ) ),
+			'maxNativeTokens'     => max( 200, absint( $settings['max_native_tokens'] ?? 3000 ) ),
 			'maxContextBytes'     => max( 10000, absint( $settings['max_native_context_bytes'] ?? 60000 ) ),
 			'supportedProviders'  => $this->providers(),
 			'safety'              => [
@@ -62,7 +62,7 @@ final class AI_Provider_Service {
 		}
 		if ( 'wordpress_ai_client' === $provider ) {
 			$wp_ai = new AI_Client_Service();
-			$result = $wp_ai->generate( $envelope, max( 200, absint( $settings['max_native_tokens'] ?? 1200 ) ), $model );
+			$result = $wp_ai->generate( $envelope, max( 200, absint( $settings['max_native_tokens'] ?? 3000 ) ), $model );
 			$result['envelope']  = $this->public_envelope( $envelope );
 			$result['estimates'] = $this->estimates( $envelope );
 			return $result;
@@ -148,7 +148,7 @@ final class AI_Provider_Service {
 			'mode'       => sanitize_key( $mode ),
 			'context'    => $context,
 			'budget'     => [
-				'maxOutputTokens' => max( 200, absint( $settings['max_native_tokens'] ?? 1200 ) ),
+				'maxOutputTokens' => max( 200, absint( $settings['max_native_tokens'] ?? 3000 ) ),
 				'tokenSaver'      => ! empty( $settings['token_saver_enabled'] ),
 			],
 		];
@@ -185,11 +185,20 @@ final class AI_Provider_Service {
 
 	private function payload( string $provider, string $model, array $envelope ): array {
 		$settings = $this->settings();
-		$max_tokens = max( 200, min( 12000, absint( $settings['max_native_tokens'] ?? 1200 ) ) );
+		$max_tokens = max( 200, min( 12000, absint( $settings['max_native_tokens'] ?? 3000 ) ) );
 		$system = $this->trim_bytes( (string) ( $envelope['system'] ?? '' ), 20000 );
 		$user = $this->trim_bytes( (string) ( $envelope['user'] ?? '' ), max( 12000, absint( $settings['max_native_context_bytes'] ?? 60000 ) ) );
 
 		if ( 'gemini' === $provider ) {
+			$config = [ 'maxOutputTokens' => $max_tokens ];
+			if ( str_starts_with( $model, 'gemini-3' ) ) {
+				$config['thinkingConfig'] = [ 'thinkingLevel' => in_array( (string) ( $envelope['thinkingLevel'] ?? '' ), [ 'low','medium','high' ], true ) ? (string) $envelope['thinkingLevel'] : 'low' ];
+			} else {
+				$config['temperature'] = 0.35;
+			}
+			if ( 'application/json' === ( $envelope['responseMimeType'] ?? '' ) ) {
+				$config['responseMimeType'] = 'application/json';
+			}
 			return [
 				'contents'         => [
 					[
@@ -199,10 +208,7 @@ final class AI_Provider_Service {
 						],
 					],
 				],
-				'generationConfig' => [
-					'maxOutputTokens' => $max_tokens,
-					'temperature'     => 0.35,
-				],
+				'generationConfig' => $config,
 			];
 		}
 
@@ -223,7 +229,8 @@ final class AI_Provider_Service {
 			$parts = isset( $candidates[0]['content']['parts'] ) && is_array( $candidates[0]['content']['parts'] ) ? $candidates[0]['content']['parts'] : [];
 			$out = '';
 			foreach ( $parts as $part ) {
-				$out .= (string) ( is_array( $part ) ? ( $part['text'] ?? '' ) : '' );
+				if ( ! is_array( $part ) || ! empty( $part['thought'] ) ) continue;
+				$out .= (string) ( $part['text'] ?? '' );
 			}
 			return trim( $out );
 		}
@@ -273,7 +280,7 @@ final class AI_Provider_Service {
 		return [
 			'promptBytes'      => strlen( $system ) + strlen( $user ),
 			'estimatedTokens'  => (int) ceil( ( strlen( $system ) + strlen( $user ) ) / 4 ),
-			'maxOutputTokens'  => max( 200, absint( $this->settings()['max_native_tokens'] ?? 1200 ) ),
+			'maxOutputTokens'  => max( 200, absint( $this->settings()['max_native_tokens'] ?? 3000 ) ),
 		];
 	}
 

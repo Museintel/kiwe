@@ -152,7 +152,7 @@ final class Settings {
 					'token_saver_enabled'     => true,
 					'prefer_companion_context'=> true,
 					'bricks_editor_companion_enabled' => false,
-					'max_native_tokens'       => 1200,
+					'max_native_tokens'       => 3000,
 					'max_native_context_bytes'=> 60000,
 					'allow_browser_handoff_export' => true,
 					'companion_enabled'        => false,

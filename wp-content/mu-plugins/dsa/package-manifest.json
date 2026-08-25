@@ -345,8 +345,8 @@
       "sha256": "7e66ce79a3ffed377ea8c5d810aeba4684d897be3c2dcdba57956726dc882087"
     },
     "includes/AI/AI_Broker_Service.php": {
-      "bytes": 10585,
-      "sha256": "7d4f9921f8af4e7ce8ba08511509149cb326845d1866e01e77ba55937e09db9b"
+      "bytes": 10917,
+      "sha256": "23e0d7001630e06ab36169b7ae8be76085ccfcf774744741f093727a742217a4"
     },
     "includes/AI/AI_Companion_Memory_Service.php": {
       "bytes": 3948,
@@ -357,8 +357,8 @@
       "sha256": "710d90a6b4fc24da2c72da7e3eec23fbc7b5d75b716b97124318b87778fc9aca"
     },
     "includes/AI/AI_Provider_Service.php": {
-      "bytes": 12608,
-      "sha256": "71bc773f3a841ac587410b73e51d591848c16fc6a13a627ec64f2755fa099029"
+      "bytes": 13060,
+      "sha256": "954f1fed04fd7538f07a183de43273d3e66d5222110d49c97c01d513aa5a4e43"
     },
     "includes/AI/Access_Key_Service.php": {
       "bytes": 7864,
@@ -478,7 +478,7 @@
     },
     "includes/AI/Studio_AI_Service.php": {
       "bytes": 18701,
-      "sha256": "40b2321b349a9be3a07f2c47f3607325b5f2efe0e9149daa4d73a636af9a8ee5"
+      "sha256": "04355b8f9ac88c329c49c60681a89e30739755f2624acf97f38748c9a0e387bd"
     },
     "includes/AI/Target_Resolution_Service.php": {
       "bytes": 6731,
@@ -502,7 +502,7 @@
     },
     "includes/Admin/Admin.php": {
       "bytes": 685098,
-      "sha256": "b9c1a92ff034bb1c751946ba6d2d2ffc67a60b2694c226674069d2b967fd577b"
+      "sha256": "e1a80d046f484ea08ca63e573434d6f4e6490623ff955d7fa8fcf16e7c4e4da4"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -870,7 +870,7 @@
     },
     "includes/Settings.php": {
       "bytes": 20913,
-      "sha256": "9c85e305c728e66c0b40f21b1016d9d0f5bd45a6f62cc1d6044fccc182bbb5c3"
+      "sha256": "0477903f001d011314259ab58c49efe4ac02f50373aa3559b1187142b2a758cc"
     },
     "includes/Site/Site_Identity_Service.php": {
       "bytes": 9193,
@@ -918,7 +918,7 @@
     },
     "includes/WP7/AI_Client_Service.php": {
       "bytes": 4035,
-      "sha256": "5af92ca2a8fb5b8b07bf523660d892a8664aaf4ed63475cfbae7e20faaf2a5e3"
+      "sha256": "372f24ced613a2ca0ee02f25ac40b0cd4a4dcbae3d42983cde030a6dd12098d7"
     },
     "includes/WP7/Abilities_Service.php": {
       "bytes": 43116,

@@ -45,7 +45,7 @@ final class AI_Client_Service {
 	 * WordPress owns provider selection and credentials. Kiwe deliberately does
 	 * not inspect Connector secrets or carry conversation history into this call.
 	 */
-	public function generate( array $envelope, int $max_tokens = 1200, string $model = '' ): array {
+	public function generate( array $envelope, int $max_tokens = 3000, string $model = '' ): array {
 		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
 			return $this->not_called( 'wordpress_ai_client_unavailable' );
 		}
