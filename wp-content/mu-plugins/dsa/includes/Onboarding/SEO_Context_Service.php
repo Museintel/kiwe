@@ -15,6 +15,8 @@ final class SEO_Context_Service {
 	public function register(): void {
 		add_filter( 'wp_robots', [ $this, 'robots' ] );
 		add_filter( 'robots_txt', [ $this, 'robots_txt' ], 99, 2 );
+		add_filter( 'jetpack_enable_open_graph', [ $this, 'jetpack_open_graph' ], 99 );
+		add_filter( 'jetpack_disable_twitter_cards', [ $this, 'jetpack_twitter_cards' ], 99 );
 		add_filter( 'wp_sitemaps_posts_query_args', [ $this, 'sitemap_args' ], 10, 2 );
 		add_action( 'wp_head', [ $this, 'head' ], 2 );
 	}
@@ -155,6 +157,15 @@ final class SEO_Context_Service {
 		if ( '0' === (string) get_option( 'blog_public', '1' ) ) return false;
 		$post_id = is_singular() ? absint( get_queried_object_id() ) : 0;
 		return ! $post_id || ( ! post_password_required( $post_id ) && 'publish' === get_post_status( $post_id ) );
+	}
+
+	/** Kiwe owns social metadata when no dedicated SEO provider is active. */
+	public function jetpack_open_graph( bool $enabled ): bool {
+		return $this->dedicated_seo_plugin_active() ? $enabled : false;
+	}
+
+	public function jetpack_twitter_cards( bool $disabled ): bool {
+		return $this->dedicated_seo_plugin_active() ? $disabled : true;
 	}
 
 	private function dedicated_seo_plugin_active(): bool {
