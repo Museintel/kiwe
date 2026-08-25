@@ -797,8 +797,8 @@
       "sha256": "15937f1c2d9f5063b13bfd3e5d09bb6b6b9f829d96b71a5ee8a657a31456adbb"
     },
     "includes/SEO/SEO_Refinement_Service.php": {
-      "bytes": 21633,
-      "sha256": "cc3817fa4c517d09c4a86d08368c344393ee91f44a00eac6c91753beb7912961"
+      "bytes": 23158,
+      "sha256": "09d890c210605a342ceaf34274eed2e52cc201061e091e6efcda04500abf0a0f"
     },
     "includes/Saved/Saved_Items_Service.php": {
       "bytes": 9269,
