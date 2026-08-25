@@ -12,7 +12,7 @@ final class Onboarding_Service {
 	private const INVITATIONS_OPTION = 'kiwe_onboarding_invitations_v1';
 	private const PROMPTED_META = '_kiwe_onboarding_prompted_v1';
 
-	public function __construct( private Design_Context_Profile_Service $profiles, private Channel_Service $channels ) {}
+	public function __construct( private Design_Context_Profile_Service $profiles, private Channel_Service $channels, private Design_Context_Refinement_Service $refinements ) {}
 
 	public function register(): void {
 		add_action( 'admin_menu', [ $this, 'menu' ], 20 );
@@ -21,6 +21,7 @@ final class Onboarding_Service {
 		add_action( 'admin_enqueue_scripts', [ $this, 'assets' ] );
 		add_action( 'admin_post_kiwe_save_onboarding', [ $this, 'handle_save' ] );
 		add_action( 'admin_post_kiwe_create_onboarding_invite', [ $this, 'handle_invite' ] );
+		$this->refinements->register();
 	}
 
 	public function menu(): void {
@@ -33,10 +34,14 @@ final class Onboarding_Service {
 		wp_enqueue_style( 'kiwe-onboarding', DSA_URL . 'assets/css/onboarding.css', [], DSA_VERSION );
 		wp_enqueue_script( 'kiwe-onboarding', DSA_URL . 'assets/js/onboarding.js', [], DSA_VERSION, true );
 		$saved = ! empty( $_GET['saved'] );
-		$step  = $saved ? 6 : min( 6, absint( $_GET['step'] ?? 0 ) );
+		$step  = $saved ? 7 : min( 7, absint( $_GET['step'] ?? 0 ) );
 		wp_localize_script( 'kiwe-onboarding', 'KIWE_ONBOARDING', [
 			'chooseImage' => __( 'Choose image', 'dsa' ),
 			'useImage'    => __( 'Use this image', 'dsa' ),
+			'chooseResources' => __( 'Choose resources', 'dsa' ),
+			'useResources'    => __( 'Add selected resources', 'dsa' ),
+			'noResource'      => __( 'No resources selected yet.', 'dsa' ),
+			'resourceRoles'    => $this->resource_roles(),
 			'saving'      => __( 'Saving owner context…', 'dsa' ),
 			'saved'       => $saved,
 			'startStep'   => $step,
@@ -81,7 +86,7 @@ final class Onboarding_Service {
 			<?php if ( is_string( $invite_link ) && $invite_link ) : ?><div class="kiwe-onboarding__share"><strong><?php esc_html_e( 'Owner link created', 'dsa' ); ?></strong><input type="text" readonly value="<?php echo esc_attr( $invite_link ); ?>" data-kiwe-copy-source><button type="button" class="button" data-kiwe-copy><?php esc_html_e( 'Copy link', 'dsa' ); ?></button><small><?php esc_html_e( 'This link expires in seven days, requires the selected administrator to sign in, and cannot authorize another account.', 'dsa' ); ?></small></div><?php endif; ?>
 
 			<nav class="kiwe-onboarding__steps" aria-label="<?php esc_attr_e( 'Onboarding progress', 'dsa' ); ?>">
-				<?php foreach ( [ 'Identity', 'Story', 'Contact', 'Brand', 'Website plan', 'Store', 'Review' ] as $i => $label ) : ?><button type="button" data-kiwe-step-button="<?php echo esc_attr( (string) $i ); ?>"><span><?php echo esc_html( (string) ( $i + 1 ) ); ?></span><?php echo esc_html( $label ); ?></button><?php endforeach; ?>
+				<?php foreach ( [ 'Identity', 'Story', 'Contact', 'Brand', 'Website plan', 'Store', 'Resources', 'Review' ] as $i => $label ) : ?><button type="button" data-kiwe-step-button="<?php echo esc_attr( (string) $i ); ?>"><span><?php echo esc_html( (string) ( $i + 1 ) ); ?></span><?php echo esc_html( $label ); ?></button><?php endforeach; ?>
 			</nav>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-kiwe-onboarding-form>
@@ -135,14 +140,21 @@ final class Onboarding_Service {
 				</section>
 
 				<section class="kiwe-onboarding__panel" data-kiwe-step="6" hidden>
-					<div class="kiwe-onboarding__intro"><span>07</span><div><h2><?php esc_html_e( 'Ready for the designer', 'dsa' ); ?></h2><p><?php esc_html_e( 'Saving updates the native owners and publishes a safe, read-only design brief through SiteGraph. It does not create pages, products, shipping zones or a SEAM Framework profile.', 'dsa' ); ?></p></div></div>
+					<div class="kiwe-onboarding__intro"><span>07</span><div><h2><?php esc_html_e( 'Resources for the website', 'dsa' ); ?></h2><p><?php esc_html_e( 'Upload or select the images, videos, PDFs and other WordPress media the designer may use. Files stay in the native Media Library; this step records only their intended design role and owner note.', 'dsa' ); ?></p></div></div>
+					<div class="kiwe-resource-toolbar"><button type="button" class="button button-primary" data-kiwe-resource-select><?php esc_html_e( 'Add from Media Library', 'dsa' ); ?></button><p class="description"><?php esc_html_e( 'Removing an item here removes it only from Design Context. It never deletes the attachment or file.', 'dsa' ); ?></p></div>
+					<div class="kiwe-resource-list" data-kiwe-resources><?php foreach ( (array) ( $p['resources']['items'] ?? [] ) as $i=>$resource ) $this->resource_row( (int) $i, (array) $resource ); ?></div>
+					<p class="kiwe-resource-empty" data-kiwe-resource-empty <?php echo ! empty( $p['resources']['items'] ) ? 'hidden' : ''; ?>><?php esc_html_e( 'No resources selected yet. You can still continue and add them later.', 'dsa' ); ?></p>
+				</section>
+
+				<section class="kiwe-onboarding__panel" data-kiwe-step="7" hidden>
+					<div class="kiwe-onboarding__intro"><span>08</span><div><h2><?php esc_html_e( 'Ready for the designer', 'dsa' ); ?></h2><p><?php esc_html_e( 'Saving updates the native owners and publishes a safe, read-only design brief through SiteGraph. It does not create pages, products, shipping zones or a SEAM Framework profile.', 'dsa' ); ?></p></div></div>
 					<div class="kiwe-review-grid"><article><h3><?php esc_html_e( 'WordPress', 'dsa' ); ?></h3><p><?php esc_html_e( 'Site title, tagline, main/inverse logos, site icon, timezone, indexing preference and native XML sitemap intent.', 'dsa' ); ?></p></article><article><h3><?php esc_html_e( 'WooCommerce', 'dsa' ); ?></h3><p><?php esc_html_e( 'Store base location, selling/shipping countries, currency display, measurement units and safe tax switches.', 'dsa' ); ?></p></article><article><h3><?php esc_html_e( 'Kiwe', 'dsa' ); ?></h3><p><?php esc_html_e( 'Public phone/email/WhatsApp, social links, owner design brief, page search roles and product-plan context.', 'dsa' ); ?></p></article><article><h3><?php esc_html_e( 'SiteGraph', 'dsa' ); ?></h3><p><?php esc_html_e( 'One bounded evidence packet combining this owner context with configured public content, media, products, custom fields and taxonomies.', 'dsa' ); ?></p></article></div>
 				</section>
 
 				<footer class="kiwe-onboarding__actions"><button type="button" class="button button-large" data-kiwe-prev><?php esc_html_e( 'Back', 'dsa' ); ?></button><span data-kiwe-step-status></span><button type="button" class="button button-primary button-large" data-kiwe-next><?php esc_html_e( 'Continue', 'dsa' ); ?></button><button type="submit" class="button button-primary button-hero" data-kiwe-save hidden><?php esc_html_e( 'Save owner context', 'dsa' ); ?></button></footer>
 			</form>
 
-			<?php if ( ! $invitation ) $this->invite_panel(); ?>
+			<?php if ( ! $invitation ) { $this->refinements->render_panel(); $this->invite_panel(); } ?>
 		</div>
 		<?php
 	}
@@ -203,6 +215,30 @@ final class Onboarding_Service {
 	private function media_field( string $name, int $id, string $label, bool $required, string $kind ): void {
 		$url = $id ? wp_get_attachment_image_url( $id, 'medium' ) : '';
 		echo '<label class="kiwe-media-field" data-kiwe-media-field><span>' . esc_html( $label ) . ( $required ? ' *' : '' ) . '</span><input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( (string) $id ) . '" data-kiwe-media-id' . ( $required ? ' required' : '' ) . '><span class="kiwe-media-field__preview" data-kiwe-media-preview>' . ( $url ? '<img src="' . esc_url( $url ) . '" alt="">' : '<em>' . esc_html__( 'No image selected', 'dsa' ) . '</em>' ) . '</span><button type="button" class="button" data-kiwe-media-select data-kind="' . esc_attr( $kind ) . '">' . esc_html__( 'Choose image', 'dsa' ) . '</button></label>';
+	}
+
+	private function resource_row( $index, array $resource ): void {
+		$attachment_id = absint( $resource['attachmentId'] ?? 0 );
+		if ( ! $attachment_id || 'attachment' !== get_post_type( $attachment_id ) ) return;
+		$base = 'context[resources][items][' . (string) $index . ']';
+		$title = sanitize_text_field( (string) get_the_title( $attachment_id ) );
+		$mime = sanitize_mime_type( (string) get_post_mime_type( $attachment_id ) );
+		$image = wp_attachment_is_image( $attachment_id ) ? wp_get_attachment_image( $attachment_id, 'thumbnail', false, [ 'alt'=>'' ] ) : '';
+		?>
+		<article class="kiwe-resource-card" data-kiwe-resource-row data-attachment-id="<?php echo esc_attr( (string) $attachment_id ); ?>">
+			<div class="kiwe-resource-card__preview"><?php echo $image ? wp_kses_post( $image ) : '<span>' . esc_html( strtoupper( (string) pathinfo( (string) get_attached_file( $attachment_id ), PATHINFO_EXTENSION ) ) ?: __( 'FILE', 'dsa' ) ) . '</span>'; ?></div>
+			<div class="kiwe-resource-card__body"><strong><?php echo esc_html( $title ?: sprintf( __( 'Attachment #%d', 'dsa' ), $attachment_id ) ); ?></strong><small><?php echo esc_html( $mime ); ?></small><input type="hidden" name="<?php echo esc_attr( $base . '[attachmentId]' ); ?>" value="<?php echo esc_attr( (string) $attachment_id ); ?>"><label><span><?php esc_html_e( 'Intended role', 'dsa' ); ?></span><select name="<?php echo esc_attr( $base . '[role]' ); ?>"><?php foreach ( $this->resource_roles() as $value=>$label ) : ?><option value="<?php echo esc_attr( $value ); ?>" <?php selected( (string) ( $resource['role'] ?? 'reference' ), $value ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></label><label><span><?php esc_html_e( 'Owner note (optional)', 'dsa' ); ?></span><textarea name="<?php echo esc_attr( $base . '[note]' ); ?>" rows="2" placeholder="<?php esc_attr_e( 'Use on About page, packaging certificate, homepage film…', 'dsa' ); ?>"><?php echo esc_textarea( (string) ( $resource['note'] ?? '' ) ); ?></textarea></label></div>
+			<button type="button" class="button-link-delete" data-kiwe-resource-remove><?php esc_html_e( 'Remove', 'dsa' ); ?></button>
+		</article>
+		<?php
+	}
+
+	private function resource_roles(): array {
+		return [
+			'logo'=>__( 'Logo or brand mark', 'dsa' ), 'hero'=>__( 'Hero or campaign', 'dsa' ), 'product'=>__( 'Product', 'dsa' ),
+			'team'=>__( 'Founder or team', 'dsa' ), 'service'=>__( 'Service', 'dsa' ), 'gallery'=>__( 'Gallery', 'dsa' ),
+			'document'=>__( 'Document or certificate', 'dsa' ), 'video'=>__( 'Video', 'dsa' ), 'reference'=>__( 'Design reference', 'dsa' ), 'other'=>__( 'Other', 'dsa' ),
+		];
 	}
 
 	private function planned_page_row( $index, array $page ): void {

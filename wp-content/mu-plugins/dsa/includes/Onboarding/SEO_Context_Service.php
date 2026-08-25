@@ -3,6 +3,7 @@
 namespace DSA\Onboarding;
 
 use DSA\Site\Site_Identity_Service;
+use DSA\SEO\SEO_Refinement_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -43,6 +44,10 @@ final class SEO_Context_Service {
 		$description = trim( (string) ( $context['seo']['homepageDescription'] ?? '' ) );
 		if ( is_front_page() && '' !== $description ) {
 			echo '<meta name="description" content="' . esc_attr( $description ) . '">' . "\n";
+		}
+		if ( ! is_front_page() ) {
+			$singular_description = SEO_Refinement_Service::singular_description();
+			if ( '' !== $singular_description ) echo '<meta name="description" content="' . esc_attr( $singular_description ) . '">' . "\n";
 		}
 		if ( ! is_front_page() || empty( $context['complete'] ) ) return;
 		$identity = $context['identity']; $contact = $context['contact'];

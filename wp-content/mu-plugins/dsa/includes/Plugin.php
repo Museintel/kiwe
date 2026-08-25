@@ -31,6 +31,7 @@ use DSA\Notifications\Push_Service;
 use DSA\Notifications\Admin_Event_Notification_Service;
 use DSA\Notifications\Order_Notification_Service;
 use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\Onboarding\Design_Context_Refinement_Service;
 use DSA\Onboarding\Onboarding_Service;
 use DSA\Onboarding\SEO_Context_Service;
 use DSA\Permissions\Permission_Journey_Service;
@@ -63,6 +64,7 @@ use DSA\Runtime\Route_Capability_Service;
 use DSA\Runtime\Editorial_Fragment_Service;
 use DSA\Schema\Schema_Geo_Service;
 use DSA\Search\Search_Service;
+use DSA\SEO\SEO_Refinement_Service;
 use DSA\Saved\Saved_Items_Service;
 use DSA\Secure\SecureTrack_Loader;
 use DSA\Site\Site_Identity_Service;
@@ -117,8 +119,10 @@ final class Plugin {
 	private $ai_broker;
 	private $design_context_profile;
 	private $onboarding;
+	private $design_context_refinement;
 	private $seo_context;
 	private $product_context;
+	private $seo_refinement;
 
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
@@ -139,8 +143,11 @@ final class Plugin {
 		$this->email        = new Email_Service( $this->settings );
 		$this->channels     = new Channel_Service( $this->settings, $this->email, $this->phonekey );
 		$this->design_context_profile = new Design_Context_Profile_Service();
-		$this->onboarding   = new Onboarding_Service( $this->design_context_profile, $this->channels );
+		$this->ai_broker = new AI_Broker_Service( $this->settings );
+		$this->design_context_refinement = new Design_Context_Refinement_Service( $this->design_context_profile, $this->ai_broker );
+		$this->onboarding   = new Onboarding_Service( $this->design_context_profile, $this->channels, $this->design_context_refinement );
 		$this->seo_context  = new SEO_Context_Service( $this->design_context_profile );
+		$this->seo_refinement = new SEO_Refinement_Service( $this->ai_broker );
 		$this->product_context = new Product_Context_Service();
 		$this->abandoned_carts = new Abandoned_Cart_Service( $this->settings, $this->store_analytics, $this->channels );
 		$this->checkout    = new Checkout_Service( $this->settings, $this->cart_payload );
@@ -148,7 +155,6 @@ final class Plugin {
 		$this->flow_guard = new Flow_Guard();
 		$this->triggers   = new Trigger_Service();
 		$this->site_graph = new Site_Graph_Service( $this->settings, $this->modules );
-		$this->ai_broker = new AI_Broker_Service( $this->settings );
 		$this->native     = new Native_Service( $this->settings, $this->registry, $this->trust, $this->site_graph );
 		$this->copilot    = new Copilot_Service( $this->settings, $this->registry, $this->trust, $this->native );
 		$this->commerce   = new Commerce_Context_Service( $this->linked_products );
@@ -243,6 +249,7 @@ final class Plugin {
 		( new Admin( $this->settings, $this->modules, $this->native, $this->readiness, $this->store_analytics, $this->linked_products, $this->email, $this->abandoned_carts, $this->notification_preferences, $this->notification_campaigns, $this->saved_items, $this->search ) )->register();
 		$this->onboarding->register();
 		$this->seo_context->register();
+		$this->seo_refinement->register();
 		$this->product_context->register();
 		( new SecureTrack_Loader() )->register();
 		if ( $surface_enabled ) {

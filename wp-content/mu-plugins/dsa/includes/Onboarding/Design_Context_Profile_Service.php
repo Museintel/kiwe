@@ -50,6 +50,7 @@ final class Design_Context_Profile_Service {
 			$profile['services']['items'] = array_merge( $inferred['services']['items'], $pending_services );
 		}
 		$profile['brand']['colors'] = is_array( $stored['brand']['colors'] ?? null ) ? array_values( $stored['brand']['colors'] ) : [];
+		$profile['resources']['items'] = is_array( $stored['resources']['items'] ?? null ) ? array_values( $stored['resources']['items'] ) : [];
 		foreach ( $profile['brand']['colors'] as &$color ) {
 			if ( is_array( $color ) && 'support' === ( $color['role'] ?? '' ) ) {
 				$color['role']  = 'neutral';
@@ -162,6 +163,22 @@ final class Design_Context_Profile_Service {
 			unset( $service_item );
 		}
 
+		$resources = [];
+		if ( $administrator ) {
+			foreach ( (array) ( $profile['resources']['items'] ?? [] ) as $resource ) {
+				$attachment_id = absint( $resource['attachmentId'] ?? 0 );
+				if ( ! $attachment_id || 'attachment' !== get_post_type( $attachment_id ) ) continue;
+				$resources[] = [
+					'attachmentId' => $attachment_id,
+					'title'        => sanitize_text_field( (string) get_the_title( $attachment_id ) ),
+					'url'          => esc_url_raw( (string) wp_get_attachment_url( $attachment_id ) ),
+					'mimeType'     => sanitize_mime_type( (string) get_post_mime_type( $attachment_id ) ),
+					'role'         => sanitize_key( (string) ( $resource['role'] ?? 'reference' ) ),
+					'note'         => sanitize_textarea_field( (string) ( $resource['note'] ?? '' ) ),
+				];
+			}
+		}
+
 		return [
 			'schema' => 'kiwe.seam-design-context.v1',
 			'complete' => $this->is_complete(),
@@ -189,6 +206,11 @@ final class Design_Context_Profile_Service {
 			'audience'    => $profile['audience'],
 			'contentPlan' => $profile['contentPlan'],
 			'services'    => $services,
+			'resources'   => [
+				'items' => $resources,
+				'count' => count( (array) ( $profile['resources']['items'] ?? [] ) ),
+				'authority' => $administrator ? 'administrator-selected-media-library-resources' : 'withheld-from-public-context',
+			],
 			'regulatory'  => $profile['regulatory'],
 			'commercePlan'=> [
 				'enabled'              => $profile['commerce']['enabled'],
@@ -233,9 +255,64 @@ final class Design_Context_Profile_Service {
 			! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
 			! empty( $p['brand']['notes'] ),
 			! empty( $p['about']['story'] ), ! empty( $p['about']['usp'] ), ! empty( $p['about']['values'] ),
+			! empty( $p['resources']['items'] ),
 		];
 		$percent = static fn( array $checks ): int => (int) round( 100 * count( array_filter( $checks ) ) / max( 1, count( $checks ) ) );
 		return [ 'seoStrength' => $percent( $seo_checks ), 'designContextStrength' => $percent( $design_checks ) ];
+	}
+
+	/**
+	 * Apply only owner-approved editorial refinements. This deliberately cannot
+	 * address identity names, contacts, locations, legal/regulatory records,
+	 * commerce facts, people names/titles, services, products, or media.
+	 */
+	public function apply_editorial_refinements( array $changes, int $user_id ): array {
+		$profile = $this->current();
+		$limits = [
+			'identity.tagline'=>160, 'identity.description'=>5000,
+			'audience.primary'=>500, 'audience.locations'=>500, 'audience.needs'=>2000,
+			'about.story'=>5000, 'about.mission'=>2000, 'about.vision'=>2000, 'about.values'=>2000, 'about.usp'=>2000,
+			'about.founder.bio'=>3000, 'brand.notes'=>3000,
+			'seo.homepageDescription'=>320, 'seo.searchIntent'=>240, 'seo.proofPoints'=>1600,
+		];
+		$applied = [];
+		foreach ( $changes as $path=>$value ) {
+			if ( ! isset( $limits[ $path ] ) || ! is_scalar( $value ) ) continue;
+			if ( 'about.founder.bio' === $path ) {
+				$founder_user_id = absint( $profile['about']['founder']['userId'] ?? 0 );
+				if ( $founder_user_id && ! current_user_can( 'edit_user', $founder_user_id ) ) continue;
+			}
+			$value = substr( sanitize_textarea_field( (string) $value ), 0, $limits[ $path ] );
+			if ( '' === trim( $value ) ) continue;
+			$segments = explode( '.', $path );
+			$cursor =& $profile;
+			foreach ( $segments as $index=>$segment ) {
+				if ( $index === count( $segments ) - 1 ) {
+					$cursor[ $segment ] = $value;
+					break;
+				}
+				if ( ! isset( $cursor[ $segment ] ) || ! is_array( $cursor[ $segment ] ) ) $cursor[ $segment ] = [];
+				$cursor =& $cursor[ $segment ];
+			}
+			unset( $cursor );
+			$applied[ $path ] = $value;
+		}
+		if ( ! $applied ) return [];
+		if ( isset( $applied['identity.tagline'] ) ) update_option( 'blogdescription', $applied['identity.tagline'] );
+		if ( isset( $applied['about.founder.bio'] ) ) {
+			$founder_user_id = absint( $profile['about']['founder']['userId'] ?? 0 );
+			if ( $founder_user_id ) wp_update_user( [ 'ID'=>$founder_user_id, 'description'=>$applied['about.founder.bio'] ] );
+		}
+		$profile['scores'] = $this->scores( $profile );
+		$profile['meta'] = array_replace( (array) ( $profile['meta'] ?? [] ), [
+			'schema'=>'kiwe.seam-design-context.v1', 'updatedAt'=>gmdate( 'c' ), 'updatedBy'=>$user_id,
+			'lastEditorialRefinementAt'=>gmdate( 'c' ), 'lastEditorialRefinementBy'=>$user_id,
+		] );
+		update_option( self::OPTION_PROFILE, $this->compact_service_references( $this->compact_people_references( $profile ) ), false );
+		$status = $this->status();
+		$status['scores'] = $profile['scores'];
+		update_option( self::OPTION_STATUS, $status, false );
+		return $applied;
 	}
 
 	private function inferred( ?array $stored = null ): array {
@@ -280,6 +357,7 @@ final class Design_Context_Profile_Service {
 			'brand' => [ 'tone' => '', 'colors' => [], 'notes' => '' ],
 			'contentPlan' => [ 'existingPages' => $pages, 'plannedPages' => [], 'showBlogRailOnHome' => false, 'highlightBestsellers' => false ],
 			'services' => $this->inferred_services( sanitize_key( (string) ( $stored['services']['sourcePostType'] ?? $this->default_service_post_type() ) ) ),
+			'resources' => [ 'items' => [] ],
 			'commerce' => $product_plan,
 			'regulatory' => [
 				'fssaiLicense' => '', 'showFssaiOnProducts' => false,
@@ -338,6 +416,7 @@ final class Design_Context_Profile_Service {
 		$localization = is_array( $raw['localization'] ?? null ) ? $raw['localization'] : [];
 		$content = is_array( $raw['contentPlan'] ?? null ) ? $raw['contentPlan'] : [];
 		$services = is_array( $raw['services'] ?? null ) ? $raw['services'] : [];
+		$resources = is_array( $raw['resources'] ?? null ) ? $raw['resources'] : [];
 
 		$colors = [];
 		$color_names = [ '#dc2626'=>'red','#f97360'=>'coral','#f97316'=>'orange','#f59e0b'=>'amber','#eab308'=>'yellow','#84cc16'=>'lime','#16a34a'=>'green','#059669'=>'emerald','#0d9488'=>'teal','#0891b2'=>'cyan','#0284c7'=>'sky','#2563eb'=>'blue','#4f46e5'=>'indigo','#7c3aed'=>'violet','#9333ea'=>'purple','#c026d3'=>'magenta','#db2777'=>'pink','#e11d48'=>'rose','#92400e'=>'brown','#c4a574'=>'sand','#6b7b3e'=>'olive','#1e3a5f'=>'navy','#64748b'=>'grey','#171717'=>'black' ];
@@ -429,6 +508,21 @@ final class Design_Context_Profile_Service {
 				'taxonomyPaths'=>$taxonomy_paths, 'meta'=>$service_meta,
 			];
 		}
+		$resource_items = [];
+		$resource_roles = [ 'logo', 'hero', 'product', 'team', 'service', 'gallery', 'document', 'video', 'reference', 'other' ];
+		$seen_attachments = [];
+		foreach ( array_slice( is_array( $resources['items'] ?? null ) ? $resources['items'] : [], 0, 100 ) as $resource ) {
+			if ( ! is_array( $resource ) ) continue;
+			$attachment_id = absint( $resource['attachmentId'] ?? 0 );
+			if ( ! $attachment_id || isset( $seen_attachments[ $attachment_id ] ) || 'attachment' !== get_post_type( $attachment_id ) ) continue;
+			$seen_attachments[ $attachment_id ] = true;
+			$role = sanitize_key( (string) ( $resource['role'] ?? 'reference' ) );
+			$resource_items[] = [
+				'attachmentId' => $attachment_id,
+				'role' => in_array( $role, $resource_roles, true ) ? $role : 'reference',
+				'note' => substr( sanitize_textarea_field( (string) ( $resource['note'] ?? '' ) ), 0, 1000 ),
+			];
+		}
 
 		return [
 			'identity' => [
@@ -471,6 +565,7 @@ final class Design_Context_Profile_Service {
 				'useForNavigation'=>! empty( $services['useForNavigation'] ),
 				'items'=>$service_items,
 			],
+			'resources' => [ 'items' => $resource_items ],
 			'commerce' => [
 				'enabled' => ! empty( $commerce['enabled'] ), 'expectedProductCount' => min( 1000000, absint( $commerce['expectedProductCount'] ?? 0 ) ),
 				'expectedPriceRange' => [ 'min' => max( 0, (float) ( $commerce['expectedPriceRange']['min'] ?? 0 ) ), 'max' => max( 0, (float) ( $commerce['expectedPriceRange']['max'] ?? 0 ) ) ],

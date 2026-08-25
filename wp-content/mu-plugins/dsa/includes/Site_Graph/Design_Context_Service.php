@@ -146,7 +146,7 @@ final class Design_Context_Service {
 				],
 				'ownerFactPaths' => [
 					'seamDesignContext.identity', 'seamDesignContext.contact', 'seamDesignContext.localization',
-					'seamDesignContext.about', 'seamDesignContext.services', 'seamDesignContext.regulatory', 'seamDesignContext.contentPlan', 'seamDesignContext.commercePlan',
+					'seamDesignContext.about', 'seamDesignContext.services', 'seamDesignContext.resources', 'seamDesignContext.regulatory', 'seamDesignContext.contentPlan', 'seamDesignContext.commercePlan',
 					'seamDesignContext.seo.legalName', 'seamDesignContext.seo.foundedYear', 'seamDesignContext.seo.allowIndexing',
 				],
 				'ownerPreferencePaths' => [
@@ -165,7 +165,7 @@ final class Design_Context_Service {
 				],
 				'doNotReaskWhenPresent' => [
 					'identity', 'site type', 'purpose', 'audience', 'goal', 'logo', 'brand preferences',
-					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder', 'team', 'services and service hierarchy',
+					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder', 'team', 'services and service hierarchy', 'owner-selected media resources and their intended roles',
 					'catalog scale', 'price range', 'regulatory disclosures', 'page plan', 'SEO intent',
 				],
 				'output' => [ 'index.html', 'styles.css', 'script.js', 'assets used by the project', 'assets/asset-manifest.json when assets are emitted' ],

@@ -45,6 +45,29 @@
 	}
 
 	root.addEventListener( 'click', function ( event ) {
+		const resourceSelect = event.target.closest( '[data-kiwe-resource-select]' );
+		if ( resourceSelect && window.wp && wp.media ) {
+			event.preventDefault();
+			const frame = wp.media( { title: config.chooseResources || 'Choose resources', button: { text: config.useResources || 'Add selected resources' }, multiple: true } );
+			frame.on( 'select', function () {
+				const list = root.querySelector( '[data-kiwe-resources]' );
+				if ( ! list ) return;
+				const existing = new Set( Array.from( list.querySelectorAll( '[data-kiwe-resource-row]' ) ).map( function ( row ) { return String( row.dataset.attachmentId ); } ) );
+				let index = Array.from( list.querySelectorAll( 'input[name*="[resources][items]"]' ) ).reduce( function ( highest, input ) {
+					const match = input.name.match( /items\]\[(\d+)\]/ );
+					return match ? Math.max( highest, Number( match[1] ) ) : highest;
+				}, -1 ) + 1;
+				frame.state().get( 'selection' ).each( function ( model ) {
+					const item = model.toJSON();
+					if ( ! item.id || existing.has( String( item.id ) ) || list.children.length >= 100 ) return;
+					existing.add( String( item.id ) );
+					list.appendChild( buildResourceRow( item, index++ ) );
+				} );
+				const empty = root.querySelector( '[data-kiwe-resource-empty]' );
+				if ( empty ) empty.hidden = list.children.length > 0;
+			} );
+			frame.open();
+		}
 		const select = event.target.closest( '[data-kiwe-media-select]' );
 		if ( select && window.wp && wp.media ) {
 			event.preventDefault();
@@ -134,7 +157,36 @@
 			const row = removeService.closest( '[data-kiwe-service-row]' );
 			if ( row ) row.remove();
 		}
+		const removeResource = event.target.closest( '[data-kiwe-resource-remove]' );
+		if ( removeResource ) {
+			const row = removeResource.closest( '[data-kiwe-resource-row]' );
+			if ( row ) row.remove();
+			const list = root.querySelector( '[data-kiwe-resources]' );
+			const empty = root.querySelector( '[data-kiwe-resource-empty]' );
+			if ( empty ) empty.hidden = !! ( list && list.children.length );
+		}
 	} );
+
+	function escapeHtml( value ) {
+		return String( value || '' ).replace( /[&<>"']/g, function ( character ) { return ( { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' } )[ character ]; } );
+	}
+	function buildResourceRow( item, index ) {
+		const article = document.createElement( 'article' );
+		article.className = 'kiwe-resource-card';
+		article.dataset.kiweResourceRow = '';
+		article.dataset.attachmentId = String( item.id );
+		const roles = config.resourceRoles || { reference:'Design reference', hero:'Hero or campaign', product:'Product', gallery:'Gallery', document:'Document or certificate', video:'Video', other:'Other' };
+		const options = Object.keys( roles ).map( function ( role ) { return '<option value="' + escapeHtml( role ) + '"' + ( role === 'reference' ? ' selected' : '' ) + '>' + escapeHtml( roles[ role ] ) + '</option>'; } ).join( '' );
+		const previewUrl = item.sizes && item.sizes.thumbnail ? item.sizes.thumbnail.url : ( item.type === 'image' ? item.url : '' );
+		const extension = item.subtype || String( item.filename || 'FILE' ).split( '.' ).pop();
+		const base = 'context[resources][items][' + index + ']';
+		article.innerHTML = '<div class="kiwe-resource-card__preview">' + ( previewUrl ? '<img src="' + escapeHtml( previewUrl ) + '" alt="">' : '<span>' + escapeHtml( String( extension ).toUpperCase() ) + '</span>' ) + '</div>'
+			+ '<div class="kiwe-resource-card__body"><strong>' + escapeHtml( item.title || item.filename || ( 'Attachment #' + item.id ) ) + '</strong><small>' + escapeHtml( item.mime || item.type || '' ) + '</small>'
+			+ '<input type="hidden" name="' + base + '[attachmentId]" value="' + Number( item.id ) + '"><label><span>Intended role</span><select name="' + base + '[role]">' + options + '</select></label>'
+			+ '<label><span>Owner note (optional)</span><textarea name="' + base + '[note]" rows="2" placeholder="Use on About page, packaging certificate, homepage film…"></textarea></label></div>'
+			+ '<button type="button" class="button-link-delete" data-kiwe-resource-remove>Remove</button>';
+		return article;
+	}
 
 	root.addEventListener( 'change', function ( event ) {
 		const userSelect = event.target.closest( '[data-kiwe-person-user]' );

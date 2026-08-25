@@ -163,6 +163,22 @@ final class AI_Broker_Service {
 				'callsPerMinute' => 8,
 				'output'         => 'json',
 			],
+			'design_context' => [
+				'enabled'        => ! empty( $settings['sitegraph_ai_enabled'] ),
+				'capabilities'   => [ 'refine' ],
+				'dataBoundary'   => 'administrator_approved_owner_context_editorial_fields_only',
+				'maxPromptBytes' => 60000,
+				'callsPerMinute' => 6,
+				'output'         => 'json',
+			],
+			'seo' => [
+				'enabled'        => ! empty( $settings['sitegraph_ai_enabled'] ),
+				'capabilities'   => [ 'propose_batch' ],
+				'dataBoundary'   => 'five_public_content_records_without_visitor_or_order_data',
+				'maxPromptBytes' => 50000,
+				'callsPerMinute' => 4,
+				'output'         => 'json',
+			],
 			'securetrack' => [
 				'enabled'        => ! empty( $settings['securetrack_brief_enabled'] ),
 				'capabilities'   => [ 'classify_security' ],

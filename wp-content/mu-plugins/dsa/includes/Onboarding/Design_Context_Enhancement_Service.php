@@ -50,7 +50,7 @@ final class Design_Context_Enhancement_Service {
 			],
 			'lockedPaths' => array_merge( [
 				'ownerContext.identity.siteName', 'ownerContext.identity.logo', 'ownerContext.identity.logoInverse', 'ownerContext.identity.siteIcon',
-				'ownerContext.contact', 'ownerContext.localization', 'ownerContext.about', 'ownerContext.services', 'ownerContext.regulatory', 'ownerContext.contentPlan', 'ownerContext.commercePlan',
+				'ownerContext.contact', 'ownerContext.localization', 'ownerContext.about', 'ownerContext.services', 'ownerContext.resources', 'ownerContext.regulatory', 'ownerContext.contentPlan', 'ownerContext.commercePlan',
 				'ownerContext.seo.legalName', 'ownerContext.seo.foundedYear', 'ownerContext.seo.allowIndexing',
 			], $locked_colors ),
 			'writablePaths' => [
