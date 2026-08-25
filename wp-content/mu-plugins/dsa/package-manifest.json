@@ -357,8 +357,8 @@
       "sha256": "710d90a6b4fc24da2c72da7e3eec23fbc7b5d75b716b97124318b87778fc9aca"
     },
     "includes/AI/AI_Provider_Service.php": {
-      "bytes": 14336,
-      "sha256": "546f3b8e529b1f3332c328e4beff3dbda99b33f02b16fd856a8e9e9caa7aba81"
+      "bytes": 14992,
+      "sha256": "6af856de919a1ac5b6daa57a8682805dec18d90338ae1f67d80af17e42ebfe7b"
     },
     "includes/AI/Access_Key_Service.php": {
       "bytes": 7864,

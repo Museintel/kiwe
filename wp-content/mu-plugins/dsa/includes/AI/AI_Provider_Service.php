@@ -82,14 +82,29 @@ final class AI_Provider_Service {
 			return $this->not_called( (string) ( $request['reason'] ?? 'request_not_prepared' ), $provider, $model, $envelope );
 		}
 
-		$response = wp_remote_post(
-			(string) $request['url'],
-			[
-				'timeout' => 35,
-				'headers' => $request['headers'],
-				'body'    => wp_json_encode( $payload ),
-			]
-		);
+		$attempts = 0;
+		do {
+			++$attempts;
+			$response = wp_remote_post(
+				(string) $request['url'],
+				[
+					'timeout' => 35,
+					'headers' => $request['headers'],
+					'body'    => wp_json_encode( $payload ),
+				]
+			);
+			if ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) {
+				break;
+			}
+			$status = function_exists( 'wp_remote_retrieve_response_code' ) ? (int) wp_remote_retrieve_response_code( $response ) : 0;
+			if ( 1 === $attempts && in_array( $status, [ 500, 502, 503, 504 ], true ) ) {
+				// A single short retry absorbs provider capacity spikes without creating
+				// an unbounded shared-host request or retrying quota/auth failures.
+				usleep( 750000 );
+				continue;
+			}
+			break;
+		} while ( $attempts < 2 );
 
 		if ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) {
 			return [
@@ -102,6 +117,7 @@ final class AI_Provider_Service {
 					'message' => $response->get_error_message(),
 				],
 				'estimates' => $this->estimates( $envelope ),
+				'responseMeta' => [ 'attempts' => $attempts ],
 			];
 		}
 
@@ -121,7 +137,8 @@ final class AI_Provider_Service {
 			'outputBytes'  => strlen( $text ),
 			'estimates'    => $this->estimates( $envelope ),
 			'responseMeta' => [
-				'hasJson' => is_array( $decoded ),
+				'hasJson'  => is_array( $decoded ),
+				'attempts' => $attempts,
 			],
 		];
 		if ( [] !== $error ) {
