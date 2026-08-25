@@ -345,8 +345,8 @@
       "sha256": "7e66ce79a3ffed377ea8c5d810aeba4684d897be3c2dcdba57956726dc882087"
     },
     "includes/AI/AI_Broker_Service.php": {
-      "bytes": 10917,
-      "sha256": "23e0d7001630e06ab36169b7ae8be76085ccfcf774744741f093727a742217a4"
+      "bytes": 13034,
+      "sha256": "f2464dbabb25347a07541dfab04ae30da9d7419cb90a0444592ecccf0b345248"
     },
     "includes/AI/AI_Companion_Memory_Service.php": {
       "bytes": 3948,
@@ -357,8 +357,8 @@
       "sha256": "710d90a6b4fc24da2c72da7e3eec23fbc7b5d75b716b97124318b87778fc9aca"
     },
     "includes/AI/AI_Provider_Service.php": {
-      "bytes": 13060,
-      "sha256": "954f1fed04fd7538f07a183de43273d3e66d5222110d49c97c01d513aa5a4e43"
+      "bytes": 13231,
+      "sha256": "cd14632b148aaa835ae914dc16b844f22431e6c082bcfe8faf4631a18220d108"
     },
     "includes/AI/Access_Key_Service.php": {
       "bytes": 7864,
@@ -649,8 +649,8 @@
       "sha256": "72582120b38a637d191d8b7be8291bcc742f360e2f391c714158e9d7f303cd46"
     },
     "includes/Onboarding/Design_Context_Refinement_Service.php": {
-      "bytes": 14172,
-      "sha256": "3d9d49742e12855bfaa5dfe64b92eb1e2d0ae6dc17814d94447e9df68cf00530"
+      "bytes": 17366,
+      "sha256": "cefa0b520dcba4b4e4735f5087df97bb3a089aa79fee4a4cf94811f7a54cc676"
     },
     "includes/Onboarding/Onboarding_Service.php": {
       "bytes": 65239,
@@ -797,8 +797,8 @@
       "sha256": "15937f1c2d9f5063b13bfd3e5d09bb6b6b9f829d96b71a5ee8a657a31456adbb"
     },
     "includes/SEO/SEO_Refinement_Service.php": {
-      "bytes": 20119,
-      "sha256": "3b085e87991d180a6ba545e98f21dc43d143f07d936b4849c5cc33fc1f790ccc"
+      "bytes": 21633,
+      "sha256": "cc3817fa4c517d09c4a86d08368c344393ee91f44a00eac6c91753beb7912961"
     },
     "includes/Saved/Saved_Items_Service.php": {
       "bytes": 9269,

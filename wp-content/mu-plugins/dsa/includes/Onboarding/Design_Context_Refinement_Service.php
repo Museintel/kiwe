@@ -24,6 +24,7 @@ final class Design_Context_Refinement_Service {
 		$proposal = $this->proposal();
 		$status = $this->broker->status( 'design_context' );
 		$message = sanitize_key( (string) ( $_GET['refinement'] ?? '' ) );
+		$detail = sanitize_key( (string) ( $_GET['refinement-detail'] ?? '' ) );
 		$messages = [
 			'generated'=>__( 'Kiwe AI prepared editorial suggestions. Nothing changed until you accept it.', 'dsa' ),
 			'accepted'=>__( 'The selected refinement was accepted into owner context.', 'dsa' ),
@@ -37,6 +38,7 @@ final class Design_Context_Refinement_Service {
 		<section class="kiwe-refinement" id="kiwe-refinement">
 			<div><span class="kiwe-onboarding__eyebrow"><?php esc_html_e( 'Optional AI review', 'dsa' ); ?></span><h2><?php esc_html_e( 'Refine owner copy without losing owner facts', 'dsa' ); ?></h2><p><?php esc_html_e( 'Kiwe proposes grammar, clarity and search-intent improvements, and may draft eligible missing copy such as a mission or vision. Legal identifiers, verified claims, names, contacts, addresses, prices, products and publishing state are outside its authority.', 'dsa' ); ?></p></div>
 			<?php if ( isset( $messages[ $message ] ) ) : ?><div class="notice notice-<?php echo 'failed' === $message || 'stale' === $message ? 'warning' : 'success'; ?> inline"><p><?php echo esc_html( $messages[ $message ] ); ?></p></div><?php endif; ?>
+			<?php if ( 'failed' === $message && '' !== $detail ) : ?><p class="description"><code><?php echo esc_html( $detail ); ?></code> · <?php esc_html_e( 'This diagnostic contains no prompt, owner content or provider secret.', 'dsa' ); ?></p><?php endif; ?>
 			<?php if ( ! $this->profiles->is_complete() ) : ?><p class="description"><?php esc_html_e( 'Save owner context before requesting refinement.', 'dsa' ); ?></p><?php elseif ( empty( $status['profile']['enabled'] ) ) : ?><p class="description"><?php esc_html_e( 'The shared Kiwe AI provider is not enabled for SiteGraph/Design Context. Configure it once in Kiwe AI; no separate onboarding key is used.', 'dsa' ); ?></p><?php else : ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_generate_context_refinement"><?php wp_nonce_field( 'kiwe_generate_context_refinement' ); ?><button class="button button-primary" type="submit"><?php echo $proposal ? esc_html__( 'Generate fresh full review', 'dsa' ) : esc_html__( 'Refine my Design Context', 'dsa' ); ?></button></form>
 			<?php endif; ?>
@@ -60,7 +62,7 @@ final class Design_Context_Refinement_Service {
 	public function handle_generate(): void {
 		$this->authorize( 'kiwe_generate_context_refinement' );
 		$result = $this->generate();
-		$this->redirect( is_wp_error( $result ) ? 'failed' : 'generated' );
+		$this->redirect( is_wp_error( $result ) ? 'failed_' . sanitize_key( $result->get_error_code() ) : 'generated' );
 	}
 
 	public function handle_review(): void {
@@ -93,14 +95,16 @@ final class Design_Context_Refinement_Service {
 		foreach ( $fields as $path=>$field ) $packet[] = [ 'path'=>$path, 'label'=>$field['label'], 'current'=>$field['value'], 'mayFillWhenEmpty'=>$field['mayFill'], 'maxLength'=>$field['maxLength'] ];
 		$result = $this->broker->request( [
 			'service'=>'design_context', 'capability'=>'refine', 'operation'=>$only_path ? 'regenerate_field' : 'refine_owner_context',
-			'system'=>'Act as a precise editorial and ethical SEO copy editor. Return only JSON. Preserve language, voice, verified facts and meaning. Correct grammar and improve reader clarity. You may fill an empty field only when mayFillWhenEmpty is true and the supplied context supports it. Never invent claims, awards, dates, people, locations, credentials, prices, legal identifiers, guarantees or keywords. Avoid keyword stuffing and ranking promises.',
+			'system'=>'Act as a precise editorial and ethical SEO copy editor. Return only JSON. Preserve language, voice, verified facts and meaning. Correct grammar and improve reader clarity. You may fill an empty field only when mayFillWhenEmpty is true and the supplied context supports it. Never invent claims, awards, dates, people, locations, credentials, prices, legal identifiers, guarantees or keywords. Avoid keyword stuffing and ranking promises. Keep suggestions concise and prioritize a complete contract-valid response over verbosity.',
 			'user'=>(string) wp_json_encode( [
 				'output'=>[ 'schema'=>self::SCHEMA, 'changes'=>[ [ 'path'=>'one supplied path', 'value'=>'proposed copy', 'reason'=>'short explanation', 'confidence'=>0.0 ] ] ],
 				'context'=>$this->context_for_ai(), 'editableFields'=>$packet,
 			], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+			'responseSchema'=>$this->response_schema( array_keys( $fields ) ),
 		] );
 		$data = is_array( $result['validation']['data'] ?? null ) ? $result['validation']['data'] : [];
-		if ( empty( $result['ok'] ) || self::SCHEMA !== (string) ( $data['schema'] ?? '' ) ) return new \WP_Error( 'ai', __( 'AI refinement failed its output contract.', 'dsa' ) );
+		if ( empty( $result['ok'] ) ) return new \WP_Error( sanitize_key( (string) ( $result['reason'] ?? $result['error']['code'] ?? 'provider' ) ), __( 'AI refinement could not complete.', 'dsa' ) );
+		if ( self::SCHEMA !== (string) ( $data['schema'] ?? '' ) ) return new \WP_Error( 'schema', __( 'AI refinement failed its output contract.', 'dsa' ) );
 		$changes = [];
 		foreach ( array_slice( is_array( $data['changes'] ?? null ) ? $data['changes'] : [], 0, 30 ) as $change ) {
 			if ( ! is_array( $change ) ) continue;
@@ -112,13 +116,37 @@ final class Design_Context_Refinement_Service {
 			$id = substr( hash( 'sha256', $path ), 0, 16 );
 			$changes[ $id ] = [ 'path'=>$path, 'label'=>$field['label'], 'original'=>$field['value'], 'originalHash'=>hash( 'sha256', $field['value'] ), 'value'=>$value, 'reason'=>substr( sanitize_text_field( (string) ( $change['reason'] ?? '' ) ), 0, 300 ), 'confidence'=>max( 0, min( 1, (float) ( $change['confidence'] ?? 0 ) ) ), 'status'=>'pending' ];
 		}
-		if ( ! $changes ) return new \WP_Error( 'empty', __( 'AI returned no safe, useful changes.', 'dsa' ) );
+		if ( ! $changes ) return new \WP_Error( 'no_changes', __( 'AI returned no safe, useful changes.', 'dsa' ) );
 		$stored = $only_path ? $this->proposal() : [];
 		$stored_changes = is_array( $stored['changes'] ?? null ) ? $stored['changes'] : [];
 		if ( $only_path ) foreach ( $stored_changes as $id=>$change ) if ( $only_path === ( $change['path'] ?? '' ) ) unset( $stored_changes[ $id ] );
 		$proposal = [ 'schema'=>self::SCHEMA, 'generatedAt'=>gmdate( 'c' ), 'generatedBy'=>get_current_user_id(), 'changes'=>array_replace( $stored_changes, $changes ), 'authority'=>[ 'proposalOnly'=>true, 'mayPublish'=>false, 'lockedFactsPreserved'=>true ] ];
 		update_option( self::OPTION, $proposal, false );
 		return $proposal;
+	}
+
+	private function response_schema( array $paths ): array {
+		return [
+			'type' => 'object',
+			'additionalProperties' => false,
+			'required' => [ 'schema','changes' ],
+			'properties' => [
+				'schema' => [ 'type'=>'string', 'enum'=>[ self::SCHEMA ] ],
+				'changes' => [
+					'type'=>'array', 'maxItems'=>count( $paths ),
+					'items'=>[
+						'type'=>'object', 'additionalProperties'=>false,
+						'required'=>[ 'path','value','reason','confidence' ],
+						'properties'=>[
+							'path'=>[ 'type'=>'string', 'enum'=>array_values( $paths ) ],
+							'value'=>[ 'type'=>'string', 'maxLength'=>5000 ],
+							'reason'=>[ 'type'=>'string', 'maxLength'=>300 ],
+							'confidence'=>[ 'type'=>'number' ],
+						],
+					],
+				],
+			],
+		];
 	}
 
 	private function accept( string $id ): bool {
@@ -172,13 +200,26 @@ final class Design_Context_Refinement_Service {
 	}
 
 	private function context_for_ai(): array {
-		$context = $this->profiles->public_context( true );
-		$context['about']['team']['members'] = array_slice( (array) ( $context['about']['team']['members'] ?? [] ), 0, 20 );
-		$context['services']['items'] = array_slice( (array) ( $context['services']['items'] ?? [] ), 0, 20 );
-		$context['resources']['items'] = array_slice( (array) ( $context['resources']['items'] ?? [] ), 0, 20 );
-		$context['contentPlan']['existingPages'] = array_slice( (array) ( $context['contentPlan']['existingPages'] ?? [] ), 0, 30 );
-		$context['contentPlan']['plannedPages'] = array_slice( (array) ( $context['contentPlan']['plannedPages'] ?? [] ), 0, 20 );
-		return $context;
+		$context = $this->profiles->public_context( false );
+		$about = is_array( $context['about'] ?? null ) ? $context['about'] : [];
+		$founder = is_array( $about['founder'] ?? null ) ? $about['founder'] : [];
+		$services = is_array( $context['services']['items'] ?? null ) ? $context['services']['items'] : [];
+		return [
+			'schema'=>'kiwe.design-context-editorial-evidence.v1',
+			'identity'=>array_intersect_key( (array) ( $context['identity'] ?? [] ), array_flip( [ 'siteName','tagline','description','industry','industrySector','siteType' ] ) ),
+			'audience'=>array_intersect_key( (array) ( $context['audience'] ?? [] ), array_flip( [ 'primary','locations','needs' ] ) ),
+			'about'=>[
+				'story'=>(string) ( $about['story'] ?? '' ), 'mission'=>(string) ( $about['mission'] ?? '' ), 'vision'=>(string) ( $about['vision'] ?? '' ),
+				'values'=>(string) ( $about['values'] ?? '' ), 'usp'=>(string) ( $about['usp'] ?? '' ),
+				'founder'=>array_intersect_key( $founder, array_flip( [ 'enabled','name','role','bio' ] ) ),
+			],
+			'brand'=>array_intersect_key( (array) ( $context['brand'] ?? [] ), array_flip( [ 'tone','notes','colors' ] ) ),
+			'seo'=>array_intersect_key( (array) ( $context['seo'] ?? [] ), array_flip( [ 'homepageDescription','legalName','foundedYear','primaryGoal','searchIntent','proofPoints' ] ) ),
+			'contentSignals'=>array_intersect_key( (array) ( $context['contentPlan'] ?? [] ), array_flip( [ 'showBlogRailOnHome','highlightBestsellers' ] ) ),
+			'commerce'=>array_intersect_key( (array) ( $context['commercePlan'] ?? [] ), array_flip( [ 'enabled','hasBundles','currency','sellingLocations' ] ) ),
+			'services'=>array_values( array_slice( array_map( static fn( $service ): array => array_intersect_key( is_array( $service ) ? $service : [], array_flip( [ 'title','summary','categoryPaths' ] ) ), $services ), 0, 20 ) ),
+			'authority'=>[ 'editableFieldsSuppliedSeparately'=>true, 'ownerEvidenceWins'=>true, 'mayInventFacts'=>false, 'excluded'=>[ 'contacts','operationalAddress','legalIdentifiers','mediaResources','adminIdentities' ] ],
+		];
 	}
 
 	private function authorize( string $nonce ): void {
@@ -187,7 +228,12 @@ final class Design_Context_Refinement_Service {
 	}
 
 	private function redirect( string $status ): void {
-		wp_safe_redirect( admin_url( 'admin.php?page=kiwe-onboarding&saved=1&refinement=' . sanitize_key( $status ) . '#kiwe-refinement' ) );
+		$normalized = sanitize_key( $status );
+		$notice = str_starts_with( $normalized, 'failed_' ) ? 'failed' : $normalized;
+		$detail = str_starts_with( $normalized, 'failed_' ) ? substr( $normalized, 7 ) : '';
+		$url = add_query_arg( [ 'saved'=>'1', 'refinement'=>$notice ], admin_url( 'admin.php?page=kiwe-onboarding' ) );
+		if ( '' !== $detail ) $url = add_query_arg( 'refinement-detail', $detail, $url );
+		wp_safe_redirect( $url . '#kiwe-refinement' );
 		exit;
 	}
 }

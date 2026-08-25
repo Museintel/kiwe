@@ -93,6 +93,12 @@ final class AI_Broker_Service {
 			'responseMimeType' => in_array( sanitize_key( (string) ( $profile['output'] ?? 'text' ) ), [ 'json','securetrack_review_json' ], true ) ? 'application/json' : 'text/plain',
 			'thinkingLevel' => in_array( sanitize_key( (string) ( $profile['output'] ?? 'text' ) ), [ 'json','securetrack_review_json' ], true ) ? 'low' : 'medium',
 		];
+		if ( 'application/json' === $envelope['responseMimeType'] && is_array( $request['responseSchema'] ?? null ) ) {
+			$schema = $this->response_schema( $request['responseSchema'] );
+			if ( [] !== $schema ) {
+				$envelope['responseSchema'] = $schema;
+			}
+		}
 		$result = $this->transport->generate( $envelope );
 		$result['schema']        = 'kiwe.ai-broker.result.v1';
 		$result['service']       = $service;
@@ -240,6 +246,45 @@ final class AI_Broker_Service {
 		$output = preg_replace( '/^```(?:json)?\s*|\s*```$/i', '', $output );
 		$decoded = json_decode( (string) $output, true );
 		return is_array( $decoded ) ? $decoded : null;
+	}
+
+	/** Keep provider schema hints bounded and declarative. They never grant authority. */
+	private function response_schema( array $schema, int $depth = 0 ): array {
+		if ( $depth > 8 ) {
+			return [];
+		}
+		$out = [];
+		$type = sanitize_key( (string) ( $schema['type'] ?? '' ) );
+		if ( in_array( $type, [ 'object','array','string','number','integer','boolean' ], true ) ) {
+			$out['type'] = $type;
+		}
+		if ( isset( $schema['properties'] ) && is_array( $schema['properties'] ) ) {
+			$out['properties'] = [];
+			foreach ( array_slice( $schema['properties'], 0, 40, true ) as $key => $value ) {
+				$key = preg_replace( '/[^a-zA-Z0-9_.-]/', '', (string) $key );
+				if ( '' !== $key && is_array( $value ) ) {
+					$out['properties'][ $key ] = $this->response_schema( $value, $depth + 1 );
+				}
+			}
+		}
+		if ( isset( $schema['items'] ) && is_array( $schema['items'] ) ) {
+			$out['items'] = $this->response_schema( $schema['items'], $depth + 1 );
+		}
+		if ( isset( $schema['required'] ) && is_array( $schema['required'] ) ) {
+			$out['required'] = array_values( array_filter( array_map( static fn( $key ): string => (string) preg_replace( '/[^a-zA-Z0-9_.-]/', '', (string) $key ), array_slice( $schema['required'], 0, 40 ) ) ) );
+		}
+		if ( isset( $schema['enum'] ) && is_array( $schema['enum'] ) ) {
+			$out['enum'] = array_values( array_slice( array_filter( $schema['enum'], static fn( $value ): bool => is_scalar( $value ) || null === $value ), 0, 100 ) );
+		}
+		foreach ( [ 'maxItems'=>100, 'minItems'=>100, 'maxLength'=>10000, 'minLength'=>10000 ] as $key => $ceiling ) {
+			if ( isset( $schema[ $key ] ) ) {
+				$out[ $key ] = max( 0, min( $ceiling, absint( $schema[ $key ] ) ) );
+			}
+		}
+		if ( array_key_exists( 'additionalProperties', $schema ) ) {
+			$out['additionalProperties'] = (bool) $schema['additionalProperties'];
+		}
+		return $out;
 	}
 
 	private function blocked( string $reason, string $service, string $capability, string $correlation_id ): array {

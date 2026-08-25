@@ -80,6 +80,7 @@ final class SEO_Refinement_Service {
 				'service'=>'seo', 'capability'=>'propose_batch', 'operation'=>'seo_' . sanitize_key( (string) $job['scope'] ),
 				'system'=>'Return only contract JSON. Improve discoverability and reader clarity without keyword stuffing. Use siteContext only as verified editorial context for audience, business goal, brand voice, search intent and proof points; do not force every context fact into every record. Prefer a natural SEO title under 60 characters and a useful meta description around 120-160 characters. Preserve verified meaning and product facts. Do not invent claims, locations, credentials, ingredients, benefits, prices, availability or guarantees. For media, leave alt empty when the supplied filename, metadata and parent context do not prove what the media depicts. Search phrases are internal planning phrases and must never be emitted as meta keywords. Do not change URLs or filenames.',
 				'user'=>(string) wp_json_encode( [ 'schema'=>self::SCHEMA, 'scope'=>$job['scope'], 'siteContext'=>$this->site_context(), 'records'=>$records, 'output'=>[ 'schema'=>self::SCHEMA, 'proposals'=>[ [ 'id'=>0, 'fields'=>'all_media' === $job['scope'] ? [ 'title'=>'','alt'=>'','caption'=>'','description'=>'' ] : [ 'seoTitle'=>'','metaDescription'=>'','excerpt'=>'','searchPhrases'=>[] ], 'reason'=>'' ] ] ] ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+				'responseSchema'=>$this->response_schema( $records, (string) $job['scope'] ),
 			] );
 			$data = is_array( $result['validation']['data'] ?? null ) ? $result['validation']['data'] : [];
 			if ( ! empty( $result['ok'] ) && self::SCHEMA === ( $data['schema'] ?? '' ) ) $job['proposals'] = array_replace( (array) $job['proposals'], $this->sanitize_proposals( (array) ( $data['proposals'] ?? [] ), $records, (string) $job['scope'] ) );
@@ -99,6 +100,40 @@ final class SEO_Refinement_Service {
 		} finally {
 			delete_transient( $lock );
 		}
+	}
+
+	private function response_schema( array $records, string $scope ): array {
+		$is_media = str_starts_with( $scope, 'all_media' );
+		$fields = $is_media
+			? [
+				'title'=>[ 'type'=>'string', 'maxLength'=>200 ],
+				'alt'=>[ 'type'=>'string', 'maxLength'=>300 ],
+				'caption'=>[ 'type'=>'string', 'maxLength'=>1000 ],
+				'description'=>[ 'type'=>'string', 'maxLength'=>3000 ],
+			]
+			: [
+				'seoTitle'=>[ 'type'=>'string', 'maxLength'=>200 ],
+				'metaDescription'=>[ 'type'=>'string', 'maxLength'=>320 ],
+				'excerpt'=>[ 'type'=>'string', 'maxLength'=>1000 ],
+				'searchPhrases'=>[ 'type'=>'array', 'maxItems'=>10, 'items'=>[ 'type'=>'string', 'maxLength'=>120 ] ],
+			];
+		return [
+			'type'=>'object', 'additionalProperties'=>false, 'required'=>[ 'schema','proposals' ],
+			'properties'=>[
+				'schema'=>[ 'type'=>'string', 'enum'=>[ self::SCHEMA ] ],
+				'proposals'=>[
+					'type'=>'array', 'maxItems'=>count( $records ),
+					'items'=>[
+						'type'=>'object', 'additionalProperties'=>false, 'required'=>[ 'id','fields','reason' ],
+						'properties'=>[
+							'id'=>[ 'type'=>'integer', 'enum'=>array_values( array_map( static fn( $record ): int => absint( $record['id'] ?? 0 ), $records ) ) ],
+							'fields'=>[ 'type'=>'object', 'additionalProperties'=>false, 'required'=>array_keys( $fields ), 'properties'=>$fields ],
+							'reason'=>[ 'type'=>'string', 'maxLength'=>300 ],
+						],
+					],
+				],
+			],
+		];
 	}
 
 	public function handle_review(): void {

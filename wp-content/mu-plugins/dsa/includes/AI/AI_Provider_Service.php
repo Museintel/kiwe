@@ -198,6 +198,9 @@ final class AI_Provider_Service {
 			}
 			if ( 'application/json' === ( $envelope['responseMimeType'] ?? '' ) ) {
 				$config['responseMimeType'] = 'application/json';
+				if ( is_array( $envelope['responseSchema'] ?? null ) && [] !== $envelope['responseSchema'] ) {
+					$config['responseJsonSchema'] = $envelope['responseSchema'];
+				}
 			}
 			return [
 				'contents'         => [
