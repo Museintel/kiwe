@@ -2,6 +2,8 @@
 
 namespace DSA\Site_Graph;
 
+use DSA\Commerce\Product_Context_Service;
+
 use DSA\Site\Site_Identity_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -381,6 +383,7 @@ final class Data_Query_Service {
 				'upsells'      => $upsells,
 				'bundleItems'  => $this->bundle_items( $product ),
 				'kiweMerchandising' => $this->kiwe_merchandising( $product ),
+				'nutritionImage' => Product_Context_Service::nutrition_image( (int) $product->get_id() ),
 			];
 		}
 

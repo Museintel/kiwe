@@ -14,11 +14,20 @@ native systems that already own site data:
 
 ## Owner journey
 
-The journey covers identity, business story, public contact, brand feeling,
-page intent, store planning and a final authority review. Existing native data
-is prefilled. Site name, logo, site icon, public phone and public email are
-required. Inverse logo, social links, colors and visual preferences are
-optional. WhatsApp may explicitly reuse the public phone.
+The journey covers identity, industry, business story, mission, vision, values,
+USP, optional founder evidence, public contact, brand feeling, page intent,
+store planning and a final authority review. Existing native data is prefilled.
+Site name, logo, site icon, public phone and public email are required. Inverse
+logo, founder details, social links, colors and visual preferences are optional.
+WhatsApp may explicitly reuse the public phone.
+
+For stores, WooCommerce remains the authority for title, long/short
+description, images/gallery, SKU, price, stock, weight, dimensions, attributes
+and product relationships. Kiwe adds one missing public product field: a
+nutrition-information image attachment. Food businesses can record an FSSAI
+licence and its product-page display decision; stores can also record GST and a
+public manufacturing address decision. These values are reusable Design
+Context facts and Bricks/WP7 dynamic data, not copied page content.
 
 Owner color choices map only to real human-selectable SEAM anchors:
 `color-brand`, `color-accent`, `color-hero`, `color-neutral`, and
@@ -52,3 +61,19 @@ become the homepage meta description or schema description.
 
 Kiwe never invents tax rates, creates shipping zones, creates planned pages, or
 creates products during onboarding.
+
+## Dynamic ownership
+
+Onboarding is resumable and may be revisited. Public owner facts are exposed as
+Kiwe Bricks dynamic tags and WP7 binding sources, while products use native
+Bricks/WooCommerce tags plus `{kiwe_product_nutrition_image}`. Therefore a later
+owner edit changes bound front-end output without regenerating a page. The
+homepage blog-rail and bestseller choices are intent, not layout instructions;
+the latter enables Kiwe's maintained bestseller taxonomy when selected.
+
+On Bricks installations, Kiwe applies a one-time compatibility profile for its
+dynamic tags and launchers. If WooCommerce is also present, the add-to-cart,
+quantity, stock, linked-products and mini-cart adapters are enabled once. Every
+other optional fresh-install capability remains off except read-only SiteGraph,
+and an administrator may disable an adapter afterwards without it being forced
+back on.

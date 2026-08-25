@@ -102,6 +102,16 @@
 	const commerceFields = root.querySelector( '[data-kiwe-commerce-fields]' );
 	function syncCommerce() { if ( commerceFields && commerceToggle ) commerceFields.toggleAttribute( 'inert', ! commerceToggle.checked ); }
 	if ( commerceToggle ) { commerceToggle.addEventListener( 'change', syncCommerce ); syncCommerce(); }
+	const industrySector = root.querySelector( '[data-kiwe-industry-sector]' );
+	function syncIndustryFields() {
+		const food = industrySector && industrySector.value === 'food_beverage';
+		root.querySelectorAll( '[data-kiwe-food-field]' ).forEach( function ( field ) {
+			field.hidden = ! food;
+			field.toggleAttribute( 'inert', ! food );
+		} );
+	}
+	if ( industrySector ) industrySector.addEventListener( 'change', syncIndustryFields );
+	syncIndustryFields();
 
 	const phone = root.querySelector( '[data-kiwe-public-phone]' );
 	const whatsappSame = root.querySelector( '[data-kiwe-whatsapp-same]' );

@@ -18,6 +18,7 @@ const core = read('kiwe-ai-toolkit/lib/kiwe-core.js');
 const dynamic = read('kiwe-ai-toolkit/contexts/dynamic-lite.md');
 const manifest = JSON.parse(read('kiwe-ai-toolkit/command-manifest.json'));
 const enhancement = read('wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Enhancement_Service.php');
+const ideate = read('kiwe-ai-toolkit/contexts/ideate-lite.md');
 
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -47,6 +48,9 @@ check('owner context exposes social and complete market coverage without secrets
 check('design context embeds a hash-bound AI enhancement contract and resolved layer', service.includes("'designContextEnhancementContract'") && service.includes("'resolvedDesignContext'") && service.includes("'ownerContextHash'") && enhancement.includes('lockedPaths'));
 check('AI enhancement command is compact vendor-neutral and framework-safe', manifest.commandGrammar.phaseTargets.includes('/designcontextenhancement') && manifest.commands['/create /designcontextenhancement'] && dynamic.includes('/create /designcontextenhancement') && dynamic.includes('does not silently enable Seam Framework'));
 check('design context is self-describing for bare ideate without granting write authority', service.includes("'ideationContract'") && service.includes("'autoComposeCommands' => [ '/ideate' ]") && service.includes("'ownerFacts' => 'locked'") && service.includes("'ownerPreferences' => 'preserve-unless-human-explicitly-revises'") && service.includes("'mayMutateDesignContext' => false") && service.includes("'ideateCommand' => '/ideate'"));
+check('SiteGraph exposes verified native Bricks product tags plus Kiwe nutrition media', ['{post_title}','{post_content}','{woo_product_excerpt}','{woo_product_price}','{woo_product_images}','{kiwe_product_nutrition_image}'].every((tag) => service.includes(tag)) && data.includes("'nutritionImage'"));
+check('ideate requests SiteGraph only when real site evidence is needed', ideate.includes('requested draft needs real products') && ideate.includes('Do not ask for SiteGraph merely to create a concept') && service.includes("'siteDataRequirement'"));
+check('ideate delivery includes portable assets and a provenance manifest', ideate.includes('assets/asset-manifest.json') && ideate.includes('intended WordPress Media use') && manifest.commands['/ideate'].output.some((item) => item.includes('asset-manifest.json')));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

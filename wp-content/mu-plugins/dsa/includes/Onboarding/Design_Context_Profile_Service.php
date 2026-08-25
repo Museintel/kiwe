@@ -120,6 +120,9 @@ final class Design_Context_Profile_Service {
 	public function public_context( bool $administrator = false ): array {
 		$profile = $this->current();
 		$address = $profile['contact']['address'];
+		$about   = $profile['about'];
+		$founder_image_id = absint( $about['founder']['imageId'] ?? 0 );
+		$about['founder']['image'] = $founder_image_id ? esc_url_raw( (string) wp_get_attachment_url( $founder_image_id ) ) : '';
 		if ( ! $administrator ) {
 			$address = [
 				'city'    => $address['city'],
@@ -136,11 +139,13 @@ final class Design_Context_Profile_Service {
 				'tagline'     => $profile['identity']['tagline'],
 				'description' => $profile['identity']['description'],
 				'industry'    => $profile['identity']['industry'],
+				'industrySector' => $profile['identity']['industrySector'],
 				'siteType'    => $profile['identity']['siteType'],
 				'logo'        => Site_Identity_Service::logo_url(),
 				'logoInverse' => Site_Identity_Service::logo_url( 'inverse' ),
 				'siteIcon'    => get_site_icon_url( 512 ) ?: '',
 			],
+			'about'       => $about,
 			'contact' => [
 				'phone'    => $profile['contact']['phone'],
 				'email'    => $profile['contact']['email'],
@@ -152,6 +157,7 @@ final class Design_Context_Profile_Service {
 			'brand'       => $profile['brand'],
 			'audience'    => $profile['audience'],
 			'contentPlan' => $profile['contentPlan'],
+			'regulatory'  => $profile['regulatory'],
 			'commercePlan'=> [
 				'enabled'              => $profile['commerce']['enabled'],
 				'expectedProductCount' => $profile['commerce']['expectedProductCount'],
@@ -185,6 +191,7 @@ final class Design_Context_Profile_Service {
 			! empty( $p['contact']['phone'] ), ! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
 			! empty( $p['seo']['legalName'] ), ! empty( $p['seo']['primaryGoal'] ),
 			! empty( $p['seo']['searchIntent'] ), ! empty( $p['seo']['proofPoints'] ),
+			! empty( $p['about']['story'] ), ! empty( $p['about']['mission'] ) || ! empty( $p['about']['vision'] ),
 		];
 		$design_checks = [
 			! empty( $p['identity']['siteName'] ), ! empty( $p['identity']['description'] ),
@@ -193,6 +200,7 @@ final class Design_Context_Profile_Service {
 			! empty( $p['brand']['tone'] ), ! empty( $p['brand']['colors'] ),
 			! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
 			! empty( $p['brand']['notes'] ),
+			! empty( $p['about']['story'] ), ! empty( $p['about']['usp'] ), ! empty( $p['about']['values'] ),
 		];
 		$percent = static fn( array $checks ): int => (int) round( 100 * count( array_filter( $checks ) ) / max( 1, count( $checks ) ) );
 		return [ 'seoStrength' => $percent( $seo_checks ), 'designContextStrength' => $percent( $design_checks ) ];
@@ -216,7 +224,7 @@ final class Design_Context_Profile_Service {
 			'identity' => [
 				'siteName' => wp_strip_all_tags( (string) get_bloginfo( 'name' ) ),
 				'tagline' => wp_strip_all_tags( (string) get_bloginfo( 'description' ) ),
-				'description' => '', 'industry' => '', 'siteType' => function_exists( 'WC' ) ? 'ecommerce' : 'business',
+				'description' => '', 'industry' => '', 'industrySector' => '', 'siteType' => function_exists( 'WC' ) ? 'ecommerce' : 'business',
 				'logoId' => Site_Identity_Service::attachment_id(), 'logoInverseId' => Site_Identity_Service::attachment_id( Site_Identity_Service::OPTION_LOGO_INVERSE ), 'siteIconId' => (int) get_option( 'site_icon', 0 ),
 			],
 			'contact' => [
@@ -231,9 +239,18 @@ final class Design_Context_Profile_Service {
 			],
 			'localization' => [ 'timezone' => wp_timezone_string(), 'language' => sanitize_text_field( (string) get_bloginfo( 'language' ) ) ],
 			'audience' => [ 'primary' => '', 'locations' => '', 'needs' => '' ],
+			'about' => [
+				'story' => '', 'mission' => '', 'vision' => '', 'values' => '', 'usp' => '',
+				'founder' => [ 'name' => '', 'title' => '', 'bio' => '', 'imageId' => 0 ],
+			],
 			'brand' => [ 'tone' => '', 'colors' => [], 'notes' => '' ],
-			'contentPlan' => [ 'existingPages' => $pages, 'plannedPages' => [] ],
+			'contentPlan' => [ 'existingPages' => $pages, 'plannedPages' => [], 'showBlogRailOnHome' => false, 'highlightBestsellers' => false ],
 			'commerce' => $product_plan,
+			'regulatory' => [
+				'fssaiLicense' => '', 'showFssaiOnProducts' => false,
+				'gstNumber' => '', 'showGstOnProducts' => false,
+				'manufacturingAddress' => '', 'showManufacturingAddress' => false,
+			],
 			'seo' => [ 'homepageDescription' => '', 'legalName' => '', 'foundedYear' => 0, 'primaryGoal' => '', 'searchIntent' => '', 'proofPoints' => '', 'allowIndexing' => '0' !== (string) get_option( 'blog_public', '1' ) ],
 			'scores' => [ 'seoStrength' => 0, 'designContextStrength' => 0 ],
 			'meta' => [ 'schema' => 'kiwe.seam-design-context.v1' ],
@@ -279,6 +296,9 @@ final class Design_Context_Profile_Service {
 		$commerce = is_array( $raw['commerce'] ?? null ) ? $raw['commerce'] : [];
 		$seo = is_array( $raw['seo'] ?? null ) ? $raw['seo'] : [];
 		$audience = is_array( $raw['audience'] ?? null ) ? $raw['audience'] : [];
+		$about = is_array( $raw['about'] ?? null ) ? $raw['about'] : [];
+		$founder = is_array( $about['founder'] ?? null ) ? $about['founder'] : [];
+		$regulatory = is_array( $raw['regulatory'] ?? null ) ? $raw['regulatory'] : [];
 		$localization = is_array( $raw['localization'] ?? null ) ? $raw['localization'] : [];
 		$content = is_array( $raw['contentPlan'] ?? null ) ? $raw['contentPlan'] : [];
 
@@ -318,6 +338,7 @@ final class Design_Context_Profile_Service {
 			'identity' => [
 				'siteName' => sanitize_text_field( (string) ( $identity['siteName'] ?? '' ) ), 'tagline' => sanitize_text_field( (string) ( $identity['tagline'] ?? '' ) ),
 				'description' => sanitize_textarea_field( (string) ( $identity['description'] ?? '' ) ), 'industry' => sanitize_text_field( (string) ( $identity['industry'] ?? '' ) ),
+				'industrySector' => in_array( $identity['industrySector'] ?? '', [ '', 'food_beverage', 'retail', 'manufacturing', 'healthcare', 'education', 'hospitality', 'professional_services', 'technology', 'media', 'nonprofit', 'real_estate', 'other' ], true ) ? $identity['industrySector'] : '',
 				'siteType' => in_array( $identity['siteType'] ?? '', [ 'business', 'ecommerce', 'publication', 'portfolio', 'nonprofit', 'community', 'education', 'service', 'other' ], true ) ? $identity['siteType'] : 'business',
 				'logoId' => absint( $identity['logoId'] ?? 0 ), 'logoInverseId' => absint( $identity['logoInverseId'] ?? 0 ), 'siteIconId' => absint( $identity['siteIconId'] ?? 0 ),
 			],
@@ -327,8 +348,25 @@ final class Design_Context_Profile_Service {
 			],
 			'localization' => [ 'timezone' => sanitize_text_field( (string) ( $localization['timezone'] ?? $current['localization']['timezone'] ) ), 'language' => sanitize_text_field( (string) get_bloginfo( 'language' ) ) ],
 			'audience' => [ 'primary' => sanitize_text_field( (string) ( $audience['primary'] ?? '' ) ), 'locations' => sanitize_text_field( (string) ( $audience['locations'] ?? '' ) ), 'needs' => sanitize_textarea_field( (string) ( $audience['needs'] ?? '' ) ) ],
+			'about' => [
+				'story' => substr( sanitize_textarea_field( (string) ( $about['story'] ?? '' ) ), 0, 5000 ),
+				'mission' => substr( sanitize_textarea_field( (string) ( $about['mission'] ?? '' ) ), 0, 2000 ),
+				'vision' => substr( sanitize_textarea_field( (string) ( $about['vision'] ?? '' ) ), 0, 2000 ),
+				'values' => substr( sanitize_textarea_field( (string) ( $about['values'] ?? '' ) ), 0, 2000 ),
+				'usp' => substr( sanitize_textarea_field( (string) ( $about['usp'] ?? '' ) ), 0, 2000 ),
+				'founder' => [
+					'name' => substr( sanitize_text_field( (string) ( $founder['name'] ?? '' ) ), 0, 200 ),
+					'title' => substr( sanitize_text_field( (string) ( $founder['title'] ?? '' ) ), 0, 200 ),
+					'bio' => substr( sanitize_textarea_field( (string) ( $founder['bio'] ?? '' ) ), 0, 3000 ),
+					'imageId' => ( static function ( int $id ): int { return $id && wp_attachment_is_image( $id ) ? $id : 0; } )( absint( $founder['imageId'] ?? 0 ) ),
+				],
+			],
 			'brand' => [ 'tone' => in_array( $brand['tone'] ?? '', [ 'pastel', 'vibrant', 'muted', 'natural', 'dark', 'light', 'luxury', 'playful', 'minimal', '' ], true ) ? $brand['tone'] : '', 'colors' => $colors, 'notes' => sanitize_textarea_field( (string) ( $brand['notes'] ?? '' ) ) ],
-			'contentPlan' => [ 'existingPages' => $existing, 'plannedPages' => $planned ],
+			'contentPlan' => [
+				'existingPages' => $existing, 'plannedPages' => $planned,
+				'showBlogRailOnHome' => ! empty( $content['showBlogRailOnHome'] ),
+				'highlightBestsellers' => ! empty( $content['highlightBestsellers'] ),
+			],
 			'commerce' => [
 				'enabled' => ! empty( $commerce['enabled'] ), 'expectedProductCount' => min( 1000000, absint( $commerce['expectedProductCount'] ?? 0 ) ),
 				'expectedPriceRange' => [ 'min' => max( 0, (float) ( $commerce['expectedPriceRange']['min'] ?? 0 ) ), 'max' => max( 0, (float) ( $commerce['expectedPriceRange']['max'] ?? 0 ) ) ],
@@ -345,6 +383,14 @@ final class Design_Context_Profile_Service {
 				'shippingCountries' => $country_codes( $commerce['shippingCountries'] ?? [] ),
 				'shippingModel' => in_array( $commerce['shippingModel'] ?? '', [ 'free', 'flat', 'calculated', 'pickup', 'mixed', '' ], true ) ? $commerce['shippingModel'] : '',
 				'typicalShippingCharge' => max( 0, (float) ( $commerce['typicalShippingCharge'] ?? 0 ) ),
+			],
+			'regulatory' => [
+				'fssaiLicense' => substr( preg_replace( '/[^A-Za-z0-9\/-]/', '', (string) ( $regulatory['fssaiLicense'] ?? '' ) ), 0, 30 ),
+				'showFssaiOnProducts' => ! empty( $regulatory['showFssaiOnProducts'] ),
+				'gstNumber' => substr( strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', (string) ( $regulatory['gstNumber'] ?? '' ) ) ), 0, 20 ),
+				'showGstOnProducts' => ! empty( $regulatory['showGstOnProducts'] ),
+				'manufacturingAddress' => substr( sanitize_textarea_field( (string) ( $regulatory['manufacturingAddress'] ?? '' ) ), 0, 1500 ),
+				'showManufacturingAddress' => ! empty( $regulatory['showManufacturingAddress'] ),
 			],
 			'seo' => [
 				'homepageDescription' => substr( sanitize_textarea_field( (string) ( $seo['homepageDescription'] ?? '' ) ), 0, 320 ),
@@ -415,6 +461,11 @@ final class Design_Context_Profile_Service {
 		$link_hub = is_array( $settings['link_hub'] ?? null ) ? $settings['link_hub'] : [];
 		$link_hub['social_links'] = $profile['contact']['socialLinks'];
 		$settings['link_hub'] = $link_hub;
+		if ( ! empty( $profile['contentPlan']['highlightBestsellers'] ) ) {
+			$commerce = is_array( $settings['commerce'] ?? null ) ? $settings['commerce'] : [];
+			$commerce['bestseller_enabled'] = true;
+			$settings['commerce'] = $commerce;
+		}
 		update_option( DSA_OPTION_SETTINGS, $settings, false );
 	}
 }

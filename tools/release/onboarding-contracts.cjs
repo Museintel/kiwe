@@ -14,6 +14,11 @@ const enhancement = read('wp-content/mu-plugins/dsa/includes/Onboarding/Design_C
 const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const linksEndpoint = read('wp-content/mu-plugins/dsa/includes/Public_Endpoint/Assets.php');
 const linksPanel = read('wp-content/mu-plugins/dsa/assets/js/modules/links-panel.js');
+const productContext = read('wp-content/mu-plugins/dsa/includes/Commerce/Product_Context_Service.php');
+const productContextJs = read('wp-content/mu-plugins/dsa/assets/js/product-context.js');
+const dataQuery = read('wp-content/mu-plugins/dsa/includes/Site_Graph/Data_Query_Service.php');
+const bindings = read('wp-content/mu-plugins/dsa/includes/WP7/Bindings_Service.php');
+const settings = read('wp-content/mu-plugins/dsa/includes/Settings.php');
 const enhancementSchema = JSON.parse(read('wp-content/mu-plugins/dsa/site-graph-system/contracts/design-context-enhancement.schema.json'));
 
 const checks = [];
@@ -47,6 +52,12 @@ check('AI enhancement wire schema rejects owner-write authority', enhancementSch
 check('owner-selected colors win over enhancement and Framework imports', enhancement.includes("in_array( $role, $owner_roles, true )") && enhancement.includes('validate_framework_tokens') && admin.includes('enhancement-color-conflict'));
 check('Framework admin exposes explicit validated enhancement import', admin.includes('dsa_import_design_context_enhancement') && admin.includes('Validate & approve Design Context enhancement') && admin.includes('frameworkOptIn'));
 check('DSA score surface uses onboarding SEO readiness only when no manual score exists', profile.includes('saved_seo_strength') && linksEndpoint.includes('Design_Context_Profile_Service::saved_seo_strength()') && linksEndpoint.includes("'scoreSource'") && linksPanel.includes('data.scoreLabel'));
+check('owner context includes universal About-page facts without requiring a founder narrative', ['story','mission','vision','values','usp','founder'].every((field) => onboarding.includes(field) && profile.includes(field)) && onboarding.includes('not founder-led'));
+check('store context captures industry-conditioned FSSAI and explicit public disclosure decisions', onboarding.includes('industrySector') && onboarding.includes('FSSAI licence number') && ['showFssaiOnProducts','showGstOnProducts','showManufacturingAddress'].every((field) => onboarding.includes(field) && profile.includes(field)) && js.includes('data-kiwe-food-field'));
+check('WooCommerce keeps native product authority while Kiwe adds a media-owned nutrition image', productContext.includes('kiwe_nutrition_image_id') && productContext.includes('woocommerce_product_options_general_product_data') && productContext.includes('wp_attachment_is_image') && productContextJs.includes('wp.media') && dataQuery.includes("'nutritionImage'"));
+check('new owner and product fields are live Bricks and WP7 dynamic surfaces', ['kiwe_business_mission','kiwe_founder_image','kiwe_fssai_license','kiwe_product_nutrition_image'].every((tag) => bricks.includes(tag)) && bindings.includes("'kiwe/product'") && bindings.includes("'nutrition_image'"));
+check('homepage rails remain intent while selecting bestsellers activates the maintained service', onboarding.includes('Show recent articles or a blog rail') && onboarding.includes('Highlight best-selling products') && profile.includes("$commerce['bestseller_enabled'] = true"));
+check('Bricks and Woo compatibility adapters enable once without activating unrelated fresh-install runtimes', settings.includes('apply_bricks_compatibility_profile') && settings.includes('dsa_bricks_compatibility_profile_v1') && settings.includes('dsa_bricks_woocommerce_profile_v1') && settings.includes("$bricks['add_to_cart_enhancer_enabled']") && settings.includes('SITE_GRAPH_ONLY_PROFILE'));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

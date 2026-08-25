@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Settings {
-	private const SAFETY_MIGRATION_VERSION = 5;
+	private const SAFETY_MIGRATION_VERSION = 6;
 	private const INSTALL_PROFILE_OPTION = 'dsa_install_profile';
 	private const SITE_GRAPH_ONLY_PROFILE = 'sitegraph_only_v1';
 
@@ -48,6 +48,7 @@ final class Settings {
 
 		self::$safety_migrations_checked = true;
 		$this->initialize_fresh_install_profile();
+		$this->apply_bricks_compatibility_profile();
 
 		if ( (int) get_option( 'dsa_safety_migration_version', 0 ) >= self::SAFETY_MIGRATION_VERSION ) {
 			return;
@@ -172,6 +173,62 @@ final class Settings {
 		}
 
 		return $settings;
+	}
+
+	/**
+	 * Enable only Kiwe's Bricks compatibility layer after Bricks is detected.
+	 *
+	 * This is a one-time profile, so an administrator can turn an individual
+	 * adapter off later without Kiwe silently re-enabling it on every request.
+	 * It does not activate the Dock, AppShell, tracking, AI or other optional
+	 * fresh-install capabilities.
+	 */
+	private function apply_bricks_compatibility_profile(): void {
+		if ( ! $this->is_bricks_installation() ) {
+			return;
+		}
+
+		$base_done = 'done' === get_option( 'dsa_bricks_compatibility_profile_v1', '' );
+		$woo       = class_exists( 'WooCommerce' ) || function_exists( 'WC' );
+		$woo_done  = 'done' === get_option( 'dsa_bricks_woocommerce_profile_v1', '' );
+		if ( $base_done && ( ! $woo || $woo_done ) ) {
+			return;
+		}
+
+		$settings = get_option( DSA_OPTION_SETTINGS, [] );
+		$settings = is_array( $settings ) ? $settings : [];
+		$bricks   = is_array( $settings['bricks'] ?? null ) ? $settings['bricks'] : [];
+
+		if ( ! $base_done ) {
+			$bricks['dynamic_tags_enabled']     = true;
+			$bricks['dsa_icon_launcher_enabled'] = true;
+			$bricks['prefer_bricks_native_cart'] = true;
+			$bricks['verified_version']          = defined( 'BRICKS_VERSION' ) ? sanitize_text_field( (string) BRICKS_VERSION ) : 'detected';
+		}
+		if ( $woo && ! $woo_done ) {
+			$bricks['add_to_cart_enhancer_enabled']     = true;
+			$bricks['linked_products_controls_enabled'] = true;
+			$bricks['mini_cart_adapter_enabled']        = true;
+			$bricks['quantity_stepper_enabled']         = true;
+			$bricks['stock_badge_enabled']              = true;
+		}
+		$settings['bricks']                           = $bricks;
+
+		update_option( DSA_OPTION_SETTINGS, $settings, false );
+		if ( ! $base_done ) update_option( 'dsa_bricks_compatibility_profile_v1', 'done', false );
+		if ( $woo && ! $woo_done ) update_option( 'dsa_bricks_woocommerce_profile_v1', 'done', false );
+		$this->resolved_settings = null;
+		$this->resolved_manifest = null;
+	}
+
+	private function is_bricks_installation(): bool {
+		if ( defined( 'BRICKS_VERSION' ) || function_exists( 'bricks_is_builder' ) || class_exists( '\\Bricks\\Setup' ) ) {
+			return true;
+		}
+
+		$theme = wp_get_theme();
+		return in_array( strtolower( (string) $theme->get_template() ), [ 'bricks' ], true )
+			|| in_array( strtolower( (string) $theme->get_stylesheet() ), [ 'bricks' ], true );
 	}
 
 	public function defaults(): array {

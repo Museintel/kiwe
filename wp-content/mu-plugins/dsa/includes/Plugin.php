@@ -14,6 +14,7 @@ use DSA\Commerce\Checkout_Service;
 use DSA\Commerce\COD_Gate_Service;
 use DSA\Commerce\Commerce_Context_Service;
 use DSA\Commerce\Linked_Products_Service;
+use DSA\Commerce\Product_Context_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Diagnostics\Asset_Manifest_Service;
 use DSA\Diagnostics\Runtime_Profiler;
@@ -117,6 +118,7 @@ final class Plugin {
 	private $design_context_profile;
 	private $onboarding;
 	private $seo_context;
+	private $product_context;
 
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
@@ -139,6 +141,7 @@ final class Plugin {
 		$this->design_context_profile = new Design_Context_Profile_Service();
 		$this->onboarding   = new Onboarding_Service( $this->design_context_profile, $this->channels );
 		$this->seo_context  = new SEO_Context_Service( $this->design_context_profile );
+		$this->product_context = new Product_Context_Service();
 		$this->abandoned_carts = new Abandoned_Cart_Service( $this->settings, $this->store_analytics, $this->channels );
 		$this->checkout    = new Checkout_Service( $this->settings, $this->cart_payload );
 		$this->trust      = new Trust_Service();
@@ -239,6 +242,7 @@ final class Plugin {
 		( new Admin( $this->settings, $this->modules, $this->native, $this->readiness, $this->store_analytics, $this->linked_products, $this->email, $this->abandoned_carts, $this->notification_preferences, $this->notification_campaigns, $this->saved_items, $this->search ) )->register();
 		$this->onboarding->register();
 		$this->seo_context->register();
+		$this->product_context->register();
 		( new SecureTrack_Loader() )->register();
 		if ( $surface_enabled ) {
 			( new Assets( $this->settings, $this->registry, $this->modules, $this->phonekey, $this->trust, $this->flow_guard, $this->triggers, $this->native, $this->commerce, $this->rewards, $this->metrics, $this->permissions, $this->notification_preferences, $this->pwa, $this->reviews, $this->route_capabilities ) )->register();

@@ -44,6 +44,10 @@
           "properties": {
             "businessDescription": { "type": "string", "maxLength": 2000 },
             "brandStory": { "type": "string", "maxLength": 3000 },
+            "mission": { "type": "string", "maxLength": 2000 },
+            "vision": { "type": "string", "maxLength": 2000 },
+            "values": { "type": "string", "maxLength": 2000 },
+            "usp": { "type": "string", "maxLength": 2000 },
             "audienceSummary": { "type": "string", "maxLength": 1600 }
           }
         },

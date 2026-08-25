@@ -3,6 +3,7 @@
 namespace DSA\WP7;
 
 use DSA\Onboarding\Design_Context_Enhancement_Service;
+use DSA\Commerce\Product_Context_Service;
 use DSA\Site\Site_Identity_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,6 +30,14 @@ final class Bindings_Service {
 				'label'              => __( 'Kiwe site identity', 'dsa' ),
 				'get_value_callback' => [ $this, 'site_value' ],
 				'uses_context'       => [],
+			]
+		);
+		$callback(
+			'kiwe/product',
+			[
+				'label'              => __( 'Kiwe product context', 'dsa' ),
+				'get_value_callback' => [ $this, 'product_value' ],
+				'uses_context'       => [ 'postId', 'postType' ],
 			]
 		);
 	}
@@ -71,8 +80,18 @@ final class Bindings_Service {
 						'youtube_url',
 						'pinterest_url',
 						'linkedin_url',
+						'business_story', 'business_mission', 'business_vision', 'business_values', 'business_usp',
+						'founder_name', 'founder_title', 'founder_bio', 'founder_image',
+						'fssai_license', 'gst_number', 'manufacturing_address',
+						'show_fssai_on_products', 'show_gst_on_products', 'show_manufacturing_address',
+						'show_blog_rail', 'highlight_bestsellers',
 					],
 					'mutations'  => false,
+				],
+				[
+					'name' => 'kiwe/product',
+					'attributes' => [ 'nutrition_image' ],
+					'mutations' => false,
 				],
 			],
 		];
@@ -140,15 +159,57 @@ final class Bindings_Service {
 			case 'youtube_url':
 			case 'pinterest_url':
 			case 'linkedin_url':
+			case 'business_story':
+			case 'business_mission':
+			case 'business_vision':
+			case 'business_values':
+			case 'business_usp':
+			case 'founder_name':
+			case 'founder_title':
+			case 'founder_bio':
+			case 'founder_image':
+			case 'fssai_license':
+			case 'gst_number':
+			case 'manufacturing_address':
+			case 'show_fssai_on_products':
+			case 'show_gst_on_products':
+			case 'show_manufacturing_address':
+			case 'show_blog_rail':
+			case 'highlight_bestsellers':
 				return $this->design_context_value( $key );
 			default:
 				return '';
 		}
 	}
 
+	public function product_value( array $source_args = [], $block_instance = null, string $attribute_name = '' ): string {
+		$key = sanitize_key( $source_args['key'] ?? $source_args['field'] ?? $attribute_name );
+		$context = is_object( $block_instance ) && is_array( $block_instance->context ?? null ) ? $block_instance->context : [];
+		$product_id = absint( $context['postId'] ?? get_the_ID() );
+		if ( 'nutrition_image' !== $key || 'product' !== get_post_type( $product_id ) ) return '';
+		$image = Product_Context_Service::nutrition_image( $product_id );
+		return esc_url_raw( (string) ( $image['url'] ?? '' ) );
+	}
+
 	private function design_context_value( string $key ): string {
 		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
 		if ( 'business_description' === $key ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
+		$about_map = [ 'business_story'=>'story', 'business_mission'=>'mission', 'business_vision'=>'vision', 'business_values'=>'values', 'business_usp'=>'usp' ];
+		if ( isset( $about_map[ $key ] ) ) return sanitize_textarea_field( (string) ( $profile['about'][ $about_map[ $key ] ] ?? '' ) );
+		$founder_map = [ 'founder_name'=>'name', 'founder_title'=>'title', 'founder_bio'=>'bio' ];
+		if ( isset( $founder_map[ $key ] ) ) return sanitize_textarea_field( (string) ( $profile['about']['founder'][ $founder_map[ $key ] ] ?? '' ) );
+		if ( 'founder_image' === $key ) {
+			$image_id = absint( $profile['about']['founder']['imageId'] ?? 0 );
+			return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+		}
+		$regulatory_map = [ 'fssai_license'=>'fssaiLicense', 'gst_number'=>'gstNumber', 'manufacturing_address'=>'manufacturingAddress' ];
+		if ( isset( $regulatory_map[ $key ] ) ) return sanitize_textarea_field( (string) ( $profile['regulatory'][ $regulatory_map[ $key ] ] ?? '' ) );
+		$flag_map = [
+			'show_fssai_on_products'=>[ 'regulatory','showFssaiOnProducts' ], 'show_gst_on_products'=>[ 'regulatory','showGstOnProducts' ],
+			'show_manufacturing_address'=>[ 'regulatory','showManufacturingAddress' ], 'show_blog_rail'=>[ 'contentPlan','showBlogRailOnHome' ],
+			'highlight_bestsellers'=>[ 'contentPlan','highlightBestsellers' ],
+		];
+		if ( isset( $flag_map[ $key ] ) ) return ! empty( $profile[ $flag_map[ $key ][0] ][ $flag_map[ $key ][1] ] ) ? '1' : '';
 		if ( 'whatsapp' === $key ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
 		if ( 'whatsapp_url' === $key ) {
 			$number = preg_replace( '/\D+/', '', (string) ( $profile['contact']['whatsapp'] ?? '' ) );

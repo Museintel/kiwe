@@ -3,6 +3,7 @@
 namespace DSA\Bricks;
 
 use DSA\Commerce\Linked_Products_Service;
+use DSA\Commerce\Product_Context_Service;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Element_Registry;
 use DSA\Settings;
@@ -309,6 +310,24 @@ final class Bricks_Integration {
 			'kiwe_store_phone_url'    => __( 'Store phone link', 'dsa' ),
 			'kiwe_store_email_url'    => __( 'Store email link', 'dsa' ),
 			'kiwe_business_description' => __( 'Business description', 'dsa' ),
+			'kiwe_business_story'      => __( 'Business story', 'dsa' ),
+			'kiwe_business_mission'    => __( 'Business mission', 'dsa' ),
+			'kiwe_business_vision'     => __( 'Business vision', 'dsa' ),
+			'kiwe_business_values'     => __( 'Business values', 'dsa' ),
+			'kiwe_business_usp'        => __( 'Business unique selling proposition', 'dsa' ),
+			'kiwe_founder_name'        => __( 'Founder name', 'dsa' ),
+			'kiwe_founder_title'       => __( 'Founder role or title', 'dsa' ),
+			'kiwe_founder_bio'         => __( 'Founder bio', 'dsa' ),
+			'kiwe_founder_image'       => __( 'Founder image URL', 'dsa' ),
+			'kiwe_fssai_license'       => __( 'FSSAI licence number', 'dsa' ),
+			'kiwe_gst_number'          => __( 'GST number', 'dsa' ),
+			'kiwe_manufacturing_address' => __( 'Manufacturing address', 'dsa' ),
+			'kiwe_show_fssai_on_products' => __( 'Show FSSAI on product pages', 'dsa' ),
+			'kiwe_show_gst_on_products' => __( 'Show GST on product pages', 'dsa' ),
+			'kiwe_show_manufacturing_address' => __( 'Show manufacturing address on product pages', 'dsa' ),
+			'kiwe_show_blog_rail'      => __( 'Homepage blog rail preference', 'dsa' ),
+			'kiwe_highlight_bestsellers' => __( 'Highlight bestsellers preference', 'dsa' ),
+			'kiwe_product_nutrition_image' => __( 'Product nutrition image URL', 'dsa' ),
 			'kiwe_whatsapp'           => __( 'WhatsApp number', 'dsa' ),
 			'kiwe_whatsapp_url'       => __( 'WhatsApp chat link', 'dsa' ),
 			'kiwe_directions_url'     => __( 'Store directions link', 'dsa' ),
@@ -376,6 +395,23 @@ final class Bricks_Integration {
 				] );
 				return $address ? esc_url_raw( 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode( implode( ', ', $address ) ) ) : '';
 			case 'kiwe_business_description':
+			case 'kiwe_business_story':
+			case 'kiwe_business_mission':
+			case 'kiwe_business_vision':
+			case 'kiwe_business_values':
+			case 'kiwe_business_usp':
+			case 'kiwe_founder_name':
+			case 'kiwe_founder_title':
+			case 'kiwe_founder_bio':
+			case 'kiwe_founder_image':
+			case 'kiwe_fssai_license':
+			case 'kiwe_gst_number':
+			case 'kiwe_manufacturing_address':
+			case 'kiwe_show_fssai_on_products':
+			case 'kiwe_show_gst_on_products':
+			case 'kiwe_show_manufacturing_address':
+			case 'kiwe_show_blog_rail':
+			case 'kiwe_highlight_bestsellers':
 			case 'kiwe_whatsapp':
 			case 'kiwe_brand_tone':
 			case 'kiwe_brand_color':
@@ -390,6 +426,8 @@ final class Bricks_Integration {
 			case 'kiwe_pinterest_url':
 			case 'kiwe_linkedin_url':
 				return $this->design_context_tag_value( $name, $context );
+			case 'kiwe_product_nutrition_image':
+				return $this->product_nutrition_image_tag_value( $post, $context );
 			case 'kiwe_selling_locations':
 				return $this->woo_locations_label( 'selling' );
 			case 'kiwe_shipping_locations':
@@ -405,9 +443,30 @@ final class Bricks_Integration {
 	}
 
 	private function design_context_tag_value( string $name, string $context ): string {
-		if ( in_array( $context, [ 'image', 'media' ], true ) ) return '';
+		if ( in_array( $context, [ 'image', 'media' ], true ) && 'kiwe_founder_image' !== $name ) return '';
 		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
 		if ( 'kiwe_business_description' === $name ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
+		$about_map = [
+			'kiwe_business_story'=>'story', 'kiwe_business_mission'=>'mission', 'kiwe_business_vision'=>'vision',
+			'kiwe_business_values'=>'values', 'kiwe_business_usp'=>'usp',
+		];
+		if ( isset( $about_map[ $name ] ) ) return sanitize_textarea_field( (string) ( $profile['about'][ $about_map[ $name ] ] ?? '' ) );
+		$founder_map = [ 'kiwe_founder_name'=>'name', 'kiwe_founder_title'=>'title', 'kiwe_founder_bio'=>'bio' ];
+		if ( isset( $founder_map[ $name ] ) ) return sanitize_textarea_field( (string) ( $profile['about']['founder'][ $founder_map[ $name ] ] ?? '' ) );
+		if ( 'kiwe_founder_image' === $name ) {
+			$image_id = absint( $profile['about']['founder']['imageId'] ?? 0 );
+			return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+		}
+		$regulatory_map = [ 'kiwe_fssai_license'=>'fssaiLicense', 'kiwe_gst_number'=>'gstNumber', 'kiwe_manufacturing_address'=>'manufacturingAddress' ];
+		if ( isset( $regulatory_map[ $name ] ) ) return sanitize_textarea_field( (string) ( $profile['regulatory'][ $regulatory_map[ $name ] ] ?? '' ) );
+		$flag_map = [
+			'kiwe_show_fssai_on_products'=>[ 'regulatory','showFssaiOnProducts' ],
+			'kiwe_show_gst_on_products'=>[ 'regulatory','showGstOnProducts' ],
+			'kiwe_show_manufacturing_address'=>[ 'regulatory','showManufacturingAddress' ],
+			'kiwe_show_blog_rail'=>[ 'contentPlan','showBlogRailOnHome' ],
+			'kiwe_highlight_bestsellers'=>[ 'contentPlan','highlightBestsellers' ],
+		];
+		if ( isset( $flag_map[ $name ] ) ) return ! empty( $profile[ $flag_map[ $name ][0] ][ $flag_map[ $name ][1] ] ) ? '1' : '';
 		if ( 'kiwe_whatsapp' === $name ) return sanitize_text_field( (string) ( $profile['contact']['whatsapp'] ?? '' ) );
 		if ( 'kiwe_brand_tone' === $name ) return sanitize_text_field( (string) ( $profile['brand']['tone'] ?? '' ) );
 		if ( preg_match( '/^kiwe_(facebook|instagram|x|youtube|pinterest|linkedin)_url$/', $name, $match ) ) {
@@ -419,6 +478,14 @@ final class Bricks_Integration {
 			if ( $role === ( $color['role'] ?? '' ) ) return (string) sanitize_hex_color( (string) ( $color['hex'] ?? '' ) );
 		}
 		return '';
+	}
+
+	private function product_nutrition_image_tag_value( $post, string $context ): string {
+		if ( 'link' === $context ) return '';
+		$product_id = is_object( $post ) && isset( $post->ID ) ? absint( $post->ID ) : absint( $post );
+		if ( ! $product_id ) $product_id = absint( get_queried_object_id() );
+		$image = Product_Context_Service::nutrition_image( $product_id );
+		return esc_url_raw( (string) ( $image['url'] ?? '' ) );
 	}
 
 	private function product_weight_tag_value( $post, string $context ): string {

@@ -1,5 +1,7 @@
 # Kiwe SeamFlow AI entrypoint
 
+SeamFlow contract: 7.28
+
 ## External SiteGraph clients
 
 Kiwe exposes its full vendor-neutral OpenAPI 3.1 discovery contract at `/wp-json/dsa/v1/ai/openapi.json`, a reduced task-capsule-only contract at `/wp-json/dsa/v1/ai/openapi.task.json`, a compact connection manifest at `/wp-json/dsa/v1/ai/client-manifest`, and secret-safe adapter templates at `/wp-json/dsa/v1/ai/client-adapters`. Ordinary browser-AI, IDE, MCP and conversion work must import the task-only contract. The `/wp-json/dsa/v1/ai` URL itself is an API namespace, not a browsable tool or complete AI connection.
@@ -18,7 +20,7 @@ Current launch scope: close Seam Framework + Bricks-powered webpages, headers, f
 
 ## Deterministic compiler authority
 
-SEAM Compiler 0.12.0 is the production authority for `/convert /bricks`, optional `/seamframework`, and their executable audits. Browser AI may create or refine the source design and explain findings, but it must not manually author production Bricks JSON, guess Framework variables/classes, or claim a manual visual PASS.
+SEAM Compiler 0.13.0 is the production authority for `/convert /bricks`, optional `/seamframework`, and their executable audits. Browser AI may create or refine the source design and explain findings, but it must not manually author production Bricks JSON, guess Framework variables/classes, or claim a manual visual PASS.
 
 Raw `/convert /bricks` accepts arbitrary HTML/CSS/JS projects and is Framework-neutral. Optional `/seamframework` runs only after raw conversion and returns one Framework Profile plus dependent templates. In Framework mode, Bricks Theme Style owns body/headings/links/site background; universal variables and palette own shared primitives; project variables/classes own repeated project design; element settings own genuine exceptions; scoped CSS owns only unsupported behavior. The profile must be pushed from Kiwe > Framework before the dependent templates are imported.
 

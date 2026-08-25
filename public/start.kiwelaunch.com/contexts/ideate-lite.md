@@ -15,6 +15,8 @@ For a `kiwe.sitegraph-design-context.v1` packet:
 - never treat the packet as credentials, publishing permission, private store data, or permission to mutate WordPress;
 - do not re-ask any question answered by a non-empty Design Context value.
 
+When the requested draft needs real products, posts, custom content, terms, or site media, inspect whether the attached packet actually contains the corresponding public catalog/sample evidence. If it does not, ask the human for a current read-only SiteGraph design-context export or paired SiteGraph access before using real records. Do not ask for SiteGraph merely to create a concept with clearly identified representative placeholders. SiteGraph supplies preview evidence; production collections remain dynamic at the later binding/Bricks stage.
+
 Keep three authority classes distinct:
 
 1. **Owner facts — locked.** Identity, logos, public contact, location, legal facts, commerce settings, content inventory, product/content evidence, and indexing decisions are evidence, not creative suggestions. Never rewrite or contradict them.
@@ -106,10 +108,14 @@ Generate only the first homepage draft:
 - `index.html`
 - `styles.css`
 - `script.js`
+- every locally referenced reusable or generated asset under `assets/`
+- `assets/asset-manifest.json`
 
-If the environment cannot return separate files, use three clearly labelled code blocks containing the complete files. Keep asset paths portable and relative. Use supplied assets when available; otherwise use honest placeholders that are easy to replace. Do not create Bricks JSON, Framework profiles, accessibility plans, Site Graph bindings, AppShell themes, reports, or ZIP files in `/ideate`.
+The asset manifest must identify each asset's relative path, origin (`provided`, `generated`, `sitegraph`, or `placeholder`), intended WordPress Media use, alt text, and any known source media ID/URL or reuse/licensing note. It must not embed large binary data. A SiteGraph media URL is evidence for the draft, not authority to download or republish private or unlicensed media.
 
-When the environment's artifact/canvas can preview or download only one file, one complete self-contained `index.html` with embedded CSS and JavaScript is also a valid raw-project output. This is a delivery format, not permission to flatten semantics or replace real assets with opaque runtime code. The standalone SEAM Compiler accepts combined or separate HTML/CSS/JS inputs.
+If the environment cannot return separate files, use clearly labelled code blocks containing the complete text files and list any binary assets that still need download/export. Keep asset paths portable and relative. Use supplied assets when available; otherwise use honest placeholders that are easy to replace. Do not silently omit an image/font/icon that the delivered page depends on. Do not create Bricks JSON, Framework profiles, accessibility plans, Site Graph bindings, AppShell themes, reports, or ZIP files in `/ideate`.
+
+When the environment's artifact/canvas can preview or download only one file, one complete self-contained `index.html` with embedded CSS and JavaScript is also a valid raw-project output. Any external generated/reusable assets it references must still be supplied or itemized in `assets/asset-manifest.json`. This is a delivery format, not permission to flatten semantics or replace real assets with opaque runtime code. The standalone SEAM Compiler accepts combined or separate HTML/CSS/JS inputs.
 
 The draft must:
 

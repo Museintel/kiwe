@@ -50,12 +50,13 @@ final class Design_Context_Enhancement_Service {
 			],
 			'lockedPaths' => array_merge( [
 				'ownerContext.identity.siteName', 'ownerContext.identity.logo', 'ownerContext.identity.logoInverse', 'ownerContext.identity.siteIcon',
-				'ownerContext.contact', 'ownerContext.localization', 'ownerContext.contentPlan', 'ownerContext.commercePlan',
+				'ownerContext.contact', 'ownerContext.localization', 'ownerContext.about', 'ownerContext.regulatory', 'ownerContext.contentPlan', 'ownerContext.commercePlan',
 				'ownerContext.seo.legalName', 'ownerContext.seo.foundedYear', 'ownerContext.seo.allowIndexing',
 			], $locked_colors ),
 			'writablePaths' => [
 				'suggestions.brand.tone', 'suggestions.brand.colors',
-				'suggestions.copy.businessDescription', 'suggestions.copy.brandStory', 'suggestions.copy.audienceSummary',
+				'suggestions.copy.businessDescription', 'suggestions.copy.brandStory', 'suggestions.copy.mission', 'suggestions.copy.vision',
+				'suggestions.copy.values', 'suggestions.copy.usp', 'suggestions.copy.audienceSummary',
 				'suggestions.seo.homepageDescription', 'suggestions.seo.searchIntent', 'suggestions.seo.contentPriorities',
 				'suggestions.design.typographyDirection', 'suggestions.design.imageryDirection', 'suggestions.design.layoutDirection',
 			],
@@ -72,7 +73,7 @@ final class Design_Context_Enhancement_Service {
 				'authority' => [ 'mayOverwriteOwnerEvidence' => false ],
 				'suggestions' => [
 					'brand' => [ 'tone' => '', 'colors' => [] ],
-					'copy' => [ 'businessDescription' => '', 'brandStory' => '', 'audienceSummary' => '' ],
+					'copy' => [ 'businessDescription' => '', 'brandStory' => '', 'mission' => '', 'vision' => '', 'values' => '', 'usp' => '', 'audienceSummary' => '' ],
 					'seo' => [ 'homepageDescription' => '', 'searchIntent' => '', 'contentPriorities' => [] ],
 					'design' => [ 'typographyDirection' => '', 'imageryDirection' => '', 'layoutDirection' => '' ],
 				],
@@ -109,6 +110,9 @@ final class Design_Context_Enhancement_Service {
 		if ( ! $enhancement || ( $enhancement['sourceContextHash'] ?? '' ) !== $this->owner_context_hash() ) return $owner;
 		$s = $enhancement['suggestions'];
 		if ( '' !== ( $s['copy']['businessDescription'] ?? '' ) ) $owner['identity']['description'] = $s['copy']['businessDescription'];
+		foreach ( [ 'brandStory'=>'story', 'mission'=>'mission', 'vision'=>'vision', 'values'=>'values', 'usp'=>'usp' ] as $suggestion => $owner_key ) {
+			if ( empty( $owner['about'][ $owner_key ] ) && '' !== ( $s['copy'][ $suggestion ] ?? '' ) ) $owner['about'][ $owner_key ] = $s['copy'][ $suggestion ];
+		}
 		if ( '' !== ( $s['seo']['homepageDescription'] ?? '' ) ) $owner['seo']['homepageDescription'] = $s['seo']['homepageDescription'];
 		if ( '' !== ( $s['seo']['searchIntent'] ?? '' ) ) $owner['seo']['searchIntent'] = $s['seo']['searchIntent'];
 		if ( empty( $owner['brand']['tone'] ) && '' !== ( $s['brand']['tone'] ?? '' ) ) $owner['brand']['tone'] = $s['brand']['tone'];
@@ -131,6 +135,7 @@ final class Design_Context_Enhancement_Service {
 		$context = $this->profiles->public_context( $administrator );
 		$resolved = $this->resolved_profile( $this->profiles->current() );
 		$context['identity']['description'] = $resolved['identity']['description'];
+		$context['about'] = $resolved['about'];
 		$context['brand'] = $resolved['brand'];
 		$context['seo'] = $resolved['seo'];
 		$context['enhancement'] = $resolved['enhancement'] ?? [ 'ownerEvidencePreserved'=>true, 'status'=>'none-or-stale' ];
@@ -180,6 +185,10 @@ final class Design_Context_Enhancement_Service {
 			'copy' => [
 				'businessDescription'=>substr( sanitize_textarea_field( (string) ( $copy['businessDescription'] ?? '' ) ), 0, 2000 ),
 				'brandStory'=>substr( sanitize_textarea_field( (string) ( $copy['brandStory'] ?? '' ) ), 0, 3000 ),
+				'mission'=>substr( sanitize_textarea_field( (string) ( $copy['mission'] ?? '' ) ), 0, 2000 ),
+				'vision'=>substr( sanitize_textarea_field( (string) ( $copy['vision'] ?? '' ) ), 0, 2000 ),
+				'values'=>substr( sanitize_textarea_field( (string) ( $copy['values'] ?? '' ) ), 0, 2000 ),
+				'usp'=>substr( sanitize_textarea_field( (string) ( $copy['usp'] ?? '' ) ), 0, 2000 ),
 				'audienceSummary'=>substr( sanitize_textarea_field( (string) ( $copy['audienceSummary'] ?? '' ) ), 0, 1600 ),
 			],
 			'seo' => [

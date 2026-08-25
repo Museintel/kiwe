@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.27',
+    contractVersion: '7.28',
     freshness: {
       discoveryTemplate: 'https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}',
       rule: 'Before every later slash command, fetch fresh discovery with a new nonce and use only its content-hash immutable command route and pinned resource hashes.'
@@ -532,7 +532,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.27',
+      mustReport: 'SeamFlow contract: 7.28',
       order: [
         'STATUS',
         'SeamFlow contract',
