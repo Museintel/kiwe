@@ -3,10 +3,12 @@
 ## 8.0.0-rc.1 — 2026-08-25
 
 - Replaced the historical SeamFlow command graph with six strict SEAM commands and one compiler authority.
-- Made SiteGraph and Design Context inputs instead of commands and made Framework an explicit conversion option.
+- Made SiteGraph with embedded Design Context an adaptive input instead of a command; `/ideate` now discovers new-build, redesign and existing-source enhancement lanes and selects a safe available SiteGraph transport.
+- Defined `/convert /bricks` as browser-AI binding preparation only: dynamic tags plus query loops by default, or one lane through `/dynamictags` or `/queryloop`; only the `seam.kiwe` application emits Bricks JSON.
+- Made Framework an explicit `seam.kiwe` compilation option.
 - Reduced the external AI API to scoped SiteGraph reads, deterministic validators and dry-run planning; removed remote mutation, studio and duplicate compiler routes.
 - Consolidated WordPress administration into seven operator-facing sections while retaining specialist tools behind those hubs.
-- Replaced accumulated settings compatibility migrations with one clean RC schema that enables only read-only SiteGraph.
+- Replaced accumulated settings compatibility migrations with one clean RC schema; fresh installations enable only read-only SiteGraph, existing explicit choices remain intact, and missing capabilities stay disabled.
 - Rebuilt the public start registry without historical contracts and retained executable Bricks, bindings, Framework, theme-style and accessibility validators.
 
 ## 7.27

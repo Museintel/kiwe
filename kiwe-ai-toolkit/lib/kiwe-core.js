@@ -31,6 +31,21 @@ function normalizeCommand(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+function parseCommand(value) {
+  const requestedCommand = normalizeCommand(value);
+  const convertMatch = requestedCommand.match(/^\/convert \/bricks(?: \/(dynamictags|queryloop))?$/);
+  if (convertMatch) {
+    const modifier = convertMatch[1] ? `/${convertMatch[1]}` : '';
+    return {
+      command: '/convert /bricks',
+      requestedCommand,
+      modifier,
+      bindingMode: modifier === '/dynamictags' ? 'dynamicTagsOnly' : modifier === '/queryloop' ? 'queryLoopsOnly' : 'dynamicTagsAndQueryLoops'
+    };
+  }
+  return { command: requestedCommand, requestedCommand, modifier: '', bindingMode: '' };
+}
+
 function hasInput(...values) {
   return values.some((value) => String(value || '').trim().length > 0);
 }
@@ -89,19 +104,19 @@ export function getAccessibilityContext() {
 }
 
 export function diagnoseCommand(input = {}) {
-  const command = normalizeCommand(input.command);
-  if (!command) {
+  const parsed = parseCommand(input.command);
+  if (!parsed.command) {
     return { ok: false, status: 'needs_command', contractVersion: getCommandManifest().contractVersion, allowed: listCommands().map((item) => item.command) };
   }
-  const spec = commandSpec(command);
+  const spec = commandSpec(parsed.command);
   if (!spec) {
-    return { ok: false, status: 'rejected', command, reason: 'Unknown command or alias.', allowed: listCommands().map((item) => item.command) };
+    return { ok: false, status: 'rejected', command: parsed.requestedCommand, reason: 'Unknown command, alias or modifier.', allowed: listCommands().map((item) => item.command) };
   }
-  const missing = requirementStatus(command, input);
+  const missing = requirementStatus(parsed.command, input);
   if (missing) {
-    return { ok: false, status: 'needs_input', command, reason: missing, requires: spec.requires };
+    return { ok: false, status: 'needs_input', command: parsed.command, requestedCommand: parsed.requestedCommand, reason: missing, requires: spec.requires };
   }
-  return { ok: true, status: 'ready', command, outputs: spec.outputs, boundary: spec.boundary };
+  return { ok: true, status: 'ready', command: parsed.command, requestedCommand: parsed.requestedCommand, modifier: parsed.modifier || undefined, bindingMode: parsed.bindingMode || undefined, outputs: spec.outputs, boundary: spec.boundary };
 }
 
 export function routeCommand(input = {}) {
@@ -119,7 +134,7 @@ export function routeCommand(input = {}) {
       siteGraphSummary: String(input.siteGraphSummary || ''),
       reportSummary: String(input.reportSummary || '')
     },
-    options: diagnosis.command === '/convert /bricks' ? { frameworkMode: Boolean(input.frameworkMode) } : undefined
+    options: diagnosis.command === '/convert /bricks' ? { bindingMode: diagnosis.bindingMode, modifier: diagnosis.modifier || null, emitsBricksJson: false } : undefined
   };
 }
 
@@ -130,8 +145,8 @@ export function planFlow(input = {}) {
   if (/failed|failure|regression|redo/.test(summary)) command = '/redo';
   else if (/audit report|findings|fix|correct/.test(summary)) command = '/fix';
   else if (/accessib|contrast|overflow|collision|dark mode|keyboard/.test(summary)) command = '/accessibility';
-  else if (/\.html|\.css|\.js|raw project|source project|web project/.test(summary)) command = '/convert /bricks';
   else if (/bricks|template|json|generated artifact|compiled/.test(summary)) command = '/audit';
+  if (/dynamic tag|query loop|binding intent|prepare.+bricks/.test(summary) && /\.html|\.css|\.js|raw project|source project|web project/.test(summary)) command = '/convert /bricks';
 
   return {
     schema: 'kiwe.flow-plan.v2',

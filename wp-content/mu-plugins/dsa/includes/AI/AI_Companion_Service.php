@@ -522,133 +522,30 @@ final class AI_Companion_Service {
 	}
 
 	private function command_gate( string $command, string $artifact_summary = '', string $site_graph_summary = '' ): array {
-		$raw        = trim( $command );
-		$text       = strtolower( $raw );
-		$core       = preg_replace( '/(?:^|\s)\/usecompanion\b/i', ' ', $raw );
-		$core       = is_string( $core ) ? trim( preg_replace( '/\s+/', ' ', $core ) ?? $core ) : $raw;
-		$normalized = trim( preg_replace( '/\s+/', ' ', preg_replace( '/(?:^|\s)\/build\b/i', ' /create', $core ) ?? $core ) ?? $core );
-		$known      = [
-			'/a11y', '/accessibility', '/adapt', '/apply', '/appshell', '/assemble', '/audit', '/binding', '/bindings', '/bricks', '/bricks-conversion', '/bricksconversion', '/brickstheme', '/build', '/combine', '/combined', '/convert', '/create', '/creative', '/dsa', '/dsatheme', '/dsathemeandhomepage', '/dynamic', '/export', '/framework', '/frameworkprofile', '/htmlcssjs', '/ideate', '/page', '/preview', '/rebuild', '/seam', '/seamframework', '/staging', '/theme', '/translate', '/usecompanion', '/webdraft', '/webpage', '/website',
-		];
-		$suggestions = [
-			'/buid' => '/create',
-			'/bild' => '/create',
-			'/bulid' => '/create',
-			'/creat' => '/create',
-			'/previe' => '/preview',
-			'/preveiw' => '/preview',
-			'/brikcs' => '/bricks',
-			'/dsathem' => '/dsatheme',
-			'/seamframwork' => '/seamframework',
-			'/accessibilty' => '/accessibility',
-		];
-
-		if ( '' === $raw ) {
-			return $this->command_gate_result( 'ok', 'workflow_default', 'No slash command supplied; return the Kiwe workflow context.', 'workflow', '', [], [] );
+		$normalized = strtolower( trim( preg_replace( '/\s+/', ' ', $command ) ?? $command ) );
+		$allowed    = [ '/ideate', '/convert /bricks', '/audit', '/accessibility', '/fix', '/redo' ];
+		if ( '' === $normalized ) {
+			return $this->command_gate_result( 'needs_input', 'missing_command', 'Use one command from the current SEAM 8.1 contract.', 'command-diagnostic', '', $allowed, [] );
 		}
 
-		preg_match_all( '/(?:^|\s)(\/[a-z0-9-]+)/i', $raw, $matches );
-		$tokens  = array_map( 'strtolower', $matches[1] ?? [] );
-		$unknown = array_values( array_filter( $tokens, static fn( $token ) => ! in_array( $token, $known, true ) ) );
-		if ( [] !== $unknown ) {
-			$next = [];
-			foreach ( $unknown as $token ) {
-				if ( isset( $suggestions[ $token ] ) ) {
-					$next[] = $suggestions[ $token ];
-				}
-			}
-			return $this->command_gate_result(
-				'rejected',
-				'unknown_command_token',
-				'Unknown Kiwe command token(s): ' . implode( ', ', $unknown ) . '. Do not guess or continue.',
-				'command-diagnostic',
-				$normalized,
-				[] !== $next ? array_values( array_unique( $next ) ) : [ '/rebuild /seamframework', '/create /dsatheme', '/convert /bricks', '/audit /combined' ],
-				[ 'Use only registered Kiwe slash-command tokens.', 'If the human made a typo, ask them to resend the corrected command.' ]
-			);
+		$is_convert = 1 === preg_match( '#^/convert /bricks(?: /(dynamictags|queryloop))?$#', $normalized, $matches );
+		if ( ! $is_convert && ! in_array( $normalized, [ '/ideate', '/audit', '/accessibility', '/fix', '/redo' ], true ) ) {
+			return $this->command_gate_result( 'rejected', 'unknown_command_or_modifier', 'Unknown SEAM command, alias or modifier. Do not guess or continue.', 'command-diagnostic', $normalized, $allowed, [ 'SiteGraph and Design Context are inputs, not commands.', 'Only /dynamictags and /queryloop may modify /convert /bricks.' ] );
 		}
 
-		if ( str_contains( $text, '/preview' ) && ! str_contains( $text, '/create' ) ) {
-			return $this->command_gate_result( 'rejected', 'preview_requires_create', 'Preview proof commands must use the canonical creation verb `/create`.', 'command-diagnostic', $normalized, [ '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Do not invent `/preview` as a standalone command.' ] );
+		if ( $is_convert && ! $this->command_gate_has_page_artifact( $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'binding_source_missing', '/convert /bricks needs the complete accepted HTML/CSS/JS project. It prepares binding intent and never emits Bricks JSON.', 'bricks-bindings', $normalized, [ 'Supply the accepted raw project' ], [ 'Site-specific bindings must be proven by SiteGraph.', 'Only seam.kiwe emits production Bricks JSON.' ] );
 		}
 
-		if ( str_contains( $text, '/create' ) && str_contains( $text, '/preview' ) && preg_match( '/\/(?:brickstheme|frameworkprofile|framework|bricks)\b|bricks theme/', $text ) ) {
-			return $this->command_gate_result( 'rejected', 'unsupported_preview_target', 'No `/create /preview /brickstheme` or Bricks-theme preview command exists. Framework/Bricks theme profiles are token JSON, not a separate preview lane.', 'command-diagnostic', $normalized, [ '/create /brickstheme', '/audit /brickstheme', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Previews exist for website/page HTML, DSA AppShell proof, and combined page-plus-AppShell proof.' ] );
+		if ( in_array( $normalized, [ '/audit', '/accessibility', '/fix', '/redo' ], true ) && '' === trim( $artifact_summary ) ) {
+			return $this->command_gate_result( 'needs_input', 'artifact_missing', $normalized . ' needs a concrete artifact. Do not inspect or change empty input.', ltrim( $normalized, '/' ), $normalized, [ 'Supply the source or generated artifact' ], [] );
 		}
 
-		if ( str_contains( $text, '/create' ) && str_contains( $text, '/preview' ) && preg_match( '/\/(?:website|webpage|page|htmlcssjs)\b/', $text ) ) {
-			$existing = $this->command_gate_has_page_artifact( $artifact_summary ) || preg_match( '/\bhtml\b.*\bcss\b|\bindex\.html\b|creative draft|website draft/i', $artifact_summary );
-			return $this->command_gate_result(
-				$existing ? 'noop' : 'rejected',
-				$existing ? 'website_preview_already_exists' : 'website_preview_is_page_artifact',
-				$existing ? 'A website/page preview already exists in the supplied artifact. Do not regenerate the same preview.' : 'There is no separate Kiwe website preview command. A website/page preview is the HTML/CSS/JS page artifact itself.',
-				'command-diagnostic',
-				$normalized,
-				$existing ? [ '/convert /bricks', '/audit /bricksconversion', '/seamframework', '/dynamic /sitegraph' ] : [ '/ideate /webdraft', '/convert /bricks' ],
-				[ 'Do not spend tokens recreating a preview that is already the artifact.' ]
-			);
-		}
+		$boundaries = $is_convert
+			? [ 'Default: dynamic tags and query loops.', 'Use /dynamictags or /queryloop for one lane.', 'Output raw source plus kiwe.bricks-bindings.v1; never Bricks JSON.' ]
+			: [];
 
-		if ( str_contains( $text, '/create' ) && str_contains( $text, '/preview' ) && ! preg_match( '/\/(?:dsatheme|appshell|dsa|combined|combine)\b|app shell/', $text ) ) {
-			return $this->command_gate_result( 'rejected', 'missing_preview_target', 'Preview creation needs an explicit supported target.', 'command-diagnostic', $normalized, [ '/create /preview /dsatheme', '/create /preview /combined' ], [ 'Supported preview-proof targets are DSA/AppShell theme and combined page-plus-AppShell only.' ] );
-		}
-
-		if ( str_contains( $text, '/create' ) && str_contains( $text, '/bricks' ) && ! str_contains( $text, '/brickstheme' ) && ! str_contains( $text, '/preview' ) ) {
-			return $this->command_gate_result(
-				'rejected',
-				'bricks_convert_requires_convert_verb',
-				'No `/create /bricks` command exists. Use `/convert /bricks` for the Bricks My Templates upload JSON lane.',
-				'bricks-convert',
-				$normalized,
-				[ '/convert /bricks' ],
-				[ 'Use `/create` for new creative/config artifacts and `/convert` for transforming approved page HTML into Bricks template JSON.' ]
-			);
-		}
-
-		$is_bricks_convert = preg_match( '/\/convert\b.*\/bricks\b|\/bricks\b.*\/convert\b/', $text ) && ! str_contains( $text, '/brickstheme' );
-
-		if ( $is_bricks_convert && $this->command_gate_forbidden_bricks_source( $raw ) ) {
-			return $this->command_gate_result( 'rejected', 'bricks_convert_forbidden_source_in_command', '`/convert /bricks` cannot convert a separately identified AppShell theme, DSA screen/sheet/dock/navbar lane, theme package, or theme CSS into page content.', 'bricks-convert', $normalized, [ '/convert /bricks with the actual website HTML/CSS/JS project', '/create /preview /dsatheme', '/create /preview /combined' ], [ 'SEAM Compiler discovers arbitrary website pages but keeps explicit AppShell control chrome out of Bricks content.' ] );
-		}
-
-		if ( $is_bricks_convert && ! $this->command_gate_has_page_artifact( $artifact_summary ) ) {
-			$theme_like = $this->command_gate_has_theme_artifact( $artifact_summary ) || $this->command_gate_forbidden_bricks_source( $artifact_summary );
-			return $this->command_gate_result(
-				$theme_like ? 'rejected' : 'needs_input',
-				$theme_like ? 'bricks_convert_missing_page_source_with_theme_artifact' : 'bricks_convert_missing_page_source',
-				$theme_like ? 'The supplied artifact summary looks like an AppShell/theme lane without an actual website source. Stop; do not convert DSA theme material into Bricks.' : '`/convert /bricks` needs an approved HTML/CSS/JS project, folder, archive, or standalone document.',
-				'bricks-convert',
-				$normalized,
-				[ '/convert /bricks after supplying the website source', '/seamframework only after raw conversion if Framework output is wanted' ],
-				[ 'Do not guess a Bricks source from a DSA theme or combined preview.' ]
-			);
-		}
-
-		if ( preg_match( '/\/audit.*(?:\/bricksconversion|\/bricks-conversion|bricks conversion|bricks json|html-to-bricks|bricks template|template upload)/', $text ) && ! $this->command_gate_has_conversion_artifact( $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'bricks_audit_missing_conversion_artifact', '`/audit /bricksconversion` needs a native `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json`. Do not audit a non-existent conversion.', 'bricks-audit', $normalized, [ '/convert /bricks', '/audit /bricksconversion after the Bricks template upload JSON exists' ], [ 'Audit phases inspect existing artifacts; they do not silently create missing outputs.' ] );
-		}
-
-		if ( preg_match( '/\/(?:create|build).*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'accessibility_create_missing_artifact', '`/create /accessibility` needs a current page or artifact. The active HTML/CSS/JS page from `/ideate` qualifies; Seam Framework and Bricks do not.', 'accessibility-create', $normalized, [ 'Provide the current page, preview, handoff files, or artifact summary', '/accessibility while refining the current /ideate page' ], [ 'Preserve the accepted design and composition.', 'Do not claim compliance from an automated score.' ] );
-		}
-
-		if ( preg_match( '/\/audit.*(?:\/accessibility|\/a11y|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'accessibility_audit_missing_artifact', '`/audit /accessibility` needs the generated files or accessibility/kiwe-accessibility-plan.json. Do not audit empty air.', 'accessibility-audit', $normalized, [ 'Provide the handoff folder/file map', '/create /accessibility before /audit /accessibility when no plan exists' ], [ 'Audit phases inspect concrete files; they do not invent missing outputs.' ] );
-		}
-
-		if ( preg_match( '/\/dynamic|\/sitegraph|\/binding|\/bindings/', $text ) && '' === trim( $site_graph_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'dynamic_missing_site_graph', '`/dynamic /sitegraph` needs a target Site Graph summary or API access. Do not guess product categories, pages, custom fields, dynamic tags, or Bricks query-loop types.', 'dynamic', $normalized, [ 'GET /wp-json/dsa/v1/ai/site-graph', 'GET|POST /wp-json/dsa/v1/ai/site-graph-data', '/dynamic /sitegraph after Site Graph is available' ], [ 'Dynamic binding must be grounded in target-site truth, not frontend scraping or assumptions.' ] );
-		}
-
-		if ( preg_match( '/\/audit.*(?:\/seamframework|\/seam|\/brickstheme|\/frameworkprofile|\/framework|\/dsatheme|\/appshell|\/dsa|\/combined|\/combine|\/accessibility|\/a11y|seam framework|bricks theme|app shell|accessibility|a11y)/', $text ) && '' === trim( $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'audit_missing_artifact', 'Audit commands need an existing generated artifact or file map. Do not perform a generic audit against nothing.', 'command-diagnostic', $normalized, [ 'Provide the handoff folder/file map', 'Run the matching `/create` or `/rebuild` phase first' ], [ 'Audit phases inspect and revise concrete files; they do not invent missing artifacts.' ] );
-		}
-
-		if ( preg_match( '/\/apply|\/staging/', $text ) && ! preg_match( '/confirm|authorized|staging site|staging confirmed|rollback|executor/i', $raw . "\n" . $artifact_summary ) ) {
-			return $this->command_gate_result( 'needs_input', 'staging_missing_explicit_authority', '`/apply /staging` needs explicit staging confirmation, mutation authorization, and controlled executor details. Stop before any write path.', 'staging', $normalized, [ 'Use Kiwe controlled staging executor with explicit confirmation flags', 'Prepare/review apply plan first' ], [ 'No WordPress, Bricks, WooCommerce, cart, checkout, auth, or raw meta mutation without explicit staging authority.' ] );
-		}
-
-		return $this->command_gate_result( 'ok', $normalized !== $core ? 'legacy_alias_normalized' : 'ok', $normalized !== $core ? 'Legacy `/build` alias accepted internally; use `/create` in user-facing output.' : 'Command is recognized.', $this->phase( $raw ), $normalized, [], [] );
+		return $this->command_gate_result( 'ok', 'ok', 'Command is recognized by the SEAM 8.1 contract.', $is_convert ? 'bricks-bindings' : ltrim( $normalized, '/' ), $normalized, [], $boundaries );
 	}
 
 	private function command_gate_result( string $status, string $code, string $message, string $kind, string $normalized, array $suggestions, array $boundaries ): array {
@@ -889,7 +786,7 @@ final class AI_Companion_Service {
 			[
 				'id'      => 'bricks-native-token-purity',
 				'title'   => 'Bricks-native controls must consume Framework tokens',
-				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During /convert /bricks and /audit /bricksconversion, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use official var(--kiwe-*)/var(--seam-*) tokens when the meaning and property domain match; use declared project variables for stable art-direction constants; use real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count. For native Bricks template uploads, inline fallbacks are not allowed; use bare var(--token) and require Kiwe > Framework profile push before template import. Bricks border radius must be stored as _border.radius.top/right/bottom/left, not CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Semantic Bricks Heading elements tagged h1-h6 must not carry local official heading-token font-size locks such as var(--kiwe-type-h3, 2rem); H1-H6 scale belongs in Kiwe > Framework / Bricks Theme Style so designers can change the heading tag and get the matching Bricks heading size.',
+				'body'    => 'A Kiwe Framework profile supplies token values; it does not rewrite hardcoded Bricks JSON. During SEAM Compiler validation, fail native element settings or global_classes that hardcode design lengths such as padding: 28px, radius: 24px, min-height: 390px, font-size: 2.35rem, gaps, shadows, or transform offsets. Use official var(--kiwe-*)/var(--seam-*) tokens when the meaning and property domain match; use declared project variables for stable art-direction constants; use real tokenized clamp() only for proven responsive interpolation. No-op clamps such as clamp(22px, 22px, 22px) do not count. For native Bricks template uploads, inline fallbacks are not allowed; use bare var(--token) and require Kiwe > Framework profile push before template import. Bricks border radius must be stored as _border.radius.top/right/bottom/left, not CSS corner keys such as topLeft/topRight/bottomRight/bottomLeft. Semantic Bricks Heading elements tagged h1-h6 must not carry local official heading-token font-size locks such as var(--kiwe-type-h3, 2rem); H1-H6 scale belongs in Kiwe > Framework / Bricks Theme Style so designers can change the heading tag and get the matching Bricks heading size.',
 				'applies' => [ 'website', 'combined', 'dynamic', 'audit' ],
 			],
 			[
@@ -1335,7 +1232,7 @@ final class AI_Companion_Service {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'bricks_lean_output_emitted_docs_without_document',
-				'message'  => 'Lean `/convert /bricks` output must not include notes, reports, validation files, or extra documentation unless `/document` is explicitly requested.',
+				'message'  => 'Lean SEAM Compiler output must not include unrelated notes or duplicate documentation artifacts.',
 				'path'     => sanitize_text_field( $normalized ),
 			];
 		}
@@ -1572,7 +1469,7 @@ final class AI_Companion_Service {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_class_hydration_dependency',
-				'message'  => sprintf( 'Large Bricks template upload has %1$d of %2$d elements (%3$d%%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.', $editability['class_only_elements'], count( $elements ), (int) round( $editability['class_only_ratio'] * 100 ) ),
+				'message'  => sprintf( 'Large Bricks template upload has %1$d of %2$d elements (%3$d%%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so SEAM Compiler must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.', $editability['class_only_elements'], count( $elements ), (int) round( $editability['class_only_ratio'] * 100 ) ),
 				'path'     => sanitize_text_field( $path ),
 			];
 		}
@@ -1649,7 +1546,7 @@ final class AI_Companion_Service {
 			$findings[] = [
 				'severity' => 'error',
 				'code'     => 'bricks_template_upload_runtime_code_element',
-				'message'  => sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). External converters may park CSS/JS in Code elements for manual review, but Kiwe /convert /bricks production output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.', (string) ( $item['id'] ?? $item['label'] ?? $item['name'] ?? 'item-' . (int) $index ), implode( ', ', array_unique( $runtime_keys ) ) ),
+				'message'  => sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). External converters may park CSS/JS in Code elements for manual review, but production SEAM Compiler output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.', (string) ( $item['id'] ?? $item['label'] ?? $item['name'] ?? 'item-' . (int) $index ), implode( ', ', array_unique( $runtime_keys ) ) ),
 				'path'     => sanitize_text_field( $path . '#' . $base_path . '[' . (int) $index . '].settings' ),
 			];
 		}
@@ -2026,7 +1923,7 @@ final class AI_Companion_Service {
 				'severity' => 'error',
 				'code'     => 'bricks_template_unknown_framework_variable',
 				'message'  => sprintf(
-					'Bricks template uses %1$d reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: %2$s%3$s. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the token to Kiwe universal registry before /convert /bricks can pass.',
+					'Bricks template uses %1$d reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: %2$s%3$s. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the token to Kiwe universal registry before SEAM Compiler validation can pass.',
 					count( $names ),
 					implode( ', ', array_slice( $names, 0, 20 ) ),
 					count( $names ) > 20 ? ', ...' : ''
@@ -2093,7 +1990,7 @@ final class AI_Companion_Service {
 				'severity' => 'error',
 				'code'     => 'bricks_template_project_variable_missing_framework_profile_proof',
 				'message'  => sprintf(
-					'Bricks template consumes %1$d project CSS variable(s) in native controls, but Framework-profile proof is missing for %2$d: %3$s%4$s. %5$s/convert /bricks must pair project variables with framework/kiwe-framework-profile.json or embedded kiwe.frameworkProfile.projectVariables proof; template-local globalVariables alone are not reliable Bricks foundation install proof.',
+					'Bricks template consumes %1$d project CSS variable(s) in native controls, but Framework-profile proof is missing for %2$d: %3$s%4$s. %5$sSEAM Compiler must pair project variables with framework/kiwe-framework-profile.json or embedded kiwe.frameworkProfile.projectVariables proof; template-local globalVariables alone are not reliable Bricks foundation install proof.',
 					count( $required ),
 					count( $missing ),
 					implode( ', ', array_slice( $missing, 0, 20 ) ),
@@ -2476,7 +2373,7 @@ final class AI_Companion_Service {
 				$findings[] = [
 					'severity' => 'error',
 					'code'     => 'bricks_conversion_forbidden_source_lane',
-					'message'  => '/convert /bricks source must be website/bricks-paste.html only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.',
+					'message'  => 'SEAM Compiler source must be website/bricks-paste.html only. Do not compile combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.',
 					'path'     => sanitize_text_field( $path ),
 				];
 			}

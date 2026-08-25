@@ -13,7 +13,7 @@ This package contains the strict SEAM command router and deterministic validator
 /redo
 ```
 
-There are no aliases. SiteGraph is input data. Seam Framework is the `frameworkMode` conversion option. SEAM Compiler is the only production Bricks JSON authority.
+There are no aliases. SiteGraph and embedded Design Context are input data. `/ideate` adaptively handles new sites, redesigns and existing source enhancement. `/convert /bricks` prepares dynamic binding intent only: both tags and loops by default, or one lane with `/dynamictags` or `/queryloop`. Seam Framework is an option inside `seam.kiwe`. Only the `seam.kiwe` application emits production Bricks JSON.
 
 ## CLI
 

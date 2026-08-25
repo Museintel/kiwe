@@ -40,7 +40,7 @@ check('AI controller distinguishes permanent keys from task capsules', controlle
 check('SiteGraph admin explains namespace versus webpage', admin.includes('Base API namespace (not a webpage)') && admin.includes('Do not paste the capsule secret into an ordinary AI chat.'));
 check('SiteGraph admin creates and revokes downloadable client connections', admin.includes('dsa_create_sitegraph_client_package') && admin.includes('dsa_revoke_sitegraph_task_capsule') && admin.includes('kiwe.external-client-connection.v1'));
 check('permanent all-scope keys are not selected by default', admin.includes('All Kiwe AI connector access') && !admin.includes('name="scopes[]" value="all" checked'));
-check('command documentation treats SiteGraph as input instead of command grammar', start.includes('SiteGraph and Design Context are attached or connected project inputs') && ideate.includes('SiteGraph context') && manifest.includes('SiteGraph and Design Context are attached or connected inputs'));
+check('command documentation treats SiteGraph as input instead of command grammar', start.includes('SiteGraph and its embedded Design Context') && ideate.includes('read-only SiteGraph') && manifest.includes('SiteGraph is an attached or connected input'));
 
 const php = spawnSync('php', ['tools/release/test-sitegraph-task-capsule.php'], { cwd: root, encoding: 'utf8' });
 check('SiteGraph task capsule PHP runtime contract passes', php.status === 0 && /PASS SiteGraph task capsule, task OpenAPI and adapter/.test(String(php.stdout)));

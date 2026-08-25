@@ -25,12 +25,11 @@ function option(args, name, fallback = '') {
 
 function commandInput(args) {
   return {
-    command: option(args, '--command', args[0] || ''),
+    command: option(args, '--command', args[0] && !args[0].startsWith('--') ? args[0] : ''),
     brief: option(args, '--brief'),
     artifactSummary: option(args, '--artifact-summary'),
     siteGraphSummary: option(args, '--site-graph-summary'),
-    reportSummary: option(args, '--report-summary'),
-    frameworkMode: args.includes('--framework')
+    reportSummary: option(args, '--report-summary')
   };
 }
 
@@ -53,6 +52,7 @@ function usage() {
   seam manifest
   seam commands
   seam diagnose --command "/convert /bricks" --artifact-summary source.html
+  seam diagnose --command "/convert /bricks /dynamictags" --artifact-summary source.html --site-graph-summary site-graph.json
   seam route --command "/audit" --artifact-summary template.json
   seam plan --artifact-summary source.html
   seam validate-bindings <path> [--site-graph <path>] [--optional]

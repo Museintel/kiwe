@@ -184,7 +184,7 @@ final class Bricks_Conversion_Validator {
 				$findings,
 				'fail',
 				'bricks_conversion_runtime_code_element',
-				sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). /convert /bricks must not ship representable page layout/design or JavaScript authority as a Code element; use native Bricks elements, controls, interactions, Kiwe capability attributes, or an explicit review-only unsupported exception.', (string) ( $item['label'] ?? '' ), implode( ', ', (array) ( $item['keys'] ?? [] ) ) ),
+				sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). SEAM Compiler must not ship representable page layout/design or JavaScript authority as a Code element; use native Bricks elements, controls, interactions, Kiwe capability attributes, or an explicit review-only unsupported exception.', (string) ( $item['label'] ?? '' ), implode( ', ', (array) ( $item['keys'] ?? [] ) ) ),
 				str_replace( '$.content/header/footer', '$.elements', (string) ( $item['path'] ?? '$.elements' ) )
 			);
 		}
@@ -263,7 +263,7 @@ final class Bricks_Conversion_Validator {
 			$source_text = (string) wp_json_encode( $source );
 			$source_html = str_replace( '\\', '/', (string) ( $source['html'] ?? $source['path'] ?? '' ) );
 			if ( preg_match( '#(^|[\\\\/])(combined-preview|appshell-theme|ui-system)([\\\\/]|$)|theme-package\.json|css[\\\\/]theme\.css|\b(?:dsa\s*theme|appshell|app\s*shell)\b#i', $source_text ) ) {
-				$this->add( $findings, 'fail', 'bricks_conversion_forbidden_source_lane', '/convert /bricks source must be the page artifact only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.', '$.source' );
+				$this->add( $findings, 'fail', 'bricks_conversion_forbidden_source_lane', 'SEAM Compiler source must be the page artifact only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.', '$.source' );
 			}
 			if ( '' !== $source_html && ! str_ends_with( $source_html, 'website/bricks-paste.html' ) ) {
 				$this->add( $findings, 'warn', 'bricks_conversion_noncanonical_source_path', 'source.html should point to website/bricks-paste.html. Combined previews and AppShell theme previews are never Bricks conversion sources.', '$.source.html' );
@@ -358,7 +358,7 @@ final class Bricks_Conversion_Validator {
 				'fail',
 				'bricks_template_unscoped_global_class_names',
 				sprintf(
-					'Bricks template upload contains %1$d unscoped global class name(s): %2$s%3$s. Bricks My Templates skips or remaps imported class styles when a local class has the same id or name, so /convert /bricks must namespace project visual global classes (for example nc-promo-card, bv-product-card, sf-hero-grid) and keep plain semantic names only in _cssClasses/attributes, not importable global_classes.',
+					'Bricks template upload contains %1$d unscoped global class name(s): %2$s%3$s. Bricks My Templates skips or remaps imported class styles when a local class has the same id or name, so SEAM Compiler must namespace project visual global classes (for example nc-promo-card, bv-product-card, sf-hero-grid) and keep plain semantic names only in _cssClasses/attributes, not importable global_classes.',
 					count( $unsafe_class_names ),
 					implode( ', ', array_map( static fn( $name ) => '"' . $name . '"', array_slice( $unsafe_class_names, 0, 12 ) ) ),
 					count( $unsafe_class_names ) > 12 ? ', ...' : ''
@@ -457,7 +457,7 @@ final class Bricks_Conversion_Validator {
 				$findings,
 				'fail',
 				'bricks_template_runtime_code_element',
-				sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). External converters may park CSS/JS in Code elements for manual review, but Kiwe /convert /bricks production output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.', (string) ( $item['label'] ?? '' ), implode( ', ', (array) ( $item['keys'] ?? [] ) ) ),
+				sprintf( 'Bricks Code element "%1$s" contains runtime/custom-code settings (%2$s). External converters may park CSS/JS in Code elements for manual review, but production SEAM Compiler output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.', (string) ( $item['label'] ?? '' ), implode( ', ', (array) ( $item['keys'] ?? [] ) ) ),
 				(string) ( $item['path'] ?? '$.content/header/footer' )
 			);
 		}
@@ -604,7 +604,7 @@ final class Bricks_Conversion_Validator {
 			$this->add( $findings, 'fail', 'bricks_template_element_native_controls_too_low', sprintf( 'Large Bricks template export has %1$d element-level native style/layout controls across %2$d elements (%3$.2f per element). This is too class-dependent for a visual-editor handoff: grid/flex, spacing, sizing, typography, color, borders, radius, shadows, and responsive overrides must be editable on elements where the source design depends on them, not only in importable global_classes.', $editability['element_controls'], count( $elements ), $editability['controls_per_element'] ), '$.content' );
 		}
 		if ( count( $elements ) >= self::LARGE_TEMPLATE_ELEMENT_COUNT && $editability['class_only_ratio'] > self::MAX_CLASS_ONLY_ELEMENT_RATIO ) {
-			$this->add( $findings, 'fail', 'bricks_template_class_hydration_dependency', sprintf( 'Large Bricks template export has %1$d of %2$d elements (%3$d%%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.', $editability['class_only_elements'], count( $elements ), (int) round( $editability['class_only_ratio'] * 100 ) ), '$.content' );
+			$this->add( $findings, 'fail', 'bricks_template_class_hydration_dependency', sprintf( 'Large Bricks template export has %1$d of %2$d elements (%3$d%%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so SEAM Compiler must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.', $editability['class_only_elements'], count( $elements ), (int) round( $editability['class_only_ratio'] * 100 ) ), '$.content' );
 		}
 
 		$styled_global_classes = $this->styled_template_global_classes( isset( $template['global_classes'] ) && is_array( $template['global_classes'] ) ? $template['global_classes'] : [] );
@@ -619,7 +619,7 @@ final class Bricks_Conversion_Validator {
 				$findings,
 				'fail',
 				'bricks_template_multi_owner_global_class_styles',
-				sprintf( 'Large Bricks template export imports %1$d styled global_classes (%2$s%3$s) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. /convert /bricks template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.', count( $styled_global_classes ), implode( ', ', $names ), count( $styled_global_classes ) > 12 ? ', ...' : '' ),
+				sprintf( 'Large Bricks template export imports %1$d styled global_classes (%2$s%3$s) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. SEAM Compiler template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.', count( $styled_global_classes ), implode( ', ', $names ), count( $styled_global_classes ) > 12 ? ', ...' : '' ),
 				'$.global_classes'
 			);
 		}
@@ -1363,7 +1363,7 @@ final class Bricks_Conversion_Validator {
 				'fail',
 				'bricks_conversion_untokenized_native_length',
 				sprintf(
-					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". /convert /bricks outputs must follow the Kiwe token ladder for spacing, sizing, radius, type, shadow, transform, and responsive layout controls: use an official var(--kiwe-*)/var(--seam-*) token when the meaning and property domain match; otherwise use a declared project variable; otherwise use a real fluid clamp() only when source responsive states prove different min/max values. Plain values are valid only at the named token definition layer for roles such as fixed primitive, geometry input, content limit, or responsive guard. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.',
+					'Bricks native style "%1$s" on "%2$s" uses literal length "%3$s". Framework-mode SEAM Compiler output must follow the Kiwe token ladder for spacing, sizing, radius, type, shadow, transform, and responsive layout controls: use an official var(--kiwe-*)/var(--seam-*) token when the meaning and property domain match; otherwise use a declared project variable; otherwise use a real fluid clamp() only when source responsive states prove different min/max values. Plain values are valid only at the named token definition layer for roles such as fixed primitive, geometry input, content limit, or responsive guard. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					(string) ( $item['value'] ?? '' )
@@ -1404,7 +1404,7 @@ final class Bricks_Conversion_Validator {
 				'fail',
 				'bricks_conversion_untokenized_native_color',
 				sprintf(
-					'Bricks native style "%1$s" on "%2$s" uses direct color literal(s) "%3$s". /convert /bricks outputs must be 100%% Seam/Framework integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume bare var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the Framework/global-variable definition layer, but not as direct component styling, CSS-variable fallbacks, color: #fff, or --pack-bg: #f5b942.',
+					'Bricks native style "%1$s" on "%2$s" uses direct color literal(s) "%3$s". Framework-mode SEAM Compiler output must be fully token integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume bare var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the Framework/global-variable definition layer, but not as direct component styling, CSS-variable fallbacks, color: #fff, or --pack-bg: #f5b942.',
 					(string) ( $item['path'] ?? '' ),
 					(string) ( $item['label'] ?? '' ),
 					implode( ', ', array_map( 'strval', (array) ( $item['literals'] ?? [] ) ) )
@@ -1502,7 +1502,7 @@ final class Bricks_Conversion_Validator {
 				'fail',
 				'bricks_template_unknown_framework_variable',
 				sprintf(
-					'Bricks template uses %1$d reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: %2$s%3$s. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the new token to Kiwe universal registry before /convert /bricks can pass.',
+					'Bricks template uses %1$d reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: %2$s%3$s. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the new token to Kiwe universal registry before SEAM Compiler validation can pass.',
 					count( $unknown_names ),
 					implode( ', ', array_slice( $unknown_names, 0, 20 ) ),
 					count( $unknown_names ) > 20 ? ', ...' : ''
@@ -1540,7 +1540,7 @@ final class Bricks_Conversion_Validator {
 				count( $template_only ) > 12 ? ', ...' : ''
 			);
 		}
-		$message .= '/convert /bricks must pair project variables with Kiwe > Framework profile output/push proof, or use only official --kiwe-/--seam- variables already installed by the Framework.';
+		$message .= 'SEAM Compiler must pair project variables with Kiwe > Framework profile output/push proof, or use only official --kiwe-/--seam- variables already installed by the Framework.';
 
 		$this->add(
 			$findings,

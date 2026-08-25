@@ -11,12 +11,12 @@ Start at `https://start.kiwelaunch.com/start.md`. The current contract exposes e
 - `/fix`
 - `/redo`
 
-Unknown commands and remembered aliases are rejected. SiteGraph and Design Context are attached or connected inputs, not commands. Seam Framework is an explicit option on Bricks conversion, not a command lane.
+Unknown commands, remembered aliases and unsupported modifiers are rejected. SiteGraph and its embedded Design Context are attached or safely connected inputs, not commands. `/ideate` detects new build, redesign or source enhancement and selects an available read-only SiteGraph transport. `/convert /bricks` prepares both dynamic-tag and query-loop intent; `/dynamictags` and `/queryloop` narrow that preparation to one binding type. Seam Framework is an explicit option in the `seam.kiwe` compiler, not a command lane.
 
 ## Authority
 
 - The user and their design conversation own creative direction.
-- SEAM Compiler alone emits production Bricks JSON.
+- The `seam.kiwe` application alone emits production Bricks JSON; browser AI never does.
 - Kiwe owns site facts, dynamic binding validation, native runtime actions and optional Framework installation.
 - Browser AI may ideate or explain; it never receives generic WordPress save authority.
 - External SiteGraph credentials are scoped, hashed, revocable, rate-limited and read-only. The only apply output available remotely is a dry-run plan.

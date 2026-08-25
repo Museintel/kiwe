@@ -1,18 +1,18 @@
 {
   "schema": "kiwe.command-manifest.v2",
   "productName": "SEAM",
-  "contractVersion": "8.0",
+  "contractVersion": "8.1",
   "updated": "2026-08-25",
   "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
   "authority": {
     "creative": "The user's design conversation owns art direction. /ideate must not impose a house style.",
-    "conversion": "SEAM Compiler is the only authority that emits production Bricks JSON.",
-    "siteContext": "SiteGraph and Design Context are attached or connected inputs, never slash commands.",
-    "framework": "Seam Framework is an explicit conversion option, never an automatic rewrite."
+    "conversion": "The seam.kiwe application is the only authority that emits production Bricks JSON. Browser AI only prepares source and binding intent.",
+    "siteContext": "SiteGraph is an attached or connected input and carries embedded Design Context; neither is a slash command.",
+    "framework": "Seam Framework is an explicit seam.kiwe compilation option, never an automatic rewrite."
   },
   "commands": [
-    {"command": "/ideate", "context": "contexts/ideate.md", "requires": ["project brief or SiteGraph context"], "outputs": ["complete raw HTML/CSS/JS project", "asset manifest"], "boundary": "Create and refine the source design only. Do not emit Bricks JSON."},
-    {"command": "/convert /bricks", "context": "contexts/convert-bricks.md", "requires": ["complete raw HTML/CSS/JS project"], "outputs": ["native Bricks templates", "conversion report"], "boundary": "Use SEAM Compiler. Framework mode is an explicit option, not another command."},
+    {"command": "/ideate", "context": "contexts/ideate.md", "requires": ["project request and any supplied files or connected SiteGraph"], "outputs": ["complete raw HTML/CSS/JS project", "asset manifest", "discovery record"], "boundary": "Adapt to a new build, redesign or source enhancement without imposing a house style. Do not emit Bricks JSON."},
+    {"command": "/convert /bricks", "context": "contexts/convert-bricks.md", "requires": ["complete accepted raw HTML/CSS/JS project", "SiteGraph when real site fields are requested"], "outputs": ["complete updated raw project", "bricks-bindings/kiwe-bindings.json", "binding report"], "modifiers": {"default": "dynamicTagsAndQueryLoops", "/dynamictags": "dynamicTagsOnly", "/queryloop": "queryLoopsOnly"}, "boundary": "Prepare Bricks dynamic intent for seam.kiwe. Never emit Bricks JSON."},
     {"command": "/audit", "context": "contexts/audit.md", "requires": ["source or generated artifact"], "outputs": ["machine-readable report", "human summary", "score evidence"], "boundary": "Read only. Never modify the submitted artifact."},
     {"command": "/accessibility", "context": "contexts/accessibility.md", "requires": ["source or Bricks artifact"], "outputs": ["accessibility report", "light/dark color evidence", "responsive evidence"], "boundary": "Audit only. Use /fix to create a changed artifact."},
     {"command": "/fix", "context": "contexts/accessibility.md", "requires": ["artifact", "audit report"], "outputs": ["corrected artifact", "before/after report"], "boundary": "Apply only proven findings and preserve art direction, content and behavior."},

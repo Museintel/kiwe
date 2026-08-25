@@ -353,8 +353,8 @@
       "sha256": "45ae7b708a3e8e6ca0e5a546fb7178ad3d720ea3629c93e0d65bcdc0117adde6"
     },
     "includes/AI/AI_Companion_Service.php": {
-      "bytes": 179123,
-      "sha256": "d22548cc6ec0e7d9a6288a864f87ae77995ac1d87195146a09558bf0ffd51793"
+      "bytes": 169677,
+      "sha256": "710d90a6b4fc24da2c72da7e3eec23fbc7b5d75b716b97124318b87778fc9aca"
     },
     "includes/AI/AI_Provider_Service.php": {
       "bytes": 12608,
@@ -377,16 +377,16 @@
       "sha256": "22136ed40c4b8d4b25555aefa7c51ec9d301109a30059b944ed0895ff4e618f2"
     },
     "includes/AI/Bricks_AI_Intelligence_Service.php": {
-      "bytes": 30502,
-      "sha256": "d22ac9ae2ff14cd809a849d31d4aaab04e5ef0e01fcd2fde299562009adec87d"
+      "bytes": 29250,
+      "sha256": "0ea5b3415c3ebcbffa47082768ba5061128a4304fae03b935c64947fed1869e1"
     },
     "includes/AI/Bricks_Controlled_Adapter_Service.php": {
       "bytes": 17537,
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 97510,
-      "sha256": "3399b04a2cdc2175dba3f381d6625be2bce5125c136c0f418a57d8bc0d087c9e"
+      "bytes": 97505,
+      "sha256": "34093eabc44281785221abe65d9860fe3fd9c43190e0a4bc987a3de0953d7adc"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,

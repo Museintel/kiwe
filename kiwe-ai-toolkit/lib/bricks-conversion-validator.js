@@ -1050,7 +1050,7 @@ function validateProjectVariableFrameworkProof(root, templateData, templateStyle
     add(
       findings,
       'fail',
-      `Bricks template uses ${unknownReserved.length} reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: ${unknownReserved.slice(0, 20).join(', ')}${unknownReserved.length > 20 ? ', ...' : ''}. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the new token to Kiwe's universal registry before /convert /bricks can pass.`,
+      `Bricks template uses ${unknownReserved.length} reserved-looking Framework variable(s) that are not in the Kiwe universal token registry: ${unknownReserved.slice(0, 20).join(', ')}${unknownReserved.length > 20 ? ', ...' : ''}. Do not invent --kiwe-* or --seam-* variables. Map to an existing official token, declare a collision-safe project variable such as --nc-*, or formally add the new token to Kiwe's universal registry before SEAM Compiler validation can pass.`,
       file,
       firstUse?.path || '$.content'
     );
@@ -1069,7 +1069,7 @@ function validateProjectVariableFrameworkProof(root, templateData, templateStyle
   add(
     findings,
     'fail',
-    `Bricks template consumes ${required.length} project CSS variable(s) in native element controls, but Framework-profile proof is missing for ${missing.length}: ${missing.slice(0, 20).join(', ')}${missing.length > 20 ? ', ...' : ''}. ${templateOnly.length ? `These variable(s) appear only in the template globalVariables lane (${templateOnly.slice(0, 12).join(', ')}${templateOnly.length > 12 ? ', ...' : ''}), but Bricks My Templates import does not reliably install template-local globalVariables into the site variable manager. ` : ''}/convert /bricks must pair project variables with Kiwe > Framework profile output/push proof, or use only official --kiwe-/--seam- variables already installed by the Framework.`,
+    `Bricks template consumes ${required.length} project CSS variable(s) in native element controls, but Framework-profile proof is missing for ${missing.length}: ${missing.slice(0, 20).join(', ')}${missing.length > 20 ? ', ...' : ''}. ${templateOnly.length ? `These variable(s) appear only in the template globalVariables lane (${templateOnly.slice(0, 12).join(', ')}${templateOnly.length > 12 ? ', ...' : ''}), but Bricks My Templates import does not reliably install template-local globalVariables into the site variable manager. ` : ''}SEAM Compiler must pair project variables with Kiwe > Framework profile output/push proof, or use only official --kiwe-/--seam- variables already installed by the Framework.`,
     file,
     firstUse?.path || '$.content'
   );
@@ -1260,7 +1260,7 @@ function validateTokenizedNativeColors(items, findings, file, pathPointer) {
     add(
       findings,
       'fail',
-      `Bricks native style "${item.path}" on "${item.label}" uses direct color literal(s) "${item.literals.join(', ')}". /convert /bricks outputs must be 100% Seam/Framework integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume bare var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the Framework/global-variable definition layer, but not as direct component styling, CSS-variable fallbacks, color: #fff, or --pack-bg: #f5b942.`,
+      `Bricks native style "${item.path}" on "${item.label}" uses direct color literal(s) "${item.literals.join(', ')}". Framework-mode SEAM Compiler output must be fully token integrated: component colors, backgrounds, gradients, borders, shadows, fills, and local CSS variables must consume bare var(--kiwe-*), var(--seam-*), or declared project variables from the Framework profile/globalVariables. Literal colors are allowed at the Framework/global-variable definition layer, but not as direct component styling, CSS-variable fallbacks, color: #fff, or --pack-bg: #f5b942.`,
       file,
       item.path
     );
@@ -1333,7 +1333,7 @@ function validateTokenizedNativeLengths(items, findings, file, pathPointer, decl
     add(
       findings,
       'fail',
-      `Bricks native style "${item.path}" on "${item.label}" uses literal length "${item.value}". /convert /bricks outputs must follow the Kiwe token ladder for spacing, sizing, radius, type, shadow, transform, and responsive layout controls: use an official var(--kiwe-*)/var(--seam-*) token when the meaning and property domain match; otherwise use a declared project variable; otherwise use a real fluid clamp() only when source responsive states prove different min/max values. Plain values are valid only at the named token definition layer for roles such as fixed primitive, geometry input, content limit, or responsive guard. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.`,
+      `Bricks native style "${item.path}" on "${item.label}" uses literal length "${item.value}". Framework-mode SEAM Compiler output must follow the Kiwe token ladder for spacing, sizing, radius, type, shadow, transform, and responsive layout controls: use an official var(--kiwe-*)/var(--seam-*) token when the meaning and property domain match; otherwise use a declared project variable; otherwise use a real fluid clamp() only when source responsive states prove different min/max values. Plain values are valid only at the named token definition layer for roles such as fixed primitive, geometry input, content limit, or responsive guard. No-op clamps such as clamp(22px, 22px, 22px) do not count as tokenization.`,
       file,
       item.path
     );
@@ -1524,7 +1524,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
       add(
         findings,
         'fail',
-        `Bricks template upload contains ${unsafeNames.length} unscoped global class name(s): ${preview}${unsafeNames.length > 12 ? ', ...' : ''}. Bricks My Templates skips or remaps imported class styles when a local class has the same id or name, so /convert /bricks must namespace project visual global classes (for example nc-promo-card, bv-product-card, sf-hero-grid) and keep plain semantic names only in _cssClasses/attributes, not importable global_classes.`,
+        `Bricks template upload contains ${unsafeNames.length} unscoped global class name(s): ${preview}${unsafeNames.length > 12 ? ', ...' : ''}. Bricks My Templates skips or remaps imported class styles when a local class has the same id or name, so SEAM Compiler must namespace project visual global classes (for example nc-promo-card, bv-product-card, sf-hero-grid) and keep plain semantic names only in _cssClasses/attributes, not importable global_classes.`,
         rel(root, templatePath),
         '$.global_classes'
       );
@@ -1606,7 +1606,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     add(
       findings,
       'fail',
-      `Bricks Code element "${item.label}" contains runtime/custom-code settings (${item.keys.join(', ')}). External converters may park CSS/JS in Code elements for manual review, but Kiwe /convert /bricks production output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.`,
+      `Bricks Code element "${item.label}" contains runtime/custom-code settings (${item.keys.join(', ')}). External converters may park CSS/JS in Code elements for manual review, but production SEAM Compiler output must decompose representable layout/design into native Bricks elements, controls, variables, attributes, interactions, and documented unsupported exceptions instead of shipping Code-element authority.`,
       rel(root, templatePath),
       item.path
     );
@@ -1784,7 +1784,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     add(
       findings,
       'fail',
-      `Large Bricks template export has ${editabilityStats.classOnlyElements} of ${editabilityStats.elementCount} elements (${Math.round(editabilityStats.classOnlyElementRatio * 100)}%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.`,
+      `Large Bricks template export has ${editabilityStats.classOnlyElements} of ${editabilityStats.elementCount} elements (${Math.round(editabilityStats.classOnlyElementRatio * 100)}%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so SEAM Compiler must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.`,
       rel(root, templatePath),
       '$.content'
     );
@@ -1796,7 +1796,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     add(
       findings,
       'fail',
-      `Large Bricks template export imports ${styledGlobalClasses.length} styled global_classes (${preview}${styledGlobalClasses.length > 12 ? ', ...' : ''}) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. /convert /bricks template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.`,
+      `Large Bricks template export imports ${styledGlobalClasses.length} styled global_classes (${preview}${styledGlobalClasses.length > 12 ? ', ...' : ''}) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. SEAM Compiler template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.`,
       rel(root, templatePath),
       '$.global_classes'
     );
@@ -1821,7 +1821,7 @@ function validateRoot(conversion, findings, conversionRel, root) {
     const sourceText = JSON.stringify(source);
     const sourceHtml = String(source.html || source.path || '');
     if (/(^|[\\/])(combined-preview|appshell-theme|ui-system)([\\/]|$)|theme-package\.json|css[\\/]theme\.css|\b(?:dsa\s*theme|appshell|app\s*shell)\b/i.test(sourceText)) {
-      add(findings, 'fail', '/convert /bricks source must be the page artifact only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.', conversionRel, '$.source');
+      add(findings, 'fail', 'SEAM Compiler source must be the page artifact only. Do not convert combined-preview, appshell-theme, DSA/AppShell preview markup, theme-package.json, or theme.css into Bricks.', conversionRel, '$.source');
     }
     if (sourceHtml && !sourceHtml.replace(/\\/g, '/').endsWith('website/bricks-paste.html')) {
       add(findings, 'warn', 'source.html should point to website/bricks-paste.html. Combined previews and AppShell theme previews are never Bricks conversion sources.', conversionRel, '$.source.html');
@@ -2347,7 +2347,7 @@ function validateEmbeddedKiweTemplateMeta(root, templatePath, templateData, find
 function validateNotes(root, findings, options = {}) {
   const notes = readNotesText(root);
   if (!notes.text) {
-    add(findings, 'info', 'BRICKS-CONVERSION-NOTES.md is absent. This is correct for lean `/convert /bricks` output unless the human also requested `/document`.');
+    add(findings, 'info', 'BRICKS-CONVERSION-NOTES.md is absent. This is correct for lean SEAM Compiler output.');
     return;
   }
   if (!options.documented) {
@@ -2460,7 +2460,7 @@ export function validateBricksConversion(target = '.', options = {}) {
       add(
         findings,
         'fail',
-        `Bricks Code element "${item.label}" contains runtime/custom-code settings (${item.keys.join(', ')}). /convert /bricks must not ship representable page layout/design or JavaScript authority as a Code element; use native Bricks elements, controls, interactions, Kiwe capability attributes, or an explicit review-only unsupported exception.`,
+        `Bricks Code element "${item.label}" contains runtime/custom-code settings (${item.keys.join(', ')}). SEAM Compiler must not ship representable page layout/design or JavaScript authority as a Code element; use native Bricks elements, controls, interactions, Kiwe capability attributes, or an explicit review-only unsupported exception.`,
         conversionRel,
         item.path.replace('$.content/header/footer', '$.elements')
       );

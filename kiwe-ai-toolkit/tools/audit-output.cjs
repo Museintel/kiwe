@@ -227,7 +227,7 @@ function collectBricksElementMisuse(value, out = []) {
         })
         .map(([key]) => key);
       if (runtimeKeys.length && !reviewOnlyCodeElementAllowancePattern.test(reviewText)) {
-        out.push(`Bricks Code element "${value.id || value.label || 'unknown'}" contains runtime/custom-code settings (${Array.from(new Set(runtimeKeys)).join(', ')}). External converter output may use Code elements as a temporary scaffold, but Kiwe /convert /bricks must decompose representable layout/design into native Bricks controls or mark the artifact review-only.`);
+        out.push(`Bricks Code element "${value.id || value.label || 'unknown'}" contains runtime/custom-code settings (${Array.from(new Set(runtimeKeys)).join(', ')}). External converter output may use Code elements as a temporary scaffold, but SEAM Compiler must decompose representable layout/design into native Bricks controls or mark the artifact review-only.`);
       }
     }
     if (isBricksLayoutElement(value)) {
@@ -510,7 +510,7 @@ function collectBricksColorTokenMisuse(items, prefix) {
     const label = item.id || item.name || item.label || `item-${index}`;
     const settings = elementSettings(item);
     for (const problem of collectUntokenizedColorValues(settings, [], `$[${index}].settings`)) {
-      problems.push(`${prefix} native style "${problem.path}" on "${label}" uses direct color literal(s) "${problem.literals.join(', ')}". /convert /bricks outputs must be 100% Seam/Framework integrated: component colors, gradients, borders, shadows, fills, and local CSS variables must consume var(--kiwe-*), var(--seam-*), or declared project variables. Literal colors are allowed only at token-definition/fallback layer, not direct component styling.`);
+      problems.push(`${prefix} native style "${problem.path}" on "${label}" uses direct color literal(s) "${problem.literals.join(', ')}". Framework-mode SEAM Compiler output must be fully token integrated: component colors, gradients, borders, shadows, fills, and local CSS variables must consume var(--kiwe-*), var(--seam-*), or declared project variables. Literal colors are allowed only at token-definition/fallback layer, not direct component styling.`);
       if (problems.length >= limit) break;
     }
     if (problems.length >= limit) break;
@@ -759,12 +759,12 @@ function validateBricksTemplateExport(packageRoot, templateRelPath) {
     editabilityStats.elementCount >= largeClipboardElementCount &&
     editabilityStats.classOnlyElementRatio > templateUploadMaxClassOnlyElementRatio
   ) {
-    out.push(`Large Bricks template export ${relPath} has ${editabilityStats.classOnlyElements} of ${editabilityStats.elementCount} elements (${Math.round(editabilityStats.classOnlyElementRatio * 100)}%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so /convert /bricks must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.`);
+    out.push(`Large Bricks template export ${relPath} has ${editabilityStats.classOnlyElements} of ${editabilityStats.elementCount} elements (${Math.round(editabilityStats.classOnlyElementRatio * 100)}%) carrying global-class dependencies without element-level native style/layout controls. Bricks My Templates can skip or remap global class definitions when class names already exist, so SEAM Compiler must keep the rendered design resilient with sufficient element-native controls instead of relying mainly on class hydration.`);
   }
   const styledGlobalClasses = collectStyledTemplateGlobalClasses(templateData.global_classes);
   if (editabilityStats.elementCount >= largeClipboardElementCount && styledGlobalClasses.length) {
     const preview = styledGlobalClasses.slice(0, 12).map((item) => item.name || item.id || '(unnamed)').join(', ');
-    out.push(`Large Bricks template export ${relPath} imports ${styledGlobalClasses.length} styled global_classes (${preview}${styledGlobalClasses.length > 12 ? ', ...' : ''}) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. /convert /bricks template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.`);
+    out.push(`Large Bricks template export ${relPath} imports ${styledGlobalClasses.length} styled global_classes (${preview}${styledGlobalClasses.length > 12 ? ', ...' : ''}) while element-native controls already own visual fidelity. This creates multi-owner "ghost styling" in Bricks: removing a color/radius/spacing from the visible element or class can leave the same style active from another layer. SEAM Compiler template uploads must use element-native controls as the render/edit owner and keep imported global_classes semantic/name-only; reusable project classes belong in the Framework profile push, not as duplicate styled classes in the template upload.`);
   }
   return out;
 }
@@ -807,7 +807,7 @@ function auditLeanBricksDocumentation(bricksArtifacts) {
     if (!docPattern.test(rel(file))) continue;
     add(
       'fail',
-      'Documentation/report files were emitted without `/document`. Lean `/convert /bricks` output should hand back only the native Bricks upload JSON unless the human explicitly asks for docs.',
+      'Documentation/report files were emitted alongside lean SEAM Compiler output. Keep production output limited to required templates, bindings and evidence.',
       rel(file)
     );
   }

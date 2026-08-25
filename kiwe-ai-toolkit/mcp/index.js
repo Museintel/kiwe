@@ -15,15 +15,14 @@ import {
   validateFrameworkProfile
 } from '../lib/kiwe-core.js';
 
-const server = new Server({ name: 'seam', version: '8.0.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'seam', version: '8.1.0' }, { capabilities: { tools: {} } });
 const object = (properties = {}, required = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}) });
 const routeProperties = {
   command: { type: 'string' },
   brief: { type: 'string' },
   artifactSummary: { type: 'string' },
   siteGraphSummary: { type: 'string' },
-  reportSummary: { type: 'string' },
-  frameworkMode: { type: 'boolean' }
+  reportSummary: { type: 'string' }
 };
 const validationProperties = {
   target: { type: 'string' },

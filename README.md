@@ -78,7 +78,7 @@ The former browser converter is quarantined under `packages/seam-bricks-adapter/
 
 ### SEAM Framework package boundary
 
-Raw `/convert /bricks` output remains self-contained and Framework-neutral. Seam Framework is an explicit compiler option, not another slash command. Framework mode emits one project-wide Framework Profile, stable Bricks class IDs and profile-dependent templates. The profile must be installed from Kiwe > Build > Framework before those templates are imported. The deterministic Framework validator fails closed when a referenced class, variable, palette entry or theme-style owner is missing. Accessibility remains its own audit/fix stage and cannot silently rewrite an accepted design.
+Raw `/convert /bricks` output remains a self-contained, Framework-neutral HTML/CSS/JS project plus `kiwe.bricks-bindings.v1`; it never contains Bricks JSON. Dynamic tags and query loops are both prepared by default, while `/dynamictags` or `/queryloop` selects only one binding lane. The user then submits the package to `seam.kiwe`, the sole native Bricks JSON compiler. Seam Framework is an explicit compiler option, not another slash command. Framework mode emits one project-wide Framework Profile, stable Bricks class IDs and profile-dependent templates. The profile must be installed from Kiwe > Build > Framework before those templates are imported. The deterministic Framework validator fails closed when a referenced class, variable, palette entry or theme-style owner is missing. Accessibility remains its own audit/fix stage and cannot silently rewrite an accepted design.
 
 ## Emergency Disable
 

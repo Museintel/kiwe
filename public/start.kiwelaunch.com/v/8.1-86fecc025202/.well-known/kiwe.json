@@ -4,7 +4,7 @@
   "contractVersion": "8.1",
   "releaseId": "8.1-86fecc025202",
   "updated": "2026-08-25",
-  "canonicalBase": "https://start.kiwelaunch.com",
+  "canonicalBase": "https://start.kiwelaunch.com/v/8.1-86fecc025202",
   "immutableBase": "https://start.kiwelaunch.com/v/8.1-86fecc025202",
   "start": "https://start.kiwelaunch.com/start.md",
   "entry": "https://start.kiwelaunch.com/entry.json",
@@ -12,12 +12,12 @@
   "sourceRepository": "https://github.com/Museintel/kiwe",
   "sourceHash": "sha256:86fecc02520276396f2db503915cb2e2b19117098fd462fb167086f6b2a3bd25",
   "commands": {
-    "/ideate": "https://start.kiwelaunch.com/ideate/contract.json",
-    "/convert /bricks": "https://start.kiwelaunch.com/convert/bricks/contract.json",
-    "/audit": "https://start.kiwelaunch.com/audit/contract.json",
-    "/accessibility": "https://start.kiwelaunch.com/accessibility/contract.json",
-    "/fix": "https://start.kiwelaunch.com/fix/contract.json",
-    "/redo": "https://start.kiwelaunch.com/redo/contract.json"
+    "/ideate": "https://start.kiwelaunch.com/v/8.1-86fecc025202/ideate/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/v/8.1-86fecc025202/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/v/8.1-86fecc025202/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/v/8.1-86fecc025202/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/v/8.1-86fecc025202/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/v/8.1-86fecc025202/redo/contract.json"
   },
   "immutableCommands": {
     "/ideate": "https://start.kiwelaunch.com/v/8.1-86fecc025202/ideate/contract.json",
