@@ -1,5 +1,24 @@
 # Changelog
 
+## 8.0.0-rc.1 — 2026-08-25
+
+- Replaced the historical SeamFlow command graph with six strict SEAM commands and one compiler authority.
+- Made SiteGraph and Design Context inputs instead of commands and made Framework an explicit conversion option.
+- Reduced the external AI API to scoped SiteGraph reads, deterministic validators and dry-run planning; removed remote mutation, studio and duplicate compiler routes.
+- Consolidated WordPress administration into seven operator-facing sections while retaining specialist tools behind those hubs.
+- Replaced accumulated settings compatibility migrations with one clean RC schema that enables only read-only SiteGraph.
+- Rebuilt the public start registry without historical contracts and retained executable Bricks, bindings, Framework, theme-style and accessibility validators.
+
+## 7.27
+
+- Unified public SiteGraph and Design Context into one `kiwe.site-graph.v1` handoff for onboarding, browser AI, SEAM and connected tools.
+- Removed the separate Design Context export, REST route, WordPress ability, MCP tool and command alias so one packet owns target-site evidence.
+- Updated `/ideate` to consume the unified SiteGraph packet and regenerated the canonical SeamFlow 7.29 command registry.
+
+## 7.26
+
+- Added the client-first SiteGraph design-context and onboarding connections that were completed between the PhoneKey 7.25 release and the unified 7.27 handoff.
+
 ## 7.25
 
 - Promoted PhoneKey from OTP-only transport to Kiwe's bounded, signed WhatsApp channel for opted-in campaigns, saved-cart recovery, WooCommerce order status, and private owner events.

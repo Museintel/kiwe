@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -7,279 +6,110 @@ const path = require('node:path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const publicRoot = path.join(repoRoot, 'public', 'start.kiwelaunch.com');
+const toolkitRoot = path.join(repoRoot, 'kiwe-ai-toolkit');
 const baseUrl = 'https://start.kiwelaunch.com';
 const checkOnly = process.argv.includes('--check');
 const textExtensions = new Set(['.cjs', '.css', '.html', '.js', '.json', '.md', '.txt', '.xml']);
 
-function canonicalText(value) {
-  return String(value).replace(/\r\n?/g, '\n');
-}
-
-function canonicalFile(file) {
-  const body = fs.readFileSync(file);
-  if (!textExtensions.has(path.extname(file).toLowerCase())) return body;
-  return Buffer.from(canonicalText(body.toString('utf8')), 'utf8');
-}
-
-function readJson(file) {
-  return JSON.parse(canonicalFile(file).toString('utf8'));
-}
-
-function sha256(value) {
-  return crypto.createHash('sha256').update(value).digest('hex');
-}
-
-function write(root, relative, value) {
+const canonical = (value) => String(value).replace(/\r\n?/g, '\n');
+const bytes = (file) => {
+  const value = fs.readFileSync(file);
+  return textExtensions.has(path.extname(file).toLowerCase()) ? Buffer.from(canonical(value.toString('utf8'))) : value;
+};
+const json = (file) => JSON.parse(bytes(file).toString('utf8'));
+const hash = (value) => crypto.createHash('sha256').update(value).digest('hex');
+const write = (root, relative, value) => {
   const target = path.join(root, relative);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, value);
+};
+const copy = (root, source, relative) => write(root, relative, bytes(source));
+const walk = (root) => fs.existsSync(root) ? fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => entry.isDirectory() ? walk(path.join(root, entry.name)) : [path.join(root, entry.name)]) : [];
+const routeFor = (command) => command.trim().split(/\s+/).map((token) => token.replace(/^\/+/, '').toLowerCase()).filter(Boolean).join('/');
+const escape = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+
+function page(title, summary, body, version, releaseId, machineUrl) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escape(summary)}"><title>${escape(title)} · SEAM</title><style>:root{color-scheme:light dark;font-family:Inter,system-ui,sans-serif;--bg:#f4f2ea;--ink:#102d29;--card:#fffdf7;--line:#a7b9b4;--accent:#0b8277}@media(prefers-color-scheme:dark){:root{--bg:#091713;--ink:#eaf6f1;--card:#10231e;--line:#36564e;--accent:#65dccd}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}main{width:min(920px,calc(100% - 32px));margin:48px auto}.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,56px)}h1{font-size:clamp(2rem,6vw,4.5rem);line-height:1}a{color:var(--accent)}code,pre{overflow:auto}li{margin:.55rem 0}.meta{display:flex;gap:8px;flex-wrap:wrap}.meta span{border:1px solid var(--line);border-radius:99px;padding:.3rem .65rem}</style></head><body><main><article class="card"><p>Kiwe launch</p><h1>${escape(title)}</h1><p>${escape(summary)}</p><div class="meta"><span>Contract ${escape(version)}</span><span>${escape(releaseId)}</span></div>${body}<p><a href="${escape(machineUrl)}">Machine contract</a> · <a href="${baseUrl}/">All commands</a></p></article></main></body></html>`;
 }
 
-function copy(root, source, relative) {
-  write(root, relative, canonicalFile(source));
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function routeFor(command) {
-  return command
-    .trim()
-    .split(/\s+/)
-    .map((token) => token.replace(/^\/+/, '').toLowerCase())
-    .filter(Boolean)
-    .join('/');
-}
-
-function publicResourcePath(resource) {
-  if (resource === 'KIWE-START.md') return 'start.md';
-  if (!resource.startsWith('kiwe-ai-toolkit/')) return null;
-  const relative = resource.slice('kiwe-ai-toolkit/'.length);
-  return relative.startsWith('tools/') ? `validators/${relative.slice('tools/'.length)}` : relative;
-}
-
-function renderPage({ title, eyebrow, summary, body, machineUrl, canonicalUrl, contractVersion, releaseId }) {
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'TechArticle',
-    name: title,
-    description: summary,
-    version: contractVersion,
-    url: canonicalUrl,
-  }).replaceAll('<', '\\u003c');
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="${escapeHtml(summary)}">
-  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
-  <title>${escapeHtml(title)} · SeamFlow</title>
-  <script type="application/ld+json">${jsonLd}</script>
-  <style>
-    :root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,sans-serif;--bg:#f4f2ea;--ink:#102d29;--card:#fffdf7;--line:#a7b9b4;--accent:#0b8277;--code:#e4eee9}
-    @media(prefers-color-scheme:dark){:root{--bg:#091713;--ink:#eaf6f1;--card:#10231e;--line:#36564e;--accent:#65dccd;--code:#172f28}}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}main{width:min(920px,calc(100% - 32px));margin:48px auto}.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,56px);box-shadow:0 18px 60px #0001}.eyebrow{color:var(--accent);font-weight:800;letter-spacing:.08em;text-transform:uppercase}h1{font-size:clamp(2rem,6vw,4.5rem);line-height:1;margin:.35em 0}h2{margin-top:2em}a{color:var(--accent)}code,pre{background:var(--code);border-radius:10px}code{padding:.15em .4em}pre{overflow:auto;padding:18px;white-space:pre-wrap}ul{padding-left:1.25rem}.meta{display:flex;gap:12px;flex-wrap:wrap;margin:1.5rem 0}.meta span{border:1px solid var(--line);border-radius:999px;padding:.35rem .7rem}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:2rem}.actions a{border:1px solid var(--line);border-radius:999px;padding:.65rem 1rem;text-decoration:none;font-weight:700}.actions a:first-child{background:var(--ink);color:var(--card)}
-  </style>
-</head>
-<body><main><article class="card">
-  <p class="eyebrow">${escapeHtml(eyebrow)}</p>
-  <h1>${escapeHtml(title)}</h1>
-  <p>${escapeHtml(summary)}</p>
-  <div class="meta"><span>Contract ${escapeHtml(contractVersion)}</span><span>Deterministic registry</span><span>Git-derived</span></div>
-  ${body}
-  <nav class="actions" aria-label="Related resources"><a href="${escapeHtml(machineUrl)}">Machine contract</a><a href="${baseUrl}/">All commands</a><a href="${baseUrl}/v/${escapeHtml(releaseId)}/">Pinned release</a></nav>
-</article></main></body></html>`;
-}
-
-function markdownFor(command, route, spec, version, releaseId, sourceHash, resources) {
-  return `# ${command}\n\nSeamFlow contract: ${version}\n\nCanonical URL: ${baseUrl}/${route}/\nMachine contract: ${baseUrl}/${route}/contract.json\nPinned machine contract: ${baseUrl}/v/${releaseId}/${route}/contract.json\nRelease: ${releaseId}\nSource hash: sha256:${sourceHash}\n\n## Phase\n\n${spec.phase || 'command'}\n\n## Hosted resources\n\n${resources.map((item) => `- ${item.url}\n  - Pinned: ${item.pinnedUrl}`).join('\n') || '- No additional hosted resource is required.'}\n\n## Requirements\n\n${(spec.requires || []).map((item) => `- ${item}`).join('\n') || '- None'}\n\n## Required behavior\n\n${(spec.must || []).map((item) => `- ${item}`).join('\n') || '- Follow the canonical SeamFlow Start and command manifest.'}\n\n## Outputs\n\n${(spec.output || []).map((item) => `- ${item}`).join('\n') || '- Follow the command contract.'}\n\n## Forbidden\n\n${(spec.forbidden || []).map((item) => `- ${item}`).join('\n') || '- Do not invent missing authority, artifacts, or PASS evidence.'}\n\n## Final response\n\n${spec.finalResponse || 'Use the canonical SeamFlow response shape.'}\n`;
-}
-
-function walkFiles(root) {
-  if (!fs.existsSync(root)) return [];
-  return fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(root, entry.name);
-    return entry.isDirectory() ? walkFiles(full) : [full];
-  });
-}
-
-function compareTrees(expectedRoot, actualRoot) {
+function compare(expectedRoot, actualRoot) {
   const relative = (root, file) => path.relative(root, file).replaceAll('\\', '/');
-  const expected = walkFiles(expectedRoot).map((file) => relative(expectedRoot, file)).sort();
-  const actual = walkFiles(actualRoot).map((file) => relative(actualRoot, file)).sort();
+  const expected = walk(expectedRoot).map((file) => relative(expectedRoot, file)).sort();
+  const actual = walk(actualRoot).map((file) => relative(actualRoot, file)).sort();
   const errors = [];
   for (const file of expected.filter((item) => !actual.includes(item))) errors.push(`missing: ${file}`);
   for (const file of actual.filter((item) => !expected.includes(item))) errors.push(`unexpected: ${file}`);
-  for (const file of expected.filter((item) => actual.includes(item))) {
-    const left = fs.readFileSync(path.join(expectedRoot, file));
-    const right = fs.readFileSync(path.join(actualRoot, file));
-    if (!left.equals(right)) errors.push(`drifted: ${file}`);
-  }
+  for (const file of expected.filter((item) => actual.includes(item))) if (!fs.readFileSync(path.join(expectedRoot, file)).equals(fs.readFileSync(path.join(actualRoot, file)))) errors.push(`drifted: ${file}`);
   return errors;
 }
 
-function build(targetRoot, { historicalRoot = '' } = {}) {
+function build(targetRoot) {
   const startPath = path.join(repoRoot, 'KIWE-START.md');
-  const toolkitRoot = path.join(repoRoot, 'kiwe-ai-toolkit');
   const entryPath = path.join(toolkitRoot, 'entry.json');
   const manifestPath = path.join(toolkitRoot, 'command-manifest.json');
-  const start = canonicalFile(startPath).toString('utf8');
-  const entry = readJson(entryPath);
-  const manifest = readJson(manifestPath);
-  const commands = manifest.commands || {};
-  const version = String(entry.contractVersion || manifest.contractVersion || 'unknown');
-  const publishedSourceFiles = [
-    startPath,
-    entryPath,
-    manifestPath,
-    ...['contexts', 'contracts', 'schemas', 'tools'].flatMap((directory) => walkFiles(path.join(toolkitRoot, directory))),
-  ].sort((left, right) => left.localeCompare(right));
-  const sourceHash = sha256(publishedSourceFiles.map((file) => {
-    const relative = path.relative(repoRoot, file).replaceAll('\\', '/');
-    return `${relative}\n${canonicalFile(file).toString('utf8')}`;
-  }).join('\n---\n'));
+  const entry = json(entryPath);
+  const manifest = json(manifestPath);
+  const commands = Array.isArray(manifest.commands) ? manifest.commands : [];
+  const published = [startPath, entryPath, manifestPath, ...['contexts', 'contracts', 'schemas'].flatMap((dir) => walk(path.join(toolkitRoot, dir)))].sort();
+  const sourceHash = hash(published.map((file) => `${path.relative(repoRoot, file).replaceAll('\\', '/')}\n${bytes(file).toString('utf8')}`).join('\n---\n'));
+  const version = String(entry.contractVersion);
   const releaseId = `${version}-${sourceHash.slice(0, 12)}`;
-  const generatedAt = entry.updated || manifest.updated || 'unknown';
-
-  const routes = Object.entries(commands).map(([command, spec]) => ({ command, spec, route: routeFor(command) }));
-  const duplicateRoutes = routes.filter((item, index) => routes.findIndex((candidate) => candidate.route === item.route) !== index);
-  if (duplicateRoutes.length) throw new Error(`Duplicate registry routes: ${duplicateRoutes.map((item) => item.route).join(', ')}`);
+  const routes = commands.map((spec) => ({ command: spec.command, spec, route: routeFor(spec.command) }));
+  if (new Set(routes.map((item) => item.route)).size !== routes.length) throw new Error('Duplicate SEAM command routes.');
 
   const discovery = {
-    schema: 'kiwe.command-registry.v1',
-    product: 'SeamFlow',
-    contractVersion: version,
-    releaseId,
-    updated: generatedAt,
-    canonicalBase: baseUrl,
-    immutableBase: `${baseUrl}/v/${releaseId}`,
-    freshDiscovery: `${baseUrl}/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}`,
-    start: `${baseUrl}/start.md`,
-    entry: `${baseUrl}/entry.json`,
-    commandManifest: `${baseUrl}/command-manifest.json`,
-    sourceRepository: 'https://github.com/Museintel/kiwe',
-    sourceHash: `sha256:${sourceHash}`,
+    schema: 'kiwe.command-registry.v2', product: 'SEAM', contractVersion: version, releaseId, updated: entry.updated,
+    canonicalBase: baseUrl, immutableBase: `${baseUrl}/v/${releaseId}`, start: `${baseUrl}/start.md`, entry: `${baseUrl}/entry.json`,
+    commandManifest: `${baseUrl}/command-manifest.json`, sourceRepository: 'https://github.com/Museintel/kiwe', sourceHash: `sha256:${sourceHash}`,
     commands: Object.fromEntries(routes.map(({ command, route }) => [command, `${baseUrl}/${route}/contract.json`])),
     immutableCommands: Object.fromEntries(routes.map(({ command, route }) => [command, `${baseUrl}/v/${releaseId}/${route}/contract.json`])),
-    cachePolicy: {
-      canonical: 'no-store; append a unique refresh query when reloading discovery in a continuing AI conversation',
-      immutable: 'public, max-age=31536000, immutable; the release URL changes whenever any published contract, context, schema, or validator changes',
-    },
+    cachePolicy: { canonical: 'no-store', immutable: 'public, max-age=31536000, immutable' }
   };
 
-  const listItems = routes.map(({ command, route, spec }) => `<li><a href="/${escapeHtml(route)}/"><code>${escapeHtml(command)}</code></a> — ${escapeHtml(spec.phase || 'command')}</li>`).join('\n');
-  const rootBody = `<h2>Use one memorable URL</h2><pre>${baseUrl}/ideate</pre><p>Give a browser AI the relevant route once. In the same conversation, continue with short composable SeamFlow commands.</p><h2>Canonical commands</h2><ul>${listItems}</ul><h2>Machine discovery</h2><ul><li><a href="/.well-known/kiwe.json"><code>/.well-known/kiwe.json</code></a></li><li><a href="/entry.json"><code>/entry.json</code></a></li><li><a href="/command-manifest.json"><code>/command-manifest.json</code></a></li><li><a href="/start.md"><code>/start.md</code></a></li></ul>`;
-  write(targetRoot, 'index.html', renderPage({ title: 'SeamFlow command registry', eyebrow: 'Kiwe launch', summary: 'A stable, public and machine-readable command front door generated from the canonical Kiwe contracts.', body: rootBody, machineUrl: `${baseUrl}/.well-known/kiwe.json?refresh=${releaseId}`, canonicalUrl: `${baseUrl}/`, contractVersion: version, releaseId }));
+  const list = routes.map(({ command, route, spec }) => `<li><a href="/${escape(route)}/"><code>${escape(command)}</code></a> — ${escape(spec.boundary)}</li>`).join('');
+  write(targetRoot, 'index.html', page('SEAM command registry', 'The strict public command boundary generated from the canonical Kiwe repository.', `<h2>Six commands</h2><ul>${list}</ul>`, version, releaseId, `${baseUrl}/.well-known/kiwe.json`));
   write(targetRoot, '.well-known/kiwe.json', `${JSON.stringify(discovery, null, 2)}\n`);
   write(targetRoot, 'registry.json', `${JSON.stringify(discovery, null, 2)}\n`);
-  write(targetRoot, 'start.md', start);
+  copy(targetRoot, startPath, 'start.md');
   copy(targetRoot, entryPath, 'entry.json');
   copy(targetRoot, manifestPath, 'command-manifest.json');
 
-  for (const { command, spec, route } of routes) {
-    const resources = (spec.read || []).map((source) => {
-      const publicPath = publicResourcePath(source);
-      if (!publicPath) return null;
+  for (const { command, route, spec } of routes) {
+    const sources = ['KIWE-START.md', `kiwe-ai-toolkit/${spec.context}`];
+    const resources = sources.map((source) => {
       const sourcePath = source === 'KIWE-START.md' ? startPath : path.join(repoRoot, source);
-      return {
-        source,
-        url: `${baseUrl}/${publicPath}`,
-        pinnedUrl: `${baseUrl}/v/${releaseId}/${publicPath}`,
-        sha256: fs.existsSync(sourcePath) ? sha256(canonicalFile(sourcePath)) : '',
-      };
-    }).filter(Boolean);
-    const machine = { schema: 'kiwe.command-route.v1', contractVersion: version, releaseId, command, route: `/${route}`, canonicalUrl: `${baseUrl}/${route}/contract.json`, immutableUrl: `${baseUrl}/v/${releaseId}/${route}/contract.json`, resources, sourceHash: `sha256:${sourceHash}`, ...spec };
-    const requirementList = (spec.requires || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Follow the canonical Start contract.</li>';
-    const outputList = (spec.output || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Follow the canonical command contract.</li>';
-    const resourceList = resources.map((item) => `<li><a href="${escapeHtml(item.url)}">${escapeHtml(item.source)}</a> · <a href="${escapeHtml(item.pinnedUrl)}">pinned ${escapeHtml(version)}</a></li>`).join('') || '<li>No additional hosted resource is required.</li>';
-    const body = `<h2>Command</h2><pre>${escapeHtml(command)}</pre><h2>Hosted resources</h2><ul>${resourceList}</ul><h2>Requires</h2><ul>${requirementList}</ul><h2>Outputs</h2><ul>${outputList}</ul><h2>Execution rule</h2><p>${escapeHtml(spec.finalResponse || 'Use the canonical SeamFlow response shape.')}</p>`;
-    write(targetRoot, `${route}/contract.json`, `${JSON.stringify(machine, null, 2)}\n`);
-    write(targetRoot, `${route}/index.md`, markdownFor(command, route, spec, version, releaseId, sourceHash, resources));
-    write(targetRoot, `${route}/index.html`, renderPage({ title: command, eyebrow: spec.phase || 'command', summary: spec.finalResponse || `Canonical SeamFlow route for ${command}.`, body, machineUrl: `${baseUrl}/${route}/contract.json?refresh=${releaseId}`, canonicalUrl: `${baseUrl}/${route}/`, contractVersion: version, releaseId }));
+      const publicPath = source === 'KIWE-START.md' ? 'start.md' : source.slice('kiwe-ai-toolkit/'.length);
+      return { source, url: `${baseUrl}/${publicPath}`, pinnedUrl: `${baseUrl}/v/${releaseId}/${publicPath}`, sha256: hash(bytes(sourcePath)) };
+    });
+    const contract = { schema: 'kiwe.command-route.v2', contractVersion: version, releaseId, route: `/${route}`, resources, sourceHash: `sha256:${sourceHash}`, ...spec };
+    write(targetRoot, `${route}/contract.json`, `${JSON.stringify(contract, null, 2)}\n`);
+    write(targetRoot, `${route}/index.md`, `# ${command}\n\nSEAM contract: ${version}\n\n${spec.boundary}\n\n## Requires\n${spec.requires.map((item) => `- ${item}`).join('\n')}\n\n## Outputs\n${spec.outputs.map((item) => `- ${item}`).join('\n')}\n`);
+    write(targetRoot, `${route}/index.html`, page(command, spec.boundary, `<h2>Requires</h2><ul>${spec.requires.map((item) => `<li>${escape(item)}</li>`).join('')}</ul><h2>Outputs</h2><ul>${spec.outputs.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>`, version, releaseId, `${baseUrl}/${route}/contract.json`));
   }
 
-  for (const directory of ['contexts', 'contracts', 'schemas', 'tools']) {
-    const sourceDir = path.join(toolkitRoot, directory);
-    for (const source of walkFiles(sourceDir)) {
-      const relative = path.relative(sourceDir, source);
-      copy(targetRoot, source, path.join(directory === 'tools' ? 'validators' : directory, relative));
-    }
-  }
-
+  for (const directory of ['contexts', 'contracts', 'schemas']) for (const source of walk(path.join(toolkitRoot, directory))) copy(targetRoot, source, path.join(directory, path.relative(path.join(toolkitRoot, directory), source)));
   const versionRoot = path.join(targetRoot, 'v', releaseId);
-  for (const file of walkFiles(targetRoot)) {
-    if (file.startsWith(path.join(targetRoot, 'v') + path.sep)) continue;
-    const relative = path.relative(targetRoot, file);
-    copy(versionRoot, file, relative);
-  }
-  const versionDiscovery = {
-    ...discovery,
-    canonicalBase: `${baseUrl}/v/${releaseId}`,
-    start: `${baseUrl}/v/${releaseId}/start.md`,
-    entry: `${baseUrl}/v/${releaseId}/entry.json`,
-    commandManifest: `${baseUrl}/v/${releaseId}/command-manifest.json`,
-    commands: discovery.immutableCommands,
-  };
-  write(versionRoot, '.well-known/kiwe.json', `${JSON.stringify(versionDiscovery, null, 2)}\n`);
-  write(versionRoot, 'registry.json', `${JSON.stringify(versionDiscovery, null, 2)}\n`);
-
-  const historicalVersionsRoot = historicalRoot ? path.join(historicalRoot, 'v') : '';
-  if (historicalVersionsRoot && fs.existsSync(historicalVersionsRoot)) {
-    for (const source of walkFiles(historicalVersionsRoot)) {
-      const relative = path.relative(historicalVersionsRoot, source);
-      const historicalRelease = relative.split(path.sep)[0];
-      if (!historicalRelease || historicalRelease === releaseId) continue;
-      copy(path.join(targetRoot, 'v'), source, relative);
-    }
-  }
-
-  const urls = [`${baseUrl}/`, ...routes.map(({ route }) => `${baseUrl}/${route}/`)];
-  write(targetRoot, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${escapeHtml(url)}</loc></url>`).join('\n')}\n</urlset>\n`);
+  for (const file of walk(targetRoot)) if (!file.startsWith(path.join(targetRoot, 'v') + path.sep)) copy(versionRoot, file, path.relative(targetRoot, file));
+  write(versionRoot, '.well-known/kiwe.json', `${JSON.stringify({ ...discovery, canonicalBase: `${baseUrl}/v/${releaseId}`, commands: discovery.immutableCommands }, null, 2)}\n`);
+  write(targetRoot, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[baseUrl, ...routes.map(({ route }) => `${baseUrl}/${route}`)].map((url) => `<url><loc>${escape(url)}</loc></url>`).join('')}</urlset>\n`);
   write(targetRoot, 'robots.txt', `User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml\n`);
-  write(targetRoot, '.htaccess', `Options -Indexes\nDirectoryIndex index.html\n\n<IfModule mod_mime.c>\n  AddType application/json .json\n  AddType text/markdown .md\n  AddType text/javascript .cjs\n</IfModule>\n\n<IfModule mod_headers.c>\n  Header always set X-Content-Type-Options "nosniff"\n  Header always set Referrer-Policy "no-referrer"\n  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"\n  Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"\n  <FilesMatch "\\.(json|md|cjs)$">\n    Header always set Access-Control-Allow-Origin "*"\n  </FilesMatch>\n  <IfModule mod_setenvif.c>\n    SetEnvIf Request_URI "^/v/" KIWE_IMMUTABLE=1\n  </IfModule>\n  Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0" env=!KIWE_IMMUTABLE\n  Header always set Pragma "no-cache" env=!KIWE_IMMUTABLE\n  Header always set Expires "0" env=!KIWE_IMMUTABLE\n  Header always set Cache-Control "public, max-age=31536000, immutable" env=KIWE_IMMUTABLE\n  Header always set X-Kiwe-Contract-Version "${version}"\n  Header always set X-Kiwe-Release "${releaseId}"\n</IfModule>\n`);
-  write(targetRoot, '404.html', renderPage({ title: 'Command route not found', eyebrow: 'SeamFlow', summary: 'This route is not part of the current canonical command registry.', body: '<p>Use the command index or machine discovery document to select a valid route.</p>', machineUrl: `${baseUrl}/.well-known/kiwe.json?refresh=${releaseId}`, canonicalUrl: `${baseUrl}/404.html`, contractVersion: version, releaseId }));
-  write(targetRoot, 'BUILD-METADATA.json', `${JSON.stringify({ schema: 'kiwe.command-registry-build.v1', contractVersion: version, releaseId, sourceHash: `sha256:${sourceHash}`, generatedFrom: publishedSourceFiles.map((file) => path.relative(repoRoot, file).replaceAll('\\', '/')), generatedAt }, null, 2)}\n`);
-  write(targetRoot, 'README.md', '# Generated SEAM command registry\n\nDo not edit files in this directory manually. Run `node tools/release/build-command-registry.cjs` from the Kiwe repository root. CI uses `--check` and fails when the hosted registry drifts from canonical Kiwe contracts.\n');
+  write(targetRoot, '.htaccess', `Options -Indexes\nDirectoryIndex index.html\n<IfModule mod_headers.c>\nHeader always set X-Content-Type-Options "nosniff"\nHeader always set Referrer-Policy "no-referrer"\nHeader always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"\n<FilesMatch "\\.(json|md|cjs)$">\nHeader always set Access-Control-Allow-Origin "*"\n</FilesMatch>\n</IfModule>\n`);
+  write(targetRoot, '404.html', page('Command not found', 'Use one of the six commands in the registry.', '', version, releaseId, `${baseUrl}/.well-known/kiwe.json`));
+  write(targetRoot, 'BUILD-METADATA.json', `${JSON.stringify({ schema: 'kiwe.command-registry-build.v2', contractVersion: version, releaseId, sourceHash: `sha256:${sourceHash}`, generatedFrom: published.map((file) => path.relative(repoRoot, file).replaceAll('\\', '/')), generatedAt: entry.updated }, null, 2)}\n`);
+  write(targetRoot, 'README.md', '# Generated SEAM command registry\n\nDo not edit manually. Run `node tools/release/build-command-registry.cjs`.\n');
 }
 
 if (checkOnly) {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwe-command-registry-'));
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'seam-registry-'));
   try {
-    build(tempRoot, { historicalRoot: publicRoot });
-    const errors = compareTrees(tempRoot, publicRoot);
-    if (errors.length) {
-      console.error('SEAM command registry drift detected:');
-      for (const error of errors) console.error(`- ${error}`);
-      process.exitCode = 1;
-    } else {
-      console.log('SEAM command registry: PASS (generated output matches canonical Kiwe contracts)');
-    }
-  } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
-  }
+    build(temp);
+    const errors = compare(temp, publicRoot);
+    if (errors.length) { console.error('SEAM command registry drift detected:\n' + errors.map((item) => `- ${item}`).join('\n')); process.exitCode = 1; }
+    else console.log('SEAM command registry: PASS');
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 } else {
-  const resolved = path.resolve(publicRoot);
-  if (resolved !== path.resolve(repoRoot, 'public', 'start.kiwelaunch.com')) throw new Error('Unsafe registry output path');
-  const historicalRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwe-command-history-'));
-  try {
-    const existingVersions = path.join(resolved, 'v');
-    if (fs.existsSync(existingVersions)) {
-      for (const source of walkFiles(existingVersions)) {
-        copy(path.join(historicalRoot, 'v'), source, path.relative(existingVersions, source));
-      }
-    }
-    fs.rmSync(resolved, { recursive: true, force: true });
-    build(resolved, { historicalRoot });
-    console.log(`Built SEAM command registry at ${resolved}`);
-  } finally {
-    fs.rmSync(historicalRoot, { recursive: true, force: true });
-  }
+  if (path.resolve(publicRoot) !== path.resolve(repoRoot, 'public', 'start.kiwelaunch.com')) throw new Error('Unsafe registry path.');
+  fs.rmSync(publicRoot, { recursive: true, force: true });
+  build(publicRoot);
+  console.log(`Built SEAM command registry at ${publicRoot}`);
 }

@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "7.27",
+  "version": "8.0.0-rc.1",
   "algorithm": "sha256",
-  "file_count": 329,
+  "file_count": 327,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -193,8 +193,8 @@
       "sha256": "c90771b601da68fcc332190170092236d34ee3b0483eaf9d230e71be9d6ce1a4"
     },
     "dsa.php": {
-      "bytes": 2754,
-      "sha256": "245f860511ea700e5d2c03afeb3e425a26c74d48472df60dbbfcdf1d4796d0da"
+      "bytes": 2766,
+      "sha256": "689445d223a74cd3e918c21038337cc20cb8df8df6fdad44b2499bdca75bea6e"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -231,10 +231,6 @@
     "framework-system/contracts/seam-class-vocabulary.md": {
       "bytes": 2809,
       "sha256": "a3f47accc195aa380fe52f97e9bb6c79789871487f13349a2699fd15d578309a"
-    },
-    "framework-system/contracts/seam-compiler-contract.json": {
-      "bytes": 3742,
-      "sha256": "ee81ecdc30f553b4eca028163a6cf6e72f8e0747ecbf53a9f9244c17d3b57095"
     },
     "framework-system/contracts/seam-vocabulary.json": {
       "bytes": 14302,
@@ -468,10 +464,6 @@
       "bytes": 8255,
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
     },
-    "includes/AI/SeamFlow_Service.php": {
-      "bytes": 31694,
-      "sha256": "eac13d880d59c18617edd9f289db6c932314fe9425186bfb6b5adece02e7e29c"
-    },
     "includes/AI/Site_Graph_Service.php": {
       "bytes": 38523,
       "sha256": "49101b25e329da24f2acd3197658840af13e057783101875e9f09d02b1b67d6e"
@@ -509,8 +501,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 682248,
-      "sha256": "5c618236d8c94035866591cfb4be258ceffdbee819d917023d91ad1d894ec704"
+      "bytes": 685098,
+      "sha256": "c7bfa95b38f2cfcf07d7481eb42d2fd298ed079a5307682ffe057167c1456153"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -689,8 +681,8 @@
       "sha256": "7933d5087bfa7b9616680213236c2914e32fb834f46ae25f7901c4ed0abff90f"
     },
     "includes/Plugin.php": {
-      "bytes": 14455,
-      "sha256": "15ddc2c9711c98ff21f7c85e7debc7dd981b402a26b0ab0b19d5d6a9b2070594"
+      "bytes": 14637,
+      "sha256": "f8072e9ce677e8e5d3bcf08ae0a9f184b471e0a56b4f0e80a68866a3281e1686"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,
@@ -713,8 +705,8 @@
       "sha256": "99a51309fa14aedbd5a99d938891e09c3ee68c841e1bdb2ad988478e52de106a"
     },
     "includes/Rest/AI_Access_Controller.php": {
-      "bytes": 47297,
-      "sha256": "7b528eb9cd9b1be2d8a87374c7c463c9d319826c4a243e3f40a05960ce2dda22"
+      "bytes": 12056,
+      "sha256": "c44ccc6709a6c4794282b5ccadcac896fe157c565ca8ec01507a71de02f36304"
     },
     "includes/Rest/Account_Controller.php": {
       "bytes": 14471,
@@ -821,8 +813,8 @@
       "sha256": "fbdefcbc10841f69b501113e23f3d72864ef1459488d7d315741eb08957e8bb1"
     },
     "includes/Secure/SecureTrack_Admin_Service.php": {
-      "bytes": 3708,
-      "sha256": "5620c7f8af976c3681fb0b4b93b2ada8a4e6d9ad30aab3ccd2dd9990bbccef94"
+      "bytes": 4569,
+      "sha256": "d3fbfe7d37440fec66495ae727584c2efce1c1490d96bae7078dbce45d282f6f"
     },
     "includes/Secure/SecureTrack_Db_Service.php": {
       "bytes": 6527,
@@ -869,8 +861,8 @@
       "sha256": "ba8f795ff9d0a7523884d78557af43d21681ffe9d2577cd2b482e78877f06c8e"
     },
     "includes/Settings.php": {
-      "bytes": 25899,
-      "sha256": "dc5b0742d33f5f0328054033a70870941da552f10a8970ed45beac251a6ed9f4"
+      "bytes": 20913,
+      "sha256": "9c85e305c728e66c0b40f21b1016d9d0f5bd45a6f62cc1d6044fccc182bbb5c3"
     },
     "includes/Site/Site_Identity_Service.php": {
       "bytes": 9193,

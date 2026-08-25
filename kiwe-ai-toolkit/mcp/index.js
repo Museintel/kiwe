@@ -2,371 +2,65 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { createHandoff, diagnoseCommand, getAccessibilityContext, getBricksConversionContext, getBricksThemeStyleContext, getCommandManifest, getContext, getDynamicContext, getIdeationContext, getSeamAttributesContext, getStartEntrypoint, getWorkflowContext, listCapabilityAttributes, listClassVocabulary, listCommands, listModes, planFlow, prepareApplyPlan, routeCommand, startDynamicPass, startProject, validateAccessibility, validateBindings, validateBricksConversion, validateBricksThemeStyle, validateFrameworkProfile, validateHandoff } from '../lib/kiwe-core.js';
+import {
+  diagnoseCommand,
+  getCommandManifest,
+  getStartEntrypoint,
+  planFlow,
+  routeCommand,
+  validateAccessibility,
+  validateBindings,
+  validateBricksConversion,
+  validateBricksThemeStyle,
+  validateFrameworkProfile
+} from '../lib/kiwe-core.js';
 
-const server = new Server(
-  { name: 'kiwe', version: '0.1.0' },
-  { capabilities: { tools: {} } }
-);
+const server = new Server({ name: 'seam', version: '8.0.0' }, { capabilities: { tools: {} } });
+const object = (properties = {}, required = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}) });
+const routeProperties = {
+  command: { type: 'string' },
+  brief: { type: 'string' },
+  artifactSummary: { type: 'string' },
+  siteGraphSummary: { type: 'string' },
+  reportSummary: { type: 'string' },
+  frameworkMode: { type: 'boolean' }
+};
+const validationProperties = {
+  target: { type: 'string' },
+  siteGraphPath: { type: 'string' },
+  optional: { type: 'boolean' },
+  documented: { type: 'boolean' }
+};
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    {
-      name: 'kiwe_get_start',
-      description: 'Return the SeamFlow Start entrypoint. KIWE-START.md is the compatibility URL. Use this before /list or any slash command so the AI confirms contract version, avoids repo crawling, classifies files, and chooses step-by-step or full-flow mode.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_seamflow_plan',
-      description: 'Classify supplied artifacts and plan the smallest safe SeamFlow path through Seam, Framework profile, Bricks page/header/footer/template conversion, DSA theme, combined handoff, and accessibility. Use when files are provided without a command or when the human asks for full-flow vs step-by-step guidance.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          command: { type: 'string', description: 'Optional human slash command. If present, the planner routes it instead of asking for a flow choice.' },
-          artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts, filenames, schemas, or visible markers.' },
-          desiredOutcome: { type: 'string', description: 'Optional human target such as website/page, header, footer, Bricks template, DSA theme, combined Appsite, or accessibility fix.' },
-          useCompanion: { type: 'boolean', description: 'Whether Kiwe Internal AI/Companion should be used if available. It is non-blocking and must fall back cleanly.' }
-        }
-      }
-    },
-    {
-      name: 'kiwe_start_project',
-      description: 'Start a Kiwe project from a plain-language human brief. Returns the correct compact context and output contract so the human prompt can stay short.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          mode: { type: 'string', enum: ['auto', 'website', 'theme', 'combined'], default: 'auto' },
-          brief: { type: 'string', description: 'Plain-language human design brief.' },
-          name: { type: 'string', description: 'Optional handoff/project name.' }
-        },
-        required: ['brief']
-      }
-    },
-    {
-      name: 'kiwe_get_workflow',
-      description: 'Return the Kiwe phased AI workflow and slash-command vocabulary. Use this before broad creative work so the model does one small phase at a time.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_get_ideation_context',
-      description: 'Return the Design-Context-aware /ideate questionnaire and Framework-neutral homepage HTML/CSS/JS output contract, including owner/AI authority boundaries and the responsive Geometry fallback ladder.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_get_command_manifest',
-      description: 'Return the compact machine-readable Kiwe slash-command manifest. Prefer this before reading prose contexts so the model uses the smallest correct command lane.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_list_commands',
-      description: 'Return the canonical Kiwe slash-command list, aliases, flags, required inputs, outputs, and boundaries. Use for /list before generation.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_route_command',
-      description: 'Route a short canonical command such as /list, /redo, /fix, /document, /ideate /webdraft, /rebuild /seamframework, /create /frameworkprofile, /create /brickstheme, /create /dsatheme, /create /preview /dsatheme, /assemble /combined, /create /preview /combined, /usesitegraph, /convert /bricks, /audit /bricksconversion, /create /accessibility, /audit /accessibility, or /audit /combined to the smallest relevant Kiwe context.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          command: { type: 'string', description: 'Human command, e.g. /rebuild /seamframework. May include /usecompanion.' },
-          brief: { type: 'string', description: 'Plain-language human brief for this phase.' },
-          artifactSummary: { type: 'string', description: 'Short summary of the previous phase artifact, if any.' },
-          siteGraphSummary: { type: 'string', description: 'Short target Site Graph summary for dynamic phases.' },
-          useCompanion: { type: 'boolean', description: 'Optional equivalent of appending /usecompanion. Companion is bounded and non-blocking; if unavailable, continue with the normal route.' }
-        },
-        required: ['command']
-      }
-    },
-    {
-      name: 'kiwe_diagnose_command',
-      description: 'Cheaply validate a Kiwe slash command before generation. Returns ok, rejected, needs_input, or noop with exact next-command suggestions so the AI does not waste tokens on nonexistent or useless phases.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          command: { type: 'string', description: 'Human slash command to diagnose.' },
-          brief: { type: 'string', description: 'Optional human brief. Site Graph/API details in the brief are recognized for /usesitegraph diagnostics.' },
-          artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts.' },
-          siteGraphSummary: { type: 'string', description: 'Short target Site Graph/API context summary.' }
-        },
-        required: ['command']
-      }
-    },
-    {
-      name: 'kiwe_plan_flow',
-      description: 'Compatibility alias for kiwe_seamflow_plan. Classify supplied artifacts and plan the smallest safe SeamFlow path.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          command: { type: 'string', description: 'Optional human slash command. If present, the planner routes it instead of asking for a flow choice.' },
-          artifactSummary: { type: 'string', description: 'Short summary of available files/artifacts, filenames, schemas, or visible markers.' },
-          desiredOutcome: { type: 'string', description: 'Optional human target such as website/page, header, footer, Bricks template, DSA theme, combined Appsite, or accessibility fix.' },
-          useCompanion: { type: 'boolean', description: 'Whether Companion should be used if available. It is non-blocking and must fall back cleanly.' }
-        }
-      }
-    },
-    {
-      name: 'kiwe_list_modes',
-      description: 'List Kiwe output modes: website, theme, combined.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_get_context',
-      description: 'Return compact mode-specific Kiwe context. Use instead of reading the full plugin codebase.',
-      inputSchema: {
-        type: 'object',
-        properties: { mode: { type: 'string', enum: ['website', 'theme', 'combined'] } },
-        required: ['mode']
-      }
-    },
-    {
-      name: 'kiwe_create_handoff',
-      description: 'Create a scaffolded Kiwe handoff folder for website, theme, or combined work.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          mode: { type: 'string', enum: ['website', 'theme', 'combined'] },
-          outputDir: { type: 'string' },
-          name: { type: 'string' },
-          brief: { type: 'string' }
-        },
-        required: ['mode', 'outputDir']
-      }
-    },
-    {
-      name: 'kiwe_validate_handoff',
-      description: 'Validate basic Kiwe handoff structure.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          mode: { type: 'string', enum: ['website', 'theme', 'combined'] },
-          targetDir: { type: 'string' }
-        },
-        required: ['mode', 'targetDir']
-      }
-    },
-    {
-      name: 'kiwe_validate_bindings',
-      description: 'Validate a Kiwe Bricks dynamic binding plan, optionally against a supplied target-site Site Graph JSON file.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          targetDir: { type: 'string', description: 'Handoff folder, bricks-bindings folder, or kiwe-bindings.json path.' },
-          siteGraphPath: { type: 'string', description: 'Optional path to kiwe.site-graph.v1 JSON for deep validation.' },
-          optional: { type: 'boolean', description: 'If true, missing binding plan is informational instead of failing.' }
-        },
-        required: ['targetDir']
-      }
-    },
-    {
-      name: 'kiwe_get_bricks_conversion_context',
-      description: 'Return the Kiwe Bricks conversion context for /convert /bricks and /audit /bricksconversion without reading the full plugin codebase.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_get_bricks_theme_style_context',
-      description: 'Return the native Bricks Theme Styles context for /create /brickstheme and /audit /brickstheme without reading the full plugin codebase.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_validate_bricks_theme_style',
-      description: 'Validate one native Bricks Theme Styles JSON file. This is separate from Kiwe Framework profile validation and Bricks template/page validation.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          targetDir: { type: 'string', description: 'Folder containing bricks-theme-style.json or the JSON file itself.' },
-          optional: { type: 'boolean', description: 'If true, missing theme-style file is informational instead of failing.' }
-        },
-        required: ['targetDir']
-      }
-    },
-    {
-      name: 'kiwe_validate_framework_profile',
-      description: 'Validate a Kiwe Framework profile JSON or handoff folder before pushing tokens, variables, colors, and Bricks global theme style metadata from Kiwe > Framework.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          targetDir: { type: 'string', description: 'Folder containing framework/kiwe-framework-profile.json or the profile JSON file itself.' },
-          optional: { type: 'boolean', description: 'If true, missing profile is informational instead of failing.' }
-        },
-        required: ['targetDir']
-      }
-    },
-    {
-      name: 'kiwe_validate_bricks_conversion',
-      description: 'Validate a native Bricks template upload JSON or reviewable Bricks conversion package, optionally against a target-site Site Graph JSON file.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          targetDir: { type: 'string', description: 'Handoff folder, bricks-conversion folder, native bricks-template folder, native Bricks template JSON, or kiwe-bricks-conversion.json path.' },
-          siteGraphPath: { type: 'string', description: 'Optional path to kiwe.site-graph.v1 JSON for deep validation.' },
-          optional: { type: 'boolean', description: 'If true, missing conversion/template package is informational instead of failing.' },
-          documented: { type: 'boolean', description: 'Pass true only when the human command included /document and extra notes/reports are expected.' }
-        },
-        required: ['targetDir']
-      }
-    },
-    {
-      name: 'kiwe_get_accessibility_context',
-      description: 'Return the Kiwe accessibility context for /create /accessibility and /audit /accessibility without reading the full plugin codebase.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_validate_accessibility',
-      description: 'Validate a Kiwe accessibility plan and scan supplied HTML/CSS/JSON for literal contrast and dark-mode proof.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          targetDir: { type: 'string', description: 'Handoff folder, accessibility folder, or kiwe-accessibility-plan.json path.' },
-          optional: { type: 'boolean', description: 'If true, missing accessibility plan is informational instead of failing.' }
-        },
-        required: ['targetDir']
-      }
-    },
-    {
-      name: 'kiwe_prepare_apply_plan',
-      description: 'Prepare a dry-run, non-mutating Bricks apply plan from a validated Kiwe binding plan and target-site Site Graph.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          targetDir: { type: 'string', description: 'Handoff folder, bricks-bindings folder, or kiwe-bindings.json path.' },
-          siteGraphPath: { type: 'string', description: 'Required path to kiwe.site-graph.v1 JSON for target-site capabilities.' },
-          write: { type: 'boolean', description: 'If true, writes bricks-apply/kiwe-apply-plan.json and APPLY-NOTES.md into the handoff folder.' }
-        },
-        required: ['targetDir', 'siteGraphPath']
-      }
-    },
-    {
-      name: 'kiwe_list_class_vocabulary',
-      description: 'Return Seam Class Vocabulary groups/classes for Bricks/global-class authoring.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_get_seam_attributes_context',
-      description: 'Return the Seam capability attributes context for /rebuild /seamframework, dynamic binding, and Bricks conversion without reading the full plugin codebase.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_list_capability_attributes',
-      description: 'Return the live and candidate Seam/Kiwe Appsite capability attributes from the machine-readable vocabulary contract.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_get_dynamic_context',
-      description: 'Return Kiwe dynamic binding context for revising a passed handoff with WordPress/Bricks/Woo query loops and dynamic data using a target Site Graph.',
-      inputSchema: { type: 'object', properties: {} }
-    },
-    {
-      name: 'kiwe_start_dynamic_pass',
-      description: 'Start a v5-style dynamic binding pass from a plain-language request, current handoff summary, and Site Graph summary.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          brief: { type: 'string', description: 'Plain-language dynamic binding request.' },
-          siteGraphSummary: { type: 'string', description: 'Short summary of the supplied kiwe.site-graph.v1 JSON.' },
-          currentHandoffSummary: { type: 'string', description: 'Short summary of the current handoff being revised.' }
-        },
-        required: ['brief']
-      }
-    }
-  ]
-}));
+const tools = [
+  { name: 'seam_get_start', description: 'Return the current strict SEAM entry contract.', inputSchema: object() },
+  { name: 'seam_get_manifest', description: 'Return the six-command SEAM manifest.', inputSchema: object() },
+  { name: 'seam_diagnose', description: 'Validate one exact SEAM command and its required inputs.', inputSchema: object(routeProperties, ['command']) },
+  { name: 'seam_route', description: 'Route one exact SEAM command to its bounded context.', inputSchema: object(routeProperties, ['command']) },
+  { name: 'seam_plan', description: 'Infer the smallest next SEAM command from an artifact summary.', inputSchema: object({ command: { type: 'string' }, artifactSummary: { type: 'string' }, desiredOutcome: { type: 'string' }, brief: { type: 'string' }, reportSummary: { type: 'string' } }) },
+  { name: 'seam_validate_bindings', description: 'Validate Bricks/SiteGraph binding metadata.', inputSchema: object(validationProperties, ['target']) },
+  { name: 'seam_validate_bricks_conversion', description: 'Validate a native Bricks conversion artifact.', inputSchema: object(validationProperties, ['target']) },
+  { name: 'seam_validate_framework_profile', description: 'Validate a Seam Framework Profile.', inputSchema: object(validationProperties, ['target']) },
+  { name: 'seam_validate_bricks_theme_style', description: 'Validate Bricks theme-style data.', inputSchema: object(validationProperties, ['target']) },
+  { name: 'seam_validate_accessibility', description: 'Validate a deterministic accessibility artifact.', inputSchema: object(validationProperties, ['target']) }
+];
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const args = request.params.arguments || {};
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+server.setRequestHandler(CallToolRequestSchema, async ({ params }) => {
+  const args = params.arguments || {};
   let result;
-  switch (request.params.name) {
-    case 'kiwe_get_start':
-      result = getStartEntrypoint();
-      break;
-    case 'kiwe_start_project':
-      result = startProject(args);
-      break;
-    case 'kiwe_get_workflow':
-      result = getWorkflowContext();
-      break;
-    case 'kiwe_get_ideation_context':
-      result = getIdeationContext();
-      break;
-    case 'kiwe_get_command_manifest':
-      result = getCommandManifest();
-      break;
-    case 'kiwe_list_commands':
-      result = listCommands();
-      break;
-    case 'kiwe_route_command':
-      result = routeCommand(args);
-      break;
-    case 'kiwe_diagnose_command':
-      result = diagnoseCommand(args);
-      break;
-    case 'kiwe_seamflow_plan':
-      result = planFlow(args);
-      break;
-    case 'kiwe_plan_flow':
-      result = planFlow(args);
-      break;
-    case 'kiwe_list_modes':
-      result = listModes();
-      break;
-    case 'kiwe_get_context':
-      result = getContext(args.mode);
-      break;
-    case 'kiwe_create_handoff':
-      result = createHandoff(args);
-      break;
-    case 'kiwe_validate_handoff':
-      result = validateHandoff(args.targetDir, args.mode);
-      break;
-    case 'kiwe_validate_bindings':
-      result = validateBindings(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional) });
-      break;
-    case 'kiwe_get_bricks_conversion_context':
-      result = getBricksConversionContext();
-      break;
-    case 'kiwe_get_bricks_theme_style_context':
-      result = getBricksThemeStyleContext();
-      break;
-    case 'kiwe_validate_bricks_theme_style':
-      result = validateBricksThemeStyle(args.targetDir, { optional: Boolean(args.optional) });
-      break;
-    case 'kiwe_validate_framework_profile':
-      result = validateFrameworkProfile(args.targetDir, { optional: Boolean(args.optional) });
-      break;
-    case 'kiwe_validate_bricks_conversion':
-      result = validateBricksConversion(args.targetDir, { siteGraphPath: args.siteGraphPath || '', optional: Boolean(args.optional), documented: Boolean(args.documented) });
-      break;
-    case 'kiwe_get_accessibility_context':
-      result = getAccessibilityContext();
-      break;
-    case 'kiwe_validate_accessibility':
-      result = validateAccessibility(args.targetDir, { optional: Boolean(args.optional) });
-      break;
-    case 'kiwe_prepare_apply_plan':
-      result = prepareApplyPlan(args.targetDir, { siteGraphPath: args.siteGraphPath || '', write: Boolean(args.write) });
-      break;
-    case 'kiwe_list_class_vocabulary':
-      result = listClassVocabulary();
-      break;
-    case 'kiwe_get_seam_attributes_context':
-      result = getSeamAttributesContext();
-      break;
-    case 'kiwe_list_capability_attributes':
-      result = listCapabilityAttributes();
-      break;
-    case 'kiwe_get_dynamic_context':
-      result = getDynamicContext();
-      break;
-    case 'kiwe_start_dynamic_pass':
-      result = startDynamicPass(args);
-      break;
-    default:
-      throw new Error(`Unknown tool: ${request.params.name}`);
-  }
-  return {
-    content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result, null, 2) }],
-    structuredContent: typeof result === 'string' ? { text: result } : result
-  };
+  if (params.name === 'seam_get_start') result = getStartEntrypoint();
+  else if (params.name === 'seam_get_manifest') result = getCommandManifest();
+  else if (params.name === 'seam_diagnose') result = diagnoseCommand(args);
+  else if (params.name === 'seam_route') result = routeCommand(args);
+  else if (params.name === 'seam_plan') result = planFlow(args);
+  else if (params.name === 'seam_validate_bindings') result = validateBindings(args.target, args);
+  else if (params.name === 'seam_validate_bricks_conversion') result = validateBricksConversion(args.target, args);
+  else if (params.name === 'seam_validate_framework_profile') result = validateFrameworkProfile(args.target, args);
+  else if (params.name === 'seam_validate_bricks_theme_style') result = validateBricksThemeStyle(args.target, args);
+  else if (params.name === 'seam_validate_accessibility') result = validateAccessibility(args.target, args);
+  else throw new Error(`Unknown SEAM tool: ${params.name}`);
+  return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
 });
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+await server.connect(new StdioServerTransport());

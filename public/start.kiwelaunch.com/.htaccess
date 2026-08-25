@@ -1,27 +1,10 @@
 Options -Indexes
 DirectoryIndex index.html
-
-<IfModule mod_mime.c>
-  AddType application/json .json
-  AddType text/markdown .md
-  AddType text/javascript .cjs
-</IfModule>
-
 <IfModule mod_headers.c>
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set Referrer-Policy "no-referrer"
-  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
-  Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-  <FilesMatch "\.(json|md|cjs)$">
-    Header always set Access-Control-Allow-Origin "*"
-  </FilesMatch>
-  <IfModule mod_setenvif.c>
-    SetEnvIf Request_URI "^/v/" KIWE_IMMUTABLE=1
-  </IfModule>
-  Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0" env=!KIWE_IMMUTABLE
-  Header always set Pragma "no-cache" env=!KIWE_IMMUTABLE
-  Header always set Expires "0" env=!KIWE_IMMUTABLE
-  Header always set Cache-Control "public, max-age=31536000, immutable" env=KIWE_IMMUTABLE
-  Header always set X-Kiwe-Contract-Version "7.29"
-  Header always set X-Kiwe-Release "7.29-3eaca3e2d672"
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "no-referrer"
+Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+<FilesMatch "\.(json|md|cjs)$">
+Header always set Access-Control-Allow-Origin "*"
+</FilesMatch>
 </IfModule>

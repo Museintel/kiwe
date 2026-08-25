@@ -16,7 +16,7 @@ const plugin = read('wp-content/mu-plugins/dsa/includes/Plugin.php');
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
 
-check('SiteGraph has a dedicated Kiwe admin destination', admin.includes("'kiwe-sitegraph'") && admin.includes("[ $this, 'render_site_graph_page' ]"));
+check('SiteGraph is reachable from the unified Context destination', admin.includes("[ 'Context', 'kiwe-context', 'render_context_page' ]") && admin.includes("[ 'kiwe-sitegraph', 'render_site_graph_page'"));
 check('AI page sends SiteGraph operators to the dedicated control plane', admin.includes('SiteGraph has its own control plane') && admin.includes('admin.php?page=kiwe-sitegraph'));
 check('SiteGraph actions return to the SiteGraph control plane', admin.includes("'page'           => 'kiwe-sitegraph'") && admin.includes("admin.php?page=kiwe-sitegraph"));
 check('broker has separate Studio SiteGraph SecureTrack and Bricks profiles', ['studio', 'sitegraph', 'securetrack', 'bricks'].every((id) => broker.includes(`'${id}' => [`)));

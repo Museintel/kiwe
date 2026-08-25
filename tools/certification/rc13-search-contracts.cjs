@@ -22,10 +22,10 @@ check('recommended Search defaults enable alphabet and quick add',
   && /'product_add_enabled'\s*=>\s*true/.test(settings));
 check('unrelated settings forms preserve Search state',
   /if \( ! is_array\( \$input \) \) \{\s*return \$next;/s.test(admin));
-check('Search recovery is versioned and signature-specific',
-  /SAFETY_MIGRATION_VERSION = (?:[2-9]|[1-9]\d+)/.test(settings)
-  && /\$collapsed_by_absent_form/.test(settings)
-  && /configuration_version'\] = 2/.test(settings));
+check('Search follows the clean RC settings schema without compatibility recovery',
+  /SCHEMA_VERSION = 8/.test(settings)
+  && /fresh_install_defaults/.test(settings)
+  && !/\$collapsed_by_absent_form/.test(settings));
 check('Search REST response declares capability state',
   /'families'\s*=>\s*\$families/.test(search)
   && /'alphabetEnabled'/.test(search));

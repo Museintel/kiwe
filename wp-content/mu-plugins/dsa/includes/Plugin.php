@@ -185,6 +185,7 @@ final class Plugin {
 		$permissions = isset( $settings['permissions'] ) && is_array( $settings['permissions'] ) ? $settings['permissions'] : [];
 		$commerce    = isset( $settings['commerce'] ) && is_array( $settings['commerce'] ) ? $settings['commerce'] : [];
 		$bricks      = isset( $settings['bricks'] ) && is_array( $settings['bricks'] ) ? $settings['bricks'] : [];
+		$ai          = isset( $settings['ai'] ) && is_array( $settings['ai'] ) ? $settings['ai'] : [];
 		$surface_enabled   = ! empty( $settings['enabled'] );
 		$phonekey_enabled  = ! empty( $settings['phonekey']['enabled'] );
 		$push_enabled      = ! empty( $permissions['enabled'] ) && ! empty( $permissions['notifications_enabled'] );
@@ -274,8 +275,10 @@ final class Plugin {
 		}
 		( new Settings_Controller( $this->settings, $this->registry, $this->trust, $this->modules, $this->native, $this->copilot, $this->reviews ) )->register();
 		( new Site_Graph_Controller( $this->site_graph ) )->register();
-		( new AI_Access_Controller( $this->site_graph, $this->settings ) )->register();
-		( new Bricks_Studio_Controller( $this->settings, $this->site_graph ) )->register();
+		( new AI_Access_Controller( $this->site_graph ) )->register();
+		if ( ! empty( $ai['studio_enabled'] ) && ! empty( $ai['bricks_editor_companion_enabled'] ) ) {
+			( new Bricks_Studio_Controller( $this->settings, $this->site_graph ) )->register();
+		}
 		if ( $surface_enabled && ! empty( $settings['search']['context_aware'] ) ) {
 			( new Search_Controller( $this->search ) )->register();
 		}

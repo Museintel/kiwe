@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Settings {
-	private const SAFETY_MIGRATION_VERSION = 6;
+	private const SCHEMA_VERSION = 8;
 	private const INSTALL_PROFILE_OPTION = 'dsa_install_profile';
 	private const SITE_GRAPH_ONLY_PROFILE = 'sitegraph_only_v1';
 
@@ -25,13 +25,15 @@ final class Settings {
 			return $this->resolved_settings;
 		}
 
-		$settings = get_option( DSA_OPTION_SETTINGS, [] );
+		$settings = get_option( DSA_OPTION_SETTINGS, null );
 
 		if ( ! is_array( $settings ) ) {
-			$settings = [];
+			$settings = $this->fresh_install_defaults();
 		}
 
-		$settings = $this->recursive_parse_args( $settings, $this->defaults() );
+		// Preserve explicit choices, but never let a capability added by a newer
+		// release become active merely because an older settings row lacks it.
+		$settings = $this->recursive_parse_args( $settings, $this->fresh_install_defaults() );
 		$settings['fragment_navigation'] = false;
 		unset( $settings['enhancements'] );
 
@@ -47,84 +49,18 @@ final class Settings {
 		}
 
 		self::$safety_migrations_checked = true;
-		$this->initialize_fresh_install_profile();
-		$this->apply_bricks_compatibility_profile();
-
-		if ( (int) get_option( 'dsa_safety_migration_version', 0 ) >= self::SAFETY_MIGRATION_VERSION ) {
+		if ( self::SCHEMA_VERSION === (int) get_option( 'kiwe_settings_schema', 0 ) ) {
 			return;
 		}
 
-		$settings = get_option( DSA_OPTION_SETTINGS, [] );
-		$settings = is_array( $settings ) ? $settings : [];
-		$changed = false;
-
-		if ( get_option( 'dsa_idle_home_default_off_v2' ) !== 'done' ) {
-			if ( isset( $settings['app'] ) && is_array( $settings['app'] ) ) {
-				$settings['app']['idle_enabled'] = false;
-			}
-
-			update_option( 'dsa_idle_home_default_off_v2', 'done', false );
-			$changed = true;
+		$stored = get_option( DSA_OPTION_SETTINGS, null );
+		if ( ! is_array( $stored ) ) {
+			update_option( DSA_OPTION_SETTINGS, $this->fresh_install_defaults(), false );
+			update_option( self::INSTALL_PROFILE_OPTION, self::SITE_GRAPH_ONLY_PROFILE, false );
 		}
-
-		if ( get_option( 'dsa_secure_auto_logout_default_off_v2' ) !== 'done' ) {
-			if ( isset( $settings['secure'] ) && is_array( $settings['secure'] ) ) {
-				$settings['secure']['auto_logout_enabled'] = false;
-				$settings['secure']['auto_logout_roles']   = [];
-			}
-
-			$stp_settings = get_option( 'stp_settings', [] );
-			if ( is_array( $stp_settings ) ) {
-				$stp_settings['idle_timeout_mins']  = 0;
-				$stp_settings['idle_timeout_roles'] = [];
-				update_option( 'stp_settings', $stp_settings, false );
-			}
-
-			update_option( 'dsa_secure_auto_logout_default_off_v2', 'done', false );
-			$changed = true;
-		}
-
-		if ( get_option( 'dsa_link_score_legacy_default_blank_v3' ) !== 'done' ) {
-			if ( isset( $settings['link_hub'] ) && is_array( $settings['link_hub'] ) && '96' === trim( (string) ( $settings['link_hub']['site_score'] ?? '' ) ) ) {
-				$settings['link_hub']['site_score'] = '';
-				$changed = true;
-			}
-
-			update_option( 'dsa_link_score_legacy_default_blank_v3', 'done', false );
-		}
-
-		if ( array_key_exists( 'enhancements', $settings ) ) {
-			unset( $settings['enhancements'] );
-			$changed = true;
-		}
-
-		$search = isset( $settings['search'] ) && is_array( $settings['search'] ) ? $settings['search'] : null;
-		if ( is_array( $search ) && (int) ( $search['configuration_version'] ?? 0 ) < 2 ) {
-			$families = isset( $search['families'] ) && is_array( $search['families'] ) ? $search['families'] : [];
-			$collapsed_by_absent_form = empty( $families['products'] )
-				&& ! empty( $families['posts'] )
-				&& empty( $families['authors'] )
-				&& empty( $search['context_aware'] )
-				&& empty( $search['alphabet_enabled'] )
-				&& empty( $search['product_add_enabled'] )
-				&& empty( $search['bricks_bridge_enabled'] );
-
-			if ( $collapsed_by_absent_form ) {
-				$search = array_replace_recursive( $search, $this->defaults()['search'] );
-			}
-
-			$search['configuration_version'] = 2;
-			$settings['search'] = $search;
-			$changed = true;
-		}
-
-		if ( $changed ) {
-			update_option( DSA_OPTION_SETTINGS, $settings, false );
-			$this->resolved_settings = null;
-			$this->resolved_manifest = null;
-		}
-
-		update_option( 'dsa_safety_migration_version', self::SAFETY_MIGRATION_VERSION, true );
+		update_option( 'kiwe_settings_schema', self::SCHEMA_VERSION, false );
+		$this->resolved_settings = null;
+		$this->resolved_manifest = null;
 	}
 
 	/**
@@ -132,9 +68,8 @@ final class Settings {
 	 * primary settings option. Every optional runtime boolean is disabled and
 	 * SiteGraph is explicitly retained as the sole enabled capability.
 	 *
-	 * Existing installations continue to resolve missing keys against the
-	 * historical defaults below, so an update cannot silently switch off a
-	 * configured production AppShell.
+	 * This is the only install profile in the RC product. Optional services are
+	 * enabled deliberately after onboarding instead of by migration history.
 	 */
 	public function fresh_install_defaults(): array {
 		$settings = $this->disable_boolean_tree( $this->defaults() );
@@ -144,20 +79,6 @@ final class Settings {
 		];
 
 		return $settings;
-	}
-
-	private function initialize_fresh_install_profile(): void {
-		$missing = '__kiwe_settings_option_missing__';
-		$stored  = get_option( DSA_OPTION_SETTINGS, $missing );
-
-		if ( $missing !== $stored ) {
-			return;
-		}
-
-		update_option( DSA_OPTION_SETTINGS, $this->fresh_install_defaults(), false );
-		update_option( self::INSTALL_PROFILE_OPTION, self::SITE_GRAPH_ONLY_PROFILE, false );
-		$this->resolved_settings = null;
-		$this->resolved_manifest = null;
 	}
 
 	private function disable_boolean_tree( array $settings ): array {
@@ -173,62 +94,6 @@ final class Settings {
 		}
 
 		return $settings;
-	}
-
-	/**
-	 * Enable only Kiwe's Bricks compatibility layer after Bricks is detected.
-	 *
-	 * This is a one-time profile, so an administrator can turn an individual
-	 * adapter off later without Kiwe silently re-enabling it on every request.
-	 * It does not activate the Dock, AppShell, tracking, AI or other optional
-	 * fresh-install capabilities.
-	 */
-	private function apply_bricks_compatibility_profile(): void {
-		if ( ! $this->is_bricks_installation() ) {
-			return;
-		}
-
-		$base_done = 'done' === get_option( 'dsa_bricks_compatibility_profile_v1', '' );
-		$woo       = class_exists( 'WooCommerce' ) || function_exists( 'WC' );
-		$woo_done  = 'done' === get_option( 'dsa_bricks_woocommerce_profile_v1', '' );
-		if ( $base_done && ( ! $woo || $woo_done ) ) {
-			return;
-		}
-
-		$settings = get_option( DSA_OPTION_SETTINGS, [] );
-		$settings = is_array( $settings ) ? $settings : [];
-		$bricks   = is_array( $settings['bricks'] ?? null ) ? $settings['bricks'] : [];
-
-		if ( ! $base_done ) {
-			$bricks['dynamic_tags_enabled']     = true;
-			$bricks['dsa_icon_launcher_enabled'] = true;
-			$bricks['prefer_bricks_native_cart'] = true;
-			$bricks['verified_version']          = defined( 'BRICKS_VERSION' ) ? sanitize_text_field( (string) BRICKS_VERSION ) : 'detected';
-		}
-		if ( $woo && ! $woo_done ) {
-			$bricks['add_to_cart_enhancer_enabled']     = true;
-			$bricks['linked_products_controls_enabled'] = true;
-			$bricks['mini_cart_adapter_enabled']        = true;
-			$bricks['quantity_stepper_enabled']         = true;
-			$bricks['stock_badge_enabled']              = true;
-		}
-		$settings['bricks']                           = $bricks;
-
-		update_option( DSA_OPTION_SETTINGS, $settings, false );
-		if ( ! $base_done ) update_option( 'dsa_bricks_compatibility_profile_v1', 'done', false );
-		if ( $woo && ! $woo_done ) update_option( 'dsa_bricks_woocommerce_profile_v1', 'done', false );
-		$this->resolved_settings = null;
-		$this->resolved_manifest = null;
-	}
-
-	private function is_bricks_installation(): bool {
-		if ( defined( 'BRICKS_VERSION' ) || function_exists( 'bricks_is_builder' ) || class_exists( '\\Bricks\\Setup' ) ) {
-			return true;
-		}
-
-		$theme = wp_get_theme();
-		return in_array( strtolower( (string) $theme->get_template() ), [ 'bricks' ], true )
-			|| in_array( strtolower( (string) $theme->get_stylesheet() ), [ 'bricks' ], true );
 	}
 
 	public function defaults(): array {

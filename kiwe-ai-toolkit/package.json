@@ -1,10 +1,11 @@
 {
-  "name": "@kiwe/ai-toolkit",
-  "version": "0.1.0",
-  "description": "AI toolkit for creating Kiwe website, AppShell theme, and combined handoffs without reading the full plugin codebase.",
+  "name": "@kiwe/seam",
+  "version": "8.0.0",
+  "description": "Strict SEAM command router and deterministic validation toolkit.",
   "type": "module",
   "bin": {
-    "kiwe": "./bin/kiwe.js",
+    "seam": "./bin/kiwe.js",
+    "seam-mcp": "./mcp/index.js",
     "kiwe-sitegraph-mcp": "./mcp/sitegraph-client.js"
   },
   "scripts": {

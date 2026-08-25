@@ -164,200 +164,139 @@ final class Admin {
 
 	public function menu(): void {
 		add_menu_page(
-			__( 'Kiwe App', 'dsa' ),
+			__( 'Kiwe', 'dsa' ),
 			__( 'Kiwe', 'dsa' ),
 			'manage_options',
 			'kiwe',
-			[ $this, 'render_app_page' ],
+			[ $this, 'render_overview_page' ],
 			'dashicons-screenoptions',
 			58
 		);
 
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Auth', 'dsa' ),
-			__( 'Auth', 'dsa' ),
-			$this->auth_capability(),
-			'kiwe-auth',
-			[ $this, 'render_auth_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe App', 'dsa' ),
-			__( 'App', 'dsa' ),
-			'manage_options',
-			'kiwe-app',
-			[ $this, 'render_app_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Haptic', 'dsa' ),
-			__( 'Haptic', 'dsa' ),
-			'manage_options',
-			'kiwe-haptic',
-			[ $this, 'render_haptic_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Framework', 'dsa' ),
-			__( 'Framework', 'dsa' ),
-			'manage_options',
-			'kiwe-framework',
-			[ $this, 'render_framework_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe SiteGraph', 'dsa' ),
-			__( 'SiteGraph', 'dsa' ),
-			'manage_options',
-			'kiwe-sitegraph',
-			[ $this, 'render_site_graph_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe AI', 'dsa' ),
-			__( 'AI', 'dsa' ),
-			'manage_options',
-			'kiwe-ai',
-			[ $this, 'render_ai_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Developer', 'dsa' ),
-			__( 'Developer', 'dsa' ),
-			'manage_options',
-			'kiwe-developer',
-			[ $this, 'render_developer_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Database & Cache', 'dsa' ),
-			__( 'Database & Cache', 'dsa' ),
-			'manage_options',
-			'kiwe-database',
-			[ $this, 'render_database_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Dock', 'dsa' ),
-			__( 'Dock', 'dsa' ),
-			'manage_options',
-			'kiwe-dock',
-			[ $this, 'render_dock_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Theme', 'dsa' ),
-			__( 'Theme', 'dsa' ),
-			'manage_options',
-			'kiwe-theme',
-			[ $this, 'render_theme_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Games', 'dsa' ),
-			__( 'Games', 'dsa' ),
-			'manage_options',
-			'kiwe-games',
-			[ $this, 'render_games_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Links', 'dsa' ),
-			__( 'Links', 'dsa' ),
-			'manage_options',
-			'kiwe-links',
-			[ $this, 'render_links_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Search', 'dsa' ),
-			__( 'Search', 'dsa' ),
-			'manage_options',
-			'kiwe-search',
-			[ $this, 'render_search_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Menu', 'dsa' ),
-			__( 'Menu', 'dsa' ),
-			'manage_options',
-			'kiwe-menu',
-			[ $this, 'render_menu_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Secure', 'dsa' ),
-			__( 'Secure', 'dsa' ),
-			'manage_options',
-			'kiwe-secure',
-			[ $this, 'render_secure_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Email', 'dsa' ),
-			__( 'Email', 'dsa' ),
-			'manage_options',
-			'kiwe-email',
-			[ $this, 'render_email_page' ]
-		);
-
-		add_submenu_page(
-			'kiwe',
-			__( 'Kiwe Analytics', 'dsa' ),
-			__( 'Analytics', 'dsa' ),
-			'manage_options',
-			'kiwe-analytics',
-			[ $this, 'render_store_analytics_page' ]
-		);
-
-		if ( class_exists( 'WooCommerce' ) || function_exists( 'WC' ) ) {
-			add_submenu_page(
-				'kiwe',
-				__( 'Kiwe WooCommerce', 'dsa' ),
-				__( 'WooCommerce', 'dsa' ),
-				'manage_options',
-				'kiwe-woocommerce',
-				[ $this, 'render_woocommerce_page' ]
-			);
-
-			add_submenu_page(
-				'kiwe',
-				__( 'Kiwe Abandoned Cart', 'dsa' ),
-				__( 'Abandoned Cart', 'dsa' ),
-				'manage_options',
-				'kiwe-abandoned-cart',
-				[ $this, 'render_abandoned_cart_page' ]
-			);
+		$sections = [
+			[ 'Overview', 'kiwe-overview', 'render_overview_page' ],
+			[ 'Context', 'kiwe-context', 'render_context_page' ],
+			[ 'Build', 'kiwe-build', 'render_build_page' ],
+			[ 'AppShell', 'kiwe-appshell', 'render_appshell_page' ],
+			[ 'Commerce & Messages', 'kiwe-commerce', 'render_commerce_page' ],
+			[ 'Security', 'kiwe-security', 'render_security_page' ],
+			[ 'System', 'kiwe-system', 'render_system_page' ],
+		];
+		foreach ( $sections as [ $label, $slug, $callback ] ) {
+			add_submenu_page( 'kiwe', 'Kiwe ' . $label, $label, 'manage_options', $slug, [ $this, $callback ] );
 		}
-
-		if ( function_exists( 'bricks_is_builder' ) || class_exists( '\Bricks\Woocommerce_Mini_Cart' ) || defined( 'BRICKS_VERSION' ) ) {
-			add_submenu_page(
-				'kiwe',
-				__( 'Kiwe Bricks', 'dsa' ),
-				__( 'Bricks', 'dsa' ),
-				'manage_options',
-				'kiwe-bricks',
-				[ $this, 'render_bricks_page' ]
-			);
-		}
-
 		remove_submenu_page( 'kiwe', 'kiwe' );
+
+		$hidden = [
+			[ 'kiwe-auth', 'render_auth_page', $this->auth_capability() ],
+			[ 'kiwe-app', 'render_app_page', 'manage_options' ],
+			[ 'kiwe-haptic', 'render_haptic_page', 'manage_options' ],
+			[ 'kiwe-framework', 'render_framework_page', 'manage_options' ],
+			[ 'kiwe-sitegraph', 'render_site_graph_page', 'manage_options' ],
+			[ 'kiwe-ai', 'render_ai_page', 'manage_options' ],
+			[ 'kiwe-developer', 'render_developer_page', 'manage_options' ],
+			[ 'kiwe-database', 'render_database_page', 'manage_options' ],
+			[ 'kiwe-dock', 'render_dock_page', 'manage_options' ],
+			[ 'kiwe-theme', 'render_theme_page', 'manage_options' ],
+			[ 'kiwe-games', 'render_games_page', 'manage_options' ],
+			[ 'kiwe-links', 'render_links_page', 'manage_options' ],
+			[ 'kiwe-search', 'render_search_page', 'manage_options' ],
+			[ 'kiwe-menu', 'render_menu_page', 'manage_options' ],
+			[ 'kiwe-secure', 'render_secure_page', 'manage_options' ],
+			[ 'kiwe-email', 'render_email_page', 'manage_options' ],
+			[ 'kiwe-analytics', 'render_store_analytics_page', 'manage_options' ],
+			[ 'kiwe-woocommerce', 'render_woocommerce_page', 'manage_options' ],
+			[ 'kiwe-abandoned-cart', 'render_abandoned_cart_page', 'manage_options' ],
+			[ 'kiwe-bricks', 'render_bricks_page', 'manage_options' ],
+		];
+		foreach ( $hidden as [ $slug, $callback, $capability ] ) {
+			add_submenu_page( null, 'Kiwe', 'Kiwe', $capability, $slug, [ $this, $callback ] );
+		}
+	}
+
+	public function render_overview_page(): void {
+		$this->render_hub_page(
+			'Kiwe Overview',
+			'One operational view for the AppShell, site context, build system, delivery channels and production health.',
+			[
+				[ 'Context', 'SiteGraph, Design Context and onboarding.', 'kiwe-context' ],
+				[ 'Build', 'Bricks integration and Seam Framework.', 'kiwe-build' ],
+				[ 'AppShell', 'Surface, dock, theme and interaction settings.', 'kiwe-appshell' ],
+				[ 'Commerce & Messages', 'WooCommerce, notifications and delivery.', 'kiwe-commerce' ],
+				[ 'Security', 'Authentication and SecureTrack.', 'kiwe-security' ],
+				[ 'System', 'Health, cache, persistence and developer tools.', 'kiwe-system' ],
+			]
+		);
+	}
+
+	public function render_context_page(): void {
+		$this->render_hub_page( 'Context', 'The canonical business and site-data boundary consumed by people, SEAM and connected tools.', [
+			[ 'SiteGraph', 'Export, pair and validate the unified site context.', 'kiwe-sitegraph' ],
+			[ 'AI broker', 'Configure the shared provider once for optional WordPress-native assistance.', 'kiwe-ai' ],
+		] );
+	}
+
+	public function render_build_page(): void {
+		$this->render_hub_page( 'Build', 'Native Bricks output and the optional Seam Framework profile are managed here.', [
+			[ 'Bricks', 'Native element, dynamic-data and WooCommerce integration.', 'kiwe-bricks' ],
+			[ 'Framework', 'Install and validate tokens, classes, palettes and accessibility colors.', 'kiwe-framework' ],
+		] );
+	}
+
+	public function render_appshell_page(): void {
+		$this->render_hub_page( 'AppShell', 'Presentation and interaction controls for the Kiwe application surface.', [
+			[ 'App surface', 'Enable and configure the public application surface.', 'kiwe-app' ],
+			[ 'Dock', 'Navigation launchers and light/dark controls.', 'kiwe-dock' ],
+			[ 'Theme', 'AppShell theme packages and presentation.', 'kiwe-theme' ],
+			[ 'Haptics', 'Optional feedback behavior.', 'kiwe-haptic' ],
+			[ 'Menu', 'AppShell navigation targets.', 'kiwe-menu' ],
+		] );
+	}
+
+	public function render_commerce_page(): void {
+		$this->render_hub_page( 'Commerce & Messages', 'Store behavior and every outbound customer channel share one operational surface.', [
+			[ 'WooCommerce', 'Products, linked products and native commerce enhancements.', 'kiwe-woocommerce' ],
+			[ 'Abandoned carts', 'Recovery policy and delivery status.', 'kiwe-abandoned-cart' ],
+			[ 'Email', 'SMTP fallback and delivery testing.', 'kiwe-email' ],
+			[ 'Analytics', 'Store and campaign evidence.', 'kiwe-analytics' ],
+		] );
+	}
+
+	public function render_security_page(): void {
+		$this->render_hub_page( 'Security', 'Authentication, consent and threat controls remain separate in responsibility but share one entry point.', [
+			[ 'Authentication', 'PhoneKey login, verification and session policy.', 'kiwe-auth' ],
+			[ 'Security policy', 'Kiwe security controls and broker status.', 'kiwe-secure' ],
+			[ 'SecureTrack events', 'Evidence, protection events and incident review.', 'stp' ],
+		] );
+	}
+
+	public function render_system_page(): void {
+		$this->render_hub_page( 'System', 'Evidence-first maintenance tools for an RC installation.', [
+			[ 'Database & cache', 'Inventory, safe cleanup and cache purge.', 'kiwe-database' ],
+			[ 'Developer', 'Diagnostics, clean conversion tests and recovery.', 'kiwe-developer' ],
+			[ 'Search', 'Search configuration and cache.', 'kiwe-search' ],
+			[ 'Links', 'Public identity and review links.', 'kiwe-links' ],
+		] );
+	}
+
+	private function render_hub_page( string $title, string $summary, array $cards ): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'dsa' ) );
+		}
+		?>
+		<div class="wrap kiwe-admin-wrap">
+			<h1><?php echo esc_html( $title ); ?></h1>
+			<p class="description"><?php echo esc_html( $summary ); ?></p>
+			<div class="kiwe-hub-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:24px;max-width:1100px">
+				<?php foreach ( $cards as [ $label, $description, $slug ] ) : ?>
+					<a class="card" style="display:block;max-width:none;text-decoration:none;color:inherit;margin:0" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $slug ) ); ?>">
+						<h2 style="margin-top:0"><?php echo esc_html( $label ); ?></h2>
+						<p><?php echo esc_html( $description ); ?></p>
+					</a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
 	}
 
 	public function database_admin_bar( \WP_Admin_Bar $admin_bar ): void {

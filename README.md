@@ -29,8 +29,8 @@ For Hostinger, use `docs/INSTALL-HOSTINGER.md`. For upgrades, incomplete uploads
 
 ## Safe Defaults
 
-- SecureTrack enforcement and automatic logout are off until deliberately configured and tested.
-- First-session Home, idle Home, morph navigation, and offline editorial delivery pilots remain governed or off by default.
+- The clean RC settings profile disables every optional runtime and enables only read-only SiteGraph.
+- AppShell, Dock, PhoneKey, messaging, commerce enhancements, SecureTrack, AI services, PWA, Push and Bricks adapters are enabled deliberately after onboarding and testing.
 - Personalized identity, cart, authority, and nonce state hydrates through private no-store REST responses instead of cacheable HTML.
 - Visitor-facing trust is rendered by deterministic services. AI may explain or suggest; it does not invent trust or authorize mutations.
 - A fresh install opens the owner-facing `Kiwe > Onboarding` journey once. It keeps optional Kiwe runtimes disabled, writes identity/store values to their native WordPress/WooCommerce owners, and makes the additional SEO/design brief available through read-only SiteGraph.
@@ -78,7 +78,7 @@ The former browser converter is quarantined under `packages/seam-bricks-adapter/
 
 ### SEAM Framework package boundary
 
-Kiwe 7.03 consumes SEAM Compiler 0.12.0 Framework packages. Raw `/convert /bricks` output remains self-contained and Framework-neutral. `/seamframework` then emits one project-wide Framework Profile, stable Bricks class IDs, profile-dependent templates, and `framework/audit-seamframework.json`. The profile must be pushed from Kiwe > Framework before its templates are imported. `/audit /seamframework` fails closed unless integration is 100%, source structure/content parity passes, every class and variable reference is installed, and each visual setting has one owner. Accessibility is deliberately outside this release gate and remains a later, separate phase.
+Raw `/convert /bricks` output remains self-contained and Framework-neutral. Seam Framework is an explicit compiler option, not another slash command. Framework mode emits one project-wide Framework Profile, stable Bricks class IDs and profile-dependent templates. The profile must be installed from Kiwe > Build > Framework before those templates are imported. The deterministic Framework validator fails closed when a referenced class, variable, palette entry or theme-style owner is missing. Accessibility remains its own audit/fix stage and cannot silently rewrite an accepted design.
 
 ## Emergency Disable
 

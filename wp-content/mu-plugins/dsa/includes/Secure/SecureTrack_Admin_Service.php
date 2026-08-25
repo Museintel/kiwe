@@ -15,6 +15,21 @@ final class SecureTrack_Admin_Service {
 
 	public static function register_core_menus(): void {
 		if ( self::dsa_owns_admin() ) {
+			foreach ( [
+				[ 'stp', 'stp_pg_events' ],
+				[ 'stp-alerts', 'stp_pg_alerts' ],
+				[ 'stp-protections', 'stp_pg_protections' ],
+				[ 'stp-brain', 'stp_pg_brain' ],
+				[ 'stp-ips', 'stp_pg_ips' ],
+				[ 'stp-subnets', 'stp_pg_subnets' ],
+				[ 'stp-chain', 'stp_pg_chain' ],
+				[ 'stp-filescan', 'stp_pg_filescan' ],
+				[ 'stp-sessions', 'stp_pg_sessions' ],
+				[ 'stp-profiles', 'stp_pg_profiles' ],
+				[ 'stp-settings', 'stp_pg_settings' ],
+			] as [ $slug, $callback ] ) {
+				add_submenu_page( null, 'Kiwe Security', 'Kiwe Security', 'manage_options', $slug, $callback );
+			}
 			return;
 		}
 
@@ -37,6 +52,13 @@ final class SecureTrack_Admin_Service {
 
 	public static function register_extended_menus(): void {
 		if ( self::dsa_owns_admin() ) {
+			foreach ( [
+				[ 'stp-live', 'stp_pg_live' ],
+				[ 'stp-analytics', 'stp_pg_analytics' ],
+				[ 'stp-auth', 'stp_pg_auth' ],
+			] as [ $slug, $callback ] ) {
+				add_submenu_page( null, 'Kiwe Security', 'Kiwe Security', 'manage_options', $slug, $callback );
+			}
 			return;
 		}
 

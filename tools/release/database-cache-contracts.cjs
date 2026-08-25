@@ -12,7 +12,7 @@ const pwa = read('wp-content/mu-plugins/dsa/includes/PWA/PWA_Service.php');
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
 
-check('Database & Cache is a dedicated Kiwe admin destination', admin.includes("'kiwe-database'") && admin.includes("[ $this, 'render_database_page' ]") && admin.includes("'Kiwe Database & Cache'"));
+check('Database & Cache is reachable from the unified System destination', admin.includes("[ 'System', 'kiwe-system', 'render_system_page' ]") && admin.includes("[ 'kiwe-database', 'render_database_page'") && admin.includes("'Database & cache'"));
 check('admin toolbar opens the evidence-first cache page', admin.includes("'id'    => 'kiwe-database-cache'") && admin.includes("admin.php?page=kiwe-database"));
 check('cache mutation requires capability nonce and confirmation', admin.includes("check_admin_referer( 'dsa_database_purge_cache' )") && admin.includes("$_POST['confirm_cache_purge']"));
 check('whole object-cache flush requires an exact phrase', admin.includes("'FLUSH OBJECT CACHE' !== $phrase"));

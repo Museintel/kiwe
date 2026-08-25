@@ -15,10 +15,9 @@ const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const abilities = read('wp-content/mu-plugins/dsa/includes/WP7/Abilities_Service.php');
 const mcp = read('kiwe-ai-toolkit/mcp/sitegraph-client.js');
 const core = read('kiwe-ai-toolkit/lib/kiwe-core.js');
-const dynamic = read('kiwe-ai-toolkit/contexts/dynamic-lite.md');
+const ideate = read('kiwe-ai-toolkit/contexts/ideate.md');
 const manifest = JSON.parse(read('kiwe-ai-toolkit/command-manifest.json'));
 const enhancement = read('wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Enhancement_Service.php');
-const ideate = read('kiwe-ai-toolkit/contexts/ideate-lite.md');
 
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -40,16 +39,16 @@ check('one authenticated SiteGraph route replaces separate design-context routes
 check('task capsule SiteGraph is resource and row bounded', aiController.includes("$args['resources']") && aiController.includes("$args['productLimit']") && aiController.includes("$args['mediaLimit']"));
 check('admin exposes one secret-free SiteGraph download', admin.includes('dsa_export_site_graph') && admin.includes('Download SiteGraph JSON') && !admin.includes('dsa_export_sitegraph_design_context'));
 check('MCP and WordPress Abilities expose one read-only SiteGraph contract', mcp.includes('kiwe_sitegraph_get_graph') && !mcp.includes('kiwe_sitegraph_design_context') && abilities.includes('dsa/get-site-graph') && !abilities.includes('dsa/get-sitegraph-design-context'));
-check('command grammar has no separate design-context target', !manifest.commandGrammar.phaseTargets.includes('/designcontext') && !core.includes('/usesitegraph /for /designcontext'));
-check('command documentation teaches one SiteGraph handoff', dynamic.includes('SiteGraph itself is the complete public-only evidence packet') && dynamic.includes('There is no separate Design Context route, file or command target'));
+check('command grammar has no separate design-context or SiteGraph command', !manifest.commands.some((item) => item.command.includes('designcontext') || item.command.includes('sitegraph')) && !core.includes('/usesitegraph'));
+check('command documentation teaches one embedded SiteGraph handoff', ideate.includes('SiteGraph context') && manifest.authority.siteContext.includes('never slash commands'));
 check('raw-source contract preserves stable media and dynamic intent', service.includes('data-kiwe-media-id') && service.includes('data-kiwe-query-template') && service.includes('bricks-bindings/kiwe-bindings.json'));
 check('owner context exposes social and complete market coverage without secrets', service.includes("'socials'") && service.includes("'marketCoverage'") && graph.includes("'socialProfileCount'") && !service.includes('consumer_secret'));
 check('design context embeds a hash-bound AI enhancement contract and resolved layer', service.includes("'designContextEnhancementContract'") && service.includes("'resolvedDesignContext'") && service.includes("'ownerContextHash'") && enhancement.includes('lockedPaths'));
-check('AI enhancement command is compact vendor-neutral and framework-safe', manifest.commandGrammar.phaseTargets.includes('/designcontextenhancement') && manifest.commands['/create /designcontextenhancement'] && dynamic.includes('/create /designcontextenhancement') && dynamic.includes('does not silently enable Seam Framework'));
+check('AI enhancement stays SiteGraph data rather than a command lane', !manifest.commands.some((item) => item.command.includes('enhancement')) && service.includes("'designContextEnhancementContract'") && enhancement.includes('mayOverwriteOwnerEvidence'));
 check('design context is self-describing for bare ideate without granting write authority', service.includes("'ideationContract'") && service.includes("'autoComposeCommands' => [ '/ideate' ]") && service.includes("'ownerFacts' => 'locked'") && service.includes("'ownerPreferences' => 'preserve-unless-human-explicitly-revises'") && service.includes("'mayMutateDesignContext' => false") && service.includes("'ideateCommand' => '/ideate'"));
 check('SiteGraph exposes verified native Bricks product tags plus Kiwe nutrition media', ['{post_title}','{post_content}','{woo_product_excerpt}','{woo_product_price}','{woo_product_images}','{kiwe_product_nutrition_image}'].every((tag) => service.includes(tag)) && data.includes("'nutritionImage'"));
-check('ideate asks once for the single SiteGraph handoff', ideate.includes('SiteGraph is the only Kiwe context handoff') && ideate.includes('ask once for a current read-only SiteGraph export') && service.includes("'siteDataRequirement'"));
-check('ideate delivery includes portable assets and a provenance manifest', ideate.includes('assets/asset-manifest.json') && ideate.includes('intended WordPress Media use') && manifest.commands['/ideate'].output.some((item) => item.includes('asset-manifest.json')));
+check('ideate consumes a single SiteGraph context without mutating it', ideate.includes('SiteGraph context') && ideate.includes('Never invent IDs') && service.includes("'siteDataRequirement'"));
+check('ideate delivery includes portable assets and a provenance manifest', ideate.includes('assets/asset-manifest.json') && ideate.includes('intended WordPress Media use') && manifest.commands.find((item) => item.command === '/ideate').outputs.includes('asset manifest'));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

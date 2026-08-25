@@ -12,7 +12,8 @@ const controller = read('wp-content/mu-plugins/dsa/includes/Rest/AI_Access_Contr
 const graph = read('wp-content/mu-plugins/dsa/includes/AI/Site_Graph_Service.php');
 const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const start = read('KIWE-START.md');
-const dynamic = read('kiwe-ai-toolkit/contexts/dynamic-lite.md');
+const ideate = read('kiwe-ai-toolkit/contexts/ideate.md');
+const manifest = read('kiwe-ai-toolkit/command-manifest.json');
 
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -21,9 +22,17 @@ check('task capsules are hash-only and revocable', capsule.includes("wp_hash_pas
 check('task capsules expire and enforce request budgets', capsule.includes("'expiresUnix'") && capsule.includes("'maxUses'") && capsule.includes('capsule_exhausted'));
 check('task capsules are public-only and mutation-forbidden', capsule.includes("'publicOnly'  => true") && capsule.includes("'mutation'    => 'forbidden'") && !capsule.match(/SCOPES\s*=\s*\[[\s\S]*controlled_mutation/));
 check('task capsules enforce resource field and row budgets', capsule.includes('authorize_data_args') && capsule.includes('capsule_resource_denied') && capsule.includes("'maxRows'"));
-check('task capsule graph redacts private structural evidence', controller.includes("'publicOnly'  => 'task_capsule'") && graph.includes("$public_only ? 'publish' : [ 'publish', 'draft', 'private' ]") && graph.includes("'operationalAddressRedacted' => true") && graph.includes("$query['public'] = true"));
+check(
+	'task capsule graph redacts private structural evidence',
+	controller.includes("'task_capsule' !== (string) ( $auth['kind'] ?? '' )")
+		&& controller.includes('new Design_Context_Service( $this->site_graph )')
+		&& graph.includes("$public_only ? 'publish' : [ 'publish', 'draft', 'private' ]")
+		&& graph.includes("'operationalAddressRedacted' => true")
+		&& graph.includes("$query['public'] = true")
+		&& read('wp-content/mu-plugins/dsa/includes/Site_Graph/Design_Context_Service.php').includes("'publicOnly' => true")
+);
 check('OpenAPI exposes both bearer and custom-header authentication', openapi.includes("'KiweBearer'") && openapi.includes("'KiweHeader'") && openapi.includes("'openapi' => '3.1.0'"));
-check('OpenAPI marks authority boundaries', openapi.includes('read-convert-validate') && openapi.includes('separately-authorized-staging') && openapi.includes('high-authority-permanent-key-only'));
+check('OpenAPI marks read and validation authority boundaries', openapi.includes('read-convert-validate') && controller.includes("'mutatesContent'           => false") && !controller.includes("'/ai/stage-apply-plan'"));
 check('OpenAPI and client manifest are public secret-free discovery routes', controller.includes("'/ai/openapi.json'") && controller.includes("'/ai/client-manifest'") && openapi.includes("'security'    => []"));
 check('ordinary external tools receive a reduced task-only OpenAPI contract', controller.includes("'/ai/openapi.task.json'") && openapi.includes("'x-kiwe-task-only'") && adapters.includes('/openapi.task.json'));
 check('AI routes enforce origin and credential rate limits', controller.includes("'kiwe-ai-auth:'") && controller.includes("'kiwe-ai-client:'") && controller.includes("'Retry-After'"));
@@ -31,7 +40,7 @@ check('AI controller distinguishes permanent keys from task capsules', controlle
 check('SiteGraph admin explains namespace versus webpage', admin.includes('Base API namespace (not a webpage)') && admin.includes('Do not paste the capsule secret into an ordinary AI chat.'));
 check('SiteGraph admin creates and revokes downloadable client connections', admin.includes('dsa_create_sitegraph_client_package') && admin.includes('dsa_revoke_sitegraph_task_capsule') && admin.includes('kiwe.external-client-connection.v1'));
 check('permanent all-scope keys are not selected by default', admin.includes('All Kiwe AI connector access') && !admin.includes('name="scopes[]" value="all" checked'));
-check('command documentation covers task capsules and vendor-neutral clients', start.includes('SiteGraph task capsule') && dynamic.includes('kiwe.external-client-manifest.v1'));
+check('command documentation treats SiteGraph as input instead of command grammar', start.includes('SiteGraph and Design Context are attached or connected project inputs') && ideate.includes('SiteGraph context') && manifest.includes('SiteGraph and Design Context are attached or connected inputs'));
 
 const php = spawnSync('php', ['tools/release/test-sitegraph-task-capsule.php'], { cwd: root, encoding: 'utf8' });
 check('SiteGraph task capsule PHP runtime contract passes', php.status === 0 && /PASS SiteGraph task capsule, task OpenAPI and adapter/.test(String(php.stdout)));

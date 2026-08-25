@@ -1,0 +1,32 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "8.0",
+  "releaseId": "8.0-2947edc03957",
+  "route": "/fix",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/8.0-2947edc03957/start.md",
+      "sha256": "152c771ace6e66e6129b0da7a52baf2dbdbf337cb00e46226e3ed792447b0667"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/accessibility.md",
+      "url": "https://start.kiwelaunch.com/contexts/accessibility.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/8.0-2947edc03957/contexts/accessibility.md",
+      "sha256": "bbe4043f7bcb9517d656470e9fed86db14a475f2f8802fd7201817dc66a09b00"
+    }
+  ],
+  "sourceHash": "sha256:2947edc039573e80d27b5fb6fbfd8807dd9cadca82f92cd453a9f5ee3539c4ad",
+  "command": "/fix",
+  "context": "contexts/accessibility.md",
+  "requires": [
+    "artifact",
+    "audit report"
+  ],
+  "outputs": [
+    "corrected artifact",
+    "before/after report"
+  ],
+  "boundary": "Apply only proven findings and preserve art direction, content and behavior."
+}
