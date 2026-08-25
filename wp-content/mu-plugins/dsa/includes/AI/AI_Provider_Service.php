@@ -173,9 +173,12 @@ final class AI_Provider_Service {
 			];
 		}
 		if ( 'gemini' === $provider ) {
+			$headers['x-goog-api-key'] = $key;
 			return [
 				'ok'      => true,
-				'url'     => 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $model ) . ':generateContent?key=' . rawurlencode( $key ),
+				'url'     => str_starts_with( $model, 'gemini-3' )
+					? 'https://generativelanguage.googleapis.com/v1/interactions'
+					: 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode( $model ) . ':generateContent',
 				'headers' => $headers,
 			];
 		}
@@ -190,12 +193,26 @@ final class AI_Provider_Service {
 		$user = $this->trim_bytes( (string) ( $envelope['user'] ?? '' ), max( 12000, absint( $settings['max_native_context_bytes'] ?? 60000 ) ) );
 
 		if ( 'gemini' === $provider ) {
-			$config = [ 'maxOutputTokens' => $max_tokens ];
 			if ( str_starts_with( $model, 'gemini-3' ) ) {
-				$config['thinkingConfig'] = [ 'thinkingLevel' => in_array( (string) ( $envelope['thinkingLevel'] ?? '' ), [ 'low','medium','high' ], true ) ? (string) $envelope['thinkingLevel'] : 'low' ];
-			} else {
-				$config['temperature'] = 0.35;
+				$payload = [
+					'model' => $model,
+					'input' => $system . "\n\n" . $user,
+					'store' => false,
+					'generation_config' => [
+						'thinking_level' => in_array( (string) ( $envelope['thinkingLevel'] ?? '' ), [ 'low','medium','high' ], true ) ? (string) $envelope['thinkingLevel'] : 'low',
+					],
+				];
+				if ( 'application/json' === ( $envelope['responseMimeType'] ?? '' ) ) {
+					$format = [ 'type'=>'text', 'mime_type'=>'application/json' ];
+					if ( is_array( $envelope['responseSchema'] ?? null ) && [] !== $envelope['responseSchema'] ) {
+						$format['schema'] = $envelope['responseSchema'];
+					}
+					$payload['response_format'] = [ $format ];
+				}
+				return $payload;
 			}
+			$config = [ 'maxOutputTokens' => $max_tokens ];
+			$config['temperature'] = 0.35;
 			if ( 'application/json' === ( $envelope['responseMimeType'] ?? '' ) ) {
 				$config['responseMimeType'] = 'application/json';
 				if ( is_array( $envelope['responseSchema'] ?? null ) && [] !== $envelope['responseSchema'] ) {
@@ -228,6 +245,16 @@ final class AI_Provider_Service {
 
 	private function extract_text( string $provider, array $decoded ): string {
 		if ( 'gemini' === $provider ) {
+			if ( isset( $decoded['steps'] ) && is_array( $decoded['steps'] ) ) {
+				$out = '';
+				foreach ( $decoded['steps'] as $step ) {
+					if ( ! is_array( $step ) || 'model_output' !== (string) ( $step['type'] ?? '' ) ) continue;
+					foreach ( is_array( $step['content'] ?? null ) ? $step['content'] : [] as $content ) {
+						if ( is_array( $content ) && 'text' === (string) ( $content['type'] ?? '' ) ) $out .= (string) ( $content['text'] ?? '' );
+					}
+				}
+				return trim( $out );
+			}
 			$candidates = isset( $decoded['candidates'] ) && is_array( $decoded['candidates'] ) ? $decoded['candidates'] : [];
 			$parts = isset( $candidates[0]['content']['parts'] ) && is_array( $candidates[0]['content']['parts'] ) ? $candidates[0]['content']['parts'] : [];
 			$out = '';

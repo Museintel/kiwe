@@ -345,8 +345,8 @@
       "sha256": "7e66ce79a3ffed377ea8c5d810aeba4684d897be3c2dcdba57956726dc882087"
     },
     "includes/AI/AI_Broker_Service.php": {
-      "bytes": 13034,
-      "sha256": "f2464dbabb25347a07541dfab04ae30da9d7419cb90a0444592ecccf0b345248"
+      "bytes": 12990,
+      "sha256": "bfcc98eb097fa4962e7d64f1b30b3b5311216a5eb857cee0cc79b092e59d0431"
     },
     "includes/AI/AI_Companion_Memory_Service.php": {
       "bytes": 3948,
@@ -357,8 +357,8 @@
       "sha256": "710d90a6b4fc24da2c72da7e3eec23fbc7b5d75b716b97124318b87778fc9aca"
     },
     "includes/AI/AI_Provider_Service.php": {
-      "bytes": 13231,
-      "sha256": "cd14632b148aaa835ae914dc16b844f22431e6c082bcfe8faf4631a18220d108"
+      "bytes": 14336,
+      "sha256": "546f3b8e529b1f3332c328e4beff3dbda99b33f02b16fd856a8e9e9caa7aba81"
     },
     "includes/AI/Access_Key_Service.php": {
       "bytes": 7864,

@@ -109,7 +109,7 @@ final class AI_Broker_Service {
 
 		$validation = $this->validate_output( (string) ( $result['output'] ?? '' ), $profile );
 		$result['validation'] = $validation;
-		if ( ! empty( $result['called'] ) && empty( $validation['valid'] ) ) {
+		if ( ! empty( $result['ok'] ) && empty( $validation['valid'] ) ) {
 			$result['ok'] = false;
 			$result['error'] = [
 				'code'    => 'output_contract_failed',
@@ -276,7 +276,7 @@ final class AI_Broker_Service {
 		if ( isset( $schema['enum'] ) && is_array( $schema['enum'] ) ) {
 			$out['enum'] = array_values( array_slice( array_filter( $schema['enum'], static fn( $value ): bool => is_scalar( $value ) || null === $value ), 0, 100 ) );
 		}
-		foreach ( [ 'maxItems'=>100, 'minItems'=>100, 'maxLength'=>10000, 'minLength'=>10000 ] as $key => $ceiling ) {
+		foreach ( [ 'maxItems'=>100, 'minItems'=>100 ] as $key => $ceiling ) {
 			if ( isset( $schema[ $key ] ) ) {
 				$out[ $key ] = max( 0, min( $ceiling, absint( $schema[ $key ] ) ) );
 			}
