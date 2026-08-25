@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Native Kiwe SEO foundation with duplicate-output protection. */
 final class SEO_Context_Service {
+	private int $head_capture_level = 0;
+
 	public function __construct( private Design_Context_Profile_Service $profiles ) {}
 
 	public function register(): void {
@@ -21,8 +23,36 @@ final class SEO_Context_Service {
 		add_filter( 'wp_sitemaps_posts_query_args', [ $this, 'sitemap_args' ], 10, 2 );
 		add_action( 'init', [ $this, 'ensure_sitemap_rewrite' ], 99 );
 		add_action( 'wp', [ $this, 'suppress_jetpack_social_metadata' ], 0 );
+		add_action( 'wp_head', [ $this, 'begin_head_capture' ], -999999 );
 		add_action( 'wp_head', [ $this, 'suppress_jetpack_social_metadata' ], 0 );
 		add_action( 'wp_head', [ $this, 'head' ], 2 );
+		add_action( 'wp_head', [ $this, 'end_head_capture' ], PHP_INT_MAX );
+	}
+
+	/** Buffer only wp_head so Kiwe can remove late third-party social duplicates. */
+	public function begin_head_capture(): void {
+		if ( $this->dedicated_seo_plugin_active() || ! $this->indexable_request() ) return;
+		ob_start();
+		$this->head_capture_level = ob_get_level();
+	}
+
+	public function end_head_capture(): void {
+		if ( 0 === $this->head_capture_level || ob_get_level() !== $this->head_capture_level ) return;
+		$output = (string) ob_get_clean();
+		$this->head_capture_level = 0;
+		echo $this->filter_social_metadata_output( $output ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	public function filter_social_metadata_output( string $output ): string {
+		return (string) preg_replace_callback(
+			'/<meta\b[^>]*>/i',
+			static function ( array $match ): string {
+				$tag = $match[0];
+				if ( preg_match( '/\bdata-kiwe-seo\s*=\s*(["\'])social\1/i', $tag ) ) return $tag;
+				return preg_match( '/\b(?:property|name)\s*=\s*(["\'])(?:og:|twitter:)[^"\']*\1/i', $tag ) ? '' : $tag;
+			},
+			$output
+		);
 	}
 
 	public function robots( array $robots ): array {
@@ -161,7 +191,7 @@ final class SEO_Context_Service {
 			'og:image:alt' => $metadata['imageAlt'],
 		];
 		foreach ( $tags as $property => $tag_content ) {
-			if ( '' !== $tag_content ) echo '<meta property="' . esc_attr( $property ) . '" content="' . esc_attr( $tag_content ) . '">' . "\n";
+			if ( '' !== $tag_content ) echo '<meta data-kiwe-seo="social" property="' . esc_attr( $property ) . '" content="' . esc_attr( $tag_content ) . '">' . "\n";
 		}
 		$twitter = [
 			'twitter:card' => '' !== $metadata['image'] ? 'summary_large_image' : 'summary',
@@ -171,7 +201,7 @@ final class SEO_Context_Service {
 			'twitter:image:alt' => $metadata['imageAlt'],
 		];
 		foreach ( $twitter as $name => $tag_content ) {
-			if ( '' !== $tag_content ) echo '<meta name="' . esc_attr( $name ) . '" content="' . esc_attr( $tag_content ) . '">' . "\n";
+			if ( '' !== $tag_content ) echo '<meta data-kiwe-seo="social" name="' . esc_attr( $name ) . '" content="' . esc_attr( $tag_content ) . '">' . "\n";
 		}
 	}
 
