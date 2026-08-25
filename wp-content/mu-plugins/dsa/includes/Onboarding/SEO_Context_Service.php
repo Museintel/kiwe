@@ -15,9 +15,12 @@ final class SEO_Context_Service {
 	public function register(): void {
 		add_filter( 'wp_robots', [ $this, 'robots' ] );
 		add_filter( 'robots_txt', [ $this, 'robots_txt' ], 99, 2 );
+		add_filter( 'wp_sitemaps_enabled', [ $this, 'native_sitemaps_enabled' ], 99 );
 		add_filter( 'jetpack_enable_open_graph', [ $this, 'jetpack_open_graph' ], 99 );
 		add_filter( 'jetpack_disable_twitter_cards', [ $this, 'jetpack_twitter_cards' ], 99 );
 		add_filter( 'wp_sitemaps_posts_query_args', [ $this, 'sitemap_args' ], 10, 2 );
+		add_action( 'init', [ $this, 'ensure_sitemap_rewrite' ], 99 );
+		add_action( 'wp', [ $this, 'suppress_jetpack_social_metadata' ], 0 );
 		add_action( 'wp_head', [ $this, 'head' ], 2 );
 	}
 
@@ -157,6 +160,25 @@ final class SEO_Context_Service {
 		if ( '0' === (string) get_option( 'blog_public', '1' ) ) return false;
 		$post_id = is_singular() ? absint( get_queried_object_id() ) : 0;
 		return ! $post_id || ( ! post_password_required( $post_id ) && 'publish' === get_post_status( $post_id ) );
+	}
+
+	/** Preserve WordPress privacy while preventing stale SEO plugins from disabling native discovery. */
+	public function native_sitemaps_enabled( bool $enabled ): bool {
+		return '1' === (string) get_option( 'blog_public', '1' ) ? true : $enabled;
+	}
+
+	/** Refresh native sitemap rewrites once, never on every request or release. */
+	public function ensure_sitemap_rewrite(): void {
+		if ( '1' === (string) get_option( 'kiwe_native_sitemap_rewrite_v1', '' ) ) return;
+		flush_rewrite_rules( false );
+		update_option( 'kiwe_native_sitemap_rewrite_v1', '1', false );
+	}
+
+	/** Jetpack may register its callback before Kiwe services boot; remove that late callback too. */
+	public function suppress_jetpack_social_metadata(): void {
+		if ( $this->dedicated_seo_plugin_active() ) return;
+		remove_action( 'wp_head', 'jetpack_og_tags' );
+		remove_action( 'web_stories_story_head', 'jetpack_og_tags' );
 	}
 
 	/** Kiwe owns social metadata when no dedicated SEO provider is active. */
