@@ -21,6 +21,7 @@ final class SEO_Context_Service {
 		add_filter( 'wp_sitemaps_posts_query_args', [ $this, 'sitemap_args' ], 10, 2 );
 		add_action( 'init', [ $this, 'ensure_sitemap_rewrite' ], 99 );
 		add_action( 'wp', [ $this, 'suppress_jetpack_social_metadata' ], 0 );
+		add_action( 'wp_head', [ $this, 'suppress_jetpack_social_metadata' ], 0 );
 		add_action( 'wp_head', [ $this, 'head' ], 2 );
 	}
 
@@ -65,6 +66,16 @@ final class SEO_Context_Service {
 		$identity = $context['identity'];
 		$contact = $context['contact'];
 		$socials = array_values( array_filter( is_array( $contact['socialLinks'] ?? null ) ? $contact['socialLinks'] : [], static fn( $url ): bool => is_string( $url ) && '' !== $url ) );
+		$address_source = is_array( $contact['address'] ?? null ) ? $contact['address'] : [];
+		$street = implode( ', ', array_filter( [ trim( (string) ( $address_source['line1'] ?? '' ) ), trim( (string) ( $address_source['line2'] ?? '' ) ) ] ) );
+		$address = array_filter( [
+			'@type' => 'PostalAddress',
+			'streetAddress' => $street,
+			'addressLocality' => trim( (string) ( $address_source['city'] ?? '' ) ),
+			'addressRegion' => trim( (string) ( $address_source['state'] ?? '' ) ),
+			'postalCode' => trim( (string) ( $address_source['postcode'] ?? '' ) ),
+			'addressCountry' => trim( (string) ( $address_source['country'] ?? '' ) ),
+		], static fn( $value ): bool => '' !== $value );
 		$schema = [
 			'@context' => 'https://schema.org',
 			'@type' => 'ecommerce' === ( $identity['siteType'] ?? '' ) ? 'OnlineStore' : 'Organization',
@@ -77,6 +88,7 @@ final class SEO_Context_Service {
 			'foundingDate' => ! empty( $context['seo']['foundedYear'] ) ? (string) absint( $context['seo']['foundedYear'] ) : '',
 			'email' => (string) ( $contact['email'] ?? '' ),
 			'telephone' => (string) ( $contact['phone'] ?? '' ),
+			'address' => count( $address ) > 1 ? $address : [],
 			'sameAs' => $socials,
 		];
 		$schema = array_filter( $schema, static fn( $value ): bool => '' !== $value && null !== $value && [] !== $value );
@@ -88,6 +100,14 @@ final class SEO_Context_Service {
 		$description = '';
 		if ( is_front_page() ) {
 			$description = trim( (string) ( $context['seo']['homepageDescription'] ?? '' ) );
+			if ( '' === $description && $post_id ) {
+				$description = SEO_Refinement_Service::singular_description();
+				if ( '' === $description ) {
+					$description = has_excerpt( $post_id ) ? get_the_excerpt( $post_id ) : wp_trim_words( wp_strip_all_tags( strip_shortcodes( (string) get_post_field( 'post_content', $post_id ) ) ), 32 );
+				}
+			}
+			if ( '' === trim( wp_strip_all_tags( $description ) ) ) $description = (string) ( $context['identity']['description'] ?? '' );
+			if ( '' === trim( wp_strip_all_tags( $description ) ) ) $description = (string) get_bloginfo( 'description' );
 		} elseif ( $post_id ) {
 			$description = SEO_Refinement_Service::singular_description();
 			if ( '' === $description ) {

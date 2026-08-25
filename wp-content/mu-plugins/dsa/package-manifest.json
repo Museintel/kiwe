@@ -661,8 +661,8 @@
       "sha256": "0a7254a86be8f2038ed51dc1f6e63e798c220bb341a333bd4331d3b6df701ee6"
     },
     "includes/Onboarding/SEO_Context_Service.php": {
-      "bytes": 9487,
-      "sha256": "c87020a1eea4c7b7c842542a4db47c9343a14658ce749b80c3d90a863e895438"
+      "bytes": 10898,
+      "sha256": "09be80d11ba09cdba234ec200a46e049565fd43158d2bda9cc786d6b5f74612a"
     },
     "includes/PWA/PWA_Service.php": {
       "bytes": 22822,
