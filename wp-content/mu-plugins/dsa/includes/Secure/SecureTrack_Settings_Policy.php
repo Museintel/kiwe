@@ -64,10 +64,10 @@ final class SecureTrack_Settings_Policy {
 			$config['v2_ai_provider'] = 'none';
 		}
 
-		$config['v2_ai_model'] = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $config['v2_ai_model'] ?? 'gemini-2.5-flash' ) );
+		$config['v2_ai_model'] = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $config['v2_ai_model'] ?? 'gemini-3.7-flash' ) );
 		$config['v2_ai_model'] = preg_replace( '#^models/#', '', $config['v2_ai_model'] );
 		if ( $config['v2_ai_model'] === '' && in_array( $config['v2_ai_provider'], [ 'gemini', 'groq', 'xai' ], true ) ) {
-			$config['v2_ai_model'] = 'gemini-2.5-flash';
+			$config['v2_ai_model'] = 'gemini-3.7-flash';
 		}
 
 		$config['v2_ai_mode'] = sanitize_key( $config['v2_ai_mode'] ?? 'batch' );

@@ -24,6 +24,7 @@ check('broker rejects shared or implicit memory', broker.includes('shared_or_imp
 check('broker enforces service capability prompt and rate boundaries', broker.includes('capability_not_allowed') && broker.includes('prompt_budget_exceeded') && broker.includes('service_rate_limited'));
 check('broker validates output contracts and does not audit raw prompts', broker.includes('output_contract_failed') && broker.includes("'promptHash'") && !broker.includes("'prompt'        =>"));
 check('provider key remains behind the transport and broker profiles expose no secret', provider.includes('Secret_Store::decrypt') && broker.includes("'secretAccess'  => false"));
+check('Gemini defaults use the current production-stable model', provider.includes("'gemini'            => 'gemini-3.7-flash'") && admin.includes('placeholder="gemini-3.7-flash / gpt-4.1-mini"') && securetrackPolicy.includes("'gemini-3.7-flash'"));
 check('WordPress 7 native AI Client is invoked through the official prompt entry point', wp7.includes("function_exists( 'wp_ai_client_prompt' )") && wp7.includes('wp_ai_client_prompt( $user )') && wp7.includes('generate_text()'));
 check('SecureTrack cloud review calls the broker', securetrack.includes('new \\DSA\\AI\\AI_Broker_Service') && securetrack.includes("'service'    => 'securetrack'") && securetrack.includes("'capability' => 'classify_security'"));
 check('SecureTrack contains no direct provider HTTP call', !securetrack.includes('wp_remote_post') && !securetrack.includes('wp_remote_get'));

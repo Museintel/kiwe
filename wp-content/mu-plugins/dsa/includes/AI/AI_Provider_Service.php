@@ -317,7 +317,7 @@ final class AI_Provider_Service {
 		}
 
 		return match ( $this->provider() ) {
-			'gemini'            => 'gemini-2.5-flash',
+			'gemini'            => 'gemini-3.7-flash',
 			'groq'              => 'llama-3.1-8b-instant',
 			'xai'               => 'grok-3-mini',
 			'openai_compatible' => 'gpt-4.1-mini',

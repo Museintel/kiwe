@@ -4966,7 +4966,7 @@ final class Admin {
 									</label>
 									<label>
 										<span><?php esc_html_e( 'Model', 'dsa' ); ?></span>
-										<input type="text" name="ai[native_model]" value="<?php echo esc_attr( $native_model ); ?>" placeholder="gemini-2.5-flash / gpt-4.1-mini" style="min-width:260px;">
+										<input type="text" name="ai[native_model]" value="<?php echo esc_attr( $native_model ); ?>" placeholder="gemini-3.7-flash / gpt-4.1-mini" style="min-width:260px;">
 									</label>
 									<label>
 										<span><?php esc_html_e( 'Max output tokens', 'dsa' ); ?></span>
@@ -10116,11 +10116,11 @@ final class Admin {
 			$mode = 'batch';
 		}
 
-		$model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $ai_settings['native_model'] ?? ( $old['v2_ai_model'] ?? 'gemini-2.5-flash' ) ) );
+		$model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $ai_settings['native_model'] ?? ( $old['v2_ai_model'] ?? 'gemini-3.7-flash' ) ) );
 		$model = preg_replace( '#^models/#', '', (string) $model );
 		if ( '' === $model && in_array( $provider, [ 'gemini', 'groq', 'xai' ], true ) ) {
 			$provider_defaults = function_exists( 'stp_ai_default_models' ) ? (array) stp_ai_default_models( $provider ) : [];
-			$model = ! empty( $provider_defaults[0]['name'] ) ? (string) $provider_defaults[0]['name'] : 'gemini-2.5-flash';
+			$model = ! empty( $provider_defaults[0]['name'] ) ? (string) $provider_defaults[0]['name'] : 'gemini-3.7-flash';
 			$model = preg_replace( '#^models/#', '', $model );
 		}
 

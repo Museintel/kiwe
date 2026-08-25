@@ -291,9 +291,9 @@ function stp_ai_default_models( $provider ) {
 	$provider = sanitize_key( $provider );
 	if ( $provider === 'gemini' ) {
 		return array(
-			array( 'name' => 'gemini-2.5-flash-lite', 'label' => 'Gemini 2.5 Flash-Lite', 'tier' => 'Free-friendly' ),
-			array( 'name' => 'gemini-2.5-flash', 'label' => 'Gemini 2.5 Flash', 'tier' => 'Free-friendly' ),
-			array( 'name' => 'gemini-2.0-flash-lite', 'label' => 'Gemini 2.0 Flash-Lite', 'tier' => 'Free-friendly' ),
+			array( 'name' => 'gemini-3.7-flash', 'label' => 'Gemini 3.7 Flash', 'tier' => 'Current stable' ),
+			array( 'name' => 'gemini-3.6-flash', 'label' => 'Gemini 3.6 Flash', 'tier' => 'Stable' ),
+			array( 'name' => 'gemini-3.5-flash-lite', 'label' => 'Gemini 3.5 Flash-Lite', 'tier' => 'Cost-efficient stable' ),
 		);
 	}
 	if ( $provider === 'groq' ) {
