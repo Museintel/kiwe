@@ -50,7 +50,7 @@ final class Design_Context_Enhancement_Service {
 			],
 			'lockedPaths' => array_merge( [
 				'ownerContext.identity.siteName', 'ownerContext.identity.logo', 'ownerContext.identity.logoInverse', 'ownerContext.identity.siteIcon',
-				'ownerContext.contact', 'ownerContext.localization', 'ownerContext.about', 'ownerContext.regulatory', 'ownerContext.contentPlan', 'ownerContext.commercePlan',
+				'ownerContext.contact', 'ownerContext.localization', 'ownerContext.about', 'ownerContext.services', 'ownerContext.regulatory', 'ownerContext.contentPlan', 'ownerContext.commercePlan',
 				'ownerContext.seo.legalName', 'ownerContext.seo.foundedYear', 'ownerContext.seo.allowIndexing',
 			], $locked_colors ),
 			'writablePaths' => [
@@ -136,6 +136,7 @@ final class Design_Context_Enhancement_Service {
 		$resolved = $this->resolved_profile( $this->profiles->current() );
 		$context['identity']['description'] = $resolved['identity']['description'];
 		$context['about'] = $resolved['about'];
+		if ( ! $administrator && empty( $context['about']['team']['enabled'] ) ) $context['about']['team']['members'] = [];
 		$context['brand'] = $resolved['brand'];
 		$context['seo'] = $resolved['seo'];
 		$context['enhancement'] = $resolved['enhancement'] ?? [ 'ownerEvidencePreserved'=>true, 'status'=>'none-or-stale' ];

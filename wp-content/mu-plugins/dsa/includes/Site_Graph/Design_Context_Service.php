@@ -146,7 +146,7 @@ final class Design_Context_Service {
 				],
 				'ownerFactPaths' => [
 					'seamDesignContext.identity', 'seamDesignContext.contact', 'seamDesignContext.localization',
-					'seamDesignContext.about', 'seamDesignContext.regulatory', 'seamDesignContext.contentPlan', 'seamDesignContext.commercePlan',
+					'seamDesignContext.about', 'seamDesignContext.services', 'seamDesignContext.regulatory', 'seamDesignContext.contentPlan', 'seamDesignContext.commercePlan',
 					'seamDesignContext.seo.legalName', 'seamDesignContext.seo.foundedYear', 'seamDesignContext.seo.allowIndexing',
 				],
 				'ownerPreferencePaths' => [
@@ -165,7 +165,7 @@ final class Design_Context_Service {
 				],
 				'doNotReaskWhenPresent' => [
 					'identity', 'site type', 'purpose', 'audience', 'goal', 'logo', 'brand preferences',
-					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder',
+					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder', 'team', 'services and service hierarchy',
 					'catalog scale', 'price range', 'regulatory disclosures', 'page plan', 'SEO intent',
 				],
 				'output' => [ 'index.html', 'styles.css', 'script.js', 'assets used by the project', 'assets/asset-manifest.json when assets are emitted' ],
@@ -198,7 +198,7 @@ final class Design_Context_Service {
 			],
 			'usage'       => [
 				'ideateCommand' => '/ideate',
-				'entityScopes' => [ '/products', '/posts', '/pages', '/media', '/menus', '/customcontent', '/taxonomies', '/business', '/commerce', '/seamdesigncontext' ],
+				'entityScopes' => [ '/products', '/services', '/posts', '/pages', '/media', '/menus', '/customcontent', '/taxonomies', '/business', '/commerce', '/seamdesigncontext' ],
 				'fieldScopes'  => [ '/titles', '/images', '/prices', '/links', '/excerpts', '/metadata', '/customfields', '/contact', '/brand', '/audience', '/contentplan', '/bundles', '/discounts', '/bestsellers', '/designcontextenhancement' ],
 				'rule' => 'Bare /ideate auto-detects this SiteGraph. Use owner facts as locked evidence, preserve owner preferences, and keep creative decisions draft-only. For an approved artifact, improve binding precision without redesigning it or hardcoding production collections.',
 			],
@@ -238,7 +238,9 @@ final class Design_Context_Service {
 
 	private function business_identity( bool $administrator ): array {
 		$address = [];
-		$owner_contact = ( new Design_Context_Profile_Service() )->public_context( false )['contact'] ?? [];
+		$owner_context = ( new Design_Context_Profile_Service() )->public_context( false );
+		$owner_contact = $owner_context['contact'] ?? [];
+		$services = is_array( $owner_context['services'] ?? null ) ? $owner_context['services'] : [];
 		if ( $administrator && ( class_exists( 'WooCommerce' ) || function_exists( 'WC' ) ) ) {
 			$address = [
 				'address1' => sanitize_text_field( (string) get_option( 'woocommerce_store_address', '' ) ),
@@ -312,6 +314,16 @@ final class Design_Context_Service {
 					'kiweTags'=>[ '{kiwe_team_member_id}', '{kiwe_team_title}', '{kiwe_team_image}', '{kiwe_team_linkedin_url}' ],
 				],
 				'pendingMembers'=>[ 'source'=>'ownerContext.about.team.members', 'selector'=>'id', 'note'=>'Use stable-selector Kiwe tags until an account is linked.' ],
+			],
+			'bricksServiceQuery' => [
+				'enabled'=>! empty( $services['sourcePostType'] ),
+				'objectType'=>'post', 'postType'=>sanitize_key( (string) ( $services['sourcePostType'] ?? '' ) ),
+				'args'=>[ 'post_type'=>sanitize_key( (string) ( $services['sourcePostType'] ?? '' ) ), 'post_status'=>'publish', 'orderby'=>[ 'menu_order'=>'ASC', 'title'=>'ASC' ] ],
+				'nativeTags'=>[ '{post_title}', '{post_excerpt}', '{post_content}', '{featured_image}', '{post_url}', '{post_id}' ],
+				'taxonomies'=>is_array( $services['taxonomies'] ?? null ) ? $services['taxonomies'] : [],
+				'customFields'=>is_array( $services['customFields'] ?? null ) ? $services['customFields'] : [],
+				'hierarchical'=>! empty( $services['hierarchical'] ), 'navigationIntent'=>! empty( $services['useForNavigation'] ),
+				'note'=>'Use native Bricks post queries and taxonomy::term_id filters. Do not hardcode service records when this source is available.',
 			],
 			'privacy' => [
 				'contactSource' => 'explicit Kiwe public store identity settings',

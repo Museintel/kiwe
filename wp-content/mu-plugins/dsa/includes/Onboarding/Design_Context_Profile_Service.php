@@ -23,11 +23,12 @@ final class Design_Context_Profile_Service {
 	public const USER_META_LINKEDIN = 'kiwe_linkedin_url';
 	public const USER_META_TEAM_ORDER = 'kiwe_team_order';
 	public const USER_META_AVATAR_ID = 'kiwe_avatar_id';
+	private const SERVICE_CATEGORY_PLAN_META = '_kiwe_service_category_plan';
 
 	public function current(): array {
 		$stored = get_option( self::OPTION_PROFILE, [] );
 		$stored = is_array( $stored ) ? $stored : [];
-		$inferred = $this->inferred();
+		$inferred = $this->inferred( $stored );
 		$profile = array_replace_recursive( $inferred, $stored );
 		$visibility = [];
 		foreach ( is_array( $stored['contentPlan']['existingPages'] ?? null ) ? $stored['contentPlan']['existingPages'] : [] as $page ) {
@@ -42,6 +43,12 @@ final class Design_Context_Profile_Service {
 		);
 		$profile['contentPlan']['plannedPages'] = is_array( $stored['contentPlan']['plannedPages'] ?? null ) ? array_values( $stored['contentPlan']['plannedPages'] ) : [];
 		$profile['about']['team']['members'] = is_array( $stored['about']['team']['members'] ?? null ) ? array_values( $stored['about']['team']['members'] ) : [];
+		if ( empty( $inferred['services']['sourcePostType'] ) ) {
+			$profile['services']['items'] = is_array( $stored['services']['items'] ?? null ) ? array_values( $stored['services']['items'] ) : [];
+		} else {
+			$pending_services = array_values( array_filter( is_array( $stored['services']['items'] ?? null ) ? $stored['services']['items'] : [], static fn( $item ): bool => is_array( $item ) && empty( $item['recordId'] ) ) );
+			$profile['services']['items'] = array_merge( $inferred['services']['items'], $pending_services );
+		}
 		$profile['brand']['colors'] = is_array( $stored['brand']['colors'] ?? null ) ? array_values( $stored['brand']['colors'] ) : [];
 		foreach ( $profile['brand']['colors'] as &$color ) {
 			if ( is_array( $color ) && 'support' === ( $color['role'] ?? '' ) ) {
@@ -97,6 +104,7 @@ final class Design_Context_Profile_Service {
 		$this->apply_page_visibility( $profile['contentPlan']['existingPages'] );
 		$this->apply_kiwe_public_context( $profile );
 		$profile = $this->apply_people_context( $profile, $user_id );
+		$profile = $this->apply_services_context( $profile, $user_id );
 		if ( $profile['commerce']['enabled'] ) {
 			$this->apply_woocommerce( $profile );
 		}
@@ -109,7 +117,9 @@ final class Design_Context_Profile_Service {
 			'authority'    => 'site-owner',
 			'frameworkOptInRequired' => true,
 		];
-		update_option( self::OPTION_PROFILE, $this->compact_people_references( $profile ), false );
+		$stored_profile = $this->compact_people_references( $profile );
+		$stored_profile = $this->compact_service_references( $stored_profile );
+		update_option( self::OPTION_PROFILE, $stored_profile, false );
 		update_option(
 			self::OPTION_STATUS,
 			[
@@ -143,6 +153,13 @@ final class Design_Context_Profile_Service {
 				'state'   => $address['state'],
 				'country' => $address['country'],
 			];
+			if ( empty( $about['team']['enabled'] ) ) $about['team']['members'] = [];
+		}
+		$services = $profile['services'];
+		if ( ! $administrator ) {
+			$services['items'] = array_values( array_filter( (array) ( $services['items'] ?? [] ), static fn( $item ): bool => ! empty( $item['recordId'] ) && 'publish' === get_post_status( absint( $item['recordId'] ) ) ) );
+			foreach ( $services['items'] as &$service_item ) $service_item['categoryPaths'] = '';
+			unset( $service_item );
 		}
 
 		return [
@@ -171,6 +188,7 @@ final class Design_Context_Profile_Service {
 			'brand'       => $profile['brand'],
 			'audience'    => $profile['audience'],
 			'contentPlan' => $profile['contentPlan'],
+			'services'    => $services,
 			'regulatory'  => $profile['regulatory'],
 			'commercePlan'=> [
 				'enabled'              => $profile['commerce']['enabled'],
@@ -220,7 +238,8 @@ final class Design_Context_Profile_Service {
 		return [ 'seoStrength' => $percent( $seo_checks ), 'designContextStrength' => $percent( $design_checks ) ];
 	}
 
-	private function inferred(): array {
+	private function inferred( ?array $stored = null ): array {
+		$stored = is_array( $stored ) ? $stored : (array) get_option( self::OPTION_PROFILE, [] );
 		$country_state = sanitize_text_field( (string) get_option( 'woocommerce_default_country', '' ) );
 		[ $country, $state ] = array_pad( explode( ':', $country_state, 2 ), 2, '' );
 		$pages = [];
@@ -260,6 +279,7 @@ final class Design_Context_Profile_Service {
 			],
 			'brand' => [ 'tone' => '', 'colors' => [], 'notes' => '' ],
 			'contentPlan' => [ 'existingPages' => $pages, 'plannedPages' => [], 'showBlogRailOnHome' => false, 'highlightBestsellers' => false ],
+			'services' => $this->inferred_services( sanitize_key( (string) ( $stored['services']['sourcePostType'] ?? $this->default_service_post_type() ) ) ),
 			'commerce' => $product_plan,
 			'regulatory' => [
 				'fssaiLicense' => '', 'showFssaiOnProducts' => false,
@@ -317,6 +337,7 @@ final class Design_Context_Profile_Service {
 		$regulatory = is_array( $raw['regulatory'] ?? null ) ? $raw['regulatory'] : [];
 		$localization = is_array( $raw['localization'] ?? null ) ? $raw['localization'] : [];
 		$content = is_array( $raw['contentPlan'] ?? null ) ? $raw['contentPlan'] : [];
+		$services = is_array( $raw['services'] ?? null ) ? $raw['services'] : [];
 
 		$colors = [];
 		$color_names = [ '#dc2626'=>'red','#f97360'=>'coral','#f97316'=>'orange','#f59e0b'=>'amber','#eab308'=>'yellow','#84cc16'=>'lime','#16a34a'=>'green','#059669'=>'emerald','#0d9488'=>'teal','#0891b2'=>'cyan','#0284c7'=>'sky','#2563eb'=>'blue','#4f46e5'=>'indigo','#7c3aed'=>'violet','#9333ea'=>'purple','#c026d3'=>'magenta','#db2777'=>'pink','#e11d48'=>'rose','#92400e'=>'brown','#c4a574'=>'sand','#6b7b3e'=>'olive','#1e3a5f'=>'navy','#64748b'=>'grey','#171717'=>'black' ];
@@ -370,6 +391,44 @@ final class Design_Context_Profile_Service {
 				'order' => $index,
 			];
 		}
+		$service_sources = $this->service_post_types();
+		$service_source = sanitize_key( (string) ( $services['sourcePostType'] ?? '' ) );
+		if ( ! isset( $service_sources[ $service_source ] ) ) $service_source = '';
+		$stored_profile = (array) get_option( self::OPTION_PROFILE, [] );
+		$previous_service_source = sanitize_key( (string) ( $stored_profile['services']['sourcePostType'] ?? '' ) );
+		$service_taxonomies = $service_source ? $this->service_taxonomies( $service_source ) : [];
+		$service_meta_fields = $service_source ? $this->service_meta_fields( $service_source ) : [];
+		$service_items = [];
+		foreach ( array_slice( is_array( $services['items'] ?? null ) ? $services['items'] : [], 0, 100 ) as $index => $item ) {
+			if ( ! is_array( $item ) ) continue;
+			$record_id = absint( $item['recordId'] ?? 0 );
+			if ( $record_id && $previous_service_source && $previous_service_source !== $service_source ) continue;
+			if ( $record_id && ( ! $service_source || $service_source !== get_post_type( $record_id ) ) ) $record_id = 0;
+			$title = substr( sanitize_text_field( (string) ( $item['title'] ?? '' ) ), 0, 240 );
+			if ( ! $record_id && '' === $title ) continue;
+			$stable_id = sanitize_key( (string) ( $item['stableId'] ?? '' ) );
+			if ( '' === $stable_id ) $stable_id = $record_id ? 'service-' . $record_id : 'service-' . substr( wp_generate_uuid4(), 0, 12 );
+			$taxonomy_paths = [];
+			foreach ( $service_taxonomies as $taxonomy => $definition ) {
+				$taxonomy_paths[ $taxonomy ] = substr( sanitize_textarea_field( (string) ( $item['taxonomyPaths'][ $taxonomy ] ?? '' ) ), 0, 3000 );
+			}
+			$service_meta = [];
+			foreach ( $service_meta_fields as $meta_key=>$definition ) {
+				$value = $item['meta'][ $meta_key ] ?? '';
+				$service_meta[ $meta_key ] = 'boolean' === $definition['type'] ? ! empty( $value ) : ( 'integer' === $definition['type'] ? (int) $value : ( 'number' === $definition['type'] ? (float) $value : substr( sanitize_textarea_field( (string) $value ), 0, 5000 ) ) );
+			}
+			$image_id = absint( $item['imageId'] ?? 0 );
+			$service_items[] = [
+				'stableId'=>substr( $stable_id, 0, 80 ), 'recordId'=>$record_id, 'title'=>$title,
+				'summary'=>substr( sanitize_textarea_field( (string) ( $item['summary'] ?? '' ) ), 0, 2000 ),
+				'description'=>substr( wp_kses_post( (string) ( $item['description'] ?? '' ) ), 0, 20000 ),
+				'imageId'=>$image_id && wp_attachment_is_image( $image_id ) ? $image_id : 0,
+				'parentId'=>absint( $item['parentId'] ?? 0 ), 'menuOrder'=>(int) ( $item['menuOrder'] ?? $index ),
+				'status'=>'publish' === ( $item['status'] ?? '' ) ? 'publish' : 'draft',
+				'categoryPaths'=>substr( sanitize_textarea_field( (string) ( $item['categoryPaths'] ?? '' ) ), 0, 3000 ),
+				'taxonomyPaths'=>$taxonomy_paths, 'meta'=>$service_meta,
+			];
+		}
 
 		return [
 			'identity' => [
@@ -406,6 +465,11 @@ final class Design_Context_Profile_Service {
 				'existingPages' => $existing, 'plannedPages' => $planned,
 				'showBlogRailOnHome' => ! empty( $content['showBlogRailOnHome'] ),
 				'highlightBestsellers' => ! empty( $content['highlightBestsellers'] ),
+			],
+			'services' => [
+				'sourcePostType'=>$service_source,
+				'useForNavigation'=>! empty( $services['useForNavigation'] ),
+				'items'=>$service_items,
 			],
 			'commerce' => [
 				'enabled' => ! empty( $commerce['enabled'] ), 'expectedProductCount' => min( 1000000, absint( $commerce['expectedProductCount'] ?? 0 ) ),
@@ -482,6 +546,157 @@ final class Design_Context_Profile_Service {
 		update_option( 'woocommerce_ship_to_countries', $profile['commerce']['shippingLocationMode'] );
 		update_option( 'woocommerce_specific_ship_to_countries', $profile['commerce']['shippingCountries'] );
 		update_option( 'kiwe_onboarding_has_bundles', $profile['commerce']['hasBundles'] ? 'yes' : 'no', false );
+	}
+
+	/** @return array<string,array{label:string,hierarchical:bool}> */
+	public function service_post_types(): array {
+		$out = [];
+		foreach ( get_post_types( [ 'show_ui'=>true ], 'objects' ) as $name=>$object ) {
+			$name = sanitize_key( (string) $name );
+			if ( in_array( $name, [ 'post','page','attachment','product','product_variation','nav_menu_item','wp_block','wp_template','wp_template_part','bricks_template' ], true ) ) continue;
+			if ( empty( $object->public ) && empty( $object->publicly_queryable ) ) continue;
+			$out[ $name ] = [ 'label'=>sanitize_text_field( (string) ( $object->labels->name ?? $object->label ?? $name ) ), 'hierarchical'=>! empty( $object->hierarchical ) ];
+		}
+		return $out;
+	}
+
+	private function default_service_post_type(): string {
+		$sources = $this->service_post_types();
+		foreach ( [ 'service','services' ] as $candidate ) if ( isset( $sources[ $candidate ] ) ) return $candidate;
+		return '';
+	}
+
+	/** @return array<string,array{label:string,hierarchical:bool}> */
+	public function service_taxonomies( string $post_type ): array {
+		$out = [];
+		foreach ( get_object_taxonomies( $post_type, 'objects' ) as $name=>$object ) {
+			if ( 'post_format' === $name || empty( $object->show_ui ) ) continue;
+			$out[ sanitize_key( (string) $name ) ] = [ 'label'=>sanitize_text_field( (string) ( $object->labels->name ?? $object->label ?? $name ) ), 'hierarchical'=>! empty( $object->hierarchical ) ];
+		}
+		return $out;
+	}
+
+	/** Registered REST-visible scalar meta is an explicit developer opt-in for owner editing. */
+	public function service_meta_fields( string $post_type ): array {
+		$out = [];
+		$registered = function_exists( 'get_registered_meta_keys' ) ? get_registered_meta_keys( 'post', $post_type ) : [];
+		foreach ( $registered as $key=>$args ) {
+			$key = sanitize_key( (string) $key );
+			$type = sanitize_key( (string) ( $args['type'] ?? 'string' ) );
+			if ( '' === $key || str_starts_with( $key, '_' ) || empty( $args['show_in_rest'] ) || empty( $args['single'] ) || ! in_array( $type, [ 'string','number','integer','boolean' ], true ) ) continue;
+			$out[ $key ] = [ 'label'=>sanitize_text_field( (string) ( $args['label'] ?? $args['description'] ?? ucwords( str_replace( [ '_','-' ], ' ', $key ) ) ) ), 'type'=>$type ];
+		}
+		return $out;
+	}
+
+	private function inferred_services( string $source ): array {
+		$sources = $this->service_post_types();
+		if ( ! isset( $sources[ $source ] ) ) return [ 'sourcePostType'=>'', 'useForNavigation'=>false, 'items'=>[] ];
+		$taxonomies = $this->service_taxonomies( $source );
+		$meta_fields = $this->service_meta_fields( $source );
+		$items = [];
+		foreach ( get_posts( [ 'post_type'=>$source, 'post_status'=>[ 'publish','draft','pending' ], 'posts_per_page'=>100, 'orderby'=>'menu_order title', 'order'=>'ASC', 'suppress_filters'=>false ] ) as $post ) {
+			$paths = [];
+			foreach ( $taxonomies as $taxonomy=>$definition ) {
+				$assigned = wp_get_object_terms( $post->ID, $taxonomy );
+				$paths[ $taxonomy ] = is_wp_error( $assigned ) ? '' : implode( "\n", array_map( fn( $term ): string => $this->term_path( $term, $taxonomy, ! empty( $definition['hierarchical'] ) ), $assigned ) );
+			}
+			$meta = [];
+			foreach ( $meta_fields as $meta_key=>$definition ) {
+				$value = get_post_meta( $post->ID, $meta_key, true );
+				$meta[ $meta_key ] = 'boolean' === $definition['type'] ? ! empty( $value ) : ( is_scalar( $value ) ? $value : '' );
+			}
+			$items[] = [
+				'stableId'=>'service-' . $post->ID, 'recordId'=>(int) $post->ID,
+				'title'=>sanitize_text_field( (string) $post->post_title ), 'summary'=>sanitize_textarea_field( (string) $post->post_excerpt ),
+				'description'=>wp_kses_post( (string) $post->post_content ), 'imageId'=>absint( get_post_thumbnail_id( $post->ID ) ),
+				'parentId'=>(int) $post->post_parent, 'menuOrder'=>(int) $post->menu_order,
+				'status'=>'publish' === $post->post_status ? 'publish' : 'draft', 'categoryPaths'=>sanitize_textarea_field( (string) get_post_meta( $post->ID, self::SERVICE_CATEGORY_PLAN_META, true ) ), 'taxonomyPaths'=>$paths, 'meta'=>$meta,
+			];
+		}
+		return [ 'sourcePostType'=>$source, 'useForNavigation'=>false, 'items'=>$items, 'taxonomies'=>$taxonomies, 'customFields'=>$meta_fields, 'hierarchical'=>$sources[ $source ]['hierarchical'] ];
+	}
+
+	private function apply_services_context( array $profile, int $actor_id ): array {
+		$source = sanitize_key( (string) ( $profile['services']['sourcePostType'] ?? '' ) );
+		$sources = $this->service_post_types();
+		if ( ! isset( $sources[ $source ] ) ) return $profile;
+		$object = get_post_type_object( $source );
+		if ( ! $object || ! user_can( $actor_id, $object->cap->edit_posts ) ) return $profile;
+		$taxonomies = $this->service_taxonomies( $source );
+		$meta_fields = $this->service_meta_fields( $source );
+		foreach ( $profile['services']['items'] as &$item ) {
+			$post_id = absint( $item['recordId'] ?? 0 );
+			if ( $post_id && ( $source !== get_post_type( $post_id ) || ! user_can( $actor_id, 'edit_post', $post_id ) ) ) continue;
+			if ( ! $post_id && ! user_can( $actor_id, $object->cap->create_posts ) ) continue;
+			$already_published = $post_id && 'publish' === get_post_status( $post_id );
+			$status = 'publish' === ( $item['status'] ?? '' ) && ( $already_published || user_can( $actor_id, $object->cap->publish_posts ) ) ? 'publish' : 'draft';
+			$parent_id = absint( $item['parentId'] ?? 0 );
+			if ( empty( $sources[ $source ]['hierarchical'] ) || $parent_id === $post_id || $source !== get_post_type( $parent_id ) || ( $post_id && in_array( $post_id, get_post_ancestors( $parent_id ), true ) ) ) $parent_id = 0;
+			$payload = [ 'post_type'=>$source, 'post_title'=>$item['title'], 'post_excerpt'=>$item['summary'], 'post_content'=>$item['description'], 'post_status'=>$status, 'post_parent'=>$parent_id, 'menu_order'=>(int) $item['menuOrder'] ];
+			if ( $post_id ) $payload['ID'] = $post_id; else $payload['post_author'] = $actor_id;
+			$result = wp_insert_post( wp_slash( $payload ), true );
+			if ( is_wp_error( $result ) || ! $result ) continue;
+			$post_id = (int) $result; $item['recordId'] = $post_id; $item['stableId'] = 'service-' . $post_id;
+			if ( ! empty( $item['imageId'] ) ) set_post_thumbnail( $post_id, absint( $item['imageId'] ) ); else delete_post_thumbnail( $post_id );
+			foreach ( $meta_fields as $meta_key=>$definition ) {
+				if ( ! user_can( $actor_id, 'edit_post_meta', $post_id, $meta_key ) ) continue;
+				$value = $item['meta'][ $meta_key ] ?? '';
+				if ( 'boolean' === $definition['type'] ) update_post_meta( $post_id, $meta_key, ! empty( $value ) ? '1' : '0' );
+				elseif ( '' === (string) $value ) delete_post_meta( $post_id, $meta_key );
+				else update_post_meta( $post_id, $meta_key, 'integer' === $definition['type'] ? (int) $value : ( 'number' === $definition['type'] ? (float) $value : sanitize_textarea_field( (string) $value ) ) );
+			}
+			$generic_paths = (string) ( $item['categoryPaths'] ?? '' );
+			$generic_target = '';
+			foreach ( $taxonomies as $taxonomy=>$definition ) { if ( ! empty( $definition['hierarchical'] ) ) { $generic_target = $taxonomy; break; } }
+			if ( '' === $generic_target && $taxonomies ) $generic_target = (string) array_key_first( $taxonomies );
+			if ( ! $taxonomies ) {
+				if ( '' !== trim( $generic_paths ) ) update_post_meta( $post_id, self::SERVICE_CATEGORY_PLAN_META, sanitize_textarea_field( $generic_paths ) );
+				else delete_post_meta( $post_id, self::SERVICE_CATEGORY_PLAN_META );
+			}
+			foreach ( $taxonomies as $taxonomy=>$definition ) {
+				$paths = (string) ( $item['taxonomyPaths'][ $taxonomy ] ?? '' );
+				if ( '' === trim( $paths ) && $generic_paths && $generic_target === $taxonomy ) { $paths = $generic_paths; $generic_paths = ''; }
+				$term_ids = $this->ensure_term_paths( $taxonomy, $paths, ! empty( $definition['hierarchical'] ), $actor_id );
+				if ( null !== $term_ids ) wp_set_object_terms( $post_id, $term_ids, $taxonomy, false );
+			}
+			if ( $taxonomies && '' === trim( $generic_paths ) ) delete_post_meta( $post_id, self::SERVICE_CATEGORY_PLAN_META );
+		}
+		unset( $item );
+		$navigation = ! empty( $profile['services']['useForNavigation'] );
+		$failed = array_values( array_filter( $profile['services']['items'], static fn( $item ): bool => empty( $item['recordId'] ) ) );
+		$profile['services'] = $this->inferred_services( $source );
+		$profile['services']['useForNavigation'] = $navigation;
+		$profile['services']['items'] = array_merge( $profile['services']['items'], $failed );
+		return $profile;
+	}
+
+	private function ensure_term_paths( string $taxonomy, string $raw, bool $hierarchical, int $actor_id ): ?array {
+		$object = get_taxonomy( $taxonomy );
+		if ( ! $object || ! user_can( $actor_id, $object->cap->assign_terms ) ) return null;
+		$may_create = user_can( $actor_id, $object->cap->manage_terms );
+		$ids = [];
+		foreach ( preg_split( '/[\r\n,]+/', $raw, -1, PREG_SPLIT_NO_EMPTY ) ?: [] as $path ) {
+			$parts = $hierarchical ? preg_split( '/\s*>\s*/', trim( $path ), -1, PREG_SPLIT_NO_EMPTY ) : [ trim( $path ) ];
+			$parent = 0;
+			foreach ( $parts as $name ) {
+				$name = substr( sanitize_text_field( $name ), 0, 200 ); if ( '' === $name ) continue;
+				$exists = term_exists( $name, $taxonomy, $parent );
+				if ( ! $exists && $may_create ) $exists = wp_insert_term( $name, $taxonomy, [ 'parent'=>$parent ] );
+				if ( ! $exists || is_wp_error( $exists ) ) { $parent = 0; break; }
+				$parent = absint( is_array( $exists ) ? $exists['term_id'] : $exists );
+			}
+			if ( $parent ) $ids[] = $parent;
+		}
+		return array_values( array_unique( $ids ) );
+	}
+
+	private function term_path( $term, string $taxonomy, bool $hierarchical ): string {
+		if ( ! $hierarchical || empty( $term->parent ) ) return sanitize_text_field( (string) $term->name );
+		$names = [];
+		foreach ( array_reverse( get_ancestors( $term->term_id, $taxonomy, 'taxonomy' ) ) as $ancestor_id ) { $ancestor = get_term( $ancestor_id, $taxonomy ); if ( $ancestor && ! is_wp_error( $ancestor ) ) $names[] = $ancestor->name; }
+		$names[] = $term->name;
+		return implode( ' > ', array_map( 'sanitize_text_field', $names ) );
 	}
 
 	private function empty_social_links(): array {
@@ -593,6 +808,13 @@ final class Design_Context_Profile_Service {
 				'order'=>(int) ( $member['order'] ?? $index ),
 			];
 		}
+		return $profile;
+	}
+
+	/** Native service posts remain canonical; Design Context retains only unresolved plans. */
+	private function compact_service_references( array $profile ): array {
+		if ( empty( $profile['services']['sourcePostType'] ) ) return $profile;
+		$profile['services']['items'] = array_values( array_filter( (array) ( $profile['services']['items'] ?? [] ), static fn( $item ): bool => is_array( $item ) && empty( $item['recordId'] ) ) );
 		return $profile;
 	}
 }

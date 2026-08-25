@@ -113,6 +113,27 @@
 			const row = removeTeamMember.closest( '[data-kiwe-team-member]' );
 			if ( row ) row.remove();
 		}
+		const addService = event.target.closest( '[data-kiwe-add-service]' );
+		if ( addService ) {
+			const list = root.querySelector( '[data-kiwe-services]' );
+			const template = root.querySelector( '[data-kiwe-service-template]' );
+			if ( list && template && list.children.length < 100 ) {
+				const index = Array.from( list.querySelectorAll( '[data-kiwe-service-row]' ) ).reduce( function ( highest, row ) {
+					const input = row.querySelector( 'input[name*="[items]"]' );
+					const match = input ? input.name.match( /items\]\[(\d+)\]/ ) : null;
+					return match ? Math.max( highest, Number( match[1] ) ) : highest;
+				}, -1 ) + 1;
+				const holder = document.createElement( 'div' );
+				holder.innerHTML = template.innerHTML.replaceAll( '__INDEX__', String( index ) );
+				const row = holder.firstElementChild;
+				if ( row ) { list.appendChild( row ); row.querySelector( 'input[name$="[title]"]' ).focus(); }
+			}
+		}
+		const removeService = event.target.closest( '[data-kiwe-remove-service]' );
+		if ( removeService ) {
+			const row = removeService.closest( '[data-kiwe-service-row]' );
+			if ( row ) row.remove();
+		}
 	} );
 
 	root.addEventListener( 'change', function ( event ) {
@@ -132,6 +153,10 @@
 			if ( imagePreview ) imagePreview.innerHTML = profile.imageUrl ? '<img src="' + String( profile.imageUrl ).replace( /"/g, '&quot;' ) + '" alt="">' : '<em>No image selected</em>';
 		}
 		if ( event.target.matches( '[data-kiwe-team-toggle] input' ) ) syncTeam();
+		if ( event.target.matches( '[data-kiwe-service-source]' ) ) {
+			const note = root.querySelector( '[data-kiwe-service-source-note]' );
+			if ( note ) note.textContent = event.target.value ? 'Save once to bind this source and load its existing services and taxonomies.' : 'Entries will remain an owner-approved plan until a developer binds a custom post type.';
+		}
 	} );
 
 	const timezone = root.querySelector( '[data-kiwe-timezone]' );
