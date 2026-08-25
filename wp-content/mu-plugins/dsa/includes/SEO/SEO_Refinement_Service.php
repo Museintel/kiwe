@@ -3,6 +3,8 @@
 namespace DSA\SEO;
 
 use DSA\AI\AI_Broker_Service;
+use DSA\Onboarding\Design_Context_Enhancement_Service;
+use DSA\Onboarding\Design_Context_Profile_Service;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -13,7 +15,7 @@ final class SEO_Refinement_Service {
 	private const CRON = 'kiwe_seo_refinement_batch';
 	private const BATCH_SIZE = 5;
 
-	public function __construct( private AI_Broker_Service $broker ) {}
+	public function __construct( private AI_Broker_Service $broker, private Design_Context_Profile_Service $profiles ) {}
 
 	public function register(): void {
 		add_action( 'admin_menu', [ $this, 'menu' ], 22 );
@@ -76,8 +78,8 @@ final class SEO_Refinement_Service {
 		if ( $records ) {
 			$result = $this->broker->request( [
 				'service'=>'seo', 'capability'=>'propose_batch', 'operation'=>'seo_' . sanitize_key( (string) $job['scope'] ),
-				'system'=>'Return only contract JSON. Improve discoverability and reader clarity without keyword stuffing. Prefer a natural SEO title under 60 characters and a useful meta description around 120-160 characters. Preserve verified meaning, product facts and brand voice. Do not invent claims, locations, credentials, ingredients, benefits, prices, availability or guarantees. For media, leave alt empty when the supplied filename, metadata and parent context do not prove what the media depicts. Search phrases are internal planning phrases and must never be emitted as meta keywords. Do not change URLs or filenames.',
-				'user'=>(string) wp_json_encode( [ 'schema'=>self::SCHEMA, 'scope'=>$job['scope'], 'records'=>$records, 'output'=>[ 'schema'=>self::SCHEMA, 'proposals'=>[ [ 'id'=>0, 'fields'=>'all_media' === $job['scope'] ? [ 'title'=>'','alt'=>'','caption'=>'','description'=>'' ] : [ 'seoTitle'=>'','metaDescription'=>'','excerpt'=>'','searchPhrases'=>[] ], 'reason'=>'' ] ] ] ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+				'system'=>'Return only contract JSON. Improve discoverability and reader clarity without keyword stuffing. Use siteContext only as verified editorial context for audience, business goal, brand voice, search intent and proof points; do not force every context fact into every record. Prefer a natural SEO title under 60 characters and a useful meta description around 120-160 characters. Preserve verified meaning and product facts. Do not invent claims, locations, credentials, ingredients, benefits, prices, availability or guarantees. For media, leave alt empty when the supplied filename, metadata and parent context do not prove what the media depicts. Search phrases are internal planning phrases and must never be emitted as meta keywords. Do not change URLs or filenames.',
+				'user'=>(string) wp_json_encode( [ 'schema'=>self::SCHEMA, 'scope'=>$job['scope'], 'siteContext'=>$this->site_context(), 'records'=>$records, 'output'=>[ 'schema'=>self::SCHEMA, 'proposals'=>[ [ 'id'=>0, 'fields'=>'all_media' === $job['scope'] ? [ 'title'=>'','alt'=>'','caption'=>'','description'=>'' ] : [ 'seoTitle'=>'','metaDescription'=>'','excerpt'=>'','searchPhrases'=>[] ], 'reason'=>'' ] ] ] ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
 			] );
 			$data = is_array( $result['validation']['data'] ?? null ) ? $result['validation']['data'] : [];
 			if ( ! empty( $result['ok'] ) && self::SCHEMA === ( $data['schema'] ?? '' ) ) $job['proposals'] = array_replace( (array) $job['proposals'], $this->sanitize_proposals( (array) ( $data['proposals'] ?? [] ), $records, (string) $job['scope'] ) );
@@ -171,6 +173,38 @@ final class SEO_Refinement_Service {
 			$data=[ 'id'=>$id, 'label'=>$post->post_title, 'postType'=>$post->post_type, 'title'=>$post->post_title, 'excerpt'=>$post->post_excerpt, 'content'=>substr( wp_strip_all_tags( strip_shortcodes( $post->post_content ) ),0,4000 ), 'currentSeoTitle'=>get_post_meta( $id, '_kiwe_seo_title', true ), 'currentMetaDescription'=>get_post_meta( $id, '_kiwe_seo_description', true ) ];
 		}
 		$data['sourceHash']=hash( 'sha256', (string) wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) ); return $data;
+	}
+
+	/**
+	 * Provide the model with owner-approved editorial evidence without sending
+	 * operational addresses, contact details, media-library resources or admin
+	 * identities. SEO remains record-scoped and review-first.
+	 */
+	private function site_context(): array {
+		$context = ( new Design_Context_Enhancement_Service( $this->profiles ) )->resolved_public_context( false );
+		$about = is_array( $context['about'] ?? null ) ? $context['about'] : [];
+		$team = is_array( $about['team'] ?? null ) ? $about['team'] : [];
+		$services = is_array( $context['services']['items'] ?? null ) ? $context['services']['items'] : [];
+
+		return [
+			'schema' => 'kiwe.seo-site-context.v1',
+			'identity' => array_intersect_key( (array) ( $context['identity'] ?? [] ), array_flip( [ 'siteName','tagline','description','industry','industrySector','siteType' ] ) ),
+			'audience' => array_intersect_key( (array) ( $context['audience'] ?? [] ), array_flip( [ 'primary','locations','needs' ] ) ),
+			'about' => [
+				'story' => (string) ( $about['story'] ?? '' ),
+				'mission' => (string) ( $about['mission'] ?? '' ),
+				'vision' => (string) ( $about['vision'] ?? '' ),
+				'values' => (string) ( $about['values'] ?? '' ),
+				'usp' => (string) ( $about['usp'] ?? '' ),
+				'founderLed' => ! empty( $about['founder']['enabled'] ),
+				'teamEnabled' => ! empty( $team['enabled'] ),
+			],
+			'seo' => array_intersect_key( (array) ( $context['seo'] ?? [] ), array_flip( [ 'homepageDescription','legalName','foundedYear','primaryGoal','searchIntent','proofPoints' ] ) ),
+			'contentSignals' => array_intersect_key( (array) ( $context['contentPlan'] ?? [] ), array_flip( [ 'showBlogRailOnHome','highlightBestsellers' ] ) ),
+			'commerce' => array_intersect_key( (array) ( $context['commercePlan'] ?? [] ), array_flip( [ 'enabled','hasBundles','currency','sellingLocations' ] ) ),
+			'services' => array_values( array_slice( array_map( static fn( $service ): array => array_intersect_key( is_array( $service ) ? $service : [], array_flip( [ 'title','summary','categoryPaths' ] ) ), $services ), 0, 30 ) ),
+			'authority' => [ 'source'=>'resolved-owner-design-context', 'ownerEvidenceWins'=>true, 'mayInventFacts'=>false ],
+		];
 	}
 
 	private function scope_ids( string $scope ): array {

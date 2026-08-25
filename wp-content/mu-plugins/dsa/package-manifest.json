@@ -685,8 +685,8 @@
       "sha256": "7933d5087bfa7b9616680213236c2914e32fb834f46ae25f7901c4ed0abff90f"
     },
     "includes/Plugin.php": {
-      "bytes": 15062,
-      "sha256": "5f0375f1e4476efa608067c147eb7a5dd8246fd8738530dd9f27e87e38699741"
+      "bytes": 15093,
+      "sha256": "350571000c1283a291c3a1bda69b55410385a45a1b16f0a2ad9d37435b2cece1"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,
@@ -797,8 +797,8 @@
       "sha256": "15937f1c2d9f5063b13bfd3e5d09bb6b6b9f829d96b71a5ee8a657a31456adbb"
     },
     "includes/SEO/SEO_Refinement_Service.php": {
-      "bytes": 17553,
-      "sha256": "9e1a6cc955e978fb8e7b91408c6f6346e6a46ca258f3e1d7a0a24c7d9f02876d"
+      "bytes": 20119,
+      "sha256": "3b085e87991d180a6ba545e98f21dc43d143f07d936b4849c5cc33fc1f790ccc"
     },
     "includes/Saved/Saved_Items_Service.php": {
       "bytes": 9269,

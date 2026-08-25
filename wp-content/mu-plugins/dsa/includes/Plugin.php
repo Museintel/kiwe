@@ -147,7 +147,7 @@ final class Plugin {
 		$this->design_context_refinement = new Design_Context_Refinement_Service( $this->design_context_profile, $this->ai_broker );
 		$this->onboarding   = new Onboarding_Service( $this->design_context_profile, $this->channels, $this->design_context_refinement );
 		$this->seo_context  = new SEO_Context_Service( $this->design_context_profile );
-		$this->seo_refinement = new SEO_Refinement_Service( $this->ai_broker );
+		$this->seo_refinement = new SEO_Refinement_Service( $this->ai_broker, $this->design_context_profile );
 		$this->product_context = new Product_Context_Service();
 		$this->abandoned_carts = new Abandoned_Cart_Service( $this->settings, $this->store_analytics, $this->channels );
 		$this->checkout    = new Checkout_Service( $this->settings, $this->cart_payload );

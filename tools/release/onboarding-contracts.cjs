@@ -16,6 +16,7 @@ const linksEndpoint = read('wp-content/mu-plugins/dsa/includes/Public_Endpoint/A
 const linksPanel = read('wp-content/mu-plugins/dsa/assets/js/modules/links-panel.js');
 const productContext = read('wp-content/mu-plugins/dsa/includes/Commerce/Product_Context_Service.php');
 const productContextJs = read('wp-content/mu-plugins/dsa/assets/js/product-context.js');
+const seoRefinement = read('wp-content/mu-plugins/dsa/includes/SEO/SEO_Refinement_Service.php');
 const dataQuery = read('wp-content/mu-plugins/dsa/includes/Site_Graph/Data_Query_Service.php');
 const bindings = read('wp-content/mu-plugins/dsa/includes/WP7/Bindings_Service.php');
 const settings = read('wp-content/mu-plugins/dsa/includes/Settings.php');
@@ -68,6 +69,7 @@ check('service writes honor native post term and meta capabilities', profile.inc
 check('service removals never delete canonical records and anonymous context excludes drafts', !profile.includes('wp_delete_post') && profile.includes("'publish' === get_post_status") && graph.includes("'bricksServiceQuery'") && ['{post_title}','{post_excerpt}','{post_content}','{featured_image}','{post_url}'].every((tag) => graph.includes(tag)));
 check('homepage rails remain intent while selecting bestsellers activates the maintained service', onboarding.includes('Show recent articles or a blog rail') && onboarding.includes('Highlight best-selling products') && profile.includes("$commerce['bestseller_enabled'] = true"));
 check('clean RC settings enable only read-only SiteGraph and contain no compatibility activation profile', settings.includes('SCHEMA_VERSION = 8') && settings.includes('disable_boolean_tree') && settings.includes("'mode'    => 'read_only'") && !settings.includes('apply_bricks_compatibility_profile') && settings.includes('SITE_GRAPH_ONLY_PROFILE'));
+check('SEO refinement is grounded in resolved owner Design Context without operational contact data', seoRefinement.includes('resolved_public_context( false )') && seoRefinement.includes("'siteContext'=>$this->site_context()") && seoRefinement.includes("'primaryGoal','searchIntent','proofPoints'") && !seoRefinement.includes("$context['contact']"));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);
