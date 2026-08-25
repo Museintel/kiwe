@@ -92,6 +92,46 @@
 				else { row.querySelector( 'input' ).value = ''; row.querySelector( 'select' ).value = 'primary'; }
 			}
 		}
+		const addTeamMember = event.target.closest( '[data-kiwe-add-team-member]' );
+		if ( addTeamMember ) {
+			const list = root.querySelector( '[data-kiwe-team-members]' );
+			const template = root.querySelector( '[data-kiwe-team-member-template]' );
+			if ( list && template && list.children.length < 30 ) {
+				const index = Array.from( list.querySelectorAll( '[data-kiwe-team-member]' ) ).reduce( function ( highest, row ) {
+					const input = row.querySelector( 'input[name*="[members]"]' );
+					const match = input ? input.name.match( /members\]\[(\d+)\]/ ) : null;
+					return match ? Math.max( highest, Number( match[1] ) ) : highest;
+				}, -1 ) + 1;
+				const holder = document.createElement( 'div' );
+				holder.innerHTML = template.innerHTML.replaceAll( '__INDEX__', String( index ) );
+				const row = holder.firstElementChild;
+				if ( row ) { list.appendChild( row ); row.querySelector( '[data-kiwe-person-user]' ).focus(); }
+			}
+		}
+		const removeTeamMember = event.target.closest( '[data-kiwe-remove-team-member]' );
+		if ( removeTeamMember ) {
+			const row = removeTeamMember.closest( '[data-kiwe-team-member]' );
+			if ( row ) row.remove();
+		}
+	} );
+
+	root.addEventListener( 'change', function ( event ) {
+		const userSelect = event.target.closest( '[data-kiwe-person-user]' );
+		if ( userSelect && userSelect.value !== '0' ) {
+			const person = userSelect.closest( '[data-kiwe-person]' );
+			const option = userSelect.options[ userSelect.selectedIndex ];
+			let profile = {};
+			try { profile = JSON.parse( option.dataset.kiweUserProfile || '{}' ); } catch ( error ) {}
+			[ 'name', 'title', 'bio', 'linkedin' ].forEach( function ( field ) {
+				const input = person && person.querySelector( '[data-kiwe-person-' + field + ']' );
+				if ( input ) input.value = profile[ field ] || '';
+			} );
+			const imageInput = person && person.querySelector( '[data-kiwe-media-id]' );
+			const imagePreview = person && person.querySelector( '[data-kiwe-media-preview]' );
+			if ( imageInput ) imageInput.value = profile.imageId || 0;
+			if ( imagePreview ) imagePreview.innerHTML = profile.imageUrl ? '<img src="' + String( profile.imageUrl ).replace( /"/g, '&quot;' ) + '" alt="">' : '<em>No image selected</em>';
+		}
+		if ( event.target.matches( '[data-kiwe-team-toggle] input' ) ) syncTeam();
 	} );
 
 	const timezone = root.querySelector( '[data-kiwe-timezone]' );
@@ -112,6 +152,13 @@
 	}
 	if ( industrySector ) industrySector.addEventListener( 'change', syncIndustryFields );
 	syncIndustryFields();
+	const teamFields = root.querySelector( '[data-kiwe-team-fields]' );
+	function syncTeam() {
+		const selected = root.querySelector( '[data-kiwe-team-toggle] input:checked' );
+		const enabled = selected && selected.value === '1';
+		if ( teamFields ) { teamFields.hidden = ! enabled; teamFields.toggleAttribute( 'inert', ! enabled ); }
+	}
+	syncTeam();
 
 	const phone = root.querySelector( '[data-kiwe-public-phone]' );
 	const whatsappSame = root.querySelector( '[data-kiwe-whatsapp-same]' );

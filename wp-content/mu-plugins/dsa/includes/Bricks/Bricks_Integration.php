@@ -9,6 +9,7 @@ use DSA\Element_Registry;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
 use DSA\Onboarding\Design_Context_Enhancement_Service;
+use DSA\Onboarding\Design_Context_Profile_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -271,12 +272,17 @@ final class Bricks_Integration {
 		}
 
 		$name = trim( $tag, "{} \t\n\r\0\x0B" );
+		$selector = '';
+		if ( preg_match( '/^(kiwe_team_(?:member_id|name|title|bio|image|linkedin_url)):([a-z0-9_-]{1,80})$/i', $name, $matches ) ) {
+			$name = strtolower( $matches[1] );
+			$selector = sanitize_key( $matches[2] );
+		}
 
 		if ( ! array_key_exists( $name, $this->dynamic_tag_definitions() ) ) {
 			return $tag;
 		}
 
-		return $this->dynamic_tag_value( $name, is_string( $context ) ? $context : 'text', $post );
+		return $this->dynamic_tag_value( $name, is_string( $context ) ? $context : 'text', $post, $selector );
 	}
 
 	public function render_dynamic_content( $content, $post = null, $context = 'text' ) {
@@ -291,6 +297,11 @@ final class Bricks_Integration {
 				$content = str_replace( $token, (string) $this->dynamic_tag_value( $name, is_string( $context ) ? $context : 'text', $post ), $content );
 			}
 		}
+		$content = preg_replace_callback(
+			'/\{(kiwe_team_(?:member_id|name|title|bio|image|linkedin_url)):([a-z0-9_-]{1,80})\}/i',
+			fn( array $matches ): string => (string) $this->dynamic_tag_value( strtolower( $matches[1] ), is_string( $context ) ? $context : 'text', $post, sanitize_key( $matches[2] ) ),
+			$content
+		);
 
 		return $content;
 	}
@@ -319,6 +330,14 @@ final class Bricks_Integration {
 			'kiwe_founder_title'       => __( 'Founder role or title', 'dsa' ),
 			'kiwe_founder_bio'         => __( 'Founder bio', 'dsa' ),
 			'kiwe_founder_image'       => __( 'Founder image URL', 'dsa' ),
+			'kiwe_founder_linkedin_url'=> __( 'Founder LinkedIn URL', 'dsa' ),
+			'kiwe_team_enabled'         => __( 'Public team enabled', 'dsa' ),
+			'kiwe_team_member_id'       => __( 'Team member stable ID', 'dsa' ),
+			'kiwe_team_name'            => __( 'Team member name', 'dsa' ),
+			'kiwe_team_title'           => __( 'Team member public role or title', 'dsa' ),
+			'kiwe_team_bio'             => __( 'Team member bio', 'dsa' ),
+			'kiwe_team_image'           => __( 'Team member image URL', 'dsa' ),
+			'kiwe_team_linkedin_url'    => __( 'Team member LinkedIn URL', 'dsa' ),
 			'kiwe_fssai_license'       => __( 'FSSAI licence number', 'dsa' ),
 			'kiwe_gst_number'          => __( 'GST number', 'dsa' ),
 			'kiwe_manufacturing_address' => __( 'Manufacturing address', 'dsa' ),
@@ -349,7 +368,7 @@ final class Bricks_Integration {
 		] + $this->nav_menu_tag_definitions();
 	}
 
-	private function dynamic_tag_value( string $name, string $context, $post = null ) {
+	private function dynamic_tag_value( string $name, string $context, $post = null, string $selector = '' ) {
 		switch ( $name ) {
 			case 'kiwe_site_logo':
 				return $this->logo_tag_value( 'default', $context );
@@ -404,6 +423,14 @@ final class Bricks_Integration {
 			case 'kiwe_founder_title':
 			case 'kiwe_founder_bio':
 			case 'kiwe_founder_image':
+			case 'kiwe_founder_linkedin_url':
+			case 'kiwe_team_enabled':
+			case 'kiwe_team_member_id':
+			case 'kiwe_team_name':
+			case 'kiwe_team_title':
+			case 'kiwe_team_bio':
+			case 'kiwe_team_image':
+			case 'kiwe_team_linkedin_url':
 			case 'kiwe_fssai_license':
 			case 'kiwe_gst_number':
 			case 'kiwe_manufacturing_address':
@@ -425,7 +452,7 @@ final class Bricks_Integration {
 			case 'kiwe_youtube_url':
 			case 'kiwe_pinterest_url':
 			case 'kiwe_linkedin_url':
-				return $this->design_context_tag_value( $name, $context );
+				return $this->design_context_tag_value( $name, $context, $selector );
 			case 'kiwe_product_nutrition_image':
 				return $this->product_nutrition_image_tag_value( $post, $context );
 			case 'kiwe_selling_locations':
@@ -442,8 +469,8 @@ final class Bricks_Integration {
 		}
 	}
 
-	private function design_context_tag_value( string $name, string $context ): string {
-		if ( in_array( $context, [ 'image', 'media' ], true ) && 'kiwe_founder_image' !== $name ) return '';
+	private function design_context_tag_value( string $name, string $context, string $selector = '' ): string {
+		if ( in_array( $context, [ 'image', 'media' ], true ) && ! in_array( $name, [ 'kiwe_founder_image', 'kiwe_team_image' ], true ) ) return '';
 		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
 		if ( 'kiwe_business_description' === $name ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
 		$about_map = [
@@ -456,6 +483,21 @@ final class Bricks_Integration {
 		if ( 'kiwe_founder_image' === $name ) {
 			$image_id = absint( $profile['about']['founder']['imageId'] ?? 0 );
 			return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+		}
+		if ( 'kiwe_founder_linkedin_url' === $name ) return esc_url_raw( (string) ( $profile['about']['founder']['linkedin'] ?? '' ) );
+		if ( 'kiwe_team_enabled' === $name ) return ! empty( $profile['about']['team']['enabled'] ) ? '1' : '';
+		if ( str_starts_with( $name, 'kiwe_team_' ) ) {
+			$member = $this->current_team_member( $profile, $selector );
+			if ( ! $member ) return '';
+			if ( 'kiwe_team_member_id' === $name ) return sanitize_key( (string) ( $member['id'] ?? '' ) );
+			if ( 'kiwe_team_name' === $name ) return sanitize_text_field( (string) ( $member['name'] ?? '' ) );
+			if ( 'kiwe_team_title' === $name ) return sanitize_text_field( (string) ( $member['title'] ?? '' ) );
+			if ( 'kiwe_team_bio' === $name ) return sanitize_textarea_field( (string) ( $member['bio'] ?? '' ) );
+			if ( 'kiwe_team_linkedin_url' === $name ) return esc_url_raw( (string) ( $member['linkedin'] ?? '' ) );
+			if ( 'kiwe_team_image' === $name ) {
+				$image_id = absint( $member['imageId'] ?? 0 );
+				return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+			}
 		}
 		$regulatory_map = [ 'kiwe_fssai_license'=>'fssaiLicense', 'kiwe_gst_number'=>'gstNumber', 'kiwe_manufacturing_address'=>'manufacturingAddress' ];
 		if ( isset( $regulatory_map[ $name ] ) ) return sanitize_textarea_field( (string) ( $profile['regulatory'][ $regulatory_map[ $name ] ] ?? '' ) );
@@ -478,6 +520,31 @@ final class Bricks_Integration {
 			if ( $role === ( $color['role'] ?? '' ) ) return (string) sanitize_hex_color( (string) ( $color['hex'] ?? '' ) );
 		}
 		return '';
+	}
+
+	private function current_team_member( array $profile, string $selector = '' ): array {
+		$members = is_array( $profile['about']['team']['members'] ?? null ) ? $profile['about']['team']['members'] : [];
+		$user_id = 0;
+		if ( class_exists( '\\Bricks\\Query' ) && \Bricks\Query::is_looping() ) {
+			$object = \Bricks\Query::get_loop_object();
+			if ( $object instanceof \WP_User ) $user_id = absint( $object->ID );
+		}
+		foreach ( $members as $member ) {
+			if ( $selector && $selector === sanitize_key( (string) ( $member['id'] ?? '' ) ) ) return (array) $member;
+			if ( $user_id && $user_id === absint( $member['userId'] ?? 0 ) ) return (array) $member;
+		}
+		if ( $user_id ) {
+			$user = get_user_by( 'id', $user_id );
+			if ( $user && '1' === (string) get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_TEAM_MEMBER, true ) ) {
+				return [
+					'id'=>'user-' . $user_id, 'userId'=>$user_id, 'name'=>$user->display_name, 'bio'=>$user->description,
+					'title'=>get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_TEAM_TITLE, true ),
+					'linkedin'=>get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_LINKEDIN, true ),
+					'imageId'=>absint( get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_AVATAR_ID, true ) ),
+				];
+			}
+		}
+		return $selector || ! $members ? [] : (array) reset( $members );
 	}
 
 	private function product_nutrition_image_tag_value( $post, string $context ): string {

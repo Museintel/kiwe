@@ -276,7 +276,12 @@ final class Design_Context_Service {
 				'vision' => '{kiwe_business_vision}',
 				'values' => '{kiwe_business_values}',
 				'usp' => '{kiwe_business_usp}',
-				'founder' => [ 'name'=>'{kiwe_founder_name}', 'title'=>'{kiwe_founder_title}', 'bio'=>'{kiwe_founder_bio}', 'image'=>'{kiwe_founder_image}' ],
+				'founder' => [ 'name'=>'{kiwe_founder_name}', 'title'=>'{kiwe_founder_title}', 'bio'=>'{kiwe_founder_bio}', 'image'=>'{kiwe_founder_image}', 'linkedin'=>'{kiwe_founder_linkedin_url}' ],
+				'team' => [
+					'enabled'=>'{kiwe_team_enabled}',
+					'currentUserLoop'=>[ 'memberId'=>'{kiwe_team_member_id}', 'name'=>'{kiwe_team_name}', 'title'=>'{kiwe_team_title}', 'bio'=>'{kiwe_team_bio}', 'image'=>'{kiwe_team_image}', 'linkedin'=>'{kiwe_team_linkedin_url}' ],
+					'byStableMemberId'=>[ 'syntax'=>'{kiwe_team_FIELD:MEMBER_ID}', 'fields'=>[ 'member_id','name','title','bio','image','linkedin_url' ] ],
+				],
 				'regulatory' => [
 					'fssai'=>'{kiwe_fssai_license}', 'gst'=>'{kiwe_gst_number}', 'manufacturingAddress'=>'{kiwe_manufacturing_address}',
 					'showFssaiOnProducts'=>'{kiwe_show_fssai_on_products}', 'showGstOnProducts'=>'{kiwe_show_gst_on_products}',
@@ -298,6 +303,15 @@ final class Design_Context_Service {
 					'youtube' => '{kiwe_youtube_url}', 'pinterest' => '{kiwe_pinterest_url}', 'linkedin' => '{kiwe_linkedin_url}',
 				],
 				'address' => [ '{kiwe_store_address_1}', '{kiwe_store_address_2}', '{kiwe_store_city}', '{kiwe_store_state}', '{kiwe_store_country}', '{kiwe_store_postcode}' ],
+			],
+			'bricksTeamQuery' => [
+				'linkedMembers' => [
+					'objectType'=>'user', 'engine'=>'WP_User_Query',
+					'args'=>[ 'meta_query'=>[ 'relation'=>'AND', 'team_member'=>[ 'key'=>Design_Context_Profile_Service::USER_META_TEAM_MEMBER, 'value'=>'1' ], 'team_order'=>[ 'key'=>Design_Context_Profile_Service::USER_META_TEAM_ORDER, 'compare'=>'EXISTS', 'type'=>'NUMERIC' ] ], 'orderby'=>[ 'team_order'=>'ASC' ] ],
+					'nativeTags'=>[ '{wp_user_display_name}', '{wp_user_description}', '{wp_user_picture}' ],
+					'kiweTags'=>[ '{kiwe_team_member_id}', '{kiwe_team_title}', '{kiwe_team_image}', '{kiwe_team_linkedin_url}' ],
+				],
+				'pendingMembers'=>[ 'source'=>'ownerContext.about.team.members', 'selector'=>'id', 'note'=>'Use stable-selector Kiwe tags until an account is linked.' ],
 			],
 			'privacy' => [
 				'contactSource' => 'explicit Kiwe public store identity settings',

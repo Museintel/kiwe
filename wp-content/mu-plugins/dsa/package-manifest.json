@@ -13,8 +13,8 @@
       "sha256": "b6c448bd71151b9a42d9e9d05af403d9388b68d881b1d4c664e60fe63d9137dc"
     },
     "assets/css/onboarding.css": {
-      "bytes": 8398,
-      "sha256": "cbe2d268d65e8a75768bf3e095257e86b41186e06866a391cb4e11549039222e"
+      "bytes": 8918,
+      "sha256": "b3f2e38f1d940e7be4c6d9703c0b69e2cd54cbf71e6e3c1a23fd9ad5936559ae"
     },
     "assets/css/seam.css": {
       "bytes": 18759,
@@ -153,8 +153,8 @@
       "sha256": "2a315f95b4baa8ff476c9155ac014a03dc38227963a752f432378087a3a90727"
     },
     "assets/js/onboarding.js": {
-      "bytes": 7933,
-      "sha256": "1ef9288d68f5255b44f725b723714186a9b1b108e8a5aacc69811a703db97870"
+      "bytes": 10584,
+      "sha256": "9af33d31ef0f6917ed8d147fd982e7bfb981f702c23a0ea676a4487e1e6ffcf1"
     },
     "assets/js/product-context.js": {
       "bytes": 1260,
@@ -385,8 +385,8 @@
       "sha256": "bc4f8f5bab9c91b3bbb2fc034c9b456cf23d3520d843e6c4b92d62c297852691"
     },
     "includes/AI/Bricks_Conversion_Validator.php": {
-      "bytes": 97505,
-      "sha256": "34093eabc44281785221abe65d9860fe3fd9c43190e0a4bc987a3de0953d7adc"
+      "bytes": 97605,
+      "sha256": "4f4bdc00eb3c6843ceff956e8a2b6dba42599deb7d0a9394b489458f16799cef"
     },
     "includes/AI/Bricks_Html_Css_Converter_Service.php": {
       "bytes": 22232,
@@ -465,8 +465,8 @@
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 38523,
-      "sha256": "49101b25e329da24f2acd3197658840af13e057783101875e9f09d02b1b67d6e"
+      "bytes": 38982,
+      "sha256": "e5cd857a08204685b39dc0bb61c1e543aec01040087b03ac883bae444cdb9a7f"
     },
     "includes/AI/Site_Introspection_Service.php": {
       "bytes": 13294,
@@ -509,8 +509,8 @@
       "sha256": "ddd5427c6bb2188aefd0dd143b1cfd4ce2a4655015a4bbb66208573099876310"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 110096,
-      "sha256": "ec013131f90f43a113c7f9ba1c8b8f56cfb9e34c9eb5465ed6499cf8602edf6e"
+      "bytes": 114078,
+      "sha256": "0f5eec97a97489253126d6c772ef05e0c6388b369e2320e0707e37732c1e26f0"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 16254,
@@ -645,12 +645,12 @@
       "sha256": "c2ac677f46d4788e1e0547a74510e32efd791728b172f24b8186c2381d0adf8a"
     },
     "includes/Onboarding/Design_Context_Profile_Service.php": {
-      "bytes": 30314,
-      "sha256": "e789ce4b6fa20deaba0218794ac46c2bad52c6075df7f911fbcbc5344da62050"
+      "bytes": 37564,
+      "sha256": "0d539f32ccd402a29c2e83b5a45e48e7b7d9b7021c93acf43d8a1b2576577ff4"
     },
     "includes/Onboarding/Onboarding_Service.php": {
-      "bytes": 47382,
-      "sha256": "77338e455902c15213be0658d2df64dc2bcedd089229deb4243febafab188788"
+      "bytes": 53031,
+      "sha256": "47d4e1bfb632d1eedb0a372d44c12f5ca9ca8a44b90152bee9e5834e9ca7bb2e"
     },
     "includes/Onboarding/README.md": {
       "bytes": 4187,
@@ -877,8 +877,8 @@
       "sha256": "33983e4285e156b3b4027704dfaf7f38ef44700c4d7eb85aeb8b0d72f9e22f99"
     },
     "includes/Site_Graph/Design_Context_Service.php": {
-      "bytes": 30230,
-      "sha256": "6509a15f5f87a0ae938216d99add63db692179021a99f2938a3ccfdba5c6435c"
+      "bytes": 31486,
+      "sha256": "c7946ef6a04b094623ec0cfe8a8089116e3d4d3e9aee50aa45c13a996135085c"
     },
     "includes/Site_Graph/Query_Service.php": {
       "bytes": 3459,
@@ -917,8 +917,8 @@
       "sha256": "abf8d3050c363b8ddaacc26b1882ace621528607dd0382a50a504ef672ac3d82"
     },
     "includes/WP7/Bindings_Service.php": {
-      "bytes": 8963,
-      "sha256": "b534e32b8af16d9dd092b452f06f74992f60c97016094d7a58ee0d866519f78a"
+      "bytes": 11348,
+      "sha256": "3e7be5a4ed91312a7ff99aa8ce5fb5ae7d7625c3690c8e66d4d29afab7c05dbd"
     },
     "includes/WP7/DataViews_Service.php": {
       "bytes": 827,
@@ -1197,8 +1197,8 @@
       "sha256": "4e2f3cb4561d7b5adfefe71de112a3843c883208cf29955c630c0e3fa22e0be0"
     },
     "ui-system/README.md": {
-      "bytes": 76457,
-      "sha256": "098e004b7998a3ef9a5ae948cdb88d8a77789f344edadec2b5a11d6a1d132515"
+      "bytes": 76924,
+      "sha256": "f97192c44072c55ec0b1717af5d57b57c98b3ffe3864dbd505031ccc148b58ce"
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,

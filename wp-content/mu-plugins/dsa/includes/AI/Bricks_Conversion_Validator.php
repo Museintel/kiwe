@@ -891,7 +891,8 @@ final class Bricks_Conversion_Validator {
 			return;
 		}
 		foreach ( $tags as $tag ) {
-			if ( ! isset( $index['dynamicTags'][ $tag ] ) ) {
+			$base = preg_replace( '/:[^}:]+(?=})/', '', $tag );
+			if ( ! isset( $index['dynamicTags'][ $tag ] ) && ! isset( $index['dynamicTags'][ $base ] ) ) {
 				$this->add( $findings, 'warn', 'bricks_conversion_unknown_dynamic_tag', sprintf( 'Dynamic tag "%s" is not listed in Site Graph dynamic tags or common Kiwe tags.', $tag ) );
 			}
 		}

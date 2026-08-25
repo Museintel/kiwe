@@ -17,6 +17,12 @@ final class Design_Context_Profile_Service {
 	public const OPTION_PROFILE = 'kiwe_seam_design_context_v1';
 	public const OPTION_STATUS  = 'kiwe_onboarding_status_v1';
 	public const PAGE_VISIBILITY_META = '_kiwe_search_visibility';
+	public const USER_META_TEAM_MEMBER = 'kiwe_public_team_member';
+	public const USER_META_TEAM_TITLE = 'kiwe_team_title';
+	public const USER_META_FOUNDER_TITLE = 'kiwe_founder_title';
+	public const USER_META_LINKEDIN = 'kiwe_linkedin_url';
+	public const USER_META_TEAM_ORDER = 'kiwe_team_order';
+	public const USER_META_AVATAR_ID = 'kiwe_avatar_id';
 
 	public function current(): array {
 		$stored = get_option( self::OPTION_PROFILE, [] );
@@ -35,6 +41,7 @@ final class Design_Context_Profile_Service {
 			$inferred['contentPlan']['existingPages']
 		);
 		$profile['contentPlan']['plannedPages'] = is_array( $stored['contentPlan']['plannedPages'] ?? null ) ? array_values( $stored['contentPlan']['plannedPages'] ) : [];
+		$profile['about']['team']['members'] = is_array( $stored['about']['team']['members'] ?? null ) ? array_values( $stored['about']['team']['members'] ) : [];
 		$profile['brand']['colors'] = is_array( $stored['brand']['colors'] ?? null ) ? array_values( $stored['brand']['colors'] ) : [];
 		foreach ( $profile['brand']['colors'] as &$color ) {
 			if ( is_array( $color ) && 'support' === ( $color['role'] ?? '' ) ) {
@@ -47,7 +54,7 @@ final class Design_Context_Profile_Service {
 			$this->empty_social_links(),
 			is_array( $stored['contact']['socialLinks'] ?? null ) ? $stored['contact']['socialLinks'] : $inferred['contact']['socialLinks']
 		);
-		return $profile;
+		return $this->resolve_people( $profile );
 	}
 
 	public function status(): array {
@@ -89,6 +96,7 @@ final class Design_Context_Profile_Service {
 
 		$this->apply_page_visibility( $profile['contentPlan']['existingPages'] );
 		$this->apply_kiwe_public_context( $profile );
+		$profile = $this->apply_people_context( $profile, $user_id );
 		if ( $profile['commerce']['enabled'] ) {
 			$this->apply_woocommerce( $profile );
 		}
@@ -101,7 +109,7 @@ final class Design_Context_Profile_Service {
 			'authority'    => 'site-owner',
 			'frameworkOptInRequired' => true,
 		];
-		update_option( self::OPTION_PROFILE, $profile, false );
+		update_option( self::OPTION_PROFILE, $this->compact_people_references( $profile ), false );
 		update_option(
 			self::OPTION_STATUS,
 			[
@@ -121,8 +129,14 @@ final class Design_Context_Profile_Service {
 		$profile = $this->current();
 		$address = $profile['contact']['address'];
 		$about   = $profile['about'];
+		$about = $this->resolve_people( [ 'about' => $about ] )['about'];
 		$founder_image_id = absint( $about['founder']['imageId'] ?? 0 );
 		$about['founder']['image'] = $founder_image_id ? esc_url_raw( (string) wp_get_attachment_url( $founder_image_id ) ) : '';
+		foreach ( $about['team']['members'] as &$member ) {
+			$image_id = absint( $member['imageId'] ?? 0 );
+			$member['image'] = $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+		}
+		unset( $member );
 		if ( ! $administrator ) {
 			$address = [
 				'city'    => $address['city'],
@@ -241,7 +255,8 @@ final class Design_Context_Profile_Service {
 			'audience' => [ 'primary' => '', 'locations' => '', 'needs' => '' ],
 			'about' => [
 				'story' => '', 'mission' => '', 'vision' => '', 'values' => '', 'usp' => '',
-				'founder' => [ 'name' => '', 'title' => '', 'bio' => '', 'imageId' => 0 ],
+				'founder' => [ 'userId' => 0, 'name' => '', 'title' => '', 'bio' => '', 'imageId' => 0, 'linkedin' => '' ],
+				'team' => [ 'enabled' => false, 'members' => [] ],
 			],
 			'brand' => [ 'tone' => '', 'colors' => [], 'notes' => '' ],
 			'contentPlan' => [ 'existingPages' => $pages, 'plannedPages' => [], 'showBlogRailOnHome' => false, 'highlightBestsellers' => false ],
@@ -298,6 +313,7 @@ final class Design_Context_Profile_Service {
 		$audience = is_array( $raw['audience'] ?? null ) ? $raw['audience'] : [];
 		$about = is_array( $raw['about'] ?? null ) ? $raw['about'] : [];
 		$founder = is_array( $about['founder'] ?? null ) ? $about['founder'] : [];
+		$team = is_array( $about['team'] ?? null ) ? $about['team'] : [];
 		$regulatory = is_array( $raw['regulatory'] ?? null ) ? $raw['regulatory'] : [];
 		$localization = is_array( $raw['localization'] ?? null ) ? $raw['localization'] : [];
 		$content = is_array( $raw['contentPlan'] ?? null ) ? $raw['contentPlan'] : [];
@@ -333,6 +349,27 @@ final class Design_Context_Profile_Service {
 			if ( '' === $name ) continue;
 			$planned[] = [ 'name' => $name, 'visibility' => 'secondary' === ( $page['visibility'] ?? '' ) ? 'secondary' : 'primary' ];
 		}
+		$team_members = [];
+		foreach ( array_slice( is_array( $team['members'] ?? null ) ? $team['members'] : [], 0, 30 ) as $index => $member ) {
+			if ( ! is_array( $member ) ) continue;
+			$user_id = absint( $member['userId'] ?? 0 );
+			if ( $user_id && ! get_user_by( 'id', $user_id ) ) $user_id = 0;
+			$name = substr( sanitize_text_field( (string) ( $member['name'] ?? '' ) ), 0, 200 );
+			if ( ! $user_id && '' === $name ) continue;
+			$member_id = sanitize_key( (string) ( $member['id'] ?? '' ) );
+			if ( '' === $member_id ) $member_id = 'member-' . substr( wp_generate_uuid4(), 0, 12 );
+			$image_id = absint( $member['imageId'] ?? 0 );
+			$team_members[] = [
+				'id' => substr( $member_id, 0, 80 ),
+				'userId' => $user_id,
+				'name' => $name,
+				'title' => substr( sanitize_text_field( (string) ( $member['title'] ?? '' ) ), 0, 200 ),
+				'bio' => substr( sanitize_textarea_field( (string) ( $member['bio'] ?? '' ) ), 0, 3000 ),
+				'imageId' => $image_id && wp_attachment_is_image( $image_id ) ? $image_id : 0,
+				'linkedin' => esc_url_raw( (string) ( $member['linkedin'] ?? '' ) ),
+				'order' => $index,
+			];
+		}
 
 		return [
 			'identity' => [
@@ -355,11 +392,14 @@ final class Design_Context_Profile_Service {
 				'values' => substr( sanitize_textarea_field( (string) ( $about['values'] ?? '' ) ), 0, 2000 ),
 				'usp' => substr( sanitize_textarea_field( (string) ( $about['usp'] ?? '' ) ), 0, 2000 ),
 				'founder' => [
+					'userId' => ( static function ( int $id ): int { return $id && get_user_by( 'id', $id ) ? $id : 0; } )( absint( $founder['userId'] ?? 0 ) ),
 					'name' => substr( sanitize_text_field( (string) ( $founder['name'] ?? '' ) ), 0, 200 ),
 					'title' => substr( sanitize_text_field( (string) ( $founder['title'] ?? '' ) ), 0, 200 ),
 					'bio' => substr( sanitize_textarea_field( (string) ( $founder['bio'] ?? '' ) ), 0, 3000 ),
 					'imageId' => ( static function ( int $id ): int { return $id && wp_attachment_is_image( $id ) ? $id : 0; } )( absint( $founder['imageId'] ?? 0 ) ),
+					'linkedin' => esc_url_raw( (string) ( $founder['linkedin'] ?? '' ) ),
 				],
+				'team' => [ 'enabled' => ! empty( $team['enabled'] ), 'members' => $team_members ],
 			],
 			'brand' => [ 'tone' => in_array( $brand['tone'] ?? '', [ 'pastel', 'vibrant', 'muted', 'natural', 'dark', 'light', 'luxury', 'playful', 'minimal', '' ], true ) ? $brand['tone'] : '', 'colors' => $colors, 'notes' => sanitize_textarea_field( (string) ( $brand['notes'] ?? '' ) ) ],
 			'contentPlan' => [
@@ -467,5 +507,92 @@ final class Design_Context_Profile_Service {
 			$settings['commerce'] = $commerce;
 		}
 		update_option( DSA_OPTION_SETTINGS, $settings, false );
+	}
+
+	/**
+	 * Synchronize only public profile fields. Login, email, capabilities and the
+	 * WordPress account role are deliberately outside this onboarding boundary.
+	 */
+	private function apply_people_context( array $profile, int $actor_id ): array {
+		$stored = get_option( self::OPTION_PROFILE, [] );
+		$old_ids = [];
+		foreach ( (array) ( $stored['about']['team']['members'] ?? [] ) as $member ) {
+			if ( ! empty( $member['userId'] ) ) $old_ids[] = absint( $member['userId'] );
+		}
+		$new_ids = [];
+		foreach ( (array) ( $profile['about']['team']['members'] ?? [] ) as $index => $member ) {
+			$user_id = absint( $member['userId'] ?? 0 );
+			if ( ! $user_id || ! get_user_by( 'id', $user_id ) ) continue;
+			$new_ids[] = $user_id;
+			if ( user_can( $actor_id, 'edit_user', $user_id ) ) {
+				wp_update_user( [ 'ID'=>$user_id, 'display_name'=>$member['name'], 'description'=>$member['bio'] ] );
+				update_user_meta( $user_id, self::USER_META_TEAM_TITLE, $member['title'] );
+				update_user_meta( $user_id, self::USER_META_LINKEDIN, $member['linkedin'] );
+				update_user_meta( $user_id, self::USER_META_AVATAR_ID, absint( $member['imageId'] ) );
+				update_user_meta( $user_id, self::USER_META_TEAM_MEMBER, ! empty( $profile['about']['team']['enabled'] ) ? '1' : '0' );
+				update_user_meta( $user_id, self::USER_META_TEAM_ORDER, (int) $index );
+			}
+		}
+		foreach ( array_diff( array_unique( $old_ids ), array_unique( $new_ids ) ) as $removed_id ) {
+			if ( user_can( $actor_id, 'edit_user', $removed_id ) ) {
+				delete_user_meta( $removed_id, self::USER_META_TEAM_MEMBER );
+				delete_user_meta( $removed_id, self::USER_META_TEAM_ORDER );
+			}
+		}
+
+		$founder = &$profile['about']['founder'];
+		$founder_id = absint( $founder['userId'] ?? 0 );
+		if ( $founder_id && get_user_by( 'id', $founder_id ) && user_can( $actor_id, 'edit_user', $founder_id ) ) {
+			wp_update_user( [ 'ID'=>$founder_id, 'display_name'=>$founder['name'], 'description'=>$founder['bio'] ] );
+			update_user_meta( $founder_id, self::USER_META_FOUNDER_TITLE, $founder['title'] );
+			update_user_meta( $founder_id, self::USER_META_LINKEDIN, $founder['linkedin'] );
+			update_user_meta( $founder_id, self::USER_META_AVATAR_ID, absint( $founder['imageId'] ) );
+		}
+		return $this->resolve_people( $profile );
+	}
+
+	/** Resolve linked records from WordPress so the profile is a reference, not a duplicate authority. */
+	private function resolve_people( array $profile ): array {
+		if ( ! isset( $profile['about'] ) || ! is_array( $profile['about'] ) ) return $profile;
+		if ( isset( $profile['about']['founder'] ) && is_array( $profile['about']['founder'] ) ) {
+			$profile['about']['founder'] = $this->resolve_person( $profile['about']['founder'], true );
+		}
+		$team = is_array( $profile['about']['team'] ?? null ) ? $profile['about']['team'] : [ 'enabled'=>false, 'members'=>[] ];
+		$team['enabled'] = ! empty( $team['enabled'] );
+		$team['members'] = array_values( array_map( [ $this, 'resolve_person' ], is_array( $team['members'] ?? null ) ? $team['members'] : [] ) );
+		$profile['about']['team'] = $team;
+		return $profile;
+	}
+
+	private function resolve_person( array $person, bool $founder = false ): array {
+		$user_id = absint( $person['userId'] ?? 0 );
+		$user = $user_id ? get_user_by( 'id', $user_id ) : false;
+		if ( ! $user ) return $person + [ 'userId'=>0, 'linkedin'=>'', 'imageId'=>0 ];
+		$person['userId'] = $user_id;
+		$person['name'] = sanitize_text_field( (string) $user->display_name );
+		$person['bio'] = sanitize_textarea_field( (string) $user->description );
+		$title_key = $founder ? self::USER_META_FOUNDER_TITLE : self::USER_META_TEAM_TITLE;
+		$person['title'] = sanitize_text_field( (string) get_user_meta( $user_id, $title_key, true ) );
+		$person['linkedin'] = esc_url_raw( (string) get_user_meta( $user_id, self::USER_META_LINKEDIN, true ) );
+		$person['imageId'] = absint( get_user_meta( $user_id, self::USER_META_AVATAR_ID, true ) );
+		$person['linkedToWordPressUser'] = true;
+		return $person;
+	}
+
+	/** Keep only references for linked users; their public fields live on the user record. */
+	private function compact_people_references( array $profile ): array {
+		$founder = (array) ( $profile['about']['founder'] ?? [] );
+		if ( ! empty( $founder['userId'] ) ) {
+			$profile['about']['founder'] = [ 'userId'=>absint( $founder['userId'] ) ];
+		}
+		foreach ( (array) ( $profile['about']['team']['members'] ?? [] ) as $index => $member ) {
+			if ( empty( $member['userId'] ) ) continue;
+			$profile['about']['team']['members'][ $index ] = [
+				'id'=>sanitize_key( (string) ( $member['id'] ?? '' ) ),
+				'userId'=>absint( $member['userId'] ),
+				'order'=>(int) ( $member['order'] ?? $index ),
+			];
+		}
+		return $profile;
 	}
 }
