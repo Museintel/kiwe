@@ -63,7 +63,7 @@ function assert(condition, message) {
 
   assert(entry.schema === 'kiwe.start.v1', 'entry schema mismatch');
   assert(entry.productName === 'SeamFlow', 'entry product mismatch');
-  assert(entry.contractVersion === '7.28', 'entry contract mismatch');
+  assert(entry.contractVersion === '7.29', 'entry contract mismatch');
   assert(entry.freshness.discoveryTemplate.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'entry missing nonce-based fresh discovery');
   assert(entry.freshness.integrity.includes('sha256'), 'entry missing pinned-resource integrity rule');
   assert(entry.noCommandInteraction.firstResponseShape.at(-1) === 'Commands: use /list for the compact command list', 'first response /list hint must be last');
@@ -115,14 +115,14 @@ function assert(condition, message) {
 
   assert(manifest.schema === 'kiwe.command-manifest.v1', 'manifest schema mismatch');
   assert(manifest.productName === 'SeamFlow', 'manifest product mismatch');
-  assert(manifest.entry.contractVersion === '7.28', 'manifest contract mismatch');
+  assert(manifest.entry.contractVersion === '7.29', 'manifest contract mismatch');
   assert(manifest.entry.freshDiscovery.includes('refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}'), 'manifest missing nonce-based discovery URL');
   assert(manifest.flowPlanner.mcp === 'kiwe_seamflow_plan', 'manifest MCP planner mismatch');
   assert(manifest.commands['/execute /stepbystep'], 'manifest missing /execute /stepbystep');
   assert(manifest.commands['/ideate'], 'manifest missing /ideate');
   assert(manifest.commandGrammar.primaryActions.includes('/ideate'), 'manifest missing /ideate primary action');
   assert(manifest.commandGrammar.contextSources.includes('/usesitegraph') && manifest.commandGrammar.contextSources.includes('/usebrickscontext'), 'manifest missing contextual dynamic evidence sources');
-  assert(manifest.commandGrammar.phaseTargets.includes('/dynamictags') && manifest.commandGrammar.phaseTargets.includes('/queryloops') && manifest.commandGrammar.phaseTargets.includes('/designcontext'), 'manifest missing narrow Bricks dynamic targets');
+	assert(manifest.commandGrammar.phaseTargets.includes('/dynamictags') && manifest.commandGrammar.phaseTargets.includes('/queryloops') && !manifest.commandGrammar.phaseTargets.includes('/designcontext'), 'manifest dynamic targets must exclude the retired context selector');
   assert(manifest.commandGrammar.entityScopes.includes('/products') && manifest.commandGrammar.fieldScopes.includes('/titles'), 'manifest missing dynamic scope tokens');
   assert(manifest.contexts.ideation === 'kiwe-ai-toolkit/contexts/ideate-lite.md', 'manifest missing ideation context');
   assert(manifest.commands['/execute /fullflow'], 'manifest missing /execute /fullflow');
@@ -161,8 +161,8 @@ function assert(condition, message) {
 
   assert(plan.schema === 'kiwe.seamflow-plan.v1', 'plan schema mismatch');
   assert(plan.productName === 'SeamFlow', 'plan product mismatch');
-  assert(plan.contractVersion === '7.28', 'plan contract mismatch');
-  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.28', 'plan contract report mismatch');
+  assert(plan.contractVersion === '7.29', 'plan contract mismatch');
+  assert(plan.startResponse.mustReport === 'SeamFlow contract: 7.29', 'plan contract report mismatch');
   assert(plan.startResponse.order.at(-1) === 'Commands: use /list for the compact command list', 'plan first-response order should put /list last');
   assert(plan.routeOptions.pluginRest.includes('KIWE_REST_BASE'), 'plan missing plugin REST route option');
   assert(plan.routeOptions.apiPrompt.includes('WordPress Admin'), 'plan missing route API prompt');
@@ -202,9 +202,7 @@ function assert(condition, message) {
   const redoRoute = m.routeCommand({ command: '/redo', artifactSummary: 'immediate previous command and approved input snapshot are accessible' });
   const broadSiteGraph = m.diagnoseCommand({ command: '/usesitegraph', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export' });
   const previewOnly = m.diagnoseCommand({ command: '/usesitegraph /for /previewdata /nonai', artifactSummary: 'current raw index.html', siteGraphSummary: 'kiwe.site-graph.v1 export with product records' });
-  const designContext = m.diagnoseCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
-  const designContextAlias = m.diagnoseCommand({ command: '/usesitegraph /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
-  const ideateDesignContext = m.diagnoseCommand({ command: '/ideate /usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
+	const retiredDesignContextTarget = m.diagnoseCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.site-graph.v1 export' });
   const genericDynamic = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags', artifactSummary: 'current raw index.html' });
   const invalidPreviewContext = m.diagnoseCommand({ command: '/usebrickscontext /for /previewdata', artifactSummary: 'current raw index.html' });
   const invalidNonAi = m.diagnoseCommand({ command: '/usebrickscontext /for /dynamictags /nonai', artifactSummary: 'current raw index.html' });
@@ -216,7 +214,7 @@ function assert(condition, message) {
   assert(bad.stop && bad.code === 'unknown_command_token', 'bad typo diagnostic failed');
   assert(!ideate.stop && ideate.kind === 'ideate', '/ideate diagnostic failed');
   assert(ideateRoute.includes('Ask no more than three short questions at a time.'), '/ideate route missing adaptive interview');
-  assert(ideateRoute.includes('Design Context auto-detection'), '/ideate route missing Design Context auto-detection');
+	assert(ideateRoute.includes('SiteGraph intake'), '/ideate route missing single SiteGraph intake');
   assert(ideateRoute.includes('Owner facts — locked') && ideateRoute.includes('Owner preferences — preserve') && ideateRoute.includes('Creative workspace — AI-writable'), '/ideate route missing owner/AI authority boundary');
   assert(ideateRoute.includes('Is this a new website, a redesign of the existing site, or a new page/direction'), '/ideate route missing new/existing/extension routing');
   assert(ideateRoute.includes('Do not ask again for the project name'), '/ideate route must suppress questions answered by Design Context');
@@ -256,9 +254,7 @@ function assert(condition, message) {
   assert(redoRoute.includes('sufficient notice') && redoRoute.includes('negative evidence') && redoRoute.includes('fresh discovery') && redoRoute.includes('content-hash') && redoRoute.includes('KIWE_PREVIOUS_COMMAND_MISSING'), '/redo route missing failure-signal and fresh replacement contract');
   assert(broadSiteGraph.stop && broadSiteGraph.code === 'dynamic_target_missing', 'broad /usesitegraph must ask for an explicit /for target');
   assert(!previewOnly.stop, 'targeted preview-data SiteGraph command should pass with artifact and evidence');
-  assert(!designContext.stop, 'file-only design-context command should pass with its export');
-  assert(!designContextAlias.stop && designContextAlias.normalizedCommand.includes('/for /designcontext'), 'design-context shorthand should normalize to canonical /for syntax');
-  assert(!ideateDesignContext.stop && ideateDesignContext.kind === 'ideate', 'design context must compose directly with /ideate');
+	assert(retiredDesignContextTarget.stop && retiredDesignContextTarget.code === 'unknown_command_token', 'retired design-context target must fail instead of aliasing');
   assert(!scopedPreview.stop, 'entity/field-scoped preview command should pass without prose');
   assert(!genericDynamic.stop, 'generic Bricks dynamic tags must not require SiteGraph');
   assert(invalidPreviewContext.stop && invalidPreviewContext.code === 'preview_data_requires_sitegraph', 'preview data must require SiteGraph evidence');
@@ -269,11 +265,7 @@ function assert(condition, message) {
   assert(scopedPreviewRoute.includes('Field scope: change only `/titles`, `/images` values'), 'preview route must honor exact field scopes');
   assert(genericDynamicRoute.includes('SiteGraph is not required'), 'Bricks-context route must explicitly remain independent of SiteGraph');
   assert(genericDynamicRoute.includes('annotate only source-evidenced'), 'dynamic-tag target contract missing');
-  const designContextRoute = m.routeCommand({ command: '/usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
-  const ideateDesignContextRoute = m.routeCommand({ command: '/ideate /usesitegraph /for /designcontext /nonai', siteGraphSummary: 'kiwe.sitegraph-design-context.v1 export' });
-  assert(designContextRoute.includes('complete public-only design evidence packet'), 'design-context route missing public-only evidence contract');
-  assert(designContextRoute.includes('does not emit Bricks JSON'), 'design-context route must preserve phase boundaries');
-  assert(ideateDesignContextRoute.includes('public-only design-context packet') && ideateDesignContextRoute.includes('Ask no more than three short questions at a time.'), '/ideate must combine design evidence with the adaptive interview');
+	assert(ideateRoute.includes('SiteGraph is the only Kiwe context handoff') && ideateRoute.includes('Ask no more than three short questions at a time.'), '/ideate must combine the one SiteGraph handoff with the adaptive interview');
 
   const seamValidatorSource = fs.readFileSync(path.join(root, 'tools/validate-seamframework.cjs'), 'utf8');
   assert(seamValidatorSource.includes('self-contained-fallback'), 'Seam validator missing standalone fallback mode');
@@ -386,7 +378,7 @@ function assert(condition, message) {
   fs.writeFileSync(path.join(closureDir, 'index.html'), '<!doctype html><html data-theme="dark"><head><style>.page{color:#111;background:#fff}</style></head><body class="page">Closure proof</body></html>');
   fs.writeFileSync(path.join(closureDir, 'accessibility/kiwe-accessibility-plan.json'), JSON.stringify({
     schema: 'kiwe.accessibility-plan.v1',
-    execution: { command: '/accessibility', contractVersion: '7.28', releaseId: '7.28-fixture', sourceHash: `sha256:${'a'.repeat(64)}`, mode: 'closed-refinement', artifactDisposition: 'revised', darkModeDisposition: 'created' },
+    execution: { command: '/accessibility', contractVersion: '7.29', releaseId: '7.29-fixture', sourceHash: `sha256:${'a'.repeat(64)}`, mode: 'closed-refinement', artifactDisposition: 'revised', darkModeDisposition: 'created' },
     source: { mode: 'website', artifact: 'closure fixture' },
     modes: ['light', 'dark'],
     tokenPairs: [{ id: 'page', foreground: '#111111', background: '#ffffff', modes: ['light', 'dark'], minimumContrast: 4.5 }],

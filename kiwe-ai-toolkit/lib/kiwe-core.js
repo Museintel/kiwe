@@ -506,7 +506,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     compatibilitySchema: 'kiwe.flow-plan.v1',
     productName: 'SeamFlow',
     flowName: 'seamflow',
-    contractVersion: '7.28',
+    contractVersion: '7.29',
     freshness: {
       discoveryTemplate: 'https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}',
       rule: 'Before every later slash command, fetch fresh discovery with a new nonce and use only its content-hash immutable command route and pinned resource hashes.'
@@ -532,7 +532,7 @@ export function planFlow({ command = '', artifactSummary = '', desiredOutcome = 
     },
     auditClosure,
     startResponse: {
-      mustReport: 'SeamFlow contract: 7.28',
+      mustReport: 'SeamFlow contract: 7.29',
       order: [
         'STATUS',
         'SeamFlow contract',
@@ -710,7 +710,7 @@ export function listCommands() {
       },
       {
         command: '/ideate /webdraft',
-        purpose: 'Create a pure creative Framework-neutral HTML/CSS/JS draft. Auto-detect an attached Kiwe Design Context so verified owner facts and preferences are not re-asked.',
+        purpose: 'Create a pure creative Framework-neutral HTML/CSS/JS draft. Auto-detect one attached or connected SiteGraph so verified owner facts, preferences and approved material are not re-asked.',
         requires: ['attached Kiwe Design Context or a short adaptive design brief'],
         output: 'creative draft only'
       },
@@ -817,13 +817,6 @@ export function listCommands() {
         purpose: 'Use SiteGraph identity/name/logo/menu facts instead of scraping or guessing the brand.',
         requires: ['Site Graph site identity data'],
         output: 'identity-aware handoff revisions'
-      },
-      {
-        command: '/usesitegraph /for /designcontext',
-        aliases: ['/usesitegraph /designcontext'],
-        purpose: 'Use the complete public-only target evidence packet—identity, logo, menus, products, media metadata, public content and builder capabilities—to improve design decisions without granting writes or forcing Seam Framework.',
-        requires: ['live SiteGraph design-context route, or exported kiwe.sitegraph-design-context.v1 JSON'],
-        output: 'site-grounded raw HTML/CSS/JS or bounded revisions with stable source markers; bindings only when a binding target is also present'
       },
       {
         command: '/usesitegraph /for /bricksbindings',
@@ -1200,7 +1193,6 @@ const KNOWN_COMMAND_TOKENS = new Set([
   '/queryloops',
   '/kiwelaunchers',
   '/siteidentity',
-  '/designcontext',
   '/products',
   '/posts',
   '/pages',
@@ -1282,8 +1274,6 @@ const VALID_PHASE_COMMANDS = [
   '/audit /combined',
   '/usesitegraph /for /previewdata',
   '/usesitegraph /for /siteidentity',
-  '/usesitegraph /for /designcontext',
-  '/usesitegraph /for /designcontext /nonai',
   '/usesitegraph /for /bricksbindings',
   '/usesitegraph /for /bricksbindings /nonai',
   '/usebrickscontext /for /bricksbindings',
@@ -1343,7 +1333,7 @@ function hasForbiddenBricksSource(text) {
 }
 
 function hasSiteGraphAccess(text) {
-  return /kiwe\.site-graph\.v1|kiwe\.sitegraph-design-context\.v1|sitegraphhash|site graph json|site graph summary|siteGraphSummary|design[-_ ]context|KIWE_REST_BASE|\/wp-json\/dsa\/v1|kiwe_ai_|X-Kiwe-AI-Key|Authorization:\s*Bearer|site-graph-data|site_graph_data/i.test(String(text || ''));
+  return /kiwe\.site-graph\.v1|sitegraphhash|site graph json|site graph summary|siteGraphSummary|KIWE_REST_BASE|\/wp-json\/dsa\/v1|kiwe_ai_|X-Kiwe-AI-Key|Authorization:\s*Bearer|site-graph-data|site_graph_data/i.test(String(text || ''));
 }
 
 function commandDiagnostic({ status = 'ok', code = 'ok', message = '', kind = '', normalizedCommand = '', suggestions = [], boundaries = [] } = {}) {
@@ -1394,7 +1384,6 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
     .replace(/(?:^|\s)\/replacepreview\b/gi, ' /replacepreviewdata')
     .replace(/(?:^|\s)\/usesitegraph\s+\/replacepreviewdata\b/gi, ' /usesitegraph /for /previewdata')
     .replace(/(?:^|\s)\/usesitegraph\s+\/websitename\b/gi, ' /usesitegraph /for /siteidentity')
-    .replace(/(?:^|\s)\/usesitegraph\s+\/designcontext\b/gi, ' /usesitegraph /for /designcontext')
     .replace(/\s+/g, ' ')
     .trim();
   const tokens = slashTokens(commandText);
@@ -1713,7 +1702,7 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
 
   const usesSiteGraph = commandHas(text, /\/usesitegraph/);
   const usesBricksContext = commandHas(text, /\/usebrickscontext/);
-  const dynamicTargets = slashTokens(normalizedCommand).filter((token) => ['/previewdata', '/bricksbindings', '/dynamictags', '/queryloops', '/kiwelaunchers', '/siteidentity', '/designcontext'].includes(token));
+  const dynamicTargets = slashTokens(normalizedCommand).filter((token) => ['/previewdata', '/bricksbindings', '/dynamictags', '/queryloops', '/kiwelaunchers', '/siteidentity'].includes(token));
 
   if ((usesSiteGraph || usesBricksContext) && !dynamicTargets.length) {
     return commandDiagnostic({
@@ -1721,9 +1710,9 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       code: 'dynamic_target_missing',
       kind: 'dynamic',
       normalizedCommand,
-      message: 'The context source is clear, but the requested target is not. Add `/for` plus one or more targets: `/designcontext`, `/previewdata`, `/bricksbindings`, `/dynamictags`, `/queryloops`, `/kiwelaunchers`, or `/siteidentity`.',
+      message: 'The context source is clear, but the requested target is not. Add `/for` plus one or more targets: `/previewdata`, `/bricksbindings`, `/dynamictags`, `/queryloops`, `/kiwelaunchers`, or `/siteidentity`.',
       suggestions: usesSiteGraph
-        ? ['/usesitegraph /for /designcontext', '/usesitegraph /for /previewdata', '/usesitegraph /for /bricksbindings', '/usesitegraph /for /siteidentity']
+        ? ['/usesitegraph /for /previewdata', '/usesitegraph /for /bricksbindings', '/usesitegraph /for /siteidentity']
         : ['/usebrickscontext /for /bricksbindings', '/usebrickscontext /for /dynamictags', '/usebrickscontext /for /queryloops'],
       boundaries: ['Context commands select evidence; `/for` targets select exactly what may change.']
     });
@@ -1783,8 +1772,8 @@ export function diagnoseCommand({ command = '', brief = '', artifactSummary = ''
       code: 'dynamic_missing_site_graph',
       kind: 'dynamic',
       normalizedCommand,
-      message: '`/usesitegraph` needs target-site truth. Ask for either KIWE_REST_BASE plus a task credential, an exported kiwe.site-graph.v1 JSON packet, an exported kiwe.sitegraph-design-context.v1 packet, or the public Site Graph Data/design-context endpoint. Do not guess product categories, pages, custom fields, dynamic tags, Bricks settings, or query-loop types.',
-      suggestions: ['Ask for KIWE_REST_BASE and a short-lived task connection.', 'Ask for exported kiwe.sitegraph-design-context.v1 JSON.', 'For AI-less/file-only reads append /nonai to the same targeted command.', '/usesitegraph /for /designcontext after SiteGraph is available'],
+      message: '`/usesitegraph` needs target-site truth. Ask for either KIWE_REST_BASE plus a task credential, or one exported kiwe.site-graph.v1 JSON packet. Do not guess product categories, pages, custom fields, dynamic tags, Bricks settings, or query-loop types.',
+      suggestions: ['Ask for KIWE_REST_BASE and a short-lived task connection.', 'Ask for the exported kiwe.site-graph.v1 JSON.', 'For AI-less/file-only reads append /nonai to the same targeted command.'],
       boundaries: ['Dynamic binding must be grounded in target-site truth, not frontend scraping or assumptions.']
     });
   }
@@ -1977,7 +1966,7 @@ function commandListMarkdown() {
     '## Site Graph lane',
     '',
     '- `/usesitegraph` selects real target-site evidence; `/usebrickscontext` selects general verified builder capabilities without SiteGraph.',
-    '- `/usesitegraph /for /designcontext` selects the complete public-only design evidence packet; it does not itself authorize bindings, Bricks JSON, Seam Framework or writes.',
+		'- SiteGraph itself contains the complete public-only Design Context and design material; no separate Design Context selection or route exists.',
     '- Add `/for` plus explicit targets. Context alone is incomplete and must not trigger every dynamic operation.',
     '- `/usesitegraph /for /previewdata` changes preview samples only.',
     '- `/usesitegraph /for /bricksbindings` creates target-grounded bindings only.',
@@ -2076,7 +2065,6 @@ function siteGraphCommandGuidance(command) {
   const nonAi = commandHas(text, /\/nonai/);
   const previewData = commandHas(text, /\/(?:previewdata|replacepreview|replacepreviewdata)/);
   const websiteName = commandHas(text, /\/(?:siteidentity|websitename)/);
-  const designContext = commandHas(text, /\/designcontext/);
   const bindings = commandHas(text, /\/bricksbindings/);
   const dynamicTags = bindings || commandHas(text, /\/dynamictags/);
   const queryLoops = bindings || commandHas(text, /\/queryloops/);
@@ -2090,7 +2078,7 @@ function siteGraphCommandGuidance(command) {
     '',
     siteGraph
       ? (nonAi
-        ? 'Evidence source `/usesitegraph /nonai`: use only exported `kiwe.site-graph.v1`, exported `kiwe.sitegraph-design-context.v1`, SiteGraph Data, or AI-less read-only data routes. Do not call Companion, native AI, Advisor, or Studio.'
+        ? 'Evidence source `/usesitegraph /nonai`: use only the exported `kiwe.site-graph.v1`, SiteGraph Data, or AI-less read-only data routes. Do not call Companion, native AI, Advisor, or Studio.'
         : 'Evidence source `/usesitegraph`: use only the supplied target SiteGraph/API/export. Ask for it when missing; never scrape the public frontend or invent target IDs.')
       : '',
     bricksContext
@@ -2102,9 +2090,6 @@ function siteGraphCommandGuidance(command) {
       : '',
     websiteName
       ? 'Target `/siteidentity`: revise only site name, logo, menu labels, and identity fields proven by SiteGraph.'
-      : '',
-    designContext
-      ? 'Target `/designcontext`: use the public-only design-context packet as an evidence palette for business identity and public contact details, product/content facts, suitable media, menus, every proven public custom post type and taxonomy, safe custom-field schemas/values, WooCommerce pricing, grouped/bundled relationships, Kiwe offers/discounts, bestseller terms and target capabilities. During `/ideate`, it may guide original composition. For an approved artifact, preserve its visual thesis and make only evidence-grounding changes unless the human explicitly requests redesign. Static media must retain public URLs and `data-kiwe-media-id`; repeating production regions remain dynamic. This target alone does not emit Bricks JSON, query loops, dynamic tags or Kiwe launchers.'
       : '',
     dynamicTags
       ? 'Target `/dynamictags`: annotate only source-evidenced text, links, images, prices, metadata, and fields with verified Bricks dynamic tags.'
@@ -2257,20 +2242,8 @@ export function routeCommand({ command = '', brief = '', artifactSummary = '', s
       '',
       'For Bricks conversion, DSA theme, combined handoff, Site Graph/dynamic binding, or accessibility lanes, document only the files and assumptions already present in the supplied artifact.'
     );
-  } else if (kind === 'ideate') {
-    if (commandHas(command, /\/designcontext/)) {
-      parts.push(
-        siteGraphCommandGuidance(command),
-        '',
-        '# Site Graph design evidence',
-        '',
-        graph,
-        '',
-        getIdeationContext()
-      );
-    } else {
-      parts.push(getIdeationContext());
-    }
+	} else if (kind === 'ideate') {
+		parts.push(getIdeationContext());
   } else if (kind === 'seam-rebuild') {
     parts.push(
       '# Selected phase guidance',

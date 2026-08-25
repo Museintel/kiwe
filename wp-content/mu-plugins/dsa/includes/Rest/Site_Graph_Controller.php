@@ -125,15 +125,6 @@ final class Site_Graph_Controller {
 			]
 		);
 
-		register_rest_route(
-			'dsa/v1',
-			'/site-graph/design-context',
-			[
-				'methods'             => [ 'GET', 'POST' ],
-				'callback'            => [ $this, 'design_context' ],
-				'permission_callback' => '__return_true',
-			]
-		);
 	}
 
 	public function can_manage_options(): bool {
@@ -141,14 +132,9 @@ final class Site_Graph_Controller {
 	}
 
 	public function graph( WP_REST_Request $request ): WP_REST_Response {
-		$response = new WP_REST_Response(
-			$this->site_graph->graph(
-				[
-					'sampleLimit' => absint( $request->get_param( 'sampleLimit' ) ),
-				]
-			),
-			200
-		);
+		$args = $request->get_params();
+		unset( $args['rest_route'] );
+		$response = new WP_REST_Response( ( new Design_Context_Service( $this->site_graph, $this->data_query ) )->context( $args, true ), 200 );
 
 		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
 		$response->header( 'X-Robots-Tag', 'noindex, nofollow' );
@@ -256,29 +242,6 @@ final class Site_Graph_Controller {
 		} else {
 			$this->public_cache( $response );
 		}
-
-		return $response;
-	}
-
-	public function design_context( WP_REST_Request $request ): WP_REST_Response {
-		if ( ! Origin_Checker::transient_rate_limit( 'dsa_sitegraph_design_context', 12 ) ) {
-			$response = new WP_REST_Response(
-				[ 'ok' => false, 'error' => [ 'code' => 'sitegraph_design_context_rate_limited', 'message' => __( 'Too many SiteGraph design-context requests. Wait one minute.', 'dsa' ) ] ],
-				429
-			);
-			$response->header( 'Retry-After', '60' );
-			$this->public_cache( $response );
-			return $response;
-		}
-		$args = $request->get_params();
-		$body = $request->get_json_params();
-		if ( is_array( $body ) ) {
-			$args = array_replace_recursive( $args, $body );
-		}
-		unset( $args['rest_route'] );
-
-		$response = new WP_REST_Response( ( new Design_Context_Service( $this->site_graph, $this->data_query ) )->context( $args, false ), 200 );
-		$this->public_cache( $response );
 
 		return $response;
 	}

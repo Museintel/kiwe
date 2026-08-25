@@ -42,8 +42,7 @@ final class SeamFlow_Service {
 				'/audit /accessibility',
 				'/fix /previousaudit',
 				'/audit /previousoutput /allflow',
-				'/usesitegraph /for /designcontext',
-				'/usesitegraph /for /designcontext /nonai',
+				'/ideate with one attached or connected kiwe.site-graph.v1 packet',
 			],
 			'routes'          => [
 				'status'           => $base . '/status',

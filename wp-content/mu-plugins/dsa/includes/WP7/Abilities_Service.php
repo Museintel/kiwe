@@ -136,23 +136,6 @@ final class Abilities_Service {
 		);
 
 		wp_register_ability(
-			'dsa/get-sitegraph-design-context',
-			[
-				'label'               => __( 'Get Kiwe SiteGraph design context', 'dsa' ),
-				'description'         => __( 'Returns one public-only design evidence packet containing site identity, products, media, public content, menus and target builder capabilities.', 'dsa' ),
-				'category'            => self::CATEGORY,
-				'input_schema'        => $this->design_context_input_schema(),
-				'output_schema'       => $this->generic_object_schema(),
-				'execute_callback'    => [ $this, 'execute_sitegraph_design_context' ],
-				'permission_callback' => [ $this, 'can_manage' ],
-				'meta'                => [
-					'annotations' => [ 'readonly' => true ],
-					'show_in_rest' => true,
-				],
-			]
-		);
-
-		wp_register_ability(
 			'dsa/get-securetrack-brief',
 			[
 				'label'               => __( 'Get SecureTrack AI brief', 'dsa' ),
@@ -210,7 +193,7 @@ final class Abilities_Service {
 					'label'               => __( 'Get Kiwe site graph', 'dsa' ),
 					'description'         => __( 'Returns an admin-only, non-secret WordPress, WooCommerce, Bricks, Seam, and Kiwe capability graph for AI design/binding workflows.', 'dsa' ),
 					'category'            => self::CATEGORY,
-					'input_schema'        => $this->site_graph_input_schema(),
+					'input_schema'        => $this->design_context_input_schema(),
 					'output_schema'       => $this->site_graph_output_schema(),
 					'execute_callback'    => [ $this, 'execute_site_graph' ],
 					'permission_callback' => [ $this, 'can_manage' ],
@@ -514,11 +497,8 @@ final class Abilities_Service {
 			];
 		}
 
-		return $this->site_graph->graph(
-			[
-				'sampleLimit' => isset( $input['sampleLimit'] ) ? absint( $input['sampleLimit'] ) : 8,
-			]
-		);
+		unset( $input['abilityInvocationId'] );
+		return ( new Design_Context_Service( $this->site_graph, $this->data_query ) )->context( $input, true );
 	}
 
 	public function execute_site_graph_data_schema(): array {
@@ -530,15 +510,6 @@ final class Abilities_Service {
 		unset( $input['publicOnly'], $input['abilityInvocationId'] );
 
 		return $this->data_query->query( $input, $private );
-	}
-
-	public function execute_sitegraph_design_context( array $input = [] ): array {
-		if ( ! $this->site_graph ) {
-			return [ 'schema' => 'kiwe.sitegraph-design-context.v1', 'error' => 'site_graph_unavailable' ];
-		}
-		unset( $input['abilityInvocationId'] );
-
-		return ( new Design_Context_Service( $this->site_graph, $this->data_query ) )->context( $input, true );
 	}
 
 	public function execute_securetrack_brief( array $input = [] ): array {
@@ -787,7 +758,6 @@ final class Abilities_Service {
 						'dsa/summarize-route',
 						'dsa/get-site-graph-data-schema',
 						'dsa/query-site-graph-data',
-						'dsa/get-sitegraph-design-context',
 						'dsa/get-securetrack-brief',
 						'dsa/get-bricks-ai-context',
 						'dsa/plan-bricks-ai-page',

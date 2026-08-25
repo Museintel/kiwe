@@ -98,7 +98,7 @@ final class Design_Context_Service {
 		];
 
 		return [
-			'schema'      => 'kiwe.sitegraph-design-context.v1',
+			'schema'      => 'kiwe.site-graph.v1',
 			'generatedAt' => gmdate( 'c' ),
 			'authority'   => [
 				'source'              => esc_url_raw( home_url( '/' ) ),
@@ -197,12 +197,10 @@ final class Design_Context_Service {
 				'compiler' => [ 'SEAM Compiler consumes only declared selectors and target-proven tags/query types', 'unmatched or ambiguous targets require human review', 'no Seam Framework requirement' ],
 			],
 			'usage'       => [
-				'command' => '/usesitegraph /for /designcontext',
-				'fileOnlyCommand' => '/usesitegraph /for /designcontext /nonai',
 				'ideateCommand' => '/ideate',
 				'entityScopes' => [ '/products', '/posts', '/pages', '/media', '/menus', '/customcontent', '/taxonomies', '/business', '/commerce', '/seamdesigncontext' ],
 				'fieldScopes'  => [ '/titles', '/images', '/prices', '/links', '/excerpts', '/metadata', '/customfields', '/contact', '/brand', '/audience', '/contentplan', '/bundles', '/discounts', '/bestsellers', '/designcontextenhancement' ],
-				'rule' => 'Bare /ideate auto-detects this file. Use owner facts as locked evidence, preserve owner preferences, and keep creative decisions draft-only. For an approved artifact, improve binding precision without redesigning it or hardcoding production collections.',
+				'rule' => 'Bare /ideate auto-detects this SiteGraph. Use owner facts as locked evidence, preserve owner preferences, and keep creative decisions draft-only. For an approved artifact, improve binding precision without redesigning it or hardcoding production collections.',
 			],
 		];
 	}

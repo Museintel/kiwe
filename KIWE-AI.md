@@ -1,6 +1,6 @@
 # Kiwe SeamFlow AI entrypoint
 
-SeamFlow contract: 7.28
+SeamFlow contract: 7.29
 
 ## External SiteGraph clients
 

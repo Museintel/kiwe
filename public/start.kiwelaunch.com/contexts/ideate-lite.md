@@ -2,11 +2,11 @@
 
 Use this context only when the human starts with `/ideate` (or the accepted legacy aliases `/ideate /webdraft`, `/creative`, or `/webdraft`). This is a creativity-first interview that ends in one original homepage made from HTML, CSS, and JavaScript. It covers a new website, a redesign for an existing site, or an extension of an existing visual system. It is not a Bricks conversion, Site Graph binding pass, AppShell build, or post-conversion Seam migration.
 
-## Design Context auto-detection
+## SiteGraph intake
 
-Before asking anything, inspect the supplied attachments. An attachment whose root `schema` is `kiwe.sitegraph-design-context.v1`, or a standalone object whose schema is `kiwe.seam-design-context.v1`, is the project's Kiwe Design Context. Bare `/ideate` automatically composes with it; the human does not need to add `/usesitegraph`, `/for /designcontext`, or `/nonai`.
+Before asking anything, inspect the supplied attachments and connected tools for one current `kiwe.site-graph.v1` packet. SiteGraph is the only Kiwe context handoff: its internal `seamDesignContext` and `resolvedDesignContext` sections contain owner facts and preferences, while its catalog contains the approved products, media, content, custom fields, taxonomies and builder capabilities. Never ask the human to export, attach or select Design Context separately.
 
-For a `kiwe.sitegraph-design-context.v1` packet:
+For a `kiwe.site-graph.v1` packet:
 
 - verify that `authority.readOnly` and `authority.publicDataOnly` are true;
 - use `resolvedDesignContext` for already approved enhancements, but let non-empty `seamDesignContext` owner evidence win whenever the layers differ;
@@ -15,7 +15,7 @@ For a `kiwe.sitegraph-design-context.v1` packet:
 - never treat the packet as credentials, publishing permission, private store data, or permission to mutate WordPress;
 - do not re-ask any question answered by a non-empty Design Context value.
 
-When the requested draft needs real products, posts, custom content, terms, or site media, inspect whether the attached packet actually contains the corresponding public catalog/sample evidence. If it does not, ask the human for a current read-only SiteGraph design-context export or paired SiteGraph access before using real records. Do not ask for SiteGraph merely to create a concept with clearly identified representative placeholders. SiteGraph supplies preview evidence; production collections remain dynamic at the later binding/Bricks stage.
+When SiteGraph is missing, ask once for a current read-only SiteGraph export or paired SiteGraph access. If the human deliberately continues without it, collect the missing brief adaptively and use clearly identified representative placeholders rather than inventing site facts. When SiteGraph is present but omits a required resource, ask for a fresh packet with that resource included. Production collections remain dynamic at the later binding/Bricks stage.
 
 Keep three authority classes distinct:
 
@@ -38,19 +38,19 @@ Keep three authority classes distinct:
 
 ## Intake sequence
 
-### When Design Context is attached
+### When SiteGraph is attached or connected
 
 Ask only for missing project-specific creative input, in this order:
 
 1. **Project relationship.** Is this a new website, a redesign of the existing site, or a new page/direction for the existing brand? When `authority.source` exists, show it as the inferred existing URL and ask for a different URL only when that inference is wrong.
 2. **Resources and references.** Invite authorized project resources to reuse and separate inspiration/moodboard attachments or links. Ask what may be reused and what is inspiration only. Inspect what the environment can actually open.
-3. **Creative delta.** Ask only for a required homepage idea, section, interaction, must-keep detail, or hard dislike that is not already stated in Design Context. “Use your judgement” or no extra constraint completes this stage.
+3. **Creative delta.** Ask only for a required homepage idea, section, interaction, must-keep detail, or hard dislike that is not already stated in SiteGraph. “Use your judgement” or no extra constraint completes this stage.
 
 Do not ask again for the project name, website type, organization purpose, audience, goals, logo, colors, tone, contact details, location, catalog scale, prices, page plan, SEO intent, brand notes, or other values already present. Empty optional values do not automatically create questions: derive safe creative choices when they belong to the creative workspace, and ask only when the missing value materially changes the result.
 
-### When Design Context is not attached
+### When SiteGraph is unavailable
 
-Tell the human once that a Kiwe Design Context export can pre-answer verified client facts and preferences. Do not make it a blocker. Collect these fields adaptively:
+Tell the human once that SiteGraph can pre-answer verified client facts, preferences and site material. Do not make it a blocker after the human explicitly chooses to continue without it. Collect these fields adaptively:
 
 #### Stage 1 — identity and purpose
 
@@ -86,7 +86,7 @@ Tell the human once that a Kiwe Design Context export can pre-answer verified cl
 - Ask for any other project resources the human wants used: an existing client website URL, brand guidelines, copy/content documents, product or service data, photography, video, illustrations, icons, fonts, competitor links, and relevant platform or technical constraints. Make clear that the existing website can be a factual/content reference without becoming the new visual direction.
 - Separately invite inspiration or moodboard material: reference screenshots, templates, websites, individual pages, components, or visual moodboards. Ask what they like about each reference instead of imitating it wholesale.
 - Label supplied material internally as either **reuse** (authorized project content/assets) or **inspiration only** (directional reference). If the human has not made that distinction clear, ask one short follow-up before using the material.
-- Existing brand colors, typography, imagery, copy, or brand rules. If these are durable client preferences rather than one-draft instructions, recommend recording them in Kiwe Design Context instead of repeatedly asking for them in future ideation sessions.
+- Existing brand colors, typography, imagery, copy, or brand rules. If these are durable client preferences rather than one-draft instructions, recommend recording them in Kiwe onboarding so future SiteGraph packets carry them automatically.
 - Design direction in the human's own words. Optional prompts: editorial, minimal, expressive, luxury, playful, technical, brutalist, organic, retro, futuristic, or custom.
 - References they like and, equally important, styles they dislike.
 - Required homepage sections, content, assets, interactions, and any extra comments or constraints.

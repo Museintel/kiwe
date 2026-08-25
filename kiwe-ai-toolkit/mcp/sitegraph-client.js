@@ -15,9 +15,20 @@ export const SITEGRAPH_TOOLS = Object.freeze({
     method: 'GET', path: '/status', inputSchema: { type: 'object', properties: {} }
   },
   kiwe_sitegraph_get_graph: {
-    description: 'Read the public-only target SiteGraph. The task capsule enforces its sample budget.',
+    description: 'Read the one public-only target SiteGraph containing owner Design Context, approved design material, content, commerce and builder capabilities. The task capsule enforces its resource and row budgets.',
     method: 'GET', path: '/site-graph',
-    inputSchema: { type: 'object', properties: { sampleLimit: { type: 'integer', minimum: 0, maximum: 24, default: 8 } } }
+    inputSchema: {
+      type: 'object',
+      properties: {
+        productLimit: { type: 'integer', minimum: 0, maximum: 100, default: 24 },
+        mediaLimit: { type: 'integer', minimum: 0, maximum: 100, default: 48 },
+        contentLimit: { type: 'integer', minimum: 0, maximum: 100, default: 12 },
+        customContentLimit: { type: 'integer', minimum: 0, maximum: 100, default: 24 },
+        termLimit: { type: 'integer', minimum: 0, maximum: 300, default: 100 },
+        mediaSearch: { type: 'string' },
+        resources: { type: 'array', items: { type: 'string' } }
+      }
+    }
   },
   kiwe_sitegraph_get_data_schema: {
     description: 'Read the SiteGraph Data resource and field schema allowed by this task capsule.',
@@ -33,20 +44,6 @@ export const SITEGRAPH_TOOLS = Object.freeze({
         limit: { type: 'integer', minimum: 1, maximum: 100 },
         taxonomy: { type: 'string' }, term: { type: ['string', 'integer'] }, search: { type: 'string' }, fields: { type: 'array', items: { type: 'string' } },
         queries: { type: 'object', additionalProperties: { type: 'object' } }
-      }
-    }
-  },
-  kiwe_sitegraph_design_context: {
-    description: 'Read one public-only SiteGraph design evidence packet: identity, menus, products, media metadata, public content and target Bricks/Kiwe capabilities. This never grants writes.',
-    method: 'POST', path: '/design-context',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        productLimit: { type: 'integer', minimum: 0, maximum: 100, default: 24 },
-        mediaLimit: { type: 'integer', minimum: 0, maximum: 100, default: 48 },
-        contentLimit: { type: 'integer', minimum: 0, maximum: 100, default: 12 },
-        mediaSearch: { type: 'string' },
-        resources: { type: 'array', items: { type: 'string', enum: ['site', 'menus', 'products', 'media', 'pages', 'posts', 'terms'] } }
       }
     }
   },

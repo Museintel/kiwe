@@ -84,9 +84,9 @@ Canonical dynamic context forms:
 /usebrickscontext /for <explicit-target>
 ```
 
-Use `/usesitegraph` for real site evidence and `/usebrickscontext` for general verified Bricks/Kiwe capabilities without site data. Valid targets include `/designcontext`, `/previewdata`, `/siteidentity`, `/bricksbindings`, `/dynamictags`, `/queryloops`, and `/kiwelaunchers`. `/designcontext` gives the AI public identity, catalog, media, content and target-capability evidence; it does not itself authorize bindings, Bricks JSON, Seam Framework or writes. Legacy `/dynamic /sitegraph`, shorthand `/sitegraph`, and `/usesitegraph /designcontext` may be accepted internally, but user-facing output should use a targeted canonical form.
+Use `/usesitegraph` for real site evidence and `/usebrickscontext` for general verified Bricks/Kiwe capabilities without site data. Valid targets include `/previewdata`, `/siteidentity`, `/bricksbindings`, `/dynamictags`, `/queryloops`, and `/kiwelaunchers`. The one SiteGraph packet already includes public Design Context and design material. No separate context-selection target or handoff exists.
 
-Bare `/ideate` automatically recognizes an attached `kiwe.sitegraph-design-context.v1` or `kiwe.seam-design-context.v1` file and composes it with the adaptive creative interview. `/ideate /usesitegraph /for /designcontext` remains a valid explicit live-tool form; append `/nonai` only for older clients that cannot auto-detect an attached export.
+Bare `/ideate` automatically recognizes an attached or connected `kiwe.site-graph.v1` packet and composes it with the adaptive creative interview. Append `/nonai` only when using the exported file or AI-less read routes.
 
 Optional entity scopes (`/products`, `/posts`, `/pages`, `/media`, `/menus`) and field scopes (`/titles`, `/images`, `/prices`, `/links`, `/excerpts`, `/metadata`) narrow the selected target. Example: `/usesitegraph /for /previewdata /products /titles /images /nonai`. If no scope is present, process every eligible region for that target. If the scoped source region is ambiguous, ask one short question instead of requesting a prose implementation prompt.
 
@@ -125,7 +125,7 @@ Examples:
 - `/convert /bricks` against `combined-preview` or `appshell-theme` -> `rejected`, `bricks_convert_forbidden_source_in_command`.
 - `/audit /bricksconversion` without `bricks-template/*-template-upload.json` or `bricks-conversion/kiwe-bricks-conversion.json` -> `needs_input`, `bricks_audit_missing_conversion_artifact`.
 - `/usesitegraph` without a `/for` target -> `needs_input`, `dynamic_target_missing`.
-- `/usesitegraph /for /designcontext /nonai` accepts an attached `kiwe.sitegraph-design-context.v1` export and needs no API credential.
+- `/ideate` accepts one attached `kiwe.site-graph.v1` export and needs no API credential.
 - `/usesitegraph /for /previewdata` without an existing handoff -> `needs_input`, `sitegraph_replacepreview_missing_artifact`.
 - `/usebrickscontext /for /dynamictags` without an existing raw artifact -> `needs_input`, `bricks_context_missing_artifact`.
 - `/usebrickscontext /for /previewdata` -> `rejected`, `preview_data_requires_sitegraph`.

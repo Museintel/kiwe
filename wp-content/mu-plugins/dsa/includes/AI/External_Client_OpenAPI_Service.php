@@ -107,7 +107,7 @@ final class External_Client_OpenAPI_Service {
 			'publicData' => [
 				'schema'        => rest_url( 'dsa/v1/site-graph/data/schema' ),
 				'query'         => rest_url( 'dsa/v1/site-graph/data' ),
-				'designContext' => rest_url( 'dsa/v1/site-graph/design-context' ),
+				'siteGraph'     => rest_url( 'dsa/v1/site-graph' ),
 			],
 			'boundaries' => [
 				'taskCapsules are public-data-only, expire automatically and have request budgets.',
@@ -130,13 +130,13 @@ final class External_Client_OpenAPI_Service {
 				$parameters[] = [ 'name' => $name, 'in' => 'path', 'required' => true, 'schema' => [ 'type' => 'string' ] ];
 			}
 		}
-		if ( in_array( $callback, [ 'site_graph', 'site_graph_data' ], true ) ) {
+		if ( 'site_graph_data' === $callback ) {
 			$parameters[] = [ 'name' => 'sampleLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 24 ] ];
 		}
 		if ( 'site_graph_data' === $callback ) {
 			$parameters[] = [ 'name' => 'publicOnly', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'boolean' ], 'description' => 'Always forced true for task capsules.' ];
 		}
-		if ( 'design_context' === $callback ) {
+		if ( 'site_graph' === $callback ) {
 			$parameters[] = [ 'name' => 'productLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
 			$parameters[] = [ 'name' => 'mediaLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];
 			$parameters[] = [ 'name' => 'contentLimit', 'in' => 'query', 'required' => false, 'schema' => [ 'type' => 'integer', 'minimum' => 0, 'maximum' => 100 ] ];

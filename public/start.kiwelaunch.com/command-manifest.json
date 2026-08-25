@@ -8,7 +8,7 @@
     "rawEntrypoint": "https://start.kiwelaunch.com/start.md",
     "machineEntrypoint": "https://start.kiwelaunch.com/entry.json",
     "freshDiscovery": "https://start.kiwelaunch.com/.well-known/kiwe.json?refresh={UTC_TIMESTAMP_OR_RANDOM_NONCE}",
-    "contractVersion": "7.28",
+    "contractVersion": "7.29",
     "rule": "Read SeamFlow Start first, report the SeamFlow contract version, then route the next slash command through this manifest. Treat explore as a location pointer, not permission to crawl the repository."
   },
   "architecture": {
@@ -71,7 +71,7 @@
     "compilerContract": "kiwe-ai-toolkit/contracts/seam-compiler-contract.json"
   },
   "errorCatalog": {
-    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.28", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
+    "responseShape": ["STATUS: NEEDS_INPUT | FAIL | WARN", "SeamFlow contract: 7.29", "ERROR: KIWE_...", "Command:", "Current artifact:", "Why stopped:", "Next valid command:"],
     "codes": {
       "KIWE_UNKNOWN_COMMAND": "Unknown or misspelled command token.",
       "KIWE_MISSING_ARTIFACT": "Required current files/attachments are missing.",
@@ -115,7 +115,7 @@
   "commandGrammar": {
     "rule": "Tokens are independent and composable. Do not require a memorized full phrase when a command line is unambiguous.",
     "primaryActions": ["/ideate", "/execute", "/rebuild", "/create", "/convert", "/seamframework", "/audit", "/fix", "/redo", "/apply", "/list", "/document"],
-    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity", "/designcontext", "/designcontextenhancement"],
+    "phaseTargets": ["/stepbystep", "/fullflow", "/seamframework", "/frameworkprofile", "/bricks", "/bricksconversion", "/accessibility", "/dsatheme", "/combined", "/allattached", "/allflow", "/previousoutput", "/previousaudit", "/previewdata", "/bricksbindings", "/dynamictags", "/queryloops", "/kiwelaunchers", "/siteidentity", "/designcontextenhancement"],
     "contextSources": ["/usesitegraph", "/usebrickscontext"],
     "entityScopes": ["/products", "/posts", "/pages", "/media", "/menus"],
     "fieldScopes": ["/titles", "/images", "/prices", "/links", "/excerpts", "/metadata"],
@@ -132,10 +132,10 @@
       "phase": "ideate",
       "aliases": ["/ideate /webdraft", "/creative", "/webdraft"],
       "read": ["kiwe-ai-toolkit/contexts/ideate-lite.md"],
-      "requires": ["an attached Kiwe Design Context or adaptive answers for facts it does not supply; project relationship; reusable versus inspiration references; any material creative constraints; a current read-only SiteGraph design-context packet when the requested draft requires real site products, posts, custom content, terms, or media not present in the attachment"],
+      "requires": ["one current read-only kiwe.site-graph.v1 packet or an explicit decision to continue without target-site evidence; project relationship; reusable versus inspiration references; any material creative constraints not already answered by SiteGraph"],
       "output": ["one original homepage as index.html, styles.css, and script.js", "all referenced reusable/generated assets under assets/", "assets/asset-manifest.json with provenance, reuse authority, alt text, WordPress Media intent, and known SiteGraph media IDs/URLs"],
       "forbidden": ["Bricks JSON", "Site Graph binding", "AppShell or DSA output", "post-conversion Seam migration", "framework-driven visual homogenization", "more than three questions at once", "restarting the interview during normal refinements"],
-      "finalResponse": "Auto-detect Design Context, ask only unanswered project-specific creative questions, generate one Framework-neutral homepage, then accept subsequent refinements through normal conversation without another slash command."
+      "finalResponse": "Auto-detect the one SiteGraph handoff, ask only unanswered project-specific creative questions, generate one Framework-neutral homepage, then accept subsequent refinements through normal conversation without another slash command."
     },
     "/list": {
       "phase": "discover",
@@ -284,8 +284,8 @@
     },
     "/create /designcontextenhancement": {
       "phase": "design-context-enhancement",
-      "read": ["kiwe-ai-toolkit/contexts/dynamic-lite.md", "the attached kiwe.sitegraph-design-context.v1 export and its embedded designContextEnhancementContract"],
-      "requires": ["a current kiwe.sitegraph-design-context.v1 export containing ownerContextHash and designContextEnhancementContract"],
+      "read": ["kiwe-ai-toolkit/contexts/dynamic-lite.md", "the attached kiwe.site-graph.v1 export and its embedded designContextEnhancementContract"],
+      "requires": ["a current kiwe.site-graph.v1 export containing ownerContextHash and designContextEnhancementContract"],
       "must": ["copy the exact sourceContextHash", "set authority.mayOverwriteOwnerEvidence to false", "preserve every locked path and owner-selected color", "suggest colors only for semantic roles the owner left empty", "keep factual claims grounded in owner/SiteGraph evidence", "put uncertainty in requiresHumanReview"],
       "output": ["kiwe-design-context-enhancement.json using schema kiwe.design-context-enhancement.v1"],
       "forbidden": ["overwriting owner evidence", "inventing contacts addresses products legal facts awards or dates", "meta keywords", "keyword stuffing", "Bricks JSON", "automatically enabling Seam Framework", "browser-AI-authored production Framework Profile"],

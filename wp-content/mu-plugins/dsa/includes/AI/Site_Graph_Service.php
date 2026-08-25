@@ -243,19 +243,6 @@ final class Site_Graph_Service {
 				'taskCapsuleScope' => 'site_graph_data',
 				'useFor'      => [ 'headless page data', 'real product rails', 'real post rails', 'menus', 'terms', 'media', 'site identity' ],
 			],
-			'designContext' => [
-				'schema'      => 'kiwe.sitegraph-design-context.v1',
-				'publicSafe'  => true,
-				'readOnly'    => true,
-				'restRoutes'  => [
-					'/wp-json/dsa/v1/site-graph/design-context',
-					'/wp-json/dsa/v1/ai/design-context',
-				],
-				'aiKeyScopes' => [ 'site_graph_data', 'all' ],
-				'taskCapsuleScope' => 'site_graph_data',
-				'command'     => '/usesitegraph /for /designcontext',
-				'useFor'      => [ 'brand-aware AI ideation', 'real media selection', 'product-aware layouts', 'framework-neutral raw HTML/CSS/JS', 'stable downstream binding markers' ],
-			],
 			'internalAI' => [
 				'schema'      => 'kiwe.internal-ai.context.v1',
 				'advisorSchema' => 'kiwe.internal-ai.advisor.v1',
@@ -329,7 +316,6 @@ final class Site_Graph_Service {
 					'dsa/get-site-graph',
 					'dsa/get-site-graph-data-schema',
 					'dsa/query-site-graph-data',
-					'dsa/get-sitegraph-design-context',
 					'dsa/get-securetrack-brief',
 					'dsa/get-internal-ai-context',
 					'dsa/run-internal-ai-advisor',
