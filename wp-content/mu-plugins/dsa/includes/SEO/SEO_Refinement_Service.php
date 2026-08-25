@@ -192,7 +192,6 @@ final class SEO_Refinement_Service {
 			if ( count( $update ) > 1 ) wp_update_post( wp_slash( $update ) ); if ( isset( $fields['alt'] ) && wp_attachment_is_image( $id ) ) update_post_meta( $id, '_wp_attachment_image_alt', $fields['alt'] );
 		} else {
 			if ( isset( $fields['seoTitle'] ) ) update_post_meta( $id, '_kiwe_seo_title', $fields['seoTitle'] ); if ( isset( $fields['metaDescription'] ) ) update_post_meta( $id, '_kiwe_seo_description', $fields['metaDescription'] ); if ( isset( $fields['searchPhrases'] ) ) update_post_meta( $id, '_kiwe_search_phrases', $fields['searchPhrases'] );
-			$this->apply_dedicated_seo_meta( $id, $fields );
 			if ( isset( $fields['excerpt'] ) ) wp_update_post( wp_slash( [ 'ID'=>$id, 'post_excerpt'=>$fields['excerpt'] ] ) );
 		}
 		return true;
@@ -206,26 +205,9 @@ final class SEO_Refinement_Service {
 			$data=[ 'id'=>$id, 'label'=>$post->post_title ?: basename( (string) get_attached_file( $id ) ), 'mimeType'=>get_post_mime_type( $id ), 'title'=>$post->post_title, 'alt'=>get_post_meta( $id, '_wp_attachment_image_alt', true ), 'caption'=>$post->post_excerpt, 'description'=>$post->post_content, 'filename'=>basename( (string) get_attached_file( $id ) ), 'url'=>wp_get_attachment_url( $id ), 'parentContext'=>$parent ? [ 'type'=>$parent->post_type, 'title'=>$parent->post_title, 'excerpt'=>$parent->post_excerpt ] : null ];
 		} else {
 			$expected=[ 'all_posts'=>'post','all_pages'=>'page','all_products'=>'product' ][ $scope ] ?? ''; if ( $post->post_type !== $expected || 'publish' !== $post->post_status ) return [];
-			$current_seo = $this->current_seo_meta( $id );
-			$data=[ 'id'=>$id, 'label'=>$post->post_title, 'postType'=>$post->post_type, 'title'=>$post->post_title, 'excerpt'=>$post->post_excerpt, 'content'=>substr( wp_strip_all_tags( strip_shortcodes( $post->post_content ) ),0,4000 ), 'currentSeoTitle'=>$current_seo['title'], 'currentMetaDescription'=>$current_seo['description'], 'currentSearchPhrases'=>$current_seo['searchPhrases'], 'seoOwner'=>$current_seo['owner'] ];
+			$data=[ 'id'=>$id, 'label'=>$post->post_title, 'postType'=>$post->post_type, 'title'=>$post->post_title, 'excerpt'=>$post->post_excerpt, 'content'=>substr( wp_strip_all_tags( strip_shortcodes( $post->post_content ) ),0,4000 ), 'currentSeoTitle'=>get_post_meta( $id, '_kiwe_seo_title', true ), 'currentMetaDescription'=>get_post_meta( $id, '_kiwe_seo_description', true ) ];
 		}
 		$data['sourceHash']=hash( 'sha256', (string) wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) ); return $data;
-	}
-
-	private function current_seo_meta( int $post_id ): array {
-		if ( defined( 'RANK_MATH_VERSION' ) ) {
-			$phrases = array_values( array_filter( array_map( 'trim', explode( ',', (string) get_post_meta( $post_id, 'rank_math_focus_keyword', true ) ) ) ) );
-			return [ 'owner'=>'rank_math', 'title'=>(string) get_post_meta( $post_id, 'rank_math_title', true ), 'description'=>(string) get_post_meta( $post_id, 'rank_math_description', true ), 'searchPhrases'=>$phrases ];
-		}
-		return [ 'owner'=>'kiwe', 'title'=>(string) get_post_meta( $post_id, '_kiwe_seo_title', true ), 'description'=>(string) get_post_meta( $post_id, '_kiwe_seo_description', true ), 'searchPhrases'=>(array) get_post_meta( $post_id, '_kiwe_search_phrases', true ) ];
-	}
-
-	/** Rank Math remains frontend authority; reviewed Kiwe proposals update its native fields. */
-	private function apply_dedicated_seo_meta( int $post_id, array $fields ): void {
-		if ( ! defined( 'RANK_MATH_VERSION' ) ) return;
-		if ( isset( $fields['seoTitle'] ) ) update_post_meta( $post_id, 'rank_math_title', $fields['seoTitle'] );
-		if ( isset( $fields['metaDescription'] ) ) update_post_meta( $post_id, 'rank_math_description', $fields['metaDescription'] );
-		if ( isset( $fields['searchPhrases'] ) ) update_post_meta( $post_id, 'rank_math_focus_keyword', implode( ', ', array_slice( (array) $fields['searchPhrases'], 0, 5 ) ) );
 	}
 
 	/**

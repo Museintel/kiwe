@@ -28,7 +28,6 @@ check('SEO AI work is shared-host bounded and cron queued', seo.includes('BATCH_
 check('SEO output is review-first and does not emit meta keywords', seo.includes("name=\"decision\" value=\"accept\"") && seo.includes("name=\"decision\" value=\"reject\"") && seo.includes('must never be emitted as meta keywords') && !seoHead.includes('name="keywords"'));
 check('media refinement preserves URLs and filenames while proposing native metadata', seo.includes('Do not change URLs or filenames') && seo.includes("'_wp_attachment_image_alt'") && seo.includes("'post_excerpt'") && seo.includes("'post_content'"));
 check('Kiwe SEO metadata yields frontend authority to dedicated SEO plugins', seo.includes('dedicated_seo_plugin_active') && seoHead.includes('dedicated_seo_plugin_active') && seoHead.includes('SEO_Refinement_Service::singular_description'));
-check('reviewed SEO proposals read and update active Rank Math native fields', seo.includes("'rank_math_title'") && seo.includes("'rank_math_description'") && seo.includes("'rank_math_focus_keyword'") && seo.includes('apply_dedicated_seo_meta'));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);
