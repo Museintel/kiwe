@@ -41,7 +41,7 @@ final class SEO_Refinement_Service {
 		<?php if ( empty( $ai['profile']['enabled'] ) ) : ?><div class="notice notice-warning inline"><p><?php esc_html_e( 'Enable the shared Kiwe AI provider for SiteGraph/SEO first. SEO uses the same broker and credentials; it has no separate AI configuration.', 'dsa' ); ?></p></div><?php endif; ?>
 		<div class="card" style="max-width:none"><h2><?php esc_html_e( 'Start a review batch', 'dsa' ); ?></h2><p><?php esc_html_e( 'Each background request contains at most five public records. Existing dedicated SEO plugins retain frontend authority.', 'dsa' ); ?></p><div style="display:flex;gap:10px;flex-wrap:wrap"><?php foreach ( $this->scopes() as $scope=>$label ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_start_seo_refinement"><input type="hidden" name="scope" value="<?php echo esc_attr( $scope ); ?>"><?php wp_nonce_field( 'kiwe_start_seo_refinement' ); ?><button class="button button-primary" type="submit" <?php disabled( empty( $ai['profile']['enabled'] ) ); ?>><?php echo esc_html( $label ); ?></button></form><?php endforeach; ?></div></div>
 		<?php if ( $job ) : $total=count( (array) $job['ids'] ); $cursor=absint( $job['cursor'] ?? 0 ); ?>
-		<div class="card" style="max-width:none"><h2><?php echo esc_html( sprintf( __( '%1$s · %2$d of %3$d inspected', 'dsa' ), $this->scopes()[ $job['scope'] ] ?? $job['scope'], min( $cursor, $total ), $total ) ); ?></h2><p><?php echo esc_html( sprintf( __( 'Status: %1$s · %2$d proposals · %3$d contract errors', 'dsa' ), (string) $job['status'], count( (array) $job['proposals'] ), absint( $job['errors'] ?? 0 ) ) ); ?></p><?php if ( 'complete' !== $job['status'] ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_run_seo_refinement"><?php wp_nonce_field( 'kiwe_run_seo_refinement' ); ?><button class="button" type="submit"><?php esc_html_e( 'Run next five now', 'dsa' ); ?></button></form><?php endif; ?></div>
+		<div class="card" style="max-width:none"><h2><?php echo esc_html( sprintf( __( '%1$s · %2$d of %3$d inspected', 'dsa' ), $this->scopes()[ $job['scope'] ] ?? $job['scope'], min( $cursor, $total ), $total ) ); ?></h2><p><?php echo esc_html( sprintf( __( 'Status: %1$s · %2$d proposals · %3$d processing errors · next batch %4$d', 'dsa' ), (string) $job['status'], count( (array) $job['proposals'] ), absint( $job['errors'] ?? 0 ), $this->batch_size( $job ) ) ); ?></p><?php if ( ! empty( $job['lastError']['message'] ) ) : ?><p><strong><?php esc_html_e( 'Last error:', 'dsa' ); ?></strong> <code><?php echo esc_html( (string) ( $job['lastError']['code'] ?? 'processing_failed' ) ); ?></code> — <?php echo esc_html( (string) $job['lastError']['message'] ); ?></p><?php endif; ?><?php if ( 'complete' !== $job['status'] ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_run_seo_refinement"><?php wp_nonce_field( 'kiwe_run_seo_refinement' ); ?><button class="button" type="submit"><?php esc_html_e( 'Run next bounded batch now', 'dsa' ); ?></button></form><?php endif; ?></div>
 		<?php if ( ! empty( $job['proposals'] ) ) : ?><h2><?php esc_html_e( 'Review proposals', 'dsa' ); ?></h2><div style="display:grid;gap:14px"><?php foreach ( (array) $job['proposals'] as $id=>$proposal ) : ?><article class="card" style="max-width:none"><h3><?php echo esc_html( (string) $proposal['label'] ); ?> <small>· <?php echo esc_html( ucfirst( (string) $proposal['status'] ) ); ?></small></h3><table class="widefat striped"><tbody><?php foreach ( (array) $proposal['fields'] as $field=>$value ) : ?><tr><th style="width:180px"><?php echo esc_html( $this->field_label( (string) $field ) ); ?></th><td><?php echo nl2br( esc_html( is_array( $value ) ? implode( ', ', $value ) : (string) $value ) ); ?></td></tr><?php endforeach; ?></tbody></table><p><?php echo esc_html( (string) ( $proposal['reason'] ?? '' ) ); ?></p><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_review_seo_refinement"><input type="hidden" name="proposal_id" value="<?php echo esc_attr( (string) $id ); ?>"><?php wp_nonce_field( 'kiwe_review_seo_refinement' ); ?><button class="button button-primary" name="decision" value="accept" type="submit"><?php esc_html_e( 'Accept proposal', 'dsa' ); ?></button> <button class="button-link-delete" name="decision" value="reject" type="submit"><?php esc_html_e( 'Reject', 'dsa' ); ?></button></form></article><?php endforeach; ?></div><?php endif; ?>
 		<?php endif; ?></div>
 		<?php
@@ -52,7 +52,7 @@ final class SEO_Refinement_Service {
 		$scope = sanitize_key( (string) ( $_POST['scope'] ?? '' ) );
 		if ( ! isset( $this->scopes()[ $scope ] ) ) $this->redirect( 'invalid' );
 		$ids = $this->scope_ids( $scope );
-		$job = [ 'schema'=>self::SCHEMA, 'id'=>wp_generate_uuid4(), 'scope'=>$scope, 'ids'=>$ids, 'cursor'=>0, 'status'=>$ids ? 'queued' : 'complete', 'proposals'=>[], 'errors'=>0, 'createdAt'=>gmdate( 'c' ), 'createdBy'=>get_current_user_id() ];
+		$job = [ 'schema'=>self::SCHEMA, 'id'=>wp_generate_uuid4(), 'scope'=>$scope, 'ids'=>$ids, 'cursor'=>0, 'batchSize'=>self::BATCH_SIZE, 'status'=>$ids ? 'queued' : 'complete', 'proposals'=>[], 'errors'=>0, 'lastError'=>null, 'createdAt'=>gmdate( 'c' ), 'createdBy'=>get_current_user_id() ];
 		update_option( self::JOB_OPTION, $job, false );
 		if ( $ids ) wp_schedule_single_event( time() + 1, self::CRON, [ $job['id'] ] );
 		$this->redirect( $ids ? 'queued' : 'empty' );
@@ -72,7 +72,7 @@ final class SEO_Refinement_Service {
 		if ( get_transient( $lock ) ) return;
 		set_transient( $lock, '1', 2 * MINUTE_IN_SECONDS );
 		try {
-		$ids = array_slice( (array) $job['ids'], absint( $job['cursor'] ), self::BATCH_SIZE );
+		$ids = array_slice( (array) $job['ids'], absint( $job['cursor'] ), $this->batch_size( $job ) );
 		$records = [];
 		foreach ( $ids as $id ) { $record=$this->record( absint( $id ), (string) $job['scope'] ); if ( $record ) $records[]=$record; }
 		if ( $records ) {
@@ -85,8 +85,11 @@ final class SEO_Refinement_Service {
 			$data = is_array( $result['validation']['data'] ?? null ) ? $result['validation']['data'] : [];
 			if ( ! empty( $result['ok'] ) && self::SCHEMA === ( $data['schema'] ?? '' ) ) $job['proposals'] = array_replace( (array) $job['proposals'], $this->sanitize_proposals( (array) ( $data['proposals'] ?? [] ), $records, (string) $job['scope'] ) );
 			else {
+				$error = $this->result_error( $result, $data );
 				$job['errors'] = absint( $job['errors'] ?? 0 ) + 1;
 				$job['status'] = 'paused';
+				$job['batchSize'] = count( $records ) > 1 ? max( 1, (int) floor( count( $records ) / 2 ) ) : 1;
+				$job['lastError'] = $error;
 				$job['lastErrorAt'] = gmdate( 'c' );
 				update_option( self::JOB_OPTION, $job, false );
 				return;
@@ -94,12 +97,39 @@ final class SEO_Refinement_Service {
 		}
 		$job['cursor'] = min( count( (array) $job['ids'] ), absint( $job['cursor'] ) + count( $ids ) );
 		$job['status'] = $job['cursor'] >= count( (array) $job['ids'] ) ? 'complete' : 'queued';
+		$job['batchSize'] = min( self::BATCH_SIZE, max( 1, $this->batch_size( $job ) + 1 ) );
+		$job['lastError'] = null;
 		$job['updatedAt'] = gmdate( 'c' );
 		update_option( self::JOB_OPTION, $job, false );
 		if ( 'complete' !== $job['status'] ) wp_schedule_single_event( time() + 20, self::CRON, [ $job['id'] ] );
 		} finally {
 			delete_transient( $lock );
 		}
+	}
+
+	private function batch_size( array $job ): int {
+		return max( 1, min( self::BATCH_SIZE, absint( $job['batchSize'] ?? self::BATCH_SIZE ) ) );
+	}
+
+	private function result_error( array $result, array $data ): array {
+		$provider_error = is_array( $result['error'] ?? null ) ? $result['error'] : [];
+		$code = sanitize_key( (string) ( $provider_error['code'] ?? $result['reason'] ?? '' ) );
+		$message = sanitize_text_field( (string) ( $provider_error['message'] ?? '' ) );
+
+		if ( '' === $code && ! empty( $result['ok'] ) ) {
+			$code = self::SCHEMA === ( $data['schema'] ?? '' ) ? 'proposal_contract_empty' : 'proposal_schema_mismatch';
+		}
+		if ( '' === $code ) {
+			$code = 'provider_request_failed';
+		}
+		if ( '' === $message ) {
+			$message = 'The bounded AI request did not return a valid SEO proposal contract. The source content was not changed.';
+		}
+
+		return [
+			'code'    => substr( $code, 0, 80 ),
+			'message' => substr( $message, 0, 240 ),
+		];
 	}
 
 	private function response_schema( array $records, string $scope ): array {
