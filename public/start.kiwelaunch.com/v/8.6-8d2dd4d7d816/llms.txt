@@ -1,0 +1,10 @@
+# SEAM by Kiwe
+
+> Canonical command boundary for attachment-aware website ideation, auditing, fixing and WordPress binding preparation.
+
+- [Start contract](https://start.kiwelaunch.com/start.md)
+- [Command manifest](https://start.kiwelaunch.com/command-manifest.json)
+- [Machine registry](https://start.kiwelaunch.com/.well-known/kiwe.json)
+- [GitHub source mirror](https://raw.githubusercontent.com/Museintel/kiwe/codex/phonekey-whatsapp-rc1/KIWE-START.md)
+
+Never substitute kiwilaunch.com or another similarly named domain.

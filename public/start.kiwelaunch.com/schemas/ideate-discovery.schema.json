@@ -14,12 +14,13 @@
     "designContextUsage",
     "designContentUsage",
     "approval",
+    "sourceAuthority",
     "creativeBoundary",
     "nextAction"
   ],
   "properties": {
-    "schema": { "const": "kiwe.ideate-discovery.v3" },
-    "lane": { "enum": ["new-site", "existing-site-redesign", "source-enhancement"] },
+    "schema": { "const": "kiwe.ideate-discovery.v4" },
+    "lane": { "enum": ["new-site", "approved-source-preservation", "existing-site-redesign", "source-enhancement"] },
     "sourceInventory": {
       "type": "array",
       "items": {
@@ -105,6 +106,26 @@
         "requiredPhrase": { "const": "proceed" }
       }
     },
+    "sourceAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decisionSource", "permittedChanges"],
+      "properties": {
+        "status": { "enum": ["not-applicable", "unknown", "approved-final", "enhancement-authorized", "redesign-authorized"] },
+        "decisionSource": { "enum": ["new-site", "explicit-user", "unresolved"] },
+        "permittedChanges": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "unknown" } }, "required": ["status"] },
+          "then": { "properties": { "decisionSource": { "const": "unresolved" }, "permittedChanges": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["approved-final", "enhancement-authorized", "redesign-authorized"] } }, "required": ["status"] },
+          "then": { "properties": { "decisionSource": { "const": "explicit-user" } } }
+        }
+      ]
+    },
     "creativeBoundary": {
       "type": "object",
       "additionalProperties": false,
@@ -115,6 +136,6 @@
         "redesignAuthorized": { "type": "boolean" }
       }
     },
-    "nextAction": { "enum": ["request-sitegraph", "ask-material-question", "request-proceed", "compose-project"] }
+    "nextAction": { "enum": ["ask-source-authority", "request-sitegraph", "ask-material-question", "request-proceed", "compose-project"] }
   }
 }

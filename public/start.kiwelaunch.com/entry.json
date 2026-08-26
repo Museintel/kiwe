@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.entry.v2",
   "productName": "SEAM",
-  "contractVersion": "8.5",
+  "contractVersion": "8.6",
   "updated": "2026-08-26",
   "repository": "Museintel/kiwe",
   "start": "https://start.kiwelaunch.com/start.md",

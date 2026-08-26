@@ -15,7 +15,7 @@ import {
   validateFrameworkProfile
 } from '../lib/kiwe-core.js';
 
-const server = new Server({ name: 'seam', version: '8.5.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'seam', version: '8.6.0' }, { capabilities: { tools: {} } });
 const object = (properties = {}, required = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}) });
 const routeProperties = {
   command: { type: 'string' },
