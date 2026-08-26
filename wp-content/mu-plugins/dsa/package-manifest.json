@@ -13,8 +13,8 @@
       "sha256": "b6c448bd71151b9a42d9e9d05af403d9388b68d881b1d4c664e60fe63d9137dc"
     },
     "assets/css/onboarding.css": {
-      "bytes": 12066,
-      "sha256": "7a2d4b04f087d1837f8e420634b250cb22d002ec4eaf9e488d6ea53ca25f3506"
+      "bytes": 12579,
+      "sha256": "e27141c4f6ebf37e024548a816b2da8a346bc0232c5cbc05c558d783d186c0a0"
     },
     "assets/css/seam.css": {
       "bytes": 18759,
@@ -153,8 +153,8 @@
       "sha256": "2a315f95b4baa8ff476c9155ac014a03dc38227963a752f432378087a3a90727"
     },
     "assets/js/onboarding.js": {
-      "bytes": 15941,
-      "sha256": "64895ac2364e08b5847b683e6608aff7fc81f10fed4ac6592cb3c3b932d600aa"
+      "bytes": 16084,
+      "sha256": "a6c813ae7d01bdbaa0ed9439226fbb7896494e4da5e23d7663dc013e32c63746"
     },
     "assets/js/product-context.js": {
       "bytes": 1260,
@@ -645,16 +645,16 @@
       "sha256": "a5477edb87e728bd961abc75690880ab1366ba75e42e6ebbbba43411585d7e1f"
     },
     "includes/Onboarding/Design_Context_Profile_Service.php": {
-      "bytes": 57672,
-      "sha256": "72582120b38a637d191d8b7be8291bcc742f360e2f391c714158e9d7f303cd46"
+      "bytes": 64149,
+      "sha256": "149e542671ad708cd434c5ffe97eadbf7286a56a06f5850c1a29725cd040f057"
     },
     "includes/Onboarding/Design_Context_Refinement_Service.php": {
-      "bytes": 17366,
-      "sha256": "cefa0b520dcba4b4e4735f5087df97bb3a089aa79fee4a4cf94811f7a54cc676"
+      "bytes": 17449,
+      "sha256": "2cbc3f40b6479bfdb829653ffff6cd57bdd110330495b3b8e9099dfc98cd62a7"
     },
     "includes/Onboarding/Onboarding_Service.php": {
-      "bytes": 65239,
-      "sha256": "19dd65f85717105bca6227ce74e55109383ddeba090176d0c72cd641dd096b96"
+      "bytes": 66023,
+      "sha256": "b2cd2d24ad6ea3bad18c7d339185ce962a2dae0506adbcda278e6f61333bdbf2"
     },
     "includes/Onboarding/README.md": {
       "bytes": 4187,
@@ -797,8 +797,8 @@
       "sha256": "15937f1c2d9f5063b13bfd3e5d09bb6b6b9f829d96b71a5ee8a657a31456adbb"
     },
     "includes/SEO/SEO_Refinement_Service.php": {
-      "bytes": 21633,
-      "sha256": "cc3817fa4c517d09c4a86d08368c344393ee91f44a00eac6c91753beb7912961"
+      "bytes": 30726,
+      "sha256": "ba73413d8842661d5d593652c75574ca7f20a02e0b5b649cda4e44f6649a6000"
     },
     "includes/Saved/Saved_Items_Service.php": {
       "bytes": 9269,

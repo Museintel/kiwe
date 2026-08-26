@@ -48,7 +48,10 @@
 		const resourceSelect = event.target.closest( '[data-kiwe-resource-select]' );
 		if ( resourceSelect && window.wp && wp.media ) {
 			event.preventDefault();
-			const frame = wp.media( { title: config.chooseResources || 'Choose resources', button: { text: config.useResources || 'Add selected resources' }, multiple: true } );
+			const frame = wp.media( { title: config.chooseResources || 'Upload resources to the Media Library', button: { text: config.useResources || 'Add uploaded resources' }, multiple: true } );
+			frame.on( 'open', function () {
+				if ( frame.content && frame.content.mode ) frame.content.mode( 'upload' );
+			} );
 			frame.on( 'select', function () {
 				const list = root.querySelector( '[data-kiwe-resources]' );
 				if ( ! list ) return;

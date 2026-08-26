@@ -13,6 +13,7 @@ final class SEO_Refinement_Service {
 	private const JOB_OPTION = 'kiwe_seo_refinement_job_v1';
 	private const SCHEMA = 'kiwe.seo-refinement-batch.v1';
 	private const CRON = 'kiwe_seo_refinement_batch';
+	private const SCORE_CRON = 'kiwe_refresh_overall_seo_score';
 	private const BATCH_SIZE = 5;
 
 	public function __construct( private AI_Broker_Service $broker, private Design_Context_Profile_Service $profiles ) {}
@@ -23,7 +24,28 @@ final class SEO_Refinement_Service {
 		add_action( 'admin_post_kiwe_run_seo_refinement', [ $this, 'handle_run' ] );
 		add_action( 'admin_post_kiwe_review_seo_refinement', [ $this, 'handle_review' ] );
 		add_action( self::CRON, [ $this, 'run_batch' ], 10, 1 );
+		add_action( self::SCORE_CRON, [ $this, 'refresh_score' ] );
+		add_action( 'save_post', [ $this, 'schedule_score_refresh' ], 30, 2 );
+		add_action( 'deleted_post', [ $this, 'schedule_score_refresh' ], 30, 2 );
+		add_action( 'added_post_meta', [ $this, 'schedule_score_meta_refresh' ], 30, 4 );
+		add_action( 'updated_post_meta', [ $this, 'schedule_score_meta_refresh' ], 30, 4 );
+		add_action( 'deleted_post_meta', [ $this, 'schedule_score_meta_refresh' ], 30, 4 );
 		add_filter( 'document_title_parts', [ $this, 'document_title' ] );
+	}
+
+	public function schedule_score_refresh( int $post_id, $post = null ): void {
+		$post_type = $post instanceof \WP_Post ? $post->post_type : get_post_type( $post_id );
+		if ( ! in_array( $post_type, [ 'post','page','product','attachment' ], true ) ) return;
+		if ( ! wp_next_scheduled( self::SCORE_CRON ) ) wp_schedule_single_event( time() + 15, self::SCORE_CRON );
+	}
+
+	public function schedule_score_meta_refresh( $meta_id, int $object_id, string $meta_key, $meta_value = null ): void {
+		if ( ! in_array( $meta_key, [ '_kiwe_seo_title','_kiwe_seo_description','_kiwe_search_phrases','_wp_attachment_image_alt','_kiwe_seo_intentional_empty_fields' ], true ) ) return;
+		$this->schedule_score_refresh( $object_id, get_post( $object_id ) );
+	}
+
+	public function refresh_score(): void {
+		$this->profiles->overall_seo_report( null, true );
 	}
 
 	public function menu(): void {
@@ -34,15 +56,17 @@ final class SEO_Refinement_Service {
 		if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'You are not allowed to manage SEO proposals.', 'dsa' ) );
 		$job = $this->job();
 		$ai = $this->broker->status( 'seo' );
+		$score_report = $this->profiles->overall_seo_report( null, true );
 		$notice = sanitize_key( (string) ( $_GET['seo-refinement'] ?? '' ) );
 		?>
 		<div class="wrap"><h1><?php esc_html_e( 'Kiwe SEO', 'dsa' ); ?></h1><p><?php esc_html_e( 'Create bounded AI proposals for native WordPress and WooCommerce content. Kiwe never promises rankings, emits obsolete meta-keywords, changes URLs or filenames, or publishes AI text without administrator acceptance.', 'dsa' ); ?></p>
 		<?php if ( $notice ) : ?><div class="notice notice-info"><p><?php echo esc_html( $this->notice( $notice ) ); ?></p></div><?php endif; ?>
 		<?php if ( empty( $ai['profile']['enabled'] ) ) : ?><div class="notice notice-warning inline"><p><?php esc_html_e( 'Enable the shared Kiwe AI provider for SiteGraph/SEO first. SEO uses the same broker and credentials; it has no separate AI configuration.', 'dsa' ); ?></p></div><?php endif; ?>
+		<div class="card" style="max-width:none"><h2><?php echo esc_html( sprintf( __( 'Overall SEO score · %d%%', 'dsa' ), absint( $score_report['score'] ?? 0 ) ) ); ?></h2><p><?php esc_html_e( 'This is a weighted live score across owner onboarding evidence, pages, posts, products and Media Library records. Empty content types do not lower the score, and rejected or unsafe suggestions do not count as complete.', 'dsa' ); ?></p><table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Surface', 'dsa' ); ?></th><th><?php esc_html_e( 'Score', 'dsa' ); ?></th><th><?php esc_html_e( 'Ready records or checks', 'dsa' ); ?></th></tr></thead><tbody><?php foreach ( (array) ( $score_report['components'] ?? [] ) as $component ) : if ( empty( $component['active'] ) ) continue; ?><tr><td><?php echo esc_html( (string) $component['label'] ); ?></td><td><?php echo esc_html( (string) absint( $component['score'] ) ); ?>%</td><td><?php echo esc_html( sprintf( '%1$d / %2$d', absint( $component['ready'] ), absint( $component['total'] ) ) ); ?></td></tr><?php endforeach; ?></tbody></table></div>
 		<div class="card" style="max-width:none"><h2><?php esc_html_e( 'Start a review batch', 'dsa' ); ?></h2><p><?php esc_html_e( 'Each background request contains at most five public records. Existing dedicated SEO plugins retain frontend authority.', 'dsa' ); ?></p><div style="display:flex;gap:10px;flex-wrap:wrap"><?php foreach ( $this->scopes() as $scope=>$label ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_start_seo_refinement"><input type="hidden" name="scope" value="<?php echo esc_attr( $scope ); ?>"><?php wp_nonce_field( 'kiwe_start_seo_refinement' ); ?><button class="button button-primary" type="submit" <?php disabled( empty( $ai['profile']['enabled'] ) ); ?>><?php echo esc_html( $label ); ?></button></form><?php endforeach; ?></div></div>
 		<?php if ( $job ) : $total=count( (array) $job['ids'] ); $cursor=absint( $job['cursor'] ?? 0 ); ?>
 		<div class="card" style="max-width:none"><h2><?php echo esc_html( sprintf( __( '%1$s · %2$d of %3$d inspected', 'dsa' ), $this->scopes()[ $job['scope'] ] ?? $job['scope'], min( $cursor, $total ), $total ) ); ?></h2><p><?php echo esc_html( sprintf( __( 'Status: %1$s · %2$d proposals · %3$d processing errors · next batch %4$d', 'dsa' ), (string) $job['status'], count( (array) $job['proposals'] ), absint( $job['errors'] ?? 0 ), $this->batch_size( $job ) ) ); ?></p><?php if ( ! empty( $job['lastError']['message'] ) ) : ?><p><strong><?php esc_html_e( 'Last error:', 'dsa' ); ?></strong> <code><?php echo esc_html( (string) ( $job['lastError']['code'] ?? 'processing_failed' ) ); ?></code> — <?php echo esc_html( (string) $job['lastError']['message'] ); ?></p><?php endif; ?><?php if ( 'complete' !== $job['status'] ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_run_seo_refinement"><?php wp_nonce_field( 'kiwe_run_seo_refinement' ); ?><button class="button" type="submit"><?php esc_html_e( 'Run next bounded batch now', 'dsa' ); ?></button></form><?php endif; ?></div>
-		<?php if ( ! empty( $job['proposals'] ) ) : ?><h2><?php esc_html_e( 'Review proposals', 'dsa' ); ?></h2><div style="display:grid;gap:14px"><?php foreach ( (array) $job['proposals'] as $id=>$proposal ) : ?><article class="card" style="max-width:none"><h3><?php echo esc_html( (string) $proposal['label'] ); ?> <small>· <?php echo esc_html( ucfirst( (string) $proposal['status'] ) ); ?></small></h3><table class="widefat striped"><tbody><?php foreach ( (array) $proposal['fields'] as $field=>$value ) : ?><tr><th style="width:180px"><?php echo esc_html( $this->field_label( (string) $field ) ); ?></th><td><?php echo nl2br( esc_html( is_array( $value ) ? implode( ', ', $value ) : (string) $value ) ); ?></td></tr><?php endforeach; ?></tbody></table><p><?php echo esc_html( (string) ( $proposal['reason'] ?? '' ) ); ?></p><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_review_seo_refinement"><input type="hidden" name="proposal_id" value="<?php echo esc_attr( (string) $id ); ?>"><?php wp_nonce_field( 'kiwe_review_seo_refinement' ); ?><button class="button button-primary" name="decision" value="accept" type="submit"><?php esc_html_e( 'Accept proposal', 'dsa' ); ?></button> <button class="button-link-delete" name="decision" value="reject" type="submit"><?php esc_html_e( 'Reject', 'dsa' ); ?></button></form></article><?php endforeach; ?></div><?php endif; ?>
+		<?php if ( ! empty( $job['proposals'] ) ) : ?><h2><?php esc_html_e( 'Review proposals', 'dsa' ); ?></h2><div style="display:grid;gap:14px"><?php foreach ( (array) $job['proposals'] as $id=>$proposal ) : ?><article class="card" style="max-width:none"><h3><?php echo esc_html( (string) $proposal['label'] ); ?> <small>· <?php echo esc_html( ucfirst( (string) $proposal['status'] ) ); ?></small></h3><table class="widefat striped"><tbody><?php foreach ( (array) $proposal['fields'] as $field=>$value ) : ?><tr><th style="width:180px"><?php echo esc_html( $this->field_label( (string) $field ) ); ?></th><td><?php echo nl2br( esc_html( is_array( $value ) ? implode( ', ', $value ) : (string) $value ) ); ?></td></tr><?php endforeach; ?></tbody></table><p><?php echo esc_html( (string) ( $proposal['reason'] ?? '' ) ); ?></p><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="kiwe_review_seo_refinement"><input type="hidden" name="proposal_id" value="<?php echo esc_attr( (string) $id ); ?>"><?php wp_nonce_field( 'kiwe_review_seo_refinement' ); ?><p><label><span class="screen-reader-text"><?php esc_html_e( 'Why this suggestion needs another attempt', 'dsa' ); ?></span><input class="regular-text" name="review_note" maxlength="300" placeholder="<?php esc_attr_e( 'Optional: explain what was inaccurate', 'dsa' ); ?>"></label></p><button class="button button-primary" name="decision" value="accept" type="submit"><?php esc_html_e( 'Accept proposal', 'dsa' ); ?></button> <button class="button" name="decision" value="regenerate" type="submit"><?php esc_html_e( 'Reject & try another', 'dsa' ); ?></button> <button class="button-link-delete" name="decision" value="reject" type="submit"><?php esc_html_e( 'Keep rejected', 'dsa' ); ?></button></form></article><?php endforeach; ?></div><?php endif; ?>
 		<?php endif; ?></div>
 		<?php
 	}
@@ -170,15 +194,70 @@ final class SEO_Refinement_Service {
 		$this->authorize( 'kiwe_review_seo_refinement' );
 		$id = sanitize_key( (string) ( $_POST['proposal_id'] ?? '' ) );
 		$decision = sanitize_key( (string) ( $_POST['decision'] ?? '' ) );
+		$review_note = substr( sanitize_text_field( (string) wp_unslash( $_POST['review_note'] ?? '' ) ), 0, 300 );
 		$job = $this->job(); $proposal = $job['proposals'][ $id ] ?? null;
-		if ( ! is_array( $proposal ) || ! in_array( $decision, [ 'accept','reject' ], true ) ) $this->redirect( 'invalid' );
+		if ( ! is_array( $proposal ) || ! in_array( $decision, [ 'accept','reject','regenerate' ], true ) ) $this->redirect( 'invalid' );
+		if ( 'regenerate' === $decision ) {
+			$replacement = $this->regenerate_proposal( $proposal, $review_note );
+			if ( is_wp_error( $replacement ) ) {
+				$job['proposals'][ $id ]['status'] = 'rejected';
+				$job['proposals'][ $id ]['lastRetryError'] = sanitize_key( $replacement->get_error_code() );
+				$job['proposals'][ $id ]['reviewedAt'] = gmdate( 'c' );
+				update_option( self::JOB_OPTION, $job, false );
+				$this->profiles->overall_seo_report( null, true );
+				$this->redirect( 'retry_failed' );
+			}
+			$job['proposals'][ $id ] = $replacement;
+			update_option( self::JOB_OPTION, $job, false );
+			$this->profiles->overall_seo_report( null, true );
+			$this->redirect( 'regenerated' );
+		}
 		if ( 'accept' === $decision && ! $this->apply( $proposal ) ) $this->redirect( 'stale' );
 		$job = $this->job();
 		$job['proposals'][ $id ]['status'] = 'accept' === $decision ? 'accepted' : 'rejected';
 		$job['proposals'][ $id ]['reviewedAt'] = gmdate( 'c' );
 		$job['proposals'][ $id ]['reviewedBy'] = get_current_user_id();
 		update_option( self::JOB_OPTION, $job, false );
+		$this->mark_review_state( $proposal, 'accept' === $decision ? 'accepted' : 'rejected' );
+		$this->profiles->overall_seo_report( null, true );
 		$this->redirect( 'accept' === $decision ? 'accepted' : 'rejected' );
+	}
+
+	private function regenerate_proposal( array $proposal, string $review_note ) {
+		$record = $this->record( absint( $proposal['objectId'] ?? 0 ), (string) ( $proposal['scope'] ?? '' ) );
+		if ( ! $record ) return new \WP_Error( 'missing_record', __( 'The source record no longer exists.', 'dsa' ) );
+		$result = $this->broker->request( [
+			'service'=>'seo', 'capability'=>'propose_batch', 'operation'=>'seo_retry_' . sanitize_key( (string) $proposal['scope'] ),
+			'system'=>'Return only contract JSON. The previous SEO suggestion was rejected. Produce a materially corrected alternative using only evidence in the supplied record and site context. Respect the reviewer note when present. Never invent what an image depicts, claims, locations, credentials, ingredients, benefits, prices, availability or guarantees. For media, an intentionally empty alt is correct when the evidence does not prove meaningful visual content. Do not change URLs or filenames.',
+			'user'=>(string) wp_json_encode( [
+				'schema'=>self::SCHEMA,
+				'scope'=>$proposal['scope'],
+				'siteContext'=>$this->site_context(),
+				'records'=>[ $record ],
+				'previousRejectedProposal'=>[ 'fields'=>$proposal['fields'] ?? [], 'reason'=>$proposal['reason'] ?? '' ],
+				'reviewerNote'=>$review_note,
+				'output'=>[ 'schema'=>self::SCHEMA, 'proposals'=>[ [ 'id'=>absint( $record['id'] ), 'fields'=>'all_media' === $proposal['scope'] ? [ 'title'=>'','alt'=>'','caption'=>'','description'=>'' ] : [ 'seoTitle'=>'','metaDescription'=>'','excerpt'=>'','searchPhrases'=>[] ], 'reason'=>'' ] ] ],
+			], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+			'responseSchema'=>$this->response_schema( [ $record ], (string) $proposal['scope'] ),
+		] );
+		$data = is_array( $result['validation']['data'] ?? null ) ? $result['validation']['data'] : [];
+		if ( empty( $result['ok'] ) || self::SCHEMA !== ( $data['schema'] ?? '' ) ) return new \WP_Error( 'provider_retry_failed', __( 'The AI provider did not return a safe replacement.', 'dsa' ) );
+		$clean = $this->sanitize_proposals( (array) ( $data['proposals'] ?? [] ), [ $record ], (string) $proposal['scope'] );
+		$replacement = reset( $clean );
+		if ( ! is_array( $replacement ) ) return new \WP_Error( 'empty_retry', __( 'The replacement contained no safe, useful fields.', 'dsa' ) );
+		$replacement['attempts'] = absint( $proposal['attempts'] ?? 0 ) + 1;
+		$replacement['previousReason'] = substr( sanitize_text_field( (string) ( $proposal['reason'] ?? '' ) ), 0, 300 );
+		return $replacement;
+	}
+
+	private function mark_review_state( array $proposal, string $status ): void {
+		$id = absint( $proposal['objectId'] ?? 0 );
+		if ( ! $id ) return;
+		update_post_meta( $id, '_kiwe_seo_review_status', $status );
+		update_post_meta( $id, '_kiwe_seo_reviewed_at', gmdate( 'c' ) );
+		if ( 'accepted' === $status && str_starts_with( (string) ( $proposal['scope'] ?? '' ), 'all_media' ) ) {
+			update_post_meta( $id, '_kiwe_seo_intentional_empty_fields', array_values( (array) ( $proposal['intentionalEmpty'] ?? [] ) ) );
+		}
 	}
 
 	public function document_title( array $parts ): array {
@@ -199,16 +278,18 @@ final class SEO_Refinement_Service {
 		foreach ( $input as $proposal ) {
 			if ( ! is_array( $proposal ) ) continue; $id=absint( $proposal['id'] ?? 0 ); if ( ! isset( $known[ $id ] ) ) continue;
 			$fields=is_array( $proposal['fields'] ?? null ) ? $proposal['fields'] : [];
-			$clean = str_starts_with( $scope, 'all_media' ) ? [
+			$is_media = str_starts_with( $scope, 'all_media' );
+			$clean = $is_media ? [
 				'title'=>substr( sanitize_text_field( (string) ( $fields['title'] ?? '' ) ),0,200 ), 'alt'=>substr( sanitize_text_field( (string) ( $fields['alt'] ?? '' ) ),0,300 ),
 				'caption'=>substr( sanitize_textarea_field( (string) ( $fields['caption'] ?? '' ) ),0,1000 ), 'description'=>substr( sanitize_textarea_field( (string) ( $fields['description'] ?? '' ) ),0,3000 ),
 			] : [
 				'seoTitle'=>substr( sanitize_text_field( (string) ( $fields['seoTitle'] ?? '' ) ),0,200 ), 'metaDescription'=>substr( sanitize_textarea_field( (string) ( $fields['metaDescription'] ?? '' ) ),0,320 ),
 				'excerpt'=>substr( sanitize_textarea_field( (string) ( $fields['excerpt'] ?? '' ) ),0,1000 ), 'searchPhrases'=>array_values( array_unique( array_filter( array_map( static fn( $v ): string=>substr( sanitize_text_field( (string) $v ),0,120 ), array_slice( is_array( $fields['searchPhrases'] ?? null ) ? $fields['searchPhrases'] : [],0,10 ) ) ) ) ),
 			];
-			$clean=array_filter( $clean, static fn( $v ): bool=>[] !== $v && '' !== $v ); if ( ! $clean ) continue;
+			$intentional_empty = $is_media ? array_keys( array_filter( $clean, static fn( $v ): bool => '' === $v ) ) : [];
+			$clean=array_filter( $clean, static fn( $v ): bool=>[] !== $v && '' !== $v ); if ( ! $clean && ! $intentional_empty ) continue;
 			$key=substr( hash( 'sha256', $scope . '|' . $id ),0,16 );
-			$out[ $key ]=[ 'objectId'=>$id, 'scope'=>$scope, 'label'=>(string) $known[$id]['label'], 'originalHash'=>(string) $known[$id]['sourceHash'], 'fields'=>$clean, 'reason'=>substr( sanitize_text_field( (string) ( $proposal['reason'] ?? '' ) ),0,300 ), 'status'=>'pending' ];
+			$out[ $key ]=[ 'objectId'=>$id, 'scope'=>$scope, 'label'=>(string) $known[$id]['label'], 'originalHash'=>(string) $known[$id]['sourceHash'], 'fields'=>$clean, 'intentionalEmpty'=>$intentional_empty, 'reason'=>substr( sanitize_text_field( (string) ( $proposal['reason'] ?? '' ) ),0,300 ), 'status'=>'pending' ];
 		}
 		return $out;
 	}
@@ -275,7 +356,7 @@ final class SEO_Refinement_Service {
 	private function scope_ids( string $scope ): array {
 		$type=[ 'all_posts'=>'post','all_pages'=>'page','all_products'=>'product','all_media'=>'attachment' ][ $scope ] ?? '';
 		if ( ! $type || ! post_type_exists( $type ) ) return [];
-		return array_map( 'absint', get_posts( [ 'post_type'=>$type, 'post_status'=>'attachment' === $type ? 'inherit' : 'publish', 'posts_per_page'=>1000, 'orderby'=>'ID', 'order'=>'ASC', 'fields'=>'ids', 'no_found_rows'=>true ] ) );
+		return array_map( 'absint', get_posts( [ 'post_type'=>$type, 'post_status'=>'attachment' === $type ? 'inherit' : 'publish', 'posts_per_page'=>-1, 'orderby'=>'ID', 'order'=>'ASC', 'fields'=>'ids', 'no_found_rows'=>true ] ) );
 	}
 
 	private function scopes(): array { return [ 'all_posts'=>__( 'All posts', 'dsa' ), 'all_pages'=>__( 'All pages', 'dsa' ), 'all_products'=>__( 'All products', 'dsa' ), 'all_media'=>__( 'All media', 'dsa' ) ]; }
@@ -283,6 +364,6 @@ final class SEO_Refinement_Service {
 	private function job(): array { $job=get_option( self::JOB_OPTION, [] ); return is_array( $job ) && self::SCHEMA === ( $job['schema'] ?? '' ) ? $job : []; }
 	private function authorize( string $nonce ): void { check_admin_referer( $nonce ); if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'You are not allowed to manage SEO proposals.', 'dsa' ) ); }
 	private function redirect( string $status ): void { wp_safe_redirect( admin_url( 'admin.php?page=kiwe-seo&seo-refinement=' . sanitize_key( $status ) ) ); exit; }
-	private function notice( string $key ): string { return [ 'queued'=>__( 'The shared-host-safe SEO review was queued.', 'dsa' ), 'empty'=>__( 'No eligible public records were found.', 'dsa' ), 'processed'=>__( 'The next bounded batch was processed.', 'dsa' ), 'accepted'=>__( 'The reviewed proposal was applied.', 'dsa' ), 'rejected'=>__( 'The proposal was rejected; content was preserved.', 'dsa' ), 'stale'=>__( 'The source changed after this proposal. Start a fresh review.', 'dsa' ), 'invalid'=>__( 'The requested SEO action was invalid.', 'dsa' ) ][ $key ] ?? __( 'SEO review updated.', 'dsa' ); }
+	private function notice( string $key ): string { return [ 'queued'=>__( 'The shared-host-safe SEO review was queued.', 'dsa' ), 'empty'=>__( 'No eligible public records were found.', 'dsa' ), 'processed'=>__( 'The next bounded batch was processed.', 'dsa' ), 'accepted'=>__( 'The reviewed proposal was applied.', 'dsa' ), 'rejected'=>__( 'The proposal remains rejected; content was preserved.', 'dsa' ), 'regenerated'=>__( 'A fresh replacement proposal is ready for review.', 'dsa' ), 'retry_failed'=>__( 'The provider could not produce a safer replacement. The existing content and rejected proposal were preserved.', 'dsa' ), 'stale'=>__( 'The source changed after this proposal. Start a fresh review.', 'dsa' ), 'invalid'=>__( 'The requested SEO action was invalid.', 'dsa' ) ][ $key ] ?? __( 'SEO review updated.', 'dsa' ); }
 	private function dedicated_seo_plugin_active(): bool { return defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' ) || defined( 'SEOPRESS_VERSION' ); }
 }

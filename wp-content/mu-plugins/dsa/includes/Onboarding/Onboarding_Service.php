@@ -38,8 +38,8 @@ final class Onboarding_Service {
 		wp_localize_script( 'kiwe-onboarding', 'KIWE_ONBOARDING', [
 			'chooseImage' => __( 'Choose image', 'dsa' ),
 			'useImage'    => __( 'Use this image', 'dsa' ),
-			'chooseResources' => __( 'Choose resources', 'dsa' ),
-			'useResources'    => __( 'Add selected resources', 'dsa' ),
+			'chooseResources' => __( 'Upload resources to the Media Library', 'dsa' ),
+			'useResources'    => __( 'Add uploaded resources', 'dsa' ),
 			'noResource'      => __( 'No resources selected yet.', 'dsa' ),
 			'resourceRoles'    => $this->resource_roles(),
 			'saving'      => __( 'Saving owner context…', 'dsa' ),
@@ -71,7 +71,9 @@ final class Onboarding_Service {
 		if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'You are not allowed to complete this onboarding.', 'dsa' ) );
 		$invitation = $this->request_invitation();
 		if ( isset( $_GET['kiwe_invite'] ) && ! $invitation ) wp_die( esc_html__( 'This onboarding invitation is invalid, expired, revoked, or belongs to another administrator.', 'dsa' ) );
-		$p = $this->profiles->current(); $scores = $this->profiles->scores( $p );
+		$p = $this->profiles->current();
+		$scores = $this->profiles->scores( $p );
+		$seo_report = $this->profiles->overall_seo_report( $p, true );
 		$flash = get_transient( 'kiwe_onboarding_flash_' . get_current_user_id() );
 		if ( $flash ) delete_transient( 'kiwe_onboarding_flash_' . get_current_user_id() );
 		$invite_link = get_transient( 'kiwe_onboarding_link_' . get_current_user_id() );
@@ -80,8 +82,13 @@ final class Onboarding_Service {
 		<div class="wrap kiwe-onboarding" data-kiwe-onboarding>
 			<header class="kiwe-onboarding__hero">
 				<div><span class="kiwe-onboarding__eyebrow"><?php esc_html_e( 'Kiwe · SEAM Design Context', 'dsa' ); ?></span><h1><?php esc_html_e( 'Tell your website what the owner already knows', 'dsa' ); ?></h1><p><?php esc_html_e( 'A guided setup for business identity, contact details, SEO foundations, brand direction and store context. Existing WordPress and WooCommerce information is already filled in.', 'dsa' ); ?></p></div>
-				<div class="kiwe-onboarding__scores"><div><strong><?php echo esc_html( (string) $scores['seoStrength'] ); ?>%</strong><span><?php esc_html_e( 'SEO strength', 'dsa' ); ?></span></div><div><strong><?php echo esc_html( (string) $scores['designContextStrength'] ); ?>%</strong><span><?php esc_html_e( 'Design context', 'dsa' ); ?></span></div></div>
+				<div class="kiwe-onboarding__scores"><div><strong><?php echo esc_html( (string) $seo_report['score'] ); ?>%</strong><span><?php esc_html_e( 'Overall SEO', 'dsa' ); ?></span></div><div><strong><?php echo esc_html( (string) $scores['designContextStrength'] ); ?>%</strong><span><?php esc_html_e( 'Design context', 'dsa' ); ?></span></div></div>
 			</header>
+			<div class="kiwe-seo-score-breakdown" aria-label="<?php esc_attr_e( 'Overall SEO score components', 'dsa' ); ?>">
+				<?php foreach ( (array) $seo_report['components'] as $component ) : if ( empty( $component['active'] ) ) continue; ?>
+					<div><strong><?php echo esc_html( (string) $component['score'] ); ?>%</strong><span><?php echo esc_html( (string) $component['label'] ); ?></span><small><?php echo esc_html( sprintf( __( '%1$d of %2$d ready', 'dsa' ), absint( $component['ready'] ), absint( $component['total'] ) ) ); ?></small></div>
+				<?php endforeach; ?>
+			</div>
 			<?php if ( is_array( $flash ) ) : ?><div class="notice notice-<?php echo esc_attr( $flash['type'] ?? 'info' ); ?> is-dismissible"><p><?php echo esc_html( $flash['message'] ?? '' ); ?></p></div><?php endif; ?>
 			<?php if ( is_string( $invite_link ) && $invite_link ) : ?><div class="kiwe-onboarding__share"><strong><?php esc_html_e( 'Owner link created', 'dsa' ); ?></strong><input type="text" readonly value="<?php echo esc_attr( $invite_link ); ?>" data-kiwe-copy-source><button type="button" class="button" data-kiwe-copy><?php esc_html_e( 'Copy link', 'dsa' ); ?></button><small><?php esc_html_e( 'This link expires in seven days, requires the selected administrator to sign in, and cannot authorize another account.', 'dsa' ); ?></small></div><?php endif; ?>
 
@@ -140,8 +147,8 @@ final class Onboarding_Service {
 				</section>
 
 				<section class="kiwe-onboarding__panel" data-kiwe-step="6" hidden>
-					<div class="kiwe-onboarding__intro"><span>07</span><div><h2><?php esc_html_e( 'Resources for the website', 'dsa' ); ?></h2><p><?php esc_html_e( 'Upload or select the images, videos, PDFs and other WordPress media the designer may use. Files stay in the native Media Library; this step records only their intended design role and owner note.', 'dsa' ); ?></p></div></div>
-					<div class="kiwe-resource-toolbar"><button type="button" class="button button-primary" data-kiwe-resource-select><?php esc_html_e( 'Add from Media Library', 'dsa' ); ?></button><p class="description"><?php esc_html_e( 'Removing an item here removes it only from Design Context. It never deletes the attachment or file.', 'dsa' ); ?></p></div>
+					<div class="kiwe-onboarding__intro"><span>07</span><div><h2><?php esc_html_e( 'Upload website resources', 'dsa' ); ?></h2><p><?php esc_html_e( 'Give the designer the images, videos, PDFs and other files supplied by the owner. Uploading here adds every file to the native WordPress Media Library, where SiteGraph can expose it as design context. You may also switch to the library tab to reuse an existing attachment.', 'dsa' ); ?></p></div></div>
+					<div class="kiwe-resource-toolbar"><button type="button" class="button button-primary" data-kiwe-resource-select><?php esc_html_e( 'Upload to Media Library', 'dsa' ); ?></button><p class="description"><?php esc_html_e( 'After upload, select the files and record their intended role. Removing a resource from this list never deletes its Media Library attachment.', 'dsa' ); ?></p></div>
 					<div class="kiwe-resource-list" data-kiwe-resources><?php foreach ( (array) ( $p['resources']['items'] ?? [] ) as $i=>$resource ) $this->resource_row( (int) $i, (array) $resource ); ?></div>
 					<p class="kiwe-resource-empty" data-kiwe-resource-empty <?php echo ! empty( $p['resources']['items'] ) ? 'hidden' : ''; ?>><?php esc_html_e( 'No resources selected yet. You can still continue and add them later.', 'dsa' ); ?></p>
 				</section>

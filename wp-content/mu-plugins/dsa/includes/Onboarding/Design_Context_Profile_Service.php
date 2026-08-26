@@ -16,6 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Design_Context_Profile_Service {
 	public const OPTION_PROFILE = 'kiwe_seam_design_context_v1';
 	public const OPTION_STATUS  = 'kiwe_onboarding_status_v1';
+	public const OPTION_SEO_REPORT = 'kiwe_overall_seo_report_v1';
 	public const PAGE_VISIBILITY_META = '_kiwe_search_visibility';
 	public const USER_META_TEAM_MEMBER = 'kiwe_public_team_member';
 	public const USER_META_TEAM_TITLE = 'kiwe_team_title';
@@ -75,6 +76,10 @@ final class Design_Context_Profile_Service {
 	}
 
 	public static function saved_seo_strength(): ?int {
+		$report = get_option( self::OPTION_SEO_REPORT, [] );
+		if ( is_array( $report ) && isset( $report['score'] ) ) {
+			return max( 0, min( 100, absint( $report['score'] ) ) );
+		}
 		$status = get_option( self::OPTION_STATUS, [] );
 		if ( ! is_array( $status ) || empty( $status['completed'] ) || ! isset( $status['scores']['seoStrength'] ) ) return null;
 		return max( 0, min( 100, absint( $status['scores']['seoStrength'] ) ) );
@@ -132,12 +137,16 @@ final class Design_Context_Profile_Service {
 			],
 			false
 		);
+		$this->overall_seo_report( $profile, true );
 
 		return $profile;
 	}
 
 	public function public_context( bool $administrator = false ): array {
 		$profile = $this->current();
+		$scores = $this->scores( $profile );
+		$overall_seo = self::saved_seo_strength();
+		if ( null !== $overall_seo ) $scores['seoStrength'] = $overall_seo;
 		$address = $profile['contact']['address'];
 		$about   = $profile['about'];
 		$about = $this->resolve_people( [ 'about' => $about ] )['about'];
@@ -227,7 +236,7 @@ final class Design_Context_Profile_Service {
 				'shippingLocations'     => [ 'mode' => $profile['commerce']['shippingLocationMode'], 'countries' => $profile['commerce']['shippingCountries'] ],
 			],
 			'seo'    => $profile['seo'],
-			'scores' => $this->scores( $profile ),
+			'scores' => $scores,
 			'privacy' => [
 				'publicBusinessContextOnly' => true,
 				'operationalAddressIncluded' => $administrator,
@@ -238,15 +247,7 @@ final class Design_Context_Profile_Service {
 
 	public function scores( ?array $profile = null ): array {
 		$p = $profile ?: $this->current();
-		$seo_checks = [
-			! empty( $p['identity']['siteName'] ), ! empty( $p['identity']['tagline'] ),
-			! empty( $p['seo']['homepageDescription'] ), ! empty( $p['identity']['logoId'] ),
-			! empty( $p['identity']['siteIconId'] ), ! empty( $p['contact']['email'] ),
-			! empty( $p['contact']['phone'] ), ! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
-			! empty( $p['seo']['legalName'] ), ! empty( $p['seo']['primaryGoal'] ),
-			! empty( $p['seo']['searchIntent'] ), ! empty( $p['seo']['proofPoints'] ),
-			! empty( $p['about']['story'] ), ! empty( $p['about']['mission'] ) || ! empty( $p['about']['vision'] ),
-		];
+		$seo_checks = $this->seo_evidence_checks( $p );
 		$design_checks = [
 			! empty( $p['identity']['siteName'] ), ! empty( $p['identity']['description'] ),
 			! empty( $p['identity']['industry'] ), ! empty( $p['audience']['primary'] ),
@@ -259,6 +260,146 @@ final class Design_Context_Profile_Service {
 		];
 		$percent = static fn( array $checks ): int => (int) round( 100 * count( array_filter( $checks ) ) / max( 1, count( $checks ) ) );
 		return [ 'seoStrength' => $percent( $seo_checks ), 'designContextStrength' => $percent( $design_checks ) ];
+	}
+
+	/**
+	 * Calculate the site-wide SEO score from owner evidence and the native
+	 * WordPress records Kiwe can actually improve. Empty content types are not
+	 * treated as failures; their weight is redistributed across active scopes.
+	 */
+	public function overall_seo_report( ?array $profile = null, bool $persist = true ): array {
+		$p = $profile ?: $this->current();
+		$evidence = $this->seo_evidence_checks( $p );
+		$evidence_total = count( $evidence );
+		$evidence_ready = count( array_filter( $evidence ) );
+		$components = [
+			'onboarding' => [
+				'label' => 'Onboarding evidence',
+				'score' => $this->percent( $evidence_ready, $evidence_total ),
+				'ready' => $evidence_ready,
+				'total' => $evidence_total,
+				'weight' => 20,
+				'active' => true,
+			],
+			'pages' => $this->content_seo_component( 'page', 'Pages', 20 ),
+			'posts' => $this->content_seo_component( 'post', 'Posts', 15 ),
+			'products' => $this->content_seo_component( 'product', 'Products', 20 ),
+			'media' => $this->media_seo_component( 25 ),
+		];
+
+		$weighted = 0;
+		$weight_total = 0;
+		foreach ( $components as $component ) {
+			if ( empty( $component['active'] ) ) continue;
+			$weight = absint( $component['weight'] ?? 0 );
+			$weighted += absint( $component['score'] ?? 0 ) * $weight;
+			$weight_total += $weight;
+		}
+
+		$report = [
+			'schema' => 'kiwe.overall-seo-score.v1',
+			'score' => $weight_total ? (int) round( $weighted / $weight_total ) : 0,
+			'components' => $components,
+			'calculatedAt' => gmdate( 'c' ),
+			'authority' => [
+				'aggregateNotVanityMetric' => true,
+				'emptyScopesRedistributed' => true,
+				'unsafeSuggestionsNeverCountAsComplete' => true,
+			],
+		];
+		if ( $persist ) update_option( self::OPTION_SEO_REPORT, $report, false );
+		return $report;
+	}
+
+	private function seo_evidence_checks( array $p ): array {
+		return [
+			! empty( $p['identity']['siteName'] ), ! empty( $p['identity']['tagline'] ),
+			! empty( $p['seo']['homepageDescription'] ), ! empty( $p['identity']['logoId'] ),
+			! empty( $p['identity']['siteIconId'] ), ! empty( $p['contact']['email'] ),
+			! empty( $p['contact']['phone'] ), ! empty( $p['contentPlan']['existingPages'] ) || ! empty( $p['contentPlan']['plannedPages'] ),
+			! empty( $p['seo']['legalName'] ), ! empty( $p['seo']['primaryGoal'] ),
+			! empty( $p['seo']['searchIntent'] ), ! empty( $p['seo']['proofPoints'] ),
+			! empty( $p['about']['story'] ), ! empty( $p['about']['mission'] ) || ! empty( $p['about']['vision'] ),
+		];
+	}
+
+	private function content_seo_component( string $post_type, string $label, int $weight ): array {
+		if ( ! post_type_exists( $post_type ) ) return [ 'label'=>$label, 'score'=>0, 'ready'=>0, 'total'=>0, 'weight'=>$weight, 'active'=>false ];
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT p.ID, p.post_excerpt,
+				MAX(CASE WHEN pm.meta_key = '_kiwe_seo_title' THEN pm.meta_value ELSE '' END) AS seo_title,
+				MAX(CASE WHEN pm.meta_key = '_kiwe_seo_description' THEN pm.meta_value ELSE '' END) AS seo_description,
+				MAX(CASE WHEN pm.meta_key = '_kiwe_search_phrases' THEN pm.meta_value ELSE '' END) AS search_phrases
+				FROM {$wpdb->posts} p
+				LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key IN ('_kiwe_seo_title','_kiwe_seo_description','_kiwe_search_phrases')
+				WHERE p.post_type = %s AND p.post_status = 'publish'
+				GROUP BY p.ID, p.post_excerpt",
+				$post_type
+			),
+			ARRAY_A
+		);
+		$total = count( $rows );
+		if ( ! $total ) return [ 'label'=>$label, 'score'=>0, 'ready'=>0, 'total'=>0, 'weight'=>$weight, 'active'=>false ];
+		$points = 0;
+		$ready = 0;
+		foreach ( $rows as $row ) {
+			$record_points = ( '' !== trim( (string) $row['seo_title'] ) ? 40 : 0 )
+				+ ( '' !== trim( (string) $row['seo_description'] ) ? 40 : 0 )
+				+ ( '' !== trim( (string) $row['post_excerpt'] ) ? 10 : 0 )
+				+ ( '' !== trim( (string) $row['search_phrases'] ) ? 10 : 0 );
+			$points += $record_points;
+			if ( $record_points >= 80 ) $ready++;
+		}
+		return [ 'label'=>$label, 'score'=>(int) round( $points / $total ), 'ready'=>$ready, 'total'=>$total, 'weight'=>$weight, 'active'=>true ];
+	}
+
+	private function media_seo_component( int $weight ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			"SELECT p.ID, p.post_title, p.post_excerpt, p.post_content, p.post_mime_type,
+			MAX(CASE WHEN pm.meta_key = '_wp_attachment_image_alt' THEN pm.meta_value ELSE '' END) AS image_alt,
+			MAX(CASE WHEN pm.meta_key = '_kiwe_seo_intentional_empty_fields' THEN pm.meta_value ELSE '' END) AS intentional_empty
+			FROM {$wpdb->posts} p
+			LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key IN ('_wp_attachment_image_alt','_kiwe_seo_intentional_empty_fields')
+			WHERE p.post_type = 'attachment' AND p.post_status = 'inherit'
+			GROUP BY p.ID, p.post_title, p.post_excerpt, p.post_content, p.post_mime_type",
+			ARRAY_A
+		);
+		$total = count( $rows );
+		if ( ! $total ) return [ 'label'=>'Media', 'score'=>0, 'ready'=>0, 'total'=>0, 'weight'=>$weight, 'active'=>false ];
+		$current_job = get_option( 'kiwe_seo_refinement_job_v1', [] );
+		$accepted = [];
+		if ( is_array( $current_job ) && 'all_media' === ( $current_job['scope'] ?? '' ) ) {
+			foreach ( (array) ( $current_job['proposals'] ?? [] ) as $proposal ) {
+				if ( is_array( $proposal ) && 'accepted' === ( $proposal['status'] ?? '' ) ) $accepted[ absint( $proposal['objectId'] ?? 0 ) ] = true;
+			}
+		}
+		$points = 0;
+		$ready = 0;
+		foreach ( $rows as $row ) {
+			$is_image = str_starts_with( (string) $row['post_mime_type'], 'image/' );
+			$intentional = maybe_unserialize( $row['intentional_empty'] ?? [] );
+			$intentional = is_array( $intentional ) ? $intentional : [];
+			$record_points = '' !== trim( (string) $row['post_title'] ) ? ( $is_image ? 20 : 30 ) : 0;
+			if ( $is_image ) {
+				$alt_ready = '' !== trim( (string) $row['image_alt'] ) || in_array( 'alt', $intentional, true ) || ! empty( $accepted[ (int) $row['ID'] ] );
+				$record_points += $alt_ready ? 40 : 0;
+				$record_points += '' !== trim( (string) $row['post_excerpt'] ) ? 20 : 0;
+				$record_points += '' !== trim( (string) $row['post_content'] ) ? 20 : 0;
+			} else {
+				$record_points += '' !== trim( (string) $row['post_excerpt'] ) ? 30 : 0;
+				$record_points += '' !== trim( (string) $row['post_content'] ) ? 40 : 0;
+			}
+			$points += $record_points;
+			if ( $record_points >= 80 ) $ready++;
+		}
+		return [ 'label'=>'Media', 'score'=>(int) round( $points / $total ), 'ready'=>$ready, 'total'=>$total, 'weight'=>$weight, 'active'=>true ];
+	}
+
+	private function percent( int $ready, int $total ): int {
+		return $total > 0 ? (int) round( 100 * $ready / $total ) : 0;
 	}
 
 	/**
