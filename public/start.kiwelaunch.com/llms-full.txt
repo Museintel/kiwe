@@ -1,0 +1,139 @@
+# SEAM by Kiwe
+
+> Canonical command boundary for attachment-aware website ideation, auditing, fixing and WordPress binding preparation.
+
+- [Start contract](https://start.kiwelaunch.com/start.md)
+- [Command manifest](https://start.kiwelaunch.com/command-manifest.json)
+- [Machine registry](https://start.kiwelaunch.com/.well-known/kiwe.json)
+- [GitHub source mirror](https://raw.githubusercontent.com/Museintel/kiwe/codex/phonekey-whatsapp-rc1/KIWE-START.md)
+
+Never substitute kiwilaunch.com or another similarly named domain.
+
+---
+
+# SEAM Start
+
+Contract version: `8.4`
+Updated: `2026-08-26`
+
+Read the matching `command-manifest.json` before acting. Do not crawl the repository and do not use a command remembered from an older conversation.
+
+Inspect supplied attachments even when the user gives only this start link. If no slash command is present, identify each attachment by content rather than filename, recommend exactly one of the six commands with a one-sentence reason, and wait for that command. Do not silently execute a guessed command. A raw HTML/CSS/JS project needing design work normally suggests `/ideate`; an accepted raw project needing WordPress binding intent suggests `/convert /bricks`; an artifact needing inspection suggests `/audit` or `/accessibility`; a report with proven findings suggests `/fix`; and a failed generated output suggests `/redo`.
+
+SEAM has six commands:
+
+- `/ideate` — inspect the supplied project, classify whether SiteGraph is required, report Design Context coverage, then create or refine raw HTML/CSS/JS without imposing a house style.
+- `/convert /bricks` — prepare both Bricks dynamic tags and query-loop bindings; add `/dynamictags` or `/queryloop` to request only one binding type.
+- `/audit` — inspect an artifact without changing it.
+- `/accessibility` — audit accessibility, responsive geometry and light/dark presentation.
+- `/fix` — correct proven audit findings while preserving the accepted design.
+- `/redo` — replace a failed output from the last accepted artifact and failure evidence.
+
+SiteGraph and its embedded Design Context are attached or safely connected project inputs. They are not commands. `/ideate` first classifies SiteGraph as required, beneficial or not needed. If required evidence is absent, it asks for one safe read-only handoff. When present, it reports Design Context coverage and a concise, page-relevant Design Context and Design Content usage brief, then waits for the user to say `proceed` before changing or creating files. Seam Framework is an explicit `seam.kiwe` compiler option, not a separate command. Browser AI never emits production Bricks JSON; only the `seam.kiwe` application does.
+
+Unknown commands, aliases and unsupported modifiers must be rejected.
+
+
+--- COMMAND MANIFEST ---
+
+{
+  "schema": "kiwe.command-manifest.v2",
+  "productName": "SEAM",
+  "contractVersion": "8.4",
+  "updated": "2026-08-26",
+  "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
+  "authority": {
+    "creative": "The user's design conversation owns art direction. /ideate must not impose a house style.",
+    "conversion": "The seam.kiwe application is the only authority that emits production Bricks JSON. Browser AI only prepares source and binding intent.",
+    "siteContext": "SiteGraph is an attached or connected input and carries embedded Design Context; neither is a slash command.",
+    "framework": "Seam Framework is an explicit seam.kiwe compilation option, never an automatic rewrite."
+  },
+  "commands": [
+    {"command": "/ideate", "context": "contexts/ideate.md", "requires": ["project request or inspectable attachments; SiteGraph only when preflight proves it is required", "user says proceed after reviewing the usage brief"], "outputs": ["Design Context coverage report before modification", "page-relevant Design Context and Design Content usage brief", "ideate/kiwe-ideate-discovery.json", "complete raw HTML/CSS/JS project after approval", "asset manifest"], "boundary": "Inspect attachments, classify the project and SiteGraph requirement, then pause on a concise usage brief. Preserve accepted art direction and do not create files before the user says proceed."},
+    {"command": "/convert /bricks", "context": "contexts/convert-bricks.md", "requires": ["complete accepted raw HTML/CSS/JS project", "SiteGraph when real site fields are requested"], "outputs": ["complete updated raw project", "bricks-bindings/kiwe-bindings.json", "binding report"], "modifiers": {"default": "dynamicTagsAndQueryLoops", "/dynamictags": "dynamicTagsOnly", "/queryloop": "queryLoopsOnly"}, "boundary": "Prepare Bricks dynamic intent for seam.kiwe. Never emit Bricks JSON."},
+    {"command": "/audit", "context": "contexts/audit.md", "requires": ["source or generated artifact"], "outputs": ["machine-readable report", "human summary", "score evidence"], "boundary": "Read only. Never modify the submitted artifact."},
+    {"command": "/accessibility", "context": "contexts/accessibility.md", "requires": ["source or Bricks artifact"], "outputs": ["accessibility report", "light/dark color evidence", "responsive evidence"], "boundary": "Audit only. Use /fix to create a changed artifact."},
+    {"command": "/fix", "context": "contexts/accessibility.md", "requires": ["artifact", "audit report"], "outputs": ["corrected artifact", "before/after report"], "boundary": "Apply only proven findings and preserve art direction, content and behavior."},
+    {"command": "/redo", "context": "contexts/audit.md", "requires": ["failed output", "failure evidence or prior report"], "outputs": ["replacement artifact", "failure closure report"], "boundary": "Discard the failed output as authority; return to the last accepted artifact."}
+  ],
+  "aliases": [],
+  "unknownCommandPolicy": "reject",
+  "cachePolicy": "Fetch the versioned manifest advertised by entry.json. Do not reuse a different contract version from conversation memory."
+}
+
+
+--- /ideate ---
+
+# /ideate
+
+Start with discovery, not a fixed questionnaire. Inspect every supplied file by its contents before asking anything and determine which lane is proven by the evidence: a new website, a redesign of an existing website, or enhancement/expansion of an existing HTML/CSS/JS project. Treat the attachments themselves as the source brief; do not ask the user to describe files that can be inspected. State the detected lane and ask only for missing decisions that materially change the result. Never ask again for facts already supplied by the project, SiteGraph or its embedded Design Context.
+
+Before designing, classify SiteGraph as `required`, `beneficial`, or `not-needed` and explain the evidence. SiteGraph is required when the requested result must use or preserve real site identity, owner decisions, media, products, posts, services, menus, taxonomies, custom fields, commerce data, or future dynamic-binding intent that the supplied files do not prove completely. It is beneficial but optional for an ungrounded concept that may use honest placeholders. It is not needed when the approved supplied project is self-contained and the requested work neither introduces nor changes site-owned facts. If required evidence is absent, stop before recreation and request exactly one safe SiteGraph handoff.
+
+Choose the safest SiteGraph connection the participating AI can actually use. Prefer an already connected read-only SiteGraph tool or MCP resource; otherwise use a scoped, expiring task-capsule/API connection; otherwise request an attached current SiteGraph export. Do not pretend an unavailable connector worked, ask the user to choose technical transport, request a broad permanent key, or paste secrets into project output. Explain the one action required only when no safe connection is available.
+
+Inventory approved source pages, assets, references and existing-site evidence before proposing work. Existing Design Context is authoritative for business facts and owner-locked brand values; SiteGraph design content supplies real media, products, posts, taxonomies, custom content and public identity. Distinguish read-only owner facts from AI-writable suggestions.
+
+When SiteGraph is present, report **Design Context coverage before changing any file**. Use `seamDesignContext.scores.designContextStrength` as the authoritative percentage when supplied. Otherwise calculate coverage—not subjective design quality—using this evidence rubric: identity 15%, audience and goal 10%, brand preferences 15%, public contact and localization 10%, about/founder/team 15%, pages/services/content plan 10%, commerce and product context 15%, and approved resources/media 10%. Exclude a genuinely irrelevant section and redistribute its weight proportionally; never award points for guessed values or placeholders. Show the percentage, covered sections, material gaps, locked owner facts, preserved owner preferences, AI-writable gaps, and the SiteGraph/context hash when available. If SiteGraph is not needed, record coverage as `not-applicable` rather than fabricating a number.
+
+Next share a concise **usage brief** before changing any file. Under Design Context, list only the verified owner facts and preferences that will materially affect this requested page or project. Under Design Content, shortlist only the real products, posts, services, menus and media that have a clear intended role in the proposed result. Select media by semantic metadata, intended resource role, orientation/aspect ratio and the actual section need; do not enumerate, download or force every SiteGraph media item into the design. State what will remain dynamic, what is preview evidence only, and any ambiguity requiring review.
+
+Then stop and ask the user to say `proceed`. Do not create or modify output files before that explicit response. Emit `ideate/kiwe-ideate-discovery.json` using schema `kiwe.ideate-discovery.v3` with approval status `awaiting-user` during this pause. After `proceed`, set it to `approved`, preserve the approved usage brief as the implementation boundary, and produce the project without another generic questionnaire. A later material change to the usage brief requires a new approval; small conversational corrections do not.
+
+Do not apply Seam Framework, Bricks structures or a SEAM house style. Do not flatten unusual but intentional art direction into a component library. Keep corrections conversational until the user accepts the result.
+
+Return a complete browser-runnable HTML/CSS/JS project appropriate to the detected lane: create a coherent new project, redesign the approved existing site, or revise the supplied source in place. For an accepted supplied project, "recreate" means preserve its visual composition, responsive behavior, content hierarchy and JavaScript unless the user explicitly asks for a redesign; apply Design Context as grounded content, media and functional intent without imposing a new design language. Include every required local asset and `assets/asset-manifest.json`, recording provenance and intended WordPress Media use. Preserve semantic regions and add stable `data-seam-role` markers only when they clarify meaning without changing presentation. Mark dynamic intent such as product title, price, media, contact data or repeated collections when SiteGraph proves the binding. Never invent IDs, fields, products or site facts.
+
+
+--- /convert /bricks ---
+
+# /convert /bricks
+
+This is the browser-AI preparation lane, not the JSON compiler. Its input is the complete accepted HTML/CSS/JS project plus assets and, whenever real site fields are requested, a current SiteGraph connection or export.
+
+Preserve the rendered source, responsive behavior, content and JavaScript. Add stable unique source selectors only where required to describe Bricks binding intent. By default, identify both singular dynamic fields and repeated query regions. `/convert /bricks /dynamictags` limits the pass to singular dynamic text, links, images and supported WooCommerce fields. `/convert /bricks /queryloop` limits the pass to repeated Bricks query-loop regions. The modifiers are mutually exclusive and never change visual design.
+
+Use only post types, taxonomies, term IDs, fields, dynamic tags and query object types proven by SiteGraph or the public Bricks contract. Never invent a site-specific ID or field. Preserve static preview content but mark production regions as dynamic. Record launchers for proven Kiwe capabilities without replacing source popups or interactions that have distinct intent.
+
+Return the complete updated raw project, `bricks-bindings/kiwe-bindings.json` using schema `kiwe.bricks-bindings.v1`, and a binding report covering `queries`, `dynamicFields`, `launchers`, `menuContext`, `assumptions` and `requiresHumanReview`. Do not emit a Bricks template, Bricks JSON, Framework Profile or compiler confidence score. The user submits this package to `seam.kiwe`, whose deterministic compiler alone produces and validates native Bricks JSON.
+
+
+--- /audit ---
+
+# /audit and /redo
+
+Audit is read-only. Inspect the supplied artifact against its accepted source, declared contract and available rendered evidence. Report concrete findings with severity, selector or element ID, breakpoint, expected result, observed result and evidence. Scores must be reproducible from findings, not intuition.
+
+For `/redo`, treat the last accepted artifact as authority and the failed output only as evidence. Re-run the responsible stage, close each proven failure and report unresolved items. Do not stack speculative patches on top of the failed artifact and do not redesign unrelated areas.
+
+
+--- /accessibility ---
+
+# /accessibility and /fix
+
+Audit accessibility and visual robustness across keyboard use, focus, landmarks, names, headings, labels, reduced motion, contrast, readable text, overflow, clipping, collision, touch targets, responsive spacing, alignment and light/dark presentation. Distinguish source defects from conversion defects.
+
+Dark mode must preserve brand identity and visual hierarchy, not turn every surface black. Keep owner-locked brand colors, derive accessible supporting surfaces deliberately, and test foreground/background pairs in their actual states. Decorative text and imagery must remain decorative; do not promote low-opacity or layered art into primary readable content.
+
+`/accessibility` produces evidence and a report without changing the artifact. `/fix` applies only proven findings, preserves accepted art direction and behavior, then re-runs the same checks and returns before/after scores. Prefer native Bricks settings for Bricks artifacts and native CSS/HTML semantics for raw projects. Flag what cannot be fixed safely instead of guessing.
+
+
+--- /fix ---
+
+# /accessibility and /fix
+
+Audit accessibility and visual robustness across keyboard use, focus, landmarks, names, headings, labels, reduced motion, contrast, readable text, overflow, clipping, collision, touch targets, responsive spacing, alignment and light/dark presentation. Distinguish source defects from conversion defects.
+
+Dark mode must preserve brand identity and visual hierarchy, not turn every surface black. Keep owner-locked brand colors, derive accessible supporting surfaces deliberately, and test foreground/background pairs in their actual states. Decorative text and imagery must remain decorative; do not promote low-opacity or layered art into primary readable content.
+
+`/accessibility` produces evidence and a report without changing the artifact. `/fix` applies only proven findings, preserves accepted art direction and behavior, then re-runs the same checks and returns before/after scores. Prefer native Bricks settings for Bricks artifacts and native CSS/HTML semantics for raw projects. Flag what cannot be fixed safely instead of guessing.
+
+
+--- /redo ---
+
+# /audit and /redo
+
+Audit is read-only. Inspect the supplied artifact against its accepted source, declared contract and available rendered evidence. Report concrete findings with severity, selector or element ID, breakpoint, expected result, observed result and evidence. Scores must be reproducible from findings, not intuition.
+
+For `/redo`, treat the last accepted artifact as authority and the failed output only as evidence. Re-run the responsible stage, close each proven failure and report unresolved items. Do not stack speculative patches on top of the failed artifact and do not redesign unrelated areas.
+

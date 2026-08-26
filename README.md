@@ -1,5 +1,7 @@
 # Kiwe DSA
 
+The public SEAM command entrypoint is [start.kiwelaunch.com](https://start.kiwelaunch.com/). Browser AI clients that cannot yet open a newly indexed domain may read the same canonical start contract from [KIWE-START.md](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/KIWE-START.md); the live registry publishes both locations and immutable release hashes.
+
 Kiwe turns a conventional WordPress site into an appsite with one persistent Dual Surface Area: a responsive dock, contextual screens, private runtime hydration, PhoneKey identity, commerce, PWA/Push, notifications, analytics, and Bricks-first design integrations.
 
 Kiwe is a must-use plugin. WordPress pages remain server-rendered and indexable; the Surface is an additive application shell, not a replacement theme or client-side rendering requirement.

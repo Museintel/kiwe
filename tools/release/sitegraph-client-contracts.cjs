@@ -14,6 +14,10 @@ const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const start = read('KIWE-START.md');
 const ideate = read('kiwe-ai-toolkit/contexts/ideate.md');
 const manifest = read('kiwe-ai-toolkit/command-manifest.json');
+const registryBuild = read('tools/release/build-command-registry.cjs');
+const publicRegistry = JSON.parse(read('public/start.kiwelaunch.com/registry.json'));
+const publicIndex = read('public/start.kiwelaunch.com/index.html');
+const publicLlms = read('public/start.kiwelaunch.com/llms.txt');
 
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -41,6 +45,10 @@ check('SiteGraph admin explains namespace versus webpage', admin.includes('Base 
 check('SiteGraph admin creates and revokes downloadable client connections', admin.includes('dsa_create_sitegraph_client_package') && admin.includes('dsa_revoke_sitegraph_task_capsule') && admin.includes('kiwe.external-client-connection.v1'));
 check('permanent all-scope keys are not selected by default', admin.includes('All Kiwe AI connector access') && !admin.includes('name="scopes[]" value="all" checked'));
 check('command documentation treats SiteGraph as input instead of command grammar', start.includes('SiteGraph and its embedded Design Context') && ideate.includes('read-only SiteGraph') && manifest.includes('SiteGraph is an attached or connected input'));
+check('public start advertises canonical AI-readable formats', publicIndex.includes('rel="canonical"') && publicIndex.includes('type="text/markdown"') && publicIndex.includes('/llms.txt'));
+check('public start has a trusted GitHub fallback without changing authority', publicRegistry.canonicalBase === 'https://start.kiwelaunch.com' && publicRegistry.rawSourceStart.startsWith('https://raw.githubusercontent.com/Museintel/kiwe/') && publicRegistry.fallback.whenCanonicalUnavailable.includes('Never substitute'));
+check('AI index rejects the similarly named unrelated domain', publicLlms.includes('Never substitute kiwilaunch.com') && publicLlms.includes('start.kiwelaunch.com/start.md'));
+check('registry build keeps stable IndexNow ownership proof', registryBuild.includes('indexNowKey') && fs.existsSync(path.join(root, 'public/start.kiwelaunch.com', 'c8db19ce3f2e469aa5622c25743c28f3.txt')));
 
 const php = spawnSync('php', ['tools/release/test-sitegraph-task-capsule.php'], { cwd: root, encoding: 'utf8' });
 check('SiteGraph task capsule PHP runtime contract passes', php.status === 0 && /PASS SiteGraph task capsule, task OpenAPI and adapter/.test(String(php.stdout)));

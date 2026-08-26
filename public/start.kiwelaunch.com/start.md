@@ -1,6 +1,6 @@
 # SEAM Start
 
-Contract version: `8.3`
+Contract version: `8.4`
 Updated: `2026-08-26`
 
 Read the matching `command-manifest.json` before acting. Do not crawl the repository and do not use a command remembered from an older conversation.

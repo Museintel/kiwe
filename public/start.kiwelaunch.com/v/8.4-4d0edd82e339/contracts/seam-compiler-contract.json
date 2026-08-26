@@ -1,0 +1,71 @@
+{
+  "schema": "seam.compiler-contract.v2",
+  "version": "1.0.0-rc.1",
+  "authority": "deterministic-seam-compiler",
+  "aiRequired": false,
+  "commands": ["/audit", "/accessibility", "/fix", "/redo"],
+  "stages": {
+    "prepareBindings": {
+      "command": "/convert /bricks",
+      "authority": "participating browser AI under the SEAM command contract",
+      "input": "complete accepted HTML/CSS/JS project, assets and SiteGraph whenever real site fields are requested",
+      "output": "updated raw project and kiwe.bricks-bindings.v1 intent; never Bricks JSON",
+      "defaultBindingMode": "dynamicTagsAndQueryLoops",
+      "modifiers": {"/dynamictags": "dynamicTagsOnly", "/queryloop": "queryLoopsOnly"}
+    },
+    "compile": {
+      "trigger": "explicit submission through the seam.kiwe application UI or API",
+      "authority": "deterministic-seam-compiler",
+      "input": "complete accepted HTML/CSS/JS project, assets and optional validated kiwe.bricks-bindings.v1",
+      "output": "native Bricks page/header/footer/popup templates plus conversion evidence",
+      "frameworkNeutral": true,
+      "maySplitDocumentChrome": true,
+      "nativeFirst": true,
+      "customCodePolicy": "only when the calibrated Bricks profile proves no native equivalent"
+    },
+    "framework": {
+      "option": "frameworkMode",
+      "input": "the same complete rendered source evidence used by conversion",
+      "output": "one Framework Profile, profile-dependent templates and integration audit",
+      "optional": true,
+      "profileInstallRequiredBeforeTemplateImport": true,
+      "fallbackValuesForbidden": true,
+      "ownershipOrder": ["Bricks Theme Style", "universal Seam variables and palette", "project variables and reusable classes", "element-native exceptions", "scoped unsupported CSS"]
+    },
+    "audit": {
+      "command": "/audit",
+      "readOnly": true,
+      "requiresExecutableProof": true,
+      "visualProofRequiresMatchingViewportProvenance": true,
+      "sourceDefectsAreNotConverterDefects": true,
+      "invalidOrContaminatedCaptureStatus": "INCOMPLETE"
+    },
+    "accessibility": {
+      "auditCommand": "/accessibility",
+      "fixCommand": "/fix",
+      "input": "accepted raw or Bricks artifact",
+      "output": "measured report or corrected same-lane artifact with before/after evidence",
+      "optional": true,
+      "requiresExecutableProof": true,
+      "browserAiMayNotInventContrastRatios": true,
+      "covers": ["semantics", "keyboard", "focus", "names and labels", "contrast", "readability", "overflow", "clipping", "collision", "touch targets", "responsive spacing and alignment", "reduced motion", "light/dark presentation"],
+      "creativeBoundary": "preserve the accepted design; dark mode may deliberately coordinate brand, accent, surface and text roles without collapsing every surface to black",
+      "bricksDarkModeBinding": ":root[data-brx-theme=\"dark\"] #brxe-<template-root-id>"
+    },
+    "redo": {
+      "command": "/redo",
+      "authority": "last accepted artifact plus failure evidence",
+      "forbidden": "stacking speculative patches on the failed output"
+    }
+  },
+  "invariants": [
+    "Raw conversion never injects or requires Seam Framework.",
+    "Framework is an explicit option, not a command or redesign.",
+    "A missing Framework Profile fails closed and templates never depend on variable fallbacks.",
+    "Browser AI may author source design and binding intent but never production Bricks JSON or Framework Profile data.",
+    "/convert /bricks never emits Bricks JSON; seam.kiwe compilation is a separate explicit application action.",
+    "Visual confidence is evidence based and never a universal fixed percentage.",
+    "Source defects are preserved in 1:1 conversion and reported separately.",
+    "No project-specific selector, brand, layout or route rule enters compiler core."
+  ]
+}
