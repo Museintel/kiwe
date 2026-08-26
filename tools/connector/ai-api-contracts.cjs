@@ -32,7 +32,11 @@ check('SiteGraph is input rather than a slash command', manifest.authority.siteC
 check('Framework is an explicit seam.kiwe conversion option', manifest.authority.framework.includes('explicit seam.kiwe compilation option') && contexts.includes('Framework Profile'));
 check('seam.kiwe is sole Bricks JSON authority', manifest.authority.conversion.includes('only authority') && contexts.includes('never produces and validates native Bricks JSON') === false && contexts.includes('compiler alone produces and validates native Bricks JSON'));
 check('ideation preserves creative authority', contexts.includes('Do not apply Seam Framework, Bricks structures or a SEAM house style'));
-check('ideation performs adaptive project and SiteGraph discovery', contexts.includes('new website, a redesign of an existing website, or enhancement/expansion') && contexts.includes('choose the safest connection method'));
+check(
+	'ideation performs adaptive project and SiteGraph discovery',
+	contexts.includes('a new website, preservation of an approved existing design, enhancement/expansion without changing its accepted art direction, or an explicitly authorized redesign')
+		&& contexts.includes('Choose the safest SiteGraph connection the participating AI can actually use')
+);
 check('convert command prepares both binding lanes by default', manifest.commands.find((item) => item.command === '/convert /bricks').modifiers.default === 'dynamicTagsAndQueryLoops' && core.includes('dynamicTagsAndQueryLoops'));
 check('convert command never emits Bricks JSON', contexts.includes('Do not emit a Bricks template, Bricks JSON') && core.includes('emitsBricksJson: false'));
 check('audit and accessibility are evidence based', contexts.includes('Scores must be reproducible') && contexts.includes('Distinguish source defects from conversion defects'));
