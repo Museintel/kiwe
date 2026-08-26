@@ -152,7 +152,9 @@ final class Design_Context_Refinement_Service {
 	private function accept( string $id ): bool {
 		$proposal = $this->proposal();
 		$change = $proposal['changes'][ $id ] ?? null;
-		if ( ! is_array( $change ) || 'pending' !== ( $change['status'] ?? '' ) ) return false;
+		if ( ! is_array( $change ) ) return false;
+		$status = (string) ( $change['status'] ?? '' );
+		if ( ! in_array( $status, [ 'pending', 'rejected' ], true ) ) return false;
 		$current = $this->fields()[ $change['path'] ]['value'] ?? null;
 		if ( ! is_string( $current ) || ! hash_equals( (string) $change['originalHash'], hash( 'sha256', $current ) ) ) return false;
 		$applied = $this->profiles->apply_editorial_refinements( [ $change['path']=>$change['value'] ], get_current_user_id() );
