@@ -35,7 +35,8 @@ function page(title, summary, body, version, releaseId, machineUrl) {
 function compare(expectedRoot, actualRoot) {
   const relative = (root, file) => path.relative(root, file).replaceAll('\\', '/');
   const expected = walk(expectedRoot).map((file) => relative(expectedRoot, file)).sort();
-  const actual = walk(actualRoot).map((file) => relative(actualRoot, file)).sort();
+  const expectedVersionRoots = new Set(expected.filter((file) => file.startsWith('v/')).map((file) => file.split('/').slice(0, 2).join('/')));
+  const actual = walk(actualRoot).map((file) => relative(actualRoot, file)).filter((file) => !file.startsWith('v/') || expectedVersionRoots.has(file.split('/').slice(0, 2).join('/'))).sort();
   const errors = [];
   for (const file of expected.filter((item) => !actual.includes(item))) errors.push(`missing: ${file}`);
   for (const file of actual.filter((item) => !expected.includes(item))) errors.push(`unexpected: ${file}`);
@@ -109,7 +110,10 @@ if (checkOnly) {
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 } else {
   if (path.resolve(publicRoot) !== path.resolve(repoRoot, 'public', 'start.kiwelaunch.com')) throw new Error('Unsafe registry path.');
-  fs.rmSync(publicRoot, { recursive: true, force: true });
+  fs.mkdirSync(publicRoot, { recursive: true });
+  for (const entry of fs.readdirSync(publicRoot, { withFileTypes: true })) {
+    if (entry.name !== 'v') fs.rmSync(path.join(publicRoot, entry.name), { recursive: true, force: true });
+  }
   build(publicRoot);
   console.log(`Built SEAM command registry at ${publicRoot}`);
 }

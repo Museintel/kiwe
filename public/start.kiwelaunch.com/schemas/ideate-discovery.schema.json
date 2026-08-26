@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://start.kiwelaunch.com/schemas/ideate-discovery.schema.json",
+  "title": "Kiwe Ideate Discovery",
+  "description": "Machine-readable preflight emitted before /ideate changes a supplied project.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "lane",
+    "sourceInventory",
+    "siteGraph",
+    "designContextCoverage",
+    "creativeBoundary",
+    "nextAction"
+  ],
+  "properties": {
+    "schema": { "const": "kiwe.ideate-discovery.v2" },
+    "lane": { "enum": ["new-site", "existing-site-redesign", "source-enhancement"] },
+    "sourceInventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["path", "role"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "authorizedUse": { "enum": ["source", "reuse", "inspiration", "unknown"] }
+        }
+      }
+    },
+    "siteGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement", "available", "reason", "transport"],
+      "properties": {
+        "requirement": { "enum": ["required", "beneficial", "not-needed"] },
+        "available": { "type": "boolean" },
+        "reason": { "type": "string", "minLength": 1 },
+        "transport": { "enum": ["connected-tool", "task-capsule", "attached-export", "none"] },
+        "schema": { "type": ["string", "null"] },
+        "contextHash": { "type": ["string", "null"] }
+      }
+    },
+    "designContextCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "score", "method", "covered", "gaps", "lockedOwnerFacts", "preservedOwnerPreferences", "aiWritableGaps"],
+      "properties": {
+        "status": { "enum": ["scored", "not-applicable", "blocked"] },
+        "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+        "method": { "enum": ["sitegraph-authoritative", "weighted-evidence-rubric", "not-applicable", "blocked"] },
+        "covered": { "type": "array", "items": { "type": "string" } },
+        "gaps": { "type": "array", "items": { "type": "string" } },
+        "lockedOwnerFacts": { "type": "array", "items": { "type": "string" } },
+        "preservedOwnerPreferences": { "type": "array", "items": { "type": "string" } },
+        "aiWritableGaps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "creativeBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preserveAcceptedDirection", "frameworkNeutral", "redesignAuthorized"],
+      "properties": {
+        "preserveAcceptedDirection": { "type": "boolean" },
+        "frameworkNeutral": { "const": true },
+        "redesignAuthorized": { "type": "boolean" }
+      }
+    },
+    "nextAction": { "enum": ["request-sitegraph", "ask-material-question", "compose-project"] }
+  }
+}

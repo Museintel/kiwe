@@ -18,6 +18,7 @@ const core = read('kiwe-ai-toolkit/lib/kiwe-core.js');
 const ideate = read('kiwe-ai-toolkit/contexts/ideate.md');
 const manifest = JSON.parse(read('kiwe-ai-toolkit/command-manifest.json'));
 const enhancement = read('wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Enhancement_Service.php');
+const ideateDiscoverySchema = JSON.parse(read('kiwe-ai-toolkit/schemas/ideate-discovery.schema.json'));
 
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -49,6 +50,10 @@ check('design context is self-describing for bare ideate without granting write 
 check('SiteGraph exposes verified native Bricks product tags plus Kiwe nutrition media', ['{post_title}','{post_content}','{woo_product_excerpt}','{woo_product_price}','{woo_product_images}','{kiwe_product_nutrition_image}'].every((tag) => service.includes(tag)) && data.includes("'nutritionImage'"));
 check('ideate consumes a single SiteGraph context without mutating it', ideate.includes('read-only SiteGraph') && ideate.includes('Never invent IDs') && service.includes("'siteDataRequirement'"));
 check('ideate delivery includes portable assets and a provenance manifest', ideate.includes('assets/asset-manifest.json') && ideate.includes('intended WordPress Media use') && manifest.commands.find((item) => item.command === '/ideate').outputs.includes('asset manifest'));
+check('ideate gates composition on an explicit SiteGraph requirement', ideate.includes('`required`, `beneficial`, or `not-needed`') && ideate.includes('stop before recreation') && ideateDiscoverySchema.properties.siteGraph.properties.requirement.enum.includes('required'));
+check('ideate reports deterministic Design Context coverage before mutation', ideate.includes('Design Context coverage before changing any file') && ideate.includes('designContextStrength') && ideate.includes('coverage—not subjective design quality') && manifest.commands.find((item) => item.command === '/ideate').outputs.includes('Design Context coverage report before modification'));
+check('ideate discovery artifact has a strict v2 schema and creative boundary', ideateDiscoverySchema.properties.schema.const === 'kiwe.ideate-discovery.v2' && ideateDiscoverySchema.required.includes('designContextCoverage') && ideateDiscoverySchema.properties.creativeBoundary.properties.frameworkNeutral.const === true);
+check('accepted source recreation preserves art direction and behavior', ideate.includes('preserve its visual composition, responsive behavior, content hierarchy and JavaScript') && ideate.includes('without imposing a new design language'));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);
