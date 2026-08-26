@@ -49,6 +49,7 @@ check('public start advertises canonical AI-readable formats', publicIndex.inclu
 check('public start has a trusted GitHub fallback without changing authority', publicRegistry.canonicalBase === 'https://start.kiwelaunch.com' && publicRegistry.rawSourceStart.startsWith('https://raw.githubusercontent.com/Museintel/kiwe/') && publicRegistry.fallback.whenCanonicalUnavailable.includes('Never substitute'));
 check('AI index rejects the similarly named unrelated domain', publicLlms.includes('Never substitute kiwilaunch.com') && publicLlms.includes('start.kiwelaunch.com/start.md'));
 check('registry build keeps stable IndexNow ownership proof', registryBuild.includes('indexNowKey') && fs.existsSync(path.join(root, 'public/start.kiwelaunch.com', 'c8db19ce3f2e469aa5622c25743c28f3.txt')));
+check('one GitHub start link can traverse the complete command contract', start.includes('GitHub manifest mirror') && start.includes('GitHub context mirror') && start.includes('kiwe-ai-toolkit/contexts/ideate.md'));
 
 const php = spawnSync('php', ['tools/release/test-sitegraph-task-capsule.php'], { cwd: root, encoding: 'utf8' });
 check('SiteGraph task capsule PHP runtime contract passes', php.status === 0 && /PASS SiteGraph task capsule, task OpenAPI and adapter/.test(String(php.stdout)));

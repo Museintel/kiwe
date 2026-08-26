@@ -4,7 +4,7 @@
   "contractVersion": "8.5",
   "releaseId": "8.5-77b307fde4ab",
   "updated": "2026-08-26",
-  "canonicalBase": "https://start.kiwelaunch.com",
+  "canonicalBase": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab",
   "immutableBase": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab",
   "start": "https://start.kiwelaunch.com/start.md",
   "entry": "https://start.kiwelaunch.com/entry.json",
@@ -19,12 +19,12 @@
     "whenCanonicalUnavailable": "Read rawSourceStart, verify the advertised contract version, then follow the same strict command boundary. Never substitute a similarly named domain."
   },
   "commands": {
-    "/ideate": "https://start.kiwelaunch.com/ideate/contract.json",
-    "/convert /bricks": "https://start.kiwelaunch.com/convert/bricks/contract.json",
-    "/audit": "https://start.kiwelaunch.com/audit/contract.json",
-    "/accessibility": "https://start.kiwelaunch.com/accessibility/contract.json",
-    "/fix": "https://start.kiwelaunch.com/fix/contract.json",
-    "/redo": "https://start.kiwelaunch.com/redo/contract.json"
+    "/ideate": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab/ideate/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab/redo/contract.json"
   },
   "immutableCommands": {
     "/ideate": "https://start.kiwelaunch.com/v/8.5-77b307fde4ab/ideate/contract.json",

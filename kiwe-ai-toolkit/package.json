@@ -1,6 +1,6 @@
 {
   "name": "@kiwe/seam",
-  "version": "8.4.0",
+  "version": "8.5.0",
   "description": "Strict SEAM command router and deterministic validation toolkit.",
   "type": "module",
   "bin": {
