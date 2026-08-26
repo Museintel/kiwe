@@ -104,6 +104,7 @@ final class Package_Manifest {
 			'includes/Diagnostics/Persistence_Maintenance_Service.php',
 			'includes/Diagnostics/Database_Inventory_Service.php',
 			'includes/Diagnostics/Cache_Maintenance_Service.php',
+			'includes/Diagnostics/Test_Site_Snapshot_Service.php',
 			'includes/Design/Token_Schema.php',
 			'includes/Design/Seam_Token_Service.php',
 			'includes/Design/Seam_Vocabulary_Schema.php',

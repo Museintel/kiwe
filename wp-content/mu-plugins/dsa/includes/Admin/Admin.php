@@ -42,6 +42,7 @@ use DSA\Diagnostics\Production_Readiness_Service;
 use DSA\Diagnostics\Persistence_Maintenance_Service;
 use DSA\Diagnostics\Database_Inventory_Service;
 use DSA\Diagnostics\Cache_Maintenance_Service;
+use DSA\Diagnostics\Test_Site_Snapshot_Service;
 use DSA\Modules\Module_Registry;
 use DSA\Notifications\Notification_Campaign_Service;
 use DSA\Notifications\Notification_Preference_Service;
@@ -159,6 +160,9 @@ final class Admin {
 		add_action( 'admin_post_dsa_developer_drop_legacy_tables', [ $this, 'handle_developer_drop_legacy_tables' ] );
 		add_action( 'admin_post_dsa_developer_remove_orphan_files', [ $this, 'handle_developer_remove_orphan_files' ] );
 		add_action( 'admin_post_dsa_database_purge_cache', [ $this, 'handle_database_purge_cache' ] );
+		add_action( 'admin_post_dsa_database_capture_test_snapshot', [ $this, 'handle_database_capture_test_snapshot' ] );
+		add_action( 'admin_post_dsa_database_restore_test_snapshot', [ $this, 'handle_database_restore_test_snapshot' ] );
+		add_action( 'admin_post_dsa_database_discard_test_snapshot', [ $this, 'handle_database_discard_test_snapshot' ] );
 		add_action( 'wp_ajax_dsa_search_menu_targets', [ $this, 'search_menu_targets' ] );
 	}
 
@@ -1565,6 +1569,66 @@ final class Admin {
 				admin_url( 'admin.php' )
 			)
 		);
+		exit;
+	}
+
+	public function handle_database_capture_test_snapshot(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_database_capture_test_snapshot' );
+		if ( '1' !== (string) ( $_POST['confirm_snapshot'] ?? '' ) ) {
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'test-snapshot' => 'cancelled' ], admin_url( 'admin.php' ) ) );
+			exit;
+		}
+		try {
+			$result = ( new Test_Site_Snapshot_Service() )->capture( sanitize_text_field( wp_unslash( $_POST['snapshot_label'] ?? '' ) ) );
+			$args = [ 'page' => 'kiwe-database', 'test-snapshot' => 'captured', 'posts' => absint( $result['posts'] ?? 0 ) ];
+		} catch ( \Throwable $error ) {
+			$args = [ 'page' => 'kiwe-database', 'test-snapshot' => 'error', 'snapshot-error' => rawurlencode( $error->getMessage() ) ];
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	public function handle_database_restore_test_snapshot(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_database_restore_test_snapshot' );
+		$confirmed = '1' === (string) ( $_POST['confirm_restore_snapshot'] ?? '' );
+		$phrase    = sanitize_text_field( wp_unslash( $_POST['confirmation_phrase'] ?? '' ) );
+		if ( ! $confirmed || 'RESTORE TEST SNAPSHOT' !== $phrase ) {
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'test-snapshot' => 'restore-cancelled' ], admin_url( 'admin.php' ) ) );
+			exit;
+		}
+		try {
+			$result = ( new Test_Site_Snapshot_Service() )->restore();
+			$args = [
+				'page' => 'kiwe-database', 'test-snapshot' => empty( $result['failed'] ) ? 'restored' : 'restore-partial',
+				'restored' => absint( $result['restored'] ?? 0 ), 'removed' => absint( $result['removedTestPosts'] ?? 0 ),
+				'failed' => count( (array) ( $result['failed'] ?? [] ) ),
+			];
+		} catch ( \Throwable $error ) {
+			$args = [ 'page' => 'kiwe-database', 'test-snapshot' => 'error', 'snapshot-error' => rawurlencode( $error->getMessage() ) ];
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	public function handle_database_discard_test_snapshot(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_database_discard_test_snapshot' );
+		$confirmed = '1' === (string) ( $_POST['confirm_discard_snapshot'] ?? '' );
+		$phrase    = sanitize_text_field( wp_unslash( $_POST['confirmation_phrase'] ?? '' ) );
+		if ( ! $confirmed || 'DISCARD TEST SNAPSHOT' !== $phrase ) {
+			wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'test-snapshot' => 'discard-cancelled' ], admin_url( 'admin.php' ) ) );
+			exit;
+		}
+		$ok = ( new Test_Site_Snapshot_Service() )->discard();
+		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-database', 'test-snapshot' => $ok ? 'discarded' : 'discard-partial' ], admin_url( 'admin.php' ) ) );
 		exit;
 	}
 	public function export_profile(): void {
@@ -6881,9 +6945,11 @@ final class Admin {
 		$legacy_tables      = sanitize_key( wp_unslash( $_GET['legacy-tables'] ?? '' ) );
 		$orphan_files       = sanitize_key( wp_unslash( $_GET['orphan-files'] ?? '' ) );
 		$cache_status       = sanitize_key( wp_unslash( $_GET['cache-purge'] ?? '' ) );
+		$snapshot_notice    = sanitize_key( wp_unslash( $_GET['test-snapshot'] ?? '' ) );
 		$persistence        = ( new Persistence_Maintenance_Service( $this->settings ) )->report();
 		$database           = ( new Database_Inventory_Service() )->report();
 		$cache              = ( new Cache_Maintenance_Service() )->report();
+		$test_snapshot      = ( new Test_Site_Snapshot_Service() )->status();
 		$cache_result       = get_transient( 'dsa_database_cache_result_' . get_current_user_id() );
 		$cache_result       = is_array( $cache_result ) ? $cache_result : [];
 		?>
@@ -6914,6 +6980,50 @@ final class Admin {
 			<?php elseif ( 'cancelled' === $orphan_files ) : ?>
 				<div class="notice notice-warning"><p><?php esc_html_e( 'Orphan-file cleanup was cancelled because both confirmations were not supplied.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( 'captured' === $snapshot_notice ) : ?>
+				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( 'Test baseline captured with %d restorable posts/templates.', 'dsa' ), absint( $_GET['posts'] ?? 0 ) ) ); ?></p></div>
+			<?php elseif ( 'restored' === $snapshot_notice || 'restore-partial' === $snapshot_notice ) : ?>
+				<div class="notice <?php echo 'restored' === $snapshot_notice ? 'notice-success' : 'notice-warning'; ?>"><p><?php echo esc_html( sprintf( __( 'Test baseline restore finished: %1$d records restored, %2$d test-created records removed, %3$d failures. Users, orders and media files were preserved.', 'dsa' ), absint( $_GET['restored'] ?? 0 ), absint( $_GET['removed'] ?? 0 ), absint( $_GET['failed'] ?? 0 ) ) ); ?></p></div>
+			<?php elseif ( 'discarded' === $snapshot_notice || 'discard-partial' === $snapshot_notice ) : ?>
+				<div class="notice <?php echo 'discarded' === $snapshot_notice ? 'notice-success' : 'notice-warning'; ?>"><p><?php esc_html_e( 'The test baseline index was discarded. No WordPress content was changed.', 'dsa' ); ?></p></div>
+			<?php elseif ( in_array( $snapshot_notice, [ 'cancelled', 'restore-cancelled', 'discard-cancelled' ], true ) ) : ?>
+				<div class="notice notice-warning"><p><?php esc_html_e( 'The test snapshot action was cancelled because its confirmation was incomplete.', 'dsa' ); ?></p></div>
+			<?php elseif ( 'error' === $snapshot_notice ) : ?>
+				<div class="notice notice-error"><p><?php echo esc_html( rawurldecode( (string) ( $_GET['snapshot-error'] ?? __( 'Test snapshot action failed.', 'dsa' ) ) ) ); ?></p></div>
+			<?php endif; ?>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Reversible test-site baseline', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Capture the current Bricks templates, pages, posts, products, coupons, menus, builder globals and relevant WordPress/Woo page settings before a conversion batch. Restore removes only content created inside that test window and restores the captured records and settings exactly.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Safety boundary: users, WooCommerce orders, PhoneKey/SecureTrack identities and conversations, credentials, and media binaries are never deleted or rewritten. Newly uploaded media is preserved for manual review. The signed snapshot is stored outside the public web root and can only be restored on this site.', 'dsa' ); ?></p>
+				<?php if ( empty( $test_snapshot['active'] ) ) : ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_database_capture_test_snapshot"><?php wp_nonce_field( 'dsa_database_capture_test_snapshot' ); ?>
+						<p><label><?php esc_html_e( 'Baseline label', 'dsa' ); ?> <input type="text" class="regular-text" name="snapshot_label" value="<?php echo esc_attr( 'Pre-conversion ' . wp_date( 'Y-m-d H:i' ) ); ?>"></label></p>
+						<p><label><input type="checkbox" name="confirm_snapshot" value="1" required> <?php esc_html_e( 'Capture this site’s current builder/content baseline before I import test output.', 'dsa' ); ?></label></p>
+						<?php submit_button( __( 'Capture test baseline', 'dsa' ), 'primary', 'submit', false ); ?>
+					</form>
+				<?php else : ?>
+					<table class="widefat striped" style="max-width:900px"><tbody>
+						<tr><th><?php esc_html_e( 'Label', 'dsa' ); ?></th><td><?php echo esc_html( $test_snapshot['label'] ?: __( 'Unlabelled baseline', 'dsa' ) ); ?></td></tr>
+						<tr><th><?php esc_html_e( 'Captured', 'dsa' ); ?></th><td><?php echo esc_html( $test_snapshot['createdAt'] ); ?></td></tr>
+						<tr><th><?php esc_html_e( 'Scope', 'dsa' ); ?></th><td><?php echo esc_html( sprintf( __( '%1$d records · %2$s · %3$s', 'dsa' ), absint( $test_snapshot['posts'] ), implode( ', ', (array) $test_snapshot['postTypes'] ), size_format( (int) $test_snapshot['bytes'] ) ) ); ?></td></tr>
+						<tr><th><?php esc_html_e( 'Integrity', 'dsa' ); ?></th><td><?php echo ! empty( $test_snapshot['fileReady'] ) ? esc_html( sprintf( __( 'Ready · %s', 'dsa' ), $test_snapshot['hashPrefix'] ) ) : esc_html__( 'Private snapshot file missing', 'dsa' ); ?></td></tr>
+					</tbody></table>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:16px">
+						<input type="hidden" name="action" value="dsa_database_restore_test_snapshot"><?php wp_nonce_field( 'dsa_database_restore_test_snapshot' ); ?>
+						<p><label><input type="checkbox" name="confirm_restore_snapshot" value="1" required> <?php esc_html_e( 'I understand that test-created pages/templates/products will be removed and captured records will be overwritten with the baseline.', 'dsa' ); ?></label></p>
+						<p><label><?php esc_html_e( 'Type RESTORE TEST SNAPSHOT', 'dsa' ); ?> <input type="text" class="regular-text code" name="confirmation_phrase" autocomplete="off" required></label></p>
+						<?php submit_button( __( 'Restore test baseline', 'dsa' ), 'primary', 'submit', false ); ?>
+					</form>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:16px">
+						<input type="hidden" name="action" value="dsa_database_discard_test_snapshot"><?php wp_nonce_field( 'dsa_database_discard_test_snapshot' ); ?>
+						<p><label><input type="checkbox" name="confirm_discard_snapshot" value="1" required> <?php esc_html_e( 'Discard only the rollback baseline; do not change site content.', 'dsa' ); ?></label></p>
+						<p><label><?php esc_html_e( 'Type DISCARD TEST SNAPSHOT', 'dsa' ); ?> <input type="text" class="regular-text code" name="confirmation_phrase" autocomplete="off" required></label></p>
+						<?php submit_button( __( 'Discard baseline', 'dsa' ), 'delete', 'submit', false ); ?>
+					</form>
+				<?php endif; ?>
+			</section>
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Cache control plane', 'dsa' ); ?></h2>

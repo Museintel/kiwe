@@ -1,11 +1,11 @@
 {
   "schema": "kiwe.command-registry.v2",
   "product": "SEAM",
-  "contractVersion": "8.6",
-  "releaseId": "8.6-8d2dd4d7d816",
-  "updated": "2026-08-26",
+  "contractVersion": "8.7",
+  "releaseId": "8.7-dd99bd5cb181",
+  "updated": "2026-08-27",
   "canonicalBase": "https://start.kiwelaunch.com",
-  "immutableBase": "https://start.kiwelaunch.com/v/8.6-8d2dd4d7d816",
+  "immutableBase": "https://start.kiwelaunch.com/v/8.7-dd99bd5cb181",
   "start": "https://start.kiwelaunch.com/start.md",
   "entry": "https://start.kiwelaunch.com/entry.json",
   "commandManifest": "https://start.kiwelaunch.com/command-manifest.json",
@@ -14,7 +14,7 @@
   "sourceRepository": "https://github.com/Museintel/kiwe",
   "sourceStart": "https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/KIWE-START.md",
   "rawSourceStart": "https://raw.githubusercontent.com/Museintel/kiwe/codex/phonekey-whatsapp-rc1/KIWE-START.md",
-  "sourceHash": "sha256:8d2dd4d7d816685be23cc57f84098434766dc6d89724369eeda5a2cfb704e5b0",
+  "sourceHash": "sha256:dd99bd5cb18130fdd274dde580f124bc0f5291edfa7c5d5c0c036b0dbbdaf6e2",
   "fallback": {
     "whenCanonicalUnavailable": "Read rawSourceStart, verify the advertised contract version, then follow the same strict command boundary. Never substitute a similarly named domain."
   },
@@ -27,12 +27,12 @@
     "/redo": "https://start.kiwelaunch.com/redo/contract.json"
   },
   "immutableCommands": {
-    "/ideate": "https://start.kiwelaunch.com/v/8.6-8d2dd4d7d816/ideate/contract.json",
-    "/convert /bricks": "https://start.kiwelaunch.com/v/8.6-8d2dd4d7d816/convert/bricks/contract.json",
-    "/audit": "https://start.kiwelaunch.com/v/8.6-8d2dd4d7d816/audit/contract.json",
-    "/accessibility": "https://start.kiwelaunch.com/v/8.6-8d2dd4d7d816/accessibility/contract.json",
-    "/fix": "https://start.kiwelaunch.com/v/8.6-8d2dd4d7d816/fix/contract.json",
-    "/redo": "https://start.kiwelaunch.com/v/8.6-8d2dd4d7d816/redo/contract.json"
+    "/ideate": "https://start.kiwelaunch.com/v/8.7-dd99bd5cb181/ideate/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/v/8.7-dd99bd5cb181/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/v/8.7-dd99bd5cb181/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/v/8.7-dd99bd5cb181/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/v/8.7-dd99bd5cb181/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/v/8.7-dd99bd5cb181/redo/contract.json"
   },
   "cachePolicy": {
     "canonical": "no-store",

@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "8.0.0-rc.1",
   "algorithm": "sha256",
-  "file_count": 329,
+  "file_count": 330,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -501,8 +501,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 685098,
-      "sha256": "e1a80d046f484ea08ca63e573434d6f4e6490623ff955d7fa8fcf16e7c4e4da4"
+      "bytes": 694740,
+      "sha256": "ae7d89e9cb0351cc7fca02b91d2be5a7c533c4b2746e63671cea82731d40f1e1"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -599,6 +599,10 @@
     "includes/Diagnostics/Runtime_Profiler.php": {
       "bytes": 6243,
       "sha256": "75c72abfb0f34e17c6e4e00a7fec6ce828c9662c5ef4eb9dfeac8a9e18ac6c55"
+    },
+    "includes/Diagnostics/Test_Site_Snapshot_Service.php": {
+      "bytes": 13542,
+      "sha256": "1f6d0e62b888fb36b7667473b9e50f97925192210f1c535ee4c5ffaaa86d0e11"
     },
     "includes/Element_Registry.php": {
       "bytes": 15104,
@@ -789,8 +793,8 @@
       "sha256": "7aff79fcc358ac72c68057351d37d5313ae71672a703ea25d8552eb27494d0db"
     },
     "includes/Runtime/Package_Manifest.php": {
-      "bytes": 7389,
-      "sha256": "4a0e9ec170f81550683e13dbfd86f45f8ab9c4ff92e99a43bf6dfbee111bb858"
+      "bytes": 7447,
+      "sha256": "6d1b22cbe98606c71ddb9aeef5759878b8885537899f66fecbc70941768c8b4b"
     },
     "includes/Runtime/Route_Capability_Service.php": {
       "bytes": 4157,
