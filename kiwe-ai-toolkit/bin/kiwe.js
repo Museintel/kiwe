@@ -29,7 +29,8 @@ function commandInput(args) {
     brief: option(args, '--brief'),
     artifactSummary: option(args, '--artifact-summary'),
     siteGraphSummary: option(args, '--site-graph-summary'),
-    reportSummary: option(args, '--report-summary')
+    reportSummary: option(args, '--report-summary'),
+    attachmentSummary: option(args, '--attachment-summary')
   };
 }
 
@@ -54,7 +55,7 @@ function usage() {
   seam diagnose --command "/convert /bricks" --artifact-summary source.html
   seam diagnose --command "/convert /bricks /dynamictags" --artifact-summary source.html --site-graph-summary site-graph.json
   seam route --command "/audit" --artifact-summary template.json
-  seam plan --artifact-summary source.html
+  seam plan --attachment-summary "index.html, styles.css and app.js"
   seam validate-bindings <path> [--site-graph <path>] [--optional]
   seam validate-bricks-conversion <path> [--site-graph <path>] [--optional] [--documented]
   seam validate-framework-profile <path> [--optional]

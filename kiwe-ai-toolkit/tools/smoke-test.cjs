@@ -27,7 +27,7 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
 
   assert(entry.schema === 'kiwe.entry.v2', 'entry schema');
   assert(entry.productName === 'SEAM', 'entry product');
-  assert(entry.contractVersion === '8.2', 'entry version');
+  assert(entry.contractVersion === '8.3', 'entry version');
   assert(JSON.stringify(entry.commands) === JSON.stringify(expected), 'entry command surface');
   assert(manifest.schema === 'kiwe.command-manifest.v2', 'manifest schema');
   assert(manifest.aliases.length === 0, 'manifest aliases must be empty');
@@ -49,12 +49,14 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
   assert(core.diagnoseCommand({ command: '/fix', artifactSummary: 'x' }).status === 'needs_input', 'fix requires findings');
   assert(core.diagnoseCommand({ command: '/redo', artifactSummary: 'x' }).status === 'needs_input', 'redo requires evidence');
   assert(core.planFlow({ artifactSummary: 'existing raw project index.html styles.css app.js', desiredOutcome: 'enhance the design' }).inferredCommand === '/ideate', 'raw project enhancement plan');
+  const attachmentPlan = core.planFlow({ attachmentSummary: 'attached index.html, styles.css, app.js and images' });
+  assert(attachmentPlan.inferredCommand === '/ideate' && attachmentPlan.execution === 'suggest-only' && attachmentPlan.waitsForUserCommand === true, 'attachment-only command suggestion');
   assert(core.planFlow({ artifactSummary: 'accepted raw project index.html styles.css app.js', desiredOutcome: 'prepare dynamic tags and query loops for Bricks' }).inferredCommand === '/convert /bricks', 'binding preparation plan');
   assert(core.planFlow({ artifactSummary: 'compiled Bricks template JSON' }).inferredCommand === '/audit', 'generated plan');
   assert(core.planFlow({ artifactSummary: 'audit report with findings' }).inferredCommand === '/fix', 'findings plan');
   assert(core.planFlow({ desiredOutcome: 'keyboard, overflow and dark mode review' }).inferredCommand === '/accessibility', 'accessibility plan');
 
-  assert(cli('manifest').contractVersion === '8.2', 'CLI manifest');
+  assert(cli('manifest').contractVersion === '8.3', 'CLI manifest');
   assert(cli('diagnose', '--command', '/audit', '--artifact-summary', 'template.json').status === 'ready', 'CLI diagnose');
   const conversionRoute = cli('route', '--command', '/convert /bricks', '--artifact-summary', 'source.html');
   assert(conversionRoute.options.bindingMode === 'dynamicTagsAndQueryLoops' && conversionRoute.options.emitsBricksJson === false, 'CLI binding preparation boundary');

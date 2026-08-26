@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.command-manifest.v2",
   "productName": "SEAM",
-  "contractVersion": "8.2",
+  "contractVersion": "8.3",
   "updated": "2026-08-26",
   "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
   "authority": {
@@ -11,7 +11,7 @@
     "framework": "Seam Framework is an explicit seam.kiwe compilation option, never an automatic rewrite."
   },
   "commands": [
-    {"command": "/ideate", "context": "contexts/ideate.md", "requires": ["project request and any supplied files; SiteGraph only when preflight proves it is required"], "outputs": ["Design Context coverage report before modification", "ideate/kiwe-ideate-discovery.json", "complete raw HTML/CSS/JS project", "asset manifest"], "boundary": "Classify the project, SiteGraph requirement and Design Context coverage before adapting a new build, redesign or source enhancement. Preserve accepted art direction and do not emit Bricks JSON."},
+    {"command": "/ideate", "context": "contexts/ideate.md", "requires": ["project request or inspectable attachments; SiteGraph only when preflight proves it is required", "user says proceed after reviewing the usage brief"], "outputs": ["Design Context coverage report before modification", "page-relevant Design Context and Design Content usage brief", "ideate/kiwe-ideate-discovery.json", "complete raw HTML/CSS/JS project after approval", "asset manifest"], "boundary": "Inspect attachments, classify the project and SiteGraph requirement, then pause on a concise usage brief. Preserve accepted art direction and do not create files before the user says proceed."},
     {"command": "/convert /bricks", "context": "contexts/convert-bricks.md", "requires": ["complete accepted raw HTML/CSS/JS project", "SiteGraph when real site fields are requested"], "outputs": ["complete updated raw project", "bricks-bindings/kiwe-bindings.json", "binding report"], "modifiers": {"default": "dynamicTagsAndQueryLoops", "/dynamictags": "dynamicTagsOnly", "/queryloop": "queryLoopsOnly"}, "boundary": "Prepare Bricks dynamic intent for seam.kiwe. Never emit Bricks JSON."},
     {"command": "/audit", "context": "contexts/audit.md", "requires": ["source or generated artifact"], "outputs": ["machine-readable report", "human summary", "score evidence"], "boundary": "Read only. Never modify the submitted artifact."},
     {"command": "/accessibility", "context": "contexts/accessibility.md", "requires": ["source or Bricks artifact"], "outputs": ["accessibility report", "light/dark color evidence", "responsive evidence"], "boundary": "Audit only. Use /fix to create a changed artifact."},

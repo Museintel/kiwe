@@ -15,14 +15,15 @@ import {
   validateFrameworkProfile
 } from '../lib/kiwe-core.js';
 
-const server = new Server({ name: 'seam', version: '8.2.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'seam', version: '8.3.0' }, { capabilities: { tools: {} } });
 const object = (properties = {}, required = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}) });
 const routeProperties = {
   command: { type: 'string' },
   brief: { type: 'string' },
   artifactSummary: { type: 'string' },
   siteGraphSummary: { type: 'string' },
-  reportSummary: { type: 'string' }
+  reportSummary: { type: 'string' },
+  attachmentSummary: { type: 'string' }
 };
 const validationProperties = {
   target: { type: 'string' },
@@ -36,7 +37,7 @@ const tools = [
   { name: 'seam_get_manifest', description: 'Return the six-command SEAM manifest.', inputSchema: object() },
   { name: 'seam_diagnose', description: 'Validate one exact SEAM command and its required inputs.', inputSchema: object(routeProperties, ['command']) },
   { name: 'seam_route', description: 'Route one exact SEAM command to its bounded context.', inputSchema: object(routeProperties, ['command']) },
-  { name: 'seam_plan', description: 'Infer the smallest next SEAM command from an artifact summary.', inputSchema: object({ command: { type: 'string' }, artifactSummary: { type: 'string' }, desiredOutcome: { type: 'string' }, brief: { type: 'string' }, reportSummary: { type: 'string' } }) },
+  { name: 'seam_plan', description: 'Inspect attachment evidence and suggest the smallest next SEAM command without executing it.', inputSchema: object({ command: { type: 'string' }, attachmentSummary: { type: 'string' }, artifactSummary: { type: 'string' }, desiredOutcome: { type: 'string' }, brief: { type: 'string' }, reportSummary: { type: 'string' } }) },
   { name: 'seam_validate_bindings', description: 'Validate Bricks/SiteGraph binding metadata.', inputSchema: object(validationProperties, ['target']) },
   { name: 'seam_validate_bricks_conversion', description: 'Validate a native Bricks conversion artifact.', inputSchema: object(validationProperties, ['target']) },
   { name: 'seam_validate_framework_profile', description: 'Validate a Seam Framework Profile.', inputSchema: object(validationProperties, ['target']) },

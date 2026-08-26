@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://start.kiwelaunch.com/schemas/ideate-discovery.schema.json",
   "title": "Kiwe Ideate Discovery",
-  "description": "Machine-readable preflight emitted before /ideate changes a supplied project.",
+  "description": "Machine-readable, user-approved preflight emitted before /ideate changes a supplied project.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -11,11 +11,14 @@
     "sourceInventory",
     "siteGraph",
     "designContextCoverage",
+    "designContextUsage",
+    "designContentUsage",
+    "approval",
     "creativeBoundary",
     "nextAction"
   ],
   "properties": {
-    "schema": { "const": "kiwe.ideate-discovery.v2" },
+    "schema": { "const": "kiwe.ideate-discovery.v3" },
     "lane": { "enum": ["new-site", "existing-site-redesign", "source-enhancement"] },
     "sourceInventory": {
       "type": "array",
@@ -58,6 +61,50 @@
         "aiWritableGaps": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "designContextUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["facts", "preferences", "gaps"],
+      "properties": {
+        "facts": { "type": "array", "items": { "type": "string" } },
+        "preferences": { "type": "array", "items": { "type": "string" } },
+        "gaps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "designContentUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selected", "dynamic", "previewOnly", "excluded", "requiresHumanReview"],
+      "properties": {
+        "selected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["type", "id", "role", "evidence"],
+            "properties": {
+              "type": { "enum": ["media", "product", "post", "page", "service", "menu", "term", "custom-content"] },
+              "id": { "type": ["integer", "string"] },
+              "role": { "type": "string", "minLength": 1 },
+              "evidence": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "dynamic": { "type": "array", "items": { "type": "string" } },
+        "previewOnly": { "type": "array", "items": { "type": "string" } },
+        "excluded": { "type": "array", "items": { "type": "string" } },
+        "requiresHumanReview": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "requiredPhrase"],
+      "properties": {
+        "status": { "enum": ["awaiting-user", "approved"] },
+        "requiredPhrase": { "const": "proceed" }
+      }
+    },
     "creativeBoundary": {
       "type": "object",
       "additionalProperties": false,
@@ -68,6 +115,6 @@
         "redesignAuthorized": { "type": "boolean" }
       }
     },
-    "nextAction": { "enum": ["request-sitegraph", "ask-material-question", "compose-project"] }
+    "nextAction": { "enum": ["request-sitegraph", "ask-material-question", "request-proceed", "compose-project"] }
   }
 }

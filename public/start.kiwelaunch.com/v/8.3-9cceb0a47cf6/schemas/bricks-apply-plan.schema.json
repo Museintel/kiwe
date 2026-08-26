@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.local/schemas/kiwe.bricks-apply-plan.v1.json",
+  "title": "Kiwe Bricks Apply Plan",
+  "description": "Dry-run, non-mutating plan that turns a validated Kiwe Bricks binding plan into an admin-reviewed Bricks apply sequence.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema",
+    "sourceBindingSchema",
+    "siteGraphSchema",
+    "target",
+    "handoff",
+    "siteCapabilities",
+    "safety",
+    "bindingSummary",
+    "preflight",
+    "operations",
+    "manualReview",
+    "applySequence",
+    "limitations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kiwe.bricks-apply-plan.v1"
+    },
+    "sourceBindingSchema": {
+      "const": "kiwe.bricks-bindings.v1"
+    },
+    "siteGraphSchema": {
+      "const": "kiwe.site-graph.v1"
+    },
+    "target": {
+      "type": "object",
+      "required": ["builder", "mode", "applyAuthority", "mutatesWordPress"],
+      "properties": {
+        "builder": {
+          "const": "bricks"
+        },
+        "mode": {
+          "const": "dry-run-apply-plan"
+        },
+        "applyAuthority": {
+          "const": "admin-approved-kiwe-bricks-adapter"
+        },
+        "mutatesWordPress": {
+          "const": false
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["root", "bindingPath", "siteGraphPath"]
+    },
+    "siteCapabilities": {
+      "type": "object",
+      "required": [
+        "wordpressAbilitiesApiPresent",
+        "bricksAbilityManager",
+        "bricksMcpLikelyAvailable",
+        "htmlCssToBricksAvailable",
+        "bricksActive",
+        "trustedAdapterLikelyAvailable",
+        "manualBuilderFallback"
+      ]
+    },
+    "safety": {
+      "type": "object",
+      "required": [
+        "dryRunOnly",
+        "mutatesWordPress",
+        "requiresAdminApprovalBeforeSave",
+        "requiresRevisionBeforeSave",
+        "forbidden"
+      ],
+      "properties": {
+        "dryRunOnly": {
+          "const": true
+        },
+        "mutatesWordPress": {
+          "const": false
+        },
+        "requiresAdminApprovalBeforeSave": {
+          "const": true
+        },
+        "requiresRevisionBeforeSave": {
+          "const": true
+        },
+        "forbidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "bindingSummary": {
+      "type": "object"
+    },
+    "preflight": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/checkpoint"
+      }
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    },
+    "manualReview": {
+      "type": "array"
+    },
+    "applySequence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "checkpoint": {
+      "type": "object",
+      "required": ["id", "label", "status", "required", "details"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "string"
+        }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["id", "type", "status", "authority", "description", "adapterSteps"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "bricks.query-loop",
+            "bricks.dynamic-field",
+            "kiwe.launcher-attribute",
+            "kiwe.menu-context"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "authority": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "adapterSteps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reviewRequired": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}

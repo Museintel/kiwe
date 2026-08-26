@@ -54,9 +54,9 @@ function commandSpec(command) {
   return getCommandManifest().commands.find((item) => item.command === command) || null;
 }
 
-function requirementStatus(command, { brief = '', artifactSummary = '', siteGraphSummary = '', reportSummary = '' } = {}) {
+function requirementStatus(command, { brief = '', attachmentSummary = '', artifactSummary = '', siteGraphSummary = '', reportSummary = '' } = {}) {
   if (command === '/ideate') {
-    return hasInput(brief, artifactSummary, siteGraphSummary) ? null : 'Provide a project brief, approved source material or SiteGraph context.';
+    return hasInput(brief, attachmentSummary, artifactSummary, siteGraphSummary) ? null : 'Provide a project brief, inspectable attachments, approved source material or SiteGraph context.';
   }
   if (command === '/convert /bricks' || command === '/audit' || command === '/accessibility') {
     return hasInput(artifactSummary) ? null : 'Provide or summarize the artifact to process.';
@@ -130,6 +130,7 @@ export function routeCommand(input = {}) {
     authority: getCommandManifest().authority,
     input: {
       brief: String(input.brief || ''),
+      attachmentSummary: String(input.attachmentSummary || ''),
       artifactSummary: String(input.artifactSummary || ''),
       siteGraphSummary: String(input.siteGraphSummary || ''),
       reportSummary: String(input.reportSummary || '')
@@ -140,7 +141,7 @@ export function routeCommand(input = {}) {
 
 export function planFlow(input = {}) {
   if (hasInput(input.command)) return routeCommand(input);
-  const summary = `${input.artifactSummary || ''} ${input.desiredOutcome || ''}`.toLowerCase();
+  const summary = `${input.attachmentSummary || ''} ${input.artifactSummary || ''} ${input.desiredOutcome || ''}`.toLowerCase();
   let command = '/ideate';
   if (/failed|failure|regression|redo/.test(summary)) command = '/redo';
   else if (/audit report|findings|fix|correct/.test(summary)) command = '/fix';
@@ -152,6 +153,8 @@ export function planFlow(input = {}) {
     schema: 'kiwe.flow-plan.v2',
     contractVersion: getCommandManifest().contractVersion,
     inferredCommand: command,
+    execution: 'suggest-only',
+    waitsForUserCommand: true,
     reason: commandSpec(command).boundary,
     next: commandSpec(command)
   };
