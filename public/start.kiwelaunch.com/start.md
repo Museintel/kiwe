@@ -1,7 +1,7 @@
 # SEAM Start
 
-Contract version: `8.7`
-Updated: `2026-08-26`
+Contract version: `8.9`
+Updated: `2026-08-28`
 
 Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context instead. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
 
@@ -10,7 +10,7 @@ Inspect supplied attachments even when the user gives only this start link. If n
 SEAM has six commands:
 
 - [`/ideate`](https://start.kiwelaunch.com/contexts/ideate.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/ideate.md)) — inspect the supplied project, establish whether its design is final, enhancement-authorized or redesign-authorized, classify whether SiteGraph is required, report Design Context coverage, then create or refine raw HTML/CSS/JS without imposing a house style.
-- [`/convert /bricks`](https://start.kiwelaunch.com/contexts/convert-bricks.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/convert-bricks.md)) — prepare both Bricks dynamic tags and query-loop bindings; add `/dynamictags` or `/queryloop` to request only one binding type.
+- [`/convert /bricks`](https://start.kiwelaunch.com/contexts/convert-bricks.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/convert-bricks.md)) — return only a guarded binding graph and report; keep the approved source unchanged. Add `/dynamictags` or `/queryloop` to narrow the pass. Only seam.kiwe emits Bricks JSON.
 - [`/audit`](https://start.kiwelaunch.com/contexts/audit.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/audit.md)) — inspect an artifact without changing it.
 - [`/accessibility`](https://start.kiwelaunch.com/contexts/accessibility.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/accessibility.md)) — audit accessibility, responsive geometry and light/dark presentation.
 - [`/fix`](https://start.kiwelaunch.com/contexts/accessibility.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/accessibility.md)) — correct proven audit findings while preserving the accepted design.

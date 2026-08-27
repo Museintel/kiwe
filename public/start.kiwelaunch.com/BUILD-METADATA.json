@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-registry-build.v2",
-  "contractVersion": "8.8",
-  "releaseId": "8.8-14d589093d31",
-  "sourceHash": "sha256:14d589093d3154c8651573840b6bb7b02aaa43f9cf9aba130f2a846360c3095b",
+  "contractVersion": "8.9",
+  "releaseId": "8.9-d1c4afa11a95",
+  "sourceHash": "sha256:d1c4afa11a952a12b8d6411d4090574a7fc6d78d2ba78a814e377a88baaacd17",
   "generatedFrom": [
     "KIWE-START.md",
     "kiwe-ai-toolkit/command-manifest.json",
@@ -18,5 +18,5 @@
     "kiwe-ai-toolkit/schemas/framework-profile.schema.json",
     "kiwe-ai-toolkit/schemas/ideate-discovery.schema.json"
   ],
-  "generatedAt": "2026-08-27"
+  "generatedAt": "2026-08-28"
 }

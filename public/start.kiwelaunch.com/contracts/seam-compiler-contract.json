@@ -9,7 +9,12 @@
       "command": "/convert /bricks",
       "authority": "participating browser AI under the SEAM command contract",
       "input": "complete accepted HTML/CSS/JS project, assets and SiteGraph whenever real site fields are requested",
-      "output": "updated raw project and kiwe.bricks-bindings.v1 intent; never Bricks JSON",
+      "output": "kiwe.bricks-bindings.v1 graph and binding report only; approved raw project remains unchanged; never Bricks JSON",
+      "sourcePolicy": "immutable",
+      "requiresExactFileTargets": true,
+      "requiresExplicitFieldSlotsAndSourceGuards": true,
+      "requiresExplicitRepeatPrototypeAndPreviewCount": true,
+      "structuralPassProvesRuntime": false,
       "defaultBindingMode": "dynamicTagsAndQueryLoops",
       "modifiers": {"/dynamictags": "dynamicTagsOnly", "/queryloop": "queryLoopsOnly"}
     },

@@ -28,7 +28,7 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
 
   assert(entry.schema === 'kiwe.entry.v2', 'entry schema');
   assert(entry.productName === 'SEAM', 'entry product');
-  assert(entry.contractVersion === '8.8', 'entry version');
+  assert(entry.contractVersion === '8.9', 'entry version');
   assert(JSON.stringify(entry.commands) === JSON.stringify(expected), 'entry command surface');
   assert(manifest.schema === 'kiwe.command-manifest.v2', 'manifest schema');
   assert(manifest.aliases.length === 0, 'manifest aliases must be empty');
@@ -66,10 +66,21 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
   assert(core.planFlow({ artifactSummary: 'audit report with findings' }).inferredCommand === '/fix', 'findings plan');
   assert(core.planFlow({ desiredOutcome: 'keyboard, overflow and dark mode review' }).inferredCommand === '/accessibility', 'accessibility plan');
 
-  assert(cli('manifest').contractVersion === '8.8', 'CLI manifest');
+  assert(cli('manifest').contractVersion === '8.9', 'CLI manifest');
   assert(cli('diagnose', '--command', '/audit', '--artifact-summary', 'template.json').status === 'ready', 'CLI diagnose');
   const conversionRoute = cli('route', '--command', '/convert /bricks', '--artifact-summary', 'source.html');
   assert(conversionRoute.options.bindingMode === 'dynamicTagsAndQueryLoops' && conversionRoute.options.emitsBricksJson === false, 'CLI binding preparation boundary');
+  assert(conversionRoute.options.emitsUpdatedSource === false && conversionRoute.options.sourcePolicy === 'immutable', 'immutable source boundary');
+  assert(conversionRoute.outputs.length === 2 && !conversionRoute.outputs.some(output => /raw project/.test(output)), 'binding graph and report only');
+  const { validateImmutableBindingContract } = await import(pathToFileURL(path.join(root, 'lib/binding-validator.js')).href);
+  const binding = { target: { sourcePolicy: 'immutable' }, queries: [], launchers: [], dynamicFields: [{ template: 'home.html', selector: '#title', slot: 'text', field: 'brand', tag: '{site_title}', textRange: { path: [0], expectedText: 'Welcome Example', match: 'Example' } }] };
+  assert(validateImmutableBindingContract(binding).length === 0, 'guarded partial text binding');
+  for (const mutation of [field => { delete field.template; }, field => { delete field.slot; }, field => { field.tag = '{echo:danger}'; }, field => { delete field.textRange; }, field => { field.textRange.path = [-1]; }]) {
+    const invalid = structuredClone(binding); mutation(invalid.dynamicFields[0]);
+    assert(validateImmutableBindingContract(invalid).some(f => f.level === 'fail'), 'invalid binding refused');
+  }
+  const unsafeLoop = { ...binding, queries: [{ template: 'home.html', selector: '.card', bindings: { title: '{post_title}' }, bricks: { queryEditor: 'return []' } }] };
+  assert(validateImmutableBindingContract(unsafeLoop).length >= 3, 'unguarded executable loop rejected');
   assert(cli('plan', '--artifact-summary', 'existing index.html styles.css', '--desired-outcome', 'enhance and redesign').inferredCommand === '/ideate', 'CLI enhancement discovery');
   assert(cli('plan', '--artifact-summary', 'accepted index.html styles.css', '--desired-outcome', 'prepare query loop bindings for Bricks').inferredCommand === '/convert /bricks', 'CLI binding discovery');
 

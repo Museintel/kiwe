@@ -135,7 +135,7 @@ export function routeCommand(input = {}) {
       siteGraphSummary: String(input.siteGraphSummary || ''),
       reportSummary: String(input.reportSummary || '')
     },
-    options: diagnosis.command === '/convert /bricks' ? { bindingMode: diagnosis.bindingMode, modifier: diagnosis.modifier || null, emitsBricksJson: false } : undefined
+    options: diagnosis.command === '/convert /bricks' ? { bindingMode: diagnosis.bindingMode, modifier: diagnosis.modifier || null, emitsBricksJson: false, emitsUpdatedSource: false, sourcePolicy: 'immutable' } : undefined
   };
 }
 

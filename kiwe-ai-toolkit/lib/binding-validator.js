@@ -224,6 +224,50 @@ function graphIndex(siteGraph) {
   return index;
 }
 
+export function validateImmutableBindingContract(binding) {
+  const findings = [];
+  if (binding?.target?.sourcePolicy !== 'immutable') return findings;
+  const fail = message => findings.push({ level: 'fail', message });
+  const validPath = value => typeof value === 'string' && value.length <= 1000 && /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\\?#]+\.html?$/i.test(value);
+  const text = value => typeof value === 'string' && value.length <= 100000;
+  const selector = value => typeof value === 'string' && value.trim().length > 0 && value.length <= 1000 && !/[\u0000-\u001f]/.test(value);
+  const safeJson = (value, depth = 0) => {
+    if (depth > 12) { fail('Binding JSON exceeds safe nesting.'); return; }
+    if (!value || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      if (['__proto__', 'prototype', 'constructor'].includes(key)) fail('Binding JSON contains an unsafe key.');
+      safeJson(child, depth + 1);
+    }
+  };
+  safeJson(binding);
+  for (const kind of ['queries', 'dynamicFields', 'launchers']) for (const item of asArray(binding[kind])) {
+    if (!isPlainObject(item) || !validPath(item.template) || !selector(item.selector)) fail(`${kind}: exact source HTML template and selector are required.`);
+  }
+  for (const query of asArray(binding.queries)) {
+    if (!isPlainObject(query)) continue;
+    const repeat = query.repeat;
+    if (!isPlainObject(repeat) || !selector(repeat.containerSelector) || !selector(repeat.itemSelector) || !Number.isInteger(repeat.expectedCount) || repeat.expectedCount < 1 || repeat.expectedCount > 500) fail('A query requires repeat container, item selector and expectedCount (1–500).');
+    if (!isPlainObject(query.bindings) || Object.keys(query.bindings).length) fail('Query bindings must be empty; use exact dynamicFields.');
+    if (Object.keys(query.bricks || {}).some(key => /queryEditor|php|code/i.test(key))) fail('Executable query code is forbidden.');
+  }
+  for (const field of asArray(binding.dynamicFields)) {
+    if (!isPlainObject(field)) continue;
+    if (!['text', 'image', 'link'].includes(field.slot)) fail('Dynamic field requires an explicit text, image or link slot.');
+    if (typeof field.tag !== 'string' || !/^\{[a-zA-Z_][^{}<>\r\n]*\}$/.test(field.tag) || /^\{(?:echo|do_action|wp_query|php|execute)(?::|\})/i.test(field.tag)) fail('Dynamic field requires one non-executable native tag.');
+    if (field.expectedText !== undefined && !text(field.expectedText)) fail('expectedText must contain original text.');
+    const range = field.textRange;
+    if (range !== undefined && (!isPlainObject(range) || !Array.isArray(range.path) || !range.path.length || range.path.length > 32 || range.path.some(n => !Number.isInteger(n) || n < 0) || !text(range.expectedText) || !text(range.match) || !range.match.length || field.slot !== 'text')) fail('textRange requires an exact childNodes path, original text and a nonempty match in a text slot.');
+    if (field.expectedAttribute !== undefined && (!isPlainObject(field.expectedAttribute) || !['src', 'href'].includes(field.expectedAttribute.name) || !text(field.expectedAttribute.value))) fail('expectedAttribute must contain the original src or href.');
+    if (field.slot === 'text' && field.expectedText === undefined && range === undefined) fail('Text fields require expectedText or textRange.');
+    if (['image', 'link'].includes(field.slot) && field.expectedAttribute?.name !== (field.slot === 'image' ? 'src' : 'href')) fail('Image/link fields require the matching original attribute guard.');
+  }
+  if (binding.sources !== undefined) {
+    if (!Array.isArray(binding.sources)) fail('sources must be an array.');
+    else for (const source of binding.sources) if (!validPath(source?.path) || typeof source?.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(source.sha256)) fail('Source fingerprint requires an exact HTML path and SHA-256 digest.');
+  }
+  return findings;
+}
+
 function validateRoot(binding, findings, bindingRel) {
   if (!isPlainObject(binding)) {
     add(findings, 'fail', 'kiwe-bindings.json must contain a JSON object.', bindingRel);
@@ -468,6 +512,11 @@ export function validateBindings(target = '.', options = {}) {
     validateLaunchers(binding, findings, bindingRel, index, website.text);
     validateMenuContext(binding, findings, bindingRel, website.text);
     validateReviewDiscipline(binding, findings, bindingRel);
+    findings.push(...validateImmutableBindingContract(binding).map(finding => ({ ...finding, file: bindingRel })));
+    if (binding.target?.sourcePolicy === 'immutable') {
+      for (const finding of findings) if (finding.level === 'warn' && /not (?:present|found) in the supplied Site Graph/.test(finding.message)) finding.level = 'fail';
+      add(findings, 'info', 'Immutable binding contract checked structurally. DOM target cardinality, source guards, repeat equivalence and runtime behavior still require seam.kiwe/Bricks execution.', bindingRel);
+    }
   }
 
   return result(root, located.bindingPath, siteGraphPath, findings);
