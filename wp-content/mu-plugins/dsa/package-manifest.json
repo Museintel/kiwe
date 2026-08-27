@@ -501,8 +501,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 695041,
-      "sha256": "96b5d9a71c596ad583787191da35fdbc0bccc87fbf902244608b055ae179ecbf"
+      "bytes": 695633,
+      "sha256": "d06ca92d91d48bd12200553934b78395763e5ab762c1f4ca69a0a39e11de4600"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -513,8 +513,8 @@
       "sha256": "0f5eec97a97489253126d6c772ef05e0c6388b369e2320e0707e37732c1e26f0"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
-      "bytes": 16254,
-      "sha256": "b718ffedf1f0d58161371ebd48aee60e353e2e67af534dc069eb406c5874fb12"
+      "bytes": 18828,
+      "sha256": "1b83f18b5f7348d4e9bd2cd71afcbc101817f6fe71d90dabc0e61f80d222ff10"
     },
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
       "bytes": 13091,
@@ -793,8 +793,8 @@
       "sha256": "7aff79fcc358ac72c68057351d37d5313ae71672a703ea25d8552eb27494d0db"
     },
     "includes/Runtime/Package_Manifest.php": {
-      "bytes": 7447,
-      "sha256": "6d1b22cbe98606c71ddb9aeef5759878b8885537899f66fecbc70941768c8b4b"
+      "bytes": 8034,
+      "sha256": "90525ba0928cc6aa40d56158202e2bd1c594cf4c8c6d13004ab5f79829be5956"
     },
     "includes/Runtime/Route_Capability_Service.php": {
       "bytes": 4157,

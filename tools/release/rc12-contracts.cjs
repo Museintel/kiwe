@@ -25,7 +25,8 @@ const currentVersion = versionMatch ? versionMatch[1] : '';
 
 check('loader and package are version-synchronized', Boolean(currentVersion) && loader.includes(currentVersion) && entry.includes(currentVersion));
 check('PHP 8.2 minimum is declared', loader.includes('Requires PHP: 8.2') && entry.includes('Requires PHP: 8.2'));
-check('runtime uses generated package manifest', runtime.includes("private const MANIFEST     = 'package-manifest.json'") && runtime.includes("hash_file( 'sha256'"));
+check('runtime uses generated package manifest', runtime.includes("private const MANIFEST     = 'package-manifest.json'") && runtime.includes("hash( 'sha256', $body )") && runtime.includes('self::canonical_body'));
+check('runtime and build verification share text normalization', runtime.includes('"\\r\\n", "\\r"') && workflow.includes('test-package-proof-refresh.php'));
 check('runtime package proof remains cached', runtime.includes('CACHE_TTL') && runtime.includes('dsa_package_manifest_proof'));
 check('manifest paths are constrained', runtime.includes("str_contains( $relative, '..' )") && runtime.includes("str_starts_with( $relative, '/' )"));
 check('README identifies exact deployment pair', readme.includes('dsa.php') && readme.includes('dsa/'));

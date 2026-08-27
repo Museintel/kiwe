@@ -6,7 +6,11 @@ namespace {
 	define( 'DSA_OPTION_SETTINGS', 'dsa_settings' );
 
 	$GLOBALS['kiwe_test_options'] = [
-		'dsa_settings' => [],
+		'dsa_settings' => [
+			'ai' => [ 'api_key' => 'fixture-old-secret' ],
+			'diagnostics' => [ 'raw_convert_test_mode' => false ],
+			'bricks' => [ 'add_to_cart_enhancer_enabled' => true ],
+		],
 		'bricks_global_classes' => [ [ 'id' => 'legacy' ] ],
 	];
 	$GLOBALS['kiwe_test_filters'] = [];
@@ -89,7 +93,25 @@ namespace {
 		throw new \RuntimeException( 'Global classes were not isolated.' );
 	}
 
+	$snapshot = get_option( 'dsa_clean_conversion_test_snapshot_v1' );
+	if ( str_contains( serialize( $snapshot ), 'fixture-old-secret' ) || isset( $snapshot['options']['dsa_settings'] ) ) {
+		throw new \RuntimeException( 'The clean-run snapshot captured unrelated service credentials.' );
+	}
+	$current_settings = get_option( 'dsa_settings' );
+	$current_settings['ai']['api_key'] = 'fixture-rotated-secret';
+	$current_settings['diagnostics']['new_unrelated_flag'] = true;
+	$current_settings['bricks']['new_unrelated_control'] = 'keep';
+	update_option( 'dsa_settings', $current_settings );
 	$service->restore();
+	$restored_settings = get_option( 'dsa_settings' );
+	if ( 'fixture-rotated-secret' !== $restored_settings['ai']['api_key']
+		|| true !== $restored_settings['diagnostics']['new_unrelated_flag']
+		|| 'keep' !== $restored_settings['bricks']['new_unrelated_control']
+		|| false !== $restored_settings['diagnostics']['raw_convert_test_mode']
+		|| true !== $restored_settings['bricks']['add_to_cart_enhancer_enabled']
+		|| array_key_exists( 'console_logs', $restored_settings['diagnostics'] ) ) {
+		throw new \RuntimeException( 'Clean-run restore changed unrelated settings or failed to restore owned flags exactly.' );
+	}
 	if ( [ [ 'id' => 'legacy' ] ] !== get_option( 'bricks_global_classes' ) ) {
 		throw new \RuntimeException( 'The exact global class snapshot was not restored.' );
 	}
@@ -101,4 +123,42 @@ namespace {
 	}
 
 	echo "clean conversion template isolation: ok\n";
+	echo "clean conversion credential and concurrent-setting isolation: ok\n";
+
+	foreach ( [ 'raw', 'woo_native', 'woo_kiwe' ] as $profile ) {
+		unset( $GLOBALS['kiwe_test_options']['dsa_settings'] );
+		$service->begin( $profile );
+		$service->restore();
+		if ( array_key_exists( 'dsa_settings', $GLOBALS['kiwe_test_options'] ) ) {
+			throw new \RuntimeException( "{$profile}: an originally absent settings option was not restored to absence." );
+		}
+		echo "{$profile}: absent settings round-trip: ok\n";
+	}
+	update_option( 'dsa_settings', [ 'diagnostics' => [], 'bricks' => [] ] );
+	$service->begin( 'woo_native' );
+	$snapshot = get_option( 'dsa_clean_conversion_test_snapshot_v1' );
+	$snapshot['options']['dsa_settings'] = [ 'exists' => true, 'value' => [ 'ai' => [ 'api_key' => 'fixture-unwanted-secret' ] ] ];
+	$snapshot['options']['unrelated_option'] = [ 'exists' => true, 'value' => 'unwanted' ];
+	unset( $snapshot['hash'] );
+	$snapshot['hash'] = hash( 'sha256', serialize( $snapshot ) );
+	update_option( 'dsa_clean_conversion_test_snapshot_v1', $snapshot );
+	$service->restore();
+	if ( [ 'diagnostics' => [], 'bricks' => [] ] !== get_option( 'dsa_settings' ) || false !== get_option( 'unrelated_option' ) ) {
+		throw new \RuntimeException( 'Settings/option allowlists did not preserve empty groups and exclude unrelated snapshot fields.' );
+	}
+	echo "empty groups and restore option allowlist: ok\n";
+	$service->begin( 'raw' );
+	$snapshot = get_option( 'dsa_clean_conversion_test_snapshot_v1' );
+	$snapshot['profile'] = 'tampered';
+	update_option( 'dsa_clean_conversion_test_snapshot_v1', $snapshot );
+	$before = $GLOBALS['kiwe_test_options'];
+	try {
+		$service->restore();
+		throw new \RuntimeException( 'Tampered snapshot was accepted.' );
+	} catch ( \RuntimeException $error ) {
+		if ( ! str_contains( $error->getMessage(), 'damaged' ) || $before !== $GLOBALS['kiwe_test_options'] ) {
+			throw $error;
+		}
+	}
+	echo "tampered snapshot leaves all options unchanged: ok\n";
 }

@@ -47,6 +47,10 @@ jobs:
           php tools/release/test-sitegraph-only-fresh-install.php existing
       - name: Verify lossless builder backup and credential isolation
         run: php tools/release/test-builder-snapshot-roundtrip.php
+      - name: Verify fresh upload proof and clean-run credential isolation
+        run: |
+          php tools/release/test-package-proof-refresh.php
+          php tools/release/test-clean-conversion-template-isolation.php
   ui-contract:
     runs-on: ubuntu-latest
     steps:

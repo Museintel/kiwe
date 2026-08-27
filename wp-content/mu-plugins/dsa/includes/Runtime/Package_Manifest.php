@@ -17,12 +17,13 @@ final class Package_Manifest {
 	private const CACHE_TTL    = 43200;
 	private const MANIFEST     = 'package-manifest.json';
 
-	public static function verify(): array {
+	public static function verify( bool $force = false ): array {
 		$stamp = self::stamp();
 		$proof = get_option( self::CACHE_OPTION, [] );
 
 		if (
-			is_array( $proof )
+			! $force
+			&& is_array( $proof )
 			&& hash_equals( (string) ( $proof['stamp'] ?? '' ), $stamp )
 			&& ! empty( $proof['checked_at'] )
 			&& ( time() - (int) $proof['checked_at'] ) < self::CACHE_TTL
@@ -44,9 +45,9 @@ final class Package_Manifest {
 					continue;
 				}
 
-				$size = @filesize( $path );
-				$hash = @hash_file( 'sha256', $path );
-				if ( (int) ( $expected['bytes'] ?? -1 ) !== (int) $size || ! is_string( $hash ) || ! hash_equals( (string) ( $expected['sha256'] ?? '' ), $hash ) ) {
+				$body = @file_get_contents( $path );
+				$body = is_string( $body ) ? self::canonical_body( $body, pathinfo( $path, PATHINFO_EXTENSION ) ) : false;
+				if ( false === $body || (int) ( $expected['bytes'] ?? -1 ) !== strlen( $body ) || ! hash_equals( (string) ( $expected['sha256'] ?? '' ), hash( 'sha256', $body ) ) ) {
 					$changed[] = $relative;
 				}
 			}
@@ -74,6 +75,15 @@ final class Package_Manifest {
 		update_option( self::CACHE_OPTION, $proof, false );
 
 		return $proof;
+	}
+
+	private static function canonical_body( string $body, string $extension ): string {
+		// Must match build-package-manifest.cjs and verify-package.cjs. Windows
+		// uploads can contain CRLF without changing the release's text content.
+		if ( in_array( strtolower( $extension ), [ 'css', 'html', 'js', 'json', 'md', 'php', 'svg', 'txt', 'xml' ], true ) ) {
+			return str_replace( [ "\r\n", "\r" ], "\n", $body );
+		}
+		return $body;
 	}
 
 	public static function required_files(): array {
@@ -188,7 +198,7 @@ final class Package_Manifest {
 
 	private static function stamp(): string {
 		$manifest_file = DSA_DIR . self::MANIFEST;
-		return hash( 'sha256', DSA_VERSION . '|' . (string) @filemtime( $manifest_file ) . '|' . (string) @filesize( $manifest_file ) );
+		return hash( 'sha256', 'canonical-lf-v1|' . DSA_VERSION . '|' . (string) @filemtime( $manifest_file ) . '|' . (string) @filesize( $manifest_file ) );
 	}
 
 	private static function read_manifest(): ?array {

@@ -17,6 +17,10 @@ final class Clean_Conversion_Test_Service {
 	private const SNAPSHOT_OPTION = 'dsa_clean_conversion_test_snapshot_v1';
 	private const LAST_RUN_OPTION = 'dsa_clean_conversion_test_last_run_v1';
 	private const SCHEMA           = 'kiwe.clean-conversion-test.v1';
+	private const SETTINGS_FIELDS  = [
+		'diagnostics' => [ 'enabled', 'frontend_debug', 'console_logs', 'raw_convert_test_mode', 'accessibility_preview_mode' ],
+		'bricks'      => [ 'mini_cart_adapter_enabled', 'add_to_cart_enhancer_enabled', 'linked_products_controls_enabled' ],
+	];
 
 	/** @return string[] */
 	public static function woocommerce_elements(): array {
@@ -78,6 +82,7 @@ final class Clean_Conversion_Test_Service {
 			'user_id'    => get_current_user_id(),
 			'profile'    => $profile,
 			'options'    => $options,
+			'settings'   => $this->snapshot_settings(),
 			// Existing templates stay published and editable, but are excluded from
 			// Bricks' active-template query while this acceptance window is open.
 			// Templates imported after the snapshot remain eligible, so headers,
@@ -228,9 +233,54 @@ final class Clean_Conversion_Test_Service {
 			$this->option_name( 'BRICKS_DB_COLOR_PALETTE', 'bricks_color_palette' ),
 			$this->option_name( 'BRICKS_DB_THEME_STYLES', 'bricks_theme_styles' ),
 			$this->option_name( 'BRICKS_DB_ELEMENT_MANAGER', 'bricks_element_manager' ),
-			defined( 'DSA_OPTION_SETTINGS' ) ? DSA_OPTION_SETTINGS : 'dsa_settings',
 		];
 		return array_values( array_unique( $names ) );
+	}
+
+	private function snapshot_settings(): array {
+		$sentinel = new \stdClass();
+		$settings = get_option( defined( 'DSA_OPTION_SETTINGS' ) ? DSA_OPTION_SETTINGS : 'dsa_settings', $sentinel );
+		$out = [ 'exists' => $settings !== $sentinel, 'groups' => [] ];
+		$settings = is_array( $settings ) ? $settings : [];
+		foreach ( self::SETTINGS_FIELDS as $group => $fields ) {
+			$values = is_array( $settings[ $group ] ?? null ) ? $settings[ $group ] : [];
+			$out['groups'][ $group ] = [ 'exists' => array_key_exists( $group, $settings ), 'fields' => [] ];
+			foreach ( $fields as $field ) {
+				$out['groups'][ $group ]['fields'][ $field ] = [
+					'exists' => array_key_exists( $field, $values ),
+					'value'  => $values[ $field ] ?? null,
+				];
+			}
+		}
+		return $out;
+	}
+
+	private function restore_settings( array $record ): void {
+		$name = defined( 'DSA_OPTION_SETTINGS' ) ? DSA_OPTION_SETTINGS : 'dsa_settings';
+		$settings = get_option( $name, [] );
+		$settings = is_array( $settings ) ? $settings : [];
+		foreach ( self::SETTINGS_FIELDS as $group => $fields ) {
+			$original = $record['groups'][ $group ];
+			$values = is_array( $settings[ $group ] ?? null ) ? $settings[ $group ] : [];
+			foreach ( $fields as $field ) {
+				$state = $original['fields'][ $field ];
+				if ( ! empty( $state['exists'] ) ) {
+					$values[ $field ] = $state['value'] ?? null;
+				} else {
+					unset( $values[ $field ] );
+				}
+			}
+			if ( [] === $values && empty( $original['exists'] ) ) {
+				unset( $settings[ $group ] );
+			} else {
+				$settings[ $group ] = $values;
+			}
+		}
+		if ( [] === $settings && empty( $record['exists'] ) ) {
+			delete_option( $name );
+		} else {
+			update_option( $name, $settings, false );
+		}
 	}
 
 	private function isolate_global_styles(): void {
@@ -294,12 +344,22 @@ final class Clean_Conversion_Test_Service {
 		if ( [] === $options ) {
 			throw new \RuntimeException( 'The clean-run snapshot contains no restorable options.' );
 		}
+		// Validate before touching any globals. Never restore an older aggregate
+		// settings copy, which could roll back AI/SMTP/PhoneKey credentials.
+		$settings = $snapshot['settings'] ?? null;
+		foreach ( self::SETTINGS_FIELDS as $group => $fields ) {
+			foreach ( $fields as $field ) {
+				if ( ! is_array( $settings['groups'][ $group ]['fields'][ $field ] ?? null ) ) {
+					throw new \RuntimeException( 'The clean-run snapshot has no isolated settings fields. No options were restored.' );
+				}
+			}
+		}
 
 		// Restore active classes first and trash last because Bricks class hooks may
 		// reconcile trash while the active option changes.
 		$trash = $this->option_name( 'BRICKS_DB_GLOBAL_CLASSES_TRASH', 'bricks_global_classes_trash' );
 		foreach ( $options as $name => $record ) {
-			if ( $trash === $name ) {
+			if ( $trash === $name || ! in_array( $name, $this->managed_options(), true ) ) {
 				continue;
 			}
 			$this->restore_option( (string) $name, is_array( $record ) ? $record : [] );
@@ -307,6 +367,7 @@ final class Clean_Conversion_Test_Service {
 		if ( isset( $options[ $trash ] ) ) {
 			$this->restore_option( $trash, is_array( $options[ $trash ] ) ? $options[ $trash ] : [] );
 		}
+		$this->restore_settings( $settings );
 	}
 
 	private function restore_option( string $name, array $record ): void {

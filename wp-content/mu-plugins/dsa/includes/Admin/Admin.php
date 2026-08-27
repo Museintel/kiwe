@@ -6936,6 +6936,15 @@ final class Admin {
 				</tr>
 			</tbody>
 		</table>
+		<?php if ( ! empty( $package_proof['missing'] ) || ! empty( $package_proof['changed'] ) ) : ?>
+			<details><summary><?php esc_html_e( 'Files requiring attention', 'dsa' ); ?></summary><ul>
+				<?php foreach ( [ 'missing' => __( 'Missing', 'dsa' ), 'changed' => __( 'Changed', 'dsa' ) ] as $kind => $label ) : ?>
+					<?php foreach ( (array) ( $package_proof[ $kind ] ?? [] ) as $path ) : ?>
+						<li><?php echo esc_html( $label ); ?>: <code><?php echo esc_html( (string) $path ); ?></code></li>
+					<?php endforeach; ?>
+				<?php endforeach; ?>
+			</ul></details>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -7122,7 +7131,7 @@ final class Admin {
 		$orphan_files    = sanitize_key( wp_unslash( $_GET['orphan-files'] ?? '' ) );
 		$settings        = $this->settings->all();
 		$diagnostics     = wp_parse_args( $settings['diagnostics'] ?? [], $this->settings->defaults()['diagnostics'] );
-		$package_proof   = \DSA\Runtime\Package_Manifest::verify();
+		$package_proof   = \DSA\Runtime\Package_Manifest::verify( true );
 		$loader_version  = defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : '';
 		$batch_report    = ( new Compiler_Batch_Cleanup_Service() )->report();
 		$clean_status    = ( new Clean_Conversion_Test_Service() )->status();
