@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
@@ -27,13 +28,19 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
 
   assert(entry.schema === 'kiwe.entry.v2', 'entry schema');
   assert(entry.productName === 'SEAM', 'entry product');
-  assert(entry.contractVersion === '8.7', 'entry version');
+  assert(entry.contractVersion === '8.8', 'entry version');
   assert(JSON.stringify(entry.commands) === JSON.stringify(expected), 'entry command surface');
   assert(manifest.schema === 'kiwe.command-manifest.v2', 'manifest schema');
   assert(manifest.aliases.length === 0, 'manifest aliases must be empty');
   assert(JSON.stringify(manifest.commands.map((item) => item.command)) === JSON.stringify(expected), 'manifest command surface');
   assert(!JSON.stringify(manifest).includes('/usesitegraph'), 'SiteGraph must be input, not command');
   assert(!JSON.stringify(manifest).includes('/seamframework'), 'Framework must be option, not command');
+  const ideateContext = fs.readFileSync(path.join(root, 'contexts', 'ideate.md'), 'utf8');
+  const ideateSchema = JSON.parse(fs.readFileSync(path.join(root, 'schemas', 'ideate-discovery.schema.json'), 'utf8'));
+  assert(ideateContext.includes('production-content readiness preflight'), 'ideate production-content readiness rule');
+  assert(ideateContext.includes('contentReadiness.runtimeSmokeTest'), 'ideate runtime smoke-test rule');
+  assert(ideateSchema.properties.schema.const === 'kiwe.ideate-discovery.v5', 'ideate discovery schema version');
+  assert(ideateSchema.required.includes('contentReadiness'), 'ideate discovery content readiness');
 
   for (const command of expected) {
     const input = { command, brief: 'approved brief and report evidence', artifactSummary: 'approved source.html and output.json', reportSummary: 'audit findings' };
@@ -56,7 +63,7 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
   assert(core.planFlow({ artifactSummary: 'audit report with findings' }).inferredCommand === '/fix', 'findings plan');
   assert(core.planFlow({ desiredOutcome: 'keyboard, overflow and dark mode review' }).inferredCommand === '/accessibility', 'accessibility plan');
 
-  assert(cli('manifest').contractVersion === '8.7', 'CLI manifest');
+  assert(cli('manifest').contractVersion === '8.8', 'CLI manifest');
   assert(cli('diagnose', '--command', '/audit', '--artifact-summary', 'template.json').status === 'ready', 'CLI diagnose');
   const conversionRoute = cli('route', '--command', '/convert /bricks', '--artifact-summary', 'source.html');
   assert(conversionRoute.options.bindingMode === 'dynamicTagsAndQueryLoops' && conversionRoute.options.emitsBricksJson === false, 'CLI binding preparation boundary');

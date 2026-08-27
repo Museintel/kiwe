@@ -13,13 +13,14 @@
     "designContextCoverage",
     "designContextUsage",
     "designContentUsage",
+    "contentReadiness",
     "approval",
     "sourceAuthority",
     "creativeBoundary",
     "nextAction"
   ],
   "properties": {
-    "schema": { "const": "kiwe.ideate-discovery.v4" },
+    "schema": { "const": "kiwe.ideate-discovery.v5" },
     "lane": { "enum": ["new-site", "approved-source-preservation", "existing-site-redesign", "source-enhancement"] },
     "sourceInventory": {
       "type": "array",
@@ -96,6 +97,26 @@
         "excluded": { "type": "array", "items": { "type": "string" } },
         "requiresHumanReview": { "type": "array", "items": { "type": "string" } }
       }
+    },
+    "contentReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "basis", "placeholderRegions", "groundedRegions", "dynamicRegions", "unresolvedClaims", "runtimeSmokeTest"],
+      "properties": {
+        "status": { "enum": ["production-ready", "preview-placeholders-allowed", "blocked"] },
+        "basis": { "enum": ["sitegraph-grounded", "self-contained-approved-source", "ungrounded-preview", "insufficient-evidence"] },
+        "placeholderRegions": { "type": "array", "items": { "type": "string" } },
+        "groundedRegions": { "type": "array", "items": { "type": "string" } },
+        "dynamicRegions": { "type": "array", "items": { "type": "string" } },
+        "unresolvedClaims": { "type": "array", "items": { "type": "string" } },
+        "runtimeSmokeTest": { "enum": ["passed", "pending", "blocked"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "production-ready" } }, "required": ["status"] },
+          "then": { "properties": { "placeholderRegions": { "maxItems": 0 }, "unresolvedClaims": { "maxItems": 0 } } }
+        }
+      ]
     },
     "approval": {
       "type": "object",
