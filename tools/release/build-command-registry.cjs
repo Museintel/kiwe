@@ -84,7 +84,7 @@ function build(targetRoot) {
   const llms = `# SEAM by Kiwe\n\n> Canonical command boundary for attachment-aware website ideation, auditing, fixing and WordPress binding preparation.\n\n- [Start contract](${baseUrl}/start.md)\n- [Command manifest](${baseUrl}/command-manifest.json)\n- [Machine registry](${baseUrl}/.well-known/kiwe.json)\n- [GitHub source mirror](${rawSourceStart})\n\nNever substitute kiwilaunch.com or another similarly named domain.\n`;
   const llmsFull = `${llms}\n---\n\n${bytes(startPath).toString('utf8')}\n\n--- COMMAND MANIFEST ---\n\n${bytes(manifestPath).toString('utf8')}\n\n${routes.map(({ command, spec }) => `--- ${command} ---\n\n${bytes(path.join(toolkitRoot, spec.context)).toString('utf8')}`).join('\n\n')}\n`;
   write(targetRoot, 'llms.txt', llms);
-  write(targetRoot, 'llms-full.txt', llmsFull);
+  write(targetRoot, 'llms-full.txt', `${llmsFull.trimEnd()}\n`);
 
   for (const { command, route, spec } of routes) {
     const sources = ['KIWE-START.md', `kiwe-ai-toolkit/${spec.context}`];

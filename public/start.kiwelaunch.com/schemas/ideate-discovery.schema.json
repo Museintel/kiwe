@@ -114,7 +114,7 @@
       "allOf": [
         {
           "if": { "properties": { "status": { "const": "production-ready" } }, "required": ["status"] },
-          "then": { "properties": { "placeholderRegions": { "maxItems": 0 }, "unresolvedClaims": { "maxItems": 0 } } }
+          "then": { "properties": { "placeholderRegions": { "maxItems": 0 }, "unresolvedClaims": { "maxItems": 0 }, "runtimeSmokeTest": { "const": "passed" }, "basis": { "enum": ["sitegraph-grounded", "self-contained-approved-source"] } } }
         }
       ]
     },

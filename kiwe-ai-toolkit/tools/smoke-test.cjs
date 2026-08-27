@@ -41,6 +41,9 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
   assert(ideateContext.includes('contentReadiness.runtimeSmokeTest'), 'ideate runtime smoke-test rule');
   assert(ideateSchema.properties.schema.const === 'kiwe.ideate-discovery.v5', 'ideate discovery schema version');
   assert(ideateSchema.required.includes('contentReadiness'), 'ideate discovery content readiness');
+  const productionGate = ideateSchema.properties.contentReadiness.allOf.find(rule => rule.if.properties.status.const === 'production-ready').then.properties;
+  assert(productionGate.runtimeSmokeTest.const === 'passed', 'production-ready requires completed runtime proof');
+  assert(productionGate.basis.enum.join(',') === 'sitegraph-grounded,self-contained-approved-source', 'production-ready requires grounded evidence');
 
   for (const command of expected) {
     const input = { command, brief: 'approved brief and report evidence', artifactSummary: 'approved source.html and output.json', reportSummary: 'audit findings' };
