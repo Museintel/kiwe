@@ -517,8 +517,8 @@
       "sha256": "1b83f18b5f7348d4e9bd2cd71afcbc101817f6fe71d90dabc0e61f80d222ff10"
     },
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
-      "bytes": 13091,
-      "sha256": "5ce4d8e8ef210d826c6c2930cfbe6f13e37ad6816a5bce38f152b4305ade6c59"
+      "bytes": 13112,
+      "sha256": "76d4732c1ecece9d08d2dfae61fd7bb72aa5e7aeb82789cf193515e3525a8f5f"
     },
     "includes/Commerce/Abandoned_Cart_Service.php": {
       "bytes": 36806,

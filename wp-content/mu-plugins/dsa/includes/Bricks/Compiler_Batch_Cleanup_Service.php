@@ -9,9 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Safely inventories and removes superseded SEAM compiler global-style groups.
  *
- * Compiler output uses a collision-resistant namespace such as `seam-qrbj6-*`
- * or `seam-152qsk-*`. Five-character namespaces remain valid for older
- * compiler exports; current exports use six characters.
+ * Raw compiler output uses a collision-resistant namespace such as
+ * `brx-src-qrbj6-*` or `brx-src-152qsk-*`. The prefix deliberately identifies
+ * isolated source classes and must never imply Seam Framework ownership.
  * These classes belong to imported templates, not to Kiwe Framework, and must be
  * cleaned only after Bricks content no longer references their IDs.
  */
@@ -22,22 +22,22 @@ final class Compiler_Batch_Cleanup_Service {
 
 	public static function compiler_namespace( string $class_name ): string {
 		$class_name = sanitize_html_class( $class_name );
-		if ( 1 !== preg_match( '/^seam-([a-z0-9]{5,6})-/', $class_name, $matches ) ) {
+		if ( 1 !== preg_match( '/^brx-src-([a-z0-9]{5,6})-/', $class_name, $matches ) ) {
 			return '';
 		}
 
-		return 'seam-' . $matches[1] . '-';
+		return 'brx-src-' . $matches[1] . '-';
 	}
 
 	public static function is_valid_namespace( string $namespace ): bool {
-		return 1 === preg_match( '/^seam-[a-z0-9]{5,6}-$/', $namespace );
+		return 1 === preg_match( '/^brx-src-[a-z0-9]{5,6}-$/', $namespace );
 	}
 
 	/**
 	 * A name-shaped match is not proof: normal Framework utilities can also use
-	 * five- or six-letter segment (for example seam-align-*). Recognition requires an
-	 * explicit compiler source marker or class-ID evidence from a template tagged
-	 * SEAM Compiler. Observed namespaces remain registered for cleanup after the
+	 * five- or six-letter segment. Recognition still requires an explicit compiler
+	 * source marker or class-ID evidence from a template tagged by seam.kiwe.
+	 * Observed namespaces remain registered for cleanup after the
 	 * originating template is later moved to trash.
 	 */
 	public static function is_recognized_compiler_class( array $class ): bool {
@@ -104,7 +104,7 @@ final class Compiler_Batch_Cleanup_Service {
 	public function cleanup( string $keep_namespace ): array {
 		$keep_namespace = sanitize_html_class( $keep_namespace );
 		if ( ! self::is_valid_namespace( $keep_namespace ) ) {
-			throw new \InvalidArgumentException( 'A valid compiler namespace such as seam-qrbj6- or seam-152qsk- is required.' );
+			throw new \InvalidArgumentException( 'A valid compiler namespace such as brx-src-qrbj6- or brx-src-152qsk- is required.' );
 		}
 		if ( ! defined( 'BRICKS_DB_GLOBAL_CLASSES' ) ) {
 			throw new \RuntimeException( 'Bricks global classes are unavailable.' );
@@ -278,7 +278,7 @@ final class Compiler_Batch_Cleanup_Service {
 
 		$meta_keys    = $this->bricks_content_meta_keys();
 		$placeholders = implode( ',', array_fill( 0, count( $meta_keys ), '%s' ) );
-		$sql          = "SELECT DISTINCT pm.meta_value FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id INNER JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id INNER JOIN {$wpdb->terms} t ON t.term_id = tt.term_id WHERE pm.meta_key IN ($placeholders) AND p.post_type = 'bricks_template' AND p.post_status NOT IN ('trash','auto-draft','inherit') AND tt.taxonomy = 'template_tag' AND t.slug = 'seam-compiler'";
+		$sql          = "SELECT DISTINCT pm.meta_value FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id INNER JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id INNER JOIN {$wpdb->terms} t ON t.term_id = tt.term_id WHERE pm.meta_key IN ($placeholders) AND p.post_type = 'bricks_template' AND p.post_status NOT IN ('trash','auto-draft','inherit') AND tt.taxonomy = 'template_tag' AND t.slug IN ('seam-compiler','seam-kiwe')";
 		$values       = $wpdb->get_col( $wpdb->prepare( $sql, ...$meta_keys ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$ids          = [];
 		foreach ( $values as $value ) {
