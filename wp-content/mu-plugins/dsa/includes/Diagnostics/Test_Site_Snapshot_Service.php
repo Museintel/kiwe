@@ -149,7 +149,9 @@ final class Test_Site_Snapshot_Service {
 		$record = get_option( self::OPTION, [] );
 		$path   = $this->snapshot_path( is_array( $record ) ? (string) ( $record['file'] ?? '' ) : '' );
 		$ok     = ! is_file( $path ) || @unlink( $path );
-		delete_option( self::OPTION );
+		if ( $ok ) {
+			delete_option( self::OPTION );
+		}
 		return $ok;
 	}
 
@@ -222,7 +224,8 @@ final class Test_Site_Snapshot_Service {
 		$wpdb->delete( $wpdb->postmeta, [ 'post_id' => $post_id ], [ '%d' ] );
 		foreach ( (array) ( $record['meta'] ?? [] ) as $key => $values ) {
 			foreach ( (array) $values as $value ) {
-				add_post_meta( $post_id, (string) $key, maybe_unserialize( $value ) );
+				// WordPress unslashes incoming metadata, including nested Bricks CSS/JS.
+				add_post_meta( $post_id, wp_slash( (string) $key ), wp_slash( maybe_unserialize( $value ) ) );
 			}
 		}
 		foreach ( get_object_taxonomies( (string) $fields['post_type'] ) as $taxonomy ) {
@@ -275,7 +278,8 @@ final class Test_Site_Snapshot_Service {
 
 	private function option_names(): array {
 		$names = [
-			defined( 'DSA_OPTION_SETTINGS' ) ? DSA_OPTION_SETTINGS : 'dsa_settings',
+			// Never roll back the aggregate Kiwe settings option: it owns live
+			// AI/SMTP/PhoneKey credentials and unrelated service configuration.
 			'show_on_front', 'page_on_front', 'page_for_posts', 'permalink_structure', 'stylesheet', 'template',
 			'woocommerce_shop_page_id', 'woocommerce_cart_page_id', 'woocommerce_checkout_page_id', 'woocommerce_myaccount_page_id',
 			$this->option_name( 'BRICKS_DB_GLOBAL_CLASSES', 'bricks_global_classes' ),

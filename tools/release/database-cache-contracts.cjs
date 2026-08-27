@@ -30,6 +30,9 @@ check('test workspace snapshot stays outside the public web root', snapshot.incl
 check('test workspace restore excludes identities orders credentials and media binaries', snapshot.includes("'users'             => 'untouched'") && snapshot.includes("'orders'            => 'untouched'") && snapshot.includes("'credentials'       => 'untouched'") && snapshot.includes("'mediaBinaries'     => 'untouched'") && !snapshot.includes("'shop_order'"));
 check('test workspace restore is capability nonce and phrase gated', admin.includes("check_admin_referer( 'dsa_database_restore_test_snapshot' )") && admin.includes("'RESTORE TEST SNAPSHOT' !== $phrase"));
 check('test workspace scope includes Bricks pages products menus and Woo page assignments', ['bricks_template', 'page', 'product', 'product_variation', 'nav_menu_item', 'woocommerce_cart_page_id', 'woocommerce_checkout_page_id'].every((token) => snapshot.includes(token)));
+check('test workspace metadata is re-slashed for WordPress JSON and nested CSS round trips', snapshot.includes('wp_slash( maybe_unserialize( $value ) )'));
+check('test workspace does not capture or restore the Kiwe service-settings credential aggregate', !snapshot.includes('DSA_OPTION_SETTINGS') && !snapshot.includes("'dsa_settings'"));
+check('failed snapshot-file deletion keeps the recovery index', /if \( \$ok \) \{\s*delete_option\( self::OPTION \);/.test(snapshot));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

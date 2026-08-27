@@ -501,8 +501,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 694740,
-      "sha256": "ae7d89e9cb0351cc7fca02b91d2be5a7c533c4b2746e63671cea82731d40f1e1"
+      "bytes": 695041,
+      "sha256": "96b5d9a71c596ad583787191da35fdbc0bccc87fbf902244608b055ae179ecbf"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -601,8 +601,8 @@
       "sha256": "75c72abfb0f34e17c6e4e00a7fec6ce828c9662c5ef4eb9dfeac8a9e18ac6c55"
     },
     "includes/Diagnostics/Test_Site_Snapshot_Service.php": {
-      "bytes": 13542,
-      "sha256": "1f6d0e62b888fb36b7667473b9e50f97925192210f1c535ee4c5ffaaa86d0e11"
+      "bytes": 13731,
+      "sha256": "e13059f27725018c406e1f0539369ed525598950ad2dc46552699d06e6b1d918"
     },
     "includes/Element_Registry.php": {
       "bytes": 15104,

@@ -6985,7 +6985,7 @@ final class Admin {
 			<?php elseif ( 'restored' === $snapshot_notice || 'restore-partial' === $snapshot_notice ) : ?>
 				<div class="notice <?php echo 'restored' === $snapshot_notice ? 'notice-success' : 'notice-warning'; ?>"><p><?php echo esc_html( sprintf( __( 'Test baseline restore finished: %1$d records restored, %2$d test-created records removed, %3$d failures. Users, orders and media files were preserved.', 'dsa' ), absint( $_GET['restored'] ?? 0 ), absint( $_GET['removed'] ?? 0 ), absint( $_GET['failed'] ?? 0 ) ) ); ?></p></div>
 			<?php elseif ( 'discarded' === $snapshot_notice || 'discard-partial' === $snapshot_notice ) : ?>
-				<div class="notice <?php echo 'discarded' === $snapshot_notice ? 'notice-success' : 'notice-warning'; ?>"><p><?php esc_html_e( 'The test baseline index was discarded. No WordPress content was changed.', 'dsa' ); ?></p></div>
+				<div class="notice <?php echo 'discarded' === $snapshot_notice ? 'notice-success' : 'notice-warning'; ?>"><p><?php echo esc_html( 'discarded' === $snapshot_notice ? __( 'The test baseline index was discarded. No WordPress content was changed.', 'dsa' ) : __( 'The private baseline file could not be deleted. Its recovery index was retained; no WordPress content was changed.', 'dsa' ) ); ?></p></div>
 			<?php elseif ( in_array( $snapshot_notice, [ 'cancelled', 'restore-cancelled', 'discard-cancelled' ], true ) ) : ?>
 				<div class="notice notice-warning"><p><?php esc_html_e( 'The test snapshot action was cancelled because its confirmation was incomplete.', 'dsa' ); ?></p></div>
 			<?php elseif ( 'error' === $snapshot_notice ) : ?>
@@ -6995,7 +6995,7 @@ final class Admin {
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Reversible test-site baseline', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Capture the current Bricks templates, pages, posts, products, coupons, menus, builder globals and relevant WordPress/Woo page settings before a conversion batch. Restore removes only content created inside that test window and restores the captured records and settings exactly.', 'dsa' ); ?></p>
-				<p class="description"><?php esc_html_e( 'Safety boundary: users, WooCommerce orders, PhoneKey/SecureTrack identities and conversations, credentials, and media binaries are never deleted or rewritten. Newly uploaded media is preserved for manual review. The signed snapshot is stored outside the public web root and can only be restored on this site.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Safety boundary: users, WooCommerce orders, PhoneKey/SecureTrack identities and conversations, Kiwe service settings and credentials, and media binaries are never deleted or rewritten. Newly uploaded media is preserved for manual review. This is a builder/content checkpoint, not a full hosting backup or a cross-site migration archive. The signed snapshot is stored outside the public web root and can only be restored on this site.', 'dsa' ); ?></p>
 				<?php if ( empty( $test_snapshot['active'] ) ) : ?>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 						<input type="hidden" name="action" value="dsa_database_capture_test_snapshot"><?php wp_nonce_field( 'dsa_database_capture_test_snapshot' ); ?>

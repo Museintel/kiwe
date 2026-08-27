@@ -45,6 +45,8 @@ jobs:
         run: |
           php tools/release/test-sitegraph-only-fresh-install.php
           php tools/release/test-sitegraph-only-fresh-install.php existing
+      - name: Verify lossless builder backup and credential isolation
+        run: php tools/release/test-builder-snapshot-roundtrip.php
   ui-contract:
     runs-on: ubuntu-latest
     steps:
