@@ -1,5 +1,12 @@
 # Bricks Integration Notes
 
+## Automatic editor controls (2026-08-28)
+
+Kiwe editor controls register automatically after active Bricks theme setup,
+including child themes. Saved runtime switches do not hide style controls.
+Optional cart behaviours, dynamic data and DSA services remain separately
+controlled. See [implementation and verification report](reports/2026-08-28-bricks-auto-editor-controls.md).
+
 Primary source currently verified at:
 
 ```text

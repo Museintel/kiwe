@@ -34,13 +34,13 @@ foreach (Controls::catalog() as $element => $parts) {
         foreach ($part['native'] as $key) { check('Does not duplicate native controls', !isset($controls[$key])); }
     }
 }
-check('Disabled ATC enhancer is never advertised', Controls::capabilities()['product-add-to-cart'] === []);
-check('Enabled ATC enhancer advertises existing exact controls', count(Controls::capabilities(true)['product-add-to-cart']) === 15);
+check('Standalone surface registration does not invent ATC controls', Controls::capabilities()['product-add-to-cart'] === []);
+check('Integrated ATC registration advertises existing exact controls', count(Controls::capabilities(true)['product-add-to-cart']) === 15);
 require dirname(__DIR__, 2) . '/wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php';
 $reflection = new ReflectionClass(\DSA\Bricks\Bricks_Integration::class);
 $integration = $reflection->newInstanceWithoutConstructor();
 $reflection->getProperty('settings')->setValue($integration, new class {
-    public function all() { return ['bricks' => ['add_to_cart_enhancer_enabled' => true]]; }
+    public function all() { return ['bricks' => ['add_to_cart_enhancer_enabled' => false]]; }
     public function get($key, $default = null) { return $this->all()[$key] ?? $default; }
 });
 $groups = $integration->add_add_to_cart_control_group([]);

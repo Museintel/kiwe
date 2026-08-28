@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "8.0.0-rc.1",
   "algorithm": "sha256",
-  "file_count": 330,
+  "file_count": 332,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -465,8 +465,8 @@
       "sha256": "e9f01e4102e5c224113f730532bd5ea8d0e5c5ebdf2a6a9b18c2018944e2fcfc"
     },
     "includes/AI/Site_Graph_Service.php": {
-      "bytes": 38982,
-      "sha256": "e5cd857a08204685b39dc0bb61c1e543aec01040087b03ac883bae444cdb9a7f"
+      "bytes": 39127,
+      "sha256": "ee3396100675828b8edb5e07f40124e1719026e9e913f39375671c0302f1a40c"
     },
     "includes/AI/Site_Introspection_Service.php": {
       "bytes": 13294,
@@ -501,16 +501,16 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 695633,
-      "sha256": "d06ca92d91d48bd12200553934b78395763e5ab762c1f4ca69a0a39e11de4600"
+      "bytes": 696144,
+      "sha256": "5671bfe9c4ff69d9592f8664746f8b08589aee9dfd82782da17b812dc700b407"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
       "sha256": "ddd5427c6bb2188aefd0dd143b1cfd4ce2a4655015a4bbb66208573099876310"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 114078,
-      "sha256": "0f5eec97a97489253126d6c772ef05e0c6388b369e2320e0707e37732c1e26f0"
+      "bytes": 114696,
+      "sha256": "43e0167f894ea956d6235ef788de1e0bd1b95074159cec56935a0c73dbbfbd56"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 18828,
@@ -519,6 +519,14 @@
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
       "bytes": 13112,
       "sha256": "76d4732c1ecece9d08d2dfae61fd7bb72aa5e7aeb82789cf193515e3525a8f5f"
+    },
+    "includes/Bricks/Surface_Style_Controls.php": {
+      "bytes": 2927,
+      "sha256": "51f58f978fdafca9278d931935001f33b0bdc06f5a9958107908b44426b74a33"
+    },
+    "includes/Bricks/surface-style-controls.json": {
+      "bytes": 5189,
+      "sha256": "62dde0240c901f7196607e78e776debdd9159217532e899405791247b0c7f04e"
     },
     "includes/Commerce/Abandoned_Cart_Service.php": {
       "bytes": 36806,
@@ -689,8 +697,8 @@
       "sha256": "7933d5087bfa7b9616680213236c2914e32fb834f46ae25f7901c4ed0abff90f"
     },
     "includes/Plugin.php": {
-      "bytes": 15093,
-      "sha256": "350571000c1283a291c3a1bda69b55410385a45a1b16f0a2ad9d37435b2cece1"
+      "bytes": 14801,
+      "sha256": "4fefc5cbde9f3374c8a96476500a78a232623e0513127d27d6547beb57c9cff4"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,

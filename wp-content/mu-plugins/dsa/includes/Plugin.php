@@ -190,7 +190,6 @@ final class Plugin {
 		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
 		$permissions = isset( $settings['permissions'] ) && is_array( $settings['permissions'] ) ? $settings['permissions'] : [];
 		$commerce    = isset( $settings['commerce'] ) && is_array( $settings['commerce'] ) ? $settings['commerce'] : [];
-		$bricks      = isset( $settings['bricks'] ) && is_array( $settings['bricks'] ) ? $settings['bricks'] : [];
 		$ai          = isset( $settings['ai'] ) && is_array( $settings['ai'] ) ? $settings['ai'] : [];
 		$surface_enabled   = ! empty( $settings['enabled'] );
 		$phonekey_enabled  = ! empty( $settings['phonekey']['enabled'] );
@@ -200,13 +199,6 @@ final class Plugin {
 		$linked_enabled    = ! empty( $commerce['linked_products_enabled'] );
 		$analytics_enabled = ! empty( $settings['metrics']['enabled'] ) || $abandoned_enabled || $linked_enabled;
 		$commerce_enabled  = $surface_enabled && ( ! empty( $commerce['cart_surface_enabled'] ) || ! empty( $commerce['checkout_surface_enabled'] ) );
-		$bricks_enabled    = ! empty( $bricks['mini_cart_adapter_enabled'] )
-			|| ! empty( $bricks['add_to_cart_enhancer_enabled'] )
-			|| ! empty( $bricks['dynamic_tags_enabled'] )
-			|| ! empty( $bricks['dsa_icon_launcher_enabled'] )
-			|| ! empty( $bricks['linked_products_controls_enabled'] )
-			|| ! empty( $bricks['quantity_stepper_enabled'] )
-			|| ! empty( $bricks['stock_badge_enabled'] );
 		Runtime_Profiler::configure( ! empty( $diagnostics['enabled'] ) && ! empty( $diagnostics['performance_profile'] ) );
 		Runtime_Profiler::mark(
 			'route.context',
@@ -297,9 +289,10 @@ final class Plugin {
 		if ( $surface_enabled && ! empty( $settings['search']['context_aware'] ) ) {
 			$this->search->register();
 		}
-		if ( $bricks_enabled ) {
-			( new Bricks_Integration( $this->registry, $this->settings, $this->linked_products, $this->store_analytics ) )->register();
-		}
+		// MU plugins run before the theme loads. Register editor capabilities after
+		// theme setup, before Bricks initializes elements on init. No option writes.
+		$bricks_integration = new Bricks_Integration( $this->registry, $this->settings, $this->linked_products, $this->store_analytics );
+		add_action( 'after_setup_theme', [ $bricks_integration, 'register' ], 20 );
 		if ( $linked_enabled ) {
 			$this->linked_products->register();
 		}

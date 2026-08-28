@@ -59,14 +59,14 @@ final class Surface_Style_Controls {
 	}
 
 	/** Advertise installed style keys, not a generic "Kiwe exists" assumption. */
-	public static function capabilities( bool $add_to_cart_enabled = false ): array {
+	public static function capabilities( bool $add_to_cart_controls_registered = false ): array {
 		if ( ! self::$registered ) { return []; }
 		$result = [];
 		foreach ( self::catalog() as $element => $parts ) {
 			$result[ $element ] = [];
 			foreach ( $parts as $part ) {
 				$result[ $element ] = array_merge( $result[ $element ], array_values( $part['extensions'] ) );
-				if ( 'product-add-to-cart' === $element && $add_to_cart_enabled ) {
+					if ( 'product-add-to-cart' === $element && $add_to_cart_controls_registered ) {
 					$result[ $element ] = array_merge( $result[ $element ], array_values( $part['existing'] ?? [] ) );
 				}
 			}

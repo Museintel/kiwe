@@ -26,6 +26,7 @@ final class Bricks_Integration {
 	private $store_analytics;
 	private array $mini_cart_context = [];
 	private bool $popup_resolution_queued = false;
+	private bool $registered = false;
 
 	public function __construct( Element_Registry $registry, Settings $settings, ?Linked_Products_Service $linked_products = null, ?Store_Analytics_Service $store_analytics = null ) {
 		$this->registry        = $registry;
@@ -34,7 +35,20 @@ final class Bricks_Integration {
 		$this->store_analytics = $store_analytics;
 	}
 
+	/** get_template() identifies the active parent, including Bricks child themes. */
+	public static function is_active_theme(): bool {
+		if ( ! function_exists( 'get_template' ) ) { return false; }
+		$template = (string) get_template();
+		if ( 'bricks' === strtolower( $template ) ) { return true; }
+		if ( '' === $template || ! function_exists( 'wp_get_theme' ) ) { return false; }
+		// Also support an active Bricks parent whose installation folder was renamed.
+		$theme = wp_get_theme( $template );
+		return $theme->exists() && 'bricks' === strtolower( trim( (string) $theme->get( 'Name' ) ) );
+	}
+
 	public function register(): void {
+		if ( $this->registered || ! self::is_active_theme() ) { return; }
+		$this->registered = true;
 		Surface_Style_Controls::register();
 		add_filter( 'bricks/dynamic_tags_list', [ $this, 'add_dynamic_tags' ], 20 );
 		add_filter( 'bricks/dynamic_data/render_tag', [ $this, 'render_dynamic_tag' ], 20, 3 );
@@ -784,7 +798,6 @@ final class Bricks_Integration {
 	}
 
 	public function add_dsa_icon_launcher_controls( array $controls ): array {
-		if ( empty( $this->bricks_config()['dsa_icon_launcher_enabled'] ) ) return $controls;
 		$controls['dsaLauncherSep'] = [
 			'tab' => 'content',
 			'type' => 'separator',
@@ -805,7 +818,7 @@ final class Bricks_Integration {
 				'ai' => esc_html__( 'AI Assistant', 'dsa' ),
 				'theme' => esc_html__( 'Light / dark mode', 'dsa' ),
 			],
-			'description' => esc_html__( 'Opens the selected registered Kiwe destination even when its dock icon is hidden.', 'dsa' ),
+			'description' => esc_html__( 'Opens the selected registered Kiwe destination even when its dock icon is hidden. Requires the destination and DSA icon launcher behaviour to be enabled in Kiwe.', 'dsa' ),
 		];
 		return $controls;
 	}
@@ -899,596 +912,586 @@ final class Bricks_Integration {
 	}
 
 	public function add_mini_cart_controls( array $controls ): array {
-		$config = $this->bricks_config();
+		// These are editor capabilities, not the optional frontend feature switches.
+		$controls['kiweMiniCartRuntimeInfo'] = [
+			'tab' => 'content', 'group' => 'cartDetails', 'type' => 'info',
+			'content' => esc_html__( 'Kiwe controls are always available with Bricks. Added mini-cart behaviours require their matching switches in Kiwe > Bricks; displaying these controls does not enable them.', 'dsa' ),
+		];
 
-		if ( empty( $config['mini_cart_adapter_enabled'] ) ) {
-			return $controls;
-		}
+		$controls['brxMcStepperSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Quantity Stepper', 'dsa' ),
+		];
+		$controls['brxMcStepperEnable'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'checkbox',
+			'label' => esc_html__( 'Enable quantity stepper', 'dsa' ),
+		];
+		$controls['brxMcStepperAlign'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'label'    => esc_html__( 'Stepper alignment', 'dsa' ),
+			'type'     => 'justify-content',
+			'css'      => [ [ 'property' => 'justify-content', 'selector' => '.brxmc-stepper-wrap' ] ],
+			'required' => [ 'brxMcStepperEnable', '!=', '' ],
+		];
 
-		if ( ! empty( $config['quantity_stepper_enabled'] ) ) {
-			$controls['brxMcStepperSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Quantity Stepper', 'dsa' ),
-			];
-			$controls['brxMcStepperEnable'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'checkbox',
-				'label' => esc_html__( 'Enable quantity stepper', 'dsa' ),
-			];
-			$controls['brxMcStepperAlign'] = [
-				'tab'      => 'content',
-				'group'    => 'cartDetails',
-				'label'    => esc_html__( 'Stepper alignment', 'dsa' ),
-				'type'     => 'justify-content',
-				'css'      => [ [ 'property' => 'justify-content', 'selector' => '.brxmc-stepper-wrap' ] ],
-				'required' => [ 'brxMcStepperEnable', '!=', '' ],
-			];
-
-			foreach ( [ 'Minus' => [ '-', '.brxmc-btn.brxmc-minus' ], 'Plus' => [ '+', '.brxmc-btn.brxmc-plus' ] ] as $name => $meta ) {
-				$key = 'Minus' === $name ? 'Minus' : 'Plus';
-				$controls[ "brxMc{$key}Sep" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'type'     => 'separator',
-					'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Button', 'dsa' ) ),
-					'required' => [ 'brxMcStepperEnable', '!=', '' ],
-				];
-				$controls[ "brxMc{$key}Bg" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Background', 'dsa' ) ),
-					'type'     => 'color',
-					'css'      => [ [ 'property' => 'background-color', 'selector' => $meta[1] ] ],
-					'required' => [ 'brxMcStepperEnable', '!=', '' ],
-				];
-				$controls[ "brxMc{$key}Padding" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Padding', 'dsa' ) ),
-					'type'     => 'spacing',
-					'css'      => [ [ 'property' => 'padding', 'selector' => $meta[1] ] ],
-					'required' => [ 'brxMcStepperEnable', '!=', '' ],
-				];
-				$controls[ "brxMc{$key}Border" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Border & radius', 'dsa' ) ),
-					'type'     => 'border',
-					'css'      => [ [ 'property' => 'border', 'selector' => $meta[1] ] ],
-					'required' => [ 'brxMcStepperEnable', '!=', '' ],
-				];
-				$controls[ "brxMc{$key}Typography" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Typography', 'dsa' ) ),
-					'type'     => 'typography',
-					'css'      => [ [ 'property' => 'font', 'selector' => '.brxmc-qty-wrap.quantity .brxmc-stepper ' . $meta[1] ] ],
-					'required' => [ 'brxMcStepperEnable', '!=', '' ],
-				];
-			}
-
-			$controls['brxMcNumSep'] = [
+		foreach ( [ 'Minus' => [ '-', '.brxmc-btn.brxmc-minus' ], 'Plus' => [ '+', '.brxmc-btn.brxmc-plus' ] ] as $name => $meta ) {
+			$key = 'Minus' === $name ? 'Minus' : 'Plus';
+			$controls[ "brxMc{$key}Sep" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
 				'type'     => 'separator',
-				'label'    => esc_html__( 'Quantity Number', 'dsa' ),
+				'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Button', 'dsa' ) ),
 				'required' => [ 'brxMcStepperEnable', '!=', '' ],
 			];
-			$controls['brxMcNumBg'] = [
+			$controls[ "brxMc{$key}Bg" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
-				'label'    => esc_html__( 'Number background', 'dsa' ),
+				'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Background', 'dsa' ) ),
 				'type'     => 'color',
-				'css'      => [ [ 'property' => 'background-color', 'selector' => '.brxmc-num' ] ],
+				'css'      => [ [ 'property' => 'background-color', 'selector' => $meta[1] ] ],
 				'required' => [ 'brxMcStepperEnable', '!=', '' ],
 			];
-			$controls['brxMcNumBorder'] = [
+			$controls[ "brxMc{$key}Padding" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
-				'label'    => esc_html__( 'Number border & radius', 'dsa' ),
-				'type'     => 'border',
-				'css'      => [ [ 'property' => 'border', 'selector' => '.brxmc-num' ] ],
-				'required' => [ 'brxMcStepperEnable', '!=', '' ],
-			];
-			$controls['brxMcNumTypography'] = [
-				'tab'      => 'content',
-				'group'    => 'cartDetails',
-				'label'    => esc_html__( 'Number typography', 'dsa' ),
-				'type'     => 'typography',
-				'css'      => [ [ 'property' => 'font', 'selector' => '.brxmc-qty-wrap.quantity .brxmc-stepper .brxmc-num' ] ],
-				'required' => [ 'brxMcStepperEnable', '!=', '' ],
-			];
-			$controls['brxMcNumPadding'] = [
-				'tab'      => 'content',
-				'group'    => 'cartDetails',
-				'label'    => esc_html__( 'Number padding', 'dsa' ),
+				'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Padding', 'dsa' ) ),
 				'type'     => 'spacing',
-				'css'      => [ [ 'property' => 'padding', 'selector' => '.brxmc-num' ] ],
+				'css'      => [ [ 'property' => 'padding', 'selector' => $meta[1] ] ],
 				'required' => [ 'brxMcStepperEnable', '!=', '' ],
 			];
-			$controls['brxMcBtnGap'] = [
+			$controls[ "brxMc{$key}Border" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
-				'label'    => esc_html__( 'Gap between items', 'dsa' ),
-				'type'     => 'number',
-				'units'    => true,
-				'unit'     => 'px',
-				'min'      => 0,
-				'css'      => [ [ 'property' => 'gap', 'selector' => '.brxmc-stepper' ] ],
+				'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Border & radius', 'dsa' ) ),
+				'type'     => 'border',
+				'css'      => [ [ 'property' => 'border', 'selector' => $meta[1] ] ],
+				'required' => [ 'brxMcStepperEnable', '!=', '' ],
+			];
+			$controls[ "brxMc{$key}Typography" ] = [
+				'tab'      => 'content',
+				'group'    => 'cartDetails',
+				'label'    => sprintf( '%s %s', $meta[0], esc_html__( 'Typography', 'dsa' ) ),
+				'type'     => 'typography',
+				'css'      => [ [ 'property' => 'font', 'selector' => '.brxmc-qty-wrap.quantity .brxmc-stepper ' . $meta[1] ] ],
 				'required' => [ 'brxMcStepperEnable', '!=', '' ],
 			];
 		}
 
-		if ( ! empty( $config['stock_badge_enabled'] ) ) {
-			$controls['brxMcBadgeSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Stock Urgency Badge', 'dsa' ),
-			];
-			$controls['brxMcBadgeEnable'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'checkbox',
-				'label'       => esc_html__( 'Enable stock badge', 'dsa' ),
-				'description' => esc_html__( 'Text and thresholds are configured in Kiwe > WooCommerce.', 'dsa' ),
-			];
+		$controls['brxMcNumSep'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'type'     => 'separator',
+			'label'    => esc_html__( 'Quantity Number', 'dsa' ),
+			'required' => [ 'brxMcStepperEnable', '!=', '' ],
+		];
+		$controls['brxMcNumBg'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'label'    => esc_html__( 'Number background', 'dsa' ),
+			'type'     => 'color',
+			'css'      => [ [ 'property' => 'background-color', 'selector' => '.brxmc-num' ] ],
+			'required' => [ 'brxMcStepperEnable', '!=', '' ],
+		];
+		$controls['brxMcNumBorder'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'label'    => esc_html__( 'Number border & radius', 'dsa' ),
+			'type'     => 'border',
+			'css'      => [ [ 'property' => 'border', 'selector' => '.brxmc-num' ] ],
+			'required' => [ 'brxMcStepperEnable', '!=', '' ],
+		];
+		$controls['brxMcNumTypography'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'label'    => esc_html__( 'Number typography', 'dsa' ),
+			'type'     => 'typography',
+			'css'      => [ [ 'property' => 'font', 'selector' => '.brxmc-qty-wrap.quantity .brxmc-stepper .brxmc-num' ] ],
+			'required' => [ 'brxMcStepperEnable', '!=', '' ],
+		];
+		$controls['brxMcNumPadding'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'label'    => esc_html__( 'Number padding', 'dsa' ),
+			'type'     => 'spacing',
+			'css'      => [ [ 'property' => 'padding', 'selector' => '.brxmc-num' ] ],
+			'required' => [ 'brxMcStepperEnable', '!=', '' ],
+		];
+		$controls['brxMcBtnGap'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'label'    => esc_html__( 'Gap between items', 'dsa' ),
+			'type'     => 'number',
+			'units'    => true,
+			'unit'     => 'px',
+			'min'      => 0,
+			'css'      => [ [ 'property' => 'gap', 'selector' => '.brxmc-stepper' ] ],
+			'required' => [ 'brxMcStepperEnable', '!=', '' ],
+		];
 
-			foreach ( [ 'Alert' => '.brxmc-badge.brxmc-badge-alert', 'Urgent' => '.brxmc-badge.brxmc-badge-urgent' ] as $label => $selector ) {
-				$key = 'Alert' === $label ? '1' : '2';
-				$controls[ "brxMcBadge{$key}Sep" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'type'     => 'separator',
-					'label'    => sprintf( '%s %s', esc_html__( 'Badge', 'dsa' ), $label ),
-					'required' => [ 'brxMcBadgeEnable', '!=', '' ],
-				];
-				$controls[ "brxMcBadge{$key}Bg" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => esc_html__( 'Background', 'dsa' ),
-					'type'     => 'color',
-					'css'      => [ [ 'property' => 'background-color', 'selector' => $selector ] ],
-					'required' => [ 'brxMcBadgeEnable', '!=', '' ],
-				];
-				$controls[ "brxMcBadge{$key}Typography" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => esc_html__( 'Typography', 'dsa' ),
-					'type'     => 'typography',
-					'css'      => [ [ 'property' => 'font', 'selector' => $selector ] ],
-					'required' => [ 'brxMcBadgeEnable', '!=', '' ],
-				];
-				$controls[ "brxMcBadge{$key}Border" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => esc_html__( 'Border & radius', 'dsa' ),
-					'type'     => 'border',
-					'css'      => [ [ 'property' => 'border', 'selector' => $selector ] ],
-					'required' => [ 'brxMcBadgeEnable', '!=', '' ],
-				];
-				$controls[ "brxMcBadge{$key}Padding" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => esc_html__( 'Padding', 'dsa' ),
-					'type'     => 'spacing',
-					'css'      => [ [ 'property' => 'padding', 'selector' => $selector ] ],
-					'required' => [ 'brxMcBadgeEnable', '!=', '' ],
-				];
-				$controls[ "brxMcBadge{$key}Margin" ] = [
-					'tab'      => 'content',
-					'group'    => 'cartDetails',
-					'label'    => esc_html__( 'Margin', 'dsa' ),
-					'type'     => 'spacing',
-					'css'      => [ [ 'property' => 'margin', 'selector' => $selector ] ],
-					'required' => [ 'brxMcBadgeEnable', '!=', '' ],
-				];
-			}
-		}
+		$controls['brxMcBadgeSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Stock Urgency Badge', 'dsa' ),
+		];
+		$controls['brxMcBadgeEnable'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'checkbox',
+			'label'       => esc_html__( 'Enable stock badge', 'dsa' ),
+			'description' => esc_html__( 'Text and thresholds are configured in Kiwe > WooCommerce.', 'dsa' ),
+		];
 
-		if ( ! empty( $config['linked_products_controls_enabled'] ) ) {
-			$controls['brxUsCsSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Frequently Bought Together', 'dsa' ),
-			];
-			$controls['brxUsCsInfo'] = [
-				'tab'     => 'content',
-				'group'   => 'cartDetails',
-				'type'    => 'info',
-				'content' => esc_html__( 'Title, max products, Cart Picks, generation, and analytics are configured in Kiwe > WooCommerce. Bricks controls below style the mini-cart cards and offer banners.', 'dsa' ),
-			];
-			$controls['brxUsPicksInfo'] = [
-				'tab'     => 'content',
-				'group'   => 'cartDetails',
-				'type'    => 'info',
-				'content' => esc_html__( 'Cart Picks appear as pending, ready, and applied offer banners when Kiwe cart upsells are enabled and a product has a searched upsell product selected.', 'dsa' ),
-			];
-			$controls['brxUsCsEnable'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'checkbox',
-				'label'       => esc_html__( 'Show FBT rail', 'dsa' ),
-				'placeholder' => esc_html__( 'Enable', 'dsa' ),
-			];
-			$controls['brxUsCsTitle'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Section title', 'dsa' ),
-				'placeholder' => esc_html__( 'Frequently Bought Together', 'dsa' ),
-			];
-			$controls['brxUsCsMax'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'number',
-				'label'       => esc_html__( 'Max products shown', 'dsa' ),
-				'placeholder' => '6',
-				'min'         => 1,
-				'max'         => 12,
-			];
-			$controls['brxUsCsTitleTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Title typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-section-title' ] ],
-			];
-			$controls['brxUsCsGap'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'number',
-				'label' => esc_html__( 'Gap', 'dsa' ),
-				'units' => true,
-				'css'   => [ [ 'property' => 'row-gap', 'selector' => '.brxus-cross-sells' ] ],
-			];
-			$controls['brxUsCsImgRadius'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'border',
-				'label' => esc_html__( 'Image border radius', 'dsa' ),
-				'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-product-img img' ] ],
-			];
-			$controls['brxUsCsNameTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Product name typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-product-name' ] ],
-			];
-			$controls['brxUsCsPriceTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Price typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-product-price' ] ],
-			];
-			$controls['brxUsCsBtnBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Button background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-cs-btn' ] ],
-			];
-			$controls['brxUsCsBtnTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Button typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-cs-btn' ] ],
-			];
-			$controls['brxUsCsBtnRadius'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'border',
-				'label' => esc_html__( 'Button radius', 'dsa' ),
-				'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-cs-btn' ] ],
-			];
-			$controls['brxUsCsBtnPadding'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'spacing',
-				'label' => esc_html__( 'Button padding', 'dsa' ),
-				'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-cs-btn' ] ],
-			];
-			$controls['brxUsCsCardBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Card background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-product-card' ] ],
-			];
-			$controls['brxUsCsCardRadius'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'border',
-				'label' => esc_html__( 'Card radius', 'dsa' ),
-				'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-product-card' ] ],
-			];
-			$controls['brxUsCsCardPadding'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'spacing',
-				'label' => esc_html__( 'Card padding', 'dsa' ),
-				'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-product-card' ] ],
-			];
-			$controls['brxUsCsCardWidth'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'number',
-				'label' => esc_html__( 'Card width', 'dsa' ),
-				'units' => true,
-				'css'   => [ [ 'property' => 'flex-basis', 'selector' => '.brxus-product-card' ] ],
-			];
-			$controls['brxUsUsSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Upsell Offer Banner', 'dsa' ),
-			];
-			$controls['brxUsUsPendingSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Pending Offer State', 'dsa' ),
-			];
-			$controls['brxUsUsPendingBadgeText'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Pending badge text', 'dsa' ),
-				'placeholder' => esc_html__( 'Offer', 'dsa' ),
-			];
-			$controls['brxUsUsPendingButtonText'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Pending button text', 'dsa' ),
-				'placeholder' => esc_html__( 'Add & Save', 'dsa' ),
-			];
-			$controls['brxUsUsPendingBannerBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Pending banner background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer--pending' ] ],
-			];
-			$controls['brxUsUsEligibleSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Eligible Offer State', 'dsa' ),
-			];
-			$controls['brxUsUsEligibleBadgeText'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Eligible badge text', 'dsa' ),
-				'placeholder' => esc_html__( 'Ready', 'dsa' ),
-			];
-			$controls['brxUsUsEligibleButtonText'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Eligible button text', 'dsa' ),
-				'placeholder' => esc_html__( 'Apply', 'dsa' ),
-			];
-			$controls['brxUsUsEligibleBannerBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Eligible banner background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer--eligible' ] ],
-			];
-			$controls['brxUsUsAppliedSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Applied Offer State', 'dsa' ),
-			];
-			$controls['brxUsUsAppliedBadgeText'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Applied badge text', 'dsa' ),
-				'placeholder' => esc_html__( 'Applied', 'dsa' ),
-			];
-			$controls['brxUsUsAppliedButtonText'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Applied button text', 'dsa' ),
-				'placeholder' => esc_html__( 'Applied', 'dsa' ),
-			];
-			$controls['brxUsUsBadgeTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Badge typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-offer-badge' ] ],
-			];
-			$controls['brxUsUsBadgeBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Badge background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer-badge' ] ],
-			];
-			$controls['brxUsUsBadgeRadius'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'border',
-				'label' => esc_html__( 'Badge radius', 'dsa' ),
-				'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-offer-badge' ] ],
-			];
-			$controls['brxUsUsBadgePadding'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'spacing',
-				'label' => esc_html__( 'Badge padding', 'dsa' ),
-				'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-offer-badge' ] ],
-			];
-			$controls['brxUsUsHeadlineTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Headline typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-offer-headline' ] ],
-			];
-			$controls['brxUsUsSubTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Sub-text typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-offer-sub' ] ],
-			];
-			$controls['brxUsUsBtnTypo'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'typography',
-				'label' => esc_html__( 'Offer button typography', 'dsa' ),
-				'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-add-btn' ] ],
-			];
-			$controls['brxUsUsBtnBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Offer button background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-add-btn' ] ],
-			];
-			$controls['brxUsUsBtnRadius'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'border',
-				'label' => esc_html__( 'Offer button radius', 'dsa' ),
-				'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-add-btn' ] ],
-			];
-			$controls['brxUsUsBtnPadding'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'spacing',
-				'label' => esc_html__( 'Offer button padding', 'dsa' ),
-				'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-add-btn' ] ],
-			];
-			$controls['brxUsUsBtnWidth'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'number',
-				'label' => esc_html__( 'Offer button width', 'dsa' ),
-				'units' => true,
-				'css'   => [ [ 'property' => 'width', 'selector' => '.brxus-add-btn' ] ],
-			];
-			$controls['brxUsUsBannerGap'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'number',
-				'label' => esc_html__( 'Banner gap', 'dsa' ),
-				'units' => true,
-				'css'   => [ [ 'property' => 'column-gap', 'selector' => '.brxus-offer-banner' ] ],
-			];
-			$controls['brxUsUsBannerBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Banner background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer-banner' ] ],
-			];
-			$controls['brxUsUsBannerRadius'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'border',
-				'label' => esc_html__( 'Banner radius', 'dsa' ),
-				'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-offer-banner' ] ],
-			];
-			$controls['brxUsUsBannerPadding'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'spacing',
-				'label' => esc_html__( 'Banner padding', 'dsa' ),
-				'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-offer-banner' ] ],
-			];
-			$controls['brxUsUsAppliedBg'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'color',
-				'label' => esc_html__( 'Applied banner background', 'dsa' ),
-				'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer--applied' ] ],
-			];
-			$controls['brxUsTrSep'] = [
-				'tab'   => 'content',
-				'group' => 'cartDetails',
-				'type'  => 'separator',
-				'label' => esc_html__( 'Total After Discount', 'dsa' ),
-			];
-			$controls['brxUsTrEnable'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'checkbox',
-				'label'       => esc_html__( 'Show total after discount row', 'dsa' ),
-				'placeholder' => esc_html__( 'Enable', 'dsa' ),
-			];
-			$controls['brxUsTrLabelText'] = [
-				'tab'         => 'content',
-				'group'       => 'cartDetails',
-				'type'        => 'text',
-				'label'       => esc_html__( 'Total row label', 'dsa' ),
-				'placeholder' => esc_html__( 'Total after discount', 'dsa' ),
-				'required'    => [ 'brxUsTrEnable', '!=', '' ],
-			];
-			$controls['brxUsTrLabelTypo'] = [
+		foreach ( [ 'Alert' => '.brxmc-badge.brxmc-badge-alert', 'Urgent' => '.brxmc-badge.brxmc-badge-urgent' ] as $label => $selector ) {
+			$key = 'Alert' === $label ? '1' : '2';
+			$controls[ "brxMcBadge{$key}Sep" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
-				'type'     => 'typography',
-				'label'    => esc_html__( 'Label typography', 'dsa' ),
-				'css'      => [ [ 'property' => 'font', 'selector' => '.brxus-total-after-label' ] ],
-				'required' => [ 'brxUsTrEnable', '!=', '' ],
+				'type'     => 'separator',
+				'label'    => sprintf( '%s %s', esc_html__( 'Badge', 'dsa' ), $label ),
+				'required' => [ 'brxMcBadgeEnable', '!=', '' ],
 			];
-			$controls['brxUsTrValueTypo'] = [
+			$controls[ "brxMcBadge{$key}Bg" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
-				'type'     => 'typography',
-				'label'    => esc_html__( 'Value typography', 'dsa' ),
-				'css'      => [ [ 'property' => 'font', 'selector' => '.brxus-total-after-value' ] ],
-				'required' => [ 'brxUsTrEnable', '!=', '' ],
-			];
-			$controls['brxUsTrBg'] = [
-				'tab'      => 'content',
-				'group'    => 'cartDetails',
+				'label'    => esc_html__( 'Background', 'dsa' ),
 				'type'     => 'color',
-				'label'    => esc_html__( 'Row background', 'dsa' ),
-				'css'      => [ [ 'property' => 'background-color', 'selector' => '.brxus-total-after-row' ] ],
-				'required' => [ 'brxUsTrEnable', '!=', '' ],
+				'css'      => [ [ 'property' => 'background-color', 'selector' => $selector ] ],
+				'required' => [ 'brxMcBadgeEnable', '!=', '' ],
 			];
-			$controls['brxUsTrBorder'] = [
+			$controls[ "brxMcBadge{$key}Typography" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
+				'label'    => esc_html__( 'Typography', 'dsa' ),
+				'type'     => 'typography',
+				'css'      => [ [ 'property' => 'font', 'selector' => $selector ] ],
+				'required' => [ 'brxMcBadgeEnable', '!=', '' ],
+			];
+			$controls[ "brxMcBadge{$key}Border" ] = [
+				'tab'      => 'content',
+				'group'    => 'cartDetails',
+				'label'    => esc_html__( 'Border & radius', 'dsa' ),
 				'type'     => 'border',
-				'label'    => esc_html__( 'Row border/radius', 'dsa' ),
-				'css'      => [ [ 'property' => 'border', 'selector' => '.brxus-total-after-row' ] ],
-				'required' => [ 'brxUsTrEnable', '!=', '' ],
+				'css'      => [ [ 'property' => 'border', 'selector' => $selector ] ],
+				'required' => [ 'brxMcBadgeEnable', '!=', '' ],
 			];
-			$controls['brxUsTrPadding'] = [
+			$controls[ "brxMcBadge{$key}Padding" ] = [
 				'tab'      => 'content',
 				'group'    => 'cartDetails',
+				'label'    => esc_html__( 'Padding', 'dsa' ),
 				'type'     => 'spacing',
-				'label'    => esc_html__( 'Row padding', 'dsa' ),
-				'css'      => [ [ 'property' => 'padding', 'selector' => '.brxus-total-after-row' ] ],
-				'required' => [ 'brxUsTrEnable', '!=', '' ],
+				'css'      => [ [ 'property' => 'padding', 'selector' => $selector ] ],
+				'required' => [ 'brxMcBadgeEnable', '!=', '' ],
+			];
+			$controls[ "brxMcBadge{$key}Margin" ] = [
+				'tab'      => 'content',
+				'group'    => 'cartDetails',
+				'label'    => esc_html__( 'Margin', 'dsa' ),
+				'type'     => 'spacing',
+				'css'      => [ [ 'property' => 'margin', 'selector' => $selector ] ],
+				'required' => [ 'brxMcBadgeEnable', '!=', '' ],
 			];
 		}
+
+		$controls['brxUsCsSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Frequently Bought Together', 'dsa' ),
+		];
+		$controls['brxUsCsInfo'] = [
+			'tab'     => 'content',
+			'group'   => 'cartDetails',
+			'type'    => 'info',
+			'content' => esc_html__( 'Title, max products, Cart Picks, generation, and analytics are configured in Kiwe > WooCommerce. Bricks controls below style the mini-cart cards and offer banners.', 'dsa' ),
+		];
+		$controls['brxUsPicksInfo'] = [
+			'tab'     => 'content',
+			'group'   => 'cartDetails',
+			'type'    => 'info',
+			'content' => esc_html__( 'Cart Picks appear as pending, ready, and applied offer banners when Kiwe cart upsells are enabled and a product has a searched upsell product selected.', 'dsa' ),
+		];
+		$controls['brxUsCsEnable'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'checkbox',
+			'label'       => esc_html__( 'Show FBT rail', 'dsa' ),
+			'placeholder' => esc_html__( 'Enable', 'dsa' ),
+		];
+		$controls['brxUsCsTitle'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Section title', 'dsa' ),
+			'placeholder' => esc_html__( 'Frequently Bought Together', 'dsa' ),
+		];
+		$controls['brxUsCsMax'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'number',
+			'label'       => esc_html__( 'Max products shown', 'dsa' ),
+			'placeholder' => '6',
+			'min'         => 1,
+			'max'         => 12,
+		];
+		$controls['brxUsCsTitleTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Title typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-section-title' ] ],
+		];
+		$controls['brxUsCsGap'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'number',
+			'label' => esc_html__( 'Gap', 'dsa' ),
+			'units' => true,
+			'css'   => [ [ 'property' => 'row-gap', 'selector' => '.brxus-cross-sells' ] ],
+		];
+		$controls['brxUsCsImgRadius'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'border',
+			'label' => esc_html__( 'Image border radius', 'dsa' ),
+			'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-product-img img' ] ],
+		];
+		$controls['brxUsCsNameTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Product name typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-product-name' ] ],
+		];
+		$controls['brxUsCsPriceTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Price typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-product-price' ] ],
+		];
+		$controls['brxUsCsBtnBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Button background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-cs-btn' ] ],
+		];
+		$controls['brxUsCsBtnTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Button typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-cs-btn' ] ],
+		];
+		$controls['brxUsCsBtnRadius'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'border',
+			'label' => esc_html__( 'Button radius', 'dsa' ),
+			'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-cs-btn' ] ],
+		];
+		$controls['brxUsCsBtnPadding'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'spacing',
+			'label' => esc_html__( 'Button padding', 'dsa' ),
+			'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-cs-btn' ] ],
+		];
+		$controls['brxUsCsCardBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Card background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-product-card' ] ],
+		];
+		$controls['brxUsCsCardRadius'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'border',
+			'label' => esc_html__( 'Card radius', 'dsa' ),
+			'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-product-card' ] ],
+		];
+		$controls['brxUsCsCardPadding'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'spacing',
+			'label' => esc_html__( 'Card padding', 'dsa' ),
+			'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-product-card' ] ],
+		];
+		$controls['brxUsCsCardWidth'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'number',
+			'label' => esc_html__( 'Card width', 'dsa' ),
+			'units' => true,
+			'css'   => [ [ 'property' => 'flex-basis', 'selector' => '.brxus-product-card' ] ],
+		];
+		$controls['brxUsUsSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Upsell Offer Banner', 'dsa' ),
+		];
+		$controls['brxUsUsPendingSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Pending Offer State', 'dsa' ),
+		];
+		$controls['brxUsUsPendingBadgeText'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Pending badge text', 'dsa' ),
+			'placeholder' => esc_html__( 'Offer', 'dsa' ),
+		];
+		$controls['brxUsUsPendingButtonText'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Pending button text', 'dsa' ),
+			'placeholder' => esc_html__( 'Add & Save', 'dsa' ),
+		];
+		$controls['brxUsUsPendingBannerBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Pending banner background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer--pending' ] ],
+		];
+		$controls['brxUsUsEligibleSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Eligible Offer State', 'dsa' ),
+		];
+		$controls['brxUsUsEligibleBadgeText'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Eligible badge text', 'dsa' ),
+			'placeholder' => esc_html__( 'Ready', 'dsa' ),
+		];
+		$controls['brxUsUsEligibleButtonText'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Eligible button text', 'dsa' ),
+			'placeholder' => esc_html__( 'Apply', 'dsa' ),
+		];
+		$controls['brxUsUsEligibleBannerBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Eligible banner background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer--eligible' ] ],
+		];
+		$controls['brxUsUsAppliedSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Applied Offer State', 'dsa' ),
+		];
+		$controls['brxUsUsAppliedBadgeText'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Applied badge text', 'dsa' ),
+			'placeholder' => esc_html__( 'Applied', 'dsa' ),
+		];
+		$controls['brxUsUsAppliedButtonText'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Applied button text', 'dsa' ),
+			'placeholder' => esc_html__( 'Applied', 'dsa' ),
+		];
+		$controls['brxUsUsBadgeTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Badge typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-offer-badge' ] ],
+		];
+		$controls['brxUsUsBadgeBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Badge background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer-badge' ] ],
+		];
+		$controls['brxUsUsBadgeRadius'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'border',
+			'label' => esc_html__( 'Badge radius', 'dsa' ),
+			'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-offer-badge' ] ],
+		];
+		$controls['brxUsUsBadgePadding'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'spacing',
+			'label' => esc_html__( 'Badge padding', 'dsa' ),
+			'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-offer-badge' ] ],
+		];
+		$controls['brxUsUsHeadlineTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Headline typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-offer-headline' ] ],
+		];
+		$controls['brxUsUsSubTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Sub-text typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-offer-sub' ] ],
+		];
+		$controls['brxUsUsBtnTypo'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'typography',
+			'label' => esc_html__( 'Offer button typography', 'dsa' ),
+			'css'   => [ [ 'property' => 'font', 'selector' => '.brxus-add-btn' ] ],
+		];
+		$controls['brxUsUsBtnBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Offer button background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-add-btn' ] ],
+		];
+		$controls['brxUsUsBtnRadius'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'border',
+			'label' => esc_html__( 'Offer button radius', 'dsa' ),
+			'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-add-btn' ] ],
+		];
+		$controls['brxUsUsBtnPadding'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'spacing',
+			'label' => esc_html__( 'Offer button padding', 'dsa' ),
+			'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-add-btn' ] ],
+		];
+		$controls['brxUsUsBtnWidth'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'number',
+			'label' => esc_html__( 'Offer button width', 'dsa' ),
+			'units' => true,
+			'css'   => [ [ 'property' => 'width', 'selector' => '.brxus-add-btn' ] ],
+		];
+		$controls['brxUsUsBannerGap'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'number',
+			'label' => esc_html__( 'Banner gap', 'dsa' ),
+			'units' => true,
+			'css'   => [ [ 'property' => 'column-gap', 'selector' => '.brxus-offer-banner' ] ],
+		];
+		$controls['brxUsUsBannerBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Banner background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer-banner' ] ],
+		];
+		$controls['brxUsUsBannerRadius'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'border',
+			'label' => esc_html__( 'Banner radius', 'dsa' ),
+			'css'   => [ [ 'property' => 'border', 'selector' => '.brxus-offer-banner' ] ],
+		];
+		$controls['brxUsUsBannerPadding'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'spacing',
+			'label' => esc_html__( 'Banner padding', 'dsa' ),
+			'css'   => [ [ 'property' => 'padding', 'selector' => '.brxus-offer-banner' ] ],
+		];
+		$controls['brxUsUsAppliedBg'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'color',
+			'label' => esc_html__( 'Applied banner background', 'dsa' ),
+			'css'   => [ [ 'property' => 'background-color', 'selector' => '.brxus-offer--applied' ] ],
+		];
+		$controls['brxUsTrSep'] = [
+			'tab'   => 'content',
+			'group' => 'cartDetails',
+			'type'  => 'separator',
+			'label' => esc_html__( 'Total After Discount', 'dsa' ),
+		];
+		$controls['brxUsTrEnable'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'checkbox',
+			'label'       => esc_html__( 'Show total after discount row', 'dsa' ),
+			'placeholder' => esc_html__( 'Enable', 'dsa' ),
+		];
+		$controls['brxUsTrLabelText'] = [
+			'tab'         => 'content',
+			'group'       => 'cartDetails',
+			'type'        => 'text',
+			'label'       => esc_html__( 'Total row label', 'dsa' ),
+			'placeholder' => esc_html__( 'Total after discount', 'dsa' ),
+			'required'    => [ 'brxUsTrEnable', '!=', '' ],
+		];
+		$controls['brxUsTrLabelTypo'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'type'     => 'typography',
+			'label'    => esc_html__( 'Label typography', 'dsa' ),
+			'css'      => [ [ 'property' => 'font', 'selector' => '.brxus-total-after-label' ] ],
+			'required' => [ 'brxUsTrEnable', '!=', '' ],
+		];
+		$controls['brxUsTrValueTypo'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'type'     => 'typography',
+			'label'    => esc_html__( 'Value typography', 'dsa' ),
+			'css'      => [ [ 'property' => 'font', 'selector' => '.brxus-total-after-value' ] ],
+			'required' => [ 'brxUsTrEnable', '!=', '' ],
+		];
+		$controls['brxUsTrBg'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'type'     => 'color',
+			'label'    => esc_html__( 'Row background', 'dsa' ),
+			'css'      => [ [ 'property' => 'background-color', 'selector' => '.brxus-total-after-row' ] ],
+			'required' => [ 'brxUsTrEnable', '!=', '' ],
+		];
+		$controls['brxUsTrBorder'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'type'     => 'border',
+			'label'    => esc_html__( 'Row border/radius', 'dsa' ),
+			'css'      => [ [ 'property' => 'border', 'selector' => '.brxus-total-after-row' ] ],
+			'required' => [ 'brxUsTrEnable', '!=', '' ],
+		];
+		$controls['brxUsTrPadding'] = [
+			'tab'      => 'content',
+			'group'    => 'cartDetails',
+			'type'     => 'spacing',
+			'label'    => esc_html__( 'Row padding', 'dsa' ),
+			'css'      => [ [ 'property' => 'padding', 'selector' => '.brxus-total-after-row' ] ],
+			'required' => [ 'brxUsTrEnable', '!=', '' ],
+		];
 
 		return $controls;
 	}
 
 	public function add_add_to_cart_control_group( array $groups ): array {
-		if ( empty( $this->bricks_config()['add_to_cart_enhancer_enabled'] ) ) {
-			return $groups;
-		}
-
 		$groups[ self::ATC_GROUP ] = [
 			'title' => esc_html__( 'Kiwe Add To Cart', 'dsa' ),
 			'tab'   => 'content',
@@ -1502,11 +1505,11 @@ final class Bricks_Integration {
 	}
 
 	public function add_add_to_cart_controls( array $controls ): array {
-		if ( empty( $this->bricks_config()['add_to_cart_enhancer_enabled'] ) ) {
-			return $controls;
-		}
-
 		$group = self::ATC_GROUP;
+		$controls['kiweAtcRuntimeInfo'] = [
+			'tab' => 'content', 'group' => $group, 'type' => 'info',
+			'content' => esc_html__( 'Style controls are always available with Bricks. Behaviour toggles below additionally require Add To Cart behaviour in Kiwe > Bricks. Styles do not create missing quantity buttons.', 'dsa' ),
+		];
 		$controls['brxAtcSeparator'] = [ 'tab' => 'content', 'group' => $group, 'type' => 'separator', 'label' => esc_html__( 'Behaviour Toggles', 'dsa' ) ];
 		$controls['brxQtyAjax'] = [ 'tab' => 'content', 'group' => $group, 'label' => esc_html__( 'Quantity Button Ajax', 'dsa' ), 'type' => 'checkbox', 'inline' => true, 'placeholder' => esc_html__( 'Enable', 'dsa' ) ];
 		$controls['brxHideQty'] = [ 'tab' => 'content', 'group' => $group, 'label' => esc_html__( 'Hide Quantity Button', 'dsa' ), 'type' => 'checkbox', 'inline' => true, 'placeholder' => esc_html__( 'Enable', 'dsa' ) ];
@@ -1543,10 +1546,6 @@ final class Bricks_Integration {
 	}
 
 	public function add_linked_products_control_group( array $groups ): array {
-		if ( empty( $this->bricks_config()['linked_products_controls_enabled'] ) ) {
-			return $groups;
-		}
-
 		$groups[ self::LINKED_PRODUCTS_GROUP ] = [
 			'title' => esc_html__( 'Kiwe Linked Products', 'dsa' ),
 			'tab'   => 'content',
@@ -1556,16 +1555,12 @@ final class Bricks_Integration {
 	}
 
 	public function add_linked_products_controls( array $controls ): array {
-		if ( empty( $this->bricks_config()['linked_products_controls_enabled'] ) ) {
-			return $controls;
-		}
-
 		$group = self::LINKED_PRODUCTS_GROUP;
 		$controls['brxKiweLinkedInfo'] = [
 			'tab'     => 'content',
 			'group'   => $group,
 			'type'    => 'info',
-			'content' => esc_html__( 'Kiwe stores cross-sells as native WooCommerce linked products. Style this element in Bricks; manage generation and bestseller analytics in Kiwe > WooCommerce.', 'dsa' ),
+			'content' => esc_html__( 'Kiwe stores cross-sells as native WooCommerce linked products. Style controls are always available; Kiwe source presets require Linked Products behaviour in Kiwe > Bricks. Manage generation and bestseller analytics in Kiwe > WooCommerce.', 'dsa' ),
 		];
 		$controls['brxKiweLinkedProductsMode'] = [
 			'tab'         => 'content',

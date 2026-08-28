@@ -39,12 +39,18 @@ jobs:
       - name: Install Kiwe AI Toolkit dependencies
         working-directory: kiwe-ai-toolkit
         run: npm ci --no-audit --no-fund
-      - name: Verify green source baseline
-        run: node tools/release/verify-green-baseline.cjs
       - name: Verify SiteGraph-only fresh-install profile
         run: |
           php tools/release/test-sitegraph-only-fresh-install.php
           php tools/release/test-sitegraph-only-fresh-install.php existing
+      - name: Verify automatic Bricks controls without runtime activation
+        run: |
+          php tools/release/test-bricks-surface-controls.php
+          for theme in parent child renamed inactive missing; do
+            php tools/release/test-bricks-auto-controls.php "$theme"
+          done
+      - name: Verify green source baseline
+        run: node tools/release/verify-green-baseline.cjs
       - name: Verify lossless builder backup and credential isolation
         run: php tools/release/test-builder-snapshot-roundtrip.php
       - name: Verify fresh upload proof and clean-run credential isolation

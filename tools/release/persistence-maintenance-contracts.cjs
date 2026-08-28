@@ -8,6 +8,7 @@ const service = read('wp-content/mu-plugins/dsa/includes/Diagnostics/Persistence
 const manifest = read('wp-content/mu-plugins/dsa/includes/Runtime/Package_Manifest.php');
 const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
 const plugin = read('wp-content/mu-plugins/dsa/includes/Plugin.php');
+const bricksIntegration = read('wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php');
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
 
@@ -21,7 +22,7 @@ check('possible top-level old MU copies are report-only', service.includes('mu_p
 check('destructive actions require capability nonce checkbox and exact phrase', admin.includes("check_admin_referer( 'dsa_developer_drop_legacy_tables' )") && admin.includes("'CLEAN LEGACY TABLES' !== $phrase") && admin.includes("check_admin_referer( 'dsa_developer_remove_orphan_files' )") && admin.includes("'REMOVE ORPHAN FILES' !== $phrase"));
 check('reset returns to SiteGraph-only baseline', admin.includes('$this->settings->fresh_install_defaults()'));
 check('disabled modules do not register persistence installers', plugin.includes('if ( $phonekey_enabled )') && plugin.includes('if ( $push_enabled )') && plugin.includes('if ( $analytics_enabled )') && plugin.includes('if ( $abandoned_enabled )'));
-check('Bricks registration ignores non-feature metadata strings', plugin.includes("! empty( $bricks['dynamic_tags_enabled'] )") && !plugin.includes('$bricks_enabled    = (bool) array_filter( $bricks )'));
+check('Bricks editor registration follows active theme without turning on runtime flags', plugin.includes("add_action( 'after_setup_theme', [ $bricks_integration, 'register' ], 20 )") && !plugin.includes('$bricks_enabled') && bricksIntegration.includes('$this->registered || ! self::is_active_theme()') && bricksIntegration.includes("empty( $this->bricks_config()['add_to_cart_enhancer_enabled'] )"));
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

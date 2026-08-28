@@ -9011,7 +9011,10 @@ final class Admin {
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe Bricks', 'dsa' ); ?></h1>
-			<p><?php esc_html_e( 'Optional compatibility controls for Bricks-based WooCommerce builds.', 'dsa' ); ?></p>
+			<p><?php esc_html_e( 'Kiwe element controls activate automatically with the Bricks theme, including child themes. The switches below control optional frontend behaviours and dynamic data, not editor styling availability.', 'dsa' ); ?></p>
+			<p class="description"><?php echo esc_html( \DSA\Bricks\Bricks_Integration::is_active_theme()
+				? __( 'Bricks detected: Kiwe editor controls are active automatically. No enable switch or settings save is needed.', 'dsa' )
+				: __( 'Bricks is not the active theme. Kiwe editor controls will activate when Bricks or a Bricks child theme is activated.', 'dsa' ) ); ?></p>
 
 			<?php if ( isset( $_GET['settings-updated'] ) ) : ?>
 				<div class="notice notice-success is-dismissible">
@@ -9061,7 +9064,7 @@ final class Admin {
 								<td>
 									<label>
 										<input type="checkbox" name="bricks[quantity_stepper_enabled]" value="1" <?php checked( ! empty( $bricks['quantity_stepper_enabled'] ) ); ?> <?php disabled( ! $has_woo ); ?>>
-										<?php esc_html_e( 'Expose Bricks mini-cart quantity stepper controls in the Bricks editor', 'dsa' ); ?>
+										<?php esc_html_e( 'Allow quantity stepper behaviour in the Bricks mini-cart', 'dsa' ); ?>
 									</label>
 									<p class="description"><?php esc_html_e( 'Styling is controlled by Bricks element controls, not by DSA active/hover colors.', 'dsa' ); ?></p>
 								</td>
@@ -9071,7 +9074,7 @@ final class Admin {
 								<td>
 									<label>
 										<input type="checkbox" name="bricks[stock_badge_enabled]" value="1" <?php checked( ! empty( $bricks['stock_badge_enabled'] ) ); ?> <?php disabled( ! $has_woo ); ?>>
-										<?php esc_html_e( 'Expose Bricks mini-cart stock badge style controls in the Bricks editor', 'dsa' ); ?>
+										<?php esc_html_e( 'Allow stock badges in the Bricks mini-cart', 'dsa' ); ?>
 									</label>
 									<p class="description"><?php esc_html_e( 'Badge thresholds and text live in Kiwe > WooCommerce so DSA cart and Bricks native mini-cart share the same commerce behavior.', 'dsa' ); ?></p>
 								</td>
@@ -9081,7 +9084,7 @@ final class Admin {
 								<td>
 									<label>
 										<input type="checkbox" name="bricks[add_to_cart_enhancer_enabled]" value="1" <?php checked( ! empty( $bricks['add_to_cart_enhancer_enabled'] ) ); ?> <?php disabled( ! $has_woo ); ?>>
-										<?php esc_html_e( 'Expose Bricks product add-to-cart behavior and quantity styling controls', 'dsa' ); ?>
+										<?php esc_html_e( 'Allow Add To Cart behaviour selected on individual Bricks elements (styling is always available)', 'dsa' ); ?>
 									</label>
 									<p class="description"><?php esc_html_e( 'Verified against the Bricks product add-to-cart contract. Visual styling stays in Bricks.', 'dsa' ); ?></p>
 								</td>
@@ -9091,7 +9094,7 @@ final class Admin {
 								<td>
 									<label>
 										<input type="checkbox" name="bricks[dsa_icon_launcher_enabled]" value="1" <?php checked( ! empty( $bricks['dsa_icon_launcher_enabled'] ) ); ?>>
-										<?php esc_html_e( 'Expose registered DSA destinations on the Bricks Icon element', 'dsa' ); ?>
+										<?php esc_html_e( 'Allow Bricks Icon elements to launch registered DSA destinations', 'dsa' ); ?>
 									</label>
 									<p class="description"><?php esc_html_e( 'Select an Icon element, then choose Open DSA screen in its Content controls. This works independently of whether that destination is visible in the dock.', 'dsa' ); ?></p>
 								</td>
@@ -9112,7 +9115,7 @@ final class Admin {
 								<td>
 									<label>
 										<input type="checkbox" name="bricks[linked_products_controls_enabled]" value="1" <?php checked( ! empty( $bricks['linked_products_controls_enabled'] ) ); ?> <?php disabled( ! $has_woo ); ?>>
-										<?php esc_html_e( 'Expose Kiwe FBT and recommendation controls in Bricks', 'dsa' ); ?>
+										<?php esc_html_e( 'Allow Kiwe linked-product source presets and cart recommendations in Bricks', 'dsa' ); ?>
 									</label>
 									<p class="description"><?php esc_html_e( 'Verified against Bricks `woocommerce-mini-cart` and `product-upsells`. Bricks owns card styling; Kiwe supplies safe cart recommendations and source presets.', 'dsa' ); ?></p>
 								</td>
