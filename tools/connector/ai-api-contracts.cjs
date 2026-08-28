@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..', '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
@@ -21,6 +22,9 @@ const bricksValidator = read('kiwe-ai-toolkit/lib/bricks-conversion-validator.js
 const accessibilityValidator = read('kiwe-ai-toolkit/lib/accessibility-validator.js');
 const frameworkValidator = read('kiwe-ai-toolkit/lib/framework-profile-validator.js');
 const contexts = ['ideate.md', 'convert-bricks.md', 'audit.md', 'accessibility.md'].map((file) => read(`kiwe-ai-toolkit/contexts/${file}`)).join('\n');
+const conversionRoutes = ['', ' /dynamictags', ' /queryloop'].map((modifier) => JSON.parse(execFileSync(process.execPath, [
+	path.join(root, 'kiwe-ai-toolkit/bin/kiwe.js'), 'route', '--command', '/convert /bricks' + modifier, '--artifact-summary', 'approved source.html styles.css app.js',
+], { cwd: root, encoding: 'utf8' })));
 
 const expected = ['/ideate', '/convert /bricks', '/audit', '/accessibility', '/fix', '/redo'];
 const checks = [];
@@ -30,7 +34,7 @@ check('SEAM exposes exactly six commands', JSON.stringify(manifest.commands.map(
 check('SEAM has no aliases or compatibility grammar', manifest.aliases.length === 0 && manifest.unknownCommandPolicy === 'reject' && !JSON.stringify(manifest).includes('compatib'));
 check('SiteGraph is input rather than a slash command', manifest.authority.siteContext.includes('neither is a slash command') && !expected.some((command) => command.includes('sitegraph')));
 check('Framework is an explicit seam.kiwe conversion option', manifest.authority.framework.includes('explicit seam.kiwe compilation option') && contexts.includes('Framework Profile'));
-check('seam.kiwe is sole Bricks JSON authority', manifest.authority.conversion.includes('only authority') && contexts.includes('never produces and validates native Bricks JSON') === false && contexts.includes('compiler alone produces and validates native Bricks JSON'));
+check('seam.kiwe is sole Bricks JSON authority', manifest.authority.conversion.includes('Only seam.kiwe emits production Bricks JSON') && conversionRoutes.every((route) => route.ok && JSON.stringify(route.outputs) === JSON.stringify(['bricks-bindings/kiwe-bindings.json', 'binding report']) && route.options.emitsBricksJson === false));
 check('ideation preserves creative authority', contexts.includes('Do not apply Seam Framework, Bricks structures or a SEAM house style'));
 check(
 	'ideation performs adaptive project and SiteGraph discovery',
@@ -38,7 +42,8 @@ check(
 		&& contexts.includes('Choose the safest SiteGraph connection the participating AI can actually use')
 );
 check('convert command prepares both binding lanes by default', manifest.commands.find((item) => item.command === '/convert /bricks').modifiers.default === 'dynamicTagsAndQueryLoops' && core.includes('dynamicTagsAndQueryLoops'));
-check('convert command never emits Bricks JSON', contexts.includes('Do not emit a Bricks template, Bricks JSON') && core.includes('emitsBricksJson: false'));
+check('convert command keeps accepted source immutable in every binding lane', conversionRoutes.every((route) => route.options.emitsBricksJson === false && route.options.emitsUpdatedSource === false && route.options.sourcePolicy === 'immutable' && route.context.includes('Do not return a rewritten raw project, Bricks JSON')));
+check('executed conversion modifiers select only their declared lanes', JSON.stringify(conversionRoutes.map((route) => route.options.bindingMode)) === JSON.stringify(['dynamicTagsAndQueryLoops', 'dynamicTagsOnly', 'queryLoopsOnly']));
 check('audit and accessibility are evidence based', contexts.includes('Scores must be reproducible') && contexts.includes('Distinguish source defects from conversion defects'));
 check('dark mode preserves brand identity', contexts.includes('must preserve brand identity') && contexts.includes('not turn every surface black'));
 check('core rejects unknown commands', core.includes("status: 'rejected'") && core.includes('Unknown command, alias or modifier.'));
