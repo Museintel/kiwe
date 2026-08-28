@@ -4,6 +4,7 @@ define( 'ABSPATH', __DIR__ );
 $hooks = [];
 function add_filter( $name, $callback, $priority = 10 ) { global $hooks; $hooks[$name][] = $callback; }
 function __( $text, $domain = '' ) { return $text; }
+function esc_html__( $text, $domain = '' ) { return $text; }
 require dirname(__DIR__, 2) . '/wp-content/mu-plugins/dsa/includes/Bricks/Surface_Style_Controls.php';
 use DSA\Bricks\Surface_Style_Controls as Controls;
 $checks = 0;
@@ -35,4 +36,18 @@ foreach (Controls::catalog() as $element => $parts) {
 }
 check('Disabled ATC enhancer is never advertised', Controls::capabilities()['product-add-to-cart'] === []);
 check('Enabled ATC enhancer advertises existing exact controls', count(Controls::capabilities(true)['product-add-to-cart']) === 15);
+require dirname(__DIR__, 2) . '/wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php';
+$reflection = new ReflectionClass(\DSA\Bricks\Bricks_Integration::class);
+$integration = $reflection->newInstanceWithoutConstructor();
+$reflection->getProperty('settings')->setValue($integration, new class {
+    public function all() { return ['bricks' => ['add_to_cart_enhancer_enabled' => true]]; }
+    public function get($key, $default = null) { return $this->all()[$key] ?? $default; }
+});
+$groups = $integration->add_add_to_cart_control_group([]);
+$atc = $integration->add_add_to_cart_controls([]);
+foreach (Controls::capabilities(true)['product-add-to-cart'] as $key) {
+    check('Advertised ATC control really exists: ' . $key, isset($atc[$key]));
+    check('ATC styling is in a style-tab group', $groups[$atc[$key]['group']]['tab'] === 'style');
+}
+check('Behavior stays in content', $groups[$atc['brxPlusOnly']['group']]['tab'] === 'content');
 echo json_encode(['pass' => true, 'checks' => $checks, 'elements' => count(Controls::catalog()), 'extensions' => count($keys)]) . PHP_EOL;
