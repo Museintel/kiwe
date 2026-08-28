@@ -127,6 +127,7 @@ final class Site_Graph_Service {
 				'queryLoopTypes'    => array_values( array_unique( array_filter( array_map( static fn( $item ): string => sanitize_key( (string) ( is_array( $item ) ? ( $item['objectType'] ?? $item['name'] ?? '' ) : $item ) ), $this->bricks_query_loop_types() ) ) ) ),
 				'dynamicTags'       => $this->calibration_dynamic_tags(),
 				'elementManager'    => $this->calibration_element_manager( is_array( $element_manager ) ? $element_manager : [] ),
+				'surfaceStyleControls' => class_exists( '\\Bricks\\Setup' ) ? \DSA\Bricks\Surface_Style_Controls::capabilities() : [],
 			],
 		];
 	}

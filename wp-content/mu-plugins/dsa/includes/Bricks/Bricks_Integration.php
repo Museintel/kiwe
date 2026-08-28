@@ -35,6 +35,7 @@ final class Bricks_Integration {
 	}
 
 	public function register(): void {
+		Surface_Style_Controls::register();
 		add_filter( 'bricks/dynamic_tags_list', [ $this, 'add_dynamic_tags' ], 20 );
 		add_filter( 'bricks/dynamic_data/render_tag', [ $this, 'render_dynamic_tag' ], 20, 3 );
 		add_filter( 'bricks/dynamic_data/render_content', [ $this, 'render_dynamic_content' ], 20, 3 );

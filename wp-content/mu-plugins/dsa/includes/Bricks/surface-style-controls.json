@@ -1,0 +1,24 @@
+{
+  "schema": "kiwe.bricks-surface-style-controls.v1",
+  "bricksVersion": "2.3.10",
+  "elements": {
+    "search": [
+      {"id":"input","label":"Search input","source":"input[type=search], input[name=s]","target":"input[type=search]","native":{"typography":"inputTypography","background":"inputBackgroundColor","border":"inputBorder","shadow":"inputBoxShadow","width":"inputWidth","height":"inputHeight"},"extensions":{"padding":"kiweSearchInputPadding"}},
+      {"id":"button","label":"Search button","source":"button[type=submit], button:not([type]), input[type=submit]","target":"button[type=submit]","native":{"typography":"iconTypography","background":"iconBackgroundColor","border":"iconBorder","shadow":"iconBoxShadow","width":"iconWidth","height":"iconHeight","padding":"buttonPadding"},"extensions":{}},
+      {"id":"label","label":"Search label","source":"label:not(.screen-reader-text):not(.sr-only)","target":"label","native":{"typography":"labelTypography"},"extensions":{}}
+    ],
+    "woocommerce-cart-coupon": [
+      {"id":"input","label":"Coupon input","source":"input:not([type=hidden]):not([type=submit])","target":".coupon input:not([type=hidden])","native":{"width":"inputWidth","background":"inputBackground","border":"inputBorder"},"extensions":{"typography":"kiweCouponInputTypography","padding":"kiweCouponInputPadding","height":"kiweCouponInputHeight","shadow":"kiweCouponInputShadow"}},
+      {"id":"button","label":"Coupon button","source":"button[type=submit], button:not([type])","target":".coupon button","native":{"width":"buttonWidth","margin":"buttonMargin","background":"buttonBackground","border":"buttonBorder","typography":"buttonTypography"},"extensions":{"padding":"kiweCouponButtonPadding","height":"kiweCouponButtonHeight","shadow":"kiweCouponButtonShadow"}}
+    ],
+    "product-reviews": [
+      {"id":"input","label":"Review text inputs","source":"form input:not([type=hidden]):not([type=submit]):not([type=checkbox]):not([type=radio])","target":"form input:not([type=hidden]):not([type=submit]):not([type=checkbox]):not([type=radio])","native":{},"extensions":{"typography":"kiweReviewInputTypography","background":"kiweReviewInputBackground","border":"kiweReviewInputBorder","padding":"kiweReviewInputPadding","height":"kiweReviewInputHeight","shadow":"kiweReviewInputShadow"}},
+      {"id":"textarea","label":"Review textarea","source":"form textarea","target":"form textarea","native":{},"extensions":{"typography":"kiweReviewTextareaTypography","background":"kiweReviewTextareaBackground","border":"kiweReviewTextareaBorder","padding":"kiweReviewTextareaPadding","height":"kiweReviewTextareaHeight","shadow":"kiweReviewTextareaShadow"}},
+      {"id":"submit","label":"Review submit","source":"form input[type=submit], form button[type=submit]","target":"form input[type=submit], form button[type=submit]","native":{},"extensions":{"typography":"kiweReviewSubmitTypography","background":"kiweReviewSubmitBackground","border":"kiweReviewSubmitBorder","padding":"kiweReviewSubmitPadding","width":"kiweReviewSubmitWidth","height":"kiweReviewSubmitHeight","shadow":"kiweReviewSubmitShadow"}}
+    ],
+    "woocommerce-checkout-customer-details": [
+      {"id":"input","label":"Checkout text inputs","source":"input:not([type=hidden]):not([type=submit]):not([type=checkbox]):not([type=radio])","target":"input:not([type=hidden]):not([type=submit]):not([type=checkbox]):not([type=radio])","native":{},"extensions":{"background":"kiweCheckoutInputBackground","border":"kiweCheckoutInputBorder","padding":"kiweCheckoutInputPadding","height":"kiweCheckoutInputHeight","shadow":"kiweCheckoutInputShadow"}},
+      {"id":"textarea","label":"Checkout textarea","source":"textarea","target":"textarea","native":{},"extensions":{"typography":"kiweCheckoutTextareaTypography","background":"kiweCheckoutTextareaBackground","border":"kiweCheckoutTextareaBorder","padding":"kiweCheckoutTextareaPadding","height":"kiweCheckoutTextareaHeight","shadow":"kiweCheckoutTextareaShadow"}}
+    ]
+  }
+}
