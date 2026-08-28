@@ -2,6 +2,12 @@
   "schema": "kiwe.bricks-surface-style-controls.v1",
   "bricksVersion": "2.3.10",
   "elements": {
+    "product-add-to-cart": [
+      {"id":"quantity","label":"Quantity wrapper","source":".quantity","target":".cart .quantity","native":{"width":"quantityWidth","background":"quantityBackground"},"extensions":{}},
+      {"id":"plus","label":"Quantity increase","source":".quantity .plus, [data-qty-increase]","target":".quantity .plus","native":{},"extensions":{},"existing":{"typography":"brxQtyPlusTypo","background":"brxQtyPlusBg","border":"brxQtyPlusBorder","padding":"brxQtyPlusPadding","width":"brxQtyPlusSize"}},
+      {"id":"minus","label":"Quantity decrease","source":".quantity .minus, [data-qty-decrease]","target":".quantity .minus","native":{},"extensions":{},"existing":{"typography":"brxQtyMinusTypo","background":"brxQtyMinusBg","border":"brxQtyMinusBorder","padding":"brxQtyMinusPadding","width":"brxQtyMinusSize"}},
+      {"id":"quantity-input","label":"Quantity input","source":".quantity input.qty, input[name=quantity]","target":".quantity input.qty","native":{},"extensions":{},"existing":{"typography":"brxQtyInputTypo","background":"brxQtyInputBg","border":"brxQtyInputBorder","padding":"brxQtyInputPadding","width":"brxQtyInputWidth"}}
+    ],
     "search": [
       {"id":"input","label":"Search input","source":"input[type=search], input[name=s]","target":"input[type=search]","native":{"typography":"inputTypography","background":"inputBackgroundColor","border":"inputBorder","shadow":"inputBoxShadow","width":"inputWidth","height":"inputHeight"},"extensions":{"padding":"kiweSearchInputPadding"}},
       {"id":"button","label":"Search button","source":"button[type=submit], button:not([type]), input[type=submit]","target":"button[type=submit]","native":{"typography":"iconTypography","background":"iconBackgroundColor","border":"iconBorder","shadow":"iconBoxShadow","width":"iconWidth","height":"iconHeight","padding":"buttonPadding"},"extensions":{}},

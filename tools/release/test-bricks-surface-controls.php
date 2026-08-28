@@ -17,8 +17,10 @@ $keys = [];
 foreach (Controls::catalog() as $element => $parts) {
     $controls = Controls::extend(['untouched' => ['default' => 'existing']], $parts);
     check('Existing controls preserved', $controls['untouched']['default'] === 'existing');
-    $hook = $hooks['bricks/elements/' . $element . '/controls'][0];
-    check('Live filter uses identical catalog', $hook(['untouched' => ['default' => 'existing']]) === $controls);
+    if (isset($hooks['bricks/elements/' . $element . '/controls'])) {
+        $hook = $hooks['bricks/elements/' . $element . '/controls'][0];
+        check('Live filter uses identical catalog', $hook(['untouched' => ['default' => 'existing']]) === $controls);
+    }
     foreach ($parts as $part) {
         foreach ($part['extensions'] as $kind => $key) {
             check('Unique extension key', !isset($keys[$key])); $keys[$key] = true;
@@ -31,4 +33,6 @@ foreach (Controls::catalog() as $element => $parts) {
         foreach ($part['native'] as $key) { check('Does not duplicate native controls', !isset($controls[$key])); }
     }
 }
+check('Disabled ATC enhancer is never advertised', Controls::capabilities()['product-add-to-cart'] === []);
+check('Enabled ATC enhancer advertises existing exact controls', count(Controls::capabilities(true)['product-add-to-cart']) === 15);
 echo json_encode(['pass' => true, 'checks' => $checks, 'elements' => count(Controls::catalog()), 'extensions' => count($keys)]) . PHP_EOL;

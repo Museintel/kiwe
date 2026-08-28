@@ -32,6 +32,7 @@ final class Surface_Style_Controls {
 		if ( self::$registered ) { return; }
 		self::$registered = true;
 		foreach ( self::catalog() as $element => $parts ) {
+			if ( ! array_filter( $parts, static fn( array $part ): bool => ! empty( $part['extensions'] ) ) ) { continue; }
 			add_filter( 'bricks/elements/' . $element . '/control_groups', static function ( array $groups ): array {
 				$groups[ self::GROUP ] = [ 'title' => __( 'Kiwe surface styles', 'dsa' ), 'tab' => 'style' ];
 				return $groups;
@@ -58,13 +59,16 @@ final class Surface_Style_Controls {
 	}
 
 	/** Advertise installed style keys, not a generic "Kiwe exists" assumption. */
-	public static function capabilities(): array {
+	public static function capabilities( bool $add_to_cart_enabled = false ): array {
 		if ( ! self::$registered ) { return []; }
 		$result = [];
 		foreach ( self::catalog() as $element => $parts ) {
 			$result[ $element ] = [];
 			foreach ( $parts as $part ) {
 				$result[ $element ] = array_merge( $result[ $element ], array_values( $part['extensions'] ) );
+				if ( 'product-add-to-cart' === $element && $add_to_cart_enabled ) {
+					$result[ $element ] = array_merge( $result[ $element ], array_values( $part['existing'] ?? [] ) );
+				}
 			}
 		}
 		return $result;

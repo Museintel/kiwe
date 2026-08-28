@@ -1493,6 +1493,10 @@ final class Bricks_Integration {
 			'title' => esc_html__( 'Kiwe Add To Cart', 'dsa' ),
 			'tab'   => 'content',
 		];
+		$groups['dsaAtcStyles'] = [
+			'title' => esc_html__( 'Kiwe Add To Cart styles', 'dsa' ),
+			'tab'   => 'style',
+		];
 
 		return $groups;
 	}
@@ -1529,6 +1533,11 @@ final class Bricks_Integration {
 		$controls['brxQtyInputBorder'] = [ 'tab' => 'style', 'group' => $group, 'label' => esc_html__( 'Input border/radius', 'dsa' ), 'type' => 'border', 'css' => [ [ 'property' => 'border', 'selector' => '.quantity input.qty' ] ] ];
 		$controls['brxQtyInputPadding'] = [ 'tab' => 'style', 'group' => $group, 'label' => esc_html__( 'Input padding', 'dsa' ), 'type' => 'spacing', 'css' => [ [ 'property' => 'padding', 'selector' => '.quantity input.qty' ] ] ];
 		$controls['brxQtyInputWidth'] = [ 'tab' => 'style', 'group' => $group, 'label' => esc_html__( 'Input width', 'dsa' ), 'type' => 'number', 'units' => true, 'css' => [ [ 'property' => 'width', 'selector' => '.quantity input.qty' ] ] ];
+		foreach ( $controls as $key => $control ) {
+			if ( self::ATC_GROUP === ( $control['group'] ?? '' ) && 'style' === ( $control['tab'] ?? '' ) ) {
+				$controls[ $key ]['group'] = 'dsaAtcStyles';
+			}
+		}
 
 		return $controls;
 	}
