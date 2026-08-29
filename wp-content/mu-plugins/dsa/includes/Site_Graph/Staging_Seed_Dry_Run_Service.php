@@ -20,6 +20,9 @@ final class Staging_Seed_Dry_Run_Service {
 		];
 		$blockers = [];
 		$warnings = [];
+		$content_types = [];
+		$matched_content_ids = [];
+		$matched_product_ids = [];
 
 		foreach ( (array) ( $resources['terms'] ?? [] ) as $term ) {
 			if ( ! is_array( $term ) ) continue;
@@ -56,6 +59,7 @@ final class Staging_Seed_Dry_Run_Service {
 		foreach ( (array) ( $resources['content'] ?? [] ) as $content ) {
 			if ( ! is_array( $content ) ) continue;
 			$post_type = sanitize_key( (string) ( $content['postType'] ?? '' ) );
+			$content_types[] = $post_type;
 			$slug = sanitize_title( (string) ( $content['slug'] ?? '' ) );
 			if ( '' === $post_type || '' === $slug || ! post_type_exists( $post_type ) ) {
 				++$summary['content']['blocked'];
@@ -66,6 +70,8 @@ final class Staging_Seed_Dry_Run_Service {
 			if ( ! $existing ) {
 				$existing = get_page_by_path( $slug, OBJECT, $post_type );
 			}
+			$matched_id = $existing instanceof \WP_Post ? absint( $existing->ID ) : absint( $existing );
+			if ( $matched_id ) $matched_content_ids[] = $matched_id;
 			++$summary['content'][ $existing ? 'update' : 'create' ];
 		}
 
@@ -101,6 +107,7 @@ final class Staging_Seed_Dry_Run_Service {
 				$existing_id = $existing instanceof \WP_Post ? $existing->ID : 0;
 			}
 			if ( $existing_id ) {
+				$matched_product_ids[] = $existing_id;
 				$existing = wc_get_product( $existing_id );
 				if ( $existing && sanitize_key( (string) $existing->get_type() ) !== $type ) {
 					++$summary['products']['blocked'];
@@ -112,6 +119,14 @@ final class Staging_Seed_Dry_Run_Service {
 				++$summary['products']['create'];
 			}
 		}
+		foreach ( array_unique( array_filter( $content_types ) ) as $post_type ) {
+			$current = get_posts( [ 'post_type' => $post_type, 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'update_post_meta_cache' => false, 'update_post_term_cache' => false ] );
+			$summary['content']['remove'] += count( array_diff( array_map( 'absint', (array) $current ), array_unique( $matched_content_ids ) ) );
+		}
+		if ( function_exists( 'wc_get_product' ) ) {
+			$current = get_posts( [ 'post_type' => 'product', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'update_post_meta_cache' => false, 'update_post_term_cache' => false ] );
+			$summary['products']['remove'] = count( array_diff( array_map( 'absint', (array) $current ), array_unique( $matched_product_ids ) ) );
+		}
 
 		$menus = (array) ( $resources['menus'] ?? [] );
 		foreach ( $menus as $menu ) {
@@ -121,6 +136,13 @@ final class Staging_Seed_Dry_Run_Service {
 
 		if ( ! empty( $resources['products'] ) && empty( $resources['media'] ) ) {
 			$warnings[] = 'products_exist_without_transferable_media';
+		}
+		$page_authority = is_array( $resources['site']['pageAuthority'] ?? null ) ? $resources['site']['pageAuthority'] : [];
+		if ( [] !== $page_authority ) {
+			$source_page_ids = array_values( array_filter( array_map( static fn( $record ): int => is_array( $record ) && 'page' === ( $record['postType'] ?? '' ) ? absint( $record['sourceId'] ?? 0 ) : 0, (array) ( $resources['content'] ?? [] ) ) ) );
+			$authority_ids = [ absint( $page_authority['frontPageSourceId'] ?? 0 ), absint( $page_authority['postsPageSourceId'] ?? 0 ) ];
+			foreach ( (array) ( $page_authority['woo'] ?? [] ) as $source_id ) $authority_ids[] = absint( $source_id );
+			foreach ( array_filter( $authority_ids ) as $source_id ) if ( ! in_array( $source_id, $source_page_ids, true ) ) $blockers[] = 'page_authority_source_missing:' . $source_id;
 		}
 		if ( function_exists( 'wp_get_environment_type' ) && 'production' === wp_get_environment_type() ) {
 			$warnings[] = 'destination_reports_production_environment';
@@ -141,7 +163,7 @@ final class Staging_Seed_Dry_Run_Service {
 	}
 
 	private function empty_counts(): array {
-		return [ 'create' => 0, 'update' => 0, 'reuse' => 0, 'blocked' => 0 ];
+		return [ 'create' => 0, 'update' => 0, 'reuse' => 0, 'remove' => 0, 'blocked' => 0 ];
 	}
 
 	private function post_by_source_key( string $source_key, string $post_type ): int {

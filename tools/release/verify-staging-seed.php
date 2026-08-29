@@ -88,6 +88,13 @@ foreach ( [ 'packages->read(', 'snapshots->capture(', 'ledgers->append(', "wooco
 		exit( 1 );
 	}
 }
+foreach ( [ 'reconcile_public_records(', "'pageAuthority'", "'woocommerce_shop_page_id'", "'woocommerce_cart_page_id'", "'woocommerce_checkout_page_id'", "'woocommerce_myaccount_page_id'" ] as $required ) {
+	$haystack = "'pageAuthority'" === $required ? $export_source : $import_source;
+	if ( false === strpos( $haystack, $required ) ) {
+		fwrite( STDERR, "Clean staging reconciliation is missing authority evidence: {$required}\n" );
+		exit( 1 );
+	}
+}
 foreach ( [ 'wp_insert_user(', 'wp_update_user(', 'update_user_meta(', 'wc_create_order(', 'wp_mail(', 'WC_Webhook' ] as $forbidden ) {
 	if ( false !== strpos( $import_source, $forbidden ) ) {
 		fwrite( STDERR, "Controlled import crosses the identity/order/message boundary: {$forbidden}\n" );

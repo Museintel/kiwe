@@ -30,6 +30,7 @@ final class Staging_Seed_Import_Ledger_Service {
 			'sourceOrigin' => esc_url_raw( (string) ( $package['manifest']['source']['origin'] ?? '' ) ),
 			'created'      => [ 'posts' => [], 'media' => [], 'terms' => [], 'termrefs' => [], 'menus' => [], 'attributes' => [] ],
 			'updated'      => [ 'posts' => [] ],
+			'deleted'      => [ 'posts' => [] ],
 			'reused'       => [ 'media' => [], 'terms' => [], 'menus' => [] ],
 			'warnings'     => [],
 			'error'        => '',
@@ -45,7 +46,7 @@ final class Staging_Seed_Import_Ledger_Service {
 		$this->mutate(
 			$id,
 			static function ( array $record ) use ( $bucket, $type, $object_id ): array {
-				$bucket = in_array( $bucket, [ 'created', 'updated', 'reused' ], true ) ? $bucket : 'created';
+				$bucket = in_array( $bucket, [ 'created', 'updated', 'reused', 'deleted' ], true ) ? $bucket : 'created';
 				$type   = sanitize_key( $type );
 				if ( $object_id > 0 && isset( $record[ $bucket ][ $type ] ) && is_array( $record[ $bucket ][ $type ] ) ) {
 					$record[ $bucket ][ $type ][] = $object_id;
@@ -71,7 +72,7 @@ final class Staging_Seed_Import_Ledger_Service {
 		$this->mutate(
 			$id,
 			static function ( array $record ) use ( $bucket, $type, $reference ): array {
-				$bucket = in_array( $bucket, [ 'created', 'updated', 'reused' ], true ) ? $bucket : 'created';
+				$bucket = in_array( $bucket, [ 'created', 'updated', 'reused', 'deleted' ], true ) ? $bucket : 'created';
 				$type = sanitize_key( $type );
 				if ( isset( $record[ $bucket ][ $type ] ) && is_array( $record[ $bucket ][ $type ] ) ) $record[ $bucket ][ $type ][] = $reference;
 				return $record;

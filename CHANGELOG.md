@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.0-rc.5 — 2026-08-29
+
+- Added opt-in, rollback-safe clean reconciliation for staging public pages/posts and WooCommerce products so historical compiler-test records cannot contaminate a verified source mirror.
+- Added source authority for the WordPress front/posts pages and WooCommerce Shop, Cart, Checkout and My Account assignments, with destination ID remapping after import.
+- Dry runs now report unmatched target content and product removal candidates before the explicit staging import confirmation.
+
 ## 8.0.0-rc.4 — 2026-08-29
 
 - Added the controlled SiteGraph Staging Seed import lane, gated by a destination-bound verified package, a fresh blocker-free dry run, exact revision confirmation and an automatic private target baseline.

@@ -337,6 +337,8 @@ final class Test_Site_Snapshot_Service {
 	private function flush_builder_state(): void {
 		wp_cache_flush();
 		flush_rewrite_rules( false );
+		if ( function_exists( 'wc_update_product_lookup_tables' ) ) wc_update_product_lookup_tables();
+		if ( function_exists( 'wc_delete_product_transients' ) ) wc_delete_product_transients();
 		if ( class_exists( '\\Bricks\\Assets_Files' ) && method_exists( '\\Bricks\\Assets_Files', 'schedule_css_file_regeneration' ) ) {
 			\Bricks\Assets_Files::schedule_css_file_regeneration();
 		}

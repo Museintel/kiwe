@@ -44,6 +44,8 @@ final class Staging_Seed_Export_Service {
 			'origin'       => $this->origin(),
 			'resources'    => $resources,
 			'lastModified' => $this->latest_public_modified(),
+			'siteHash'     => hash( 'sha256', $this->json( $this->site_record() ) ),
+			'menuHash'     => hash( 'sha256', $this->json( $this->data_query->query( [ 'resource' => 'menus' ], true ) ) ),
 			'designHash'   => hash( 'sha256', $this->json( ( new Design_Context_Profile_Service() )->public_context( true ) ) ),
 			'kiweVersion'  => defined( 'DSA_VERSION' ) ? DSA_VERSION : '',
 		];
@@ -123,6 +125,17 @@ final class Staging_Seed_Export_Service {
 			'publicContact' => [
 				'phone' => Site_Identity_Service::store_phone(),
 				'email' => Site_Identity_Service::store_email(),
+			],
+			'pageAuthority' => [
+				'showOnFront'       => sanitize_key( (string) get_option( 'show_on_front', 'posts' ) ),
+				'frontPageSourceId'  => absint( get_option( 'page_on_front', 0 ) ),
+				'postsPageSourceId'  => absint( get_option( 'page_for_posts', 0 ) ),
+				'woo' => [
+					'shopSourceId'      => absint( get_option( 'woocommerce_shop_page_id', 0 ) ),
+					'cartSourceId'      => absint( get_option( 'woocommerce_cart_page_id', 0 ) ),
+					'checkoutSourceId'  => absint( get_option( 'woocommerce_checkout_page_id', 0 ) ),
+					'myAccountSourceId' => absint( get_option( 'woocommerce_myaccount_page_id', 0 ) ),
+				],
 			],
 			'commerce' => [
 				'enabled'          => class_exists( 'WooCommerce' ),
@@ -511,7 +524,7 @@ final class Staging_Seed_Export_Service {
 
 	private function latest_public_modified(): string {
 		global $wpdb;
-		$post_types = array_merge( $this->public_content_types(), post_type_exists( 'product' ) ? [ 'product' ] : [], [ 'attachment' ] );
+		$post_types = array_merge( $this->public_content_types(), post_type_exists( 'product' ) ? [ 'product' ] : [], post_type_exists( 'product_variation' ) ? [ 'product_variation' ] : [], post_type_exists( 'nav_menu_item' ) ? [ 'nav_menu_item' ] : [], [ 'attachment' ] );
 		$placeholders = implode( ',', array_fill( 0, count( $post_types ), '%s' ) );
 		$sql = $wpdb->prepare( "SELECT MAX(post_modified_gmt) FROM {$wpdb->posts} WHERE post_type IN ($placeholders) AND post_status IN ('publish','inherit')", ...$post_types ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return sanitize_text_field( (string) $wpdb->get_var( $sql ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared

@@ -35,8 +35,12 @@ final class Staging_Seed_Import_Service {
 		$this->snapshots = $snapshots ?: new Test_Site_Snapshot_Service();
 	}
 
-	public function run( string $package_record_id, string $expected_revision ): array {
+	public function run( string $package_record_id, string $expected_revision, bool $reconcile = false ): array {
 		$package = $this->packages->read( $package_record_id );
+		$resources = is_array( $package['resources'] ?? null ) ? $package['resources'] : [];
+		if ( $reconcile && empty( $resources['site']['pageAuthority'] ) ) {
+			throw new \RuntimeException( 'Clean reconciliation requires a fresh package with source page authority.' );
+		}
 		$revision = sanitize_text_field( (string) ( $package['manifest']['revisionHash'] ?? '' ) );
 		if ( '' === $expected_revision || ! hash_equals( $revision, sanitize_text_field( $expected_revision ) ) ) {
 			throw new \RuntimeException( 'The import confirmation does not match the verified source revision.' );
@@ -61,7 +65,6 @@ final class Staging_Seed_Import_Service {
 
 		add_filter( 'woocommerce_webhook_should_deliver', '__return_false', PHP_INT_MAX );
 		try {
-			$resources = is_array( $package['resources'] ?? null ) ? $package['resources'] : [];
 			$this->ensure_product_attribute_taxonomies( (array) ( $resources['terms'] ?? [] ), (array) ( $resources['products'] ?? [] ) );
 			$this->import_terms( (array) ( $resources['terms'] ?? [] ) );
 			$this->import_media( (array) ( $resources['media'] ?? [] ) );
@@ -69,6 +72,7 @@ final class Staging_Seed_Import_Service {
 			$this->import_products( (array) ( $resources['products'] ?? [] ) );
 			$this->import_menus( (array) ( $resources['menus'] ?? [] ) );
 			$this->import_site_context( is_array( $resources['site'] ?? null ) ? $resources['site'] : [], is_array( $resources['designContext'] ?? null ) ? $resources['designContext'] : [] );
+			if ( $reconcile ) $this->reconcile_public_records( (array) ( $resources['content'] ?? [] ), (array) ( $resources['products'] ?? [] ), is_array( $resources['site'] ?? null ) ? $resources['site'] : [] );
 			$this->flush_runtime();
 			return $this->ledgers->complete( $this->ledger_id );
 		} catch ( \Throwable $error ) {
@@ -370,6 +374,14 @@ final class Staging_Seed_Import_Service {
 		update_option( Site_Identity_Service::OPTION_STORE_PHONE, sanitize_text_field( (string) ( $site['publicContact']['phone'] ?? '' ) ), false );
 		update_option( Site_Identity_Service::OPTION_STORE_EMAIL, sanitize_email( (string) ( $site['publicContact']['email'] ?? '' ) ), false );
 		foreach ( [ 'currency' => 'woocommerce_currency', 'currencyPosition' => 'woocommerce_currency_pos', 'weightUnit' => 'woocommerce_weight_unit', 'dimensionUnit' => 'woocommerce_dimension_unit' ] as $source => $option ) if ( isset( $site['commerce'][ $source ] ) ) update_option( $option, sanitize_key( (string) $site['commerce'][ $source ] ), false );
+		$page_authority = is_array( $site['pageAuthority'] ?? null ) ? $site['pageAuthority'] : [];
+		if ( [] !== $page_authority ) {
+			update_option( 'show_on_front', 'page' === ( $page_authority['showOnFront'] ?? '' ) ? 'page' : 'posts', false );
+			$this->map_page_option( 'page_on_front', absint( $page_authority['frontPageSourceId'] ?? 0 ) );
+			$this->map_page_option( 'page_for_posts', absint( $page_authority['postsPageSourceId'] ?? 0 ) );
+			$woo_pages = is_array( $page_authority['woo'] ?? null ) ? $page_authority['woo'] : [];
+			foreach ( [ 'shopSourceId' => 'woocommerce_shop_page_id', 'cartSourceId' => 'woocommerce_cart_page_id', 'checkoutSourceId' => 'woocommerce_checkout_page_id', 'myAccountSourceId' => 'woocommerce_myaccount_page_id' ] as $source_key => $option ) $this->map_page_option( $option, absint( $woo_pages[ $source_key ] ?? 0 ) );
+		}
 		if ( [] !== $context ) {
 			$context = $this->remap_context( $context );
 			$context['identity']['logoId'] = $logo;
@@ -408,6 +420,41 @@ final class Staging_Seed_Import_Service {
 		foreach ( (array) ( $context['contentPlan']['existingPages'] ?? [] ) as $index => $page ) if ( is_array( $page ) ) $context['contentPlan']['existingPages'][ $index ]['id'] = absint( $this->post_map['page'][ absint( $page['id'] ?? 0 ) ] ?? 0 );
 		foreach ( (array) ( $context['services']['items'] ?? [] ) as $index => $service ) if ( is_array( $service ) ) { $context['services']['items'][ $index ]['recordId'] = absint( $this->post_map['all'][ absint( $service['recordId'] ?? 0 ) ] ?? 0 ); $context['services']['items'][ $index ]['imageId'] = absint( $this->media_map[ absint( $service['imageId'] ?? 0 ) ] ?? 0 ); }
 		return $context;
+	}
+
+	private function map_page_option( string $option, int $source_id ): void {
+		$target_id = $source_id ? absint( $this->post_map['page'][ $source_id ] ?? 0 ) : 0;
+		update_option( sanitize_key( $option ), $target_id, false );
+	}
+
+	/** Removes only public posts/products absent from the verified package. */
+	private function reconcile_public_records( array $content, array $products, array $site ): void {
+		if ( empty( $site['pageAuthority'] ) ) {
+			throw new \RuntimeException( 'Clean reconciliation requires a fresh package with source page authority.' );
+		}
+		$expected_by_type = [];
+		foreach ( $content as $record ) {
+			if ( ! is_array( $record ) ) continue;
+			$type = sanitize_key( (string) ( $record['postType'] ?? '' ) );
+			$target_id = absint( $this->post_map[ $type ][ absint( $record['sourceId'] ?? 0 ) ] ?? 0 );
+			if ( $target_id ) $expected_by_type[ $type ][] = $target_id;
+		}
+		foreach ( $expected_by_type as $type => $expected ) {
+			if ( ! post_type_exists( $type ) || in_array( $type, [ 'attachment', 'product', 'product_variation', 'shop_order', 'shop_order_refund', 'shop_coupon' ], true ) ) continue;
+			$current = get_posts( [ 'post_type' => $type, 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'update_post_meta_cache' => false, 'update_post_term_cache' => false ] );
+			foreach ( array_diff( array_map( 'absint', (array) $current ), array_unique( array_map( 'absint', $expected ) ) ) as $post_id ) {
+				if ( $post_id > 0 && wp_delete_post( $post_id, true ) ) $this->ledgers->append( $this->ledger_id, 'deleted', 'posts', $post_id );
+			}
+		}
+
+		$expected_products = [];
+		foreach ( $products as $record ) if ( is_array( $record ) && ! empty( $this->product_map[ absint( $record['sourceId'] ?? 0 ) ] ) ) $expected_products[] = absint( $this->product_map[ absint( $record['sourceId'] ) ] );
+		$current_products = get_posts( [ 'post_type' => 'product', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'update_post_meta_cache' => false, 'update_post_term_cache' => false ] );
+		foreach ( array_diff( array_map( 'absint', (array) $current_products ), array_unique( $expected_products ) ) as $product_id ) {
+			$product = function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : false;
+			$deleted = $product && method_exists( $product, 'delete' ) ? $product->delete( true ) : wp_delete_post( $product_id, true );
+			if ( $deleted ) $this->ledgers->append( $this->ledger_id, 'deleted', 'posts', $product_id );
+		}
 	}
 
 	private function product_attributes( array $records ): array {

@@ -2148,7 +2148,7 @@ final class Admin {
 		check_admin_referer( 'dsa_sitegraph_staging_seed_import' );
 		if ( empty( $_POST['confirmBoundedImport'] ) ) wp_die( esc_html__( 'Confirm the bounded staging import before continuing.', 'dsa' ) );
 		try {
-			$result = ( new Staging_Seed_Import_Service() )->run( sanitize_key( (string) wp_unslash( $_POST['packageId'] ?? '' ) ), sanitize_text_field( (string) wp_unslash( $_POST['revisionHash'] ?? '' ) ) );
+			$result = ( new Staging_Seed_Import_Service() )->run( sanitize_key( (string) wp_unslash( $_POST['packageId'] ?? '' ) ), sanitize_text_field( (string) wp_unslash( $_POST['revisionHash'] ?? '' ) ), ! empty( $_POST['reconcilePublicData'] ) );
 			wp_safe_redirect( add_query_arg( 'staging-seed-import', sanitize_key( (string) ( $result['id'] ?? 'complete' ) ), admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
 			exit;
 		} catch ( \Throwable $error ) {
@@ -4876,12 +4876,12 @@ final class Admin {
 					<h3><?php esc_html_e( 'Verified packages', 'dsa' ); ?></h3>
 					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Pulled', 'dsa' ); ?></th><th><?php esc_html_e( 'Dry run', 'dsa' ); ?></th><th><?php esc_html_e( 'Integrity', 'dsa' ); ?></th><th><?php esc_html_e( 'Action', 'dsa' ); ?></th></tr></thead><tbody>
 					<?php foreach ( array_slice( $seed_packages, 0, 4 ) as $seed_package ) : ?>
-						<?php $package_counts = is_array( $seed_package['resourceCounts'] ?? null ) ? $seed_package['resourceCounts'] : []; $dry = is_array( $seed_package['dryRun'] ?? null ) ? $seed_package['dryRun'] : []; $product_dry = is_array( $dry['summary']['products'] ?? null ) ? $dry['summary']['products'] : []; ?>
+						<?php $package_counts = is_array( $seed_package['resourceCounts'] ?? null ) ? $seed_package['resourceCounts'] : []; $dry = is_array( $seed_package['dryRun'] ?? null ) ? $seed_package['dryRun'] : []; $product_dry = is_array( $dry['summary']['products'] ?? null ) ? $dry['summary']['products'] : []; $content_dry = is_array( $dry['summary']['content'] ?? null ) ? $dry['summary']['content'] : []; ?>
 						<tr>
 							<td><code><?php echo esc_html( (string) ( $seed_package['sourceOrigin'] ?? '' ) ); ?></code><br><small><?php echo esc_html( substr( (string) ( $seed_package['revisionHash'] ?? '' ), 0, 12 ) ); ?></small></td>
 							<td><?php echo esc_html( (string) ( $seed_package['state'] ?? '' ) ); ?></td>
 							<td><?php echo esc_html( sprintf( 'Products %1$d · Content %2$d · Media %3$d', absint( $package_counts['products'] ?? 0 ), absint( $package_counts['content'] ?? 0 ), absint( $package_counts['media'] ?? 0 ) ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $dry['status'] ?? '' ) ); ?><br><small><?php echo esc_html( sprintf( 'Products: %1$d create · %2$d update · %3$d blocked', absint( $product_dry['create'] ?? 0 ), absint( $product_dry['update'] ?? 0 ), absint( $product_dry['blocked'] ?? 0 ) ) ); ?></small></td>
+							<td><?php echo esc_html( (string) ( $dry['status'] ?? '' ) ); ?><br><small><?php echo esc_html( sprintf( 'Products: %1$d create · %2$d update · %3$d remove · %4$d blocked', absint( $product_dry['create'] ?? 0 ), absint( $product_dry['update'] ?? 0 ), absint( $product_dry['remove'] ?? 0 ), absint( $product_dry['blocked'] ?? 0 ) ) ); ?></small><br><small><?php echo esc_html( sprintf( 'Content: %d remove', absint( $content_dry['remove'] ?? 0 ) ) ); ?></small></td>
 							<td><?php echo esc_html( size_format( absint( $seed_package['bytes'] ?? 0 ) ) ); ?> · <?php echo esc_html( substr( (string) ( $seed_package['hash'] ?? '' ), 0, 12 ) ); ?><br><small><?php esc_html_e( 'Credentials not stored', 'dsa' ); ?></small></td>
 							<td>
 								<?php if ( 'ready-for-baseline-and-import-confirmation' === ( $dry['status'] ?? '' ) ) : ?>
@@ -4891,6 +4891,7 @@ final class Admin {
 									<input type="hidden" name="revisionHash" value="<?php echo esc_attr( (string) ( $seed_package['revisionHash'] ?? '' ) ); ?>">
 									<?php wp_nonce_field( 'dsa_sitegraph_staging_seed_import' ); ?>
 									<label><input type="checkbox" name="confirmBoundedImport" value="1" required> <?php esc_html_e( 'I confirm this is the staging destination.', 'dsa' ); ?></label><br>
+									<label><input type="checkbox" name="reconcilePublicData" value="1" checked> <?php esc_html_e( 'Reconcile public pages/posts and WooCommerce products to this source package; remove unmatched test records under the rollback baseline.', 'dsa' ); ?></label><br>
 									<?php submit_button( __( 'Capture baseline and import', 'dsa' ), 'primary', 'submit', false ); ?>
 								</form>
 								<?php else : ?>—<?php endif; ?>
