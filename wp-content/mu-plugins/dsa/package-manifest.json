@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.5",
+  "version": "8.0.0-rc.6",
   "algorithm": "sha256",
   "file_count": 344,
   "files": {
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2766,
-      "sha256": "13967d9724d886f9f7e44fe0dbced7e258d209f0b7ec980cba5b9b7737ab186a"
+      "sha256": "f6e57aa573a11b7779b3c46fba7fe82343f5a6b75e920c8ab1291f506e383d8a"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -501,8 +501,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 716507,
-      "sha256": "6642354bcf82f7dc83b8953e5625c407873f3ebe0223f7a27bdc39ada8e3536a"
+      "bytes": 717037,
+      "sha256": "f92346607e9dc548db0119c2b75bb119eb09db9ced76c098b7f86187277a74f9"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -905,36 +905,36 @@
       "sha256": "582200fef51476925b48750d8f3475a625772c752171ee946308840cb85d723f"
     },
     "includes/Site_Graph/Staging_Seed_Connection_Service.php": {
-      "bytes": 3887,
-      "sha256": "83112364f34460d06a049f5150ebde5ef2f6f8914b81e8b3c1b0db1f9e1a1b19"
+      "bytes": 4060,
+      "sha256": "a320e09e80664f5ac1da49c38f17908d9b791c7e4448441c64f409d37549f156"
     },
     "includes/Site_Graph/Staging_Seed_Dry_Run_Service.php": {
       "bytes": 8178,
       "sha256": "5ff366146578800175cb6fbfee031175e3e9a8b36fd6a67a1882d34d6a4b725d"
     },
     "includes/Site_Graph/Staging_Seed_Export_Service.php": {
-      "bytes": 25598,
-      "sha256": "0e947749beea3c20b5217698f1f76e696cb9de4b80bacf6a7c26d05cdea94c19"
+      "bytes": 25695,
+      "sha256": "244a8106fc6177b7c6e4afd4328d40a2c085de239ccefd6ef184aab81b23c4b5"
     },
     "includes/Site_Graph/Staging_Seed_Import_Ledger_Service.php": {
       "bytes": 5341,
       "sha256": "346cccdc90433b11d37b4570751b0ff1a464b2b116c02998d24ba274f8c3bbf3"
     },
     "includes/Site_Graph/Staging_Seed_Import_Service.php": {
-      "bytes": 40292,
-      "sha256": "40f1268f73ca9b176d31fc99de1e6994a1763a8e6a4ef8cbe7a99a69cd32b22c"
+      "bytes": 40392,
+      "sha256": "f09b57e0e1e67991cd1f549e4681b5e276dd1a2efa2d078301de632ab3599381"
     },
     "includes/Site_Graph/Staging_Seed_Ledger_Service.php": {
       "bytes": 2189,
       "sha256": "b6ddf0db902ab973bc870df444631645f747dfa332b0c16ea462544f3764bf64"
     },
     "includes/Site_Graph/Staging_Seed_Package_Service.php": {
-      "bytes": 7922,
-      "sha256": "19dedf01f57422d7e5c8ae0371ca37e4b31851a8c7b096f79ce61607a742808d"
+      "bytes": 9145,
+      "sha256": "010332864de32fe0acbe7fbc07c158ff3075d317797c5a0041a2556dbf29edbb"
     },
     "includes/Site_Graph/Staging_Seed_Preflight_Service.php": {
-      "bytes": 3089,
-      "sha256": "b2fedca969468b4b978695e596191b74824b473a9851774f8e5949a24c7476ce"
+      "bytes": 3368,
+      "sha256": "92e846c0e62e2db58d66ebc2b3ae66990bdc27f5d5bdc097cc5d0ce0223ec261"
     },
     "includes/Theme/Screen_Copy_Schema.php": {
       "bytes": 15201,

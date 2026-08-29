@@ -52,6 +52,10 @@ final class Staging_Seed_Export_Service {
 
 		return [
 			'schema'       => self::SCHEMA,
+			'capabilities' => [
+				'pageAuthority'      => 'v1',
+				'cleanReconciliation'=> true,
+			],
 			'generatedAt'  => gmdate( 'c' ),
 			'packageId'    => substr( hash( 'sha256', $this->json( $revision_material ) ), 0, 32 ),
 			'revisionHash' => hash( 'sha256', $this->json( $revision_material ) ),

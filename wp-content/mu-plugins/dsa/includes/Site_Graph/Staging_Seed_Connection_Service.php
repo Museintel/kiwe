@@ -18,11 +18,11 @@ final class Staging_Seed_Connection_Service {
 	}
 
 	public function fetch_manifest( string $source_url, string $username, string $application_password ): array {
-		return $this->request( $source_url, '/wp-json/dsa/v1/site-graph/staging-seed/manifest', [], $username, $application_password, 2 * MB_IN_BYTES );
+		return $this->request( $source_url, '/wp-json/dsa/v1/site-graph/staging-seed/manifest', [ '_kiweTransfer' => wp_generate_uuid4() ], $username, $application_password, 2 * MB_IN_BYTES );
 	}
 
 	public function fetch_resource( string $source_url, string $username, string $application_password, string $resource, array $args = [] ): array {
-		$args = array_merge( $args, [ 'resource' => sanitize_key( $resource ) ] );
+		$args = array_merge( $args, [ 'resource' => sanitize_key( $resource ), '_kiweTransfer' => wp_generate_uuid4() ] );
 		return $this->request( $source_url, '/wp-json/dsa/v1/site-graph/staging-seed/resource', $args, $username, $application_password, 12 * MB_IN_BYTES );
 	}
 
@@ -50,6 +50,8 @@ final class Staging_Seed_Connection_Service {
 					'Authorization' => 'Basic ' . base64_encode( $username . ':' . $password ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 					'Accept'        => 'application/json',
 					'User-Agent'    => 'Kiwe-Staging-Seed/' . ( defined( 'DSA_VERSION' ) ? DSA_VERSION : 'unknown' ),
+					'Cache-Control' => 'no-cache, no-store, max-age=0',
+					'Pragma'        => 'no-cache',
 				],
 			]
 		);

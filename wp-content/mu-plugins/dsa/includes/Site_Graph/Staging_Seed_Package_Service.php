@@ -8,8 +8,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Pulls and hash-verifies a complete read-only staging package. */
 final class Staging_Seed_Package_Service {
-	private const OPTION = 'dsa_sitegraph_staging_seed_packages_v1';
-	private const SCHEMA = 'kiwe.staging-seed-package.v1';
+	private const OPTION = 'dsa_sitegraph_staging_seed_packages_v2';
+	private const LEGACY_OPTION = 'dsa_sitegraph_staging_seed_packages_v1';
+	private const SCHEMA = 'kiwe.staging-seed-package.v2';
 	private const MAX_RECORDS = 6;
 	private const MAX_TOTAL_ROWS = 50000;
 	private const MAX_CALLS = 600;
@@ -59,6 +60,10 @@ final class Staging_Seed_Package_Service {
 		if ( ! hash_equals( (string) ( $manifest['revisionHash'] ?? '' ), (string) ( $final_manifest['revisionHash'] ?? '' ) ) ) {
 			throw new \RuntimeException( 'The source changed while Kiwe was reading it. Run the pull again from a fresh revision.' );
 		}
+		if ( empty( $resources['site']['pageAuthority'] ) ) {
+			$source_version = sanitize_text_field( (string) ( $manifest['source']['kiwe'] ?? 'unknown' ) );
+			throw new \RuntimeException( 'The source returned an incomplete clean-reconciliation package (Kiwe ' . $source_version . '). Update the complete canonical Kiwe plugin on the source site, then pull once more.' );
+		}
 
 		$package = [
 			'schema'       => self::SCHEMA,
@@ -98,6 +103,11 @@ final class Staging_Seed_Package_Service {
 			'createdAt'    => $package['createdAt'],
 			'createdBy'    => $package['createdBy'],
 			'sourceOrigin' => esc_url_raw( (string) ( $manifest['source']['origin'] ?? '' ) ),
+			'sourceKiweVersion' => sanitize_text_field( (string) ( $manifest['source']['kiwe'] ?? '' ) ),
+			'capabilities' => [
+				'pageAuthority'       => 'v1',
+				'cleanReconciliation' => true,
+			],
 			'packageId'    => sanitize_text_field( (string) ( $manifest['packageId'] ?? '' ) ),
 			'revisionHash' => sanitize_text_field( (string) ( $manifest['revisionHash'] ?? '' ) ),
 			'file'         => $filename,
@@ -113,6 +123,7 @@ final class Staging_Seed_Package_Service {
 	}
 
 	public function records(): array {
+		$this->retire_legacy_packages();
 		$records = get_option( self::OPTION, [] );
 		return is_array( $records ) ? array_values( array_filter( $records, 'is_array' ) ) : [];
 	}
@@ -144,6 +155,21 @@ final class Staging_Seed_Package_Service {
 			if ( is_file( $path ) ) @unlink( $path );
 		}
 		update_option( self::OPTION, array_slice( $records, 0, self::MAX_RECORDS ), false );
+	}
+
+	/** Retires pre-authority packages so an obsolete row can never be imported by mistake. */
+	private function retire_legacy_packages(): void {
+		$records = get_option( self::LEGACY_OPTION, [] );
+		if ( ! is_array( $records ) || [] === $records ) {
+			delete_option( self::LEGACY_OPTION );
+			return;
+		}
+		foreach ( $records as $record ) {
+			if ( ! is_array( $record ) ) continue;
+			$path = $this->package_path( (string) ( $record['file'] ?? '' ) );
+			if ( is_file( $path ) ) @unlink( $path );
+		}
+		delete_option( self::LEGACY_OPTION );
 	}
 
 	private function resource_key( string $resource ): string {

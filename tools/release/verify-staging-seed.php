@@ -27,6 +27,7 @@ $boundary = array_fill_keys(
 );
 $manifest = [
 	'schema' => Staging_Seed_Export_Service::SCHEMA,
+	'capabilities' => [ 'pageAuthority' => 'v1', 'cleanReconciliation' => true ],
 	'packageId' => 'fixture',
 	'revisionHash' => str_repeat( 'a', 64 ),
 	'source' => [ 'origin' => 'https://source.example.test' ],
@@ -39,6 +40,14 @@ $service = new Staging_Seed_Preflight_Service();
 $safe = $service->evaluate( $manifest );
 if ( 'ready-for-human-reviewed-import' !== $safe['status'] || [] !== $safe['blockers'] || $safe['contentMutated'] || $safe['credentialsStored'] ) {
 	fwrite( STDERR, "Safe staging manifest did not pass the fail-closed preflight.\n" );
+	exit( 1 );
+}
+
+$legacy = $manifest;
+unset( $legacy['capabilities'] );
+$legacy_result = $service->evaluate( $legacy );
+if ( ! in_array( 'source_missing_clean_reconciliation_capability', $legacy_result['blockers'], true ) ) {
+	fwrite( STDERR, "Legacy source did not fail closed before package pull.\n" );
 	exit( 1 );
 }
 
@@ -92,6 +101,20 @@ foreach ( [ 'reconcile_public_records(', "'pageAuthority'", "'woocommerce_shop_p
 	$haystack = "'pageAuthority'" === $required ? $export_source : $import_source;
 	if ( false === strpos( $haystack, $required ) ) {
 		fwrite( STDERR, "Clean staging reconciliation is missing authority evidence: {$required}\n" );
+		exit( 1 );
+	}
+}
+$package_source = (string) file_get_contents( __DIR__ . '/../../wp-content/mu-plugins/dsa/includes/Site_Graph/Staging_Seed_Package_Service.php' );
+foreach ( [ 'kiwe.staging-seed-package.v2', 'retire_legacy_packages(', "'sourceKiweVersion'", "'cleanReconciliation'" ] as $required ) {
+	if ( false === strpos( $package_source, $required ) ) {
+		fwrite( STDERR, "Package compatibility gate is missing evidence: {$required}\n" );
+		exit( 1 );
+	}
+}
+$connection_source = (string) file_get_contents( __DIR__ . '/../../wp-content/mu-plugins/dsa/includes/Site_Graph/Staging_Seed_Connection_Service.php' );
+foreach ( [ "'_kiweTransfer'", "'Cache-Control' => 'no-cache, no-store, max-age=0'" ] as $required ) {
+	if ( false === strpos( $connection_source, $required ) ) {
+		fwrite( STDERR, "Staging transfer cache bypass is missing evidence: {$required}\n" );
 		exit( 1 );
 	}
 }

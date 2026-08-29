@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.0.0-rc.6 — 2026-08-29
+
+- Made source page authority and clean reconciliation explicit SiteGraph capabilities that fail preflight before any incomplete package can be saved.
+- Replaced ambiguous legacy package rows with a v2 verified-package ledger that identifies the source Kiwe version and visibly proves whether clean reconciliation is ready.
+- Added per-request cache busting and no-cache request headers to staging manifest/resource pulls so hosting caches cannot replay an older exporter contract.
+- Automatically retired obsolete pre-authority package files and removed their reconciliation actions; importing continues to require the existing rollback boundary.
+
 ## 8.0.0-rc.5 — 2026-08-29
 
 - Added opt-in, rollback-safe clean reconciliation for staging public pages/posts and WooCommerce products so historical compiler-test records cannot contaminate a verified source mirror.

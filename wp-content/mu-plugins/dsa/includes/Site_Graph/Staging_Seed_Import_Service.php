@@ -39,7 +39,7 @@ final class Staging_Seed_Import_Service {
 		$package = $this->packages->read( $package_record_id );
 		$resources = is_array( $package['resources'] ?? null ) ? $package['resources'] : [];
 		if ( $reconcile && empty( $resources['site']['pageAuthority'] ) ) {
-			throw new \RuntimeException( 'Clean reconciliation requires a fresh package with source page authority.' );
+			throw new \RuntimeException( 'This package cannot perform clean reconciliation. Pull a new package from a source that reports Clean reconciliation ready.' );
 		}
 		$revision = sanitize_text_field( (string) ( $package['manifest']['revisionHash'] ?? '' ) );
 		if ( '' === $expected_revision || ! hash_equals( $revision, sanitize_text_field( $expected_revision ) ) ) {
@@ -430,7 +430,7 @@ final class Staging_Seed_Import_Service {
 	/** Removes only public posts/products absent from the verified package. */
 	private function reconcile_public_records( array $content, array $products, array $site ): void {
 		if ( empty( $site['pageAuthority'] ) ) {
-			throw new \RuntimeException( 'Clean reconciliation requires a fresh package with source page authority.' );
+			throw new \RuntimeException( 'This package cannot perform clean reconciliation. Pull a new package from a source that reports Clean reconciliation ready.' );
 		}
 		$expected_by_type = [];
 		foreach ( $content as $record ) {

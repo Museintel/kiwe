@@ -18,6 +18,10 @@ final class Staging_Seed_Preflight_Service {
 		if ( Staging_Seed_Export_Service::SCHEMA !== ( $manifest['schema'] ?? '' ) ) {
 			$blockers[] = 'unsupported_manifest_schema';
 		}
+		$capabilities = is_array( $manifest['capabilities'] ?? null ) ? $manifest['capabilities'] : [];
+		if ( 'v1' !== ( $capabilities['pageAuthority'] ?? '' ) || empty( $capabilities['cleanReconciliation'] ) ) {
+			$blockers[] = 'source_missing_clean_reconciliation_capability';
+		}
 		if ( '' === $source || ! str_starts_with( $source, 'https://' ) ) {
 			$blockers[] = 'source_must_use_https';
 		}
