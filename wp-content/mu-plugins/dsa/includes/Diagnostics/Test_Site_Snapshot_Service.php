@@ -60,7 +60,7 @@ final class Test_Site_Snapshot_Service {
 				'orders'            => 'untouched',
 				'credentials'       => 'untouched',
 				'mediaBinaries'     => 'untouched',
-				'newMediaRecords'   => 'preserved',
+				'newMediaRecords'   => 'removed-only-by-the-import-ledger',
 			],
 		];
 		$snapshot['hash'] = $this->snapshot_hash( $snapshot );
@@ -99,7 +99,7 @@ final class Test_Site_Snapshot_Service {
 		$snapshot = $this->read_snapshot();
 		$post_types = array_values( array_filter( array_map( 'sanitize_key', (array) ( $snapshot['postTypes'] ?? [] ) ) ) );
 		$posts = is_array( $snapshot['posts'] ?? null ) ? $snapshot['posts'] : [];
-		if ( [] === $post_types || [] === $posts ) {
+		if ( [] === $post_types ) {
 			throw new \RuntimeException( 'The snapshot has no restorable content boundary.' );
 		}
 
@@ -268,8 +268,13 @@ final class Test_Site_Snapshot_Service {
 	}
 
 	private function post_types(): array {
-		$types = [ 'bricks_template', 'page', 'post', 'product', 'product_variation', 'shop_coupon', 'nav_menu_item', 'wp_template', 'wp_template_part', 'wp_navigation' ];
-		return array_values( array_filter( $types, 'post_type_exists' ) );
+		$types = [ 'bricks_template', 'page', 'post', 'product', 'product_variation', 'nav_menu_item', 'wp_template', 'wp_template_part', 'wp_navigation' ];
+		foreach ( get_post_types( [ 'show_ui' => true ], 'objects' ) as $name => $object ) {
+			$name = sanitize_key( (string) $name );
+			if ( ! empty( $object->public ) ) $types[] = $name;
+		}
+		$excluded = [ 'attachment', 'shop_order', 'shop_order_refund', 'shop_coupon', 'shop_subscription', 'user_request' ];
+		return array_values( array_filter( array_unique( $types ), static fn( string $type ): bool => ! in_array( $type, $excluded, true ) && post_type_exists( $type ) ) );
 	}
 
 	private function post_fields(): array {
@@ -281,6 +286,10 @@ final class Test_Site_Snapshot_Service {
 			// Never roll back the aggregate Kiwe settings option: it owns live
 			// AI/SMTP/PhoneKey credentials and unrelated service configuration.
 			'show_on_front', 'page_on_front', 'page_for_posts', 'permalink_structure', 'stylesheet', 'template',
+			'blogname', 'blogdescription', 'site_icon', 'timezone_string', 'gmt_offset',
+			'kiwe_site_logo_id', 'kiwe_site_logo_inverse_id', 'kiwe_store_phone', 'kiwe_store_email',
+			'kiwe_seam_design_context_v1', 'kiwe_onboarding_status_v1',
+			'woocommerce_currency', 'woocommerce_currency_pos', 'woocommerce_weight_unit', 'woocommerce_dimension_unit',
 			'woocommerce_shop_page_id', 'woocommerce_cart_page_id', 'woocommerce_checkout_page_id', 'woocommerce_myaccount_page_id',
 			$this->option_name( 'BRICKS_DB_GLOBAL_CLASSES', 'bricks_global_classes' ),
 			$this->option_name( 'BRICKS_DB_GLOBAL_CLASSES_TRASH', 'bricks_global_classes_trash' ),

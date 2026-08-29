@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.0-rc.4 — 2026-08-29
+
+- Added the controlled SiteGraph Staging Seed import lane, gated by a destination-bound verified package, a fresh blocker-free dry run, exact revision confirmation and an automatic private target baseline.
+- Added crash-resilient per-object mutation ledgers plus rollback/accept controls for public content, referenced media, menus, Design Context and simple, variable, grouped and external WooCommerce products.
+- Kept users, customers, orders, coupons, credentials, messages, payment state, webhooks and protected download-file URLs outside the transfer boundary; webhook delivery is suppressed while staging mutates.
+
 ## 8.0.0-rc.3 — 2026-08-29
 
 - Added the second SiteGraph Staging Seed gate: a complete bounded server-to-server pull into a destination-bound, HMAC-verified package outside the public web root.

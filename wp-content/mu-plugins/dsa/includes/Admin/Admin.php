@@ -55,6 +55,8 @@ use DSA\Site_Graph\Design_Context_Service;
 use DSA\Site_Graph\Staging_Seed_Connection_Service;
 use DSA\Site_Graph\Staging_Seed_Ledger_Service;
 use DSA\Site_Graph\Staging_Seed_Package_Service;
+use DSA\Site_Graph\Staging_Seed_Import_Ledger_Service;
+use DSA\Site_Graph\Staging_Seed_Import_Service;
 use DSA\Settings;
 use DSA\Theme\Screen_Copy_Schema;
 use DSA\Theme\Theme_Package_Service;
@@ -135,6 +137,9 @@ final class Admin {
 		add_action( 'admin_post_dsa_revoke_sitegraph_task_capsule', [ $this, 'revoke_sitegraph_task_capsule' ] );
 		add_action( 'admin_post_dsa_sitegraph_staging_seed_preflight', [ $this, 'sitegraph_staging_seed_preflight' ] );
 		add_action( 'admin_post_dsa_sitegraph_staging_seed_pull', [ $this, 'sitegraph_staging_seed_pull' ] );
+		add_action( 'admin_post_dsa_sitegraph_staging_seed_import', [ $this, 'sitegraph_staging_seed_import' ] );
+		add_action( 'admin_post_dsa_sitegraph_staging_seed_rollback', [ $this, 'sitegraph_staging_seed_rollback' ] );
+		add_action( 'admin_post_dsa_sitegraph_staging_seed_accept', [ $this, 'sitegraph_staging_seed_accept' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
 		add_action( 'admin_post_dsa_stage_apply_plan', [ $this, 'stage_apply_plan' ] );
@@ -2136,6 +2141,50 @@ final class Admin {
 			wp_safe_redirect( add_query_arg( 'staging-seed-error', $key, admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
 			exit;
 		}
+	}
+
+	public function sitegraph_staging_seed_import(): void {
+		if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'You do not have permission to import a SiteGraph staging package.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		check_admin_referer( 'dsa_sitegraph_staging_seed_import' );
+		if ( empty( $_POST['confirmBoundedImport'] ) ) wp_die( esc_html__( 'Confirm the bounded staging import before continuing.', 'dsa' ) );
+		try {
+			$result = ( new Staging_Seed_Import_Service() )->run( sanitize_key( (string) wp_unslash( $_POST['packageId'] ?? '' ) ), sanitize_text_field( (string) wp_unslash( $_POST['revisionHash'] ?? '' ) ) );
+			wp_safe_redirect( add_query_arg( 'staging-seed-import', sanitize_key( (string) ( $result['id'] ?? 'complete' ) ), admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		} catch ( \Throwable $error ) {
+			$this->redirect_staging_seed_error( $error );
+		}
+	}
+
+	public function sitegraph_staging_seed_rollback(): void {
+		if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'You do not have permission to roll back a SiteGraph staging import.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		check_admin_referer( 'dsa_sitegraph_staging_seed_rollback' );
+		try {
+			$result = ( new Staging_Seed_Import_Service() )->rollback( sanitize_key( (string) wp_unslash( $_POST['ledgerId'] ?? '' ) ) );
+			wp_safe_redirect( add_query_arg( 'staging-seed-rollback', sanitize_key( (string) ( $result['ledgerId'] ?? 'complete' ) ), admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		} catch ( \Throwable $error ) {
+			$this->redirect_staging_seed_error( $error );
+		}
+	}
+
+	public function sitegraph_staging_seed_accept(): void {
+		if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'You do not have permission to accept a SiteGraph staging import.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		check_admin_referer( 'dsa_sitegraph_staging_seed_accept' );
+		try {
+			$result = ( new Staging_Seed_Import_Service() )->accept( sanitize_key( (string) wp_unslash( $_POST['ledgerId'] ?? '' ) ) );
+			wp_safe_redirect( add_query_arg( 'staging-seed-accepted', sanitize_key( (string) ( $result['id'] ?? 'complete' ) ), admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		} catch ( \Throwable $error ) {
+			$this->redirect_staging_seed_error( $error );
+		}
+	}
+
+	private function redirect_staging_seed_error( \Throwable $error ): void {
+		$key = strtolower( wp_generate_password( 18, false, false ) );
+		set_transient( 'dsa_staging_seed_error_' . $key, sanitize_text_field( $error->getMessage() ), MINUTE_IN_SECONDS );
+		wp_safe_redirect( add_query_arg( 'staging-seed-error', $key, admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+		exit;
 	}
 
 	public function export_site_graph_calibration(): void {
@@ -4728,6 +4777,7 @@ final class Admin {
 		$capsules       = ( new Task_Capsule_Service() )->public_records();
 		$seed_ledgers   = ( new Staging_Seed_Ledger_Service() )->records();
 		$seed_packages  = ( new Staging_Seed_Package_Service() )->records();
+		$seed_imports   = ( new Staging_Seed_Import_Ledger_Service() )->records();
 		$seed_error     = '';
 		$seed_error_key = isset( $_GET['staging-seed-error'] ) ? sanitize_key( (string) wp_unslash( $_GET['staging-seed-error'] ) ) : '';
 		if ( '' !== $seed_error_key ) {
@@ -4757,6 +4807,15 @@ final class Admin {
 			<?php endif; ?>
 			<?php if ( isset( $_GET['staging-seed-package'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Kiwe pulled and hash-verified every source resource, confirmed that the source revision stayed unchanged, and built a target dry run. No WordPress or WooCommerce content was changed.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['staging-seed-import'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'The verified public-business package was imported into staging. Customers, orders, credentials, messages and payment state were untouched. Keep the rollback baseline until visual and commerce acceptance is complete.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['staging-seed-rollback'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'The staging import was rolled back to its hash-verified baseline and import-created media was removed.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['staging-seed-accepted'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'The staging import was accepted and its private rollback baseline was discarded.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
 			<?php if ( '' !== $seed_error ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $seed_error ); ?></p></div>
@@ -4815,7 +4874,7 @@ final class Admin {
 
 				<?php if ( [] !== $seed_packages ) : ?>
 					<h3><?php esc_html_e( 'Verified packages', 'dsa' ); ?></h3>
-					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Pulled', 'dsa' ); ?></th><th><?php esc_html_e( 'Dry run', 'dsa' ); ?></th><th><?php esc_html_e( 'Integrity', 'dsa' ); ?></th></tr></thead><tbody>
+					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Pulled', 'dsa' ); ?></th><th><?php esc_html_e( 'Dry run', 'dsa' ); ?></th><th><?php esc_html_e( 'Integrity', 'dsa' ); ?></th><th><?php esc_html_e( 'Action', 'dsa' ); ?></th></tr></thead><tbody>
 					<?php foreach ( array_slice( $seed_packages, 0, 4 ) as $seed_package ) : ?>
 						<?php $package_counts = is_array( $seed_package['resourceCounts'] ?? null ) ? $seed_package['resourceCounts'] : []; $dry = is_array( $seed_package['dryRun'] ?? null ) ? $seed_package['dryRun'] : []; $product_dry = is_array( $dry['summary']['products'] ?? null ) ? $dry['summary']['products'] : []; ?>
 						<tr>
@@ -4824,6 +4883,38 @@ final class Admin {
 							<td><?php echo esc_html( sprintf( 'Products %1$d · Content %2$d · Media %3$d', absint( $package_counts['products'] ?? 0 ), absint( $package_counts['content'] ?? 0 ), absint( $package_counts['media'] ?? 0 ) ) ); ?></td>
 							<td><?php echo esc_html( (string) ( $dry['status'] ?? '' ) ); ?><br><small><?php echo esc_html( sprintf( 'Products: %1$d create · %2$d update · %3$d blocked', absint( $product_dry['create'] ?? 0 ), absint( $product_dry['update'] ?? 0 ), absint( $product_dry['blocked'] ?? 0 ) ) ); ?></small></td>
 							<td><?php echo esc_html( size_format( absint( $seed_package['bytes'] ?? 0 ) ) ); ?> · <?php echo esc_html( substr( (string) ( $seed_package['hash'] ?? '' ), 0, 12 ) ); ?><br><small><?php esc_html_e( 'Credentials not stored', 'dsa' ); ?></small></td>
+							<td>
+								<?php if ( 'ready-for-baseline-and-import-confirmation' === ( $dry['status'] ?? '' ) ) : ?>
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+									<input type="hidden" name="action" value="dsa_sitegraph_staging_seed_import">
+									<input type="hidden" name="packageId" value="<?php echo esc_attr( (string) ( $seed_package['id'] ?? '' ) ); ?>">
+									<input type="hidden" name="revisionHash" value="<?php echo esc_attr( (string) ( $seed_package['revisionHash'] ?? '' ) ); ?>">
+									<?php wp_nonce_field( 'dsa_sitegraph_staging_seed_import' ); ?>
+									<label><input type="checkbox" name="confirmBoundedImport" value="1" required> <?php esc_html_e( 'I confirm this is the staging destination.', 'dsa' ); ?></label><br>
+									<?php submit_button( __( 'Capture baseline and import', 'dsa' ), 'primary', 'submit', false ); ?>
+								</form>
+								<?php else : ?>—<?php endif; ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody></table>
+				<?php endif; ?>
+
+				<?php if ( [] !== $seed_imports ) : ?>
+					<h3><?php esc_html_e( 'Staging import rollback ledger', 'dsa' ); ?></h3>
+					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source revision', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Objects', 'dsa' ); ?></th><th><?php esc_html_e( 'Rollback boundary', 'dsa' ); ?></th></tr></thead><tbody>
+					<?php foreach ( array_slice( $seed_imports, 0, 6 ) as $seed_import ) : ?>
+						<?php $created = is_array( $seed_import['created'] ?? null ) ? $seed_import['created'] : []; $is_open = empty( $seed_import['closedAt'] ) && in_array( (string) ( $seed_import['state'] ?? '' ), [ 'running', 'failed', 'complete' ], true ); ?>
+						<tr>
+							<td><code><?php echo esc_html( (string) ( $seed_import['sourceOrigin'] ?? '' ) ); ?></code><br><small><?php echo esc_html( substr( (string) ( $seed_import['revisionHash'] ?? '' ), 0, 12 ) ); ?></small></td>
+							<td><?php echo esc_html( (string) ( $seed_import['state'] ?? '' ) ); ?><?php if ( ! empty( $seed_import['error'] ) ) : ?><br><small><?php echo esc_html( (string) $seed_import['error'] ); ?></small><?php endif; ?></td>
+							<td><?php echo esc_html( sprintf( 'Posts %1$d · Media %2$d · Terms %3$d', count( (array) ( $created['posts'] ?? [] ) ), count( (array) ( $created['media'] ?? [] ) ), count( (array) ( $created['terms'] ?? [] ) ) ) ); ?></td>
+							<td>
+							<?php if ( $is_open ) : ?>
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:.5rem"><input type="hidden" name="action" value="dsa_sitegraph_staging_seed_rollback"><input type="hidden" name="ledgerId" value="<?php echo esc_attr( (string) ( $seed_import['id'] ?? '' ) ); ?>"><?php wp_nonce_field( 'dsa_sitegraph_staging_seed_rollback' ); ?><?php submit_button( __( 'Roll back import', 'dsa' ), 'secondary', 'submit', false ); ?></form>
+								<?php if ( 'complete' === ( $seed_import['state'] ?? '' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block"><input type="hidden" name="action" value="dsa_sitegraph_staging_seed_accept"><input type="hidden" name="ledgerId" value="<?php echo esc_attr( (string) ( $seed_import['id'] ?? '' ) ); ?>"><?php wp_nonce_field( 'dsa_sitegraph_staging_seed_accept' ); ?><?php submit_button( __( 'Accept and discard baseline', 'dsa' ), 'primary', 'submit', false ); ?></form><?php endif; ?>
+							<?php else : ?><?php echo esc_html( (string) ( $seed_import['closedAt'] ?? 'closed' ) ); ?><?php endif; ?>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 					</tbody></table>

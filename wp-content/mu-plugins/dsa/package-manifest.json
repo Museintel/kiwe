@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.3",
+  "version": "8.0.0-rc.4",
   "algorithm": "sha256",
-  "file_count": 340,
+  "file_count": 343,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2766,
-      "sha256": "7b6688418ca3d78b2f8e51fb7ec8bdfd4ca93cca43461aba05b08a94599ce461"
+      "sha256": "d34d4105a67d1d8627ba2fe8b103f8741034fadfc4a81f548b641c2e2d5b4b78"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -501,8 +501,8 @@
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 707938,
-      "sha256": "fec51fedbfd863ecc3e08ceb8b64d7824db8ee4becc2ef773837879b609d712e"
+      "bytes": 715931,
+      "sha256": "745a38094842b0dfcc635b9be4bb680d583844534cb997fd2bbd02add5c9a5f3"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
@@ -609,8 +609,8 @@
       "sha256": "75c72abfb0f34e17c6e4e00a7fec6ce828c9662c5ef4eb9dfeac8a9e18ac6c55"
     },
     "includes/Diagnostics/Test_Site_Snapshot_Service.php": {
-      "bytes": 13731,
-      "sha256": "e13059f27725018c406e1f0539369ed525598950ad2dc46552699d06e6b1d918"
+      "bytes": 14477,
+      "sha256": "5cc73c940cfd5a5649d062266b159a0a016d9567e8bd83d22dfd8f23ce813025"
     },
     "includes/Element_Registry.php": {
       "bytes": 15104,
@@ -801,8 +801,8 @@
       "sha256": "7aff79fcc358ac72c68057351d37d5313ae71672a703ea25d8552eb27494d0db"
     },
     "includes/Runtime/Package_Manifest.php": {
-      "bytes": 8391,
-      "sha256": "6a5a6d42470b45165e795de7267efaf2f604efd497fae1bfaa573e39e80b7c7f"
+      "bytes": 8514,
+      "sha256": "18fc7d6b1bcee334ea196acb15c7a062020277b1bc0acc6958d3d99176284000"
     },
     "includes/Runtime/Route_Capability_Service.php": {
       "bytes": 4157,
@@ -909,12 +909,20 @@
       "sha256": "83112364f34460d06a049f5150ebde5ef2f6f8914b81e8b3c1b0db1f9e1a1b19"
     },
     "includes/Site_Graph/Staging_Seed_Dry_Run_Service.php": {
-      "bytes": 5641,
-      "sha256": "563735f1110a80336b9982ab6174301a54c86c446e9e6588c1bb1f7b051072e9"
+      "bytes": 6183,
+      "sha256": "e0a869d238fa255e2e38a58e72a8af942a392fadf8ce904990969e358e3811b1"
     },
     "includes/Site_Graph/Staging_Seed_Export_Service.php": {
       "bytes": 24641,
       "sha256": "0beec4528774a166c404b93daf7d2ab0456bdd57ea841b0536840dcd26ca5b82"
+    },
+    "includes/Site_Graph/Staging_Seed_Import_Ledger_Service.php": {
+      "bytes": 5279,
+      "sha256": "29ee65efcc8c2dc82774b72637e17aa9d6caf8959ec7a3ff5eb766701a7924d8"
+    },
+    "includes/Site_Graph/Staging_Seed_Import_Service.php": {
+      "bytes": 36472,
+      "sha256": "52e1976ecb32b1fefe36d89ffbb71edf97e67905417ff5b5e27678600fbad9f0"
     },
     "includes/Site_Graph/Staging_Seed_Ledger_Service.php": {
       "bytes": 2189,
@@ -1243,6 +1251,10 @@
     "site-graph-system/release-proof-8.0.0-rc.3.md": {
       "bytes": 1882,
       "sha256": "a8de415610629df4eb9d1e0d9f68e6f9160d4a243cbf5d36bdbcfd049e9beab2"
+    },
+    "site-graph-system/release-proof-8.0.0-rc.4.md": {
+      "bytes": 1982,
+      "sha256": "2891884fe5d80bb968a5adb943510d0a5b2fe1075aa7f6ee7a5144a573fdd596"
     },
     "ui-system/HANDOFF-MODES.md": {
       "bytes": 14678,

@@ -81,4 +81,24 @@ foreach ( [
 	}
 }
 
-fwrite( STDOUT, "Staging Seed contract verified: safe manifest accepted, unsafe manifest blocked, pull/dry-run remain content-mutation-free.\n" );
+$import_source = (string) file_get_contents( __DIR__ . '/../../wp-content/mu-plugins/dsa/includes/Site_Graph/Staging_Seed_Import_Service.php' );
+foreach ( [ 'packages->read(', 'snapshots->capture(', 'ledgers->append(', "woocommerce_webhook_should_deliver", 'snapshots->restore(', 'wp_delete_attachment(', 'Customers, users, orders, coupons, credentials, messages, webhooks and' ] as $required ) {
+	if ( false === strpos( $import_source, $required ) ) {
+		fwrite( STDERR, "Controlled import is missing required safety evidence: {$required}\n" );
+		exit( 1 );
+	}
+}
+foreach ( [ 'wp_insert_user(', 'wp_update_user(', 'update_user_meta(', 'wc_create_order(', 'wp_mail(', 'WC_Webhook' ] as $forbidden ) {
+	if ( false !== strpos( $import_source, $forbidden ) ) {
+		fwrite( STDERR, "Controlled import crosses the identity/order/message boundary: {$forbidden}\n" );
+		exit( 1 );
+	}
+}
+
+$ledger_source = (string) file_get_contents( __DIR__ . '/../../wp-content/mu-plugins/dsa/includes/Site_Graph/Staging_Seed_Import_Ledger_Service.php' );
+if ( false === strpos( $ledger_source, "'credentialsStored' => false" ) || false === strpos( $ledger_source, "'termrefs'" ) ) {
+	fwrite( STDERR, "Import ledger does not prove its credential-free rollback inventory.\n" );
+	exit( 1 );
+}
+
+fwrite( STDOUT, "Staging Seed contract verified: read lanes remain mutation-free; import is baseline-gated, ledgered and excludes identities, orders, messages and credentials.\n" );

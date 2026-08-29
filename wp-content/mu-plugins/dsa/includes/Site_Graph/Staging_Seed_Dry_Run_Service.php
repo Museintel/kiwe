@@ -25,7 +25,17 @@ final class Staging_Seed_Dry_Run_Service {
 			if ( ! is_array( $term ) ) continue;
 			$taxonomy = sanitize_key( (string) ( $term['taxonomy'] ?? '' ) );
 			$slug = sanitize_title( (string) ( $term['slug'] ?? '' ) );
-			if ( '' === $taxonomy || '' === $slug || ! taxonomy_exists( $taxonomy ) ) {
+			if ( '' === $taxonomy || '' === $slug ) {
+				++$summary['terms']['blocked'];
+				$blockers[] = 'invalid_term_record';
+				continue;
+			}
+			if ( ! taxonomy_exists( $taxonomy ) ) {
+				if ( str_starts_with( $taxonomy, 'pa_' ) && function_exists( 'wc_create_attribute' ) ) {
+					++$summary['terms']['create'];
+					$warnings[] = 'create_product_attribute_taxonomy:' . $taxonomy;
+					continue;
+				}
 				++$summary['terms']['blocked'];
 				$blockers[] = 'missing_destination_taxonomy:' . $taxonomy;
 				continue;
@@ -68,6 +78,12 @@ final class Staging_Seed_Dry_Run_Service {
 				continue;
 			}
 			$sku = sanitize_text_field( (string) ( $product['sku'] ?? '' ) );
+			$type = sanitize_key( (string) ( $product['type'] ?? 'simple' ) );
+			if ( ! in_array( $type, [ 'simple', 'variable', 'grouped', 'external' ], true ) ) {
+				++$summary['products']['blocked'];
+				$blockers[] = 'unsupported_product_type:' . $type;
+				continue;
+			}
 			if ( '' !== $sku ) {
 				if ( isset( $source_skus[ $sku ] ) ) {
 					++$summary['products']['blocked'];
@@ -86,7 +102,7 @@ final class Staging_Seed_Dry_Run_Service {
 			}
 			if ( $existing_id ) {
 				$existing = wc_get_product( $existing_id );
-				if ( $existing && sanitize_key( (string) $existing->get_type() ) !== sanitize_key( (string) ( $product['type'] ?? 'simple' ) ) ) {
+				if ( $existing && sanitize_key( (string) $existing->get_type() ) !== $type ) {
 					++$summary['products']['blocked'];
 					$blockers[] = 'product_type_conflict:' . $existing_id;
 					continue;
