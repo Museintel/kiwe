@@ -54,6 +54,7 @@ use DSA\Site_Graph\Calibration_Pairing_Service;
 use DSA\Site_Graph\Design_Context_Service;
 use DSA\Site_Graph\Staging_Seed_Connection_Service;
 use DSA\Site_Graph\Staging_Seed_Ledger_Service;
+use DSA\Site_Graph\Staging_Seed_Package_Service;
 use DSA\Settings;
 use DSA\Theme\Screen_Copy_Schema;
 use DSA\Theme\Theme_Package_Service;
@@ -133,6 +134,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_create_sitegraph_client_package', [ $this, 'create_sitegraph_client_package' ] );
 		add_action( 'admin_post_dsa_revoke_sitegraph_task_capsule', [ $this, 'revoke_sitegraph_task_capsule' ] );
 		add_action( 'admin_post_dsa_sitegraph_staging_seed_preflight', [ $this, 'sitegraph_staging_seed_preflight' ] );
+		add_action( 'admin_post_dsa_sitegraph_staging_seed_pull', [ $this, 'sitegraph_staging_seed_pull' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
 		add_action( 'admin_post_dsa_stage_apply_plan', [ $this, 'stage_apply_plan' ] );
@@ -2102,6 +2104,30 @@ final class Admin {
 			unset( $password );
 			$ledger_id = sanitize_key( (string) ( $result['ledger']['id'] ?? '' ) );
 			wp_safe_redirect( add_query_arg( 'staging-seed-preflight', $ledger_id ?: 'ready', admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		} catch ( \Throwable $error ) {
+			unset( $password );
+			$key = strtolower( wp_generate_password( 18, false, false ) );
+			set_transient( 'dsa_staging_seed_error_' . $key, sanitize_text_field( $error->getMessage() ), MINUTE_IN_SECONDS );
+			wp_safe_redirect( add_query_arg( 'staging-seed-error', $key, admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		}
+	}
+
+	public function sitegraph_staging_seed_pull(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to pull a SiteGraph staging package.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_sitegraph_staging_seed_pull' );
+
+		$source_url = isset( $_POST['sourceUrl'] ) ? esc_url_raw( (string) wp_unslash( $_POST['sourceUrl'] ) ) : '';
+		$username   = isset( $_POST['sourceUsername'] ) ? sanitize_text_field( (string) wp_unslash( $_POST['sourceUsername'] ) ) : '';
+		$password   = isset( $_POST['sourceApplicationPassword'] ) ? (string) wp_unslash( $_POST['sourceApplicationPassword'] ) : '';
+
+		try {
+			$record = ( new Staging_Seed_Package_Service() )->pull( $source_url, $username, $password );
+			unset( $password );
+			wp_safe_redirect( add_query_arg( 'staging-seed-package', sanitize_key( (string) ( $record['id'] ?? 'ready' ) ), admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
 			exit;
 		} catch ( \Throwable $error ) {
 			unset( $password );
@@ -4701,6 +4727,7 @@ final class Admin {
 		$profile        = is_array( $broker_status['profile'] ?? null ) ? $broker_status['profile'] : [];
 		$capsules       = ( new Task_Capsule_Service() )->public_records();
 		$seed_ledgers   = ( new Staging_Seed_Ledger_Service() )->records();
+		$seed_packages  = ( new Staging_Seed_Package_Service() )->records();
 		$seed_error     = '';
 		$seed_error_key = isset( $_GET['staging-seed-error'] ) ? sanitize_key( (string) wp_unslash( $_GET['staging-seed-error'] ) ) : '';
 		if ( '' !== $seed_error_key ) {
@@ -4727,6 +4754,9 @@ final class Admin {
 			<?php endif; ?>
 			<?php if ( isset( $_GET['staging-seed-preflight'] ) ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'The remote SiteGraph manifest was authenticated and inspected. No WordPress or WooCommerce content was imported, and the Application Password was not stored.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( isset( $_GET['staging-seed-package'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Kiwe pulled and hash-verified every source resource, confirmed that the source revision stayed unchanged, and built a target dry run. No WordPress or WooCommerce content was changed.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
 			<?php if ( '' !== $seed_error ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $seed_error ); ?></p></div>
@@ -4770,6 +4800,34 @@ final class Admin {
 					</p>
 				</form>
 				<p class="description"><?php esc_html_e( 'Create a temporary Application Password on the source administrator profile. Do not enter the normal WordPress login password. Kiwe uses the credential for this HTTPS request only and never stores it.', 'dsa' ); ?></p>
+				<h3><?php esc_html_e( 'Pull verified package and build dry run', 'dsa' ); ?></h3>
+				<p><?php esc_html_e( 'This reads every approved source resource into a hash-verified private package outside the public web root, rechecks the source revision, and calculates create/update/reuse/conflict counts. It still performs no content import.', 'dsa' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
+					<input type="hidden" name="action" value="dsa_sitegraph_staging_seed_pull">
+					<?php wp_nonce_field( 'dsa_sitegraph_staging_seed_pull' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label><span><?php esc_html_e( 'Source site URL', 'dsa' ); ?></span><input type="url" name="sourceUrl" placeholder="https://example.com" required></label>
+						<label><span><?php esc_html_e( 'Source administrator username', 'dsa' ); ?></span><input type="text" name="sourceUsername" autocomplete="off" required></label>
+						<label><span><?php esc_html_e( 'WordPress Application Password', 'dsa' ); ?></span><input type="password" name="sourceApplicationPassword" autocomplete="new-password" required></label>
+						<?php submit_button( __( 'Pull package and calculate dry run', 'dsa' ), 'primary', 'submit', false ); ?>
+					</p>
+				</form>
+
+				<?php if ( [] !== $seed_packages ) : ?>
+					<h3><?php esc_html_e( 'Verified packages', 'dsa' ); ?></h3>
+					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Pulled', 'dsa' ); ?></th><th><?php esc_html_e( 'Dry run', 'dsa' ); ?></th><th><?php esc_html_e( 'Integrity', 'dsa' ); ?></th></tr></thead><tbody>
+					<?php foreach ( array_slice( $seed_packages, 0, 4 ) as $seed_package ) : ?>
+						<?php $package_counts = is_array( $seed_package['resourceCounts'] ?? null ) ? $seed_package['resourceCounts'] : []; $dry = is_array( $seed_package['dryRun'] ?? null ) ? $seed_package['dryRun'] : []; $product_dry = is_array( $dry['summary']['products'] ?? null ) ? $dry['summary']['products'] : []; ?>
+						<tr>
+							<td><code><?php echo esc_html( (string) ( $seed_package['sourceOrigin'] ?? '' ) ); ?></code><br><small><?php echo esc_html( substr( (string) ( $seed_package['revisionHash'] ?? '' ), 0, 12 ) ); ?></small></td>
+							<td><?php echo esc_html( (string) ( $seed_package['state'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( sprintf( 'Products %1$d · Content %2$d · Media %3$d', absint( $package_counts['products'] ?? 0 ), absint( $package_counts['content'] ?? 0 ), absint( $package_counts['media'] ?? 0 ) ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $dry['status'] ?? '' ) ); ?><br><small><?php echo esc_html( sprintf( 'Products: %1$d create · %2$d update · %3$d blocked', absint( $product_dry['create'] ?? 0 ), absint( $product_dry['update'] ?? 0 ), absint( $product_dry['blocked'] ?? 0 ) ) ); ?></small></td>
+							<td><?php echo esc_html( size_format( absint( $seed_package['bytes'] ?? 0 ) ) ); ?> · <?php echo esc_html( substr( (string) ( $seed_package['hash'] ?? '' ), 0, 12 ) ); ?><br><small><?php esc_html_e( 'Credentials not stored', 'dsa' ); ?></small></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody></table>
+				<?php endif; ?>
 
 				<?php if ( [] !== $seed_ledgers ) : ?>
 					<h3><?php esc_html_e( 'Recent preflights', 'dsa' ); ?></h3>

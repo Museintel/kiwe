@@ -119,6 +119,8 @@ final class Package_Manifest {
 			'includes/Site_Graph/Staging_Seed_Preflight_Service.php',
 			'includes/Site_Graph/Staging_Seed_Connection_Service.php',
 			'includes/Site_Graph/Staging_Seed_Ledger_Service.php',
+			'includes/Site_Graph/Staging_Seed_Package_Service.php',
+			'includes/Site_Graph/Staging_Seed_Dry_Run_Service.php',
 			'includes/Design/Token_Schema.php',
 			'includes/Design/Seam_Token_Service.php',
 			'includes/Design/Seam_Vocabulary_Schema.php',

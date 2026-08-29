@@ -136,8 +136,15 @@ downloadable-file URLs.
 The first gate is preflight-only. It records a credential-free audit ledger,
 checks the source safety declarations, verifies that source and destination
 are different HTTPS sites, requires WooCommerce when products exist, and
-defines the rollback/import gates. It does not yet pull resource chunks or
-create/update WordPress records. The future importer must capture the target
+defines the rollback/import gates.
+
+The second gate pulls every approved resource page into a hash-verified private
+package outside the public web root. It verifies bounded request/row/response
+budgets, reads the manifest again after the final page, rejects a source that
+changed mid-transfer, and calculates deterministic create/update/reuse/conflict
+counts against the destination. Credentials are never written to the package,
+ledger, database or filesystem. This gate still does not create/update
+WordPress records. The future importer must capture the target
 baseline, disable outbound side effects, verify every chunk, present a diff,
 and receive explicit import confirmation before mutation.
 

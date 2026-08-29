@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.0-rc.3 — 2026-08-29
+
+- Added the second SiteGraph Staging Seed gate: a complete bounded server-to-server pull into a destination-bound, HMAC-verified package outside the public web root.
+- Rechecks the source manifest after the final resource page and fails closed if production changed during transfer.
+- Added deterministic create/update/reuse/conflict dry-run mapping for terms, referenced media, public content, WooCommerce products and menus, with no content mutation or credential persistence.
+
 ## 8.0.0-rc.2 — 2026-08-29
 
 - Added the SiteGraph Staging Seed preflight: an administrator-authenticated, server-to-server manifest and paged resource contract for published business content, WooCommerce catalog/variation facts, media, menus, public CPTs/taxonomies and approved Design Context.

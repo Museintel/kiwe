@@ -9,6 +9,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Target-side, one-request remote manifest inspection. Credentials are never stored. */
 final class Staging_Seed_Connection_Service {
 	public function inspect( string $source_url, string $username, string $application_password ): array {
+		$manifest = $this->fetch_manifest( $source_url, $username, $application_password );
+
+		$preflight = ( new Staging_Seed_Preflight_Service() )->evaluate( $manifest );
+		$ledger    = ( new Staging_Seed_Ledger_Service() )->record_preflight( $manifest, $preflight );
+
+		return [ 'manifest' => $manifest, 'preflight' => $preflight, 'ledger' => $ledger ];
+	}
+
+	public function fetch_manifest( string $source_url, string $username, string $application_password ): array {
+		return $this->request( $source_url, '/wp-json/dsa/v1/site-graph/staging-seed/manifest', [], $username, $application_password, 2 * MB_IN_BYTES );
+	}
+
+	public function fetch_resource( string $source_url, string $username, string $application_password, string $resource, array $args = [] ): array {
+		$args = array_merge( $args, [ 'resource' => sanitize_key( $resource ) ] );
+		return $this->request( $source_url, '/wp-json/dsa/v1/site-graph/staging-seed/resource', $args, $username, $application_password, 12 * MB_IN_BYTES );
+	}
+
+	private function request( string $source_url, string $path, array $query, string $username, string $application_password, int $max_bytes ): array {
 		$source_url = $this->source_origin( $source_url );
 		$username   = sanitize_text_field( $username );
 		$password   = preg_replace( '/\s+/', '', $application_password );
@@ -22,11 +40,11 @@ final class Staging_Seed_Connection_Service {
 			throw new \RuntimeException( 'The source and destination cannot be the same site.' );
 		}
 
-		$url      = $source_url . '/wp-json/dsa/v1/site-graph/staging-seed/manifest';
+		$url = add_query_arg( array_filter( $query, static fn( $value ): bool => null !== $value && '' !== $value ), $source_url . $path );
 		$response = wp_safe_remote_get(
 			$url,
 			[
-				'timeout'     => 25,
+				'timeout'     => 30,
 				'redirection' => 2,
 				'headers'     => [
 					'Authorization' => 'Basic ' . base64_encode( $username . ':' . $password ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
@@ -45,18 +63,14 @@ final class Staging_Seed_Connection_Service {
 		if ( 200 !== $status ) {
 			throw new \RuntimeException( 401 === $status || 403 === $status ? 'The source rejected the Application Password or administrator does not have permission.' : 'The source SiteGraph returned HTTP ' . $status . '.' );
 		}
-		if ( strlen( $body ) > 2 * MB_IN_BYTES ) {
-			throw new \RuntimeException( 'The source manifest exceeded the safe response limit.' );
+		if ( strlen( $body ) > $max_bytes ) {
+			throw new \RuntimeException( 'The source response exceeded the safe response limit.' );
 		}
-		$manifest = json_decode( $body, true );
-		if ( ! is_array( $manifest ) ) {
-			throw new \RuntimeException( 'The source returned an invalid SiteGraph staging manifest.' );
+		$payload = json_decode( $body, true );
+		if ( ! is_array( $payload ) ) {
+			throw new \RuntimeException( 'The source returned invalid SiteGraph staging JSON.' );
 		}
-
-		$preflight = ( new Staging_Seed_Preflight_Service() )->evaluate( $manifest );
-		$ledger    = ( new Staging_Seed_Ledger_Service() )->record_preflight( $manifest, $preflight );
-
-		return [ 'manifest' => $manifest, 'preflight' => $preflight, 'ledger' => $ledger ];
+		return $payload;
 	}
 
 	private function source_origin( string $url ): string {
