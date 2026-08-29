@@ -39,14 +39,52 @@ const KNOWN_BRICKS_ELEMENTS = new Set([
   'query-results-summary',
   'filter-search',
   'product-title',
+  'product-gallery',
   'product-price',
   'product-add-to-cart',
   'product-short-description',
-  'product-images',
-  'product-upsells',
+  'product-stock',
+  'product-meta',
+  'product-rating',
+  'product-content',
   'product-related',
+  'product-reviews',
+  'product-additional-information',
+  'product-tabs',
+  'product-upsells',
+  'product-images',
   'woocommerce-breadcrumbs',
-  'woocommerce-mini-cart'
+  'woocommerce-mini-cart',
+  'woocommerce-cart-collaterals',
+  'woocommerce-cart-coupon',
+  'woocommerce-cart-items',
+  'woocommerce-checkout-coupon',
+  'woocommerce-checkout-login',
+  'woocommerce-checkout-customer-details',
+  'woocommerce-checkout-order-review',
+  'woocommerce-checkout-thankyou',
+  'woocommerce-checkout-order-table',
+  'woocommerce-checkout-order-payment',
+  'woocommerce-products',
+  'woocommerce-products-pagination',
+  'woocommerce-products-orderby',
+  'woocommerce-products-total-results',
+  'woocommerce-products-filter',
+  'woocommerce-products-archive-description',
+  'woocommerce-notice',
+  'woocommerce-account-page',
+  'woocommerce-account-form-login',
+  'woocommerce-account-form-register',
+  'woocommerce-account-form-lost-password',
+  'woocommerce-account-form-reset-password',
+  'woocommerce-account-orders',
+  'woocommerce-account-downloads',
+  'woocommerce-account-addresses',
+  'woocommerce-account-view-order',
+  'woocommerce-account-form-edit-address',
+  'woocommerce-account-form-edit-account',
+  'woocommerce-account-payment-methods',
+  'woocommerce-account-add-payment-method'
 ]);
 
 const OFFICIAL_SEAM_ROLES = new Set([
@@ -225,7 +263,7 @@ const TEMPLATE_UPLOAD_MIN_ELEMENT_NATIVE_CONTROLS_PER_ELEMENT = 1.15;
 const TEMPLATE_UPLOAD_MAX_CLASS_ONLY_ELEMENT_RATIO = 0.25;
 const SUPPORTED_TEMPLATE_BRICKS_VERSION_RE = /^2\.3(?:\.|$)/;
 const REVIEW_ONLY_CODE_ELEMENT_ALLOWANCE_RE = /\b(?:review-only|manual-review|unsupported|code-exception)\b/i;
-const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_RE = /^(?:kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i;
+const TEMPLATE_UPLOAD_SAFE_CLASS_PREFIX_RE = /^(?:brx-src|kiwe|seam|dsa|sf|nc|bv|bio|appsite)-/i;
 const BRICKS_COMPILE_UNSAFE_CONTROL_RE = /^_(?:minWidth|maxWidth|minHeight|maxHeight)(?::|$)/;
 const BRICKS_FONT_FAMILY_TOKEN_RE = /var\(\s*--/i;
 const SEMANTIC_HEADING_TAG_RE = /^h[1-6]$/i;
@@ -1075,13 +1113,33 @@ function validateProjectVariableFrameworkProof(root, templateData, templateStyle
   );
 }
 
-function validateSelfContainedNativeValues(templateStyleItems, findings, file) {
+function collectRuntimeDefinedCssVariables(value, out = new Set()) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectRuntimeDefinedCssVariables(item, out));
+    return out;
+  }
+  if (!isPlainObject(value)) return out;
+  for (const [key, item] of Object.entries(value)) {
+    if (/^_cssCustom(?::|$)/.test(key) && typeof item === 'string') {
+      for (const match of item.matchAll(/(^|[;{])\s*(--[a-z][a-z0-9_-]*)\s*:/gi)) {
+        const normalized = normalizeCssVariableName(match[2]);
+        if (normalized) out.add(normalized);
+      }
+    } else {
+      collectRuntimeDefinedCssVariables(item, out);
+    }
+  }
+  return out;
+}
+
+function validateSelfContainedNativeValues(templateData, templateStyleItems, findings, file) {
+  const runtimeVariables = collectRuntimeDefinedCssVariables(templateData);
   const unresolved = [];
   asArray(templateStyleItems).forEach((item, index) => {
     if (!isPlainObject(item)) return;
     const label = item.id || item.name || item.label || `item-${index}`;
     collectNativeOwnedCssVariableCalls(elementSettings(item), [], `$.content/header/footer/global_classes[${index}].settings`, false)
-      .filter((value) => !isOfficialFrameworkVariable(value.variable))
+      .filter((value) => !isOfficialFrameworkVariable(value.variable) && !runtimeVariables.has(value.variable))
       .forEach((value) => unresolved.push({ label, ...value }));
   });
   unresolved.slice(0, CSS_VAR_FINDING_LIMIT).forEach((item) => {
@@ -1493,13 +1551,14 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
   if (homepageHint && templateType && templateType !== 'content') {
     add(findings, 'warn', 'Homepage body template should normally use templateType "content"; use section/header/footer only when that is the intended Bricks library type.', rel(root, templatePath), '$.templateType');
   }
-  if (!String(templateData.version || '').trim()) {
+  const templateBricksVersion = String(templateData.version || templateData?.generator?.bricksVersion || '').trim();
+  if (!templateBricksVersion) {
     add(findings, 'warn', 'Bricks template export should include the target Bricks version used to author/verify the native template.', rel(root, templatePath), '$.version');
-  } else if (!SUPPORTED_TEMPLATE_BRICKS_VERSION_RE.test(String(templateData.version || '').trim())) {
+  } else if (!SUPPORTED_TEMPLATE_BRICKS_VERSION_RE.test(templateBricksVersion)) {
     add(
       findings,
       'fail',
-      `Bricks template export declares version "${String(templateData.version || '').trim()}". Kiwe production template uploads currently target the public Bricks 2.3.x importer/runtime; do not emit unreleased/beta 2.4 template metadata unless the contract is explicitly updated after a public Bricks release.`,
+      `Bricks template export declares version "${templateBricksVersion}". Kiwe production template uploads currently target the public Bricks 2.3.x importer/runtime; do not emit unreleased/beta 2.4 template metadata unless the contract is explicitly updated after a public Bricks release.`,
       rel(root, templatePath),
       '$.version'
     );
@@ -1599,7 +1658,8 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     .concat(asArray(templateData.global_classes))
     .concat(asArray(templateData.globalClasses));
   const declaredVariables = collectDeclaredCssVariables(templateData);
-  const rawSelfContained = templateData?.kiwe?.renderMode === 'raw-self-contained';
+  const rawSelfContained = templateData?.kiwe?.renderMode === 'raw-self-contained'
+    || templateData?.generator?.renderMode === 'raw-self-contained';
   validateBricksTemplateElements(root, templatePath, templateElements, findings);
   const runtimeCodeElements = collectRuntimeCodeElements(templateElements);
   for (const item of runtimeCodeElements.slice(0, 20)) {
@@ -1726,7 +1786,7 @@ function validateBricksTemplateExport(root, templateRelPath, findings, conversio
     }
   }
   if (rawSelfContained) {
-    validateSelfContainedNativeValues(templateStyleItems, findings, rel(root, templatePath));
+    validateSelfContainedNativeValues(templateData, templateStyleItems, findings, rel(root, templatePath));
   } else {
     validateTokenizedNativeLengths(
       templateStyleItems,
