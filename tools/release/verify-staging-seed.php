@@ -70,6 +70,16 @@ foreach ( [ 'wp_insert_post(', 'wp_update_post(', 'wp_delete_post(', 'wc_create_
 		exit( 1 );
 	}
 }
+foreach ( [ '$menu_data', "\$menu_query['data']", 'generatedAt, which is intentionally volatile' ] as $required ) {
+	if ( false === strpos( (string) $export_source, $required ) ) {
+		fwrite( STDERR, "Revision hashing is missing stable menu-data evidence: {$required}\n" );
+		exit( 1 );
+	}
+}
+if ( false !== strpos( (string) $export_source, "'menuHash'     => hash( 'sha256', \$this->json( \$this->data_query->query(" ) ) {
+	fwrite( STDERR, "Revision hashing still includes the volatile SiteGraph menu envelope.\n" );
+	exit( 1 );
+}
 
 $dry = ( new Staging_Seed_Dry_Run_Service() )->evaluate( [ 'manifest' => [ 'packageId' => 'fixture', 'revisionHash' => str_repeat( 'a', 64 ) ], 'resources' => [] ] );
 if ( 'ready-for-baseline-and-import-confirmation' !== $dry['status'] || $dry['mutationsPerformed'] ) {

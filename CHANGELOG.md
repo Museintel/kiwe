@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.0-rc.7 — 2026-08-29
+
+- Corrected staging revision authority so menu hashing excludes the SiteGraph response envelope's per-request `generatedAt` timestamp.
+- A source that remains unchanged now produces the same opening and closing revision, while genuine content, menu, Design Context or page-authority changes still fail the transfer safely.
+- Added a release regression gate preventing volatile SiteGraph envelopes from re-entering staging package revision hashes.
+
 ## 8.0.0-rc.6 — 2026-08-29
 
 - Made source page authority and clean reconciliation explicit SiteGraph capabilities that fail preflight before any incomplete package can be saved.

@@ -30,6 +30,8 @@ final class Staging_Seed_Export_Service {
 	public function manifest(): array {
 		$post_types = $this->public_content_types();
 		$taxonomies = $this->public_taxonomies();
+		$menu_query = $this->data_query->query( [ 'resource' => 'menus' ], true );
+		$menu_data  = is_array( $menu_query['data'] ?? null ) ? $menu_query['data'] : [];
 		$resources  = [
 			'site'          => [ 'count' => 1, 'paged' => false ],
 			'designContext' => [ 'count' => 1, 'paged' => false ],
@@ -45,7 +47,9 @@ final class Staging_Seed_Export_Service {
 			'resources'    => $resources,
 			'lastModified' => $this->latest_public_modified(),
 			'siteHash'     => hash( 'sha256', $this->json( $this->site_record() ) ),
-			'menuHash'     => hash( 'sha256', $this->json( $this->data_query->query( [ 'resource' => 'menus' ], true ) ) ),
+			// Hash only authoritative menu data. The SiteGraph envelope contains
+			// generatedAt, which is intentionally volatile on every request.
+			'menuHash'     => hash( 'sha256', $this->json( $menu_data ) ),
 			'designHash'   => hash( 'sha256', $this->json( ( new Design_Context_Profile_Service() )->public_context( true ) ) ),
 			'kiweVersion'  => defined( 'DSA_VERSION' ) ? DSA_VERSION : '',
 		];

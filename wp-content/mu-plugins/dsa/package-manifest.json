@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.6",
+  "version": "8.0.0-rc.7",
   "algorithm": "sha256",
   "file_count": 344,
   "files": {
@@ -194,7 +194,7 @@
     },
     "dsa.php": {
       "bytes": 2766,
-      "sha256": "f6e57aa573a11b7779b3c46fba7fe82343f5a6b75e920c8ab1291f506e383d8a"
+      "sha256": "3bed7051657d6baeb835f86bdb4fa2f6f651ef060cf78f52e029ebe3ac7cc31d"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -913,8 +913,8 @@
       "sha256": "5ff366146578800175cb6fbfee031175e3e9a8b36fd6a67a1882d34d6a4b725d"
     },
     "includes/Site_Graph/Staging_Seed_Export_Service.php": {
-      "bytes": 25695,
-      "sha256": "244a8106fc6177b7c6e4afd4328d40a2c085de239ccefd6ef184aab81b23c4b5"
+      "bytes": 25949,
+      "sha256": "b93802679dba4b4aab3662a5df5ce37ad37f2761789798a1a67fbd0527d6fbc2"
     },
     "includes/Site_Graph/Staging_Seed_Import_Ledger_Service.php": {
       "bytes": 5341,
