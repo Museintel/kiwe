@@ -7,6 +7,7 @@ use DSA\Site_Graph\Data_Query_Service;
 use DSA\Site_Graph\Design_Context_Service;
 use DSA\Site_Graph\Query_Service;
 use DSA\Site_Graph\Calibration_Pairing_Service;
+use DSA\Site_Graph\Staging_Seed_Export_Service;
 use DSA\Utilities\Origin_Checker;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -19,11 +20,13 @@ final class Site_Graph_Controller {
 	private Data_Query_Service $data_query;
 	private Query_Service $query;
 	private Calibration_Pairing_Service $pairing;
+	private Staging_Seed_Export_Service $staging_seed;
 
 	public function __construct( private Site_Graph_Service $site_graph, ?Query_Service $query = null, ?Data_Query_Service $data_query = null ) {
 		$this->query      = $query ?: new Query_Service();
 		$this->data_query = $data_query ?: new Data_Query_Service();
 		$this->pairing    = new Calibration_Pairing_Service( $site_graph );
+		$this->staging_seed = new Staging_Seed_Export_Service( $this->data_query );
 	}
 
 	public function register(): void {
@@ -122,6 +125,38 @@ final class Site_Graph_Controller {
 				'methods'             => [ 'GET', 'POST' ],
 				'callback'            => [ $this, 'data' ],
 				'permission_callback' => '__return_true',
+			]
+		);
+
+		register_rest_route(
+			'dsa/v1',
+			'/site-graph/staging-seed/manifest',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'staging_seed_manifest' ],
+				'permission_callback' => [ $this, 'can_manage_options' ],
+			]
+		);
+
+		register_rest_route(
+			'dsa/v1',
+			'/site-graph/staging-seed/resource',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'staging_seed_resource' ],
+				'permission_callback' => [ $this, 'can_manage_options' ],
+				'args'                => [
+					'resource' => [
+						'type'              => 'string',
+						'required'          => true,
+						'enum'              => [ 'site', 'designcontext', 'menus', 'content', 'products', 'terms', 'media' ],
+						'sanitize_callback' => 'sanitize_key',
+					],
+					'postType' => [ 'type' => 'string', 'sanitize_callback' => 'sanitize_key' ],
+					'taxonomy' => [ 'type' => 'string', 'sanitize_callback' => 'sanitize_key' ],
+					'page' => [ 'type' => 'integer', 'default' => 1, 'minimum' => 1, 'sanitize_callback' => 'absint' ],
+					'perPage' => [ 'type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 100, 'sanitize_callback' => 'absint' ],
+				],
 			]
 		);
 
@@ -244,6 +279,26 @@ final class Site_Graph_Controller {
 		}
 
 		return $response;
+	}
+
+	public function staging_seed_manifest(): WP_REST_Response {
+		$response = new WP_REST_Response( $this->staging_seed->manifest(), 200 );
+		$this->seed_headers( $response );
+		return $response;
+	}
+
+	public function staging_seed_resource( WP_REST_Request $request ): WP_REST_Response {
+		$args = $request->get_params();
+		unset( $args['rest_route'] );
+		$response = new WP_REST_Response( $this->staging_seed->resource( (string) $request->get_param( 'resource' ), $args ), 200 );
+		$this->seed_headers( $response );
+		return $response;
+	}
+
+	private function seed_headers( WP_REST_Response $response ): void {
+		$this->no_store( $response );
+		$response->header( 'Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; sandbox" );
+		$response->header( 'X-Kiwe-Export-Boundary', 'published-business-content-only' );
 	}
 
 	private function no_store( WP_REST_Response $response ): void {

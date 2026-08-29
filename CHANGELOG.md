@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.0.0-rc.2 — 2026-08-29
+
+- Added the SiteGraph Staging Seed preflight: an administrator-authenticated, server-to-server manifest and paged resource contract for published business content, WooCommerce catalog/variation facts, media, menus, public CPTs/taxonomies and approved Design Context.
+- Kept SiteGraph read-only and fail-closed: the export categorically excludes users, customers, orders, credentials, payment data, sessions, webhooks, provider settings, logs and downloadable-file URLs.
+- Added a target-side HTTPS preflight using a temporary WordPress Application Password that Kiwe never stores, plus a credential-free audit ledger and explicit baseline/import/rollback gates.
+- Did not add content import in this release rung; mutation remains reserved for the next Controlled Executor batch after live source-manifest proof.
+
 ## 8.0.0-rc.1 — 2026-08-25
 
 - Replaced the historical SeamFlow command graph with six strict SEAM commands and one compiler authority.

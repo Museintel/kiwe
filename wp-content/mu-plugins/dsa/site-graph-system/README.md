@@ -112,6 +112,38 @@ Site Graph does not mutate:
 
 Those actions stay in the Controlled Executor and require explicit scoped authorization.
 
+## Staging Seed
+
+`Kiwe > SiteGraph > Staging Seed` is the production-to-staging data bridge. It
+does not make staging pages render production data remotely. Instead, the
+source publishes an administrator-authenticated, read-only manifest and paged
+resource contract. A target site can inspect that contract over HTTPS with a
+temporary WordPress Application Password; the credential is used for that
+request only and is never persisted by Kiwe.
+
+```text
+GET /wp-json/dsa/v1/site-graph/staging-seed/manifest
+GET /wp-json/dsa/v1/site-graph/staging-seed/resource?resource=products&page=1&perPage=50
+```
+
+The source contract includes published business content, public custom post
+types/taxonomies, products and variations, media metadata/URLs, menus, public
+site identity and administrator-approved Design Context. It categorically
+excludes users, customers, orders, refunds, payment tokens, credentials,
+sessions, carts, provider settings, webhooks, logs, analytics, licenses and
+downloadable-file URLs.
+
+The first gate is preflight-only. It records a credential-free audit ledger,
+checks the source safety declarations, verifies that source and destination
+are different HTTPS sites, requires WooCommerce when products exist, and
+defines the rollback/import gates. It does not yet pull resource chunks or
+create/update WordPress records. The future importer must capture the target
+baseline, disable outbound side effects, verify every chunk, present a diff,
+and receive explicit import confirmation before mutation.
+
+SiteGraph remains read-only throughout. The target-side Controlled Executor
+will own any later import and rollback.
+
 ## Deterministic compiler calibration
 
 `/site-graph/calibration` is an administrator-only, GET-only profile for the standalone SEAM Compiler. It deliberately excludes posts, products, media, users, orders, visitor state, settings values, secrets and credentials. It publishes only target-environment facts: WordPress/Bricks/Kiwe versions, exact Bricks breakpoint keys and widths, existing global class and variable names, theme-style count, query-loop types and dynamic-tag names.

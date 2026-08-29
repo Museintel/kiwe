@@ -52,6 +52,8 @@ use DSA\Saved\Saved_Items_Service;
 use DSA\Search\Search_Service;
 use DSA\Site_Graph\Calibration_Pairing_Service;
 use DSA\Site_Graph\Design_Context_Service;
+use DSA\Site_Graph\Staging_Seed_Connection_Service;
+use DSA\Site_Graph\Staging_Seed_Ledger_Service;
 use DSA\Settings;
 use DSA\Theme\Screen_Copy_Schema;
 use DSA\Theme\Theme_Package_Service;
@@ -130,6 +132,7 @@ final class Admin {
 		add_action( 'admin_post_dsa_create_site_graph_calibration_pair', [ $this, 'create_site_graph_calibration_pair' ] );
 		add_action( 'admin_post_dsa_create_sitegraph_client_package', [ $this, 'create_sitegraph_client_package' ] );
 		add_action( 'admin_post_dsa_revoke_sitegraph_task_capsule', [ $this, 'revoke_sitegraph_task_capsule' ] );
+		add_action( 'admin_post_dsa_sitegraph_staging_seed_preflight', [ $this, 'sitegraph_staging_seed_preflight' ] );
 		add_action( 'admin_post_dsa_validate_binding_plan', [ $this, 'validate_binding_plan' ] );
 		add_action( 'admin_post_dsa_download_apply_plan', [ $this, 'download_apply_plan' ] );
 		add_action( 'admin_post_dsa_stage_apply_plan', [ $this, 'stage_apply_plan' ] );
@@ -2082,6 +2085,31 @@ final class Admin {
 
 		wp_safe_redirect( add_query_arg( 'site-graph-settings-saved', '1', admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
 		exit;
+	}
+
+	public function sitegraph_staging_seed_preflight(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to inspect a SiteGraph staging source.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_sitegraph_staging_seed_preflight' );
+
+		$source_url = isset( $_POST['sourceUrl'] ) ? esc_url_raw( (string) wp_unslash( $_POST['sourceUrl'] ) ) : '';
+		$username   = isset( $_POST['sourceUsername'] ) ? sanitize_text_field( (string) wp_unslash( $_POST['sourceUsername'] ) ) : '';
+		$password   = isset( $_POST['sourceApplicationPassword'] ) ? (string) wp_unslash( $_POST['sourceApplicationPassword'] ) : '';
+
+		try {
+			$result = ( new Staging_Seed_Connection_Service() )->inspect( $source_url, $username, $password );
+			unset( $password );
+			$ledger_id = sanitize_key( (string) ( $result['ledger']['id'] ?? '' ) );
+			wp_safe_redirect( add_query_arg( 'staging-seed-preflight', $ledger_id ?: 'ready', admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		} catch ( \Throwable $error ) {
+			unset( $password );
+			$key = strtolower( wp_generate_password( 18, false, false ) );
+			set_transient( 'dsa_staging_seed_error_' . $key, sanitize_text_field( $error->getMessage() ), MINUTE_IN_SECONDS );
+			wp_safe_redirect( add_query_arg( 'staging-seed-error', $key, admin_url( 'admin.php?page=kiwe-sitegraph' ) ) );
+			exit;
+		}
 	}
 
 	public function export_site_graph_calibration(): void {
@@ -4672,6 +4700,13 @@ final class Admin {
 		$broker_status  = ( new AI_Broker_Service( $this->settings ) )->status( 'sitegraph' );
 		$profile        = is_array( $broker_status['profile'] ?? null ) ? $broker_status['profile'] : [];
 		$capsules       = ( new Task_Capsule_Service() )->public_records();
+		$seed_ledgers   = ( new Staging_Seed_Ledger_Service() )->records();
+		$seed_error     = '';
+		$seed_error_key = isset( $_GET['staging-seed-error'] ) ? sanitize_key( (string) wp_unslash( $_GET['staging-seed-error'] ) ) : '';
+		if ( '' !== $seed_error_key ) {
+			$seed_error = sanitize_text_field( (string) get_transient( 'dsa_staging_seed_error_' . $seed_error_key ) );
+			delete_transient( 'dsa_staging_seed_error_' . $seed_error_key );
+		}
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe SiteGraph', 'dsa' ); ?></h1>
@@ -4690,6 +4725,12 @@ final class Admin {
 				<?php $capsule_revoked = '1' === sanitize_key( (string) wp_unslash( $_GET['sitegraph-capsule-revoked'] ) ); ?>
 				<div class="notice <?php echo $capsule_revoked ? 'notice-success' : 'notice-warning'; ?> is-dismissible"><p><?php echo $capsule_revoked ? esc_html__( 'SiteGraph task capsule revoked.', 'dsa' ) : esc_html__( 'SiteGraph task capsule could not be revoked.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['staging-seed-preflight'] ) ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'The remote SiteGraph manifest was authenticated and inspected. No WordPress or WooCommerce content was imported, and the Application Password was not stored.', 'dsa' ); ?></p></div>
+			<?php endif; ?>
+			<?php if ( '' !== $seed_error ) : ?>
+				<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $seed_error ); ?></p></div>
+			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'SiteGraph AI isolation', 'dsa' ); ?></h2>
@@ -4707,6 +4748,44 @@ final class Admin {
 					<p class="description"><?php esc_html_e( 'Configure the provider once under Kiwe > AI or WordPress Settings > Connectors. Deterministic exports and validation do not require AI.', 'dsa' ); ?></p>
 					<?php submit_button( __( 'Save SiteGraph AI policy', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
+			</section>
+
+			<section class="dsa-admin__panel" style="margin-top: 1rem;">
+				<h2><?php esc_html_e( 'Staging Seed', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Pair this staging site with another Kiwe site and inspect its sanitized public-business-data manifest. This preflight is read-only: it does not import content, store credentials, call payment gateways, send messages, or copy customers and orders.', 'dsa' ); ?></p>
+				<div class="dsa-admin-token-summary">
+					<div><strong><?php esc_html_e( 'Server to server', 'dsa' ); ?></strong><span><?php esc_html_e( 'no data-file relay', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Published only', 'dsa' ); ?></strong><span><?php esc_html_e( 'business content', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'No customers', 'dsa' ); ?></strong><span><?php esc_html_e( 'orders or secrets', 'dsa' ); ?></span></div>
+					<div><strong><?php esc_html_e( 'Dry run', 'dsa' ); ?></strong><span><?php esc_html_e( 'first gate', 'dsa' ); ?></span></div>
+				</div>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
+					<input type="hidden" name="action" value="dsa_sitegraph_staging_seed_preflight">
+					<?php wp_nonce_field( 'dsa_sitegraph_staging_seed_preflight' ); ?>
+					<p class="dsa-admin-inline-fields">
+						<label><span><?php esc_html_e( 'Source site URL', 'dsa' ); ?></span><input type="url" name="sourceUrl" placeholder="https://example.com" required></label>
+						<label><span><?php esc_html_e( 'Source administrator username', 'dsa' ); ?></span><input type="text" name="sourceUsername" autocomplete="off" required></label>
+						<label><span><?php esc_html_e( 'WordPress Application Password', 'dsa' ); ?></span><input type="password" name="sourceApplicationPassword" autocomplete="new-password" required></label>
+						<?php submit_button( __( 'Inspect source manifest', 'dsa' ), 'secondary', 'submit', false ); ?>
+					</p>
+				</form>
+				<p class="description"><?php esc_html_e( 'Create a temporary Application Password on the source administrator profile. Do not enter the normal WordPress login password. Kiwe uses the credential for this HTTPS request only and never stores it.', 'dsa' ); ?></p>
+
+				<?php if ( [] !== $seed_ledgers ) : ?>
+					<h3><?php esc_html_e( 'Recent preflights', 'dsa' ); ?></h3>
+					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Resources', 'dsa' ); ?></th><th><?php esc_html_e( 'Safety', 'dsa' ); ?></th><th><?php esc_html_e( 'Created', 'dsa' ); ?></th></tr></thead><tbody>
+					<?php foreach ( array_slice( $seed_ledgers, 0, 5 ) as $seed_ledger ) : ?>
+						<?php $seed_counts = is_array( $seed_ledger['resourceCounts'] ?? null ) ? $seed_ledger['resourceCounts'] : []; ?>
+						<tr>
+							<td><code><?php echo esc_html( (string) ( $seed_ledger['source']['origin'] ?? '' ) ); ?></code><br><small><?php echo esc_html( substr( (string) ( $seed_ledger['source']['revisionHash'] ?? '' ), 0, 12 ) ); ?></small></td>
+							<td><?php echo esc_html( (string) ( $seed_ledger['state'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( sprintf( 'Products %1$d · Content %2$d · Media %3$d', absint( $seed_counts['products'] ?? 0 ), absint( $seed_counts['content'] ?? 0 ), absint( $seed_counts['media'] ?? 0 ) ) ); ?></td>
+							<td><?php echo empty( $seed_ledger['blockers'] ) ? esc_html__( 'Ready for reviewed import', 'dsa' ) : esc_html( sprintf( _n( '%d blocker', '%d blockers', count( (array) $seed_ledger['blockers'] ), 'dsa' ), count( (array) $seed_ledger['blockers'] ) ) ); ?><br><small><?php esc_html_e( 'Credentials not stored', 'dsa' ); ?></small></td>
+							<td><?php echo esc_html( (string) ( $seed_ledger['createdAt'] ?? '' ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody></table>
+				<?php endif; ?>
 			</section>
 
 			<section class="dsa-admin__panel" style="margin-top: 1rem;">
