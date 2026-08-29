@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.0.0-rc.8 — 2026-08-29
+
+- Replaced the multi-form Staging Seed operator surface with one guided Connect → Review changes → Import → Accept or roll back flow.
+- Removed the redundant standalone preflight credential form; connecting now authenticates, preflights, pulls, verifies and calculates changes in one action without storing the Application Password.
+- Made an active imported site show only its review, rollback and acceptance actions while package, preflight and closed-ledger internals remain in advanced history.
+- Detects a separate test baseline before offering import and links directly to its controls with its label and capture time; direct import errors now provide the same precise route.
+
 ## 8.0.0-rc.7 — 2026-08-29
 
 - Corrected staging revision authority so menu hashing excludes the SiteGraph response envelope's per-request `generatedAt` timestamp.

@@ -4778,6 +4778,17 @@ final class Admin {
 		$seed_ledgers   = ( new Staging_Seed_Ledger_Service() )->records();
 		$seed_packages  = ( new Staging_Seed_Package_Service() )->records();
 		$seed_imports   = ( new Staging_Seed_Import_Ledger_Service() )->records();
+		$seed_snapshot  = ( new Test_Site_Snapshot_Service() )->status();
+		$seed_open_import = [];
+		foreach ( $seed_imports as $candidate_import ) {
+			if ( is_array( $candidate_import ) && empty( $candidate_import['closedAt'] ) && in_array( (string) ( $candidate_import['state'] ?? '' ), [ 'running', 'failed', 'complete' ], true ) ) {
+				$seed_open_import = $candidate_import;
+				break;
+			}
+		}
+		$seed_review_active = 'complete' === (string) ( $seed_open_import['state'] ?? '' );
+		$seed_import_locked = [] !== $seed_open_import;
+		$seed_stale_snapshot = ! empty( $seed_snapshot['active'] ) && [] === $seed_open_import;
 		$seed_error     = '';
 		$seed_error_key = isset( $_GET['staging-seed-error'] ) ? sanitize_key( (string) wp_unslash( $_GET['staging-seed-error'] ) ) : '';
 		if ( '' !== $seed_error_key ) {
@@ -4840,27 +4851,32 @@ final class Admin {
 			</section>
 
 			<section class="dsa-admin__panel" style="margin-top: 1rem;">
-				<h2><?php esc_html_e( 'Staging Seed', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Pair this staging site with another Kiwe site and inspect its sanitized public-business-data manifest. This preflight is read-only: it does not import content, store credentials, call payment gateways, send messages, or copy customers and orders.', 'dsa' ); ?></p>
+				<h2><?php esc_html_e( 'Copy public site data to staging', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Kiwe guides one safe path: connect the source, review the calculated changes, import, then accept or roll back after testing. Customers, orders, credentials, messages and payment state never enter this transfer.', 'dsa' ); ?></p>
 				<div class="dsa-admin-token-summary">
-					<div><strong><?php esc_html_e( 'Server to server', 'dsa' ); ?></strong><span><?php esc_html_e( 'no data-file relay', 'dsa' ); ?></span></div>
-					<div><strong><?php esc_html_e( 'Published only', 'dsa' ); ?></strong><span><?php esc_html_e( 'business content', 'dsa' ); ?></span></div>
-					<div><strong><?php esc_html_e( 'No customers', 'dsa' ); ?></strong><span><?php esc_html_e( 'orders or secrets', 'dsa' ); ?></span></div>
-					<div><strong><?php esc_html_e( 'Dry run', 'dsa' ); ?></strong><span><?php esc_html_e( 'first gate', 'dsa' ); ?></span></div>
+					<div><strong>1</strong><span><?php esc_html_e( 'Connect', 'dsa' ); ?></span></div>
+					<div><strong>2</strong><span><?php esc_html_e( 'Review changes', 'dsa' ); ?></span></div>
+					<div><strong>3</strong><span><?php esc_html_e( 'Import', 'dsa' ); ?></span></div>
+					<div><strong>4</strong><span><?php esc_html_e( 'Accept or roll back', 'dsa' ); ?></span></div>
 				</div>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
-					<input type="hidden" name="action" value="dsa_sitegraph_staging_seed_preflight">
-					<?php wp_nonce_field( 'dsa_sitegraph_staging_seed_preflight' ); ?>
-					<p class="dsa-admin-inline-fields">
-						<label><span><?php esc_html_e( 'Source site URL', 'dsa' ); ?></span><input type="url" name="sourceUrl" placeholder="https://example.com" required></label>
-						<label><span><?php esc_html_e( 'Source administrator username', 'dsa' ); ?></span><input type="text" name="sourceUsername" autocomplete="off" required></label>
-						<label><span><?php esc_html_e( 'WordPress Application Password', 'dsa' ); ?></span><input type="password" name="sourceApplicationPassword" autocomplete="new-password" required></label>
-						<?php submit_button( __( 'Inspect source manifest', 'dsa' ), 'secondary', 'submit', false ); ?>
-					</p>
-				</form>
-				<p class="description"><?php esc_html_e( 'Create a temporary Application Password on the source administrator profile. Do not enter the normal WordPress login password. Kiwe uses the credential for this HTTPS request only and never stores it.', 'dsa' ); ?></p>
-				<h3><?php esc_html_e( 'Pull verified package and build dry run', 'dsa' ); ?></h3>
-				<p><?php esc_html_e( 'This reads every approved source resource into a hash-verified private package outside the public web root, rechecks the source revision, and calculates create/update/reuse/conflict counts. It still performs no content import.', 'dsa' ); ?></p>
+
+				<?php if ( $seed_review_active ) : ?>
+					<h3><?php esc_html_e( 'Imported and ready for review', 'dsa' ); ?></h3>
+					<p><?php esc_html_e( 'The rollback baseline is being kept for this review. Open the staging site, Shop, Cart, Checkout and My Account on desktop and mobile. When satisfied, accept the import; otherwise roll it back.', 'dsa' ); ?></p>
+					<p><a class="button button-secondary" href="<?php echo esc_url( home_url( '/' ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Open staging site', 'dsa' ); ?></a></p>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:.5rem"><input type="hidden" name="action" value="dsa_sitegraph_staging_seed_rollback"><input type="hidden" name="ledgerId" value="<?php echo esc_attr( (string) ( $seed_open_import['id'] ?? '' ) ); ?>"><?php wp_nonce_field( 'dsa_sitegraph_staging_seed_rollback' ); ?><?php submit_button( __( 'Roll back this import', 'dsa' ), 'secondary', 'submit', false ); ?></form>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block"><input type="hidden" name="action" value="dsa_sitegraph_staging_seed_accept"><input type="hidden" name="ledgerId" value="<?php echo esc_attr( (string) ( $seed_open_import['id'] ?? '' ) ); ?>"><?php wp_nonce_field( 'dsa_sitegraph_staging_seed_accept' ); ?><?php submit_button( __( 'Accept import and finish', 'dsa' ), 'primary', 'submit', false ); ?></form>
+				<?php elseif ( $seed_import_locked ) : ?>
+					<h3><?php esc_html_e( 'The current import needs attention', 'dsa' ); ?></h3>
+					<p><?php echo esc_html( (string) ( $seed_open_import['error'] ?? __( 'The import did not reach review state. Roll it back before starting another transfer.', 'dsa' ) ) ); ?></p>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_sitegraph_staging_seed_rollback"><input type="hidden" name="ledgerId" value="<?php echo esc_attr( (string) ( $seed_open_import['id'] ?? '' ) ); ?>"><?php wp_nonce_field( 'dsa_sitegraph_staging_seed_rollback' ); ?><?php submit_button( __( 'Roll back incomplete import', 'dsa' ), 'primary', 'submit', false ); ?></form>
+				<?php elseif ( $seed_stale_snapshot ) : ?>
+					<h3><?php esc_html_e( 'A separate test baseline needs a decision', 'dsa' ); ?></h3>
+					<p><?php echo esc_html( sprintf( __( 'The baseline “%1$s” from %2$s is not owned by an active SiteGraph import. Restore it if you need its old content, or discard it without changing the current site; then return here.', 'dsa' ), (string) ( $seed_snapshot['label'] ?? __( 'Unlabelled baseline', 'dsa' ) ), (string) ( $seed_snapshot['createdAt'] ?? '' ) ) ); ?></p>
+					<p><a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=kiwe-database#kiwe-test-baseline' ) ); ?>"><?php esc_html_e( 'Open baseline controls', 'dsa' ); ?></a></p>
+				<?php else : ?>
+				<h3><?php esc_html_e( 'Connect and prepare', 'dsa' ); ?></h3>
+				<p><?php esc_html_e( 'Enter the source once. Kiwe authenticates it, checks compatibility, pulls and verifies the approved resources, then presents the changes before anything is imported.', 'dsa' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
 					<input type="hidden" name="action" value="dsa_sitegraph_staging_seed_pull">
 					<?php wp_nonce_field( 'dsa_sitegraph_staging_seed_pull' ); ?>
@@ -4868,14 +4884,16 @@ final class Admin {
 						<label><span><?php esc_html_e( 'Source site URL', 'dsa' ); ?></span><input type="url" name="sourceUrl" placeholder="https://example.com" required></label>
 						<label><span><?php esc_html_e( 'Source administrator username', 'dsa' ); ?></span><input type="text" name="sourceUsername" autocomplete="off" required></label>
 						<label><span><?php esc_html_e( 'WordPress Application Password', 'dsa' ); ?></span><input type="password" name="sourceApplicationPassword" autocomplete="new-password" required></label>
-						<?php submit_button( __( 'Pull package and calculate dry run', 'dsa' ), 'primary', 'submit', false ); ?>
+						<?php submit_button( __( 'Connect and calculate changes', 'dsa' ), 'primary', 'submit', false ); ?>
 					</p>
 				</form>
+				<p class="description"><?php esc_html_e( 'Use a temporary WordPress Application Password from the source administrator profile, not the normal login password. Kiwe never stores it.', 'dsa' ); ?></p>
+				<?php endif; ?>
 
-				<?php if ( [] !== $seed_packages ) : ?>
-					<h3><?php esc_html_e( 'Verified packages', 'dsa' ); ?></h3>
+				<?php if ( ! $seed_import_locked && ! $seed_stale_snapshot && [] !== $seed_packages ) : ?>
+					<h3><?php esc_html_e( 'Review calculated changes', 'dsa' ); ?></h3>
 					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Pulled', 'dsa' ); ?></th><th><?php esc_html_e( 'Dry run', 'dsa' ); ?></th><th><?php esc_html_e( 'Integrity', 'dsa' ); ?></th><th><?php esc_html_e( 'Action', 'dsa' ); ?></th></tr></thead><tbody>
-					<?php foreach ( array_slice( $seed_packages, 0, 4 ) as $seed_package ) : ?>
+					<?php foreach ( array_slice( $seed_packages, 0, 1 ) as $seed_package ) : ?>
 						<?php $package_counts = is_array( $seed_package['resourceCounts'] ?? null ) ? $seed_package['resourceCounts'] : []; $dry = is_array( $seed_package['dryRun'] ?? null ) ? $seed_package['dryRun'] : []; $product_dry = is_array( $dry['summary']['products'] ?? null ) ? $dry['summary']['products'] : []; $content_dry = is_array( $dry['summary']['content'] ?? null ) ? $dry['summary']['content'] : []; $package_capabilities = is_array( $seed_package['capabilities'] ?? null ) ? $seed_package['capabilities'] : []; $clean_ready = ! empty( $package_capabilities['cleanReconciliation'] ) && 'v1' === ( $package_capabilities['pageAuthority'] ?? '' ); ?>
 						<tr>
 							<td><code><?php echo esc_html( (string) ( $seed_package['sourceOrigin'] ?? '' ) ); ?></code><br><small><?php echo esc_html( substr( (string) ( $seed_package['revisionHash'] ?? '' ), 0, 12 ) ); ?> · Kiwe <?php echo esc_html( (string) ( $seed_package['sourceKiweVersion'] ?? 'unknown' ) ); ?></small></td>
@@ -4902,6 +4920,7 @@ final class Admin {
 				<?php endif; ?>
 
 				<?php if ( [] !== $seed_imports ) : ?>
+					<details style="margin-top:1rem"><summary><strong><?php esc_html_e( 'Advanced: import and rollback history', 'dsa' ); ?></strong></summary>
 					<h3><?php esc_html_e( 'Staging import rollback ledger', 'dsa' ); ?></h3>
 					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source revision', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Objects', 'dsa' ); ?></th><th><?php esc_html_e( 'Rollback boundary', 'dsa' ); ?></th></tr></thead><tbody>
 					<?php foreach ( array_slice( $seed_imports, 0, 6 ) as $seed_import ) : ?>
@@ -4919,9 +4938,11 @@ final class Admin {
 						</tr>
 					<?php endforeach; ?>
 					</tbody></table>
+					</details>
 				<?php endif; ?>
 
 				<?php if ( [] !== $seed_ledgers ) : ?>
+					<details style="margin-top:1rem"><summary><strong><?php esc_html_e( 'Advanced: connection preflight history', 'dsa' ); ?></strong></summary>
 					<h3><?php esc_html_e( 'Recent preflights', 'dsa' ); ?></h3>
 					<table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Source', 'dsa' ); ?></th><th><?php esc_html_e( 'State', 'dsa' ); ?></th><th><?php esc_html_e( 'Resources', 'dsa' ); ?></th><th><?php esc_html_e( 'Safety', 'dsa' ); ?></th><th><?php esc_html_e( 'Created', 'dsa' ); ?></th></tr></thead><tbody>
 					<?php foreach ( array_slice( $seed_ledgers, 0, 5 ) as $seed_ledger ) : ?>
@@ -4935,6 +4956,7 @@ final class Admin {
 						</tr>
 					<?php endforeach; ?>
 					</tbody></table>
+					</details>
 				<?php endif; ?>
 			</section>
 
@@ -7230,7 +7252,7 @@ final class Admin {
 				<div class="notice notice-error"><p><?php echo esc_html( rawurldecode( (string) ( $_GET['snapshot-error'] ?? __( 'Test snapshot action failed.', 'dsa' ) ) ) ); ?></p></div>
 			<?php endif; ?>
 
-			<section class="dsa-admin__panel">
+			<section class="dsa-admin__panel" id="kiwe-test-baseline">
 				<h2><?php esc_html_e( 'Reversible test-site baseline', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Capture the current Bricks templates, pages, posts, products, coupons, menus, builder globals and relevant WordPress/Woo page settings before a conversion batch. Restore removes only content created inside that test window and restores the captured records and settings exactly.', 'dsa' ); ?></p>
 				<p class="description"><?php esc_html_e( 'Safety boundary: users, WooCommerce orders, PhoneKey/SecureTrack identities and conversations, Kiwe service settings and credentials, and media binaries are never deleted or rewritten. Newly uploaded media is preserved for manual review. This is a builder/content checkpoint, not a full hosting backup or a cross-site migration archive. The signed snapshot is stored outside the public web root and can only be restored on this site.', 'dsa' ); ?></p>

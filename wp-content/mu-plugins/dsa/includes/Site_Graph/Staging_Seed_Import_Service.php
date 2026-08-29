@@ -49,8 +49,11 @@ final class Staging_Seed_Import_Service {
 		if ( ! empty( $dry_run['blockers'] ) ) {
 			throw new \RuntimeException( 'The current destination dry run is blocked: ' . implode( ', ', (array) $dry_run['blockers'] ) );
 		}
-		if ( ! empty( $this->snapshots->status()['active'] ) ) {
-			throw new \RuntimeException( 'A rollback baseline already exists. Restore or discard it before this import.' );
+		$snapshot_status = $this->snapshots->status();
+		if ( ! empty( $snapshot_status['active'] ) ) {
+			$label = sanitize_text_field( (string) ( $snapshot_status['label'] ?? 'Unlabelled baseline' ) );
+			$created = sanitize_text_field( (string) ( $snapshot_status['createdAt'] ?? 'unknown time' ) );
+			throw new \RuntimeException( 'A separate test baseline (“' . $label . '”, ' . $created . ') is active. Open Kiwe > Database & Cache > Reversible test-site baseline and restore or discard it before importing.' );
 		}
 		foreach ( $this->ledgers->records() as $open_ledger ) {
 			if ( in_array( (string) ( $open_ledger['state'] ?? '' ), [ 'running', 'failed', 'complete' ], true ) && empty( $open_ledger['closedAt'] ) ) {

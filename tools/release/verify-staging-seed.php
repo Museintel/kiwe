@@ -128,6 +128,17 @@ foreach ( [ "'_kiweTransfer'", "'Cache-Control' => 'no-cache, no-store, max-age=
 		exit( 1 );
 	}
 }
+$admin_source = (string) file_get_contents( __DIR__ . '/../../wp-content/mu-plugins/dsa/includes/Admin/Admin.php' );
+foreach ( [ 'Copy public site data to staging', 'Connect and calculate changes', 'Imported and ready for review', 'Accept import and finish', 'Advanced: import and rollback history', 'Open baseline controls' ] as $required ) {
+	if ( false === strpos( $admin_source, $required ) ) {
+		fwrite( STDERR, "Guided staging migration UI is missing evidence: {$required}\n" );
+		exit( 1 );
+	}
+}
+if ( 1 !== substr_count( $admin_source, 'name="sourceApplicationPassword"' ) ) {
+	fwrite( STDERR, "The normal staging flow must request the temporary source credential exactly once.\n" );
+	exit( 1 );
+}
 foreach ( [ 'wp_insert_user(', 'wp_update_user(', 'update_user_meta(', 'wc_create_order(', 'wp_mail(', 'WC_Webhook' ] as $forbidden ) {
 	if ( false !== strpos( $import_source, $forbidden ) ) {
 		fwrite( STDERR, "Controlled import crosses the identity/order/message boundary: {$forbidden}\n" );
