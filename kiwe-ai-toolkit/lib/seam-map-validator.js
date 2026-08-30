@@ -78,12 +78,15 @@ export function validateSeamMap(target = '.') {
     const absent = Array.from(declared).filter(value => !sourceAnchors.includes(value));
     if (orphaned.length || absent.length || Number(document?.closure?.declaredAnchors) !== declared.size || document?.closure?.status !== 'complete' || asArray(document?.closure?.unresolved).length) finding(findings, 'fail', `SEAM closure is incomplete for ${rel}. Orphaned: ${orphaned.join(', ') || 'none'}; missing: ${absent.join(', ') || 'none'}.`, located.mapPath);
     for (const stitch of stitches) {
-      if (!['field','collection','launcher','native-element','interaction','condition','static'].includes(stitch?.kind)) finding(findings, 'fail', `Unsupported stitch kind ${stitch?.kind || 'missing'}.`, located.mapPath);
+      if (!['field','collection','launcher','native-element','interaction','condition','static','template-boundary'].includes(stitch?.kind)) finding(findings, 'fail', `Unsupported stitch kind ${stitch?.kind || 'missing'}.`, located.mapPath);
       if (!isObject(stitch?.authority) || !['sitegraph','owner','approved-source','wordpress-contract'].includes(stitch.authority.source) || !String(stitch.authority.pointer || '').trim() || !String(stitch.authority.evidence || '').trim()) finding(findings, 'fail', `Stitch ${stitch?.key || 'unknown'} lacks explicit authority.`, located.mapPath);
       if (stitch?.authority?.source === 'sitegraph') siteGraphStitches.push(stitch);
       if (stitch?.kind === 'field' && (!/^\{[A-Za-z_][^{}<>\r\n]*\}$/.test(String(stitch.dynamicTag || '')) || /^\{(?:echo|do_action|wp_query|php|execute)(?::|\})/i.test(stitch.dynamicTag))) finding(findings, 'fail', `Stitch ${stitch.key} has an unsafe dynamic tag.`, located.mapPath);
       if (stitch?.kind === 'interaction' && /(?:<script|javascript:|\beval\s*\(|\bFunction\s*\(|\bfetch\s*\()/i.test(JSON.stringify(stitch.interactions))) finding(findings, 'fail', `Stitch ${stitch.key} contains executable interaction code.`, located.mapPath);
     }
+    const boundaries = stitches.filter(stitch => stitch?.kind === 'template-boundary');
+    if (new Set(boundaries.map(stitch => String(stitch.outputPath || '').toLowerCase())).size !== boundaries.length || boundaries.some(stitch => !sourcePath.test(String(stitch.outputPath || '')))) finding(findings, 'fail', `Template-boundary output paths must be valid and unique in ${rel}.`, located.mapPath);
+    if (boundaries.filter(stitch => stitch.runtime === 'include').length > 1 || boundaries.some(stitch => !['include','exclude'].includes(stitch.runtime))) finding(findings, 'fail', `Template boundaries require explicit runtime ownership with at most one include in ${rel}.`, located.mapPath);
   }
   for (const source of sourceByPath.keys()) if (!documentPaths.has(source)) finding(findings, 'fail', `Fingerprint has no SEAM document contract: ${source}.`, located.mapPath);
 

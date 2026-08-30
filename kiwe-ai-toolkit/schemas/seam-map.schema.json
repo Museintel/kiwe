@@ -100,6 +100,18 @@
             {
               "properties": { "kind": { "const": "static" }, "anchor": { "$ref": "#/$defs/token" }, "reason": { "type": "string", "minLength": 1 } },
               "required": ["anchor", "reason"]
+            },
+            {
+              "properties": {
+                "kind": { "const": "template-boundary" }, "anchor": { "$ref": "#/$defs/token" }, "outputPath": { "$ref": "#/$defs/path" },
+                "title": { "type": "string", "minLength": 1, "maxLength": 180 }, "runtime": { "enum": ["include", "exclude"] },
+                "wordpress": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["templateType", "commerce", "content", "templateConditions"],
+                  "properties": { "templateType": { "enum": ["content", "header", "footer", "popup", "archive"] }, "commerce": { "enum": ["preserve", "woocommerce"] }, "content": { "enum": ["static", "posts"] }, "editorialSurface": { "type": ["string", "null"], "enum": ["single", "archive", null] }, "templateConditions": { "type": "array", "items": { "type": "object" } } }
+                }
+              },
+              "required": ["anchor", "outputPath", "title", "runtime", "wordpress"]
             }
           ]
         }
