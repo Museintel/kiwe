@@ -11,7 +11,8 @@ import {
   validateBindings,
   validateBricksConversion,
   validateBricksThemeStyle,
-  validateFrameworkProfile
+  validateFrameworkProfile,
+  validateSeamMap
 } from '../lib/kiwe-core.js';
 
 function print(value) {
@@ -57,6 +58,7 @@ function usage() {
   seam route --command "/audit" --artifact-summary template.json
   seam plan --attachment-summary "index.html, styles.css and app.js"
   seam validate-bindings <path> [--site-graph <path>] [--optional]
+  seam validate-seam-map <path>
   seam validate-bricks-conversion <path> [--site-graph <path>] [--optional] [--documented]
   seam validate-framework-profile <path> [--optional]
   seam validate-bricks-theme-style <path> [--optional]
@@ -75,6 +77,7 @@ try {
   else if (action === 'route') print(routeCommand(commandInput(args)));
   else if (action === 'plan') print(planFlow({ ...commandInput(args), desiredOutcome: option(args, '--desired-outcome') }));
   else if (action === 'validate-bindings') print(validateBindings(target(args), validationOptions(args)));
+  else if (action === 'validate-seam-map') print(validateSeamMap(target(args)));
   else if (action === 'validate-bricks-conversion') print(validateBricksConversion(target(args), validationOptions(args)));
   else if (action === 'validate-framework-profile') print(validateFrameworkProfile(target(args), validationOptions(args)));
   else if (action === 'validate-bricks-theme-style') print(validateBricksThemeStyle(target(args), validationOptions(args)));

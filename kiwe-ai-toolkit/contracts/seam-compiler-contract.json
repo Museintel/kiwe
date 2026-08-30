@@ -5,10 +5,21 @@
   "aiRequired": false,
   "commands": ["/audit", "/accessibility", "/fix", "/redo"],
   "stages": {
+    "semanticSeam": {
+      "command": "/ideate",
+      "authority": "closed kiwe.seam-map.v1 plus inert data-seam-anchor stitches",
+      "input": "approved browser-runnable HTML/CSS/JS and exact SiteGraph evidence when cited",
+      "output": "builder-neutral semantic contract, exact source fingerprints and proof ledger",
+      "sourcePolicy": "marker-only",
+      "unmarkedPolicy": "preserve-static",
+      "semanticInferenceAllowed": false,
+      "requiresCompleteClosure": true,
+      "requiresExactSiteGraphHashRevisionAndPointers": true
+    },
     "prepareBindings": {
       "command": "/convert /bricks",
       "authority": "participating browser AI under the SEAM command contract",
-      "input": "complete accepted HTML/CSS/JS project, assets and SiteGraph whenever real site fields are requested",
+      "input": "complete accepted pre-existing HTML/CSS/JS project without a strict SEAM Map, plus assets and SiteGraph whenever real site fields are requested",
       "output": "kiwe.bricks-bindings.v1 graph and binding report only; approved raw project remains unchanged; never Bricks JSON",
       "sourcePolicy": "immutable",
       "requiresExactFileTargets": true,
@@ -21,7 +32,7 @@
     "compile": {
       "trigger": "explicit submission through the seam.kiwe application UI or API",
       "authority": "deterministic-seam-compiler",
-      "input": "complete accepted HTML/CSS/JS project, assets and optional validated kiwe.bricks-bindings.v1",
+      "input": "complete accepted HTML/CSS/JS project, assets and either a strict validated kiwe.seam-map.v1 or optional legacy kiwe.bricks-bindings.v1",
       "output": "native Bricks page/header/footer/popup templates plus conversion evidence",
       "frameworkNeutral": true,
       "maySplitDocumentChrome": true,
@@ -69,6 +80,8 @@
     "A missing Framework Profile fails closed and templates never depend on variable fallbacks.",
     "Browser AI may author source design and binding intent but never production Bricks JSON or Framework Profile data.",
     "/convert /bricks never emits Bricks JSON; seam.kiwe compilation is a separate explicit application action.",
+    "Strict SEAM Map conversion never infers dynamic, commerce, editorial, interaction or conditional meaning; missing, stale, duplicated, unproven or unresolved stitches fail closed.",
+    "SEAM Map is builder-neutral conversion context and does not apply Seam Framework or influence art direction.",
     "Visual confidence is evidence based and never a universal fixed percentage.",
     "Source defects are preserved in 1:1 conversion and reported separately.",
     "No project-specific selector, brand, layout or route rule enters compiler core."

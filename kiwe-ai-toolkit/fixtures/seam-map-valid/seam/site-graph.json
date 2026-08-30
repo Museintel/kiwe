@@ -1,0 +1,1 @@
+{"schema":"kiwe.site-graph.v1","generatedAt":"fixture-revision-1","bricks":{"queryLoopTypes":[{"objectType":"post"}],"dynamicTags":[{"name":"{site_title}"}]},"kiwe":{"modules":{"items":[{"id":"cart"}]}}}

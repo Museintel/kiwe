@@ -11,13 +11,14 @@ Start at `https://start.kiwelaunch.com/start.md`. The current contract exposes e
 - `/fix`
 - `/redo`
 
-Unknown commands, remembered aliases and unsupported modifiers are rejected. SiteGraph and its embedded Design Context are attached or safely connected inputs, not commands. `/ideate` detects new build, redesign or source enhancement and selects an available read-only SiteGraph transport. `/convert /bricks` prepares both dynamic-tag and query-loop intent; `/dynamictags` and `/queryloop` narrow that preparation to one binding type. Seam Framework is an explicit option in the `seam.kiwe` compiler, not a command lane.
+Unknown commands, remembered aliases and unsupported modifiers are rejected. SiteGraph and its embedded Design Context are attached or safely connected inputs, not commands. `/ideate` detects new build, redesign or source enhancement and selects an available read-only SiteGraph transport. After approval it adds inert `data-seam-anchor` stitches and a closed `kiwe.seam-map.v1`: source hashes, exact guards, WordPress ownership, template boundaries, dynamic fields, loop prototypes, launchers, specialist elements, conditions and interactions all travel as builder-neutral evidence. A cited SiteGraph snapshot is attached unchanged and verified by revision, SHA-256, JSON pointer, tag, query type and module. Unmarked source remains static; a missing or stale proof fails closed instead of enabling semantic inference. `/convert /bricks` remains the fallback for accepted pre-existing projects without this map and prepares both dynamic-tag and query-loop intent; `/dynamictags` and `/queryloop` narrow that preparation to one binding type. Seam Framework is an explicit option in the `seam.kiwe` compiler, not a command lane.
 
 ## Authority
 
 - The user and their design conversation own creative direction.
 - The `seam.kiwe` application alone emits production Bricks JSON; browser AI never does.
 - Kiwe owns site facts, dynamic binding validation, native runtime actions and optional Framework installation.
+- The strict SEAM Map owns ideate-to-compiler semantic continuity; it never owns art direction or styling.
 - Browser AI may ideate or explain; it never receives generic WordPress save authority.
 - External SiteGraph credentials are scoped, hashed, revocable, rate-limited and read-only. The only apply output available remotely is a dry-run plan.
 

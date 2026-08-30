@@ -6,6 +6,7 @@ import { validateBricksConversion as validateBricksConversionPlan } from './bric
 import { validateAccessibility as validateAccessibilityPlan } from './accessibility-validator.js';
 import { validateFrameworkProfile as validateFrameworkProfilePlan } from './framework-profile-validator.js';
 import { validateBricksThemeStyle as validateBricksThemeStylePlan } from './bricks-theme-style-validator.js';
+import { validateSeamMap as validateSeamMapPlan } from './seam-map-validator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const toolkitRoot = path.resolve(__dirname, '..');
@@ -208,4 +209,8 @@ export function validateFrameworkProfile(targetDir, options = {}) {
 
 export function validateBricksThemeStyle(targetDir, options = {}) {
   return validateBricksThemeStylePlan(targetDir, options);
+}
+
+export function validateSeamMap(targetDir) {
+  return validateSeamMapPlan(targetDir);
 }

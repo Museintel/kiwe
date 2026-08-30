@@ -1,0 +1,18 @@
+{
+  "schema": "kiwe.seam-map.v1",
+  "mode": "strict",
+  "sourcePolicy": "marker-only",
+  "siteGraph": {"schema":"kiwe.site-graph.v1","path":"seam/site-graph.json","revision":"fixture-revision-1","hash":"ea667b5b2f8e1013ccee031bfcff729ed90a3d4a5b9e161076eb5c6061466a0e"},
+  "sources": [{"path":"home.html","sha256":"3a172e8c7e3408745435d537ed6a5f7eb3d61b8e3db72255c355c7eb06563cc4"}],
+  "documents": [{
+    "path": "home.html",
+    "wordpress": {"templateType":"content","commerce":"preserve","content":"static","editorialSurface":null,"templateConditions":[]},
+    "closure": {"status":"complete","declaredAnchors":3,"unresolved":[]},
+    "stitches": [
+      {"kind":"static","key":"page.shell","anchor":"page-shell","semantic":"page.shell","authority":{"source":"approved-source","pointer":"home.html#main","evidence":"Approved fixture shell"},"reason":"Preserve authored shell"},
+      {"kind":"field","key":"site.title","anchor":"site-title","semantic":"site.title","authority":{"source":"sitegraph","pointer":"/bricks/dynamicTags/0/name","evidence":"Site title tag is exposed"},"slot":"text","dynamicTag":"{site_title}","guard":{"expectedText":"Example"}},
+      {"kind":"launcher","key":"cart.open","anchor":"cart-open","semantic":"kiwe.cart.open","authority":{"source":"sitegraph","pointer":"/kiwe/modules/items/0","evidence":"Cart module is exposed"},"module":"cart"}
+    ]
+  }],
+  "requiresHumanReview": []
+}
