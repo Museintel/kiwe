@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://start.kiwelaunch.com/schemas/ideate-discovery.schema.json",
+  "title": "Kiwe Ideate Discovery",
+  "description": "Machine-readable, user-approved preflight emitted before /ideate changes a supplied project.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "lane",
+    "sourceInventory",
+    "siteGraph",
+    "designContextCoverage",
+    "designContextUsage",
+    "designContentUsage",
+    "contentReadiness",
+    "approval",
+    "sourceAuthority",
+    "creativeBoundary",
+    "nextAction"
+  ],
+  "properties": {
+    "schema": { "const": "kiwe.ideate-discovery.v5" },
+    "lane": { "enum": ["new-site", "approved-source-preservation", "existing-site-redesign", "source-enhancement"] },
+    "sourceInventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["path", "role"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "authorizedUse": { "enum": ["source", "reuse", "inspiration", "unknown"] }
+        }
+      }
+    },
+    "siteGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement", "available", "reason", "transport"],
+      "properties": {
+        "requirement": { "enum": ["required", "beneficial", "not-needed"] },
+        "available": { "type": "boolean" },
+        "reason": { "type": "string", "minLength": 1 },
+        "transport": { "enum": ["connected-tool", "task-capsule", "attached-export", "none"] },
+        "schema": { "type": ["string", "null"] },
+        "contextHash": { "type": ["string", "null"] }
+      }
+    },
+    "designContextCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "score", "method", "covered", "gaps", "lockedOwnerFacts", "preservedOwnerPreferences", "aiWritableGaps"],
+      "properties": {
+        "status": { "enum": ["scored", "not-applicable", "blocked"] },
+        "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+        "method": { "enum": ["sitegraph-authoritative", "weighted-evidence-rubric", "not-applicable", "blocked"] },
+        "covered": { "type": "array", "items": { "type": "string" } },
+        "gaps": { "type": "array", "items": { "type": "string" } },
+        "lockedOwnerFacts": { "type": "array", "items": { "type": "string" } },
+        "preservedOwnerPreferences": { "type": "array", "items": { "type": "string" } },
+        "aiWritableGaps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "designContextUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["facts", "preferences", "gaps"],
+      "properties": {
+        "facts": { "type": "array", "items": { "type": "string" } },
+        "preferences": { "type": "array", "items": { "type": "string" } },
+        "gaps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "designContentUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selected", "dynamic", "previewOnly", "excluded", "requiresHumanReview"],
+      "properties": {
+        "selected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["type", "id", "role", "evidence"],
+            "properties": {
+              "type": { "enum": ["media", "product", "post", "page", "service", "menu", "term", "custom-content"] },
+              "id": { "type": ["integer", "string"] },
+              "role": { "type": "string", "minLength": 1 },
+              "evidence": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "dynamic": { "type": "array", "items": { "type": "string" } },
+        "previewOnly": { "type": "array", "items": { "type": "string" } },
+        "excluded": { "type": "array", "items": { "type": "string" } },
+        "requiresHumanReview": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "contentReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "basis", "placeholderRegions", "groundedRegions", "dynamicRegions", "unresolvedClaims", "runtimeSmokeTest"],
+      "properties": {
+        "status": { "enum": ["production-ready", "preview-placeholders-allowed", "blocked"] },
+        "basis": { "enum": ["sitegraph-grounded", "self-contained-approved-source", "ungrounded-preview", "insufficient-evidence"] },
+        "placeholderRegions": { "type": "array", "items": { "type": "string" } },
+        "groundedRegions": { "type": "array", "items": { "type": "string" } },
+        "dynamicRegions": { "type": "array", "items": { "type": "string" } },
+        "unresolvedClaims": { "type": "array", "items": { "type": "string" } },
+        "runtimeSmokeTest": { "enum": ["passed", "pending", "blocked"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "production-ready" } }, "required": ["status"] },
+          "then": { "properties": { "placeholderRegions": { "maxItems": 0 }, "unresolvedClaims": { "maxItems": 0 }, "runtimeSmokeTest": { "const": "passed" }, "basis": { "enum": ["sitegraph-grounded", "self-contained-approved-source"] } } }
+        }
+      ]
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "requiredPhrase"],
+      "properties": {
+        "status": { "enum": ["awaiting-user", "approved"] },
+        "requiredPhrase": { "const": "proceed" }
+      }
+    },
+    "sourceAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decisionSource", "permittedChanges"],
+      "properties": {
+        "status": { "enum": ["not-applicable", "unknown", "approved-final", "enhancement-authorized", "redesign-authorized"] },
+        "decisionSource": { "enum": ["new-site", "explicit-user", "unresolved"] },
+        "permittedChanges": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "unknown" } }, "required": ["status"] },
+          "then": { "properties": { "decisionSource": { "const": "unresolved" }, "permittedChanges": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["approved-final", "enhancement-authorized", "redesign-authorized"] } }, "required": ["status"] },
+          "then": { "properties": { "decisionSource": { "const": "explicit-user" } } }
+        }
+      ]
+    },
+    "creativeBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preserveAcceptedDirection", "frameworkNeutral", "redesignAuthorized"],
+      "properties": {
+        "preserveAcceptedDirection": { "type": "boolean" },
+        "frameworkNeutral": { "const": true },
+        "redesignAuthorized": { "type": "boolean" }
+      }
+    },
+    "nextAction": { "enum": ["ask-source-authority", "request-sitegraph", "ask-material-question", "request-proceed", "compose-project"] }
+  }
+}

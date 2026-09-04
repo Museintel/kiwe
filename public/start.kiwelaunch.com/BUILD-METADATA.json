@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-registry-build.v2",
-  "contractVersion": "8.9",
-  "releaseId": "8.9-d1c4afa11a95",
-  "sourceHash": "sha256:d1c4afa11a952a12b8d6411d4090574a7fc6d78d2ba78a814e377a88baaacd17",
+  "contractVersion": "9.0",
+  "releaseId": "9.0-926b95f1a65c",
+  "sourceHash": "sha256:926b95f1a65cc4f0ae9f3469b0a68b02798639796cb4f477a07d8080e13fce9f",
   "generatedFrom": [
     "KIWE-START.md",
     "kiwe-ai-toolkit/command-manifest.json",
@@ -16,7 +16,8 @@
     "kiwe-ai-toolkit/schemas/bricks-bindings.schema.json",
     "kiwe-ai-toolkit/schemas/bricks-theme-style.schema.json",
     "kiwe-ai-toolkit/schemas/framework-profile.schema.json",
-    "kiwe-ai-toolkit/schemas/ideate-discovery.schema.json"
+    "kiwe-ai-toolkit/schemas/ideate-discovery.schema.json",
+    "kiwe-ai-toolkit/schemas/seam-map.schema.json"
   ],
-  "generatedAt": "2026-08-28"
+  "generatedAt": "2026-08-30"
 }

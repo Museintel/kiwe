@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://start.kiwelaunch.com/schemas/seam-map.schema.json",
+  "title": "SEAM Map",
+  "description": "Closed, marker-only semantic contract produced during /ideate and consumed deterministically by seam.kiwe.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "mode", "sourcePolicy", "siteGraph", "sources", "documents", "requiresHumanReview"],
+  "properties": {
+    "schema": { "const": "kiwe.seam-map.v1" },
+    "mode": { "const": "strict" },
+    "sourcePolicy": { "const": "marker-only" },
+    "siteGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "path", "revision", "hash"],
+      "properties": {
+        "schema": { "type": ["string", "null"], "enum": ["kiwe.site-graph.v1", null] },
+        "path": { "type": ["string", "null"], "pattern": "^(?:seam/)site-graph\\.json$" },
+        "revision": { "type": ["string", "null"], "minLength": 1 },
+        "hash": { "type": ["string", "null"], "pattern": "^[a-fA-F0-9]{64}$" }
+      }
+    },
+    "sources": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "documents": {
+      "type": "array", "minItems": 1,
+      "items": { "$ref": "#/$defs/document" }
+    },
+    "requiresHumanReview": { "type": "array", "maxItems": 0 }
+  },
+  "$defs": {
+    "token": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$", "maxLength": 180 },
+    "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\?#]+\\.html?$" },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": { "path": { "$ref": "#/$defs/path" }, "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" } }
+    },
+    "authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "pointer", "evidence"],
+      "properties": {
+        "source": { "enum": ["sitegraph", "owner", "approved-source", "wordpress-contract"] },
+        "pointer": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "evidence": { "type": "string", "minLength": 1, "maxLength": 4000 }
+      }
+    },
+    "common": {
+      "type": "object",
+      "required": ["kind", "key", "semantic", "authority"],
+      "properties": { "kind": { "type": "string" }, "key": { "$ref": "#/$defs/token" }, "semantic": { "$ref": "#/$defs/token" }, "authority": { "$ref": "#/$defs/authority" } }
+    },
+    "guard": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": {
+        "expectedText": { "type": "string" },
+        "expectedAttribute": {
+          "type": "object", "additionalProperties": false, "required": ["name", "value"],
+          "properties": { "name": { "enum": ["src", "href"] }, "value": { "type": "string" } }
+        },
+        "textRange": {
+          "type": "object", "additionalProperties": false, "required": ["path", "expectedText", "match"],
+          "properties": { "path": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "type": "integer", "minimum": 0 } }, "expectedText": { "type": "string" }, "match": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "stitch": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "oneOf": [
+            {
+              "properties": { "kind": { "const": "field" }, "anchor": { "$ref": "#/$defs/token" }, "slot": { "enum": ["text", "image", "link"] }, "dynamicTag": { "type": "string", "pattern": "^\\{[A-Za-z_][^{}<>\\r\\n]*\\}$" }, "guard": { "$ref": "#/$defs/guard" } },
+              "required": ["anchor", "slot", "dynamicTag", "guard"]
+            },
+            {
+              "properties": { "kind": { "const": "collection" }, "containerAnchor": { "$ref": "#/$defs/token" }, "prototypeAnchor": { "$ref": "#/$defs/token" }, "itemSelector": { "type": "string", "minLength": 1 }, "expectedPreviewCount": { "type": "integer", "minimum": 1, "maximum": 500 }, "query": { "type": "object", "required": ["objectType"] } },
+              "required": ["containerAnchor", "prototypeAnchor", "itemSelector", "expectedPreviewCount", "query"]
+            },
+            {
+              "properties": { "kind": { "const": "launcher" }, "anchor": { "$ref": "#/$defs/token" }, "module": { "$ref": "#/$defs/token" } },
+              "required": ["anchor", "module"]
+            },
+            {
+              "properties": { "kind": { "const": "native-element" }, "anchor": { "$ref": "#/$defs/token" }, "element": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" } },
+              "required": ["anchor", "element"]
+            },
+            {
+              "properties": { "kind": { "const": "interaction" }, "anchor": { "$ref": "#/$defs/token" }, "interactions": { "type": "array", "minItems": 1, "items": { "type": "object" } } },
+              "required": ["anchor", "interactions"]
+            },
+            {
+              "properties": { "kind": { "const": "condition" }, "anchor": { "$ref": "#/$defs/token" }, "conditions": { "type": "array", "minItems": 1, "items": { "type": "array", "minItems": 1, "items": { "type": "object" } } } },
+              "required": ["anchor", "conditions"]
+            },
+            {
+              "properties": { "kind": { "const": "static" }, "anchor": { "$ref": "#/$defs/token" }, "reason": { "type": "string", "minLength": 1 } },
+              "required": ["anchor", "reason"]
+            },
+            {
+              "properties": {
+                "kind": { "const": "template-boundary" }, "anchor": { "$ref": "#/$defs/token" }, "outputPath": { "$ref": "#/$defs/path" },
+                "title": { "type": "string", "minLength": 1, "maxLength": 180 }, "runtime": { "enum": ["include", "exclude"] },
+                "wordpress": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["templateType", "commerce", "content", "templateConditions"],
+                  "properties": { "templateType": { "enum": ["content", "header", "footer", "popup", "archive"] }, "commerce": { "enum": ["preserve", "woocommerce"] }, "content": { "enum": ["static", "posts"] }, "editorialSurface": { "type": ["string", "null"], "enum": ["single", "archive", null] }, "templateConditions": { "type": "array", "items": { "type": "object" } } }
+                }
+              },
+              "required": ["anchor", "outputPath", "title", "runtime", "wordpress"]
+            }
+          ]
+        }
+      ]
+    },
+    "document": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "wordpress", "closure", "stitches"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "wordpress": {
+          "type": "object", "additionalProperties": false,
+          "required": ["templateType", "commerce", "content", "templateConditions"],
+          "properties": { "templateType": { "enum": ["content", "header", "footer", "popup", "archive"] }, "commerce": { "enum": ["preserve", "woocommerce"] }, "content": { "enum": ["static", "posts"] }, "editorialSurface": { "type": ["string", "null"], "enum": ["single", "archive", null] }, "templateConditions": { "type": "array", "items": { "type": "object" } } }
+        },
+        "closure": {
+          "type": "object", "additionalProperties": false, "required": ["status", "declaredAnchors", "unresolved"],
+          "properties": { "status": { "const": "complete" }, "declaredAnchors": { "type": "integer", "minimum": 0 }, "unresolved": { "type": "array", "maxItems": 0 } }
+        },
+        "stitches": { "type": "array", "items": { "$ref": "#/$defs/stitch" } }
+      }
+    }
+  }
+}

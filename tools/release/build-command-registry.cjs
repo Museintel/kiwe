@@ -9,12 +9,13 @@ const publicRoot = path.join(repoRoot, 'public', 'start.kiwelaunch.com');
 const toolkitRoot = path.join(repoRoot, 'kiwe-ai-toolkit');
 const baseUrl = 'https://start.kiwelaunch.com';
 const sourceRepository = 'https://github.com/Museintel/kiwe';
-const sourceBranch = 'codex/phonekey-whatsapp-rc1';
+const sourceBranch = 'main';
 const sourceStart = `${sourceRepository}/blob/${sourceBranch}/KIWE-START.md`;
 const rawSourceStart = `https://raw.githubusercontent.com/Museintel/kiwe/${sourceBranch}/KIWE-START.md`;
 const indexNowKey = 'c8db19ce3f2e469aa5622c25743c28f3';
 const checkOnly = process.argv.includes('--check');
 const textExtensions = new Set(['.cjs', '.css', '.html', '.js', '.json', '.md', '.txt', '.xml']);
+const independentPublicRoots = new Set(['key']);
 
 const canonical = (value) => String(value).replace(/\r\n?/g, '\n');
 const bytes = (file) => {
@@ -41,7 +42,11 @@ function compare(expectedRoot, actualRoot) {
   const relative = (root, file) => path.relative(root, file).replaceAll('\\', '/');
   const expected = walk(expectedRoot).map((file) => relative(expectedRoot, file)).sort();
   const expectedVersionRoots = new Set(expected.filter((file) => file.startsWith('v/')).map((file) => file.split('/').slice(0, 2).join('/')));
-  const actual = walk(actualRoot).map((file) => relative(actualRoot, file)).filter((file) => !file.startsWith('v/') || expectedVersionRoots.has(file.split('/').slice(0, 2).join('/'))).sort();
+  const actual = walk(actualRoot)
+    .map((file) => relative(actualRoot, file))
+    .filter((file) => !independentPublicRoots.has(file.split('/')[0]))
+    .filter((file) => !file.startsWith('v/') || expectedVersionRoots.has(file.split('/').slice(0, 2).join('/')))
+    .sort();
   const errors = [];
   for (const file of expected.filter((item) => !actual.includes(item))) errors.push(`missing: ${file}`);
   for (const file of actual.filter((item) => !expected.includes(item))) errors.push(`unexpected: ${file}`);
@@ -101,7 +106,11 @@ function build(targetRoot) {
 
   for (const directory of ['contexts', 'contracts', 'schemas']) for (const source of walk(path.join(toolkitRoot, directory))) copy(targetRoot, source, path.join(directory, path.relative(path.join(toolkitRoot, directory), source)));
   const versionRoot = path.join(targetRoot, 'v', releaseId);
-  for (const file of walk(targetRoot)) if (!file.startsWith(path.join(targetRoot, 'v') + path.sep)) copy(versionRoot, file, path.relative(targetRoot, file));
+  for (const file of walk(targetRoot)) {
+    const relative = path.relative(targetRoot, file).replaceAll('\\', '/');
+    if (file.startsWith(path.join(targetRoot, 'v') + path.sep) || independentPublicRoots.has(relative.split('/')[0])) continue;
+    copy(versionRoot, file, relative);
+  }
   write(versionRoot, '.well-known/kiwe.json', `${JSON.stringify({ ...discovery, canonicalBase: `${baseUrl}/v/${releaseId}`, commands: discovery.immutableCommands }, null, 2)}\n`);
   write(targetRoot, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[`${baseUrl}/`, ...routes.map(({ route }) => `${baseUrl}/${route}/`)].map((url) => `<url><loc>${escape(url)}</loc><lastmod>${escape(entry.updated)}</lastmod></url>`).join('')}</urlset>\n`);
   write(targetRoot, 'robots.txt', `User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml\n`);
@@ -124,7 +133,7 @@ if (checkOnly) {
   if (path.resolve(publicRoot) !== path.resolve(repoRoot, 'public', 'start.kiwelaunch.com')) throw new Error('Unsafe registry path.');
   fs.mkdirSync(publicRoot, { recursive: true });
   for (const entry of fs.readdirSync(publicRoot, { withFileTypes: true })) {
-    if (entry.name !== 'v') fs.rmSync(path.join(publicRoot, entry.name), { recursive: true, force: true });
+    if (entry.name !== 'v' && !independentPublicRoots.has(entry.name)) fs.rmSync(path.join(publicRoot, entry.name), { recursive: true, force: true });
   }
   build(publicRoot);
   console.log(`Built SEAM command registry at ${publicRoot}`);
