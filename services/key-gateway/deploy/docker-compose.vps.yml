@@ -1,0 +1,53 @@
+services:
+  gateway:
+    build: ..
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      KIWE_KEY_TRANSPORT: evolution
+      KIWE_KEY_CONFIG_FILE: /run/secrets/kiwe_key_config
+      EVOLUTION_BASE_URL: http://evolution:8080
+    secrets:
+      - kiwe_key_config
+    depends_on:
+      evolution:
+        condition: service_started
+    networks: [kiwe_key]
+    ports: ["127.0.0.1:3000:3000"]
+
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7@sha256:1bd8afc4a6cf48822e6cf02469aeae7bd35a12a6b616eacd1291926307f4d339
+    restart: unless-stopped
+    env_file: .env.evolution
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes: ["evolution_instances:/evolution/instances"]
+    networks: [kiwe_key]
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: .env.evolution
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"], interval: 10s, timeout: 5s, retries: 6 }
+    networks: [kiwe_key]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes: ["redis_data:/data"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 10s, timeout: 5s, retries: 6 }
+    networks: [kiwe_key]
+
+secrets:
+  kiwe_key_config:
+    file: ./runtime-config.json
+volumes:
+  evolution_instances:
+  postgres_data:
+  redis_data:
+networks:
+  kiwe_key:
+    driver: bridge

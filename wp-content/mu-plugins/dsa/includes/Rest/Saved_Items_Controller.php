@@ -39,6 +39,9 @@ final class Saved_Items_Controller {
 	}
 
 	public function can_mutate( WP_REST_Request $request ) {
+		if ( ! is_user_logged_in() ) {
+			return new WP_Error( 'dsa_saved_items_login_required', __( 'Sign in before saving bookmarks or wishlist items.', 'dsa' ), [ 'status' => 401 ] );
+		}
 		$allowed = Origin_Checker::mutation_allowed( $request );
 		return true !== $allowed ? $allowed : Origin_Checker::transient_rate_limit( 'dsa_saved_items', 60 );
 	}

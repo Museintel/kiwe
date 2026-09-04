@@ -1,0 +1,37 @@
+{
+  "port": 3000,
+  "transport": "baileys",
+  "publicBaseUrl": "https://key.kiwelaunch.com",
+  "stateDirectory": "../.kiwe-key-state",
+  "setupToken": "replace-with-at-least-32-random-characters",
+  "memoryLimitMb": 256,
+  "rcObservability": {
+    "enabled": false,
+    "captureInboundText": false,
+    "captureOutboundText": false,
+    "retentionDays": 14,
+    "maxEvents": 3000,
+    "path": "../.kiwe-key-state/rc-history.json",
+    "key": "replace-with-a-32-byte-base64url-key",
+    "tenant": "example-site"
+  },
+  "controlPlane": {
+    "enabled": true,
+    "path": "../.kiwe-key-state/control-plane.json",
+    "bootstrapOwnerEmail": "owner@example.com",
+    "sessionHours": 24,
+    "registrationEnabled": true
+  },
+  "tenants": {
+    "example-site": {
+      "secret": "replace-with-at-least-32-random-characters",
+      "sites": ["https://example.com"],
+      "label": "Example Store"
+    }
+  },
+  "evolution": {
+    "baseUrl": "http://evolution:8080",
+    "instance": "kiwe-key",
+    "apiKey": "replace-on-vps"
+  }
+}

@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Kiwe
- * Description: Kiwe Surface, PhoneKey auth, and appsite layer for WordPress.
- * Version: 8.0.0-rc.8
+ * Description: Kiwe Surface, Key.kiwe auth, and appsite layer for WordPress.
+ * Version: 8.0.0-rc.52
  * Requires PHP: 8.2
  * Author: Kiwelauch
  */
@@ -21,7 +21,7 @@ if ( PHP_VERSION_ID < 80200 ) {
 	return;
 }
 
-define( 'DSA_VERSION', '8.0.0-rc.8' );
+define( 'DSA_VERSION', '8.0.0-rc.52' );
 define( 'DSA_FILE', __FILE__ );
 define( 'DSA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DSA_URL', plugin_dir_url( __FILE__ ) );
@@ -37,6 +37,20 @@ if ( ! defined( 'KIWE_MU_LOADER_VERSION' ) || KIWE_MU_LOADER_VERSION !== DSA_VER
 	kiwe_mu_debug_log( 'Loader/package version mismatch', [ 'loader' => defined( 'KIWE_MU_LOADER_VERSION' ) ? KIWE_MU_LOADER_VERSION : '', 'package' => DSA_VERSION ] );
 	kiwe_mu_admin_notice( 'Kiwe loader and package versions do not match. Upload both wp-content/mu-plugins/dsa.php and the complete dsa folder from the same release.' );
 	return;
+}
+
+// Authentication is a critical lane. Load the existing Key.kiwe core before
+// the wider Kiwe graph and package audit so an already-open sign-in sheet does
+// not lose its REST routes during a slow boot or a partially copied manual MU
+// deployment. Plugin::register_services() reuses this same core via
+// require_once; no second auth service or route set is created.
+$kiwe_boot_settings = get_option( DSA_OPTION_SETTINGS, [] );
+if (
+	is_array( $kiwe_boot_settings )
+	&& ! empty( $kiwe_boot_settings['phonekey']['enabled'] )
+	&& is_readable( DSA_DIR . 'includes/PhoneKey/phonekey-core.php' )
+) {
+	( new \DSA\PhoneKey\PhoneKey_Core_Loader() )->register();
 }
 
 $dsa_package_proof = \DSA\Runtime\Package_Manifest::verify();
@@ -64,6 +78,13 @@ if ( empty( $dsa_package_proof['complete'] ) ) {
 			'changed'       => array_slice( (array) ( $dsa_package_proof['changed'] ?? [] ), 0, 10 ),
 		]
 	);
+}
+
+// Image upload/sub-size generation is a memory-sensitive WordPress core path.
+// The direct Kiwe Incident Guard MU loader still provides bounded upload and
+// security checks, while the large application graph is intentionally skipped.
+if ( \DSA\Secure\Incident_Response_Service::is_lean_media_request() ) {
+	return;
 }
 
 \DSA\Plugin::instance()->boot();

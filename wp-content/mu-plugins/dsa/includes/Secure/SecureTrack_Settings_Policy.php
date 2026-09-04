@@ -7,11 +7,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SecureTrack_Settings_Policy {
+	public static function notification_policy(): array {
+		if ( function_exists( 'stp_cfg' ) ) return (array) stp_cfg();
+		return (array) get_option( 'stp_settings', [] );
+	}
+
+	public static function update_notification_policy( array $input ): array {
+		$stored = (array) get_option( 'stp_settings', [] );
+		$mode = sanitize_key( (string) ( $input['alert_delivery_policy'] ?? 'actionable' ) );
+		$stored['alert_on_red'] = empty( $input['alert_on_red'] ) ? 0 : 1;
+		// alert_email is retained only as a backwards-compatible data field.
+		// Recipients and delivery lanes now belong to Kiwe Notifications.
+		$email = sanitize_email( (string) ( $input['alert_email'] ?? ( $stored['alert_email'] ?? '' ) ) );
+		if ( is_email( $email ) ) $stored['alert_email'] = $email;
+		$stored['alert_delivery_policy'] = in_array( $mode, [ 'actionable', 'yellow_and_actionable' ], true ) ? $mode : 'actionable';
+		$stored['alert_repeat_window_mins'] = max( 1, min( 1440, (int) ( $input['alert_repeat_window_mins'] ?? 15 ) ) );
+		$stored['alert_hourly_limit'] = max( 1, min( 100, (int) ( $input['alert_hourly_limit'] ?? 8 ) ) );
+		update_option( 'stp_settings', $stored, false );
+		wp_cache_delete( 'settings', 'securetrack_pro' );
+		if ( function_exists( 'stp_cfg' ) ) stp_cfg( true );
+		return [ 'ok' => true, 'policy' => $stored ];
+	}
+
 	public static function sync_from_kiwe( array $secure ): void {
 		$settings = (array) get_option( 'stp_settings', [] );
 		$engine_enabled = ! empty( $secure['enabled'] );
 		$auto_logout_enabled = $engine_enabled && ! empty( $secure['auto_logout_enabled'] );
 		$roles = self::normalize_roles( $secure['auto_logout_roles'] ?? [] );
+		$profile = sanitize_key( (string) ( $secure['protection_profile'] ?? 'monitor' ) );
+		$profile = in_array( $profile, [ 'monitor', 'recommended' ], true ) ? $profile : 'monitor';
 
 		if ( ! $engine_enabled ) {
 			$settings = self::disable_enforcement_settings( $settings );
@@ -19,6 +43,26 @@ final class SecureTrack_Settings_Policy {
 
 		$settings['idle_timeout_mins'] = $auto_logout_enabled && $roles ? max( 1, min( 1440, absint( $secure['auto_logout_minutes'] ?? 30 ) ) ) : 0;
 		$settings['idle_timeout_roles'] = $auto_logout_enabled ? $roles : [];
+
+		if ( $engine_enabled && 'recommended' === $profile ) {
+			$settings['emergency_safe_mode'] = 0;
+			$settings['endpoint_rate_limits'] = 1;
+			$settings['block_brute_force'] = 1;
+			$settings['adaptive_waf'] = 1;
+			$settings['honeypot_enabled'] = 1;
+			$settings['tarpit_enabled'] = 0;
+			$settings['harden_xmlrpc'] = 1;
+			$settings['harden_rest_users'] = 1;
+			$settings['harden_file_editor'] = 1;
+			$settings['harden_wp_generator'] = 1;
+			$settings['harden_security_headers'] = 1;
+			$settings['track_admin_activity'] = 1;
+			$settings['rl_login_per_min'] = 20;
+			$settings['rl_xmlrpc_per_min'] = 10;
+			$settings['rl_rest_per_min'] = 300;
+			$settings['rl_admin_per_min'] = 600;
+			$settings['rl_frontend_per_min'] = 1200;
+		}
 
 		update_option( 'stp_settings', $settings, false );
 
@@ -59,6 +103,10 @@ final class SecureTrack_Settings_Policy {
 
 	public static function normalize_runtime_config( array $config ): array {
 		$config['break_glass_slug'] = stp_sanitize_break_glass_slug( $config['break_glass_slug'] ?? '' );
+		$config['alert_delivery_policy'] = sanitize_key( $config['alert_delivery_policy'] ?? 'actionable' );
+		if ( ! in_array( $config['alert_delivery_policy'], [ 'actionable', 'yellow_and_actionable' ], true ) ) {
+			$config['alert_delivery_policy'] = 'actionable';
+		}
 		$config['v2_ai_provider'] = sanitize_key( $config['v2_ai_provider'] ?? 'none' );
 		if ( ! in_array( $config['v2_ai_provider'], [ 'none', 'wordpress_ai_client', 'openai_compatible', 'gemini', 'groq', 'xai' ], true ) ) {
 			$config['v2_ai_provider'] = 'none';

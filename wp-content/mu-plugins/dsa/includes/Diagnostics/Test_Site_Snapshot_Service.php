@@ -284,7 +284,7 @@ final class Test_Site_Snapshot_Service {
 	private function option_names(): array {
 		$names = [
 			// Never roll back the aggregate Kiwe settings option: it owns live
-			// AI/SMTP/PhoneKey credentials and unrelated service configuration.
+			// AI/SMTP/Key.kiwe credentials and unrelated service configuration.
 			'show_on_front', 'page_on_front', 'page_for_posts', 'permalink_structure', 'stylesheet', 'template',
 			'blogname', 'blogdescription', 'site_icon', 'timezone_string', 'gmt_offset',
 			'kiwe_site_logo_id', 'kiwe_site_logo_inverse_id', 'kiwe_store_phone', 'kiwe_store_email',

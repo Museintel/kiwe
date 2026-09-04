@@ -188,7 +188,7 @@ function stp_pg_events() {
       <?php if ( ( $e->ip_st ?? '' ) === 'trusted' ): ?>
         <button class="stp-b stp-bt stp-disabled" disabled title="Already trusted">Trusted</button>
       <?php else: ?>
-        <button class="stp-b stp-bt" onclick="stpTrust(this,<?php echo (int)$e->ip_row_id; ?>)" title="Trust this IP">✅</button>
+        <button class="stp-b stp-bt" onclick="stpTrust(this,<?php echo (int)$e->ip_row_id; ?>,'<?php echo esc_js( (string) $e->ip_address ); ?>')" title="Trust this IP">✅</button>
       <?php endif; ?>
     <?php endif; ?>
   </td>
@@ -324,7 +324,7 @@ function stp_pg_ips() {
     <?php if ( $ip->status === 'trusted' ): ?>
       <button class="stp-b stp-bt stp-disabled" disabled title="Already trusted">Trusted</button>
     <?php else: ?>
-      <button class="stp-b stp-bt" onclick="stpTrust(this,<?php echo (int)$ip->id; ?>)" title="Trust">✅</button>
+      <button class="stp-b stp-bt" onclick="stpTrust(this,<?php echo (int)$ip->id; ?>,'<?php echo esc_js( (string) $ip->ip_address ); ?>')" title="Trust">✅</button>
     <?php endif; ?>
     <button class="stp-b stp-bg" onclick="stpGreen(<?php echo (int)$ip->id; ?>,'ip')" title="Green all events">🟢</button>
     <button class="stp-b stp-bd" onclick="stpDelIp(<?php echo (int)$ip->id; ?>)" title="Delete IP + all events">🗑</button>
@@ -949,7 +949,7 @@ function stp_pg_chain() {
     <?php if ( ( $ip_row->status ?? '' ) === 'trusted' ): ?>
       <button class="stp-b stp-bt stp-disabled" disabled>Trusted</button>
     <?php else: ?>
-      <button class="stp-b stp-bt" onclick="stpTrust(this,<?php echo (int) $ip_row->id; ?>)">Trust IP</button>
+      <button class="stp-b stp-bt" onclick="stpTrust(this,<?php echo (int) $ip_row->id; ?>,'<?php echo esc_js( $ip ); ?>')">Trust IP</button>
     <?php endif; ?>
     <?php if ( $subnet ): ?>
       <?php if ( $subnet_row && (int) $subnet_row->is_banned === 1 ): ?>
@@ -1006,95 +1006,167 @@ function stp_file_scan_patterns() {
 	);
 }
 
-function stp_scan_files_now( $limit = 1200 ) {
+function stp_scan_files_now( $limit = 220, $continue = false, $time_budget = 8.0 ) {
 	if ( get_transient( 'stp_file_scan_lock' ) ) {
 		$last = (array) get_transient( 'stp_file_scan_last' );
 		$last['locked'] = true;
 		return $last + array( 'scanned' => 0, 'findings' => array() );
 	}
-	set_transient( 'stp_file_scan_lock', 1, 10 * MINUTE_IN_SECONDS );
+	set_transient( 'stp_file_scan_lock', 1, 2 * MINUTE_IN_SECONDS );
 	$base = WP_CONTENT_DIR;
 	$skip = '/\/(?:cache|upgrade|backups?|backup|ai1wm-backups|wflogs|updraft|node_modules|vendor)\//i';
 	$exts = array( 'php', 'phtml', 'php3', 'php4', 'php5', 'js', 'htaccess' );
 	$patterns = stp_file_scan_patterns();
-	$findings = array();
-	$scanned = 0;
+	$state = $continue ? (array) get_transient( 'stp_file_scan_state' ) : array();
+	if ( empty( $state['queue'] ) || ! is_array( $state['queue'] ) ) {
+		$state = array(
+			'queue'    => array( array( 'path' => $base, 'offset' => 0 ) ),
+			'findings' => array(),
+			'scanned'  => 0,
+			'started'  => current_time( 'mysql' ),
+		);
+	}
+	$state['findings'] = isset( $state['findings'] ) && is_array( $state['findings'] ) ? $state['findings'] : array();
+	$state['scanned'] = isset( $state['scanned'] ) ? max( 0, (int) $state['scanned'] ) : 0;
+	$base_normalized = trailingslashit( wp_normalize_path( $base ) );
+	$batch_scanned = 0;
+	$started_at = microtime( true );
+	$yielded = false;
+	$limit = max( 25, min( 500, (int) $limit ) );
+	$time_budget = max( 2.0, min( 15.0, (float) $time_budget ) );
 
 	try {
-		$it = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $base, FilesystemIterator::SKIP_DOTS ) );
-		foreach ( $it as $file ) {
-			if ( $scanned >= $limit ) break;
-			if ( ! $file->isFile() ) continue;
-			$path = wp_normalize_path( $file->getPathname() );
-			if ( $file->isLink() || strpos( $path, wp_normalize_path( WP_CONTENT_DIR ) ) !== 0 ) continue;
-			if ( preg_match( $skip, $path ) ) continue;
-			$ext = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
-			if ( basename( $path ) !== '.htaccess' && ! in_array( $ext, $exts, true ) ) continue;
-			$scanned++;
-			$rel = str_replace( wp_normalize_path( ABSPATH ), '', $path );
-			$size = (int) @filesize( $path );
-			if ( $size > 1500000 ) {
-				$head = @file_get_contents( $path, false, null, 0, 750000 );
-				$tail = @file_get_contents( $path, false, null, max( 0, $size - 750000 ), 750000 );
-				$body = ( $head === false ? '' : $head ) . "\n/* securetrack-large-file-gap */\n" . ( $tail === false ? '' : $tail );
-			} else {
-				$body = @file_get_contents( $path );
+		while ( ! empty( $state['queue'] ) && $batch_scanned < $limit && ( microtime( true ) - $started_at ) < $time_budget ) {
+			$item = array_shift( $state['queue'] );
+			$directory = isset( $item['path'] ) ? wp_normalize_path( (string) $item['path'] ) : '';
+			$offset = isset( $item['offset'] ) ? max( 0, (int) $item['offset'] ) : 0;
+			if ( ! $directory || strpos( trailingslashit( $directory ), $base_normalized ) !== 0 || ! is_dir( $directory ) || is_link( $directory ) || preg_match( $skip, trailingslashit( $directory ) ) ) {
+				continue;
 			}
-			if ( $body === false ) continue;
-			$hits = array();
-			foreach ( $patterns as $name => $rx ) {
-				if ( $name === 'php_in_uploads' ) {
-					if ( preg_match( $rx, $path ) ) $hits[] = $name;
-				} elseif ( preg_match( $rx, $body ) ) {
-					$hits[] = $name;
+
+			$entries = array();
+			foreach ( new DirectoryIterator( $directory ) as $entry ) {
+				if ( $entry->isDot() ) continue;
+				$entries[] = wp_normalize_path( $entry->getPathname() );
+			}
+			sort( $entries, SORT_STRING );
+
+			for ( $index = $offset, $entry_count = count( $entries ); $index < $entry_count; $index++ ) {
+				if ( ( microtime( true ) - $started_at ) >= $time_budget ) {
+					array_unshift( $state['queue'], array( 'path' => $directory, 'offset' => $index ) );
+					$yielded = true;
+					break 2;
+				}
+
+				$path = $entries[ $index ];
+				if ( strpos( $path, $base_normalized ) !== 0 || is_link( $path ) || preg_match( $skip, $path ) ) continue;
+				if ( is_dir( $path ) ) {
+					$state['queue'][] = array( 'path' => $path, 'offset' => 0 );
+					continue;
+				}
+				if ( ! is_file( $path ) ) continue;
+
+				$ext = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
+				if ( basename( $path ) !== '.htaccess' && ! in_array( $ext, $exts, true ) ) continue;
+				$batch_scanned++;
+				$state['scanned']++;
+				$rel = str_replace( wp_normalize_path( ABSPATH ), '', $path );
+				$size = (int) @filesize( $path );
+				$chunk = 262144;
+				if ( $size > ( 2 * $chunk ) ) {
+					$head = @file_get_contents( $path, false, null, 0, $chunk );
+					$tail = @file_get_contents( $path, false, null, max( 0, $size - $chunk ), $chunk );
+					$body = ( $head === false ? '' : $head ) . "\n/* securetrack-large-file-gap */\n" . ( $tail === false ? '' : $tail );
+				} else {
+					$body = @file_get_contents( $path );
+				}
+				if ( $body === false ) continue;
+				$hits = array();
+				foreach ( $patterns as $name => $rx ) {
+					if ( $name === 'php_in_uploads' ) {
+						if ( preg_match( $rx, $path ) ) $hits[] = $name;
+					} elseif ( preg_match( $rx, $body ) ) {
+						$hits[] = $name;
+					}
+				}
+				$modified = (int) @filemtime( $path );
+				$recent = $modified > strtotime( '-7 days' );
+				if ( ( $hits || $recent ) && count( $state['findings'] ) < 250 ) {
+					$state['findings'][] = array(
+						'file'     => $rel,
+						'hits'     => $hits,
+						'recent'   => $recent,
+						'modified' => date_i18n( 'M j Y H:i', $modified ),
+						'size'     => size_format( $size ),
+					);
+				}
+
+				if ( $batch_scanned >= $limit && ( $index + 1 ) < $entry_count ) {
+					array_unshift( $state['queue'], array( 'path' => $directory, 'offset' => $index + 1 ) );
+					$yielded = true;
+					break 2;
 				}
 			}
-			$recent = filemtime( $path ) > strtotime( '-7 days' );
-			if ( $hits || $recent ) {
-				$findings[] = array(
-					'file'     => $rel,
-					'hits'     => $hits,
-					'recent'   => $recent,
-					'modified' => date_i18n( 'M j Y H:i', filemtime( $path ) ),
-					'size'     => size_format( $size ),
-				);
-			}
 		}
-	} catch ( Exception $e ) {
+	} catch ( Throwable $e ) {
 		delete_transient( 'stp_file_scan_lock' );
-		return array( 'error' => $e->getMessage(), 'scanned' => $scanned, 'findings' => $findings );
+		return array( 'error' => $e->getMessage(), 'scanned' => $state['scanned'], 'findings' => $state['findings'], 'complete' => false );
 	}
 
-	set_transient( 'stp_file_scan_last', array( 'time' => current_time( 'mysql' ), 'scanned' => $scanned, 'findings' => $findings ), 6 * HOUR_IN_SECONDS );
+	$complete = ! $yielded && empty( $state['queue'] );
+	$result = array(
+		'time'                  => current_time( 'mysql' ),
+		'started'               => $state['started'],
+		'scanned'               => $state['scanned'],
+		'batch_scanned'         => $batch_scanned,
+		'findings'              => $state['findings'],
+		'complete'              => $complete,
+		'remaining_directories' => count( $state['queue'] ),
+	);
+	set_transient( 'stp_file_scan_last', $result, 6 * HOUR_IN_SECONDS );
+	if ( $complete ) {
+		delete_transient( 'stp_file_scan_state' );
+	} else {
+		set_transient( 'stp_file_scan_state', $state, 2 * HOUR_IN_SECONDS );
+	}
 	delete_transient( 'stp_file_scan_lock' );
-	if ( $findings ) {
+	if ( $complete && $state['findings'] ) {
 		stp_create_alert( array(
 			'chain_type'  => 'file_scan',
 			'severity'    => 'high',
 			'title'       => 'File scanner found suspicious files',
-			'description' => count( $findings ) . ' suspicious or recently changed file(s) were found in wp-content.',
-			'evidence'    => array_slice( $findings, 0, 20 ),
+			'description' => count( $state['findings'] ) . ' suspicious or recently changed file(s) were found in wp-content.',
+			'evidence'    => array_slice( $state['findings'], 0, 20 ),
 		) );
 	}
-	return array( 'scanned' => $scanned, 'findings' => $findings );
+	return $result;
 }
 
 function stp_pg_filescan() {
 	if ( ! current_user_can( 'manage_options' ) ) return;
 	$result = get_transient( 'stp_file_scan_last' );
 	if ( isset( $_GET['scan'] ) && check_admin_referer( 'stp_file_scan' ) ) {
-		$result = stp_scan_files_now();
-		echo ! empty( $result['locked'] )
-			? '<div class="notice notice-warning is-dismissible"><p>A SecureTrack file scan is already running. Showing the last completed scan.</p></div>'
-			: '<div class="notice notice-success is-dismissible"><p>File scan completed.</p></div>';
+		$result = stp_scan_files_now( 220, isset( $_GET['continue'] ) );
+		if ( ! empty( $result['locked'] ) ) {
+			echo '<div class="notice notice-warning is-dismissible"><p>A SecureTrack file scan batch is already running. Showing the latest saved progress.</p></div>';
+		} elseif ( ! empty( $result['error'] ) ) {
+			echo '<div class="notice notice-error is-dismissible"><p>File scan stopped safely: ' . esc_html( $result['error'] ) . '</p></div>';
+		} elseif ( empty( $result['complete'] ) ) {
+			echo '<div class="notice notice-info is-dismissible"><p>File scan batch completed within the request resource budget. Continue to scan the remaining directories.</p></div>';
+		} else {
+			echo '<div class="notice notice-success is-dismissible"><p>File scan completed.</p></div>';
+		}
 	}
 	$findings = $result['findings'] ?? array();
 	?>
 <div class="wrap stp-wrap">
 <h1>File Scanner</h1>
 <p class="stp-desc">Manual heuristic scan for suspicious PHP/JS/.htaccess patterns and recent changes under <code>wp-content</code>. Review findings before deleting anything.</p>
-<p><a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( '?page=stp-filescan&scan=1', 'stp_file_scan' ) ); ?>">Run Scan Now</a>
-<?php if ( $result ): ?><span class="stp-tot">Last scan: <?php echo esc_html( $result['time'] ?? current_time( 'mysql' ) ); ?>, scanned <?php echo number_format( (int) ( $result['scanned'] ?? 0 ) ); ?> files</span><?php endif; ?></p>
+<p><a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( '?page=stp-filescan&scan=1', 'stp_file_scan' ) ); ?>">Run New Scan</a>
+<?php if ( $result && empty( $result['complete'] ) && empty( $result['locked'] ) ): ?>
+	<a class="button" href="<?php echo esc_url( wp_nonce_url( '?page=stp-filescan&scan=1&continue=1', 'stp_file_scan' ) ); ?>">Continue Scan</a>
+<?php endif; ?>
+<?php if ( $result ): ?><span class="stp-tot">Last progress: <?php echo esc_html( $result['time'] ?? current_time( 'mysql' ) ); ?>, scanned <?php echo number_format( (int) ( $result['scanned'] ?? 0 ) ); ?> files<?php echo ! empty( $result['complete'] ) ? ' (complete)' : ' (in progress)'; ?></span><?php endif; ?></p>
 <div class="stp-tw"><table class="stp-t">
 <thead><tr><th>File</th><th>Signals</th><th>Modified</th><th>Size</th></tr></thead>
 <tbody>
@@ -1367,17 +1439,16 @@ function stp_pg_settings() {
 		$ai_mode = sanitize_key( $_POST['v2_ai_mode'] ?? 'batch' );
 		if ( ! in_array( $ai_mode, array( 'batch', 'always' ), true ) ) $ai_mode = 'batch';
 		$posted_ai_model = preg_replace( '/[^a-zA-Z0-9._:\/-]/', '', (string) ( $broker_status['model'] ?? '' ) );
-		$posted_idle_roles = isset( $_POST['idle_timeout_roles'] ) && is_array( $_POST['idle_timeout_roles'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['idle_timeout_roles'] ) ) : array();
-		$valid_idle_roles = function_exists( 'wp_roles' ) ? array_keys( wp_roles()->get_names() ) : array();
-		$posted_idle_roles = array_values( array_intersect( $posted_idle_roles, $valid_idle_roles ) );
-
 		$new = array(
 			'red_threshold'     => min(100, max(1,  (int)$_POST['red_threshold'])),
 			'yellow_threshold'  => min(100, max(1,  (int)$_POST['yellow_threshold'])),
 			'green_trim_days'   => max( 0, (int)$_POST['green_trim_days'] ),
 			'yellow_trim_days'  => max( 0, (int)$_POST['yellow_trim_days'] ),
-			'alert_email'       => sanitize_email( $_POST['alert_email'] ),
+			'alert_email'       => sanitize_email( $old_settings['alert_email'] ?? get_option( 'admin_email' ) ),
 			'alert_on_red'      => (int) isset( $_POST['alert_on_red'] ),
+			'alert_delivery_policy' => in_array( sanitize_key( $_POST['alert_delivery_policy'] ?? 'actionable' ), array( 'actionable', 'yellow_and_actionable' ), true ) ? sanitize_key( $_POST['alert_delivery_policy'] ?? 'actionable' ) : 'actionable',
+			'alert_repeat_window_mins' => max( 1, min( 1440, (int) ( $_POST['alert_repeat_window_mins'] ?? 15 ) ) ),
+			'alert_hourly_limit' => max( 1, min( 100, (int) ( $_POST['alert_hourly_limit'] ?? 8 ) ) ),
 			'geo_enabled'       => (int) isset( $_POST['geo_enabled'] ),
 			'country_blocklist' => strtoupper( preg_replace( '/[^A-Z,\s]/i', '', (string) ( $_POST['country_blocklist'] ?? '' ) ) ),
 			'login_country_policy' => in_array( sanitize_key( $_POST['login_country_policy'] ?? 'off' ), array( 'off', 'deny', 'ban' ), true ) ? sanitize_key( $_POST['login_country_policy'] ?? 'off' ) : 'off',
@@ -1404,13 +1475,15 @@ function stp_pg_settings() {
 			'csp_report_uri'       => stp_same_site_url( $_POST['csp_report_uri'] ?? '' ),
 			'security_txt_enabled' => (int) isset( $_POST['security_txt_enabled'] ),
 			'endpoint_rate_limits' => (int) isset( $_POST['endpoint_rate_limits'] ),
-			'rl_login_per_min'     => max( 5, min( 2000, (int) ( $_POST['rl_login_per_min'] ?? 20 ) ) ),
+			'rl_login_per_min'     => max( 5, min( 2000, (int) ( $old_settings['rl_login_per_min'] ?? 60 ) ) ),
 			'rl_xmlrpc_per_min'    => max( 5, min( 2000, (int) ( $_POST['rl_xmlrpc_per_min'] ?? 15 ) ) ),
-			'rl_rest_per_min'      => max( 5, min( 2000, (int) ( $_POST['rl_rest_per_min'] ?? 90 ) ) ),
-			'rl_admin_per_min'     => max( 5, min( 2000, (int) ( $_POST['rl_admin_per_min'] ?? 120 ) ) ),
-			'rl_frontend_per_min'  => max( 5, min( 2000, (int) ( $_POST['rl_frontend_per_min'] ?? 240 ) ) ),
-			'idle_timeout_mins'    => max( 0, min( 1440, (int) ( $_POST['idle_timeout_mins'] ?? 0 ) ) ),
-			'idle_timeout_roles'   => $posted_idle_roles,
+			'rl_rest_per_min'      => max( 5, min( 2000, (int) ( $old_settings['rl_rest_per_min'] ?? 300 ) ) ),
+			'rl_admin_per_min'     => max( 5, min( 2000, (int) ( $old_settings['rl_admin_per_min'] ?? 600 ) ) ),
+			'rl_frontend_per_min'  => max( 5, min( 2000, (int) ( $old_settings['rl_frontend_per_min'] ?? 1200 ) ) ),
+			// Kiwe Secure is the single authority for idle logout. Saving the
+			// detailed SecureTrack form must not silently override that policy.
+			'idle_timeout_mins'    => max( 0, min( 1440, (int) ( $old_settings['idle_timeout_mins'] ?? 0 ) ) ),
+			'idle_timeout_roles'   => (array) ( $old_settings['idle_timeout_roles'] ?? array() ),
 			'adaptive_learning'    => (int) isset( $_POST['adaptive_learning'] ),
 			'behavioral_risk'      => (int) isset( $_POST['behavioral_risk'] ),
 			'attack_graph'         => (int) isset( $_POST['attack_graph'] ),
@@ -1566,15 +1639,11 @@ function stp_pg_settings() {
     </tr>
 
     <tr>
-      <th scope="row">Endpoint Rate Limits</th>
+      <th scope="row">XML-RPC Rate Limit</th>
       <td>
-        <label><input type="checkbox" name="endpoint_rate_limits" <?php checked($s['endpoint_rate_limits']); ?>> Enable advanced per-IP endpoint rate limiting</label><br>
-        Login <input type="number" name="rl_login_per_min" value="<?php echo esc_attr($s['rl_login_per_min']); ?>" min="5" max="2000" style="width:70px"> / min &nbsp;
+        <label><input type="checkbox" name="endpoint_rate_limits" <?php checked($s['endpoint_rate_limits']); ?>> Enable the early per-IP XML-RPC hard limit</label><br>
         XML-RPC <input type="number" name="rl_xmlrpc_per_min" value="<?php echo esc_attr($s['rl_xmlrpc_per_min']); ?>" min="5" max="2000" style="width:70px"> / min &nbsp;
-        REST <input type="number" name="rl_rest_per_min" value="<?php echo esc_attr($s['rl_rest_per_min']); ?>" min="5" max="2000" style="width:70px"> / min &nbsp;
-        Admin <input type="number" name="rl_admin_per_min" value="<?php echo esc_attr($s['rl_admin_per_min']); ?>" min="5" max="2000" style="width:70px"> / min &nbsp;
-        Frontend <input type="number" name="rl_frontend_per_min" value="<?php echo esc_attr($s['rl_frontend_per_min']); ?>" min="5" max="2000" style="width:70px"> / min
-        <p class="description">Disabled by default. Enable only after tuning limits for your host/CDN/proxy. Logged-in users, SecureTrack AJAX, cron, WP-CLI, and active break-glass recovery remain exempt.</p>
+        <p class="description">Login, WordPress admin, REST, and admin AJAX are intentionally excluded from this early limiter. They remain protected by authentication, capability checks, route-specific budgets, the WAF, and failed-login brute-force controls.</p>
       </td>
     </tr>
 
@@ -1624,12 +1693,7 @@ function stp_pg_settings() {
         <label style="margin-left:22px">CSP report URI <input type="url" name="csp_report_uri" value="<?php echo esc_attr($s['csp_report_uri']); ?>" class="regular-text" placeholder="<?php echo esc_attr( home_url( '/csp-report' ) ); ?>"></label><br>
         <small style="margin-left:22px" class="description">CSP report URI must be on this site; external report endpoints are ignored to avoid leaking page/resource structure.</small><br>
         <label><input type="checkbox" name="security_txt_enabled" <?php checked($s['security_txt_enabled']); ?>> Publish <code>/.well-known/security.txt</code> contact file</label><br>
-        Auto-logout inactive users after <input type="number" name="idle_timeout_mins" value="<?php echo esc_attr($s['idle_timeout_mins']); ?>" min="0" max="1440" style="width:70px"> minutes <small>(0 = disabled)</small><br>
-        <span style="display:inline-block;margin-top:6px">Apply auto-logout to roles:</span><br>
-        <?php foreach ( wp_roles()->get_names() as $role_slug => $role_name ) : ?>
-          <label style="display:inline-block;margin:4px 12px 0 0"><input type="checkbox" name="idle_timeout_roles[]" value="<?php echo esc_attr( $role_slug ); ?>" <?php checked( in_array( $role_slug, (array) ( $s['idle_timeout_roles'] ?? array() ), true ) ); ?>> <?php echo esc_html( translate_user_role( $role_name ) ); ?></label>
-        <?php endforeach; ?><br>
-        <small class="description">If no roles are selected, auto-logout does not run even if minutes are set.</small>
+        <p class="description"><strong>Idle auto-logout is managed by Kiwe Secure above.</strong> This removes the duplicate timeout controls and keeps one source of truth for roles and duration.</p>
         <p class="description">For news sites, leave author archives unblocked and keep safe author slugs enabled so readers can browse an author's posts without exposing login-linked usernames.</p>
       </td>
     </tr>
@@ -1703,11 +1767,22 @@ function stp_pg_settings() {
       </td>
     </tr>
 
-    <tr>
-      <th scope="row">Email Alerts</th>
-      <td>
-        Send alerts to: <input type="email" name="alert_email" value="<?php echo esc_attr($s['alert_email']); ?>" style="width:280px"><br>
-        <label><input type="checkbox" name="alert_on_red" <?php checked($s['alert_on_red']); ?>> Email on every 🔴 red-flag event</label>
+	<tr>
+	  <th scope="row">Incident Notifications</th>
+	  <td>
+		<label><input type="checkbox" name="alert_on_red" <?php checked($s['alert_on_red']); ?>> Generate SecureTrack incident notifications</label>
+		<p style="margin:8px 0 0">
+			Delivery policy:
+			<select name="alert_delivery_policy">
+				<option value="actionable" <?php selected( $s['alert_delivery_policy'], 'actionable' ); ?>>High/critical incidents only (recommended)</option>
+				<option value="yellow_and_actionable" <?php selected( $s['alert_delivery_policy'], 'yellow_and_actionable' ); ?>>Include yellow informational events</option>
+			</select>
+		</p>
+		<p style="margin:8px 0 0">
+			Repeat window: <input type="number" name="alert_repeat_window_mins" value="<?php echo esc_attr( $s['alert_repeat_window_mins'] ); ?>" min="1" max="1440" style="width:72px"> minutes
+			&nbsp;&nbsp; Hourly ceiling: <input type="number" name="alert_hourly_limit" value="<?php echo esc_attr( $s['alert_hourly_limit'] ); ?>" min="1" max="100" style="width:64px"> notifications
+		</p>
+		<p class="description">Choose recipients and Email, WhatsApp or SMS under WordPress → Notifications. Successful protections stay yellow and do not notify by default. Administrators may include yellow events; repeat coalescing and the hourly ceiling protect every gateway. The complete event ledger always remains in SecureTrack.</p>
       </td>
     </tr>
 
@@ -1917,11 +1992,21 @@ jQuery(function($){
   var ajaxurl = (typeof stpCfg!=="undefined") ? stpCfg.ajaxurl : "/wp-admin/admin-ajax.php";
 
   /* ── Core AJAX helper ──────────────────────────────────── */
-  function stpPost(action,data,cb){
-    $.post(ajaxurl,$.extend({action:action,nonce:nonce},data),function(r){
-      if(r.success){ if(cb)cb(r.data); }
-      else alert("SecureTrack error: "+(r.data||"unknown"));
-    },"json");
+  function stpPost(action,data,cb,onError){
+    $.ajax({
+      url:ajaxurl,
+      method:"POST",
+      data:$.extend({action:action,nonce:nonce},data),
+      dataType:"json"
+    }).done(function(r){
+      if(r&&r.success){ if(cb)cb(r.data); return; }
+      var msg=(r&&r.data)?r.data:"Unknown SecureTrack error.";
+      if(onError) onError(msg); else alert("SecureTrack error: "+msg);
+    }).fail(function(xhr){
+      var msg="Request failed"+(xhr&&xhr.status?" (HTTP "+xhr.status+")":"")+". Refresh the page and try again.";
+      if(xhr&&xhr.responseJSON&&xhr.responseJSON.data) msg=xhr.responseJSON.data;
+      if(onError) onError(msg); else alert("SecureTrack error: "+msg);
+    });
   }
 
   /* ── Public API (called from inline onclick) ──────────── */
@@ -2004,12 +2089,16 @@ jQuery(function($){
     stpPost("stp_resolve_alert",{id:id,action_taken:"acknowledged"},function(){ location.reload(); });
   };
 
-  window.stpTrust = function(btn,id){
-    if(id===undefined){ id=btn; btn=null; }
+  window.stpTrust = function(btn,id,ip){
+    if(id===undefined){ id=btn; btn=null; ip=""; }
+    var original=btn?$(btn).text():"Trust IP";
     if(btn) $(btn).prop("disabled",true).text("Trusting...");
-    stpPost("stp_trust_ip",{id:id},function(){
+    stpPost("stp_trust_ip",{id:id,ip:ip||""},function(){
       if(btn) $(btn).text("Trusted").addClass("stp-disabled");
-      else location.reload();
+      window.setTimeout(function(){ location.reload(); },250);
+    },function(message){
+      if(btn) $(btn).prop("disabled",false).text(original);
+      alert("SecureTrack could not trust this IP: "+message);
     });
   };
 

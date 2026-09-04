@@ -16,6 +16,11 @@ final class SEO_Context_Service {
 
 	public function register(): void {
 		add_filter( 'wp_robots', [ $this, 'robots' ] );
+		add_filter( 'rank_math/frontend/robots', [ $this, 'rankmath_robots' ], 99 );
+		add_filter( 'rank_math/sitemap/entry', [ $this, 'rankmath_sitemap_entry' ], 99, 3 );
+		add_action( 'added_post_meta', [ $this, 'sync_rankmath_indexing' ], 10, 4 );
+		add_action( 'updated_post_meta', [ $this, 'sync_rankmath_indexing' ], 10, 4 );
+		add_action( 'deleted_post_meta', [ $this, 'sync_rankmath_indexing' ], 10, 4 );
 		add_filter( 'robots_txt', [ $this, 'robots_txt' ], 99, 2 );
 		add_filter( 'wp_sitemaps_enabled', [ $this, 'native_sitemaps_enabled' ], 99 );
 		add_filter( 'jetpack_enable_open_graph', [ $this, 'jetpack_open_graph' ], 99 );
@@ -56,7 +61,7 @@ final class SEO_Context_Service {
 	}
 
 	public function robots( array $robots ): array {
-		if ( is_page() && 'secondary' === get_post_meta( get_queried_object_id(), Design_Context_Profile_Service::PAGE_VISIBILITY_META, true ) ) {
+		if ( is_page() && self::page_noindex( (int) get_queried_object_id() ) ) {
 			$robots['noindex'] = true;
 			unset( $robots['index'] );
 		}
@@ -64,6 +69,46 @@ final class SEO_Context_Service {
 			$robots['max-image-preview'] = 'large';
 		}
 		return $robots;
+	}
+
+	/** Rank Math remains the native SEO source when it has an explicit page choice. */
+	public static function page_noindex( int $id ): bool {
+		if ( defined( 'RANK_MATH_VERSION' ) ) {
+			$robots = (array) get_post_meta( $id, 'rank_math_robots', true );
+			if ( in_array( 'noindex', $robots, true ) ) return true;
+			if ( in_array( 'index', $robots, true ) ) return false;
+		}
+		return 'secondary' === get_post_meta( $id, Design_Context_Profile_Service::PAGE_VISIBILITY_META, true );
+	}
+
+	/** Called only by the nonce/capability-checked native Pages actions. */
+	public static function set_page_indexing( int $id, bool $noindex ) {
+		if ( 'page' !== get_post_type( $id ) ) return new \WP_Error( 'kiwe_page_indexing', 'Only pages are supported.' );
+		$visibility = $noindex ? 'secondary' : 'primary';
+		update_post_meta( $id, Design_Context_Profile_Service::PAGE_VISIBILITY_META, $visibility );
+		if ( defined( 'RANK_MATH_VERSION' ) ) {
+			$robots = array_values( array_diff( (array) get_post_meta( $id, 'rank_math_robots', true ), [ '', 'index','noindex' ] ) );
+			$robots[] = $noindex ? 'noindex' : 'index';
+			update_post_meta( $id, 'rank_math_robots', $robots );
+			if ( class_exists( '\\RankMath\\Sitemap\\Cache' ) ) \RankMath\Sitemap\Cache::invalidate_storage( 'page' );
+		}
+		do_action( 'litespeed_purge_post', $id );
+		if ( self::page_noindex( $id ) !== $noindex || get_post_meta( $id, Design_Context_Profile_Service::PAGE_VISIBILITY_META, true ) !== $visibility ) return new \WP_Error( 'kiwe_page_indexing', 'Could not save the indexing setting. Please retry.' );
+		return true;
+	}
+
+	/** Keep the native sitemap mirror aligned when a designer changes Rank Math. */
+	public function sync_rankmath_indexing( $meta_id, int $id, string $key, $value ): void {
+		if ( 'rank_math_robots' !== $key || 'page' !== get_post_type( $id ) ) return;
+		$robots = (array) get_post_meta( $id, $key, true );
+		update_post_meta( $id, Design_Context_Profile_Service::PAGE_VISIBILITY_META, in_array( 'noindex', $robots, true ) ? 'secondary' : 'primary' );
+	}
+	public function rankmath_robots( array $robots ): array {
+		if ( is_page() && self::page_noindex( (int) get_queried_object_id() ) ) $robots['index'] = 'noindex';
+		return $robots;
+	}
+	public function rankmath_sitemap_entry( $url, string $type, $object ) {
+		return 'post' === $type && 'page' === ( $object->post_type ?? '' ) && self::page_noindex( (int) $object->ID ) ? false : $url;
 	}
 
 	/** Keep discovery standards-native and avoid a second sitemap implementation. */

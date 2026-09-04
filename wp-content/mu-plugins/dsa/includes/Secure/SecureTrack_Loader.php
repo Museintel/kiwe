@@ -106,7 +106,7 @@ final class SecureTrack_Loader {
 
 	private function register_collision_notice(): void {
 		$this->register_boot_notice(
-			__( 'Kiwe Secure did not load its bundled SecureTrack engine because another SecureTrack/PhoneKey security snippet is already active. Deactivate the older snippet before using the bundled Kiwe Secure module.', 'dsa' ),
+			__( 'Kiwe Secure did not load its bundled SecureTrack engine because another SecureTrack/Key.kiwe security snippet is already active. Deactivate the older snippet before using the bundled Kiwe Secure module.', 'dsa' ),
 			'warning'
 		);
 	}

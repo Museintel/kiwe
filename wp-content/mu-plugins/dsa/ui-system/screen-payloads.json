@@ -35,7 +35,7 @@
   },
   "screens": {
     "profile": {
-      "ownedBy": "PhoneKey, WordPress user, WooCommerce account when available",
+      "ownedBy": "Key.kiwe, WordPress user, WooCommerce account when available",
       "currentFactory": "assets/js/modules/profile-panel.js",
       "requiredRoot": "[data-dsa-profile-panel]",
       "actions": [
@@ -169,7 +169,7 @@
       ]
     },
     "notifications": {
-      "ownedBy": "DSA notification preference service, Push/PWA journey, PhoneKey identity when required",
+      "ownedBy": "DSA notification preference service, Push/PWA journey, Key.kiwe identity when required",
       "currentFactory": "assets/js/modules/surface-panels.js",
       "runtimeAdapter": "visual-profile registry in surface-panels.js",
       "requiredRoot": "[data-dsa-notification-panel]",

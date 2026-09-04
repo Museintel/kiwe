@@ -211,7 +211,7 @@ function renderSavedGroup( title, items ) {
 				item.excerpt ? '<span class="dsa-saved-card__excerpt">' + escapeHtml( item.excerpt ) + '</span>' : '',
 				'</span>',
 				'</a>',
-				'<button type="button" data-dsa-saved-remove="' + escapeHtml( item.key || '' ) + '" data-dsa-keep-open aria-label="Remove ' + escapeHtml( item.title || 'saved item' ) + '">&times;</button>',
+				'<button type="button" data-dsa-saved-remove="' + escapeHtml( item.key || '' ) + '" data-dsa-keep-open aria-label="Remove ' + escapeHtml( item.title || 'saved item' ) + '"><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>',
 				'</article>',
 			].join( '' );
 		} ).join( '' ),
@@ -341,13 +341,27 @@ export function renderGames( payload ) {
 function renderMenuItem( item, fallbackUrl ) {
 	const title = item.title || item.label || 'Menu item';
 	const url = item.url || fallbackUrl || '/';
-	return '<li><a class="dsa-menu-link' + ( item.isActive ? ' is-active' : '' ) + '" href="' + escapeHtml( url ) + '" data-dsa-full-navigation' + ( item.object_id ? ' data-dsa-object-id="' + escapeHtml( item.object_id ) + '"' : '' ) + '>' + ( item.image ? '<img class="dsa-menu-link__image" src="' + escapeHtml( item.image ) + '" alt="">' : '' ) + '<span class="dsa-menu-link__body"><span>' + escapeHtml( title ) + '</span></span></a></li>';
+	return '<li><a class="dsa-menu-link' + ( item.isActive ? ' is-active' : '' ) + '" href="' + escapeHtml( url ) + '" data-dsa-full-navigation' + ( item.isActive ? ' aria-current="page"' : '' ) + ( item.object_id ? ' data-dsa-object-id="' + escapeHtml( item.object_id ) + '"' : '' ) + '>' + ( item.image ? '<img class="dsa-menu-link__image" src="' + escapeHtml( item.image ) + '" alt="">' : '' ) + '<span class="dsa-menu-link__body"><span>' + escapeHtml( title ) + '</span></span></a></li>';
 }
 
 function renderMenuGroup( group, fallbackUrl ) {
 	const items = Array.isArray( group && group.items ) ? group.items : [];
 	if ( ! items.length ) return '';
 	return '<section class="dsa-menu-group">' + ( group.label ? '<h2 class="dsa-menu-group__title">' + escapeHtml( group.label ) + '</h2>' : '' ) + '<ul class="dsa-menu-list">' + items.map( function ( item ) { return renderMenuItem( item, fallbackUrl ); } ).join( '' ) + '</ul></section>';
+}
+
+function menuGroupsWithSectionTitle( groups, title ) {
+	const normalized = Array.isArray( groups ) ? groups.map( function ( group ) {
+		return Object.assign( {}, group || {} );
+	} ) : [];
+	if ( normalized.length && title ) normalized[ 0 ].label = title;
+	return normalized;
+}
+
+function renderUngroupedMenu( links, title, fallbackUrl ) {
+	const list = Array.isArray( links ) ? links : [];
+	if ( ! list.length ) return '';
+	return '<section class="dsa-menu-group">' + ( title ? '<h2 class="dsa-menu-group__title">' + escapeHtml( title ) + '</h2>' : '' ) + '<ul class="dsa-menu-list">' + list.map( function ( item ) { return renderMenuItem( item, fallbackUrl ); } ).join( '' ) + '</ul></section>';
 }
 
 function renderMenuContext( headings, title ) {
@@ -361,7 +375,7 @@ function menuCopy( payload ) {
 	return screenCopy( payload, {
 		label: payload.label || 'Menu',
 		eyebrow: payload.label || 'Menu',
-		title: 'Move around faster.',
+		title: 'Navigation',
 		intro: '',
 		contextTitle: payload.contextTitle || 'On this page',
 		dashboardLabel: 'Dashboard',
@@ -372,16 +386,16 @@ function renderLegacyMenu( payload ) {
 	payload = payload || {};
 	const copy = menuCopy( payload );
 	const tag = /^(h1|h2|h3|h4|p|span)$/.test( payload.tag || '' ) ? payload.tag : 'span';
-	const groups = Array.isArray( payload.groups ) ? payload.groups : [];
+	const groups = menuGroupsWithSectionTitle( payload.groups, copy.title );
 	const links = Array.isArray( payload.links ) ? payload.links : [];
 	const admin = payload.adminDashboard || {};
-	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</' + tag + '><h2>' + escapeHtml( copy.title ) + '</h2>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' ) : '<ul class="dsa-menu-list">' + links.map( function ( item ) { return renderMenuItem( item, payload.fallbackUrl ); } ).join( '' ) + '</ul>' ) + renderMenuContext( payload.contextHeadings, copy.contextTitle ) + ( admin.url ? '<a class="dsa-menu-dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '' ) + '</section>';
+	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</' + tag + '>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' ) : renderUngroupedMenu( links, copy.title, payload.fallbackUrl ) ) + renderMenuContext( payload.contextHeadings, copy.contextTitle ) + ( admin.url ? '<a class="dsa-menu-dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '' ) + '</section>';
 }
 
 function renderPrototypeMenu( payload ) {
 	payload = payload || {};
 	const copy = menuCopy( payload );
-	const groups = Array.isArray( payload.groups ) ? payload.groups : [];
+	const groups = menuGroupsWithSectionTitle( payload.groups, copy.title );
 	const links = Array.isArray( payload.links ) ? payload.links : [];
 	const admin = payload.adminDashboard || {};
 	const linkCount = groups.length
@@ -389,12 +403,12 @@ function renderPrototypeMenu( payload ) {
 		: links.length;
 	const menuBody = groups.length
 		? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' )
-		: '<ul class="dsa-menu-list">' + links.map( function ( item ) { return renderMenuItem( item, payload.fallbackUrl ); } ).join( '' ) + '</ul>';
+		: renderUngroupedMenu( links, copy.title, payload.fallbackUrl );
 	const context = renderMenuContext( payload.contextHeadings, copy.contextTitle );
 
 	return [
 		'<section class="dsa-panel dsa-menu-panel dsa-hero-panel kiwe-menu-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-menu-adapter="prototype-2027">',
-		'<div class="kiwe-menu-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( copy.intro || ( String( linkCount ) + ' site links' + ( context ? ' plus this page guide' : '' ) + '.' ) ) + '</p></div>',
+		'<div class="kiwe-menu-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><p class="dsa-panel__meta">' + escapeHtml( copy.intro || ( String( linkCount ) + ' site links' + ( context ? ' plus this page guide' : '' ) + '.' ) ) + '</p></div>',
 		'<div class="kiwe-menu-v2027__grid">',
 		'<div class="kiwe-menu-v2027__nav">' + menuBody + '</div>',
 		context ? '<div class="kiwe-menu-v2027__context">' + context + '</div>' : '',

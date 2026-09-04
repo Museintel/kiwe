@@ -1,0 +1,6 @@
+{
+  "schema": "kiwe.update-public-key.v1",
+  "keyId": "kiwe-release-2026-01",
+  "algorithm": "ed25519",
+  "publicKey": "v6qwuL3+Zqx76G5A1MCqkvnzOM62fyXudc8OCgXqKzg="
+}

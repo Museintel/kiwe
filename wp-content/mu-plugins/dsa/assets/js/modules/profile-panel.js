@@ -32,13 +32,48 @@ function profileCopy( payload ) {
 	};
 }
 
+function contactField( type, user ) {
+	const isPhone = type === 'phone';
+	const value = isPhone ? ( user.phone || '' ) : ( user.email || '' );
+	const verified = isPhone ? Boolean( user.phoneVerified ) : Boolean( user.emailVerified );
+	const label = isPhone ? 'Phone number' : 'Email address';
+	const inputAttributes = isPhone
+		? 'type="tel" autocomplete="tel" inputmode="tel" data-dsa-profile-factor-input="phone"' + ( verified ? ' readonly' : '' )
+		: 'name="email" type="email" autocomplete="email" data-dsa-profile-factor-input="email"';
+	const action = verified
+		? '<span class="dsa-profile-contact__state is-verified" aria-label="' + escapeHtml( label + ' verified' ) + '">Verified</span>'
+		: '<button class="dsa-profile-contact__action" type="button" data-dsa-profile-factor-verify="' + type + '">' + ( value ? 'Verify' : 'Add &amp; verify' ) + '</button>';
+
+	return [
+		'<label class="dsa-profile-contact" data-dsa-profile-contact="' + type + '">',
+		'<span class="dsa-profile-contact__label">' + escapeHtml( label ) + '</span>',
+		'<span class="dsa-profile-contact__control">',
+		'<input class="dsa-auth-field" id="dsa-profile-' + type + '" ' + inputAttributes + ' value="' + escapeHtml( value ) + '" aria-label="' + escapeHtml( label ) + '" placeholder="' + escapeHtml( label ) + '">',
+		action,
+		'</span>',
+		'</label>',
+	].join( '' );
+}
+
+function publicProfileFields( user ) {
+	if ( ! user.publicProfileEditable ) return '';
+	const fields = user.publicProfile || {};
+	return '<details class="dsa-profile-public"><summary>Public profile</summary><p>These details appear publicly only when an administrator selects you for the team.</p>'
+		+ '<label>Biography<textarea class="dsa-auth-field" name="publicBio" maxlength="3000">' + escapeHtml( fields.bio || '' ) + '</textarea></label>'
+		+ [ [ 'website', 'Website' ], [ 'linkedin', 'LinkedIn' ], [ 'facebook', 'Facebook' ] ].map( function ( field ) {
+			return '<label>' + field[1] + '<input class="dsa-auth-field" type="url" name="public_' + field[0] + '" value="' + escapeHtml( fields[ field[0] ] || '' ) + '" placeholder="https://"></label>';
+		} ).join( '' ) + '</details>';
+}
+
 function profileForm( user ) {
 	return [
 		'<form class="dsa-profile-form" data-dsa-profile-form>',
 		'<input class="dsa-auth-field" id="dsa-profile-first" name="firstName" value="' + escapeHtml( user.firstName || '' ) + '" autocomplete="given-name" aria-label="First name" placeholder="First name">',
 		'<input class="dsa-auth-field" id="dsa-profile-last" name="lastName" value="' + escapeHtml( user.lastName || '' ) + '" autocomplete="family-name" aria-label="Last name" placeholder="Last name">',
 		'<input class="dsa-auth-field" id="dsa-profile-display" name="displayName" value="' + escapeHtml( user.displayName || '' ) + '" autocomplete="nickname" aria-label="Display name" placeholder="Display name">',
-		'<input class="dsa-auth-field" id="dsa-profile-email" name="email" value="' + escapeHtml( user.email || '' ) + '" autocomplete="email" type="email" aria-label="Email" placeholder="Email">',
+		contactField( 'email', user ),
+		contactField( 'phone', user ),
+		publicProfileFields( user ),
 		user.isAdmin ? '<input class="dsa-auth-field" name="currentPassword" autocomplete="current-password" type="password" aria-label="Current WordPress password" placeholder="Current password (required to change admin email)">' : '',
 		'<div class="dsa-profile-email-verify" data-dsa-profile-email-verify hidden><input class="dsa-auth-field" name="emailCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Email verification code" placeholder="6-digit email code"><button class="dsa-panel__button" type="button" data-dsa-profile-email-confirm>Confirm email</button></div>',
 		'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" type="submit">Update profile</button><span class="dsa-panel__meta" data-dsa-profile-message></span></div>',
@@ -50,9 +85,9 @@ function accountActions( hasWoo, sprite, copy ) {
 	copy = copy || {};
 	return [
 		'<div class="dsa-panel__list dsa-account-actions" data-dsa-context-slot data-dsa-context-name="profile" data-dsa-context-width="dock">',
-		hasWoo ? '<button class="dsa-panel__button" type="button" data-dsa-account-view="downloads" aria-label="' + escapeHtml( copy.downloadsTitle || 'Downloads' ) + '">' + icon( 'download', sprite ) + '<span>' + escapeHtml( copy.downloadsTitle || 'Downloads' ) + '</span><b class="dsa-context-action__badge" data-dsa-profile-badge="downloads" hidden>0</b></button>' : '',
-		hasWoo ? '<button class="dsa-panel__button" type="button" data-dsa-account-view="addresses" aria-label="' + escapeHtml( copy.addressesTitle || 'Addresses' ) + '">' + icon( 'map-pin', sprite ) + '<span>' + escapeHtml( copy.addressesTitle || 'Addresses' ) + '</span><b class="dsa-context-action__badge" data-dsa-profile-badge="addresses" hidden>!</b></button>' : '',
-		'<button class="dsa-panel__button" type="button" data-dsa-account-view="password" aria-label="' + escapeHtml( copy.passwordTitle || 'Reset password' ) + '">' + icon( 'key-round', sprite ) + '<span>' + escapeHtml( copy.passwordTitle || 'Password' ) + '</span></button>',
+		hasWoo ? '<button class="dsa-panel__button" type="button" data-dsa-account-view="downloads" aria-label="' + escapeHtml( copy.downloadsTitle || 'Downloads' ) + '">' + icon( 'download', sprite ) + '<span class="dsa-account-action__label">' + escapeHtml( copy.downloadsTitle || 'Downloads' ) + '</span><b class="dsa-context-action__badge" data-dsa-profile-badge="downloads" hidden>0</b></button>' : '',
+		hasWoo ? '<button class="dsa-panel__button" type="button" data-dsa-account-view="addresses" aria-label="' + escapeHtml( copy.addressesTitle || 'Addresses' ) + '">' + icon( 'map-pin', sprite ) + '<span class="dsa-account-action__label">' + escapeHtml( copy.addressesTitle || 'Addresses' ) + '</span><b class="dsa-context-action__badge" data-dsa-profile-badge="addresses" hidden>!</b></button>' : '',
+		'<button class="dsa-panel__button" type="button" data-dsa-account-view="password" aria-label="' + escapeHtml( copy.passwordTitle || 'Reset password' ) + '">' + icon( 'key-round', sprite ) + '<span class="dsa-account-action__label">' + escapeHtml( copy.passwordTitle || 'Password' ) + '</span></button>',
 		'</div>',
 	].join( '' );
 }
@@ -83,24 +118,53 @@ function profileRow( title, copy, attrs, badge ) {
 	].join( '' );
 }
 
+function verificationStatus( user ) {
+	if ( user.verified ) {
+		return '<span class="dsa-panel__status">Verified</span>';
+	}
+	if ( user.identityVerified || user.verificationState === 'partial' ) {
+		return '<button class="dsa-panel__status is-unverified" type="button" data-dsa-profile-verify aria-label="Finish account security setup">Partially verified &middot; finish setup</button>';
+	}
+
+	return '<button class="dsa-panel__status is-unverified" type="button" data-dsa-profile-verify aria-label="Verify account security">Unverified &middot; verify now</button>';
+}
+
+function guestApplicationControl( user, hasWoo ) {
+	const guest = user.guestApplication || {};
+	if ( guest.status === 'approved' ) return '<span class="dsa-guest-status is-approved">Guest</span>';
+	if ( guest.status === 'pending' ) return '<span class="dsa-guest-status is-pending">Guest application pending</span>';
+	if ( guest.status === 'denied' ) return '<span class="dsa-guest-status is-denied">Guest application denied</span>';
+	if ( ! guest.eligible || guest.hasAdminAccess || ! guest.applicationsEnabled ) return '';
+	const postsAvailable = Boolean( guest.postsAvailable );
+	const productsAvailable = Boolean( hasWoo && guest.productsAvailable );
+	if ( ! postsAvailable && ! productsAvailable ) return '';
+	return [
+		'<span class="dsa-guest-application" data-dsa-guest-application>',
+		'<span class="dsa-guest-application__choices">',
+		postsAvailable ? '<label><input type="checkbox" value="post" checked> Guest posts</label>' : '',
+		productsAvailable ? '<label><input type="checkbox" value="product"' + ( postsAvailable ? '' : ' checked' ) + '> Sell products</label>' : '',
+		'</span><button type="button" class="dsa-guest-status" data-dsa-guest-apply>Apply for Guest</button>',
+		'</span>',
+	].join( '' );
+}
+
 function renderLegacyProfile( payload ) {
 	const user = payload.user || {};
 	const copy = profileCopy( payload );
-	const status = user.verified
-		? '<span class="dsa-panel__status">Verified</span>'
-		: '<span class="dsa-panel__status is-unverified">Unverified &middot; verify now</span>';
+	const hasWoo = Boolean( payload.hasWoo );
+	const status = verificationStatus( user );
 
 	return [
-		'<section class="dsa-panel dsa-profile-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-profile-panel>',
+		'<section class="dsa-panel dsa-profile-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-profile-panel data-dsa-commerce="' + ( hasWoo ? '1' : '0' ) + '">',
 		'<div class="dsa-profile-panel__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + '</div>',
 		'<div class="dsa-panel__header">',
 		'<label class="dsa-avatar-editor"><img class="dsa-panel__avatar" src="' + escapeHtml( user.avatar || '' ) + '" alt="" data-dsa-profile-avatar><span>Change photo</span><input type="file" accept="image/*" data-dsa-avatar-input></label>',
-		'<div><p class="dsa-panel__name">' + escapeHtml( user.displayName || user.userLogin || 'Account' ) + '</p>' + status + '</div>',
+		'<div><p class="dsa-panel__name">' + escapeHtml( user.displayName || user.userLogin || 'Account' ) + '</p>' + status + guestApplicationControl( user, hasWoo ) + '</div>',
 		'</div>',
 		profileForm( user ),
-		accountActions( Boolean( payload.hasWoo ), payload.iconSprite || '', copy ),
-		'<section class="dsa-recent-orders" data-dsa-recent-orders><div class="dsa-recent-orders__head"><strong>' + escapeHtml( copy.recentOrdersTitle ) + '</strong><span>Loading...</span></div></section>',
-		'<button class="dsa-panel__button dsa-logout-button" type="button" data-dsa-account-logout data-dsa-context-slot data-dsa-context-name="profile" data-dsa-context-width="dock" aria-label="' + escapeHtml( copy.signOutLabel ) + '" title="' + escapeHtml( copy.signOutLabel ) + '">' + icon( 'log-out', payload.iconSprite || '' ) + '</button>',
+		accountActions( hasWoo, payload.iconSprite || '', copy ),
+		hasWoo ? '<section class="dsa-recent-orders" data-dsa-recent-orders><div class="dsa-recent-orders__head"><strong>' + escapeHtml( copy.recentOrdersTitle ) + '</strong><span>Loading...</span></div></section>' : '',
+		'<button class="dsa-panel__button dsa-logout-button" type="button" data-dsa-account-logout data-dsa-context-slot data-dsa-context-name="profile" data-dsa-context-width="dock" aria-label="' + escapeHtml( copy.signOutLabel ) + '" title="' + escapeHtml( copy.signOutLabel ) + '">' + icon( 'log-out', payload.iconSprite || '' ) + '<span class="dsa-account-action__label">' + escapeHtml( copy.signOutLabel ) + '</span></button>',
 		'</section>',
 	].join( '' );
 }
@@ -118,7 +182,7 @@ function renderPrototypeProfile( payload ) {
 	const addressBadge = '<b class="dsa-context-action__badge" data-dsa-profile-badge="addresses" hidden>!</b>';
 
 	return [
-		'<section class="dsa-panel dsa-profile-panel kiwe-profile-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-profile-panel data-dsa-profile-adapter="prototype-2027">',
+		'<section class="dsa-panel dsa-profile-panel kiwe-profile-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-profile-panel data-dsa-profile-adapter="prototype-2027" data-dsa-commerce="' + ( hasWoo ? '1' : '0' ) + '">',
 		'<div class="kiwe-profile-v2027__title">',
 		'<p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p>',
 		'<h2>' + escapeHtml( copy.title ) + '</h2>',
@@ -126,14 +190,14 @@ function renderPrototypeProfile( payload ) {
 		'</div>',
 		'<div class="kiwe-profile-v2027__identity">',
 		'<label class="kiwe-profile-v2027__avatar"><span aria-hidden="true">' + escapeHtml( userInitials( user ) ) + '</span><img src="' + escapeHtml( user.avatar || '' ) + '" alt="" data-dsa-profile-avatar><input type="file" accept="image/*" data-dsa-avatar-input><em>Change photo</em></label>',
-		'<span class="kiwe-profile-v2027__person"><small>' + escapeHtml( copy.accountLabel ) + '</small><strong>' + escapeHtml( displayName ) + '</strong><em>' + escapeHtml( email ) + '</em></span>',
+		'<span class="kiwe-profile-v2027__person"><small>' + escapeHtml( copy.accountLabel ) + '</small><strong>' + escapeHtml( displayName ) + '</strong><em>' + escapeHtml( email ) + '</em>' + verificationStatus( user ) + guestApplicationControl( user, hasWoo ) + '</span>',
 		'<button class="dsa-panel__button kiwe-profile-v2027__edit" type="button" data-dsa-profile-edit aria-expanded="false">' + escapeHtml( copy.editLabel ) + '</button>',
 		'</div>',
 		'<div class="kiwe-profile-v2027__edit-region" data-dsa-profile-edit-region hidden>',
 		profileForm( user ),
 		'</div>',
 		'<div class="kiwe-profile-v2027__stats" aria-label="Account activity">',
-		metricCard( orderCount, 'Orders', 'orders' ),
+		hasWoo ? metricCard( orderCount, 'Orders', 'orders' ) : '',
 		metricCard( savedCount, 'Saved', 'saved' ),
 		metricCard( points, 'Kiwe points', 'points' ),
 		'</div>',
@@ -145,7 +209,7 @@ function renderPrototypeProfile( payload ) {
 		profileRow( copy.passwordTitle, copy.passwordText, 'data-dsa-account-view="password" aria-label="' + escapeHtml( copy.passwordTitle ) + '"', '' ),
 		'<button class="kiwe-profile-v2027__signout" type="button" data-dsa-account-logout>' + escapeHtml( copy.signOutLabel ) + '</button>',
 		'</div>',
-		'<section class="dsa-recent-orders kiwe-profile-v2027__recent" data-dsa-recent-orders hidden><div class="dsa-recent-orders__head"><strong>' + escapeHtml( copy.recentOrdersTitle ) + '</strong><span>Loading...</span></div></section>',
+		hasWoo ? '<section class="dsa-recent-orders kiwe-profile-v2027__recent" data-dsa-recent-orders hidden><div class="dsa-recent-orders__head"><strong>' + escapeHtml( copy.recentOrdersTitle ) + '</strong><span>Loading...</span></div></section>' : '',
 		'</section>',
 	].join( '' );
 }

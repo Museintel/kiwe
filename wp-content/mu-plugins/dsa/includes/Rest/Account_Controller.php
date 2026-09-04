@@ -106,6 +106,9 @@ final class Account_Controller {
 			];
 		}
 
+		$public_fields = $request->get_param( 'publicProfile' );
+		if ( is_array( $public_fields ) ) \DSA\Onboarding\User_Profile_Service::update_public_fields( $user_id, $public_fields );
+		$response['publicProfile'] = \DSA\Onboarding\User_Profile_Service::public_fields( $user_id );
 		return new WP_REST_Response( $response, 200 );
 	}
 
@@ -234,7 +237,18 @@ final class Account_Controller {
 			$reset_url
 		);
 
-		wp_mail( $user->user_email, $subject, $message );
+		$mail_accepted = wp_mail( $user->user_email, $subject, $message );
+
+		if ( ! $mail_accepted ) {
+			delete_transient( $rate_key );
+			return new WP_REST_Response(
+				[
+					'ok'      => false,
+					'message' => __( 'The password reset email could not be handed to the site mail service. Please try again or contact the site administrator.', 'dsa' ),
+				],
+				502
+			);
+		}
 
 		return new WP_REST_Response( [ 'ok' => true, 'message' => __( 'Password reset email sent.', 'dsa' ) ], 200 );
 	}

@@ -1,5 +1,276 @@
 # Changelog
 
+## 8.0.0-rc.52 — 2026-09-03
+
+- Establish one Kiwe-wide notification ingress for SecureTrack, Key.kiwe, editorial, Guest, WooCommerce, PWA and future modules. Sources publish a protected topic and event; the shared router owns the inbox, browser/app push and the Email, WhatsApp and SMS gateways.
+- Replace SecureTrack's private `wp_mail()` lane with the shared notification pipeline. SecureTrack retains site-wide severity, repeat-suppression and hourly-budget authority, while each authorized administrator selects the SecureTrack topic and any configured delivery channels in WordPress → Notifications.
+- Keep security evidence independent from notification delivery: every observation remains in SecureTrack even when a recipient disables a topic/channel or a gateway is unavailable. Simplified client Administrators can also read and acknowledge the shared inbox through their dedicated notification-policy capability.
+- Document the stable extension contract so future notification types register one authorized topic and publish through `kiwe_notification_event` without owning credentials or duplicating channel logic.
+
+## 8.0.0-rc.51 — 2026-09-03
+
+- Make Guest contributions explicitly opt-in under WordPress → Guest. Guest posts and WooCommerce-only product proposals have independent site-owner controls; both are disabled until deliberately enabled, and product controls remain dormant when WooCommerce is unavailable.
+- Restrict the Profile DSA application control to ordinary accounts that have verified at least one Key.kiwe factor and have no administrator-area role or capability. Pending, denied and approved Guest status remains visible without reopening the application action.
+- Enforce the same feature flags at the REST application boundary and submission boundary, so hidden controls, forged requests and previously approved accounts cannot submit a contribution type the site owner has paused.
+- Keep client Administrators subscribed to owner-relevant order and visitor topics through Kiwe's dedicated notification-policy capability even though their simplified workspace deliberately removes WordPress `manage_options`; Shop Managers remain product-only and do not inherit order alerts.
+
+## 8.0.0-rc.50 — 2026-09-03
+
+- Turn the built-in Contributor compatibility role into an application-gated Guest relationship. A partially verified Key.kiwe account can apply from Profile DSA for guest articles and, only when WooCommerce is active, product proposals; Administrator/Super Admin approval is required and the Profile badge reflects pending, denied or Guest state.
+- Add an isolated create-once Guest workspace. Guests can submit read-only article drafts or product proposals and see only their own contribution status; native Posts, Media, REST mutation, builder and unrelated wp-admin capabilities remain unavailable. Product proposals never grant order, payout or store-settings access.
+- Move role-relevant notification preferences into a first-class WordPress Notifications menu backed by Kiwe's existing preference and delivery services. Unconfigured email, WhatsApp, SMS and app lanes are disabled, and Guest/application/editorial events reuse the same inbox, push and channel dispatchers.
+- Surface SecureTrack's existing severity, recipient and flood-control policy in the Notifications center for client Administrators and the Super Admin without creating a second security-alert store. Add executable application, role-injection, REST-bypass, gateway-availability and Profile DSA contracts.
+
+## 8.0.0-rc.49 — 2026-09-03
+
+- Lock Bricks builder and technical settings to the Super Admin under the active ownership policy, including Bricks' cached raw grants. Show effective builder access in Users.
+- Use native WordPress Pages for clients: view pages, create titled draft pages and change indexing; no content/layout editing or deletion of existing pages.
+- Remove the duplicate page inventory/editor and planned-page repeater from Website plan. Preserve legacy notes; infer current pages from WordPress.
+- Synchronize index/noindex with Rank Math's native robots metadata, preserving unrelated directives and the native sitemap/context mirror. Add executable draft/nonce/forged-input/indexing tests and optional Bricks vendor-source proof.
+
+## 8.0.0-rc.48 — 2026-09-03
+
+- Added an explicitly activated single-owner client workspace. The full-access Super Admin is protected from deletion, demotion, competing assignments and client credential edits. Ownership transfer requires the current owner's password, uses an atomic lock and restores previous assignments on persistence failure; native Multisite ownership remains a singleton.
+- Added capability, direct-admin-route and API enforcement for simplified client Administrators, read-only Pages, editorial roles and product-only Shop Managers. Rank Math offers owner-configured inline/dashboard/off access, with post-bound SEO writes. Frontend Key, saved items, native media, Bricks forms/query flows and telemetry retain their existing authorization.
+- Added the verified User lifecycle without replacing staff roles. Extra role retirement records previous definitions and user assignments; no accounts/posts are deleted by migration.
+- Moved Identity, Story, Contact, Brand, Website plan, Services and conditional Store into standalone WordPress menus. Removed Review, retained secure legacy handoff links, scoped form saves to their own native data and removed synchronous site-wide SEO scans from those saves.
+- Added executable ownership/rollback, capability/API isolation, independent form saves and standalone-section JavaScript tests. Live deployment and role-session evidence are recorded separately from local test results.
+
+## 8.0.0-rc.47 — 2026-09-03
+
+- Made Design Context's Store step conditional on an active commerce integration, separated Services into an explicit opt-in section, and removed the duplicate Resources picker in favor of the existing bounded, paginated Media Library catalog (all MIME types).
+- Replaced the parallel team editor with administrator-controlled WordPress User membership/title fields. Public team context and existing Bricks/WordPress bindings now resolve selected eligible staff directly from user records, preserving old stable selectors. Legacy unlinked notes are retained but no longer published.
+- Added staff public-profile self-editing to the existing DSA profile form: biography, website, LinkedIn and Facebook. Selection/title remain administrator-only; account email, phone, passwords, roles, sessions and arbitrary plugin metadata are not part of public team exports.
+- Native identity, page visibility and WooCommerce settings now override stale saved Design Context snapshots. Disabled service plans are retained without service-post writes. Public media queries exclude private, draft and password-protected parent records.
+- Added executable user-authority, public-data, service opt-in and commerce/non-commerce wizard-navigation regression tests.
+
+## 8.0.0-rc.46 — 2026-09-02
+
+- Made every newly opened DSA panel start at its own top without disturbing the reader's preserved page position, and stopped the active table-of-contents tracker from forcing the Menu sheet down to a centered item.
+- Added lightweight current-post category context to the existing Menu payload, so a category navigation item is highlighted while reading one of its posts without adding an extra query on non-post routes.
+- Added `aria-current="page"` to the active category or route link while retaining `aria-current="location"` for the active table-of-contents heading.
+
+## 8.0.0-rc.45 — 2026-09-02
+
+- Rebranded the public authentication product from PhoneKey to Key.kiwe across Kiwe administrator and user-facing copy, and changed the default gateway to `https://key.kiwelaunch.com/v1/otp`.
+- Added a compatibility migration that upgrades the exact former gateway URL automatically while retaining invisible legacy identifiers only where removing them would break existing WordPress identity, settings, sessions, or encrypted transport continuity.
+- Migrated signed gateway requests to `X-Kiwe-Key-*` headers while keeping temporary server-side aliases during the controlled multi-site rollout.
+- Paired Kiwe with the new Key.kiwe multi-tenant account model: one owner primary WhatsApp connection is inherited by default, while each website can switch to, replace, remove, or restore a dedicated client connection.
+
+## 8.0.0-rc.44 — 2026-09-02
+
+- Clarified the account lifecycle without inventing a WordPress role: an ordinary PhoneKey signup is a low-friction Subscriber, one verified email or phone makes that account purchase-ready, and only a completed WooCommerce order transitions a Subscriber-only account to Customer.
+- Closed direct checkout entry: when the Kiwe identity gate or WooCommerce's own account requirement is active, typing the checkout URL now creates a same-origin checkout intent, opens PhoneKey/Profile, and exposes the Checkout DSA only after the identity boundary is satisfied.
+- Closed the Checkout REST contract and draft lane until identity is allowed, preserving classic checkout and Checkout Block server enforcement as the final boundary.
+- Deferred every WooCommerce purchase hook until WooCommerce has actually loaded, so editorial/non-commerce sites attach no purchase-gate, order-transition, or checkout-entry hooks.
+- Preserved Bricks' native checkout-template authority after reviewing its WooCommerce registration-required path; Kiwe guards entry before Bricks renders and returns to the configured DSA/native checkout journey afterward.
+
+## 8.0.0-rc.43 — 2026-09-02
+
+- Made Subscriber the default PhoneKey signup role on editorial and WooCommerce sites, with a one-time migration from the former automatic Customer default while preserving the administrator's ability to change the signup role afterward.
+- Added one-step first signup for an ordinary Subscriber: a new email or phone identity can enter immediately for bookmarks and wishlists, while an existing account still requires proof so identifier knowledge alone can never take over a user.
+- Turned bookmark and wishlist clicks into authenticated intents. Logged-out visitors enter the existing PhoneKey Profile sheet, the same-origin intent survives the login redirect in session storage, and the item is written to canonical WordPress user meta only after authentication.
+- Added a WooCommerce purchase identity gate: checkout requires a signed-in WordPress account and either a verified email or verified phone, while full email + phone + passkey completion remains a stronger optional Profile state for ordinary customers.
+- Enforced the purchase gate in both classic WooCommerce checkout and Checkout Block/Store API order placement, keeping the Profile sheet as guidance rather than the only security boundary.
+- Made WooCommerce Customer a purchase lifecycle role: only a Subscriber-only account transitions to Customer after its first classic or Checkout Block order, so purchases never overwrite editorial, store-management, administrator, or custom multi-role access.
+- Separated the built-in post type's create capability from edit/publish capability: Editor can update and publish existing stories but cannot create new posts; Author retains native creation and ownership boundaries.
+- Restricted Author and Editor wp-admin navigation to the post, media, and own-profile lane, and made every role with editorial admin access enter strict PhoneKey password, recovery, phone, and passkey enrollment.
+- Restricted Shop Manager to WooCommerce product viewing, creation, editing, publishing, existing taxonomy assignment, and product-media support routes; deletion, taxonomy management, and every unrelated wp-admin capability, menu, and route are removed while Administrator and Multisite Super Admin remain deliberately unchanged for the later policy batch.
+- Added Phone and PhoneKey verification columns to the native WordPress Users list, so contact and security state remain visible where WordPress roles are managed.
+- Added release contracts for subscriber defaults, one-step signup safety, saved-intent replay, classic/block checkout enforcement, editorial capability boundaries, strict admin enrollment, and native Users integration.
+
+## 8.0.0-rc.42 — 2026-09-02
+
+- Preserved the reader's exact document position through Sheet close and Kiwe's synthetic history release, while keeping deliberate table-of-contents jumps exempt from the restoration step.
+- Made Menu identify the current H1/H2/H3 immediately on open and bring its active table-of-contents entry into view, so opening navigation mid-article exposes the reader's current section.
+- Added a real Kiwe > Menu navigation-size control with Compact, Balanced, and Expressive scales; Compact is the lightweight editorial default and is smaller than RC41's fixed scale.
+- Restored native AdSense vignette authority for Search and other DSA result links by no longer removing or intercepting the clicked result, with an exact same-origin destination fail-safe after the ad closes.
+- Added Latest and Popular sorting pills to Search. Popular reuses SecureTrack's existing page-view table through a decoupled filter, runs only on explicit Popular requests, compares a bounded candidate set, and remains covered by the five-minute Search cache.
+- Added release contracts for reading-progress restoration, visible current-section state, configurable Menu scale, AdSense destination continuity, deterministic sort requests, and SecureTrack-backed popularity.
+
+## 8.0.0-rc.41 — 2026-09-02
+
+- Made new-device and ordinary OTP screens identify the server-selected destination with a privacy-safe email or phone hint, so users know where to retrieve the code without exposing the full contact unnecessarily.
+- Removed inactive trust claims from PhoneKey and restricted the payment-protection badge to sites with an active commerce capability, keeping editorial publishers free of misleading ecommerce language.
+- Reduced the legacy Menu navigation scale for long category lists while preserving Kiwe's responsive type tokens and administrator-authored navigation copy.
+- Added lightweight, animation-frame-coalesced table-of-contents tracking that marks the in-view H1/H2/H3 entry with the configured active color and releases its listeners when the Menu sheet is gone.
+- Made TOC navigation measure WordPress and theme sticky headers before scrolling, keeping the selected article heading visible instead of hiding it underneath the publisher header.
+- Added release contracts for destination-aware OTP copy, editorial trust rails, Menu typography, active heading tracking, sticky-header clearance, and tracking cleanup.
+
+## 8.0.0-rc.40 — 2026-09-02
+
+- Rebuilt the Profile contact area around PhoneKey's canonical factors: email and phone now show their own verified state, missing or unverified contacts can start OTP verification inline, and successful proof continues into the existing recovery-contact and passkey journey.
+- Kept WordPress authoritative for account email and user identity: inline email verification accepts only the current confirmed WordPress email, phone conflicts fail closed, and the new authenticated route never creates or merges a user.
+- Kept every privileged account behind the existing strict WordPress-password journey rather than allowing an inline factor button to weaken administrator setup policy.
+- Exposed the signed-in user's encrypted PhoneKey phone factor through the existing private runtime bridge so Profile does not introduce a second identity store.
+- Restored visible Password and Sign out labels beside their icons in Sheet and Screen layouts, with icon-only fallback limited to the dock and genuinely small 360px containers.
+- Added release contracts for inline factor ownership, shared OTP issuance, strict privileged routing, contact-state rendering, and responsive action labels.
+
+## 8.0.0-rc.39 — 2026-09-02
+
+- Added a zero-ambiguity migration handoff for WordPress administrators who existed before PhoneKey: an incomplete privileged user redirected from `/wp-admin` now enters the canonical strict PhoneKey journey immediately instead of landing on a Profile badge and appearing to loop.
+- Exposed privileged-enrollment state through the existing PhoneKey bridge without duplicating identity storage; the journey still resolves the current WordPress user ID and preserves native WordPress email, password, role, and reset authority.
+- Kept email/phone delivery behind password confirmation during this handoff, so opening strict enrollment does not send OTP traffic until the administrator proves the WordPress password.
+- Added a release contract for legacy privileged-account migration and direct strict-enrollment routing.
+
+## 8.0.0-rc.38 — 2026-09-02
+
+- Made WordPress the explicit authority for PhoneKey identities, passwords, roles, and capabilities: PhoneKey-created accounts remain ordinary users and can never inherit an administrator-area role from signup settings.
+- Closed the subscriber-to-privileged transition gap by destroying active WordPress sessions, PhoneKey trusted devices, IP trust, and prior password assurance whenever privileged role scope changes.
+- Required every privileged account to confirm its WordPress password, verify an email or phone recovery factor, bind a phone number, and assert or enroll a passkey before PhoneKey creates an authenticated WordPress session or permits `/wp-admin` access.
+- Reused an existing subscriber passkey after promotion instead of creating a duplicate credential, while preserving the non-skippable phone-binding and recovery-verification steps.
+- Added a native WordPress set/reset-password lane inside strict PhoneKey, retained core reset and email-confirmation actions, and made password resets revoke remembered trust and require fresh privileged enrollment.
+- Coalesced incomplete-enrollment admin guard telemetry into a low-severity five-minute event to prevent repetitive protection notices from becoming another alert or database flood.
+- Added lifecycle contracts for role promotion, privileged scope changes, session invalidation, passkey reuse, mandatory phone binding, fail-closed auth cookies, and WordPress password recovery.
+
+## 8.0.0-rc.37 — 2026-09-01
+
+- Made OTP verification server-authoritative: PhoneKey now resolves email versus phone from the active signed flow instead of trusting stale browser state, preventing a successfully delivered WhatsApp code from being submitted to the email-code lane.
+- Preserved the correct verification factor across counterpart binding, dual-contact progression, privileged phone binding, and recovery-email transitions by issuing channel-specific flow tokens at every boundary.
+- Added a visible server-aligned resend countdown from the first OTP delivery onward, retained the lock through UI busy-state changes, and kept the entered code intact while the timer updates.
+- Kept the existing server rate limits as the enforcement layer while removing the client-supplied resend channel, so button manipulation cannot switch factors or bypass backend abuse controls.
+- Added release contracts for authoritative verification routing, counterpart target preservation, resend-channel selection, cooldown response coverage, and countdown behavior.
+
+## 8.0.0-rc.36 — 2026-09-01
+
+- Repaired the PhoneKey verification loop by separating current identity proof from complete account security: ordinary users can defer the remaining recovery-contact and passkey work into a stable Partially verified state, while privileged accounts remain non-skippable.
+- Made full verification require the configured recovery contacts plus a passkey; Profile now distinguishes Unverified, Partially verified, and Verified and reopens the canonical completion journey from its status badge.
+- Joined counterpart binding and passkey enrollment into one progressive in-sheet journey: email-first users are offered phone verification, phone-first users are offered email verification, and verified counterpart completion advances to passkey setup without a second login loop.
+- Required fresh factor proof before an existing passkey-less account may enroll a credential, preventing identifier knowledge alone from becoming an enrollment path.
+- Kept the PhoneKey close control enabled during requests, made auth-sheet dismissal immediate, and shortened the post-auth refresh delay while preserving the lightweight lazy Surface architecture.
+- Added progressive-verification release contracts for partial/full state, strict-role invariants, completion routing, immediate close behavior, and standalone-app compatibility.
+
+## 8.0.0-rc.35 — 2026-09-01
+
+- Decoupled Kiwe REST nonce recovery from the commerce-only cart route, so PhoneKey, Profile, and other mutations on editorial sites no longer replace useful authentication errors with WordPress `rest_no_route` failures.
+- Kept ordinary PhoneKey 401/403 verification results authoritative while limiting automatic retries to an expired REST nonce or a genuinely missing route.
+- Moved the existing PhoneKey core into Kiwe's early critical boot lane so an already-open verification sheet retains its routes during a slow wider boot or an incomplete manual MU-plugin transfer, without creating a duplicate auth service.
+- Normalized PhoneKey REST endpoint slashes and added a release gate for non-commerce nonce recovery, route resilience, and early-core reuse.
+
+## 8.0.0-rc.34 — 2026-09-01
+
+- Made the Menu screen's administrator-authored navigation title own the first real menu-group heading, removing the duplicate hardcoded hero heading and the WordPress menu-name override that exposed “Main Menu”.
+- Added signed MU-plugin release delivery to Kiwe Developer with manual checks/installs, administrator-selectable stable or candidate channels, and optional background automatic updates.
+- Added Ed25519 release verification, archive and inner-manifest checks, PHP/WordPress compatibility gates, a single-update lock, staged same-filesystem activation, and loader-level rollback for interrupted or failed first boots.
+- Added a reproducible signed-release publisher for the canonical Kiwe application feed on app.kiwelaunch.com, keeping start.kiwelaunch.com exclusive to SEAM command and `/ideate` authority, plus release contracts covering menu-copy ownership and updater supply-chain safety.
+
+## 8.0.0-rc.33 — 2026-09-01
+
+- Turned the Profile “Unverified · verify now” state into an accessible action that enters the existing PhoneKey journey with the signed-in account identity, preserving privileged password, verification, recovery-contact, and passkey policy without a duplicate registration lane.
+- Made editorial table-of-contents discovery prefer the real article body and its configured heading levels, while treating a single full-page Bricks section as structural instead of suppressing client-authored H2/H3 headings.
+- Hardened the Profile password-reset handoff so success is shown only after WordPress accepts the reset email; failed mail acceptance clears the retry lock and returns an actionable error while WordPress/PhoneKey reset synchronization continues to revoke trust and require privileged reenrollment.
+- Added release contracts for clickable profile verification, article-body heading discovery, and truthful password-reset mail acceptance.
+
+## 8.0.0-rc.32 — 2026-09-01
+
+- Integrated PhoneKey with WordPress' pending profile-email lifecycle so a requested administrator email resolves to the original strict account instead of silently creating a subscriber; ordinary pending-email collisions now stop safely without registration.
+- Preserved same-origin WordPress return destinations through PhoneKey in a signed, short-lived, HttpOnly cookie, allowing profile-email confirmations and other protected admin destinations to resume after authentication without exposing their confirmation URL to JavaScript.
+- Synchronized WordPress-native email confirmations and password resets back into PhoneKey factors, remembered devices, recovery challenges, and privileged reenrollment policy.
+- Added one-time recovery for stale REST route manifests so a cached Surface refreshes Kiwe runtime data before showing a phone-binding failure.
+- Added a release gate for WordPress/PhoneKey identity continuity, duplicate-account prevention, native reset synchronization, and safe login-return handling.
+
+## 8.0.0-rc.31 — 2026-09-01
+
+- Removed remote SecureTrack AI calls from foreground requests: “always” mode now schedules one coalesced priority queue in the background while the regular five-minute queue remains the durable fallback.
+- Consolidated three overlapping post-save security hooks into one WordPress `wp_after_insert_post` audit after post, term, and metadata persistence, preserving content-change and status-transition evidence without triple processing.
+- Added request-local SecureTrack table-existence memoization to eliminate repeated schema discovery queries while preserving explicit cache resets during install and repair.
+- Added an administrator-selectable SecureTrack email policy: high/critical incidents remain the safe default, while yellow informational events can be explicitly enabled and still obey subject coalescing and the hourly mailbox ceiling.
+
+## 8.0.0-rc.30 — 2026-09-01
+
+- Reclassified successfully blocked, rate-limited, and otherwise contained SecureTrack requests as yellow protections unless there is explicit bypass or containment-failure evidence.
+- Removed the duplicate generic every-red email path so actionable high/critical alert records remain the single escalation authority.
+- Made the existing SecureTrack email switch authoritative over every alert-mail path, coalesced repeated subjects for 15 minutes, and capped security mail at eight messages per hour while preserving the complete local event ledger.
+- Clarified the existing SecureTrack setting: email is for high/critical incidents requiring administrator attention; successful protections remain visible in the Protections view without mailbox noise.
+
+## 8.0.0-rc.29 — 2026-09-01
+
+- Made Profile geometry consume the commerce capability directly: editorial sites release the unused commerce column, rebalance identity fields across available wide space, and keep security actions aligned without dead rows.
+- Preserved measured compact/narrow behavior, made every Profile field collapse to one column at a 520px Surface container, and kept privileged current-password plus email-verification rows from becoming orphaned half rows.
+- Removed the Orders metric from the Kiwe 2027 profile when ecommerce is unavailable, matching the existing commerce-row and recent-orders capability gates.
+
+## 8.0.0-rc.28 — 2026-09-01
+
+- Made Profile commerce rails capability-driven: orders and commerce activity are not rendered when WooCommerce is unavailable, while ecommerce sites retain the existing order experience.
+- Added a Surface-wide finite SVG icon contract so host themes cannot expose the browser's oversized intrinsic SVG dimensions.
+- Standardized circular dismiss controls on one optically centered close-glyph contract across Search, PhoneKey, AI, and Saved screens.
+- Normalized WordPress navigation titles to plain text at the PHP-to-JavaScript boundary so labels such as “Industry & Events” are never double-encoded.
+- Added a release gate preserving the existing WordPress-menu and contextual table-of-contents architecture alongside these profile and geometry guarantees.
+
+## 8.0.0-rc.27 — 2026-09-01
+
+- Makes Kiwe's signed PhoneKey adapter resolve its canonical hosted gateway URL by default while still requiring a tenant key and encrypted secret before readiness, removing a fragile per-site URL entry step without weakening provider isolation.
+
+## 8.0.0-rc.26 — 2026-09-01
+
+- Added a native Google Workspace / Gmail SMTP preset using authenticated STARTTLS on `smtp.gmail.com:587`.
+- Clarified that Google delivery requires a dedicated app password or an administrator-configured SMTP relay and must never use the normal Google Account password.
+- Kept PhoneKey on its existing signed multi-tenant WhatsApp gateway so a new site can be added without pairing or displacing the connected sender.
+
+## 8.0.0-rc.25 — 2026-08-31
+
+- Made the Kiwe-to-AdSense fixed-layer handoff independent of optional navigation transitions, so it remains active on lightweight publisher configurations such as Ascendants.
+
+## 8.0.0-rc.24 — 2026-08-31
+
+- Added a native AdSense handoff for links activated inside a Kiwe Sheet: the original click remains untouched for Auto Ads, then Kiwe relinquishes its fixed layer without navigating browser history.
+
+## 8.0.0-rc.23 — 2026-08-31
+
+- Gave AdSense native navigation authority whenever Google ad containers are present, preventing Kiwe transitions from pre-empting Auto Ads click and vignette decisions.
+- Isolated `#google_vignette` and related advertising history from Kiwe's synthetic Sheet history so closing ads cannot reload pages or dismiss a DSA module.
+
+## 8.0.0-rc.22 — 2026-08-31
+
+- Fixed the mobile Sheet backdrop remaining visible and intercepting navigation after close by making hidden overlay, loader, and scrim states authoritative over every theme display rule.
+- Stopped Kiwe overlays from filtering or transforming the publisher document, preserving the layout and containing blocks used by AdSense anchor and sticky ads.
+- Added explicit AdSense/Google ad boundaries so ad refresh mutations, ad dialogs, and ad clicks never drive Kiwe modal detection, navigation handling, or accessibility observers.
+- Added a release gate covering mobile closed-state tap safety and advertising isolation.
+
+## 8.0.0-rc.21 — 2026-08-31
+
+- Made editorial Search paint its initial news stories from the existing page bootstrap, eliminating the empty-query REST request and giving readers useful results immediately.
+- Removed per-request cache busting and added safe anonymous editorial response caching so repeated live searches can reuse browser and edge work without exposing commerce or authenticated results.
+- Removed the duplicate frontend token catalogue while preserving both runtime aliases, reducing Kiwe's inline bootstrap without breaking the public API.
+- Added release contracts preventing cache-busting search requests and duplicate token localization from returning.
+
+## 8.0.0-rc.20 — 2026-08-31
+
+- Fixed the live Search REST route disappearing when context-aware preselection was disabled; endpoint availability now follows the Surface master setting, while context awareness only selects the initial scope.
+- Added capability-aware Search copy so news/editorial sites never inherit WooCommerce product wording, including migration-safe normalization of previously saved default copy.
+- Added release contracts covering endpoint registration, default-result hydration, and non-commerce Search copy.
+
+## 8.0.0-rc.19 — 2026-08-31
+
+- Made the private Break Glass route fail open to the normal WordPress credential form when its alert-rate counter is unavailable or exhausted; the secret route never authenticates by itself.
+- Retained complete recovery-access event logging while converting the old denial budget into duplicate critical-alert coalescing.
+
+## 8.0.0-rc.18 — 2026-08-31
+
+- Prevented the private SecureTrack Break Glass route from rate-limiting an already valid IP-and-browser-bound recovery window.
+- Reset the stale recovery-entry limiter namespace and raised its bounded allowance so normal browser retries cannot lock the emergency door while high-entropy slug protection and critical access alerts remain intact.
+
+## 8.0.0-rc.17 — 2026-08-31
+
+- Made Kiwe > Security > Authentication the recovery-safe enable point for the existing canonical `phonekey.enabled` setting when PhoneKey is disabled.
+- Kept WordPress login replacement and admin access protection staged off during enablement so administrators can validate PhoneKey before enforcing it.
+
+## 8.0.0-rc.16 — 2026-08-31
+
+- Reused PhoneKey's existing verification timing, email-or-phone mode, and Kiwe Dock admin-bar setting instead of adding parallel switches.
+- Kept only the independently staged WordPress login and admin access gates, while preserving already-authenticated privileged sessions for recovery-safe enrollment.
+- Added explicit Bricks Name/Value guidance for every live Kiwe capability attribute in Kiwe > Developer, including Profile and Search header icon examples.
+
+## 8.0.0-rc.15 — 2026-08-31
+
+- Added the PhoneKey strict authentication policy: privileged accounts confirm their existing WordPress password, verify email or phone, bind a phone, and enroll a passkey before WordPress administration is available.
+- Added fail-safe new-device recovery that verifies a channel before enrolling another passkey, and immediate SecureTrack IP trust only after a privileged strict flow completes.
+- Replaced unlimited verify-later behavior with one grace login for a newly created ordinary subscriber; the next sign-in requires verification.
+- Added the one-field optional recovery-contact journey inside the Profile sheet, including proof-before-linking and non-destructive aliasing for ordinary duplicate accounts while privileged accounts require manual review.
+- Added break-glass-aware `wp-login.php` replacement, `/wp-admin` protection, frontend admin-bar hiding, direct Profile-sheet login routing, and dock-independent Profile/Search header triggers.
+- Consolidated authentication policy under Kiwe Auth and disabled the duplicate legacy PhoneKey settings form inside SecureTrack.
+- Kept interactive WordPress, REST, AJAX, and admin traffic outside the early generic rate limiter while retaining XML-RPC protection.
+
 ## 8.0.0-rc.8 — 2026-08-29
 
 - Replaced the multi-form Staging Seed operator surface with one guided Connect → Review changes → Import → Accept or roll back flow.

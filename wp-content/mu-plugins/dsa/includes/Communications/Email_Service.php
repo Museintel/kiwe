@@ -11,19 +11,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Email_Service {
 	private $settings;
+	private bool $registered = false;
 
 	public function __construct( Settings $settings ) {
 		$this->settings = $settings;
 	}
 
 	public function register(): void {
-		add_action( 'phpmailer_init', [ $this, 'configure_phpmailer' ], 20 );
+		if ( $this->registered ) {
+			return;
+		}
+
+		$this->registered = true;
+		// A site may have a host-mail or legacy SMTP plugin that also configures
+		// PHPMailer. When Kiwe SMTP is selected it is the explicit administrator
+		// choice, so apply it last without replacing WordPress' mail pipeline.
+		add_action( 'phpmailer_init', [ $this, 'configure_phpmailer' ], PHP_INT_MAX );
 		add_filter( 'wp_mail_from', [ $this, 'filter_from_email' ] );
 		add_filter( 'wp_mail_from_name', [ $this, 'filter_from_name' ] );
 		add_action( 'wp_mail_failed', [ $this, 'record_failure' ] );
 	}
 
 	public function send( string $to, string $subject, string $message, array $headers = [] ) {
+		// Keep explicit sends deterministic even if this service was constructed
+		// before email delivery was enabled during the current request.
+		$this->register();
 		$config = $this->config();
 
 		if ( empty( $config['enabled'] ) ) {

@@ -12,11 +12,12 @@ const seoHead = read('wp-content/mu-plugins/dsa/includes/Onboarding/SEO_Context_
 const graph = read('wp-content/mu-plugins/dsa/includes/Site_Graph/Design_Context_Service.php');
 const js = read('wp-content/mu-plugins/dsa/assets/js/onboarding.js');
 
+const data = read('wp-content/mu-plugins/dsa/includes/Site_Graph/Data_Query_Service.php');
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
-check('final owner handoff step uses native mixed WordPress media selection', onboarding.includes("'Resources', 'Review'") && onboarding.includes('wp_enqueue_media') && js.includes('multiple: true') && !js.includes("library: { type: 'image' }, multiple: true"));
-check('resource selection stores attachment references and never deletes media', profile.includes("'attachment' !== get_post_type") && profile.includes("'resources' => [ 'items' => $resource_items ]") && onboarding.includes('never deletes its Media Library attachment') && !onboarding.includes('wp_delete_attachment'));
-check('administrator SiteGraph context carries owner-selected resource roles', profile.includes("'administrator-selected-media-library-resources'") && graph.includes('seamDesignContext.resources') && graph.includes('owner-selected media resources and their intended roles'));
+check('owner handoff uses the native mixed Media Library instead of another picker', onboarding.includes('Open Media Library') && !onboarding.includes('data-kiwe-resource-select') && graph.includes("'mimeType' => ''"));
+check('legacy attachment notes are retained and media is never deleted', profile.includes("$raw['resources'] = $stored['resources']") && !onboarding.includes('wp_delete_attachment') && !profile.includes('wp_delete_attachment'));
+check('SiteGraph media stays paginated and excludes private parent content', profile.includes("'source' => 'wordpress-media-library'") && data.includes('kiwe_public_media') && data.includes("kiwe_media_parent.post_status = 'publish'") && data.includes("kiwe_media_parent.post_password = ''") && data.includes("'pageInfo'"));
 check('one shared broker has isolated design-context and SEO profiles', broker.includes("'design_context' => [") && broker.includes("'seo' => [") && broker.includes("'capabilities'   => [ 'refine' ]") && broker.includes("'capabilities'   => [ 'propose_batch' ]"));
 check('copy refinement is proposal-only and field review is explicit', refinement.includes("'proposalOnly'=>true") && ['accept','reject','regenerate','accept_all'].every((action) => refinement.includes(`'${action}'`)) && refinement.includes('originalHash'));
 check('Design Context and SEO request provider-enforced JSON schemas with safe diagnostics', refinement.includes("'responseSchema'=>$this->response_schema") && refinement.includes('refinement-detail') && seo.includes("'responseSchema'=>$this->response_schema"));

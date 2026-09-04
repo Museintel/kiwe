@@ -85,7 +85,7 @@ jobs:
       - name: Run rendered capture and responsive geometry contract
         run: node packages/seam-capture/test/render-capture.cjs
 
-  phonekey-whatsapp:
+  key-whatsapp:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,11 +95,11 @@ jobs:
       - name: Verify WordPress-to-gateway security contract
         run: node tools/release/phonekey-whatsapp-contracts.cjs
       - name: Install the resource-capped gateway
-        working-directory: services/phonekey-gateway
+        working-directory: services/key-gateway
         run: npm ci --no-audit --no-fund
       - name: Detect Baileys package, lockfile and upstream drift
-        working-directory: services/phonekey-gateway
+        working-directory: services/key-gateway
         run: npm run check:compat
       - name: Test signed delivery, replay protection and fallback
-        working-directory: services/phonekey-gateway
+        working-directory: services/key-gateway
         run: npm test

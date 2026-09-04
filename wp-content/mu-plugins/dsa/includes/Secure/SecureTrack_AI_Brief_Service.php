@@ -251,7 +251,7 @@ final class SecureTrack_AI_Brief_Service {
 			$out[] = 'Enable Site Brain for local-first behavioral learning before relying on provider AI review.';
 		}
 		if ( empty( $cfg['endpoint_rate_limits'] ) ) {
-			$out[] = 'Endpoint rate limits are disabled; internal AI should flag REST/login/XML-RPC exposure in security summaries.';
+			$out[] = 'The early XML-RPC rate limit is disabled; login and application routes remain covered by their dedicated controls.';
 		}
 		if ( empty( $cfg['v2_ai_key'] ) || 'none' === (string) ( $cfg['v2_ai_provider'] ?? 'none' ) ) {
 			$out[] = 'SecureTrack provider AI is not configured; use local Site Brain and queue status only.';

@@ -283,7 +283,7 @@ final class Production_Readiness_Service {
 				__( 'HTTPS / SSL', 'dsa' ),
 				is_ssl() ? 'pass' : 'critical',
 				is_ssl() ? __( 'Current request is HTTPS.', 'dsa' ) : __( 'Current request is not HTTPS.', 'dsa' ),
-				__( 'PhoneKey, profile editing, rewards, app install prompts, and checkout trust require HTTPS.', 'dsa' ),
+				__( 'Key.kiwe, profile editing, rewards, app install prompts, and checkout trust require HTTPS.', 'dsa' ),
 				'security'
 			),
 			$this->check(
@@ -298,10 +298,10 @@ final class Production_Readiness_Service {
 			),
 			$this->check(
 				'phonekey_crypto_key',
-				__( 'PhoneKey identity key continuity', 'dsa' ),
+				__( 'Key.kiwe identity key continuity', 'dsa' ),
 				empty( $phonekey_crypto['hmac_key_mismatch'] ) ? 'pass' : 'critical',
-				empty( $phonekey_crypto['hmac_key_mismatch'] ) ? __( 'PhoneKey identity key continuity is intact.', 'dsa' ) : __( 'PhoneKey detected a WordPress salt-derived identity-key change.', 'dsa' ),
-				__( 'Restore the prior WordPress authentication salts before accepting PhoneKey identity changes. Encrypted-secret recovery keys do not repair changed identity HMACs.', 'dsa' ),
+				empty( $phonekey_crypto['hmac_key_mismatch'] ) ? __( 'Key.kiwe identity key continuity is intact.', 'dsa' ) : __( 'Key.kiwe detected a WordPress salt-derived identity-key change.', 'dsa' ),
+				__( 'Restore the prior WordPress authentication salts before accepting Key.kiwe identity changes. Encrypted-secret recovery keys do not repair changed identity HMACs.', 'dsa' ),
 				'security'
 			),
 			$this->check(

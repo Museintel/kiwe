@@ -146,6 +146,8 @@ add_action( 'init', function () {
 		update_option( 'pk_db_ver', PK_VER, false );
 	}
 	pk_apply_policy_defaults_once();
+	pk_apply_subscriber_signup_default_once();
+	pk_apply_editorial_access_policy_once();
 	pk_apply_session_timeout_default_off_once();
 	pk_ensure_visitor_cookie();
 	pk_enforce_session_timeout();
@@ -166,16 +168,21 @@ function pk_admin_cap() {
 }
 
 function pk_default_role() {
-	return get_role( 'customer' ) ? 'customer' : 'subscriber';
+	return get_role( 'subscriber' ) ? 'subscriber' : get_option( 'default_role', 'subscriber' );
 }
 
 function pk_role_is_high_privilege_role( $role ) {
 	$r = get_role( $role );
-	if ( ! $r ) return in_array( $role, array( 'administrator', 'editor', 'shop_manager' ), true );
+	if ( ! $r ) return in_array( $role, array( 'administrator', 'editor', 'author', 'contributor', 'shop_manager' ), true );
 	return ! empty( $r->capabilities['manage_options'] )
 		|| ! empty( $r->capabilities['manage_woocommerce'] )
+		|| ! empty( $r->capabilities['edit_posts'] )
 		|| ! empty( $r->capabilities['edit_others_posts'] )
 		|| ! empty( $r->capabilities['edit_pages'] );
+}
+
+function pk_default_whatsapp_gateway_url() {
+	return 'https://key.kiwelaunch.com/v1/otp';
 }
 
 function pk_default_settings() {
@@ -201,14 +208,18 @@ function pk_default_settings() {
 		'app_verification_timing' => 'verify_now',
 		'default_country_code' => '+91',
 		'signup_role'          => pk_default_role(),
+		'low_friction_signup'  => 1,
+		'purchase_verified_contact' => 1,
 		'verification_timing'  => 'verify_later',
 		'progressive_visits'   => 2,
+		'protect_wp_admin'     => 0,
+		'replace_wp_login'     => 0,
 		'email_delivery'       => 'magic_link',
 		'phone_delivery'       => 'otp',
 		'sms_provider'         => '',
 		'sms_webhook'          => '',
 		'whatsapp_provider'    => '',
-		'whatsapp_webhook'     => '',
+		'whatsapp_webhook'     => pk_default_whatsapp_gateway_url(),
 		'whatsapp_mode'        => 'phonekey_gateway',
 		'whatsapp_key_id'      => '',
 		'whatsapp_secret'      => '',
@@ -231,18 +242,49 @@ function pk_settings() {
 	$stored = get_option( 'pk_settings_v3', array() );
 	if ( ! is_array( $stored ) ) $stored = array();
 	$settings = array_replace_recursive( pk_default_settings(), $stored );
+	if ( 'https://phonekey.kiwelaunch.com/v1/otp' === ( $settings['whatsapp_webhook'] ?? '' ) ) {
+		$settings['whatsapp_webhook'] = pk_default_whatsapp_gateway_url();
+	}
+	if ( 'phonekey_gateway' === ( $settings['whatsapp_mode'] ?? 'phonekey_gateway' ) && empty( $settings['whatsapp_webhook'] ) ) {
+		$settings['whatsapp_webhook'] = pk_default_whatsapp_gateway_url();
+	}
 	return $settings;
 }
 
+add_filter( 'dsa_phonekey_purchase_verified_contact_enabled', function ( $enabled ) {
+	$settings = pk_settings();
+	return ! array_key_exists( 'purchase_verified_contact', $settings ) || ! empty( $settings['purchase_verified_contact'] );
+} );
+
+add_filter( 'dsa_phonekey_account_identity_verified', function ( $verified, $user_id ) {
+	return pk_account_verified( absint( $user_id ) );
+}, 10, 2 );
+
 function pk_admin_phone_verified( $user_id ) {
 	return pk_factor_verified( $user_id, 'phone' );
+}
+
+function pk_admin_phone_bound( $user_id ) {
+	return (bool) pk_factor( (int) $user_id, 'phone' );
+}
+
+function pk_user_phone( $user_id ) {
+	$factor = pk_factor( (int) $user_id, 'phone' );
+	if ( ! $factor ) return '';
+	$meta = pk_meta_decode( $factor['meta'] ?? '' );
+	$phone = pk_normalize_phone( $meta['phone'] ?? '' );
+	if ( ! $phone && ! empty( $factor['factor_value'] ) ) {
+		$phone = pk_normalize_phone( pk_decrypt( (string) $factor['factor_value'] ) );
+	}
+	return $phone;
 }
 
 function pk_admin_enrollment_complete( $user_id ) {
 	$user_id = (int) $user_id;
 	if ( ! $user_id ) return false;
 	return pk_credential_count( $user_id ) > 0
-		&& pk_admin_phone_verified( $user_id )
+		&& pk_admin_phone_bound( $user_id )
+		&& pk_account_verified( $user_id )
 		&& (bool) get_user_meta( $user_id, 'pk_admin_password_bound_at', true );
 }
 
@@ -280,6 +322,20 @@ function pk_flag_all_admins_once() {
 }
 add_action( 'init', 'pk_flag_all_admins_once', 2 );
 
+function pk_flag_all_privileged_accounts_once() {
+	if ( 'done' === get_option( 'pk_privileged_editorial_accounts_flagged_v1' ) ) return;
+	$roles = array();
+	foreach ( wp_roles()->roles as $role => $info ) {
+		if ( pk_role_is_high_privilege_role( $role ) ) $roles[] = $role;
+	}
+	$user_ids = $roles ? get_users( array( 'role__in' => $roles, 'fields' => 'ID', 'number' => 1000 ) ) : array();
+	foreach ( (array) $user_ids as $user_id ) {
+		pk_flag_admin_enrollment( (int) $user_id );
+	}
+	update_option( 'pk_privileged_editorial_accounts_flagged_v1', 'done', false );
+}
+add_action( 'init', 'pk_flag_all_privileged_accounts_once', 3 );
+
 function pk_revoke_role_assurance( $user_id, $event, $role ) {
 	global $wpdb;
 	$user_id = absint( $user_id );
@@ -288,6 +344,16 @@ function pk_revoke_role_assurance( $user_id, $event, $role ) {
 	delete_user_meta( $user_id, 'pk_last_high_assurance_login' );
 	delete_user_meta( $user_id, 'pk_trusted_ip_hashes' );
 	$wpdb->delete( pk_t( 'trusted_devices' ), array( 'user_id' => $user_id ) );
+	if ( pk_is_privileged( $user_id ) ) {
+		update_user_meta( $user_id, 'pk_admin_enrollment_required', 1 );
+		update_user_meta( $user_id, 'pk_force_reenroll', 1 );
+	} else {
+		delete_user_meta( $user_id, 'pk_admin_enrollment_required' );
+		delete_user_meta( $user_id, 'pk_force_reenroll' );
+	}
+	if ( class_exists( 'WP_Session_Tokens' ) ) {
+		WP_Session_Tokens::get_instance( $user_id )->destroy_all();
+	}
 	pk_log( $event, $user_id, array( 'role' => sanitize_key( $role ) ), 'warning' );
 }
 
@@ -297,10 +363,15 @@ add_action( 'set_user_role', function ( $user_id, $role, $old_roles ) {
 		if ( pk_role_is_high_privilege_role( $old_role ) ) $was_privileged = true;
 	}
 	$is_privileged = pk_role_is_high_privilege_role( $role );
-	if ( $is_privileged && ! $was_privileged ) {
-		pk_revoke_role_assurance( $user_id, 'privilege_elevation_requires_stepup', $role );
-	} elseif ( ! $is_privileged && $was_privileged ) {
-		pk_revoke_role_assurance( $user_id, 'privilege_revocation_cleared_assurance', $role );
+	$old_roles = array_values( array_unique( array_map( 'sanitize_key', (array) $old_roles ) ) );
+	$role_changed = 1 !== count( $old_roles ) || ! in_array( sanitize_key( $role ), $old_roles, true );
+	if ( $role_changed && ( $is_privileged || $was_privileged ) ) {
+		$event = $is_privileged && ! $was_privileged
+			? 'privilege_elevation_requires_stepup'
+			: ( $was_privileged && ! $is_privileged
+				? 'privilege_revocation_cleared_assurance'
+				: 'privileged_role_scope_changed_requires_stepup' );
+		pk_revoke_role_assurance( $user_id, $event, $role );
 	}
 	pk_flag_admin_enrollment( (int) $user_id );
 }, 10, 3 );
@@ -314,12 +385,36 @@ add_action( 'remove_user_role', function ( $user_id, $role ) {
 	if ( ! pk_role_is_high_privilege_role( $role ) ) return;
 	$user = get_userdata( (int) $user_id );
 	foreach ( (array) ( $user ? $user->roles : array() ) as $remaining_role ) {
-		if ( pk_role_is_high_privilege_role( $remaining_role ) ) return;
+		if ( pk_role_is_high_privilege_role( $remaining_role ) ) {
+			pk_revoke_role_assurance( $user_id, 'privileged_role_scope_changed_requires_stepup', $remaining_role );
+			pk_flag_admin_enrollment( (int) $user_id );
+			return;
+		}
 	}
 	pk_revoke_role_assurance( $user_id, 'privilege_revocation_cleared_assurance', $role );
 	pk_flag_admin_enrollment( (int) $user_id );
 }, 10, 2 );
 add_action( 'user_register', function ( $user_id ) { pk_flag_admin_enrollment( (int) $user_id ); }, 20, 1 );
+
+add_filter( 'manage_users_columns', function ( $columns ) {
+	$columns['phonekey_phone'] = __( 'Phone', 'phonekey' );
+	$columns['phonekey_security'] = __( 'Key.kiwe', 'phonekey' );
+	return $columns;
+} );
+
+add_filter( 'manage_users_custom_column', function ( $value, $column, $user_id ) {
+	if ( 'phonekey_phone' === $column ) {
+		$phone = pk_user_phone( (int) $user_id );
+		return $phone ? esc_html( $phone ) : '&mdash;';
+	}
+	if ( 'phonekey_security' === $column ) {
+		$security = pk_security_completion( (int) $user_id );
+		$state = sanitize_key( $security['state'] ?? 'unverified' );
+		$labels = array( 'verified' => __( 'Verified', 'phonekey' ), 'partial' => __( 'Partial', 'phonekey' ), 'unverified' => __( 'Unverified', 'phonekey' ) );
+		return esc_html( $labels[ $state ] ?? $labels['unverified'] );
+	}
+	return $value;
+}, 10, 3 );
 
 add_action( 'admin_notices', function () {
 	$user_id = get_current_user_id();
@@ -327,12 +422,14 @@ add_action( 'admin_notices', function () {
 	if ( pk_admin_enrollment_complete( $user_id ) ) return;
 
 	$needs_passkey = pk_credential_count( $user_id ) < 1;
-	$needs_phone   = ! pk_admin_phone_verified( $user_id );
+	$needs_phone   = ! pk_admin_phone_bound( $user_id );
+	$needs_verified_factor = ! pk_account_verified( $user_id );
 	$needs_password_binding = ! get_user_meta( $user_id, 'pk_admin_password_bound_at', true );
 	$parts = array();
 	if ( $needs_password_binding ) $parts[] = esc_html__( 'confirm the WordPress password', 'phonekey' );
 	if ( $needs_passkey ) $parts[] = esc_html__( 'set up a passkey', 'phonekey' );
-	if ( $needs_phone ) $parts[] = esc_html__( 'verify a phone number', 'phonekey' );
+	if ( $needs_phone ) $parts[] = esc_html__( 'bind a phone number', 'phonekey' );
+	if ( $needs_verified_factor ) $parts[] = esc_html__( 'verify an email address or phone number', 'phonekey' );
 	if ( empty( $parts ) ) return;
 
 	echo '<div class="notice notice-warning"><p><strong>' . esc_html__( 'Kiwe Auth:', 'phonekey' ) . '</strong> '
@@ -389,6 +486,36 @@ function pk_apply_session_timeout_default_off_once() {
 	update_option( 'pk_session_timeout_default_off_v1', 'done', false );
 }
 
+function pk_apply_subscriber_signup_default_once() {
+	if ( 'done' === get_option( 'pk_subscriber_signup_default_v1' ) ) return;
+	$settings = pk_settings();
+	if ( empty( $settings['signup_role'] ) || 'customer' === $settings['signup_role'] ) {
+		$settings['signup_role'] = pk_default_role();
+		update_option( 'pk_settings_v3', $settings, false );
+	}
+	update_option( 'pk_subscriber_signup_default_v1', 'done', false );
+}
+
+function pk_apply_editorial_access_policy_once() {
+	if ( 'done' === get_option( 'pk_editorial_access_policy_v1' ) ) return;
+	$settings = pk_settings();
+	foreach ( wp_roles()->roles as $role => $info ) {
+		if ( ! pk_role_is_high_privilege_role( $role ) ) continue;
+		$settings['role_matrix'][ $role ] = array_replace(
+			(array) ( $settings['role_matrix'][ $role ] ?? array() ),
+			array(
+				'verification' => 'verify_now',
+				'login_mode'   => 'passkey',
+				'step_up'      => 'totp_optional',
+				'timeout'      => 0,
+				'device_days'  => 7,
+			)
+		);
+	}
+	update_option( 'pk_settings_v3', $settings, false );
+	update_option( 'pk_editorial_access_policy_v1', 'done', false );
+}
+
 function pk_save_settings_array( $raw ) {
 	$defaults = pk_default_settings();
 	$current  = pk_settings();
@@ -405,8 +532,12 @@ function pk_save_settings_array( $raw ) {
 	if ( pk_role_is_high_privilege_role( $out['signup_role'] ) ) {
 		$out['signup_role'] = pk_default_role();
 	}
+	$out['low_friction_signup']  = ! empty( $raw['low_friction_signup'] ) ? 1 : 0;
+	$out['purchase_verified_contact'] = ! empty( $raw['purchase_verified_contact'] ) ? 1 : 0;
 	$out['verification_timing']  = in_array( $raw['verification_timing'] ?? '', array( 'verify_now', 'verify_later', 'progressive' ), true ) ? $raw['verification_timing'] : $defaults['verification_timing'];
 	$out['progressive_visits']   = max( 1, min( 20, absint( $raw['progressive_visits'] ?? 2 ) ) );
+	$out['protect_wp_admin']     = ! empty( $raw['protect_wp_admin'] ) ? 1 : 0;
+	$out['replace_wp_login']     = ! empty( $raw['replace_wp_login'] ) ? 1 : 0;
 	$out['email_delivery']       = in_array( $raw['email_delivery'] ?? '', array( 'otp', 'magic_link' ), true ) ? $raw['email_delivery'] : 'magic_link';
 	$out['phone_delivery']       = 'otp';
 	$out['sms_provider']         = sanitize_text_field( $raw['sms_provider'] ?? '' );
@@ -431,7 +562,7 @@ function pk_save_settings_array( $raw ) {
 	$out['admin_reauth_minutes'] = max( 0, min( 1440, absint( $raw['admin_reauth_minutes'] ?? 0 ) ) );
 	$out['otp_target_limit']     = max( 1, min( 50, absint( $raw['otp_target_limit'] ?? 5 ) ) );
 	$out['otp_target_window_min'] = max( 1, min( 1440, absint( $raw['otp_target_window_min'] ?? 60 ) ) );
-	$out['ip_trust_roles']       = array_map( 'sanitize_key', (array) ( $raw['ip_trust_roles'] ?? array() ) );
+	$out['ip_trust_roles']       = array_map( 'sanitize_key', (array) ( $raw['ip_trust_roles'] ?? ( $current['ip_trust_roles'] ?? $defaults['ip_trust_roles'] ) ) );
 
 	$out['role_matrix'] = array();
 	$roles = wp_roles() ? wp_roles()->roles : array();
@@ -728,7 +859,20 @@ function pk_identifier_allowed( $type, $app_context = false ) {
 	return ( 'email_or_phone' === $mode ) || ( 'email_and_phone' === $mode && 'email' === $type ) || ( 'email' === $mode && 'email' === $type ) || ( 'phone' === $mode && 'phone' === $type );
 }
 
-function pk_find_user( $identifier, $type ) {
+function pk_canonical_user_id( $user_id ) {
+	$current = absint( $user_id );
+	$seen = array();
+	for ( $depth = 0; $current && $depth < 5; $depth++ ) {
+		if ( isset( $seen[ $current ] ) ) return 0;
+		$seen[ $current ] = true;
+		$next = absint( get_user_meta( $current, 'pk_merged_into', true ) );
+		if ( ! $next ) return $current;
+		$current = $next;
+	}
+	return $current;
+}
+
+function pk_find_user_raw( $identifier, $type ) {
 	if ( 'email' === $type ) {
 		$u = get_user_by( 'email', pk_normalize_email( $identifier ) );
 		if ( $u ) return (int) $u->ID;
@@ -741,6 +885,41 @@ function pk_find_user( $identifier, $type ) {
 		'fields'     => 'ID',
 	) );
 	return $users ? (int) $users[0] : 0;
+}
+
+/**
+ * Resolve the WordPress user that owns a pending core profile-email change.
+ *
+ * WordPress keeps the requested address in the owner's `_new_email` usermeta
+ * until its confirmation link is consumed. Key.kiwe must see that reservation
+ * before it considers creating a new account for the same address.
+ */
+function pk_pending_wordpress_email_owner( $email ) {
+	global $wpdb;
+
+	$email = pk_normalize_email( $email );
+	if ( ! is_email( $email ) ) return 0;
+
+	$candidate_ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key=%s AND meta_value LIKE %s ORDER BY umeta_id DESC LIMIT 10",
+		'_new_email',
+		'%' . $wpdb->esc_like( $email ) . '%'
+	) );
+
+	foreach ( array_unique( array_map( 'absint', (array) $candidate_ids ) ) as $candidate_id ) {
+		$pending = get_user_meta( $candidate_id, '_new_email', true );
+		$pending_email = is_array( $pending ) ? pk_normalize_email( $pending['newemail'] ?? '' ) : '';
+		if ( $pending_email && hash_equals( $email, $pending_email ) ) {
+			return pk_canonical_user_id( $candidate_id );
+		}
+	}
+
+	return 0;
+}
+
+function pk_find_user( $identifier, $type ) {
+	$user_id = pk_find_user_raw( $identifier, $type );
+	return $user_id ? pk_canonical_user_id( $user_id ) : 0;
 }
 
 function pk_user_roles( $user_id ) {
@@ -791,7 +970,7 @@ function pk_is_privileged( $user_id ) {
 	foreach ( (array) $u->roles as $role ) {
 		if ( pk_role_is_high_privilege_role( $role ) ) return true;
 	}
-	return user_can( $u, 'manage_options' ) || user_can( $u, 'manage_woocommerce' ) || user_can( $u, 'edit_others_posts' ) || user_can( $u, 'edit_pages' );
+	return user_can( $u, 'manage_options' ) || user_can( $u, 'manage_woocommerce' ) || user_can( $u, 'edit_posts' ) || user_can( $u, 'edit_others_posts' ) || user_can( $u, 'edit_pages' );
 }
 
 function pk_phone_provider_ready() {
@@ -827,6 +1006,7 @@ function pk_create_user_for_identifier( $identifier, $type ) {
 		'role'         => $role,
 	) );
 	if ( is_wp_error( $user_id ) ) return 0;
+	update_user_meta( $user_id, 'pk_created_by_phonekey', current_time( 'mysql' ) );
 	update_user_meta( $user_id, 'pk_anchor_type', $type );
 	if ( 'email' === $type ) {
 		update_user_meta( $user_id, 'pk_email_hash', pk_hmac( $identifier ) );
@@ -883,6 +1063,36 @@ function pk_account_verified( $user_id ) {
 	return pk_factor_verified( $user_id, 'email' ) || pk_factor_verified( $user_id, 'phone' ) || (bool) get_user_meta( $user_id, 'pk_verified_at', true );
 }
 
+/**
+ * Describe progressive Key.kiwe completion without weakening the identity proof
+ * used by login policy. A verified email or phone proves the account holder;
+ * the public "Verified" badge is reserved for complete recovery + passkey setup.
+ */
+function pk_security_completion( $user_id ) {
+	$user_id = absint( $user_id );
+	$email_verified = $user_id && pk_factor_verified( $user_id, 'email' );
+	$phone_verified = $user_id && pk_factor_verified( $user_id, 'phone' );
+	$passkey_enrolled = $user_id && pk_credential_count( $user_id ) > 0;
+	$identity_verified = $email_verified || $phone_verified || ( $user_id && (bool) get_user_meta( $user_id, 'pk_verified_at', true ) );
+	$settings = pk_settings();
+	$identifier_mode = sanitize_key( $settings['identifier_mode'] ?? 'email_or_phone' );
+	$requires_email = pk_is_privileged( $user_id ) || in_array( $identifier_mode, array( 'email', 'email_or_phone', 'email_and_phone' ), true );
+	$requires_phone = pk_is_privileged( $user_id ) || in_array( $identifier_mode, array( 'phone', 'email_or_phone', 'email_and_phone' ), true );
+	$complete = $passkey_enrolled
+		&& ( ! $requires_email || $email_verified )
+		&& ( ! $requires_phone || $phone_verified );
+
+	return array(
+		'state'              => $complete ? 'verified' : ( $identity_verified ? 'partial' : 'unverified' ),
+		'complete'           => (bool) $complete,
+		'identityVerified'   => (bool) $identity_verified,
+		'emailVerified'      => (bool) $email_verified,
+		'phoneVerified'      => (bool) $phone_verified,
+		'passkeyEnrolled'    => (bool) $passkey_enrolled,
+		'missingCounterpart' => pk_missing_counterpart_type( $user_id ),
+	);
+}
+
 function pk_mark_factor_verified( $user_id, $type, $identifier = '' ) {
 	$hash = $identifier ? pk_hmac( $identifier ) : '';
 	$existing = pk_factor( $user_id, $type, $hash );
@@ -903,6 +1113,7 @@ function pk_mark_factor_verified( $user_id, $type, $identifier = '' ) {
 	pk_upsert_factor( $user_id, $type, 'verified', $hash, $meta, $identifier );
 	update_user_meta( $user_id, 'pk_verified_at', current_time( 'mysql' ) );
 	pk_log( $type . '_verified', $user_id, array( 'anchor_type' => $type ), 'success' );
+	do_action( 'kiwe_identity_factor_verified', (int) $user_id );
 }
 
 function pk_issue_token( $purpose, $user_id = 0, $ttl = PK_CHALLENGE_TTL, $meta = array(), $challenge = '' ) {
@@ -952,14 +1163,20 @@ function pk_otp_target_allowed( $identifier ) {
 }
 
 function pk_recent_otp_send_exists( $user_id, $purpose ) {
+	return pk_otp_resend_after( $user_id, $purpose ) > 0;
+}
+
+function pk_otp_resend_after( $user_id, $purpose ) {
 	global $wpdb;
-	return (bool) $wpdb->get_var( $wpdb->prepare(
-		"SELECT id FROM " . pk_t( 'challenges' ) . " WHERE purpose=%s AND user_id=%d AND used=0 AND expires_at>%s AND created_at>=%s LIMIT 1",
+	$created_at = $wpdb->get_var( $wpdb->prepare(
+		"SELECT created_at FROM " . pk_t( 'challenges' ) . " WHERE purpose=%s AND user_id=%d AND used=0 AND expires_at>%s AND created_at>=%s ORDER BY id DESC LIMIT 1",
 		sanitize_key( $purpose ),
 		absint( $user_id ),
 		pk_now(),
 		gmdate( 'Y-m-d H:i:s', time() - 60 )
 	) );
+	if ( ! $created_at ) return 0;
+	return max( 1, 60 - max( 0, time() - (int) strtotime( $created_at . ' UTC' ) ) );
 }
 
 function pk_send_email_otp_or_link( $user_id, $email, $flow_token = '', $force_method = '' ) {
@@ -1096,6 +1313,53 @@ function pk_complete_account_email_change( $user_id, $token, $code ) {
 	return array( 'email' => $email );
 }
 
+function pk_sync_wordpress_profile_email_change( $user_id, $old_user_data ) {
+	global $wpdb;
+
+	$user_id = absint( $user_id );
+	$current = $user_id ? get_userdata( $user_id ) : null;
+	$before  = $old_user_data instanceof WP_User ? pk_normalize_email( $old_user_data->user_email ) : '';
+	$after   = $current ? pk_normalize_email( $current->user_email ) : '';
+	if ( ! $current || ! is_email( $after ) || $before === $after ) return;
+
+	$new_hash = pk_hmac( $after );
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM " . pk_t( 'factors' ) . " WHERE user_id=%d AND factor_type='email' AND factor_hash<>%s",
+		$user_id,
+		$new_hash
+	) );
+	pk_mark_factor_verified( $user_id, 'email', $after );
+	$wpdb->delete( pk_t( 'trusted_devices' ), array( 'user_id' => $user_id ) );
+	delete_user_meta( $user_id, 'pk_trusted_ip_hashes' );
+	delete_user_meta( $user_id, 'pk_session_started_at' );
+	$wpdb->query( $wpdb->prepare(
+		"UPDATE " . pk_t( 'challenges' ) . " SET used=1, used_at=%s WHERE user_id=%d AND used=0 AND purpose IN ('account_email_change','email_otp','email_magic','recovery','stepup')",
+		pk_now(),
+		$user_id
+	) );
+	pk_log( 'wordpress_account_email_changed', $user_id, array( 'trust_revoked' => 1 ), 'success' );
+}
+add_action( 'profile_update', 'pk_sync_wordpress_profile_email_change', 20, 2 );
+
+function pk_sync_wordpress_password_reset( $user ) {
+	global $wpdb;
+	if ( ! $user instanceof WP_User || ! $user->ID ) return;
+
+	$user_id = (int) $user->ID;
+	$wpdb->delete( pk_t( 'trusted_devices' ), array( 'user_id' => $user_id ) );
+	delete_user_meta( $user_id, 'pk_trusted_ip_hashes' );
+	delete_user_meta( $user_id, 'pk_session_started_at' );
+	delete_user_meta( $user_id, 'pk_admin_password_bound_at' );
+	if ( pk_is_privileged( $user_id ) ) update_user_meta( $user_id, 'pk_force_reenroll', 1 );
+	$wpdb->query( $wpdb->prepare(
+		"UPDATE " . pk_t( 'challenges' ) . " SET used=1, used_at=%s WHERE user_id=%d AND used=0",
+		pk_now(),
+		$user_id
+	) );
+	pk_log( 'wordpress_password_reset', $user_id, array( 'trust_revoked' => 1, 'strict_reenroll' => pk_is_privileged( $user_id ) ? 1 : 0 ), 'success' );
+}
+add_action( 'after_password_reset', 'pk_sync_wordpress_password_reset', 20, 1 );
+
 function pk_send_phone_fallback_email( $user_id, $code ) {
 	$user = get_userdata( $user_id );
 	$email = $user && is_email( $user->user_email ) ? $user->user_email : '';
@@ -1110,8 +1374,8 @@ function pk_send_phone_fallback_email( $user_id, $code ) {
 	$site = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 	$accepted = wp_mail(
 		$email,
-		sprintf( '[%s] PhoneKey verification code', $site ),
-		sprintf( "Your PhoneKey verification code is %s. It expires in 10 minutes.\n\nWhatsApp delivery was unavailable, so Kiwe used the configured email fallback. Never share this code.", $code )
+		sprintf( '[%s] Key.kiwe verification code', $site ),
+		sprintf( "Your Key.kiwe verification code is %s. It expires in 10 minutes.\n\nWhatsApp delivery was unavailable, so Kiwe used the configured email fallback. Never share this code.", $code )
 	);
 	pk_log( $accepted ? 'phone_otp_email_fallback_accepted' : 'phone_otp_email_fallback_failed', $user_id, array( 'provider' => 'wp_mail' ), $accepted ? 'info' : 'warning' );
 	return (bool) $accepted;
@@ -1124,10 +1388,10 @@ function pk_gateway_signed_headers( array $settings, $body ) {
 	$nonce = wp_generate_password( 32, false, false );
 	return array(
 		'Content-Type'             => 'application/json',
-		'X-PhoneKey-Key-Id'        => (string) $settings['whatsapp_key_id'],
-		'X-PhoneKey-Timestamp'     => $timestamp,
-		'X-PhoneKey-Nonce'         => $nonce,
-		'X-PhoneKey-Signature'     => hash_hmac( 'sha256', $timestamp . '.' . $nonce . '.' . $body, $secret ),
+		'X-Kiwe-Key-Id'        => (string) $settings['whatsapp_key_id'],
+		'X-Kiwe-Key-Timestamp' => $timestamp,
+		'X-Kiwe-Key-Nonce'     => $nonce,
+		'X-Kiwe-Key-Signature' => hash_hmac( 'sha256', $timestamp . '.' . $nonce . '.' . $body, $secret ),
 	);
 }
 
@@ -1161,13 +1425,13 @@ function pk_whatsapp_notification_ready() {
 
 function pk_send_whatsapp_message( $phone, $message, $purpose = 'notification_campaign', array $context = array() ) {
 	$s = pk_settings();
-	if ( ! pk_whatsapp_notification_ready() ) return new WP_Error( 'phonekey_whatsapp_unavailable', 'PhoneKey WhatsApp is not configured.' );
-	$allowed = array( 'notification_campaign', 'abandoned_cart_reminder', 'abandoned_cart_automation', 'order_status', 'admin_new_order', 'admin_new_comment', 'admin_visitor_summary', 'admin_live_visitor' );
+	if ( ! pk_whatsapp_notification_ready() ) return new WP_Error( 'phonekey_whatsapp_unavailable', 'Key.kiwe WhatsApp is not configured.' );
+	$allowed = array( 'notification_campaign', 'abandoned_cart_reminder', 'abandoned_cart_automation', 'order_status', 'admin_new_order', 'admin_new_comment', 'admin_visitor_summary', 'admin_live_visitor', 'admin_guest_application', 'admin_guest_submission', 'guest_post_status', 'editorial_post_status' );
 	$purpose = sanitize_key( $purpose );
 	$phone = pk_normalize_phone( $phone );
 	$message = trim( wp_strip_all_tags( (string) $message ) );
 	if ( ! in_array( $purpose, $allowed, true ) || strlen( preg_replace( '/\D/', '', $phone ) ) < 7 || '' === $message ) {
-		return new WP_Error( 'phonekey_whatsapp_invalid', 'PhoneKey rejected an invalid WhatsApp notification.' );
+		return new WP_Error( 'phonekey_whatsapp_invalid', 'Key.kiwe rejected an invalid WhatsApp notification.' );
 	}
 	if ( function_exists( 'mb_substr' ) ) $message = mb_substr( $message, 0, 1600 );
 	else $message = substr( $message, 0, 1600 );
@@ -1183,7 +1447,7 @@ function pk_send_whatsapp_message( $phone, $message, $purpose = 'notification_ca
 	$body = wp_json_encode( $payload );
 	$headers = pk_gateway_signed_headers( $s, $body );
 	$url = preg_replace( '#/v1/otp/?$#', '/v1/message', (string) $s['whatsapp_webhook'] );
-	if ( empty( $headers ) || ! $url || $url === $s['whatsapp_webhook'] ) return new WP_Error( 'phonekey_whatsapp_contract', 'PhoneKey WhatsApp gateway settings are incomplete.', array( 'request_id' => $request_id ) );
+	if ( empty( $headers ) || ! $url || $url === $s['whatsapp_webhook'] ) return new WP_Error( 'phonekey_whatsapp_contract', 'Key.kiwe WhatsApp gateway settings are incomplete.', array( 'request_id' => $request_id ) );
 	$response = wp_safe_remote_post( $url, array(
 		'timeout'     => 10,
 		'redirection' => 0,
@@ -1194,7 +1458,7 @@ function pk_send_whatsapp_message( $phone, $message, $purpose = 'notification_ca
 	$result = is_wp_error( $response ) ? array() : json_decode( (string) wp_remote_retrieve_body( $response ), true );
 	$accepted = $status >= 200 && $status < 300 && is_array( $result ) && ! empty( $result['ok'] );
 	if ( ! $accepted ) {
-		return new WP_Error( 'phonekey_whatsapp_delivery', 'PhoneKey WhatsApp did not accept the notification.', array( 'request_id' => $request_id, 'status' => $status ) );
+		return new WP_Error( 'phonekey_whatsapp_delivery', 'Key.kiwe WhatsApp did not accept the notification.', array( 'request_id' => $request_id, 'status' => $status ) );
 	}
 	return array( 'ok' => true, 'request_id' => $request_id, 'provider' => 'phonekey_whatsapp' );
 }
@@ -1631,6 +1895,62 @@ function pk_redirect_url() {
 	return home_url( '/' );
 }
 
+function pk_login_return_cookie_name() {
+	return 'kiwe_login_return';
+}
+
+function pk_validate_login_return_url( $url ) {
+	$url = esc_url_raw( (string) $url );
+	if ( ! $url ) return '';
+
+	$validated = wp_validate_redirect( $url, '' );
+	if ( ! $validated ) return '';
+
+	$target_host = strtolower( (string) wp_parse_url( $validated, PHP_URL_HOST ) );
+	$site_host   = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+	return $target_host && $site_host && hash_equals( $site_host, $target_host ) ? $validated : '';
+}
+
+function pk_remember_login_return( $url ) {
+	$url = pk_validate_login_return_url( $url );
+	if ( ! $url || headers_sent() ) return false;
+
+	$payload = rtrim( strtr( base64_encode( wp_json_encode( array( 'url' => $url, 'exp' => time() + 15 * MINUTE_IN_SECONDS ) ) ), '+/', '-_' ), '=' );
+	$value   = $payload . '.' . hash_hmac( 'sha256', $payload, wp_salt( 'auth' ) );
+	$options = pk_device_cookie_options( time() + 15 * MINUTE_IN_SECONDS );
+	setcookie( pk_login_return_cookie_name(), $value, $options );
+	$_COOKIE[ pk_login_return_cookie_name() ] = $value;
+	return true;
+}
+
+function pk_remember_requested_login_return( $fallback_to_request = false ) {
+	$redirect = isset( $_REQUEST['redirect_to'] ) ? wp_unslash( $_REQUEST['redirect_to'] ) : '';
+	if ( ! $redirect && $fallback_to_request ) {
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$redirect = $request_uri ? home_url( $request_uri ) : '';
+	}
+	return pk_remember_login_return( $redirect );
+}
+
+function pk_consume_login_return() {
+	$name  = pk_login_return_cookie_name();
+	$value = isset( $_COOKIE[ $name ] ) ? sanitize_text_field( wp_unslash( $_COOKIE[ $name ] ) ) : '';
+	if ( ! $value ) return '';
+
+	if ( ! headers_sent() ) {
+		setcookie( $name, '', pk_device_cookie_options( time() - HOUR_IN_SECONDS ) );
+	}
+	unset( $_COOKIE[ $name ] );
+
+	$parts = explode( '.', $value, 2 );
+	if ( 2 !== count( $parts ) || ! hash_equals( hash_hmac( 'sha256', $parts[0], wp_salt( 'auth' ) ), $parts[1] ) ) return '';
+	$encoded = strtr( $parts[0], '-_', '+/' );
+	$encoded .= str_repeat( '=', ( 4 - strlen( $encoded ) % 4 ) % 4 );
+	$decoded = json_decode( (string) base64_decode( $encoded, true ), true );
+	if ( ! is_array( $decoded ) || (int) ( $decoded['exp'] ?? 0 ) < time() ) return '';
+	return pk_validate_login_return_url( $decoded['url'] ?? '' );
+}
+
 function pk_device_cookie_options( $expires ) {
 	return array(
 		'expires'  => $expires,
@@ -1665,8 +1985,14 @@ function pk_current_trusted_device( $user_id ) {
 	if ( empty( $_COOKIE[ PK_DEVICE_COOKIE ] ) ) return false;
 	global $wpdb;
 	$token = sanitize_text_field( wp_unslash( $_COOKIE[ PK_DEVICE_COOKIE ] ) );
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM " . pk_t( 'trusted_devices' ) . " WHERE user_id=%d AND token_hash=%s AND expires_at>%s LIMIT 1", $user_id, pk_hmac( $token ), pk_now() ) );
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, role_scope FROM " . pk_t( 'trusted_devices' ) . " WHERE user_id=%d AND token_hash=%s AND expires_at>%s LIMIT 1", $user_id, pk_hmac( $token ), pk_now() ) );
 	if ( ! $row ) return false;
+	$current_scope = implode( ',', pk_user_roles( $user_id ) );
+	if ( ! hash_equals( (string) $row->role_scope, $current_scope ) ) {
+		$wpdb->delete( pk_t( 'trusted_devices' ), array( 'id' => (int) $row->id ) );
+		pk_log( 'trusted_device_role_scope_revoked', $user_id, array( 'previous_scope' => sanitize_text_field( $row->role_scope ), 'current_scope' => $current_scope ), 'warning' );
+		return false;
+	}
 	$wpdb->update( pk_t( 'trusted_devices' ), array( 'last_seen_at' => pk_now() ), array( 'id' => (int) $row->id ) );
 	return true;
 }
@@ -1674,6 +2000,7 @@ function pk_current_trusted_device( $user_id ) {
 function pk_after_high_assurance_login( $user_id, $method, $meta = array() ) {
 	$ip_hash = pk_hmac( pk_ip() );
 	$s = pk_settings();
+	$strict_privileged_complete = pk_is_privileged( $user_id ) && pk_admin_enrollment_complete( $user_id );
 	$scores = get_user_meta( $user_id, 'pk_ip_trust_scores', true );
 	if ( ! is_array( $scores ) ) $scores = array();
 	$scores[ $ip_hash ] = array(
@@ -1682,29 +2009,118 @@ function pk_after_high_assurance_login( $user_id, $method, $meta = array() ) {
 		'expires_at' => time() + DAY_IN_SECONDS * absint( $s['ip_trust_ttl'] ),
 	);
 	update_user_meta( $user_id, 'pk_ip_trust_scores', $scores );
-	if ( $scores[ $ip_hash ]['score'] >= absint( $s['ip_trust_threshold'] ) ) {
+	$trust_threshold = $strict_privileged_complete ? 1 : absint( $s['ip_trust_threshold'] );
+	if ( $scores[ $ip_hash ]['score'] >= $trust_threshold ) {
 		$trusted = get_user_meta( $user_id, 'pk_trusted_ip_hashes', true );
 		if ( ! is_array( $trusted ) ) $trusted = array();
 		$trusted[ $ip_hash ] = array( 'trusted_at' => time(), 'expires_at' => time() + DAY_IN_SECONDS * absint( $s['ip_trust_ttl'] ) );
 		update_user_meta( $user_id, 'pk_trusted_ip_hashes', $trusted );
-		if ( function_exists( 'stp_touch_profile' ) && in_array( pk_primary_role( $user_id ), (array) $s['ip_trust_roles'], true ) ) {
+		if ( function_exists( 'stp_touch_profile' ) && array_intersect( pk_user_roles( $user_id ), (array) $s['ip_trust_roles'] ) ) {
 			stp_touch_profile( $user_id, pk_ip(), '', (int) current_time( 'G' ), false );
+		}
+		if ( $strict_privileged_complete && function_exists( 'stp_trust_ip' ) ) {
+			$trust_result = stp_trust_ip( pk_ip(), 'Trusted automatically after completed Key.kiwe strict authentication for user #' . (int) $user_id );
+			if ( is_wp_error( $trust_result ) ) {
+				pk_log( 'ip_trust_sync_failed', $user_id, array( 'method' => $method ), 'warning' );
+			}
 		}
 		pk_log( 'ip_trust_elevated', $user_id, array( 'method' => $method, 'score' => $scores[ $ip_hash ]['score'] ), 'success' );
 	}
-	pk_set_trusted_device( $user_id );
+	if ( ! pk_is_privileged( $user_id ) || $strict_privileged_complete ) {
+		pk_set_trusted_device( $user_id );
+	}
 	update_user_meta( $user_id, 'pk_last_high_assurance_login', current_time( 'mysql' ) );
 	pk_log( 'high_assurance_login', $user_id, array_merge( array( 'method' => $method ), $meta ), 'success' );
 }
 
+function pk_missing_counterpart_type( $user_id ) {
+	$user = get_userdata( (int) $user_id );
+	if ( ! $user ) return '';
+	$has_email = pk_factor_verified( $user_id, 'email' );
+	$has_phone = pk_factor_verified( $user_id, 'phone' );
+	if ( $has_email && ! $has_phone ) return 'phone';
+	if ( $has_phone && ! $has_email ) return 'email';
+	return '';
+}
+
+function pk_counterpart_prompt_data( $user_id, $redirect, $meta = array() ) {
+	$s = pk_settings();
+	if ( 'email_or_phone' !== ( $s['identifier_mode'] ?? '' ) || pk_is_privileged( $user_id ) || ! empty( $meta['skip_counterpart_prompt'] ) ) return array();
+	if ( empty( $meta['force_counterpart_prompt'] ) && get_user_meta( $user_id, 'pk_counterpart_prompt_skipped_at', true ) ) return array();
+	$type = pk_missing_counterpart_type( $user_id );
+	if ( ! $type ) return array();
+	$token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, array(
+		'mode' => 'counterpart_prompt',
+		'counterpart_type' => $type,
+		'identity_verified_this_flow' => ! empty( $meta['identity_verified_this_flow'] ) ? 1 : 0,
+		'completion_intent' => ! empty( $meta['completion_intent'] ) ? 1 : 0,
+	) );
+	return array(
+		'counterpartRequired' => true,
+		'counterpartType' => $type,
+		'counterpartToken' => $token,
+		'canSkipCounterpart' => true,
+		'redirect' => $redirect,
+	);
+}
+
+function pk_next_security_setup_response( $user_id, $flow_meta = array() ) {
+	$user_id = pk_canonical_user_id( $user_id );
+	if ( ! $user_id || pk_is_privileged( $user_id ) ) return array();
+
+	$security = pk_security_completion( $user_id );
+	$prompt_meta = array(
+		'force_counterpart_prompt' => ! empty( $flow_meta['completion_intent'] ) ? 1 : 0,
+		'identity_verified_this_flow' => ! empty( $flow_meta['identity_verified_this_flow'] ) ? 1 : 0,
+		'completion_intent' => ! empty( $flow_meta['completion_intent'] ) ? 1 : 0,
+	);
+	$counterpart = pk_counterpart_prompt_data( $user_id, '', $prompt_meta );
+	if ( $counterpart ) {
+		return array_merge( array(
+			'ok' => true,
+			'next' => 'security_setup',
+			'security' => $security,
+		), $counterpart );
+	}
+
+	if ( empty( $security['passkeyEnrolled'] ) ) {
+		$next_meta = $flow_meta;
+		$next_meta['mode'] = 'enroll_passkey';
+		return array(
+			'ok' => true,
+			'next' => 'enroll_passkey',
+			'token' => pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $next_meta ),
+			'verified' => true,
+			'security' => $security,
+			'canLater' => true,
+		);
+	}
+
+	return array();
+}
+
 function pk_finish_login( $user_id, $method, $high = true, $meta = array() ) {
+	$user_id = pk_canonical_user_id( $user_id );
+	if ( ! $user_id ) return array( 'ok' => false, 'message' => 'This account link is invalid.' );
+	if ( pk_is_privileged( $user_id ) && ! pk_admin_enrollment_complete( $user_id ) ) {
+		pk_flag_admin_enrollment( $user_id );
+		pk_log( 'privileged_login_blocked_incomplete', $user_id, array( 'method' => sanitize_key( $method ) ), 'warning' );
+		return array(
+			'ok' => false,
+			'code' => 'privileged_setup_incomplete',
+			'message' => 'Complete WordPress password confirmation, recovery verification, phone binding, and passkey setup before administrator access.',
+		);
+	}
 	wp_set_current_user( $user_id );
 	wp_set_auth_cookie( $user_id, true, pk_secure_auth_cookie() );
 	update_user_meta( $user_id, 'pk_session_started_at', time() );
 	if ( $high ) pk_after_high_assurance_login( $user_id, $method, $meta );
 	else pk_log( 'login_success', $user_id, array( 'method' => $method ), 'success' );
 	do_action( 'dsa_phonekey_authenticated', $user_id, $method );
-	return array( 'ok' => true, 'redirect' => pk_redirect_url() );
+	$redirect = pk_consume_login_return();
+	if ( ! $redirect ) $redirect = pk_redirect_url();
+	$counterpart = pk_counterpart_prompt_data( $user_id, $redirect, $meta );
+	return array_merge( array( 'ok' => true, 'redirect' => $redirect ), $counterpart );
 }
 
 function pk_known_device_for_user( $user_id ) {
@@ -1753,6 +2169,49 @@ function pk_is_login_request() {
 
 	return false !== strpos( $script, 'wp-login.php' ) || false !== strpos( $self, 'wp-login.php' );
 }
+
+function pk_break_glass_login_allowed() {
+	return function_exists( 'stp_break_glass_session_valid' ) && stp_break_glass_session_valid();
+}
+
+function pk_surface_login_url() {
+	return add_query_arg( 'kiwe-auth', '1', home_url( '/' ) );
+}
+
+function pk_protect_wordpress_login() {
+	$s = pk_settings();
+	if ( empty( $s['replace_wp_login'] ) || pk_break_glass_login_allowed() ) return;
+	$action = sanitize_key( $_REQUEST['action'] ?? 'login' );
+	$allowed = array( 'logout', 'lostpassword', 'retrievepassword', 'resetpass', 'rp', 'postpass', 'confirm_admin_email' );
+	if ( in_array( $action, $allowed, true ) ) return;
+	pk_remember_requested_login_return();
+	wp_safe_redirect( pk_surface_login_url() );
+	exit;
+}
+add_action( 'login_init', 'pk_protect_wordpress_login', -5 );
+
+function pk_protect_wordpress_admin() {
+	$s = pk_settings();
+	if ( empty( $s['protect_wp_admin'] ) || ! is_admin() ) return;
+	if ( wp_doing_ajax() || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) return;
+	$script = basename( sanitize_text_field( wp_unslash( $_SERVER['SCRIPT_NAME'] ?? '' ) ) );
+	if ( in_array( $script, array( 'admin-ajax.php', 'admin-post.php', 'async-upload.php' ), true ) ) return;
+	if ( pk_break_glass_login_allowed() ) return;
+	if ( is_user_logged_in() && pk_is_privileged( get_current_user_id() ) && pk_admin_enrollment_complete( get_current_user_id() ) ) return;
+	if ( is_user_logged_in() && pk_is_privileged( get_current_user_id() ) ) {
+		$user_id = get_current_user_id();
+		pk_flag_admin_enrollment( $user_id );
+		$notice_key = 'pk_admin_setup_blocked_' . (int) $user_id;
+		if ( ! get_transient( $notice_key ) ) {
+			pk_log( 'wordpress_admin_blocked_pending_strict_setup', $user_id, array( 'script' => $script ), 'info' );
+			set_transient( $notice_key, 1, 5 * MINUTE_IN_SECONDS );
+		}
+	}
+	pk_remember_requested_login_return( true );
+	wp_safe_redirect( pk_surface_login_url() );
+	exit;
+}
+add_action( 'init', 'pk_protect_wordpress_admin', -5 );
 
 function pk_enforce_session_timeout() {
 	if ( ! is_user_logged_in() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) return;
@@ -1806,12 +2265,15 @@ add_action( 'rest_api_init', function () {
 	$open = array( 'permission_callback' => 'pk_public_rest_allowed' );
 	register_rest_route( PK_NS, '/config', array( 'methods' => 'GET', 'callback' => 'pk_rest_config', 'permission_callback' => '__return_true' ) );
 	register_rest_route( PK_NS, '/identify', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_identify' ) ) );
+	register_rest_route( PK_NS, '/verify-code', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_verify_code' ) ) );
 	register_rest_route( PK_NS, '/verify-email', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_verify_email' ) ) );
 	register_rest_route( PK_NS, '/verify-phone', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_verify_phone' ) ) );
 	register_rest_route( PK_NS, '/resend-otp', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_resend_otp' ) ) );
 	register_rest_route( PK_NS, '/send-recovery', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_send_recovery' ) ) );
 	register_rest_route( PK_NS, '/admin-password-verify', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_admin_password_verify' ) ) );
 	register_rest_route( PK_NS, '/continue-later', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_continue_later' ) ) );
+	register_rest_route( PK_NS, '/counterpart/start', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_counterpart_start' ) ) );
+	register_rest_route( PK_NS, '/counterpart/skip', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_counterpart_skip' ) ) );
 	register_rest_route( PK_NS, '/bind-phone', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_bind_phone' ) ) );
 	register_rest_route( PK_NS, '/webauthn/register/options', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_webauthn_register_options' ) ) );
 	register_rest_route( PK_NS, '/webauthn/register/verify', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_webauthn_register_verify' ) ) );
@@ -1822,6 +2284,7 @@ add_action( 'rest_api_init', function () {
 	register_rest_route( PK_NS, '/totp/recovery-verify', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_totp_recovery_verify' ) ) );
 	register_rest_route( PK_NS, '/backup/recovery-verify', array_merge( $open, array( 'methods' => 'POST', 'callback' => 'pk_rest_backup_recovery_verify' ) ) );
 	register_rest_route( PK_NS, '/session/status', array( 'methods' => 'GET', 'callback' => 'pk_rest_session_status', 'permission_callback' => function () { return is_user_logged_in(); } ) );
+	register_rest_route( PK_NS, '/account/factor/start', array( 'methods' => 'POST', 'callback' => 'pk_rest_account_factor_start', 'permission_callback' => 'pk_account_rest_allowed' ) );
 	register_rest_route( PK_NS, '/account/totp/start', array( 'methods' => 'POST', 'callback' => 'pk_rest_account_totp_start', 'permission_callback' => 'pk_account_rest_allowed' ) );
 	register_rest_route( PK_NS, '/account/totp/verify', array( 'methods' => 'POST', 'callback' => 'pk_rest_account_totp_verify', 'permission_callback' => 'pk_account_rest_allowed' ) );
 	register_rest_route( PK_NS, '/account/backup/regenerate', array( 'methods' => 'POST', 'callback' => 'pk_rest_account_backup_regenerate', 'permission_callback' => 'pk_account_rest_allowed' ) );
@@ -1867,6 +2330,7 @@ function pk_visit_count( $anchor_hash, $user_id = 0 ) {
 function pk_rest_identify( WP_REST_Request $r ) {
 	if ( ! pk_rate_limit( 'identify', 40, 300 ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many attempts. Try again shortly.' ), 429 );
 	$app_context = (bool) $r->get_param( 'appContext' );
+	$completion_intent = 'complete_security' === sanitize_key( (string) $r->get_param( 'intent' ) );
 	$s = pk_settings();
 	$identifier_mode = $app_context ? ( $s['app_identifier_mode'] ?? $s['identifier_mode'] ) : $s['identifier_mode'];
 	$dual_identifier = 'email_and_phone' === $identifier_mode;
@@ -1880,7 +2344,7 @@ function pk_rest_identify( WP_REST_Request $r ) {
 			return new WP_REST_Response( array( 'ok' => false, 'message' => 'Enter a valid email address and phone number.' ), 400 );
 		}
 		if ( ! pk_phone_provider_ready() ) {
-			return new WP_REST_Response( array( 'ok' => false, 'code' => 'phone_delivery_unavailable', 'message' => 'Email + phone sign-in needs a working WhatsApp or SMS provider. Ask the site administrator to configure PhoneKey.' ), 503 );
+			return new WP_REST_Response( array( 'ok' => false, 'code' => 'phone_delivery_unavailable', 'message' => 'Email + phone sign-in needs a working WhatsApp or SMS provider. Ask the site administrator to configure Key.kiwe.' ), 503 );
 		}
 		$id = array( 'type' => 'email', 'value' => $email );
 	} else {
@@ -1889,7 +2353,22 @@ function pk_rest_identify( WP_REST_Request $r ) {
 
 	if ( ! $id['type'] || ! pk_identifier_allowed( $id['type'], $app_context ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Enter a valid allowed email or phone.' ), 400 );
 	$type = $id['type']; $identifier = $id['value'];
-	$user_id = pk_find_user( $identifier, $type );
+	$pending_wordpress_owner = 'email' === $type ? pk_pending_wordpress_email_owner( $identifier ) : 0;
+	if ( $pending_wordpress_owner && pk_is_privileged( $pending_wordpress_owner ) ) {
+		// A pending administrator email remains attached to the original account.
+		// Strict setup still requires its WordPress password/passkey, so control of
+		// the requested mailbox alone can never grant privileged access.
+		$user_id = $pending_wordpress_owner;
+		pk_log( 'wordpress_pending_email_continuity', $user_id, array( 'strict' => 1 ), 'info' );
+	} elseif ( $pending_wordpress_owner ) {
+		return new WP_REST_Response( array(
+			'ok'      => false,
+			'code'    => 'wordpress_email_change_pending',
+			'message' => 'This address is waiting for confirmation on an existing WordPress account. Sign in with that account’s current email, then finish the email change from its profile.',
+		), 409 );
+	} else {
+		$user_id = pk_find_user( $identifier, $type );
+	}
 	if ( $dual_identifier ) {
 		$phone_user_id = pk_find_user( $pending_phone, 'phone' );
 		if ( $phone_user_id && ( ! $user_id || $phone_user_id !== $user_id ) ) {
@@ -1917,10 +2396,16 @@ function pk_rest_identify( WP_REST_Request $r ) {
 		}
 	}
 	$strict_now = 'verify_now' === $timing || ( 'progressive' === $timing && $visit_count >= absint( $s['progressive_visits'] ) );
+	$grace_used = (bool) get_user_meta( $user_id, 'pk_initial_unverified_login_used_at', true );
+	$grace_available = 'verify_later' === $timing && $is_new && ! $grace_used && ! pk_is_privileged( $user_id );
+	if ( ! $verified && ! $is_new ) {
+		$strict_now = true;
+	}
 	$known_device = pk_known_device_for_user( $user_id );
 	$mode = 'enroll_passkey';
 
 	if ( $creds > 0 && $verified ) $mode = 'login_passkey';
+	elseif ( $verified && ! $is_new && $creds < 1 ) $mode = 'verify_required';
 	elseif ( ! $verified && ! $is_new ) $mode = $strict_now ? 'verify_required' : 'unverified_return';
 	elseif ( ! $verified && $strict_now ) $mode = 'verify_required';
 
@@ -1948,8 +2433,11 @@ function pk_rest_identify( WP_REST_Request $r ) {
 		'anchor_type' => $type,
 		'identifier'  => $identifier,
 		'is_new'      => $is_new ? 1 : 0,
+		'can_later'   => $grace_available ? 1 : 0,
 		'mode'        => $mode,
+		'completion_intent' => $completion_intent ? 1 : 0,
 	);
+	if ( $pending_wordpress_owner ) $flow_meta['wordpress_pending_email_change'] = 1;
 	if ( $dual_identifier ) {
 		$flow_meta['dual_identifier'] = 1;
 		$flow_meta['dual_stage'] = $dual_stage;
@@ -1979,7 +2467,10 @@ function pk_rest_identify( WP_REST_Request $r ) {
 	$backup = pk_factor( $user_id, 'backup_code', 'backup' );
 	$response_type = $dual_stage ?: $type;
 	$response_identifier = 'phone' === $response_type ? 'phone ending ' . substr( preg_replace( '/[^0-9]/', '', $phone_target ), -4 ) : $identifier;
-	return rest_ensure_response( array(
+	$email_delivery_mode = ( $dual_identifier || 'new_device_verify' === $mode ) ? 'otp' : $s['email_delivery'];
+	$otp_dispatched = ( is_array( $phone_delivery ) && ! empty( $phone_delivery['ok'] ) )
+		|| ( true === $email_accepted && 'otp' === $email_delivery_mode );
+	$response = array(
 		'ok'           => true,
 		'token'        => $flow,
 		'mode'         => $mode,
@@ -1991,23 +2482,60 @@ function pk_rest_identify( WP_REST_Request $r ) {
 		'knownDevice'   => $known_device,
 		'verified'     => $known_device ? $verified : false,
 		'hasPasskey'   => $known_device ? ( $creds > 0 ) : false,
-		'canLater'     => ! $strict_now,
+		'canLater'     => $grace_available && ! $strict_now,
+		'isNew'        => $is_new,
+		'autoContinue' => $is_new && $grace_available && ! $strict_now && ! pk_is_privileged( $user_id ) && ! empty( $s['low_friction_signup'] ),
 		'phoneReady'   => pk_phone_provider_ready(),
 		'phoneDeliveryProvider' => is_array( $phone_delivery ) ? sanitize_key( $phone_delivery['provider'] ?? '' ) : '',
 		'phoneDeliveryMessage' => is_array( $phone_delivery ) ? sanitize_text_field( $phone_delivery['message'] ?? '' ) : '',
-		'emailDelivery'=> ( $dual_identifier || 'new_device_verify' === $mode ) ? 'otp' : $s['email_delivery'],
+		'emailDelivery'=> $email_delivery_mode,
 		'emailAccepted'=> $email_accepted,
+		'resendAfter'  => $otp_dispatched ? 60 : 0,
 		'canEmailRecovery' => (bool) ( $user && $user->user_email && pk_factor_verified( $user_id, 'email' ) ),
 		'hasTotp'      => $known_device && (bool) pk_totp_factor( $user_id ),
 		'hasBackup'    => $known_device && (bool) $backup,
 		'returnMessage'=> str_replace( array( '{name}', '{site}' ), array( $known_device ? $name : '', get_bloginfo( 'name' ) ), $s['return_message'] ),
-	) );
+		'security'     => pk_security_completion( $user_id ),
+	);
+	return rest_ensure_response( $response );
 }
 
 function pk_flow_user( $token ) {
 	$row = pk_token_row( 'flow', $token, false );
 	if ( ! $row ) return array( 0, null, array() );
 	return array( (int) $row['user_id'], $row, $row['meta_arr'] );
+}
+
+/**
+ * Resolve the factor awaiting proof from server-owned flow metadata.
+ *
+ * The browser may render stale UI after a counterpart or dual-identifier
+ * transition. It must never be trusted to choose which challenge is verified.
+ */
+function pk_flow_verification_type( $meta ) {
+	$mode = sanitize_key( $meta['mode'] ?? '' );
+	if ( 'counterpart_verify' === $mode ) {
+		$type = sanitize_key( $meta['counterpart_type'] ?? '' );
+		if ( in_array( $type, array( 'email', 'phone' ), true ) ) return $type;
+	}
+
+	$type = sanitize_key( $meta['dual_stage'] ?? '' );
+	if ( in_array( $type, array( 'email', 'phone' ), true ) ) return $type;
+
+	$type = sanitize_key( $meta['anchor_type'] ?? '' );
+	return in_array( $type, array( 'email', 'phone' ), true ) ? $type : '';
+}
+
+function pk_rest_verify_code( WP_REST_Request $r ) {
+	$flow_token = sanitize_text_field( $r->get_param( 'token' ) );
+	list( $user_id, $flow, $meta ) = pk_flow_user( $flow_token );
+	if ( ! $user_id ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'This session expired.' ), 403 );
+
+	$type = pk_flow_verification_type( $meta );
+	if ( 'phone' === $type ) return pk_rest_verify_phone( $r );
+	if ( 'email' === $type ) return pk_rest_verify_email( $r );
+
+	return new WP_REST_Response( array( 'ok' => false, 'message' => 'This verification session has no active code channel.' ), 400 );
 }
 
 function pk_flow_admin_password_verified( $meta ) {
@@ -2043,7 +2571,19 @@ function pk_rest_verify_email( WP_REST_Request $r ) {
 	}
 	$wpdb->update( pk_t( 'challenges' ), array( 'used' => 1, 'used_at' => pk_now() ), array( 'id' => (int) $row['id'] ) );
 	$user = get_userdata( $user_id );
-	pk_mark_factor_verified( $user_id, 'email', $user ? $user->user_email : '' );
+	$verified_email = $user ? $user->user_email : '';
+	if ( 'counterpart_verify' === ( $flow_meta['mode'] ?? '' ) && 'email' === ( $flow_meta['counterpart_type'] ?? '' ) ) {
+		$verified_email = pk_normalize_email( pk_decrypt( (string) ( $flow_meta['counterpart_identifier'] ?? '' ) ) );
+	}
+	pk_mark_factor_verified( $user_id, 'email', $verified_email );
+	$counterpart_user_id = pk_complete_counterpart_flow( $user_id, $flow_meta, 'email' );
+	if ( is_wp_error( $counterpart_user_id ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => $counterpart_user_id->get_error_message() ), 409 );
+	if ( $counterpart_user_id ) {
+		$next_meta = array_merge( $flow_meta, array( 'identity_verified_this_flow' => 1, 'skip_counterpart_prompt' => 1 ) );
+		$next_setup = pk_next_security_setup_response( $counterpart_user_id, $next_meta );
+		if ( $next_setup ) return rest_ensure_response( $next_setup );
+		return rest_ensure_response( pk_finish_login( $counterpart_user_id, 'counterpart_email_verified', true, array( 'skip_counterpart_prompt' => true ) ) );
+	}
 	if ( ! empty( $flow_meta['dual_identifier'] ) && ! empty( $flow_meta['pending_phone'] ) ) {
 		$phone = pk_normalize_phone( pk_decrypt( (string) $flow_meta['pending_phone'] ) );
 		$phone_digits = preg_replace( '/[^0-9]/', '', $phone );
@@ -2053,7 +2593,7 @@ function pk_rest_verify_email( WP_REST_Request $r ) {
 		$phone_factor = pk_factor( $user_id, 'phone', pk_hmac( $phone ) );
 		if ( ! $phone_factor || 'verified' !== $phone_factor['status'] ) {
 			if ( ! pk_phone_provider_ready() ) {
-				return new WP_REST_Response( array( 'ok' => false, 'message' => 'Email is verified, but phone delivery is unavailable. Ask the site administrator to configure PhoneKey.' ), 503 );
+				return new WP_REST_Response( array( 'ok' => false, 'message' => 'Email is verified, but phone delivery is unavailable. Ask the site administrator to configure Key.kiwe.' ), 503 );
 			}
 			$flow_meta['anchor_hash'] = pk_hmac( $phone );
 			$flow_meta['anchor_type'] = 'phone';
@@ -2076,6 +2616,7 @@ function pk_rest_verify_email( WP_REST_Request $r ) {
 				'token' => $phone_flow,
 				'identifier' => 'phone ending ' . substr( $phone_digits, -4 ),
 				'identifierType' => 'phone',
+				'resendAfter' => 60,
 				'phoneDeliveryProvider' => sanitize_key( $sent['provider'] ?? 'phone' ),
 				'phoneDeliveryMessage' => sanitize_text_field( $sent['message'] ?? '' ),
 			) );
@@ -2089,6 +2630,9 @@ function pk_rest_verify_email( WP_REST_Request $r ) {
 		pk_log( 'new_device_otp_verified', $user_id, array( 'factor' => 'email' ), 'success' );
 		return rest_ensure_response( array( 'ok' => true, 'next' => 'enroll_passkey', 'token' => $enroll_token, 'newDevice' => true ) );
 	}
+	$flow_meta['identity_verified_this_flow'] = 1;
+	$next_setup = pk_next_security_setup_response( $user_id, $flow_meta );
+	if ( $next_setup ) return rest_ensure_response( $next_setup );
 	return rest_ensure_response( array( 'ok' => true, 'next' => pk_credential_count( $user_id ) ? 'login_passkey' : 'enroll_passkey' ) );
 }
 
@@ -2114,7 +2658,18 @@ function pk_rest_verify_phone( WP_REST_Request $r ) {
 	if ( '' === $verified_phone && $f && ! empty( $f['factor_value'] ) ) {
 		$verified_phone = pk_decrypt( (string) $f['factor_value'] );
 	}
+	if ( 'counterpart_verify' === ( $flow_meta['mode'] ?? '' ) && 'phone' === ( $flow_meta['counterpart_type'] ?? '' ) ) {
+		$verified_phone = pk_normalize_phone( pk_decrypt( (string) ( $flow_meta['counterpart_identifier'] ?? '' ) ) );
+	}
 	pk_mark_factor_verified( $user_id, 'phone', $verified_phone );
+	$counterpart_user_id = pk_complete_counterpart_flow( $user_id, $flow_meta, 'phone' );
+	if ( is_wp_error( $counterpart_user_id ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => $counterpart_user_id->get_error_message() ), 409 );
+	if ( $counterpart_user_id ) {
+		$next_meta = array_merge( $flow_meta, array( 'identity_verified_this_flow' => 1, 'skip_counterpart_prompt' => 1 ) );
+		$next_setup = pk_next_security_setup_response( $counterpart_user_id, $next_meta );
+		if ( $next_setup ) return rest_ensure_response( $next_setup );
+		return rest_ensure_response( pk_finish_login( $counterpart_user_id, 'counterpart_phone_verified', true, array( 'skip_counterpart_prompt' => true ) ) );
+	}
 	if ( '' !== $verified_phone && class_exists( '\\DSA\\Commerce\\COD_Gate_Service' ) ) {
 		\DSA\Commerce\COD_Gate_Service::confirm_phone_for_cod( pk_hmac( $verified_phone ) );
 	}
@@ -2134,6 +2689,9 @@ function pk_rest_verify_phone( WP_REST_Request $r ) {
 		}
 		return rest_ensure_response( pk_finish_login( $user_id, 'admin_phone_bind', true ) );
 	}
+	$flow_meta['identity_verified_this_flow'] = 1;
+	$next_setup = pk_next_security_setup_response( $user_id, $flow_meta );
+	if ( $next_setup ) return rest_ensure_response( $next_setup );
 	return rest_ensure_response( array( 'ok' => true, 'next' => pk_credential_count( $user_id ) ? 'login_passkey' : 'enroll_passkey' ) );
 }
 
@@ -2141,17 +2699,24 @@ function pk_rest_resend_otp( WP_REST_Request $r ) {
 	$flow_token = sanitize_text_field( $r->get_param( 'token' ) );
 	list( $user_id, $flow, $meta ) = pk_flow_user( $flow_token );
 	if ( ! $user_id ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'This session expired.' ), 403 );
-	if ( ! pk_rate_limit( 'otp_resend|' . $user_id, 4, 600 ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many code requests. Try again in a few minutes.' ), 429 );
 
-	$type = sanitize_key( $meta['anchor_type'] ?? $r->get_param( 'type' ) );
+	$type = pk_flow_verification_type( $meta );
+	if ( in_array( $type, array( 'email', 'phone' ), true ) ) {
+		$resend_after = pk_otp_resend_after( $user_id, $type . '_otp' );
+		if ( $resend_after > 0 ) {
+			return new WP_REST_Response( array( 'ok' => false, 'resendAfter' => $resend_after, 'message' => 'Please wait before requesting another code.' ), 429 );
+		}
+	}
+	if ( ! pk_rate_limit( 'otp_resend|' . $user_id, 4, 600 ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many code requests. Try again in a few minutes.' ), 429 );
 	if ( 'email' === $type ) {
 		$user = get_userdata( $user_id );
-		$email = $user && $user->user_email ? $user->user_email : sanitize_email( $meta['identifier'] ?? '' );
+		$email = pk_normalize_email( $meta['identifier'] ?? '' );
+		if ( ! $email && $user && $user->user_email ) $email = strtolower( $user->user_email );
 		if ( ! $email ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'No email is available for this session.' ), 400 );
 		if ( ! pk_otp_target_allowed( $email ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many codes were sent to this address. Try again later.' ), 429 );
 		$delivery = pk_send_email_otp_or_link( $user_id, $email, $flow_token, 'otp' );
 		if ( empty( $delivery['accepted'] ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'WordPress could not hand this code to its mail transport. Ask the site administrator to check Kiwe Email and SMTP.' ), 503 );
-		return rest_ensure_response( array( 'ok' => true, 'method' => 'otp', 'message' => 'A new code was sent if email delivery is available.' ) );
+		return rest_ensure_response( array( 'ok' => true, 'method' => 'otp', 'resendAfter' => 60, 'message' => 'A new code was sent if email delivery is available.' ) );
 	}
 
 	if ( 'phone' === $type ) {
@@ -2169,7 +2734,7 @@ function pk_rest_resend_otp( WP_REST_Request $r ) {
 		if ( ! pk_otp_target_allowed( $phone ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many codes were sent to this number. Try again later.' ), 429 );
 		$sent = pk_send_phone_otp( $user_id, $phone, $flow_token );
 		if ( empty( $sent['ok'] ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => $sent['message'] ?? 'Phone delivery failed.' ), 400 );
-		return rest_ensure_response( array( 'ok' => true, 'method' => 'otp', 'provider' => sanitize_key( $sent['provider'] ?? 'phone' ), 'message' => $sent['message'] ?? 'A new code was sent.' ) );
+		return rest_ensure_response( array( 'ok' => true, 'method' => 'otp', 'resendAfter' => 60, 'provider' => sanitize_key( $sent['provider'] ?? 'phone' ), 'message' => $sent['message'] ?? 'A new code was sent.' ) );
 	}
 
 	return new WP_REST_Response( array( 'ok' => false, 'message' => 'This session cannot resend an OTP.' ), 400 );
@@ -2191,24 +2756,317 @@ function pk_rest_admin_password_verify( WP_REST_Request $r ) {
 
 	$meta['admin_password_verified_at'] = time();
 	$meta['admin_password_ip_hash'] = pk_hmac( pk_ip() );
-	$meta['mode'] = 'enroll_passkey';
 	update_user_meta( $user_id, 'pk_admin_password_bound_at', current_time( 'mysql' ) );
 	delete_user_meta( $user_id, 'pk_force_reenroll' );
+	pk_flag_admin_enrollment( $user_id );
+	if ( ! pk_account_verified( $user_id ) ) {
+		if ( $user->user_email && is_email( $user->user_email ) ) {
+			$email_meta = array_merge( $meta, array(
+				'mode' => 'privileged_email_verify',
+				'anchor_type' => 'email',
+				'identifier' => strtolower( $user->user_email ),
+			) );
+			$verified_flow = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $email_meta );
+			$delivery = pk_send_email_otp_or_link( $user_id, strtolower( $user->user_email ), $verified_flow, 'otp' );
+			if ( ! empty( $delivery['accepted'] ) ) {
+				pk_log( 'admin_password_success', $user_id, array( 'mode' => 'email_verification' ), 'success' );
+				return rest_ensure_response( array(
+					'ok' => true,
+					'token' => $verified_flow,
+					'mode' => 'verify_required',
+					'next' => 'verify_email',
+					'identifierType' => 'email',
+					'emailDelivery' => 'otp',
+					'resendAfter' => 60,
+					'verified' => false,
+				) );
+			}
+		}
+
+		$phone = pk_user_phone( $user_id );
+		if ( $phone && pk_phone_provider_ready() && pk_otp_target_allowed( $phone ) ) {
+			$phone_meta = array_merge( $meta, array(
+				'mode' => 'privileged_phone_verify',
+				'anchor_type' => 'phone',
+				'identifier' => $phone,
+			) );
+			$verified_flow = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $phone_meta );
+			$delivery = pk_send_phone_otp( $user_id, $phone, $verified_flow );
+			if ( ! empty( $delivery['ok'] ) && 'email_fallback' !== ( $delivery['provider'] ?? '' ) ) {
+				pk_log( 'admin_password_success', $user_id, array( 'mode' => 'phone_verification' ), 'success' );
+				return rest_ensure_response( array(
+					'ok' => true,
+					'token' => $verified_flow,
+					'mode' => 'verify_required',
+					'next' => 'verify_phone',
+					'identifierType' => 'phone',
+					'emailDelivery' => 'otp',
+					'phoneDeliveryProvider' => sanitize_key( $delivery['provider'] ?? 'phone' ),
+					'phoneDeliveryMessage' => sanitize_text_field( $delivery['message'] ?? '' ),
+					'resendAfter' => 60,
+					'verified' => false,
+				) );
+			}
+		}
+
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'Your password is correct, but neither recovery email nor phone verification could be delivered. Ask the site administrator to check Kiwe Email and Key.kiwe.' ), 503 );
+	}
+	$has_passkey = pk_credential_count( $user_id ) > 0;
+	$meta['mode'] = $has_passkey ? 'login_passkey' : 'enroll_passkey';
 	$verified_flow = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $meta );
-	pk_log( 'admin_password_success', $user_id, array( 'mode' => 'passkey_enrollment' ), 'success' );
+	pk_log( 'admin_password_success', $user_id, array( 'mode' => $has_passkey ? 'passkey_assertion' : 'passkey_enrollment' ), 'success' );
 	return rest_ensure_response( array(
 		'ok' => true,
 		'token' => $verified_flow,
-		'mode' => 'enroll_passkey',
+		'mode' => $meta['mode'],
+		'next' => $meta['mode'],
 		'verified' => pk_account_verified( $user_id ),
 	) );
 }
 
+function pk_merge_counterpart_accounts( $current_user_id, $owner_user_id, $counterpart_type ) {
+	global $wpdb;
+	$current_user_id = pk_canonical_user_id( $current_user_id );
+	$owner_user_id = pk_canonical_user_id( $owner_user_id );
+	if ( ! $current_user_id || ! $owner_user_id ) return new WP_Error( 'pk_merge_invalid', 'The account link could not be completed.' );
+	if ( $current_user_id === $owner_user_id ) return $current_user_id;
+	if ( pk_is_privileged( $current_user_id ) || pk_is_privileged( $owner_user_id ) ) {
+		return new WP_Error( 'pk_merge_privileged', 'Accounts with publishing or administrator privileges cannot be merged automatically. Ask an administrator to review them.' );
+	}
+
+	$canonical = 'email' === $counterpart_type ? $owner_user_id : $current_user_id;
+	$alias = $canonical === $current_user_id ? $owner_user_id : $current_user_id;
+	$factors = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . pk_t( 'factors' ) . ' WHERE user_id=%d ORDER BY id ASC', $alias ), ARRAY_A );
+	foreach ( (array) $factors as $factor ) {
+		$secret = ! empty( $factor['factor_value'] ) ? pk_decrypt( (string) $factor['factor_value'] ) : '';
+		pk_upsert_factor(
+			$canonical,
+			(string) $factor['factor_type'],
+			(string) $factor['status'],
+			(string) $factor['factor_hash'],
+			pk_meta_decode( $factor['meta'] ?? '' ),
+			$secret
+		);
+	}
+	$wpdb->update( pk_t( 'credentials' ), array( 'user_id' => $canonical ), array( 'user_id' => $alias ) );
+	$wpdb->update( pk_t( 'trusted_devices' ), array( 'user_id' => $canonical ), array( 'user_id' => $alias ) );
+	$phone = pk_factor( $canonical, 'phone' );
+	if ( $phone ) {
+		update_user_meta( $canonical, 'pk_phone_hash', (string) $phone['factor_hash'] );
+		$phone_meta = pk_meta_decode( $phone['meta'] ?? '' );
+		if ( ! empty( $phone_meta['last4'] ) ) update_user_meta( $canonical, 'pk_phone_last4', sanitize_text_field( $phone_meta['last4'] ) );
+	}
+	$canonical_user = get_userdata( $canonical );
+	if ( $canonical_user && is_email( $canonical_user->user_email ) ) update_user_meta( $canonical, 'pk_email_hash', pk_hmac( strtolower( $canonical_user->user_email ) ) );
+	$linked = array_filter( array_map( 'absint', (array) get_user_meta( $canonical, 'pk_linked_user_ids', true ) ) );
+	$linked[] = $alias;
+	update_user_meta( $canonical, 'pk_linked_user_ids', array_values( array_unique( $linked ) ) );
+	update_user_meta( $alias, 'pk_merged_into', $canonical );
+	delete_user_meta( $canonical, 'pk_counterpart_prompt_skipped_at' );
+	pk_log( 'accounts_linked', $canonical, array( 'alias_user_id' => $alias, 'method' => 'verified_counterpart' ), 'success' );
+	return $canonical;
+}
+
+function pk_complete_counterpart_flow( $user_id, $flow_meta, $verified_type ) {
+	$type = sanitize_key( $flow_meta['counterpart_type'] ?? '' );
+	if ( 'counterpart_verify' !== ( $flow_meta['mode'] ?? '' ) || $type !== $verified_type ) return 0;
+	$identifier = pk_decrypt( (string) ( $flow_meta['counterpart_identifier'] ?? '' ) );
+	$identifier = 'email' === $type ? pk_normalize_email( $identifier ) : pk_normalize_phone( $identifier );
+	if ( ! $identifier ) return new WP_Error( 'pk_counterpart_expired', 'The recovery contact session expired. Start again.' );
+	$owner = pk_find_user_raw( $identifier, $type );
+	$expected_owner = absint( $flow_meta['counterpart_owner_id'] ?? 0 );
+	if ( $owner && $owner !== $expected_owner && pk_canonical_user_id( $owner ) !== pk_canonical_user_id( $user_id ) ) {
+		return new WP_Error( 'pk_counterpart_changed', 'That recovery contact changed accounts while you were verifying it. Start again.' );
+	}
+	if ( $owner && pk_canonical_user_id( $owner ) !== pk_canonical_user_id( $user_id ) ) {
+		return pk_merge_counterpart_accounts( $user_id, $owner, $type );
+	}
+	if ( 'email' === $type ) {
+		$updated = wp_update_user( array( 'ID' => (int) $user_id, 'user_email' => $identifier ) );
+		if ( is_wp_error( $updated ) ) return $updated;
+		update_user_meta( $user_id, 'pk_email_hash', pk_hmac( $identifier ) );
+	} else {
+		update_user_meta( $user_id, 'pk_phone_hash', pk_hmac( $identifier ) );
+		update_user_meta( $user_id, 'pk_phone_last4', substr( preg_replace( '/[^0-9]/', '', $identifier ), -4 ) );
+	}
+	delete_user_meta( $user_id, 'pk_counterpart_prompt_skipped_at' );
+	pk_log( 'counterpart_bound', $user_id, array( 'factor' => $type ), 'success' );
+	return (int) $user_id;
+}
+
+/**
+ * Start an OTP proof for an already-resolved WordPress user and factor.
+ *
+ * Account discovery, creation, linking, and privileged password proof remain
+ * the caller's responsibility. This helper only owns the flow token, pending
+ * factor, delivery channel, and resend contract.
+ */
+function pk_start_factor_otp( $user_id, $type, $identifier, $flow_meta = array() ) {
+	$user_id = pk_canonical_user_id( absint( $user_id ) );
+	$type = sanitize_key( $type );
+	$identifier = 'email' === $type ? pk_normalize_email( $identifier ) : pk_normalize_phone( $identifier );
+	if ( ! $user_id || ! in_array( $type, array( 'email', 'phone' ), true ) || ! $identifier ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'Enter a valid email address or phone number.' ), 400 );
+	}
+
+	$next_meta = array_merge( (array) $flow_meta, array(
+		'anchor_type' => $type,
+		'identifier'  => $identifier,
+	) );
+	$next_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $next_meta );
+	$factor_meta = 'phone' === $type
+		? array( 'last4' => substr( preg_replace( '/[^0-9]/', '', $identifier ), -4 ) )
+		: array();
+	pk_upsert_factor( $user_id, $type, 'pending', pk_hmac( $identifier ), $factor_meta, $identifier );
+
+	$response = array(
+		'ok'             => true,
+		'token'          => $next_token,
+		'mode'           => sanitize_key( $next_meta['mode'] ?? 'verify_required' ),
+		'next'           => 'verify_' . $type,
+		'identifierType' => $type,
+		'emailDelivery'  => 'otp',
+		'resendAfter'    => 60,
+	);
+
+	if ( 'email' === $type ) {
+		if ( ! pk_otp_target_allowed( $identifier ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many codes were sent to this address. Try again later.' ), 429 );
+		}
+		$delivery = pk_send_email_otp_or_link( $user_id, $identifier, $next_token, 'otp' );
+		if ( empty( $delivery['accepted'] ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => 'The email verification code could not be sent.' ), 503 );
+		}
+		return $response;
+	}
+
+	if ( ! pk_phone_provider_ready() ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'Phone verification is not configured. You can add it later.' ), 503 );
+	}
+	if ( ! pk_otp_target_allowed( $identifier ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many codes were sent to this number. Try again later.' ), 429 );
+	}
+	$delivery = pk_send_phone_otp( $user_id, $identifier, $next_token );
+	if ( empty( $delivery['ok'] ) || 'email_fallback' === ( $delivery['provider'] ?? '' ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'The phone itself could not receive a code. You can add it later.' ), 503 );
+	}
+	$response['phoneDeliveryProvider'] = sanitize_key( $delivery['provider'] ?? 'phone' );
+	$response['phoneDeliveryMessage'] = sanitize_text_field( $delivery['message'] ?? '' );
+	return $response;
+}
+
+function pk_rest_account_factor_start( WP_REST_Request $r ) {
+	$user_id = pk_canonical_user_id( get_current_user_id() );
+	$type = sanitize_key( (string) $r->get_param( 'factor' ) );
+	$input = sanitize_text_field( (string) $r->get_param( 'identifier' ) );
+	$user = $user_id ? get_userdata( $user_id ) : null;
+
+	if ( ! $user || ! in_array( $type, array( 'email', 'phone' ), true ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'This account factor is not available.' ), 400 );
+	}
+	if ( pk_is_privileged( $user_id ) ) {
+		return new WP_REST_Response( array(
+			'ok'      => false,
+			'code'    => 'privileged_setup_required',
+			'message' => 'Privileged accounts must continue through WordPress password confirmation and strict Key.kiwe setup.',
+		), 403 );
+	}
+
+	if ( 'email' === $type ) {
+		$identifier = pk_normalize_email( $input );
+		$current_email = pk_normalize_email( $user->user_email );
+		if ( ! $identifier || ! $current_email || ! hash_equals( $current_email, $identifier ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => 'Save and confirm this email as your WordPress account email before verifying it.' ), 409 );
+		}
+	} else {
+		$identifier = pk_normalize_phone( $input );
+		if ( ! $identifier ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => 'Enter a valid phone number including its country code.' ), 400 );
+		}
+		$owner = pk_find_user_raw( $identifier, 'phone' );
+		if ( $owner && pk_canonical_user_id( $owner ) !== $user_id ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => 'That phone number already belongs to another account. Use the full Key.kiwe setup journey to resolve it safely.' ), 409 );
+		}
+	}
+
+	$exact_factor = pk_factor( $user_id, $type, pk_hmac( $identifier ) );
+	if ( $exact_factor && 'verified' === ( $exact_factor['status'] ?? '' ) ) {
+		return rest_ensure_response( array( 'ok' => true, 'alreadyVerified' => true, 'identifierType' => $type ) );
+	}
+	if ( pk_factor_verified( $user_id, $type ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'This account already has a verified ' . $type . '. Use the account-change flow before replacing it.' ), 409 );
+	}
+
+	$result = pk_start_factor_otp( $user_id, $type, $identifier, array(
+		'mode'              => 'profile_factor_verify',
+		'completion_intent' => 1,
+	) );
+	if ( $result instanceof WP_REST_Response ) return $result;
+	pk_log( 'profile_factor_verification_started', $user_id, array( 'factor' => $type ), 'info' );
+	return rest_ensure_response( $result );
+}
+
+function pk_rest_counterpart_start( WP_REST_Request $r ) {
+	$token = sanitize_text_field( $r->get_param( 'token' ) );
+	$input = sanitize_text_field( $r->get_param( 'identifier' ) );
+	list( $user_id, $flow, $meta ) = pk_flow_user( $token );
+	if ( ! $user_id || 'counterpart_prompt' !== ( $meta['mode'] ?? '' ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'This recovery-contact session expired.' ), 403 );
+	if ( pk_is_privileged( $user_id ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Privileged account recovery contacts use the strict setup flow.' ), 403 );
+	$id = pk_detect_identifier( $input );
+	$type = sanitize_key( $meta['counterpart_type'] ?? '' );
+	if ( empty( $id['type'] ) || $id['type'] !== $type ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Enter a valid ' . $type . '.' ), 400 );
+	$identifier = $id['value'];
+	$owner = pk_find_user_raw( $identifier, $type );
+	if ( $owner && pk_canonical_user_id( $owner ) !== pk_canonical_user_id( $user_id ) && ( pk_is_privileged( $owner ) || pk_is_privileged( $user_id ) ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'That contact belongs to a privileged account and cannot be merged automatically.' ), 409 );
+	}
+	$next_meta = array(
+		'mode' => 'counterpart_verify',
+		'counterpart_type' => $type,
+		'counterpart_identifier' => pk_encrypt( $identifier ),
+		'counterpart_owner_id' => absint( $owner ),
+	);
+	$result = pk_start_factor_otp( $user_id, $type, $identifier, $next_meta );
+	if ( $result instanceof WP_REST_Response ) return $result;
+	$result['next'] = 'verify_counterpart';
+	return rest_ensure_response( $result );
+}
+
+function pk_rest_counterpart_skip( WP_REST_Request $r ) {
+	$token = sanitize_text_field( $r->get_param( 'token' ) );
+	list( $user_id, $flow, $meta ) = pk_flow_user( $token );
+	if ( ! $user_id || 'counterpart_prompt' !== ( $meta['mode'] ?? '' ) || pk_is_privileged( $user_id ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'This action is not available.' ), 403 );
+	update_user_meta( $user_id, 'pk_counterpart_prompt_skipped_at', current_time( 'mysql' ) );
+	update_user_meta( $user_id, 'pk_security_setup_skipped_at', current_time( 'mysql' ) );
+	pk_log( 'counterpart_prompt_skipped', $user_id, array( 'factor' => sanitize_key( $meta['counterpart_type'] ?? '' ) ), 'info' );
+	return rest_ensure_response( pk_finish_login( $user_id, 'counterpart_skipped', false, array( 'skip_counterpart_prompt' => true ) ) );
+}
+
 function pk_rest_continue_later( WP_REST_Request $r ) {
 	$token = sanitize_text_field( $r->get_param( 'token' ) );
-	list( $user_id ) = pk_flow_user( $token );
+	list( $user_id, $flow, $meta ) = pk_flow_user( $token );
 	if ( ! $user_id ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'This session expired.' ), 403 );
 	if ( pk_is_privileged( $user_id ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Privileged accounts must complete secure setup.' ), 403 );
+	$authenticated_user = is_user_logged_in() && pk_canonical_user_id( get_current_user_id() ) === pk_canonical_user_id( $user_id );
+	$verified_in_flow = ! empty( $meta['identity_verified_this_flow'] );
+	if ( pk_account_verified( $user_id ) && ( $verified_in_flow || $authenticated_user ) ) {
+		update_user_meta( $user_id, 'pk_security_setup_skipped_at', current_time( 'mysql' ) );
+		if ( pk_missing_counterpart_type( $user_id ) ) {
+			update_user_meta( $user_id, 'pk_counterpart_prompt_skipped_at', current_time( 'mysql' ) );
+		}
+		pk_log( 'security_setup_deferred', $user_id, array( 'state' => 'partial' ), 'info' );
+		return rest_ensure_response( pk_finish_login( $user_id, 'verified_partial', false, array( 'skip_counterpart_prompt' => true ) ) );
+	}
+	$grace_used = (bool) get_user_meta( $user_id, 'pk_initial_unverified_login_used_at', true );
+	if ( empty( $meta['is_new'] ) || empty( $meta['can_later'] ) || $grace_used ) {
+		pk_log( 'continue_later_blocked', $user_id, array( 'reason' => 'first_login_grace_exhausted' ), 'warning' );
+		return new WP_REST_Response( array(
+			'ok'              => false,
+			'factor_required' => true,
+			'next'            => 'verify_required',
+			'message'         => 'This account has used its one-time setup grace. Verify an email address or phone number to continue.',
+		), 403 );
+	}
 	if ( pk_account_verified( $user_id ) || pk_force_factor_for_account( $user_id ) ) {
 		pk_log( 'continue_later_blocked', $user_id, array( 'reason' => 'factor_required' ), 'warning' );
 		return new WP_REST_Response( array(
@@ -2218,6 +3076,7 @@ function pk_rest_continue_later( WP_REST_Request $r ) {
 			'message'         => 'Please confirm it is you to continue.',
 		), 403 );
 	}
+	update_user_meta( $user_id, 'pk_initial_unverified_login_used_at', current_time( 'mysql' ) );
 	pk_log( 'unverified_continue_later', $user_id, array(), 'info' );
 	return rest_ensure_response( pk_finish_login( $user_id, 'lenient_unverified', false ) );
 }
@@ -2228,20 +3087,50 @@ function pk_rest_bind_phone( WP_REST_Request $r ) {
 	list( $user_id, $flow, $flow_meta ) = pk_flow_user( $token );
 	if ( ! $user_id || ! $phone ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Could not bind phone.' ), 400 );
 	if ( pk_phone_provider_ready() && ! pk_otp_target_allowed( $phone ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many codes were sent to this number. Try again later.' ), 429 );
+	$flow_meta['anchor_type'] = 'phone';
+	$flow_meta['identifier'] = $phone;
+	unset( $flow_meta['dual_stage'] );
+	$verification_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $flow_meta );
 	update_user_meta( $user_id, 'pk_phone_hash', pk_hmac( $phone ) );
 	update_user_meta( $user_id, 'pk_phone_last4', substr( preg_replace( '/[^0-9]/', '', $phone ), -4 ) );
-	$sent = pk_phone_provider_ready() ? pk_send_phone_otp( $user_id, $phone, $token ) : array( 'ok' => false );
-	$status = ! empty( $sent['ok'] ) ? 'otp_sent' : 'pending';
-	pk_upsert_factor( $user_id, 'phone', $status, pk_hmac( $phone ), array( 'phone' => $phone, 'provider_ready' => pk_phone_provider_ready() ? 1 : 0, 'otp_dispatched' => ! empty( $sent['ok'] ) ? 1 : 0 ) );
-	pk_log( 'phone_bound', $user_id, array( 'provider_ready' => pk_phone_provider_ready() ? 1 : 0, 'otp_dispatched' => ! empty( $sent['ok'] ) ? 1 : 0 ), 'info' );
-	if ( 'bind_phone_required' === ( $flow_meta['mode'] ?? '' ) && pk_is_privileged( $user_id ) && empty( $sent['ok'] ) && pk_credential_count( $user_id ) > 0 ) {
+	$sent = pk_phone_provider_ready() ? pk_send_phone_otp( $user_id, $phone, $verification_token ) : array( 'ok' => false );
+	$phone_proof_dispatched = ! empty( $sent['ok'] ) && 'email_fallback' !== ( $sent['provider'] ?? '' );
+	$status = $phone_proof_dispatched ? 'otp_sent' : 'pending';
+	pk_upsert_factor( $user_id, 'phone', $status, pk_hmac( $phone ), array( 'phone' => $phone, 'provider_ready' => pk_phone_provider_ready() ? 1 : 0, 'otp_dispatched' => $phone_proof_dispatched ? 1 : 0 ) );
+	pk_log( 'phone_bound', $user_id, array( 'provider_ready' => pk_phone_provider_ready() ? 1 : 0, 'otp_dispatched' => $phone_proof_dispatched ? 1 : 0 ), 'info' );
+	if ( 'bind_phone_required' === ( $flow_meta['mode'] ?? '' ) && pk_is_privileged( $user_id ) && ! $phone_proof_dispatched && ! pk_account_verified( $user_id ) ) {
+		return new WP_REST_Response( array( 'ok' => false, 'message' => 'The phone number is saved, but this admin account must verify its email or phone before access can continue.' ), 503 );
+	}
+	if ( 'bind_phone_required' === ( $flow_meta['mode'] ?? '' ) && pk_is_privileged( $user_id ) && ! $phone_proof_dispatched && pk_credential_count( $user_id ) > 0 ) {
 		if ( pk_step_up_required( $user_id ) ) {
 			$login_token = pk_issue_token( 'stepup', $user_id, PK_FLOW_TTL, array( 'method' => 'admin_phone_pending' ) );
 			return rest_ensure_response( array( 'ok' => true, 'requiresTotp' => true, 'loginToken' => $login_token, 'totpEnrolled' => (bool) pk_totp_factor( $user_id ) ) );
 		}
 		return rest_ensure_response( pk_finish_login( $user_id, 'admin_phone_pending', true, array( 'pending_phone_verification' => true ) ) );
 	}
-	return rest_ensure_response( array( 'ok' => true, 'phoneReady' => pk_phone_provider_ready(), 'otpDispatched' => ! empty( $sent['ok'] ) ) );
+	return rest_ensure_response( array(
+		'ok' => true,
+		'token' => $verification_token,
+		'identifierType' => 'phone',
+		'phoneReady' => pk_phone_provider_ready(),
+		'otpDispatched' => $phone_proof_dispatched,
+		'resendAfter' => $phone_proof_dispatched ? 60 : 0,
+	) );
+}
+
+function pk_privileged_bind_phone_response( $user_id, $flow_meta = array() ) {
+	$user_id = absint( $user_id );
+	if ( ! $user_id || ! pk_is_privileged( $user_id ) || pk_admin_phone_bound( $user_id ) ) return array();
+	$bind_meta = array_merge( (array) $flow_meta, array( 'mode' => 'bind_phone_required' ) );
+	$bind_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $bind_meta );
+	pk_log( 'admin_phone_required', $user_id, array( 'phone_ready' => pk_phone_provider_ready() ? 1 : 0 ), 'info' );
+	return array(
+		'ok'                => true,
+		'bindPhoneRequired' => true,
+		'token'             => $bind_token,
+		'phoneReady'        => pk_phone_provider_ready(),
+		'message'           => 'Add a phone number to finish securing this privileged WordPress account.',
+	);
 }
 
 function pk_rest_webauthn_register_options( WP_REST_Request $r ) {
@@ -2280,6 +3169,12 @@ function pk_rest_webauthn_register_verify( WP_REST_Request $r ) {
 	$row = pk_token_row( 'webauthn_register', $token, true );
 	if ( ! $row ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Passkey setup expired.' ), 403 );
 	$user_id = (int) $row['user_id'];
+	$source_flow_meta = array();
+	$source_flow_token = sanitize_text_field( $row['meta_arr']['flow_token'] ?? '' );
+	if ( $source_flow_token ) {
+		list( $source_user_id, $source_flow, $source_flow_meta ) = pk_flow_user( $source_flow_token );
+		if ( (int) $source_user_id !== $user_id ) $source_flow_meta = array();
+	}
 	$cred = (array) $r->get_param( 'credential' );
 	try {
 		$response = (array) ( $cred['response'] ?? array() );
@@ -2304,16 +3199,11 @@ function pk_rest_webauthn_register_verify( WP_REST_Request $r ) {
 		if ( ! pk_account_verified( $user_id ) && ! pk_is_privileged( $user_id ) ) {
 			return rest_ensure_response( pk_finish_login( $user_id, 'passkey_pending', true, array( 'pending_verification' => true ) ) );
 		}
-		if ( pk_is_privileged( $user_id ) && ! pk_admin_phone_verified( $user_id ) ) {
-			$bind_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, array( 'mode' => 'bind_phone_required', 'admin_password_verified_at' => time() ) );
-			pk_log( 'admin_phone_required', $user_id, array( 'phone_ready' => pk_phone_provider_ready() ? 1 : 0 ), 'info' );
-			return rest_ensure_response( array(
-				'ok'                => true,
-				'bindPhoneRequired' => true,
-				'token'             => $bind_token,
-				'phoneReady'        => pk_phone_provider_ready(),
-				'message'           => 'Add a phone number to finish securing this admin account.',
-			) );
+		$bind_phone = pk_privileged_bind_phone_response( $user_id, $source_flow_meta );
+		if ( $bind_phone ) return rest_ensure_response( $bind_phone );
+		if ( pk_is_privileged( $user_id ) && ! pk_admin_enrollment_complete( $user_id ) ) {
+			pk_flag_admin_enrollment( $user_id );
+			return new WP_REST_Response( array( 'ok' => false, 'code' => 'privileged_setup_incomplete', 'message' => 'Verify a recovery email or phone before administrator access.' ), 403 );
 		}
 		if ( pk_step_up_required( $user_id ) ) {
 			$login_token = pk_issue_token( 'stepup', $user_id, PK_FLOW_TTL, array( 'method' => 'passkey_register' ) );
@@ -2328,12 +3218,15 @@ function pk_rest_webauthn_register_verify( WP_REST_Request $r ) {
 
 function pk_rest_webauthn_login_options( WP_REST_Request $r ) {
 	$token = sanitize_text_field( $r->get_param( 'token' ) );
-	list( $user_id ) = pk_flow_user( $token );
+	list( $user_id, $flow, $flow_meta ) = pk_flow_user( $token );
 	if ( ! $user_id ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'This session expired.' ), 403 );
 	$creds = pk_credentials_for_user( $user_id );
 	if ( ! $creds ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'No passkey is enrolled.' ), 404 );
 	$challenge = pk_rand_token( 32 );
-	$login_token = pk_issue_token( 'webauthn_login', $user_id, PK_CHALLENGE_TTL, array( 'flow_token' => $token ), $challenge );
+	$login_token = pk_issue_token( 'webauthn_login', $user_id, PK_CHALLENGE_TTL, array(
+		'flow_token' => $token,
+		'completion_intent' => ! empty( $flow_meta['completion_intent'] ) ? 1 : 0,
+	), $challenge );
 	$allow = array();
 	foreach ( $creds as $c ) {
 		$allow[] = array( 'type' => 'public-key', 'id' => $c['credential_id'], 'transports' => json_decode( $c['transports'] ?: '[]', true ) ?: array() );
@@ -2357,6 +3250,12 @@ function pk_rest_webauthn_login_verify( WP_REST_Request $r ) {
 	$row = pk_token_row( 'webauthn_login', $token, true );
 	if ( ! $row ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Passkey challenge expired.' ), 403 );
 	$user_id = (int) $row['user_id'];
+	$source_flow_meta = array();
+	$source_flow_token = sanitize_text_field( $row['meta_arr']['flow_token'] ?? '' );
+	if ( $source_flow_token ) {
+		list( $source_user_id, $source_flow, $source_flow_meta ) = pk_flow_user( $source_flow_token );
+		if ( (int) $source_user_id !== $user_id ) $source_flow_meta = array();
+	}
 	$cred = (array) $r->get_param( 'credential' );
 	try {
 		$raw_id = (string) ( $cred['rawId'] ?? $cred['id'] ?? '' );
@@ -2380,9 +3279,19 @@ function pk_rest_webauthn_login_verify( WP_REST_Request $r ) {
 		if ( 1 !== $ok ) throw new Exception( 'Bad signature' );
 		$wpdb->update( pk_t( 'credentials' ), array( 'sign_count' => max( $old, $count ), 'last_used_at' => pk_now() ), array( 'id' => (int) $db['id'] ) );
 		pk_log( 'passkey_success', $user_id, array( 'credential' => (int) $db['id'] ), 'success' );
+		$bind_phone = pk_privileged_bind_phone_response( $user_id, $source_flow_meta );
+		if ( $bind_phone ) return rest_ensure_response( $bind_phone );
+		if ( pk_is_privileged( $user_id ) && ! pk_admin_enrollment_complete( $user_id ) ) {
+			pk_flag_admin_enrollment( $user_id );
+			return new WP_REST_Response( array( 'ok' => false, 'code' => 'privileged_setup_incomplete', 'message' => 'Complete WordPress password confirmation and recovery verification before administrator access.' ), 403 );
+		}
 		if ( pk_step_up_required( $user_id ) ) {
 			$login_token = pk_issue_token( 'stepup', $user_id, PK_FLOW_TTL, array( 'method' => 'passkey_login' ) );
 			return rest_ensure_response( array( 'ok' => true, 'requiresTotp' => true, 'loginToken' => $login_token, 'totpEnrolled' => (bool) pk_totp_factor( $user_id ) ) );
+		}
+		if ( ! pk_is_privileged( $user_id ) && ! empty( $row['meta_arr']['completion_intent'] ) ) {
+			$next_setup = pk_next_security_setup_response( $user_id, array( 'completion_intent' => 1, 'identity_verified_this_flow' => 1 ) );
+			if ( $next_setup ) return rest_ensure_response( $next_setup );
 		}
 		return rest_ensure_response( pk_finish_login( $user_id, 'passkey_login', true ) );
 	} catch ( Throwable $e ) {
@@ -2393,7 +3302,7 @@ function pk_rest_webauthn_login_verify( WP_REST_Request $r ) {
 
 function pk_rest_send_recovery( WP_REST_Request $r ) {
 	$token = sanitize_text_field( $r->get_param( 'token' ) );
-	list( $user_id ) = pk_flow_user( $token );
+	list( $user_id, $flow, $meta ) = pk_flow_user( $token );
 	$user = $user_id ? get_userdata( $user_id ) : null;
 	if ( ! $user ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'This session expired.' ), 403 );
 	if ( ! $user->user_email || ! pk_factor_verified( $user_id, 'email' ) ) {
@@ -2401,10 +3310,14 @@ function pk_rest_send_recovery( WP_REST_Request $r ) {
 		return new WP_REST_Response( array( 'ok' => false, 'message' => 'Self-service recovery is not available. Contact the site admin.' ), 403 );
 	}
 	if ( ! pk_otp_target_allowed( $user->user_email ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'Too many codes were sent to this address. Try again later.' ), 429 );
-	$delivery = pk_send_email_otp_or_link( $user_id, $user->user_email, $token, 'otp' );
+	$meta['anchor_type'] = 'email';
+	$meta['identifier'] = strtolower( $user->user_email );
+	unset( $meta['dual_identifier'], $meta['dual_stage'], $meta['pending_phone'], $meta['counterpart_type'], $meta['counterpart_identifier'], $meta['counterpart_owner_id'] );
+	$verification_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $meta );
+	$delivery = pk_send_email_otp_or_link( $user_id, $user->user_email, $verification_token, 'otp' );
 	if ( empty( $delivery['accepted'] ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'WordPress could not hand the recovery code to its mail transport.' ), 503 );
 	pk_log( 'recovery_attempt', $user_id, array( 'channel' => 'email' ), 'info' );
-	return rest_ensure_response( array( 'ok' => true, 'message' => 'If recovery is available, a code has been sent.' ) );
+	return rest_ensure_response( array( 'ok' => true, 'token' => $verification_token, 'identifierType' => 'email', 'resendAfter' => 60, 'message' => 'If recovery is available, a code has been sent.' ) );
 }
 
 function pk_rest_totp_login_verify( WP_REST_Request $r ) {
@@ -2560,7 +3473,7 @@ add_action( 'wp_footer', function () {
 
 if ( ! defined( 'KIWE_AUTH_ADMIN_UI' ) || ! KIWE_AUTH_ADMIN_UI ) {
 	add_action( 'admin_menu', function () {
-		add_menu_page( 'PhoneKey', 'PhoneKey', pk_admin_cap(), 'phonekey', 'pk_admin_page', 'dashicons-shield-alt', 58 );
+		add_menu_page( 'Key.kiwe', 'Key.kiwe', pk_admin_cap(), 'phonekey', 'pk_admin_page', 'dashicons-shield-alt', 58 );
 	} );
 }
 
@@ -2626,11 +3539,11 @@ function pk_admin_page() {
 function pk_admin_notices_inline( $s ) {
 	$phone_modes = array( $s['identifier_mode'], $s['app_identifier_mode'] ?? $s['identifier_mode'] );
 	if ( array_intersect( $phone_modes, array( 'phone', 'email_or_phone', 'email_and_phone' ) ) && ! pk_phone_provider_ready() ) {
-		echo '<div class="notice notice-warning"><p><strong>Kiwe Auth:</strong> Phone identifiers are enabled, but no SMS or WhatsApp webhook is configured. Configure PhoneKey before allowing phone verification.</p></div>';
+		echo '<div class="notice notice-warning"><p><strong>Kiwe Auth:</strong> Phone identifiers are enabled, but no SMS or WhatsApp webhook is configured. Configure Key.kiwe before allowing phone verification.</p></div>';
 	}
 	$email_test = get_option( 'dsa_email_last_test', array() );
 	if ( ! empty( $s['whatsapp_email_fallback'] ) && empty( $email_test['success'] ) ) {
-		echo '<div class="notice notice-warning"><p><strong>PhoneKey fallback:</strong> Email delivery has not passed a Kiwe test. <a href="' . esc_url( admin_url( 'admin.php?page=kiwe-email&tab=diagnostics' ) ) . '">Configure and test Kiwe Email</a> before client use.</p></div>';
+		echo '<div class="notice notice-warning"><p><strong>Key.kiwe fallback:</strong> Email delivery has not passed a Kiwe test. <a href="' . esc_url( admin_url( 'admin.php?page=kiwe-email&tab=diagnostics' ) ) . '">Configure and test Kiwe Email</a> before client use.</p></div>';
 	}
 	if ( ! function_exists( 'openssl_verify' ) ) {
 		echo '<div class="notice notice-error"><p><strong>Kiwe Auth:</strong> OpenSSL is required for passkey signature verification.</p></div>';
@@ -2666,19 +3579,29 @@ function pk_admin_settings( $s ) {
 				<p><label>Installed app verification<br><select name="pk[app_verification_timing]"><?php pk_select_options( array( 'verify_now'=>'Verify on first app launch', 'verify_later'=>'Allow setup later', 'progressive'=>'Progressive after visits' ), $s['app_verification_timing'] ?? 'verify_now' ); ?></select></label><br><span class="description">Applies to non-privileged app visitors. Administrator and manager accounts still follow their role policy for password/passkey protection.</span></p>
 				<p><label>Default country code<br><input name="pk[default_country_code]" value="<?php echo esc_attr( $s['default_country_code'] ); ?>"></label></p>
 				<p><label>New signup role<br><select name="pk[signup_role]"><?php foreach ( $roles as $role => $info ) { if ( pk_role_is_high_privilege_role( $role ) ) continue; echo '<option value="' . esc_attr( $role ) . '" ' . selected( $s['signup_role'], $role, false ) . '>' . esc_html( translate_user_role( $info['name'] ) ) . '</option>'; } ?></select></label></p>
+				<p><label><input type="checkbox" name="pk[low_friction_signup]" value="1" <?php checked( ! empty( $s['low_friction_signup'] ) ); ?>> One-step first subscriber signup</label><br><span class="description">A new low-risk account signs in immediately after entering its email or phone. Existing accounts still require proof, so knowing an identifier alone can never take over an account.</span></p>
 			</div>
 			<div class="pk-card"><h2>Verification</h2>
 				<p><label>Signup timing<br><select name="pk[verification_timing]"><?php pk_select_options( array( 'verify_now'=>'Verify now', 'verify_later'=>'Verify later', 'progressive'=>'Progressive after visits' ), $s['verification_timing'] ); ?></select></label></p>
+				<p><label><input type="checkbox" name="pk[purchase_verified_contact]" value="1" <?php checked( ! empty( $s['purchase_verified_contact'] ) ); ?>> Require one verified contact before purchase</label><br><span class="description">WooCommerce checkout requires a signed-in account with either a verified email or verified phone. Full email + phone + passkey completion remains recommended but is not required to purchase.</span></p>
 				<p><label>Progressive visit threshold<br><input type="number" min="1" max="20" name="pk[progressive_visits]" value="<?php echo esc_attr( $s['progressive_visits'] ); ?>"></label></p>
+				<p class="description"><strong>Verify later</strong> lets a new ordinary subscriber defer verification once; their next sign-in requires verification. In <strong>Email or phone</strong> mode, Key.kiwe automatically offers the missing recovery email or phone in the same Profile sheet. Privileged accounts never receive the grace or skip option.</p>
 				<p><label>Email delivery<br><select name="pk[email_delivery]"><?php pk_select_options( array( 'magic_link'=>'Magic link', 'otp'=>'OTP code' ), $s['email_delivery'] ); ?></select></label><br><span class="description">Uses <code>wp_mail()</code>. Configure authenticated transactional SMTP in Kiwe &gt; Email; an accepted handoff does not prove inbox delivery.</span></p>
 				<p><label>Return message<br><input class="large-text" name="pk[return_message]" value="<?php echo esc_attr( $s['return_message'] ); ?>"></label></p>
+			</div>
+			<div class="pk-card"><h2>WordPress Access</h2>
+				<p><label><input type="checkbox" name="pk[replace_wp_login]" value="1" <?php checked( ! empty( $s['replace_wp_login'] ) ); ?>> Send normal <code>wp-login.php</code> sign-ins to the Key.kiwe Profile sheet</label></p>
+				<p><label><input type="checkbox" name="pk[protect_wp_admin]" value="1" <?php checked( ! empty( $s['protect_wp_admin'] ) ); ?>> Protect <code>/wp-admin</code> from visitors and non-privileged accounts</label></p>
+				<p class="description">Frontend admin-bar visibility remains in Kiwe &gt; Settings &gt; Dock, so there is one canonical control.</p>
+				<p class="description"><strong>Recovery invariant:</strong> enable login/admin protection only after the private SecureTrack break-glass URL has been tested. Password reset and logout actions remain available.</p>
+				<p class="description">Header triggers (no dock required): <code>data-dsa-open-module=&quot;profile&quot;</code> and <code>data-dsa-open-module=&quot;search&quot;</code>. Add an <code>aria-label</code> to the same button or icon link.</p>
 			</div>
 			<div class="pk-card"><h2>Phone Providers</h2>
 				<p><label>SMS provider label<br><input class="regular-text" name="pk[sms_provider]" value="<?php echo esc_attr( $s['sms_provider'] ); ?>"></label></p>
 				<p><label>SMS webhook URL<br><input class="large-text" name="pk[sms_webhook]" value="<?php echo esc_attr( $s['sms_webhook'] ); ?>"></label></p>
-				<p><label>WhatsApp adapter<br><select name="pk[whatsapp_mode]"><?php pk_select_options( array( 'phonekey_gateway'=>'Kiwe PhoneKey Gateway (signed)', 'generic_webhook'=>'Legacy generic webhook' ), $s['whatsapp_mode'] ?? 'phonekey_gateway' ); ?></select></label></p>
+				<p><label>WhatsApp adapter<br><select name="pk[whatsapp_mode]"><?php pk_select_options( array( 'phonekey_gateway'=>'Key.kiwe Gateway (signed)', 'generic_webhook'=>'Legacy generic webhook' ), $s['whatsapp_mode'] ?? 'phonekey_gateway' ); ?></select></label></p>
 				<p><label>WhatsApp provider label<br><input class="regular-text" name="pk[whatsapp_provider]" value="<?php echo esc_attr( $s['whatsapp_provider'] ); ?>" placeholder="Kiwe WhatsApp"></label></p>
-				<p><label>WhatsApp gateway URL<br><input class="large-text" type="url" name="pk[whatsapp_webhook]" value="<?php echo esc_attr( $s['whatsapp_webhook'] ); ?>" placeholder="https://phonekey.kiwelaunch.com/v1/otp"></label></p>
+				<p><label>WhatsApp gateway URL<br><input class="large-text" type="url" name="pk[whatsapp_webhook]" value="<?php echo esc_attr( $s['whatsapp_webhook'] ); ?>" placeholder="https://key.kiwelaunch.com/v1/otp"></label></p>
 				<p><label>Gateway tenant key ID<br><input class="regular-text" name="pk[whatsapp_key_id]" value="<?php echo esc_attr( $s['whatsapp_key_id'] ?? '' ); ?>"></label></p>
 				<p><label>Gateway signing secret<br><input class="regular-text" type="password" autocomplete="new-password" name="pk[whatsapp_secret]" value="" placeholder="<?php echo ! empty( $s['whatsapp_secret'] ) ? 'Stored securely — leave blank to keep' : 'Paste the tenant secret'; ?>"></label></p>
 				<p><label><input type="checkbox" name="pk[whatsapp_email_fallback]" value="1" <?php checked( ! empty( $s['whatsapp_email_fallback'] ) ); ?>> Immediately email the same OTP when WhatsApp is unavailable or rejected</label></p>

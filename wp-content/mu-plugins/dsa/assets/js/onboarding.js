@@ -18,15 +18,16 @@
 		buttons.forEach( function ( button, i ) {
 			if ( i === step ) button.setAttribute( 'aria-current', 'step' ); else button.removeAttribute( 'aria-current' );
 		} );
-		previous.disabled = step === 0;
-		next.hidden = step === panels.length - 1;
+		if ( previous ) previous.disabled = step === 0;
+		if ( next ) next.hidden = step === panels.length - 1;
 		save.hidden = step !== panels.length - 1;
-		status.textContent = ( config.saved && step === panels.length - 1 ? 'Saved · ' : '' ) + 'Step ' + ( step + 1 ) + ' of ' + panels.length;
+		status.textContent = config.singleSection ? ( config.saved ? 'Saved' : '' ) : ( config.saved && step === panels.length - 1 ? 'Saved · ' : '' ) + 'Step ' + ( step + 1 ) + ' of ' + panels.length;
 		window.scrollTo( { top: Math.max( 0, root.offsetTop - 40 ), behavior: 'smooth' } );
 	}
-	buttons.forEach( function ( button ) { button.addEventListener( 'click', function () { show( button.dataset.kiweStepButton ); } ); } );
-	previous.addEventListener( 'click', function () { show( step - 1 ); } );
-	next.addEventListener( 'click', function () {
+	buttons.forEach( function ( button, index ) { button.addEventListener( 'click', function () { show( index ); } ); } );
+	panels.forEach( function ( panel, index ) { const number = panel.querySelector( '.kiwe-onboarding__intro > span' ); if ( number ) { number.hidden = !! config.singleSection; number.textContent = String( index + 1 ).padStart( 2, '0' ); } } );
+	if ( previous ) previous.addEventListener( 'click', function () { show( step - 1 ); } );
+	if ( next ) next.addEventListener( 'click', function () {
 		const invalid = panels[ step ].querySelector( ':invalid' );
 		if ( invalid ) { invalid.reportValidity(); invalid.focus(); return; }
 		show( step + 1 );
@@ -45,32 +46,6 @@
 	}
 
 	root.addEventListener( 'click', function ( event ) {
-		const resourceSelect = event.target.closest( '[data-kiwe-resource-select]' );
-		if ( resourceSelect && window.wp && wp.media ) {
-			event.preventDefault();
-			const frame = wp.media( { title: config.chooseResources || 'Upload resources to the Media Library', button: { text: config.useResources || 'Add uploaded resources' }, multiple: true } );
-			frame.on( 'open', function () {
-				if ( frame.content && frame.content.mode ) frame.content.mode( 'upload' );
-			} );
-			frame.on( 'select', function () {
-				const list = root.querySelector( '[data-kiwe-resources]' );
-				if ( ! list ) return;
-				const existing = new Set( Array.from( list.querySelectorAll( '[data-kiwe-resource-row]' ) ).map( function ( row ) { return String( row.dataset.attachmentId ); } ) );
-				let index = Array.from( list.querySelectorAll( 'input[name*="[resources][items]"]' ) ).reduce( function ( highest, input ) {
-					const match = input.name.match( /items\]\[(\d+)\]/ );
-					return match ? Math.max( highest, Number( match[1] ) ) : highest;
-				}, -1 ) + 1;
-				frame.state().get( 'selection' ).each( function ( model ) {
-					const item = model.toJSON();
-					if ( ! item.id || existing.has( String( item.id ) ) || list.children.length >= 100 ) return;
-					existing.add( String( item.id ) );
-					list.appendChild( buildResourceRow( item, index++ ) );
-				} );
-				const empty = root.querySelector( '[data-kiwe-resource-empty]' );
-				if ( empty ) empty.hidden = list.children.length > 0;
-			} );
-			frame.open();
-		}
 		const select = event.target.closest( '[data-kiwe-media-select]' );
 		if ( select && window.wp && wp.media ) {
 			event.preventDefault();
@@ -93,52 +68,6 @@
 		if ( clearTone ) {
 			root.querySelectorAll( 'input[name="context[brand][tone]"]' ).forEach( function ( input ) { input.checked = false; } );
 		}
-		const addPlannedPage = event.target.closest( '[data-kiwe-add-planned-page]' );
-		if ( addPlannedPage ) {
-			const list = root.querySelector( '[data-kiwe-planned-pages]' );
-			const template = root.querySelector( '[data-kiwe-planned-page-template]' );
-			if ( list && template && list.children.length < 20 ) {
-				const index = Array.from( list.querySelectorAll( '[data-kiwe-planned-page-row]' ) ).reduce( function ( highest, row ) {
-					const input = row.querySelector( 'input[name]' );
-					const match = input ? input.name.match( /plannedPages\]\[(\d+)\]/ ) : null;
-					return match ? Math.max( highest, Number( match[1] ) ) : highest;
-				}, -1 ) + 1;
-				const holder = document.createElement( 'div' );
-				holder.innerHTML = template.innerHTML.replaceAll( '__INDEX__', String( index ) );
-				const row = holder.firstElementChild;
-				if ( row ) { list.appendChild( row ); row.querySelector( 'input' ).focus(); }
-			}
-		}
-		const removePlannedPage = event.target.closest( '[data-kiwe-remove-planned-page]' );
-		if ( removePlannedPage ) {
-			const list = root.querySelector( '[data-kiwe-planned-pages]' );
-			const row = removePlannedPage.closest( '[data-kiwe-planned-page-row]' );
-			if ( list && row ) {
-				if ( list.querySelectorAll( '[data-kiwe-planned-page-row]' ).length > 1 ) row.remove();
-				else { row.querySelector( 'input' ).value = ''; row.querySelector( 'select' ).value = 'primary'; }
-			}
-		}
-		const addTeamMember = event.target.closest( '[data-kiwe-add-team-member]' );
-		if ( addTeamMember ) {
-			const list = root.querySelector( '[data-kiwe-team-members]' );
-			const template = root.querySelector( '[data-kiwe-team-member-template]' );
-			if ( list && template && list.children.length < 30 ) {
-				const index = Array.from( list.querySelectorAll( '[data-kiwe-team-member]' ) ).reduce( function ( highest, row ) {
-					const input = row.querySelector( 'input[name*="[members]"]' );
-					const match = input ? input.name.match( /members\]\[(\d+)\]/ ) : null;
-					return match ? Math.max( highest, Number( match[1] ) ) : highest;
-				}, -1 ) + 1;
-				const holder = document.createElement( 'div' );
-				holder.innerHTML = template.innerHTML.replaceAll( '__INDEX__', String( index ) );
-				const row = holder.firstElementChild;
-				if ( row ) { list.appendChild( row ); row.querySelector( '[data-kiwe-person-user]' ).focus(); }
-			}
-		}
-		const removeTeamMember = event.target.closest( '[data-kiwe-remove-team-member]' );
-		if ( removeTeamMember ) {
-			const row = removeTeamMember.closest( '[data-kiwe-team-member]' );
-			if ( row ) row.remove();
-		}
 		const addService = event.target.closest( '[data-kiwe-add-service]' );
 		if ( addService ) {
 			const list = root.querySelector( '[data-kiwe-services]' );
@@ -160,36 +89,8 @@
 			const row = removeService.closest( '[data-kiwe-service-row]' );
 			if ( row ) row.remove();
 		}
-		const removeResource = event.target.closest( '[data-kiwe-resource-remove]' );
-		if ( removeResource ) {
-			const row = removeResource.closest( '[data-kiwe-resource-row]' );
-			if ( row ) row.remove();
-			const list = root.querySelector( '[data-kiwe-resources]' );
-			const empty = root.querySelector( '[data-kiwe-resource-empty]' );
-			if ( empty ) empty.hidden = !! ( list && list.children.length );
-		}
-	} );
 
-	function escapeHtml( value ) {
-		return String( value || '' ).replace( /[&<>"']/g, function ( character ) { return ( { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' } )[ character ]; } );
-	}
-	function buildResourceRow( item, index ) {
-		const article = document.createElement( 'article' );
-		article.className = 'kiwe-resource-card';
-		article.dataset.kiweResourceRow = '';
-		article.dataset.attachmentId = String( item.id );
-		const roles = config.resourceRoles || { reference:'Design reference', hero:'Hero or campaign', product:'Product', gallery:'Gallery', document:'Document or certificate', video:'Video', other:'Other' };
-		const options = Object.keys( roles ).map( function ( role ) { return '<option value="' + escapeHtml( role ) + '"' + ( role === 'reference' ? ' selected' : '' ) + '>' + escapeHtml( roles[ role ] ) + '</option>'; } ).join( '' );
-		const previewUrl = item.sizes && item.sizes.thumbnail ? item.sizes.thumbnail.url : ( item.type === 'image' ? item.url : '' );
-		const extension = item.subtype || String( item.filename || 'FILE' ).split( '.' ).pop();
-		const base = 'context[resources][items][' + index + ']';
-		article.innerHTML = '<div class="kiwe-resource-card__preview">' + ( previewUrl ? '<img src="' + escapeHtml( previewUrl ) + '" alt="">' : '<span>' + escapeHtml( String( extension ).toUpperCase() ) + '</span>' ) + '</div>'
-			+ '<div class="kiwe-resource-card__body"><strong>' + escapeHtml( item.title || item.filename || ( 'Attachment #' + item.id ) ) + '</strong><small>' + escapeHtml( item.mime || item.type || '' ) + '</small>'
-			+ '<input type="hidden" name="' + base + '[attachmentId]" value="' + Number( item.id ) + '"><label><span>Intended role</span><select name="' + base + '[role]">' + options + '</select></label>'
-			+ '<label><span>Owner note (optional)</span><textarea name="' + base + '[note]" rows="2" placeholder="Use on About page, packaging certificate, homepage film…"></textarea></label></div>'
-			+ '<button type="button" class="button-link-delete" data-kiwe-resource-remove>Remove</button>';
-		return article;
-	}
+	} );
 
 	root.addEventListener( 'change', function ( event ) {
 		const userSelect = event.target.closest( '[data-kiwe-person-user]' );
@@ -207,7 +108,7 @@
 			if ( imageInput ) imageInput.value = profile.imageId || 0;
 			if ( imagePreview ) imagePreview.innerHTML = profile.imageUrl ? '<img src="' + String( profile.imageUrl ).replace( /"/g, '&quot;' ) + '" alt="">' : '<em>No image selected</em>';
 		}
-		if ( event.target.matches( '[data-kiwe-team-toggle] input' ) ) syncTeam();
+
 		if ( event.target.matches( '[data-kiwe-service-source]' ) ) {
 			const note = root.querySelector( '[data-kiwe-service-source-note]' );
 			if ( note ) note.textContent = event.target.value ? 'Save once to bind this source and load its existing services and taxonomies.' : 'Entries will remain an owner-approved plan until a developer binds a custom post type.';
@@ -224,7 +125,7 @@
 	if ( commerceToggle ) { commerceToggle.addEventListener( 'change', syncCommerce ); syncCommerce(); }
 	const industrySector = root.querySelector( '[data-kiwe-industry-sector]' );
 	function syncIndustryFields() {
-		const food = industrySector && industrySector.value === 'food_beverage';
+		const food = ( industrySector ? industrySector.value : config.industrySector ) === 'food_beverage';
 		root.querySelectorAll( '[data-kiwe-food-field]' ).forEach( function ( field ) {
 			field.hidden = ! food;
 			field.toggleAttribute( 'inert', ! food );
@@ -232,13 +133,6 @@
 	}
 	if ( industrySector ) industrySector.addEventListener( 'change', syncIndustryFields );
 	syncIndustryFields();
-	const teamFields = root.querySelector( '[data-kiwe-team-fields]' );
-	function syncTeam() {
-		const selected = root.querySelector( '[data-kiwe-team-toggle] input:checked' );
-		const enabled = selected && selected.value === '1';
-		if ( teamFields ) { teamFields.hidden = ! enabled; teamFields.toggleAttribute( 'inert', ! enabled ); }
-	}
-	syncTeam();
 
 	const phone = root.querySelector( '[data-kiwe-public-phone]' );
 	const whatsappSame = root.querySelector( '[data-kiwe-whatsapp-same]' );
@@ -269,5 +163,15 @@
 	if ( sellingMode ) sellingMode.addEventListener( 'change', syncCountryLists );
 	if ( shippingMode ) shippingMode.addEventListener( 'change', syncCountryLists );
 	syncCountryLists();
-	show( Number.isInteger( Number( config.startStep ) ) ? Number( config.startStep ) : 0 );
+	const serviceToggle = root.querySelector( '[data-kiwe-services-toggle]' );
+	const serviceFields = root.querySelector( '[data-kiwe-services-fields]' );
+	function syncServices() {
+		if ( ! serviceToggle || ! serviceFields ) return;
+		serviceFields.hidden = ! serviceToggle.checked;
+		serviceFields.disabled = ! serviceToggle.checked;
+	}
+	if ( serviceToggle ) serviceToggle.addEventListener( 'change', syncServices );
+	syncServices();
+	const initial = panels.findIndex( function ( panel ) { return Number( panel.dataset.kiweStep ) === Number( config.startStep ); } );
+	show( config.saved ? panels.length - 1 : Math.max( 0, initial ) );
 }() );

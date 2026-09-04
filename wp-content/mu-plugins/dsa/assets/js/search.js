@@ -1,16 +1,8 @@
 const requestCache = new Map();
 let activeController = null;
-const searchMemory = { query: '', scope: '', prefix: '' };
+const searchMemory = { query: '', scope: '', prefix: '', sort: 'latest' };
 const bricksBridgeMemory = new Map();
 let bricksReconcileBound = false;
-
-function noStoreHeaders( headers ) {
-	return Object.assign( {
-		'Accept': 'application/json',
-		'Cache-Control': 'no-cache, no-store, must-revalidate',
-		'Pragma': 'no-cache',
-	}, headers || {} );
-}
 
 function escapeHtml( value ) {
 	return String( value == null ? '' : value ).replace( /[&<>'"]/g, function ( character ) {
@@ -62,6 +54,28 @@ function resultGroup( label, items, root ) {
 
 function activeFilter( root ) {
 	return String( root._dsaSearchScope || root.dataset.dsaSearchFilter || 'all' );
+}
+
+function activeSort( root ) {
+	return root._dsaSearchSort === 'popular' ? 'popular' : 'latest';
+}
+
+function renderSorts( root, data ) {
+	const container = root.querySelector( '[data-dsa-search-sort-options]' );
+	if ( ! container ) return;
+	const config = root._dsaSearchConfig || {};
+	const popularAvailable = typeof data.popularAvailable === 'boolean' ? data.popularAvailable : Boolean( config.popularEnabled );
+	const selected = activeSort( root );
+	const options = [ { id: 'latest', label: 'Latest' } ];
+	if ( popularAvailable ) options.push( { id: 'popular', label: 'Popular' } );
+	if ( selected === 'popular' && ! popularAvailable ) {
+		root._dsaSearchSort = 'latest';
+		root.dataset.dsaSearchSort = 'latest';
+	}
+	container.innerHTML = options.map( function ( option ) {
+		const active = option.id === activeSort( root );
+		return '<button type="button" class="dsa-search-filter dsa-search-sort' + ( active ? ' is-active' : '' ) + '" data-dsa-search-sort="' + option.id + '" aria-pressed="' + ( active ? 'true' : 'false' ) + '">' + option.label + ( active ? '<span aria-hidden="true">&times;</span>' : '' ) + '</button>';
+	} ).join( '' );
 }
 
 function renderFilters( root, data ) {
@@ -132,13 +146,14 @@ function renderResults( root, data ) {
 
 	root._dsaSearchPayload = data;
 	renderFilters( root, data );
+	renderSorts( root, data );
 	renderAlphabet( root, data );
 	const filter = activeFilter( root );
 	const visibleTotal = filter === 'products' ? ( data.products || [] ).length : ( filter === 'posts' ? ( data.posts || [] ).length : ( filter === 'authors' ? ( data.authors || [] ).length : ( filter === 'categories' ? ( data.categories || [] ).length : total ) ) );
 	results.innerHTML = visibleTotal
 		? ( filter === 'all' || filter === 'products' ? resultGroup( 'Products', data.products, root ) : '' ) + ( filter === 'all' || filter === 'posts' ? resultGroup( 'Posts', data.posts, root ) : '' ) + ( filter === 'all' || filter === 'authors' ? resultGroup( 'Authors', data.authors, root ) : '' ) + ( filter === 'all' || filter === 'categories' ? resultGroup( 'Categories', data.categories, root ) : '' )
 		: '<div class="dsa-search-empty"><strong>No matches yet.</strong><span>Try another word.</span></div>';
-	if ( status ) status.textContent = query ? visibleTotal + ( visibleTotal === 1 ? ' result' : ' results' ) + ' for “' + query + '”' : '';
+	if ( status ) status.textContent = ( query ? visibleTotal + ( visibleTotal === 1 ? ' result' : ' results' ) + ' for “' + query + '” · ' : '' ) + ( activeSort( root ) === 'popular' ? 'Popular' : 'Latest' );
 	results.classList.remove( 'is-ghost' );
 	root.classList.remove( 'is-loading' );
 	bindQuickAddButtons( root );
@@ -360,13 +375,58 @@ function cacheSet( key, value ) {
 	requestCache.set( key, value );
 }
 
+function editorialInitialPayload( config, scope ) {
+	const context = config.context || {};
+	const families = context.families || {};
+	const boot = window.DSA_DATA || {};
+	const posts = boot.links && Array.isArray( boot.links.posts ) ? boot.links.posts : [];
+	if ( context.hasCommerce || families.posts === false || ! [ 'all', 'posts' ].includes( scope ) || ! posts.length ) {
+		return null;
+	}
+
+	const recent = posts.slice( 0, Number( config.limit ) || 6 ).map( function ( post, index ) {
+		return {
+			id: Number( post.id ) || index + 1,
+			type: 'post',
+			typeLabel: 'Post',
+			title: String( post.title || '' ),
+			titleHtml: escapeHtml( post.title || '' ),
+			excerpt: '',
+			excerptHtml: '',
+			url: String( post.url || '' ),
+			image: String( post.image || '' ),
+		};
+	} ).filter( function ( post ) { return post.title && post.url; } );
+
+	return recent.length ? {
+		query: '',
+		scope: scope,
+		prefix: '',
+		sort: 'latest',
+		families: Object.assign( { products: false, posts: true, authors: false, categories: false }, families ),
+		alphabetEnabled: false,
+		alphabet: [],
+		hasCommerce: false,
+		products: [],
+		posts: recent,
+		authors: [],
+		categories: [],
+		total: recent.length,
+		cached: true,
+		source: 'boot',
+		popularAvailable: Boolean( config.popularEnabled ),
+	} : null;
+}
+
 async function requestResults( root, config, query ) {
 	const scope = activeFilter( root );
 	const prefix = String( root._dsaSearchPrefix || '' );
+	const sort = activeSort( root );
 	searchMemory.query = query;
 	searchMemory.scope = scope;
 	searchMemory.prefix = prefix;
-	const key = scope + '|' + prefix + '|' + query.toLocaleLowerCase();
+	searchMemory.sort = sort;
+	const key = scope + '|' + sort + '|' + prefix + '|' + query.toLocaleLowerCase();
 	bridgeBricksLiveSearch( query || prefix, scope, config );
 	if ( requestCache.has( key ) ) {
 		renderResults( root, requestCache.get( key ) );
@@ -392,14 +452,13 @@ async function requestResults( root, config, query ) {
 	url.searchParams.set( 'limit', String( config.limit || 6 ) );
 	url.searchParams.set( 'scope', scope );
 	url.searchParams.set( 'prefix', prefix );
-	url.searchParams.set( '_dsa_rt', String( Date.now() ) + '-' + Math.floor( Math.random() * 100000 ) );
-
+	url.searchParams.set( 'sort', sort );
 	try {
 		const response = await fetch( url.toString(), {
 			method: 'GET',
 			credentials: 'same-origin',
-			cache: 'no-store',
-			headers: noStoreHeaders(),
+			cache: 'default',
+			headers: { 'Accept': 'application/json' },
 			signal: activeController.signal,
 		} );
 		if ( ! response.ok ) {
@@ -437,6 +496,8 @@ export function mount( root, config ) {
 	root._dsaSearchScope = searchMemory.scope || ( [ 'products', 'posts', 'authors', 'categories' ].includes( initialScope ) ? initialScope : 'all' );
 	root.dataset.dsaSearchFilter = root._dsaSearchScope;
 	root._dsaSearchPrefix = searchMemory.prefix || '';
+	root._dsaSearchSort = searchMemory.sort === 'popular' ? 'popular' : 'latest';
+	root.dataset.dsaSearchSort = root._dsaSearchSort;
 	const form = root.querySelector( '[data-dsa-search-form]' );
 	const input = root.querySelector( '[data-dsa-search-input]' );
 	const clear = root.querySelector( '[data-dsa-search-clear]' );
@@ -470,6 +531,16 @@ export function mount( root, config ) {
 			root._dsaSearchScope = requested;
 			root.dataset.dsaSearchFilter = root._dsaSearchScope;
 			root._dsaSearchPrefix = '';
+			requestResults( root, config, input.value.trim() );
+			return;
+		}
+		const sortButton = event.target.closest( '[data-dsa-search-sort]' );
+		if ( sortButton ) {
+			event.preventDefault();
+			event.stopPropagation();
+			const requestedSort = sortButton.dataset.dsaSearchSort === 'popular' ? 'popular' : 'latest';
+			root._dsaSearchSort = requestedSort === activeSort( root ) && requestedSort === 'popular' ? 'latest' : requestedSort;
+			root.dataset.dsaSearchSort = root._dsaSearchSort;
 			requestResults( root, config, input.value.trim() );
 			return;
 		}
@@ -513,7 +584,14 @@ export function mount( root, config ) {
 		} );
 	}
 
-	requestResults( root, config, input.value.trim() );
+	const initialQuery = input.value.trim();
+	const initialPayload = ! initialQuery && ! root._dsaSearchPrefix ? editorialInitialPayload( config, root._dsaSearchScope ) : null;
+	if ( initialPayload ) {
+		cacheSet( root._dsaSearchScope + '|latest||', initialPayload );
+		renderResults( root, initialPayload );
+	} else {
+		requestResults( root, config, initialQuery );
+	}
 	window.requestAnimationFrame( function () {
 		if ( root.isConnected && shouldAutofocusSearchInput( root, config ) ) {
 			input.focus( { preventScroll: true } );

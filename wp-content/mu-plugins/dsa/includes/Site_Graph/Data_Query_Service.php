@@ -433,7 +433,25 @@ final class Data_Query_Service {
 			$query_args['kiwe_media_search'] = 1;
 			add_filter( 'posts_search', $search_filter, 20, 2 );
 		}
-		$query = new \WP_Query( $query_args );
+		// A public media catalog must not reveal draft/private/password-protected parents.
+		$visibility_filter = null;
+		if ( ! $private ) {
+			$query_args['kiwe_public_media'] = true;
+			$visibility_filter = static function ( string $where, \WP_Query $query ): string {
+				if ( ! $query->get( 'kiwe_public_media' ) ) return $where;
+				global $wpdb;
+				$types = array_values( get_post_types( [ 'publicly_queryable'=>true ] ) );
+				$types = array_values( array_unique( array_merge( $types, [ 'post', 'page' ] ) ) );
+				$placeholders = implode( ',', array_fill( 0, count( $types ), '%s' ) );
+				return $where . $wpdb->prepare( " AND {$wpdb->posts}.post_password = '' AND ({$wpdb->posts}.post_parent = 0 OR EXISTS (SELECT 1 FROM {$wpdb->posts} kiwe_media_parent WHERE kiwe_media_parent.ID = {$wpdb->posts}.post_parent AND kiwe_media_parent.post_status = 'publish' AND kiwe_media_parent.post_password = '' AND kiwe_media_parent.post_type IN ({$placeholders})))", ...$types );
+			};
+			add_filter( 'posts_where', $visibility_filter, 20, 2 );
+		}
+		try {
+			$query = new \WP_Query( $query_args );
+		} finally {
+			if ( $visibility_filter ) remove_filter( 'posts_where', $visibility_filter, 20 );
+		}
 		if ( $search_filter ) {
 			remove_filter( 'posts_search', $search_filter, 20 );
 		}

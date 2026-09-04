@@ -257,6 +257,13 @@ final class SecureTrack_Ip_Service {
 			'ip_status'    => $ip_row->status ?? '',
 		];
 
+		// A manual trusted-IP decision is an explicit administrator allow rule.
+		// It must win over inherited country/subnet containment or the UI can say
+		// "Trusted" while the same address remains locked out.
+		if ( $ip_row && $ip_row->status === 'trusted' ) {
+			return $cache[ $ip ] = $out;
+		}
+
 		if ( $ip_row && $ip_row->status === 'blocked' ) {
 			$out['blocked'] = true;
 			$out['source'] = 'ip_block';

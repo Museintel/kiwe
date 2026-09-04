@@ -355,12 +355,12 @@ final class Seam_Vocabulary_Schema {
 				'shadowOnly' => [
 					'card' => 'AppShell keeps card semantics on protected data-seam-* metadata so site CSS cannot accidentally style live DSA internals.',
 					'button' => 'AppShell keeps button semantics protected so site CSS cannot override DSA controls.',
-					'input' => 'AppShell keeps field/input semantics protected because Profile, PhoneKey, checkout, and validation states are authority-owned.',
+					'input' => 'AppShell keeps field/input semantics protected because Profile, Key.kiwe, checkout, and validation states are authority-owned.',
 					'media' => 'AppShell keeps media semantics protected because DSA media geometry is screen-specific.',
 					'badge' => 'AppShell keeps badge semantics protected so site CSS cannot alter notification/status badges.',
 					'nav' => 'AppShell keeps nav semantics protected because dock and context navigation use Geometry Engine variables.',
 					'actions' => 'AppShell keeps action-row semantics protected because action placement is panel/dock/context-owned.',
-					'form' => 'AppShell keeps form semantics protected because Profile, PhoneKey, checkout, and notification forms are authority-owned.',
+					'form' => 'AppShell keeps form semantics protected because Profile, Key.kiwe, checkout, and notification forms are authority-owned.',
 					'field' => 'AppShell keeps field semantics protected because validation, account, and checkout fields are authority-owned.',
 					'modal' => 'AppShell keeps modal semantics protected because DSA sheet/screen geometry owns this surface.',
 				],
@@ -379,7 +379,7 @@ final class Seam_Vocabulary_Schema {
 			],
 			'authority' => [
 				'presentation' => 'Seam roles, flows, tones, scenes, states, motion, shape, and classes.',
-				'appShell'     => 'Kiwe DSA owns dock, sheets/screens, geometry, Search, Cart, Checkout, Profile, AI, PWA, PhoneKey, and lifecycle.',
+				'appShell'     => 'Kiwe DSA owns dock, sheets/screens, geometry, Search, Cart, Checkout, Profile, AI, PWA, Key.kiwe, and lifecycle.',
 				'commerce'     => 'WooCommerce and Kiwe commerce modules own cart and checkout mutation. Seam page code must not create another cart authority.',
 				'builders'     => 'Bricks and other builders own page content authoring. Seam provides portable classes/attributes and tokens.',
 			],

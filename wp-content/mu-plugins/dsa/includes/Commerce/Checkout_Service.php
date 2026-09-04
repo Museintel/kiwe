@@ -36,7 +36,7 @@ final class Checkout_Service {
 	}
 
 	public function available(): bool {
-		return $this->enabled() && $this->load_checkout();
+		return $this->enabled() && $this->identity_allowed() && $this->load_checkout();
 	}
 
 	public function contract( bool $consume_errors = false ): array {
@@ -693,6 +693,11 @@ final class Checkout_Service {
 
 	private function account_required(): bool {
 		return ! is_user_logged_in() && 'no' === get_option( 'woocommerce_enable_guest_checkout', 'yes' );
+	}
+
+	private function identity_allowed(): bool {
+		$state = apply_filters( 'dsa_purchase_identity_gate_state', [] );
+		return ! is_array( $state ) || empty( $state['enabled'] ) || ! empty( $state['allowed'] );
 	}
 
 	private function create_account(): bool {

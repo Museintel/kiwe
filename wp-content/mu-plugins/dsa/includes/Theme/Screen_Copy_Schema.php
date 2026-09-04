@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Screen_Copy_Schema {
 	public static function screens(): array {
+		$has_commerce = function_exists( 'wc_get_product' ) && post_type_exists( 'product' );
+
 		return [
 			'profile'       => [
 				'label'       => __( 'Profile', 'dsa' ),
@@ -74,9 +76,9 @@ final class Screen_Copy_Schema {
 				'fields'      => [
 					'label'       => self::field( __( 'Dock/module label', 'dsa' ), __( 'Search', 'dsa' ) ),
 					'eyebrow'     => self::field( __( 'Eyebrow', 'dsa' ), __( 'Search', 'dsa' ) ),
-					'title'       => self::field( __( 'Title', 'dsa' ), __( 'Find what you need.', 'dsa' ) ),
-					'intro'       => self::field( __( 'Intro/status copy', 'dsa' ), __( 'Search products, posts, authors, and categories.', 'dsa' ), 220 ),
-					'placeholder' => self::field( __( 'Input placeholder', 'dsa' ), __( 'Search products and posts', 'dsa' ) ),
+					'title'       => self::field( __( 'Title', 'dsa' ), $has_commerce ? __( 'Find what you need.', 'dsa' ) : __( 'Find the story you need.', 'dsa' ) ),
+					'intro'       => self::field( __( 'Intro/status copy', 'dsa' ), $has_commerce ? __( 'Search products, posts, authors, and categories.', 'dsa' ) : __( 'Browse the latest news, analysis, and industry stories.', 'dsa' ), 220 ),
+					'placeholder' => self::field( __( 'Input placeholder', 'dsa' ), $has_commerce ? __( 'Search products and posts', 'dsa' ) : __( 'Search news and stories', 'dsa' ) ),
 				],
 			],
 			'menu'          => [
@@ -85,7 +87,7 @@ final class Screen_Copy_Schema {
 				'fields'      => [
 					'label'          => self::field( __( 'Dock/module label', 'dsa' ), __( 'Menu', 'dsa' ) ),
 					'eyebrow'        => self::field( __( 'Eyebrow', 'dsa' ), __( 'Menu', 'dsa' ) ),
-					'title'          => self::field( __( 'Title', 'dsa' ), __( 'Move around faster.', 'dsa' ) ),
+					'title'          => self::field( __( 'Navigation section title', 'dsa' ), __( 'Navigation', 'dsa' ) ),
 					'intro'          => self::field( __( 'Intro/body copy', 'dsa' ), __( 'Site links and this page guide.', 'dsa' ), 220 ),
 					'contextTitle'   => self::field( __( 'Context title', 'dsa' ), __( 'On this page', 'dsa' ) ),
 					'dashboardLabel' => self::field( __( 'Dashboard link label', 'dsa' ), __( 'Dashboard', 'dsa' ) ),

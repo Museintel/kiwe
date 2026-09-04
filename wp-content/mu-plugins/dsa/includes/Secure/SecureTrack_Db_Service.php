@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class SecureTrack_Db_Service {
 	private const TABLES = [ 'ips', 'sessions', 'events', 'profiles', 'pages', 'alerts', 'subnets', 'brain', 'ai_queue', 'rate_limits' ];
+	private static array $table_existence = [];
 
 	public static function table_name( string $name ): string {
 		global $wpdb;
@@ -27,9 +28,15 @@ final class SecureTrack_Db_Service {
 	public static function table_exists( string $name ): bool {
 		global $wpdb;
 
+		if ( array_key_exists( $name, self::$table_existence ) ) {
+			return self::$table_existence[ $name ];
+		}
+
 		$table = self::table_name( $name );
 
-		return $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
+		self::$table_existence[ $name ] = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
+
+		return self::$table_existence[ $name ];
 	}
 
 	public static function column_exists( string $table_name, string $column ): bool {
@@ -131,8 +138,10 @@ final class SecureTrack_Db_Service {
 
 	public static function repair_database(): bool {
 		delete_transient( 'stp_tables_ready_v' . STP_VER );
+		self::$table_existence = [];
 		stp_create_tables();
 		stp_migrate_schema();
+		self::$table_existence = [];
 		stp_schedule_crons();
 		update_option( 'stp_db_version', STP_VER );
 		self::diag( 'last_db_error', '' );
@@ -158,7 +167,9 @@ final class SecureTrack_Db_Service {
 	}
 
 	public static function install(): void {
+		self::$table_existence = [];
 		stp_create_tables();
+		self::$table_existence = [];
 		stp_schedule_crons();
 		if ( ! get_option( 'stp_settings' ) ) {
 			add_option( 'stp_settings', stp_cfg() );
@@ -169,6 +180,7 @@ final class SecureTrack_Db_Service {
 		wp_clear_scheduled_hook( 'stp_cron_cleanup' );
 		wp_clear_scheduled_hook( 'stp_cron_geo' );
 		wp_clear_scheduled_hook( 'stp_cron_ai_queue' );
+		wp_clear_scheduled_hook( 'stp_cron_ai_queue_priority' );
 	}
 
 	public static function diag( string $key, $value = null ) {

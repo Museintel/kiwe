@@ -3,9 +3,9 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '../..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const core = read('wp-content/mu-plugins/dsa/includes/PhoneKey/phonekey-core.php');
-const app = read('services/phonekey-gateway/src/app.mjs');
-const compose = read('services/phonekey-gateway/deploy/docker-compose.vps.yml');
-const history = read('services/phonekey-gateway/src/history.mjs');
+const app = read('services/key-gateway/src/app.mjs');
+const compose = read('services/key-gateway/deploy/docker-compose.vps.yml');
+const history = read('services/key-gateway/src/history.mjs');
 const email = read('wp-content/mu-plugins/dsa/includes/Communications/Email_Service.php');
 const channels = read('wp-content/mu-plugins/dsa/includes/Communications/Channel_Service.php');
 const preferences = read('wp-content/mu-plugins/dsa/includes/Notifications/Notification_Preference_Service.php');
@@ -14,11 +14,12 @@ const orders = read('wp-content/mu-plugins/dsa/includes/Notifications/Order_Noti
 const owners = read('wp-content/mu-plugins/dsa/includes/Notifications/Admin_Event_Notification_Service.php');
 const bridge = read('wp-content/mu-plugins/dsa/includes/PhoneKey/PhoneKey_Bridge.php');
 const surface = read('wp-content/mu-plugins/dsa/assets/js/surface.js');
-const gatewayPackage = JSON.parse(read('services/phonekey-gateway/package.json'));
-const baileys = read('services/phonekey-gateway/src/transports/baileys.mjs');
+const gatewayPackage = JSON.parse(read('services/key-gateway/package.json'));
+const baileys = read('services/key-gateway/src/transports/baileys.mjs');
 const checks = [
-  ['PhoneKey signs exact request bodies', core.includes("X-PhoneKey-Signature") && core.includes("$timestamp . '.' . $nonce . '.' . $body")],
+  ['Key.kiwe signs exact request bodies', core.includes("X-Kiwe-Key-Signature") && core.includes("$timestamp . '.' . $nonce . '.' . $body")],
   ['PhoneKey validates provider status', core.includes('wp_remote_retrieve_response_code') && core.includes('$status >= 200 && $status < 300')],
+  ['Signed Key.kiwe mode resolves the canonical hosted gateway safely', core.includes('function pk_default_whatsapp_gateway_url()') && core.includes("'phonekey_gateway' === ( $settings['whatsapp_mode']") && core.includes('https://key.kiwelaunch.com/v1/otp')],
   ['PhoneKey has explicit same-code email fallback', core.includes('pk_send_phone_fallback_email') && core.includes('WhatsApp was unavailable; the code was sent by email.')],
   ['PhoneKey uses Woo billing email as a fallback address', core.includes("get_user_meta( $user_id, 'billing_email', true )")],
   ['Phone-only signup is not silently replaced by email bootstrap', !core.includes("'email_bootstrap_required'") && core.includes("pk_create_user_for_identifier( $identifier, $type )")],
@@ -32,6 +33,7 @@ const checks = [
   ['RC history encrypts only explicitly allowed outbound notification content', history.includes('this.captureOutboundText && event.allowContent === true') && history.includes('createCipheriv("aes-256-gcm"')],
   ['WordPress reports fallback outcomes without OTP content', core.includes('pk_report_gateway_event') && app.includes('email_fallback_accepted')],
   ['Kiwe Email exposes a tested fallback readiness signal', email.includes("'fallback_ready'") && email.includes("$last_test['success']")],
+  ['Explicit Kiwe SMTP owns final PHPMailer configuration without duplicate hooks', email.includes("private bool $registered = false") && email.includes("if ( $this->registered )") && email.includes("PHP_INT_MAX") && email.includes("$this->register();")],
   ['PhoneKey exposes a signed bounded notification endpoint', core.includes('pk_send_whatsapp_message') && app.includes('url.pathname === "/v1/message"') && app.includes('allowedPurposes')],
   ['Channel service prefers PhoneKey and limits email fallback by consent', channels.includes('notification_ready') && channels.includes("'fallback_email_allowed'") && bridge.includes('pk_send_whatsapp_message')],
   ['Notification preferences include saved-cart consent', preferences.includes("'cart_reminder'") && preferences.includes('user_accepts')],

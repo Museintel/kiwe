@@ -34,15 +34,15 @@ function stp_csv_row( array $row ) {
 
 // ════════════════════════════════════════════════════════════════
 //  PHONEKEY INTEGRATION BRIDGE
-//  Wires PhoneKey's REST auth events into the SecureTrack event log.
-//  Self-activates only when PhoneKey (PK_VER constant) is present.
+//  Wires Key.kiwe's REST auth events into the SecureTrack event log.
+//  Self-activates only when Key.kiwe (PK_VER constant) is present.
 // ════════════════════════════════════════════════════════════════
 
 function stp_pk_active() {
 	return defined( 'PK_VER' ) && function_exists( 'pk_activity_table' );
 }
 
-// ── Intercept PhoneKey REST responses ──────────────────────────
+// ── Intercept Key.kiwe REST responses ──────────────────────────
 add_filter( 'rest_post_dispatch', function ( $response, $server, $request ) {
 	if ( ! stp_pk_active() ) return $response;
 
@@ -279,7 +279,7 @@ function stp_ajax_live_feed() {
 
 function stp_ajax_pk_users() {
 	stp_check();
-	if ( ! stp_pk_active() ) { wp_send_json_error( 'PhoneKey not active.' ); return; }
+	if ( ! stp_pk_active() ) { wp_send_json_error( 'Key.kiwe not active.' ); return; }
 	global $wpdb;
 
 	$type  = sanitize_key( $_POST['anchor_type'] ?? 'all' );
@@ -347,7 +347,7 @@ function stp_ajax_pk_activity() {
 		 ORDER BY e.id DESC LIMIT 100", ARRAY_A
 	);
 
-	/* Also pull from PhoneKey's own activity table if it exists */
+	/* Also pull from Key.kiwe's own activity table if it exists */
 	$pk_rows = array();
 	if ( stp_pk_active() ) {
 		$pk_event_filter = ( $filter !== 'all' ) ? $wpdb->prepare( "WHERE event=%s", $filter ) : '';
@@ -667,7 +667,7 @@ function stp_pg_analytics() {
 
 
 // ════════════════════════════════════════════════════════════════
-//  ADMIN PAGE: AUTH SECURITY  (PhoneKey unified view)
+//  ADMIN PAGE: AUTH SECURITY  (Key.kiwe unified view)
 // ════════════════════════════════════════════════════════════════
 
 function stp_pg_auth() {
@@ -676,34 +676,18 @@ function stp_pg_auth() {
 	$pk = stp_pk_active();
 	$sodium_ok = function_exists( 'sodium_crypto_sign_verify_detached' );
 
-	/* Save PhoneKey settings if posted */
-	if ( $pk && isset( $_POST['stp_save_pk'] ) && check_admin_referer( 'stp_pk_save' ) ) {
-		$pk_fields = array(
-			'pk_default_country_code', 'pk_argon_domain', 'pk_hub_url', 'pk_hub_secret',
-			'pk_whatsapp_phone_number', 'pk_whatsapp_token', 'pk_signup_role',
-			'pk_login_page_url', 'pk_strict_mode',
-		);
-		foreach ( $pk_fields as $field ) {
-			if ( isset( $_POST[ $field ] ) )
-				update_option( $field, sanitize_text_field( $_POST[ $field ] ) );
-		}
-		// pk_strict_roles is an array
-		$strict_roles = isset( $_POST['pk_strict_roles'] ) ? (array) $_POST['pk_strict_roles'] : array();
-		update_option( 'pk_strict_roles', implode( ',', array_map( 'sanitize_key', $strict_roles ) ) );
-		echo '<div class="notice notice-success is-dismissible"><p>PhoneKey settings saved.</p></div>';
-	}
 	?>
 <div class="wrap stp-wrap">
 <div class="stp-hdr">
   <h1>🔐 Auth Security</h1>
-  <span class="stp-tagline">PhoneKey passwordless + behavioral analysis</span>
+  <span class="stp-tagline">Key.kiwe passwordless + behavioral analysis</span>
 </div>
 
 <!-- STATUS BADGES -->
 <div class="stp-auth-badges">
   <?php
   $badges = array(
-    array( 'PhoneKey Plugin',   $pk,                                               'Active',      'Not Detected'   ),
+    array( 'Key.kiwe Plugin',   $pk,                                               'Active',      'Not Detected'   ),
     array( 'PHP libsodium',     $sodium_ok,                                        'OK',          'MISSING!'       ),
     array( 'WhatsApp Business', $pk && ! empty( get_option('pk_whatsapp_token') ), 'Connected',   'Not connected'  ),
     array( 'Geo Resolution',    stp_cfg()['geo_enabled'],                          'Enabled',     'Disabled'       ),
@@ -721,9 +705,9 @@ function stp_pg_auth() {
 
 <!-- TABS -->
 <div class="stp-tab-bar">
-  <button class="stp-tab active" data-tab="pk-users">👥 PhoneKey Users</button>
+  <button class="stp-tab active" data-tab="pk-users">👥 Key.kiwe Users</button>
   <button class="stp-tab" data-tab="pk-activity">⚡ Auth Activity</button>
-  <button class="stp-tab" data-tab="pk-settings">⚙️ PhoneKey Settings</button>
+  <button class="stp-tab" data-tab="pk-settings">⚙️ Auth Policy</button>
 </div>
 
 <!-- TAB: USERS -->
@@ -762,11 +746,17 @@ function stp_pg_auth() {
 
 <!-- TAB: SETTINGS -->
 <div class="stp-tab-panel" id="stp-tab-pk-settings">
+  <div class="stp-ph-notice">
+    <h3>One canonical authentication policy</h3>
+    <p>Key.kiwe login, verification, passkeys, trusted devices, WordPress access protection, and provider settings are managed together in <strong>Kiwe Auth</strong>.</p>
+    <p><a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=kiwe-auth' ) ); ?>">Open Kiwe Auth</a></p>
+  </div>
+<?php if ( false ) : // Legacy duplicate settings retained only for migration reference; never render or save from SecureTrack. ?>
 <?php if ( ! $pk ): ?>
   <div class="stp-ph-notice">
-    <h3>PhoneKey Not Detected</h3>
-    <p>Install and activate the <strong>PhoneKey</strong> plugin to manage passwordless authentication settings here.</p>
-    <p>Once installed, this panel will display all PhoneKey configuration options merged within this unified security dashboard.</p>
+    <h3>Key.kiwe Not Detected</h3>
+    <p>Install and activate the <strong>Key.kiwe</strong> plugin to manage passwordless authentication settings here.</p>
+    <p>Once installed, this panel will display all Key.kiwe configuration options merged within this unified security dashboard.</p>
   </div>
 <?php else: ?>
   <form method="post" style="margin-top:16px">
@@ -830,8 +820,9 @@ function stp_pg_auth() {
         <td><input type="password" name="pk_whatsapp_token" value="<?php echo esc_attr( get_option('pk_whatsapp_token') ); ?>" class="regular-text"></td>
       </tr>
     </table>
-    <p class="submit"><input type="submit" name="stp_save_pk" class="button-primary" value="Save PhoneKey Settings"></p>
+    <p class="submit"><input type="submit" name="stp_save_pk" class="button-primary" value="Save Key.kiwe Settings"></p>
   </form>
+<?php endif; ?>
 <?php endif; ?>
 </div><!-- /stp-tab-pk-settings -->
 </div><!-- .stp-wrap -->
@@ -1270,7 +1261,7 @@ jQuery(function($){
       post("stp_pk_users",{anchor_type:$("#pk-utype").val()},function(d){
         $btn.prop("disabled",false).text("▶ Load Users");
         $("#pk-user-count").text(d.rows.length+" user(s)");
-        if(!d.rows.length){ $("#pk-users-out").html("<div class=\"stp-chart-loading\">No PhoneKey users found.</div>"); return; }
+        if(!d.rows.length){ $("#pk-users-out").html("<div class=\"stp-chart-loading\">No Key.kiwe users found.</div>"); return; }
         var html="<table class=\"stp-pk-tbl\">"
           +"<thead><tr><th>User</th><th>Anchor</th><th>Type</th><th>Verified</th><th>🟢 Clean</th><th>🔴 Risk</th><th>Baseline</th><th>Last Risk Score</th><th>Enrolled</th><th>Last Login</th></tr></thead><tbody>";
         d.rows.forEach(function(r,i){

@@ -62,7 +62,7 @@ final class Apex_Acceptance_Service {
 		$matrix = [
 			[ 'id' => 's16', 'label' => 'Navigation and fragment safety', 'code' => 'complete', 'proof' => 'partial', 'remaining' => 'Bricks/editorial morph, bfcache, comments, search, archives, forms, embeds, cache plugins, accessibility and SEO-head matrix.' ],
 			[ 'id' => 's17', 'label' => 'Offline public editorial', 'code' => 'complete', 'proof' => 'pending', 'remaining' => 'Airplane-mode replay, cache/media eviction, worker upgrade, iOS/Chromium and identity/cart isolation.' ],
-			[ 'id' => 'production', 'label' => 'Production gates', 'code' => 'implemented', 'proof' => 'pending', 'remaining' => 'Commerce, PhoneKey, SecureTrack, Push, host/cache and release rollback matrices.' ],
+			[ 'id' => 'production', 'label' => 'Production gates', 'code' => 'implemented', 'proof' => 'pending', 'remaining' => 'Commerce, Key.kiwe, SecureTrack, Push, host/cache and release rollback matrices.' ],
 		];
 
 		return array_merge(

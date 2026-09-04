@@ -50,6 +50,7 @@ use DSA\Onboarding\Design_Context_Enhancement_Service;
 use DSA\Security\Secret_Store;
 use DSA\Saved\Saved_Items_Service;
 use DSA\Search\Search_Service;
+use DSA\Runtime\Update_Service;
 use DSA\Site_Graph\Calibration_Pairing_Service;
 use DSA\Site_Graph\Design_Context_Service;
 use DSA\Site_Graph\Staging_Seed_Connection_Service;
@@ -101,6 +102,7 @@ final class Admin {
 		add_action( 'admin_bar_menu', [ $this, 'database_admin_bar' ], 95 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'assets' ] );
 		add_action( 'admin_post_dsa_save_settings', [ $this, 'save_settings' ] );
+		add_action( 'admin_post_dsa_enable_phonekey', [ $this, 'enable_phonekey' ] );
 		add_action( 'admin_post_dsa_export_profile', [ $this, 'export_profile' ] );
 		add_action( 'admin_post_dsa_import_profile', [ $this, 'import_profile' ] );
 		add_action( 'admin_post_dsa_export_framework_profile', [ $this, 'export_framework_profile' ] );
@@ -169,6 +171,9 @@ final class Admin {
 		add_action( 'admin_post_dsa_developer_safe_persistence_cleanup', [ $this, 'handle_developer_safe_persistence_cleanup' ] );
 		add_action( 'admin_post_dsa_developer_drop_legacy_tables', [ $this, 'handle_developer_drop_legacy_tables' ] );
 		add_action( 'admin_post_dsa_developer_remove_orphan_files', [ $this, 'handle_developer_remove_orphan_files' ] );
+		add_action( 'admin_post_dsa_save_update_settings', [ $this, 'handle_save_update_settings' ] );
+		add_action( 'admin_post_dsa_check_updates', [ $this, 'handle_check_updates' ] );
+		add_action( 'admin_post_dsa_install_update', [ $this, 'handle_install_update' ] );
 		add_action( 'admin_post_dsa_database_purge_cache', [ $this, 'handle_database_purge_cache' ] );
 		add_action( 'admin_post_dsa_database_capture_test_snapshot', [ $this, 'handle_database_capture_test_snapshot' ] );
 		add_action( 'admin_post_dsa_database_restore_test_snapshot', [ $this, 'handle_database_restore_test_snapshot' ] );
@@ -278,7 +283,7 @@ final class Admin {
 
 	public function render_security_page(): void {
 		$this->render_hub_page( 'Security', 'Authentication, consent and threat controls remain separate in responsibility but share one entry point.', [
-			[ 'Authentication', 'PhoneKey login, verification and session policy.', 'kiwe-auth' ],
+			[ 'Authentication', 'Key.kiwe login, verification and session policy.', 'kiwe-auth' ],
 			[ 'Security policy', 'Kiwe security controls and broker status.', 'kiwe-secure' ],
 			[ 'SecureTrack events', 'Evidence, protection events and incident review.', 'stp' ],
 		] );
@@ -821,7 +826,7 @@ final class Admin {
 
 			<?php if ( false ) : // Dock controls moved to Kiwe > Dock. Keep old markup out of production UI. ?>
 			<section class="dsa-admin__panel">
-				<h2><?php esc_html_e( 'PhoneKey Dock', 'dsa' ); ?></h2>
+				<h2><?php esc_html_e( 'Key.kiwe Dock', 'dsa' ); ?></h2>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_save_settings">
 					<?php wp_nonce_field( 'dsa_save_settings' ); ?>
@@ -883,7 +888,7 @@ final class Admin {
 							</tr>
 							<tr>
 								<th scope="row">
-									<label for="dsa-phonekey-visibility"><?php esc_html_e( 'PhoneKey Visibility', 'dsa' ); ?></label>
+									<label for="dsa-phonekey-visibility"><?php esc_html_e( 'Key.kiwe Visibility', 'dsa' ); ?></label>
 								</th>
 								<td>
 									<select id="dsa-phonekey-visibility" name="dock[phonekey_visibility]">
@@ -969,7 +974,7 @@ final class Admin {
 						</tbody>
 					</table>
 
-					<?php submit_button( __( 'Save PhoneKey Dock', 'dsa' ) ); ?>
+					<?php submit_button( __( 'Save Key.kiwe Dock', 'dsa' ) ); ?>
 				</form>
 			</section>
 			<?php endif; ?>
@@ -1330,6 +1335,62 @@ final class Admin {
 		}
 
 		wp_safe_redirect( add_query_arg( 'settings-updated', '1', admin_url( 'admin.php?page=' . $redirect_page ) ) );
+		exit;
+	}
+
+	public function handle_save_update_settings(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_save_update_settings' );
+		( new Update_Service() )->save_settings( is_array( $_POST['kiwe_updates'] ?? null ) ? wp_unslash( $_POST['kiwe_updates'] ) : [] );
+		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-developer', 'kiwe-update' => 'settings-saved' ], admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	public function handle_check_updates(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_check_updates' );
+		try {
+			$release = ( new Update_Service() )->check( true );
+			$args = [
+				'page'        => 'kiwe-developer',
+				'kiwe-update' => ! empty( $release['available'] ) ? 'available' : 'current',
+				'version'     => (string) ( $release['version'] ?? '' ),
+			];
+		} catch ( \Throwable $error ) {
+			$args = [
+				'page'              => 'kiwe-developer',
+				'kiwe-update'       => 'error',
+				'kiwe-update-error' => $error->getMessage(),
+			];
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	public function handle_install_update(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+		check_admin_referer( 'dsa_install_update' );
+		try {
+			$result = ( new Update_Service() )->install();
+			$args = [
+				'page'        => 'kiwe-developer',
+				'kiwe-update' => 'installed',
+				'version'     => (string) ( $result['version'] ?? '' ),
+			];
+		} catch ( \Throwable $error ) {
+			$args = [
+				'page'              => 'kiwe-developer',
+				'kiwe-update'       => 'error',
+				'kiwe-update-error' => $error->getMessage(),
+			];
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 
@@ -4186,18 +4247,39 @@ final class Admin {
 
 	public function render_auth_page(): void {
 		if ( ! function_exists( 'pk_admin_page' ) ) {
+			$settings = $this->settings->all();
+			$phonekey_enabled = ! empty( $settings['phonekey']['enabled'] );
 			?>
 			<div class="wrap dsa-admin">
 				<h1><?php esc_html_e( 'Kiwe Auth', 'dsa' ); ?></h1>
-				<div class="notice notice-error">
-					<p><?php esc_html_e( 'Kiwe Auth core is not loaded yet. Re-upload the PhoneKey integration files and refresh this page.', 'dsa' ); ?></p>
-				</div>
+				<?php if ( $phonekey_enabled ) : ?>
+					<div class="notice notice-error"><p><?php esc_html_e( 'Key.kiwe is enabled, but its core did not load. Verify the canonical Kiwe package and refresh this page.', 'dsa' ); ?></p></div>
+				<?php else : ?>
+					<div class="notice notice-info"><p><?php esc_html_e( 'Key.kiwe is currently disabled in the canonical Kiwe configuration. Enable it here to load the existing authentication settings and runtime.', 'dsa' ); ?></p></div>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="dsa_enable_phonekey">
+						<?php wp_nonce_field( 'dsa_enable_phonekey' ); ?>
+						<?php submit_button( __( 'Enable Key.kiwe', 'dsa' ), 'primary', 'submit', false ); ?>
+					</form>
+					<p class="description"><?php esc_html_e( 'This changes only phonekey.enabled. It does not enable wp-login.php replacement or /wp-admin protection; those remain staged inside Kiwe Auth.', 'dsa' ); ?></p>
+				<?php endif; ?>
 			</div>
 			<?php
 			return;
 		}
 
 		pk_admin_page();
+	}
+
+	public function enable_phonekey(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to manage Kiwe authentication.', 'dsa' ), esc_html__( 'Permission denied', 'dsa' ), [ 'response' => 403 ] );
+		}
+
+		check_admin_referer( 'dsa_enable_phonekey' );
+		$this->settings->update( [ 'phonekey' => [ 'enabled' => true ] ] );
+		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-auth', 'phonekey-enabled' => '1' ], admin_url( 'admin.php' ) ) );
+		exit;
 	}
 
 	public function render_app_page(): void {
@@ -7032,10 +7114,10 @@ final class Admin {
 			<h2><?php esc_html_e( 'App identity', 'dsa' ); ?></h2>
 			<div class="dsa-lpm-summary">
 				<?php foreach ( [
-					'appUsers' => [ __( 'App + user', 'dsa' ), __( 'Standalone app devices resolved to a WordPress or PhoneKey user', 'dsa' ) ],
-					'appAnonymous' => [ __( 'App, not yet a user', 'dsa' ), __( 'Standalone app devices still waiting for PhoneKey welcome', 'dsa' ) ],
+					'appUsers' => [ __( 'App + user', 'dsa' ), __( 'Standalone app devices resolved to a WordPress or Key.kiwe user', 'dsa' ) ],
+					'appAnonymous' => [ __( 'App, not yet a user', 'dsa' ), __( 'Standalone app devices still waiting for Key.kiwe welcome', 'dsa' ) ],
 					'registered' => [ __( 'Registered audience', 'dsa' ), __( 'Preference records linked to users across app and web', 'dsa' ) ],
-					'phonekeyVerified' => [ __( 'PhoneKey verified', 'dsa' ), __( 'Audience records linked to verified PhoneKey accounts', 'dsa' ) ],
+					'phonekeyVerified' => [ __( 'Key.kiwe verified', 'dsa' ), __( 'Audience records linked to verified Key.kiwe accounts', 'dsa' ) ],
 				] as $key => $card ) : ?>
 					<div class="dsa-lpm-stat"><span><?php echo esc_html( $card[0] ); ?></span><strong><?php echo esc_html( (string) ( $summary[ $key ] ?? 0 ) ); ?></strong><small><?php echo esc_html( $card[1] ); ?></small></div>
 				<?php endforeach; ?>
@@ -7044,7 +7126,7 @@ final class Admin {
 			<div class="dsa-lpm-card">
 				<h2><?php esc_html_e( 'Send a notification', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Only registered users who explicitly selected the channel are addressed. Email, WhatsApp, and SMS require their configured provider and a usable account contact.', 'dsa' ); ?></p>
-				<p><strong><?php echo $phonekey_ready ? esc_html__( 'PhoneKey WhatsApp ready', 'dsa' ) : esc_html__( 'PhoneKey WhatsApp needs pairing/configuration', 'dsa' ); ?></strong> · <strong><?php echo ! empty( $email_health['fallback_ready'] ) ? esc_html__( 'Email fallback tested', 'dsa' ) : esc_html__( 'Email fallback needs a successful Kiwe Email test', 'dsa' ); ?></strong></p>
+				<p><strong><?php echo $phonekey_ready ? esc_html__( 'Key.kiwe WhatsApp ready', 'dsa' ) : esc_html__( 'Key.kiwe WhatsApp needs pairing/configuration', 'dsa' ); ?></strong> · <strong><?php echo ! empty( $email_health['fallback_ready'] ) ? esc_html__( 'Email fallback tested', 'dsa' ) : esc_html__( 'Email fallback needs a successful Kiwe Email test', 'dsa' ); ?></strong></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_send_notification_campaign">
 					<?php wp_nonce_field( 'dsa_send_notification_campaign' ); ?>
@@ -7077,7 +7159,7 @@ final class Admin {
 				<?php if ( empty( $summary['rows'] ) ) : ?><tr><td colspan="7"><?php esc_html_e( 'No notification preferences have been saved yet.', 'dsa' ); ?></td></tr><?php endif; ?>
 				<?php foreach ( (array) ( $summary['rows'] ?? [] ) as $row ) : ?><tr>
 					<td><code><?php echo esc_html( (string) ( $row['visitor'] ?? '' ) ); ?></code></td>
-					<td><?php echo esc_html( ! empty( $row['userId'] ) ? ( (string) ( $row['userName'] ?: 'User #' . $row['userId'] ) ) : __( 'Anonymous', 'dsa' ) ); ?><?php if ( ! empty( $row['phonekeyVerified'] ) ) : ?> <small><?php esc_html_e( 'PhoneKey verified', 'dsa' ); ?></small><?php endif; ?></td>
+					<td><?php echo esc_html( ! empty( $row['userId'] ) ? ( (string) ( $row['userName'] ?: 'User #' . $row['userId'] ) ) : __( 'Anonymous', 'dsa' ) ); ?><?php if ( ! empty( $row['phonekeyVerified'] ) ) : ?> <small><?php esc_html_e( 'Key.kiwe verified', 'dsa' ); ?></small><?php endif; ?></td>
 					<td><?php echo esc_html( ! empty( $row['isApp'] ) ? __( 'Standalone', 'dsa' ) : __( 'Browser', 'dsa' ) ); ?></td>
 					<td><?php echo esc_html( implode( ', ', (array) ( $row['channels'] ?? [] ) ) ?: '-' ); ?></td>
 					<td><?php echo esc_html( implode( ', ', (array) ( $row['topics'] ?? [] ) ) ?: '-' ); ?></td>
@@ -7100,6 +7182,8 @@ final class Admin {
 			<h2><?php esc_html_e( 'Universal Appsite attribute library', 'dsa' ); ?></h2>
 			<p><?php echo esc_html( (string) ( $capabilities['purpose'] ?? __( 'Builder-neutral capability hooks for Bricks, block themes, and custom HTML.', 'dsa' ) ) ); ?></p>
 			<p class="description"><?php echo esc_html( (string) ( $capabilities['authorRule'] ?? __( 'Use attributes only where the matching Kiwe runtime owns the capability.', 'dsa' ) ) ); ?></p>
+			<p><strong><?php esc_html_e( 'Bricks custom attributes:', 'dsa' ); ?></strong> <?php esc_html_e( 'in Settings → Style → Attributes, put the exact attribute in Name and only its value in Value. Never put data-name="value" in the Value field. For a presence-only trigger, use 1.', 'dsa' ); ?></p>
+			<p class="description"><strong><?php esc_html_e( 'Profile icon example:', 'dsa' ); ?></strong> <?php esc_html_e( 'Name:', 'dsa' ); ?> <code>data-dsa-open-module</code> · <?php esc_html_e( 'Value:', 'dsa' ); ?> <code>profile</code>. <strong><?php esc_html_e( 'Search icon:', 'dsa' ); ?></strong> <?php esc_html_e( 'Name:', 'dsa' ); ?> <code>data-dsa-open-module</code> · <?php esc_html_e( 'Value:', 'dsa' ); ?> <code>search</code>.</p>
 			<?php foreach ( $groups as $group_id => $group ) : ?>
 				<?php
 				$attributes = is_array( $group['attributes'] ?? null ) ? $group['attributes'] : [];
@@ -7110,13 +7194,28 @@ final class Admin {
 				<h3><?php echo esc_html( ucwords( preg_replace( '/(?<!^)[A-Z]/', ' $0', (string) $group_id ) ) ); ?> <code><?php echo esc_html( (string) ( $group['status'] ?? 'live' ) ); ?></code></h3>
 				<p class="description"><?php echo esc_html( sprintf( __( 'Authority: %s', 'dsa' ), (string) ( $group['authority'] ?? 'kiwe' ) ) ); ?></p>
 				<table class="widefat striped">
-					<thead><tr><th><?php esc_html_e( 'Attribute', 'dsa' ); ?></th><th><?php esc_html_e( 'Purpose', 'dsa' ); ?></th><th><?php esc_html_e( 'Values', 'dsa' ); ?></th></tr></thead>
+					<thead><tr><th><?php esc_html_e( 'Bricks Name', 'dsa' ); ?></th><th><?php esc_html_e( 'Bricks Value', 'dsa' ); ?></th><th><?php esc_html_e( 'Purpose / HTML example', 'dsa' ); ?></th></tr></thead>
 					<tbody>
 						<?php foreach ( $attributes as $attribute ) : ?>
+							<?php
+							$attribute_name = (string) ( $attribute['attribute'] ?? '' );
+							$attribute_values = array_values( array_filter( array_map( 'strval', (array) ( $attribute['values'] ?? [] ) ) ) );
+							$example = (string) ( $attribute['example'] ?? '' );
+							$bricks_value = '';
+							if ( [] !== $attribute_values ) {
+								$bricks_value = implode( ' | ', $attribute_values );
+							} elseif ( '' !== $example && str_starts_with( $attribute_name, 'data-' ) && preg_match( '/\\b' . preg_quote( $attribute_name, '/' ) . '(?:="([^"]*)")?/', $example, $match ) ) {
+								$bricks_value = isset( $match[1] ) && '' !== $match[1] ? $match[1] : '1';
+							} elseif ( in_array( $attribute_name, [ 'data-kiwe-notifications', 'data-dsa-native-notification-request', 'data-kiwe-theme-toggle' ], true ) ) {
+								$bricks_value = '1';
+							} else {
+								$bricks_value = __( 'Dynamic value described here', 'dsa' );
+							}
+							?>
 							<tr>
-								<td><code><?php echo esc_html( (string) ( $attribute['attribute'] ?? '' ) ); ?></code></td>
-								<td><?php echo esc_html( (string) ( $attribute['purpose'] ?? '' ) ); ?><?php if ( ! empty( $attribute['example'] ) ) : ?><br><code><?php echo esc_html( (string) $attribute['example'] ); ?></code><?php endif; ?></td>
-								<td><?php echo esc_html( implode( ', ', array_map( 'strval', (array) ( $attribute['values'] ?? [] ) ) ) ?: '-' ); ?></td>
+								<td><code><?php echo esc_html( $attribute_name ); ?></code></td>
+								<td><code><?php echo esc_html( $bricks_value ); ?></code><?php if ( count( $attribute_values ) > 1 ) : ?><br><span class="description"><?php esc_html_e( 'Choose one value.', 'dsa' ); ?></span><?php endif; ?></td>
+								<td><?php echo esc_html( (string) ( $attribute['purpose'] ?? '' ) ); ?><?php if ( '' !== $example ) : ?><br><code><?php echo esc_html( $example ); ?></code><?php endif; ?></td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -7255,7 +7354,7 @@ final class Admin {
 			<section class="dsa-admin__panel" id="kiwe-test-baseline">
 				<h2><?php esc_html_e( 'Reversible test-site baseline', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Capture the current Bricks templates, pages, posts, products, coupons, menus, builder globals and relevant WordPress/Woo page settings before a conversion batch. Restore removes only content created inside that test window and restores the captured records and settings exactly.', 'dsa' ); ?></p>
-				<p class="description"><?php esc_html_e( 'Safety boundary: users, WooCommerce orders, PhoneKey/SecureTrack identities and conversations, Kiwe service settings and credentials, and media binaries are never deleted or rewritten. Newly uploaded media is preserved for manual review. This is a builder/content checkpoint, not a full hosting backup or a cross-site migration archive. The signed snapshot is stored outside the public web root and can only be restored on this site.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Safety boundary: users, WooCommerce orders, Key.kiwe/SecureTrack identities and conversations, Kiwe service settings and credentials, and media binaries are never deleted or rewritten. Newly uploaded media is preserved for manual review. This is a builder/content checkpoint, not a full hosting backup or a cross-site migration archive. The signed snapshot is stored outside the public web root and can only be restored on this site.', 'dsa' ); ?></p>
 				<?php if ( empty( $test_snapshot['active'] ) ) : ?>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 						<input type="hidden" name="action" value="dsa_database_capture_test_snapshot"><?php wp_nonce_field( 'dsa_database_capture_test_snapshot' ); ?>
@@ -7384,12 +7483,17 @@ final class Admin {
 		$diagnostics     = wp_parse_args( $settings['diagnostics'] ?? [], $this->settings->defaults()['diagnostics'] );
 		$package_proof   = \DSA\Runtime\Package_Manifest::verify( true );
 		$loader_version  = defined( 'KIWE_MU_LOADER_VERSION' ) ? (string) KIWE_MU_LOADER_VERSION : '';
+		$update_service  = new Update_Service();
+		$update_settings = $update_service->settings();
+		$update_state    = $update_service->state();
+		$update_release  = is_array( $update_state['release'] ?? null ) ? $update_state['release'] : [];
+		$update_notice   = sanitize_key( wp_unslash( $_GET['kiwe-update'] ?? '' ) );
 		$batch_report    = ( new Compiler_Batch_Cleanup_Service() )->report();
 		$clean_status    = ( new Clean_Conversion_Test_Service() )->status();
 		?>
 		<div class="wrap dsa-admin" data-dsa-developer-tools data-auto-clear-browser="<?php echo $runtime_cleared ? '1' : '0'; ?>">
 			<h1><?php esc_html_e( 'Kiwe Developer', 'dsa' ); ?></h1>
-			<p><?php esc_html_e( 'Deployment recovery and portable configuration tools. Runtime cleanup never deletes orders, users, PhoneKey credentials, analytics, or SecureTrack records.', 'dsa' ); ?></p>
+			<p><?php esc_html_e( 'Deployment recovery and portable configuration tools. Runtime cleanup never deletes orders, users, Key.kiwe credentials, analytics, or SecureTrack records.', 'dsa' ); ?></p>
 
 			<?php if ( $runtime_cleared ) : ?>
 				<div class="notice notice-success"><p><?php esc_html_e( 'Server-side Kiwe runtime caches were cleared. This browser is now removing old Kiwe service workers and cached shell files.', 'dsa' ); ?></p></div>
@@ -7428,6 +7532,17 @@ final class Admin {
 			<?php elseif ( 'cancelled' === $orphan_files ) : ?>
 				<div class="notice notice-warning"><p><?php esc_html_e( 'Orphan-file cleanup was cancelled because both confirmations were not supplied.', 'dsa' ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( 'settings-saved' === $update_notice ) : ?>
+				<div class="notice notice-success"><p><?php esc_html_e( 'Kiwe update settings saved.', 'dsa' ); ?></p></div>
+			<?php elseif ( 'available' === $update_notice ) : ?>
+				<div class="notice notice-info"><p><?php echo esc_html( sprintf( __( 'A signed Kiwe update is available: %s.', 'dsa' ), sanitize_text_field( wp_unslash( $_GET['version'] ?? '' ) ) ) ); ?></p></div>
+			<?php elseif ( 'current' === $update_notice ) : ?>
+				<div class="notice notice-success"><p><?php esc_html_e( 'This site already has the newest signed Kiwe build for its channel.', 'dsa' ); ?></p></div>
+			<?php elseif ( 'installed' === $update_notice ) : ?>
+				<div class="notice notice-success"><p><?php echo esc_html( sprintf( __( 'Kiwe %s was installed and completed its verified boot.', 'dsa' ), sanitize_text_field( wp_unslash( $_GET['version'] ?? '' ) ) ) ); ?></p></div>
+			<?php elseif ( 'error' === $update_notice ) : ?>
+				<div class="notice notice-error"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['kiwe-update-error'] ?? __( 'Kiwe update failed safely.', 'dsa' ) ) ) ); ?></p></div>
+			<?php endif; ?>
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Installed build', 'dsa' ); ?></h2>
@@ -7435,6 +7550,32 @@ final class Admin {
 					<?php $this->render_package_proof_fragment( $package_proof, $loader_version ); ?>
 				</div>
 				<p class="description"><?php esc_html_e( 'Reload this page after replacing the MU plugin to refresh the server-rendered package proof.', 'dsa' ); ?></p>
+			</section>
+
+			<section class="dsa-admin__panel">
+				<h2><?php esc_html_e( 'Signed Kiwe updates', 'dsa' ); ?></h2>
+				<p><?php esc_html_e( 'Kiwe verifies the release signature, archive checksum, exact inner package manifest, PHP/WordPress requirements, and matching loader/package versions before staging an MU-plugin update. A failed or interrupted first boot rolls back to the previous verified build.', 'dsa' ); ?></p>
+				<table class="widefat striped" style="max-width:900px">
+					<tbody>
+						<tr><th><?php esc_html_e( 'Installed', 'dsa' ); ?></th><td><code><?php echo esc_html( DSA_VERSION ); ?></code></td></tr>
+						<tr><th><?php esc_html_e( 'Channel', 'dsa' ); ?></th><td><?php echo esc_html( ucfirst( (string) $update_settings['channel'] ) ); ?></td></tr>
+						<tr><th><?php esc_html_e( 'Latest verified check', 'dsa' ); ?></th><td><?php echo ! empty( $update_release['version'] ) ? '<code>' . esc_html( (string) $update_release['version'] ) . '</code>' : esc_html__( 'Not checked yet', 'dsa' ); ?></td></tr>
+						<tr><th><?php esc_html_e( 'Last installed by updater', 'dsa' ); ?></th><td><?php echo ! empty( $update_state['last_installed'] ) ? '<code>' . esc_html( (string) $update_state['last_installed'] ) . '</code>' : esc_html__( 'None yet', 'dsa' ); ?></td></tr>
+					</tbody>
+				</table>
+				<?php if ( ! empty( $update_state['last_error'] ) ) : ?><p class="notice notice-warning inline"><strong><?php esc_html_e( 'Last safe failure:', 'dsa' ); ?></strong> <?php echo esc_html( (string) $update_state['last_error'] ); ?></p><?php endif; ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:16px">
+					<input type="hidden" name="action" value="dsa_save_update_settings">
+					<?php wp_nonce_field( 'dsa_save_update_settings' ); ?>
+					<p><label><?php esc_html_e( 'Release channel', 'dsa' ); ?> <select name="kiwe_updates[channel]"><option value="stable" <?php selected( $update_settings['channel'], 'stable' ); ?>><?php esc_html_e( 'Stable', 'dsa' ); ?></option><option value="candidate" <?php selected( $update_settings['channel'], 'candidate' ); ?>><?php esc_html_e( 'Release candidate', 'dsa' ); ?></option></select></label></p>
+					<label><input type="checkbox" name="kiwe_updates[automatic]" value="1" <?php checked( ! empty( $update_settings['automatic'] ) ); ?>> <?php esc_html_e( 'Automatically install newer signed builds from this channel', 'dsa' ); ?></label>
+					<p class="description"><?php esc_html_e( 'Stable is recommended for client sites. Candidate receives reviewed pre-release builds such as the current 8.0 release candidates.', 'dsa' ); ?></p>
+					<?php submit_button( __( 'Save update settings', 'dsa' ), 'secondary', 'submit', false ); ?>
+				</form>
+				<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_check_updates"><?php wp_nonce_field( 'dsa_check_updates' ); ?><?php submit_button( __( 'Check signed feed now', 'dsa' ), 'secondary', 'submit', false ); ?></form>
+					<?php if ( ! empty( $update_release['available'] ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_install_update"><?php wp_nonce_field( 'dsa_install_update' ); ?><?php submit_button( sprintf( __( 'Install Kiwe %s', 'dsa' ), (string) $update_release['version'] ), 'primary', 'submit', false ); ?></form><?php endif; ?>
+				</div>
 			</section>
 
 			<section class="dsa-admin__panel">
@@ -7477,7 +7618,7 @@ final class Admin {
 					<?php wp_nonce_field( 'dsa_developer_safe_persistence_cleanup' ); ?>
 					<?php submit_button( __( 'Run safe persistence maintenance', 'dsa' ), 'secondary', 'submit', false ); ?>
 				</form>
-				<p class="description"><?php esc_html_e( 'Safe maintenance removes only expired Kiwe/SecureTrack/PhoneKey transients, expired operational rows, and cron events for disabled features. It preserves content, commerce data, consent, logs, and active PhoneKey identity.', 'dsa' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Safe maintenance removes only expired Kiwe/SecureTrack/Key.kiwe transients, expired operational rows, and cron events for disabled features. It preserves content, commerce data, consent, logs, and active Key.kiwe identity.', 'dsa' ); ?></p>
 
 				<?php if ( ! empty( $persistence['tables']['legacy'] ) ) : ?>
 					<h3><?php esc_html_e( 'Unknown legacy tables', 'dsa' ); ?></h3>
@@ -7619,7 +7760,7 @@ final class Admin {
 
 			<section class="dsa-admin__panel">
 				<h2><?php esc_html_e( 'Reset configuration', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Returns Kiwe to the safe SiteGraph-only baseline. This does not remove WordPress content, WooCommerce data, user accounts, PhoneKey credentials, analytics tables, or SecureTrack records.', 'dsa' ); ?></p>
+				<p><?php esc_html_e( 'Returns Kiwe to the safe SiteGraph-only baseline. This does not remove WordPress content, WooCommerce data, user accounts, Key.kiwe credentials, analytics tables, or SecureTrack records.', 'dsa' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-dsa-reset-settings>
 					<input type="hidden" name="action" value="dsa_developer_reset_settings">
 					<?php wp_nonce_field( 'dsa_developer_reset_settings' ); ?>
@@ -7761,7 +7902,7 @@ final class Admin {
 		?>
 		<div class="wrap dsa-admin">
 			<h1><?php esc_html_e( 'Kiwe Theme', 'dsa' ); ?></h1>
-			<p><?php esc_html_e( 'Choose how Kiwe presents the same Surface modules. Theme changes presentation only; data, REST, PhoneKey, cart, search, AI, and module contracts remain unchanged.', 'dsa' ); ?></p>
+			<p><?php esc_html_e( 'Choose how Kiwe presents the same Surface modules. Theme changes presentation only; data, REST, Key.kiwe, cart, search, AI, and module contracts remain unchanged.', 'dsa' ); ?></p>
 			<?php if ( isset( $_GET['settings-updated'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Theme saved.', 'dsa' ); ?></p></div><?php endif; ?>
 			<?php if ( isset( $_GET['theme-imported'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Theme installed. Activate it below when ready.', 'dsa' ); ?></p></div><?php endif; ?>
 			<?php if ( isset( $_GET['theme-activated'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Installed theme activated.', 'dsa' ); ?></p></div><?php endif; ?>
@@ -8105,6 +8246,7 @@ final class Admin {
 					<table class="form-table" role="presentation"><tbody>
 						<tr><th scope="row"><label for="dsa-menu-label"><?php esc_html_e( 'Menu label', 'dsa' ); ?></label></th><td><input id="dsa-menu-label" class="regular-text" type="text" name="dock[menu_label]" value="<?php echo esc_attr( (string) $dock['menu_label'] ); ?>"></td></tr>
 						<tr><th scope="row"><label for="dsa-menu-heading"><?php esc_html_e( 'Heading tag', 'dsa' ); ?></label></th><td><select id="dsa-menu-heading" name="dock[menu_heading_tag]"><?php foreach ( [ 'span', 'p', 'h1', 'h2', 'h3', 'h4' ] as $tag ) : ?><option value="<?php echo esc_attr( $tag ); ?>" <?php selected( $dock['menu_heading_tag'], $tag ); ?>><?php echo esc_html( strtoupper( $tag ) ); ?></option><?php endforeach; ?></select></td></tr>
+						<tr><th scope="row"><label for="dsa-menu-scale"><?php esc_html_e( 'Navigation text size', 'dsa' ); ?></label></th><td><select id="dsa-menu-scale" name="dock[menu_scale]"><?php foreach ( [ 'compact' => __( 'Compact', 'dsa' ), 'balanced' => __( 'Balanced', 'dsa' ), 'expressive' => __( 'Expressive', 'dsa' ) ] as $scale => $scale_label ) : ?><option value="<?php echo esc_attr( $scale ); ?>" <?php selected( $dock['menu_scale'] ?? 'compact', $scale ); ?>><?php echo esc_html( $scale_label ); ?></option><?php endforeach; ?></select><p class="description"><?php esc_html_e( 'Controls the large WordPress navigation links. Table-of-contents text remains compact and readable.', 'dsa' ); ?></p></td></tr>
 						<tr><th scope="row"><?php esc_html_e( 'Administrator utility', 'dsa' ); ?></th><td><label><input type="checkbox" name="dock[admin_dashboard_link_enabled]" value="1" <?php checked( ! empty( $dock['admin_dashboard_link_enabled'] ) ); ?>> <?php esc_html_e( 'Show the compact Dashboard link to administrators', 'dsa' ); ?></label></td></tr>
 					</tbody></table>
 				</section>
@@ -8203,6 +8345,15 @@ final class Admin {
 				</div>
 			<?php endif; ?>
 
+			<?php if ( $loaded ) : ?>
+				<nav class="nav-tab-wrapper" aria-label="<?php echo esc_attr__( 'Kiwe Secure sections', 'dsa' ); ?>">
+					<?php foreach ( $tabs as $id => $tab ) : ?>
+						<a class="nav-tab <?php echo $active === $id ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( [ 'page' => 'kiwe-secure', 'tab' => $id ], admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html( $tab['label'] ); ?></a>
+					<?php endforeach; ?>
+				</nav>
+			<?php endif; ?>
+
+			<?php if ( ! $loaded || 'settings' === $active ) : ?>
 			<section class="dsa-admin__panel">
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<?php wp_nonce_field( 'dsa_save_settings' ); ?>
@@ -8240,6 +8391,34 @@ final class Admin {
 								</td>
 							</tr>
 							<tr>
+								<th scope="row"><?php esc_html_e( 'Protection Profile', 'dsa' ); ?></th>
+								<td>
+									<select name="secure[protection_profile]">
+										<option value="monitor" <?php selected( (string) ( $secure['protection_profile'] ?? 'monitor' ), 'monitor' ); ?>><?php esc_html_e( 'Monitor only', 'dsa' ); ?></option>
+										<option value="recommended" <?php selected( (string) ( $secure['protection_profile'] ?? 'monitor' ), 'recommended' ); ?>><?php esc_html_e( 'Recommended enforcement', 'dsa' ); ?></option>
+									</select>
+									<p class="description"><?php esc_html_e( 'Recommended enforcement enables brute-force blocking, semantic WAF checks, a honeypot, XML-RPC and user-enumeration hardening, security headers, file-editor protection, admin activity tracking, and bounded endpoint rate limits.', 'dsa' ); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e( 'Incident and SEO Integrity', 'dsa' ); ?></th>
+								<td class="dsa-admin__checks">
+									<label><input type="checkbox" name="secure[schema_integrity_guard_enabled]" value="1" <?php checked( ! empty( $secure['schema_integrity_guard_enabled'] ) ); ?>> <?php esc_html_e( 'Remove Product schema from requests that are not real WooCommerce products', 'dsa' ); ?></label><br>
+									<label><input type="checkbox" name="secure[seo_spam_410_enabled]" value="1" <?php checked( ! empty( $secure['seo_spam_410_enabled'] ) ); ?>> <?php esc_html_e( 'Return 410 + noindex for unresolved numeric SEO-spam routes', 'dsa' ); ?></label><br>
+									<label><input type="checkbox" name="secure[harden_public_rest_users]" value="1" <?php checked( ! empty( $secure['harden_public_rest_users'] ) ); ?>> <?php esc_html_e( 'Hide public WordPress REST user-enumeration routes', 'dsa' ); ?></label><br>
+									<label><input type="checkbox" name="secure[security_headers_enabled]" value="1" <?php checked( ! empty( $secure['security_headers_enabled'] ) ); ?>> <?php esc_html_e( 'Send conservative security headers and remove X-Powered-By', 'dsa' ); ?></label>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row"><?php esc_html_e( 'Image Resource Guard', 'dsa' ); ?></th>
+								<td class="dsa-admin-inline-fields">
+									<label><input type="checkbox" name="secure[image_resource_guard_enabled]" value="1" <?php checked( ! empty( $secure['image_resource_guard_enabled'] ) ); ?>> <?php esc_html_e( 'Use the low-memory upload path and reject pathological image dimensions before processing', 'dsa' ); ?></label>
+									<label><?php esc_html_e( 'Large-image threshold', 'dsa' ); ?> <input class="small-text" type="number" min="1600" max="4096" name="secure[image_big_size_threshold]" value="<?php echo esc_attr( (string) ( $secure['image_big_size_threshold'] ?? 2560 ) ); ?>"> px</label>
+									<label><?php esc_html_e( 'Maximum side', 'dsa' ); ?> <input class="small-text" type="number" min="4096" max="20000" name="secure[image_max_dimension]" value="<?php echo esc_attr( (string) ( $secure['image_max_dimension'] ?? 12000 ) ); ?>"> px</label>
+									<label><?php esc_html_e( 'Maximum megapixels', 'dsa' ); ?> <input class="small-text" type="number" min="16" max="120" name="secure[image_max_megapixels]" value="<?php echo esc_attr( (string) ( $secure['image_max_megapixels'] ?? 40 ) ); ?>"></label>
+								</td>
+							</tr>
+							<tr>
 								<th scope="row"><label for="dsa-trusted-proxy-cidrs"><?php esc_html_e( 'Trusted Proxy CIDRs', 'dsa' ); ?></label></th>
 								<td>
 									<textarea id="dsa-trusted-proxy-cidrs" class="large-text code" rows="5" name="secure[trusted_proxy_cidrs]" placeholder="203.0.113.0/24"><?php echo esc_textarea( (string) ( $secure['trusted_proxy_cidrs'] ?? '' ) ); ?></textarea>
@@ -8256,6 +8435,7 @@ final class Admin {
 				<p><?php echo esc_html( sprintf( __( 'SecureTrack resolves this request as %1$s from %2$s. Direct peer: %3$s.', 'dsa' ), (string) ( $ip_resolution['resolved'] ?? '' ), sanitize_key( (string) ( $ip_resolution['source'] ?? 'remote_addr' ) ), (string) ( $ip_resolution['remote'] ?? '' ) ) ); ?></p>
 				<?php if ( ! empty( $ip_resolution['forwarded_ignored'] ) ) : ?><p class="description"><?php esc_html_e( 'Forwarded headers were present but ignored because the direct peer is not trusted. Add only host-confirmed proxy CIDRs above.', 'dsa' ); ?></p><?php endif; ?>
 			</section>
+			<?php endif; ?>
 
 			<?php if ( ! $loaded ) : ?>
 				<section class="dsa-admin__panel">
@@ -8263,11 +8443,6 @@ final class Admin {
 					<p><?php esc_html_e( 'Enable the engine above and reload to access Secure tabs. This keeps a broken security module from taking down wp-admin.', 'dsa' ); ?></p>
 				</section>
 			<?php else : ?>
-				<nav class="nav-tab-wrapper" aria-label="<?php echo esc_attr__( 'Kiwe Secure sections', 'dsa' ); ?>">
-					<?php foreach ( $tabs as $id => $tab ) : ?>
-						<a class="nav-tab <?php echo $active === $id ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( [ 'page' => 'kiwe-secure', 'tab' => $id ], admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html( $tab['label'] ); ?></a>
-					<?php endforeach; ?>
-				</nav>
 				<section class="dsa-admin__panel dsa-secure-admin__tab">
 					<?php $this->render_secure_tab( $tabs[ $active ]['callback'] ); ?>
 				</section>
@@ -8285,7 +8460,7 @@ final class Admin {
 		?>
 		<div class="wrap dsa-admin dsa-store-manager">
 			<h1><?php esc_html_e( 'Kiwe Email', 'dsa' ); ?></h1>
-			<p><?php esc_html_e( 'WordPress provides wp_mail. Kiwe configures and tests the delivery path your host or SMTP provider uses for PhoneKey and cart recovery messages.', 'dsa' ); ?></p>
+			<p><?php esc_html_e( 'WordPress provides wp_mail. Kiwe configures and tests the delivery path your host or SMTP provider uses for Key.kiwe and cart recovery messages.', 'dsa' ); ?></p>
 			<?php if ( isset( $_GET['settings-updated'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Email settings saved.', 'dsa' ); ?></p></div><?php endif; ?>
 			<?php if ( isset( $_GET['email-test'] ) ) : ?>
 				<div class="notice <?php echo 'sent' === $_GET['email-test'] ? 'notice-success' : 'notice-error'; ?> is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['message'] ?? ( 'sent' === $_GET['email-test'] ? __( 'Test email handed to the mail transport.', 'dsa' ) : __( 'Test email failed.', 'dsa' ) ) ) ) ); ?></p></div>
@@ -8301,19 +8476,19 @@ final class Admin {
 							<tr><th scope="row"><?php esc_html_e( 'Email Delivery', 'dsa' ); ?></th><td><label><input type="checkbox" name="email[enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>> <?php esc_html_e( 'Enable Kiwe email delivery', 'dsa' ); ?></label></td></tr>
 							<tr><th scope="row"><label for="dsa-email-transport"><?php esc_html_e( 'Transport', 'dsa' ); ?></label></th><td><select id="dsa-email-transport" name="email[transport]"><option value="wordpress" <?php selected( $config['transport'], 'wordpress' ); ?>><?php esc_html_e( 'WordPress / host mail', 'dsa' ); ?></option><option value="smtp" <?php selected( $config['transport'], 'smtp' ); ?>><?php esc_html_e( 'SMTP', 'dsa' ); ?></option></select><p class="description"><?php esc_html_e( 'Use WordPress/host mail when Hostinger or another mail plugin already handles delivery.', 'dsa' ); ?></p></td></tr>
 							<tr><th scope="row"><?php esc_html_e( 'Sender', 'dsa' ); ?></th><td><input class="regular-text" type="text" name="email[from_name]" value="<?php echo esc_attr( $config['from_name'] ); ?>" placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"> <input class="regular-text" type="email" name="email[from_email]" value="<?php echo esc_attr( $config['from_email'] ); ?>" placeholder="name@example.com"></td></tr>
-							<tr><th scope="row"><label for="dsa-email-provider"><?php esc_html_e( 'Provider preset', 'dsa' ); ?></label></th><td><select id="dsa-email-provider"><option value="custom"><?php esc_html_e( 'Custom / keep current settings', 'dsa' ); ?></option><option value="hostinger"><?php esc_html_e( 'Hostinger Email', 'dsa' ); ?></option><option value="titan"><?php esc_html_e( 'Titan Email', 'dsa' ); ?></option></select><p class="description"><?php esc_html_e( 'Select a preset to fill the server, port and encryption. You still enter the mailbox address and its password.', 'dsa' ); ?></p></td></tr>
+							<tr><th scope="row"><label for="dsa-email-provider"><?php esc_html_e( 'Provider preset', 'dsa' ); ?></label></th><td><select id="dsa-email-provider"><option value="custom"><?php esc_html_e( 'Custom / keep current settings', 'dsa' ); ?></option><option value="google"><?php esc_html_e( 'Google Workspace / Gmail', 'dsa' ); ?></option><option value="hostinger"><?php esc_html_e( 'Hostinger Email', 'dsa' ); ?></option><option value="titan"><?php esc_html_e( 'Titan Email', 'dsa' ); ?></option></select><p class="description"><?php esc_html_e( 'Select a preset to fill the server, port and encryption. Google requires a dedicated app password (or an administrator-configured SMTP relay); never enter the normal Google Account password.', 'dsa' ); ?></p></td></tr>
 							<tr><th scope="row"><?php esc_html_e( 'SMTP Server', 'dsa' ); ?></th><td><input id="dsa-email-smtp-host" class="regular-text" type="text" name="email[smtp][host]" value="<?php echo esc_attr( $smtp['host'] ); ?>" placeholder="smtp.example.com"> <input id="dsa-email-smtp-port" class="small-text" type="number" min="1" max="65535" name="email[smtp][port]" value="<?php echo esc_attr( (string) $smtp['port'] ); ?>"> <select id="dsa-email-smtp-encryption" name="email[smtp][encryption]"><option value="tls" <?php selected( $smtp['encryption'], 'tls' ); ?>>TLS</option><option value="ssl" <?php selected( $smtp['encryption'], 'ssl' ); ?>>SSL</option><option value="none" <?php selected( $smtp['encryption'], 'none' ); ?>><?php esc_html_e( 'None', 'dsa' ); ?></option></select></td></tr>
 							<tr><th scope="row"><?php esc_html_e( 'SMTP Authentication', 'dsa' ); ?></th><td><label><input type="checkbox" name="email[smtp][auth]" value="1" <?php checked( ! empty( $smtp['auth'] ) ); ?>> <?php esc_html_e( 'Authenticate with the SMTP server', 'dsa' ); ?></label><p><input class="regular-text" type="text" autocomplete="off" name="email[smtp][username]" value="<?php echo esc_attr( $smtp['username'] ); ?>" placeholder="<?php esc_attr_e( 'Username', 'dsa' ); ?>"> <input class="regular-text" type="password" autocomplete="new-password" name="email[smtp][password]" value="" placeholder="<?php echo esc_attr( ! empty( $smtp['password'] ) ? __( 'Saved securely; leave blank to keep', 'dsa' ) : __( 'Password', 'dsa' ) ); ?>"></p></td></tr>
 						</tbody></table>
 					<?php submit_button( __( 'Save Email Settings', 'dsa' ) ); ?>
 					</form>
-					<script>document.getElementById('dsa-email-provider')?.addEventListener('change',function(){const presets={hostinger:{host:'smtp.hostinger.com',port:'465',encryption:'ssl'},titan:{host:'smtp.titan.email',port:'465',encryption:'ssl'}};const preset=presets[this.value];if(!preset)return;document.getElementById('dsa-email-transport').value='smtp';document.getElementById('dsa-email-smtp-host').value=preset.host;document.getElementById('dsa-email-smtp-port').value=preset.port;document.getElementById('dsa-email-smtp-encryption').value=preset.encryption;});</script>
+					<script>document.getElementById('dsa-email-provider')?.addEventListener('change',function(){const presets={google:{host:'smtp.gmail.com',port:'587',encryption:'tls'},hostinger:{host:'smtp.hostinger.com',port:'465',encryption:'ssl'},titan:{host:'smtp.titan.email',port:'465',encryption:'ssl'}};const preset=presets[this.value];if(!preset)return;document.getElementById('dsa-email-transport').value='smtp';document.getElementById('dsa-email-smtp-host').value=preset.host;document.getElementById('dsa-email-smtp-port').value=preset.port;document.getElementById('dsa-email-smtp-encryption').value=preset.encryption;});</script>
 				</section>
 			<?php else : ?>
 				<section class="dsa-admin__panel">
 					<h2><?php esc_html_e( 'Delivery Test', 'dsa' ); ?></h2>
 					<p><?php echo esc_html( sprintf( __( 'Transport: %s', 'dsa' ), $diagnostics['transport'] ?? 'wordpress' ) ); ?> <?php if ( 'smtp' === ( $diagnostics['transport'] ?? '' ) ) : ?><?php echo esc_html( ! empty( $diagnostics['smtp_ready'] ) ? __( 'SMTP configuration is complete.', 'dsa' ) : __( 'SMTP configuration is incomplete.', 'dsa' ) ); ?><?php endif; ?></p>
-					<p><strong><?php esc_html_e( 'PhoneKey email fallback:', 'dsa' ); ?></strong> <?php echo esc_html( ! empty( $diagnostics['fallback_ready'] ) ? __( 'Verified by a successful Kiwe email test.', 'dsa' ) : __( 'Not verified. Save the transport and send a test before enabling client authentication.', 'dsa' ) ); ?></p>
+					<p><strong><?php esc_html_e( 'Key.kiwe email fallback:', 'dsa' ); ?></strong> <?php echo esc_html( ! empty( $diagnostics['fallback_ready'] ) ? __( 'Verified by a successful Kiwe email test.', 'dsa' ) : __( 'Not verified. Save the transport and send a test before enabling client authentication.', 'dsa' ) ); ?></p>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_email_test"><?php wp_nonce_field( 'dsa_email_test' ); ?><input class="regular-text" type="email" required name="recipient" value="<?php echo esc_attr( wp_get_current_user()->user_email ); ?>"><button class="button button-primary" type="submit"><?php esc_html_e( 'Send Test Email', 'dsa' ); ?></button></form>
 					<?php if ( ! empty( $diagnostics['last_failure']['message'] ) ) : ?><p><strong><?php esc_html_e( 'Last transport error:', 'dsa' ); ?></strong> <?php echo esc_html( $diagnostics['last_failure']['message'] ); ?></p><?php endif; ?>
 				</section>
@@ -8334,7 +8509,7 @@ final class Admin {
 		?>
 		<div class="wrap dsa-admin dsa-store-manager">
 			<h1><?php esc_html_e( 'Kiwe Abandoned Cart', 'dsa' ); ?></h1>
-			<p><?php esc_html_e( 'Follow a cart from anonymous activity to a PhoneKey or Woo account, then recover it through a deliberate admin reminder. Raw IP addresses are never stored.', 'dsa' ); ?></p>
+			<p><?php esc_html_e( 'Follow a cart from anonymous activity to a Key.kiwe or Woo account, then recover it through a deliberate admin reminder. Raw IP addresses are never stored.', 'dsa' ); ?></p>
 			<?php if ( isset( $_GET['settings-updated'] ) ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Abandoned-cart settings saved.', 'dsa' ); ?></p></div><?php endif; ?>
 			<?php if ( isset( $_GET['reminder'] ) ) : ?><div class="notice <?php echo 'sent' === $_GET['reminder'] ? 'notice-success' : 'notice-error'; ?> is-dismissible"><p><?php echo esc_html( sanitize_text_field( wp_unslash( $_GET['message'] ?? '' ) ) ); ?></p></div><?php endif; ?>
 			<?php $this->render_simple_admin_tabs( 'kiwe-abandoned-cart', $tabs, $tab ); ?>
@@ -8346,7 +8521,7 @@ final class Admin {
 					<?php foreach ( [ 'carts' => __( 'Tracked carts', 'dsa' ), 'identified' => __( 'Identified', 'dsa' ), 'abandoned' => __( 'Abandoned', 'dsa' ), 'reminded' => __( 'Reminded', 'dsa' ), 'recovered' => __( 'Recovered', 'dsa' ), 'converted' => __( 'Converted', 'dsa' ) ] as $key => $label ) : ?><div class="dsa-lpm-stat"><span><?php echo esc_html( $label ); ?></span><strong><?php echo esc_html( (string) $summary[ $key ] ); ?></strong></div><?php endforeach; ?>
 					<div class="dsa-lpm-stat"><span><?php esc_html_e( 'Recovered revenue', 'dsa' ); ?></span><strong><?php echo function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $summary['recovered_revenue'] ) ) : esc_html( (string) $summary['recovered_revenue'] ); ?></strong></div>
 				</div>
-				<section class="dsa-admin__panel"><h2><?php esc_html_e( 'Identity Journey', 'dsa' ); ?></h2><p><?php esc_html_e( 'Anonymous activity begins with salted visitor and Woo-session hashes. When PhoneKey or WordPress identifies the same browser, the open cart is linked to that user ID. Contact details are resolved only when an authorized admin sends a reminder.', 'dsa' ); ?></p></section>
+				<section class="dsa-admin__panel"><h2><?php esc_html_e( 'Identity Journey', 'dsa' ); ?></h2><p><?php esc_html_e( 'Anonymous activity begins with salted visitor and Woo-session hashes. When Key.kiwe or WordPress identifies the same browser, the open cart is linked to that user ID. Contact details are resolved only when an authorized admin sends a reminder.', 'dsa' ); ?></p></section>
 			<?php elseif ( 'reminders' === $tab ) : ?>
 				<?php $rows = $this->abandoned_carts->reminder_rows( 'abandoned', 150 ); ?>
 				<section class="dsa-admin__panel"><table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Cart', 'dsa' ); ?></th><th><?php esc_html_e( 'Identity', 'dsa' ); ?></th><th><?php esc_html_e( 'Last activity', 'dsa' ); ?></th><th><?php esc_html_e( 'Reminders', 'dsa' ); ?></th><th><?php esc_html_e( 'Actions', 'dsa' ); ?></th></tr></thead><tbody>
@@ -8358,10 +8533,10 @@ final class Admin {
 			<?php elseif ( 'settings' === $tab ) : ?>
 				<section class="dsa-admin__panel"><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="dsa_save_settings"><input type="hidden" name="_dsa_redirect" value="kiwe-abandoned-cart"><?php wp_nonce_field( 'dsa_save_settings' ); ?>
 				<table class="form-table" role="presentation"><tbody>
-				<tr><th scope="row"><?php esc_html_e( 'Tracking', 'dsa' ); ?></th><td><label><input type="checkbox" name="abandoned_cart[enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>> <?php esc_html_e( 'Track privacy-safe cart state', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[manual_reminders_enabled]" value="1" <?php checked( ! empty( $config['manual_reminders_enabled'] ) ); ?>> <?php esc_html_e( 'Allow authorized admins to send manual reminders', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[automatic_whatsapp_enabled]" value="1" <?php checked( ! empty( $config['automatic_whatsapp_enabled'] ) ); ?>> <?php esc_html_e( 'Prefer PhoneKey WhatsApp for opted-in saved-cart reminders', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[automatic_email_enabled]" value="1" <?php checked( ! empty( $config['automatic_email_enabled'] ) ); ?>> <?php esc_html_e( 'Use email for opted-in saved-cart reminders and consented WhatsApp fallback', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[guest_email_reminders_enabled]" value="1" <?php checked( ! empty( $config['guest_email_reminders_enabled'] ) ); ?>> <?php esc_html_e( 'Allow encrypted guest checkout email recovery after a visitor enters an email', 'dsa' ); ?></label><p class="description"><?php esc_html_e( 'Registered customers must opt into Saved cart reminders for each channel. WhatsApp failures fall back to email only when that customer also selected email. Guest email recovery is a separate explicit store setting.', 'dsa' ); ?></p></td></tr>
+				<tr><th scope="row"><?php esc_html_e( 'Tracking', 'dsa' ); ?></th><td><label><input type="checkbox" name="abandoned_cart[enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>> <?php esc_html_e( 'Track privacy-safe cart state', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[manual_reminders_enabled]" value="1" <?php checked( ! empty( $config['manual_reminders_enabled'] ) ); ?>> <?php esc_html_e( 'Allow authorized admins to send manual reminders', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[automatic_whatsapp_enabled]" value="1" <?php checked( ! empty( $config['automatic_whatsapp_enabled'] ) ); ?>> <?php esc_html_e( 'Prefer Key.kiwe WhatsApp for opted-in saved-cart reminders', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[automatic_email_enabled]" value="1" <?php checked( ! empty( $config['automatic_email_enabled'] ) ); ?>> <?php esc_html_e( 'Use email for opted-in saved-cart reminders and consented WhatsApp fallback', 'dsa' ); ?></label><br><label><input type="checkbox" name="abandoned_cart[guest_email_reminders_enabled]" value="1" <?php checked( ! empty( $config['guest_email_reminders_enabled'] ) ); ?>> <?php esc_html_e( 'Allow encrypted guest checkout email recovery after a visitor enters an email', 'dsa' ); ?></label><p class="description"><?php esc_html_e( 'Registered customers must opt into Saved cart reminders for each channel. WhatsApp failures fall back to email only when that customer also selected email. Guest email recovery is a separate explicit store setting.', 'dsa' ); ?></p></td></tr>
 				<tr><th scope="row"><?php esc_html_e( 'Timing', 'dsa' ); ?></th><td><label><?php esc_html_e( 'Abandoned after', 'dsa' ); ?> <input class="small-text" type="number" min="15" max="43200" name="abandoned_cart[inactivity_minutes]" value="<?php echo esc_attr( (string) $config['inactivity_minutes'] ); ?>"> <?php esc_html_e( 'minutes', 'dsa' ); ?></label> <label><?php esc_html_e( 'Unchanged-cart heartbeat', 'dsa' ); ?> <input class="small-text" type="number" min="1" max="60" name="abandoned_cart[heartbeat_minutes]" value="<?php echo esc_attr( (string) ( $config['heartbeat_minutes'] ?? 5 ) ); ?>"> <?php esc_html_e( 'minutes', 'dsa' ); ?></label> <label><?php esc_html_e( 'Cooldown', 'dsa' ); ?> <input class="small-text" type="number" min="1" max="720" name="abandoned_cart[cooldown_hours]" value="<?php echo esc_attr( (string) $config['cooldown_hours'] ); ?>"> <?php esc_html_e( 'hours', 'dsa' ); ?></label> <label><?php esc_html_e( 'Maximum', 'dsa' ); ?> <input class="small-text" type="number" min="1" max="10" name="abandoned_cart[max_reminders]" value="<?php echo esc_attr( (string) $config['max_reminders'] ); ?>"></label> <label><?php esc_html_e( 'Automation batch', 'dsa' ); ?> <input class="small-text" type="number" min="1" max="250" name="abandoned_cart[automation_batch_limit]" value="<?php echo esc_attr( (string) ( $config['automation_batch_limit'] ?? 25 ) ); ?>"></label><p class="description"><?php esc_html_e( 'Unchanged carts write only at this heartbeat. Quantity, product, identity, checkout, clear, and conversion changes still write immediately.', 'dsa' ); ?></p></td></tr>
 				<tr><th scope="row"><?php esc_html_e( 'Email Copy', 'dsa' ); ?></th><td><input class="large-text" type="text" name="abandoned_cart[email_subject]" value="<?php echo esc_attr( $config['email_subject'] ); ?>"><textarea class="large-text" rows="5" name="abandoned_cart[email_message]"><?php echo esc_textarea( $config['email_message'] ); ?></textarea><p class="description"><?php esc_html_e( 'Tokens: {site_name}, {item_count}, {cart_items}, {cart_total}, {recovery_url}', 'dsa' ); ?></p></td></tr>
-				<?php foreach ( [ 'sms' => 'SMS', 'whatsapp' => 'WhatsApp' ] as $channel => $label ) : $channel_config = $config['channels'][ $channel ] ?? []; ?><tr><th scope="row"><?php echo esc_html( $label ); ?></th><td><?php if ( 'whatsapp' === $channel ) : ?><p><strong><?php echo function_exists( 'pk_whatsapp_notification_ready' ) && pk_whatsapp_notification_ready() ? esc_html__( 'PhoneKey is ready and is the primary WhatsApp adapter.', 'dsa' ) : esc_html__( 'Configure and pair PhoneKey under Kiwe Auth to enable signed WhatsApp delivery.', 'dsa' ); ?></strong></p><p class="description"><?php esc_html_e( 'The fields below are retained only for legacy webhook compatibility and are ignored while PhoneKey is ready.', 'dsa' ); ?></p><?php endif; ?><label><input type="checkbox" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][enabled]" value="1" <?php checked( ! empty( $channel_config['enabled'] ) ); ?>> <?php esc_html_e( 'Enable legacy generic webhook adapter', 'dsa' ); ?></label><p><input class="large-text" type="url" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][webhook_url]" value="<?php echo esc_attr( $channel_config['webhook_url'] ?? '' ); ?>" placeholder="https://provider.example/send"></p><p><input class="regular-text" type="password" autocomplete="new-password" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][api_token]" value="" placeholder="<?php echo esc_attr( ! empty( $channel_config['api_token'] ) ? __( 'Token saved; leave blank to keep', 'dsa' ) : __( 'Bearer API token', 'dsa' ) ); ?>"> <input class="regular-text" type="text" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][sender]" value="<?php echo esc_attr( $channel_config['sender'] ?? '' ); ?>" placeholder="<?php esc_attr_e( 'Sender ID or number', 'dsa' ); ?>"></p><textarea class="large-text" rows="3" name="abandoned_cart[<?php echo esc_attr( $channel ); ?>_message]"><?php echo esc_textarea( $config[ $channel . '_message' ] ?? '' ); ?></textarea></td></tr><?php endforeach; ?>
+				<?php foreach ( [ 'sms' => 'SMS', 'whatsapp' => 'WhatsApp' ] as $channel => $label ) : $channel_config = $config['channels'][ $channel ] ?? []; ?><tr><th scope="row"><?php echo esc_html( $label ); ?></th><td><?php if ( 'whatsapp' === $channel ) : ?><p><strong><?php echo function_exists( 'pk_whatsapp_notification_ready' ) && pk_whatsapp_notification_ready() ? esc_html__( 'Key.kiwe is ready and is the primary WhatsApp adapter.', 'dsa' ) : esc_html__( 'Configure and pair Key.kiwe under Kiwe Auth to enable signed WhatsApp delivery.', 'dsa' ); ?></strong></p><p class="description"><?php esc_html_e( 'The fields below are retained only for legacy webhook compatibility and are ignored while Key.kiwe is ready.', 'dsa' ); ?></p><?php endif; ?><label><input type="checkbox" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][enabled]" value="1" <?php checked( ! empty( $channel_config['enabled'] ) ); ?>> <?php esc_html_e( 'Enable legacy generic webhook adapter', 'dsa' ); ?></label><p><input class="large-text" type="url" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][webhook_url]" value="<?php echo esc_attr( $channel_config['webhook_url'] ?? '' ); ?>" placeholder="https://provider.example/send"></p><p><input class="regular-text" type="password" autocomplete="new-password" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][api_token]" value="" placeholder="<?php echo esc_attr( ! empty( $channel_config['api_token'] ) ? __( 'Token saved; leave blank to keep', 'dsa' ) : __( 'Bearer API token', 'dsa' ) ); ?>"> <input class="regular-text" type="text" name="abandoned_cart[channels][<?php echo esc_attr( $channel ); ?>][sender]" value="<?php echo esc_attr( $channel_config['sender'] ?? '' ); ?>" placeholder="<?php esc_attr_e( 'Sender ID or number', 'dsa' ); ?>"></p><textarea class="large-text" rows="3" name="abandoned_cart[<?php echo esc_attr( $channel ); ?>_message]"><?php echo esc_textarea( $config[ $channel . '_message' ] ?? '' ); ?></textarea></td></tr><?php endforeach; ?>
 				</tbody></table><?php submit_button( __( 'Save Abandoned Cart Settings', 'dsa' ) ); ?></form></section>
 			<?php else : ?>
 				<?php $logs = $this->abandoned_carts->delivery_logs( 150 ); ?><section class="dsa-admin__panel"><table class="widefat striped"><thead><tr><th><?php esc_html_e( 'Time', 'dsa' ); ?></th><th><?php esc_html_e( 'Cart', 'dsa' ); ?></th><th><?php esc_html_e( 'Channel', 'dsa' ); ?></th><th><?php esc_html_e( 'Status', 'dsa' ); ?></th><th><?php esc_html_e( 'Result', 'dsa' ); ?></th></tr></thead><tbody><?php if ( ! $logs ) : ?><tr><td colspan="5"><?php esc_html_e( 'No reminder deliveries recorded yet.', 'dsa' ); ?></td></tr><?php endif; ?><?php foreach ( $logs as $log ) : ?><tr><td><?php echo esc_html( $log['created_at'] ); ?></td><td>#<?php echo esc_html( (string) $log['cart_id'] ); ?></td><td><?php echo esc_html( ucfirst( $log['channel'] ) ); ?></td><td><?php echo esc_html( ucfirst( $log['status'] ) ); ?></td><td><?php echo esc_html( $log['message'] ); ?></td></tr><?php endforeach; ?></tbody></table></section>
@@ -8777,7 +8952,7 @@ final class Admin {
 				$cards = [
 					'visitors'          => [ __( 'Visitors', 'dsa' ), __( 'Unique hashed IP anchors', 'dsa' ) ],
 					'users'             => [ __( 'Users', 'dsa' ), __( 'Logged-in or registered', 'dsa' ) ],
-					'identified'        => [ __( 'Identified', 'dsa' ), __( 'Hashed PhoneKey/Woo contact', 'dsa' ) ],
+					'identified'        => [ __( 'Identified', 'dsa' ), __( 'Hashed Key.kiwe/Woo contact', 'dsa' ) ],
 					'cart_visitors'     => [ __( 'Added to cart', 'dsa' ), sprintf( __( '%s%% of visitors', 'dsa' ), $funnel['cart_rate'] ) ],
 					'checkout_visitors' => [ __( 'Reached checkout', 'dsa' ), sprintf( __( '%s%% of carts', 'dsa' ), $funnel['checkout_rate'] ) ],
 					'purchase_visitors' => [ __( 'Purchased', 'dsa' ), sprintf( __( '%s%% of checkout visitors', 'dsa' ), $funnel['purchase_rate'] ) ],
@@ -8797,7 +8972,7 @@ final class Admin {
 			<div class="dsa-lpm-card">
 				<h2><?php esc_html_e( 'Funnel Definition', 'dsa' ); ?></h2>
 				<p><?php esc_html_e( 'Visitors are counted through salted IP hashes, not raw IP addresses. Analytics keeps broad funnel math; Kiwe Abandoned Cart uses its configured inactivity threshold and a separate recoverable-cart ledger.', 'dsa' ); ?></p>
-				<p><?php esc_html_e( 'Identified visitors have a hashed PhoneKey, Woo customer, billing phone, or billing email anchor. Raw contact details are resolved only for an authorized manual reminder.', 'dsa' ); ?></p>
+				<p><?php esc_html_e( 'Identified visitors have a hashed Key.kiwe, Woo customer, billing phone, or billing email anchor. Raw contact details are resolved only for an authorized manual reminder.', 'dsa' ); ?></p>
 				<p><?php esc_html_e( 'Funnel totals begin collecting after this analytics schema is installed; older cart-event rows remain available but cannot be retroactively assigned an IP or contact hash.', 'dsa' ); ?></p>
 			</div>
 		</section>
@@ -8914,7 +9089,7 @@ final class Admin {
 					'confirmedInstalls'    => [ __( 'Confirmed app users', 'dsa' ), __( 'Installed event or standalone launch', 'dsa' ) ],
 					'standaloneLaunches'   => [ __( 'Standalone launches', 'dsa' ), __( 'Opened from a Home Screen app icon', 'dsa' ) ],
 					'appUsers'             => [ __( 'App + user', 'dsa' ), __( 'Confirmed app visitors resolved to an account', 'dsa' ) ],
-					'appAnonymous'         => [ __( 'App, not yet a user', 'dsa' ), __( 'Confirmed app visitors awaiting PhoneKey welcome', 'dsa' ) ],
+					'appAnonymous'         => [ __( 'App, not yet a user', 'dsa' ), __( 'Confirmed app visitors awaiting Key.kiwe welcome', 'dsa' ) ],
 				];
 				?>
 				<?php foreach ( $cards as $key => $card ) : ?>
@@ -8945,7 +9120,7 @@ final class Admin {
 
 			<div class="dsa-lpm-card">
 				<h2><?php esc_html_e( 'Visitor adoption ledger', 'dsa' ); ?></h2>
-				<p><?php esc_html_e( 'Visitors are keyed by a salted IP hash. Raw IP addresses are never retained. When the same visitor later signs in through PhoneKey or WordPress, the row resolves to that user; shared networks can still merge multiple people into one approximate visitor.', 'dsa' ); ?></p>
+				<p><?php esc_html_e( 'Visitors are keyed by a salted IP hash. Raw IP addresses are never retained. When the same visitor later signs in through Key.kiwe or WordPress, the row resolves to that user; shared networks can still merge multiple people into one approximate visitor.', 'dsa' ); ?></p>
 				<table class="widefat striped">
 					<thead><tr><th><?php esc_html_e( 'Visitor', 'dsa' ); ?></th><th><?php esc_html_e( 'Identity', 'dsa' ); ?></th><th><?php esc_html_e( 'App', 'dsa' ); ?></th><th><?php esc_html_e( 'Notifications', 'dsa' ); ?></th><th><?php esc_html_e( 'Platform', 'dsa' ); ?></th><th><?php esc_html_e( 'Last event', 'dsa' ); ?></th></tr></thead>
 					<tbody>
@@ -8974,7 +9149,7 @@ final class Admin {
 								<td>
 									<?php if ( ! empty( $row['userId'] ) ) : ?>
 										<a href="<?php echo esc_url( (string) ( $row['userEditUrl'] ?? '' ) ); ?>"><?php echo esc_html( $identity_name ); ?></a>
-										<?php if ( ! empty( $row['phonekeyVerified'] ) ) : ?><small><?php esc_html_e( 'PhoneKey verified', 'dsa' ); ?></small><?php endif; ?>
+										<?php if ( ! empty( $row['phonekeyVerified'] ) ) : ?><small><?php esc_html_e( 'Key.kiwe verified', 'dsa' ); ?></small><?php endif; ?>
 									<?php else : ?>
 										<?php esc_html_e( 'Anonymous visitor', 'dsa' ); ?>
 									<?php endif; ?>
@@ -9204,7 +9379,7 @@ final class Admin {
 				<tbody>
 					<?php if ( empty( $rows ) ) : ?><tr><td colspan="6"><?php esc_html_e( 'No cart events found.', 'dsa' ); ?></td></tr><?php endif; ?>
 					<?php foreach ( $rows as $row ) : ?>
-						<tr><td><code><?php echo esc_html( $row['event_type'] ); ?></code></td><td><a href="<?php echo esc_url( $row['edit_url'] ); ?>"><?php echo esc_html( $row['title'] ); ?></a></td><td><?php echo esc_html( (string) $row['quantity'] ); ?></td><td><?php echo esc_html( $row['source'] . ( $row['context'] ? ' / ' . $row['context'] : '' ) ); ?></td><td><?php echo esc_html( $row['phonekey_verified'] ? __( 'PhoneKey verified', 'dsa' ) : ( $row['user_id'] ? __( 'Logged-in', 'dsa' ) : $row['customer_hash'] ) ); ?></td><td><?php echo esc_html( $row['created_at'] ); ?></td></tr>
+						<tr><td><code><?php echo esc_html( $row['event_type'] ); ?></code></td><td><a href="<?php echo esc_url( $row['edit_url'] ); ?>"><?php echo esc_html( $row['title'] ); ?></a></td><td><?php echo esc_html( (string) $row['quantity'] ); ?></td><td><?php echo esc_html( $row['source'] . ( $row['context'] ? ' / ' . $row['context'] : '' ) ); ?></td><td><?php echo esc_html( $row['phonekey_verified'] ? __( 'Key.kiwe verified', 'dsa' ) : ( $row['user_id'] ? __( 'Logged-in', 'dsa' ) : $row['customer_hash'] ) ); ?></td><td><?php echo esc_html( $row['created_at'] ); ?></td></tr>
 					<?php endforeach; ?>
 				</tbody>
 			</table>
@@ -9987,6 +10162,7 @@ final class Admin {
 			'menu_nav_id'         => absint( $input['menu_nav_id'] ?? ( $current['menu_nav_id'] ?? 0 ) ),
 			'menu_nav_ids'        => isset( $input['menu_nav_ids'] ) ? array_values( array_filter( array_map( 'absint', (array) $input['menu_nav_ids'] ) ) ) : (array) ( $current['menu_nav_ids'] ?? [] ),
 			'menu_heading_tag'    => $heading,
+			'menu_scale'          => in_array( $input['menu_scale'] ?? ( $current['menu_scale'] ?? 'compact' ), [ 'compact', 'balanced', 'expressive' ], true ) ? sanitize_key( $input['menu_scale'] ?? ( $current['menu_scale'] ?? 'compact' ) ) : 'compact',
 			'menu_items'          => isset( $input['menu_items'] ) ? $this->sanitize_menu_items( $input['menu_items'] ) : (array) ( $current['menu_items'] ?? [] ),
 			'menu_context_enabled' => array_key_exists( 'menu_context_enabled', $input ) ? ! empty( $input['menu_context_enabled'] ) : ! empty( $current['menu_context_enabled'] ),
 			'menu_context_title' => sanitize_text_field( $input['menu_context_title'] ?? ( $current['menu_context_title'] ?? 'Table of contents' ) ),
@@ -10011,6 +10187,7 @@ final class Admin {
 		return [
 			'menu_label'          => sanitize_text_field( $input['menu_label'] ?? 'Menu' ),
 			'menu_heading_tag'    => $heading,
+			'menu_scale'          => in_array( $input['menu_scale'] ?? ( $current['menu_scale'] ?? 'compact' ), [ 'compact', 'balanced', 'expressive' ], true ) ? sanitize_key( $input['menu_scale'] ?? ( $current['menu_scale'] ?? 'compact' ) ) : 'compact',
 			'menu_nav_ids'        => $nav_ids,
 			'menu_nav_id'         => absint( $nav_ids[0] ?? 0 ),
 			'menu_items'          => $this->sanitize_menu_items( $input['menu_items'] ?? [] ),
@@ -10411,10 +10588,19 @@ final class Admin {
 
 		return [
 			'enabled'             => ! empty( $input['enabled'] ),
+			'protection_profile'  => in_array( sanitize_key( (string) ( $input['protection_profile'] ?? 'monitor' ) ), [ 'monitor', 'recommended' ], true ) ? sanitize_key( (string) $input['protection_profile'] ) : 'monitor',
 			'auto_logout_enabled' => ! empty( $input['auto_logout_enabled'] ),
 			'auto_logout_minutes' => max( 1, min( 1440, absint( $input['auto_logout_minutes'] ?? ( $current['auto_logout_minutes'] ?? 30 ) ) ) ),
 			'auto_logout_roles'   => $roles,
 			'trusted_proxy_cidrs' => $this->sanitize_cidr_lines( $input['trusted_proxy_cidrs'] ?? ( $current['trusted_proxy_cidrs'] ?? '' ) ),
+			'schema_integrity_guard_enabled' => ! empty( $input['schema_integrity_guard_enabled'] ),
+			'seo_spam_410_enabled' => ! empty( $input['seo_spam_410_enabled'] ),
+			'harden_public_rest_users' => ! empty( $input['harden_public_rest_users'] ),
+			'security_headers_enabled' => ! empty( $input['security_headers_enabled'] ),
+			'image_resource_guard_enabled' => ! empty( $input['image_resource_guard_enabled'] ),
+			'image_big_size_threshold' => max( 1600, min( 4096, absint( $input['image_big_size_threshold'] ?? ( $current['image_big_size_threshold'] ?? 2560 ) ) ) ),
+			'image_max_dimension' => max( 4096, min( 20000, absint( $input['image_max_dimension'] ?? ( $current['image_max_dimension'] ?? 12000 ) ) ) ),
+			'image_max_megapixels' => max( 16, min( 120, absint( $input['image_max_megapixels'] ?? ( $current['image_max_megapixels'] ?? 40 ) ) ) ),
 		];
 	}
 

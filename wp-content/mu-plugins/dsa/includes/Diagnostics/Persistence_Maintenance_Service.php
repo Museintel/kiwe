@@ -13,8 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Read-only persistence inventory plus narrowly scoped maintenance actions.
  *
  * It never touches WordPress/WooCommerce content, users, orders, active
- * PhoneKey credentials/factors/devices, notification consent, or current
- * Kiwe/SecureTrack/PhoneKey table schemas.
+ * Key.kiwe credentials/factors/devices, notification consent, or current
+ * Kiwe/SecureTrack/Key.kiwe table schemas.
  */
 final class Persistence_Maintenance_Service {
 	private const TABLE_SUFFIXES = [

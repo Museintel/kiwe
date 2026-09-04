@@ -12,6 +12,12 @@ kiwe-ai-toolkit/node_modules/
 kiwe-ai-toolkit/tmp/
 kiwe-ai-toolkit/out/
 ui/
-services/phonekey-gateway/runtime-config.json
-services/phonekey-gateway/.phonekey-state/
-services/phonekey-gateway/.phonekey-runtime/
+services/key-gateway/runtime-config.json
+services/key-gateway/instance-config.json
+services/key-gateway/.kiwe-key-state/
+services/key-gateway/.kiwe-key-runtime/
+tools/release/.secrets/
+/.tmp/
+/dist/
+/app.kiwelaunch.com_*.zip
+/public/app.kiwelaunch.com/updates/kiwe/v1/releases/*/kiwe-mu-plugin.zip

@@ -1,0 +1,45 @@
+name: Build signed Kiwe MU release
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release feed channel
+        required: true
+        default: candidate
+        type: choice
+        options:
+          - candidate
+          - stable
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Install Kiwe AI Toolkit dependencies
+        working-directory: kiwe-ai-toolkit
+        run: npm ci --no-audit --no-fund
+      - name: Verify source baseline
+        run: node tools/release/verify-green-baseline.cjs
+      - name: Build signed release feed
+        env:
+          KIWE_UPDATE_ED25519_PRIVATE_PEM: ${{ secrets.KIWE_UPDATE_ED25519_PRIVATE_PEM }}
+        run: node tools/release/build-signed-update.mjs --channel=${{ inputs.channel }}
+      - name: Upload deployable feed
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiwe-${{ inputs.channel }}-signed-feed
+          path: public/app.kiwelaunch.com/
+          if-no-files-found: error
+          retention-days: 30

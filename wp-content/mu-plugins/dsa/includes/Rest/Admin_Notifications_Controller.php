@@ -39,14 +39,14 @@ final class Admin_Notifications_Controller {
 
 	public function can_read(): bool {
 		return is_user_logged_in()
-			&& ( current_user_can( 'manage_options' ) || current_user_can( 'manage_woocommerce' ) || current_user_can( 'moderate_comments' ) )
+			&& ( current_user_can( 'manage_options' ) || current_user_can( 'manage_woocommerce' ) || current_user_can( 'moderate_comments' ) || current_user_can( 'kiwe_manage_notification_policy' ) )
 			&& Origin_Checker::is_same_site_request()
 			&& Origin_Checker::transient_rate_limit( 'dsa_admin_notifications_read', 30 );
 	}
 
 	public function can_write( WP_REST_Request $request ) {
 		$authorized = is_user_logged_in()
-			&& ( current_user_can( 'manage_options' ) || current_user_can( 'manage_woocommerce' ) || current_user_can( 'moderate_comments' ) )
+			&& ( current_user_can( 'manage_options' ) || current_user_can( 'manage_woocommerce' ) || current_user_can( 'moderate_comments' ) || current_user_can( 'kiwe_manage_notification_policy' ) )
 			&& Origin_Checker::transient_rate_limit( 'dsa_admin_notifications_write', 60 );
 
 		return $authorized ? Origin_Checker::mutation_allowed( $request ) : false;

@@ -15,6 +15,8 @@ final class Admin_Event_Notification_Service {
 	private $push;
 	private $analytics;
 	private $channels;
+	private bool $router_registered = false;
+	private bool $sources_registered = false;
 
 	public function __construct( Notification_Preference_Service $preferences, Push_Service $push, ?Store_Analytics_Service $analytics = null, ?Channel_Service $channels = null ) {
 		$this->preferences = $preferences;
@@ -24,6 +26,9 @@ final class Admin_Event_Notification_Service {
 	}
 
 	public function register(): void {
+		$this->register_router();
+		if ( $this->sources_registered ) return;
+		$this->sources_registered = true;
 		add_action( 'template_redirect', [ $this, 'queue_visitor_summary' ], 45 );
 		add_action( 'dsa_analytics_visit_recorded', [ $this, 'queue_live_visitor' ], 10, 1 );
 		add_action( 'dsa_analytics_activity_recorded', [ $this, 'queue_visitor_activity' ], 10, 1 );
@@ -31,7 +36,63 @@ final class Admin_Event_Notification_Service {
 		add_action( 'woocommerce_checkout_order_processed', [ $this, 'queue_order' ], 20, 1 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'queue_order' ], 20, 1 );
 		add_action( 'comment_post', [ $this, 'queue_comment' ], 20, 3 );
+		add_action( 'kiwe_guest_application_submitted', [ $this, 'queue_guest_application' ], 10, 2 );
+		add_action( 'kiwe_guest_application_decided', [ $this, 'queue_guest_decision' ], 10, 3 );
+		add_action( 'kiwe_guest_submission_received', [ $this, 'queue_guest_submission' ], 10, 2 );
+		add_action( 'transition_post_status', [ $this, 'queue_author_status' ], 30, 3 );
 		add_action( 'dsa_admin_notification_event', [ $this, 'dispatch' ], 10, 2 );
+	}
+
+	/**
+	 * Register the one credential-blind notification ingress used by every Kiwe
+	 * subsystem. Sources publish a topic plus presentation-safe event data;
+	 * this service owns audience, preferences, inbox, push and gateway delivery.
+	 */
+	public function register_router(): void {
+		if ( $this->router_registered ) return;
+		$this->router_registered = true;
+		add_action( 'kiwe_notification_event', [ $this, 'dispatch_event' ], 10, 2 );
+	}
+
+	/** Shared event contract for current and future Kiwe notification sources. */
+	public function dispatch_event( string $topic, array $event ): void {
+		$topic = sanitize_key( $topic );
+		if ( '' === $topic || ! $this->preferences->enabled() ) return;
+
+		$title = sanitize_text_field( (string) ( $event['title'] ?? '' ) );
+		$message = sanitize_textarea_field( (string) ( $event['message'] ?? '' ) );
+		if ( '' === $title || '' === $message ) return;
+
+		$url = esc_url_raw( (string) ( $event['url'] ?? '' ) );
+		$event_id = sanitize_text_field( (string) ( $event['id'] ?? '' ) );
+		if ( '' === $event_id ) $event_id = $topic . '-' . substr( hash( 'sha256', $title . '|' . $message . '|' . microtime( true ) ), 0, 20 );
+		$eligible = $this->preferences->audience_user_ids_for_topic( '', $topic );
+		$explicit = array_values( array_unique( array_filter( array_map( 'absint', (array) ( $event['userIds'] ?? [] ) ) ) ) );
+		if ( $explicit ) $eligible = array_values( array_intersect( $eligible, $explicit ) );
+		$eligible = array_slice( $eligible, 0, 100 );
+		if ( ! $eligible ) return;
+
+		$kicker = sanitize_text_field( (string) ( $event['kicker'] ?? __( 'Notification', 'dsa' ) ) );
+		$action_label = sanitize_text_field( (string) ( $event['actionLabel'] ?? __( 'Open', 'dsa' ) ) );
+		$item = [
+			'id'          => $event_id,
+			'type'        => $topic,
+			'kicker'      => $kicker,
+			'title'       => $title,
+			'message'     => $message,
+			'actionLabel' => $action_label,
+			'actionUrl'   => $url,
+			'createdAt'   => max( 1, absint( $event['createdAt'] ?? time() ) ),
+		];
+		if ( isset( $event['severity'] ) ) $item['severity'] = sanitize_key( (string) $event['severity'] );
+		$this->store_inbox( $eligible, $item );
+
+		$app_users = array_values( array_intersect( $eligible, $this->preferences->audience_user_ids_for_topic( 'app', $topic ) ) );
+		if ( $app_users ) {
+			$this->push->send_to_users( $app_users, $title, $message, $url, [ 'eventId' => $event_id, 'eventType' => $topic, 'kicker' => $kicker ] );
+		}
+
+		$this->deliver_channels( $topic, $title, $message, $url, $eligible );
 	}
 
 	public function queue_order( $order_id ): void {
@@ -45,6 +106,43 @@ final class Admin_Event_Notification_Service {
 		$comment_type = sanitize_key( (string) ( is_array( $comment_data ) ? ( $comment_data['comment_type'] ?? 'comment' ) : 'comment' ) );
 		if ( ! in_array( $comment_type, [ '', 'comment', 'review' ], true ) ) return;
 		$this->queue( 'new_comment', absint( $comment_id ) );
+	}
+
+	public function queue_guest_application( int $user_id, array $application ): void {
+		$user = get_userdata( $user_id );
+		if ( ! $user ) return;
+		$title = __( 'New Guest application', 'dsa' );
+		$message = sprintf( __( '%s applied to contribute. Review the verified account and requested work.', 'dsa' ), sanitize_text_field( $user->display_name ?: $user->user_login ) );
+		$url = admin_url( 'admin.php?page=kiwe-guests' );
+		$this->dispatch_role_event( 'admin_guest_application', 'guest-application-' . $user_id . '-' . time(), $title, $message, $url );
+	}
+
+	public function queue_guest_decision( int $user_id, string $decision, array $application ): void {
+		$title = 'approved' === $decision ? __( 'Your Guest application was approved', 'dsa' ) : __( 'Your Guest application was reviewed', 'dsa' );
+		$message = 'approved' === $decision
+			? __( 'You can now open the protected Guest workspace and send an article for editorial review.', 'dsa' )
+			: ( (string) ( $application['reason'] ?? '' ) ?: __( 'The publisher did not approve this application.', 'dsa' ) );
+		$url = 'approved' === $decision ? admin_url( 'admin.php?page=kiwe-guests' ) : home_url( '/' );
+		$this->dispatch_to_user( $user_id, 'guest_post_status', 'guest-decision-' . $user_id . '-' . time(), $title, $message, $url );
+	}
+
+	public function queue_guest_submission( int $post_id, int $user_id ): void {
+		$type_label = 'product' === get_post_type( $post_id ) ? __( 'product proposal', 'dsa' ) : __( 'article', 'dsa' );
+		$title = sprintf( __( 'Guest %s ready for review', 'dsa' ), $type_label );
+		$message = sprintf( __( '“%s” was submitted through the protected Guest workspace.', 'dsa' ), wp_strip_all_tags( get_the_title( $post_id ) ) );
+		$this->dispatch_role_event( 'admin_guest_submission', 'guest-post-' . $post_id, $title, $message, get_edit_post_link( $post_id, 'raw' ) ?: admin_url( 'edit.php?post_status=pending&post_type=post' ) );
+	}
+
+	public function queue_author_status( string $new_status, string $old_status, $post ): void {
+		if ( $new_status === $old_status || ! $post instanceof \WP_Post || 'post' !== $post->post_type || get_current_user_id() === (int) $post->post_author ) return;
+		$user = get_userdata( (int) $post->post_author );
+		if ( ! $user ) return;
+		$topic = in_array( 'contributor', (array) $user->roles, true ) ? 'guest_post_status' : ( in_array( 'author', (array) $user->roles, true ) ? 'editorial_post_status' : '' );
+		if ( '' === $topic ) return;
+		$status = get_post_status_object( $new_status );
+		$title = __( 'Article status updated', 'dsa' );
+		$message = sprintf( __( '“%1$s” is now %2$s.', 'dsa' ), wp_strip_all_tags( get_the_title( $post ) ), $status ? strtolower( $status->label ) : sanitize_key( $new_status ) );
+		$this->dispatch_to_user( (int) $post->post_author, $topic, 'post-status-' . $post->ID . '-' . $new_status, $title, $message, 'publish' === $new_status ? get_permalink( $post ) : home_url( '/' ) );
 	}
 
 	public function queue_visitor_summary(): void {
@@ -118,8 +216,7 @@ final class Admin_Event_Notification_Service {
 			'createdAt'   => time(),
 		];
 
-		$this->store_inbox( $this->admin_user_ids( 'manage_options' ), $item );
-		$this->deliver_channels( 'admin_live_visitor', $title, $message, (string) $item['actionUrl'] );
+		$this->dispatch_event( 'admin_live_visitor', [ 'id' => (string) $item['id'], 'kicker' => (string) $item['kicker'], 'title' => $title, 'message' => $message, 'actionLabel' => (string) $item['actionLabel'], 'url' => (string) $item['actionUrl'] ] );
 	}
 
 	public function queue_visitor_activity( array $event ): void {
@@ -163,20 +260,14 @@ final class Admin_Event_Notification_Service {
 			$message = '' !== $name ? sprintf( __( '%s is now identified.', 'dsa' ), $name ) : __( 'A visitor converted into an identified user.', 'dsa' );
 		}
 
-		$this->store_inbox(
-			$this->admin_user_ids( 'manage_options' ),
-			[
-				'id'          => 'visitor-activity-' . substr( md5( $visitor_hash . '|' . $type . '|' . $product_id . '|' . time() ), 0, 12 ),
-				'type'        => 'admin_live_visitor',
-				'kicker'      => __( 'Live visitor', 'dsa' ),
-				'title'       => $title,
-				'message'     => $message,
-				'actionLabel' => __( 'View', 'dsa' ),
-				'actionUrl'   => esc_url_raw( admin_url( 'admin.php?page=kiwe-analytics&tab=funnel&days=1' ) ),
-				'createdAt'   => time(),
-			]
-		);
-		$this->deliver_channels( 'admin_live_visitor', $title, $message, admin_url( 'admin.php?page=kiwe-analytics&tab=funnel&days=1' ) );
+		$this->dispatch_event( 'admin_live_visitor', [
+			'id' => 'visitor-activity-' . substr( md5( $visitor_hash . '|' . $type . '|' . $product_id . '|' . time() ), 0, 12 ),
+			'kicker' => __( 'Live visitor', 'dsa' ),
+			'title' => $title,
+			'message' => $message,
+			'actionLabel' => __( 'View', 'dsa' ),
+			'url' => admin_url( 'admin.php?page=kiwe-analytics&tab=funnel&days=1' ),
+		] );
 	}
 
 	public function dispatch( string $event, int $object_id ): void {
@@ -239,8 +330,6 @@ final class Admin_Event_Notification_Service {
 		$order = wc_get_order( $order_id );
 		if ( ! $order ) return;
 		if ( in_array( $order->get_status(), [ 'checkout-draft', 'auto-draft', 'draft' ], true ) ) return;
-		$inbox_user_ids = $this->preferences->audience_user_ids_for_topic( '', 'admin_new_order' );
-		$push_user_ids = $this->preferences->audience_user_ids_for_topic( 'app', 'admin_new_order' );
 		$order_number = sanitize_text_field( (string) $order->get_order_number() );
 		$url = method_exists( $order, 'get_edit_order_url' ) ? $order->get_edit_order_url() : admin_url( 'post.php?post=' . $order_id . '&action=edit' );
 		$event_id = 'order-' . $order_id;
@@ -253,28 +342,19 @@ final class Admin_Event_Notification_Service {
 			'actionUrl' => esc_url_raw( $url ),
 			'createdAt' => time(),
 		];
-		$this->store_inbox( $inbox_user_ids, $inbox );
-		$this->push->send_to_users(
-			$push_user_ids,
-			sprintf( __( 'New order #%s', 'dsa' ), $order_number ),
-			__( 'A new order arrived. Tap to review payment and fulfilment.', 'dsa' ),
-			$url,
-			[
-				'eventId'   => $event_id,
-				'eventType' => 'admin_new_order',
-				'kicker'    => __( 'New order', 'dsa' ),
-				'aiTitle'   => sprintf( __( 'Order #%s needs your attention.', 'dsa' ), $order_number ),
-				'aiMessage' => __( 'Open the order in WordPress to review payment, products, and fulfilment.', 'dsa' ),
-			]
-		);
-		$this->deliver_channels( 'admin_new_order', (string) $inbox['title'], (string) $inbox['message'], $url );
+		$this->dispatch_event( 'admin_new_order', [
+			'id' => $event_id,
+			'kicker' => (string) $inbox['kicker'],
+			'title' => (string) $inbox['title'],
+			'message' => (string) $inbox['message'],
+			'actionLabel' => __( 'Review', 'dsa' ),
+			'url' => $url,
+		] );
 	}
 
 	private function dispatch_comment( int $comment_id ): void {
 		$comment = get_comment( $comment_id );
 		if ( ! $comment ) return;
-		$inbox_user_ids = $this->preferences->audience_user_ids_for_topic( '', 'admin_new_comment' );
-		$push_user_ids = $this->preferences->audience_user_ids_for_topic( 'app', 'admin_new_comment' );
 		$post_title = get_the_title( (int) $comment->comment_post_ID );
 		$status = wp_get_comment_status( $comment_id );
 		$pending = 'unapproved' === $status || 'hold' === $status;
@@ -293,21 +373,14 @@ final class Admin_Event_Notification_Service {
 			'actionUrl' => esc_url_raw( $url ),
 			'createdAt' => time(),
 		];
-		$this->store_inbox( $inbox_user_ids, $inbox );
-		$this->push->send_to_users(
-			$push_user_ids,
-			$title,
-			$body,
-			$url,
-			[
-				'eventId'   => $event_id,
-				'eventType' => 'admin_new_comment',
-				'kicker'    => $pending ? __( 'Approval needed', 'dsa' ) : __( 'New comment', 'dsa' ),
-				'aiTitle'   => $title,
-				'aiMessage' => $body,
-			]
-		);
-		$this->deliver_channels( 'admin_new_comment', $title, $body, $url );
+		$this->dispatch_event( 'admin_new_comment', [
+			'id' => $event_id,
+			'kicker' => (string) $inbox['kicker'],
+			'title' => $title,
+			'message' => $body,
+			'actionLabel' => __( 'Review', 'dsa' ),
+			'url' => $url,
+		] );
 	}
 
 	private function dispatch_visitor_summary(): void {
@@ -350,11 +423,10 @@ final class Admin_Event_Notification_Service {
 			'createdAt' => time(),
 		];
 
-		$this->store_inbox( $this->admin_user_ids( 'manage_options' ), $item );
-		$this->deliver_channels( 'admin_visitor_summary', (string) $item['title'], (string) $item['message'], (string) $item['actionUrl'] );
+		$this->dispatch_event( 'admin_visitor_summary', [ 'id' => (string) $item['id'], 'kicker' => (string) $item['kicker'], 'title' => (string) $item['title'], 'message' => (string) $item['message'], 'actionLabel' => (string) $item['actionLabel'], 'url' => (string) $item['actionUrl'] ] );
 	}
 
-	private function deliver_channels( string $topic, string $title, string $message, string $url ): void {
+	private function deliver_channels( string $topic, string $title, string $message, string $url, array $eligible_user_ids = [] ): void {
 		if ( ! $this->channels ) {
 			return;
 		}
@@ -365,39 +437,36 @@ final class Admin_Event_Notification_Service {
 			if ( ! $this->channels->available_for_campaign( $channel ) ) {
 				continue;
 			}
-			foreach ( array_slice( $this->preferences->audience_user_ids_for_topic( $channel, $topic ), 0, 100 ) as $user_id ) {
+			$audience = $this->preferences->audience_user_ids_for_topic( $channel, $topic );
+			if ( $eligible_user_ids ) $audience = array_values( array_intersect( $audience, $eligible_user_ids ) );
+			foreach ( array_slice( $audience, 0, 100 ) as $user_id ) {
 				$recipient = $this->preferences->contact_for_user( (int) $user_id, $channel );
 				if ( '' === $recipient ) {
 					continue;
+				}
+				$context = [ 'purpose' => $purpose, 'user_id' => (int) $user_id ];
+				if ( 'whatsapp' === $channel && $this->preferences->user_accepts( (int) $user_id, 'email', $topic ) ) {
+					$context['fallback_email'] = $this->preferences->contact_for_user( (int) $user_id, 'email' );
+					$context['fallback_email_allowed'] = true;
 				}
 				$this->channels->send(
 					$channel,
 					$recipient,
 					$title,
 					'email' === $channel ? $message . ( $url ? "\n\n" . $url : '' ) : $delivery_message,
-					[ 'purpose' => $purpose, 'user_id' => (int) $user_id ]
+					$context
 				);
 			}
 		}
 	}
 
-	private function admin_user_ids( string $capability ): array {
-		$users = get_users(
-			[
-				'fields' => 'ID',
-				'number' => 100,
-			]
-		);
-		$ids = [];
+	private function dispatch_role_event( string $topic, string $event_id, string $title, string $message, string $url ): void {
+		$this->dispatch_event( $topic, [ 'id' => $event_id, 'kicker' => __( 'Action needed', 'dsa' ), 'title' => $title, 'message' => $message, 'actionLabel' => __( 'Review', 'dsa' ), 'url' => $url ] );
+	}
 
-		foreach ( is_array( $users ) ? $users : [] as $user_id ) {
-			$user_id = absint( $user_id );
-			if ( $user_id && user_can( $user_id, $capability ) ) {
-				$ids[] = $user_id;
-			}
-		}
-
-		return $ids;
+	private function dispatch_to_user( int $user_id, string $topic, string $event_id, string $title, string $message, string $url ): void {
+		if ( $user_id < 1 ) return;
+		$this->dispatch_event( $topic, [ 'id' => $event_id, 'userIds' => [ $user_id ], 'kicker' => __( 'Account update', 'dsa' ), 'title' => $title, 'message' => $message, 'actionLabel' => __( 'Open', 'dsa' ), 'url' => $url ] );
 	}
 
 	private function visitor_context_label( string $context, string $post_title = '' ): string {

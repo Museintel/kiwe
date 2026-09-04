@@ -64,7 +64,7 @@ final class Design_Context_Service {
 			'media',
 			$media_limit,
 			[
-				'mimeType' => 'image',
+				'mimeType' => '',
 				'search'   => $media_search,
 			],
 			false
@@ -165,7 +165,7 @@ final class Design_Context_Service {
 				],
 				'doNotReaskWhenPresent' => [
 					'identity', 'site type', 'purpose', 'audience', 'goal', 'logo', 'brand preferences',
-					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder', 'team', 'services and service hierarchy', 'owner-selected media resources and their intended roles',
+					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder', 'team', 'services and service hierarchy', 'WordPress Media Library assets',
 					'catalog scale', 'price range', 'regulatory disclosures', 'page plan', 'SEO intent',
 				],
 				'output' => [ 'index.html', 'styles.css', 'script.js', 'assets used by the project', 'assets/asset-manifest.json when assets are emitted' ],
@@ -309,14 +309,14 @@ final class Design_Context_Service {
 			'bricksTeamQuery' => [
 				'linkedMembers' => [
 					'objectType'=>'user', 'engine'=>'WP_User_Query',
-					'args'=>[ 'meta_query'=>[ 'relation'=>'AND', 'team_member'=>[ 'key'=>Design_Context_Profile_Service::USER_META_TEAM_MEMBER, 'value'=>'1' ], 'team_order'=>[ 'key'=>Design_Context_Profile_Service::USER_META_TEAM_ORDER, 'compare'=>'EXISTS', 'type'=>'NUMERIC' ] ], 'orderby'=>[ 'team_order'=>'ASC' ] ],
+					'args'=>[ 'include'=>array_values( array_map( static fn( array $member ): int => absint( $member['userId'] ?? 0 ), (array) ( $owner_context['about']['team']['members'] ?? [] ) ) ) ?: [ 0 ], 'orderby'=>'display_name', 'order'=>'ASC' ],
 					'nativeTags'=>[ '{wp_user_display_name}', '{wp_user_description}', '{wp_user_picture}' ],
 					'kiweTags'=>[ '{kiwe_team_member_id}', '{kiwe_team_title}', '{kiwe_team_image}', '{kiwe_team_linkedin_url}' ],
 				],
-				'pendingMembers'=>[ 'source'=>'ownerContext.about.team.members', 'selector'=>'id', 'note'=>'Use stable-selector Kiwe tags until an account is linked.' ],
+				'membershipAuthority'=>'WordPress Users: administrator-selected eligible staff only',
 			],
 			'bricksServiceQuery' => [
-				'enabled'=>! empty( $services['sourcePostType'] ),
+				'enabled'=>! empty( $services['enabled'] ) && ! empty( $services['sourcePostType'] ),
 				'objectType'=>'post', 'postType'=>sanitize_key( (string) ( $services['sourcePostType'] ?? '' ) ),
 				'args'=>[ 'post_type'=>sanitize_key( (string) ( $services['sourcePostType'] ?? '' ) ), 'post_status'=>'publish', 'orderby'=>[ 'menu_order'=>'ASC', 'title'=>'ASC' ] ],
 				'nativeTags'=>[ '{post_title}', '{post_excerpt}', '{post_content}', '{featured_image}', '{post_url}', '{post_id}' ],

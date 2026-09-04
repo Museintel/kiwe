@@ -39,7 +39,7 @@ function insightCard( insight ) {
 		'<div class="dsa-ai-insight__copy"><small>' + escapeHtml( insight.kicker || 'Insight' ) + '</small><strong>' + escapeHtml( insight.title || '' ) + '</strong><p>' + escapeHtml( insight.message || '' ) + '</p>' + benefits( insight ) + ( insight.createdAt ? '<time datetime="' + escapeHtml( new Date( Number( insight.createdAt ) ).toISOString() ) + '">' + escapeHtml( notificationTime( insight.createdAt ) ) + '</time>' : '' ) + '</div>',
 		'<span class="dsa-ai-insight__actions">',
 		insight.action ? '<button type="button" data-dsa-ai-insight-action="' + escapeHtml( insight.id ) + '">' + escapeHtml( insight.actionLabel || 'Open' ) + '</button>' : '',
-		insight.notification ? ( insight.dismissible ? '<button type="button" class="dsa-ai-insight__dismiss" data-dsa-ai-notification-dismiss="' + escapeHtml( insight.id ) + '" aria-label="Dismiss notification">&times;</button>' : '<span class="dsa-ai-insight__saved">Saved</span>' ) : '<button type="button" class="is-quiet" data-dsa-ai-insight-dismiss="' + escapeHtml( insight.id ) + '">Dismiss</button>',
+		insight.notification ? ( insight.dismissible ? '<button type="button" class="dsa-ai-insight__dismiss" data-dsa-ai-notification-dismiss="' + escapeHtml( insight.id ) + '" aria-label="Dismiss notification"><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>' : '<span class="dsa-ai-insight__saved">Saved</span>' ) : '<button type="button" class="is-quiet" data-dsa-ai-insight-dismiss="' + escapeHtml( insight.id ) + '">Dismiss</button>',
 		'</span><span class="dsa-ai-insight__status" data-dsa-ai-insight-status></span></article>',
 	].join( '' );
 }

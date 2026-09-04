@@ -86,11 +86,11 @@ final class Copilot_Service {
 		];
 
 		$items[] = [
-			'label'  => __( 'PhoneKey', 'dsa' ),
+			'label'  => __( 'Key.kiwe', 'dsa' ),
 			'status' => ! empty( $trust['phonekey']['active'] ) ? 'good' : 'warning',
 			'text'   => ! empty( $trust['phonekey']['active'] )
 				? __( 'Kiwe Key can support secure login and future step-up flows.', 'dsa' )
-				: __( 'PhoneKey is not active, so profile trust should remain conservative.', 'dsa' ),
+				: __( 'Key.kiwe is not active, so profile trust should remain conservative.', 'dsa' ),
 		];
 
 		return [

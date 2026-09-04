@@ -247,6 +247,7 @@ final class Assets {
 			}
 		}
 
+		$kiwe_tokens = $this->kiwe_tokens_data();
 		wp_localize_script(
 			'dsa-surface',
 			'DSA_DATA',
@@ -266,6 +267,7 @@ final class Assets {
 					'logoInverse' => Site_Identity_Service::logo_url( 'inverse' ),
 					'current'     => [
 						'postId'      => (int) get_queried_object_id(),
+						'categoryIds' => $this->current_post_category_ids(),
 						'isFrontPage' => is_front_page(),
 						'frontPageId' => (int) get_option( 'page_on_front' ),
 						'frontPageUrl' => (int) get_option( 'page_on_front' ) ? get_permalink( (int) get_option( 'page_on_front' ) ) : home_url( '/' ),
@@ -287,8 +289,9 @@ final class Assets {
 					'screens'  => $resolved_theme_screens,
 				],
 				'designTokens' => Token_Schema::contract( $settings, $manifest ),
-				'kiweTokens' => $this->kiwe_tokens_data(),
-				'seamTokens' => $this->kiwe_tokens_data(),
+				// One payload, two runtime aliases. Sending the same 80-token catalog
+				// twice added tens of kilobytes to every public document.
+				'kiweTokens' => $kiwe_tokens,
 				'seam'       => [
 					'enabled'      => true,
 					'contract'     => 'kiwe.seam',
@@ -304,6 +307,7 @@ final class Assets {
 					'alphabetEnabled' => ! empty( $this->settings->get( 'search', [] )['alphabet_enabled'] ),
 					'productAddEnabled' => ! empty( $this->settings->get( 'search', [] )['product_add_enabled'] ),
 					'bricksBridgeEnabled' => ! empty( $this->settings->get( 'search', [] )['bricks_bridge_enabled'] ),
+					'popularEnabled' => $this->search_popularity_available(),
 				],
 				'presentationModules' => [
 					'profile' => esc_url_raw( $this->asset_url( 'assets/js/modules/profile-panel.js' ) ),
@@ -493,7 +497,9 @@ final class Assets {
 				}
 
 				$normalized = [
-					'title'       => sanitize_text_field( (string) $item->title ),
+					// WordPress menu titles may already contain stored entities. Decode
+					// before sanitizing so the JSON contract carries text, not HTML.
+					'title'       => sanitize_text_field( wp_specialchars_decode( (string) $item->title, ENT_QUOTES ) ),
 					'url'         => esc_url_raw( (string) $item->url ),
 					'type'        => sanitize_text_field( (string) ( $item->type_label ?? __( 'Navigation', 'dsa' ) ) ),
 					'image'       => $this->menu_item_image( $item ),
@@ -1102,6 +1108,10 @@ CSS;
 		return defined( 'STP_VER' ) || function_exists( 'stp_cfg' );
 	}
 
+	private function search_popularity_available(): bool {
+		return (bool) apply_filters( 'dsa_search_popularity_available', false );
+	}
+
 	private function links_data(): array {
 		$config = $this->settings->get( 'link_hub', [] );
 		$config = is_array( $config ) ? $config : [];
@@ -1291,6 +1301,23 @@ CSS;
 		);
 
 		return ! empty( $categories ) ? $categories[0] : null;
+	}
+
+	private function current_post_category_ids(): array {
+		if ( ! is_singular( 'post' ) ) {
+			return [];
+		}
+
+		$category_ids = wp_get_post_categories(
+			(int) get_queried_object_id(),
+			[ 'fields' => 'ids' ]
+		);
+
+		if ( is_wp_error( $category_ids ) ) {
+			return [];
+		}
+
+		return array_values( array_unique( array_filter( array_map( 'absint', $category_ids ) ) ) );
 	}
 
 	private function post_category_options(): array {

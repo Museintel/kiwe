@@ -1,0 +1,22 @@
+{
+  "name": "@kiwe/key-gateway",
+  "version": "1.0.0-rc.3",
+  "private": true,
+  "type": "module",
+  "main": "src/server.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "build": "node tools/build.mjs",
+    "check:compat": "node tools/check-baileys-compat.mjs",
+    "smoke:live": "node tools/live-smoke.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "pino": "9.7.0",
+    "qrcode": "1.5.4"
+  }
+}

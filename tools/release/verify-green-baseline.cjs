@@ -86,6 +86,8 @@ function checkSyntax(label, files, moduleInput = false) {
 }
 
 const gates = [
+	['Client workspace ownership and authorization', 'tools/release/client-workspace-contracts.cjs'],
+	['Guest contribution and role-aware notification contracts', 'tools/release/guest-notification-contracts.cjs'],
 	['Release package integrity', 'tools/release/verify-package.cjs'],
 	['Seam adoption audit', 'tools/ui-theme/audit-seam-adoption.cjs'],
 	['Runtime token purity audit', 'tools/ui-theme/audit-runtime-token-purity.cjs'],
@@ -103,6 +105,7 @@ const gates = [
 	['SiteGraph universal adapter contracts', 'tools/release/sitegraph-adapter-contracts.cjs'],
 	['SiteGraph design-context contracts', 'tools/release/sitegraph-design-context-contracts.cjs'],
 	['Owner onboarding contracts', 'tools/release/onboarding-contracts.cjs'],
+	['Native Design Context behavior', 'tools/release/design-context-native-contracts.cjs'],
 	['Owner handoff refinement contracts', 'tools/release/owner-handoff-refinement-contracts.cjs'],
 	['Kiwe AI Toolkit smoke contracts', 'kiwe-ai-toolkit/tools/smoke-test.cjs'],
 	['AI API source contracts', 'tools/connector/ai-api-contracts.cjs'],
@@ -115,6 +118,17 @@ const gates = [
 	['RC11 WordPress 7 contracts', 'tools/wp7/rc11-contracts.cjs'],
 	['RC12 release contracts', 'tools/release/rc12-contracts.cjs'],
 	['RC13 search contracts', 'tools/certification/rc13-search-contracts.cjs'],
+	['Search Surface availability contracts', 'tools/runtime/search-surface-contracts.cjs'],
+	['Profile, Menu, and control geometry contracts', 'tools/runtime/profile-menu-geometry-contracts.cjs'],
+	['Mobile overlay and AdSense isolation contracts', 'tools/runtime/mobile-overlay-adsense-contracts.cjs'],
+	['PhoneKey strict-flow contracts', 'tools/runtime/phonekey-strict-flow-contracts.cjs'],
+	['PhoneKey progressive-verification contracts', 'tools/runtime/phonekey-progressive-verification-contracts.cjs'],
+	['PhoneKey role and commerce contracts', 'tools/runtime/phonekey-role-commerce-contracts.cjs'],
+	['PhoneKey WordPress identity-continuity contracts', 'tools/runtime/phonekey-wordpress-identity-contracts.cjs'],
+	['PhoneKey route-resilience contracts', 'tools/runtime/phonekey-route-resilience-contracts.cjs'],
+	['SecureTrack alert escalation contracts', 'tools/security/securetrack-alert-contracts.cjs'],
+	['SecureTrack publish performance contracts', 'tools/runtime/securetrack-publish-performance-contracts.cjs'],
+	['Signed MU-plugin update contracts', 'tools/release/kiwe-update-contracts.cjs'],
 ];
 
 for (const [label, script, args = [], options = {}] of gates) {

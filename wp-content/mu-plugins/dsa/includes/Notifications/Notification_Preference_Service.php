@@ -30,13 +30,19 @@ final class Notification_Preference_Service {
 		add_action( 'woocommerce_single_product_summary', [ $this, 'render_single_notify_button' ], 31 );
 	}
 
+	/** Whether the site owner has enabled Kiwe's shared notification preference layer. */
+	public function enabled(): bool {
+		$permissions = $this->settings->get( 'permissions', [] );
+		return is_array( $permissions ) && ! empty( $permissions['notification_preferences_enabled'] );
+	}
+
 	public function public_config(): array {
 		$permissions = $this->settings->get( 'permissions', [] );
 		$permissions = is_array( $permissions ) ? $permissions : [];
 		$link_hub    = $this->settings->get( 'link_hub', [] );
 
 		return [
-			'enabled'                  => ! empty( $permissions['notification_preferences_enabled'] ),
+			'enabled'                  => $this->enabled(),
 			'browserPermissionEnabled' => ! empty( $permissions['notifications_enabled'] ),
 			'passiveOrderEnabled'      => ! empty( $permissions['notification_order_prompt_enabled'] ),
 			'ctaLabel'                 => $this->cta_label(),
@@ -209,9 +215,15 @@ final class Notification_Preference_Service {
 		$ids = [];
 		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
 			$user_id = absint( $row['user_id'] ?? 0 );
-			if ( 'admin_new_order' === $topic && ! user_can( $user_id, 'manage_woocommerce' ) && ! user_can( $user_id, 'manage_options' ) ) continue;
+			if ( 'securetrack_incident' === $topic && ! user_can( $user_id, 'kiwe_manage_notification_policy' ) ) continue;
+			if ( 'admin_guest_application' === $topic && ! user_can( $user_id, 'kiwe_manage_guest_applications' ) ) continue;
+			if ( 'admin_guest_submission' === $topic && ! user_can( $user_id, 'edit_others_posts' ) ) continue;
+			if ( 'guest_post_status' === $topic && [] === \DSA\Access\Guest_Contribution_Service::application( $user_id ) ) continue;
+			$audience_user = get_userdata( $user_id );
+			if ( 'editorial_post_status' === $topic && ( ! $audience_user || ! in_array( 'author', (array) $audience_user->roles, true ) ) ) continue;
+			if ( 'admin_new_order' === $topic && ! user_can( $user_id, 'manage_woocommerce' ) && ! user_can( $user_id, 'manage_options' ) && ! user_can( $user_id, 'kiwe_manage_notification_policy' ) ) continue;
 			if ( 'admin_new_comment' === $topic && ! user_can( $user_id, 'moderate_comments' ) && ! user_can( $user_id, 'manage_options' ) ) continue;
-			if ( in_array( $topic, [ 'admin_visitor_summary', 'admin_live_visitor' ], true ) && ! user_can( $user_id, 'manage_options' ) ) continue;
+			if ( in_array( $topic, [ 'admin_visitor_summary', 'admin_live_visitor' ], true ) && ! user_can( $user_id, 'manage_options' ) && ! user_can( $user_id, 'kiwe_manage_notification_policy' ) ) continue;
 			if ( '' !== $channel && ! in_array( $channel, $this->decode_list( $row['channels'] ?? '' ), true ) ) continue;
 			if ( ! in_array( $topic, $this->decode_list( $row['topics'] ?? '' ), true ) ) continue;
 			if ( 'app' === $channel && 'granted' !== sanitize_key( (string) ( $row['browser_permission'] ?? '' ) ) ) continue;
@@ -372,15 +384,17 @@ final class Notification_Preference_Service {
 
 	private function channels(): array {
 		$email = $this->settings->get( 'email', [] );
+		$permissions = $this->settings->get( 'permissions', [] );
 		$recovery = $this->settings->get( 'abandoned_cart', [] );
 		$provider_channels = is_array( $recovery ) && isset( $recovery['channels'] ) && is_array( $recovery['channels'] ) ? $recovery['channels'] : [];
 
-		return [
-			[ 'id' => 'app', 'label' => __( 'App', 'dsa' ), 'description' => __( 'Offline browser notifications on this device.', 'dsa' ), 'available' => true ],
-			[ 'id' => 'email', 'label' => __( 'Email', 'dsa' ), 'description' => ! empty( $email['enabled'] ) ? __( 'Useful updates in your inbox.', 'dsa' ) : __( 'Save email preferences now; delivery begins when site email is configured.', 'dsa' ), 'available' => true ],
-			[ 'id' => 'whatsapp', 'label' => __( 'WhatsApp', 'dsa' ), 'description' => __( 'Consent-aware updates through Kiwe PhoneKey.', 'dsa' ), 'available' => ( function_exists( 'pk_whatsapp_notification_ready' ) && pk_whatsapp_notification_ready() ) || $this->channel_ready( $provider_channels['whatsapp'] ?? [] ) ],
+		$channels = [
+			[ 'id' => 'app', 'label' => __( 'App', 'dsa' ), 'description' => __( 'Offline browser notifications on this device.', 'dsa' ), 'available' => ! empty( $permissions['notifications_enabled'] ) ],
+			[ 'id' => 'email', 'label' => __( 'Email', 'dsa' ), 'description' => ! empty( $email['enabled'] ) ? __( 'Useful updates in your inbox.', 'dsa' ) : __( 'Email delivery has not been configured by the site owner.', 'dsa' ), 'available' => ! empty( $email['enabled'] ) ],
+			[ 'id' => 'whatsapp', 'label' => __( 'WhatsApp', 'dsa' ), 'description' => __( 'Consent-aware updates through Kiwe Key.kiwe.', 'dsa' ), 'available' => ( function_exists( 'pk_whatsapp_notification_ready' ) && pk_whatsapp_notification_ready() ) || $this->channel_ready( $provider_channels['whatsapp'] ?? [] ) ],
 			[ 'id' => 'sms', 'label' => __( 'SMS', 'dsa' ), 'description' => __( 'Text messages through the configured SMS provider.', 'dsa' ), 'available' => $this->channel_ready( $provider_channels['sms'] ?? [] ) ],
 		];
+		return (array) apply_filters( 'dsa_notification_channel_catalog', $channels, get_current_user_id() );
 	}
 
 	private function channel_ready( $channel ): bool {
@@ -389,25 +403,42 @@ final class Notification_Preference_Service {
 
 	private function topics(): array {
 		$admin_topics = [];
-		if ( is_user_logged_in() && ( current_user_can( 'manage_woocommerce' ) || current_user_can( 'manage_options' ) ) ) {
+		$user_id = get_current_user_id();
+		$user = $user_id ? get_userdata( $user_id ) : false;
+		$roles = $user ? (array) $user->roles : [];
+		if ( $user_id && current_user_can( 'kiwe_manage_guest_applications' ) ) {
+			$admin_topics[] = [ 'id' => 'admin_guest_application', 'label' => __( 'Guest applications', 'dsa' ), 'description' => __( 'A verified person applied to contribute.', 'dsa' ), 'audience' => 'admin' ];
+		}
+		if ( $user_id && current_user_can( 'edit_others_posts' ) ) {
+			$admin_topics[] = [ 'id' => 'admin_guest_submission', 'label' => __( 'Guest submissions', 'dsa' ), 'description' => __( 'A Guest submitted an article for editorial review.', 'dsa' ), 'audience' => 'admin' ];
+		}
+		if ( $user_id && ( in_array( 'contributor', $roles, true ) || [] !== \DSA\Access\Guest_Contribution_Service::application( $user_id ) ) ) {
+			$admin_topics[] = [ 'id' => 'guest_post_status', 'label' => __( 'Guest contribution decisions', 'dsa' ), 'description' => __( 'Approval, denial and publishing updates for your Guest work.', 'dsa' ) ];
+		}
+		if ( $user_id && in_array( 'author', $roles, true ) ) {
+			$admin_topics[] = [ 'id' => 'editorial_post_status', 'label' => __( 'Article status', 'dsa' ), 'description' => __( 'Editorial status changes to your articles.', 'dsa' ) ];
+		}
+		if ( is_user_logged_in() && ( current_user_can( 'manage_woocommerce' ) || current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_notification_policy' ) ) ) {
 			$admin_topics[] = [ 'id' => 'admin_new_order', 'label' => __( 'New store orders', 'dsa' ), 'description' => __( 'Private owner alerts when a WooCommerce order arrives.', 'dsa' ), 'audience' => 'admin' ];
 		}
 		if ( is_user_logged_in() && ( current_user_can( 'moderate_comments' ) || current_user_can( 'manage_options' ) ) ) {
 			$admin_topics[] = [ 'id' => 'admin_new_comment', 'label' => __( 'New comments', 'dsa' ), 'description' => __( 'Private owner alerts when a comment needs attention.', 'dsa' ), 'audience' => 'admin' ];
 		}
-		if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) {
+		if ( is_user_logged_in() && ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_notification_policy' ) ) ) {
+			$admin_topics[] = [ 'id' => 'securetrack_incident', 'label' => __( 'SecureTrack incidents', 'dsa' ), 'description' => __( 'Security incidents that meet the site-wide severity and flood-control policy.', 'dsa' ), 'audience' => 'admin' ];
 			$admin_topics[] = [ 'id' => 'admin_live_visitor', 'label' => __( 'Live visitors', 'dsa' ), 'description' => __( 'Private owner alerts when a new or returning visitor is recorded while you have Kiwe open.', 'dsa' ), 'audience' => 'admin' ];
 			$admin_topics[] = [ 'id' => 'admin_visitor_summary', 'label' => __( 'Visitor summary', 'dsa' ), 'description' => __( 'Private owner insight showing today visitors versus yesterday.', 'dsa' ), 'audience' => 'admin' ];
 		}
 
 		if ( ! $this->woo_available() ) {
-			return array_merge( [
+			$topics = array_merge( [
 				[ 'id' => 'newsletter', 'label' => __( 'Newsletter', 'dsa' ), 'description' => __( 'Occasional highlights selected by the publisher.', 'dsa' ) ],
 				[ 'id' => 'new_post', 'label' => __( 'New posts', 'dsa' ), 'description' => __( 'Fresh stories from categories you follow.', 'dsa' ) ],
 			], $admin_topics );
+			return (array) apply_filters( 'dsa_notification_topic_catalog', $topics, $user_id );
 		}
 
-		return array_merge( [
+		$topics = array_merge( [
 			[ 'id' => 'new_offer', 'label' => __( 'Offers and coupons', 'dsa' ), 'description' => __( 'New savings worth knowing about.', 'dsa' ) ],
 			[ 'id' => 'price_change', 'label' => __( 'Sale and price changes', 'dsa' ), 'description' => __( 'Price movement for products you care about.', 'dsa' ) ],
 			[ 'id' => 'stock_update', 'label' => __( 'Stock updates', 'dsa' ), 'description' => __( 'Know when unavailable products return.', 'dsa' ) ],
@@ -415,6 +446,7 @@ final class Notification_Preference_Service {
 			[ 'id' => 'order_status', 'label' => __( 'Order status', 'dsa' ), 'description' => __( 'Progress after checkout and fulfilment updates.', 'dsa' ) ],
 			[ 'id' => 'cart_reminder', 'label' => __( 'Saved cart reminders', 'dsa' ), 'description' => __( 'A limited reminder when a cart you started is still waiting.', 'dsa' ) ],
 		], $admin_topics );
+		return (array) apply_filters( 'dsa_notification_topic_catalog', $topics, $user_id );
 	}
 
 	private function categories( string $taxonomy ): array {

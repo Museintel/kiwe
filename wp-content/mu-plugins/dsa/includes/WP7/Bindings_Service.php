@@ -228,7 +228,7 @@ final class Bindings_Service {
 		if ( 'linkedin_url' === $key ) return esc_url_raw( (string) ( $member['linkedin'] ?? '' ) );
 		if ( 'image' === $key ) {
 			$image_id = absint( $member['imageId'] ?? 0 );
-			return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+			return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : esc_url_raw( (string) ( $member['image'] ?? '' ) );
 		}
 		return '';
 	}

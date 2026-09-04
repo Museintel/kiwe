@@ -415,7 +415,7 @@
 	--dsa-runtime-token-0316: color 140ms ease, transform 140ms ease;
 	--dsa-runtime-token-0317: translateX(8px);
 	--dsa-runtime-token-0318: 7px 10px;
-	--dsa-runtime-token-0319: clamp(42px, 7vw, 96px);
+	--dsa-runtime-token-0319: clamp(32px, 5vw, 64px);
 	--dsa-runtime-token-0320: clamp(72px, 10vw, 132px);
 	--dsa-runtime-token-0321: min(620px, 100%);
 	--dsa-runtime-token-0322: min(340px, 78vw);
@@ -819,6 +819,9 @@
 	--dsa-runtime-token-0717: 1;
 	--dsa-runtime-token-0718: 0s;
 	--dsa-runtime-token-0719: 0 0 0 max(4px, .28em) #000;
+	--dsa-runtime-token-0720: clamp(24px, 3.6vw, 46px);
+	--dsa-runtime-token-0721: clamp(32px, 5vw, 64px);
+	--dsa-runtime-token-0722: clamp(42px, 7vw, 96px);
 }
 
 /* Notification preference journey */
@@ -1134,9 +1137,12 @@ html.dsa-scroll-locked:not(.dsa-overlay-active):not([data-dsa-surface-mode="apps
 }
 
 html.dsa-overlay-active #brx-content {
-	filter: var(--dsa-runtime-token-0058);
-	transform: translateZ(0) scale(0.998);
-	transition: var(--dsa-runtime-token-0059);
+	/* The scrim/sheet owns the visual treatment. Filtering or transforming the
+	 * publisher document changes the containing block used by sticky/anchor ads
+	 * and can interfere with AdSense placement. */
+	filter: none;
+	transform: none;
+	transition: none;
 }
 
 html.dsa-effect-blur-none.dsa-overlay-active #brx-content,
@@ -1590,6 +1596,45 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	stroke-width: 2;
 	stroke-linecap: round;
 	stroke-linejoin: round;
+}
+
+/* Every Surface sprite icon owns a finite box; SVG's intrinsic 300x150 size must never leak into a theme. */
+.dsa-surface[data-dsa-ui-contract="2"] .dsa-icon {
+	display: block;
+	width: var(--dsa-runtime-token-0167) !important;
+	height: var(--dsa-runtime-token-0167) !important;
+	min-width: var(--dsa-runtime-token-0167);
+	max-width: var(--dsa-runtime-token-0167);
+	max-height: var(--dsa-runtime-token-0167);
+	flex: 0 0 var(--dsa-runtime-token-0167);
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* Font crosses need an optical centre independent of the host theme's button baseline. */
+.dsa-surface[data-dsa-ui-contract="2"] .dsa-close-glyph {
+	display: block;
+	line-height: 1;
+	text-align: center;
+	transform: translateY(-6%);
+	pointer-events: none;
+}
+
+.dsa-surface[data-dsa-ui-contract="2"] :is(
+	[data-dsa-search-clear],
+	.dsa-auth-close,
+	.dsa-ai-popout__close,
+	.dsa-ai-insight__dismiss,
+	[data-dsa-saved-remove]
+) {
+	display: inline-grid !important;
+	place-content: center;
+	place-items: center;
+	padding: 0 !important;
+	line-height: 1 !important;
 }
 
 .dsa-dock__badge {
@@ -2791,7 +2836,8 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	font-weight: 800;
 }
 
-.dsa-search-panel__filters {
+.dsa-search-panel__filters,
+.dsa-search-panel__sort {
 	display: flex;
 	align-items: center;
 	gap: var(--dsa-runtime-token-0088);
@@ -2800,7 +2846,8 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	scrollbar-width: none;
 }
 
-.dsa-search-panel__filters::-webkit-scrollbar { display: none; }
+.dsa-search-panel__filters::-webkit-scrollbar,
+.dsa-search-panel__sort::-webkit-scrollbar { display: none; }
 
 .dsa-search-panel__alphabet {
 	display: flex;
@@ -3167,6 +3214,7 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 }
 
 .dsa-panel__status {
+	appearance: none;
 	display: inline-flex;
 	align-items: center;
 	gap: var(--dsa-runtime-token-0033);
@@ -3177,11 +3225,24 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	color: var(--dsa-runtime-token-0300);
 	font-size: var(--dsa-runtime-token-0029);
 	font-weight: 800;
+	font-family: inherit;
+	line-height: 1.25;
 }
 
 .dsa-panel__status.is-unverified {
 	background: var(--dsa-runtime-token-0301);
 	color: var(--dsa-runtime-token-0302);
+}
+
+button.dsa-panel__status.is-unverified {
+	border: 0;
+	cursor: pointer;
+}
+
+button.dsa-panel__status.is-unverified:is(:hover, :focus-visible) {
+	filter: brightness(0.96);
+	outline: var(--dsa-runtime-token-0105);
+	outline-offset: var(--dsa-runtime-token-0005);
 }
 
 .dsa-panel__list {
@@ -3279,10 +3340,16 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 }
 
 .dsa-menu-context__list button:hover,
-.dsa-menu-context__list button:focus-visible {
+.dsa-menu-context__list button:focus-visible,
+.dsa-menu-context__list button.is-active {
 	background: color-mix(in srgb, var(--dsa-hover-color) 10%, transparent);
 	color: var(--dsa-hover-color);
 	outline: none;
+}
+
+.dsa-menu-context__list button.is-active {
+	background: color-mix(in srgb, var(--dsa-active-color) 14%, transparent);
+	color: var(--dsa-active-color);
 }
 
 .dsa-menu-link {
@@ -3343,6 +3410,18 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	line-height: 0.96;
 	font-weight: 900;
 	text-wrap: balance;
+}
+
+.dsa-surface[data-dsa-menu-scale="compact"] {
+	--dsa-runtime-token-0319: var(--dsa-runtime-token-0720);
+}
+
+.dsa-surface[data-dsa-menu-scale="balanced"] {
+	--dsa-runtime-token-0319: var(--dsa-runtime-token-0721);
+}
+
+.dsa-surface[data-dsa-menu-scale="expressive"] {
+	--dsa-runtime-token-0319: var(--dsa-runtime-token-0722);
 }
 
 .dsa-menu-link__body small {
@@ -4447,6 +4526,66 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	gap: var(--dsa-runtime-token-0023);
 }
 
+.dsa-profile-contact {
+	display: grid;
+	gap: var(--dsa-runtime-token-0005);
+	min-width: 0;
+}
+
+.dsa-profile-contact__label {
+	color: var(--dsa-runtime-token-0219);
+	font-size: var(--dsa-runtime-token-0017);
+	font-weight: 700;
+}
+
+.dsa-profile-contact__control {
+	position: relative;
+	display: block;
+	min-width: 0;
+}
+
+.dsa-profile-contact__control .dsa-auth-field {
+	width: 100%;
+	min-width: 0;
+	padding-inline-end: var(--dsa-runtime-token-0710);
+}
+
+.dsa-profile-contact__action,
+.dsa-profile-contact__state {
+	position: absolute;
+	top: 50%;
+	right: var(--dsa-runtime-token-0015);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 42%;
+	min-height: calc(100% - (2 * var(--dsa-runtime-token-0015)));
+	padding: var(--dsa-runtime-token-0005) var(--dsa-runtime-token-0015);
+	transform: translateY(-50%);
+	border: 0;
+	border-radius: var(--dsa-runtime-token-0015);
+	font: inherit;
+	font-size: var(--dsa-runtime-token-0017);
+	font-weight: 800;
+	line-height: 1.1;
+	white-space: nowrap;
+}
+
+.dsa-profile-contact__action {
+	cursor: pointer;
+	background: color-mix(in srgb, var(--dsa-active-color) 16%, var(--dsa-ui-surface));
+	color: color-mix(in srgb, var(--dsa-active-color) 82%, var(--dsa-ui-text));
+}
+
+.dsa-profile-contact__action:is(:hover, :focus-visible) {
+	filter: brightness(.96);
+}
+
+.dsa-profile-contact__state.is-verified {
+	background: color-mix(in srgb, var(--dsa-success-color) 14%, var(--dsa-ui-surface));
+	color: color-mix(in srgb, var(--dsa-success-color) 84%, var(--dsa-ui-text));
+}
+
 .dsa-address-form {
 	margin-top: var(--dsa-runtime-token-0029);
 	padding-top: var(--dsa-runtime-token-0029);
@@ -4462,8 +4601,12 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	margin-top: var(--dsa-runtime-token-0005);
 }
 
+.dsa-profile-panel .dsa-account-actions .dsa-panel__button,
+.dsa-profile-panel .dsa-logout-button {
+	justify-content: flex-start;
+}
+
 .dsa-logout-button {
-	justify-content: center;
 	background: color-mix(in srgb, var(--dsa-danger-color) 14%, var(--dsa-ui-surface));
 	color: color-mix(in srgb, var(--dsa-danger-color) 84%, var(--dsa-ui-text));
 }
@@ -6377,6 +6520,7 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-dock-mobile="1"][data-dsa-do
 }
 .dsa-context-action__badge[hidden] { display: none; }
 .dsa-dock-context .dsa-logout-button { flex: 0 0 var(--dsa-dock-control-size); width: var(--dsa-dock-control-size); padding: 0; border-radius: 999px; }
+.dsa-dock-context .dsa-logout-button .dsa-account-action__label { display: none; }
 .dsa-dock-context .dsa-health-row { grid-template-columns: none; min-width: 0; }
 .dsa-dock-context .dsa-health-pill { flex: 1 1 0; min-width: 0; min-height: var(--dsa-dock-control-size); padding: 5px 6px; font-size: var(--kiwe-type-micro, 10px); line-height: 1.08; white-space: normal; }
 .dsa-dock-context .dsa-health-pill i { flex: var(--dsa-runtime-token-0589); width: 6px; height: 6px; }
@@ -6559,6 +6703,45 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-dock-mobile="1"][data-dsa-do
 	grid-column: 2;
 }
 
+/* Editorial profiles release the commerce column and let measured geometry
+ * rebalance the form and security actions across the available Sheet/Screen. */
+.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="wide"] .dsa-profile-panel[data-dsa-commerce="0"] {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-content: start;
+}
+
+.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="wide"] .dsa-profile-panel[data-dsa-commerce="0"] :is(
+	.dsa-profile-panel__title,
+	.dsa-panel__header,
+	.dsa-profile-form
+) {
+	grid-column: 1 / -1;
+}
+
+.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="wide"] .dsa-profile-panel[data-dsa-commerce="0"] .dsa-profile-form {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="wide"] .dsa-profile-panel[data-dsa-commerce="0"] .dsa-profile-form > :is(
+	[name="currentPassword"],
+	.dsa-profile-email-verify,
+	.dsa-auth-actions
+) {
+	grid-column: 1 / -1;
+}
+
+.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="wide"] .dsa-profile-panel[data-dsa-commerce="0"] .dsa-account-actions {
+	grid-column: 1;
+	align-self: stretch;
+	margin-top: 0;
+}
+
+.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="wide"] .dsa-profile-panel[data-dsa-commerce="0"] .dsa-logout-button {
+	grid-column: 2;
+	align-self: stretch;
+	margin: 0;
+}
+
 .dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="wide"] .dsa-cart-panel__item {
 	grid-template-columns: var(--dsa-runtime-token-0595);
 }
@@ -6656,6 +6839,13 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-dock-mobile="1"][data-dsa-do
 	grid-column: 1 / -1;
 }
 
+.dsa-surface[data-dsa-ui-contract="2"] :is([data-dsa-layout="compact"], [data-dsa-layout="narrow"]) .dsa-profile-form > :is(
+	[name="currentPassword"],
+	.dsa-profile-email-verify
+) {
+	grid-column: 1 / -1;
+}
+
 .dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout="compact"] .dsa-cart-panel__items {
 	display: grid;
 	grid-template-columns: var(--dsa-runtime-token-0604);
@@ -6728,13 +6918,35 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-dock-mobile="1"][data-dsa-do
 	padding: var(--dsa-runtime-token-0044);
 }
 
-@container dsa-surface-viewport (max-width: 380px) {
-	.dsa-surface[data-dsa-ui-contract="2"] .dsa-profile-form {
+@container dsa-surface-viewport (max-width: 520px) {
+	.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout] .dsa-profile-panel[data-dsa-commerce] {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.dsa-surface[data-dsa-ui-contract="2"] .dsa-profile-form .dsa-auth-actions {
+	.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout] .dsa-profile-panel[data-dsa-commerce] > * {
 		grid-column: 1;
+	}
+
+	.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout] .dsa-profile-panel[data-dsa-commerce] .dsa-profile-form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout] .dsa-profile-panel[data-dsa-commerce] .dsa-profile-form > * {
+		grid-column: 1;
+	}
+
+	.dsa-surface[data-dsa-ui-contract="2"][data-dsa-layout] .dsa-profile-panel[data-dsa-commerce] .dsa-profile-form .dsa-auth-actions {
+		grid-column: 1;
+	}
+}
+
+@container dsa-surface-viewport (max-width: 360px) {
+	.dsa-surface[data-dsa-ui-contract="2"] .dsa-profile-panel :is(.dsa-account-actions .dsa-panel__button, .dsa-logout-button) {
+		justify-content: center;
+	}
+
+	.dsa-surface[data-dsa-ui-contract="2"] .dsa-profile-panel .dsa-account-action__label {
+		display: none;
 	}
 }
 
@@ -8160,6 +8372,7 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-ui-contract="2"][data-dsa-do
 }
 
 .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-search-v2027 .dsa-search-panel__filters,
+.dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-search-v2027 .dsa-search-panel__sort,
 .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-search-v2027 .dsa-search-panel__alphabet {
 	gap: var(--dsa-runtime-token-0088);
 }
@@ -8598,6 +8811,25 @@ body.kiwe-accessibility-preview :where(a[href], button, input:not([type="hidden"
 	box-shadow: var(--dsa-runtime-token-0719) !important;
 }
 
+/* Closed means absent. This high-authority rule must remain after every theme
+ * rule: Sheet presentation declares display:grid later than the base hidden
+ * rule, which otherwise leaves a transparent full-viewport tap blocker on
+ * mobile browsers. */
+.dsa-surface[data-dsa-surface] .dsa-overlay-root[hidden],
+.dsa-surface[data-dsa-surface] .dsa-loader[hidden],
+.dsa-document-scrim[hidden] {
+	display: none !important;
+	visibility: hidden !important;
+	pointer-events: none !important;
+	-webkit-backdrop-filter: none !important;
+	backdrop-filter: none !important;
+}
+
+.dsa-surface[data-dsa-surface] .dsa-overlay-root[hidden]::before {
+	content: none !important;
+	display: none !important;
+}
+
 body.kiwe-accessibility-preview :where(button, input:not([type="hidden"]), select, textarea, [role="button"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"]) {
 	min-block-size: var(--dsa-geometry-control-min);
 	touch-action: manipulation;
@@ -8625,4 +8857,23 @@ body.kiwe-accessibility-preview :where(input[type="checkbox"], input[type="radio
 		transition-duration: var(--dsa-runtime-token-0716) !important;
 		transition-delay: var(--dsa-runtime-token-0718) !important;
 	}
+}
+
+/* Public staff fields share the existing responsive profile grid. */
+.dsa-profile-form .dsa-profile-public { grid-column: 1 / -1; min-width: 0; }
+.dsa-profile-public summary { cursor: pointer; font-weight: 600; }
+.dsa-profile-public label { display: grid; gap: .4rem; margin-block: .75rem; }
+
+/* Guest contribution state sits beside identity verification without widening the sheet. */
+.dsa-guest-application,
+.dsa-guest-application__choices { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.dsa-guest-application { margin-block-start: var(--dsa-runtime-token-0675); }
+.dsa-guest-application__choices label { display: inline-flex; align-items: center; gap: .25rem; font-size: .78rem; }
+.dsa-guest-status { display: inline-flex; align-items: center; min-block-size: 2rem; padding: .35rem .7rem; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: .78rem; font-weight: 700; line-height: 1; }
+button.dsa-guest-status { cursor: pointer; }
+.dsa-guest-status.is-approved { color: var(--dsa-success-color); }
+.dsa-guest-status.is-pending { color: var(--dsa-runtime-token-0419); }
+.dsa-guest-status.is-denied { color: var(--dsa-danger-color); }
+@media (max-width: 480px) {
+	.dsa-guest-application__choices { inline-size: 100%; }
 }

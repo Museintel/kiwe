@@ -468,8 +468,8 @@ final class Store_Analytics_Service {
 				'all'   => $this->funnel_summary( 0 ),
 			],
 			'notes' => [
-				__( 'Analytics stores privacy-light events, product IDs, source labels, user IDs when logged in, salted visitor/contact hashes, and order IDs/totals for funnel math. It does not store raw IPs, phones, emails, names, or raw PhoneKey anchors.', 'dsa' ),
-				__( 'PhoneKey, Woo customer, and checkout contact signals are represented as hashed anchors so abandoned-cart intelligence can grow without exposing identity data.', 'dsa' ),
+				__( 'Analytics stores privacy-light events, product IDs, source labels, user IDs when logged in, salted visitor/contact hashes, and order IDs/totals for funnel math. It does not store raw IPs, phones, emails, names, or raw Key.kiwe anchors.', 'dsa' ),
+				__( 'Key.kiwe, Woo customer, and checkout contact signals are represented as hashed anchors so abandoned-cart intelligence can grow without exposing identity data.', 'dsa' ),
 			],
 		];
 	}

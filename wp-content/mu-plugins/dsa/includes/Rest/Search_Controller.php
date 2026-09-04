@@ -37,6 +37,12 @@ final class Search_Controller {
 						'sanitize_callback' => 'sanitize_key',
 						'validate_callback' => static fn( $value ): bool => in_array( $value, [ 'all', 'products', 'posts', 'authors', 'categories' ], true ),
 					],
+					'sort' => [
+						'type'              => 'string',
+						'default'           => 'latest',
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => static fn( $value ): bool => in_array( $value, [ 'latest', 'popular' ], true ),
+					],
 				],
 			]
 		);
@@ -51,16 +57,20 @@ final class Search_Controller {
 			return new WP_Error( 'dsa_search_rate_limited', __( 'Please wait a moment before searching again.', 'dsa' ), [ 'status' => 429 ] );
 		}
 
-		$response = new WP_REST_Response(
-			$this->search->results(
+		$payload = $this->search->results(
 				(string) $request->get_param( 'q' ),
 				(int) $request->get_param( 'limit' ),
 				(string) $request->get_param( 'scope' ),
-				(string) $request->get_param( 'prefix' )
-			),
-			200
+				(string) $request->get_param( 'prefix' ),
+				(string) $request->get_param( 'sort' )
 		);
-		$response->header( 'Cache-Control', 'private, max-age=60, stale-while-revalidate=240' );
+		$response = new WP_REST_Response( $payload, 200 );
+		$response->header(
+			'Cache-Control',
+			empty( $payload['hasCommerce'] ) && ! is_user_logged_in()
+				? 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400'
+				: 'private, max-age=60, stale-while-revalidate=240'
+		);
 
 		return $response;
 	}

@@ -2,6 +2,8 @@
 
 namespace DSA;
 
+use DSA\Access\WordPress_Role_Access_Service;
+use DSA\Access\Guest_Contribution_Service;
 use DSA\Admin\Admin;
 use DSA\AI\AI_Broker_Service;
 use DSA\AI\Copilot_Service;
@@ -15,6 +17,7 @@ use DSA\Commerce\COD_Gate_Service;
 use DSA\Commerce\Commerce_Context_Service;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Product_Context_Service;
+use DSA\Commerce\Purchase_Identity_Gate;
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Diagnostics\Asset_Manifest_Service;
 use DSA\Diagnostics\Runtime_Profiler;
@@ -26,6 +29,7 @@ use DSA\Link_Hub\Review_Service;
 use DSA\Metrics\Metrics_Service;
 use DSA\Modules\Module_Registry;
 use DSA\Notifications\Notification_Preference_Service;
+use DSA\Notifications\Notification_Center_Service;
 use DSA\Notifications\Notification_Campaign_Service;
 use DSA\Notifications\Push_Service;
 use DSA\Notifications\Admin_Event_Notification_Service;
@@ -62,6 +66,7 @@ use DSA\Rest\Runtime_Hydration_Controller;
 use DSA\Rewards\Reward_Service;
 use DSA\Runtime\Route_Capability_Service;
 use DSA\Runtime\Editorial_Fragment_Service;
+use DSA\Runtime\Update_Service;
 use DSA\Schema\Schema_Geo_Service;
 use DSA\Search\Search_Service;
 use DSA\SEO\SEO_Refinement_Service;
@@ -123,6 +128,8 @@ final class Plugin {
 	private $seo_context;
 	private $product_context;
 	private $seo_refinement;
+	private $role_access;
+	private $purchase_identity_gate;
 
 	public static function instance(): Plugin {
 		if ( null === self::$instance ) {
@@ -149,6 +156,8 @@ final class Plugin {
 		$this->seo_context  = new SEO_Context_Service( $this->design_context_profile );
 		$this->seo_refinement = new SEO_Refinement_Service( $this->ai_broker, $this->design_context_profile );
 		$this->product_context = new Product_Context_Service();
+		$this->role_access = new WordPress_Role_Access_Service();
+		$this->purchase_identity_gate = new Purchase_Identity_Gate();
 		$this->abandoned_carts = new Abandoned_Cart_Service( $this->settings, $this->store_analytics, $this->channels );
 		$this->checkout    = new Checkout_Service( $this->settings, $this->cart_payload );
 		$this->trust      = new Trust_Service();
@@ -212,11 +221,22 @@ final class Plugin {
 		$service_profile = Runtime_Profiler::start( 'service.register_services' );
 		( new Asset_Manifest_Service( ! empty( $diagnostics['enabled'] ) && ! empty( $diagnostics['asset_manifest'] ) ) )->register();
 		Atomic_Rate_Limiter::register();
+		( new Update_Service() )->register();
 		$this->apex_acceptance->register();
 
 		$this->registry->register();
+		// Ownership and the business workspace must survive disabling Key login.
+		$this->role_access->register();
+		( new Guest_Contribution_Service() )->register();
+		( new Notification_Center_Service( $this->notification_preferences ) )->register();
+		// Every Kiwe subsystem, including SecureTrack, publishes through this
+		// lightweight ingress. Event-source hooks remain preference-gated below.
+		$this->admin_notifications->register_router();
 		if ( $phonekey_enabled ) {
 			( new PhoneKey_Core_Loader() )->register();
+			// Regular plugins load after MU plugins. Attach the WooCommerce lifecycle
+			// only after Woo itself is present; editorial sites pay no commerce-hook cost.
+			add_action( 'plugins_loaded', [ $this->purchase_identity_gate, 'register_if_available' ], 30 );
 		}
 		$this->native->register();
 		/** Third-party integrations receive the broker object, never provider credentials. */
@@ -278,7 +298,9 @@ final class Plugin {
 		if ( ! empty( $ai['studio_enabled'] ) && ! empty( $ai['bricks_editor_companion_enabled'] ) ) {
 			( new Bricks_Studio_Controller( $this->settings, $this->site_graph ) )->register();
 		}
-		if ( $surface_enabled && ! empty( $settings['search']['context_aware'] ) ) {
+		// Context awareness only chooses the initial search scope. The endpoint and
+		// cache/index hooks must remain available whenever the Surface is enabled.
+		if ( $surface_enabled ) {
 			( new Search_Controller( $this->search ) )->register();
 		}
 		if ( $surface_enabled ) {
@@ -286,7 +308,7 @@ final class Plugin {
 			( new Editorial_Envelope_Controller( $this->editorial_fragments ) )->register();
 		}
 		( new Apex_Profile_Controller( $this->apex_acceptance ) )->register();
-		if ( $surface_enabled && ! empty( $settings['search']['context_aware'] ) ) {
+		if ( $surface_enabled ) {
 			$this->search->register();
 		}
 		// MU plugins run before the theme loads. Register editor capabilities after

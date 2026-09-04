@@ -167,12 +167,12 @@
     "shadowOnly": {
       "card": "AppShell keeps card semantics on protected data-seam-* metadata so site CSS cannot accidentally style live DSA internals.",
       "button": "AppShell keeps button semantics protected so site CSS cannot override DSA controls.",
-      "input": "AppShell keeps field/input semantics protected because Profile, PhoneKey, checkout, and validation states are authority-owned.",
+      "input": "AppShell keeps field/input semantics protected because Profile, Key.kiwe, checkout, and validation states are authority-owned.",
       "media": "AppShell keeps media semantics protected because DSA media geometry is screen-specific.",
       "badge": "AppShell keeps badge semantics protected so site CSS cannot alter notification/status badges.",
       "nav": "AppShell keeps nav semantics protected because dock and context navigation use Geometry Engine variables.",
       "actions": "AppShell keeps action-row semantics protected because action placement is panel/dock/context-owned.",
-      "form": "AppShell keeps form semantics protected because Profile, PhoneKey, checkout, and notification forms are authority-owned.",
+      "form": "AppShell keeps form semantics protected because Profile, Key.kiwe, checkout, and notification forms are authority-owned.",
       "field": "AppShell keeps field semantics protected because validation, account, and checkout fields are authority-owned.",
       "modal": "AppShell keeps modal semantics protected because DSA sheet/screen geometry owns this surface."
     },

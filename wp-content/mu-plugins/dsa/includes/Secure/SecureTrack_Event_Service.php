@@ -128,6 +128,8 @@ final class SecureTrack_Event_Service {
 		stp_ai_queue_maybe( $event_id, $type, $args, $risk, $ip_str );
 		stp_update_subnet_intel( $ip_str, $is_attack_event );
 
+		$is_containment = function_exists( 'stp_is_containment_event' )
+			&& stp_is_containment_event( $type, (string) ( $args['sub'] ?? '' ) );
 		$graph = stp_attack_graph_update( $ip_str, $type, $args, $risk );
 		if ( $graph ) {
 			stp_create_alert(
@@ -162,7 +164,7 @@ final class SecureTrack_Event_Service {
 					'evidence'    => [ 'event_type' => $type, 'score' => $risk['score'], 'reasons' => $risk['reasons'], 'url' => $args['url'] ?? '' ],
 				]
 			);
-		} elseif ( $risk['flag'] === 'red' && (int) $risk['score'] >= 75 && empty( $args['suppress_high_risk_alert'] ) && ! in_array( $type, [ 'break_glass_access' ], true ) ) {
+		} elseif ( ! $is_containment && $risk['flag'] === 'red' && (int) $risk['score'] >= 75 && empty( $args['suppress_high_risk_alert'] ) && ! in_array( $type, [ 'break_glass_access' ], true ) ) {
 			$alert_severity = ( (int) $risk['score'] >= 90 || in_array( $type, [ 'waf_block', 'login_failed', 'behavior_signal', 'break_glass_access' ], true ) ) ? 'critical' : 'high';
 			stp_create_alert(
 				[
@@ -210,8 +212,12 @@ final class SecureTrack_Event_Service {
 			}
 		}
 
-		if ( $risk['flag'] === 'red' && $config['alert_on_red'] ) {
-			stp_alert( "Red-Flag Event: {$type}", "IP: {$ip_str}\nUser: {$username}\nScore: {$risk['score']}/100\nReasons: {$risk['reasons']}" );
+		if ( $risk['flag'] === 'yellow' && ( $config['alert_delivery_policy'] ?? 'actionable' ) === 'yellow_and_actionable' ) {
+			stp_alert(
+				"SecureTrack yellow event: {$type}",
+				"Score {$risk['score']}/100. Reasons: {$risk['reasons']}\nURL: " . ( $args['url'] ?? '' ),
+				[ 'severity' => 'yellow' ]
+			);
 		}
 
 		if ( $risk['flag'] === 'red' ) {

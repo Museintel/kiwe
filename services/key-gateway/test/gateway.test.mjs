@@ -1,0 +1,175 @@
+import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import { afterEach, test } from "node:test";
+import { createApp } from "../src/app.mjs";
+import { signature } from "../src/security.mjs";
+import { reconnectDelayFor } from "../src/transports/baileys.mjs";
+import { DisconnectReason } from "@whiskeysockets/baileys";
+
+const servers = [];
+afterEach(async () => { while (servers.length) await new Promise((resolve) => servers.pop().close(resolve)); });
+
+async function fixture(ready = true, stateOverride = "", operatorOverrides = {}) {
+  const sent = [];
+  const events = [];
+  const config = {
+    setupToken: "s".repeat(32), requestWindowSeconds: 90, sendTimeoutMs: 1000,
+    memoryLimitMb: 384, rcObservability: { enabled: false },
+    tenants: { client: { secret: "x".repeat(40), sites: ["https://example.com"], label: "Example" } },
+  };
+  let resetCount = 0;
+  const transport = {
+    name: "test",
+    ready: async () => ready,
+    sendText: async (phone, text) => { sent.push({ phone, text }); return { id: "message-1" }; },
+    selfTest: async () => { sent.push({ selfTest: true }); return { id: "self-test-1", target: "919876543210" }; },
+    setup: () => ({
+      state: stateOverride || (ready ? "open" : "pairing-timeout"),
+      qr: "",
+      libraryVersion: "7.0.0-rc14",
+      protocolVersion: "2.3000.1045862343",
+      protocolSource: "wa-web",
+      registered: ready,
+      lastDisconnect: ready ? { code: 0, reason: "", at: 0 } : { code: 408, reason: "timed-out", at: 1720000000000 },
+    }),
+    close: async () => {},
+  };
+  const history = { record: async (event) => { events.push(event); }, list: () => events };
+  const operator = { resetSession: async () => { resetCount += 1; }, ...operatorOverrides };
+  const server = createServer(createApp(config, transport, () => 1720000000000, history, operator));
+  servers.push(server);
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return { config, sent, events, get resetCount() { return resetCount; }, url: `http://127.0.0.1:${server.address().port}` };
+}
+
+function signed(config, payload, overrides = {}) {
+  const raw = JSON.stringify(payload);
+  const timestamp = "1720000000000";
+  const nonce = overrides.nonce || "nonce_1234567890123456";
+  return {
+    method: "POST",
+    headers: {
+      "content-type": "application/json", "x-kiwe-key-id": "client", "x-kiwe-key-timestamp": timestamp,
+      "x-kiwe-key-nonce": nonce, "x-kiwe-key-signature": signature(config.tenants.client.secret, timestamp, nonce, raw),
+    },
+    body: raw,
+  };
+}
+
+const payload = { phone: "+919876543210", code: "135790", site: "Example", origin: "https://example.com", requestId: "request_1234567890123456" };
+
+test("backs off replaced sessions while keeping ordinary reconnects bounded", () => {
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.connectionReplaced, attempts: 1, registered: true }), 120000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.restartRequired, attempts: 4, registered: true }), 1000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.timedOut, attempts: 1, registered: false }), 60000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.connectionLost, attempts: 1, registered: true }), 2000);
+  assert.equal(reconnectDelayFor({ status: DisconnectReason.connectionLost, attempts: 10, registered: true }), 30000);
+});
+
+test("accepts a signed bounded OTP without exposing it in the response", async () => {
+  const app = await fixture();
+  const response = await fetch(`${app.url}/v1/otp`, signed(app.config, payload));
+  const result = await response.json();
+  assert.equal(response.status, 202);
+  assert.equal(result.ok, true);
+  assert.equal(JSON.stringify(result).includes(payload.code), false);
+  assert.deepEqual(app.sent.map((item) => item.phone), ["919876543210"]);
+});
+
+test("rejects invalid signatures, replay, and unapproved site origins", async () => {
+  const app = await fixture();
+  const invalid = signed(app.config, payload);
+  invalid.headers["x-kiwe-key-signature"] = "0".repeat(64);
+  assert.equal((await fetch(`${app.url}/v1/otp`, invalid)).status, 401);
+  const valid = signed(app.config, payload);
+  assert.equal((await fetch(`${app.url}/v1/otp`, valid)).status, 202);
+  assert.equal((await fetch(`${app.url}/v1/otp`, valid)).status, 409);
+  const wrongSite = signed(app.config, { ...payload, origin: "https://attacker.example", requestId: "request_abcdefghijklmnop" }, { nonce: "nonce_abcdefghijklmnop" });
+  assert.equal((await fetch(`${app.url}/v1/otp`, wrongSite)).status, 403);
+});
+
+test("rejects signed delivery for a website its owner has deactivated", async () => {
+  const app = await fixture(true, "", { controlPlane: { siteByKeyId: () => ({ active: false }), recordTransaction: () => { throw new Error("inactive requests must not be counted"); } } });
+  const response = await fetch(`${app.url}/v1/otp`, signed(app.config, payload));
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error, "site_inactive");
+  assert.equal(app.sent.length, 0);
+});
+
+test("returns an explicit email fallback signal while WhatsApp is unavailable", async () => {
+  const app = await fixture(false);
+  const response = await fetch(`${app.url}/v1/otp`, signed(app.config, payload));
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).fallback, "email");
+  assert.equal(app.sent.length, 0);
+  assert.equal(app.events.some((event) => event.status === "fallback_required"), true);
+});
+
+test("exposes bounded pairing diagnostics without hiding the email fallback state", async () => {
+  const app = await fixture(false);
+  const health = await fetch(`${app.url}/health`);
+  const status = await health.json();
+  assert.equal(health.status, 503);
+  assert.equal(status.state, "pairing-timeout");
+  assert.equal(status.libraryVersion, "7.0.0-rc14");
+  assert.equal(status.protocolSource, "wa-web");
+
+  const setup = await fetch(`${app.url}/setup?token=${"s".repeat(32)}`);
+  const html = await setup.text();
+  assert.equal(setup.status, 200);
+  assert.equal(setup.headers.get("x-frame-options"), "DENY");
+  assert.match(setup.headers.get("permissions-policy"), /camera=\(\)/);
+  assert.match(html, /New-device compatibility notice/);
+  assert.match(html, /http-equiv="Content-Security-Policy"/);
+  assert.match(html, /email fallback active/);
+  assert.match(html, /7\.0\.0-rc14/);
+  assert.doesNotMatch(html, /request_1234567890123456|135790/);
+});
+
+test("accepts signed email fallback outcomes without OTP content", async () => {
+  const app = await fixture(false);
+  const outcome = { phone: payload.phone, origin: payload.origin, requestId: payload.requestId, event: "email_fallback_accepted" };
+  const response = await fetch(`${app.url}/v1/event`, signed(app.config, outcome));
+  assert.equal(response.status, 202);
+  assert.equal(app.events.at(-1).status, "email_fallback_accepted");
+  assert.equal(JSON.stringify(app.events).includes(payload.code), false);
+});
+
+test("runs a protected connected-account self-test without exposing its target", async () => {
+  const app = await fixture();
+  assert.equal((await fetch(`${app.url}/setup/self-test`, { method: "POST" })).status, 404);
+  const response = await fetch(`${app.url}/setup/self-test?token=${"s".repeat(32)}`, { method: "POST" });
+  const result = await response.json();
+  assert.equal(response.status, 202);
+  assert.equal(result.ok, true);
+  assert.equal(JSON.stringify(result).includes("919876543210"), false);
+  assert.equal(app.sent.some((entry) => entry.selfTest), true);
+  assert.equal(app.events.at(-1).summary, "Connected-account RC self-test");
+});
+
+test("requires the protected explicit operator action before resetting a replaced session", async () => {
+  const app = await fixture(false, "session-replaced");
+  const setup = await fetch(`${app.url}/setup?token=${"s".repeat(32)}`);
+  const html = await setup.text();
+  assert.match(html, /Reset linked device/);
+  assert.match(setup.headers.get("content-security-policy"), /form-action 'self'/);
+  assert.equal((await fetch(`${app.url}/setup/reset-session`, { method: "POST" })).status, 404);
+  assert.equal((await fetch(`${app.url}/setup/reset-session?token=${"s".repeat(32)}`, { method: "POST", body: "confirm=no" })).status, 400);
+  const response = await fetch(`${app.url}/setup/reset-session?token=${"s".repeat(32)}`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: "confirm=reset-linked-device",
+  });
+  assert.equal(response.status, 202);
+  assert.equal(app.resetCount, 1);
+});
+
+test("accepts bounded consented notifications through the same tenant", async () => {
+  const app = await fixture();
+  const notification = { phone: payload.phone, origin: payload.origin, requestId: "notification_1234567890123456", purpose: "order_status", message: "Example: Order #42 is ready." };
+  const response = await fetch(`${app.url}/v1/message`, signed(app.config, notification));
+  assert.equal(response.status, 202);
+  assert.equal(app.sent.at(-1).text, notification.message);
+  assert.equal(app.events.at(-1).summary, "order_status");
+  assert.equal(app.events.at(-1).allowContent, true);
+});

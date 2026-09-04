@@ -62,6 +62,11 @@ final class Channel_Service {
 			'admin_new_comment',
 			'admin_visitor_summary',
 			'admin_live_visitor',
+			'admin_guest_application',
+			'admin_guest_submission',
+			'guest_post_status',
+			'editorial_post_status',
+			'securetrack_incident',
 		];
 		$available = in_array( sanitize_key( (string) ( $context['purpose'] ?? '' ) ), $campaign_purposes, true )
 			? $this->available_for_campaign( $channel )

@@ -122,7 +122,26 @@ final class SecureTrack_Runtime_Guard {
 		}
 
 		$type = self::endpoint_type();
-		if ( is_user_logged_in() && in_array( $type, [ 'admin_page', 'admin_ajax', 'frontend' ], true ) ) {
+
+		// This guard runs on init before REST cookie/nonce authentication is
+		// guaranteed to have resolved. A shared or rotating ISP address must not
+		// be able to exhaust a pre-authentication budget for wp-login, REST,
+		// admin-ajax, or wp-admin and lock legitimate editors out. Those surfaces
+		// retain their native authentication/capability checks, route-specific
+		// limits, SecureTrack WAF checks, and failed-login brute-force controls.
+		// Keep the early generic hard limit only for XML-RPC, whose requests are
+		// self-contained and are not part of an interactive admin session.
+		$hard_limited_types = (array) apply_filters( 'stp_pre_auth_hard_limited_endpoint_types', [ 'xmlrpc' ] );
+		if ( ! in_array( $type, $hard_limited_types, true ) ) {
+			return;
+		}
+
+		if ( is_user_logged_in() ) {
+			return;
+		}
+
+		$ip = stp_get_ip();
+		if ( stp_ip_status_is_trusted( $ip ) ) {
 			return;
 		}
 
@@ -134,21 +153,7 @@ final class SecureTrack_Runtime_Guard {
 			return;
 		}
 
-		$limits = [
-			'login'      => (int) $config['rl_login_per_min'],
-			'xmlrpc'     => (int) $config['rl_xmlrpc_per_min'],
-			'rest'       => (int) $config['rl_rest_per_min'],
-			'admin_ajax' => (int) $config['rl_admin_per_min'],
-			'admin_page' => max( 600, (int) $config['rl_admin_per_min'] * 5 ),
-			'frontend'   => (int) $config['rl_frontend_per_min'],
-		];
-		$limit = max( 5, (int) ( $limits[ $type ] ?? 120 ) );
-		$ip = stp_get_ip();
-
-		if ( stp_ip_status_is_trusted( $ip ) && in_array( $type, [ 'frontend', 'rest', 'admin_ajax' ], true ) ) {
-			$limit = max( $limit * 4, 360 );
-		}
-
+		$limit = max( 5, (int) $config['rl_xmlrpc_per_min'] );
 		$limit = (int) apply_filters( 'stp_endpoint_rate_limit', $limit, $type, $ip );
 		if ( $limit <= 0 || stp_rate_limit( 'endpoint|' . $type . '|' . $ip, $limit, 60 ) ) {
 			return;

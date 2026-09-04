@@ -4,7 +4,7 @@
  * Description:  Local-first WordPress security intelligence — reflex blocking, self-learning
  *               site baselines, optional AI second opinion, risk scoring, IP reputation,
  *               page navigation trails, protected-event ledger, and admin intelligence dashboards.
- * Version:      2.0.15
+ * Version:      2.0.16
  * Requires PHP: 8.2
  * Author:       Custom Build
  * License:      GPL-2.0+
@@ -46,7 +46,7 @@ require_once __DIR__ . '/SecureTrack_Db_Service.php';
 //  CONSTANTS
 // ════════════════════════════════════════════════════════════════
 
-define( 'STP_VER', '2.0.15' );
+define( 'STP_VER', '2.0.16' );
 define( 'STP_FILE', __FILE__ );
 
 function stp_break_glass_default_slug() {
@@ -233,6 +233,9 @@ function stp_cfg( $refresh = false ) {
 		'yellow_trim_days'  => 90,
 		'alert_email'       => get_option( 'admin_email' ),
 		'alert_on_red'      => 1,
+		'alert_delivery_policy' => 'actionable',
+		'alert_repeat_window_mins' => 15,
+		'alert_hourly_limit' => 8,
 		'geo_enabled'       => 0,
 		'country_blocklist' => '',
 		'login_country_policy' => 'off',
@@ -698,6 +701,47 @@ function stp_maybe_install() {
 function stp_table_exists( $name ) {
 	return \DSA\Secure\SecureTrack_Db_Service::table_exists( (string) $name );
 }
+
+function stp_search_popularity_available( $available = false ) {
+	$config = stp_cfg();
+	return (bool) $available || ( ! empty( $config['track_visitors'] ) && ! empty( $config['track_pages'] ) && stp_table_exists( 'pages' ) );
+}
+
+function stp_search_popularity_scores( $scores, $post_ids, $days = 30 ) {
+	$scores = is_array( $scores ) ? $scores : array();
+	$ids = array_values( array_unique( array_filter( array_map( 'absint', (array) $post_ids ) ) ) );
+	if ( ! $ids || ! stp_search_popularity_available() ) return $scores;
+
+	$url_to_id = array();
+	foreach ( $ids as $post_id ) {
+		$url = esc_url_raw( (string) get_permalink( $post_id ) );
+		if ( '' === $url ) continue;
+		$url_to_id[ untrailingslashit( $url ) ] = $post_id;
+		$url_to_id[ trailingslashit( $url ) ] = $post_id;
+	}
+	if ( ! $url_to_id ) return $scores;
+
+	global $wpdb;
+	$urls = array_keys( $url_to_id );
+	$placeholders = implode( ',', array_fill( 0, count( $urls ), '%s' ) );
+	$since = gmdate( 'Y-m-d H:i:s', current_time( 'timestamp', true ) - max( 1, min( 365, absint( $days ) ) ) * DAY_IN_SECONDS );
+	$rows = (array) $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT url, COUNT(*) AS views FROM " . stp_t( 'pages' ) . " WHERE visited_at >= %s AND url IN ({$placeholders}) GROUP BY url",
+			...array_merge( array( $since ), $urls )
+		),
+		ARRAY_A
+	);
+	foreach ( $rows as $row ) {
+		$url = (string) ( $row['url'] ?? '' );
+		$post_id = absint( $url_to_id[ $url ] ?? 0 );
+		if ( $post_id ) $scores[ $post_id ] = absint( $scores[ $post_id ] ?? 0 ) + absint( $row['views'] ?? 0 );
+	}
+	return $scores;
+}
+
+add_filter( 'dsa_search_popularity_available', 'stp_search_popularity_available' );
+add_filter( 'dsa_search_popularity_scores', 'stp_search_popularity_scores', 10, 3 );
 
 function stp_column_exists( $table_name, $column ) {
 	return \DSA\Secure\SecureTrack_Db_Service::column_exists( (string) $table_name, (string) $column );
@@ -1166,6 +1210,7 @@ add_action( 'admin_init', 'stp_verify_crons', 5 );
 add_action( 'stp_cron_cleanup', 'stp_run_cleanup' );
 add_action( 'stp_cron_geo',     'stp_run_geo' );
 add_action( 'stp_cron_ai_queue', 'stp_run_ai_queue' );
+add_action( 'stp_cron_ai_queue_priority', 'stp_run_priority_ai_queue' );
 
 /**
  * Removes aged-out events and green sessions.
@@ -1542,7 +1587,7 @@ function stp_create_alert( $data ) {
 
 	$alert_id = (int) $wpdb->insert_id;
 	if ( $alert_id && ! empty( stp_cfg()['alert_on_red'] ) && in_array( $d['severity'], array( 'high', 'critical' ), true ) ) {
-		stp_alert( $d['title'] ?: stp_chain_title( $d['chain_type'] ), wp_strip_all_tags( $d['description'] ) );
+		stp_alert( $d['title'] ?: stp_chain_title( $d['chain_type'] ), wp_strip_all_tags( $d['description'] ), [ 'severity' => $d['severity'], 'alert_id' => $alert_id ] );
 	}
 	return $alert_id;
 }
@@ -1809,13 +1854,21 @@ function stp_break_glass_session_valid() {
 
 function stp_handle_break_glass_login() {
 	if ( ! stp_is_break_glass_request() ) return;
+	// A recovery window has already passed the high-entropy slug check and is
+	// bound to this IP + browser. Re-opening the bookmarked route must not burn
+	// the entry budget or strand an administrator behind a 429.
+	if ( stp_break_glass_session_valid() ) {
+		nocache_headers();
+		wp_safe_redirect( add_query_arg( 'stp_break_glass', '1', wp_login_url() ) );
+		exit;
+	}
 	$ip = stp_get_ip();
 	$ua = substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ), 0, 500 );
-	if ( ! stp_rate_limit( 'break_glass|' . $ip, 4, 15 * MINUTE_IN_SECONDS ) || ! stp_rate_limit( 'break_glass_global', 60, HOUR_IN_SECONDS ) ) {
-		stp_log( 'break_glass_access', array( 'sub' => 'recovery_slug_rate_limited', 'url' => home_url( stp_break_glass_path() ), 'extra' => array( 'ua' => $ua, 'rate_limited' => true ) ) );
-		status_header( 429 );
-		wp_die( 'Recovery login temporarily rate limited.', 'Rate limited', array( 'response' => 429 ) );
-	}
+	// The private slug opens the normal credential form; it never authenticates
+	// by itself. A rate-counter failure must therefore coalesce duplicate alerts,
+	// never deny the emergency door administrators rely on during an incident.
+	$alert_allowed = stp_rate_limit( 'break_glass_notice_v1|' . $ip, 12, 15 * MINUTE_IN_SECONDS )
+		&& stp_rate_limit( 'break_glass_notice_global_v1', 240, HOUR_IN_SECONDS );
 	$tok = bin2hex( random_bytes( 32 ) );
 	set_transient( 'stp_bg_' . $tok, array( 'ip' => $ip, 'ua_hash' => hash( 'sha256', $ua ), 'created' => time() ), 15 * MINUTE_IN_SECONDS );
 	if ( ! headers_sent() ) {
@@ -1832,9 +1885,12 @@ function stp_handle_break_glass_login() {
 	$eid = stp_log( 'break_glass_access', array(
 		'sub'   => 'recovery_login_slug_accessed',
 		'url'   => home_url( stp_break_glass_path() ),
-		'extra' => array( 'ua' => $ua, 'recovery_window_minutes' => 15 ),
+		'extra' => array( 'ua' => $ua, 'recovery_window_minutes' => 15, 'alert_coalesced' => ! $alert_allowed ),
 	) );
-	stp_create_break_glass_alert( 'access', $eid, $ip, 0, '', array( 'ua' => $ua, 'recovery_window_minutes' => 15 ) );
+	if ( $alert_allowed ) {
+		stp_create_break_glass_alert( 'access', $eid, $ip, 0, '', array( 'ua' => $ua, 'recovery_window_minutes' => 15 ) );
+	}
+	nocache_headers();
 	wp_safe_redirect( add_query_arg( 'stp_break_glass', '1', wp_login_url() ) );
 	exit;
 }
@@ -2132,6 +2188,22 @@ function stp_risk( $type, $ctx = array() ) {
 
 	$score = min( 100, max( 0, $score ) );
 	$cfg   = stp_cfg();
+
+	/*
+	 * A denied request is evidence that the control worked, not that the site
+	 * was compromised. Keep containment visible as a yellow protection while
+	 * reserving red for bypass, takeover, privileged access, and other events
+	 * that still need an administrator decision.
+	 */
+	$is_containment = function_exists( 'stp_is_containment_event' )
+		&& stp_is_containment_event( $type, (string) ( $ctx['sub'] ?? '' ) );
+	$containment_failed = ! empty( $ctx['containment_failed'] ) || ! empty( $ctx['bypass_evidence'] );
+	if ( $is_containment && ! $containment_failed ) {
+		$yellow_floor = min( max( 1, (int) $cfg['yellow_threshold'] ), max( 1, (int) $cfg['red_threshold'] - 1 ) );
+		$score = max( $yellow_floor, min( $score, max( 1, (int) $cfg['red_threshold'] - 1 ) ) );
+		$reasons[] = 'Request contained; no administrator action required';
+	}
+
 	$flag  = $score >= $cfg['red_threshold'] ? 'red' : ( $score >= $cfg['yellow_threshold'] ? 'yellow' : 'green' );
 	return array( 'score' => $score, 'reasons' => implode( '; ', $reasons ), 'flag' => $flag );
 }
@@ -2261,11 +2333,47 @@ function stp_log( $type, $args = array() ) {
 	return \DSA\Secure\SecureTrack_Event_Service::log( $type, $args );
 }
 
-function stp_alert( $subject, $body ) {
-	$to = stp_cfg()['alert_email'] ?? '';
-	if ( ! $to ) return;
-	wp_mail( $to, '[SecureTrack] ' . $subject,
-		"SecureTrack Pro — Security Alert\n\n{$body}\n\nTime: " . current_time( 'mysql' ) . "\nSite: " . get_site_url() );
+function stp_alert( $subject, $body, $context = array() ) {
+	$config = stp_cfg();
+	if ( empty( $config['alert_on_red'] ) ) return false;
+
+	/*
+	 * A live attack can produce hundreds of equivalent observations. The Kiwe
+	 * notification pipeline is an escalation layer, not the event ledger:
+	 * coalesce equivalent subjects and apply an administrator-controlled hourly
+	 * ceiling before handing the event to Email, WhatsApp, SMS and the inbox.
+	 * Every observation remains in SecureTrack regardless of delivery budgets.
+	 */
+	$repeat_window = max( 1, min( 1440, (int) ( $config['alert_repeat_window_mins'] ?? 15 ) ) );
+	$hourly_limit = max( 1, min( 100, (int) ( $config['alert_hourly_limit'] ?? 8 ) ) );
+	$subject_key = 'stp_notice_subject_' . substr( hash( 'sha256', strtolower( trim( (string) $subject ) ) ), 0, 24 );
+	if ( get_transient( $subject_key ) ) return false;
+
+	$hour_key = 'stp_notice_hour_' . gmdate( 'YmdH' );
+	$hour_count = (int) get_transient( $hour_key );
+	if ( $hour_count >= $hourly_limit ) return false;
+
+	if ( ! has_action( 'kiwe_notification_event' ) ) return false;
+	$context = is_array( $context ) ? $context : array();
+	$severity = sanitize_key( (string) ( $context['severity'] ?? ( str_contains( strtolower( (string) $subject ), 'yellow' ) ? 'yellow' : 'high' ) ) );
+	$event_id = 'securetrack-' . absint( $context['alert_id'] ?? 0 ) . '-' . substr( hash( 'sha256', (string) $subject . '|' . microtime( true ) ), 0, 12 );
+	do_action(
+		'kiwe_notification_event',
+		'securetrack_incident',
+		array(
+			'id'          => $event_id,
+			'kicker'      => 'yellow' === $severity ? __( 'SecureTrack information', 'dsa' ) : __( 'SecureTrack security alert', 'dsa' ),
+			'title'       => sanitize_text_field( (string) $subject ),
+			'message'     => wp_strip_all_tags( (string) $body ) . "\n\n" . sprintf( __( 'Recorded at %s.', 'dsa' ), current_time( 'mysql' ) ),
+			'actionLabel' => __( 'Review security', 'dsa' ),
+			'url'         => admin_url( 'admin.php?page=stp-alerts' ),
+			'severity'    => $severity,
+			'createdAt'   => time(),
+		)
+	);
+	set_transient( $subject_key, 1, $repeat_window * MINUTE_IN_SECONDS );
+	set_transient( $hour_key, $hour_count + 1, HOUR_IN_SECONDS );
+	return true;
 }
 
 /** Count recent failed logins for a given IP within the last hour. */
@@ -2447,57 +2555,37 @@ function stp_post_extra( $pid, $post ) {
 	return $extra;
 }
 
-add_action( 'save_post', function ( $pid, $post, $update ) {
+add_action( 'wp_after_insert_post', function ( $pid, $post, $update, $post_before ) {
 	if ( wp_is_post_revision( $pid ) || wp_is_post_autosave( $pid ) ) return;
-	if ( ! in_array( $post->post_status, array( 'publish', 'draft', 'pending', 'private' ), true ) ) return;
+	if ( ! $post || ! in_array( $post->post_status, array( 'publish', 'draft', 'pending', 'private' ), true ) ) return;
+	if ( ! in_array( $post->post_type, array( 'post', 'page', 'product', 'shop_order', 'shop_order_placehold', 'shop_coupon' ), true ) ) return;
+
+	$changed = array();
+	if ( $update && $post_before instanceof WP_Post ) {
+		foreach ( array( 'post_title' => 'title', 'post_status' => 'status', 'post_content' => 'content', 'post_excerpt' => 'excerpt' ) as $field => $label ) {
+			if ( (string) ( $post_before->$field ?? '' ) !== (string) ( $post->$field ?? '' ) ) $changed[] = $label;
+		}
+	}
+	$sub = $update ? ( $changed ? 'update_' . implode( '_', $changed ) : 'edit' ) : 'create';
 
 	$cf   = stp_scan_content( $post->post_content ?? '' );
 	$hour = (int) current_time( 'G' );
+	$extra = stp_post_extra( $pid, $post );
+	$extra['changed'] = $changed;
+	if ( $post_before instanceof WP_Post ) {
+		$extra['before_status'] = $post_before->post_status;
+		$extra['after_status'] = $post->post_status;
+	}
 	stp_log( stp_post_event_type( $post->post_type ), array_merge( $cf, array(
-		'sub'       => $update ? 'edit' : 'create',
+		'sub'       => $sub,
 		'obj_type'  => $post->post_type,
 		'obj_id'    => $pid,
 		'obj_title' => $post->post_title,
 		'url'       => get_permalink( $pid ) ?: '',
 		'odd_hour'  => ( $hour >= 1 && $hour <= 5 ),
-		'extra'     => stp_post_extra( $pid, $post ),
+		'extra'     => $extra,
 	) ) );
-}, 10, 3 );
-
-add_action( 'post_updated', function ( $pid, $post_after, $post_before ) {
-	if ( wp_is_post_revision( $pid ) || wp_is_post_autosave( $pid ) ) return;
-	if ( ! $post_after || ! in_array( $post_after->post_status, array( 'publish', 'draft', 'pending', 'private', 'trash' ), true ) ) return;
-	$changed = array();
-	foreach ( array( 'post_title' => 'title', 'post_status' => 'status', 'post_content' => 'content', 'post_excerpt' => 'excerpt' ) as $field => $label ) {
-		if ( (string) ( $post_before->$field ?? '' ) !== (string) ( $post_after->$field ?? '' ) ) $changed[] = $label;
-	}
-	if ( ! $changed ) return;
-	$key = 'stp_post_updated_' . $pid . '_' . md5( implode( '|', $changed ) );
-	if ( get_transient( $key ) ) return;
-	set_transient( $key, 1, 30 );
-	$cf = stp_scan_content( $post_after->post_content ?? '' );
-	stp_log( stp_post_event_type( $post_after->post_type ), array_merge( $cf, array(
-		'sub'       => 'update_' . implode( '_', $changed ),
-		'obj_type'  => $post_after->post_type,
-		'obj_id'    => $pid,
-		'obj_title' => $post_after->post_title,
-		'url'       => get_permalink( $pid ) ?: '',
-		'extra'     => array( 'changed' => $changed, 'before_status' => $post_before->post_status, 'after_status' => $post_after->post_status ),
-	) ) );
-}, 10, 3 );
-
-add_action( 'transition_post_status', function ( $new_status, $old_status, $post ) {
-	if ( ! $post || $new_status === $old_status || wp_is_post_revision( $post->ID ) || wp_is_post_autosave( $post->ID ) ) return;
-	if ( ! in_array( $post->post_type, array( 'post', 'page', 'product', 'shop_order', 'shop_coupon' ), true ) ) return;
-	stp_log( stp_post_event_type( $post->post_type ), array(
-		'sub'       => 'status_' . sanitize_key( $old_status ) . '_to_' . sanitize_key( $new_status ),
-		'obj_type'  => $post->post_type,
-		'obj_id'    => (int) $post->ID,
-		'obj_title' => $post->post_title,
-		'url'       => get_permalink( $post->ID ) ?: '',
-		'extra'     => array( 'old_status' => $old_status, 'new_status' => $new_status ),
-	) );
-}, 10, 3 );
+}, 10, 4 );
 
 add_action( 'wp_trash_post', function ( $pid ) {
 	$p = get_post( $pid );
@@ -3008,12 +3096,17 @@ function stp_rate_limit( $bucket, $limit = 120, $window = 60 ) {
 function stp_check() {
 	if ( ! check_ajax_referer( 'stp_nonce', 'nonce', false ) || ! current_user_can( 'manage_options' ) )
 		wp_send_json_error( 'Unauthorized', 403 );
-	$action = sanitize_key( $_REQUEST['action'] ?? 'stp_admin' );
-	$limit = $action === 'stp_live_feed' ? 90 : 120;
-	if ( current_user_can( 'manage_options' ) ) $limit = max( $limit, 600 );
-	if ( stp_ip_status_is_trusted( stp_get_ip() ) ) $limit = max( $limit, 360 );
 	if ( stp_enforcement_paused() ) return;
-	if ( ! stp_rate_limit( 'admin|' . get_current_user_id() . '|' . stp_get_ip() . '|' . $action, $limit, 60 ) )
+
+	$action = sanitize_key( $_REQUEST['action'] ?? 'stp_admin' );
+	// Nonce-protected manage_options mutations must remain recoverable. A
+	// generic per-IP counter here can prevent an administrator from trusting
+	// or unblocking their own address, which turns the safety control into a
+	// lockout loop. Only the high-frequency live-feed poller needs a request
+	// budget; capability and nonce checks protect every mutation above.
+	if ( 'stp_live_feed' !== $action ) return;
+
+	if ( ! stp_rate_limit( 'admin|' . get_current_user_id() . '|' . stp_get_ip() . '|' . $action, 90, 60 ) )
 		wp_send_json_error( 'Rate limited', 429 );
 }
 
@@ -3083,10 +3176,52 @@ function stp_ajax_unban_subnet() {
 	$updated = stp_unban_subnet( $subnet );
 	wp_send_json_success( array( 'subnet' => $subnet, 'unblocked' => $updated ) );
 }
+function stp_trust_ip( $ip, $note = 'Trusted by SecureTrack' ) {
+	global $wpdb;
+	$ip = stp_normalize_ip( $ip );
+	if ( ! $ip ) return new WP_Error( 'stp_invalid_ip', 'SecureTrack could not resolve that IP address.' );
+	$row = stp_upsert_ip( $ip, false );
+	$id  = (int) ( $row->id ?? 0 );
+	if ( ! $id ) return new WP_Error( 'stp_ip_record', 'SecureTrack could not create the IP record.' );
+
+	$updated = $wpdb->update(
+		stp_t( 'ips' ),
+		array(
+			'status'     => 'trusted',
+			'risk_score' => 0,
+			'blocked_at' => null,
+			'notes'      => substr( sanitize_text_field( $note ), 0, 500 ),
+		),
+		array( 'id' => $id )
+	);
+	if ( false === $updated ) return new WP_Error( 'stp_ip_trust_save', 'SecureTrack could not save the trusted-IP status.' );
+
+	// Remove any persisted generic endpoint buckets so trust takes effect
+	// immediately. Object-cache buckets may remain until their short expiry,
+	// but the runtime trusted-IP bypass prevents them from denying requests.
+	if ( stp_table_exists( 'rate_limits' ) ) {
+		foreach ( array( 'login', 'xmlrpc', 'rest', 'admin_ajax', 'admin_page', 'frontend' ) as $type ) {
+			$wpdb->delete( stp_t( 'rate_limits' ), array( 'bucket_id' => hash( 'sha256', 'endpoint|' . $type . '|' . $ip ) ) );
+		}
+	}
+	return array( 'id' => $id, 'ip' => $ip, 'status' => 'trusted' );
+}
+
 function stp_ajax_trust_ip() {
-	global $wpdb; stp_check();
-	$wpdb->update( stp_t( 'ips' ), array( 'status' => 'trusted', 'risk_score' => 0, 'blocked_at' => null ), array( 'id' => (int) $_POST['id'] ) );
-	wp_send_json_success();
+	global $wpdb;
+	stp_check();
+
+	$id = absint( $_POST['id'] ?? 0 );
+	$ip = stp_normalize_ip( $_POST['ip'] ?? '' );
+	if ( ! $ip && $id ) {
+		$ip = stp_normalize_ip( $wpdb->get_var( $wpdb->prepare( 'SELECT ip_address FROM ' . stp_t( 'ips' ) . ' WHERE id=%d', $id ) ) );
+	}
+	$result = stp_trust_ip( $ip, 'Trusted manually by a WordPress administrator' );
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( $result->get_error_message(), 500 );
+	}
+
+	wp_send_json_success( $result );
 }
 function stp_ajax_delete_event() {
 	global $wpdb; stp_check();

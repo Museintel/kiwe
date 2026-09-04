@@ -345,7 +345,7 @@ final class Clean_Conversion_Test_Service {
 			throw new \RuntimeException( 'The clean-run snapshot contains no restorable options.' );
 		}
 		// Validate before touching any globals. Never restore an older aggregate
-		// settings copy, which could roll back AI/SMTP/PhoneKey credentials.
+		// settings copy, which could roll back AI/SMTP/Key.kiwe credentials.
 		$settings = $snapshot['settings'] ?? null;
 		foreach ( self::SETTINGS_FIELDS as $group => $fields ) {
 			foreach ( $fields as $field ) {

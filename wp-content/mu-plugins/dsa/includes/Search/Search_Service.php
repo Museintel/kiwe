@@ -45,33 +45,36 @@ final class Search_Service {
 		update_option( self::CACHE_VERSION_OPTION, $version + 1, false );
 	}
 
-	public function results( string $query, int $limit = 6, string $scope = 'all', string $prefix = '' ): array {
+	public function results( string $query, int $limit = 6, string $scope = 'all', string $prefix = '', string $sort = 'latest' ): array {
 		$query = trim( sanitize_text_field( $query ) );
 		$query = function_exists( 'mb_substr' ) ? mb_substr( $query, 0, 80 ) : substr( $query, 0, 80 );
 		$limit = max( 1, min( 12, $limit ) );
 		$prefix = strtoupper( preg_replace( '/[^A-Z]/i', '', $prefix ) ?? '' );
 		$prefix = function_exists( 'mb_substr' ) ? mb_substr( $prefix, 0, 3 ) : substr( $prefix, 0, 3 );
 		$scope = $this->allowed_scope( $scope );
-		$key   = $this->cache_key( $query, $limit, $scope, $prefix );
+		$sort  = in_array( $sort, [ 'latest', 'popular' ], true ) ? $sort : 'latest';
+		$key   = $this->cache_key( $query, $limit, $scope, $prefix, $sort );
 		$found = false;
 		$data  = wp_cache_get( $key, self::CACHE_GROUP, false, $found );
 
 		if ( $found && is_array( $data ) ) {
 			$data['cached'] = true;
-			$this->record_search( $query, $scope, $prefix, $data );
+			$this->record_search( $query, $scope, $prefix, $sort, $data );
 			return $data;
 		}
 
 		$families     = $this->families();
 		$has_commerce = function_exists( 'wc_get_product' ) && post_type_exists( 'product' );
 		$products     = $has_commerce && $families['products'] && in_array( $scope, [ 'all', 'products' ], true ) ? $this->product_results( $query, $limit, $prefix ) : [];
-		$posts        = $families['posts'] && in_array( $scope, [ 'all', 'posts' ], true ) ? $this->post_results( $query, $limit, $prefix ) : [];
+		$posts        = $families['posts'] && in_array( $scope, [ 'all', 'posts' ], true ) ? $this->post_results( $query, $limit, $prefix, $sort ) : [];
 		$authors      = $families['authors'] && in_array( $scope, [ 'all', 'authors' ], true ) ? $this->author_results( $query, $limit, $prefix ) : [];
 		$categories   = $families['categories'] && in_array( $scope, [ 'all', 'categories' ], true ) ? $this->category_results( $query, $limit, $prefix ) : [];
 		$data         = [
 			'query'       => $query,
 			'scope'       => $scope,
 			'prefix'      => $prefix,
+			'sort'        => $sort,
+			'popularAvailable' => $this->popularity_available(),
 			'families'    => $families,
 			'alphabetEnabled' => ! empty( $this->settings->get( 'search', [] )['alphabet_enabled'] ),
 			'alphabet'    => '' === $query ? $this->alphabet( $scope, $prefix, $has_commerce ) : [],
@@ -85,7 +88,7 @@ final class Search_Service {
 		];
 
 		wp_cache_set( $key, $data, self::CACHE_GROUP, self::CACHE_TTL );
-		$this->record_search( $query, $scope, $prefix, $data );
+		$this->record_search( $query, $scope, $prefix, $sort, $data );
 
 		return $data;
 	}
@@ -215,8 +218,10 @@ final class Search_Service {
 		return $out;
 	}
 
-	private function post_results( string $query, int $limit, string $prefix = '' ): array {
-		$ids = ( new WP_Query( $this->query_args( 'post', $query, $limit, $prefix ) ) )->posts;
+	private function post_results( string $query, int $limit, string $prefix = '', string $sort = 'latest' ): array {
+		$ids = 'popular' === $sort
+			? $this->popular_post_ids( $query, $limit, $prefix )
+			: ( new WP_Query( $this->query_args( 'post', $query, $limit, $prefix ) ) )->posts;
 		$out = [];
 
 		foreach ( $ids as $id ) {
@@ -236,6 +241,32 @@ final class Search_Service {
 		}
 
 		return $out;
+	}
+
+	private function popular_post_ids( string $query, int $limit, string $prefix ): array {
+		global $wpdb;
+		$candidate_limit = max( 36, min( 96, $limit * 8 ) );
+		$ids = array_map( 'absint', (array) ( new WP_Query( $this->query_args( 'post', $query, $candidate_limit, $prefix ) ) )->posts );
+		if ( ! $ids ) {
+			return [];
+		}
+		$scores = apply_filters( 'dsa_search_popularity_scores', [], $ids, 30 );
+		$scores = is_array( $scores ) ? array_map( 'absint', $scores ) : [];
+		$id_list = implode( ',', array_map( 'absint', $ids ) );
+		$dates = $id_list ? (array) $wpdb->get_results( "SELECT ID, post_date_gmt FROM {$wpdb->posts} WHERE ID IN ({$id_list})", OBJECT_K ) : [];
+		usort(
+			$ids,
+			static function ( int $left, int $right ) use ( $scores, $dates ): int {
+				$score_order = ( $scores[ $right ] ?? 0 ) <=> ( $scores[ $left ] ?? 0 );
+				if ( 0 !== $score_order ) return $score_order;
+				return strcmp( (string) ( $dates[ $right ]->post_date_gmt ?? '' ), (string) ( $dates[ $left ]->post_date_gmt ?? '' ) );
+			}
+		);
+		return array_slice( $ids, 0, $limit );
+	}
+
+	private function popularity_available(): bool {
+		return (bool) apply_filters( 'dsa_search_popularity_available', false );
 	}
 
 	private function author_results( string $query, int $limit, string $prefix = '' ): array {
@@ -284,7 +315,7 @@ final class Search_Service {
 			'ignore_sticky_posts'    => true,
 			'update_post_meta_cache' => false,
 			'update_post_term_cache' => false,
-			'orderby'                => $query ? 'relevance' : 'date',
+			'orderby'                => 'date',
 			'order'                  => 'DESC',
 		];
 
@@ -476,7 +507,7 @@ final class Search_Service {
 		);
 	}
 
-	private function record_search( string $query, string $scope, string $prefix, array $data ): void {
+	private function record_search( string $query, string $scope, string $prefix, string $sort, array $data ): void {
 		if ( '' === $query && '' === $prefix ) {
 			return;
 		}
@@ -486,12 +517,13 @@ final class Search_Service {
 				'query'  => $query,
 				'prefix' => $prefix,
 				'scope'  => $scope,
+				'sort'   => $sort,
 				'total'  => absint( $data['total'] ?? 0 ),
 			]
 		);
 	}
 
-	private function cache_key( string $query, int $limit, string $scope, string $prefix ): string {
+	private function cache_key( string $query, int $limit, string $scope, string $prefix, string $sort ): string {
 		$version = max( 1, (int) get_option( self::CACHE_VERSION_OPTION, 1 ) );
 		$user    = wp_get_current_user();
 		$role    = $user && $user->exists()
@@ -514,7 +546,7 @@ final class Search_Service {
 		$currency = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '';
 		$plugin_version = defined( 'DSA_VERSION' ) ? DSA_VERSION : 'dev';
 		$families = $this->families();
-		$source   = implode( '|', [ $plugin_version, $version, $role, $locale, $currency, $location, $limit, $scope, $prefix, strtolower( $query ), implode( ',', array_keys( array_filter( $families ) ) ), implode( ',', $this->custom_taxonomies() ), function_exists( 'wc_get_product' ) ? 'woo' : 'wp' ] );
+		$source   = implode( '|', [ $plugin_version, $version, $role, $locale, $currency, $location, $limit, $scope, $sort, $prefix, strtolower( $query ), implode( ',', array_keys( array_filter( $families ) ) ), implode( ',', $this->custom_taxonomies() ), function_exists( 'wc_get_product' ) ? 'woo' : 'wp' ] );
 
 		return 'dsa_search_' . md5( $source );
 	}

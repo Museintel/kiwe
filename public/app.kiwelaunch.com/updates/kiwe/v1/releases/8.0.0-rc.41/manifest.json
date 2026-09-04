@@ -1,0 +1,14 @@
+{
+  "schema": "kiwe.mu-release.v1",
+  "version": "8.0.0-rc.41",
+  "channel": "candidate",
+  "publishedAt": "2026-09-01T22:11:02.138Z",
+  "packageUrl": "https://app.kiwelaunch.com/updates/kiwe/v1/releases/8.0.0-rc.41/kiwe-mu-plugin.zip",
+  "sha256": "96e6613921f831352bc8bb809df6506ed48e315df6e39ff3c0c6be6e8aa84e03",
+  "bytes": 1477296,
+  "requiresPhp": "8.2",
+  "requiresWp": "7.0",
+  "packageManifestSha256": "82bac06b7ca4a981a807e390e7d101977ae0c864654ddeb2ff2f9c2f4ca1a8be",
+  "keyId": "kiwe-release-2026-01",
+  "signature": "GUZhudYoDB0fG12WqomkarguAvNOmaFOIHqjYvsqRVNkBuKpC9yX0ooF2AvWIzBZKzIi5YyNInZrevcP3G7RDg=="
+}

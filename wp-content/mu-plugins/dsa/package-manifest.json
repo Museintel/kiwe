@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.8",
+  "version": "8.0.0-rc.52",
   "algorithm": "sha256",
-  "file_count": 344,
+  "file_count": 353,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -25,8 +25,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 275393,
-      "sha256": "09750ba08f7bc6aac9c43231f152141877eff01bc227c95924bbb80eeb712ac5"
+      "bytes": 283913,
+      "sha256": "77fde265ff23e4a5052ea1096e16b82f294fd0401d0648ce870c89d3878699d9"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -125,8 +125,8 @@
       "sha256": "2b2ac7396214bb7c5528751f3ddc49eeb0f0384a6a5c5044ba24bddf5103d725"
     },
     "assets/js/modules/ai-panel.js": {
-      "bytes": 10633,
-      "sha256": "bdb4f0dfa1f78ff7deb722758b51283bc68f4d9b5ced7d1ebe73b844e8e5c2d5"
+      "bytes": 10689,
+      "sha256": "6fdef04db6ae48e983dba6591d088f43abd413b20bf3c964b2c62789b4e183de"
     },
     "assets/js/modules/commerce-panels.js": {
       "bytes": 22045,
@@ -145,16 +145,16 @@
       "sha256": "c5e8f9b1f7e29de9541c26fdbf6fd2aff3e58c818f6b73022225dc28dfd3015c"
     },
     "assets/js/modules/profile-panel.js": {
-      "bytes": 11302,
-      "sha256": "b2f0cc00781e984089164f68663cbd8f531483b95bb8aab6ba1c22df37eee067"
+      "bytes": 15485,
+      "sha256": "15c1e0411008a77b6249fc40799b64aad6ce9ac7d99467981dd74826b5ba1c66"
     },
     "assets/js/modules/surface-panels.js": {
-      "bytes": 28324,
-      "sha256": "2a315f95b4baa8ff476c9155ac014a03dc38227963a752f432378087a3a90727"
+      "bytes": 28889,
+      "sha256": "924d2e49ad949d954c79760879538cfab385d44fbe822158f91b0de8ccb3f690"
     },
     "assets/js/onboarding.js": {
-      "bytes": 16084,
-      "sha256": "a6c813ae7d01bdbaa0ed9439226fbb7896494e4da5e23d7663dc013e32c63746"
+      "bytes": 9984,
+      "sha256": "833174e09985c506b2a03548a7ca38fffdaf934cb90821fcf42db056ec457816"
     },
     "assets/js/product-context.js": {
       "bytes": 1260,
@@ -173,12 +173,12 @@
       "sha256": "5d766c23963e03e73c93ce321bb5c30c7818d715f73ce28ca0e8028bc19deb74"
     },
     "assets/js/search.js": {
-      "bytes": 23181,
-      "sha256": "edf2567ee5994e5e41b54f6b7ecaac14bc9d04ec3c06be12baf657071f77544d"
+      "bytes": 26494,
+      "sha256": "33f9a1ae400f854be35c32d1bd8754da049aed097a8928218b44787b760bbbca"
     },
     "assets/js/surface.js": {
-      "bytes": 396497,
-      "sha256": "cc97ed17d52c10d30959b44fcb29787caadf18694d15039e0937650dd2333769"
+      "bytes": 430160,
+      "sha256": "fbda14706b6e760f7e402f43f7ca100ae67a6f7064c38a7fde98e57fc062f4ad"
     },
     "connector-system/BRICKS-DYNAMIC-BINDINGS.md": {
       "bytes": 9415,
@@ -193,8 +193,8 @@
       "sha256": "c90771b601da68fcc332190170092236d34ee3b0483eaf9d230e71be9d6ce1a4"
     },
     "dsa.php": {
-      "bytes": 2766,
-      "sha256": "38689cfadd595511296505759318f9620055fe82ef32bf0a048c1655242aa6bd"
+      "bytes": 3749,
+      "sha256": "37f6be96076787757f67cf84d19844df92a4206cac831fefa3be5c6984a11994"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -234,7 +234,7 @@
     },
     "framework-system/contracts/seam-vocabulary.json": {
       "bytes": 14302,
-      "sha256": "2acd23475f97f7866521297943cb4d8a493583c5daeb38aa12ad4d6a9c681126"
+      "sha256": "969ee0566027b842b1a33a7f332f1a9bfb4ff45f8a46f2c6fdd3cecaed015b0d"
     },
     "framework-system/contracts/seam-vocabulary.md": {
       "bytes": 10682,
@@ -286,7 +286,7 @@
     },
     "framework-system/handoffs/website-builder/contracts/seam-vocabulary.json": {
       "bytes": 14302,
-      "sha256": "2acd23475f97f7866521297943cb4d8a493583c5daeb38aa12ad4d6a9c681126"
+      "sha256": "969ee0566027b842b1a33a7f332f1a9bfb4ff45f8a46f2c6fdd3cecaed015b0d"
     },
     "framework-system/handoffs/website-builder/contracts/seam-vocabulary.md": {
       "bytes": 10682,
@@ -402,7 +402,7 @@
     },
     "includes/AI/Copilot_Service.php": {
       "bytes": 7279,
-      "sha256": "9e70c0275416656661bf3140262e925fcdead9b0ced8191a0f12b807f8b365e6"
+      "sha256": "b47b7da2d290748567d40ee0759550952764457cb450618bd412f2248e9057d6"
     },
     "includes/AI/External_Client_Adapter_Service.php": {
       "bytes": 3959,
@@ -500,21 +500,37 @@
       "bytes": 9793,
       "sha256": "4c8aa92b9605db8f8b1803e3beba97af9151106f6f4cce6b373ce9518f2ea696"
     },
+    "includes/Access/Guest_Contribution_Service.php": {
+      "bytes": 21311,
+      "sha256": "481e1a4bcc5fcc9a57b5077b25e429bc81236443df00acf6c3c938244aaefb62"
+    },
+    "includes/Access/Page_Workspace_Service.php": {
+      "bytes": 7585,
+      "sha256": "8ef56d6e3cfdb53f0cbd0dac7f3d89546eed790c68e19dddfea40676423a4374"
+    },
+    "includes/Access/Site_Owner_Service.php": {
+      "bytes": 16837,
+      "sha256": "07a9eb41a7a11c38208c03d1036bdfed3d3ad7da041fbeca0e5a7160b3ad6a46"
+    },
+    "includes/Access/WordPress_Role_Access_Service.php": {
+      "bytes": 22627,
+      "sha256": "921aa88d3561fd26751cc17e0f19868e93771f15a0acd12cd9b7bcbf9ab0b83b"
+    },
     "includes/Admin/Admin.php": {
-      "bytes": 719791,
-      "sha256": "fe6c21940388bf41e98f4293e8a4d004525093abcb5c95f98a13d8afd7f79544"
+      "bytes": 736488,
+      "sha256": "beb402399b3590421fb510e96d049a170c4fe14e786bd6835dd9e2fa48d84cd5"
     },
     "includes/Autoloader.php": {
       "bytes": 808,
       "sha256": "ddd5427c6bb2188aefd0dd143b1cfd4ce2a4655015a4bbb66208573099876310"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 114696,
-      "sha256": "43e0167f894ea956d6235ef788de1e0bd1b95074159cec56935a0c73dbbfbd56"
+      "bytes": 116023,
+      "sha256": "049af43c20a9df4e8bdedc74c99903f27fc9836e51de322c823686b4c660a739"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 18828,
-      "sha256": "1b83f18b5f7348d4e9bd2cd71afcbc101817f6fe71d90dabc0e61f80d222ff10"
+      "sha256": "633d15bb5593168699113eec4215a277d8b124648b895cd3f7a0125b977bd12b"
     },
     "includes/Bricks/Compiler_Batch_Cleanup_Service.php": {
       "bytes": 13112,
@@ -541,8 +557,8 @@
       "sha256": "fd95cd4d077e2e6d8e7c3f5ca25244cde345986dff06dae32548a140fe9f365f"
     },
     "includes/Commerce/Checkout_Service.php": {
-      "bytes": 22607,
-      "sha256": "71205b771c704db17f31b6145bf4ca59a95826daef0ac3c35a1a71131e9dd27d"
+      "bytes": 22846,
+      "sha256": "f87a2da9943011f2b2a86b23ad5cfebc62789fb1fd8b8eda130c9a2cb5eca60f"
     },
     "includes/Commerce/Commerce_Context_Service.php": {
       "bytes": 12367,
@@ -556,17 +572,21 @@
       "bytes": 3976,
       "sha256": "a3847091ec2b9e21871a28b608484e0b969d99be4434e9d02c22b74a170c7de6"
     },
+    "includes/Commerce/Purchase_Identity_Gate.php": {
+      "bytes": 6029,
+      "sha256": "81e79c85a681b90126c0effdab58705812374d9eb64ce32889b48919bb404eec"
+    },
     "includes/Commerce/Store_Analytics_Service.php": {
       "bytes": 76106,
-      "sha256": "c2871df757b3b2bde584691ac65d4b020275630452c7a490b204891c9233ba47"
+      "sha256": "0e55f740369881da86b865049b343e433772df75f3301a91159526e8a58c08da"
     },
     "includes/Communications/Channel_Service.php": {
-      "bytes": 5596,
-      "sha256": "657919ff9b50838ccd1ba8cb67472de3de67dd64499560386e47c4888baad16b"
+      "bytes": 5734,
+      "sha256": "dd9fd35f44ec64a2800314caa1f4a380e3998b2c204be3bb1e852ce6856b1db5"
     },
     "includes/Communications/Email_Service.php": {
-      "bytes": 4035,
-      "sha256": "aef206ec4e2ca82744bfab810a4d3b5bc11bf9f46319ac5ef88d0e4e82f533e6"
+      "bytes": 4542,
+      "sha256": "907fa8d83a3dcf1dd1213ce9a975cdd4cb804e1256ca73c3675b2572462423df"
     },
     "includes/Design/Seam_Token_Service.php": {
       "bytes": 69541,
@@ -574,7 +594,7 @@
     },
     "includes/Design/Seam_Vocabulary_Schema.php": {
       "bytes": 17665,
-      "sha256": "d40984d64e8009ac4acb1c72abab49f0896180c49a3de68cc815e0a3c0ec8925"
+      "sha256": "da96b31323a12db72cd94dc2a060b6ccd12eae7c7ddb21b3ca71a44799a3d11a"
     },
     "includes/Design/Token_Schema.php": {
       "bytes": 8257,
@@ -582,7 +602,7 @@
     },
     "includes/Diagnostics/Apex_Acceptance_Service.php": {
       "bytes": 5077,
-      "sha256": "f3aa955193ee1254f0ff8ef332a76cde4bdf3e6250e3bf2f5bdcc26d2fe97221"
+      "sha256": "39f0dbd6478d90e98754e7ffbc106394b728715b7009ae2da13d48efd36d94e7"
     },
     "includes/Diagnostics/Asset_Manifest_Service.php": {
       "bytes": 7412,
@@ -598,11 +618,11 @@
     },
     "includes/Diagnostics/Persistence_Maintenance_Service.php": {
       "bytes": 13338,
-      "sha256": "21fb1591c6d3a30bc5fe9fffbe35cb28db35f37dacb606bf45c53ce4ff4a8e40"
+      "sha256": "78704d9b75162d10125184bed74e9571c5010dfba8af5f2800c1a683f35e208f"
     },
     "includes/Diagnostics/Production_Readiness_Service.php": {
       "bytes": 24556,
-      "sha256": "08828f17c87b11c2d137c8ac22d5c28d5da3195e349c2d42b277e588a8ba95eb"
+      "sha256": "ecd7b899f8e5316dab880b808406def29dfbc9508f9b86459a8e10986e1406ae"
     },
     "includes/Diagnostics/Runtime_Profiler.php": {
       "bytes": 6243,
@@ -610,7 +630,7 @@
     },
     "includes/Diagnostics/Test_Site_Snapshot_Service.php": {
       "bytes": 14665,
-      "sha256": "cea1562b1c11348900a58d066bc0bc76684ee1aaba602440cce24b27c2594a69"
+      "sha256": "f29b1136afece89788197b73f953f207e405963dd99a460d855402d3a9a2d029"
     },
     "includes/Element_Registry.php": {
       "bytes": 15104,
@@ -633,16 +653,20 @@
       "sha256": "32d97cb9bc6d536318a7008f42497c831836be1fe2b944b71199281168df1bcb"
     },
     "includes/Notifications/Admin_Event_Notification_Service.php": {
-      "bytes": 17862,
-      "sha256": "e20340eddd187722b0225e07ec24a94e117bc9d2b273706bf15d6be368ab3d4d"
+      "bytes": 23574,
+      "sha256": "74479e713454b348e8d2cf410e33aa7616c7c9dbe9248036fb401adb6b502c85"
     },
     "includes/Notifications/Notification_Campaign_Service.php": {
       "bytes": 3456,
       "sha256": "f5df5053a39fb992a71e1469aae86fb21bf3bf9969e541d1e3456569aedfd366"
     },
+    "includes/Notifications/Notification_Center_Service.php": {
+      "bytes": 7490,
+      "sha256": "cafb0c5a3c1ee037de59ea4df01b95a3afd5844bc9302a6c68d91c544c3c4f5f"
+    },
     "includes/Notifications/Notification_Preference_Service.php": {
-      "bytes": 23231,
-      "sha256": "3898624937c91b60b03a50ab32eaba725838aab61589a8e7f3588b5e16ccb8ed"
+      "bytes": 26287,
+      "sha256": "a35cf019ea7ee5fa20c32c0c5050cfbf27bbf2773a9821b1e7b95fb0a44b03c6"
     },
     "includes/Notifications/Order_Notification_Service.php": {
       "bytes": 2487,
@@ -657,24 +681,28 @@
       "sha256": "a5477edb87e728bd961abc75690880ab1366ba75e42e6ebbbba43411585d7e1f"
     },
     "includes/Onboarding/Design_Context_Profile_Service.php": {
-      "bytes": 64149,
-      "sha256": "149e542671ad708cd434c5ffe97eadbf7286a56a06f5850c1a29725cd040f057"
+      "bytes": 67663,
+      "sha256": "23f3c339c9cc1d31c1cdfc709739f279bcd3afeab4093a5293b9676d06534d13"
     },
     "includes/Onboarding/Design_Context_Refinement_Service.php": {
       "bytes": 17449,
       "sha256": "2cbc3f40b6479bfdb829653ffff6cd57bdd110330495b3b8e9099dfc98cd62a7"
     },
     "includes/Onboarding/Onboarding_Service.php": {
-      "bytes": 66023,
-      "sha256": "b2cd2d24ad6ea3bad18c7d339185ce962a2dae0506adbcda278e6f61333bdbf2"
+      "bytes": 57436,
+      "sha256": "7dac76c70aa083602e2c6d712ba864cf7c0263caf2d0a6175be5c976950e3181"
     },
     "includes/Onboarding/README.md": {
       "bytes": 4187,
       "sha256": "0a7254a86be8f2038ed51dc1f6e63e798c220bb341a333bd4331d3b6df701ee6"
     },
     "includes/Onboarding/SEO_Context_Service.php": {
-      "bytes": 12166,
-      "sha256": "f676b8a55958c3ab4d76ad5fce68c31adc8bc5613f697828dc9fd44cd362ade3"
+      "bytes": 14940,
+      "sha256": "9693623002f07dcc1d337558fe83312427fee9cddec49bf917116d93fa29e55e"
+    },
+    "includes/Onboarding/User_Profile_Service.php": {
+      "bytes": 7899,
+      "sha256": "fc3b9715d96436d473f5a154b53fed2cc32a998b063ba9f5918d062504e56e8e"
     },
     "includes/PWA/PWA_Service.php": {
       "bytes": 22822,
@@ -685,20 +713,20 @@
       "sha256": "96a75d9fdadd8a0edca9008f25aff591ccda8e67230b179078139f26d4bedba9"
     },
     "includes/PhoneKey/PhoneKey_Bridge.php": {
-      "bytes": 6579,
-      "sha256": "cfa8c9af0f9dd6f345304643e39ac0e30c62c4443db3a931f7e9daf39c901bea"
+      "bytes": 9988,
+      "sha256": "cf2a25490fd254feee4f07960d2957e9c29e4abc072dce3e67dcd8ff2391a34f"
     },
     "includes/PhoneKey/PhoneKey_Core_Loader.php": {
       "bytes": 400,
       "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 145946,
-      "sha256": "7933d5087bfa7b9616680213236c2914e32fb834f46ae25f7901c4ed0abff90f"
+      "bytes": 194556,
+      "sha256": "14a866c83f27b0f13e76f76b555fe64715c17d637766b11cd06927ba8c1611b0"
     },
     "includes/Plugin.php": {
-      "bytes": 14801,
-      "sha256": "4fefc5cbde9f3374c8a96476500a78a232623e0513127d27d6547beb57c9cff4"
+      "bytes": 15996,
+      "sha256": "ad248b01399e3af7e3ed7abacd9430de54a5f7e1e971b8204b79b7008ea46f37"
     },
     "includes/Protected_Flow/Flow_Context.php": {
       "bytes": 489,
@@ -713,8 +741,8 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 61497,
-      "sha256": "6c811bf3f04a46604bee41ea03f8bc39ab83852aa3bcda1625bb6ae1f3dbe674"
+      "bytes": 62433,
+      "sha256": "28ab488c8c1d805698805ac949db79cc655f7e7ad4ee6f19ea48f6aac8a03f1c"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
       "bytes": 17223,
@@ -725,12 +753,12 @@
       "sha256": "c44ccc6709a6c4794282b5ccadcac896fe157c565ca8ec01507a71de02f36304"
     },
     "includes/Rest/Account_Controller.php": {
-      "bytes": 14471,
-      "sha256": "0aaee435d9f98625051012c7ff87d315c3ad2db4e16184a3cbd2ec84271b8472"
+      "bytes": 15075,
+      "sha256": "6a0905f1cd1ca37a0e0b8d3dfcc1d20a7bc22d37b0d1554fb854834ee67088fd"
     },
     "includes/Rest/Admin_Notifications_Controller.php": {
-      "bytes": 2054,
-      "sha256": "e4b170ccf26eb8810878251376ff1447fcb2095e0516e851a4ea767548aa66d0"
+      "bytes": 2168,
+      "sha256": "d594e52ff627367aabe75f36e6c4f85df7ade4d15b68a450dcfa9558b879224c"
     },
     "includes/Rest/Apex_Profile_Controller.php": {
       "bytes": 987,
@@ -777,12 +805,12 @@
       "sha256": "44c883c9d3db4971a0fbd5d55d4c60b8f10e223fb543ae7bad3fcebffad5f651"
     },
     "includes/Rest/Saved_Items_Controller.php": {
-      "bytes": 1861,
-      "sha256": "057330922777696ad3c48e1fc34c4d5046245bd97dc657c10086717fccf7caaf"
+      "bytes": 2046,
+      "sha256": "980a551abdd5db9c2e8651b67f0706982db697f074b83244105ffea3c5c7c8d0"
     },
     "includes/Rest/Search_Controller.php": {
-      "bytes": 2012,
-      "sha256": "bd2110129fe7285d5bec2902e66fc0c99b0e0894353598c87ad905c03eb0d2ef"
+      "bytes": 2470,
+      "sha256": "7b8f5b30fc44ff8eca12c4d309c26b8f9785aa9c731f35bcadd0c245d63e5c30"
     },
     "includes/Rest/Settings_Controller.php": {
       "bytes": 14228,
@@ -801,12 +829,16 @@
       "sha256": "7aff79fcc358ac72c68057351d37d5313ae71672a703ea25d8552eb27494d0db"
     },
     "includes/Runtime/Package_Manifest.php": {
-      "bytes": 8514,
-      "sha256": "18fc7d6b1bcee334ea196acb15c7a062020277b1bc0acc6958d3d99176284000"
+      "bytes": 8556,
+      "sha256": "a5d6d4ed5a2f4c7b36e86e3fbc6d719fe0d19de47650228306aa40cc8607aec8"
     },
     "includes/Runtime/Route_Capability_Service.php": {
       "bytes": 4157,
       "sha256": "15937f1c2d9f5063b13bfd3e5d09bb6b6b9f829d96b71a5ee8a657a31456adbb"
+    },
+    "includes/Runtime/Update_Service.php": {
+      "bytes": 18599,
+      "sha256": "28568d735828ea926b5f411ca6418f947823c2e08dae962763605c49ae55df7d"
     },
     "includes/SEO/SEO_Refinement_Service.php": {
       "bytes": 30726,
@@ -821,12 +853,16 @@
       "sha256": "2465d2678243727f8cc06c120679b22fa170c0ef51012e6ff8a2ef598a1954fa"
     },
     "includes/Search/Search_Service.php": {
-      "bytes": 18161,
-      "sha256": "609bd835ad5afc7cc70a1155ae19f378b74991f5be0317e27e30ee7d213de206"
+      "bytes": 19718,
+      "sha256": "04d8ad5dcf338bdebf1bff835481198fba07c9058359ae76c578969c55f2c80c"
+    },
+    "includes/Secure/Incident_Response_Service.php": {
+      "bytes": 7827,
+      "sha256": "e1c3cdad5ffbf7cac705f7f20d7216590ff9f9af2aae84699edac5faa12e835e"
     },
     "includes/Secure/SecureTrack_AI_Brief_Service.php": {
-      "bytes": 9541,
-      "sha256": "8f09c54994499add29bf525811026e21c354ab98cdd1cbdae0f0cd28cb1cdd0d"
+      "bytes": 9546,
+      "sha256": "8e6d772529f6e00d8ef7ece9bea48a073326c41ff9294acdfd0afeb82b261493"
     },
     "includes/Secure/SecureTrack_Admin_Data_Service.php": {
       "bytes": 2545,
@@ -837,52 +873,52 @@
       "sha256": "d3fbfe7d37440fec66495ae727584c2efce1c1490d96bae7078dbce45d282f6f"
     },
     "includes/Secure/SecureTrack_Db_Service.php": {
-      "bytes": 6527,
-      "sha256": "1770888fa216fc3962c8885c446448521454f343eb5780c7721aa1e51655cca2"
+      "bytes": 6934,
+      "sha256": "5e34581771dc4833ae07ba66513230034c1a723a8d329a786fc309b72dbbd97f"
     },
     "includes/Secure/SecureTrack_Event_Service.php": {
-      "bytes": 9120,
-      "sha256": "d22a81a2d3b44faa693a36fea35098c9e32f09ac972d73529018a5d3fd8e49e7"
+      "bytes": 9391,
+      "sha256": "b2dd6282900fff3c63b5f461854673b52a44b824441d5ed2969379dd21030f2e"
     },
     "includes/Secure/SecureTrack_Ip_Service.php": {
-      "bytes": 10483,
-      "sha256": "306aaf65cedd701c35c9b66c1a6f34099377c0a33333019170de4c9f2d28caa9"
+      "bytes": 10782,
+      "sha256": "b40620d5f4139d82580f0966927afa3ea7dfb7e9a8288dcd88fc1343383b590f"
     },
     "includes/Secure/SecureTrack_Loader.php": {
       "bytes": 3598,
-      "sha256": "a061e1ed86b62e92b4cc96bf665ebac17c962413236bd5f7246e17dec5476cfc"
+      "sha256": "7e1c9c44301b7ad79e3bb6808af4b5632645710b0361429eff380dd219a66bc1"
     },
     "includes/Secure/SecureTrack_Runtime_Guard.php": {
-      "bytes": 5850,
-      "sha256": "22be770fc92a6824af54ba8b29e29ed69b206289c195e420e0b0873ca3efaec4"
+      "bytes": 6102,
+      "sha256": "72732c7d3730212112a5d5eafd47fe4274662bb6cce697150f3eeb1664802cea"
     },
     "includes/Secure/SecureTrack_Settings_Policy.php": {
-      "bytes": 5910,
-      "sha256": "4c825a77c0da60224fd570f35180fc2fdfc41b487d855ce0e1efcc2acdbc62c7"
+      "bytes": 8410,
+      "sha256": "00a4ee104f7060780fbbe9b684eadf294160626bb9cf94ad298631575f703248"
     },
     "includes/Secure/securetrack-admin-core.php": {
-      "bytes": 135958,
-      "sha256": "218ecde55df5e0f2cba3216cb11f1344af11a9a3168c30b41472a246ac0bc32f"
+      "bytes": 140261,
+      "sha256": "bc55e9e10c879ff6ad78bd9efa5df55772d98c99f909528044a9a080978c2377"
     },
     "includes/Secure/securetrack-admin-extended.php": {
-      "bytes": 62601,
-      "sha256": "e2e72eb8bc143a6f32378f7759076786dd9d449d58977a660858c0f7a83581d8"
+      "bytes": 62311,
+      "sha256": "2f2dd3d72189c1d15c85a5413142815f9167effbc8297fda692e17c1d2e50d58"
     },
     "includes/Secure/securetrack-core.php": {
-      "bytes": 152511,
-      "sha256": "661f0c1e2ef580dd7a559d5015419d81991be0c0338c5f170de0394115c204d5"
+      "bytes": 158265,
+      "sha256": "dfb85864aab9c39358f70b44b05ef40251cd73a8667408d08027c7fff8297df5"
     },
     "includes/Secure/securetrack-site-brain.php": {
-      "bytes": 28312,
-      "sha256": "227cf9545cb9c8d6eb62c31fdf6ce23f32d4178f6fa637e2cac27f3164ed588c"
+      "bytes": 29010,
+      "sha256": "f7e652e534f28eb7aa6fc411652def632113ee344b405cf268c9c5f0019171d6"
     },
     "includes/Security/Secret_Store.php": {
       "bytes": 6774,
       "sha256": "ba8f795ff9d0a7523884d78557af43d21681ffe9d2577cd2b482e78877f06c8e"
     },
     "includes/Settings.php": {
-      "bytes": 20913,
-      "sha256": "0477903f001d011314259ab58c49efe4ac02f50373aa3559b1187142b2a758cc"
+      "bytes": 21324,
+      "sha256": "41e45ab6c5988c80ceef32e20adddc446903367b3b34a026c24b6bd901b404d0"
     },
     "includes/Site/Site_Identity_Service.php": {
       "bytes": 9193,
@@ -893,12 +929,12 @@
       "sha256": "5b2a9e5c3ed0572d645caf5820ebd5055de54646a115695132d28b36e3e8425e"
     },
     "includes/Site_Graph/Data_Query_Service.php": {
-      "bytes": 32981,
-      "sha256": "33983e4285e156b3b4027704dfaf7f38ef44700c4d7eb85aeb8b0d72f9e22f99"
+      "bytes": 34136,
+      "sha256": "5bdbe539ef96850a2c402df6e9e808254645a356028c3bb587bb946d95f61415"
     },
     "includes/Site_Graph/Design_Context_Service.php": {
-      "bytes": 32730,
-      "sha256": "cecde584ea212bda658c66a28610059fd5b5c470dcbed98d38aa0debe81c4150"
+      "bytes": 32603,
+      "sha256": "9a75f7c213238e52581d642086865327227003eb038fffc2320a565043c26387"
     },
     "includes/Site_Graph/Query_Service.php": {
       "bytes": 3459,
@@ -937,8 +973,8 @@
       "sha256": "92e846c0e62e2db58d66ebc2b3ae66990bdc27f5d5bdc097cc5d0ce0223ec261"
     },
     "includes/Theme/Screen_Copy_Schema.php": {
-      "bytes": 15201,
-      "sha256": "e7dd8ac08add2bdd2bcae54d178ba63157d7bd4518cba7e9b605d5666fa03eba"
+      "bytes": 15504,
+      "sha256": "c2d56a3fff44f48adeb44a1529ba644a18380445145c6fb0509915e5e27de4d6"
     },
     "includes/Theme/Theme_Package_Service.php": {
       "bytes": 23029,
@@ -969,8 +1005,8 @@
       "sha256": "abf8d3050c363b8ddaacc26b1882ace621528607dd0382a50a504ef672ac3d82"
     },
     "includes/WP7/Bindings_Service.php": {
-      "bytes": 11348,
-      "sha256": "3e7be5a4ed91312a7ff99aa8ce5fb5ae7d7625c3690c8e66d4d29afab7c05dbd"
+      "bytes": 11396,
+      "sha256": "563ca734f4200a1276acd36c503a785628a8644f3a0c6e9262fa0a61bfd42d00"
     },
     "includes/WP7/DataViews_Service.php": {
       "bytes": 827,
@@ -1270,7 +1306,7 @@
     },
     "ui-system/adapters/adapter-contract.js": {
       "bytes": 2485,
-      "sha256": "1951f0965dfe7e1da0462f073d64dea5586dffc19508a05dbdac17fefe12b95a"
+      "sha256": "1e9b9ba8497b121e2034bce4dd49c1cbcdfac3dd34d5841b184bb6deb7aa1b95"
     },
     "ui-system/adapters/profile.kiwe-2027.example.js": {
       "bytes": 2833,
@@ -1338,7 +1374,7 @@
     },
     "ui-system/screen-payloads.json": {
       "bytes": 15881,
-      "sha256": "f7c42aeaa1c9545512e0039041e049019effa65c9deb215076dfdc2b7225a36d"
+      "sha256": "c605fca2eb919af201e9b03e22c85213aa146863501c868313006eab8ddf8b8a"
     },
     "ui-system/seam-class-vocabulary.json": {
       "bytes": 6618,
@@ -1350,7 +1386,7 @@
     },
     "ui-system/seam-vocabulary.json": {
       "bytes": 14302,
-      "sha256": "2acd23475f97f7866521297943cb4d8a493583c5daeb38aa12ad4d6a9c681126"
+      "sha256": "969ee0566027b842b1a33a7f332f1a9bfb4ff45f8a46f2c6fdd3cecaed015b0d"
     },
     "ui-system/seam-vocabulary.md": {
       "bytes": 10682,

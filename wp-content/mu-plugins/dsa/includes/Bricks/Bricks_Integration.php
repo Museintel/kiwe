@@ -50,6 +50,7 @@ final class Bricks_Integration {
 		if ( $this->registered || ! self::is_active_theme() ) { return; }
 		$this->registered = true;
 		Surface_Style_Controls::register();
+		$this->activate_native_checkout_element_authority();
 		add_filter( 'bricks/dynamic_tags_list', [ $this, 'add_dynamic_tags' ], 20 );
 		add_filter( 'bricks/dynamic_data/render_tag', [ $this, 'render_dynamic_tag' ], 20, 3 );
 		add_filter( 'bricks/dynamic_data/render_content', [ $this, 'render_dynamic_content' ], 20, 3 );
@@ -74,6 +75,44 @@ final class Bricks_Integration {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_studio_editor_companion' ] );
 		add_action( 'added_post_meta', [ $this, 'maybe_resolve_compiler_popup_meta' ], 30, 4 );
 		add_action( 'updated_post_meta', [ $this, 'maybe_resolve_compiler_popup_meta' ], 30, 4 );
+	}
+
+	/**
+	 * Let imported Bricks templates own checkout coupon placement.
+	 *
+	 * WooCommerce otherwise injects its classic coupon notice above every
+	 * checkout through a global hook. That creates an unrequested, separately
+	 * styled surface even when a converted source contains no coupon UI. Bricks'
+	 * own switch removes that hook and renders the native Checkout Coupon element
+	 * only when the template actually contains one. Kiwe enables this contract
+	 * automatically whenever Bricks is the active theme.
+	 */
+	private function activate_native_checkout_element_authority(): void {
+		if ( ! defined( 'BRICKS_DB_GLOBAL_SETTINGS' ) || ! class_exists( '\\Bricks\\Database' ) ) {
+			return;
+		}
+
+		$settings = get_option( BRICKS_DB_GLOBAL_SETTINGS, [] );
+		$settings = is_array( $settings ) ? $settings : [];
+		if ( empty( $settings['woocommerceUseBricksWooCheckoutCoupon'] ) ) {
+			$settings['woocommerceUseBricksWooCheckoutCoupon'] = true;
+			update_option( BRICKS_DB_GLOBAL_SETTINGS, $settings, false );
+		}
+
+		// Database has already loaded its request-local cache by this point.
+		// Keep this request and the persisted next request on the same contract.
+		if ( property_exists( '\\Bricks\\Database', 'global_settings' ) ) {
+			\Bricks\Database::$global_settings['woocommerceUseBricksWooCheckoutCoupon'] = true;
+		}
+
+		// Bricks normally removes this hook while it initializes WooCommerce.
+		// Kiwe registers after theme setup so editor controls are available; on the
+		// first request after installation Bricks may already have evaluated the old
+		// setting. Remove the same documented Woo hook now as well, making the
+		// authority switch effective immediately and idempotently.
+		if ( function_exists( 'woocommerce_checkout_coupon_form' ) ) {
+			remove_action( 'woocommerce_before_checkout_form', 'woocommerce_checkout_coupon_form', 10 );
+		}
 	}
 
 	public function maybe_resolve_compiler_popup_meta( int $meta_id, int $object_id, string $meta_key, $meta_value ): void {
@@ -511,7 +550,7 @@ final class Bricks_Integration {
 			if ( 'kiwe_team_linkedin_url' === $name ) return esc_url_raw( (string) ( $member['linkedin'] ?? '' ) );
 			if ( 'kiwe_team_image' === $name ) {
 				$image_id = absint( $member['imageId'] ?? 0 );
-				return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+				return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : esc_url_raw( (string) ( $member['image'] ?? '' ) );
 			}
 		}
 		$regulatory_map = [ 'kiwe_fssai_license'=>'fssaiLicense', 'kiwe_gst_number'=>'gstNumber', 'kiwe_manufacturing_address'=>'manufacturingAddress' ];
@@ -547,17 +586,6 @@ final class Bricks_Integration {
 		foreach ( $members as $member ) {
 			if ( $selector && $selector === sanitize_key( (string) ( $member['id'] ?? '' ) ) ) return (array) $member;
 			if ( $user_id && $user_id === absint( $member['userId'] ?? 0 ) ) return (array) $member;
-		}
-		if ( $user_id ) {
-			$user = get_user_by( 'id', $user_id );
-			if ( $user && '1' === (string) get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_TEAM_MEMBER, true ) ) {
-				return [
-					'id'=>'user-' . $user_id, 'userId'=>$user_id, 'name'=>$user->display_name, 'bio'=>$user->description,
-					'title'=>get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_TEAM_TITLE, true ),
-					'linkedin'=>get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_LINKEDIN, true ),
-					'imageId'=>absint( get_user_meta( $user_id, Design_Context_Profile_Service::USER_META_AVATAR_ID, true ) ),
-				];
-			}
 		}
 		return $selector || ! $members ? [] : (array) reset( $members );
 	}

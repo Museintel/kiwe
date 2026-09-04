@@ -152,6 +152,7 @@ final class Package_Manifest {
 			'includes/Saved/Saved_Items_Service.php',
 			'includes/Runtime/Route_Capability_Service.php',
 			'includes/Runtime/Editorial_Fragment_Service.php',
+			'includes/Runtime/Update_Service.php',
 			'includes/Rest/Editorial_Envelope_Controller.php',
 			'includes/Public_Endpoint/Assets.php',
 		];

@@ -220,9 +220,26 @@ function stp_ai_queue_maybe( $event_id, $type, $args, $risk, $ip_str ) {
 	) );
 	$qid = $ok ? (int) $wpdb->insert_id : 0;
 	if ( $qid && $status === 'pending' && ( $cfg['v2_ai_mode'] ?? 'batch' ) === 'always' ) {
-		stp_ai_process_queue_item( $qid );
+		stp_ai_schedule_priority_queue();
 	}
 	return $qid;
+}
+
+/**
+ * Gives "always" mode priority without putting a remote AI request inside the
+ * visitor, login, or editor request that created the event. A single shared
+ * event coalesces bursts; the regular five-minute queue remains the fallback.
+ */
+function stp_ai_schedule_priority_queue() {
+	if ( wp_next_scheduled( 'stp_cron_ai_queue_priority' ) ) return true;
+
+	$scheduled = wp_schedule_single_event( time() + 1, 'stp_cron_ai_queue_priority', array(), true );
+	if ( is_wp_error( $scheduled ) ) {
+		stp_diag( 'ai_priority_schedule_error', $scheduled->get_error_message() );
+		return false;
+	}
+
+	return (bool) $scheduled;
 }
 
 function stp_ai_status( $status = null ) {
@@ -492,6 +509,10 @@ function stp_ai_test_connection() {
 
 function stp_run_ai_queue() {
 	stp_ai_process_pending_queue( 10 );
+}
+
+function stp_run_priority_ai_queue() {
+	stp_ai_process_pending_queue( 3 );
 }
 
 function stp_brain_train_from_history( $limit = 20000 ) {

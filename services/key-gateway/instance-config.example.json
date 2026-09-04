@@ -1,0 +1,9 @@
+{
+  "controlPlane": {
+    "enabled": true,
+    "path": "/home/ACCOUNT/.kiwe-key-state/control-plane.json",
+    "bootstrapOwnerEmail": "owner@example.com",
+    "sessionHours": 24,
+    "registrationEnabled": true
+  }
+}

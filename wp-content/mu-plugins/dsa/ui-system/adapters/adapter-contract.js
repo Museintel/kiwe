@@ -39,7 +39,7 @@ export const requiredPanelAttributes = {
 
 export const forbiddenAdapterActions = [
 	'Do not fetch payment/auth/cart endpoints directly from theme code.',
-	'Do not persist account, cart, checkout, or PhoneKey state in localStorage.',
+	'Do not persist account, cart, checkout, or Key.kiwe state in localStorage.',
 	'Do not remove data-dsa-* attributes used by core event handlers.',
 	'Do not clone transactional controls; move/rearrange the original action markup or render the same data attributes.'
 ];

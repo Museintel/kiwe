@@ -68,6 +68,8 @@
 	const contactActions = data.contactActions && typeof data.contactActions === 'object' ? data.contactActions : {};
 	let linksHub = data.links || {};
 	const savedStorageKey = 'dsa_saved_items_v2';
+	const pendingSavedIntentKey = 'kiwe_pending_saved_intent_v1';
+	const pendingPurchaseIntentKey = 'kiwe_pending_purchase_intent_v1';
 	let savedItems = [];
 	const phonekey = data.phonekey || {};
 	let cartStateInitialized = Boolean( phonekey.cart && typeof phonekey.cart.count !== 'undefined' );
@@ -82,6 +84,8 @@
 	const surface = document.querySelector( '[data-dsa-surface]' );
 	if ( surface ) {
 		surface.classList.toggle( 'dsa-has-commerce', commerce.available === true );
+		const menuScale = [ 'compact', 'balanced', 'expressive' ].includes( dockSettings.menu_scale ) ? dockSettings.menu_scale : 'compact';
+		surface.dataset.dsaMenuScale = menuScale;
 	}
 	const registryNode = document.getElementById( 'dsa-element-registry' );
 	const scrim = document.querySelector( '[data-dsa-scrim]' );
@@ -94,11 +98,18 @@
 	let overlayContentSequence = 0;
 	let surfaceLifecycleSequence = 0;
 	let surfaceScrollY = 0;
+	let surfaceScrollRestoreFrame = 0;
+	let menuAnchorNavigationPending = false;
 	let overlayVisibilityToken = 0;
 	let surfaceGeometryFrame = 0;
 	let surfaceHistoryActive = false;
 	let surfaceHistoryClosing = false;
 	let surfaceHistorySuppressPop = false;
+	let menuContextTrackingCleanup = null;
+	let menuContextTrackingFrame = 0;
+	let activeMenuContextId = '';
+	let advertisingHistoryActive = /^#google_(?:vignette|interstitial|ads?)(?:[=&_-]|$)/i.test( window.location.hash || '' );
+	let pendingAdvertisingNavigation = null;
 	let morphDocumentActive = Boolean( window.history.state && window.history.state.kiweMorph );
 	let searchModulePromise = null;
 	let reconciliationModulePromise = null;
@@ -621,6 +632,8 @@
 		emailDelivery: 'magic_link',
 		emailAccepted: null,
 		otpResendLockedUntil: 0,
+		otpCountdownTimer: 0,
+		verificationTarget: '',
 		adminPhoneBinding: false,
 	};
 	let permissionAskSessionCount = permissionSessionAskCount();
@@ -734,24 +747,24 @@
 	function protectedTrustBadges() {
 		const badges = [];
 
-		if ( trust.ssl ) {
+		if ( trust.ssl && trust.ssl.active ) {
 			const sslProvider = trust.ssl.provider || 'active SSL';
 			badges.push( {
-				active: Boolean( trust.ssl.active ),
+				active: true,
 				label: sslProvider === 'active SSL' ? 'SSL active' : 'SSL by ' + sslProvider,
 			} );
 		}
 
-		if ( trust.phonekey ) {
+		if ( trust.phonekey && trust.phonekey.active ) {
 			badges.push( {
-				active: Boolean( trust.phonekey.active ),
+				active: true,
 				label: 'Secure login by ' + ( trust.phonekey.label || 'Kiwe Key' ),
 			} );
 		}
 
-		if ( trust.payment ) {
+		if ( trust.payment && trust.payment.active && ( commerce.available === true || ( phonekey.cart && phonekey.cart.available ) ) ) {
 			badges.push( {
-				active: Boolean( trust.payment.active ),
+				active: true,
 				label: 'Payment protected by ' + ( trust.payment.label || 'your payment provider' ),
 			} );
 		}
@@ -1162,6 +1175,7 @@
 		overlayRoot.hidden = false;
 		overlayRoot.classList.remove( 'is-closing' );
 		prepareSheetPanel();
+		resetOverlayScrollPosition();
 		setOverlayActive( true );
 		announce( label + ' opened.' );
 
@@ -1172,6 +1186,9 @@
 		}
 
 		bindModulePanel( module );
+		window.requestAnimationFrame( function () {
+			window.requestAnimationFrame( resetOverlayScrollPosition );
+		} );
 		syncDockContextRail();
 		dispatchSurfaceLifecycle( 'mount', { reason: 'open' } );
 		claimSurfaceHistoryEntry( activeOverlayModuleId );
@@ -1190,6 +1207,13 @@
 		}
 
 		recordMetric( 'dock_open', module.id || moduleId || 'module' );
+	}
+
+	function resetOverlayScrollPosition() {
+		if ( ! overlayRoot || overlayRoot.hidden ) return;
+		overlayRoot.scrollTop = 0;
+		const panel = overlayRoot.querySelector( '[role="dialog"]' );
+		if ( panel ) panel.scrollTop = 0;
 	}
 
 	function createSurfaceLifecycle( module, mode, label ) {
@@ -1677,12 +1701,21 @@
 		return label || 'Search';
 	}
 	function searchPanelCopy( label ) {
+		const hasCommerce = Boolean( searchConfig.context && searchConfig.context.hasCommerce );
 		const copy = screenCopy( 'search', {
 			label: searchPanelLabel( label ),
 			eyebrow: searchPanelLabel( label ),
-			title: 'Find what you need.',
-			placeholder: 'Search products and posts',
+			title: hasCommerce ? 'Find what you need.' : 'Find the story you need.',
+			intro: hasCommerce ? 'Search products, posts, authors, and categories.' : 'Browse the latest news, analysis, and industry stories.',
+			placeholder: hasCommerce ? 'Search products and posts' : 'Search news and stories',
 		} );
+		// Existing sites may have persisted Kiwe's former commerce-first defaults.
+		// Never show product language when WooCommerce is unavailable.
+		if ( ! hasCommerce ) {
+			if ( copy.title === 'Find what you need.' ) copy.title = 'Find the story you need.';
+			if ( ! copy.intro || /\bproducts?\b/i.test( copy.intro ) ) copy.intro = 'Browse the latest news, analysis, and industry stories.';
+			if ( ! copy.placeholder || /\bproducts?\b/i.test( copy.placeholder ) ) copy.placeholder = 'Search news and stories';
+		}
 		copy.eyebrow = copy.eyebrow || copy.label || searchPanelLabel( label );
 		return copy;
 	}
@@ -1699,10 +1732,11 @@
 			'<span class="dsa-search-panel__field">',
 			'<span class="dsa-search-glyph" aria-hidden="true"></span>',
 			'<input id="dsa-live-search" type="search" name="q" inputmode="search" autocomplete="off" placeholder="' + escapeHtml( copy.placeholder ) + '" data-dsa-search-input>',
-			'<button type="button" aria-label="Clear search" data-dsa-search-clear hidden>&times;</button>',
+			'<button type="button" aria-label="Clear search" data-dsa-search-clear hidden><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>',
 			'</span>',
 			'</form>',
 			'<div class="dsa-search-panel__filters" data-dsa-search-filters aria-label="Filter search results"></div>',
+			'<div class="dsa-search-panel__sort" data-dsa-search-sort-options aria-label="Sort search results"></div>',
 			'<div class="dsa-search-panel__alphabet" data-dsa-search-alphabet aria-label="Browse by title" hidden></div>',
 			'<div class="dsa-search-panel__results" data-dsa-search-results></div>',
 			'</section>',
@@ -1724,11 +1758,12 @@
 			'<span class="dsa-search-panel__field">',
 			'<span class="dsa-search-glyph" aria-hidden="true"></span>',
 			'<input id="dsa-live-search" type="search" name="q" inputmode="search" autocomplete="off" placeholder="' + escapeHtml( copy.placeholder ) + '" data-dsa-search-input>',
-			'<button type="button" aria-label="Clear search" data-dsa-search-clear hidden>&times;</button>',
+			'<button type="button" aria-label="Clear search" data-dsa-search-clear hidden><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>',
 			'</span>',
 			'</form>',
 			'<div class="kiwe-search-v2027__controls">',
 			'<div class="dsa-search-panel__filters" data-dsa-search-filters aria-label="Filter search results"></div>',
+			'<div class="dsa-search-panel__sort" data-dsa-search-sort-options aria-label="Sort search results"></div>',
 			'<div class="dsa-search-panel__alphabet" data-dsa-search-alphabet aria-label="Browse by title" hidden></div>',
 			'</div>',
 			'<div class="dsa-search-panel__results kiwe-search-v2027__results" data-dsa-search-results></div>',
@@ -1815,6 +1850,28 @@
 				return normalizeTitle( labelNode && labelNode.textContent );
 			} ).filter( Boolean ).join( ' ' );
 		};
+		const headingPayload = function ( heading, index ) {
+			const title = normalizeTitle( heading.textContent );
+			return { id: assignId( heading, title, index ), title: title, level: Number( heading.tagName.slice( 1 ) ) || 2, source: 'heading' };
+		};
+		const eligibleHeading = function ( heading ) {
+			if ( heading.closest( blockedClosest ) ) return false;
+			if ( heading.hidden || heading.getAttribute( 'aria-hidden' ) === 'true' ) return false;
+			return Boolean( normalizeTitle( heading.textContent ) );
+		};
+		const articleBodySelector = '[itemprop="articleBody"], [data-role~="article-body"], article .entry-content, article .post-content, .entry-content, .post-content, [class*="post-content"]';
+		const articleBody = selector ? Array.from( scope.querySelectorAll( articleBodySelector ) ).find( function ( candidate ) {
+			return ! candidate.closest( blockedClosest ) && Array.from( candidate.querySelectorAll( selector ) ).some( eligibleHeading );
+		} ) : null;
+
+		if ( articleBody ) {
+			const articleHeadings = Array.from( articleBody.querySelectorAll( selector ) ).filter( eligibleHeading );
+			const primaryHeading = scope.querySelector( 'h1' );
+			if ( primaryHeading && ! articleBody.contains( primaryHeading ) && eligibleHeading( primaryHeading ) ) {
+				articleHeadings.unshift( primaryHeading );
+			}
+			return articleHeadings.slice( 0, 60 ).map( headingPayload );
+		}
 		const sectionSelector = 'section[id], [data-role~="section"], [data-seam-role~="section"], [data-seam-role~="hero"], .seam-section';
 		const sections = Array.from( scope.querySelectorAll( sectionSelector ) ).filter( function ( section ) {
 			if ( section.closest( blockedClosest ) ) return false;
@@ -1834,16 +1891,12 @@
 			return { id: assignId( section, title, index ), title: title, level: level, source: 'section' };
 		} );
 
-		if ( sections.length ) return sections;
+		// A single full-page Bricks wrapper is structural, not a useful one-item TOC.
+		if ( sections.length > 1 ) return sections;
 
 		const headings = selector ? Array.from( scope.querySelectorAll( selector ) ).filter( function ( heading ) {
-			if ( heading.closest( blockedClosest ) ) return false;
-			if ( heading.hidden || heading.getAttribute( 'aria-hidden' ) === 'true' ) return false;
-			return Boolean( normalizeTitle( heading.textContent ) );
-		} ).slice( 0, 60 ).map( function ( heading, index ) {
-			const title = normalizeTitle( heading.textContent );
-			return { id: assignId( heading, title, index ), title: title, level: Number( heading.tagName.slice( 1 ) ) || 2, source: 'heading' };
-		} ) : [];
+			return eligibleHeading( heading );
+		} ).slice( 0, 60 ).map( headingPayload ) : [];
 
 		return headings;
 	}
@@ -1883,8 +1936,13 @@
 		const current = ( data.site && data.site.current ) || {};
 		const objectId = Number( item.object_id || 0 );
 		const objectType = String( item.object_type || '' );
+		const categoryIds = Array.isArray( current.categoryIds ) ? current.categoryIds.map( Number ) : [];
 
 		if ( objectId && Number( current.postId || 0 ) === objectId ) {
+			return true;
+		}
+
+		if ( objectId && objectType === 'category' && categoryIds.includes( objectId ) ) {
 			return true;
 		}
 
@@ -2517,7 +2575,7 @@
 		aiInsightMemory.shown[ context + '|' + insight.id ] = Date.now();
 		saveAiInsightMemory();
 		card.innerHTML = [
-			popoutDismissible ? '<button type="button" class="dsa-ai-popout__close" data-dsa-ai-popout-dismiss="' + escapeHtml( insight.id ) + '" aria-label="Dismiss notification">&times;</button>' : ( aiPopoutLocked ? '' : '<button type="button" class="dsa-ai-popout__close" data-dsa-ai-popout-close aria-label="Close insight">&times;</button>' ),
+			popoutDismissible ? '<button type="button" class="dsa-ai-popout__close" data-dsa-ai-popout-dismiss="' + escapeHtml( insight.id ) + '" aria-label="Dismiss notification"><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>' : ( aiPopoutLocked ? '' : '<button type="button" class="dsa-ai-popout__close" data-dsa-ai-popout-close aria-label="Close insight"><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>' ),
 			'<div class="dsa-ai-popout__head"><span class="dsa-ai-glyph" aria-hidden="true"></span><strong>' + escapeHtml( insight.notification ? 'Kiwe notification' : 'AI Assistant' ) + '</strong></div>',
 			'<small>' + escapeHtml( insight.kicker || 'New insight' ) + '</small>',
 			'<h3>' + escapeHtml( insight.title || '' ) + '</h3>',
@@ -2972,9 +3030,41 @@
 			savedItems = [];
 		}
 
-		dsaGet( '/saved-items' ).then( function ( response ) {
+		return dsaGet( '/saved-items' ).then( function ( response ) {
 			if ( response && Array.isArray( response.items ) ) mergeSavedItems( response.items );
-		} ).catch( function () {} );
+		} ).catch( function () {} ).then( consumePendingSavedIntent );
+	}
+
+	function rememberPendingSavedIntent( item ) {
+		try {
+			if ( window.sessionStorage ) {
+				window.sessionStorage.setItem( pendingSavedIntentKey, JSON.stringify( {
+					item: item,
+					expires: Date.now() + ( 15 * 60 * 1000 ),
+				} ) );
+			}
+		} catch ( error ) {}
+	}
+
+	function consumePendingSavedIntent() {
+		if ( ! ( phonekey.user || {} ).loggedIn ) return;
+		let pending = null;
+		try {
+			if ( window.sessionStorage ) {
+				pending = JSON.parse( window.sessionStorage.getItem( pendingSavedIntentKey ) || 'null' );
+				window.sessionStorage.removeItem( pendingSavedIntentKey );
+			}
+		} catch ( error ) {
+			pending = null;
+		}
+		if ( ! pending || Number( pending.expires || 0 ) < Date.now() ) return;
+		const item = normalizeSavedItem( pending.item );
+		if ( ! item || savedItems.some( function ( candidate ) { return candidate.key === item.key; } ) ) return;
+		savedItems.unshift( item );
+		savedItems = savedItems.slice( 0, 100 );
+		persistSavedItems();
+		updateSavedUi();
+		mutateSavedItem( 'add', item );
 	}
 
 	function inferSavedItem( trigger ) {
@@ -3010,6 +3100,13 @@
 	function toggleSavedItem( trigger ) {
 		const item = inferSavedItem( trigger );
 		if ( ! item ) return;
+		if ( ! ( phonekey.user || {} ).loggedIn ) {
+			rememberPendingSavedIntent( item );
+			openOverlay( 'profile', item.type === 'wishlist' ? 'Sign in to add to Wishlist' : 'Sign in to bookmark' );
+			phonekeyState.intent = 'saved_item';
+			announce( item.type === 'wishlist' ? 'Sign in to add this item to your Wishlist.' : 'Sign in to bookmark this story.' );
+			return;
+		}
 		const existing = savedItems.some( function ( candidate ) { return candidate.key === item.key; } );
 		if ( existing ) {
 			removeSavedItem( item.key );
@@ -3083,6 +3180,9 @@
 	}
 
 	function resetPhoneKeyState() {
+		if ( phonekeyState && phonekeyState.otpCountdownTimer ) {
+			window.clearTimeout( phonekeyState.otpCountdownTimer );
+		}
 		phonekeyState = {
 			token: '',
 			mode: '',
@@ -3098,12 +3198,41 @@
 			hasBackup: false,
 			emailDelivery: 'magic_link',
 			otpResendLockedUntil: 0,
+			otpCountdownTimer: 0,
+			verificationTarget: '',
+			intent: '',
+			security: {},
 		};
+	}
+
+	function openProfileVerification() {
+		const user = phonekey.user || {};
+		const identifierMode = phoneKeyIdentifierMode();
+		const identifier = identifierMode === 'phone' ? '' : String( user.email || '' ).trim();
+		const label = 'Verify account';
+
+		resetPhoneKeyState();
+		phonekeyState.identifier = identifier;
+		phonekeyState.intent = 'complete_security';
+		replaceOverlayContent(
+			'<section class="dsa-panel dsa-auth-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-phonekey-auth>' + phoneKeyCloseButton() + renderPhoneKeyStart() + '</section>',
+			{ reason: 'profile_verification', module: getSurfaceModule( 'profile' ), label: label }
+		);
+		bindPhoneKeyAuth();
+
+		// The badge click is the user's explicit request to begin verification. Existing
+		// accounts can therefore enter the canonical PhoneKey journey immediately.
+		if ( identifier && identifierMode !== 'email_and_phone' ) {
+			identifyPhoneKey();
+		}
 	}
 
 	function bindMenuPanel() {
 		if ( !overlayRoot ) return;
-		overlayRoot.querySelectorAll( '[data-dsa-menu-anchor]' ).forEach( function ( button ) {
+		const buttons = Array.from( overlayRoot.querySelectorAll( '[data-dsa-menu-anchor]' ) );
+		activeMenuContextId = '';
+		bindMenuContextTracking( buttons );
+		buttons.forEach( function ( button ) {
 			button.addEventListener( 'click', function ( event ) {
 				event.preventDefault();
 				event.stopPropagation();
@@ -3111,16 +3240,20 @@
 				if ( !target ) return;
 				const reducedMotion = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
 				let scrolled = false;
+				menuAnchorNavigationPending = true;
 				const scrollToTarget = function () {
 					if ( scrolled ) return;
 					if ( document.documentElement.classList.contains( 'dsa-scroll-locked' ) ) {
 						window.setTimeout( scrollToTarget, 40 );
 						return;
 					}
-					const adminBarHeight = geometryCssNumber( '--dsa-admin-bar-height', 0 );
-					const reserve = geometryCssNumber( '--dsa-screen-block-reserve', 0 );
-					target.style.scrollMarginTop = Math.max( 12, adminBarHeight + Math.min( reserve, 96 ) + 12 ) + 'px';
-					target.scrollIntoView( { behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' } );
+					const offset = pageScrollHeaderOffset();
+					target.style.scrollMarginTop = offset + 'px';
+					const top = Math.max( 0, window.scrollY + target.getBoundingClientRect().top - offset );
+					window.scrollTo( { top: top, behavior: reducedMotion ? 'auto' : 'smooth' } );
+					menuAnchorNavigationPending = false;
+					activeMenuContextId = target.id;
+					updateMenuContextActiveState( buttons );
 					scrolled = true;
 					if ( window.history && window.history.replaceState ) {
 						try {
@@ -3140,6 +3273,81 @@
 				}, reducedMotion ? 0 : 700 );
 			} );
 		} );
+	}
+
+	function pageScrollHeaderOffset() {
+		const adminBarHeight = geometryCssNumber( '--dsa-admin-bar-height', 0 );
+		let occupiedBottom = adminBarHeight;
+		const selectors = 'header, [role="banner"], #brx-header, .brx-header-sticky, [data-sticky-header]';
+		Array.from( document.querySelectorAll( selectors ) ).forEach( function ( header ) {
+			if ( header.closest( '.dsa-surface' ) ) return;
+			const style = window.getComputedStyle( header );
+			if ( style.display === 'none' || style.visibility === 'hidden' || ! [ 'fixed', 'sticky' ].includes( style.position ) ) return;
+			const rect = header.getBoundingClientRect();
+			if ( rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight * .5 ) {
+				occupiedBottom = Math.max( occupiedBottom, rect.bottom );
+			}
+		} );
+		return Math.max( 12, Math.ceil( occupiedBottom + 16 ) );
+	}
+
+	function updateMenuContextActiveState( buttons, reveal ) {
+		if ( ! buttons || ! buttons.length ) return;
+		const offset = pageScrollHeaderOffset();
+		let currentId = '';
+		let firstAhead = '';
+
+		buttons.forEach( function ( button ) {
+			const id = button.getAttribute( 'data-dsa-menu-anchor' ) || '';
+			const target = id ? document.getElementById( id ) : null;
+			if ( ! target ) return;
+			const rect = target.getBoundingClientRect();
+			if ( rect.top <= offset + 8 ) currentId = id;
+			else if ( ! firstAhead && rect.bottom > offset ) firstAhead = id;
+		} );
+
+		activeMenuContextId = currentId || firstAhead || activeMenuContextId;
+		buttons.forEach( function ( button ) {
+			const active = button.getAttribute( 'data-dsa-menu-anchor' ) === activeMenuContextId;
+			button.classList.toggle( 'is-active', active );
+			if ( active ) button.setAttribute( 'aria-current', 'location' );
+			else button.removeAttribute( 'aria-current' );
+		} );
+		if ( reveal ) {
+			const activeButton = buttons.find( function ( button ) { return button.getAttribute( 'aria-current' ) === 'location'; } );
+			if ( activeButton ) {
+				window.requestAnimationFrame( function () {
+					if ( activeButton.isConnected && typeof activeButton.scrollIntoView === 'function' ) {
+						activeButton.scrollIntoView( { block: 'center', inline: 'nearest', behavior: 'auto' } );
+					}
+				} );
+			}
+		}
+	}
+
+	function bindMenuContextTracking( buttons ) {
+		if ( typeof menuContextTrackingCleanup === 'function' ) menuContextTrackingCleanup();
+		if ( ! buttons || ! buttons.length ) return;
+		const schedule = function () {
+			if ( ! buttons.some( function ( button ) { return button.isConnected; } ) ) {
+				if ( typeof menuContextTrackingCleanup === 'function' ) menuContextTrackingCleanup();
+				return;
+			}
+			if ( menuContextTrackingFrame ) return;
+			menuContextTrackingFrame = window.requestAnimationFrame( function () {
+				menuContextTrackingFrame = 0;
+				updateMenuContextActiveState( buttons );
+			} );
+		};
+		window.addEventListener( 'scroll', schedule, { passive: true } );
+		window.addEventListener( 'resize', schedule, { passive: true } );
+		menuContextTrackingCleanup = function () {
+			window.removeEventListener( 'scroll', schedule );
+			window.removeEventListener( 'resize', schedule );
+			if ( menuContextTrackingFrame ) window.cancelAnimationFrame( menuContextTrackingFrame );
+			menuContextTrackingFrame = 0;
+		};
+		updateMenuContextActiveState( buttons );
 	}
 
 	function bindModulePanel( module ) {
@@ -3882,6 +4090,37 @@
 		}
 
 		panel.addEventListener( 'click', function ( event ) {
+			const guestApply = closestEventTarget( event, '[data-dsa-guest-apply]' );
+			if ( guestApply && panel.contains( guestApply ) ) {
+				event.preventDefault();
+				event.stopPropagation();
+				const wrap = guestApply.closest( '[data-dsa-guest-application]' );
+				const intents = wrap ? Array.from( wrap.querySelectorAll( 'input[type="checkbox"]:checked' ) ).map( function ( input ) { return input.value; } ) : [ 'post' ];
+				guestApply.disabled = true;
+				guestApply.textContent = 'Applying…';
+				dsaPost( '/account/guest-application', { intents: intents } ).then( function ( response ) {
+					phonekey.user.guestApplication = response.guestApplication || { status: 'pending' };
+					if ( wrap ) wrap.outerHTML = '<span class="dsa-guest-status is-pending">Guest application pending</span>';
+				} ).catch( function ( error ) {
+					guestApply.disabled = false;
+					guestApply.textContent = error.message || 'Try again';
+				} );
+				return;
+			}
+			const factorVerify = closestEventTarget( event, '[data-dsa-profile-factor-verify]' );
+			if ( factorVerify && panel.contains( factorVerify ) ) {
+				event.preventDefault();
+				event.stopPropagation();
+				startProfileFactorVerification( factorVerify, panel );
+				return;
+			}
+			const profileVerify = closestEventTarget( event, '[data-dsa-profile-verify]' );
+			if ( profileVerify && panel.contains( profileVerify ) ) {
+				event.preventDefault();
+				event.stopPropagation();
+				openProfileVerification();
+				return;
+			}
 			const profileEdit = closestEventTarget( event, '[data-dsa-profile-edit]' );
 			if ( profileEdit && panel.contains( profileEdit ) ) {
 				event.preventDefault();
@@ -3927,6 +4166,60 @@
 
 		loadRecentOrders( panel );
 		refreshProfileContextBadges();
+	}
+
+	function startProfileFactorVerification( button, panel ) {
+		const type = button && button.dataset.dsaProfileFactorVerify === 'phone' ? 'phone' : 'email';
+		const input = panel ? panel.querySelector( '[data-dsa-profile-factor-input="' + type + '"]' ) : null;
+		const form = input ? input.closest( '[data-dsa-profile-form]' ) : null;
+		const message = form ? form.querySelector( '[data-dsa-profile-message]' ) : null;
+		const identifier = input ? input.value.trim() : '';
+		const user = phonekey.user || {};
+
+		if ( user.isPrivileged && user.privilegedEnrollmentRequired ) {
+			openProfileVerification();
+			return;
+		}
+
+		if ( ! identifier ) {
+			if ( message ) message.textContent = 'Enter a ' + ( type === 'phone' ? 'phone number' : 'email address' ) + ' first.';
+			if ( input && typeof input.focus === 'function' ) input.focus();
+			return;
+		}
+
+		button.disabled = true;
+		if ( message ) message.textContent = 'Sending verification code...';
+
+		phoneKeyPost( 'account/factor/start', { factor: type, identifier: identifier } )
+			.then( function ( response ) {
+				resetPhoneKeyState();
+				phonekeyState.token = response.token || '';
+				phonekeyState.mode = response.mode || 'profile_factor_verify';
+				phonekeyState.identifier = identifier;
+				phonekeyState.identifierType = type;
+				phonekeyState.verificationTarget = type;
+				phonekeyState.emailDelivery = 'otp';
+				phonekeyState.phoneDeliveryProvider = response.phoneDeliveryProvider || '';
+				phonekeyState.phoneDeliveryMessage = response.phoneDeliveryMessage || '';
+				phonekeyState.intent = 'complete_security';
+				applyOtpCooldown( response );
+				const label = type === 'phone' ? 'Verify phone number' : 'Verify email address';
+				replaceOverlayContent(
+					'<section class="dsa-panel dsa-auth-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( label ) + '" data-dsa-phonekey-auth></section>',
+					{ reason: 'profile_factor_verification', module: getSurfaceModule( 'profile' ), label: label }
+				);
+				renderVerify( response );
+			} )
+			.catch( function ( error ) {
+				if ( error && error.code === 'privileged_setup_required' ) {
+					openProfileVerification();
+					return;
+				}
+				if ( message ) message.textContent = error.message || 'Could not start verification.';
+			} )
+			.finally( function () {
+				if ( button && button.isConnected ) button.disabled = false;
+			} );
 	}
 
 	function handleAccountContextClick( event, scope ) {
@@ -4011,6 +4304,126 @@
 		} );
 	}
 
+	function purchaseIdentityState() {
+		if ( commerce.available !== true || ! phonekeyConfig.purchaseGateEnabled ) return 'allowed';
+		const user = phonekey.user || {};
+		if ( ! user.loggedIn ) return 'signup_required';
+		if ( ! user.identityVerified ) return 'verification_required';
+		return 'allowed';
+	}
+
+	function rememberPendingPurchaseIntent( url ) {
+		try {
+			if ( window.sessionStorage ) {
+				window.sessionStorage.setItem( pendingPurchaseIntentKey, JSON.stringify( {
+					url: String( url || ( commerce.routes && commerce.routes.checkoutUrl ) || window.location.href ),
+					expires: Date.now() + ( 20 * 60 * 1000 ),
+				} ) );
+			}
+		} catch ( error ) {}
+	}
+
+	function pendingPurchaseIntent() {
+		let pending = null;
+		try {
+			pending = window.sessionStorage ? JSON.parse( window.sessionStorage.getItem( pendingPurchaseIntentKey ) || 'null' ) : null;
+		} catch ( error ) {
+			pending = null;
+		}
+		if ( ! pending || Number( pending.expires || 0 ) < Date.now() ) {
+			try { if ( window.sessionStorage ) window.sessionStorage.removeItem( pendingPurchaseIntentKey ); } catch ( error ) {}
+			return null;
+		}
+		return pending;
+	}
+
+	function clearPendingPurchaseIntent() {
+		try { if ( window.sessionStorage ) window.sessionStorage.removeItem( pendingPurchaseIntentKey ); } catch ( error ) {}
+	}
+
+	function openPurchaseIdentityGate( url ) {
+		const state = purchaseIdentityState();
+		if ( state === 'allowed' ) return false;
+		rememberPendingPurchaseIntent( url );
+		if ( state === 'signup_required' ) {
+			openOverlay( 'profile', 'Sign in to purchase' );
+			phonekeyState.intent = 'purchase';
+			announce( 'Create or sign in to your free account before purchasing.' );
+			return true;
+		}
+		openOverlay( 'profile', 'Verify to purchase' );
+		announce( 'Verify either your email address or phone number before purchasing.' );
+		return true;
+	}
+
+	function consumePendingPurchaseIntent() {
+		const pending = pendingPurchaseIntent();
+		if ( ! pending ) return;
+		const state = purchaseIdentityState();
+		if ( state === 'signup_required' ) return;
+		if ( state === 'verification_required' ) {
+			openOverlay( 'profile', 'Verify to purchase' );
+			return;
+		}
+		clearPendingPurchaseIntent();
+		try {
+			const target = new URL( pending.url || '', window.location.href );
+			if ( target.origin === window.location.origin
+				&& isCheckoutNavigationUrl( target )
+				&& commerce.settings
+				&& commerce.settings.checkoutSurfaceEnabled ) {
+				openCheckoutSurface( { returnToPage: isCurrentCheckoutPage() } );
+				return;
+			}
+			if ( target.origin === window.location.origin && target.href !== window.location.href ) {
+				navigateWithFullPageLoader( target.href );
+			}
+		} catch ( error ) {}
+	}
+
+	function consumeCheckoutEntryIntent() {
+		let url;
+		try {
+			url = new URL( window.location.href );
+		} catch ( error ) {
+			return;
+		}
+		if ( url.searchParams.get( 'dsa-checkout-intent' ) !== '1' ) return;
+		url.searchParams.delete( 'dsa-checkout-intent' );
+		window.history.replaceState( window.history.state, '', url.href );
+		openPurchaseIdentityGate( ( commerce.routes && commerce.routes.checkoutUrl ) || url.href );
+	}
+
+	function purchaseAttemptTarget( target ) {
+		if ( ! target || ! target.closest ) return null;
+		const control = target.closest( '#place_order, .wc-block-components-checkout-place-order-button, [data-dsa-checkout-open], a[href]' );
+		if ( ! control ) return null;
+		if ( control.matches( '#place_order, .wc-block-components-checkout-place-order-button, [data-dsa-checkout-open]' ) ) return control;
+		try {
+			const url = new URL( control.href, window.location.href );
+			return isCheckoutNavigationUrl( url ) && ! /order-(?:pay|received)/i.test( url.pathname ) ? control : null;
+		} catch ( error ) {
+			return null;
+		}
+	}
+
+	function bindPurchaseIdentityGate() {
+		document.addEventListener( 'click', function ( event ) {
+			if ( event.defaultPrevented ) return;
+			const control = purchaseAttemptTarget( event.target );
+			if ( ! control || purchaseIdentityState() === 'allowed' ) return;
+			event.preventDefault();
+			event.stopPropagation();
+			openPurchaseIdentityGate( control.href || ( commerce.routes && commerce.routes.checkoutUrl ) || window.location.href );
+		}, true );
+		document.addEventListener( 'submit', function ( event ) {
+			if ( ! event.target || ! event.target.matches( 'form.checkout' ) || purchaseIdentityState() === 'allowed' ) return;
+			event.preventDefault();
+			event.stopPropagation();
+			openPurchaseIdentityGate( ( commerce.routes && commerce.routes.checkoutUrl ) || window.location.href );
+		}, true );
+	}
+
 	function refreshProfileContextBadges() {
 		if ( ! ( phonekey.cart && phonekey.cart.available ) ) return;
 		dsaGet( '/account/addresses' ).then( function ( response ) {
@@ -4079,6 +4492,7 @@
 			checkoutButton.addEventListener( 'click', function ( event ) {
 				event.preventDefault();
 				event.stopPropagation();
+				if ( openPurchaseIdentityGate( checkoutButton.href ) ) return;
 
 				if ( commerce.settings && commerce.settings.checkoutSurfaceEnabled ) {
 					openCheckoutSurface();
@@ -4148,6 +4562,7 @@
 	}
 
 	function openCheckoutSurface( options ) {
+		if ( openPurchaseIdentityGate( ( commerce.routes && commerce.routes.checkoutUrl ) || window.location.href ) ) return;
 		options = options || {};
 		checkoutState = {
 			contract: null,
@@ -4987,13 +5402,22 @@
 	}
 
 	function refreshRestNonce() {
-		return fetch( noStoreUrl( data.restUrl + '/cart/nonce' ), {
+		// Runtime hydration exists on every Surface site; cart/nonce only exists
+		// when commerce is enabled. Using the cart route here caused auth and
+		// profile retries on editorial sites to fail with rest_no_route.
+		const endpoint = hydrationConfig.endpoint || ( data.restUrl ? data.restUrl + '/runtime/hydrate' : '' );
+		if ( ! endpoint ) {
+			return Promise.reject( new Error( 'Request failed' ) );
+		}
+
+		return fetch( noStoreUrl( endpoint ), {
 			credentials: 'same-origin',
 			cache: 'no-store',
 			headers: noStoreHeaders(),
 		} ).then( restJson ).then( function ( response ) {
 			if ( response && response.nonce ) {
 				data.nonce = response.nonce;
+				phonekey.nonce = response.nonce;
 				return response.nonce;
 			}
 
@@ -5120,6 +5544,11 @@
 			email: form.querySelector( '[name="email"]' ).value,
 			currentPassword: form.querySelector( '[name="currentPassword"]' ) ? form.querySelector( '[name="currentPassword"]' ).value : '',
 		};
+		const publicBio = form.querySelector( '[name="publicBio"]' );
+		if ( publicBio ) {
+			payload.publicProfile = { bio: publicBio.value };
+			[ 'website', 'linkedin', 'facebook' ].forEach( function ( field ) { payload.publicProfile[ field ] = form.querySelector( '[name="public_' + field + '"]' ).value; } );
+		}
 
 		if ( message ) {
 			message.textContent = 'Saving...';
@@ -5130,6 +5559,7 @@
 				phonekey.user.firstName = payload.firstName;
 				phonekey.user.lastName = payload.lastName;
 				phonekey.user.displayName = payload.displayName;
+				if ( response.publicProfile ) phonekey.user.publicProfile = response.publicProfile;
 				if ( ! response.emailChange ) {
 					phonekey.user.email = response.email || payload.email;
 				}
@@ -5484,7 +5914,7 @@
 	}
 
 	function phoneKeyCloseButton() {
-		return appPhoneKeyGate ? '' : '<button class="dsa-auth-close" type="button" aria-label="Close" data-dsa-pk-close>&times;</button>';
+		return appPhoneKeyGate ? '' : '<button class="dsa-auth-close" type="button" aria-label="Close" data-dsa-pk-close><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>';
 	}
 
 	function bindPhoneKeyClose( root ) {
@@ -5494,7 +5924,8 @@
 			close.addEventListener( 'click', function ( event ) {
 				event.preventDefault();
 				event.stopPropagation();
-				closeOverlay();
+				clearOtpCountdown();
+				closeOverlay( false, { immediate: true } );
 			} );
 		}
 	}
@@ -5521,9 +5952,44 @@
 			return;
 		}
 
-		root.querySelectorAll( 'button, input' ).forEach( function ( control ) {
-			control.disabled = busy;
+		root.setAttribute( 'aria-busy', busy ? 'true' : 'false' );
+		root.querySelectorAll( 'button:not([data-dsa-pk-close]), input' ).forEach( function ( control ) {
+			const coolingDown = control.matches( '[data-dsa-pk-resend]' )
+				&& Date.now() < Number( phonekeyState.otpResendLockedUntil || 0 );
+			control.disabled = busy || coolingDown;
 		} );
+
+		if ( ! busy ) syncOtpResendCountdown();
+	}
+
+	function clearOtpCountdown() {
+		if ( phonekeyState && phonekeyState.otpCountdownTimer ) {
+			window.clearTimeout( phonekeyState.otpCountdownTimer );
+			phonekeyState.otpCountdownTimer = 0;
+		}
+	}
+
+	function applyOtpCooldown( response ) {
+		const seconds = Math.max( 0, Number( response && response.resendAfter ? response.resendAfter : 0 ) );
+		if ( seconds > 0 ) {
+			phonekeyState.otpResendLockedUntil = Date.now() + ( seconds * 1000 );
+		}
+	}
+
+	function syncOtpResendCountdown() {
+		clearOtpCountdown();
+		const root = phoneKeyRoot();
+		const button = root ? root.querySelector( '[data-dsa-pk-resend]' ) : null;
+		if ( ! button ) return;
+
+		const remaining = Math.max( 0, Math.ceil( ( Number( phonekeyState.otpResendLockedUntil || 0 ) - Date.now() ) / 1000 ) );
+		const busy = root.getAttribute( 'aria-busy' ) === 'true';
+		button.disabled = busy || remaining > 0;
+		button.textContent = remaining > 0 ? 'Resend code in ' + remaining + 's' : 'Resend code';
+
+		if ( remaining > 0 ) {
+			phonekeyState.otpCountdownTimer = window.setTimeout( syncOtpResendCountdown, 1000 );
+		}
 	}
 
 	function phoneKeyPost( path, payload, retried ) {
@@ -5537,7 +6003,9 @@
 			headers['X-WP-Nonce'] = nonce;
 		}
 
-		return fetch( noStoreUrl( phonekey.restUrl + path ), {
+		const endpoint = String( phonekey.restUrl || '' ).replace( /\/+$/, '' ) + '/' + String( path || '' ).replace( /^\/+/, '' );
+
+		return fetch( noStoreUrl( endpoint ), {
 			method: 'POST',
 			headers: headers,
 			credentials: 'same-origin',
@@ -5547,10 +6015,13 @@
 			return response.json().then( function ( json ) {
 				if ( ! response.ok || json.ok === false ) {
 					const code = json && json.code ? String( json.code ) : '';
-					if ( ! retried && ( response.status === 401 || response.status === 403 || code === 'rest_cookie_invalid_nonce' ) ) {
+					if ( ! retried && response.status === 404 && code === 'rest_no_route' ) {
 						return hydrateRuntime().then( function () {
-							return refreshRestNonce();
-						} ).then( function ( nonceValue ) {
+							return phoneKeyPost( path, payload, true );
+						} );
+					}
+					if ( ! retried && code === 'rest_cookie_invalid_nonce' ) {
+						return refreshRestNonce().then( function ( nonceValue ) {
 							phonekey.nonce = nonceValue || data.nonce || phonekey.nonce || '';
 							return phoneKeyPost( path, payload, true );
 						} );
@@ -5588,7 +6059,7 @@
 		}
 
 		setPhoneKeyBusy( true );
-		phoneKeyPost( 'identify', dualIdentifier ? { email: email, phone: phone, appContext: isStandaloneApp() } : { identifier: value, appContext: isStandaloneApp() } )
+		phoneKeyPost( 'identify', dualIdentifier ? { email: email, phone: phone, appContext: isStandaloneApp(), intent: phonekeyState.intent || '' } : { identifier: value, appContext: isStandaloneApp(), intent: phonekeyState.intent || '' } )
 			.then( function ( response ) {
 				phonekeyState = Object.assign( phonekeyState, {
 					token: response.token,
@@ -5604,13 +6075,21 @@
 					emailAccepted: typeof response.emailAccepted === 'boolean' ? response.emailAccepted : null,
 					phoneDeliveryProvider: response.phoneDeliveryProvider || '',
 					phoneDeliveryMessage: response.phoneDeliveryMessage || '',
+					security: response.security || {},
 					otpResendLockedUntil: 0,
+					verificationTarget: response.identifierType || '',
 					error: '',
 					emailDraft: '',
 					phoneDraft: '',
 				} );
+				applyOtpCooldown( response );
+				if ( response.autoContinue ) {
+					return phoneKeyPost( 'continue-later', { token: phonekeyState.token } ).then( phoneKeyDone );
+				}
 
-				if ( response.mode === 'login_passkey' ) {
+				if ( response.counterpartRequired ) {
+					renderCounterpartPrompt( response );
+				} else if ( response.mode === 'login_passkey' ) {
 					renderPasskeyLogin();
 				} else if ( response.mode === 'new_device_verify' ) {
 					renderVerify( Object.assign( {}, response, { newDevice: true, emailDelivery: 'otp' } ) );
@@ -5650,14 +6129,19 @@
 	}
 
 	function renderEnroll( response ) {
+		response = response || {};
 		const newDevice = Boolean( response && response.newDevice );
+		const security = Object.assign( {}, phonekeyState.security || {}, response && response.security ? response.security : {} );
+		phonekeyState.security = security;
+		const recoveryReady = Boolean( security.emailVerified && security.phoneVerified );
 		renderPhoneKeyStep(
 			[
-				'<h2>' + ( newDevice ? 'Secure this device' : 'Secure your account' ) + '</h2>',
-				'<p>' + ( newDevice ? 'Create a passkey for this device using Face ID, fingerprint, device PIN, or its password manager.' : 'Create a passkey using Face ID, fingerprint, device PIN, or your browser password manager.' ) + '</p>',
+				'<h2>' + ( newDevice ? 'Secure this device' : 'Finish securing your account' ) + '</h2>',
+				'<p>' + ( newDevice ? 'Create a passkey for this device using Face ID, fingerprint, device PIN, or its password manager.' : ( recoveryReady ? 'Your email and phone are verified. Create a passkey using Face ID, fingerprint, device PIN, or your browser password manager.' : 'Create a passkey now, or finish the missing recovery contact and passkey later from your profile.' ) ) + '</p>',
 				! response.verified ? '<p class="dsa-panel__meta">Verification is pending. You can finish it from the link or code sent to you.</p>' : '',
+				! newDevice ? '<p class="dsa-panel__meta">Finishing later keeps the account partially verified. It becomes fully verified after email, phone, and passkey setup are complete.</p>' : '',
 				renderPhoneKeyError(),
-				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-enroll>Set up passkey</button>' + ( newDevice ? '' : '<button class="dsa-panel__button" data-dsa-pk-later>Later</button>' ) + '</div>',
+				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-enroll>Set up passkey</button>' + ( newDevice ? '' : '<button class="dsa-panel__button" data-dsa-pk-later>Finish later</button>' ) + '</div>',
 			].join( '' ),
 			function ( root ) {
 				root.querySelector( '[data-dsa-pk-enroll]' ).addEventListener( 'click', passkeyRegister );
@@ -5667,22 +6151,43 @@
 		);
 	}
 
+	function maskedVerificationDestination( target, response ) {
+		const identifier = String( ( response && response.identifier ) || phonekeyState.identifier || '' ).trim();
+		if ( target === 'phone' ) {
+			const phoneHint = /ending\s+\d+/i.test( identifier ) ? identifier : '';
+			const provider = String( ( response && response.phoneDeliveryProvider ) || phonekeyState.phoneDeliveryProvider || '' );
+			const channel = provider && provider !== 'phone' ? ' through ' + provider.replace( /_/g, ' ' ) : '';
+			return ( phoneHint || 'your phone number' ) + channel;
+		}
+
+		const parts = identifier.split( '@' );
+		if ( parts.length === 2 && parts[0] && parts[1] ) {
+			const local = parts[0];
+			const visible = local.slice( 0, Math.min( 2, local.length ) );
+			return 'your email at ' + visible + ( local.length > visible.length ? '***' : '' ) + '@' + parts[1];
+		}
+		return 'your email address';
+	}
+
 	function renderVerify( response ) {
-		const isPhone = ( response.identifierType || phonekeyState.identifierType ) === 'phone';
-		const phoneProvider = response.phoneDeliveryProvider || phonekeyState.phoneDeliveryProvider || '';
-		const phoneDestination = phoneProvider === 'email_fallback' ? 'email fallback.' : 'phone.';
+		response = response || {};
+		const target = response.identifierType || phonekeyState.verificationTarget || phonekeyState.identifierType;
+		const isPhone = target === 'phone';
+		phonekeyState.verificationTarget = isPhone ? 'phone' : 'email';
+		phonekeyState.identifierType = phonekeyState.verificationTarget;
 		const useOtp = isPhone || ( response.emailDelivery || phonekeyState.emailDelivery ) === 'otp';
-		const canResend = useOtp && Date.now() >= Number( phonekeyState.otpResendLockedUntil || 0 );
+		const resendRemaining = Math.max( 0, Math.ceil( ( Number( phonekeyState.otpResendLockedUntil || 0 ) - Date.now() ) / 1000 ) );
 		const newDevice = Boolean( response.newDevice || phonekeyState.mode === 'new_device_verify' );
+		const verificationDestination = maskedVerificationDestination( phonekeyState.verificationTarget, response );
 
 		renderPhoneKeyStep(
 			[
 				'<h2>' + ( newDevice ? 'A new device' : 'Verify first' ) + '</h2>',
-				'<p>' + ( newDevice ? 'It looks like you are using a new device. Enter the six digit code, then set up a passkey for this device.' : ( useOtp ? 'Enter the six digit code sent to your ' + ( isPhone ? phoneDestination : 'email.' ) : 'We sent a verification link to your email. Open it to continue, or request a recovery code.' ) ) + '</p>',
+				'<p>' + ( newDevice ? 'It looks like you are using a new device. Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + ', then set up a passkey for this device.' : ( useOtp ? 'Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + '.' : 'We sent a verification link to your email. Open it to continue, or request a recovery code.' ) ) + '</p>',
 				isPhone && ( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) ? '<p class="dsa-panel__meta">' + escapeHtml( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) + '</p>' : '',
 				! isPhone && phonekeyState.emailAccepted === false ? '<p class="dsa-panel__meta dsa-auth-error">WordPress could not hand this message to its mail transport. The site administrator needs to check Kiwe Email and SMTP.</p>' : '',
 				renderPhoneKeyError(),
-				useOtp ? '<input class="dsa-auth-field" id="dsa-pk-code" inputmode="numeric" placeholder="123456"><div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-verify>Verify</button><button class="dsa-panel__button" data-dsa-pk-resend' + ( canResend ? '' : ' disabled' ) + '>' + ( canResend ? 'Resend code' : 'Wait before retry' ) + '</button></div>' : '<div class="dsa-auth-actions"><button class="dsa-panel__button" data-dsa-pk-recovery>Send recovery code</button></div>',
+				useOtp ? '<input class="dsa-auth-field" id="dsa-pk-code" inputmode="numeric" placeholder="123456"><div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-verify>Verify</button><button class="dsa-panel__button" data-dsa-pk-resend' + ( resendRemaining > 0 ? ' disabled' : '' ) + '>' + ( resendRemaining > 0 ? 'Resend code in ' + resendRemaining + 's' : 'Resend code' ) + '</button></div>' : '<div class="dsa-auth-actions"><button class="dsa-panel__button" data-dsa-pk-recovery>Send recovery code</button></div>',
 			].join( '' ),
 			function ( root ) {
 				const verifyButton = root.querySelector( '[data-dsa-pk-verify]' );
@@ -5691,7 +6196,7 @@
 
 				if ( verifyButton ) {
 					verifyButton.addEventListener( 'click', function () {
-						verifyCode( isPhone );
+						verifyCode();
 					} );
 				}
 
@@ -5701,9 +6206,10 @@
 
 				if ( resendButton ) {
 					resendButton.addEventListener( 'click', function () {
-						resendOtp( isPhone );
+						resendOtp();
 					} );
 				}
+				syncOtpResendCountdown();
 			}
 		);
 	}
@@ -5731,13 +6237,14 @@
 	}
 
 	function renderPrivileged() {
+		const resetPasswordUrl = String( phonekey.resetPasswordUrl || '/wp-login.php?action=lostpassword' );
 		renderPhoneKeyStep(
 			[
 				'<h2>Secure admin access</h2>',
-				'<p>Enter your WordPress admin password first. After that, this device can set up a passkey.</p>',
+				'<p>Administrator-area access starts with your WordPress password, then verifies a recovery contact and your passkey. Key.kiwe never replaces WordPress role or password authority.</p>',
 				renderPhoneKeyError(),
-				'<input class="dsa-auth-field" id="dsa-pk-admin-password" type="password" autocomplete="current-password" placeholder="Admin password">',
-				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-admin-password>Continue</button></div>',
+				'<input class="dsa-auth-field" id="dsa-pk-admin-password" type="password" autocomplete="current-password" placeholder="WordPress password">',
+				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-admin-password>Continue</button><a class="dsa-panel__button" href="' + escapeHtml( resetPasswordUrl ) + '">Set or reset WordPress password</a></div>',
 			].join( '' ),
 			function ( root ) {
 				const submit = function () {
@@ -5748,7 +6255,22 @@
 						.then( function ( response ) {
 							phonekeyState.token = response.token || phonekeyState.token;
 							phonekeyState.mode = response.mode || 'enroll_passkey';
+							phonekeyState.identifierType = response.identifierType || phonekeyState.identifierType;
+							phonekeyState.emailDelivery = response.emailDelivery || phonekeyState.emailDelivery;
 							phonekeyState.error = '';
+							if ( response.next === 'verify_email' || response.next === 'verify_phone' ) {
+								const verificationTarget = response.next === 'verify_phone' ? 'phone' : 'email';
+								phonekeyState.verificationTarget = verificationTarget;
+								phonekeyState.phoneDeliveryProvider = response.phoneDeliveryProvider || '';
+								phonekeyState.phoneDeliveryMessage = response.phoneDeliveryMessage || '';
+								applyOtpCooldown( response );
+								renderVerify( { identifierType: verificationTarget, emailDelivery: 'otp', phoneDeliveryProvider: response.phoneDeliveryProvider, phoneDeliveryMessage: response.phoneDeliveryMessage } );
+								return;
+							}
+							if ( response.next === 'login_passkey' ) {
+								renderPasskeyLogin();
+								return;
+							}
 							renderEnroll( { verified: Boolean( response.verified ) } );
 						} )
 						.catch( function ( error ) {
@@ -5771,11 +6293,12 @@
 		);
 	}
 
-	function verifyCode( isPhone ) {
+	function verifyCode() {
 		const root = phoneKeyRoot();
 		const code = root && root.querySelector( '#dsa-pk-code' ) ? root.querySelector( '#dsa-pk-code' ).value.trim() : '';
+		const verificationTarget = phonekeyState.verificationTarget === 'phone' ? 'phone' : 'email';
 
-		phoneKeyPost( isPhone ? 'verify-phone' : 'verify-email', { token: phonekeyState.token, code: code } )
+		phoneKeyPost( 'verify-code', { token: phonekeyState.token, code: code } )
 			.then( function ( response ) {
 				if ( response && ( response.redirect || response.requiresTotp ) ) {
 					phonekeyState.adminPhoneBinding = false;
@@ -5785,42 +6308,49 @@
 
 				phonekeyState.token = response.token || phonekeyState.token;
 				phonekeyState.mode = response.next || 'enroll_passkey';
+				phonekeyState.security = response.security || phonekeyState.security || {};
+				if ( response.counterpartRequired ) {
+					phonekeyState.error = '';
+					renderCounterpartPrompt( response );
+					return;
+				}
 				if ( response.next === 'verify_phone' ) {
 					phonekeyState.identifier = response.identifier || phonekeyState.identifier;
 					phonekeyState.identifierType = 'phone';
 					phonekeyState.emailDelivery = 'otp';
 					phonekeyState.phoneDeliveryProvider = response.phoneDeliveryProvider || '';
 					phonekeyState.phoneDeliveryMessage = response.phoneDeliveryMessage || '';
-					phonekeyState.otpResendLockedUntil = 0;
+					phonekeyState.verificationTarget = 'phone';
+					applyOtpCooldown( response );
 					phonekeyState.error = '';
 					renderVerify( { identifierType: 'phone', emailDelivery: 'otp', phoneDeliveryProvider: response.phoneDeliveryProvider, phoneDeliveryMessage: response.phoneDeliveryMessage } );
 					return;
 				}
 				if ( response.next === 'login_passkey' ) {
-					phonekeyState.identifierType = isPhone ? 'phone' : 'email';
+					phonekeyState.identifierType = verificationTarget;
 					phonekeyState.error = '';
 					renderPasskeyLogin();
 					return;
 				}
-				renderEnroll( { verified: true, newDevice: Boolean( response.newDevice ) } );
+				renderEnroll( { verified: true, newDevice: Boolean( response.newDevice ), security: response.security || {} } );
 			} )
 			.catch( function ( error ) {
 				phonekeyState.error = error.message;
-				renderVerify( { identifierType: isPhone ? 'phone' : 'email', emailDelivery: 'otp' } );
+				applyOtpCooldown( error && error.data ? error.data : {} );
+				renderVerify( { identifierType: verificationTarget, emailDelivery: 'otp' } );
 			} );
 	}
 
 	function sendRecovery() {
 		phoneKeyPost( 'send-recovery', { token: phonekeyState.token } )
-			.then( function () {
-				renderPhoneKeyStep(
-					'<h2>Check your email</h2><p>If recovery is available, a code has been sent.</p><input class="dsa-auth-field" id="dsa-pk-code" inputmode="numeric" placeholder="123456"><div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-verify>Verify</button></div>',
-					function ( root ) {
-						root.querySelector( '[data-dsa-pk-verify]' ).addEventListener( 'click', function () {
-							verifyCode( false );
-						} );
-					}
-				);
+			.then( function ( response ) {
+				phonekeyState.token = response.token || phonekeyState.token;
+				phonekeyState.identifierType = 'email';
+				phonekeyState.verificationTarget = 'email';
+				phonekeyState.emailDelivery = 'otp';
+				phonekeyState.error = '';
+				applyOtpCooldown( response );
+				renderVerify( { identifierType: 'email', emailDelivery: 'otp' } );
 			} )
 			.catch( function ( error ) {
 				phonekeyState.error = error.message;
@@ -5828,28 +6358,27 @@
 			} );
 	}
 
-	function resendOtp( isPhone ) {
+	function resendOtp() {
+		const verificationTarget = phonekeyState.verificationTarget === 'phone' ? 'phone' : 'email';
 		setPhoneKeyBusy( true );
-		phoneKeyPost( 'resend-otp', { token: phonekeyState.token, type: isPhone ? 'phone' : 'email' } )
+		phoneKeyPost( 'resend-otp', { token: phonekeyState.token } )
 			.then( function ( response ) {
 				phonekeyState.error = '';
 				phonekeyState.phoneDeliveryProvider = response.provider || phonekeyState.phoneDeliveryProvider || '';
 				phonekeyState.phoneDeliveryMessage = response.message || '';
-				phonekeyState.otpResendLockedUntil = Date.now() + 60000;
-				renderVerify( { identifierType: isPhone ? 'phone' : 'email', emailDelivery: 'otp' } );
-				window.setTimeout( function () {
-					if ( phoneKeyRoot() && Date.now() >= Number( phonekeyState.otpResendLockedUntil || 0 ) ) {
-						renderVerify( { identifierType: isPhone ? 'phone' : 'email', emailDelivery: 'otp' } );
-					}
-				}, 61000 );
+				applyOtpCooldown( response );
+				renderVerify( { identifierType: verificationTarget, emailDelivery: 'otp' } );
 			} )
 			.catch( function ( error ) {
 				phonekeyState.error = error.message;
-				renderVerify( { identifierType: isPhone ? 'phone' : 'email', emailDelivery: 'otp' } );
-			} );
+				applyOtpCooldown( error && error.data ? error.data : {} );
+				renderVerify( { identifierType: verificationTarget, emailDelivery: 'otp' } );
+			} )
+			.finally( function () { setPhoneKeyBusy( false ); } );
 	}
 
 	function continueLater() {
+		setPhoneKeyBusy( true );
 		phoneKeyPost( 'continue-later', { token: phonekeyState.token } )
 			.then( phoneKeyDone )
 			.catch( function ( error ) {
@@ -5869,7 +6398,8 @@
 
 				phonekeyState.error = error.message;
 				renderPhoneKeyStep( renderPhoneKeyStart(), bindPhoneKeyAuth );
-			} );
+			} )
+			.finally( function () { setPhoneKeyBusy( false ); } );
 	}
 
 	function b64ToBuffer( value ) {
@@ -6045,11 +6575,14 @@
 					phoneKeyPost( 'bind-phone', { token: phonekeyState.token, phone: phone } )
 						.then( function ( bindResponse ) {
 							phonekeyState.error = '';
+							phonekeyState.token = bindResponse.token || phonekeyState.token;
 
 							if ( bindResponse && bindResponse.otpDispatched ) {
 								phonekeyState.identifierType = 'phone';
+								phonekeyState.verificationTarget = 'phone';
 								phonekeyState.emailDelivery = 'otp';
 								phonekeyState.adminPhoneBinding = true;
+								applyOtpCooldown( bindResponse );
 								renderVerify( { identifierType: 'phone', emailDelivery: 'otp' } );
 								return;
 							}
@@ -6178,7 +6711,60 @@
 		);
 	}
 
+	function renderCounterpartPrompt( response ) {
+		const type = response && response.counterpartType === 'email' ? 'email' : 'phone';
+		const label = type === 'email' ? 'recovery email' : 'phone number';
+		phonekeyState.token = response.counterpartToken || phonekeyState.token;
+		phonekeyState.security = response.security || phonekeyState.security || {};
+		renderPhoneKeyStep(
+			[
+				'<h2>Finish securing your account</h2>',
+				'<p>Your ' + ( type === 'phone' ? 'email is verified. Add and verify a phone number' : 'phone is verified. Add and verify a recovery email' ) + ', then set up a passkey. If this contact already belongs to another ordinary account, Key.kiwe will securely link the records after verification.</p>',
+				'<p class="dsa-panel__meta">You may finish the mobile/email and passkey setup later. Until all three are complete, your profile will show Partially verified.</p>',
+				renderPhoneKeyError(),
+				'<input class="dsa-auth-field" id="dsa-pk-counterpart" type="' + ( type === 'email' ? 'email' : 'tel' ) + '" autocomplete="' + type + '" inputmode="' + ( type === 'email' ? 'email' : 'tel' ) + '" placeholder="' + ( type === 'email' ? 'you@example.com' : 'Phone number' ) + '">',
+				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-counterpart>Verify and add</button><button class="dsa-panel__button" data-dsa-pk-counterpart-skip>Finish later</button></div>',
+			].join( '' ),
+			function ( root ) {
+				root.querySelector( '[data-dsa-pk-counterpart]' ).addEventListener( 'click', function () {
+					const identifier = root.querySelector( '#dsa-pk-counterpart' ).value.trim();
+					if ( ! identifier ) {
+						phonekeyState.error = 'Enter a ' + label + '.';
+						renderCounterpartPrompt( response );
+						return;
+					}
+					setPhoneKeyBusy( true );
+					phoneKeyPost( 'counterpart/start', { token: phonekeyState.token, identifier: identifier } )
+						.then( function ( next ) {
+							phonekeyState.token = next.token;
+							phonekeyState.identifierType = type;
+							phonekeyState.verificationTarget = type;
+							phonekeyState.emailDelivery = 'otp';
+							phonekeyState.error = '';
+							applyOtpCooldown( next );
+							renderVerify( { identifierType: type, emailDelivery: 'otp' } );
+						} )
+						.catch( function ( error ) {
+							phonekeyState.error = error.message || 'Could not verify that recovery contact.';
+							renderCounterpartPrompt( response );
+						} )
+						.finally( function () { setPhoneKeyBusy( false ); } );
+				} );
+				root.querySelector( '[data-dsa-pk-counterpart-skip]' ).addEventListener( 'click', function () {
+					phoneKeyPost( 'counterpart/skip', { token: phonekeyState.token } ).then( phoneKeyDone ).catch( function ( error ) {
+						phonekeyState.error = error.message || 'Could not continue.';
+						renderCounterpartPrompt( response );
+					} );
+				} );
+			}
+		);
+	}
+
 	function phoneKeyDone( response ) {
+		if ( response && response.counterpartRequired ) {
+			renderCounterpartPrompt( response );
+			return;
+		}
 		renderPhoneKeyStep( '<h2>You are in</h2><p>Secure login complete.</p>' );
 
 		if ( response && response.redirect ) {
@@ -6188,7 +6774,7 @@
 
 		window.setTimeout( function () {
 			window.location.reload();
-		}, 650 );
+		}, 150 );
 	}
 
 	function renderCartPanel( label ) {
@@ -6301,7 +6887,21 @@
 
 		root.classList.remove( 'dsa-scroll-locked' );
 		root.style.removeProperty( '--dsa-scroll-lock-top' );
-		window.scrollTo( 0, surfaceScrollY );
+		if ( ! menuAnchorNavigationPending ) restoreSurfaceScrollPosition( surfaceScrollY );
+	}
+
+	function restoreSurfaceScrollPosition( position ) {
+		const target = Math.max( 0, Number( position ) || 0 );
+		if ( surfaceScrollRestoreFrame ) window.cancelAnimationFrame( surfaceScrollRestoreFrame );
+		window.scrollTo( 0, target );
+		surfaceScrollRestoreFrame = window.requestAnimationFrame( function () {
+			surfaceScrollRestoreFrame = window.requestAnimationFrame( function () {
+				surfaceScrollRestoreFrame = 0;
+				if ( ! menuAnchorNavigationPending && ! document.documentElement.classList.contains( 'dsa-scroll-locked' ) ) {
+					window.scrollTo( 0, target );
+				}
+			} );
+		} );
 	}
 
 	function enterSurfaceMode( mode, force ) {
@@ -7068,6 +7668,70 @@
 		'.xoo-el-container',
 		'.xoo-el-modal',
 	].join( ',' );
+	const advertisingBoundarySelector = [
+		'ins.adsbygoogle',
+		'.adsbygoogle',
+		'.google-auto-placed',
+		'[data-ad-client]',
+		'[data-ad-slot]',
+		'[id^="google_ads_"]',
+		'[id^="aswift_"]',
+		'[id^="div-gpt-ad"]',
+		'[id^="google_vignette"]',
+		'iframe[src*="googlesyndication.com"]',
+		'iframe[src*="doubleclick.net"]',
+	].join( ',' );
+
+	function isAdvertisingNode( node ) {
+		const element = node && node.nodeType === 1 ? node : ( node && node.parentElement ? node.parentElement : null );
+		return Boolean( element && element.closest && element.closest( advertisingBoundarySelector ) );
+	}
+
+	function advertisingRuntimePresent() {
+		return Boolean( document.querySelector( advertisingBoundarySelector ) );
+	}
+
+	function rememberAdvertisingNavigation( link ) {
+		if ( ! link || ! link.closest || ! link.closest( '[data-dsa-surface]' ) || ! link.matches( '[data-dsa-full-navigation]' ) ) {
+			return;
+		}
+		let href = '';
+		try {
+			const target = new URL( link.href, window.location.href );
+			if ( target.origin !== window.location.origin ) return;
+			href = target.href;
+		} catch ( error ) {
+			return;
+		}
+		pendingAdvertisingNavigation = {
+			href: href,
+			origin: window.location.href,
+			sawInterstitial: isAdvertisingHistoryHash( window.location.hash ),
+		};
+		window.setTimeout( function () {
+			const pending = pendingAdvertisingNavigation;
+			if ( ! pending || pending.href !== href || window.location.href !== pending.origin || pending.sawInterstitial || isAdvertisingHistoryHash( window.location.hash ) ) return;
+			pendingAdvertisingNavigation = null;
+			window.location.assign( pending.href );
+		}, 1600 );
+	}
+
+	function completeAdvertisingNavigation() {
+		const pending = pendingAdvertisingNavigation;
+		if ( ! pending ) return;
+		pendingAdvertisingNavigation = null;
+		window.location.assign( pending.href );
+	}
+
+	function onAdvertisingNavigationClick( event ) {
+		if ( isAdvertisingNode( event.target ) || ! advertisingRuntimePresent() ) return;
+		const link = closestEventTarget( event, 'a[href]' );
+		if ( link ) rememberAdvertisingNavigation( link );
+	}
+
+	function isAdvertisingHistoryHash( value ) {
+		return /^#google_(?:vignette|interstitial|ads?)(?:[=&_-]|$)/i.test( String( value || '' ) );
+	}
 
 	function isDsaOwnedNode( element ) {
 		return Boolean(
@@ -7078,7 +7742,7 @@
 	}
 
 	function visibleExternalSiteModalElement( element ) {
-		if ( ! element || ! element.isConnected || isDsaOwnedNode( element ) ) {
+		if ( ! element || ! element.isConnected || isDsaOwnedNode( element ) || isAdvertisingNode( element ) ) {
 			return false;
 		}
 
@@ -7170,7 +7834,15 @@
 		}, true );
 
 		if ( typeof MutationObserver === 'function' && document.body ) {
-			new MutationObserver( scheduleExternalSiteModalState ).observe( document.body, {
+			new MutationObserver( function ( mutations ) {
+				const publisherMutation = mutations.some( function ( mutation ) {
+					if ( isAdvertisingNode( mutation.target ) ) return false;
+					const changed = Array.prototype.slice.call( mutation.addedNodes || [] )
+						.concat( Array.prototype.slice.call( mutation.removedNodes || [] ) );
+					return ! changed.length || changed.some( function ( node ) { return ! isAdvertisingNode( node ); } );
+				} );
+				if ( publisherMutation ) scheduleExternalSiteModalState();
+			} ).observe( document.body, {
 				childList: true,
 				subtree: true,
 				attributes: true,
@@ -8260,7 +8932,7 @@
 	function initializeStandaloneAppJourney() {
 		if ( ! isStandaloneApp() ) return;
 		const currentUser = phonekey.user || {};
-		if ( ! currentUser.loggedIn || ! currentUser.verified ) {
+		if ( ! currentUser.loggedIn || currentUser.identityVerified === false ) {
 			appPhoneKeyGate = true;
 			notificationIdentityIntent = '';
 			openOverlay( 'profile', 'Welcome to your Appsite' );
@@ -9486,6 +10158,13 @@
 				rememberSurfaceReturn( link );
 
 				if ( shouldHandleSurfaceFullNavigation( link ) ) {
+					if ( advertisingRuntimePresent() ) {
+						// Preserve the native click so AdSense can show and then dismiss a
+						// vignette. A destination fail-safe is captured by the document
+						// listener without removing the clicked result from the DOM.
+						rememberAdvertisingNavigation( link );
+						return;
+					}
 					event.preventDefault();
 					event.stopPropagation();
 					navigateWithFullPageLoader( link.href );
@@ -9593,6 +10272,19 @@
 		event.preventDefault();
 		launcher.click();
 	} );
+
+	try {
+		const directAuth = new URL( window.location.href ).searchParams.get( 'kiwe-auth' );
+		if ( directAuth === '1' ) {
+			runtimeHydrationPromise.then( function () {
+				openOverlay( 'profile', 'Secure sign in' );
+				const user = phonekey.user || {};
+				if ( user.loggedIn && user.isPrivileged && user.privilegedEnrollmentRequired ) {
+					openProfileVerification();
+				}
+			} );
+		}
+	} catch ( error ) {}
 
 	if ( loader ) {
 		loader.addEventListener( 'click', function ( event ) {
@@ -9737,6 +10429,8 @@
 		initializeAdminNotificationInbox();
 		initializeLinksDockIcon();
 		initializeSavedItems();
+		bindPurchaseIdentityGate();
+		consumeCheckoutEntryIntent();
 		initializePwaRuntime();
 		bindCommerceFeedback();
 		bindUniversalAddToCartEnhancer();
@@ -9744,7 +10438,10 @@
 		bindSavedTriggers();
 		bindCheckoutPageBridge();
 		window.setTimeout( restoreSurfaceReturn, 120 );
+		window.setTimeout( consumePendingPurchaseIntent, 160 );
 	} );
+
+	document.addEventListener( 'click', onAdvertisingNavigationClick, true );
 
 	if ( surfaceTriggerEnabled( 'safe_link_transition', visual.show_on_navigation ) || ( data.navigation && data.navigation.enabled ) || reconciliationConfig.applyEnabled || ( commerce.settings && commerce.settings.checkoutSurfaceEnabled ) ) {
 		document.addEventListener( 'click', onNavigationClick, true );
@@ -9760,8 +10457,21 @@
 				event.stopImmediatePropagation();
 			}
 			window.setTimeout( function () {
+				restoreSurfaceScrollPosition( surfaceScrollY );
 				window.dispatchEvent( new CustomEvent( 'surface:history:released' ) );
 			}, 0 );
+			return;
+		}
+
+		const advertisingHistoryTransition = advertisingHistoryActive || isAdvertisingHistoryHash( window.location.hash );
+		advertisingHistoryActive = isAdvertisingHistoryHash( window.location.hash );
+		if ( advertisingHistoryTransition ) {
+			if ( pendingAdvertisingNavigation ) {
+				if ( advertisingHistoryActive ) pendingAdvertisingNavigation.sawInterstitial = true;
+				else completeAdvertisingNavigation();
+			}
+			// Google owns vignette/interstitial history. Do not reload the page,
+			// close a Sheet, or stop propagation of its popstate event.
 			return;
 		}
 
@@ -9784,6 +10494,15 @@
 
 		if ( data.navigation && data.navigation.enabled ) {
 			window.location.reload();
+		}
+	} );
+
+	window.addEventListener( 'hashchange', function () {
+		const wasAdvertising = advertisingHistoryActive;
+		advertisingHistoryActive = isAdvertisingHistoryHash( window.location.hash );
+		if ( pendingAdvertisingNavigation ) {
+			if ( advertisingHistoryActive ) pendingAdvertisingNavigation.sawInterstitial = true;
+			else if ( wasAdvertising || pendingAdvertisingNavigation.sawInterstitial ) completeAdvertisingNavigation();
 		}
 	} );
 
@@ -10122,6 +10841,9 @@
 	}
 
 	function onNavigationClick( event ) {
+		if ( isAdvertisingNode( event.target ) ) {
+			return;
+		}
 		if ( event.target && event.target.closest && event.target.closest( '[data-kiwe-notifications], [data-dsa-notifications], [data-dsa-permission="notifications"], [data-dsa-notify-product]' ) ) {
 			return;
 		}
@@ -10133,6 +10855,18 @@
 		}
 
 		if ( event.defaultPrevented || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ) {
+			return;
+		}
+		if ( purchaseAttemptTarget( link ) && openPurchaseIdentityGate( link.href ) ) {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
+		// Ad-supported publishers retain native click/navigation authority so
+		// AdSense Auto Ads can decide whether to show a vignette. Kiwe must not
+		// preventDefault ahead of Google's click lifecycle.
+		if ( advertisingRuntimePresent() ) {
 			return;
 		}
 
@@ -10496,7 +11230,7 @@
 		new MutationObserver( function ( mutations ) {
 			mutations.forEach( function ( mutation ) {
 				mutation.addedNodes.forEach( function ( node ) {
-					if ( node.nodeType === 1 ) {
+					if ( node.nodeType === 1 && ! isAdvertisingNode( node ) ) {
 						enhanceFormMessageAccessibility( node );
 					}
 				} );
