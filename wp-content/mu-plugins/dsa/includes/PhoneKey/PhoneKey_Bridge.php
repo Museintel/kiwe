@@ -30,6 +30,10 @@ final class PhoneKey_Bridge {
 		];
 	}
 
+	public static function provider_ready(): bool {
+		return function_exists( 'pk_phone_provider_ready' ) && pk_phone_provider_ready();
+	}
+
 	public function notification_ready(): bool {
 		return function_exists( 'pk_whatsapp_notification_ready' ) && pk_whatsapp_notification_ready();
 	}

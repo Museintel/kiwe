@@ -19,6 +19,7 @@ final class WordPress_Role_Access_Service {
 	public function register(): void {
 		( new Site_Owner_Service() )->register();
 		( new Page_Workspace_Service() )->register();
+		( new Workspace_Admin_Service() )->register();
 		add_filter( 'register_post_type_args', [ $this, 'post_type_capabilities' ], 20, 2 );
 		add_filter( 'user_has_cap', [ $this, 'editorial_capabilities' ], 20, 4 );
 		add_filter( 'user_has_cap', [ $this, 'client_capabilities' ], PHP_INT_MAX, 4 );
@@ -171,9 +172,12 @@ final class WordPress_Role_Access_Service {
 			? [ 'edit.php?post_type=product' ]
 			: [ 'index.php', 'edit.php', 'upload.php', 'profile.php' ];
 		if ( Site_Owner_Service::enabled() ) {
-			$allowed = 'administrator' === $role ? [ 'edit.php', 'upload.php', 'edit.php?post_type=page', 'edit-comments.php', 'users.php', 'kiwe-guests', 'kiwe-notifications', 'profile.php' ] : array_diff( $allowed, [ 'index.php' ] );
-			if ( 'contributor' === $role ) $allowed = [ 'kiwe-guests', 'kiwe-notifications', 'profile.php' ];
-			if ( in_array( $role, [ 'author', 'editor', 'shop_manager' ], true ) ) $allowed[] = 'kiwe-notifications';
+			$allowed = 'administrator' === $role ? [ 'index.php', 'edit.php', 'upload.php', 'edit.php?post_type=page', 'edit-comments.php', 'users.php', 'kiwe-guests', 'kiwe-notifications', 'profile.php' ] : $allowed;
+			if ( 'contributor' === $role ) $allowed = [ 'index.php', 'kiwe-guests', 'kiwe-notifications', 'profile.php' ];
+			if ( in_array( $role, [ 'author', 'editor', 'shop_manager' ], true ) ) {
+				$allowed[] = 'index.php';
+				$allowed[] = 'kiwe-notifications';
+			}
 			if ( 'administrator' === $role ) {
 				foreach ( \DSA\Onboarding\Onboarding_Service::section_slugs() as $slug ) $allowed[] = $slug;
 				if ( 'dashboard' === ( Site_Owner_Service::policy()['rankMath'] ?? '' ) ) $allowed[] = 'rank-math';
@@ -304,7 +308,7 @@ final class WordPress_Role_Access_Service {
 
 	public function menu_order( $order ) {
 		if ( ! Site_Owner_Service::enabled() || Site_Owner_Service::is_owner() || ! is_array( $order ) ) return $order;
-		$priority = array_merge( [ 'edit.php', 'upload.php', 'woocommerce', 'edit.php?post_type=product' ], \DSA\Onboarding\Onboarding_Service::section_slugs(), [ 'edit.php?post_type=page', 'edit-comments.php', 'kiwe-guests', 'kiwe-notifications', 'users.php', 'profile.php' ] );
+		$priority = array_merge( [ 'index.php', 'edit.php', 'upload.php', 'woocommerce', 'edit.php?post_type=product' ], \DSA\Onboarding\Onboarding_Service::section_slugs(), [ 'edit.php?post_type=page', 'edit-comments.php', 'kiwe-guests', 'kiwe-notifications', 'users.php', 'profile.php' ] );
 		return array_merge( array_values( array_intersect( $priority, $order ) ), array_values( array_diff( $order, $priority ) ) );
 	}
 
@@ -342,6 +346,7 @@ final class WordPress_Role_Access_Service {
 		if ( wp_doing_ajax() ) { $this->guard_ajax( $role ); return; }
 		if ( ! in_array( $role, $work_roles, true ) ) { wp_safe_redirect( home_url( '/' ) ); exit; }
 		$page = sanitize_key( $_GET['page'] ?? '' );
+		if ( 'index.php' === $script ) return;
 		if ( 'admin.php' === $script && 'kiwe-notifications' === $page && current_user_can( 'kiwe_use_notifications' ) ) return;
 		if ( 'admin.php' === $script && 'kiwe-guests' === $page && ( current_user_can( 'kiwe_manage_guest_applications' ) || current_user_can( 'kiwe_guest_submit' ) ) ) return;
 		if ( 'admin-post.php' === $script && in_array( sanitize_key( $_POST['action'] ?? '' ), [ 'kiwe_save_notification_preferences', 'kiwe_save_notification_policy', 'kiwe_guest_save_settings', 'kiwe_guest_decide', 'kiwe_guest_submit' ], true ) ) return;
@@ -371,7 +376,6 @@ final class WordPress_Role_Access_Service {
 		if ( in_array( $script, [ 'edit.php','post.php','post-new.php' ], true ) && $expected === $type && empty( $_GET['page'] ) ) {
 			if ( 'post-new.php' !== $script || current_user_can( 'shop_manager' === $role ? 'create_products' : 'create_posts' ) ) return;
 		}
-		if ( 'index.php' === $script ) { wp_safe_redirect( admin_url( 'edit.php' . ( 'shop_manager' === $role ? '?post_type=product' : '' ) ) ); exit; }
 		$this->deny();
 	}
 

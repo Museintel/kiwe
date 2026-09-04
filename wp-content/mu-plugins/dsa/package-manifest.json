@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.52",
+  "version": "8.0.0-rc.53",
   "algorithm": "sha256",
-  "file_count": 353,
+  "file_count": 355,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -27,6 +27,10 @@
     "assets/css/surface.css": {
       "bytes": 283913,
       "sha256": "77fde265ff23e4a5052ea1096e16b82f294fd0401d0648ce870c89d3878699d9"
+    },
+    "assets/css/workspace-admin.css": {
+      "bytes": 12221,
+      "sha256": "7a8e6ac949b46bf3879da9badbaf82f91516867735879de1971ccb74ef324743"
     },
     "assets/icons/lucide/LICENSE": {
       "bytes": 3208,
@@ -194,7 +198,7 @@
     },
     "dsa.php": {
       "bytes": 3749,
-      "sha256": "37f6be96076787757f67cf84d19844df92a4206cac831fefa3be5c6984a11994"
+      "sha256": "40ea899b1e463c601990ca163afaa433013bd0dfbb417c74bcd2d82254f2a458"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -513,8 +517,12 @@
       "sha256": "07a9eb41a7a11c38208c03d1036bdfed3d3ad7da041fbeca0e5a7160b3ad6a46"
     },
     "includes/Access/WordPress_Role_Access_Service.php": {
-      "bytes": 22627,
-      "sha256": "921aa88d3561fd26751cc17e0f19868e93771f15a0acd12cd9b7bcbf9ab0b83b"
+      "bytes": 22619,
+      "sha256": "0ba4010acdeffd88682e75d363124df78bb30297eca5d7de5dd6d980433d6605"
+    },
+    "includes/Access/Workspace_Admin_Service.php": {
+      "bytes": 12090,
+      "sha256": "ca5eb146642d723a7eae3ef313318709e08a3294adae43ada16ed93ba4d6ff5c"
     },
     "includes/Admin/Admin.php": {
       "bytes": 736488,
@@ -713,8 +721,8 @@
       "sha256": "96a75d9fdadd8a0edca9008f25aff591ccda8e67230b179078139f26d4bedba9"
     },
     "includes/PhoneKey/PhoneKey_Bridge.php": {
-      "bytes": 9988,
-      "sha256": "cf2a25490fd254feee4f07960d2957e9c29e4abc072dce3e67dcd8ff2391a34f"
+      "bytes": 10125,
+      "sha256": "ea22183acc791b9c8fa31ca3885357323988e60259ab9ba377c8ba8d96561490"
     },
     "includes/PhoneKey/PhoneKey_Core_Loader.php": {
       "bytes": 400,

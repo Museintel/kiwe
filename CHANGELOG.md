@@ -1,5 +1,13 @@
 # Changelog
 
+## 8.0.0-rc.53 — 2026-09-04
+
+- Introduce the first production Kiwe Workspace shell for every approved wp-admin role except the single Super Admin. It restyles native WordPress administration instead of duplicating posts, media, pages, categories, users or Design Context data.
+- Replace the client dashboard redirect with a server-rendered, role-aware Home: Administrator, Editor, Author, Guest and Shop Manager receive only safe actions already authorized by Kiwe's capability and route boundary.
+- Keep the dashboard honest and light. Publishing and category cards read canonical WordPress data; Email and Key.kiwe status pills require actual delivery/provider evidence; editorial sites do not render WooCommerce actions.
+- Load one CSS file only for signed-in non-owner wp-admin requests. No front-end asset, REST hydration, animation, glass effect or new JavaScript is added, and responsive tablet/phone layouts reuse WordPress' native mobile navigation.
+- Add release contracts covering owner isolation, dashboard access, canonical data, role-aware actions, channel evidence, responsive behavior and the zero-JavaScript shell.
+
 ## 8.0.0-rc.52 — 2026-09-03
 
 - Establish one Kiwe-wide notification ingress for SecureTrack, Key.kiwe, editorial, Guest, WooCommerce, PWA and future modules. Sources publish a protected topic and event; the shared router owns the inbox, browser/app push and the Email, WhatsApp and SMS gateways.

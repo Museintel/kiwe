@@ -1,0 +1,441 @@
+body.kiwe-workspace-admin {
+	--kiwe-accent: #19ad8d;
+	--kiwe-accent-soft: #ebfaf6;
+	--kiwe-ink: #172033;
+	--kiwe-muted: #667085;
+	--kiwe-line: #e4e7ec;
+	--kiwe-canvas: #f7f9f8;
+	background: var(--kiwe-canvas);
+	color: var(--kiwe-ink);
+}
+
+.kiwe-workspace-admin #wpcontent,
+.kiwe-workspace-admin #wpfooter { margin-left: 248px; }
+.kiwe-workspace-admin #wpcontent { padding-left: 32px; }
+.kiwe-workspace-admin #adminmenuback,
+.kiwe-workspace-admin #adminmenuwrap,
+.kiwe-workspace-admin #adminmenu,
+.kiwe-workspace-admin #adminmenu .wp-submenu { width: 248px; }
+.kiwe-workspace-admin #adminmenuback,
+.kiwe-workspace-admin #adminmenuwrap {
+	background: #fff;
+	border-right: 1px solid var(--kiwe-line);
+}
+.kiwe-workspace-admin #adminmenu {
+	margin: 14px 0;
+	background: transparent;
+}
+.kiwe-workspace-admin #adminmenu a { color: #344054; }
+.kiwe-workspace-admin #adminmenu li.menu-top {
+	min-height: 42px;
+	margin: 4px 14px;
+	border-radius: 10px;
+}
+.kiwe-workspace-admin #adminmenu li.menu-top > a {
+	min-height: 42px;
+	padding: 0;
+	border-radius: 10px;
+}
+.kiwe-workspace-admin #adminmenu div.wp-menu-image {
+	width: 42px;
+	height: 42px;
+}
+.kiwe-workspace-admin #adminmenu div.wp-menu-image::before {
+	padding: 10px 0;
+	color: #667085;
+	font-size: 19px;
+}
+.kiwe-workspace-admin #adminmenu div.wp-menu-name {
+	padding: 11px 10px 11px 0;
+	font-weight: 600;
+}
+.kiwe-workspace-admin #adminmenu li.wp-has-current-submenu,
+.kiwe-workspace-admin #adminmenu li.current,
+.kiwe-workspace-admin #adminmenu li.menu-top:hover,
+.kiwe-workspace-admin #adminmenu li.opensub > a.menu-top,
+.kiwe-workspace-admin #adminmenu li > a.menu-top:focus {
+	background: var(--kiwe-accent-soft);
+	box-shadow: none;
+}
+.kiwe-workspace-admin #adminmenu li.wp-has-current-submenu > a.wp-has-current-submenu,
+.kiwe-workspace-admin #adminmenu li.current > a.menu-top,
+.kiwe-workspace-admin #adminmenu li:hover div.wp-menu-image::before,
+.kiwe-workspace-admin #adminmenu li.current div.wp-menu-image::before {
+	background: transparent;
+	color: var(--kiwe-accent);
+}
+.kiwe-workspace-admin #adminmenu .wp-menu-arrow,
+.kiwe-workspace-admin #adminmenu li.wp-menu-separator,
+.kiwe-workspace-admin #collapse-menu { display: none; }
+.kiwe-workspace-admin #adminmenu .wp-submenu {
+	left: 234px;
+	padding: 8px;
+	border: 1px solid var(--kiwe-line);
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 10px 30px rgba(16, 24, 40, .12);
+}
+.kiwe-workspace-admin #wpadminbar {
+	background: #fff;
+	box-shadow: inset 0 -1px var(--kiwe-line);
+}
+.kiwe-workspace-admin #wpadminbar .ab-item,
+.kiwe-workspace-admin #wpadminbar a.ab-item,
+.kiwe-workspace-admin #wpadminbar > #wp-toolbar span.ab-label,
+.kiwe-workspace-admin #wpadminbar > #wp-toolbar span.noticon { color: #475467; }
+.kiwe-workspace-admin #wpbody-content > .wrap {
+	max-width: 1360px;
+	margin-top: 28px;
+}
+.kiwe-workspace-admin #wpbody-content > .wrap > h1,
+.kiwe-workspace-admin #wpbody-content > .wrap > .wp-heading-inline {
+	color: var(--kiwe-ink);
+	font-size: clamp(26px, 3vw, 38px);
+	font-weight: 750;
+	letter-spacing: -.03em;
+}
+.kiwe-workspace-admin .button,
+.kiwe-workspace-admin .button-secondary,
+.kiwe-workspace-admin .button-primary,
+.kiwe-workspace-admin .page-title-action {
+	min-height: 38px;
+	padding: 5px 14px;
+	border-radius: 9px;
+}
+.kiwe-workspace-admin .button-primary,
+.kiwe-workspace-admin .page-title-action {
+	border-color: var(--kiwe-accent);
+	background: var(--kiwe-accent);
+	color: #fff;
+}
+.kiwe-workspace-admin input[type="text"],
+.kiwe-workspace-admin input[type="email"],
+.kiwe-workspace-admin input[type="url"],
+.kiwe-workspace-admin input[type="search"],
+.kiwe-workspace-admin input[type="password"],
+.kiwe-workspace-admin input[type="number"],
+.kiwe-workspace-admin select,
+.kiwe-workspace-admin textarea {
+	border-color: #d0d5dd;
+	border-radius: 9px;
+}
+.kiwe-workspace-admin .widefat,
+.kiwe-workspace-admin .postbox,
+.kiwe-workspace-admin .card {
+	border-color: var(--kiwe-line);
+	border-radius: 12px;
+	box-shadow: none;
+	overflow: hidden;
+}
+
+.kiwe-workspace-admin.index-php #wpbody-content > .wrap > h1,
+.kiwe-workspace-admin.index-php #dashboard-widgets .postbox-header,
+.kiwe-workspace-admin.index-php #dashboard-widgets .handle-actions,
+.kiwe-workspace-admin.index-php #dashboard-widgets .hndle,
+.kiwe-workspace-admin.index-php #dashboard-widgets .empty-container { display: none !important; }
+.kiwe-workspace-admin.index-php #wpbody-content > .wrap {
+	max-width: 1360px;
+	margin: 0;
+}
+.kiwe-workspace-admin.index-php #dashboard-widgets-wrap,
+.kiwe-workspace-admin.index-php #dashboard-widgets,
+.kiwe-workspace-admin.index-php #postbox-container-1,
+.kiwe-workspace-admin.index-php #normal-sortables,
+.kiwe-workspace-admin.index-php #kiwe-workspace-home,
+.kiwe-workspace-admin.index-php #kiwe-workspace-home .inside {
+	float: none;
+	width: 100%;
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+}
+.kiwe-workspace-admin.index-php #postbox-container-2,
+.kiwe-workspace-admin.index-php #postbox-container-3,
+.kiwe-workspace-admin.index-php #postbox-container-4 { display: none; }
+
+.kiwe-workspace {
+	max-width: 1320px;
+	padding: 34px 28px 44px 0;
+}
+.kiwe-workspace__hero {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 20px;
+	margin-bottom: 24px;
+}
+.kiwe-workspace__eyebrow {
+	margin: 0 0 9px;
+	color: var(--kiwe-muted);
+	font-size: 12px;
+	font-weight: 750;
+	letter-spacing: .1em;
+}
+.kiwe-workspace__hero h1 {
+	margin: 0;
+	color: var(--kiwe-ink);
+	font-size: clamp(30px, 4vw, 44px);
+	line-height: 1.08;
+	letter-spacing: -.04em;
+}
+.kiwe-workspace__hero > div > p:last-child {
+	margin: 10px 0 0;
+	color: var(--kiwe-muted);
+	font-size: 15px;
+}
+.kiwe-workspace__status {
+	display: flex;
+	flex-wrap: wrap;
+	align-self: flex-end;
+	gap: 8px;
+}
+.kiwe-workspace__status-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	min-height: 34px;
+	padding: 0 11px;
+	border: 1px solid var(--kiwe-line);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--kiwe-muted);
+	font-size: 12px;
+	font-weight: 650;
+}
+.kiwe-workspace__status-pill i {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #98a2b3;
+}
+.kiwe-workspace__status-pill.is-active i {
+	background: var(--kiwe-accent);
+	box-shadow: 0 0 0 3px rgba(25, 173, 141, .13);
+}
+.kiwe-workspace__panel {
+	min-width: 0;
+	padding: 20px;
+	border: 1px solid var(--kiwe-line);
+	border-radius: 14px;
+	background: #fff;
+}
+.kiwe-workspace__quick { margin-bottom: 16px; }
+.kiwe-workspace__section-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+.kiwe-workspace__section-heading h2 {
+	margin: 0;
+	font-size: 16px;
+	line-height: 1.3;
+}
+.kiwe-workspace__section-heading a,
+.kiwe-workspace__section-heading > span {
+	color: var(--kiwe-accent);
+	font-size: 12px;
+	font-weight: 650;
+	text-decoration: none;
+}
+.kiwe-workspace__actions {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 12px;
+}
+.kiwe-workspace__actions a {
+	display: grid;
+	grid-template-columns: 38px minmax(0, 1fr);
+	grid-template-rows: auto auto;
+	column-gap: 10px;
+	align-items: center;
+	min-height: 66px;
+	padding: 13px;
+	border: 1px solid var(--kiwe-line);
+	border-radius: 11px;
+	color: var(--kiwe-ink);
+	text-decoration: none;
+}
+.kiwe-workspace__actions a:hover,
+.kiwe-workspace__actions a:focus-visible {
+	border-color: #9adfce;
+	background: var(--kiwe-accent-soft);
+	box-shadow: none;
+	outline: 2px solid transparent;
+}
+.kiwe-workspace__actions .dashicons {
+	display: grid;
+	grid-row: 1 / span 2;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	border-radius: 9px;
+	background: var(--kiwe-accent-soft);
+	color: var(--kiwe-accent);
+	font-size: 19px;
+}
+.kiwe-workspace__actions strong,
+.kiwe-workspace__actions small { min-width: 0; }
+.kiwe-workspace__actions small {
+	margin-top: 2px;
+	color: var(--kiwe-muted);
+}
+.kiwe-workspace__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+.kiwe-workspace__metrics {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+.kiwe-workspace__metrics > div {
+	display: grid;
+	gap: 5px;
+	padding: 14px;
+	border-radius: 10px;
+	background: #f8faf9;
+}
+.kiwe-workspace__metrics strong {
+	color: var(--kiwe-ink);
+	font-size: 28px;
+	line-height: 1;
+}
+.kiwe-workspace__metrics span,
+.kiwe-workspace__identity span,
+.kiwe-workspace__protected span,
+.kiwe-workspace__protection p {
+	color: var(--kiwe-muted);
+	font-size: 12px;
+}
+.kiwe-workspace__identity,
+.kiwe-workspace__protected {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+.kiwe-workspace__identity > div:last-child,
+.kiwe-workspace__protected > div {
+	display: grid;
+	gap: 4px;
+}
+.kiwe-workspace__identity strong {
+	font-family: Georgia, serif;
+	font-size: 24px;
+}
+.kiwe-workspace__site-mark {
+	display: grid;
+	place-items: center;
+	width: 50px;
+	height: 50px;
+	overflow: hidden;
+	border-radius: 12px;
+	background: var(--kiwe-accent-soft);
+	color: var(--kiwe-accent);
+	font-size: 24px;
+	font-weight: 700;
+}
+.kiwe-workspace__site-mark .custom-logo-link,
+.kiwe-workspace__site-mark img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+.kiwe-workspace__list {
+	display: grid;
+	gap: 0;
+	margin: 0;
+}
+.kiwe-workspace__list li {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	margin: 0;
+	padding: 10px 0;
+	border-top: 1px solid #f0f2f4;
+}
+.kiwe-workspace__list li:first-child {
+	padding-top: 0;
+	border-top: 0;
+}
+.kiwe-workspace__list strong {
+	color: var(--kiwe-muted);
+	font-size: 12px;
+}
+.kiwe-workspace__protected .dashicons {
+	display: grid;
+	place-items: center;
+	width: 46px;
+	height: 46px;
+	border-radius: 12px;
+	background: var(--kiwe-accent-soft);
+	color: var(--kiwe-accent);
+	font-size: 24px;
+}
+.kiwe-workspace__protected strong {
+	color: var(--kiwe-accent);
+	font-size: 17px;
+}
+
+@media (max-width: 1180px) {
+	.kiwe-workspace-admin #wpcontent,
+	.kiwe-workspace-admin #wpfooter { margin-left: 210px; }
+	.kiwe-workspace-admin #adminmenuback,
+	.kiwe-workspace-admin #adminmenuwrap,
+	.kiwe-workspace-admin #adminmenu,
+	.kiwe-workspace-admin #adminmenu .wp-submenu { width: 210px; }
+	.kiwe-workspace-admin #adminmenu .wp-submenu { left: 196px; }
+	.kiwe-workspace__actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 960px) {
+	.kiwe-workspace-admin #wpcontent,
+	.kiwe-workspace-admin #wpfooter { margin-left: 56px; }
+	.kiwe-workspace-admin #wpcontent { padding-left: 22px; }
+	.kiwe-workspace-admin #adminmenuback,
+	.kiwe-workspace-admin #adminmenuwrap,
+	.kiwe-workspace-admin #adminmenu { width: 56px; }
+	.kiwe-workspace-admin #adminmenu li.menu-top { margin-inline: 7px; }
+	.kiwe-workspace-admin #adminmenu div.wp-menu-image { width: 42px; }
+	.kiwe-workspace-admin #adminmenu .wp-submenu { left: 49px; width: 210px; }
+	.kiwe-workspace__grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 782px) {
+	body.kiwe-workspace-admin { background: #fff; }
+	.kiwe-workspace-admin #wpcontent,
+	.kiwe-workspace-admin #wpfooter { margin-left: 0; }
+	.kiwe-workspace-admin #wpcontent { padding: 0 16px; }
+	.kiwe-workspace-admin #adminmenuback,
+	.kiwe-workspace-admin #adminmenuwrap,
+	.kiwe-workspace-admin #adminmenu { width: 190px; }
+	.kiwe-workspace-admin #adminmenu .wp-submenu { width: auto; }
+	.kiwe-workspace { padding: 24px 0 86px; }
+	.kiwe-workspace__hero { display: grid; }
+	.kiwe-workspace__status { align-self: auto; }
+	.kiwe-workspace__panel { padding: 16px; }
+	.kiwe-workspace__actions { grid-template-columns: 1fr 1fr; }
+	.kiwe-workspace__actions a { grid-template-columns: 32px minmax(0, 1fr); padding: 10px; }
+	.kiwe-workspace__actions .dashicons { width: 32px; height: 32px; }
+	.kiwe-workspace__metrics strong { font-size: 23px; }
+}
+@media (max-width: 520px) {
+	.kiwe-workspace__actions,
+	.kiwe-workspace__metrics { grid-template-columns: 1fr; }
+	.kiwe-workspace__metrics > div { grid-template-columns: auto 1fr; align-items: center; }
+	.kiwe-workspace__hero h1 { font-size: 31px; }
+	.kiwe-workspace__status-pill { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.kiwe-workspace-admin *,
+	.kiwe-workspace-admin *::before,
+	.kiwe-workspace-admin *::after {
+		scroll-behavior: auto !important;
+		transition: none !important;
+		animation: none !important;
+	}
+}
