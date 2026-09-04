@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const [sourceRoot, remoteRoot = 'wp-content/mu-plugins', includeArgument = ''] = process.argv.slice(2);
+const [sourceRoot, remoteRoot = 'wp-content/mu-plugins', ...includeArguments] = process.argv.slice(2);
 const baseUrl = String(process.env.KIWE_TUS_URL || '').replace(/\/+$/, '');
 const authKey = String(process.env.KIWE_TUS_AUTH || '');
 const restAuthKey = String(process.env.KIWE_TUS_REST_AUTH || '');
@@ -10,8 +10,8 @@ if (!sourceRoot || !baseUrl || !authKey || !restAuthKey) {
 	throw new Error('Usage: set KIWE_TUS_URL, KIWE_TUS_AUTH, and KIWE_TUS_REST_AUTH, then pass the local MU-plugin directory.');
 }
 
-const include = includeArgument
-	? includeArgument.split(',').map((value) => value.trim()).filter(Boolean)
+const include = includeArguments.length
+	? includeArguments.flatMap((argument) => argument.split(',')).map((value) => value.trim()).filter(Boolean)
 	: ['dsa', 'dsa.php', 'kiwe-incident-guard.php'];
 const files = [];
 
@@ -72,19 +72,32 @@ async function upload(file) {
 	}
 }
 
-let cursor = 0;
 let completed = 0;
-const workers = Array.from({ length: Math.min(6, files.length) }, async () => {
-	while (cursor < files.length) {
-		const index = cursor;
-		cursor += 1;
-		await upload(files[index]);
-		completed += 1;
-		if (completed % 25 === 0 || completed === files.length) {
-			console.log(`Uploaded ${completed}/${files.length}`);
-		}
-	}
-});
 
-await Promise.all(workers);
+async function uploadBatch(batch, concurrency = 6) {
+	let cursor = 0;
+	const workers = Array.from({ length: Math.min(concurrency, batch.length) }, async () => {
+		while (cursor < batch.length) {
+			const index = cursor;
+			cursor += 1;
+			await upload(batch[index]);
+			completed += 1;
+			if (completed % 25 === 0 || completed === files.length) {
+				console.log(`Uploaded ${completed}/${files.length}`);
+			}
+		}
+	});
+	await Promise.all(workers);
+}
+
+// The nested package must finish before its MU loaders are replaced. Keeping
+// the two root entry points last prevents a mixed loader/package version from
+// being observable even when this utility is used instead of Kiwe's atomic
+// in-dashboard updater.
+const loaderNames = new Set(['dsa.php', 'kiwe-incident-guard.php']);
+const packageFiles = files.filter((file) => !loaderNames.has(file.relativePath));
+const loaderFiles = files.filter((file) => loaderNames.has(file.relativePath));
+
+await uploadBatch(packageFiles);
+await uploadBatch(loaderFiles, 1);
 console.log(`MU-plugin deployment complete: ${files.length} files.`);

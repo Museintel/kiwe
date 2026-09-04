@@ -88,6 +88,7 @@ function checkSyntax(label, files, moduleInput = false) {
 const gates = [
 	['Client workspace ownership and authorization', 'tools/release/client-workspace-contracts.cjs'],
 	['Role-aware Kiwe Workspace admin shell', 'tools/release/workspace-admin-contracts.cjs'],
+	['Ordered MU-plugin uploader', 'tools/release/upload-mu-plugin-contracts.cjs'],
 	['Guest contribution and role-aware notification contracts', 'tools/release/guest-notification-contracts.cjs'],
 	['Release package integrity', 'tools/release/verify-package.cjs'],
 	['Seam adoption audit', 'tools/ui-theme/audit-seam-adoption.cjs'],
