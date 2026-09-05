@@ -1,5 +1,14 @@
 # Changelog
 
+## 8.0.0-rc.54 — 2026-09-05
+
+- Complete the Key.kiwe-to-WordPress privilege handoff without ever emailing or exposing a plaintext password. Elevating an account into any administrator-area role now revokes prior assurance, queues WordPress' native one-time set/reset-password link, and greets the user with the exact first-access instructions inside Key.kiwe.
+- Repair already-promoted Key-created accounts on their next identification attempt. Password creation, native password reset and successful password proof now advance one explicit setup state while still invalidating old sessions, trusted devices and privileged assurance before strict recovery-contact and passkey verification.
+- Make OTP journeys feel immediate even when SMTP or WhatsApp is slow. Key.kiwe renders the destination-aware code screen first, delivers through the existing bounded resend endpoint in a background request, and keeps verification/resend controls disabled until the provider accepts the message.
+- Make approved Guest identity unambiguous with one read-only `✓ Guest` badge and no concurrent application action.
+- Make Menu table-of-contents selection replace Kiwe's synthetic Sheet history entry with the real heading anchor, preventing a delayed browser history restoration from undoing the reader's jump while retaining sticky-header clearance.
+- Extend release gates for privileged password enrollment, deferred OTP delivery, approved Guest presentation and TOC/history continuity.
+
 ## 8.0.0-rc.53 — 2026-09-04
 
 - Introduce the first production Kiwe Workspace shell for every approved wp-admin role except the single Super Admin. It restyles native WordPress administration instead of duplicating posts, media, pages, categories, users or Design Context data.

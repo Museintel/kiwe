@@ -634,6 +634,10 @@
 		otpResendLockedUntil: 0,
 		otpCountdownTimer: 0,
 		verificationTarget: '',
+		deliveryPending: false,
+		deliveryRequestToken: '',
+		privilegedSetup: {},
+		privilegedSetupRequestPending: false,
 		adminPhoneBinding: false,
 	};
 	let permissionAskSessionCount = permissionSessionAskCount();
@@ -3200,6 +3204,10 @@
 			otpResendLockedUntil: 0,
 			otpCountdownTimer: 0,
 			verificationTarget: '',
+			deliveryPending: false,
+			deliveryRequestToken: '',
+			privilegedSetup: {},
+			privilegedSetupRequestPending: false,
 			intent: '',
 			security: {},
 		};
@@ -3239,38 +3247,38 @@
 				const target = document.getElementById( button.getAttribute( 'data-dsa-menu-anchor' ) || '' );
 				if ( !target ) return;
 				const reducedMotion = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
-				let scrolled = false;
 				menuAnchorNavigationPending = true;
-				const scrollToTarget = function () {
-					if ( scrolled ) return;
+				const scrollToTarget = function ( behavior ) {
 					if ( document.documentElement.classList.contains( 'dsa-scroll-locked' ) ) {
-						window.setTimeout( scrollToTarget, 40 );
+						window.setTimeout( function () { scrollToTarget( behavior ); }, 40 );
 						return;
 					}
 					const offset = pageScrollHeaderOffset();
 					target.style.scrollMarginTop = offset + 'px';
 					const top = Math.max( 0, window.scrollY + target.getBoundingClientRect().top - offset );
-					window.scrollTo( { top: top, behavior: reducedMotion ? 'auto' : 'smooth' } );
-					menuAnchorNavigationPending = false;
+					window.scrollTo( { top: top, behavior: behavior || ( reducedMotion ? 'auto' : 'smooth' ) } );
 					activeMenuContextId = target.id;
 					updateMenuContextActiveState( buttons );
-					scrolled = true;
 					if ( window.history && window.history.replaceState ) {
 						try {
-							window.history.replaceState( window.history.state, document.title, '#' + encodeURIComponent( target.id ) );
+							const state = window.history.state && typeof window.history.state === 'object' ? Object.assign( {}, window.history.state ) : {};
+							delete state.kiweSurface;
+							window.history.replaceState( state, document.title, '#' + encodeURIComponent( target.id ) );
 						} catch ( error ) {}
 					}
 				};
-				const scheduleScrollToTarget = function () {
-					window.requestAnimationFrame( function () {
-						window.requestAnimationFrame( scrollToTarget );
-					} );
-				};
-				window.addEventListener( 'surface:overlay:close', scheduleScrollToTarget, { once: true } );
-				closeOverlay( false, { retainHistory: false, immediate: reducedMotion } );
+				// Turn the synthetic Sheet history entry into the real section
+				// navigation. Calling history.back() here can restore the browser's
+				// previous scroll position after the heading jump has already run.
+				surfaceHistoryActive = false;
+				closeOverlay( false, { retainHistory: true, immediate: true } );
+				window.requestAnimationFrame( function () {
+					window.requestAnimationFrame( function () { scrollToTarget(); } );
+				} );
 				window.setTimeout( function () {
-					scrollToTarget();
-				}, reducedMotion ? 0 : 700 );
+					scrollToTarget( 'auto' );
+					menuAnchorNavigationPending = false;
+				}, reducedMotion ? 40 : 520 );
 			} );
 		} );
 	}
@@ -4190,7 +4198,7 @@
 		button.disabled = true;
 		if ( message ) message.textContent = 'Sending verification code...';
 
-		phoneKeyPost( 'account/factor/start', { factor: type, identifier: identifier } )
+		phoneKeyPost( 'account/factor/start', { factor: type, identifier: identifier, deferOtpDelivery: true } )
 			.then( function ( response ) {
 				resetPhoneKeyState();
 				phonekeyState.token = response.token || '';
@@ -4201,6 +4209,8 @@
 				phonekeyState.emailDelivery = 'otp';
 				phonekeyState.phoneDeliveryProvider = response.phoneDeliveryProvider || '';
 				phonekeyState.phoneDeliveryMessage = response.phoneDeliveryMessage || '';
+				phonekeyState.deliveryPending = Boolean( response.deliveryPending );
+				phonekeyState.deliveryRequestToken = '';
 				phonekeyState.intent = 'complete_security';
 				applyOtpCooldown( response );
 				const label = type === 'phone' ? 'Verify phone number' : 'Verify email address';
@@ -4209,6 +4219,7 @@
 					{ reason: 'profile_factor_verification', module: getSurfaceModule( 'profile' ), label: label }
 				);
 				renderVerify( response );
+				beginDeferredOtpDelivery( response );
 			} )
 			.catch( function ( error ) {
 				if ( error && error.code === 'privileged_setup_required' ) {
@@ -5956,7 +5967,9 @@
 		root.querySelectorAll( 'button:not([data-dsa-pk-close]), input' ).forEach( function ( control ) {
 			const coolingDown = control.matches( '[data-dsa-pk-resend]' )
 				&& Date.now() < Number( phonekeyState.otpResendLockedUntil || 0 );
-			control.disabled = busy || coolingDown;
+			const waitingForDelivery = Boolean( phonekeyState.deliveryPending )
+				&& control.matches( '#dsa-pk-code, [data-dsa-pk-verify], [data-dsa-pk-resend]' );
+			control.disabled = busy || coolingDown || waitingForDelivery;
 		} );
 
 		if ( ! busy ) syncOtpResendCountdown();
@@ -5984,8 +5997,9 @@
 
 		const remaining = Math.max( 0, Math.ceil( ( Number( phonekeyState.otpResendLockedUntil || 0 ) - Date.now() ) / 1000 ) );
 		const busy = root.getAttribute( 'aria-busy' ) === 'true';
-		button.disabled = busy || remaining > 0;
-		button.textContent = remaining > 0 ? 'Resend code in ' + remaining + 's' : 'Resend code';
+		const deliveryPending = Boolean( phonekeyState.deliveryPending );
+		button.disabled = busy || deliveryPending || remaining > 0;
+		button.textContent = deliveryPending ? 'Sending code…' : ( remaining > 0 ? 'Resend code in ' + remaining + 's' : 'Resend code' );
 
 		if ( remaining > 0 ) {
 			phonekeyState.otpCountdownTimer = window.setTimeout( syncOtpResendCountdown, 1000 );
@@ -6059,7 +6073,7 @@
 		}
 
 		setPhoneKeyBusy( true );
-		phoneKeyPost( 'identify', dualIdentifier ? { email: email, phone: phone, appContext: isStandaloneApp(), intent: phonekeyState.intent || '' } : { identifier: value, appContext: isStandaloneApp(), intent: phonekeyState.intent || '' } )
+		phoneKeyPost( 'identify', dualIdentifier ? { email: email, phone: phone, appContext: isStandaloneApp(), intent: phonekeyState.intent || '', deferOtpDelivery: true } : { identifier: value, appContext: isStandaloneApp(), intent: phonekeyState.intent || '', deferOtpDelivery: true } )
 			.then( function ( response ) {
 				phonekeyState = Object.assign( phonekeyState, {
 					token: response.token,
@@ -6076,6 +6090,9 @@
 					phoneDeliveryProvider: response.phoneDeliveryProvider || '',
 					phoneDeliveryMessage: response.phoneDeliveryMessage || '',
 					security: response.security || {},
+					privilegedSetup: response.privilegedSetup || {},
+					deliveryPending: Boolean( response.deliveryPending ),
+					deliveryRequestToken: '',
 					otpResendLockedUntil: 0,
 					verificationTarget: response.identifierType || '',
 					error: '',
@@ -6093,12 +6110,14 @@
 					renderPasskeyLogin();
 				} else if ( response.mode === 'new_device_verify' ) {
 					renderVerify( Object.assign( {}, response, { newDevice: true, emailDelivery: 'otp' } ) );
+					beginDeferredOtpDelivery( response );
 				} else if ( response.mode === 'verify_required' ) {
 					renderVerify( response );
+					beginDeferredOtpDelivery( response );
 				} else if ( response.mode === 'unverified_return' ) {
 					renderUnverified( response );
 				} else if ( response.mode === 'privileged_setup' ) {
-					renderPrivileged();
+					renderPrivileged( response );
 				} else {
 					renderEnroll( response );
 				}
@@ -6169,6 +6188,50 @@
 		return 'your email address';
 	}
 
+	/**
+	 * Delivery runs as a second request so SMTP/WhatsApp latency never holds the
+	 * previous form on a misleading "sending" state. The OTP controls remain
+	 * disabled until the server confirms that the provider accepted the code.
+	 */
+	function beginDeferredOtpDelivery( response ) {
+		response = response || {};
+		if ( ! response.deliveryPending || ! phonekeyState.token ) return;
+		const requestToken = String( phonekeyState.token );
+		if ( phonekeyState.deliveryRequestToken === requestToken ) return;
+		phonekeyState.deliveryPending = true;
+		phonekeyState.deliveryRequestToken = requestToken;
+		setPhoneKeyBusy( false );
+
+		phoneKeyPost( 'resend-otp', { token: requestToken } )
+			.then( function ( delivery ) {
+				if ( phonekeyState.deliveryRequestToken !== requestToken ) return;
+				phonekeyState.deliveryPending = false;
+				phonekeyState.deliveryRequestToken = '';
+				phonekeyState.error = '';
+				phonekeyState.phoneDeliveryProvider = delivery.provider || phonekeyState.phoneDeliveryProvider || '';
+				phonekeyState.phoneDeliveryMessage = delivery.message || '';
+				phonekeyState.emailAccepted = true;
+				applyOtpCooldown( delivery );
+				renderVerify( {
+					identifierType: phonekeyState.verificationTarget,
+					emailDelivery: 'otp',
+					phoneDeliveryProvider: phonekeyState.phoneDeliveryProvider,
+					phoneDeliveryMessage: phonekeyState.phoneDeliveryMessage,
+				} );
+			} )
+			.catch( function ( error ) {
+				if ( phonekeyState.deliveryRequestToken !== requestToken ) return;
+				phonekeyState.deliveryPending = false;
+				phonekeyState.deliveryRequestToken = '';
+				phonekeyState.error = error.message || 'The verification code could not be delivered.';
+				applyOtpCooldown( error && error.data ? error.data : {} );
+				renderVerify( { identifierType: phonekeyState.verificationTarget, emailDelivery: 'otp' } );
+			} )
+			.finally( function () {
+				setPhoneKeyBusy( false );
+			} );
+	}
+
 	function renderVerify( response ) {
 		response = response || {};
 		const target = response.identifierType || phonekeyState.verificationTarget || phonekeyState.identifierType;
@@ -6179,15 +6242,18 @@
 		const resendRemaining = Math.max( 0, Math.ceil( ( Number( phonekeyState.otpResendLockedUntil || 0 ) - Date.now() ) / 1000 ) );
 		const newDevice = Boolean( response.newDevice || phonekeyState.mode === 'new_device_verify' );
 		const verificationDestination = maskedVerificationDestination( phonekeyState.verificationTarget, response );
+		const deliveryPending = Boolean( response.deliveryPending || phonekeyState.deliveryPending );
+		phonekeyState.deliveryPending = deliveryPending;
 
 		renderPhoneKeyStep(
 			[
 				'<h2>' + ( newDevice ? 'A new device' : 'Verify first' ) + '</h2>',
 				'<p>' + ( newDevice ? 'It looks like you are using a new device. Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + ', then set up a passkey for this device.' : ( useOtp ? 'Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + '.' : 'We sent a verification link to your email. Open it to continue, or request a recovery code.' ) ) + '</p>',
+				deliveryPending ? '<p class="dsa-panel__meta" role="status" data-dsa-otp-delivery-status>Preparing and sending your code securely&hellip; You can enter it as soon as delivery is confirmed.</p>' : '',
 				isPhone && ( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) ? '<p class="dsa-panel__meta">' + escapeHtml( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) + '</p>' : '',
 				! isPhone && phonekeyState.emailAccepted === false ? '<p class="dsa-panel__meta dsa-auth-error">WordPress could not hand this message to its mail transport. The site administrator needs to check Kiwe Email and SMTP.</p>' : '',
 				renderPhoneKeyError(),
-				useOtp ? '<input class="dsa-auth-field" id="dsa-pk-code" inputmode="numeric" placeholder="123456"><div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-verify>Verify</button><button class="dsa-panel__button" data-dsa-pk-resend' + ( resendRemaining > 0 ? ' disabled' : '' ) + '>' + ( resendRemaining > 0 ? 'Resend code in ' + resendRemaining + 's' : 'Resend code' ) + '</button></div>' : '<div class="dsa-auth-actions"><button class="dsa-panel__button" data-dsa-pk-recovery>Send recovery code</button></div>',
+				useOtp ? '<input class="dsa-auth-field" id="dsa-pk-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"' + ( deliveryPending ? ' disabled' : '' ) + '><div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-verify' + ( deliveryPending ? ' disabled' : '' ) + '>Verify</button><button class="dsa-panel__button" data-dsa-pk-resend' + ( deliveryPending || resendRemaining > 0 ? ' disabled' : '' ) + '>' + ( deliveryPending ? 'Sending code&hellip;' : ( resendRemaining > 0 ? 'Resend code in ' + resendRemaining + 's' : 'Resend code' ) ) + '</button></div>' : '<div class="dsa-auth-actions"><button class="dsa-panel__button" data-dsa-pk-recovery>Send recovery code</button></div>',
 			].join( '' ),
 			function ( root ) {
 				const verifyButton = root.querySelector( '[data-dsa-pk-verify]' );
@@ -6236,22 +6302,59 @@
 		);
 	}
 
-	function renderPrivileged() {
+	function requestPrivilegedPasswordSetup( root, resend ) {
+		if ( phonekeyState.privilegedSetupRequestPending || ! phonekeyState.token ) return;
+		phonekeyState.privilegedSetupRequestPending = true;
+		const message = root ? root.querySelector( '[data-dsa-pk-privileged-setup-message]' ) : null;
+		const button = root ? root.querySelector( '[data-dsa-pk-privileged-setup-resend]' ) : null;
+		if ( message ) message.textContent = resend ? 'Sending a fresh one-time setup link…' : 'Sending your one-time setup link…';
+		if ( button ) button.disabled = true;
+
+		phoneKeyPost( 'privileged-password-setup', { token: phonekeyState.token, resend: Boolean( resend ) } )
+			.then( function ( response ) {
+				phonekeyState.privilegedSetup = response.privilegedSetup || phonekeyState.privilegedSetup || {};
+				if ( message ) message.textContent = response.message || 'Check your account email for the one-time WordPress password setup link.';
+			} )
+			.catch( function ( error ) {
+				if ( error && error.data && error.data.privilegedSetup ) phonekeyState.privilegedSetup = error.data.privilegedSetup;
+				if ( message ) message.textContent = error.message || 'The setup email could not be sent.';
+			} )
+			.finally( function () {
+				phonekeyState.privilegedSetupRequestPending = false;
+				if ( button ) button.disabled = false;
+			} );
+	}
+
+	function renderPrivileged( response ) {
+		response = response || {};
 		const resetPasswordUrl = String( phonekey.resetPasswordUrl || '/wp-login.php?action=lostpassword' );
+		const setup = Object.assign( {}, phonekeyState.privilegedSetup || {}, response.privilegedSetup || {} );
+		phonekeyState.privilegedSetup = setup;
+		const roleLabel = String( setup.roleLabel || 'administrator-area' );
+		const newAccess = Boolean( setup.promoted );
+		const passwordRequired = Boolean( setup.required );
+		let setupMessage = '';
+		if ( setup.status === 'sent' ) setupMessage = 'A one-time WordPress password setup link was sent to ' + String( setup.emailHint || 'your account email' ) + '.';
+		else if ( setup.status === 'password_set' || setup.status === 'password_confirmed' ) setupMessage = 'Your WordPress password is ready. Enter it below to continue strict security setup.';
+		else if ( setup.status === 'email_missing' ) setupMessage = 'This account needs an email address before WordPress can deliver a secure password setup link. Ask an administrator to add one in Users.';
+		else if ( setup.status === 'failed' ) setupMessage = 'The last setup email could not be handed to the site mail service. You can try again below.';
+		else if ( setup.status === 'queued' ) setupMessage = 'Your one-time WordPress password setup link is being prepared for ' + String( setup.emailHint || 'your account email' ) + '.';
 		renderPhoneKeyStep(
 			[
-				'<h2>Secure admin access</h2>',
-				'<p>Administrator-area access starts with your WordPress password, then verifies a recovery contact and your passkey. Key.kiwe never replaces WordPress role or password authority.</p>',
+				'<h2>' + ( newAccess ? 'Congratulations on your new access' : 'Secure admin access' ) + '</h2>',
+				'<p>' + ( newAccess ? 'Your account now has ' + escapeHtml( roleLabel ) + ' access. ' : '' ) + 'WordPress keeps password authority; Key.kiwe then verifies a recovery contact and your passkey before opening the administrator area.</p>',
+				passwordRequired ? '<p class="dsa-panel__meta">This account began in Key.kiwe with an unshared random password. Create your own from the one-time email link, then return here.</p>' : '',
+				setupMessage ? '<p class="dsa-panel__meta" role="status" data-dsa-pk-privileged-setup-message>' + escapeHtml( setupMessage ) + '</p>' : '<p class="dsa-panel__meta" role="status" data-dsa-pk-privileged-setup-message></p>',
 				renderPhoneKeyError(),
 				'<input class="dsa-auth-field" id="dsa-pk-admin-password" type="password" autocomplete="current-password" placeholder="WordPress password">',
-				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-admin-password>Continue</button><a class="dsa-panel__button" href="' + escapeHtml( resetPasswordUrl ) + '">Set or reset WordPress password</a></div>',
+				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-admin-password>Continue</button>' + ( setup.emailAvailable ? '<button class="dsa-panel__button" type="button" data-dsa-pk-privileged-setup-resend>Resend setup email</button>' : '<a class="dsa-panel__button" href="' + escapeHtml( resetPasswordUrl ) + '">Set or reset WordPress password</a>' ) + '</div>',
 			].join( '' ),
 			function ( root ) {
 				const submit = function () {
 					const password = root.querySelector( '#dsa-pk-admin-password' ).value;
 
 					setPhoneKeyBusy( true );
-					phoneKeyPost( 'admin-password-verify', { token: phonekeyState.token, password: password } )
+					phoneKeyPost( 'admin-password-verify', { token: phonekeyState.token, password: password, deferOtpDelivery: true } )
 						.then( function ( response ) {
 							phonekeyState.token = response.token || phonekeyState.token;
 							phonekeyState.mode = response.mode || 'enroll_passkey';
@@ -6264,7 +6367,9 @@
 								phonekeyState.phoneDeliveryProvider = response.phoneDeliveryProvider || '';
 								phonekeyState.phoneDeliveryMessage = response.phoneDeliveryMessage || '';
 								applyOtpCooldown( response );
-								renderVerify( { identifierType: verificationTarget, emailDelivery: 'otp', phoneDeliveryProvider: response.phoneDeliveryProvider, phoneDeliveryMessage: response.phoneDeliveryMessage } );
+								const verificationResponse = { identifier: response.identifier, identifierType: verificationTarget, emailDelivery: 'otp', phoneDeliveryProvider: response.phoneDeliveryProvider, phoneDeliveryMessage: response.phoneDeliveryMessage, deliveryPending: Boolean( response.deliveryPending ) };
+								renderVerify( verificationResponse );
+								beginDeferredOtpDelivery( verificationResponse );
 								return;
 							}
 							if ( response.next === 'login_passkey' ) {
@@ -6275,7 +6380,7 @@
 						} )
 						.catch( function ( error ) {
 							phonekeyState.error = error.message;
-							renderPrivileged();
+							renderPrivileged( {} );
 						} )
 						.finally( function () {
 							setPhoneKeyBusy( false );
@@ -6283,12 +6388,17 @@
 				};
 
 				root.querySelector( '[data-dsa-pk-admin-password]' ).addEventListener( 'click', submit );
+				const resend = root.querySelector( '[data-dsa-pk-privileged-setup-resend]' );
+				if ( resend ) resend.addEventListener( 'click', function () { requestPrivilegedPasswordSetup( root, true ); } );
 				root.querySelector( '#dsa-pk-admin-password' ).addEventListener( 'keydown', function ( event ) {
 					if ( event.key === 'Enter' ) {
 						event.preventDefault();
 						submit();
 					}
 				} );
+				if ( setup.status === 'queued' ) {
+					window.setTimeout( function () { requestPrivilegedPasswordSetup( root, false ); }, 0 );
+				}
 			}
 		);
 	}
@@ -6298,7 +6408,7 @@
 		const code = root && root.querySelector( '#dsa-pk-code' ) ? root.querySelector( '#dsa-pk-code' ).value.trim() : '';
 		const verificationTarget = phonekeyState.verificationTarget === 'phone' ? 'phone' : 'email';
 
-		phoneKeyPost( 'verify-code', { token: phonekeyState.token, code: code } )
+		phoneKeyPost( 'verify-code', { token: phonekeyState.token, code: code, deferOtpDelivery: true } )
 			.then( function ( response ) {
 				if ( response && ( response.redirect || response.requiresTotp ) ) {
 					phonekeyState.adminPhoneBinding = false;
@@ -6321,9 +6431,13 @@
 					phonekeyState.phoneDeliveryProvider = response.phoneDeliveryProvider || '';
 					phonekeyState.phoneDeliveryMessage = response.phoneDeliveryMessage || '';
 					phonekeyState.verificationTarget = 'phone';
+					phonekeyState.deliveryPending = Boolean( response.deliveryPending );
+					phonekeyState.deliveryRequestToken = '';
 					applyOtpCooldown( response );
 					phonekeyState.error = '';
-					renderVerify( { identifierType: 'phone', emailDelivery: 'otp', phoneDeliveryProvider: response.phoneDeliveryProvider, phoneDeliveryMessage: response.phoneDeliveryMessage } );
+					const verificationResponse = { identifier: response.identifier, identifierType: 'phone', emailDelivery: 'otp', phoneDeliveryProvider: response.phoneDeliveryProvider, phoneDeliveryMessage: response.phoneDeliveryMessage, deliveryPending: Boolean( response.deliveryPending ) };
+					renderVerify( verificationResponse );
+					beginDeferredOtpDelivery( verificationResponse );
 					return;
 				}
 				if ( response.next === 'login_passkey' ) {
@@ -6572,18 +6686,23 @@
 					}
 
 					setPhoneKeyBusy( true );
-					phoneKeyPost( 'bind-phone', { token: phonekeyState.token, phone: phone } )
+					phoneKeyPost( 'bind-phone', { token: phonekeyState.token, phone: phone, deferOtpDelivery: true } )
 						.then( function ( bindResponse ) {
 							phonekeyState.error = '';
 							phonekeyState.token = bindResponse.token || phonekeyState.token;
 
-							if ( bindResponse && bindResponse.otpDispatched ) {
+							if ( bindResponse && ( bindResponse.otpDispatched || bindResponse.deliveryPending ) ) {
+								phonekeyState.identifier = bindResponse.identifier || 'phone ending ' + phone.replace( /\D/g, '' ).slice( -4 );
 								phonekeyState.identifierType = 'phone';
 								phonekeyState.verificationTarget = 'phone';
 								phonekeyState.emailDelivery = 'otp';
 								phonekeyState.adminPhoneBinding = true;
+								phonekeyState.deliveryPending = Boolean( bindResponse.deliveryPending );
+								phonekeyState.deliveryRequestToken = '';
 								applyOtpCooldown( bindResponse );
-								renderVerify( { identifierType: 'phone', emailDelivery: 'otp' } );
+								const verificationResponse = { identifier: bindResponse.identifier, identifierType: 'phone', emailDelivery: 'otp', deliveryPending: Boolean( bindResponse.deliveryPending ) };
+								renderVerify( verificationResponse );
+								beginDeferredOtpDelivery( verificationResponse );
 								return;
 							}
 
@@ -6734,15 +6853,19 @@
 						return;
 					}
 					setPhoneKeyBusy( true );
-					phoneKeyPost( 'counterpart/start', { token: phonekeyState.token, identifier: identifier } )
+					phoneKeyPost( 'counterpart/start', { token: phonekeyState.token, identifier: identifier, deferOtpDelivery: true } )
 						.then( function ( next ) {
 							phonekeyState.token = next.token;
 							phonekeyState.identifierType = type;
 							phonekeyState.verificationTarget = type;
 							phonekeyState.emailDelivery = 'otp';
+							phonekeyState.deliveryPending = Boolean( next.deliveryPending );
+							phonekeyState.deliveryRequestToken = '';
 							phonekeyState.error = '';
 							applyOtpCooldown( next );
-							renderVerify( { identifierType: type, emailDelivery: 'otp' } );
+							const verificationResponse = { identifierType: type, emailDelivery: 'otp', deliveryPending: Boolean( next.deliveryPending ) };
+							renderVerify( verificationResponse );
+							beginDeferredOtpDelivery( verificationResponse );
 						} )
 						.catch( function ( error ) {
 							phonekeyState.error = error.message || 'Could not verify that recovery contact.';

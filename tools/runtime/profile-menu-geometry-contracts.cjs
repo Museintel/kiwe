@@ -125,6 +125,14 @@ check('closing a Surface restores reading position after synthetic history relea
 	&& surface.includes('restoreSurfaceScrollPosition( surfaceScrollY );')
 	&& surface.includes('if ( ! menuAnchorNavigationPending ) restoreSurfaceScrollPosition( surfaceScrollY );')
 );
+const menuBinding = surface.slice(surface.indexOf('function bindMenuPanel()'), surface.indexOf('function pageScrollHeaderOffset()'));
+check('TOC selection converts the synthetic Sheet entry into the article anchor without a late history rollback',
+	menuBinding.includes('surfaceHistoryActive = false;')
+	&& menuBinding.includes('closeOverlay( false, { retainHistory: true, immediate: true } );')
+	&& menuBinding.includes('delete state.kiweSurface;')
+	&& menuBinding.includes('window.history.replaceState')
+	&& !menuBinding.includes('window.history.back(')
+);
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

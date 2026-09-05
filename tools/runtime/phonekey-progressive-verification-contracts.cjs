@@ -59,9 +59,26 @@ check('profile factor buttons transition into the server-selected OTP and comple
 check('PhoneKey close remains enabled during network work and closes immediately', surface.includes("button:not([data-dsa-pk-close]), input") && surface.includes("closeOverlay( false, { immediate: true } )"));
 check('OTP verification route is server-authoritative', core.includes("'/verify-code'") && core.includes('function pk_flow_verification_type') && core.includes('function pk_rest_verify_code') && core.includes("return pk_rest_verify_phone( $r )") && core.includes("return pk_rest_verify_email( $r )"));
 check('browser no longer chooses an email or phone verification endpoint', surface.includes("phoneKeyPost( 'verify-code'") && !/function verifyCode[\s\S]*?phoneKeyPost\( isPhone \? 'verify-phone' : 'verify-email'/.test(surface));
-check('counterpart UI preserves the server-requested factor', surface.includes("phonekeyState.verificationTarget = type") && surface.includes("renderVerify( { identifierType: type, emailDelivery: 'otp' } )"));
+check('counterpart UI preserves the server-requested factor',
+	surface.includes("phonekeyState.verificationTarget = type")
+	&& surface.includes("const verificationResponse = { identifierType: type, emailDelivery: 'otp'")
+	&& surface.includes('renderVerify( verificationResponse );')
+);
 check('OTP issuance responses publish a resend cooldown', (core.match(/'resendAfter'/g) || []).length >= 7);
 check('resend cooldown is visible and survives busy-state release', surface.includes("'Resend code in ' + remaining + 's'") && surface.includes('control.disabled = busy || coolingDown') && surface.includes('syncOtpResendCountdown'));
+check('initial OTP delivery transitions to the code screen before a slow provider returns',
+	core.includes("$defer_otp_delivery = (bool) $r->get_param( 'deferOtpDelivery' )")
+	&& core.includes("'deliveryPending' => $delivery_pending")
+	&& surface.includes("deferOtpDelivery: true")
+	&& surface.includes('function beginDeferredOtpDelivery')
+	&& surface.includes("phoneKeyPost( 'resend-otp', { token: requestToken } )")
+	&& surface.includes('Preparing and sending your code securely')
+);
+check('OTP controls stay unavailable until the delivery provider accepts the code',
+	surface.includes("deliveryPending ? ' disabled' : ''")
+	&& surface.includes("deliveryPending ? 'Sending code&hellip;'")
+	&& surface.includes('phonekeyState.deliveryPending = false;')
+);
 check('resend channel is also selected from flow metadata', /function pk_rest_resend_otp[\s\S]*?pk_flow_verification_type\( \$meta \)/.test(core));
 check('server enforces the cooldown before consuming the broader resend allowance', /function pk_rest_resend_otp[\s\S]*?pk_otp_resend_after[\s\S]*?Please wait before requesting another code[\s\S]*?pk_rate_limit\( 'otp_resend\|'/.test(core));
 check('new-device OTP copy names a masked server-selected destination',

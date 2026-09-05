@@ -38,6 +38,24 @@ check('wp-login replacement preserves break glass and password recovery actions'
 check('break glass re-entry bypasses counters and fresh entry never fails closed on alert throttling', secure.includes('if ( stp_break_glass_session_valid() )') && secure.includes('$alert_allowed = stp_rate_limit') && !secure.includes('Recovery login temporarily rate limited.'));
 check('wp-admin permits only completed privileged enrollment outside break glass', /pk_protect_wordpress_admin[\s\S]*?pk_break_glass_login_allowed[\s\S]*?pk_admin_enrollment_complete\( get_current_user_id\(\) \)/.test(core));
 check('role elevation revokes WordPress and PhoneKey sessions and forces reenrollment', core.includes("WP_Session_Tokens::get_instance( $user_id )->destroy_all()") && core.includes("'pk_admin_enrollment_required'") && core.includes("'pk_force_reenroll'") && core.includes("'privilege_elevation_requires_stepup'"));
+check('privilege elevation queues a native one-time password setup handoff',
+  core.includes('function pk_queue_privileged_access_setup')
+  && core.includes("pk_queue_privileged_access_setup( $user_id, $role, 'role_elevation' )")
+  && core.includes('get_password_reset_key( $user )')
+  && core.includes("'wp-login.php?action=rp&key='")
+  && core.includes('this email never contains a password')
+);
+check('Key-created privileged accounts cannot treat their unshared bootstrap secret as a chosen password',
+  core.includes('function pk_wordpress_password_setup_required')
+  && core.includes("'pk_created_by_phonekey'")
+  && core.includes("'pk_wordpress_password_set_at'")
+  && core.includes("'existing_key_account'")
+);
+check('native password creation is recorded and still revokes old privileged assurance',
+  core.includes('function pk_sync_wordpress_profile_password_change')
+  && core.includes("add_action( 'after_password_reset', 'pk_sync_wordpress_password_reset'")
+  && /pk_sync_wordpress_password_reset[\s\S]*?pk_wordpress_password_set_at[\s\S]*?pk_admin_password_bound_at[\s\S]*?pk_force_reenroll/.test(core)
+);
 check('every privileged role-scope change revokes assurance rather than inheriting a broader session', core.includes("'privileged_role_scope_changed_requires_stepup'") && core.includes('$role_changed && ( $is_privileged || $was_privileged )'));
 check('trusted devices are invalidated when their WordPress role scope changes', core.includes("trusted_device_role_scope_revoked") && core.includes("SELECT id, role_scope FROM"));
 check('PhoneKey-created users can never inherit a privileged signup role', /pk_create_user_for_identifier[\s\S]*?pk_role_is_high_privilege_role[\s\S]*?wp_generate_password\( 32/.test(core));
@@ -45,6 +63,13 @@ check('privileged login fails closed before WordPress auth cookies when setup is
 check('existing subscriber passkeys are asserted rather than recreated after promotion', core.includes("$has_passkey ? 'login_passkey' : 'enroll_passkey'") && surface.includes("response.next === 'login_passkey'"));
 check('passkey assertion continues to mandatory phone binding for privileged roles', /pk_rest_webauthn_login_verify[\s\S]*?pk_privileged_bind_phone_response/.test(core));
 check('strict PhoneKey exposes the native WordPress password setup and reset lane', surface.includes('Set or reset WordPress password') && surface.includes('phonekey.resetPasswordUrl'));
+check('promoted users receive an in-sheet congratulations and setup-email recovery lane',
+  core.includes("'/privileged-password-setup'")
+  && core.includes('function pk_rest_privileged_password_setup')
+  && surface.includes('Congratulations on your new access')
+  && surface.includes("phoneKeyPost( 'privileged-password-setup'")
+  && surface.includes('Resend setup email')
+);
 check('legacy privileged WordPress sessions enter strict PhoneKey directly instead of looping on Profile', bridge.includes("'privilegedEnrollmentRequired'") && bridge.includes("pk_admin_enrollment_complete") && /directAuth === '1'[\s\S]*?user\.privilegedEnrollmentRequired[\s\S]*?openProfileVerification/.test(surface));
 check('frontend admin bar uses the canonical Kiwe dock setting', assets.includes("hide_frontend_admin_bar") && !core.includes("pk[hide_admin_bar]"));
 check('counterpart binding follows email-or-phone mode, stays in-sheet, and can be skipped for ordinary accounts', core.includes("'email_or_phone' !== ( $s['identifier_mode']") && core.includes("/counterpart/start") && core.includes("/counterpart/skip") && surface.includes("renderCounterpartPrompt"));

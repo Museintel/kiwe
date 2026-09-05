@@ -131,7 +131,7 @@ function verificationStatus( user ) {
 
 function guestApplicationControl( user, hasWoo ) {
 	const guest = user.guestApplication || {};
-	if ( guest.status === 'approved' ) return '<span class="dsa-guest-status is-approved">Guest</span>';
+	if ( guest.status === 'approved' ) return '<span class="dsa-guest-status is-approved"><span aria-hidden="true">&#10003;</span> Guest</span>';
 	if ( guest.status === 'pending' ) return '<span class="dsa-guest-status is-pending">Guest application pending</span>';
 	if ( guest.status === 'denied' ) return '<span class="dsa-guest-status is-denied">Guest application denied</span>';
 	if ( ! guest.eligible || guest.hasAdminAccess || ! guest.applicationsEnabled ) return '';

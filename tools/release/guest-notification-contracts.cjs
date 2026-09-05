@@ -34,4 +34,9 @@ check(prefs.includes("'securetrack_incident'") && prefs.includes("! user_can( $u
 check(events.includes("add_action( 'kiwe_notification_event'") && events.includes("foreach ( [ 'whatsapp', 'email', 'sms' ] as $channel )"), 'one shared event ingress owns all three external delivery channels');
 check(channels.includes("'securetrack_incident'") && secure.includes("'kiwe_notification_event'") && !secure.slice(secure.indexOf('function stp_alert('), secure.indexOf('/** Count recent failed logins')).includes('wp_mail('), 'SecureTrack uses the shared gateway service instead of direct email');
 check(profile.includes('data-dsa-guest-apply') && profile.includes('guest.postsAvailable') && profile.includes('guest.productsAvailable') && surface.includes("'/account/guest-application'"), 'Profile DSA exposes only enabled application journeys');
+check(
+	profile.includes("guest.status === 'approved' ) return '<span class=\"dsa-guest-status is-approved\"><span aria-hidden=\"true\">&#10003;</span> Guest</span>'")
+	&& profile.indexOf("guest.status === 'approved'") < profile.indexOf('data-dsa-guest-apply'),
+	'approved Guest state is one read-only badge and cannot also render the application action'
+);
 console.log(`${passed} Guest and notification contracts passed.`);
