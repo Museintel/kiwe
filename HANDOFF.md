@@ -8,17 +8,17 @@
 
 Start here, then read the project handoff for the repository you will change. This document is a snapshot and map, not a substitute for executable tests or live evidence.
 
-## 1. Canonical repositories and product baselines
+## 1. Canonical repositories and handoff heads
 
-| Product | Canonical repository | Product baseline before handoff-only docs | Runtime/version |
+| Product | Canonical repository | Canonical branch/revision at handoff | Runtime/version |
 | --- | --- | --- | --- |
-| Kiwe MU plugin, DSA, SiteGraph and public SEAM command source | `https://github.com/Museintel/kiwe` | `codex/phonekey-whatsapp-rc1` at `6471d662a52ba8e69981ffa40267edb14095effc` | `8.0.0-rc.55` |
-| Key.kiwe account/control plane and WhatsApp gateway | `https://github.com/Museintel/key.kiwe` | `main` at `009a9dffd5b6711fe9be605240abf74636695c50` | `1.0.0-rc.3` |
-| Seam.kiwe public compiler/audit Studio and capture extension | `https://github.com/Museintel/seam-compiler` | `main` at `82b245a9e41fdd5bb3c2eac805e65cc6db6a1d7f` | `0.20.0` |
+| Kiwe MU plugin, DSA, SiteGraph and public SEAM command source | `https://github.com/Museintel/kiwe` | `main` at promotion baseline `981459327a8207d470a76505e3f63d2d8fc6ba68`; live RC55 code is `19634ec` | `8.0.0-rc.55` |
+| Key.kiwe account/control plane and WhatsApp gateway | `https://github.com/Museintel/key.kiwe` | `main` at `79d58df5f3363b1586abfaf58bc63f479511fc4f` | `1.0.0-rc.3` |
+| Seam.kiwe public compiler/audit Studio and capture extension | `https://github.com/Museintel/seam-compiler` | `main` at `bd4f5679b22ed119dce1e8816ea34b91587d8efb` | `0.20.0` |
 
 Do not develop from Downloads, `dist/`, `.tmp/`, `.next/`, generated public releases or a Hostinger File Manager copy. Every project is portable from its canonical Git repository.
 
-The revisions above identify the code and live-product state this guide describes. The documentation commits that add these handoffs necessarily advance each repository; use Git history to identify their final commit IDs.
+The revisions above identify the code and live-product state this guide describes. Later documentation or product commits may advance them; use each repository's current Git history and release record rather than treating this table as a permanent pin.
 
 ### Required project guides
 
@@ -184,15 +184,16 @@ The final two rows are a known deployment drift. Do not overwrite `/ideate` manu
 
 ## 8. Branch and synchronization state
 
-- Kiwe `origin/main` is `1211c394...`.
-- The RC55 product baseline at `6471d662...` is seven commits ahead of `origin/main`; RC53-RC55 are live from that product history. Handoff-only documentation commits follow it and do not represent another deployed RC.
-- Seam's `SEAMFLOW-UPSTREAM.json` pins Kiwe `main` at `1211c394...` and 117 exact snapshot files.
-- Key.kiwe's product baseline is `009a9df...`; its handoff is committed separately on its own `main` branch.
+- Kiwe `origin/main` was safely fast-forwarded from `1211c394...` to the reviewed RC55 and handoff history at `9814593...` on 5 September 2026.
+- The historical `codex/phonekey-whatsapp-rc1` branch points to that promotion baseline. New work starts from `main`; do not reset `main` back to the historical base or treat the RC branch as a second source of truth.
+- The installed RC55 product code remains `19634ec`; later commits through `9814593...` are deployment records and handoff documentation, not a newer installed plugin build.
+- Seam's `SEAMFLOW-UPSTREAM.json` still deliberately pins the pre-promotion Kiwe `main` commit `1211c394...` and 117 exact snapshot files. Its declared snapshot must be reviewed and synchronized separately.
+- Key.kiwe and Seam.kiwe use their independent `main` branches and handoff commits listed above.
 
 Recommended order:
 
-1. review and promote the Kiwe RC branch to `main` without rewriting live history;
-2. regenerate/deploy the start registry from the promoted canonical source;
+1. branch new Kiwe work from `main` and preserve the historical RC branch as release evidence;
+2. regenerate/deploy the start registry from canonical source to resolve the tracked 9.0 versus live 8.8 drift;
 3. run Seam's Kiwe drift check, inspect the declared snapshot delta and sync only those paths;
 4. run all three test suites before any production release.
 
@@ -235,7 +236,7 @@ The incoming developer should obtain access through the organization's password 
 
 ## 11. Known risks and unfinished decisions
 
-- **Kiwe main promotion:** live RC55 is not on `main` yet.
+- **Seam snapshot lag after Kiwe promotion:** Seam still pins the former Kiwe `main` baseline. Synchronize through its audited drift workflow; never copy the whole Kiwe tree into Seam.
 - **Start registry drift:** tracked 9.0 versus live 8.8 needs a controlled registry release.
 - **Two SEAM implementation tracks:** `Museintel/kiwe/packages/seam-*` is a newer deterministic library plane; `Museintel/seam-compiler/app/*` is the deployed Studio/compiler. They share concepts but are not drop-in replacements. Convergence needs its own plan and corpus parity gate.
 - **WhatsApp transport:** Baileys linked-device sessions can disconnect because this is not an official guaranteed messaging API. Reconnect, health and email fallback are product requirements.

@@ -1,6 +1,6 @@
 # Kiwe DSA
 
-The public SEAM command entrypoint is [start.kiwelaunch.com](https://start.kiwelaunch.com/). Browser AI clients that cannot yet open a newly indexed domain may read the same canonical start contract from [KIWE-START.md](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/KIWE-START.md); the live registry publishes both locations and immutable release hashes.
+The public SEAM command entrypoint is [start.kiwelaunch.com](https://start.kiwelaunch.com/). Browser AI clients that cannot yet open a newly indexed domain may read the same canonical start contract from [KIWE-START.md](https://github.com/Museintel/kiwe/blob/main/KIWE-START.md); the live registry publishes both locations and immutable release hashes.
 
 Incoming maintainers should start with the [ecosystem handoff](HANDOFF.md), then use the [Kiwe MU-plugin developer handoff](docs/KIWE-MU-DEVELOPER-HANDOFF.md) for source-level ownership, runtime wiring, release gates and recovery.
 

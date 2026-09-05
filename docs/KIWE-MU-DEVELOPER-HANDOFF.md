@@ -4,7 +4,9 @@
 
 **Repository:** `https://github.com/Museintel/kiwe`
 
-**Product baseline before this handoff-only commit:** `codex/phonekey-whatsapp-rc1` at `6471d662a52ba8e69981ffa40267edb14095effc`
+**Canonical branch:** `main`
+
+**Reviewed promotion baseline:** `981459327a8207d470a76505e3f63d2d8fc6ba68`
 
 **Release code commit:** `19634ec`
 
@@ -368,22 +370,24 @@ Preserve internal `pk_*` continuity, WordPress password authority, origin-bound 
 
 ## 15. Known state and handoff risks
 
-1. The RC55 product baseline on `codex/phonekey-whatsapp-rc1` is seven commits ahead of `origin/main`. Later handoff-only documentation commits do not represent another deployed RC. RC53-RC55 and their deployment records are live but not yet promoted to `main`; review and merge deliberately and do not reset the release branch to main.
+1. Kiwe `main` was safely fast-forwarded through the reviewed RC55 and handoff history on 5 September 2026. The historical `codex/phonekey-whatsapp-rc1` pointer remains for audit only. New work starts from `main`; never reset it to the former base or use the old branch as a competing source of truth.
 2. The tracked `public/start.kiwelaunch.com` registry is contract `9.0`, while the live registry returned `8.8` on 5 September 2026. This is deployment drift, not a reason to regenerate or edit `/ideate` ad hoc.
-3. The separate Seam.kiwe repository pins Kiwe `main` commit `1211c394...`, not the RC branch. Synchronize only after the intended Kiwe branch is promoted and `npm run check:kiwe-drift` explains the exact path delta.
+3. The separate Seam.kiwe repository still pins the pre-promotion Kiwe `main` commit `1211c394...`. Synchronize only through `npm run check:kiwe-drift` and the declared snapshot paths after reviewing the exact delta.
 4. The main Kiwe repository contains next-generation `packages/seam-*` compiler libraries while the deployed Seam Studio has its own current converter implementation. Treat convergence as an explicit architecture project; do not silently swap one into the other.
 5. Hostinger's outer website-cache purge endpoint has intermittently returned HTTP 500 even when LiteSpeed accepts a purge and live cache-keyed assets update. Verify the actual live manifest/assets instead of treating that API response alone as release truth.
 6. Baileys is an unofficial WhatsApp linked-device transport. Preserve explicit email fallback, health/reconnect UX and bounded use; never promise guaranteed delivery.
 7. Historical documents describe earlier RC boundaries. This handoff, current code, current changelog and executable contracts take precedence over an older milestone note.
+8. A fresh `npm ci` in `kiwe-ai-toolkit` reported no high or critical advisories and one moderate transitive `qs` advisory. Triage its lockfile update in a dedicated tested commit; do not run a broad automated dependency rewrite during an unrelated release.
 
 ## 16. First-day maintainer sequence
 
 1. Clone all three canonical repositories from Git; do not copy build directories from this workstation.
-2. Check out the exact revisions listed in the ecosystem `HANDOFF.md`.
+2. Start each project from its canonical branch in the ecosystem `HANDOFF.md`; for Kiwe that is now `main`.
 3. Read this file, `docs/notification-architecture.md`, `docs/client-workspace-ownership.md`, `docs/RELEASE-RUNBOOK.md` and `docs/SECURITY-AUDIT.md`.
-4. Run the Kiwe green baseline without changing source.
-5. Inspect `git diff origin/main...codex/phonekey-whatsapp-rc1` and decide the reviewed promotion path.
-6. Use a disposable WordPress/Woo/Bricks test installation for role, Key, checkout or updater changes.
-7. Never begin with a live Ascendants edit or an unversioned File Manager copy.
+4. Run `npm ci --prefix kiwe-ai-toolkit` so the SiteGraph/MCP contract dependency comes from the committed lockfile.
+5. Run the Kiwe green baseline without changing source.
+6. Confirm the Kiwe worktree tracks `origin/main`; treat `codex/phonekey-whatsapp-rc1` as historical release evidence.
+7. Use a disposable WordPress/Woo/Bricks test installation for role, Key, checkout or updater changes.
+8. Never begin with a live Ascendants edit or an unversioned File Manager copy.
 
 If an implementation appears duplicated, first identify the authority and adapter. The architecture deliberately keeps compatibility shims around Key/PhoneKey, WordPress/Woo ownership and compiler generations; deleting one because names look similar can break live continuity.
