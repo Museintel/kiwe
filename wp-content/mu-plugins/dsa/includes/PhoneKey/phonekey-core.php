@@ -420,7 +420,7 @@ function pk_send_privileged_access_setup_email( $user_id, $generation = '', $for
 	$requires_new_password = pk_wordpress_password_setup_required( $user_id );
 	$subject = sprintf( '[%s] Your %s access is ready', $site, $role_label );
 	$message = sprintf(
-		"Congratulations — your WordPress account now has %1\$s access on %2\$s.\n\n%3\$s\n\nUse this one-time link to set or reset your WordPress password:\n%4\$s\n\nThen return to the site and continue through Key.kiwe. Administrator-area access still requires recovery verification and a passkey; this email never contains a password.",
+		"Congratulations — your WordPress account now has %1\$s access on %2\$s.\n\n%3\$s\n\nUse this one-time link to open the site's private Key.kiwe password screen:\n%4\$s\n\nWordPress remains the password authority behind this ad-free screen. Then return to the site and continue through Key.kiwe. Administrator-area access still requires recovery verification and a passkey; this email never contains a password.",
 		$role_label,
 		$site,
 		$requires_new_password
@@ -2342,6 +2342,86 @@ function pk_surface_login_url() {
 	return add_query_arg( 'kiwe-auth', '1', home_url( '/' ) );
 }
 
+/**
+ * Keep WordPress as the password authority while presenting its isolated
+ * login/reset document as the site's private Key.kiwe surface. The reset key
+ * deliberately never enters a normal theme page where advertisements,
+ * analytics, or other third-party assets could receive it in a referrer.
+ */
+function pk_login_brand_logo_url() {
+	if ( class_exists( '\\DSA\\Site\\Site_Identity_Service' ) ) {
+		$logo_url = \DSA\Site\Site_Identity_Service::logo_url();
+		if ( $logo_url ) return esc_url_raw( $logo_url );
+	}
+
+	$logo_id = absint( get_theme_mod( 'custom_logo' ) );
+	if ( $logo_id ) {
+		$logo_url = wp_get_attachment_image_url( $logo_id, 'full' );
+		if ( $logo_url ) return esc_url_raw( $logo_url );
+	}
+
+	$site_icon = get_site_icon_url( 192 );
+	return $site_icon ? esc_url_raw( $site_icon ) : '';
+}
+
+function pk_brand_wordpress_login() {
+	$logo_url = pk_login_brand_logo_url();
+	$logo_rule = $logo_url
+		? 'background-image:url(' . wp_json_encode( $logo_url ) . ')!important;background-size:contain!important;'
+		: 'background-image:none!important;';
+	$fallback_mark = $logo_url
+		? ''
+		: '#login h1{display:none;}';
+
+	$css = '
+		body.login{box-sizing:border-box;min-height:100vh;margin:0;background:#f3f7f6;color:#17242f;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+		body.login *{box-sizing:border-box;}
+		#login{width:min(92vw,460px);padding:clamp(24px,7vh,72px) 0 32px;}
+		#login h1{margin:0 0 14px;}
+		body.login div#login h1 a{' . $logo_rule . 'width:100%;height:68px;margin:0 auto;background-position:center;background-repeat:no-repeat;font-size:0;text-indent:0;overflow:visible;}
+		' . $fallback_mark . '
+		.kiwe-key-auth-context{margin:0 0 12px;text-align:center;color:#52616b;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+		.kiwe-key-auth-context strong{display:block;margin-bottom:5px;color:#17242f;font-size:28px;line-height:1.15;letter-spacing:-.03em;text-transform:none;}
+		.login form{margin-top:0;padding:28px;border:1px solid #d8e2df;border-radius:22px;background:#fff;box-shadow:0 14px 34px rgba(20,44,38,.08);}
+		.login label{color:#263640;font-size:14px;font-weight:650;}
+		.login form .input,.login input[type=password],.login input[type=text]{min-height:50px;margin-top:7px;border:1px solid #cbd7d4;border-radius:12px;background:#fff;box-shadow:none;font-size:17px;}
+		.login form .input:focus,.login input[type=password]:focus,.login input[type=text]:focus{border-color:#0f766e;box-shadow:0 0 0 2px rgba(15,118,110,.16);}
+		.wp-core-ui .button-primary{min-height:46px;padding:0 20px;border:0;border-radius:12px;background:#0f766e;font-weight:700;text-shadow:none;box-shadow:none;}
+		.wp-core-ui .button-primary:hover,.wp-core-ui .button-primary:focus{background:#0b5f59;}
+		.login .message,.login .notice,.login #login_error{margin:0 0 14px;padding:14px 16px;border:1px solid #d8e2df;border-left:4px solid #0f766e;border-radius:12px;background:#fff;box-shadow:none;}
+		.login #nav,.login #backtoblog{padding:0;text-align:center;}
+		.login #nav a,.login #backtoblog a,.login .privacy-policy-page-link a{color:#36525b;}
+		.login .language-switcher{margin-top:18px;}
+		@media(max-width:480px){#login{width:calc(100% - 28px);padding-top:24px}.login form{padding:22px 18px;border-radius:18px}body.login div#login h1 a{height:56px}}
+	';
+
+	wp_add_inline_style( 'login', $css );
+}
+add_action( 'login_enqueue_scripts', 'pk_brand_wordpress_login', 20 );
+
+add_filter( 'login_headerurl', static function () {
+	return home_url( '/' );
+} );
+
+add_filter( 'login_headertext', static function () {
+	return sprintf( '%s — Secure access by Key.kiwe', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) );
+} );
+
+add_filter( 'login_title', static function ( $login_title, $title ) {
+	return esc_html( wp_strip_all_tags( (string) $title ) ) . ' &lsaquo; ' . esc_html( wp_strip_all_tags( get_bloginfo( 'name' ) ) );
+}, 10, 2 );
+
+add_filter( 'login_body_class', static function ( $classes ) {
+	$classes[] = 'kiwe-key-auth';
+	return array_values( array_unique( $classes ) );
+} );
+
+add_filter( 'login_message', static function ( $message ) {
+	if ( false !== strpos( (string) $message, 'kiwe-key-auth-context' ) ) return $message;
+	$fallback_name = pk_login_brand_logo_url() ? '' : '<strong>' . esc_html( wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ) . '</strong>';
+	return '<div class="kiwe-key-auth-context">' . $fallback_name . 'Private, ad-free access by Key.kiwe</div>' . $message;
+}, 5 );
+
 function pk_protect_wordpress_login() {
 	$s = pk_settings();
 	if ( empty( $s['replace_wp_login'] ) || pk_break_glass_login_allowed() ) return;
@@ -2734,6 +2814,43 @@ function pk_flow_device_recovery_verified( $meta ) {
 		&& hash_equals( $ip_hash, pk_hmac( pk_ip() ) );
 }
 
+/**
+ * Recovery proves that the account owner may continue on this browser. It
+ * does not imply that an existing passkey disappeared. Synced/passkey-manager
+ * credentials must be asserted before registration is offered; otherwise the
+ * browser correctly rejects the excluded duplicate credential.
+ */
+function pk_new_device_recovery_response( $user_id, array $flow_meta, $factor ) {
+	$user_id = pk_canonical_user_id( absint( $user_id ) );
+	$has_passkey = $user_id && pk_credential_count( $user_id ) > 0;
+	$flow_meta['mode'] = $has_passkey ? 'device_passkey_assert' : 'device_passkey_enroll';
+	$flow_meta['device_recovery_verified_at'] = time();
+	$flow_meta['device_recovery_ip_hash'] = pk_hmac( pk_ip() );
+	$next_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $flow_meta );
+
+	pk_log(
+		'new_device_otp_verified',
+		$user_id,
+		array(
+			'factor' => sanitize_key( $factor ),
+			'next'   => $has_passkey ? 'passkey_assertion' : 'passkey_enrollment',
+		),
+		'success'
+	);
+
+	return array(
+		'ok'                     => true,
+		'next'                   => $has_passkey ? 'login_passkey' : 'enroll_passkey',
+		'mode'                   => $flow_meta['mode'],
+		'token'                  => $next_token,
+		'newDevice'              => true,
+		'deviceRecoveryVerified' => true,
+		'hasPasskey'             => (bool) $has_passkey,
+		'canRegisterPasskey'     => true,
+		'security'               => pk_security_completion( $user_id ),
+	);
+}
+
 function pk_rest_verify_email( WP_REST_Request $r ) {
 	$flow_token = sanitize_text_field( $r->get_param( 'token' ) );
 	$code = preg_replace( '/[^0-9]/', '', (string) $r->get_param( 'code' ) );
@@ -2819,12 +2936,7 @@ function pk_rest_verify_email( WP_REST_Request $r ) {
 		}
 	}
 	if ( 'new_device_verify' === ( $flow_meta['mode'] ?? '' ) ) {
-		$flow_meta['mode'] = 'device_passkey_enroll';
-		$flow_meta['device_recovery_verified_at'] = time();
-		$flow_meta['device_recovery_ip_hash'] = pk_hmac( pk_ip() );
-		$enroll_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $flow_meta );
-		pk_log( 'new_device_otp_verified', $user_id, array( 'factor' => 'email' ), 'success' );
-		return rest_ensure_response( array( 'ok' => true, 'next' => 'enroll_passkey', 'token' => $enroll_token, 'newDevice' => true ) );
+		return rest_ensure_response( pk_new_device_recovery_response( $user_id, $flow_meta, 'email' ) );
 	}
 	$flow_meta['identity_verified_this_flow'] = 1;
 	$next_setup = pk_next_security_setup_response( $user_id, $flow_meta );
@@ -2870,12 +2982,7 @@ function pk_rest_verify_phone( WP_REST_Request $r ) {
 		\DSA\Commerce\COD_Gate_Service::confirm_phone_for_cod( pk_hmac( $verified_phone ) );
 	}
 	if ( 'new_device_verify' === ( $flow_meta['mode'] ?? '' ) ) {
-		$flow_meta['mode'] = 'device_passkey_enroll';
-		$flow_meta['device_recovery_verified_at'] = time();
-		$flow_meta['device_recovery_ip_hash'] = pk_hmac( pk_ip() );
-		$enroll_token = pk_issue_token( 'flow', $user_id, PK_FLOW_TTL, $flow_meta );
-		pk_log( 'new_device_otp_verified', $user_id, array( 'factor' => 'phone' ), 'success' );
-		return rest_ensure_response( array( 'ok' => true, 'next' => 'enroll_passkey', 'token' => $enroll_token, 'newDevice' => true ) );
+		return rest_ensure_response( pk_new_device_recovery_response( $user_id, $flow_meta, 'phone' ) );
 	}
 	if ( 'bind_phone_required' === ( $flow_meta['mode'] ?? '' ) && pk_is_privileged( $user_id ) && pk_credential_count( $user_id ) > 0 ) {
 		pk_flag_admin_enrollment( $user_id );
@@ -2962,7 +3069,7 @@ function pk_rest_privileged_password_setup( WP_REST_Request $r ) {
 
 	return rest_ensure_response( array(
 		'ok' => true,
-		'message' => 'A one-time WordPress password setup link was sent to the account email.',
+		'message' => 'A one-time private Key.kiwe password setup link was sent to the account email.',
 		'privilegedSetup' => pk_privileged_access_setup_state( $user_id ),
 	) );
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 8.0.0-rc.55 — 2026-09-05
+
+- Keep WordPress as the sole password authority while presenting its isolated login, lost-password and reset-password document as a responsive, site-branded Key.kiwe surface. The Design Context logo replaces WordPress branding, and reset bearer keys remain off normal theme pages, advertisements and analytics.
+- Correct new-device recovery to assert an existing or synced passkey first. A new credential is offered only when that device genuinely needs one, preventing WebAuthn's duplicate-credential rejection after a user already enrolled a passkey on the same relying party.
+- Turn duplicate WebAuthn registration into a clear route back to existing-passkey assertion, and detect in-app browsers without passkey APIs before opening an unusable authenticator prompt. The recovery screen explains that moving into a full browser creates a separate secure browser context and therefore repeats verification.
+- Make OTP destination language explicit: email identifiers use email, phone identifiers use the configured WhatsApp/SMS lane, and the configured email fallback is labelled as such instead of being presented as phone delivery.
+- Extend strict-flow release gates for site-owned password branding, assertion-first device recovery, duplicate-credential handling and in-app browser guidance.
+
 ## 8.0.0-rc.54 — 2026-09-05
 
 - Complete the Key.kiwe-to-WordPress privilege handoff without ever emailing or exposing a plaintext password. Elevating an account into any administrator-area role now revokes prior assurance, queues WordPress' native one-time set/reset-password link, and greets the user with the exact first-access instructions inside Key.kiwe.

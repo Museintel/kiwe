@@ -639,6 +639,11 @@
 		privilegedSetup: {},
 		privilegedSetupRequestPending: false,
 		adminPhoneBinding: false,
+		knownDevice: null,
+		newDevice: false,
+		deviceRecoveryVerified: false,
+		hasPasskey: false,
+		canRegisterPasskey: false,
 	};
 	let permissionAskSessionCount = permissionSessionAskCount();
 	let notificationPreferences = loadNotificationPreferenceDraft();
@@ -3210,6 +3215,11 @@
 			privilegedSetupRequestPending: false,
 			intent: '',
 			security: {},
+			knownDevice: null,
+			newDevice: false,
+			deviceRecoveryVerified: false,
+			hasPasskey: false,
+			canRegisterPasskey: false,
 		};
 	}
 
@@ -6082,7 +6092,11 @@
 					identifier: response.identifier,
 					identifierType: response.identifierType,
 					canEmailRecovery: Boolean( response.canEmailRecovery ),
-					knownDevice: Boolean( response.knownDevice ),
+					knownDevice: response.knownDevice === true,
+					newDevice: response.mode === 'new_device_verify',
+					deviceRecoveryVerified: Boolean( response.deviceRecoveryVerified ),
+					hasPasskey: Boolean( response.hasPasskey ),
+					canRegisterPasskey: Boolean( response.canRegisterPasskey ),
 					hasTotp: Boolean( response.hasTotp ),
 					hasBackup: Boolean( response.hasBackup ),
 					emailDelivery: response.emailDelivery || 'magic_link',
@@ -6131,39 +6145,110 @@
 			} );
 	}
 
-	function renderPasskeyLogin() {
-		const newDevice = phonekeyState.knownDevice === false;
+	function passkeyInAppBrowser() {
+		const userAgent = String( ( window.navigator && window.navigator.userAgent ) || '' );
+		return /(?:;\s*wv\)|\bwv\b|FBAN|FBAV|Instagram|GSA\/|Line\/)/i.test( userAgent );
+	}
+
+	function passkeyApiAvailable() {
+		return Boolean(
+			window.isSecureContext
+			&& ! passkeyInAppBrowser()
+			&& window.PublicKeyCredential
+			&& window.navigator
+			&& window.navigator.credentials
+		);
+	}
+
+	function passkeyBrowserRestartUrl() {
+		const url = new URL( window.location.href );
+		url.search = '';
+		url.hash = '';
+		url.searchParams.set( 'kiwe-auth', '1' );
+		return url.toString();
+	}
+
+	function passkeyDuplicateCredentialError( error ) {
+		const detail = String( ( error && error.message ) || '' ).toLowerCase();
+		return Boolean(
+			error
+			&& (
+				error.name === 'InvalidStateError'
+				|| detail.indexOf( 'already registered' ) !== -1
+				|| detail.indexOf( 'credentials already registered' ) !== -1
+				|| detail.indexOf( 'relying party' ) !== -1
+			)
+		);
+	}
+
+	function renderPasskeyLogin( response ) {
+		response = response || {};
+		phonekeyState.newDevice = Boolean( response.newDevice || phonekeyState.newDevice );
+		phonekeyState.deviceRecoveryVerified = Boolean( response.deviceRecoveryVerified || phonekeyState.deviceRecoveryVerified );
+		phonekeyState.hasPasskey = Boolean( response.hasPasskey || phonekeyState.hasPasskey );
+		phonekeyState.canRegisterPasskey = Boolean( response.canRegisterPasskey || phonekeyState.canRegisterPasskey );
+		const recoveredDevice = phonekeyState.newDevice && phonekeyState.deviceRecoveryVerified;
+		const passkeyAvailable = passkeyApiAvailable();
+		const alternateAvailable = Boolean( ( ! recoveredDevice && phonekeyState.canEmailRecovery ) || phonekeyState.hasTotp || phonekeyState.hasBackup );
+		const explanation = recoveredDevice
+			? 'Recovery is confirmed. Use the passkey already saved or synced to this device. If this device has no copy, add a new passkey to it.'
+			: 'Confirm it is you with your device passkey.';
+		const browserHelp = passkeyAvailable
+			? ''
+			: '<div class="dsa-auth-error">Passkeys are not available in this in-app browser. Open the site in Chrome, Safari, or Edge and sign in again; browser isolation means the verification step must be repeated.</div>';
+		const actions = [
+			'<button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-pass' + ( passkeyAvailable ? '' : ' disabled' ) + '>Use existing passkey</button>',
+			recoveredDevice && phonekeyState.canRegisterPasskey ? '<button class="dsa-panel__button" data-dsa-pk-add-device' + ( passkeyAvailable ? '' : ' disabled' ) + '>Add passkey to this device</button>' : '',
+			! passkeyAvailable ? '<a class="dsa-panel__button" href="' + escapeHtml( passkeyBrowserRestartUrl() ) + '" target="_blank" rel="noopener noreferrer">Open in full browser</a>' : '',
+			alternateAvailable ? '<button class="dsa-panel__button" data-dsa-pk-other>Try another way</button>' : '',
+		].join( '' );
 		renderPhoneKeyStep(
 			[
 				'<h2>Welcome back' + ( phonekeyState.name ? ', ' + escapeHtml( phonekeyState.name ) : '' ) + '</h2>',
-				'<p>' + ( newDevice ? 'This appears to be a new or untrusted device. Use a synced passkey, or verify through your recovery email.' : 'Confirm it is you with your device passkey.' ) + '</p>',
+				'<p>' + explanation + '</p>',
+				browserHelp,
 				renderPhoneKeyError(),
-				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-pass>Continue with passkey</button><button class="dsa-panel__button" data-dsa-pk-other>' + ( newDevice && phonekeyState.canEmailRecovery ? 'Use email code' : 'Try another way' ) + '</button></div>',
+				'<div class="dsa-auth-actions">' + actions + '</div>',
 			].join( '' ),
 			function ( root ) {
-				root.querySelector( '[data-dsa-pk-pass]' ).addEventListener( 'click', passkeyLogin );
-				root.querySelector( '[data-dsa-pk-other]' ).addEventListener( 'click', tryAnother );
+				const pass = root.querySelector( '[data-dsa-pk-pass]' );
+				const addDevice = root.querySelector( '[data-dsa-pk-add-device]' );
+				const other = root.querySelector( '[data-dsa-pk-other]' );
+				if ( pass ) pass.addEventListener( 'click', passkeyLogin );
+				if ( addDevice ) addDevice.addEventListener( 'click', function () {
+					phonekeyState.error = '';
+					renderEnroll( { verified: true, newDevice: true, security: phonekeyState.security || {} } );
+				} );
+				if ( other ) other.addEventListener( 'click', tryAnother );
 			}
 		);
 	}
 
 	function renderEnroll( response ) {
 		response = response || {};
-		const newDevice = Boolean( response && response.newDevice );
+		phonekeyState.newDevice = Boolean( response.newDevice || phonekeyState.newDevice );
+		const newDevice = phonekeyState.newDevice;
+		const passkeyAvailable = passkeyApiAvailable();
 		const security = Object.assign( {}, phonekeyState.security || {}, response && response.security ? response.security : {} );
 		phonekeyState.security = security;
 		const recoveryReady = Boolean( security.emailVerified && security.phoneVerified );
 		renderPhoneKeyStep(
 			[
 				'<h2>' + ( newDevice ? 'Secure this device' : 'Finish securing your account' ) + '</h2>',
-				'<p>' + ( newDevice ? 'Create a passkey for this device using Face ID, fingerprint, device PIN, or its password manager.' : ( recoveryReady ? 'Your email and phone are verified. Create a passkey using Face ID, fingerprint, device PIN, or your browser password manager.' : 'Create a passkey now, or finish the missing recovery contact and passkey later from your profile.' ) ) + '</p>',
+				'<p>' + ( newDevice ? 'Add a passkey for this device using Face ID, fingerprint, device PIN, or its password manager. If a synced passkey already exists, use it instead.' : ( recoveryReady ? 'Your email and phone are verified. Create a passkey using Face ID, fingerprint, device PIN, or your browser password manager.' : 'Create a passkey now, or finish the missing recovery contact and passkey later from your profile.' ) ) + '</p>',
+				! passkeyAvailable ? '<div class="dsa-auth-error">Passkeys are not available in this in-app browser. Open the site in Chrome, Safari, or Edge and sign in again.</div>' : '',
 				! response.verified ? '<p class="dsa-panel__meta">Verification is pending. You can finish it from the link or code sent to you.</p>' : '',
 				! newDevice ? '<p class="dsa-panel__meta">Finishing later keeps the account partially verified. It becomes fully verified after email, phone, and passkey setup are complete.</p>' : '',
 				renderPhoneKeyError(),
-				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-enroll>Set up passkey</button>' + ( newDevice ? '' : '<button class="dsa-panel__button" data-dsa-pk-later>Finish later</button>' ) + '</div>',
+				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-enroll' + ( passkeyAvailable ? '' : ' disabled' ) + '>Set up passkey</button>' + ( newDevice && phonekeyState.hasPasskey ? '<button class="dsa-panel__button" data-dsa-pk-existing>Use existing passkey</button>' : '' ) + ( newDevice ? '' : '<button class="dsa-panel__button" data-dsa-pk-later>Finish later</button>' ) + '</div>',
 			].join( '' ),
 			function ( root ) {
 				root.querySelector( '[data-dsa-pk-enroll]' ).addEventListener( 'click', passkeyRegister );
+				const existing = root.querySelector( '[data-dsa-pk-existing]' );
+				if ( existing ) existing.addEventListener( 'click', function () {
+					phonekeyState.error = '';
+					renderPasskeyLogin();
+				} );
 				const later = root.querySelector( '[data-dsa-pk-later]' );
 				if ( later ) later.addEventListener( 'click', continueLater );
 			}
@@ -6175,6 +6260,7 @@
 		if ( target === 'phone' ) {
 			const phoneHint = /ending\s+\d+/i.test( identifier ) ? identifier : '';
 			const provider = String( ( response && response.phoneDeliveryProvider ) || phonekeyState.phoneDeliveryProvider || '' );
+			if ( provider === 'email_fallback' ) return 'your account email (WhatsApp fallback)';
 			const channel = provider && provider !== 'phone' ? ' through ' + provider.replace( /_/g, ' ' ) : '';
 			return ( phoneHint || 'your phone number' ) + channel;
 		}
@@ -6248,7 +6334,7 @@
 		renderPhoneKeyStep(
 			[
 				'<h2>' + ( newDevice ? 'A new device' : 'Verify first' ) + '</h2>',
-				'<p>' + ( newDevice ? 'It looks like you are using a new device. Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + ', then set up a passkey for this device.' : ( useOtp ? 'Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + '.' : 'We sent a verification link to your email. Open it to continue, or request a recovery code.' ) ) + '</p>',
+				'<p>' + ( newDevice ? 'It looks like you are using a new device. Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + ', then continue with an existing passkey or add one only if this device needs it.' : ( useOtp ? 'Enter the six digit code sent to ' + escapeHtml( verificationDestination ) + '.' : 'We sent a verification link to your email. Open it to continue, or request a recovery code.' ) ) + '</p>',
 				deliveryPending ? '<p class="dsa-panel__meta" role="status" data-dsa-otp-delivery-status>Preparing and sending your code securely&hellip; You can enter it as soon as delivery is confirmed.</p>' : '',
 				isPhone && ( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) ? '<p class="dsa-panel__meta">' + escapeHtml( response.phoneDeliveryMessage || phonekeyState.phoneDeliveryMessage ) + '</p>' : '',
 				! isPhone && phonekeyState.emailAccepted === false ? '<p class="dsa-panel__meta dsa-auth-error">WordPress could not hand this message to its mail transport. The site administrator needs to check Kiwe Email and SMTP.</p>' : '',
@@ -6313,7 +6399,7 @@
 		phoneKeyPost( 'privileged-password-setup', { token: phonekeyState.token, resend: Boolean( resend ) } )
 			.then( function ( response ) {
 				phonekeyState.privilegedSetup = response.privilegedSetup || phonekeyState.privilegedSetup || {};
-				if ( message ) message.textContent = response.message || 'Check your account email for the one-time WordPress password setup link.';
+				if ( message ) message.textContent = response.message || 'Check your account email for the one-time private Key.kiwe password setup link.';
 			} )
 			.catch( function ( error ) {
 				if ( error && error.data && error.data.privilegedSetup ) phonekeyState.privilegedSetup = error.data.privilegedSetup;
@@ -6334,20 +6420,20 @@
 		const newAccess = Boolean( setup.promoted );
 		const passwordRequired = Boolean( setup.required );
 		let setupMessage = '';
-		if ( setup.status === 'sent' ) setupMessage = 'A one-time WordPress password setup link was sent to ' + String( setup.emailHint || 'your account email' ) + '.';
+		if ( setup.status === 'sent' ) setupMessage = 'A one-time private Key.kiwe password setup link was sent to ' + String( setup.emailHint || 'your account email' ) + '.';
 		else if ( setup.status === 'password_set' || setup.status === 'password_confirmed' ) setupMessage = 'Your WordPress password is ready. Enter it below to continue strict security setup.';
 		else if ( setup.status === 'email_missing' ) setupMessage = 'This account needs an email address before WordPress can deliver a secure password setup link. Ask an administrator to add one in Users.';
 		else if ( setup.status === 'failed' ) setupMessage = 'The last setup email could not be handed to the site mail service. You can try again below.';
-		else if ( setup.status === 'queued' ) setupMessage = 'Your one-time WordPress password setup link is being prepared for ' + String( setup.emailHint || 'your account email' ) + '.';
+		else if ( setup.status === 'queued' ) setupMessage = 'Your one-time private Key.kiwe password setup link is being prepared for ' + String( setup.emailHint || 'your account email' ) + '.';
 		renderPhoneKeyStep(
 			[
 				'<h2>' + ( newAccess ? 'Congratulations on your new access' : 'Secure admin access' ) + '</h2>',
-				'<p>' + ( newAccess ? 'Your account now has ' + escapeHtml( roleLabel ) + ' access. ' : '' ) + 'WordPress keeps password authority; Key.kiwe then verifies a recovery contact and your passkey before opening the administrator area.</p>',
+				'<p>' + ( newAccess ? 'Your account now has ' + escapeHtml( roleLabel ) + ' access. ' : '' ) + 'Key.kiwe presents the private password screen while WordPress securely validates the password underneath. Recovery contact and passkey checks follow before the administrator area opens.</p>',
 				passwordRequired ? '<p class="dsa-panel__meta">This account began in Key.kiwe with an unshared random password. Create your own from the one-time email link, then return here.</p>' : '',
 				setupMessage ? '<p class="dsa-panel__meta" role="status" data-dsa-pk-privileged-setup-message>' + escapeHtml( setupMessage ) + '</p>' : '<p class="dsa-panel__meta" role="status" data-dsa-pk-privileged-setup-message></p>',
 				renderPhoneKeyError(),
 				'<input class="dsa-auth-field" id="dsa-pk-admin-password" type="password" autocomplete="current-password" placeholder="WordPress password">',
-				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-admin-password>Continue</button>' + ( setup.emailAvailable ? '<button class="dsa-panel__button" type="button" data-dsa-pk-privileged-setup-resend>Resend setup email</button>' : '<a class="dsa-panel__button" href="' + escapeHtml( resetPasswordUrl ) + '">Set or reset WordPress password</a>' ) + '</div>',
+				'<div class="dsa-auth-actions"><button class="dsa-panel__button dsa-auth-primary" data-dsa-pk-admin-password>Continue</button>' + ( setup.emailAvailable ? '<button class="dsa-panel__button" type="button" data-dsa-pk-privileged-setup-resend>Resend setup email</button>' : '<a class="dsa-panel__button" href="' + escapeHtml( resetPasswordUrl ) + '">Set or reset secure password</a>' ) + '</div>',
 			].join( '' ),
 			function ( root ) {
 				const submit = function () {
@@ -6419,6 +6505,10 @@
 				phonekeyState.token = response.token || phonekeyState.token;
 				phonekeyState.mode = response.next || 'enroll_passkey';
 				phonekeyState.security = response.security || phonekeyState.security || {};
+				phonekeyState.newDevice = Boolean( response.newDevice || phonekeyState.newDevice );
+				phonekeyState.deviceRecoveryVerified = Boolean( response.deviceRecoveryVerified || phonekeyState.deviceRecoveryVerified );
+				phonekeyState.hasPasskey = Boolean( response.hasPasskey || phonekeyState.hasPasskey );
+				phonekeyState.canRegisterPasskey = Boolean( response.canRegisterPasskey || phonekeyState.canRegisterPasskey );
 				if ( response.counterpartRequired ) {
 					phonekeyState.error = '';
 					renderCounterpartPrompt( response );
@@ -6443,7 +6533,7 @@
 				if ( response.next === 'login_passkey' ) {
 					phonekeyState.identifierType = verificationTarget;
 					phonekeyState.error = '';
-					renderPasskeyLogin();
+					renderPasskeyLogin( response );
 					return;
 				}
 				renderEnroll( { verified: true, newDevice: Boolean( response.newDevice ), security: response.security || {} } );
@@ -6596,9 +6686,9 @@
 	}
 
 	function passkeyRegister() {
-		if ( ! window.navigator.credentials ) {
-			phonekeyState.error = 'This browser does not support passkeys.';
-			renderEnroll( {} );
+		if ( ! passkeyApiAvailable() ) {
+			phonekeyState.error = 'Passkeys are not available in this in-app browser. Open the site in Chrome, Safari, or Edge and sign in again.';
+			renderEnroll( { newDevice: phonekeyState.newDevice, verified: true } );
 			return;
 		}
 
@@ -6612,8 +6702,13 @@
 			} )
 			.then( afterPhoneKeyAuth )
 			.catch( function ( error ) {
+				if ( passkeyDuplicateCredentialError( error ) && phonekeyState.hasPasskey ) {
+					phonekeyState.error = 'That passkey is already connected to this account. Use the existing passkey instead of creating it again.';
+					renderPasskeyLogin();
+					return;
+				}
 				phonekeyState.error = error.message || 'Passkey setup failed.';
-				renderEnroll( {} );
+				renderEnroll( { newDevice: phonekeyState.newDevice, verified: true } );
 			} )
 			.finally( function () {
 				setPhoneKeyBusy( false );
@@ -6621,8 +6716,8 @@
 	}
 
 	function passkeyLogin() {
-		if ( ! window.navigator.credentials ) {
-			phonekeyState.error = 'This browser does not support passkeys.';
+		if ( ! passkeyApiAvailable() ) {
+			phonekeyState.error = 'Passkeys are not available in this in-app browser. Open the site in Chrome, Safari, or Edge and sign in again.';
 			renderPasskeyLogin();
 			return;
 		}
