@@ -185,9 +185,9 @@ The final two rows are a known deployment drift. Do not overwrite `/ideate` manu
 ## 8. Branch and synchronization state
 
 - Kiwe `origin/main` is `1211c394...`.
-- The active RC branch is seven commits ahead at `6471d662...`; RC53-RC55 are live from this branch.
+- The RC55 product baseline at `6471d662...` is seven commits ahead of `origin/main`; RC53-RC55 are live from that product history. Handoff-only documentation commits follow it and do not represent another deployed RC.
 - Seam's `SEAMFLOW-UPSTREAM.json` pins Kiwe `main` at `1211c394...` and 117 exact snapshot files.
-- Key.kiwe is independent at `main` `009a9df...`.
+- Key.kiwe's product baseline is `009a9df...`; its handoff is committed separately on its own `main` branch.
 
 Recommended order:
 

@@ -368,7 +368,7 @@ Preserve internal `pk_*` continuity, WordPress password authority, origin-bound 
 
 ## 15. Known state and handoff risks
 
-1. `codex/phonekey-whatsapp-rc1` is seven commits ahead of `origin/main`. RC53-RC55 and their deployment records are live but not yet promoted to `main`. Review and merge deliberately; do not reset the release branch to main.
+1. The RC55 product baseline on `codex/phonekey-whatsapp-rc1` is seven commits ahead of `origin/main`. Later handoff-only documentation commits do not represent another deployed RC. RC53-RC55 and their deployment records are live but not yet promoted to `main`; review and merge deliberately and do not reset the release branch to main.
 2. The tracked `public/start.kiwelaunch.com` registry is contract `9.0`, while the live registry returned `8.8` on 5 September 2026. This is deployment drift, not a reason to regenerate or edit `/ideate` ad hoc.
 3. The separate Seam.kiwe repository pins Kiwe `main` commit `1211c394...`, not the RC branch. Synchronize only after the intended Kiwe branch is promoted and `npm run check:kiwe-drift` explains the exact path delta.
 4. The main Kiwe repository contains next-generation `packages/seam-*` compiler libraries while the deployed Seam Studio has its own current converter implementation. Treat convergence as an explicit architecture project; do not silently swap one into the other.
