@@ -1,7 +1,7 @@
 # SEAM Start
 
-Contract version: `9.0`
-Updated: `2026-08-30`
+Contract version: `9.1`
+Updated: `2026-10-15`
 
 Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context instead. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
 
@@ -19,3 +19,5 @@ SEAM has six commands:
 SiteGraph and its embedded Design Context are attached or safely connected project inputs. They are not commands. For an existing supplied design, `/ideate` first establishes source authority: final/approved, enhancement-authorized, or redesign-authorized. The command itself never grants redesign permission. If the user's intent is not explicit, the AI asks that one question and stops. It then classifies SiteGraph as required, beneficial or not needed. If required evidence is absent, it asks for one safe read-only handoff. Attaching or connecting that requested evidence never counts as `proceed`: the AI must next report Design Context coverage and a concise, page-relevant Design Context and Design Content usage brief, stop, and wait for the user's explicit `proceed` before changing or creating files. After approval, `/ideate` adds inert `data-seam-anchor` stitches and `seam/seam-map.json`. When SiteGraph is cited it also carries the unchanged `seam/site-graph.json`; hashes, revisions, JSON pointers, tags, query types, modules, source guards and closure are verified. Unmarked content means preserve static source. A missing or stale proof stops conversion rather than triggering inference. Seam Framework is an explicit `seam.kiwe` compiler option, not a separate command. Browser AI never emits production Bricks JSON; only the `seam.kiwe` application does.
 
 Unknown commands, aliases and unsupported modifiers must be rejected.
+
+Public Design Context facts use the attached `dynamicBindings` catalogue. The visual preview retains real values and exact inert `data-seam-field`/`data-seam-slot` markers alongside `data-seam-anchor`; the closed field stitch cites the same binding, native tag and guarded slot. Never manufacture private, planning-only or unknown future bindings.

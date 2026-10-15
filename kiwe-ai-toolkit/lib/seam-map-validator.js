@@ -30,7 +30,8 @@ function locate(target) {
 }
 
 function graphIndex(graph) {
-  const bricks = isObject(graph?.bricks) ? graph.bricks : {};
+  const nested = isObject(graph?.siteGraph) ? graph.siteGraph : {};
+  const bricks = isObject(graph?.bricks) ? graph.bricks : isObject(nested.bricks) ? nested.bricks : {};
   const tags = new Set(commonTags);
   for (const entry of [...asArray(bricks.dynamicTags), ...asArray(bricks.kiweDynamicTags)]) {
     const raw = isObject(entry) ? entry.name || entry.tag : entry;
@@ -38,13 +39,29 @@ function graphIndex(graph) {
     if (value) tags.add(value.startsWith('{') ? value : `{${value.replace(/[{}]/g, '')}}`);
   }
   const queries = new Set(asArray(bricks.queryLoopTypes).map(entry => isObject(entry) ? String(entry.objectType || '') : String(entry || '')).filter(Boolean));
-  const modules = isObject(graph?.kiwe?.modules) ? graph.kiwe.modules : {};
+  const modules = isObject(graph?.kiwe?.modules) ? graph.kiwe.modules : isObject(nested?.kiwe?.modules) ? nested.kiwe.modules : {};
   const moduleIds = new Set(asArray(modules.items || modules.modules || modules.registered).map(entry => isObject(entry) ? String(entry.id || entry.module || entry.key || '') : String(entry || '')).filter(Boolean));
-  return { tags, queries, moduleIds };
+  const bindings = graph?.dynamicBindings?.schema === 'kiwe.dynamic-bindings.v1' && isObject(graph.dynamicBindings.fields) ? graph.dynamicBindings.fields : {};
+  return { tags, queries, moduleIds, bindings };
 }
 
 function anchorsIn(html) {
   return Array.from(html.matchAll(/\bdata-seam-anchor\s*=\s*(["'])(.*?)\1/gi), match => match[2]);
+}
+
+function contextMarkersIn(html, findings, rel) {
+  const out=[];
+  for(const node of html.match(/<[a-z][^>]*\bdata-seam-fields?\s*=\s*["'][^>]*>/gi)||[]) {
+    const attribute=name=>node.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`,'i'))?.[2];
+    const anchor=attribute('data-seam-anchor'),single=attribute('data-seam-field'),multiple=attribute('data-seam-fields');
+    if(single!==undefined&&multiple!==undefined) {finding(findings,'fail','Use one Design Context marker form per node.',rel);continue;}
+    if(multiple!==undefined) {
+      let fields;try{fields=JSON.parse(multiple.replaceAll('&quot;','"').replaceAll('&#39;',"'").replaceAll('&amp;','&'));}catch{finding(findings,'fail','Multi-field marker is not a JSON slot map.',rel);continue;}
+      if(!isObject(fields)||!Object.keys(fields).length||Object.entries(fields).some(([slot,value])=>!['text','image','link','alt','aria-label','title'].includes(slot)||typeof value!=='string'||!/^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*$/.test(value))){finding(findings,'fail','Multi-field marker has an invalid slot or public field.',rel);continue;}
+      for(const [slot,binding]of Object.entries(fields))out.push({anchor,slot,binding});
+    }else out.push({anchor,binding:single,slot:attribute('data-seam-slot')});
+  }
+  return out;
 }
 
 export function validateSeamMap(target = '.') {
@@ -71,6 +88,11 @@ export function validateSeamMap(target = '.') {
     const sourceAnchors = anchorsIn(bytes.toString('utf8'));
     if (sourceAnchors.some(value => !token.test(value)) || new Set(sourceAnchors).size !== sourceAnchors.length) finding(findings, 'fail', `SEAM source anchors must be valid and unique: ${rel}.`, rel);
     const stitches = asArray(document.stitches);
+    const markers=contextMarkersIn(bytes.toString('utf8'),findings,rel);
+    for (const {anchor,binding,slot} of markers) {
+      const matches = stitches.filter(stitch=>stitch.kind==='field' && stitch.anchor===anchor && stitch.binding===binding && (!slot || stitch.slot===slot));
+      if(matches.length!==1) finding(findings,'fail','Preview field marker has no exact closed field stitch.',rel);
+    }
     const keys = stitches.map(stitch => String(stitch?.key || ''));
     if (keys.some(value => !token.test(value)) || new Set(keys).size !== keys.length) finding(findings, 'fail', `SEAM stitch keys must be valid and unique: ${rel}.`, located.mapPath);
     const declared = new Set(stitches.flatMap(stitch => stitch?.kind === 'collection' ? [stitch.containerAnchor, stitch.prototypeAnchor] : [stitch?.anchor]).map(String));
@@ -82,6 +104,15 @@ export function validateSeamMap(target = '.') {
       if (!isObject(stitch?.authority) || !['sitegraph','owner','approved-source','wordpress-contract'].includes(stitch.authority.source) || !String(stitch.authority.pointer || '').trim() || !String(stitch.authority.evidence || '').trim()) finding(findings, 'fail', `Stitch ${stitch?.key || 'unknown'} lacks explicit authority.`, located.mapPath);
       if (stitch?.authority?.source === 'sitegraph') siteGraphStitches.push(stitch);
       if (stitch?.kind === 'field' && (!/^\{[A-Za-z_][^{}<>\r\n]*\}$/.test(String(stitch.dynamicTag || '')) || /^\{(?:echo|do_action|wp_query|php|execute)(?::|\})/i.test(stitch.dynamicTag))) finding(findings, 'fail', `Stitch ${stitch.key} has an unsafe dynamic tag.`, located.mapPath);
+      if(stitch?.kind==='field'){
+        const slot=stitch.slot,guard=stitch.guard||{},expected={image:'src',link:'href',alt:'alt','aria-label':'aria-label',title:'title'}[slot];
+        if(!['text','image','link','alt','aria-label','title'].includes(slot)||(slot==='text'&&guard.expectedText===undefined&&guard.textRange===undefined)||(expected&&guard.expectedAttribute?.name!==expected)||(slot!=='text'&&guard.textRange!==undefined))finding(findings,'fail',`Stitch ${stitch.key} lacks a supported slot and exact source guard.`,located.mapPath);
+      }
+      if (stitch?.kind === 'field' && stitch.binding !== undefined) {
+        if (!/^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*$/.test(String(stitch.binding)) || stitch.authority?.source !== 'sitegraph') finding(findings,'fail',`Stitch ${stitch.key} needs an exact public Design Context binding and SiteGraph authority.`,located.mapPath);
+        const matching = markers.filter(marker=>marker.anchor===stitch.anchor && marker.binding===stitch.binding && (!marker.slot||marker.slot===stitch.slot));
+        if (matching.length !== 1) finding(findings,'fail',`Stitch ${stitch.key} is missing its exact preview field marker.`,rel);
+      }
       if (stitch?.kind === 'interaction' && /(?:<script|javascript:|\beval\s*\(|\bFunction\s*\(|\bfetch\s*\()/i.test(JSON.stringify(stitch.interactions))) finding(findings, 'fail', `Stitch ${stitch.key} contains executable interaction code.`, located.mapPath);
     }
     const boundaries = stitches.filter(stitch => stitch?.kind === 'template-boundary');
@@ -105,6 +136,11 @@ export function validateSeamMap(target = '.') {
         for (const stitch of siteGraphStitches) {
           if (exactPointer(graph, stitch.authority.pointer) === undefined) finding(findings, 'fail', `SiteGraph pointer does not exist: ${stitch.authority.pointer}.`, graphRel);
           if (stitch.kind === 'field' && !index.tags.has(stitch.dynamicTag)) finding(findings, 'fail', `SiteGraph does not prove dynamic tag ${stitch.dynamicTag}.`, graphRel);
+          if (stitch.kind === 'field' && stitch.binding) {
+            const field = index.bindings[stitch.binding];
+            if (!field || field.tag !== stitch.dynamicTag || (['image','link'].includes(stitch.slot) && field.kind !== stitch.slot) || (['alt','aria-label','title'].includes(stitch.slot)&&!['text','number'].includes(field.kind))) finding(findings,'fail',`Design Context binding ${stitch.binding} does not prove this exact tag and slot.`,graphRel);
+            if (graph.dynamicBindings?.coverage?.complete === false) finding(findings,'fail','Design Context has undeclared bindings; repair the catalogue before compiling.',graphRel);
+          }
           if (stitch.kind === 'collection' && !index.queries.has(String(stitch.query?.objectType || ''))) finding(findings, 'fail', `SiteGraph does not prove query type ${stitch.query?.objectType || 'missing'}.`, graphRel);
           if (stitch.kind === 'launcher' && !index.moduleIds.has(String(stitch.module || ''))) finding(findings, 'fail', `SiteGraph does not prove Kiwe module ${stitch.module || 'missing'}.`, graphRel);
         }

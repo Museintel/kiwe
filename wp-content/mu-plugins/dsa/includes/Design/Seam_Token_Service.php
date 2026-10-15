@@ -138,6 +138,17 @@ final class Seam_Token_Service {
 		return $variables;
 	}
 
+	/** Private workspace layout rhythm from Seam's canonical tokens, without visitor theme overrides. */
+	public static function workspace_layout_stylesheet(): string {
+		$names = [ '--kiwe-space-xxs', '--kiwe-space-xs', '--kiwe-space-sm', '--kiwe-space-md', '--kiwe-space-lg', '--kiwe-space-xl', '--kiwe-radius-sm', '--kiwe-radius-md', '--kiwe-radius-lg' ];
+		$variables = self::css_variables();
+		$declarations = [];
+		foreach ( $names as $name ) {
+			if ( isset( $variables[ $name ] ) ) $declarations[] = $name . ':' . $variables[ $name ];
+		}
+		return ':root{' . implode( ';', $declarations ) . '}';
+	}
+
 	public static function seam_alias_stylesheet( array $overrides = [] ): string {
 		$lines = [];
 
