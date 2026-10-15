@@ -1,0 +1,41 @@
+{
+  "schema": "kiwe.command-registry.v2",
+  "product": "SEAM",
+  "contractVersion": "9.1",
+  "releaseId": "9.1-7cc03a976130",
+  "updated": "2026-10-15",
+  "canonicalBase": "https://start.kiwelaunch.com",
+  "immutableBase": "https://start.kiwelaunch.com/v/9.1-7cc03a976130",
+  "start": "https://start.kiwelaunch.com/start.md",
+  "entry": "https://start.kiwelaunch.com/entry.json",
+  "commandManifest": "https://start.kiwelaunch.com/command-manifest.json",
+  "llms": "https://start.kiwelaunch.com/llms.txt",
+  "llmsFull": "https://start.kiwelaunch.com/llms-full.txt",
+  "sourceRepository": "https://github.com/Museintel/kiwe",
+  "sourceStart": "https://github.com/Museintel/kiwe/blob/main/KIWE-START.md",
+  "rawSourceStart": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
+  "sourceHash": "sha256:7cc03a9761302d730a5fa2c725da8895ab7839ffac1925c232d7a0148a7d0e2c",
+  "fallback": {
+    "whenCanonicalUnavailable": "Read rawSourceStart, verify the advertised contract version, then follow the same strict command boundary. Never substitute a similarly named domain."
+  },
+  "commands": {
+    "/ideate": "https://start.kiwelaunch.com/ideate/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/redo/contract.json"
+  },
+  "immutableCommands": {
+    "/ideate": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/ideate/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/redo/contract.json"
+  },
+  "cachePolicy": {
+    "canonical": "no-store",
+    "immutable": "public, max-age=31536000, immutable"
+  }
+}

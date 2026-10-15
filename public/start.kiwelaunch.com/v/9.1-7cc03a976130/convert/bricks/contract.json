@@ -1,0 +1,37 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.1",
+  "releaseId": "9.1-7cc03a976130",
+  "route": "/convert/bricks",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/start.md",
+      "sha256": "a6a42a612cf85c694390cda1dd4105bd2dc01f4d68d1280dbf312e5a77f66eb7"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/convert-bricks.md",
+      "url": "https://start.kiwelaunch.com/contexts/convert-bricks.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/contexts/convert-bricks.md",
+      "sha256": "0cc6b66d5838ba409c676b9d36b9e20a141098f69331bf951d975d488b7019d9"
+    }
+  ],
+  "sourceHash": "sha256:7cc03a9761302d730a5fa2c725da8895ab7839ffac1925c232d7a0148a7d0e2c",
+  "command": "/convert /bricks",
+  "context": "contexts/convert-bricks.md",
+  "requires": [
+    "complete accepted raw HTML/CSS/JS project without a strict SEAM Map, kept unchanged",
+    "SiteGraph when site-specific fields are requested"
+  ],
+  "outputs": [
+    "bricks-bindings/kiwe-bindings.json",
+    "binding report"
+  ],
+  "modifiers": {
+    "default": "dynamicTagsAndQueryLoops",
+    "/dynamictags": "dynamicTagsOnly",
+    "/queryloop": "queryLoopsOnly"
+  },
+  "boundary": "Fallback binding-only handoff for accepted pre-existing source that did not originate with a strict SEAM Map. Use sourcePolicy immutable, exact per-file targets, explicit field slots, source guards and repeat prototypes. Never rewrite source or emit Bricks JSON."
+}

@@ -1,6 +1,6 @@
 # /redo
 
-SEAM contract: 9.0
+SEAM contract: 9.1
 
 Discard the failed output as authority; return to the last accepted artifact.
 

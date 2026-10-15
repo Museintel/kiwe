@@ -13,25 +13,27 @@ Never substitute kiwilaunch.com or another similarly named domain.
 
 # SEAM Start
 
-Contract version: `9.0`
-Updated: `2026-08-30`
+Contract version: `9.1`
+Updated: `2026-10-15`
 
-Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context instead. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
+Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context instead. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
 
 Inspect supplied attachments even when the user gives only this start link. If no slash command is present, identify each attachment by content rather than filename, recommend exactly one of the six commands with a one-sentence reason, and wait for that command. Do not silently execute a guessed command. A raw HTML/CSS/JS project needing design work normally suggests `/ideate`; an accepted raw project needing WordPress binding intent suggests `/convert /bricks`; an artifact needing inspection suggests `/audit` or `/accessibility`; a report with proven findings suggests `/fix`; and a failed generated output suggests `/redo`.
 
 SEAM has six commands:
 
-- [`/ideate`](https://start.kiwelaunch.com/contexts/ideate.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/ideate.md)) — inspect the supplied project, establish whether its design is final, enhancement-authorized or redesign-authorized, classify whether SiteGraph is required, report Design Context coverage, then create or refine raw HTML/CSS/JS without imposing a house style. Its invisible stitches and closed SEAM Map carry conversion meaning without influencing the design.
-- [`/convert /bricks`](https://start.kiwelaunch.com/contexts/convert-bricks.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/convert-bricks.md)) — for an accepted pre-existing project without a SEAM Map, return only a guarded binding graph and report while keeping source unchanged. Add `/dynamictags` or `/queryloop` to narrow the pass. Only seam.kiwe emits Bricks JSON.
-- [`/audit`](https://start.kiwelaunch.com/contexts/audit.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/audit.md)) — inspect an artifact without changing it.
-- [`/accessibility`](https://start.kiwelaunch.com/contexts/accessibility.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/accessibility.md)) — audit accessibility, responsive geometry and light/dark presentation.
-- [`/fix`](https://start.kiwelaunch.com/contexts/accessibility.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/accessibility.md)) — correct proven audit findings while preserving the accepted design.
-- [`/redo`](https://start.kiwelaunch.com/contexts/audit.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/codex/phonekey-whatsapp-rc1/kiwe-ai-toolkit/contexts/audit.md)) — replace a failed output from the last accepted artifact and failure evidence.
+- [`/ideate`](https://start.kiwelaunch.com/contexts/ideate.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/contexts/ideate.md)) — inspect the supplied project, establish whether its design is final, enhancement-authorized or redesign-authorized, classify whether SiteGraph is required, report Design Context coverage, then create or refine raw HTML/CSS/JS without imposing a house style. Its invisible stitches and closed SEAM Map carry conversion meaning without influencing the design.
+- [`/convert /bricks`](https://start.kiwelaunch.com/contexts/convert-bricks.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/contexts/convert-bricks.md)) — for an accepted pre-existing project without a SEAM Map, return only a guarded binding graph and report while keeping source unchanged. Add `/dynamictags` or `/queryloop` to narrow the pass. Only seam.kiwe emits Bricks JSON.
+- [`/audit`](https://start.kiwelaunch.com/contexts/audit.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/contexts/audit.md)) — inspect an artifact without changing it.
+- [`/accessibility`](https://start.kiwelaunch.com/contexts/accessibility.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/contexts/accessibility.md)) — audit accessibility, responsive geometry and light/dark presentation.
+- [`/fix`](https://start.kiwelaunch.com/contexts/accessibility.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/contexts/accessibility.md)) — correct proven audit findings while preserving the accepted design.
+- [`/redo`](https://start.kiwelaunch.com/contexts/audit.md) ([GitHub context mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/contexts/audit.md)) — replace a failed output from the last accepted artifact and failure evidence.
 
 SiteGraph and its embedded Design Context are attached or safely connected project inputs. They are not commands. For an existing supplied design, `/ideate` first establishes source authority: final/approved, enhancement-authorized, or redesign-authorized. The command itself never grants redesign permission. If the user's intent is not explicit, the AI asks that one question and stops. It then classifies SiteGraph as required, beneficial or not needed. If required evidence is absent, it asks for one safe read-only handoff. Attaching or connecting that requested evidence never counts as `proceed`: the AI must next report Design Context coverage and a concise, page-relevant Design Context and Design Content usage brief, stop, and wait for the user's explicit `proceed` before changing or creating files. After approval, `/ideate` adds inert `data-seam-anchor` stitches and `seam/seam-map.json`. When SiteGraph is cited it also carries the unchanged `seam/site-graph.json`; hashes, revisions, JSON pointers, tags, query types, modules, source guards and closure are verified. Unmarked content means preserve static source. A missing or stale proof stops conversion rather than triggering inference. Seam Framework is an explicit `seam.kiwe` compiler option, not a separate command. Browser AI never emits production Bricks JSON; only the `seam.kiwe` application does.
 
 Unknown commands, aliases and unsupported modifiers must be rejected.
+
+Public Design Context facts use the attached `dynamicBindings` catalogue. The visual preview retains real values and exact inert `data-seam-field`/`data-seam-slot` markers alongside `data-seam-anchor`; the closed field stitch cites the same binding, native tag and guarded slot. Never manufacture private, planning-only or unknown future bindings.
 
 
 --- COMMAND MANIFEST ---
@@ -39,8 +41,8 @@ Unknown commands, aliases and unsupported modifiers must be rejected.
 {
   "schema": "kiwe.command-manifest.v2",
   "productName": "SEAM",
-  "contractVersion": "9.0",
-  "updated": "2026-08-30",
+  "contractVersion": "9.1",
+  "updated": "2026-10-15",
   "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
   "authority": {
     "creative": "The user's design conversation owns art direction. /ideate never authorizes redesign by itself and must resolve final, enhancement or redesign authority before creative work.",
@@ -65,6 +67,12 @@ Unknown commands, aliases and unsupported modifiers must be rejected.
 --- /ideate ---
 
 # /ideate
+
+When SiteGraph supplies `dynamicBindings` (`kiwe.dynamic-bindings.v1`), use it as the field vocabulary. Native WordPress/WooCommerce tags take priority; Kiwe supplies only the missing public bindings. Every occurrence of owner-managed data that should update after launch must have an inert `data-seam-anchor` and `data-seam-field="EXACT.CATALOGUE.PATH"` on its preview element. Keep real preview text, image URLs and links so the client can see the design. The matching closed field stitch declares `binding`, the catalogue's exact `dynamicTag`, `slot` and the existing source guard. Optional `data-seam-slot` disambiguates text/image/link. The markers and map must agree; markers alone do not authorize a guessed conversion.
+
+Example: `<img data-seam-anchor="brand-logo" data-seam-field="identity.logo" data-seam-slot="image" src="VERIFIED_PREVIEW_URL" alt="Verified business name">` pairs with a field stitch whose `binding` is `identity.logo` and whose `dynamicTag` is the actual catalogue tag, usually `{kiwe_site_logo}`. Never replace preview copy with visible curly-brace placeholders.
+
+Use the catalogue's native collection declarations for pages, products, selected Team, Services, media and testimonials. Stable group/offer IDs retain their meaning after renaming. In a loop bind every changing text, image, accessible label and link to the current record. Declared planning-only or private records must not become public queries or tags. An unknown future field, unsupported tag or incomplete catalogue is an explicit review item, never a hardcoded production substitute. Business activities may overlap: an online store can also publish news. Optional square/round brand assets reuse the owner's WordPress media references; do not invent a logo or Google resource.
 
 Start with discovery, not a fixed questionnaire. Inspect every supplied file by its contents before asking anything. Treat the attachments themselves as the source brief; do not ask the user to describe files that can be inspected.
 
@@ -105,9 +113,18 @@ If any stitch uses SiteGraph authority, include the exact unchanged evidence use
 Before delivery, run `seam validate-seam-map <project>` and load every entry page at its intended desktop and mobile viewport. Fail closed on any validator finding, uncaught JavaScript error, missing-selector initialization, empty required region, broken local link, missing required asset or unintended document overflow. Bind scripts only to elements that exist. Record the runtime result in `contentReadiness.runtimeSmokeTest`; an artifact that fails either proof is not production-ready.
 
 
+### Complete record bindings
+
+Use native WordPress/WooCommerce tags for each record. Read `dynamicBindings` for exact commerce, configured pair and stable tag-group fields. A product card must bind its image, image description, visible price, accessible price and each link to the same current record; do not retain the sample label. For several slots on one node, use an inert JSON marker such as `data-seam-fields='{"image":"commerce.product.image","alt":"commerce.product.imageAlt"}'`. It replaces the single `data-seam-field` form on that node. Allowed slots are `text`, `image`, `link`, `alt`, `aria-label`, `title`; every slot has its own closed field stitch and exact original guard. Labels accept declared text/number fields only. Arbitrary attributes, private paths and executable tags are forbidden. Preview text, URLs and labels remain real values.
+
+Native product query loops can use `kiweProductRelation` (`upsells`, `cross_sells`, `grouped`, `companion`, `configured_offers`) and optional `kiweRelationSource` in their query stitch. The compiler places these in the original Bricks element controls. Leave source empty for current product. Source relationships and pair configuration stay in Woo/Kiwe product editing. Stable pair selectors use the trigger product ID; renames retain tags and deleted/private targets become empty. The chooser/handoff enumerates at most 100 configured source products per request; current-record and exact stable selectors do not scan and remain valid beyond that sampled catalogue. Use the returned catalogue; never invent a final pair total. Woo owns quantities, chosen variations, coupons, tax, shipping and checkout totals.
+
+
 --- /convert /bricks ---
 
 # /convert /bricks — binding-only handoff
+
+Use the attached `dynamicBindings` catalogue to audit complete owner-data coverage, including contact/logo variants, native content, selected Team/Services and configured tag/offer groups. Prefer the native tag listed there; never invent a custom tag from a label. This legacy binding-only lane preserves the accepted source exactly. New `/ideate` output carries `data-seam-field` markers and a closed SEAM Map; do not mix the two semantic authorities or insert markers into an older approved source as a shortcut.
 
 This is the fallback lane for an accepted pre-existing HTML/CSS/JS project that does not carry `seam/seam-map.json`. If the project already has a valid strict SEAM Map, do not create a second semantic authority: tell the user to submit the project directly to seam.kiwe. Otherwise read the approved project and assets. Do not regenerate, reformat or edit them, add attributes/wrappers, rename classes, rewrite JavaScript, or produce Bricks JSON. Return only `bricks-bindings/kiwe-bindings.json` and a concise binding report. The user attaches that graph to the same originals in seam.kiwe. This lane does not opt into Seam Framework.
 
@@ -142,6 +159,13 @@ Launchers require exact template/selector, `attribute: "data-dsa-open-module"` a
 Return the graph and report only, with all proposed replacements, retained prototypes, declared preview removals, evidence and unresolved items. Do not return a rewritten raw project, Bricks JSON, Framework Profile or invented confidence percentage. `/audit` checks this graph against the unchanged originals and SiteGraph; `/redo` replaces only the failed graph/report, not the approved website.
 
 seam.kiwe checks exact targeting, source guards, conflicts and repeat safety before native compilation. A structural pass is not proof of correct business intent, live query results, inventory, price behavior, or visual parity. Those require testing on the target Bricks/WooCommerce installation. If tooling cannot inspect the DOM or prove a field, explicitly report that limitation rather than calling it verified.
+
+
+### Complete record bindings
+
+Use native WordPress/WooCommerce tags for each record. Read `dynamicBindings` for exact commerce, configured pair and stable tag-group fields. A product card must bind its image, image description, visible price, accessible price and each link to the same current record; do not retain the sample label. For several slots on one node, use an inert JSON marker such as `data-seam-fields='{"image":"commerce.product.image","alt":"commerce.product.imageAlt"}'`. It replaces the single `data-seam-field` form on that node. Allowed slots are `text`, `image`, `link`, `alt`, `aria-label`, `title`; every slot has its own closed field stitch and exact original guard. Labels accept declared text/number fields only. Arbitrary attributes, private paths and executable tags are forbidden. Preview text, URLs and labels remain real values.
+
+Native product query loops can use `kiweProductRelation` (`upsells`, `cross_sells`, `grouped`, `companion`, `configured_offers`) and optional `kiweRelationSource` in their query stitch. The compiler places these in the original Bricks element controls. Leave source empty for current product. Source relationships and pair configuration stay in Woo/Kiwe product editing. Stable pair selectors use the trigger product ID; renames retain tags and deleted/private targets become empty. The chooser/handoff enumerates at most 100 configured source products per request; current-record and exact stable selectors do not scan and remain valid beyond that sampled catalogue. Use the returned catalogue; never invent a final pair total. Woo owns quantities, chosen variations, coupons, tax, shipping and checkout totals.
 
 
 --- /audit ---

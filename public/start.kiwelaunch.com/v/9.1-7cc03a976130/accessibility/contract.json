@@ -1,0 +1,32 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.1",
+  "releaseId": "9.1-7cc03a976130",
+  "route": "/accessibility",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/start.md",
+      "sha256": "a6a42a612cf85c694390cda1dd4105bd2dc01f4d68d1280dbf312e5a77f66eb7"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/accessibility.md",
+      "url": "https://start.kiwelaunch.com/contexts/accessibility.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/contexts/accessibility.md",
+      "sha256": "bbe4043f7bcb9517d656470e9fed86db14a475f2f8802fd7201817dc66a09b00"
+    }
+  ],
+  "sourceHash": "sha256:7cc03a9761302d730a5fa2c725da8895ab7839ffac1925c232d7a0148a7d0e2c",
+  "command": "/accessibility",
+  "context": "contexts/accessibility.md",
+  "requires": [
+    "source or Bricks artifact"
+  ],
+  "outputs": [
+    "accessibility report",
+    "light/dark color evidence",
+    "responsive evidence"
+  ],
+  "boundary": "Audit only. Use /fix to create a changed artifact."
+}

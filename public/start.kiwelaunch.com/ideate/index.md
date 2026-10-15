@@ -1,6 +1,6 @@
 # /ideate
 
-SEAM contract: 9.0
+SEAM contract: 9.1
 
 Inspect attachments and resolve whether an existing design is final, enhancement-authorized or redesign-authorized before SiteGraph or creative work; after any requested evidence arrives, emit and pause on the grounded usage brief. Production output may not retain placeholders when sufficient SiteGraph or approved-source context exists, and must fail closed on runtime errors or incomplete semantic closure. Inert data-seam-anchor stitches plus the closed SEAM Map express conversion intent without influencing design. Attachments never grant approval and /ideate alone never grants redesign permission.
 

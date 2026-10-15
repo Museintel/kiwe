@@ -1,0 +1,32 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.1",
+  "releaseId": "9.1-7cc03a976130",
+  "route": "/audit",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/start.md",
+      "sha256": "a6a42a612cf85c694390cda1dd4105bd2dc01f4d68d1280dbf312e5a77f66eb7"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/audit.md",
+      "url": "https://start.kiwelaunch.com/contexts/audit.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.1-7cc03a976130/contexts/audit.md",
+      "sha256": "ed1d2a637fa1ac4653285678d65e9ee5821b0cfa13a27c58d0ac20f7026aae7a"
+    }
+  ],
+  "sourceHash": "sha256:7cc03a9761302d730a5fa2c725da8895ab7839ffac1925c232d7a0148a7d0e2c",
+  "command": "/audit",
+  "context": "contexts/audit.md",
+  "requires": [
+    "source or generated artifact"
+  ],
+  "outputs": [
+    "machine-readable report",
+    "human summary",
+    "score evidence"
+  ],
+  "boundary": "Read only. Never modify the submitted artifact."
+}
