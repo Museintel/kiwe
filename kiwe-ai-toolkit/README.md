@@ -6,6 +6,9 @@ This package contains the strict SEAM command router and deterministic validator
 
 ```text
 /ideate
+/preview
+/seam
+/library
 /convert /bricks
 /audit
 /accessibility
@@ -13,7 +16,7 @@ This package contains the strict SEAM command router and deterministic validator
 /redo
 ```
 
-There are no aliases. SiteGraph and embedded Design Context are input data. `/ideate` adaptively handles new sites, redesigns and existing source enhancement. `/convert /bricks` prepares dynamic binding intent only: both tags and loops by default, or one lane with `/dynamictags` or `/queryloop`. Seam Framework is an option inside `seam.kiwe`. Only the `seam.kiwe` application emits production Bricks JSON.
+There are no aliases. SiteGraph and embedded Design Context are input data. `/ideate` plans; `/preview` approves the usage brief to generate raw source; `/seam` prepares an accepted preview as design-preserving Framework source; `/library` reads the complete source-bound reference. `/convert /bricks` retains its immutable binding-only path and existing modifiers. Framework native conversion remains an explicit compiler option. Only `seam.kiwe` emits production Bricks JSON; no authoring command approves live deployment.
 
 ## CLI
 

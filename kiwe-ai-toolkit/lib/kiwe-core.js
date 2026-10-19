@@ -7,18 +7,11 @@ import { validateAccessibility as validateAccessibilityPlan } from './accessibil
 import { validateFrameworkProfile as validateFrameworkProfilePlan } from './framework-profile-validator.js';
 import { validateBricksThemeStyle as validateBricksThemeStylePlan } from './bricks-theme-style-validator.js';
 import { validateSeamMap as validateSeamMapPlan } from './seam-map-validator.js';
+import { inspectBindings as inspectBindingAuthority } from './binding-preflight.js';
+import { validatePreview as validatePreviewEvidence } from './preview-validator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const toolkitRoot = path.resolve(__dirname, '..');
-
-const contextByCommand = new Map([
-  ['/ideate', 'ideate.md'],
-  ['/convert /bricks', 'convert-bricks.md'],
-  ['/audit', 'audit.md'],
-  ['/accessibility', 'accessibility.md'],
-  ['/fix', 'accessibility.md'],
-  ['/redo', 'audit.md']
-]);
 
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(toolkitRoot, relativePath), 'utf8'));
@@ -59,6 +52,12 @@ function requirementStatus(command, { brief = '', attachmentSummary = '', artifa
   if (command === '/ideate') {
     return hasInput(brief, attachmentSummary, artifactSummary, siteGraphSummary) ? null : 'Provide a project brief, inspectable attachments, approved source material or SiteGraph context.';
   }
+  if (command === '/preview') {
+    return hasInput(brief, reportSummary) ? null : 'Provide the current reviewed /ideate discovery and usage brief. /preview approves that brief only.';
+  }
+  if (command === '/seam') {
+    return hasInput(artifactSummary) ? null : 'Provide the accepted raw preview and its exact source inventory. /seam approves translation of that preview only.';
+  }
   if (command === '/convert /bricks' || command === '/audit' || command === '/accessibility') {
     return hasInput(artifactSummary) ? null : 'Provide or summarize the artifact to process.';
   }
@@ -80,7 +79,7 @@ export function getCommandManifest() {
 export function getStartEntrypoint() {
   return {
     ...readJson('entry.json'),
-    startText: fs.readFileSync(path.resolve(toolkitRoot, '..', 'KIWE-START.md'), 'utf8')
+    startText: fs.readFileSync(fs.existsSync(path.join(toolkitRoot,'start.md')) ? path.join(toolkitRoot,'start.md') : path.resolve(toolkitRoot, '..', 'KIWE-START.md'), 'utf8')
   };
 }
 
@@ -127,7 +126,9 @@ export function routeCommand(input = {}) {
   return {
     ...diagnosis,
     contractVersion: getCommandManifest().contractVersion,
-    context: readText(`contexts/${contextByCommand.get(diagnosis.command)}`),
+    context: readText(spec.context),
+    sharedContext: readText(getCommandManifest().sharedContext),
+    sharedContextPath: getCommandManifest().sharedContext,
     authority: getCommandManifest().authority,
     input: {
       brief: String(input.brief || ''),
@@ -136,7 +137,7 @@ export function routeCommand(input = {}) {
       siteGraphSummary: String(input.siteGraphSummary || ''),
       reportSummary: String(input.reportSummary || '')
     },
-    options: diagnosis.command === '/convert /bricks' ? { bindingMode: diagnosis.bindingMode, modifier: diagnosis.modifier || null, emitsBricksJson: false, emitsUpdatedSource: false, sourcePolicy: 'immutable' } : undefined
+    options: diagnosis.command === '/convert /bricks' ? { bindingMode: diagnosis.bindingMode, modifier: diagnosis.modifier || null, emitsBricksJson: false, emitsUpdatedSource: false, sourcePolicy: 'immutable' } : diagnosis.command === '/seam' ? { frameworkMode: true, emitsBricksJson: false, preservesAcceptedSource: true, deploymentAuthorized: false } : undefined
   };
 }
 
@@ -213,4 +214,12 @@ export function validateBricksThemeStyle(targetDir, options = {}) {
 
 export function validateSeamMap(targetDir) {
   return validateSeamMapPlan(targetDir);
+}
+
+export function inspectBindings(source, options = {}) {
+  return inspectBindingAuthority(source, options);
+}
+
+export function validatePreview(targetDir) {
+  return validatePreviewEvidence(targetDir);
 }

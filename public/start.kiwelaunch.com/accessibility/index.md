@@ -1,6 +1,6 @@
 # /accessibility
 
-SEAM contract: 9.1
+SEAM contract: 9.4
 
 Audit only. Use /fix to create a changed artifact.
 

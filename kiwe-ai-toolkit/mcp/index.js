@@ -34,7 +34,7 @@ const validationProperties = {
 
 const tools = [
   { name: 'seam_get_start', description: 'Return the current strict SEAM entry contract.', inputSchema: object() },
-  { name: 'seam_get_manifest', description: 'Return the six-command SEAM manifest.', inputSchema: object() },
+  { name: 'seam_get_manifest', description: 'Return the current exact SEAM command manifest.', inputSchema: object() },
   { name: 'seam_diagnose', description: 'Validate one exact SEAM command and its required inputs.', inputSchema: object(routeProperties, ['command']) },
   { name: 'seam_route', description: 'Route one exact SEAM command to its bounded context.', inputSchema: object(routeProperties, ['command']) },
   { name: 'seam_plan', description: 'Inspect attachment evidence and suggest the smallest next SEAM command without executing it.', inputSchema: object({ command: { type: 'string' }, attachmentSummary: { type: 'string' }, artifactSummary: { type: 'string' }, desiredOutcome: { type: 'string' }, brief: { type: 'string' }, reportSummary: { type: 'string' } }) },

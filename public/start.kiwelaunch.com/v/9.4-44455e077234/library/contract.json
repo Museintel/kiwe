@@ -1,0 +1,36 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.4",
+  "releaseId": "9.4-44455e077234",
+  "route": "/library",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/start.md",
+      "sha256": "b08c94fea55ba4a806e3ebe315e0f02178acd33d2a5214e28c999ad35e2b5c69"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
+      "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/contracts/authoring-delivery.md",
+      "sha256": "209b7bfa67ccdfdacc3821fafbfdba2faf2a82d1719fd813d963e75557b1ea69"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/library.md",
+      "url": "https://start.kiwelaunch.com/contexts/library.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/contexts/library.md",
+      "sha256": "2521f7ccde99de89555b157115a2613372397805c0e06ba0dfd148eba8679731"
+    }
+  ],
+  "sourceHash": "sha256:44455e0772341590c952df47a19889a3ccf8be1f0d97adc4df35dbecbc314239",
+  "command": "/library",
+  "context": "contexts/library.md",
+  "requires": [],
+  "outputs": [
+    "matching release reference index",
+    "relevant exact resource links, pointers and hashes",
+    "supported, target-dependent and unsupported capability distinctions"
+  ],
+  "boundary": "Read-only complete public authoring reference. Fetch relevant resources without repository crawling or inventing site-specific capabilities."
+}

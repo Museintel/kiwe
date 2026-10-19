@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "namespace": "kiwe.seam.classVocabulary",
+  "mode": "neutral-searchable",
+  "notes": "Searchable generic class vocabulary for Bricks/global-class authoring. These class names are neutral handles, not starter visual recipes.",
+  "groups": {
+    "flow": {
+      "label": "Flow",
+      "classes": ["seam-stack", "seam-row", "seam-cluster", "seam-inline", "seam-grid", "seam-dense", "seam-sidebar", "seam-center", "seam-spread", "seam-cover", "seam-frame", "seam-reel", "seam-horizontal-rail", "seam-vertical-rail"]
+    },
+    "role": {
+      "label": "Role Core",
+      "classes": ["seam-section", "seam-container", "seam-main", "seam-header", "seam-footer", "seam-aside", "seam-hero", "seam-lead", "seam-eyebrow", "seam-label", "seam-caption", "seam-hint", "seam-micro", "seam-card", "seam-panel", "seam-surface", "seam-media", "seam-avatar", "seam-button", "seam-link", "seam-icon", "seam-badge", "seam-chip", "seam-nav", "seam-actions", "seam-toolbar", "seam-menu", "seam-form", "seam-field", "seam-input", "seam-textarea", "seam-select", "seam-modal", "seam-dialog", "seam-drawer", "seam-toast", "seam-testimonial", "seam-price", "seam-progress", "seam-skeleton"]
+    },
+    "content": {
+      "label": "Content",
+      "classes": ["seam-article", "seam-post", "seam-story", "seam-feature", "seam-callout", "seam-note", "seam-stat", "seam-metric", "seam-counter", "seam-quote", "seam-citation", "seam-author", "seam-byline", "seam-date", "seam-kicker", "seam-title", "seam-subtitle", "seam-summary", "seam-body", "seam-divider"]
+    },
+    "commerce": {
+      "label": "Commerce",
+      "classes": ["seam-product", "seam-product-card", "seam-product-grid", "seam-product-rail", "seam-product-media", "seam-product-title", "seam-product-summary", "seam-product-price", "seam-product-rating", "seam-product-badge", "seam-product-options", "seam-add-to-cart", "seam-cart-line", "seam-cart-summary", "seam-checkout-cta", "seam-discount", "seam-trust-badge", "seam-shipping-note"]
+    },
+    "navigation": {
+      "label": "Navigation",
+      "classes": ["seam-breadcrumbs", "seam-breadcrumb", "seam-pagination", "seam-page-link", "seam-tabs", "seam-tab-list", "seam-tab", "seam-tab-panel", "seam-stepper", "seam-step", "seam-toc", "seam-toc-link", "seam-skip-link", "seam-search-bar", "seam-filter-bar", "seam-sort-control"]
+    },
+    "disclosure": {
+      "label": "Disclosure",
+      "classes": ["seam-accordion", "seam-accordion-item", "seam-accordion-trigger", "seam-accordion-panel", "seam-details", "seam-summary-control", "seam-dropdown", "seam-dropdown-trigger", "seam-dropdown-panel", "seam-popover", "seam-tooltip", "seam-faq", "seam-faq-item"]
+    },
+    "data": {
+      "label": "Data",
+      "classes": ["seam-table", "seam-table-wrap", "seam-table-head", "seam-table-body", "seam-table-row", "seam-table-cell", "seam-table-caption", "seam-data-grid", "seam-data-row", "seam-data-cell", "seam-chart", "seam-chart-legend", "seam-meter", "seam-kpi", "seam-comparison", "seam-comparison-row", "seam-timeline", "seam-timeline-item"]
+    },
+    "media": {
+      "label": "Media",
+      "classes": ["seam-image", "seam-picture", "seam-video", "seam-embed", "seam-figure", "seam-figcaption", "seam-gallery", "seam-gallery-item", "seam-carousel", "seam-slide", "seam-slider", "seam-thumbnail", "seam-logo", "seam-map", "seam-poster", "seam-scrim", "seam-overlay"]
+    },
+    "form": {
+      "label": "Form",
+      "classes": ["seam-form-row", "seam-form-group", "seam-control", "seam-control-label", "seam-control-help", "seam-control-error", "seam-checkbox", "seam-radio", "seam-switch", "seam-range", "seam-search-input", "seam-submit", "seam-reset", "seam-validation"]
+    },
+    "tone": {
+      "label": "Tone",
+      "classes": ["seam-tone-brand", "seam-tone-accent", "seam-tone-neutral", "seam-tone-muted", "seam-tone-success", "seam-tone-warning", "seam-tone-danger", "seam-tone-info", "seam-tone-surface", "seam-tone-inverse"]
+    },
+    "size": {
+      "label": "Size",
+      "classes": ["seam-size-2xs", "seam-size-xs", "seam-size-sm", "seam-size-md", "seam-size-lg", "seam-size-xl", "seam-size-2xl", "seam-size-3xl"]
+    },
+    "density": {
+      "label": "Density",
+      "classes": ["seam-density-compact", "seam-density-comfortable", "seam-density-spacious", "seam-density-airy"]
+    },
+    "emphasis": {
+      "label": "Emphasis",
+      "classes": ["seam-emphasis-quiet", "seam-emphasis-normal", "seam-emphasis-strong", "seam-emphasis-featured", "seam-emphasis-hero"]
+    },
+    "scene": {
+      "label": "Scene",
+      "classes": ["seam-scene-dramatic", "seam-scene-elevated", "seam-scene-standard", "seam-scene-compact", "seam-scene-micro"]
+    },
+    "state": {
+      "label": "State",
+      "classes": ["seam-is-loading", "seam-is-disabled", "seam-is-selected", "seam-is-current", "seam-is-error", "seam-is-success", "seam-is-warning", "seam-is-collapsed", "seam-is-featured", "seam-is-hidden", "seam-print-hidden"]
+    },
+    "motion": {
+      "label": "Motion",
+      "classes": ["seam-fade-up", "seam-scale-in", "seam-view-fade-up"]
+    },
+    "shape": {
+      "label": "Shape",
+      "classes": ["seam-shape-square", "seam-shape-sharp", "seam-shape-soft", "seam-shape-rounded", "seam-shape-pill", "seam-shape-circle"]
+    },
+    "placement": {
+      "label": "Placement",
+      "classes": ["seam-place-top", "seam-place-right", "seam-place-bottom", "seam-place-left", "seam-place-center", "seam-place-start", "seam-place-end", "seam-sticky-top", "seam-sticky-bottom", "seam-fixed-top", "seam-fixed-bottom"]
+    },
+    "aspect": {
+      "label": "Aspect",
+      "classes": ["seam-ratio-square", "seam-ratio-video", "seam-ratio-photo", "seam-ratio-portrait", "seam-ratio-landscape", "seam-ratio-wide", "seam-fit-cover", "seam-fit-contain", "seam-fit-fill"]
+    },
+    "flow-control": {
+      "label": "Flow Control",
+      "classes": ["seam-flow-density-compact", "seam-flow-density-comfortable", "seam-flow-density-spacious", "seam-gap-none", "seam-gap-xxs", "seam-gap-xs", "seam-gap-sm", "seam-gap-md", "seam-gap-lg", "seam-gap-xl", "seam-align-start", "seam-align-center", "seam-align-end", "seam-align-stretch", "seam-justify-start", "seam-justify-center", "seam-justify-end", "seam-justify-between", "seam-justify-around", "seam-wrap", "seam-nowrap"]
+    },
+    "utility": {
+      "label": "Utility",
+      "classes": ["seam-narrow", "seam-wide", "seam-full", "seam-bleed", "seam-inset", "seam-visually-hidden", "seam-no-overflow", "seam-overflow-auto", "seam-overflow-x", "seam-overflow-y", "seam-clickable", "seam-unclickable", "seam-print-hidden"]
+    }
+  }
+}

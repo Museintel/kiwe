@@ -1,6 +1,6 @@
 # /fix
 
-SEAM contract: 9.1
+SEAM contract: 9.4
 
 Apply only proven findings and preserve art direction, content and behavior.
 

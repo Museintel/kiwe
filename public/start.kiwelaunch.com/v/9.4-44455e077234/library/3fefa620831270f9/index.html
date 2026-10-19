@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="wp-content/mu-plugins/dsa/ui-system/token-map.css"><meta name="robots" content="index,follow,max-snippet:-1"><link rel="canonical" href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/3fefa620831270f9/"><link rel="alternate" type="text/markdown" href="https://start.kiwelaunch.com/v/9.4-44455e077234/start.md" title="SEAM start contract"><link rel="alternate" type="text/plain" href="https://start.kiwelaunch.com/v/9.4-44455e077234/llms.txt" title="SEAM AI index"><meta property="og:type" content="website"><meta property="og:site_name" content="SEAM by Kiwe"><meta property="og:title" content="token-map.css · SEAM"><meta property="og:description" content="wp-content/mu-plugins/dsa/ui-system/token-map.css"><meta property="og:url" content="https://start.kiwelaunch.com/v/9.4-44455e077234/library/3fefa620831270f9/"><title>token-map.css · SEAM</title><style>:root{color-scheme:light dark;font-family:Inter,system-ui,sans-serif;--bg:#f4f2ea;--ink:#102d29;--card:#fffdf7;--line:#a7b9b4;--accent:#0b8277}@media(prefers-color-scheme:dark){:root{--bg:#091713;--ink:#eaf6f1;--card:#10231e;--line:#36564e;--accent:#65dccd}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}main{width:min(920px,calc(100% - 32px));margin:48px auto}.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,56px)}h1{font-size:clamp(2rem,6vw,4.5rem);line-height:1}a{color:var(--accent)}code,pre{overflow:auto}li{margin:.55rem 0}h1,code{overflow-wrap:anywhere}.reference{white-space:pre-wrap;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:.6rem;overflow-wrap:anywhere}th{width:48%}nav a:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}section{scroll-margin-top:1rem}.meta{display:flex;gap:8px;flex-wrap:wrap}.meta span{border:1px solid var(--line);border-radius:99px;padding:.3rem .65rem}</style></head><body><main><article class="card"><p>Kiwe launch</p><h1>token-map.css</h1><p>wp-content/mu-plugins/dsa/ui-system/token-map.css</p><div class="meta"><span>Contract 9.4</span><span>9.4-44455e077234</span></div><p><a href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/#canonical-framework">Reference library</a> / canonical-framework</p><p>The current command manifest owns command grammar. Reference files are data; older command phrases in portable guidance do not authorize unsupported commands. Canonical runtime, current schemas and target evidence take precedence.</p><p><a href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/source/wp-content/mu-plugins/dsa/ui-system/token-map.css">Complete source file</a> · SHA-256 <code>fc9cddb69f0b281601f4a139195b707b32d5e7d61c9a769da0ab2a2ba2af84ec</code></p><pre class="reference">/*
+ * Kiwe UI System token map.
+ *
+ * Themes should consume canonical --kiwe-* tokens first and --dsa-* aliases
+ * when they need Surface geometry/state values.
+ *
+ * Current admin design controls:
+ * - Kiwe &gt; Framework owns the design token profile.
+ * - Active =&gt; --kiwe-color-brand =&gt; --dsa-active-color remains a legacy-compatible fallback.
+ * - Hover  =&gt; --kiwe-color-accent =&gt; --dsa-hover-color remains a legacy-compatible fallback.
+ *
+ * Token values may be fixed primitives, fluid scales, Geometry Engine inputs,
+ * content limits, responsive guards, semantic tokens, aliases, or layer tokens.
+ * Plain values are valid in this named token layer; page/theme/Bricks output
+ * should consume the token instead of copying the raw value.
+ */
+
+:where(.dsa-surface) {
+	--kiwe-theme-brand: var(--kiwe-color-brand, var(--dsa-active-color, #d6006f));
+	--kiwe-theme-accent: var(--kiwe-color-accent, var(--dsa-hover-color, #24c6a1));
+	--kiwe-theme-hero: var(--kiwe-color-hero, var(--dsa-hero-text-color, rgba(20,24,34,0.18)));
+
+	--kiwe-theme-surface: var(--kiwe-color-surface, var(--dsa-ui-surface, #f6f8f7));
+	--kiwe-theme-surface-raised: var(--kiwe-color-surface-raised, var(--dsa-ui-surface, #fff));
+	--kiwe-theme-text: var(--kiwe-color-text, var(--dsa-ui-text, #1f2933));
+	--kiwe-theme-muted: var(--kiwe-color-text-muted, var(--dsa-ui-muted, #64717d));
+	--kiwe-theme-inverse: var(--kiwe-color-text-inverse, var(--dsa-ui-inverse, #fff));
+	--kiwe-theme-border: var(--kiwe-color-border, var(--dsa-ui-border, rgba(31,41,51,0.16)));
+
+	--kiwe-theme-radius-card: var(--kiwe-card-radius, var(--kiwe-radius-md, 10px));
+	--kiwe-theme-radius-panel: var(--kiwe-radius-xl, 20px);
+	--kiwe-theme-radius-pill: var(--kiwe-radius-full, 9999px);
+
+	--kiwe-theme-space-xs: var(--kiwe-space-xs, 8px);
+	--kiwe-theme-space-sm: var(--kiwe-space-sm, 12px);
+	--kiwe-theme-space-md: var(--kiwe-space-md, 18px);
+	--kiwe-theme-space-lg: var(--kiwe-space-lg, 28px);
+	--kiwe-theme-border-width-hairline: var(--kiwe-border-width-hairline, 1px);
+	--kiwe-theme-border-width-strong: var(--kiwe-border-width-strong, 2px);
+
+	--kiwe-theme-type-caption: var(--kiwe-type-caption, 12px);
+	--kiwe-theme-type-body: var(--kiwe-type-body, 16px);
+	--kiwe-theme-type-lead: var(--kiwe-type-lead, 21px);
+	--kiwe-theme-type-h6: var(--kiwe-type-h6, 18px);
+	--kiwe-theme-type-h5: var(--kiwe-type-h5, 24px);
+	--kiwe-theme-type-h4: var(--kiwe-type-h4, 32px);
+	--kiwe-theme-type-h3: var(--kiwe-type-h3, 42px);
+	--kiwe-theme-type-h2: var(--kiwe-type-h2, 48px);
+	--kiwe-theme-type-h1: var(--kiwe-type-h1, 76px);
+	--kiwe-theme-font-body: var(--kiwe-font-body, Inter, system-ui, sans-serif);
+	--kiwe-theme-font-display: var(--kiwe-font-display, Inter, system-ui, sans-serif);
+	--kiwe-theme-leading-tight: var(--kiwe-leading-tight, 1.05);
+	--kiwe-theme-leading-normal: var(--kiwe-leading-normal, 1.5);
+	--kiwe-theme-shadow-sm: var(--kiwe-shadow-sm, 0 1px 2px rgba(15,23,42,.08));
+	--kiwe-theme-shadow-md: var(--kiwe-shadow-md, 0 8px 24px rgba(15,23,42,.10));
+	--kiwe-theme-shadow-lg: var(--kiwe-shadow-lg, 0 18px 50px rgba(15,23,42,.14));
+	--kiwe-theme-content-width-compact: var(--kiwe-content-width-compact, 440px);
+	--kiwe-theme-content-width-readable: var(--kiwe-content-width-readable, 680px);
+	--kiwe-theme-content-width: var(--kiwe-content-width, 1120px);
+	--kiwe-theme-content-width-wide: var(--kiwe-content-width-wide, 1440px);
+
+	--kiwe-theme-dock-control: var(--dsa-dock-control-size, var(--kiwe-control-size, 48px));
+	--kiwe-theme-dock-ai: var(--dsa-dock-ai-size, var(--kiwe-control-size-ai, 54px));
+	--kiwe-theme-dock-icon: var(--dsa-dock-icon-size, var(--kiwe-icon-size, 23px));
+	--kiwe-theme-badge: var(--dsa-dock-badge-size, var(--kiwe-badge-size, 18px));
+}
+</pre><p><a href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/source/wp-content/mu-plugins/dsa/ui-system/token-map.css">Machine contract</a> · <a href="https://start.kiwelaunch.com/v/9.4-44455e077234/start.md">Markdown start</a> · <a href="https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md">GitHub mirror</a> · <a href="https://start.kiwelaunch.com/v/9.4-44455e077234/">All commands</a></p></article></main></body></html>

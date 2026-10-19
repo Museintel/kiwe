@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.capture.v1.schema.json",
+  "title": "SEAM rendered capture v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source", "viewports", "nodes", "diagnostics"],
+  "properties": {
+    "schema": { "const": "seam.capture.v1" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "entry", "contentHash"],
+      "properties": {
+        "kind": { "enum": ["html", "url", "bundle"] },
+        "entry": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "viewports": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "width", "height", "theme", "state"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "width": { "type": "integer", "minimum": 240 },
+          "height": { "type": "integer", "minimum": 240 },
+          "theme": { "enum": ["light", "dark", "system"] },
+          "state": { "type": "string", "minLength": 1 },
+          "screenshot": {
+            "type": "object", "additionalProperties": false, "required": ["file", "bytes", "sha256"],
+            "properties": { "file": { "type": "string" }, "bytes": { "type": "integer", "minimum": 1 }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "parentId", "tag", "role", "text", "attributes", "observations", "provenance"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "parentId": { "type": ["string", "null"] },
+          "tag": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "role": { "type": ["string", "null"] },
+          "accessibleName": { "type": "string" },
+          "text": { "type": "string" },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+          "observations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["viewportId", "visible", "box", "computed"],
+              "properties": {
+                "viewportId": { "type": "string", "minLength": 1 },
+                "visible": { "type": "boolean" },
+                "box": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["x", "y", "width", "height"],
+                  "properties": {
+                    "x": { "type": "number" }, "y": { "type": "number" },
+                    "width": { "type": "number", "minimum": 0 }, "height": { "type": "number", "minimum": 0 }
+                  }
+                },
+                "computed": { "type": "object", "additionalProperties": { "type": "string" } }
+                ,"customProperties": { "type": "object", "additionalProperties": { "type": "string" } },
+                "scroll": {
+                  "type": "object", "additionalProperties": false, "required": ["width", "height", "left", "top"],
+                  "properties": { "width": { "type": "number", "minimum": 0 }, "height": { "type": "number", "minimum": 0 }, "left": { "type": "number" }, "top": { "type": "number" } }
+                },
+                "stacking": {
+                  "type": "object", "additionalProperties": false, "required": ["position", "zIndex", "createsContext"],
+                  "properties": { "position": { "type": "string" }, "zIndex": { "type": "string" }, "createsContext": { "type": "boolean" } }
+                },
+                "pseudo": { "type": "object", "additionalProperties": true },
+                "matchedRules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object", "additionalProperties": false, "required": ["selector", "source", "media", "declarations"],
+                    "properties": {
+                      "selector": { "type": "string" }, "source": { "type": "string" }, "media": { "type": "string" },
+                      "specificity": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "integer", "minimum": 0 } },
+                      "order": { "type": "integer", "minimum": 0 },
+                      "declarations": { "type": "object", "additionalProperties": { "type": "string" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["selector", "domPath"],
+            "properties": {
+              "selector": { "type": "string", "minLength": 1 },
+              "domPath": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": { "type": "array", "items": { "type": "string" } },
+    "capture": {
+      "type": "object", "additionalProperties": false, "required": ["engine", "engineVersion", "scriptsExecuted", "remoteAssetsAllowed", "deterministicClock"],
+      "properties": {
+        "engine": { "const": "chromium" }, "engineVersion": { "type": "string" }, "scriptsExecuted": { "type": "boolean" },
+        "remoteAssetsAllowed": { "type": "boolean" }, "deterministicClock": { "type": "boolean" }
+      }
+    },
+    "stylesheets": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "href", "inline", "media", "disabled", "ruleCount", "accessible"],
+        "properties": {
+          "id": { "type": "string" }, "href": { "type": ["string", "null"] }, "inline": { "type": "boolean" },
+          "media": { "type": "string" }, "disabled": { "type": "boolean" }, "ruleCount": { "type": "integer", "minimum": 0 },
+          "accessible": { "type": "boolean" }, "contentHash": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["url", "kind", "status", "mime", "bytes", "sha256", "blocked"],
+        "properties": {
+          "url": { "type": "string" }, "kind": { "type": "string" }, "status": { "type": ["integer", "null"] },
+          "mime": { "type": ["string", "null"] }, "bytes": { "type": ["integer", "null"], "minimum": 0 },
+          "sha256": { "type": ["string", "null"] }, "blocked": { "type": "boolean" }, "content": { "type": "string" }
+        }
+      }
+    }
+  }
+}

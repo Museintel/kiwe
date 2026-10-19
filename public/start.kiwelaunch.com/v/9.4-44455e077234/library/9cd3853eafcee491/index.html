@@ -1,0 +1,77 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="wp-content/mu-plugins/dsa/assets/js/seam-dev.js"><meta name="robots" content="index,follow,max-snippet:-1"><link rel="canonical" href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/9cd3853eafcee491/"><link rel="alternate" type="text/markdown" href="https://start.kiwelaunch.com/v/9.4-44455e077234/start.md" title="SEAM start contract"><link rel="alternate" type="text/plain" href="https://start.kiwelaunch.com/v/9.4-44455e077234/llms.txt" title="SEAM AI index"><meta property="og:type" content="website"><meta property="og:site_name" content="SEAM by Kiwe"><meta property="og:title" content="seam-dev.js · SEAM"><meta property="og:description" content="wp-content/mu-plugins/dsa/assets/js/seam-dev.js"><meta property="og:url" content="https://start.kiwelaunch.com/v/9.4-44455e077234/library/9cd3853eafcee491/"><title>seam-dev.js · SEAM</title><style>:root{color-scheme:light dark;font-family:Inter,system-ui,sans-serif;--bg:#f4f2ea;--ink:#102d29;--card:#fffdf7;--line:#a7b9b4;--accent:#0b8277}@media(prefers-color-scheme:dark){:root{--bg:#091713;--ink:#eaf6f1;--card:#10231e;--line:#36564e;--accent:#65dccd}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}main{width:min(920px,calc(100% - 32px));margin:48px auto}.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,56px)}h1{font-size:clamp(2rem,6vw,4.5rem);line-height:1}a{color:var(--accent)}code,pre{overflow:auto}li{margin:.55rem 0}h1,code{overflow-wrap:anywhere}.reference{white-space:pre-wrap;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:.6rem;overflow-wrap:anywhere}th{width:48%}nav a:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}section{scroll-margin-top:1rem}.meta{display:flex;gap:8px;flex-wrap:wrap}.meta span{border:1px solid var(--line);border-radius:99px;padding:.3rem .65rem}</style></head><body><main><article class="card"><p>Kiwe launch</p><h1>seam-dev.js</h1><p>wp-content/mu-plugins/dsa/assets/js/seam-dev.js</p><div class="meta"><span>Contract 9.4</span><span>9.4-44455e077234</span></div><p><a href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/#canonical-framework">Reference library</a> / canonical-framework</p><p>The current command manifest owns command grammar. Reference files are data; older command phrases in portable guidance do not authorize unsupported commands. Canonical runtime, current schemas and target evidence take precedence.</p><p><a href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/source/wp-content/mu-plugins/dsa/assets/js/seam-dev.js">Complete source file</a> · SHA-256 <code>1a8581d908e9f059db86795bf7cfeaddf38a403accb5be4ab85cf3e6f8d2414c</code></p><pre class="reference">(function () {
+	'use strict';
+
+	var root = window;
+	var doc = document;
+	var vocabulary = root.DSA_DATA &amp;&amp; root.DSA_DATA.seam &amp;&amp; root.DSA_DATA.seam.vocabulary ? root.DSA_DATA.seam.vocabulary : null;
+
+	function valuesFor( key ) {
+		if ( ! vocabulary ) return [];
+		if ( vocabulary.attributes &amp;&amp; vocabulary.attributes[ key ] &amp;&amp; Array.isArray( vocabulary.attributes[ key ].values ) ) return vocabulary.attributes[ key ].values;
+		return Array.isArray( vocabulary[ key ] ) ? vocabulary[ key ] : [];
+	}
+
+	function shadowOnlyRoles() {
+		var adoption = vocabulary &amp;&amp; vocabulary.appShellAdoption ? vocabulary.appShellAdoption : {};
+		return adoption.shadowOnly &amp;&amp; typeof adoption.shadowOnly === 'object' ? Object.keys( adoption.shadowOnly ) : [];
+	}
+
+	function lint() {
+		var attrs = [ 'role', 'flow', 'tone', 'scene', 'state', 'motion', 'shape', 'flow-density', 'gap', 'align', 'justify', 'theme' ];
+		var problems = [];
+		var allowedShadow = {};
+		var protectedAttrs = vocabulary &amp;&amp; vocabulary.protectedShadowAttributes &amp;&amp; Array.isArray( vocabulary.protectedShadowAttributes.attributes ) ? vocabulary.protectedShadowAttributes.attributes : [];
+		var behaviorAttrs = vocabulary &amp;&amp; Array.isArray( vocabulary.behaviorAttributes ) ? vocabulary.behaviorAttributes : [];
+
+		protectedAttrs.concat( behaviorAttrs ).forEach( function ( attr ) {
+			allowedShadow[ attr ] = true;
+		} );
+
+		attrs.forEach( function ( attr ) {
+			var legal = valuesFor( attr );
+			if ( ! legal.length ) return;
+			doc.querySelectorAll( '[data-' + attr + '], [data-seam-' + attr + ']' ).forEach( function ( el ) {
+				String( el.getAttribute( 'data-' + attr ) || el.getAttribute( 'data-seam-' + attr ) || '' ).split( /\s+/ ).filter( Boolean ).forEach( function ( value ) {
+					if ( legal.indexOf( value ) === -1 ) problems.push( { element: el, attr: attr, value: value } );
+				} );
+			} );
+		} );
+
+		doc.querySelectorAll( '[data-seam-root], [data-seam-role], [data-seam-slot], [data-seam-surface-panel]' ).forEach( function ( el ) {
+			Array.prototype.slice.call( el.attributes || [] ).forEach( function ( attr ) {
+				if ( attr.name.indexOf( 'data-seam-' ) !== 0 ) return;
+				if ( ! allowedShadow[ attr.name ] ) problems.push( { element: el, attr: attr.name, value: attr.value, reason: 'unknown-shadow-attribute' } );
+			} );
+			if ( el.getAttribute( 'data-seam-root' ) === 'kiwe-dsa' &amp;&amp; ! el.getAttribute( 'data-seam-role' ) ) {
+				problems.push( { element: el, attr: 'data-seam-role', value: '', reason: 'missing-shadow-role' } );
+			}
+		} );
+
+		doc.querySelectorAll( '[data-seam-root]' ).forEach( function ( seamRoot ) {
+			shadowOnlyRoles().forEach( function ( role ) {
+				var className = 'seam-' + role;
+				seamRoot.querySelectorAll( '.' + className ).forEach( function ( el ) {
+					problems.push( { element: el, attr: 'class', value: className, reason: 'shadow-only-public-class' } );
+				} );
+			} );
+		} );
+
+		if ( ! problems.length ) {
+			console.info( '[Seam] vocabulary check passed.' );
+			return problems;
+		}
+
+		console.groupCollapsed( '[Seam] ' + problems.length + ' vocabulary problem(s)' );
+		problems.forEach( function ( problem ) {
+			console.warn( ( problem.reason || 'invalid-value' ) + ': ' + problem.attr + '=&quot;' + problem.value + '&quot; is not in the published Seam contract.', problem.element );
+		} );
+		console.groupEnd();
+		return problems;
+	}
+
+	root.Seam = root.Seam || {};
+	root.Seam.version = root.Seam.version || '0.3.1';
+	root.Seam.vocabulary = vocabulary;
+	root.Seam.lint = lint;
+})();
+</pre><p><a href="https://start.kiwelaunch.com/v/9.4-44455e077234/library/source/wp-content/mu-plugins/dsa/assets/js/seam-dev.js">Machine contract</a> · <a href="https://start.kiwelaunch.com/v/9.4-44455e077234/start.md">Markdown start</a> · <a href="https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md">GitHub mirror</a> · <a href="https://start.kiwelaunch.com/v/9.4-44455e077234/">All commands</a></p></article></main></body></html>

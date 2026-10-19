@@ -1,0 +1,38 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.4",
+  "releaseId": "9.4-44455e077234",
+  "route": "/preview",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/start.md",
+      "sha256": "b08c94fea55ba4a806e3ebe315e0f02178acd33d2a5214e28c999ad35e2b5c69"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
+      "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/contracts/authoring-delivery.md",
+      "sha256": "209b7bfa67ccdfdacc3821fafbfdba2faf2a82d1719fd813d963e75557b1ea69"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/preview.md",
+      "url": "https://start.kiwelaunch.com/contexts/preview.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/contexts/preview.md",
+      "sha256": "6fc1f95ddccff6431717c7d6feb61cf4ade2e66666262e4c63a18094e6fee539"
+    }
+  ],
+  "sourceHash": "sha256:44455e0772341590c952df47a19889a3ccf8be1f0d97adc4df35dbecbc314239",
+  "command": "/preview",
+  "context": "contexts/preview.md",
+  "requires": [
+    "current reviewed /ideate discovery and usage brief; required project facts and source authority"
+  ],
+  "outputs": [
+    "complete browser-tested raw HTML/CSS/JS preview",
+    "closed SEAM Map and asset manifest",
+    "authoring/preview-receipt.json"
+  ],
+  "boundary": "This command approves the current usage brief and generates raw preview source. Preserve the established design authority; no real form delivery, site mutation or deployment."
+}

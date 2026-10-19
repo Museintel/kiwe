@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.local/schemas/kiwe.bricks-bindings.v1.json",
+  "title": "Kiwe Bricks Binding Plan",
+  "description": "Read-only binding plan that maps an approved Kiwe website/page handoff to Bricks query loops, dynamic data, Kiwe launchers, and review items.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "siteGraphSchema",
+    "target",
+    "queries",
+    "dynamicFields",
+    "launchers",
+    "menuContext",
+    "assumptions",
+    "requiresHumanReview"
+  ],
+  "properties": {
+    "sources": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": { "path": { "$ref": "#/$defs/sourcePath" }, "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" } } } },
+    "schema": {
+      "const": "kiwe.bricks-bindings.v1"
+    },
+    "siteGraphSchema": {
+      "const": "kiwe.site-graph.v1"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["builder", "mode", "applyAuthority"],
+      "properties": {
+        "builder": {
+          "const": "bricks"
+        },
+        "mode": {
+          "const": "binding-plan"
+        },
+        "applyAuthority": {
+          "type": "string",
+          "description": "Must indicate human review or a trusted Kiwe/Bricks adapter. The plan itself does not mutate WordPress."
+        }
+      }
+    },
+    "queries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/queryBinding"
+      }
+    },
+    "dynamicFields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dynamicField"
+      }
+    },
+    "launchers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/launcher"
+      }
+    },
+    "menuContext": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/menuContext"
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": ["string", "object"]
+      }
+    },
+    "requiresHumanReview": {
+      "type": "array",
+      "items": {
+        "type": ["string", "object"]
+      }
+    }
+  },
+  "allOf": [{
+    "if": { "properties": { "target": { "required": ["sourcePolicy"], "properties": { "sourcePolicy": { "const": "immutable" } } } } },
+    "then": { "properties": {
+      "queries": { "items": { "required": ["template", "repeat"], "properties": { "template": { "$ref": "#/$defs/sourcePath" }, "repeat": { "$ref": "#/$defs/repeat" }, "bindings": { "maxProperties": 0 } } } },
+      "dynamicFields": { "items": { "required": ["template", "slot"], "properties": { "template": { "$ref": "#/$defs/sourcePath" }, "slot": { "enum": ["text", "image", "link"] }, "textRange": { "$ref": "#/$defs/textRange" }, "expectedText": { "type": "string", "maxLength": 100000 }, "expectedAttribute": { "$ref": "#/$defs/expectedAttribute" } }, "anyOf": [{ "required": ["textRange"] }, { "required": ["expectedText"] }, { "required": ["expectedAttribute"] }] } },
+      "launchers": { "items": { "required": ["template"], "properties": { "template": { "$ref": "#/$defs/sourcePath" } } } }
+    } }
+  }],
+  "$defs": {
+    "sourcePath": { "type": "string", "maxLength": 1000, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\?#]+\\.html?$" },
+    "textRange": {
+      "type": "object", "additionalProperties": false, "required": ["path", "expectedText", "match"],
+      "properties": {
+        "path": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "type": "integer", "minimum": 0 } },
+        "expectedText": { "type": "string", "maxLength": 100000 },
+        "match": { "type": "string", "minLength": 1, "maxLength": 100000 }
+      }
+    },
+    "expectedAttribute": {
+      "type": "object", "additionalProperties": false, "required": ["name", "value"],
+      "properties": { "name": { "enum": ["src", "href"] }, "value": { "type": "string", "maxLength": 100000 } }
+    },
+    "repeat": {
+      "type": "object", "additionalProperties": false, "required": ["containerSelector", "itemSelector", "expectedCount"],
+      "properties": {
+        "containerSelector": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "itemSelector": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "expectedCount": { "type": "integer", "minimum": 1, "maximum": 500 }
+      }
+    },
+    "queryBinding": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "label", "selector", "bricks", "bindings"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selector": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bricks": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["objectType"],
+          "properties": {
+            "objectType": {
+              "type": "string",
+              "minLength": 1
+            },
+            "post_type": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "posts_per_page": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "tax_query": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9_-]+::[0-9]+$"
+              }
+            },
+            "tax_query_not": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9_-]+::[0-9]+$"
+              }
+            }
+          }
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "object", "array", "number", "boolean", "null"]
+          }
+        }
+      }
+    },
+    "dynamicField": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["selector", "field", "tag"],
+      "properties": {
+        "selector": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "pattern": "\\{[^{}]+\\}"
+        }
+      }
+    },
+    "launcher": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["selector", "attribute", "value"],
+      "properties": {
+        "selector": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attribute": {
+          "const": "data-dsa-open-module"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "menuContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selector": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

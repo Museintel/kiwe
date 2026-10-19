@@ -1,0 +1,364 @@
+{
+  "schema": "kiwe.authoring-kit.v1",
+  "contractVersion": "9.4",
+  "releaseId": "9.4-44455e077234",
+  "canonicalStart": "https://start.kiwelaunch.com/start.md",
+  "pinnedStart": "https://start.kiwelaunch.com/v/9.4-44455e077234/start.md",
+  "firstPrompt": "PROMPT.txt",
+  "sharedContext": "contracts/authoring-delivery.md",
+  "files": [
+    {
+      "path": "bin/kiwe.js",
+      "bytes": 4269,
+      "sha256": "fbb868a2d590e808bdaf9391cdceebd36df52a6f2b3831edc276d1e3e42edf39"
+    },
+    {
+      "path": "command-manifest.json",
+      "bytes": 7464,
+      "sha256": "1cc1f4558aaa2c83ef6ab442ed646d7f6013b9ebc8eab5293c279fb872a92a8c"
+    },
+    {
+      "path": "contexts/accessibility.md",
+      "bytes": 1072,
+      "sha256": "bbe4043f7bcb9517d656470e9fed86db14a475f2f8802fd7201817dc66a09b00"
+    },
+    {
+      "path": "contexts/audit.md",
+      "bytes": 1380,
+      "sha256": "ed1d2a637fa1ac4653285678d65e9ee5821b0cfa13a27c58d0ac20f7026aae7a"
+    },
+    {
+      "path": "contexts/convert-bricks.md",
+      "bytes": 8560,
+      "sha256": "0cc6b66d5838ba409c676b9d36b9e20a141098f69331bf951d975d488b7019d9"
+    },
+    {
+      "path": "contexts/ideate.md",
+      "bytes": 16660,
+      "sha256": "7a4c7d261cc2e9961867cd6908773340044faad180218c2672675d2ba106da11"
+    },
+    {
+      "path": "contexts/library.md",
+      "bytes": 1570,
+      "sha256": "2521f7ccde99de89555b157115a2613372397805c0e06ba0dfd148eba8679731"
+    },
+    {
+      "path": "contexts/preview.md",
+      "bytes": 2504,
+      "sha256": "6fc1f95ddccff6431717c7d6feb61cf4ade2e66666262e4c63a18094e6fee539"
+    },
+    {
+      "path": "contexts/seam.md",
+      "bytes": 4657,
+      "sha256": "c5c2f15d8cfa3f5fdfdd657b441bff2bd26bca3b032bf369ee137be3e9eda232"
+    },
+    {
+      "path": "contracts/authoring-delivery.md",
+      "bytes": 12815,
+      "sha256": "209b7bfa67ccdfdacc3821fafbfdba2faf2a82d1719fd813d963e75557b1ea69"
+    },
+    {
+      "path": "contracts/seam-compiler-contract.json",
+      "bytes": 5089,
+      "sha256": "11e6180595e4293d69c18eced52c08ce6bbb3d70805b3887393c857badda64e5"
+    },
+    {
+      "path": "entry.json",
+      "bytes": 2665,
+      "sha256": "0751aee21094aee9eb8a1154604770b94de20fcbff7d413e6d06cfd70e21d25c"
+    },
+    {
+      "path": "lib/accessibility-validator.js",
+      "bytes": 33443,
+      "sha256": "7461051da91a7eada0fce680a44729b1cd265b02d9f4499673434d9577bfc8b8"
+    },
+    {
+      "path": "lib/apply-planner.js",
+      "bytes": 14321,
+      "sha256": "e422a4f2c6b0fa5acc8ff14f76bcb64c68df5d7c619b1a985debc1f09dfa2c76"
+    },
+    {
+      "path": "lib/authoring-schemas.cjs",
+      "bytes": 96096,
+      "sha256": "4d3eac351b3acdf57d5d84cc4d0427cdb5b06ea3999c5b70f3cd7b9afa6a0136"
+    },
+    {
+      "path": "lib/binding-preflight.js",
+      "bytes": 3371,
+      "sha256": "fbf3d9fdf0bfdd40f0963c40ef54b41f6259154a26ffb2c7d324bb546a7fba95"
+    },
+    {
+      "path": "lib/binding-validator.js",
+      "bytes": 22856,
+      "sha256": "ebc7f1dabf4a45a646ba2b1ff145807cd700c5856b904fa5b95b65ad042e6946"
+    },
+    {
+      "path": "lib/bricks-conversion-validator.js",
+      "bytes": 113558,
+      "sha256": "41de71c32df08b0977a8a0ae9362b77c0897472b81cc609199bbe066148b9bfc"
+    },
+    {
+      "path": "lib/bricks-theme-style-validator.js",
+      "bytes": 5686,
+      "sha256": "e73661b150bf6a32deb3747e250c775fc19a2a9121c3ec156690881230ac85d9"
+    },
+    {
+      "path": "lib/framework-profile-validator.js",
+      "bytes": 22464,
+      "sha256": "a33950bef52b387f31a425b7aeef6e2184308a1058a6d9b795b91b146e14446b"
+    },
+    {
+      "path": "lib/kiwe-core.js",
+      "bytes": 10380,
+      "sha256": "11bf948ddce3f4e96476ed413c151e097460fc2db774a366e27861b68031cfb1"
+    },
+    {
+      "path": "lib/preview-validator.js",
+      "bytes": 9264,
+      "sha256": "ac0973c71f9cff4aa9ad853a05c19b56a57cbac0f86155234440b713efd480aa"
+    },
+    {
+      "path": "lib/seam-framework-package-validator.js",
+      "bytes": 9787,
+      "sha256": "209997d08704fb6ca43081caa33caec51ab59a3fd52441b3e6e0974f5502e9f2"
+    },
+    {
+      "path": "lib/seam-map-validator.js",
+      "bytes": 14497,
+      "sha256": "a1f90951a0228ab62ba9ad850811343086f9ae90f96c7f10a8ec146513e7598c"
+    },
+    {
+      "path": "package.json",
+      "bytes": 183,
+      "sha256": "f510d7809ac27b792c11dfe80435c28d4f06e0b54cc959ccb2ccdbc4d4118b77"
+    },
+    {
+      "path": "PROMPT.txt",
+      "bytes": 46,
+      "sha256": "5cd80915f08ac37f6d94c81b6a76465de1690316405c0fa5343ea0aae2b3f453"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1426,
+      "sha256": "bc0a32b26171907ece9ad5d7345d3e916f84c2082f14932b86ae5bca07f7d99c"
+    },
+    {
+      "path": "reference/index.json",
+      "bytes": 13767,
+      "sha256": "6d1490638825a1fca964634187902c38af74518de79a0120c0f59390537c0a9b"
+    },
+    {
+      "path": "reference/source/docs/BRICKS-ICON-LIBRARY.md",
+      "bytes": 2515,
+      "sha256": "9a868355a970b35d8f8a0b9acad3104d2355064a0c36799240cd8974ba040deb"
+    },
+    {
+      "path": "reference/source/docs/BRICKS-INTEGRATION.md",
+      "bytes": 11298,
+      "sha256": "6c0d2167f992dded30888bde670044a78f0bd1deb38cd65b2753bfb782669db6"
+    },
+    {
+      "path": "reference/source/docs/design-context-native-records.md",
+      "bytes": 8733,
+      "sha256": "f028a44fcae1a561aae0f0939737fe50b31382066a0f829038fedbebd8b5364c"
+    },
+    {
+      "path": "reference/source/docs/DESIGN-CONTEXT-WORKSPACE-COVERAGE.md",
+      "bytes": 22648,
+      "sha256": "d13f078e5e1e6fdaf82b5f76470dde0f0c5792bbe250ad779ddf46af2fd8c997"
+    },
+    {
+      "path": "reference/source/docs/FRONTEND-ATTRIBUTES.md",
+      "bytes": 10064,
+      "sha256": "08262f4f678946e471efe059a845e901b1ca9d22996f187ee2254c170bccfee8"
+    },
+    {
+      "path": "reference/source/kiwe-ai-toolkit/reference/bricks-elements.json",
+      "bytes": 10426,
+      "sha256": "bcd9d85ea23345cc6e35322a18c5bdaaa3914f9f7a7e106a1465f97a92fb4edb"
+    },
+    {
+      "path": "reference/source/kiwe-ai-toolkit/reference/design-context-fields.json",
+      "bytes": 16504,
+      "sha256": "88f5f0a8671ca28dc4996a36bea106cdcdb1538e063cac3bb27ebd37b0b832af"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/generated/kiwe-token-catalog.json",
+      "bytes": 14317,
+      "sha256": "67b3ad399b97e4ccd50afe36d95ccf7c80af08d41459e98ee77c8cc387fe564c"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/kiwe.appsite-package.v1.schema.json",
+      "bytes": 2476,
+      "sha256": "3ed08b666681c371ae5416a8be1650200e1470de0131e7b1d7829d50020bed40"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/kiwe.sitegraph-calibration-pair.v1.schema.json",
+      "bytes": 1233,
+      "sha256": "280e639122cf444593e895ddd49db56b40baf06f22559c2faef2a24a6edb889b"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/kiwe.sitegraph-calibration.v1.schema.json",
+      "bytes": 3321,
+      "sha256": "0b53f75ebbe7d6efa6801cb90c189f2cb6e2da01727354706a1ad5e6c815c7c3"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.asset-import-plan.v1.schema.json",
+      "bytes": 1684,
+      "sha256": "cef3c063d1f47513a5e2165f5ce2c922a4192d6fe3c4ed65cca071357576610a"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.asset-manifest.v1.schema.json",
+      "bytes": 1237,
+      "sha256": "48fe7981bb9e9e971feb46996d533cabcc8e2dd3743473f92dc3021f4ebbcd1a"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.behavior-ir.v1.schema.json",
+      "bytes": 1423,
+      "sha256": "4de26ad9f2cdfb1fd976065bbe30a46cece69c21595c5ffdaddbd2f2ac366a1f"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.bricks-plan.v1.schema.json",
+      "bytes": 4173,
+      "sha256": "eca2f43439572eac1310193cad23fb292541a9586cd78c664895185f36b1d750"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.capture.v1.schema.json",
+      "bytes": 6839,
+      "sha256": "e12645d5ff082bb83618ee943c6e61894cf909424acc39dd7b7e31e7b7e59b75"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.deployment-plan.v1.schema.json",
+      "bytes": 2273,
+      "sha256": "4e515cb633111c2336c0055dc8c7b34d5e2bc947427ed1f5cb308b4395eeb343"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.geometry.v1.schema.json",
+      "bytes": 3253,
+      "sha256": "f3baad54df1d79f7fccd3f440df14642c513777250d7486f18a6dca0398e852d"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.page-ir.v1.schema.json",
+      "bytes": 5309,
+      "sha256": "126015a3d1300af062ee13d6097d5de8a718628d0fecfd8c96a212e963ce2c74"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.repair-plan.v1.schema.json",
+      "bytes": 1439,
+      "sha256": "4bc52d85953c346d49d2c935f96c72616fd8654ceb0778f552dceef64e321aef"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.sitegraph-snapshot.v1.schema.json",
+      "bytes": 2404,
+      "sha256": "a27dabd1bd82ac15d89f040a52edbfab3e36390f2a671ef1f4d7d735386a2438"
+    },
+    {
+      "path": "reference/source/packages/seam-contracts/schemas/seam.visual-proof.v1.schema.json",
+      "bytes": 4017,
+      "sha256": "bc02c86beb30bb8f42b30e21f6c18efddd15c3b0e9cbb8e8fd31ada2b77948ea"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/assets/css/seam.css",
+      "bytes": 18759,
+      "sha256": "1b609722ae3bef2a25c47451ff74f64c6bfdc804d65777060a1482774f7cae7a"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/assets/js/seam-dev.js",
+      "bytes": 3486,
+      "sha256": "1a8581d908e9f059db86795bf7cfeaddf38a403accb5be4ab85cf3e6f8d2414c"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/assets/js/seam.js",
+      "bytes": 7532,
+      "sha256": "5d766c23963e03e73c93ce321bb5c30c7818d715f73ce28ca0e8028bc19deb74"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/includes/Bricks/surface-style-controls.json",
+      "bytes": 5189,
+      "sha256": "62dde0240c901f7196607e78e776debdd9159217532e899405791247b0c7f04e"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/bricks-capabilities.json",
+      "bytes": 6611,
+      "sha256": "be77475d5ec5457b4f165a0db82b6ca213d40c4d87986b12f5c0fe39548f0f21"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/screen-payloads.json",
+      "bytes": 15881,
+      "sha256": "c605fca2eb919af201e9b03e22c85213aa146863501c868313006eab8ddf8b8a"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/seam-class-vocabulary.json",
+      "bytes": 6618,
+      "sha256": "a26de64fb04b101cabc6cbc942a0cb756284944fc1c8a36d04a79bee3c12aa9d"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.json",
+      "bytes": 14302,
+      "sha256": "969ee0566027b842b1a33a7f332f1a9bfb4ff45f8a46f2c6fdd3cecaed015b0d"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/theme-manifest.schema.json",
+      "bytes": 4211,
+      "sha256": "2bf1caffd4d4a65828df4f1c15ad3b7f6aeff2b5d6f510ffaa9de6bb8f8bb8ff"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/theme-package.schema.json",
+      "bytes": 12308,
+      "sha256": "06ee8dfd257d5847081e54ab8edd31743afb1938541430d6572277aadb12c0f0"
+    },
+    {
+      "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/token-map.css",
+      "bytes": 3713,
+      "sha256": "fc9cddb69f0b281601f4a139195b707b32d5e7d61c9a769da0ab2a2ba2af84ec"
+    },
+    {
+      "path": "schemas/authoring-journey.schema.json",
+      "bytes": 3765,
+      "sha256": "5af91624f9fab992e7c36a520adc38fa777dbd4389fc6dc001b43e4b636f5d85"
+    },
+    {
+      "path": "schemas/bricks-apply-plan.schema.json",
+      "bytes": 4180,
+      "sha256": "9403bdac9656a3916a273bf45088b27a7a9537e77f4217504edf46432c0ab8fc"
+    },
+    {
+      "path": "schemas/bricks-bindings.schema.json",
+      "bytes": 7210,
+      "sha256": "2f01b41ff196181d510289ce433d5543ef21fec968452809208e10aac462e3a0"
+    },
+    {
+      "path": "schemas/bricks-theme-style.schema.json",
+      "bytes": 2188,
+      "sha256": "6388e45c5b4caeaa6d0a836426fa8bcf0c02c1cbd78b35e64c84bbecd6941872"
+    },
+    {
+      "path": "schemas/framework-profile.schema.json",
+      "bytes": 10168,
+      "sha256": "76ed38d6f042c746f1428dbc5beda93648130450d34590641dd0d2d7e8e25db8"
+    },
+    {
+      "path": "schemas/ideate-discovery.schema.json",
+      "bytes": 7245,
+      "sha256": "f1897fbec7a025f6891415ea3a60e1fe3e9470b15a8e3f3b17ce108e3f675eae"
+    },
+    {
+      "path": "schemas/preview-receipt.schema.json",
+      "bytes": 2344,
+      "sha256": "ec8cd084cd75fb08f514890157fe9e26445cee0eff38aa95f540198201faf981"
+    },
+    {
+      "path": "schemas/seam-map.schema.json",
+      "bytes": 14294,
+      "sha256": "4f3c7e6c76ca6252d202febd2cc8e881c5a3dc48c2fd2ae3d8e6fb55d530a16c"
+    },
+    {
+      "path": "start.md",
+      "bytes": 8019,
+      "sha256": "b08c94fea55ba4a806e3ebe315e0f02178acd33d2a5214e28c999ad35e2b5c69"
+    }
+  ],
+  "archive": "https://start.kiwelaunch.com/start-authoring-kit.zip",
+  "archiveBytes": 205775,
+  "archiveSha256": "306c34b6750db825431472b93fb12dcd31e70f57957b00817fad3c7d995e3841"
+}

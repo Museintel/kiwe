@@ -2,16 +2,19 @@
 
 SEAM is the public design, audit and conversion product. Kiwe is the WordPress runtime, SiteGraph authority and optional AppShell/commerce/security layer. They share contracts but do not duplicate responsibilities.
 
-Start at `https://start.kiwelaunch.com/start.md`. The current contract exposes exactly six commands:
+Start at `https://start.kiwelaunch.com/start.md`. The current contract exposes exactly nine commands:
 
 - `/ideate`
+- `/preview`
+- `/seam`
+- `/library`
 - `/convert /bricks`
 - `/audit`
 - `/accessibility`
 - `/fix`
 - `/redo`
 
-Unknown commands, remembered aliases and unsupported modifiers are rejected. SiteGraph and its embedded Design Context are attached or safely connected inputs, not commands. `/ideate` detects new build, redesign or source enhancement and selects an available read-only SiteGraph transport. After approval it adds inert `data-seam-anchor` stitches and a closed `kiwe.seam-map.v1`: source hashes, exact guards, WordPress ownership, template boundaries, dynamic fields, loop prototypes, launchers, specialist elements, conditions and interactions all travel as builder-neutral evidence. A cited SiteGraph snapshot is attached unchanged and verified by revision, SHA-256, JSON pointer, tag, query type and module. Unmarked source remains static; a missing or stale proof fails closed instead of enabling semantic inference. `/convert /bricks` remains the fallback for accepted pre-existing projects without this map and prepares both dynamic-tag and query-loop intent; `/dynamictags` and `/queryloop` narrow that preparation to one binding type. Seam Framework is an explicit option in the `seam.kiwe` compiler, not a command lane.
+Unknown commands, remembered aliases and unsupported modifiers are rejected. SiteGraph and its embedded Design Context are attached or safely connected inputs, not commands. `/ideate` establishes the brief and design authority; `/preview` approves that brief to generate raw browser-tested source. Inert `data-seam-anchor` stitches and a closed `kiwe.seam-map.v1` carry source guards, ownership, template boundaries, dynamic fields, loop prototypes, launchers, native elements, conditions and interactions. Cited SiteGraph is attached unchanged and checked by revision, hash, pointer and capability. Unmarked source remains static. `/seam` accepts the current preview for a separate design-preserving Framework source copy; `/library` reads the complete source-bound reference. Only the deterministic compiler generates native Bricks JSON and its final Framework Profile, with Framework explicitly enabled. `/convert /bricks` remains the immutable legacy binding-only path, including `/dynamictags` and `/queryloop`. No command authorizes live deployment.
 
 ## Authority
 

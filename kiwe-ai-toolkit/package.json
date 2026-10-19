@@ -1,6 +1,6 @@
 {
   "name": "@kiwe/seam",
-  "version": "9.1.0",
+  "version": "9.4.0",
   "description": "Strict SEAM command router and deterministic validation toolkit.",
   "type": "module",
   "bin": {
@@ -9,7 +9,7 @@
     "kiwe-sitegraph-mcp": "./mcp/sitegraph-client.js"
   },
   "scripts": {
-    "test": "node tools/smoke-test.cjs"
+    "test": "node tools/smoke-test.cjs && node ../tools/release/authoring-delivery-contracts.cjs"
   },
   "keywords": [
     "kiwe",

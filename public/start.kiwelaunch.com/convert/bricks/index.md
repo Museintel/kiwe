@@ -1,6 +1,6 @@
 # /convert /bricks
 
-SEAM contract: 9.1
+SEAM contract: 9.4
 
 Fallback binding-only handoff for accepted pre-existing source that did not originate with a strict SEAM Map. Use sourcePolicy immutable, exact per-file targets, explicit field slots, source guards and repeat prototypes. Never rewrite source or emit Bricks JSON.
 

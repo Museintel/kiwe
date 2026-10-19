@@ -12,7 +12,9 @@ import {
   validateBricksConversion,
   validateBricksThemeStyle,
   validateFrameworkProfile,
-  validateSeamMap
+  validateSeamMap,
+  inspectBindings,
+  validatePreview
 } from '../lib/kiwe-core.js';
 
 function print(value) {
@@ -59,6 +61,8 @@ function usage() {
   seam plan --attachment-summary "index.html, styles.css and app.js"
   seam validate-bindings <path> [--site-graph <path>] [--optional]
   seam validate-seam-map <path>
+  seam inspect-bindings <site-graph.json> [--field exact.binding.path]
+  seam validate-preview <path>
   seam validate-bricks-conversion <path> [--site-graph <path>] [--optional] [--documented]
   seam validate-framework-profile <path> [--optional]
   seam validate-bricks-theme-style <path> [--optional]
@@ -72,6 +76,8 @@ try {
   if (!action || action === '--help' || action === '-h') usage();
   else if (action === 'entry') print(getStartEntrypoint());
   else if (action === 'manifest') print(getCommandManifest());
+  else if (action === 'inspect-bindings') print(inspectBindings(args[0], {fields:option(args,'--field').split(',').filter(Boolean)}));
+  else if (action === 'validate-preview') { const result=validatePreview(target(args)); print(result); if(!result.ok)process.exitCode=1; }
   else if (action === 'commands') print(listCommands());
   else if (action === 'diagnose') print(diagnoseCommand(commandInput(args)));
   else if (action === 'route') print(routeCommand(commandInput(args)));

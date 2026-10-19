@@ -3,6 +3,8 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const library = require('./command-library.cjs');
+const {buildKit} = require('./authoring-kit.cjs');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const publicRoot = path.join(repoRoot, 'public', 'start.kiwelaunch.com');
@@ -35,7 +37,8 @@ const routeFor = (command) => command.trim().split(/\s+/).map((token) => token.r
 const escape = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 
 function page(title, summary, body, version, releaseId, machineUrl, canonicalUrl = baseUrl) {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escape(summary)}"><meta name="robots" content="index,follow,max-snippet:-1"><link rel="canonical" href="${escape(canonicalUrl)}"><link rel="alternate" type="text/markdown" href="${baseUrl}/start.md" title="SEAM start contract"><link rel="alternate" type="text/plain" href="${baseUrl}/llms.txt" title="SEAM AI index"><meta property="og:type" content="website"><meta property="og:site_name" content="SEAM by Kiwe"><meta property="og:title" content="${escape(title)} · SEAM"><meta property="og:description" content="${escape(summary)}"><meta property="og:url" content="${escape(canonicalUrl)}"><title>${escape(title)} · SEAM</title><style>:root{color-scheme:light dark;font-family:Inter,system-ui,sans-serif;--bg:#f4f2ea;--ink:#102d29;--card:#fffdf7;--line:#a7b9b4;--accent:#0b8277}@media(prefers-color-scheme:dark){:root{--bg:#091713;--ink:#eaf6f1;--card:#10231e;--line:#36564e;--accent:#65dccd}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}main{width:min(920px,calc(100% - 32px));margin:48px auto}.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,56px)}h1{font-size:clamp(2rem,6vw,4.5rem);line-height:1}a{color:var(--accent)}code,pre{overflow:auto}li{margin:.55rem 0}.meta{display:flex;gap:8px;flex-wrap:wrap}.meta span{border:1px solid var(--line);border-radius:99px;padding:.3rem .65rem}</style></head><body><main><article class="card"><p>Kiwe launch</p><h1>${escape(title)}</h1><p>${escape(summary)}</p><div class="meta"><span>Contract ${escape(version)}</span><span>${escape(releaseId)}</span></div>${body}<p><a href="${escape(machineUrl)}">Machine contract</a> · <a href="${baseUrl}/start.md">Markdown start</a> · <a href="${escape(rawSourceStart)}">GitHub mirror</a> · <a href="${baseUrl}/">All commands</a></p></article></main></body></html>`;
+  if(canonicalUrl===`${baseUrl}/`)body=`<h2>Start with one short message</h2><pre>https://start.kiwelaunch.com/start.md\n/ideate</pre><p>Attach your brief and safe Kiwe Design Context once. <a href="/start-authoring-kit.zip">Download the pinned Start kit</a> to carry its rules, schemas and checks with the project ZIP. The AI reads the rules and fixes routine defects before delivery.</p>${body}`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${escape(summary)}"><meta name="robots" content="index,follow,max-snippet:-1"><link rel="canonical" href="${escape(canonicalUrl)}"><link rel="alternate" type="text/markdown" href="${baseUrl}/start.md" title="SEAM start contract"><link rel="alternate" type="text/plain" href="${baseUrl}/llms.txt" title="SEAM AI index"><meta property="og:type" content="website"><meta property="og:site_name" content="SEAM by Kiwe"><meta property="og:title" content="${escape(title)} · SEAM"><meta property="og:description" content="${escape(summary)}"><meta property="og:url" content="${escape(canonicalUrl)}"><title>${escape(title)} · SEAM</title><style>:root{color-scheme:light dark;font-family:Inter,system-ui,sans-serif;--bg:#f4f2ea;--ink:#102d29;--card:#fffdf7;--line:#a7b9b4;--accent:#0b8277}@media(prefers-color-scheme:dark){:root{--bg:#091713;--ink:#eaf6f1;--card:#10231e;--line:#36564e;--accent:#65dccd}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}main{width:min(920px,calc(100% - 32px));margin:48px auto}.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,56px)}h1{font-size:clamp(2rem,6vw,4.5rem);line-height:1}a{color:var(--accent)}code,pre{overflow:auto}li{margin:.55rem 0}h1,code{overflow-wrap:anywhere}.reference{white-space:pre-wrap;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:.6rem;overflow-wrap:anywhere}th{width:48%}nav a:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}section{scroll-margin-top:1rem}.meta{display:flex;gap:8px;flex-wrap:wrap}.meta span{border:1px solid var(--line);border-radius:99px;padding:.3rem .65rem}</style></head><body><main><article class="card"><p>Kiwe launch</p><h1>${escape(title)}</h1><p>${escape(summary)}</p><div class="meta"><span>Contract ${escape(version)}</span><span>${escape(releaseId)}</span></div>${body}<p><a href="${escape(machineUrl)}">Machine contract</a> · <a href="${baseUrl}/start.md">Markdown start</a> · <a href="${escape(rawSourceStart)}">GitHub mirror</a> · <a href="${baseUrl}/">All commands</a></p></article></main></body></html>`;
 }
 
 function compare(expectedRoot, actualRoot) {
@@ -61,7 +64,7 @@ function build(targetRoot) {
   const entry = json(entryPath);
   const manifest = json(manifestPath);
   const commands = Array.isArray(manifest.commands) ? manifest.commands : [];
-  const published = [startPath, entryPath, manifestPath, ...['contexts', 'contracts', 'schemas'].flatMap((dir) => walk(path.join(toolkitRoot, dir)))].sort();
+  const published = [...new Set([startPath, entryPath, manifestPath, __filename, path.join(__dirname,'command-library.cjs'), path.join(__dirname,'authoring-kit.cjs'), path.join(__dirname,'build-authoring-schemas.cjs'), ...['bin','lib','contexts', 'contracts', 'schemas'].flatMap((dir) => walk(path.join(toolkitRoot, dir))), ...library.resources().map(r=>path.join(repoRoot,r.file))])].sort();
   const sourceHash = hash(published.map((file) => `${path.relative(repoRoot, file).replaceAll('\\', '/')}\n${bytes(file).toString('utf8')}`).join('\n---\n'));
   const version = String(entry.contractVersion);
   const releaseId = `${version}-${sourceHash.slice(0, 12)}`;
@@ -73,26 +76,28 @@ function build(targetRoot) {
     canonicalBase: baseUrl, immutableBase: `${baseUrl}/v/${releaseId}`, start: `${baseUrl}/start.md`, entry: `${baseUrl}/entry.json`,
     commandManifest: `${baseUrl}/command-manifest.json`, llms: `${baseUrl}/llms.txt`, llmsFull: `${baseUrl}/llms-full.txt`,
     sourceRepository, sourceStart, rawSourceStart, sourceHash: `sha256:${sourceHash}`,
-    fallback: { whenCanonicalUnavailable: 'Read rawSourceStart, verify the advertised contract version, then follow the same strict command boundary. Never substitute a similarly named domain.' },
+    fallback: { whenCanonicalUnavailable: 'Verify an intact attached Start kit and use its matching bootstrap/manifest/shared context first; otherwise read rawSourceStart at the same contract version. Never substitute a similarly named domain.' },
     commands: Object.fromEntries(routes.map(({ command, route }) => [command, `${baseUrl}/${route}/contract.json`])),
     immutableCommands: Object.fromEntries(routes.map(({ command, route }) => [command, `${baseUrl}/v/${releaseId}/${route}/contract.json`])),
+    library: `${baseUrl}/library/catalog.json`, immutableLibrary: `${baseUrl}/v/${releaseId}/library/catalog.json`,
+    authoringKit: `${baseUrl}/start-authoring-kit.zip`, immutableAuthoringKit: `${baseUrl}/v/${releaseId}/start-authoring-kit.zip`,
     cachePolicy: { canonical: 'no-store', immutable: 'public, max-age=31536000, immutable' }
   };
 
   const list = routes.map(({ command, route, spec }) => `<li><a href="/${escape(route)}/"><code>${escape(command)}</code></a> — ${escape(spec.boundary)}</li>`).join('');
-  write(targetRoot, 'index.html', page('SEAM command registry', 'The strict public command boundary generated from the canonical Kiwe repository.', `<h2>Six commands</h2><ul>${list}</ul><h2>AI-readable bootstrap</h2><p>Read <a href="/start.md">start.md</a> first. If a browser AI cannot yet open this newly indexed host, use the byte-equivalent <a href="${escape(rawSourceStart)}">GitHub mirror</a>. Never substitute a similarly named product or domain.</p>`, version, releaseId, `${baseUrl}/.well-known/kiwe.json`, `${baseUrl}/`));
+  write(targetRoot, 'index.html', page('From your idea to an editable website', 'Give your AI these commands. Review a real preview, then prepare the same design for Seam and Bricks.', `<h2>Three steps</h2><ol><li><a href="/ideate/"><code>/ideate</code></a> — use your Design Context and attachments to plan the website. Review the brief.</li><li><a href="/preview/"><code>/preview</code></a> — approve that brief and get a complete raw HTML, CSS and JavaScript preview.</li><li><a href="/seam/"><code>/seam</code></a> — happy with the preview? Prepare the same design with Seam variables, attributes and explicit native Bricks intent. Import through the <a href="https://seam.kiwelaunch.com/">Seam compiler</a> with Framework enabled.</li></ol><p>Commands are instructions for your connected AI. This static reference does not run an AI or publish changes to your website. Supply your brief, assets and safe Design Context once; commands reuse the current project.</p><h2><a href="/library/">The complete reference library</a></h2><p>Browse all public Framework vocabulary, tokens, variables, actions and compiler schemas, including loops, interactions and conditions. Every source has a hash and exact entry links. Site-specific and unsupported capabilities stay explicit.</p><h2>All ${routes.length} commands</h2><ul>${list}</ul><h2>AI-readable bootstrap</h2><p>Read <a href="/start.md">start.md</a> first. If this host cannot be opened, use the <a href="${escape(rawSourceStart)}">GitHub source mirror</a> only when it advertises this exact release. Never substitute a similarly named product or domain.</p>`, version, releaseId, `${baseUrl}/.well-known/kiwe.json`, `${baseUrl}/`));
   write(targetRoot, '.well-known/kiwe.json', `${JSON.stringify(discovery, null, 2)}\n`);
   write(targetRoot, 'registry.json', `${JSON.stringify(discovery, null, 2)}\n`);
   copy(targetRoot, startPath, 'start.md');
   copy(targetRoot, entryPath, 'entry.json');
   copy(targetRoot, manifestPath, 'command-manifest.json');
-  const llms = `# SEAM by Kiwe\n\n> Canonical command boundary for attachment-aware website ideation, auditing, fixing and WordPress binding preparation.\n\n- [Start contract](${baseUrl}/start.md)\n- [Command manifest](${baseUrl}/command-manifest.json)\n- [Machine registry](${baseUrl}/.well-known/kiwe.json)\n- [GitHub source mirror](${rawSourceStart})\n\nNever substitute kiwilaunch.com or another similarly named domain.\n`;
+  const llms = `# SEAM by Kiwe\n\n> Canonical command boundary: /ideate, /preview, /seam; inspect, fix and convert with exact evidence.\n\n- [Start contract](${baseUrl}/start.md)\n- [Command manifest](${baseUrl}/command-manifest.json)\n- [Complete reference library](${baseUrl}/library/)\n- [Machine library with source hashes and pointers](${baseUrl}/library/catalog.json)\n- [Machine registry](${baseUrl}/.well-known/kiwe.json)\n- [GitHub source mirror](${rawSourceStart})\n\nNever substitute kiwilaunch.com or another similarly named domain.\n`;
   const llmsFull = `${llms}\n---\n\n${bytes(startPath).toString('utf8')}\n\n--- COMMAND MANIFEST ---\n\n${bytes(manifestPath).toString('utf8')}\n\n${routes.map(({ command, spec }) => `--- ${command} ---\n\n${bytes(path.join(toolkitRoot, spec.context)).toString('utf8')}`).join('\n\n')}\n`;
   write(targetRoot, 'llms.txt', llms);
-  write(targetRoot, 'llms-full.txt', `${llmsFull.trimEnd()}\n`);
+  write(targetRoot, 'llms-full.txt', `${llmsFull.trimEnd()}\n\n--- SHARED AUTHORING AND DELIVERY ---\n\n${bytes(path.join(toolkitRoot,manifest.sharedContext)).toString('utf8').trimEnd()}\n`);
 
   for (const { command, route, spec } of routes) {
-    const sources = ['KIWE-START.md', `kiwe-ai-toolkit/${spec.context}`];
+    const sources = ['KIWE-START.md', `kiwe-ai-toolkit/${manifest.sharedContext}`, `kiwe-ai-toolkit/${spec.context}`];
     const resources = sources.map((source) => {
       const sourcePath = source === 'KIWE-START.md' ? startPath : path.join(repoRoot, source);
       const publicPath = source === 'KIWE-START.md' ? 'start.md' : source.slice('kiwe-ai-toolkit/'.length);
@@ -105,24 +110,31 @@ function build(targetRoot) {
   }
 
   for (const directory of ['contexts', 'contracts', 'schemas']) for (const source of walk(path.join(toolkitRoot, directory))) copy(targetRoot, source, path.join(directory, path.relative(path.join(toolkitRoot, directory), source)));
+  library.buildLibrary(targetRoot, page, version, releaseId);
+  const kit=buildKit({version,releaseId,resources:library.resources()});
+  write(targetRoot,'start-authoring-kit.zip',kit.archive);
+  write(targetRoot,'authoring-kit.json',JSON.stringify({...kit.manifest,archive:`${baseUrl}/start-authoring-kit.zip`,archiveBytes:kit.archive.length,archiveSha256:hash(kit.archive)},null,2)+'\n');
   const versionRoot = path.join(targetRoot, 'v', releaseId);
   for (const file of walk(targetRoot)) {
     const relative = path.relative(targetRoot, file).replaceAll('\\', '/');
     if (file.startsWith(path.join(targetRoot, 'v') + path.sep) || independentPublicRoots.has(relative.split('/')[0])) continue;
-    copy(versionRoot, file, relative);
+    if (relative.startsWith('library/') && (relative.endsWith('.html') || relative === 'library/catalog.json')) {
+      write(versionRoot, relative, bytes(file).toString('utf8').replaceAll(`${baseUrl}/`,`${baseUrl}/v/${releaseId}/`).replaceAll('href="/library/',`href="${baseUrl}/v/${releaseId}/library/`));
+    } else copy(versionRoot, file, relative);
   }
   write(versionRoot, '.well-known/kiwe.json', `${JSON.stringify({ ...discovery, canonicalBase: `${baseUrl}/v/${releaseId}`, commands: discovery.immutableCommands }, null, 2)}\n`);
   write(targetRoot, 'sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[`${baseUrl}/`, ...routes.map(({ route }) => `${baseUrl}/${route}/`)].map((url) => `<url><loc>${escape(url)}</loc><lastmod>${escape(entry.updated)}</lastmod></url>`).join('')}</urlset>\n`);
   write(targetRoot, 'robots.txt', `User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml\n`);
   write(targetRoot, `${indexNowKey}.txt`, `${indexNowKey}\n`);
   write(targetRoot, '.htaccess', `Options -Indexes\nDirectoryIndex index.html\n<IfModule mod_headers.c>\nHeader always set X-Content-Type-Options "nosniff"\nHeader always set Referrer-Policy "no-referrer"\nHeader always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"\n<FilesMatch "\\.(json|md|cjs)$">\nHeader always set Access-Control-Allow-Origin "*"\n</FilesMatch>\n</IfModule>\n`);
-  write(targetRoot, '404.html', page('Command not found', 'Use one of the six commands in the registry.', '', version, releaseId, `${baseUrl}/.well-known/kiwe.json`, `${baseUrl}/`));
+  write(targetRoot, '404.html', page('Command not found', 'Choose a command or consult the reference library.', '', version, releaseId, `${baseUrl}/.well-known/kiwe.json`, `${baseUrl}/`));
   write(targetRoot, 'BUILD-METADATA.json', `${JSON.stringify({ schema: 'kiwe.command-registry-build.v2', contractVersion: version, releaseId, sourceHash: `sha256:${sourceHash}`, generatedFrom: published.map((file) => path.relative(repoRoot, file).replaceAll('\\', '/')), generatedAt: entry.updated }, null, 2)}\n`);
   write(targetRoot, 'README.md', '# Generated SEAM command registry\n\nDo not edit manually. Run `node tools/release/build-command-registry.cjs`.\n');
 }
 
 if (checkOnly) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'seam-registry-'));
+  if(path.dirname(path.resolve(temp))!==path.resolve(os.tmpdir())||!path.basename(temp).startsWith('seam-registry-'))throw new Error('Unsafe generated comparison directory.');
   try {
     build(temp);
     const errors = compare(temp, publicRoot);

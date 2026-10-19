@@ -5,7 +5,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 const root = path.resolve(__dirname, '..');
-const expected = ['/ideate', '/convert /bricks', '/audit', '/accessibility', '/fix', '/redo'];
+const expected = ['/ideate', '/preview', '/seam', '/convert /bricks', '/audit', '/accessibility', '/fix', '/redo', '/library'];
 let checks = 0;
 
 function assert(condition, message) {
@@ -17,7 +17,7 @@ function cli(...args) {
   return JSON.parse(execFileSync(process.execPath, ['bin/kiwe.js', ...args], { cwd: root, encoding: 'utf8' }));
 }
 
-for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js', 'lib/seam-map-validator.js', 'lib/bricks-conversion-validator.js', 'lib/accessibility-validator.js', 'lib/framework-profile-validator.js', 'lib/bricks-theme-style-validator.js', 'mcp/index.js']) {
+for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-preflight.js', 'lib/preview-validator.js', 'lib/authoring-schemas.cjs', 'lib/binding-validator.js', 'lib/seam-map-validator.js', 'lib/bricks-conversion-validator.js', 'lib/accessibility-validator.js', 'lib/framework-profile-validator.js', 'lib/bricks-theme-style-validator.js', 'mcp/index.js']) {
   execFileSync(process.execPath, ['--check', file], { cwd: root, stdio: 'inherit' });
 }
 
@@ -28,7 +28,7 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
 
   assert(entry.schema === 'kiwe.entry.v2', 'entry schema');
   assert(entry.productName === 'SEAM', 'entry product');
-  assert(entry.contractVersion === '9.1', 'entry version');
+  assert(entry.contractVersion === '9.4', 'entry version');
   assert(JSON.stringify(entry.commands) === JSON.stringify(expected), 'entry command surface');
   assert(manifest.schema === 'kiwe.command-manifest.v2', 'manifest schema');
   assert(manifest.aliases.length === 0, 'manifest aliases must be empty');
@@ -68,7 +68,7 @@ for (const file of ['bin/kiwe.js', 'lib/kiwe-core.js', 'lib/binding-validator.js
   assert(core.planFlow({ artifactSummary: 'audit report with findings' }).inferredCommand === '/fix', 'findings plan');
   assert(core.planFlow({ desiredOutcome: 'keyboard, overflow and dark mode review' }).inferredCommand === '/accessibility', 'accessibility plan');
 
-  assert(cli('manifest').contractVersion === '9.1', 'CLI manifest');
+  assert(cli('manifest').contractVersion === '9.4', 'CLI manifest');
   assert(cli('diagnose', '--command', '/audit', '--artifact-summary', 'template.json').status === 'ready', 'CLI diagnose');
   const conversionRoute = cli('route', '--command', '/convert /bricks', '--artifact-summary', 'source.html');
   assert(conversionRoute.options.bindingMode === 'dynamicTagsAndQueryLoops' && conversionRoute.options.emitsBricksJson === false, 'CLI binding preparation boundary');

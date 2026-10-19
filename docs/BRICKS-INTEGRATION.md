@@ -1,16 +1,44 @@
 # Bricks Integration Notes
 
+## Native Kiwe icons (16 October 2026, source candidate)
+
+The native Icon control's Dynamic Data chooser gains a **Kiwe icons** group using the same packaged SVG artwork as the Dock. Stable cart, notifications, wishlist and bookmark tags require no uploaded media, icon font, provider or enable switch. Normal Bricks styling and existing launcher/save attributes remain authoritative. [Icon vocabulary, cost and verification boundary](BRICKS-ICON-LIBRARY.md). Lab/browser acceptance and deployment are separate from this source addition.
+
+## Public product and configured-pair bindings (15 October 2026)
+
+Native product loops retain WordPress/Woo tags for title, permalink, image, price and descriptions. Kiwe adds `kiwe_product_image_alt` and `kiwe_product_price_text` for matching accessible output. Generic `kiwe_pair_<field>` tags read the current source product; configured pairs also appear automatically as `kiwe_pair_<source-product-id>_<field>`. The stable ID survives renames. Public/private/deleted endpoint guards apply on every resolution.
+
+Layout query loops expose **Product collection** and optional **Source product ID**. Choices use existing up-sells, cross-sells, grouped children, companion or configured Kiwe pairs. Leave source empty for the current product; native product editing owns the relationship. Empty collections render no results. Enumeration is capped at 100 configured source products; exact selectors/current-record bindings do not scan the catalogue. Pair tags expose names, images, links, prices and normalized offer labels/scope; Woo's cart remains the final totals/claim authority. [Exact ownership and limits](decisions/2026-10-15-native-commerce-bindings.md).
+
+AI preview markers use one `data-seam-field` or a `data-seam-fields` JSON slot map on a node. A closed exact map and public catalogue are required. Bind each card's visible and accessible fields to the same record. Source previews keep real values; native Bricks receives altText/link ariaLabel/root attributes through Seam 2.17.0. Public compiler/Start rollout remains D03.
+
 ## Automatic editor controls (2026-08-28)
 
 Kiwe editor controls register automatically after active Bricks theme setup,
 including child themes. Saved runtime switches do not hide style controls.
-Optional cart behaviours, dynamic data and DSA services remain separately
-controlled. See [implementation and verification report](reports/2026-08-28-bricks-auto-editor-controls.md).
+Native dynamic data, cart/linked-product/icon adapters and the search bridge are
+automatic in RC319; no global integration switch remains. Per-element design
+choices and optional DSA/AI/provider services retain their own authority.
+See [current decision](decisions/2026-10-11-automatic-bricks-capabilities.md) and
+the complete [frontend name/value reference](FRONTEND-ATTRIBUTES.md).
+
+Authored Search launchers are cosmetic controls; Cart launchers receive the
+shared live count automatically. Raw HTML elements forward the recognized
+native launcher attribute to their real root at render time. The native
+layout/settings remain unchanged. See the [launcher contract](decisions/2026-10-12-authored-dsa-launchers.md).
+
+For a native **Add to cart** element, behaviour is in **Content → Kiwe Add To
+Cart**. Its quantity-button/input typography, background, border/radius,
+padding and width controls are in **Style → Kiwe Add To Cart styles**. The
+native submit button retains Bricks' **Content → Button** controls. These
+groups require no Kiwe admin enable switch. [12 October Chrome verification](BRICKS-STYLE-CONTROLS-2026-10-12.md)
+confirmed both a fresh editor and the founder's existing session without
+reloading or saving that session.
 
 Primary source currently verified at:
 
 ```text
-E:\downloads\bricks.2.3.7\bricks
+C:\Users\shariq\Downloads\bricks.2.3.10\bricks
 ```
 
 ## Relevant Bricks Anchors

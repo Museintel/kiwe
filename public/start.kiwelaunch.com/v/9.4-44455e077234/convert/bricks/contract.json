@@ -1,0 +1,43 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.4",
+  "releaseId": "9.4-44455e077234",
+  "route": "/convert/bricks",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/start.md",
+      "sha256": "b08c94fea55ba4a806e3ebe315e0f02178acd33d2a5214e28c999ad35e2b5c69"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
+      "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/contracts/authoring-delivery.md",
+      "sha256": "209b7bfa67ccdfdacc3821fafbfdba2faf2a82d1719fd813d963e75557b1ea69"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/convert-bricks.md",
+      "url": "https://start.kiwelaunch.com/contexts/convert-bricks.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.4-44455e077234/contexts/convert-bricks.md",
+      "sha256": "0cc6b66d5838ba409c676b9d36b9e20a141098f69331bf951d975d488b7019d9"
+    }
+  ],
+  "sourceHash": "sha256:44455e0772341590c952df47a19889a3ccf8be1f0d97adc4df35dbecbc314239",
+  "command": "/convert /bricks",
+  "context": "contexts/convert-bricks.md",
+  "requires": [
+    "complete accepted raw HTML/CSS/JS project without a strict SEAM Map, kept unchanged",
+    "SiteGraph when site-specific fields are requested"
+  ],
+  "outputs": [
+    "bricks-bindings/kiwe-bindings.json",
+    "binding report"
+  ],
+  "modifiers": {
+    "default": "dynamicTagsAndQueryLoops",
+    "/dynamictags": "dynamicTagsOnly",
+    "/queryloop": "queryLoopsOnly"
+  },
+  "boundary": "Fallback binding-only handoff for accepted pre-existing source that did not originate with a strict SEAM Map. Use sourcePolicy immutable, exact per-file targets, explicit field slots, source guards and repeat prototypes. Never rewrite source or emit Bricks JSON."
+}
