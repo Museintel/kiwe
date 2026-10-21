@@ -2,11 +2,11 @@
 
 You are working with Kiwe Framework, the Seam-powered design/development framework bundled with Kiwe DSA.
 
-Read this entire `framework-system/` folder before proposing code or design.
+Read this prompt and the shared `contracts/authoring-delivery.md`, then consult only relevant entries in the complete versioned library. Do not load every reference before designing.
 
 ## Goal
 
-Use the Kiwe Framework to design or implement WordPress/Bricks page sections, reusable classes, or builder-safe design patterns that align with Kiwe’s AppShell and token system.
+Create a polished design that follows the owner's brief. Use Kiwe Framework where it helps; visual quality and the accepted art direction take priority. Its public vocabulary is a reusable reference, not a house style or a quota.
 
 Kiwe is an AppShell framework for WordPress. The page you design may be imported into Bricks, and the site may also run Kiwe DSA sheets/screens/dock on top of it.
 
@@ -46,7 +46,7 @@ Seam roles are semantic/headless by default. `data-role="card"` or `.seam-card` 
 
 Prefer the Kiwe/Seam token library first. If a design genuinely needs a stable art-direction value that is not universal, declare a project token and use it consistently. Only propose promotion into the universal token library when the need is generic across many sites, not merely because one project uses it.
 
-Token behavior matters. Official tokens may be fixed primitives, fluid scales, geometry inputs, content limits, responsive guards, semantic tokens, aliases, layer tokens, or project tokens. A plain value is acceptable in the token definition layer when it is a named primitive/guard/input; it is not acceptable as an anonymous Bricks/page design value.
+Token behavior matters. Official tokens may be fixed primitives, fluid scales, geometry inputs, content limits, responsive guards, semantic tokens, aliases, layer tokens, or project tokens. Plain values are valid in a raw preview. For Framework conversion, the compiler selectively promotes equivalent reusable values and preserves distinctive local values or project tokens. Never change appearance merely to satisfy a token count, flatten different scoped/page values, or rename a script-owned variable without preserving its consumers.
 
 Token fallback ladder:
 
@@ -94,6 +94,8 @@ Do not attach high-impact classes such as `seam-card`, `seam-button`, `seam-inpu
 Use Bricks as the page-design authority. Do not hardcode site-specific Bricks element IDs or copy Bricks post meta between sites.
 
 Compatible Bricks targets may expose an HTML-to-Bricks converter pipeline. Make standalone previews conversion-friendly: semantic HTML, class-based CSS, reusable variables, limited inline styles, and clear separation between preview-only JavaScript and production behavior.
+
+Supply the actual local images, videos and fonts the preview uses, with provenance and generation status. Do not invent Media/Bricks IDs, asset hashes, successful uploads or imports. AI supplies source and advisory intent; the deterministic compiler generates the final Framework Profile, native Bricks JSON and dependency ZIP. Kiwe's reviewed Framework import installs supported real Media and compatible native styles, remaps verified references and creates drafts. Preserve an accepted original; native readback/browser review and live approval remain separate.
 
 ## Preview requirements
 

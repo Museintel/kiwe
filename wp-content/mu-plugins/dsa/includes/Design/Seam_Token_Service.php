@@ -833,6 +833,7 @@ final class Seam_Token_Service {
 
 		$categories = [];
 		$classes    = [];
+		$seen       = [];
 
 		foreach ( $groups as $key => $group ) {
 			$category_id = self::stable_id( 'kw-seam-class-category-' . $key );
@@ -843,6 +844,10 @@ final class Seam_Token_Service {
 			];
 
 			foreach ( $group['classes'] as $name ) {
+				// A vocabulary entry may appear in several reference groups. Bricks
+				// stores one class per native ID; the first canonical group owns it.
+				if ( isset( $seen[$name] ) ) continue;
+				$seen[$name] = true;
 				$classes[] = [
 					'id'       => self::stable_id( 'kw-seam-class-' . $name ),
 					'name'     => $name,

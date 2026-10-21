@@ -18,14 +18,14 @@ website-handoff/
   bricks-paste.html  # open in browser for preview; paste/import through Bricks
   bricks-notes.md    # optional only when /document is requested
   framework/
-    kiwe-framework-profile.json # optional when the page defines a sitewide token profile
+    # Final Profile/dependency ZIP is produced later by the compiler, not AI.
 ```
 
 Rules:
 
 - Use Kiwe/Seam tokens and Seam Class Vocabulary names where useful.
 - Produce `bricks-paste.html` as the single website/page artifact. It must open directly in a browser for visual review and also paste/import through Bricks HTML-to-Bricks. It may inline the CSS/JS needed for the page preview, but must not require a React/Vite/Tailwind build, generated Bricks IDs, duplicate preview files, or hidden local files.
-- If the website/page establishes a brand system that should be reused by Bricks and future Kiwe pages, include `framework/kiwe-framework-profile.json` with `schema: "kiwe.framework-profile.v1"` and `settings.tokens` only. This imports at `Kiwe > Framework`, not `Kiwe > Theme`. The profile must include a complete `settings.tokens.bricks_theme_style` lane (`enabled: true`, safe `id`, human `label`, global style slots only) so Kiwe can create/update the matching Bricks Theme Style during the Framework push.
+- If the website/page establishes a reusable brand system, declare the actual values in its source CSS and advisory design notes. The deterministic compiler generates `framework/kiwe-framework-profile.json` and the dependency ZIP from that real source. AI does not generate final native Profile/Bricks IDs or claim successful import. The target reviews Media, shared native styles and draft templates at `Kiwe > Framework`; this is separate from live publishing.
 - Do not create a Kiwe DSA AppShell theme.
 - Do not create cart, checkout, save, auth, AI, Search, service-worker, history, or focus authority.
 - If the page includes cart/save/search UI, mark it as Kiwe/Woo/Bricks-owned behavior.
