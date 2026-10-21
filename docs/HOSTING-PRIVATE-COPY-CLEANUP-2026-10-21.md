@@ -1,6 +1,6 @@
 # Private hosting copy cleanup
 
-21 October 2026, CL105. **The exact obsolete-copy retirement and cleanup are accepted.** The founder authorizes removing unnecessary backups and test copies beside `public_html` on Dharwad, National and the lab, then continuing the shared compiler release.
+21 October 2026, CL105. **The exact obsolete-copy retirement and cleanup are accepted.** The subsequent approved [SC106 rollout](KIWE-RC389-ROLLOUT-2026-10-21.md) retains one new immediate runtime rollback per client; the quota figure below belongs to the completed cleanup checkpoint. The founder authorizes removing unnecessary backups and test copies beside `public_html` on Dharwad, National and the lab, then continuing the shared compiler release.
 
 The shared account exceeded its 400,000-entry allocation. Hostinger's native compiler build compiled and generated pages, then failed with EDQUOT while copying its standalone output. The separately approved provider temporary-file cleanup did not restore capacity. No unchanged build retry, account upgrade or customer-content deletion is used to force acceptance.
 

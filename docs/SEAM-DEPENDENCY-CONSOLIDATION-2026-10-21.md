@@ -1,6 +1,6 @@
 # Seam dependencies and selective consolidation — 21 October 2026
 
-**Final status: SC01–SC04 shared tools and CL105 cleanup accepted; RC389 remains lab-only pending named live approval.** [Runtime review](KIWE-RC389-LIVE-REVIEW-2026-10-21.md). Dated intermediate states below are retained as history.
+**Final status: SC01–SC04 shared tools and CL105 cleanup accepted. The subsequent founder-approved SC106 rollout installs RC389 on both live sites; [rollout evidence](KIWE-RC389-ROLLOUT-2026-10-21.md) supersedes the earlier lab-only deployment checkpoint.** [Runtime review](KIWE-RC389-LIVE-REVIEW-2026-10-21.md). Dated intermediate states below are retained as history.
 
 Work run103 continues the founder's four-batch scope. **SC01 source acceptance is complete. SC02's signed RC389 is installed only on the lab: fresh171-gate source baseline,644 deployment/seven boot,118 native import/interruption/reuse/undo and102 actual compiler-package roundtrip checks pass. Original content/styles/settings/roles recover exactly; independent retirement confirms26 original root entries, zero owned transport/jobs and the sole original cron unchanged. SC03 Start9.5 source/kit checks pass; publication remains pending. A read-only inventory covers44 retained native documents for SC04. Neither live site nor the public Start/compiler distribution has changed.** Earlier F1–F4 and C102 remain accepted. The queued Admin/Super Admin template Trash permission defect is a necessary SC02 recovery dependency; its separate obsolete page-template rename follow-up remains queued.
 
