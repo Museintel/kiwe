@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.command-manifest.v2",
   "productName": "SEAM",
-  "contractVersion": "9.5",
+  "contractVersion": "9.7",
   "updated": "2026-10-21",
   "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
   "authority": {

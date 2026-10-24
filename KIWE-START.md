@@ -1,6 +1,6 @@
 # SEAM Start
 
-Contract version: `9.5`
+Contract version: `9.7`
 Updated: `2026-10-21`
 
 Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, verify and use an intact attached Start kit; otherwise read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context at the same version. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.

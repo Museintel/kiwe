@@ -56,3 +56,5 @@ Native product query loops can use `kiweProductRelation` (`upsells`, `cross_sell
 ## Command-only continuation
 
 After the usage brief, `/preview` is explicit approval to generate that preview (the original `proceed` remains valid). Once the identified preview is accepted, `/seam` prepares a separate Framework source copy under contexts/seam.md. `/library` reads the complete public reference. None grants production deployment or redesign authority.
+
+Read optional Kiwe App availability from the current Site Graph as described in the shared authoring contract. Keep the complete Core brief and SEO goal even without the SEO App; use only evidenced active Store actions. An App capability is read-only evidence, never installation authority.

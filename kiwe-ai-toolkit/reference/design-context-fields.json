@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.public-binding-reference.v1",
   "source": "wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php",
-  "sourceSha256": "90e3d975234f639c2f1c4d1817506fa5c99475c7f57edc9afcfbd7620eb7197d",
+  "sourceSha256": "3dc661dbea7e76e6174d5ab19dd177e6c336f4d8798e5eaeac5c70a6a8414f8c",
   "policy": "Public field definitions only; no values. Current-site dynamicBindings additionally owns record, group, collection and configured commerce tags. Private/planning fields are never inferred from matching labels.",
   "fields": {
     "identity.siteName": {
