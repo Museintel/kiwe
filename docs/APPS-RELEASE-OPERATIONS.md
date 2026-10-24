@@ -1,5 +1,11 @@
 # Independent App release operations
 
+## Existing-site dependency admission
+
+Before requesting rollout approval or placing a bundled compatibility bridge, read each actual site's PHP/WordPress/Woo versions and compare them with the exact authenticated release requirements. Core-version/byte-preservation checks alone are not a complete App preflight. Existing Woo below `requiresWoo` must stop before the first Core switch. Qualify and review any necessary commerce engine/database update separately; do not lower a signed minimum, overwrite an immutable App release or silently update the existing dependency. Use fresh operation identities/captures after a refusal, preserve failure evidence and business data, and retire exact temporary work after recovery. AP125's recovered production stop and the two rehearsed older-Woo paths are recorded in [the live attempt](APPS-RC436-LIVE-ATTEMPT-2026-10-25.md).
+
+## Publishing and renewal
+
 Core and normal App releases use the existing offline Ed25519 custodian. Never upload that private key to a WordPress site, public origin, helper or source repository. Publish immutable ZIP and release metadata first, verify their served bytes, then atomically replace the channel catalogue. Store and SEO are independently versioned; a one-App release retains the other authenticated release and all revocations.
 
 New public release directories need explicit public traversal permissions after creation under a private operator umask. Verify all immutable release files through the actual HTTPS origin before offering their catalogue. A successful filesystem write alone is not distribution acceptance. Keep staging, installed-code recovery, credentials and journals private.

@@ -1,5 +1,9 @@
 # Apps platform: reviewed release for Dharwad and National
 
+**Current status,25 October:** the owner approved this original Kiwe artifact set. The attempted migration stops on both older Woo dependencies; National is exactly recovered to427 and Dharwad stays427. [Attempt/recovery evidence](APPS-RC436-LIVE-ATTEMPT-2026-10-25.md) and the [additional Woo engine/database review](WOO-APPS-PREREQUISITE-REVIEW-2026-10-25.md) supersede the original pending-status text below. The signed artifact identities remain unchanged.
+
+Original prepared review:
+
 Prepared 25 October 2026. **Awaiting named live approval. No change to either production store is made by this review.**
 
 Kiwe Store and SEO become independently installed, signed normal plugins. The permanent Core retains the complete Design Context, SiteGraph/MCP authoring, shared shell, account, bookmarks and other common services. Unused commerce/SEO engines are physically absent from Core. Store settings stay under App → Store; SEO stays under App → SEO. Both named stores keep both Apps enabled with their current configuration.

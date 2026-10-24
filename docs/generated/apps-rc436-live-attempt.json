@@ -1,0 +1,89 @@
+{
+  "schema": "kiwe.apps-live-attempt.v1",
+  "recordedAt": "2026-10-24T22:00:54.900Z",
+  "originalApproval": true,
+  "liveMigrationComplete": false,
+  "finalCore": "8.0.0-rc.427",
+  "independentAppsInstalled": false,
+  "targets": [
+    {
+      "domain": "nationalchikki.com",
+      "woo": "10.4.4",
+      "bricks": "2.3.4",
+      "coreRecovered": true
+    },
+    {
+      "domain": "dharwadpedha.com",
+      "woo": "11.0.1",
+      "bricks": "2.3.11",
+      "runtimeUnchanged": true
+    }
+  ],
+  "requiredWoo": "11.2",
+  "proposedWoo": "11.2.1",
+  "additionalWooApproval": "pending",
+  "qualification": {
+    "scope": "Isolated synthetic actual WordPress 7.1.3/MariaDB11.8.3/PHP8.4 fixture; not a production gateway or hosting-capacity claim",
+    "cases": {
+      "national": {
+        "freshRequests": 17,
+        "namedChecks": 94,
+        "databaseCallbacks": 25,
+        "finalPassed": true
+      },
+      "dharwad": {
+        "freshRequests": 17,
+        "namedChecks": 94,
+        "databaseCallbacks": 13,
+        "finalPassed": true
+      }
+    }
+  },
+  "officialArchives": [
+    {
+      "version": "10.4.4",
+      "members": 5629,
+      "bytes": 19454979,
+      "sha256": "cfda134de31f991491e49158ed575e1860422e0ebce377771cf4ff4fa72fad7b",
+      "officialChecksumsMatched": true
+    },
+    {
+      "version": "11.0.1",
+      "members": 5872,
+      "bytes": 20218895,
+      "sha256": "da189b6616c610d15a2106f93151dab81b78f83e075bcefce221ac0d00b4fa21",
+      "officialChecksumsMatched": true
+    },
+    {
+      "version": "11.2.1",
+      "members": 5488,
+      "bytes": 18060641,
+      "sha256": "5317434cb381b5fdc7c1dd6ee258324f08c390976aaf8d1199f2a0e9a3ab8586",
+      "officialChecksumsMatched": true
+    }
+  ],
+  "fixtureCleanup": {
+    "passed": true,
+    "droppedSyntheticTables": 110,
+    "outsideTableInventoryExact": true
+  },
+  "offlineCustody": {
+    "offlineArchiveSha256": "d303d0a4bfa7eb770346de34284adbacf3c524e3f3294654dc1b29335d08c452",
+    "verifiedMembers": 1210,
+    "protected": true,
+    "rawBytes": 26695099,
+    "archiveBytes": 6990425
+  },
+  "serverCompaction": {
+    "checks": 3869,
+    "files": 1210,
+    "directories": 151,
+    "rawBytes": 26695099,
+    "originalActiveRecoveryRetained": true
+  },
+  "nativeSettingsPreserved": true,
+  "publicGuestFlows": true,
+  "browserVisualVerified": false,
+  "publicCoreFeedChanged": false,
+  "ascendantsChanged": false
+}
