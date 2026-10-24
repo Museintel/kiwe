@@ -5,23 +5,43 @@ namespace DSA\Secure;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+require_once __DIR__ . '/SecureTrack_Report_Service.php';
 
 final class SecureTrack_Event_Service {
+	/** A bounded account clock for the private Users directory. */
+	public static function user_last_activity_map( array $ids ): array {
+		return SecureTrack_Report_Service::activity( $ids );
+	}
+
+	public static function log_account_action( string $action, int $user_id ): void {
+		if ( function_exists( 'stp_log' ) ) stp_log( 'user_action', [ 'sub'=>$action, 'obj_type'=>'user', 'obj_id'=>$user_id ] );
+	}
+
 	public static function log( $type, $args = [] ) {
+		return self::persist( $type, $args, false );
+	}
+
+	/** A navigation record shares the event's already-resolved IP and session. */
+	public static function log_page_view( array $args = [] ) {
+		return self::persist( 'page_view', $args, true );
+	}
+
+	private static function persist( $type, $args, bool $record_page ) {
 		global $wpdb;
 
 		$args = is_array( $args ) ? $args : [];
-		if ( ! stp_tables_ready() && ! stp_repair_database() ) {
-			return null;
-		}
-
 		$config = stp_cfg();
-		stp_diag( 'last_log_attempt', [ 'type' => $type, 'url' => $args['url'] ?? '', 'time' => current_time( 'mysql' ), 'user_id' => get_current_user_id() ] );
-
-		if ( $type === 'page_view' && $config['exclude_admin'] && current_user_can( 'manage_options' ) ) {
-			stp_diag( 'last_skip_reason', 'Admin page view skipped because Exclude logged-in admins is enabled.' );
+		// Only an ordinary visit is optional. Preserve flagged, named and future security signals.
+		$ordinary_visit = $type === 'page_view' && ! array_diff( array_keys( $args ), [ 'url', 'extra' ] );
+		if ( $ordinary_visit && ( empty( $config['track_visitors'] ) || ( ! empty( $config['exclude_admin'] ) && current_user_can( 'manage_options' ) ) ) ) {
 			return null;
 		}
+		if ($ordinary_visit && class_exists(SecureTrack_Lifecycle_Service::class) && !SecureTrack_Lifecycle_Service::reserve_visit()) return null;
+		if ( ! stp_tables_ready() ) {
+			return null;
+		}
+
+		stp_diag( 'last_log_attempt', [ 'type' => $type, 'url' => $args['url'] ?? '', 'time' => current_time( 'mysql' ), 'user_id' => get_current_user_id() ] );
 
 		$ip_str = stp_get_ip();
 		$ip = stp_upsert_ip( $ip_str );
@@ -34,12 +54,8 @@ final class SecureTrack_Event_Service {
 		if ( $config['track_visitors'] && stp_should_create_session_for_event( $type ) ) {
 			$session = stp_upsert_session( $ip );
 			if ( empty( $session->id ) ) {
-				stp_repair_database();
-				$session = stp_upsert_session( $ip );
-				if ( empty( $session->id ) ) {
-					stp_diag( 'last_db_error', 'Session insert/upsert failed after migration: ' . $wpdb->last_error );
-					$session = null;
-				}
+				stp_diag( 'last_db_error', 'Session insert/upsert failed; no schema repair attempted: ' . $wpdb->last_error );
+				$session = null;
 			}
 
 			$bot_security_types = [ 'waf_block', 'protection_block', 'break_glass_access', 'login_failed', 'login_success', 'xmlrpc', 'rest_abuse', 'pk_auth_fail' ];
@@ -110,6 +126,8 @@ final class SecureTrack_Event_Service {
 		];
 
 		$event_data['hash_prev'] = $wpdb->get_var( 'SELECT hash_current FROM ' . stp_t( 'events' ) . " WHERE hash_current IS NOT NULL AND hash_current<>'' ORDER BY id DESC LIMIT 1" ) ?: null;
+		// A target account is not necessarily the actor; a failed login proves no account activity.
+		if ( SecureTrack_Report_Service::enabled() ) $event_data['actor_id'] = get_current_user_id() ?: ( $type === 'login_success' ? $uid : 0 );
 		$event_data['hash_current'] = stp_event_hash( $event_data );
 		$ok = $wpdb->insert( stp_t( 'events' ), $event_data );
 
@@ -120,6 +138,20 @@ final class SecureTrack_Event_Service {
 		}
 
 		$event_id = (int) $wpdb->insert_id;
+		if ( $record_page && ! empty( $config['track_pages'] ) && $session && ! $session->is_bot ) {
+			$page_ok = $wpdb->insert( stp_t( 'pages' ), [
+				'session_id' => $session->id,
+				'url'        => substr( (string) ( $args['url'] ?? '' ), 0, 1000 ),
+				'page_title' => '',
+				'visited_at' => $event_data['created_at'],
+			] );
+			if ( $page_ok ) {
+				// Do not read a count and write it back: concurrent visits must both count.
+				$wpdb->query( $wpdb->prepare( 'UPDATE ' . stp_t( 'sessions' ) . ' SET page_count=page_count+1 WHERE id=%d', $session->id ) );
+			} else {
+				stp_diag( 'last_db_error', 'Page insert failed: ' . $wpdb->last_error );
+			}
+		}
 		stp_diag( 'last_insert', [ 'id' => $event_id, 'type' => $type, 'ip' => $ip_str, 'time' => current_time( 'mysql' ) ] );
 		stp_diag( 'last_skip_reason', '' );
 
@@ -183,9 +215,11 @@ final class SecureTrack_Event_Service {
 		}
 
 		$new_ip_risk = min( 100, (int) round( ( (int) $ip->risk_score * 0.9 ) + ( $risk['score'] * 0.1 ) ) );
-		$wpdb->update( stp_t( 'ips' ), [ 'risk_score' => $new_ip_risk ], [ 'id' => $ip->id ] );
+		if ( $new_ip_risk !== (int) $ip->risk_score ) {
+			$wpdb->update( stp_t( 'ips' ), [ 'risk_score' => $new_ip_risk ], [ 'id' => $ip->id ] );
+		}
 
-		if ( $session && $risk['flag'] === 'red' ) {
+		if ( $session && $risk['flag'] === 'red' && $session->flag_status !== 'red' ) {
 			$wpdb->update( stp_t( 'sessions' ), [ 'flag_status' => 'red' ], [ 'id' => $session->id ] );
 		}
 

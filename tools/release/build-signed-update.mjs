@@ -10,7 +10,10 @@ const muRoot = path.join(repo, 'wp-content', 'mu-plugins');
 const secretDir = path.join(repo, 'tools', 'release', '.secrets');
 const privatePath = path.join(secretDir, 'kiwe-update-ed25519-private.pem');
 const publicPath = path.join(repo, 'tools', 'release', 'kiwe-update-public-key.json');
-const outputRoot = path.join(repo, 'public', 'app.kiwelaunch.com', 'updates', 'kiwe', 'v1');
+const outputArg = process.argv.find((value) => value.startsWith('--output-root='));
+const outputRoot = outputArg ? path.resolve(outputArg.slice('--output-root='.length)) : path.join(repo, 'public', 'app.kiwelaunch.com', 'updates', 'kiwe', 'v1');
+const archiveArg = process.argv.find((value) => value.startsWith('--archive='));
+const acceptedArchive = archiveArg ? path.resolve(archiveArg.slice('--archive='.length)) : null;
 const initKey = process.argv.includes('--init-key');
 const channelArg = process.argv.find((value) => value.startsWith('--channel='));
 const channel = channelArg ? channelArg.slice('--channel='.length) : 'candidate';
@@ -33,7 +36,7 @@ async function ensureKey() {
 			algorithm: 'ed25519',
 			publicKey: raw.toString('base64'),
 		};
-		await fs.writeFile(publicPath, `${JSON.stringify(record, null, 2)}\n`);
+		await retainTrustedPublicKey(record);
 		return { privatePem, record };
 	}
 
@@ -55,8 +58,21 @@ async function ensureKey() {
 		algorithm: 'ed25519',
 		publicKey: raw.toString('base64'),
 	};
-	await fs.writeFile(publicPath, `${JSON.stringify(record, null, 2)}\n`);
+	await retainTrustedPublicKey(record);
 	return { privatePem, record };
+}
+
+async function retainTrustedPublicKey(record) {
+	const runtime = await fs.readFile(path.join(muRoot, 'dsa', 'includes', 'Runtime', 'Update_Service.php'), 'utf8');
+	const embedded = runtime.match(/PUBLIC_KEY_B64\s*=\s*'([^']+)'/);
+	if (!embedded || embedded[1] !== record.publicKey) throw new Error('Signing key does not match the embedded release trust.');
+	try {
+		const existing = JSON.parse(await fs.readFile(publicPath, 'utf8'));
+		if (existing.publicKey !== record.publicKey || existing.keyId !== record.keyId) throw new Error('Existing public release trust cannot be replaced implicitly.');
+	} catch (error) {
+		if (error.code !== 'ENOENT') throw error;
+		await fs.writeFile(publicPath, `${JSON.stringify(record, null, 2)}\n`, { flag: 'wx' });
+	}
 }
 
 function versionFrom(source, constant) {
@@ -112,12 +128,28 @@ if (packageManifest.version !== version) throw new Error('Build package-manifest
 const releaseDir = path.join(outputRoot, 'releases', version);
 const stage = path.join(repo, '.tmp', `kiwe-signed-stage-${version}`);
 const archive = path.join(releaseDir, 'kiwe-mu-plugin.zip');
-await fs.rm(stage, { recursive: true, force: true });
-await fs.mkdir(stage, { recursive: true });
 await fs.mkdir(releaseDir, { recursive: true });
-await copyPackage(stage);
-zipStage(stage, archive);
-await fs.rm(stage, { recursive: true, force: true });
+if (acceptedArchive) {
+	const sourceStat = await fs.lstat(acceptedArchive);
+	if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) throw new Error('A verified ordinary accepted archive is required.');
+	const bytes = await fs.readFile(acceptedArchive);
+	try {
+		const existing = await fs.readFile(archive);
+		if (!existing.equals(bytes)) throw new Error('Immutable release archive already contains different bytes.');
+	} catch (error) {
+		if (error.code !== 'ENOENT') throw error;
+		await fs.writeFile(archive, bytes, { flag: 'wx' });
+	}
+} else {
+	try { await fs.access(archive); throw new Error('Immutable release archive already exists; supply its verified --archive to reuse it.'); }
+	catch (error) { if (error.code !== 'ENOENT') throw error; }
+	if (path.dirname(stage) !== path.join(repo, '.tmp') || path.basename(stage) !== `kiwe-signed-stage-${version}`) throw new Error('Signing stage path refused.');
+	await fs.rm(stage, { recursive: true, force: true });
+	await fs.mkdir(stage, { recursive: true });
+	await copyPackage(stage);
+	zipStage(stage, archive);
+	await fs.rm(stage, { recursive: true, force: true });
+}
 
 const archiveBody = await fs.readFile(archive);
 const manifestBody = await fs.readFile(packageManifestPath);
@@ -140,3 +172,4 @@ await fs.writeFile(path.join(releaseDir, 'manifest.json'), `${JSON.stringify(rel
 await fs.writeFile(path.join(outputRoot, `${channel}.json`), `${JSON.stringify(release, null, 2)}\n`);
 console.log(`Built signed ${channel} release ${version} (${release.bytes} bytes).`);
 console.log(`Public key: ${publicKey.publicKey}`);
+console.log(outputArg ? 'Prepared offline only; no feed or deployment was published.' : 'Local feed files prepared; publication is a separate action.');

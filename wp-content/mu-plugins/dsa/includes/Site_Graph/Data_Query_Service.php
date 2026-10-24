@@ -49,7 +49,8 @@ final class Data_Query_Service {
 					'args'        => [ 'limit', 'page', 'search', 'slug', 'include', 'fields' ],
 				],
 				'products'   => [
-					'description' => 'WooCommerce products when WooCommerce is active.',
+					'description' => 'WooCommerce products when Kiwe Store is active.',
+					'available' => \DSA\Apps\Store_App_Service::enabled(),
 					'args'        => [ 'limit', 'page', 'search', 'slug', 'include', 'taxonomy', 'term', 'category', 'fields' ],
 				],
 				'terms'      => [
@@ -57,8 +58,8 @@ final class Data_Query_Service {
 					'args'        => [ 'taxonomy', 'limit', 'search', 'slug', 'hideEmpty' ],
 				],
 				'media'      => [
-					'description' => 'Published/inherited media, primarily images for headless previews.',
-					'args'        => [ 'limit', 'page', 'mimeType', 'search', 'include' ],
+					'description' => 'Native media; use mimeType empty for all file types and contextOnly true for explicit Design Context selection.',
+					'args'        => [ 'limit', 'page', 'mimeType', 'search', 'include', 'contextOnly' ],
 				],
 				'batch'      => [
 					'description' => 'Run up to 20 named data queries in one request via the queries object/array, or use resources as a compact shorthand.',
@@ -219,6 +220,7 @@ final class Data_Query_Service {
 
 	private function posts( array $args, bool $private ): array {
 		$post_type = sanitize_key( (string) ( $args['postType'] ?? $args['post_type'] ?? 'post' ) );
+		if ( ! \DSA\Apps\Store_App_Service::content_available( $post_type ) ) return $this->envelope( 'products', [ 'postType'=>$post_type ], [], [ 'error'=>'store_app_off', 'available'=>false ] );
 		$resource  = $this->post_resource_name( $post_type );
 		if ( ! post_type_exists( $post_type ) ) {
 			return $this->envelope( $resource, [ 'postType' => $post_type ], [], [ 'error' => 'unknown_post_type' ] );
@@ -409,6 +411,11 @@ final class Data_Query_Service {
 				'order'          => 'DESC',
 			];
 		$include = $this->ids( $args['include'] ?? [] );
+		$context_only = in_array( $args['contextOnly'] ?? false, [ true, 1, '1', 'true' ], true );
+		if ( $context_only ) {
+			$query_args['kiwe_context_media'] = true;
+			add_filter( 'posts_where', [ \DSA\Onboarding\Context_Media_Service::class, 'context_where' ], 20, 2 );
+		}
 		if ( $include ) {
 			$query_args['post__in'] = $include;
 			$query_args['orderby']  = 'post__in';
@@ -451,9 +458,8 @@ final class Data_Query_Service {
 			$query = new \WP_Query( $query_args );
 		} finally {
 			if ( $visibility_filter ) remove_filter( 'posts_where', $visibility_filter, 20 );
-		}
-		if ( $search_filter ) {
-			remove_filter( 'posts_search', $search_filter, 20 );
+			if ( $search_filter ) remove_filter( 'posts_search', $search_filter, 20 );
+			if ( $context_only ) remove_filter( 'posts_where', [ \DSA\Onboarding\Context_Media_Service::class, 'context_where' ], 20 );
 		}
 		$nodes = [];
 
@@ -467,7 +473,7 @@ final class Data_Query_Service {
 
 		return $this->envelope(
 			'media',
-			[ 'limit' => $limit, 'page' => $page, 'private' => $private, 'search' => $search ],
+			[ 'limit' => $limit, 'page' => $page, 'private' => $private, 'search' => $search, 'contextOnly'=>$context_only ],
 			array_values( array_filter( $nodes ) ),
 			[
 				'pageInfo' => [
@@ -485,6 +491,7 @@ final class Data_Query_Service {
 		if ( 'productcategories' === $taxonomy || 'product-categories' === $taxonomy ) {
 			$taxonomy = 'product_cat';
 		}
+		if ( ! \DSA\Apps\Store_App_Service::taxonomy_available( $taxonomy ) ) return $this->envelope( 'terms', [ 'taxonomy'=>$taxonomy ], [], [ 'error'=>'store_app_off', 'available'=>false ] );
 		if ( ! taxonomy_exists( $taxonomy ) ) {
 			return $this->envelope( 'terms', [ 'taxonomy' => $taxonomy ], [], [ 'error' => 'unknown_taxonomy' ] );
 		}

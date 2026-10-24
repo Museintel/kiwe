@@ -1,0 +1,11 @@
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const result = spawnSync('php', ['tools/release/test-workspace-shell.php'], { encoding: 'utf8', windowsHide: true });
+if (result.status !== 0 || /Warning:|Fatal error:|Deprecated:/.test(result.stdout + result.stderr)) throw Error(result.stdout + result.stderr);
+process.stdout.write(result.stdout);
+const source = fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Workspace_Shell_Service.php', 'utf8');
+if (!source.includes('private, no-store') || !source.includes("'X-Robots-Tag: noindex, nofollow'")) throw Error('Missing private document headers');
+if (/register_rest_route|update_option|set_transient|wp_schedule|wp_head\(/.test(source)) throw Error('Presentation bridge crossed its scope');
+const catalog = fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Workspace_Admin_Service.php', 'utf8');
+for (const token of ['Website & Design Context','Work','Daily','Setup','kiwe-identity']) if (!catalog.includes(token)) throw Error('Home catalog lost '+token);
+console.log('PASS private header and presentation-only shell boundaries');

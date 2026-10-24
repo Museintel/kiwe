@@ -17,7 +17,7 @@ const families = [
   {id:'authoring', title:'Semantic markers, bindings, queries, interactions and conditions', prefix:'kiwe-ai-toolkit/', files:() => ['contexts','schemas','contracts'].flatMap(d => walk(`kiwe-ai-toolkit/${d}`))},
   {id:'bindings', title:'Every declared public Design Context field and dynamic tag', files:() => ['kiwe-ai-toolkit/reference/design-context-fields.json']},
   {id:'contracts', title:'Compiler, capture, assets, geometry, deployment and proof schemas', prefix:'packages/seam-contracts/', files:() => walk('packages/seam-contracts/schemas')},
-  {id:'runtime', title:'Live Kiwe actions, dynamic content, icons and native Bricks rules', files:() => ['docs/FRONTEND-ATTRIBUTES.md','docs/BRICKS-INTEGRATION.md','docs/BRICKS-ICON-LIBRARY.md','docs/design-context-native-records.md','docs/DESIGN-CONTEXT-WORKSPACE-COVERAGE.md','wp-content/mu-plugins/dsa/includes/Bricks/surface-style-controls.json','kiwe-ai-toolkit/reference/bricks-elements.json']},
+  {id:'runtime', title:'Live Kiwe actions, dynamic content, icons and native Bricks rules', files:() => ['docs/FRONTEND-ATTRIBUTES.md','docs/BRICKS-INTEGRATION.md','docs/BRICKS-ICON-LIBRARY.md','docs/design-context-native-records.md','docs/DESIGN-CONTEXT-WORKSPACE-COVERAGE.md','wp-content/mu-plugins/dsa/includes/Bricks/surface-style-controls.json','kiwe-ai-toolkit/reference/bricks-elements.json','kiwe-ai-toolkit/reference/icons.json']},
 ];
 function resources() {
   return families.flatMap(family => family.files().sort().map(file => ({family:family.id, file, id:hash(file).slice(0,16), content:bytes(file)})));

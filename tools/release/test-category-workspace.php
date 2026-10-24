@@ -1,0 +1,33 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/workspace-test-bootstrap.php';
+function wp_json_encode($value){return json_encode($value);}
+$service=new DSA\Access\Category_Workspace_Service();
+check($service->create_category(['name'=>'<b>New category</b>','taxonomy'=>'product_cat','slug'=>'inject','parent'=>20])===90,'client can create a native category');
+check($term_write===['New category','category'],'category creation ignores unrelated fields');
+$before=clone $terms[10];check($service->rename_category(10,['name'=>'Renamed','slug'=>'new','parent'=>20,'description'=>'changed'])===true,'category can be renamed');
+check($terms[10]->slug===$before->slug&&$terms[10]->parent===$before->parent&&$terms[10]->description===$before->description,'rename preserves permalink parent and description');
+check($term_write===[10,'category',['name'=>'Renamed']],'only category name reaches WordPress update');
+foreach(['',str_repeat('a',201),['bad']] as $name)check(is_wp_error($service->create_category(['name'=>$name])),'invalid category names rejected');
+$denied=['edit_term:10'];check(is_wp_error($service->rename_category(10,['name'=>'Denied'])),'term object permission enforced');$denied=[];
+$actor=3;check(is_wp_error($service->create_category(['name'=>'Denied'])),'author cannot create categories in the client policy');$actor=1;
+$r=$service->move_posts(10,20,[101,102]);check($r['moved']===2&&$r['failed']===0,'selected posts move successfully');
+check($relationships[101]===[30,20]&&$relationships[102]===[20],'move preserves unrelated categories and avoids an uncategorized post');
+check($relationships[103]===[10],'unselected posts are untouched');
+check(is_wp_error($service->move_posts(10,10,[101])),'same-category destination denied');
+check(is_wp_error($service->move_posts(10,999,[101])),'missing destination denied');
+check(is_wp_error($service->move_posts(10,20,array_fill(0,21,101))),'server caps submitted batch at twenty');
+foreach([[],[0],['1e2'],[[101]]] as $ids)check(is_wp_error($service->move_posts(10,20,$ids)),'invalid selection rejected');
+$r=$service->move_posts(10,20,[101,103,999]);check(array_column($r['outcomes'],'status')===['source_changed','unavailable','unavailable'],'changed sources and non-post objects produce explicit outcomes');
+$relationships[101]=[10,30];$denied=['edit_post:101'];$r=$service->move_posts(10,20,[101]);check($r['failed']===1&&$relationships[101]===[10,30],'post permission failure leaves assignments unchanged');$denied=[];
+$fail_add=true;$r=$service->move_posts(10,20,[101]);check($r['outcomes'][0]['status']==='target_failed'&&$relationships[101]===[10,30],'destination failure retains the source');$fail_add=false;
+$fail_remove=true;$r=$service->move_posts(10,20,[101]);check($r['outcomes'][0]['status']==='incomplete'&&in_array(10,$relationships[101],true)&&in_array(20,$relationships[101],true),'partial move is reported rather than silently successful');$fail_remove=false;
+$relationships[101]=[10,30];$concurrent_term=40;$r=$service->move_posts(10,20,[101,101]);check($r['requested']===1&&in_array(40,$relationships[101],true),'deduplicates selected IDs and retains concurrently added unrelated terms');$concurrent_term=0;
+$service->list_categories(['taxonomy'=>'product_cat','page'=>2,'number'=>500]);check($term_query['taxonomy']==='category'&&$term_query['number']===21&&$term_query['offset']===20,'category query is fixed and bounded');
+$query_posts=[$posts[101],$posts[102],$posts[103]];$denied=['edit_post:102'];$r=$service->list_posts(10);check(array_column($r['items'],'ID')===[101],'post listing filters unauthorized and non-post objects');$denied=[];
+check($post_query['posts_per_page']===21&&$post_query['tax_query'][0]['include_children']===false&&$post_query['no_found_rows'],'post query stays bounded and directly assigned');
+$_SERVER['REQUEST_METHOD']='POST';$_POST=['category_id'=>'10','name'=>'CSRF'];check(denied(fn()=>$service->handle_rename()),'category rename requires object-bound nonce');
+$_POST=['category_id'=>'10','target_id'=>'20','post_ids'=>[101],'_wpnonce'=>'kiwe_category_move_20'];check(denied(fn()=>$service->handle_move()),'move rejects nonce for a different source');
+$pagenow='edit.php';$_GET=['page'=>'kiwe-categories'];$_REQUEST=['post_type'=>'post'];$access->guard_editorial_admin_route();check(true,'restricted Administrator can open category workflow');
+$pagenow='admin-post.php';$_POST=['action'=>'kiwe_category_move'];$access->guard_editorial_admin_route();check(true,'restricted Administrator reaches the independently protected move handler');
+echo "$count category workspace behavior checks passed.\n";

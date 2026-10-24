@@ -1,12 +1,6 @@
 body.kiwe-workspace-admin {
-	--kiwe-accent: #19ad8d;
-	--kiwe-accent-soft: #ebfaf6;
-	--kiwe-ink: #172033;
-	--kiwe-muted: #667085;
-	--kiwe-line: #e4e7ec;
-	--kiwe-canvas: #f7f9f8;
-	background: var(--kiwe-canvas);
-	color: var(--kiwe-ink);
+ background:var(--kiwe-color-surface);color:var(--kiwe-color-text);
+ --kiwe-accent:var(--kiwe-color-text);--kiwe-accent-soft:var(--kiwe-color-surface);--kiwe-ink:var(--kiwe-color-text);--kiwe-muted:var(--kiwe-color-text-muted);--kiwe-line:var(--kiwe-color-border);--kiwe-canvas:var(--kiwe-color-surface);
 }
 
 .kiwe-workspace-admin #wpcontent,
@@ -98,7 +92,7 @@ body.kiwe-workspace-admin {
 .kiwe-workspace-admin .button-secondary,
 .kiwe-workspace-admin .button-primary,
 .kiwe-workspace-admin .page-title-action {
-	min-height: 38px;
+	min-height: 44px;
 	padding: 5px 14px;
 	border-radius: 9px;
 }
@@ -139,7 +133,7 @@ body.kiwe-workspace-admin {
 }
 .kiwe-workspace-admin.index-php #dashboard-widgets-wrap,
 .kiwe-workspace-admin.index-php #dashboard-widgets,
-.kiwe-workspace-admin.index-php #postbox-container-1,
+.kiwe-workspace-admin.index-php #dashboard-widgets #postbox-container-1,
 .kiwe-workspace-admin.index-php #normal-sortables,
 .kiwe-workspace-admin.index-php #kiwe-workspace-home,
 .kiwe-workspace-admin.index-php #kiwe-workspace-home .inside {
@@ -156,286 +150,48 @@ body.kiwe-workspace-admin {
 .kiwe-workspace-admin.index-php #postbox-container-3,
 .kiwe-workspace-admin.index-php #postbox-container-4 { display: none; }
 
-.kiwe-workspace {
-	max-width: 1320px;
-	padding: 34px 28px 44px 0;
-}
-.kiwe-workspace__hero {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-between;
-	gap: 20px;
-	margin-bottom: 24px;
-}
-.kiwe-workspace__eyebrow {
-	margin: 0 0 9px;
-	color: var(--kiwe-muted);
-	font-size: 12px;
-	font-weight: 750;
-	letter-spacing: .1em;
-}
-.kiwe-workspace__hero h1 {
-	margin: 0;
-	color: var(--kiwe-ink);
-	font-size: clamp(30px, 4vw, 44px);
-	line-height: 1.08;
-	letter-spacing: -.04em;
-}
-.kiwe-workspace__hero > div > p:last-child {
-	margin: 10px 0 0;
-	color: var(--kiwe-muted);
-	font-size: 15px;
-}
-.kiwe-workspace__status {
-	display: flex;
-	flex-wrap: wrap;
-	align-self: flex-end;
-	gap: 8px;
-}
-.kiwe-workspace__status-pill {
-	display: inline-flex;
-	align-items: center;
-	gap: 7px;
-	min-height: 34px;
-	padding: 0 11px;
-	border: 1px solid var(--kiwe-line);
-	border-radius: 999px;
-	background: #fff;
-	color: var(--kiwe-muted);
-	font-size: 12px;
-	font-weight: 650;
-}
-.kiwe-workspace__status-pill i {
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	background: #98a2b3;
-}
-.kiwe-workspace__status-pill.is-active i {
-	background: var(--kiwe-accent);
-	box-shadow: 0 0 0 3px rgba(25, 173, 141, .13);
-}
-.kiwe-workspace__panel {
-	min-width: 0;
-	padding: 20px;
-	border: 1px solid var(--kiwe-line);
-	border-radius: 14px;
-	background: #fff;
-}
-.kiwe-workspace__quick { margin-bottom: 16px; }
-.kiwe-workspace__section-heading {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	margin-bottom: 16px;
-}
-.kiwe-workspace__section-heading h2 {
-	margin: 0;
-	font-size: 16px;
-	line-height: 1.3;
-}
-.kiwe-workspace__section-heading a,
-.kiwe-workspace__section-heading > span {
-	color: var(--kiwe-accent);
-	font-size: 12px;
-	font-weight: 650;
-	text-decoration: none;
-}
-.kiwe-workspace__actions {
-	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	gap: 12px;
-}
-.kiwe-workspace__actions a {
-	display: grid;
-	grid-template-columns: 38px minmax(0, 1fr);
-	grid-template-rows: auto auto;
-	column-gap: 10px;
-	align-items: center;
-	min-height: 66px;
-	padding: 13px;
-	border: 1px solid var(--kiwe-line);
-	border-radius: 11px;
-	color: var(--kiwe-ink);
-	text-decoration: none;
-}
-.kiwe-workspace__actions a:hover,
-.kiwe-workspace__actions a:focus-visible {
-	border-color: #9adfce;
-	background: var(--kiwe-accent-soft);
-	box-shadow: none;
-	outline: 2px solid transparent;
-}
-.kiwe-workspace__actions .dashicons {
-	display: grid;
-	grid-row: 1 / span 2;
-	place-items: center;
-	width: 38px;
-	height: 38px;
-	border-radius: 9px;
-	background: var(--kiwe-accent-soft);
-	color: var(--kiwe-accent);
-	font-size: 19px;
-}
-.kiwe-workspace__actions strong,
-.kiwe-workspace__actions small { min-width: 0; }
-.kiwe-workspace__actions small {
-	margin-top: 2px;
-	color: var(--kiwe-muted);
-}
-.kiwe-workspace__grid {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 16px;
-}
-.kiwe-workspace__metrics {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 10px;
-}
-.kiwe-workspace__metrics > div {
-	display: grid;
-	gap: 5px;
-	padding: 14px;
-	border-radius: 10px;
-	background: #f8faf9;
-}
-.kiwe-workspace__metrics strong {
-	color: var(--kiwe-ink);
-	font-size: 28px;
-	line-height: 1;
-}
-.kiwe-workspace__metrics span,
-.kiwe-workspace__identity span,
-.kiwe-workspace__protected span,
-.kiwe-workspace__protection p {
-	color: var(--kiwe-muted);
-	font-size: 12px;
-}
-.kiwe-workspace__identity,
-.kiwe-workspace__protected {
-	display: flex;
-	align-items: center;
-	gap: 14px;
-}
-.kiwe-workspace__identity > div:last-child,
-.kiwe-workspace__protected > div {
-	display: grid;
-	gap: 4px;
-}
-.kiwe-workspace__identity strong {
-	font-family: Georgia, serif;
-	font-size: 24px;
-}
-.kiwe-workspace__site-mark {
-	display: grid;
-	place-items: center;
-	width: 50px;
-	height: 50px;
-	overflow: hidden;
-	border-radius: 12px;
-	background: var(--kiwe-accent-soft);
-	color: var(--kiwe-accent);
-	font-size: 24px;
-	font-weight: 700;
-}
-.kiwe-workspace__site-mark .custom-logo-link,
-.kiwe-workspace__site-mark img {
-	display: block;
-	width: 100%;
-	height: 100%;
-	object-fit: contain;
-}
-.kiwe-workspace__list {
-	display: grid;
-	gap: 0;
-	margin: 0;
-}
-.kiwe-workspace__list li {
-	display: flex;
-	justify-content: space-between;
-	gap: 16px;
-	margin: 0;
-	padding: 10px 0;
-	border-top: 1px solid #f0f2f4;
-}
-.kiwe-workspace__list li:first-child {
-	padding-top: 0;
-	border-top: 0;
-}
-.kiwe-workspace__list strong {
-	color: var(--kiwe-muted);
-	font-size: 12px;
-}
-.kiwe-workspace__protected .dashicons {
-	display: grid;
-	place-items: center;
-	width: 46px;
-	height: 46px;
-	border-radius: 12px;
-	background: var(--kiwe-accent-soft);
-	color: var(--kiwe-accent);
-	font-size: 24px;
-}
-.kiwe-workspace__protected strong {
-	color: var(--kiwe-accent);
-	font-size: 17px;
-}
 
-@media (max-width: 1180px) {
-	.kiwe-workspace-admin #wpcontent,
-	.kiwe-workspace-admin #wpfooter { margin-left: 210px; }
-	.kiwe-workspace-admin #adminmenuback,
-	.kiwe-workspace-admin #adminmenuwrap,
-	.kiwe-workspace-admin #adminmenu,
-	.kiwe-workspace-admin #adminmenu .wp-submenu { width: 210px; }
-	.kiwe-workspace-admin #adminmenu .wp-submenu { left: 196px; }
-	.kiwe-workspace__actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kiwe-workspace{max-width:1320px;padding:32px 28px 48px 0}
+.kiwe-workspace__hero{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px}
+.kiwe-workspace__hero h1{font-size:var(--kiwe-type-h3);line-height:1.16;letter-spacing:-.035em;margin:0;color:var(--kiwe-ink)}
+.kiwe-workspace__hero p:last-child{font-size:var(--kiwe-type-body);color:var(--kiwe-muted);margin:12px 0 0}
+.kiwe-workspace__eyebrow{font-size:12px;font-weight:650;letter-spacing:.1em;text-transform:uppercase;color:var(--kiwe-muted);margin:0 0 12px}
+.kiwe-workspace__visit{display:inline-flex;gap:12px;align-items:center;min-height:44px;border:1px solid var(--kiwe-line);border-radius:var(--kiwe-radius-full);padding:10px 18px;text-decoration:none;color:var(--kiwe-ink);font-weight:600}
+.kiwe-workspace__overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:20px;margin-bottom:32px}
+.kiwe-workspace__overview h2{font-size:var(--kiwe-type-h5);line-height:1.2;color:var(--kiwe-ink);margin:0 0 16px;letter-spacing:-.02em}
+.kiwe-workspace__business{background:color-mix(in srgb,var(--kiwe-color-accent) 12%,var(--kiwe-color-surface-raised));display:flex;align-items:flex-start;flex-direction:column;position:relative;overflow:hidden}
+.kiwe-workspace__business>p:not(.kiwe-workspace__eyebrow){font-size:var(--kiwe-type-body);line-height:1.65;max-width:48ch;margin:0 0 24px}
+.kiwe-workspace__business .kiwe-app-link{margin-top:auto}
+.kiwe-workspace__metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0 12px}
+.kiwe-workspace__metrics a{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:92px;padding:14px 10px;background:var(--kiwe-color-surface);border:1px solid transparent;border-radius:var(--kiwe-radius-lg);text-decoration:none;color:var(--kiwe-ink)}
+.kiwe-workspace__metrics a:hover{border-color:var(--kiwe-line)}
+.kiwe-workspace__metrics strong{font-size:30px;line-height:1;font-weight:600;letter-spacing:-.04em}
+.kiwe-workspace__metrics span{font-size:12px;line-height:1.5;color:var(--kiwe-muted)}
+.kiwe-workspace__review-link{display:inline-flex;align-items:center;min-height:44px;color:var(--kiwe-ink);font-size:14px}
+.kiwe-workspace__section-heading{margin:0 0 18px}
+.kiwe-workspace__section-heading h2{font-size:var(--kiwe-type-h5);margin:0;line-height:1.3;color:var(--kiwe-ink)}
+.kiwe-workspace__actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.kiwe-workspace__actions a{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;color:var(--kiwe-ink);text-decoration:none;position:relative}
+.kiwe-workspace__actions a:hover{background:var(--kiwe-color-surface);border-color:var(--kiwe-color-text-muted)}
+.kiwe-workspace__actions .dashicons{display:grid;place-items:center;width:44px;height:44px;font-size:22px;border-radius:var(--kiwe-radius-lg);background:var(--kiwe-color-surface);margin-bottom:12px}
+.kiwe-workspace__actions strong,.kiwe-workspace__actions small{grid-column:1/-1}
+.kiwe-workspace__actions strong{font-size:17px;line-height:1.35;font-weight:650}
+.kiwe-workspace__actions small{font-size:14px;line-height:1.65;color:var(--kiwe-muted)}
+.kiwe-workspace__arrow{grid-column:2;grid-row:1;align-self:start;font-size:21px;color:var(--kiwe-muted)}
+.kiwe-workspace__dock{display:none}
+@media (max-width: 1180px){.kiwe-workspace-admin #wpcontent,.kiwe-workspace-admin #wpfooter{margin-left:210px}.kiwe-workspace-admin #adminmenuback,.kiwe-workspace-admin #adminmenuwrap,.kiwe-workspace-admin #adminmenu,.kiwe-workspace-admin #adminmenu .wp-submenu{width:210px}.kiwe-workspace-admin #adminmenu .wp-submenu{left:196px}.kiwe-workspace__actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width: 960px){.kiwe-workspace-admin #wpcontent,.kiwe-workspace-admin #wpfooter{margin-left:56px}.kiwe-workspace-admin #wpcontent{padding-left:22px}.kiwe-workspace-admin #adminmenuback,.kiwe-workspace-admin #adminmenuwrap,.kiwe-workspace-admin #adminmenu{width:56px}.kiwe-workspace-admin #adminmenu li.menu-top{margin-inline:7px}.kiwe-workspace-admin #adminmenu .wp-submenu{left:49px;width:210px}}
+@media (max-width: 782px){
+ .kiwe-workspace-admin #wpcontent,.kiwe-workspace-admin #wpfooter{margin-left:0}.kiwe-workspace-admin #wpcontent{padding:0 16px}.kiwe-workspace-admin #wpbody-content{padding-bottom:calc(100px + env(safe-area-inset-bottom))}.kiwe-workspace-admin #adminmenuback,.kiwe-workspace-admin #adminmenuwrap,.kiwe-workspace-admin #adminmenu{width:220px}.kiwe-workspace-admin #adminmenu .wp-submenu{width:auto}
+ .kiwe-workspace{padding:24px 0}.kiwe-workspace__hero{gap:16px}.kiwe-workspace__overview{gap:14px;margin-bottom:26px}.kiwe-workspace__actions{gap:12px}.kiwe-workspace__actions .kiwe-app-card{padding:18px}.kiwe-workspace__hero h1{font-size:30px}
+ .kiwe-workspace__dock{position:fixed;z-index:999;bottom:0;left:0;right:0;display:flex;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--kiwe-line);background:var(--kiwe-color-surface-raised)}
+ .kiwe-workspace__dock a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:52px;max-width:110px;padding:5px;border-radius:var(--kiwe-radius-lg);font-size:11px;text-decoration:none;color:var(--kiwe-muted)}
+ .kiwe-workspace__dock a[aria-current=page]{background:var(--kiwe-color-surface);color:var(--kiwe-ink);font-weight:700}.kiwe-workspace__dock a:focus-visible{outline:2px solid var(--kiwe-ink);outline-offset:1px}
+ .kiwe-workspace-admin.wp-responsive-open .kiwe-workspace__dock{display:none}
 }
-@media (max-width: 960px) {
-	.kiwe-workspace-admin #wpcontent,
-	.kiwe-workspace-admin #wpfooter { margin-left: 56px; }
-	.kiwe-workspace-admin #wpcontent { padding-left: 22px; }
-	.kiwe-workspace-admin #adminmenuback,
-	.kiwe-workspace-admin #adminmenuwrap,
-	.kiwe-workspace-admin #adminmenu { width: 56px; }
-	.kiwe-workspace-admin #adminmenu li.menu-top { margin-inline: 7px; }
-	.kiwe-workspace-admin #adminmenu div.wp-menu-image { width: 42px; }
-	.kiwe-workspace-admin #adminmenu .wp-submenu { left: 49px; width: 210px; }
-	.kiwe-workspace__grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 782px) {
-	body.kiwe-workspace-admin { background: #fff; }
-	.kiwe-workspace-admin #wpcontent,
-	.kiwe-workspace-admin #wpfooter { margin-left: 0; }
-	.kiwe-workspace-admin #wpcontent { padding: 0 16px; }
-	.kiwe-workspace-admin #adminmenuback,
-	.kiwe-workspace-admin #adminmenuwrap,
-	.kiwe-workspace-admin #adminmenu { width: 190px; }
-	.kiwe-workspace-admin #adminmenu .wp-submenu { width: auto; }
-	.kiwe-workspace { padding: 24px 0 86px; }
-	.kiwe-workspace__hero { display: grid; }
-	.kiwe-workspace__status { align-self: auto; }
-	.kiwe-workspace__panel { padding: 16px; }
-	.kiwe-workspace__actions { grid-template-columns: 1fr 1fr; }
-	.kiwe-workspace__actions a { grid-template-columns: 32px minmax(0, 1fr); padding: 10px; }
-	.kiwe-workspace__actions .dashicons { width: 32px; height: 32px; }
-	.kiwe-workspace__metrics strong { font-size: 23px; }
-}
-@media (max-width: 520px) {
-	.kiwe-workspace__actions,
-	.kiwe-workspace__metrics { grid-template-columns: 1fr; }
-	.kiwe-workspace__metrics > div { grid-template-columns: auto 1fr; align-items: center; }
-	.kiwe-workspace__hero h1 { font-size: 31px; }
-	.kiwe-workspace__status-pill { flex: 1 1 auto; }
-}
-@media (prefers-reduced-motion: reduce) {
-	.kiwe-workspace-admin *,
-	.kiwe-workspace-admin *::before,
-	.kiwe-workspace-admin *::after {
-		scroll-behavior: auto !important;
-		transition: none !important;
-		animation: none !important;
-	}
-}
+@media (max-width: 520px){.kiwe-workspace__actions strong{font-size:16px}.kiwe-workspace__actions small{font-size:13px}.kiwe-workspace__visit{font-size:13px}.kiwe-workspace__overview .kiwe-app-card{padding:22px}}
+@media (max-width: 360px){.kiwe-workspace__actions{grid-template-columns:1fr}.kiwe-workspace__metrics{gap:6px}}
+@media (prefers-reduced-motion: reduce){.kiwe-workspace-admin *,.kiwe-workspace-admin *::before,.kiwe-workspace-admin *::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Dedicated Home uses the same server-rendered workspace as the legacy route. */
+.kiwe-workspace-admin.kiwe-workspace-home #wpbody-content { max-width: 1360px; }

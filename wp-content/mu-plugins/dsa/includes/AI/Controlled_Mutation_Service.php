@@ -49,6 +49,7 @@ final class Controlled_Mutation_Service {
 	}
 
 	public function execute( array $operation, string $type, string $execution_id ): array {
+		if ( ( str_starts_with( $type, 'woocommerce.' ) || in_array( $type, [ 'cart.run','checkout.run' ], true ) ) && ! \DSA\Apps\Store_App_Service::enabled() ) return $this->failure( 'store_app_off', 'Turn on Kiwe Store before using ecommerce operations.' );
 		return match ( $type ) {
 			'woocommerce.mutate'         => $this->woocommerce_mutate( $operation, $execution_id ),
 			'woocommerce.product.upsert' => $this->upsert_product( $operation, $execution_id ),

@@ -20,6 +20,7 @@ final class Checkout_Controller {
 	}
 
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_action( 'rest_api_init', [ $this, 'routes' ] );
 	}
 

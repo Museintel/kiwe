@@ -26,7 +26,9 @@ final class AI_Broker_Service {
 		$this->transport = $this->transport ?: new AI_Provider_Service( $settings );
 	}
 
-	public function status( string $service = '' ): array {
+	public function status( string $service = '', bool $refresh_policy = false ): array {
+		if ( $refresh_policy ) { AI_Feature_Policy::refresh_cache(); $this->settings = new Settings(); }
+
 		$profiles = $this->profiles();
 		$profile  = '' !== $service && isset( $profiles[ $service ] ) ? $profiles[ $service ] : null;
 
@@ -180,9 +182,9 @@ final class AI_Broker_Service {
 				'output'         => 'json',
 			],
 			'seo' => [
-				'enabled'        => ! empty( $settings['sitegraph_ai_enabled'] ),
+				'enabled'        => ! empty( $settings['seo_enabled'] ),
 				'capabilities'   => [ 'propose_batch' ],
-				'dataBoundary'   => 'five_public_content_records_without_visitor_or_order_data',
+				'dataBoundary'   => 'public_content_aggregate_visits_accepted_goal_strategy_without_personal_data',
 				'maxPromptBytes' => 50000,
 				'callsPerMinute' => 4,
 				'output'         => 'json',
@@ -194,6 +196,11 @@ final class AI_Broker_Service {
 				'maxPromptBytes' => 12000,
 				'callsPerMinute' => 30,
 				'output'         => 'securetrack_review_json',
+			],
+			'analytics' => [
+				'enabled'=>AI_Feature_Policy::analytics_enabled( $settings ),'capabilities'=>[ 'review_report' ],
+				'dataBoundary'=>'approved_goals_aggregate_metrics_without_personal_identifiers',
+				'maxPromptBytes'=>30000,'callsPerMinute'=>2,'output'=>'json',
 			],
 			'bricks' => [
 				'enabled'        => ! empty( $settings['bricks_editor_companion_enabled'] ),
@@ -210,7 +217,18 @@ final class AI_Broker_Service {
 		 * broker results, never provider credentials. Unknown capabilities fail closed.
 		 */
 		$profiles = apply_filters( 'kiwe_ai_broker_profiles', $profiles );
-		return is_array( $profiles ) ? $profiles : [];
+		if ( ! is_array( $profiles ) ) return [];
+		foreach ( $profiles as &$profile ) if ( is_array( $profile ) ) $profile['enabled'] = ! empty( $profile['enabled'] ) && AI_Feature_Policy::site_choices()['ai'];
+		unset( $profile );
+		if ( isset( $profiles['analytics'] ) ) $profiles['analytics']['enabled'] = ! empty( $profiles['analytics']['enabled'] ) && AI_Feature_Policy::analytics_enabled( $settings );
+		// Apply built-in permission intersections after extension filters, before any request accounting.
+		foreach ( AI_Feature_Policy::choices( $settings ) as $feature=>$choice ) {
+			if ( ! is_array( $profiles[ $feature ] ?? null ) ) continue;
+			$profiles[ $feature ]['ownerAllowed'] = $choice['ownerAllowed'];
+			$profiles[ $feature ]['clientEnabled'] = $choice['clientEnabled'];
+			$profiles[ $feature ]['enabled'] = ! empty( $profiles[ $feature ]['enabled'] ) && $choice['enabled'];
+		}
+		return $profiles;
 	}
 
 	private function service_instruction( string $service, string $capability, array $profile ): string {

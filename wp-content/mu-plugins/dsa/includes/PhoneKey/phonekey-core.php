@@ -149,7 +149,6 @@ add_action( 'init', function () {
 	pk_apply_subscriber_signup_default_once();
 	pk_apply_editorial_access_policy_once();
 	pk_apply_session_timeout_default_off_once();
-	pk_ensure_visitor_cookie();
 	pk_enforce_session_timeout();
 }, 1 );
 
@@ -209,7 +208,6 @@ function pk_default_settings() {
 		'default_country_code' => '+91',
 		'signup_role'          => pk_default_role(),
 		'low_friction_signup'  => 1,
-		'purchase_verified_contact' => 1,
 		'verification_timing'  => 'verify_later',
 		'progressive_visits'   => 2,
 		'protect_wp_admin'     => 0,
@@ -250,11 +248,6 @@ function pk_settings() {
 	}
 	return $settings;
 }
-
-add_filter( 'dsa_phonekey_purchase_verified_contact_enabled', function ( $enabled ) {
-	$settings = pk_settings();
-	return ! array_key_exists( 'purchase_verified_contact', $settings ) || ! empty( $settings['purchase_verified_contact'] );
-} );
 
 add_filter( 'dsa_phonekey_account_identity_verified', function ( $verified, $user_id ) {
 	return pk_account_verified( absint( $user_id ) );
@@ -559,29 +552,8 @@ add_filter( 'manage_users_custom_column', function ( $value, $column, $user_id )
 	return $value;
 }, 10, 3 );
 
-add_action( 'admin_notices', function () {
-	$user_id = get_current_user_id();
-	if ( ! $user_id || ! pk_is_privileged( $user_id ) ) return;
-	if ( pk_admin_enrollment_complete( $user_id ) ) return;
-
-	$needs_passkey = pk_credential_count( $user_id ) < 1;
-	$needs_phone   = ! pk_admin_phone_bound( $user_id );
-	$needs_verified_factor = ! pk_account_verified( $user_id );
-	$needs_password_binding = ! get_user_meta( $user_id, 'pk_admin_password_bound_at', true );
-	$parts = array();
-	if ( $needs_password_binding ) $parts[] = esc_html__( 'confirm the WordPress password', 'phonekey' );
-	if ( $needs_passkey ) $parts[] = esc_html__( 'set up a passkey', 'phonekey' );
-	if ( $needs_phone ) $parts[] = esc_html__( 'bind a phone number', 'phonekey' );
-	if ( $needs_verified_factor ) $parts[] = esc_html__( 'verify an email address or phone number', 'phonekey' );
-	if ( empty( $parts ) ) return;
-
-	echo '<div class="notice notice-warning"><p><strong>' . esc_html__( 'Kiwe Auth:', 'phonekey' ) . '</strong> '
-		. esc_html( sprintf(
-			__( 'Your admin account still needs to %s. Complete secure setup from the Kiwe sign-in to protect this account on new devices.', 'phonekey' ),
-			implode( esc_html__( ' and ', 'phonekey' ), $parts )
-		) )
-		. '</p></div>';
-} );
+// Same enrollment authority, compact admin-only reminder; no security-state writes.
+( new \DSA\Access\Account_Setup_Notice_Service() )->register();
 
 function pk_apply_policy_defaults_once() {
 	if ( get_option( 'pk_stage3_policy_defaults' ) === 'high_privilege_passkey_first' ) return;
@@ -676,7 +648,6 @@ function pk_save_settings_array( $raw ) {
 		$out['signup_role'] = pk_default_role();
 	}
 	$out['low_friction_signup']  = ! empty( $raw['low_friction_signup'] ) ? 1 : 0;
-	$out['purchase_verified_contact'] = ! empty( $raw['purchase_verified_contact'] ) ? 1 : 0;
 	$out['verification_timing']  = in_array( $raw['verification_timing'] ?? '', array( 'verify_now', 'verify_later', 'progressive' ), true ) ? $raw['verification_timing'] : $defaults['verification_timing'];
 	$out['progressive_visits']   = max( 1, min( 20, absint( $raw['progressive_visits'] ?? 2 ) ) );
 	$out['protect_wp_admin']     = ! empty( $raw['protect_wp_admin'] ) ? 1 : 0;
@@ -1590,8 +1561,11 @@ function pk_whatsapp_notification_ready() {
 function pk_send_whatsapp_message( $phone, $message, $purpose = 'notification_campaign', array $context = array() ) {
 	$s = pk_settings();
 	if ( ! pk_whatsapp_notification_ready() ) return new WP_Error( 'phonekey_whatsapp_unavailable', 'Key.kiwe WhatsApp is not configured.' );
-	$allowed = array( 'notification_campaign', 'abandoned_cart_reminder', 'abandoned_cart_automation', 'order_status', 'admin_new_order', 'admin_new_comment', 'admin_visitor_summary', 'admin_live_visitor', 'admin_guest_application', 'admin_guest_submission', 'guest_post_status', 'editorial_post_status' );
+	$allowed = array( 'notification_campaign', 'abandoned_cart_reminder', 'abandoned_cart_automation', 'order_status', 'admin_new_order', 'admin_abandoned_cart', 'admin_new_comment', 'admin_visitor_summary', 'admin_live_visitor', 'admin_guest_application', 'admin_guest_submission', 'guest_post_status', 'editorial_post_status' );
 	$purpose = sanitize_key( $purpose );
+	// Adapt the new native topic to Key's existing general-notification contract.
+	$topic = $purpose;
+	if ( 'hosting_backup_request' === $purpose ) $purpose = 'notification_campaign';
 	$phone = pk_normalize_phone( $phone );
 	$message = trim( wp_strip_all_tags( (string) $message ) );
 	if ( ! in_array( $purpose, $allowed, true ) || strlen( preg_replace( '/\D/', '', $phone ) ) < 7 || '' === $message ) {
@@ -1599,11 +1573,13 @@ function pk_send_whatsapp_message( $phone, $message, $purpose = 'notification_ca
 	}
 	if ( function_exists( 'mb_substr' ) ) $message = mb_substr( $message, 0, 1600 );
 	else $message = substr( $message, 0, 1600 );
-	$request_id = pk_hmac( $purpose . '|' . $phone . '|' . $message . '|' . wp_generate_uuid4() );
+	$stable = 'hosting_backup_request' === $topic && is_string( $context['request_id'] ?? null ) && preg_match( '/^[a-zA-Z0-9._:-]{16,128}$/D', $context['request_id'] ) ? $context['request_id'] : wp_generate_uuid4();
+	$request_id = pk_hmac( $topic . '|' . $phone . '|' . $message . '|' . $stable );
 	$payload = array(
 		'phone'     => $phone,
 		'message'   => $message,
 		'purpose'   => $purpose,
+		'topic'     => $topic,
 		'site'      => get_bloginfo( 'name' ),
 		'origin'    => untrailingslashit( home_url() ),
 		'requestId' => $request_id,
@@ -1690,6 +1666,7 @@ add_action( 'template_redirect', function () {
 	$user_id = (int) $row['user_id'];
 	$user = get_userdata( $user_id );
 	if ( ! $user ) pk_die( esc_html__( 'Invalid verification link.', 'phonekey' ), 403 );
+	if ( '1' === (string) get_user_meta( $user_id, '_kiwe_account_suspended', true ) ) pk_die( esc_html__( 'This account cannot sign in. Contact the website administrator.', 'phonekey' ), 403 );
 	pk_mark_factor_verified( $user_id, 'email', $user->user_email );
 	wp_set_current_user( $user_id );
 	wp_set_auth_cookie( $user_id, true, pk_secure_auth_cookie() );
@@ -2266,6 +2243,7 @@ function pk_next_security_setup_response( $user_id, $flow_meta = array() ) {
 function pk_finish_login( $user_id, $method, $high = true, $meta = array() ) {
 	$user_id = pk_canonical_user_id( $user_id );
 	if ( ! $user_id ) return array( 'ok' => false, 'message' => 'This account link is invalid.' );
+	if ( '1' === (string) get_user_meta( $user_id, '_kiwe_account_suspended', true ) ) return array( 'ok' => false, 'code' => 'account_suspended', 'message' => 'This account cannot sign in. Contact the website administrator.' );
 	if ( pk_is_privileged( $user_id ) && ! pk_admin_enrollment_complete( $user_id ) ) {
 		pk_flag_admin_enrollment( $user_id );
 		pk_log( 'privileged_login_blocked_incomplete', $user_id, array( 'method' => sanitize_key( $method ) ), 'warning' );
@@ -2283,6 +2261,8 @@ function pk_finish_login( $user_id, $method, $high = true, $meta = array() ) {
 	do_action( 'dsa_phonekey_authenticated', $user_id, $method );
 	$redirect = pk_consume_login_return();
 	if ( ! $redirect ) $redirect = pk_redirect_url();
+	// The completed authentication result shares the WordPress/Woo staff destination.
+	$redirect = apply_filters( 'kiwe_workspace_login_destination', $redirect, get_userdata( $user_id ) );
 	$counterpart = pk_counterpart_prompt_data( $user_id, $redirect, $meta );
 	return array_merge( array( 'ok' => true, 'redirect' => $redirect ), $counterpart );
 }
@@ -3809,7 +3789,8 @@ function pk_rest_account_backup_regenerate() {
 function pk_ensure_visitor_cookie() {
 	if ( is_admin() || headers_sent() || is_user_logged_in() ) return;
 	if ( empty( $_COOKIE[ PK_VISITOR_COOKIE ] ) ) {
-		setcookie( PK_VISITOR_COOKIE, pk_rand_token( 18 ), array(
+		$token = pk_rand_token( 18 );
+		$sent = setcookie( PK_VISITOR_COOKIE, $token, array(
 			'expires'  => time() + YEAR_IN_SECONDS,
 			'path'     => COOKIEPATH ?: '/',
 			'domain'   => COOKIE_DOMAIN ?: '',
@@ -3817,10 +3798,14 @@ function pk_ensure_visitor_cookie() {
 			'httponly' => true,
 			'samesite' => 'Lax',
 		) );
+		if ( $sent ) $_COOKIE[ PK_VISITOR_COOKIE ] = $token;
 	}
 }
 
 function pk_visitor_hash() {
+	// Allocate identity when an authentication/analytics journey actually asks
+	// for it. Ordinary anonymous HTML must not acquire a cache-breaking cookie.
+	pk_ensure_visitor_cookie();
 	$v = sanitize_text_field( wp_unslash( $_COOKIE[ PK_VISITOR_COOKIE ] ?? '' ) );
 	if ( ! $v ) $v = pk_ip() . '|' . pk_ua();
 	return pk_hmac( $v );
@@ -3974,7 +3959,7 @@ function pk_admin_settings( $s ) {
 			</div>
 			<div class="pk-card"><h2>Verification</h2>
 				<p><label>Signup timing<br><select name="pk[verification_timing]"><?php pk_select_options( array( 'verify_now'=>'Verify now', 'verify_later'=>'Verify later', 'progressive'=>'Progressive after visits' ), $s['verification_timing'] ); ?></select></label></p>
-				<p><label><input type="checkbox" name="pk[purchase_verified_contact]" value="1" <?php checked( ! empty( $s['purchase_verified_contact'] ) ); ?>> Require one verified contact before purchase</label><br><span class="description">WooCommerce checkout requires a signed-in account with either a verified email or verified phone. Full email + phone + passkey completion remains recommended but is not required to purchase.</span></p>
+				<p class="description">Guest checkout is managed in Kiwe → Store → Checkout policy. When the store requires an account, one verified recovery contact is required before purchasing.</p>
 				<p><label>Progressive visit threshold<br><input type="number" min="1" max="20" name="pk[progressive_visits]" value="<?php echo esc_attr( $s['progressive_visits'] ); ?>"></label></p>
 				<p class="description"><strong>Verify later</strong> lets a new ordinary subscriber defer verification once; their next sign-in requires verification. In <strong>Email or phone</strong> mode, Key.kiwe automatically offers the missing recovery email or phone in the same Profile sheet. Privileged accounts never receive the grace or skip option.</p>
 				<p><label>Email delivery<br><select name="pk[email_delivery]"><?php pk_select_options( array( 'magic_link'=>'Magic link', 'otp'=>'OTP code' ), $s['email_delivery'] ); ?></select></label><br><span class="description">Uses <code>wp_mail()</code>. Configure authenticated transactional SMTP in Kiwe &gt; Email; an accepted handoff does not prove inbox delivery.</span></p>
@@ -4108,5 +4093,3 @@ function pk_admin_activity() {
 	}
 	echo '</tbody></table>';
 }
-
-

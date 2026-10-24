@@ -130,7 +130,10 @@ try {
 		assert.ok(tokenService.includes('add_missing_dark_values_to_bricks_palette'));
 		assert.ok(tokenService.includes("'colorPalette'    => empty( $palette_colors )"));
 		assert.ok(tokenService.includes("'raw'     => 'var(--' . $bare . ')'"));
-		assert.ok(admin.includes('array_merge( $merged_palette, $kiwe_palette, $project_palette )'));
+		assert.ok(admin.includes('\\DSA\\Bricks\\Framework_Style_Service::apply'));
+		const result = spawnSync(process.env.KIWE_PHP || 'php', ['tools/release/test-framework-style-merge.php'], { cwd: root, encoding: 'utf8', windowsHide: true });
+		assert.equal(result.status, 0, result.stdout + result.stderr);
+		assert.ok(JSON.parse(result.stdout).checks >= 12, 'Shared writer preserves actual palette and unrelated project data');
 		assert.ok(admin.includes('dsa_apply_bricks_native_dark_colors'));
 	});
 
@@ -265,6 +268,23 @@ try {
 		assert.equal(deployment.target.authority, 'admin-approved-kiwe-staging-executor');
 		assert.throws(() => sanitizeSiteGraph({ schema: 'invented.sitegraph' }), /kiwe\.site-graph\.v1/);
 	});
+
+	check('optional App discovery is safe, backward compatible and changes target identity', () => {
+  const graph = {schema:'kiwe.site-graph.v1',wordpress:{},bricks:{},kiwe:{version:'8.0.0-rc.432'}};
+  const legacy = sanitizeSiteGraph(graph);
+  assert.equal(legacy.kiwe.apps, undefined);
+  const capabilities = {schema:'kiwe.app-capabilities.v1',coreApi:1,designContextOwner:'core',secret:'never-copy',apps:{seo:{installed:false,enabled:false,source:'absent',version:''},store:{installed:true,enabled:false,source:'plugin',version:'1.0.0-rc.2',installToken:'never-copy'}}};
+  graph.kiwe.apps = capabilities;
+  const current = sanitizeSiteGraph(graph);
+  assert.equal(current.kiwe.apps.apps.store.enabled, false);
+  assert.equal(current.kiwe.apps.designContextOwner, 'core');
+  assert.equal(JSON.stringify(current).includes('never-copy'), false);
+  assert.notEqual(current.sourceHash, legacy.sourceHash);
+  graph.kiwe.apps.apps.store.enabled = true;
+  assert.notEqual(sanitizeSiteGraph(graph).sourceHash,current.sourceHash);
+  graph.kiwe.apps.apps.seo.enabled = true;
+  assert.equal(sanitizeSiteGraph(graph).kiwe.apps, undefined);
+ });
 
 	check('compiler refuses to mix a new package with stale output artifacts', () => {
 		const output = path.join(temp, 'non-empty-output');

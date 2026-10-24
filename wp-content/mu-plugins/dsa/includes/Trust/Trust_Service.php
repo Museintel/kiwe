@@ -8,6 +8,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Trust_Service {
 	public function summary( array $config = [] ): array {
+		// Gateway availability can depend on the current address/cart. Resolve once
+		// for this projection, without caching across later cart or checkout changes.
+		$gateways = $this->payment_gateways( $config );
 		return [
 			'ssl'      => [
 				'active'     => is_ssl(),
@@ -23,9 +26,9 @@ final class Trust_Service {
 				'label'  => __( 'Kiwe Secure', 'dsa' ),
 			],
 			'payment'  => [
-				'active'    => ! empty( $this->payment_gateways( $config ) ),
-				'providers' => $this->payment_gateways( $config ),
-				'label'     => $this->payment_provider_label( $config ),
+				'active'    => ! empty( $gateways ),
+				'providers' => $gateways,
+				'label'     => ! empty( $gateways ) ? implode( ', ', array_slice( $gateways, 0, 2 ) ) : __( 'your payment provider', 'dsa' ),
 			],
 		];
 	}

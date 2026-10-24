@@ -25,7 +25,10 @@ final class Incident_Response_Service {
 		add_filter( 'redirect_canonical', [ self::class, 'disable_spam_404_redirect' ], 10, 2 );
 		add_filter( 'wp_robots', [ self::class, 'filter_robots' ], 99 );
 		add_filter( 'rank_math/json_ld', [ self::class, 'filter_rank_math_schema' ], PHP_INT_MAX, 2 );
-		add_filter( 'woocommerce_structured_data_product', [ self::class, 'filter_woocommerce_product_schema' ], PHP_INT_MAX, 2 );
+		// Native Woo schema protection is Core security, independent of Store's business runtime.
+		add_action( 'plugins_loaded', static function (): void {
+			if ( function_exists( 'WC' ) ) add_filter( 'woocommerce_structured_data_product', [ self::class, 'filter_woocommerce_product_schema' ], PHP_INT_MAX, 2 );
+		}, 25 );
 		add_filter( 'rest_endpoints', [ self::class, 'filter_rest_endpoints' ], PHP_INT_MAX );
 		add_action( 'send_headers', [ self::class, 'send_security_headers' ], 99 );
 		add_filter( 'big_image_size_threshold', [ self::class, 'big_image_threshold' ], 99, 4 );
@@ -34,9 +37,12 @@ final class Incident_Response_Service {
 
 	public static function is_lean_media_request(): bool {
 		$path = (string) wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH );
-		if ( preg_match( '#/wp-admin/(?:async-upload|media-new)\.php$#i', $path ) ) {
+		if ( preg_match( '#/wp-admin/async-upload\.php$#i', $path ) ) {
 			return true;
 		}
+		// A direct GET must load the role-aware dashboard guard; only the upload
+		// writer needs the lean image-processing path.
+		if ( preg_match( '#/wp-admin/media-new\.php$#i', $path ) && ! in_array( $_SERVER['REQUEST_METHOD'] ?? 'GET', [ 'GET', 'HEAD' ], true ) ) return true;
 
 		$action = sanitize_key( wp_unslash( $_REQUEST['action'] ?? '' ) );
 		return in_array( $action, [ 'upload-attachment', 'media-create-image-subsizes', 'image-editor' ], true );

@@ -1,0 +1,10 @@
+.wf-merch-list{list-style:none;padding:0;margin:20px 0;display:grid;gap:10px}
+.wf-merch-list li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px;border:1px solid var(--wf-line,#b6c4b9);border-radius:6px;background:rgba(255,255,255,.32)}
+.wf-merch-list li>span{min-width:0;overflow-wrap:anywhere}
+.wf-merch-list small{display:block;margin-top:4px}
+.wf-merch-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px}
+.wf-merch-filters form{display:flex;align-items:end;gap:8px;min-width:0}
+.wf-merch-filters form label{flex:1;min-width:0}
+.wf-merch-filters input,.wf-merch-filters select{width:100%;min-width:0}
+.wf-merchandising .wf-actions{flex-wrap:wrap}
+@media(max-width:600px){.wf-merch-filters{grid-template-columns:1fr}.wf-merch-list li{align-items:start;flex-direction:column}.wf-merchandising header{flex-wrap:wrap}.wf-merch-list li .wf-actions{align-self:end}}

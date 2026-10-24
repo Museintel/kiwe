@@ -42,11 +42,21 @@
     "framework": {
       "option": "frameworkMode",
       "input": "the same complete rendered source evidence used by conversion",
-      "output": "one Framework Profile, profile-dependent templates and integration audit",
+      "output": "one Framework Profile, profile-dependent templates, real dependency package and integration audit",
       "optional": true,
       "profileInstallRequiredBeforeTemplateImport": true,
       "fallbackValuesForbidden": true,
       "ownershipOrder": ["Bricks Theme Style", "universal Seam variables and palette", "project variables and reusable classes", "element-native exceptions", "scoped unsupported CSS"]
+    },
+    "dependencies": {
+      "authority": "deterministic-seam-compiler",
+      "input": "actual compiled native templates/Profile, referenced real bytes and source-resource reports",
+      "output": ["package-integrity.json", "assets/manifest.json", "assets/import-plan.json", "style-dependencies.json"],
+      "nativeImportReady": false,
+      "aiInventedNativeIdsAllowed": false,
+      "remoteFetch": false,
+      "targetImport": "separate authorized Kiwe Framework review, supported native Media, compatible shared styles, guarded remapping and draft templates",
+      "recovery": "preserve newer edits and reusable Media; no automatic publication or permanent media deletion"
     },
     "audit": {
       "command": "/audit",
@@ -77,6 +87,8 @@
   "invariants": [
     "Raw conversion never injects or requires Seam Framework.",
     "Framework is an explicit option, not a command or redesign.",
+    "Visual quality and the accepted design take priority; consolidate only equivalent values and meanings while preserving page/scoped values and script-owned variables.",
+    "Real asset bytes and exact native references determine the compiler package; AI notes, filenames, hashes and IDs are not proof of assets or native installation.",
     "A missing Framework Profile fails closed and templates never depend on variable fallbacks.",
     "Browser AI may author source design and binding intent but never production Bricks JSON or Framework Profile data.",
     "/convert /bricks never emits Bricks JSON; seam.kiwe compilation is a separate explicit application action.",

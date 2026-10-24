@@ -110,6 +110,10 @@ final class Editorial_Fragment_Service {
 		if ( is_wp_error( $target ) ) {
 			return $this->offline_failure( $target->get_error_code() );
 		}
+		// An unlocked password cookie must not turn protected content into a public cache contract.
+		if ( '' !== (string) $target->post_password ) {
+			return $this->offline_failure( 'protected_editorial_requires_network' );
+		}
 
 		if ( $this->has_bricks_content( (int) $target->ID ) ) {
 			return $this->offline_failure( 'builder_content_requires_network' );

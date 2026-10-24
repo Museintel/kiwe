@@ -15,16 +15,32 @@ namespace {
 	];
 	$GLOBALS['kiwe_test_filters'] = [];
 	$GLOBALS['kiwe_cache_writes'] = [];
+	$GLOBALS['kiwe_option_reads'] = [];
+	$GLOBALS['kiwe_option_write_count'] = 0;
+	$GLOBALS['kiwe_test_actions'] = [];
 
 	function get_option( $name, $default = false ) {
+		$GLOBALS['kiwe_option_reads'][] = $name;
 		return array_key_exists( $name, $GLOBALS['kiwe_test_options'] ) ? $GLOBALS['kiwe_test_options'][ $name ] : $default;
 	}
 	function update_option( $name, $value ) {
+		$exists = array_key_exists( $name, $GLOBALS['kiwe_test_options'] );
+		$old = get_option( $name );
+		$value = apply_filters( 'pre_update_option_' . $name, $value, $old );
+		if ( ! $exists ) $value = apply_filters( 'pre_add_option_' . $name, $value );
+		if ( $exists && $value === $old ) return false;
+		if ( $name === ( $GLOBALS['kiwe_fail_option_write'] ?? '' ) ) return false;
 		$GLOBALS['kiwe_test_options'][ $name ] = $value;
+		$GLOBALS['kiwe_option_write_count']++;
+		do_action( $exists ? 'updated_option' : 'added_option', ... ( $exists ? [ $name, $old, $value ] : [ $name, $value ] ) );
 		return true;
 	}
 	function delete_option( $name ) {
+		do_action( 'delete_option', $name );
+		if ( $name === ( $GLOBALS['kiwe_fail_option_delete'] ?? '' ) ) return false;
 		unset( $GLOBALS['kiwe_test_options'][ $name ] );
+		$GLOBALS['kiwe_option_write_count']++;
+		do_action( 'deleted_option', $name );
 		return true;
 	}
 	function sanitize_key( $value ) {
@@ -46,19 +62,29 @@ namespace {
 		return [ 11, 22, 11, 0 ];
 	}
 	function add_filter( $hook, $callback ) {
-		$GLOBALS['kiwe_test_filters'][ $hook ][] = $callback;
+		if ( ! in_array( $callback, $GLOBALS['kiwe_test_filters'][ $hook ] ?? [], true ) ) $GLOBALS['kiwe_test_filters'][ $hook ][] = $callback;
 		return true;
 	}
-	function apply_filters( $hook, $value ) {
+	function apply_filters( $hook, $value, ...$args ) {
 		foreach ( $GLOBALS['kiwe_test_filters'][ $hook ] ?? [] as $callback ) {
-			$value = $callback( $value );
+			$value = $callback( $value, ...$args );
 		}
 		return $value;
 	}
+	function add_action( $hook, $callback ) {
+		if ( ! in_array( $callback, $GLOBALS['kiwe_test_actions'][ $hook ] ?? [], true ) ) $GLOBALS['kiwe_test_actions'][ $hook ][] = $callback;
+	}
+	function do_action( $hook, ...$args ) {
+		foreach ( $GLOBALS['kiwe_test_actions'][ $hook ] ?? [] as $callback ) $callback( ...$args );
+	}
+	function is_admin() { return false; }
+	function wp_salt( $scheme ) { return 'synthetic-clean-runtime-salt-' . $scheme; }
 	function wp_cache_set( $key, $value, $group ) {
 		$GLOBALS['kiwe_cache_writes'][] = compact( 'key', 'value', 'group' );
 		return true;
 	}
+	function wp_cache_get( $key, $group ) { return false; }
+	function wp_cache_delete( $key, $group ) { return true; }
 	function wp_next_scheduled() {
 		return false;
 	}
@@ -161,4 +187,52 @@ namespace {
 		}
 	}
 	echo "tampered snapshot leaves all options unchanged: ok\n";
+
+	$master_key = 'dsa_clean_conversion_test_snapshot_v1';
+	$runtime_key = 'dsa_clean_conversion_runtime_v1';
+	delete_option( $master_key );
+	$large = [ 'schema' => 'kiwe.clean-conversion-test.v1', 'excluded_template_ids' => [ 231, 242 ], 'options' => [ 'synthetic_restore_blob' => str_repeat( 'x', 2 * 1024 * 1024 ) ] ];
+	$large['hash'] = hash( 'sha256', serialize( $large ) );
+	update_option( $master_key, $large );
+	$projection = get_option( $runtime_key );
+	if ( strlen( serialize( $projection ) ) > 600 || $large !== get_option( $master_key ) ) throw new \RuntimeException( 'Projection replaced the full restoration source or retained its payload.' );
+	$GLOBALS['kiwe_option_reads'] = [];
+	$GLOBALS['kiwe_test_filters']['bricks/database/bricks_get_all_templates_by_type_args'] = [];
+	$writes = $GLOBALS['kiwe_option_write_count'];
+	\DSA\Bricks\Clean_Conversion_Test_Service::register_runtime_isolation();
+	if ( in_array( $master_key, $GLOBALS['kiwe_option_reads'], true ) || $writes !== $GLOBALS['kiwe_option_write_count'] ) throw new \RuntimeException( 'A valid runtime projection reads the restoration blob or writes during rendering.' );
+	if ( [ 33, 231, 242 ] !== apply_filters( 'bricks/database/bricks_get_all_templates_by_type_args', [ 'post__not_in' => [ 33 ] ] )['post__not_in'] ) throw new \RuntimeException( 'Projected exclusions differ from the source.' );
+	echo "large restoration source stays separate; projected rendering reads no blob and writes nothing: ok\n";
+
+	$next = $large;
+	unset( $next['hash'] );
+	$next['excluded_template_ids'] = [ 303 ];
+	$next['hash'] = hash( 'sha256', serialize( $next ) );
+	$GLOBALS['kiwe_fail_option_delete'] = $runtime_key;
+	if ( update_option( $master_key, $next ) || get_option( $master_key ) !== $large || get_option( $runtime_key ) !== $projection ) throw new \RuntimeException( 'A failed cache invalidation allowed the source to change.' );
+	try { delete_option( $master_key ); throw new \RuntimeException( 'Source deletion accepted failed invalidation.' ); }
+	catch ( \RuntimeException $error ) { if ( ! str_contains( $error->getMessage(), 'could not be invalidated' ) || get_option( $master_key ) !== $large ) throw $error; }
+	unset( $GLOBALS['kiwe_fail_option_delete'] );
+	echo "failed invalidation refuses snapshot update and deletion: ok\n";
+
+	$GLOBALS['kiwe_fail_option_write'] = $runtime_key;
+	update_option( $master_key, $next );
+	if ( false !== get_option( $runtime_key ) || get_option( $master_key ) !== $next ) throw new \RuntimeException( 'Failed projection write retained stale authority or lost the source.' );
+	$GLOBALS['kiwe_test_filters']['bricks/database/bricks_get_all_templates_by_type_args'] = [];
+	\DSA\Bricks\Clean_Conversion_Test_Service::register_runtime_isolation();
+	if ( [ 303 ] !== apply_filters( 'bricks/database/bricks_get_all_templates_by_type_args', [] )['post__not_in'] ) throw new \RuntimeException( 'Missing projection failed to fall back to the newer source.' );
+	unset( $GLOBALS['kiwe_fail_option_write'] );
+	\DSA\Bricks\Clean_Conversion_Test_Service::refresh_runtime_projection();
+	$runtime = get_option( $runtime_key );
+	$runtime['excluded_template_ids'] = [ 999 ];
+	update_option( $runtime_key, $runtime );
+	$GLOBALS['kiwe_test_filters']['bricks/database/bricks_get_all_templates_by_type_args'] = [];
+	\DSA\Bricks\Clean_Conversion_Test_Service::register_runtime_isolation();
+	if ( [ 303 ] !== apply_filters( 'bricks/database/bricks_get_all_templates_by_type_args', [] )['post__not_in'] ) throw new \RuntimeException( 'An invalid projection signature became template authority.' );
+	delete_option( $master_key );
+	$GLOBALS['kiwe_test_filters']['bricks/database/bricks_get_all_templates_by_type_args'] = [];
+	$GLOBALS['kiwe_option_reads'] = [];
+	\DSA\Bricks\Clean_Conversion_Test_Service::register_runtime_isolation();
+	if ( in_array( $master_key, $GLOBALS['kiwe_option_reads'], true ) || [] !== apply_filters( 'bricks/database/bricks_get_all_templates_by_type_args', [] ) ) throw new \RuntimeException( 'Deleted snapshot still contributes exclusions or blob reads.' );
+	echo "failed cache write falls back; signature tampering and deletion retain source authority: ok\n";
 }

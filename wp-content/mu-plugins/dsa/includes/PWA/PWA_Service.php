@@ -32,6 +32,7 @@ final class PWA_Service {
 			'serviceWorkerEnabled' => $this->service_worker_enabled(),
 			'serviceWorkerUrl' => $this->service_worker_enabled() ? $this->service_worker_url() : '',
 			'scope'            => $this->scope_url(),
+			'cachePrefix'      => $this->cache_prefix(),
 			'siteIconReady'    => (bool) get_site_icon_url( 512 ),
 			'iosHelp'          => __( 'On iPhone or iPad, tap Share, then Add to Home Screen, then Add.', 'dsa' ),
 			'androidHelp'      => __( 'Open the browser menu and choose Install app or Add to Home screen.', 'dsa' ),
@@ -62,6 +63,10 @@ final class PWA_Service {
 	}
 
 	public function serve_endpoint(): void {
+		if ( isset( $_GET['dsa_pwa_manifest'] ) || isset( $_GET['dsa_service_worker'] ) ) {
+			if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+			do_action( 'litespeed_control_set_nocache', 'Kiwe PWA endpoint' );
+		}
 		if ( isset( $_GET['dsa_pwa_manifest'] ) ) {
 			$this->serve_manifest();
 		}
@@ -114,20 +119,19 @@ final class PWA_Service {
 	}
 
 	private function serve_service_worker(): void {
-		if ( ! $this->service_worker_enabled() ) {
-			status_header( 404 );
-			exit;
-		}
-
 		$permissions = $this->settings->get( 'permissions', [] );
 		$runtime_version = DSA_VERSION . '.' . (string) max( 0, (int) get_option( 'dsa_runtime_cache_epoch', 0 ) );
+		$cache_prefix = $this->cache_prefix();
+		$cache_version = preg_replace( '/[^a-zA-Z0-9._-]/', '-', $runtime_version );
 		$config = wp_json_encode(
 			[
+				'enabled'        => $this->service_worker_enabled(),
+				'cachePrefix'    => $cache_prefix,
 				'version'        => $runtime_version,
-				'cache'          => 'kiwe-appsite-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', $runtime_version ),
-				'editorialCache' => 'kiwe-editorial-v1-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', $runtime_version ),
-				'mediaCache'     => 'kiwe-editorial-media-v1-' . preg_replace( '/[^a-zA-Z0-9._-]/', '-', $runtime_version ),
-				'pushMetaCache'  => 'kiwe-push-meta-v1',
+				'cache'          => $cache_prefix . 'assets-' . $cache_version,
+				'editorialCache' => $cache_prefix . 'editorial-' . $cache_version,
+				'mediaCache'     => $cache_prefix . 'media-' . $cache_version,
+				'pushMetaCache'  => $cache_prefix . 'push-meta',
 				'editorialFreshSeconds' => 15 * MINUTE_IN_SECONDS,
 				'home'           => home_url( '/' ),
 				'icon'           => $this->app_icon_url( 192 ),
@@ -156,27 +160,27 @@ final class PWA_Service {
 		header( 'Pragma: no-cache' );
 		header( 'Expires: 0' );
 		header( 'Content-Type: application/javascript; charset=utf-8' );
-		header( 'Service-Worker-Allowed: /' );
+		header( 'Service-Worker-Allowed: ' . $this->scope_url() );
 		header( 'X-Content-Type-Options: nosniff' );
 		?>
 const KIWE_PWA = <?php echo $config; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 self.addEventListener('install', function (event) {
-	event.waitUntil(caches.open(KIWE_PWA.cache).then(function (cache) {
-		return Promise.all((KIWE_PWA.assets || []).map(function (asset) {
-			return cache.add(asset).catch(function () { return null; });
-		}));
-	}).then(function () { return self.skipWaiting(); }));
+	// Cache assets only when requested; installation must not download unused islands.
+	event.waitUntil(self.skipWaiting());
 });
 self.addEventListener('activate', function (event) {
+	const keep = KIWE_PWA.enabled ? [KIWE_PWA.cache, KIWE_PWA.pushMetaCache].concat(KIWE_PWA.offlineEditorialEnabled ? [KIWE_PWA.editorialCache, KIWE_PWA.mediaCache] : []) : [];
 	event.waitUntil(caches.keys().then(function (keys) {
 		return Promise.all(keys.filter(function (key) {
-			return (key.indexOf('kiwe-appsite-') === 0 && key !== KIWE_PWA.cache)
-				|| (key.indexOf('kiwe-editorial-v1-') === 0 && (!KIWE_PWA.offlineEditorialEnabled || key !== KIWE_PWA.editorialCache))
-				|| (key.indexOf('kiwe-editorial-media-v1-') === 0 && (!KIWE_PWA.offlineEditorialEnabled || key !== KIWE_PWA.mediaCache));
+			return key.indexOf(KIWE_PWA.cachePrefix) === 0 && keep.indexOf(key) === -1;
 		}).map(function (key) { return caches.delete(key); }));
-	}).then(function () { return self.clients.claim(); }));
+	}).then(function () { return self.clients.claim(); }).then(function () {
+		// A valid retirement worker replaces existing controllers even when the UI is disabled.
+		return KIWE_PWA.enabled ? true : self.registration.unregister();
+	}));
 });
 self.addEventListener('message', function (event) {
+	if (!KIWE_PWA.enabled || !event.source || !isSiteUrl(event.source.url)) return;
 	if (event.data && event.data.type === 'KIWE_SKIP_WAITING') self.skipWaiting();
 	if (event.data && event.data.type === 'KIWE_PUSH_RENEWAL') {
 		event.waitUntil(storePushRenewal(event.data));
@@ -187,44 +191,63 @@ self.addEventListener('message', function (event) {
 });
 self.addEventListener('fetch', function (event) {
 	const request = event.request;
-	if (!request || request.method !== 'GET') return;
-	if (isRuntimeFreshUrl(request.url)) {
-		event.respondWith(fetch(request, {cache:'no-store', credentials:'same-origin'}).catch(function () {
-			return caches.match(request);
+	if (!KIWE_PWA.enabled || !request || request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+	if (isAppAsset(request.url)) {
+		const result = fetch(request).then(function (response) {
+			const type = response.headers.get('Content-Type') || '';
+			const safe = response.ok && !response.redirected && /(?:text\/css|(?:text|application)\/(?:java|ecma)script)/i.test(type)
+				&& !/(?:private|no-store)/i.test(response.headers.get('Cache-Control') || '');
+			return {response:response, stored:safe ? response.clone() : null};
+		});
+		event.respondWith(result.then(function (value) { return value.response; }).catch(function () {
+			return caches.open(KIWE_PWA.cache).then(function (cache) { return cache.match(request); });
 		}));
+		event.waitUntil(result.then(function (value) {
+			return value.stored ? caches.open(KIWE_PWA.cache).then(function (cache) { return cache.put(request, value.stored); }) : false;
+		}).catch(function () { return false; }));
+		return;
+	}
+	if (isRuntimeFreshUrl(request.url)) {
+		// Auth, account and runtime data must never be replayed from any browser cache.
+		event.respondWith(fetch(request, {cache:'no-store'}));
 		return;
 	}
 	if (request.mode === 'navigate') {
 		const navigation = fetch(request);
 		event.respondWith(navigation.catch(function () {
-			return offlineEditorialResponse(request.url).then(function (response) { return response || offlineShellResponse(); });
+			return offlineEditorialResponse(request.url).catch(function () { return null; }).then(function (response) { return response || offlineShellResponse(request.url); });
 		}));
 		event.waitUntil(navigation.then(function (response) {
 			return response && response.ok && !isNetworkOnlyUrl(request.url) ? cacheEditorial(request.url, request) : false;
 		}).catch(function () { return false; }));
 		return;
 	}
-	if (isAppAsset(request.url)) {
-		event.respondWith(caches.match(request).then(function (cached) {
-			return cached || fetch(request).then(function (response) {
-				if (response && response.ok) caches.open(KIWE_PWA.cache).then(function (cache) { cache.put(request, response.clone()); });
-				return response;
-			});
+	if (KIWE_PWA.offlineEditorialEnabled && request.destination === 'image' && !isNetworkOnlyUrl(request.url)) {
+		// Only replay images saved from the server's public editorial contract.
+		event.respondWith(fetch(request).catch(function () {
+			return caches.open(KIWE_PWA.mediaCache).then(function (cache) { return cache.match(request); });
 		}));
 	}
 });
+function isSiteUrl(value) {
+	try {
+		const url = new URL(value);
+		const home = new URL(KIWE_PWA.home);
+		return url.origin === home.origin && url.pathname.indexOf(home.pathname) === 0;
+	} catch (error) { return false; }
+}
 function isRuntimeFreshUrl(value) {
 	let url;
 	try { url = new URL(value); } catch (error) { return true; }
 	if (url.origin !== self.location.origin) return false;
-	if (/\/wp-json\/dsa(?:\/|$)/i.test(url.pathname) || url.searchParams.get('rest_route') && /^\/dsa\//i.test(url.searchParams.get('rest_route') || '')) return true;
+	if (/\/wp-json(?:\/|$)/i.test(url.pathname) || url.searchParams.has('rest_route')) return true;
 	if (/\/wp-content\/mu-plugins\/dsa\//i.test(url.pathname)) return true;
 	return /[?&]dsa_(?:runtime|debug|health|rt|manifest|service_worker|pwa_manifest)=/i.test(url.search);
 }
 function isNetworkOnlyUrl(value) {
 	let url;
 	try { url = new URL(value); } catch (error) { return true; }
-	if (url.origin !== self.location.origin || url.search) return true;
+	if (!isSiteUrl(value) || url.search) return true;
 	return /\/(?:wp-admin|wp-json|wp-login\.php|cart|checkout|my-account|order-pay|order-received|wc-api)(?:\/|$)/i.test(url.pathname);
 }
 function isAppAsset(value) {
@@ -236,7 +259,7 @@ function isAppAsset(value) {
 		try { expected = new URL(asset); } catch (error) { return false; }
 		if (candidate.pathname !== expected.pathname) return false;
 		const version = expected.searchParams.get('ver');
-		return !version || candidate.searchParams.get('ver') === version;
+		return candidate.search === expected.search && (!version || candidate.searchParams.get('ver') === version);
 	});
 }
 function saveDataRequested(request) {
@@ -292,7 +315,7 @@ function cacheEditorialMedia(hint) {
 	if (url.origin !== self.location.origin) return Promise.resolve(false);
 	if (self.navigator && self.navigator.connection && self.navigator.connection.saveData === true) return Promise.resolve(false);
 	return fetch(url.href, {credentials:'omit', cache:'no-store'}).then(function (response) {
-		if (!response.ok || !(response.headers.get('Content-Type') || '').toLowerCase().startsWith('image/')) return false;
+		if (!response.ok || response.redirected || /(?:private|no-store)/i.test(response.headers.get('Cache-Control') || '') || !(response.headers.get('Content-Type') || '').toLowerCase().startsWith('image/')) return false;
 		return response.blob().then(function (blob) {
 			if (!blob || blob.size > 3145728) return false;
 			const stored = new Response(blob, {status:200, headers:{'Content-Type':blob.type || 'application/octet-stream','Cache-Control':'public, max-age=86400'}});
@@ -313,17 +336,18 @@ function offlineEditorialResponse(value) {
 				const description = escapeHtml((payload.document && payload.document.description) || 'Saved for offline reading.');
 				const canonical = escapeHtml((payload.route && payload.route.canonicalUrl) || value);
 				const color = /^#[0-9a-f]{6}$/i.test(KIWE_PWA.theme || '') ? KIWE_PWA.theme : '#6b7280';
-				const html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="' + color + '"><link rel="canonical" href="' + canonical + '"><title>' + title + '</title><style>html{font-family:system-ui,sans-serif;background:#f2f4f6;color:#20242d}body{margin:0;padding:clamp(24px,6vw,72px)}main{max-width:760px;margin:auto}.offline-kicker{font-size:12px;font-weight:800;text-transform:uppercase;color:' + color + '}.offline-title{font-size:clamp(38px,8vw,84px);line-height:1;margin:18px 0}.offline-description{font-size:18px;line-height:1.5;color:#59606d}.offline-content{margin-top:40px;font-size:18px;line-height:1.7}.offline-content img{display:block;max-width:100%;height:auto;margin:24px 0}</style></head><body><main><div class="offline-kicker">Available offline</div><h1 class="offline-title">' + title + '</h1><p class="offline-description">' + description + '</p><article class="offline-content">' + payload.content.html + '</article></main></body></html>';
+				const html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="' + color + '"><link rel="canonical" href="' + canonical + '"><title>' + title + '</title><style>html{font-family:system-ui,sans-serif;background:#f2f4f6;color:#20242d}body{margin:0;padding:clamp(24px,6vw,72px)}main{max-width:760px;min-width:0;margin:auto;overflow-wrap:anywhere}.offline-kicker{font-size:12px;font-weight:800;text-transform:uppercase;color:' + color + '}.offline-title{font-size:clamp(38px,8vw,84px);line-height:1;margin:18px 0}.offline-description{font-size:18px;line-height:1.5;color:#59606d}.offline-content{margin-top:40px;font-size:18px;line-height:1.7}.offline-content img{display:block;max-width:100%;height:auto;margin:24px 0}</style></head><body><main><div class="offline-kicker">Available offline</div><h1 class="offline-title">' + title + '</h1><p class="offline-description">' + description + '</p><article class="offline-content">' + payload.content.html + '</article></main></body></html>';
 				return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",'X-Kiwe-Offline':'public-editorial-v1'}});
 			}).catch(function () { return null; });
 		});
 	});
 }
-function offlineShellResponse() {
+function offlineShellResponse(value) {
 	const title = escapeHtml(KIWE_PWA.name || 'Kiwe Appsite');
 	const message = escapeHtml(KIWE_PWA.offlineMessage || 'You are offline.');
+	const retry = escapeHtml(isSiteUrl(value) ? value : KIWE_PWA.home);
 	const color = /^#[0-9a-f]{6}$/i.test(KIWE_PWA.theme || '') ? KIWE_PWA.theme : '#6b7280';
-	return new Response('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="' + color + '"><title>' + title + '</title><style>html{font-family:system-ui,sans-serif;background:#f2f4f6;color:#20242d}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:28px}.offline{max-width:720px}.offline small{font-weight:800;text-transform:uppercase;color:' + color + '}.offline h1{font-size:clamp(48px,10vw,112px);line-height:.92;margin:18px 0;color:' + color + '}.offline p{font-size:20px;font-weight:650;line-height:1.4}</style></head><body><main class="offline"><small>Offline Appsite</small><h1>' + title + '</h1><p>' + message + '</p></main></body></html>', {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
+	return new Response('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="' + color + '"><title>' + title + '</title><style>html{font-family:system-ui,sans-serif;background:#f2f4f6;color:#20242d}body{box-sizing:border-box;min-height:100vh;min-height:100dvh;margin:0;display:grid;place-items:center;padding:28px}.offline{width:100%;max-width:720px;min-width:0;overflow-wrap:anywhere}.offline small{font-weight:800;text-transform:uppercase;color:' + color + '}.offline h1{font-size:clamp(48px,10vw,112px);line-height:.92;margin:18px 0;color:' + color + '}.offline p{font-size:20px;font-weight:650;line-height:1.4}.offline a{display:inline-block;padding:14px 22px;border-radius:14px;background:#20242d;color:#fff;font-size:16px;font-weight:700;text-decoration:none}.offline a:focus-visible{outline:3px solid currentColor;outline-offset:4px}</style></head><body><main class="offline"><small>Offline Appsite</small><h1>' + title + '</h1><p>' + message + '</p><a href="' + retry + '">Try again</a></main></body></html>', {status:503, headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
 }
 function escapeHtml(value) {
 	return String(value || '').replace(/[&<>"']/g, function (character) {
@@ -331,6 +355,7 @@ function escapeHtml(value) {
 	});
 }
 self.addEventListener('push', function (event) {
+	if (!KIWE_PWA.enabled) return;
 	let payload = {};
 	if (event.data) {
 		try { payload = event.data.json(); } catch (error) { payload = { body: event.data.text() }; }
@@ -349,11 +374,12 @@ self.addEventListener('push', function (event) {
 	event.waitUntil(Promise.all([
 		self.registration.showNotification(title, options),
 		self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
-			clients.forEach(function (client) { client.postMessage({ type: 'KIWE_PUSH_RECEIVED', payload: payload }); });
+			clients.filter(function (client) { return isSiteUrl(client.url); }).forEach(function (client) { client.postMessage({ type: 'KIWE_PUSH_RECEIVED', payload: payload }); });
 		})
 	]));
 });
 self.addEventListener('pushsubscriptionchange', function (event) {
+	if (!KIWE_PWA.enabled) return;
 	const oldSubscription = event.oldSubscription || null;
 	const options = oldSubscription && oldSubscription.options ? oldSubscription.options : null;
 	if (!options || !options.applicationServerKey || !KIWE_PWA.pushRest) return;
@@ -387,12 +413,13 @@ function readPushRenewal() {
 	}).then(function (response) { return response ? response.json() : null; }).catch(function () { return null; });
 }
 self.addEventListener('notificationclick', function (event) {
+	if (!KIWE_PWA.enabled) return;
 	event.notification.close();
 	let target = event.notification.data && event.notification.data.url ? event.notification.data.url : KIWE_PWA.home;
-	try { if (new URL(target).origin !== self.location.origin) target = KIWE_PWA.home; } catch (error) { target = KIWE_PWA.home; }
+	try { if (new URL(target).origin !== self.location.origin || !isSiteUrl(target)) target = KIWE_PWA.home; } catch (error) { target = KIWE_PWA.home; }
 	event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
 		for (const client of clients) {
-			if ('focus' in client) {
+			if (isSiteUrl(client.url) && 'focus' in client) {
 				if ('navigate' in client) client.navigate(target);
 				return client.focus();
 			}
@@ -405,12 +432,11 @@ self.addEventListener('notificationclick', function (event) {
 	}
 
 	private function enabled(): bool {
-		$permissions = $this->settings->get( 'permissions', [] );
-		return (bool) $this->settings->get( 'enabled', true ) && is_array( $permissions ) && ! empty( $permissions['pwa_enabled'] );
+		return (bool) $this->settings->get( 'enabled', true );
 	}
 
 	private function service_worker_enabled(): bool {
-		return $this->enabled() && (bool) $this->settings->get( 'service_worker', false );
+		return $this->enabled();
 	}
 
 	private function manifest_url(): string {
@@ -424,6 +450,10 @@ self.addEventListener('notificationclick', function (event) {
 	private function scope_url(): string {
 		$path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
 		return is_string( $path ) && '' !== $path ? trailingslashit( $path ) : '/';
+	}
+
+	private function cache_prefix(): string {
+		return 'kiwe-pwa-v2-' . substr( hash( 'sha256', home_url( '/' ) ), 0, 20 ) . '-';
 	}
 
 	private function short_name(): string {

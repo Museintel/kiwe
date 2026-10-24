@@ -12,6 +12,20 @@ final class Secret_Store {
 	private const PREFIX_SODIUM_V2 = 'dsa-secret:v2:sodium:';
 	private const PREFIX_GCM_V2 = 'dsa-secret:v2:gcm:';
 
+	private static function native_sodium(): bool {
+		return extension_loaded( 'sodium' ) && function_exists( 'sodium_crypto_secretbox' ) && function_exists( 'sodium_crypto_secretbox_open' );
+	}
+
+	public static function supports_native_encryption(): bool {
+		return self::native_sodium() || ( extension_loaded( 'openssl' ) && function_exists( 'openssl_encrypt' ) && function_exists( 'openssl_decrypt' ) && function_exists( 'openssl_get_cipher_methods' ) && in_array( 'aes-256-gcm',array_map( 'strtolower',openssl_get_cipher_methods() ),true ) );
+	}
+
+	private static function seal_sodium( string $value,string $key,string $key_id ): string {
+		$nonce = random_bytes( SODIUM_CRYPTO_SECRETBOX_NONCEBYTES );
+		$box = sodium_crypto_secretbox( $value,$nonce,$key );
+		return self::PREFIX_SODIUM_V2 . $key_id . ':' . base64_encode( $nonce . $box );
+	}
+
 	public static function encrypt( string $value ): string {
 		if ( '' === $value ) {
 			return '';
@@ -21,11 +35,9 @@ final class Secret_Store {
 		$key_id = self::key_id( $key );
 
 		try {
-			if ( function_exists( 'sodium_crypto_secretbox' ) && function_exists( 'sodium_crypto_secretbox_open' ) ) {
-				$nonce = random_bytes( SODIUM_CRYPTO_SECRETBOX_NONCEBYTES );
-				$box = sodium_crypto_secretbox( $value, $nonce, $key );
-				return self::PREFIX_SODIUM_V2 . $key_id . ':' . base64_encode( $nonce . $box );
-			}
+			// WordPress can define these functions with a PHP compatibility
+			// implementation. Prefer an actual native primitive for new writes.
+			if ( self::native_sodium() ) return self::seal_sodium( $value,$key,$key_id );
 
 			if ( function_exists( 'openssl_encrypt' ) ) {
 				$iv = random_bytes( 12 );
@@ -36,6 +48,9 @@ final class Secret_Store {
 					return self::PREFIX_GCM_V2 . $key_id . ':' . base64_encode( $iv . $tag . $cipher );
 				}
 			}
+			// Preserve small-secret compatibility on hosts with neither native
+			// primitive. Large checkpoint writers separately require native crypto.
+			if ( function_exists( 'sodium_crypto_secretbox' ) && function_exists( 'sodium_crypto_secretbox_open' ) ) return self::seal_sodium( $value,$key,$key_id );
 		} catch ( \Throwable $error ) {
 			return '';
 		}
@@ -111,6 +126,7 @@ final class Secret_Store {
 		if ( function_exists( 'openssl_encrypt' ) && function_exists( 'openssl_decrypt' ) && function_exists( 'openssl_get_cipher_methods' ) && in_array( 'aes-256-gcm', array_map( 'strtolower', openssl_get_cipher_methods() ), true ) ) $algorithms[] = 'aes-256-gcm';
 		return [
 			'ready'       => ! empty( $algorithms ),
+			'nativeEncryption' => self::supports_native_encryption(),
 			'version'     => 2,
 			'keyId'       => self::key_id( self::key() ),
 			'algorithms'  => $algorithms,

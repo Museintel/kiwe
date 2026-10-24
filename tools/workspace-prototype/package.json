@@ -1,0 +1,21 @@
+{
+  "name": "kiwe-workspace-direction-preview",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local React interaction prototype. No WordPress credentials or database connection.",
+  "scripts": {
+    "start": "node serve.cjs",
+    "build:tokens": "node generate-workspace-tokens.cjs",
+    "build:native": "node build-workspace.cjs",
+    "check:native": "node build-workspace.cjs --check"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "css-tree": "3.2.1",
+    "esbuild": "0.28.2",
+    "postcss": "8.5.26"
+  }
+}

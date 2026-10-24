@@ -5,11 +5,13 @@ namespace DSA\Bricks;
 use DSA\Commerce\Linked_Products_Service;
 use DSA\Commerce\Product_Context_Service;
 use DSA\Commerce\Store_Analytics_Service;
+use DSA\Access\Tag_Group_Service;
 use DSA\Element_Registry;
 use DSA\Settings;
 use DSA\Site\Site_Identity_Service;
 use DSA\Onboarding\Design_Context_Enhancement_Service;
 use DSA\Onboarding\Design_Context_Profile_Service;
+use DSA\PhoneKey\PhoneKey_Bridge;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -24,6 +26,8 @@ final class Bricks_Integration {
 	private $settings;
 	private $linked_products;
 	private $store_analytics;
+	private ?Commerce_Binding_Service $commerce_bindings = null;
+	private ?Context_Collection_Service $context_collections = null;
 	private array $mini_cart_context = [];
 	private bool $popup_resolution_queued = false;
 	private bool $registered = false;
@@ -33,6 +37,16 @@ final class Bricks_Integration {
 		$this->settings        = $settings;
 		$this->linked_products = $linked_products;
 		$this->store_analytics = $store_analytics;
+	}
+
+	private function commerce_bindings(): ?Commerce_Binding_Service {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return null;
+		if ( ! class_exists(Commerce_Binding_Service::class) ) return null;
+		return $this->commerce_bindings ??= new Commerce_Binding_Service($this->linked_products ?? null,$this->store_analytics ?? null);
+	}
+	private function context_collections(): ?Context_Collection_Service {
+		if(!class_exists(Context_Collection_Service::class))return null;
+		return $this->context_collections ??= new Context_Collection_Service();
 	}
 
 	/** get_template() identifies the active parent, including Bricks child themes. */
@@ -46,32 +60,58 @@ final class Bricks_Integration {
 		return $theme->exists() && 'bricks' === strtolower( trim( (string) $theme->get( 'Name' ) ) );
 	}
 
+	/** Native Bricks settings resolve before its WooCommerce constructor runs. */
+	public static function native_woocommerce_defaults( $value ): array {
+		$settings = is_array( $value ) ? $value : [];
+		if ( self::is_active_theme() && \DSA\Apps\Store_App_Service::enabled() ) $settings['woocommerceEnableAjaxAddToCart'] = true;
+		return $settings;
+	}
+
 	public function register(): void {
 		if ( $this->registered || ! self::is_active_theme() ) { return; }
 		$this->registered = true;
+		( new Loop_Style_Service() )->register();
 		Surface_Style_Controls::register();
+		( new Filter_Image_Service() )->register();
+		$this->context_collections()?->register();
 		$this->activate_native_checkout_element_authority();
 		add_filter( 'bricks/dynamic_tags_list', [ $this, 'add_dynamic_tags' ], 20 );
+		foreach ( ['updated_option','added_option','deleted_option','save_post','deleted_post','added_post_meta','updated_post_meta','deleted_post_meta','profile_update','added_user_meta','updated_user_meta','deleted_user_meta','edited_term','delete_term'] as $binding_change ) add_action($binding_change,[Design_Context_Binding_Service::class,'invalidate'],10,0);
+		if ( \DSA\Apps\Store_App_Service::enabled() ) {
+			foreach ( ['save_post','deleted_post','added_post_meta','updated_post_meta','deleted_post_meta'] as $binding_change ) add_action($binding_change,[Commerce_Binding_Service::class,'invalidate'],10,0);
+			foreach ( ['div','block','container','section'] as $layout_element ) add_filter('bricks/elements/'.$layout_element.'/controls',[Commerce_Binding_Service::class,'controls'],20);
+		}
+		if ($bindings=$this->commerce_bindings()) add_filter('bricks/posts/query_vars',[$bindings,'query_vars'],25,4);
 		add_filter( 'bricks/dynamic_data/render_tag', [ $this, 'render_dynamic_tag' ], 20, 3 );
 		add_filter( 'bricks/dynamic_data/render_content', [ $this, 'render_dynamic_content' ], 20, 3 );
+		if ( \DSA\Apps\Store_App_Service::enabled() ) {
+			foreach ( [ 'block', 'woocommerce-products' ] as $element ) {
+				add_filter( 'bricks/elements/' . $element . '/controls', [ $this, 'add_bestseller_controls' ], 20 );
+			}
+			add_filter( 'bricks/posts/query_vars', [ $this, 'bestseller_query_vars' ], 20, 4 );
+		}
+		foreach ( [ 'BRICKS_DB_PAGE_CONTENT', 'BRICKS_DB_PAGE_HEADER', 'BRICKS_DB_PAGE_FOOTER' ] as $data_key ) {
+			if ( defined( $data_key ) ) add_filter( 'sanitize_post_meta_' . constant( $data_key ), [ $this, 'preserve_authored_html' ], 20, 3 );
+		}
 		add_filter( 'bricks/element/render_attributes', [ $this, 'add_element_attributes' ], 20, 3 );
 		add_filter( 'bricks/frontend/render_element', [ $this, 'observe_rendered_element' ], 20, 2 );
-		add_filter( 'bricks/elements/woocommerce-mini-cart/controls', [ $this, 'add_mini_cart_controls' ], 20 );
 		add_filter( 'bricks/elements/filter-search/controls', [ $this, 'add_search_bridge_controls' ], 20 );
 		add_filter( 'bricks/elements/icon/controls', [ $this, 'add_dsa_icon_launcher_controls' ], 20 );
 		foreach ( [ 'icon', 'button', 'text-link' ] as $contact_element ) {
 			add_filter( 'bricks/elements/' . $contact_element . '/controls', [ $this, 'add_context_action_controls' ], 30 );
 		}
-		add_filter( 'bricks/elements/product-add-to-cart/control_groups', [ $this, 'add_add_to_cart_control_group' ], 20 );
-		add_filter( 'bricks/elements/product-add-to-cart/controls', [ $this, 'add_add_to_cart_controls' ], 20 );
-		add_filter( 'bricks/elements/product-upsells/control_groups', [ $this, 'add_linked_products_control_group' ], 20 );
-		add_filter( 'bricks/elements/product-upsells/controls', [ $this, 'add_linked_products_controls' ], 20 );
 		add_filter( 'bricks/element/settings', [ $this, 'bridge_element_settings' ], 20, 2 );
-		add_filter( 'bricks/element/set_root_attributes', [ $this, 'add_add_to_cart_attributes' ], 20, 2 );
-		add_action( 'woocommerce_before_mini_cart', [ $this, 'restore_mini_cart_context' ] );
-		add_filter( 'woocommerce_widget_cart_item_quantity', [ $this, 'render_mini_cart_quantity' ], 20, 3 );
-		add_action( 'woocommerce_widget_shopping_cart_before_buttons', [ $this, 'render_mini_cart_recommendations' ], 8 );
-		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_mini_cart_adapter' ] );
+		if ( \DSA\Apps\Store_App_Service::enabled() ) {
+			add_filter( 'bricks/elements/woocommerce-mini-cart/controls', [ $this, 'add_mini_cart_controls' ], 20 );
+			add_filter( 'bricks/elements/product-add-to-cart/control_groups', [ $this, 'add_add_to_cart_control_group' ], 20 );
+			add_filter( 'bricks/elements/product-add-to-cart/controls', [ $this, 'add_add_to_cart_controls' ], 20 );
+			add_filter( 'bricks/elements/product-upsells/control_groups', [ $this, 'add_linked_products_control_group' ], 20 );
+			add_filter( 'bricks/elements/product-upsells/controls', [ $this, 'add_linked_products_controls' ], 20 );
+			add_filter( 'bricks/element/set_root_attributes', [ $this, 'add_add_to_cart_attributes' ], 20, 2 );
+			add_action( 'woocommerce_before_mini_cart', [ $this, 'restore_mini_cart_context' ] );
+			add_filter( 'woocommerce_widget_cart_item_quantity', [ $this, 'render_mini_cart_quantity' ], 20, 3 );
+			add_action( 'woocommerce_widget_shopping_cart_before_buttons', [ $this, 'render_mini_cart_recommendations' ], 8 );
+		}
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_studio_editor_companion' ] );
 		add_action( 'added_post_meta', [ $this, 'maybe_resolve_compiler_popup_meta' ], 30, 4 );
 		add_action( 'updated_post_meta', [ $this, 'maybe_resolve_compiler_popup_meta' ], 30, 4 );
@@ -88,6 +128,7 @@ final class Bricks_Integration {
 	 * automatically whenever Bricks is the active theme.
 	 */
 	private function activate_native_checkout_element_authority(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		if ( ! defined( 'BRICKS_DB_GLOBAL_SETTINGS' ) || ! class_exists( '\\Bricks\\Database' ) ) {
 			return;
 		}
@@ -103,6 +144,7 @@ final class Bricks_Integration {
 		// Keep this request and the persisted next request on the same contract.
 		if ( property_exists( '\\Bricks\\Database', 'global_settings' ) ) {
 			\Bricks\Database::$global_settings['woocommerceUseBricksWooCheckoutCoupon'] = true;
+			if ( \DSA\Apps\Store_App_Service::enabled() ) \Bricks\Database::$global_settings['woocommerceEnableAjaxAddToCart'] = true;
 		}
 
 		// Bricks normally removes this hook while it initializes WooCommerce.
@@ -130,7 +172,8 @@ final class Bricks_Integration {
 		);
 		if ( in_array( $meta_key, $keys, true ) && ! $this->popup_resolution_queued ) {
 			$this->popup_resolution_queued = true;
-			add_action( 'shutdown', [ $this, 'resolve_compiler_popup_references' ], 5 );
+			// WordPress supplies an empty placeholder for actions with no arguments.
+			add_action( 'shutdown', [ $this, 'resolve_compiler_popup_references' ], 5, 0 );
 		}
 	}
 
@@ -299,13 +342,10 @@ final class Bricks_Integration {
 	}
 
 	public function add_dynamic_tags( array $tags ): array {
-		if ( empty( $this->bricks_config()['dynamic_tags_enabled'] ) ) {
-			return $tags;
-		}
-
+		// Native authoring data is independent of optional DSA runtime switches.
 		$existing = array_filter( array_column( $tags, 'name' ), 'is_string' );
 
-		foreach ( $this->dynamic_tag_definitions() as $name => $label ) {
+		foreach ( self::base_dynamic_tag_definitions() + $this->nav_menu_tag_definitions() + $this->tag_group_definitions() + ($this->commerce_bindings()?->definitions() ?? []) + ($this->context_collections()?->definitions() ?? []) as $name => $label ) {
 			if ( in_array( '{' . $name . '}', $existing, true ) ) {
 				continue;
 			}
@@ -316,52 +356,99 @@ final class Bricks_Integration {
 				'group' => 'Kiwe',
 			];
 		}
+		if ( class_exists( Icon_Library_Service::class ) ) {
+			foreach ( Icon_Library_Service::definitions() as $name => $label ) {
+				if ( in_array( '{' . $name . '}', $existing, true ) ) continue;
+				$tags[] = [ 'name' => '{' . $name . '}', 'label' => $label, 'group' => 'Kiwe icons' ];
+			}
+		}
 
 		return $tags;
 	}
 
 	public function render_dynamic_tag( $tag, $post = null, $context = 'text' ) {
-		if ( empty( $this->bricks_config()['dynamic_tags_enabled'] ) || ! is_string( $tag ) ) {
+		if ( ! is_string( $tag ) ) {
 			return $tag;
 		}
 
 		$name = trim( $tag, "{} \t\n\r\0\x0B" );
+		if ( preg_match( '/^(kiwe_product_bestseller|woo_product_bestseller)(?::(week|month|year))?$/D', $name, $badge ) ) {
+			return $this->bestseller_badge_value( $post, is_string( $context ) ? $context : 'text', $badge[2] ?? ( 'woo_product_bestseller' === $badge[1] ? 'year' : 'month' ) );
+		}
+		if ( ! str_starts_with( $name, 'kiwe_' ) && 'woo_product_weight' !== $name ) return $tag;
+		$context = is_string( $context ) ? $context : 'text';
+		if ( str_starts_with( $name, 'kiwe_icon_' ) ) return class_exists( Icon_Library_Service::class ) ? Icon_Library_Service::render( $name, $context ) : '';
+		if(str_starts_with($name,'kiwe_testimonial')){
+			$value=$this->context_collections()?->render($name,$context);return null===$value?$tag:$value;
+		}
+		if ( str_starts_with( $name, 'kiwe_context_' ) ) {
+			$value = Design_Context_Binding_Service::render( $name, $context );
+			return null === $value ? $tag : $value;
+		}
+		if ( str_starts_with($name,'kiwe_pair_') || in_array($name,['kiwe_product_image_alt','kiwe_product_price_text'],true) ) {
+			$value = $this->commerce_bindings()?->render($name,$post,$context);
+			return null === $value ? $tag : $value;
+		}
+		if ( preg_match( '/^kiwe_tag_group_([1-9][0-9]{0,9})(?:_(name|all))?$/D', $name, $group ) ) {
+			return $this->tag_group_value( (int) $group[1], $group[2] ?? '', $post, $context );
+		}
+		if ( preg_match( '/^kiwe_menu_([1-9][0-9]{0,9})$/D', $name, $menu ) ) return $this->nav_menu_tag_value( (int) $menu[1], $context );
 		$selector = '';
 		if ( preg_match( '/^(kiwe_team_(?:member_id|name|title|bio|image|linkedin_url)):([a-z0-9_-]{1,80})$/i', $name, $matches ) ) {
 			$name = strtolower( $matches[1] );
 			$selector = sanitize_key( $matches[2] );
 		}
 
-		if ( ! array_key_exists( $name, $this->dynamic_tag_definitions() ) ) {
+		if ( ! array_key_exists( $name, self::base_dynamic_tag_definitions() ) ) {
 			return $tag;
 		}
 
-		return $this->dynamic_tag_value( $name, is_string( $context ) ? $context : 'text', $post, $selector );
+		return $this->dynamic_tag_value( $name, $context, $post, $selector );
 	}
 
 	public function render_dynamic_content( $content, $post = null, $context = 'text' ) {
-		if ( empty( $this->bricks_config()['dynamic_tags_enabled'] ) || ! is_string( $content ) || ( false === strpos( $content, '{kiwe_' ) && false === strpos( $content, '{woo_product_weight}' ) ) ) {
+		if ( ! is_string( $content ) || ( false === strpos( $content, '{kiwe_' ) && false === strpos( $content, '{woo_product_' ) ) ) {
 			return $content;
 		}
 
-		foreach ( array_keys( $this->dynamic_tag_definitions() ) as $name ) {
-			$token = '{' . $name . '}';
-
-			if ( false !== strpos( $content, $token ) ) {
-				$content = str_replace( $token, (string) $this->dynamic_tag_value( $name, is_string( $context ) ? $context : 'text', $post ), $content );
-			}
-		}
-		$content = preg_replace_callback(
-			'/\{(kiwe_team_(?:member_id|name|title|bio|image|linkedin_url)):([a-z0-9_-]{1,80})\}/i',
-			fn( array $matches ): string => (string) $this->dynamic_tag_value( strtolower( $matches[1] ), is_string( $context ) ? $context : 'text', $post, sanitize_key( $matches[2] ) ),
-			$content
-		);
-
-		return $content;
+		return preg_replace_callback( '/\{(?:kiwe_[a-z0-9_]+(?::[a-z0-9_-]{1,80})?|woo_product_weight|woo_product_bestseller(?::(?:week|month|year))?)\}/i', function( array $match ) use ( $post, $context ): string {
+			$value = $this->render_dynamic_tag( $match[0], $post, $context );
+			// Images are arrays only in native image controls, never stringify arrays in prose.
+			return is_scalar( $value ) ? (string) $value : '';
+		}, $content );
 	}
 
-	private function dynamic_tag_definitions(): array {
-		return [
+	/** Preserve unchanged, previously approved HTML when Bricks sanitizes a restricted builder save. */
+	public function preserve_authored_html( $value, $meta_key, $object_type ) {
+		// Bricks owns authentication, nonce, object access and all ordinary sanitation.
+		// This restores only an exact sanitation-only loss, never new executable markup.
+		if ( ! is_array( $value ) || count( $value ) > 5000 || 'post' !== $object_type || ! wp_doing_ajax() || 'bricks_save_post' !== ( $_POST['action'] ?? '' ) ) return $value;
+		$post_id = absint( $_POST['postId'] ?? 0 );
+		if ( ! $post_id || ! in_array( get_post_type( $post_id ), [ 'page', 'bricks_template' ], true ) || ! \DSA\Access\Template_Workspace_Service::builder_actor() || ! current_user_can( 'edit_post', $post_id ) || ! check_ajax_referer( 'bricks-nonce-builder', 'nonce', false ) ) return $value;
+		$keys = [];
+		foreach ( [ 'BRICKS_DB_PAGE_CONTENT', 'BRICKS_DB_PAGE_HEADER', 'BRICKS_DB_PAGE_FOOTER' ] as $name ) if ( defined( $name ) ) $keys[] = constant( $name );
+		if ( ! in_array( $meta_key, $keys, true ) ) return $value;
+		$existing = get_post_meta( $post_id, $meta_key, true );
+		if ( ! is_array( $existing ) || count( $existing ) > 5000 ) return $value;
+		$approved = [];
+		foreach ( $existing as $element ) if ( 'html' === ( $element['name'] ?? '' ) && is_string( $element['settings']['html'] ?? null ) ) $approved[ $element['id'] ?? '' ] = $element['settings']['html'];
+		foreach ( $value as &$element ) {
+			if ( 'html' !== ( $element['name'] ?? '' ) || ! is_string( $element['settings']['html'] ?? null ) ) continue;
+			$before = $approved[ $element['id'] ?? '' ] ?? null;
+			$after = $element['settings']['html'];
+			if ( ! is_string( $before ) || $before === $after || strlen( $before ) > 2097152 ) continue;
+			if ( wp_unslash( wp_filter_post_kses( wp_slash( $before ) ) ) === $after ) $element['settings']['html'] = $before;
+		}
+		unset( $element );
+		// Bricks recursively KSES-filters restricted saves, including selector
+		// syntax. Restore only nesting anchors after the same nonce/role/object
+		// admission above; HTML, attributes and scripts keep native sanitation.
+		return Source_Runtime_Bridge::normalize_elements( $value );
+	}
+
+	/** Shared catalog for Bricks and SiteGraph; values resolve only when a tag is used. */
+	public static function base_dynamic_tag_definitions(): array {
+		$definitions = [
 			'kiwe_site_logo'          => __( 'Site logo URL', 'dsa' ),
 			'kiwe_site_logo_inverse'  => __( 'Site logo inverse URL', 'dsa' ),
 			'kiwe_store_address_1'    => __( 'Store address line 1', 'dsa' ),
@@ -385,6 +472,8 @@ final class Bricks_Integration {
 			'kiwe_founder_bio'         => __( 'Founder bio', 'dsa' ),
 			'kiwe_founder_image'       => __( 'Founder image URL', 'dsa' ),
 			'kiwe_founder_linkedin_url'=> __( 'Founder LinkedIn URL', 'dsa' ),
+			'kiwe_founder_website_url' => __( 'Founder website URL', 'dsa' ),
+			'kiwe_founder_facebook_url' => __( 'Founder Facebook URL', 'dsa' ),
 			'kiwe_team_enabled'         => __( 'Public team enabled', 'dsa' ),
 			'kiwe_team_member_id'       => __( 'Team member stable ID', 'dsa' ),
 			'kiwe_team_name'            => __( 'Team member name', 'dsa' ),
@@ -392,6 +481,13 @@ final class Bricks_Integration {
 			'kiwe_team_bio'             => __( 'Team member bio', 'dsa' ),
 			'kiwe_team_image'           => __( 'Team member image URL', 'dsa' ),
 			'kiwe_team_linkedin_url'    => __( 'Team member LinkedIn URL', 'dsa' ),
+			'kiwe_services_enabled'    => __( 'Public services enabled', 'dsa' ),
+			'kiwe_service_id'          => __( 'Service record ID (current service)', 'dsa' ),
+			'kiwe_service_title'       => __( 'Service title (current service)', 'dsa' ),
+			'kiwe_service_summary'     => __( 'Service summary (current service)', 'dsa' ),
+			'kiwe_service_description' => __( 'Service description (current service)', 'dsa' ),
+			'kiwe_service_image'       => __( 'Service image (current service)', 'dsa' ),
+			'kiwe_service_url'         => __( 'Service link (current service)', 'dsa' ),
 			'kiwe_fssai_license'       => __( 'FSSAI licence number', 'dsa' ),
 			'kiwe_gst_number'          => __( 'GST number', 'dsa' ),
 			'kiwe_manufacturing_address' => __( 'Manufacturing address', 'dsa' ),
@@ -419,10 +515,46 @@ final class Bricks_Integration {
 			'kiwe_selling_locations'  => __( 'Selling locations', 'dsa' ),
 			'kiwe_shipping_locations' => __( 'Shipping locations', 'dsa' ),
 			'woo_product_weight'      => __( 'Product weight', 'dsa' ),
-		] + $this->nav_menu_tag_definitions();
+			'kiwe_product_bestseller'  => __( 'Product bestseller badge · last 30 days', 'dsa' ),
+			'woo_product_bestseller'   => __( 'Product bestseller badge · last 365 days (legacy)', 'dsa' ),
+		];
+		return $definitions + Design_Context_Binding_Service::definitions();
+	}
+
+	/** Retain authored legacy control IDs, with the shared Kiwe period ranking as sole owner. */
+	public function add_bestseller_controls( array $controls ): array {
+		$controls['bestSellersHeading'] = [ 'tab'=>'content', 'type'=>'separator', 'label'=>__( 'Kiwe bestsellers', 'dsa' ) ];
+		$controls['bestSellers'] = [ 'tab'=>'content', 'type'=>'checkbox', 'label'=>__( 'Use bestseller ranking', 'dsa' ) ];
+		$controls['bestSellersPeriod'] = [ 'tab'=>'content', 'type'=>'select', 'label'=>__( 'Sales period', 'dsa' ), 'options'=>[ 'week'=>__( 'Last 7 days', 'dsa' ), 'month'=>__( 'Last 30 days', 'dsa' ), 'year'=>__( 'Last 365 days', 'dsa' ) ], 'placeholder'=>__( 'Last 30 days', 'dsa' ), 'required'=>[ 'bestSellers', '!=', '' ] ];
+		return $controls;
+	}
+
+	public function bestseller_query_vars( array $vars, array $settings, $element_id, $element_name ): array {
+		if ( ! in_array( $element_name, [ 'block', 'woocommerce-products' ], true ) || empty( $settings['bestSellers'] ) ) return $vars;
+		$types = (array) ( $vars['post_type'] ?? $settings['query']['post_type'] ?? ( 'woocommerce-products' === $element_name ? 'product' : [] ) );
+		if ( $types !== [ 'product' ] ) return $vars;
+		$period = is_string( $settings['bestSellersPeriod'] ?? null ) ? $settings['bestSellersPeriod'] : 'month';
+		$ids = $this->linked_products ? $this->linked_products->cached_bestseller_ids( $period ) : [];
+		if ( ! empty( $vars['post__in'] ) ) $ids = array_values( array_intersect( $ids, array_map( 'absint', (array) $vars['post__in'] ) ) );
+		$vars['post__in'] = $ids ?: [ 0 ]; // Empty must not expand into an unfiltered product catalog.
+		$vars['post_status'] = 'publish';
+		$vars['orderby'] = 'post__in';
+		unset( $vars['order'] );
+		return $vars;
+	}
+
+	private function bestseller_badge_value( $post, string $context, string $period ): string {
+		if ( ! $this->linked_products || ! function_exists( 'wc_get_product' ) || in_array( $context, [ 'image', 'media', 'link' ], true ) ) return '';
+		$id = is_object( $post ) ? (int) ( $post->ID ?? 0 ) : ( is_numeric( $post ) ? (int) $post : (int) get_queried_object_id() );
+		$record = $id ? get_post( $id ) : null;
+		if ( ! $record || 'product' !== $record->post_type || 'publish' !== $record->post_status || post_password_required( $record ) ) return '';
+		$product = wc_get_product( $id );
+		if ( ! $product || ! $product->is_visible() ) return '';
+		return in_array( $id, $this->linked_products->cached_bestseller_ids( $period ), true ) ? esc_html( __( 'Bestseller', 'dsa' ) ) : '';
 	}
 
 	private function dynamic_tag_value( string $name, string $context, $post = null, string $selector = '' ) {
+		if ( str_starts_with( $name, 'kiwe_service_' ) || 'kiwe_services_enabled' === $name ) return $this->service_tag_value( $name, $post, $context );
 		switch ( $name ) {
 			case 'kiwe_site_logo':
 				return $this->logo_tag_value( 'default', $context );
@@ -447,14 +579,16 @@ final class Bricks_Integration {
 			case 'kiwe_store_email':
 				return Site_Identity_Service::store_email();
 			case 'kiwe_store_phone_url':
-				$phone = preg_replace( '/[^0-9+]/', '', Site_Identity_Service::store_phone() );
+				$phone = Site_Identity_Service::store_phone();
+				$phone = PhoneKey_Bridge::normalize_public_phone( $phone );
 				return $phone ? esc_url_raw( 'tel:' . $phone ) : '';
 			case 'kiwe_store_email_url':
 				$email = sanitize_email( Site_Identity_Service::store_email() );
 				return $email ? esc_url_raw( 'mailto:' . $email ) : '';
 			case 'kiwe_whatsapp_url':
-				$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
-				$number = preg_replace( '/\D+/', '', (string) ( $profile['contact']['whatsapp'] ?? '' ) );
+				$profile = Design_Context_Binding_Service::profile();
+				$phone = ! empty( $profile['contact']['whatsappSameAsPhone'] ) ? Site_Identity_Service::store_phone() : (string) ( $profile['contact']['whatsapp'] ?? '' );
+				$number = preg_replace( '/\D+/', '', PhoneKey_Bridge::normalize_public_phone( $phone ) );
 				return $number ? esc_url_raw( 'https://wa.me/' . $number ) : '';
 			case 'kiwe_directions_url':
 				$location = $this->woo_store_country_state();
@@ -478,6 +612,8 @@ final class Bricks_Integration {
 			case 'kiwe_founder_bio':
 			case 'kiwe_founder_image':
 			case 'kiwe_founder_linkedin_url':
+			case 'kiwe_founder_website_url':
+			case 'kiwe_founder_facebook_url':
 			case 'kiwe_team_enabled':
 			case 'kiwe_team_member_id':
 			case 'kiwe_team_name':
@@ -525,7 +661,7 @@ final class Bricks_Integration {
 
 	private function design_context_tag_value( string $name, string $context, string $selector = '' ): string {
 		if ( in_array( $context, [ 'image', 'media' ], true ) && ! in_array( $name, [ 'kiwe_founder_image', 'kiwe_team_image' ], true ) ) return '';
-		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
+		$profile = Design_Context_Binding_Service::profile();
 		if ( 'kiwe_business_description' === $name ) return sanitize_textarea_field( (string) ( $profile['identity']['description'] ?? '' ) );
 		$about_map = [
 			'kiwe_business_story'=>'story', 'kiwe_business_mission'=>'mission', 'kiwe_business_vision'=>'vision',
@@ -539,6 +675,8 @@ final class Bricks_Integration {
 			return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
 		}
 		if ( 'kiwe_founder_linkedin_url' === $name ) return esc_url_raw( (string) ( $profile['about']['founder']['linkedin'] ?? '' ) );
+		if ( 'kiwe_founder_website_url' === $name ) return esc_url_raw( (string) ( $profile['about']['founder']['website'] ?? '' ) );
+		if ( 'kiwe_founder_facebook_url' === $name ) return esc_url_raw( (string) ( $profile['about']['founder']['facebook'] ?? '' ) );
 		if ( 'kiwe_team_enabled' === $name ) return ! empty( $profile['about']['team']['enabled'] ) ? '1' : '';
 		if ( str_starts_with( $name, 'kiwe_team_' ) ) {
 			$member = $this->current_team_member( $profile, $selector );
@@ -577,6 +715,7 @@ final class Bricks_Integration {
 	}
 
 	private function current_team_member( array $profile, string $selector = '' ): array {
+		if ( empty( $profile['about']['team']['enabled'] ) ) return [];
 		$members = is_array( $profile['about']['team']['members'] ?? null ) ? $profile['about']['team']['members'] : [];
 		$user_id = 0;
 		if ( class_exists( '\\Bricks\\Query' ) && \Bricks\Query::is_looping() ) {
@@ -587,7 +726,69 @@ final class Bricks_Integration {
 			if ( $selector && $selector === sanitize_key( (string) ( $member['id'] ?? '' ) ) ) return (array) $member;
 			if ( $user_id && $user_id === absint( $member['userId'] ?? 0 ) ) return (array) $member;
 		}
-		return $selector || ! $members ? [] : (array) reset( $members );
+		return $selector || $user_id || ! $members ? [] : (array) reset( $members );
+	}
+
+	private function service_tag_value( string $name, $post, string $context ) {
+		$stored = get_option( Design_Context_Profile_Service::OPTION_PROFILE, [] );
+		$services = is_array( $stored ) ? (array) ( $stored['services'] ?? [] ) : [];
+		$source = sanitize_key( (string) ( $services['sourcePostType'] ?? '' ) );
+		$enabled = array_key_exists( 'enabled', $services ) ? ! empty( $services['enabled'] ) : '' !== $source;
+		$allowed = ( new Design_Context_Profile_Service() )->service_post_types();
+		if ( ! $enabled || ! isset( $allowed[ $source ] ) ) return in_array( $context, [ 'image','media' ], true ) ? [] : '';
+		if ( 'kiwe_services_enabled' === $name ) return in_array( $context, [ 'image','media','link' ], true ) ? '' : '1';
+		$id = is_object( $post ) && isset( $post->ID ) ? absint( $post->ID ) : absint( $post );
+		$record = $id ? get_post( $id ) : null;
+		if ( ! $record || $source !== $record->post_type || post_password_required( $record ) || ( 'publish' !== $record->post_status && ! ( function_exists( 'bricks_is_builder_call' ) && bricks_is_builder_call() && current_user_can( 'edit_post', $id ) ) ) ) return in_array( $context, [ 'image','media' ], true ) ? [] : '';
+		if ( 'kiwe_service_image' === $name ) {
+			$image_id = absint( get_post_thumbnail_id( $id ) );
+			if ( in_array( $context, [ 'image','media' ], true ) ) return $image_id ? [ $image_id ] : [];
+			return $image_id ? esc_url_raw( (string) wp_get_attachment_url( $image_id ) ) : '';
+		}
+		if ( in_array( $context, [ 'image','media' ], true ) || ( 'link' === $context && 'kiwe_service_url' !== $name ) ) return '';
+		return match ( $name ) {
+			'kiwe_service_id' => (string) $id,
+			'kiwe_service_title' => sanitize_text_field( $record->post_title ),
+			'kiwe_service_summary' => sanitize_textarea_field( $record->post_excerpt ),
+			'kiwe_service_description' => wp_kses_post( $record->post_content ),
+			'kiwe_service_url' => esc_url_raw( (string) get_permalink( $id ) ),
+			default => '',
+		};
+	}
+
+	private function tag_group_definitions(): array {
+		$tags = [];
+		foreach ( ( new Tag_Group_Service() )->dynamic_groups() as $group ) {
+			$label = ( 'product' === $group['kind'] ? __( 'Product tags', 'dsa' ) : __( 'Post tags', 'dsa' ) ) . ': ' . $group['name'];
+			$name = 'kiwe_tag_group_' . $group['id'];
+			$tags[ $name ] = $label . ' — ' . __( 'current record', 'dsa' );
+			$tags[ $name . '_name' ] = $label . ' — ' . __( 'category name', 'dsa' );
+			$tags[ $name . '_all' ] = $label . ' — ' . __( 'all public tags', 'dsa' );
+		}
+		return $tags;
+	}
+
+	private function tag_group_value( int $id, string $mode, $post, string $context ): string {
+		if ( in_array( $context, [ 'image','media','link' ], true ) ) return '';
+		$group = ( new Tag_Group_Service() )->dynamic_groups()[ $id ] ?? null;
+		if ( ! $group ) return '';
+		if ( 'name' === $mode ) return esc_html( $group['name'] );
+		$args = [ 'taxonomy'=>$group['taxonomy'], 'hide_empty'=>true, 'number'=>100, 'orderby'=>'name', 'order'=>'ASC', 'meta_query'=>[ [ 'key'=>Tag_Group_Service::META, 'value'=>(string) $id, 'compare'=>'=' ] ] ];
+		if ( 'all' !== $mode ) {
+			$post_id = is_object( $post ) && isset( $post->ID ) ? absint( $post->ID ) : absint( $post );
+			$record = $post_id ? get_post( $post_id ) : null;
+			if ( ! $record || ( 'post' === $group['kind'] ? 'post' : 'product' ) !== $record->post_type || post_password_required( $record ) || ( 'publish' !== $record->post_status && ! ( function_exists( 'bricks_is_builder_call' ) && bricks_is_builder_call() && current_user_can( 'edit_post', $post_id ) ) ) ) return '';
+			$args['object_ids'] = [ $post_id ];
+			$args['hide_empty'] = false;
+		}
+		$terms = get_terms( $args );
+		if ( is_wp_error( $terms ) ) return '';
+		$out = [];
+		foreach ( $terms as $term ) {
+			$url = get_term_link( $term );
+			if ( ! is_wp_error( $url ) ) $out[] = '<a href="' . esc_url( $url ) . '">' . esc_html( $term->name ) . '</a>';
+		}
+		return implode( ', ', $out );
 	}
 
 	private function product_nutrition_image_tag_value( $post, string $context ): string {
@@ -673,12 +874,22 @@ final class Bricks_Integration {
 	}
 
 	private function woo_store_option( string $option ): string {
+		if ( ! function_exists( 'WC' ) ) {
+			$map = [ 'woocommerce_store_address'=>'line1','woocommerce_store_address_2'=>'line2','woocommerce_store_city'=>'city','woocommerce_store_postcode'=>'postcode' ];
+			$stored = get_option( Design_Context_Profile_Service::OPTION_PROFILE, [] );
+			return isset( $map[ $option ] ) ? sanitize_text_field( (string) ( $stored['contact']['address'][ $map[ $option ] ] ?? '' ) ) : '';
+		}
 		return sanitize_text_field( (string) get_option( $option, '' ) );
 	}
 
 	private function woo_store_country_state(): array {
 		$raw = sanitize_text_field( (string) get_option( 'woocommerce_default_country', '' ) );
 		[ $country, $state ] = array_pad( explode( ':', $raw, 2 ), 2, '' );
+		if ( ! function_exists( 'WC' ) ) {
+			$stored = get_option( Design_Context_Profile_Service::OPTION_PROFILE, [] );
+			$country = sanitize_text_field( (string) ( $stored['contact']['address']['country'] ?? '' ) );
+			$state = sanitize_text_field( (string) ( $stored['contact']['address']['state'] ?? '' ) );
+		}
 
 		return [
 			'country'       => $country,
@@ -797,12 +1008,12 @@ final class Bricks_Integration {
 
 		if ( 'icon' === (string) ( $element->name ?? '' ) && ! empty( $this->bricks_config()['dsa_icon_launcher_enabled'] ) ) {
 			$module = sanitize_key( (string) ( $element->settings['dsaOpenModule'] ?? '' ) );
-			$allowed = [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'ai', 'theme' ];
+			$allowed = [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'ai', 'notifications', 'theme' ];
 			if ( in_array( $module, $allowed, true ) ) {
 				$attributes['_root']['data-dsa-open-module'] = $module;
 				$attributes['_root']['role'] = 'button';
 				$attributes['_root']['tabindex'] = '0';
-				$attributes['_root']['aria-label'] = sprintf( 'Open %s', ucfirst( $module ) );
+				$attributes['_root']['aria-label'] = sprintf( 'Open %s', in_array( $module, [ 'ai','notifications' ], true ) ? 'Notifications' : ucfirst( $module ) );
 			}
 		}
 
@@ -843,10 +1054,10 @@ final class Bricks_Integration {
 				'links' => esc_html__( 'Links', 'dsa' ),
 				'saved' => esc_html__( 'Saved', 'dsa' ),
 				'cart' => esc_html__( 'Cart', 'dsa' ),
-				'ai' => esc_html__( 'AI Assistant', 'dsa' ),
+				'ai' => esc_html__( 'Notifications', 'dsa' ),
 				'theme' => esc_html__( 'Light / dark mode', 'dsa' ),
 			],
-			'description' => esc_html__( 'Opens the selected registered Kiwe destination even when its dock icon is hidden. Requires the destination and DSA icon launcher behaviour to be enabled in Kiwe.', 'dsa' ),
+			'description' => esc_html__( 'Opens the selected registered Kiwe destination even when its dock icon is hidden. Available automatically; the destination must exist on this website.', 'dsa' ),
 		];
 		return $controls;
 	}
@@ -911,6 +1122,13 @@ final class Bricks_Integration {
 		if ( ! is_object( $element ) || empty( $element->id ) || '' === trim( $html ) ) {
 			return $html;
 		}
+		$html = $this->bridge_html_launcher( $html, $element );
+		Source_Runtime_Bridge::observe( $html );
+		// Only an authored native preview scope needs this small data-only controller.
+		// No catalog request, cart/session initialization or site-wide visitor script.
+		if ( str_contains( $html, 'data-kiwe-preview-scope=' ) ) {
+			wp_enqueue_script( 'kiwe-public-preview', DSA_URL . 'assets/js/public-preview.js', [], DSA_VERSION, true );
+		}
 
 		$id             = sanitize_key( (string) $element->id );
 		$element_name   = ! empty( $element->name ) ? sanitize_key( (string) $element->name ) : 'bricks-element';
@@ -935,15 +1153,36 @@ final class Bricks_Integration {
 		if ( 'product-add-to-cart' === $element_name && $this->add_to_cart_runtime_enabled( (array) ( $element->settings ?? [] ) ) ) {
 			$this->enqueue_add_to_cart_adapter();
 		}
+		if ( 'woocommerce-mini-cart' === $element_name ) {
+			$this->enqueue_mini_cart_adapter();
+		}
 
 		return $html;
+	}
+
+	/** Raw HTML has no Bricks wrapper on which to render its authored attributes. */
+	public function bridge_html_launcher( string $html, $element ): string {
+		if ( ! is_object( $element ) || 'html' !== ( $element->name ?? '' ) || ! method_exists( $element, 'get_custom_attributes' ) || ! class_exists( '\\WP_HTML_Tag_Processor' ) ) {
+			return $html;
+		}
+		$attributes = $element->get_custom_attributes( (array) ( $element->settings ?? [] ) );
+		$module = $attributes['data-dsa-open-module'] ?? '';
+		if ( ! is_string( $module ) || ! in_array( $module, [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'notifications', 'ios-install', 'games' ], true ) ) {
+			return $html;
+		}
+		$tags = new \WP_HTML_Tag_Processor( $html );
+		if ( ! $tags->next_tag() || in_array( $tags->get_tag(), [ 'SCRIPT', 'STYLE', 'TEMPLATE', 'LINK', 'META', 'TITLE' ], true ) || null !== $tags->get_attribute( 'data-dsa-open-module' ) ) {
+			return $html;
+		}
+		$tags->set_attribute( 'data-dsa-open-module', $module );
+		return $tags->get_updated_html();
 	}
 
 	public function add_mini_cart_controls( array $controls ): array {
 		// These are editor capabilities, not the optional frontend feature switches.
 		$controls['kiweMiniCartRuntimeInfo'] = [
 			'tab' => 'content', 'group' => 'cartDetails', 'type' => 'info',
-			'content' => esc_html__( 'Kiwe controls are always available with Bricks. Added mini-cart behaviours require their matching switches in Kiwe > Bricks; displaying these controls does not enable them.', 'dsa' ),
+			'content' => esc_html__( 'Kiwe mini-cart integration is automatic with WooCommerce. Choose quantity and badge behaviour on this element; recommendations follow the website commerce settings.', 'dsa' ),
 		];
 
 		$controls['brxMcStepperSep'] = [
@@ -1536,7 +1775,7 @@ final class Bricks_Integration {
 		$group = self::ATC_GROUP;
 		$controls['kiweAtcRuntimeInfo'] = [
 			'tab' => 'content', 'group' => $group, 'type' => 'info',
-			'content' => esc_html__( 'Style controls are always available with Bricks. Behaviour toggles below additionally require Add To Cart behaviour in Kiwe > Bricks. Styles do not create missing quantity buttons.', 'dsa' ),
+			'content' => esc_html__( 'Kiwe integration is automatic. Choose behaviour for this element below. Styles do not create missing quantity buttons.', 'dsa' ),
 		];
 		$controls['brxAtcSeparator'] = [ 'tab' => 'content', 'group' => $group, 'type' => 'separator', 'label' => esc_html__( 'Behaviour Toggles', 'dsa' ) ];
 		$controls['brxQtyAjax'] = [ 'tab' => 'content', 'group' => $group, 'label' => esc_html__( 'Quantity Button Ajax', 'dsa' ), 'type' => 'checkbox', 'inline' => true, 'placeholder' => esc_html__( 'Enable', 'dsa' ) ];
@@ -1588,7 +1827,7 @@ final class Bricks_Integration {
 			'tab'     => 'content',
 			'group'   => $group,
 			'type'    => 'info',
-			'content' => esc_html__( 'Kiwe stores cross-sells as native WooCommerce linked products. Style controls are always available; Kiwe source presets require Linked Products behaviour in Kiwe > Bricks. Manage generation and bestseller analytics in Kiwe > WooCommerce.', 'dsa' ),
+			'content' => esc_html__( 'Kiwe stores cross-sells as native WooCommerce linked products. Source presets and style controls are automatically available. Manage generation and bestseller analytics in Kiwe > WooCommerce.', 'dsa' ),
 		];
 		$controls['brxKiweLinkedProductsMode'] = [
 			'tab'         => 'content',
@@ -1744,7 +1983,7 @@ final class Bricks_Integration {
 		}
 
 		$max = $this->product_max_quantity( $product, $quantity );
-		$price = function_exists( 'WC' ) && WC()->cart ? WC()->cart->get_product_price( $product ) : '';
+		$price = \DSA\Apps\Store_App_Service::enabled() && WC()->cart ? WC()->cart->get_product_price( $product ) : '';
 
 		return sprintf(
 			'<span class="quantity brxmc-qty-wrap"><span class="brxmc-price">%1$s</span><span class="brxmc-stepper-wrap"><span class="brxmc-stepper" data-dsa-keep-open><button class="brxmc-btn brxmc-minus" type="button" data-dsa-bricks-cart-quantity="%2$s" data-dsa-bricks-cart-product="%12$d" data-dsa-bricks-cart-variation="%13$d" data-dsa-bricks-cart-next="%3$d" aria-label="%4$s" %5$s>&minus;</button><span class="brxmc-num">%6$d</span><button class="brxmc-btn brxmc-plus" type="button" data-dsa-bricks-cart-quantity="%2$s" data-dsa-bricks-cart-product="%12$d" data-dsa-bricks-cart-variation="%13$d" data-dsa-bricks-cart-next="%7$d" data-max="%8$d" aria-label="%9$s" %10$s>+</button></span></span></span>%11$s',
@@ -1773,7 +2012,7 @@ final class Bricks_Integration {
 
 		$commerce = $this->commerce_config();
 
-		if ( ! function_exists( 'WC' ) || ! WC() || ! WC()->cart ) {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! WC() || ! WC()->cart ) {
 			return;
 		}
 
@@ -1914,7 +2153,7 @@ final class Bricks_Integration {
 	private function render_mini_cart_total_after_discount(): void {
 		$context = $this->mini_cart_settings();
 
-		if ( empty( $context['brxUsTrEnable'] ) || ! function_exists( 'WC' ) || ! WC() || ! WC()->cart ) {
+		if ( empty( $context['brxUsTrEnable'] ) || ! \DSA\Apps\Store_App_Service::enabled() || ! WC() || ! WC()->cart ) {
 			return;
 		}
 
@@ -2011,8 +2250,8 @@ final class Bricks_Integration {
 
 	public function enqueue_mini_cart_adapter(): void {
 		$config = $this->bricks_config();
-
-		if ( empty( $config['mini_cart_adapter_enabled'] ) || ( empty( $config['quantity_stepper_enabled'] ) && empty( $config['stock_badge_enabled'] ) && empty( $config['linked_products_controls_enabled'] ) ) ) {
+		// Load only for an actual rendered mini-cart, never on non-Woo pages.
+		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! WC() || ! $this->mini_cart_context || wp_script_is( 'dsa-bricks-mini-cart', 'enqueued' ) ) {
 			return;
 		}
 
@@ -2109,7 +2348,7 @@ final class Bricks_Integration {
 	private function bricks_config(): array {
 		$config = $this->settings->get( 'bricks', [] );
 
-		return is_array( $config ) ? $config : [];
+		return array_replace( is_array( $config ) ? $config : [], Settings::automatic_bricks_settings() );
 	}
 
 	private function commerce_config(): array {
@@ -2182,7 +2421,7 @@ final class Bricks_Integration {
 	}
 
 	private function cart_item_for_product( int $product_id ): array {
-		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! WC()->cart ) {
 			return [];
 		}
 
@@ -2316,7 +2555,8 @@ final class Bricks_Integration {
 	}
 	function refreshNonce(){
 		if(!config.nonceUrl){ return Promise.reject(new Error("Nonce refresh unavailable")); }
-		return fetch(config.nonceUrl,{credentials:"same-origin"}).then(function(response){ return response.json(); }).then(function(payload){
+		var nonceUrl = new URL(config.nonceUrl,window.location.href); nonceUrl.searchParams.set("_kiwe_nonce",String(Date.now()));
+		return fetch(nonceUrl.toString(),{credentials:"same-origin",cache:"no-store",headers:{"Cache-Control":"no-cache"}}).then(function(response){ return response.json(); }).then(function(payload){
 			if(payload && payload.nonce){ config.nonce = payload.nonce; return payload.nonce; }
 			throw new Error("Nonce refresh failed");
 		});
@@ -2421,6 +2661,7 @@ final class Bricks_Integration {
 :where(.quantity input.qty){font:inherit}
 :where(.quantity .plus svg,.quantity .minus svg),:where(.quantity .plus svg *,.quantity .minus svg *){fill:currentColor}
 :where(.quantity .plus svg,.quantity .minus svg){width:1em;height:1em;display:block}
+:where([data-brx-t1],[data-brx-t2],[data-brx-t3],[data-brx-t4],[data-brx-t5]){position:relative;min-width:0;max-width:100%}
 [data-brx-t2] .quantity{display:none!important}
 [data-brx-t3] .quantity{transition:opacity var(--brx-atc-swap-duration,0s) var(--brx-atc-swap-easing,ease),visibility var(--brx-atc-swap-duration,0s) var(--brx-atc-swap-easing,ease),max-height var(--brx-atc-swap-duration,0s) var(--brx-atc-swap-easing,ease)}
 [data-brx-t3]:not([data-brx-added]) .quantity{opacity:0;visibility:hidden;pointer-events:none;max-height:0;overflow:hidden}
@@ -2433,6 +2674,11 @@ final class Bricks_Integration {
 [data-brx-t5] .add_to_cart_button,[data-brx-t5] .added_to_cart{display:none!important}
 [data-brx-t5] .quantity{display:flex!important}
 [data-brx-t5] .quantity .action.minus,[data-brx-t5] .quantity input.qty{display:none!important}
+[data-brx-t5]{width:max-content;max-width:100%;min-width:0}
+[data-brx-t5] form.cart,[data-brx-t5] .quantity{width:auto!important;max-width:100%;min-width:0;margin:0}
+[data-brx-t5] .quantity{gap:0}
+[data-brx-t5] .quantity .action.plus{position:static;flex:0 0 44px;width:44px;height:44px;min-width:44px;padding:0}
+[data-dsa-atc-error]{max-width:100%;overflow-wrap:anywhere;font-size:14px}
 [data-brx-loading] .quantity{opacity:.5;pointer-events:none}
 ';
 	}
@@ -2513,7 +2759,8 @@ final class Bricks_Integration {
 	}
 	function refreshNonce(){
 		if(!config.nonceUrl){ return Promise.reject(new Error("Nonce refresh unavailable")); }
-		return fetch(config.nonceUrl,{credentials:"same-origin"}).then(function(response){ return response.json(); }).then(function(payload){
+		var nonceUrl = new URL(config.nonceUrl,window.location.href); nonceUrl.searchParams.set("_kiwe_nonce",String(Date.now()));
+		return fetch(nonceUrl.toString(),{credentials:"same-origin",cache:"no-store",headers:{"Cache-Control":"no-cache"}}).then(function(response){ return response.json(); }).then(function(payload){
 			if(payload && payload.nonce){ config.nonce = payload.nonce; return payload.nonce; }
 			throw new Error("Nonce refresh failed");
 		});
@@ -2537,12 +2784,18 @@ final class Bricks_Integration {
 	}
 	function add(r,pid,qty){
 		debug("add click",{productId:pid,quantity:qty || 1});
+		var error = r.querySelector("[data-dsa-atc-error]"); if(error){ error.remove(); }
 		setLoading(r,true);
-		post(config.addUrl,{productId:pid,quantity:qty || 1}).then(function(res){
+		var shared = window.DSA && window.DSA.cart && typeof window.DSA.cart.addProduct === "function";
+		var request = shared ? window.DSA.cart.addProduct(Number(pid),"bricks_add_to_cart",qty || 1) : post(config.addUrl,{productId:pid,quantity:qty || 1});
+		request.then(function(res){
 			var data = res && res.item ? res.item : {};
 			markAdded(r,data.key || "",data.quantity || qty || 1);
-			refresh(res);
-		}).catch(function(){ refresh(); }).finally(function(){ setLoading(r,false); });
+			if(shared){ syncRoots(res && res.cart); } else { refresh(res); }
+		}).catch(function(error){
+			var notice = document.createElement("p"); notice.setAttribute("data-dsa-atc-error",""); notice.setAttribute("role","alert");
+			notice.textContent = error && error.message ? error.message : "Could not add this product. Please try again."; r.appendChild(notice);
+		}).finally(function(){ setLoading(r,false); });
 	}
 	function update(r,key,qty,rollback){
 		debug("quantity click",{key:key,quantity:qty,rollback:rollback});
@@ -2552,28 +2805,32 @@ final class Bricks_Integration {
 			refresh(res);
 		}).catch(function(){ setQty(r,rollback || 1); refresh(); }).finally(function(){ setLoading(r,false); });
 	}
-	$(document).on("click",".cart .action.plus",function(event){
-		var r = root(this);
-		if(!r || r.hasAttribute("data-brx-loading")){ return; }
+	document.addEventListener("click",function(event){
+		var control = event.target.closest && event.target.closest(".cart .action.plus"); if(!control){ return; }
+		var r = root(control);
+		if(!r){ return; }
 		if(!r.hasAttribute("data-brx-t1") && !r.hasAttribute("data-brx-t4") && !r.hasAttribute("data-brx-t5")){ return; }
 		event.preventDefault();
 		event.stopImmediatePropagation();
+		if(r.hasAttribute("data-brx-loading")){ return; }
 		var key = r.getAttribute("data-brx-cart-key") || "";
 		var current = parseInt(r.getAttribute("data-brx-cart-qty") || "0",10);
 		if(key && !r.hasAttribute("data-brx-t5")){ update(r,key,current + 1,current); return; }
 		var pid = productId(r);
 		if(pid){ add(r,pid,1); }
-	});
-	$(document).on("click",".cart .action.minus",function(event){
-		var r = root(this);
-		if(!r || !r.hasAttribute("data-brx-t1") || r.hasAttribute("data-brx-loading")){ return; }
+	},true);
+	document.addEventListener("click",function(event){
+		var control = event.target.closest && event.target.closest(".cart .action.minus"); if(!control){ return; }
+		var r = root(control);
+		if(!r || !r.hasAttribute("data-brx-t1")){ return; }
+		if(r.hasAttribute("data-brx-loading")){ event.preventDefault(); event.stopImmediatePropagation(); return; }
 		var key = r.getAttribute("data-brx-cart-key") || "";
 		if(!key){ return; }
 		event.preventDefault();
 		event.stopImmediatePropagation();
 		var current = parseInt(r.getAttribute("data-brx-cart-qty") || "1",10);
 		update(r,key,Math.max(0,current - 1),current);
-	});
+	},true);
 	$(document).on("change",".cart .quantity input.qty",function(){
 		var r = root(this);
 		if(!r || !r.hasAttribute("data-brx-t1") || r.hasAttribute("data-brx-loading")){ return; }
@@ -2583,6 +2840,25 @@ final class Bricks_Integration {
 		var next = Math.max(0,parseInt(this.value || "0",10));
 		if(next !== current){ update(r,key,next,current); }
 	});
+	function accessibleControls(scope){
+		var selector = "[data-brx-t1] .quantity .action,[data-brx-t4] .quantity .action,[data-brx-t5] .quantity .action";
+		var controls = Array.prototype.slice.call(scope.querySelectorAll(selector));
+		if(scope.matches && scope.matches(selector)){ controls.unshift(scope); }
+		controls.forEach(function(control){
+			if(control.tagName === "BUTTON"){ return; }
+			control.setAttribute("role","button"); control.setAttribute("tabindex","0");
+			control.setAttribute("aria-label",control.classList.contains("plus") ? "Add one to cart" : "Decrease quantity");
+		});
+	}
+	document.addEventListener("keydown",function(event){
+		var control = event.target.closest && event.target.closest(".quantity .action[role=button]");
+		if(!control || !root(control) || (event.key !== "Enter" && event.key !== " ")){ return; }
+		event.preventDefault(); if(!event.repeat){ control.click(); }
+	});
+	accessibleControls(document);
+	if(window.MutationObserver){
+		new MutationObserver(function(records){ records.forEach(function(record){ Array.prototype.forEach.call(record.addedNodes,function(node){ if(node.nodeType === 1){ accessibleControls(node); } }); }); }).observe(document.body,{childList:true,subtree:true});
+	}
 })(jQuery);
 ';
 	}

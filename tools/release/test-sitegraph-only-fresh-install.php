@@ -71,7 +71,9 @@ namespace {
 
 	$truthy   = kiwe_true_boolean_paths( $resolved );
 
-	if ( [ 'site_graph.enabled' ] !== $truthy ) {
+	$expected = array_merge( [ 'abandoned_cart.enabled', 'site_graph.enabled', 'search.bricks_bridge_enabled', 'commerce.checkout_surface_enabled', 'commerce.cart_show_fbt', 'dock.admin_dashboard_link_enabled', 'permissions.enabled', 'permissions.notifications_enabled', 'permissions.notification_preferences_enabled', 'permissions.pwa_enabled', 'service_worker', 'app.show_install_actions' ], array_map( static fn( $key ) => 'bricks.' . $key, array_keys( \DSA\Settings::automatic_bricks_settings() ) ) );
+	sort( $truthy ); sort( $expected );
+	if ( $expected !== $truthy ) {
 		fwrite( STDERR, 'Fresh Kiwe install enabled unexpected boolean settings: ' . json_encode( $truthy ) . PHP_EOL );
 		exit( 1 );
 	}
@@ -86,11 +88,11 @@ namespace {
 		|| ! empty( $resolved['secure']['enabled'] )
 		|| ! empty( array_filter( $resolved['dock']['enabled_items'] ?? [] ) )
 		|| ! empty( $resolved['tokens']['enabled'] )
-		|| ! empty( $resolved['bricks']['dynamic_tags_enabled'] )
+		|| empty( $resolved['bricks']['dynamic_tags_enabled'] )
 	) {
 		fwrite( STDERR, 'Fresh Kiwe install violated the fail-closed runtime contract.' . PHP_EOL );
 		exit( 1 );
 	}
 
-	echo "PASS SiteGraph-only fresh-install profile\n";
+	echo "PASS optional services off; native Bricks capabilities automatic\n";
 }

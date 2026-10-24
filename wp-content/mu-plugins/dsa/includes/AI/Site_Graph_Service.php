@@ -36,6 +36,7 @@ final class Site_Graph_Service {
 			'generatedAt'   => gmdate( 'c' ),
 			'site'          => $this->site_summary(),
 			'designContext' => $this->design_context_summary(),
+			'dynamicBindings' => \DSA\Bricks\Design_Context_Binding_Service::contract(),
 			'wordpress'     => $this->wordpress_summary( $sample_limit, $public_only ),
 			'woocommerce'   => $this->woocommerce_summary( $sample_limit, $public_only ),
 			'bricks'        => $this->bricks_summary(),
@@ -43,6 +44,7 @@ final class Site_Graph_Service {
 			'connectors'    => $this->connectors_summary(),
 			'kiwe'          => [
 				'version'       => defined( 'DSA_VERSION' ) ? DSA_VERSION : '',
+				'apps'          => \DSA\Apps\Runtime_Registry::capabilities(),
 				'modules'       => $this->modules->manifest_contract( $dock ),
 				'dock'          => $this->safe_setting_fragment( $dock, [ 'presentation', 'layout', 'focus_module', 'shape', 'orientation', 'items' ] ),
 				'search'        => $this->safe_setting_fragment( isset( $settings['search'] ) && is_array( $settings['search'] ) ? $settings['search'] : [], [ 'context_aware', 'alphabet_enabled', 'product_add_enabled', 'bricks_bridge_enabled', 'families', 'custom_taxonomies' ] ),
@@ -116,6 +118,7 @@ final class Site_Graph_Service {
 				'kiweActive'       => defined( 'DSA_VERSION' ),
 				'woocommerceVersion' => defined( 'WC_VERSION' ) ? sanitize_text_field( (string) WC_VERSION ) : '',
 				'woocommerceActive'  => class_exists( 'WooCommerce' ) || function_exists( 'WC' ),
+				'storeAppEnabled'    => \DSA\Apps\Store_App_Service::enabled(),
 				'isMultisite'      => is_multisite(),
 			],
 			'bricks'      => [
@@ -128,6 +131,7 @@ final class Site_Graph_Service {
 				'dynamicTags'       => $this->calibration_dynamic_tags(),
 				'elementManager'    => $this->calibration_element_manager( is_array( $element_manager ) ? $element_manager : [] ),
 				'surfaceStyleControls' => \DSA\Bricks\Bricks_Integration::is_active_theme() ? \DSA\Bricks\Surface_Style_Controls::capabilities( true ) : [],
+				'sourceRuntimeBridge' => \DSA\Bricks\Bricks_Integration::is_active_theme() ? [ 'version' => \DSA\Bricks\Source_Runtime_Bridge::VERSION, 'delivery' => 'cached' ] : null,
 			],
 		];
 	}
@@ -377,7 +381,7 @@ final class Site_Graph_Service {
 		$objects    = get_post_types( [ 'public' => true ], 'objects' );
 
 		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
-			if ( ! is_object( $object ) ) {
+			if ( ! \DSA\Apps\Store_App_Service::content_available( (string) $name ) || ! is_object( $object ) ) {
 				continue;
 			}
 
@@ -400,7 +404,8 @@ final class Site_Graph_Service {
 	}
 
 	private function woocommerce_summary( int $sample_limit, bool $public_only = false ): array {
-		$active = class_exists( 'WooCommerce' ) || function_exists( 'WC' );
+		$active = \DSA\Apps\Store_App_Service::enabled();
+		if ( !$active ) return [ 'active'=>false, 'nativeActive'=>function_exists( 'WC' ), 'storeAppEnabled'=>false, 'currency'=>'', 'currencySymbol'=>'', 'productTypes'=>[], 'pages'=>[], 'productCounts'=>[], 'productCategories'=>[], 'productTags'=>[], 'merchandising'=>[] ];
 		$pages  = [];
 		$commerce = $this->settings->get( 'commerce', [] );
 		$commerce = is_array( $commerce ) ? $commerce : [];
@@ -566,7 +571,7 @@ final class Site_Graph_Service {
 		$objects    = get_taxonomies( [ 'public' => true ], 'objects' );
 
 		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
-			if ( ! is_object( $object ) ) {
+			if ( ! \DSA\Apps\Store_App_Service::taxonomy_available( (string) $name ) || ! is_object( $object ) ) {
 				continue;
 			}
 
@@ -604,7 +609,7 @@ final class Site_Graph_Service {
 		}
 		$objects = get_post_types( $query, 'objects' );
 		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
-			if ( ! is_object( $object ) ) {
+			if ( ! \DSA\Apps\Store_App_Service::content_available( (string) $name ) || ! is_object( $object ) ) {
 				continue;
 			}
 			$out[] = [
@@ -631,7 +636,7 @@ final class Site_Graph_Service {
 		}
 		$objects = get_taxonomies( $query, 'objects' );
 		foreach ( is_array( $objects ) ? $objects : [] as $name => $object ) {
-			if ( ! is_object( $object ) ) {
+			if ( ! \DSA\Apps\Store_App_Service::taxonomy_available( (string) $name ) || ! is_object( $object ) ) {
 				continue;
 			}
 			$out[] = [
@@ -652,6 +657,7 @@ final class Site_Graph_Service {
 		$post_types = get_post_types( $public_only ? [ 'public' => true ] : [], 'names' );
 		$registered = [];
 		foreach ( is_array( $post_types ) ? $post_types : [] as $post_type ) {
+			if ( ! \DSA\Apps\Store_App_Service::content_available( (string) $post_type ) ) continue;
 			$keys = function_exists( 'get_registered_meta_keys' ) ? get_registered_meta_keys( 'post', (string) $post_type ) : [];
 			foreach ( is_array( $keys ) ? $keys : [] as $key => $schema ) {
 				if ( $this->is_secretish_key( (string) $key ) ) {
@@ -681,6 +687,7 @@ final class Site_Graph_Service {
 		$out = [];
 		$post_types = get_post_types( [ 'public' => true ], 'names' );
 		foreach ( is_array( $post_types ) ? $post_types : [] as $post_type ) {
+			if ( !\DSA\Apps\Store_App_Service::content_available( (string) $post_type ) ) continue;
 			$ids = get_posts(
 				[
 					'post_type'              => (string) $post_type,
@@ -903,56 +910,7 @@ final class Site_Graph_Service {
 	}
 
 	private function kiwe_dynamic_tags(): array {
-		return [
-			'{kiwe_site_logo}',
-			'{kiwe_site_logo_inverse}',
-			'{kiwe_store_address_1}',
-			'{kiwe_store_address_2}',
-			'{kiwe_store_city}',
-			'{kiwe_store_country}',
-			'{kiwe_store_state}',
-			'{kiwe_store_postcode}',
-			'{kiwe_store_phone}',
-			'{kiwe_store_email}',
-			'{kiwe_store_phone_url}',
-			'{kiwe_store_email_url}',
-			'{kiwe_business_description}',
-			'{kiwe_business_story}',
-			'{kiwe_business_mission}',
-			'{kiwe_business_vision}',
-			'{kiwe_business_values}',
-			'{kiwe_business_usp}',
-			'{kiwe_founder_name}',
-			'{kiwe_founder_title}',
-			'{kiwe_founder_bio}',
-			'{kiwe_founder_image}',
-			'{kiwe_founder_linkedin_url}',
-			'{kiwe_team_enabled}',
-			'{kiwe_team_member_id}',
-			'{kiwe_team_name}',
-			'{kiwe_team_title}',
-			'{kiwe_team_bio}',
-			'{kiwe_team_image}',
-			'{kiwe_team_linkedin_url}',
-			'{kiwe_whatsapp}',
-			'{kiwe_whatsapp_url}',
-			'{kiwe_directions_url}',
-			'{kiwe_brand_tone}',
-			'{kiwe_brand_color}',
-			'{kiwe_accent_color}',
-			'{kiwe_hero_color}',
-			'{kiwe_neutral_color}',
-			'{kiwe_surface_color}',
-			'{kiwe_facebook_url}',
-			'{kiwe_instagram_url}',
-			'{kiwe_x_url}',
-			'{kiwe_youtube_url}',
-			'{kiwe_pinterest_url}',
-			'{kiwe_linkedin_url}',
-			'{kiwe_selling_locations}',
-			'{kiwe_shipping_locations}',
-			'{woo_product_weight}',
-		];
+		return array_map( static fn( string $name ): string => '{' . $name . '}', array_keys( \DSA\Bricks\Bricks_Integration::base_dynamic_tag_definitions() ) );
 	}
 
 	private function safe_setting_fragment( array $settings, array $allow ): array {

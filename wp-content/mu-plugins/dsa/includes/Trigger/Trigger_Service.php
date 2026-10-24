@@ -10,6 +10,7 @@ final class Trigger_Service {
 	public function contract( array $settings, array $manifest, array $protected_flow = [] ): array {
 		$visual = isset( $settings['visual_effects'] ) && is_array( $settings['visual_effects'] ) ? $settings['visual_effects'] : [];
 		$app    = isset( $settings['app'] ) && is_array( $settings['app'] ) ? $settings['app'] : [];
+		$home_enabled = array_key_exists( 'home_enabled', $app ) ? ! empty( $app['home_enabled'] ) : ! empty( $app['idle_enabled'] ) || ! empty( $visual['initial_preloader_enabled'] );
 		$games  = isset( $settings['games'] ) && is_array( $settings['games'] ) ? $settings['games'] : [];
 
 		return [
@@ -27,8 +28,8 @@ final class Trigger_Service {
 			'rules'           => array_values(
 				array_filter(
 					[
-						$this->first_session_home_rule( $visual ),
-						$this->idle_home_rule( $app ),
+						$this->first_session_home_rule( $visual, $home_enabled ),
+						$this->idle_home_rule( $app, $home_enabled ),
 						$this->safe_link_transition_rule( $visual ),
 						$this->scheduled_game_rule( $games ),
 						$this->protected_flow_rule( $protected_flow ),
@@ -38,13 +39,13 @@ final class Trigger_Service {
 		];
 	}
 
-	private function first_session_home_rule( array $visual ): array {
+	private function first_session_home_rule( array $visual, bool $home_enabled ): array {
 		return [
 			'id'           => 'first_session_home',
 			'event'        => 'first_session',
 			'mode'         => 'appsiteHome',
 			'module'       => '',
-			'enabled'      => ! empty( $visual['initial_preloader_enabled'] ),
+			'enabled'      => $home_enabled && ! empty( $visual['initial_preloader_enabled'] ),
 			'durationMs'   => 0,
 			'dismiss'      => 'scroll_touch_escape',
 			'frequency'    => 'session_once',
@@ -54,22 +55,22 @@ final class Trigger_Service {
 		];
 	}
 
-	private function idle_home_rule( array $app ): array {
-		$delay = max( 10000, min( 1800000, (int) ( $app['idle_delay_ms'] ?? 60000 ) ) );
+	private function idle_home_rule( array $app, bool $home_enabled ): array {
+		$delay = max( 10000, min( 1800000, (int) ( $app['idle_delay_ms'] ?? 10000 ) ) );
 
 		return [
 			'id'           => 'idle_home',
 			'event'        => 'idle',
 			'mode'         => 'appsiteHome',
 			'module'       => '',
-			'enabled'      => ! empty( $app['idle_enabled'] ),
+			'enabled'      => $home_enabled,
 			'delayMs'      => $delay,
 			'durationMs'   => 0,
 			'dismiss'      => 'scroll_touch_escape',
 			'frequency'    => 'after_idle',
 			'priority'     => 5,
 			'guards'       => [ 'not_protected_flow', 'no_active_mode', 'no_interactive_focus' ],
-			'adminSource'  => 'app.idle_enabled',
+			'adminSource'  => 'app.home_enabled',
 		];
 	}
 
@@ -80,8 +81,8 @@ final class Trigger_Service {
 			'mode'         => 'transition',
 			'module'       => '',
 			'enabled'      => ! empty( $visual['show_on_navigation'] ),
-			'durationMs'   => max( 0, min( 10000, (int) ( $visual['min_loader_ms'] ?? 700 ) ) ),
-			'dismiss'      => 'click_escape_hover_hold',
+			'durationMs'   => 0,
+			'dismiss'      => 'ready_click_escape',
 			'frequency'    => 'every_safe_navigation',
 			'priority'     => 3,
 			'guards'       => [ 'same_origin', 'route_not_excluded', 'not_protected_flow' ],

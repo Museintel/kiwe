@@ -1,0 +1,16 @@
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),cp=require('node:child_process'),assert=require('node:assert/strict');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'kiwe-fixed-transfer-test-')),builder=path.join(__dirname,'build-private-source-transfer.cjs'),remote='/home/u123/domains/qualification.invalid/public_html',php=process.argv[2];if(php&&!path.isAbsolute(php))throw Error('Known PHP runtime path required');let checks=0;
+try{
+ const profiles={'native-source':['database.kiwe','files.kiwe','diagnostics.kiwe'],'previous-code':['previous-kiwe.kiwefiles','previous-kiwe-manifest.json']};
+ for(const [profile,names]of Object.entries(profiles)){
+  const ref={schema:'kiwe.private-member-reference.v1',directory:'/home/u123/domains/qualification.invalid/kiwe-private-fixture',memberProfile:profile,tokenSha256:'a'.repeat(64),members:Object.fromEntries(names.map(n=>[n,{bytes:7,sha256:'b'.repeat(64)}]))};
+  const run=(value,suffix)=>{const p=path.join(root,profile+'-'+suffix+'.json'),out=path.join(root,'kiwe-fixture-'+profile+'-'+suffix+'.php');fs.writeFileSync(p,JSON.stringify(value),{flag:'wx'});return cp.spawnSync(process.execPath,[builder,'--root='+remote,'--id=kiwe-fixture','--output='+out,'--expires='+Math.floor(Date.now()/1000+3600),'--member-reference='+p],{encoding:'utf8',timeout:10000});};
+  const valid=run(ref,'valid');assert.equal(valid.status,0);checks++;
+  if(php){const body=fs.readFileSync(JSON.parse(valid.stdout).path,'utf8'),line=body.split('\n').find(l=>l.startsWith('$suffix='));assert.ok(line);const execution=cp.spawnSync(php,['-n','-r','$reference=true;$private="/unused";'+line+'if($suffix!=="-kiwe-fixture")exit(1);echo "ok";'],{encoding:'utf8',timeout:10000});assert.equal(execution.status,0);assert.equal(execution.stdout,'ok');assert.equal(execution.stderr,'');checks++;
+   const rangeLine=body.split('\n').find(l=>l.startsWith('$nativeRange='));assert.ok(rangeLine);for(const state of ["['HTTP_RANGE'=>'bytes=0-4095']","['HTTP_X_KIWE_TRANSFER_RANGE'=>'bytes=0-4095']","['HTTP_RANGE'=>'bytes=0-4095','HTTP_X_KIWE_TRANSFER_RANGE'=>'bytes=1-4095']"]){const conflict=state.includes("bytes=1-4095"),script='$reject=static function(){throw new RuntimeException();};$_SERVER='+state+';try{'+rangeLine+'if($start!==0||$end!==4095)exit(2);echo "accepted";}catch(RuntimeException $e){echo "denied";}';const r=cp.spawnSync(php,['-n','-r',script],{encoding:'utf8',timeout:10000});assert.equal(r.status,0);assert.equal(r.stderr,'');assert.equal(r.stdout,conflict?'denied':'accepted');checks++;}
+  }
+  const variants=[{...ref,memberProfile:'unknown'},{...ref,directory:'/home/u999/domains/other.invalid/kiwe-private-fixture'},{...ref,tokenSha256:'invalid'},{...ref,members:{...ref.members,'../wp-config.php':{bytes:7,sha256:'b'.repeat(64)}}},{...ref,members:{...ref.members,[names[0]]:{bytes:2000000001,sha256:'b'.repeat(64)}}},{...ref,members:{...ref.members,[names[0]]:{bytes:7,sha256:'bad'}}}];
+  variants.forEach((v,i)=>{assert.notEqual(run(v,'refuse-'+i).status,0);checks++;});
+ }
+ console.log(JSON.stringify({schema:'kiwe.private-fixed-transfer-builder-tests.v1',passed:true,checks,syntheticOnly:true,nativePosixBehaviorQualified:false}));
+}finally{for(const n of fs.readdirSync(root))fs.unlinkSync(path.join(root,n));fs.rmdirSync(root);}

@@ -21,6 +21,7 @@ final class Cart_Controller {
 	) {}
 
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_action( 'rest_api_init', [ $this, 'routes' ] );
 	}
 
@@ -105,13 +106,24 @@ final class Cart_Controller {
 	}
 
 	public function get_nonce( WP_REST_Request $request ): WP_REST_Response {
-		return new WP_REST_Response(
+		// A nonce-free REST read clears the current user in WordPress. Validate
+		// the existing signed cookie for this same-origin nonce bootstrap only;
+		// mutation requests still pass WordPress cookie/nonce authentication.
+		if ( ! is_user_logged_in() ) {
+			$user_id = wp_validate_auth_cookie( '', 'logged_in' );
+			if ( $user_id ) wp_set_current_user( $user_id );
+		}
+		nocache_headers();
+		$response = new WP_REST_Response(
 			[
 				'ok'    => true,
 				'nonce' => wp_create_nonce( 'wp_rest' ),
 			],
 			200
 		);
+		$response->header( 'Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0' );
+		$response->header( 'Vary', 'Cookie' );
+		return $response;
 	}
 
 	public function add_item( WP_REST_Request $request ) {
@@ -207,6 +219,8 @@ final class Cart_Controller {
 		}
 
 		Store_Analytics_Service::mark_cart_source( $source );
+		$mutation_cart = WC()->cart;
+		$calculations_before = did_action( 'woocommerce_after_calculate_totals' );
 		try {
 			$cart_key = WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variation_attributes, $cart_item_data );
 		} finally {
@@ -217,9 +231,6 @@ final class Cart_Controller {
 			$this->debug_log( 'cart/add failed', [ 'product_id' => $product_id, 'variation_id' => $variation_id, 'quantity' => $quantity ] );
 			return new WP_Error( 'dsa_cart_add_failed', $this->cart_error_message( __( 'Could not add product to cart.', 'dsa' ) ), [ 'status' => 409 ] );
 		}
-
-		WC()->cart->calculate_totals();
-		WC()->cart->set_session();
 
 		if ( method_exists( WC()->cart, 'maybe_set_cart_cookies' ) ) {
 			WC()->cart->maybe_set_cart_cookies();
@@ -246,6 +257,8 @@ final class Cart_Controller {
 			}
 		}
 
+		$this->cart_payload->refresh_after_mutation( $mutation_cart, $calculations_before );
+		WC()->cart->set_session();
 		$cart = $this->cart_data();
 		$fragments = $this->cart_fragments();
 		$cart_hash = WC()->cart->get_cart_hash();
@@ -319,6 +332,8 @@ final class Cart_Controller {
 
 		$event_item = $item;
 		$event_type = 0 === $quantity ? 'cart_remove' : 'cart_update';
+		$mutation_cart = WC()->cart;
+		$calculations_before = did_action( 'woocommerce_after_calculate_totals' );
 
 		if ( 0 === $quantity ) {
 			WC()->cart->remove_cart_item( $key );
@@ -366,7 +381,7 @@ final class Cart_Controller {
 			]
 		);
 
-		WC()->cart->calculate_totals();
+		$this->cart_payload->refresh_after_mutation( $mutation_cart, $calculations_before );
 		WC()->cart->set_session();
 		$cart = $this->cart_data();
 		$fragments = $this->cart_fragments();
@@ -407,6 +422,8 @@ final class Cart_Controller {
 		$trigger_id = absint( $request->get_param( 'triggerId' ) ?: $request->get_param( 'trigger_id' ) );
 		$this->debug_log( 'cart/upsell/claim start', [ 'product_id' => $product_id, 'trigger_id' => $trigger_id, 'before_count' => (int) WC()->cart->get_cart_contents_count() ] );
 		$store = $this->store_analytics;
+		$mutation_cart = WC()->cart;
+		$calculations_before = did_action( 'woocommerce_after_calculate_totals' );
 		$result = $store->claim_cart_upsell_discount( $product_id, $trigger_id );
 
 		if ( is_wp_error( $result ) ) {
@@ -417,6 +434,7 @@ final class Cart_Controller {
 		if ( method_exists( WC()->cart, 'maybe_set_cart_cookies' ) ) {
 			WC()->cart->maybe_set_cart_cookies();
 		}
+		$this->cart_payload->refresh_after_mutation( $mutation_cart, $calculations_before );
 		$cart = $this->cart_data();
 		$fragments = $this->cart_fragments();
 		$cart_hash = WC()->cart->get_cart_hash();

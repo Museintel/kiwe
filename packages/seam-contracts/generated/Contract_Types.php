@@ -44,6 +44,18 @@ final class SeamAssetImportPlanV1 {
 	public function __construct( public readonly array $value ) {}
 }
 
+final class SeamPackageIntegrityV1 {
+	public const SCHEMA = 'seam.package-integrity.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
+final class SeamStyleDependenciesV1 {
+	public const SCHEMA = 'seam.style-dependencies.v1';
+	/** @param array<string, mixed> $value */
+	public function __construct( public readonly array $value ) {}
+}
+
 final class SeamDeploymentPlanV1 {
 	public const SCHEMA = 'seam.deployment-plan.v1';
 	/** @param array<string, mixed> $value */

@@ -10,7 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class SecureTrack_Loader {
 	public function register(): void {
+		SecureTrack_Lifecycle_Service::register();
 		add_action( 'plugins_loaded', [ $this, 'boot' ], 20 );
+		// Coverage must notice an engine switch even while the optional core is unloaded.
+		add_action('updated_option',[SecureTrack_Report_Service::class,'settings_changed'],10,3);
 	}
 
 	public function boot(): void {

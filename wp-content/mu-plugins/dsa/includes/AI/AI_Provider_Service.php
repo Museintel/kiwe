@@ -38,6 +38,7 @@ final class AI_Provider_Service {
 			'baseUrlConfigured'   => '' !== $this->base_url(),
 			'maxNativeTokens'     => max( 200, absint( $settings['max_native_tokens'] ?? 3000 ) ),
 			'maxContextBytes'     => max( 10000, absint( $settings['max_native_context_bytes'] ?? 60000 ) ),
+			'allowance'           => ! empty( $settings['allow_native_generation'] ) ? ( new AI_Allowance_Service( $this->settings ) )->status() : [ 'enabled'=>false ],
 			'supportedProviders'  => $this->providers(),
 			'safety'              => [
 				'readOnly'          => true,
@@ -60,9 +61,22 @@ final class AI_Provider_Service {
 		if ( 'none' === $provider ) {
 			return $this->not_called( 'provider_none', $provider, $model );
 		}
+		if ( '' === trim( (string) ( $envelope['user'] ?? '' ) ) ) return $this->not_called( 'empty_prompt', $provider, $model );
+		if ( strlen( (string) ( $envelope['system'] ?? '' ) ) + strlen( (string) $envelope['user'] ) > self::MAX_PROMPT_BYTES ) return $this->allowance_blocked( [ 'reason'=>'prompt_budget_exceeded' ], $provider, $model );
+		$allowance = new AI_Allowance_Service( $this->settings );
+		$max_output = max( 200, min( 12000, absint( $settings['max_native_tokens'] ?? 3000 ) ) );
 		if ( 'wordpress_ai_client' === $provider ) {
 			$wp_ai = new AI_Client_Service();
-			$result = $wp_ai->generate( $envelope, max( 200, absint( $settings['max_native_tokens'] ?? 3000 ) ), $model );
+			if ( ! $wp_ai->text_generation_available() ) return $this->not_called( 'wordpress_ai_client_unavailable', $provider, $model );
+			$estimate = AI_Usage_Service::estimate( $envelope, $max_output );
+			if ( ! $estimate ) return $this->allowance_blocked( [ 'reason'=>'site_ai_token_estimate_invalid' ], $provider, $model );
+			$reservation = $allowance->reserve( $estimate );
+			if ( empty( $reservation['ok'] ) ) return $this->allowance_blocked( $reservation, $provider, $model );
+			$result = $wp_ai->generate( $envelope, $max_output, $model );
+			// WordPress's adapter returns text without certified usage/underlying attempt counts.
+			$settled = $allowance->settle( $reservation['ticket'], null );
+			if ( empty( $settled['ok'] ) ) return $this->allowance_blocked( $settled, $provider, $model, 1 );
+			$result['tokenAccounting'] = $settled;
 			$result['envelope']  = $this->public_envelope( $envelope );
 			$result['estimates'] = $this->estimates( $envelope );
 			return $result;
@@ -81,9 +95,14 @@ final class AI_Provider_Service {
 		if ( empty( $request['ok'] ) ) {
 			return $this->not_called( (string) ( $request['reason'] ?? 'request_not_prepared' ), $provider, $model, $envelope );
 		}
+		$estimate = AI_Usage_Service::estimate( $payload, $max_output );
+		if ( ! $estimate ) return $this->allowance_blocked( [ 'reason'=>'site_ai_token_estimate_invalid' ], $provider, $model );
 
 		$attempts = 0;
+		$usage = null;
 		do {
+			$reservation = $allowance->reserve( $estimate );
+			if ( empty( $reservation['ok'] ) ) return $this->allowance_blocked( $reservation, $provider, $model, $attempts );
 			++$attempts;
 			$response = wp_remote_post(
 				(string) $request['url'],
@@ -93,10 +112,17 @@ final class AI_Provider_Service {
 					'body'    => wp_json_encode( $payload ),
 				]
 			);
-			if ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) {
-				break;
+			$http_error = function_exists( 'is_wp_error' ) && is_wp_error( $response );
+			$status = ! $http_error && function_exists( 'wp_remote_retrieve_response_code' ) ? (int) wp_remote_retrieve_response_code( $response ) : 0;
+			$decoded_usage = ! $http_error && $status >= 200 && $status < 300 ? json_decode( (string) wp_remote_retrieve_body( $response ), true ) : null;
+			$usage = is_array( $decoded_usage ) && empty( $decoded_usage['error'] ) ? AI_Usage_Service::reported( $provider, $model, $decoded_usage ) : null;
+			$settled = $allowance->settle( $reservation['ticket'], $usage['total'] ?? null );
+			if ( empty( $settled['ok'] ) ) return $this->allowance_blocked( $settled, $provider, $model, $attempts );
+			if ( $http_error ) break;
+			if ( 429 === $status ) {
+				$hold = $allowance->cooldown( (string) wp_remote_retrieve_header( $response, 'retry-after' ) );
+				return $this->allowance_blocked( $hold, $provider, $model, $attempts ) + [ 'httpStatus'=>429 ];
 			}
-			$status = function_exists( 'wp_remote_retrieve_response_code' ) ? (int) wp_remote_retrieve_response_code( $response ) : 0;
 			if ( 1 === $attempts && in_array( $status, [ 500, 502, 503, 504 ], true ) ) {
 				// A single short retry absorbs provider capacity spikes without creating
 				// an unbounded shared-host request or retrying quota/auth failures.
@@ -117,6 +143,7 @@ final class AI_Provider_Service {
 					'message' => $response->get_error_message(),
 				],
 				'estimates' => $this->estimates( $envelope ),
+				'tokenAccounting' => $settled,
 				'responseMeta' => [ 'attempts' => $attempts ],
 			];
 		}
@@ -136,6 +163,8 @@ final class AI_Provider_Service {
 			'output'       => $this->trim_bytes( $text, self::MAX_OUTPUT_BYTES ),
 			'outputBytes'  => strlen( $text ),
 			'estimates'    => $this->estimates( $envelope ),
+			'usage'        => $usage,
+			'tokenAccounting' => $settled,
 			'responseMeta' => [
 				'hasJson'  => is_array( $decoded ),
 				'attempts' => $attempts,
@@ -146,6 +175,14 @@ final class AI_Provider_Service {
 		}
 
 		return $result;
+	}
+
+	private function allowance_blocked( array $reservation, string $provider, string $model, int $attempts = 0 ): array {
+		$reason = (string) ( $reservation['reason'] ?? 'site_ai_storage_unavailable' );
+		$message = 'site_ai_token_request_too_large' === $reason
+			? __( 'This request cannot fit the website token allowance. Use a smaller batch or ask your website manager to review the token limits. A zero token limit pauses generation.', 'dsa' )
+			: __( 'AI requests are paused by the website allowance or provider cooldown. Review the shared AI allowance before trying again.', 'dsa' );
+		return [ 'ok'=>false, 'called'=>$attempts > 0, 'provider'=>$provider, 'model'=>$model, 'reason'=>$reason, 'retryAt'=>(int) ( $reservation['retryAt'] ?? 0 ), 'responseMeta'=>[ 'attempts'=>$attempts ], 'error'=>[ 'code'=>$reason, 'message'=>$message ] ];
 	}
 
 	public function build_prompt( array $context, string $task, string $mode = 'combined' ): array {
@@ -216,6 +253,7 @@ final class AI_Provider_Service {
 					'input' => $system . "\n\n" . $user,
 					'store' => false,
 					'generation_config' => [
+						'max_output_tokens' => $max_tokens,
 						'thinking_level' => in_array( (string) ( $envelope['thinkingLevel'] ?? '' ), [ 'low','medium','high' ], true ) ? (string) $envelope['thinkingLevel'] : 'low',
 					],
 				];

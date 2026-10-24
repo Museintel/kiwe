@@ -1,0 +1,432 @@
+{
+  "contact": {
+    "title": "Contact & location",
+    "fields": [
+      {
+        "path": "contact.phone",
+        "label": "Public phone",
+        "type": "tel"
+      },
+      {
+        "path": "contact.email",
+        "label": "Public email",
+        "type": "email"
+      },
+      {
+        "path": "contact.whatsappSameAsPhone",
+        "label": "Use this phone for WhatsApp",
+        "type": "boolean"
+      },
+      {
+        "path": "contact.whatsapp",
+        "label": "WhatsApp number",
+        "type": "tel",
+        "hideWhen": {
+          "path": "contact.whatsappSameAsPhone",
+          "equals": true
+        }
+      },
+      {
+        "path": "localization.timezone",
+        "label": "Timezone",
+        "type": "text"
+      },
+      {
+        "path": "contact.address.line1",
+        "label": "Street address",
+        "type": "text"
+      },
+      {
+        "path": "contact.address.line2",
+        "label": "Address continued",
+        "type": "text"
+      },
+      {
+        "path": "contact.address.city",
+        "label": "City",
+        "type": "text"
+      },
+      {
+        "path": "contact.address.state",
+        "label": "State or region",
+        "type": "text"
+      },
+      {
+        "path": "contact.address.postcode",
+        "label": "Postal code",
+        "type": "text"
+      },
+      {
+        "path": "contact.address.country",
+        "label": "Country code",
+        "type": "text"
+      },
+      {
+        "path": "contact.socialLinks.facebook",
+        "label": "Your Facebook",
+        "type": "url"
+      },
+      {
+        "path": "contact.socialLinks.instagram",
+        "label": "Your Instagram",
+        "type": "url"
+      },
+      {
+        "path": "contact.socialLinks.x",
+        "label": "Your X",
+        "type": "url"
+      },
+      {
+        "path": "contact.socialLinks.youtube",
+        "label": "Your YouTube",
+        "type": "url"
+      },
+      {
+        "path": "contact.socialLinks.pinterest",
+        "label": "Your Pinterest",
+        "type": "url"
+      },
+      {
+        "path": "contact.socialLinks.linkedin",
+        "label": "Your LinkedIn",
+        "type": "url"
+      }
+    ]
+  },
+  "story": {
+    "title": "Story & audience",
+    "fields": [
+      {
+        "path": "identity.description",
+        "label": "What you do",
+        "type": "textarea"
+      },
+      {
+        "path": "audience.primary",
+        "label": "Who you help",
+        "type": "textarea"
+      },
+      {
+        "path": "audience.locations",
+        "label": "Where they are",
+        "type": "textarea"
+      },
+      {
+        "path": "audience.needs",
+        "label": "What they need",
+        "type": "textarea"
+      },
+      {
+        "path": "seo.primaryGoal",
+        "label": "SEO goal",
+        "type": "text",
+        "options": {
+          "": "Not decided",
+          "buy": "Buy online",
+          "contact": "Contact you",
+          "book": "Make a booking",
+          "visit": "Visit you",
+          "subscribe": "Subscribe",
+          "donate": "Donate",
+          "read": "Read or learn"
+        },
+        "help": "Choose the result your website should support. Kiwe SEO, AI suggestions and the shared design brief follow this saved goal."
+      },
+      {
+        "path": "about.story",
+        "label": "Your story",
+        "type": "textarea"
+      },
+      {
+        "path": "about.mission",
+        "label": "Your mission",
+        "type": "textarea"
+      },
+      {
+        "path": "about.vision",
+        "label": "Your vision",
+        "type": "textarea"
+      },
+      {
+        "path": "about.values",
+        "label": "Your values",
+        "type": "textarea"
+      },
+      {
+        "path": "about.usp",
+        "label": "What makes you different",
+        "type": "textarea"
+      },
+      {
+        "path": "seo.legalName",
+        "label": "Legal business name",
+        "type": "textarea"
+      },
+      {
+        "path": "seo.foundedYear",
+        "label": "Year established",
+        "type": "number"
+      },
+      {
+        "path": "seo.searchIntent",
+        "label": "What customers search for",
+        "type": "textarea"
+      },
+      {
+        "path": "seo.proofPoints",
+        "label": "Facts that build trust",
+        "type": "textarea"
+      },
+      {
+        "path": "seo.homepageDescription",
+        "label": "Homepage search description",
+        "type": "textarea"
+      },
+      {
+        "path": "about.founder.userId",
+        "label": "Founder or principal",
+        "type": "person"
+      },
+      {
+        "path": "about.founder.name",
+        "label": "Founder name",
+        "type": "text"
+      },
+      {
+        "path": "about.founder.title",
+        "label": "Founder title",
+        "type": "text"
+      },
+      {
+        "path": "about.founder.bio",
+        "label": "Founder biography",
+        "type": "textarea"
+      },
+      {
+        "path": "about.founder.linkedin",
+        "label": "Founder LinkedIn",
+        "type": "url"
+      },
+      {
+        "path": "about.founder.imageId",
+        "label": "Founder portrait",
+        "type": "image"
+      }
+    ]
+  },
+  "brand": {
+    "title": "Brand style",
+    "fields": [
+      {
+        "path": "brand.tone",
+        "label": "Your visual mood",
+        "type": "text",
+        "options": {
+          "": "Keep open",
+          "pastel": "Soft pastel",
+          "vibrant": "Bright & energetic",
+          "muted": "Calm & muted",
+          "natural": "Earthy & natural",
+          "dark": "Rich & dark",
+          "light": "Fresh & light",
+          "luxury": "Elegant & premium",
+          "playful": "Playful",
+          "minimal": "Minimal"
+        }
+      },
+      {
+        "path": "brand.colors",
+        "label": "Your palette",
+        "type": "palette"
+      },
+      {
+        "path": "brand.notes",
+        "label": "Keep, avoid or include",
+        "type": "textarea"
+      }
+    ]
+  },
+  "website-plan": {
+    "title": "Website plan",
+    "fields": [
+      {
+        "path": "contentPlan.showBlogRailOnHome",
+        "label": "Feature recent articles",
+        "type": "boolean"
+      },
+      {
+        "path": "contentPlan.highlightBestsellers",
+        "label": "Highlight bestsellers",
+        "type": "boolean"
+      }
+    ]
+  },
+  "services": {
+    "title": "Services",
+    "fields": [
+      {
+        "path": "services.items",
+        "label": "Your services",
+        "type": "services"
+      }
+    ]
+  },
+  "store": {
+    "title": "Store setup",
+    "fields": [
+      {
+        "path": "commerce.enabled",
+        "label": "Sell products on this website",
+        "type": "boolean"
+      },
+      {
+        "path": "commerce.expectedProductCount",
+        "label": "Expected product count",
+        "type": "number"
+      },
+      {
+        "path": "commerce.priceDecimals",
+        "label": "Price decimal places",
+        "type": "number"
+      },
+      {
+        "path": "commerce.typicalShippingCharge",
+        "label": "Shipping charge for design previews",
+        "type": "number"
+      },
+      {
+        "path": "commerce.currency",
+        "label": "Currency code",
+        "type": "text"
+      },
+      {
+        "path": "commerce.currencyPosition",
+        "label": "Currency position",
+        "type": "text",
+        "options": {
+          "left": "Before price",
+          "right": "After price",
+          "left_space": "Before price with space",
+          "right_space": "After price with space"
+        }
+      },
+      {
+        "path": "commerce.weightUnit",
+        "label": "Weight unit",
+        "type": "text",
+        "options": {
+          "kg": "Kilograms",
+          "g": "Grams",
+          "lbs": "Pounds",
+          "oz": "Ounces"
+        }
+      },
+      {
+        "path": "commerce.dimensionUnit",
+        "label": "Dimension unit",
+        "type": "text",
+        "options": {
+          "m": "Metres",
+          "cm": "Centimetres",
+          "mm": "Millimetres",
+          "in": "Inches",
+          "yd": "Yards"
+        }
+      },
+      {
+        "path": "commerce.expectedPriceRange.min",
+        "label": "Lowest expected price",
+        "type": "number"
+      },
+      {
+        "path": "commerce.expectedPriceRange.max",
+        "label": "Highest expected price",
+        "type": "number"
+      },
+      {
+        "path": "commerce.shippingModel",
+        "label": "Shipping plan",
+        "type": "text",
+        "options": {
+          "": "Not decided",
+          "free": "Free",
+          "flat": "Flat charge",
+          "calculated": "Calculated by location",
+          "pickup": "Pickup",
+          "mixed": "Mixed methods"
+        }
+      },
+      {
+        "path": "commerce.sellingLocationMode",
+        "label": "Sell to",
+        "type": "text",
+        "options": {
+          "all": "All countries",
+          "all_except": "All except selected",
+          "specific": "Selected countries"
+        }
+      },
+      {
+        "path": "commerce.shippingLocationMode",
+        "label": "Ship to",
+        "type": "text",
+        "options": {
+          "": "Selling countries",
+          "all": "All countries",
+          "specific": "Selected countries",
+          "disabled": "Shipping disabled"
+        }
+      },
+      {
+        "path": "commerce.sellingCountries",
+        "label": "Selling countries",
+        "type": "countries"
+      },
+      {
+        "path": "commerce.excludedSellingCountries",
+        "label": "Excluded countries",
+        "type": "countries"
+      },
+      {
+        "path": "commerce.shippingCountries",
+        "label": "Shipping countries",
+        "type": "countries"
+      },
+      {
+        "path": "commerce.hasBundles",
+        "label": "Offer bundles",
+        "type": "boolean"
+      },
+      {
+        "path": "regulatory.fssaiLicense",
+        "label": "FSSAI licence",
+        "type": "text"
+      },
+      {
+        "path": "regulatory.gstNumber",
+        "label": "GST number",
+        "type": "text"
+      },
+      {
+        "path": "regulatory.manufacturingAddress",
+        "label": "Manufacturing address",
+        "type": "textarea"
+      },
+      {
+        "path": "regulatory.showFssaiOnProducts",
+        "label": "Show FSSAI on products",
+        "type": "boolean"
+      },
+      {
+        "path": "regulatory.showGstOnProducts",
+        "label": "Show GST on products",
+        "type": "boolean"
+      },
+      {
+        "path": "regulatory.showManufacturingAddress",
+        "label": "Show manufacturing address",
+        "type": "boolean"
+      }
+    ]
+  }
+}

@@ -16,7 +16,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Product_Context_Service {
 	public const META_NUTRITION_IMAGE_ID = 'kiwe_nutrition_image_id';
 
+	/** Read-only public record boundary, including a variation's native parent. */
+	public static function public_product( int $id ) {
+		if ( $id < 1 || ! function_exists( 'wc_get_product' ) ) return null;
+		$record = get_post( $id );
+		if ( ! $record || ! in_array( $record->post_type, [ 'product', 'product_variation' ], true ) || 'publish' !== $record->post_status || ! empty( $record->post_password ) ) return null;
+		$product = wc_get_product( $id );
+		if ( ! $product || ! $product->is_visible() ) return null;
+		if ( $product->is_type( 'variation' ) ) {
+			$parent = $product->get_parent_id();
+			$parent_record = $parent ? get_post($parent) : null;
+			if ( ! $parent_record || 'product' !== $parent_record->post_type || $parent === $id || ! self::public_product( $parent ) ) return null;
+		}
+		return $product;
+	}
+
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_action( 'init', [ $this, 'register_meta' ], 20 );
 		add_action( 'woocommerce_product_options_general_product_data', [ $this, 'render_fields' ], 40 );
 		add_action( 'woocommerce_process_product_meta', [ $this, 'save_fields' ], 40 );
@@ -58,7 +74,7 @@ final class Product_Context_Service {
 	}
 
 	public function save_fields( int $product_id ): void {
-		if ( ! current_user_can( 'edit_post', $product_id ) ) {
+		if ( ! array_key_exists( self::META_NUTRITION_IMAGE_ID, $_POST ) || ! current_user_can( 'edit_post', $product_id ) ) {
 			return;
 		}
 
@@ -74,7 +90,7 @@ final class Product_Context_Service {
 			return;
 		}
 		wp_enqueue_media();
-		wp_enqueue_script( 'kiwe-product-context', DSA_URL . 'assets/js/product-context.js', [], DSA_VERSION, true );
+		wp_enqueue_script( 'kiwe-product-context', \DSA\Apps\Asset_Locator::url('assets/js/product-context.js'), [], \DSA\Apps\Asset_Locator::version('assets/js/product-context.js'), true );
 	}
 
 	public static function nutrition_image( int $product_id ): array {

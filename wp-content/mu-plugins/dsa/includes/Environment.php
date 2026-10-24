@@ -7,6 +7,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Environment {
+	/** Presentation request only: never authenticates an account or changes feature settings. */
+	public static function is_auth_surface_request(): bool {
+		return isset( $_GET['kiwe-auth'] ) && is_string( $_GET['kiwe-auth'] ) && '1' === $_GET['kiwe-auth']
+			&& in_array( $_SERVER['REQUEST_METHOD'] ?? 'GET', [ 'GET', 'HEAD' ], true );
+	}
+
+	/** An explicit account entry needs the Profile sheet even in clean-conversion mode. */
+	public static function is_profile_surface_request(): bool {
+		return isset( $_GET['kiwe-screen'] ) && is_string( $_GET['kiwe-screen'] ) && 'profile' === $_GET['kiwe-screen']
+			&& in_array( $_SERVER['REQUEST_METHOD'] ?? 'GET', [ 'GET', 'HEAD' ], true );
+	}
+
+	public static function is_private_surface_request(): bool {
+		return self::is_auth_surface_request() || self::is_profile_surface_request();
+	}
+
+	public static function allows_surface_registration( array $settings ): bool {
+		$diagnostics = is_array( $settings['diagnostics'] ?? null ) ? $settings['diagnostics'] : [];
+		if ( empty( $diagnostics['raw_convert_test_mode'] ) || ! empty( $diagnostics['accessibility_preview_mode'] ) ) return true;
+		// Clean conversion pages stay bare; an explicit login still needs its existing screen and assets.
+		return ! empty( $settings['enabled'] ) && ! empty( $settings['phonekey']['enabled'] ) && self::is_private_surface_request();
+	}
+
 	public static function should_render_frontend(): bool {
 		if ( is_admin() || wp_doing_ajax() || wp_doing_cron() || self::is_non_document_request() ) {
 			return false;

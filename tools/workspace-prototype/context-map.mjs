@@ -1,0 +1,21 @@
+// Presentation inventory only. These names do not define production option keys.
+// Each group has one editing home; the connected implementation must use native writers.
+export const contextGroups = [
+  { id: 'identity', label: 'Identity', description: 'Your name, logos and browser icon', fields: ['Website name', 'Tagline', 'Main logo', 'Logo for dark backgrounds', 'Site icon', 'Website type', 'Industry'], owner: 'WordPress site options + existing Kiwe identity', status: 'Logo and identity interaction demonstrated' },
+  { id: 'story', label: 'Story & audience', description: 'What you do and who you do it for', fields: ['Business description', 'Story', 'Mission', 'Vision', 'Values', 'What makes you different', 'Audience', 'Locations served', 'Business goals', 'Founder evidence'], owner: 'Existing Design Context profile; selected native people', status: 'Existing native fields; React task integration pending' },
+  { id: 'contact', label: 'Contact & location', description: 'All the ways customers reach you', fields: ['Public phone', 'Public email', 'WhatsApp', 'Social links', 'Address', 'Timezone', 'Location display choices'], owner: 'Existing Kiwe public identity; Woo address when installed; WordPress timezone', status: 'Existing native fields; React task integration pending' },
+  { id: 'style', label: 'Brand style', description: 'Give your business a familiar feel', fields: ['Brand colors', 'Visual mood', 'Design preferences', 'Reference websites', 'Accessibility-derived colors'], owner: 'Design Context preferences → existing SEAM token authority', status: 'Existing native fields; React task integration pending' },
+  { id: 'plan', label: 'Pages & website plan', description: 'Give every part of your site a purpose', fields: ['Existing pages', 'Page names', 'Page briefs', 'Primary and secondary pages', 'Goals and calls to action', 'Required sections', 'Native page editor integration'], owner: 'Native WordPress pages + existing page-intent metadata', status: 'Native task services exist; complete editor integration pending' },
+  { id: 'search', label: 'Search & sharing', description: 'Help people understand and discover your site', fields: ['Site indexing', 'Business identity in structured data', 'Site title and description rules', 'Default sharing image', 'Sitemap state', 'Post/page/product search appearance', 'Media descriptions', 'Category archive appearance', 'SEO goals', 'AI assistance within the site allowance'], owner: 'Existing Kiwe SEO/native WordPress/active SEO adapter', status: 'Mixed existing and planned controls; per-object and provider acceptance remain' },
+  { id: 'store', label: 'Store setup', description: 'Sell, deliver and calculate consistently', fields: ['Currency and formatting', 'Selling countries', 'Shipping destinations', 'Shipping zones and methods', 'Tax enablement', 'Prices including tax', 'Tax rates/classes', 'Units', 'Store address → Contact', 'Applicable business registrations', 'Payment setup and order permissions'], owner: 'WooCommerce options, shipping and tax APIs; existing Kiwe additional facts', status: 'Basic native settings exist; zones/rates/payment and role scope need explicit adapters' },
+  { id: 'services', label: 'Services', description: 'Show what your business can do', fields: ['Services enabled', 'Service names and descriptions', 'Service categories', 'Selected images', 'Supported prices and availability', 'Designer-configured native record binding'], owner: 'Configured native post type/taxonomy/permitted fields; no second service catalog', status: 'Optional native binding exists; React task and binding acceptance pending' },
+];
+
+export const dailyDestinations = [
+  { id: 'posts', label: 'Posts', description: 'Write, categorize and manage search appearance' },
+  { id: 'products', label: 'Products', description: 'Names, media, stock, categories and search appearance' },
+  { id: 'media', label: 'Media', description: 'Manage files and mark Design Context' },
+  { id: 'team', label: 'People', description: 'Choose public team members and their job titles' },
+  { id: 'navigation', label: 'Navigation', description: 'Menus and links to their original pages and categories' },
+  { id: 'activity', label: 'Activity', description: 'Permitted updates and daily actions' },
+];

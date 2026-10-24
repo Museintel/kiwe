@@ -1,8 +1,25 @@
+16 October — Saved wishlist/bookmark attributes own a visible brand-colour state on their native SVG/font icons, alongside the shared pressed state. Native author colours return when unsaved; no extra card CSS or state class is required from the designer. Dock icon visibility remains a site presentation choice and must not disable its header launcher or destination. [RC372 scope](SAVED-ICON-STATE-RC372-2026-10-16.md).
+
+14 October RC358: All role-eligible updates are core Kiwe inbox behavior. Preferences expose one optional-delivery topic list and available delivery methods; inboxTopics is a derived compatibility projection and old opt-outs cannot disable it. Preserve external consent, personal recipients and native permission boundaries. Saved carts belong in Daily with a private shopper/Unknown title, separate native amount and semantic stacked cards. One conditional first-abandonment event feeds the existing badge and admin queue; existing signed visit receipts acknowledge captured arrivals. No GET transition, new table or polling loop. [Accepted behavior and limits](SAVED-CART-INBOX-RC358-2026-10-14.md), [decision](decisions/2026-10-14-core-inbox-and-daily-saved-carts.md).
+
+14 October RC357: One mounted Sheet retains its chrome/scroller across same-panel updates and verification steps. Native Woo owns checkout fields, validation, destination and amount policy; inactive shipping fields are hidden/disabled and draft writes cannot apply stale results. Private role-scoped notification catalogs isolate local actors and guard delayed/lazy responses. RC358 supersedes the editable inbox choices; only optional external delivery preserves saved opt-outs. [Accepted scope and limits](CHECKOUT-PREFERENCES-RC357-2026-10-14.md), [shared contract decision](decisions/2026-10-14-shared-dsa-drafts-and-private-preferences.md).
+
+**12 October — native Cart and loop controls:** The founder requests stable mobile Cart quantity updates, working Kiwe plus-only controls in native Bricks product loops, no page overflow, and an installed/latest Bricks and global AJAX check. Preserve current authoring edits and use the existing WordPress/Woo and shared Sheet owners. [Decision](decisions/2026-10-12-cart-refresh-and-bricks-loop-controls.md), [accepted RC334](CART-AJAX-RC334-2026-10-12.md).
+
 # DSA Surface UI Contract
 
 **Contract:** `kiwe.surface-ui.v2`  
 **Runtime marker:** `[data-dsa-ui-contract="2"]`  
 **Canonical implementation:** `wp-content/mu-plugins/dsa/includes/Public_Endpoint/Surface_Renderer.php`, `assets/js/surface.js`, and `assets/css/surface.css`
+
+## Links and action continuity (RC331)
+
+Attributed Search and Cart controls outside the Dock use the shared Surface lifecycle. A cosmetic search form/input opens Search with one focus stop and no header typing/submission. Available Cart launchers receive the Dock's existing live quantity and accessible count; zero hides the badge. Late-loaded nodes use the existing observer, without polling or developer badge markup. [RC335 launcher decision](decisions/2026-10-12-authored-dsa-launchers.md).
+
+- Dock uses an 8px ideal / 4px minimum gap through shared responsive geometry. Fitting controls to the available viewport still takes priority.
+- Social cards use a 192px minimum independent of the site root font scale. Social icons and names have separate grid tracks. Missing-link actions sit below the name; public visitors see configured links only. Normal interface labels wrap at words.
+- Authorized Administrators and super admins use Add link or Manage links to enter the existing Contact & location editor. A recognized link query opens that social URL field; it grants no access.
+- Checkout defaults say Place order in both entry and return states. Woo remains the final order and payment owner.
 
 ## Icon And Dock Contract (`0.5.2`)
 

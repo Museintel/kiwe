@@ -1,0 +1,38 @@
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto'),cp=require('node:child_process');
+const{pathToFileURL}=require('node:url');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'kiwe-download-protocol-'));
+const names=['recovery.kiwebackup','observation.kiwesource','previous-kiwe.kiwefiles','previous-kiwe-manifest.json'];
+const sizes=[33554448,3,5,7],members=Object.fromEntries(names.map((n,i)=>[n,{bytes:sizes[i],sha256:crypto.createHash('sha256').update(Buffer.alloc(sizes[i],97+i)).digest('hex')}]));
+const preload=path.join(root,'fake.mjs');
+fs.writeFileSync(preload,`import fs from 'node:fs';const cfg=JSON.parse(fs.readFileSync(new URL('./mock.json',import.meta.url),'utf8'));globalThis.fetch=async(url,request)=>{const name=new URL(url).searchParams.get('member'),index=cfg.names.indexOf(name),match=/^bytes=(\\d+)-(\\d+)$/.exec(request.headers.Range);if(index<0||!match||request.redirect!=='error'||request.headers['X-Kiwe-Qualification']!=='0'.repeat(64))throw Error('Unexpected synthetic request');const start=Number(match[1]),end=Number(match[2]);await new Promise(r=>setTimeout(r,start===3?30:1));const wrong=cfg.mode==='header'&&start>3;return{status:206,headers:new Map([['content-range',wrong?'wrong':\`bytes \${start}-\${end}/\${cfg.members[name].bytes}\`],['etag','"'+cfg.members[name].sha256+'"']]),arrayBuffer:async()=>Buffer.alloc(end-start+1,cfg.mode==='hash'&&start>3?99:97+index)};};`);
+let checks=0;
+try{
+ for(const mode of ['valid','header','hash']){
+  const dir=path.join(root,mode);fs.mkdirSync(dir,{mode:0o700});fs.writeFileSync(path.join(dir,names[0]+'.partial'),Buffer.alloc(3,97),{flag:'wx',mode:0o600});
+  fs.writeFileSync(path.join(root,'mock.json'),JSON.stringify({mode,names,members}));
+  const cfg={url:'https://qualification.invalid/kiwe-transfer-fixture.php',domain:'qualification.invalid',directory:dir,token:'0'.repeat(64),members,concurrency:2};
+  const r=cp.spawnSync(process.execPath,['--import',pathToFileURL(preload).href,path.join(__dirname,'private-encrypted-download.mjs')],{input:JSON.stringify(cfg)+'\n',encoding:'utf8',timeout:30000,maxBuffer:1048576});
+  if(mode==='valid'){
+   if(r.status!==0||r.stderr)throw Error('Checked concurrent transfer refused ('+r.status+'): '+r.stdout+' '+r.stderr);const proof=JSON.parse(fs.readFileSync(path.join(dir,'saved-transfer-proof.json'),'utf8'));if(!proof.passed||Object.keys(proof.members).length!==4)throw Error('Complete saved proof required');
+   for(const n of names){const b=fs.readFileSync(path.join(dir,n));if(b.length!==members[n].bytes||crypto.createHash('sha256').update(b).digest('hex')!==members[n].sha256)throw Error('Exact resumed range order/hash required');++checks;}++checks;
+  }else{
+   if(r.status===0||fs.existsSync(path.join(dir,names[0]))||fs.existsSync(path.join(dir,'saved-transfer-proof.json')))throw Error('Unaccepted bytes were promoted');++checks;
+   if(mode==='header'&&fs.statSync(path.join(dir,names[0]+'.partial')).size!==3)throw Error('Failed concurrent batch must retain its exact original prefix');if(mode==='header')++checks;
+  }
+ }
+ const profiles={'native-source':['database.kiwe','files.kiwe','diagnostics.kiwe'],'previous-code':['previous-kiwe.kiwefiles','previous-kiwe-manifest.json']};
+ for(const [memberProfile,profileNames]of Object.entries(profiles)){
+  const dir=path.join(root,memberProfile);fs.mkdirSync(dir,{mode:0o700});const profileMembers=Object.fromEntries(profileNames.map((n,i)=>[n,{bytes:i===1?131089:7,sha256:crypto.createHash('sha256').update(Buffer.alloc(i===1?131089:7,97+i)).digest('hex')}]));fs.writeFileSync(path.join(root,'mock.json'),JSON.stringify({mode:'valid',names:profileNames,members:profileMembers}));
+  const cfg={url:'https://qualification.invalid/kiwe-transfer-fixture.php',domain:'qualification.invalid',directory:dir,token:'0'.repeat(64),memberProfile,members:profileMembers,rangeBytes:65536,concurrency:2,transferBudget:{path:path.join(dir,'budget.private.json').replaceAll(path.sep,'/'),maxBytes:500000}};
+  const run=()=>cp.spawnSync(process.execPath,['--import',pathToFileURL(preload).href,path.join(__dirname,'private-encrypted-download.mjs')],{input:JSON.stringify(cfg)+'\n',encoding:'utf8',timeout:30000,maxBuffer:1048576});let r=run();if(r.status!==0||r.stderr)throw Error('Reviewed member profile transfer failed');const budget=JSON.parse(fs.readFileSync(cfg.transferBudget.path));if(budget.reservedBytes!==Object.values(profileMembers).reduce((s,m)=>s+m.bytes,0)||fs.existsSync(cfg.transferBudget.path+'.lock'))throw Error('Exact durable request reservations and lease retirement required');checks+=2;
+  const proof=fs.readFileSync(path.join(dir,'saved-transfer-proof.json'));r=run();if(r.status!==0||r.stderr||JSON.parse(fs.readFileSync(cfg.transferBudget.path)).reservedBytes!==budget.reservedBytes||!fs.readFileSync(path.join(dir,'saved-transfer-proof.json')).equals(proof))throw Error('Completed receipt replay must use no network or extra allowance');checks++;
+  cfg.memberProfile='unknown';r=run();if(r.status===0)throw Error('Unknown member profile accepted');checks++;
+ }
+ {
+  const dir=path.join(root,'capped');fs.mkdirSync(dir,{mode:0o700});const profileNames=profiles['native-source'],profileMembers=Object.fromEntries(profileNames.map((n,i)=>[n,{bytes:i===1?131089:7,sha256:crypto.createHash('sha256').update(Buffer.alloc(i===1?131089:7,97+i)).digest('hex')}]));fs.writeFileSync(path.join(root,'mock.json'),JSON.stringify({mode:'valid',names:profileNames,members:profileMembers}));const cfg={url:'https://qualification.invalid/kiwe-transfer-fixture.php',domain:'qualification.invalid',directory:dir,token:'0'.repeat(64),memberProfile:'native-source',members:profileMembers,rangeBytes:65536,concurrency:2,transferBudget:{path:path.join(dir,'budget.private.json'),maxBytes:60000}};
+  const r=cp.spawnSync(process.execPath,['--import',pathToFileURL(preload).href,path.join(__dirname,'private-encrypted-download.mjs')],{input:JSON.stringify(cfg)+'\n',encoding:'utf8',timeout:30000,maxBuffer:1048576});const budget=JSON.parse(fs.readFileSync(cfg.transferBudget.path));if(r.status===0||budget.reservedBytes!==7||fs.statSync(path.join(dir,'files.kiwe.partial')).size!==0||fs.existsSync(cfg.transferBudget.path+'.lock'))throw Error('Allowance refusal must retain accepted member and exact remaining prefix');checks++;
+  fs.writeFileSync(cfg.transferBudget.path+'.lock','foreign lease',{flag:'wx'});const lock=fs.readFileSync(cfg.transferBudget.path+'.lock');const blocked=cp.spawnSync(process.execPath,['--import',pathToFileURL(preload).href,path.join(__dirname,'private-encrypted-download.mjs')],{input:JSON.stringify(cfg)+'\n',encoding:'utf8',timeout:30000,maxBuffer:1048576});if(blocked.status===0||!fs.readFileSync(cfg.transferBudget.path+'.lock').equals(lock)||JSON.parse(fs.readFileSync(cfg.transferBudget.path)).reservedBytes!==7)throw Error('Concurrent or foreign transfer lease must not be removed or spent');checks++;
+ }
+ const resolved=fs.realpathSync(root),parent=fs.realpathSync(os.tmpdir());if(!resolved.startsWith(parent+path.sep)||!/^kiwe-download-protocol-/.test(path.basename(resolved)))throw Error('Exact owned fixture cleanup scope required');
+ fs.rmSync(resolved,{recursive:true,force:false});console.log(JSON.stringify({schema:'kiwe.private-encrypted-download-fixture.v1',passed:true,cleanup:true,checks,checkedChildExits:true,reversedResponseOrder:true,invalidHeadersRefused:true,wrongFinalHashRefused:true,contiguousResumePreserved:true,syntheticOnly:true,posixPermissionsQualified:process.platform!=='win32'}));
+}catch(e){console.error('Private download protocol fixture failed: '+e.message);process.exitCode=1;}

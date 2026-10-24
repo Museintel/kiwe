@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 const fs = require('node:fs');
+const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..', '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const onboarding = read('wp-content/mu-plugins/dsa/includes/Onboarding/Onboarding_Service.php');
 const profile = read('wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Profile_Service.php');
-const seo = read('wp-content/mu-plugins/dsa/includes/Onboarding/SEO_Context_Service.php');
+const score = read('wp-content/mu-plugins/dsa/includes/SEO/SEO_Score_Service.php');
+const seo = (read('wp-content/mu-plugins/dsa/includes/Onboarding/SEO_Context_Service.php') + read('wp-content/mu-plugins/dsa/includes/SEO/SEO_Output_Service.php'));
+const sitemap = read('wp-content/mu-plugins/dsa/includes/SEO/SEO_Sitemap_Service.php');
+const seoDefaults = read('wp-content/mu-plugins/dsa/includes/SEO/SEO_Defaults_Service.php');
+const seoApp = read('wp-content/mu-plugins/dsa/includes/Apps/SEO_App_Service.php');
+const seoDefaultsModel = read('wp-content/mu-plugins/dsa/includes/Onboarding/Search_Defaults_Model.php');
+const schemaOwner = read('wp-content/mu-plugins/dsa/includes/Schema/Schema_Geo_Service.php');
 const plugin = read('wp-content/mu-plugins/dsa/includes/Plugin.php');
 const graph = read('wp-content/mu-plugins/dsa/includes/Site_Graph/Design_Context_Service.php');
 const bricks = read('wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php');
@@ -26,22 +33,22 @@ const users = read('wp-content/mu-plugins/dsa/includes/Onboarding/User_Profile_S
 const checks = [];
 const check = (name, pass) => checks.push({ name, pass: Boolean(pass) });
 check('fresh installs open a resumable owner journey without enabling optional Kiwe runtimes', onboarding.includes("'sitegraph_only_v1'") && onboarding.includes('maybe_open_fresh_install') && plugin.includes('$this->onboarding->register()'));
-check('owner journey uses conditional Store, standalone Services and native media', onboarding.includes('commerce_available()') && onboarding.includes('Enable services') && onboarding.includes('Open Media Library') && !onboarding.includes('data-kiwe-resource-select') && !js.includes('buildResourceRow'));
+check('owner journey uses conditional Store, standalone Services and native media', onboarding.includes('commerce_available()') && onboarding.includes('Enable services') && onboarding.includes('admin.php?page=kiwe-context-library') && !onboarding.includes('data-kiwe-resource-select') && !js.includes('buildResourceRow'));
 check('required identity stays server enforced', profile.includes('Site name is required') && profile.includes('A site logo is required') && profile.includes('A square site icon is required') && profile.includes('A public phone number is required') && profile.includes('A valid public email is required'));
 check('canonical WordPress and Kiwe identity options receive owner values', profile.includes("update_option( 'blogname'") && profile.includes("update_option( 'blogdescription'") && profile.includes('set_theme_mod( \'custom_logo\'') && profile.includes('OPTION_STORE_PHONE') && profile.includes("update_option( 'site_icon'"));
 check('WooCommerce remains price shipping-zone and product authority', profile.includes("update_option( 'woocommerce_currency'") && onboarding.includes('does not invent tax rates or overwrite shipping zones') && !profile.includes('WC_Shipping_Zone') && !profile.includes("'post_type'=>'product'"));
 check('page inventory is native WordPress with no duplicate planner', profile.includes('PAGE_VISIBILITY_META') && onboarding.includes('Open WordPress Pages') && !onboarding.includes('name="context[contentPlan][existingPages]') && !profile.includes("'post_type'=>'page'"));
-check('secondary pages are noindex and excluded from native XML sitemaps', seo.includes('wp_robots') && seo.includes('wp_sitemaps_posts_query_args') && seo.includes("'secondary'") && seo.includes("'noindex'"));
-check('native robots discovery advertises the WordPress sitemap without replacing it', seo.includes("add_filter( 'robots_txt'") && seo.includes("home_url( '/wp-sitemap.xml' )") && seo.includes('wp_sitemaps_get_server') && seo.includes('preg_quote'));
-check('Kiwe owns deterministic Open Graph and Twitter metadata', ['og:title','og:description','og:url','og:image','twitter:card','twitter:title','twitter:description'].every((tag) => seo.includes(tag)) && seo.includes('summary_large_image'));
+check('secondary pages are noindex and excluded from native XML sitemaps', seo.includes('wp_robots') && sitemap.includes('wp_sitemaps_posts_query_args') && seo.includes("'secondary'") && seo.includes("'noindex'"));
+check('native robots discovery advertises the WordPress sitemap without replacing it', sitemap.includes("add_filter( 'robots_txt'") && sitemap.includes("'/wp-sitemap.xml'") && sitemap.includes('wp_sitemaps_get_server') && sitemap.includes('preg_quote'));
+check('Kiwe owns deterministic Open Graph and Twitter metadata', ['og:title','og:description','og:url','og:image','twitter:card','twitter:title','twitter:description'].every((tag) => seo.includes(tag)) && seoDefaultsModel.includes('summary_large_image') && seoDefaults.includes('SEO_Defaults_Model::'));
 check('Kiwe finalizes one social metadata owner without touching non-social head output', seo.includes('begin_head_capture') && seo.includes('end_head_capture') && seo.includes('filter_social_metadata_output') && seo.includes('data-kiwe-seo="social"') && seo.includes('(?:og:|twitter:)'));
 check('Kiwe suppresses Jetpack social tags only while Kiwe owns metadata', seo.includes('jetpack_enable_open_graph') && seo.includes('jetpack_disable_twitter_cards') && seo.includes('jetpack_open_graph') && seo.includes('jetpack_twitter_cards'));
 check('late Jetpack callbacks are removed again immediately before head rendering', seo.includes("add_action( 'wp_head', [ $this, 'suppress_jetpack_social_metadata' ], 0 )") && seo.includes('remove_action') && seo.includes('jetpack_og_tags') && seo.includes('web_stories_story_head'));
-check('public sites reclaim native sitemaps with a one-time soft rewrite refresh', seo.includes('wp_sitemaps_enabled') && seo.includes('native_sitemaps_enabled') && seo.includes('blog_public') && seo.includes('flush_rewrite_rules( false )') && seo.includes('kiwe_native_sitemap_rewrite_v1'));
-check('AI-approved descriptions lead while native excerpts provide a safe fallback', seo.includes('SEO_Refinement_Service::singular_description()') && seo.includes('has_excerpt( $post_id )') && seo.includes('wp_trim_words'));
+check('public native sitemaps yield to active providers and rewrites refresh only in authorized admin maintenance', sitemap.includes('wp_sitemaps_enabled') && sitemap.includes('SEO_Defaults_Service::enabled()') && seo.includes("add_action( 'admin_init', [ $this, 'ensure_sitemap_rewrite' ]") && seo.includes('flush_rewrite_rules( false )') && seo.includes('kiwe_native_sitemap_rewrite_v1'));
+check('approved descriptions lead while native excerpts provide a safe fallback', seo.includes('SEO_Refinement_Service::singular_description()') && seo.includes('$post->post_excerpt') && seo.includes('wp_trim_words'));
 check('homepage metadata safely falls back without requiring AI acceptance', seo.includes("$context['seo']['homepageDescription']") && seo.includes("$context['identity']['description']") && seo.includes("get_bloginfo( 'description' )"));
 check('verified owner address reaches native organization schema', ['PostalAddress','streetAddress','addressLocality','addressRegion','postalCode','addressCountry'].every((field) => seo.includes(field)));
-check('native meta and organization schema yield to dedicated SEO plugins', seo.includes('dedicated_seo_plugin_active') && seo.includes('WPSEO_VERSION') && seo.includes('RANK_MATH_VERSION') && seo.includes('application/ld+json'));
+check('native meta and the sole schema owner yield to the shared late-provider app owner', seo.includes('dedicated_seo_plugin_active') && seoDefaults.includes('SEO_App_Service::external_owner()') && seoApp.includes('WPSEO_VERSION') && seoApp.includes('RANK_MATH_VERSION') && seoApp.includes("add_action( 'plugins_loaded'") && schemaOwner.includes('application/ld+json') && seo.includes('dsa_schema_geo_graph') && !seo.includes('application/ld+json'));
 check('invitations are random hashed expiring account-bound links', onboarding.includes('random_bytes( 32 )') && onboarding.includes('wp_hash_password') && onboarding.includes('7*DAY_IN_SECONDS') && onboarding.includes('get_current_user_id()') && onboarding.includes('wp_check_password'));
 check('invitation writes require nonce and administrator authority', onboarding.includes("check_admin_referer( 'kiwe_save_onboarding' )") && onboarding.includes("check_admin_referer( 'kiwe_create_onboarding_invite' )") && onboarding.includes("current_user_can( 'manage_options' )"));
 check('delivery supports WordPress email configured Kiwe channels and manual copy', onboarding.includes('wp_mail') && onboarding.includes("[ 'sms', 'whatsapp' ]") && onboarding.includes("'copy'"));
@@ -50,7 +57,7 @@ check('owner context has native Bricks and WordPress binding surfaces', ['kiwe_b
 check('anonymous design context redacts operational address detail', profile.includes('if ( ! $administrator )') && profile.includes("'operationalAddressIncluded' => $administrator") && profile.includes("'adminIdentityExcluded' => true"));
 check('readiness reports separate SEO and design-context scores', profile.includes("'seoStrength'") && profile.includes("'designContextStrength'"));
 check('browser timezone detection is local and requires no geolocation service', js.includes('Intl.DateTimeFormat().resolvedOptions().timeZone') && !js.includes('geolocation') && !js.includes('fetch('));
-check('optional mood can be cleared and save state remains visible', onboarding.includes('Clear mood preference') && js.includes('data-kiwe-clear-tone') && js.includes('Saving owner context') && js.includes('config.startStep'));
+check('optional mood can be cleared and pending save state remains visible', onboarding.includes('Clear mood preference') && js.includes('data-kiwe-clear-tone') && js.includes('config.saving') && js.includes('config.startStep'));
 check('owner color anchors align to official SEAM token roles', ['brand','accent','hero','neutral','surface'].every((role) => onboarding.includes(`'${role}'=>`)) && profile.includes("'token' => 'color-' . $role") && !onboarding.includes("'support'=>'Supporting color'"));
 check('WhatsApp can explicitly share the public phone authority', onboarding.includes('whatsappSameAsPhone') && profile.includes('$whatsapp_same ? $phone') && js.includes('data-kiwe-whatsapp-same'));
 check('social profiles update Kiwe public link context and bindings', ['facebook','instagram','x','youtube','pinterest','linkedin'].every((network) => profile.includes(`'${network}'`)) && profile.includes("$link_hub['social_links']") && bricks.includes('kiwe_instagram_url'));
@@ -80,8 +87,12 @@ check('service removals never delete canonical records and anonymous context exc
 check('homepage rails remain intent while selecting bestsellers activates the maintained service', onboarding.includes('Show recent articles or a blog rail') && onboarding.includes('Highlight best-selling products') && profile.includes("$commerce['bestseller_enabled'] = true"));
 check('clean RC settings enable only read-only SiteGraph and contain no compatibility activation profile', settings.includes('SCHEMA_VERSION = 8') && settings.includes('disable_boolean_tree') && settings.includes("'mode'    => 'read_only'") && !settings.includes('apply_bricks_compatibility_profile') && settings.includes('SITE_GRAPH_ONLY_PROFILE'));
 check('SEO refinement is grounded in resolved owner Design Context without operational contact data', seoRefinement.includes('resolved_public_context( false )') && seoRefinement.includes("'siteContext'=>$this->site_context()") && seoRefinement.includes("'primaryGoal','searchIntent','proofPoints'") && !seoRefinement.includes("$context['contact']"));
-check('overall SEO score covers onboarding pages posts products and media without penalizing empty scopes', ['onboarding','pages','posts','products','media'].every((scope) => profile.includes(`'${scope}'`)) && profile.includes('emptyScopesRedistributed') && profile.includes('unsafeSuggestionsNeverCountAsComplete'));
-check('rejected SEO proposals can be regenerated with reviewer context and remain fail closed', seoRefinement.includes("'regenerate'") && seoRefinement.includes('regenerate_proposal') && seoRefinement.includes('reviewerNote') && seoRefinement.includes('Reject & try another') && seoRefinement.includes('retry_failed'));
+check('overall SEO score covers onboarding pages posts products and media without penalizing empty scopes', ['onboarding','pages','posts','products','media'].every((scope) => score.includes(`'${scope}'`)) && score.includes('emptyScopesRedistributed') && score.includes('unsafeSuggestionsNeverCountAsComplete'));
+check('rejected SEO proposals can be regenerated with reviewer context and remain fail closed', seoRefinement.includes("'regenerate'") && seoRefinement.includes('regenerate_proposal') && seoRefinement.includes('reviewerNote') && seoRefinement.includes('Try another') && seoRefinement.includes('proposal_version') && seoRefinement.includes('retry_failed'));
+check('native Store and legacy context never register the same menu slug together', (() => {
+	const result = spawnSync('php', [path.join(root, 'tools/release/test-store-menu-ownership.php')], { cwd: root, encoding: 'utf8' });
+	return result.status === 0 && result.stdout.includes('Native and legacy Store menu ownership passed.');
+})());
 
 for (const item of checks) console.log(`${item.pass ? 'PASS' : 'FAIL'} ${item.name}`);
 const failed = checks.filter((item) => !item.pass);

@@ -11,6 +11,15 @@
 	const save = root.querySelector( '[data-kiwe-save]' );
 	const status = root.querySelector( '[data-kiwe-step-status]' );
 	let step = 0;
+	let initialValues = null;
+	let submitting = false;
+	const saveLabel = save ? save.textContent : '';
+	const values = () => JSON.stringify( Array.from( new FormData( form ).entries() ) );
+	const dirty = () => initialValues !== null && values() !== initialValues;
+	function feedback() {
+		if ( status && ! submitting ) status.textContent = dirty() ? ( config.changed || 'You have unsaved changes.' ) : '';
+	}
+	const changed = () => { if ( form ) form.dispatchEvent( new Event( 'change', { bubbles: true } ) ); };
 
 	function show( index ) {
 		step = Math.max( 0, Math.min( panels.length - 1, Number( index ) || 0 ) );
@@ -21,8 +30,7 @@
 		if ( previous ) previous.disabled = step === 0;
 		if ( next ) next.hidden = step === panels.length - 1;
 		save.hidden = step !== panels.length - 1;
-		status.textContent = config.singleSection ? ( config.saved ? 'Saved' : '' ) : ( config.saved && step === panels.length - 1 ? 'Saved · ' : '' ) + 'Step ' + ( step + 1 ) + ' of ' + panels.length;
-		window.scrollTo( { top: Math.max( 0, root.offsetTop - 40 ), behavior: 'smooth' } );
+		status.textContent = config.singleSection ? '' : 'Step ' + ( step + 1 ) + ' of ' + panels.length;
 	}
 	buttons.forEach( function ( button, index ) { button.addEventListener( 'click', function () { show( index ); } ); } );
 	panels.forEach( function ( panel, index ) { const number = panel.querySelector( '.kiwe-onboarding__intro > span' ); if ( number ) { number.hidden = !! config.singleSection; number.textContent = String( index + 1 ).padStart( 2, '0' ); } } );
@@ -38,12 +46,30 @@
 			const index = panel ? panels.indexOf( panel ) : -1;
 			if ( index >= 0 && index !== step ) show( index );
 		}, true );
-		form.addEventListener( 'submit', function () {
-			save.disabled = true;
-			save.textContent = config.saving || 'Saving owner context…';
-			status.textContent = config.saving || 'Saving owner context…';
+		// Successful controls stay enabled for native browser serialization.
+		form.addEventListener( 'submit', function ( event ) {
+			if ( event.defaultPrevented ) return;
+			if ( submitting || ! form.reportValidity() ) { event.preventDefault(); return; }
+			submitting = true; form.setAttribute( 'aria-busy', 'true' );
+			save.setAttribute( 'aria-disabled', 'true' );
+			save.textContent = config.saving || 'Submitting…';
+			status.textContent = config.saving || 'Submitting…';
+			window.setTimeout( function () { if ( event.defaultPrevented ) restore(); }, 0 );
 		} );
+		form.addEventListener( 'input', feedback );
+		// Derived values and dynamic rows finish updating before comparison.
+		form.addEventListener( 'change', () => queueMicrotask( feedback ) );
 	}
+	function restore() {
+		submitting = false;
+		if ( form ) form.removeAttribute( 'aria-busy' );
+		if ( save ) { save.removeAttribute( 'aria-disabled' ); save.textContent = saveLabel; }
+		feedback();
+	}
+	window.addEventListener( 'pageshow', restore );
+	window.addEventListener( 'beforeunload', function ( event ) {
+		if ( ! submitting && form && dirty() ) { event.preventDefault(); event.returnValue = ''; }
+	} );
 
 	root.addEventListener( 'click', function ( event ) {
 		const select = event.target.closest( '[data-kiwe-media-select]' );
@@ -56,6 +82,7 @@
 				const url = image.sizes && image.sizes.medium ? image.sizes.medium.url : image.url;
 				field.querySelector( '[data-kiwe-media-id]' ).value = image.id || 0;
 				field.querySelector( '[data-kiwe-media-preview]' ).innerHTML = '<img src="' + String( url ).replace( /"/g, '&quot;' ) + '" alt="">';
+				changed();
 			} );
 			frame.open();
 		}
@@ -67,6 +94,7 @@
 		const clearTone = event.target.closest( '[data-kiwe-clear-tone]' );
 		if ( clearTone ) {
 			root.querySelectorAll( 'input[name="context[brand][tone]"]' ).forEach( function ( input ) { input.checked = false; } );
+			changed();
 		}
 		const addService = event.target.closest( '[data-kiwe-add-service]' );
 		if ( addService ) {
@@ -81,13 +109,13 @@
 				const holder = document.createElement( 'div' );
 				holder.innerHTML = template.innerHTML.replaceAll( '__INDEX__', String( index ) );
 				const row = holder.firstElementChild;
-				if ( row ) { list.appendChild( row ); row.querySelector( 'input[name$="[title]"]' ).focus(); }
+				if ( row ) { list.appendChild( row ); row.querySelector( 'input[name$="[title]"]' ).focus(); changed(); }
 			}
 		}
 		const removeService = event.target.closest( '[data-kiwe-remove-service]' );
 		if ( removeService ) {
 			const row = removeService.closest( '[data-kiwe-service-row]' );
-			if ( row ) row.remove();
+			if ( row ) { row.remove(); changed(); }
 		}
 
 	} );
@@ -173,5 +201,6 @@
 	if ( serviceToggle ) serviceToggle.addEventListener( 'change', syncServices );
 	syncServices();
 	const initial = panels.findIndex( function ( panel ) { return Number( panel.dataset.kiweStep ) === Number( config.startStep ); } );
-	show( config.saved ? panels.length - 1 : Math.max( 0, initial ) );
+	show( Math.max( 0, initial ) );
+	if ( form && window.FormData ) initialValues = values();
 }() );

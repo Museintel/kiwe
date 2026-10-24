@@ -1,0 +1,14 @@
+const fs=require('node:fs'),{spawnSync}=require('node:child_process');
+const owner='wp-content/mu-plugins/dsa/includes/Access/Service_History_Service.php';
+const result=spawnSync(process.env.KIWE_PHP||'php',['-l',owner],{encoding:'utf8',windowsHide:true});
+if(result.status!==0||/Warning:|Fatal error:|Deprecated:/.test(result.stdout+result.stderr))throw Error(result.stdout+result.stderr);
+const deletion=spawnSync(process.env.KIWE_PHP||'php',['tools/release/test-element-registry-history.php'],{encoding:'utf8',windowsHide:true});
+if(deletion.status!==0||/Warning:|Fatal error:|Deprecated:/.test(deletion.stdout+deletion.stderr))throw Error(deletion.stdout+deletion.stderr);
+process.stdout.write(deletion.stdout);
+const php=fs.readFileSync(owner,'utf8'),ui=fs.readFileSync('tools/workspace-prototype/service-journey-editor.jsx','utf8'),route=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Continuity_App_Service.php','utf8');
+for(const token of ['WP_REST_Autosaves_Controller','Task_Workspace_UI::revision_fingerprint','Task_Workspace_UI::restore_revision_writing','wp_save_post_revision','wp_delete_post_revision','GET_LOCK','FOR UPDATE','ROLLBACK','COMMIT','current_user_can(\'edit_post\'','current_user_can(\'kiwe_manage_context\''])if(!php.includes(token))throw Error('Native Service history lost '+token);
+if(!php.includes('snapshot_matches_post')||!php.includes('Element_Registry::SNAPSHOT_META_KEY'))throw Error('Service restore must verify its native derived cache without freezing that cache as authored data');
+if(/\b(?:update_option|add_option|set_transient|CREATE TABLE)\s*\(/.test(php))throw Error('Service history may not create a second revision or autosave owner');
+for(const token of ['CoreTabs','WorkspaceDialog','LegacyVisualEditor','service_autosave','service_versions','service_restore','service_discard','historySequence','phase:\'uncertain\'','editorExpected','hidden={tab!==\'create\'}'])if(!ui.includes(token))throw Error('Service journey lost '+token);
+for(const token of ['service_version','service_versions','service_autosave','service_restore','service_discard','canHistory','ServiceJourneyEditor'])if(!(route+fs.readFileSync('tools/workspace-prototype/native-continuity.jsx','utf8')).includes(token))throw Error('Service route lost '+token);
+console.log('PASS Service history source contracts: one native owner, bounded authority, transactional writes, contextual journey and guarded recovery');

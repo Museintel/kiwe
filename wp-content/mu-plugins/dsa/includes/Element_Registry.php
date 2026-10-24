@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Element_Registry {
-	private const SNAPSHOT_META_KEY = '_dsa_registry_snapshot';
+	public const SNAPSHOT_META_KEY = '_dsa_registry_snapshot';
 	private const SNAPSHOT_VERSION = 1;
 	private const SNAPSHOT_ELEMENT_LIMIT = 140;
 
@@ -16,7 +16,7 @@ final class Element_Registry {
 
 	public function register(): void {
 		add_action( 'save_post', [ $this, 'save_post_snapshot' ], 25, 3 );
-		add_action( 'deleted_post', [ $this, 'delete_snapshot' ] );
+		add_action( 'deleted_post', [ $this, 'delete_snapshot' ],10,2 );
 	}
 
 	public function add( array $element ): void {
@@ -110,10 +110,23 @@ final class Element_Registry {
 		update_post_meta( $post_id, self::SNAPSHOT_META_KEY, $snapshot );
 	}
 
-	public function delete_snapshot( int $post_id ): void {
+	public function delete_snapshot( int $post_id, ?\WP_Post $post=null ): void {
+		// delete_post_meta redirects a still-cached revision ID to its parent.
+		// The deleted-post hook supplies the native object even after its row is gone.
+		if ($post && 'revision'===$post->post_type) return;
 		if ( $post_id > 0 ) {
-			delete_post_meta( $post_id, self::SNAPSHOT_META_KEY );
+			delete_metadata('post',$post_id,self::SNAPSHOT_META_KEY);
 		}
+	}
+
+	/** A native writing restore may refresh this derived cache, never an authored setting. */
+	public function snapshot_matches_post( \WP_Post $post ): bool {
+		$expected=$this->build_snapshot_for_post($post);
+		$stored=get_post_meta((int)$post->ID,self::SNAPSHOT_META_KEY,true);
+		if (empty($expected['elements'])) return $stored==='' || $stored===[];
+		if (!is_array($stored)) return false;
+		unset($expected['generatedAt'],$stored['generatedAt']);
+		return $expected===$stored;
 	}
 
 	public function snapshot_for_post( int $post_id ): array {

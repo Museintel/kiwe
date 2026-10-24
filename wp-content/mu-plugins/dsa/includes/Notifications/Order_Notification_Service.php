@@ -20,6 +20,7 @@ final class Order_Notification_Service {
 	}
 
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_action( 'woocommerce_order_status_changed', [ $this, 'notify_status_changed' ], 30, 4 );
 	}
 
@@ -41,20 +42,11 @@ final class Order_Notification_Service {
 		$url = method_exists( $order, 'get_view_order_url' ) ? $order->get_view_order_url() : home_url( '/' );
 		$message = sprintf( __( 'Your order #%1$s at %2$s is now %3$s. View your order: %4$s', 'dsa' ), $order_number, get_bloginfo( 'name' ), $status_label, $url );
 
-		if ( $this->preferences->user_accepts( $user_id, 'app', 'order_status' ) ) {
-			$this->push->send_to_users( [ $user_id ], $subject, $message, $url, [ 'eventType' => 'order_status', 'orderId' => $order_id ] );
-		}
-
-		foreach ( [ 'whatsapp', 'email', 'sms' ] as $channel ) {
-			if ( ! $this->preferences->user_accepts( $user_id, $channel, 'order_status' ) || ! $this->channels->available_for_campaign( $channel ) ) {
-				continue;
-			}
-			$recipient = $this->preferences->contact_for_user( $user_id, $channel );
-			if ( '' === $recipient ) {
-				continue;
-			}
-			$context = [ 'purpose' => 'order_status', 'user_id' => $user_id, 'order_id' => $order_id ];
-			$this->channels->send( $channel, $recipient, $subject, 'email' === $channel ? $message : $subject . "\n\n" . $message, $context );
-		}
+		// One router owns both native inbox and explicitly chosen delivery methods.
+		do_action( 'kiwe_notification_event', 'order_status', [
+			'id'=>'order-' . $order_id . '-status-' . sanitize_key( (string) $from ) . '-' . sanitize_key( (string) $to ) . '-' . time(),
+			'userIds'=>[ $user_id ],'objectId'=>$order_id,'title'=>$subject,'message'=>$message,
+			'url'=>$url,'actionLabel'=>__( 'View your order', 'dsa' ),
+		] );
 	}
 }

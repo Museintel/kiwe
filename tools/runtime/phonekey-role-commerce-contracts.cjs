@@ -63,7 +63,11 @@ check('saved intent is replayed only after WordPress reports an authenticated us
 	surface.includes('function consumePendingSavedIntent')
 	&& /consumePendingSavedIntent[\s\S]*?phonekey\.user[\s\S]*?loggedIn[\s\S]*?mutateSavedItem\( 'add'/.test(surface)
 );
-check('WooCommerce purchase requires a signed-in account and one verified PhoneKey factor',
+check('PhoneKey does not override the native Woo guest policy or expose a second purchase switch',
+	!core.includes("add_filter( 'dsa_phonekey_purchase_verified_contact_enabled'")
+	&& !core.includes('pk[purchase_verified_contact]')
+);
+check('WooCommerce account-required purchase retains verified PhoneKey factors',
 	purchase.includes("'signup_required'")
 	&& purchase.includes("'verification_required'")
 	&& purchase.includes("apply_filters( 'dsa_phonekey_account_identity_verified'")
@@ -134,7 +138,7 @@ check('ownership survives Key being disabled; commerce stays gated',
 	&& plugin.includes('new Purchase_Identity_Gate()')
 	&& /role_access->register\(\)[\s\S]*?if \( \$phonekey_enabled \)[\s\S]*?register_if_available/.test(plugin)
 	&& purchase.includes("class_exists( 'WooCommerce' )")
-	&& purchase.includes('! function_exists( \'WC\' )')
+	&& purchase.includes('! \\DSA\\Apps\\Store_App_Service::enabled()')
 );
 
 if (failures.length) {

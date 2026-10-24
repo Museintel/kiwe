@@ -9,11 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Commerce_Context_Service {
 	private $linked_products;
 
-	public function __construct( ?Linked_Products_Service $linked_products = null ) {
+	public function __construct( Linked_Products_Service|\Closure|null $linked_products = null ) {
 		$this->linked_products = $linked_products;
 	}
 
 	public function context( array $trust = [], array $protected_flow = [] ): array {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return \DSA\Apps\Store_App_Service::inactive_context();
 		$available = $this->woo_available();
 		$cart      = $this->cart_context();
 		$current   = $this->current_context();
@@ -37,6 +38,7 @@ final class Commerce_Context_Service {
 	}
 
 	public function public_context(): array {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return \DSA\Apps\Store_App_Service::inactive_context();
 		$available = $this->woo_available();
 		$cart      = $this->neutral_cart_context( $available );
 		$current   = $this->current_context();
@@ -62,7 +64,7 @@ final class Commerce_Context_Service {
 	}
 
 	private function woo_available(): bool {
-		return function_exists( 'WC' ) && function_exists( 'wc_get_page_permalink' );
+		return \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_page_permalink' );
 	}
 
 	private function cart_context(): array {
@@ -164,6 +166,7 @@ final class Commerce_Context_Service {
 			$context['title'] = wp_strip_all_tags( get_the_title( function_exists( 'wc_get_page_id' ) ? wc_get_page_id( 'shop' ) : 0 ) ?: __( 'Shop', 'dsa' ) );
 		}
 
+		$context['isCheckout'] = function_exists( 'is_checkout' ) && is_checkout() && !( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url() );
 		return $context;
 	}
 
@@ -240,6 +243,8 @@ final class Commerce_Context_Service {
 	}
 
 	private function complements( array $cart, array $current ): array {
+		if ( ! $this->woo_available() ) return [];
+		if ( $this->linked_products instanceof \Closure ) $this->linked_products = ( $this->linked_products )();
 		if ( $this->linked_products ) {
 			$linked = $this->linked_products->recommendations_for_context( $cart, $current, 4 );
 

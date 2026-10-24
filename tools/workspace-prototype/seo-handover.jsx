@@ -1,0 +1,10 @@
+import React from 'react';
+import {StructuredControls} from './seo-structured-controls.jsx';
+export function handoverValid(value){
+ if(value?.schema!=='kiwe.seo-handover.v1'||!/^[a-f0-9]{64}$/.test(value.expected)||value.sourcePreserved!==true||value.providerRemovalReady!==false||!['mappedFields','blockedFields','nativeConflicts','manualReview'].every(key=>Array.isArray(value[key])&&value[key].every(item=>typeof item==='string'))||!['canImport','canUndo','journalRetained'].every(key=>typeof value[key]==='boolean'))throw Error('The settings handover review was incomplete. Refresh before making changes.');
+ return value;
+}
+export function HandoverCard({value,disabled,onRun,request}){
+ if(!value)return null;
+ return <article className="ai-migration"><span className="ai-kicker">WEBSITE SEO SETTINGS</span><h3>Review the handover.</h3><p>Copy supported website defaults while keeping your existing Kiwe choices and Rank Math source settings.</p><p className="ai-small">Frontend owner: {value.frontendOwner==='rank_math'?'Rank Math':value.frontendOwner}. {value.mappedFields.length} supported saved fields · {value.nativeConflicts.length} existing Kiwe choices kept.</p>{value.blockedFields.length>0&&<div role="status"><h4>Source settings needing review</h4><ul className="ai-small">{value.blockedFields.map(field=><li key={field}>{field}</li>)}</ul></div>}<p className="ai-small">Before removing the source plugin, review: {value.manualReview.join('; ')}.</p>{value.journalRetained&&!value.canUndo&&<p className="ai-small">Newer settings are protected. The import journal remains available for review.</p>}<div className="ai-toolbar">{value.canImport&&<button type="button" disabled={disabled} onClick={()=>onRun('import')}>Import supported website settings</button>}{value.canUndo&&<button type="button" disabled={disabled} onClick={()=>onRun('undo')}>Undo website settings import</button>}</div><p className="ai-small">Plugin removal is not ready. An import never switches the frontend owner or enables AI.</p><StructuredControls request={request} disabled={disabled}/></article>;
+}

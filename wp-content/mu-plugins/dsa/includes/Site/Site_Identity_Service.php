@@ -12,6 +12,17 @@ final class Site_Identity_Service {
 	public const OPTION_STORE_PHONE  = 'kiwe_store_phone';
 	public const OPTION_STORE_EMAIL  = 'kiwe_store_email';
 
+	/** One client-brand projection for private workspace headers. Medium keeps the logo's aspect ratio. */
+	public static function workspace_brand(): array {
+		$logo_id = absint( get_option( self::OPTION_LOGO, 0 ) ) ?: absint( get_theme_mod( 'custom_logo', 0 ) );
+		return [
+			'siteName' => get_bloginfo( 'name' ),
+			'siteTagline' => get_bloginfo( 'description' ),
+			'siteLogo' => $logo_id ? (string) wp_get_attachment_image_url( $logo_id, 'medium' ) : '',
+			'identityUrl' => current_user_can( 'kiwe_manage_context' ) ? admin_url( 'admin.php?page=kiwe-identity' ) : '',
+		];
+	}
+
 	public function register(): void {
 		add_action( 'after_setup_theme', [ $this, 'enable_custom_logo' ], 20 );
 		add_action( 'admin_init', [ $this, 'register_general_settings' ] );

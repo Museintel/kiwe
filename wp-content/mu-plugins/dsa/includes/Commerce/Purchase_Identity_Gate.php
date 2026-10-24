@@ -6,13 +6,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Require a Key.kiwe subscriber and one verified recovery factor at payment. */
+/** Follow Woo's account policy; verify contact only when an account is required. */
 final class Purchase_Identity_Gate {
 	private bool $registered = false;
 
 	/** Do not attach a commerce hook on editorial/non-WooCommerce sites. */
 	public function register_if_available(): void {
-		if ( $this->registered || ! class_exists( 'WooCommerce' ) || ! function_exists( 'WC' ) ) {
+		if ( $this->registered || ! class_exists( 'WooCommerce' ) || ! \DSA\Apps\Store_App_Service::enabled() ) {
 			return;
 		}
 
@@ -21,6 +21,7 @@ final class Purchase_Identity_Gate {
 	}
 
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_filter( 'dsa_purchase_identity_gate_enabled', [ $this, 'enabled' ] );
 		add_filter( 'dsa_purchase_identity_gate_state', [ $this, 'state' ] );
 		add_action( 'template_redirect', [ $this, 'guard_checkout_entry' ], 1 );
@@ -31,14 +32,14 @@ final class Purchase_Identity_Gate {
 	}
 
 	public function enabled( $enabled = false ): bool {
-		if ( ! function_exists( 'WC' ) && ! class_exists( 'WooCommerce' ) ) {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) {
 			return false;
 		}
 
-		// WooCommerce's own account requirement is a hard boundary. When guest
-		// checkout is enabled, Kiwe's verified-contact policy remains configurable.
+		// The native guest-checkout choice must work without a second Kiwe switch.
+		// Integrators may explicitly require verified contact for a specialist store.
 		return $this->woocommerce_account_required()
-			|| (bool) apply_filters( 'dsa_phonekey_purchase_verified_contact_enabled', true );
+			|| (bool) apply_filters( 'dsa_phonekey_purchase_verified_contact_enabled', false );
 	}
 
 	public function state( $state = [] ): array {

@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-registry-build.v2",
-  "contractVersion": "9.4",
-  "releaseId": "9.4-44455e077234",
-  "sourceHash": "sha256:44455e0772341590c952df47a19889a3ccf8be1f0d97adc4df35dbecbc314239",
+  "contractVersion": "9.7",
+  "releaseId": "9.7-6f6ff8c091a5",
+  "sourceHash": "sha256:6f6ff8c091a550e5d138b7ab37f22f6a517405740f8144efce25f99fb40c376f",
   "generatedFrom": [
     "KIWE-START.md",
     "docs/BRICKS-ICON-LIBRARY.md",
@@ -36,6 +36,7 @@
     "kiwe-ai-toolkit/lib/seam-map-validator.js",
     "kiwe-ai-toolkit/reference/bricks-elements.json",
     "kiwe-ai-toolkit/reference/design-context-fields.json",
+    "kiwe-ai-toolkit/reference/icons.json",
     "kiwe-ai-toolkit/schemas/authoring-journey.schema.json",
     "kiwe-ai-toolkit/schemas/bricks-apply-plan.schema.json",
     "kiwe-ai-toolkit/schemas/bricks-bindings.schema.json",
@@ -55,9 +56,11 @@
     "packages/seam-contracts/schemas/seam.capture.v1.schema.json",
     "packages/seam-contracts/schemas/seam.deployment-plan.v1.schema.json",
     "packages/seam-contracts/schemas/seam.geometry.v1.schema.json",
+    "packages/seam-contracts/schemas/seam.package-integrity.v1.schema.json",
     "packages/seam-contracts/schemas/seam.page-ir.v1.schema.json",
     "packages/seam-contracts/schemas/seam.repair-plan.v1.schema.json",
     "packages/seam-contracts/schemas/seam.sitegraph-snapshot.v1.schema.json",
+    "packages/seam-contracts/schemas/seam.style-dependencies.v1.schema.json",
     "packages/seam-contracts/schemas/seam.visual-proof.v1.schema.json",
     "tools/release/authoring-kit.cjs",
     "tools/release/build-authoring-schemas.cjs",
@@ -75,5 +78,5 @@
     "wp-content/mu-plugins/dsa/ui-system/theme-package.schema.json",
     "wp-content/mu-plugins/dsa/ui-system/token-map.css"
   ],
-  "generatedAt": "2026-10-20"
+  "generatedAt": "2026-10-22"
 }

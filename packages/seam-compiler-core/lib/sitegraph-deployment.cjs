@@ -31,6 +31,19 @@ function normalizeTag(value) {
 	return tag ? (tag.startsWith('{') ? tag : `{${tag.replace(/[{}]/g, '')}}`) : '';
 }
 
+function sanitizeApps(value) {
+ if (!value || value.schema !== 'kiwe.app-capabilities.v1' || value.coreApi !== 1 || value.designContextOwner !== 'core') return null;
+ const apps = {};
+ for (const id of ['seo','store']) {
+  const app = value.apps && value.apps[id];
+  if (!app || typeof app.installed !== 'boolean' || typeof app.enabled !== 'boolean' || !['bundled','plugin','absent'].includes(app.source)
+   || typeof app.version !== 'string' || app.version.length > 48 || !/^(?:[0-9]+\.[0-9]+\.[0-9]+(?:-(?:rc|beta|alpha)\.[1-9][0-9]*)?)?$/.test(app.version)
+   || (app.enabled && !app.installed) || (app.source === 'absent') !== !app.installed || (app.installed && !app.version)) return null;
+  apps[id] = {installed:app.installed, enabled:app.enabled, source:app.source, version:app.version};
+ }
+ return {schema:'kiwe.app-capabilities.v1',coreApi:1,apps,designContextOwner:'core'};
+}
+
 function sanitizeSiteGraph(siteGraph) {
 	if (!siteGraph || siteGraph.schema !== 'kiwe.site-graph.v1') throw new Error('SiteGraph input must use kiwe.site-graph.v1.');
 	const wordpress = siteGraph.wordpress || {};
@@ -65,6 +78,8 @@ function sanitizeSiteGraph(siteGraph) {
 		},
 		kiwe: { version: cleanString(siteGraph.kiwe && siteGraph.kiwe.version), modules: uniqueStrings(moduleItems.map((item) => item && (item.id || item.module || item.key))) }
 	};
+	const apps = sanitizeApps(siteGraph.kiwe && siteGraph.kiwe.apps);
+	if (apps) snapshot.kiwe.apps = apps;
 	snapshot.sourceHash = digest({ sourceSchema: snapshot.sourceSchema, wordpress: snapshot.wordpress, bricks: snapshot.bricks, kiwe: snapshot.kiwe });
 	assertContract('siteGraphSnapshot', snapshot);
 	return snapshot;
@@ -149,6 +164,7 @@ function buildBindingPlan(capture, snapshot) {
 		if (attributes['data-dsa-open-module']) {
 			const value = cleanString(attributes['data-dsa-open-module']);
 			launchers.push({ selector: `[data-dsa-open-module='${value}']`, attribute: 'data-dsa-open-module', value });
+			if (value === 'cart' && snapshot.kiwe.apps && !snapshot.kiwe.apps.apps.store.enabled) review.push({nodeId:node.id, reason:'Kiwe Store is inactive; its Cart launcher needs an active Store App.'});
 			if (!modules.has(value)) review.push({ nodeId: node.id, reason: `Kiwe module ${value} is absent from the SiteGraph.` });
 		}
 		if (attributes['data-kiwe-menu-label']) {

@@ -1,0 +1,17 @@
+@import './module-workspace.css';
+.analytics-context{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:26px 0;padding:20px;border-bottom:1px solid #bbc8ba}
+.analytics-context h2{margin:0 0 6px;font-size:28px;font-weight:500}.analytics-context p{margin:0}
+.analytics-context>div:last-child{display:grid;gap:6px;max-width:320px}.analytics-context small{font-size:10px;letter-spacing:.13em;font-weight:700}
+.analytics-report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:24px 0}
+.analytics-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:12px 0 24px}
+.analytics-metric{display:flex;flex-direction:column;gap:6px;min-width:0}.analytics-metric>span{font-size:12px;min-height:36px}
+.analytics-metric strong{font-size:clamp(20px,2.3vw,30px);font-weight:550;letter-spacing:-.04em;line-height:1.15;overflow-wrap:anywhere}
+.analytics-metric small{font-size:11px;letter-spacing:normal;text-transform:none;font-weight:400}
+.analytics-report .kiwe-module-footer button{background:transparent;font-size:12px}
+.analytics-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.analytics-actions a{color:inherit}
+.analytics-strategy{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 0;margin-top:28px;border-top:1px solid #bbc8ba}
+.analytics-strategy h2{font-size:26px;letter-spacing:-.035em;margin:0 0 8px}.analytics-strategy p{max-width:650px;font-size:13px;margin:0}
+.analytics-allowance{padding:24px;border:1px solid #bbc8ba;border-radius:8px}
+.analytics-query-table{max-width:100%;overflow-x:auto}.analytics-query-table table{width:100%;min-width:480px;border-collapse:collapse;table-layout:fixed}.analytics-query-table th,.analytics-query-table td{padding:12px 8px;text-align:left;border-bottom:1px solid #bbc8ba;font-size:12px;overflow-wrap:anywhere}.analytics-query-table th:first-child{width:44%}.analytics-query-table td:not(:first-child){white-space:nowrap}
+@media(max-width:850px){.analytics-report-grid{grid-template-columns:1fr}.analytics-strategy{align-items:start;flex-direction:column}}
+@media(max-width:600px){.analytics-context{align-items:start;flex-direction:column;padding:12px 0}.analytics-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-metric strong{font-size:26px}}

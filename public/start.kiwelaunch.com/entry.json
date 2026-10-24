@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.entry.v2",
   "productName": "SEAM",
-  "contractVersion": "9.4",
-  "updated": "2026-10-20",
+  "contractVersion": "9.7",
+  "updated": "2026-10-22",
   "repository": "Museintel/kiwe",
   "start": "https://start.kiwelaunch.com/start.md",
   "manifest": "https://start.kiwelaunch.com/command-manifest.json",

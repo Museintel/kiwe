@@ -16,7 +16,7 @@ final class Metrics_Service {
 	private $settings;
 	private $store_analytics;
 
-	public function __construct( Settings $settings, ?Store_Analytics_Service $store_analytics = null ) {
+	public function __construct( Settings $settings, Store_Analytics_Service|\Closure|null $store_analytics = null ) {
 		$this->settings = $settings;
 		$this->store_analytics = $store_analytics;
 	}
@@ -206,10 +206,6 @@ final class Metrics_Service {
 	}
 
 	private function record_adoption_event( string $event, string $context ): void {
-		if ( ! $this->store_analytics ) {
-			return;
-		}
-
 		$map = [
 			'pwa_primer_ok'           => 'pwa_primer_ok',
 			'pwa_install_intent'      => 'pwa_install_intent',
@@ -224,7 +220,8 @@ final class Metrics_Service {
 		];
 
 		if ( isset( $map[ $event ] ) ) {
-			$this->store_analytics->record_adoption_event( $map[ $event ], $context );
+			if ( $this->store_analytics instanceof \Closure ) $this->store_analytics = ( $this->store_analytics )();
+			$this->store_analytics?->record_adoption_event( $map[ $event ], $context );
 		}
 	}
 

@@ -36,7 +36,9 @@ check('the duplicate every-red email path is removed',
   !events.includes('Red-Flag Event: {$type}')
 );
 
-check('incident disabling is authoritative for every SecureTrack delivery path',
+check('incident generation is core while legacy runtime guards remain defensive',
+	policy.includes("$config['alert_on_red'] = 1;") &&
+	!admin.includes('name="alert_on_red"') &&
 	alert.includes("empty( $config['alert_on_red'] )") &&
 	alert.indexOf("empty( $config['alert_on_red'] )") < alert.indexOf("do_action(")
 );
@@ -52,7 +54,7 @@ check('incident delivery has subject coalescing and an hourly gateway cap',
 );
 
 check('settings expose safe notification budgets and explain preserved evidence',
-	admin.includes('Generate SecureTrack incident notifications') &&
+	!admin.includes('Generate SecureTrack incident notifications') &&
 	admin.includes('name="alert_repeat_window_mins"') &&
 	admin.includes('name="alert_hourly_limit"') &&
 	admin.includes('Choose recipients and Email, WhatsApp or SMS under WordPress') &&

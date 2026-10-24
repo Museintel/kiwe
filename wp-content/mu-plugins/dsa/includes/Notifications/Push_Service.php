@@ -189,6 +189,24 @@ final class Push_Service {
 		];
 	}
 
+	/** Only IDs; active endpoint/key material stays inside the push authority. */
+	public function active_user_ids( array $ids ): array {
+		global $wpdb;
+		$ids = array_slice( array_values( array_unique( array_filter( array_map( 'absint',$ids ) ) ) ),0,500 );
+		if ( ! $ids ) return [];
+		$this->maybe_install(); $found=[];
+		foreach ( array_chunk( $ids,100 ) as $chunk ) {
+			$placeholders=implode(',',array_fill(0,count($chunk),'%d'));
+			$rows=$wpdb->get_col($wpdb->prepare("SELECT DISTINCT user_id FROM {$this->table()} WHERE status='active' AND user_id IN ({$placeholders})",...$chunk));
+			$found=array_merge($found,array_map('intval',(array)$rows));
+		}
+		return array_values(array_unique($found));
+	}
+	public function active_visitor_hashes( array $hashes ): array {
+		global $wpdb; $hashes=array_slice(array_values(array_unique(array_filter($hashes,static fn($h)=>is_string($h)&&preg_match('/^[a-f0-9]{64}$/',$h)))),0,500);if(!$hashes)return [];$this->maybe_install();$found=[];
+		foreach(array_chunk($hashes,100)as$chunk){$sql=implode(',',array_fill(0,count($chunk),'%s'));$rows=$wpdb->get_col($wpdb->prepare("SELECT DISTINCT visitor_hash FROM {$this->table()} WHERE status='active' AND user_id=0 AND visitor_hash IN ({$sql})",...$chunk));$found=array_merge($found,(array)$rows);}return array_values(array_unique($found));
+	}
+
 	public function ensure_cleanup_schedule(): void {
 		if ( ! wp_next_scheduled( 'dsa_push_cleanup' ) ) {
 			wp_schedule_event( time() + 5 * MINUTE_IN_SECONDS, 'daily', 'dsa_push_cleanup' );
@@ -345,7 +363,7 @@ final class Push_Service {
 		$this->maybe_install();
 		$user_ids = array_slice( array_values( array_unique( array_filter( array_map( 'absint', $user_ids ) ) ) ), 0, 100 );
 		if ( empty( $user_ids ) ) {
-			return [ 'ok' => true, 'message' => __( 'No opted-in administrators matched this alert.', 'dsa' ), 'sent' => 0, 'failed' => 0 ];
+			return [ 'ok' => true, 'message' => __( 'No opted-in administrators matched this alert.', 'dsa' ), 'sent' => 0, 'failed' => 0, 'users' => [] ];
 		}
 
 		$placeholders = implode( ',', array_fill( 0, count( $user_ids ), '%d' ) );
@@ -358,9 +376,21 @@ final class Push_Service {
 		return $this->send_rows( is_array( $rows ) ? $rows : [], $title, $message, $url, $meta );
 	}
 
+	/** Only a server-side preference worker may target one anonymous PWA identity. */
+	public function send_to_visitor_hash( string $visitor_hash, string $title, string $message, string $url = '', array $meta = [] ): array {
+		global $wpdb;
+		if ( ! preg_match( '/^[a-f0-9]{64}$/', $visitor_hash ) ) return [ 'ok'=>false, 'sent'=>0, 'failed'=>0 ];
+		$this->maybe_install();
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM {$this->table()} WHERE status='active' AND user_id=0 AND visitor_hash=%s ORDER BY updated_at DESC LIMIT 3",
+			$visitor_hash
+		), ARRAY_A );
+		return $this->send_rows( is_array( $rows ) ? $rows : [], $title, $message, $url, $meta );
+	}
+
 	private function send_rows( array $rows, string $title, string $message, string $url = '', array $meta = [] ): array {
 		if ( ! $this->ready() ) {
-			return [ 'ok' => false, 'message' => __( 'VAPID push delivery is unavailable. OpenSSL with P-256 support is required.', 'dsa' ), 'sent' => 0, 'failed' => 0 ];
+			return [ 'ok' => false, 'message' => __( 'VAPID push delivery is unavailable. OpenSSL with P-256 support is required.', 'dsa' ), 'sent' => 0, 'failed' => 0, 'users' => [] ];
 		}
 		$title = $this->truncate( sanitize_text_field( $title ?: get_bloginfo( 'name' ) ), 120 );
 		$message = $this->truncate( sanitize_textarea_field( $message ), 1200 );
@@ -380,15 +410,25 @@ final class Push_Service {
 		$payload = wp_json_encode( $payload_data );
 		$sent = 0;
 		$failed = 0;
+		$users = [];
 		foreach ( $rows as $row ) {
 			$result = $this->send_one( $row, (string) $payload );
-			if ( ! empty( $result['ok'] ) ) $sent++; else $failed++;
+			$user_id = absint( $row['user_id'] ?? 0 );
+			if ( $user_id > 0 && ! isset( $users[ $user_id ] ) ) $users[ $user_id ] = [ 'sent' => 0, 'failed' => 0 ];
+			if ( ! empty( $result['ok'] ) ) {
+				$sent++;
+				if ( $user_id > 0 ) $users[ $user_id ]['sent']++;
+			} else {
+				$failed++;
+				if ( $user_id > 0 ) $users[ $user_id ]['failed']++;
+			}
 		}
 		return [
 			'ok' => $sent > 0 && 0 === $failed,
 			'message' => sprintf( __( 'Push accepted for %1$d device(s); %2$d failed. Sends are capped at 100 devices per action.', 'dsa' ), $sent, $failed ),
 			'sent' => $sent,
 			'failed' => $failed,
+			'users' => $users,
 		];
 	}
 

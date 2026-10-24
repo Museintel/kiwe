@@ -1,0 +1,8 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawnSync}=require('node:child_process');
+const root=path.resolve(__dirname,'../..'),php=process.env.KIWE_PHP||'php';
+const probe=spawnSync(php,['-r','echo json_encode([PHP_BINARY,extension_loaded("sodium")]);'],{encoding:'utf8',windowsHide:true});assert.equal(probe.status,0,probe.stderr);const[binary,sodium]=JSON.parse(probe.stdout),args=[];
+if(!sodium){const extension=path.join(path.dirname(binary),'ext',process.platform==='win32'?'php_sodium.dll':'sodium.so');assert(fs.existsSync(extension),'Sodium is required for real signature tests');args.push('-d','extension='+extension);}
+let checks=0;
+for(const[file,modes]of[['test-app-runtime-contract.php',['bundled','split']],['test-core-update-profile.php',['bundled','split']],['test-app-signed-packets.php',['']],['test-app-platform-boundaries.php',['']]])for(const mode of modes){const r=spawnSync(php,[...args,'tools/release/'+file,...(mode?[mode]:[])],{cwd:root,encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stdout+r.stderr);assert(!/Warning:|Fatal error:|Deprecated:/.test(r.stdout+r.stderr),r.stdout+r.stderr);const proof=JSON.parse(r.stdout.trim());assert(proof.passed);checks+=proof.checks;}
+const owned=spawnSync(process.execPath,['tools/release/build-apps-ownership.cjs','--check'],{cwd:root,encoding:'utf8',windowsHide:true});assert.equal(owned.status,0,owned.stdout+owned.stderr);checks++;
+console.log(JSON.stringify({passed:true,checks,scope:'Versioned providers, actual original-key signature/compatibility tests, Core-only denial, native software permissions and one-writer conflict protection; actual WordPress installation remains a separate native gate'}));

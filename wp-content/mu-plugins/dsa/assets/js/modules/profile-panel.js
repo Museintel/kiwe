@@ -196,7 +196,7 @@ function renderPrototypeProfile( payload ) {
 		'<div class="kiwe-profile-v2027__edit-region" data-dsa-profile-edit-region hidden>',
 		profileForm( user ),
 		'</div>',
-		'<div class="kiwe-profile-v2027__stats" aria-label="Account activity">',
+		'<div class="kiwe-profile-v2027__stats dsa-summary-stats" aria-label="Account activity">',
 		hasWoo ? metricCard( orderCount, 'Orders', 'orders' ) : '',
 		metricCard( savedCount, 'Saved', 'saved' ),
 		metricCard( points, 'Kiwe points', 'points' ),

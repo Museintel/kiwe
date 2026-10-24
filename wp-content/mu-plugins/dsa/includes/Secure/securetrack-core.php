@@ -4,7 +4,7 @@
  * Description:  Local-first WordPress security intelligence — reflex blocking, self-learning
  *               site baselines, optional AI second opinion, risk scoring, IP reputation,
  *               page navigation trails, protected-event ledger, and admin intelligence dashboards.
- * Version:      2.0.16
+ * Version:      2.0.18
  * Requires PHP: 8.2
  * Author:       Custom Build
  * License:      GPL-2.0+
@@ -46,7 +46,7 @@ require_once __DIR__ . '/SecureTrack_Db_Service.php';
 //  CONSTANTS
 // ════════════════════════════════════════════════════════════════
 
-define( 'STP_VER', '2.0.16' );
+define( 'STP_VER', '2.0.18' );
 define( 'STP_FILE', __FILE__ );
 
 function stp_break_glass_default_slug() {
@@ -507,16 +507,13 @@ function stp_honeypot_path() {
 function stp_tarpit_response() {
 	if ( stp_enforcement_paused() ) return false;
 	if ( empty( stp_cfg()['tarpit_enabled'] ) || headers_sent() ) return false;
-	@set_time_limit( 12 );
+	// A sleeping denial consumes the same shared-host worker needed by legitimate visitors.
 	header( 'HTTP/1.1 429 Too Many Requests' );
 	header( 'Content-Type: text/plain; charset=utf-8' );
 	header( 'X-Robots-Tag: noindex, nofollow', true );
-	for ( $i = 0; $i < 4; $i++ ) {
-		echo '.';
-		@ob_flush();
-		@flush();
-		sleep( 2 );
-	}
+	header( 'Cache-Control: no-store, private' );
+	header( 'Retry-After: 60' );
+	echo 'Too many requests. Try again later.';
 	exit;
 }
 
@@ -613,7 +610,7 @@ function stp_waf_guard() {
 	}
 	if ( ! empty( stp_cfg()['honeypot_enabled'] ) && $path === stp_honeypot_path() ) {
 		global $wpdb;
-		if ( ! stp_tables_ready() && ! stp_repair_database() ) wp_die( 'Forbidden', 'Forbidden', array( 'response' => 403 ) );
+		if ( ! stp_tables_ready() ) wp_die( 'Forbidden', 'Forbidden', array( 'response' => 403 ) );
 		$ip_row = stp_upsert_ip( $ip );
 		$wpdb->update( stp_t( 'ips' ), array( 'status' => 'blocked', 'risk_score' => 100, 'blocked_at' => current_time( 'mysql' ), 'notes' => 'Honeypot endpoint hit' ), array( 'id' => (int) $ip_row->id ) );
 		stp_log( 'waf_block', array( 'sub' => 'honeypot_hit', 'url' => home_url( stp_honeypot_path() ), 'waf_score' => 100, 'extra' => array( 'honeypot' => true ) ) );
@@ -686,7 +683,7 @@ function stp_security_grade( $score ) {
 $_stp_is_mu = ( defined( 'WPMU_PLUGIN_DIR' ) && strpos( STP_FILE, WPMU_PLUGIN_DIR ) !== false );
 
 if ( $_stp_is_mu ) {
-	// MU-plugins have no activation hook; initialise lazily.
+	// Retained compatibility hook; schema changes require explicit maintenance.
 	add_action( 'plugins_loaded', 'stp_maybe_install', 5 );
 } else {
 	register_activation_hook( STP_FILE, 'stp_install' );
@@ -784,6 +781,7 @@ function stp_upgrade_alert_severity() {
 }
 
 function stp_migrate_schema() {
+	if ( ! \DSA\Secure\SecureTrack_Db_Service::schema_write_allowed() ) return;
 	stp_ensure_column( 'ips', 'ip_address', "VARCHAR(45) NOT NULL DEFAULT ''" );
 	stp_ensure_column( 'ips', 'country', 'VARCHAR(80) DEFAULT NULL' );
 	stp_ensure_column( 'ips', 'country_code', 'VARCHAR(4) DEFAULT NULL' );
@@ -949,31 +947,32 @@ function stp_deactivate() {
 // ════════════════════════════════════════════════════════════════
 
 function stp_create_tables() {
+	if ( ! \DSA\Secure\SecureTrack_Db_Service::schema_write_allowed() ) return;
 	global $wpdb;
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	$cs = $wpdb->get_charset_collate();
 
 	/* ── IP Reputation ─────────────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'ips' ) . " (
-  id            BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  ip_address    VARCHAR(45)         NOT NULL,
-  country       VARCHAR(80)         DEFAULT NULL,
-  country_code  VARCHAR(4)          DEFAULT NULL,
-  region        VARCHAR(100)        DEFAULT NULL,
-  city          VARCHAR(100)        DEFAULT NULL,
-  isp           VARCHAR(200)        DEFAULT NULL,
-  org           VARCHAR(200)        DEFAULT NULL,
-  is_proxy      TINYINT(1)          NOT NULL DEFAULT 0,
-  is_hosting    TINYINT(1)          NOT NULL DEFAULT 0,
-  risk_score    SMALLINT            NOT NULL DEFAULT 0,
-  status        VARCHAR(10)         NOT NULL DEFAULT 'unknown',
-  failed_logins SMALLINT            NOT NULL DEFAULT 0,
-  total_hits    INT                 NOT NULL DEFAULT 0,
-  first_seen    DATETIME            NOT NULL,
-  last_seen     DATETIME            NOT NULL,
-  blocked_at    DATETIME            DEFAULT NULL,
-  geo_fetched   TINYINT(1)          NOT NULL DEFAULT 0,
-  notes         TEXT                DEFAULT NULL,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  ip_address varchar(45) NOT NULL,
+  country varchar(80) DEFAULT NULL,
+  country_code varchar(4) DEFAULT NULL,
+  region varchar(100) DEFAULT NULL,
+  city varchar(100) DEFAULT NULL,
+  isp varchar(200) DEFAULT NULL,
+  org varchar(200) DEFAULT NULL,
+  is_proxy tinyint(1) NOT NULL DEFAULT 0,
+  is_hosting tinyint(1) NOT NULL DEFAULT 0,
+  risk_score smallint(6) NOT NULL DEFAULT 0,
+  status varchar(10) NOT NULL DEFAULT 'unknown',
+  failed_logins smallint(6) NOT NULL DEFAULT 0,
+  total_hits int(11) NOT NULL DEFAULT 0,
+  first_seen datetime NOT NULL,
+  last_seen datetime NOT NULL,
+  blocked_at datetime DEFAULT NULL,
+  geo_fetched tinyint(1) NOT NULL DEFAULT 0,
+  notes text DEFAULT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY   uk_ip (ip_address),
   KEY          idx_status (status),
@@ -983,19 +982,19 @@ function stp_create_tables() {
 
 	/* ── Sessions ──────────────────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'sessions' ) . " (
-  id             BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  session_token  VARCHAR(64)         NOT NULL,
-  ip_id          BIGINT UNSIGNED     NOT NULL,
-  user_id        BIGINT UNSIGNED     NOT NULL DEFAULT 0,
-  user_agent     TEXT                DEFAULT NULL,
-  device_type    VARCHAR(10)         NOT NULL DEFAULT 'desktop',
-  referrer       VARCHAR(500)        DEFAULT NULL,
-  started_at     DATETIME            NOT NULL,
-  last_activity  DATETIME            NOT NULL,
-  page_count     SMALLINT            NOT NULL DEFAULT 0,
-  total_seconds  INT                 NOT NULL DEFAULT 0,
-  is_bot         TINYINT(1)          NOT NULL DEFAULT 0,
-  flag_status    VARCHAR(10)         NOT NULL DEFAULT 'yellow',
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  session_token varchar(64) NOT NULL,
+  ip_id bigint(20) unsigned NOT NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  user_agent text DEFAULT NULL,
+  device_type varchar(10) NOT NULL DEFAULT 'desktop',
+  referrer varchar(500) DEFAULT NULL,
+  started_at datetime NOT NULL,
+  last_activity datetime NOT NULL,
+  page_count smallint(6) NOT NULL DEFAULT 0,
+  total_seconds int(11) NOT NULL DEFAULT 0,
+  is_bot tinyint(1) NOT NULL DEFAULT 0,
+  flag_status varchar(10) NOT NULL DEFAULT 'yellow',
   PRIMARY KEY  (id),
   UNIQUE KEY   uk_token  (session_token),
   KEY          idx_user  (user_id),
@@ -1007,25 +1006,25 @@ function stp_create_tables() {
 
 	/* ── Events Log ────────────────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'events' ) . " (
-  id            BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  session_id    BIGINT UNSIGNED     DEFAULT NULL,
-  ip_id         BIGINT UNSIGNED     NOT NULL,
-  user_id       BIGINT UNSIGNED     NOT NULL DEFAULT 0,
-  username      VARCHAR(200)        DEFAULT NULL,
-  event_type    VARCHAR(60)         NOT NULL,
-  event_sub     VARCHAR(60)         DEFAULT NULL,
-  obj_type      VARCHAR(50)         DEFAULT NULL,
-  obj_id        BIGINT UNSIGNED     DEFAULT NULL,
-  obj_title     VARCHAR(500)        DEFAULT NULL,
-  url           VARCHAR(1000)       DEFAULT NULL,
-  extra         LONGTEXT            DEFAULT NULL,
-  risk_score    SMALLINT            NOT NULL DEFAULT 0,
-  risk_reasons  VARCHAR(500)        DEFAULT NULL,
-  flag_status   VARCHAR(10)         NOT NULL DEFAULT 'yellow',
-  reviewed      TINYINT(1)          NOT NULL DEFAULT 0,
-  created_at    DATETIME            NOT NULL,
-  hash_prev     VARCHAR(64)         DEFAULT NULL,
-  hash_current  VARCHAR(64)         DEFAULT NULL,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  session_id bigint(20) unsigned DEFAULT NULL,
+  ip_id bigint(20) unsigned NOT NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  username varchar(200) DEFAULT NULL,
+  event_type varchar(60) NOT NULL,
+  event_sub varchar(60) DEFAULT NULL,
+  obj_type varchar(50) DEFAULT NULL,
+  obj_id bigint(20) unsigned DEFAULT NULL,
+  obj_title varchar(500) DEFAULT NULL,
+  url varchar(1000) DEFAULT NULL,
+  extra longtext DEFAULT NULL,
+  risk_score smallint(6) NOT NULL DEFAULT 0,
+  risk_reasons varchar(500) DEFAULT NULL,
+  flag_status varchar(10) NOT NULL DEFAULT 'yellow',
+  reviewed tinyint(1) NOT NULL DEFAULT 0,
+  created_at datetime NOT NULL,
+  hash_prev varchar(64) DEFAULT NULL,
+  hash_current varchar(64) DEFAULT NULL,
   PRIMARY KEY  (id),
   KEY          idx_type    (event_type),
   KEY          idx_user    (user_id),
@@ -1042,28 +1041,28 @@ function stp_create_tables() {
 
 	/* ── Behavioral Profiles ───────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'profiles' ) . " (
-  user_id            BIGINT UNSIGNED     NOT NULL,
-  trusted_ips        LONGTEXT            DEFAULT NULL,
-  trusted_countries  LONGTEXT            DEFAULT NULL,
-  login_hours        LONGTEXT            DEFAULT NULL,
-  green_count        INT                 NOT NULL DEFAULT 0,
-  risk_count         INT                 NOT NULL DEFAULT 0,
-  last_login         DATETIME            DEFAULT NULL,
-  last_ip            VARCHAR(45)         DEFAULT NULL,
-  last_country       VARCHAR(80)         DEFAULT NULL,
-  baseline_done      TINYINT(1)          NOT NULL DEFAULT 0,
-  updated_at         DATETIME            DEFAULT NULL,
+  user_id bigint(20) unsigned NOT NULL,
+  trusted_ips longtext DEFAULT NULL,
+  trusted_countries longtext DEFAULT NULL,
+  login_hours longtext DEFAULT NULL,
+  green_count int(11) NOT NULL DEFAULT 0,
+  risk_count int(11) NOT NULL DEFAULT 0,
+  last_login datetime DEFAULT NULL,
+  last_ip varchar(45) DEFAULT NULL,
+  last_country varchar(80) DEFAULT NULL,
+  baseline_done tinyint(1) NOT NULL DEFAULT 0,
+  updated_at datetime DEFAULT NULL,
   PRIMARY KEY  (user_id)
 ) $cs;" );
 
 	/* ── Page Navigation ───────────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'pages' ) . " (
-  id           BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  session_id   BIGINT UNSIGNED     NOT NULL,
-  url          VARCHAR(1000)       NOT NULL,
-  page_title   VARCHAR(500)        DEFAULT NULL,
-  time_spent   SMALLINT            NOT NULL DEFAULT 0,
-  visited_at   DATETIME            NOT NULL,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  session_id bigint(20) unsigned NOT NULL,
+  url varchar(1000) NOT NULL,
+  page_title varchar(500) DEFAULT NULL,
+  time_spent smallint(6) NOT NULL DEFAULT 0,
+  visited_at datetime NOT NULL,
   PRIMARY KEY  (id),
   KEY          idx_session (session_id),
   KEY          idx_session_visited (session_id,visited_at),
@@ -1072,21 +1071,21 @@ function stp_create_tables() {
 
 	/* ── Alerts ──────────────────────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'alerts' ) . " (
-  id            BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  alert_time    DATETIME            NOT NULL,
-  chain_type    VARCHAR(100)        NOT NULL DEFAULT '',
-  severity      VARCHAR(20)         NOT NULL DEFAULT 'high',
-  ip_address    VARCHAR(45)         DEFAULT NULL,
-  subnet_24     VARCHAR(20)         DEFAULT NULL,
-  user_id       BIGINT UNSIGNED     NOT NULL DEFAULT 0,
-  username      VARCHAR(200)        DEFAULT NULL,
-  event_id      BIGINT UNSIGNED     DEFAULT NULL,
-  title         VARCHAR(255)        NOT NULL DEFAULT '',
-  description   TEXT                DEFAULT NULL,
-  evidence      LONGTEXT            DEFAULT NULL,
-  is_resolved   TINYINT(1)          NOT NULL DEFAULT 0,
-  action_taken  VARCHAR(255)        DEFAULT NULL,
-  resolved_at   DATETIME            DEFAULT NULL,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  alert_time datetime NOT NULL,
+  chain_type varchar(100) NOT NULL DEFAULT '',
+  severity varchar(20) NOT NULL DEFAULT 'high',
+  ip_address varchar(45) DEFAULT NULL,
+  subnet_24 varchar(20) DEFAULT NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  username varchar(200) DEFAULT NULL,
+  event_id bigint(20) unsigned DEFAULT NULL,
+  title varchar(255) NOT NULL DEFAULT '',
+  description text DEFAULT NULL,
+  evidence longtext DEFAULT NULL,
+  is_resolved tinyint(1) NOT NULL DEFAULT 0,
+  action_taken varchar(255) DEFAULT NULL,
+  resolved_at datetime DEFAULT NULL,
   PRIMARY KEY  (id),
   KEY          idx_alert_time (alert_time),
   KEY          idx_alert_open (is_resolved),
@@ -1097,19 +1096,19 @@ function stp_create_tables() {
 
 	/* ── Subnet Intelligence ─────────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'subnets' ) . " (
-  id             BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  subnet         VARCHAR(20)         NOT NULL,
-  ip_count       INT                 NOT NULL DEFAULT 0,
-  attack_ips     INT                 NOT NULL DEFAULT 0,
-  total_events   INT                 NOT NULL DEFAULT 0,
-  attack_events  INT                 NOT NULL DEFAULT 0,
-  threat_level   VARCHAR(20)         NOT NULL DEFAULT 'low',
-  threat_score   INT                 NOT NULL DEFAULT 0,
-  is_banned      TINYINT(1)          NOT NULL DEFAULT 0,
-  ban_reason     VARCHAR(255)        DEFAULT NULL,
-  ban_time       DATETIME            DEFAULT NULL,
-  first_seen     DATETIME            NOT NULL,
-  last_seen      DATETIME            NOT NULL,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  subnet varchar(20) NOT NULL,
+  ip_count int(11) NOT NULL DEFAULT 0,
+  attack_ips int(11) NOT NULL DEFAULT 0,
+  total_events int(11) NOT NULL DEFAULT 0,
+  attack_events int(11) NOT NULL DEFAULT 0,
+  threat_level varchar(20) NOT NULL DEFAULT 'low',
+  threat_score int(11) NOT NULL DEFAULT 0,
+  is_banned tinyint(1) NOT NULL DEFAULT 0,
+  ban_reason varchar(255) DEFAULT NULL,
+  ban_time datetime DEFAULT NULL,
+  first_seen datetime NOT NULL,
+  last_seen datetime NOT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY   uk_subnet (subnet),
   KEY          idx_level (threat_level),
@@ -1119,16 +1118,16 @@ function stp_create_tables() {
 
 	/* ── v2 Local Site Brain ───────────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'brain' ) . " (
-  id             BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  feature_key    VARCHAR(120)        NOT NULL,
-  feature_type   VARCHAR(40)         NOT NULL DEFAULT 'site',
-  good_count     INT                 NOT NULL DEFAULT 0,
-  risk_count     INT                 NOT NULL DEFAULT 0,
-  last_score     SMALLINT            NOT NULL DEFAULT 0,
-  confidence     SMALLINT            NOT NULL DEFAULT 0,
-  meta           LONGTEXT            DEFAULT NULL,
-  first_seen     DATETIME            NOT NULL,
-  last_seen      DATETIME            NOT NULL,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  feature_key varchar(120) NOT NULL,
+  feature_type varchar(40) NOT NULL DEFAULT 'site',
+  good_count int(11) NOT NULL DEFAULT 0,
+  risk_count int(11) NOT NULL DEFAULT 0,
+  last_score smallint(6) NOT NULL DEFAULT 0,
+  confidence smallint(6) NOT NULL DEFAULT 0,
+  meta longtext DEFAULT NULL,
+  first_seen datetime NOT NULL,
+  last_seen datetime NOT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY   uk_feature (feature_key),
   KEY          idx_type   (feature_type),
@@ -1138,17 +1137,17 @@ function stp_create_tables() {
 
 	/* ── v2 Optional Cloud Second Opinion Queue ─────────────── */
 dbDelta( "CREATE TABLE " . stp_t( 'ai_queue' ) . " (
-  id               BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  event_id         BIGINT UNSIGNED     NOT NULL DEFAULT 0,
-  provider         VARCHAR(30)         NOT NULL DEFAULT 'none',
-  local_score      SMALLINT            NOT NULL DEFAULT 0,
-  status           VARCHAR(20)         NOT NULL DEFAULT 'pending',
-  compact_context  LONGTEXT            DEFAULT NULL,
-  ai_score         SMALLINT            DEFAULT NULL,
-  ai_label         VARCHAR(40)         DEFAULT NULL,
-  ai_reason        TEXT                DEFAULT NULL,
-  created_at       DATETIME            NOT NULL,
-  reviewed_at      DATETIME            DEFAULT NULL,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  event_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  provider varchar(30) NOT NULL DEFAULT 'none',
+  local_score smallint(6) NOT NULL DEFAULT 0,
+  status varchar(20) NOT NULL DEFAULT 'pending',
+  compact_context longtext DEFAULT NULL,
+  ai_score smallint(6) DEFAULT NULL,
+  ai_label varchar(40) DEFAULT NULL,
+  ai_reason text DEFAULT NULL,
+  created_at datetime NOT NULL,
+  reviewed_at datetime DEFAULT NULL,
   PRIMARY KEY    (id),
   KEY            idx_status (status),
   KEY            idx_event  (event_id),
@@ -1157,12 +1156,12 @@ dbDelta( "CREATE TABLE " . stp_t( 'ai_queue' ) . " (
 
 	/* ── Atomic rate limit counters ─────────────────────────── */
 	dbDelta( "CREATE TABLE " . stp_t( 'rate_limits' ) . " (
-  id             BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT,
-  bucket_hash    VARCHAR(64)         NOT NULL,
-  bucket_id      VARCHAR(64)         NOT NULL DEFAULT '',
-  counter        INT                 NOT NULL DEFAULT 0,
-  window_start   INT                 NOT NULL DEFAULT 0,
-  expires_at     INT                 NOT NULL DEFAULT 0,
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  bucket_hash varchar(64) NOT NULL,
+  bucket_id varchar(64) NOT NULL DEFAULT '',
+  counter int(11) NOT NULL DEFAULT 0,
+  window_start int(11) NOT NULL DEFAULT 0,
+  expires_at int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY  (id),
   UNIQUE KEY   uk_bucket (bucket_hash),
   KEY          idx_bucket_id (bucket_id),
@@ -1170,7 +1169,8 @@ dbDelta( "CREATE TABLE " . stp_t( 'ai_queue' ) . " (
 ) $cs;" );
 
 	stp_migrate_schema();
-	update_option( 'stp_db_version', STP_VER );
+	\DSA\Secure\SecureTrack_Report_Service::install();
+	\DSA\Secure\SecureTrack_Lifecycle_Service::install();
 }
 
 
@@ -1184,12 +1184,10 @@ add_filter( 'cron_schedules', function ( $s ) {
 } );
 
 function stp_schedule_crons() {
-	if ( ! wp_next_scheduled( 'stp_cron_cleanup' ) )
-		wp_schedule_event( time(), 'daily', 'stp_cron_cleanup' );
-	if ( ! wp_next_scheduled( 'stp_cron_geo' ) )
-		wp_schedule_event( time(), 'stp_5min', 'stp_cron_geo' );
-	if ( ! wp_next_scheduled( 'stp_cron_ai_queue' ) )
-		wp_schedule_event( time() + 60, 'stp_5min', 'stp_cron_ai_queue' );
+	\DSA\Secure\SecureTrack_Lifecycle_Service::schedule();
+	$c=stp_cfg();
+	if (!empty($c['geo_enabled']) && !wp_next_scheduled('stp_cron_geo')) wp_schedule_event(time()+180+wp_rand(0,120),'stp_5min','stp_cron_geo');
+	if (!empty($c['v2_site_brain']) && !wp_next_scheduled('stp_cron_ai_queue')) wp_schedule_event(time()+240+wp_rand(0,120),'stp_5min','stp_cron_ai_queue');
 }
 
 function stp_verify_crons() {
@@ -1197,7 +1195,11 @@ function stp_verify_crons() {
 	if ( get_transient( 'stp_cron_verify' ) ) return;
 	set_transient( 'stp_cron_verify', 1, HOUR_IN_SECONDS );
 	$missing = array();
-	foreach ( array( 'stp_cron_cleanup', 'stp_cron_geo', 'stp_cron_ai_queue' ) as $hook ) {
+	$hooks = array('stp_cron_cleanup');
+	if (!empty(stp_cfg()['geo_enabled'])) $hooks[]='stp_cron_geo';
+	if (!empty(stp_cfg()['v2_site_brain'])) $hooks[]='stp_cron_ai_queue';
+	if (\DSA\Secure\SecureTrack_Report_Service::enabled()) $hooks[]='stp_cron_reports';
+	foreach ( $hooks as $hook ) {
 		if ( ! wp_next_scheduled( $hook ) ) $missing[] = $hook;
 	}
 	if ( $missing ) {
@@ -1207,48 +1209,19 @@ function stp_verify_crons() {
 }
 add_action( 'admin_init', 'stp_verify_crons', 5 );
 
-add_action( 'stp_cron_cleanup', 'stp_run_cleanup' );
+\DSA\Secure\SecureTrack_Lifecycle_Service::register();
 add_action( 'stp_cron_geo',     'stp_run_geo' );
 add_action( 'stp_cron_ai_queue', 'stp_run_ai_queue' );
 add_action( 'stp_cron_ai_queue_priority', 'stp_run_priority_ai_queue' );
+add_action( 'stp_cron_reports', [ \DSA\Secure\SecureTrack_Report_Service::class, 'run' ] );
+add_action( 'updated_option', [ \DSA\Secure\SecureTrack_Report_Service::class, 'settings_changed' ], 10, 3 );
 
 /**
- * Removes aged-out events and green sessions.
+ * One bounded retention pass. Backlogs wait for a later scheduled run.
+ * The elapsed budget prevents starting more SQL; it cannot interrupt an active query.
  */
 function stp_run_cleanup() {
-	global $wpdb;
-	$c = stp_cfg();
-
-	if ( $c['green_trim_days'] > 0 ) {
-		$cut = date( 'Y-m-d H:i:s', strtotime( "-{$c['green_trim_days']} days" ) );
-		$wpdb->query( $wpdb->prepare( "DELETE FROM " . stp_t( 'events' ) . " WHERE flag_status='green' AND created_at < %s", $cut ) );
-	}
-	if ( $c['yellow_trim_days'] > 0 ) {
-		$cut = date( 'Y-m-d H:i:s', strtotime( "-{$c['yellow_trim_days']} days" ) );
-		$wpdb->query( $wpdb->prepare( "DELETE FROM " . stp_t( 'events' ) . " WHERE flag_status='yellow' AND created_at < %s", $cut ) );
-	}
-	// Page nav for old green/yellow sessions. Delete by indexed session IDs in small batches.
-	$cut14 = date( 'Y-m-d H:i:s', strtotime( '-14 days' ) );
-	$green_sessions = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM " . stp_t( 'sessions' ) . " WHERE flag_status='green' AND last_activity < %s LIMIT 1000", $cut14 ) );
-	if ( $green_sessions ) {
-		$ids = implode( ',', array_map( 'intval', $green_sessions ) );
-		$wpdb->query( "DELETE FROM " . stp_t( 'pages' ) . " WHERE session_id IN ({$ids}) LIMIT 5000" );
-	}
-	$wpdb->query( $wpdb->prepare(
-		"DELETE FROM " . stp_t( 'sessions' ) . " WHERE flag_status='green' AND last_activity < %s LIMIT 1000", $cut14
-	) );
-	if ( $c['yellow_trim_days'] > 0 ) {
-		$cut_yellow_pages = date( 'Y-m-d H:i:s', strtotime( "-{$c['yellow_trim_days']} days" ) );
-		$yellow_sessions = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM " . stp_t( 'sessions' ) . " WHERE flag_status='yellow' AND last_activity < %s LIMIT 1000", $cut_yellow_pages ) );
-		if ( $yellow_sessions ) {
-			$ids = implode( ',', array_map( 'intval', $yellow_sessions ) );
-			$wpdb->query( "DELETE FROM " . stp_t( 'pages' ) . " WHERE session_id IN ({$ids}) LIMIT 5000" );
-		}
-		$wpdb->query( $wpdb->prepare( "DELETE FROM " . stp_t( 'sessions' ) . " WHERE flag_status='yellow' AND last_activity < %s LIMIT 1000", $cut_yellow_pages ) );
-	}
-	$wpdb->query( $wpdb->prepare( "DELETE FROM " . stp_t( 'ai_queue' ) . " WHERE status IN ('reviewed','error','local_only') AND created_at < %s", date( 'Y-m-d H:i:s', strtotime( '-30 days' ) ) ) );
-	$wpdb->query( "DELETE FROM " . stp_t( 'ai_queue' ) . " WHERE status='pending' AND id NOT IN (SELECT id FROM (SELECT id FROM " . stp_t( 'ai_queue' ) . " WHERE status='pending' ORDER BY id DESC LIMIT 1000) keepq)" );
-	$wpdb->query( $wpdb->prepare( "DELETE FROM " . stp_t( 'rate_limits' ) . " WHERE expires_at < %d LIMIT 2000", time() ) );
+	return \DSA\Secure\SecureTrack_Lifecycle_Service::run();
 }
 
 /**
@@ -1361,12 +1334,12 @@ function stp_ip_has_nearby_threat( $ip, $minutes = 1440 ) {
 	$prefix = stp_ipv4_prefix( $ip, 3 );
 	if ( ! $prefix ) return false;
 	$count = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT i.ip_address)
+		"SELECT 1
 		 FROM " . stp_t( 'events' ) . " e
 		 JOIN " . stp_t( 'ips' ) . " i ON i.id=e.ip_id
 		 WHERE i.ip_address LIKE %s AND i.ip_address<>%s
 		   AND (e.flag_status='red' OR e.risk_score>=60 OR e.risk_reasons LIKE %s)
-		   AND e.created_at > %s",
+		   AND e.created_at > %s LIMIT 1",
 		$prefix . '%', $ip, '%Attack path probed%', date( 'Y-m-d H:i:s', strtotime( '-' . absint( $minutes ) . ' minutes' ) )
 	) );
 	return $count > 0;
@@ -1376,10 +1349,10 @@ function stp_user_recent_different_ip( $uid, $ip, $minutes = 1440 ) {
 	global $wpdb;
 	if ( ! $uid ) return false;
 	$count = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT i.ip_address)
+		"SELECT 1
 		 FROM " . stp_t( 'events' ) . " e
 		 JOIN " . stp_t( 'ips' ) . " i ON i.id=e.ip_id
-		 WHERE e.user_id=%d AND i.ip_address<>%s AND e.created_at > %s",
+		 WHERE e.user_id=%d AND i.ip_address<>%s AND e.created_at > %s LIMIT 1",
 		$uid, $ip, date( 'Y-m-d H:i:s', strtotime( '-' . absint( $minutes ) . ' minutes' ) )
 	) );
 	return $count > 0;
@@ -1427,25 +1400,25 @@ function stp_ip_recent_similar_reason( $ip, $url = '', $type = '', $minutes = 14
 	global $wpdb;
 	$path = $url ? wp_parse_url( $url, PHP_URL_PATH ) : '';
 	$like = $path ? '%' . $wpdb->esc_like( $path ) . '%' : '%';
-	$count = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*)
+	$rows = $wpdb->get_col( $wpdb->prepare(
+		"SELECT e.id
 		 FROM " . stp_t( 'events' ) . " e
 		 JOIN " . stp_t( 'ips' ) . " i ON i.id=e.ip_id
-		 WHERE i.ip_address=%s AND e.event_type=%s AND e.url LIKE %s AND e.risk_score>=25 AND e.created_at > %s",
+		 WHERE i.ip_address=%s AND e.event_type=%s AND e.url LIKE %s AND e.risk_score>=25 AND e.created_at > %s LIMIT 2",
 		$ip, $type, $like, date( 'Y-m-d H:i:s', strtotime( '-' . absint( $minutes ) . ' minutes' ) )
 	) );
-	return $count >= 2;
+	return count( (array) $rows ) >= 2;
 }
 
 function stp_ip_recent_attack_chain( $ip, $minutes = 1440 ) {
 	global $wpdb;
 	$count = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*)
+		"SELECT 1
 		 FROM " . stp_t( 'events' ) . " e
 		 JOIN " . stp_t( 'ips' ) . " i ON i.id=e.ip_id
 		 WHERE i.ip_address=%s
 		   AND (e.event_type='login_failed' OR e.risk_reasons LIKE %s OR e.risk_score>=60)
-		   AND e.created_at > %s",
+		   AND e.created_at > %s LIMIT 1",
 		$ip, '%Attack path probed%', date( 'Y-m-d H:i:s', strtotime( '-' . absint( $minutes ) . ' minutes' ) )
 	) );
 	return $count > 0;
@@ -1760,16 +1733,14 @@ function stp_update_subnet_intel( $ip, $is_attack ) {
 	global $wpdb;
 	$cfg = stp_cfg();
 	if ( empty( $cfg['subnet_intel'] ) || ! stp_table_exists( 'subnets' ) ) return;
+	if (class_exists(\DSA\Secure\SecureTrack_Lifecycle_Service::class) && !\DSA\Secure\SecureTrack_Lifecycle_Service::optional_allowed('subnets')) return;
+	$site_clock=class_exists(\DSA\Secure\SecureTrack_Lifecycle_Service::class) && \DSA\Secure\SecureTrack_Lifecycle_Service::enabled();
+	$now=current_time('mysql');
 	$subnet = stp_subnet24_cidr( $ip );
 	if ( ! $subnet ) return;
 	$prefix = stp_ipv4_prefix( $ip, 3 );
 
-	$wpdb->query( $wpdb->prepare(
-		"INSERT INTO " . stp_t( 'subnets' ) . " (subnet,total_events,attack_events,first_seen,last_seen)
-		 VALUES (%s,1,%d,NOW(),NOW())
-		 ON DUPLICATE KEY UPDATE total_events=total_events+1,attack_events=attack_events+%d,last_seen=NOW()",
-		$subnet, $is_attack ? 1 : 0, $is_attack ? 1 : 0
-	) );
+	$wpdb->query($wpdb->prepare("INSERT INTO ".stp_t('subnets')." (subnet,total_events,attack_events,first_seen,last_seen".($site_clock?',site_clock':'').") VALUES (%s,1,%d,%s,%s".($site_clock?',1':'').") ON DUPLICATE KEY UPDATE total_events=total_events+1,attack_events=attack_events+%d,last_seen=VALUES(last_seen)".($site_clock?',site_clock=1':''),$subnet,$is_attack?1:0,$now,$now,$is_attack?1:0));
 
 	$attack_ips = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(DISTINCT i.ip_address) FROM " . stp_t( 'events' ) . " e
@@ -1953,7 +1924,7 @@ function stp_should_create_session_for_event( $type ) {
 
 function stp_session_token() {
 	$key = 'stp_sess';
-	if ( ! empty( $_COOKIE[ $key ] ) && preg_match( '/^[a-f0-9]{64}$/', $_COOKIE[ $key ] ) ) {
+	if ( isset( $_COOKIE[ $key ] ) && is_string( $_COOKIE[ $key ] ) && preg_match( '/^[a-f0-9]{64}$/', $_COOKIE[ $key ] ) ) {
 		return $_COOKIE[ $key ];
 	}
 	$tok = bin2hex( random_bytes( 32 ) );
@@ -1968,6 +1939,9 @@ function stp_session_token() {
 		if ( defined( 'COOKIE_DOMAIN' ) && COOKIE_DOMAIN ) $opts['domain'] = COOKIE_DOMAIN;
 		setcookie( $key, $tok, $opts );
 	}
+	// setcookie() only affects the response; all callers in this request also
+	// need the same token, including the footer's timing beacon.
+	$_COOKIE[ $key ] = $tok;
 	return $tok;
 }
 
@@ -1981,7 +1955,13 @@ function stp_upsert_session( $ip ) {
 		"SELECT * FROM " . stp_t( 'sessions' ) . " WHERE session_token=%s", $tok
 	) );
 	if ( $row ) {
-		$wpdb->update( stp_t( 'sessions' ), array( 'last_activity' => current_time( 'mysql' ) ), array( 'id' => $row->id ) );
+		$now = current_time( 'mysql' );
+		if ( $row->last_activity !== $now ) {
+			$activity = array('last_activity'=>$now);
+			if (\DSA\Secure\SecureTrack_Report_Service::enabled()) $activity['report_pending']=1;
+			$wpdb->update( stp_t( 'sessions' ), $activity, array( 'id' => $row->id ) );
+			$row->last_activity = $now;
+		}
 		return $row;
 	}
 	$ua  = substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ), 0, 500 );
@@ -2333,6 +2313,10 @@ function stp_log( $type, $args = array() ) {
 	return \DSA\Secure\SecureTrack_Event_Service::log( $type, $args );
 }
 
+function stp_log_page_view( $args = array() ) {
+	return \DSA\Secure\SecureTrack_Event_Service::log_page_view( $args );
+}
+
 function stp_alert( $subject, $body, $context = array() ) {
 	$config = stp_cfg();
 	if ( empty( $config['alert_on_red'] ) ) return false;
@@ -2504,7 +2488,9 @@ add_action( 'wp_login', function ( $login, $user ) {
 	/* Link session to authenticated user */
 	$tok = stp_session_token();
 	global $wpdb;
-	$wpdb->update( stp_t( 'sessions' ), array( 'user_id' => $user->ID ), array( 'session_token' => $tok ) );
+	$linked = array('user_id'=>$user->ID);
+	if (\DSA\Secure\SecureTrack_Report_Service::enabled()) $linked['report_pending']=1;
+	$wpdb->update( stp_t( 'sessions' ), $linked, array( 'session_token' => $tok ) );
 
 	$was_risky = ! empty( $ctx['new_country'] ) || ! empty( $ctx['odd_hour'] );
 	stp_touch_profile( $user->ID, $ip, $ip_obj->country, $hour, $was_risky );
@@ -2514,7 +2500,10 @@ add_action( 'wp_logout', function () {
 	stp_log( 'logout', array( 'url' => home_url( '/' ) ) );
 	global $wpdb;
 	$tok = isset( $_COOKIE['stp_sess'] ) && preg_match( '/^[a-f0-9]{64}$/', $_COOKIE['stp_sess'] ) ? $_COOKIE['stp_sess'] : '';
-	if ( $tok && stp_table_exists( 'sessions' ) ) $wpdb->delete( stp_t( 'sessions' ), array( 'session_token' => $tok ) );
+	if ( $tok && stp_table_exists( 'sessions' ) ) {
+		$reported = \DSA\Secure\SecureTrack_Report_Service::enabled() ? ' AND report_pending=0' : '';
+		$wpdb->query($wpdb->prepare('DELETE FROM '.stp_t('sessions').' WHERE session_token=%s'.$reported,$tok));
+	}
 	if ( ! headers_sent() ) {
 		$opts = array( 'expires' => time() - HOUR_IN_SECONDS, 'path' => defined( 'COOKIEPATH' ) && COOKIEPATH ? COOKIEPATH : '/', 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax' );
 		if ( defined( 'COOKIE_DOMAIN' ) && COOKIE_DOMAIN ) $opts['domain'] = COOKIE_DOMAIN;
@@ -2599,6 +2588,8 @@ add_action( 'before_delete_post', function ( $pid ) {
 	stp_log( stp_post_event_type( $p->post_type ), array( 'sub' => 'delete', 'obj_type' => $p->post_type, 'obj_id' => $pid, 'obj_title' => $p->post_title ) );
 } );
 
+// Native Woo audit is Core security, including when the Kiwe Store app is off.
+if ( function_exists( 'WC' ) ) {
 add_action( 'woocommerce_order_status_changed', function ( $order_id, $old_status, $new_status, $order ) {
 	$title = "Order #{$order_id}";
 	$extra = array( 'old_status' => $old_status, 'new_status' => $new_status );
@@ -2614,6 +2605,7 @@ add_action( 'woocommerce_order_status_changed', function ( $order_id, $old_statu
 		'extra'     => $extra,
 	) );
 }, 10, 4 );
+}
 
 add_action( 'current_screen', function ( $screen ) {
 	$is_ajax = function_exists( 'wp_doing_ajax' ) ? wp_doing_ajax() : ( defined( 'DOING_AJAX' ) && DOING_AJAX );
@@ -2668,6 +2660,8 @@ add_action( 'current_screen', function ( $screen ) {
 	}
 } );
 
+// Native Woo audit is Core security, including when the Kiwe Store app is off.
+if ( function_exists( 'WC' ) ) {
 add_action( 'woocommerce_new_product', function ( $product_id ) {
 	$p = get_post( $product_id );
 	stp_log( 'product_action', array(
@@ -2679,7 +2673,10 @@ add_action( 'woocommerce_new_product', function ( $product_id ) {
 		'extra'     => $p ? stp_post_extra( $product_id, $p ) : array(),
 	) );
 } );
+}
 
+// Native Woo audit is Core security, including when the Kiwe Store app is off.
+if ( function_exists( 'WC' ) ) {
 add_action( 'woocommerce_update_product', function ( $product_id ) {
 	$p = get_post( $product_id );
 	$key = 'stp_wc_product_update_' . (int) $product_id;
@@ -2694,7 +2691,10 @@ add_action( 'woocommerce_update_product', function ( $product_id ) {
 		'extra'     => $p ? stp_post_extra( $product_id, $p ) : array(),
 	) );
 } );
+}
 
+// Native Woo audit is Core security, including when the Kiwe Store app is off.
+if ( function_exists( 'WC' ) ) {
 add_action( 'woocommerce_new_order', function ( $order_id ) {
 	$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
 	stp_log( 'order_action', array(
@@ -2705,7 +2705,10 @@ add_action( 'woocommerce_new_order', function ( $order_id ) {
 		'extra'     => $order ? array( 'order_status' => $order->get_status(), 'order_total' => $order->get_total(), 'billing_email' => $order->get_billing_email() ) : array(),
 	) );
 } );
+}
 
+// Native Woo audit is Core security, including when the Kiwe Store app is off.
+if ( function_exists( 'WC' ) ) {
 add_action( 'woocommerce_update_order', function ( $order_id ) {
 	$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
 	$key = 'stp_wc_order_update_' . (int) $order_id;
@@ -2719,6 +2722,7 @@ add_action( 'woocommerce_update_order', function ( $order_id ) {
 		'extra'     => $order ? array( 'order_status' => $order->get_status(), 'order_total' => $order->get_total(), 'billing_email' => $order->get_billing_email() ) : array(),
 	) );
 } );
+}
 
 
 // ════════════════════════════════════════════════════════════════
@@ -2824,10 +2828,10 @@ add_action( 'transition_comment_status', function ( $new_status, $old_status, $c
 // ════════════════════════════════════════════════════════════════
 
 add_action( 'template_redirect', function () {
-	stp_diag( 'last_template_redirect', array( 'url' => $_SERVER['REQUEST_URI'] ?? '/', 'time' => current_time( 'mysql' ), 'user_id' => get_current_user_id() ) );
 	$cfg = stp_cfg();
-	if ( ! $cfg['track_visitors'] ) { stp_diag( 'last_skip_reason', 'Visitor tracking setting is OFF.' ); return; }
+	if ( empty( $cfg['track_visitors'] ) || ( ! empty( $cfg['exclude_admin'] ) && current_user_can( 'manage_options' ) ) ) return;
 	if ( stp_is_static_request() || is_feed() || is_robots() || is_trackback() ) return;
+	stp_diag( 'last_template_redirect', array( 'url' => $_SERVER['REQUEST_URI'] ?? '/', 'time' => current_time( 'mysql' ), 'user_id' => get_current_user_id() ) );
 
 	$ua = sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) );
 	$url   = ( is_ssl() ? 'https' : 'http' ) . '://' . ( $_SERVER['HTTP_HOST'] ?? '' ) . ( $_SERVER['REQUEST_URI'] ?? '/' );
@@ -2835,41 +2839,21 @@ add_action( 'template_redirect', function () {
 	$is_known_bot = preg_match( '/bot|crawl|spider|slurp|bingbot|googlebot|ahref|semrush|mj12bot/i', $ua );
 	$is_attack_probe = ! empty( $flags['attack_path'] ) || ! empty( $flags['sqli'] ) || ! empty( $flags['xss'] ) || ! empty( $flags['traversal'] ) || ( ! empty( $flags['waf_score'] ) && (int) $flags['waf_score'] >= 70 );
 	if ( $is_known_bot && ! $is_attack_probe ) { stp_diag( 'last_skip_reason', 'Clean known crawler skipped: ' . substr( $ua, 0, 120 ) ); return; }
+	if ( ! stp_tables_ready() ) return;
 
-	/* Transient-based per-IP rate limiter */
+	/* Share the native atomic counter owner; no per-visitor option pair. */
 	$ip  = stp_get_ip();
-	$rk  = 'stp_r_' . md5( $ip );
-	$cnt = (int) get_transient( $rk );
-	set_transient( $rk, $cnt + 1, 60 );
-	if ( $cnt > 20 ) $flags['rate_burst'] = true;
+	if ( ! stp_rate_limit( 'visit|' . $ip, 21, 60 ) ) $flags['rate_burst'] = true;
 
 	/* Admin area probe by unauthenticated visitor */
 	if ( strpos( $url, '/wp-admin' ) !== false && ! is_user_logged_in() )
 		$flags['admin_probe'] = true;
 
-	stp_log( 'page_view', array_merge( $flags, array(
+	stp_log_page_view( array_merge( $flags, array(
 		'url'   => $url,
 		'extra' => array( 'ref' => substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ?? '' ) ), 0, 200 ) ),
 	) ) );
 
-	/* Detailed page navigation table */
-	if ( $cfg['track_pages'] ) {
-		global $wpdb;
-		$ip_obj  = stp_upsert_ip( $ip );
-		$session = stp_upsert_session( $ip_obj );
-		if ( $session->is_bot ) return;
-
-		$wpdb->insert( stp_t( 'pages' ), array(
-			'session_id' => $session->id,
-			'url'        => substr( $url, 0, 1000 ),
-			'page_title' => '',
-			'visited_at' => current_time( 'mysql' ),
-		) );
-		$cur_count = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT page_count FROM " . stp_t( 'sessions' ) . " WHERE id=%d", $session->id
-		) );
-		$wpdb->update( stp_t( 'sessions' ), array( 'page_count' => $cur_count + 1 ), array( 'id' => $session->id ) );
-	}
 } );
 
 add_action( 'xmlrpc_call', function ( $method ) {
@@ -2882,11 +2866,12 @@ add_action( 'xmlrpc_call', function ( $method ) {
 // ════════════════════════════════════════════════════════════════
 
 add_action( 'wp_footer', function () {
-	stp_diag( 'last_wp_footer', array( 'url' => $_SERVER['REQUEST_URI'] ?? '/', 'time' => current_time( 'mysql' ) ) );
-	if ( ! empty( stp_cfg()['honeypot_enabled'] ) ) {
+	$cfg = stp_cfg();
+	if ( ! empty( $cfg['honeypot_enabled'] ) ) {
 		echo '<a href="' . esc_url( home_url( stp_honeypot_path() ) ) . '" rel="nofollow" aria-hidden="true" tabindex="-1" style="position:absolute;left:-99999px;top:auto;width:1px;height:1px;overflow:hidden">.</a>' . "\n";
 	}
-	if ( ! stp_cfg()['track_pages'] ) return;
+	if ( empty( $cfg['track_visitors'] ) || empty( $cfg['track_pages'] ) || ( ! empty( $cfg['exclude_admin'] ) && current_user_can( 'manage_options' ) ) ) return;
+	stp_diag( 'last_wp_footer', array( 'url' => $_SERVER['REQUEST_URI'] ?? '/', 'time' => current_time( 'mysql' ) ) );
 	$tok  = stp_session_token();
 	$exit_nonce = wp_create_nonce( 'stp_exit_' . $tok );
 	$ajax = esc_url( admin_url( 'admin-ajax.php' ) );
@@ -2968,10 +2953,18 @@ add_action( 'wp_ajax_stp_behavior', 'stp_ajax_behavior' );
 
 function stp_ajax_exit() {
 	global $wpdb;
+	$cfg = stp_cfg();
+	// Cached pages and already-open tabs can continue sending beacons after a setting change.
+	if ( empty( $cfg['track_pages'] ) ) { http_response_code( 204 ); exit; }
+	$url = esc_url_raw( substr( $_POST['u'] ?? '', 0, 1000 ) );
+	$admin_page = is_user_logged_in() && strpos( $url, admin_url() ) === 0;
+	$tracking_enabled = $admin_page
+		? ! empty( $cfg['track_admin_activity'] )
+		: ( ! empty( $cfg['track_visitors'] ) && ! ( ! empty( $cfg['exclude_admin'] ) && current_user_can( 'manage_options' ) ) );
+	if ( ! $tracking_enabled ) { http_response_code( 204 ); exit; }
 	$tok  = preg_replace( '/[^a-f0-9]/', '', $_POST['k'] ?? '' );
 	$nonce = sanitize_text_field( wp_unslash( $_POST['n'] ?? '' ) );
 	$secs = max( 0, min( 120, (int) ( $_POST['s'] ?? 0 ) ) );
-	$url  = esc_url_raw( substr( $_POST['u'] ?? '', 0, 1000 ) );
 	if ( ! $tok || $secs < 1 ) { http_response_code( 204 ); exit; }
 	if ( ! wp_verify_nonce( $nonce, 'stp_exit_' . $tok ) ) { http_response_code( 204 ); exit; }
 	if ( ! stp_rate_limit( 'exit|' . $tok . '|' . stp_get_ip(), 40, 60 ) ) { http_response_code( 204 ); exit; }
@@ -2980,9 +2973,10 @@ function stp_ajax_exit() {
 		"SELECT id FROM " . stp_t( 'sessions' ) . " WHERE session_token=%s", $tok
 	) );
 	if ( $sid ) {
+		$pending = \DSA\Secure\SecureTrack_Report_Service::enabled() ? ',report_pending=1' : '';
 		$updated = $wpdb->query( $wpdb->prepare(
 			"UPDATE " . stp_t( 'pages' ) . "
-			 SET time_spent=time_spent+%d
+			 SET time_spent=time_spent+%d{$pending}
 			 WHERE session_id=%d AND url=%s
 			 ORDER BY visited_at DESC LIMIT 1",
 			$secs, $sid, $url
@@ -2990,7 +2984,7 @@ function stp_ajax_exit() {
 		if ( ! $updated ) {
 			$wpdb->query( $wpdb->prepare(
 				"UPDATE " . stp_t( 'pages' ) . "
-				 SET time_spent=time_spent+%d
+				 SET time_spent=time_spent+%d{$pending}
 				 WHERE session_id=%d
 				 ORDER BY visited_at DESC LIMIT 1",
 				$secs, $sid
@@ -3052,11 +3046,20 @@ function stp_ajax_behavior() {
 //  AJAX — ADMIN ACTIONS
 // ════════════════════════════════════════════════════════════════
 
-function stp_rate_limit( $bucket, $limit = 120, $window = 60 ) {
+function stp_rate_limit( $bucket, $limit = 120, $window = 60, $fixed_window = false ) {
 	global $wpdb;
 	$limit = max( 1, (int) $limit );
 	$window = max( 10, (int) $window );
 	$now = time();
+	if ($fixed_window) {
+        // The same native counter owner, one key per website/day, saturating at its cap.
+        // Keep limited-day evidence for complete 90-day and previous-period reports.
+        $slot=(int)(floor($now/$window)*$window);$bucket_id=hash('sha256',(string)$bucket);$hash=hash('sha256',$bucket_id.'|fixed|'.$slot);
+        $ok=$wpdb->query($wpdb->prepare('INSERT INTO '.stp_t('rate_limits').' (bucket_hash,bucket_id,counter,window_start,expires_at) VALUES (%s,%s,LAST_INSERT_ID(1),%d,%d) ON DUPLICATE KEY UPDATE counter=LAST_INSERT_ID(LEAST(%d,counter+1))',$hash,$bucket_id,$slot,$slot+187*DAY_IN_SECONDS,$limit+1));
+        if ($ok===false || $wpdb->last_error) return false;
+        $count=(int)$wpdb->get_var('SELECT LAST_INSERT_ID()');
+        return !$wpdb->last_error && $count>0 && $count<=$limit;
+    }
 	if ( function_exists( 'wp_using_ext_object_cache' ) && wp_using_ext_object_cache() && function_exists( 'wp_cache_incr' ) ) {
 		$slot = (int) ( floor( $now / $window ) * $window );
 		$key = 'rl:' . hash( 'sha256', (string) $bucket . '|' . $slot );
@@ -3085,7 +3088,7 @@ function stp_rate_limit( $bucket, $limit = 120, $window = 60 ) {
 	) );
 	$current_slot_count = (int) $wpdb->get_var( "SELECT LAST_INSERT_ID()" );
 	if ( $current_slot_count === 0 ) $current_slot_count = 1;
-	if ( mt_rand( 1, 100 ) === 1 ) $wpdb->query( $wpdb->prepare( "DELETE FROM " . stp_t( 'rate_limits' ) . " WHERE expires_at < %d LIMIT 500", $now ) );
+	// Expired counters belong to the scheduled cleanup owner, not a visitor.
 	$count = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COALESCE(SUM(counter),0) FROM " . stp_t( 'rate_limits' ) . " WHERE bucket_id=%s AND window_start>%d",
 		$bucket_id, $now - $window

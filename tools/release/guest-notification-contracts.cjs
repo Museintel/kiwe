@@ -9,6 +9,8 @@ const access = read('wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Ac
 const prefs = read('wp-content/mu-plugins/dsa/includes/Notifications/Notification_Preference_Service.php');
 const center = read('wp-content/mu-plugins/dsa/includes/Notifications/Notification_Center_Service.php');
 const events = read('wp-content/mu-plugins/dsa/includes/Notifications/Admin_Event_Notification_Service.php');
+const notificationApp = read('wp-content/mu-plugins/dsa/includes/Access/Notification_App_Service.php');
+const push = read('wp-content/mu-plugins/dsa/includes/Notifications/Push_Service.php');
 const channels = read('wp-content/mu-plugins/dsa/includes/Communications/Channel_Service.php');
 const secure = read('wp-content/mu-plugins/dsa/includes/Secure/securetrack-core.php');
 const profile = read('wp-content/mu-plugins/dsa/assets/js/modules/profile-panel.js');
@@ -34,6 +36,11 @@ check(prefs.includes("'securetrack_incident'") && prefs.includes("! user_can( $u
 check(events.includes("add_action( 'kiwe_notification_event'") && events.includes("foreach ( [ 'whatsapp', 'email', 'sms' ] as $channel )"), 'one shared event ingress owns all three external delivery channels');
 check(channels.includes("'securetrack_incident'") && secure.includes("'kiwe_notification_event'") && !secure.slice(secure.indexOf('function stp_alert('), secure.indexOf('/** Count recent failed logins')).includes('wp_mail('), 'SecureTrack uses the shared gateway service instead of direct email');
 check(profile.includes('data-dsa-guest-apply') && profile.includes('guest.postsAvailable') && profile.includes('guest.productsAvailable') && surface.includes("'/account/guest-application'"), 'Profile DSA exposes only enabled application journeys');
+check(events.includes("'view' => 'applications'") && events.includes("'view' => 'review'") && events.includes("'view' => 'mine'") && events.includes("'page' => 'kiwe-guests'"), 'Guest notification actions deep-link to exact Kiwe work views');
+check(notificationApp.includes("'/workspace/notifications/history'") && notificationApp.includes('workspace_history('), 'private notification history is a separate on-demand route');
+check(events.includes('array_slice( $visible, $offset, 21 )') && events.includes("min( 2, $page )") && events.includes("'deliveries' => $deliveries"), 'recipient history stays bounded to two pages and projects sanitized outcomes');
+check(events.includes('record_push_results') && events.includes("'accepted'") && events.includes("'partial'") && events.includes("'fallback'") && events.includes("'failed'") && events.includes("'unavailable'"), 'notification history distinguishes accepted, partial, fallback, failed and unavailable delivery');
+check(push.includes("'users' => $users") && push.includes("$users[ $user_id ]['sent']++") && push.includes("$users[ $user_id ]['failed']++"), 'push delivery reports bounded per-user device outcomes without endpoint data');
 check(
 	profile.includes("guest.status === 'approved' ) return '<span class=\"dsa-guest-status is-approved\"><span aria-hidden=\"true\">&#10003;</span> Guest</span>'")
 	&& profile.indexOf("guest.status === 'approved'") < profile.indexOf('data-dsa-guest-apply'),

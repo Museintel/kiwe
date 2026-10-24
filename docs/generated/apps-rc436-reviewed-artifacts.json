@@ -1,0 +1,67 @@
+{
+  "schema": "kiwe.reviewed-app-migration.v1",
+  "preparedAt": "2026-10-24T20:46:19.176Z",
+  "approvalStatus": "awaiting-named-live-approval",
+  "targets": [
+    "dharwadpedha.com",
+    "nationalchikki.com"
+  ],
+  "expectedBaseline": "8.0.0-rc.427",
+  "bridge": {
+    "version": "8.0.0-rc.434",
+    "bytes": 2811313,
+    "sha256": "fe18329e5a3d57538b63174861d4904c1a4ee46feb137602417179257306b520",
+    "packageManifestSha256": "f08a2d47b291539ceb8a18f09243ab8dea7a47a9e621e03494bd00e993daf7c3",
+    "keyId": "kiwe-release-2026-01",
+    "signature": "72r8on+vor48ivdjWz5Gq2QoLD/TZgRESZKF0tBAMvHeSmj7gXzdO8ZK41SruyOE/w7xlTMHGYrpCE/fwIsjBg=="
+  },
+  "core": {
+    "version": "8.0.0-rc.436",
+    "bytes": 2458109,
+    "sha256": "9bf335d52626f2f173fe61fb70756f6389d57fb7701b9561dfa93ac1e799351a",
+    "packageManifestSha256": "4893f3a13f0b08d61fa780beaf116dee7bad426dfa4ddfc7637082edbd347351",
+    "keyId": "kiwe-release-2026-01",
+    "signature": "MoRY/yUxXpPSCSSTm2/tbvJ9nSFQovWhEHHrGBuvGB4LlWIne2BVqHcdWAPKeq9rS2FTxcAYO94wFowyfhxoDw=="
+  },
+  "apps": {
+    "seo": {
+      "version": "1.0.0",
+      "bytes": 94553,
+      "sha256": "d2bd99de74ad408544f231353a78608b3d3ab232f976761ee7dae9f7f653df92",
+      "packageManifestSha256": "84f87aab706a0ff341f4170f0b632c5428b37253707c5c7cf498a7d9d9dd5d3b",
+      "keyId": "kiwe-release-2026-01",
+      "signature": "j4h4ZhD/rEkYv7XikBoeSn8cDL20C1cJexek5nUYZvTSJbRiZxVnqdYYCYB9fsdLMJO60l3HnE/UUt6yIO3mAg=="
+    },
+    "store": {
+      "version": "1.0.0",
+      "bytes": 211447,
+      "sha256": "9f3ee5bf1da78c0cf8ae9d2d48c9b7bac84912cf04ee610e5c81b9aa7b2bce02",
+      "packageManifestSha256": "096c9426962a8e4853ff279f3a50f437ea5a2021553f37a4346d77d4242bad7c",
+      "keyId": "kiwe-release-2026-01",
+      "signature": "kBjJEZXk3x4YjPoCiT1B/pwyobwes4iWGBDtJV6xXhGsi5cIX7WFXBaVrClCJ7VwwFeD6G4lku+dujXne1ckCg=="
+    }
+  },
+  "preserve": {
+    "storeEnabled": true,
+    "seoEnabled": true,
+    "existingSettings": true,
+    "nativeAutomaticUpdateChoices": true,
+    "authoredDocuments": true,
+    "commerceRecords": true,
+    "roles": true
+  },
+  "sequence": [
+    "fresh-target-native-and-code-capture",
+    "signed-bundled-compatibility-bridge",
+    "native-independent-app-installer-with-existing-woo",
+    "fresh-native-app-acceptance",
+    "signed-physical-core",
+    "fresh-native-version-and-preservation-proof",
+    "actual-guest-and-account-critical-flow-check",
+    "exact-transport-and-job-retirement"
+  ],
+  "recovery": "Immediate prior code and native activation choices; never roll back customer/order data.",
+  "clientWrites": false,
+  "ascendantsIncluded": false,
+  "publicCoreFeedChanged": false
+}

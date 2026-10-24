@@ -1,0 +1,13 @@
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const root=path.resolve(__dirname,'../..'),base='wp-content/mu-plugins/dsa/includes/';
+const files=[...fs.readdirSync(path.join(root,base,'Commerce')).filter(name=>name.endsWith('.php')).map(name=>base+'Commerce/'+name),...['Apps/Store_App_Service.php','Plugin.php','Modules/Module_Registry.php','Saved/Saved_Items_Service.php','Notifications/Notification_Preference_Service.php','Public_Endpoint/Assets.php','Rest/Runtime_Hydration_Controller.php','PhoneKey/PhoneKey_Bridge.php','Rest/Account_Controller.php','Search/Search_Service.php','Access/Dock_Workspace_Service.php','Settings.php','Access/Checkout_Policy_Workspace_Service.php','Access/Campaign_Workspace_Service.php','Access/WordPress_Role_Access_Service.php','Admin/Admin.php','Bricks/Bricks_Integration.php','Site_Graph/Data_Query_Service.php','Onboarding/Design_Context_Profile_Service.php'].map(name=>base+name)];
+const inventory=files.map(source=>{const text=fs.readFileSync(path.join(root,source),'utf8').replace(/\r\n?/g,'\n'),lines=text.split('\n');const found=[];let commerce=false;
+ lines.forEach((line,i)=>{
+  if(source.endsWith('/Settings.php')){if(line.includes("'commerce'            => ["))commerce=true;if(line.includes("'bricks'              => ["))commerce=false;if(commerce){const key=line.match(/'([^']+)'\s*=>/);if(key)found.push({kind:'commerce-setting',name:key[1],line:i+1});}return;}
+  for(const [kind,pattern]of [['hook',/\badd_(?:action|filter)\(\s*'([^']+)'/g],['metadata',/['"](_(?:sc_|kiwe_|dsa_)[a-zA-Z0-9_]+)['"]/g],['form-field',/name="((?:commerce|cod_gate|abandoned_cart)\[[^"]+)"/g],['method',/(?:public|private|protected)\s+(?:static\s+)?function\s+([a-zA-Z0-9_]+)/g]])for(const match of line.matchAll(pattern))found.push({kind,name:match[1],line:i+1});
+ });return {source,sha256:crypto.createHash('sha256').update(text).digest('hex'),symbols:found};});
+const output=JSON.stringify({schema:'kiwe-commerce-source-inventory/v1',scope:'Static symbols from selected native owners. No runtime or completeness certification; no option values or customer data.',files:inventory},null,2)+'\n';
+const destination=path.join(root,'docs/generated/commerce-source-inventory.json');
+if(process.argv.includes('--check')){if(!fs.existsSync(destination)||fs.readFileSync(destination,'utf8')!==output)throw Error('Commerce source inventory is stale; regenerate and review feature coverage.');}
+else{fs.mkdirSync(path.dirname(destination),{recursive:true});fs.writeFileSync(destination,output);}
+console.log(JSON.stringify({passed:true,files:inventory.length,symbols:inventory.reduce((sum,file)=>sum+file.symbols.length,0)}));

@@ -14,12 +14,12 @@ function benefits( insight ) {
 function aiCopy( payload ) {
 	const screen = payload && payload.screenTheme && typeof payload.screenTheme === 'object' ? payload.screenTheme : {};
 	return {
-		label: screen.label || payload.label || 'AI Assistant',
-		eyebrow: screen.eyebrow || screen.label || payload.label || 'AI Assistant',
+		label: screen.label === 'AI Assistant' ? 'Notifications' : screen.label || payload.label || 'Notifications',
+		eyebrow: screen.eyebrow === 'AI Assistant' ? 'Notifications' : screen.eyebrow || screen.label || payload.label || 'Notifications',
 		title: screen.title || 'Useful things, at the right moment.',
-		intro: screen.intro || 'DSA keeps the decisions deterministic; this surface only arranges the useful signals.',
+		intro: screen.intro || 'Your updates, saved in one place. Choose how you want to hear from us.',
 		emptyTitle: screen.emptyTitle || 'You are all caught up.',
-		emptyText: screen.emptyText || 'New account, cart, notification, and safety insights will collect here.',
+		emptyText: screen.emptyText || 'Account, order, cart and website updates will collect here.',
 		chatPlaceholder: screen.chatPlaceholder || 'Chat with AI',
 	};
 }
@@ -36,10 +36,10 @@ function insightCard( insight ) {
 	return [
 		'<article class="dsa-ai-insight dsa-ai-insight--' + escapeHtml( insight.type || 'info' ) + ( insight.notification ? ' is-notification' : '' ) + '" data-dsa-ai-insight="' + escapeHtml( insight.id ) + '"' + ( insight.dismissible ? ' data-dsa-ai-dismissible="true"' : '' ) + '>',
 		'<span class="dsa-ai-insight__glyph"><span class="dsa-ai-glyph" aria-hidden="true"></span></span>',
-		'<div class="dsa-ai-insight__copy"><small>' + escapeHtml( insight.kicker || 'Insight' ) + '</small><strong>' + escapeHtml( insight.title || '' ) + '</strong><p>' + escapeHtml( insight.message || '' ) + '</p>' + benefits( insight ) + ( insight.createdAt ? '<time datetime="' + escapeHtml( new Date( Number( insight.createdAt ) ).toISOString() ) + '">' + escapeHtml( notificationTime( insight.createdAt ) ) + '</time>' : '' ) + '</div>',
+		'<div class="dsa-ai-insight__copy"><small>' + escapeHtml( insight.kicker || 'Update' ) + '</small><strong>' + escapeHtml( insight.title || '' ) + '</strong><p>' + escapeHtml( insight.message || '' ) + '</p>' + benefits( insight ) + ( insight.createdAt ? '<time datetime="' + escapeHtml( new Date( Number( insight.createdAt ) ).toISOString() ) + '">' + escapeHtml( notificationTime( insight.createdAt ) ) + '</time>' : '' ) + '</div>',
 		'<span class="dsa-ai-insight__actions">',
 		insight.action ? '<button type="button" data-dsa-ai-insight-action="' + escapeHtml( insight.id ) + '">' + escapeHtml( insight.actionLabel || 'Open' ) + '</button>' : '',
-		insight.notification ? ( insight.dismissible ? '<button type="button" class="dsa-ai-insight__dismiss" data-dsa-ai-notification-dismiss="' + escapeHtml( insight.id ) + '" aria-label="Dismiss notification"><span class="dsa-close-glyph" aria-hidden="true">&times;</span></button>' : '<span class="dsa-ai-insight__saved">Saved</span>' ) : '<button type="button" class="is-quiet" data-dsa-ai-insight-dismiss="' + escapeHtml( insight.id ) + '">Dismiss</button>',
+		insight.notification ? '<span class="dsa-ai-insight__saved">' + ( ( insight.pendingAction || insight.requiredAction ) ? 'Action available' : ( insight.read ? 'Seen' : 'New' ) ) + '</span>' : '<button type="button" class="is-quiet" data-dsa-ai-insight-dismiss="' + escapeHtml( insight.id ) + '">Dismiss</button>',
 		'</span><span class="dsa-ai-insight__status" data-dsa-ai-insight-status></span></article>',
 	].join( '' );
 }
@@ -52,7 +52,7 @@ function renderLegacyInbox( payload ) {
 	}
 	const unread = Number( payload.unread || 0 );
 	const open = Boolean( payload.open );
-	return '<div class="dsa-ai-inbox-head"><button type="button" class="dsa-ai-tray-toggle' + ( unread ? ' has-unread' : '' ) + '" data-dsa-ai-tray-toggle aria-expanded="' + ( open ? 'true' : 'false' ) + '" aria-label="' + ( open ? 'Hide notifications' : 'Show notifications' ) + '"><span class="dsa-notification-bell" aria-hidden="true"></span></button><strong>' + escapeHtml( items.length ) + ' notification' + ( items.length === 1 ? '' : 's' ) + '</strong><span>' + ( unread ? escapeHtml( unread ) + ' unread' : 'Recent activity' ) + '</span></div><div class="dsa-ai-inbox-list' + ( open ? '' : ' is-collapsed' ) + '">' + items.map( insightCard ).join( '' ) + '</div>';
+	return '<div class="dsa-ai-inbox-head"><button type="button" class="dsa-ai-tray-toggle' + ( unread ? ' has-unread' : '' ) + '" data-dsa-ai-tray-toggle aria-expanded="' + ( open ? 'true' : 'false' ) + '" aria-label="' + ( open ? 'Hide notifications' : 'Show notifications' ) + '"><span class="dsa-notification-bell" aria-hidden="true"></span></button><strong>' + escapeHtml( items.length ) + ' notification' + ( items.length === 1 ? '' : 's' ) + '</strong><span>' + ( unread ? escapeHtml( unread ) + ' new or pending' : 'Recent activity' ) + '</span></div><div class="dsa-ai-inbox-list' + ( open ? '' : ' is-collapsed' ) + '">' + items.map( insightCard ).join( '' ) + '</div>';
 }
 
 function renderPrototypeInbox( payload ) {
@@ -63,7 +63,7 @@ function renderPrototypeInbox( payload ) {
 	}
 	const unread = Number( payload.unread || 0 );
 	const open = Boolean( payload.open );
-	return '<div class="dsa-ai-inbox-head kiwe-ai-v2027__inbox-head"><button type="button" class="dsa-ai-tray-toggle' + ( unread ? ' has-unread' : '' ) + '" data-dsa-ai-tray-toggle aria-expanded="' + ( open ? 'true' : 'false' ) + '" aria-label="' + ( open ? 'Hide notifications' : 'Show notifications' ) + '"><span class="dsa-notification-bell" aria-hidden="true"></span></button><span><strong>' + escapeHtml( items.length ) + '</strong><small>signals</small></span><span>' + ( unread ? escapeHtml( unread ) + ' unread' : 'Recent activity' ) + '</span></div><div class="dsa-ai-inbox-list kiwe-ai-v2027__inbox-list' + ( open ? '' : ' is-collapsed' ) + '">' + items.map( insightCard ).join( '' ) + '</div>';
+	return '<div class="dsa-ai-inbox-head kiwe-ai-v2027__inbox-head"><button type="button" class="dsa-ai-tray-toggle' + ( unread ? ' has-unread' : '' ) + '" data-dsa-ai-tray-toggle aria-expanded="' + ( open ? 'true' : 'false' ) + '" aria-label="' + ( open ? 'Hide notifications' : 'Show notifications' ) + '"><span class="dsa-notification-bell" aria-hidden="true"></span></button><span><strong>' + escapeHtml( items.length ) + '</strong><small>notifications</small></span><span>' + ( unread ? escapeHtml( unread ) + ' new or pending' : 'Recent activity' ) + '</span></div><div class="dsa-ai-inbox-list kiwe-ai-v2027__inbox-list' + ( open ? '' : ' is-collapsed' ) + '">' + items.map( insightCard ).join( '' ) + '</div>';
 }
 
 const inboxAdapters = {
@@ -84,8 +84,9 @@ function renderLegacyPanel( payload ) {
 	return [
 		'<section class="dsa-panel dsa-ai-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ai-panel data-dsa-keep-open>',
 		'<p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ),
+		'<p role="status" aria-live="polite" data-dsa-ai-inbox-status></p>',
 		'<div class="dsa-ai-insights" data-dsa-ai-insights>' + renderInbox( payload ) + '</div>',
-		'<div class="dsa-ai-chat-placeholder" data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="ai" data-dsa-context-width="dock"><input type="text" placeholder="' + escapeHtml( copy.chatPlaceholder ) + '" aria-label="' + escapeHtml( copy.chatPlaceholder ) + '" readonly><button type="button" aria-label="Send message" disabled>&uarr;</button></div>',
+		'<div class="dsa-ai-preferences"><button type="button" class="dsa-panel__button" data-dsa-ai-notification-preferences>Choose alerts</button><button type="button" class="dsa-panel__button" data-dsa-ai-refresh>Refresh updates</button></div>',
 		'</section>',
 	].join( '' );
 }
@@ -95,8 +96,9 @@ function renderPrototypePanel( payload ) {
 	return [
 		'<section class="dsa-panel dsa-ai-panel dsa-hero-panel kiwe-ai-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ai-panel data-dsa-keep-open data-dsa-ai-adapter="prototype-2027">',
 		'<div class="kiwe-ai-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p></div>',
+		'<p role="status" aria-live="polite" data-dsa-ai-inbox-status></p>',
 		'<div class="dsa-ai-insights kiwe-ai-v2027__insights" data-dsa-ai-insights>' + renderInbox( payload ) + '</div>',
-		'<div class="dsa-ai-chat-placeholder kiwe-ai-v2027__chat" data-dsa-keep-open data-dsa-context-slot data-dsa-context-name="ai" data-dsa-context-width="dock"><input type="text" placeholder="' + escapeHtml( copy.chatPlaceholder ) + '" aria-label="' + escapeHtml( copy.chatPlaceholder ) + '" readonly><button type="button" aria-label="Send message" disabled>&uarr;</button></div>',
+		'<div class="dsa-ai-preferences"><button type="button" class="dsa-panel__button" data-dsa-ai-notification-preferences>Choose alerts</button><button type="button" class="dsa-panel__button" data-dsa-ai-refresh>Refresh updates</button></div>',
 		'</section>',
 	].join( '' );
 }

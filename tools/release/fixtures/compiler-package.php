@@ -1,0 +1,24 @@
+<?php
+/** Shared synthetic contract fixture; an inventory is not a compiler signer or native success claim. */
+function kiwe_test_compiler_package( string $path,array $base_tokens = [] ): array {
+	// A real CRC-verified PNG: native WordPress must be able to decode the fixture.
+	$png = base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAnElEQVR4nNXRMQ3DABQD0cupEAqsBIolCpjuJZO5U8ZyCIjoK7oHwLbkZf+8mXR8/6P5EidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEidxEvdYf8/Rgu01Gk/+AYmTOImTOImTOImTOImTOImTOImTOImTOImTOImTOImTOImTOImTOImTOImTOInz7gFXnYxBBx4wpbhRAAAAAElFTkSuQmCC',true );
+	$reference = 'data:image/png;base64,' . base64_encode( $png ); $hash = hash( 'sha256',$png ); $asset = 'asset-' . $hash;
+	$tokens = array_replace( $base_tokens,[ 'enabled'=>true,'profile_label'=>'Seam import proof','project'=>[ 'enabled'=>true,'id'=>'seam-import-proof','label'=>'Seam import proof','variables'=>[ [ 'name'=>'--sf-import-proof-space','value'=>'18px' ] ],'classes'=>[ [ 'id'=>'seamproof1','name'=>'sf-import-proof-card','settings'=>[ '_padding'=>[ 'top'=>'var(--sf-import-proof-space)' ] ] ] ] ] ] );
+	$profile = [ 'type'=>'kiwe-framework-profile','schema'=>'kiwe.framework-profile.v1','schemaVersion'=>1,'settings'=>[ 'tokens'=>$tokens ] ];
+	$home = [ 'title'=>'Import proof','templateType'=>'content','version'=>'2.3.10','content'=>[ [ 'id'=>'proof1','name'=>'image','parent'=>0,'children'=>[],'settings'=>[ 'image'=>[ 'url'=>$reference,'filename'=>'embedded-image.svg' ],'_cssGlobalClasses'=>[ 'seamproof1' ] ] ],[ 'id'=>'proof2','name'=>'div','parent'=>0,'children'=>[],'settings'=>[ '_cssCustom'=>"%root%{background-image:url('" . $reference . "')}" ] ] ] ];
+	$entries = [ 'profile.json'=>json_encode( $profile ),'home.json'=>json_encode( $home ) ]; $native = []; $rows = [];
+	foreach ( $entries as $name=>$bytes ) { $h = 'sha256:' . hash( 'sha256',$bytes ); $native[] = [ 'path'=>$name,'sha256'=>$h,'bytes'=>strlen( $bytes ) ]; $rows[] = $name . "\0" . $h . "\n"; }
+	sort( $rows,SORT_STRING ); $source = 'sha256:' . hash( 'sha256',implode( '',$rows ) );
+	$entries['assets/' . $hash . '.png'] = $png;
+	$entries['assets/manifest.json'] = json_encode( [ 'schema'=>'seam.asset-manifest.v1','sourceHash'=>$source,'assets'=>[ [ 'id'=>$asset,'kind'=>'image','source'=>'embedded:sha256:' . $hash,'contentHash'=>'sha256:' . $hash,'mime'=>'image/png','bytes'=>strlen( $png ),'policy'=>'import','usedBy'=>[ 'home.json#/content/0/settings/image/url','home.json#/content/1/settings/_cssCustom' ] ] ] ] );
+	$entries['assets/import-plan.json'] = json_encode( [ 'schema'=>'seam.asset-import-plan.v1','sourceHash'=>$source,'mode'=>'dry-run','mutatesWordPress'=>false,'operations'=>[ [ 'id'=>'asset:' . $asset,'assetId'=>$asset,'action'=>'import','source'=>'embedded:sha256:' . $hash,'contentHash'=>'sha256:' . $hash,'mime'=>'image/png','bytes'=>strlen( $png ),'target'=>'assets/' . $hash . '.png','status'=>'planned','preconditions'=>[ 'Native media permission and type validation' ],'rollback'=>'Keep reused assets; preserve media on draft/style undo.' ] ],'summary'=>[ 'total'=>1,'planned'=>1,'reviewRequired'=>0,'blocked'=>0 ] ] );
+	$bindings = [];
+	foreach ( [ '/content/0/settings/image/url','/content/1/settings/_cssCustom' ] as $pointer ) $bindings[] = [ 'artifact'=>'home.json','pointer'=>$pointer,'referenceHash'=>'sha256:' . hash( 'sha256',$reference ),'assetId'=>$asset ];
+	$entries['style-dependencies.json'] = json_encode( [ 'schema'=>'seam.style-dependencies.v1','sourceHash'=>$source,'mutatesWordPress'=>false,'installOrder'=>[ 'native media','Framework Profile','templates','native review' ],'classes'=>[ [ 'id'=>'seamproof1','name'=>'sf-import-proof-card' ] ],'variables'=>[ [ 'name'=>'--sf-import-proof-space','value'=>'18px' ] ],'templateFiles'=>[ 'home.json' ],'sourceFiles'=>[],'assetBindings'=>$bindings,'issues'=>[],'dependencyReviewPassed'=>true,'nativeImportReady'=>false,'limits'=>[ 'assets'=>200,'perAssetBytes'=>16777216,'totalAssetBytes'=>67108864,'nativeBytes'=>67108864,'packageBytes'=>134217728 ],'limitations'=>[ 'Synthetic fixture; native acceptance is separate.' ] ] );
+	$files = []; foreach ( $entries as $name=>$bytes ) $files[] = [ 'path'=>$name,'sha256'=>'sha256:' . hash( 'sha256',$bytes ),'bytes'=>strlen( $bytes ) ];
+	$entries['package-integrity.json'] = json_encode( [ 'schema'=>'seam.package-integrity.v1','sourceHash'=>$source,'algorithm'=>'sha256','profile'=>'profile.json','templates'=>[ 'home.json' ],'nativeMembers'=>$native,'files'=>$files,'mutatesWordPress'=>false ] );
+	$zip = new ZipArchive(); if ( true !== $zip->open( $path,ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) throw new RuntimeException( 'Fixture ZIP cannot open' );
+	foreach ( $entries as $name=>$bytes ) $zip->addFromString( $name,$bytes ); $zip->close();
+	return [ 'assetHash'=>$hash,'sourceHash'=>$source ];
+}

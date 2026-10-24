@@ -19,34 +19,48 @@ final class Origin_Checker {
 			return false;
 		}
 
-		$allowed_hosts = [];
-		$site_host     = wp_parse_url( home_url( '/' ), PHP_URL_HOST );
-		if ( is_string( $site_host ) && '' !== $site_host ) {
-			$allowed_hosts[] = strtolower( $site_host );
-		}
-		$request_host = sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ?? '' ) );
-		$request_host = strtolower( preg_replace( '/:\d+$/', '', $request_host ) );
-		if ( '' !== $request_host ) {
-			$allowed_hosts[] = $request_host;
-		}
-		$allowed_hosts = array_values( array_unique( array_filter( $allowed_hosts ) ) );
+		// WordPress may live in a subdirectory or use a different configured admin
+		// origin. Request Host is not configuration and must not expand this list.
+		$allowed_origins = array_values( array_unique( array_filter( [
+			self::url_origin( home_url( '/' ) ),
+			self::url_origin( site_url( '/' ) ),
+		] ) ) );
 
 		foreach ( [ 'HTTP_ORIGIN', 'HTTP_REFERER' ] as $header ) {
-			$value = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ?? '' ) );
-
-			if ( '' === $value ) {
+			if ( ! isset( $_SERVER[ $header ] ) ) {
 				continue;
 			}
 
-			$host = wp_parse_url( $value, PHP_URL_HOST );
-			$host = is_string( $host ) ? strtolower( $host ) : '';
-
-			if ( '' !== $host && [] !== $allowed_hosts && ! in_array( $host, $allowed_hosts, true ) ) {
+			$value = wp_unslash( $_SERVER[ $header ] );
+			// An explicit opaque/malformed Origin is not an absent header. Compare
+			// scheme, host and effective port without sanitizing invalid URLs into
+			// acceptable ones. Origin is an authority; Referer may include a path.
+			if ( ! is_string( $value ) || ( 'HTTP_ORIGIN' === $header && ! preg_match( '#\Ahttps?://(?:\[[0-9a-f:.]+\]|[a-z0-9.-]+)(?::[0-9]+)?\z#i', $value ) ) ) {
+				return false;
+			}
+			$origin = self::url_origin( $value );
+			if ( '' === $origin || ! in_array( $origin, $allowed_origins, true ) ) {
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	private static function url_origin( string $url ): string {
+		if ( preg_match( '/[\x00-\x20\x7f\\\\]/', $url ) ) {
+			return '';
+		}
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return '';
+		}
+		$scheme = strtolower( $parts['scheme'] ?? '' );
+		if ( ! in_array( $scheme, [ 'http', 'https' ], true ) ) {
+			return '';
+		}
+		$port = $parts['port'] ?? ( 'https' === $scheme ? 443 : 80 );
+		return $scheme . '://' . strtolower( $parts['host'] ) . ':' . $port;
 	}
 
 	/**

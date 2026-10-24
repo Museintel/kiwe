@@ -1,0 +1,14 @@
+/* Only source-owned setup reminders; native/third-party notices remain independent. */
+.notice.kiwe-workspace-notice{margin:16px 0;padding:16px 20px;border:1px solid var(--kiwe-color-border);border-inline-start:4px solid var(--kiwe-color-text-muted);border-radius:var(--kiwe-radius-lg);background:var(--kiwe-color-surface-raised);box-shadow:none}
+.notice-warning.kiwe-workspace-notice{border-inline-start-color:var(--kiwe-color-danger)}
+.kiwe-workspace-notice__main{display:flex;align-items:center;justify-content:space-between;gap:12px 24px}
+.kiwe-workspace-notice__main>div{min-width:0}
+.kiwe-workspace-notice h2{font-size:16px;line-height:1.4;margin:0;color:var(--kiwe-color-text)}
+.kiwe-workspace-notice p{font-size:14px;line-height:1.6;margin:6px 0 0;padding:0}
+.kiwe-workspace-notice .kiwe-app-link{flex-shrink:0;min-height:48px;font-size:14px}
+.kiwe-workspace-notice details{margin-top:8px;border-top:1px solid var(--kiwe-color-border)}
+.kiwe-workspace-notice summary{cursor:pointer;min-height:48px;padding:12px 0;font-size:14px;line-height:24px;font-weight:600}
+.kiwe-workspace-notice details ul{margin:0;padding:0 0 0 22px;list-style:disc;font-size:14px;line-height:1.7}
+.kiwe-workspace-notice li{margin:4px 0}
+.kiwe-workspace-notice details p{color:var(--kiwe-color-text-muted);padding-bottom:4px}
+@media(max-width:600px){.notice.kiwe-workspace-notice{padding:16px}.kiwe-workspace-notice__main{align-items:stretch;flex-direction:column}.kiwe-workspace-notice .kiwe-app-link{align-self:flex-start;max-width:100%}}

@@ -1,0 +1,125 @@
+<?php
+/** Actual Bricks and WordPress; the lab wrapper isolates every native write. */
+if ( PHP_SAPI !== 'cli' || ! defined( 'KIWE_WORKSPACE_TEST_SITE' ) || true !== KIWE_WORKSPACE_TEST_SITE || empty( $GLOBALS['kiwe_media_tables_isolated'] ) ) exit( 2 );
+use DSA\Backup\Bricks_Design_Snapshot_Service as Design;
+use DSA\Backup\Configuration_Snapshot_Service as Snapshots;
+use DSA\Backup\Archive_Cipher as Cipher;
+
+$designActor=(int)($GLOBALS['kiwe_native_design_actor']??78);
+$proof = [ 'schema'=>'kiwe-native-bricks-design.v1','kiwe'=>DSA_VERSION,'bricks'=>defined( 'BRICKS_VERSION' ) ? BRICKS_VERSION : '', 'wordpress'=>$GLOBALS['wp_version'],'php'=>PHP_VERSION,'checks'=>[],'cleanup'=>false ];
+$GLOBALS['kiwe_media_proof'] =& $proof;
+$assert = static function( bool $ok, string $label ) use ( &$proof ): void { $proof['checks'][] = [ 'label'=>$label,'passed'=>$ok ]; if ( ! $ok ) throw new RuntimeException( $label ); };
+$reject = static function( callable $action, string $contains = '' ): bool { try { $action(); return false; } catch ( Throwable $error ) { return '' === $contains || str_contains( $error->getMessage(), $contains ); } };
+$service = new Snapshots(); $actor = get_current_user_id(); $phrase = 'synthetic-design-recovery-123'; $beforeCopies = array_column( $service->inventory(), 'id' ); $reviews = []; $folder = null; $filters = [];
+$review = static function( string $bytes ) use ( $service,$phrase,&$reviews ): array { $value = $service->preview_upload( $bytes,$phrase ); $reviews[$value['token']] = get_transient( 'kiwe_backup_review_' . $value['token'] ); return $value; };
+try {
+	$assert( DSA_VERSION === KIWE_WORKSPACE_EXPECTED_VERSION && ! empty( DSA\Runtime\Package_Manifest::verify( true )['valid'] ), 'complete matching installed package' );
+	$assert( ! function_exists( 'WC' ), 'WooCommerce genuinely unloaded in the native process' );
+	wp_set_current_user( $designActor );
+	$assert( Design::available() && Design::allowed() && count( Design::names() ) === 13, 'prepared native client retains Bricks design authority' );
+	$proof['originalDesignShape'] = [];
+	foreach ( Design::names() as $name ) { $value = get_option( $name, null ); $proof['originalDesignShape'][$name] = [ 'type'=>get_debug_type( $value ),'count'=>is_array($value) ? count($value) : null,'jsonBytes'=>strlen((string)wp_json_encode($value)) ]; }
+	$originalCopy = $service->create( $phrase, 'Synthetic original design capture', [ Design::GROUP ] );
+	$originalBytes = file_get_contents( $service->download_path( $originalCopy['id'] ) );
+	$originalReview = $review( $originalBytes );
+	$assert( $originalReview['changedCount'] === 0, 'the complete cloned original Bricks registry captures and reviews without normalization' );
+	$proof['originalSnapshotBytes'] = strlen( $originalBytes );
+	$prefix = 'kiwedesignqa_' . bin2hex( random_bytes( 6 ) );
+	$folder = Snapshots::private_directory( true ) . '/media-qa-' . bin2hex( random_bytes( 12 ) ); wp_mkdir_p( $folder );
+	$GLOBALS['kiwe_media_fixture_root'] = $folder;
+	$uploads = static fn()=>[ 'path'=>$folder,'basedir'=>$folder,'url'=>home_url( '/synthetic-design' ),'baseurl'=>home_url( '/synthetic-design' ),'subdir'=>'','error'=>false ];
+	add_filter( 'upload_dir',$uploads,PHP_INT_MAX ); $filters[] = [ 'upload_dir',$uploads ];
+	file_put_contents( $folder . '/synthetic-font.woff2', 'Synthetic local font dependency' );
+	$file = wp_insert_attachment( [ 'post_title'=>$prefix . ' font file','post_status'=>'inherit','post_mime_type'=>'font/woff2','post_author'=>$designActor ], $folder . '/synthetic-font.woff2',0,true );
+	if ( is_wp_error( $file ) ) throw new RuntimeException( 'Synthetic native font attachment unavailable' );
+	$font = wp_insert_post( [ 'post_type'=>BRICKS_DB_CUSTOM_FONTS,'post_title'=>$prefix . ' font','post_status'=>'publish','post_author'=>$designActor ], true );
+	if ( is_wp_error( $font ) ) throw new RuntimeException( 'Synthetic native font unavailable' );
+	update_post_meta( $font,BRICKS_DB_CUSTOM_FONT_FACES,[ '400normal'=>[ 'woff2'=>$file ] ] );
+	file_put_contents( $folder . '/synthetic-image.png',base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF1kAAAAASUVORK5CYII=' ) );
+	$image = wp_insert_attachment( [ 'post_title'=>$prefix . ' image','post_status'=>'inherit','post_mime_type'=>'image/png','post_author'=>$designActor ],$folder . '/synthetic-image.png',0,true );
+	if ( is_wp_error( $image ) ) throw new RuntimeException( 'Synthetic native image unavailable' );
+	$template = wp_insert_post( [ 'post_type'=>BRICKS_DB_TEMPLATE_SLUG,'post_title'=>$prefix . ' template','post_status'=>'draft','post_author'=>$designActor ],true );
+	if ( is_wp_error( $template ) ) throw new RuntimeException( 'Synthetic native template unavailable' );
+	update_post_meta( $template, BRICKS_DB_PAGE_CONTENT, [ [ 'id'=>'txt01','name'=>'text-basic','settings'=>[ 'text'=>'Synthetic template' ] ] ] );
+	foreach ( Design::names() as $name ) delete_option( $name );
+	$classes = [ [ 'id'=>'clsa01','name'=>'synthetic-class','settings'=>[ '_background'=>[ 'color'=>[ 'hex'=>'#112233' ] ] ] ] ];
+	update_option( BRICKS_DB_GLOBAL_CLASSES,$classes );
+	update_option( BRICKS_DB_GLOBAL_VARIABLES,[ [ 'id'=>'vara01','name'=>'synthetic-color','value'=>'#112233' ] ] );
+	update_option( BRICKS_DB_COMPONENTS,[ [ 'id'=>'cmpa01','label'=>'Synthetic component','elements'=>[ [ 'id'=>'cmpa01','name'=>'block','parent'=>0,'children'=>[],'settings'=>[ '_cssGlobalClasses'=>['clsa01'],'_typography'=>[ 'fontFamily'=>'custom_font_' . $font ],'image'=>[ 'id'=>$image,'full'=>wp_get_attachment_url( $image ) ],'template'=>$template ] ] ] ] ] );
+	update_option( BRICKS_DB_THEME_STYLES,[ 'sty01'=>[ 'label'=>'Synthetic style','settings'=>[ 'color'=>[ 'hex'=>'#112233' ] ] ] ] );
+	update_option( BRICKS_DB_COLOR_PALETTE,[] ); // Exact native existence, including empty lists.
+	$copy = $service->create( $phrase,'Synthetic Bricks design',[ Design::GROUP ] ); $bytes = file_get_contents( $service->download_path( $copy['id'] ) );
+	$payload = Cipher::open( $bytes,Snapshots::SCHEMA,$phrase,2097152 );
+	$assert( count( $payload['options'] ) === 13 && ! str_contains( $bytes,'synthetic-class' ), 'native design is encrypted through the existing snapshot cipher' );
+	$assert( ! isset( $payload['options'][BRICKS_DB_GLOBAL_SETTINGS] ) && ! isset( $payload['options'][BRICKS_DB_CAPABILITIES_PERMISSIONS] ), 'builder settings and security permissions are excluded' );
+	$bad = $payload['options']; unset( $bad[BRICKS_DB_GLOBAL_CLASSES] ); $assert( $reject( fn()=>Design::validate( $bad ) ), 'partial design groups cannot drop global dependencies' );
+	$duplicate = $classes[0]; $duplicate['name'] = 'synthetic-later-class';
+	$nativeDuplicates = [ $classes[0], $duplicate ]; update_option( BRICKS_DB_GLOBAL_CLASSES, $nativeDuplicates );
+	$duplicateCopy = $service->create( $phrase, 'Synthetic native duplicate classes', [ Design::GROUP ] );
+	$duplicateBytes = file_get_contents( $service->download_path( $duplicateCopy['id'] ) );
+	$duplicatePayload = Cipher::open( $duplicateBytes, Snapshots::SCHEMA, $phrase, Snapshots::MAX_FILE );
+	$assert( $duplicatePayload['options'][BRICKS_DB_GLOBAL_CLASSES]['value'] === $nativeDuplicates, 'native duplicate class rows and their order remain archived exactly' );
+	update_option( BRICKS_DB_GLOBAL_CLASSES, $classes ); $duplicatePreview = $review( $duplicateBytes );
+	$service->apply( $duplicatePreview['token'], $phrase );
+	$assert( get_option( BRICKS_DB_GLOBAL_CLASSES ) === $nativeDuplicates && Bricks\Helpers::get_global_class_by_id( 'clsa01', 'name' ) === 'synthetic-later-class', 'restored class lookup matches native last-row behavior' );
+	update_option( BRICKS_DB_GLOBAL_CLASSES, $classes );
+	$bad = $payload['options']; $bad[BRICKS_DB_GLOBAL_CLASSES]['value'][0]['id'] = ''; $assert( $reject( fn()=>Design::validate( $bad ) ), 'missing native global class IDs are rejected' );
+	$bad = $payload['options']; $bad[BRICKS_DB_COMPONENTS]['value'][] = $bad[BRICKS_DB_COMPONENTS]['value'][0]; $assert( $reject( fn()=>Design::validate( $bad ) ), 'duplicate component IDs remain rejected' );
+	$bad = $payload['options']; $bad[BRICKS_DB_COMPONENTS]['value'][0]['elements'][0]['settings']['_cssGlobalClasses'] = ['missing']; $assert( $reject( fn()=>Design::validate( $bad ) ), 'missing class dependencies are rejected' );
+	$bad = $payload['options']; $bad[BRICKS_DB_COMPONENTS]['value'][0]['elements'][0]['cid'] = 'cmpa01'; $assert( $reject( fn()=>Design::validate( $bad ) ), 'cyclic component dependencies are rejected' );
+	$bad = $payload['options']; $bad[BRICKS_DB_COMPONENTS]['value'][0]['elements'][0]['name'] = 'code'; $assert( $reject( fn()=>Design::validate( $bad ) ), 'executable Bricks elements are not imported or signed' );
+	$assert( $reject( fn()=>$service->preview_upload( $bytes,'wrong-synthetic-recovery' ) ), 'wrong recovery passphrase cannot preview native design' );
+	$preview = $review( $bytes ); $assert( $preview['changedCount'] === 0 && $preview['designDependencies'] === [ 'media'=>1,'fonts'=>1,'templates'=>1 ], 'review shows exact existing media font and template dependencies' );
+	$classes[0]['settings']['_background']['color']['hex'] = '#abcdef'; update_option( BRICKS_DB_GLOBAL_CLASSES,$classes );
+	$preview = $review( $bytes ); $assert( $preview['changed'] === [ BRICKS_DB_GLOBAL_CLASSES ], 'only the native changed design option is reviewed' );
+	$restored = $service->apply( $preview['token'],$phrase );
+	$assert( $restored['restored'] === 1 && get_option( BRICKS_DB_GLOBAL_CLASSES ) === $payload['options'][BRICKS_DB_GLOBAL_CLASSES]['value'], 'native class writer restores reviewed design' );
+	$assert( (int) get_option( BRICKS_DB_GLOBAL_CLASSES_USER ) === $designActor && (int) get_option( BRICKS_DB_GLOBAL_CLASSES_TIMESTAMP ) > 0, 'Bricks writer records its native author and timestamp' );
+	$assert( ! empty( Bricks\Database::$global_data['globalClasses'] ) && isset( Bricks\Database::$global_data['components'] ), 'native Bricks runtime data refreshes after restore' );
+	$rollback = $service->preview_upload( file_get_contents( $service->download_path( $restored['rollbackId'] ) ),$phrase ); $reviews[$rollback['token']] = get_transient( 'kiwe_backup_review_' . $rollback['token'] );
+	$assert( $rollback['changedCount'] === 1, 'encrypted before-copy retains the replaced native design' );
+	$service->apply( $rollback['token'],$phrase ); $assert( get_option( BRICKS_DB_GLOBAL_CLASSES ) === $classes, 'reviewed before-copy restores the former native design' );
+	$preview = $review( $bytes ); update_option( BRICKS_DB_COLOR_PALETTE,[ [ 'id'=>'pal01','name'=>'Changed palette','colors'=>[] ] ] );
+	$assert( $reject( fn()=>$service->apply( $preview['token'],$phrase ),'changed since review' ) && get_option( BRICKS_DB_GLOBAL_CLASSES ) === $classes, 'concurrent design edits refuse restore before any writes' );
+	update_option( BRICKS_DB_COLOR_PALETTE,[] ); $preview = $review( $bytes ); file_put_contents( $folder . '/synthetic-font.woff2','Changed local font dependency' );
+	$assert( $reject( fn()=>$service->apply( $preview['token'],$phrase ),'dependencies changed' ) && get_option( BRICKS_DB_GLOBAL_CLASSES ) === $classes, 'changed font files invalidate the restore review' );
+	file_put_contents( $folder . '/synthetic-font.woff2','Synthetic local font dependency' ); $preview = $review( $bytes ); update_post_meta( $template,BRICKS_DB_PAGE_CONTENT,[] );
+	$assert( $reject( fn()=>$service->apply( $preview['token'],$phrase ),'dependencies changed' ), 'changed native template dependencies invalidate the review' );
+	update_post_meta( $template,BRICKS_DB_PAGE_CONTENT,[ [ 'id'=>'txt01','name'=>'text-basic','settings'=>[ 'text'=>'Synthetic template' ] ] ] );
+	$preview = $review( $bytes ); $deny = static fn( $value,$old )=>$old; add_filter( 'pre_update_option_' . BRICKS_DB_GLOBAL_CLASSES,$deny,PHP_INT_MAX,2 );
+	$assert( $reject( fn()=>$service->apply( $preview['token'],$phrase ),'before-restore choices were put back' ), 'a failed native option write rolls back with its encrypted before-copy' ); remove_filter( 'pre_update_option_' . BRICKS_DB_GLOBAL_CLASSES,$deny,PHP_INT_MAX );
+	$assert( get_option( BRICKS_DB_GLOBAL_CLASSES ) === $classes && ! get_option( 'kiwe_backup_restore_lock_v1' ), 'failed restore preserves prior design and releases its lock' );
+	wp_update_post( [ 'ID'=>$font,'post_status'=>'trash' ] ); $assert( $reject( fn()=>$review( $bytes ),'font' ), 'missing native font prevents a misleading successful review' ); wp_update_post( [ 'ID'=>$font,'post_status'=>'publish' ] );
+	$subscriber = wp_insert_user( [ 'user_login'=>$prefix,'user_email'=>$prefix . '@example.invalid','user_pass'=>wp_generate_password(40),'role'=>'subscriber' ] ); if ( is_wp_error( $subscriber ) ) throw new RuntimeException( 'Native role fixture unavailable' );
+	wp_set_current_user( $subscriber ); $assert( ! Design::allowed() && ! isset( Snapshots::option_groups()[Design::GROUP] ) && $reject( fn()=>$service->preview_upload( $bytes,$phrase ) ), 'subscriber cannot capture or restore global design' );
+	wp_set_current_user( $designActor ); $assert( ! in_array( false,array_column( $proof['checks'],'passed' ),true ), 'all native design checks passed' );
+	$large = $payload['options'][BRICKS_DB_GLOBAL_CLASSES]['value'];
+	for ( $i=1; $i<2800; ++$i ) $large[] = [ 'id'=>'large' . $i,'name'=>'synthetic-large-' . $i,'settings'=>[ '_padding'=>['top'=>'12px'] ] ];
+	$trash = [];
+	for ( $i=0; $i<5000; ++$i ) $trash[] = [ 'id'=>'trash' . $i,'name'=>'synthetic-trash-' . $i,'settings'=>[ '_cssCustom'=>str_repeat('/* synthetic native class history */',22),'_typography'=>[ 'fontFamily'=>'custom_font_999999' ] ] ];
+	update_option( BRICKS_DB_GLOBAL_CLASSES,$large ); update_option( BRICKS_DB_GLOBAL_CLASSES_TRASH,$trash );
+	$largeCopy = $service->create( $phrase,'Synthetic large registry',[Design::GROUP] ); $largeBytes = file_get_contents( $service->download_path($largeCopy['id']) );
+	$largeReview = $review( $largeBytes );
+	$assert( strlen($largeBytes)>2097152 && strlen($largeBytes)<=Snapshots::MAX_FILE && $largeReview['changedCount']===0, 'large active and trash registries round-trip above the former two-MB limit' );
+	$assert( $largeReview['designDependencies']['fonts']===1 && count(get_option(BRICKS_DB_GLOBAL_CLASSES_TRASH))===5000, 'inactive trash remains preserved without requiring retired font files' );
+	$tooLarge = array_fill(0,10001,$large[0]); update_option(BRICKS_DB_GLOBAL_CLASSES,$tooLarge);
+	$assert( $reject(fn()=>$service->create($phrase,'Oversized structure',[Design::GROUP]),'supported settings structure'), 'design lists over ten thousand entries are rejected before storage' );
+	update_option(BRICKS_DB_GLOBAL_CLASSES,$large);
+	$oversizedStandard=Cipher::seal(['theme'=>get_stylesheet(),'options'=>['blogname'=>['exists'=>true,'value'=>str_repeat('x',1048577)]]],Snapshots::SCHEMA,$phrase,['createdAt'=>gmdate('c'),'label'=>'Oversized standard settings','groups'=>['WordPress'],'count'=>1],Snapshots::MAX_FILE);
+	$assert($reject(fn()=>$service->preview_upload($oversizedStandard,$phrase),'supported snapshot size'),'ordinary settings retain their original small payload limit');
+	$settings = get_option( BRICKS_DB_GLOBAL_SETTINGS, [] ); $settings['cssLoading'] = 'file'; update_option( BRICKS_DB_GLOBAL_SETTINGS, $settings );
+	// Simulate the native file-mode boot which the lab's normal inline boot omitted.
+	Bricks\Assets::autoload_files();
+	Design::refresh( Design::names() );
+	$assert( (bool) wp_next_scheduled( 'bricks_regenerate_css_files' ), 'file-based design CSS reuses the native Bricks rebuild job' );
+} catch ( Throwable $error ) { $proof['error'] = [ 'message'=>$error->getMessage(),'line'=>$error->getLine() ]; }
+finally {
+	wp_set_current_user( $designActor );
+	foreach ( $reviews as $token=>$value ) { delete_transient( 'kiwe_backup_review_' . $token ); if ( is_array( $value ) && preg_match( '/^[a-f0-9]{24}$/D',(string)($value['id']??'') ) ) @unlink( Snapshots::private_directory() . '/stage-' . $value['id'] . '.kiwe' ); }
+	foreach ( $service->inventory() as $copy ) if ( ! in_array( $copy['id'],$beforeCopies,true ) ) $service->remove( $copy['id'] );
+	foreach ( $filters as [$hook,$callback] ) remove_filter( $hook,$callback,PHP_INT_MAX );
+	wp_set_current_user( $actor );
+	$proof['cleanup'] = array_column( $service->inventory(),'id' ) === $beforeCopies;
+	$proof['passed'] = empty( $proof['error'] ) && $proof['cleanup'] && ! in_array( false,array_column( $proof['checks'],'passed' ),true );
+}
+return $proof;

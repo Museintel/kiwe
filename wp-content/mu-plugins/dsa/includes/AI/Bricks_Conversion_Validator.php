@@ -104,6 +104,9 @@ final class Bricks_Conversion_Validator {
 		'data-kiwe-save-title',
 		'data-kiwe-save-url',
 		'data-kiwe-save-image',
+		'data-kiwe-add-to-cart',
+		'data-kiwe-cart-quantity',
+		'data-kiwe-cart-status-target',
 		'data-kiwe-notifications',
 		'data-kiwe-notification-status-target',
 		'data-kiwe-notification-topic',
@@ -315,6 +318,8 @@ final class Bricks_Conversion_Validator {
 	}
 
 	private function validate_native_template_export( array $template, array &$findings ): void {
+		$runtime_error = \DSA\Bricks\Source_Runtime_Bridge::dependency_error( $template );
+		if ( null !== $runtime_error ) $this->add( $findings, 'fail', 'bricks_template_source_runtime_dependency', $runtime_error, '$.generator.runtimeDependencies.sourceBridge' );
 		$title = trim( (string) ( $template['title'] ?? '' ) );
 		if ( '' === $title ) {
 			$this->add( $findings, 'fail', 'bricks_template_missing_title', 'Bricks template export is missing title. Bricks imports this as "(no title)".', '$.title' );

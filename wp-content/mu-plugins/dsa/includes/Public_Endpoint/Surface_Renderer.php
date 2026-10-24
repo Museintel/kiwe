@@ -23,8 +23,7 @@ final class Surface_Renderer {
 
 	public function register(): void {
 		$settings    = $this->settings->all();
-		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
-		if ( ! empty( $diagnostics['raw_convert_test_mode'] ) && empty( $diagnostics['accessibility_preview_mode'] ) ) {
+		if ( ! Environment::allows_surface_registration( $settings ) ) {
 			return;
 		}
 		add_action( 'wp_footer', [ $this, 'render' ], 5 );
@@ -45,7 +44,7 @@ final class Surface_Renderer {
 		$modules = $this->dock_items( $dock );
 		$focus_item = sanitize_key( (string) ( $dock['focus_item'] ?? 'ai' ) );
 		$module_ids = array_map( static fn( array $module ): string => sanitize_key( (string) ( $module['id'] ?? '' ) ), $modules );
-		if ( ! in_array( $focus_item, $module_ids, true ) ) {
+		if ( '' !== $focus_item && ! in_array( $focus_item, $module_ids, true ) ) {
 			$focus_item = in_array( 'ai', $module_ids, true ) ? 'ai' : ( $module_ids[0] ?? '' );
 		}
 		$main_module_count = count( array_filter( $modules, static fn( array $module ): bool => $focus_item !== (string) ( $module['id'] ?? '' ) ) );
@@ -65,6 +64,7 @@ final class Surface_Renderer {
 		$sheet_duration = max( 120, min( 900, (int) ( $style['sheet_duration_ms'] ?? 320 ) ) );
 		$sheet_max_height = max( 45, min( 96, (int) ( $style['sheet_max_height'] ?? 82 ) ) );
 		$sheet_width_percent = max( 50, min( 90, (int) ( $style['sheet_width_percent'] ?? 78 ) ) );
+		$sheet_side_max_width = max( 280, min( 1200, (int) ( $style['sheet_side_max_width'] ?? 460 ) ) );
 		$dock_presentation = in_array( $dock['presentation'] ?? 'dock', [ 'dock', 'navbar' ], true ) ? (string) $dock['presentation'] : 'dock';
 		$dock_shape = sanitize_key( (string) ( $dock['shape'] ?? 'pill' ) );
 		$dock_shape = 'rounded' === $dock_shape ? 'pill' : $dock_shape;
@@ -136,8 +136,9 @@ final class Surface_Renderer {
 		<!-- DSA Surface <?php echo esc_html( DSA_VERSION ); ?> -->
 		<script id="dsa-element-registry" type="application/json"><?php echo $registry_json ? $registry_json : '{}'; ?></script>
 		<div class="dsa-document-scrim" data-dsa-scrim hidden></div>
-		<div id="dsa-surface" class="<?php echo esc_attr( implode( ' ', $surface_classes ) ); ?>" data-dsa-surface data-nosnippet data-dsa-ui-contract="2" data-dsa-visual-profile="<?php echo esc_attr( $visual_profile ); ?>" data-dsa-installed-theme="<?php echo esc_attr( $active_theme_id ); ?>" data-dsa-theme="<?php echo esc_attr( $theme_mode ); ?>" data-dsa-dock-presentation="<?php echo esc_attr( $dock_presentation ); ?>" data-dsa-dock-focus-id="<?php echo esc_attr( $focus_item ); ?>" data-dsa-dock-profile="desktop" data-dsa-dock-orientation="<?php echo esc_attr( $initial_orientation ); ?>" data-dsa-dock-position="<?php echo esc_attr( $initial_position ); ?>" data-dsa-dock-alignment="<?php echo esc_attr( $initial_alignment ); ?>" data-dsa-dock-edge="<?php echo esc_attr( $initial_edge ); ?>" data-dsa-sheet-position="<?php echo esc_attr( $sheet_position ); ?>" data-dsa-sheet-backdrop="<?php echo esc_attr( $sheet_backdrop ); ?>" data-dsa-sheet-spacing="<?php echo esc_attr( $sheet_spacing ); ?>" data-dsa-sheet-origin="<?php echo esc_attr( $sheet_origin ); ?>" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-item-count="<?php echo esc_attr( (string) $main_module_count ); ?>" data-dsa-dock-ai-count="<?php echo esc_attr( (string) $ai_module_count ); ?>" style="--dsa-dock-item-count:<?php echo esc_attr( (string) $main_module_count ); ?>;--dsa-dock-ai-count:<?php echo esc_attr( (string) $ai_module_count ); ?>;--dsa-sheet-duration:<?php echo esc_attr( (string) $sheet_duration ); ?>ms;--dsa-sheet-max-height:<?php echo esc_attr( (string) $sheet_max_height ); ?>dvh;--dsa-sheet-width-percent:<?php echo esc_attr( (string) $sheet_width_percent ); ?>;">
+		<div id="dsa-surface" class="<?php echo esc_attr( implode( ' ', $surface_classes ) ); ?>" data-dsa-surface data-nosnippet data-dsa-ui-contract="2" data-dsa-visual-profile="<?php echo esc_attr( $visual_profile ); ?>" data-dsa-installed-theme="<?php echo esc_attr( $active_theme_id ); ?>" data-dsa-theme="<?php echo esc_attr( $theme_mode ); ?>" data-dsa-dock-presentation="<?php echo esc_attr( $dock_presentation ); ?>" data-dsa-dock-focus-id="<?php echo esc_attr( $focus_item ); ?>" data-dsa-dock-profile="desktop" data-dsa-dock-orientation="<?php echo esc_attr( $initial_orientation ); ?>" data-dsa-dock-position="<?php echo esc_attr( $initial_position ); ?>" data-dsa-dock-alignment="<?php echo esc_attr( $initial_alignment ); ?>" data-dsa-dock-edge="<?php echo esc_attr( $initial_edge ); ?>" data-dsa-sheet-position="<?php echo esc_attr( $sheet_position ); ?>" data-dsa-sheet-backdrop="<?php echo esc_attr( $sheet_backdrop ); ?>" data-dsa-sheet-spacing="<?php echo esc_attr( $sheet_spacing ); ?>" data-dsa-sheet-origin="<?php echo esc_attr( $sheet_origin ); ?>" data-dsa-layout="wide" data-dsa-density="comfortable" data-dsa-dock-item-count="<?php echo esc_attr( (string) $main_module_count ); ?>" data-dsa-dock-ai-count="<?php echo esc_attr( (string) $ai_module_count ); ?>" style="--dsa-dock-item-count:<?php echo esc_attr( (string) $main_module_count ); ?>;--dsa-dock-ai-count:<?php echo esc_attr( (string) $ai_module_count ); ?>;--dsa-sheet-duration:<?php echo esc_attr( (string) $sheet_duration ); ?>ms;--dsa-sheet-max-height:<?php echo esc_attr( (string) $sheet_max_height ); ?>dvh;--dsa-sheet-width-percent:<?php echo esc_attr( (string) $sheet_width_percent ); ?>;--dsa-sheet-side-max-width:<?php echo esc_attr( (string) $sheet_side_max_width ); ?>px;">
 			<div class="dsa-dock-context" data-dsa-dock-context hidden><div class="dsa-dock-context__content" data-dsa-dock-context-content></div></div>
+			<?php if ( $modules && ( $dock['visible'] ?? true ) ) : ?>
 			<div class="dsa-dock-cluster" data-dsa-dock-cluster>
 			<nav class="dsa-dock dsa-phonekey-dock" data-dsa-dock role="toolbar" aria-label="<?php echo esc_attr__( 'Surface tools', 'dsa' ); ?>">
 				<?php foreach ( $modules as $index => $module ) : ?>
@@ -201,20 +202,23 @@ final class Surface_Renderer {
 				<?php endforeach; ?>
 			</nav>
 			</div>
+			<?php endif; ?>
 			<aside class="dsa-ai-popout" data-dsa-ai-popout hidden aria-live="polite"></aside>
 			<div class="dsa-overlay-root" data-dsa-overlay-root hidden></div>
 			<div class="dsa-loader" data-dsa-loader hidden aria-live="polite" aria-label="<?php echo esc_attr__( 'Surface loading experience', 'dsa' ); ?>">
+				<div class="dsa-loader__experience">
 				<div class="dsa-loader__arena" data-dsa-loader-arena>
 					<span class="dsa-loader__orb" data-dsa-loader-orb></span>
 					<span class="dsa-loader__target"></span>
 					<span class="dsa-loader__trail dsa-loader__trail--one"></span>
 					<span class="dsa-loader__trail dsa-loader__trail--two"></span>
 				</div>
-				<div class="dsa-loader__message" data-dsa-loader-message hidden>
+				<div class="dsa-loader__message" data-dsa-loader-message tabindex="0" hidden>
 					<div class="dsa-loader__title" data-dsa-loader-title></div>
 					<div class="dsa-loader__copy" data-dsa-loader-copy></div>
 				</div>
 				<div class="dsa-loader__label" data-dsa-loader-label><?php esc_html_e( 'Loading', 'dsa' ); ?></div>
+				</div>
 			</div>
 			<div class="dsa-live-region screen-reader-text" aria-live="polite" aria-atomic="true"></div>
 		</div>

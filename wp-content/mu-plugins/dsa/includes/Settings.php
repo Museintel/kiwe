@@ -16,19 +16,40 @@ final class Settings {
 	private static bool $safety_migrations_checked = false;
 	private ?array $resolved_settings = null;
 	private ?array $resolved_manifest = null;
+	private static int $write_generation = 0;
+	private int $resolved_generation = -1;
 
 	public function all(): array {
 		$profile = Runtime_Profiler::start();
 
-		if ( is_array( $this->resolved_settings ) ) {
+		if ( is_array( $this->resolved_settings ) && $this->resolved_generation === self::$write_generation ) {
 			Runtime_Profiler::finish( 'settings.all', $profile, true );
 			return $this->resolved_settings;
 		}
 
+		$this->resolved_manifest = null;
 		$settings = get_option( DSA_OPTION_SETTINGS, null );
 
 		if ( ! is_array( $settings ) ) {
 			$settings = $this->fresh_install_defaults();
+		}
+		// One Home choice supersedes the old independent first-session/idle switches.
+		// Resolve compatibility in memory; reading a page must not rewrite saved choices.
+		if ( ! is_array( $settings['app'] ?? null ) ) $settings['app'] = [];
+		// Existing installations already displayed their Dock. Do not resolve a
+		// missing new visibility choice through the optional-feature off baseline.
+		if ( ! is_array( $settings['dock'] ?? null ) ) $settings['dock'] = [];
+		if ( ! array_key_exists( 'visible', $settings['dock'] ) ) $settings['dock']['visible'] = (bool) ( $settings['enabled'] ?? true );
+		if ( ! array_key_exists( 'home_enabled', $settings['app'] ) ) {
+			$settings['app']['home_enabled'] = ! empty( $settings['app']['idle_enabled'] ) || ! empty( $settings['visual_effects']['initial_preloader_enabled'] );
+			if ( empty( $settings['app']['idle_enabled'] ) && 60000 === (int) ( $settings['app']['idle_delay_ms'] ?? 60000 ) ) $settings['app']['idle_delay_ms'] = 10000;
+		}
+		if ( ! is_array( $settings['visual_effects'] ?? null ) ) $settings['visual_effects'] = [];
+		if ( ! array_key_exists( 'transition_content', $settings['visual_effects'] ) ) {
+			$messages = $settings['visual_effects']['transition_messages'] ?? [];
+			$settings['visual_effects']['transition_content'] = array_filter( is_array( $messages ) ? $messages : [], static fn( $item ) => is_array( $item ) && ( ! empty( $item['title'] ) || ! empty( $item['message'] ) ) ) ? 'messages' : 'animation';
+			// Resolve the old two-switch navigation choice once, without a read-time write.
+			$settings['visual_effects']['show_on_navigation'] = ( $settings['visual_effects']['show_on_navigation'] ?? true ) && ( $settings['visual_effects']['show_on_page_out'] ?? true );
 		}
 
 		// Preserve explicit choices, but never let a capability added by a newer
@@ -36,8 +57,10 @@ final class Settings {
 		$settings = $this->recursive_parse_args( $settings, $this->fresh_install_defaults() );
 		$settings['fragment_navigation'] = false;
 		unset( $settings['enhancements'] );
+		$settings = $this->resolve_core_integrations( $settings );
 
 		$this->resolved_settings = $settings;
+		$this->resolved_generation = self::$write_generation;
 		Runtime_Profiler::finish( 'settings.all', $profile, false );
 
 		return $this->resolved_settings;
@@ -65,19 +88,58 @@ final class Settings {
 
 	/**
 	 * Build the fail-closed settings used only when Kiwe has never stored its
-	 * primary settings option. Every optional runtime boolean is disabled and
-	 * SiteGraph is explicitly retained as the sole enabled capability.
+	 * primary settings option. Optional services remain disabled; native Bricks
+	 * authoring adapters are always available when their dependencies exist.
 	 *
 	 * This is the only install profile in the RC product. Optional services are
 	 * enabled deliberately after onboarding instead of by migration history.
 	 */
 	public function fresh_install_defaults(): array {
 		$settings = $this->disable_boolean_tree( $this->defaults() );
+		$settings['app']['show_install_actions'] = true;
 		$settings['site_graph'] = [
 			'enabled' => true,
 			'mode'    => 'read_only',
 		];
 
+		return $this->resolve_core_integrations( $settings );
+	}
+
+	/** Compatibility keys describe core capabilities, never user enable switches. */
+	public static function automatic_bricks_settings(): array {
+		return array_fill_keys( [
+			'mini_cart_adapter_enabled', 'add_to_cart_enhancer_enabled',
+			'dynamic_tags_enabled', 'dsa_icon_launcher_enabled',
+			'linked_products_controls_enabled', 'prefer_bricks_native_cart',
+			'quantity_stepper_enabled', 'stock_badge_enabled',
+		], true );
+	}
+
+	private function resolve_core_integrations( array $settings ): array {
+		// App installation is part of Kiwe. Legacy switches stay recoverable, but
+		// neither a hidden Home screen nor an old off flag can disable installation.
+		$settings['service_worker'] = true;
+		$settings['permissions']['pwa_enabled'] = true;
+		// Transitions acknowledge genuine navigation; content is never delayed to display them.
+		$settings['visual_effects']['min_loader_ms'] = 0;
+		$settings['visual_effects']['artificial_delay_ms'] = 0;
+		if ( ! is_array( $settings['abandoned_cart'] ?? null ) ) $settings['abandoned_cart'] = [];
+		$settings['abandoned_cart']['enabled'] = true;
+		$settings['bricks'] = array_replace( is_array( $settings['bricks'] ?? null ) ? $settings['bricks'] : [], self::automatic_bricks_settings() );
+		$settings['search']['bricks_bridge_enabled'] = true;
+		// Native checkout drafts and authorized workspace access are core journeys.
+		// Legacy switches remain recoverable but never disable these affordances.
+		$settings['commerce']['checkout_surface_enabled'] = true;
+		// Cart recommendations appear only when native product relationships exist.
+		// This dedicated display choice supersedes the legacy service activation gates.
+		if ( ! array_key_exists( 'cart_show_fbt', $settings['commerce'] ) ) $settings['commerce']['cart_show_fbt'] = true;
+		$settings['dock']['admin_dashboard_link_enabled'] = true;
+		// Native notifications and explicit browser enrollment are core journeys.
+		foreach ( [ 'enabled','notifications_enabled','notification_preferences_enabled' ] as $key ) $settings['permissions'][ $key ] = true;
+		// Sheets are modal and edge-anchored. Resolve legacy choices without
+		// rewriting the stored configuration or altering classic presentation.
+		$settings['style']['sheet_origin'] = 'bottom';
+		if ( 'none' === ( $settings['style']['sheet_backdrop'] ?? '' ) ) $settings['style']['sheet_backdrop'] = 'fade';
 		return $settings;
 	}
 
@@ -110,6 +172,7 @@ final class Settings {
 					'sheet_spacing'     => 'edge',
 					'sheet_origin'      => 'bottom',
 					'sheet_width_percent' => 78,
+					'sheet_side_max_width' => 460,
 					'screen_heading_tag' => 'h2',
 					'active_theme_id'   => 'legacy',
 				],
@@ -117,7 +180,7 @@ final class Settings {
 				'surface_width'       => 72,
 				'surface_bottom'      => 24,
 				'fragment_navigation' => false,
-				'service_worker'      => false,
+				'service_worker'      => true,
 				'bricks_first'        => true,
 				'diagnostics'         => [
 					'enabled'             => false,
@@ -162,6 +225,8 @@ final class Settings {
 					'prefer_companion_context'=> true,
 					'bricks_editor_companion_enabled' => false,
 					'max_native_tokens'       => 3000,
+					'request_allowance'       => [ 'minute'=>2, 'day'=>30, 'month'=>300 ],
+					'token_allowance'         => [ 'minute'=>100000, 'day'=>300000, 'month'=>3000000 ],
 					'max_native_context_bytes'=> 60000,
 					'allow_browser_handoff_export' => true,
 					'companion_enabled'        => false,
@@ -176,6 +241,7 @@ final class Settings {
 					],
 					'securetrack_brief_enabled' => false,
 					'sitegraph_ai_enabled'      => false,
+					'seo_enabled'               => false,
 					'memory_enabled'           => true,
 					'memory_retention_days'    => 90,
 					'max_context_cards'        => 12,
@@ -233,6 +299,7 @@ final class Settings {
 					'cart_surface_enabled' => true,
 					'checkout_surface_enabled' => true,
 					'cart_quantity_controls' => true,
+					'cart_show_delivery' => false,
 					'cart_badges_enabled' => true,
 					'stock_badge_alert_threshold' => 10,
 					'stock_badge_alert_text' => 'Only %d left',
@@ -268,11 +335,11 @@ final class Settings {
 					],
 				],
 				'bricks'              => [
-					'mini_cart_adapter_enabled' => false,
-					'add_to_cart_enhancer_enabled' => false,
+					'mini_cart_adapter_enabled' => true,
+					'add_to_cart_enhancer_enabled' => true,
 					'dynamic_tags_enabled' => true,
 					'dsa_icon_launcher_enabled' => true,
-					'linked_products_controls_enabled' => false,
+					'linked_products_controls_enabled' => true,
 					'prefer_bricks_native_cart' => true,
 					'quantity_stepper_enabled'  => true,
 					'stock_badge_enabled'       => true,
@@ -306,6 +373,7 @@ final class Settings {
 					],
 				],
 				'dock'                => [
+					'visible'             => true,
 					'hide_frontend_admin_bar' => true,
 					'style'               => 'phonekey',
 					'presentation'        => 'dock',
@@ -352,6 +420,7 @@ final class Settings {
 					'menu_url'            => '',
 					'menu_nav_id'         => 0,
 					'menu_nav_ids'        => [],
+					'menu_group_limits'   => [],
 					'menu_heading_tag'    => 'span',
 					'menu_scale'          => 'compact',
 					'menu_items'          => [],
@@ -376,6 +445,8 @@ final class Settings {
 					'screen_material'       => 'glass',
 					'screen_animation'      => 'bottom',
 					'loader_type'           => 'orb-chase',
+					'transition_content'    => 'animation',
+					'transition_title'      => '',
 					'show_on_overlay_open'  => true,
 					'show_on_navigation'    => true,
 					'show_on_page_in'       => false,
@@ -399,6 +470,9 @@ final class Settings {
 					],
 				],
 				'app'                 => [
+					'home_timing'     => 'before_load',
+					'home_enabled'    => false,
+					'show_install_actions' => true,
 					'welcome_message' => 'Welcome to Our Appsite',
 					'pwa_pitch'       => 'Try our app. No app store required.',
 					'ios_url'         => '',
@@ -406,7 +480,7 @@ final class Settings {
 					'android_url'     => '',
 					'pc_url'          => '',
 					'idle_enabled'    => false,
-					'idle_delay_ms'   => 60000,
+					'idle_delay_ms'   => 10000,
 					'button_labels'   => [
 						'playstore' => 'Play Store',
 						'android'   => 'Android',
@@ -535,10 +609,52 @@ final class Settings {
 		$resolved = $this->recursive_parse_args( $settings, $this->all() );
 		$resolved['fragment_navigation'] = false;
 
-		update_option( DSA_OPTION_SETTINGS, $resolved, false );
+		$this->persist( $resolved, $resolved );
+	}
 
-		$this->resolved_settings = $resolved;
+	/** Recover reviewed fields without applying unrelated full-form migrations. */
+	public function update_selected( array $settings ): void {
+		$current = get_option( DSA_OPTION_SETTINGS, null );
+		if ( ! is_array( $current ) ) throw new \RuntimeException( 'Native Kiwe Settings must exist before selected-choice recovery.' );
+		$this->persist( $this->recursive_parse_args( $settings, $current ), null );
+	}
+
+	private function persist( array $settings, ?array $resolved ): void {
+		update_option( DSA_OPTION_SETTINGS, $settings, false );
+		++self::$write_generation;
+		$this->resolved_settings = is_array( $resolved ) ? $this->resolve_core_integrations( $resolved ) : null;
+		$this->resolved_generation = self::$write_generation;
 		$this->resolved_manifest = null;
+	}
+
+	/** Atomic selected-choice update; preserves untouched raw choices, ciphertext and extensions. */
+	public function compare_and_update_selected( array $expected, array $choices ): bool {
+		$next = $this->recursive_parse_args( $choices, $expected );
+		return $this->compare_and_persist( $expected,$next );
+	}
+	/** Framework import/reversal replaces only its exact raw owner field, including absence. */
+	public function compare_and_replace_framework_tokens( array $expected, ?array $tokens ): bool {
+		$next = $expected;
+		if ( null === $tokens ) unset( $next['tokens'] ); else $next['tokens'] = $tokens;
+		return $this->compare_and_persist( $expected,$next );
+	}
+	private function compare_and_persist( array $expected,array $next ): bool {
+		global $wpdb;
+		if ( $next === $expected ) return get_option( DSA_OPTION_SETTINGS, null ) === $expected;
+		$changed = $wpdb->query( $wpdb->prepare(
+			"UPDATE {$wpdb->options} SET option_value=%s WHERE option_name=%s AND BINARY option_value=BINARY %s",
+			maybe_serialize( $next ), DSA_OPTION_SETTINGS, maybe_serialize( $expected )
+		) );
+		if ( 1 !== $changed ) return false;
+		wp_cache_delete( DSA_OPTION_SETTINGS, 'options' );
+		$autoloaded = wp_cache_get( 'alloptions', 'options' );
+		if ( is_array( $autoloaded ) && array_key_exists( DSA_OPTION_SETTINGS, $autoloaded ) ) wp_cache_delete( 'alloptions', 'options' );
+		++self::$write_generation;
+		$this->resolved_settings = null;
+		$this->resolved_manifest = null;
+		do_action( 'update_option_' . DSA_OPTION_SETTINGS, $expected, $next, DSA_OPTION_SETTINGS );
+		do_action( 'updated_option', DSA_OPTION_SETTINGS, $expected, $next );
+		return get_option( DSA_OPTION_SETTINGS, null ) === $next;
 	}
 
 	private function recursive_parse_args( array $settings, array $defaults ): array {
@@ -583,7 +699,7 @@ final class Settings {
 	public function manifest(): array {
 		$profile = Runtime_Profiler::start();
 
-		if ( is_array( $this->resolved_manifest ) ) {
+		if ( is_array( $this->resolved_manifest ) && $this->resolved_generation === self::$write_generation ) {
 			Runtime_Profiler::finish( 'settings.manifest', $profile, true );
 			return $this->resolved_manifest;
 		}

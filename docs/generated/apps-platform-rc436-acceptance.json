@@ -1,0 +1,23 @@
+{
+  "schema": "kiwe.apps-acceptance.v1",
+  "sourceVersion": "8.0.0-rc.436",
+  "coreProfile": "physical",
+  "apps": {
+    "store": "1.0.0",
+    "seo": "1.0.0"
+  },
+  "sourceGates": 179,
+  "coreInstallChecks": 564,
+  "freshBootChecks": 7,
+  "nativeCartChecks": 43,
+  "preservationChecks": 67,
+  "stableUpdateAndPublicChecks": 177,
+  "compilerTests": 392,
+  "servedCompilerAppChecks": 43,
+  "publicStartFiles": 329,
+  "unlistedStartFilesPreserved": 1133,
+  "offlineOriginalMembers": 5610,
+  "retiredEntries": 5480,
+  "clientRolloutApproved": false,
+  "visualCaptureVerified": false
+}

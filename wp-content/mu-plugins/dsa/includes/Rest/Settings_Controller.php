@@ -373,7 +373,7 @@ final class Settings_Controller {
 	}
 
 	private function links_commerce_available(): bool {
-		return class_exists( 'WooCommerce' ) || function_exists( 'wc_get_page_permalink' );
+		return \DSA\Apps\Store_App_Service::enabled();
 	}
 
 	private function posts_section_data( array $config ): array {

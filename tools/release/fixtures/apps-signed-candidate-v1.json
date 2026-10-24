@@ -1,0 +1,48 @@
+{
+  "schema": "kiwe.apps-catalog.v1",
+  "channel": "candidate",
+  "coreApi": 1,
+  "publishedAt": "2026-10-24T11:49:56Z",
+  "expiresAt": "2026-10-31T11:49:56Z",
+  "apps": {
+    "seo": {
+      "schema": "kiwe.app-release.v1",
+      "id": "seo",
+      "version": "1.0.0-rc.3",
+      "channel": "candidate",
+      "coreApi": 1,
+      "requiresPhp": "8.2",
+      "requiresWp": "7.1",
+      "requiresWoo": "",
+      "packageUrl": "https://app.kiwelaunch.com/apps/v1/releases/seo/1.0.0-rc.3/kiwe-seo.zip",
+      "sha256": "5dfc25e75f257bc4ba443e6f33ca11e5eff7b90d0ac2c843bf5ed7caff14e496",
+      "bytes": 94566,
+      "packageManifestSha256": "a2526bfd35e45b8aa7f49a33b136fb6855b30ddb911ba4546b00e035fa0b6c34",
+      "publishedAt": "2026-10-24T11:49:56Z",
+      "keyId": "kiwe-release-2026-01",
+      "signature": "3bPHGmgyE+Lh2Qm0rkdoBof35Bbk/WGvl/3NFXyNtbQEHPOnTZ2WRhBYkaalE0JhD43BgkNx1QaPADj+2VKlCw=="
+    },
+    "store": {
+      "schema": "kiwe.app-release.v1",
+      "id": "store",
+      "version": "1.0.0-rc.2",
+      "channel": "candidate",
+      "coreApi": 1,
+      "requiresPhp": "8.2",
+      "requiresWp": "7.1",
+      "requiresWoo": "11.2",
+      "packageUrl": "https://app.kiwelaunch.com/apps/v1/releases/store/1.0.0-rc.2/kiwe-store.zip",
+      "sha256": "9371104dc9d7091536bc1ce28b0f724f2b70d260e85dababe76e35eb24e264e6",
+      "bytes": 211455,
+      "packageManifestSha256": "5e1457d1e96434a250ba0a0c819a125fd732ad41e080dad2cb3ec369b3059a7c",
+      "publishedAt": "2026-10-24T11:12:30Z",
+      "keyId": "kiwe-release-2026-01",
+      "signature": "XxOlx9EJ7I8QtTMTYKE2WAx7ZKpi17Tq6L6Xo15IjkxojgD3ztyh769lQgYz3PJ1K3Eo51crWKsg3ptDk7H3Cw=="
+    }
+  },
+  "revoked": [
+    "seo@1.0.0-rc.2"
+  ],
+  "keyId": "kiwe-release-2026-01",
+  "signature": "15WXp2A42sNI63Rbkmmymdzlfz8EXP5jIfs2WAZqSHBoA5tv/10Tkeldyhj6IMfDj7LVuMvXLUsPZIo1oFMIDg=="
+}

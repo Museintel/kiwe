@@ -1,7 +1,7 @@
 # SEAM Start
 
-Contract version: `9.4`
-Updated: `2026-10-20`
+Contract version: `9.7`
+Updated: `2026-10-21`
 
 Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, verify and use an intact attached Start kit; otherwise read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context at the same version. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
 
@@ -23,6 +23,8 @@ Inspect supplied attachments even when the user gives only this start link. If n
 Supply the project brief, assets and safe Design Context once. `/ideate` prepares the grounded usage brief; `/preview` approves that brief and produces raw browser-runnable HTML/CSS/JS; when happy with that identified preview, `/seam` prepares the same design with relevant Seam attributes, tokens and variables plus explicit native Bricks intent. It preserves the original and produces a separate source copy. Upload that copy to seam.kiwe with Framework enabled. No command here grants site deployment permission. Missing facts still require an answer; commands never invent business information.
 
 Browse the [complete versioned reference library](https://start.kiwelaunch.com/library/) or its [machine index](https://start.kiwelaunch.com/library/catalog.json). It includes all public source resources in the declared families and exact JSON pointers/hashes. Site-created tags and target-calibrated Bricks capabilities additionally come from the current site. Registered, supported and executed are different evidence levels. Use only the entries the design needs; completeness is not a command to add everything to every page.
+
+Visual quality and the accepted design take priority. Use Seam where it helps; preserve distinctive art direction, scoped values and script-owned variables. Supply real source assets with provenance. AI does not invent Media/Bricks IDs or the final Profile/import plan: the deterministic compiler derives the dependency ZIP from actual bytes. Kiwe's separate target review handles native Media, compatible shared styles and draft templates; package hashes do not prove a successful import or grant live approval.
 
 SEAM has nine commands:
 

@@ -27,6 +27,7 @@ final class Account_Controller {
 			'/account/avatar'    => [ 'methods' => 'POST', 'callback' => 'update_avatar' ],
 			'/account/password-reset' => [ 'methods' => 'POST', 'callback' => 'password_reset' ],
 		] as $route => $args ) {
+			if ( in_array( $args['callback'], [ 'orders','downloads','addresses','update_address' ], true ) && ! \DSA\Apps\Store_App_Service::enabled() ) continue;
 			register_rest_route(
 				'dsa/v1',
 				$route,
@@ -254,7 +255,7 @@ final class Account_Controller {
 	}
 
 	public function orders(): WP_REST_Response {
-		if ( ! function_exists( 'wc_get_orders' ) ) {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! function_exists( 'wc_get_orders' ) ) {
 			return new WP_REST_Response( [ 'orders' => [] ], 200 );
 		}
 
@@ -302,7 +303,7 @@ final class Account_Controller {
 	}
 
 	public function downloads(): WP_REST_Response {
-		if ( ! function_exists( 'wc_get_customer_available_downloads' ) ) {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! function_exists( 'wc_get_customer_available_downloads' ) ) {
 			return new WP_REST_Response( [ 'downloads' => [] ], 200 );
 		}
 
@@ -331,6 +332,7 @@ final class Account_Controller {
 	}
 
 	public function update_address( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return new WP_Error( 'kiwe_store_off', 'Kiwe Store is not active.', [ 'status'=>409 ] );
 		$type = sanitize_key( (string) $request->get_param( 'type' ) );
 
 		if ( ! in_array( $type, [ 'billing', 'shipping' ], true ) ) {
@@ -364,6 +366,7 @@ final class Account_Controller {
 	}
 
 	private function address_data( string $type ): array {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return [];
 		$data = [];
 		$customer = null;
 

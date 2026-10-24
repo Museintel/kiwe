@@ -9,3 +9,13 @@ const target=path.join(root,'kiwe-ai-toolkit/reference/design-context-fields.jso
 if(process.argv.includes('--check')){if(fs.readFileSync(target,'utf8').replace(/\r\n?/g,'\n')!==text)throw Error('Public binding reference drift');}
 else{fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,text);}
 console.log(JSON.stringify({passed:true,fields:Object.keys(fields).length}));
+
+// Fixed public artwork only. Never serialize site settings or private PHP internals.
+const iconOwner='wp-content/mu-plugins/dsa/includes/Bricks/Icon_Library_Service.php',spriteOwner='wp-content/mu-plugins/dsa/assets/icons/lucide/sprite.svg';
+const iconPhp="define('ABSPATH',__DIR__);function __($v,$d=''){return $v;}require $argv[1];$out=[];foreach(\\DSA\\Bricks\\Icon_Library_Service::definitions()as$key=>$label)$out[$key]=['tag'=>'{'.$key.'}','label'=>$label,'svg'=>\\DSA\\Bricks\\Icon_Library_Service::render($key)];echo json_encode($out,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);";
+const ir=cp.spawnSync('php',['-r',iconPhp,path.join(root,iconOwner)],{cwd:root,encoding:'utf8',windowsHide:true});if(ir.status!==0)throw Error('Public icon projection failed: '+ir.stderr);
+const icons=JSON.parse(ir.stdout);if(!icons.kiwe_icon_app_ios?.svg.includes('0 0 48 48')||!icons.kiwe_icon_app_android?.svg)throw Error('Complete existing app artwork required');
+const iconValue={schema:'kiwe.public-icon-reference.v1',source:iconOwner,sourceSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(root,iconOwner),'utf8').replace(/\r\n?/g,'\n')).digest('hex'),spriteSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(root,spriteOwner),'utf8').replace(/\r\n?/g,'\n')).digest('hex'),policy:'Fixed public artwork and native Bricks icon tags only. App icons/actions require RC393 or current target evidence. Artwork does not establish app-store enrollment, installation or notification consent.',icons};
+const iconTarget=path.join(root,'kiwe-ai-toolkit/reference/icons.json'),iconText=JSON.stringify(iconValue,null,2)+'\n';
+if(process.argv.includes('--check')){if(!fs.existsSync(iconTarget)||fs.readFileSync(iconTarget,'utf8').replace(/\r\n?/g,'\n')!==iconText)throw Error('Public icon reference drift');}else fs.writeFileSync(iconTarget,iconText);
+console.log(JSON.stringify({passed:true,publicIcons:Object.keys(icons).length}));

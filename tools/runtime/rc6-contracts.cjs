@@ -30,9 +30,9 @@ const checks = [
   ['abandoned cart has configurable heartbeat', settings.includes("'heartbeat_minutes'        => 5") && abandoned.includes("'heartbeat_minutes'")],
   ['unchanged cart skips writes inside heartbeat', abandoned.includes('unchanged_within_heartbeat') && abandoned.includes("'browse' === $reason && $same_cart")],
   ['unchanged heartbeat performs a narrow update', abandoned.includes("array_intersect_key( $data") && abandoned.includes("'last_activity_at'")],
-  ['same-request duplicate cart capture is suppressed', abandoned.includes("$signature = $cart_hash") && abandoned.includes('$request_capture_signature')],
-  ['abandoned retention includes terminal abandoned rows', abandoned.includes("status IN ('converted','cleared','abandoned')")],
-  ['cleanup continues when tracking is disabled', /public function maintenance\(\): void \{[\s\S]{0,220}\$this->purge_old_rows\(\);/.test(abandoned)],
+  ['same-request duplicate cart capture is suppressed', abandoned.includes("hash( 'sha256', wp_json_encode( [ $cart_hash, $reason") && abandoned.includes('$request_capture_signature')],
+  ['abandoned retention visits each terminal status in bounded batches and preserves child receipts', /foreach\s*\(\s*\[\s*'converted','cleared','abandoned'\s*\]/.test(abandoned) && abandoned.includes('ORDER BY updated_at ASC,id ASC LIMIT 50') && abandoned.includes('NOT EXISTS (SELECT 1 FROM {$this->logs_table()} l WHERE l.cart_id=c.id)')],
+  ['core capture has private automatic preparation and no pause control', abandoned.includes("add_action( 'admin_init', [ $this, 'prepare_core_capture' ], 30 )") && abandoned.includes("[ 'enabled'=>true ]") && !abandoned.includes('wp_clear_scheduled_hook( self::CRON_HOOK )')],
   ['metric context cardinality is bounded', metrics.includes('count( $contexts ) >= 100') && metrics.includes("$event . ':other'")],
   ['hot write paths are profile-visible', ['store_analytics.insert','metrics.rollup_write','saved_items.meta_write','rewards.identity_state_write','rewards.ip_state_write','abandoned_cart.update'].every((name) => analytics.includes(name) || metrics.includes(name) || saved.includes(name) || rewards.includes(name) || abandoned.includes(name))],
 ];

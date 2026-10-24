@@ -5,6 +5,8 @@ const [sourceRoot, remoteRoot = 'wp-content/mu-plugins', ...includeArguments] = 
 const baseUrl = String(process.env.KIWE_TUS_URL || '').replace(/\/+$/, '');
 const authKey = String(process.env.KIWE_TUS_AUTH || '');
 const restAuthKey = String(process.env.KIWE_TUS_REST_AUTH || '');
+const maxAttempts = process.env.KIWE_TUS_MAX_ATTEMPTS === undefined ? 4 : Number(process.env.KIWE_TUS_MAX_ATTEMPTS);
+if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 4) throw new Error('KIWE_TUS_MAX_ATTEMPTS must be 1–4.');
 
 if (!sourceRoot || !baseUrl || !authKey || !restAuthKey) {
 	throw new Error('Usage: set KIWE_TUS_URL, KIWE_TUS_AUTH, and KIWE_TUS_REST_AUTH, then pass the local MU-plugin directory.');
@@ -44,7 +46,7 @@ async function upload(file) {
 		'Tus-Resumable': '1.0.0',
 	};
 
-	for (let attempt = 1; attempt <= 4; attempt += 1) {
+	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
 		try {
 			const create = await fetch(target, {
 				method: 'POST',
@@ -66,7 +68,7 @@ async function upload(file) {
 			}
 			return;
 		} catch (error) {
-			if (attempt === 4) throw new Error(`${remotePath}: ${error.message}`);
+			if (attempt === maxAttempts) throw new Error(`${remotePath}: ${error.message}`);
 			await wait(250 * (2 ** attempt));
 		}
 	}

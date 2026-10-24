@@ -12,11 +12,10 @@ function renderTrustBadges( badges ) {
 	} ).join( '' ) + '</div>';
 }
 
-function renderAppBadgeIcon( icon ) {
-	if ( icon === 'play' ) {
-		return '<svg viewBox="0 0 48 48" focusable="false"><path fill="#34a853" d="M7 5.5 28.2 24 7 42.5c-.7-.8-1-1.9-1-3.2V8.7c0-1.3.3-2.4 1-3.2Z"/><path fill="#4285f4" d="m28.2 24 6.7-5.8L10.8 4.7A4.8 4.8 0 0 0 7 5.5L28.2 24Z"/><path fill="#fbbc04" d="m28.2 24 6.7 5.8L10.8 43.3A4.8 4.8 0 0 1 7 42.5L28.2 24Z"/><path fill="#ea4335" d="m34.9 18.2 6.1 3.4c1.4.8 1.4 4 0 4.8l-6.1 3.4-6.7-5.8 6.7-5.8Z"/></svg>';
-	}
-	return '<svg viewBox="0 0 48 48" focusable="false"><rect x="3" y="3" width="42" height="42" rx="10" fill="#0a84ff"/><path d="M16 34 27 14m-7-1 14 21M13 28h23" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>';
+function renderAppBadgeIcon( icon, sprite ) {
+	sprite = sprite || ( typeof window !== 'undefined' && window.DSA_DATA && window.DSA_DATA.iconSprite ) || '';
+	if ( ! sprite ) return '';
+	return '<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><use href="' + escapeHtml( sprite + '#' + ( icon === 'play' ? 'app-android' : 'app-ios' ) ) + '"></use></svg>';
 }
 
 function screenCopy( payload, defaults ) {
@@ -51,9 +50,11 @@ function notificationData( payload ) {
 		label: payload.label || 'Personalize your Appsite',
 		eyebrow: 'Notifications',
 		title: 'Choose what reaches you.',
-		intro: 'Useful moments only. Every choice stays optional and editable.',
-		topicsLegend: 'What matters to you?',
-		channelsLegend: 'How should we reach you?',
+		intro: 'Your updates are always available in Kiwe. Choose optional delivery to your devices.',
+		topicsLegend: 'Send these updates to me',
+		topicsText: 'Optional. Choose which updates you also want delivered to you.',
+		channelsLegend: 'Where should alerts reach you?',
+		channelsText: 'Email, SMS and WhatsApp appear here when the website has them ready. App notifications need your permission.',
 		appText: 'App notifications use the same no-store installation journey from Home.',
 		submitLabel: 'Save my choices',
 		emailPlaceholder: 'Email for email updates',
@@ -76,9 +77,11 @@ function renderNotificationFormParts( data ) {
 	return [
 		'<form data-dsa-notification-form>',
 		'<fieldset class="dsa-notification-options"><legend>' + escapeHtml( data.copy.topicsLegend ) + '</legend>',
+		'<p class="dsa-panel__meta">' + escapeHtml( data.copy.topicsText ) + '</p>',
 		data.topics.map( function ( topic ) { return renderNotificationChoice( 'topics', topic, data.preferences.topics ); } ).join( '' ),
 		'</fieldset>',
 		'<fieldset class="dsa-notification-options dsa-notification-options--channels"><legend>' + escapeHtml( data.copy.channelsLegend ) + '</legend>',
+		'<p class="dsa-panel__meta">' + escapeHtml( data.copy.channelsText ) + '</p>',
 		data.channels.map( function ( channel ) { return renderNotificationChoice( 'channels', channel, data.preferences.channels ); } ).join( '' ),
 		'</fieldset>',
 		data.user.loggedIn ? '' : '<div class="dsa-notification-contact" data-dsa-notification-contact><input class="dsa-auth-field" type="email" autocomplete="email" placeholder="' + escapeHtml( data.copy.emailPlaceholder ) + '" data-dsa-notification-email><input class="dsa-auth-field" type="tel" autocomplete="tel" placeholder="' + escapeHtml( data.copy.phonePlaceholder ) + '" data-dsa-notification-phone' + ( ( data.preferences.channels || [] ).indexOf( 'sms' ) === -1 && ( data.preferences.channels || [] ).indexOf( 'whatsapp' ) === -1 ? ' hidden' : '' ) + '></div>',
@@ -136,14 +139,14 @@ function renderLegacyIosInstall( payload ) {
 		label: payload.label || 'iPhone and iPad App',
 		eyebrow: 'For iPhone & iPad',
 		title: 'Welcome, iOS users.',
-		intro: 'Give ' + siteName + ' its own place on your Home Screen, then open it once to finish notifications.',
-		stepOneTitle: 'Open Safari Share',
-		stepOneText: 'Use the Share button in Safari.',
+		intro: 'Give ' + siteName + ' its own place on your Home Screen, then open it to sign in.',
+		stepOneTitle: 'Open the Share menu',
+		stepOneText: 'On your iPhone or iPad, tap the browser’s Share button. If you cannot find Add to Home Screen, open this website in Safari.',
 		stepTwoTitle: 'Add to Home Screen',
 		stepTwoText: 'Choose Add to Home Screen from the share sheet.',
 		stepThreeTitle: 'Tap Add, then open the app',
-		stepThreeText: 'Your notification choices are already waiting there.',
-		doneLabel: 'I added it',
+		stepThreeText: 'Tap Add. If your iPhone offers Open as Web App, keep it on. Open the new icon and sign in; notification delivery is optional.',
+		doneLabel: 'Back to website',
 	} );
 	return [
 		'<section class="dsa-panel dsa-ios-install-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ios-install-panel data-dsa-keep-open>',
@@ -152,7 +155,7 @@ function renderLegacyIosInstall( payload ) {
 		'<p class="dsa-ios-install-panel__lead">' + escapeHtml( copy.intro ) + '</p>',
 		'<ol class="dsa-ios-steps"><li><span class="dsa-ios-share" aria-hidden="true">&#8679;</span><div><strong>' + escapeHtml( copy.stepOneTitle ) + '</strong><small>' + escapeHtml( copy.stepOneText ) + '</small></div></li><li><span aria-hidden="true">+</span><div><strong>' + escapeHtml( copy.stepTwoTitle ) + '</strong><small>' + escapeHtml( copy.stepTwoText ) + '</small></div></li><li><span aria-hidden="true">&#10003;</span><div><strong>' + escapeHtml( copy.stepThreeTitle ) + '</strong><small>' + escapeHtml( copy.stepThreeText ) + '</small></div></li></ol>',
 		renderTrustBadges( payload.trustBadges ),
-		'<button type="button" class="dsa-panel__button dsa-auth-primary" data-dsa-ios-install-done>' + escapeHtml( copy.doneLabel ) + '</button>',
+		'<button type="button" class="dsa-panel__button" data-dsa-ios-install-done>' + escapeHtml( copy.doneLabel ) + '</button>',
 		'</section>',
 	].join( '' );
 }
@@ -164,21 +167,21 @@ function renderPrototypeIosInstall( payload ) {
 		label: payload.label || 'iPhone and iPad App',
 		eyebrow: 'For iPhone & iPad',
 		title: 'Add the Appsite.',
-		intro: 'Give ' + siteName + ' its own Home Screen place, then open it once to finish notifications.',
-		stepOneTitle: 'Open Safari Share',
-		stepOneText: 'Use the Share button in Safari.',
+		intro: 'Give ' + siteName + ' its own Home Screen place, then open it to sign in.',
+		stepOneTitle: 'Open the Share menu',
+		stepOneText: 'On your iPhone or iPad, tap the browser’s Share button. If you cannot find Add to Home Screen, open this website in Safari.',
 		stepTwoTitle: 'Add to Home Screen',
 		stepTwoText: 'Choose Add to Home Screen from the share sheet.',
 		stepThreeTitle: 'Tap Add, then open the app',
-		stepThreeText: 'Your notification choices are already waiting there.',
-		doneLabel: 'I added it',
+		stepThreeText: 'Tap Add. If your iPhone offers Open as Web App, keep it on. Open the new icon and sign in; notification delivery is optional.',
+		doneLabel: 'Back to website',
 	} );
 	return [
 		'<section class="dsa-panel dsa-ios-install-panel dsa-hero-panel kiwe-ios-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-ios-install-panel data-dsa-keep-open data-dsa-ios-adapter="prototype-2027">',
 		'<div class="kiwe-ios-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-ios-install-panel__lead">' + escapeHtml( copy.intro ) + '</p></div>',
 		'<ol class="dsa-ios-steps"><li><span class="dsa-ios-share" aria-hidden="true">&#8679;</span><div><strong>' + escapeHtml( copy.stepOneTitle ) + '</strong><small>' + escapeHtml( copy.stepOneText ) + '</small></div></li><li><span aria-hidden="true">+</span><div><strong>' + escapeHtml( copy.stepTwoTitle ) + '</strong><small>' + escapeHtml( copy.stepTwoText ) + '</small></div></li><li><span aria-hidden="true">&#10003;</span><div><strong>' + escapeHtml( copy.stepThreeTitle ) + '</strong><small>' + escapeHtml( copy.stepThreeText ) + '</small></div></li></ol>',
 		renderTrustBadges( payload.trustBadges ),
-		'<button type="button" class="dsa-panel__button dsa-auth-primary" data-dsa-ios-install-done>' + escapeHtml( copy.doneLabel ) + '</button>',
+		'<button type="button" class="dsa-panel__button" data-dsa-ios-install-done>' + escapeHtml( copy.doneLabel ) + '</button>',
 		'</section>',
 	].join( '' );
 }
@@ -224,9 +227,9 @@ function savedCopy( payload ) {
 		label: payload.label || 'Saved',
 		eyebrow: payload.label || 'Saved',
 		title: 'Your saved shelf.',
-		intro: 'Wishlist products and page bookmarks stay close.',
+		intro: payload.storeAvailable === false ? 'Your page bookmarks stay close.' : 'Wishlist products and page bookmarks stay close.',
 		emptyTitle: 'Nothing saved yet.',
-		emptyText: 'Tap the bookmark or heart on products and pages to build this shelf.',
+		emptyText: payload.storeAvailable === false ? 'Tap the bookmark on a page to save it here.' : 'Tap the bookmark or heart on products and pages to build this shelf.',
 		wishlistLabel: 'Wishlist',
 		bookmarksLabel: 'Bookmarks',
 		summaryWishlistLabel: 'Wishlist',
@@ -235,11 +238,11 @@ function savedCopy( payload ) {
 	} );
 }
 
-function renderSavedSummary( wishes, bookmarks, copy ) {
+function renderSavedSummary( wishes, bookmarks, copy, storeAvailable ) {
 	copy = copy || {};
 	return [
-		'<div class="kiwe-saved-v2027__summary" aria-label="Saved summary">',
-		'<span><strong>' + escapeHtml( wishes.length ) + '</strong><small>' + escapeHtml( copy.summaryWishlistLabel || 'Wishlist' ) + '</small></span>',
+		'<div class="kiwe-saved-v2027__summary dsa-summary-stats" aria-label="Saved summary">',
+		storeAvailable === false ? '' : '<span><strong>' + escapeHtml( wishes.length ) + '</strong><small>' + escapeHtml( copy.summaryWishlistLabel || 'Wishlist' ) + '</small></span>',
 		'<span><strong>' + escapeHtml( bookmarks.length ) + '</strong><small>' + escapeHtml( copy.summaryBookmarksLabel || 'Bookmarks' ) + '</small></span>',
 		'<span><strong>' + escapeHtml( wishes.length + bookmarks.length ) + '</strong><small>' + escapeHtml( copy.summaryTotalLabel || 'Total saved' ) + '</small></span>',
 		'</div>',
@@ -275,7 +278,7 @@ function renderPrototypeSaved( payload ) {
 	return [
 		'<section class="dsa-panel dsa-saved-panel kiwe-saved-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-saved-panel data-dsa-saved-adapter="prototype-2027">',
 		'<div class="kiwe-saved-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</p><h2>' + escapeHtml( copy.title ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p></div>',
-		renderSavedSummary( wishes, bookmarks, copy ),
+		renderSavedSummary( wishes, bookmarks, copy, payload.storeAvailable ),
 		wishes.length ? renderSavedGroup( copy.wishlistLabel, wishes ) : '',
 		bookmarks.length ? renderSavedGroup( copy.bookmarksLabel, bookmarks ) : '',
 		! hasItems ? '<div class="dsa-saved-empty kiwe-saved-v2027__empty"><strong>' + escapeHtml( copy.emptyTitle ) + '</strong><span>' + escapeHtml( copy.emptyText ) + '</span></div>' : '',
@@ -291,6 +294,7 @@ const savedAdapters = {
 
 export function renderSaved( payload ) {
 	payload = payload || {};
+	if ( payload.storeAvailable === false && Array.isArray( payload.items ) ) payload = Object.assign( {}, payload, { items: payload.items.filter( function ( item ) { return item.type !== 'wishlist'; } ) } );
 	const requestedProfile = String( payload.visualProfile || 'legacy' );
 	const adapter = savedAdapters[ requestedProfile ] || savedAdapters.legacy;
 	return adapter( payload );
@@ -344,17 +348,18 @@ function renderMenuItem( item, fallbackUrl ) {
 	return '<li><a class="dsa-menu-link' + ( item.isActive ? ' is-active' : '' ) + '" href="' + escapeHtml( url ) + '" data-dsa-full-navigation' + ( item.isActive ? ' aria-current="page"' : '' ) + ( item.object_id ? ' data-dsa-object-id="' + escapeHtml( item.object_id ) + '"' : '' ) + '>' + ( item.image ? '<img class="dsa-menu-link__image" src="' + escapeHtml( item.image ) + '" alt="">' : '' ) + '<span class="dsa-menu-link__body"><span>' + escapeHtml( title ) + '</span></span></a></li>';
 }
 
-function renderMenuGroup( group, fallbackUrl ) {
+function renderMenuGroup( group, fallbackUrl, headings ) {
 	const items = Array.isArray( group && group.items ) ? group.items : [];
-	if ( ! items.length ) return '';
-	return '<section class="dsa-menu-group">' + ( group.label ? '<h2 class="dsa-menu-group__title">' + escapeHtml( group.label ) + '</h2>' : '' ) + '<ul class="dsa-menu-list">' + items.map( function ( item ) { return renderMenuItem( item, fallbackUrl ); } ).join( '' ) + '</ul></section>';
+	const context = group.pageContents && group.pageContents.enabled ? renderMenuContext( headings, group.pageContents.title ) : '';
+	if ( ! items.length && ! context ) return '';
+	return '<section class="dsa-menu-group">' + ( group.label ? '<h2 class="dsa-menu-group__title">' + escapeHtml( group.label ) + '</h2>' : '' ) + '<ul class="dsa-menu-list">' + items.map( function ( item ) { return renderMenuItem( item, fallbackUrl ); } ).join( '' ) + '</ul>' + context + '</section>';
 }
 
 function menuGroupsWithSectionTitle( groups, title ) {
 	const normalized = Array.isArray( groups ) ? groups.map( function ( group ) {
 		return Object.assign( {}, group || {} );
 	} ) : [];
-	if ( normalized.length && title ) normalized[ 0 ].label = title;
+	if ( normalized.length && title && ! normalized[ 0 ].label ) normalized[ 0 ].label = title;
 	return normalized;
 }
 
@@ -389,7 +394,7 @@ function renderLegacyMenu( payload ) {
 	const groups = menuGroupsWithSectionTitle( payload.groups, copy.title );
 	const links = Array.isArray( payload.links ) ? payload.links : [];
 	const admin = payload.adminDashboard || {};
-	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</' + tag + '>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' ) : renderUngroupedMenu( links, copy.title, payload.fallbackUrl ) ) + renderMenuContext( payload.contextHeadings, copy.contextTitle ) + ( admin.url ? '<a class="dsa-menu-dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '' ) + '</section>';
+	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</' + tag + '>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl, payload.contextHeadings ); } ).join( '' ) : renderUngroupedMenu( links, copy.title, payload.fallbackUrl ) ) + ( payload.groupOwnedContext ? '' : renderMenuContext( payload.contextHeadings, copy.contextTitle ) ) + ( admin.url ? '<a class="dsa-menu-dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '' ) + '</section>';
 }
 
 function renderPrototypeMenu( payload ) {
@@ -402,9 +407,9 @@ function renderPrototypeMenu( payload ) {
 		? groups.reduce( function ( total, group ) { return total + ( Array.isArray( group.items ) ? group.items.length : 0 ); }, 0 )
 		: links.length;
 	const menuBody = groups.length
-		? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl ); } ).join( '' )
+		? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl, payload.contextHeadings ); } ).join( '' )
 		: renderUngroupedMenu( links, copy.title, payload.fallbackUrl );
-	const context = renderMenuContext( payload.contextHeadings, copy.contextTitle );
+	const context = payload.groupOwnedContext ? '' : renderMenuContext( payload.contextHeadings, copy.contextTitle );
 
 	return [
 		'<section class="dsa-panel dsa-menu-panel dsa-hero-panel kiwe-menu-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '" data-dsa-menu-adapter="prototype-2027">',
@@ -442,26 +447,27 @@ export function renderAppsiteHome( payload ) {
 	const buttons = Array.isArray( config.buttons ) ? config.buttons : [];
 
 	return [
-		'<div class="dsa-initial-preloader" data-dsa-initial-preloader role="status" aria-live="polite" aria-label="Kiwe Appsite home screen">',
+		'<div class="dsa-initial-preloader" data-dsa-initial-preloader role="dialog" aria-modal="true" tabindex="-1" aria-label="Kiwe Appsite home screen">',
 		'<div class="dsa-initial-preloader__inner">',
 		'<p class="dsa-initial-preloader__title">' + escapeHtml( title ) + '</p>',
-		'<h1 class="dsa-initial-preloader__hero">' + escapeHtml( hero ) + '</h1>',
+		'<div class="dsa-initial-preloader__hero" role="heading" aria-level="2">' + escapeHtml( hero ) + '</div>',
 		'<p class="dsa-initial-preloader__message">' + escapeHtml( message ) + '</p>',
 		'<div class="dsa-initial-preloader__clock" data-dsa-initial-clock></div>',
-		'<div class="dsa-initial-preloader__unlock" aria-hidden="true"><span></span><strong>Scroll or swipe up to enter</strong></div>',
-		'<p class="dsa-initial-preloader__app-pitch">' + escapeHtml( pwaPitch ) + '</p>',
-		'<div class="dsa-initial-preloader__actions" data-dsa-keep-open>',
+		'<div class="dsa-initial-preloader__unlock"><span aria-hidden="true"></span><strong>Scroll, swipe up, or press ↓ to enter</strong></div>',
+		'<p class="dsa-initial-preloader__app-pitch" data-dsa-pwa-pitch>' + escapeHtml( pwaPitch ) + '</p>',
+		'<div class="dsa-initial-preloader__actions" data-dsa-install-group data-dsa-keep-open>',
 		buttons.map( function ( button ) {
 			const label = button.label || 'Open';
 			const eyebrow = button.eyebrow || '';
 			const platform = button.platform || button.id || '';
 			const icon = button.icon || platform;
-			const content = '<span class="dsa-app-badge__icon dsa-app-badge__icon--' + escapeHtml( icon ) + '" aria-hidden="true">' + renderAppBadgeIcon( icon ) + '</span><span class="dsa-app-badge__copy"><small>' + escapeHtml( eyebrow ) + '</small><strong>' + escapeHtml( label ) + '</strong></span>';
+			const content = '<span class="dsa-app-badge__icon dsa-app-badge__icon--' + escapeHtml( icon ) + '" aria-hidden="true">' + renderAppBadgeIcon( icon, payload.iconSprite ) + '</span><span class="dsa-app-badge__copy"><small>' + escapeHtml( eyebrow ) + '</small><strong>' + escapeHtml( label ) + '</strong></span>';
 			if ( button.url ) {
 				return '<a class="dsa-app-badge" href="' + escapeHtml( button.url ) + '" data-dsa-initial-action>' + content + '</a>';
 			}
 			return '<button class="dsa-app-badge" type="button" data-dsa-initial-action data-dsa-install-pwa data-dsa-pwa-platform="' + escapeHtml( platform ) + '">' + content + '</button>';
 		} ).join( '' ),
+		'<p class="dsa-install-disclosure" data-dsa-install-disclosure>' + escapeHtml( config.installDisclosure || 'Adds this website to your Home Screen. No app store needed. Notifications are optional.' ) + '</p>',
 		'</div>',
 		renderTrustBadges( payload.trustBadges ),
 		'<p class="dsa-initial-preloader__app-status" data-dsa-pwa-status hidden aria-live="polite"></p>',

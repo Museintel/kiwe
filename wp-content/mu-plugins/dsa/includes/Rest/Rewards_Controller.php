@@ -15,6 +15,7 @@ final class Rewards_Controller {
 	public function __construct( private Reward_Service $rewards ) {}
 
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_action( 'rest_api_init', [ $this, 'routes' ] );
 	}
 

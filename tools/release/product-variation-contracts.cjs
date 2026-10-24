@@ -1,0 +1,22 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawnSync}=require('node:child_process');
+const root=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const service=read('wp-content/mu-plugins/dsa/includes/Access/Product_Variation_Workspace_Service.php'),app=read('wp-content/mu-plugins/dsa/includes/Access/Commerce_App_Service.php'),ui=read('tools/workspace-prototype/native-product-variations.jsx'),journey=read('tools/workspace-prototype/native-workflow.jsx');
+const checks=[],check=(ok,label)=>{assert.ok(ok,label);checks.push(label);};
+check(!/add_action\s*\(|add_filter\s*\(|dbDelta\s*\(|CREATE TABLE/i.test(service),'No added request hooks tables or worker');
+check(service.includes('new \\WC_Product_Attribute()')&&service.includes('new \\WC_Product_Variation()')&&service.includes('\\WC_Product_Variable::sync('),'Native Woo writers and parent synchronization');
+check(service.includes("current_user_can('edit_post',$parent)")&&service.includes("get_parent_id()!==$s['id']"),'Parent-specific authority and child ownership');
+check(service.includes('LIMIT 201')&&service.includes('LIMIT 1001')&&service.includes('LIMIT 4001'),'Bounded catalog and private metadata review');
+check(service.includes('GET_LOCK(%s,0)')&&service.includes('hash_equals')&&service.includes('COMMIT')&&service.includes('ROLLBACK')&&service.includes('in_transaction'),'Nonblocking checked writes and native transaction ownership');
+check(service.includes('_variation_description')&&service.includes('protected_meta')&&service.includes('Protected product categories')&&service.includes('Protected parent content'),'Native description writer and protected SEO relationships content');
+check(service.includes('checkout')===false&&service.includes('wc_product_has_unique_sku')&&service.includes('sale_date'),'Native SKU and existing timezone owner reuse');
+check(app.includes("in_array($before['type'],['variable','grouped'],true)&&$price!==$before['price']")&&app.includes("if($before['type']==='simple')$product->set_regular_price"),'Variable parent prices remain native derived values');
+check(app.includes("$before['inventoryEditable']")&&app.includes("$before['deliveryEditable']"),'Existing simple task writers retain their boundary');
+check(app.includes('Product_Variation_Workspace_Service::attribute_values($product)')&&app.includes("'defaultAttributes'=>$product->get_default_attributes('edit')"),'Shared basic fingerprint tracks attributes and defaults');
+check(ui.includes('WorkspaceDialog')&&ui.includes('useProductDraftState')&&ui.includes('kiwe-task-tabs')&&ui.includes('kiwe-task-filters'),'Compact shared dialogs filters and dirty navigation');
+check(ui.includes('Refresh saved state')&&ui.includes('setConfirmed(false)')&&!ui.includes('setInterval')&&!ui.includes('localStorage'),'Reviewed recovery without polling persisted drafts or auto retry');
+check(journey.includes("task==='variations'")&&journey.includes('ProductOptions item={record}')&&journey.includes('Product type<select'),'Shared parent journey and simple or variable creation');
+const php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe';
+for(const file of ['wp-content/mu-plugins/dsa/includes/Access/Product_Variation_Workspace_Service.php','tools/release/test-wordpress-product-variations.php']){const r=spawnSync(php,['-l',path.join(root,file)],{encoding:'utf8'});check(r.status===0,'PHP syntax '+file);}
+const file=path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Product_Variation_Workspace_Service.php').replaceAll('\\','/'),code=`define('ABSPATH',__DIR__);class WP_Error{} function is_wp_error($v){return $v instanceof WP_Error;} function current_user_can($cap){throw new RuntimeException('Non-Woo permission work');} require ${JSON.stringify(file)}; $s=new \\DSA\\Access\\Product_Variation_Workspace_Service();if($s::available()||!($s->setup(1) instanceof WP_Error))exit(1);echo 'disabled';`;
+const disabled=spawnSync(php,['-r',code],{encoding:'utf8'});check(disabled.status===0&&disabled.stdout==='disabled','Non-Woo owner stops before permissions or database');
+console.log(JSON.stringify({passed:true,checks:checks.length,scope:'Source syntax and executable disabled path. Native routes CRUD and UI use separate acceptance.'}));

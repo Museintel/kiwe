@@ -207,7 +207,7 @@ final class Production_Readiness_Service {
 				'initial_home_surface',
 				__( 'First-session Home surface', 'dsa' ),
 				! empty( $visual['initial_preloader_enabled'] ) ? 'warning' : 'pass',
-				! empty( $visual['initial_preloader_enabled'] ) ? __( 'The full-screen first-session Home experience is enabled.', 'dsa' ) : __( 'The first-session Home experience is opt-in and currently disabled.', 'dsa' ),
+				! empty( $visual['initial_preloader_enabled'] ) ? __( 'The full-screen Home introduction is configured.', 'dsa' ) : __( 'The immediate Home introduction is not selected.', 'dsa' ),
 				__( 'Enable it deliberately for an appsite journey. Keep it disabled on ad-supported or search-sensitive editorial sites unless policy and crawler tests approve it.', 'dsa' ),
 				'surface'
 			),

@@ -15,7 +15,12 @@ final class Search_Service {
 	private const CACHE_TTL = 5 * MINUTE_IN_SECONDS;
 	private const CACHE_VERSION_OPTION = 'dsa_search_cache_version';
 
-	public function __construct( private Settings $settings, private Cart_Payload_Service $cartPayload ) {}
+	public function __construct( private Settings $settings, private Cart_Payload_Service|\Closure $cartPayload ) {}
+
+	private function cart_payload(): Cart_Payload_Service {
+		if ( $this->cartPayload instanceof \Closure ) $this->cartPayload = ( $this->cartPayload )();
+		return $this->cartPayload;
+	}
 
 	public function register(): void {
 		add_action( 'save_post', [ $this, 'invalidate_for_post' ], 20, 2 );
@@ -64,7 +69,7 @@ final class Search_Service {
 		}
 
 		$families     = $this->families();
-		$has_commerce = function_exists( 'wc_get_product' ) && post_type_exists( 'product' );
+		$has_commerce = \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_product' ) && post_type_exists( 'product' );
 		$products     = $has_commerce && $families['products'] && in_array( $scope, [ 'all', 'products' ], true ) ? $this->product_results( $query, $limit, $prefix ) : [];
 		$posts        = $families['posts'] && in_array( $scope, [ 'all', 'posts' ], true ) ? $this->post_results( $query, $limit, $prefix, $sort ) : [];
 		$authors      = $families['authors'] && in_array( $scope, [ 'all', 'authors' ], true ) ? $this->author_results( $query, $limit, $prefix ) : [];
@@ -142,7 +147,7 @@ final class Search_Service {
 				'image'       => $image_id ? esc_url_raw( (string) wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) ) : '',
 				'price'       => $this->product_price( $product ),
 				'weight'      => $this->product_weight( $product ),
-				'stockBadge'  => $this->cartPayload->stock_badge( $product ),
+				'stockBadge'  => $this->cart_payload()->stock_badge( $product ),
 				'addable'     => $product->is_type( 'simple' ) && $product->is_purchasable() && $product->is_in_stock(),
 			];
 		}
@@ -382,7 +387,7 @@ final class Search_Service {
 		$families = wp_parse_args( $families, $defaults );
 
 		return [
-			'products' => ! empty( $families['products'] ),
+			'products' => \DSA\Apps\Store_App_Service::enabled() && ! empty( $families['products'] ),
 			'posts'    => ! empty( $families['posts'] ),
 			'authors'  => ! empty( $families['authors'] ),
 			'categories' => ! empty( $this->custom_taxonomies() ),
@@ -403,7 +408,7 @@ final class Search_Service {
 			array_filter(
 				array_map( 'sanitize_key', (array) ( $config['custom_taxonomies'] ?? [] ) ),
 				static function ( string $taxonomy ): bool {
-					if ( '' === $taxonomy || ! taxonomy_exists( $taxonomy ) ) {
+					if ( '' === $taxonomy || ! taxonomy_exists( $taxonomy ) || ( ! \DSA\Apps\Store_App_Service::enabled() && in_array( 'product', (array) get_taxonomy( $taxonomy )->object_type, true ) ) ) {
 						return false;
 					}
 					$object = get_taxonomy( $taxonomy );
@@ -532,7 +537,7 @@ final class Search_Service {
 		$locale   = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
 		$location = '';
 
-		if ( function_exists( 'WC' ) && WC() && WC()->customer ) {
+		if ( \DSA\Apps\Store_App_Service::enabled() && WC() && WC()->customer ) {
 			$location = implode(
 				':',
 				[
@@ -543,10 +548,10 @@ final class Search_Service {
 			);
 		}
 
-		$currency = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '';
+		$currency = \DSA\Apps\Store_App_Service::enabled() && function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '';
 		$plugin_version = defined( 'DSA_VERSION' ) ? DSA_VERSION : 'dev';
 		$families = $this->families();
-		$source   = implode( '|', [ $plugin_version, $version, $role, $locale, $currency, $location, $limit, $scope, $sort, $prefix, strtolower( $query ), implode( ',', array_keys( array_filter( $families ) ) ), implode( ',', $this->custom_taxonomies() ), function_exists( 'wc_get_product' ) ? 'woo' : 'wp' ] );
+		$source   = implode( '|', [ $plugin_version, $version, $role, $locale, $currency, $location, $limit, $scope, $sort, $prefix, strtolower( $query ), implode( ',', array_keys( array_filter( $families ) ) ), implode( ',', $this->custom_taxonomies() ), \DSA\Apps\Store_App_Service::enabled() ? 'store' : 'core' ] );
 
 		return 'dsa_search_' . md5( $source );
 	}

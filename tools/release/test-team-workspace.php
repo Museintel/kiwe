@@ -1,0 +1,35 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/workspace-test-bootstrap.php';
+function wp_json_encode($value){return json_encode($value);}
+use DSA\Access\Team_Workspace_Service as Team;
+use DSA\Onboarding\Design_Context_Profile_Service as Context;
+$service=new Team();$valid=['team_member'=>'1','team_title'=>'<b>Studio lead</b>','team_order'=>'2'];
+check($service->save_member(3,$valid)===true,'client saves an eligible staff member');
+check($usermeta[3]===['kiwe_team_title'=>'Studio lead','kiwe_team_order'=>'2','kiwe_public_team_member'=>'1'],'only public team fields are written and title is sanitized');
+$before=$usermeta;$service->save_member(3,$valid+['role'=>'administrator','user_email'=>'injection@example.test','other_users'=>[6],'ID'=>2]);
+check($usermeta===$before&&$users[3]->roles===['author'],'forged identity permission and other-user fields cannot change records');
+$write_count=count($writes);check($service->save_member(3,$valid)===true&&count($writes)===$write_count,'an unchanged save is successful without redundant writes');
+foreach([2,4,5,999] as $id)check(is_wp_error($service->save_member($id,$valid)),'owner nonstaff Guest and missing people are protected: '.$id);
+$denied=['edit_user:3'];check(is_wp_error($service->save_member(3,$valid)),'per-user edit denial is enforced');$denied=[];
+$actor=3;check(is_wp_error($service->save_member(3,$valid)),'staff cannot select themselves as public team');$actor=1;
+$multisite=true;$outside_blog=[3];check(is_wp_error($service->save_member(3,$valid)),'another blog member cannot be selected');$multisite=false;$outside_blog=[];
+foreach([['team_member'=>'yes'],['team_member'=>['1']],['team_title'=>str_repeat('a',201)],['team_order'=>'-1'],['team_order'=>'10000'],['team_order'=>'1e2']] as $invalid)check(is_wp_error($service->save_member(3,array_replace($valid,$invalid))),'invalid team field rejected: '.array_key_first($invalid));
+check(is_wp_error($service->save_member(3,['team_member'=>'1'])),'incomplete forms cannot clear details');
+$failed_meta=Context::USER_META_TEAM_ORDER;check(is_wp_error($service->save_member(6,$valid)),'metadata write failure is reported');
+check(get_user_meta(6,Context::USER_META_TEAM_MEMBER,true)!=='1','new membership is not published after a failed detail write');$failed_meta='';
+$query_users=[$users[2],$users[3],$users[4],$users[5],$users[6]];
+$listing=$service->listing(['team_page'=>2,'team_search'=>'*Studio*','include'=>[2],'number'=>9999]);
+check(array_column($listing['users'],'ID')===[3,6],'listing rechecks effective staff and object eligibility');
+check($user_query['number']===13&&$user_query['offset']===12&&!$user_query['count_total'],'one bounded user query with lookahead');
+check($user_query['search']==='*Studio*'&&$user_query['search_columns']===['display_name']&&$user_query['exclude']===[2],'public-name search and owner exclusion cannot be overridden');
+check(!isset($user_query['include']),'arbitrary user query fields are ignored');
+$service->listing(['team_view'=>'members']);check($user_query['meta_key']===Context::USER_META_TEAM_MEMBER&&$user_query['meta_value']==='1','member view uses canonical membership');
+$_SERVER['REQUEST_METHOD']='POST';$_POST=['user_id'=>'3']+$valid;
+check(denied(fn()=>$service->handle_save()),'team save requires a user-bound nonce');
+$_POST['kiwe_team_nonce']=Team::ACTION.'_6';check(denied(fn()=>$service->handle_save()),'nonce for another user is rejected');
+$_POST['kiwe_team_nonce']=Team::ACTION.'_3';$_SERVER['REQUEST_METHOD']='GET';check(denied(fn()=>$service->handle_save()),'GET cannot save a team');
+$pagenow='admin.php';$_GET=['page'=>Team::PAGE];$_SERVER['REQUEST_METHOD']='GET';
+$access->guard_editorial_admin_route();check(true,'restricted Administrator can open Teams through the real route guard');
+$actor=3;check(denied(fn()=>$access->guard_editorial_admin_route()),'author cannot open Teams through the real route guard');
+echo "$count team workspace behavior checks passed.\n";

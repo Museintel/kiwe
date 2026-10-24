@@ -51,6 +51,11 @@ final class Guest_Contribution_Service {
 		return is_array( $stored ) ? $stored : [];
 	}
 
+	public static function is_submission( int $post_id ): bool {
+		$stored = get_post_meta( $post_id, self::POST_META, true );
+		return is_array( $stored ) && ! empty( $stored['createdAt'] );
+	}
+
 	public static function approved( int $user_id ): bool {
 		return 'approved' === sanitize_key( (string) ( self::application( $user_id )['status'] ?? '' ) );
 	}
@@ -58,7 +63,7 @@ final class Guest_Contribution_Service {
 	public static function settings(): array {
 		$stored = get_option( self::SETTINGS_OPTION, [] );
 		$stored = is_array( $stored ) ? $stored : [];
-		$commerce = class_exists( 'WooCommerce' ) || function_exists( 'WC' );
+		$commerce = \DSA\Apps\Store_App_Service::enabled();
 		$posts = ! empty( $stored['posts_enabled'] );
 		$products = $commerce && ! empty( $stored['products_enabled'] );
 
@@ -150,7 +155,7 @@ final class Guest_Contribution_Service {
 		if ( $count > 0 ) {
 			$label .= ' <span class="awaiting-mod count-' . $count . '"><span class="pending-count">' . $count . '</span></span>';
 		}
-		if ( current_user_can( 'kiwe_manage_guest_applications' ) || current_user_can( 'kiwe_guest_submit' ) ) {
+		if ( current_user_can( 'kiwe_manage_guest_applications' ) || current_user_can( 'kiwe_guest_submit' ) || ( defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && ( current_user_can( 'edit_others_posts' ) || current_user_can( 'edit_others_products' ) ) ) ) {
 			add_menu_page( __( 'Guest', 'dsa' ), $label, 'read', 'kiwe-guests', [ $this, 'render' ], 'dashicons-welcome-write-blog', 31 );
 		}
 	}
@@ -168,109 +173,210 @@ final class Guest_Contribution_Service {
 	}
 
 	public function handle_settings(): void {
-		if ( ! current_user_can( 'kiwe_manage_guest_applications' ) ) {
-			wp_die( esc_html__( 'You cannot configure Guest contributions.', 'dsa' ), '', [ 'response' => 403 ] );
-		}
 		check_admin_referer( 'kiwe_guest_save_settings' );
-		$commerce = class_exists( 'WooCommerce' ) || function_exists( 'WC' );
-		update_option(
-			self::SETTINGS_OPTION,
-			[
-				'posts_enabled'    => ! empty( $_POST['posts_enabled'] ),
-				'products_enabled' => $commerce && ! empty( $_POST['products_enabled'] ),
-			],
-			false
-		);
-		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-guests', 'settings-updated' => 1 ], admin_url( 'admin.php' ) ) );
-		exit;
+		$result = $this->save_workspace_settings( [ 'postsEnabled'=>! empty( $_POST['posts_enabled'] ), 'productsEnabled'=>! empty( $_POST['products_enabled'] ) ] );
+		if ( is_wp_error( $result ) ) Task_Workspace_UI::error( $result );
+		wp_safe_redirect( add_query_arg( [ 'page'=>'kiwe-guests', 'settings-updated'=>1 ], admin_url( 'admin.php' ) ) ); exit;
 	}
-
 	public function handle_decision(): void {
-		if ( ! current_user_can( 'kiwe_manage_guest_applications' ) ) {
-			wp_die( esc_html__( 'You cannot review Guest applications.', 'dsa' ), '', [ 'response' => 403 ] );
-		}
 		check_admin_referer( 'kiwe_guest_decide' );
-		$user_id = absint( $_POST['user_id'] ?? 0 );
-		$decision = sanitize_key( wp_unslash( $_POST['decision'] ?? '' ) );
-		$application = self::application( $user_id );
-		$user = get_userdata( $user_id );
-		if ( ! $user || 'pending' !== ( $application['status'] ?? '' ) || ! in_array( $decision, [ 'approved', 'denied' ], true ) ) {
-			wp_die( esc_html__( 'That application is no longer pending.', 'dsa' ), '', [ 'response' => 409 ] );
-		}
-
-		$application['status'] = $decision;
-		$application['decidedAt'] = gmdate( 'c' );
-		$application['decidedBy'] = get_current_user_id();
-		$application['reason'] = 'denied' === $decision ? sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) ) : '';
-		update_user_meta( $user_id, self::META, $application );
-		if ( 'approved' === $decision ) {
-			$user->add_role( 'contributor' );
-		} else {
-			$user->remove_role( 'contributor' );
-		}
-		do_action( 'kiwe_guest_application_decided', $user_id, $decision, $application );
-		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-guests', 'updated' => $decision ], admin_url( 'admin.php' ) ) );
-		exit;
+		$result = $this->decide_application( absint( $_POST['user_id'] ?? 0 ), sanitize_key( wp_unslash( $_POST['decision'] ?? '' ) ), sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) ) );
+		if ( is_wp_error( $result ) ) Task_Workspace_UI::error( $result );
+		wp_safe_redirect( add_query_arg( [ 'page'=>'kiwe-guests', 'updated'=>$result['status'] ], admin_url( 'admin.php' ) ) ); exit;
 	}
-
 	public function handle_submission(): void {
-		if ( ! current_user_can( 'kiwe_guest_submit' ) || ! self::approved( get_current_user_id() ) ) {
-			wp_die( esc_html__( 'Approved Guest access is required.', 'dsa' ), '', [ 'response' => 403 ] );
-		}
 		check_admin_referer( 'kiwe_guest_submit' );
+		$result = $this->submit_workspace( [ 'type'=>sanitize_key( wp_unslash( $_POST['submission_type'] ?? 'post' ) ), 'title'=>wp_unslash( $_POST['post_title'] ?? '' ), 'content'=>wp_unslash( $_POST['post_content'] ?? '' ), 'status'=>sanitize_key( wp_unslash( $_POST['post_status'] ?? 'pending' ) ), 'price'=>wp_unslash( $_POST['regular_price'] ?? '' ) ] );
+		if ( is_wp_error( $result ) ) Task_Workspace_UI::error( $result );
+		wp_safe_redirect( add_query_arg( [ 'page'=>'kiwe-guests', 'submitted'=>$result['status'] ], admin_url( 'admin.php' ) ) ); exit;
+	}
+	/** Paged role-scoped projection. Reads never write, queue work or send messages. */
+	public function workspace( array $input = [] ): array {
 		$user_id = get_current_user_id();
-		$key = 'kiwe_guest_submit_' . $user_id;
-		if ( get_transient( $key ) ) {
-			wp_die( esc_html__( 'Please wait before sending another contribution.', 'dsa' ), '', [ 'response' => 429 ] );
+		$manage = is_user_logged_in() && current_user_can( 'kiwe_manage_guest_applications' );
+		$types = [];
+		if ( current_user_can( 'edit_posts' ) && current_user_can( 'edit_others_posts' ) ) $types[] = 'post';
+		if ( \DSA\Apps\Store_App_Service::enabled() && current_user_can( 'edit_products' ) && current_user_can( 'edit_others_products' ) ) $types[] = 'product';
+		$submit = is_user_logged_in() && current_user_can( 'kiwe_guest_submit' ) && self::approved( $user_id );
+		$views = array_merge( $manage ? [ 'applications' ] : [], $types ? [ 'review' ] : [], $submit ? [ 'mine' ] : [] );
+		$view = $manage && 'setup' === ( $input['view'] ?? '' ) ? 'setup' : ( in_array( $input['view'] ?? '', $views, true ) ? $input['view'] : ( $views[0] ?? '' ) );
+		$requested_id = max( 0, is_scalar( $input['id'] ?? null ) ? (int) $input['id'] : 0 );
+		$page = $requested_id > 0 ? 1 : max( 1, min( 1000, is_scalar( $input['page'] ?? null ) ? (int) $input['page'] : 1 ) );
+		$search = Task_Workspace_UI::text( is_scalar( $input['search'] ?? null ) ? (string) $input['search'] : '', 80 );
+		$sort = in_array( $input['sort'] ?? '', [ 'date_desc','date_asc','title_asc','title_desc' ], true ) ? $input['sort'] : 'date_desc';
+		$status = in_array( $input['status'] ?? '', [ 'draft','pending','publish','future','private' ], true ) ? $input['status'] : 'all';
+		$kind = in_array( $input['kind'] ?? '', [ 'post','product' ], true ) && in_array( $input['kind'], $types, true ) ? $input['kind'] : 'all';
+		$out = [ 'settings'=>self::settings(), 'settingsExpected'=>self::settings_fingerprint(), 'views'=>$views, 'view'=>$view, 'page'=>$page, 'search'=>$search, 'sort'=>$sort, 'status'=>$status, 'kind'=>$kind, 'items'=>[], 'hasNext'=>false, 'categories'=>[], 'canManage'=>$manage, 'canSubmit'=>$submit, 'submitTypes'=>[], 'reviewTypes'=>$types, 'publishTypes'=>[] ];
+		if ( ! is_user_logged_in() || ! $views ) return $out;
+		if ( 'setup' === $view ) return $out;
+		foreach ( $types as $type ) {
+			if ( current_user_can( 'product' === $type ? 'publish_products' : 'publish_posts' ) ) $out['publishTypes'][] = $type;
+			$tax = 'product' === $type ? 'product_cat' : 'category';
+			$terms = get_terms( [ 'taxonomy'=>$tax, 'hide_empty'=>false, 'number'=>100 ] );
+			foreach ( is_array( $terms ) ? $terms : [] as $term ) $out['categories'][] = [ 'id'=>(int) $term->term_id, 'name'=>(string) $term->name, 'type'=>$type ];
 		}
-		$type = 'product' === sanitize_key( wp_unslash( $_POST['submission_type'] ?? 'post' ) ) ? 'product' : 'post';
-		$application = self::application( $user_id );
-		$features = self::settings();
-		if ( 'post' === $type && ( empty( $features['postsEnabled'] ) || ! in_array( 'post', (array) ( $application['intents'] ?? [] ), true ) ) ) {
-			wp_die( esc_html__( 'Guest posts are not active for this account.', 'dsa' ), '', [ 'response' => 403 ] );
+		if ( $submit ) foreach ( (array) ( self::application( $user_id )['intents'] ?? [] ) as $type ) {
+			if ( ( 'post' === $type && $out['settings']['postsEnabled'] ) || ( 'product' === $type && $out['settings']['productsEnabled'] ) ) $out['submitTypes'][] = $type;
 		}
-		if ( 'product' === $type && ( empty( $features['productsEnabled'] ) || ! function_exists( 'WC' ) || ! in_array( 'product', (array) ( $application['intents'] ?? [] ), true ) ) ) {
-			wp_die( esc_html__( 'Product proposals are not active for this Guest account.', 'dsa' ), '', [ 'response' => 403 ] );
-		}
-		$title = sanitize_text_field( wp_unslash( $_POST['post_title'] ?? '' ) );
-		$content = wp_kses_post( wp_unslash( $_POST['post_content'] ?? '' ) );
-		$status = 'draft' === sanitize_key( wp_unslash( $_POST['post_status'] ?? 'pending' ) ) ? 'draft' : 'pending';
-		if ( strlen( $title ) < 5 || strlen( wp_strip_all_tags( $content ) ) < ( 'product' === $type ? 20 : 50 ) ) {
-			wp_die( esc_html__( 'Add a clear title and enough detail for an editor to review.', 'dsa' ), '', [ 'response' => 400 ] );
-		}
-		if ( strlen( $content ) > 100000 ) {
-			wp_die( esc_html__( 'This contribution is too long.', 'dsa' ), '', [ 'response' => 413 ] );
-		}
-		$post_id = wp_insert_post(
-			[
-				'post_type'    => $type,
-				'post_author'  => $user_id,
-				'post_title'   => $title,
-				'post_content' => $content,
-				'post_status'  => $status,
-			],
-			true
-		);
-		if ( is_wp_error( $post_id ) ) {
-			wp_die( esc_html( $post_id->get_error_message() ), '', [ 'response' => 500 ] );
-		}
-		update_post_meta( (int) $post_id, self::POST_META, [ 'createdAt' => gmdate( 'c' ), 'immutableForAuthor' => true ] );
-		if ( 'product' === $type ) {
-			$price = function_exists( 'wc_format_decimal' ) ? wc_format_decimal( wp_unslash( $_POST['regular_price'] ?? '' ) ) : preg_replace( '/[^0-9.]/', '', (string) ( $_POST['regular_price'] ?? '' ) );
-			if ( '' !== $price ) {
-				update_post_meta( (int) $post_id, '_regular_price', $price );
-				update_post_meta( (int) $post_id, '_price', $price );
+		if ( 'applications' === $view ) {
+			if ( $requested_id > 0 ) {
+				$candidate = get_userdata( $requested_id );
+				$records = $candidate && self::application( $requested_id ) ? [ $candidate ] : [];
+			} else {
+				$args = [ 'meta_key'=>self::META, 'number'=>21, 'offset'=>( $page - 1 ) * 20, 'orderby'=>str_starts_with( $sort, 'title_' ) ? 'display_name' : 'registered', 'order'=>str_ends_with( $sort, '_asc' ) ? 'ASC' : 'DESC', 'count_total'=>false ];
+				if ( '' !== $search ) { $args['search'] = '*' . str_replace( '*', '', $search ) . '*'; $args['search_columns'] = [ 'display_name' ]; }
+				$records = get_users( $args );
 			}
-			update_post_meta( (int) $post_id, '_kiwe_guest_seller_user_id', $user_id );
+			foreach ( array_slice( $records, 0, 20 ) as $user ) $out['items'][] = $this->project_application( $user );
+		} else {
+			if ( $requested_id > 0 ) {
+				$candidate = get_post( $requested_id );
+				$records = $candidate ? [ $candidate ] : [];
+			} else {
+				$post_types = 'mine' === $view ? ( \DSA\Apps\Store_App_Service::enabled() ? [ 'post','product' ] : [ 'post' ] ) : $types;
+				if ( 'all' !== $kind && in_array( $kind, $post_types, true ) ) $post_types = [ $kind ];
+				$args = [ 'post_type'=>$post_types, 'post_status'=>'all' === $status ? [ 'draft','pending','publish','future','private' ] : [ $status ], 'posts_per_page'=>21, 'offset'=>( $page - 1 ) * 20, 'orderby'=>str_starts_with( $sort, 'title_' ) ? 'title' : 'modified', 'order'=>str_ends_with( $sort, '_asc' ) ? 'ASC' : 'DESC', 's'=>$search, 'meta_key'=>self::POST_META, 'meta_compare'=>'EXISTS', 'no_found_rows'=>true ];
+				if ( 'mine' === $view ) $args['author'] = $user_id;
+				$records = get_posts( $args );
+			}
+			foreach ( array_slice( $records, 0, 20 ) as $post ) {
+				if ( ! self::is_submission( (int) $post->ID ) ) continue;
+				if ( ! in_array( $post->post_type, 'mine' === $view ? [ 'post','product' ] : $types, true ) ) continue;
+				if ( ! in_array( $post->post_status, [ 'draft','pending','publish','future','private' ], true ) ) continue;
+				if ( 'mine' === $view ? (int) $post->post_author !== $user_id : ! current_user_can( 'edit_post', (int) $post->ID ) ) continue;
+				$out['items'][] = $this->project_submission( $post );
+			}
 		}
-		set_transient( $key, 1, 15 );
-		if ( 'pending' === $status ) {
-			do_action( 'kiwe_guest_submission_received', (int) $post_id, $user_id );
-		}
-		wp_safe_redirect( add_query_arg( [ 'page' => 'kiwe-guests', 'submitted' => $status ], admin_url( 'admin.php' ) ) );
-		exit;
+		$out['hasNext'] = 0 === $requested_id && count( $records ) > 20;
+		return $out;
 	}
 
+	public static function settings_fingerprint(): string { return hash( 'sha256', wp_json_encode( self::settings() ) ); }
+
+	public function decide_application( int $user_id, string $decision, string $reason = '', ?string $expected = null ) {
+		if ( ! current_user_can( 'kiwe_manage_guest_applications' ) ) return new WP_Error( 'kiwe_guest_forbidden', 'You cannot review Guest applications.', [ 'status'=>403 ] );
+		$user = get_userdata( $user_id ); $application = self::application( $user_id );
+		if ( ! $user || 'pending' !== ( $application['status'] ?? '' ) || ! in_array( $decision, [ 'approved','denied' ], true ) || ( null !== $expected && ! hash_equals( $this->project_application( $user )['expected'], $expected ) ) ) return new WP_Error( 'kiwe_guest_stale', 'The application changed. Refresh and review it.', [ 'status'=>409 ] );
+		if ( 'approved' === $decision && ( ! \DSA\PhoneKey\PhoneKey_Bridge::account_verified( $user_id ) || self::has_admin_area_access( $user_id, (array) $user->roles ) ) ) return new WP_Error( 'kiwe_guest_eligibility', 'This account is no longer eligible for Guest approval.', [ 'status'=>409 ] );
+		$had_contributor = in_array( 'contributor', (array) $user->roles, true );
+		$next = array_replace( $application, [ 'status'=>$decision, 'decidedAt'=>gmdate( 'c' ), 'decidedBy'=>get_current_user_id(), 'reason'=>'denied' === $decision ? substr( sanitize_text_field( $reason ), 0, 180 ) : '' ] );
+		if ( ! update_user_meta( $user_id, self::META, $next, $application ) ) return new WP_Error( 'kiwe_guest_stale', 'The decision could not be confirmed. Refresh before retrying.', [ 'status'=>409 ] );
+		if ( 'approved' === $decision ) $user->add_role( 'contributor' );
+		else $user->remove_role( 'contributor' );
+		$user = get_userdata( $user_id );
+		if ( ! $user || ( 'approved' === $decision ) !== in_array( 'contributor', (array) $user->roles, true ) ) {
+			if ( $user ) {
+				if ( $had_contributor ) $user->add_role( 'contributor' );
+				else $user->remove_role( 'contributor' );
+			}
+			$meta_restored = update_user_meta( $user_id, self::META, $application, $next );
+			$restored_user = get_userdata( $user_id );
+			$role_restored = $restored_user && $had_contributor === in_array( 'contributor', (array) $restored_user->roles, true );
+			if ( $meta_restored && $role_restored && self::application( $user_id ) === $application ) {
+				return new WP_Error( 'kiwe_guest_role', 'Guest access could not be confirmed, so the application remains pending. Refresh before retrying.', [ 'status'=>409 ] );
+			}
+			return new WP_Error( 'kiwe_guest_role_recovery', 'Guest access could not be confirmed and the application needs a site manager to review it before retrying.', [ 'status'=>409 ] );
+		}
+		do_action( 'kiwe_guest_application_decided', $user_id, $decision, $next );
+		return $this->project_application( $user );
+	}
+
+	public function save_workspace_settings( array $input ) {
+		if ( ! current_user_can( 'kiwe_manage_guest_applications' ) ) return new WP_Error( 'kiwe_guest_forbidden', 'Guest settings are unavailable.', [ 'status'=>403 ] );
+		if ( ! is_bool( $input['postsEnabled'] ?? null ) || ! is_bool( $input['productsEnabled'] ?? null ) ) return new WP_Error( 'kiwe_guest_settings', 'Choose the contribution types.', [ 'status'=>400 ] );
+		if ( isset( $input['expected'] ) && ! hash_equals( self::settings_fingerprint(), (string) $input['expected'] ) ) return new WP_Error( 'kiwe_guest_stale', 'Guest settings changed elsewhere. Reload before saving.', [ 'status'=>409 ] );
+		$commerce = \DSA\Apps\Store_App_Service::enabled();
+		$stored = get_option( self::SETTINGS_OPTION, [] );
+		$values = [ 'posts_enabled'=>$input['postsEnabled'], 'products_enabled'=>$commerce ? $input['productsEnabled'] : !empty( $stored['products_enabled'] ) ];
+		update_option( self::SETTINGS_OPTION, $values, false );
+		if ( $values !== get_option( self::SETTINGS_OPTION ) ) return new WP_Error( 'kiwe_guest_settings', 'Guest settings could not be confirmed.', [ 'status'=>409 ] );
+		return [ 'settings'=>self::settings(), 'settingsExpected'=>self::settings_fingerprint() ];
+	}
+
+	private function writing( array $input ) {
+		if ( ! is_string( $input['title'] ?? null ) || ! is_string( $input['content'] ?? null ) || strlen( $input['title'] ) > 960 || strlen( $input['content'] ) > 100000 ) return new WP_Error( 'kiwe_guest_content', 'Add a title and content within the writing limit.', [ 'status'=>400 ] );
+		$title = sanitize_text_field( $input['title'] );
+		if ( '' === $title || preg_match_all( '/./us', $title ) > 240 ) return new WP_Error( 'kiwe_guest_title', 'Enter a title of up to 240 characters.', [ 'status'=>400 ] );
+		return [ 'title'=>$title, 'content'=>wp_kses_post( $input['content'] ) ];
+	}
+
+	public function review_submission( int $post_id, array $input ) {
+		$post = get_post( $post_id );
+		if ( ! $post || ! self::is_submission( $post_id ) || ! in_array( $post->post_type, [ 'post','product' ], true ) || ! in_array( $post->post_status, [ 'draft','pending','publish' ], true ) ) return new WP_Error( 'kiwe_guest_missing', 'This contribution is unavailable for review.', [ 'status'=>404 ] );
+		$product = 'product' === $post->post_type;
+		if ( $product && ! \DSA\Apps\Store_App_Service::enabled() ) return new WP_Error( 'kiwe_guest_store_off', 'Turn on Kiwe Store before reviewing product contributions.', [ 'status'=>409 ] );
+		if ( ! current_user_can( $product ? 'edit_others_products' : 'edit_others_posts' ) || ! current_user_can( 'edit_post', $post_id ) ) return new WP_Error( 'kiwe_guest_forbidden', 'Your role cannot review this contribution.', [ 'status'=>403 ] );
+		$before = $this->project_submission( $post );
+		if ( ! is_string( $input['expected'] ?? null ) || ! hash_equals( $before['expected'], $input['expected'] ) ) return new WP_Error( 'kiwe_guest_stale', 'This contribution changed elsewhere. Reload before saving.', [ 'status'=>409 ] );
+		$writing = $this->writing( $input ); if ( is_wp_error( $writing ) ) return $writing;
+		$status = $input['status'] ?? '';
+		if ( ! in_array( $status, [ 'draft','pending','publish' ], true ) ) return new WP_Error( 'kiwe_guest_status', 'Choose draft, review or publish.', [ 'status'=>400 ] );
+		if ( 'publish' === $status && ! current_user_can( $product ? 'publish_products' : 'publish_posts' ) ) return new WP_Error( 'kiwe_guest_publish', 'Your role cannot publish this contribution.', [ 'status'=>403 ] );
+		$tax = $product ? 'product_cat' : 'category'; $taxonomy = get_taxonomy( $tax );
+		$categories = $input['categories'] ?? null;
+		if ( ! is_array( $categories ) || count( $categories ) > 100 || ! $taxonomy || ! current_user_can( $taxonomy->cap->assign_terms ) ) return new WP_Error( 'kiwe_guest_categories', 'Category assignment is unavailable.', [ 'status'=>403 ] );
+		foreach ( $categories as $id ) if ( ! is_int( $id ) || $id < 1 || ! term_exists( $id, $tax ) ) return new WP_Error( 'kiwe_guest_categories', 'Choose existing categories.', [ 'status'=>400 ] );
+		$categories = array_values( array_unique( $categories ) );
+		if ( $product ) {
+			if ( ! function_exists( 'wc_get_product' ) ) return new WP_Error( 'kiwe_guest_woo', 'WooCommerce is unavailable.', [ 'status'=>409 ] );
+			try {
+				$record = wc_get_product( $post_id ); if ( ! $record ) return new WP_Error( 'kiwe_guest_product', 'The product proposal could not be loaded.', [ 'status'=>409 ] );
+				$record->set_name( $writing['title'] ); $record->set_description( $writing['content'] ); $record->set_status( $status ); $record->set_category_ids( $categories ); $saved = $record->save();
+			} catch ( \Throwable $error ) { return new WP_Error( 'kiwe_guest_write', 'The product save could not be confirmed. Reload before retrying.', [ 'status'=>409 ] ); }
+		} else {
+			$saved = wp_update_post( wp_slash( [ 'ID'=>$post_id, 'post_title'=>$writing['title'], 'post_content'=>$writing['content'], 'post_status'=>$status, 'post_category'=>$categories ] ), true );
+		}
+		if ( is_wp_error( $saved ) || ! $saved ) return new WP_Error( 'kiwe_guest_write', 'The contribution save could not be confirmed.', [ 'status'=>409 ] );
+		$readback = get_post( $post_id );
+		if ( ! $readback ) return new WP_Error( 'kiwe_guest_unconfirmed', 'The saved contribution could not be read. Reload before retrying.', [ 'status'=>409 ] );
+		$after = $this->project_submission( $readback );
+		if ( $after['title'] !== $writing['title'] || $after['content'] !== $writing['content'] || $after['status'] !== $status || array_diff( $categories, $after['categories'] ) || array_diff( $after['categories'], $categories ) ) return new WP_Error( 'kiwe_guest_unconfirmed', 'The saved contribution differs. Reload and review it.', [ 'status'=>409 ] );
+		return $after;
+	}
+
+	public function submit_workspace( array $input ) {
+		$user_id = get_current_user_id();
+		if ( ! current_user_can( 'kiwe_guest_submit' ) || ! self::approved( $user_id ) ) return new WP_Error( 'kiwe_guest_forbidden', 'Approved Guest access is required.', [ 'status'=>403 ] );
+		$type = $input['type'] ?? ''; $status = $input['status'] ?? '';
+		$features = self::settings(); $intents = (array) ( self::application( $user_id )['intents'] ?? [] );
+		if ( ! in_array( $type, [ 'post','product' ], true ) || ! in_array( $type, $intents, true ) || ! $features[ 'post' === $type ? 'postsEnabled' : 'productsEnabled' ] ) return new WP_Error( 'kiwe_guest_type', 'This contribution type is not active for your account.', [ 'status'=>403 ] );
+		if ( ! in_array( $status, [ 'draft','pending' ], true ) ) return new WP_Error( 'kiwe_guest_status', 'Guest contributions must be drafts or await review.', [ 'status'=>403 ] );
+		$writing = $this->writing( $input ); if ( is_wp_error( $writing ) ) return $writing;
+		if ( strlen( $writing['title'] ) < 5 || strlen( wp_strip_all_tags( $writing['content'] ) ) < ( 'product' === $type ? 20 : 50 ) ) return new WP_Error( 'kiwe_guest_content', 'Add a clear title and enough detail for review.', [ 'status'=>400 ] );
+		$price = $input['price'] ?? '';
+		if ( 'product' === $type && ( ! class_exists( '\WC_Product_Simple' ) || ! is_string( $price ) || ( '' !== $price && ! preg_match( '/^\d{1,12}(?:\.\d{1,6})?$/D', $price ) ) ) ) return new WP_Error( 'kiwe_guest_price', 'Enter a valid proposed price.', [ 'status'=>400 ] );
+		$key = 'kiwe_guest_submit_' . $user_id;
+		if ( get_transient( $key ) ) return new WP_Error( 'kiwe_guest_wait', 'Please wait before sending another contribution.', [ 'status'=>429 ] );
+		set_transient( $key, 1, 15 );
+		$id = wp_insert_post( wp_slash( [ 'post_type'    => $type, 'post_author'=>$user_id, 'post_title'=>$writing['title'], 'post_content'=>$writing['content'], 'post_status'=>$status ] ), true );
+		if ( is_wp_error( $id ) || ! $id ) return new WP_Error( 'kiwe_guest_write', 'The contribution could not be confirmed. Check your contributions before trying again.', [ 'status'=>409 ] );
+		update_post_meta( (int) $id, self::POST_META, [ 'createdAt'=>gmdate( 'c' ), 'immutableForAuthor' => true ] );
+		if ( 'product' === $type ) {
+			try {
+				$record = new \WC_Product_Simple( (int) $id ); $record->set_regular_price( $price ); $record->update_meta_data( '_kiwe_guest_seller_user_id', $user_id );
+				if ( ! $record->save() ) return new WP_Error( 'kiwe_guest_product', 'The proposal was created but its price could not be confirmed. Ask your reviewer to check it.', [ 'status'=>409 ] );
+			} catch ( \Throwable $error ) { return new WP_Error( 'kiwe_guest_product', 'The contribution was created but its price needs review. Check your contributions before trying again.', [ 'status'=>409 ] ); }
+		}
+		if ( ! self::is_submission( (int) $id ) ) return new WP_Error( 'kiwe_guest_unconfirmed', 'Contribution metadata could not be confirmed. Ask your editor to review it before retrying.', [ 'status'=>409 ] );
+		$readback = get_post( (int) $id );
+		if ( ! $readback || (int) $readback->post_author !== $user_id || $readback->post_type !== $type || $readback->post_title !== $writing['title'] || $readback->post_content !== $writing['content'] || $readback->post_status !== $status ) return new WP_Error( 'kiwe_guest_unconfirmed', 'Your contribution differs from the saved record. Check your contributions before retrying.', [ 'status'=>409 ] );
+		if ( 'pending' === $status ) do_action( 'kiwe_guest_submission_received', (int) $id, $user_id );
+		return $this->project_submission( $readback );
+	}
+
+	private function project_application( $user ): array {
+		$app = self::application( (int) $user->ID );
+		$verified = (bool) \DSA\PhoneKey\PhoneKey_Bridge::account_verified( (int) $user->ID );
+		return [ 'id'=>(int) $user->ID, 'name'=>sanitize_text_field( $user->display_name ?: $user->user_login ), 'verified'=>$verified, 'intents'=>array_values( array_intersect( [ 'post','product' ], (array) ( $app['intents'] ?? [] ) ) ), 'status'=>sanitize_key( $app['status'] ?? 'none' ), 'reason'=>sanitize_text_field( $app['reason'] ?? '' ), 'roles'=>array_values( (array) $user->roles ), 'expected'=>hash( 'sha256', wp_json_encode( [ $app, $user->roles, $verified ] ) ) ];
+	}
+
+	private function project_submission( $post ): array {
+		$categories = wp_get_object_terms( (int) $post->ID, 'product' === $post->post_type ? 'product_cat' : 'category', [ 'fields'=>'ids' ] );
+		$categories = is_array( $categories ) ? array_map( 'intval', $categories ) : []; sort( $categories, SORT_NUMERIC );
+		$author = get_userdata( (int) $post->post_author );
+		$out = [ 'id'=>(int) $post->ID, 'type'=>(string) $post->post_type, 'title'=>(string) $post->post_title, 'content'=>(string) $post->post_content, 'status'=>(string) $post->post_status, 'authorId'=>(int) $post->post_author, 'authorName'=>$author ? sanitize_text_field( $author->display_name ) : '', 'categories'=>$categories, 'modifiedGmt'=>(string) $post->post_modified_gmt ];
+		$out['expected'] = hash( 'sha256', wp_json_encode( $out ) ); return $out;
+	}
 	public function guest_role_label( string $translation, string $text ): string {
 		return 'Contributor' === $text ? __( 'Guest', 'dsa' ) : $translation;
 	}

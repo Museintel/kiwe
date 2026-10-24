@@ -34,8 +34,10 @@ function linksCopy( payload ) {
 function social( item, preview ) {
 	const id = item.id || 'link';
 	const label = item.label || id;
-	const content = '<span class="dsa-social-icon" aria-hidden="true">' + socialGlyph( id, label ) + '</span><span>' + escapeHtml( label ) + '</span>';
-	return item.url ? '<a class="dsa-social-link dsa-social-link--' + escapeHtml( id ) + '" href="' + escapeHtml( item.url ) + '" target="_blank" rel="noopener noreferrer">' + content + '</a>' : ( preview ? '<span class="dsa-social-link dsa-social-link--empty dsa-social-link--' + escapeHtml( id ) + '">' + content + '<small>Not set</small></span>' : '' );
+	const empty = ! item.url;
+	if ( empty && ( ! preview || ! item.editUrl ) ) return '';
+	const content = '<span class="dsa-social-icon" aria-hidden="true">' + socialGlyph( id, label ) + '</span><span class="dsa-social-link__body"><strong>' + escapeHtml( label ) + '</strong>' + ( empty ? '<small>Add link</small>' : '' ) + '</span>';
+	return '<a class="dsa-social-link' + ( empty ? ' dsa-social-link--empty' : '' ) + ' dsa-social-link--' + escapeHtml( id ) + '" href="' + escapeHtml( empty ? item.editUrl : item.url ) + '"' + ( empty ? ' data-dsa-full-navigation aria-label="Add ' + escapeHtml( label ) + ' link"' : ' target="_blank" rel="noopener noreferrer"' ) + '>' + content + '</a>';
 }
 
 function posts( items, section ) {
@@ -55,7 +57,7 @@ function health( item ) {
 }
 
 function adminBar( editor ) {
-	return '<div class="dsa-links-admin-bar"><button type="button" class="dsa-panel__button dsa-links-edit-button" data-dsa-links-edit>Edit links</button>' + ( editor.adminUrl ? '<a class="dsa-links-admin-link" href="' + escapeHtml( editor.adminUrl ) + '" data-dsa-full-navigation>Kiwe settings</a>' : '' ) + '</div>';
+	return editor.adminUrl ? '<div class="dsa-links-admin-bar"><a class="dsa-panel__button dsa-links-admin-link" href="' + escapeHtml( editor.adminUrl ) + '" data-dsa-full-navigation>Manage links</a></div>' : '';
 }
 
 function linksViewData( payload ) {

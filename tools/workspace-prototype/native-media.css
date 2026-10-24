@@ -1,0 +1,19 @@
+.kiwe-editor-media{min-width:0;margin:0;padding:16px;background:#f1ecdf;border:1px solid #d5d6c9;border-radius:12px}
+.kiwe-editor-media h3{margin:0;font-size:17px;line-height:1.25;font-weight:650}
+.kiwe-editor-media button{max-width:100%;min-height:40px;white-space:normal}
+.kiwe-editor-media--single{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:center;gap:18px;width:min(100%,680px)}
+.kiwe-editor-media-preview{display:grid;place-items:center;width:132px;height:132px;overflow:hidden;border:1px solid #d7ded6;border-radius:9px;background:#fff;color:#526b5b}
+.kiwe-editor-media-preview img{display:block;width:100%;height:100%;object-fit:cover}
+.kiwe-editor-media-preview span{font-size:38px;line-height:1;font-weight:300}
+.kiwe-editor-media-main{min-width:0}
+.kiwe-editor-media-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.kiwe-editor-media-actions>button:first-child,.kiwe-editor-media-heading>button{border:1px solid #203b2f;border-radius:6px;background:#203b2f;color:#fff;font-weight:600}
+.kiwe-editor-media-actions .kiwe-seo-open{background:#fffdf8}
+.kiwe-editor-media-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.kiwe-editor-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px}
+.kiwe-editor-image{min-width:0;padding:7px;border:1px solid #d7ded6;border-radius:9px;background:#fff}
+.kiwe-editor-image img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:5px;background:#f8f7f3}
+.kiwe-editor-image-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:7px}
+.kiwe-editor-image-actions button{min-height:36px;padding:6px 9px}
+.kiwe-editor-media>[role=alert]{grid-column:1/-1;margin:0;color:#9d271d}
+@media(max-width:520px){.kiwe-editor-media--single{grid-template-columns:104px minmax(0,1fr);gap:12px;padding:12px}.kiwe-editor-media-preview{width:104px;height:104px}.kiwe-editor-media-actions{gap:6px;margin-top:9px}.kiwe-editor-media-actions button{min-height:38px;padding:6px 9px}.kiwe-editor-images{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}

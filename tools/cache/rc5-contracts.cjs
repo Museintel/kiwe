@@ -30,7 +30,7 @@ const checks = [
   ['static Links editor is disabled', assets.includes("'canEdit'         => false")],
   ['boot seed is deterministic', assets.includes("wp_json_encode( DSA_VERSION ),\n\t\t\t'0'")],
   ['client hydration bypasses browser cache', surface.includes("cache: 'no-store'") && surface.includes("credentials: 'same-origin'")],
-  ['private runtime state merges only after hydration', surface.includes('Object.assign( phonekey, payload.phonekey )') && surface.includes('Object.assign( commerce, payload.commerce )')],
+  ['private runtime state merges only after hydration', /function hydrateRuntime\([\s\S]*?Object\.assign\( phonekey, payload\.phonekey \)[\s\S]*?if \( payload\.commerce \) hydrateCommerceContext\( payload\.commerce \)/.test(surface) && /function hydrateCommerceContext\( payload \)[\s\S]*?Object\.assign\( commerce, payload \)/.test(surface)],
   ['dock visibility and geometry hydrate together', surface.includes('payload.dock.phonekey_visible === false') && surface.includes("--dsa-dock-item-count")],
   ['admin Links capability hydrates privately', hydration.includes("'links' => $this->links_admin_data") && surface.includes('Object.assign( linksHub, payload.links )')],
   ['Bricks boot config carries no nonce', (bricks.match(/'nonce'\s*=>\s*''/g) || []).length >= 2],

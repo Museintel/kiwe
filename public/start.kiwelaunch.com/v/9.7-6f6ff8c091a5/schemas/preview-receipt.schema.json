@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://start.kiwelaunch.com/schemas/preview-receipt.schema.json",
+  "title": "Raw preview delivery receipt",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "status", "approvedBrief", "sourceAssetInventory", "semanticMapValidation", "runtimeResult"],
+  "properties": {
+    "schema": {"const": "kiwe.preview-receipt.v2"},
+    "status": {"enum": ["ready-for-design-review", "source-exported-unverified", "failed"]},
+    "approvedBrief": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"const": "ideate/kiwe-ideate-discovery.json"}, "sha256": {"$ref": "#/$defs/sha256"}}},
+    "sourceAssetInventory": {"type": "array", "minItems": 1, "maxItems": 10000, "items": {"$ref": "#/$defs/file"}},
+    "semanticMapValidation": {"type": "object", "required": ["status"], "properties": {"status": {"enum": ["passed", "failed"]}}},
+    "runtimeResult": {
+      "type": "object", "required": ["status", "viewports", "proof"],
+      "properties": {
+        "status": {"enum": ["passed", "unavailable", "failed"]},
+        "reason": {"type": "string"},
+        "viewports": {"type": "array", "items": {"type": "object", "required": ["width", "height"], "properties": {"width": {"type": "integer", "minimum": 240, "maximum": 10000}, "height": {"type": "integer", "minimum": 240, "maximum": 10000}}}},
+        "proof": {"type": "array", "items": {"$ref": "#/$defs/file"}}
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "ready-for-design-review"}}}, "then": {"properties": {"semanticMapValidation": {"properties": {"status": {"const": "passed"}}}, "runtimeResult": {"properties": {"status": {"const": "passed"}, "viewports": {"minItems": 2}, "proof": {"minItems": 2}}}}}},
+    {"if": {"properties": {"status": {"const": "source-exported-unverified"}}}, "then": {"properties": {"runtimeResult": {"required": ["reason"], "properties": {"status": {"const": "unavailable"}, "reason": {"minLength": 1}}}}}}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "file": {"type": "object", "required": ["path", "sha256", "bytes"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"$ref": "#/$defs/sha256"}, "bytes": {"type": "integer", "minimum": 0}}}
+  }
+}

@@ -1,0 +1,601 @@
+[
+  {
+    "area": "Identity, contact, story and site context",
+    "ui": "RC163 Home uses one Website & Design Context entrance; Identity keeps native story, contact, brand, plan, services and optional store links together. Native Identity selectively edits site name, tagline, main/dark logos and site icon through existing WordPress/Kiwe owners, including explicit removal without sibling overwrites. Private headers show the site's uncropped logo and tagline with an edit route only for permitted roles.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Profile_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Identity_App_Service.php"
+    ],
+    "id": "identity",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "identity",
+      "brand"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "browserEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "nextAcceptance": "RC147 accepts the current Identity task across the grouped role/device/keyboard pass. Verify remaining business-section fields and actual frontend binding/cache propagation."
+  },
+  {
+    "area": "People and selected public team",
+    "ui": "RC142 People includes bounded account/customer views, native profile and Woo address editors, public-team controls, password-setup invitations, ordinary single-role changes, native login-email updates, WordPress password-reset requests and confirmed single-site account removal with content transfer. Woo order ownership blocks simplified removal; multisite remains a technical-owner task.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Team_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Onboarding/User_Profile_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Team_App_Service.php"
+    ],
+    "id": "people",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "team"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "browserEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "nextAcceptance": "RC147 accepts the current People and public-team controls across the grouped role/device/keyboard pass. Woo order/privacy disposition, locale/portraits and remaining native preferences remain."
+  },
+  {
+    "area": "Posts and page briefs/indexing",
+    "ui": "RC140 adds native page publication/scheduling plus bounded saved-version and signed-in-writer autosave recovery through narrow client capabilities. Assigned home/posts pages are protected from accidental unpublishing; restore preserves publication, hierarchy, template, image, indexing and menu order. RC137 Posts automatically saves changed title/body after five quiet seconds to the current writer's native WordPress autosave. RC149 adds native post-tag selection/creation with readback and stale-tag protection. Post and page cards remain text-only.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Post_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Post_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Page_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Page_Publishing_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Onboarding/SEO_Context_Service.php"
+    ],
+    "id": "publishing",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "posts",
+      "pages"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/SCHEDULING-STRUCTURED-PAGES-2026-09-20.md",
+    "browserEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "nextAcceptance": "RC147 accepts role/device/keyboard journeys; its 20 September follow-up accepts low-traffic Hostinger cron timing and representative block, shortcode and Bricks Page preservation. RC149 accepts native tag editing and one-record SEO boundaries. Other installed extensions require explicit compatibility disposition, not a universal guarantee."
+  },
+  {
+    "area": "Post, product and service categories",
+    "ui": "Native React taxonomy workspace for post, WooCommerce product and configured service groups. RC144 adds a dedicated service-only destination with bounded create/rename and native readback.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Taxonomy_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Category_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Profile_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Onboarding/SEO_Context_Service.php"
+    ],
+    "id": "taxonomy",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "categories",
+      "services"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "browserEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "nextAcceptance": "RC147 accepts current category creation/detail focus and grouped role/device/keyboard behavior. Verify complete product/service moves, DSA Menu linkage and archive output."
+  },
+  {
+    "id": "services",
+    "area": "Connected Services and service plans",
+    "ui": "RC144 completes both supported Services modes: connected records use paged native WordPress posts, thumbnails, configured scalar metadata and service-only taxonomies; unconnected plans use isolated fingerprinted Design Context create/edit/remove mutations. Overview cards remain text-only and media stays inside the editor.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Continuity_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Profile_Service.php"
+    ],
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "services"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/SERVICES-CLOSURE-RC144-2026-09-20.md",
+    "browserEvidence": "docs/SERVICES-CLOSURE-RC144-2026-09-20.md",
+    "nextAcceptance": "Accepted in RC144 and rechecked in the RC147 grouped role/device/keyboard package. Reopen only when a new configured taxonomy/metadata integration is declared."
+  },
+  {
+    "area": "Single DSA Menu screen",
+    "ui": "RC146 native React DSA Menu shows the visitor-connected WordPress menu and theme-location context, supports bounded search/paging, nested native page insertion and source-following labels, and keeps technical connection controls outside the client role.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Navigation_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Navigation_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Public_Endpoint/Assets.php"
+    ],
+    "id": "menu",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "navigation"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "browserEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "nextAcceptance": "RC147 accepts grouped role/device/keyboard behavior on top of RC146 menu ordering, nested insertion and labels. Verify an assigned theme location and connected Service links."
+  },
+  {
+    "area": "Guest applications",
+    "ui": "RC153 accepts the native React application queue and availability controls from verified application through confirmed WordPress Contributor-role approval. Failed role readback restores the prior role and pending application.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Guest_Contribution_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Guest_App_Service.php"
+    ],
+    "id": "guest-applications",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "guests"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/GUEST-EDITORIAL-LIFECYCLE-RC153-2026-09-20.md",
+    "browserEvidence": "docs/GUEST-EDITORIAL-LIFECYCLE-RC153-2026-09-20.md",
+    "nextAcceptance": "Accepted in RC153 with verified identity, exact task links, role readback, rollback, client browser and disposable-host evidence. Channel delivery remains in the separate notifications area."
+  },
+  {
+    "area": "Guest submission and editorial review",
+    "ui": "RC153 accepts author-owned native article submission through Kiwe, Editor review with native category/publication readback, and read-only Guest publication status. Guests retain no WordPress editor, media-library or native REST write access.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Guest_Contribution_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Guest_App_Service.php"
+    ],
+    "id": "guest-editorial",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "reviews",
+      "contributions"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/GUEST-EDITORIAL-LIFECYCLE-RC153-2026-09-20.md",
+    "browserEvidence": "docs/GUEST-EDITORIAL-LIFECYCLE-RC153-2026-09-20.md",
+    "nextAcceptance": "Accepted in RC153 for the supported article journey. Product proposals remain part of the WooCommerce backend inventory."
+  },
+  {
+    "area": "Notification topics and delivery preferences",
+    "ui": "Native React topic cards persist role-derived per-event channels in existing user preferences; WordPress email outcomes are recorded generically and RC131 site-email controls keep native Discussion settings authoritative.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Notifications/Notification_Preference_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Notifications/Notification_Center_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Notification_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/WordPress_Email_Settings.php"
+    ],
+    "id": "notification-preferences",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "notifications",
+      "notifications/site-emails"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/NOTIFICATION-PUBLISHER-ALERTS-RC156-2026-09-21.md",
+    "browserEvidence": "docs/NOTIFICATION-PUBLISHER-ALERTS-RC156-2026-09-21.md",
+    "nextAcceptance": "RC154–RC156 accept role-derived topics, one personal preference authority, configured handoff outcomes, manual campaigns and automatic category-aware publisher alerts. Final pilot must exercise live provider receipts where configured."
+  },
+  {
+    "area": "Notification queue and read history",
+    "ui": "Native React reads the existing 40-item per-user inbox, loads two pages of history only when opened, projects sanitized channel outcomes and explicitly acknowledges with compare-and-swap protection.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Notifications/Admin_Event_Notification_Service.php",
+      "wp-content/mu-plugins/dsa/assets/js/surface.js",
+      "wp-content/mu-plugins/dsa/includes/Access/Notification_App_Service.php"
+    ],
+    "id": "notification-inbox",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "notifications",
+      "notifications/history"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/NOTIFICATION-DELIVERY-HISTORY-RC154-2026-09-20.md",
+    "browserEvidence": "docs/NOTIFICATION-DELIVERY-HISTORY-RC154-2026-09-20.md",
+    "nextAcceptance": "Accepted in RC154 with bounded history, read/unread state, concurrent-arrival protection, role isolation and recipient-safe delivery outcomes. Reopen only for a new declared history or retention requirement."
+  },
+  {
+    "area": "Media and selected testimonials",
+    "ui": "Native paginated media library and explicit Design Context selection deployed; RC143 adds on-demand native attachment title, image alt text, caption and description editing. RC132 provides bounded WordPress comment/Woo review moderation beside approval-dependent testimonial selection. List views stay bounded and load no full attachment metadata until a file is opened. RC343 adds native paginated Public/Private Media views, scoped Trash and role-safe existing controls.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Onboarding/Context_Selection_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Comment_Moderation_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Continuity_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Media_App_Service.php"
+    ],
+    "id": "design-library",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "media",
+      "comments",
+      "continuity/feedback",
+      "continuity/library"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "browserEvidence": "docs/GROUPED-ROLE-DEVICE-KEYBOARD-RC147-2026-09-20.md",
+    "nextAcceptance": "RC132/RC143 native moderation, testimonial selection, media curation and attachment editing passed the RC147 grouped role/device/keyboard acceptance. Reopen only for a new declared media/testimonial workflow.",
+    "latestPresentationEvidence": "docs/STATUS-VISIBILITY-RC343-2026-10-13.md"
+  },
+  {
+    "area": "Products, orders, tax and shipping",
+    "ui": "Native basics/media/stock/delivery and HPOS completion; cart offers, category cross-sell preview/merge and saved bestseller status. RC105 reports bounded cleanup, category-review and analytics-unavailable attempts; broader enhancement inventory records missing tasks. RC107 connects native category ownership review/approval for category managers; product-only staff retain read access. RC108 exposes reviewed global banner/discount switches and read-only shopping/COD policy. RC109 adds editor-only nutrition-label selection/removal. RC110 adds simple-product sale pricing and website-local schedules using native Woo saves. RC111 connects Store Orders and native completion for Shop Managers; technical/account/category/refund authority stays excluded. RC112 connects a dedicated Product categories tile/document through native manager taxonomy permissions; selected moves and visibility use the shared taxonomy adapter. RC113 pages assigned items and searches/pages move destinations; preserves unsaved names and page selections, with a corrected mobile detail layout. RC114 adds saved native coupon search/pages and amount/description editing; automatic/extension-marked coupons stay read-only. RC115 adds native draft coupons and focused activation/pause, website-local expiry, usage/spend and combination rules, preserving targeting. RC116 connects paged included/excluded product/variation/category targeting with add/remove operations and existing native rules preserved. RC117 corrects the native variation mapping through parent-product permission, preserving explicit/custom denials. RC119 adds coupon free-shipping and per-item allowance; RC120 adds paged native email/domain rules. RC121 adds paged delivery zones, fallback/method/region review and confirmed core-method availability; native lab acceptance and cleanup passed. RC122 adds method names, plain charges/tax status and free-shipping requirements; formulas/class settings protected. Native lab acceptance and cleanup passed. RC123 adds existing zone name/priority and bounded country/state/postcode add/remove with off-page preservation; native lab acceptance and cleanup passed. RC124 adds transactional zone/first-method creation and disabled method addition; native lab acceptance and rollback proof passed. RC125 connects bounded native shipping-class price tiles and per-class/highest-class rules; isolated native calculator and cleanup accepted. RC126 adds nine native tax policy cards and bounded rate/location review, replacing duplicate client tax switches. RC127 adds six saved-rate choices and scope-preserving native writes. RC128 adds native tax rate and bounded location creation, opening the existing editor on success. RC129 adds selected city/postcode rule editing, preserving unseen rules and warning before removing the last restriction. RC130 adds paired native country/state changes and explicit wildcard confirmations while preserving existing location rules. RC343 adds native-label semantic stacked Orders and repairs Products rendering; wider Woo acceptance remains pending.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Workspace_Admin_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Commerce_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Shipping_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Tax_Workspace_Service.php"
+    ],
+    "id": "commerce",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "products",
+      "orders",
+      "store"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/TAX-GEOGRAPHY-RC130-2026-09-19.md",
+    "browserEvidence": "docs/TAX-GEOGRAPHY-RC130-2026-09-19.md",
+    "nextAcceptance": "Backend first: tax class/deletion lifecycle and product tax classification/provider acceptance; shipping-class lifecycle/advanced shipping, product variations/attributes, order/payment and enhancement tasks, then grouped role/device/checkout acceptance. RC130 country/state editing accepted; full commerce remains partial.",
+    "latestPresentationEvidence": "docs/STATUS-VISIBILITY-RC343-2026-10-13.md"
+  },
+  {
+    "area": "AI owner setup and client allowances",
+    "ui": "RC148 provides a dedicated responsive React workspace. Clients choose SEO and SecureTrack assistance and see only the shared request/token allowance; the technical owner controls the existing provider gate, per-feature permission and ceilings without exposing credentials or provider URLs in the app.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/AI_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/AI/AI_Allowance_Service.php"
+    ],
+    "id": "ai-access",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "ai",
+      "ai/preference",
+      "ai/owner"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/AI-WORKSPACE-RC148-2026-09-20.md",
+    "browserEvidence": "docs/AI-WORKSPACE-RC148-2026-09-20.md",
+    "nextAcceptance": "Accepted in RC148 with role, privacy, stale-write, responsive and native WordPress evidence. RC149 accepts per-object SEO boundaries and RC150 accepts the bounded client historical workflow; provider/migration closure remains in the separate SEO area."
+  },
+  {
+    "area": "SEO jobs, progress and proposals",
+    "ui": "RC149 accepts role-aware per-object SEO review. RC150 accepts client-owned historical-library progress, explicit control and actor-bound proposal review in the same dedicated document. Live configured-provider delivery/limits and supported SEO-metadata migration remain separate acceptance.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/SEO/SEO_Job_Store.php",
+      "wp-content/mu-plugins/dsa/includes/SEO/SEO_Refinement_Service.php"
+    ],
+    "id": "seo",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "seo-assistant",
+      "seo/history"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/SEO-HISTORICAL-WORKSPACE-RC150-2026-09-20.md",
+    "browserEvidence": "docs/SEO-HISTORICAL-WORKSPACE-RC150-2026-09-20.md",
+    "nextAcceptance": "Accept configured-provider delivery and limits, then verify supported migration from existing SEO metadata without exposing provider credentials or spending allowance on document load."
+  },
+  {
+    "area": "Notification campaigns and audiences",
+    "ui": "Native React Campaigns task previews a bounded opted-in audience, confirms a title/message/channel and queues one three-recipient-at-a-time WordPress cron job. The same task shows aggregate automatic publisher-alert enrollment and bounded status/resume controls without polling. RC343 uses the shared compact semantic-status stack without changing delivery authority.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Notifications/Notification_Campaign_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Notifications/New_Post_Notification_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Notifications/Notification_Preference_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Notification_App_Service.php",
+      "tools/workspace-prototype/native-workflow.jsx"
+    ],
+    "id": "campaigns",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "notifications/campaigns"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/NOTIFICATION-PUBLISHER-ALERTS-RC156-2026-09-21.md",
+    "browserEvidence": "docs/NOTIFICATION-PUBLISHER-ALERTS-RC156-2026-09-21.md",
+    "nextAcceptance": "RC155 accepts manual campaigns and RC156 accepts automatic first-publication alerts with aggregate client status, bounded audience discovery and exact anonymous PWA delivery. Real provider delivery and grouped cross-channel acceptance remain for the final pilot.",
+    "latestPresentationEvidence": "docs/STATUS-VISIBILITY-RC343-2026-10-13.md"
+  },
+  {
+    "area": "PhoneKey, device verification and account recovery",
+    "ui": "Visitor composition only; no full React account journey",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/PhoneKey/PhoneKey_Bridge.php"
+    ],
+    "id": "account",
+    "status": "partial",
+    "audience": "visitor",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "visitor"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Visitor composition only; no full React account journey"
+  },
+  {
+    "area": "Saved items, wishlist and bookmarks",
+    "ui": "Visitor illustration only; existing service not connected",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Saved/Saved_Items_Service.php"
+    ],
+    "id": "saved",
+    "status": "partial",
+    "audience": "visitor",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "visitor"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Visitor illustration only; existing service not connected"
+  },
+  {
+    "area": "PWA install, update and device permission",
+    "ui": "Dedicated client/device journey not represented",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/PWA/PWA_Service.php"
+    ],
+    "id": "pwa",
+    "status": "missing",
+    "audience": "visitor",
+    "owner": "Kiwe engineering",
+    "routes": [],
+    "launchRequired": true,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Dedicated client/device journey not represented"
+  },
+  {
+    "area": "SecureTrack and site health",
+    "ui": "Alert types represented; technical controls remain outside the client sample",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Secure/SecureTrack_Event_Service.php"
+    ],
+    "id": "security",
+    "status": "external",
+    "audience": "owner",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "notifications"
+    ],
+    "launchRequired": false,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Alert types represented; technical controls remain outside the client sample"
+  },
+  {
+    "area": "Backup, restore and Google Drive offload",
+    "ui": "Setup Backups separates encrypted settings snapshots, resumable native content and hosting requests. Shared collection downloads/imports cover Posts, Pages, supported Woo Products, native categories and Bricks records, with inclusive dates, frozen selections, Pause/Resume and compact saved-progress cards. Full review precedes native draft imports; originals remain and template placement conditions are removed. Drive/direct provider operations remain unavailable.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Backup_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Backup/Configuration_Snapshot_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/Content_Archive_App_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Backup/Content_Archive_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Backup/Backup_Request_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Backup/Content_Archive_Job_Service.php"
+    ],
+    "id": "backup",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "backups"
+    ],
+    "launchRequired": false,
+    "nativeEvidence": "docs/generated/content-native-rc238.json",
+    "browserEvidence": "docs/BACKUPS-RESUMABLE-RC238-2026-10-02.md",
+    "nextAcceptance": "Resumable native sets accepted in RC238. Service collections, binary/global design dependencies, reviewed deletion, media, website-owned Drive and whole-site/VPS recovery remain implementation units. Client-owned provider/channel acceptance stays in docs/CLIENT-BACKUP-ACCEPTANCE.md."
+  },
+  {
+    "area": "Seam, Bricks and automated frontend generation",
+    "ui": "Separate ecosystem workflow, not implemented by this dashboard sample",
+    "sources": [
+      "docs/FIRST-LAUNCH-PLAN.md",
+      "docs/PRODUCT-VISION.md"
+    ],
+    "id": "seam",
+    "status": "external",
+    "audience": "ecosystem",
+    "owner": "Seam + Kiwe engineering",
+    "routes": [],
+    "launchRequired": false,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Separate ecosystem workflow, not implemented by this dashboard sample"
+  },
+  {
+    "area": "POS, booking, membership, attendance and LMS",
+    "ui": "Future roadmap modules",
+    "sources": [
+      "docs/PRODUCT-VISION.md",
+      "docs/FIRST-LAUNCH-PLAN.md"
+    ],
+    "id": "verticals",
+    "status": "future",
+    "audience": "future",
+    "owner": "Kiwe engineering",
+    "routes": [],
+    "launchRequired": false,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Future roadmap modules"
+  },
+  {
+    "area": "Cross-site SSO, games and entrepreneur network",
+    "ui": "Future roadmap modules",
+    "sources": [
+      "docs/PRODUCT-VISION.md"
+    ],
+    "id": "network",
+    "status": "future",
+    "audience": "future",
+    "owner": "Kiwe engineering",
+    "routes": [],
+    "launchRequired": false,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Future roadmap modules"
+  },
+  {
+    "area": "Native Bricks templates and Web Designer access",
+    "ui": "Work Templates lists native Bricks drafts and types, creates and renames, and opens the protected Bricks builder.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Template_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php"
+    ],
+    "id": "templates",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "templates",
+      "pages"
+    ],
+    "launchRequired": false,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Immutable release, authenticated Bricks type/draft/rename/builder test and role denial on the disposable lab."
+  },
+  {
+    "area": "Contextual Analytics and approved SEO strategy",
+    "ui": "Home Analytics carries site, content, Store and existing operational aggregates; requested AI reviews require human save.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Analytics_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Analytics/Analytics_Report_Service.php"
+    ],
+    "id": "analytics",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "analytics"
+    ],
+    "launchRequired": false,
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Immutable release, native aggregate and denial tests, AI-off no-call proof and authenticated contextual browser acceptance."
+  },
+  {
+    "id": "dock-controls",
+    "area": "Client Dock settings",
+    "ui": "Setup → Dock presents buttons, native menu, Cart, installed surface theme and complete appearance/screen choices through common task tabs.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Dock_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Dock/Dock_Settings_Service.php"
+    ],
+    "status": "verified",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "dock"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/DOCK-THEME-RC316-2026-10-11.md",
+    "browserEvidence": "docs/DOCK-THEME-RC316-2026-10-11.md",
+    "nextAcceptance": "Accepted RC316 theme follow-up and native client controls; original RC313 Dock configuration remains preserved. Custom Dock link creation and detailed TOC locations retain the technical owner. Wider Woo/auth/provider acceptance remains task 21."
+  },
+  {
+    "id": "native-trash",
+    "area": "Native content and Media Trash",
+    "ui": "Organize → Trash shows native type tabs, reversible restore and reviewed bounded permanent deletion. RC343 adds type-specific collection entrances and verifies ownership, draft-only rights and permission removal after review.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Trash_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Onboarding/Context_Media_Service.php"
+    ],
+    "status": "partial",
+    "audience": "client",
+    "owner": "Kiwe engineering",
+    "routes": [
+      "trash"
+    ],
+    "launchRequired": false,
+    "nativeEvidence": "docs/MEDIA-CONTEXT-TRASH-RC342-2026-10-13.md",
+    "browserEvidence": "docs/MEDIA-CONTEXT-TRASH-RC342-2026-10-13.md",
+    "nextAcceptance": "RC342 accepts native lab deletion/restore, outer roles, authenticated desktop/phone Media and Trash, and reversible named live rollout. Wider installed-extension and role journeys remain in task 21; traffic/monitoring remains task 22.",
+    "latestPresentationEvidence": "docs/STATUS-VISIBILITY-RC343-2026-10-13.md"
+  },
+  {
+    "area": "Owner native form inbox",
+    "ui": "Daily Forms reads original Bricks submissions, exact counts and private on-demand message details.",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Form_Workspace_Service.php"
+    ],
+    "id": "forms",
+    "status": "verified",
+    "audience": "client",
+    "owner": "Bricks submission storage; Kiwe private workspace",
+    "routes": [
+      "forms"
+    ],
+    "launchRequired": false,
+    "nativeEvidence": "docs/START-FORMS-RC379-ROLLOUT-2026-10-17.md",
+    "browserEvidence": "docs/START-FORMS-RC379-ROLLOUT-2026-10-17.md",
+    "nextAcceptance": "Signed lab and founder-approved Dharwad RC379 native role/save/recipient and desktop/390px inbox scopes are accepted. Native plain Bricks submissions remain the supported projection; actual mailbox delivery, attachments and other form plugins are outside this scope."
+  },
+  {
+    "id": "app-workspace",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Existing native App settings, notification audience and WordPress users",
+    "launchRequired": true,
+    "routes": [
+      "admin.php?page=kiwe-app-settings",
+      "/dsa/v1/workspace/app",
+      "/dsa/v1/workspace/app/activity",
+      "/dsa/v1/app/activity"
+    ],
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/App_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/PWA/App_Activity_Service.php"
+    ],
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "APP109: native schema/clock/role/readiness/arrival acceptance and actual responsive lab review, then new concrete live approval."
+  },
+  {
+    "id": "independent-apps",
+    "area": "Apps",
+    "audience": "owner",
+    "status": "partial",
+    "owner": "WordPress native plugin authority, shared Kiwe Apps lifecycle and release verification",
+    "launchRequired": true,
+    "routes": [
+      "admin.php?page=kiwe-app-library",
+      "/dsa/v1/workspace/app-library"
+    ],
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Apps/Library_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Apps/Installer_Service.php",
+      "tools/workspace-prototype/apps-app-entry.jsx"
+    ],
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "Actual physical Core/App install, resume, signed native update and code recovery on the lab; permission and complete-context continuity plus owner browser review."
+  }
+]

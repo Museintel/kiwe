@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.bricks-plan.v1.schema.json",
+  "title": "SEAM native Bricks plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "compiler", "aiGenerated", "sourceHash", "target", "elements", "globalClasses", "variables", "customCss", "residuals", "ownership", "metrics"],
+  "properties": {
+    "schema": { "const": "seam.bricks-plan.v1" },
+    "compiler": { "const": "seam-compiler" },
+    "aiGenerated": { "const": false },
+    "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "target": {
+      "type": "object", "additionalProperties": false, "required": ["bricksVersion", "capabilityProfileHash"],
+      "properties": { "bricksVersion": { "type": "string", "minLength": 1 }, "capabilityProfileHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }
+    },
+    "elements": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "type", "parentId", "children", "settings", "provenance"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]{6}$" }, "type": { "type": "string", "minLength": 1 },
+          "parentId": { "type": ["string", "null"] }, "children": { "type": "array", "items": { "type": "string" } },
+          "settings": { "type": "object", "additionalProperties": true },
+          "provenance": {
+            "type": "object", "additionalProperties": false, "required": ["pageNodeId", "captureNodeIds", "selector", "ownedControls", "component"],
+            "properties": {
+              "pageNodeId": { "type": "string" }, "captureNodeIds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "selector": { "type": "string" }, "ownedControls": { "type": "array", "items": { "type": "string" } },
+              "component": {
+                "type": "object", "additionalProperties": false, "required": ["semanticType", "adapter", "confidence", "evidence"],
+                "properties": {
+                  "semanticType": { "type": "string" }, "adapter": { "type": "string" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "globalClasses": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "variables": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "customCss": { "type": "string" },
+    "residuals": { "type": "array", "items": { "type": "string" } },
+    "ownership": {
+      "type": "object", "additionalProperties": false, "required": ["policy", "elementNativeControls", "frameworkVariables", "customCssDeclarations", "conflicts"],
+      "properties": {
+        "policy": { "const": "element-native-single-owner" },
+        "elementNativeControls": { "type": "integer", "minimum": 0 },
+        "frameworkVariables": { "type": "integer", "minimum": 0 },
+        "customCssDeclarations": { "type": "integer", "minimum": 0 },
+        "conflicts": { "type": "array", "maxItems": 0 }
+      }
+    },
+    "metrics": {
+      "type": "object", "additionalProperties": false, "required": ["nativeCoverage", "residualCount", "customCssDeclarations", "sourceNodeCount", "nativeElementCount", "aggregatedNodeCount", "semanticCoverage", "reviewComponentCount"],
+      "properties": {
+        "nativeCoverage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "residualCount": { "type": "integer", "minimum": 0 },
+        "customCssDeclarations": { "type": "integer", "minimum": 0 },
+        "sourceNodeCount": { "type": "integer", "minimum": 1 },
+        "nativeElementCount": { "type": "integer", "minimum": 1 },
+        "aggregatedNodeCount": { "type": "integer", "minimum": 0 },
+        "semanticCoverage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "reviewComponentCount": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

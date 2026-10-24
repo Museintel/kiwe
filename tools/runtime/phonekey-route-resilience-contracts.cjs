@@ -5,6 +5,9 @@ const path = require('path');
 const root = path.resolve(__dirname, '..', '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const failures = [];
+const native = require('node:child_process').spawnSync('php', ['tools/release/test-auth-surface-registration.php'], {cwd:root,encoding:'utf8',windowsHide:true});
+if(native.status!==0){process.stderr.write((native.stdout||'')+(native.stderr||''));process.exit(1);}
+console.log('PASS actual auth surface registration and document policy');
 
 function check(label, condition) {
 	if (condition) {

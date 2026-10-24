@@ -1,0 +1,17 @@
+.workspace-site-brand{display:flex;align-items:center;min-width:0;max-width:220px;text-decoration:none;line-height:1.2}
+.workspace-site-brand img{display:block;width:auto;height:auto;max-width:180px;max-height:60px;object-fit:contain}
+.workspace-site-brand strong{font-size:clamp(18px,2vw,25px);overflow-wrap:anywhere}
+.workspace-brand-meta{display:flex;align-items:center;gap:var(--kiwe-space-xs,10px);min-width:0;max-width:min(460px,42vw)}
+.workspace-site-tagline{font-size:clamp(13px,1.15vw,16px);font-weight:400;line-height:1.4;color:#465247;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workspace-site-edit{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border:1px solid #d9ddcd;border-radius:var(--kiwe-radius-md,10px);background:#fff;text-decoration:none}
+.workspace-site-edit:hover{background:#eceee4}
+:is(.native-identity-shell,.native-posts-shell,.continuity-shell,.seo-shell) header .workspace-site-brand{white-space:normal}
+:is(.native-identity-shell,.native-posts-shell,.continuity-shell,.seo-shell) header .workspace-site-edit{font-size:18px;font-weight:400;white-space:normal}
+@media(max-width:700px){.workspace-site-brand img{max-width:120px;max-height:52px}.workspace-brand-meta{max-width:40vw}}
+:is(.native-posts-shell,.continuity-shell,.seo-shell) header .workspace-site-tagline{font-size:clamp(13px,1.15vw,16px);font-weight:400;letter-spacing:normal;color:#465247}
+:is(.native-posts-shell,.continuity-shell) header{gap:var(--kiwe-space-md,20px)}
+.native-posts-shell header .native-view-site,.seo-top>a:last-child{margin-left:auto}
+.continuity-shell main{padding:var(--kiwe-space-xl,42px) var(--kiwe-space-md,28px) var(--kiwe-space-xl,80px)}
+.continuity-area-nav{gap:var(--kiwe-space-xs,12px);margin:var(--kiwe-space-md,26px) 0}
+.continuity-area-nav a{padding:var(--kiwe-space-xs,10px) var(--kiwe-space-sm,14px);border-radius:var(--kiwe-radius-sm,5px)}
+@media(max-width:700px){:is(.native-posts-shell,.continuity-shell) header{flex-wrap:wrap}.workspace-brand-meta{order:3;flex-basis:100%;max-width:none}.continuity-shell main{padding:var(--kiwe-space-lg,28px) var(--kiwe-space-sm,18px) var(--kiwe-space-xl,60px)}}

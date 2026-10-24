@@ -59,9 +59,15 @@ function stp_brain_context( $type, $args, $ip_row = null ) {
 	$score = 0;
 	$discount = 0;
 	$reasons = array();
-	foreach ( stp_brain_features_for_event( $type, $args, $ip_row ) as $feature ) {
+	$features = stp_brain_features_for_event( $type, $args, $ip_row );
+	$keys = array_map( static fn( $feature ) => stp_brain_feature_key( $feature['type'], $feature['value'] ), $features );
+	$slots = implode( ',', array_fill( 0, count( $keys ), '%s' ) );
+	$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT feature_key,good_count,risk_count,confidence FROM ' . stp_t( 'brain' ) . " WHERE feature_key IN ({$slots})", ...$keys ) );
+	$known = array();
+	foreach ( (array) $rows as $row ) $known[ $row->feature_key ] = $row;
+	foreach ( $features as $feature ) {
 		$key = stp_brain_feature_key( $feature['type'], $feature['value'] );
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . stp_t( 'brain' ) . " WHERE feature_key=%s", $key ) );
+		$row = $known[ $key ] ?? null;
 		if ( ! $row ) { $score += 4; $reasons[] = 'Site Brain: new ' . $feature['type']; continue; }
 		$total = max( 1, (int) $row->good_count + (int) $row->risk_count );
 		$risk_rate = (int) $row->risk_count / $total;
@@ -84,6 +90,7 @@ function stp_brain_context( $type, $args, $ip_row = null ) {
 
 function stp_brain_observe( $event_id, $type, $args, $risk, $ip_row = null, $force = false, $target_table = '' ) {
 	if ( ( empty( stp_cfg()['v2_site_brain'] ) && ! $force ) || ! stp_table_exists( 'brain' ) ) return;
+	if (!$force && class_exists(\DSA\Secure\SecureTrack_Lifecycle_Service::class) && !\DSA\Secure\SecureTrack_Lifecycle_Service::optional_allowed('learning')) return;
 	global $wpdb;
 	$table = $target_table ? stp_safe_table_name( $target_table ) : stp_t( 'brain' );
 	if ( ! $table ) return;
@@ -94,17 +101,20 @@ function stp_brain_observe( $event_id, $type, $args, $risk, $ip_row = null, $for
 	if ( $is_trusted_source && $is_containment && ! in_array( $sub, array( 'honeypot_hit', 'login_country_policy', 'attack_graph_preemptive_limit' ), true ) ) {
 		$is_risk = false;
 	}
+	$site_clock=class_exists(\DSA\Secure\SecureTrack_Lifecycle_Service::class) && \DSA\Secure\SecureTrack_Lifecycle_Service::enabled();
+	$now=current_time('mysql');
+	$values = array();
 	foreach ( stp_brain_features_for_event( $type, $args, $ip_row ) as $feature ) {
 		$key = stp_brain_feature_key( $feature['type'], $feature['value'] );
 		$meta = array( 'type' => $feature['type'], 'sample' => substr( (string) $feature['value'], 0, 160 ), 'last_event_id' => (int) $event_id );
-		$wpdb->query( $wpdb->prepare(
-			"INSERT INTO {$table} (feature_key,feature_type,good_count,risk_count,last_score,confidence,meta,first_seen,last_seen)
-			 VALUES (%s,%s,%d,%d,%d,1,%s,NOW(),NOW())
-			 ON DUPLICATE KEY UPDATE good_count=good_count+%d,risk_count=risk_count+%d,last_score=%d,confidence=LEAST(100,good_count+risk_count+1),meta=%s,last_seen=NOW()",
-			$key, sanitize_key( $feature['type'] ), $is_risk ? 0 : 1, $is_risk ? 1 : 0, (int) $risk['score'], wp_json_encode( $meta ),
-			$is_risk ? 0 : 1, $is_risk ? 1 : 0, (int) $risk['score'], wp_json_encode( $meta )
-		) );
+		$values[] = $wpdb->prepare( '(%s,%s,%d,%d,%d,1,%s,%s,%s)',
+			$key, sanitize_key( $feature['type'] ), $is_risk ? 0 : 1, $is_risk ? 1 : 0, (int) $risk['score'], wp_json_encode( $meta ),$now,$now );
+		if ($site_clock) $values[count($values)-1]=substr($values[count($values)-1],0,-1).',1)';
 	}
+	// At most six native features per event. Preserve every occurrence with one
+	// atomic multi-row upsert and the existing confidence/containment semantics.
+	$wpdb->query( "INSERT INTO {$table} (feature_key,feature_type,good_count,risk_count,last_score,confidence,meta,first_seen,last_seen".($site_clock?',site_clock':'').") VALUES " . implode( ',', $values ) .
+		' ON DUPLICATE KEY UPDATE good_count=good_count+VALUES(good_count),risk_count=risk_count+VALUES(risk_count),last_score=VALUES(last_score),confidence=LEAST(100,good_count+risk_count+1),meta=VALUES(meta),last_seen=VALUES(last_seen)'.($site_clock?',site_clock=1':'') );
 }
 
 function stp_ai_hash_value( $value, $prefix = '' ) {
@@ -175,6 +185,7 @@ function stp_ai_upgrade_packet_from_event( $packet, $event_id ) {
 function stp_ai_queue_maybe( $event_id, $type, $args, $risk, $ip_str ) {
 	$cfg = stp_cfg();
 	if ( empty( $cfg['v2_site_brain'] ) || ! stp_table_exists( 'ai_queue' ) ) return 0;
+	if (class_exists(\DSA\Secure\SecureTrack_Lifecycle_Service::class) && !\DSA\Secure\SecureTrack_Lifecycle_Service::optional_allowed('reviews')) return 0;
 	$score = (int) ( $risk['score'] ?? 0 );
 	if ( $score < (int) $cfg['v2_uncertain_low'] || $score > (int) $cfg['v2_uncertain_high'] ) return 0;
 	global $wpdb;

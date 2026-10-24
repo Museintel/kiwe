@@ -1,0 +1,4 @@
+@import './module-workspace.css';
+.kiwe-app-library-card.is-off{background:var(--seam-surface-muted,#eceee9);box-shadow:none}
+.kiwe-module .kiwe-app-choice{display:flex;align-items:center;gap:var(--kiwe-space-sm);margin-block:var(--kiwe-space-md)}
+.kiwe-module .kiwe-app-choice input{width:auto;min-height:0;flex:0 0 auto;margin:0}

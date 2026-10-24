@@ -11,6 +11,7 @@ const surface = read('wp-content/mu-plugins/dsa/assets/js/surface.js');
 const panels = read('wp-content/mu-plugins/dsa/assets/js/modules/surface-panels.js');
 const assets = read('wp-content/mu-plugins/dsa/includes/Public_Endpoint/Assets.php');
 const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
+const dockSettings = read('wp-content/mu-plugins/dsa/includes/Dock/Dock_Settings_Service.php');
 const css = read('wp-content/mu-plugins/dsa/assets/css/surface.css');
 
 check('legacy and prototype profiles omit recent orders without commerce capability',
@@ -114,7 +115,8 @@ check('post category context highlights the matching navigation item',
 );
 check('Menu navigation scale is administrator-controlled and defaults compact',
 	admin.includes('name="dock[menu_scale]"')
-	&& admin.includes("[ 'compact', 'balanced', 'expressive' ]")
+	&& dockSettings.includes("[ 'compact', 'balanced', 'expressive' ]")
+	&& admin.includes("Dock_Settings_Service( $this->dock_module_labels() )")
 	&& surface.includes('surface.dataset.dsaMenuScale = menuScale')
 	&& css.includes('.dsa-surface[data-dsa-menu-scale="compact"]')
 	&& css.includes('--dsa-runtime-token-0720: clamp(24px, 3.6vw, 46px);')

@@ -1,0 +1,10 @@
+const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process');
+const root=path.resolve(__dirname,'../..'),base='wp-content/mu-plugins/dsa/',read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const php=cp.spawnSync(process.env.PHP_BINARY||'php',[path.join(root,'tools/release/test-source-runtime-dependencies.php')],{windowsHide:true,encoding:'utf8'});
+if(php.status!==0)throw Error(php.stderr||php.stdout||'Native dependency checks failed');
+const proof=JSON.parse(php.stdout);if(!proof.passed||proof.checks.length<19||proof.checks.some(c=>!c.passed))throw Error('Native dependency admission failed');
+const owner=read(base+'includes/Bricks/Source_Runtime_Bridge.php').match(/public const VERSION = '([^']+)'/)?.[1];
+const artifact=read(base+'assets/js/source-runtime.js').match(/; bridge ([^.]+)\./)?.[1];
+if(!owner||owner!==artifact)throw Error('Native and generated bridge versions differ');
+if(!read(base+'includes/AI/Site_Graph_Service.php').includes('\\DSA\\Bricks\\Source_Runtime_Bridge::VERSION'))throw Error('Target calibration must use the runtime owner version');
+console.log(JSON.stringify({passed:true,nativeAdmissionChecks:proof.checks.length,bridgeVersion:owner,permissionBoundary:'unchanged; dependency declarations do not authorize executable HTML'}));

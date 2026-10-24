@@ -1,0 +1,13 @@
+/* Operational colour is stable by meaning, never index, ID or sort position. */
+.kiwe-screen [data-tone=success]{--kiwe-status-bg:#d5ead5;--kiwe-status-accent:#28613a}
+.kiwe-screen [data-tone=waiting]{--kiwe-status-bg:#f6e6ac;--kiwe-status-accent:#745400}
+.kiwe-screen [data-tone=hold]{--kiwe-status-bg:#dfd3f4;--kiwe-status-accent:#61408c}
+.kiwe-screen [data-tone=danger]{--kiwe-status-bg:#f5cdca;--kiwe-status-accent:#972e2b}
+.kiwe-screen [data-tone=info]{--kiwe-status-bg:#cee5f2;--kiwe-status-accent:#235e7c}
+.kiwe-screen [data-tone=neutral]{--kiwe-status-bg:#e9eae4;--kiwe-status-accent:#4d5a52}
+.kiwe-screen .kiwe-status-label{display:inline-flex;align-items:center;gap:8px;max-width:100%;width:fit-content;border:1px solid var(--kiwe-status-accent,#4d5a52);border-radius:999px;padding:5px 11px;font-size:13px;line-height:1.4;font-weight:650;background:var(--kiwe-status-bg,#e9eae4);color:#20382e;overflow-wrap:anywhere}
+.kiwe-status-dot{width:8px;height:8px;border-radius:50%;background:var(--kiwe-status-accent,#4d5a52);flex:none}
+.kiwe-screen .kiwe-status-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--kiwe-space-sm,14px);align-items:start;margin:var(--kiwe-space-md,20px) 0}
+.kiwe-screen .kiwe-status-stack>.kiwe-status-card,.kiwe-screen .kiwe-status-stack>.kiwe-status-card:first-child,.kiwe-screen .kiwe-status-stack>.kiwe-status-card:nth-child(n){grid-column:auto;min-height:0;background:var(--kiwe-status-bg,#e9eae4);border-left:5px solid var(--kiwe-status-accent,#4d5a52)}
+.kiwe-screen .kiwe-status-stack>.kiwe-status-card h2,.kiwe-screen .kiwe-status-stack>.kiwe-status-card:first-child h2{font-size:clamp(21px,2.4vw,28px)}
+.kiwe-screen .kiwe-status-card .kiwe-status-label{background:#fffaf8b3}

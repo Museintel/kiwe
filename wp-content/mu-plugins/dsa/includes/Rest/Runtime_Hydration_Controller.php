@@ -20,7 +20,7 @@ final class Runtime_Hydration_Controller {
 		private PhoneKey_Bridge $phonekey,
 		private Trust_Service $trust,
 		private Flow_Guard $flow_guard,
-		private Commerce_Context_Service $commerce
+		private Commerce_Context_Service|\Closure $commerce
 	) {}
 
 	public function register(): void {
@@ -72,8 +72,9 @@ final class Runtime_Hydration_Controller {
 		$trust = $this->trust->summary( $link_hub );
 		$protected = $this->flow_guard->current();
 		$protected['railEnabled'] = ! empty( $settings['protected_flow']['rail_enabled'] );
-		$phonekey = $this->phonekey->public_data();
-		$commerce = $this->commerce->context( $trust, $protected );
+		$phonekey = $this->phonekey->public_data( true );
+		if ( \DSA\Apps\Store_App_Service::enabled() && $this->commerce instanceof \Closure ) $this->commerce = ( $this->commerce )();
+		$commerce = \DSA\Apps\Store_App_Service::enabled() ? $this->commerce->context( $trust, $protected ) : \DSA\Apps\Store_App_Service::inactive_context();
 		$permissions = is_array( $settings['permissions'] ?? null ) ? $settings['permissions'] : [];
 
 		return [
@@ -91,12 +92,19 @@ final class Runtime_Hydration_Controller {
 			'secure' => $this->secure_data(),
 			'dock' => [
 				'phonekey_visible' => $this->phonekey_visible( is_array( $settings['dock'] ?? null ) ? $settings['dock'] : [] ),
-				'admin_dashboard' => current_user_can( 'manage_options' ) && ! empty( $settings['dock']['admin_dashboard_link_enabled'] )
-					? [ 'label' => __( 'Dashboard', 'dsa' ), 'url' => admin_url() ] : null,
+				'admin_dashboard' => $this->dashboard_link(),
 			],
 			'links' => $this->links_admin_data( $link_hub ),
 			'nativeData' => $this->native_data( $trust, $phonekey, $commerce ),
 		];
+	}
+
+	/** Private hydration only; WordPress/Workspace policy owns access. */
+	private function dashboard_link(): ?array {
+		if ( ! is_user_logged_in() || ! current_user_can( 'read' ) ) return null;
+		$workspace = \DSA\Access\Workspace_Admin_Service::uses_workspace( wp_get_current_user() );
+		if ( ! $workspace && ! current_user_can( 'manage_options' ) ) return null;
+		return [ 'label' => __( 'Dashboard', 'dsa' ), 'url' => $workspace ? \DSA\Access\Workspace_Admin_Service::url() : admin_url() ];
 	}
 
 	private function secure_data(): array {
@@ -108,47 +116,20 @@ final class Runtime_Hydration_Controller {
 	}
 
 	private function phonekey_visible( array $dock ): bool {
-		$scope = sanitize_key( $dock['phonekey_visibility'] ?? 'all' );
-		if ( 'visitors' === $scope ) return ! is_user_logged_in();
-		if ( 'users' === $scope ) return is_user_logged_in();
-		if ( 'admins' === $scope ) return current_user_can( 'manage_options' );
-		if ( 'customers' === $scope ) {
-			if ( ! is_user_logged_in() ) return false;
-			return array_intersect( [ 'customer', 'subscriber' ], (array) wp_get_current_user()->roles ) || current_user_can( 'manage_woocommerce' );
-		}
+		// Profile opens sign-in for visitors and the current account for users.
+		// Its Dock visibility switch is the only launcher control, never a role gate.
 		return true;
 	}
 
 	private function links_admin_data( array $config ): array {
-		if ( ! current_user_can( 'manage_options' ) ) return [ 'canEdit' => false, 'editor' => [] ];
+		// Reuse the existing business editor policy; no technical settings access is granted.
+		if ( ! is_user_logged_in() || ! ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) ) ) return [ 'canEdit' => false, 'editor' => [] ];
 		$raw = is_array( $config['social_links'] ?? null ) ? $config['social_links'] : [];
 		$labels = [ 'facebook' => 'Facebook', 'instagram' => 'Instagram', 'x' => 'X', 'youtube' => 'YouTube', 'pinterest' => 'Pinterest', 'linkedin' => 'LinkedIn' ];
+		$admin_url = admin_url( 'admin.php?page=kiwe-contact' );
 		$socials = [];
-		foreach ( $labels as $id => $label ) $socials[] = [ 'id' => $id, 'label' => $label, 'url' => esc_url_raw( $raw[ $id ] ?? '' ) ];
-		$categories = [];
-		$terms = get_terms( [ 'taxonomy' => 'category', 'hide_empty' => false ] );
-		if ( ! is_wp_error( $terms ) ) {
-			foreach ( $terms as $term ) $categories[] = [ 'id' => (int) $term->term_id, 'name' => sanitize_text_field( $term->name ) ];
-		}
-		return [
-			'canEdit' => true,
-			'editor' => [
-				'siteScore' => '' === trim( (string) ( $config['site_score'] ?? '' ) ) ? '' : max( 0, min( 100, (int) $config['site_score'] ) ),
-				'shopLabel' => sanitize_text_field( $config['shop_label'] ?? __( 'Shop', 'dsa' ) ),
-				'shopUrl' => esc_url_raw( $config['shop_url'] ?? '' ),
-				'postsTitle' => sanitize_text_field( $config['posts_title'] ?? '' ),
-				'postsCategory' => (int) ( $config['posts_category'] ?? 0 ),
-				'categories' => $categories,
-				'sslProvider' => sanitize_text_field( $config['ssl_provider'] ?? '' ),
-				'paymentProvider' => sanitize_text_field( $config['payment_provider'] ?? '' ),
-				'reviewSource' => 'google' === ( $config['review_source'] ?? 'manual' ) ? 'google' : 'manual',
-				'googlePlaceId' => sanitize_text_field( $config['google_place_id'] ?? '' ),
-				'hasGoogleApiKey' => ! empty( $config['google_api_key'] ),
-				'testimonials' => sanitize_textarea_field( $config['testimonials'] ?? '' ),
-				'socials' => $socials,
-				'adminUrl' => admin_url( 'admin.php?page=dsa-settings' ),
-			],
-		];
+		foreach ( $labels as $id => $label ) $socials[] = [ 'id' => $id, 'label' => $label, 'url' => esc_url_raw( $raw[ $id ] ?? '' ), 'editUrl' => add_query_arg( 'link', $id, $admin_url ) ];
+		return [ 'canEdit' => true, 'editor' => [ 'socials' => $socials, 'adminUrl' => $admin_url ] ];
 	}
 
 	private function native_data( array $trust, array $phonekey, array $commerce ): array {

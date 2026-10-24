@@ -1,8 +1,22 @@
 # Kiwe DSA
 
+**Current priority, 11 October — Dharwad design accepted:** [Native authored migration](docs/DHARWAD-DESIGN-MIGRATION-2026-10-11.md) publishes the preserved R49B/R52 layouts and enables the existing requested Munaf account through native Kiwe ownership. Product/article bindings, shop filters, homepage recommendations/pairings and phone/header behavior pass scoped native/Chrome checks; original business hashes and recovery custody remain intact. Signed RC311 is unchanged, and all migration helpers/jobs are retired. **39 actual attempts / 25 accepted tasks; two Woo milestones and four deferred Ascendants milestones remain. Next batch: task 21, live store operations and role/UI acceptance; task 22 follows with reliability and monitoring readiness.** Lab RC277 and Ascendants RC55.5 remain unchanged. No customer charge/send, feed publication, commit or push.
+
+**Prior Ascendants forecast — historical subset:**
+
+**Current priority, 8 October — original run 7 / attempt 2:** [RC296 release preparation](docs/ASCENDANTS-RELEASE-PREPARATION-RC296-2026-10-08.md) completes private signing (eight checks), inert current-source review (75 checks), exact original previous-package body revalidation and independent native/public retirement. Historical A remains failed on one changed ciphertext ctime; its binding is preserved, with separate current revalidation. Ascendants remains RC55.5 with Rank Math active; served lab RC277. Complete offline authentication awaits the founder's faster-connection instruction; actual-source restore/reversal requires another qualified destination because only 27,432 account entries remain for at least 138,095 source files. Run 7 stays **in progress**. **Two tasks through upload, four through live acceptance, sixteen overall including twelve Woo tasks; sixteen actual attempts/fourteen accepted tasks.** [Ledger](docs/generated/kiwe-delivery-run-ledger-2026-10-05.json) owns counts. STSEO-8 source acceptance and its retained numerical latency failure remain at their disclosed scope. No owned job/public helper/transfer process remains; two tiny synthetic local folders remain after automatic approval review blocked cleanup.
+
+**Historical RC158 checkpoint, 24 September:** Then-current local and disposable-lab runtime: [RC158 tax classification](docs/TAX-CLASSIFICATION-RC158-2026-09-24.md) is accepted on the lab under PHP 8.2.33 with RC157 privately recoverable. The corrected 426-file package passed the local baseline, 78 responsive React checks, 23 native WooCommerce checks and authenticated client-role browser review. Temporary public staging/jobs are retired. Ascendants production remains RC55.4 and awaits its own explicit deployment approval. [The backend forecast](docs/LAUNCH-BATCH-FORECAST.md) is 0 non-WooCommerce, 5–7 WooCommerce and 5–7 total; 13–21 overall.
+
+Historical runtime: [RC156 category-aware publisher alerts](docs/NOTIFICATION-PUBLISHER-ALERTS-RC156-2026-09-21.md).
+
+Earlier AI checkpoint: [RC150 client historical SEO acceptance](docs/SEO-HISTORICAL-WORKSPACE-RC150-2026-09-20.md) connects bounded historical progress, control and proposal review to the role-aware SEO document without spending allowance on inspection or exposing provider credentials.
+
 The public SEAM command entrypoint is [start.kiwelaunch.com](https://start.kiwelaunch.com/). Browser AI clients that cannot yet open a newly indexed domain may read the same canonical start contract from [KIWE-START.md](https://github.com/Museintel/kiwe/blob/main/KIWE-START.md); the live registry publishes both locations and immutable release hashes.
 
 Incoming maintainers should start with the [ecosystem handoff](HANDOFF.md), then use the [Kiwe MU-plugin developer handoff](docs/KIWE-MU-DEVELOPER-HANDOFF.md) for source-level ownership, runtime wiring, release gates and recovery.
+
+The [Product Vision](docs/PRODUCT-VISION.md) captures the founder's client-first direction. The [Engineering Roadmap](docs/ENGINEERING-ROADMAP.md) owns current priorities, and the [Maintainer Contract](docs/MAINTAINER-CONTRACT.md) requires every contributor to keep behavior, architecture, verification and handoff evidence aligned. Read the [lead-transition baseline](docs/ENGINEERING-BASELINE-2026-09-05.md) for the latest local audit and its limits.
 
 Kiwe turns a conventional WordPress site into an appsite with one persistent Dual Surface Area: a responsive dock, contextual screens, private runtime hydration, Key identity, commerce, PWA/Push, notifications, analytics, and Bricks-first design integrations.
 
@@ -58,7 +72,7 @@ No ZIP is required for the canonical Hostinger copy workflow. Do not mix files f
 
 ## Development And Verification
 
-The architecture and decisions live in `docs/DSA-ARCHITECTURE.md`. The short execution truth is `docs/DEVELOPMENT-PLAN.md`; security acceptance lives in `docs/SECURITY-AUDIT.md`; the UI marketplace contract lives in `docs/DSA-UI-CONTRACT.md`.
+The architecture history and decisions live in `docs/DSA-ARCHITECTURE.md`; the current implementation map is `docs/KIWE-MU-DEVELOPER-HANDOFF.md`. Current priorities live in `docs/ENGINEERING-ROADMAP.md`; `docs/DEVELOPMENT-PLAN.md` preserves earlier execution history. Security acceptance lives in `docs/SECURITY-AUDIT.md`; the UI marketplace contract lives in `docs/DSA-UI-CONTRACT.md`.
 
 The next-generation deterministic HTML/CSS/JS-to-AppSite direction, including the SEAM Compiler (formerly BRX Shift), SiteGraph binding, Geometry inference, native Bricks compilation, visual proof, and controlled deployment, is defined in `docs/SEAM-APPSITE-PLATFORM.md`.
 

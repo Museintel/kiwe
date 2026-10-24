@@ -8,7 +8,6 @@ use DSA\Onboarding\Design_Context_Enhancement_Service;
 use DSA\Element_Registry;
 use DSA\Commerce\Commerce_Context_Service;
 use DSA\Design\Seam_Token_Service;
-use DSA\Design\Seam_Vocabulary_Schema;
 use DSA\Design\Token_Schema;
 use DSA\Environment;
 use DSA\Link_Hub\Review_Service;
@@ -51,7 +50,7 @@ final class Assets {
 	private $route_capabilities;
 	private $initial_preloader_printed = false;
 
-	public function __construct( Settings $settings, Element_Registry $registry, Module_Registry $modules, PhoneKey_Bridge $phonekey, Trust_Service $trust, Flow_Guard $flow_guard, Trigger_Service $triggers, Native_Service $native, Commerce_Context_Service $commerce, Reward_Service $rewards, Metrics_Service $metrics, Permission_Journey_Service $permissions, Notification_Preference_Service $notification_preferences, PWA_Service $pwa, Review_Service $reviews, Route_Capability_Service $route_capabilities ) {
+	public function __construct( Settings $settings, Element_Registry $registry, Module_Registry $modules, PhoneKey_Bridge $phonekey, Trust_Service $trust, Flow_Guard $flow_guard, Trigger_Service $triggers, Native_Service $native, Commerce_Context_Service|\Closure $commerce, Reward_Service|\Closure $rewards, Metrics_Service $metrics, Permission_Journey_Service $permissions, Notification_Preference_Service $notification_preferences, PWA_Service $pwa, Review_Service $reviews, Route_Capability_Service $route_capabilities ) {
 		$this->settings   = $settings;
 		$this->registry   = $registry;
 		$this->modules    = $modules;
@@ -72,19 +71,34 @@ final class Assets {
 
 	public function register(): void {
 		$settings    = $this->settings->all();
-		$diagnostics = isset( $settings['diagnostics'] ) && is_array( $settings['diagnostics'] ) ? $settings['diagnostics'] : [];
-		if ( ! empty( $diagnostics['raw_convert_test_mode'] ) && empty( $diagnostics['accessibility_preview_mode'] ) ) {
+		if ( ! Environment::allows_surface_registration( $settings ) ) {
 			return;
+		}
+		if ( ! empty( $settings['enabled'] ) && ! empty( $settings['phonekey']['enabled'] ) && Environment::is_private_surface_request() ) {
+			add_action( 'template_redirect', [ $this, 'protect_auth_document' ], 0 );
 		}
 		add_filter( 'show_admin_bar', [ $this, 'filter_admin_bar' ], 1000 );
 		add_filter( 'body_class', [ $this, 'filter_body_classes' ] );
 		add_action( 'wp_head', [ $this, 'print_phantom_viewport_seed' ], 0 );
 		add_action( 'wp_head', [ $this, 'print_boot_seed' ], 1 );
+		add_action( 'wp_head', [ $this, 'print_install_action_visibility' ], 2 );
 		add_action( 'wp_head', [ $this, 'print_initial_preloader_style' ], 2 );
 		add_action( 'wp_body_open', [ $this, 'print_initial_preloader' ], 0 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
 		add_action( 'wp_footer', [ $this, 'print_initial_preloader_fallback' ], 0 );
 		add_action( 'wp_footer', [ $this, 'print_token_cascade_guard' ], 999 );
+	}
+
+	public function protect_auth_document(): void {
+		if ( ! Environment::is_private_surface_request() || ! Environment::should_render_frontend()
+			|| ! $this->settings->get( 'enabled', true ) || empty( $this->settings->get( 'phonekey', [] )['enabled'] ) ) return;
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+		nocache_headers();
+		if ( ! headers_sent() ) {
+			header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0' );
+			header( 'X-Robots-Tag: noindex, nofollow, noarchive' );
+		}
+		do_action( 'litespeed_control_set_nocache', 'Kiwe authentication document' );
 	}
 
 	public function filter_body_classes( array $classes ): array {
@@ -120,15 +134,17 @@ final class Assets {
 		}
 		$link_hub       = isset( $settings['link_hub'] ) && is_array( $settings['link_hub'] ) ? $settings['link_hub'] : [];
 		$trust_summary  = $this->trust->summary( $link_hub );
-		$commerce       = $this->commerce->public_context();
+		if ( \DSA\Apps\Store_App_Service::enabled() && $this->commerce instanceof \Closure ) $this->commerce = ( $this->commerce )();
+		$commerce       = \DSA\Apps\Store_App_Service::enabled() ? $this->commerce->public_context() : \DSA\Apps\Store_App_Service::inactive_context();
 		$phonekey       = $this->phonekey->boot_data();
 		$native_data    = $this->native_readonly_data( $trust_summary, $commerce, $phonekey );
 		$commerce['settings'] = [
-			'cartSurfaceEnabled'   => ! empty( $settings['commerce']['cart_surface_enabled'] ),
-			'checkoutSurfaceEnabled' => ! empty( $settings['commerce']['checkout_surface_enabled'] ),
+			'cartSurfaceEnabled'   => ! empty( $commerce['available'] ) && ! empty( $settings['commerce']['cart_surface_enabled'] ),
+			'checkoutSurfaceEnabled' => ! empty( $settings['enabled'] ) && ! empty( $commerce['available'] ) && ! \DSA\Commerce\Store_Recovery_Gate_Service::is_paused(),
 			'cartQuantityControls' => ! empty( $settings['commerce']['cart_quantity_controls'] ),
+			'cartShowDelivery'     => ! empty( $settings['commerce']['cart_show_delivery'] ),
 			'cartBadgesEnabled'    => ! empty( $settings['commerce']['cart_badges_enabled'] ),
-			'fbtEnabled'           => ! empty( $settings['commerce']['fbt_enabled'] ),
+			'fbtEnabled'           => ! empty( $settings['commerce']['cart_show_fbt'] ),
 			'fbtTitle'             => sanitize_text_field( $settings['commerce']['fbt_title'] ?? __( 'Frequently Bought Together', 'dsa' ) ),
 			'fbtMaxProducts'       => max( 1, min( 12, (int) ( $settings['commerce']['fbt_max_products'] ?? 6 ) ) ),
 			'addToCartMode'        => in_array( $settings['commerce']['add_to_cart_mode'] ?? 'default', [ 'default', 'plus_only', 'quantity', 'replace' ], true ) ? $settings['commerce']['add_to_cart_mode'] : 'default',
@@ -175,10 +191,12 @@ final class Assets {
 			true
 		);
 
+		wp_enqueue_script( 'dsa-public-contract', DSA_URL . 'assets/js/public-contract.js', [], $this->asset_version( 'assets/js/public-contract.js' ), true );
+
 		wp_enqueue_script(
 			'dsa-surface',
 			DSA_URL . 'assets/js/surface.js',
-			[ 'dsa-seam' ],
+			[ 'dsa-seam', 'dsa-public-contract' ],
 			$this->asset_version( 'assets/js/surface.js' ),
 			true
 		);
@@ -253,7 +271,7 @@ final class Assets {
 			'DSA_DATA',
 			[
 				'restUrl'    => esc_url_raw( rest_url( 'dsa/v1' ) ),
-				'iconSprite' => esc_url_raw( DSA_URL . 'assets/icons/lucide/sprite.svg' ),
+				'iconSprite' => esc_url_raw( DSA_URL . 'assets/icons/lucide/sprite.svg?ver=' . rawurlencode( defined( 'DSA_VERSION' ) ? DSA_VERSION : '1' ) ),
 				'nonce'      => '',
 				'hydration'  => [ 'endpoint' => esc_url_raw( admin_url( 'admin-ajax.php?action=dsa_runtime_hydrate' ) ), 'version' => 2 ],
 				'version'    => DSA_VERSION,
@@ -289,14 +307,14 @@ final class Assets {
 					'screens'  => $resolved_theme_screens,
 				],
 				'designTokens' => Token_Schema::contract( $settings, $manifest ),
-				// One payload, two runtime aliases. Sending the same 80-token catalog
-				// twice added tens of kilobytes to every public document.
+				// Site values stay in HTML; the versioned canonical catalog restores
+				// the existing complete browser API before its first consumer runs.
+				'contractCatalog' => 1,
 				'kiweTokens' => $kiwe_tokens,
 				'seam'       => [
 					'enabled'      => true,
 					'contract'     => 'kiwe.seam',
 					'frameworkCss' => true,
-					'vocabulary'   => Seam_Vocabulary_Schema::contract(),
 				],
 				'app'        => $this->app_data(),
 				'search'     => [
@@ -305,14 +323,15 @@ final class Assets {
 					'limit'     => max( 1, min( 12, absint( $this->settings->get( 'search', [] )['result_limit'] ?? 6 ) ) ),
 					'context'   => $this->search_context(),
 					'alphabetEnabled' => ! empty( $this->settings->get( 'search', [] )['alphabet_enabled'] ),
-					'productAddEnabled' => ! empty( $this->settings->get( 'search', [] )['product_add_enabled'] ),
+					'productAddEnabled' => \DSA\Apps\Store_App_Service::enabled() && ! empty( $this->settings->get( 'search', [] )['product_add_enabled'] ),
 					'bricksBridgeEnabled' => ! empty( $this->settings->get( 'search', [] )['bricks_bridge_enabled'] ),
 					'popularEnabled' => $this->search_popularity_available(),
 				],
-				'presentationModules' => [
+				'presentationModules' => array_filter( [
+					'diagnostics' => esc_url_raw( $this->asset_url( 'assets/js/modules/diagnostics.js' ) ),
 					'profile' => esc_url_raw( $this->asset_url( 'assets/js/modules/profile-panel.js' ) ),
-					'cart' => esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ),
-					'checkout' => esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ),
+					'cart' => \DSA\Apps\Store_App_Service::enabled() ? esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ) : '',
+					'checkout' => \DSA\Apps\Store_App_Service::enabled() ? esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ) : '',
 					'links' => esc_url_raw( $this->asset_url( 'assets/js/modules/links-panel.js' ) ),
 					'ai' => esc_url_raw( $this->asset_url( 'assets/js/modules/ai-panel.js' ) ),
 					'saved' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
@@ -321,7 +340,7 @@ final class Assets {
 					'appsite-home' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
 					'games' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
 					'menu' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
-				],
+				] ),
 				'games'      => $this->games_data(),
 				'ai'         => $this->ai_data(),
 				'dock'       => $settings['dock'] ?? [],
@@ -359,6 +378,7 @@ final class Assets {
 				],
 			]
 		);
+		wp_add_inline_script( 'dsa-surface', 'if(window.KiwePublicContract)window.KiwePublicContract.hydrate(window.DSA_DATA);', 'before' );
 	}
 
 	/**
@@ -490,6 +510,7 @@ final class Assets {
 			$menu  = wp_get_nav_menu_object( $menu_id );
 			$items = wp_get_nav_menu_items( $menu_id, [ 'update_post_term_cache' => false ] );
 			$out   = [];
+			$menu_seen = [];
 
 			foreach ( is_array( $items ) ? $items : [] as $item ) {
 				if ( ! is_object( $item ) || empty( $item->url ) ) {
@@ -508,18 +529,25 @@ final class Assets {
 					'menu_parent' => absint( $item->menu_item_parent ?? 0 ),
 				];
 				$key = strtolower( $normalized['url'] . '|' . $normalized['title'] );
-				if ( isset( $seen[ $key ] ) ) {
+				if ( isset( $menu_seen[ $key ] ) ) {
 					continue;
 				}
+				$menu_seen[ $key ] = true;
 				$seen[ $key ] = true;
 				$out[] = $normalized;
-				$flat[] = $normalized;
 			}
 
-			if ( $out ) {
+			$page_contents = \DSA\Access\Navigation_Workspace_Service::menu_contents( $dock, $menu_id );
+			if ( $out || $page_contents['enabled'] ) {
+				$raw_limit = (array) ( $dock['menu_group_limits'] ?? [] );
+				$limit = isset( $raw_limit[ $menu_id ] ) && is_numeric( $raw_limit[ $menu_id ] ) ? max( 1, min( 200, (int) $raw_limit[ $menu_id ] ) ) : 200;
+				$out = array_slice( $out, 0, $limit );
+				foreach ( $out as $visible_item ) $flat[] = $visible_item;
 				$groups[] = [
+					'id' => $menu_id,
+					'pageContents' => $page_contents,
 					'label' => sanitize_text_field( (string) ( $menu->name ?? __( 'Navigation', 'dsa' ) ) ),
-					'items' => array_slice( $out, 0, 40 ),
+					'items' => $out,
 				];
 			}
 		}
@@ -562,7 +590,17 @@ final class Assets {
 		$active = false;
 		$reason = 'disabled';
 
-		if ( ! empty( $dock['menu_context_enabled'] ) ) {
+		$menu_ids = array_values( array_filter( array_map( 'absint', (array) ( $dock['menu_nav_ids'] ?? [] ) ) ) );
+		if ( ! $menu_ids && ! empty( $dock['menu_nav_id'] ) ) $menu_ids[] = absint( $dock['menu_nav_id'] );
+		$enabled = ! $menu_ids && ! empty( $dock['menu_context_enabled'] ); $explicit = false;
+		foreach ( $menu_ids as $menu_id ) {
+			if ( ! is_nav_menu( $menu_id ) ) continue;
+			$choice = \DSA\Access\Navigation_Workspace_Service::menu_contents( $dock, $menu_id );
+			$enabled = $enabled || $choice['enabled'];
+			if ( $choice['enabled'] && isset( $dock['menu_group_contents'][$menu_id] ) ) $explicit = true;
+		}
+		if ( $enabled && $explicit ) { $active = true; $reason = 'menu_group'; }
+		elseif ( $enabled ) {
 			if ( ! empty( $locations['everywhere'] ) ) {
 				$active = true;
 				$reason = 'everywhere';
@@ -590,7 +628,8 @@ final class Assets {
 		}
 
 		return [
-			'enabled'       => ! empty( $dock['menu_context_enabled'] ),
+			'enabled'       => $enabled,
+			'groupOwned'    => ! empty( $menu_ids ),
 			'active'        => $active,
 			'title'         => $title,
 			'headingLevels' => $levels ?: [ 'h1', 'h2', 'h3' ],
@@ -809,13 +848,18 @@ CSS;
 
 	private function kiwe_tokens_data(): array {
 		$settings = $this->settings->all();
-		$items = Seam_Token_Service::tokens_with_overrides( Seam_Token_Service::overrides_from_settings( $settings ) );
+		$overrides = Seam_Token_Service::overrides_from_settings( $settings );
+		$items = Seam_Token_Service::tokens_with_overrides( $overrides );
+		$values = [];
+		foreach ( array_slice( $items, 0, 80 ) as $item ) {
+			if ( array_key_exists( $item['name'], $overrides ) ) $values[ $item['name'] ] = $item['value'];
+		}
 
 		return [
 			'enabled'         => true,
 			'source'          => 'kiwe.universal',
 			'count'           => count( $items ),
-			'items'           => array_slice( $items, 0, 80 ),
+			'values'          => $values,
 			'affectsSurface'  => true,
 			'bricksAdditive'  => true,
 			'bricksThemeStyle' => true,
@@ -852,7 +896,7 @@ CSS;
 			'confettiEnabled' => ! empty( $config['confetti_enabled'] ),
 			'bonuses'         => $out_bonuses,
 			'retryTexts'      => $out_retry,
-			'reward'          => $this->rewards->public_config(),
+			'reward'          => $this->reward_config(),
 			'games'           => [
 				[ 'id' => 'dino', 'label' => __( 'Dinosaur Jump', 'dsa' ) ],
 				[ 'id' => 'star', 'label' => __( 'Star Shooter', 'dsa' ) ],
@@ -870,6 +914,17 @@ CSS;
 			wp_json_encode( DSA_VERSION ),
 			'0'
 		);
+		printf(
+			'<script id="dsa-startup-hydration" data-no-optimize="1" data-no-defer="1" data-cfasync="false" data-dsa-runtime-endpoint="%s">%s</script>' . "\n",
+			esc_url( admin_url( 'admin-ajax.php?action=dsa_runtime_hydrate' ) ),
+			file_get_contents( DSA_DIR . 'assets/js/startup-hydration.js' )
+		);
+		$visual = $this->settings->get( 'visual_effects', [] );
+		if ( ! empty( $visual['show_on_navigation'] ) ) {
+			// Capture release gestures before the new document's deferred AppShell
+			// runs. This only carries an intentional hold, never a loading delay.
+			echo '<script id="dsa-transition-reader">' . file_get_contents( DSA_DIR . 'assets/js/transition-reader.js' ) . '</script>' . "\n";
+		}
 	}
 
 	public function print_initial_preloader_style(): void {
@@ -882,9 +937,10 @@ CSS;
 			try{if(window.sessionStorage&&window.sessionStorage.getItem('dsa_appsite_home_seen')==='1'){document.documentElement.classList.add('dsa-appsite-home-seen');}}catch(error){}
 		</script>
 		<style id="dsa-initial-preloader-style">
-			.dsa-initial-preloader,.dsa-initial-preloader *,.dsa-initial-preloader *:before,.dsa-initial-preloader *:after{box-sizing:border-box}.dsa-initial-preloader{position:fixed;inset:0;z-index:1000004;display:grid;align-items:safe center;width:100%;min-height:100vh;min-height:100dvh;max-width:100vw;padding:clamp(28px,5vw,96px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:none;background:linear-gradient(115deg,rgba(245,247,251,.80),rgba(223,229,232,.62));-webkit-backdrop-filter:blur(var(--dsa-blur-strength,14px)) saturate(1.18);backdrop-filter:blur(var(--dsa-blur-strength,14px)) saturate(1.18);color:rgba(20,24,34,.48);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transform:translateY(var(--dsa-appsite-shift,0));opacity:var(--dsa-appsite-opacity,1);transition:transform 180ms ease,opacity 180ms ease}
 			.dsa-appsite-home-seen .dsa-initial-preloader[data-dsa-session-home]{display:none}
+			.dsa-initial-preloader,.dsa-initial-preloader *,.dsa-initial-preloader *:before,.dsa-initial-preloader *:after{box-sizing:border-box}.dsa-initial-preloader{position:fixed;inset:0;z-index:1000004;display:grid;align-items:safe center;width:100%;min-height:100vh;min-height:100dvh;max-width:100vw;padding:clamp(28px,5vw,96px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:none;background:linear-gradient(115deg,rgba(245,247,251,.80),rgba(223,229,232,.62));-webkit-backdrop-filter:blur(var(--dsa-blur-strength,14px)) saturate(1.18);backdrop-filter:blur(var(--dsa-blur-strength,14px)) saturate(1.18);color:rgba(20,24,34,.48);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transform:translateY(var(--dsa-appsite-shift,0));opacity:var(--dsa-appsite-opacity,1);transition:transform 180ms ease,opacity 180ms ease}
 			.dsa-initial-preloader[hidden]{display:none}
+			.dsa-initial-preloader{--dsa-home-surface:var(--kiwe-color-surface,#f7f8fa);--dsa-home-ink:var(--kiwe-color-text,#1f2933);background:color-mix(in srgb,var(--dsa-home-surface) 68%,transparent);-webkit-backdrop-filter:blur(min(var(--dsa-blur-strength,14px),6px)) saturate(1.1);backdrop-filter:blur(min(var(--dsa-blur-strength,14px),6px)) saturate(1.1);color:var(--dsa-home-ink)}
 			.dsa-initial-preloader.is-dragging{transition:none}.dsa-initial-preloader.is-dismissing{transform:translateY(-110%);opacity:.2}
 			.dsa-initial-preloader__inner{width:min(1040px,100%);min-width:0;max-width:100%;display:grid;gap:clamp(14px,2.3vw,28px)}
 			.dsa-initial-preloader__title{margin:0;font-size:clamp(13px,1.2vw,18px);font-weight:900;line-height:1;letter-spacing:0;text-transform:uppercase;color:var(--dsa-hero-text-color,rgba(20,24,34,.22))}
@@ -913,8 +969,13 @@ CSS;
 			.dsa-home-trust{display:flex;flex-wrap:wrap;gap:8px;width:min(760px,100%)}
 			.dsa-home-trust__badge{display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:6px 10px;border:1px solid rgba(255,255,255,.5);border-radius:999px;background:rgba(255,255,255,.34);color:rgba(20,24,34,.55);font-size:11px;font-weight:850}
 			.dsa-home-trust__badge i{width:7px;height:7px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.16)}.dsa-home-trust__badge.is-active i{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.16)}
+			.dsa-initial-preloader .dsa-home-trust__badge{color:var(--dsa-home-ink);background:var(--dsa-home-surface)}
 			.dsa-initial-preloader__button{appearance:none;border:1px solid rgba(255,255,255,.58);border-radius:999px;background:rgba(255,255,255,.34);box-shadow:inset 0 1px 0 rgba(255,255,255,.52),0 18px 44px rgba(20,24,34,.08);color:color-mix(in srgb,var(--dsa-active-color,#8f8f98) 82%,#101827);cursor:pointer;font:800 15px/1 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:14px 18px;text-decoration:none;transition:background 140ms ease,color 140ms ease,transform 140ms ease}
 			.dsa-initial-preloader__button:hover,.dsa-initial-preloader__button:focus-visible{background:rgba(255,255,255,.54);color:var(--dsa-hover-color,#24c6a1);outline:none;transform:translateY(-1px)}
+			.dsa-initial-preloader__inner{animation:dsa-home-entry-cue 3s ease-in-out infinite}
+			.dsa-initial-preloader:is(.is-dragging,.is-dismissing) .dsa-initial-preloader__inner{animation:none}
+			@keyframes dsa-home-entry-cue{0%,60%,100%{transform:translateY(0)}74%{transform:translateY(-8px)}84%{transform:translateY(0)}92%{transform:translateY(-3px)}}
+			@media (prefers-reduced-motion:reduce){.dsa-initial-preloader__inner,.dsa-initial-preloader__unlock span:after{animation:none}}
 			@media (max-width:1100px){.dsa-initial-preloader__hero{font-size:7rem}}@media (max-width:800px){.dsa-initial-preloader__hero{font-size:5.5rem}}
 			@media (max-width:640px){.dsa-initial-preloader{align-items:start;padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom))}.dsa-initial-preloader__inner{gap:12px;margin-block:auto}.dsa-initial-preloader__hero{font-size:3.75rem;line-height:.96}.dsa-initial-preloader__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.dsa-app-badge{width:100%;min-width:0;min-height:62px}.dsa-initial-preloader__button{text-align:center}}
 			@media (max-width:420px){.dsa-initial-preloader__hero{font-size:3rem}.dsa-initial-preloader__actions{grid-template-columns:1fr}}@media (max-width:360px){.dsa-initial-preloader__hero{font-size:2.625rem}}
@@ -939,18 +1000,18 @@ CSS;
 		$buttons    = $app['buttons'];
 		$trust_badges = $this->home_trust_badges();
 		?>
-		<div id="dsa-initial-preloader" class="dsa-initial-preloader" data-dsa-initial-preloader data-dsa-session-home data-nosnippet role="status" aria-live="polite" aria-label="<?php esc_attr_e( 'Kiwe Appsite home screen', 'dsa' ); ?>">
+		<div id="dsa-initial-preloader" class="dsa-initial-preloader" data-dsa-initial-preloader data-dsa-session-home data-nosnippet role="dialog" aria-modal="true" tabindex="-1" aria-label="<?php esc_attr_e( 'Kiwe Appsite home screen', 'dsa' ); ?>">
 			<div class="dsa-initial-preloader__inner">
 				<p class="dsa-initial-preloader__title"><?php echo esc_html( $title ); ?></p>
 				<div class="dsa-initial-preloader__hero" role="heading" aria-level="2"><?php echo esc_html( $hero ); ?></div>
 				<p class="dsa-initial-preloader__message"><?php echo esc_html( $message ); ?></p>
 				<div class="dsa-initial-preloader__clock" data-dsa-initial-clock></div>
-				<div class="dsa-initial-preloader__unlock" aria-hidden="true"><span></span><strong><?php esc_html_e( 'Scroll, swipe up, or press ↓ to enter', 'dsa' ); ?></strong></div>
-				<p class="dsa-initial-preloader__app-pitch"><?php echo esc_html( $pwa_pitch ); ?></p>
-				<div class="dsa-initial-preloader__actions" data-dsa-keep-open>
+				<div class="dsa-initial-preloader__unlock"><span aria-hidden="true"></span><strong><?php esc_html_e( 'Scroll, swipe up, or press ↓ to enter', 'dsa' ); ?></strong></div>
+				<p class="dsa-initial-preloader__app-pitch" data-dsa-pwa-pitch><?php echo esc_html( $pwa_pitch ); ?></p>
+				<div class="dsa-initial-preloader__actions" data-dsa-install-group data-dsa-keep-open>
 					<?php foreach ( $buttons as $button ) : ?>
 						<?php if ( ! empty( $button['url'] ) ) : ?>
-							<a class="dsa-app-badge" href="<?php echo esc_url( $button['url'] ); ?>" data-dsa-initial-action>
+							<a class="dsa-app-badge" href="<?php echo esc_url( $button['url'] ); ?>" data-dsa-install-pwa="<?php echo esc_attr( $button['platform'] ); ?>" data-dsa-initial-action>
 						<?php else : ?>
 							<button class="dsa-app-badge" type="button" data-dsa-initial-action data-dsa-install-pwa data-dsa-pwa-platform="<?php echo esc_attr( $button['platform'] ?? $button['id'] ?? '' ); ?>">
 						<?php endif; ?>
@@ -958,6 +1019,7 @@ CSS;
 							<span class="dsa-app-badge__copy"><small><?php echo esc_html( $button['eyebrow'] ?? '' ); ?></small><strong><?php echo esc_html( $button['label'] ?? '' ); ?></strong></span>
 						<?php if ( ! empty( $button['url'] ) ) : ?></a><?php else : ?></button><?php endif; ?>
 					<?php endforeach; ?>
+					<p class="dsa-install-disclosure" data-dsa-install-disclosure><?php echo esc_html( $app['installDisclosure'] ); ?></p>
 				</div>
 				<?php if ( ! empty( $trust_badges ) ) : ?>
 					<div class="dsa-home-trust" aria-label="<?php esc_attr_e( 'Site trust', 'dsa' ); ?>">
@@ -969,6 +1031,7 @@ CSS;
 				<p class="dsa-initial-preloader__app-status" data-dsa-pwa-status hidden aria-live="polite"></p>
 			</div>
 		</div>
+		<script>window.setTimeout(function(){var screen=document.getElementById('dsa-initial-preloader');if(screen&&!screen.hasAttribute('data-dsa-home-ready'))screen.remove();},5000);</script>
 		<?php
 	}
 
@@ -976,11 +1039,18 @@ CSS;
 		$this->print_initial_preloader();
 	}
 
+	private function reward_config(): array {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return [ 'enabled'=>false, 'couponEnabled'=>false ];
+		if ( $this->rewards instanceof \Closure ) $this->rewards = ( $this->rewards )();
+		return $this->rewards->public_config();
+	}
+
 	private function should_print_initial_preloader(): bool {
 		$contract = $this->trigger_contract();
 
 		return $this->settings->get( 'enabled', true )
 			&& Environment::should_render_frontend()
+			&& empty( $contract['activeProtected'] )
 			&& $this->trigger_rule_enabled( $contract, 'first_session_home' );
 	}
 
@@ -1015,18 +1085,26 @@ CSS;
 		return false;
 	}
 
+	public function print_install_action_visibility(): void {
+		$app=$this->settings->get('app',[]);
+		if(($app['show_install_actions']??true)===false)echo '<style id="kiwe-app-install-visibility">[data-dsa-install-pwa],[data-dsa-install-group],[data-dsa-pwa-pitch]{display:none!important}</style>';
+	}
 	private function app_data(): array {
 		$config = $this->settings->get( 'app', [] );
 		$config = is_array( $config ) ? $config : [];
 
 		return [
 			'welcomeMessage' => sanitize_text_field( $config['welcome_message'] ?? __( 'Welcome to Our Appsite', 'dsa' ) ),
+			'homeEnabled'    => ! empty( $config['home_enabled'] ),
+			'installActionsVisible' => ($config['show_install_actions']??true)!==false,
+			'desktopUrl' => esc_url_raw($config['pc_url']??''),
 			'pwaPitch'       => sanitize_text_field( $config['pwa_pitch'] ?? __( 'Try our app. No app store required.', 'dsa' ) ),
+			'installDisclosure' => __( 'Adds this website to your Home Screen. No app store needed. Notifications are optional.', 'dsa' ),
 			'idle'           => [
-				'enabled' => ! empty( $config['idle_enabled'] ),
-				'delayMs' => max( 10000, min( 1800000, (int) ( $config['idle_delay_ms'] ?? 60000 ) ) ),
+				'enabled' => ! empty( $config['home_enabled'] ),
+				'delayMs' => max( 10000, min( 1800000, (int) ( $config['idle_delay_ms'] ?? 10000 ) ) ),
 			],
-			'buttons'        => [
+			'buttons'        => ($config['show_install_actions']??true)===false ? [] : [
 				[
 					'id'       => 'ios',
 					'platform' => 'ios',
@@ -1062,11 +1140,7 @@ CSS;
 	}
 
 	private function app_badge_icon( string $icon ): string {
-		if ( 'play' === $icon ) {
-			return '<svg viewBox="0 0 48 48" role="img" aria-label="Google Play"><path fill="#34a853" d="M7 5.5 28.2 24 7 42.5c-.7-.8-1-1.9-1-3.2V8.7c0-1.3.3-2.4 1-3.2Z"/><path fill="#4285f4" d="m28.2 24 6.7-5.8L10.8 4.7A4.8 4.8 0 0 0 7 5.5L28.2 24Z"/><path fill="#fbbc04" d="m28.2 24 6.7 5.8L10.8 43.3A4.8 4.8 0 0 1 7 42.5L28.2 24Z"/><path fill="#ea4335" d="m34.9 18.2 6.1 3.4c1.4.8 1.4 4 0 4.8l-6.1 3.4-6.7-5.8 6.7-5.8Z"/></svg>';
-		}
-
-		return '<svg viewBox="0 0 48 48" role="img" aria-label="App Store"><rect x="3" y="3" width="42" height="42" rx="10" fill="#0a84ff"/><path d="M16 34 27 14m-7-1 14 21M13 28h23" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>';
+		return \DSA\Bricks\Icon_Library_Service::render('kiwe_icon_'.('play'===$icon?'app_android':'app_ios'));
 	}
 
 	private function module_context( array $dock ): array {
@@ -1234,7 +1308,7 @@ CSS;
 	}
 
 	private function links_commerce_available(): bool {
-		return class_exists( 'WooCommerce' ) || function_exists( 'wc_get_page_permalink' );
+		return \DSA\Apps\Store_App_Service::enabled();
 	}
 
 	private function posts_section_data( array $config ): array {
@@ -1354,7 +1428,8 @@ CSS;
 		$path     = DSA_DIR . ltrim( $relative_path, '/\\' );
 		$modified = is_file( $path ) ? filemtime( $path ) : false;
 		$epoch    = max( 0, (int) get_option( 'dsa_runtime_cache_epoch', 0 ) );
-		$version  = false !== $modified ? DSA_VERSION . '.' . (string) $modified : DSA_VERSION;
+		$base_version = \DSA\Apps\Asset_Locator::version( $relative_path );
+		$version = false !== $modified ? $base_version . '.' . (string) $modified : $base_version;
 
 		return $epoch > 0 ? $version . '.' . (string) $epoch : $version;
 	}
@@ -1363,7 +1438,7 @@ CSS;
 		return (string) add_query_arg(
 			'ver',
 			$this->asset_version( $relative_path ),
-			DSA_URL . ltrim( $relative_path, '/\\' )
+			\DSA\Apps\Asset_Locator::url( ltrim( $relative_path, '/\\' ) )
 		);
 	}
 

@@ -1,0 +1,6 @@
+.kiwe-core-tabs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:22px 0;padding:6px;border:1px solid #bdcbbf;border-radius:10px;background:#edf2ea}
+.kiwe-core-tabs button,.kiwe-core-tabs a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 17px;border:1px solid transparent;border-radius:7px;background:transparent;color:#173127;font:inherit;font-weight:650;text-decoration:none;cursor:pointer}
+.kiwe-core-tabs button[aria-selected=true],.kiwe-core-tabs a[aria-current=page]{border-color:#203b2f;background:#203b2f;color:#fff}
+.kiwe-core-tabs button:disabled,.kiwe-core-tabs a[aria-disabled=true]{cursor:default;opacity:.48}
+.kiwe-core-tabs-note{margin:-10px 0 18px;color:#4c6258;font-size:13px;line-height:1.5}
+@media(max-width:520px){.kiwe-core-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;align-items:stretch}.kiwe-core-tabs button,.kiwe-core-tabs a{min-width:0;width:100%;padding:8px 4px;font-size:12px;line-height:1.25;text-align:center}}

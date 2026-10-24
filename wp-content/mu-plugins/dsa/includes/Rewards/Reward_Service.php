@@ -197,8 +197,8 @@ final class Reward_Service {
 		$games = is_array( $games ) ? $games : [];
 
 		return [
-			'rewards_enabled'       => ! empty( $games['rewards_enabled'] ),
-			'coupon_enabled'        => ! empty( $games['coupon_enabled'] ),
+			'rewards_enabled'       => \DSA\Apps\Store_App_Service::enabled() && ! empty( $games['rewards_enabled'] ),
+			'coupon_enabled'        => \DSA\Apps\Store_App_Service::enabled() && ! empty( $games['coupon_enabled'] ),
 			'max_attempts_per_day'  => max( 1, min( 10, (int) ( $games['max_attempts_per_day'] ?? 3 ) ) ),
 			'coupon_expiry_minutes' => max( 5, min( 1440, (int) ( $games['coupon_expiry_minutes'] ?? 20 ) ) ),
 			'min_play_ms'           => max( 1000, min( 30000, (int) ( $games['min_play_ms'] ?? 4000 ) ) ),

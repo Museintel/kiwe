@@ -329,9 +329,9 @@ final class Theme_Package_Service {
 			[
 				'id'          => 'legacy',
 				'schema'      => 'kiwe.installed-theme.v1',
-				'name'        => __( 'Legacy UI', 'dsa' ),
+				'name'        => __( 'Classic', 'dsa' ),
 				'version'     => defined( 'DSA_VERSION' ) ? DSA_VERSION : '1.0.0',
-				'description' => __( 'The preserved lightweight baseline.', 'dsa' ),
+				'description' => __( 'A simple, lightweight look.', 'dsa' ),
 				'author'      => 'Kiwe',
 				'profile'     => 'legacy',
 				'builtIn'     => true,
@@ -341,9 +341,9 @@ final class Theme_Package_Service {
 			[
 				'id'          => 'kiwe2027',
 				'schema'      => 'kiwe.installed-theme.v1',
-				'name'        => __( 'Kiwe 2027', 'dsa' ),
+				'name'        => __( 'Modern', 'dsa' ),
 				'version'     => defined( 'DSA_VERSION' ) ? DSA_VERSION : '1.0.0',
-				'description' => __( 'The built-in modern app UI track.', 'dsa' ),
+				'description' => __( 'A modern app look with compact cards.', 'dsa' ),
 				'author'      => 'Kiwe',
 				'profile'     => 'kiwe-2027',
 				'builtIn'     => true,

@@ -1,9 +1,16 @@
 <?php
 declare(strict_types=1);
 define('ABSPATH', __DIR__ . '/');
+require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/SEO_App_Service.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Native_Indexing_Service.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Search_Report_Snapshot.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php';
 $options=[]; $meta=[]; $users=[]; $actor=1; $hook='personal_options_update'; $commerce=false; $service_queries=0;
 $wpdb=(object)['prefix'=>'wp_'];
 class WP_User { public function __construct(public int $ID, public string $display_name, public string $description='', public string $user_url='', public array $caps=[]) {} }
+function do_action($hook,...$args){$GLOBALS['actions'][]=$hook;}
 function __(string $s, string $d=''): string { return $s; }
 function get_option($key,$default=false){return $GLOBALS['options'][$key]??$default;}
 function get_user_meta($id,$key,$single=true){return $GLOBALS['meta'][$id][$key]??'';}
@@ -11,7 +18,7 @@ function update_user_meta($id,$key,$value){$GLOBALS['meta'][$id][$key]=$value;}
 function metadata_exists($type,$id,$key){return array_key_exists($key,$GLOBALS['meta'][$id]??[]);}
 function get_userdata($id){return $GLOBALS['users'][$id]??false;}
 function get_user_by($field,$id){return get_userdata($id);}
-function get_users($args){return array_values(array_filter($GLOBALS['users'],fn($u)=>get_user_meta($u->ID,$args['meta_key'])===$args['meta_value']));}
+function get_users($args){return array_values(array_filter($GLOBALS['users'],fn($u)=>!isset($args['meta_key'])||get_user_meta($u->ID,$args['meta_key'])===$args['meta_value']));}
 function is_multisite(){return false;}
 function user_can($id,$cap,...$args){$u=$id instanceof WP_User?$id:get_userdata($id);return (bool)($u->caps[$cap]??false);}
 function get_current_user_id(){return $GLOBALS['actor'];}
@@ -30,7 +37,7 @@ function get_pages($args){return $GLOBALS['test_pages']??[];}
 function get_post_type($id){foreach($GLOBALS['test_pages']??[] as $page)if($page->ID===$id)return 'page';return false;}
 function get_the_title($id){foreach($GLOBALS['test_pages']??[] as $page)if($page->ID===$id)return $page->post_title;return '';}
 function wp_strip_all_tags($v){return strip_tags((string)$v);}
-function get_bloginfo($key){return ['name'=>'Native title','description'=>'Native tagline','language'=>'en-IN'][$key]??'';}
+function get_bloginfo($key){return ['name'=>$GLOBALS['options']['blogname']??'Native title','description'=>$GLOBALS['options']['blogdescription']??'Native tagline','language'=>'en-IN'][$key]??'';}
 function wp_timezone_string(){return 'Asia/Kolkata';}
 function post_type_exists($type){return false;}
 function get_post_types($args,$output='names'){$GLOBALS['service_queries']++;return [];}
@@ -40,7 +47,7 @@ function get_site_icon_url($size){return 'https://test.example/icon.png';}
 function wp_get_attachment_url($id){return 'https://test.example/image.png';}
 function get_avatar_url($id,$args){return 'https://test.example/avatar.png';}
 function sanitize_hex_color($v){return preg_match('/^#[a-f0-9]{6}$/i',$v)?$v:null;}
-class WP_Error { function __construct(public $code,public $message,public $data=[]){} }
+class WP_Error { function __construct(public $code,public $message,public $data=[]){} function get_error_data(){return $this->data;} function get_error_code(){return $this->code;} function get_error_message(){return $this->message;} }
 function is_wp_error($v){return $v instanceof WP_Error;}
 function update_option($key,$value,$autoload=null){$GLOBALS['options'][$key]=$value;return true;}
 function set_theme_mod($key,$value){$GLOBALS['options']['theme_'.$key]=$value;}
@@ -51,11 +58,14 @@ function wp_kses_post($v){return strip_tags($v,'<p><b>');}
 function sanitize_title($v){return sanitize_key($v);}
 function wp_generate_uuid4(){return '11111111-2222-4333-8444-555555555555';}
 
+function get_comments($args){return [];}
+require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Context_Selection_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/User_Profile_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Profile_Service.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/SEO/SEO_Defaults_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/SEO_Context_Service.php';
 // Only stub the unrelated identity provider; tests exercise the real context and user services.
-eval('namespace DSA\\Site; class Site_Identity_Service { const OPTION_LOGO_INVERSE="inverse"; static function attachment_id($key=""){return 12;} static function store_phone(){return "public business phone";} static function store_email(){return "hello@example.test";} static function logo_url($v=""){return "https://test.example/logo.png";} }');
+eval('namespace DSA\\Site; class Site_Identity_Service { const OPTION_LOGO="logo"; const OPTION_LOGO_INVERSE="inverse"; const OPTION_STORE_PHONE="phone"; const OPTION_STORE_EMAIL="email"; static function attachment_id($key=""){$option=$key?:self::OPTION_LOGO;return (int) \\get_option($option,12);} static function store_phone(){return "public business phone";} static function store_email(){return "hello@example.test";} static function logo_url($v=""){return "https://test.example/logo.png";} }');
 use DSA\Onboarding\User_Profile_Service as Users;
 use DSA\Onboarding\Design_Context_Profile_Service as Context;
 function check($pass,$name){if(!$pass)throw new RuntimeException($name);echo "PASS $name\n";}
@@ -93,9 +103,20 @@ check($p['identity']['siteName']==='Native title'&&$p['identity']['tagline']==='
 check(!$p['commerce']['enabled']&&!$ctx->commerce_available(),'store unavailable without active commerce even if site type says ecommerce');
 check($service_queries===0,'disabled services never inspect service catalogs on read');
 check($p['services']['items'][0]['title']==='Kept plan','disabled plan is preserved');
-$commerce=true;check($ctx->commerce_available(),'commerce adapter can enable Store without hardcoded site configuration');
+$commerce=true;check(!$ctx->commerce_available(),'a legacy context filter cannot enable a disabled or absent Store App');
+eval('function WC(){return (object)[];}');check($ctx->commerce_available(),'native Woo makes Store available without hardcoded site configuration');
 $public=$ctx->public_context(false);
+$bindings=\DSA\Bricks\Design_Context_Binding_Service::contract($public);
+$before_context=$options[Context::OPTION_PROFILE];
+foreach(['0','1'] as $seo_choice){
+ $options[\DSA\Apps\SEO_App_Service::OPTION]=$seo_choice;
+ check($ctx->public_context(false)===$public,'complete public Design Context is identical with SEO '.$seo_choice);
+ check(\DSA\Bricks\Design_Context_Binding_Service::contract($ctx->public_context(false))===$bindings,'dynamic binding contract is identical with SEO '.$seo_choice);
+ check($options[Context::OPTION_PROFILE]===$before_context,'SEO choice never changes stored owner context');
+}
+check(!class_exists('DSA\\SEO\\SEO_Score_Service',false),'Core Design Context does not load the SEO worker');
 check($public['resources']['source']==='wordpress-media-library'&&$public['resources']['query']['mimeType']==='','media source delegates all MIME types to existing paginated catalog');
+check($public['resources']['query']['contextOnly']===true&&$public['testimonials']['items']===[],'public brief explicitly requests selected media and does not invent testimonials');
 check($public['services']['items']===[],'disabled service data is absent from public context');
 echo "Native Design Context behavior tests passed.\n";
 $commerce=false;$actor=1;
@@ -119,3 +140,27 @@ check($ctx->current()['contentPlan']['existingPages'][0]['visibility']==='primar
 $options[Context::OPTION_PROFILE]['contentPlan']['plannedPages']=[['name'=>'Retained planning note','visibility'=>'primary']];
 $result=$ctx->save_section('website-plan',['contentPlan'=>['plannedPages'=>[['name'=>'Injected']]]],1);
 check($result['contentPlan']['plannedPages'][0]['name']==='Retained planning note','retired planning input cannot erase or replace preserved notes');
+
+check(in_array('kiwe_seo_score_dirty',$actions,true),'native section saves signal background checklist refresh without scanning');
+
+$options['blog_public']='1';$legacy=$ctx->current();$legacy['seo']['allowIndexing']=false;
+$result=$ctx->save_section('story',$legacy,1);
+check(!is_wp_error($result)&&$options['blog_public']==='1'&&$result['seo']['allowIndexing']===true,'legacy Story input cannot disable the public website');
+$options['blog_public']='0';$legacy['seo']['allowIndexing']=true;$result=$ctx->save_section('story',$legacy,1);
+check(!is_wp_error($result)&&$options['blog_public']==='0'&&$result['seo']['allowIndexing']===false,'Story preserves native staging privacy while removing the client master switch');
+
+// A Core save while Store is paused must not normalize hidden commerce choices away.
+$options[\DSA\Apps\Store_App_Service::OPTION]='0';$commerce=true;
+$options[Context::OPTION_PROFILE]['commerce']=['enabled'=>true,'catalogNote'=>'retained','offers'=>['original'=>true]];
+$options[Context::OPTION_PROFILE]['regulatory']=['fssaiLicense'=>'synthetic-original','showFssaiOnProducts'=>true,'futureField'=>'keep'];
+$options[Context::OPTION_PROFILE]['contentPlan']['highlightBestsellers']=true;
+$dormant=$options[Context::OPTION_PROFILE];
+$result=$ctx->save_section('website-plan',['contentPlan'=>['showBlogRailOnHome'=>true,'highlightBestsellers'=>false]],1);
+check(!is_wp_error($result)&&!$ctx->commerce_available(),'Store App off overrides Woo and the legacy availability filter');
+check($options[Context::OPTION_PROFILE]['commerce']===$dormant['commerce']&&$options[Context::OPTION_PROFILE]['regulatory']===$dormant['regulatory'],'Core website-plan save preserves all dormant Store and regulatory data exactly');
+check($options[Context::OPTION_PROFILE]['contentPlan']['highlightBestsellers']===true,'hidden bestseller choice survives a Core save');
+check(is_wp_error($ctx->save_section('regulatory',[],1))&&is_wp_error($ctx->save_section('store',[],1)),'inactive Store and FSSAI forms refuse direct writes');
+$options[\DSA\Apps\Store_App_Service::OPTION]='1';check($ctx->commerce_available(),'original Store choices are available again after re-enabling');
+
+// Restore fixture-only input for dependent renderer tests.
+$commerce=false;unset($options[\DSA\Apps\Store_App_Service::OPTION]);

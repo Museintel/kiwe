@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Clean_Conversion_Test_Service {
 	private const SNAPSHOT_OPTION = 'dsa_clean_conversion_test_snapshot_v1';
+	private const RUNTIME_OPTION = 'dsa_clean_conversion_runtime_v1';
+	private const RUNTIME_SCHEMA = 'kiwe.clean-conversion-runtime.v1';
 	private const LAST_RUN_OPTION = 'dsa_clean_conversion_test_last_run_v1';
 	private const SCHEMA           = 'kiwe.clean-conversion-test.v1';
 	private const SETTINGS_FIELDS  = [
@@ -157,18 +159,29 @@ final class Clean_Conversion_Test_Service {
 	 * soon as the snapshot is restored.
 	 */
 	public static function register_runtime_isolation(): void {
-		$snapshot = get_option( self::SNAPSHOT_OPTION, [] );
-		if ( ! is_array( $snapshot ) || self::SCHEMA !== ( $snapshot['schema'] ?? '' ) ) {
+		// The MU constructor runs before WordPress loads pluggable functions.
+		// Wait for the native signing owner, including plugin overrides, before
+		// reading the projection; Bricks template queries run after this hook.
+		if ( ! function_exists( 'wp_salt' ) ) {
+			add_action( 'plugins_loaded', [ self::class, 'register_runtime_isolation' ], 0 );
 			return;
 		}
-
-		$expected = (string) ( $snapshot['hash'] ?? '' );
-		$service  = new self();
-		if ( '' === $expected || ! hash_equals( $expected, $service->snapshot_hash( $snapshot ) ) ) {
-			return;
+		// WordPress owns snapshot writes. Keep this disposable projection fresh
+		// through those writes; visitor requests never persist cache repairs.
+		add_filter( 'pre_update_option_' . self::SNAPSHOT_OPTION, [ self::class, 'before_snapshot_update' ], PHP_INT_MAX, 2 );
+		add_filter( 'pre_add_option_' . self::SNAPSHOT_OPTION, [ self::class, 'before_snapshot_add' ] );
+		add_action( 'delete_option', [ self::class, 'before_snapshot_delete' ] );
+		add_action( 'added_option', [ self::class, 'snapshot_added' ], 10, 2 );
+		add_action( 'updated_option', [ self::class, 'snapshot_updated' ], 10, 3 );
+		add_action( 'deleted_option', [ self::class, 'snapshot_deleted' ] );
+		$runtime = get_option( self::RUNTIME_OPTION, null );
+		if ( ! self::valid_runtime( $runtime ) && ( is_admin() || PHP_SAPI === 'cli' ) ) {
+			$runtime = self::refresh_runtime_projection();
 		}
-
-		$excluded = array_values( array_unique( array_filter( array_map( 'absint', (array) ( $snapshot['excluded_template_ids'] ?? [] ) ) ) ) );
+		// An older active test remains compatible until an admin/maintenance
+		// request builds its projection. Missing or invalid cache is not authority.
+		if ( ! self::valid_runtime( $runtime ) ) $runtime = self::runtime_projection( get_option( self::SNAPSHOT_OPTION, [] ) );
+		$excluded = is_array( $runtime ) ? $runtime['excluded_template_ids'] : [];
 		if ( [] === $excluded ) {
 			return;
 		}
@@ -185,6 +198,77 @@ final class Clean_Conversion_Test_Service {
 			},
 			PHP_INT_MAX
 		);
+	}
+
+	public static function before_snapshot_update( $value, $old_value ) {
+		// Refuse a source change if its old projection cannot be invalidated.
+		// If the later cache write fails, the visitor falls back to the source.
+		return self::invalidate_runtime_projection() ? $value : $old_value;
+	}
+
+	public static function before_snapshot_add( $value ) {
+		if ( ! self::invalidate_runtime_projection() ) throw new \RuntimeException( 'Clean test cache could not be invalidated. Retry starting the test.' );
+		return $value;
+	}
+
+	public static function before_snapshot_delete( string $name ): void {
+		if ( self::SNAPSHOT_OPTION === $name && ! self::invalidate_runtime_projection() ) throw new \RuntimeException( 'Clean test cache could not be invalidated. Retry restoration.' );
+	}
+
+	private static function invalidate_runtime_projection(): bool {
+		$missing = new \stdClass();
+		if ( get_option( self::RUNTIME_OPTION, $missing ) === $missing ) return true;
+		if ( ! delete_option( self::RUNTIME_OPTION ) ) {
+			// Core can cache a failed deletion as absent. Preserve the source and
+			// let a later getter read the still-existing projection independently.
+			wp_cache_delete( self::RUNTIME_OPTION, 'options' );
+			foreach ( [ 'notoptions', 'alloptions' ] as $key ) {
+				$values = wp_cache_get( $key, 'options' );
+				if ( is_array( $values ) ) { unset( $values[ self::RUNTIME_OPTION ] ); wp_cache_set( $key, $values, 'options' ); }
+			}
+			return false;
+		}
+		return get_option( self::RUNTIME_OPTION, $missing ) === $missing;
+	}
+
+	public static function snapshot_added( string $name, $value ): void {
+		if ( self::SNAPSHOT_OPTION === $name ) self::refresh_runtime_projection( $value );
+	}
+
+	public static function snapshot_updated( string $name, $old_value, $value ): void {
+		if ( self::SNAPSHOT_OPTION === $name ) self::refresh_runtime_projection( $value );
+	}
+
+	public static function snapshot_deleted( string $name ): void {
+		if ( self::SNAPSHOT_OPTION === $name ) self::refresh_runtime_projection( [] );
+	}
+
+	/** Disposable native cache; full snapshot remains the restoration source. */
+	public static function refresh_runtime_projection( $snapshot = null ): array {
+		if ( null === $snapshot ) $snapshot = get_option( self::SNAPSHOT_OPTION, [] );
+		$runtime = self::runtime_projection( $snapshot );
+		update_option( self::RUNTIME_OPTION, $runtime, false );
+		return $runtime;
+	}
+
+	private static function runtime_projection( $snapshot ): array {
+		$runtime = [ 'schema' => self::RUNTIME_SCHEMA, 'source_hash' => '', 'excluded_template_ids' => [] ];
+		if ( is_array( $snapshot ) && self::SCHEMA === ( $snapshot['schema'] ?? '' ) ) {
+			$expected = (string) ( $snapshot['hash'] ?? '' );
+			if ( '' !== $expected && hash_equals( $expected, ( new self() )->snapshot_hash( $snapshot ) ) ) {
+				$runtime['source_hash'] = $expected;
+				$runtime['excluded_template_ids'] = array_values( array_unique( array_filter( array_map( 'absint', (array) ( $snapshot['excluded_template_ids'] ?? [] ) ) ) ) );
+			}
+		}
+		$runtime['signature'] = hash_hmac( 'sha256', serialize( $runtime ), wp_salt( 'nonce' ) );
+		return $runtime;
+	}
+
+	private static function valid_runtime( $runtime ): bool {
+		if ( ! is_array( $runtime ) || self::RUNTIME_SCHEMA !== ( $runtime['schema'] ?? '' ) || ! is_array( $runtime['excluded_template_ids'] ?? null ) || ! is_string( $runtime['signature'] ?? null ) ) return false;
+		$signature = $runtime['signature'];
+		unset( $runtime['signature'] );
+		return hash_equals( hash_hmac( 'sha256', serialize( $runtime ), wp_salt( 'nonce' ) ), $signature );
 	}
 
 	/** @return array<string,array{exists:bool,value:mixed}> */

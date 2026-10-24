@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kiwe
  * Description: Kiwe Surface, Key.kiwe auth, and appsite layer for WordPress.
- * Version: 8.0.0-rc.55
+ * Version: 8.0.0-rc.436
  * Requires PHP: 8.2
  * Author: Kiwelauch
  */
@@ -21,12 +21,17 @@ if ( PHP_VERSION_ID < 80200 ) {
 	return;
 }
 
-define( 'DSA_VERSION', '8.0.0-rc.55' );
+define( 'DSA_VERSION', '8.0.0-rc.436' );
 define( 'DSA_FILE', __FILE__ );
 define( 'DSA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DSA_URL', plugin_dir_url( __FILE__ ) );
 define( 'DSA_OPTION_SETTINGS', 'dsa_settings' );
 define( 'DSA_OPTION_MANIFEST', 'dsa_shell_manifest' );
+
+// The client workspace is Kiwe's supported backend. Hosts can still define
+// either constant as false before MU plugins load to recover the native forms.
+if ( ! defined( 'KIWE_REACT_WORKSPACE' ) ) define( 'KIWE_REACT_WORKSPACE', true );
+if ( ! defined( 'KIWE_CLIENT_SHELL' ) ) define( 'KIWE_CLIENT_SHELL', true );
 
 require_once DSA_DIR . 'includes/Autoloader.php';
 require_once DSA_DIR . 'includes/Runtime/Package_Manifest.php';
@@ -45,6 +50,14 @@ if ( ! defined( 'KIWE_MU_LOADER_VERSION' ) || KIWE_MU_LOADER_VERSION !== DSA_VER
 // deployment. Plugin::register_services() reuses this same core via
 // require_once; no second auth service or route set is created.
 $kiwe_boot_settings = get_option( DSA_OPTION_SETTINGS, [] );
+// Keep early authentication available during a partial folder copy. The wider
+// manifest gate below still refuses an incomplete package.
+if (is_array($kiwe_boot_settings) && is_readable(DSA_DIR . 'includes/Runtime/Request_Option_Primer.php')) {
+    \DSA\Runtime\Request_Option_Primer::prime($kiwe_boot_settings);
+}
+if ( is_readable( __DIR__ . '/includes/Commerce/Store_Recovery_Gate_Service.php' ) ) {
+	\DSA\Commerce\Store_Recovery_Gate_Service::register_early();
+}
 if (
 	is_array( $kiwe_boot_settings )
 	&& ! empty( $kiwe_boot_settings['phonekey']['enabled'] )

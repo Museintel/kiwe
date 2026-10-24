@@ -1,0 +1,12 @@
+/* Shared registry primitives, scoped to authenticated Kiwe surfaces. No public runtime dependency. */
+:where(.kiwe-workspace-admin,.kiwe-tasks,.kiwe-workspace-notice){font-family:var(--kiwe-font-body);color:var(--kiwe-color-text);--kiwe-accent:var(--kiwe-color-text);--kiwe-accent-soft:var(--kiwe-color-surface);--kiwe-ink:var(--kiwe-color-text);--kiwe-muted:var(--kiwe-color-text-muted);--kiwe-line:var(--kiwe-color-border);--kiwe-canvas:var(--kiwe-color-surface)}
+:where(.kiwe-workspace,.kiwe-tasks,.kiwe-workspace-notice) *{box-sizing:border-box}
+:where(.kiwe-workspace,.kiwe-tasks,.kiwe-workspace-notice) :is(a,button,input,select,summary):focus-visible{outline:3px solid var(--kiwe-color-text);outline-offset:4px}
+:where(.kiwe-workspace,.kiwe-tasks,.kiwe-workspace-notice) :is(h1,h2,p,a,span,strong){overflow-wrap:anywhere}
+.kiwe-app-card{min-width:0;padding:var(--kiwe-space-md);border:1px solid var(--kiwe-color-border);border-radius:var(--kiwe-radius-xl);background:var(--kiwe-color-surface-raised)}
+.kiwe-app-link{display:inline-flex;gap:10px;align-items:center;justify-content:center;min-height:44px;padding:10px 18px;border-radius:var(--kiwe-radius-full);background:var(--kiwe-color-text);color:var(--kiwe-color-text-inverse);text-decoration:none;font-weight:600;line-height:1.5}
+.kiwe-app-link:hover,.kiwe-app-link:focus{background:var(--kiwe-color-text);color:var(--kiwe-color-text-inverse);text-decoration:underline}
+.kiwe-app-state{padding:12px 16px;border-radius:var(--kiwe-radius-md);background:var(--kiwe-color-surface);font-size:14px;line-height:1.6}
+.kiwe-app-state[data-state=error]{border-left:3px solid var(--kiwe-color-danger)}
+.kiwe-app-state[data-state=saved]{border-left:3px solid var(--kiwe-color-text)}
+@media(prefers-reduced-motion:reduce){:where(.kiwe-workspace,.kiwe-tasks,.kiwe-workspace-notice) *{scroll-behavior:auto!important;transition:none!important}}

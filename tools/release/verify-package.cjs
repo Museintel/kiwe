@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const {assertTextIntegrity}=require('./source-integrity.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const packageRoot = path.join(root, 'wp-content', 'mu-plugins', 'dsa');
@@ -12,7 +13,7 @@ const textExtensions = new Set(['.css', '.html', '.js', '.json', '.md', '.php', 
 function canonicalBody(absolute) {
   const body = fs.readFileSync(absolute);
   if (!textExtensions.has(path.extname(absolute).toLowerCase())) return body;
-  return Buffer.from(body.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8');
+  return Buffer.from(assertTextIntegrity(body,path.extname(absolute).toLowerCase(),path.relative(root,absolute)).replace(/\r\n?/g, '\n'), 'utf8');
 }
 
 function version(file, pattern, label) {

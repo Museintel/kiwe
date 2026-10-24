@@ -15,8 +15,8 @@ Never substitute kiwilaunch.com or another similarly named domain.
 
 # SEAM Start
 
-Contract version: `9.4`
-Updated: `2026-10-20`
+Contract version: `9.7`
+Updated: `2026-10-21`
 
 Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, verify and use an intact attached Start kit; otherwise read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context at the same version. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
 
@@ -38,6 +38,8 @@ Inspect supplied attachments even when the user gives only this start link. If n
 Supply the project brief, assets and safe Design Context once. `/ideate` prepares the grounded usage brief; `/preview` approves that brief and produces raw browser-runnable HTML/CSS/JS; when happy with that identified preview, `/seam` prepares the same design with relevant Seam attributes, tokens and variables plus explicit native Bricks intent. It preserves the original and produces a separate source copy. Upload that copy to seam.kiwe with Framework enabled. No command here grants site deployment permission. Missing facts still require an answer; commands never invent business information.
 
 Browse the [complete versioned reference library](https://start.kiwelaunch.com/library/) or its [machine index](https://start.kiwelaunch.com/library/catalog.json). It includes all public source resources in the declared families and exact JSON pointers/hashes. Site-created tags and target-calibrated Bricks capabilities additionally come from the current site. Registered, supported and executed are different evidence levels. Use only the entries the design needs; completeness is not a command to add everything to every page.
+
+Visual quality and the accepted design take priority. Use Seam where it helps; preserve distinctive art direction, scoped values and script-owned variables. Supply real source assets with provenance. AI does not invent Media/Bricks IDs or the final Profile/import plan: the deterministic compiler derives the dependency ZIP from actual bytes. Kiwe's separate target review handles native Media, compatible shared styles and draft templates; package hashes do not prove a successful import or grant live approval.
 
 SEAM has nine commands:
 
@@ -63,8 +65,8 @@ Public Design Context facts use the attached `dynamicBindings` catalogue. The vi
 {
   "schema": "kiwe.command-manifest.v2",
   "productName": "SEAM",
-  "contractVersion": "9.4",
-  "updated": "2026-10-20",
+  "contractVersion": "9.7",
+  "updated": "2026-10-21",
   "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
   "authority": {
     "creative": "The user's design conversation owns art direction. /ideate never authorizes redesign by itself and must resolve final, enhancement or redesign authority before creative work.",
@@ -280,6 +282,8 @@ Native product query loops can use `kiweProductRelation` (`upsells`, `cross_sell
 
 After the usage brief, `/preview` is explicit approval to generate that preview (the original `proceed` remains valid). Once the identified preview is accepted, `/seam` prepares a separate Framework source copy under contexts/seam.md. `/library` reads the complete public reference. None grants production deployment or redesign authority.
 
+Read optional Kiwe App availability from the current Site Graph as described in the shared authoring contract. Keep the complete Core brief and SEO goal even without the SEO App; use only evidenced active Store actions. An App capability is read-only evidence, never installation authority.
+
 
 --- /preview ---
 
@@ -312,6 +316,8 @@ Before closure, reconcile every planned native page/template with the real assig
 6. Recompute source guards, source hashes, exact SiteGraph revision/hash/pointers and marker closure after all transformations. Validate the map and record desktop/phone before/after evidence with unchanged viewport provenance. Reject lost content, missing assets, broken links, errors, overflow, mismatched record slots, regressions or incomplete closure. Unsupported CSS and intentional differences need an explicit list. Do not call an unverified comparison passed.
 
 Deliver `accepted/`, `seam-source/`, assets and `authoring/seam-handoff.json` (`kiwe.seam-source-handoff.v1`) containing `frameworkMode: true`, the accepted/transformed inventory, library release and fetched resource hashes, map path, native intent coverage, explicit gaps and actual test receipts. Hand `seam-source/` to seam.kiwe for deterministic conversion with Framework enabled. The final native export, target calibration, import and live approval remain separate steps. No command can make an unsupported feature safe by claiming complete coverage.
+
+Apply the shared design/dependency rules: visual quality has priority, equivalent consolidation preserves page/scoped values and script-owned variables, and every referenced local asset must have real supplied bytes. Any AI design/provenance notes are advisory. The compiler derives the final native Profile, hashes, asset import plan and guarded style/media bindings; AI must not manufacture those artifacts. The target Kiwe Framework journey reviews shared changes, registers supported Media and stages native drafts. Package validation is not native or browser acceptance, and it does not grant live approval.
 
 
 --- /convert /bricks ---
@@ -422,6 +428,14 @@ This is a read-only command. It changes no artifact or site. Recommend `/ideate`
 
 These rules accompany every command. Apply fixes only inside that command's authority: `/audit`, `/accessibility` and `/library` remain read-only. They do not impose a palette, typeface, bento layout, section order, framework, commerce feature or business claim. Owner facts, the reviewed brief and an accepted design retain their authority.
 
+## Optional Apps and the complete business brief
+
+Design Context, public media, native content, generic tag groups and the Site Graph/MCP authoring brief belong to Kiwe Core. Switching Kiwe SEO off does not remove the search goal, per-record indexing choice or any design facts. Store applicability is a runtime capability, not permission to erase saved business facts.
+
+When the current Site Graph supplies `kiwe.apps` with schema `kiwe.app-capabilities.v1`, use its explicit `installed`, `enabled`, `source` and `version` for SEO and Store. Never infer an enabled Kiwe Store from native WooCommerce or product records alone. Native WordPress/Woo/Bricks features still follow their own exported evidence. Do not generate a working Kiwe Cart, product wishlist or pairing action when Store is inactive. Bookmarks, accounts, Search, shared app shell and design-context bindings stay independent.
+
+An older graph without this optional field is still valid; use its existing module/query/binding evidence and record any material unknown. A command, AI connection or App toggle cannot install software, grant permissions, spend money, replace an SEO provider or publish a website. Installation and update authority remains the site’s native software manager. Request one fresh capability export only when an actual required feature cannot be established.
+
 ## Bootstrap once; continue with one command
 
 The first message is `https://start.kiwelaunch.com/start.md` followed by exactly one supported command, normally `/ideate`, with the brief and safe project inputs attached. Read the matching manifest, this shared contract and that command's context. Do not interpret `/ideate /preview` as approval of a brief that has not been written. `/convert /bricks` and its declared modifiers are the manifest's explicit multi-token commands, not permission to concatenate workflow steps.
@@ -450,9 +464,25 @@ Every product card, including hero picks, rails, related products and archives, 
 
 When Kiwe owns these surfaces, provide a cosmetic header search field that opens Search DSA and a cart launcher with its canonical attribute. Notification launchers follow the reviewed brief; do not add a second Dock or force a notification tool into an existing Dock. Saved/cart/notification state, badges and selected styling belong to Kiwe's shared handlers, not per-card scripts. Exact attributes come from the current public reference and site capability evidence. Preview actions remain local simulations.
 
+Every Kiwe footer includes accessible iPhone and Android app-install actions. App support is always included with Kiwe. The one native ‘Show app install buttons’ preference controls these attributed actions everywhere, independently of Home-screen visibility; do not invent a second installer or activation switch. Use optional `data-dsa-install-group` on a dedicated heading/button group so hiding its actions also hides their surrounding install-only copy. Use the existing Home-screen artwork, exposed in native Bricks as `{kiwe_icon_app_ios}` and `{kiwe_icon_app_android}`, with `data-dsa-install-pwa="ios"` and `data-dsa-install-pwa="android"` on their real buttons/links. These hooks require RC393 or current target evidence; an older target is a handoff gap, not permission to implement a second installer. The existing native handler owns configured store/download URLs, browser installation and honest platform instructions. In the raw preview, simulate these actions locally and record the inert conversion intent in the SEAM Map. Do not fabricate app-store listing links, tracking, permission grants or physical-device installation. Keep the footer's approved design; no duplicate Dock or per-footer installer script is required.
+
 Use category images from their native term records when available. A category rail must navigate to the actual category archive, retain readable active/focus colours and remain inside its declared template boundary. When the approved design calls for a rail below a sticky header, declare the real header relationship using the supported `data-bricks-sticky-below-header` contract and a source-defined cold offset; do not guess a fixed height or add another scroll observer. Preserve intended behaviour across responsive header heights. Native controls and Framework variables/classes take precedence over custom CSS when equivalent; list genuine unsupported exceptions instead of adding page-specific patches.
 
 Plan content depth from the owner's brief and available facts, not a fixed minimal template. Reuse authentic leadership photos and approved editorial/lifestyle assets where they improve the story. Keep provenance and generation status in authoring notes, avoid unsupported product/record claims and do not copy another site's mascot or art direction. Coverage of these rules never imposes a bento layout or a section order on an accepted design.
+
+## Preserve the design; derive dependencies from real source
+
+Visual quality and the owner's accepted design take priority. Seam is a useful public library, not a house style or a coverage quota. During raw preview generation, use its attributes, variables and classes where they help; ordinary well-structured HTML/CSS/JS remains valid. A distinctive design value may stay local or become a named project variable. Do not substitute a nearby Framework colour, spacing, type scale or layout merely to increase reuse. `/seam` and the deterministic compiler may consolidate only equivalent values and compatible meanings without changing the accepted design.
+
+Preserve CSS scope, cascade, responsive states and JavaScript ownership. The same variable name may legitimately have different values on different pages or nested elements. Never choose a majority palette, infer brand roles from colour frequency, flatten those values into one global, or rename a variable that a script writes without preserving every consumer. An existing exact public token is reusable; a superficially similar value is not proof of equivalence. Keep unsupported native cases explicit and preserve their source CSS.
+
+Supply real local image/video/font files used by the preview, with source/provenance and generation status in `authoring/`. A generated image is usable only when an actual tool produced its bytes and the file travels with the project. A filename, plausible URL, claimed attachment ID or AI-written hash does not create an asset. Keep authenticated product photography separate from illustrative lifestyle imagery. Do not invent WordPress Media IDs, Bricks class/variable IDs, asset hashes, successful uploads or import receipts. Existing site records require current SiteGraph/native evidence; reuse is never inferred from a similar filename.
+
+Make the standalone preview self-contained, including the actual pinned Framework assets if it uses them. It must not depend on an uninstalled WordPress/Bricks Style Manager or on Kiwe being present to render. Referenced remote assets that cannot be supplied/verified remain explicit dependencies for review; do not claim they are included or ask a live plugin to fetch arbitrary URLs. Preview actions stay local as required above.
+
+AI authors source and advisory design/asset intent. It does not author the final native Framework Profile, dependency inventory, import plan or Bricks JSON. The compiler derives `package-integrity.json`, `assets/manifest.json`, `assets/import-plan.json` and `style-dependencies.json` from actual source/native output and real bytes, alongside its Framework Profile and templates. The resulting package is separate from the raw source ZIP. Passing package hashes validates that package's bytes; it does not prove licensing, factual identity, target permissions or a successful WordPress import.
+
+The target's reviewed Kiwe Framework import registers supported real Media, reuses verified exact content hashes, merges compatible native variables/classes/palettes/Theme Styles and remaps guarded references into draft templates. Shared style changes can affect existing pages and must appear in that review. Conflicts, unverified assets or unsupported native adapters stay visible. No source command or package declaration grants publishing or deployment approval. Native readback and browser review remain separate; recovery preserves newer edits and reusable Media.
 
 ## Customer copy and progressive behaviour
 

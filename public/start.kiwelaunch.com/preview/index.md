@@ -1,6 +1,6 @@
 # /preview
 
-SEAM contract: 9.4
+SEAM contract: 9.7
 
 This command approves the current usage brief and generates raw preview source. Preserve the established design authority; no real form delivery, site mutation or deployment.
 

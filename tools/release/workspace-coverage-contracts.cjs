@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {validate}=require('../workspace-prototype/coverage-inventory.cjs');
+const root=path.resolve(__dirname,'../..');
+require('node:child_process').execFileSync(process.execPath,[path.join(__dirname,'commerce-source-inventory.cjs'),'--check'],{cwd:root,windowsHide:true});
+const features=JSON.parse(fs.readFileSync(path.join(root,'tools/workspace-prototype/feature-coverage.json')));
+const mappings=JSON.parse(fs.readFileSync(path.join(root,'tools/workspace-prototype/native-surface-map.json')));
+const current=validate(root,features,mappings);assert.equal(current.passed,true,current.errors.join('\n'));
+assert.equal(validate(root,features,mappings.slice(1)).passed,false,'removed native owner must fail');
+const changed=structuredClone(mappings);changed[0].callbacks.push('inventedCallback');
+assert.equal(validate(root,features,changed).passed,false,'changed native callbacks must fail');
+const missing=structuredClone(features);missing[0].id='';assert.equal(validate(root,missing,mappings).passed,false,'missing feature identity must fail');
+const fake=structuredClone(features);fake[0].status='verified';fake[0].nativeEvidence=null;fake[0].browserEvidence=null;assert.equal(validate(root,fake,mappings).passed,false,'verified claim without native/browser evidence must fail');
+const unfinished=structuredClone(features);unfinished[0].status='sample';unfinished[0].launchRequired=true;
+assert.equal(validate(root,unfinished,mappings).launchReady,false,'a remaining sample-only area cannot pass launch readiness');
+console.log(JSON.stringify({passed:true,checks:6,nativeAdminOwners:current.nativeAdminOwners,nativeRenderCallbacks:current.nativeRenderCallbacks,launchReady:current.launchReady,launchBlockers:current.launchBlockers.length}));

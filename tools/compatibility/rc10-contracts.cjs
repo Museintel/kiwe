@@ -26,7 +26,7 @@ check( 'schema is restricted to indexable public requests', schema.includes( 'is
 check( 'schema defers to established SEO providers', [ 'WPSEO_VERSION', 'RANK_MATH_VERSION', 'AIOSEO_VERSION', 'SEOPRESS_VERSION', 'THE_SEO_FRAMEWORK_VERSION' ].every( ( token ) => schema.includes( token ) ) );
 check( 'Product schema defers to Woo structured data', schema.includes( 'woo_outputs_product_schema' ) && schema.includes( "class_exists( 'WC_Structured_Data' )" ) );
 check( 'schema IDs use canonicalized URLs and remove campaign parameters', schema.includes( 'wp_get_canonical_url' ) && [ 'utm_source', 'gclid', 'fbclid', 'msclkid' ].every( ( token ) => schema.includes( token ) ) );
-check( 'archive schema cache identity is stable across requests', schema.includes( "get_lastpostmodified( 'GMT' )" ) && schema.includes( "'route-static'" ) && !/if \( ! \$post_id \) \{\s*return gmdate\( 'c' \)/.test( schema ) );
+check( 'collection schema omits borrowed clocks and persistent route caches', schema.includes( "is_singular() ? (int) get_queried_object_id() : 0" ) && schema.includes( "return '';" ) && !schema.includes( 'get_lastpostmodified' ) && !schema.includes( 'set_transient' ) );
 check( 'View Transition opt-in is server-gated to editorial documents', assets.includes( "! empty( $route_policy['viewTransitions']['currentDocumentEditorial'] )" ) && routes.includes( 'current_document_is_editorial' ) );
 check( 'morph delivery remains off by default', /'editorial_morph_navigation'\s*=>\s*false/.test( settings ) );
 check( 'ad and consent interactions bypass DSA navigation', [ 'ins.adsbygoogle', '[data-ad-client]', '[data-google-query-id]', '#onetrust-banner-sdk', '.cky-consent-container', '.cmplz-cookiebanner' ].every( ( token ) => routes.includes( token ) ) );

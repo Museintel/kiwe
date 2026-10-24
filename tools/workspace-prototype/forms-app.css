@@ -1,0 +1,5 @@
+@import './module-workspace.css';
+.kiwe-forms-list {display:grid;grid-template-columns:minmax(0,1fr);gap:var(--seam-space-md)}
+.kiwe-forms-list .kiwe-module-card {min-height:0}
+.kiwe-form-answer {white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 var(--seam-space-md)}
+.kiwe-forms-note {max-width:70ch}

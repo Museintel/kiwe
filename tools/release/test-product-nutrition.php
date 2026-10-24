@@ -1,0 +1,21 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/test-workflow-apps.php';
+require $base.'Commerce/Product_Context_Service.php';
+$actor=3;$caps[3][]='upload_files';$failProduct=false;$products[102]=new WC_Product_Simple(102);$metaKey=DSA\Commerce\Product_Context_Service::META_NUTRITION_IMAGE_ID;
+$before=$products[102]->values;$writesBefore=$writes;$r=$store->nutrition_record(102);check($r['imageId']===0&&$writes===$writesBefore,'Nutrition GET does not write or load a catalog');
+$input=['imageId'=>201,'expected'=>$r['expected']];$saved=$store->save_nutrition_record(102,$input);check(is_array($saved)&&$saved['imageId']===201&&get_post_meta(102,$metaKey)==201,'Nutrition save reaches existing native metadata');
+check($products[102]->values===$before,'Nutrition save preserves product data including gallery price and stock');
+check(is_wp_error($store->save_nutrition_record(102,$input)),'Stale nutrition replay denied');$input['expected']=$saved['expected'];$writesBefore=$writes;
+check(is_array($store->save_nutrition_record(102,$input))&&$writes===$writesBefore,'Unchanged nutrition image does not write');
+foreach([['imageId'=>'202'],['imageId'=>-1],['imageId'=>999],['imageId'=>[201]],['price'=>'5']]as$bad)check(is_wp_error($store->save_nutrition_record(102,array_replace($input,$bad)))&&$writes===$writesBefore,'Invalid nutrition edit rejected '.array_key_first($bad));
+update_post_meta(102,$metaKey,202);check(is_wp_error($store->save_nutrition_record(102,$input)),'External nutrition edit invalidates pending selection');$input=['imageId'=>0,'expected'=>$store->nutrition_record(102)['expected']];
+$refuseNutritionMeta=true;check(is_wp_error($store->save_nutrition_record(102,$input))&&get_post_meta(102,$metaKey)==202,'Refused nutrition metadata cannot report success');$refuseNutritionMeta=false;
+$caps[3]=array_values(array_diff($caps[3],['upload_files']));check(is_wp_error($store->save_nutrition_record(102,$input)),'Upload permission required to detach label');$caps[3][]='upload_files';$input['expected']=$store->nutrition_record(102)['expected'];
+$cleared=$store->save_nutrition_record(102,$input);check(is_array($cleared)&&$cleared['imageId']===0,'Remove detaches nutrition image');
+$products[102]->type='variable';check(is_array($store->nutrition_record(102)),'Variable product parent supports nutrition label');$products[102]->type='grouped';check(is_wp_error($store->nutrition_record(102)),'Unsupported product type denied');$products[102]->type='simple';
+$r=new WP_REST_Request('POST',['imageId'=>201,'expected'=>$store->nutrition_record(102)['expected']],['id'=>102]);$r->headers['x-kiwe-mutation']='';check($store->save_nutrition($r)->status===403,'Nutrition write requires mutation proof');
+$actor=2;check(is_wp_error($store->nutrition_record(102)),'Editor cannot enter product nutrition');$actor=3;
+update_post_meta(102,$metaKey,201);$_POST=[];$writer=new DSA\Commerce\Product_Context_Service();$writesBefore=$writes;$writer->save_fields(102);check(get_post_meta(102,$metaKey)==201&&$writes===$writesBefore,'Legacy save without field preserves nutrition label');
+$_POST=[$metaKey=>0];$writer->save_fields(102);check(get_post_meta(102,$metaKey)==0,'Legacy explicit removal remains supported');$_POST=[];
+echo "Nutrition label checks passed.\n";

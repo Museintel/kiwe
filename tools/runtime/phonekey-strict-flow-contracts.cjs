@@ -102,7 +102,7 @@ check('automatic account linking refuses privileged accounts and preserves an al
 check('header icon attributes open profile and search without a dock click', surface.includes("[data-dsa-open-module]") && surface.includes("openOverlay( moduleId"));
 check('Developer explains Bricks Name and Value fields without reversed attributes', admin.includes("put the exact attribute in Name and only its value in Value") && admin.includes("Profile icon example:"));
 check('Authentication page can recover the canonical disabled PhoneKey setting', admin.includes("admin_post_dsa_enable_phonekey") && admin.includes("[ 'phonekey' => [ 'enabled' => true ] ]") && admin.includes("Enable Key.kiwe"));
-check('wp-login redirects directly into the Profile sheet', surface.includes("searchParams.get( 'kiwe-auth' )") && surface.includes("openOverlay( 'profile', 'Secure sign in' )"));
+check('wp-login and workspace Account links enter the Profile sheet', surface.includes("searchParams.get( 'kiwe-auth' )") && surface.includes("searchParams.get( 'kiwe-screen' ) === 'profile'") && surface.includes("openOverlay( 'profile', directProfile ? 'My account' : 'Secure sign in' )"));
 check('legacy duplicate SecureTrack settings are disabled', extended.includes("Legacy duplicate settings retained only for migration reference; never render or save from SecureTrack"));
 
 if (failed) process.exit(1);

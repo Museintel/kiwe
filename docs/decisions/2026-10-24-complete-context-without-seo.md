@@ -1,0 +1,15 @@
+# Complete authoring context without the SEO App
+
+Status: accepted architecture and signed RC425 source/lab implementation. [Native comparisons, client review, recovery and retirement](../CONTEXT-INDEPENDENCE-RC425-2026-10-24.md) are accepted at their stated scope. No production deployment is authorized.
+
+The founder clarifies that preserving a Design Context editing screen is insufficient. The complete connected authoring flow must survive when Kiwe SEO is inactive or another provider owns search output: Design Context, its guided setup, native facts and SEO goal, Site Graph, authorized MCP/API reads, file handoffs consumed by Start, and Seam/Bricks dynamic binding contracts.
+
+Core owns the entire existing context schema, editing permissions, native data references, public/private projection, owner-approved enhancement layer and dynamic bindings. It retains the SEO goal, search intent, proof, publication identity and other fields even when their eventual consumer is optional. The App consumes that context; it does not own or reduce it. App state must not remove a setup step or change the authoring context's readiness calculation. Existing permission, resource-budget, public-data and AI-consent boundaries remain in force.
+
+The deeper trace found an older Search & sharing setup step gated by SEO activation and a Core export getter loading the SEO checklist worker to read its saved result. RC425 removes the step's gate and extracts the existing bounded passive snapshot reader/validator to Core. The active worker delegates to that same model; there is no copied report, second parser, new option, migration or freshness claim. Disabled authoring reads retain the last completed result and its original date; they never start a worker. The compatibility refresh entry can signal work only when Kiwe SEO is active. Core indexing projections resolve the thin App owner without loading the SEO defaults engine for external-provider reads.
+
+The same schemas, existing native storage and API/tool routes remain. Internal Design Context refinement and external browser-AI reads retain their separate permissions, credentials and provider choices. Turning Kiwe SEO off does not revoke an otherwise authorized design connection or imply that the client must buy an internal AI provider to use external tools. SEO output and app-owned analysis remain inactive as designed; another provider retains its own choices.
+
+Verification compares complete owner/public context, guided progress and dynamic binding contracts across on/off cases; validates saved/legacy/malformed report behavior; and exercises actual native Site Graph packets under independent request boots. MCP client and Start/authoring contract tests remain separate from a new receiving-AI generation trial. The latter is not claimed merely because a native export passes. Production, Ascendants' actual-source recovery/provider qualification and physical downloadable App extraction retain their existing gates.
+
+Related: [Local SEO admission](2026-10-24-local-seo-app-admission.md), [RC424 accepted scope and limitations](../SEO-APP-RC424-2026-10-24.md).

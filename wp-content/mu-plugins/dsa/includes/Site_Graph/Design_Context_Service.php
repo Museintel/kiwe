@@ -54,7 +54,7 @@ final class Design_Context_Service {
 		$product_args = $this->content_query_args( 'product', [ 'id', 'type', 'slug', 'status', 'title', 'url', 'excerpt', 'featuredImage', 'terms', 'product', 'meta' ], $administrator );
 		$page_args    = $this->content_query_args( 'page', [ 'id', 'type', 'slug', 'title', 'url', 'excerpt', 'featuredImage', 'terms', 'meta' ], $administrator );
 		$post_args    = $this->content_query_args( 'post', [ 'id', 'type', 'slug', 'title', 'url', 'excerpt', 'date', 'featuredImage', 'terms', 'meta' ], $administrator );
-		$products = $allows( 'products' ) && $product_limit ? $this->collect(
+		$products = \DSA\Apps\Store_App_Service::enabled() && $allows( 'products' ) && $product_limit ? $this->collect(
 			'products',
 			$product_limit,
 			$product_args,
@@ -66,21 +66,23 @@ final class Design_Context_Service {
 			[
 				'mimeType' => '',
 				'search'   => $media_search,
+				'contextOnly' => true,
 			],
 			false
 		) : [];
 		$pages = $allows( 'pages' ) && $content_limit ? $this->collect( 'pages', $content_limit, $page_args, $administrator ) : [];
 		$posts = $allows( 'posts' ) && $content_limit ? $this->collect( 'posts', $content_limit, $post_args, $administrator ) : [];
-		$product_categories = $allows( 'terms' ) && taxonomy_exists( 'product_cat' ) ? $this->data->query( [ 'resource' => 'terms', 'taxonomy' => 'product_cat', 'limit' => 100 ], false ) : [ 'data' => [] ];
-		$product_tags       = $allows( 'terms' ) && taxonomy_exists( 'product_tag' ) ? $this->data->query( [ 'resource' => 'terms', 'taxonomy' => 'product_tag', 'limit' => 100 ], false ) : [ 'data' => [] ];
+		$product_categories = \DSA\Apps\Store_App_Service::enabled() && $allows( 'terms' ) && taxonomy_exists( 'product_cat' ) ? $this->data->query( [ 'resource' => 'terms', 'taxonomy' => 'product_cat', 'limit' => 100 ], false ) : [ 'data' => [] ];
+		$product_tags       = \DSA\Apps\Store_App_Service::enabled() && $allows( 'terms' ) && taxonomy_exists( 'product_tag' ) ? $this->data->query( [ 'resource' => 'terms', 'taxonomy' => 'product_tag', 'limit' => 100 ], false ) : [ 'data' => [] ];
 		$custom_content     = $allows( 'customcontent' ) && $custom_limit ? $this->custom_content_catalog( $custom_limit, $administrator ) : [];
 		$taxonomies        = ( $allows( 'taxonomies' ) || $allows( 'terms' ) ) && $term_limit ? $this->taxonomy_catalog( $term_limit, $administrator ) : [];
 		$business          = $allows( 'business' ) || $allows( 'site' ) ? $this->business_identity( $administrator ) : [];
-		$commerce          = $allows( 'commerce' ) || $allows( 'products' ) ? $this->commerce_context( $graph, $products ) : [];
+		$commerce          = \DSA\Apps\Store_App_Service::enabled() && ( $allows( 'commerce' ) || $allows( 'products' ) ) ? $this->commerce_context( $graph, $products ) : [];
 		$field_registry     = $allows( 'customfields' ) || $allows( 'customcontent' ) ? $this->field_registry( $administrator ) : [];
 		$profiles           = new Design_Context_Profile_Service();
 		$enhancements       = new Design_Context_Enhancement_Service( $profiles );
 		$owner_context      = $profiles->public_context( $administrator );
+		$dynamic_bindings   = \DSA\Bricks\Design_Context_Binding_Service::contract( $owner_context );
 		$resolved_context   = $enhancements->resolved_public_context( $administrator );
 
 		$catalog = [
@@ -131,6 +133,7 @@ final class Design_Context_Service {
 			],
 			'business'    => $business,
 			'seamDesignContext' => $owner_context,
+			'dynamicBindings' => $dynamic_bindings,
 			'resolvedDesignContext' => $resolved_context,
 			'designContextEnhancementContract' => $enhancements->handoff_contract(),
 			'ideationContract' => [
@@ -165,7 +168,7 @@ final class Design_Context_Service {
 				],
 				'doNotReaskWhenPresent' => [
 					'identity', 'site type', 'purpose', 'audience', 'goal', 'logo', 'brand preferences',
-					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder', 'team', 'services and service hierarchy', 'WordPress Media Library assets',
+					'public contact', 'location', 'business story', 'mission', 'vision', 'values', 'USP', 'founder', 'team', 'services and service hierarchy', 'selected Design Context media',
 					'catalog scale', 'price range', 'regulatory disclosures', 'page plan', 'SEO intent',
 				],
 				'output' => [ 'index.html', 'styles.css', 'script.js', 'assets used by the project', 'assets/asset-manifest.json when assets are emitted' ],
@@ -291,6 +294,8 @@ final class Design_Context_Service {
 				],
 				'contentPreferences' => [ 'showBlogRail'=>'{kiwe_show_blog_rail}', 'highlightBestsellers'=>'{kiwe_highlight_bestsellers}' ],
 				'productNutritionImage' => '{kiwe_product_nutrition_image}',
+				'service' => [ 'enabled'=>'{kiwe_services_enabled}', 'id'=>'{kiwe_service_id}', 'title'=>'{kiwe_service_title}', 'summary'=>'{kiwe_service_summary}', 'description'=>'{kiwe_service_description}', 'image'=>'{kiwe_service_image}', 'url'=>'{kiwe_service_url}' ],
+				'tagCategories' => [ 'currentRecord'=>'{kiwe_tag_group_ID}', 'name'=>'{kiwe_tag_group_ID_name}', 'allPublicTags'=>'{kiwe_tag_group_ID_all}', 'owner'=>'kiwe_tag_groups_v1', 'stableId'=>true, 'maxGroups'=>100, 'maxRenderedTerms'=>100 ],
 				'whatsapp' => '{kiwe_whatsapp}',
 				'whatsappUrl' => '{kiwe_whatsapp_url}',
 				'directionsUrl' => '{kiwe_directions_url}',
@@ -513,6 +518,7 @@ final class Design_Context_Service {
 				break;
 			}
 			$taxonomy = sanitize_key( (string) $name );
+			if ( ! \DSA\Apps\Store_App_Service::taxonomy_available( $taxonomy ) ) continue;
 			$take = min( 30, $remaining );
 			$result = $this->data->query( [ 'resource' => 'terms', 'taxonomy' => $taxonomy, 'limit' => $take ], false );
 			$terms = is_array( $result['data'] ?? null ) ? $result['data'] : [];

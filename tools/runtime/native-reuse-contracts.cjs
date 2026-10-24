@@ -1,0 +1,17 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),cp=require('node:child_process');
+const root=path.resolve(__dirname,'../..'),read=p=>fs.readFileSync(path.join(root,p),'utf8'),base='wp-content/mu-plugins/dsa/';
+const checks=[],assert=(ok,label)=>{checks.push({passed:!!ok,label});if(!ok)throw Error(label);};
+const asset=read(base+'assets/js/source-runtime.js');new vm.Script(asset);
+assert(/^\/\* Generated from Seam app\/runtimeBridge\.ts; source SHA256 [a-f0-9]{64}; bridge 1\./.test(asset),'one declared compiler-owned generated artifact');
+assert(asset.includes('if(api.version!=="1")')&&asset.includes('if(c)api.register(c);'),'portable and cached installations share one version guard');
+assert(asset.includes('node.type&&!/^(?:text|application)\\/javascript$/i.test(node.type)')&&!asset.includes('eval('),'data-only scripts cannot acquire executable authority');
+assert(asset.includes('api._bundleNodes.get(node)===text')&&asset.includes('.slice(0,256)'),'bounded declarative remount scanning is idempotent');
+assert(!asset.includes('setInterval')&&!asset.includes('fetch('),'no polling or new provider/visitor data request');
+const manifest=read(base+'includes/Runtime/Package_Manifest.php');
+for(const file of ['assets/js/source-runtime.js','includes/Bricks/Source_Runtime_Bridge.php'])assert(manifest.includes("'"+file+"'"),'critical member '+file);
+const integration=read(base+'includes/Bricks/Bricks_Integration.php');
+assert(integration.includes('return Source_Runtime_Bridge::normalize_elements( $value );')&&integration.includes('Source_Runtime_Bridge::observe( $html );'),'existing authorized builder save and render owners admit the adapters');
+const php=cp.spawnSync(process.env.PHP_BINARY||'php',[path.join(root,'tools/release/test-bricks-html-preservation.php')],{windowsHide:true,encoding:'utf8'});
+assert(php.status===0,'existing role/nonce/object/code boundaries pass');
+const proof=JSON.parse(php.stdout);assert(proof.passed&&proof.checks.every(c=>c.passed),'all original builder sanitation denial checks pass');
+console.log(JSON.stringify({passed:true,checks,bytes:Buffer.byteLength(asset),builderBoundaryChecks:proof.checks.length}));

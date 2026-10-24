@@ -1347,9 +1347,9 @@ function stp_pg_settings() {
 	if ( isset( $_REQUEST['stp_do'] ) && check_admin_referer( 'stp_do' ) ) {
 		$action = sanitize_text_field( wp_unslash( $_REQUEST['stp_do'] ) );
 		$is_post = ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) === 'POST';
-		$destructive = in_array( $action, array( 'gc', 'yc', 'unblock', 'reset' ), true );
+		$destructive = in_array( $action, array( 'gc', 'yc', 'unblock', 'reset', 'repairdb' ), true );
 		if ( $destructive && ! $is_post ) {
-			echo '<div class="notice notice-error is-dismissible"><p>Destructive SecureTrack actions must be submitted with POST.</p></div>';
+			echo '<div class="notice notice-error is-dismissible"><p>SecureTrack maintenance actions must be submitted with POST.</p></div>';
 		} elseif ( $action === 'gc' ) {
 			$wpdb->query( "DELETE FROM " . stp_t('events') . " WHERE flag_status='green'" );
 			echo '<div class="notice notice-success is-dismissible"><p>All green events cleared.</p></div>';
@@ -1361,10 +1361,10 @@ function stp_pg_settings() {
 			echo '<div class="notice notice-success is-dismissible"><p>All IPs unblocked.</p></div>';
 		} elseif ( $action === 'repairdb' ) {
 			$ok = stp_repair_database();
-			echo $ok ? '<div class="notice notice-success is-dismissible"><p>SecureTrack database repaired and verified.</p></div>' : '<div class="notice notice-error is-dismissible"><p>SecureTrack database repair did not complete. Check database user permissions.</p></div>';
+			echo $ok ? '<div class="notice notice-success is-dismissible"><p>SecureTrack database repaired and verified.</p></div>' : '<div class="notice notice-error is-dismissible"><p>SecureTrack maintenance did not complete. Check database access, the maintenance status and the 15-minute retry delay before trying again.</p></div>';
 		} elseif ( $action === 'probe' ) {
 			$eid = stp_log( 'diagnostic', array( 'sub' => 'manual_probe', 'url' => admin_url( 'admin.php?page=stp-settings' ), 'extra' => array( 'source' => 'settings_button', 'time' => current_time( 'mysql' ) ) ) );
-			echo $eid ? '<div class="notice notice-success is-dismissible"><p>Test event inserted. Check Events Log now.</p></div>' : '<div class="notice notice-error is-dismissible"><p>Test event could not be inserted. Use Repair Database, then try again.</p></div>';
+			echo $eid ? '<div class="notice notice-success is-dismissible"><p>Test event inserted. Check Events Log now.</p></div>' : '<div class="notice notice-error is-dismissible"><p>Test event could not be inserted. Check database availability and diagnostics before considering schema maintenance.</p></div>';
 		} elseif ( $action === 'harden' ) {
 			$door = sanitize_key( $_GET['door'] ?? '' );
 			$allowed = array( 'harden_xmlrpc', 'harden_rest_users', 'harden_author_archives', 'author_public_slugs', 'harden_file_editor', 'harden_wp_generator', 'harden_security_headers' );
@@ -1445,7 +1445,6 @@ function stp_pg_settings() {
 			'green_trim_days'   => max( 0, (int)$_POST['green_trim_days'] ),
 			'yellow_trim_days'  => max( 0, (int)$_POST['yellow_trim_days'] ),
 			'alert_email'       => sanitize_email( $old_settings['alert_email'] ?? get_option( 'admin_email' ) ),
-			'alert_on_red'      => (int) isset( $_POST['alert_on_red'] ),
 			'alert_delivery_policy' => in_array( sanitize_key( $_POST['alert_delivery_policy'] ?? 'actionable' ), array( 'actionable', 'yellow_and_actionable' ), true ) ? sanitize_key( $_POST['alert_delivery_policy'] ?? 'actionable' ) : 'actionable',
 			'alert_repeat_window_mins' => max( 1, min( 1440, (int) ( $_POST['alert_repeat_window_mins'] ?? 15 ) ) ),
 			'alert_hourly_limit' => max( 1, min( 100, (int) ( $_POST['alert_hourly_limit'] ?? 8 ) ) ),
@@ -1511,6 +1510,7 @@ function stp_pg_settings() {
 			$new['idle_timeout_mins'] = 0;
 			$new['idle_timeout_roles'] = array();
 		}
+		$new = \DSA\Secure\SecureTrack_Lifecycle_Service::preserve_settings( $new, $raw_old_settings );
 		update_option( 'stp_settings', $new );
 		wp_cache_delete( 'settings', 'securetrack_pro' );
 		if ( $new['v2_ai_provider'] !== ( $old_settings['v2_ai_provider'] ?? 'none' ) || $new['v2_ai_model'] !== ( $old_settings['v2_ai_model'] ?? '' ) || '' !== (string) ( $raw_old_settings['v2_ai_key_enc'] ?? '' ) ) {
@@ -1633,7 +1633,8 @@ function stp_pg_settings() {
         <label><input type="checkbox" name="adaptive_waf" <?php checked($s['adaptive_waf']); ?>> Enable normalized semantic payload detection</label><br>
         Block request at WAF score <input type="number" name="waf_block_score" value="<?php echo esc_attr($s['waf_block_score']); ?>" min="50" max="100" style="width:70px"><br>
         <label><input type="checkbox" name="honeypot_enabled" <?php checked($s['honeypot_enabled']); ?>> Inject dynamic hidden honeypot endpoint</label><br>
-        <label><input type="checkbox" name="tarpit_enabled" <?php checked($s['tarpit_enabled']); ?>> Tarpit severe bots instead of instantly closing the response</label>
+        <label><input type="checkbox" name="tarpit_enabled" <?php checked($s['tarpit_enabled']); ?>> Ask severe bots to retry later (immediate 429 response)</label>
+        <p class="description">Rejects the request immediately so legitimate visitors can use the server. No artificial delay is added.</p>
         <p class="description">Local-only detection for obfuscated SQLi, XSS, PHP execution payloads, traversal, encoded payloads, and bots that scrape hidden links. Emergency monitor-only mode keeps logging but pauses active denials while you investigate false positives.</p>
       </td>
     </tr>
@@ -1744,6 +1745,7 @@ function stp_pg_settings() {
         <label><input type="checkbox" name="track_visitors" <?php checked($s['track_visitors']); ?>> Track visitor sessions</label><br>
         <label><input type="checkbox" name="track_pages"    <?php checked($s['track_pages']); ?>   > Track page navigation &amp; time on page (JS beacon)</label><br>
         <label><input type="checkbox" name="exclude_admin"  <?php checked($s['exclude_admin']); ?>  > Exclude logged-in admins from page-view tracking</label>
+        <p class="description">Optional traffic analytics. Turn visitor sessions and page timing off to reduce database work on busy sites. SecureTrack protection, Key.kiwe sign-in, passkeys, trusted-IP checks and security audit events remain active. Public timing needs both switches; dashboard timing also needs dashboard activity tracking. Already-open pages may send timing requests until refreshed, but disabled tracking will discard them.</p>
       </td>
     </tr>
 
@@ -1770,7 +1772,6 @@ function stp_pg_settings() {
 	<tr>
 	  <th scope="row">Incident Notifications</th>
 	  <td>
-		<label><input type="checkbox" name="alert_on_red" <?php checked($s['alert_on_red']); ?>> Generate SecureTrack incident notifications</label>
 		<p style="margin:8px 0 0">
 			Delivery policy:
 			<select name="alert_delivery_policy">
@@ -1806,6 +1807,10 @@ function stp_pg_settings() {
 
 <hr>
 <h2>🧹 Manual Data Management</h2>
+<p>SecureTrack never creates or alters tables during browsing, publishing or background event logging. Use schema maintenance for initial setup or a verified schema problem. It preserves existing records. Failed or interrupted attempts have a 15-minute retry delay.</p>
+<?php $schema_state = (array) get_option( 'stp_schema_maintenance', array() ); ?>
+<?php if ( ! stp_tables_ready() ): ?><div class="notice notice-warning inline"><p>SecureTrack storage is unavailable or incomplete. Some security event recording is unavailable. Check database access before running maintenance.</p></div><?php endif; ?>
+<?php if ( ! empty( $schema_state['status'] ) ): ?><p>Last schema maintenance: <strong><?php echo esc_html( (string) $schema_state['status'] ); ?></strong></p><?php endif; ?>
 <div class="stp-action-row">
   <form method="post" style="display:inline-block;margin:0 6px 6px 0" onsubmit="return confirm('Toggle SecureTrack emergency monitor-only mode?')">
     <?php wp_nonce_field( 'stp_do' ); ?>
@@ -1823,8 +1828,12 @@ function stp_pg_settings() {
       <button type="submit" class="button"><?php echo esc_html( $label ); ?></button>
     </form>
   <?php endforeach; ?>
-  <a href="<?php echo esc_url( wp_nonce_url( '?page=stp-settings&stp_do=repairdb', 'stp_do' ) ); ?>"
-     class="button button-primary">🛠 Repair Database</a> &nbsp;
+  <form method="post" style="display:inline-block;margin:0 6px 6px 0" onsubmit="return confirm('Run SecureTrack schema maintenance? Existing tables may need locks. Use a quiet maintenance window and a current recovery point.')">
+    <?php wp_nonce_field( 'stp_do' ); ?>
+    <input type="hidden" name="page" value="stp-settings">
+    <input type="hidden" name="stp_do" value="repairdb">
+    <button type="submit" class="button button-primary">Set up or repair SecureTrack tables</button>
+  </form>
   <a href="<?php echo esc_url( wp_nonce_url( '?page=stp-settings&stp_do=probe', 'stp_do' ) ); ?>"
      class="button">🧪 Create Test Event</a> &nbsp;
   <a href="<?php echo esc_url( wp_nonce_url( '?page=stp-settings&stp_do=geonow', 'stp_do' ) ); ?>"

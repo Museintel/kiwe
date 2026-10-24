@@ -32,7 +32,7 @@ final class Bindings_Service {
 				'uses_context'       => [],
 			]
 		);
-		$callback(
+		if ( \DSA\Apps\Store_App_Service::enabled() ) $callback(
 			'kiwe/product',
 			[
 				'label'              => __( 'Kiwe product context', 'dsa' ),
@@ -58,7 +58,7 @@ final class Bindings_Service {
 			'status'      => $this->available() ? 'available' : 'fallback',
 			'description' => __( 'Native bindings for site logo, title, user/account data, WooCommerce context, and trust labels.', 'dsa' ),
 			'fallback'    => __( 'DSA continues using server-rendered PHP data and REST payloads.', 'dsa' ),
-			'sources'     => [
+			'sources'     => array_values( array_filter( [
 				[
 					'name'       => 'kiwe/site',
 					'attributes' => [
@@ -96,18 +96,18 @@ final class Bindings_Service {
 					],
 					'mutations'  => false,
 				],
-				[
+				\DSA\Apps\Store_App_Service::enabled() ? [
 					'name' => 'kiwe/product',
 					'attributes' => [ 'nutrition_image' ],
 					'mutations' => false,
-				],
+				] : null,
 				[
 					'name' => 'kiwe/team',
 					'attributes' => [ 'member_id', 'name', 'title', 'bio', 'image', 'linkedin_url' ],
 					'selectorArgument' => 'memberId',
 					'mutations' => false,
 				],
-			],
+			] ) ),
 		];
 	}
 
@@ -199,6 +199,7 @@ final class Bindings_Service {
 	}
 
 	public function product_value( array $source_args = [], $block_instance = null, string $attribute_name = '' ): string {
+		if ( !\DSA\Apps\Store_App_Service::enabled() ) return '';
 		$key = sanitize_key( $source_args['key'] ?? $source_args['field'] ?? $attribute_name );
 		$context = is_object( $block_instance ) && is_array( $block_instance->context ?? null ) ? $block_instance->context : [];
 		$product_id = absint( $context['postId'] ?? get_the_ID() );

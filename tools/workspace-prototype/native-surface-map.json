@@ -1,0 +1,345 @@
+[
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Media_App_Service.php",
+    "callbacks": [],
+    "features": [
+      "design-library"
+    ],
+    "retainedAccess": "Editor and Author media tasks use WordPress's existing picker and attachment REST authority inside the private Kiwe screen.",
+    "reviewBoundary": "Authenticated role and phone acceptance must show upload/browse, attachment details, permission denial and return to Home without a default WordPress admin screen. RC343 adds complementary native Media views and scoped recovery entrances; object permission and ownership must be rechecked at action time, including after review. Evidence: docs/STATUS-VISIBILITY-RC343-2026-10-13.md."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Post_App_Service.php",
+    "callbacks": [],
+    "features": [
+      "publishing"
+    ],
+    "retainedAccess": "Opt-in React Posts document; disabling the pilot restores the existing native post entry. WordPress owns posts and permissions.",
+    "reviewBoundary": "Admin page registration and menu retention must pass native and authenticated browser checks; REST save success alone does not prove screen access."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/AI_Workspace_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "ai-access"
+    ],
+    "retainedAccess": "RC148 accepted the opt-in dedicated React document over the existing AI policy, preference and allowance authorities. Disabling the experiment restores the existing native page.",
+    "reviewBoundary": "Client responses expose feature choices and aggregate allowance only. Owner app writes are allowlisted, stale-protected and stored in the original dsa_settings.ai authority; credentials and provider URLs remain on the protected technical setup page."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Category_Workspace_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "taxonomy"
+    ],
+    "retainedAccess": "The owner retains bounded historical review controls; eligible client roles receive the separate one-record review-first app.",
+    "reviewBoundary": "Per-object proposals are explicit, actor-bound and stale-safe. Historical library batch ownership remains a separate acceptance area."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Context_Workspace_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "design-library"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage. RC343 adds complementary native Media views and scoped recovery entrances; object permission and ownership must be rechecked at action time, including after review. Evidence: docs/STATUS-VISIBILITY-RC343-2026-10-13.md."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Guest_Contribution_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "guest-applications",
+      "guest-editorial"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Identity_App_Service.php",
+    "callbacks": [],
+    "features": [
+      "identity"
+    ],
+    "retainedAccess": "Existing native identity editor remains the fallback while the React surface is opt-in.",
+    "reviewBoundary": "Review the REST projection, media picker handoff and native Design Context writer together; callback presence alone does not prove field coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Navigation_Workspace_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "menu"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Page_Workspace_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "publishing"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Site_Owner_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "account",
+      "security"
+    ],
+    "retainedAccess": "Existing technical owner controls retained under current capabilities.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Team_Workspace_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "people"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Taxonomy_App_Service.php",
+    "callbacks": [
+      "render_fallback"
+    ],
+    "features": [
+      "taxonomy"
+    ],
+    "retainedAccess": "Native category workspace remains available as the fallback while the React taxonomy surface is opt-in.",
+    "reviewBoundary": "Review allowlisted term definitions, service taxonomy discovery, indexing metadata and relationship outcomes together; callback presence alone does not prove field coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Workspace_Admin_Service.php",
+    "callbacks": [
+      "render_dashboard"
+    ],
+    "features": [
+      "publishing",
+      "commerce",
+      "identity"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Admin/Admin.php",
+    "callbacks": [
+      "render_abandoned_cart_page",
+      "render_ai_page",
+      "render_app_page",
+      "render_appshell_page",
+      "render_attributes_page",
+      "render_auth_page",
+      "render_bricks_page",
+      "render_build_page",
+      "render_commerce_page",
+      "render_context_page",
+      "render_database_page",
+      "render_developer_page",
+      "render_dock_page",
+      "render_email_page",
+      "render_framework_page",
+      "render_games_page",
+      "render_haptic_page",
+      "render_links_page",
+      "render_menu_page",
+      "render_overview_page",
+      "render_page",
+      "render_search_page",
+      "render_secure_page",
+      "render_security_page",
+      "render_site_graph_page",
+      "render_store_analytics_page",
+      "render_system_page",
+      "render_theme_page",
+      "render_woocommerce_page"
+    ],
+    "features": [
+      "identity",
+      "commerce",
+      "ai-access",
+      "menu",
+      "account",
+      "pwa",
+      "security",
+      "campaigns",
+      "seam"
+    ],
+    "retainedAccess": "Existing technical owner controls remain under current capabilities. RC148 connects safe AI gates and allowance ceilings to the dedicated app while provider credentials, destinations and broader technical configuration stay here.",
+    "reviewBoundary": "The RC148 AI adapter is accepted only for its declared allowlist. Other callbacks and technical controls remain separate review responsibilities; callback presence alone does not prove coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Notifications/Notification_Center_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "notification-preferences",
+      "notification-inbox",
+      "campaigns"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Onboarding/Onboarding_Service.php",
+    "callbacks": [
+      "render"
+    ],
+    "features": [
+      "identity",
+      "taxonomy",
+      "commerce",
+      "people",
+      "design-library"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/PhoneKey/phonekey-core.php",
+    "callbacks": [],
+    "features": [
+      "account"
+    ],
+    "retainedAccess": "Existing technical owner controls retained under current capabilities.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Secure/SecureTrack_Admin_Service.php",
+    "callbacks": [],
+    "features": [
+      "security"
+    ],
+    "retainedAccess": "Existing technical owner controls retained under current capabilities.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/SEO/SEO_Refinement_Service.php",
+    "callbacks": [
+      "render",
+      "render_object_workspace"
+    ],
+    "features": [
+      "seo"
+    ],
+    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Commerce_App_Service.php",
+    "callbacks": [
+      "render_fallback"
+    ],
+    "features": [
+      "commerce"
+    ],
+    "retainedAccess": "Flagged Store workspace; original product creation and advanced editing stay linked. Flag off retains native Woo routes.",
+    "reviewBoundary": "Basic simple products and authorized order summaries only; broader Woo controls remain explicit launch blockers."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Continuity_App_Service.php",
+    "callbacks": [],
+    "features": [
+      "publishing",
+      "design-library",
+      "identity",
+      "commerce",
+      "taxonomy",
+      "services"
+    ],
+    "retainedAccess": "Opt-in Pages, library and business tile adapters over existing native task writers. Original forms remain when disabled.",
+    "reviewBoundary": "Field inventory, source permissions, optimistic writes and browser acceptance remain separate evidence."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Template_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "templates"
+    ],
+    "retainedAccess": "Bricks owns native templates and its builder; Kiwe presents type, title and draft creation through a private document.",
+    "reviewBoundary": "Installed Bricks type list, per-object capability, same-site builder link and stale rename need native and authenticated browser proof."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Backup_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "backup"
+    ],
+    "retainedAccess": "WordPress and Woo settings remain native; the private client task adds encrypted allowlisted settings copies. Host recovery stays with its provider. Shared child archive controller adds role-checked native card downloads and reviewed draft import across content collections; hosting requests reuse the existing owner and transport authorities.",
+    "reviewBoundary": "RC228 settings-only recovery has 25 native checks, signed-in Chrome download/upload/recovery, responsive review and cleanup proof in docs/BACKUPS-RC228-2026-10-02.md. Native browser confirmation completion is unverified; content/Bricks, chunked media and Drive/provider recovery remain later units. Archive roles, complete collection recovery and outbound-blocked ticket checks require native proof."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Analytics_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "analytics"
+    ],
+    "retainedAccess": "SecureTrack, WordPress, WooCommerce, campaigns and PWA remain the measurement owners; Kiwe presents bounded aggregates.",
+    "reviewBoundary": "Context permissions, absent-data labels, no personal telemetry, goal freshness and explicit AI review/save need native and authenticated browser proof."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Dock_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "dock-controls"
+    ],
+    "retainedAccess": "Native technical Dock forms retain their handlers and shared normalizer. Theme_Package_Service remains the installed-skin owner. Setup → Dock → Appearance is the client theme editing home.",
+    "reviewBoundary": "Explicit native setting and installed-theme allowlists; bounded client navigation capability/session/nonce/origin/mutation proof; paired native foundation; stale catalog and numeric-bound refusal; atomic selective writes without provider/account state or technical capability grants."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Trash_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "native-trash"
+    ],
+    "retainedAccess": "Private native WordPress content, attachment and feedback Trash; native object capabilities remain authoritative.",
+    "reviewBoundary": "Actual role admission, recoverable trash/restore, actor-bound reviewed deletion, stale/conflict rejection, bounded current-tab clearing and cleanup must pass native lab and authenticated browser acceptance. RC343 adds complementary native Media views and scoped recovery entrances; object permission and ownership must be rechecked at action time, including after review. Evidence: docs/STATUS-VISIBILITY-RC343-2026-10-13.md."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Form_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "forms"
+    ],
+    "retainedAccess": "Bricks owns original saved submissions and email actions; only the client Administrator and designated technical owner can enter this private Kiwe projection.",
+    "reviewBoundary": "Native owner/staff admission, nonce/origin, cursor/body bounds and sensitive-field omission pass on signed lab RC379; actual native browser submission/save/recipient and responsive private detail pass with zero email delivered. Current inbox projects plain Bricks submissions only; no duplicate store, public read or mutation route. Evidence: docs/START-AND-FORMS-2026-10-17.md."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/App_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "app-workspace"
+    ],
+    "retainedAccess": "One client App editor over existing dsa_settings and native audience, WordPress users and consent owners.",
+    "reviewBoundary": "APP109 requires native settings/migration/denial/identity/readiness and real responsive browser review; source completion is not production acceptance."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Apps/Library_Service.php",
+    "callbacks": [],
+    "features": [
+      "independent-apps"
+    ],
+    "retainedAccess": "Native software managers get the shared Kiwe Apps screen; store managers keep existing Store tasks without plugin-install authority.",
+    "reviewBoundary": "Installation, automatic-update changes and code recovery keep native capabilities, current nonce, origin/mutation and reviewed expected-state checks. Actual native/browser acceptance remains pending AP01–AP06."
+  }
+]

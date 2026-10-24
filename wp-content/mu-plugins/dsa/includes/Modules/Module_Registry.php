@@ -100,8 +100,8 @@ final class Module_Registry {
 		$this->register(
 			[
 				'id'          => 'ai',
-				'label'       => __( 'AI Assistant', 'dsa' ),
-				'icon'        => $this->lucide_icon( 'sparkles' ),
+				'label'       => __( 'Notifications', 'dsa' ),
+				'icon'        => $this->lucide_icon( 'bell' ),
 				'order'       => 90,
 				'panel'       => 'ai',
 				'binder'      => '',
@@ -141,7 +141,7 @@ final class Module_Registry {
 		if ( 'external-link' === $name ) {
 			return '<svg class="dsa-lucide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>';
 		}
-		$href = esc_url( DSA_URL . 'assets/icons/lucide/sprite.svg' ) . '#' . $name;
+		$href = esc_url( DSA_URL . 'assets/icons/lucide/sprite.svg?ver=' . rawurlencode( defined( 'DSA_VERSION' ) ? DSA_VERSION : '1' ) ) . '#' . $name;
 		return '<svg class="dsa-lucide" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' . esc_attr( $href ) . '"></use></svg>';
 	}
 
@@ -211,6 +211,7 @@ final class Module_Registry {
 		$badges = isset( $context['badges'] ) && is_array( $context['badges'] ) ? $context['badges'] : [];
 		$labels = isset( $context['labels'] ) && is_array( $context['labels'] ) ? $context['labels'] : [];
 		$modules = array_merge( $this->public_modules(), $this->custom_link_modules( $dock ) );
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) unset( $modules['cart'] );
 		$order = isset( $dock['item_order'] ) && is_array( $dock['item_order'] )
 			? array_values( array_unique( array_map( 'sanitize_key', $dock['item_order'] ) ) )
 			: [];
@@ -269,6 +270,7 @@ final class Module_Registry {
 	}
 
 	public function manifest_contract( array $dock ): array {
+		// Manifest and rendered Dock share the same real Store availability.
 		$enabled = array_replace(
 			[
 				'menu'    => true,
@@ -284,6 +286,7 @@ final class Module_Registry {
 			isset( $dock['enabled_items'] ) && is_array( $dock['enabled_items'] ) ? $dock['enabled_items'] : []
 		);
 		$modules = array_merge( $this->public_modules(), $this->custom_link_modules( $dock ) );
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) unset( $modules['cart'] );
 		$order = isset( $dock['item_order'] ) && is_array( $dock['item_order'] )
 			? array_values( array_unique( array_map( 'sanitize_key', $dock['item_order'] ) ) )
 			: [];

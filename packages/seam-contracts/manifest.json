@@ -9,6 +9,8 @@
     { "name": "siteGraphSnapshot", "schema": "seam.sitegraph-snapshot.v1", "file": "schemas/seam.sitegraph-snapshot.v1.schema.json", "type": "SeamSitegraphSnapshotV1" },
     { "name": "bindings", "schema": "kiwe.bricks-bindings.v1", "file": "../../kiwe-ai-toolkit/schemas/bricks-bindings.schema.json", "type": "KiweBricksBindingsV1" },
     { "name": "assetImportPlan", "schema": "seam.asset-import-plan.v1", "file": "schemas/seam.asset-import-plan.v1.schema.json", "type": "SeamAssetImportPlanV1" },
+    { "name": "packageIntegrity", "schema": "seam.package-integrity.v1", "file": "schemas/seam.package-integrity.v1.schema.json", "type": "SeamPackageIntegrityV1" },
+    { "name": "styleDependencies", "schema": "seam.style-dependencies.v1", "file": "schemas/seam.style-dependencies.v1.schema.json", "type": "SeamStyleDependenciesV1" },
     { "name": "deploymentPlan", "schema": "seam.deployment-plan.v1", "file": "schemas/seam.deployment-plan.v1.schema.json", "type": "SeamDeploymentPlanV1" },
     { "name": "visualProof", "schema": "seam.visual-proof.v1", "file": "schemas/seam.visual-proof.v1.schema.json", "type": "SeamVisualProofV1" },
     { "name": "repairPlan", "schema": "seam.repair-plan.v1", "file": "schemas/seam.repair-plan.v1.schema.json", "type": "SeamRepairPlanV1" },

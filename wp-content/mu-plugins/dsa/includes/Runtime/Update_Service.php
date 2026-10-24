@@ -19,6 +19,8 @@ final class Update_Service {
 	public const STATE_OPTION    = 'kiwe_update_state';
 	public const CRON_HOOK       = 'kiwe_signed_update_check';
 
+	private bool $owns_release_lease = false;
+
 	private const LOCK_OPTION     = 'kiwe_update_lock';
 	private const FEED_BASE       = 'https://app.kiwelaunch.com/updates/kiwe/v1/';
 	private const SCHEMA          = 'kiwe.mu-release.v1';
@@ -93,12 +95,16 @@ final class Update_Service {
 	 */
 	public function check( bool $force = false ): array {
 		$state = $this->state();
-		if ( ! $force && ! empty( $state['release'] ) && ( time() - (int) ( $state['checked_at'] ?? 0 ) ) < self::CHECK_TTL ) {
+		$channel = (string) $this->settings()['channel'];
+		$profile = \DSA\Apps\Package_Layout::BUNDLED ? 'bundled' : 'core';
+		if ( ! $force && ( $state['profile'] ?? '' ) === $profile && ! empty( $state['release'] ) && $this->verify_release( (array) $state['release'], $channel ) && ( time() - (int) ( $state['checked_at'] ?? 0 ) ) < self::CHECK_TTL ) {
 			return (array) $state['release'];
 		}
 
-		$channel = (string) $this->settings()['channel'];
-		$url     = apply_filters( 'kiwe_update_feed_url', self::FEED_BASE . $channel . '.json', $channel );
+		// Legacy installations keep their bundled feed until a reviewed migration.
+		// Independent Core cannot follow that feed and silently regain optional engines.
+		$feed = ( $profile === 'core' ? 'core-' : '' ) . $channel;
+		$url = apply_filters( 'kiwe_update_feed_url', self::FEED_BASE . $feed . '.json', $channel );
 		if ( ! $this->is_trusted_release_url( $url, false ) ) {
 			throw new \RuntimeException( 'Kiwe update feed must use the trusted HTTPS release origin.' );
 		}
@@ -127,6 +133,7 @@ final class Update_Service {
 		$release['available'] = version_compare( (string) $release['version'], DSA_VERSION, '>' );
 		$state = [
 			'checked_at' => time(),
+			'profile'    => $profile,
 			'release'    => $release,
 			'last_error' => '',
 		] + $state;
@@ -306,6 +313,7 @@ final class Update_Service {
 			throw new \RuntimeException( 'Kiwe inner package manifest is invalid.' );
 		}
 
+		\DSA\Apps\Migration_Service::assert_core_profile( $manifest );
 		foreach ( $manifest['files'] as $relative => $proof ) {
 			$relative = str_replace( '\\', '/', (string) $relative );
 			if ( '' === $relative || str_starts_with( $relative, '/' ) || str_contains( $relative, '../' ) ) {
@@ -337,7 +345,7 @@ final class Update_Service {
 
 	private function swap_package( string $source, array $release ): void {
 		$mu_root      = trailingslashit( WP_CONTENT_DIR ) . 'mu-plugins';
-		$upgrade_root = trailingslashit( WP_CONTENT_DIR ) . 'upgrade';
+		$upgrade_root = \DSA\Runtime\Private_Storage::directory( 'releases', true );
 		$backup       = trailingslashit( $upgrade_root ) . 'kiwe-backup-' . wp_generate_uuid4();
 		$transaction  = trailingslashit( $mu_root ) . self::TRANSACTION_FILE;
 		if ( ! is_dir( $mu_root ) || ! wp_mkdir_p( $backup ) ) {
@@ -384,6 +392,9 @@ final class Update_Service {
 					throw new \RuntimeException( 'Kiwe could not atomically replace ' . $file . '.' );
 				}
 			}
+			if ( ! function_exists( 'kiwe_mu_refresh_php_runtime' ) || ! kiwe_mu_refresh_php_runtime( $mu_root ) ) {
+				throw new \RuntimeException( 'Kiwe could not refresh the host PHP runtime after activation.' );
+			}
 
 			$record['state'] = 'awaiting_boot';
 			if ( false === file_put_contents( $transaction, wp_json_encode( $record, JSON_UNESCAPED_SLASHES ), LOCK_EX ) ) {
@@ -391,45 +402,38 @@ final class Update_Service {
 			}
 			delete_option( 'dsa_package_manifest_proof' );
 		} catch ( \Throwable $error ) {
-			$this->rollback_now( $mu_root, $backup );
-			@unlink( $transaction );
+			if ( ! $this->rollback_now( $mu_root, $backup ) ) {
+				throw new \RuntimeException( 'Kiwe update and automatic recovery could not finish. The rollback files and transaction were retained for a complete restore.', 0, $error );
+			}
 			throw $error;
 		}
 	}
 
-	private function rollback_now( string $mu_root, string $backup ): void {
-		$target = trailingslashit( $mu_root ) . 'dsa';
-		$failed = trailingslashit( dirname( $backup ) ) . 'kiwe-failed-' . wp_generate_uuid4();
-		if ( ! is_dir( trailingslashit( $backup ) . 'dsa' ) ) {
-			$this->remove_tree( $backup );
-			return;
-		}
-		if ( is_dir( $target ) ) {
-			@rename( $target, $failed );
-		}
-		if ( is_dir( trailingslashit( $backup ) . 'dsa' ) ) {
-			@rename( trailingslashit( $backup ) . 'dsa', $target );
-		}
-		foreach ( [ 'dsa.php', 'kiwe-incident-guard.php' ] as $file ) {
-			if ( is_file( trailingslashit( $backup ) . $file ) ) {
-				@copy( trailingslashit( $backup ) . $file, trailingslashit( $mu_root ) . $file );
-			}
-		}
-		$this->remove_tree( $failed );
-		$this->remove_tree( $backup );
+	private function rollback_now( string $mu_root, string $backup ): bool {
+		// The matching root loader owns one checked recovery path. If unavailable,
+		// retain the transaction and backup instead of attempting unchecked deletes.
+		if ( ! function_exists( 'kiwe_mu_rollback_update' ) || realpath( $mu_root ) !== realpath( trailingslashit( WP_CONTENT_DIR ) . 'mu-plugins' ) ) return false;
+		return \kiwe_mu_rollback_update( [ 'backup'=>$backup, 'oldVersion'=>DSA_VERSION ] );
 	}
 
 	private function acquire_lock(): bool {
+		if ( ! \DSA\Apps\Release_Coordinator::acquire() ) return false;
+		$this->owns_release_lease = true;
 		$lock = get_option( self::LOCK_OPTION, [] );
 		if ( is_array( $lock ) && ! empty( $lock['time'] ) && ( time() - (int) $lock['time'] ) < self::LOCK_TTL ) {
+			$this->owns_release_lease = false; \DSA\Apps\Release_Coordinator::release();
 			return false;
 		}
 		delete_option( self::LOCK_OPTION );
-		return add_option( self::LOCK_OPTION, [ 'time' => time(), 'token' => wp_generate_uuid4() ], '', false );
+		$added = add_option( self::LOCK_OPTION, [ 'time' => time(), 'token' => wp_generate_uuid4() ], '', false );
+		if ( ! $added ) { $this->owns_release_lease = false; \DSA\Apps\Release_Coordinator::release(); }
+		return $added;
 	}
 
 	private function release_lock(): void {
+		if ( ! $this->owns_release_lease ) return;
 		delete_option( self::LOCK_OPTION );
+		$this->owns_release_lease = false; \DSA\Apps\Release_Coordinator::release();
 	}
 
 	private function record_error( string $message ): void {

@@ -49,7 +49,7 @@ final class Design_Context_Enhancement_Service {
 				'frameworkOptInRequired' => true,
 			],
 			'lockedPaths' => array_merge( [
-				'ownerContext.identity.siteName', 'ownerContext.identity.logo', 'ownerContext.identity.logoInverse', 'ownerContext.identity.siteIcon',
+				'ownerContext.identity.siteName', 'ownerContext.identity.logo', 'ownerContext.identity.logoInverse', 'ownerContext.identity.siteIcon', 'ownerContext.identity.squareLogo', 'ownerContext.identity.roundLogo', 'ownerContext.business',
 				'ownerContext.contact', 'ownerContext.localization', 'ownerContext.about', 'ownerContext.services', 'ownerContext.resources', 'ownerContext.regulatory', 'ownerContext.contentPlan', 'ownerContext.commercePlan',
 				'ownerContext.seo.legalName', 'ownerContext.seo.foundedYear', 'ownerContext.seo.allowIndexing',
 			], $locked_colors ),
@@ -107,7 +107,7 @@ final class Design_Context_Enhancement_Service {
 	public function resolved_profile( ?array $owner = null ): array {
 		$owner = $owner ?: $this->profiles->current();
 		$enhancement = $this->approved();
-		if ( ! $enhancement || ( $enhancement['sourceContextHash'] ?? '' ) !== $this->owner_context_hash() ) return $owner;
+		if ( ! $enhancement || ! $this->matches_approved_owner_hash((string)($enhancement['sourceContextHash'] ?? '')) ) return $owner;
 		$s = $enhancement['suggestions'];
 		if ( '' !== ( $s['copy']['businessDescription'] ?? '' ) ) $owner['identity']['description'] = $s['copy']['businessDescription'];
 		foreach ( [ 'brandStory'=>'story', 'mission'=>'mission', 'vision'=>'vision', 'values'=>'values', 'usp'=>'usp' ] as $suggestion => $owner_key ) {
@@ -129,6 +129,18 @@ final class Design_Context_Enhancement_Service {
 			'ownerEvidencePreserved' => true,
 		];
 		return $owner;
+	}
+
+	/** Added empty/derived fields must not invalidate unchanged, already approved editorial evidence. */
+	private function matches_approved_owner_hash( string $expected ): bool {
+		$context = $this->profiles->public_context(false); unset($context['scores']);
+		$encode = static fn(array $value): string => hash('sha256',(string)wp_json_encode($value,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));
+		if (hash_equals($encode($context),$expected)) return true;
+		if (!empty($context['identity']['squareLogo']) || !empty($context['identity']['roundLogo'])) return false;
+		$legacy_profile = ['identity'=>$context['identity'] ?? [],'contentPlan'=>$context['contentPlan'] ?? []];
+		if (\DSA\Bricks\Design_Context_Binding_Service::activities($legacy_profile) !== ($context['business']['activities'] ?? [])) return false;
+		unset($context['business'],$context['identity']['squareLogo'],$context['identity']['roundLogo']);
+		return hash_equals($encode($context),$expected);
 	}
 
 	public function resolved_public_context( bool $administrator = false ): array {

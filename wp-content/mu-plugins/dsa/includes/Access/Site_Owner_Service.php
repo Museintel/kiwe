@@ -52,7 +52,7 @@ final class Site_Owner_Service {
 	}
 
 	public static function allowed_roles(): array {
-		$roles = [ 'subscriber', 'kiwe_user', 'customer', 'author', 'editor', 'contributor', 'administrator' ];
+		$roles = [ 'subscriber', 'kiwe_user', 'customer', 'author', 'editor', 'contributor', Template_Workspace_Service::ROLE, 'administrator' ];
 		if ( ( new \DSA\Onboarding\Design_Context_Profile_Service() )->commerce_available() ) $roles[] = 'shop_manager';
 		return $roles;
 	}

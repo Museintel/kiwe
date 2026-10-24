@@ -28,6 +28,9 @@ final class Autoloader {
 			return;
 		}
 
+		// Only an actually registered normal App may supply a missing optional class.
+		if ( class_exists( \DSA\Apps\Runtime_Registry::class, false ) && \DSA\Apps\Runtime_Registry::load( $class ) ) return;
+
 		if ( function_exists( 'kiwe_mu_debug_log' ) && empty( $reported_misses[ $class ] ) ) {
 			$reported_misses[ $class ] = true;
 			\kiwe_mu_debug_log( 'Autoload miss', [ 'class' => $class ] );

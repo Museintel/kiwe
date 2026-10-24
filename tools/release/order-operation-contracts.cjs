@@ -1,0 +1,21 @@
+const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
+const root=path.resolve(__dirname,'../..'),checks=[];
+function check(ok,label){checks.push({label,passed:!!ok});if(!ok)throw Error(label);}
+const owner=fs.readFileSync(path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Order_Workspace_Service.php'),'utf8'),ui=fs.readFileSync(path.join(root,'tools/workspace-prototype/native-order.jsx'),'utf8'),app=fs.readFileSync(path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Commerce_App_Service.php'),'utf8');
+check(owner.includes("wc_get_order( $id )")&&owner.includes('get_data_store()->read')&&owner.includes('read_meta_data( true )'),'Fresh native order owner');
+check(owner.includes("current_user_can( 'edit_shop_order', $id )")&&owner.includes("current_user_can( 'edit_others_shop_orders' )"),'Native coarse and exact object capabilities');
+check(owner.includes("SELECT GET_LOCK(%s, 0)")&&owner.includes('SELECT RELEASE_LOCK')&&!owner.includes('START TRANSACTION'),'Nonblocking native action lock without fictional side-effect rollback');
+check(owner.includes('payment_complete( $reference )')&&owner.includes('get_class( $gateway ) === $classes[$id]')&&!owner.includes('process_payment('),'Core offline receipts use native payment lifecycle, never gateway capture');
+check(owner.includes('add_order_note( sanitize_textarea_field( $note ), 0, true )'),'Private native note owner');
+check(owner.includes('hash_hmac')&&owner.includes("'notes' => $notes")&&owner.includes("'gateway' => $gateway"),'Review includes native order notes and gateway state');
+check(owner.includes('! $order->get_refunds()')&&owner.includes("in_array( get_class( $order ), [ 'WC_Order', 'Automattic")&&owner.includes('Overrides'),'Refund boundaries admit only native core order classes');
+check(owner.includes('remove_filter(')&&owner.includes('woocommerce_valid_order_statuses_for_payment_complete'),'Request-scoped COD compatibility filter retired');
+check(ui.includes('CoreTabs')&&ui.includes('WorkspaceDialog')&&ui.includes('Refresh saved state')&&!ui.includes('setInterval')&&!ui.includes('localStorage'),'Shared journey and uncertain-state recovery without polling or persisted draft');
+check(app.includes("'/workspace/commerce/orders/(?P<id>[1-9][0-9]*)/actions'")&&app.includes("$input['operation'] = 'complete'"),'New action and legacy completion share one order owner');
+const php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe';
+for(const file of ['wp-content/mu-plugins/dsa/includes/Access/Order_Workspace_Service.php','tools/release/test-wordpress-order-operations.php'])check(spawnSync(php,['-l',path.join(root,file)],{encoding:'utf8'}).status===0,'PHP syntax '+file);
+const file=path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Order_Workspace_Service.php').replaceAll('\\','/');
+const disabled="define('ABSPATH',__DIR__);class WP_Error{} function is_wp_error($v){return $v instanceof WP_Error;} function current_user_can($c){throw new RuntimeException('Unexpected permission work');} require "+JSON.stringify(file)+"; $s=new \\DSA\\Access\\Order_Workspace_Service();if($s::available()||!($s->review(1) instanceof WP_Error)||!($s->change(1,[]) instanceof WP_Error))exit(1);echo 'disabled';";
+const proof=spawnSync(php,['-r',disabled],{encoding:'utf8'});check(proof.status===0&&proof.stdout==='disabled','Non-Woo reads/writes stop before capabilities or database');
+const legacy=spawnSync(php,[path.join(root,'tools/release/test-order-fulfilment.php')],{encoding:'utf8'});check(legacy.status===0&&legacy.stdout.includes('Order fulfilment boundary checks passed.'),'Existing fulfilment nonce lock stale and replay behavior retained');
+console.log(JSON.stringify({passed:true,checks:checks.length,scope:'Source and executable disabled/legacy fixtures. Exact native CPT/HPOS acceptance is separate.'}));

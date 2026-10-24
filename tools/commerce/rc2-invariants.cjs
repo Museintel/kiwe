@@ -3,7 +3,7 @@ const path = require( 'path' );
 
 const root = path.resolve( __dirname, '..', '..' );
 const reward = fs.readFileSync( path.join( root, 'wp-content/mu-plugins/dsa/includes/Rewards/Reward_Service.php' ), 'utf8' );
-const commerce = fs.readFileSync( path.join( root, 'wp-content/mu-plugins/dsa/includes/Commerce/Store_Analytics_Service.php' ), 'utf8' );
+const commerce = fs.readFileSync( path.join( root, 'wp-content/mu-plugins/dsa/includes/Commerce/Store_Commerce_Analytics_Service.php' ), 'utf8' );
 
 const assertions = [
 	[ reward.includes( '$duration_ms = $server_duration_ms;' ), 'reward duration is server authoritative' ],

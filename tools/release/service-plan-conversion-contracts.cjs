@@ -1,0 +1,10 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),{spawnSync}=require('node:child_process');
+const result=spawnSync(process.env.KIWE_PHP||'php',['tools/release/test-service-plan-conversion.php'],{encoding:'utf8',windowsHide:true});
+assert.equal(result.status,0,result.stdout+result.stderr);assert(!/Warning:|Fatal error:|Deprecated:/.test(result.stdout+result.stderr));console.log(result.stdout.trim());
+const source=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Onboarding/Native_Service_Conversion_Service.php','utf8');
+assert(source.includes('->save_service_record(')&&source.includes('Archive_Cipher::seal(')&&source.includes('Archive_Cipher::open('));
+assert(source.includes("$wpdb->query('ROLLBACK')")&&source.includes("$wpdb->query('COMMIT')")&&source.includes('FOR UPDATE')&&source.includes("'INNODB'"));
+assert(!/wp_mail|wp_remote_|CREATE TABLE|ALTER TABLE|wp_schedule|set_transient/.test(source),'conversion must have no provider scheduler second inventory or schema write');
+const ui=fs.readFileSync('tools/workspace-prototype/service-conversion.jsx','utf8');assert(ui.includes('WorkspaceDialog')&&ui.includes("setState('uncertain')")&&ui.includes('result.changed!==true')&&ui.includes('value.count!==value.items.length'));
+const routes=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Continuity_App_Service.php','utf8');assert(routes.includes("'convert_service_plans'")&&routes.includes("'service_conversion_undo'")&&routes.includes("'sort'=>$request->get_param('sort'),'status'=>$request->get_param('status')"));
+console.log('PASS Service conversion native writer, atomic recovery, strict transport and shared dialog contracts');

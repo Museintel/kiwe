@@ -2,9 +2,10 @@
 
 namespace DSA\Schema;
 
-use DSA\Diagnostics\Runtime_Profiler;
 use DSA\Element_Registry;
 use DSA\Settings;
+use DSA\SEO\SEO_Defaults_Service;
+use DSA\Onboarding\SEO_Context_Service;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -21,18 +22,18 @@ final class Schema_Geo_Service {
 	}
 
 	public function print_schema(): void {
-		if ( ! $this->settings->get( 'enabled', true ) || ! $this->is_indexable_request() || $this->external_schema_provider() ) {
+		if ( ! $this->settings->get( 'enabled', true ) || ! SEO_Defaults_Service::enabled() || $this->external_schema_provider() ) {
 			return;
 		}
 
 		$config = $this->settings->get( 'schema_geo', [] );
 		$config = is_array( $config ) ? $config : [];
 
-		if ( empty( $config['enabled'] ) ) {
+		if ( empty( $config['enabled'] ) || ! $this->is_indexable_request() ) {
 			return;
 		}
 
-		$graph = $this->schema_graph( $config );
+		$graph = apply_filters( 'dsa_schema_geo_graph', $this->schema_graph( $config ) );
 
 		if ( empty( $graph ) ) {
 			return;
@@ -72,15 +73,14 @@ final class Schema_Geo_Service {
 	}
 
 	private function schema_graph( array $config ): array {
-		$cache_key = $this->cache_key( $config );
-		$profile   = Runtime_Profiler::start();
-		$cached    = get_transient( $cache_key );
-		Runtime_Profiler::finish( 'transient.schema.read', $profile, is_array( $cached ) );
-
-		if ( is_array( $cached ) ) {
-			return $cached;
+		// Deterministic native facts are already request-cached by WordPress. Avoid a
+		// route/query-specific transient for every possible visitor URL.
+		$id = is_singular() ? (int) get_queried_object_id() : 0;
+		if ( $id && metadata_exists( 'post', $id, Schema_Template_Service::META ) ) {
+			$facts = apply_filters( 'dsa_schema_geo_facts', [] );
+			$imported = Schema_Template_Service::graph( $id, $facts );
+			return is_array( $imported ) ? $imported : [];
 		}
-
 		$graph = [];
 
 		if ( ! empty( $config['webpage'] ) ) {
@@ -107,16 +107,12 @@ final class Schema_Geo_Service {
 			}
 		}
 
-		$profile = Runtime_Profiler::start();
-		set_transient( $cache_key, $graph, 12 * HOUR_IN_SECONDS );
-		Runtime_Profiler::finish( 'transient.schema.write', $profile );
-
 		return $graph;
 	}
 
 	private function webpage_schema( array $config ): array {
 		$url      = $this->current_url();
-		$post_id  = (int) get_queried_object_id();
+		$post_id  = is_singular() ? (int) get_queried_object_id() : 0;
 		$title    = wp_strip_all_tags( wp_get_document_title() );
 		$schema   = [
 			'@type'       => is_singular( 'post' ) ? 'Article' : 'WebPage',
@@ -135,6 +131,11 @@ final class Schema_Geo_Service {
 
 		if ( is_singular() ) {
 			$schema['headline'] = get_the_title( $post_id );
+			$schema['datePublished'] = get_post_time( DATE_W3C, false, $post_id );
+			if ( 'Article' === $schema['@type'] ) {
+				$post = get_post( $post_id ); $author = $post ? get_userdata( (int) $post->post_author ) : null;
+				if ( $author ) $schema['author'] = [ '@type'=>'Person', 'name'=>(string)$author->display_name, 'url'=>get_author_posts_url( $author->ID ) ];
+			}
 			$excerpt = $this->excerpt( $post_id );
 
 			if ( '' !== $excerpt ) {
@@ -407,8 +408,9 @@ final class Schema_Geo_Service {
 
 	private function modified_time( int $post_id ): string {
 		if ( ! $post_id ) {
-			$modified = get_lastpostmodified( 'GMT' );
-			return $modified ? gmdate( 'c', strtotime( $modified . ' UTC' ) ) : 'route-static';
+			// Collections have no single native modification clock. Avoid a last-post
+			// query merely to populate optional schema metadata on ordinary visits.
+			return '';
 		}
 
 		$modified = get_post_modified_time( 'c', true, $post_id );
@@ -444,6 +446,8 @@ final class Schema_Geo_Service {
 		if ( is_admin() || wp_doing_ajax() || wp_is_json_request() || is_feed() || is_robots() || is_preview() || is_search() || is_404() ) {
 			return false;
 		}
+		$robots = apply_filters( 'wp_robots', [] );
+		if ( ! empty( $robots['noindex'] ) ) return false;
 
 		if ( '0' === (string) get_option( 'blog_public', '1' ) ) {
 			return false;

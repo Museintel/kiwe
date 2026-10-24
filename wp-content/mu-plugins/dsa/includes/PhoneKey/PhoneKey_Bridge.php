@@ -9,9 +9,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class PhoneKey_Bridge {
+	/** Format an already-public business contact; never reads account factors. */
+	public static function normalize_public_phone( string $phone ): string {
+		return function_exists( 'pk_normalize_phone' ) ? (string) pk_normalize_phone( $phone ) : (string) preg_replace( '/[^0-9+]/', '', $phone );
+	}
+
+	/** A billing address is not proof of a marketing destination. Never expose this in projections. */
+	public static function campaign_contact( int $id, string $channel ): string {
+		if ( $id < 1 || ! function_exists( 'pk_factor' ) || ! function_exists( 'pk_factor_verified' ) ) return '';
+		$type = 'email' === $channel ? 'email' : ( in_array( $channel, [ 'sms','whatsapp' ], true ) ? 'phone' : '' );
+		if ( ! $type || ! pk_factor_verified( $id, $type ) ) return '';
+		$factor = pk_factor( $id, $type ); if ( ! is_array( $factor ) || 'verified' !== ( $factor['status'] ?? '' ) ) return '';
+		if ( 'email' === $type ) {
+			$user = get_userdata( $id ); $email = $user ? sanitize_email( $user->user_email ) : '';
+			return $email && function_exists( 'pk_hmac' ) && hash_equals( (string) ( $factor['factor_hash'] ?? '' ), (string) pk_hmac( $email ) ) ? $email : '';
+		}
+		if ( ! function_exists( 'pk_decrypt' ) || ! function_exists( 'pk_normalize_phone' ) ) return '';
+		$phone = (string) pk_normalize_phone( (string) pk_decrypt( (string) ( $factor['factor_value'] ?? '' ) ) );
+		return preg_match( '/^\+[1-9][0-9]{7,14}$/', $phone ) ? $phone : '';
+	}
 	private $cart_payload;
 
-	public function __construct( Cart_Payload_Service $cart_payload ) {
+	public function __construct( Cart_Payload_Service|\Closure $cart_payload ) {
 		$this->cart_payload = $cart_payload;
 	}
 
@@ -21,6 +40,32 @@ final class PhoneKey_Bridge {
 
 	public static function account_verified( int $user_id ): bool {
 		return $user_id > 0 && ( function_exists( 'pk_account_verified' ) ? (bool) pk_account_verified( $user_id ) : (bool) get_user_meta( $user_id, 'pk_verified_at', true ) );
+	}
+
+	/** Private account-management projection; PhoneKey remains the factor authority. */
+	public static function security_completion( int $user_id ): ?array {
+		return $user_id > 0 && function_exists( 'pk_security_completion' ) ? (array) pk_security_completion( $user_id ) : null;
+	}
+	public static function can_send_email_verification(): bool { return function_exists( 'pk_send_email_otp_or_link' ); }
+	public static function email_verified( int $user_id ): bool { return $user_id > 0 && function_exists( 'pk_factor_verified' ) && (bool) pk_factor_verified( $user_id, 'email' ); }
+	public static function send_email_verification( int $user_id, string $email ): array {
+		return self::can_send_email_verification() ? (array) pk_send_email_otp_or_link( $user_id, $email, '', 'magic_link' ) : [];
+	}
+
+	/** Current admin's existing enrollment reminder only; no public projection or writes. */
+	public static function admin_enrollment_steps(): array {
+		$id = get_current_user_id();
+		if ( ! is_admin() || wp_doing_ajax() || ! $id || ! function_exists( 'pk_admin_enrollment_complete' ) || ! pk_is_privileged( $id ) || pk_admin_enrollment_complete( $id ) ) return [];
+		$steps = [];
+		if ( ! get_user_meta( $id, 'pk_admin_password_bound_at', true ) ) $steps[] = __( 'Confirm your WordPress password.', 'dsa' );
+		if ( pk_credential_count( $id ) < 1 ) $steps[] = __( 'Set up a passkey.', 'dsa' );
+		if ( ! pk_admin_phone_bound( $id ) ) $steps[] = __( 'Bind a phone number.', 'dsa' );
+		if ( ! pk_account_verified( $id ) ) $steps[] = __( 'Verify an email address or phone number.', 'dsa' );
+		return $steps;
+	}
+
+	public static function admin_enrollment_url(): string {
+		return function_exists( 'pk_surface_login_url' ) ? (string) pk_surface_login_url() : '';
 	}
 
 	public static function verified_factors( int $user_id ): array {
@@ -52,14 +97,14 @@ final class PhoneKey_Bridge {
 		}
 	}
 
-	public function public_data(): array {
+	public function public_data( bool $runtime_only = false ): array {
 		return [
 			'available' => $this->is_available(),
 			'restUrl'   => defined( 'PK_NS' ) ? esc_url_raw( get_rest_url( null, PK_NS . '/' ) ) : '',
 			'nonce'     => wp_create_nonce( 'wp_rest' ),
 			'config'    => $this->config_data(),
 			'user'      => $this->user_data(),
-			'cart'      => $this->cart_data(),
+			'cart'      => $this->cart_data( $runtime_only ),
 			'account'   => $this->account_links(),
 			'loginUrl'  => wp_login_url( home_url( $this->request_uri() ) ),
 			'logoutUrl' => wp_logout_url( home_url( '/' ) ),
@@ -68,7 +113,7 @@ final class PhoneKey_Bridge {
 	}
 
 	public function boot_data(): array {
-		$has_commerce = function_exists( 'WC' ) || class_exists( 'WooCommerce' );
+		$has_commerce = \DSA\Apps\Store_App_Service::enabled();
 
 		return [
 			'available' => $this->is_available(),
@@ -183,8 +228,10 @@ final class PhoneKey_Bridge {
 			'isPrivileged'    => $is_privileged,
 			'privilegedEnrollmentComplete' => $privileged_enrollment_complete,
 			'privilegedEnrollmentRequired' => $is_privileged && ! $privileged_enrollment_complete,
-			'canManageOrders'  => current_user_can( 'manage_woocommerce' ) || current_user_can( 'manage_options' ),
+			'canManageOrders'  => \DSA\Apps\Store_App_Service::enabled() && ( current_user_can( 'manage_woocommerce' ) || current_user_can( 'manage_options' ) ),
 			'canModerate'      => current_user_can( 'moderate_comments' ) || current_user_can( 'manage_options' ),
+			'canUseNotifications' => current_user_can( 'read' ) && current_user_can( 'kiwe_use_notifications' ),
+			'inboxUnreadCount' => \DSA\Notifications\Admin_Event_Notification_Service::unread_count(),
 			'id'              => $user_id,
 			'displayName'     => $user ? $user->display_name : '',
 			'userLogin'       => $user ? $user->user_login : '',
@@ -207,10 +254,10 @@ final class PhoneKey_Bridge {
 			'purchaseGateMessage' => sanitize_text_field( (string) ( $purchase_gate['message'] ?? '' ) ),
 			'badgeCount'      => count( $completion ),
 			'completionItems' => $completion,
-			'editProfileUrl'  => function_exists( 'wc_get_endpoint_url' ) && function_exists( 'wc_get_page_permalink' )
+			'editProfileUrl'  => \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_endpoint_url' ) && function_exists( 'wc_get_page_permalink' )
 				? wc_get_endpoint_url( 'edit-account', '', wc_get_page_permalink( 'myaccount' ) )
 				: admin_url( 'profile.php' ),
-			'verifyUrl'       => function_exists( 'wc_get_page_permalink' )
+			'verifyUrl'       => \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_page_permalink' )
 				? wc_get_page_permalink( 'myaccount' )
 				: admin_url( 'profile.php' ),
 		];
@@ -235,12 +282,14 @@ final class PhoneKey_Bridge {
 		return get_avatar_url( $user_id, [ 'size' => 128 ] );
 	}
 
-	private function cart_data(): array {
-		return $this->cart_payload->cart_data();
+	private function cart_data( bool $runtime_only = false ): array {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return \DSA\Apps\Store_App_Service::inactive_cart( $runtime_only );
+		if ( $this->cart_payload instanceof \Closure ) $this->cart_payload = ( $this->cart_payload )();
+		return $runtime_only ? $this->cart_payload->runtime_data() : $this->cart_payload->cart_data();
 	}
 
 	private function account_links(): array {
-		if ( ! function_exists( 'wc_get_account_menu_items' ) || ! function_exists( 'wc_get_account_endpoint_url' ) ) {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! function_exists( 'wc_get_account_menu_items' ) || ! function_exists( 'wc_get_account_endpoint_url' ) ) {
 			return [];
 		}
 

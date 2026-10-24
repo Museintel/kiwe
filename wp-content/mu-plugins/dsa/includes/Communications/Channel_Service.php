@@ -59,14 +59,19 @@ final class Channel_Service {
 			'abandoned_cart_automation',
 			'order_status',
 			'admin_new_order',
+			'admin_new_account',
+			'admin_abandoned_cart',
 			'admin_new_comment',
 			'admin_visitor_summary',
 			'admin_live_visitor',
 			'admin_guest_application',
 			'admin_guest_submission',
+			'admin_guest_product_submission',
 			'guest_post_status',
+			'guest_product_status',
 			'editorial_post_status',
 			'securetrack_incident',
+			'hosting_backup_request',
 		];
 		$available = in_array( sanitize_key( (string) ( $context['purpose'] ?? '' ) ), $campaign_purposes, true )
 			? $this->available_for_campaign( $channel )
@@ -143,6 +148,8 @@ final class Channel_Service {
 	private function phonekey_available(): bool {
 		return $this->phonekey->notification_ready();
 	}
+	/** Provider requests use the site's Key tenant, never a generic reminder webhook. */
+	public function tenant_whatsapp_ready(): bool { return $this->phonekey_available(); }
 
 	private function maybe_email_fallback( \WP_Error $error, string $phone, string $subject, string $message, array $context ) {
 		$email = sanitize_email( (string) ( $context['fallback_email'] ?? '' ) );

@@ -149,6 +149,18 @@ final class Seam_Vocabulary_Schema {
 							],
 						],
 					],
+					'appInstall' => [
+						'status' => 'live', 'authority' => 'kiwe-pwa',
+						'attributes' => [ [
+							'attribute' => 'data-dsa-install-pwa', 'values' => [ 'ios','android','desktop','auto' ],
+							'purpose' => 'Reuse the Home-screen install journey from a semantic button or link. A configured store/download URL takes precedence; otherwise use browser-supported installation or honest platform instructions. Available from RC393; verify current target capability. A click is install intent, not a confirmed download or notification consent.',
+							'example' => '<button type="button" data-dsa-install-pwa="android" aria-label="Install Android app">Install app</button>',
+						], [
+							'attribute' => 'data-dsa-install-group', 'values' => [ 'true' ],
+							'purpose' => 'Optional wrapper around install-only copy and attributed install buttons. Setup App hides this whole group when Show app install buttons is off; never wrap unrelated footer content.',
+							'example' => '<div data-dsa-install-group="true"><button type="button" data-dsa-install-pwa="ios">iPhone app</button></div>',
+						] ],
+					],
 					'savedItems' => [
 						'status' => 'live',
 						'authority' => 'kiwe-saved-items',
@@ -174,6 +186,28 @@ final class Seam_Vocabulary_Schema {
 							[
 								'attribute' => 'data-kiwe-save-image',
 								'purpose' => 'Optional saved-item image URL. Kiwe otherwise reads the nearest card image.',
+							],
+						],
+					],
+					'cartActions' => [
+						'status' => 'live',
+						'authority' => 'woocommerce-native-cart',
+						'attributes' => [
+							[
+								'attribute' => 'data-kiwe-add-to-cart',
+								'values' => [ 'positive product/variation ID', 'current' ],
+								'purpose' => 'Add a simple product or concrete variation using the existing native WooCommerce cart route. Use {post_id} in a product query loop; current resolves the single-product context. Use the native Bricks Add To Cart element when a visitor must select options.',
+								'example' => '<button type="button" data-kiwe-add-to-cart="{post_id}" data-kiwe-cart-quantity="1" data-kiwe-cart-status-target="#cart-status">Add to cart</button>',
+							],
+							[
+								'attribute' => 'data-kiwe-cart-quantity',
+								'values' => [ 'integer 1–99; default 1' ],
+								'purpose' => 'Optional quantity for the same custom add-to-cart control. Native stock, sold-individually and purchase rules still apply.',
+							],
+							[
+								'attribute' => 'data-kiwe-cart-status-target',
+								'values' => [ 'CSS selector, e.g. #cart-status' ],
+								'purpose' => 'Optional on-page status element. Give it role="status" and aria-live="polite". Kiwe also announces progress and errors through its existing live region.',
 							],
 						],
 					],

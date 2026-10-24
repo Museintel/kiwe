@@ -1,0 +1,14 @@
+const {spawnSync}=require('node:child_process');
+const fs=require('node:fs');
+const result=spawnSync(process.env.KIWE_PHP||process.env.PHP_BINARY||'php',['tools/release/test-revision-timeline.php'],{encoding:'utf8',windowsHide:true});
+const output=(result.stdout||'')+(result.stderr||'');
+if(result.status!==0||/Warning:|Fatal error:|Deprecated:/.test(output))throw Error(output);
+process.stdout.write(output);
+const ui=fs.readFileSync('tools/workspace-prototype/timeline-view.jsx','utf8');
+const home=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Workspace_Admin_Service.php','utf8');
+const route=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Continuity_App_Service.php','utf8');
+const role=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php','utf8');
+for(const token of ['Find a record','Author','From','To','What','Who','When'])if(!ui.includes(token))throw Error('Timeline presentation lost '+token);
+if(!home.includes("Continuity_App_Service::timeline_url()")||!route.includes("'timeline' === $area ) return $this->response( $this->timeline_action( $body ) )"))throw Error('Timeline no longer delegates reviewed actions to native writers');
+if(!route.includes('public function can_view_timeline(): bool')||!role.includes("$allowed[] = 'kiwe-timeline'")||!role.includes("'kiwe-timeline' === $page && ( new Continuity_App_Service() )->can_view_timeline()"))throw Error('Timeline card is blocked by the client route guard');
+console.log('PASS revision timeline includes recovery, reviewed actions, filters and role boundaries');

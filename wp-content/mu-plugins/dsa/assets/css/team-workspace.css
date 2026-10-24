@@ -1,0 +1,37 @@
+.kiwe-team-workspace { max-width: 1220px; color: var(--kiwe-ink, var(--kiwe-color-text)); }
+.kiwe-team-workspace *, .kiwe-team-workspace *::before, .kiwe-team-workspace *::after { box-sizing: border-box; }
+.kiwe-team-workspace__intro { padding: 20px 0; max-width: 740px; }
+.kiwe-team-workspace__intro h1 { padding: 0; font-weight: 700; }
+.kiwe-team-workspace__intro p { font-size: 15px; line-height: 1.65; }
+.kiwe-team-workspace .kiwe-team-workspace__eyebrow { color: var(--kiwe-color-text-muted); text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: .1em; margin: 0 0 8px; }
+.kiwe-team-workspace__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; background: var(--kiwe-color-surface-raised); border: 1px solid var(--kiwe-line, var(--kiwe-color-border)); border-radius: var(--kiwe-radius-xl); padding: 20px; }
+.kiwe-team-workspace__views { display: flex; flex-wrap: wrap; gap: 6px; }
+.kiwe-team-workspace__views a { display: inline-flex; align-items: center; min-height: 48px; padding: 10px 14px; border-radius: var(--kiwe-radius-full); text-decoration: none; font-weight: 600; color: var(--kiwe-color-text); }
+.kiwe-team-workspace__views a[aria-current="page"] { background: var(--kiwe-color-surface-sunken); color: var(--kiwe-color-text); }
+.kiwe-team-workspace__search { min-width: 0; }
+.kiwe-team-workspace__search label { display: block; margin-bottom: 6px; font-weight: 600; }
+.kiwe-team-workspace__search > div { display: flex; gap: 8px; }
+.kiwe-team-workspace__search input { width: 100%; min-width: 0; }
+.kiwe-team-workspace__help { color: var(--kiwe-color-text-muted); line-height: 1.6; margin: 20px 0; }
+.kiwe-team-workspace__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 18px; }
+.kiwe-team-workspace__card, .kiwe-team-workspace__empty { min-width: 0; background: var(--kiwe-color-surface-raised); border: 1px solid var(--kiwe-line, var(--kiwe-color-border)); border-radius: var(--kiwe-radius-xl); padding: 22px; box-shadow: none; }
+.kiwe-team-workspace__card > header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.kiwe-team-workspace__card > header > div { min-width: 0; }
+.kiwe-team-workspace__card h2 { font-size: 17px; line-height: 1.4; margin: 0 0 7px; overflow-wrap: anywhere; }
+.kiwe-team-workspace__initial { flex: 0 0 46px; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 15px; background: var(--kiwe-color-surface); color: var(--kiwe-color-text); font-size: 22px; font-weight: 700; }
+.kiwe-team-workspace__badge { display: inline-block; font-size: 12px; color: var(--kiwe-color-text-muted); background: var(--kiwe-color-surface); padding: 3px 8px; border-radius: 6px; }
+.kiwe-team-workspace__badge.is-member { background: var(--kiwe-color-surface-sunken); color: var(--kiwe-color-text); }
+.kiwe-team-workspace__card form { display: flex; flex-direction: column; align-items: stretch; }
+.kiwe-team-workspace__card form label { font-weight: 600; margin: 0 0 6px; }
+.kiwe-team-workspace__card input:not([type="hidden"]), .kiwe-team-workspace__card select { width: 100%; max-width: 100%; margin: 0 0 16px; }
+.kiwe-team-workspace input:not([type="hidden"]), .kiwe-team-workspace select, .kiwe-team-workspace .button { min-height: 48px; font-size: 14px; }
+.kiwe-team-workspace .button { display: inline-flex; align-items: center; justify-content: center; white-space: normal; text-align: center; padding: 7px 14px; }
+.kiwe-team-workspace__card .button-primary { margin-top: 6px; }
+.kiwe-team-workspace__pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px; margin: 24px 0; }
+.kiwe-team-workspace a:focus-visible, .kiwe-team-workspace button:focus-visible, .kiwe-team-workspace input:focus-visible, .kiwe-team-workspace select:focus-visible { outline: 3px solid var(--kiwe-color-text); outline-offset: 3px; }
+@media (max-width: 600px) {
+	.kiwe-team-workspace__toolbar { padding: 16px; }
+	.kiwe-team-workspace__search { width: 100%; }
+	.kiwe-team-workspace__card, .kiwe-team-workspace__empty { padding: 18px; }
+	.kiwe-team-workspace input:not([type="hidden"]), .kiwe-team-workspace select { font-size: 16px; }
+}

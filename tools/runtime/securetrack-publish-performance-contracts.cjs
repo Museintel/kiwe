@@ -49,12 +49,13 @@ check('always AI mode is priority background work, never an inline provider call
 check('AI burst scheduling is coalesced and retains the regular fallback',
   brain.includes("wp_next_scheduled( 'stp_cron_ai_queue_priority' )") &&
   brain.includes('stp_ai_process_pending_queue( 3 );') &&
-  core.includes("wp_schedule_event( time() + 60, 'stp_5min', 'stp_cron_ai_queue' )")
+  core.includes("!empty($c['v2_site_brain']) && !wp_next_scheduled('stp_cron_ai_queue')") &&
+  core.includes("wp_schedule_event(time()+240+wp_rand(0,120),'stp_5min','stp_cron_ai_queue')")
 );
 
 check('schema existence checks are memoized per request and reset for schema writes',
   database.includes('private static array $table_existence = [];') &&
-  database.includes('array_key_exists( $name, self::$table_existence )') &&
+  database.includes('array_key_exists( $table, self::$table_existence )') &&
   (database.match(/self::\$table_existence = \[\];/g) || []).length >= 3
 );
 

@@ -1,0 +1,2 @@
+const {spawnSync}=require('node:child_process');
+for(const args of [[],['--no-woo']]){const r=spawnSync(process.env.KIWE_PHP||'php',['tools/release/test-notification-preference-journey.php',...args],{encoding:'utf8',windowsHide:true});if(r.status!==0)throw Error(r.stdout+r.stderr);const p=JSON.parse(r.stdout.trim());if(p.passed!==true||p.checks<80)throw Error('Incomplete private preference proof');process.stdout.write(JSON.stringify(p)+'\n');}

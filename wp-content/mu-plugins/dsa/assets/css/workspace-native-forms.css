@@ -1,0 +1,11 @@
+/* Shared native-task controls, only on Categories and Team. */
+.kiwe-native-workspace [hidden]{display:none!important}
+.kiwe-native-workspace .button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 18px;border:1px solid var(--kiwe-color-border);border-radius:var(--kiwe-radius-full);background:var(--kiwe-color-surface-raised);color:var(--kiwe-color-text);font-weight:600;line-height:1.5;white-space:normal}
+.kiwe-native-workspace .button-primary{background:var(--kiwe-color-text);color:var(--kiwe-color-text-inverse);border-color:var(--kiwe-color-text)}
+.kiwe-native-workspace .button:hover{background:var(--kiwe-color-surface-sunken);color:var(--kiwe-color-text)}
+.kiwe-native-workspace input:not([type=hidden]):not([type=checkbox]):not([type=submit]),.kiwe-native-workspace select{min-height:48px;border:1px solid var(--kiwe-color-border);border-radius:var(--kiwe-radius-md);padding:8px 12px;background:var(--kiwe-color-surface-raised);color:var(--kiwe-color-text)}
+.kiwe-native-workspace [data-kiwe-native-undo]{margin-top:8px;align-self:flex-start}
+.kiwe-native-workspace [data-kiwe-selection-count]{font-size:14px;font-weight:600;line-height:1.6}
+.kiwe-native-workspace form[aria-busy=true]{opacity:.75}
+.kiwe-native-workspace form[aria-busy=true] [aria-disabled=true]{cursor:wait}
+.kiwe-native-workspace :is(a,button,input,select):focus-visible{outline:3px solid var(--kiwe-color-text);outline-offset:3px}

@@ -1,6 +1,6 @@
 # /audit
 
-SEAM contract: 9.4
+SEAM contract: 9.7
 
 Read only. Never modify the submitted artifact.
 

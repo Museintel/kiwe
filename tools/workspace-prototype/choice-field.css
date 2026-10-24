@@ -1,0 +1,8 @@
+.kiwe-choice-field{min-width:0;margin:0;border:0;padding:0}
+.kiwe-choice-field legend{padding:0;margin-bottom:var(--kiwe-space-xs);font-weight:600}
+.kiwe-choice-field>p{margin:0 0 var(--kiwe-space-sm);max-width:65ch}
+.kiwe-choice-options{display:flex;flex-wrap:wrap;gap:var(--kiwe-space-xs) var(--kiwe-space-md)}
+.kiwe-choice-options>label{display:flex!important;align-items:center;gap:var(--kiwe-space-xs);min-height:2.75rem;cursor:pointer}
+.kiwe-choice-options input[type=radio]{width:1.25rem!important;height:1.25rem;min-height:0!important;flex:none;margin:0;accent-color:var(--kiwe-color-brand)}
+.kiwe-choice-options small{display:block;font-weight:400;max-width:35ch}
+.kiwe-choice-field:disabled{opacity:.6}

@@ -9,13 +9,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SecureTrack_Settings_Policy {
 	public static function notification_policy(): array {
 		if ( function_exists( 'stp_cfg' ) ) return (array) stp_cfg();
-		return (array) get_option( 'stp_settings', [] );
+		return array_replace( (array) get_option( 'stp_settings', [] ), [ 'alert_on_red'=>1 ] );
 	}
 
 	public static function update_notification_policy( array $input ): array {
 		$stored = (array) get_option( 'stp_settings', [] );
 		$mode = sanitize_key( (string) ( $input['alert_delivery_policy'] ?? 'actionable' ) );
-		$stored['alert_on_red'] = empty( $input['alert_on_red'] ) ? 0 : 1;
+		// Legacy pause state stays recoverable; runtime notices use personal topic choices.
 		// alert_email is retained only as a backwards-compatible data field.
 		// Recipients and delivery lanes now belong to Kiwe Notifications.
 		$email = sanitize_email( (string) ( $input['alert_email'] ?? ( $stored['alert_email'] ?? '' ) ) );
@@ -102,6 +102,8 @@ final class SecureTrack_Settings_Policy {
 	}
 
 	public static function normalize_runtime_config( array $config ): array {
+		// Do not pause the native security inbox. Severity and flood limits still apply.
+		$config['alert_on_red'] = 1;
 		$config['break_glass_slug'] = stp_sanitize_break_glass_slug( $config['break_glass_slug'] ?? '' );
 		$config['alert_delivery_policy'] = sanitize_key( $config['alert_delivery_policy'] ?? 'actionable' );
 		if ( ! in_array( $config['alert_delivery_policy'], [ 'actionable', 'yellow_and_actionable' ], true ) ) {

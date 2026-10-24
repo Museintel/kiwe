@@ -6,6 +6,11 @@ async function run(){
  const core=await import(pathToFileURL(toolkit+'/lib/kiwe-core.js'));
  check(core.diagnoseCommand({command:'/ideate /preview',brief:'x'}).status==='rejected','Stacked workflow commands are not approval');
  for(const command of ['/ideate','/preview','/seam','/audit'])check(core.routeCommand({command,brief:'reviewed',artifactSummary:'source'}).sharedContext.includes('Automatic verification and correction'),'Every routed command carries shared rules');
+ for(const command of ['/ideate','/preview','/seam']){
+  const rules=core.routeCommand({command,brief:'reviewed',artifactSummary:'source'}).sharedContext;
+  check(rules.includes("Visual quality and the owner's accepted design take priority")&&rules.includes('same variable name may legitimately have different values'),'Every authoring stage preserves creative and scoped source authority');
+  check(rules.includes('actual tool produced its bytes')&&rules.includes('does not author the final native Framework Profile')&&rules.includes('does not prove licensing'),'Every authoring stage separates real assets/compiler output/native proof');
+ }
  const graph={dynamicBindings:{schema:'kiwe.dynamic-bindings.v1',fields:{'commerce.product.priceText':{tag:'{missing_price}',kind:'text',owner:'woocommerce',scope:'current-public-product'},'commerce.product.price':{tag:'{woo_product_price}',kind:'text',owner:'woocommerce',scope:'current-public-product'},'commerce.product.imageAlt':{tag:'{missing_alt}',kind:'text',owner:'woocommerce',scope:'current-public-product'},'commerce.product.title':{tag:'{post_title}',kind:'text',owner:'woocommerce',scope:'current-public-product'}}},siteGraph:{bricks:{dynamicTags:[{name:'{woo_product_price}'},{name:'{post_title}'}]}}};
  const before=JSON.stringify(graph),found=core.inspectBindings(graph,{fields:['commerce.product.priceText','commerce.product.imageAlt']});
  check(found.ok&&found.counts.fallback===2,'Known exported-tag gaps use proven declared native fallbacks');
@@ -19,6 +24,7 @@ async function run(){
  check(kit.archive.equals(buildKit({version,releaseId:version+'-fixture',resources:library.resources()}).archive),'Authoring kit ZIP is deterministic');
  check(kit.files.get('PROMPT.txt').toString()==='https://start.kiwelaunch.com/start.md\n/ideate\n','First prompt always contains canonical link and one command');
  for(const name of ['start.md','contexts/ideate.md','contexts/preview.md','contracts/authoring-delivery.md','schemas/preview-receipt.schema.json','lib/authoring-schemas.cjs','bin/kiwe.js'])check(kit.manifest.files.some(f=>f.path===name),'Complete offline dependency '+name);
+ check(kit.files.get('contracts/authoring-delivery.md').toString().includes('package-integrity.json')&&kit.files.get('contexts/seam.md').toString().includes('AI must not manufacture those artifacts'),'Offline receiving flow carries real dependency authority without another client prompt');
  check(![...kit.files.keys()].some(name=>/mcp\/|node_modules|credential|private\.json|\.php$/.test(name)),'Kit excludes adapters, dependencies and private/server files');
  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'kiwe-authoring-'));
  try{

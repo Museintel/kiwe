@@ -19,6 +19,7 @@ final class Linked_Products_Service {
 	}
 
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_action( 'woocommerce_product_options_related', [ $this, 'render_product_cross_sell_panel' ] );
 		add_action( 'wp_ajax_dsa_apply_cross_sells', [ $this, 'ajax_apply_cross_sells' ] );
 		add_action( 'wp_ajax_dsa_apply_co_purchased_upsells', [ $this, 'ajax_apply_co_purchased_upsells' ] );
@@ -31,6 +32,7 @@ final class Linked_Products_Service {
 		if ( ! empty( $this->commerce_config()['bestseller_sync_on_order'] ) ) {
 			add_action( 'woocommerce_order_status_completed', [ $this, 'bust_bestseller_cache' ] );
 			add_action( 'woocommerce_order_status_processing', [ $this, 'bust_bestseller_cache' ] );
+			add_action( 'woocommerce_order_refunded', [ $this, 'bust_bestseller_cache' ] );
 		}
 	}
 
@@ -65,17 +67,14 @@ final class Linked_Products_Service {
 	public function cart_recommendations( int $limit = 6 ): array {
 		$config = $this->commerce_config();
 
-		if ( ! $this->woo_available() || empty( $config['linked_products_enabled'] ) || empty( $config['commerce_recommendations_enabled'] ) || empty( $config['fbt_enabled'] ) ) {
+		if ( ! $this->woo_available() || empty( $config['cart_show_fbt'] ) ) {
 			return [];
 		}
 
 		$limit = max( 1, min( 12, $limit ) );
 		$cart_product_ids = $this->cart_product_ids();
-		$ids = array_merge( $this->cross_sell_ids_from_cart(), $this->co_purchased_ids_from_cart( $limit * 2 ) );
-
-		if ( count( $ids ) < $limit && ! empty( $config['bestseller_enabled'] ) ) {
-			$ids = array_merge( $ids, $this->bestseller_product_ids( 'month', $limit * 2 ) );
-		}
+		$companions = array_map( static fn( int $id ): int => absint( get_post_meta( $id, '_sc_upsell_product_id', true ) ), $cart_product_ids );
+		$ids = array_merge( $companions, $this->cross_sell_ids_from_cart(), $this->co_purchased_ids_from_cart( $limit * 2 ) );
 
 		$ids = array_values( array_diff( array_unique( array_filter( array_map( 'absint', $ids ) ) ), $cart_product_ids ) );
 
@@ -117,6 +116,24 @@ final class Linked_Products_Service {
 			},
 			$terms
 		);
+	}
+
+	/** Native product relationships in owner order. Empty relationships never become the full catalogue. */
+	public function public_relationship_ids( int $source_id, string $relation, int $limit = 100 ): array {
+		$product = Product_Context_Service::public_product( $source_id );
+		if ( ! $product ) return [];
+		$ids = match ( $relation ) {
+			'upsells' => $product->get_upsell_ids(),
+			'cross_sells' => $product->get_cross_sell_ids(),
+			'grouped' => $product->is_type( 'grouped' ) ? $product->get_children() : [],
+			'companion' => [ absint( get_post_meta( $source_id, '_sc_upsell_product_id', true ) ) ],
+			default => [],
+		};
+		$out = [];
+		foreach ( array_slice( array_unique( array_map( 'absint', $ids ) ), 0, max( 1, min( 100, $limit ) ) ) as $id ) {
+			if ( $id !== $source_id && Product_Context_Service::public_product( $id ) ) $out[] = $id;
+		}
+		return $out;
 	}
 
 	public function run_bulk_cross_sells( array $args ): array {
@@ -511,16 +528,16 @@ final class Linked_Products_Service {
 			];
 		}
 
-		$result = $this->run_bulk_co_purchase_upsells(
-			[
-				'source_type' => 'all',
-				'depth'       => absint( $config['co_purchase_daily_sync_depth'] ?? 5 ),
-				'mode'        => sanitize_key( $config['co_purchase_daily_sync_mode'] ?? 'merge' ),
-			]
-		);
-
-		update_option( 'dsa_co_purchase_last_sync', current_time( 'mysql' ), false );
-
+		// One scheduled pass touches at most 50 native products. The cursor is disposable derived progress.
+		$offset = max( 0, (int) get_option( 'dsa_co_purchase_cursor', 0 ) );
+		$ids = wc_get_products( [ 'status'=>'publish','type'=>[ 'simple','variable' ],'limit'=>51,'offset'=>$offset,'orderby'=>'ID','order'=>'ASC','return'=>'ids' ] );
+		$result = [ 'products'=>0,'updated'=>0,'total_links'=>0,'pending'=>count( $ids ) > 50 ];
+		foreach ( array_slice( $ids, 0, 50 ) as $id ) {
+			$count = $this->apply_co_purchased_to_product( (int) $id, sanitize_key( $config['co_purchase_daily_sync_mode'] ?? 'merge' ) );
+			$result['products']++; $result['updated'] += $count > 0 ? 1 : 0; $result['total_links'] += $count;
+		}
+		update_option( 'dsa_co_purchase_cursor', $result['pending'] ? $offset + 50 : 0, false );
+		if ( ! $result['pending'] ) update_option( 'dsa_co_purchase_last_sync', current_time( 'mysql' ), false );
 		return $result;
 	}
 
@@ -539,52 +556,42 @@ final class Linked_Products_Service {
 	}
 
 	public function sync_bestseller_terms(): void {
-		if ( empty( $this->commerce_config()['bestseller_enabled'] ) ) {
-			return;
-		}
-
-		$terms = $this->ensure_bestseller_terms();
-
-		if ( empty( $terms ) ) {
-			return;
-		}
-
-		$parent_id = (int) ( $terms['parent'] ?? 0 );
-		$parent_targets = [];
-
-		foreach ( [ 'week', 'month', 'year' ] as $period ) {
-			if ( empty( $terms[ $period ] ) ) {
-				continue;
+		if ( empty( $this->commerce_config()['bestseller_enabled'] ) ) return;
+		global $wpdb;
+		$lock = 'kiwe-bestseller-' . substr( hash( 'sha256', $wpdb->prefix ), 0, 32 );
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $lock ) ) ) return;
+		$report = [ 'status'=>'failed', 'removed'=>0, 'checkedAt'=>current_time( 'mysql' ), 'removalLimitPerCategory'=>50 ];
+		try {
+			$targets = []; $parent_targets = [];
+			foreach ( [ 'week','month','year' ] as $period ) {
+				$ids = array_values( array_unique( array_filter( array_map( 'absint', $this->bestseller_product_ids( $period, $this->bestseller_limit(), true ) ) ) ) );
+				$targets[$period] = array_values( array_filter( array_slice( $ids, 0, $this->bestseller_limit() ), static function( $id ) { $product = wc_get_product( $id ); return $product && 'publish' === $product->get_status() && in_array( $product->get_type(), [ 'simple','variable' ], true ); } ) );
+				$parent_targets = array_merge( $parent_targets, $targets[$period] );
 			}
-
-			$term_id = (int) $terms[ $period ];
-			$product_ids = $this->bestseller_product_ids( $period, $this->bestseller_limit() );
-			$product_ids = array_values( array_unique( array_filter( array_map( 'absint', $product_ids ) ) ) );
-			$current_ids = $this->products_in_product_cat( $term_id );
-
-			foreach ( $product_ids as $product_id ) {
-				$term_ids = $parent_id ? [ $parent_id, $term_id ] : [ $term_id ];
-				wp_set_object_terms( (int) $product_id, $term_ids, 'product_cat', true );
+			$targets['parent'] = array_values( array_unique( $parent_targets ) );
+			$terms = $this->ensure_bestseller_terms();
+			if ( count( $terms ) !== 4 ) throw new \RuntimeException( 'category_review' );
+			// Add wanted memberships before removing stale ones. A failed write never marks the run complete.
+			foreach ( [ 'week','month','year' ] as $period ) foreach ( $targets[$period] as $id ) {
+				if ( is_wp_error( wp_set_object_terms( $id, [ (int) $terms['parent'], (int) $terms[$period] ], 'product_cat', true ) ) ) throw new \RuntimeException( 'membership_write' );
 			}
-
-			foreach ( array_diff( $current_ids, $product_ids ) as $stale_id ) {
-				wp_remove_object_terms( (int) $stale_id, $term_id, 'product_cat' );
+			$pending = false;
+			foreach ( [ 'week','month','year','parent' ] as $period ) {
+				$stale = $this->products_in_product_cat( (int) $terms[$period], $targets[$period] );
+				$pending = $pending || count( $stale ) > 50;
+				foreach ( array_slice( $stale, 0, 50 ) as $id ) {
+					if ( true !== wp_remove_object_terms( $id, (int) $terms[$period], 'product_cat' ) ) throw new \RuntimeException( 'membership_remove' );
+					$report['removed']++;
+				}
 			}
-
-			$parent_targets = array_merge( $parent_targets, $product_ids );
+			$report['status'] = $pending ? 'pending' : 'complete';
+			if ( ! $pending ) update_option( 'dsa_bestseller_last_sync', current_time( 'mysql' ), false );
+		} catch ( \Throwable $error ) { $report['status'] = 'failed'; $report['reason'] = in_array( $error->getMessage(), [ 'category_review','ranking_unavailable' ], true ) ? $error->getMessage() : 'write_failed'; }
+		finally {
+			update_option( 'dsa_bestseller_sync_status', $report, false );
+			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
 		}
-
-		if ( $parent_id ) {
-			$parent_targets = array_values( array_unique( array_filter( array_map( 'absint', $parent_targets ) ) ) );
-
-			foreach ( array_diff( $this->products_in_product_cat( $parent_id ), $parent_targets ) as $stale_id ) {
-				wp_remove_object_terms( (int) $stale_id, $parent_id, 'product_cat' );
-			}
-		}
-
-		update_option( 'dsa_bestseller_last_sync', current_time( 'mysql' ), false );
 	}
-
 	public function bust_bestseller_cache(): void {
 		foreach ( [ 'week', 'month', 'year' ] as $period ) {
 			delete_transient( 'dsa_bestsellers_' . $period );
@@ -621,7 +628,7 @@ final class Linked_Products_Service {
 			return 0;
 		}
 
-		$ids = array_values( array_diff( $this->co_purchased_ids_for_product( $product_id, 12 ), [ $product_id ] ) );
+		$ids = array_values( array_diff( $this->co_purchased_ids_for_product( $product_id, 12, true ), [ $product_id ] ) );
 
 		if ( empty( $ids ) ) {
 			return 0;
@@ -639,7 +646,9 @@ final class Linked_Products_Service {
 		}
 
 		$existing = method_exists( $product, 'get_upsell_ids' ) ? array_map( 'absint', $product->get_upsell_ids() ) : [];
+		if ( count( $existing ) > 100 ) return 0;
 		$merged = array_values( array_unique( array_merge( $existing, $ids ) ) );
+		$merged = array_slice( $merged, 0, 100 );
 		$product->set_upsell_ids( $merged );
 		$product->save();
 
@@ -755,7 +764,8 @@ final class Linked_Products_Service {
 		return implode( ', ', $names ) . ( $extra > 0 ? sprintf( __( ' +%d more', 'dsa' ), $extra ) : '' );
 	}
 
-	private function products_by_categories( array $category_ids, array $exclude_ids = [] ): array {
+	/** Bounded selector shared by legacy generation and the client preview. Does not write. */
+	public function products_by_categories( array $category_ids, array $exclude_ids = [] ): array {
 		$category_ids = array_values( array_unique( array_filter( array_map( 'absint', $category_ids ) ) ) );
 
 		if ( empty( $category_ids ) ) {
@@ -818,7 +828,7 @@ final class Linked_Products_Service {
 		return array_values( array_unique( array_filter( array_map( 'absint', $out ) ) ) );
 	}
 
-	private function co_purchased_ids_for_product( int $product_id, int $limit ): array {
+	private function co_purchased_ids_for_product( int $product_id, int $limit, bool $calculate = false ): array {
 		global $wpdb;
 
 		if ( ! $product_id ) {
@@ -829,8 +839,9 @@ final class Linked_Products_Service {
 		$cached = get_transient( 'dsa_cop_' . $product_id );
 
 		if ( is_array( $cached ) ) {
-			return array_map( 'absint', $cached );
+			return array_slice( array_map( 'absint', $cached ), 0, $limit );
 		}
+		if ( ! $calculate ) return []; // A missing optional cache never scans orders on a visitor request.
 
 		$lookup = $wpdb->prefix . 'wc_order_product_lookup';
 		$stats  = $wpdb->prefix . 'wc_order_stats';
@@ -875,36 +886,47 @@ final class Linked_Products_Service {
 		return array_values( array_unique( array_filter( $ids ) ) );
 	}
 
-	private function bestseller_product_ids( string $period, int $limit ): array {
+	/** Authoring/public adapters consume the same maintained ranking; a visitor never regenerates it. */
+	public function cached_bestseller_ids( string $period = 'month' ): array {
+		if ( ! $this->woo_available() || empty( $this->commerce_config()['bestseller_enabled'] ) ) return [];
+		$period = strtolower( $period );
+		if ( ! in_array( $period, [ 'week', 'month', 'year' ], true ) ) return [];
+		return array_values( array_unique( array_filter( $this->bestseller_product_ids( $period, $this->bestseller_limit() ) ) ) );
+	}
+
+	private function bestseller_product_ids( string $period, int $limit, bool $strict = false ): array {
 		$period = in_array( $period, [ 'week', 'month', 'year' ], true ) ? $period : 'month';
 		$cached = get_transient( 'dsa_bestsellers_' . $period );
 
-		if ( is_array( $cached ) ) {
-			return array_map( 'absint', $cached );
+		if ( is_array( $cached ) && ( $cached['source'] ?? '' ) === 'woo-order-period-v1' && ( $cached['limit'] ?? 0 ) >= $limit && is_array( $cached['ids'] ?? null ) ) {
+			return array_slice( array_map( 'absint', $cached['ids'] ), 0, $limit );
 		}
+		if ( ! $strict ) return []; // Only explicit/scheduled maintenance calculates a period ranking.
 
 		$ids = $this->analytics_bestsellers( $period, $limit );
 
-		if ( empty( $ids ) ) {
-			$ids = $this->meta_bestsellers( $limit );
+		if ( null === $ids ) {
+			if ( $strict ) throw new \RuntimeException( 'ranking_unavailable' );
+			return []; // Public recommendation reads fail quietly; never substitute lifetime sales for a period.
 		}
 
-		set_transient( 'dsa_bestsellers_' . $period, $ids, HOUR_IN_SECONDS * 6 );
+		// Keep the last maintained ranking through the daily refresh window, including a delayed cron.
+		set_transient( 'dsa_bestsellers_' . $period, [ 'source'=>'woo-order-period-v1', 'limit'=>$limit, 'ids'=>$ids ], HOUR_IN_SECONDS * 48 );
 
 		return $ids;
 	}
 
-	private function analytics_bestsellers( string $period, int $limit ): array {
+	private function analytics_bestsellers( string $period, int $limit ): ?array {
 		global $wpdb;
 
 		$lookup = $wpdb->prefix . 'wc_order_product_lookup';
 		$stats  = $wpdb->prefix . 'wc_order_stats';
 
 		if ( $lookup !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $lookup ) ) || $stats !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $stats ) ) ) {
-			return [];
+			return null;
 		}
 
-		$after = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 'week' === $period ? '7 days' : ( 'year' === $period ? '365 days' : '30 days' ) ) ) );
+		$after = wp_date( 'Y-m-d H:i:s', time() - ( 'week' === $period ? 7 : ( 'year' === $period ? 365 : 30 ) ) * DAY_IN_SECONDS, wp_timezone() );
 
 		$sql = "
 			SELECT lookup.product_id
@@ -913,61 +935,50 @@ final class Linked_Products_Service {
 			WHERE stats.date_created >= %s
 			AND stats.status IN ('wc-completed', 'wc-processing', 'completed', 'processing')
 			GROUP BY lookup.product_id
-			ORDER BY SUM(lookup.product_qty) DESC
+			HAVING SUM(lookup.product_qty) > 0
+			ORDER BY SUM(lookup.product_qty) DESC, lookup.product_id ASC
 			LIMIT %d
 		";
 
-		return array_map( 'absint', $wpdb->get_col( $wpdb->prepare( $sql, $after, $limit ) ) );
-	}
-
-	private function meta_bestsellers( int $limit ): array {
-		return get_posts(
-			[
-				'post_type'      => 'product',
-				'post_status'    => 'publish',
-				'fields'         => 'ids',
-				'posts_per_page' => $limit,
-				'meta_key'       => 'total_sales',
-				'orderby'        => 'meta_value_num',
-				'order'          => 'DESC',
-			]
-		);
+		$rows = $wpdb->get_col( $wpdb->prepare( $sql, $after, $limit ) );
+		return ! empty( $wpdb->last_error ) || ! is_array( $rows ) ? null : array_map( 'absint', $rows );
 	}
 
 	private function ensure_bestseller_terms(): array {
 		$config = $this->commerce_config();
-		$parent_label = sanitize_text_field( $config['bestseller_parent_label'] ?? 'Bestseller' );
-		$parent_slug  = sanitize_title( $config['bestseller_parent_slug'] ?? 'bestseller' );
-		$parent       = term_exists( $parent_slug, 'product_cat' );
-
-		if ( ! $parent ) {
-			$parent = wp_insert_term( $parent_label, 'product_cat', [ 'slug' => $parent_slug ] );
+		$label = sanitize_text_field( $config['bestseller_parent_label'] ?? 'Bestseller' );
+		$slug = sanitize_title( $config['bestseller_parent_slug'] ?? 'bestseller' );
+		if ( '' === $slug ) return [];
+		$periods = [ 'parent'=>'', 'week'=>'-week', 'month'=>'-month', 'year'=>'-year' ];
+		$known = [];
+		// Preflight all existing names before creating or assigning anything. Old unmarked categories need explicit review.
+		foreach ( $periods as $period=>$suffix ) {
+			$exists = term_exists( $slug . $suffix, 'product_cat' );
+			if ( is_wp_error( $exists ) ) return [];
+			if ( ! $exists ) continue;
+			$id = (int) ( is_array( $exists ) ? $exists['term_id'] : $exists );
+			if ( get_term_meta( $id, '_kiwe_bestseller_owner', false ) !== [ $slug . ':' . $period ] ) return [];
+			$known[$period] = $id;
 		}
-
-		if ( is_wp_error( $parent ) ) {
-			return [];
+		foreach ( $known as $period=>$id ) {
+			$term = get_term( $id, 'product_cat' );
+			if ( ! $term || is_wp_error( $term ) || (int) $term->parent !== ( 'parent' === $period ? 0 : ( $known['parent'] ?? -1 ) ) ) return [];
 		}
-
-		$parent_id = (int) ( is_array( $parent ) ? $parent['term_id'] : $parent );
-		$out       = [ 'parent' => $parent_id ];
-
-		foreach ( [ 'week' => 'This Week', 'month' => 'This Month', 'year' => 'This Year' ] as $period => $label ) {
-			$slug = $parent_slug . '-' . $period;
-			$term = term_exists( $slug, 'product_cat' );
-
-			if ( ! $term ) {
-				$term = wp_insert_term( $parent_label . ' - ' . $label, 'product_cat', [ 'slug' => $slug, 'parent' => $parent_id ] );
+		$out = [];
+		foreach ( $periods as $period=>$suffix ) {
+			$id = $known[$period] ?? 0;
+			if ( ! $id ) {
+				$created = wp_insert_term( $label . ( $suffix ? ' - ' . ucfirst( $period ) : '' ), 'product_cat', [ 'slug'=>$slug . $suffix, 'parent'=>'parent' === $period ? 0 : $out['parent'] ] );
+				if ( is_wp_error( $created ) || empty( $created['term_id'] ) ) return [];
+				$id = (int) $created['term_id'];
+				update_term_meta( $id, '_kiwe_bestseller_owner', $slug . ':' . $period );
+				if ( get_term_meta( $id, '_kiwe_bestseller_owner', true ) !== $slug . ':' . $period ) return [];
 			}
-
-			if ( ! is_wp_error( $term ) ) {
-				$out[ $period ] = (int) ( is_array( $term ) ? $term['term_id'] : $term );
-			}
+			$out[$period] = $id;
 		}
-
 		return $out;
 	}
-
-	private function products_in_product_cat( int $term_id ): array {
+	private function products_in_product_cat( int $term_id, array $exclude_ids = [] ): array {
 		if ( ! $term_id ) {
 			return [];
 		}
@@ -977,14 +988,19 @@ final class Linked_Products_Service {
 			get_posts(
 				[
 					'post_type'      => 'product',
-					'post_status'    => 'publish',
+					'post_status'    => [ 'publish','draft','pending','future','private','trash' ],
 					'fields'         => 'ids',
-					'posts_per_page' => -1,
+					'posts_per_page' => 51,
+					'post__not_in' => array_values( $exclude_ids ),
+					'orderby' => 'ID',
+					'order' => 'ASC',
+					'no_found_rows' => true,
 					'tax_query'      => [
 						[
 							'taxonomy' => 'product_cat',
 							'field'    => 'term_id',
 							'terms'    => [ $term_id ],
+						'include_children' => false,
 						],
 					],
 				]
@@ -998,7 +1014,7 @@ final class Linked_Products_Service {
 		foreach ( $ids as $id ) {
 			$product = function_exists( 'wc_get_product' ) ? wc_get_product( (int) $id ) : null;
 
-			if ( ! $product || ! is_object( $product ) ) {
+			if ( ! $product || ! is_object( $product ) || ( method_exists( $product, 'get_status' ) && 'publish' !== $product->get_status() ) || ( method_exists( $product, 'is_visible' ) && ! $product->is_visible() ) ) {
 				continue;
 			}
 

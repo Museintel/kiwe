@@ -1,0 +1,10 @@
+const fs=require('fs'),path=require('path'),{spawnSync}=require('child_process'),root=path.resolve(__dirname,'../..'),php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe',checks=[];
+const check=(ok,label)=>{checks.push({label,passed:!!ok});if(!ok)throw Error(label);};
+for(const file of ['wp-content/mu-plugins/dsa/includes/Access/Product_Merchandising_Workspace_Service.php','tools/release/test-wordpress-merchandising.php','tools/release/test-merchandising-cold-path.php']){const r=spawnSync(php,['-l',path.join(root,file)],{encoding:'utf8'});check(r.status===0,'PHP syntax '+file);}
+const r=spawnSync(php,[path.join(root,'tools/release/test-merchandising-cold-path.php')],{encoding:'utf8'});if(r.status!==0)throw Error(r.stdout+r.stderr);const cold=JSON.parse(r.stdout);check(cold.passed&&cold.checks===12&&cold.orderQueries===0&&cold.writes===0,'Executable cheap cold/disabled behavior');
+const owner=fs.readFileSync(path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Product_Merchandising_Workspace_Service.php'),'utf8'),ui=fs.readFileSync(path.join(root,'tools/workspace-prototype/native-merchandising.jsx'),'utf8'),archive=fs.readFileSync(path.join(root,'wp-content/mu-plugins/dsa/includes/Backup/Content_Archive_Service.php'),'utf8');
+check(owner.includes('SELECT GET_LOCK')&&owner.includes('DB_NAME')&&owner.includes("$product->{'set_'.$prop}"),'Native relationship setter and database-scoped exclusion');
+check(!owner.includes('update_option')&&!owner.includes('update_post_meta')&&!owner.includes('add_action'),'Stateless owner projection without mirrors/visitor work');
+check(ui.includes('WorkspaceDialog')&&ui.includes('CoreTabs')&&!ui.includes('setInterval')&&!ui.includes('localStorage'),'Common contextual journey and compact dialog');
+check(archive.includes("'children','upsell_ids','cross_sell_ids'")&&archive.includes("$map[$target] ?? $target"),'Shared capture and guarded native copy remapping');
+console.log(JSON.stringify({passed:true,checks:checks.length,coldChecks:cold.checks,scope:'Source and cold-path behavior; native and browser proof separate'}));

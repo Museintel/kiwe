@@ -1,6 +1,10 @@
 <?php
-/** Theme lifecycle + disabled-runtime contract. Each mode runs in a fresh PHP process. */
+/** Theme lifecycle + automatic native integration contract. Each mode is isolated. */
 define('ABSPATH', __DIR__);
+require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php';
+// These are Woo-native editor controls; non-Woo omission is exercised separately.
+function WC() { return null; }
 $mode = $argv[1] ?? 'parent';
 $theme = match ($mode) {
     'parent' => ['bricks', 'bricks', 'Bricks', true],
@@ -10,7 +14,7 @@ $theme = match ($mode) {
     'missing' => ['removed-theme', 'removed-theme', '', false],
     default => throw new RuntimeException('Unknown theme mode'),
 };
-$hooks = []; $checks = 0;
+$hooks = []; $hookArgs = []; $checks = 0;
 function get_template() { global $theme; return $theme[0]; }
 function get_stylesheet() { global $theme; return $theme[1]; }
 function wp_get_theme($template) {
@@ -22,8 +26,16 @@ function wp_get_theme($template) {
         public function get($key) { return $key === 'Name' ? $this->name : ''; }
     };
 }
-function add_filter($name, $callback, $priority = 10, $args = 1) { global $hooks; $hooks[$name][$priority][] = $callback; }
+function add_filter($name, $callback, $priority = 10, $args = 1) { global $hooks, $hookArgs; $hooks[$name][$priority][] = $callback; $hookArgs[$name][$priority][] = $args; }
 function add_action($name, $callback, $priority = 10, $args = 1) { add_filter($name, $callback, $priority, $args); }
+function do_action($name, ...$args) {
+    global $hooks, $hookArgs;
+    if ($args === []) $args = ['']; // WordPress's no-payload action convention.
+    $callbacks = $hooks[$name] ?? []; ksort($callbacks);
+    foreach ($callbacks as $priority => $group) foreach ($group as $i => $callback) {
+        call_user_func_array($callback, array_slice($args, 0, $hookArgs[$name][$priority][$i]));
+    }
+}
 function apply_filters($name, $value) {
     global $hooks; $callbacks = $hooks[$name] ?? []; ksort($callbacks);
     foreach ($callbacks as $group) { foreach ($group as $callback) { $value = $callback($value); } }
@@ -31,13 +43,21 @@ function apply_filters($name, $value) {
 }
 function __($text, $domain = '') { return $text; }
 function esc_html__($text, $domain = '') { return $text; }
+function sanitize_key($text) { return preg_replace('/[^a-z0-9_-]/','',strtolower($text)); }
+function get_option($key, $default = false) { if ($key===\DSA\Apps\Store_App_Service::OPTION) return $default; if (!in_array($key,[\DSA\Access\Tag_Group_Service::OPTION,'dsa_bricks_mini_cart_settings'],true)) throw new RuntimeException('Unexpected authoring option read'); return []; }
+function wp_get_nav_menus() { return []; }
 function update_option(...$args) { throw new RuntimeException('Registration must not write settings'); }
 function wp_enqueue_script(...$args) { throw new RuntimeException('Disabled runtime must not load scripts'); }
 function wp_enqueue_style(...$args) { throw new RuntimeException('Disabled runtime must not load styles'); }
 function check($label, $pass) { global $checks; ++$checks; if (!$pass) { throw new RuntimeException($label); } }
 
 $root = dirname(__DIR__, 2);
+require_once $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php';
+require $root . '/wp-content/mu-plugins/dsa/includes/Settings.php';
 require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Surface_Style_Controls.php';
+require $root . '/wp-content/mu-plugins/dsa/includes/Access/Tag_Group_Service.php';
+require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Filter_Image_Service.php';
+require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Loop_Style_Service.php';
 require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php';
 use DSA\Bricks\Bricks_Integration as Integration;
 use DSA\Bricks\Surface_Style_Controls as Controls;
@@ -75,6 +95,8 @@ if (!$theme[3]) {
     $integration->register();
     check('Saved enabled flags cannot activate Bricks on another theme', $hooks === []);
 } else {
+    do_action('shutdown');
+    check('Native no-payload shutdown dispatch completes without a post ID', true);
     $total = 0;
     foreach (Controls::capabilities(true) as $element => $keys) {
         $controls = apply_filters('bricks/elements/' . $element . '/controls', ['original' => ['sentinel' => true]]);
@@ -94,14 +116,16 @@ if (!$theme[3]) {
     check('DSA launcher control available without enabling dock', isset(apply_filters('bricks/elements/icon/controls', [])['dsaOpenModule']));
     check('Contact action controls available', isset(apply_filters('bricks/elements/button/controls', [])['kiweContactAction']));
     check('Search bridge control available', isset(apply_filters('bricks/elements/filter-search/controls', [])['dsaSearchBridge']));
-    check('Dynamic data switch remains respected', $integration->add_dynamic_tags(['sentinel']) === ['sentinel']);
+    $tags = $integration->add_dynamic_tags([['name'=>'{native_sentinel}']]);
+    check('Native authoring tags are available independently of optional runtime switches', in_array('{kiwe_site_logo}',array_column($tags,'name'),true) && in_array('{kiwe_service_title}',array_column($tags,'name'),true) && $tags[0]['name']==='{native_sentinel}');
+    check('Unrelated text remains unchanged without data enumeration', $integration->render_dynamic_content('ordinary text') === 'ordinary text');
     $runtime = $reflection->getMethod('add_to_cart_runtime_enabled');
-    check('Element behaviour cannot bypass disabled runtime', !$runtime->invoke($integration, ['brxPlusOnly' => true]));
-    check('Disabled mini-cart retains native output', $integration->render_mini_cart_quantity('native', [], 'key') === 'native');
-    check('Disabled mini-cart settings are not persisted', $integration->bridge_element_settings(['brxMcStepperEnable' => true], (object) ['name' => 'woocommerce-mini-cart']) === ['brxMcStepperEnable' => true]);
-    check('Disabled linked behaviour preserves the native query', $integration->bridge_element_settings(['type' => 'upsells', 'brxKiweLinkedProductsMode' => 'cross_sells'], (object) ['name' => 'product-upsells'])['type'] === 'upsells');
-    check('Disabled ATC behaviour leaves attributes untouched', $integration->add_add_to_cart_attributes(['sentinel' => true], (object) ['name' => 'product-add-to-cart']) === ['sentinel' => true]);
+    check('Legacy false flags do not disable selected element behaviour', $runtime->invoke($integration, ['brxPlusOnly' => true]));
+    check('Mini-cart without element selections retains native output', $integration->render_mini_cart_quantity('native', [], 'key') === 'native');
+    check('Linked preset follows the element despite legacy false flag', $integration->bridge_element_settings(['type' => 'upsells', 'brxKiweLinkedProductsMode' => 'cross_sells'], (object) ['name' => 'product-upsells'])['type'] === 'cross_sells');
+    check('ATC without element selection leaves attributes untouched', $integration->add_add_to_cart_attributes(['sentinel' => true], (object) ['name' => 'product-add-to-cart']) === ['sentinel' => true]);
     $integration->enqueue_mini_cart_adapter();
+    check('No global visitor mini-cart enqueue hook', !isset($hooks['wp_enqueue_scripts'][10]) || !in_array([$integration,'enqueue_mini_cart_adapter'],$hooks['wp_enqueue_scripts'][10],true));
     check('No settings changes while rendering controls', $before === $settings->all());
     $settings->data['bricks']['add_to_cart_enhancer_enabled'] = true;
     check('Enabling runtime alone does not alter every element', !$runtime->invoke($integration, []));
@@ -109,7 +133,7 @@ if (!$theme[3]) {
 }
 
 $bootstrap = file_get_contents($root . '/wp-content/mu-plugins/dsa/includes/Plugin.php');
-check('Bootstrap waits for theme setup', str_contains($bootstrap, "add_action( 'after_setup_theme', [ \$bricks_integration, 'register' ], 20 )"));
+check('Bootstrap waits for theme setup before constructing Bricks integration', str_contains($bootstrap, "add_action( 'after_setup_theme', function (): void") && str_contains($bootstrap, '( new Bricks_Integration('));
 check('Bootstrap is not gated by saved Bricks settings', !str_contains($bootstrap, '$bricks_enabled'));
 $graph = file_get_contents($root . '/wp-content/mu-plugins/dsa/includes/AI/Site_Graph_Service.php');
 check('Calibration uses active-theme capability, not behaviour switch', str_contains($graph, "'surfaceStyleControls' => \\DSA\\Bricks\\Bricks_Integration::is_active_theme() ? \\DSA\\Bricks\\Surface_Style_Controls::capabilities( true ) : []"));

@@ -26,14 +26,14 @@ const conversionRoutes = ['', ' /dynamictags', ' /queryloop'].map((modifier) => 
 	path.join(root, 'kiwe-ai-toolkit/bin/kiwe.js'), 'route', '--command', '/convert /bricks' + modifier, '--artifact-summary', 'approved source.html styles.css app.js',
 ], { cwd: root, encoding: 'utf8' })));
 
-const expected = ['/ideate', '/convert /bricks', '/audit', '/accessibility', '/fix', '/redo'];
+const expected = ['/ideate', '/preview', '/seam', '/convert /bricks', '/audit', '/accessibility', '/fix', '/redo', '/library'];
 const checks = [];
 const check = (label, pass) => checks.push({ label, pass: Boolean(pass) });
 
-check('SEAM exposes exactly six commands', JSON.stringify(manifest.commands.map((item) => item.command)) === JSON.stringify(expected) && JSON.stringify(entry.commands) === JSON.stringify(expected));
+check('SEAM exposes the nine declared commands without extra aliases', JSON.stringify(manifest.commands.map((item) => item.command)) === JSON.stringify(expected) && JSON.stringify(entry.commands) === JSON.stringify(expected));
 check('SEAM has no aliases or compatibility grammar', manifest.aliases.length === 0 && manifest.unknownCommandPolicy === 'reject' && !JSON.stringify(manifest).includes('compatib'));
 check('SiteGraph is input rather than a slash command', manifest.authority.siteContext.includes('neither is a slash command') && !expected.some((command) => command.includes('sitegraph')));
-check('Framework is an explicit seam.kiwe conversion option', manifest.authority.framework.includes('explicit seam.kiwe compilation option') && contexts.includes('Framework Profile'));
+check('Framework source preparation is explicit and native conversion stays in Seam', manifest.authority.framework.includes('Explicit /seam') && manifest.authority.framework.includes('compiler remains the sole native Bricks JSON/Profile generator') && manifest.workflow.acceptPreviewAndPrepareFramework === '/seam' && contexts.includes('Framework Profile'));
 check('seam.kiwe is sole Bricks JSON authority', manifest.authority.conversion.includes('Only seam.kiwe emits production Bricks JSON') && conversionRoutes.every((route) => route.ok && JSON.stringify(route.outputs) === JSON.stringify(['bricks-bindings/kiwe-bindings.json', 'binding report']) && route.options.emitsBricksJson === false));
 check('ideation preserves creative authority', contexts.includes('Do not apply Seam Framework, Bricks structures or a SEAM house style'));
 check(
@@ -63,7 +63,7 @@ check('access keys remain hashed at rest', keys.includes('wp_hash_password') && 
 check('shared provider secret remains behind broker transport', provider.includes('Secret_Store::decrypt') && broker.includes("'secretAccess'  => false"));
 check('plugin registers one external SiteGraph boundary', plugin.includes('new AI_Access_Controller( $this->site_graph )') && plugin.includes('new Site_Graph_Controller( $this->site_graph )'));
 check('clean RC settings schema has no historical migration ladder', settings.includes('SCHEMA_VERSION = 8') && !settings.includes('SAFETY_MIGRATION_VERSION') && !settings.includes('apply_bricks_compatibility_profile'));
-check('fresh installs enable only read-only SiteGraph', settings.includes('disable_boolean_tree') && settings.includes("'site_graph'") && settings.includes("'mode'    => 'read_only'"));
+check('fresh installs keep optional services off and native Bricks automatic', settings.includes('disable_boolean_tree') && settings.includes("'mode'    => 'read_only'") && settings.includes('resolve_core_integrations'));
 check('Kiwe admin exposes seven coherent sections', ['Overview','Context','Build','AppShell','Commerce & Messages','Security','System'].every((label) => admin.includes(`'${label}'`)) && admin.includes('render_hub_page'));
 
 const failures = checks.filter((item) => !item.pass);

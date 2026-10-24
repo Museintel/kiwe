@@ -24,11 +24,20 @@ final class Design_Context_Profile_Service {
 	public const USER_META_LINKEDIN = 'kiwe_linkedin_url';
 	public const USER_META_TEAM_ORDER = 'kiwe_team_order';
 	public const USER_META_AVATAR_ID = 'kiwe_avatar_id';
-	private const SERVICE_CATEGORY_PLAN_META = '_kiwe_service_category_plan';
+	/** Native fallback shared with same-site Service archives when the source has no taxonomy. */
+	public const SERVICE_CATEGORY_PLAN_META = '_kiwe_service_category_plan';
 
 	/** Active integrations, never the site-type label, determine commerce availability. */
+	/** A Core edit never rewrites dormant Store context or its existing intent. */
+	private function retain_inactive_store( array $profile, array $stored ): array {
+		if ( $this->commerce_available() ) return $profile;
+		foreach ( [ 'commerce','regulatory' ] as $key ) { if ( array_key_exists( $key, $stored ) ) $profile[$key] = $stored[$key]; else unset( $profile[$key] ); }
+		if ( array_key_exists( 'highlightBestsellers', (array) ( $stored['contentPlan'] ?? [] ) ) ) $profile['contentPlan']['highlightBestsellers'] = $stored['contentPlan']['highlightBestsellers'];
+		return $profile;
+	}
+
 	public function commerce_available(): bool {
-		return (bool) apply_filters( 'kiwe_design_context_commerce_available', function_exists( 'WC' ) );
+		return \DSA\Apps\Store_App_Service::enabled() && (bool) apply_filters( 'kiwe_design_context_commerce_available', true );
 	}
 
 	private function services_enabled( array $stored ): bool {
@@ -42,8 +51,10 @@ final class Design_Context_Profile_Service {
 		$stored = is_array( $stored ) ? $stored : [];
 		$inferred = $this->inferred( $stored );
 		$profile = array_replace_recursive( $inferred, $stored );
+		$profile['business']['activities'] = \DSA\Bricks\Design_Context_Binding_Service::activities( $profile );
 		// Native owners win, including edits made outside Kiwe.
 		foreach ( [ 'siteName', 'tagline', 'logoId', 'logoInverseId', 'siteIconId' ] as $key ) $profile['identity'][ $key ] = $inferred['identity'][ $key ];
+		foreach ( ['squareLogoId','roundLogoId'] as $asset ) $profile['identity'][$asset] = self::public_brand_image($profile['identity'][$asset] ?? 0);
 		foreach ( [ 'phone', 'email' ] as $key ) $profile['contact'][ $key ] = $inferred['contact'][ $key ];
 		$profile['localization'] = $inferred['localization'];
 		$profile['seo']['allowIndexing'] = $inferred['seo']['allowIndexing'];
@@ -83,12 +94,41 @@ final class Design_Context_Profile_Service {
 		return is_array( $status ) ? $status : [];
 	}
 
+	/** Private identity card projection. Native WordPress options remain the authority. */
+	public function identity_projection(): array {
+		$profile = $this->current();
+		$identity = (array) ( $profile['identity'] ?? [] );
+		$contact = (array) ( $profile['contact'] ?? [] );
+		$state = [
+			'siteName'       => wp_strip_all_tags( (string) ( $identity['siteName'] ?? '' ) ),
+			'tagline'        => wp_strip_all_tags( (string) ( $identity['tagline'] ?? '' ) ),
+			'industry'       => sanitize_text_field( (string) ( $identity['industry'] ?? '' ) ),
+			'industrySector' => sanitize_key( (string) ( $identity['industrySector'] ?? '' ) ),
+			'siteType'       => sanitize_key( (string) ( $identity['siteType'] ?? 'business' ) ),
+			'logoId'         => absint( $identity['logoId'] ?? 0 ),
+			'logoInverseId'  => absint( $identity['logoInverseId'] ?? 0 ),
+			'siteIconId'     => absint( $identity['siteIconId'] ?? 0 ),
+			'phone'          => Site_Identity_Service::store_phone(),
+			'email'          => Site_Identity_Service::store_email(),
+		];
+		$state['logoUrl'] = $state['logoId'] ? esc_url_raw( (string) wp_get_attachment_url( $state['logoId'] ) ) : '';
+		$state['logoInverseUrl'] = $state['logoInverseId'] ? esc_url_raw( (string) wp_get_attachment_url( $state['logoInverseId'] ) ) : '';
+		$state['siteIconUrl'] = $state['siteIconId'] ? esc_url_raw( (string) wp_get_attachment_url( $state['siteIconId'] ) ) : '';
+		foreach ( ['squareLogo','roundLogo'] as $asset ) {
+			$state[$asset.'Id'] = self::public_brand_image($identity[$asset.'Id'] ?? 0);
+			$state[$asset.'Url'] = $state[$asset.'Id'] ? esc_url_raw((string) wp_get_attachment_url($state[$asset.'Id'])) : '';
+		}
+		$state['activities'] = \DSA\Bricks\Design_Context_Binding_Service::activities($profile);
+		$state['expected'] = hash( 'sha256', wp_json_encode( [ $state['siteName'], $state['tagline'], $state['industry'], $state['industrySector'], $state['siteType'], $state['logoId'], $state['logoInverseId'], $state['siteIconId'], $state['phone'], $state['email'], $state['squareLogoId'], $state['roundLogoId'], $state['activities'] ] ) );
+		return $state;
+	}
+
 	public function is_complete(): bool {
 		return ! empty( $this->status()['completed'] );
 	}
 
 	public static function saved_seo_strength(): ?int {
-		$report = get_option( self::OPTION_SEO_REPORT, [] );
+		$report = Search_Report_Snapshot::read()['report'];
 		if ( is_array( $report ) && isset( $report['score'] ) ) {
 			return max( 0, min( 100, absint( $report['score'] ) ) );
 		}
@@ -98,8 +138,8 @@ final class Design_Context_Profile_Service {
 	}
 
 	/** Section inputs are scoped before the existing sanitizer and native writers run. */
-	public function save_section( string $section, array $raw, int $user_id, string $invitation_id = '' ) {
-		$groups = [ 'identity'=>[ 'identity' ], 'story'=>[ 'audience','about','seo' ], 'contact'=>[ 'contact','localization' ], 'brand'=>[ 'brand' ], 'website-plan'=>[ 'contentPlan' ], 'services'=>[ 'services' ], 'store'=>[ 'commerce','regulatory' ] ];
+	public function save_section( string $section, array $raw, int $user_id, string $invitation_id = '', string $changed_field = '' ) {
+		$groups = [ 'identity'=>[ 'identity','business' ], 'story'=>[ 'audience','about','seo' ], 'contact'=>[ 'contact','localization' ], 'brand'=>[ 'brand' ], 'website-plan'=>[ 'contentPlan' ], 'services'=>[ 'services' ], 'store'=>[ 'commerce','regulatory' ] ];
 		if ( ! isset( $groups[ $section ] ) || ( 'store' === $section && ! $this->commerce_available() ) ) return new \WP_Error( 'kiwe_section', 'This section is unavailable.' );
 		if ( ! user_can( $user_id, 'kiwe_manage_context' ) ) return new \WP_Error( 'kiwe_section_forbidden', 'Website management access required.' );
 		$latest = $this->current();
@@ -113,10 +153,64 @@ final class Design_Context_Profile_Service {
 		}
 		// Binding arbitrary post types is a developer decision, never an input shortcut.
 		if ( 'services' === $section && ! user_can( $user_id, 'manage_options' ) ) $merged['services']['sourcePostType'] = $latest['services']['sourcePostType'];
-		return $this->save( $merged, $user_id, $invitation_id, $section );
+		// Individual contact tiles can complete a fresh profile incrementally. The
+		// overall onboarding status still records every missing required field.
+		$validation = null;
+		if ( 'contact' === $section && '' !== $changed_field ) {
+			$validation = 'contact.phone' === $changed_field ? [ 'phone' ] : ( 'contact.email' === $changed_field ? [ 'email' ] : [] );
+		}
+		return $this->save( $merged, $user_id, $invitation_id, $section, $validation );
 	}
 
-	public function save( array $raw, int $user_id, string $invitation_id = '', string $section = '' ) {
+	/**
+	 * Apply only the identity values a client changed.
+	 *
+	 * This is deliberately narrower than the onboarding form: it preserves every
+	 * unrelated native value, accepts an explicit image removal, and leaves the
+	 * overall Design Context status incomplete until required setup is restored.
+	 */
+	public function save_identity_changes( array $changes, string $expected, int $user_id ) {
+		if ( ! user_can( $user_id, 'kiwe_manage_context' ) ) return new \WP_Error( 'kiwe_identity_forbidden', __( 'Website management access required.', 'dsa' ) );
+		$current = $this->identity_projection();
+		if ( ! preg_match( '/^[a-f0-9]{64}$/', $expected ) || ! hash_equals( $current['expected'], $expected ) ) return new \WP_Error( 'kiwe_identity_stale', __( 'Business identity changed in another screen. Reload and review it before saving.', 'dsa' ), [ 'status'=>409 ] );
+		$allowed = [ 'siteName','tagline','industry','industrySector','siteType','logoId','logoInverseId','siteIconId','squareLogoId','roundLogoId','activities' ];
+		if ( ! $changes || count( $changes ) > count( $allowed ) || array_diff( array_keys( $changes ), $allowed ) ) return new \WP_Error( 'kiwe_identity_changes', __( 'Choose one or more supported identity details to save.', 'dsa' ), [ 'status'=>400 ] );
+
+		$latest = $this->current();
+		$text_limits = [ 'siteName'=>200, 'tagline'=>160, 'industry'=>200 ];
+		$sectors = [ '', 'food_beverage','retail','manufacturing','healthcare','education','hospitality','professional_services','technology','media','nonprofit','real_estate','other' ];
+		$types = [ 'business','ecommerce','publication','portfolio','nonprofit','community','education','service','other' ];
+		foreach ( $changes as $key=>$value ) {
+			if ( 'activities' === $key ) {
+				$keys = array_keys(\DSA\Bricks\Design_Context_Binding_Service::activities([]));
+				if ( ! is_array($value) || count($value)!==count($keys) || array_diff(array_keys($value),$keys) || count(array_filter($value,'is_bool'))!==count($keys) ) return new \WP_Error('kiwe_identity_activities',__('Choose the supported business activities.','dsa'),['status'=>400]);
+				$latest['business']['activities'] = array_replace(array_fill_keys($keys,false),$value);
+				continue;
+			} elseif ( isset( $text_limits[ $key ] ) ) {
+				if ( ! is_string( $value ) ) return new \WP_Error( 'kiwe_identity_value', __( 'Use text for this identity field.', 'dsa' ), [ 'status'=>400 ] );
+				$value = sanitize_text_field( $value );
+				$length = function_exists( 'mb_strlen' ) ? mb_strlen( $value ) : strlen( $value );
+				if ( $length > $text_limits[ $key ] || ( 'siteName' === $key && '' === $value ) ) return new \WP_Error( 'kiwe_identity_value', 'siteName' === $key ? __( 'Website name is required.', 'dsa' ) : __( 'This identity value is too long.', 'dsa' ), [ 'status'=>400 ] );
+			} elseif ( 'industrySector' === $key || 'siteType' === $key ) {
+				if ( ! is_string( $value ) ) return new \WP_Error( 'kiwe_identity_value', __( 'Choose an available identity option.', 'dsa' ), [ 'status'=>400 ] );
+				$value = sanitize_key( $value );
+				if ( ! in_array( $value, 'industrySector' === $key ? $sectors : $types, true ) ) return new \WP_Error( 'kiwe_identity_value', __( 'Choose an available identity option.', 'dsa' ), [ 'status'=>400 ] );
+			} else {
+				if ( ! is_int( $value ) || $value < 0 ) return new \WP_Error( 'kiwe_identity_image', __( 'Choose an image from this website or remove the current image.', 'dsa' ), [ 'status'=>400 ] );
+				if ( $value && ! wp_attachment_is_image( $value ) ) return new \WP_Error( 'kiwe_identity_image', __( 'Choose an image from this website.', 'dsa' ), [ 'status'=>400 ] );
+				if ( $value && in_array($key,['squareLogoId','roundLogoId'],true) && ! self::public_brand_image($value) ) return new \WP_Error('kiwe_identity_image',__('Choose a public business image.','dsa'),['status'=>400]);
+			}
+			$latest['identity'][ $key ] = $value;
+		}
+		$validation = array_key_exists( 'siteName', $changes ) ? [ 'siteName' ] : [];
+		$result = $this->save( $latest, $user_id, '', 'identity', $validation );
+		if ( is_wp_error( $result ) ) return $result;
+		$after = $this->identity_projection();
+		foreach ( $changes as $key=>$value ) if ( 'activities' === $key ? $after[$key] != $value : $after[$key] !== $value ) return new \WP_Error( 'kiwe_identity_unconfirmed', __( 'Identity changed during the save. Reload and review the current details.', 'dsa' ), [ 'status'=>409 ] );
+		return $after;
+	}
+
+	public function save( array $raw, int $user_id, string $invitation_id = '', string $section = '', ?array $validation_fields = null ) {
 		$stored = (array) get_option( self::OPTION_PROFILE, [] );
 		// Removed editors cannot erase legacy records on an unrelated save.
 		$raw['about']['team'] = $stored['about']['team'] ?? [ 'enabled'=>false, 'members'=>[] ];
@@ -129,10 +223,14 @@ final class Design_Context_Profile_Service {
 			$raw['regulatory'] = $stored['regulatory'] ?? [];
 		}
 		if ( empty( $raw['services']['enabled'] ) ) $raw['services'] = array_replace( (array) ( $stored['services'] ?? [] ), [ 'enabled'=>false ] );
+		// Site privacy stays with WordPress; client choices apply to individual records.
+		$raw['seo'] = is_array( $raw['seo'] ?? null ) ? $raw['seo'] : [];
+		$raw['seo']['allowIndexing'] = '0' !== (string) get_option( 'blog_public', '1' );
 		$profile = $this->sanitize( $raw );
 		$errors  = $this->required_errors( $profile );
 		$section_fields = [ 'identity'=>[ 'siteName','logoId','siteIconId' ], 'contact'=>[ 'phone','email','address' ] ];
 		$blocking_errors = $section ? array_intersect_key( $errors, array_fill_keys( $section_fields[ $section ] ?? [], true ) ) : $errors;
+		if ( in_array( $section, [ 'identity','contact' ], true ) && null !== $validation_fields ) $blocking_errors = array_intersect_key( $blocking_errors, array_fill_keys( $validation_fields, true ) );
 		if ( $blocking_errors ) {
 			return new \WP_Error( 'kiwe_onboarding_incomplete', implode( ' ', $blocking_errors ), [ 'fields' => array_keys( $blocking_errors ) ] );
 		}
@@ -143,7 +241,7 @@ final class Design_Context_Profile_Service {
 		update_option( Site_Identity_Service::OPTION_LOGO, $profile['identity']['logoId'], false );
 		update_option( Site_Identity_Service::OPTION_LOGO_INVERSE, $profile['identity']['logoInverseId'], false );
 		set_theme_mod( 'custom_logo', $profile['identity']['logoId'] );
-		if ( $profile['identity']['siteIconId'] ) update_option( 'site_icon', $profile['identity']['siteIconId'] );
+		update_option( 'site_icon', $profile['identity']['siteIconId'], false );
 		}
 		if ( ! $section || 'contact' === $section ) {
 		update_option( Site_Identity_Service::OPTION_STORE_PHONE, $profile['contact']['phone'], false );
@@ -157,7 +255,6 @@ final class Design_Context_Profile_Service {
 		if ( ! $section || in_array( $section, [ 'contact','website-plan' ], true ) ) $this->apply_kiwe_public_context( $profile );
 		if ( ! $section || 'story' === $section ) {
 			$profile = $this->apply_people_context( $profile, $user_id );
-			update_option( 'blog_public', ! empty( $profile['seo']['allowIndexing'] ) ? '1' : '0' );
 		}
 		if ( ! $section || 'services' === $section ) $profile = $this->apply_services_context( $profile, $user_id );
 		if ( ( ! $section || in_array( $section, [ 'store','contact' ], true ) ) && $profile['commerce']['enabled'] && function_exists( 'WC' ) ) {
@@ -176,6 +273,9 @@ final class Design_Context_Profile_Service {
 		$stored_profile = $this->compact_service_references( $stored_profile );
 		// Legacy unlinked entries remain recoverable but are never projected publicly.
 		$stored_profile['about']['team'] = $stored['about']['team'] ?? [ 'enabled'=>false, 'members'=>[] ];
+		// Setup choices belong to their narrow journey writer, not stale section forms.
+		$stored_profile['journey'] = is_array( $stored['journey'] ?? null ) ? $stored['journey'] : [];
+		$stored_profile = $this->retain_inactive_store( $stored_profile, $stored );
 		update_option( self::OPTION_PROFILE, $stored_profile, false );
 		update_option(
 			self::OPTION_STATUS,
@@ -189,7 +289,7 @@ final class Design_Context_Profile_Service {
 			false
 		);
 		// Business edits never synchronously scan the site's full posts/media catalog.
-		if ( ! $section ) $this->overall_seo_report( $profile, true );
+		do_action( 'kiwe_seo_score_dirty' );
 
 		return $profile;
 	}
@@ -201,6 +301,7 @@ final class Design_Context_Profile_Service {
 		if ( null !== $overall_seo ) $scores['seoStrength'] = $overall_seo;
 		$address = $profile['contact']['address'];
 		$about   = $profile['about'];
+		unset( $about['team']['enabledByOwner'] ); // Private applicability is not a public person field.
 
 		$founder_image_id = absint( $about['founder']['imageId'] ?? 0 );
 		$about['founder']['image'] = $founder_image_id ? esc_url_raw( (string) wp_get_attachment_url( $founder_image_id ) ) : '';
@@ -238,7 +339,10 @@ final class Design_Context_Profile_Service {
 				'logo'        => Site_Identity_Service::logo_url(),
 				'logoInverse' => Site_Identity_Service::logo_url( 'inverse' ),
 				'siteIcon'    => get_site_icon_url( 512 ) ?: '',
+				'squareLogo'  => ! empty($profile['identity']['squareLogoId']) ? (string) wp_get_attachment_url($profile['identity']['squareLogoId']) : '',
+				'roundLogo'   => ! empty($profile['identity']['roundLogoId']) ? (string) wp_get_attachment_url($profile['identity']['roundLogoId']) : '',
 			],
+			'business' => [ 'activities'=>\DSA\Bricks\Design_Context_Binding_Service::activities($profile) ],
 			'about'       => $about,
 			'contact' => [
 				'phone'    => $profile['contact']['phone'],
@@ -252,12 +356,13 @@ final class Design_Context_Profile_Service {
 			'audience'    => $profile['audience'],
 			'contentPlan' => $profile['contentPlan'],
 			'services'    => $services,
+			'testimonials' => [ 'source'=>'selected-native-comments', 'items'=>Context_Selection_Service::testimonials( 20 ), 'limit'=>20 ],
 			'resources'   => [
 				'items' => [],
 				'source' => 'wordpress-media-library',
-				'authority' => 'native-media-library-public-records',
-				'query' => [ 'resource'=>'media', 'mimeType'=>'', 'page'=>1 ],
-				'note' => 'Use the SiteGraph media catalog and pagination, not a second resource list.',
+				'authority' => 'explicit-design-selections-and-inherited-public-images',
+				'query' => [ 'resource'=>'media', 'mimeType'=>'', 'contextOnly'=>true, 'page'=>1 ],
+				'note' => 'Use the SiteGraph contextOnly media query and pagination. Native content, gallery, identity and public team images are inherited; other files require explicit design selection. Automatic inclusion alone never completes the Media setup step.',
 			],
 			'regulatory'  => $profile['regulatory'],
 			'commercePlan'=> [
@@ -301,53 +406,30 @@ final class Design_Context_Profile_Service {
 		return [ 'seoStrength' => $percent( $seo_checks ), 'designContextStrength' => $percent( $design_checks ) ];
 	}
 
-	/**
-	 * Calculate the site-wide SEO score from owner evidence and the native
-	 * WordPress records Kiwe can actually improve. Empty content types are not
-	 * treated as failures; their weight is redistributed across active scopes.
-	 */
+	/** Compatibility entry: request background work and return only the last completed snapshot. */
 	public function overall_seo_report( ?array $profile = null, bool $persist = true ): array {
-		$p = $profile ?: $this->current();
-		$evidence = $this->seo_evidence_checks( $p );
-		$evidence_total = count( $evidence );
-		$evidence_ready = count( array_filter( $evidence ) );
-		$components = [
-			'onboarding' => [
-				'label' => 'Onboarding evidence',
-				'score' => $this->percent( $evidence_ready, $evidence_total ),
-				'ready' => $evidence_ready,
-				'total' => $evidence_total,
-				'weight' => 20,
-				'active' => true,
-			],
-			'pages' => $this->content_seo_component( 'page', 'Pages', 20 ),
-			'posts' => $this->content_seo_component( 'post', 'Posts', 15 ),
-			'products' => $this->content_seo_component( 'product', 'Products', 20 ),
-			'media' => $this->media_seo_component( 25 ),
-		];
+		if ( $persist && \DSA\Apps\SEO_App_Service::enabled() ) do_action( 'kiwe_seo_score_dirty' );
+		return Search_Report_Snapshot::read()['report'] ?? [];
+	}
 
-		$weighted = 0;
-		$weight_total = 0;
-		foreach ( $components as $component ) {
-			if ( empty( $component['active'] ) ) continue;
-			$weight = absint( $component['weight'] ?? 0 );
-			$weighted += absint( $component['score'] ?? 0 ) * $weight;
-			$weight_total += $weight;
-		}
-
-		$report = [
-			'schema' => 'kiwe.overall-seo-score.v1',
-			'score' => $weight_total ? (int) round( $weighted / $weight_total ) : 0,
-			'components' => $components,
-			'calculatedAt' => gmdate( 'c' ),
-			'authority' => [
-				'aggregateNotVanityMetric' => true,
-				'emptyScopesRedistributed' => true,
-				'unsafeSuggestionsNeverCountAsComplete' => true,
-			],
-		];
-		if ( $persist ) update_option( self::OPTION_SEO_REPORT, $report, false );
-		return $report;
+	/** Onboarding evidence without current(), page inventories, service lists or product aggregation. */
+	public function seo_evidence_component() {
+		global $wpdb;
+		$p = get_option( self::OPTION_PROFILE, [] );
+		$p = is_array( $p ) ? $p : [];
+		foreach ( [ 'identity','contact','contentPlan','seo','about' ] as $key ) if ( ! is_array( $p[ $key ] ?? null ) ) $p[ $key ] = [];
+		$p['identity']['siteName'] = wp_strip_all_tags( (string) get_bloginfo( 'name' ) );
+		$p['identity']['tagline'] = wp_strip_all_tags( (string) get_bloginfo( 'description' ) );
+		$p['identity']['logoId'] = Site_Identity_Service::attachment_id();
+		$p['identity']['siteIconId'] = (int) get_option( 'site_icon', 0 );
+		$p['contact']['email'] = Site_Identity_Service::store_email();
+		$p['contact']['phone'] = Site_Identity_Service::store_phone();
+		$page = $wpdb->get_var( "SELECT ID FROM {$wpdb->posts} WHERE post_type='page' AND post_status IN ('publish','draft','private') LIMIT 1" );
+		if ( $wpdb->last_error ) return new \WP_Error( 'score_evidence', 'Could not read page evidence.' );
+		$p['contentPlan']['existingPages'] = (bool) $page;
+		$checks = $this->seo_evidence_checks( $p );
+		$ready = count( array_filter( $checks ) ); $total = count( $checks );
+		return [ 'label'=>'Onboarding evidence','score'=>(int) round( 100 * $ready / max( 1, $total ) ),'ready'=>$ready,'total'=>$total,'weight'=>20,'active'=>true ];
 	}
 
 	private function seo_evidence_checks( array $p ): array {
@@ -360,85 +442,6 @@ final class Design_Context_Profile_Service {
 			! empty( $p['seo']['searchIntent'] ), ! empty( $p['seo']['proofPoints'] ),
 			! empty( $p['about']['story'] ), ! empty( $p['about']['mission'] ) || ! empty( $p['about']['vision'] ),
 		];
-	}
-
-	private function content_seo_component( string $post_type, string $label, int $weight ): array {
-		if ( ! post_type_exists( $post_type ) ) return [ 'label'=>$label, 'score'=>0, 'ready'=>0, 'total'=>0, 'weight'=>$weight, 'active'=>false ];
-		global $wpdb;
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT p.ID, p.post_excerpt,
-				MAX(CASE WHEN pm.meta_key = '_kiwe_seo_title' THEN pm.meta_value ELSE '' END) AS seo_title,
-				MAX(CASE WHEN pm.meta_key = '_kiwe_seo_description' THEN pm.meta_value ELSE '' END) AS seo_description,
-				MAX(CASE WHEN pm.meta_key = '_kiwe_search_phrases' THEN pm.meta_value ELSE '' END) AS search_phrases
-				FROM {$wpdb->posts} p
-				LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key IN ('_kiwe_seo_title','_kiwe_seo_description','_kiwe_search_phrases')
-				WHERE p.post_type = %s AND p.post_status = 'publish'
-				GROUP BY p.ID, p.post_excerpt",
-				$post_type
-			),
-			ARRAY_A
-		);
-		$total = count( $rows );
-		if ( ! $total ) return [ 'label'=>$label, 'score'=>0, 'ready'=>0, 'total'=>0, 'weight'=>$weight, 'active'=>false ];
-		$points = 0;
-		$ready = 0;
-		foreach ( $rows as $row ) {
-			$record_points = ( '' !== trim( (string) $row['seo_title'] ) ? 40 : 0 )
-				+ ( '' !== trim( (string) $row['seo_description'] ) ? 40 : 0 )
-				+ ( '' !== trim( (string) $row['post_excerpt'] ) ? 10 : 0 )
-				+ ( '' !== trim( (string) $row['search_phrases'] ) ? 10 : 0 );
-			$points += $record_points;
-			if ( $record_points >= 80 ) $ready++;
-		}
-		return [ 'label'=>$label, 'score'=>(int) round( $points / $total ), 'ready'=>$ready, 'total'=>$total, 'weight'=>$weight, 'active'=>true ];
-	}
-
-	private function media_seo_component( int $weight ): array {
-		global $wpdb;
-		$rows = $wpdb->get_results(
-			"SELECT p.ID, p.post_title, p.post_excerpt, p.post_content, p.post_mime_type,
-			MAX(CASE WHEN pm.meta_key = '_wp_attachment_image_alt' THEN pm.meta_value ELSE '' END) AS image_alt,
-			MAX(CASE WHEN pm.meta_key = '_kiwe_seo_intentional_empty_fields' THEN pm.meta_value ELSE '' END) AS intentional_empty
-			FROM {$wpdb->posts} p
-			LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key IN ('_wp_attachment_image_alt','_kiwe_seo_intentional_empty_fields')
-			WHERE p.post_type = 'attachment' AND p.post_status = 'inherit'
-			GROUP BY p.ID, p.post_title, p.post_excerpt, p.post_content, p.post_mime_type",
-			ARRAY_A
-		);
-		$total = count( $rows );
-		if ( ! $total ) return [ 'label'=>'Media', 'score'=>0, 'ready'=>0, 'total'=>0, 'weight'=>$weight, 'active'=>false ];
-		$current_job = get_option( 'kiwe_seo_refinement_job_v1', [] );
-		$accepted = [];
-		if ( is_array( $current_job ) && 'all_media' === ( $current_job['scope'] ?? '' ) ) {
-			foreach ( (array) ( $current_job['proposals'] ?? [] ) as $proposal ) {
-				if ( is_array( $proposal ) && 'accepted' === ( $proposal['status'] ?? '' ) ) $accepted[ absint( $proposal['objectId'] ?? 0 ) ] = true;
-			}
-		}
-		$points = 0;
-		$ready = 0;
-		foreach ( $rows as $row ) {
-			$is_image = str_starts_with( (string) $row['post_mime_type'], 'image/' );
-			$intentional = maybe_unserialize( $row['intentional_empty'] ?? [] );
-			$intentional = is_array( $intentional ) ? $intentional : [];
-			$record_points = '' !== trim( (string) $row['post_title'] ) ? ( $is_image ? 20 : 30 ) : 0;
-			if ( $is_image ) {
-				$alt_ready = '' !== trim( (string) $row['image_alt'] ) || in_array( 'alt', $intentional, true ) || ! empty( $accepted[ (int) $row['ID'] ] );
-				$record_points += $alt_ready ? 40 : 0;
-				$record_points += '' !== trim( (string) $row['post_excerpt'] ) ? 20 : 0;
-				$record_points += '' !== trim( (string) $row['post_content'] ) ? 20 : 0;
-			} else {
-				$record_points += '' !== trim( (string) $row['post_excerpt'] ) ? 30 : 0;
-				$record_points += '' !== trim( (string) $row['post_content'] ) ? 40 : 0;
-			}
-			$points += $record_points;
-			if ( $record_points >= 80 ) $ready++;
-		}
-		return [ 'label'=>'Media', 'score'=>(int) round( $points / $total ), 'ready'=>$ready, 'total'=>$total, 'weight'=>$weight, 'active'=>true ];
-	}
-
-	private function percent( int $ready, int $total ): int {
-		return $total > 0 ? (int) round( 100 * $ready / $total ) : 0;
 	}
 
 	/**
@@ -488,7 +491,7 @@ final class Design_Context_Profile_Service {
 			'schema'=>'kiwe.seam-design-context.v1', 'updatedAt'=>gmdate( 'c' ), 'updatedBy'=>$user_id,
 			'lastEditorialRefinementAt'=>gmdate( 'c' ), 'lastEditorialRefinementBy'=>$user_id,
 		] );
-		update_option( self::OPTION_PROFILE, $this->compact_service_references( $this->compact_people_references( $profile ) ), false );
+		update_option( self::OPTION_PROFILE, $this->retain_inactive_store( $this->compact_service_references( $this->compact_people_references( $profile ) ), (array) get_option( self::OPTION_PROFILE, [] ) ), false );
 		$status = $this->status();
 		$status['scores'] = $profile['scores'];
 		update_option( self::OPTION_STATUS, $status, false );
@@ -514,8 +517,9 @@ final class Design_Context_Profile_Service {
 			'identity' => [
 				'siteName' => wp_strip_all_tags( (string) get_bloginfo( 'name' ) ),
 				'tagline' => wp_strip_all_tags( (string) get_bloginfo( 'description' ) ),
-				'description' => '', 'industry' => '', 'industrySector' => '', 'siteType' => function_exists( 'WC' ) ? 'ecommerce' : 'business',
+				'description' => '', 'industry' => '', 'industrySector' => '', 'siteType' => $this->commerce_available() ? 'ecommerce' : 'business',
 				'logoId' => Site_Identity_Service::attachment_id(), 'logoInverseId' => Site_Identity_Service::attachment_id( Site_Identity_Service::OPTION_LOGO_INVERSE ), 'siteIconId' => (int) get_option( 'site_icon', 0 ),
+				'squareLogoId'=>0, 'roundLogoId'=>0,
 			],
 			'contact' => [
 				'phone' => Site_Identity_Service::store_phone(), 'email' => Site_Identity_Service::store_email(), 'whatsapp' => '', 'whatsappSameAsPhone' => false,
@@ -551,7 +555,7 @@ final class Design_Context_Profile_Service {
 	}
 
 	private function product_plan(): array {
-		$count = function_exists( 'WC' ) && post_type_exists( 'product' ) ? (int) ( wp_count_posts( 'product' )->publish ?? 0 ) : 0;
+		$count = $this->commerce_available() && post_type_exists( 'product' ) ? (int) ( wp_count_posts( 'product' )->publish ?? 0 ) : 0;
 		$min = ''; $max = '';
 		global $wpdb;
 		$table = $wpdb->prefix . 'wc_product_meta_lookup';
@@ -674,7 +678,7 @@ final class Design_Context_Profile_Service {
 			$service_meta = [];
 			foreach ( $service_meta_fields as $meta_key=>$definition ) {
 				$value = $item['meta'][ $meta_key ] ?? '';
-				$service_meta[ $meta_key ] = 'boolean' === $definition['type'] ? ! empty( $value ) : ( 'integer' === $definition['type'] ? (int) $value : ( 'number' === $definition['type'] ? (float) $value : substr( sanitize_textarea_field( (string) $value ), 0, 5000 ) ) );
+				$service_meta[ $meta_key ] = 'boolean' === $definition['type'] ? ! empty( $value ) : ( '' === (string) $value ? '' : ( 'integer' === $definition['type'] ? (int) $value : ( 'number' === $definition['type'] ? (float) $value : substr( sanitize_textarea_field( (string) $value ), 0, 5000 ) ) ) );
 			}
 			$image_id = absint( $item['imageId'] ?? 0 );
 			$service_items[] = [
@@ -683,7 +687,7 @@ final class Design_Context_Profile_Service {
 				'description'=>substr( wp_kses_post( (string) ( $item['description'] ?? '' ) ), 0, 20000 ),
 				'imageId'=>$image_id && wp_attachment_is_image( $image_id ) ? $image_id : 0,
 				'parentId'=>absint( $item['parentId'] ?? 0 ), 'menuOrder'=>(int) ( $item['menuOrder'] ?? $index ),
-				'status'=>'publish' === ( $item['status'] ?? '' ) ? 'publish' : 'draft',
+				'status'=>in_array( $item['status'] ?? '', [ 'publish','pending' ], true ) ? $item['status'] : 'draft',
 				'categoryPaths'=>substr( sanitize_textarea_field( (string) ( $item['categoryPaths'] ?? '' ) ), 0, 3000 ),
 				'taxonomyPaths'=>$taxonomy_paths, 'meta'=>$service_meta,
 			];
@@ -711,7 +715,9 @@ final class Design_Context_Profile_Service {
 				'industrySector' => in_array( $identity['industrySector'] ?? '', [ '', 'food_beverage', 'retail', 'manufacturing', 'healthcare', 'education', 'hospitality', 'professional_services', 'technology', 'media', 'nonprofit', 'real_estate', 'other' ], true ) ? $identity['industrySector'] : '',
 				'siteType' => in_array( $identity['siteType'] ?? '', [ 'business', 'ecommerce', 'publication', 'portfolio', 'nonprofit', 'community', 'education', 'service', 'other' ], true ) ? $identity['siteType'] : 'business',
 				'logoId' => absint( $identity['logoId'] ?? 0 ), 'logoInverseId' => absint( $identity['logoInverseId'] ?? 0 ), 'siteIconId' => absint( $identity['siteIconId'] ?? 0 ),
+				'squareLogoId' => self::public_brand_image($identity['squareLogoId'] ?? 0), 'roundLogoId' => self::public_brand_image($identity['roundLogoId'] ?? 0),
 			],
+			'business' => [ 'activities'=>\DSA\Bricks\Design_Context_Binding_Service::activities($raw) ],
 			'contact' => [
 				'phone' => $phone, 'email' => sanitize_email( (string) ( $contact['email'] ?? '' ) ), 'whatsapp' => $whatsapp, 'whatsappSameAsPhone' => $whatsapp_same, 'socialLinks' => $social_links,
 				'address' => [ 'line1' => sanitize_text_field( (string) ( $address['line1'] ?? '' ) ), 'line2' => sanitize_text_field( (string) ( $address['line2'] ?? '' ) ), 'city' => sanitize_text_field( (string) ( $address['city'] ?? '' ) ), 'state' => sanitize_text_field( (string) ( $address['state'] ?? '' ) ), 'postcode' => sanitize_text_field( (string) ( $address['postcode'] ?? '' ) ), 'country' => strtoupper( substr( sanitize_key( (string) ( $address['country'] ?? '' ) ), 0, 2 ) ) ],
@@ -783,6 +789,11 @@ final class Design_Context_Profile_Service {
 			],
 			'scores' => [ 'seoStrength' => 0, 'designContextStrength' => 0 ], 'meta' => [ 'schema' => 'kiwe.seam-design-context.v1' ],
 		];
+	}
+
+	private static function public_brand_image( $value ): int {
+		$id = absint($value);
+		return $id && wp_attachment_is_image($id) && Context_Selection_Service::public_media(get_post($id)) ? $id : 0;
 	}
 
 	private function required_errors( array $profile ): array {
@@ -859,13 +870,53 @@ final class Design_Context_Profile_Service {
 		return $out;
 	}
 
-	private function inferred_services( string $source ): array {
+	/** Bounded native catalog for the client app; exports retain their own limits. */
+	public function service_catalog( array $query = [] ): array {
+		$stored = (array) get_option( self::OPTION_PROFILE, [] );
+		// A service source is always explicit. An unrelated plugin's CPT must never
+		// silently replace a client's plan-only inventory.
+		$source = sanitize_key( (string) ( $stored['services']['sourcePostType'] ?? '' ) );
+		$result = $this->inferred_services( $source, $query );
+		$result['enabled'] = $this->services_enabled( $stored );
+		$result['useForNavigation'] = ! empty( $stored['services']['useForNavigation'] );
+		return $result;
+	}
+
+	/** Reuse the existing native writer without saving unrelated context/options. */
+	public function save_service_record( string $source, array $item, int $actor_id ): array {
+		$result = $this->apply_services_context( [ 'services'=>[ 'enabled'=>true, 'sourcePostType'=>$source, 'items'=>[ $item ] ] ], $actor_id, false );
+		$saved = $result['services']['items'][0];
+		// The native post remains the record owner. Only this Kiwe-owned context
+		// flag changes when a client first saves a connected service.
+		if ( ! empty( $saved['recordId'] ) ) {
+			$stored = get_option( self::OPTION_PROFILE, [] );
+			if ( is_array( $stored ) && $source === sanitize_key( (string) ( $stored['services']['sourcePostType'] ?? '' ) ) && empty( $stored['services']['enabled'] ) ) {
+				$stored['services']['enabled'] = true;
+				update_option( self::OPTION_PROFILE, $stored, false );
+			}
+		}
+		return $saved;
+	}
+
+	private function inferred_services( string $source, array $query = [] ): array {
 		$sources = $this->service_post_types();
 		if ( ! isset( $sources[ $source ] ) ) return [ 'sourcePostType'=>'', 'useForNavigation'=>false, 'items'=>[] ];
 		$taxonomies = $this->service_taxonomies( $source );
 		$meta_fields = $this->service_meta_fields( $source );
 		$items = [];
-		foreach ( get_posts( [ 'post_type'=>$source, 'post_status'=>[ 'publish','draft','pending' ], 'posts_per_page'=>100, 'orderby'=>'menu_order title', 'order'=>'ASC', 'suppress_filters'=>false ] ) as $post ) {
+		$args = [ 'post_type'=>$source, 'post_status'=>[ 'publish','draft','pending' ], 'posts_per_page'=>100, 'orderby'=>[ 'menu_order'=>'ASC', 'title'=>'ASC', 'ID'=>'ASC' ], 'suppress_filters'=>false ];
+		if ( $query ) {
+			$status = in_array( $query['status'] ?? '', [ 'publish','draft','pending' ], true ) ? $query['status'] : 'all';
+			$sort = in_array( $query['sort'] ?? '', [ 'modified_desc','modified_asc','date_desc','date_asc','title_asc','title_desc' ], true ) ? $query['sort'] : 'modified_desc';
+			$args['posts_per_page'] = 21;
+			$args['offset'] = ( max( 1, min( 10000, (int) ( $query['page'] ?? 1 ) ) ) - 1 ) * 20;
+			$args['s'] = sanitize_text_field( substr( (string) ( $query['search'] ?? '' ), 0, 200 ) );
+			$args['post_status'] = 'all' === $status ? [ 'publish','draft','pending' ] : [ $status ];
+			$args['orderby'] = str_starts_with( $sort, 'title_' ) ? 'title' : ( str_starts_with( $sort, 'date_' ) ? 'date' : 'modified' );
+			$args['order'] = str_ends_with( $sort, '_asc' ) ? 'ASC' : 'DESC';
+			if ( ! empty( $query['id'] ) ) { $args['post__in'] = [ absint( $query['id'] ) ]; $args['offset'] = 0; $args['posts_per_page'] = 1; }
+		}
+		foreach ( empty( $query['disabled'] ) ? get_posts( $args ) : [] as $post ) {
 			$paths = [];
 			foreach ( $taxonomies as $taxonomy=>$definition ) {
 				$assigned = wp_get_object_terms( $post->ID, $taxonomy );
@@ -881,13 +932,13 @@ final class Design_Context_Profile_Service {
 				'title'=>sanitize_text_field( (string) $post->post_title ), 'summary'=>sanitize_textarea_field( (string) $post->post_excerpt ),
 				'description'=>wp_kses_post( (string) $post->post_content ), 'imageId'=>absint( get_post_thumbnail_id( $post->ID ) ),
 				'parentId'=>(int) $post->post_parent, 'menuOrder'=>(int) $post->menu_order,
-				'status'=>'publish' === $post->post_status ? 'publish' : 'draft', 'categoryPaths'=>sanitize_textarea_field( (string) get_post_meta( $post->ID, self::SERVICE_CATEGORY_PLAN_META, true ) ), 'taxonomyPaths'=>$paths, 'meta'=>$meta,
+				'status'=>in_array( $post->post_status, [ 'publish','pending' ], true ) ? $post->post_status : 'draft', 'categoryPaths'=>sanitize_textarea_field( (string) get_post_meta( $post->ID, self::SERVICE_CATEGORY_PLAN_META, true ) ), 'taxonomyPaths'=>$paths, 'meta'=>$meta,
 			];
 		}
 		return [ 'sourcePostType'=>$source, 'useForNavigation'=>false, 'items'=>$items, 'taxonomies'=>$taxonomies, 'customFields'=>$meta_fields, 'hierarchical'=>$sources[ $source ]['hierarchical'] ];
 	}
 
-	private function apply_services_context( array $profile, int $actor_id ): array {
+	private function apply_services_context( array $profile, int $actor_id, bool $refresh = true ): array {
 		if ( empty( $profile['services']['enabled'] ) ) return $profile;
 		$source = sanitize_key( (string) ( $profile['services']['sourcePostType'] ?? '' ) );
 		$sources = $this->service_post_types();
@@ -901,7 +952,7 @@ final class Design_Context_Profile_Service {
 			if ( $post_id && ( $source !== get_post_type( $post_id ) || ! user_can( $actor_id, 'edit_post', $post_id ) ) ) continue;
 			if ( ! $post_id && ! user_can( $actor_id, $object->cap->create_posts ) ) continue;
 			$already_published = $post_id && 'publish' === get_post_status( $post_id );
-			$status = 'publish' === ( $item['status'] ?? '' ) && ( $already_published || user_can( $actor_id, $object->cap->publish_posts ) ) ? 'publish' : 'draft';
+			$status = 'publish' === ( $item['status'] ?? '' ) && ( $already_published || user_can( $actor_id, $object->cap->publish_posts ) ) ? 'publish' : ( 'pending' === ( $item['status'] ?? '' ) ? 'pending' : 'draft' );
 			$parent_id = absint( $item['parentId'] ?? 0 );
 			if ( empty( $sources[ $source ]['hierarchical'] ) || $parent_id === $post_id || $source !== get_post_type( $parent_id ) || ( $post_id && in_array( $post_id, get_post_ancestors( $parent_id ), true ) ) ) $parent_id = 0;
 			$payload = [ 'post_type'=>$source, 'post_title'=>$item['title'], 'post_excerpt'=>$item['summary'], 'post_content'=>$item['description'], 'post_status'=>$status, 'post_parent'=>$parent_id, 'menu_order'=>(int) $item['menuOrder'] ];
@@ -934,6 +985,7 @@ final class Design_Context_Profile_Service {
 			if ( $taxonomies && '' === trim( $generic_paths ) ) delete_post_meta( $post_id, self::SERVICE_CATEGORY_PLAN_META );
 		}
 		unset( $item );
+		if ( ! $refresh ) return $profile;
 		$navigation = ! empty( $profile['services']['useForNavigation'] );
 		$failed = array_values( array_filter( $profile['services']['items'], static fn( $item ): bool => empty( $item['recordId'] ) ) );
 		$profile['services'] = $this->inferred_services( $source );
@@ -955,7 +1007,8 @@ final class Design_Context_Profile_Service {
 				$name = substr( sanitize_text_field( $name ), 0, 200 ); if ( '' === $name ) continue;
 				$exists = term_exists( $name, $taxonomy, $parent );
 				if ( ! $exists && $may_create ) $exists = wp_insert_term( $name, $taxonomy, [ 'parent'=>$parent ] );
-				if ( ! $exists || is_wp_error( $exists ) ) { $parent = 0; break; }
+				// A failed path must not replace existing assignments with a subset.
+				if ( ! $exists || is_wp_error( $exists ) ) return null;
 				$parent = absint( is_array( $exists ) ? $exists['term_id'] : $exists );
 			}
 			if ( $parent ) $ids[] = $parent;
@@ -1031,7 +1084,9 @@ final class Design_Context_Profile_Service {
 			$members[] = $this->resolve_person( [ 'id'=>$id, 'userId'=>$user_id, 'order'=>(int) get_user_meta( $user_id, self::USER_META_TEAM_ORDER, true ) ] );
 		}
 		usort( $members, static fn( array $a, array $b ): int => ( $a['order'] <=> $b['order'] ) ?: strcasecmp( $a['name'], $b['name'] ) );
-		$profile['about']['team'] = [ 'enabled'=>! empty( $members ), 'members'=>$members ];
+		$owner_enabled = $profile['about']['team']['enabledByOwner'] ?? null;
+		$profile['about']['team'] = [ 'enabled'=>null === $owner_enabled ? ! empty( $members ) : true === $owner_enabled, 'members'=>false === $owner_enabled ? [] : $members ];
+		if ( null !== $owner_enabled ) $profile['about']['team']['enabledByOwner'] = true === $owner_enabled;
 		return $profile;
 	}
 

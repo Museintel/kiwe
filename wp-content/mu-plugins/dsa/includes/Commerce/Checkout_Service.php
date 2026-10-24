@@ -22,6 +22,7 @@ final class Checkout_Service {
 	}
 
 	public function register(): void {
+		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_filter( 'woocommerce_checkout_get_value', [ $this, 'checkout_value' ], 5, 2 );
 		add_filter( 'woocommerce_ship_to_different_address_checked', [ $this, 'ship_to_different_address_checked' ], 5 );
 		add_filter( 'woocommerce_checkout_posted_data', [ $this, 'merge_draft_into_posted_data' ], 5 );
@@ -31,8 +32,9 @@ final class Checkout_Service {
 	}
 
 	public function enabled(): bool {
-		$commerce = $this->settings->get( 'commerce', [] );
-		return ! empty( $commerce['checkout_surface_enabled'] );
+		return \DSA\Apps\Store_App_Service::enabled() && ! empty( $this->settings->get( 'enabled', false ) )
+			&& function_exists( 'WC' ) && (bool) WC()
+			&& ! Store_Recovery_Gate_Service::is_paused();
 	}
 
 	public function available(): bool {
@@ -68,6 +70,7 @@ final class Checkout_Service {
 		}
 		$values['ship_to_different_address'] = $this->ship_to_different_address() ? '1' : '0';
 		$values['createaccount'] = $this->create_account() ? '1' : '0';
+		$show_delivery = ! empty( $this->settings->get( 'commerce', [] )['cart_show_delivery'] );
 
 		return [
 			'available'     => true,
@@ -78,9 +81,10 @@ final class Checkout_Service {
 			'errors'        => $errors['fields'],
 			'notices'       => $errors['notices'],
 			'checkoutUrl'   => function_exists( 'wc_get_checkout_url' ) ? esc_url_raw( wc_get_checkout_url() ) : '',
-			'cartTotal'     => WC()->cart ? $this->money_text( WC()->cart->get_total() ) : '',
-			'discountSummary' => $this->cart_payload ? $this->cart_payload->discount_summary() : [],
-			'needsShipping' => WC()->cart ? (bool) WC()->cart->needs_shipping() : false,
+			'cartTotal'     => $show_delivery ? ( WC()->cart ? $this->money_text( WC()->cart->get_total() ) : '' ) : $this->product_total(),
+			'cartShowDelivery' => $show_delivery,
+			'discountSummary' => $this->cart_payload ? $this->cart_payload->discount_summary( ! $show_delivery ) : [],
+			'needsShipping' => $this->needs_shipping_address(),
 			'shipToDifferent' => $this->ship_to_different_address(),
 			'canCreateAccount' => $this->can_create_account(),
 			'accountRequired' => $this->account_required(),
@@ -132,6 +136,7 @@ final class Checkout_Service {
 		$contract = $this->contract( false );
 		$contract['errors']  = $errors['fields'];
 		$contract['notices'] = $errors['notices'];
+		do_action( 'dsa_checkout_draft_saved' );
 
 		return [
 			'ok'       => true,
@@ -158,7 +163,7 @@ final class Checkout_Service {
 		}
 
 		$draft = $this->draft();
-		return array_key_exists( 'ship_to_different_address', $draft ) ? '1' === (string) $draft['ship_to_different_address'] : (bool) $checked;
+		return array_key_exists( 'ship_to_different_address', $draft ) ? $this->should_persist_shipping_address( $draft ) : (bool) $checked;
 	}
 
 	public function merge_draft_into_posted_data( array $data ): array {
@@ -172,6 +177,9 @@ final class Checkout_Service {
 		}
 
 		foreach ( $this->raw_checkout_fields() as $key => $field ) {
+			if ( 0 === strpos( (string) $key, 'shipping_' ) && empty( $data['ship_to_different_address'] ) ) {
+				continue;
+			}
 			$submitted_value = $data[ $key ] ?? '';
 			$draft_value     = $draft[ $key ] ?? '';
 			$submitted_empty = is_array( $submitted_value ) ? empty( $submitted_value ) : '' === trim( (string) $submitted_value );
@@ -380,8 +388,12 @@ final class Checkout_Service {
 
 	private function validate_draft( array $draft, array $definitions ): array {
 		$errors = [ 'fields' => [], 'notices' => [] ];
+		$validate_shipping = $this->should_persist_shipping_address( $draft );
 
 		foreach ( $definitions as $key => $field ) {
+			if ( 0 === strpos( (string) $key, 'shipping_' ) && ! $validate_shipping ) {
+				continue;
+			}
 			$value       = $draft[ $key ] ?? '';
 			$label       = sanitize_text_field( $field['label'] ?? $this->humanize_key( $key ) );
 			$empty_value = is_array( $value ) ? empty( $value ) : '' === trim( (string) $value );
@@ -424,14 +436,28 @@ final class Checkout_Service {
 		}
 
 		$properties = [ 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone', 'email' ];
+		// Retain the separate address draft, but let native Woo calculate the active
+		// destination from billing when the shopper has not chosen another address.
+		$session_draft = $draft;
+		if ( ! $this->should_persist_shipping_address( $draft ) ) {
+			foreach ( $properties as $property ) {
+				$billing_key = 'billing_' . $property;
+				$getter      = 'get_' . $billing_key;
+				if ( array_key_exists( $billing_key, $draft ) ) {
+					$session_draft[ 'shipping_' . $property ] = $draft[ $billing_key ];
+				} elseif ( method_exists( WC()->customer, $getter ) ) {
+					$session_draft[ 'shipping_' . $property ] = WC()->customer->{$getter}();
+				}
+			}
+		}
 
 		foreach ( [ 'billing', 'shipping' ] as $group ) {
 			foreach ( $properties as $property ) {
 				$key    = $group . '_' . $property;
 				$setter = 'set_' . $key;
-				if ( array_key_exists( $key, $draft ) && method_exists( WC()->customer, $setter ) ) {
+				if ( array_key_exists( $key, $session_draft ) && method_exists( WC()->customer, $setter ) ) {
 					try {
-						WC()->customer->{$setter}( $draft[ $key ] );
+						WC()->customer->{$setter}( $session_draft[ $key ] );
 					} catch ( \Exception $exception ) {
 						// Keep the sanitized draft; final Woo validation explains invalid values.
 					}
@@ -603,22 +629,16 @@ final class Checkout_Service {
 	}
 
 	private function should_persist_shipping_address( array $draft ): bool {
-		if ( '1' === (string) ( $draft['ship_to_different_address'] ?? '0' ) ) {
-			return true;
+		return $this->needs_shipping_address() && '1' === (string) ( $draft['ship_to_different_address'] ?? '0' );
+	}
+
+	private function needs_shipping_address(): bool {
+		if ( ! WC()->cart ) {
+			return false;
 		}
-
-		foreach ( $draft as $key => $value ) {
-			if ( 0 !== strpos( (string) $key, 'shipping_' ) ) {
-				continue;
-			}
-
-			$value = is_array( $value ) ? implode( '', array_map( 'strval', $value ) ) : (string) $value;
-			if ( '' !== trim( $value ) ) {
-				return true;
-			}
-		}
-
-		return false;
+		return method_exists( WC()->cart, 'needs_shipping_address' )
+			? (bool) WC()->cart->needs_shipping_address()
+			: WC()->cart->needs_shipping() && ( ! function_exists( 'wc_ship_to_billing_address_only' ) || ! wc_ship_to_billing_address_only() );
 	}
 
 	private function draft(): array {
@@ -684,7 +704,19 @@ final class Checkout_Service {
 
 	private function ship_to_different_address(): bool {
 		$draft = $this->draft();
-		return '1' === (string) ( $draft['ship_to_different_address'] ?? '0' );
+		return $this->should_persist_shipping_address( $draft );
+	}
+
+	private function product_total(): string {
+		if ( $this->cart_payload ) {
+			return $this->cart_payload->product_total();
+		}
+		if ( ! WC()->cart ) {
+			return '';
+		}
+		$cart = WC()->cart;
+		$total = (float) $cart->get_cart_contents_total() + ( $cart->display_prices_including_tax() ? (float) $cart->get_cart_contents_tax() : 0 );
+		return $this->money_text( wc_price( $total ) );
 	}
 
 	private function can_create_account(): bool {

@@ -182,7 +182,7 @@ final class Permission_Journey_Service {
 			'retention_days'               => max( 1, min( 90, (int) ( $config['retention_days'] ?? 30 ) ) ),
 			'cooldown_hours'               => max( 1, min( 720, (int) ( $config['cooldown_hours'] ?? 24 ) ) ),
 			'max_asks_per_session'         => max( 1, min( 5, (int) ( $config['max_asks_per_session'] ?? 1 ) ) ),
-			'pwa_enabled'                  => ! empty( $config['pwa_enabled'] ),
+			'pwa_enabled'                  => (($this->settings->get('app',[])['show_install_actions']??true)!==false),
 			'pwa_min_home_views'           => max( 0, min( 20, (int) ( $config['pwa_min_home_views'] ?? 1 ) ) ),
 			'pwa_min_dock_opens'           => max( 0, min( 20, (int) ( $config['pwa_min_dock_opens'] ?? 1 ) ) ),
 			'pwa_min_transition_completes' => max( 0, min( 50, (int) ( $config['pwa_min_transition_completes'] ?? 1 ) ) ),

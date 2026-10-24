@@ -1,0 +1,38 @@
+/* Store-only order detail. The Metro tile primitive comes from the shared screen. */
+.wf-order-summary{display:grid;grid-template-columns:2fr 1fr;gap:var(--kiwe-space-sm,14px);margin:var(--kiwe-space-md,20px) 0}
+.wf-order-summary>.wf-tile{min-height:150px;padding:var(--kiwe-space-md,20px)}
+.wf-order-total strong{font-size:clamp(25px,3vw,40px);line-height:1.1;overflow-wrap:anywhere}
+.wf-order-total .wf-pill{margin-top:auto}
+.wf-order-payment h3{font-size:clamp(18px,2vw,24px);line-height:1.2;margin:var(--kiwe-space-sm,14px) 0}
+.wf-order-addresses{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--kiwe-space-sm,14px);margin:var(--kiwe-space-md,20px) 0}
+.wf-order-addresses>.wf-tile{min-height:200px;padding:var(--kiwe-space-md,20px)}
+.wf-order-address h3{font-size:clamp(19px,2vw,26px);margin:var(--kiwe-space-xs,10px) 0 var(--kiwe-space-sm,14px)}
+.wf-detail .wf-order-address dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--kiwe-space-sm,14px);margin:0}
+.wf-order-address dl>div{min-width:0}.wf-order-address dt{font-size:12px;letter-spacing:.05em;text-transform:uppercase;opacity:.8}.wf-order-address dd{margin:2px 0 0;font-weight:600;overflow-wrap:anywhere}
+.wf-order-address dl>.wf-order-wide{grid-column:span 2}
+.wf-order-items .wf-tile{min-height:175px}.wf-order-items h3{font-size:clamp(18px,2vw,24px);line-height:1.2;margin:var(--kiwe-space-sm,14px) 0}
+.wf-order-note{min-height:130px}
+.wf-order-detail header button{min-height:44px;padding:var(--kiwe-space-xs,10px) var(--kiwe-space-sm,14px);border:1px solid #b7c3b5;border-radius:var(--kiwe-radius-sm,5px);background:#fffdf8;color:var(--screen-ink);font:inherit}
+.wf-order-complete{min-height:44px;padding:var(--kiwe-space-xs,10px) var(--kiwe-space-md,20px);border:0;border-radius:var(--kiwe-radius-sm,5px);background:#20392b;color:#fff;font:inherit}
+.wf-order-actions{display:flex;align-items:center;flex-wrap:wrap;gap:var(--kiwe-space-xs,10px);margin:var(--kiwe-space-md,20px) 0}
+.wf-order-charges{display:grid;gap:var(--kiwe-space-xs,10px);margin:var(--kiwe-space-md,20px) 0}
+.wf-order-charges>div{display:flex;justify-content:space-between;gap:var(--kiwe-space-sm,14px);border-bottom:1px solid #b7c3b5;padding-block:var(--kiwe-space-xs,10px)}
+.wf-order-charges dd{margin:0;text-align:right;overflow-wrap:anywhere;min-width:0}
+.wf-order-timeline{list-style:none;padding:0;display:grid;gap:var(--kiwe-space-sm,14px)}
+.wf-order-timeline li{padding:var(--kiwe-space-md,20px);border-left:3px solid #20392b;background:#fffdf8;overflow-wrap:anywhere}
+.wf-order-timeline p{white-space:pre-wrap}
+.wf-order-action-dialog{display:grid;gap:var(--kiwe-space-sm,14px);min-width:0}
+.wf-order-action-dialog label:not(.wf-choice){display:grid;gap:var(--kiwe-space-xs,10px)}
+.wf-order-action-dialog input:not([type=checkbox]),.wf-order-action-dialog textarea{width:100%;min-width:0;box-sizing:border-box;padding:var(--kiwe-space-xs,10px);font:inherit}
+@media(max-width:700px){.wf-order-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.wf-order-addresses{grid-template-columns:1fr}.wf-detail .wf-order-address dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.wf-order-summary,.wf-order-addresses{gap:var(--kiwe-space-xs,10px)}.wf-order-summary>.wf-tile,.wf-order-addresses>.wf-tile{padding:var(--kiwe-space-sm,14px)}.wf-order-total strong{font-size:clamp(21px,6vw,30px)}.wf-detail .wf-order-address dl{gap:var(--kiwe-space-xs,10px)}}
+
+.wf-order-refunds{border-top:1px solid var(--wf-line,#bac9bf);margin-top:24px;padding-top:20px}.wf-order-refunds h3,.wf-order-refunds h4{margin:0}.wf-order-refund-balance{display:flex;gap:12px;flex-wrap:wrap}.wf-refund-form{display:grid;gap:16px;min-width:0}.wf-refund-form label:not(.wf-choice){display:grid;gap:6px;min-width:0}.wf-refund-form input,.wf-refund-form select,.wf-refund-form textarea{width:100%;min-width:0;box-sizing:border-box}.wf-refund-form .wf-choice input{width:20px;height:20px;flex:0 0 20px}.wf-detail .wf-refund-form textarea{min-height:96px}.wf-refund-lines{display:grid;gap:12px}.wf-refund-line{border:1px solid var(--wf-line,#bac9bf);border-radius:8px;padding:12px;min-width:0}.wf-refund-line-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin-top:12px}.wf-refund-form .kiwe-core-tabs{flex-wrap:wrap}.wf-refund-form .wf-choice{align-items:start}
+
+/* One order per row: identity, amount and explicit native status. */
+.kiwe-screen .wf-order-card{padding:18px 22px;border-radius:var(--kiwe-radius-md,10px)}
+.kiwe-screen .wf-order-card .wf-open{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.45fr) minmax(145px,.45fr);align-items:center;gap:20px;min-height:88px}
+.kiwe-screen .wf-order-identity{min-width:0}.kiwe-screen .wf-order-identity h2{margin:6px 0}.kiwe-screen .wf-order-card .wf-amount{margin:0;font-size:clamp(22px,2.4vw,30px);font-weight:650;letter-spacing:-.03em}
+.wf-order-state{display:flex;flex-direction:column;align-items:flex-end;gap:10px;min-width:0}
+@media(max-width:700px){.kiwe-screen .wf-order-card{padding:16px}.kiwe-screen .wf-order-card .wf-open{grid-template-columns:minmax(0,1fr) auto;gap:14px}.wf-order-identity{grid-column:1/-1}.wf-order-state{align-items:flex-end}.kiwe-screen .wf-order-card .wf-amount{font-size:22px}}
+@media(max-width:360px){.kiwe-screen .wf-order-card .wf-open{grid-template-columns:minmax(0,1fr)}.wf-order-identity{grid-column:auto}.wf-order-state{align-items:flex-start}}

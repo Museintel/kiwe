@@ -1,0 +1,24 @@
+const fs=require('node:fs');const path=require('node:path');
+(async()=>{
+ const source=fs.readFileSync(path.resolve(__dirname,'../../wp-content/mu-plugins/dsa/assets/js/modules/commerce-panels.js'),'utf8');
+ const adapter=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+ const checks=[];const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
+ const groups={billing:[{key:'billing_email',group:'billing',type:'email',label:'Email',value:'shopper@example.invalid',required:true}],shipping:[{key:'shipping_city',group:'shipping',type:'text',label:'City',value:'Mumbai',required:true}],order:[{key:'order_comments',group:'order',type:'textarea',label:'Note'}]};
+ const render=(contract)=>adapter.renderCheckout({checkoutState:{loading:false,errors:{},notices:[],contract:{available:true,cartTotal:'$440.00',needsShipping:true,shipToDifferent:false,groups,...contract}},settings:{cartShowDelivery:false}});
+ const off=render({});
+ check(off.includes('data-dsa-checkout-shipping-fields hidden disabled'),'Unchecked separate shipping is hidden and removed from native form validation');
+ check(off.includes('name="shipping_city"')&&off.includes('value="Mumbai"'),'Hidden separate shipping retains editable draft data for later reuse');
+ check(off.includes('aria-controls="dsa-checkout-shipping-fields" aria-expanded="false"'),'Checkbox announces the hidden dependent group');
+ check(off.includes('name="billing_email"')&&off.includes('required aria-required="true"'),'Billing remains available and required while separate shipping is inactive');
+ check(off.includes('dsa-cart-panel__checkout-amount"><small>Products</small><strong>$440.00</strong>')&&!off.includes('dsa-panel__meta">$440.00'),'Checkout uses shared accessible amount markup and product label');
+ const on=render({shipToDifferent:true});
+ check(on.includes('data-dsa-checkout-shipping-fields>')&&!on.includes('data-dsa-checkout-shipping-fields hidden'),'Selected shipping reveals the existing group');
+ check(on.includes('aria-expanded="true"')&&on.includes('name="shipping_city"')&&on.includes('required aria-required="true"'),'Selected shipping retains native required semantics');
+ const full=render({cartShowDelivery:true,cartTotal:'$523.16'});
+ check(full.includes('<small>Current total</small><strong>$523.16</strong>'),'Enabled delivery projects the native full total with an explicit label');
+ const virtual=render({needsShipping:false,shipToDifferent:true});
+ check(!virtual.includes('data-dsa-checkout-shipping-toggle')&&!virtual.includes('name="shipping_city"'),'Virtual or native billing-only cart omits separate address controls');
+ const unavailable=render({available:false});check(!unavailable.includes('data-dsa-checkout-form'),'Unavailable checkout does not expose a mutation form');
+ check(!/\b(?:fetch|dsaPost|XMLHttpRequest|localStorage|sessionStorage)\s*\(/.test(source),'Presentation adapter retains no mutation or independent persistence authority');
+ process.stdout.write(JSON.stringify({passed:true,checks:checks.length,scope:'Actual pure commerce presentation adapter; dependent fields and policy-selected native amount'})+'\n');
+})().catch(error=>{process.stderr.write(error.stack+'\n');process.exitCode=1;});
