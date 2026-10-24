@@ -37,7 +37,7 @@ const checks = [
   ['PhoneKey exposes a signed bounded notification endpoint', core.includes('pk_send_whatsapp_message') && app.includes('url.pathname === "/v1/message"') && app.includes('allowedPurposes')],
   ['Channel service prefers PhoneKey and limits email fallback by consent', channels.includes('notification_ready') && channels.includes("'fallback_email_allowed'") && bridge.includes('pk_send_whatsapp_message')],
   ['Notification preferences include saved-cart consent', preferences.includes("'cart_reminder'") && preferences.includes('user_accepts')],
-  ['Abandoned-cart automation can prefer WhatsApp without duplicate sends', carts.includes("'automatic_whatsapp_enabled'") && carts.includes("$channel = 'whatsapp'")],
+  ['Abandoned-cart automation prefers WhatsApp through the shared reminder authority', carts.includes("'automatic_whatsapp_enabled'") && carts.includes("foreach ( [ 'whatsapp','email' ] as $channel )") && carts.includes("$this->send_reminder( (int) $row['id'],$channel,true )")],
   ['WooCommerce status changes use opted-in notification channels', orders.includes('woocommerce_order_status_changed') && orders.includes("'order_status'")],
   ['Owner events use selected external channels', owners.includes('deliver_channels') && owners.includes("'admin_new_order'")],
   ['Gateway pins the audited Baileys RC', gatewayPackage.dependencies['@whiskeysockets/baileys'] === '7.0.0-rc14' && baileys.includes('const BAILEYS_VERSION = "7.0.0-rc14"')],

@@ -1,4 +1,4 @@
-const fs=require('fs'),path=require('path'),{spawnSync}=require('child_process'),root=path.resolve(__dirname,'../..'),php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe',checks=[];
+const fs=require('fs'),path=require('path'),{spawnSync}=require('child_process'),root=path.resolve(__dirname,'../..'),php=process.env.KIWE_PHP||'php',checks=[];
 const check=(ok,label)=>{checks.push({label,passed:!!ok});if(!ok)throw Error(label);};
 for(const file of ['wp-content/mu-plugins/dsa/includes/Access/Product_Merchandising_Workspace_Service.php','tools/release/test-wordpress-merchandising.php','tools/release/test-merchandising-cold-path.php']){const r=spawnSync(php,['-l',path.join(root,file)],{encoding:'utf8'});check(r.status===0,'PHP syntax '+file);}
 const r=spawnSync(php,[path.join(root,'tools/release/test-merchandising-cold-path.php')],{encoding:'utf8'});if(r.status!==0)throw Error(r.stdout+r.stderr);const cold=JSON.parse(r.stdout);check(cold.passed&&cold.checks===12&&cold.orderQueries===0&&cold.writes===0,'Executable cheap cold/disabled behavior');

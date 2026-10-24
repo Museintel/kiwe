@@ -1,8 +1,10 @@
 ## 8.0.0-rc.436 (2026-10-24)
 
+- 25 October qualification: physical Core436 with native-updated stable Store1.0.0/SEO1.0.0 is accepted on the lab. Complete selected-source qualification, exact signed ZIP reproduction, stable native updates/recovery/preservation and guest/account purchase checks pass. Start9.7 and Seam2.18.1 are public; task-owned helpers/jobs and5480 obsolete entries retire after encrypted offline recovery. Named live rollout and unavailable final Chrome visual capture remain explicit in the [review](docs/APPS-RC436-LIVE-REVIEW-2026-10-25.md).
+- Make the development-only checks portable: own the DOM fixture dependency, select PHP through the configured runtime/PATH, sort the commerce inventory independently of filesystem order, and update the obsolete WhatsApp assignment assertion to the existing shared reminder loop. Ten affected checks pass with no runtime/package changes. The first Linux CI failure is retained and the correction requires a fresh CI result.
 - Distinguish verifying/reinstalling an already installed App from a new install or update in the client review. Preserve all native software actions and settings.
 - Actual fresh Windows WordPress7.1.3/MariaDB11.8.3 fixture installs official Woo11.2.1 and signed StoreRC2 through seven native dependency steps across12 requests; Core-only starts with both Apps/Woo absent. This proves native dependency orchestration, not Linux quota or public latency.
-- RC435 native migration/cache/feed29 and final preservation67 pass; the private signed bootstrap fatal recovers with a healthy following native request. RC436 UI review and final acceptance remain. No production or public MU feed change.
+- RC435 native migration/cache/feed29 and final preservation67 pass; the private signed bootstrap fatal recovers with a healthy following native request. RC436 final native acceptance and publication are recorded above; final visual capture is unverified. No production or public MU feed change.
 
 ## 8.0.0-rc.435 (2026-10-24)
 

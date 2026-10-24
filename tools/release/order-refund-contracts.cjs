@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
-const root=path.resolve(__dirname,'../..'),php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe',checks=[];
+const root=path.resolve(__dirname,'../..'),php=process.env.KIWE_PHP||'php',checks=[];
 const check=(ok,label)=>{checks.push({label,passed:!!ok});if(!ok)throw Error(label);};
 for(const file of ['wp-content/mu-plugins/dsa/includes/Access/Order_Workspace_Service.php','tools/release/test-wordpress-order-refunds.php','tools/release/test-order-refund-money.php']){const r=spawnSync(php,['-l',path.join(root,file)],{encoding:'utf8'});check(r.status===0,'PHP syntax '+file);}
 const r=spawnSync(php,[path.join(root,'tools/release/test-order-refund-money.php')],{encoding:'utf8'});

@@ -12,7 +12,7 @@ check(owner.includes('! $order->get_refunds()')&&owner.includes("in_array( get_c
 check(owner.includes('remove_filter(')&&owner.includes('woocommerce_valid_order_statuses_for_payment_complete'),'Request-scoped COD compatibility filter retired');
 check(ui.includes('CoreTabs')&&ui.includes('WorkspaceDialog')&&ui.includes('Refresh saved state')&&!ui.includes('setInterval')&&!ui.includes('localStorage'),'Shared journey and uncertain-state recovery without polling or persisted draft');
 check(app.includes("'/workspace/commerce/orders/(?P<id>[1-9][0-9]*)/actions'")&&app.includes("$input['operation'] = 'complete'"),'New action and legacy completion share one order owner');
-const php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe';
+const php=process.env.KIWE_PHP||'php';
 for(const file of ['wp-content/mu-plugins/dsa/includes/Access/Order_Workspace_Service.php','tools/release/test-wordpress-order-operations.php'])check(spawnSync(php,['-l',path.join(root,file)],{encoding:'utf8'}).status===0,'PHP syntax '+file);
 const file=path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Order_Workspace_Service.php').replaceAll('\\','/');
 const disabled="define('ABSPATH',__DIR__);class WP_Error{} function is_wp_error($v){return $v instanceof WP_Error;} function current_user_can($c){throw new RuntimeException('Unexpected permission work');} require "+JSON.stringify(file)+"; $s=new \\DSA\\Access\\Order_Workspace_Service();if($s::available()||!($s->review(1) instanceof WP_Error)||!($s->change(1,[]) instanceof WP_Error))exit(1);echo 'disabled';";

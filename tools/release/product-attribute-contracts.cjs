@@ -15,7 +15,7 @@ check(adapter.includes('hash_equals')&&adapter.includes('ksort')&&!/update_optio
 check(ui.includes('WorkspaceDialog')&&ui.includes('kiwe-task-tabs')&&ui.includes('kiwe-task-filters')&&ui.includes('onDirtyChange'),'Shared compact UI and navigation guard');
 check(ui.includes('work.mutate')&&!ui.includes('setInterval')&&!ui.includes('localStorage'),'Explicit saves and no polling or stored customer drafts');
 check(ui.includes('Refresh saved state')&&ui.includes('Saved name:')&&ui.includes('setConfirmed(false);work.refresh();'),'Uncertain saves can review fresh state without dropping the draft or replaying');
-const php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe';
+const php=process.env.KIWE_PHP||'php';
 for(const relative of ['Access/Product_Attribute_Workspace_Service.php','Backup/Product_Attribute_Snapshot_Service.php','Access/Commerce_App_Service.php','Backup/Configuration_Snapshot_Service.php']){const result=spawnSync(php,['-l',path.join(root,'wp-content/mu-plugins/dsa/includes',relative)],{encoding:'utf8'});check(result.status===0,'PHP syntax '+relative);}
 const disabled=`define('ABSPATH',__DIR__); function current_user_can($cap){throw new RuntimeException('Non-Woo capability work');} require ${JSON.stringify(path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Product_Attribute_Workspace_Service.php')).replaceAll('\\','/')}; if(\\DSA\\Access\\Product_Attribute_Workspace_Service::available() || \\DSA\\Access\\Product_Attribute_Workspace_Service::allowed()) exit(1); echo 'disabled';`;
 const result=spawnSync(php,['-r',disabled],{encoding:'utf8'});check(result.status===0&&result.stdout==='disabled','Non-Woo availability short-circuits before permission or native catalog work');

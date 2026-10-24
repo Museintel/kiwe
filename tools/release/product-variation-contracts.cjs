@@ -15,7 +15,7 @@ check(app.includes('Product_Variation_Workspace_Service::attribute_values($produ
 check(ui.includes('WorkspaceDialog')&&ui.includes('useProductDraftState')&&ui.includes('kiwe-task-tabs')&&ui.includes('kiwe-task-filters'),'Compact shared dialogs filters and dirty navigation');
 check(ui.includes('Refresh saved state')&&ui.includes('setConfirmed(false)')&&!ui.includes('setInterval')&&!ui.includes('localStorage'),'Reviewed recovery without polling persisted drafts or auto retry');
 check(journey.includes("task==='variations'")&&journey.includes('ProductOptions item={record}')&&journey.includes('Product type<select'),'Shared parent journey and simple or variable creation');
-const php=process.env.KIWE_PHP||'C:/Users/shariq/Documents/dsa-dual-surface/.tools/php-8.4.23/php.exe';
+const php=process.env.KIWE_PHP||'php';
 for(const file of ['wp-content/mu-plugins/dsa/includes/Access/Product_Variation_Workspace_Service.php','tools/release/test-wordpress-product-variations.php']){const r=spawnSync(php,['-l',path.join(root,file)],{encoding:'utf8'});check(r.status===0,'PHP syntax '+file);}
 const file=path.join(root,'wp-content/mu-plugins/dsa/includes/Access/Product_Variation_Workspace_Service.php').replaceAll('\\','/'),code=`define('ABSPATH',__DIR__);class WP_Error{} function is_wp_error($v){return $v instanceof WP_Error;} function current_user_can($cap){throw new RuntimeException('Non-Woo permission work');} require ${JSON.stringify(file)}; $s=new \\DSA\\Access\\Product_Variation_Workspace_Service();if($s::available()||!($s->setup(1) instanceof WP_Error))exit(1);echo 'disabled';`;
 const disabled=spawnSync(php,['-r',code],{encoding:'utf8'});check(disabled.status===0&&disabled.stdout==='disabled','Non-Woo owner stops before permissions or database');
