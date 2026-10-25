@@ -1,5 +1,7 @@
 # WooCommerce prerequisite for the approved Apps migration
 
+**Execution accepted,25 October — AP126:** both named approvals are granted and both stores now run Woo11.2.1/Core436/Store1.0.0/SEO1.0.0. [Actual execution, recovery and limitations](APPS-RC436-LIVE-2026-10-25.md). The following prepared review/earlier stop text is retained as historical authorization evidence; artifact identities remain exact.
+
 Prepared25 October2026 after the [compatibility stop and recovery](APPS-RC436-LIVE-ATTEMPT-2026-10-25.md). **Awaiting additional named approval for the WooCommerce engine/database change.** The original Core436/Store1.0.0/SEO1.0.0 approval is retained.
 
 | Target | Current WooCommerce | Proposed WooCommerce | Kiwe migration after prerequisite |

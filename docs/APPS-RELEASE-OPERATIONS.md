@@ -1,3 +1,5 @@
+25 October — AP126 production migration accepted on both named stores after separate Woo/database approval. Use the [actual execution and recovery record](APPS-RC436-LIVE-2026-10-25.md) when operating Core436/Store1.0.0/SEO1.0.0. Capture actual target state and independently protected database/code recovery before a commerce prerequisite. Compare business semantics separately from native version/notices/derived-index bookkeeping; retain first refusals and resume only the exact accepted stages. A fresh accepted recovery record/provider/signature must precede physical Core cutover. Keep one immediate code recovery and encrypted database set, consolidating superseded originals after complete offline verification. Do not infer concurrency/account quota from filesystem headroom.
+
 # Independent App release operations
 
 ## Existing-site dependency admission

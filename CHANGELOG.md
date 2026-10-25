@@ -1,5 +1,7 @@
 ## 8.0.0-rc.436 (2026-10-24)
 
+- 25 October live acceptance: AP126 completes the approved Woo11.2.1/database prerequisite and independent Store1.0.0/SEO1.0.0 migration on National and Dharwad. Native/public guest flow, original business data and encrypted recovery/retirement pass. Runtime artifacts stay exact; final fresh browser capture remains unverified. [Deployment record](docs/APPS-RC436-LIVE-2026-10-25.md).
+
 - 25 October qualification: physical Core436 with native-updated stable Store1.0.0/SEO1.0.0 is accepted on the lab. Complete selected-source qualification, exact signed ZIP reproduction, stable native updates/recovery/preservation and guest/account purchase checks pass. Start9.7 and Seam2.18.1 are public; task-owned helpers/jobs and5480 obsolete entries retire after encrypted offline recovery. Named live rollout and unavailable final Chrome visual capture remain explicit in the [review](docs/APPS-RC436-LIVE-REVIEW-2026-10-25.md).
 - Make the development-only checks portable: own the DOM fixture dependency, select PHP through the configured runtime/PATH, sort the commerce inventory independently of filesystem order, and update the obsolete WhatsApp assignment assertion to the existing shared reminder loop. Ten affected checks pass with no runtime/package changes. The first Linux CI failure is retained and the correction requires a fresh CI result.
 - Distinguish verifying/reinstalling an already installed App from a new install or update in the client review. Preserve all native software actions and settings.

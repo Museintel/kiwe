@@ -1,5 +1,7 @@
 # Apps platform: reviewed release for Dharwad and National
 
+**Execution accepted,25 October — AP126:** both named approvals are granted and both stores now run Woo11.2.1/Core436/Store1.0.0/SEO1.0.0. [Actual execution, recovery and limitations](APPS-RC436-LIVE-2026-10-25.md). The following prepared review/earlier stop text is retained as historical authorization evidence; artifact identities remain exact.
+
 **Current status,25 October:** the owner approved this original Kiwe artifact set. The attempted migration stops on both older Woo dependencies; National is exactly recovered to427 and Dharwad stays427. [Attempt/recovery evidence](APPS-RC436-LIVE-ATTEMPT-2026-10-25.md) and the [additional Woo engine/database review](WOO-APPS-PREREQUISITE-REVIEW-2026-10-25.md) supersede the original pending-status text below. The signed artifact identities remain unchanged.
 
 Original prepared review:
