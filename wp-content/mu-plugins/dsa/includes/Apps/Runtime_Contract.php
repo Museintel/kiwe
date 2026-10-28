@@ -5,9 +5,10 @@ if (!defined('ABSPATH')) exit;
 
 /** Small provider contract. No options, catalogue, filesystem enumeration or business services. */
 final class Runtime_Contract {
- public const VERSION = '1.0.0';
+ public const VERSION = '1.1.0';
+ public const API = 2;
  public const SCHEMA = 'kiwe.app-provider.v1';
- public const IDS = ['seo','store'];
+ public const IDS = ['seo','store','guest','ai','sitegraph'];
 
  public static function version(string $value): bool {
   return strlen($value) <= 48 && preg_match('/^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:rc|beta|alpha)\.[1-9][0-9]*)?$/D', $value) === 1;
@@ -20,16 +21,16 @@ final class Runtime_Contract {
  public static function validate(array $value): bool {
   if (array_diff(array_keys($value), ['schema','id','version','coreApi','requiresPhp','requiresWp','requiresWoo','namespaces','classes','assets'])) return false;
   if (($value['schema'] ?? '') !== self::SCHEMA || !in_array($value['id'] ?? '', self::IDS, true)
-   || !is_string($value['version'] ?? null) || !self::version($value['version']) || ($value['coreApi'] ?? null) !== 1) return false;
+   || !is_string($value['version'] ?? null) || !self::version($value['version']) || !in_array($value['coreApi'] ?? null,[1,self::API],true)) return false;
   foreach (['requiresPhp','requiresWp'] as $key) if (!is_string($value[$key] ?? null) || preg_match('/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/D', $value[$key]) !== 1) return false;
-  if (!is_string($value['requiresWoo'] ?? null) || ($value['id'] === 'seo' ? $value['requiresWoo'] !== '' : preg_match('/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/D', $value['requiresWoo']) !== 1)) return false;
+  if (!is_string($value['requiresWoo'] ?? null) || ($value['id'] !== 'store' ? $value['requiresWoo'] !== '' : preg_match('/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/D', $value['requiresWoo']) !== 1)) return false;
   foreach (['namespaces','classes','assets'] as $key) if (!is_array($value[$key] ?? null) || count($value[$key]) > 160) return false;
   foreach ($value['namespaces'] as $prefix => $path) {
-   if (!in_array($prefix, $value['id'] === 'seo' ? ['DSA\\SEO\\'] : ['DSA\\Commerce\\','DSA\\Rewards\\'], true)
+   if (!in_array($prefix, match($value['id']){'seo'=>['DSA\\SEO\\'],'store'=>['DSA\\Commerce\\','DSA\\Rewards\\'],default=>[]}, true)
     || !is_string($path) || !self::relative(rtrim($path, '/')) || !str_ends_with($path, '/')) return false;
   }
   foreach ($value['classes'] as $name => $path) {
-   if (!is_string($name) || ($value['id'] === 'seo' ? $name !== 'DSA\\Schema\\Schema_Geo_Service' : preg_match('/^DSA\\\\(?:Access|Rest|Bricks|Notifications)\\\\[A-Za-z_][A-Za-z0-9_]*$/D', $name) !== 1)
+   if (!is_string($name) || !match($value['id']){'seo'=>$name === 'DSA\\Schema\\Schema_Geo_Service','store'=>preg_match('/^DSA\\\\(?:Access|Rest|Bricks|Notifications)\\\\[A-Za-z_][A-Za-z0-9_]*$/D',$name) === 1,'guest'=>in_array($name,['DSA\\Access\\Guest_App_Service','DSA\\Access\\Guest_Engine_Service'],true),'ai'=>in_array($name,['DSA\\Access\\AI_Workspace_Service','DSA\\AI\\AI_Provider_Service','DSA\\AI\\AI_Configuration_Service'],true),'sitegraph'=>$name === 'DSA\\Access\\SiteGraph_Workspace_Service'}
     || !is_string($path) || !self::relative($path) || !str_ends_with($path, '.php')) return false;
   }
   foreach ($value['assets'] as $name => $path) if (!is_string($name) || !self::relative($name) || !is_string($path) || !self::relative($path) || preg_match('/\.(?:css|js|json|svg)$/D', $path) !== 1) return false;

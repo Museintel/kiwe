@@ -7,5 +7,5 @@ const source = fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Worksp
 if (!source.includes('private, no-store') || !source.includes("'X-Robots-Tag: noindex, nofollow'")) throw Error('Missing private document headers');
 if (/register_rest_route|update_option|set_transient|wp_schedule|wp_head\(/.test(source)) throw Error('Presentation bridge crossed its scope');
 const catalog = fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Workspace_Admin_Service.php', 'utf8');
-for (const token of ['Website & Design Context','Work','Daily','Setup','kiwe-identity']) if (!catalog.includes(token)) throw Error('Home catalog lost '+token);
+for (const token of ['Work','Daily','App','kiwe-identity']) if (!catalog.includes(token)) throw Error('Home catalog lost '+token);
 console.log('PASS private header and presentation-only shell boundaries');

@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** The single client editing home for site AI preferences. Opening it never invokes AI. */
 final class AI_Workspace_Service {
+	public static function legacy_template(): string { return __DIR__ . '/views/ai-workspace.php'; }
 	public const PAGE = 'kiwe-ai-features';
 	public const ACTION = 'kiwe_ai_preference';
 	private const PROVIDER_CHECK_OPTION = 'kiwe_ai_provider_check_v1';
@@ -26,7 +27,7 @@ final class AI_Workspace_Service {
 			if ( is_admin() ) add_action( 'load-toplevel_page_' . self::PAGE, [ $this, 'document' ], 1 );
 		}
 	}
-	private function app_enabled(): bool { return defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
+	private function app_enabled(): bool { return \DSA\Apps\AI_App_Service::enabled() && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
 	public function routes(): void {
 		if ( ! $this->app_enabled() ) return;
 		register_rest_route( 'dsa/v1', '/workspace/ai', [ 'methods'=>'GET', 'callback'=>[ $this, 'read_app' ], 'permission_callback'=>[ $this, 'app_permission' ] ] );
@@ -53,7 +54,7 @@ final class AI_Workspace_Service {
 			'goalUrl'=>current_user_can( 'kiwe_manage_context' ) ? \DSA\Onboarding\SEO_Context_Service::goal_url() : '',
 			'allowance'=>( new AI_Allowance_Service( $settings ) )->status(),
 			'ownerSetupUrl'=>current_user_can( 'manage_options' ) ? admin_url( 'admin.php?page=kiwe-ai' ) : '',
-			'owner'=>current_user_can( 'manage_options' ) ? $this->owner_snapshot( $ai, $settings ) : null,
+			'owner'=>( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) ) ? $this->owner_snapshot( $ai, $settings ) : null,
 		];
 	}
 	private function owner_snapshot( array $ai, Settings $settings ): array {
@@ -74,8 +75,10 @@ final class AI_Workspace_Service {
 			'enabled'=>! empty( $provider['enabled'] ), 'configured'=>! empty( $provider['configured'] ),
 			'keyStatus'=>sanitize_key( (string) ( $provider['keyStatus']['status'] ?? 'empty' ) ),
 		];
-		$fingerprint = $controls + [ 'keyStored'=>$key_stored, 'provider'=>$provider_snapshot ];
+		$configuration = \DSA\AI\AI_Configuration_Service::projection( $ai );
+		$fingerprint = $controls + [ 'configuration'=>$configuration,'keyStored'=>$key_stored, 'provider'=>$provider_snapshot,'keyProof'=>hash_hmac( 'sha256',(string) ( $ai['native_api_key'] ?? '' ),wp_salt( 'nonce' ) ) ];
 		return $controls + [
+			'configuration'=>$configuration,
 			'keyStored'=>$key_stored,
 			'provider'=>$provider_snapshot + [ 'lastCheck'=>$last_check ],
 			'expected'=>hash( 'sha256', wp_json_encode( $fingerprint ) ),
@@ -101,36 +104,36 @@ final class AI_Workspace_Service {
 		return Task_Workspace_UI::response( $this->app_snapshot() );
 	}
 	public function save_owner_app( \WP_REST_Request $request ): \WP_REST_Response {
-		if ( ! $this->app_permission( $request ) || ! current_user_can( 'manage_options' ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
+		if ( ! $this->app_permission( $request ) || ! ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
 		$body = $request->get_json_params();
 		$key = is_array( $body ) ? ( $body['key'] ?? null ) : null;
 		$value = is_array( $body ) ? ( $body['value'] ?? null ) : null;
 		$expected = is_array( $body ) ? ( $body['expected'] ?? null ) : null;
-		if ( ! is_string( $key ) || ! in_array( $key, [ 'allowNativeGeneration', 'seoAllowed', 'securetrackAllowed', 'requestLimits', 'tokenLimits' ], true ) || ! is_string( $expected ) || ! preg_match( '/^[a-f0-9]{64}$/D', $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Choose a valid website AI control.', 'dsa' ) ), 400 );
+		if ( ! is_string( $key ) || ! in_array( $key, [ 'allowNativeGeneration', 'seoAllowed', 'securetrackAllowed', 'requestLimits', 'tokenLimits','configuration' ], true ) || ! is_string( $expected ) || ! preg_match( '/^[a-f0-9]{64}$/D', $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Choose a valid website AI control.', 'dsa' ) ), 400 );
 		if ( in_array( $key, [ 'requestLimits', 'tokenLimits' ], true ) ) {
 			if ( ! is_array( $value ) || array_keys( $value ) !== [ 'minute', 'day', 'month' ] || count( array_filter( $value, static fn( $n ) => is_int( $n ) && $n >= 0 && $n <= 1000000000 ) ) !== 3 ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Enter whole-number allowance limits.', 'dsa' ) ), 400 );
-		} elseif ( ! is_bool( $value ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Choose on or off.', 'dsa' ) ), 400 );
+		} elseif ( 'configuration' === $key ) { if ( ! is_array( $value ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value','Choose supported AI settings.' ),400 ); } elseif ( ! is_bool( $value ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Choose on or off.', 'dsa' ) ), 400 );
 		$raw = get_option( DSA_OPTION_SETTINGS, null );
 		if ( ! is_array( $raw ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_settings', __( 'Website settings are unavailable. Refresh and review.', 'dsa' ) ), 409 );
 		$ai = is_array( $raw['ai'] ?? null ) ? $raw['ai'] : [];
 		$current = $this->owner_snapshot( $ai, new Settings() );
 		if ( ! hash_equals( $current['expected'], $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_changed', __( 'Website AI settings changed. Refresh before saving.', 'dsa' ) ), 409 );
 		switch ( $key ) {
+			case 'configuration': $ai = \DSA\AI\AI_Configuration_Service::patch( $value,$ai ); if ( is_wp_error( $ai ) ) return Task_Workspace_UI::failure( $ai,400 ); break;
 			case 'allowNativeGeneration': $ai['allow_native_generation'] = $value; break;
 			case 'seoAllowed': $ai['seo_enabled'] = $value; break;
 			case 'securetrackAllowed': $ai['securetrack_brief_enabled'] = $value; break;
 			case 'requestLimits': $ai['request_allowance'] = AI_Allowance_Service::sanitize_limits( $value ); break;
 			case 'tokenLimits': $ai['token_allowance'] = AI_Allowance_Service::sanitize_token_limits( $value ); break;
 		}
-		$raw['ai'] = $ai;
-		update_option( DSA_OPTION_SETTINGS, $raw, false );
+		if ( ! ( new Settings() )->compare_and_update_selected( $raw,[ 'ai'=>$ai ] ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_changed','Settings changed or the save could not be confirmed. Refresh before retrying.' ),409 );
 		$stored = get_option( DSA_OPTION_SETTINGS, null );
 		if ( ! is_array( $stored ) || ( $stored['ai'] ?? null ) !== $ai ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_save', __( 'The setting could not be confirmed. Refresh and review.', 'dsa' ) ), 409 );
 		return Task_Workspace_UI::response( $this->app_snapshot() );
 	}
 
 	public function check_provider_app( \WP_REST_Request $request ): \WP_REST_Response {
-		if ( ! $this->app_permission( $request ) || ! current_user_can( 'manage_options' ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
+		if ( ! $this->app_permission( $request ) || ! ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
 		$body = $request->get_json_params();
 		$expected = is_array( $body ) && is_string( $body['expected'] ?? null ) ? (string) $body['expected'] : '';
 		if ( ! is_array( $body ) || true !== ( $body['confirmed'] ?? null ) || ! preg_match( '/^[a-f0-9]{64}$/D', $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_provider_check', __( 'Confirm the single provider check before continuing.', 'dsa' ) ), 400 );
@@ -161,8 +164,8 @@ final class AI_Workspace_Service {
 		if ( ! $this->app_enabled() || ! is_admin() || is_network_admin() || is_user_admin() || wp_doing_ajax() || wp_doing_cron() || ! current_user_can( Policy::CAPABILITY ) || ! in_array( $_SERVER['REQUEST_METHOD'] ?? '', [ 'GET', 'HEAD' ], true ) ) return;
 		nocache_headers(); header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0', true ); header( 'X-Robots-Tag: noindex, nofollow', true ); header( 'X-Content-Type-Options: nosniff', true );
 		if ( 'HEAD' === $_SERVER['REQUEST_METHOD'] ) exit;
-		wp_enqueue_style( 'kiwe-ai-app', DSA_URL . 'assets/css/ai-app.css', \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), DSA_VERSION );
-		wp_enqueue_script( 'kiwe-ai-app', DSA_URL . 'assets/js/ai-app.js', [ 'wp-element' ], DSA_VERSION, true );
+		wp_enqueue_style( 'kiwe-ai-app', \DSA\Apps\Asset_Locator::url('assets/css/ai-app.css'), \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), \DSA\Apps\Asset_Locator::version('assets/css/ai-app.css') );
+		wp_enqueue_script( 'kiwe-ai-app', \DSA\Apps\Asset_Locator::url('assets/js/ai-app.js'), [ 'wp-element' ], \DSA\Apps\Asset_Locator::version('assets/js/ai-app.js'), true );
 		wp_localize_script( 'kiwe-ai-app', 'KIWE_AI_APP', [ 'endpoint'=>rest_url( 'dsa/v1/workspace/ai' ), 'nonce'=>wp_create_nonce( 'wp_rest' ), 'home'=>Workspace_Admin_Service::url(), ...Workspace_Chrome_Service::projection() ] );
 		?><!doctype html><html <?php language_attributes(); ?>><head><meta charset="<?php bloginfo( 'charset' ); ?>"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php esc_html_e( 'AI assistance · Kiwe', 'dsa' ); ?></title><?php wp_print_styles( [ 'kiwe-ai-app' ] ); ?></head><body class="kiwe-ai-app"><div id="kiwe-ai-app"><p><?php esc_html_e( 'Opening AI assistance…', 'dsa' ); ?></p><noscript><?php esc_html_e( 'This workspace needs JavaScript. Switch off the experiment to restore the existing AI choices.', 'dsa' ); ?></noscript></div><?php wp_print_scripts( [ 'wp-element', 'kiwe-ai-app' ] ); ?></body></html><?php exit;
 	}

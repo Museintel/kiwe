@@ -27,7 +27,7 @@ function check( bool $passed, string $label ): void {
 function bricks_render_dynamic_data( $value ) { return $GLOBALS['bridge']->render_dynamic_content( $value ); }
 
 $definitions = DSA\Bricks\Icon_Library_Service::definitions();
-check( count( $definitions ) === 29 && $owner_reads === 0, 'Fixed icon chooser needs no data-owner reads' );
+check( count( $definitions ) === 34 && isset( $definitions['kiwe_icon_comments'], $definitions['kiwe_icon_message_circle'], $definitions['kiwe_icon_thumbs_up'], $definitions['kiwe_icon_flag'], $definitions['kiwe_icon_pin'] ) && $owner_reads === 0, 'Fixed icon chooser includes conversation/reaction artwork without data-owner reads' );
 $sprite = file_get_contents( $root . '/wp-content/mu-plugins/dsa/assets/icons/lucide/sprite.svg' );
 preg_match_all( '/<symbol\b[^>]*\bid="([a-z0-9-]+)"/', $sprite, $symbols );
 foreach ( $symbols[1] as $symbol ) {
@@ -55,7 +55,7 @@ check( $cart === $bridge->render_dynamic_tag( '{kiwe_icon_cart}' ), 'Registered 
 check( 'Before ' . $cart . ' After' === $bridge->render_dynamic_content( 'Before {kiwe_icon_cart} After' ), 'Native dynamic content resolves inline SVG' );
 $tags = $bridge->add_dynamic_tags( [ [ 'name' => '{kiwe_icon_cart}', 'label' => 'Already registered', 'group' => 'Existing' ] ] );
 check( count( array_filter( $tags, static fn( $tag ) => '{kiwe_icon_cart}' === $tag['name'] ) ) === 1, 'An existing registration is preserved once' );
-check( count( array_filter( $tags, static fn( $tag ) => 'Kiwe icons' === ( $tag['group'] ?? '' ) ) ) === 28, 'Remaining icon choices appear in Kiwe icons' );
+check( count( array_filter( $tags, static fn( $tag ) => 'Kiwe icons' === ( $tag['group'] ?? '' ) ) ) === count( $definitions ) - 1, 'Remaining icon choices appear in Kiwe icons' );
 
 // Deliberately corrupt process-local fixture artwork; the package path is never caller-controlled.
 $class = new ReflectionClass( DSA\Bricks\Icon_Library_Service::class );

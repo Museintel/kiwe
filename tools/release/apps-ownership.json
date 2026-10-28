@@ -1,6 +1,6 @@
 {
   "schema": "kiwe.apps-ownership.v1",
-  "coreApi": 1,
+  "coreApi": 2,
   "shared": {
     "retained": [
       "complete Design Context and Site Graph/MCP/Start/Seam authoring contracts",
@@ -85,7 +85,11 @@
         "includes/Commerce/Abandoned_Cart_Service.php",
         "includes/Commerce/COD_Gate_Service.php",
         "includes/Commerce/Cart_Payload_Service.php",
+        "includes/Commerce/Checkout_Details_Model.php",
+        "includes/Commerce/Checkout_Field_Service.php",
         "includes/Commerce/Checkout_Service.php",
+        "includes/Commerce/Discussion_Review_Adapter.php",
+        "includes/Commerce/Checkout_Session_Details.php",
         "includes/Commerce/Commerce_Context_Service.php",
         "includes/Commerce/Linked_Products_Service.php",
         "includes/Commerce/Product_Context_Service.php",
@@ -99,6 +103,60 @@
         "includes/Rewards/Reward_Service.php"
       ],
       "minimumVersion": "1.0.0-rc.2"
+    },
+    "guest": {
+      "name": "Kiwe Guest",
+      "classes": {
+        "DSA\\Access\\Guest_App_Service": "includes/Access/Guest_App_Service.php",
+        "DSA\\Access\\Guest_Engine_Service": "includes/Access/Guest_Engine_Service.php"
+      },
+      "files": [
+        "assets/css/guest-app.css",
+        "assets/js/guest-app.js",
+        "includes/Access/Guest_App_Service.php",
+        "includes/Access/Guest_Engine_Service.php"
+      ],
+      "requiresPhp": "8.2",
+      "requiresWp": "7.1",
+      "requiresWoo": "",
+      "namespaces": {},
+      "minimumVersion": "1.0.0-rc.1"
+    },
+    "ai": {
+      "name": "Kiwe AI",
+      "classes": {
+        "DSA\\Access\\AI_Workspace_Service": "includes/Access/AI_Workspace_Service.php",
+        "DSA\\AI\\AI_Provider_Service": "includes/AI/AI_Provider_Service.php",
+        "DSA\\AI\\AI_Configuration_Service": "includes/AI/AI_Configuration_Service.php"
+      },
+      "files": [
+        "assets/css/ai-app.css",
+        "assets/js/ai-app.js",
+        "includes/AI/AI_Configuration_Service.php",
+        "includes/AI/AI_Provider_Service.php",
+        "includes/Access/AI_Workspace_Service.php",
+        "includes/Access/views/ai-workspace.php"
+      ],
+      "requiresPhp": "8.2",
+      "requiresWp": "7.1",
+      "requiresWoo": "",
+      "namespaces": {},
+      "minimumVersion": "1.0.0-rc.1"
+    },
+    "sitegraph": {
+      "name": "Kiwe SiteGraph",
+      "classes": {
+        "DSA\\Access\\SiteGraph_Workspace_Service": "includes/Access/SiteGraph_Workspace_Service.php"
+      },
+      "files": [
+        "includes/Access/SiteGraph_Workspace_Service.php",
+        "includes/Access/views/sitegraph-workspace.php"
+      ],
+      "requiresPhp": "8.2",
+      "requiresWp": "7.1",
+      "requiresWoo": "",
+      "namespaces": {},
+      "minimumVersion": "1.0.0-rc.1"
     }
   }
 }

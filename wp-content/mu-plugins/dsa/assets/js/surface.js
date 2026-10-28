@@ -46,6 +46,12 @@
 	const presentationModuleUrls = data.presentationModules || {};
 	const presentationModules = new Map();
 	const presentationModulePromises = new Map();
+	const discussionConfig = data.discussion || {};
+	let discussionTargetId = Number( discussionConfig.targetId ) || 0;
+	const discussionCounts = new Map();
+	const discussionPendingCounts = new Set();
+	const discussionInFlightCounts = new Set();
+	let discussionCountFrame = 0;
 	const surfaceReturnKey = 'dsa_surface_return';
 	const gamesConfig = data.games || {};
 	const aiConfig = data.ai || {};
@@ -73,6 +79,11 @@
 	const pendingSavedIntentKey = 'kiwe_pending_saved_intent_v1';
 	const pendingPurchaseIntentKey = 'kiwe_pending_purchase_intent_v1';
 	let savedItems = [];
+	let savedConfirmedItems = null;
+	let savedConfirmedActor = '';
+	let savedServerRevision = 0;
+	let savedMutations = [];
+	let savedMutationQueue = Promise.resolve();
 	const phonekey = data.phonekey || {};
 	let cartStateInitialized = Boolean( phonekey.cart && typeof phonekey.cart.count !== 'undefined' );
 	let firstCartConfettiPlayedForCart = false;
@@ -500,6 +511,7 @@
 	let nativeInboxStatus = '';
 	let socialDockTimer = 0;
 	let checkoutDraftTimer = 0;
+	let checkoutDraftDirty = false;
 	let checkoutDraftPromise = Promise.resolve();
 	let checkoutErrorOpenTimer = 0;
 	let checkoutPageDraftTimer = 0;
@@ -703,6 +715,7 @@
 
 		const closingMode = activeOverlayMode;
 		const closingModuleId = activeOverlayModuleId;
+		flushCheckoutDraft();
 		const finalizeClose = function () {
 			window.clearTimeout( overlayCloseTimer );
 			cleanupSheetInteractionState();
@@ -1709,6 +1722,10 @@
 		if ( panel === 'saved' ) {
 			return renderSavedPanel( resolvedLabel );
 		}
+		if ( panel === 'comments' ) {
+			const adapter = presentationModules.get( 'comments' );
+			return adapter ? adapter.renderComments( { label: resolvedLabel || 'Comments', targetId: discussionTargetId, styleUrl: discussionConfig.stylesheet, copy: screenCopy( 'comments', {} ) } ) : renderLazyPresentation( 'comments', 'Comments' );
+		}
 
 		if ( panel === 'games' ) {
 			return renderGamesPanel( resolvedLabel );
@@ -1898,6 +1915,7 @@
 			groupOwnedContext: Boolean( ( dockSettings.menu_context || {} ).groupOwned ),
 			contextTitle: copy.contextTitle || 'On this page',
 			adminDashboard: adminDashboard,
+			adminEdit: dockSettings.admin_edit || null,
 			visualProfile: currentVisualProfile(),
 			screenTheme: copy,
 		} );
@@ -3131,6 +3149,40 @@
 		updateSavedUi();
 	}
 
+	function savedItemIdentity( item ) {
+		return item.type + ':' + ( item.id ? String( item.id ) : item.url );
+	}
+
+	function savedActor() {
+		const user = phonekey.user || {};
+		return user.loggedIn ? String( user.id || user.userId || user.ID || '' ) : '';
+	}
+
+	function renderSavedMutations() {
+		const actor = savedActor();
+		savedItems = savedConfirmedActor === actor ? ( savedConfirmedItems || [] ).slice() : [];
+		savedMutations.forEach( function ( operation ) {
+			if ( operation.actor !== actor ) return;
+			const identity = savedItemIdentity( operation.item );
+			savedItems = savedItems.filter( function ( item ) { return savedItemIdentity( item ) !== identity; } );
+			if ( operation.action === 'add' ) savedItems.unshift( operation.item );
+			savedItems = savedItems.slice( 0, 100 );
+		} );
+		persistSavedItems();
+		updateSavedUi();
+	}
+
+	function acceptSavedServerItems( incoming ) {
+		const dormant = commerce.available === true || savedConfirmedActor !== savedActor() ? [] : savedItems.filter( function ( item ) { return item.type === 'wishlist'; } );
+		savedConfirmedItems = incoming.map( normalizeSavedItem ).filter( Boolean );
+		savedConfirmedActor = savedActor();
+		dormant.forEach( function ( item ) {
+			if ( ! savedConfirmedItems.some( function ( other ) { return savedItemIdentity( other ) === savedItemIdentity( item ); } ) ) savedConfirmedItems.push( item );
+		} );
+		++savedServerRevision;
+		renderSavedMutations();
+	}
+
 	function persistSavedItems() {
 		try {
 			if ( window.localStorage ) window.localStorage.setItem( savedStorageKey, JSON.stringify( savedItems ) );
@@ -3148,9 +3200,11 @@
 			const storeOnly = !item && commerce.available !== true;
 			if ( storeOnly && !trigger.hidden ) { trigger.hidden = true; trigger.dataset.kiweStoreHidden = '1'; }
 			else if ( !storeOnly && trigger.dataset.kiweStoreHidden === '1' ) { trigger.hidden = false; delete trigger.dataset.kiweStoreHidden; }
-			const saved = item && savedItems.some( function ( existing ) { return existing.key === item.key; } );
+			const saved = item && savedItems.some( function ( existing ) { return savedItemIdentity( existing ) === savedItemIdentity( item ); } );
 			trigger.classList.toggle( 'is-kiwe-saved', Boolean( saved ) );
 			trigger.setAttribute( 'aria-pressed', saved ? 'true' : 'false' );
+			if ( item && savedMutations.some( function ( operation ) { return savedItemIdentity( operation.item ) === savedItemIdentity( item ); } ) ) trigger.setAttribute( 'aria-busy', 'true' );
+			else trigger.removeAttribute( 'aria-busy' );
 		} );
 		if ( overlayRoot && ! overlayRoot.hidden && overlayRoot.querySelector( '[data-dsa-saved-panel]' ) ) {
 			replaceOverlayContent( renderSavedPanel( 'Saved' ), { reason: 'saved_refresh', module: getSurfaceModule( 'saved' ), label: 'Saved' } );
@@ -3173,8 +3227,9 @@
 			return Promise.resolve().then( consumePendingSavedIntent );
 		}
 
+		const revision = savedServerRevision;
 		return dsaGet( '/saved-items' ).then( function ( response ) {
-			if ( response && Array.isArray( response.items ) ) mergeSavedItems( response.items );
+			if ( response && Array.isArray( response.items ) && revision === savedServerRevision ) acceptSavedServerItems( response.items );
 		} ).catch( function () {} ).then( consumePendingSavedIntent );
 	}
 
@@ -3202,11 +3257,7 @@
 		}
 		if ( ! pending || Number( pending.expires || 0 ) < Date.now() ) return;
 		const item = normalizeSavedItem( pending.item );
-		if ( ! item || ( item.type === 'wishlist' && commerce.available !== true ) || savedItems.some( function ( candidate ) { return candidate.key === item.key; } ) || ( commerce.available !== true && savedItems.length >= 100 ) ) return;
-		savedItems.unshift( item );
-		savedItems = savedItems.slice( 0, 100 );
-		persistSavedItems();
-		updateSavedUi();
+		if ( ! item || ( item.type === 'wishlist' && commerce.available !== true ) || savedItems.some( function ( candidate ) { return savedItemIdentity( candidate ) === savedItemIdentity( item ); } ) || ( commerce.available !== true && savedItems.length >= 100 ) ) return;
 		mutateSavedItem( 'add', item );
 	}
 
@@ -3235,10 +3286,34 @@
 	}
 
 	function mutateSavedItem( action, item ) {
-		return dsaPost( '/saved-items', { action: action, item: item } ).then( function ( response ) {
-			if ( response && Array.isArray( response.items ) ) mergeSavedItems( response.items );
-			return response;
-		} ).catch( function () {} );
+		if ( ! ( phonekey.user || {} ).loggedIn ) return Promise.resolve( null );
+		const actor = savedActor();
+		const operation = { action: action, item: item, actor: actor };
+		if ( savedConfirmedItems === null ) { savedConfirmedItems = savedItems.slice(); savedConfirmedActor = actor; }
+		savedMutations.push( operation );
+		renderSavedMutations();
+		const sameActor = function () { return ( phonekey.user || {} ).loggedIn && actor === savedActor(); };
+		const finished = function () { savedMutations = savedMutations.filter( function ( pending ) { return pending !== operation; } ); };
+		const request = savedMutationQueue.then( function () {
+			if ( ! sameActor() ) { finished(); savedConfirmedItems = []; renderSavedMutations(); return null; }
+			return dsaPost( '/saved-items', { action: action, item: item } ).then( function ( response ) {
+				if ( ! response || response.ok !== true || ! Array.isArray( response.items ) ) throw new Error( 'Your saved list could not be updated. Please try again.' );
+				finished();
+				if ( ! sameActor() ) { savedConfirmedItems = []; renderSavedMutations(); return null; }
+				acceptSavedServerItems( response.items );
+				return response;
+			} ).catch( function ( error ) {
+				finished(); renderSavedMutations();
+				announce( error.message || 'Your saved list could not be updated. Please try again.' );
+				if ( ! sameActor() ) return null;
+				const revision = savedServerRevision;
+				return dsaGet( '/saved-items' ).then( function ( response ) {
+					if ( response && Array.isArray( response.items ) && revision === savedServerRevision && sameActor() ) acceptSavedServerItems( response.items );
+				} ).catch( function () {} ).then( function () { return null; } );
+			} );
+		} );
+		savedMutationQueue = request.then( function () {}, function () {} );
+		return request;
 	}
 
 	function toggleSavedItem( trigger ) {
@@ -3251,17 +3326,14 @@
 			announce( item.type === 'wishlist' ? 'Sign in to add this item to your Wishlist.' : 'Sign in to bookmark this story.' );
 			return;
 		}
-		const existing = savedItems.some( function ( candidate ) { return candidate.key === item.key; } );
+		const existing = savedItems.find( function ( candidate ) { return savedItemIdentity( candidate ) === savedItemIdentity( item ); } );
 		if ( existing ) {
-			removeSavedItem( item.key );
+			removeSavedItem( existing.key );
 			return;
 		}
 		if ( commerce.available !== true && savedItems.length >= 100 ) { announce( 'Your saved list is full. Remove an item before saving another.' ); return; }
-		savedItems.unshift( item );
-		savedItems = savedItems.slice( 0, 100 );
-		persistSavedItems();
-		updateSavedUi();
-		mutateSavedItem( 'add', item );
+		mutateSavedItem( 'add', item ).then( function ( response ) {
+		if ( ! response || ! savedItems.some( function ( candidate ) { return savedItemIdentity( candidate ) === savedItemIdentity( item ); } ) ) return;
 		removeAiNotification( 'saved:' + item.key );
 		const notice = recordAiNotification( {
 			id: 'saved:' + item.key,
@@ -3273,15 +3345,13 @@
 			notification: true,
 		} );
 		if ( notice ) queueAiPopout( notice, 'saved' );
+		} );
 	}
 
 	function removeSavedItem( key ) {
 		const item = savedItems.find( function ( candidate ) { return candidate.key === key; } );
 		if ( ! item ) return;
-		savedItems = savedItems.filter( function ( candidate ) { return candidate.key !== key; } );
-		persistSavedItems();
-		updateSavedUi();
-		mutateSavedItem( 'remove', item );
+		mutateSavedItem( 'remove', item ).then( function ( response ) { if ( response ) removeAiNotification( 'saved:' + item.key ); } );
 	}
 
 	function bindSavedTriggers() {
@@ -3544,6 +3614,23 @@
 
 		if ( panel === 'saved' ) {
 			bindSavedPanel();
+		}
+		if ( panel === 'comments' ) {
+			const adapter = presentationModules.get( 'comments' );
+			if ( adapter ) adapter.bindComments( {
+				panel: overlayRoot.querySelector( '[data-dsa-comments-panel]' ), restUrl: data.restUrl,
+				copy: screenCopy( 'comments', {} ),
+				headers: runtimeHeaders, ready: runtimeHydrationPromise, phoneKeyPost: phoneKeyPost,
+				refreshIdentity: function () { return window.DSA.refreshRuntime(); }, refreshNonce: refreshRestNonce,
+				ownProfile: function () { return phonekey.user || {}; },
+				iconSprite: iconSprite, brandLabel: ( data.site || {} ).name || '',
+				focusId: ( function () { const query = new URL( window.location.href ).searchParams; return query.get( 'kiwe-screen' ) === 'comments' && Number( query.get( 'kiwe-discussion' ) ) === discussionTargetId ? Number( query.get( 'kiwe-comment' ) ) : 0; }() ),
+				nonce: function ( value ) { if ( value ) { data.nonce = value; phonekey.nonce = value; } },
+				onCount: updateDiscussionCount,
+				scrollOwner: function () { return overlayRoot.querySelector( '[data-dsa-sheet-content]' ) || overlayRoot; },
+				isActive: function () { return activeOverlayPanel === 'comments' && ! overlayRoot.hidden; },
+				openSignIn: function () { openOverlay( 'profile', 'Subscribe Now' ); },
+			} );
 		}
 
 		if ( panel === 'ai' ) {
@@ -4875,13 +4962,23 @@
 	}
 
 	function queueCheckoutDraftSave( form ) {
+		checkoutDraftDirty = true;
 		window.clearTimeout( checkoutDraftTimer );
 		checkoutDraftTimer = window.setTimeout( function () {
 			saveCheckoutDraft( form, false, false );
 		}, 360 );
 	}
 
-	function saveCheckoutDraft( form, validate, rerender ) {
+	function flushCheckoutDraft() {
+		if ( ! checkoutDraftDirty && ! checkoutDraftTimer ) return;
+		const form = overlayRoot && overlayRoot.querySelector( '[data-dsa-checkout-form]' );
+		if ( ! form ) return;
+		checkoutDraftDirty = false;
+		// Persist the pending allowed draft without holding navigation or reviving closed UI.
+		saveCheckoutDraft( form, false, false, true ).catch( function () {} );
+	}
+
+	function saveCheckoutDraft( form, validate, rerender, finalSave ) {
 		if ( ! form ) {
 			return Promise.resolve( null );
 		}
@@ -4902,8 +4999,9 @@
 		const checkoutSequence = ++checkoutRequestSequence;
 		const fields = collectCheckoutValues( form );
 		const request = checkoutDraftPromise.catch( function () {} ).then( function () {
-			if ( ! overlayLifecycleCurrent( lifecycleSequence ) || checkoutSequence < checkoutRequestSequence ) return null;
-			return dsaPost( '/checkout', { fields: fields, validate: Boolean( validate ) } );
+			if ( ! finalSave && ( ! overlayLifecycleCurrent( lifecycleSequence ) || checkoutSequence < checkoutRequestSequence ) ) return null;
+			checkoutDraftDirty = false;
+			return dsaPost( '/checkout', { fields: fields, validate: Boolean( validate ) }, false, Boolean( finalSave ) );
 		} );
 		checkoutDraftPromise = request.catch( function () {} );
 		return request.then( function ( response ) {
@@ -5525,7 +5623,7 @@
 
 	function externalModuleAvailable( moduleId ) {
 		if ( ! overlayRoot ) return false;
-		if ( ! [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'theme', 'ai', 'notifications', 'ios-install', 'games' ].includes( moduleId ) && ! moduleItems().some( function ( item ) { return item.id === moduleId; } ) ) return false;
+		if ( ! [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'comments', 'theme', 'ai', 'notifications', 'ios-install', 'games' ].includes( moduleId ) && ! moduleItems().some( function ( item ) { return item.id === moduleId; } ) ) return false;
 		if ( moduleId === 'cart' ) return commerce.available === true && ( commerce.settings || {} ).cartSurfaceEnabled !== false;
 		if ( moduleId === 'search' ) return searchConfig.enabled !== false;
 		return true;
@@ -5554,7 +5652,7 @@
 		let labels = externalLauncherLabels.get( launcher );
 		if ( ! labels || currentLabel !== labels.last ) {
 			const text = Array.from( launcher.childNodes ).filter( function ( child ) { return child !== badge; } ).map( function ( child ) { return child.textContent; } ).join( '' ).trim();
-			labels = { base: currentLabel || text || screenLabel( moduleId, moduleId === 'cart' ? 'Cart' : 'Notifications' ) };
+			labels = { base: currentLabel || text || screenLabel( moduleId, moduleId === 'cart' ? 'Cart' : moduleId === 'comments' ? 'Comments' : 'Notifications' ) };
 			externalLauncherLabels.set( launcher, labels );
 		}
 		if ( ! badge ) {
@@ -5568,7 +5666,7 @@
 		const count = Number.isFinite( numeric ) ? Math.max( 0, Math.floor( numeric ) ) : 0;
 		if ( badge.textContent !== String( count || '' ) ) badge.textContent = String( count || '' );
 		badge.hidden = count === 0;
-		labels.last = labels.base + ', ' + String( count ) + ( moduleId === 'cart' ? ( count === 1 ? ' item in cart' : ' items in cart' ) : ( count === 1 ? ' notification' : ' notifications' ) );
+		labels.last = labels.base + ', ' + String( count ) + ( moduleId === 'cart' ? ( count === 1 ? ' item in cart' : ' items in cart' ) : moduleId === 'comments' ? ( count === 1 ? ' comment' : ' comments' ) : ( count === 1 ? ' notification' : ' notifications' ) );
 		if ( moduleId === 'ai' ) {
 			host.classList.toggle( 'has-unread', count > 0 );
 			host.classList.toggle( 'dsa-notification-reminder', isCurrentCheckoutPage() && pendingNotificationActions().length > 0 );
@@ -5583,6 +5681,12 @@
 		if ( root.matches && root.matches( selector ) ) launchers.unshift( root );
 		launchers.forEach( function ( launcher ) {
 			const moduleId = String( launcher.dataset.dsaOpenModule || '' );
+			if ( moduleId === 'comments' ) {
+				const id = discussionLauncherId( launcher ); launcher.hidden = ! id;
+				if ( ! id ) return;
+				if ( discussionCounts.has( id ) ) { if ( discussionCounts.get( id ) === null ) { launcher.hidden = true; return; } updateExternalModuleBadge( launcher, discussionCounts.get( id ), 'comments' ); }
+				else queueDiscussionCount( id );
+			}
 			if ( moduleId === 'cart' && commerce.available !== true ) { launcher.hidden = true; return; }
 			if ( launcher.closest( '[data-dsa-surface]' ) || ! externalModuleAvailable( moduleId ) ) return;
 			if ( ! launcher.classList.contains( 'dsa-module-launcher' ) ) {
@@ -5610,7 +5714,43 @@
 		} );
 	}
 
-	function dsaPost( path, payload, retried ) {
+	function discussionLauncherId( launcher ) {
+		const raw = launcher.getAttribute( 'data-dsa-discussion-id' );
+		if ( raw === 'site' ) return Number( discussionConfig.siteTargetId ) || 0;
+		if ( raw === 'current' ) return Number( discussionConfig.currentTargetId ) || 0;
+		if ( raw && raw !== 'current' ) return /^[1-9][0-9]{0,14}$/.test( raw ) ? Number( raw ) : 0;
+		return Number( discussionConfig.targetId ) || 0;
+	}
+	function updateDiscussionCount( id, count ) {
+		discussionCounts.set( Number( id ), Math.max( 0, Number( count ) || 0 ) );
+		if ( Number( id ) === Number( discussionConfig.targetId ) ) updateDockBadge( 'comments', count );
+		document.querySelectorAll( '[data-dsa-open-module="comments"]' ).forEach( function ( launcher ) { if ( discussionLauncherId( launcher ) === Number( id ) ) updateExternalModuleBadge( launcher, count, 'comments' ); } );
+	}
+	function queueDiscussionCount( id ) {
+		if ( ! data.restUrl || discussionPendingCounts.has( id ) || discussionInFlightCounts.has( id ) ) return;
+		discussionPendingCounts.add( id ); if ( discussionCountFrame ) return;
+		discussionCountFrame = window.requestAnimationFrame( function () {
+			discussionCountFrame = 0;
+			const ids = Array.from( discussionPendingCounts ).slice( 0, 50 ); if ( ! ids.length ) return;
+			ids.forEach( function ( value ) { discussionPendingCounts.delete( value ); discussionInFlightCounts.add( value ); } );
+			dsaGet( '/discussion/counts?ids=' + ids.join( ',' ) ).then( function ( response ) {
+				Object.keys( response.counts || {} ).forEach( function ( key ) { const value = response.counts[key]; if ( value.available ) updateDiscussionCount( Number( key ), value.count ); else { discussionCounts.set( Number( key ), null ); document.querySelectorAll( '[data-dsa-open-module="comments"]' ).forEach( function ( node ) { if ( discussionLauncherId( node ) === Number( key ) ) node.hidden = true; } ); } } );
+			} ).catch( function () {} ).finally( function () { ids.forEach( function ( value ) { discussionInFlightCounts.delete( value ); } ); if ( discussionPendingCounts.size ) queueDiscussionCountBatch(); } );
+		} );
+	}
+	function queueDiscussionCountBatch() { const remaining = Array.from( discussionPendingCounts ); discussionPendingCounts.clear(); remaining.forEach( queueDiscussionCount ); }
+	window.addEventListener( 'surface:navigation:complete', function ( event ) {
+		if ( ( event.detail || {} ).mode !== 'morph' || ! data.restUrl ) return;
+		dsaGet( '/discussion/context?url=' + encodeURIComponent( window.location.href.split( '#' )[0] ) ).then( function ( context ) {
+			discussionConfig.targetId = Number( context.targetId ) || 0; discussionConfig.count = Number( context.count ) || 0;
+			discussionConfig.currentTargetId = Number( context.currentTargetId ) || 0;
+			const button = surface && surface.querySelector( '[data-dsa-module="comments"]' ); if ( button ) button.hidden = ! discussionConfig.targetId;
+			if ( discussionConfig.targetId ) updateDiscussionCount( discussionConfig.targetId, discussionConfig.count );
+			enhanceModuleLaunchers( document ); scheduleSurfaceGeometry();
+		} ).catch( function () { const button = surface && surface.querySelector( '[data-dsa-module="comments"]' ); if ( button ) button.hidden = true; } );
+	} );
+
+	function dsaPost( path, payload, retried, keepalive ) {
 		debugLog( 'REST POST start', { path: path, payload: payload || {}, retried: Boolean( retried ) } );
 
 		return fetch( noStoreUrl( data.restUrl + path ), {
@@ -5622,6 +5762,7 @@
 			credentials: 'same-origin',
 			cache: 'no-store',
 			body: JSON.stringify( payload || {} ),
+			keepalive: Boolean( keepalive ) && JSON.stringify( payload || {} ).length <= 32768,
 		} ).then( function ( response ) {
 			debugLog( 'REST POST response', { path: path, status: response.status, ok: response.ok } );
 
@@ -5648,7 +5789,7 @@
 				if ( ! retried && ( response.status === 401 || response.status === 403 || code === 'rest_cookie_invalid_nonce' ) ) {
 					debugLog( 'REST nonce retry', { path: path, status: response.status, code: code } );
 					return refreshRestNonce().then( function () {
-						return dsaPost( path, payload, true );
+						return dsaPost( path, payload, true, keepalive );
 					} );
 				}
 
@@ -6228,7 +6369,7 @@
 
 		const appWelcome = isStandaloneApp() && ( !( phonekey.user || {} ).loggedIn || appPhoneKeyGate ) && ! notificationIdentityIntent;
 		return [
-			notificationIdentityIntent ? '<h2>Keep your notifications with you.</h2>' : ( appWelcome ? '<h2>Welcome to your Appsite.</h2>' : '<h2>Continue securely</h2>' ),
+			notificationIdentityIntent ? '<h2>Keep your notifications with you.</h2>' : ( appWelcome ? '<h2>Welcome to your Appsite.</h2>' : '<h2>Subscribe Now</h2>' ),
 			notificationIdentityIntent ? '<p>Confirm ' + escapeHtml( label.toLowerCase() ) + ' once so your Appsite choices can follow you securely.</p>' : ( appWelcome ? '<p>Use ' + escapeHtml( label.toLowerCase() ) + ' once to keep this app, your preferences, and future notifications together.</p>' : '<p>Use ' + escapeHtml( label.toLowerCase() ) + ' to continue. If this device supports passkeys, Kiwe Auth will use the secure login built into your device.</p>' ),
 			renderPhoneKeyError(),
 			'<form class="dsa-auth-form" data-dsa-pk-start>',
@@ -8065,7 +8206,7 @@
 		const verticalEdge = String( dockSettings[ profile + '_vertical_edge' ] || 'right' );
 		const horizontalEdge = String( dockSettings[ profile + '_horizontal_edge' ] || 'bottom' );
 		const mainDock = surface.querySelector( '.dsa-phonekey-dock' );
-		const itemCount = mainDock ? mainDock.querySelectorAll( ':scope > [data-dsa-module]' ).length : Number( surface.dataset.dsaDockItemCount ) || 0;
+		const itemCount = mainDock ? Array.from( mainDock.querySelectorAll( ':scope > [data-dsa-module]' ) ).filter( function ( button ) { return ! button.hidden; } ).length : Number( surface.dataset.dsaDockItemCount ) || 0;
 		const hasAi = Boolean( surface.querySelector( '.dsa-ai-launcher' ) );
 		const safe = geometrySafeAreaInsets();
 		const gutter = geometryCssNumber( '--dsa-geometry-viewport-gutter', 12 );
@@ -9566,6 +9707,19 @@
 			return;
 		}
 		appPhoneKeyGate = false;
+		// Only the manifest launch is an instruction to enter staff work. Public
+		// browsing and notification deep links retain their selected destination.
+		if ( currentUser.workspaceUrl ) {
+			try {
+				const entry = new URL( window.location.href );
+				const work = new URL( currentUser.workspaceUrl, entry );
+				const scope = new URL( pwaConfig.scope || '/', entry );
+				if ( entry.searchParams.get( 'dsa_pwa' ) === '1' && entry.pathname.replace(/\/$/,'') === scope.pathname.replace(/\/$/,'') && work.origin === entry.origin && /\/wp-admin\/admin\.php$/.test( work.pathname ) && work.searchParams.get( 'page' ) === 'kiwe-workspace' ) {
+					window.location.replace( work.href );
+					return;
+				}
+			} catch ( error ) {}
+		}
 		if ( ! notificationConfig.enabled ) return;
 		if ( resumeIosNotificationJourney() ) return;
 		const hasPreferences = notificationPreferences.topics.length > 0 && notificationPreferences.channels.length > 0;
@@ -10704,6 +10858,7 @@
 		if ( button.dataset.dsaModule === 'ai' ) {
 			hideAiPopout();
 		}
+		if ( button.dataset.dsaModule === 'comments' ) { discussionTargetId = Number( discussionConfig.targetId ) || 0; if ( ! discussionTargetId ) return; }
 		openOverlay( button.dataset.dsaModule, button.getAttribute( 'aria-label' ) || 'Surface module' );
 	} );
 
@@ -10807,6 +10962,7 @@
 		}
 		// The public Notifications launcher opens the inbox; explicit alert preferences
 		// retain their existing data-kiwe-notifications journey.
+		if ( moduleId === 'comments' ) { discussionTargetId = discussionLauncherId( launcher ); if ( ! discussionTargetId ) return; }
 		openOverlay( moduleId === 'notifications' ? 'ai' : moduleId, launcher.getAttribute( 'aria-label' ) || '' );
 	}, true );
 
@@ -10862,6 +11018,9 @@
 					openProfileVerification();
 				}
 			} );
+		} else if ( new URL( window.location.href ).searchParams.get( 'kiwe-screen' ) === 'comments' && externalModuleAvailable( 'comments' ) ) {
+			const target = Number( new URL( window.location.href ).searchParams.get( 'kiwe-discussion' ) );
+			if ( Number.isSafeInteger( target ) && target > 0 ) runtimeHydrationPromise.then( function () { discussionTargetId = target; openOverlay( 'comments', 'Conversation' ); } );
 		}
 	} catch ( error ) {}
 
@@ -10949,6 +11108,7 @@
 	window.addEventListener( 'pageshow', handleRuntimePageShow );
 
 	window.addEventListener( 'pagehide', function () {
+		flushCheckoutDraft();
 		if ( window.DSA.transitionReader ) window.DSA.transitionReader.depart();
 		resetNavigationState( true );
 		reconcileInactiveOverlayState();
@@ -10960,6 +11120,7 @@
 	} );
 
 	document.addEventListener( 'visibilitychange', function () {
+		if ( document.visibilityState === 'hidden' ) flushCheckoutDraft();
 		if ( document.visibilityState === 'visible' && navigationInFlight && ! pendingFullNavigationUrl ) {
 			resetNavigationState( true );
 		}
@@ -11802,6 +11963,7 @@
 	function bindFormMessageAccessibility() {
 		enhanceFormMessageAccessibility( document );
 		enhanceModuleLaunchers( document );
+		if ( Number( discussionConfig.targetId ) ) { const commentsButton = surface && surface.querySelector( '[data-dsa-module="comments"]' ); if ( commentsButton && ! commentsButton.hidden ) queueDiscussionCount( Number( discussionConfig.targetId ) ); }
 		if ( ! window.MutationObserver || ! document.body ) {
 			return;
 		}

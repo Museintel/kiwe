@@ -1,0 +1,17 @@
+<?php
+if(PHP_SAPI!=='cli'||!defined('KIWE_MATERIAL_NATIVE_TEST')||KIWE_MATERIAL_NATIVE_TEST!==true||empty($GLOBALS['kiwe_seo_test_tables']))throw new RuntimeException('Owned material fixture required');
+function kiwe_material_native_run():array{
+ global$wpdb;$out=['passed'=>false,'cleanup'=>false,'checks'=>[]];$check=static function($ok,$why)use(&$out){$out['checks'][$why]=(bool)$ok;if(!$ok)throw new RuntimeException($why);};
+ $canonical=static function($v)use(&$canonical){if(!is_array($v))return$v;foreach($v as$k=>$item)$v[$k]=$canonical($item);if(!array_is_list($v))ksort($v);return$v;};
+ try{
+  foreach(['user_register','set_user_role','litespeed_purge_all','litespeed_purge_post','litespeed_purge_url']as$hook)remove_all_actions($hook);
+  foreach([1=>'administrator',2=>'author']as$id=>$role){$check($wpdb->insert($wpdb->users,['ID'=>$id,'user_login'=>'materialfixture'.$id,'user_pass'=>'not-a-login-password','user_email'=>'material'.$id.'@example.invalid','display_name'=>'Synthetic material user','user_registered'=>current_time('mysql',true)])===1,'Connection-local actor '.$id);update_user_meta($id,$wpdb->prefix.'capabilities',[$role=>true]);}
+  update_option(DSA\Access\Site_Owner_Service::OPTION,['enabled'=>true,'ownerId'=>1,'rankMath'=>'inline'],false);wp_set_current_user(0);wp_set_current_user(1);$service=new DSA\Access\App_Workspace_Service();$snapshot=$service->snapshot();
+  $check($snapshot['choices']['app']['home_material']==='glass'&&$snapshot['choices']['visual_effects']['transition_material']==='glass','Missing material values resolve to glass without read-time save');
+  foreach(['glass','solid']as$home)foreach(['glass','solid']as$transition){$before=get_option(DSA_OPTION_SETTINGS);$s=$service->snapshot();$value=$service->update(['expected'=>$s['expected'],'changes'=>['app'=>['home_material'=>$home],'visual_effects'=>['transition_material'=>$transition]]]);$check(!is_wp_error($value)&&$value['choices']['app']['home_material']===$home&&$value['choices']['visual_effects']['transition_material']===$transition,'Native independent material save '.$home.'/'.$transition);$expected=$before;$expected['app']['home_material']=$home;$expected['visual_effects']['transition_material']=$transition;$check($canonical(get_option(DSA_OPTION_SETTINGS))===$canonical($expected),'Unrelated raw choice values preserved '.$home.'/'.$transition);}
+  $before=get_option(DSA_OPTION_SETTINGS);foreach([['app'=>['home_material'=>'arbitrary-css']],['visual_effects'=>['transition_material'=>'transparent']]]as$patch){$s=$service->snapshot();$bad=$service->update(['expected'=>$s['expected'],'changes'=>$patch]);$check(is_wp_error($bad)&&get_option(DSA_OPTION_SETTINGS)===$before,'Invalid native material is atomic');}
+  $stale=$service->update(['expected'=>$snapshot['expected'],'changes'=>['app'=>['home_material'=>'glass']]]);$check(is_wp_error($stale)&&get_option(DSA_OPTION_SETTINGS)===$before,'Original stale tab cannot overwrite newer material');
+  wp_set_current_user(0);wp_set_current_user(2);$denied=$service->update(['expected'=>$service->snapshot()['expected'],'changes'=>['app'=>['home_material'=>'glass']]]);$check(is_wp_error($denied)&&get_option(DSA_OPTION_SETTINGS)===$before,'Author has no material writer');
+  $check($GLOBALS['kiwe_seo_test_http_calls']===0&&$GLOBALS['kiwe_seo_test_mail_calls']===0,'Native fixture sends nothing');$out['passed']=true;
+ }catch(Throwable$e){$out['error']=$e->getMessage();}finally{kiwe_seo_test_cleanup($out);}return$out;
+}

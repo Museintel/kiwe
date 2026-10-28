@@ -1,0 +1,39 @@
+{
+  "schema": "kiwe.site-graph.v1",
+  "generatedAt": "discussion-fixture-v1",
+  "bricks": {
+    "dynamicTags": [
+      {
+        "name": "{kiwe_discussion_id}"
+      }
+    ]
+  },
+  "kiwe": {
+    "modules": {
+      "items": [
+        {
+          "id": "comments"
+        }
+      ]
+    },
+    "discussion": {
+      "schema": "kiwe.discussion.v1",
+      "authority": "wordpress-comments",
+      "runtimeVersion": "8.0.0-rc.451",
+      "core": {
+        "posts": true,
+        "websitePageId": 55
+      },
+      "productReviews": false,
+      "launcher": {
+        "attribute": "data-dsa-open-module",
+        "value": "comments",
+        "targetAttribute": "data-dsa-discussion-id"
+      },
+      "bricks": {
+        "target": "{kiwe_discussion_id}",
+        "count": "{kiwe_discussion_count}"
+      }
+    }
+  }
+}

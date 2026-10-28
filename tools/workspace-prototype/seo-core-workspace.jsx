@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {WorkspaceHeader} from './workspace-chrome.jsx';
 import {SeoEditorPanel} from './seo-editor.jsx';
 import {SeoDefaults} from './seo-defaults.jsx';
+import {SEOHandover} from './seo-handover-settings.jsx';
 import {client,History,validateHistory,validateList} from './seo-object-app-entry.jsx';
 
 function startContext(){
@@ -90,6 +91,7 @@ function App(){
   <main id="seo-main">
    <p className="seo-eyebrow">{config.siteName} · saved records</p><h1>SEO.</h1><p className="seo-title-sub">Help the right people find your work.</p>
    {config.goal&&<section className="seo-goal" aria-labelledby="seo-goal-title"><div><p className="seo-eyebrow">YOUR SEO GOAL</p><h2 id="seo-goal-title">{config.goal.label}</h2><p>SEO and AI suggestions follow the goal you save in Design Context.</p></div>{config.goalUrl&&<a href={config.goalUrl}>Review goal ↗</a>}</section>}
+   <SEOHandover config={config}/>
    {message&&<p role="status" className="seo-message">{message}</p>}{error&&<p role="alert" className="seo-error">{error}</p>}
    {data&&<>
     <div className="seo-tab-row"><nav className="seo-tabs" aria-label="Content types">{data.scopes.map(item=><button type="button" key={item.id} aria-current={scope===item.id?'page':undefined} disabled={busy} onClick={()=>selectScope(item.id)}>{item.label}</button>)}</nav><div className="seo-tab-action">{config.defaultsAllowed&&<button type="button" disabled={busy} onClick={()=>setDefaultsOpen(true)}>Website defaults</button>}{config.historyAllowed&&<button type="button" disabled={busy} onClick={()=>historyOpen?setHistoryOpen(false):loadHistory()}>{historyOpen?'Close older library':'Review older library'}</button>}</div></div>

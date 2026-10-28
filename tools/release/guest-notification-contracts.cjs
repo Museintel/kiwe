@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..', '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
-const guest = read('wp-content/mu-plugins/dsa/includes/Access/Guest_Contribution_Service.php');
+const guest = read('wp-content/mu-plugins/dsa/includes/Access/Guest_Contribution_Service.php') + read('wp-content/mu-plugins/dsa/includes/Access/Guest_Engine_Service.php');
 const access = read('wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php');
 const prefs = read('wp-content/mu-plugins/dsa/includes/Notifications/Notification_Preference_Service.php');
 const center = read('wp-content/mu-plugins/dsa/includes/Notifications/Notification_Center_Service.php');

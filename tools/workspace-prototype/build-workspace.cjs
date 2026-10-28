@@ -1,7 +1,7 @@
 const path = require('node:path');
 const { build } = require('esbuild');
 const { writeWorkspaceArtifacts } = require('./workspace-css.cjs');
-const kinds = ['ai','analytics','app','apps','backups','commerce','continuity','dock','forms','guest','identity','media','navigation','notification','posts','seo-object','taxonomy','team','templates','trash'];
+const kinds = ['ai','analytics','app','apps','backups','commerce','continuity','dock','forms','guest','identity','media','navigation','notification','posts','seo-object','system','taxonomy','team','templates','trash'];
 async function buildWorkspace(kind) {
   if (!kinds.includes(kind)) throw Error('Unknown native workspace');
   const result = await build({ absWorkingDir: __dirname, entryPoints: [kind === 'seo-object' ? 'seo-core-workspace.jsx' : kind + '-app-entry.jsx'], bundle: true, format: 'iife', platform: 'browser', target: ['es2020'], minify: true, write: false, outfile: kind + '-app.js', metafile: true, alias: { react: path.join(__dirname, 'wp-element-shim.mjs'), 'react-dom/client': path.join(__dirname, 'wp-element-shim.mjs') } });

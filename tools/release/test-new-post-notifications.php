@@ -55,6 +55,7 @@ namespace DSA\Communications {
 
 namespace {
 	define( 'ABSPATH', __DIR__ . '/' );
+	require_once __DIR__.'/fixtures/worker-options.php';
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php';
 	$options = [];
@@ -165,11 +166,11 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
 	$posts[105] = (object) [ 'ID'=>105, 'post_type'=>'post', 'post_status'=>'publish', 'post_password'=>'', 'post_title'=>'Worker lock' ];
 	$post_categories[105] = [ 7 ];
 	$service->queue_first_publish( 105, $posts[105], true, $before );
-	$options['dsa_new_post_notification_worker_lock'] = time() + 60;
+	$busy=\DSA\Notifications\Worker_Job::claim('dsa_new_post_alert_105');
 	$event_count = count( $events );
 	$service->run_batch( 105 );
-	ok( count( $events ) === $event_count + 1 && $service->status()['active']['scanned'] === 0, 'A busy global worker reschedules instead of sending concurrently.' );
-	unset( $options['dsa_new_post_notification_worker_lock'] );
+	ok( count( $events ) === $event_count && $service->status()['active']['scanned'] === 0, 'A busy per-job owner prevents concurrent sending without replacing its progress.' );
+	$busy->release();
 
 	$events = [];
 	$options['dsa_new_post_alert_105']['status'] = 'stalled';

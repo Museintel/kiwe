@@ -32,6 +32,9 @@ function rest_url( string $path = '' ): string { return 'https://example.test/wp
 function untrailingslashit( string $value ): string { return rtrim( $value, '/\\' ); }
 function esc_url_raw( string $value ): string { return filter_var( $value, FILTER_SANITIZE_URL ) ?: ''; }
 
+require __DIR__ . '/fixtures/credential-records.php';
+$GLOBALS['wpdb'] = new Kiwe_Credential_Test_DB();
+require dirname( __DIR__, 2 ) . '/wp-content/mu-plugins/dsa/includes/Utilities/Credential_Records.php';
 require dirname( __DIR__, 2 ) . '/wp-content/mu-plugins/dsa/includes/AI/Task_Capsule_Service.php';
 require dirname( __DIR__, 2 ) . '/wp-content/mu-plugins/dsa/includes/AI/External_Client_OpenAPI_Service.php';
 require dirname( __DIR__, 2 ) . '/wp-content/mu-plugins/dsa/includes/AI/External_Client_Adapter_Service.php';

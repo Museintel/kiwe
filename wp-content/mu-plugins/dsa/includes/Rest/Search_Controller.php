@@ -31,6 +31,7 @@ final class Search_Controller {
 					'q'     => [ 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_text_field' ],
 					'limit' => [ 'type' => 'integer', 'default' => 6, 'minimum' => 1, 'maximum' => 12, 'sanitize_callback' => 'absint' ],
 					'prefix' => [ 'type' => 'string', 'default' => '', 'sanitize_callback' => 'sanitize_text_field' ],
+					'cursor' => [ 'type'=>'string', 'default'=>'', 'maxLength'=>4096 ],
 					'scope' => [
 						'type'              => 'string',
 						'default'           => 'all',
@@ -62,13 +63,15 @@ final class Search_Controller {
 				(int) $request->get_param( 'limit' ),
 				(string) $request->get_param( 'scope' ),
 				(string) $request->get_param( 'prefix' ),
-				(string) $request->get_param( 'sort' )
+				(string) $request->get_param( 'sort' ),
+				(string) $request->get_param( 'cursor' )
 		);
+		if ( is_wp_error( $payload ) ) return $payload;
 		$response = new WP_REST_Response( $payload, 200 );
 		$response->header(
 			'Cache-Control',
 			empty( $payload['hasCommerce'] ) && ! is_user_logged_in()
-				? 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400'
+				? 'public, max-age=60, s-maxage=300, stale-while-revalidate=240'
 				: 'private, max-age=60, stale-while-revalidate=240'
 		);
 

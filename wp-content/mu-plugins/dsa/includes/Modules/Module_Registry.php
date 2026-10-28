@@ -96,6 +96,7 @@ final class Module_Registry {
 				'dismiss' => 'none',
 			]
 		);
+		$this->register( [ 'id'=>'comments', 'label'=>__( 'Comments', 'dsa' ), 'icon'=>$this->lucide_icon( 'message-circle' ), 'order'=>45, 'panel'=>'comments', 'binder'=>'comments', 'dismiss'=>'outside_safe' ] );
 
 		$this->register(
 			[
@@ -202,6 +203,7 @@ final class Module_Registry {
 				'links'   => true,
 				'saved'   => true,
 				'cart'    => true,
+				'comments'=> true,
 				'theme'   => true,
 				'ai'      => true,
 				'secure'  => true,
@@ -240,6 +242,7 @@ final class Module_Registry {
 
 			$out[] = [
 				'id'             => $id,
+				'context_available' => 'comments' !== $id || ! array_key_exists( 'discussion_available', $context ) || (bool) $context['discussion_available'],
 				'label'          => sanitize_text_field( $labels[ $id ] ?? $module['label'] ),
 				'icon'           => (string) $module['icon'],
 				'badge'          => $badges[ $id ] ?? '',
@@ -279,6 +282,7 @@ final class Module_Registry {
 				'links'   => true,
 				'saved'   => true,
 				'cart'    => true,
+				'comments'=> true,
 				'theme'   => true,
 				'ai'      => true,
 				'secure'  => true,

@@ -171,6 +171,7 @@ final class SEO_Refinement_Service {
 		wp_localize_script( 'kiwe-seo-object-app', 'KIWE_SEO_OBJECT_APP', [
 			'endpoint'=>rest_url( 'dsa/v1/workspace/seo' ),
 			'nonce'=>wp_create_nonce( 'wp_rest' ),
+			'handoverEndpoint'=>current_user_can( 'manage_options' ) ? rest_url( 'dsa/v1/workspace/ai' ) : '',
 			'home'=>Workspace_Admin_Service::url(),
 			...\DSA\Access\Workspace_Chrome_Service::projection(),
 			'historyAllowed'=>current_user_can( 'kiwe_manage_ai_preferences' ),
@@ -271,7 +272,7 @@ final class SEO_Refinement_Service {
 			if ( ! $taxonomy || ! is_scalar( $focus ) || ! preg_match( '/^[1-9][0-9]*$/D', (string) $focus ) ) return UI::failure( new \WP_Error( 'kiwe_seo_category_id', __( 'Choose a saved category.', 'dsa' ) ), 400 );
 			$term = get_term( absint( $focus ), $taxonomy );
 			if ( ! $term || is_wp_error( $term ) || ! current_user_can( 'edit_term', $term->term_id ) ) return UI::failure( new \WP_Error( 'kiwe_seo_category_missing', __( 'This category is unavailable for your account.', 'dsa' ) ), 404 );
-			return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'scope'=>'category', 'scopes'=>$available, 'items'=>[ $this->term_summary( $term ) ], 'page'=>1, 'more'=>false, 'taxonomies'=>$taxonomies, 'aiReady'=>$this->object_ai_ready(), 'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? \DSA\Access\AI_Workspace_Service::url() : '' ] );
+			return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'scope'=>'category', 'scopes'=>$available, 'items'=>[ $this->term_summary( $term ) ], 'page'=>1, 'more'=>false, 'taxonomies'=>$taxonomies, 'aiReady'=>$this->object_ai_ready(), 'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? ( \DSA\Apps\AI_App_Service::enabled() ? \DSA\Apps\AI_App_Service::url() : \DSA\Apps\Library_Service::url('ai') ) : '' ] );
 		}
 		$page = max( 1, min( 5000, absint( $request->get_param( 'page' ) ) ) );
 		$search = UI::text( $request->get_param( 'search' ), 100 );
@@ -282,7 +283,7 @@ final class SEO_Refinement_Service {
 		$more = count( $terms ) > self::OBJECT_PAGE_SIZE;
 		$items = [];
 		foreach ( array_slice( $terms, 0, self::OBJECT_PAGE_SIZE ) as $term ) if ( current_user_can( 'edit_term', $term->term_id ) ) $items[] = $this->term_summary( $term );
-		return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'scope'=>'category', 'scopes'=>$available, 'items'=>$items, 'page'=>$page, 'more'=>$more, 'sort'=>$sort, 'taxonomy'=>$taxonomy, 'taxonomies'=>$taxonomies, 'aiReady'=>$this->object_ai_ready(), 'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? \DSA\Access\AI_Workspace_Service::url() : '' ] );
+		return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'scope'=>'category', 'scopes'=>$available, 'items'=>$items, 'page'=>$page, 'more'=>$more, 'sort'=>$sort, 'taxonomy'=>$taxonomy, 'taxonomies'=>$taxonomies, 'aiReady'=>$this->object_ai_ready(), 'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? ( \DSA\Apps\AI_App_Service::enabled() ? \DSA\Apps\AI_App_Service::url() : \DSA\Apps\Library_Service::url('ai') ) : '' ] );
 	}
 
 	private function object_ai_ready(): bool {
@@ -306,7 +307,7 @@ final class SEO_Refinement_Service {
 			if ( ! $post || $post->post_type !== $type || ! $this->can_edit_object( $scope, $id ) ) return UI::failure( new \WP_Error( 'kiwe_seo_object_missing', __( 'This record is unavailable for your account.', 'dsa' ) ), 404 );
 			$record = $this->record( $id, $this->internal_scope( $scope ), true, true );
 			if ( ! $record ) return UI::failure( new \WP_Error( 'kiwe_seo_object_missing', __( 'This record is unavailable for your account.', 'dsa' ) ), 404 );
-			return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'scope'=>$scope, 'scopes'=>$available, 'items'=>[ $this->object_summary( $record, $scope, $post ) ], 'page'=>1, 'more'=>false, 'aiReady'=>$this->object_ai_ready(), 'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? \DSA\Access\AI_Workspace_Service::url() : '' ] );
+			return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'scope'=>$scope, 'scopes'=>$available, 'items'=>[ $this->object_summary( $record, $scope, $post ) ], 'page'=>1, 'more'=>false, 'aiReady'=>$this->object_ai_ready(), 'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? ( \DSA\Apps\AI_App_Service::enabled() ? \DSA\Apps\AI_App_Service::url() : \DSA\Apps\Library_Service::url('ai') ) : '' ] );
 		}
 		$page = max( 1, min( 5000, absint( $request->get_param( 'page' ) ) ) );
 		$search = UI::text( $request->get_param( 'search' ), 100 );
@@ -382,7 +383,7 @@ final class SEO_Refinement_Service {
 			'categories'=>$category_options,
 			'authors'=>'post' === $scope ? array_values( array_map( static fn( $user )=>[ 'id'=>(int) $user->ID, 'name'=>(string) $user->display_name ], current_user_can( 'edit_others_posts' ) ? get_users( [ 'number'=>100, 'orderby'=>'display_name', 'fields'=>[ 'ID','display_name' ], 'who'=>'authors' ] ) : [ wp_get_current_user() ] ) ) : [],
 			'aiReady'=>$this->object_ai_ready(),
-			'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? \DSA\Access\AI_Workspace_Service::url() : '',
+			'aiSettingsUrl'=>current_user_can( 'kiwe_manage_ai_preferences' ) ? ( \DSA\Apps\AI_App_Service::enabled() ? \DSA\Apps\AI_App_Service::url() : \DSA\Apps\Library_Service::url('ai') ) : '',
 		] );
 	}
 
@@ -589,7 +590,7 @@ final class SEO_Refinement_Service {
 		UI::receipt();
 		if ( $this->jobs->has_legacy() ) echo '<p>' . esc_html__( 'An older SEO job is preserved for your website manager. It will not resume automatically. This screen manages new bounded reviews.', 'dsa' ) . '</p>';
 		if ( ! $ready ) echo '<p class="kiwe-tasks__status">' . esc_html__( 'SEO needs owner permission in AI setup, an on preference in AI assistance and a configured provider. Reviews and native content remain available while AI is off.', 'dsa' ) . '</p>';
-		echo '<nav class="kiwe-tasks__actions"><a class="button" href="' . esc_url( \DSA\Access\AI_Workspace_Service::url() ) . '">' . esc_html__( 'AI assistance and allowance', 'dsa' ) . '</a></nav>';
+		echo '<nav class="kiwe-tasks__actions"><a class="button" href="' . esc_url( \DSA\Apps\AI_App_Service::enabled() ? \DSA\Apps\AI_App_Service::url() : \DSA\Apps\Library_Service::url('ai') ) . '">' . esc_html__( 'AI assistance and allowance', 'dsa' ) . '</a></nav>';
 		SEO_Score_Service::render();
 		if ( ! $job || ( in_array( $job['status'], [ 'complete','cancelled' ], true ) && ! $job['proposals'] && ( ! $job['lease'] || $job['lease']['until'] <= time() ) ) ) {
 			echo '<section class="kiwe-tasks__card"><h2>' . esc_html__( 'Start a library review', 'dsa' ) . '</h2><p>' . esc_html__( 'Each step inspects at most five records. Files attached to private or protected content are excluded. New records created after this job starts belong to a later job.', 'dsa' ) . '</p><div class="kiwe-tasks__actions">';

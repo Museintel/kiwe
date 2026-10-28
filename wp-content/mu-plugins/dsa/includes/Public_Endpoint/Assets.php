@@ -82,6 +82,7 @@ final class Assets {
 		add_action( 'wp_head', [ $this, 'print_phantom_viewport_seed' ], 0 );
 		add_action( 'wp_head', [ $this, 'print_boot_seed' ], 1 );
 		add_action( 'wp_head', [ $this, 'print_install_action_visibility' ], 2 );
+		add_action( 'wp_head', [ $this, 'print_material_style' ], 2 );
 		add_action( 'wp_head', [ $this, 'print_initial_preloader_style' ], 2 );
 		add_action( 'wp_body_open', [ $this, 'print_initial_preloader' ], 0 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
@@ -127,6 +128,7 @@ final class Assets {
 		$settings       = $this->settings->all();
 		$settings['dock'] = $this->dock_with_nav_menu_items( isset( $settings['dock'] ) && is_array( $settings['dock'] ) ? $settings['dock'] : [] );
 		$settings['dock']['admin_dashboard'] = null;
+		$settings['dock']['admin_edit'] = null;
 		$manifest       = $this->settings->manifest();
 		$protected_flow = $this->neutral_protected_flow( $settings );
 		if ( empty( $settings['commerce']['cart_surface_enabled'] ) ) {
@@ -328,6 +330,7 @@ final class Assets {
 					'popularEnabled' => $this->search_popularity_available(),
 				],
 				'presentationModules' => array_filter( [
+					'comments' => esc_url_raw( $this->asset_url( 'assets/js/modules/comments-panel.js' ) ),
 					'diagnostics' => esc_url_raw( $this->asset_url( 'assets/js/modules/diagnostics.js' ) ),
 					'profile' => esc_url_raw( $this->asset_url( 'assets/js/modules/profile-panel.js' ) ),
 					'cart' => \DSA\Apps\Store_App_Service::enabled() ? esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ) : '',
@@ -342,6 +345,7 @@ final class Assets {
 					'menu' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
 				] ),
 				'games'      => $this->games_data(),
+				'discussion'=> $this->discussion_data(),
 				'ai'         => $this->ai_data(),
 				'dock'       => $settings['dock'] ?? [],
 				'trust'      => $trust_summary,
@@ -794,22 +798,6 @@ final class Assets {
 		margin-inline: var(--dsa-dock-split-focus-gap-narrow, var(--kiwe-space-xxs, clamp(0.25rem, 0.36vw + 0.18rem, 0.5rem))) !important;
 	}
 }
-#dsa-surface[data-dsa-surface].dsa-dock-material-glass {
-	--dsa-runtime-dock-control-material: color-mix(in srgb, var(--kiwe-color-surface, var(--dsa-ui-surface, #fff)) 72%, transparent);
-	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 58%, transparent);
-	--dsa-runtime-dock-control-filter: blur(var(--kiwe-glass-blur, var(--dsa-blur-strength, 0.625rem)));
-}
-:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) #dsa-surface[data-dsa-surface].dsa-dock-material-glass,
-#dsa-surface[data-dsa-surface][data-kiwe-theme="dark"].dsa-dock-material-glass,
-#dsa-surface[data-dsa-surface][data-brx-theme="dark"].dsa-dock-material-glass {
-	--dsa-runtime-dock-control-material: color-mix(in srgb, var(--kiwe-color-surface, var(--dsa-ui-surface, #111)) 48%, transparent);
-	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 50%, transparent);
-}
-#dsa-surface[data-dsa-surface].dsa-dock-material-solid {
-	--dsa-runtime-dock-control-material: var(--kiwe-color-surface-raised, var(--kiwe-color-surface, var(--dsa-ui-surface, #fff)));
-	--dsa-runtime-dock-control-border: var(--kiwe-color-border, color-mix(in srgb, currentColor 14%, transparent));
-	--dsa-runtime-dock-control-filter: none;
-}
 #dsa-surface[data-dsa-surface].dsa-dock-material-glass [data-dsa-dock] .dsa-dock__button:not([data-dsa-dock-focus]):not([data-dsa-dock-primary]),
 #dsa-surface[data-dsa-surface].dsa-dock-material-solid [data-dsa-dock] .dsa-dock__button:not([data-dsa-dock-focus]):not([data-dsa-dock-primary]) {
 	background: var(--dsa-runtime-dock-control-material) !important;
@@ -927,6 +915,39 @@ CSS;
 		}
 	}
 
+	/** One material definition for Dock controls and both full-screen AppShell surfaces. */
+	public function print_material_style(): void {
+		if ( ! $this->settings->get( 'enabled', true ) || ! Environment::should_render_frontend() ) return;
+		?>
+		<style id="dsa-surface-materials">
+#dsa-surface[data-dsa-surface].dsa-dock-material-glass,
+.dsa-material-surface[data-dsa-material="glass"] {
+	--dsa-runtime-dock-control-material: color-mix(in srgb, var(--kiwe-color-surface, var(--dsa-ui-surface, #fff)) 72%, transparent);
+	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 58%, transparent);
+	--dsa-runtime-dock-control-filter: blur(var(--kiwe-glass-blur, var(--dsa-blur-strength, 0.625rem)));
+}
+:is(html[data-kiwe-theme="dark"], html[data-brx-theme="dark"]) :is(#dsa-surface[data-dsa-surface].dsa-dock-material-glass, .dsa-material-surface[data-dsa-material="glass"]),
+#dsa-surface[data-dsa-surface][data-kiwe-theme="dark"].dsa-dock-material-glass,
+#dsa-surface[data-dsa-surface][data-brx-theme="dark"].dsa-dock-material-glass {
+	--dsa-runtime-dock-control-material: color-mix(in srgb, var(--kiwe-color-surface, var(--dsa-ui-surface, #111)) 48%, transparent);
+	--dsa-runtime-dock-control-border: color-mix(in srgb, var(--kiwe-color-border, currentColor) 50%, transparent);
+}
+#dsa-surface[data-dsa-surface].dsa-dock-material-solid,
+.dsa-material-surface[data-dsa-material="solid"] {
+	--dsa-runtime-dock-control-material: var(--kiwe-color-surface-raised, var(--kiwe-color-surface, var(--dsa-ui-surface, #fff)));
+	--dsa-runtime-dock-control-border: var(--kiwe-color-border, color-mix(in srgb, currentColor 14%, transparent));
+	--dsa-runtime-dock-control-filter: none;
+}
+.dsa-material-surface[data-dsa-material] {
+	background: var(--dsa-runtime-dock-control-material) !important;
+	border-color: var(--dsa-runtime-dock-control-border) !important;
+	-webkit-backdrop-filter: var(--dsa-runtime-dock-control-filter) !important;
+	backdrop-filter: var(--dsa-runtime-dock-control-filter) !important;
+}
+		</style>
+		<?php
+	}
+
 	public function print_initial_preloader_style(): void {
 		if ( ! $this->should_print_appsite_assets() ) {
 			return;
@@ -938,9 +959,9 @@ CSS;
 		</script>
 		<style id="dsa-initial-preloader-style">
 			.dsa-appsite-home-seen .dsa-initial-preloader[data-dsa-session-home]{display:none}
-			.dsa-initial-preloader,.dsa-initial-preloader *,.dsa-initial-preloader *:before,.dsa-initial-preloader *:after{box-sizing:border-box}.dsa-initial-preloader{position:fixed;inset:0;z-index:1000004;display:grid;align-items:safe center;width:100%;min-height:100vh;min-height:100dvh;max-width:100vw;padding:clamp(28px,5vw,96px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:none;background:linear-gradient(115deg,rgba(245,247,251,.80),rgba(223,229,232,.62));-webkit-backdrop-filter:blur(var(--dsa-blur-strength,14px)) saturate(1.18);backdrop-filter:blur(var(--dsa-blur-strength,14px)) saturate(1.18);color:rgba(20,24,34,.48);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transform:translateY(var(--dsa-appsite-shift,0));opacity:var(--dsa-appsite-opacity,1);transition:transform 180ms ease,opacity 180ms ease}
+			.dsa-initial-preloader,.dsa-initial-preloader *,.dsa-initial-preloader *:before,.dsa-initial-preloader *:after{box-sizing:border-box}.dsa-initial-preloader{position:fixed;inset:0;z-index:1000004;display:grid;align-items:safe center;width:100%;min-height:100vh;min-height:100dvh;max-width:100vw;padding:clamp(28px,5vw,96px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:none;color:rgba(20,24,34,.48);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;transform:translateY(var(--dsa-appsite-shift,0));opacity:var(--dsa-appsite-opacity,1);transition:transform 180ms ease,opacity 180ms ease}
 			.dsa-initial-preloader[hidden]{display:none}
-			.dsa-initial-preloader{--dsa-home-surface:var(--kiwe-color-surface,#f7f8fa);--dsa-home-ink:var(--kiwe-color-text,#1f2933);background:color-mix(in srgb,var(--dsa-home-surface) 68%,transparent);-webkit-backdrop-filter:blur(min(var(--dsa-blur-strength,14px),6px)) saturate(1.1);backdrop-filter:blur(min(var(--dsa-blur-strength,14px),6px)) saturate(1.1);color:var(--dsa-home-ink)}
+			.dsa-initial-preloader{--dsa-home-surface:var(--kiwe-color-surface,#f7f8fa);--dsa-home-ink:var(--kiwe-color-text,#1f2933);color:var(--dsa-home-ink)}
 			.dsa-initial-preloader.is-dragging{transition:none}.dsa-initial-preloader.is-dismissing{transform:translateY(-110%);opacity:.2}
 			.dsa-initial-preloader__inner{width:min(1040px,100%);min-width:0;max-width:100%;display:grid;gap:clamp(14px,2.3vw,28px)}
 			.dsa-initial-preloader__title{margin:0;font-size:clamp(13px,1.2vw,18px);font-weight:900;line-height:1;letter-spacing:0;text-transform:uppercase;color:var(--dsa-hero-text-color,rgba(20,24,34,.22))}
@@ -1000,7 +1021,7 @@ CSS;
 		$buttons    = $app['buttons'];
 		$trust_badges = $this->home_trust_badges();
 		?>
-		<div id="dsa-initial-preloader" class="dsa-initial-preloader" data-dsa-initial-preloader data-dsa-session-home data-nosnippet role="dialog" aria-modal="true" tabindex="-1" aria-label="<?php esc_attr_e( 'Kiwe Appsite home screen', 'dsa' ); ?>">
+		<div id="dsa-initial-preloader" class="dsa-initial-preloader dsa-material-surface" data-dsa-material="<?php echo 'solid' === ( $this->settings->get( 'app', [] )['home_material'] ?? 'glass' ) ? 'solid' : 'glass'; ?>" data-dsa-initial-preloader data-dsa-session-home data-nosnippet role="dialog" aria-modal="true" tabindex="-1" aria-label="<?php esc_attr_e( 'Kiwe Appsite home screen', 'dsa' ); ?>">
 			<div class="dsa-initial-preloader__inner">
 				<p class="dsa-initial-preloader__title"><?php echo esc_html( $title ); ?></p>
 				<div class="dsa-initial-preloader__hero" role="heading" aria-level="2"><?php echo esc_html( $hero ); ?></div>
@@ -1096,6 +1117,7 @@ CSS;
 		return [
 			'welcomeMessage' => sanitize_text_field( $config['welcome_message'] ?? __( 'Welcome to Our Appsite', 'dsa' ) ),
 			'homeEnabled'    => ! empty( $config['home_enabled'] ),
+			'homeMaterial'   => 'solid' === ( $config['home_material'] ?? 'glass' ) ? 'solid' : 'glass',
 			'installActionsVisible' => ($config['show_install_actions']??true)!==false,
 			'desktopUrl' => esc_url_raw($config['pc_url']??''),
 			'pwaPitch'       => sanitize_text_field( $config['pwa_pitch'] ?? __( 'Try our app. No app store required.', 'dsa' ) ),
@@ -1145,6 +1167,7 @@ CSS;
 
 	private function module_context( array $dock ): array {
 		return [
+			'discussion_available' => \DSA\Discussion\Discussion_Target::automatic_id( is_singular() ? (int) get_queried_object_id() : 0 ) > 0,
 			'phonekey_visible' => true,
 			'secure_available' => $this->securetrack_available(),
 			'badges'           => [
@@ -1156,6 +1179,13 @@ CSS;
 				'menu' => $dock['menu_label'] ?? __( 'Menu', 'dsa' ),
 			],
 		];
+	}
+	private function discussion_data(): array {
+		$current = is_singular() ? (int) get_queried_object_id() : 0;
+		$current_post = $current ? \DSA\Discussion\Discussion_Target::get( $current ) : null;
+		$id = \DSA\Discussion\Discussion_Target::automatic_id( $current );
+		// Cached public HTML carries capability, not a stale conversation count. Only rendered controls join the private batched read.
+		return [ 'targetId'=>$id, 'currentTargetId'=>$current_post && ! is_wp_error( $current_post ) ? $current : 0, 'siteTargetId'=>\DSA\Discussion\Discussion_Target::automatic_id( 0 ), 'count'=>0, 'stylesheet'=>esc_url_raw($this->asset_url('assets/css/comments.css')) ];
 	}
 
 	private function ai_data(): array {

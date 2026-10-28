@@ -208,6 +208,16 @@ final class Plugin {
 		$service_profile = Runtime_Profiler::start( 'service.register_services' );
 		( new Asset_Manifest_Service( ! empty( $diagnostics['enabled'] ) && ! empty( $diagnostics['asset_manifest'] ) ) )->register();
 		Atomic_Rate_Limiter::register();
+		// Native admission runs only on comment writes; public pages do not load the discussion graph.
+		add_filter( 'pre_comment_approved', static fn( $approved, $data ) => \DSA\Discussion\Discussion_Service::approval( $approved, $data ), PHP_INT_MAX, 2 );
+		add_filter( 'get_comment_author', static fn( $name, $id, $comment ) => \DSA\Discussion\Discussion_Service::author_name( $name, $id, $comment ), 20, 3 );
+		add_action( 'admin_init', static fn() => \DSA\Discussion\Discussion_Reaction_Store::install(), 26 );
+		add_action( 'wp_insert_comment', static fn( $id,$comment ) => \DSA\Discussion\Discussion_Reactions::native_insert( $id,$comment ), 20, 2 );
+		add_action( 'transition_comment_status', static fn( $new,$old,$comment ) => \DSA\Discussion\Discussion_Reactions::native_transition( $new,$old,$comment ), 20, 3 );
+		add_action( 'deleted_comment', static fn( $id,$comment ) => \DSA\Discussion\Discussion_Reactions::native_deleted( (int) $id,$comment ), 20, 2 );
+		add_action( 'deleted_user', static fn( $id ) => \DSA\Discussion\Discussion_Reaction_Store::delete_user( (int) $id ) );
+		add_filter( 'wp_privacy_personal_data_exporters', static fn( $items ) => \DSA\Discussion\Discussion_Privacy::exporters( $items ) );
+		add_filter( 'wp_privacy_personal_data_erasers', static fn( $items ) => \DSA\Discussion\Discussion_Privacy::erasers( $items ) );
 		( new Update_Service() )->register();
 		( new \DSA\Apps\Update_Hooks() )->register();
 		add_action( 'admin_menu', static fn() => ( new \DSA\Apps\Library_Service() )->menu(), 37 );
@@ -218,7 +228,7 @@ final class Plugin {
 		// Ownership and the business workspace must survive disabling Key login.
 		$this->role_access->register();
 		( new \DSA\Onboarding\Native_Service_Source_Service() )->register();
-		( new Guest_Contribution_Service() )->register();
+		foreach ( [ \DSA\Apps\Guest_App_Service::class,\DSA\Apps\AI_App_Service::class,\DSA\Apps\SiteGraph_App_Service::class ] as $optional_app ) ( new $optional_app() )->register();
 		( new \DSA\Access\Workspace_Activity_Service() )->register();
 		// App configuration is private; ordinary visitor requests do not load its editor.
 		add_action('admin_init',[$this->notification_preferences,'maybe_install'],25);
@@ -226,8 +236,11 @@ final class Plugin {
 		add_action('rest_api_init',static fn()=>(new \DSA\Access\App_Workspace_Service())->routes());
 		if(is_admin())add_action('load-toplevel_page_kiwe-app-settings',static fn()=>(new \DSA\Access\App_Workspace_Service())->document(),1);
 		// Private Forms code is not loaded by ordinary visitor page requests.
+		add_filter( 'bricks/form/save-submission/form_data', static fn( $data, $form, $post ) => \DSA\Bricks\Form_Identity_Service::capture( $data, $form, $post ), 50, 3 );
 		add_action( 'admin_menu', static fn() => ( new \DSA\Access\Form_Workspace_Service() )->menu(), 36 );
 		add_action( 'rest_api_init', static fn() => ( new \DSA\Access\Form_Workspace_Service() )->routes() );
+		if ( is_admin() && ! wp_doing_ajax() && ! wp_doing_cron() ) ( new \DSA\Access\System_App_Workspace_Service() )->register();
+		add_action( 'rest_api_init', [ \DSA\Access\System_App_Routes::class, 'register' ] );
 		( new \DSA\Access\Analytics_Reporting_Setup_Service( $this->settings, fn() => $this->abandoned_carts() ) )->register();
 		( new Notification_Center_Service( $this->notification_preferences ) )->register();
 		add_action( 'plugins_loaded', function (): void {
@@ -264,6 +277,7 @@ final class Plugin {
 			$this->admin_notifications->register( ! empty( $settings['metrics']['enabled'] ) );
 		}
 		$this->notification_campaigns->register();
+		$this->saved_items->register();
 		$this->new_post_notifications->register( $preferences_enabled );
 		$this->register_administration();
 		$this->onboarding->register();
@@ -308,6 +322,7 @@ final class Plugin {
 		// cache/index hooks must remain available whenever the Surface is enabled.
 		if ( $surface_enabled ) {
 			( new Search_Controller( $this->search ) )->register();
+			add_action( 'rest_api_init', static fn() => ( new \DSA\Rest\Discussion_Controller() )->routes() );
 		}
 		if ( $surface_enabled ) {
 			( new Saved_Items_Controller( $this->saved_items ) )->register();

@@ -7,14 +7,17 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
 function get_option($key,$default=false){return $default;}
 
 class WP_Error {public function __construct(public string $code,public string $message,public array $data=[]){ }public function get_error_data(){return $this->data;}}
-class WP_Comment {public int $comment_ID;public int $comment_post_ID;public string $comment_type;public string $comment_approved;public string $comment_author;public string $comment_author_email;public string $comment_content;public function __construct(array $data){foreach($data as$key=>$value)$this->$key=$value;}}
+class WP_Comment {public int $comment_ID;public int $comment_post_ID;public int $user_id=0;public int $comment_parent=0;public string $comment_date_gmt='2026-10-28 00:00:00';public string $comment_type;public string $comment_approved;public string $comment_author;public string $comment_author_email;public string $comment_content;public function __construct(array $data){foreach($data as$key=>$value)$this->$key=$value;}}
 function is_wp_error($value){return $value instanceof WP_Error;}
 $actor=1;$caps=[1=>['moderate_comments','kiwe_manage_context','read_post'],2=>['moderate_comments','read_post'],3=>['read_post']];
 $comments=[
  11=>new WP_Comment(['comment_ID'=>11,'comment_post_ID'=>21,'comment_type'=>'comment','comment_approved'=>'0','comment_author'=>'Pending person','comment_author_email'=>'private@example.test','comment_content'=>'A pending useful comment.']),
  12=>new WP_Comment(['comment_ID'=>12,'comment_post_ID'=>22,'comment_type'=>'review','comment_approved'=>'1','comment_author'=>'Reviewer','comment_author_email'=>'review@example.test','comment_content'=>'A real product review.']),
 ];
-$posts=[21=>(object)['ID'=>21,'post_title'=>'Public article','post_status'=>'publish'],22=>(object)['ID'=>22,'post_title'=>'Public product','post_status'=>'publish']];$ratings=[12=>4];$writes=0;$locked=false;
+$posts=[21=>(object)['ID'=>21,'post_title'=>'Public article','post_status'=>'publish','post_type'=>'post'],22=>(object)['ID'=>22,'post_title'=>'Public product','post_status'=>'publish','post_type'=>'product']];$ratings=[12=>4];$writes=0;$locked=false;
+function get_current_user_id(){return $GLOBALS['actor'];}
+function is_multisite(){return false;}
+function get_post_type($id){return $GLOBALS['posts'][$id]->post_type??'';}
 function current_user_can($cap,...$args){return in_array($cap,$GLOBALS['caps'][$GLOBALS['actor']]??[],true);}
 function get_comment($id){return $GLOBALS['comments'][$id]??null;}
 function get_post($id){return $GLOBALS['posts'][$id]??null;}
@@ -32,7 +35,17 @@ function WC(){return true;}
 $wpdb=new class {public string $prefix='wp_';public function prepare($sql,...$args){return $sql;}public function get_var($sql){return str_contains($sql,'GET_LOCK')&&$GLOBALS['locked']?'0':'1';}};
 }
 namespace DSA\Access {
+final class Team_Workspace_Service {public static function suspended($id){return false;}}
 final class Task_Workspace_UI {public static function text($value,$length=200){$value=trim((string)$value);return function_exists('mb_substr')?\mb_substr($value,0,$length):substr($value,0,$length);}public static function id($value){return max(0,(int)$value);}}
+}
+// This small fixture retains its original native moderation/curation scope. The real discussion
+// services, proof, reactions, roles and Store context have separate actual WordPress integration tests.
+namespace DSA\PhoneKey {final class PhoneKey_Bridge {public static function verified_accounts(array $ids):array{return [];}}}
+namespace DSA\Discussion {
+final class Public_Identity {public static function current_name(){return 'Fixture moderator';}}
+final class Discussion_Target {public static function get($id){return new \WP_Error('unavailable','No public DSA fixture in this legacy moderation test');}}
+final class Discussion_Reaction_Store {public static function ready(){return false;}public static function projection(array $ids,int $actor){return [];}}
+final class Discussion_Service {public function current_actor_key(){return str_repeat('f',64);}}
 }
 namespace DSA\Onboarding {
 final class Context_Selection_Service {

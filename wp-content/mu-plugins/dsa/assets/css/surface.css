@@ -1668,6 +1668,9 @@ html.dsa-overlay-active .dsa-surface.dsa-dock-desktop-vertical.dsa-dock-desktop-
 	line-height: 1;
 }
 
+.dsa-surface [data-dsa-module="comments"][hidden],
+[data-dsa-open-module="comments"][hidden] { display: none !important; }
+
 .dsa-dock__badge[hidden] {
 	display: none;
 }
@@ -9254,3 +9257,7 @@ button.dsa-guest-status { cursor: pointer; }
 .dsa-overlay-root > .dsa-panel[data-dsa-search-panel]:not([data-dsa-sheet-ready="1"]){display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .dsa-overlay-root > [data-dsa-search-panel]:not([data-dsa-sheet-ready="1"]) > :not([data-dsa-search-results]){flex-shrink:0}
 .dsa-overlay-root > [data-dsa-search-panel]:not([data-dsa-sheet-ready="1"]) > [data-dsa-search-results]{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
+
+/* Private role-aware actions share the ordinary Menu navigation owner. */
+.dsa-menu-staff-actions{display:flex;flex-wrap:wrap;gap:var(--seam-space-3,12px)}
+.dsa-menu-staff-actions .dsa-menu-dashboard{flex:1;min-width:7rem;text-align:center}

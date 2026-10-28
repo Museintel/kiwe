@@ -3,7 +3,12 @@
   "version": "1.0.0-rc.1",
   "authority": "deterministic-seam-compiler",
   "aiRequired": false,
-  "commands": ["/audit", "/accessibility", "/fix", "/redo"],
+  "commands": [
+    "/audit",
+    "/accessibility",
+    "/fix",
+    "/redo"
+  ],
   "stages": {
     "semanticSeam": {
       "command": "/ideate",
@@ -14,7 +19,27 @@
       "unmarkedPolicy": "preserve-static",
       "semanticInferenceAllowed": false,
       "requiresCompleteClosure": true,
-      "requiresExactSiteGraphHashRevisionAndPointers": true
+      "requiresExactSiteGraphHashRevisionAndPointers": true,
+      "contextualDiscussion": {
+        "compilerSchemaMinimum": "2.18.3",
+        "coreMinimum": "8.0.0-rc.452",
+        "storeReviewAdapterMinimum": "1.1.8",
+        "launcherModule": "comments",
+        "mapProperty": "discussionTarget",
+        "targets": [
+          "current",
+          "site",
+          "{kiwe_discussion_id}",
+          "{kiwe_testimonial_target_id}"
+        ],
+        "requiresCurrentDiscussionContract": true,
+        "requiresNativeTagCatalogueForLoopBinding": true,
+        "testimonialScope": {
+          "query": "kiwe_testimonials",
+          "sameDocumentCollectionRequired": true,
+          "exactPrototypeContainmentRequired": true
+        }
+      }
     },
     "prepareBindings": {
       "command": "/convert /bricks",
@@ -27,7 +52,10 @@
       "requiresExplicitRepeatPrototypeAndPreviewCount": true,
       "structuralPassProvesRuntime": false,
       "defaultBindingMode": "dynamicTagsAndQueryLoops",
-      "modifiers": {"/dynamictags": "dynamicTagsOnly", "/queryloop": "queryLoopsOnly"}
+      "modifiers": {
+        "/dynamictags": "dynamicTagsOnly",
+        "/queryloop": "queryLoopsOnly"
+      }
     },
     "compile": {
       "trigger": "explicit submission through the seam.kiwe application UI or API",
@@ -37,7 +65,16 @@
       "frameworkNeutral": true,
       "maySplitDocumentChrome": true,
       "nativeFirst": true,
-      "customCodePolicy": "only when the calibrated Bricks profile proves no native equivalent"
+      "customCodePolicy": "only when the calibrated Bricks profile proves no native equivalent",
+      "formIdentity": {
+        "schema": "kiwe.form-identity.v1",
+        "keyAttribute": "data-kiwe-form",
+        "labelAttribute": "data-kiwe-form-label",
+        "nativeName": "submissionFormName",
+        "nativeSaveAction": "save-submission",
+        "emailDeliveryDefault": false,
+        "sensitiveFormsRequireExplicitReview": true
+      }
     },
     "framework": {
       "option": "frameworkMode",
@@ -46,12 +83,23 @@
       "optional": true,
       "profileInstallRequiredBeforeTemplateImport": true,
       "fallbackValuesForbidden": true,
-      "ownershipOrder": ["Bricks Theme Style", "universal Seam variables and palette", "project variables and reusable classes", "element-native exceptions", "scoped unsupported CSS"]
+      "ownershipOrder": [
+        "Bricks Theme Style",
+        "universal Seam variables and palette",
+        "project variables and reusable classes",
+        "element-native exceptions",
+        "scoped unsupported CSS"
+      ]
     },
     "dependencies": {
       "authority": "deterministic-seam-compiler",
       "input": "actual compiled native templates/Profile, referenced real bytes and source-resource reports",
-      "output": ["package-integrity.json", "assets/manifest.json", "assets/import-plan.json", "style-dependencies.json"],
+      "output": [
+        "package-integrity.json",
+        "assets/manifest.json",
+        "assets/import-plan.json",
+        "style-dependencies.json"
+      ],
       "nativeImportReady": false,
       "aiInventedNativeIdsAllowed": false,
       "remoteFetch": false,
@@ -74,7 +122,21 @@
       "optional": true,
       "requiresExecutableProof": true,
       "browserAiMayNotInventContrastRatios": true,
-      "covers": ["semantics", "keyboard", "focus", "names and labels", "contrast", "readability", "overflow", "clipping", "collision", "touch targets", "responsive spacing and alignment", "reduced motion", "light/dark presentation"],
+      "covers": [
+        "semantics",
+        "keyboard",
+        "focus",
+        "names and labels",
+        "contrast",
+        "readability",
+        "overflow",
+        "clipping",
+        "collision",
+        "touch targets",
+        "responsive spacing and alignment",
+        "reduced motion",
+        "light/dark presentation"
+      ],
       "creativeBoundary": "preserve the accepted design; dark mode may deliberately coordinate brand, accent, surface and text roles without collapsing every surface to black",
       "bricksDarkModeBinding": ":root[data-brx-theme=\"dark\"] #brxe-<template-root-id>"
     },

@@ -20,6 +20,7 @@ final class Workspace_Activity_Service {
 		add_action( 'transition_post_status', [ $this, 'post_created' ], 40, 3 );
 		add_action( 'add_attachment', [ $this, 'attachment_created' ], 40, 1 );
 		add_action( 'comment_post', [ $this, 'comment_created' ], 40, 3 );
+		add_action( 'kiwe_discussion_comment_committed', [ $this, 'comment_committed' ], 40 );
 		if ( function_exists( 'WC' ) ) $this->register_store_hooks();
 		else add_action( 'plugins_loaded', [ $this, 'register_store_hooks' ], 30 );
 		add_action( 'kiwe_guest_application_submitted', [ $this, 'guest_application' ], 40, 2 );
@@ -65,6 +66,7 @@ final class Workspace_Activity_Service {
 		return $object && current_user_can( $object->cap->edit_others_posts ) ? 'all' : 'own';
 	}
 	private static function guest_sections(): array {
+		if ( ! \DSA\Apps\Guest_App_Service::enabled() ) return [];
 		$out = [];
 		if ( current_user_can( 'kiwe_manage_guest_applications' ) ) $out[] = 'guest-applications';
 		if ( current_user_can( 'edit_posts' ) && current_user_can( 'edit_others_posts' ) ) $out[] = 'guest-posts';
@@ -115,6 +117,13 @@ final class Workspace_Activity_Service {
 	}
 	public function attachment_created( int $id ): void { $post = get_post( $id ); if ( $post ) $this->post_created( 'inherit', 'new', $post ); }
 	public function comment_created( int $id, $approved, array $data ): void {
+		if ( 'composer' === ( $data['comment_meta']['_kiwe_discussion_source_v1'] ?? '' ) ) return;
+		$this->record_comment( $id, $approved, $data );
+	}
+	public function comment_committed( int $id ): void {
+		$comment = get_comment( $id ); if ( $comment ) $this->record_comment( $id, $comment->comment_approved, $comment->to_array() );
+	}
+	private function record_comment( int $id, $approved, array $data ): void {
 		if ( in_array( (string) $approved, [ 'spam', 'trash' ], true ) || ! in_array( $data['comment_type'] ?? '', [ '', 'comment', 'review' ], true ) ) return;
 		$post = get_post( (int) ( $data['comment_post_ID'] ?? 0 ) );
 		$this->increment( 'feedback', 'comment:' . $id, $post ? (int) $post->post_author : 0 );

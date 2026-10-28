@@ -71,6 +71,7 @@ final class Bricks_Integration {
 		if ( $this->registered || ! self::is_active_theme() ) { return; }
 		$this->registered = true;
 		( new Loop_Style_Service() )->register();
+		( new Inline_Style_Service() )->register();
 		Surface_Style_Controls::register();
 		( new Filter_Image_Service() )->register();
 		$this->context_collections()?->register();
@@ -378,6 +379,7 @@ final class Bricks_Integration {
 		if ( ! str_starts_with( $name, 'kiwe_' ) && 'woo_product_weight' !== $name ) return $tag;
 		$context = is_string( $context ) ? $context : 'text';
 		if ( str_starts_with( $name, 'kiwe_icon_' ) ) return class_exists( Icon_Library_Service::class ) ? Icon_Library_Service::render( $name, $context ) : '';
+		if ( in_array( $name, [ 'kiwe_discussion_id','kiwe_discussion_count' ], true ) ) return Discussion_Bindings::render( $name, $post );
 		if(str_starts_with($name,'kiwe_testimonial')){
 			$value=$this->context_collections()?->render($name,$context);return null===$value?$tag:$value;
 		}
@@ -449,6 +451,8 @@ final class Bricks_Integration {
 	/** Shared catalog for Bricks and SiteGraph; values resolve only when a tag is used. */
 	public static function base_dynamic_tag_definitions(): array {
 		$definitions = [
+			'kiwe_discussion_id'      => __( 'Current discussion ID', 'dsa' ),
+			'kiwe_discussion_count'   => __( 'Approved top-level comments / reviews', 'dsa' ),
 			'kiwe_site_logo'          => __( 'Site logo URL', 'dsa' ),
 			'kiwe_site_logo_inverse'  => __( 'Site logo inverse URL', 'dsa' ),
 			'kiwe_store_address_1'    => __( 'Store address line 1', 'dsa' ),

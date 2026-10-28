@@ -1,0 +1,51 @@
+{
+  "schema": "kiwe.command-registry.v2",
+  "product": "SEAM",
+  "contractVersion": "9.9",
+  "releaseId": "9.9-d25ac5a01c64",
+  "updated": "2026-10-28",
+  "canonicalBase": "https://start.kiwelaunch.com",
+  "immutableBase": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64",
+  "start": "https://start.kiwelaunch.com/start.md",
+  "entry": "https://start.kiwelaunch.com/entry.json",
+  "commandManifest": "https://start.kiwelaunch.com/command-manifest.json",
+  "llms": "https://start.kiwelaunch.com/llms.txt",
+  "llmsFull": "https://start.kiwelaunch.com/llms-full.txt",
+  "sourceRepository": "https://github.com/Museintel/kiwe",
+  "sourceStart": "https://github.com/Museintel/kiwe/blob/main/KIWE-START.md",
+  "rawSourceStart": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
+  "sourceHash": "sha256:d25ac5a01c64d4e576d186e910b8dccc4d589007884b13e0fef190d8a6289697",
+  "fallback": {
+    "whenCanonicalUnavailable": "Verify an intact attached Start kit and use its matching bootstrap/manifest/shared context first; otherwise read rawSourceStart at the same contract version. Never substitute a similarly named domain."
+  },
+  "commands": {
+    "/ideate": "https://start.kiwelaunch.com/ideate/contract.json",
+    "/preview": "https://start.kiwelaunch.com/preview/contract.json",
+    "/seam": "https://start.kiwelaunch.com/seam/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/redo/contract.json",
+    "/library": "https://start.kiwelaunch.com/library/contract.json"
+  },
+  "immutableCommands": {
+    "/ideate": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/ideate/contract.json",
+    "/preview": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/preview/contract.json",
+    "/seam": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/seam/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/redo/contract.json",
+    "/library": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/library/contract.json"
+  },
+  "library": "https://start.kiwelaunch.com/library/catalog.json",
+  "immutableLibrary": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/library/catalog.json",
+  "authoringKit": "https://start.kiwelaunch.com/start-authoring-kit.zip",
+  "immutableAuthoringKit": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/start-authoring-kit.zip",
+  "cachePolicy": {
+    "canonical": "no-store",
+    "immutable": "public, max-age=31536000, immutable"
+  }
+}

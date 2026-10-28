@@ -55,7 +55,9 @@ final class Saved_Items_Controller {
 		$params = is_array( $params ) ? $params : [];
 		$result = $this->saved_items->mutate( sanitize_key( (string) ( $params['action'] ?? 'add' ) ), is_array( $params['item'] ?? null ) ? $params['item'] : [] );
 		if ( empty( $result['ok'] ) ) {
-			return new WP_Error( 'dsa_saved_item_invalid', (string) ( $result['message'] ?? __( 'This item could not be saved.', 'dsa' ) ), [ 'status' => 400 ] );
+			$status = in_array( $result['status'] ?? 400, [ 400, 401, 409, 503 ], true ) ? (int) ( $result['status'] ?? 400 ) : 400;
+			$codes = [ 400=>'dsa_saved_item_invalid', 401=>'dsa_saved_items_login_required', 409=>'dsa_saved_items_conflict', 503=>'dsa_saved_items_unavailable' ];
+			return new WP_Error( $codes[$status], (string) ( $result['message'] ?? __( 'This item could not be saved.', 'dsa' ) ), [ 'status' => $status ] );
 		}
 
 		return new WP_REST_Response( $result, 200 );

@@ -14,6 +14,12 @@ final class App_Activity_Service {
 	public const LAST_USE_META = '_kiwe_app_last_used_at';
 	public static function meta_key(string $name): string { return $name.'_b'.get_current_blog_id(); }
 	public static function ready(): bool { return '2' === get_option('dsa_notification_preferences_db_version'); }
+	public static function notification_visible_for( int $user, int $device ): bool {
+		if ( $device < 1 || ! self::ready() || ! user_can( $user, App_Workspace_Service::CAPABILITY ) || ! user_can( $user, 'list_users' ) || ! user_can( $user, 'edit_users' ) || Team_Workspace_Service::suspended( $user ) || ( is_multisite() && ! is_user_member_of_blog( $user ) ) ) return false;
+		global $wpdb; $table = Notification_Preference_Service::audience_table();
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT user_id FROM {$table} WHERE id=%d AND is_app=1", $device ), ARRAY_A );
+		return is_array( $row ) && ( ! Site_Owner_Service::owner_id() || (int) $row['user_id'] !== Site_Owner_Service::owner_id() || Site_Owner_Service::is_owner( $user ) );
+	}
 	/** Called only after an authenticated lifecycle event; supplied user IDs never establish identity. */
 	public static function record_account_use(int $id,string $utc): void {
 		if(!$id||$id!==get_current_user_id()||!is_user_logged_in()||!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',$utc))return;

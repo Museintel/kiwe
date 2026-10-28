@@ -66,6 +66,7 @@ final class Design_Context_Profile_Service {
 		$profile['services']['enabled'] = $this->services_enabled( $stored );
 		$profile['contentPlan']['existingPages'] = $inferred['contentPlan']['existingPages'];
 		$profile['contentPlan']['plannedPages'] = is_array( $stored['contentPlan']['plannedPages'] ?? null ) ? array_values( $stored['contentPlan']['plannedPages'] ) : [];
+		$profile['contentPlan']['testimonialSources'] = Context_Selection_Service::testimonial_sources( (array) ( $stored['contentPlan']['testimonialSources'] ?? [] ) );
 		$profile['about']['team']['members'] = is_array( $stored['about']['team']['members'] ?? null ) ? array_values( $stored['about']['team']['members'] ) : [];
 		if ( empty( $inferred['services']['sourcePostType'] ) ) {
 			$profile['services']['items'] = is_array( $stored['services']['items'] ?? null ) ? array_values( $stored['services']['items'] ) : [];
@@ -356,7 +357,7 @@ final class Design_Context_Profile_Service {
 			'audience'    => $profile['audience'],
 			'contentPlan' => $profile['contentPlan'],
 			'services'    => $services,
-			'testimonials' => [ 'source'=>'selected-native-comments', 'items'=>Context_Selection_Service::testimonials( 20 ), 'limit'=>20 ],
+			'testimonials' => [ 'source'=>'public-community-feedback', 'sources'=>Context_Selection_Service::testimonial_sources(), 'items'=>Context_Selection_Service::testimonials( 20 ), 'limit'=>20, 'queryType'=>'kiwe_testimonials', 'note'=>'Live approved public feedback selected by pinned, team-heart or optional popular sources. Preserve source context and genuine product ratings. Never invent quotes, identities or verified-purchase claims.' ],
 			'resources'   => [
 				'items' => [],
 				'source' => 'wordpress-media-library',
@@ -745,6 +746,7 @@ final class Design_Context_Profile_Service {
 				'existingPages' => $existing, 'plannedPages' => $planned,
 				'showBlogRailOnHome' => ! empty( $content['showBlogRailOnHome'] ),
 				'highlightBestsellers' => ! empty( $content['highlightBestsellers'] ),
+				'testimonialSources' => Context_Selection_Service::testimonial_sources( (array) ( $content['testimonialSources'] ?? [] ) ),
 			],
 			'services' => [
 				'enabled'=>! empty( $services['enabled'] ),

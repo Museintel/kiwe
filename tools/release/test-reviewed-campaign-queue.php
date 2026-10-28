@@ -40,6 +40,7 @@ namespace DSA\PhoneKey {
 }
 namespace {
 	define('ABSPATH',__DIR__.'/');
+	require_once __DIR__.'/fixtures/worker-options.php';
 	define('DAY_IN_SECONDS',86400);
 	class WP_Error {public function __construct(private string $code,private string $message,private array $data=[]){}public function get_error_code():string{return $this->code;}}
 	$options=[];$events=[];$checks=0;

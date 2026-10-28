@@ -7,6 +7,9 @@ if (!defined('ABSPATH')) exit;
 final class Runtime_Registry {
  private static array $providers = [];
  private static array $errors = [];
+ public static function owner(string $id): string {
+  return match($id){'seo'=>SEO_App_Service::class,'store'=>Store_App_Service::class,'guest'=>Guest_App_Service::class,'ai'=>AI_App_Service::class,'sitegraph'=>SiteGraph_App_Service::class,default=>throw new \InvalidArgumentException('Unknown App.')};
+ }
 
  public static function register(array $descriptor, string $root): bool {
   $id = is_string($descriptor['id'] ?? null) ? $descriptor['id'] : '';
@@ -23,14 +26,15 @@ final class Runtime_Registry {
   return false;
  }
  public static function installed(string $id): bool {
-  return in_array($id, Runtime_Contract::IDS, true) && (Package_Layout::BUNDLED || isset(self::$providers[$id]));
+  return in_array($id, Runtime_Contract::IDS, true) && (Package_Layout::bundled($id) || isset(self::$providers[$id]));
  }
  public static function provider(string $id): ?array { return self::$providers[$id]['descriptor'] ?? null; }
  public static function diagnostics(): array { return self::$errors; }
  /** Read-only Site Graph/MCP discovery. Describes current engines without limiting the full authoring brief. */
  public static function capabilities(): array {
   $apps=[];
-  foreach(Runtime_Contract::IDS as$id){$owner=$id==='store'?Store_App_Service::class:SEO_App_Service::class;$provider=self::provider($id);$apps[$id]=['installed'=>self::installed($id),'enabled'=>$owner::enabled(),'source'=>Package_Layout::BUNDLED?'bundled':($provider?'plugin':'absent'),'version'=>Package_Layout::BUNDLED?(defined('DSA_VERSION')?DSA_VERSION:''):(string)($provider['version']??'')];}
+  // Preserve the published v1 Start/Seam contract. Software inventory uses the App library.
+  foreach(['seo','store'] as$id){$owner=self::owner($id);$provider=self::provider($id);$apps[$id]=['installed'=>self::installed($id),'enabled'=>$owner::enabled(),'source'=>Package_Layout::bundled($id)?'bundled':($provider?'plugin':'absent'),'version'=>Package_Layout::bundled($id)?(defined('DSA_VERSION')?DSA_VERSION:''):(string)($provider['version']??'')];}
   return['schema'=>'kiwe.app-capabilities.v1','coreApi'=>1,'apps'=>$apps,'designContextOwner'=>'core'];
  }
  public static function load(string $class): bool {

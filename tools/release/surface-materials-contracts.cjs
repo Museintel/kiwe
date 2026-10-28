@@ -1,0 +1,1 @@
+const cp=require('node:child_process');const r=cp.spawnSync(process.env.KIWE_PHP||'php',['tools/release/test-surface-materials.php'],{encoding:'utf8',windowsHide:true});if(r.status!==0||/Warning:|Fatal error:/.test(r.stdout+r.stderr))throw Error(r.stdout+r.stderr);const p=JSON.parse(r.stdout);if(!p.passed)throw Error('Material owner failed');console.log(JSON.stringify(p));

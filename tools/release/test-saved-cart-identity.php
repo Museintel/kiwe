@@ -27,7 +27,7 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
 	check($summary->invoke($carts,['user_id'=>0,'contact_phone_enc'=>'sealed:not-a-phone'])['contactKnown']===false,'invalid captured phone is never green');
 	$users[3]=(object)['user_email'=>'generated@phonekey.invalid','display_name'=>'Account name only'];check($summary->invoke($carts,['user_id'=>3])===['customer'=>'Account name only','contactKnown'=>false],'a display name alone is not a known email or phone');
 	check($journey->invoke($carts,['status'=>'abandoned'])['journeyLabel']==='Checkout visit not recorded','historical carts do not claim a checkout visit');
-	check($journey->invoke($carts,['status'=>'abandoned','checkout_details_at'=>'2026-10-22 10:00:00'])['journeyLabel']==='Checkout details entered','sheet details are distinct from the checkout page');
+	check($journey->invoke($carts,['status'=>'abandoned','checkout_details_at'=>'2026-10-22 10:00:00'])['journeyLabel']==='Checkout form started','sheet details are distinct from the checkout page');
 	check($journey->invoke($carts,['status'=>'abandoned','checkout_started_at'=>'2026-10-22 10:01:00'])['journeyLabel']==='Left at checkout','actual abandoned checkout has its clear cue');
 	check($journey->invoke($carts,['status'=>'active','checkout_started_at'=>'2026-10-22 10:01:00'])['journeyLabel']==='Reached checkout','active checkout is not labelled abandoned');
 	check($journey->invoke($carts,['status'=>'converted','checkout_started_at'=>'2026-10-22 10:01:00'])['journeyLabel']==='Order placed','placed order does not remain a checkout abandonment');

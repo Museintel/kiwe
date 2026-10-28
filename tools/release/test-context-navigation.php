@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/workspace-test-bootstrap.php';
+require __DIR__.'/fixtures/context-navigation-community.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Context_Selection_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Access/Task_Workspace_UI.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Site_Graph/Data_Query_Service.php';
@@ -19,7 +20,7 @@ function get_comment($id){return $GLOBALS['comments'][$id]??null;}
 function get_comment_meta($id,$key,$single=true){return $GLOBALS['commentmeta'][$id][$key]??'';}
 function update_comment_meta($id,$key,$value){if($GLOBALS['fail_write'])return false;$GLOBALS['commentmeta'][$id][$key]=$value;return true;}
 function delete_comment_meta($id,$key){if($GLOBALS['fail_write'])return false;unset($GLOBALS['commentmeta'][$id][$key]);return true;}
-function get_comments($args){$GLOBALS['comment_query']=$args;return array_slice(array_values(array_filter($GLOBALS['comments'],fn($c)=>empty($args['meta_key'])||get_comment_meta($c->comment_ID,$args['meta_key'])==='1')),0,$args['number']);}
+function get_comments($args){$GLOBALS['comment_query']=$args;return array_slice(array_values(array_filter($GLOBALS['comments'],fn($c)=>(!empty($args['kiwe_testimonial_projection'])?get_comment_meta($c->comment_ID,Selection::TESTIMONIAL_META)==='1':(empty($args['meta_key'])||get_comment_meta($c->comment_ID,$args['meta_key'])==='1')))),0,$args['number']);}
 function wp_strip_all_tags($s){return strip_tags($s);}
 function esc_url_raw($s){return $s;} function get_comment_link($c){return 'https://example.test/story/#comment-'.$c->comment_ID;}
 function do_action($hook,...$args){$GLOBALS['events'][]=[$hook,...$args];if(isset($GLOBALS['after_test_action']))($GLOBALS['after_test_action'])($hook,...$args);}
@@ -67,7 +68,7 @@ $denied=['edit_post:201'];check(is_wp_error($selection->select('media',201,false
 $actor=3;check(is_wp_error($selection->select('media',201,true))&&is_wp_error($nav->items(70)),'author cannot curate context or edit navigation');$actor=1;
 $fail_write=true;check(is_wp_error($selection->select('media',201,false)),'failed metadata removal is reported');$fail_write=false;
 $posts[201]->post_parent=302;check(!Selection::public_media($posts[201])&&$selection->select('media',201,false)===true,'revoked public media is excluded and can still be deselected');$posts[201]->post_parent=0;
-foreach([401,402,403,404,405] as $id)$comments[$id]=(object)['comment_ID'=>$id,'comment_post_ID'=>301,'comment_approved'=>'1','comment_type'=>'comment','comment_content'=>'<p>Helpful studio.</p>','comment_author'=>'Public name','comment_author_email'=>'private@example.test','comment_author_IP'=>'192.0.2.1','user_id'=>91];
+foreach([401,402,403,404,405] as $id)$comments[$id]=new WP_Comment(['comment_ID'=>$id,'comment_post_ID'=>301,'comment_approved'=>'1','comment_type'=>'comment','comment_content'=>'<p>Helpful studio.</p>','comment_author'=>'Public name','comment_author_email'=>'private@example.test','comment_author_IP'=>'192.0.2.1','user_id'=>91]);
 $comments[402]->comment_approved='0';$comments[403]->comment_type='order_note';$comments[404]->comment_post_ID=302;
 check($selection->select('testimonial',401,true)===true,'approved public comment can become a testimonial');
 foreach([402,403,404] as $id)check(is_wp_error($selection->select('testimonial',$id,true)),'unapproved operational and private comments cannot be selected: '.$id);
@@ -78,7 +79,7 @@ $comments[401]->comment_approved='spam';check(Selection::testimonials()===[],'mo
 $posts[301]->post_password='private';check(Selection::testimonials()===[],'password protecting parent removes selected quote');$posts[301]->post_password='';
 newpost(310,'product','publish');$comments[405]->comment_post_ID=310;$comments[405]->comment_type='review';
 check(is_wp_error($selection->select('testimonial',405,true)),'Woo-disabled product reviews are excluded');
-eval('function WC(){return true;}');$commentmeta[405]['rating']='5';
+eval('function WC(){return true;} function wc_review_ratings_enabled(){return true;}');$commentmeta[405]['rating']='5';
 check($selection->select('testimonial',405,true)===true,'Woo review can be explicitly selected when Woo is present');
 $quote=array_values(array_filter(Selection::testimonials(),fn($item)=>$item['id']===405))[0];check($quote['rating']===5&&$quote['source']==='woocommerce-review','review keeps genuine native rating and provenance');
 $denied=['moderate_comments'];check(is_wp_error($selection->select('testimonial',405,false))&&is_wp_error($library->listing('testimonial')),'curation requires comment moderation authority');$denied=[];

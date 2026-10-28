@@ -1,5 +1,4 @@
 const requestCache = new Map();
-let activeController = null;
 const searchMemory = { query: '', scope: '', prefix: '', sort: 'latest' };
 const bricksBridgeMemory = new Map();
 let bricksReconcileBound = false;
@@ -45,11 +44,10 @@ function resultCard( item, root ) {
 }
 
 function resultGroup( label, items, root ) {
-	if ( ! Array.isArray( items ) || ! items.length ) {
-		return '';
-	}
 	const family = String( label || 'items' ).toLowerCase().replace( /[^a-z0-9_-]/g, '' );
-	return '<section class="dsa-search-group dsa-search-group--' + escapeHtml( family ) + '"><h3>' + escapeHtml( label ) + '</h3><div class="dsa-search-group__items">' + items.map( function ( item ) { return resultCard( item, root ); } ).join( '' ) + '</div></section>';
+	const more = Boolean( root._dsaSearchPayload?.pagination?.[ family ] );
+	if ( ! Array.isArray( items ) || ( ! items.length && ! more ) ) return '';
+	return '<section class="dsa-search-group dsa-search-group--' + escapeHtml( family ) + '"><h3>' + escapeHtml( label ) + '</h3><div class="dsa-search-group__items">' + items.map( function ( item ) { return resultCard( item, root ); } ).join( '' ) + '</div>' + ( more ? '<button type="button" class="dsa-search-more" data-dsa-search-more="' + family + '">Show more ' + family + '</button>' : '' ) + '</section>';
 }
 
 function activeFilter( root ) {
@@ -150,10 +148,11 @@ function renderResults( root, data ) {
 	renderAlphabet( root, data );
 	const filter = activeFilter( root );
 	const visibleTotal = filter === 'products' ? ( data.products || [] ).length : ( filter === 'posts' ? ( data.posts || [] ).length : ( filter === 'authors' ? ( data.authors || [] ).length : ( filter === 'categories' ? ( data.categories || [] ).length : total ) ) );
-	results.innerHTML = visibleTotal
+	const canContinue = Object.entries( data.pagination || {} ).some( function ( [ family, cursor ] ) { return cursor && ( filter === 'all' || filter === family ); } );
+	results.innerHTML = visibleTotal || canContinue
 		? ( filter === 'all' || filter === 'products' ? resultGroup( 'Products', data.products, root ) : '' ) + ( filter === 'all' || filter === 'posts' ? resultGroup( 'Posts', data.posts, root ) : '' ) + ( filter === 'all' || filter === 'authors' ? resultGroup( 'Authors', data.authors, root ) : '' ) + ( filter === 'all' || filter === 'categories' ? resultGroup( 'Categories', data.categories, root ) : '' )
 		: '<div class="dsa-search-empty"><strong>No matches yet.</strong><span>Try another word.</span></div>';
-	if ( status ) status.textContent = ( query ? visibleTotal + ( visibleTotal === 1 ? ' result' : ' results' ) + ' for “' + query + '” · ' : '' ) + ( activeSort( root ) === 'popular' ? 'Popular' : 'Latest' );
+	if ( status ) status.textContent = ( query ? visibleTotal + ( visibleTotal === 1 ? ' result shown' : ' results shown' ) + ' for “' + query + '” · ' : '' ) + ( activeSort( root ) === 'popular' ? 'Popular' : 'Latest' );
 	results.classList.remove( 'is-ghost' );
 	root.classList.remove( 'is-loading' );
 	bindQuickAddButtons( root );
@@ -209,7 +208,7 @@ function adaptiveDelay( query ) {
 	if ( connection && ( connection.saveData || /2g/.test( connection.effectiveType || '' ) ) ) {
 		return 360;
 	}
-	return query.length > 5 ? 120 : ( query.length > 2 ? 180 : 240 );
+	return query.length > 5 ? 120 : ( query.length > 2 ? 180 : 360 );
 }
 
 function bricksQueryTrail( targetQueryId ) {
@@ -372,7 +371,11 @@ function cacheSet( key, value ) {
 	if ( requestCache.size >= 24 ) {
 		requestCache.delete( requestCache.keys().next().value );
 	}
-	requestCache.set( key, value );
+	requestCache.set( key, { value: value, expires: Date.now() + 60000 } );
+}
+
+function searchCacheKey( scope, sort, prefix, query, config ) {
+	return String( config.endpoint || '' ) + '|' + String( config.limit || 6 ) + '|' + scope + '|' + sort + '|' + prefix + '|' + query.toLocaleLowerCase();
 }
 
 function editorialInitialPayload( config, scope ) {
@@ -418,32 +421,34 @@ function editorialInitialPayload( config, scope ) {
 	} : null;
 }
 
-async function requestResults( root, config, query ) {
-	const scope = activeFilter( root );
+async function requestResults( root, config, query, continuation = null ) {
+	const scope = continuation ? continuation.family : activeFilter( root );
 	const prefix = String( root._dsaSearchPrefix || '' );
 	const sort = activeSort( root );
+	const cursor = continuation ? String( root._dsaSearchPayload?.pagination?.[ scope ] || '' ) : '';
+	if ( continuation && ! cursor ) return;
+	if ( root._dsaSearchController ) root._dsaSearchController.abort();
+	const controller = new AbortController();
+	root._dsaSearchController = controller;
+	const serial = root._dsaSearchSerial = ( root._dsaSearchSerial || 0 ) + 1;
 	searchMemory.query = query;
-	searchMemory.scope = scope;
+	searchMemory.scope = activeFilter( root );
 	searchMemory.prefix = prefix;
 	searchMemory.sort = sort;
-	const key = scope + '|' + sort + '|' + prefix + '|' + query.toLocaleLowerCase();
-	bridgeBricksLiveSearch( query || prefix, scope, config );
-	if ( requestCache.has( key ) ) {
-		renderResults( root, requestCache.get( key ) );
+	const key = searchCacheKey( scope, sort, prefix, query, config );
+	if ( ! continuation ) bridgeBricksLiveSearch( query || prefix, scope, config );
+	const remembered = requestCache.get( key );
+	if ( ! continuation && remembered && remembered.expires > Date.now() ) {
+		renderResults( root, remembered.value );
 		return;
 	}
-
-	if ( activeController ) {
-		activeController.abort();
-	}
-	activeController = new AbortController();
 	const results = root.querySelector( '[data-dsa-search-results]' );
 	const status = root.querySelector( '[data-dsa-search-status]' );
 	if ( results && results.childElementCount ) {
 		results.classList.add( 'is-ghost' );
 	}
 	if ( status ) {
-		status.textContent = query ? 'Searching…' : 'Loading recent results…';
+		status.textContent = continuation ? 'Loading more results…' : ( query ? 'Searching…' : 'Loading recent results…' );
 	}
 	root.classList.add( 'is-loading' );
 
@@ -453,36 +458,52 @@ async function requestResults( root, config, query ) {
 	url.searchParams.set( 'scope', scope );
 	url.searchParams.set( 'prefix', prefix );
 	url.searchParams.set( 'sort', sort );
+	if ( cursor ) url.searchParams.set( 'cursor', cursor );
+	root.querySelectorAll( '[data-dsa-search-more]' ).forEach( function ( button ) { button.disabled = true; } );
 	try {
 		const response = await fetch( url.toString(), {
 			method: 'GET',
 			credentials: 'same-origin',
-			cache: 'default',
+			cache: root._dsaSearchRefresh ? 'reload' : 'default',
 			headers: { 'Accept': 'application/json' },
-			signal: activeController.signal,
+			signal: controller.signal,
 		} );
 		if ( ! response.ok ) {
-			throw new Error( 'Search request failed.' );
+			const error = new Error( response.status === 409 ? 'Results changed. Refresh the results to continue.' : 'Search is unavailable right now.' );
+			error.refreshSearch = response.status === 409;
+			throw error;
 		}
 		const payload = await response.json();
-		cacheSet( key, payload );
+		root._dsaSearchRefresh = false;
+		if ( controller.signal.aborted || serial !== root._dsaSearchSerial ) return;
+		let rendered = payload;
+		if ( continuation ) {
+			const previous = root._dsaSearchPayload || {};
+			const ids = new Set();
+			const items = [ ...( previous[ scope ] || [] ), ...( payload[ scope ] || [] ) ].filter( function ( item ) { if ( ids.has( item.id ) ) return false; ids.add( item.id ); return true; } );
+			rendered = { ...previous, [ scope ]: items, pagination: { ...previous.pagination, [ scope ]: payload.pagination?.[ scope ] || '' } };
+			rendered.total = [ 'posts', 'products', 'authors', 'categories' ].reduce( function ( total, family ) { return total + ( rendered[ family ] || [] ).length; }, 0 );
+		} else cacheSet( key, payload );
 		if ( window.scheduler && typeof window.scheduler.yield === 'function' ) {
 			await window.scheduler.yield();
 		}
-		if ( root.isConnected ) {
-			renderResults( root, payload );
+		if ( root.isConnected && ! controller.signal.aborted && serial === root._dsaSearchSerial ) {
+			renderResults( root, rendered );
 		}
 	} catch ( error ) {
-		if ( error.name === 'AbortError' ) {
+		if ( error.name === 'AbortError' || controller.signal.aborted || serial !== root._dsaSearchSerial ) {
 			return;
 		}
 		root.classList.remove( 'is-loading' );
 		if ( status ) {
-			status.textContent = 'Search is unavailable right now.';
+			status.textContent = error.message || 'Search is unavailable right now.';
 		}
 		if ( results ) {
 			results.classList.remove( 'is-ghost' );
+			if ( error.refreshSearch ) results.querySelectorAll( '[data-dsa-search-more]' ).forEach( function ( button ) { delete button.dataset.dsaSearchMore; button.dataset.dsaSearchRefresh = '1'; button.textContent = 'Refresh results'; } );
 		}
+	} finally {
+		if ( serial === root._dsaSearchSerial ) root.querySelectorAll( '[data-dsa-search-more], [data-dsa-search-refresh]' ).forEach( function ( button ) { button.disabled = false; } );
 	}
 }
 
@@ -523,6 +544,16 @@ export function mount( root, config ) {
 	}
 
 	root.addEventListener( 'click', function ( event ) {
+		const moreButton = event.target.closest( '[data-dsa-search-more]' );
+		if ( moreButton && ! moreButton.disabled ) {
+			event.preventDefault(); event.stopPropagation();
+			requestResults( root, config, input.value.trim(), { family: moreButton.dataset.dsaSearchMore } );
+			return;
+		}
+		if ( event.target.closest( '[data-dsa-search-refresh]' ) ) {
+			event.preventDefault(); event.stopPropagation();
+			requestCache.clear(); root._dsaSearchRefresh = true; requestResults( root, config, input.value.trim() ); return;
+		}
 		const button = event.target.closest( '[data-dsa-search-filter]' );
 		if ( button ) {
 			event.preventDefault();
@@ -554,19 +585,13 @@ export function mount( root, config ) {
 	} );
 	input.addEventListener( 'input', function () {
 		const query = input.value.trim();
+		root._dsaSearchSerial = ( root._dsaSearchSerial || 0 ) + 1;
+		if ( root._dsaSearchController ) root._dsaSearchController.abort();
 		root._dsaSearchPrefix = '';
 		if ( clear ) {
 			clear.hidden = ! query;
 		}
 		window.clearTimeout( timer );
-		if ( query.length === 1 ) {
-			closeAnchoredResults( root );
-			const status = root.querySelector( '[data-dsa-search-status]' );
-			if ( status ) {
-				status.textContent = 'Keep typing…';
-			}
-			return;
-		}
 		timer = window.setTimeout( function () {
 			requestResults( root, config, query );
 		}, adaptiveDelay( query ) );
@@ -587,7 +612,7 @@ export function mount( root, config ) {
 	const initialQuery = input.value.trim();
 	const initialPayload = ! initialQuery && ! root._dsaSearchPrefix ? editorialInitialPayload( config, root._dsaSearchScope ) : null;
 	if ( initialPayload ) {
-		cacheSet( root._dsaSearchScope + '|latest||', initialPayload );
+		cacheSet( searchCacheKey( root._dsaSearchScope, 'latest', '', '', config ), initialPayload );
 		renderResults( root, initialPayload );
 	} else {
 		requestResults( root, config, initialQuery );

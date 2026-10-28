@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "namespace": "kiwe.seam",
+  "roleMode": "semantic-headless",
+  "roleModeNotes": "Public data-role values and seam-* role classes identify meaning for CSS, JavaScript, audits, Bricks, and AI tools. They do not apply starter card/button/modal visuals, padding, background, border, shadow, or radius. Build appearance with neutral Seam primitives, universal Kiwe/Seam tokens, and site CSS.",
+  "role": [
+    "section",
+    "container",
+    "hero",
+    "lead",
+    "eyebrow",
+    "label",
+    "caption",
+    "hint",
+    "micro",
+    "card",
+    "media",
+    "avatar",
+    "button",
+    "badge",
+    "chip",
+    "nav",
+    "actions",
+    "form",
+    "field",
+    "input",
+    "textarea",
+    "select",
+    "modal",
+    "toast",
+    "testimonial",
+    "price",
+    "progress",
+    "skeleton",
+    "footer",
+    "aside"
+  ],
+  "flow": [
+    "stack",
+    "row",
+    "cluster",
+    "inline",
+    "grid",
+    "dense",
+    "sidebar",
+    "center",
+    "spread",
+    "cover",
+    "frame",
+    "reel",
+    "horizontal-rail",
+    "vertical-rail"
+  ],
+  "tone": [
+    "brand",
+    "accent",
+    "neutral",
+    "muted",
+    "success",
+    "warning",
+    "danger",
+    "info",
+    "surface",
+    "inverse"
+  ],
+  "scene": [
+    "dramatic",
+    "elevated",
+    "standard",
+    "compact",
+    "micro"
+  ],
+  "state": [
+    "loading",
+    "disabled",
+    "selected",
+    "current",
+    "error",
+    "success",
+    "warning",
+    "collapsed",
+    "featured",
+    "hidden",
+    "print-hidden"
+  ],
+  "motion": [
+    "fade-up",
+    "scale-in",
+    "view-fade-up"
+  ],
+  "shape": [
+    "square",
+    "sharp",
+    "soft",
+    "rounded",
+    "pill",
+    "circle"
+  ],
+  "flow-density": [
+    "compact",
+    "comfortable",
+    "spacious"
+  ],
+  "gap": [
+    "none",
+    "xxs",
+    "xs",
+    "sm",
+    "md",
+    "lg",
+    "xl"
+  ],
+  "align": [
+    "start",
+    "center",
+    "end",
+    "stretch"
+  ],
+  "justify": [
+    "start",
+    "center",
+    "end",
+    "between",
+    "around"
+  ],
+  "theme": [
+    "dark"
+  ],
+  "bodyClasses": {
+    "seam-heading": [
+      "balanced",
+      "quiet",
+      "bold"
+    ],
+    "seam-motion": [
+      "minimal",
+      "standard",
+      "expressive"
+    ]
+  },
+  "behaviorAttributes": [
+    "data-seam-bind",
+    "data-seam-bind-text",
+    "data-seam-bind-html",
+    "data-seam-bind-attr",
+    "data-seam-template",
+    "data-seam-each",
+    "data-seam-if",
+    "data-seam-unless",
+    "data-seam-show",
+    "data-seam-model"
+  ],
+  "capabilityAttributes": {
+    "purpose": "Builder-neutral Appsite capability hooks. Public page authors, Bricks layouts, block themes, and AI-generated HTML may use these attributes to call Kiwe-owned runtime journeys without recreating Kiwe behavior.",
+    "authorRule": "Use these attributes only on real interactive controls or semantic page regions. Preserve visible UI and add the smallest capability hook that matches the intent. Never create duplicate JavaScript authority for saved items, notifications, AppShell screens, theme switching, cart, checkout, auth, search, service workers, focus trapping, or browser history.",
+    "groups": {
+      "appshellLaunchers": {
+        "status": "live",
+        "authority": "kiwe-appshell",
+        "attributes": [
+          {
+            "attribute": "data-dsa-open-module",
+            "values": [
+              "menu",
+              "search",
+              "profile",
+              "links",
+              "saved",
+              "cart",
+              "theme",
+              "ai",
+              "notifications",
+              "comments",
+              "ios-install",
+              "games"
+            ],
+            "purpose": "Open a registered Kiwe DSA/AppShell screen from a page/header/Bricks/custom control. The value theme toggles light/dark mode instead of opening a sheet.",
+            "example": "<button data-dsa-open-module=\"cart\" type=\"button\">Cart</button>"
+          }
+        ]
+      },
+      "discussion": {
+        "status": "live",
+        "authority": "kiwe-native-discussion",
+        "coreMinimum": "8.0.0-rc.452",
+        "attributes": [
+          {
+            "attribute": "data-dsa-open-module",
+            "values": [
+              "comments"
+            ],
+            "purpose": "One contextual conversation: Comments on posts, Reviews on active Store products, or the configured public website-feedback page. Kiwe owns counts, identity, moderation and reactions.",
+            "example": "<button type=\"button\" data-dsa-open-module=\"comments\" data-dsa-discussion-id=\"current\" aria-label=\"Open conversation\">Comments</button>"
+          },
+          {
+            "attribute": "data-dsa-discussion-id",
+            "values": [
+              "current",
+              "site",
+              "native-public-post-id"
+            ],
+            "purpose": "Use current context, the configured website-feedback page, or a native published post ID. In native WP_Post loops use {kiwe_discussion_id}; in the kiwe_testimonials array loop use {kiwe_testimonial_target_id}. Never substitute a comment, user or taxonomy ID."
+          }
+        ],
+        "dynamicTags": [
+          "{kiwe_discussion_id}",
+          "{kiwe_discussion_count}",
+          "{kiwe_testimonial_target_id}"
+        ],
+        "badge": "Kiwe supplies the approved top-level count on attributed icons. Replies are excluded. Do not add polling or a parallel discussion engine."
+      },
+      "savedItems": {
+        "status": "live",
+        "authority": "kiwe-saved-items",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-save",
+            "values": [
+              "wishlist",
+              "bookmark",
+              "auto"
+            ],
+            "purpose": "Toggle the nearest item into Kiwe Saved. Use wishlist for WooCommerce product controls, bookmark for articles/pages, and auto only when the context is unambiguous.",
+            "example": "<button data-kiwe-save=\"wishlist\" data-kiwe-save-id=\"{post_id}\" data-kiwe-save-title=\"{post_title}\" data-kiwe-save-url=\"{post_url}\" type=\"button\">Wishlist</button>"
+          },
+          {
+            "attribute": "data-kiwe-save-id",
+            "purpose": "Stable post/product ID, recommended in Bricks query loops."
+          },
+          {
+            "attribute": "data-kiwe-save-title",
+            "purpose": "Optional saved-item title override. Kiwe otherwise reads the nearest card heading."
+          },
+          {
+            "attribute": "data-kiwe-save-url",
+            "purpose": "Optional saved-item URL override. Kiwe otherwise reads the nearest card link or current URL."
+          },
+          {
+            "attribute": "data-kiwe-save-image",
+            "purpose": "Optional saved-item image URL. Kiwe otherwise reads the nearest card image."
+          }
+        ]
+      },
+      "browserNotifications": {
+        "status": "live",
+        "authority": "kiwe-notification-journey",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-notifications",
+            "purpose": "Start the browser-notification preference journey after an explicit visitor click. Kiwe never prompts during a protected flow.",
+            "example": "<button data-kiwe-notifications data-kiwe-notification-status-target=\"#notification-status\" type=\"button\">Turn on notifications</button>"
+          },
+          {
+            "attribute": "data-kiwe-notification-status-target",
+            "purpose": "Optional CSS selector for an on-page live-status element that receives the current notification-permission message."
+          },
+          {
+            "attribute": "data-kiwe-notification-topic",
+            "purpose": "Optional topic hint for the notification preference screen. Use only real site topics exposed by Kiwe."
+          },
+          {
+            "attribute": "data-dsa-native-notification-request",
+            "purpose": "Advanced direct browser-permission request for a real visitor-click control. Prefer data-kiwe-notifications unless the UI is explicitly asking for native permission now."
+          }
+        ]
+      },
+      "themeControls": {
+        "status": "live",
+        "authority": "kiwe-theme-runtime",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-theme-toggle",
+            "purpose": "Toggle Kiwe/Bricks light-dark mode from a page/header/Bricks/custom control without adding the dock theme icon.",
+            "example": "<button data-kiwe-theme-toggle type=\"button\">Toggle theme</button>"
+          },
+          {
+            "attribute": "data-kiwe-theme-status-target",
+            "purpose": "Optional selector for a status element that receives the current light/dark state label."
+          }
+        ]
+      },
+      "contactActions": {
+        "status": "live",
+        "authority": "kiwe-design-context",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-contact",
+            "values": [
+              "phone",
+              "email",
+              "whatsapp",
+              "directions"
+            ],
+            "purpose": "Turn a real link or button into a contact action backed by the approved Kiwe Design Context. Kiwe resolves the destination; page markup must not duplicate phone, email, WhatsApp, or address values.",
+            "example": "<a data-kiwe-contact=\"whatsapp\" data-kiwe-contact-message=\"Hello, I would like to know more.\" href=\"{kiwe_whatsapp_url}\">Chat on WhatsApp</a>"
+          },
+          {
+            "attribute": "data-kiwe-contact-message",
+            "purpose": "Optional human-visible WhatsApp starter message. Kiwe URL-encodes it only after a visitor activates the control. Do not place private data or secrets here."
+          }
+        ],
+        "nativeRecipes": {
+          "phone": "Prefer a Bricks-native link whose URL is {kiwe_store_phone_url}; retain data-kiwe-contact=\"phone\" as semantic capability metadata.",
+          "email": "Prefer a Bricks-native link whose URL is {kiwe_store_email_url}; retain data-kiwe-contact=\"email\" as semantic capability metadata.",
+          "whatsapp": "Prefer a Bricks-native link whose URL is {kiwe_whatsapp_url}; data-kiwe-contact-message may add a prefilled message at runtime.",
+          "directions": "Prefer a Bricks-native link whose URL is {kiwe_directions_url}. For a Bricks Map element, compose its native address control from the kiwe_store_address_* dynamic tags instead of embedding a map iframe."
+        }
+      },
+      "socialProfiles": {
+        "status": "live",
+        "authority": "kiwe-public-identity",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-social",
+            "values": [
+              "facebook",
+              "instagram",
+              "x",
+              "youtube",
+              "pinterest",
+              "linkedin"
+            ],
+            "purpose": "Open the selected public business profile from Kiwe Design Context/DSA Links. Use only on a real link or button; Kiwe ignores unknown networks and missing URLs.",
+            "example": "<a data-kiwe-social=\"instagram\" href=\"{kiwe_instagram_url}\">Instagram</a>"
+          }
+        ]
+      },
+      "menuContext": {
+        "status": "live",
+        "authority": "kiwe-menu-context",
+        "attributes": [
+          {
+            "attribute": "id + data-role=\"section\" / .seam-section + aria-label|aria-labelledby|visible heading",
+            "purpose": "Expose real page sections to Kiwe Menu context without hidden duplicate anchors. Kiwe prefers semantic sections, then falls back to admin-selected heading levels.",
+            "example": "<section id=\"heritage\" class=\"seam-section\" data-role=\"section\" aria-labelledby=\"heritage-title\"><h2 id=\"heritage-title\">Heritage</h2></section>"
+          }
+        ]
+      },
+      "dynamicAndBricksIntent": {
+        "status": "live-contract",
+        "authority": "kiwe-bricks-dynamic-planning",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-query-template",
+            "purpose": "Marks a source region whose preview/sample cards should become a Bricks query loop or dynamic binding plan.",
+            "example": "<section data-kiwe-query-template=\"featured-products\" data-role=\"section\" class=\"seam-section seam-horizontal-rail\"></section>"
+          },
+          {
+            "attribute": "data-kiwe-binding",
+            "purpose": "Marks a repeated sample card or field that belongs to a named Kiwe dynamic binding plan."
+          }
+        ]
+      },
+      "appInstall": {
+        "status": "live",
+        "authority": "kiwe-pwa",
+        "attributes": [
+          {
+            "attribute": "data-dsa-install-pwa",
+            "values": [
+              "ios",
+              "android",
+              "desktop",
+              "auto"
+            ],
+            "purpose": "Reuse the Home-screen install journey from a semantic button or link. A configured store/download URL takes precedence; otherwise use browser-supported installation or honest platform instructions. Available from RC393; verify current target capability. A click is install intent, not a confirmed download or notification consent.",
+            "example": "<button type=\"button\" data-dsa-install-pwa=\"android\" aria-label=\"Install Android app\">Install app</button>"
+          },
+          {
+            "attribute": "data-dsa-install-group",
+            "values": [
+              "true"
+            ],
+            "purpose": "Optional wrapper around install-only copy and attributed install buttons. Setup App hides this whole group when Show app install buttons is off; never wrap unrelated footer content.",
+            "example": "<div data-dsa-install-group=\"true\"><button type=\"button\" data-dsa-install-pwa=\"ios\">iPhone app</button></div>"
+          }
+        ]
+      },
+      "forms": {
+        "status": "live",
+        "authority": "saved-native-bricks-form",
+        "coreMinimum": "8.0.0-rc.452",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-form",
+            "purpose": "Stable lowercase form slug, starting with a letter, up to 64 letters/digits/hyphens/underscores. Add to the native Bricks Form element, never trust a submitted field for this identity.",
+            "example": "<form data-kiwe-form=\"careers\" data-kiwe-form-label=\"Careers enquiry\"></form>"
+          },
+          {
+            "attribute": "data-kiwe-form-label",
+            "purpose": "Human-readable form name used in Daily Forms, automatic filters and private team notifications. Stored with the native page/form pair so later renaming cannot mislabel an old enquiry."
+          }
+        ],
+        "requires": [
+          "native Bricks submission storage",
+          "Save submission action on the form",
+          "deliberately configured native email action for email delivery"
+        ],
+        "privacy": "A saved enquiry is private and does not imply mail delivery or marketing consent. Do not retain passwords, upload bytes or credentials. The compiler enables native saving only for unambiguous ordinary enquiry forms."
+      }
+    },
+    "candidateAttributes": [
+      {
+        "attribute": "data-kiwe-share",
+        "status": "candidate-not-live",
+        "purpose": "Future Web Share / copy-link capability for products, posts, offers, and pages."
+      },
+      {
+        "attribute": "data-kiwe-compare",
+        "status": "candidate-not-live",
+        "purpose": "Future product/content comparison tray."
+      },
+      {
+        "attribute": "data-kiwe-recently-viewed",
+        "status": "candidate-not-live",
+        "purpose": "Future recently-viewed product/post rail and personalization signal."
+      },
+      {
+        "attribute": "data-kiwe-follow",
+        "status": "candidate-not-live",
+        "purpose": "Future author, brand, topic, category, or product-subscription follow intent."
+      },
+      {
+        "attribute": "data-kiwe-ai-context",
+        "status": "candidate-not-live",
+        "purpose": "Future safe context handoff to Kiwe AI from a selected section/card without exposing private data."
+      },
+      {
+        "attribute": "data-kiwe-feedback",
+        "status": "candidate-not-live",
+        "purpose": "Future lightweight rating, helpful/not helpful, or report-an-issue intent."
+      },
+      {
+        "attribute": "data-kiwe-offer",
+        "status": "candidate-not-live",
+        "purpose": "Future coupon, bundle, FBT, or personalization trigger that remains Woo/Kiwe-owned."
+      }
+    ]
+  },
+  "appShellAdoption": {
+    "purpose": "Defines which public Seam classes Kiwe DSA itself may apply inside live sheets/screens. Normal WordPress pages and Bricks layouts may use the full public Seam vocabulary; this map is specifically for Kiwe AppShell internals where generic classes can accidentally alter geometry.",
+    "levels": {
+      "public-adopted": "Runtime may add the public seam-* class to existing DSA markup because visual impact is low and reviewed.",
+      "shadow-only": "Runtime annotates the role with protected data-seam-* metadata only. This preserves AppShell isolation from site CSS even when core Seam role classes are headless.",
+      "authority-only": "Runtime/state authority only. Themes and Seam must not create behavior for this concern."
+    },
+    "publicAdopted": {
+      "eyebrow": {
+        "classes": [
+          "seam-eyebrow",
+          "seam-tone-brand"
+        ],
+        "reason": "Text-only role; existing DSA selectors already own surface typography and color."
+      },
+      "caption": {
+        "classes": [
+          "seam-caption",
+          "seam-tone-muted"
+        ],
+        "reason": "Text-only helper; safe for muted supporting copy."
+      },
+      "price": {
+        "classes": [
+          "seam-price",
+          "seam-tone-brand"
+        ],
+        "reason": "Numeric/text-only helper; tabular numeric styling is compatible with DSA price landmarks."
+      }
+    },
+    "shadowOnly": {
+      "card": "AppShell keeps card semantics on protected data-seam-* metadata so site CSS cannot accidentally style live DSA internals.",
+      "button": "AppShell keeps button semantics protected so site CSS cannot override DSA controls.",
+      "input": "AppShell keeps field/input semantics protected because Profile, Key.kiwe, checkout, and validation states are authority-owned.",
+      "media": "AppShell keeps media semantics protected because DSA media geometry is screen-specific.",
+      "badge": "AppShell keeps badge semantics protected so site CSS cannot alter notification/status badges.",
+      "nav": "AppShell keeps nav semantics protected because dock and context navigation use Geometry Engine variables.",
+      "actions": "AppShell keeps action-row semantics protected because action placement is panel/dock/context-owned.",
+      "form": "AppShell keeps form semantics protected because Profile, Key.kiwe, checkout, and notification forms are authority-owned.",
+      "field": "AppShell keeps field semantics protected because validation, account, and checkout fields are authority-owned.",
+      "modal": "AppShell keeps modal semantics protected because DSA sheet/screen geometry owns this surface."
+    },
+    "authorityOnly": [
+      "cart",
+      "checkout",
+      "payment",
+      "auth",
+      "phonekey",
+      "search-query",
+      "bricks-query",
+      "service-worker",
+      "browser-history",
+      "focus-trap"
+    ]
+  },
+  "protectedShadowAttributes": {
+    "purpose": "Kiwe DSA uses data-seam-* shadow metadata on live AppShell panels so tools can understand framework roles without generic Seam CSS restyling those panels.",
+    "attributes": [
+      "data-seam-root",
+      "data-seam-role",
+      "data-seam-flow",
+      "data-seam-tone",
+      "data-seam-scene",
+      "data-seam-state",
+      "data-seam-motion",
+      "data-seam-shape",
+      "data-seam-slot",
+      "data-seam-surface-panel",
+      "data-seam-authority"
+    ],
+    "authorRule": "Use public data-role/data-flow/classes for normal page markup. Do not add data-seam-* manually unless writing Kiwe runtime/core integration code."
+  }
+}

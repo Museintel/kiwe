@@ -4,13 +4,14 @@ import {workflowClient} from './workflow-client.mjs';
 import {WorkspaceHeader} from './workspace-chrome.jsx';
 import {WorkspaceDialog} from './workspace-dialog.jsx';
 import './apps-app.css';
+import {APP_IDS,checkedAppLibrary} from './apps-client-contract.mjs';
 
 function App(){
  const config=globalThis.KIWE_APPS_APP,request=workflowClient(config);
- const [data,setData]=useState(null),[selected,setSelected]=useState(['seo','store'].includes(new URL(location.href).searchParams.get('app'))?new URL(location.href).searchParams.get('app'):''),[review,setReview]=useState(null),[automatic,setAutomatic]=useState(false),[job,setJob]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [data,setData]=useState(null),[selected,setSelected]=useState(APP_IDS.includes(new URL(location.href).searchParams.get('app'))?new URL(location.href).searchParams.get('app'):''),[review,setReview]=useState(null),[automatic,setAutomatic]=useState(false),[job,setJob]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const running=useRef(false),mounted=useRef(true);
  useEffect(()=>{refresh();return()=>{mounted.current=false;running.current=false;};},[]);
- async function refresh(force=false){setBusy(true);setError('');try{const value=await request('',force?{operation:'refresh'}:undefined);if(!Array.isArray(value.items)||value.items.length!==2)throw Error('Apps could not be read completely.');if(mounted.current)setData(value);}catch(e){if(mounted.current)setError(e.message);}finally{if(mounted.current)setBusy(false);}}
+ async function refresh(force=false){setBusy(true);setError('');try{const value=await request('',force?{operation:'refresh'}:undefined);checkedAppLibrary(value);if(mounted.current)setData(value);}catch(e){if(mounted.current)setError(e.message);}finally{if(mounted.current)setBusy(false);}}
  function open(id){setSelected(id);setReview(null);setJob(null);setError('');setAutomatic(Boolean(data?.items.find(v=>v.id===id)?.automatic));}
  const item=data?.items.find(v=>v.id===selected);
  useEffect(()=>{if(item){setAutomatic(item.automatic);}},[item?.id,item?.version]);
@@ -20,7 +21,7 @@ function App(){
   catch(e){if(mounted.current){setJob(null);setError(e.message);await refresh();setError(e.message);}}finally{running.current=false;if(mounted.current)setBusy(false);}
  }
  async function start(){setBusy(true);setError('');try{const receipt=await request('',{operation:'start',app:selected,automatic,expected:review.expected});setJob(receipt.job);setBusy(false);advance(receipt.job);}catch(e){setError(e.message);setBusy(false);}}
- async function change(operation,fields={}){setBusy(true);setError('');try{const value=await request('',{operation,app:selected,...fields});setData(value);setReview(null);setJob(null);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function change(operation,fields={}){setBusy(true);setError('');try{const value=await request('',{operation,app:selected,...fields});setData(checkedAppLibrary(value));setReview(null);setJob(null);}catch(e){setError(e.message);}finally{setBusy(false);}}
  const currentJob=job||item?.job,unfinished=currentJob&&!['complete','cancelled'].includes(currentJob.status);
  return <div className="kiwe-screen kiwe-module"><WorkspaceHeader config={config}/><main><p className="native-eyebrow">YOUR KIWE APPS</p><h1>Apps.</h1><p>Add what your business needs. Your settings and activity keep their familiar places in Kiwe.</p>
   <div className="kiwe-task-tabs"><a href={config.appsHome}>← Home</a><button type="button" disabled={busy} onClick={()=>refresh(true)}>Check available Apps</button><a href={data?.nativeUpdatesUrl}>WordPress updates ↗</a></div>

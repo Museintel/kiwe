@@ -18,6 +18,8 @@ final class Icon_Library_Service {
 		'menu' => 'grip', 'profile' => 'user-round', 'links' => 'share-2',
 		'saved' => 'bookmark', 'theme' => 'sun-moon', 'secure' => 'shield-check',
 		'app_ios' => 'app-ios', 'app_android' => 'app-android',
+		'message_circle' => 'message-circle', 'comments' => 'message-circle',
+		'thumbs_up' => 'thumbs-up', 'flag' => 'flag', 'pin' => 'pin',
 	];
 
 	private static ?string $sprite = null;

@@ -30,8 +30,27 @@ final class Checkout_Policy_Workspace_Service {
 		$out = [ 'fields'=>$config,'canEdit'=>current_user_can( 'kiwe_manage_context' ),'gateway'=>[ 'enabled'=>'yes' === ( $gateway['enabled'] ?? 'no' ),'title'=>Task_Workspace_UI::text( $gateway['title'] ?? 'Cash on delivery',120 ) ],'prepaidDiscount'=>[ 'status'=>'external_owner','message'=>'Payment-method discounts stay with their installed Woo provider. Kiwe’s prepaid setting restores COD eligibility after a native paid, completed order.' ] ];
 		$out['guestCheckout'] = 'yes' === $guest;
 		$out['canEditGuestCheckout'] = $out['canEdit'] && current_user_can( 'manage_woocommerce' );
+		$out['checkoutFields'] = \DSA\Commerce\Checkout_Field_Service::projection();
 		$out['verifiedContactRequired'] = (bool) apply_filters( 'dsa_phonekey_purchase_verified_contact_enabled',false );
 		$out['expected'] = hash_hmac( 'sha256',serialize( [ $raw,$gateway,$out ] ),wp_salt( 'nonce' ) ); return $out;
+	}
+	public function change_checkout_fields( array $input ) {
+		$before = $this->policy(); if ( is_wp_error( $before ) ) return $before;
+		if ( ! $before['canEditGuestCheckout'] ) return $this->error( 'Your site owner manages checkout fields.',403 );
+		if ( array_diff( array_keys( $input ),[ 'operation','fields','expected' ] ) || ( $input['operation'] ?? null ) !== 'checkoutFields' || ! is_string( $input['expected'] ?? null ) || ! \DSA\Commerce\Checkout_Field_Service::valid( $input['fields'] ?? null ) ) return $this->error( 'Choose Required, Optional or Hidden for each checkout field.' );
+		$input['fields'] = array_replace( \DSA\Commerce\Checkout_Field_Service::DEFAULTS,$input['fields'] );
+		global $wpdb;
+		$lock = 'kiwe-guest-checkout-' . substr( hash( 'sha256',$wpdb->prefix ),0,32 );
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)',$lock ) ) ) return $this->error( 'Another checkout save is running. Reload before retrying.',409 );
+		try {
+			$current = $this->policy();
+			if ( is_wp_error( $current ) || ! hash_equals( $current['expected'],$input['expected'] ) ) return $this->error( 'Checkout settings changed. Reload before saving.',409 );
+			foreach ( $input['fields'] as $key=>$value ) update_option( 'woocommerce_checkout_' . $key . '_field',$value );
+			$after = $this->policy();
+			if ( is_wp_error( $after ) || $after['checkoutFields'] !== $input['fields'] ) return $this->error( 'Checkout fields could not be confirmed. Reload before retrying.',409 );
+			return $after;
+		} catch ( \Throwable $error ) { return $this->error( 'Checkout fields could not be confirmed. Reload before retrying.',409 ); }
+		finally { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)',$lock ) ); }
 	}
 	public function change_guest_checkout( array $input ) {
 		$before = $this->policy(); if ( is_wp_error( $before ) ) return $before;
@@ -74,7 +93,7 @@ final class Checkout_Policy_Workspace_Service {
 	public function write_policy( \WP_REST_Request $r ): \WP_REST_Response {
 		if ( $r->get_method() !== 'POST' || ! $this->permission( $r ) ) return $this->response( $this->error( 'Checkout policy is unavailable.',403 ) );
 		$input = (array) $r->get_json_params();
-		return $this->response( ( $input['operation'] ?? null ) === 'guestCheckout' ? $this->change_guest_checkout( $input ) : $this->change_policy( $input ) );
+		return $this->response( match( $input['operation'] ?? null ) { 'guestCheckout'=>$this->change_guest_checkout( $input ),'checkoutFields'=>$this->change_checkout_fields( $input ),default=>$this->change_policy( $input ) } );
 	}
 	public function read_carts( \WP_REST_Request $r ): \WP_REST_Response {
 		if ( $r->get_method() !== 'GET' || ! $this->permission( $r ) || ! current_user_can( 'edit_others_shop_orders' ) ) return $this->response( $this->error( 'Saved carts require order-management access.',403 ) );

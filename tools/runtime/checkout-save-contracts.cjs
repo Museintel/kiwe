@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync(path.resolve(__dirname,'../../wp-content/mu-plugins/dsa/assets/js/surface.js'),'utf8');
 function extract(name){const start=source.indexOf('\tfunction '+name+'('),end=source.indexOf('\n\tfunction ',start+1);assert(start>=0&&end>start,name);return source.slice(start,end);}
-const shipped=['saveCheckoutDraft','collectCheckoutValues','updateCheckoutShippingFields'].map(extract).join('\n');
+const shipped=['flushCheckoutDraft','saveCheckoutDraft','collectCheckoutValues','updateCheckoutShippingFields'].map(extract).join('\n');
 const checks=[];function check(ok,label){assert(ok,label);checks.push(label);}
 async function settle(){for(let i=0;i<24;i++)await Promise.resolve();}
 function fixture(){
@@ -12,7 +12,7 @@ function fixture(){
  const city={name:'billing_city',type:'text',value:'Initial city',matches(){return false;}};
  const separate={name:'shipping_city',type:'text',value:'Separate city',matches(selector){assert.equal(selector,':disabled');return shipping.disabled;}};
  const form={querySelector(selector){if(selector==='button[type="submit"]')return button;if(selector==='[data-dsa-checkout-message]')return message;if(selector==='[data-dsa-checkout-shipping-toggle]')return toggle;if(selector==='[data-dsa-checkout-shipping-fields]')return shipping;return null;},querySelectorAll(selector){assert.equal(selector,'[data-dsa-checkout-field]');return[toggle,city,separate];}};
- const c={Promise,Boolean,Object,window:{clearTimeout(){}},checkoutDraftTimer:91,checkoutDraftPromise:Promise.resolve(),checkoutRequestSequence:0,checkoutAppliedSequence:0,activeOverlayLifecycle:{sequence:7},open:true,checkoutState:{contract:{marker:'initial'},errors:{},notices:[]},
+ const c={Promise,Boolean,Object,window:{clearTimeout(){}},checkoutDraftTimer:91,checkoutDraftDirty:false,overlayRoot:{querySelector(){return form;}},checkoutDraftPromise:Promise.resolve(),checkoutRequestSequence:0,checkoutAppliedSequence:0,activeOverlayLifecycle:{sequence:7},open:true,checkoutState:{contract:{marker:'initial'},errors:{},notices:[]},
   dsaPost(route,payload){assert.equal(route,'/checkout');let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});calls.push({payload,resolve,reject});return promise;},
   renderCheckoutSurface(){paint.push('render');},focusFirstCheckoutError(){paint.push('focus');},completeCheckoutSurface(){paint.push('complete');}
  };
@@ -22,6 +22,11 @@ function fixture(){
 }
 function response(marker,shipToDifferent=false,extra={}){return{valid:true,checkout:{marker,shipToDifferent,errors:{},notices:[]},...extra};}
 (async()=>{
+ {
+  const f=fixture();f.c.checkoutDraftDirty=true;f.city.value='Final address';f.c.flushCheckoutDraft();f.c.open=false;await settle();
+  check(f.calls.length===1&&f.calls[0].payload.fields.billing_city==='Final address','Final pending draft starts even after the sheet lifecycle closes');
+  f.calls[0].resolve(response('final snapshot'));await settle();check(f.paint.length===0,'Final draft persistence never revives a closed sheet');
+ }
  {
   const f=fixture();const one=f.c.saveCheckoutDraft(f.form,false,true);await settle();
   check(f.calls.length===1&&f.calls[0].payload.fields.ship_to_different_address==='0','First unchecked snapshot starts one request');

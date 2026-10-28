@@ -16,6 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Abandoned_Cart_Service {
 	private const DB_VERSION = '4';
 	private const DB_OPTION = 'dsa_abandoned_cart_db_version';
+	// Additive extension: the previous Store can keep capturing with base schema v4.
+	private const DETAILS_OPTION = 'dsa_abandoned_cart_details_schema';
 	private const CRON_HOOK = 'dsa_abandoned_cart_maintenance';
 
 	private $settings;
@@ -26,6 +28,7 @@ final class Abandoned_Cart_Service {
 	private string $request_capture_signature = '';
 	private array $customer_labels = [];
 	private array $checkout_contact = [];
+	private ?array $checkout_details = null;
 	private function recovery_paused(): bool {
 		return class_exists( Store_Recovery_Gate_Service::class ) && Store_Recovery_Gate_Service::is_paused();
 	}
@@ -53,7 +56,7 @@ final class Abandoned_Cart_Service {
 		add_action( 'woocommerce_after_calculate_totals', [ $this, 'capture_after_cart_change' ], 90 );
 		add_action( 'dsa_checkout_draft_saved', [ $this, 'capture_checkout_details' ], 90 );
 		add_action( 'woocommerce_checkout_update_order_review', [ $this, 'capture_checkout_review' ], 90, 1 );
-		add_action( 'woocommerce_store_api_cart_update_customer_from_request', [ $this, 'capture_checkout_details' ], 90, 0 );
+		add_action( 'woocommerce_store_api_cart_update_customer_from_request', [ $this, 'capture_store_api_details' ], 90, 2 );
 		add_action( 'woocommerce_cart_emptied', [ $this, 'mark_current_cart_cleared' ], 90 );
 		add_action( 'woocommerce_checkout_order_processed', [ $this, 'mark_order_converted' ], 90, 3 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'mark_store_api_order_converted' ], 90 );
@@ -64,7 +67,8 @@ final class Abandoned_Cart_Service {
 		if ( $this->recovery_paused() ) return;
 		// Schema work is an explicit reviewed setup action, never a visitor request.
 		if ( ! $this->woo_available() || ! current_user_can( 'kiwe_manage_context' ) || ! current_user_can( 'edit_others_shop_orders' ) ) return;
-		if ( get_option( self::DB_OPTION ) === self::DB_VERSION && $this->schema_exists() ) {
+		if ( get_option( self::DB_OPTION ) === self::DB_VERSION && $this->schema_exists() && $this->details_schema_exists() ) {
+			update_option( self::DETAILS_OPTION,'1',false );
 			return;
 		}
 
@@ -103,6 +107,7 @@ final class Abandoned_Cart_Service {
 			contact_phone_enc text NULL,
 			checkout_started_at datetime NULL,
 			checkout_details_at datetime NULL,
+			checkout_snapshot_enc longtext NULL,
 			PRIMARY KEY (id),
 			KEY visitor_hash (visitor_hash),
 			KEY customer_hash (customer_hash),
@@ -131,11 +136,12 @@ final class Abandoned_Cart_Service {
 		dbDelta( $sql );
 		if ( ! $this->schema_exists() ) return;
 		update_option( self::DB_OPTION, self::DB_VERSION, false );
+		if ( $this->details_schema_exists() ) update_option( self::DETAILS_OPTION,'1',false );
 	}
 	/** Fresh installs and upgrades prepare their core owner on an authorized private request only. */
 	public function prepare_core_capture(): void {
 		if ( $this->recovery_paused() || ! $this->woo_available() || ! current_user_can( 'kiwe_manage_context' ) || ! current_user_can( 'edit_others_shop_orders' ) ) return;
-		if ( ! $this->ready() || ! wp_next_scheduled( self::CRON_HOOK ) ) $this->configure_runtime();
+		if ( ! $this->ready() || '1' !== get_option( self::DETAILS_OPTION ) || ! wp_next_scheduled( self::CRON_HOOK ) ) $this->configure_runtime();
 	}
 
 	/** Inspect schema only during explicit setup, never on a visitor or archive read. */
@@ -146,7 +152,12 @@ final class Abandoned_Cart_Service {
 			&& 3 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=%s AND column_name IN (%s,%s,%s)', $this->carts_table(), 'contact_phone_enc', 'checkout_started_at', 'checkout_details_at' ) );
 	}
 
-public function ready(): bool {
+	private function details_schema_exists(): bool {
+		global $wpdb;
+		return 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=%s AND column_name=%s',$this->carts_table(),'checkout_snapshot_enc' ) );
+	}
+
+	public function ready(): bool {
 		return $this->woo_available() && self::DB_VERSION === get_option( self::DB_OPTION );
 	}
 
@@ -189,17 +200,32 @@ public function ready(): bool {
 	public function capture_after_cart_change(): void {
 		$this->capture_current_cart( 'cart_change' );
 	}
-	public function capture_checkout_details(): void { $this->capture_current_cart( 'checkout_details' ); }
-	/** Native Woo calls this after its own AJAX nonce gate. Capture only bounded individual contact fields. */
+	public function capture_checkout_details( $draft = [] ): void {
+		if ( is_array( $draft ) && $draft ) $this->remember_checkout_details( $draft,'dsa' );
+		$this->capture_current_cart( 'checkout_details' );
+	}
+	/** Native Woo calls this after its own AJAX nonce gate. */
 	public function capture_checkout_review( $posted ): void {
 		if ( $this->recovery_paused() || ! $this->ready() || ! is_string( $posted ) || strlen( $posted ) > 16384 ) return;
 		parse_str( $posted, $fields );
-		foreach ( [ 'email', 'phone' ] as $kind ) {
-			$value = $fields[ 'billing_' . $kind ] ?? null;
-			if ( ! is_string( $value ) || strlen( $value ) > ( 'email' === $kind ? 254 : 40 ) ) continue;
-			$this->checkout_contact[ $kind ] = 'email' === $kind ? ( is_email( trim( $value ) ) ? strtolower( sanitize_email( $value ) ) : '' ) : $this->contact_phone( $value );
+		$this->remember_checkout_details( $fields,'woocommerce' );
+		$this->capture_current_cart( 'checkout_details' );
+	}
+	public function capture_store_api_details( $customer,$request ): void {
+		if ( ! is_object( $customer ) || ! $request instanceof \WP_REST_Request || $this->recovery_paused() || ! $this->ready() ) return;
+		$fields = [];
+		foreach ( [ 'billing','shipping' ] as $group ) foreach ( Checkout_Details_Model::FIELDS as $key ) {
+			$getter = 'get_' . $group . '_' . $key;
+			if ( method_exists( $customer,$getter ) ) $fields[$group . '_' . $key] = (string) $customer->$getter();
 		}
-		if ( $this->checkout_contact ) $this->capture_checkout_details();
+		$fields['ship_to_different_address'] = false;
+		foreach ( [ 'first_name','last_name','company','address_1','address_2','city','state','postcode','country' ] as $key ) if ( ( $fields['billing_' . $key] ?? '' ) !== ( $fields['shipping_' . $key] ?? '' ) ) $fields['ship_to_different_address'] = true;
+		$this->remember_checkout_details( $fields,'store-api' );
+		$this->capture_current_cart( 'checkout_details' );
+	}
+	private function remember_checkout_details( array $fields,string $source ): void {
+		$this->checkout_details = Checkout_Details_Model::envelope( $fields,$source,current_time( 'mysql' ) );
+		foreach ( [ 'email','phone' ] as $key ) if ( array_key_exists( $key,$this->checkout_details['billing'] ) ) $this->checkout_contact[$key] = $this->checkout_details['billing'][$key];
 	}
 
 	public function capture_current_cart( string $reason = '' ): void {
@@ -225,7 +251,16 @@ public function ready(): bool {
 		$email = $this->current_checkout_email();
 		$phone = $this->current_checkout_phone();
 		$total = method_exists( $cart, 'get_total' ) ? (float) $cart->get_total( 'edit' ) : (float) $cart->get_cart_contents_total();
-		$signature = hash( 'sha256', wp_json_encode( [ $cart_hash, $reason, $identity['customer_hash'] ?? '', $email, $phone, $total ] ) );
+		$details = $this->checkout_details;
+		if ( $details ) {
+			$prior = Checkout_Details_Model::decode( Secret_Store::decrypt( (string) ( $existing['checkout_snapshot_enc'] ?? '' ) ) );
+			if ( $prior ) foreach ( [ 'billing','shipping' ] as $group ) if ( 'billing' === $group || $details['differentShipping'] ) $details[$group] = array_replace( $prior[$group],$details[$group] );
+			$flattened = [ 'ship_to_different_address'=>$details['differentShipping'] ];
+			foreach ( [ 'billing','shipping' ] as $group ) foreach ( $details[$group] as $key=>$value ) $flattened[$group . '_' . $key] = $value;
+			$details = Checkout_Details_Model::envelope( $flattened,$details['source'],$details['capturedAt'] );
+		}
+		$details_hash = $details ? hash( 'sha256',wp_json_encode( [ $details['billing'],$details['shipping'],$details['differentShipping'] ] ) ) : '';
+		$signature = hash( 'sha256', wp_json_encode( [ $cart_hash, $reason, $identity['customer_hash'] ?? '', $email, $phone, $total,$details_hash ] ) );
 		if ( $signature === $this->request_capture_signature ) {
 			$this->capturing = false;
 			return;
@@ -265,6 +300,13 @@ public function ready(): bool {
 		}
 		if ( 'checkout_page' === $reason && empty( $existing['checkout_started_at'] ) ) $data['checkout_started_at'] = $now;
 		if ( 'checkout_details' === $reason && empty( $existing['checkout_details_at'] ) ) $data['checkout_details_at'] = $now;
+		$details_changed = false;
+		if ( $details && '1' === get_option( self::DETAILS_OPTION ) ) {
+			$old_details = Checkout_Details_Model::decode( Secret_Store::decrypt( (string) ( $existing['checkout_snapshot_enc'] ?? '' ) ) );
+			$old_hash = $old_details ? hash( 'sha256',wp_json_encode( [ $old_details['billing'],$old_details['shipping'],$old_details['differentShipping'] ] ) ) : '';
+			$details_changed = $old_hash !== $details_hash;
+			if ( $details_changed ) { $sealed = Secret_Store::encrypt( wp_json_encode( $details ) ); if ( '' !== $sealed ) $data['checkout_snapshot_enc'] = $sealed; }
+		}
 
 		global $wpdb;
 
@@ -276,7 +318,7 @@ public function ready(): bool {
 			$stage_changed = isset( $data['checkout_started_at'] ) || isset( $data['checkout_details_at'] );
 			$total_changed = abs( (float) ( $existing['cart_total'] ?? 0 ) - $total ) > 0.0001;
 			$identity_changed = (int) ( $existing['user_id'] ?? 0 ) !== $data['user_id'] || (string) ( $existing['customer_hash'] ?? '' ) !== $data['customer_hash'];
-			if ( $same_cart && ! $contact_changed && ! $stage_changed && ! $total_changed && ! $identity_changed && $last_activity > 0 && ( time() - $last_activity ) < $heartbeat ) {
+			if ( $same_cart && ! $contact_changed && ! $stage_changed && ! $total_changed && ! $identity_changed && ! $details_changed && $last_activity > 0 && ( time() - $last_activity ) < $heartbeat ) {
 				Runtime_Profiler::mark( 'abandoned_cart.write_skipped', [ 'reason' => 'unchanged_within_heartbeat' ] );
 				$this->remember_cart( (int) $existing['id'], $data['customer_hash'] );
 				$this->capturing = false;
@@ -484,6 +526,7 @@ private function row( int $id ): array {
 		}
 		$items = json_decode( (string) $row['items'], true ); $items = is_array( $items ) ? $items : [];
 		$out = [ 'id'=>$id, ...$this->customer_summary( $row ), ...$this->journey( $row ), 'status'=>$row['status'], 'lastActivity'=>$row['last_activity_at'], 'itemCount'=>(int) $row['item_count'], 'total'=>$this->money( (float) $row['cart_total'], $row['currency'] ), 'attempts'=>(int) $row['reminder_count'], 'lastReminder'=>$row['last_reminder_at'] ?: '', 'orderId'=>(int) $row['order_id'], 'items'=>array_map( static fn( $item ) => [ 'name'=>sanitize_text_field( (string) ( $item['name'] ?? '' ) ), 'quantity'=>max( 0, (int) ( $item['quantity'] ?? 0 ) ) ], array_slice( $items, 0, 100 ) ), 'itemsTruncated'=>count( $items ) > 100, 'reach'=>$reach, 'unknown'=>$unknown ? [ 'id'=>(int) $unknown['id'], 'channel'=>$unknown['channel'], 'createdAt'=>$unknown['created_at'] ] : null, 'canSend'=>current_user_can( 'kiwe_manage_notification_policy' ), 'logs'=>$wpdb->get_results( $wpdb->prepare( "SELECT id,channel,status,created_at FROM {$this->logs_table()} WHERE cart_id=%d ORDER BY id DESC LIMIT 10", $id ), ARRAY_A ) ?: [] ];
+		$out['checkoutDetails'] = $this->checkout_review_details( $row );
 		if ( $this->recovery_paused() ) { $out['canSend'] = false; $out['recovery'] = Store_Recovery_Gate_Service::projection(); }
 		$out['expected'] = hash_hmac( 'sha256', serialize( [ $row,$out,$contacts,$this->config() ] ), wp_salt( 'nonce' ) );
 		return $out;
@@ -957,11 +1000,25 @@ private function purge_old_rows(): void {
 		$this->customer_labels[ $key ] = $out;
 		return $out;
 	}
+	private function checkout_review_details( array $row ): array {
+		if ( ! empty( $row['user_id'] ) && ! get_userdata( (int) $row['user_id'] ) ) return [ 'available'=>false,'source'=>'saved-contact','capturedAt'=>'','billing'=>[],'shipping'=>[],'differentShipping'=>null ];
+		$value = Checkout_Details_Model::decode( Secret_Store::decrypt( (string) ( $row['checkout_snapshot_enc'] ?? '' ) ) );
+		// An explicit saved clear wins over older session data.
+		if ( ! $value && empty( $row['checkout_snapshot_enc'] ) && ! $this->recovery_paused() ) $value = Checkout_Session_Details::recover( $row );
+		if ( $value ) return [ 'available'=>Checkout_Details_Model::meaningful( $value ),...$value ];
+		$contact = [];
+		$email = Secret_Store::decrypt( (string) ( $row['contact_email_enc'] ?? '' ) );
+		$phone = $this->contact_phone( Secret_Store::decrypt( (string) ( $row['contact_phone_enc'] ?? '' ) ) );
+		if ( is_email( $email ) ) $contact['email'] = $email;
+		if ( $phone ) $contact['phone'] = $phone;
+		return [ 'available'=>(bool) $contact,'source'=>'saved-contact','capturedAt'=>'','billing'=>$contact,'shipping'=>[],'differentShipping'=>null ];
+	}
+
 	/** Actual checkout endpoint and checkout-sheet progress remain distinct, with no retrospective guess. */
 	private function journey( array $row ): array {
 		$page = (string) ( $row['checkout_started_at'] ?? '' ); $details = (string) ( $row['checkout_details_at'] ?? '' );
 		$status = $row['status'] ?? '';
-		$label = 'converted' === $status ? __( 'Order placed', 'dsa' ) : ( 'cleared' === $status ? __( 'Cart cleared', 'dsa' ) : ( $page ? ( 'abandoned' === $status ? __( 'Left at checkout', 'dsa' ) : __( 'Reached checkout', 'dsa' ) ) : ( $details ? __( 'Checkout details entered', 'dsa' ) : __( 'Checkout visit not recorded', 'dsa' ) ) ) );
+		$label = 'converted' === $status ? __( 'Order placed', 'dsa' ) : ( 'cleared' === $status ? __( 'Cart cleared', 'dsa' ) : ( $page ? ( 'abandoned' === $status ? __( 'Left at checkout', 'dsa' ) : __( 'Reached checkout', 'dsa' ) ) : ( $details ? __( 'Checkout form started', 'dsa' ) : __( 'Checkout visit not recorded', 'dsa' ) ) ) );
 		return [ 'checkoutReachedAt'=>$page, 'checkoutDetailsAt'=>$details, 'journeyLabel'=>$label ];
 	}
 

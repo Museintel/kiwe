@@ -24,7 +24,7 @@ for(const [label,source,service,asset] of cases){
  if(!ui.includes('WorkspaceHeader')||!ui.includes('kiwe-screen'))throw Error(label+': shared client screen missing');
  if(!php.includes('Workspace_Chrome_Service::projection('))throw Error(label+': shared site/role projection missing');
  if(!php.includes('Workspace_Design_Service::app_dependencies('))throw Error(label+': native document must depend on shared styles');
- if(!css.includes('.kiwe-screen-header')||!css.includes('.kiwe-screen>main'))throw Error(label+': built geometry absent');
+ if(!css.includes('.kiwe-workspace-header')||!css.includes('.kiwe-account-menu')||!css.includes('.kiwe-screen>main'))throw Error(label+': built geometry absent');
  if(!js.includes('Account and website'))throw Error(label+': built header absent');
  if(/<b className="(?:native-mark|native-nav-mark|ai-brand)/.test(ui))throw Error(label+': old plugin mark remains');
  checked++;

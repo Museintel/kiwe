@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 final class Task_Workspace_UI {
 	/** Shared private document bootstrap for new workspace modules. */
 	public static function app_document( string $module, string $title, array $config ): void {
-		if ( ! in_array( $module, [ 'templates','analytics','backups','forms','app','apps' ], true ) ) return;
+		if ( ! in_array( $module, [ 'templates','analytics','backups','forms','app','apps','system' ], true ) ) return;
 		nocache_headers(); header( 'Cache-Control: private, no-store' ); header( 'X-Robots-Tag: noindex, nofollow' ); header( 'X-Content-Type-Options: nosniff' );
 		$handle = 'kiwe-' . $module . '-app';
 		wp_enqueue_style( $handle, DSA_URL . 'assets/css/' . $module . '-app.css', \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), DSA_VERSION );

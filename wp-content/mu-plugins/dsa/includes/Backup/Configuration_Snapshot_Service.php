@@ -17,7 +17,7 @@ final class Configuration_Snapshot_Service {
 	public static function option_groups(): array {
 		$groups = [
 			'WordPress' => [ 'blogname', 'blogdescription', 'timezone_string', 'gmt_offset', 'date_format', 'time_format', 'start_of_week', 'posts_per_page', 'show_on_front', 'page_on_front', 'page_for_posts', 'site_icon', 'blog_public' ],
-			'Kiwe' => [ 'kiwe_seam_design_context_v1', 'kiwe_site_logo_id', 'kiwe_site_logo_inverse_id', 'theme.custom_logo', 'kiwe_store_phone', 'kiwe_store_email', 'kiwe_store_app_enabled_v1', 'kiwe_seo_workspace_enabled_v1', 'kiwe_ai_opt_in_global_v1' ],
+			'Kiwe' => [ 'kiwe_seam_design_context_v1', 'kiwe_site_logo_id', 'kiwe_site_logo_inverse_id', 'theme.custom_logo', 'kiwe_store_phone', 'kiwe_store_email', 'kiwe_store_app_enabled_v1', 'kiwe_seo_workspace_enabled_v1', 'kiwe_ai_opt_in_global_v1', 'kiwe_guest_app_enabled_v1', 'kiwe_sitegraph_app_enabled_v1' ],
 		];
 		if ( function_exists( 'WC' ) ) $groups['WooCommerce'] = [ 'woocommerce_currency', 'woocommerce_currency_pos', 'woocommerce_price_thousand_sep', 'woocommerce_price_decimal_sep', 'woocommerce_price_num_decimals', 'woocommerce_weight_unit', 'woocommerce_dimension_unit', 'woocommerce_store_address', 'woocommerce_store_address_2', 'woocommerce_store_city', 'woocommerce_store_postcode', 'woocommerce_default_country' ];
 		if ( class_exists( Bricks_Design_Snapshot_Service::class ) && ( $names = Bricks_Design_Snapshot_Service::names() ) ) $groups[Bricks_Design_Snapshot_Service::GROUP] = $names;

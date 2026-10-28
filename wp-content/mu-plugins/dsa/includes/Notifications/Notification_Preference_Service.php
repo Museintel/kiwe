@@ -399,7 +399,7 @@ final class Notification_Preference_Service {
 	}
 
 	public function personal_topic( string $topic ): bool {
-		return in_array( $topic, [ 'account_update','guest_post_status','guest_product_status','editorial_post_status','order_status','cart_reminder' ], true );
+		return in_array( $topic, [ 'account_update','guest_post_status','guest_product_status','editorial_post_status','order_status','cart_reminder','discussion_update' ], true );
 	}
 
 	/** Inbox entitlement is distinct from consent to send to a gateway. */
@@ -411,9 +411,12 @@ final class Notification_Preference_Service {
 		if ( ! $user || ! user_can( $user, 'read' ) || \DSA\Access\Team_Workspace_Service::suspended( $id ) || ( is_multisite() && ! is_user_member_of_blog( $id ) ) ) return false;
 		switch ( $topic ) {
 			case 'admin_new_account': return user_can( $user, 'kiwe_manage_team' ) && user_can( $user, 'list_users' ) && user_can( $user, 'edit_users' );
+			case 'admin_form_submission': return \DSA\Access\Form_Workspace_Service::allowed_for( $id );
+			case 'admin_app_activity': return user_can( $user, \DSA\Access\App_Workspace_Service::CAPABILITY ) && user_can( $user, 'list_users' ) && user_can( $user, 'edit_users' );
+			case 'admin_campaign_status': return user_can( $user, 'kiwe_manage_notification_policy' );
 			case 'admin_new_order': return $this->woo_available() && user_can( $user, 'edit_shop_orders' );
 			case 'admin_abandoned_cart': return $this->woo_available() && user_can( $user, 'edit_shop_orders' ) && user_can( $user, 'edit_others_shop_orders' );
-			case 'admin_new_comment': return user_can( $user, 'moderate_comments' );
+			case 'admin_new_comment': case 'admin_comment_report': return user_can( $user, 'moderate_comments' );
 			case 'admin_guest_application': return user_can( $user, 'kiwe_manage_guest_applications' );
 			case 'admin_guest_submission': return user_can( $user, 'edit_others_posts' );
 			case 'admin_guest_product_submission': return $this->woo_available() && user_can( $user, 'edit_products' ) && user_can( $user, 'edit_others_products' );
@@ -422,7 +425,7 @@ final class Notification_Preference_Service {
 			case 'guest_post_status': return [] !== \DSA\Access\Guest_Contribution_Service::application( $id ) || in_array( 'contributor', (array) $user->roles, true );
 			case 'editorial_post_status': return in_array( 'author', (array) $user->roles, true );
 			case 'order_status': case 'new_offer': case 'price_change': case 'stock_update': case 'new_product': case 'cart_reminder': return $this->woo_available();
-			case 'account_update': case 'newsletter': case 'new_post': return true;
+			case 'account_update': case 'newsletter': case 'new_post': case 'discussion_update': return true;
 		}
 		// Additional server-owned topics must declare their own explicit entitlement.
 		return true === apply_filters( 'dsa_notification_topic_allowed_for_user', false, $topic, $id, $user );
@@ -705,6 +708,7 @@ final class Notification_Preference_Service {
 		$user = $user_id ? get_userdata( $user_id ) : false;
 		$roles = $user ? (array) $user->roles : [];
 		if ( $user_id && current_user_can( 'read' ) ) $admin_topics[] = [ 'id'=>'account_update','label'=>__( 'Your account', 'dsa' ),'description'=>__( 'Registration, verification, role and password changes for your account.', 'dsa' ) ];
+		if ( $user_id && current_user_can( 'read' ) ) $admin_topics[] = [ 'id'=>'discussion_update', 'label'=>__( 'Your conversations', 'dsa' ), 'description'=>__( 'Replies, likes, website-team hearts and approval of your contributions.', 'dsa' ) ];
 		if ( $user_id && current_user_can( 'kiwe_manage_guest_applications' ) ) {
 			$admin_topics[] = [ 'id' => 'admin_guest_application', 'label' => __( 'Guest applications', 'dsa' ), 'description' => __( 'A verified person applied to contribute.', 'dsa' ), 'audience' => 'admin' ];
 		}
@@ -722,12 +726,16 @@ final class Notification_Preference_Service {
 			$admin_topics[] = [ 'id' => 'editorial_post_status', 'label' => __( 'Article status', 'dsa' ), 'description' => __( 'Editorial status changes to your articles.', 'dsa' ) ];
 		}
 		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_new_account' ) ) $admin_topics[] = [ 'id'=>'admin_new_account', 'label'=>__( 'New users', 'dsa' ), 'description'=>__( 'New accounts arrive in Daily → Users. Verification and account access stay private.', 'dsa' ), 'audience'=>'admin' ];
+		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_form_submission' ) ) $admin_topics[] = [ 'id'=>'admin_form_submission', 'label'=>__( 'Form enquiries', 'dsa' ), 'description'=>__( 'A saved message arrived in Daily → Forms. Enquiry answers remain in the private Forms inbox.', 'dsa' ), 'audience'=>'admin' ];
+		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_app_activity' ) ) $admin_topics[] = [ 'id'=>'admin_app_activity', 'label'=>__( 'App activity', 'dsa' ), 'description'=>__( 'A device first reports an app installation or opening.', 'dsa' ), 'audience'=>'admin' ];
+		if ( $user_id && $this->topic_allowed_for_user( $user_id, 'admin_campaign_status' ) ) $admin_topics[] = [ 'id'=>'admin_campaign_status', 'label'=>__( 'Campaign results', 'dsa' ), 'description'=>__( 'A campaign finishes or is cancelled. Review its recorded outcomes.', 'dsa' ), 'audience'=>'admin' ];
 		if ( $this->woo_available() && $user_id && current_user_can( 'edit_shop_orders' ) ) {
 			$admin_topics[] = [ 'id' => 'admin_new_order', 'label' => __( 'New store orders', 'dsa' ), 'description' => __( 'Private owner alerts when a WooCommerce order arrives.', 'dsa' ), 'audience' => 'admin' ];
 			if ( current_user_can( 'edit_others_shop_orders' ) ) $admin_topics[] = [ 'id'=>'admin_abandoned_cart', 'label'=>__( 'New abandoned carts', 'dsa' ), 'description'=>__( 'A shopper left a cart waiting. Review it in Daily saved carts.', 'dsa' ), 'audience'=>'admin' ];
 		}
 		if ( $user_id && ( current_user_can( 'moderate_comments' ) || current_user_can( 'manage_options' ) ) ) {
 			$admin_topics[] = [ 'id' => 'admin_new_comment', 'label' => __( 'New comments', 'dsa' ), 'description' => __( 'Private owner alerts when a comment needs attention.', 'dsa' ), 'audience' => 'admin' ];
+			$admin_topics[] = [ 'id'=>'admin_comment_report', 'label'=>__( 'Reported comments', 'dsa' ), 'description'=>__( 'Reports waiting for your moderation decision in Daily Feedback.', 'dsa' ), 'audience'=>'admin' ];
 		}
 		if ( $user_id && ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_notification_policy' ) ) ) {
 			$admin_topics[] = [ 'id' => 'securetrack_incident', 'label' => __( 'SecureTrack incidents', 'dsa' ), 'description' => __( 'Security incidents that meet the site-wide severity and flood-control policy.', 'dsa' ), 'audience' => 'admin' ];

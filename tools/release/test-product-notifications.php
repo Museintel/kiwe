@@ -3,7 +3,7 @@ declare(strict_types=1);
 // Actual topic, audience and event services; synthetic WP I/O and bounded delivery adapter.
 namespace DSA { class Settings { public function get($key,$default=[]){return $key==='permissions'?['notification_preferences_enabled'=>true]:$default;} } }
 namespace DSA\Trust { class Trust_Service {} }
-namespace DSA\Access {class Team_Workspace_Service {public static function suspended(int $id):bool{return false;}}class Site_Owner_Service {public static function owner_id():int{return 0;}}}
+namespace DSA\Access {class Form_Workspace_Service {public static function allowed_for(int $id):bool{return false;}}class Team_Workspace_Service {public static function suspended(int $id):bool{return false;}}class Site_Owner_Service {public static function owner_id():int{return 0;}}}
 namespace DSA\Notifications { class Push_Service { public function send_to_users(...$args){throw new \RuntimeException('Unexpected external delivery.');} } }
 namespace DSA\Communications {
 class Channel_Service {

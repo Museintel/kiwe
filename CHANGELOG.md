@@ -1,3 +1,88 @@
+## 8.0.0-rc.452 / Kiwe1 completion (2026-10-28, source candidate)
+
+- Reuse one contextual native Comments/Reviews/Website conversation and live eligible testimonials. Website plan controls pinned, team-hearted and optional liked sources; existing native Bricks query/tags remain. Privacy, source changes and relevant native review settings invalidate only testimonial-tagged cache pages.
+- Native saved form identity drives automatic private filters and team notices. Confirm the actual native insert before queuing; answers and contact data stay out of notices/public context.
+- Included Auth and Security Apps offer one role-bound settings home. Ordinary clients cannot change providers or technical enforcement; secrets remain blank-preserve, stale/partial writes are checked and the tested PhoneKey engine remains exact.
+- Contextual Menu Edit respects native object permissions and mandatory/optional editor policy. Start9.9/Seam2.18.3 add exact testimonial-source targets and native enquiry identities. Current tests and remaining lab/shared/live qualification are tracked in [the completion ledger](docs/KIWE-1-COMPLETION-2026-10-28.md). No production publication is claimed.
+
+## 8.0.0-rc.451 (2026-10-28, unreleased Comments/Reviews candidate)
+
+- One native contextual discussion DSA, existing PhoneKey verification/Skip, account-owned likes and reports, team hearts, root pins and private moderation. Ordinary PhoneKey says Subscribe Now; its tested engine, roles, passkeys and recovery stay unchanged.
+- Daily Feedback is one newest-first timeline with likes, Post/Website/Store-only Product filters and role-scoped customer information. Native policies, reply hierarchy, publication and privacy ownership remain authoritative.
+- Native form-validation errors become truthful REST refusals, with the draft retained. Missing phone delivery exposes only permitted moderation or the existing secure sign-in, and an unsubmitted draft stays editable. Uncertain Send retries retain their exact identity and body.
+- Current development evidence and remaining installed/browser/performance/recovery gates are in [the lab ledger](docs/COMMENTS-LAB-DEVELOPMENT-2026-10-28.md). No production or shared publication; accepted450 artifacts remain immutable.
+
+## 8.0.0-rc.450 (2026-10-28, live accepted on all three named sites)
+
+- Home and Transition offer independent Glass/Solid background choices in App settings, sharing the Dock's material definitions and colour/blur tokens in early and lazy rendering. Original text roles, gesture cue, timing and load-bound/intentional-reading behavior remain.
+- National/Dharwad use solid transitions and glass Home; Ascendants has both screens off and retains optional native WordPress with Rank Math. Every App/provider choice and original role/control/configuration remains.
+- Source185, native material27, signed installation/boot, guest commerce, actual live control/computed-style review and exact recovery/cleanup pass. All15 inputs/11 jobs retire with independent zero-helper/sole-cron inventory. [Evidence and limits](docs/APPSHELL-MATERIALS-RC450-2026-10-28.md).
+
+## 8.0.0-rc.449 (2026-10-28, live accepted on Ascendants)
+
+- Optional dashboard mode keeps native WordPress login/dashboard entry for the technical owner and staff, and stops replacing native post/media/taxonomy routes or pruning their menus and toolbar. Kiwe remains an explicit toolbar destination. Mandatory mode, installed-app launch, native role/capability and protected-object boundaries remain unchanged.
+- The Ascendants publishing regression is reproduced in the browser. Focused89/source184, hosted native66, actual browser, exact control/role preservation and cleanup pass. Full release and acceptance are tracked in [the correction record](docs/OPTIONAL-NATIVE-WORKFLOW-RC449-2026-10-28.md). No App version, content, policy or SEO provider change.
+
+## 8.0.0-rc.448 (2026-10-27, live accepted)
+
+- Search automatically includes assigned native tags and configured applicable public taxonomies, deduplicates text/tag matches, excludes protected content and offers bounded signed continuation. Latest retains chronological order; Popular progresses through ranked recent candidate windows. Native assignment/removal invalidates the existing cache owner. Per-root cancellation and expiry protect the search client from stale results and continuations.
+- Super Admin can require the Kiwe staff dashboard or retain native WordPress dashboard entry with a Kiwe toolbar shortcut. The existing ownership policy owns this private choice; staff capabilities, native editors and explicit installed-app launch remain. Target authorization is recorded for Ascendants optional and Dharwad/National mandatory. [Decision](docs/decisions/2026-10-27-tag-search-dashboard-policy.md). Source184, signed lab/native/guest/browser/provider checks and authorized deployment to all three sites pass. Rank Math and native roles/settings remain on Ascendants, with Store/SEO absent. Complete owned-input/job retirement and immediate recovery remain. [Live evidence](docs/CF1-SEARCH-DASHBOARD-RC448-2026-10-27.md).
+
+## 8.0.0-rc.447 (2026-10-27, live accepted)
+
+- APP120 reduces proven same-parent inline CSS repetition through native WordPress metadata, preserving Bricks' loading mode, designer styles, builder, security and commerce paths.
+- Bounded signed removal plans prevent repeated parsing; small stylesheets and unsupported/busy/error paths retain current native CSS. No new public files, visitor identity, job, table or settings control.
+- Source187 composed, native component proof,15 responsive CSS fixture pairs, signed-package installation, actual installed routes/guest checkout and505 final preservation pass on the lab. Exact immediate Core446 recovery,1261 retirement and independent zero-owned-input/job closure pass. The approved rollout is accepted on National and Dharwad with all Apps/settings retained: four National routes reduce; its category retains native CSS, and five smaller Dharwad routes bypass. Native final19,606/6,022, guest required-phone checkout, fresh live desktop/phone review and complete13-input/14-job recovery/retirement pass. [Live evidence](docs/SHARED-PERFORMANCE-RC447-LIVE-2026-10-27.md). [Batch evidence](docs/SHARED-PERFORMANCE-APP120-2026-10-27.md), [runtime ownership](docs/SHARED-CSS-RUNTIME-CONTRACT.md).
+
+## 8.0.0-rc.446 (2026-10-26, live accepted)
+
+- PT5 guards native saved-list changes with explicit conflict/storage errors, browser confirmation/rollback and an incremental private report. Native permissions, shared attributes, ordering/list limit and dormant Store data remain.
+- Explicit privileged preparation alone creates the derived report cache. Visitor saves never perform report aggregation or schema/job creation. Actor/content invalidation, exact complete rankings and bounded cache retirement are qualified on native MariaDB.
+- Composed186 source entries,52 installed-artifact native checks, fresh desktop/phone wishlist/bookmark interactions, guest checkout and551 final preservation pass. Exact original saved rows are restored. Immediate Core445/native App recovery,1,159 authenticated offline members and18 protected inputs remain; all18 public inputs/17 temporary jobs retire, with original lab inventory exact. The named rollout is accepted on both stores: native final19,550/6,025, original saved-list/business/App preservation and actual guest checkout pass. Immediate Core445,2,270 authenticated offline originals and10 protected operator inputs remain; all ten live public inputs/jobs retire and original inventory matches. PT6 Key storage is the sole unstarted development batch. [Live acceptance](docs/PONYTAIL-PT5-RC446-LIVE-2026-10-26.md). No global feed, commit or push. [Evidence and limits](docs/PONYTAIL-PT5-SAVED-ITEMS-2026-10-26.md), [live review](docs/PONYTAIL-PT5-RC446-LIVE-REVIEW-2026-10-26.md).
+
+## 8.0.0-rc.445 (2026-10-26, live accepted)
+
+- PT4 gives campaign, first-publication and legacy push jobs a unique fenced claim in their existing private option row. Conditional progress, completion, cancellation, resume and release preserve a successor; uncertain recipients/devices are committed before I/O and are not automatically replayed. Batches stop between calls after a bounded runtime.
+- Terminal jobs retain resumable history persistence; public job projections omit claims. Push cleanup respects active ownership, and ordinary non-autoload job writes avoid invalidating WordPress's full options cache. No visitor-path lock, new table or external service is added.
+- Article audience-query failures leave their jobs pending. Push public points pad legitimate short OpenSSL P-256 coordinates while retaining strict input/key validation. Existing valid enrolments, provider policies, consents, Apps and commerce remain.
+- Composed185 source entries,49 focused/50 existing cases,47 native SQL/mail/push checks and guest checkout pass on the lab. The approved Core-only rollout is accepted on National and Dharwad: native final19,548/6,023, original business/settings/App preservation and actual guest checkout pass. Exact immediate Core444/native App recovery,2,284 authenticated offline originals and13 protected inputs remain. All ten public inputs/ten temporary jobs retire; independent original roots/sole cron match. The initial stale National response stays failed; one unidentified native backup is preserved. PT5/PT6 are unstarted. No global feed, commit or push. [Source/lab evidence](docs/PONYTAIL-PT4-WORKER-OWNERSHIP-RC445-2026-10-26.md), [live acceptance and limits](docs/PONYTAIL-PT4-RC445-LIVE-2026-10-26.md).
+
+## Store1.1.6 (2026-10-26, live accepted; Core444 unchanged)
+
+- Cart additions and positive quantity changes honour native Woo validation, readable denial notices, backorders and stock shared across variations. Failed native mutations no longer claim success; unavailable items remain removable. Key-only quantity requests restore the native session before lookup.
+- Cart plus controls follow native purchase maxima, shared stock and the existing99-unit route limit. Pricing, provider settings, checkout fields, browser assets and the complete Core authoring flow remain.
+- Composed180 source behaviour gates/four syntax groups,73 focused checks,73 actual native checks per captured store profile,43 native totals/discount checks and actual guest HTTP pass on the lab. The approved Store-only rollout is accepted on National and Dharwad: native final19,541/6,016, exact original settings/business-state preservation and actual guest checkout pass. Core444 and the other four Apps remain exact. Store114/Core443 immediate recovery,79 authenticated offline evidence members,13 protected inputs and independent zero-owned-input/job closure remain; all12 public task inputs/14 jobs retire. Original failed guards and their bounded operator corrections stay explicit. [Source/lab evidence](docs/PONYTAIL-PT3-NATIVE-CART-2026-10-26.md), [live acceptance and limits](docs/PONYTAIL-PT3-STORE116-LIVE-2026-10-26.md).
+
+## 8.0.0-rc.444 (2026-10-26, live accepted)
+
+- PT2 makes permanent-key/capsule creation, revocation, accounting and expiry pruning conditional on the current native option snapshot. Bounded retries revalidate scope, expiry, revocation and request budget; failure cannot falsely confirm authentication, revocation or secret issuance. Existing formats, hashes and independent App settings remain.
+- PhoneKey token and OTP consumers require one eligible unused/unexpired claim before effects. Existing password, signature, role, TOTP, enrolment and WordPress session authorities remain. No schema, provider, content or public asset change.
+- Composed 179 behaviour gates/four syntax groups, 65 focused checks, signed installation568/seven boot, native credential/identity79, actual guest cart/checkout and final preservation/recovery96 pass on the lab. The founder-approved Core-only rollout is accepted on National and Dharwad: all five Apps/settings and captured native business/credential state remain, native final 19,547/6,022 and actual guest checkout pass. Exact immediate Core443 recovery and 2,275 authenticated offline originals remain; all ten public inputs/ten jobs retire and independent original-root/cron closure passes. Original source/fixture/provider/public failures stay explicit. [Source/lab evidence](docs/PONYTAIL-PT2-CREDENTIAL-STATE-2026-10-26.md), [live acceptance and limits](docs/PONYTAIL-PT2-RC444-LIVE-2026-10-26.md).
+
+## 8.0.0-rc.443 (2026-10-26, live accepted)
+
+- PT1 repairs the audited public SiteGraph password boundary and saved-item object-read boundary through one Core native visibility policy. Public queries exclude protected records before pagination and recheck records before serialization; Design Context's larger administrator exports remain public-only.
+- Personal bookmarks/wishlists recheck WordPress read permission and protected parents without deleting dormant or newly private saved rows. Ordinary public content, authorized authors/administrators and Store-off Core bookmarks retain their existing owners and contracts.
+- Forty focused synthetic cases, composed full source qualification, signed package verification and native WordPress boundary/preservation checks pass on the lab. The founder-approved Core-only rollout is accepted on National and Dharwad: all five App versions/settings and captured native business state remain, actual guest cart/checkout/removal passes, authenticated immediate Core442 recovery remains, and every owned hosting input/job retires. [Source/lab evidence](docs/PONYTAIL-PT1-VISIBILITY-RC443-2026-10-26.md); [live acceptance, original public failures and limits](docs/PONYTAIL-PT1-RC443-LIVE-2026-10-26.md).
+
+## 8.0.0-rc.439 (2026-10-25)
+
+- Qualify the independent Guest/AI/SiteGraph Apps, no-Setup navigation, shared responsive account header and native checkout/saved-cart work on the lab. Store/Guest1.1.1 correct invisible native checkout selection marks and carry their dependent builds; SEO/AI/SiteGraph stay1.1.0. Prior signed releases remain unchanged.
+- Final source/native update/recovery and lab qualification pass. Founder-approved Core439 and all five Apps are now live on National and Dharwad; native phone is Required, original business data/settings remain and fresh owner/guest responsive reviews pass. Recovery custody and zero-owned-helper/job cleanup are complete. [Live acceptance and limits](docs/APPS-RC439-LIVE-2026-10-25.md).
+
+## 8.0.0-rc.438 (2026-10-25)
+
+- Final physical profile for the five independent Apps; retain the full Core authoring context and add Guest/SiteGraph availability to same-site settings recovery with readable labels.
+- Qualified on the lab, then superseded by the browser-found native-control presentation fix in RC439. The compatibility bridge is RC437. No production change or public Core feed publication. [Current scope](docs/WORKSPACE-APPS-CHECKOUT-2026-10-25.md).
+
+## 8.0.0-rc.437 (2026-10-25)
+
+- Candidate only: unify private native/React headers and the Account menu, move App settings/native WordPress navigation into it, remove Setup and keep context progress on Home.
+- Extend the independent App platform to Guest, AI and advanced SiteGraph workspaces. Preserve the full factual graph, Design Context, external authoring, passive Guest records, accounts and bookmarks in Core. Keep the prior Store/SEO catalogue separate; API2 releases require the newer Core.
+- Present native Woo checkout phone/company/address-line-two controls and show actually captured encrypted checkout details in private saved-cart reviews, with exact active-session fallback and a nonblocking final draft flush. Base cart schema4 remains compatible with previous Store code.
+- Move SEO handover UI out of AI; expose write-only provider setup and bounded existing AI controls. No paid provider request runs on opening the workspace.
+- Source, lab, signed distribution/recovery and a concrete live review remain pending. Production is unchanged. [Scope](docs/WORKSPACE-APPS-CHECKOUT-2026-10-25.md).
+
 ## 8.0.0-rc.436 (2026-10-24)
 
 - 25 October live acceptance: AP126 completes the approved Woo11.2.1/database prerequisite and independent Store1.0.0/SEO1.0.0 migration on National and Dharwad. Native/public guest flow, original business data and encrypted recovery/retirement pass. Runtime artifacts stay exact; final fresh browser capture remains unverified. [Deployment record](docs/APPS-RC436-LIVE-2026-10-25.md).
@@ -3439,4 +3524,17 @@ Start the existing private runtime read in the early public head, alongside page
 
 - Reuse static Bricks card styles during CSS generation, retaining the complete native result/history for content rendering. Dynamic styles and unsupported trees retain the original loop.
 - Signed RC419 passes native lab installation, cart, capability and preservation checks; production remains RC417. Paired CPU/render measurements, source qualification and remaining waiting costs are recorded in [APP118](docs/PERFORMANCE-APP118-RC419-2026-10-23.md).
+
+# 8.0.0-rc.442 — settings cleanup candidate, 25 October 2026
+
+- Browser review also consolidates the independently registered SEO child links under WordPress → Kiwe, retaining their native registration and App editing homes.
+- Distinguish notification preferences from the notification inbox in Screen text. Store 1.1.4 uses visible native On/Off choices in plain settings sections; Guest 1.1.3 receives the updated shared build. Earlier private RC440/441 artifacts and failed test/operator receipts remain immutable evidence.
+- Final full source177+four syntax groups, native63 role/menu/save checks,13 actual public app-entry checks and desktop/phone browser review pass. Exact original business state, protected recovery and temporary-input/job retirement are verified. Founder-approved AP130 now runs Core442/Store1.1.4/Guest1.1.3 on National and Dharwad with original settings/data, other Apps and Woo11.2.1 retained. Actual guest checkout, client responsive review and protected recovery/retirement pass. [Live acceptance](docs/SETTINGS-HOME-RC442-LIVE-2026-10-25.md).
+
+# 8.0.0-rc.440 — settings cleanup candidate, 25 October 2026
+
+- Consolidate Kiwe-owned WordPress menus into Dashboard and owner-only Technical tools; old read entrances open their canonical Kiwe tasks while registered capabilities, write handlers and native WordPress/Woo/Bricks menus remain.
+- Add missing Search and Screen text controls to App settings and stock/related-product/add-button presentation to Store, using selected native settings patches. Keep unique technical editors and dormant values.
+- Route verified staff manifest launches into the existing role-aware dashboard, retain customer/guest and content-link flows, and reuse the existing functional App activity owner through a small private script. Private dashboard HTML stays uncached.
+- Future Google, Meta and expanded MCP are planned as optional Apps. Source qualification and lab acceptance are in progress; production remains RC439 and a new named rollout approval is required.
 

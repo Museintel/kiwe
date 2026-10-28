@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace DSA {
  final class Settings {
-  public function defaults(): array {return ['ai'=>[]];}
+  public function defaults(): array {return ['ai'=>['native_provider'=>'none','native_model'=>'','native_base_url'=>'']];}
+  public function compare_and_update_selected(array $expected,array $patch): bool {if($GLOBALS['fail_option']||$GLOBALS['options']['dsa_settings']!==$expected)return false;return update_option('dsa_settings',array_replace($expected,$patch),false);}
   public ?array $cached=null;
   public function get($key,$default=[]) {return ($this->cached??$GLOBALS['options']['dsa_settings'])[$key]??$default;}
  }
@@ -25,11 +26,13 @@ namespace {
 require __DIR__.'/workspace-test-bootstrap.php';
 $inc=dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/';
 require $inc.'AI/AI_Feature_Policy.php';
+require $inc.'AI/AI_Configuration_Service.php';
 require $inc.'AI/AI_Allowance_Service.php';
 require $inc.'AI/AI_Broker_Service.php';
 require $inc.'Utilities/Origin_Checker.php';
 require $inc.'Access/Task_Workspace_UI.php';
 require $inc.'Onboarding/SEO_Context_Service.php';
+require $inc.'Admin/Workspace_Settings_Trait.php';
 require $inc.'Admin/Admin.php';
 use DSA\AI\AI_Feature_Policy as Policy;
 use DSA\AI\AI_Broker_Service as Broker;
@@ -48,6 +51,7 @@ function add_action($name,...$args){$GLOBALS['hooks'][]=$name;}
 function add_menu_page(...$args){$GLOBALS['menu_entry']=$args;return 'toplevel_page_'.Workspace::PAGE;}
 function wp_enqueue_style(...$args){$GLOBALS['styles'][]=$args;}
 function wp_json_encode($value){return json_encode($value);}
+function wp_salt($scheme='auth'){return 'synthetic-ai-workspace';}
 class WP_REST_Request {public function __construct(private string $method='GET',private array $body=[],private array $headers=['X-WP-Nonce'=>'wp_rest','x-kiwe-mutation'=>'1']){}public function get_method(){return $this->method;}public function get_header($key){return $this->headers[$key]??'';}public function get_json_params(){return $this->body;}}
 class WP_REST_Response {public array $headers=[];public function __construct(public array $data,public int $status=200){}public function header($name,$value){$this->headers[$name]=$value;}}
 function wp_parse_url($url){return parse_url($url);}function site_url($path='/'){return home_url($path);}
@@ -158,16 +162,15 @@ check(isset($rest_routes['/workspace/ai'],$rest_routes['/workspace/ai/preference
 $actor=1;$options['dsa_settings']['ai']['allow_native_generation']=false;
 $read=new WP_REST_Request();$snapshot=$workspace->read_app($read);
 check($snapshot->status===200&&$snapshot->data['schema']==='kiwe.ai-workspace.v1'&&$snapshot->data['globalPaused']===true&&$snapshot->data['ownerSetupUrl']==='','client sees owner gate and allowance without setup link');
-check(!str_contains(json_encode($snapshot->data),'synthetic-stored-secret')&&!str_contains(json_encode($snapshot->data),'private.example.test'),'native app response contains no provider credential or URL');
+check(!str_contains(json_encode($snapshot->data),'synthetic-stored-secret')&&$snapshot->data['owner']['configuration']['native_base_url']==='https://private.example.test','authorized administrator sees editable provider URL while the response excludes its stored credential');
 $save=new WP_REST_Request('POST',['feature'=>'seo','enabled'=>false]);
 check($workspace->save_app($save)->status===200&&get_option('kiwe_ai_opt_in_seo_v1')==='0','native app saves through the existing feature policy');
 $site_view=$workspace->read_app($read)->data;
 check($site_view['siteChoices']===['seo'=>true,'ai'=>true],'existing websites retain explicit SEO and AI setup choices');
 $provider_calls=Transport::$calls;
 check($workspace->save_app(new WP_REST_Request('POST',['feature'=>'site_ai','enabled'=>false,'expected'=>$site_view['siteExpected']]))->status===200&&!Policy::site_choices()['ai']&&Transport::$calls===$provider_calls,'client AI switch pauses all provider work without calling provider');
-check($workspace->save_app(new WP_REST_Request('POST',['feature'=>'site_ai','enabled'=>true,'expected'=>$site_view['siteExpected']]))->status===409,'stale website choice cannot overwrite a newer AI setting');
-$site_view=$workspace->read_app($read)->data;
-check($workspace->save_app(new WP_REST_Request('POST',['feature'=>'site_ai','enabled'=>true,'expected'=>$site_view['siteExpected']]))->status===200&&Policy::site_choices()['ai'],'client can restore AI choice without changing owner settings');
+check($workspace->save_app(new WP_REST_Request('POST',['feature'=>'site_ai','enabled'=>true,'expected'=>$site_view['siteExpected']]))->status===403,'disabled AI cannot be reenabled through its dormant workspace endpoint');
+check(DSA\Apps\AI_App_Service::change(true,DSA\Apps\AI_App_Service::expected())===true&&Policy::site_choices()['ai'],'client restores AI through the guarded Core App card without changing provider settings');
 $site_view=$workspace->read_app($read)->data;
 check($workspace->save_app(new WP_REST_Request('POST',['feature'=>'site_seo','enabled'=>false,'expected'=>$site_view['siteExpected']]))->status===200&&!Policy::seo_enabled(),'SEO switch pauses Kiwe SEO without deleting saved feature preferences');
 $site_view=$workspace->read_app($read)->data;
@@ -197,6 +200,7 @@ $owner_view=$workspace->read_app($read)->data;
 check($workspace->save_owner_app(new WP_REST_Request('POST',['key'=>'tokenLimits','value'=>['minute'=>0,'day'=>500,'month'=>5000],'expected'=>$owner_view['owner']['expected']]))->status===200&&$options['dsa_settings']['ai']['token_allowance']['minute']===0,'owner app can pause with existing token-limit sanitizer');
 $owner_view=$workspace->read_app($read)->data;$before=$options;
 check($workspace->save_owner_app(new WP_REST_Request('POST',['key'=>'native_api_key','value'=>'exfiltrate','expected'=>$owner_view['owner']['expected']]))->status===400&&$options===$before,'owner route rejects arbitrary technical settings');
-$actor=1;check($workspace->save_owner_app(new WP_REST_Request('POST',['key'=>'allowNativeGeneration','value'=>true,'expected'=>$owner_view['owner']['expected']]))->status===403,'client cannot mutate owner provider gate');
+$actor=6;check($workspace->save_owner_app(new WP_REST_Request('POST',['key'=>'allowNativeGeneration','value'=>true,'expected'=>$owner_view['owner']['expected']]))->status===403,'editor cannot mutate website provider controls');
+$actor=1;check($workspace->save_owner_app(new WP_REST_Request('POST',['key'=>'allowNativeGeneration','value'=>true,'expected'=>$owner_view['owner']['expected']]))->status===200,'authorized client administrator manages the supported website provider controls');
 echo "$count AI feature permission checks passed.\n";
 }

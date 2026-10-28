@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-registry-build.v2",
-  "contractVersion": "9.7",
-  "releaseId": "9.7-6f6ff8c091a5",
-  "sourceHash": "sha256:6f6ff8c091a550e5d138b7ab37f22f6a517405740f8144efce25f99fb40c376f",
+  "contractVersion": "9.9",
+  "releaseId": "9.9-d25ac5a01c64",
+  "sourceHash": "sha256:d25ac5a01c64d4e576d186e910b8dccc4d589007884b13e0fef190d8a6289697",
   "generatedFrom": [
     "KIWE-START.md",
     "docs/BRICKS-ICON-LIBRARY.md",
@@ -20,6 +20,7 @@
     "kiwe-ai-toolkit/contexts/preview.md",
     "kiwe-ai-toolkit/contexts/seam.md",
     "kiwe-ai-toolkit/contracts/authoring-delivery.md",
+    "kiwe-ai-toolkit/contracts/discussion.md",
     "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",
     "kiwe-ai-toolkit/entry.json",
     "kiwe-ai-toolkit/lib/accessibility-validator.js",
@@ -78,5 +79,5 @@
     "wp-content/mu-plugins/dsa/ui-system/theme-package.schema.json",
     "wp-content/mu-plugins/dsa/ui-system/token-map.css"
   ],
-  "generatedAt": "2026-10-22"
+  "generatedAt": "2026-10-28"
 }

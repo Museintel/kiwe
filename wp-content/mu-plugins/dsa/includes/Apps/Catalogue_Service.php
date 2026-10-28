@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) exit;
 
 /** Explicit administration/native update work only; visitor capability checks never instantiate this owner. */
 final class Catalogue_Service {
- public const OPTION='kiwe_apps_catalogue_v1';
+ public const OPTION='kiwe_apps_catalogue_v2';
  public const TTL=21600;
  public const MAX_BYTES=65536;
  private ?array $cached=null;
@@ -19,9 +19,9 @@ final class Catalogue_Service {
  public function refresh(bool $force=false): array {
   if(!self::maintenance_context())throw new \RuntimeException('App checks run only in website administration or native scheduled updates.');
   $existing=$this->snapshot();if(!$force&&$existing['available']&&time()-$existing['checkedAt']<self::TTL)return$existing;
-  $url=Signed_Packet::ORIGIN.'/apps/v1/channels/stable.json';
+  $url=Signed_Packet::ORIGIN.'/apps/v1/channels/workspace-stable.json';
   // A candidate URL is admitted only on the original disposable lab, never by a visitor or remote manifest.
-  if(defined('KIWE_APPS_CANDIDATE_CATALOGUE')&&KIWE_APPS_CANDIDATE_CATALOGUE===true&&home_url()==='https://plum-giraffe-539524.hostingersite.com')$url=Signed_Packet::ORIGIN.'/apps/v1/channels/candidate.json';
+  if(defined('KIWE_APPS_CANDIDATE_CATALOGUE')&&KIWE_APPS_CANDIDATE_CATALOGUE===true&&home_url()==='https://plum-giraffe-539524.hostingersite.com')$url=Signed_Packet::ORIGIN.'/apps/v1/channels/workspace-candidate.json';
   $response=wp_safe_remote_get($url,['timeout'=>12,'redirection'=>0,'limit_response_size'=>self::MAX_BYTES+1,'headers'=>['Accept'=>'application/json'],'user-agent'=>'Kiwe-Apps/'.Runtime_Contract::VERSION]);
   $message='';$packet=null;
   if(is_wp_error($response))$message='App releases could not be reached. Installed Apps continue working.';

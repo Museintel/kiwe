@@ -170,6 +170,7 @@
               "theme",
               "ai",
               "notifications",
+              "comments",
               "ios-install",
               "games"
             ],
@@ -177,6 +178,36 @@
             "example": "<button data-dsa-open-module=\"cart\" type=\"button\">Cart</button>"
           }
         ]
+      },
+      "discussion": {
+        "status": "live",
+        "authority": "kiwe-native-discussion",
+        "coreMinimum": "8.0.0-rc.452",
+        "attributes": [
+          {
+            "attribute": "data-dsa-open-module",
+            "values": [
+              "comments"
+            ],
+            "purpose": "One contextual conversation: Comments on posts, Reviews on active Store products, or the configured public website-feedback page. Kiwe owns counts, identity, moderation and reactions.",
+            "example": "<button type=\"button\" data-dsa-open-module=\"comments\" data-dsa-discussion-id=\"current\" aria-label=\"Open conversation\">Comments</button>"
+          },
+          {
+            "attribute": "data-dsa-discussion-id",
+            "values": [
+              "current",
+              "site",
+              "native-public-post-id"
+            ],
+            "purpose": "Use current context, the configured website-feedback page, or a native published post ID. In native WP_Post loops use {kiwe_discussion_id}; in the kiwe_testimonials array loop use {kiwe_testimonial_target_id}. Never substitute a comment, user or taxonomy ID."
+          }
+        ],
+        "dynamicTags": [
+          "{kiwe_discussion_id}",
+          "{kiwe_discussion_count}",
+          "{kiwe_testimonial_target_id}"
+        ],
+        "badge": "Kiwe supplies the approved top-level count on attributed icons. Replies are excluded. Do not add polling or a parallel discussion engine."
       },
       "savedItems": {
         "status": "live",
@@ -337,11 +368,35 @@
           },
           {
             "attribute": "data-dsa-install-group",
-            "values": ["true"],
+            "values": [
+              "true"
+            ],
             "purpose": "Optional wrapper around install-only copy and attributed install buttons. Setup App hides this whole group when Show app install buttons is off; never wrap unrelated footer content.",
             "example": "<div data-dsa-install-group=\"true\"><button type=\"button\" data-dsa-install-pwa=\"ios\">iPhone app</button></div>"
           }
         ]
+      },
+      "forms": {
+        "status": "live",
+        "authority": "saved-native-bricks-form",
+        "coreMinimum": "8.0.0-rc.452",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-form",
+            "purpose": "Stable lowercase form slug, starting with a letter, up to 64 letters/digits/hyphens/underscores. Add to the native Bricks Form element, never trust a submitted field for this identity.",
+            "example": "<form data-kiwe-form=\"careers\" data-kiwe-form-label=\"Careers enquiry\"></form>"
+          },
+          {
+            "attribute": "data-kiwe-form-label",
+            "purpose": "Human-readable form name used in Daily Forms, automatic filters and private team notifications. Stored with the native page/form pair so later renaming cannot mislabel an old enquiry."
+          }
+        ],
+        "requires": [
+          "native Bricks submission storage",
+          "Save submission action on the form",
+          "deliberately configured native email action for email delivery"
+        ],
+        "privacy": "A saved enquiry is private and does not imply mail delivery or marketing consent. Do not retain passwords, upload bytes or credentials. The compiler enables native saving only for unambiguous ordinary enquiry forms."
       }
     },
     "candidateAttributes": [

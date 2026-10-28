@@ -136,7 +136,7 @@ final class Checkout_Service {
 		$contract = $this->contract( false );
 		$contract['errors']  = $errors['fields'];
 		$contract['notices'] = $errors['notices'];
-		do_action( 'dsa_checkout_draft_saved' );
+		do_action( 'dsa_checkout_draft_saved', $draft );
 
 		return [
 			'ok'       => true,

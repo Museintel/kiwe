@@ -1249,13 +1249,27 @@ function pk_issue_token( $purpose, $user_id = 0, $ttl = PK_CHALLENGE_TTL, $meta 
 	return $token;
 }
 
+/** Claim the same eligible challenge exactly once before authentication effects. */
+function pk_claim_challenge( $row ) {
+	global $wpdb;
+	if ( ! is_array( $row ) || empty( $row['id'] ) || empty( $row['purpose'] ) || empty( $row['token_hash'] ) ) return false;
+	$now = pk_now();
+	$claimed = $wpdb->query( $wpdb->prepare(
+		"UPDATE " . pk_t( 'challenges' ) . " SET used=1, used_at=%s WHERE id=%d AND purpose=%s AND token_hash=%s AND used=0 AND expires_at>%s",
+		$now,
+		(int) $row['id'],
+		sanitize_key( (string) $row['purpose'] ),
+		(string) $row['token_hash'],
+		$now
+	) );
+	return 1 === $claimed;
+}
+
 function pk_token_row( $purpose, $token, $consume = false ) {
 	global $wpdb;
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . pk_t( 'challenges' ) . " WHERE purpose=%s AND token_hash=%s AND used=0 AND expires_at>%s LIMIT 1", sanitize_key( $purpose ), pk_hmac( $token ), pk_now() ), ARRAY_A );
 	if ( ! $row ) return null;
-	if ( $consume ) {
-		$wpdb->update( pk_t( 'challenges' ), array( 'used' => 1, 'used_at' => pk_now() ), array( 'id' => (int) $row['id'] ) );
-	}
+	if ( $consume && ! pk_claim_challenge( $row ) ) return null;
 	$row['meta_arr'] = pk_meta_decode( $row['meta'] ?? '' );
 	return $row;
 }
@@ -1388,12 +1402,7 @@ function pk_complete_account_email_change( $user_id, $token, $code ) {
 		return new WP_Error( 'pk_email_change_stale', 'The account email changed after this code was requested. Start again.', array( 'status' => 409 ) );
 	}
 
-	$consumed = $wpdb->query( $wpdb->prepare(
-		"UPDATE " . pk_t( 'challenges' ) . " SET used=1, used_at=%s WHERE id=%d AND used=0",
-		pk_now(),
-		(int) $row['id']
-	) );
-	if ( 1 !== $consumed ) {
+	if ( ! pk_claim_challenge( $row ) ) {
 		return new WP_Error( 'pk_email_change_consumed', 'This verification code was already used.', array( 'status' => 409 ) );
 	}
 
@@ -2846,7 +2855,7 @@ function pk_rest_verify_email( WP_REST_Request $r ) {
 		pk_log( 'otp_failure', $user_id, array( 'factor' => 'email' ), 'warning' );
 		return new WP_REST_Response( array( 'ok' => false, 'message' => 'That code was not accepted.' ), 403 );
 	}
-	$wpdb->update( pk_t( 'challenges' ), array( 'used' => 1, 'used_at' => pk_now() ), array( 'id' => (int) $row['id'] ) );
+	if ( ! pk_claim_challenge( $row ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'That code could not be confirmed. It may have expired or already been used. Request a new code.' ), 409 );
 	$user = get_userdata( $user_id );
 	$verified_email = $user ? $user->user_email : '';
 	if ( 'counterpart_verify' === ( $flow_meta['mode'] ?? '' ) && 'email' === ( $flow_meta['counterpart_type'] ?? '' ) ) {
@@ -2939,7 +2948,7 @@ function pk_rest_verify_phone( WP_REST_Request $r ) {
 		pk_log( 'otp_failure', $user_id, array( 'factor' => 'phone' ), 'warning' );
 		return new WP_REST_Response( array( 'ok' => false, 'message' => 'That code was not accepted.' ), 403 );
 	}
-	$wpdb->update( pk_t( 'challenges' ), array( 'used' => 1, 'used_at' => pk_now() ), array( 'id' => (int) $row['id'] ) );
+	if ( ! pk_claim_challenge( $row ) ) return new WP_REST_Response( array( 'ok' => false, 'message' => 'That code could not be confirmed. It may have expired or already been used. Request a new code.' ), 409 );
 	$f = pk_factor( $user_id, 'phone' );
 	$fmeta = $f ? pk_meta_decode( $f['meta'] ?? '' ) : array();
 	$verified_phone = (string) ( $fmeta['phone'] ?? '' );

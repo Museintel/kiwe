@@ -1,0 +1,9 @@
+.kiwe-product-display{max-width:58rem;min-width:0;margin-block:var(--kiwe-space-lg)}
+.kiwe-product-display>p{max-width:72ch}
+.kiwe-product-display form>fieldset{border:0;padding:0;margin:0;min-width:0}
+.kiwe-product-display form>fieldset>legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.kiwe-product-display .kiwe-settings-section{display:grid;gap:var(--kiwe-space-md);padding-block:var(--kiwe-space-lg);border-bottom:1px solid var(--kiwe-color-border,currentColor)}
+.kiwe-product-display label{display:grid;gap:var(--kiwe-space-xs);min-width:0}
+.kiwe-product-display label>input:not([type=radio]):not([type=checkbox]){box-sizing:border-box;width:100%;min-width:0;min-height:2.75rem;font:inherit;color:inherit;background:var(--kiwe-color-surface);border:1px solid currentColor;border-radius:var(--kiwe-radius-sm,.5rem);padding:var(--kiwe-space-sm)}
+.kiwe-product-display form>button{margin-block:var(--kiwe-space-md);margin-inline-end:var(--kiwe-space-sm)}
+.kiwe-screen .kiwe-product-display .kiwe-choice-options input[type=radio]{appearance:auto;accent-color:var(--kiwe-color-brand)}

@@ -1,5 +1,9 @@
 # Bricks Integration Notes
 
+## Contextual Comments/Reviews — from Core451
+
+`{kiwe_discussion_id}` and `{kiwe_discussion_count}` resolve only an eligible native WordPress post context; a taxonomy/user loop cannot supply its ID. Use the ID tag with `data-dsa-open-module="comments"` and `data-dsa-discussion-id` on a real button/link. `{kiwe_icon_comments}` reuses packaged Dock artwork. The shared launcher supplies its own badge; replies are separate from approved root counts. Product reviews require Store1.1.7; ordinary post comments do not require Woo. [Authoring and strict compiler intent](../kiwe-ai-toolkit/contracts/discussion.md).
+
 ## Native Kiwe icons (16 October 2026, source candidate)
 
 The native Icon control's Dynamic Data chooser gains a **Kiwe icons** group using the same packaged SVG artwork as the Dock. Stable cart, notifications, wishlist and bookmark tags require no uploaded media, icon font, provider or enable switch. Normal Bricks styling and existing launcher/save attributes remain authoritative. [Icon vocabulary, cost and verification boundary](BRICKS-ICON-LIBRARY.md). Lab/browser acceptance and deployment are separate from this source addition.
@@ -197,3 +201,9 @@ Registry quality rules in the current build:
 - Headings, text, and images are marked `editable: true`.
 - Layout and unknown elements are marked `aiVisible: false`.
 - The registry remains read-only and does not alter Bricks post meta.
+
+## Live native testimonials and enquiry identity
+
+The existing `kiwe_testimonials` query now projects approved public comments selected by Website plan: pinned, team-hearted, or optionally liked. It reuses `{kiwe_testimonial_name}`, `{kiwe_testimonial_quote}` and the existing URL/source tags. Additional `source_type`, `source_title`, `likes`, `pinned`, `hearted` and `target_id` suffixes describe the genuine record; only real product ratings are available. Private/held/deleted records, staff replies and restricted ancestry are excluded. Source settings remain in Design Context even when SEO is off. The compiler retains one native array prototype and requires exact SiteGraph authority for a source-discussion launcher.
+
+The native Form Attributes carry `data-kiwe-form` and `data-kiwe-form-label`. The compiler maps the human name to `submissionFormName` and adds the existing Save submission action only for a clearly identified ordinary enquiry form. It never invents recipients or turns on mail; password/upload/credential-like forms require explicit review. Actual saved submissions drive private Daily Forms filters, badges and role-derived notifications.

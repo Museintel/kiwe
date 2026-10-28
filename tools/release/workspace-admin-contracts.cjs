@@ -23,7 +23,8 @@ const seoImport = service.match(/^use\s+(DSA\\SEO\\SEO_Refinement_Service);/m)?.
 const seoPath = seoImport && 'wp-content/mu-plugins/dsa/includes/' + seoImport.slice(4).replaceAll('\\', '/') + '.php';
 check(!service.includes('SEO_Refinement_Service::') || !!(seoPath && fs.existsSync(seoPath) && read(seoPath).includes('class SEO_Refinement_Service')), 'Shop Manager SEO task resolves its real PHP class');
 check(service.includes('Guest workspace') && service.includes('kiwe-guests'), 'Guest receives the protected contribution lane');
-check(!service.includes('PhoneKey_Bridge') && !service.includes('get_option('), 'client Home does not read technical channel configuration');
+const homeRendering=service.slice(service.indexOf('public function render_dashboard()'));
+check(!homeRendering.includes('PhoneKey_Bridge') && !service.includes('get_option('), 'client Home does not read technical channel configuration');
 check(!service.includes("'Site healthy'") && !service.includes("'Protected'") && !service.includes("'No action required'"), 'dashboard makes no unevidenced security or health claim');
 check(service.includes('Category_Workspace_Service::url()') && service.includes('Team_Workspace_Service::url()'), 'client task cards link the native category and team workspaces');
 check(css.includes('@media (max-width: 782px)') && css.includes('@media (max-width: 520px)'), 'workspace has tablet and phone layouts');

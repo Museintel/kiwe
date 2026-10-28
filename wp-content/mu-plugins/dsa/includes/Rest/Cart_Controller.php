@@ -187,25 +187,6 @@ final class Cart_Controller {
 			return new WP_Error( 'dsa_cart_out_of_stock', __( 'Product is out of stock.', 'dsa' ), [ 'status' => 409 ] );
 		}
 
-		if ( method_exists( $product, 'managing_stock' ) && $product->managing_stock() ) {
-			$stock = max( 0, (int) $product->get_stock_quantity() );
-
-			if ( $quantity > $stock ) {
-				return new WP_Error(
-					'dsa_cart_stock_limit',
-					sprintf(
-						/* translators: %d: stock quantity. */
-						__( 'Only %d in stock.', 'dsa' ),
-						$stock
-					),
-					[
-						'status'  => 409,
-						'max_qty' => $stock,
-					]
-				);
-			}
-		}
-
 		$trigger_id = $this->int_param( $request, [ 'triggerId', 'trigger_id' ] );
 		$requested_source = sanitize_key( (string) $request->get_param( 'source' ) );
 		$source = in_array( $requested_source, [ 'dsa_search', 'dsa_cart', 'dsa_cart_upsell' ], true ) ? $requested_source : ( $trigger_id ? 'dsa_cart_upsell' : 'dsa_cart' );
@@ -213,6 +194,12 @@ final class Cart_Controller {
 		$offer_product_id = $variation_id ?: $product_id;
 		$cart_item_data = $trigger_id ? $store->cart_item_data_for_upsell( $offer_product_id, $trigger_id ) : [];
 		$cart_item_data['dsa_source_context'] = $cart_item_data['dsa_source_context'] ?? ( 'dsa_search' === $source ? 'search_result' : ( $trigger_id ? 'cart_upsell' : 'dsa_cart' ) );
+
+		// The lower-level cart does not invoke this caller boundary. Match Woo's
+		// Store API arguments; native add_to_cart still owns stock and backorders.
+		if ( ! apply_filters( 'woocommerce_add_to_cart_validation', true, $product_id, $quantity, $variation_id, $variation_attributes, $cart_item_data ) ) {
+			return new WP_Error( 'dsa_cart_add_failed', $this->cart_error_message( __( 'Could not add product to cart.', 'dsa' ) ), [ 'status' => 409 ] );
+		}
 
 		if ( WC()->session && method_exists( WC()->session, 'set_customer_session_cookie' ) ) {
 			WC()->session->set_customer_session_cookie( true );
@@ -311,6 +298,9 @@ final class Cart_Controller {
 		$product_id = absint( $request->get_param( 'productId' ) ?: $request->get_param( 'product_id' ) );
 		$variation_id = absint( $request->get_param( 'variationId' ) ?: $request->get_param( 'variation_id' ) );
 
+		// Woo restores its session lazily through get_cart(), not get_cart_item().
+		// Resolve the real row before validating even a key-only request.
+		WC()->cart->get_cart();
 		$item = '' !== $key ? WC()->cart->get_cart_item( $key ) : null;
 		$key  = $item ? $key : $this->find_cart_item_key( $product_id, $variation_id );
 		$item = $item ?: ( $key ? WC()->cart->get_cart_item( $key ) : null );
@@ -336,19 +326,31 @@ final class Cart_Controller {
 		$calculations_before = did_action( 'woocommerce_after_calculate_totals' );
 
 		if ( 0 === $quantity ) {
-			WC()->cart->remove_cart_item( $key );
+			$updated = WC()->cart->remove_cart_item( $key );
 		} else {
+			if ( ! apply_filters( 'woocommerce_update_cart_validation', true, $key, $item, $quantity ) ) {
+				return new WP_Error( 'dsa_cart_update_failed', $this->cart_error_message( __( 'Could not update the cart.', 'dsa' ) ), [ 'status' => 409 ] );
+			}
+
 			$product = $item['data'] ?? null;
 
 			if ( is_object( $product ) ) {
-				if ( method_exists( $product, 'is_sold_individually' ) && $product->is_sold_individually() ) {
-					$quantity = min( 1, $quantity );
+				if ( $quantity > 1 && $product->is_sold_individually() ) {
+					return new WP_Error( 'dsa_cart_sold_individually', __( 'Only one of this product is allowed in the cart.', 'dsa' ), [ 'status' => 409 ] );
 				}
 
-				if ( method_exists( $product, 'managing_stock' ) && $product->managing_stock() ) {
-					$stock = max( 0, (int) $product->get_stock_quantity() );
+				if ( ! $product->is_in_stock() ) {
+					return new WP_Error( 'dsa_cart_out_of_stock', __( 'Product is out of stock.', 'dsa' ), [ 'status' => 409 ] );
+				}
 
-					if ( $quantity > $stock ) {
+				if ( $product->managing_stock() ) {
+					// set_quantity does not validate stock. Replace this row's quantity
+					// within Woo's stock-owner group, including sibling variations.
+					$quantities = WC()->cart->get_cart_item_quantities();
+					$other_quantity = max( 0, ( $quantities[ $product->get_stock_managed_by_id() ] ?? 0 ) - $item['quantity'] );
+
+					if ( ! $product->has_enough_stock( $other_quantity + $quantity ) ) {
+						$stock = (int) max( 0, floor( $product->get_stock_quantity() - $other_quantity ) );
 						return new WP_Error(
 							'dsa_cart_stock_limit',
 							sprintf(
@@ -365,7 +367,11 @@ final class Cart_Controller {
 				}
 			}
 
-			WC()->cart->set_quantity( $key, $quantity, true );
+			$updated = WC()->cart->set_quantity( $key, $quantity, true );
+		}
+
+		if ( false === $updated ) {
+			return new WP_Error( 'dsa_cart_update_failed', $this->cart_error_message( __( 'Could not update the cart.', 'dsa' ) ), [ 'status' => 409 ] );
 		}
 
 		$store = $this->store_analytics;

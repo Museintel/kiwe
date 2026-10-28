@@ -19,6 +19,27 @@ final class Site_Owner_Service {
 	public static function enabled(): bool { return ! empty( self::policy()['enabled'] ) && self::owner_id() > 0; }
 	public static function is_owner( ?int $id = null ): bool { return ( $id ?? get_current_user_id() ) === self::owner_id() && self::owner_id() > 0; }
 
+	/** Presentation choice only. Missing values preserve the existing mandatory workspace. */
+	public static function dashboard_mandatory(): bool { return false !== ( self::policy()['dashboardMandatory'] ?? true ); }
+	public static function can_manage_dashboard(): bool { return is_user_logged_in() && ( self::is_owner() || ( is_multisite() && is_super_admin() ) ); }
+	public static function dashboard_policy(): ?array {
+		if ( ! self::can_manage_dashboard() ) return null;
+		return [ 'schema'=>'kiwe.workspace-dashboard-policy.v1', 'mandatory'=>self::dashboard_mandatory(), 'expected'=>hash( 'sha256', wp_json_encode( self::policy() ) ) ];
+	}
+	public function update_dashboard( array $body ) {
+		if ( ! self::can_manage_dashboard() ) return new \WP_Error( 'kiwe_dashboard_owner', __( 'Only the Super Admin can change dashboard access.', 'dsa' ), [ 'status'=>403 ] );
+		if ( array_diff( array_keys( $body ), [ 'expected','mandatory' ] ) || ! is_bool( $body['mandatory'] ?? null ) || ! is_string( $body['expected'] ?? null ) ) return new \WP_Error( 'kiwe_dashboard_choice', __( 'Choose whether the Kiwe dashboard is mandatory.', 'dsa' ), [ 'status'=>400 ] );
+		if ( ! $this->ownership_lock( true ) ) return new \WP_Error( 'kiwe_dashboard_busy', __( 'Access settings are being changed. Reload and review.', 'dsa' ), [ 'status'=>409 ] );
+		try {
+			$snapshot = self::dashboard_policy();
+			if ( ! $snapshot || ! hash_equals( $snapshot['expected'], $body['expected'] ) ) return new \WP_Error( 'kiwe_dashboard_stale', __( 'Access settings changed. Reload and review before saving.', 'dsa' ), [ 'status'=>409 ] );
+			$policy = self::policy(); $policy['dashboardMandatory'] = $body['mandatory'];
+			self::store( $policy );
+			if ( self::policy() !== $policy ) return new \WP_Error( 'kiwe_dashboard_save', __( 'Dashboard access could not be confirmed. Reload and review.', 'dsa' ), [ 'status'=>500 ] );
+			return self::dashboard_policy();
+		} finally { $this->ownership_lock( false ); }
+	}
+
 	private static function store( array $policy ): void {
 		if ( is_multisite() ) update_network_option( null, self::OPTION, $policy );
 		else update_option( self::OPTION, $policy, false );

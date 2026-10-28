@@ -54,6 +54,7 @@ final class Design_Context_Binding_Service {
 			'commercePlan.shippingLocations.mode'=>'text', 'commercePlan.shippingLocations.countries'=>'list',
 		];
 		foreach ( [ 'commerce','blog','publication','physical_store','service_area' ] as $activity ) $extra['business.activities.'.$activity] = 'boolean';
+		foreach ( [ 'pinned','hearted','popular' ] as $source ) $extra['contentPlan.testimonialSources.'.$source] = 'boolean';
 		$fields = [];
 		foreach ( $preferred as $path=>$tag ) {
 			$kind = preg_match( '/(?:logo|logoInverse|image)$/i', $path ) ? 'image' : ( str_ends_with($tag,'_url') ? 'link' : 'text' );
@@ -131,7 +132,7 @@ final class Design_Context_Binding_Service {
 				'services'=>['query'=>'configured-native-post-type','fields'=>['title'=>'{post_title}','summary'=>'{post_excerpt}','description'=>'{post_content}','image'=>'{featured_image}','url'=>'{post_url}']],
 				'about.team.members'=>['query'=>'selected-native-users','fields'=>['id'=>'{kiwe_team_member_id}','name'=>'{kiwe_team_name}','title'=>'{kiwe_team_title}','bio'=>'{kiwe_team_bio}','image'=>'{kiwe_team_image}','linkedin'=>'{kiwe_team_linkedin_url}']],
 				'resources'=>['query'=>'public-selected-media','fields'=>['id'=>'{post_id}','title'=>'{post_title}','url'=>'{post_url}']],
-				'testimonials'=>['query'=>['objectType'=>'kiwe_testimonials'],'selectionRequired'=>true,'limit'=>100,'fieldsPrefix'=>'testimonials.item','availability'=>'testimonials.available','emptyPolicy'=>'no-results','authority'=>'existing native Feedback selection, comment approval and public parent visibility'],
+				'testimonials'=>['query'=>['objectType'=>'kiwe_testimonials'],'selectionRequired'=>false,'sourcePolicy'=>'contentPlan.testimonialSources','limit'=>100,'fieldsPrefix'=>'testimonials.item','availability'=>'testimonials.available','emptyPolicy'=>'no-results','authority'=>'native public approved feedback, eligible ancestry and configured pinned/team-hearted/popular sources'],
 				'brand.colors'=>['query'=>'semantic-role','fields'=>array_filter(self::fields(),static fn($key)=>str_starts_with($key,'brand.colors.'),ARRAY_FILTER_USE_KEY)],
 			]+$commerce['collections'],
 			'coverage'=>self::coverage($public_context),

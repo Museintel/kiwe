@@ -15,7 +15,7 @@ final class AI_Feature_Policy {
 	];
 	private const SITE_OPTIONS = [ 'seo'=>'kiwe_seo_workspace_enabled_v1','ai'=>'kiwe_ai_opt_in_global_v1' ];
 	public static function site_choices(): array {
-		return [ 'seo'=>\DSA\Apps\SEO_App_Service::enabled(),'ai'=>self::yes( get_option( self::SITE_OPTIONS['ai'],'1' ) ) ];
+		return [ 'seo'=>\DSA\Apps\SEO_App_Service::enabled(),'ai'=>\DSA\Apps\AI_App_Service::enabled() ];
 	}
 	public static function seo_enabled(): bool { return self::site_choices()['seo']; }
 	public static function analytics_enabled( array $ai ): bool {

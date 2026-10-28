@@ -5,5 +5,9 @@ const service=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Comment
 assert(service.includes('wp_set_comment_status')&&service.includes('Context_Selection_Service')&&service.includes("'number'=>self::PAGE_SIZE + 1"));
 assert(!/comment_author_email|CREATE TABLE|ALTER TABLE|wp_schedule|set_transient/.test(service));
 const ui=fs.readFileSync('tools/workspace-prototype/native-continuity.jsx','utf8');
-for(const text of ['Feedback types','Product reviews','Mark as testimonial','Testimonial selection never edits'])assert(ui.includes(text),text);
-console.log('Feedback UI uses bounded native moderation and the shared Design Context selector.');
+const cards=fs.readFileSync('tools/workspace-prototype/feedback-cards.jsx','utf8');
+for(const text of ['All contributions, newest first','feedbackFilters(data.hasReviews)','FeedbackCard','Testimonial selection never edits'])assert(ui.includes(text),text);
+for(const text of ['Eligible for live testimonials','item.likes','Mark reports reviewed'])assert(cards.includes(text),text);
+assert(!cards.includes('Mark as testimonial'),'Heart/pin and Website plan replace the obsolete manual selector');
+assert(!ui.includes('aria-label="Feedback types"'),'One timeline replaces the old separate type tabs');
+console.log('Unified Feedback uses bounded native moderation, likes, Store-aware filtering and the shared Design Context selector.');

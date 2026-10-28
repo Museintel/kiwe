@@ -58,6 +58,7 @@ require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Surface_Style_Contro
 require $root . '/wp-content/mu-plugins/dsa/includes/Access/Tag_Group_Service.php';
 require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Filter_Image_Service.php';
 require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Loop_Style_Service.php';
+require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Inline_Style_Service.php';
 require $root . '/wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php';
 use DSA\Bricks\Bricks_Integration as Integration;
 use DSA\Bricks\Surface_Style_Controls as Controls;

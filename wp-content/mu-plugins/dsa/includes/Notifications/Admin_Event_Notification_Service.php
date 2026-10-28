@@ -39,6 +39,13 @@ final class Admin_Event_Notification_Service {
 		if ( function_exists( 'WC' ) ) $this->register_store_sources();
 		else add_action( 'plugins_loaded', [ $this, 'register_store_sources' ], 30 );
 		add_action( 'comment_post', [ $this, 'queue_comment' ], 20, 3 );
+		add_action( 'kiwe_discussion_comment_committed', [ $this, 'discussion_committed' ], 20 );
+		add_action( 'transition_comment_status', [ $this, 'discussion_transition' ], 30, 3 );
+		add_action( 'kiwe_discussion_reaction_changed', [ $this, 'discussion_reaction' ], 20, 4 );
+		add_action( 'kiwe_form_submission_saved', [ $this, 'queue_form' ], 20 );
+		add_action( 'kiwe_app_first_observed', [ $this, 'queue_app' ], 20 );
+		add_action( 'kiwe_campaign_finished', [ $this, 'queue_campaign' ], 20 );
+		add_action( 'kiwe_campaign_status_notification', [ $this, 'dispatch_campaign' ] );
 		add_action( 'user_register', [ $this, 'account_registered' ], 30, 1 );
 		add_action( 'kiwe_identity_factor_verified', [ $this, 'account_verified' ], 30, 2 );
 		add_action( 'set_user_role', [ $this, 'account_role_changed' ], 30, 2 );
@@ -93,6 +100,14 @@ final class Admin_Event_Notification_Service {
 			$can_review = static fn( $actor ) => \DSA\Access\Team_Workspace_Service::can_review_account_for( (int) $actor, $object );
 			$native = array_values( array_filter( $native, $can_review ) );
 			$eligible = array_values( array_filter( $eligible, $can_review ) );
+		}
+		if ( in_array( $topic, [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) ) {
+			$admit = static fn( $actor ) => \DSA\Discussion\Discussion_Notifications::visible_for( (int) $actor, [ 'type'=>$topic, 'objectId'=>absint( $event['objectId'] ?? 0 ) ] );
+			$native = array_values( array_filter( $native, $admit ) ); $eligible = array_values( array_filter( $eligible, $admit ) );
+		}
+		if ( 'admin_app_activity' === $topic ) {
+			$admit = static fn( $actor ) => \DSA\PWA\App_Activity_Service::notification_visible_for( (int) $actor, absint( $event['objectId'] ?? 0 ) );
+			$native = array_values( array_filter( $native, $admit ) ); $eligible = array_values( array_filter( $eligible, $admit ) );
 		}
 		if ( ! $eligible ) return;
 
@@ -149,9 +164,23 @@ final class Admin_Event_Notification_Service {
 	}
 
 	public function queue_comment( $comment_id, $approved, $comment_data ): void {
+		if ( ! in_array( (string) $approved, [ '0','1' ], true ) ) return;
 		$comment_type = sanitize_key( (string) ( is_array( $comment_data ) ? ( $comment_data['comment_type'] ?? 'comment' ) : 'comment' ) );
 		if ( ! in_array( $comment_type, [ '', 'comment', 'review' ], true ) ) return;
+		if ( 'composer' === ( $comment_data['comment_meta']['_kiwe_discussion_source_v1'] ?? '' ) ) return;
 		$this->queue( 'new_comment', absint( $comment_id ) );
+		if ( '1' === (string) $approved ) $this->queue( 'discussion_reply', absint( $comment_id ) );
+	}
+	public function discussion_committed( int $id ): void {
+		$comment = get_comment( $id ); if ( ! $comment || ! in_array( (string) $comment->comment_approved, [ '0','1' ], true ) ) return;
+		$this->queue( 'new_comment', $id ); if ( '1' === (string) $comment->comment_approved ) $this->queue( 'discussion_reply', $id );
+	}
+	public function discussion_transition( string $new, string $old, $comment ): void {
+		if ( 'approved' !== $new || 'new' === $old || $new === $old || ! $comment instanceof \WP_Comment || ! in_array( $comment->comment_type, [ '', 'comment','review' ], true ) ) return;
+		$this->queue( 'discussion_status', (int) $comment->comment_ID ); if ( $comment->comment_parent ) $this->queue( 'discussion_reply', (int) $comment->comment_ID );
+	}
+	public function discussion_reaction( int $id, string $kind, bool $enabled, int $actor ): void {
+		if ( $enabled && in_array( $kind, [ 'like','heart','report' ], true ) ) $this->queue( 'discussion_' . $kind, $id );
 	}
 
 	public function queue_saved_cart( int $id ): void { $this->queue( 'abandoned_cart', $id ); }
@@ -339,6 +368,9 @@ final class Admin_Event_Notification_Service {
 	}
 
 	public function dispatch( string $event, int $object_id ): void {
+		if ( 'form_submission' === $event ) { $this->dispatch_form( $object_id ); return; }
+		if ( 'app_observed' === $event ) { $this->dispatch_app( $object_id ); return; }
+		if ( in_array( $event, [ 'discussion_reply','discussion_status','discussion_like','discussion_heart','discussion_report' ], true ) ) { \DSA\Discussion\Discussion_Notifications::dispatch( $event, $object_id ); return; }
 		if ( 'abandoned_cart' === $event ) { $this->dispatch_saved_cart( $object_id ); return; }
 		if ( 'new_order' === $event ) {
 			$this->dispatch_order( $object_id );
@@ -392,6 +424,8 @@ final class Admin_Event_Notification_Service {
 		if ( ! $this->preferences->topic_allowed_for_user( $id, $topic ) ) return false;
 		$object = absint( $item['objectId'] ?? 0 );
 		if ( 'admin_new_account' === $topic ) return \DSA\Access\Team_Workspace_Service::can_review_account_for( $id, $object );
+		if ( 'admin_app_activity' === $topic ) return \DSA\PWA\App_Activity_Service::notification_visible_for( $id, $object );
+		if ( in_array( $topic, [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) ) return \DSA\Discussion\Discussion_Notifications::visible_for( $id, $item );
 		if ( ! $object && in_array( $topic, [ 'admin_new_order','order_status' ], true ) && preg_match( '/^order-(\d+)(?:-|$)/', (string) ( $item['id'] ?? '' ), $match ) ) $object = (int) $match[1];
 		if ( 'admin_new_order' === $topic ) return $object > 0 && function_exists( 'wc_get_order' ) && wc_get_order( $object ) && user_can( $id, 'edit_shop_order', $object );
 		if ( 'order_status' === $topic ) { $order = $object && function_exists( 'wc_get_order' ) ? wc_get_order( $object ) : false; return $order && (int) $order->get_user_id() === $id; }
@@ -404,7 +438,13 @@ final class Admin_Event_Notification_Service {
 		if ( ! is_user_logged_in() || ! current_user_can( 'read' ) || ! current_user_can( 'kiwe_use_notifications' ) ) return 0;
 		$preferences = new Notification_Preference_Service( new \DSA\Settings(), new \DSA\Trust\Trust_Service() );
 		$items = get_user_meta( get_current_user_id(), self::INBOX_META, true ); $count = 0;
-		foreach ( array_slice( is_array( $items ) ? $items : [], 0, 40 ) as $item ) if ( is_array( $item ) && empty( $item['acknowledgedAt'] ) && $preferences->topic_allowed_for_user( get_current_user_id(), sanitize_key( (string) ( $item['type'] ?? '' ) ) ) && ( 'admin_new_account' !== ( $item['type'] ?? '' ) || \DSA\Access\Team_Workspace_Service::can_review_account_for( get_current_user_id(), absint( $item['objectId'] ?? 0 ) ) ) ) $count++;
+		foreach ( array_slice( is_array( $items ) ? $items : [], 0, 40 ) as $item ) {
+			if ( ! is_array( $item ) || ! empty( $item['acknowledgedAt'] ) || ! $preferences->topic_allowed_for_user( get_current_user_id(), sanitize_key( (string) ( $item['type'] ?? '' ) ) ) ) continue;
+			if ( 'admin_new_account' === ( $item['type'] ?? '' ) && ! \DSA\Access\Team_Workspace_Service::can_review_account_for( get_current_user_id(), absint( $item['objectId'] ?? 0 ) ) ) continue;
+			if ( 'admin_app_activity' === ( $item['type'] ?? '' ) && ! \DSA\PWA\App_Activity_Service::notification_visible_for( get_current_user_id(), absint( $item['objectId'] ?? 0 ) ) ) continue;
+			if ( in_array( $item['type'] ?? '', [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) && ! \DSA\Discussion\Discussion_Notifications::visible_for( get_current_user_id(), $item ) ) continue;
+			$count++;
+		}
 		return $count;
 	}
 
@@ -453,8 +493,27 @@ final class Admin_Event_Notification_Service {
 		set_transient( $key, 1, HOUR_IN_SECONDS );
 		$scheduled = wp_schedule_single_event( time() + 3, 'dsa_admin_notification_event', [ $event, $object_id ] );
 		if ( false === $scheduled || is_wp_error( $scheduled ) ) {
+			if ( in_array( $event, [ 'new_comment','form_submission','app_observed' ], true ) || str_starts_with( $event, 'discussion_' ) ) { delete_transient( $key ); do_action( 'kiwe_discussion_notification_queue_unavailable', $event, $object_id ); return; }
 			$this->dispatch( $event, $object_id );
 		}
+	}
+	public function queue_form( int $id ): void { $this->queue( 'form_submission', $id ); }
+	public function queue_app( int $id ): void { $this->queue( 'app_observed', $id ); }
+	private function dispatch_app( int $id ): void {
+		$this->dispatch_event( 'admin_app_activity', [ 'id'=>'app-observed-' . $id, 'objectId'=>$id, 'kicker'=>__( 'App', 'dsa' ), 'title'=>__( 'New app activity', 'dsa' ), 'message'=>__( 'A device first reported an app installation or opening. Review its observed activity and notification choices in Daily → App.', 'dsa' ), 'actionLabel'=>__( 'Review activity', 'dsa' ), 'url'=>\DSA\Access\App_Workspace_Service::url( 'activity' ) ] );
+	}
+	public function queue_campaign( array $summary ): void {
+		$id = $summary['id'] ?? ''; if ( ! is_string( $id ) || ! Notification_Campaign_Service::notification_status( $id ) ) return;
+		if ( ! wp_next_scheduled( 'kiwe_campaign_status_notification', [ $id ] ) ) wp_schedule_single_event( time() + 3, 'kiwe_campaign_status_notification', [ $id ] );
+	}
+	public function dispatch_campaign( string $id ): void {
+		$status = Notification_Campaign_Service::notification_status( $id ); if ( ! $status ) return;
+		$this->dispatch_event( 'admin_campaign_status', [ 'id'=>'campaign-status-' . $id, 'kicker'=>__( 'Campaigns', 'dsa' ), 'title'=>'cancelled' === $status ? __( 'Campaign cancelled', 'dsa' ) : __( 'Campaign finished', 'dsa' ), 'message'=>__( 'Review the campaign’s recorded delivery results in Daily → Campaigns. A completed batch does not mean every recipient received a message.', 'dsa' ), 'actionLabel'=>__( 'Review results', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-notifications&view=campaigns' ) ] );
+	}
+	private function dispatch_form( int $id ): void {
+		$record = \DSA\Access\Form_Workspace_Service::notification_record( $id );
+		if ( ! $record ) return;
+		$this->dispatch_event( 'admin_form_submission', [ 'id'=>'form-submission-' . $id, 'objectId'=>$id, 'kicker'=>__( 'Forms', 'dsa' ), 'title'=>__( 'New form enquiry', 'dsa' ), 'message'=>sprintf( __( 'A message arrived through %s. Open Daily Forms to read it privately.', 'dsa' ), $record['title'] ), 'actionLabel'=>__( 'Read message', 'dsa' ), 'url'=>add_query_arg( 'submission', $id, \DSA\Access\Form_Workspace_Service::url() ) ] );
 	}
 
 	private function dispatch_order( int $order_id ): void {
@@ -488,7 +547,7 @@ final class Admin_Event_Notification_Service {
 
 	private function dispatch_comment( int $comment_id ): void {
 		$comment = get_comment( $comment_id );
-		if ( ! $comment ) return;
+		if ( ! $comment || ! in_array( (string) $comment->comment_approved, [ '0','1' ], true ) ) return;
 		$post_title = get_the_title( (int) $comment->comment_post_ID );
 		$status = wp_get_comment_status( $comment_id );
 		$pending = 'unapproved' === $status || 'hold' === $status;
@@ -496,7 +555,7 @@ final class Admin_Event_Notification_Service {
 		$body = $post_title
 			? sprintf( __( 'A comment arrived on "%s". Tap to review it.', 'dsa' ), wp_strip_all_tags( $post_title ) )
 			: __( 'A comment arrived. Tap to review it.', 'dsa' );
-		$url = admin_url( 'comment.php?action=editcomment&c=' . $comment_id );
+		$url = add_query_arg( 'feedback', $comment_id, \DSA\Access\Continuity_App_Service::feedback_url() );
 		$event_id = 'comment-' . $comment_id;
 		$inbox = [
 			'id' => $event_id,
@@ -509,6 +568,7 @@ final class Admin_Event_Notification_Service {
 		];
 		$this->dispatch_event( 'admin_new_comment', [
 			'id' => $event_id,
+			'objectId' => $comment_id,
 			'kicker' => (string) $inbox['kicker'],
 			'title' => $title,
 			'message' => $body,

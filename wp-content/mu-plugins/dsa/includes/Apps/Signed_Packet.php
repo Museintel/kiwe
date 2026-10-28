@@ -43,9 +43,9 @@ final class Signed_Packet {
  public static function release(array $value): bool {
   $keys=['schema','id','version','channel','coreApi','requiresPhp','requiresWp','requiresWoo','packageUrl','sha256','bytes','packageManifestSha256','publishedAt','keyId','signature'];
   if (count($value)!==count($keys)||array_diff(array_keys($value),$keys)||($value['schema']??'')!==self::RELEASE_SCHEMA) return false;
-  if (!in_array($value['id']??'',Runtime_Contract::IDS,true)||!is_string($value['version']??null)||!Runtime_Contract::version($value['version'])||($value['coreApi']??null)!==1||!in_array($value['channel']??'',['stable','candidate'],true)) return false;
+  if (!in_array($value['id']??'',Runtime_Contract::IDS,true)||!is_string($value['version']??null)||!Runtime_Contract::version($value['version'])||!in_array($value['coreApi']??null,[1,Runtime_Contract::API],true)||!in_array($value['channel']??'',['stable','candidate'],true)) return false;
   foreach(['requiresPhp','requiresWp']as$key)if(!is_string($value[$key]??null)||preg_match('/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/D',$value[$key])!==1)return false;
-  if(!is_string($value['requiresWoo']??null)||($value['id']==='seo'?$value['requiresWoo']!=='':preg_match('/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/D',$value['requiresWoo'])!==1))return false;
+  if(!is_string($value['requiresWoo']??null)||($value['id']!=='store'?$value['requiresWoo']!=='':preg_match('/^[0-9]+\.[0-9]+(?:\.[0-9]+)?$/D',$value['requiresWoo'])!==1))return false;
   foreach(['sha256','packageManifestSha256']as$key)if(!is_string($value[$key]??null)||preg_match('/^[a-f0-9]{64}$/D',$value[$key])!==1)return false;
   if(!is_int($value['bytes']??null)||$value['bytes']<1||$value['bytes']>16777216||!self::timestamp($value['publishedAt']??null)||!is_string($value['packageUrl']??null)||!self::url($value['packageUrl']))return false;
   $expected='/apps/v1/releases/'.$value['id'].'/'.$value['version'].'/kiwe-'.$value['id'].'.zip';
@@ -53,12 +53,12 @@ final class Signed_Packet {
  }
  public static function catalogue(array $value, ?int $now=null): bool {
   $keys=['schema','channel','coreApi','publishedAt','expiresAt','apps','revoked','keyId','signature'];
-  if(count($value)!==count($keys)||array_diff(array_keys($value),$keys)||($value['schema']??'')!==self::CATALOG_SCHEMA||($value['coreApi']??null)!==1||!in_array($value['channel']??'',['stable','candidate'],true))return false;
+  if(count($value)!==count($keys)||array_diff(array_keys($value),$keys)||($value['schema']??'')!==self::CATALOG_SCHEMA||!in_array($value['coreApi']??null,[1,Runtime_Contract::API],true)||!in_array($value['channel']??'',['stable','candidate'],true))return false;
   if(!self::timestamp($value['publishedAt']??null)||!self::timestamp($value['expiresAt']??null)||!is_array($value['apps']??null)||count($value['apps'])>count(Runtime_Contract::IDS)||!is_array($value['revoked']??null)||!array_is_list($value['revoked'])||count($value['revoked'])>32)return false;
   $now??=time();$published=strtotime($value['publishedAt']);$expires=strtotime($value['expiresAt']);
   if($published>$now+300||$expires<=$now||$expires<=$published||$expires-$published>604800)return false;
   foreach($value['apps']as$id=>$release)if(!is_array($release)||!self::release($release)||$release['id']!==$id||$release['channel']!==$value['channel'])return false;
-  foreach($value['revoked']as$entry)if(!is_string($entry)||preg_match('/^(?:seo|store)@[0-9]+\.[0-9]+\.[0-9]+(?:-(?:rc|beta|alpha)\.[1-9][0-9]*)?$/D',$entry)!==1)return false;
+  foreach($value['revoked']as$entry)if(!is_string($entry)||preg_match('/^(?:seo|store|guest|ai|sitegraph)@[0-9]+\.[0-9]+\.[0-9]+(?:-(?:rc|beta|alpha)\.[1-9][0-9]*)?$/D',$entry)!==1)return false;
   return self::verify($value);
  }
 }

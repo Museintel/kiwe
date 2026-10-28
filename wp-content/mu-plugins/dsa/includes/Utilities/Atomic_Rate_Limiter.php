@@ -49,7 +49,8 @@ final class Atomic_Rate_Limiter {
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', self::CRON_HOOK );
 	}
 
-	public static function allow( string $bucket, int $limit, int $window_seconds = 60 ): bool {
+	/** Existing callers retain fail-open behavior; public discussion writes opt into fail-closed admission. */
+	public static function allow( string $bucket, int $limit, int $window_seconds = 60, bool $fail_open = true ): bool {
 		$limit = max( 1, $limit );
 		$window_seconds = max( 1, min( DAY_IN_SECONDS, $window_seconds ) );
 		$hash = hash_hmac( 'sha256', substr( $bucket, 0, 500 ), wp_salt( 'nonce' ) );
@@ -60,13 +61,13 @@ final class Atomic_Rate_Limiter {
 			wp_cache_add( $key, 0, self::CACHE_GROUP, $window_seconds );
 			$count = wp_cache_incr( $key, 1, self::CACHE_GROUP );
 			Runtime_Profiler::finish( 'rate_limit.object_cache', $profile, false !== $count );
-			return false === $count || (int) $count <= $limit;
+			return false === $count ? $fail_open : (int) $count <= $limit;
 		}
 
 		if ( ! self::$installed ) self::maybe_install();
 		if ( ! self::$installed ) {
 			Runtime_Profiler::finish( 'rate_limit.storage_unavailable', $profile, false );
-			return true;
+			return $fail_open;
 		}
 
 		global $wpdb;
@@ -84,9 +85,10 @@ final class Atomic_Rate_Limiter {
 			$hash, $now, $expires, current_time( 'mysql' ), $reset_before, $reset_before
 		);
 		$written = false !== $wpdb->query( $sql );
-		$count = $written ? (int) $wpdb->get_var( $wpdb->prepare( "SELECT counter FROM {$table} WHERE bucket_hash=%s", $hash ) ) : 0;
+		$value = $written ? $wpdb->get_var( $wpdb->prepare( "SELECT counter FROM {$table} WHERE bucket_hash=%s", $hash ) ) : null;
+		$count = null !== $value ? (int) $value : 0;
 		Runtime_Profiler::finish( 'rate_limit.sql', $profile, $written );
-		return ! $written || $count <= $limit;
+		return ! $written || null === $value || $wpdb->last_error ? $fail_open : $count <= $limit;
 	}
 
 	public static function cleanup(): void {

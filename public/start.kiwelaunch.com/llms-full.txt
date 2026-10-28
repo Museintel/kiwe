@@ -15,8 +15,8 @@ Never substitute kiwilaunch.com or another similarly named domain.
 
 # SEAM Start
 
-Contract version: `9.7`
-Updated: `2026-10-21`
+Contract version: `9.9`
+Updated: `2026-10-28`
 
 Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, verify and use an intact attached Start kit; otherwise read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context at the same version. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
 
@@ -65,8 +65,8 @@ Public Design Context facts use the attached `dynamicBindings` catalogue. The vi
 {
   "schema": "kiwe.command-manifest.v2",
   "productName": "SEAM",
-  "contractVersion": "9.7",
-  "updated": "2026-10-21",
+  "contractVersion": "9.9",
+  "updated": "2026-10-28",
   "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
   "authority": {
     "creative": "The user's design conversation owns art direction. /ideate never authorizes redesign by itself and must resolve final, enhancement or redesign authority before creative work.",
@@ -310,7 +310,7 @@ This command approves only the current identified preview for a design-preservin
 2. Use the full Framework role/flow/tone/state vocabulary, class vocabulary, token catalog and variable aliases as a reference. Do not insert all library entries into a page. Replace repeated matching values with official variables only when meanings and values match. Declare project variables for distinctive art direction. Preserve appearance, typography, spacing, assets, accessible labels, responsive layouts and behaviour. Do not add a house style, force components into unsuitable primitives, invent variables or create duplicate runtime authority. Preview-only values must be isolated from production token profiles; do not mask missing production variables with CSS fallbacks.
 3. Use native Bricks Theme Styles, global variables/palette and reusable native classes before element exceptions. Keep CSS only for cases where calibrated native controls cannot represent the source. The deterministic compiler still performs actual native conversion. Request `frameworkMode: true` in `authoring/seam-handoff.json`; the compiler generates and verifies its final Framework Profile and dependent native templates. Browser AI does not emit production Bricks JSON or claim native import succeeded.
 4. Express dynamic fields, complete current-record image/alt/price/link/save bindings, repeat prototypes and query types through the closed `kiwe.seam-map.v1` contract. Use current SiteGraph `dynamicBindings`, configured group/pair selectors and target Bricks context. Record query loops, interactions, conditions, template boundaries and native elements only with exact admitted declarative settings. Preserve unmarked static content. Registered availability is not proof that an automatic mapping or the target site supports it. Missing support is an explicit blocker, never a guessed control or executable payload.
-5. Add the smallest actual Kiwe action attributes for cart, search, saved items, notifications, identity and other relevant journeys. Use the reference's canonical name/value. Keep native links as fallbacks. Reuse Kiwe handlers; never duplicate their fetches, badges, cart state, authentication or notification stores. Never bake a sample product ID into a query-loop action. Forms must declare the native form action, dynamic business-email routing and private saved-submission requirement; no real delivery in a preview.
+5. Add the smallest actual Kiwe action attributes for cart, search, saved items, notifications, identity and other relevant journeys. Use the reference's canonical name/value. Follow `contracts/discussion.md` for contextual Comments/Reviews and its guarded `discussionTarget` launcher stitch. Keep native links as fallbacks. Reuse Kiwe handlers; never duplicate their fetches, badges, cart state, authentication or notification stores. Never bake a sample product ID into a query-loop action. Forms must declare the native form action, dynamic business-email routing and private saved-submission requirement; no real delivery in a preview.
 Before closure, reconcile every planned native page/template with the real assigned route and its boundary, including category archives and Checkout. Apply the shared storefront rules to header launchers, product purchase/save/weight slots and post bookmarks. Preserve a single native transaction owner and use distinct native wrapper identities. Record missing coverage as a gap; do not omit a difficult surface and call the handoff complete.
 
 6. Recompute source guards, source hashes, exact SiteGraph revision/hash/pointers and marker closure after all transformations. Validate the map and record desktop/phone before/after evidence with unchanged viewport provenance. Reject lost content, missing assets, broken links, errors, overflow, mismatched record slots, regressions or incomplete closure. Unsupported CSS and intentional differences need an explicit list. Do not call an unverified comparison passed.
@@ -318,6 +318,10 @@ Before closure, reconcile every planned native page/template with the real assig
 Deliver `accepted/`, `seam-source/`, assets and `authoring/seam-handoff.json` (`kiwe.seam-source-handoff.v1`) containing `frameworkMode: true`, the accepted/transformed inventory, library release and fetched resource hashes, map path, native intent coverage, explicit gaps and actual test receipts. Hand `seam-source/` to seam.kiwe for deterministic conversion with Framework enabled. The final native export, target calibration, import and live approval remain separate steps. No command can make an unsupported feature safe by claiming complete coverage.
 
 Apply the shared design/dependency rules: visual quality has priority, equivalent consolidation preserves page/scoped values and script-owned variables, and every referenced local asset must have real supplied bytes. Any AI design/provenance notes are advisory. The compiler derives the final native Profile, hashes, asset import plan and guarded style/media bindings; AI must not manufacture those artifacts. The target Kiwe Framework journey reviews shared changes, registers supported Media and stages native drafts. Package validation is not native or browser acceptance, and it does not grant live approval.
+
+### Real conversations and forms
+
+Use the current SiteGraph discussion and forms contracts. The single Comments launcher follows post, product or configured website context; the testimonial collection uses its own documented target tag. Testimonials are approved public native records, never invented endorsements. Every enquiry form has a stable `data-kiwe-form` slug and `data-kiwe-form-label` on its native Form element. Native saving, email delivery and marketing consent are separate; attach only the actions actually configured and report missing prerequisites.
 
 
 --- /convert /bricks ---
@@ -485,6 +489,12 @@ AI authors source and advisory design/asset intent. It does not author the final
 The target's reviewed Kiwe Framework import registers supported real Media, reuses verified exact content hashes, merges compatible native variables/classes/palettes/Theme Styles and remaps guarded references into draft templates. Shared style changes can affect existing pages and must appear in that review. Conflicts, unverified assets or unsupported native adapters stay visible. No source command or package declaration grants publishing or deployment approval. Native readback and browser review remain separate; recovery preserves newer edits and reusable Media.
 
 ## Customer copy and progressive behaviour
+
+For applicable posts/products, follow `contracts/discussion.md` for the single native Comments/Reviews launcher and current-record target. Require current SiteGraph evidence; website feedback is optional. Preserve the design and never generate another form, authentication engine, fake review or badge counter.
+
+Every business-enquiry form needs a stable lowercase `data-kiwe-form` slug such as `contact`, `careers` or `trade-enquiry`, plus a human `data-kiwe-form-label` such as `Careers enquiry`. Use different slugs for different purposes and reuse a slug only for the same intended form. These are ordinary attributes; do not create a separate JavaScript forms engine, hidden naming fields or a tracking request. SiteGraph's `kiwe.forms` / Design Context's `forms` describes the saved-native-form contract. Bricks owns submission validation, storage and email. Kiwe reads identity from saved Bricks settings, ignores visitor-supplied labels as authority, preserves the form's identity with its native submission and automatically offers source-form filters in Daily → Forms.
+
+The current compiler preserves those attributes and the native submission name. For an identity-marked ordinary enquiry form with business fields it emits Bricks' Save submission action; native Bricks storage must be configured and verified in the import handoff. Password, hidden/credential and file forms require explicit storage/privacy review and do not automatically gain retention. Authentication, checkout, search and campaign-consent journeys keep their existing native owners. Configure an email action deliberately with the proven public business-email tag where intended. Never invent a recipient or pretend a preview sent an email. Test both private native submission and actual configured email outcome separately; a saved message is not a delivery receipt. Keep enquiry answers, contacts and attachments out of public Design Context, SiteGraph, prompts and logs. Form submission never implies marketing consent.
 
 Write the storefront for its customers. Put source provenance, uncertainty audits, capture timestamps, compiler terminology and unverified export details in `authoring/`, not product merchandising. Keep useful customer information: actual availability, meaningful ingredient/allergen advice, ordinary source attribution and a clear preview-only notice where an action is simulated. Do not replace unsupported claims with technical warnings scattered across the design.
 

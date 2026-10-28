@@ -35,6 +35,8 @@ try{
  $options['dsa_abandoned_cart_db_version']='4';$v4=Store::inspect($query,$tables,$prefix);$check($v4['options']['dsa_abandoned_cart_db_version']==='4','exact native schema-4 journey and encrypted phone columns are supported');
  $options['dsa_abandoned_cart_db_version']='3';$reject(static fn()=>Store::inspect($query,$tables,$prefix),'schema version must agree with the exact native cart columns');
  $options['dsa_abandoned_cart_db_version']='4';$writes=[];Store::apply($query,$tables,$prefix,$v4,str_repeat('d',64));$check((bool)array_filter($writes,static fn($sql)=>str_contains($sql,'contact_phone_enc=NULL')),'restoration removes the new encrypted phone authority');$marker=null;$writes=[];
+ $tables['dsa_abandoned_carts']['columns'][]='checkout_snapshot_enc';$ddls[$prefix.'dsa_abandoned_carts']=str_replace(',PRIMARY KEY',',`checkout_snapshot_enc` longtext NULL,PRIMARY KEY',$ddls[$prefix.'dsa_abandoned_carts']);
+ $detailsProfile=Store::inspect($query,$tables,$prefix);$writes=[];Store::apply($query,$tables,$prefix,$detailsProfile,str_repeat('e',64));$check((bool)array_filter($writes,static fn($sql)=>str_contains($sql,'checkout_snapshot_enc=NULL')),'Copied encrypted checkout snapshots are invalidated with contact authority');$marker=null;$writes=[];
  $tables['dsa_abandoned_carts']=$cartTable;$ddls[$prefix.'dsa_abandoned_carts']=$cartDdl;$options['dsa_abandoned_cart_db_version']='3';
 
  $options['active_plugins']=serialize([0=>'unrelated/provider.php',4=>'woocommerce/woocommerce.php']);$check(Store::inspect($query,$tables,$prefix)['connected'],'native sparse plugin indexes after WordPress deactivation remain supported');$options['active_plugins']=serialize(['woocommerce/woocommerce.php']);

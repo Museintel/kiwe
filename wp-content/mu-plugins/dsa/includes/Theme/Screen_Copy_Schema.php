@@ -18,6 +18,17 @@ final class Screen_Copy_Schema {
 		$has_commerce = function_exists( 'wc_get_product' ) && post_type_exists( 'product' );
 
 		return [
+			'comments' => [
+				'label'=>__( 'Comments and reviews', 'dsa' ),
+				'description'=>__( 'Conversation presentation only. Native comments, reviews, identity, counts and moderation remain Kiwe/WordPress/Store-owned.', 'dsa' ),
+				'fields'=>[
+					'label'=>self::field( __( 'Dock/module label', 'dsa' ), __( 'Comments', 'dsa' ) ),
+					'eyebrow'=>self::field( __( 'Eyebrow', 'dsa' ), __( 'Conversation', 'dsa' ) ),
+					'title'=>self::field( __( 'Optional heading', 'dsa' ), __( 'Uses Comments, Reviews or Site feedback when blank', 'dsa' ) ),
+					'composerTitle'=>self::field( __( 'Composer heading', 'dsa' ), __( 'Join the conversation', 'dsa' ) ),
+					'emptyText'=>self::field( __( 'Empty conversation', 'dsa' ), __( 'Be the first to join the conversation.', 'dsa' ), 220 ),
+				],
+			],
 			'profile'       => [
 				'label'       => __( 'Profile', 'dsa' ),
 				'description' => __( 'Account/profile surface labels. User, orders, addresses, downloads, and auth state remain Kiwe/Woo/WordPress-owned.', 'dsa' ),

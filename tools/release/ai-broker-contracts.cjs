@@ -7,7 +7,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const broker = read('wp-content/mu-plugins/dsa/includes/AI/AI_Broker_Service.php');
 const provider = read('wp-content/mu-plugins/dsa/includes/AI/AI_Provider_Service.php');
 const wp7 = read('wp-content/mu-plugins/dsa/includes/WP7/AI_Client_Service.php');
-const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php');
+const admin = read('wp-content/mu-plugins/dsa/includes/Admin/Admin.php') + read('wp-content/mu-plugins/dsa/includes/Access/views/sitegraph-workspace.php') + read('wp-content/mu-plugins/dsa/includes/Access/views/ai-workspace.php');
 const securetrack = read('wp-content/mu-plugins/dsa/includes/Secure/securetrack-site-brain.php');
 const securetrackAdmin = read('wp-content/mu-plugins/dsa/includes/Secure/securetrack-admin-core.php');
 const securetrackPolicy = read('wp-content/mu-plugins/dsa/includes/Secure/SecureTrack_Settings_Policy.php');

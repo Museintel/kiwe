@@ -234,9 +234,10 @@ final class Push_Service {
 		foreach ( array_slice( (array) get_option( 'dsa_push_active_jobs', [] ), 0, 20 ) as $job_id ) {
 			$job_id = preg_replace( '/[^a-z0-9]/', '', strtolower( (string) $job_id ) );
 			$job = get_option( 'dsa_push_job_' . $job_id, [] );
-			if ( ! is_array( $job ) || empty( $job ) || absint( $job['created'] ?? 0 ) < time() - 2 * DAY_IN_SECONDS ) {
-				delete_option( 'dsa_push_job_' . $job_id );
-				$this->forget_job( $job_id );
+			if(!is_array($job)||empty($job)){if(!$job)$this->forget_job($job_id);continue;}
+			if(absint($job['created']??0)<time()-2*DAY_IN_SECONDS){
+				$worker=Worker_Job::claim('dsa_push_job_'.$job_id);if(!$worker)continue;
+				try{if(absint($worker->data()['created']??0)<time()-2*DAY_IN_SECONDS&&$worker->remove())$this->forget_job($job_id);}finally{$worker->release();}
 			}
 		}
 	}
@@ -294,8 +295,7 @@ final class Push_Service {
 		$this->remember_job( $job_id );
 		$scheduled = wp_schedule_single_event( time() + 1, 'dsa_push_delivery_batch', [ $job_id ], true );
 		if ( false === $scheduled || is_wp_error( $scheduled ) ) {
-			delete_option( 'dsa_push_job_' . $job_id );
-			$this->forget_job( $job_id );
+			if(Worker_Job::discard('dsa_push_job_'.$job_id,$job))$this->forget_job($job_id);
 			return [ 'ok' => false, 'message' => __( 'WordPress could not schedule this push campaign. Check cron health.', 'dsa' ), 'sent' => 0, 'failed' => 0 ];
 		}
 		return [ 'ok' => true, 'queued' => true, 'jobId' => $job_id, 'message' => __( 'Push campaign queued in shared-host-safe batches of five devices.', 'dsa' ), 'sent' => 0, 'failed' => 0 ];
@@ -303,59 +303,52 @@ final class Push_Service {
 
 	public function run_delivery_batch( string $job_id ): void {
 		$job_id = preg_replace( '/[^a-z0-9]/', '', strtolower( $job_id ) );
-		$lock = $this->acquire_job_lock( $job_id, 60 );
-		if ( ! $lock ) return;
+		$worker=Worker_Job::claim('dsa_push_job_'.$job_id);
+		if(!$worker)return;
 		try {
-			$this->process_delivery_batch( $job_id );
+			$this->process_delivery_batch( $job_id, $worker );
 		} finally {
-			$this->release_job_lock( $lock );
+			$worker->release();
+			if(get_option('dsa_push_job_'.$job_id,[])&&!wp_next_scheduled('dsa_push_delivery_batch',[$job_id]))wp_schedule_single_event(time()+5,'dsa_push_delivery_batch',[$job_id],true);
 		}
 	}
 
-	private function process_delivery_batch( string $job_id ): void {
+	private function process_delivery_batch( string $job_id, Worker_Job $worker ): void {
 		global $wpdb;
 		$option = 'dsa_push_job_' . $job_id;
-		$job = get_option( $option, [] );
+		$job = $worker->data();
 		if ( ! is_array( $job ) || empty( $job ) ) {
 			$this->forget_job( $job_id );
 			return;
 		}
+		if(($job['status']??'')==='complete'){$this->finish_delivery($worker,$job_id,$job);return;}
 		$rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT * FROM {$this->table()} WHERE status='active' AND id>%d ORDER BY id ASC LIMIT 5",
 			absint( $job['after_id'] ?? 0 )
 		), ARRAY_A );
-		$rows = is_array( $rows ) ? $rows : [];
+		if(!is_array($rows)||$wpdb->last_error)return;
 		if ( empty( $rows ) ) {
-			update_option( 'dsa_push_last_job', [ 'jobId' => $job_id, 'sent' => absint( $job['sent'] ?? 0 ), 'failed' => absint( $job['failed'] ?? 0 ), 'completed' => time() ], false );
-			delete_option( $option );
-			$this->forget_job( $job_id );
+			$job['status']='complete';$job['completed']=time();
+			if($worker->save($job))$this->finish_delivery($worker,$job_id,$job);
 			return;
 		}
-		$result = $this->send_rows( $rows, (string) ( $job['title'] ?? '' ), (string) ( $job['message'] ?? '' ), (string) ( $job['url'] ?? '' ) );
-		$job['sent'] = absint( $job['sent'] ?? 0 ) + absint( $result['sent'] ?? 0 );
-		$job['failed'] = absint( $job['failed'] ?? 0 ) + absint( $result['failed'] ?? 0 );
-		$last = end( $rows );
-		$job['after_id'] = absint( is_array( $last ) ? ( $last['id'] ?? 0 ) : 0 );
-		update_option( $option, $job, false );
+		foreach($rows as$row){
+			$job['after_id']=absint($row['id']??0);$job['unknown']=absint($job['unknown']??0)+1;
+			if(!$worker->save($job))return;
+			try{$result=$this->send_rows([$row],(string)($job['title']??''),(string)($job['message']??''),(string)($job['url']??''),['workerGuard'=>[$worker,'owns']]);}catch(\Throwable){$result=['unknown'=>1];}
+			if(empty($result['unknown'])){--$job['unknown'];$job['sent']=absint($job['sent']??0)+absint($result['sent']??0);$job['failed']=absint($job['failed']??0)+absint($result['failed']??0);}
+			if(!$worker->save($job))return;
+		}
 		$scheduled = wp_schedule_single_event( time() + 5, 'dsa_push_delivery_batch', [ $job_id ], true );
 		if ( false === $scheduled || is_wp_error( $scheduled ) ) {
-			update_option( 'dsa_push_last_job', [ 'jobId' => $job_id, 'sent' => $job['sent'], 'failed' => $job['failed'], 'stalled' => time() ], false );
+			$job['status']='stalled';$worker->save($job);
 		}
 	}
 
-	private function acquire_job_lock( string $job_id, int $ttl ): string {
-		$key = 'dsa_push_job_lock_' . sanitize_key( $job_id );
-		$expires = time() + max( 15, $ttl );
-		if ( add_option( $key, $expires, '', false ) ) return $key;
-		if ( absint( get_option( $key, 0 ) ) < time() ) {
-			delete_option( $key );
-			if ( add_option( $key, $expires, '', false ) ) return $key;
-		}
-		return '';
-	}
-
-	private function release_job_lock( string $key ): void {
-		if ( '' !== $key ) delete_option( $key );
+	private function finish_delivery(Worker_Job $worker,string $job_id,array $job):void{
+		$summary=['jobId'=>$job_id,'sent'=>absint($job['sent']??0),'failed'=>absint($job['failed']??0),'unknown'=>absint($job['unknown']??0),'completed'=>(int)$job['completed']];
+		if(!$worker->last_push($summary)||!$worker->remove())return;
+		$this->forget_job($job_id);wp_clear_scheduled_hook('dsa_push_delivery_batch',[$job_id]);
 	}
 
 	public function send_to_users( array $user_ids, string $title, string $message, string $url = '', array $meta = [] ): array {
@@ -410,9 +403,13 @@ final class Push_Service {
 		$payload = wp_json_encode( $payload_data );
 		$sent = 0;
 		$failed = 0;
+		$unknown = 0;
 		$users = [];
 		foreach ( $rows as $row ) {
-			$result = $this->send_one( $row, (string) $payload );
+			$guard=isset($meta['workerGuard'])&&is_callable($meta['workerGuard'])?$meta['workerGuard']:null;
+			if($guard&&!$guard()){++$unknown;break;}
+			$result = $this->send_one( $row, (string) $payload, $guard );
+			if(!empty($result['unknown']))++$unknown;
 			$user_id = absint( $row['user_id'] ?? 0 );
 			if ( $user_id > 0 && ! isset( $users[ $user_id ] ) ) $users[ $user_id ] = [ 'sent' => 0, 'failed' => 0 ];
 			if ( ! empty( $result['ok'] ) ) {
@@ -428,6 +425,7 @@ final class Push_Service {
 			'message' => sprintf( __( 'Push accepted for %1$d device(s); %2$d failed. Sends are capped at 100 devices per action.', 'dsa' ), $sent, $failed ),
 			'sent' => $sent,
 			'failed' => $failed,
+			'unknown' => $unknown,
 			'users' => $users,
 		];
 	}
@@ -447,7 +445,7 @@ final class Push_Service {
 		return in_array( 'aes-128-gcm', $ciphers, true );
 	}
 
-	private function send_one( array $row, string $payload ): array {
+	private function send_one( array $row, string $payload, ?callable $guard=null ): array {
 		global $wpdb;
 		$endpoint = Secret_Store::decrypt( (string) ( $row['endpoint'] ?? '' ) );
 		$p256dh = Secret_Store::decrypt( (string) ( $row['p256dh'] ?? '' ) );
@@ -462,6 +460,7 @@ final class Push_Service {
 			$this->mark_failure( (int) $row['id'], is_wp_error( $encrypted ) ? $encrypted->get_error_code() : $authorization->get_error_code() );
 			return [ 'ok' => false ];
 		}
+		if($guard&&!$guard())return['ok'=>false,'unknown'=>true];
 		$response = wp_safe_remote_post( $endpoint, [
 			'timeout' => 5,
 			'redirection' => 0,
@@ -475,9 +474,10 @@ final class Push_Service {
 			'body' => $encrypted,
 			'data_format' => 'body',
 		] );
+		if($guard&&!$guard())return['ok'=>false,'unknown'=>true];
 		if ( is_wp_error( $response ) ) {
 			$this->mark_failure( (int) $row['id'], $response->get_error_code() );
-			return [ 'ok' => false ];
+			return [ 'ok' => false, 'unknown'=>true ];
 		}
 		$code = (int) wp_remote_retrieve_response_code( $response );
 		if ( $code >= 200 && $code < 300 ) {
@@ -567,7 +567,9 @@ final class Push_Service {
 	private function raw_public_point( $details ): string {
 		$x = is_array( $details ) ? (string) ( $details['ec']['x'] ?? '' ) : '';
 		$y = is_array( $details ) ? (string) ( $details['ec']['y'] ?? '' ) : '';
-		return 32 === strlen( $x ) && 32 === strlen( $y ) ? "\x04" . $x . $y : '';
+		if ( $x === '' || $y === '' || strlen($x)>32 || strlen($y)>32 ) return '';
+		// OpenSSL may omit a leading zero; SEC1 P-256 coordinates remain 32 bytes.
+		return "\x04" . str_pad($x,32,"\x00",STR_PAD_LEFT) . str_pad($y,32,"\x00",STR_PAD_LEFT);
 	}
 
 	private function public_point_pem( string $point ): string {

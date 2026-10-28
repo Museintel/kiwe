@@ -419,7 +419,7 @@ final class Theme_Package_Service {
 			'profile'     => (string) ( $record['profile'] ?? 'legacy' ),
 			'description' => (string) ( $record['description'] ?? '' ),
 			'author'      => (string) ( $record['author'] ?? 'Kiwe' ),
-			'screens'     => [ 'profile', 'cart', 'checkout', 'search', 'menu', 'saved', 'links', 'notifications', 'ios-install', 'games', 'ai' ],
+			'screens'     => [ 'profile', 'cart', 'checkout', 'search', 'menu', 'saved', 'links', 'notifications', 'ios-install', 'games', 'ai', 'comments' ],
 			'supports'    => [ 'light', 'dark', 'sheet', 'classic', 'dock', 'split-dock', 'full-dock', 'navigation-bar', 'horizontal', 'vertical' ],
 			'requires'    => [ 'uiContract' => 'kiwe.surface-ui.v2', 'tokenContract' => 'kiwe.universal', 'minKiwe' => defined( 'DSA_VERSION' ) ? DSA_VERSION : '0.0.0' ],
 		];

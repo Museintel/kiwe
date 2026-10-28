@@ -5,25 +5,43 @@ if (!defined('ABSPATH')) exit;
 /** Generated from tools/release/apps-ownership.json. Build profiles share one source owner. */
 final class Package_Layout {
  public const BUNDLED = true; // KIWE_APPS_BUNDLED_PROFILE
- public const MINIMUM = ['seo'=>'1.0.0-rc.3','store'=>'1.0.0-rc.2'];
+ public const BUNDLED_APPS = []; // KIWE_APPS_PARTIAL_PROFILE
+ public static function bundled(string $id): bool { return self::BUNDLED || in_array($id,self::BUNDLED_APPS,true); }
+ public const MINIMUM = ['seo'=>'1.0.0-rc.3','store'=>'1.0.0-rc.2','guest'=>'1.0.0-rc.1','ai'=>'1.0.0-rc.1','sitegraph'=>'1.0.0-rc.1'];
  public const APP_FILES = [
+  'assets/css/ai-app.css',
   'assets/css/commerce-app.css',
+  'assets/css/guest-app.css',
   'assets/css/seo-object-app.css',
+  'assets/js/ai-app.js',
   'assets/js/commerce-app.js',
+  'assets/js/guest-app.js',
   'assets/js/modules/commerce-panels.js',
   'assets/js/product-context.js',
   'assets/js/seo-object-app.js',
+  'includes/AI/AI_Configuration_Service.php',
+  'includes/AI/AI_Provider_Service.php',
+  'includes/Access/AI_Workspace_Service.php',
   'includes/Access/Checkout_Policy_Workspace_Service.php',
   'includes/Access/Commerce_App_Service.php',
+  'includes/Access/Guest_App_Service.php',
+  'includes/Access/Guest_Engine_Service.php',
   'includes/Access/Product_Attribute_Workspace_Service.php',
   'includes/Access/Product_Merchandising_Workspace_Service.php',
   'includes/Access/Product_Variation_Workspace_Service.php',
+  'includes/Access/SiteGraph_Workspace_Service.php',
+  'includes/Access/views/ai-workspace.php',
+  'includes/Access/views/sitegraph-workspace.php',
   'includes/Bricks/Commerce_Binding_Service.php',
   'includes/Commerce/Abandoned_Cart_Service.php',
   'includes/Commerce/COD_Gate_Service.php',
   'includes/Commerce/Cart_Payload_Service.php',
+  'includes/Commerce/Checkout_Details_Model.php',
+  'includes/Commerce/Checkout_Field_Service.php',
   'includes/Commerce/Checkout_Service.php',
+  'includes/Commerce/Checkout_Session_Details.php',
   'includes/Commerce/Commerce_Context_Service.php',
+  'includes/Commerce/Discussion_Review_Adapter.php',
   'includes/Commerce/Linked_Products_Service.php',
   'includes/Commerce/Product_Context_Service.php',
   'includes/Commerce/Purchase_Identity_Gate.php',

@@ -1,0 +1,83 @@
+{
+  "schema": "kiwe.seam-map.v1",
+  "mode": "strict",
+  "sourcePolicy": "marker-only",
+  "siteGraph": {
+    "schema": "kiwe.site-graph.v1",
+    "path": "seam/site-graph.json",
+    "revision": "discussion-fixture-v1",
+    "hash": "5f00ba9571c25dacdc75ae1ae0bb010ce209fa76a8c3fbc7de9f3be5c85169cd"
+  },
+  "sources": [
+    {
+      "path": "index.html",
+      "sha256": "e310a46625ab491f1d9c0175114613a319907f258110037f23437d988abd7d1e"
+    }
+  ],
+  "documents": [
+    {
+      "path": "index.html",
+      "wordpress": {
+        "templateType": "content",
+        "commerce": "preserve",
+        "content": "static",
+        "editorialSurface": null,
+        "templateConditions": [
+          {
+            "main": "postType",
+            "postType": [
+              "page"
+            ]
+          }
+        ]
+      },
+      "closure": {
+        "status": "complete",
+        "declaredAnchors": 3,
+        "unresolved": []
+      },
+      "stitches": [
+        {
+          "kind": "launcher",
+          "key": "single-comments",
+          "anchor": "single-comments",
+          "semantic": "discussion.open",
+          "authority": {
+            "source": "sitegraph",
+            "pointer": "/kiwe/discussion",
+            "evidence": "Synthetic declared native contract"
+          },
+          "module": "comments",
+          "discussionTarget": "current"
+        },
+        {
+          "kind": "launcher",
+          "key": "loop-comments",
+          "anchor": "loop-comments",
+          "semantic": "discussion.open",
+          "authority": {
+            "source": "sitegraph",
+            "pointer": "/kiwe/discussion",
+            "evidence": "Synthetic declared native contract"
+          },
+          "module": "comments",
+          "discussionTarget": "{kiwe_discussion_id}"
+        },
+        {
+          "kind": "launcher",
+          "key": "website-comments",
+          "anchor": "website-comments",
+          "semantic": "discussion.open",
+          "authority": {
+            "source": "sitegraph",
+            "pointer": "/kiwe/discussion",
+            "evidence": "Synthetic declared native contract"
+          },
+          "module": "comments",
+          "discussionTarget": "site"
+        }
+      ]
+    }
+  ],
+  "requiresHumanReview": []
+}

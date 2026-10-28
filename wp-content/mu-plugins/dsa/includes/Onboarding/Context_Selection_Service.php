@@ -32,12 +32,49 @@ final class Context_Selection_Service {
 		return $where . ( 'public' === $view ? " AND $public" : " AND NOT $public" );
 	}
 	public static function public_testimonial( $comment ): bool {
-		if ( ! $comment || '1' !== (string) $comment->comment_approved || ! in_array( $comment->comment_type, [ '', 'comment', 'review' ], true ) ) return false;
-		$post = get_post( $comment->comment_post_ID );
-		if ( ! self::public_post( $post ) ) return false;
-		if ( 'product' === $post->post_type && !\DSA\Apps\Store_App_Service::enabled() ) return false;
-		if ( 'review' === $comment->comment_type && 'product' !== $post->post_type ) return false;
-		return '' !== trim( wp_strip_all_tags( $comment->comment_content ) );
+		if ( ! $comment instanceof \WP_Comment || '1' !== (string) $comment->comment_approved ) return false;
+		$post = \DSA\Discussion\Discussion_Target::get( (int) $comment->comment_post_ID );
+		if ( is_wp_error( $post ) || ! in_array( $comment->comment_type, \DSA\Discussion\Discussion_Target::types( $post ), true ) ) return false;
+		// A held ancestor also hides its replies. Staff replies are not customer endorsements.
+		return ! is_wp_error( \DSA\Discussion\Discussion_Target::parent( $post, (int) $comment->comment_ID ) )
+			&& ! \DSA\Discussion\Public_Identity::team_member( $comment )
+			&& '' !== trim( wp_strip_all_tags( $comment->comment_content ) );
+	}
+
+	/** This policy lives in the existing context profile, not a second selection store. */
+	public static function testimonial_sources( ?array $input = null ): array {
+		if ( null === $input ) {
+			$profile = (array) get_option( Design_Context_Profile_Service::OPTION_PROFILE, [] );
+			$input = (array) ( $profile['contentPlan']['testimonialSources'] ?? [] );
+		}
+		$out = [];
+		foreach ( [ 'pinned'=>true, 'hearted'=>true, 'popular'=>false ] as $key=>$default ) $out[$key] = array_key_exists( $key, $input ) ? in_array( $input[$key], [ true, 1, '1' ], true ) : $default;
+		return $out;
+	}
+	public static function testimonial_candidate( int $id ): bool {
+		$policy = self::testimonial_sources();
+		if ( $policy['pinned'] && '1' === (string) get_comment_meta( $id, \DSA\Discussion\Discussion_Reactions::PIN, true ) ) return true;
+		if ( $policy['hearted'] && ( (int) get_comment_meta( $id, \DSA\Discussion\Discussion_Reactions::HEART, true ) > 0 || self::selected( 'testimonial', $id ) ) ) return true;
+		return $policy['popular'] && \DSA\Discussion\Discussion_Reaction_Store::has_likes( $id );
+	}
+	/** Trusted compatibility operation, invoked by an owner/installer, never on a public read. */
+	public static function migrate_testimonials( int $limit = 50 ) {
+		if ( ! current_user_can( 'kiwe_manage_context' ) || ! current_user_can( 'moderate_comments' ) ) return new \WP_Error( 'kiwe_context_forbidden', __( 'Your account cannot migrate curation.', 'dsa' ) );
+		global $wpdb;
+		$option = 'kiwe_testimonial_curation_migration_v1';
+		$cursor = max( 0, (int) get_option( $option, 0 ) );
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT c.comment_ID FROM {$wpdb->comments} c INNER JOIN {$wpdb->commentmeta} m ON m.comment_id=c.comment_ID WHERE m.meta_key=%s AND m.meta_value='1' AND c.comment_ID>%d ORDER BY c.comment_ID ASC LIMIT %d", self::TESTIMONIAL_META, $cursor, max( 1, min( 100, $limit ) ) ) );
+		if ( $wpdb->last_error ) return new \WP_Error( 'kiwe_context_read', __( 'Curation could not be read.', 'dsa' ) );
+		foreach ( $ids as $id ) {
+			$id = (int) $id;
+			if ( ! metadata_exists( 'comment', $id, \DSA\Discussion\Discussion_Reactions::HEART ) && ! add_comment_meta( $id, \DSA\Discussion\Discussion_Reactions::HEART, '1', true ) ) return new \WP_Error( 'kiwe_context_write', __( 'Curation could not be confirmed.', 'dsa' ) );
+			// Retire only the legacy membership flag; the native comment and its content stay intact.
+			delete_comment_meta( $id, self::TESTIMONIAL_META );
+			if ( metadata_exists( 'comment', $id, self::TESTIMONIAL_META ) ) return new \WP_Error( 'kiwe_context_write', __( 'Curation could not be confirmed.', 'dsa' ) );
+			$cursor = $id;
+			update_option( $option, $cursor, false );
+		}
+		return [ 'processed'=>count( $ids ), 'complete'=>count( $ids ) < max( 1, min( 100, $limit ) ) ];
 	}
 
 	public static function selected( string $kind, int $id ): bool {
@@ -69,21 +106,48 @@ final class Context_Selection_Service {
 		return true;
 	}
 
-	/** Bounded live projection. Revoked approval or public visibility removes a quote immediately. */
+	/** Bounded live projection of feedback, rechecking public visibility and safe names. */
 	public static function testimonials( int $limit = 20 ): array {
-		$comments = get_comments( [ 'status'=>'approve', 'type__in'=>[ '', 'comment', 'review' ], 'meta_key'=>self::TESTIMONIAL_META, 'meta_value'=>'1', 'number'=>min( 100, max( 1, $limit ) ), 'orderby'=>'comment_ID', 'order'=>'DESC' ] );
+		$limit = min( 100, max( 1, $limit ) ); $policy = self::testimonial_sources();
+		if ( ! array_filter( $policy ) ) return [];
+		global $wpdb;
+		$conditions = [];
+		if ( $policy['pinned'] ) $conditions[] = $wpdb->prepare( "EXISTS (SELECT 1 FROM {$wpdb->commentmeta} tm WHERE tm.comment_id={$wpdb->comments}.comment_ID AND tm.meta_key=%s AND tm.meta_value='1')", \DSA\Discussion\Discussion_Reactions::PIN );
+		if ( $policy['hearted'] ) $conditions[] = $wpdb->prepare( "EXISTS (SELECT 1 FROM {$wpdb->commentmeta} tm WHERE tm.comment_id={$wpdb->comments}.comment_ID AND ((tm.meta_key=%s AND CAST(tm.meta_value AS UNSIGNED)>0) OR (tm.meta_key=%s AND tm.meta_value='1')))", \DSA\Discussion\Discussion_Reactions::HEART, self::TESTIMONIAL_META );
+		if ( $policy['popular'] && \DSA\Discussion\Discussion_Reaction_Store::ready() ) $conditions[] = 'EXISTS (SELECT 1 FROM ' . \DSA\Discussion\Discussion_Reaction_Store::table() . " tr WHERE tr.comment_id={$wpdb->comments}.comment_ID AND tr.kind='like')";
+		if ( ! $conditions ) return [];
+		$filter = static function( array $clauses, \WP_Comment_Query $query ) use ( $conditions ): array {
+			if ( ! empty( $query->query_vars['kiwe_testimonial_projection'] ) ) $clauses['where'] .= ' AND (' . implode( ' OR ', $conditions ) . ')';
+			return $clauses;
+		};
+		add_filter( 'comments_clauses', $filter, 25, 2 );
+		// WP_Comment_Query keys only native arguments, not comments_clauses or custom flags.
+		$domain = 'kiwe-testimonials-' . hash( 'sha256', wp_json_encode( [ $policy, \DSA\Apps\Store_App_Service::enabled(), wp_cache_get_last_changed( 'kiwe_testimonials' ) ] ) );
+		try { $comments = get_comments( [ 'status'=>'approve', 'post_status'=>'publish', 'type__in'=>[ '', 'comment', 'review' ], 'number'=>500, 'orderby'=>'comment_ID', 'order'=>'DESC', 'kiwe_testimonial_projection'=>true, 'cache_domain'=>$domain, 'update_comment_post_cache'=>true ] ); }
+		finally { remove_filter( 'comments_clauses', $filter, 25 ); }
+		$users = array_values( array_unique( array_filter( array_map( static fn( $comment ) => (int) $comment->user_id, $comments ) ) ) );
+		if ( $users ) cache_users( $users );
 		$items = [];
 		foreach ( $comments as $comment ) {
 			if ( ! self::public_testimonial( $comment ) ) continue;
 			$full_quote = trim( wp_strip_all_tags( $comment->comment_content ) );
 			$quote = wp_html_excerpt( $full_quote, 2000, '' );
-			$item = [ 'id'=>(int) $comment->comment_ID, 'source'=>'wordpress-comment', 'name'=>sanitize_text_field( $comment->comment_author ), 'quote'=>$quote, 'isExcerpt'=>$quote !== $full_quote, 'url'=>esc_url_raw( get_comment_link( $comment ) ) ];
+			$post = get_post( $comment->comment_post_ID );
+			$item = [ 'id'=>(int) $comment->comment_ID, 'source'=>'wordpress-comment', 'name'=>\DSA\Discussion\Public_Identity::comment_name( $comment ), 'quote'=>$quote, 'isExcerpt'=>$quote !== $full_quote, 'url'=>esc_url_raw( get_comment_link( $comment ) ), 'target_id'=>(int) $comment->comment_post_ID, 'source_type'=>'page' === $post->post_type ? 'website' : 'post', 'source_title'=>wp_strip_all_tags( get_the_title( $post ) ), 'pinned'=>'1' === (string) get_comment_meta( $comment->comment_ID, \DSA\Discussion\Discussion_Reactions::PIN, true ), 'hearted'=>(int) get_comment_meta( $comment->comment_ID, \DSA\Discussion\Discussion_Reactions::HEART, true ) > 0 || self::selected( 'testimonial', (int) $comment->comment_ID ) ];
 			if ( 'product' === get_post_type( $comment->comment_post_ID ) ) {
 				$item['source'] = 'woocommerce-review';
+				$item['source_type'] = 'product';
 				$rating = get_comment_meta( $comment->comment_ID, 'rating', true );
-				if ( in_array( (string) $rating, [ '1', '2', '3', '4', '5' ], true ) ) $item['rating'] = (int) $rating;
+				if ( ! $comment->comment_parent && function_exists( 'wc_review_ratings_enabled' ) && wc_review_ratings_enabled() && in_array( (string) $rating, [ '1', '2', '3', '4', '5' ], true ) ) $item['rating'] = (int) $rating;
 			}
 			$items[] = $item;
+			if ( count( $items ) >= $limit ) break;
+		}
+		// The account IDs and reports in the reaction store never enter public context.
+		foreach ( array_chunk( array_column( $items, 'id' ), 50 ) as $ids ) {
+			$counts = \DSA\Discussion\Discussion_Reaction_Store::projection( $ids, 0 );
+			foreach ( $items as &$item ) if ( in_array( $item['id'], $ids, true ) ) $item['likes'] = is_wp_error( $counts ) ? 0 : (int) ( $counts[$item['id']]['likes'] ?? 0 );
+			unset( $item );
 		}
 		return $items;
 	}

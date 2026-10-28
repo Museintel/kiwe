@@ -5,6 +5,7 @@ namespace DSA\Site_Graph;
 use DSA\Commerce\Product_Context_Service;
 
 use DSA\Site\Site_Identity_Service;
+use DSA\Utilities\Content_Visibility;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -219,6 +220,7 @@ final class Data_Query_Service {
 	}
 
 	private function posts( array $args, bool $private ): array {
+		$public_only = ! $private || ! empty( $args['publicOnly'] );
 		$post_type = sanitize_key( (string) ( $args['postType'] ?? $args['post_type'] ?? 'post' ) );
 		if ( ! \DSA\Apps\Store_App_Service::content_available( $post_type ) ) return $this->envelope( 'products', [ 'postType'=>$post_type ], [], [ 'error'=>'store_app_off', 'available'=>false ] );
 		$resource  = $this->post_resource_name( $post_type );
@@ -227,7 +229,7 @@ final class Data_Query_Service {
 		}
 
 		$object = get_post_type_object( $post_type );
-		if ( ! $private && ( ! $object || empty( $object->public ) ) ) {
+		if ( $public_only && ( ! $object || empty( $object->public ) ) ) {
 			return $this->envelope( $resource, [ 'postType' => $post_type ], [], [ 'error' => 'post_type_not_public' ] );
 		}
 
@@ -243,13 +245,14 @@ final class Data_Query_Service {
 
 		$query_args = [
 			'post_type'           => $post_type,
-			'post_status'         => $private ? $this->status( $args ) : 'publish',
+			'post_status'         => $public_only ? 'publish' : $this->status( $args ),
 			'posts_per_page'      => $limit,
 			'paged'               => $page,
 			'orderby'             => $orderby,
 			'order'               => $order,
 			'ignore_sticky_posts' => true,
 		];
+		if ( $public_only ) $query_args['has_password'] = false;
 
 		if ( ! empty( $args['search'] ) ) {
 			$query_args['s'] = sanitize_text_field( (string) $args['search'] );
@@ -275,7 +278,7 @@ final class Data_Query_Service {
 		$nodes  = [];
 
 		foreach ( $query->posts as $post ) {
-			if ( $post instanceof \WP_Post ) {
+			if ( $post instanceof \WP_Post && ( ! $public_only || Content_Visibility::is_public( $post ) ) ) {
 				$nodes[] = $this->post_node( $post, $fields, $args, $private );
 			}
 		}
@@ -761,7 +764,7 @@ final class Data_Query_Service {
 	private function public_product_references( array $ids, int $limit ): array {
 		$out = [];
 		foreach ( array_slice( array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) ), 0, $limit ) as $id ) {
-			if ( 'publish' !== get_post_status( $id ) || 'product' !== get_post_type( $id ) ) {
+			if ( 'product' !== get_post_type( $id ) || ! Content_Visibility::is_public( $id ) ) {
 				continue;
 			}
 			$out[] = [
@@ -784,11 +787,12 @@ final class Data_Query_Service {
 				continue;
 			}
 			$id = is_callable( [ $item, 'get_product_id' ] ) ? absint( $item->get_product_id() ) : 0;
-			if ( ! $id || 'publish' !== get_post_status( $id ) ) {
+			$reference = $id ? ( $this->public_product_references( [ $id ], 1 )[0] ?? null ) : null;
+			if ( ! $reference ) {
 				continue;
 			}
 			$out[] = [
-				'product' => $this->public_product_references( [ $id ], 1 )[0] ?? [ 'id' => $id ],
+				'product' => $reference,
 				'quantity' => is_callable( [ $item, 'get_quantity' ] ) ? max( 0, (float) $item->get_quantity() ) : null,
 			];
 		}

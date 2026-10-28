@@ -2,6 +2,7 @@
 
 namespace DSA\AI;
 
+use DSA\Utilities\Credential_Records;
 use WP_REST_Request;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -45,55 +46,55 @@ final class Access_Key_Service {
 		$plain      = self::PREFIX . $id . '_' . $secret;
 		$created_at = (string) ( $context['createdAt'] ?? gmdate( 'c' ) );
 		$user_id    = isset( $context['userId'] ) ? absint( $context['userId'] ) : ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
-		$records    = $this->records();
-		array_unshift(
-			$records,
-			[
-				'id'          => $id,
-				'label'       => '' !== $label ? $label : __( 'Kiwe AI key', 'dsa' ),
-				'prefix'      => substr( $plain, 0, 22 ),
-				'last4'       => substr( $plain, -4 ),
-				'hash'        => wp_hash_password( $plain ),
-				'scopes'      => $scopes,
-				'createdAt'   => $created_at,
-				'createdBy'   => $user_id,
-				'lastUsedAt'  => '',
-				'lastUsedIp'  => '',
-				'revokedAt'   => '',
-				'revokedBy'   => 0,
-			]
-		);
-		$records = array_slice( $this->dedupe( $records ), 0, self::MAX_KEYS );
-		update_option( self::OPTION, $records, false );
-
-		return [
-			'key'    => $plain,
-			'record' => $this->public_record( $records[0] ),
+		$record = [
+			'id'          => $id,
+			'label'       => '' !== $label ? $label : __( 'Kiwe AI key', 'dsa' ),
+			'prefix'      => substr( $plain, 0, 22 ),
+			'last4'       => substr( $plain, -4 ),
+			'hash'        => wp_hash_password( $plain ),
+			'scopes'      => $scopes,
+			'createdAt'   => $created_at,
+			'createdBy'   => $user_id,
+			'lastUsedAt'  => '',
+			'lastUsedIp'  => '',
+			'revokedAt'   => '',
+			'revokedBy'   => 0,
 		];
+		$result = Credential_Records::change( self::OPTION, function ( array $stored ) use ( $record, $plain ): array {
+			$records = $this->records( $stored );
+			array_unshift( $records, $record );
+			return [
+				'records' => array_slice( $this->dedupe( $records ), 0, self::MAX_KEYS ),
+				'value' => [ 'key' => $plain, 'record' => $this->public_record( $record ) ],
+			];
+		} );
+		if ( ! $result['ok'] ) throw new \RuntimeException( 'Kiwe could not confirm that the API key was saved. Refresh the key list before trying again.' );
+		return $result['value'];
 	}
 
 	public function revoke( string $id, int $user_id = 0 ): bool {
-		$id      = sanitize_key( $id );
-		$records = $this->records();
-		$matched = false;
-		foreach ( $records as &$record ) {
-			if ( $id !== (string) ( $record['id'] ?? '' ) ) {
-				continue;
+		$id = sanitize_key( $id );
+		if ( '' === $id ) return false;
+		$result = Credential_Records::change( self::OPTION, function ( array $stored ) use ( $id, $user_id ): array {
+			$records = $this->records( $stored );
+			$matched = false;
+			foreach ( $records as &$record ) {
+				if ( $id !== (string) ( $record['id'] ?? '' ) ) continue;
+				if ( '' === (string) ( $record['revokedAt'] ?? '' ) ) {
+					$record['revokedAt'] = gmdate( 'c' );
+					$record['revokedBy'] = $user_id;
+				}
+				$matched = true;
 			}
-			$record['revokedAt'] = gmdate( 'c' );
-			$record['revokedBy'] = $user_id;
-			$matched             = true;
-		}
-		unset( $record );
-		if ( $matched ) {
-			update_option( self::OPTION, $records, false );
-		}
-
-		return $matched;
+			unset( $record );
+			return $matched ? [ 'records' => $records, 'value' => true ] : [ 'value' => false ];
+		} );
+		return $result['ok'] && true === $result['value'];
 	}
 
 	public function public_records(): array {
-		return array_map( [ $this, 'public_record' ], $this->records() );
+		$result = Credential_Records::change( self::OPTION, fn( array $stored ): array => [ 'value' => array_map( [ $this, 'public_record' ], $this->records( $stored ) ) ] );
+		return $result['ok'] ? $result['value'] : [];
 	}
 
 	public function authenticate_request( WP_REST_Request $request, string $required_scope ): array {
@@ -104,29 +105,33 @@ final class Access_Key_Service {
 		if ( ! str_starts_with( $key, self::PREFIX ) ) {
 			return $this->auth_failure( 'invalid_prefix', 'Invalid Kiwe AI API key prefix.' );
 		}
-		$records = $this->records();
-		foreach ( $records as $record ) {
-			if ( ! is_array( $record ) || '' !== (string) ( $record['revokedAt'] ?? '' ) ) {
-				continue;
-			}
-			$hash = (string) ( $record['hash'] ?? '' );
-			if ( '' === $hash || ! wp_check_password( $key, $hash ) ) {
-				continue;
-			}
-			$scopes = $this->normalize_scopes( isset( $record['scopes'] ) && is_array( $record['scopes'] ) ? $record['scopes'] : [] );
-			if ( 'status' !== $required_scope && ! $this->scope_satisfied( $required_scope, $scopes ) ) {
-				return $this->auth_failure( 'scope_denied', 'Kiwe AI API key does not include the required scope.' );
-			}
-			$this->mark_used( (string) ( $record['id'] ?? '' ) );
+		$result = Credential_Records::change( self::OPTION, function ( array $stored ) use ( $key, $required_scope ): array {
+			$records = $this->records( $stored );
+			foreach ( $records as &$record ) {
+				if ( ! is_array( $record ) || '' !== (string) ( $record['revokedAt'] ?? '' ) ) {
+					continue;
+				}
+				$hash = (string) ( $record['hash'] ?? '' );
+				if ( '' === $hash || ! wp_check_password( $key, $hash ) ) {
+					continue;
+				}
+				$scopes = $this->normalize_scopes( isset( $record['scopes'] ) && is_array( $record['scopes'] ) ? $record['scopes'] : [] );
+				if ( 'status' !== $required_scope && ! $this->scope_satisfied( $required_scope, $scopes ) ) {
+					return [ 'value' => $this->auth_failure( 'scope_denied', 'Kiwe AI API key does not include the required scope.' ) ];
+				}
+				$record['lastUsedAt'] = gmdate( 'c' );
+				$record['lastUsedIp'] = $this->client_ip();
 
-			return [
-				'ok'     => true,
-				'record' => $this->public_record( $record ),
-				'scope'  => $required_scope,
-			];
-		}
-
-		return $this->auth_failure( 'invalid_key', 'Kiwe AI API key was not found or has been revoked.' );
+				return [ 'records' => $records, 'value' => [
+					'ok'     => true,
+					'record' => $this->public_record( $record ),
+					'scope'  => $required_scope,
+				] ];
+			}
+			unset( $record );
+			return [ 'value' => $this->auth_failure( 'invalid_key', 'Kiwe AI API key was not found or has been revoked.' ) ];
+		} );
+		return $result['ok'] ? $result['value'] : $this->auth_failure( $result['code'], 'Kiwe could not confirm the current API key state. Try again shortly.', 503 );
 	}
 
 	public function normalize_scopes( array $scopes ): array {
@@ -164,12 +169,7 @@ final class Access_Key_Service {
 		return false;
 	}
 
-	private function records(): array {
-		$records = get_option( self::OPTION, [] );
-		if ( ! is_array( $records ) ) {
-			return [];
-		}
-
+	private function records( array $records ): array {
 		return array_values( array_filter( $records, static fn( $record ): bool => is_array( $record ) && ! empty( $record['id'] ) ) );
 	}
 
@@ -189,20 +189,6 @@ final class Access_Key_Service {
 		];
 	}
 
-	private function mark_used( string $id ): void {
-		$id      = sanitize_key( $id );
-		$records = $this->records();
-		foreach ( $records as &$record ) {
-			if ( $id !== (string) ( $record['id'] ?? '' ) ) {
-				continue;
-			}
-			$record['lastUsedAt'] = gmdate( 'c' );
-			$record['lastUsedIp'] = $this->client_ip();
-		}
-		unset( $record );
-		update_option( self::OPTION, $records, false );
-	}
-
 	private function request_key( WP_REST_Request $request ): string {
 		$header = (string) $request->get_header( 'authorization' );
 		if ( preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
@@ -216,12 +202,12 @@ final class Access_Key_Service {
 		return '';
 	}
 
-	private function auth_failure( string $code, string $message ): array {
+	private function auth_failure( string $code, string $message, int $status = 401 ): array {
 		return [
 			'ok'      => false,
 			'code'    => $code,
 			'message' => $message,
-			'status'  => 401,
+			'status'  => $status,
 		];
 	}
 

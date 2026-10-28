@@ -316,8 +316,12 @@
                 },
                 "module": {
                   "$ref": "#/$defs/token"
+                },
+                "discussionTarget": {
+                  "enum": ["current", "site", "{kiwe_discussion_id}", "{kiwe_testimonial_target_id}"]
                 }
               },
+              "allOf": [{"if": {"required": ["discussionTarget"]}, "then": {"properties": {"module": {"const": "comments"}}}}],
               "required": [
                 "anchor",
                 "module"

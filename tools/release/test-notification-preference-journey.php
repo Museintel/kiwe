@@ -4,6 +4,9 @@ declare(strict_types=1);
 namespace DSA { final class Settings { public array $values=[]; public function get($key,$default=[]){return $this->values[$key]??$default;} } }
 namespace DSA\Trust { final class Trust_Service { public function health_data(array $config):array{return [];} } }
 namespace DSA\Access {
+// The independent native Kiwe1 suite tests Forms admission; this fixture isolates existing topics.
+class Form_Workspace_Service {public static function allowed_for(int $id):bool{return false;}}
+
 	final class Guest_Contribution_Service { public static function application(int $id):array{return $GLOBALS['applications'][$id]??[];} }
 	final class Team_Workspace_Service { public static function suspended(int $id):bool{return in_array($id,$GLOBALS['suspended'],true);} }
 }

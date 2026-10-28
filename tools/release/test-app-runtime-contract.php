@@ -17,9 +17,11 @@ function check(bool $ok,string $label){if(!$ok)throw new RuntimeException($label
 $descriptor=['schema'=>Contract::SCHEMA,'id'=>'seo','version'=>'1.0.0','coreApi'=>1,'requiresPhp'=>'8.2','requiresWp'=>'7.0','requiresWoo'=>'','namespaces'=>['DSA\\SEO\\'=>'includes/SEO/'],'classes'=>[],'assets'=>['assets/js/seo.js'=>'assets/js/seo.js']];
 try{
  check(Contract::validate($descriptor),'Exact versioned provider accepted');
+ check(Contract::validate(array_replace($descriptor,['coreApi'=>2])),'New Core admits the prior and current provider APIs');
+ foreach(['guest','ai','sitegraph']as$id){$provider=array_replace($descriptor,['id'=>$id,'coreApi'=>2,'requiresWoo'=>'','namespaces'=>[],'classes'=>[],'assets'=>[]]);check(Contract::validate($provider),'Noncommerce optional provider admitted '.$id);check(!Contract::validate(array_replace($provider,['requiresWoo'=>'11.2'])),'Noncommerce App cannot smuggle a Woo dependency '.$id);}
  foreach(['1.0','../1.0.0','1.0.0+unknown','1.0.0-rc.0','v1.0.0']as$bad)check(!Contract::version($bad),'Invalid version refused '.$bad);
  foreach(['../file.php','a/../file.php','/absolute.php','a//b.php','a\\b.php','a/.']as$bad)check(!Contract::relative($bad),'Unsafe relative path refused '.$bad);
- foreach([['coreApi'=>2],['extra'=>true],['id'=>'unknown'],['requiresWp'=>'0;code'],['requiresWoo'=>'1.0'],['namespaces'=>['DSA\\Access\\'=>'includes/Access/']],['classes'=>['DSA\\Runtime\\Update_Service'=>'includes/update.php']],['assets'=>['x'=>'../private.php']]]as$i=>$delta)check(!Contract::validate(array_replace($descriptor,$delta)),'Invalid provider boundary refused '.$i);
+ foreach([['coreApi'=>3],['extra'=>true],['id'=>'unknown'],['requiresWp'=>'0;code'],['requiresWoo'=>'1.0'],['namespaces'=>['DSA\\Access\\'=>'includes/Access/']],['classes'=>['DSA\\Runtime\\Update_Service'=>'includes/update.php']],['assets'=>['x'=>'../private.php']]]as$i=>$delta)check(!Contract::validate(array_replace($descriptor,$delta)),'Invalid provider boundary refused '.$i);
  check(!Contract::compatible(array_replace($descriptor,['version'=>'1.0.0-rc.2'])),'Older signed code cannot supply this Core API implementation');
  check(Contract::supports('seo','1.0.0-rc.3')&&Contract::supports('store','1.0.0-rc.2'),'Current independent App floors admitted');
  check(!Contract::supports('store','1.0.0-rc.1')&&!Contract::supports('unknown','99.0.0'),'Older or unknown App floor refused');

@@ -34,6 +34,67 @@
     ]
   },
   "screens": {
+    "comments": {
+      "ownedBy": "Native WordPress comments; existing PhoneKey identity; Store alone owns product ratings and purchase rules",
+      "releaseStatus": "candidate; hosted Core450 does not include this screen",
+      "currentFactory": "assets/js/modules/comments-panel.js",
+      "requiredRoot": "[data-dsa-comments-panel]",
+      "actions": [
+        {
+          "id": "send",
+          "selector": "[data-discussion-form]",
+          "authority": "Native WordPress admission and committed exactly-once Send"
+        },
+        {
+          "id": "verify",
+          "selector": "[data-discussion-verify]",
+          "authority": "Existing PhoneKey OTP and assurance"
+        },
+        {
+          "id": "skip",
+          "selector": "[data-discussion-skip]",
+          "authority": "Existing allowed PhoneKey continuation and native moderation"
+        },
+        {
+          "id": "edit",
+          "selector": "[data-discussion-edit]",
+          "authority": "Unsubmitted local draft only; never replace an uncertain Send"
+        },
+        {
+          "id": "react",
+          "selector": "[data-discussion-action]",
+          "authority": "Private same-site verified account; native moderation remains authoritative"
+        },
+        {
+          "id": "more",
+          "selector": "[data-discussion-more]",
+          "authority": "Bounded native approved-history cursor"
+        }
+      ],
+      "themeableBlocks": [
+        "heading",
+        "author",
+        "teamBadge",
+        "verifiedPurchase",
+        "commentText",
+        "rating",
+        "replies",
+        "likes",
+        "businessHeart",
+        "pin",
+        "composer",
+        "inlineVerification"
+      ],
+      "notes": [
+        "One contextual screen serves native posts, Store products and an explicit public site-feedback page.",
+        "Approved root count is not an unread count; replies have separate counts.",
+        "Public rows never expose contact, account ID, external avatar hash, reporter identity, pending text or private order history.",
+        "A typed existing identifier never grants its account, verification or purchase authority.",
+        "Use protected AppShell role metadata and shared tokens; author-page component classes must not override the live Sheet.",
+        "No polling, per-card requests or AI/network calls on ordinary page views.",
+        "Daily Feedback is one newest-first stream, filtered by Post, Website and, only when Store is active, Product."
+      ]
+    },
     "profile": {
       "ownedBy": "Key.kiwe, WordPress user, WooCommerce account when available",
       "currentFactory": "assets/js/modules/profile-panel.js",

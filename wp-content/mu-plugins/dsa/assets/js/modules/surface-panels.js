@@ -387,6 +387,12 @@ function menuCopy( payload ) {
 	} );
 }
 
+function renderMenuStaffActions(payload, copy) {
+ const dashboard=payload.adminDashboard||{}, edit=payload.adminEdit||{};
+ const links=[{...dashboard,label:dashboard.label||copy.dashboardLabel},edit].filter(item=>typeof item.url==='string'&&item.url);
+ return links.length?'<div class="dsa-menu-staff-actions">'+links.map(item=>'<a class="dsa-menu-dashboard" href="'+escapeHtml(item.url)+'" data-dsa-full-navigation>'+escapeHtml(item.label||'Edit')+'</a>').join('')+'</div>':'';
+}
+
 function renderLegacyMenu( payload ) {
 	payload = payload || {};
 	const copy = menuCopy( payload );
@@ -394,7 +400,7 @@ function renderLegacyMenu( payload ) {
 	const groups = menuGroupsWithSectionTitle( payload.groups, copy.title );
 	const links = Array.isArray( payload.links ) ? payload.links : [];
 	const admin = payload.adminDashboard || {};
-	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</' + tag + '>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl, payload.contextHeadings ); } ).join( '' ) : renderUngroupedMenu( links, copy.title, payload.fallbackUrl ) ) + ( payload.groupOwnedContext ? '' : renderMenuContext( payload.contextHeadings, copy.contextTitle ) ) + ( admin.url ? '<a class="dsa-menu-dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '' ) + '</section>';
+	return '<section class="dsa-panel dsa-menu-panel dsa-hero-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( copy.label ) + '"><' + tag + ' class="dsa-hero-kicker">' + escapeHtml( copy.eyebrow ) + '</' + tag + '>' + ( copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( copy.intro ) + '</p>' : '' ) + ( groups.length ? groups.map( function ( group ) { return renderMenuGroup( group, payload.fallbackUrl, payload.contextHeadings ); } ).join( '' ) : renderUngroupedMenu( links, copy.title, payload.fallbackUrl ) ) + ( payload.groupOwnedContext ? '' : renderMenuContext( payload.contextHeadings, copy.contextTitle ) ) + renderMenuStaffActions( payload, copy ) + '</section>';
 }
 
 function renderPrototypeMenu( payload ) {
@@ -418,7 +424,7 @@ function renderPrototypeMenu( payload ) {
 		'<div class="kiwe-menu-v2027__nav">' + menuBody + '</div>',
 		context ? '<div class="kiwe-menu-v2027__context">' + context + '</div>' : '',
 		'</div>',
-		admin.url ? '<a class="dsa-menu-dashboard kiwe-menu-v2027__dashboard" href="' + escapeHtml( admin.url ) + '" data-dsa-full-navigation data-dsa-context-slot data-dsa-context-name="menu" data-dsa-context-width="content">' + escapeHtml( admin.label || copy.dashboardLabel ) + '</a>' : '',
+		renderMenuStaffActions( payload, copy ),
 		'</section>',
 	].join( '' );
 }
@@ -447,7 +453,7 @@ export function renderAppsiteHome( payload ) {
 	const buttons = Array.isArray( config.buttons ) ? config.buttons : [];
 
 	return [
-		'<div class="dsa-initial-preloader" data-dsa-initial-preloader role="dialog" aria-modal="true" tabindex="-1" aria-label="Kiwe Appsite home screen">',
+		'<div class="dsa-initial-preloader dsa-material-surface" data-dsa-material="' + ( config.homeMaterial === 'solid' ? 'solid' : 'glass' ) + '" data-dsa-initial-preloader role="dialog" aria-modal="true" tabindex="-1" aria-label="Kiwe Appsite home screen">',
 		'<div class="dsa-initial-preloader__inner">',
 		'<p class="dsa-initial-preloader__title">' + escapeHtml( title ) + '</p>',
 		'<div class="dsa-initial-preloader__hero" role="heading" aria-level="2">' + escapeHtml( hero ) + '</div>',

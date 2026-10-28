@@ -1,6 +1,6 @@
 # /seam
 
-SEAM contract: 9.7
+SEAM contract: 9.9
 
 Accept the current preview for Framework source preparation only. Use relevant complete vocabulary/tokens/attributes and explicit native loop/interaction/condition intent; preserve art direction. Only seam.kiwe produces Bricks JSON. No live approval.
 

@@ -1,0 +1,590 @@
+{
+  "schema": "kiwe.public-binding-reference.v1",
+  "source": "wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php",
+  "sourceSha256": "3b9b0867eb26565b9ca8b893438d88cfb37ea66972771844836125566e53566b",
+  "policy": "Public field definitions only; no values. Current-site dynamicBindings additionally owns record, group, collection and configured commerce tags. Private/planning fields are never inferred from matching labels.",
+  "fields": {
+    "identity.siteName": {
+      "tag": "{site_title}",
+      "kind": "text",
+      "owner": "wordpress",
+      "scope": "site"
+    },
+    "identity.tagline": {
+      "tag": "{site_tagline}",
+      "kind": "text",
+      "owner": "wordpress",
+      "scope": "site"
+    },
+    "identity.logo": {
+      "tag": "{kiwe_site_logo}",
+      "kind": "image",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "identity.logoInverse": {
+      "tag": "{kiwe_site_logo_inverse}",
+      "kind": "image",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "identity.description": {
+      "tag": "{kiwe_business_description}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.phone": {
+      "tag": "{kiwe_store_phone}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.email": {
+      "tag": "{kiwe_store_email}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.whatsapp": {
+      "tag": "{kiwe_whatsapp}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.phoneUrl": {
+      "tag": "{kiwe_store_phone_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.emailUrl": {
+      "tag": "{kiwe_store_email_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.whatsappUrl": {
+      "tag": "{kiwe_whatsapp_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.directionsUrl": {
+      "tag": "{kiwe_directions_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.story": {
+      "tag": "{kiwe_business_story}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.mission": {
+      "tag": "{kiwe_business_mission}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.vision": {
+      "tag": "{kiwe_business_vision}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.values": {
+      "tag": "{kiwe_business_values}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.usp": {
+      "tag": "{kiwe_business_usp}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.founder.name": {
+      "tag": "{kiwe_founder_name}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.founder.title": {
+      "tag": "{kiwe_founder_title}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.founder.bio": {
+      "tag": "{kiwe_founder_bio}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.founder.image": {
+      "tag": "{kiwe_founder_image}",
+      "kind": "image",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.founder.linkedin": {
+      "tag": "{kiwe_founder_linkedin_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.founder.website": {
+      "tag": "{kiwe_founder_website_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.founder.facebook": {
+      "tag": "{kiwe_founder_facebook_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "about.team.enabled": {
+      "tag": "{kiwe_team_enabled}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "services.enabled": {
+      "tag": "{kiwe_services_enabled}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "brand.tone": {
+      "tag": "{kiwe_brand_tone}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.showBlogRailOnHome": {
+      "tag": "{kiwe_show_blog_rail}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.highlightBestsellers": {
+      "tag": "{kiwe_highlight_bestsellers}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "regulatory.fssaiLicense": {
+      "tag": "{kiwe_fssai_license}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "regulatory.gstNumber": {
+      "tag": "{kiwe_gst_number}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "regulatory.manufacturingAddress": {
+      "tag": "{kiwe_manufacturing_address}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "regulatory.showFssaiOnProducts": {
+      "tag": "{kiwe_show_fssai_on_products}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "regulatory.showGstOnProducts": {
+      "tag": "{kiwe_show_gst_on_products}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "regulatory.showManufacturingAddress": {
+      "tag": "{kiwe_show_manufacturing_address}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.address.line1": {
+      "tag": "{kiwe_store_address_1}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.address.line2": {
+      "tag": "{kiwe_store_address_2}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.address.city": {
+      "tag": "{kiwe_store_city}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.address.state": {
+      "tag": "{kiwe_store_state}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.address.country": {
+      "tag": "{kiwe_store_country}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.address.postcode": {
+      "tag": "{kiwe_store_postcode}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.socialLinks.facebook": {
+      "tag": "{kiwe_facebook_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.socialLinks.instagram": {
+      "tag": "{kiwe_instagram_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.socialLinks.x": {
+      "tag": "{kiwe_x_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.socialLinks.youtube": {
+      "tag": "{kiwe_youtube_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.socialLinks.pinterest": {
+      "tag": "{kiwe_pinterest_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "contact.socialLinks.linkedin": {
+      "tag": "{kiwe_linkedin_url}",
+      "kind": "link",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "brand.colors.brand": {
+      "tag": "{kiwe_brand_color}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "brand.colors.accent": {
+      "tag": "{kiwe_accent_color}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "brand.colors.hero": {
+      "tag": "{kiwe_hero_color}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "brand.colors.neutral": {
+      "tag": "{kiwe_neutral_color}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "brand.colors.surface": {
+      "tag": "{kiwe_surface_color}",
+      "kind": "text",
+      "owner": "kiwe-native-owner",
+      "scope": "site"
+    },
+    "identity.siteIcon": {
+      "tag": "{kiwe_context_identity_site_icon}",
+      "kind": "image",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "identity.industry": {
+      "tag": "{kiwe_context_identity_industry}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "identity.industrySector": {
+      "tag": "{kiwe_context_identity_industry_sector}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "identity.siteType": {
+      "tag": "{kiwe_context_identity_site_type}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "identity.squareLogo": {
+      "tag": "{kiwe_context_identity_square_logo}",
+      "kind": "image",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "identity.roundLogo": {
+      "tag": "{kiwe_context_identity_round_logo}",
+      "kind": "image",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "localization.timezone": {
+      "tag": "{kiwe_context_localization_timezone}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "localization.language": {
+      "tag": "{kiwe_context_localization_language}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "audience.primary": {
+      "tag": "{kiwe_context_audience_primary}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "audience.locations": {
+      "tag": "{kiwe_context_audience_locations}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "audience.needs": {
+      "tag": "{kiwe_context_audience_needs}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "brand.notes": {
+      "tag": "{kiwe_context_brand_notes}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contact.whatsappSameAsPhone": {
+      "tag": "{kiwe_context_contact_whatsapp_same_as_phone}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "services.useForNavigation": {
+      "tag": "{kiwe_context_services_use_for_navigation}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "seo.homepageDescription": {
+      "tag": "{kiwe_context_seo_homepage_description}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "seo.legalName": {
+      "tag": "{kiwe_context_seo_legal_name}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "seo.foundedYear": {
+      "tag": "{kiwe_context_seo_founded_year}",
+      "kind": "number",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "seo.primaryGoal": {
+      "tag": "{kiwe_context_seo_primary_goal}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "seo.searchIntent": {
+      "tag": "{kiwe_context_seo_search_intent}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "seo.proofPoints": {
+      "tag": "{kiwe_context_seo_proof_points}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "seo.allowIndexing": {
+      "tag": "{kiwe_context_seo_allow_indexing}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.enabled": {
+      "tag": "{kiwe_context_commerce_plan_enabled}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.expectedProductCount": {
+      "tag": "{kiwe_context_commerce_plan_expected_product_count}",
+      "kind": "number",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.expectedPriceRange.min": {
+      "tag": "{kiwe_context_commerce_plan_expected_price_range_min}",
+      "kind": "number",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.expectedPriceRange.max": {
+      "tag": "{kiwe_context_commerce_plan_expected_price_range_max}",
+      "kind": "number",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.hasBundles": {
+      "tag": "{kiwe_context_commerce_plan_has_bundles}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.shippingModel": {
+      "tag": "{kiwe_context_commerce_plan_shipping_model}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.typicalShippingCharge": {
+      "tag": "{kiwe_context_commerce_plan_typical_shipping_charge}",
+      "kind": "number",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.currency": {
+      "tag": "{kiwe_context_commerce_plan_currency}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.currencyPosition": {
+      "tag": "{kiwe_context_commerce_plan_currency_position}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.weightUnit": {
+      "tag": "{kiwe_context_commerce_plan_weight_unit}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.dimensionUnit": {
+      "tag": "{kiwe_context_commerce_plan_dimension_unit}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.sellingLocations.mode": {
+      "tag": "{kiwe_context_commerce_plan_selling_locations_mode}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.sellingLocations.countries": {
+      "tag": "{kiwe_context_commerce_plan_selling_locations_countries}",
+      "kind": "list",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.sellingLocations.excludedCountries": {
+      "tag": "{kiwe_context_commerce_plan_selling_locations_excluded_countries}",
+      "kind": "list",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.shippingLocations.mode": {
+      "tag": "{kiwe_context_commerce_plan_shipping_locations_mode}",
+      "kind": "text",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "commercePlan.shippingLocations.countries": {
+      "tag": "{kiwe_context_commerce_plan_shipping_locations_countries}",
+      "kind": "list",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "business.activities.commerce": {
+      "tag": "{kiwe_context_business_activities_commerce}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "business.activities.blog": {
+      "tag": "{kiwe_context_business_activities_blog}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "business.activities.publication": {
+      "tag": "{kiwe_context_business_activities_publication}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "business.activities.physical_store": {
+      "tag": "{kiwe_context_business_activities_physical_store}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "business.activities.service_area": {
+      "tag": "{kiwe_context_business_activities_service_area}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.testimonialSources.pinned": {
+      "tag": "{kiwe_context_content_plan_testimonial_sources_pinned}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.testimonialSources.hearted": {
+      "tag": "{kiwe_context_content_plan_testimonial_sources_hearted}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.testimonialSources.popular": {
+      "tag": "{kiwe_context_content_plan_testimonial_sources_popular}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    }
+  }
+}

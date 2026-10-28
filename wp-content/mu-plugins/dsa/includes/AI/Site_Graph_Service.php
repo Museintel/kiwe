@@ -46,6 +46,8 @@ final class Site_Graph_Service {
 				'version'       => defined( 'DSA_VERSION' ) ? DSA_VERSION : '',
 				'apps'          => \DSA\Apps\Runtime_Registry::capabilities(),
 				'modules'       => $this->modules->manifest_contract( $dock ),
+				'discussion'    => \DSA\Discussion\Discussion_Contract::export(),
+				'forms'         => \DSA\Bricks\Form_Identity_Service::contract(),
 				'dock'          => $this->safe_setting_fragment( $dock, [ 'presentation', 'layout', 'focus_module', 'shape', 'orientation', 'items' ] ),
 				'search'        => $this->safe_setting_fragment( isset( $settings['search'] ) && is_array( $settings['search'] ) ? $settings['search'] : [], [ 'context_aware', 'alphabet_enabled', 'product_add_enabled', 'bricks_bridge_enabled', 'families', 'custom_taxonomies' ] ),
 				'bricksBridge'  => $this->safe_setting_fragment( isset( $settings['bricks'] ) && is_array( $settings['bricks'] ) ? $settings['bricks'] : [], [ 'dynamic_tags_enabled', 'dsa_icon_launcher_enabled', 'linked_products_controls_enabled', 'prefer_bricks_native_cart', 'quantity_stepper_enabled', 'stock_badge_enabled', 'verified_version' ] ),
@@ -499,7 +501,7 @@ final class Site_Graph_Service {
 			],
 			'kiweAppShell'      => [
 				'authority' => 'kiwe',
-				'useFor'    => [ 'dock launchers', 'Search screen', 'Menu context', 'Saved', 'Cart', 'Checkout', 'Profile', 'AI', 'notifications', 'Links' ],
+				'useFor'    => [ 'dock launchers', 'Search screen', 'Menu context', 'Saved', 'Cart', 'Checkout', 'Profile', 'AI', 'notifications', 'Links', 'contextual native comments and product reviews' ],
 				'rule'      => 'Page/header controls should use canonical Kiwe launchers such as data-dsa-open-module. Do not recreate AppShell runtime.',
 			],
 			'seamContext'       => [

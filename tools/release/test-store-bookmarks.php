@@ -11,10 +11,12 @@ $mode=$argv[1]??'off';$options=[App::OPTION=>$mode==='on'?'1':'0'];$writes=0;$pr
 if($mode!=='missing')eval('function WC(){return (object)[];}');
 function check($ok,$label){if(!$ok)throw new RuntimeException($label);$GLOBALS['checks'][$label]=true;}
 function get_option($k,$d=false){return $GLOBALS['options'][$k]??$d;}function get_current_user_id(){return 4;}
+require __DIR__.'/fixtures/saved-metadata.php';
 function get_user_meta($id,$key,$single){return $GLOBALS['meta'][$id][$key]??[];}function update_user_meta($id,$key,$value){$GLOBALS['writes']++;$GLOBALS['meta'][$id][$key]=$value;return true;}
 function absint($n){return abs((int)$n);}function sanitize_key($s){return preg_replace('/[^a-z0-9_-]/','',strtolower((string)$s));}function sanitize_text_field($s){return trim(strip_tags((string)$s));}function esc_url_raw($s){return (string)$s;}
 function __($s,$d=''){return $s;}function _n($a,$b,$n,$d=''){return $n===1?$a:$b;}function get_bloginfo($s){return 'UTF-8';}
-function get_post($id){return (object)['ID'=>$id,'post_type'=>get_post_type($id)];}function get_post_type($id){return $id===2?'product':'post';}function get_post_type_object($t){return (object)['labels'=>(object)['singular_name'=>$t]];}
+function get_post($id){return is_object($id)?$id:(object)['ID'=>$id,'post_type'=>get_post_type($id),'post_status'=>'publish','post_password'=>'','post_parent'=>0];}function get_post_type($id){return $id===2?'product':'post';}function get_post_type_object($t){return (object)['labels'=>(object)['singular_name'=>$t]];}
+function is_post_publicly_viewable($post){return $post->post_status==='publish';}function post_password_required($post){return $post->post_password!=='';}
 function get_the_title($id){return 'Article '.$id;}function get_permalink($id){return 'https://site.test/story/'.$id;}function get_the_post_thumbnail_url($id,$size){return '';}function get_the_excerpt($id){return 'An article.';}function get_the_date($format,$id){return '2026-10-24';}function get_object_taxonomies($t,$output){return [];}function wp_trim_words($s,$n){return $s;}function wp_strip_all_tags($s,$r=false){return strip_tags($s);}function delete_transient($key){return true;}
 function wc_get_product($id){$GLOBALS['productReads']++;if($id!==2)throw new RuntimeException('Article bookmark asked Woo for a product');return new ProductFixture();}
 function wc_price($v){return '₹'.$v;}function wc_format_weight($v){return $v.' g';}function wp_get_post_terms($id,$t,$args){return ['Chikki'];}function is_wp_error($v){return false;}

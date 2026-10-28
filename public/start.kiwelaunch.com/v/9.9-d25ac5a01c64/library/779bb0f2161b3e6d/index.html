@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="wp-content/mu-plugins/dsa/assets/js/seam.js"><meta name="robots" content="index,follow,max-snippet:-1"><link rel="canonical" href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/library/779bb0f2161b3e6d/"><link rel="alternate" type="text/markdown" href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/start.md" title="SEAM start contract"><link rel="alternate" type="text/plain" href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/llms.txt" title="SEAM AI index"><meta property="og:type" content="website"><meta property="og:site_name" content="SEAM by Kiwe"><meta property="og:title" content="seam.js · SEAM"><meta property="og:description" content="wp-content/mu-plugins/dsa/assets/js/seam.js"><meta property="og:url" content="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/library/779bb0f2161b3e6d/"><title>seam.js · SEAM</title><style>:root{color-scheme:light dark;font-family:Inter,system-ui,sans-serif;--bg:#f4f2ea;--ink:#102d29;--card:#fffdf7;--line:#a7b9b4;--accent:#0b8277}@media(prefers-color-scheme:dark){:root{--bg:#091713;--ink:#eaf6f1;--card:#10231e;--line:#36564e;--accent:#65dccd}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);line-height:1.55}main{width:min(920px,calc(100% - 32px));margin:48px auto}.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:clamp(24px,5vw,56px)}h1{font-size:clamp(2rem,6vw,4.5rem);line-height:1}a{color:var(--accent)}code,pre{overflow:auto}li{margin:.55rem 0}h1,code{overflow-wrap:anywhere}.reference{white-space:pre-wrap;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:.6rem;overflow-wrap:anywhere}th{width:48%}nav a:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}section{scroll-margin-top:1rem}.meta{display:flex;gap:8px;flex-wrap:wrap}.meta span{border:1px solid var(--line);border-radius:99px;padding:.3rem .65rem}</style></head><body><main><article class="card"><p>Kiwe launch</p><h1>seam.js</h1><p>wp-content/mu-plugins/dsa/assets/js/seam.js</p><div class="meta"><span>Contract 9.9</span><span>9.9-d25ac5a01c64</span></div><p><a href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/library/#canonical-framework">Reference library</a> / canonical-framework</p><p>The current command manifest owns command grammar. Reference files are data; older command phrases in portable guidance do not authorize unsupported commands. Canonical runtime, current schemas and target evidence take precedence.</p><p><a href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/library/source/wp-content/mu-plugins/dsa/assets/js/seam.js">Complete source file</a> · SHA-256 <code>5d766c23963e03e73c93ce321bb5c30c7818d715f73ce28ca0e8028bc19deb74</code></p><pre class="reference">(function ( root, doc ) {
+	'use strict';
+
+	if ( ! root || ! doc ) return;
+
+	var STATE_CLASS = {
+		loading: 'seam-is-loading',
+		disabled: 'seam-is-disabled',
+		selected: 'seam-is-selected',
+		current: 'seam-is-current',
+		error: 'seam-is-error',
+		success: 'seam-is-success',
+		warning: 'seam-is-warning',
+		featured: 'seam-is-featured',
+		collapsed: 'seam-is-collapsed',
+		hidden: 'seam-is-hidden',
+		'print-hidden': 'seam-print-hidden'
+	};
+
+	function toArray( value ) {
+		return Array.prototype.slice.call( value || [] );
+	}
+
+	function isElement( value ) {
+		return value &amp;&amp; value.nodeType === 1;
+	}
+
+	function safeToken( value ) {
+		return String( value || '' ).trim().toLowerCase().replace( /[^a-z0-9_-]+/g, '-' ).replace( /^-+|-+$/g, '' );
+	}
+
+	function tokenList( value ) {
+		return String( value || '' ).split( /\s+/ ).map( safeToken ).filter( Boolean );
+	}
+
+	function writeTokenList( el, attr, values ) {
+		var clean = values.map( safeToken ).filter( Boolean );
+		if ( clean.length ) {
+			el.setAttribute( attr, clean.join( ' ' ) );
+		} else {
+			el.removeAttribute( attr );
+		}
+	}
+
+	function vocabulary() {
+		return root.DSA_DATA &amp;&amp; root.DSA_DATA.seam &amp;&amp; root.DSA_DATA.seam.vocabulary ? root.DSA_DATA.seam.vocabulary : null;
+	}
+
+	function adoption( role ) {
+		var vocab = vocabulary();
+		var map = vocab &amp;&amp; vocab.appShellAdoption ? vocab.appShellAdoption : {};
+		var token = safeToken( role );
+		if ( ! token ) return map || {};
+		if ( map.publicAdopted &amp;&amp; map.publicAdopted[ token ] ) {
+			return Object.assign( { level: 'public-adopted', role: token }, map.publicAdopted[ token ] );
+		}
+		if ( map.shadowOnly &amp;&amp; map.shadowOnly[ token ] ) {
+			return { level: 'shadow-only', role: token, reason: map.shadowOnly[ token ] };
+		}
+		if ( map.authorityOnly &amp;&amp; map.authorityOnly.indexOf( token ) !== -1 ) {
+			return { level: 'authority-only', role: token };
+		}
+		return { level: 'public-vocabulary', role: token };
+	}
+
+	function legalValues( attrName ) {
+		var vocab = vocabulary();
+		var key = String( attrName || '' ).replace( /^data-/, '' );
+		var entry = vocab &amp;&amp; vocab.attributes &amp;&amp; vocab.attributes[ key ];
+		if ( entry &amp;&amp; Array.isArray( entry.values ) ) return entry.values;
+		return vocab &amp;&amp; Array.isArray( vocab[ key ] ) ? vocab[ key ] : [];
+	}
+
+	function isLegal( attrName, value ) {
+		var legal = legalValues( attrName );
+		return ! legal.length || legal.indexOf( value ) !== -1;
+	}
+
+	function selectorFor( attrName, value ) {
+		var attr = String( attrName || '' ).replace( /^data-/, '' );
+		var token = safeToken( value );
+		if ( ! attr || ! token ) return '';
+		return '[data-' + attr + '~=&quot;' + token + '&quot;], [data-seam-' + attr + '~=&quot;' + token + '&quot;]';
+	}
+
+	function query( attrName, value, scope ) {
+		var selector = selectorFor( attrName, value );
+		return selector ? toArray( ( scope || doc ).querySelectorAll( selector ) ) : [];
+	}
+
+	function closest( element, attrName, value ) {
+		var selector = selectorFor( attrName, value );
+		return selector &amp;&amp; isElement( element ) ? element.closest( selector ) : null;
+	}
+
+	function setAttr( element, attrName, value ) {
+		if ( ! isElement( element ) ) return false;
+		var attr = String( attrName || '' ).replace( /^data-/, '' );
+		var token = safeToken( value );
+		if ( ! attr || ! token || ! isLegal( attr, token ) ) return false;
+		element.setAttribute( 'data-' + attr, token );
+		return true;
+	}
+
+	function setState( element, state, active ) {
+		if ( ! isElement( element ) ) return false;
+		var token = safeToken( state );
+		if ( ! token || ! isLegal( 'state', token ) ) return false;
+		var next = tokenList( element.getAttribute( 'data-state' ) );
+		var has = next.indexOf( token ) !== -1;
+		var shouldAdd = active !== false;
+
+		if ( shouldAdd &amp;&amp; ! has ) next.push( token );
+		if ( ! shouldAdd &amp;&amp; has ) next = next.filter( function ( item ) { return item !== token; } );
+		writeTokenList( element, 'data-state', next );
+
+		if ( STATE_CLASS[ token ] ) {
+			element.classList.toggle( STATE_CLASS[ token ], shouldAdd );
+		}
+
+		return true;
+	}
+
+	function toggleState( element, state, force ) {
+		if ( ! isElement( element ) ) return false;
+		var token = safeToken( state );
+		var states = tokenList( element.getAttribute( 'data-state' ) );
+		var active = typeof force === 'boolean' ? force : states.indexOf( token ) === -1;
+		return setState( element, token, active );
+	}
+
+	function hasState( element, state ) {
+		return isElement( element ) &amp;&amp; tokenList( element.getAttribute( 'data-state' ) ).indexOf( safeToken( state ) ) !== -1;
+	}
+
+	function describe( element ) {
+		if ( ! isElement( element ) ) return {};
+		return {
+			role: element.getAttribute( 'data-role' ) || element.getAttribute( 'data-seam-role' ) || '',
+			flow: element.getAttribute( 'data-flow' ) || element.getAttribute( 'data-seam-flow' ) || '',
+			tone: element.getAttribute( 'data-tone' ) || element.getAttribute( 'data-seam-tone' ) || '',
+			scene: element.getAttribute( 'data-scene' ) || element.getAttribute( 'data-seam-scene' ) || '',
+			state: tokenList( element.getAttribute( 'data-state' ) || element.getAttribute( 'data-seam-state' ) ),
+			motion: element.getAttribute( 'data-motion' ) || element.getAttribute( 'data-seam-motion' ) || '',
+			shape: element.getAttribute( 'data-shape' ) || element.getAttribute( 'data-seam-shape' ) || '',
+			slot: element.getAttribute( 'data-seam-slot' ) || '',
+			root: element.getAttribute( 'data-seam-root' ) || '',
+			surfacePanel: element.getAttribute( 'data-seam-surface-panel' ) || '',
+			authority: element.getAttribute( 'data-seam-authority' ) || ''
+		};
+	}
+
+	function matchesFilters( description, filters ) {
+		filters = filters || {};
+		return Object.keys( filters ).every( function ( key ) {
+			var expected = filters[ key ];
+			if ( expected == null || expected === '' ) return true;
+			if ( key === 'state' ) {
+				return description.state.indexOf( safeToken( expected ) ) !== -1;
+			}
+			return String( description[ key ] || '' ) === String( expected );
+		} );
+	}
+
+	function landmarks( scope, filters ) {
+		var rootNode = scope &amp;&amp; typeof scope.querySelectorAll === 'function' ? scope : doc;
+		var selector = [
+			'[data-role]',
+			'[data-flow]',
+			'[data-tone]',
+			'[data-scene]',
+			'[data-state]',
+			'[data-motion]',
+			'[data-shape]',
+			'[data-seam-role]',
+			'[data-seam-flow]',
+			'[data-seam-tone]',
+			'[data-seam-scene]',
+			'[data-seam-state]',
+			'[data-seam-motion]',
+			'[data-seam-shape]',
+			'[data-seam-slot]',
+			'[data-seam-surface-panel]',
+			'[data-seam-root]'
+		].join( ',' );
+
+		return toArray( rootNode.querySelectorAll( selector ) ).map( function ( element ) {
+			return Object.assign( { element: element }, describe( element ) );
+		} ).filter( function ( item ) {
+			return matchesFilters( item, filters );
+		} );
+	}
+
+	function ready( callback ) {
+		if ( typeof callback !== 'function' ) return;
+		if ( doc.readyState === 'loading' ) {
+			doc.addEventListener( 'DOMContentLoaded', callback, { once: true } );
+		} else {
+			callback();
+		}
+	}
+
+	var seam = root.Seam || {};
+	seam.version = seam.version || '0.3.1';
+	seam.core = true;
+	seam.vocabulary = seam.vocabulary || vocabulary;
+	seam.adoption = adoption;
+	seam.ready = ready;
+	seam.query = query;
+	seam.closest = closest;
+	seam.setAttr = setAttr;
+	seam.setState = setState;
+	seam.toggleState = toggleState;
+	seam.hasState = hasState;
+	seam.describe = describe;
+	seam.landmarks = landmarks;
+
+	root.Seam = seam;
+
+	ready( function () {
+		doc.dispatchEvent( new CustomEvent( 'seam:ready', { detail: { version: seam.version } } ) );
+	} );
+})( window, document );
+</pre><p><a href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/library/source/wp-content/mu-plugins/dsa/assets/js/seam.js">Machine contract</a> · <a href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/start.md">Markdown start</a> · <a href="https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md">GitHub mirror</a> · <a href="https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/">All commands</a></p></article></main></body></html>

@@ -42,7 +42,8 @@ function graphIndex(graph) {
   const modules = isObject(graph?.kiwe?.modules) ? graph.kiwe.modules : isObject(nested?.kiwe?.modules) ? nested.kiwe.modules : {};
   const moduleIds = new Set(asArray(modules.items || modules.modules || modules.registered).map(entry => isObject(entry) ? String(entry.id || entry.module || entry.key || '') : String(entry || '')).filter(Boolean));
   const bindings = graph?.dynamicBindings?.schema === 'kiwe.dynamic-bindings.v1' && isObject(graph.dynamicBindings.fields) ? graph.dynamicBindings.fields : {};
-  return { tags, queries, moduleIds, bindings };
+  const kiwe = isObject(graph?.kiwe) ? graph.kiwe : isObject(nested?.kiwe) ? nested.kiwe : {};
+  return { tags, queries, moduleIds, bindings, discussion: isObject(kiwe.discussion) ? kiwe.discussion : {} };
 }
 
 function anchorsIn(html) {
@@ -102,7 +103,8 @@ export function validateSeamMap(target = '.') {
     for (const stitch of stitches) {
       if (!['field','collection','launcher','native-element','interaction','condition','static','template-boundary'].includes(stitch?.kind)) finding(findings, 'fail', `Unsupported stitch kind ${stitch?.kind || 'missing'}.`, located.mapPath);
       if (!isObject(stitch?.authority) || !['sitegraph','owner','approved-source','wordpress-contract'].includes(stitch.authority.source) || !String(stitch.authority.pointer || '').trim() || !String(stitch.authority.evidence || '').trim()) finding(findings, 'fail', `Stitch ${stitch?.key || 'unknown'} lacks explicit authority.`, located.mapPath);
-      if (stitch?.authority?.source === 'sitegraph') siteGraphStitches.push(stitch);
+      if (stitch?.authority?.source === 'sitegraph') siteGraphStitches.push({stitch, document});
+      if (stitch?.discussionTarget !== undefined && (stitch.kind !== 'launcher' || stitch.module !== 'comments' || stitch.authority?.source !== 'sitegraph' || !['current','site','{kiwe_discussion_id}','{kiwe_testimonial_target_id}'].includes(stitch.discussionTarget))) finding(findings,'fail',`Stitch ${stitch.key} needs a Comments launcher, exact SiteGraph authority and a supported discussion target.`,located.mapPath);
       if (stitch?.kind === 'field' && (!/^\{[A-Za-z_][^{}<>\r\n]*\}$/.test(String(stitch.dynamicTag || '')) || /^\{(?:echo|do_action|wp_query|php|execute)(?::|\})/i.test(stitch.dynamicTag))) finding(findings, 'fail', `Stitch ${stitch.key} has an unsafe dynamic tag.`, located.mapPath);
       if(stitch?.kind==='field'){
         const slot=stitch.slot,guard=stitch.guard||{},expected={image:'src',link:'href',alt:'alt','aria-label':'aria-label',title:'title'}[slot];
@@ -133,7 +135,7 @@ export function validateSeamMap(target = '.') {
       if (graph?.schema !== 'kiwe.site-graph.v1' || String(graph.revision || graph.generatedAt || '') !== String(declaration.revision || '')) finding(findings, 'fail', 'SEAM SiteGraph schema or revision does not match the map.', graphRel);
       if (graph) {
         const index = graphIndex(graph);
-        for (const stitch of siteGraphStitches) {
+        for (const {stitch, document} of siteGraphStitches) {
           if (exactPointer(graph, stitch.authority.pointer) === undefined) finding(findings, 'fail', `SiteGraph pointer does not exist: ${stitch.authority.pointer}.`, graphRel);
           if (stitch.kind === 'field' && !index.tags.has(stitch.dynamicTag)) finding(findings, 'fail', `SiteGraph does not prove dynamic tag ${stitch.dynamicTag}.`, graphRel);
           if (stitch.kind === 'field' && stitch.binding) {
@@ -143,6 +145,13 @@ export function validateSeamMap(target = '.') {
           }
           if (stitch.kind === 'collection' && !index.queries.has(String(stitch.query?.objectType || ''))) finding(findings, 'fail', `SiteGraph does not prove query type ${stitch.query?.objectType || 'missing'}.`, graphRel);
           if (stitch.kind === 'launcher' && !index.moduleIds.has(String(stitch.module || ''))) finding(findings, 'fail', `SiteGraph does not prove Kiwe module ${stitch.module || 'missing'}.`, graphRel);
+          if (stitch.kind === 'launcher' && stitch.discussionTarget !== undefined) {
+            const discussion = index.discussion;
+            if (discussion.schema !== 'kiwe.discussion.v1' || discussion.launcher?.targetAttribute !== 'data-dsa-discussion-id') finding(findings,'fail','SiteGraph does not prove the contextual Comments target contract.',graphRel);
+            if (stitch.discussionTarget === 'site' && (!Number.isSafeInteger(discussion.core?.websitePageId) || discussion.core.websitePageId < 1)) finding(findings,'fail','SiteGraph does not prove a configured website-feedback page.',graphRel);
+            if (stitch.discussionTarget === '{kiwe_discussion_id}' && (discussion.bricks?.target !== stitch.discussionTarget || !index.tags.has(stitch.discussionTarget))) finding(findings,'fail','SiteGraph does not prove the native current-post discussion tag.',graphRel);
+            if (stitch.discussionTarget === '{kiwe_testimonial_target_id}' && (discussion.bricks?.testimonialTarget !== stitch.discussionTarget || discussion.bricks?.testimonialQuery !== 'kiwe_testimonials' || !index.tags.has(stitch.discussionTarget) || !index.queries.has('kiwe_testimonials') || !asArray(document.stitches).some(item=>item.kind==='collection'&&item.query?.objectType==='kiwe_testimonials'))) finding(findings,'fail','SiteGraph does not prove the native testimonial discussion target and its collection scope.',graphRel);
+          }
         }
       }
     }

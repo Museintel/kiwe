@@ -51,7 +51,7 @@
     "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage. RC343 adds complementary native Media views and scoped recovery entrances; object permission and ownership must be rechecked at action time, including after review. Evidence: docs/STATUS-VISIBILITY-RC343-2026-10-13.md."
   },
   {
-    "source": "wp-content/mu-plugins/dsa/includes/Access/Guest_Contribution_Service.php",
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Guest_Engine_Service.php",
     "callbacks": [
       "render"
     ],
@@ -59,7 +59,7 @@
       "guest-applications",
       "guest-editorial"
     ],
-    "retainedAccess": "Existing native workflow retained until the corresponding client app journey is accepted.",
+    "retainedAccess": "Guest App retains the native operations and menu; Core keeps passive records and immutable contribution permission ownership.",
     "reviewBoundary": "Review all controls within these callbacks when connecting this area; callback presence alone does not prove control coverage."
   },
   {
@@ -341,5 +341,15 @@
     ],
     "retainedAccess": "Native software managers get the shared Kiwe Apps screen; store managers keep existing Store tasks without plugin-install authority.",
     "reviewBoundary": "Installation, automatic-update changes and code recovery keep native capabilities, current nonce, origin/mutation and reviewed expected-state checks. Actual native/browser acceptance remains pending AP01–AP06."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/System_App_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "account",
+      "security"
+    ],
+    "retainedAccess": "Included Auth/Security Apps reuse Core PhoneKey/SecureTrack policy. Native logs, accounts, roles, enforcement and optional telemetry choices keep their existing owners; the Apps cannot be removed.",
+    "reviewBoundary": "Exact native partial-save preservation, role/secret/origin/nonce/stale denial, rollback and no-Woo boundaries are qualified in the owned WordPress suite. Auth engine remains unchanged. Real installed private browser navigation and settings UI must pass before live publication."
   }
 ]

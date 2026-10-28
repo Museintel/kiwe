@@ -8,7 +8,9 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Search_Report_Snapshot.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php';
 $options=[]; $meta=[]; $users=[]; $actor=1; $hook='personal_options_update'; $commerce=false; $service_queries=0;
-$wpdb=(object)['prefix'=>'wp_'];
+$wpdb=new class { public $prefix='wp_', $comments='wp_comments', $commentmeta='wp_commentmeta'; public function prepare($sql,...$args){return $sql;} };
+if(!function_exists('add_filter')){function add_filter(...$args){}} if(!function_exists('remove_filter')){function remove_filter(...$args){}} if(!function_exists('wp_json_encode')){function wp_json_encode($value,...$args){return json_encode($value);}} if(!function_exists('wp_cache_get_last_changed')){function wp_cache_get_last_changed($group){return 'fixture-native-empty';}}
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Discussion/Discussion_Reactions.php';
 class WP_User { public function __construct(public int $ID, public string $display_name, public string $description='', public string $user_url='', public array $caps=[]) {} }
 function do_action($hook,...$args){$GLOBALS['actions'][]=$hook;}
 function __(string $s, string $d=''): string { return $s; }

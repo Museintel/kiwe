@@ -19,7 +19,7 @@ const checks = [
   ['shared atomic limiter is boot-registered', plugin.includes('Atomic_Rate_Limiter::register()')],
   ['persistent object cache uses atomic increment', limiter.includes('wp_using_ext_object_cache()') && limiter.includes('wp_cache_incr')],
   ['shared-host limiter uses one primary row per bucket', limiter.includes('PRIMARY KEY (bucket_hash)') && limiter.includes('ON DUPLICATE KEY UPDATE')],
-  ['limiter fails open if storage is unavailable', limiter.includes("rate_limit.storage_unavailable") && /storage_unavailable[\s\S]{0,140}return true;/.test(limiter)],
+  ['legacy limiter callers fail open; discussion can opt into strict admission', limiter.includes("rate_limit.storage_unavailable") && /bool \$fail_open = true/.test(limiter) && /storage_unavailable[\s\S]{0,140}return \$fail_open;/.test(limiter)],
   ['expired limiter rows have bounded cleanup', limiter.includes("WHERE expires_at < %d LIMIT 5000") && limiter.includes("'hourly'")],
   ['REST limiter no longer creates minute transients', origin.includes('Atomic_Rate_Limiter::allow') && !origin.includes('set_transient')],
   ['Cart REST limiter uses shared atomic store', cart.includes('Atomic_Rate_Limiter::allow') && !cart.includes("'dsa_cart_rate_'") && !/private function rate_limit[\s\S]{0,500}set_transient/.test(cart)],

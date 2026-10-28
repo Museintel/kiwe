@@ -44,11 +44,11 @@ async function run() {
   const retry = consumer(early().owner.startupHydration);
   check((await retry.context.requestRuntimeHydration(true)).fresh && retry.calls.length === 1, 'Nonce recovery never replays the first response');
   for (const scenario of [{ confirmed: true, failed: false, loggedIn: false, reads: 0 }, { confirmed: true, failed: false, loggedIn: true, reads: 1 }, { confirmed: false, failed: false, loggedIn: false, reads: 1 }, { confirmed: true, failed: true, loggedIn: false, reads: 1 }]) {
-    const reads = [], merged = [], intents = [];
-    const c = { window: { localStorage: { getItem: () => '[{"key":"local"}]' } }, savedStorageKey: 'existing', savedItems: [], runtimeIdentityConfirmed: scenario.confirmed, runtimeHydrationFailed: scenario.failed, phonekey: { user: { loggedIn: scenario.loggedIn } }, Promise, JSON, mergeSavedItems: items => merged.push(...items), consumePendingSavedIntent: () => intents.push(true), dsaGet: url => { reads.push(url); return Promise.resolve({ items: [{ key: 'server' }] }); } };
+    const reads = [], merged = [], accepted = [], intents = [];
+    const c = { window: { localStorage: { getItem: () => '[{"key":"local"}]' } }, savedStorageKey: 'existing', savedItems: [], savedServerRevision: 0, runtimeIdentityConfirmed: scenario.confirmed, runtimeHydrationFailed: scenario.failed, phonekey: { user: { loggedIn: scenario.loggedIn } }, Promise, JSON, mergeSavedItems: items => merged.push(...items), acceptSavedServerItems: items => accepted.push(...items), consumePendingSavedIntent: () => intents.push(true), dsaGet: url => { reads.push(url); return Promise.resolve({ items: [{ key: 'server' }] }); } };
     vm.createContext(c); vm.runInContext(fn('initializeSavedItems'), c); await c.initializeSavedItems();
     check(reads.length === scenario.reads && intents.length === 1 && merged[0].key === 'local', 'Local Saved shelf and pending action survive every identity boundary');
-    check(scenario.reads ? merged.some(x => x.key === 'server') : merged.length === 1, 'Only a freshly confirmed guest skips the always-empty server shelf');
+    check(scenario.reads ? accepted.some(x => x.key === 'server') : accepted.length === 0, 'Only a freshly confirmed guest skips the always-empty server shelf');
   }
   console.log(JSON.stringify({ passed: true, checks, scope: 'Actual head request, one-use consumer, stale/failed/navigation boundaries and native-identity Saved decisions' }));
 }

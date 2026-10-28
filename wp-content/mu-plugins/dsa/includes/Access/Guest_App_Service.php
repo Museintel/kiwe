@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 final class Guest_App_Service {
 	public const PAGE = 'kiwe-guests';
 
-	public static function enabled(): bool { return defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
+	public static function enabled(): bool { return \DSA\Apps\Guest_App_Service::enabled() && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
 
 	public function register(): void {
 		if ( ! self::enabled() ) return;
@@ -90,8 +90,8 @@ final class Guest_App_Service {
 		if ( 'HEAD' === $_SERVER['REQUEST_METHOD'] ) exit;
 		wp_enqueue_editor();
 		wp_enqueue_script( 'wp-i18n' );
-		wp_enqueue_style( 'kiwe-guest-app', DSA_URL . 'assets/css/guest-app.css', \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), DSA_VERSION );
-		wp_enqueue_script( 'kiwe-guest-app', DSA_URL . 'assets/js/guest-app.js', [ 'wp-element' ], DSA_VERSION, true );
+		wp_enqueue_style( 'kiwe-guest-app', \DSA\Apps\Asset_Locator::url('assets/css/guest-app.css'), \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), \DSA\Apps\Asset_Locator::version('assets/css/guest-app.css') );
+		wp_enqueue_script( 'kiwe-guest-app', \DSA\Apps\Asset_Locator::url('assets/js/guest-app.js'), [ 'wp-element' ], \DSA\Apps\Asset_Locator::version('assets/js/guest-app.js'), true );
 		wp_localize_script( 'kiwe-guest-app', 'KIWE_GUEST_APP', [ 'endpoint' => rest_url( 'dsa/v1/workspace/guests' ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'home' => Workspace_Admin_Service::url(), ...Workspace_Chrome_Service::projection() ] );
 		?><!doctype html><html <?php language_attributes(); ?>><head><meta charset="<?php bloginfo( 'charset' ); ?>"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php esc_html_e( 'Guests · Kiwe', 'dsa' ); ?></title><?php wp_print_styles( [ 'editor-buttons', 'kiwe-guest-app' ] ); ?></head><body class="kiwe-guest-app"><div id="kiwe-guest-app"><p><?php esc_html_e( 'Opening Guest work…', 'dsa' ); ?></p><noscript><?php esc_html_e( 'This workspace needs JavaScript. Switch off the experiment to restore the native Guest screen.', 'dsa' ); ?></noscript></div><script>var ajaxurl=<?php echo wp_json_encode( admin_url( 'admin-ajax.php', 'relative' ), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ); ?>;</script><?php wp_print_scripts( [ 'wp-i18n', 'editor', 'quicktags', 'wp-element' ] ); \_WP_Editors::print_default_editor_scripts(); wp_print_scripts( [ 'kiwe-guest-app' ] ); ?></body></html><?php exit;
 	}

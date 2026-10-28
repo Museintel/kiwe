@@ -1,0 +1,11 @@
+@import './app-app.css';
+.kiwe-system-groups{max-width:64rem}
+.kiwe-system-field{border:0;padding:var(--kiwe-space-md) 0;margin:0;min-width:0}
+.kiwe-system-field legend{font-weight:700}
+.kiwe-system-field p{margin:0 0 var(--kiwe-space-sm);max-width:70ch}
+.kiwe-system-choices{display:flex;flex-wrap:wrap;gap:var(--kiwe-space-md)}
+.kiwe-app-settings .kiwe-system-choices label{display:flex;align-items:center;gap:var(--kiwe-space-xs);min-height:2.75rem}
+.kiwe-app-settings .kiwe-system-choices input{width:1.25rem;min-height:1.25rem;accent-color:var(--kiwe-color-brand)}
+.kiwe-system-groups details{border-top:1px solid currentColor;padding-block:var(--kiwe-space-md)}
+.kiwe-system-groups summary{cursor:pointer;font-weight:700;min-height:2.75rem}
+.kiwe-system-links{display:flex;flex-wrap:wrap;gap:var(--kiwe-space-md)}

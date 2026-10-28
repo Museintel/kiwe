@@ -13,8 +13,12 @@ final class Form_Workspace_Service {
 	private array $form_settings = [];
 	public static function url(): string { return admin_url( 'admin.php?page=' . self::PAGE ); }
 	public static function allowed(): bool {
-		if ( ! is_user_logged_in() || ! current_user_can( 'read' ) || Team_Workspace_Service::suspended( get_current_user_id() ) || ( is_multisite() && ! is_user_member_of_blog( get_current_user_id() ) ) ) return false;
-		return Site_Owner_Service::is_owner() || ( 'administrator' === WordPress_Role_Access_Service::role_for( wp_get_current_user() ) && ( current_user_can( 'kiwe_manage_context' ) || current_user_can( 'manage_options' ) ) );
+		return self::allowed_for( get_current_user_id() );
+	}
+	public static function allowed_for( int $id ): bool {
+		$user = $id > 0 ? get_userdata( $id ) : null;
+		if ( ! $user || ! user_can( $user, 'read' ) || Team_Workspace_Service::suspended( $id ) || ( is_multisite() && ! is_user_member_of_blog( $id ) ) ) return false;
+		return Site_Owner_Service::owner_id() === $id || ( 'administrator' === WordPress_Role_Access_Service::role_for( $user ) && ( user_can( $user, 'kiwe_manage_context' ) || user_can( $user, 'manage_options' ) ) );
 	}
 	public function register(): void {
 		add_action( 'admin_menu', [ $this, 'menu' ], 36 );
@@ -65,8 +69,28 @@ final class Form_Workspace_Service {
 		return $this->form_settings[ $key ];
 	}
 	private function label( array $row ): string {
+		if ( is_string( $row['form_identity'] ?? null ) && strlen( $row['form_identity'] ) <= 2048 ) {
+			$identity = \DSA\Bricks\Form_Identity_Service::stored_identity( [ \DSA\Bricks\Form_Identity_Service::META=>[ 'type'=>'kiwe-internal', 'value'=>$row['form_identity'] ] ], (int) $row['post_id'], (string) $row['form_id'] );
+			if ( $identity && $identity['label'] ) return $identity['label'];
+		}
+		if ( ! empty( $row['form_data'] ) && strlen( $row['form_data'] ) <= 131072 ) {
+			$data = json_decode( $row['form_data'], true );
+			$identity = is_array( $data ) ? \DSA\Bricks\Form_Identity_Service::stored_identity( $data, (int) $row['post_id'], (string) $row['form_id'] ) : null;
+			if ( $identity && $identity['label'] ) return $identity['label'];
+		}
 		$settings = $this->settings( $row );
-		return Task_Workspace_UI::text( $settings['submissionFormName'] ?? $settings['formName'] ?? '', 160 ) ?: sprintf( __( 'Form %s', 'dsa' ), (string) $row['form_id'] );
+		return \DSA\Bricks\Form_Identity_Service::identity( $settings, (int) $row['post_id'], (string) $row['form_id'] )['label'];
+	}
+	private function identity_column( string $alias = '' ): string {
+		$column = $alias ? $alias . '.form_data' : 'form_data';
+		return "LEFT(JSON_UNQUOTE(JSON_EXTRACT(CASE WHEN JSON_VALID({$column}) THEN {$column} ELSE '{}' END, '$.\"_kiwe_form_identity_v1\".value')),2049) AS form_identity";
+	}
+	/** Presentation-only notification data. No enquiry answers or contact details enter notices. */
+	public static function notification_record( int $id ): ?array {
+		$self = new self(); $table = $self->table(); if ( ! $table || $id < 1 ) return null;
+		global $wpdb;
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT id,post_id,form_id,created_at,LEFT(form_data,131073) AS form_data FROM `{$table}` WHERE id=%d", $id ), ARRAY_A );
+		return is_array( $row ) && ! $wpdb->last_error ? $self->item( $row ) : null;
 	}
 	private function item( array $row ): array {
 		$post = get_post( (int) $row['post_id'] );
@@ -79,20 +103,21 @@ final class Form_Workspace_Service {
 		$snapshots = Workspace_Activity_Service::snapshots();
 		$ceiling = $snapshots['forms']['ceiling'] ?? 0;
 		$q = $request->get_query_params(); $form = $q['form'] ?? ''; $before = $q['before'] ?? '';
-		if ( ! is_string( $form ) || ( '' !== $form && ! preg_match( '/^[a-zA-Z0-9_-]{1,64}$/D', $form ) ) || ( '' !== $before && ! Task_Workspace_UI::id( $before ) ) ) return $this->fail( 'Refresh Forms before choosing this view.' );
+		if ( ! is_string( $form ) || ( '' !== $form && ! preg_match( '/^[a-zA-Z0-9_-]{1,100}$/D', $form ) ) || ( '' !== $before && ! Task_Workspace_UI::id( $before ) ) ) return $this->fail( 'Refresh Forms before choosing this view.' );
 		global $wpdb;
 		$where = 'id<=%d'; $args = [ $ceiling ];
-		if ( $form ) { $where .= ' AND form_id=%s'; $args[] = $form; }
+		if ( $form && preg_match( '/^native-([0-9]+)-([a-zA-Z0-9_-]{1,64})$/D', $form, $match ) ) { $where .= ' AND post_id=%d AND form_id=%s'; $args[] = (int) $match[1]; $args[] = $match[2]; }
+		elseif ( $form ) { $where .= ' AND form_id=%s'; $args[] = $form; } // Existing bookmarked views remain readable.
 		$total = (int) $wpdb->get_var( $args ? $wpdb->prepare( "SELECT COUNT(*) FROM `{$table}` WHERE {$where}", $args ) : "SELECT COUNT(*) FROM `{$table}`" );
 		if ( $wpdb->last_error ) return $this->fail( 'The native form count could not be read. Refresh to try again.', 503 );
 		if ( $before ) { $where .= ' AND id<%d'; $args[] = (int) $before; }
-		$sql = "SELECT id,post_id,form_id,created_at FROM `{$table}` WHERE {$where} ORDER BY id DESC LIMIT 21";
+		$sql = "SELECT id,post_id,form_id,created_at," . $this->identity_column() . " FROM `{$table}` WHERE {$where} ORDER BY id DESC LIMIT 21";
 		$rows = $wpdb->get_results( $args ? $wpdb->prepare( $sql, $args ) : $sql, ARRAY_A );
 		if ( ! is_array( $rows ) || $wpdb->last_error ) return $this->fail( 'The native form inbox could not be read. Refresh to try again.', 503 );
-		$groups = $wpdb->get_results( $wpdb->prepare( "SELECT form_id,MAX(post_id) AS post_id,COUNT(*) AS entries FROM `{$table}` WHERE id<=%d GROUP BY form_id ORDER BY MAX(id) DESC LIMIT 101", $ceiling ), ARRAY_A );
+		$groups = $wpdb->get_results( $wpdb->prepare( "SELECT g.form_id,g.post_id,g.entries," . $this->identity_column( 's' ) . " FROM (SELECT form_id,post_id,COUNT(*) AS entries,MAX(id) AS latest_id FROM `{$table}` WHERE id<=%d GROUP BY form_id,post_id ORDER BY MAX(id) DESC LIMIT 101) g INNER JOIN `{$table}` s ON s.id=g.latest_id ORDER BY g.latest_id DESC", $ceiling ), ARRAY_A );
 		if ( ! is_array( $rows ) || ! is_array( $groups ) || $wpdb->last_error ) return $this->fail( 'The native form inbox could not be read. Refresh to try again.', 503 );
 		$items = array_map( [ $this, 'item' ], array_slice( $rows, 0, self::PAGE_SIZE ) );
-		$forms = array_map( fn( $r ) => [ 'id'=>$r['form_id'], 'label'=>$this->label( $r ), 'count'=>(int) $r['entries'] ], array_slice( $groups, 0, 100 ) );
+		$forms = array_map( fn( $r ) => [ 'id'=>'native-' . (int) $r['post_id'] . '-' . $r['form_id'], 'label'=>$this->label( $r ), 'count'=>(int) $r['entries'] ], array_slice( $groups, 0, 100 ) );
 		return Workspace_Activity_Service::attach_snapshots( Task_Workspace_UI::response( [ 'available'=>true, 'items'=>$items, 'forms'=>$forms, 'formsLimited'=>count( $groups ) > 100, 'total'=>$total, 'hasNext'=>count( $rows ) > self::PAGE_SIZE, 'nextBefore'=>$items ? end( $items )['id'] : 0 ] ), $snapshots );
 	}
 	/** Business fields only. Passwords, hidden values, file-system paths and provider tokens never project. */
@@ -126,6 +151,6 @@ final class Form_Workspace_Service {
 	}
 	public function document(): void {
 		if ( ! self::allowed() ) wp_die( 'Forms are available only to the site owner.', '', [ 'response'=>403 ] );
-		Task_Workspace_UI::app_document( 'forms', 'Forms', [ 'endpoint'=>rest_url( 'dsa/v1/workspace/forms' ), 'businessEmail'=>Site_Identity_Service::store_email(), 'contactUrl'=>admin_url( 'admin.php?page=kiwe-contact' ) ] );
+		Task_Workspace_UI::app_document( 'forms', 'Forms', [ 'endpoint'=>rest_url( 'dsa/v1/workspace/forms' ), 'businessEmail'=>Site_Identity_Service::store_email(), 'contactUrl'=>admin_url( 'admin.php?page=kiwe-contact' ), 'focusId'=>Task_Workspace_UI::id( $_GET['submission'] ?? '' ) ?: 0 ] );
 	}
 }

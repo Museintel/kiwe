@@ -1,6 +1,6 @@
 # /library
 
-SEAM contract: 9.7
+SEAM contract: 9.9
 
 Read-only complete public authoring reference. Fetch relevant resources without repository crawling or inventing site-specific capabilities.
 

@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-manifest.v2",
   "productName": "SEAM",
-  "contractVersion": "9.7",
-  "updated": "2026-10-21",
+  "contractVersion": "9.9",
+  "updated": "2026-10-28",
   "purpose": "Small, strict command contract for designing, auditing, fixing and compiling websites without repository crawling or prompt aliases.",
   "authority": {
     "creative": "The user's design conversation owns art direction. /ideate never authorizes redesign by itself and must resolve final, enhancement or redesign authority before creative work.",

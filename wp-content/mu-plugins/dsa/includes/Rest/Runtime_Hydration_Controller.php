@@ -93,6 +93,7 @@ final class Runtime_Hydration_Controller {
 			'dock' => [
 				'phonekey_visible' => $this->phonekey_visible( is_array( $settings['dock'] ?? null ) ? $settings['dock'] : [] ),
 				'admin_dashboard' => $this->dashboard_link(),
+				'admin_edit' => \DSA\Access\Contextual_Edit_Service::current_link(),
 			],
 			'links' => $this->links_admin_data( $link_hub ),
 			'nativeData' => $this->native_data( $trust, $phonekey, $commerce ),

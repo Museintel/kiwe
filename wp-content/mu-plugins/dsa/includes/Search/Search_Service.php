@@ -31,6 +31,14 @@ final class Search_Service {
 		add_action( 'created_term', [ $this, 'invalidate' ] );
 		add_action( 'edited_term', [ $this, 'invalidate' ] );
 		add_action( 'delete_term', [ $this, 'invalidate' ] );
+		add_action( 'set_object_terms', [ $this, 'invalidate_terms' ], 20, 4 );
+		add_action( 'deleted_term_relationships', [ $this, 'invalidate_terms' ], 20, 3 );
+	}
+
+	/** Native term assignment/removal need not save the post or edit the term. */
+	public function invalidate_terms( $object_id, $terms, $third = null, $taxonomy = '' ): void {
+		$taxonomy = is_string( $third ) ? $third : $taxonomy;
+		if ( in_array( get_post_type( (int) $object_id ), [ 'post', 'product' ], true ) && taxonomy_exists( (string) $taxonomy ) ) $this->invalidate();
 	}
 
 	public function invalidate_for_post( int $post_id, $post ): void {
@@ -46,11 +54,16 @@ final class Search_Service {
 	}
 
 	public function invalidate( int $post_id = 0 ): void {
+		self::invalidate_settings();
+	}
+
+	/** Same native cache owner for content and configuration changes. */
+	public static function invalidate_settings(): void {
 		$version = max( 1, (int) get_option( self::CACHE_VERSION_OPTION, 1 ) );
 		update_option( self::CACHE_VERSION_OPTION, $version + 1, false );
 	}
 
-	public function results( string $query, int $limit = 6, string $scope = 'all', string $prefix = '', string $sort = 'latest' ): array {
+	public function results( string $query, int $limit = 6, string $scope = 'all', string $prefix = '', string $sort = 'latest', string $cursor = '' ): array|\WP_Error {
 		$query = trim( sanitize_text_field( $query ) );
 		$query = function_exists( 'mb_substr' ) ? mb_substr( $query, 0, 80 ) : substr( $query, 0, 80 );
 		$limit = max( 1, min( 12, $limit ) );
@@ -58,7 +71,9 @@ final class Search_Service {
 		$prefix = function_exists( 'mb_substr' ) ? mb_substr( $prefix, 0, 3 ) : substr( $prefix, 0, 3 );
 		$scope = $this->allowed_scope( $scope );
 		$sort  = in_array( $sort, [ 'latest', 'popular' ], true ) ? $sort : 'latest';
-		$key   = $this->cache_key( $query, $limit, $scope, $prefix, $sort );
+		if ( '' !== $cursor && ( '' === $query || '' !== $prefix || ! in_array( $scope, [ 'posts', 'products' ], true ) ) ) return new \WP_Error( 'kiwe_search_cursor', __( 'Refresh the results to continue.', 'dsa' ), [ 'status'=>409 ] );
+		if ( '' !== $cursor && ! Search_Query::accepts( $cursor, $this->cache_key( $query, $limit, $scope, $prefix, $sort ) ) ) return new \WP_Error( 'kiwe_search_cursor', __( 'Search results changed. Refresh the results to continue.', 'dsa' ), [ 'status'=>409 ] );
+		$key   = $this->cache_key( $query, $limit, $scope, $prefix, $sort ) . ( '' !== $cursor ? ':' . hash( 'sha256', $cursor ) : '' );
 		$found = false;
 		$data  = wp_cache_get( $key, self::CACHE_GROUP, false, $found );
 
@@ -69,9 +84,12 @@ final class Search_Service {
 		}
 
 		$families     = $this->families();
+		$pagination   = [];
 		$has_commerce = \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_product' ) && post_type_exists( 'product' );
-		$products     = $has_commerce && $families['products'] && in_array( $scope, [ 'all', 'products' ], true ) ? $this->product_results( $query, $limit, $prefix ) : [];
-		$posts        = $families['posts'] && in_array( $scope, [ 'all', 'posts' ], true ) ? $this->post_results( $query, $limit, $prefix, $sort ) : [];
+		$products     = $has_commerce && $families['products'] && in_array( $scope, [ 'all', 'products' ], true ) ? $this->product_results( $query, $limit, $prefix, $sort, $cursor, $pagination ) : [];
+		if ( is_wp_error( $products ) ) return $products;
+		$posts        = $families['posts'] && in_array( $scope, [ 'all', 'posts' ], true ) ? $this->post_results( $query, $limit, $prefix, $sort, $cursor, $pagination ) : [];
+		if ( is_wp_error( $posts ) ) return $posts;
 		$authors      = $families['authors'] && in_array( $scope, [ 'all', 'authors' ], true ) ? $this->author_results( $query, $limit, $prefix ) : [];
 		$categories   = $families['categories'] && in_array( $scope, [ 'all', 'categories' ], true ) ? $this->category_results( $query, $limit, $prefix ) : [];
 		$data         = [
@@ -88,6 +106,7 @@ final class Search_Service {
 			'posts'       => $posts,
 			'authors'     => $authors,
 			'categories'  => $categories,
+			'pagination'  => $pagination,
 			'total'       => count( $products ) + count( $posts ) + count( $authors ) + count( $categories ),
 			'cached'      => false,
 		];
@@ -98,7 +117,7 @@ final class Search_Service {
 		return $data;
 	}
 
-	private function product_results( string $query, int $limit, string $prefix = '' ): array {
+	private function product_results( string $query, int $limit, string $prefix = '', string $sort = 'latest', string $cursor = '', array &$pagination = [] ): array|\WP_Error {
 		$args = $this->query_args( 'product', $query, $limit, $prefix );
 
 		if ( function_exists( 'wc_get_product_visibility_term_ids' ) ) {
@@ -122,13 +141,15 @@ final class Search_Service {
 			}
 		}
 
-		$ids = ( new WP_Query( $args ) )->posts;
+		$page = $this->content_page( $args, $query, $limit, $prefix, 'products', $sort, $cursor );
+		if ( is_wp_error( $page ) ) return $page;
+		$ids = $page['ids']; $pagination['products'] = $page['next'];
 		$out = [];
 
 		foreach ( $ids as $id ) {
 			$product = wc_get_product( (int) $id );
 
-			if ( ! $product || ! $product->is_visible() ) {
+			if ( ! $product || ! $product->is_visible() || ! \DSA\Utilities\Content_Visibility::is_public( (int) $id ) ) {
 				continue;
 			}
 
@@ -223,13 +244,14 @@ final class Search_Service {
 		return $out;
 	}
 
-	private function post_results( string $query, int $limit, string $prefix = '', string $sort = 'latest' ): array {
-		$ids = 'popular' === $sort
-			? $this->popular_post_ids( $query, $limit, $prefix )
-			: ( new WP_Query( $this->query_args( 'post', $query, $limit, $prefix ) ) )->posts;
+	private function post_results( string $query, int $limit, string $prefix = '', string $sort = 'latest', string $cursor = '', array &$pagination = [] ): array|\WP_Error {
+		$page = $this->content_page( $this->query_args( 'post', $query, $limit, $prefix ), $query, $limit, $prefix, 'posts', $sort, $cursor );
+		if ( is_wp_error( $page ) ) return $page;
+		$ids = $page['ids']; $pagination['posts'] = $page['next'];
 		$out = [];
 
 		foreach ( $ids as $id ) {
+			if ( ! \DSA\Utilities\Content_Visibility::is_public( (int) $id ) ) continue;
 			$title   = wp_strip_all_tags( get_the_title( (int) $id ) );
 			$excerpt = $this->excerpt( (int) $id );
 			$out[] = [
@@ -246,6 +268,15 @@ final class Search_Service {
 		}
 
 		return $out;
+	}
+
+	private function content_page( array $args, string $query, int $limit, string $prefix, string $family, string $sort, string $cursor ) {
+		$type = 'products' === $family ? 'product' : 'post';
+		if ( '' === $query || '' !== $prefix ) return [ 'ids'=>'posts' === $family && 'popular' === $sort ? $this->popular_post_ids( $query, $limit, $prefix ) : ( new WP_Query( $args ) )->posts, 'next'=>'' ];
+		$taxonomies = array_values( array_filter( array_unique( array_merge( [ 'product' === $type ? 'product_tag' : 'post_tag' ], $this->custom_taxonomies() ) ), static function ( $name ) use ( $type ): bool { $tax = get_taxonomy( $name ); return $tax && ! empty( $tax->public ) && in_array( $type, (array) $tax->object_type, true ); } ) );
+		// The native query cache must also change when only tag relationships change.
+		$args['kiwe_search_version'] = max( 1, (int) get_option( self::CACHE_VERSION_OPTION, 1 ) );
+		return Search_Query::page( $args, $query, $taxonomies, 'posts' === $family ? $sort : 'latest', $cursor, $this->cache_key( $query, $limit, $family, $prefix, $sort ) );
 	}
 
 	private function popular_post_ids( string $query, int $limit, string $prefix ): array {
@@ -314,6 +345,7 @@ final class Search_Service {
 		$args = [
 			'post_type'              => $post_type,
 			'post_status'            => 'publish',
+			'has_password'           => false,
 			'posts_per_page'         => $limit,
 			'fields'                 => 'ids',
 			'no_found_rows'          => true,

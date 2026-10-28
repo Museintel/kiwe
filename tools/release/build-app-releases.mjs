@@ -20,23 +20,27 @@ function normalize(v){if(Array.isArray(v))return v.map(normalize);if(v!==null&&t
 function sign(v){return {...v,signature:crypto.sign(null,Buffer.from(canonical(v)),privateKey).toString('base64')};}
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 let timestamp=new Date().toISOString().replace(/\.\d{3}Z$/,'Z');
+const legacy=args['--catalogue']==='legacy';
+if(legacy&&!renew)throw Error('The historical catalogue can only be renewed; immutable old releases stay unchanged.');
+const catalogueName=(legacy?'':'workspace-')+channel;
 const selected=renew?'renew':(args['--app']||'all');if(!['all','renew',...Object.keys(ownership.apps)].includes(selected))throw Error('Choose an owned App or all.');
 const publicKeyObject=crypto.createPublicKey(privateKey);
 function authenticated(value){if(!value||typeof value!=='object'||value.keyId!==keyId||typeof value.signature!=='string')return false;const payload={...value};delete payload.signature;try{return crypto.verify(null,Buffer.from(canonical(payload)),publicKeyObject,Buffer.from(value.signature,'base64'));}catch{return false;}}
-let prior=null;try{prior=JSON.parse(await fs.readFile(path.join(output,'channels',channel+'.json'),'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
-if(prior&&(!authenticated(prior)||prior.schema!=='kiwe.apps-catalog.v1'||prior.channel!==channel||prior.coreApi!==ownership.coreApi||Date.parse(prior.publishedAt)>Date.now()+300000||Object.entries(prior.apps).some(([id,r])=>!ownership.apps[id]||r.id!==id||r.channel!==channel||!authenticated(r))))throw Error('The previous catalogue and each retained App must authenticate.');
+let prior=null;try{prior=JSON.parse(await fs.readFile(path.join(output,'channels',catalogueName+'.json'),'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
+if(prior&&(!authenticated(prior)||prior.schema!=='kiwe.apps-catalog.v1'||prior.channel!==channel||![1,ownership.coreApi].includes(prior.coreApi)||Date.parse(prior.publishedAt)>Date.now()+300000||Object.entries(prior.apps).some(([id,r])=>!ownership.apps[id]||r.id!==id||r.channel!==channel||!authenticated(r))))throw Error('The previous catalogue and each retained App must authenticate.');
+if(legacy&&prior&&(prior.coreApi!==1||Object.keys(prior.apps).some(id=>!['seo','store'].includes(id))))throw Error('Legacy renewal must retain only the original Store and SEO release contract.');
 if(renew&&(!prior||!Object.keys(prior.apps).length))throw Error('Renewal requires the previous authenticated App catalogue.');
 if(prior&&Date.parse(timestamp)<=Date.parse(prior.publishedAt))timestamp=new Date(Date.parse(prior.publishedAt)+1000).toISOString().replace(/\.\d{3}Z$/,'Z');
 const releases=selected==='all'?{}:{...(prior?.apps||{})};
 const revoked=[...new Set([...(prior?.revoked||[]),...(args['--revoke']||'').split(',').filter(Boolean)])].sort();
-if(revoked.length>32||revoked.some(v=>!/^(?:seo|store)@[0-9]+\.[0-9]+\.[0-9]+(?:-(?:rc|beta|alpha)\.[1-9][0-9]*)?$/.test(v)))throw Error('Only exact owned App versions may be revoked.');
+if(revoked.length>32||revoked.some(v=>!/^(?:seo|store|guest|ai|sitegraph)@[0-9]+\.[0-9]+\.[0-9]+(?:-(?:rc|beta|alpha)\.[1-9][0-9]*)?$/.test(v)))throw Error('Only exact owned App versions may be revoked.');
 for(const[id,app]of Object.entries(ownership.apps)){
  if(selected!=='all'&&selected!==id)continue;
  const root=path.join(output,'releases',id,version),stage=path.join(root,'source','kiwe-'+id);
  if(await fs.stat(root).catch(()=>null))throw Error('An immutable App version already exists: '+id+'@'+version);
  await fs.mkdir(stage,{recursive:true});
  const provider={schema:'kiwe.app-provider.v1',id,version,coreApi:ownership.coreApi,requiresPhp:app.requiresPhp,requiresWp:app.requiresWp,requiresWoo:app.requiresWoo,namespaces:app.namespaces,classes:app.classes,assets:Object.fromEntries(app.files.filter(n=>n.startsWith('assets/')).map(n=>[n,n]))};
- const bootstrap=`<?php\n/**\n * Plugin Name: ${app.name}\n * Description: Optional ${id==='store'?'commerce':'search'} engine for Kiwe Core.\n * Version: ${version}\n * Requires at least: ${app.requiresWp}\n * Requires PHP: ${app.requiresPhp}\n${id==='store'?' * Requires Plugins: woocommerce\n':''} * Update URI: ${origin}/apps/v1/${id}\n */\nif (!defined('ABSPATH')) exit;\n// Core is an MU plugin. A pre-contract Core keeps its bundled engine until migration.\nif (!class_exists('DSA\\\\Apps\\\\Runtime_Registry')) return;\n$kiwe_app_provider = json_decode((string)file_get_contents(__DIR__.'/provider.json'),true);\nif (is_array($kiwe_app_provider)) \\DSA\\Apps\\Runtime_Registry::register($kiwe_app_provider,__DIR__);\nunset($kiwe_app_provider);\n`;
+ const bootstrap=`<?php\n/**\n * Plugin Name: ${app.name}\n * Description: Optional ${id} engine for Kiwe Core.\n * Version: ${version}\n * Requires at least: ${app.requiresWp}\n * Requires PHP: ${app.requiresPhp}\n${id==='store'?' * Requires Plugins: woocommerce\n':''} * Update URI: ${origin}/apps/v1/${id}\n */\nif (!defined('ABSPATH')) exit;\n// Core is an MU plugin. A pre-contract Core keeps its bundled engine until migration.\nif (!class_exists('DSA\\\\Apps\\\\Runtime_Registry')) return;\n$kiwe_app_provider = json_decode((string)file_get_contents(__DIR__.'/provider.json'),true);\nif (is_array($kiwe_app_provider)) \\DSA\\Apps\\Runtime_Registry::register($kiwe_app_provider,__DIR__);\nunset($kiwe_app_provider);\n`;
  const bodies=new Map([['kiwe-'+id+'.php',Buffer.from(bootstrap)],['provider.json',Buffer.from(JSON.stringify(provider,null,2)+'\n')]]);
  for(const name of app.files){if(!/^[A-Za-z0-9_][A-Za-z0-9_/.\-]+$/.test(name)||name.split('/').some(p=>['.','..'].includes(p)))throw Error('Invalid ownership path');const body=await fs.readFile(path.join(repo,'wp-content/mu-plugins/dsa',name),'utf8');bodies.set(name,Buffer.from(body.replace(/\r\n?/g,'\n')));}
  const inventory={schema:'kiwe.app-files.v1',id,version,coreApi:ownership.coreApi,files:Object.fromEntries([...bodies.entries()].sort(([a],[b])=>a<b?-1:1).map(([name,body])=>[name,{bytes:body.length,sha256:hash(body)}]))};
@@ -50,6 +54,6 @@ for(const[id,app]of Object.entries(ownership.apps)){
 }
 for(const[id,r]of Object.entries(releases))if(revoked.includes(id+'@'+r.version))throw Error('A revoked release cannot remain an offered App.');
 const expiresAt=new Date(Date.parse(timestamp)+7*86400000).toISOString().replace(/\.\d{3}Z$/,'Z');
-const catalogue=sign({schema:'kiwe.apps-catalog.v1',channel,coreApi:ownership.coreApi,publishedAt:timestamp,expiresAt,apps:releases,revoked,keyId});
-await fs.mkdir(path.join(output,'channels'),{recursive:true});await fs.writeFile(path.join(output,'channels',channel+'.json'),JSON.stringify(catalogue,null,2)+'\n');
+const catalogue=sign({schema:'kiwe.apps-catalog.v1',channel,coreApi:legacy?1:ownership.coreApi,publishedAt:timestamp,expiresAt,apps:releases,revoked,keyId});
+await fs.mkdir(path.join(output,'channels'),{recursive:true});await fs.writeFile(path.join(output,'channels',catalogueName+'.json'),JSON.stringify(catalogue,null,2)+'\n');
 console.log(JSON.stringify({passed:true,channel,version,renewed:renew,updated:renew?[]:(selected==='all'?Object.keys(ownership.apps):[selected]),apps:Object.fromEntries(Object.entries(releases).map(([id,r])=>[id,{bytes:r.bytes,sha256:r.sha256,files:ownership.apps[id].files.length+3}]))}));

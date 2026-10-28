@@ -12,7 +12,9 @@ const profile=path.resolve(args['--profile-root']),output=path.resolve(args['--o
 for(const root of[profile,output])if(root===repo||root.startsWith(repo+path.sep))throw Error('Release custody must be outside source.');
 const source=path.join(repo,'wp-content/mu-plugins'),stage=path.join(profile,'mu-plugins');
 const ownership=JSON.parse(await fs.readFile(path.join(repo,'tools/release/apps-ownership.json'),'utf8'));
-const optional=new Set(Object.values(ownership.apps).flatMap(v=>v.files));
+const buildProfile=JSON.parse(await fs.readFile(path.join(profile,'build.json'),'utf8'));
+const bundled=buildProfile.bundledApps||[];if(bundled.some(id=>!['guest','ai','sitegraph'].includes(id))||new Set(bundled).size!==bundled.length)throw Error('Unknown bridge App.');
+const optional=new Set(Object.entries(ownership.apps).filter(([id])=>!bundled.includes(id)).flatMap(([,app])=>app.files));
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 const text=new Set(['.css','.html','.js','.json','.md','.php','.svg','.txt','.xml']);
 async function files(root){const all=[];for(const entry of await fs.readdir(root,{withFileTypes:true})){const file=path.join(root,entry.name);if(entry.isSymbolicLink())throw Error('Symlinks cannot authorize a release.');if(entry.isDirectory())all.push(...await files(file));else if(entry.isFile())all.push(file);else throw Error('Unsupported source member.');}return all.sort();}
@@ -24,14 +26,14 @@ for(const file of[path.join(source,'dsa.php'),path.join(source,'kiwe-incident-gu
  if(name==='dsa/includes/Apps/Package_Layout.php'){
   const marker='public const BUNDLED = true; // KIWE_APPS_BUNDLED_PROFILE';
   if(body.toString().split(marker).length!==2)throw Error('The Core profile marker is ambiguous.');
-  body=Buffer.from(body.toString().replace(marker,'public const BUNDLED = false; // KIWE_APPS_BUNDLED_PROFILE'));
+  body=Buffer.from(body.toString().replace(marker,'public const BUNDLED = false; // KIWE_APPS_BUNDLED_PROFILE').replace('public const BUNDLED_APPS = []; // KIWE_APPS_PARTIAL_PROFILE',"public const BUNDLED_APPS = ["+bundled.map(id=>"'"+id+"'").join(',')+"]; // KIWE_APPS_PARTIAL_PROFILE"));
  }
  expected.set(name,body);
 }
 const manifestBody=await fs.readFile(path.join(stage,'dsa/package-manifest.json'));
 const manifest=JSON.parse(manifestBody),build=JSON.parse(await fs.readFile(path.join(profile,'build.json'),'utf8'));
-if(manifest.schema!==1||manifest.algorithm!=='sha256'||manifest.apps?.profile!=='core'||manifest.apps?.coreApi!==1||manifest.version!==build.version||manifest.file_count!==Object.keys(manifest.files).length)throw Error('A complete Core App profile is required.');
-for(const id of Object.keys(ownership.apps))if(manifest.apps.minimum?.[id]!==ownership.apps[id].minimumVersion||!/^\d+\.\d+\.\d+(?:-(?:rc|beta|alpha)\.[1-9]\d*)?$/.test(manifest.apps.minimum?.[id]||''))throw Error('Every App minimum needs an exact compatible version.');
+if(manifest.schema!==1||manifest.algorithm!=='sha256'||manifest.apps?.profile!=='core'||manifest.apps?.coreApi!==(bundled.length?1:ownership.coreApi)||manifest.version!==build.version||manifest.file_count!==Object.keys(manifest.files).length)throw Error('A complete Core App profile is required.');
+for(const id of Object.keys(ownership.apps).filter(id=>!bundled.includes(id)))if(manifest.apps.minimum?.[id]!==ownership.apps[id].minimumVersion||!/^\d+\.\d+\.\d+(?:-(?:rc|beta|alpha)\.[1-9]\d*)?$/.test(manifest.apps.minimum?.[id]||''))throw Error('Every App minimum needs an exact compatible version.');
 for(const[name,body]of expected){
  const actual=await fs.readFile(path.join(stage,name));if(!actual.equals(body))throw Error('The profile differs from current canonical source: '+name);
  if(name.startsWith('dsa/')){const proof=manifest.files[name.slice(4)];if(proof?.sha256!==hash(body)||proof.bytes!==body.length)throw Error('The inner manifest does not commit this Core file: '+name);}

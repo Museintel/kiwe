@@ -251,6 +251,7 @@ final class Cart_Payload_Service {
 
 	private function cart_items(): array {
 		$items = [];
+		$stock_quantities = WC()->cart->get_cart_item_quantities();
 
 		foreach ( WC()->cart->get_cart() as $cart_item_key => $item ) {
 			$product = $item['data'] ?? null;
@@ -262,15 +263,19 @@ final class Cart_Payload_Service {
 			$image_id       = method_exists( $product, 'get_image_id' ) ? (int) $product->get_image_id() : 0;
 			$quantity       = (int) ( $item['quantity'] ?? 0 );
 			$stock_quantity = method_exists( $product, 'managing_stock' ) && $product->managing_stock() ? (int) $product->get_stock_quantity() : null;
-			$max_quantity   = method_exists( $product, 'is_sold_individually' ) && $product->is_sold_individually()
-				? 1
-				: ( null === $stock_quantity ? 99 : max( $quantity, $stock_quantity ) );
+			$native_max     = $product->get_max_purchase_quantity();
+			$max_quantity   = $native_max < 0 ? 99 : (int) floor( $native_max );
+			if ( null !== $stock_quantity && ! $product->backorders_allowed() ) {
+				$other_quantity = max( 0, ( $stock_quantities[ $product->get_stock_managed_by_id() ] ?? 0 ) - $quantity );
+				$max_quantity = min( $max_quantity, (int) max( 0, floor( $product->get_stock_quantity() - $other_quantity ) ) );
+			}
+			$max_quantity = min( 99, max( $quantity, $max_quantity ) );
 
 			$items[] = [
 				'key'           => sanitize_text_field( (string) $cart_item_key ),
 				'productId'     => (int) ( $item['product_id'] ?? 0 ),
 				'variationId'   => (int) ( $item['variation_id'] ?? 0 ),
-				'title'         => wp_strip_all_tags( $product->get_name() ),
+				'title'         => wp_strip_all_tags( html_entity_decode( $product->get_name(),ENT_QUOTES | ENT_HTML5,'UTF-8' ) ),
 				'weight'        => $this->product_weight( $product ),
 				'quantity'      => $quantity,
 				'maxQuantity'   => $max_quantity,

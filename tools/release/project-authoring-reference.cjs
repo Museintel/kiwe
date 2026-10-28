@@ -19,3 +19,20 @@ const iconValue={schema:'kiwe.public-icon-reference.v1',source:iconOwner,sourceS
 const iconTarget=path.join(root,'kiwe-ai-toolkit/reference/icons.json'),iconText=JSON.stringify(iconValue,null,2)+'\n';
 if(process.argv.includes('--check')){if(!fs.existsSync(iconTarget)||fs.readFileSync(iconTarget,'utf8').replace(/\r\n?/g,'\n')!==iconText)throw Error('Public icon reference drift');}else fs.writeFileSync(iconTarget,iconText);
 console.log(JSON.stringify({passed:true,publicIcons:Object.keys(icons).length}));
+
+// Only the PHP runtime owns capability semantics. Portable packs project these
+// groups without replacing their independent layout/presentation vocabularies.
+const capabilityOwner='wp-content/mu-plugins/dsa/includes/Design/Seam_Vocabulary_Schema.php';
+const capabilityPhp="define('ABSPATH',__DIR__);require $argv[1];echo json_encode(\\DSA\\Design\\Seam_Vocabulary_Schema::contract(),JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);";
+const cr=cp.spawnSync('php',['-r',capabilityPhp,path.join(root,capabilityOwner)],{cwd:root,encoding:'utf8',windowsHide:true});
+if(cr.status!==0)throw Error('Public capability projection failed: '+cr.stderr);
+const capabilities=JSON.parse(cr.stdout).capabilityAttributes.groups;
+const capabilityTargets=['wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.json','wp-content/mu-plugins/dsa/framework-system/contracts/seam-vocabulary.json','kiwe-ai-toolkit/packs/appshell-theme/seam-vocabulary.json'];
+for(const relative of capabilityTargets){
+ const target=path.join(root,relative),original=fs.readFileSync(target,'utf8'),value=JSON.parse(original);
+ for(const key of ['appshellLaunchers','discussion','forms'])value.capabilityAttributes.groups[key]=capabilities[key];
+ const output=JSON.stringify(value,null,2)+'\n';
+ if(process.argv.includes('--check')){if(original.replace(/\r\n?/g,'\n')!==output)throw Error('Capability projection drift: '+relative);}
+ else fs.writeFileSync(target,output);
+}
+console.log(JSON.stringify({passed:true,capabilityGroups:3,projections:capabilityTargets.length}));

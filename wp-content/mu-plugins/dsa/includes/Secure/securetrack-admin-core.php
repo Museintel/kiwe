@@ -1658,13 +1658,20 @@ function stp_pg_settings() {
         <input type="number" name="v2_uncertain_high" value="<?php echo esc_attr( $s['v2_uncertain_high'] ); ?>" min="2" max="99" style="width:70px"><br>
         <input type="hidden" name="v2_ai_provider" value="<?php echo esc_attr( $s['v2_ai_provider'] ); ?>">
         <input type="hidden" name="v2_ai_model" value="<?php echo esc_attr( $s['v2_ai_model'] ); ?>">
+        <?php if ( defined( 'KIWE_REACT_WORKSPACE' ) && KIWE_REACT_WORKSPACE ) : ?>
+        <p><label>Threat-review mode <select name="v2_ai_mode"><option value="batch" <?php selected( $s['v2_ai_mode'], 'batch' ); ?>>Batch</option><option value="always" <?php selected( $s['v2_ai_mode'], 'always' ); ?>>Each uncertain event</option></select></label></p>
+        <p><label>Batch interval (minutes) <input type="number" name="v2_ai_batch_mins" min="1" max="60" value="<?php echo esc_attr( $s['v2_ai_batch_mins'] ); ?>"></label></p>
+        <p><label><input type="checkbox" name="v2_auto_block_local" value="1" <?php checked( ! empty( $s['v2_auto_block_local'] ) ); ?>> Allow mature local Site Brain to recommend blocks without cloud review</label></p>
+        <p><label><input type="checkbox" name="v2_share_patterns" value="1" <?php checked( ! empty( $s['v2_share_patterns'] ) ); ?>> Allow anonymized pattern sharing when a future global model is connected</label></p>
+        <?php else : ?>
         <input type="hidden" name="v2_ai_mode" value="<?php echo esc_attr( $s['v2_ai_mode'] ); ?>">
         <input type="hidden" name="v2_ai_batch_mins" value="<?php echo esc_attr( $s['v2_ai_batch_mins'] ); ?>">
         <input type="hidden" name="v2_auto_block_local" value="<?php echo ! empty( $s['v2_auto_block_local'] ) ? '1' : ''; ?>">
         <input type="hidden" name="v2_share_patterns" value="<?php echo ! empty( $s['v2_share_patterns'] ) ? '1' : ''; ?>">
+        <?php endif; ?>
 		<?php $broker_ai_status = function_exists( 'stp_ai_shared_broker_status' ) ? stp_ai_shared_broker_status() : array( 'ready' => false, 'provider' => 'none' ); ?>
-        <p><strong>AI provider settings live in Kiwe &gt; AI.</strong> SecureTrack still owns local Site Brain learning and security enforcement. Redacted packets use an isolated, stateless SecureTrack broker profile; there is no separate SecureTrack key or shared conversation memory.</p>
-        <p><a href="<?php echo esc_url( admin_url( 'admin.php?page=kiwe-ai' ) ); ?>" class="button button-small">Open Kiwe AI settings</a></p>
+        <p><strong>AI provider settings live in Kiwe &gt; App &gt; AI.</strong> SecureTrack owns local learning and security enforcement. Redacted packets use an isolated, stateless broker profile; there is no separate SecureTrack key or shared conversation memory.</p>
+        <p><a href="<?php echo esc_url( defined( 'KIWE_REACT_WORKSPACE' ) && KIWE_REACT_WORKSPACE ? \DSA\Access\AI_Workspace_Service::url() : admin_url( 'admin.php?page=kiwe-ai' ) ); ?>" class="button button-small">Open Kiwe AI settings</a></p>
         <strong>AI status:</strong>
 		<?php if ( ! empty( $ai_status['connected'] ) && ! empty( $broker_ai_status['ready'] ) ): ?>
           <span style="color:#059669;font-weight:700">Connected</span>
@@ -1675,7 +1682,7 @@ function stp_pg_settings() {
         <?php endif; ?>
         <small><?php echo ! empty( $ai_status['message'] ) ? esc_html( ' - ' . $ai_status['message'] . ' (' . ( $ai_status['updated_at'] ?? '' ) . ')' ) : ''; ?></small>
         <a href="<?php echo esc_url( wp_nonce_url( '?page=stp-settings&stp_do=testai', 'stp_do' ) ); ?>" class="button button-small">Test AI Connection</a><br>
-		<p class="description">Batch/realtime review mode, local auto-block recommendation policy, and future pattern-sharing consent are controlled from Kiwe &gt; AI. Provider/model authority comes from the shared broker; SecureTrack never receives the provider credential.</p>
+		<p class="description">Provider/model authority comes from the shared Kiwe AI broker. These technical security choices retain their existing SecureTrack owner and never copy the provider credential.</p>
       </td>
     </tr>
 

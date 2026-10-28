@@ -5,7 +5,10 @@ namespace DSA { class Settings { public function get($key,$default=[]){return ma
 namespace DSA\Trust { class Trust_Service {} }
 namespace DSA\PhoneKey { class PhoneKey_Bridge {public static function account_verified($id){return $GLOBALS['verified'][$id]??false;}} }
 namespace DSA\Notifications { class Push_Service {public function send_to_users(...$args){throw new \RuntimeException('Unexpected provider call');}} class Notification_Campaign_Service {public function preview($channel){return ['channel'=>$channel,'topic'=>'new_offer','count'=>0,'limited'=>false,'sampled'=>false,'ready'=>false,'enabled'=>true,'expected'=>str_repeat('a',64)];}public function status(){return ['active'=>null,'history'=>[]];}public function start(...$args){throw new \RuntimeException('Unexpected campaign delivery');}public function resume(...$args){throw new \RuntimeException('Unexpected campaign resume');}} }
-namespace DSA\Access { class Site_Owner_Service {const ROLE='kiwe_site_owner';public static function is_owner(?int $id=null):bool{return ($id??\get_current_user_id())===1;}public static function owner_id():int{return 1;} } class Team_Workspace_Service {public static function suspended(int $id):bool{return !empty($GLOBALS['suspended'][$id]);}} }
+namespace DSA\Access {
+// The independent native Kiwe1 suite tests Forms admission; this fixture isolates existing topics.
+class Form_Workspace_Service {public static function allowed_for(int $id):bool{return false;}}
+ class Site_Owner_Service {const ROLE='kiwe_site_owner';public static function is_owner(?int $id=null):bool{return ($id??\get_current_user_id())===1;}public static function owner_id():int{return 1;} } class Team_Workspace_Service {public static function suspended(int $id):bool{return !empty($GLOBALS['suspended'][$id]);}} }
 namespace {
 define('ABSPATH',__DIR__.'/');
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';

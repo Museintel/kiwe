@@ -3,23 +3,153 @@
   "namespace": "kiwe.seam",
   "roleMode": "semantic-headless",
   "roleModeNotes": "Public data-role values and seam-* role classes identify meaning for CSS, JavaScript, audits, Bricks, and AI tools. They do not apply starter card/button/modal visuals, padding, background, border, shadow, or radius. Build appearance with neutral Seam primitives, universal Kiwe/Seam tokens, and site CSS.",
-  "role": ["section", "container", "hero", "lead", "eyebrow", "label", "caption", "hint", "micro", "card", "media", "avatar", "button", "badge", "chip", "nav", "actions", "form", "field", "input", "textarea", "select", "modal", "toast", "testimonial", "price", "progress", "skeleton", "footer", "aside"],
-  "flow": ["stack", "row", "cluster", "inline", "grid", "dense", "sidebar", "center", "spread", "cover", "frame", "reel", "horizontal-rail", "vertical-rail"],
-  "tone": ["brand", "accent", "neutral", "muted", "success", "warning", "danger", "info", "surface", "inverse"],
-  "scene": ["dramatic", "elevated", "standard", "compact", "micro"],
-  "state": ["loading", "disabled", "selected", "current", "error", "success", "warning", "collapsed", "featured", "hidden", "print-hidden"],
-  "motion": ["fade-up", "scale-in", "view-fade-up"],
-  "shape": ["square", "sharp", "soft", "rounded", "pill", "circle"],
-  "flow-density": ["compact", "comfortable", "spacious"],
-  "gap": ["none", "xxs", "xs", "sm", "md", "lg", "xl"],
-  "align": ["start", "center", "end", "stretch"],
-  "justify": ["start", "center", "end", "between", "around"],
-  "theme": ["dark"],
+  "role": [
+    "section",
+    "container",
+    "hero",
+    "lead",
+    "eyebrow",
+    "label",
+    "caption",
+    "hint",
+    "micro",
+    "card",
+    "media",
+    "avatar",
+    "button",
+    "badge",
+    "chip",
+    "nav",
+    "actions",
+    "form",
+    "field",
+    "input",
+    "textarea",
+    "select",
+    "modal",
+    "toast",
+    "testimonial",
+    "price",
+    "progress",
+    "skeleton",
+    "footer",
+    "aside"
+  ],
+  "flow": [
+    "stack",
+    "row",
+    "cluster",
+    "inline",
+    "grid",
+    "dense",
+    "sidebar",
+    "center",
+    "spread",
+    "cover",
+    "frame",
+    "reel",
+    "horizontal-rail",
+    "vertical-rail"
+  ],
+  "tone": [
+    "brand",
+    "accent",
+    "neutral",
+    "muted",
+    "success",
+    "warning",
+    "danger",
+    "info",
+    "surface",
+    "inverse"
+  ],
+  "scene": [
+    "dramatic",
+    "elevated",
+    "standard",
+    "compact",
+    "micro"
+  ],
+  "state": [
+    "loading",
+    "disabled",
+    "selected",
+    "current",
+    "error",
+    "success",
+    "warning",
+    "collapsed",
+    "featured",
+    "hidden",
+    "print-hidden"
+  ],
+  "motion": [
+    "fade-up",
+    "scale-in",
+    "view-fade-up"
+  ],
+  "shape": [
+    "square",
+    "sharp",
+    "soft",
+    "rounded",
+    "pill",
+    "circle"
+  ],
+  "flow-density": [
+    "compact",
+    "comfortable",
+    "spacious"
+  ],
+  "gap": [
+    "none",
+    "xxs",
+    "xs",
+    "sm",
+    "md",
+    "lg",
+    "xl"
+  ],
+  "align": [
+    "start",
+    "center",
+    "end",
+    "stretch"
+  ],
+  "justify": [
+    "start",
+    "center",
+    "end",
+    "between",
+    "around"
+  ],
+  "theme": [
+    "dark"
+  ],
   "bodyClasses": {
-    "seam-heading": ["balanced", "quiet", "bold"],
-    "seam-motion": ["minimal", "standard", "expressive"]
+    "seam-heading": [
+      "balanced",
+      "quiet",
+      "bold"
+    ],
+    "seam-motion": [
+      "minimal",
+      "standard",
+      "expressive"
+    ]
   },
-  "behaviorAttributes": ["data-seam-bind", "data-seam-bind-text", "data-seam-bind-html", "data-seam-bind-attr", "data-seam-template", "data-seam-each", "data-seam-if", "data-seam-unless", "data-seam-show", "data-seam-model"],
+  "behaviorAttributes": [
+    "data-seam-bind",
+    "data-seam-bind-text",
+    "data-seam-bind-html",
+    "data-seam-bind-attr",
+    "data-seam-template",
+    "data-seam-each",
+    "data-seam-if",
+    "data-seam-unless",
+    "data-seam-show",
+    "data-seam-model"
+  ],
   "capabilityAttributes": {
     "purpose": "Builder-neutral Appsite capability hooks. Public page authors, Bricks layouts, block themes, and AI-generated HTML may use these attributes to call Kiwe-owned runtime journeys without recreating Kiwe behavior.",
     "authorRule": "Use these attributes only on real interactive controls or semantic page regions. Preserve visible UI and add the smallest capability hook that matches the intent. Never create duplicate JavaScript authority for saved items, notifications, AppShell screens, theme switching, cart, checkout, auth, search, service workers, focus trapping, or browser history.",
@@ -30,7 +160,20 @@
         "attributes": [
           {
             "attribute": "data-dsa-open-module",
-            "values": ["menu", "search", "profile", "links", "saved", "cart", "theme", "ai", "notifications", "ios-install", "games"],
+            "values": [
+              "menu",
+              "search",
+              "profile",
+              "links",
+              "saved",
+              "cart",
+              "theme",
+              "ai",
+              "notifications",
+              "comments",
+              "ios-install",
+              "games"
+            ],
             "purpose": "Open a registered Kiwe DSA/AppShell screen from a page/header/Bricks/custom control. The value theme toggles light/dark mode instead of opening a sheet.",
             "example": "<button data-dsa-open-module=\"cart\" type=\"button\">Cart</button>"
           }
@@ -42,14 +185,30 @@
         "attributes": [
           {
             "attribute": "data-kiwe-save",
-            "values": ["wishlist", "bookmark", "auto"],
+            "values": [
+              "wishlist",
+              "bookmark",
+              "auto"
+            ],
             "purpose": "Toggle the nearest item into Kiwe Saved. Use wishlist for WooCommerce product controls, bookmark for articles/pages, and auto only when the context is unambiguous.",
             "example": "<button data-kiwe-save=\"wishlist\" data-kiwe-save-id=\"{post_id}\" data-kiwe-save-title=\"{post_title}\" data-kiwe-save-url=\"{post_url}\" type=\"button\">Wishlist</button>"
           },
-          { "attribute": "data-kiwe-save-id", "purpose": "Stable post/product ID, recommended in Bricks query loops." },
-          { "attribute": "data-kiwe-save-title", "purpose": "Optional saved-item title override. Kiwe otherwise reads the nearest card heading." },
-          { "attribute": "data-kiwe-save-url", "purpose": "Optional saved-item URL override. Kiwe otherwise reads the nearest card link or current URL." },
-          { "attribute": "data-kiwe-save-image", "purpose": "Optional saved-item image URL. Kiwe otherwise reads the nearest card image." }
+          {
+            "attribute": "data-kiwe-save-id",
+            "purpose": "Stable post/product ID, recommended in Bricks query loops."
+          },
+          {
+            "attribute": "data-kiwe-save-title",
+            "purpose": "Optional saved-item title override. Kiwe otherwise reads the nearest card heading."
+          },
+          {
+            "attribute": "data-kiwe-save-url",
+            "purpose": "Optional saved-item URL override. Kiwe otherwise reads the nearest card link or current URL."
+          },
+          {
+            "attribute": "data-kiwe-save-image",
+            "purpose": "Optional saved-item image URL. Kiwe otherwise reads the nearest card image."
+          }
         ]
       },
       "browserNotifications": {
@@ -61,9 +220,18 @@
             "purpose": "Start the browser-notification preference journey after an explicit visitor click. Kiwe never prompts during a protected flow.",
             "example": "<button data-kiwe-notifications data-kiwe-notification-status-target=\"#notification-status\" type=\"button\">Turn on notifications</button>"
           },
-          { "attribute": "data-kiwe-notification-status-target", "purpose": "Optional CSS selector for an on-page live-status element that receives the current notification-permission message." },
-          { "attribute": "data-kiwe-notification-topic", "purpose": "Optional topic hint for the notification preference screen. Use only real site topics exposed by Kiwe." },
-          { "attribute": "data-dsa-native-notification-request", "purpose": "Advanced direct browser-permission request for a real visitor-click control. Prefer data-kiwe-notifications unless the UI is explicitly asking for native permission now." }
+          {
+            "attribute": "data-kiwe-notification-status-target",
+            "purpose": "Optional CSS selector for an on-page live-status element that receives the current notification-permission message."
+          },
+          {
+            "attribute": "data-kiwe-notification-topic",
+            "purpose": "Optional topic hint for the notification preference screen. Use only real site topics exposed by Kiwe."
+          },
+          {
+            "attribute": "data-dsa-native-notification-request",
+            "purpose": "Advanced direct browser-permission request for a real visitor-click control. Prefer data-kiwe-notifications unless the UI is explicitly asking for native permission now."
+          }
         ]
       },
       "themeControls": {
@@ -75,7 +243,10 @@
             "purpose": "Toggle Kiwe/Bricks light-dark mode from a page/header/Bricks/custom control without adding the dock theme icon.",
             "example": "<button data-kiwe-theme-toggle type=\"button\">Toggle theme</button>"
           },
-          { "attribute": "data-kiwe-theme-status-target", "purpose": "Optional selector for a status element that receives the current light/dark state label." }
+          {
+            "attribute": "data-kiwe-theme-status-target",
+            "purpose": "Optional selector for a status element that receives the current light/dark state label."
+          }
         ]
       },
       "menuContext": {
@@ -98,18 +269,101 @@
             "purpose": "Marks a source region whose preview/sample cards should become a Bricks query loop or dynamic binding plan.",
             "example": "<section data-kiwe-query-template=\"featured-products\" data-role=\"section\" class=\"seam-section seam-horizontal-rail\"></section>"
           },
-          { "attribute": "data-kiwe-binding", "purpose": "Marks a repeated sample card or field that belongs to a named Kiwe dynamic binding plan." }
+          {
+            "attribute": "data-kiwe-binding",
+            "purpose": "Marks a repeated sample card or field that belongs to a named Kiwe dynamic binding plan."
+          }
         ]
+      },
+      "discussion": {
+        "status": "live",
+        "authority": "kiwe-native-discussion",
+        "coreMinimum": "8.0.0-rc.452",
+        "attributes": [
+          {
+            "attribute": "data-dsa-open-module",
+            "values": [
+              "comments"
+            ],
+            "purpose": "One contextual conversation: Comments on posts, Reviews on active Store products, or the configured public website-feedback page. Kiwe owns counts, identity, moderation and reactions.",
+            "example": "<button type=\"button\" data-dsa-open-module=\"comments\" data-dsa-discussion-id=\"current\" aria-label=\"Open conversation\">Comments</button>"
+          },
+          {
+            "attribute": "data-dsa-discussion-id",
+            "values": [
+              "current",
+              "site",
+              "native-public-post-id"
+            ],
+            "purpose": "Use current context, the configured website-feedback page, or a native published post ID. In native WP_Post loops use {kiwe_discussion_id}; in the kiwe_testimonials array loop use {kiwe_testimonial_target_id}. Never substitute a comment, user or taxonomy ID."
+          }
+        ],
+        "dynamicTags": [
+          "{kiwe_discussion_id}",
+          "{kiwe_discussion_count}",
+          "{kiwe_testimonial_target_id}"
+        ],
+        "badge": "Kiwe supplies the approved top-level count on attributed icons. Replies are excluded. Do not add polling or a parallel discussion engine."
+      },
+      "forms": {
+        "status": "live",
+        "authority": "saved-native-bricks-form",
+        "coreMinimum": "8.0.0-rc.452",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-form",
+            "purpose": "Stable lowercase form slug, starting with a letter, up to 64 letters/digits/hyphens/underscores. Add to the native Bricks Form element, never trust a submitted field for this identity.",
+            "example": "<form data-kiwe-form=\"careers\" data-kiwe-form-label=\"Careers enquiry\"></form>"
+          },
+          {
+            "attribute": "data-kiwe-form-label",
+            "purpose": "Human-readable form name used in Daily Forms, automatic filters and private team notifications. Stored with the native page/form pair so later renaming cannot mislabel an old enquiry."
+          }
+        ],
+        "requires": [
+          "native Bricks submission storage",
+          "Save submission action on the form",
+          "deliberately configured native email action for email delivery"
+        ],
+        "privacy": "A saved enquiry is private and does not imply mail delivery or marketing consent. Do not retain passwords, upload bytes or credentials. The compiler enables native saving only for unambiguous ordinary enquiry forms."
       }
     },
     "candidateAttributes": [
-      { "attribute": "data-kiwe-share", "status": "candidate-not-live", "purpose": "Future Web Share / copy-link capability for products, posts, offers, and pages." },
-      { "attribute": "data-kiwe-compare", "status": "candidate-not-live", "purpose": "Future product/content comparison tray." },
-      { "attribute": "data-kiwe-recently-viewed", "status": "candidate-not-live", "purpose": "Future recently-viewed product/post rail and personalization signal." },
-      { "attribute": "data-kiwe-follow", "status": "candidate-not-live", "purpose": "Future author, brand, topic, category, or product-subscription follow intent." },
-      { "attribute": "data-kiwe-ai-context", "status": "candidate-not-live", "purpose": "Future safe context handoff to Kiwe AI from a selected section/card without exposing private data." },
-      { "attribute": "data-kiwe-feedback", "status": "candidate-not-live", "purpose": "Future lightweight rating, helpful/not helpful, or report-an-issue intent." },
-      { "attribute": "data-kiwe-offer", "status": "candidate-not-live", "purpose": "Future coupon, bundle, FBT, or personalization trigger that remains Woo/Kiwe-owned." }
+      {
+        "attribute": "data-kiwe-share",
+        "status": "candidate-not-live",
+        "purpose": "Future Web Share / copy-link capability for products, posts, offers, and pages."
+      },
+      {
+        "attribute": "data-kiwe-compare",
+        "status": "candidate-not-live",
+        "purpose": "Future product/content comparison tray."
+      },
+      {
+        "attribute": "data-kiwe-recently-viewed",
+        "status": "candidate-not-live",
+        "purpose": "Future recently-viewed product/post rail and personalization signal."
+      },
+      {
+        "attribute": "data-kiwe-follow",
+        "status": "candidate-not-live",
+        "purpose": "Future author, brand, topic, category, or product-subscription follow intent."
+      },
+      {
+        "attribute": "data-kiwe-ai-context",
+        "status": "candidate-not-live",
+        "purpose": "Future safe context handoff to Kiwe AI from a selected section/card without exposing private data."
+      },
+      {
+        "attribute": "data-kiwe-feedback",
+        "status": "candidate-not-live",
+        "purpose": "Future lightweight rating, helpful/not helpful, or report-an-issue intent."
+      },
+      {
+        "attribute": "data-kiwe-offer",
+        "status": "candidate-not-live",
+        "purpose": "Future coupon, bundle, FBT, or personalization trigger that remains Woo/Kiwe-owned."
+      }
     ]
   },
   "appShellAdoption": {
@@ -121,15 +375,24 @@
     },
     "publicAdopted": {
       "eyebrow": {
-        "classes": ["seam-eyebrow", "seam-tone-brand"],
+        "classes": [
+          "seam-eyebrow",
+          "seam-tone-brand"
+        ],
         "reason": "Text-only role; existing DSA selectors already own surface typography and color."
       },
       "caption": {
-        "classes": ["seam-caption", "seam-tone-muted"],
+        "classes": [
+          "seam-caption",
+          "seam-tone-muted"
+        ],
         "reason": "Text-only helper; safe for muted supporting copy."
       },
       "price": {
-        "classes": ["seam-price", "seam-tone-brand"],
+        "classes": [
+          "seam-price",
+          "seam-tone-brand"
+        ],
         "reason": "Numeric/text-only helper; tabular numeric styling is compatible with DSA price landmarks."
       }
     },
@@ -145,11 +408,34 @@
       "field": "AppShell keeps field semantics protected because validation, account, and checkout fields are authority-owned.",
       "modal": "AppShell keeps modal semantics protected because DSA sheet/screen geometry owns this surface."
     },
-    "authorityOnly": ["cart", "checkout", "payment", "auth", "phonekey", "search-query", "bricks-query", "service-worker", "browser-history", "focus-trap"]
+    "authorityOnly": [
+      "cart",
+      "checkout",
+      "payment",
+      "auth",
+      "phonekey",
+      "search-query",
+      "bricks-query",
+      "service-worker",
+      "browser-history",
+      "focus-trap"
+    ]
   },
   "protectedShadowAttributes": {
     "purpose": "Kiwe DSA uses data-seam-* shadow metadata on live AppShell panels so tools can understand framework roles without generic Seam CSS restyling those panels.",
-    "attributes": ["data-seam-root", "data-seam-role", "data-seam-flow", "data-seam-tone", "data-seam-scene", "data-seam-state", "data-seam-motion", "data-seam-shape", "data-seam-slot", "data-seam-surface-panel", "data-seam-authority"],
+    "attributes": [
+      "data-seam-root",
+      "data-seam-role",
+      "data-seam-flow",
+      "data-seam-tone",
+      "data-seam-scene",
+      "data-seam-state",
+      "data-seam-motion",
+      "data-seam-shape",
+      "data-seam-slot",
+      "data-seam-surface-panel",
+      "data-seam-authority"
+    ],
     "authorRule": "Use public data-role/data-flow/classes for normal page markup. Do not add data-seam-* manually unless writing Kiwe runtime/core integration code."
   }
 }

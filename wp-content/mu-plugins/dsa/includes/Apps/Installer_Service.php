@@ -82,7 +82,7 @@ final class Installer_Service {
      Package_Verifier::directory(WP_PLUGIN_DIR.'/kiwe-'.$id,$r);$provider=Runtime_Registry::provider($id);
      if(!is_plugin_active($plugin)||($provider['version']??'')!==$r['version'])throw new \RuntimeException('The App has not completed a fresh WordPress boot. Refresh and resume.');
      $state=Code_Recovery::state($id);if(($state['phase']??'')!=='accepted'||($state['release']['sha256']??'')!==$r['sha256'])throw new \RuntimeException('The App boot is still awaiting recovery verification. Refresh and resume.');
-     if(Native_State::automatic($id)!==$job['plan']['automatic'])Native_State::automatic_choice($id,$job['plan']['automatic']);$owner=$id==='store'?Store_App_Service::class:SEO_App_Service::class;$changed=$owner::change(true,$owner::expected());if(is_wp_error($changed))throw new \RuntimeException($changed->get_error_message());
+     if(Native_State::automatic($id)!==$job['plan']['automatic'])Native_State::automatic_choice($id,$job['plan']['automatic']);$owner=Runtime_Registry::owner($id);$changed=$owner::change(true,$owner::expected());if(is_wp_error($changed))throw new \RuntimeException($changed->get_error_message());
      if(is_file($this->file($job)))unlink($this->file($job));break;
     default:throw new \RuntimeException('Unknown App installation step.');
    }

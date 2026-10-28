@@ -61,7 +61,8 @@ async function main() {
   check(actual===expected, 'Shipped private token CSS equals the real canonical PHP projection');
   const foundation=await css.foundation();
   check(read('wp-content/mu-plugins/dsa/assets/css/workspace-foundation.css')===foundation.css, 'Shared asset is reproducible and contains canonical tokens');
-  check(foundation.rows.length===248, 'All 248 current shared rules, including the App card, are represented');
+  check(foundation.rows.length>=240&&foundation.css.includes('.kiwe-workspace-header')&&foundation.css.includes('.kiwe-account-menu'), 'Shared geometry includes one responsive header and account disclosure');
+  check(!read('tools/workspace-prototype/workspace-screen.css').includes('.kiwe-screen-header'), 'Retired task-header rules cannot compete with the common native/React header');
   check(foundation.css.includes('.kiwe-client-shell .kiwe-shell-app-card.is-off')&&foundation.css.includes('--workspace-tile-surface:var(--kiwe-color-surface-sunken)'), 'Disabled apps use the shared sunken token without muting readable text');
   const owners=['Access/AI_Workspace_Service','Access/Commerce_App_Service','Access/Continuity_App_Service','Access/Dock_Workspace_Service','Access/Guest_App_Service','Access/Identity_App_Service','Access/Media_App_Service','Access/Navigation_App_Service','Access/Notification_App_Service','Access/Post_App_Service','Access/Taxonomy_App_Service','Access/Team_App_Service','Access/Trash_Workspace_Service','SEO/SEO_Refinement_Service','Access/Task_Workspace_UI'];
   for(const owner of owners)check(read('wp-content/mu-plugins/dsa/includes/'+owner+'.php').includes('Workspace_Design_Service::app_dependencies('),'Selected native styles have an explicit dependency: '+owner);

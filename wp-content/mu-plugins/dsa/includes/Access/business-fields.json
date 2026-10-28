@@ -258,6 +258,24 @@
         "path": "contentPlan.highlightBestsellers",
         "label": "Highlight bestsellers",
         "type": "boolean"
+      },
+      {
+        "path": "contentPlan.testimonialSources.pinned",
+        "label": "Use pinned feedback as testimonials",
+        "type": "boolean",
+        "description": "Only approved public feedback is included. Pin or heart contributions in Daily → Feedback. Connected testimonials update from those same native records."
+      },
+      {
+        "path": "contentPlan.testimonialSources.hearted",
+        "label": "Use feedback hearted by the team as testimonials",
+        "type": "boolean",
+        "description": "Only approved public feedback is included. Pin or heart contributions in Daily → Feedback. Connected testimonials update from those same native records."
+      },
+      {
+        "path": "contentPlan.testimonialSources.popular",
+        "label": "Also use feedback with visitor likes as testimonials",
+        "type": "boolean",
+        "description": "Only approved public feedback is included. Pin or heart contributions in Daily → Feedback. Connected testimonials update from those same native records."
       }
     ]
   },

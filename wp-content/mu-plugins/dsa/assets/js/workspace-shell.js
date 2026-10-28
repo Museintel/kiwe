@@ -1,6 +1,11 @@
 /* Native task URLs and fixed-size visit counts; no repeating poll or shadow business records. */
 (() => {
   'use strict';
+  const accountMenu=document.querySelector('.kiwe-account-menu');
+  if(accountMenu){
+    document.addEventListener('pointerdown',event=>{if(accountMenu.open&&!accountMenu.contains(event.target))accountMenu.open=false;});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&accountMenu.open){accountMenu.open=false;accountMenu.querySelector('summary')?.focus();}});
+  }
   const data = window.KIWE_CLIENT_SHELL_DATA;
   const root = document.getElementById('kiwe-shell-home');
   if (root && data?.home && window.wp?.element?.createRoot) {
@@ -8,7 +13,7 @@
     const colors = ['apricot', 'blue', 'green', 'purple', 'yellow', 'rose', 'ink'];
     let colorIndex = 0;
     const app = createRoot(root);
-    const groups = ['work', 'daily', 'setup', 'organize', 'apps', 'analytics'].filter(group => data.tasks.some(task => task.group === group));
+    const groups = ['work', 'daily', 'organize', 'apps', 'analytics'].filter(group => data.tasks.some(task => task.group === group));
     const area = new URL(window.location.href).searchParams.get('area');
     let active = groups.includes(area) ? area : (groups[0] || 'work');
     let appBusy = false, appMessage = '';

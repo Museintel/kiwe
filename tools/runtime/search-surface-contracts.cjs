@@ -36,7 +36,8 @@ check('search requests default results on mount',
 	&& search.includes("source: 'boot'")
 );
 check('search GETs reuse browser and edge caches',
-	search.includes("cache: 'default'")
+	search.includes("cache: root._dsaSearchRefresh ? 'reload' : 'default'")
+	&& search.includes('expires: Date.now() + 60000')
 	&& !search.includes("_dsa_rt")
 	&& !search.includes("no-cache, no-store")
 	&& controller.includes("public, max-age=60, s-maxage=300")
@@ -49,7 +50,8 @@ check('Latest and Popular pills use server-authoritative cached sort requests',
 	surface.includes('data-dsa-search-sort-options')
 	&& search.includes("data-dsa-search-sort=\"")
 	&& search.includes("url.searchParams.set( 'sort', sort )")
-	&& search.includes("const key = scope + '|' + sort")
+	&& search.includes('const key = searchCacheKey( scope, sort, prefix, query, config )')
+	&& search.includes("+ '|' + scope + '|' + sort + '|' + prefix")
 	&& controller.includes("in_array( $value, [ 'latest', 'popular' ], true )")
 	&& service.includes("'popularAvailable' => $this->popularity_available()")
 );

@@ -20,9 +20,11 @@ final class Workspace_Admin_Service {
 	private bool $store_hooks_registered = false;
 
 	public function register(): void {
+		if('1'===($_GET['dsa_pwa']??null))add_action('template_redirect',[$this,'redirect_app_launch'],1);
 		add_action( 'admin_menu', [ $this, 'menu' ], 20 );
 		add_action( 'admin_init', [ $this, 'redirect_dashboard' ], 0 );
 		add_filter( 'login_redirect', [ $this, 'login_redirect' ], PHP_INT_MAX, 3 );
+		add_action( 'admin_bar_menu', [ $this, 'toolbar' ], 90 );
 		if ( function_exists( 'WC' ) ) $this->register_store_hooks();
 		else add_action( 'plugins_loaded', [ $this, 'register_store_hooks' ], 30 );
 		add_filter( 'kiwe_workspace_login_destination', [ $this, 'login_destination' ], PHP_INT_MAX, 2 );
@@ -60,21 +62,54 @@ final class Workspace_Admin_Service {
 		return $user instanceof \WP_User && $user->ID > 0 && ( Site_Owner_Service::is_owner( (int) $user->ID ) || ( is_multisite() && is_super_admin( $user->ID ) ) );
 	}
 
+	public static function requires_workspace( $user ): bool {
+		return self::uses_workspace( $user ) && ! self::uses_native_admin( $user ) && Site_Owner_Service::dashboard_mandatory();
+	}
+	/** Optional means native entry and tasks, including for the technical owner. */
+	public static function prefers_native_dashboard( $user ): bool {
+		return self::uses_workspace( $user ) && ! Site_Owner_Service::dashboard_mandatory();
+	}
+	public static function can_open_native_dashboard( $user ): bool {
+		return self::uses_native_admin( $user ) || ( self::uses_workspace( $user ) && ! self::requires_workspace( $user ) );
+	}
+	/** A shortcut is not an access grant: the destination retains native role checks. */
+	public function toolbar( $bar ): void {
+		if ( ! is_user_logged_in() || ! current_user_can( 'read' ) || ! self::uses_workspace( wp_get_current_user() ) ) return;
+		$bar->add_node( [ 'id'=>'kiwe-workspace', 'title'=>'<span class="ab-icon dashicons dashicons-screenoptions" aria-hidden="true"></span><span class="ab-label">' . esc_html__( 'Kiwe', 'dsa' ) . '</span>', 'href'=>self::url(), 'meta'=>[ 'title'=>__( 'Open the Kiwe dashboard', 'dsa' ) ] ] );
+	}
+
 	public static function url(): string { return admin_url( 'admin.php?page=' . self::PAGE ); }
+
+	/** Fresh authenticated projection only; the PWA never stores a role or grants access. */
+	public static function app_launch_url( $user ): string {
+		return $user instanceof \WP_User && self::uses_workspace( $user ) && user_can( $user, 'read' ) ? self::url() : '';
+	}
+	/** Avoid rendering the public storefront merely to enter an authenticated staff app. */
+	public function redirect_app_launch(): void {
+		if(is_admin()||'1'!==($_GET['dsa_pwa']??null)||!in_array($_SERVER['REQUEST_METHOD']??'GET',['GET','HEAD'],true)||wp_doing_ajax()||wp_doing_cron()||(defined('REST_REQUEST')&&REST_REQUEST)||!is_front_page())return;
+		if(!defined('DONOTCACHEPAGE'))define('DONOTCACHEPAGE',true);
+		do_action('litespeed_control_set_nocache','Kiwe authenticated app entrance');nocache_headers();
+		if(!is_user_logged_in())return;
+		$user=wp_get_current_user();$url=self::app_launch_url($user);
+		if(''===$url||!\DSA\PhoneKey\PhoneKey_Bridge::account_verified((int)$user->ID))return;
+		// The destination retains the existing native session, enrollment and task guards.
+		wp_safe_redirect($url);exit;
+	}
 
 	private function active(): bool {
 		$user = wp_get_current_user();
-		return is_admin() && is_user_logged_in() && current_user_can( 'read' ) && self::uses_workspace( $user ) && ( ! self::uses_native_admin( $user ) || self::PAGE === ( $_GET['page'] ?? '' ) );
+		return is_admin() && is_user_logged_in() && current_user_can( 'read' ) && self::uses_workspace( $user ) && ( self::requires_workspace( $user ) || self::PAGE === ( $_GET['page'] ?? '' ) );
 	}
 
 	public function menu(): void {
 		if ( ! is_admin() || ! is_user_logged_in() || ! current_user_can( 'read' ) || ! self::uses_workspace( wp_get_current_user() ) ) return;
 		add_menu_page( __( 'Kiwe Workspace', 'dsa' ), __( 'Home', 'dsa' ), 'read', self::PAGE, [ $this, 'render_dashboard' ], 'dashicons-admin-home', 2 );
-		if ( ! self::uses_native_admin( wp_get_current_user() ) ) remove_menu_page( 'index.php' );
+		if ( self::requires_workspace( wp_get_current_user() ) ) remove_menu_page( 'index.php' );
 	}
 
 	public function login_destination( $destination, $user ): string {
-		return self::uses_workspace( $user ) ? self::url() : (string) $destination;
+		if ( self::prefers_native_dashboard( $user ) ) return (string) $destination;
+		return self::uses_native_admin( $user ) || self::requires_workspace( $user ) ? self::url() : (string) $destination;
 	}
 
 	public function login_redirect( $destination, $requested, $user ): string {
@@ -89,7 +124,9 @@ final class Workspace_Admin_Service {
 	public function redirect_dashboard(): void {
 		// Never redirect a write, AJAX, cron or REST request into an HTML page.
 		if ( ! is_admin() || is_network_admin() || is_user_admin() || ! is_user_logged_in() || ! current_user_can( 'read' ) || ! self::uses_workspace( wp_get_current_user() ) || wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ! in_array( $_SERVER['REQUEST_METHOD'] ?? 'GET', [ 'GET', 'HEAD' ], true ) || 'index.php' !== ( $GLOBALS['pagenow'] ?? '' ) ) return;
-		// Only existing technical owners can opt into WordPress's original dashboard.
+		if ( self::prefers_native_dashboard( wp_get_current_user() ) ) return;
+		if ( ! self::uses_native_admin( wp_get_current_user() ) && ! self::requires_workspace( wp_get_current_user() ) ) return;
+		// Technical owners retain their explicit original-dashboard entrance.
 		if ( self::uses_native_admin( wp_get_current_user() ) && '1' === ( $_GET['kiwe-native-dashboard'] ?? '' ) ) return;
 		wp_safe_redirect( self::url() );
 		exit;
@@ -222,7 +259,7 @@ final class Workspace_Admin_Service {
 		$actions = [];
 		if ( Template_Workspace_Service::ROLE === $role ) return [ [ 'label'=>__( 'Pages','dsa' ),'description'=>__( 'Work on page layouts','dsa' ),'url'=>Page_Workspace_Service::url(),'icon'=>'dashicons-admin-page' ] ];
 		if ( 'contributor' === $role ) {
-			if ( current_user_can( 'kiwe_guest_submit' ) ) $actions[] = [ 'label'=>__( 'Guests', 'dsa' ), 'description'=>__( 'Prepare a contribution', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-guests' ), 'icon'=>'dashicons-welcome-write-blog' ];
+			if ( \DSA\Apps\Guest_App_Service::enabled() && current_user_can( 'kiwe_guest_submit' ) ) $actions[] = [ 'label'=>__( 'Guests', 'dsa' ), 'description'=>__( 'Prepare a contribution', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-guests' ), 'icon'=>'dashicons-welcome-write-blog' ];
 			if ( current_user_can( 'kiwe_use_notifications' ) ) $actions[] = [ 'label'=>__( 'Notifications', 'dsa' ), 'description'=>__( 'Choose your alerts', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-notifications' ), 'icon'=>'dashicons-bell' ];
 			$actions[] = [ 'label'=>__( 'Profile', 'dsa' ), 'description'=>__( 'Manage your account', 'dsa' ), 'url'=>home_url( '/?kiwe-screen=profile' ), 'icon'=>'dashicons-admin-users' ];
 			return $actions;
@@ -251,13 +288,13 @@ final class Workspace_Admin_Service {
 			if ( \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_orders' ) && current_user_can( 'edit_shop_orders' ) && current_user_can( 'edit_others_shop_orders' ) ) $actions[] = [ 'label'=>__( 'Orders', 'dsa' ), 'description'=>__( 'Review and fulfil orders', 'dsa' ), 'url'=>Commerce_App_Service::enabled() ? Commerce_App_Service::url( 'orders' ) : admin_url( 'edit.php?post_type=shop_order' ), 'icon'=>'dashicons-cart' ];
 			if ( current_user_can( 'kiwe_manage_context' ) ) $actions[] = [ 'label'=>__( 'Media', 'dsa' ), 'description'=>__( 'Manage files and choose Design Context', 'dsa' ), 'url'=>Context_Workspace_Service::url(), 'icon'=>'dashicons-images-alt2' ];
 			if ( current_user_can( 'kiwe_manage_context' ) && \DSA\Onboarding\Design_Context_Journey_Service::feature_enabled( 'services' ) ) $actions[] = [ 'label'=>__( 'Services', 'dsa' ), 'description'=>__( 'Add and manage your services', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-services' ), 'icon'=>'dashicons-networking' ];
-			if ( current_user_can( 'kiwe_manage_ai_preferences' ) ) $actions[] = [ 'label'=>__( 'AI', 'dsa' ), 'description'=>__( 'Choose where AI may help', 'dsa' ), 'url'=>AI_Workspace_Service::url(), 'icon'=>'dashicons-lightbulb' ];
+			if ( current_user_can( 'kiwe_manage_ai_preferences' ) ) $actions[] = [ 'label'=>__( 'AI', 'dsa' ), 'description'=>__( 'Choose where AI may help', 'dsa' ), 'url'=>\DSA\Apps\AI_App_Service::url(), 'icon'=>'dashicons-lightbulb' ];
 			if ( \DSA\Apps\SEO_App_Service::enabled() && ( current_user_can( 'edit_posts' ) || current_user_can( 'edit_pages' ) || current_user_can( 'edit_products' ) || current_user_can( 'upload_files' ) ) ) $actions[] = [ 'label'=>__( 'SEO assistant', 'dsa' ), 'description'=>__( 'Review posts, pages, products or media', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-seo-assistant' ), 'icon'=>'dashicons-search' ];
 			if ( current_user_can( 'kiwe_manage_context' ) ) $actions[] = [ 'label'=>__( 'Business details', 'dsa' ), 'description'=>__( 'Update your website identity', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-identity' ), 'icon'=>'dashicons-store' ];
 			if ( current_user_can( 'manage_categories' ) || current_user_can( 'edit_posts' ) ) $actions[] = [ 'label'=>__( 'Categories', 'dsa' ), 'description'=>__( 'Organize posts, products, services and menu categories', 'dsa' ), 'url'=>Category_Workspace_Service::url(), 'icon'=>'dashicons-category' ];
 			if ( current_user_can( 'kiwe_manage_team' ) && \DSA\Onboarding\Design_Context_Journey_Service::feature_enabled( 'team' ) ) $actions[] = [ 'label'=>__( 'Team', 'dsa' ), 'description'=>__( 'Choose who appears on your site', 'dsa' ), 'url'=>Team_Workspace_Service::url(), 'icon'=>'dashicons-groups' ];
 			if ( current_user_can( 'kiwe_view_pages' ) ) $actions[] = [ 'label'=>__( 'Pages', 'dsa' ), 'description'=>__( 'Change page names and manage page briefs', 'dsa' ), 'url'=>class_exists( Continuity_App_Service::class ) && Continuity_App_Service::enabled() ? Continuity_App_Service::url() : admin_url( 'edit.php?post_type=page' ), 'icon'=>'dashicons-admin-page' ];
-			if ( current_user_can( 'kiwe_manage_guest_applications' ) ) $actions[] = [ 'label'=>__( 'Guests', 'dsa' ), 'description'=>__( 'Review applications and submissions', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-guests' ), 'icon'=>'dashicons-welcome-write-blog' ];
+			if ( \DSA\Apps\Guest_App_Service::enabled() && current_user_can( 'kiwe_manage_guest_applications' ) ) $actions[] = [ 'label'=>__( 'Guests', 'dsa' ), 'description'=>__( 'Review applications and submissions', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-guests' ), 'icon'=>'dashicons-welcome-write-blog' ];
 			if ( current_user_can( 'kiwe_use_notifications' ) ) $actions[] = [ 'label'=>__( 'Notifications', 'dsa' ), 'description'=>__( 'Choose your alerts', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-notifications' ), 'icon'=>'dashicons-bell' ];
 			return $actions;
 		}
@@ -277,25 +314,18 @@ final class Workspace_Admin_Service {
 		// hide later actions such as Notifications or Upload media.
 		$role = self::uses_native_admin( wp_get_current_user() ) ? 'administrator' : WordPress_Role_Access_Service::role_for( wp_get_current_user() );
 		$tasks = $this->quick_actions( $role, false );
-		if ( self::uses_native_admin( wp_get_current_user() ) ) $tasks[] = [ 'label'=>__( 'WordPress dashboard', 'dsa' ), 'description'=>__( 'Technical settings and plugins', 'dsa' ), 'url'=>admin_url( 'index.php?kiwe-native-dashboard=1' ), 'icon'=>'dashicons-admin-tools' ];
 		if ( class_exists( Post_Workspace_Service::class ) && Post_Workspace_Service::enabled() ) $tasks = array_values( array_filter( $tasks, static fn( $task ) => ! in_array( $task['label'], [ __( 'New post', 'dsa' ), __( 'Review submissions', 'dsa' ) ], true ) ) );
 		// Identity's persistent subnavigation owns its related Design Context
 		// areas. Home needs one clear entrance, not duplicate tiles for each tab.
 		$context = []; $organize = []; $apps = []; $analytics = [];
 		if ( Template_Workspace_Service::allowed() ) $tasks[] = [ 'label'=>__( 'Templates','dsa' ),'description'=>__( 'Headers, footers and native Bricks templates','dsa' ),'url'=>Template_Workspace_Service::url(),'icon'=>'dashicons-layout' ];
 		if ( Analytics_Workspace_Service::allowed() ) $analytics[] = [ 'label'=>__( 'Analytics','dsa' ),'description'=>__( 'Understand your website and business results','dsa' ),'url'=>Analytics_Workspace_Service::url(),'icon'=>'dashicons-chart-area','group'=>'analytics','groupLabel'=>__( 'Analytics','dsa' ) ];
-		if ( current_user_can( 'kiwe_manage_context' ) ) {
-			$context = [
-				[ 'label'=>__( 'Website & Design Context', 'dsa' ), 'description'=>__( 'Identity, story, contact, style and plan', 'dsa' ), 'url'=>\DSA\Onboarding\Design_Context_Journey_Service::url(), 'icon'=>'dashicons-id' ],
-			];
-		}
+
 		if ( Backup_Workspace_Service::allowed() ) $organize[] = [ 'label'=>__( 'Backups', 'dsa' ), 'description'=>__( 'Save and review recovery copies', 'dsa' ), 'url'=>Backup_Workspace_Service::url(), 'icon'=>'dashicons-database-export' ];
 		if ( current_user_can( 'kiwe_manage_navigation' ) && class_exists( Navigation_Workspace_Service::class ) && class_exists( Navigation_App_Service::class ) && Navigation_App_Service::enabled() ) {
 			$organize[] = [ 'label'=>__( 'Navigation', 'dsa' ), 'description'=>__( 'Arrange visitor menu categories and links', 'dsa' ), 'url'=>Navigation_Workspace_Service::url(), 'icon'=>'dashicons-menu' ];
 		}
-		if ( current_user_can( 'kiwe_manage_guest_applications' ) && class_exists( Guest_App_Service::class ) && Guest_App_Service::enabled() ) {
-			$context[] = [ 'label'=>__( 'Guests', 'dsa' ), 'description'=>__( 'Choose which guest contributions to accept', 'dsa' ), 'url'=>admin_url( 'admin.php?page=kiwe-guests&area=setup' ), 'icon'=>'dashicons-admin-settings' ];
-		}
+
 		if ( current_user_can( 'kiwe_manage_team' ) && current_user_can( 'list_users' ) && current_user_can( 'edit_users' ) ) {
 			$tasks[] = [ 'label'=>__( 'Users', 'dsa' ), 'description'=>__( 'Review new accounts, verification and recent activity', 'dsa' ), 'url'=>Team_Workspace_Service::url( [ 'team_view'=>'accounts' ] ), 'icon'=>'dashicons-admin-users' ];
 		}
@@ -303,7 +333,17 @@ final class Workspace_Admin_Service {
 			$apps[] = [ 'label'=>__( 'Store', 'dsa' ), 'description'=>__( 'Products, delivery, taxes, offers and orders', 'dsa' ), 'url'=>\DSA\Apps\Store_App_Service::home_url(), 'icon'=>'dashicons-store', 'app'=>\DSA\Apps\Store_App_Service::card() ];
 		}
 
-		// The direct identity tile above replaces the legacy catch-all action.
+		foreach ( [ \DSA\Apps\Guest_App_Service::class=>'dashicons-welcome-write-blog',\DSA\Apps\AI_App_Service::class=>'dashicons-lightbulb',\DSA\Apps\SiteGraph_App_Service::class=>'dashicons-networking' ] as $owner=>$icon ) {
+			if ( ! $owner::allowed() ) continue;
+			$apps[] = [ 'label'=>$owner::NAME,'description'=>$owner::DESCRIPTION,'url'=>$owner::home_url(),'icon'=>$icon,'app'=>$owner::card() ];
+		}
+		foreach ( [ 'auth'=>'dashicons-lock', 'security'=>'dashicons-shield' ] as $id=>$icon ) {
+			if ( ! \DSA\Apps\Required_App_Service::allowed( $id ) ) continue;
+			$app = \DSA\Apps\Required_App_Service::card( $id );
+			$apps[] = [ 'label'=>ucfirst( $id ), 'description'=>$app['description'], 'url'=>$app['url'], 'icon'=>$icon, 'app'=>$app ];
+		}
+		$tasks = array_values( array_filter( $tasks,static fn( $task ) => ! in_array( $task['label'],[ __( 'AI','dsa' ),__( 'Profile','dsa' ) ],true ) && ( __( 'Guests','dsa' ) !== $task['label'] || \DSA\Apps\Guest_App_Service::enabled() ) ) );
+		// Design Context is entered through the home progress bar or identity edit action.
 		$tasks = array_values( array_filter( $tasks, static fn( $task ) => false === strpos( (string) ( $task['url'] ?? '' ), 'page=kiwe-identity' ) ) );
 		// A single capability-filtered task catalog feeds both tabs. Notifications
 		// keep their bell entrance and never consume a Home tile.
@@ -337,17 +377,16 @@ final class Workspace_Admin_Service {
 		unset( $task );
 		$work_labels = [ __( 'Pages', 'dsa' ), __( 'Templates','dsa' ), __( 'Posts', 'dsa' ), __( 'Products', 'dsa' ), __( 'Media', 'dsa' ), __( 'Services', 'dsa' ), __( 'Team', 'dsa' ), __( 'My contributions', 'dsa' ), __( 'New product', 'dsa' ), __( 'New post', 'dsa' ), __( 'Add page', 'dsa' ) ];
 		$daily_labels = [ __( 'Orders', 'dsa' ), __( 'Saved carts', 'dsa' ), __( 'Forms', 'dsa' ), __( 'Users', 'dsa' ), __( 'Feedback', 'dsa' ), __( 'Guests', 'dsa' ), __( 'Campaigns', 'dsa' ) ];
-		if(class_exists(App_Workspace_Service::class)&&App_Workspace_Service::enabled()&&App_Workspace_Service::allowed())$context[]=['label'=>__('App','dsa'),'description'=>__('Home, Dock, appearance, transitions and installation','dsa'),'url'=>App_Workspace_Service::url(),'icon'=>'dashicons-smartphone'];
 		if(class_exists(App_Workspace_Service::class)&&App_Workspace_Service::enabled()&&App_Workspace_Service::audience_allowed()){$daily_labels[]=__('App','dsa');$tasks[]=['label'=>__('App','dsa'),'description'=>__('Review app activity and notification readiness','dsa'),'url'=>App_Workspace_Service::url('activity'),'icon'=>'dashicons-smartphone'];}
 		if ( class_exists( Form_Workspace_Service::class ) && Form_Workspace_Service::allowed() ) $tasks[] = [ 'label'=>__( 'Forms', 'dsa' ), 'description'=>__( 'Read messages submitted through your website forms', 'dsa' ), 'url'=>Form_Workspace_Service::url(), 'icon'=>'dashicons-feedback' ];
 		if ( \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_products' ) && class_exists( Commerce_App_Service::class ) && Commerce_App_Service::enabled() && current_user_can( 'edit_shop_orders' ) && current_user_can( 'edit_others_shop_orders' ) ) $tasks[] = [ 'label'=>__( 'Saved carts', 'dsa' ), 'description'=>__( 'Review shoppers who left a cart waiting', 'dsa' ), 'url'=>Commerce_App_Service::url( 'saved-carts' ), 'icon'=>'dashicons-cart' ];
 		if ( current_user_can('kiwe_manage_notification_policy') && class_exists(User_Group_Service::class) && class_exists(Notification_App_Service::class) && User_Group_Service::allowed() && Notification_App_Service::enabled() ) $tasks[]=[ 'label'=>__('Campaigns','dsa'),'description'=>__('Reach your opted-in audiences','dsa'),'url'=>admin_url('admin.php?page=kiwe-notifications&view=campaigns'),'icon'=>'dashicons-megaphone' ];
 		foreach ( $tasks as &$task ) {
-			$task['group'] = in_array( $task['label'], $daily_labels, true ) ? 'daily' : ( in_array( $task['label'], $work_labels, true ) ? 'work' : 'setup' );
-			$task['groupLabel'] = 'work' === $task['group'] ? __( 'Work', 'dsa' ) : ( 'daily' === $task['group'] ? __( 'Daily', 'dsa' ) : __( 'Setup', 'dsa' ) );
+			$task['group'] = in_array( $task['label'], $daily_labels, true ) ? 'daily' : ( in_array( $task['label'], $work_labels, true ) ? 'work' : 'organize' );
+			$task['groupLabel'] = 'work' === $task['group'] ? __( 'Work', 'dsa' ) : ( 'daily' === $task['group'] ? __( 'Daily', 'dsa' ) : __( 'Organize', 'dsa' ) );
 		}
 		unset( $task );
-		foreach ( $context as &$task ) { $task['group'] = 'setup'; $task['groupLabel'] = __( 'Setup', 'dsa' ); }
+		foreach ( $context as &$task ) { $task['group'] = 'apps'; $task['groupLabel'] = __( 'App', 'dsa' ); }
 		unset( $task );
 		foreach ( $organize as &$task ) { $task['group'] = 'organize'; $task['groupLabel'] = __( 'Organize', 'dsa' ); }
 		unset( $task );
@@ -358,7 +397,7 @@ final class Workspace_Admin_Service {
 		$work_order = array_flip( $work_labels ); $daily_order = array_flip( $daily_labels );
 		usort( $work, static fn( $a, $b ) => ( $work_order[ $a['label'] ] ?? 99 ) <=> ( $work_order[ $b['label'] ] ?? 99 ) );
 		usort( $daily, static fn( $a, $b ) => ( $daily_order[ $a['label'] ] ?? 99 ) <=> ( $daily_order[ $b['label'] ] ?? 99 ) );
-		return array_values( array_merge( $work, $daily, $context, array_filter( $tasks, static fn( $task ) => 'setup' === $task['group'] ), $organize, $apps, $analytics ) );
+		return array_values( array_merge( $work, $daily, $context, array_filter( $tasks, static fn( $task ) => 'organize' === $task['group'] ), $organize, $apps, $analytics ) );
 	}
 
 	private function day_part(): string {

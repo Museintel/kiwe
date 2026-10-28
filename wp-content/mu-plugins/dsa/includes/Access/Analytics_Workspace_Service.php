@@ -104,7 +104,7 @@ final class Analytics_Workspace_Service {
 		$report['expected'] = $this->expected( $scope,$id,$days,$report['searchType'] ); $report['tabs'] = $this->choices();
 		$report['records'] = $id ? [ 'items'=>[],'page'=>1,'hasNext'=>false ] : $this->records( $scope,$q );
 		$report['strategy'] = $this->saved( $id ); $report['canReview'] = ( $id || 'site' === $scope || 'store' === $scope ) && self::reviewable_record( $id ) && ! empty( $report['goal']['key'] ) && AI_Feature_Policy::analytics_enabled( ( new Settings() )->get( 'ai',[] ) );
-		$report['goalUrl'] = current_user_can( 'kiwe_manage_context' ) ? \DSA\Onboarding\SEO_Context_Service::goal_url() : ''; $report['aiUrl'] = current_user_can( AI_Feature_Policy::CAPABILITY ) ? AI_Workspace_Service::url() : '';
+		$report['goalUrl'] = current_user_can( 'kiwe_manage_context' ) ? \DSA\Onboarding\SEO_Context_Service::goal_url() : ''; $report['aiUrl'] = current_user_can( AI_Feature_Policy::CAPABILITY ) ? ( \DSA\Apps\AI_App_Service::enabled() ? \DSA\Apps\AI_App_Service::url() : \DSA\Apps\Library_Service::url('ai') ) : '';
 		return Task_Workspace_UI::response( $report );
 	}
 	private function proposal_key(): string { return 'kiwe_analytics_review_' . get_current_user_id(); }

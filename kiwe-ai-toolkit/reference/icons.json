@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.public-icon-reference.v1",
   "source": "wp-content/mu-plugins/dsa/includes/Bricks/Icon_Library_Service.php",
-  "sourceSha256": "f1f5be8ff010888afd34b4cc248fb044188fb8a01086101bfbdb9dcde2d73a46",
-  "spriteSha256": "fad74b617d9679dbb1dc1b3dd634058c62d68f71252c9a7e8bd330ffea06204b",
+  "sourceSha256": "520e0689a1a7207b3f3abca8298cb39ab5eaf2a19770f509e008213209f703b6",
+  "spriteSha256": "603ddf55a66a94d75523829daec8d558d2297a9d16e15030303909681ba357d0",
   "policy": "Fixed public artwork and native Bricks icon tags only. App icons/actions require RC393 or current target evidence. Artwork does not establish app-store enrollment, installation or notification consent.",
   "icons": {
     "kiwe_icon_arrow_right": {
@@ -149,6 +149,31 @@
       "tag": "{kiwe_icon_app_android}",
       "label": "Icon: App Android",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path fill=\"#34a853\" stroke=\"none\" d=\"M7 5.5 28.2 24 7 42.5c-.7-.8-1-1.9-1-3.2V8.7c0-1.3.3-2.4 1-3.2Z\"/><path fill=\"#4285f4\" stroke=\"none\" d=\"m28.2 24 6.7-5.8L10.8 4.7A4.8 4.8 0 0 0 7 5.5L28.2 24Z\"/><path fill=\"#fbbc04\" stroke=\"none\" d=\"m28.2 24 6.7 5.8L10.8 43.3A4.8 4.8 0 0 1 7 42.5L28.2 24Z\"/><path fill=\"#ea4335\" stroke=\"none\" d=\"m34.9 18.2 6.1 3.4c1.4.8 1.4 4 0 4.8l-6.1 3.4-6.7-5.8 6.7-5.8Z\"/></svg>"
+    },
+    "kiwe_icon_message_circle": {
+      "tag": "{kiwe_icon_message_circle}",
+      "label": "Icon: Message Circle",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/></svg>"
+    },
+    "kiwe_icon_comments": {
+      "tag": "{kiwe_icon_comments}",
+      "label": "Icon: Comments",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/></svg>"
+    },
+    "kiwe_icon_thumbs_up": {
+      "tag": "{kiwe_icon_thumbs_up}",
+      "label": "Icon: Thumbs Up",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 10v12H3V10h4Zm0 0 5-8a3 3 0 0 1 2 3v4h5a2 2 0 0 1 2 2l-1 8a3 3 0 0 1-3 3H7\"/></svg>"
+    },
+    "kiwe_icon_flag": {
+      "tag": "{kiwe_icon_flag}",
+      "label": "Icon: Flag",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M4 22V3c5-4 9 4 16 0v12c-7 4-11-4-16 0\"/></svg>"
+    },
+    "kiwe_icon_pin": {
+      "tag": "{kiwe_icon_pin}",
+      "label": "Icon: Pin",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"m16 3 5 5-4 2-3 5-5-5 5-3 2-4ZM9 10l-4 4 5 5 4-4M7 17l-5 5\"/></svg>"
     }
   }
 }

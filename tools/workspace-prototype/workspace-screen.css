@@ -1,23 +1,10 @@
 @import '../../wp-content/mu-plugins/dsa/assets/css/workspace-tiles.css';
+@import '../../wp-content/mu-plugins/dsa/assets/css/workspace-header.css';
 /* Seam's private geometry: one bounded presentation layer for React task screens. */
 .kiwe-screen{--screen-ink:var(--kiwe-color-text);--screen-paper:var(--kiwe-color-surface);--screen-line:var(--kiwe-color-border);--screen-radius:var(--kiwe-radius-md,10px);--screen-gap:var(--kiwe-space-sm,14px);min-height:100vh;background:var(--screen-paper);color:var(--screen-ink);font:15px/1.5 var(--kiwe-font-body);max-width:none}
 .kiwe-screen:is(.continuity-shell,.wf-shell,.ai-shell,.seo-shell){max-width:none;padding:0;margin:0}
 .kiwe-screen *{box-sizing:border-box}
 .kiwe-screen :is(a,button,input,select,textarea,summary):focus-visible{outline:3px solid #1f5844;outline-offset:3px}
-.kiwe-screen .kiwe-screen-header{display:flex;align-items:center;gap:var(--kiwe-space-md,20px);min-height:92px;height:auto;margin:0;padding:var(--kiwe-space-sm,14px) max(var(--kiwe-space-md,20px),calc((100vw - 1240px)/2));border-bottom:1px solid var(--screen-line);background:#fff}
-.kiwe-screen-brand{display:flex;align-items:center;gap:var(--kiwe-space-sm,14px);min-width:0;flex:1}
-.kiwe-screen-header .workspace-site-brand{display:flex;align-items:center;min-width:0;max-width:190px;font-size:inherit;font-weight:inherit;white-space:normal;letter-spacing:normal}
-.kiwe-screen-header .workspace-site-brand img{width:auto;height:auto;max-width:150px;max-height:58px;object-fit:contain}
-.kiwe-screen-header .workspace-brand-meta{max-width:min(430px,35vw);margin:0}
-.kiwe-screen-header .workspace-site-tagline{letter-spacing:normal;font:400 14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:#536358}
-.kiwe-screen-header .workspace-site-edit{font-size:16px;font-weight:400}
-.kiwe-screen-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:var(--kiwe-space-xs,10px);flex-wrap:wrap;margin-left:auto}
-.kiwe-screen .kiwe-screen-header-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:var(--kiwe-space-xs,10px);border-radius:var(--screen-radius);color:var(--screen-ink);font:500 13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;text-decoration:none;white-space:nowrap}
-.kiwe-screen .kiwe-screen-header-actions a:hover{background:#eff2e9}
-.kiwe-screen .kiwe-screen-header-actions .kiwe-screen-account{padding-inline:var(--kiwe-space-sm,14px);background:#efb89c}
-.kiwe-screen-bell{position:relative;border:1px solid var(--screen-line)}
-.kiwe-screen-bell svg{display:block;flex:none}
-.kiwe-screen-bell b{position:absolute;right:-4px;top:-6px;min-width:19px;height:19px;padding:1px 4px;border-radius:20px;background:#20352b;color:#fff;font-size:11px}
 .kiwe-screen > main{width:min(100%,1240px);max-width:1240px;margin:0 auto;padding:var(--kiwe-space-lg,30px) var(--kiwe-space-md,20px) var(--kiwe-space-xl,44px)}
 .kiwe-screen > main > :is(h1,.kiwe-screen-title){font-size:clamp(40px,5vw,64px);font-weight:450;line-height:1.08;letter-spacing:-.045em;margin:var(--kiwe-space-xxs,6px) 0 var(--kiwe-space-xs,10px)}
 .kiwe-screen > main > :is(.native-eyebrow,.continuity-eyebrow,.identity-eyebrow,.native-tax-eyebrow,.native-nav-eyebrow,.ai-eyebrow,.wf-eyebrow,.seo-eyebrow){margin:0;font-size:11px;font-weight:650;letter-spacing:.16em;line-height:1.4;text-transform:uppercase}
@@ -84,17 +71,9 @@
 .kiwe-screen .continuity-related{grid-template-columns:1fr;margin-block:var(--kiwe-space-md,20px)}
 .kiwe-screen .continuity-related>.continuity-route{grid-column:auto;min-height:126px;gap:9px;padding:var(--kiwe-space-md,20px);text-decoration:none}
 .kiwe-screen .continuity-related>.continuity-route strong{font-size:clamp(20px,2.2vw,27px)}
-@media(max-width:700px){.kiwe-screen > .kiwe-screen-header{flex-wrap:wrap;padding:var(--kiwe-space-sm,14px)}.kiwe-screen-brand{flex-basis:auto;flex-wrap:wrap}.kiwe-screen-header .workspace-brand-meta{max-width:calc(100vw - 170px)}.kiwe-screen-header-actions{width:auto;justify-content:flex-end;margin-left:auto}.kiwe-screen > main{padding:var(--kiwe-space-md,20px) var(--kiwe-space-sm,14px) var(--kiwe-space-xl,44px)}}
+@media(max-width:700px){.kiwe-screen > main{padding:var(--kiwe-space-md,20px) var(--kiwe-space-sm,14px) var(--kiwe-space-xl,44px)}}
 @media(max-width:540px){.kiwe-screen > main > :is(h1,.kiwe-screen-title){font-size:clamp(37px,11vw,50px)}.kiwe-screen :is(.native-post-grid,.native-tax-grid,.continuity-grid,.wf-grid){grid-template-columns:repeat(2,minmax(0,1fr))}.kiwe-screen :is(.native-post-grid,.native-tax-grid,.continuity-grid,.wf-grid)>:first-child{grid-column:span 2}.kiwe-screen :is(.native-post-grid,.native-tax-grid,.continuity-grid,.wf-grid)>:last-child:nth-child(even){grid-column:span 2}.kiwe-screen .native-nav-grid,.kiwe-screen .native-people-grid,.kiwe-screen .ai-grid{grid-template-columns:1fr}}
 @media(max-width:540px){.kiwe-screen .continuity-grid.business .continuity-card.business strong{font-size:clamp(18px,5.1vw,22px)}.kiwe-screen .continuity-related{grid-template-columns:1fr}}
-@media(max-width:540px){
-  .kiwe-screen .kiwe-screen-brand{display:grid;grid-template-columns:minmax(56px,96px) minmax(0,1fr);gap:var(--kiwe-space-xs,10px);width:100%;flex-basis:100%;align-items:center}
-  .kiwe-screen .kiwe-screen-header .workspace-site-brand{max-width:96px}
-  .kiwe-screen .kiwe-screen-header .workspace-site-brand img{max-width:96px;max-height:52px}
-  .kiwe-screen .kiwe-screen-header .workspace-site-brand strong{font-size:16px;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .kiwe-screen .kiwe-screen-header .workspace-brand-meta{order:0;flex-basis:auto;max-width:none;width:100%;justify-content:space-between}
-  .kiwe-screen .kiwe-screen-header-actions{width:100%;justify-content:space-between;gap:4px}
-}
 /* One compact card-control grammar across content, commerce and service tasks. */
 .kiwe-record-controls{display:flex;flex-wrap:wrap;align-items:center;gap:var(--kiwe-space-2,8px);padding:var(--kiwe-space-3,12px);border-top:1px solid currentColor}
 .kiwe-record-controls:has(.kiwe-menu-placement){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center}

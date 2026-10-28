@@ -7,6 +7,82 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class SecureTrack_Settings_Policy {
+	public static function sanitize_kiwe_settings( $input, array $current ): array {
+		if ( ! is_array( $input ) ) {
+			return $current;
+		}
+
+		$input = wp_unslash( $input );
+		$roles = isset( $input['auto_logout_roles'] ) && is_array( $input['auto_logout_roles'] ) ? $input['auto_logout_roles'] : [];
+		$valid_roles = function_exists( 'wp_roles' ) ? array_keys( wp_roles()->get_names() ) : [];
+		$roles = array_values(
+			array_intersect(
+				array_map( 'sanitize_key', $roles ),
+				$valid_roles
+			)
+		);
+
+		return [
+			'enabled'             => ! empty( $input['enabled'] ),
+			'protection_profile'  => in_array( sanitize_key( (string) ( $input['protection_profile'] ?? 'monitor' ) ), [ 'monitor', 'recommended' ], true ) ? sanitize_key( (string) $input['protection_profile'] ) : 'monitor',
+			'auto_logout_enabled' => ! empty( $input['auto_logout_enabled'] ),
+			'auto_logout_minutes' => max( 1, min( 1440, absint( $input['auto_logout_minutes'] ?? ( $current['auto_logout_minutes'] ?? 30 ) ) ) ),
+			'auto_logout_roles'   => $roles,
+			'trusted_proxy_cidrs' => self::sanitize_cidr_lines( $input['trusted_proxy_cidrs'] ?? ( $current['trusted_proxy_cidrs'] ?? '' ) ),
+			'schema_integrity_guard_enabled' => ! empty( $input['schema_integrity_guard_enabled'] ),
+			'seo_spam_410_enabled' => ! empty( $input['seo_spam_410_enabled'] ),
+			'harden_public_rest_users' => ! empty( $input['harden_public_rest_users'] ),
+			'security_headers_enabled' => ! empty( $input['security_headers_enabled'] ),
+			'image_resource_guard_enabled' => ! empty( $input['image_resource_guard_enabled'] ),
+			'image_big_size_threshold' => max( 1600, min( 4096, absint( $input['image_big_size_threshold'] ?? ( $current['image_big_size_threshold'] ?? 2560 ) ) ) ),
+			'image_max_dimension' => max( 4096, min( 20000, absint( $input['image_max_dimension'] ?? ( $current['image_max_dimension'] ?? 12000 ) ) ) ),
+			'image_max_megapixels' => max( 16, min( 120, absint( $input['image_max_megapixels'] ?? ( $current['image_max_megapixels'] ?? 40 ) ) ) ),
+		];
+	}
+
+	private static function sanitize_cidr_lines( $value ): string {
+		$lines = preg_split( '/[\r\n,]+/', (string) $value ) ?: [];
+		$valid = [];
+		foreach ( $lines as $line ) {
+			$line = trim( sanitize_text_field( $line ) );
+			if ( '' === $line ) continue;
+			$parts = explode( '/', $line, 2 );
+			$ip = filter_var( $parts[0], FILTER_VALIDATE_IP );
+			if ( false === $ip ) continue;
+			$is_ipv6 = false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 );
+			$max = $is_ipv6 ? 128 : 32;
+			$minimum = $is_ipv6 ? 32 : 8;
+			$bits = isset( $parts[1] ) ? (int) $parts[1] : $max;
+			if ( $bits < $minimum || $bits > $max ) continue;
+			$valid[] = $ip . '/' . $bits;
+		}
+		return implode( "\n", array_values( array_unique( $valid ) ) );
+	}
+
+
+	/** Partial native policy save: retain unrelated keys, recovery, AI credentials and timing policy. */
+	public static function update_app_policy( array $changes ) {
+		if ( ! \DSA\Apps\Required_App_Service::allowed( 'security' ) ) return new \WP_Error( 'kiwe_security_forbidden', __( 'Security policy is unavailable.', 'dsa' ) );
+		$allowed = \DSA\Access\System_Control_Catalogue::fields( 'security', \DSA\Apps\Required_App_Service::technical() );
+		if ( array_diff_key( $changes, $allowed ) ) return new \WP_Error( 'kiwe_security_field', __( 'Choose an available security control.', 'dsa' ) );
+		$stored = (array) get_option( 'stp_settings', [] ); $current = self::notification_policy(); $next = $stored;
+		foreach ( $changes as $key=>$value ) $next[$key] = is_bool( $value ) ? (int) $value : $value;
+		$effective = array_replace( $current, $next );
+		if ( (int) ( $effective['yellow_threshold'] ?? 25 ) >= (int) ( $effective['red_threshold'] ?? 60 ) ) return new \WP_Error( 'kiwe_security_threshold', __( 'The warning score must be lower than the critical score.', 'dsa' ) );
+		foreach ( [ 'country_blocklist','login_allowed_countries' ] as $key ) if ( array_key_exists( $key, $changes ) ) {
+			$codes = self::normalize_country_codes( $changes[$key] );
+			$next[$key] = implode( ',', $codes );
+		}
+		update_option( 'stp_settings', $next, false );
+		wp_cache_delete( 'settings', 'securetrack_pro' );
+		if ( function_exists( 'stp_cfg' ) ) stp_cfg( true );
+		if ( (array) get_option( 'stp_settings', [] ) !== $next ) return new \WP_Error( 'kiwe_security_readback', __( 'Security settings could not be confirmed. Reload and review.', 'dsa' ) );
+		return true;
+	}
+	public static function refresh_runtime_cache(): void {
+		wp_cache_delete( 'settings', 'securetrack_pro' );
+		if ( function_exists( 'stp_cfg' ) ) stp_cfg( true );
+	}
 	public static function notification_policy(): array {
 		if ( function_exists( 'stp_cfg' ) ) return (array) stp_cfg();
 		return array_replace( (array) get_option( 'stp_settings', [] ), [ 'alert_on_red'=>1 ] );

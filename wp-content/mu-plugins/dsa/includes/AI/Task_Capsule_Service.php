@@ -2,6 +2,7 @@
 
 namespace DSA\AI;
 
+use DSA\Utilities\Credential_Records;
 use WP_REST_Request;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -64,14 +65,13 @@ final class Task_Capsule_Service {
 			'revokedAt'   => '',
 			'revokedBy'   => 0,
 		];
-		$records = $this->records( false );
-		array_unshift( $records, $record );
-		update_option( self::OPTION, array_slice( $records, 0, self::MAX_RECORDS ), false );
-
-		return [
-			'token'  => $plain,
-			'record' => $this->public_record( $record ),
-		];
+		$result = Credential_Records::change( self::OPTION, function ( array $stored ) use ( $record, $plain ): array {
+			$records = $this->records( $stored );
+			array_unshift( $records, $record );
+			return [ 'records' => array_slice( $records, 0, self::MAX_RECORDS ), 'value' => [ 'token' => $plain, 'record' => $this->public_record( $record ) ] ];
+		} );
+		if ( ! $result['ok'] ) throw new \RuntimeException( 'Kiwe could not confirm that the task capsule was saved. Refresh the connection list before trying again.' );
+		return $result['value'];
 	}
 
 	public function authenticate_request( WP_REST_Request $request, string $required_scope ): array {
@@ -83,43 +83,45 @@ final class Task_Capsule_Service {
 			return $this->failure( 'invalid_capsule_prefix', 'The supplied credential is not a Kiwe task capsule.' );
 		}
 
-		$records = $this->records( false );
-		foreach ( $records as &$record ) {
-			if ( ! is_array( $record ) || '' !== (string) ( $record['revokedAt'] ?? '' ) ) {
-				continue;
-			}
-			if ( ! wp_check_password( $token, (string) ( $record['hash'] ?? '' ) ) ) {
-				continue;
-			}
-			if ( time() > absint( $record['expiresUnix'] ?? 0 ) ) {
-				return $this->failure( 'capsule_expired', 'This Kiwe task capsule has expired.' );
-			}
-			$max_uses = absint( $record['policy']['maxUses'] ?? 0 );
-			if ( $max_uses < 1 || absint( $record['uses'] ?? 0 ) >= $max_uses ) {
-				return $this->failure( 'capsule_exhausted', 'This Kiwe task capsule has used its request budget.' );
-			}
-			$scopes = $this->normalize_scopes( (array) ( $record['scopes'] ?? [] ) );
-			if ( 'status' !== $required_scope && ! in_array( $required_scope, $scopes, true ) ) {
-				return $this->failure( 'capsule_scope_denied', 'This Kiwe task capsule does not allow the requested capability.', 403 );
-			}
+		$result = Credential_Records::change( self::OPTION, function ( array $stored ) use ( $token, $required_scope ): array {
+			$records = $this->records( $stored );
+			foreach ( $records as &$record ) {
+				if ( ! is_array( $record ) || '' !== (string) ( $record['revokedAt'] ?? '' ) ) {
+					continue;
+				}
+				if ( ! wp_check_password( $token, (string) ( $record['hash'] ?? '' ) ) ) {
+					continue;
+				}
+				if ( time() > absint( $record['expiresUnix'] ?? 0 ) ) {
+					return [ 'value' => $this->failure( 'capsule_expired', 'This Kiwe task capsule has expired.' ) ];
+				}
+				$max_uses = absint( $record['policy']['maxUses'] ?? 0 );
+				if ( $max_uses < 1 || absint( $record['uses'] ?? 0 ) >= $max_uses ) {
+					return [ 'value' => $this->failure( 'capsule_exhausted', 'This Kiwe task capsule has used its request budget.' ) ];
+				}
+				$scopes = $this->normalize_scopes( (array) ( $record['scopes'] ?? [] ) );
+				if ( 'status' !== $required_scope && ! in_array( $required_scope, $scopes, true ) ) {
+					return [ 'value' => $this->failure( 'capsule_scope_denied', 'This Kiwe task capsule does not allow the requested capability.', 403 ) ];
+				}
 
-			$record['uses']       = absint( $record['uses'] ?? 0 ) + 1;
-			$record['lastUsedAt'] = gmdate( 'c' );
-			$record['lastUsedIp'] = $this->client_ip();
-			update_option( self::OPTION, $records, false );
-			$public = $this->public_record( $record );
+				$record['uses']       = absint( $record['uses'] ?? 0 ) + 1;
+				$record['lastUsedAt'] = gmdate( 'c' );
+				$record['lastUsedIp'] = $this->client_ip();
+				$public = $this->public_record( $record );
 
-			return [
-				'ok'     => true,
-				'kind'   => 'task_capsule',
-				'record' => $public,
-				'policy' => $public['policy'],
-				'scope'  => $required_scope,
-			];
-		}
-		unset( $record );
+				return [ 'records' => $records, 'value' => [
+					'ok'     => true,
+					'kind'   => 'task_capsule',
+					'record' => $public,
+					'policy' => $public['policy'],
+					'scope'  => $required_scope,
+				] ];
+			}
+			unset( $record );
 
-		return $this->failure( 'invalid_capsule', 'Kiwe task capsule was not found or has been revoked.' );
+			return [ 'value' => $this->failure( 'invalid_capsule', 'Kiwe task capsule was not found or has been revoked.' ) ];
+		} );
+		return $result['ok'] ? $result['value'] : $this->failure( $result['code'], 'Kiwe could not confirm the current task capsule state. Try again shortly.', 503 );
 	}
 
 	public function authorize_data_args( array $args, array $auth ): array {
@@ -174,27 +176,34 @@ final class Task_Capsule_Service {
 	}
 
 	public function public_records(): array {
-		return array_map( [ $this, 'public_record' ], $this->records() );
+		$result = Credential_Records::change( self::OPTION, function ( array $stored ): array {
+			$records = $this->records( $stored );
+			$cutoff = time() - DAY_IN_SECONDS;
+			$next = array_values( array_filter( $records, static fn( array $record ): bool => absint( $record['expiresUnix'] ?? 0 ) >= $cutoff ) );
+			$value = [ 'value' => array_map( [ $this, 'public_record' ], $next ) ];
+			return count( $next ) !== count( $records ) ? [ 'records' => $next ] + $value : $value;
+		} );
+		return $result['ok'] ? $result['value'] : [];
 	}
 
 	public function revoke( string $id, int $user_id = 0 ): bool {
-		$id      = sanitize_key( $id );
-		$records = $this->records( false );
-		$matched = false;
-		foreach ( $records as &$record ) {
-			if ( $id !== (string) ( $record['id'] ?? '' ) ) {
-				continue;
+		$id = sanitize_key( $id );
+		if ( '' === $id ) return false;
+		$result = Credential_Records::change( self::OPTION, function ( array $stored ) use ( $id, $user_id ): array {
+			$records = $this->records( $stored );
+			$matched = false;
+			foreach ( $records as &$record ) {
+				if ( $id !== (string) ( $record['id'] ?? '' ) ) continue;
+				if ( '' === (string) ( $record['revokedAt'] ?? '' ) ) {
+					$record['revokedAt'] = gmdate( 'c' );
+					$record['revokedBy'] = $user_id;
+				}
+				$matched = true;
 			}
-			$record['revokedAt'] = gmdate( 'c' );
-			$record['revokedBy'] = $user_id;
-			$matched = true;
-		}
-		unset( $record );
-		if ( $matched ) {
-			update_option( self::OPTION, $records, false );
-		}
-
-		return $matched;
+			unset( $record );
+			return $matched ? [ 'records' => $records, 'value' => true ] : [ 'value' => false ];
+		} );
+		return $result['ok'] && true === $result['value'];
 	}
 
 	private function normalize_policy( array $policy, int $max_uses ): array {
@@ -270,19 +279,8 @@ final class Task_Capsule_Service {
 		return array_values( array_unique( $out ) );
 	}
 
-	private function records( bool $prune = true ): array {
-		$records = get_option( self::OPTION, [] );
-		$records = is_array( $records ) ? array_values( array_filter( $records, static fn( $record ): bool => is_array( $record ) && ! empty( $record['id'] ) ) ) : [];
-		if ( ! $prune ) {
-			return $records;
-		}
-		$cutoff = time() - DAY_IN_SECONDS;
-		$next   = array_values( array_filter( $records, static fn( array $record ): bool => absint( $record['expiresUnix'] ?? 0 ) >= $cutoff ) );
-		if ( count( $next ) !== count( $records ) ) {
-			update_option( self::OPTION, $next, false );
-		}
-
-		return $next;
+	private function records( array $records ): array {
+		return array_values( array_filter( $records, static fn( $record ): bool => is_array( $record ) && ! empty( $record['id'] ) ) );
 	}
 
 	private function public_record( array $record ): array {

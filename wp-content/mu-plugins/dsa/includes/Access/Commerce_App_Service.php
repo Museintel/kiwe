@@ -240,6 +240,11 @@ final class Commerce_App_Service {
 		return 'POST' !== $request->get_method() || true === Origin_Checker::mutation_allowed( $request );
 	}
 	public function routes(): void {
+		if ( self::enabled() && class_exists( '\DSA\Commerce\Discussion_Review_Adapter' ) ) register_rest_route( 'dsa/v1', '/workspace/commerce/review-policy', [ [ 'methods'=>'GET', 'callback'=>[ $this,'read_review_policy' ], 'permission_callback'=>[ $this,'permission' ] ], [ 'methods'=>'POST', 'callback'=>[ $this,'save_review_policy' ], 'permission_callback'=>[ $this,'permission' ] ] ] );
+		register_rest_route('dsa/v1','/workspace/commerce/display-policy',[
+			['methods'=>'GET','callback'=>[$this,'read_display_policy'],'permission_callback'=>[$this,'permission']],
+			['methods'=>'POST','callback'=>[$this,'save_display_policy'],'permission_callback'=>[$this,'permission']],
+		]);
 		if ( !self::enabled() ) return;
 		register_rest_route('dsa/v1','/workspace/commerce/products/(?P<id>[1-9][0-9]*)/options',[['methods'=>'GET','callback'=>[$this,'read_product_options'],'permission_callback'=>[$this,'permission']],['methods'=>'POST','callback'=>[$this,'change_product_option'],'permission_callback'=>[$this,'permission']]]);
 		register_rest_route('dsa/v1','/workspace/commerce/products/(?P<id>[1-9][0-9]*)/options/attributes',['methods'=>'GET','callback'=>[$this,'read_product_option_choices'],'permission_callback'=>[$this,'permission']]);
@@ -307,6 +312,12 @@ final class Commerce_App_Service {
 	public function read_merchandising(\WP_REST_Request $request): \WP_REST_Response {
 		if($request->get_method()!=='GET'||!$this->permission($request))return $this->response($this->error('forbidden','Product relationships unavailable.',403));
 		return $this->response((new Product_Merchandising_Workspace_Service())->review((int)$request->get_url_params()['id']));
+	}
+	public function read_review_policy( \WP_REST_Request $request ): \WP_REST_Response {
+		return $this->response( 'GET' === $request->get_method() && $this->permission( $request ) && class_exists( '\DSA\Commerce\Discussion_Review_Adapter' ) ? \DSA\Commerce\Discussion_Review_Adapter::policy() : $this->error( 'forbidden', 'Review settings are unavailable.', 403 ) );
+	}
+	public function save_review_policy( \WP_REST_Request $request ): \WP_REST_Response {
+		return $this->response( 'POST' === $request->get_method() && $this->permission( $request ) && class_exists( '\DSA\Commerce\Discussion_Review_Adapter' ) ? \DSA\Commerce\Discussion_Review_Adapter::save_policy( (array) $request->get_json_params() ) : $this->error( 'forbidden', 'Review settings are unavailable.', 403 ) );
 	}
 	public function merchandising_choices(\WP_REST_Request $request): \WP_REST_Response {
 		if($request->get_method()!=='GET'||!$this->permission($request))return $this->response($this->error('forbidden','Product choices unavailable.',403));
@@ -434,6 +445,46 @@ final class Commerce_App_Service {
 		} finally { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) ); }
 	}
 
+
+ public static function display_policy_fields(): array {
+  return [
+   'cart_badges_enabled'=>['label'=>'Show stock messages','type'=>'bool'],
+   'stock_badge_alert_threshold'=>['label'=>'Low stock at or below','type'=>'int','min'=>1,'max'=>999],
+   'stock_badge_urgent_threshold'=>['label'=>'Very low stock at or below','type'=>'int','min'=>1,'max'=>999],
+   'stock_badge_alert_text'=>['label'=>'Low-stock message','type'=>'text','max'=>160],
+   'stock_badge_urgent_text'=>['label'=>'Very-low-stock message','type'=>'text','max'=>160],
+   'fbt_title'=>['label'=>'Frequently bought together title','type'=>'text','max'=>160],
+   'fbt_max_products'=>['label'=>'Maximum related products','type'=>'int','min'=>1,'max'=>12],
+   'fbt_show_out_of_stock'=>['label'=>'Include unavailable related products','type'=>'bool'],
+   'cross_sells_product_panel_enabled'=>['label'=>'Show the companion panel on product pages','type'=>'bool'],
+   'add_to_cart_mode'=>['label'=>'Product add button','type'=>'choice','options'=>[['default','Theme default'],['plus_only','Plus button'],['quantity','Quantity and add'],['replace','Replace the theme button']]],
+   'first_cart_confetti_enabled'=>['label'=>'Celebrate the first cart addition','type'=>'bool'],
+  ];
+ }
+ public function display_policy_record() {
+  if(!self::enabled()||!function_exists('wc_get_product')||!current_user_can('edit_products'))return $this->error('forbidden','Product display is unavailable.',403);
+  $raw=get_option(DSA_OPTION_SETTINGS,null);if(!is_array($raw))return $this->error('settings','Reload the store before changing product display.',409);
+  $fields=self::display_policy_fields();$values=array_intersect_key((new \DSA\Settings())->get('commerce',[]),$fields);
+  return ['schema'=>'kiwe.store-display.v1','canEdit'=>current_user_can('kiwe_manage_context'),'fields'=>$fields,'values'=>$values,'expected'=>hash_hmac('sha256',serialize($raw),wp_salt('nonce'))];
+ }
+ public function read_display_policy(\WP_REST_Request $request): \WP_REST_Response {
+  return $this->response($this->permission($request)&&'GET'===$request->get_method()?$this->display_policy_record():$this->error('forbidden','Product display is unavailable.',403));
+ }
+ public function save_display_policy(\WP_REST_Request $request): \WP_REST_Response {
+  return $this->response($this->permission($request)&&'POST'===$request->get_method()?$this->save_display_policy_record((array)$request->get_json_params()):$this->error('forbidden','Product display is unavailable.',403));
+ }
+ public function save_display_policy_record(array $body) {
+  if(!self::enabled()||!function_exists('wc_get_product')||!current_user_can('edit_products')||!current_user_can('kiwe_manage_context'))return $this->error('forbidden','Your role cannot change product display.',403);
+  $before=$this->display_policy_record();if(is_wp_error($before))return $before;
+  if(array_diff(array_keys($body),['expected','changes'])||!is_string($body['expected']??null)||!hash_equals($before['expected'],$body['expected']))return $this->error('stale','Store settings changed. Reload and review before saving.',409);
+  $changes=$body['changes']??null;$fields=self::display_policy_fields();if(!is_array($changes)||!$changes||count($changes)>11||array_diff(array_keys($changes),array_keys($fields)))return $this->error('display','Choose a product display setting.');
+  foreach($changes as $key=>&$value){$f=$fields[$key];$valid=match($f['type']){'bool'=>is_bool($value),'int'=>is_int($value)&&$value>=$f['min']&&$value<=$f['max'],'text'=>is_string($value)&&strlen($value)<=$f['max'],'choice'=>is_string($value)&&in_array($value,array_column($f['options'],0),true),default=>false};if(!$valid)return $this->error('display','A product display choice is invalid.');if('text'===$f['type'])$value=sanitize_text_field($value);}unset($value);
+  $effective=array_replace($before['values'],$changes);if($effective['stock_badge_urgent_threshold']>$effective['stock_badge_alert_threshold'])return $this->error('display','The very-low-stock threshold must be at or below the low-stock threshold.');
+  if(!array_diff_assoc($changes,$before['values']))return $before;
+  $raw=get_option(DSA_OPTION_SETTINGS,null);if(!is_array($raw)||!hash_equals($before['expected'],hash_hmac('sha256',serialize($raw),wp_salt('nonce'))))return $this->error('stale','Store settings changed. Reload and review before saving.',409);
+  if(!(new \DSA\Settings())->compare_and_update_selected($raw,['commerce'=>$changes]))return $this->error('stale','Store settings changed during saving.',409);
+  do_action('litespeed_purge_all');$after=$this->display_policy_record();if(is_wp_error($after))return $after;foreach($changes as $key=>$value)if($after['values'][$key]!==$value)return $this->error('readback','Product display could not be confirmed. Reload before retrying.',409);return $after;
+ }
 
  public function offer_policy_record() {
   if ( ! function_exists( 'wc_get_product' ) || ! current_user_can( 'edit_products' ) ) return $this->error( 'forbidden', 'Cart display is unavailable.', 403 );

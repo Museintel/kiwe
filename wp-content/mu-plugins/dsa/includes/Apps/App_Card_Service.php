@@ -6,7 +6,7 @@ if ( !defined( 'ABSPATH' ) ) exit;
 final class App_Card_Service {
  public static function render( array $task ): void {
   $app=$task['app']; $label=$task['label'];
-  $action='store' === $app['id'] ? Store_App_Service::ACTION : SEO_App_Service::ACTION;
+  $action=$app['actionName'] ?? ('store' === $app['id'] ? Store_App_Service::ACTION : SEO_App_Service::ACTION);
   echo '<article class="kiwe-shell-tile kiwe-shell-app-card ' . ( $app['enabled'] ? 'apricot' : 'is-off' ) . '">';
   if ( $app['url'] ) echo '<a class="kiwe-shell-app-body" href="' . esc_url( $app['url'] ) . '">'; else echo '<div class="kiwe-shell-app-body">';
   echo '<strong>' . esc_html( $label ) . '</strong><span>' . esc_html( $app['description'] ) . '</span>' . ( $app['url'] ? '</a>' : '</div>' );

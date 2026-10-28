@@ -23,7 +23,10 @@ final class AI_Broker_Service {
 		private Settings $settings,
 		private ?AI_Provider_Service $transport = null
 	) {
-		$this->transport = $this->transport ?: new AI_Provider_Service( $settings );
+	}
+	private function transport(): ?AI_Provider_Service {
+		if ( ! \DSA\Apps\AI_App_Service::enabled() ) return null;
+		return $this->transport ??= new AI_Provider_Service( $this->settings );
 	}
 
 	public function status( string $service = '', bool $refresh_policy = false ): array {
@@ -34,7 +37,7 @@ final class AI_Broker_Service {
 
 		return [
 			'schema'        => 'kiwe.ai-broker.status.v1',
-			'provider'      => $this->transport->status(),
+			'provider'      => $this->transport()?->status() ?? [ 'schema'=>'kiwe.ai-provider.status.v1','enabled'=>false,'nativeGeneration'=>false,'provider'=>'none','configured'=>false,'model'=>'','reason'=>'ai_app_unavailable' ],
 			'service'       => '' !== $service ? $service : null,
 			'profile'       => $profile,
 			'supported'     => null !== $profile,
@@ -60,6 +63,8 @@ final class AI_Broker_Service {
 		$profile    = $profiles[ $service ] ?? null;
 		$started    = microtime( true );
 		$correlation_id = $this->correlation_id();
+		$transport = $this->transport();
+		if ( ! $transport ) return $this->blocked( 'ai_app_unavailable',$service,$capability,$correlation_id );
 
 		if ( ! is_array( $profile ) ) {
 			return $this->blocked( 'unknown_service', $service, $capability, $correlation_id );
@@ -101,7 +106,7 @@ final class AI_Broker_Service {
 				$envelope['responseSchema'] = $schema;
 			}
 		}
-		$result = $this->transport->generate( $envelope );
+		$result = $transport->generate( $envelope );
 		$result['schema']        = 'kiwe.ai-broker.result.v1';
 		$result['service']       = $service;
 		$result['capability']    = $capability;
@@ -151,7 +156,7 @@ final class AI_Broker_Service {
 	}
 
 	public function build_prompt( array $context, string $task, string $mode = 'combined' ): array {
-		return $this->transport->build_prompt( $context, $task, $mode );
+		return ( new AI_Prompt_Service( $this->settings ) )->build_prompt( $context, $task, $mode );
 	}
 
 	private function profiles(): array {

@@ -5,6 +5,8 @@ namespace DSA\Security { class Secret_Store { public static function decrypt($v)
 namespace DSA\AI { function time(){return $GLOBALS['clock'];} function usleep($n){} }
 namespace {
 define('ABSPATH',__DIR__.'/');
+require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
+function get_option($key,$default=false){return $default;}
 $clock=strtotime('2026-09-06 12:00:00 UTC');$checks=[];$network=[];$responses=[];$wpCalls=0;$wpAvailable=true;
 function __($s,$d=''){return $s;}function absint($v){return abs((int)$v);}function sanitize_key($v){return preg_replace('/[^a-z0-9_-]/','',strtolower((string)$v));}function sanitize_text_field($v){return trim(strip_tags((string)$v));}function wp_json_encode($v){return json_encode($v);}function wp_cache_delete($k,$g){}function is_wp_error($v){return $v instanceof WP_Error;}
 class WP_Error {public function __construct(private string $code,private string $message){}public function get_error_code(){return $this->code;}public function get_error_message(){return $this->message;}}

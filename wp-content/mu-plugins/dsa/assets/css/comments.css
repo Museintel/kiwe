@@ -1,0 +1,51 @@
+/* Lazy discussion presentation. Shared tokens, controls and the existing Sheet own geometry. */
+.dsa-comments { --discussion-border: color-mix(in srgb, currentColor 16%, transparent); gap: var(--sf-space-sm, 1rem); }
+.dsa-comments__header h2 { margin: .25em 0; }
+.dsa-comments__header a { color: inherit; text-underline-offset: .2em; }
+.dsa-comments__list { display: grid; gap: var(--sf-space-sm, 1rem); }
+.dsa-comment { padding: var(--sf-space-sm, 1rem); border: 1px solid var(--discussion-border); border-radius: var(--sf-radius-lg, 1rem); background: color-mix(in srgb, currentColor 3%, transparent); min-width: 0; }
+.dsa-comment > header { display: flex; align-items: center; gap: .65rem; }
+.dsa-comment > header > div { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; min-width: 0; }
+.dsa-comment strong, .dsa-comment__text, .dsa-comments__replying { overflow-wrap: anywhere; }
+.dsa-comment time { width: 100%; font-size: .75rem; opacity: .7; }
+.dsa-comment__avatar { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; flex-shrink: 0; border-radius: 50%; background: color-mix(in srgb, var(--dsa-active-color) 15%, transparent); font-weight: 700; }
+.dsa-comment__team, .dsa-comment__buyer { font-size: .7rem; border: 1px solid var(--discussion-border); padding: .15rem .45rem; border-radius: 1rem; }
+.dsa-comment__buyer::before { content: '●'; color: var(--sf-color-success, #227044); margin-inline-end: .3em; }
+.dsa-comment__text { white-space: pre-wrap; line-height: 1.6; }
+.dsa-comment__rating { color: var(--dsa-active-color); letter-spacing: .15em; margin: .75rem 0; }
+.dsa-comment__actions, .dsa-comments__actions, .dsa-comments__verification .dsa-comments__row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.dsa-comment__replies { display: grid; gap: .65rem; margin-inline-start: min(2vw, .65rem); }
+.dsa-comment__replies:not(:empty) { margin-top: .75rem; }
+.dsa-comments .dsa-comments__button { cursor: pointer; min-height: 2.75rem; padding: .55rem .85rem; border: 1px solid var(--discussion-border); border-radius: var(--sf-radius-md, .7rem); color: inherit; background: transparent; font: inherit; }
+.dsa-comments .dsa-comments__button:focus-visible, .dsa-comments input:focus-visible, .dsa-comments textarea:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.dsa-comments .dsa-comments__button:disabled { cursor: wait; opacity: .6; }
+.dsa-comments .dsa-comments__primary { color: inherit; background: color-mix(in srgb, var(--dsa-active-color, #333) 20%, transparent); font-weight: 700; }
+.dsa-comments__composer { display: grid; gap: .8rem; margin-top: var(--sf-space-md, 1.5rem); padding-top: var(--sf-space-sm, 1rem); border-top: 1px solid var(--discussion-border); }
+.dsa-comments__composer h3, .dsa-comments__composer h4 { margin: 0; }
+.dsa-comments__composer label.dsa-auth-field { display: grid; gap: .4rem; }
+.dsa-comments__composer input:not([type=radio]), .dsa-comments__composer textarea { width: 100%; box-sizing: border-box; padding: .75rem; border: 1px solid var(--discussion-border); border-radius: var(--sf-radius-md, .7rem); background: color-mix(in srgb, currentColor 3%, transparent); color: inherit; font: inherit; }
+.dsa-comments__composer textarea { resize: vertical; min-height: 6rem; }
+.dsa-comments__composer [readonly] { opacity: .8; }
+.dsa-comments__privacy { font-size: .75rem; line-height: 1.5; opacity: .75; margin: 0; }
+.dsa-comments__verification { padding: var(--sf-space-sm, 1rem); border: 1px solid var(--discussion-border); border-radius: var(--sf-radius-lg, 1rem); display: grid; gap: .65rem; }
+.dsa-comments__error { border-inline-start: 3px solid var(--sf-color-danger, #a32932); padding-inline-start: .6rem; font-size: .9rem; }
+.dsa-comments__stars { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .6rem; }
+.dsa-comments__stars legend { margin-bottom: .35rem; }
+.dsa-comments__stars label { position: relative; min-width: 2.75rem; min-height: 2.75rem; display: grid; place-items: center; border: 1px solid var(--discussion-border); border-radius: .5rem; cursor: pointer; }
+.dsa-comments__stars input { position: absolute; inset: 0; margin: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.dsa-comments__stars label:has(input:checked) { background: color-mix(in srgb, var(--dsa-active-color) 20%, transparent); }
+.dsa-comments__stars label:has(input:focus-visible) { outline: 2px solid currentColor; outline-offset: 3px; }
+.dsa-comments__sr, .dsa-comments__trap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.dsa-comments [hidden] { display: none !important; }
+.dsa-comments__order { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: var(--sf-space-xs, .65rem); }
+.dsa-comments__order [aria-pressed="true"], .dsa-comment__reaction[aria-pressed="true"] { background: color-mix(in srgb, var(--dsa-active-color) 18%, transparent); border-color: currentColor; }
+.dsa-comment__reaction { display: inline-flex; align-items: center; gap: .35em; }
+.dsa-comment__reaction svg, .dsa-comment__heart svg { width: 1em; height: 1em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; }
+.dsa-comment__heart { display: flex; align-items: center; gap: .4em; font-size: .8rem; margin-top: .6rem; }
+.dsa-comment__heart svg { fill: currentColor; }
+.dsa-comment__pin { font-size: .75rem; margin-bottom: .6rem; opacity: .8; }
+@media (prefers-reduced-motion: reduce) { .dsa-comments { scroll-behavior: auto; } }
+
+/* Protected AppShell semantics share tokens without opting into author-page component CSS. */
+.dsa-comments__stack { display: grid; gap: var(--sf-space-sm, 1rem); }
+.dsa-comments__row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }

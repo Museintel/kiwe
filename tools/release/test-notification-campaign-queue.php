@@ -24,6 +24,7 @@ namespace DSA\Communications {
 }
 namespace {
 	define('ABSPATH',__DIR__.'/');
+	require_once __DIR__.'/fixtures/worker-options.php';
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php';
 	class WP_Error {public function __construct(private string $code,private string $message,private array $data=[]){}public function get_error_message(): string{return $this->message;}}

@@ -43,12 +43,13 @@ final class Surface_Renderer {
 		}
 		$modules = $this->dock_items( $dock );
 		$focus_item = sanitize_key( (string) ( $dock['focus_item'] ?? 'ai' ) );
-		$module_ids = array_map( static fn( array $module ): string => sanitize_key( (string) ( $module['id'] ?? '' ) ), $modules );
+		$visible_modules = array_values( array_filter( $modules, static fn( array $module ): bool => ! isset( $module['context_available'] ) || $module['context_available'] ) );
+		$module_ids = array_map( static fn( array $module ): string => sanitize_key( (string) ( $module['id'] ?? '' ) ), $visible_modules );
 		if ( '' !== $focus_item && ! in_array( $focus_item, $module_ids, true ) ) {
 			$focus_item = in_array( 'ai', $module_ids, true ) ? 'ai' : ( $module_ids[0] ?? '' );
 		}
-		$main_module_count = count( array_filter( $modules, static fn( array $module ): bool => $focus_item !== (string) ( $module['id'] ?? '' ) ) );
-		$ai_module_count = count( $modules ) - $main_module_count;
+		$main_module_count = count( array_filter( $visible_modules, static fn( array $module ): bool => $focus_item !== (string) ( $module['id'] ?? '' ) ) );
+		$ai_module_count = count( $visible_modules ) - $main_module_count;
 		$visual  = $this->settings->get( 'visual_effects', [] );
 		$style   = $this->settings->get( 'style', [] );
 		$raw_visual_profile = sanitize_key( (string) ( $style['visual_profile'] ?? 'legacy' ) );
@@ -191,6 +192,7 @@ final class Surface_Renderer {
 						data-dsa-module="<?php echo esc_attr( $module_id ); ?>"
 						data-dsa-module-mode="<?php echo esc_attr( $module['mode'] ?? 'dock' ); ?>"
 						data-dsa-module-panel="<?php echo esc_attr( $module['panel'] ?? $module_id ); ?>"
+						<?php echo isset( $module['context_available'] ) && ! $module['context_available'] ? 'hidden' : ''; ?>
 						<?php echo $is_focus ? 'data-dsa-dock-focus data-dsa-dock-primary' : ''; ?>
 						aria-pressed="false"
 						aria-label="<?php echo esc_attr( $module['label'] ); ?>"
@@ -205,7 +207,7 @@ final class Surface_Renderer {
 			<?php endif; ?>
 			<aside class="dsa-ai-popout" data-dsa-ai-popout hidden aria-live="polite"></aside>
 			<div class="dsa-overlay-root" data-dsa-overlay-root hidden></div>
-			<div class="dsa-loader" data-dsa-loader hidden aria-live="polite" aria-label="<?php echo esc_attr__( 'Surface loading experience', 'dsa' ); ?>">
+			<div class="dsa-loader dsa-material-surface" data-dsa-material="<?php echo 'solid' === ( $visual['transition_material'] ?? 'glass' ) ? 'solid' : 'glass'; ?>" data-dsa-loader hidden aria-live="polite" aria-label="<?php echo esc_attr__( 'Surface loading experience', 'dsa' ); ?>">
 				<div class="dsa-loader__experience">
 				<div class="dsa-loader__arena" data-dsa-loader-arena>
 					<span class="dsa-loader__orb" data-dsa-loader-orb></span>
@@ -230,6 +232,7 @@ final class Surface_Renderer {
 			$dock,
 			[
 				// Visibility is hydrated after cache-safe boot; keep the static shell neutral.
+				'discussion_available' => \DSA\Discussion\Discussion_Target::automatic_id( is_singular() ? (int) get_queried_object_id() : 0 ) > 0,
 				'phonekey_visible' => true,
 				'secure_available' => $this->securetrack_available(),
 				'badges'           => [

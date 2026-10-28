@@ -4,6 +4,7 @@ namespace DSA\Saved;
 
 use DSA\Commerce\Store_Analytics_Service;
 use DSA\Diagnostics\Runtime_Profiler;
+use DSA\Utilities\Content_Visibility;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -13,6 +14,19 @@ final class Saved_Items_Service {
 	private const META_KEY = 'dsa_saved_items';
 
 	public function __construct( private Store_Analytics_Service|\Closure|null $analytics = null ) {}
+
+	public function register(): void {
+		// Cheap registration; journal/report code is loaded only for relevant work.
+		foreach ( [ 'added_user_meta', 'updated_user_meta', 'deleted_user_meta' ] as $hook ) {
+			add_action( $hook, static function( $meta_id, $user_id, $key ): void {
+				if ( $key === self::META_KEY ) Saved_Report_Journal::mark_user( (int) $user_id );
+			}, 10, 3 );
+		}
+		add_action( 'deleted_user', static fn( $id ) => Saved_Report_Journal::mark_user( (int) $id ) );
+		add_action( 'wp_after_insert_post', static fn( $id ) => Saved_Report_Journal::mark_post( (int) $id ) );
+		add_action( 'deleted_post', static fn( $id ) => Saved_Report_Journal::mark_post( (int) $id ) );
+		add_action( 'dsa_saved_report_step_v2', [ Saved_Report_Index::class, 'scheduled_step' ], 10, 2 );
+	}
 
 	public function current_items(): array {
 		$user_id = get_current_user_id();
@@ -26,30 +40,38 @@ final class Saved_Items_Service {
 	}
 
 	public function mutate( string $action, array $raw_item ): array {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) return $this->failure( 401 );
 		$item = $this->normalize_item( $raw_item );
 		if ( empty( $item['key'] ) ) {
 			return [ 'ok' => false, 'message' => __( 'This item could not be saved.', 'dsa' ), 'items' => $this->current_items() ];
 		}
 
-		// Preserve dormant wishlist rows byte-for-byte while a Core bookmark is edited.
-		$user_id = get_current_user_id();
-		$stored = $user_id ? get_user_meta( $user_id, self::META_KEY, true ) : [];
-		$items = array_values( array_filter( is_array( $stored ) ? $stored : [], static fn( $existing ): bool => !is_array( $existing ) || self::item_key( $existing ) !== (string) $item['key'] ) );
 		$adding = 'remove' !== sanitize_key( $action );
-		if ( $adding ) {
-			array_unshift( $items, $item );
-		}
-		if ( ! \DSA\Apps\Store_App_Service::enabled() && count( $items ) > 100 ) return [ 'ok'=>false, 'message'=>__( 'Your saved list is full. Remove an item before saving another.', 'dsa' ), 'items'=>$this->current_items() ];
-		$items = array_slice( $items, 0, 100 );
-
-		$user_id = get_current_user_id();
-		if ( $user_id ) {
-			$profile = Runtime_Profiler::start();
-			update_user_meta( $user_id, self::META_KEY, $items );
+		$claim = Saved_DB_Session::claim( 'user:' . $user_id );
+		if ( empty( $claim['owner'] ) ) return $this->failure( (int) $claim['status'] );
+		$owner = $claim['owner'];
+		$profile = Runtime_Profiler::start();
+		try {
+			for ( $attempt = 0; $attempt < 4; ++$attempt ) {
+				$before = Saved_Items_State::read( $user_id );
+				if ( ! $before ) return $this->failure( 503 );
+				// Preserve dormant wishlist rows byte-for-byte during Core edits.
+				$items = array_values( array_filter( $before['items'], static fn( $existing ): bool => ! is_array( $existing ) || self::item_key( $existing ) !== (string) $item['key'] ) );
+				if ( $adding ) array_unshift( $items, $item );
+				if ( ! \DSA\Apps\Store_App_Service::enabled() && count( $items ) > 100 ) return [ 'ok'=>false, 'message'=>__( 'Your saved list is full. Remove an item before saving another.', 'dsa' ), 'items'=>$this->current_items() ];
+				$result = Saved_Items_State::write( $user_id, $before, array_slice( $items, 0, 100 ), $owner );
+				if ( $result['status'] === 200 ) break;
+				if ( $result['status'] !== 409 || ! $owner->owns() ) return $this->failure( 503 );
+			}
+			if ( $result['status'] !== 200 ) return $this->failure( 409 );
+			$items = $result['items'];
+		} finally {
+			$owner->release();
 			Runtime_Profiler::finish( 'saved_items.meta_write', $profile );
-			delete_transient( 'dsa_saved_admin_snapshot_v1' );
-			delete_transient( 'dsa_saved_admin_snapshot_v1_core' );
 		}
+		delete_transient( 'dsa_saved_admin_snapshot_v1' );
+		delete_transient( 'dsa_saved_admin_snapshot_v1_core' );
 
 		if ( $this->analytics instanceof \Closure ) $this->analytics = ( $this->analytics )();
 		$this->analytics?->record_cart_event(
@@ -65,83 +87,13 @@ final class Saved_Items_Service {
 		return [ 'ok' => true, 'action' => $adding ? 'add' : 'remove', 'item' => $item, 'items' => array_values( array_filter( array_map( [ $this, 'normalize_item' ], $items ) ) ) ];
 	}
 
+	private function failure( int $status ): array {
+		$message = $status === 401 ? __( 'Sign in before saving bookmarks or wishlist items.', 'dsa' ) : ( $status === 409 ? __( 'Your saved list is being updated. Please try again.', 'dsa' ) : __( 'Your saved list could not be updated. Please try again.', 'dsa' ) );
+		return [ 'ok'=>false, 'status'=>$status, 'code'=>$status === 401 ? 'dsa_saved_items_login_required' : ( $status === 409 ? 'dsa_saved_items_conflict' : 'dsa_saved_items_unavailable' ), 'message'=>$message, 'items'=>$this->current_items() ];
+	}
+
 	public function admin_snapshot(): array {
-		$cache_key = 'dsa_saved_admin_snapshot_v1' . ( \DSA\Apps\Store_App_Service::enabled() ? '' : '_core' );
-		$cached = get_transient( $cache_key );
-		if ( is_array( $cached ) ) {
-			return $cached;
-		}
-
-		global $wpdb;
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = %s",
-				self::META_KEY
-			),
-			ARRAY_A
-		);
-		$objects = [];
-		$users   = [];
-
-		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
-			$user_id = absint( $row['user_id'] ?? 0 );
-			$items   = maybe_unserialize( $row['meta_value'] ?? '' );
-			if ( ! $user_id || ! is_array( $items ) ) continue;
-
-			foreach ( $items as $raw_item ) {
-				$item = $this->normalize_item( $raw_item );
-				if ( empty( $item['key'] ) ) continue;
-				$key = (string) $item['key'];
-				if ( ! isset( $objects[ $key ] ) ) {
-					$objects[ $key ] = [
-						'key' => $key,
-						'id' => absint( $item['id'] ?? 0 ),
-						'type' => $item['type'],
-						'title' => $item['title'],
-						'url' => $item['url'],
-						'users' => [],
-					];
-				}
-				$objects[ $key ]['users'][ $user_id ] = true;
-				$users[ $user_id ][ $item['type'] ] = ( $users[ $user_id ][ $item['type'] ] ?? 0 ) + 1;
-				$users[ $user_id ]['latest'] = max( absint( $users[ $user_id ]['latest'] ?? 0 ), absint( $item['savedAt'] ?? 0 ) );
-			}
-		}
-
-		$object_rows = array_values( array_map( static function ( array $item ): array {
-			$item['user_count'] = count( $item['users'] );
-			unset( $item['users'] );
-			return $item;
-		}, $objects ) );
-		usort( $object_rows, static fn( array $a, array $b ): int => ( $b['user_count'] <=> $a['user_count'] ) ?: strcasecmp( $a['title'], $b['title'] ) );
-
-		$user_rows = [];
-		foreach ( $users as $user_id => $counts ) {
-			$user = get_userdata( (int) $user_id );
-			if ( ! $user ) continue;
-			$user_rows[] = [
-				'id' => (int) $user_id,
-				'name' => $user->display_name ?: $user->user_login,
-				'email' => $user->user_email,
-				'wishlist' => absint( $counts['wishlist'] ?? 0 ),
-				'bookmark' => absint( $counts['bookmark'] ?? 0 ),
-				'latest' => absint( $counts['latest'] ?? 0 ),
-			];
-		}
-		usort( $user_rows, static fn( array $a, array $b ): int => $b['latest'] <=> $a['latest'] );
-
-		$snapshot = [
-			'objects' => array_slice( $object_rows, 0, 250 ),
-			'users' => array_slice( $user_rows, 0, 250 ),
-			'totals' => [
-				'users' => count( $users ),
-				'wishlist_users' => count( array_filter( $users, static fn( array $counts ): bool => ! empty( $counts['wishlist'] ) ) ),
-				'bookmark_users' => count( array_filter( $users, static fn( array $counts ): bool => ! empty( $counts['bookmark'] ) ) ),
-				'objects' => count( $objects ),
-			],
-		];
-		set_transient( $cache_key, $snapshot, 5 * MINUTE_IN_SECONDS );
-		return $snapshot;
+		return ( new Saved_Report_Index() )->snapshot();
 	}
 
 	public function items_for_user( int $user_id ): array {
@@ -156,6 +108,7 @@ final class Saved_Items_Service {
 		$type     = sanitize_key( (string) ( $raw_item['type'] ?? 'bookmark' ) );
 		$store = \DSA\Apps\Store_App_Service::enabled();
 		if ( !$store && ( 'wishlist' === $type || ( $id && in_array( get_post_type( $id ), [ 'product','product_variation' ], true ) ) ) ) return [];
+		if ( $id && ! Content_Visibility::can_read( $id ) ) return [];
 		$type = 'wishlist' === $type && $store ? 'wishlist' : 'bookmark';
 		$product = $store && $id && ( 'wishlist' === $type || in_array( get_post_type( $id ), [ 'product','product_variation' ], true ) ) && function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
 
@@ -217,7 +170,7 @@ final class Saved_Items_Service {
 		];
 	}
 
-	private static function item_key( array $item ): string {
+	public static function item_key( array $item ): string {
 		$id=absint( $item['id'] ?? 0 ); $type='wishlist' === ( $item['type'] ?? '' ) ? 'wishlist' : 'bookmark';
 		return $id ? $type . ':' . $id : $type . ':' . md5( esc_url_raw( (string) ( $item['url'] ?? '' ) ) );
 	}

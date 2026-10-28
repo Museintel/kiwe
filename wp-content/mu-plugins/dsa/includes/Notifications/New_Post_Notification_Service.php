@@ -11,7 +11,6 @@ final class New_Post_Notification_Service {
 	private const HOOK = 'dsa_new_post_notification_batch';
 	private const HISTORY = 'dsa_new_post_notification_history';
 	private const LATEST = 'dsa_new_post_notification_latest';
-	private const LOCK = 'dsa_new_post_notification_worker_lock';
 	private const META = '_kiwe_new_post_alert_queued';
 	private const SCAN = 25;
 	private const RECIPIENTS = 3;
@@ -35,69 +34,63 @@ final class New_Post_Notification_Service {
 		if ( ! add_option( $this->job_key( $post_id ), $job, '', false ) ) { delete_post_meta( $post_id, self::META ); return; }
 		$scheduled = wp_schedule_single_event( time() + 5, self::HOOK, [ $post_id ], true );
 		if ( false === $scheduled || is_wp_error( $scheduled ) ) {
-			delete_option( $this->job_key( $post_id ) );
-			delete_post_meta( $post_id, self::META );
+			if(Worker_Job::discard($this->job_key($post_id),$job))delete_post_meta($post_id,self::META);
 			return;
 		}
 		update_option( self::LATEST, $post_id, false );
 	}
 
 	public function run_batch( $post_id ): void {
+		global $wpdb;
 		$post_id = absint( $post_id );
 		$key = $this->job_key( $post_id );
 		$job = get_option( $key, [] );
 		if ( ! $post_id || ! is_array( $job ) || (int) ( $job['postId'] ?? 0 ) !== $post_id ) return;
-		if ( ! add_option( self::LOCK, time() + 90, '', false ) ) {
-			if ( (int) get_option( self::LOCK, 0 ) >= time() ) {
-				$retry = wp_schedule_single_event( time() + 15, self::HOOK, [ $post_id ], true );
-				if ( false === $retry || is_wp_error( $retry ) ) { $job['status']='stalled'; update_option( $key, $job, false ); }
-				return;
-			}
-			delete_option( self::LOCK );
-			if ( ! add_option( self::LOCK, time() + 90, '', false ) ) return;
-		}
+		$worker = Worker_Job::claim( $key );
+		if ( ! $worker ) return;
 		try {
-			$job = get_option( $key, [] );
+			$job = $worker->data();
 			if ( ! is_array( $job ) || (int) ( $job['postId'] ?? 0 ) !== $post_id ) return;
+			if ( in_array( $job['status'] ?? '', [ 'complete', 'stopped' ], true ) ) { $this->complete( $worker, $job ); return; }
 			$post = get_post( $post_id );
-			if ( ! $this->preferences->enabled() || ! $post || 'publish' !== $post->post_status || 'post' !== $post->post_type || '' !== (string) $post->post_password ) { $this->complete( $job, 'stopped' ); return; }
+			if ( ! $this->preferences->enabled() || ! $post || 'publish' !== $post->post_status || 'post' !== $post->post_type || '' !== (string) $post->post_password ) { $job['status']='stopped'; if($worker->save($job))$this->complete($worker,$job); return; }
 			$rows = $this->preferences->post_alert_rows_after( (int) $job['cursor'], (int) $job['ceiling'], self::SCAN );
+			if ( $wpdb->last_error ) return;
 			$used = 0;
 			$scanned = 0;
-			$uncommitted = false;
 			foreach ( $rows as $row ) {
 				$row_id = absint( $row['id'] ?? 0 );
 				if ( $row_id <= (int) $job['cursor'] ) continue;
 				$job['cursor'] = $row_id;
 				++$job['scanned']; ++$scanned;
 				$inbox_user = $this->preferences->post_alert_inbox_user_for_row( $row, (array) $job['categories'] );
-				if ( $inbox_user ) do_action( 'kiwe_notification_event', 'new_post', [ 'id'=>'post-' . $post_id,'userIds'=>[ $inbox_user ],'inboxOnly'=>true,'objectId'=>$post_id,'title'=>sanitize_text_field( wp_strip_all_tags( $post->post_title ) ),'message'=>__( 'A new article is ready in a category you follow.', 'dsa' ),'url'=>get_permalink( $post ),'actionLabel'=>__( 'Read article', 'dsa' ) ] );
 				$channels = $this->preferences->post_alert_channels_for_row( $row, (array) $job['categories'] );
-				if ( ! $channels ) { ++$job['skipped']; $uncommitted = true; continue; }
-				// Commit progress before any external call; uncertain sends never replay.
-				++$job['unknown']; $job['status'] = 'sending';
-				if ( ! update_option( $key, $job, false ) ) return;
-				$committed = get_option( $key, [] );
-				if ( ! is_array( $committed ) || (int) ( $committed['cursor'] ?? -1 ) !== $row_id ) return;
-				try { $result = $this->deliver( $post, $row, $channels ); }
+				if ( $channels ) { ++$job['unknown']; $job['status']='sending'; } else ++$job['skipped'];
+				// Fence progress before inbox effects as well as external I/O.
+				if ( ! $worker->save( $job ) ) return;
+				if ( $inbox_user && $worker->owns() ) do_action( 'kiwe_notification_event', 'new_post', [ 'id'=>'post-' . $post_id,'userIds'=>[ $inbox_user ],'inboxOnly'=>true,'objectId'=>$post_id,'title'=>sanitize_text_field( wp_strip_all_tags( $post->post_title ) ),'message'=>__( 'A new article is ready in a category you follow.', 'dsa' ),'url'=>get_permalink( $post ),'actionLabel'=>__( 'Read article', 'dsa' ) ] );
+				if ( ! $channels ) continue;
+				try { $result = $this->deliver( $post, $row, $channels, $worker ); }
 				catch ( \Throwable $error ) { $result = 'unknown'; }
 				if ( 'unknown' !== $result ) { --$job['unknown']; ++$job[ $result ]; }
-				if ( ! update_option( $key, $job, false ) ) return;
-				$uncommitted = false;
+				if ( ! $worker->save( $job ) ) return;
 				if ( ++$used >= self::RECIPIENTS ) break;
 			}
-			if ( $uncommitted && ! update_option( $key, $job, false ) ) return;
 			$exhausted = ! $rows || ( $scanned === count( $rows ) && count( $rows ) < self::SCAN ) || (int) $job['cursor'] >= (int) $job['ceiling'];
-			if ( $exhausted ) { $this->complete( $job, 'complete' ); return; }
+			if ( $exhausted ) { $job['status']='complete'; if($worker->save($job))$this->complete($worker,$job); return; }
 			$scheduled = wp_schedule_single_event( time() + 5, self::HOOK, [ $post_id ], true );
 			if ( false === $scheduled || is_wp_error( $scheduled ) ) {
 				$job['status'] = 'stalled';
-				update_option( $key, $job, false );
+				$worker->save( $job );
 			}
-		} finally { delete_option( self::LOCK ); }
+		} finally {
+			$worker->release();
+			$current=get_option($key,[]);
+			if(is_array($current)&&($current['postId']??0)===$post_id&&!wp_next_scheduled(self::HOOK,[$post_id]))wp_schedule_single_event(time()+5,self::HOOK,[$post_id],true);
+		}
 	}
 
-	private function deliver( $post, array $row, array $channels ): string {
+	private function deliver( $post, array $row, array $channels, Worker_Job $worker ): string {
 		$title = sanitize_text_field( wp_strip_all_tags( (string) $post->post_title ) );
 		$subject = sprintf( __( 'New on %1$s: %2$s', 'dsa' ), get_bloginfo( 'name' ), $title );
 		$url = get_permalink( $post );
@@ -107,13 +100,17 @@ final class New_Post_Notification_Service {
 		$categories = wp_get_post_categories( $post->ID, [ 'fields'=>'ids' ] );
 		$current_channels = $this->preferences->post_alert_channels_for_row( $row, is_array( $categories ) ? $categories : [] );
 		foreach ( $channels as $channel ) {
+			if ( ! $worker->owns() ) return 'unknown';
 			// Another device can withdraw consent between audience discovery and send.
 			if ( ! in_array( $channel, $current_channels, true ) ) continue;
 			if ( 'app' === $channel ) {
 				if ( ! $this->push->ready() ) continue;
+				$meta=[ 'eventType'=>'new_post', 'workerGuard'=>[$worker,'owns'] ];
+				if ( ! $worker->owns() ) return 'unknown';
 				$result = $user_id
-					? $this->push->send_to_users( [ $user_id ], $subject, $body, $url, [ 'eventType'=>'new_post' ] )
-					: $this->push->send_to_visitor_hash( (string) $row['visitor_hash'], $subject, $body, $url, [ 'eventType'=>'new_post' ] );
+					? $this->push->send_to_users( [ $user_id ], $subject, $body, $url, $meta )
+					: $this->push->send_to_visitor_hash( (string) $row['visitor_hash'], $subject, $body, $url, $meta );
+				if ( ! empty( $result['unknown'] ) ) return 'unknown';
 				if ( (int) ( $result['sent'] ?? 0 ) > 0 ) ++$accepted;
 				continue;
 			}
@@ -128,20 +125,19 @@ final class New_Post_Notification_Service {
 				$context['fallback_email'] = $this->preferences->contact_for_user( $user_id, 'email' );
 				$context['fallback_email_allowed'] = true;
 			}
+			if ( ! $worker->owns() ) return 'unknown';
 			$result = $this->channels->send( $channel, $contact, $subject, $body, $context );
+			if ( is_wp_error($result) && in_array($result->get_error_code(),['http_request_failed','phonekey_whatsapp_delivery'],true) ) return 'unknown';
 			if ( ! is_wp_error( $result ) && false !== $result ) ++$accepted;
 		}
 		return $accepted ? 'sent' : 'failed';
 	}
 
-	private function complete( array $job, string $status ): void {
-		$job['status'] = $status;
+	private function complete( Worker_Job $worker, array $job ): void {
 		$summary = $this->public_job( $job );
-		$history = (array) get_option( self::HISTORY, [] );
-		array_unshift( $history, $summary );
-		update_option( self::HISTORY, array_slice( $history, 0, 20 ), false );
-		update_post_meta( (int) $job['postId'], self::META, $status );
-		delete_option( $this->job_key( (int) $job['postId'] ) );
+		if(!$worker->remember(self::HISTORY,$summary,'postId')||!$worker->owns())return;
+		update_post_meta((int)$job['postId'],self::META,$job['status']);
+		if($worker->remove())wp_clear_scheduled_hook(self::HOOK,[(int)$job['postId']]);
 	}
 
 	public function status(): array {
@@ -151,15 +147,19 @@ final class New_Post_Notification_Service {
 	}
 
 	public function resume( int $post_id ) {
-		$job = get_option( $this->job_key( $post_id ), [] );
+		$worker=Worker_Job::claim($this->job_key($post_id));
+		if(!$worker)return new \WP_Error('kiwe_post_alert_working',__('An alert batch is active or unavailable. Refresh its status.','dsa'),['status'=>409]);
+		try{
+		$job = $worker->data();
 		if ( ! is_array( $job ) || (int) ( $job['postId'] ?? 0 ) !== $post_id ) return new \WP_Error( 'kiwe_post_alert_missing', __( 'This post alert is no longer active.', 'dsa' ), [ 'status'=>409 ] );
 		if ( wp_next_scheduled( self::HOOK, [ $post_id ] ) ) return [ 'ok'=>true, 'job'=>$this->public_job( $job ) ];
 		if ( 'stalled' !== ( $job['status'] ?? '' ) && time() - (int) $job['created'] < 90 ) return new \WP_Error( 'kiwe_post_alert_wait', __( 'The next alert batch is still pending.', 'dsa' ), [ 'status'=>409 ] );
 		$scheduled = wp_schedule_single_event( time() + 5, self::HOOK, [ $post_id ], true );
 		if ( false === $scheduled || is_wp_error( $scheduled ) ) return new \WP_Error( 'kiwe_post_alert_schedule', __( 'WordPress could not resume this alert.', 'dsa' ), [ 'status'=>503 ] );
-		$job['status'] = 'queued';
-		update_option( $this->job_key( $post_id ), $job, false );
+		if(!in_array($job['status']??'',['complete','stopped'],true))$job['status']='queued';
+		if(!$worker->save($job))return new \WP_Error('kiwe_post_alert_stale',__('The alert changed. Refresh before resuming.','dsa'),['status'=>409]);
 		return [ 'ok'=>true, 'job'=>$this->public_job( $job ) ];
+		}finally{$worker->release();}
 	}
 
 	private function public_job( array $job ): array {

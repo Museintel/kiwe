@@ -15,6 +15,8 @@ namespace DSA\Commerce {
 }
 namespace DSA\Protected_Flow { class Flow_Guard { public function current() { return [ 'context' => 'page' ]; } } }
 
+namespace DSA\Access { class Contextual_Edit_Service { public static function current_link(): ?array { return null; } } }
+// Contextual object/capability routes are qualified in the real WordPress Kiwe1 suite.
 namespace {
 	define( 'ABSPATH', __DIR__ . '/' );
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
@@ -59,6 +61,7 @@ function get_option($key,$default=false){return $default;}
 		public function get_weight() { return ''; }
 		public function managing_stock() { return false; }
 		public function is_sold_individually() { return false; }
+		public function get_max_purchase_quantity() { return -1; }
 	}
 	class Startup_Cart {
 		public array $snapshot = [ 'total' => 133, 'subtotal' => 120, 'subtotal_tax' => 12, 'cart_contents_total' => 100, 'cart_contents_tax' => 10 ];
@@ -67,6 +70,7 @@ function get_option($key,$default=false){return $default;}
 		public function display_prices_including_tax() { return $GLOBALS['inclusive']; }
 		public function get_cart_contents_count() { return 2; }
 		public function get_cart() { return [ 'current-session-key' => [ 'data' => new Startup_Product(), 'quantity' => 2, 'product_id' => 11, 'variation_id' => 0 ] ]; }
+		public function get_cart_item_quantities() { return [ 11 => 2 ]; }
 		public function get_product_price( $product ) { return '$60.00'; }
 		public function get_product_subtotal( $product, $quantity ) { return '$120.00'; }
 		public function get_total( $context = 'view' ) { return 'edit' === $context ? $this->snapshot['total'] : wc_price( $this->snapshot['total'] ); }

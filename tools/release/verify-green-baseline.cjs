@@ -91,6 +91,11 @@ function checkSyntax(label, files, moduleInput = false) {
 }
 
 const gates = [
+	['Contextual discussion client, exact Send retry and unified Feedback rendering', 'tools/runtime/discussion-client-contracts.cjs'],
+	['Shared Dock/Home/Transition materials', 'tools/release/surface-materials-contracts.cjs'],
+	['Tag-aware search client and Super Admin dashboard policy', 'tools/release/tag-search-dashboard-contracts.cjs'],
+	['Saved-list concurrent writes, failure recovery and client confirmation', 'tools/release/saved-items-consistency-contracts.cjs'],
+	['Native public exports and viewer-specific saved-item visibility', 'tools/release/content-visibility-contracts.cjs'],
 	['Store App admission, dormant settings, bookmarks and authoring boundaries', 'tools/release/store-app-contracts.cjs'],
 	['SEO App admission, late external providers and Core record privacy', 'tools/release/seo-app-contracts.cjs'],
 	['Complete Core context and authoring flow independent of SEO', 'tools/release/context-seo-independence-contracts.cjs'],
@@ -122,6 +127,7 @@ const gates = [
 	['Private startup native snapshots and deferred cart cost boundaries', 'tools/release/runtime-startup-contracts.cjs'],
 	['Cart native charge breakdown and shared compact summary', 'tools/release/cart-totals-contracts.cjs'],
 	['Native option cache failure and lazy visitor identity boundaries', 'tools/release/request-cost-contracts.cjs'],
+	['Bounded native CSS repetition plans and unchanged builder delivery', 'tools/release/shared-css-contracts.cjs'],
 	['Runtime source integrity and interrupted-write refusal', 'tools/release/source-integrity-contracts.cjs'],
 	['Shipping-class native lifecycle, disabled Woo and tax-provider boundaries', 'tools/release/shipping-class-lifecycle-contracts.cjs'],
 	['Native product attributes, shared label recovery and disabled Woo boundaries', 'tools/release/product-attribute-contracts.cjs'],
@@ -212,6 +218,7 @@ const gates = [
 	['Ordered MU-plugin uploader', 'tools/release/upload-mu-plugin-contracts.cjs'],
 	['Guest contribution and role-aware notification contracts', 'tools/release/guest-notification-contracts.cjs'],
 	['Consent-aware bounded notification campaigns', 'tools/release/notification-campaign-contracts.cjs'],
+	['Fenced notification job ownership and uncertain delivery', 'tools/release/notification-worker-contracts.cjs'],
 	['Product proposal notification behavior', 'tools/release/product-notification-contracts.cjs'],
 	['Release package integrity', 'tools/release/verify-package.cjs'],
 	['Seam adoption audit', 'tools/ui-theme/audit-seam-adoption.cjs'],
@@ -249,10 +256,12 @@ const gates = [
 	['Profile, Menu, and control geometry contracts', 'tools/runtime/profile-menu-geometry-contracts.cjs'],
 	['Shared sheet shell and modality contracts', 'tools/runtime/sheet-layout-contracts.cjs'],
 	['Cart AJAX and Bricks query-loop behavior', 'tools/runtime/cart-ajax-contracts.cjs'],
+	['Native cart validation and backorder compatibility', 'tools/release/native-cart-validation-contracts.cjs'],
 	['Authored module launcher behavior', 'tools/runtime/module-launcher-contracts.cjs'],
 	['No-dock Surface remains invisible and attribute-launchable', 'tools/runtime/no-dock-surface-contracts.cjs'],
 	['Mobile overlay and AdSense isolation contracts', 'tools/runtime/mobile-overlay-adsense-contracts.cjs'],
 	['PhoneKey strict-flow contracts', 'tools/runtime/phonekey-strict-flow-contracts.cjs'],
+	['Credential-state and one-time challenge claims', 'tools/release/credential-state-contracts.cjs'],
 	['PhoneKey progressive-verification contracts', 'tools/runtime/phonekey-progressive-verification-contracts.cjs'],
 	['PhoneKey role and commerce contracts', 'tools/runtime/phonekey-role-commerce-contracts.cjs'],
 	['PhoneKey WordPress identity-continuity contracts', 'tools/runtime/phonekey-wordpress-identity-contracts.cjs'],
@@ -266,6 +275,8 @@ const gates = [
 	['SecureTrack explicit schema maintenance', 'tools/release/securetrack-schema-contracts.cjs'],
 	['Signed MU-plugin update contracts', 'tools/release/kiwe-update-contracts.cjs'],
 	['Independent App provider/signature/permission contracts', 'tools/release/apps-platform-contracts.cjs'],
+	['Optional workspace Apps and checkout-detail boundaries', 'tools/release/workspace-app-checkout-contracts.cjs'],
+	['One Kiwe settings home and role-aware installed app', 'tools/release/settings-home-contracts.cjs'],
 ];
 
 for (const [label, script, args = [], options = {}] of process.argv.includes('--syntax-only') ? [] : gates) {

@@ -143,8 +143,9 @@ final class Notification_App_Service {
 
 	public function document(): void {
 		if ( ! self::enabled() || ! is_admin() || is_network_admin() || is_user_admin() || wp_doing_ajax() || wp_doing_cron() || ! $this->can_use() || ! in_array( $_SERVER['REQUEST_METHOD'] ?? '', [ 'GET', 'HEAD' ], true ) ) return;
-		// Preserve the existing protected security policy controls during app rollout.
-		if ( current_user_can( 'kiwe_manage_notification_policy' ) && '1' === ( $_GET['notification_settings'] ?? '' ) ) return;
+		if ( \DSA\Apps\Required_App_Service::allowed( 'security' ) && '1' === ( $_GET['notification_settings'] ?? '' ) ) {
+			wp_safe_redirect( \DSA\Apps\Required_App_Service::url( 'security' ) ); exit;
+		}
 		nocache_headers(); header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0', true ); header( 'X-Robots-Tag: noindex, nofollow', true ); header( 'X-Content-Type-Options: nosniff', true );
 		if ( 'HEAD' === $_SERVER['REQUEST_METHOD'] ) exit;
 		$admin_notices = Workspace_Notice_UI::capture_admin_notices();
@@ -152,7 +153,7 @@ final class Notification_App_Service {
 		wp_enqueue_style( 'kiwe-notification-app', DSA_URL . 'assets/css/notification-app.css', \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), DSA_VERSION );
 		wp_enqueue_style( 'kiwe-notification-notices', DSA_URL . 'assets/css/workspace-notices.css', [ 'kiwe-notification-app' ], DSA_VERSION );
 		wp_enqueue_script( 'kiwe-notification-app', DSA_URL . 'assets/js/notification-app.js', [ 'wp-element' ], DSA_VERSION, true );
-		wp_localize_script( 'kiwe-notification-app', 'KIWE_NOTIFICATION_APP', [ 'endpoint' => rest_url( 'dsa/v1/workspace/notifications' ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'home' => Workspace_Admin_Service::url(), 'campaignEndpoint'=>rest_url( 'dsa/v1/workspace/campaigns' ), 'userGroupsEndpoint'=>rest_url( 'dsa/v1/workspace/user-groups' ), 'campaignUrl'=>admin_url( 'admin.php?page=kiwe-notifications&view=campaigns' ), ...Workspace_Chrome_Service::projection( $notice_count ), 'policyUrl'=>current_user_can( 'kiwe_manage_notification_policy' ) ? admin_url( 'admin.php?page=kiwe-notifications&notification_settings=1' ) : '' ] );
+		wp_localize_script( 'kiwe-notification-app', 'KIWE_NOTIFICATION_APP', [ 'endpoint' => rest_url( 'dsa/v1/workspace/notifications' ), 'nonce' => wp_create_nonce( 'wp_rest' ), 'home' => Workspace_Admin_Service::url(), 'campaignEndpoint'=>rest_url( 'dsa/v1/workspace/campaigns' ), 'userGroupsEndpoint'=>rest_url( 'dsa/v1/workspace/user-groups' ), 'campaignUrl'=>admin_url( 'admin.php?page=kiwe-notifications&view=campaigns' ), ...Workspace_Chrome_Service::projection( $notice_count ), 'policyUrl'=>\DSA\Apps\Required_App_Service::allowed( 'security' ) ? \DSA\Apps\Required_App_Service::url( 'security' ) : '' ] );
 		?><!doctype html><html <?php language_attributes(); ?>><head><meta charset="<?php bloginfo( 'charset' ); ?>"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php echo esc_html( __( 'Notifications', 'dsa' ) . ' · ' . get_bloginfo( 'name' ) ); ?></title><?php wp_print_styles( [ 'kiwe-notification-app', 'kiwe-notification-notices' ] ); ?></head><body class="kiwe-notification-app"><?php if ( $notice_count ) : ?><section class="wf-system-notices" id="website-alerts" aria-label="<?php esc_attr_e( 'Website alerts', 'dsa' ); ?>" tabindex="-1"><div class="wf-system-notices-head"><h2><?php echo esc_html( sprintf( _n( '%d website alert', '%d website alerts', $notice_count, 'dsa' ), $notice_count ) ); ?></h2><a class="wf-system-notices-close" href="#work-main"><?php esc_html_e( 'Close alerts', 'dsa' ); ?></a></div><?php echo $admin_notices; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted admin_notices callbacks, as in wp-admin. ?></section><?php endif; ?><div id="kiwe-notification-app"><p><?php esc_html_e( 'Opening your notifications…', 'dsa' ); ?></p><noscript><?php esc_html_e( 'This workspace needs JavaScript. Switch off the experiment to restore the native notification screen.', 'dsa' ); ?></noscript></div><?php wp_print_scripts( [ 'wp-element', 'kiwe-notification-app' ] ); ?></body></html><?php exit;
 	}
 }

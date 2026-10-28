@@ -1,0 +1,45 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.9",
+  "releaseId": "9.9-d25ac5a01c64",
+  "route": "/ideate",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/start.md",
+      "sha256": "3d098670285909b914b08f24997e83be6bf9108fc2439b591d09859f5c13d958"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
+      "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/contracts/authoring-delivery.md",
+      "sha256": "4d867a21b949d19028be6becba4d46c684db52739a3f434dc54ad2d6170ae29f"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/ideate.md",
+      "url": "https://start.kiwelaunch.com/contexts/ideate.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/contexts/ideate.md",
+      "sha256": "86ab4146341a620dede32c743a0f25ea148c9e186b89179013a8c8cc9d1caf99"
+    }
+  ],
+  "sourceHash": "sha256:d25ac5a01c64d4e576d186e910b8dccc4d589007884b13e0fef190d8a6289697",
+  "command": "/ideate",
+  "context": "contexts/ideate.md",
+  "requires": [
+    "project request or inspectable attachments; explicit source authority for an existing design; SiteGraph only when preflight proves it is required",
+    "user says proceed after reviewing the usage brief and production-content readiness preflight; supplying SiteGraph or another requested attachment is not proceed"
+  ],
+  "outputs": [
+    "source-authority decision",
+    "Design Context coverage report before modification",
+    "page-relevant Design Context and Design Content usage brief",
+    "production-content readiness preflight",
+    "ideate/kiwe-ideate-discovery.json",
+    "complete browser-smoke-tested raw HTML/CSS/JS project after approval",
+    "seam/seam-map.json with closed marker proof",
+    "seam/site-graph.json only when cited",
+    "asset manifest"
+  ],
+  "boundary": "Inspect attachments and resolve whether an existing design is final, enhancement-authorized or redesign-authorized before SiteGraph or creative work; after any requested evidence arrives, emit and pause on the grounded usage brief. Production output may not retain placeholders when sufficient SiteGraph or approved-source context exists, and must fail closed on runtime errors or incomplete semantic closure. Inert data-seam-anchor stitches plus the closed SEAM Map express conversion intent without influencing design. Attachments never grant approval and /ideate alone never grants redesign permission."
+}

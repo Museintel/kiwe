@@ -21,7 +21,10 @@ const conditionalCluster = /<\?php if \( \$modules && \( \$dock\['visible'\] \?\
 check('empty or hidden dock does not render a material cluster', conditionalCluster.test(renderer));
 check('surface root and overlay remain available without a dock', renderer.includes('data-dsa-surface') && renderer.includes('data-dsa-overlay-root'));
 check('external module launchers keep their no-dock path', surface.includes("[data-dsa-open-module]") && surface.includes('openOverlay( moduleId'));
-check('geometry tolerates a missing dock cluster', surface.includes("const mainDock = surface.querySelector( '.dsa-phonekey-dock' )") && surface.includes('mainDock ? mainDock.querySelectorAll'));
+const itemCount=surface.match(/const itemCount = (mainDock \?[^;]+\{ return ! button\.hidden; \}\s*\)\.length : Number\( surface\.dataset\.dsaDockItemCount \) \|\| 0);/);
+const countItems=itemCount?new Function('mainDock','surface','return '+itemCount[1]):null;
+check('geometry tolerates a missing dock cluster',!!countItems&&countItems(null,{dataset:{dsaDockItemCount:'0'}})===0);
+check('context-hidden buttons occupy no Dock geometry',!!countItems&&countItems({querySelectorAll:()=>[{hidden:false},{hidden:true},{hidden:false}]},{dataset:{}})===2);
 
 if (failures.length) process.exit(1);
 console.log('No-dock Surface contracts verified.');

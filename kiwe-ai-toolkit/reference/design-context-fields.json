@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.public-binding-reference.v1",
   "source": "wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php",
-  "sourceSha256": "3dc661dbea7e76e6174d5ab19dd177e6c336f4d8798e5eaeac5c70a6a8414f8c",
+  "sourceSha256": "3b9b0867eb26565b9ca8b893438d88cfb37ea66972771844836125566e53566b",
   "policy": "Public field definitions only; no values. Current-site dynamicBindings additionally owns record, group, collection and configured commerce tags. Private/planning fields are never inferred from matching labels.",
   "fields": {
     "identity.siteName": {
@@ -564,6 +564,24 @@
     },
     "business.activities.service_area": {
       "tag": "{kiwe_context_business_activities_service_area}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.testimonialSources.pinned": {
+      "tag": "{kiwe_context_content_plan_testimonial_sources_pinned}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.testimonialSources.hearted": {
+      "tag": "{kiwe_context_content_plan_testimonial_sources_hearted}",
+      "kind": "boolean",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contentPlan.testimonialSources.popular": {
+      "tag": "{kiwe_context_content_plan_testimonial_sources_popular}",
       "kind": "boolean",
       "owner": "design-context-native-owner",
       "scope": "site"

@@ -34,7 +34,6 @@ final class WordPress_Role_Access_Service {
 		( new Taxonomy_App_Service() )->register();
 		( new Tag_Group_Service() )->register();
 		( new User_Group_Service() )->register();
-		( new AI_Workspace_Service() )->register();
 		( new Template_Workspace_Service() )->register();
 		( new Analytics_Workspace_Service() )->register();
 		( new Backup_Workspace_Service() )->register();
@@ -45,7 +44,10 @@ final class WordPress_Role_Access_Service {
 		( new Continuity_App_Service() )->register();
 		( new Media_App_Service() )->register();
 		( new Trash_Workspace_Service() )->register();
-		( new Guest_App_Service() )->register();
+		add_action( 'plugins_loaded',static function (): void {
+			if ( \DSA\Apps\AI_App_Service::enabled() ) ( new AI_Workspace_Service() )->register();
+			if ( \DSA\Apps\Guest_App_Service::enabled() ) { ( new Guest_Contribution_Service() )->register(); ( new Guest_App_Service() )->register(); }
+		},30 );
 
 		// MU plugins precede Woo. Editorial sites do not parse the store workspace.
 		add_action( 'plugins_loaded', static function (): void {
@@ -255,6 +257,7 @@ final class WordPress_Role_Access_Service {
 	}
 
 	public function limit_editorial_menu(): void {
+		if ( Workspace_Admin_Service::prefers_native_dashboard( wp_get_current_user() ) ) return;
 		$role = $this->restricted_role();
 		if ( '' === $role ) {
 			return;
@@ -303,6 +306,7 @@ final class WordPress_Role_Access_Service {
 		if ( Template_Workspace_Service::allowed() ) $allowed[] = Template_Workspace_Service::PAGE;
 		if ( Analytics_Workspace_Service::allowed() ) $allowed[] = Analytics_Workspace_Service::PAGE;
 		if ( class_exists( Form_Workspace_Service::class ) && Form_Workspace_Service::allowed() ) $allowed[] = Form_Workspace_Service::PAGE;
+		foreach ( \DSA\Apps\Required_App_Service::IDS as $app ) if ( \DSA\Apps\Required_App_Service::allowed( $app ) ) $allowed[] = 'kiwe-' . $app . '-app';
 		foreach ( (array) $menu as $item ) {
 			$slug = isset( $item[2] ) ? (string) $item[2] : '';
 			if ( '' !== $slug && ! in_array( $slug, $allowed, true ) ) {
@@ -316,6 +320,9 @@ final class WordPress_Role_Access_Service {
 	}
 
 	public function guard_editorial_admin_route(): void {
+		// Optional presentation must not replace native editors or their AJAX.
+		// Native handlers, capability/object guards and REST policy still authorize work.
+		if ( Workspace_Admin_Service::prefers_native_dashboard( wp_get_current_user() ) ) return;
 		$role = $this->restricted_role();
 		if ( '' !== $role && ( Site_Owner_Service::enabled() || Workspace_Admin_Service::uses_workspace( wp_get_current_user() ) ) ) {
 			$this->guard_client_route( $role );
@@ -429,13 +436,14 @@ final class WordPress_Role_Access_Service {
 	}
 
 	public function menu_order( $order ) {
-		if ( ! Workspace_Admin_Service::uses_workspace( wp_get_current_user() ) || ! is_array( $order ) ) return $order;
+		if ( ! Workspace_Admin_Service::requires_workspace( wp_get_current_user() ) || ! is_array( $order ) ) return $order;
 		$priority = array_merge( [ 'index.php', 'edit.php', 'upload.php', 'woocommerce', 'edit.php?post_type=product' ], \DSA\Onboarding\Onboarding_Service::section_slugs(), [ 'edit.php?post_type=page', 'kiwe-team', 'kiwe-context-library', 'kiwe-feedback', 'kiwe-navigation', 'kiwe-dock-settings', 'kiwe-services', 'kiwe-ai-features', 'kiwe-guests', 'kiwe-store', 'kiwe-notifications', 'edit-comments.php', 'users.php', 'profile.php' ] );
 		array_unshift( $priority, Workspace_Admin_Service::PAGE );
 		return array_merge( array_values( array_intersect( $priority, $order ) ), array_values( array_diff( $order, $priority ) ) );
 	}
 
 	public function toolbar( $bar ): void {
+		if ( Workspace_Admin_Service::prefers_native_dashboard( wp_get_current_user() ) ) return;
 		if ( ! Site_Owner_Service::enabled() || Site_Owner_Service::is_owner() ) return;
 		foreach ( [ 'wp-logo', 'updates', 'customize', 'themes', 'widgets', 'menus', 'rank-math', 'hostinger', 'litespeed-menu', 'dsa-cache', 'kiwe-cache', 'new-page', 'new-web-story' ] as $id ) $bar->remove_node( $id );
 	}
@@ -493,6 +501,7 @@ final class WordPress_Role_Access_Service {
 			if ( 'post.php' === $script && in_array( get_post_type( absint( $_REQUEST['post'] ?? $_POST['post_ID'] ?? 0 ) ),[ 'page','bricks_template','attachment' ],true ) ) return;
 		}
 		if ( 'admin.php' === $script && Workspace_Admin_Service::PAGE === $page && current_user_can( 'read' ) ) return;
+		foreach ( \DSA\Apps\Required_App_Service::IDS as $app ) if ( 'admin.php' === $script && 'kiwe-' . $app . '-app' === $page && \DSA\Apps\Required_App_Service::allowed( $app ) ) return;
 		if ( 'admin.php' === $script && Media_App_Service::PAGE === $page && current_user_can( 'upload_files' ) ) return;
 		if ( 'admin.php' === $script && class_exists( Trash_Workspace_Service::class ) && Trash_Workspace_Service::PAGE === $page && Trash_Workspace_Service::allowed() ) return;
 		if ( class_exists( Post_Workspace_Service::class ) && 'admin.php' === $script && Post_Workspace_Service::PAGE === $page && Post_Workspace_Service::enabled() && current_user_can( 'edit_posts' ) ) return;
@@ -528,13 +537,13 @@ final class WordPress_Role_Access_Service {
 			if ( 'admin.php' === $script && Context_Workspace_Service::PAGE === $page && current_user_can( 'kiwe_manage_context' ) ) return;
 			if ( 'admin.php' === $script && 'kiwe-dock-settings' === $page && current_user_can( 'kiwe_manage_navigation' ) ) return;
 			if ( 'admin.php' === $script && Navigation_Workspace_Service::PAGE === $page && current_user_can( 'kiwe_manage_navigation' ) ) return;
-			if ( 'admin.php' === $script && AI_Workspace_Service::PAGE === $page && current_user_can( 'kiwe_manage_ai_preferences' ) ) return;
+			if ( 'admin.php' === $script && 'kiwe-ai-features' === $page && current_user_can( 'kiwe_manage_ai_preferences' ) ) return;
 			// Each handler also checks its nonce, payload and object capabilities.
 			if ( 'admin-post.php' === $script && in_array( $_POST['action'] ?? '', [ 'kiwe_category_create', 'kiwe_category_rename', 'kiwe_category_move' ], true ) && current_user_can( 'manage_categories' ) ) return;
 			if ( 'admin-post.php' === $script && Team_Workspace_Service::ACTION === ( $_POST['action'] ?? '' ) && current_user_can( 'kiwe_manage_team' ) ) return;
 			if ( 'admin-post.php' === $script && Context_Workspace_Service::ACTION === ( $_POST['action'] ?? '' ) && current_user_can( 'kiwe_manage_context' ) ) return;
 			if ( 'admin-post.php' === $script && Navigation_Workspace_Service::ACTION === ( $_POST['action'] ?? '' ) && current_user_can( 'kiwe_manage_navigation' ) ) return;
-			if ( 'admin-post.php' === $script && AI_Workspace_Service::ACTION === ( $_POST['action'] ?? '' ) && current_user_can( 'kiwe_manage_ai_preferences' ) ) return;
+			if ( 'admin-post.php' === $script && 'kiwe_ai_preference' === ( $_POST['action'] ?? '' ) && current_user_can( 'kiwe_manage_ai_preferences' ) ) return;
 			if ( 'edit.php' === $script && 'page' === $type && in_array( $page, [ '', 'kiwe-page-details' ], true ) ) return;
 			if ( 'post-new.php' === $script && 'page' === $type ) { wp_safe_redirect( Page_Workspace_Service::url() ); exit; }
 			if ( 'admin-post.php' === $script && in_array( $_POST['action'] ?? '', [ 'kiwe_create_page', 'kiwe_page_indexing', 'kiwe_page_title' ], true ) ) return;
@@ -588,6 +597,7 @@ final class WordPress_Role_Access_Service {
 		if ( Template_Workspace_Service::builder_actor() && ( str_starts_with( $route,'/bricks/v1/' ) || preg_match( '#^/wp/v2/(?:pages|bricks_template)(?:/|$)#',$route ) ) ) return $result;
 		if ( 'POST' === $method && '/dsa/v1/workspace/activity/seen' === rtrim( $route, '/' ) && current_user_can( 'read' ) ) return $result; // Actor-bound native counters recheck admitted collection, nonce and signed ceiling.
 		if ( 'POST' === $method && '/dsa/v1/workspace/app-library' === rtrim( $route, '/' ) && \DSA\Apps\Native_State::can_review() ) return $result; // Native software permissions and exact review/nonce are rechecked by the library.
+		if ( 'POST' === $method && preg_match( '#^/dsa/v1/workspace/system/(auth|security)/?$#', $route, $system ) && \DSA\Apps\Required_App_Service::allowed( $system[1] ) ) return $result; // Included App retains native authority, nonce, origin and fresh-state checks.
 		if ( 'POST' === $method && '/dsa/v1/workspace/apps/store' === rtrim( $route, '/' ) && \DSA\Apps\Store_App_Service::allowed() ) return $result;
 		if ( 'POST' === $method && '/dsa/v1/workspace/apps/seo' === rtrim( $route, '/' ) && \DSA\Apps\SEO_App_Service::allowed() ) return $result; // The app owner rechecks nonce, origin, mutation proof and current state.
 		if ( 'POST' === $method && preg_match( '#^/dsa/v1/workspace/templates(?:/[1-9][0-9]*)?/?$#',$route ) && Template_Workspace_Service::allowed() ) return $result;

@@ -32,9 +32,9 @@ final class Library_Service {
  }
  public function snapshot(): array {
   $native=Native_State::snapshot();$catalogue=(new Catalogue_Service())->snapshot();$installer=new Installer_Service();$jobs=$installer->jobs();$items=[];
-  foreach(Runtime_Contract::IDS as$id){$recovery=Code_Recovery::state($id);$owner=$id==='store'?Store_App_Service::class:SEO_App_Service::class;$release=$catalogue['catalogue']['apps'][$id]??null;$installed=$native['apps'][$id]??null;
-   $items[]=['id'=>$id,'name'=>$id==='store'?'Store':'SEO','description'=>$id==='store'?'Products, delivery, taxes, carts, wishlists and orders. Bookmarks stay part of Core.':'Search details, structured data, redirects, SEO reviews and XML and News sitemaps. Design Context stays part of Core.',
-    'enabled'=>$owner::enabled(),'installed'=>is_array($installed),'version'=>(string)($installed['version']??''),'active'=>!empty($installed['active']),'bundled'=>Package_Layout::BUNDLED,'externalOwner'=>$id==='seo'?$native['seoOwner']:'','settingsUrl'=>$owner::enabled()?$owner::url():'','automatic'=>Native_State::automatic($id),'automaticExpected'=>hash('sha256',Signed_Packet::canonical([$native,Native_State::automatic($id)])),'canUpdate'=>current_user_can('update_plugins'),'releaseVersion'=>(string)($release['version']??''),
+  foreach(Runtime_Contract::IDS as$id){$recovery=Code_Recovery::state($id);$owner=Runtime_Registry::owner($id);$release=$catalogue['catalogue']['apps'][$id]??null;$installed=$native['apps'][$id]??null;
+   $items[]=['id'=>$id,'name'=>match($id){'store'=>'Store','seo'=>'SEO',default=>$owner::NAME},'description'=>$owner::card()['description'],
+    'enabled'=>$owner::enabled(),'installed'=>is_array($installed),'version'=>(string)($installed['version']??''),'active'=>!empty($installed['active']),'bundled'=>Package_Layout::bundled($id),'externalOwner'=>$id==='seo'?$native['seoOwner']:'','settingsUrl'=>$owner::enabled()?$owner::url():'','automatic'=>Native_State::automatic($id),'automaticExpected'=>hash('sha256',Signed_Packet::canonical([$native,Native_State::automatic($id)])),'canUpdate'=>current_user_can('update_plugins'),'releaseVersion'=>(string)($release['version']??''),
     'job'=>isset($jobs[$id])?$installer->projection($jobs[$id]):null,
     'recoveryRemovesApp'=>($recovery['before']??null)===[],
     'canRecover'=>Native_State::can_recover()&&($recovery['id']??'')===$id&&($recovery['phase']??'')==='accepted','recoveryExpected'=>($recovery['id']??'')===$id?hash('sha256',Signed_Packet::canonical($recovery)):''];

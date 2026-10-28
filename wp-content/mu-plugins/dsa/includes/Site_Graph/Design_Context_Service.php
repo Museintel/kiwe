@@ -126,6 +126,8 @@ final class Design_Context_Service {
 				'kiwe'           => [
 					'version'      => sanitize_text_field( (string) ( $graph['kiwe']['version'] ?? '' ) ),
 					'modules'      => is_array( $graph['kiwe']['modules'] ?? null ) ? $graph['kiwe']['modules'] : [],
+					'discussion'   => is_array( $graph['kiwe']['discussion'] ?? null ) ? $graph['kiwe']['discussion'] : [],
+					'forms'        => is_array( $graph['kiwe']['forms'] ?? null ) ? $graph['kiwe']['forms'] : [],
 					'bricksBridge' => is_array( $graph['kiwe']['bricksBridge'] ?? null ) ? $graph['kiwe']['bricksBridge'] : [],
 				],
 				'bindingTargets' => is_array( $graph['bindingTargets'] ?? null ) ? $graph['bindingTargets'] : [],
@@ -134,6 +136,8 @@ final class Design_Context_Service {
 			'business'    => $business,
 			'seamDesignContext' => $owner_context,
 			'dynamicBindings' => $dynamic_bindings,
+			'discussion' => is_array( $graph['kiwe']['discussion'] ?? null ) ? $graph['kiwe']['discussion'] : [],
+			'forms' => is_array( $graph['kiwe']['forms'] ?? null ) ? $graph['kiwe']['forms'] : [],
 			'resolvedDesignContext' => $resolved_context,
 			'designContextEnhancementContract' => $enhancements->handoff_contract(),
 			'ideationContract' => [
@@ -587,7 +591,7 @@ final class Design_Context_Service {
 		$page_size = $private ? 200 : 100;
 		while ( $remaining > 0 ) {
 			$take = min( $page_size, $remaining );
-			$result = $this->data->query( [ 'resource' => $resource, 'limit' => $take, 'page' => $page ] + $args, $private );
+			$result = $this->data->query( [ 'resource' => $resource, 'limit' => $take, 'page' => $page, 'publicOnly' => true ] + $args, $private );
 			$nodes  = is_array( $result['data'] ?? null ) ? $result['data'] : [];
 			foreach ( $nodes as $node ) {
 				if ( is_array( $node ) ) {

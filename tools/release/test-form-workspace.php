@@ -11,6 +11,7 @@ class WP_REST_Response {function __construct(public $data, public $status=200){}
 class WP_Error {function __construct(public $code,public $message){} }
 $actor=new WP_User();$suspended=false;$member=true;$multi=false;$nonce=true;$origin=true;$owner=false;$checks=[];
 function is_user_logged_in(){global $actor;return $actor->ID>0;}function current_user_can($cap){global $actor;return $cap==='read'||($actor->roles[0]==='administrator'&&in_array($cap,['manage_options','kiwe_manage_context']));}
+function get_userdata($id){return $id===$GLOBALS['actor']->ID?$GLOBALS['actor']:false;}function user_can($user,$cap){return current_user_can($cap);}
 function wp_get_current_user(){global $actor;return $actor;}function get_current_user_id(){global $actor;return $actor->ID;}function is_multisite(){global $multi;return $multi;}function is_user_member_of_blog($id){global $member;return $member;}
 function wp_verify_nonce($a,$b){global $nonce;return $nonce&&$a==='ok';}function __($s,$d=''){return $s;}function sanitize_text_field($s){return trim(strip_tags($s));}function sanitize_textarea_field($s){return strip_tags($s);}
 function get_post($id){return (object)['post_title'=>'Contact'];}
@@ -28,12 +29,13 @@ namespace DSA\Utilities {class Origin_Checker {static function is_same_site_requ
 namespace DSA\Access {
 class Team_Workspace_Service {static function suspended($id){return $GLOBALS['suspended'];}}
 class Workspace_Activity_Service {static function snapshots(){return ['forms'=>['ceiling'=>25]];}static function attach_snapshots($response,$snapshots){return $response;}}
-class Site_Owner_Service {static function is_owner(){return $GLOBALS['owner'];}}
+class Site_Owner_Service {static function is_owner(){return $GLOBALS['owner'];}static function owner_id(){return $GLOBALS['owner']?1:999;}}
 class WordPress_Role_Access_Service {static function role_for($u){return $u->roles[0];}}
 class Task_Workspace_UI {static function text($s,$limit=200){return is_string($s)?substr(\sanitize_text_field($s),0,$limit):'';}static function id($v){return is_scalar($v)?filter_var($v,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]):0;}static function response($v){return new \WP_REST_Response($v);}static function failure($v,$status){return new \WP_REST_Response(['message'=>$v->message],$status);}}
 }
 namespace Bricks\Integrations\Form {class Submission_Database {static function get_table_name(){return 'wp_bricks_form_submissions';}static function get_form_settings($post,$form){return ['submissionFormName'=>'Business enquiries','fields'=>[['id'=>'email','label'=>'Email']]];}}}
 namespace {
+require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Bricks/Form_Identity_Service.php';
 require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Access/Form_Workspace_Service.php';
 $service=new \DSA\Access\Form_Workspace_Service();
 foreach(['administrator','kiwe_super_admin','editor','author','contributor','subscriber','customer','shop_manager','kiwe_web_designer','kiwe_user'] as $role){$actor->roles=[$role];$owner=$role==='kiwe_super_admin';check(\DSA\Access\Form_Workspace_Service::allowed()===in_array($role,['administrator','kiwe_super_admin']),'Owner-only inbox for '.$role);if(!in_array($role,['administrator','kiwe_super_admin']))check($service->detail(new WP_REST_Request(['id'=>25]))->status===403,'Direct private message denial for '.$role);}

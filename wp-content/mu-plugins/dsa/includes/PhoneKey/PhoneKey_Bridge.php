@@ -9,6 +9,77 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class PhoneKey_Bridge {
+	/** Private settings adapter; the tested engine keeps validation, roles and encryption. */
+	public static function admin_settings(): array { return function_exists( 'pk_settings' ) ? (array) \pk_settings() : []; }
+	public static function signup_roles(): array {
+		$out = [];
+		foreach ( (array) ( wp_roles()->roles ?? [] ) as $id=>$role ) if ( function_exists( 'pk_role_is_high_privilege_role' ) && ! \pk_role_is_high_privilege_role( $id ) ) $out[$id] = translate_user_role( $role['name'] );
+		return $out;
+	}
+	public static function save_admin_settings( array $changes ) {
+		if ( ! \DSA\Apps\Required_App_Service::allowed( 'auth' ) || ! function_exists( 'pk_save_settings_array' ) ) return new \WP_Error( 'kiwe_auth_forbidden', __( 'Authentication settings are unavailable.', 'dsa' ) );
+		$fields = \DSA\Access\System_Control_Catalogue::fields( 'auth', \DSA\Apps\Required_App_Service::technical() );
+		$allowed = array_fill_keys( array_map( static fn( $key ) => explode( '.', $key )[0], array_keys( $fields ) ), true );
+		if ( array_diff_key( $changes, $allowed ) ) return new \WP_Error( 'kiwe_auth_forbidden', __( 'Choose an authentication setting available for your account.', 'dsa' ) );
+		$original = get_option( 'pk_settings_v3', false ); $stored = is_array( $original ) ? $original : [];
+		$current = self::admin_settings();
+		$keys = array_fill_keys( array_keys( $changes ), true );
+		// Let the existing native writer sanitize/encrypt, while persisting only changed keys.
+		$anticipated = null;
+		$filter = static function( $value, $old ) use ( $original, $stored, $keys, $changes, &$anticipated ) {
+			if ( $old !== $original ) throw new \RuntimeException( 'Authentication settings changed. Refresh before saving.' );
+			$next = array_replace( $stored, array_intersect_key( (array) $value, $keys ) );
+			if ( isset( $changes['role_matrix'] ) ) {
+				$next['role_matrix'] = (array) ( $stored['role_matrix'] ?? [] );
+				foreach ( $changes['role_matrix'] as $role=>$fields ) $next['role_matrix'][$role] = array_replace( (array) ( $stored['role_matrix'][$role] ?? [] ), array_intersect_key( (array) ( $value['role_matrix'][$role] ?? [] ), $fields ) );
+			}
+			$anticipated = $next; return $next;
+		};
+		add_filter( 'pre_update_option_pk_settings_v3', $filter, 999, 2 );
+		try { \pk_save_settings_array( array_replace_recursive( $current, $changes ) ); }
+		finally { remove_filter( 'pre_update_option_pk_settings_v3', $filter, 999 ); }
+		if ( null === $anticipated || get_option( 'pk_settings_v3', false ) !== $anticipated ) return new \WP_Error( 'kiwe_auth_write', __( 'Authentication settings could not be confirmed. Reload and review.', 'dsa' ) );
+		return self::admin_settings();
+	}
+	/** Composer capability only; native PhoneKey retains all account, provider and assurance decisions. */
+	public static function discussion_configuration(): array {
+		$settings = function_exists( 'pk_settings' ) ? \pk_settings() : [];
+		return [ 'available'=>function_exists( 'pk_rest_identify' ) && function_exists( 'pk_public_rest_allowed' ), 'identifierMode'=>(string) ( $settings['identifier_mode'] ?? '' ), 'phoneReady'=>function_exists( 'pk_phone_provider_ready' ) && \pk_phone_provider_ready() ];
+	}
+	public static function discussion_device_key(): string {
+		$cookie = defined( 'PK_VISITOR_COOKIE' ) ? ( $_COOKIE[PK_VISITOR_COOKIE] ?? '' ) : '';
+		if ( is_string( $cookie ) && preg_match( '/^[A-Za-z0-9_-]{24,128}$/D', $cookie ) ) return hash_hmac( 'sha256', $cookie, wp_salt( 'nonce' ) );
+		if ( get_current_user_id() ) return hash_hmac( 'sha256', 'user:' . get_current_user_id() . '|session:' . wp_get_session_token(), wp_salt( 'nonce' ) );
+		if ( ! function_exists( 'pk_visitor_hash' ) || ! defined( 'PK_VISITOR_COOKIE' ) ) return '';
+		\pk_visitor_hash(); $cookie = $_COOKIE[PK_VISITOR_COOKIE] ?? '';
+		// Never expose a pending receipt through the engine's IP/UA fallback.
+		return is_string( $cookie ) && preg_match( '/^[A-Za-z0-9_-]{24,128}$/D', $cookie ) ? hash_hmac( 'sha256', $cookie, wp_salt( 'nonce' ) ) : '';
+	}
+	public static function discussion_own_contact(): array {
+		$id = get_current_user_id(); $user = $id ? get_userdata( $id ) : null; if ( ! $user ) return [];
+		$email = is_email( $user->user_email ) ? $user->user_email : '';
+		$phone = function_exists( 'pk_user_phone' ) ? (string) \pk_user_phone( $id ) : '';
+		$settings = function_exists( 'pk_settings' ) ? \pk_settings() : [];
+		if ( $phone && ( ! $email || 'phone' === ( $settings['identifier_mode'] ?? '' ) ) ) return [ 'identifierType'=>'phone', 'identifier'=>$phone ];
+		return $email ? [ 'identifierType'=>'email', 'identifier'=>$email ] : [];
+	}
+	public static function discussion_start_identity( \WP_REST_Request $request, array $input ) {
+		$native = new \WP_REST_Request( 'POST' ); $native->set_headers( $request->get_headers() );
+		if ( is_user_logged_in() ) {
+			if ( self::account_verified( get_current_user_id() ) ) return [ 'ok'=>true, 'alreadyVerified'=>true ];
+			if ( true !== \pk_account_rest_allowed( $native ) ) return new \WP_Error( 'kiwe_discussion_identity_forbidden', __( 'Refresh before verifying your account.', 'dsa' ), [ 'status'=>403 ] );
+			$contact = self::discussion_own_contact(); if ( ! $contact ) return new \WP_Error( 'kiwe_discussion_identity_contact', __( 'Add a contact to your profile to verify it, or send for moderation.', 'dsa' ), [ 'status'=>409 ] );
+			$native->set_param( 'factor', $contact['identifierType'] ); $native->set_param( 'identifier', $contact['identifier'] ); $native->set_param( 'deferOtpDelivery', true );
+			return \pk_rest_account_factor_start( $native );
+		}
+		if ( true !== \pk_public_rest_allowed( $native ) ) return new \WP_Error( 'kiwe_discussion_identity_forbidden', __( 'Refresh before starting verification.', 'dsa' ), [ 'status'=>403 ] );
+		foreach ( $input as $key=>$value ) $native->set_param( $key, $value ); $native->set_param( 'deferOtpDelivery', true );
+		// Request-local presentation selects one OTP; it changes no saved policy, signup role or proof.
+		$otp = static fn( $settings ) => array_replace( is_array( $settings ) ? $settings : [], [ 'email_delivery'=>'otp' ] );
+		add_filter( 'option_pk_settings_v3', $otp ); add_filter( 'default_option_pk_settings_v3', $otp );
+		try { return \pk_rest_identify( $native ); }
+		finally { remove_filter( 'option_pk_settings_v3', $otp ); remove_filter( 'default_option_pk_settings_v3', $otp ); }
+	}
 	/** Format an already-public business contact; never reads account factors. */
 	public static function normalize_public_phone( string $phone ): string {
 		return function_exists( 'pk_normalize_phone' ) ? (string) pk_normalize_phone( $phone ) : (string) preg_replace( '/[^0-9+]/', '', $phone );
@@ -40,6 +111,23 @@ final class PhoneKey_Bridge {
 
 	public static function account_verified( int $user_id ): bool {
 		return $user_id > 0 && ( function_exists( 'pk_account_verified' ) ? (bool) pk_account_verified( $user_id ) : (bool) get_user_meta( $user_id, 'pk_verified_at', true ) );
+	}
+
+	/** Read-only bounded projection, with the same latest-factor/legacy-proof semantics as PhoneKey. */
+	public static function verified_accounts( array $user_ids ): array {
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', $user_ids ) ) ) );
+		if ( count( $ids ) > 50 ) throw new \InvalidArgumentException( 'A bounded account projection is required.' );
+		if ( ! $ids ) return [];
+		update_meta_cache( 'user', $ids );
+		$out = []; foreach ( $ids as $id ) $out[$id] = (bool) get_user_meta( $id, 'pk_verified_at', true );
+		if ( ! function_exists( 'pk_t' ) ) return $out;
+		global $wpdb;
+		$table = \pk_t( 'factors' );
+		$in = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$sql = "SELECT DISTINCT f.user_id FROM {$table} f INNER JOIN (SELECT MAX(id) AS id FROM {$table} WHERE user_id IN ({$in}) AND factor_type IN ('email','phone') GROUP BY user_id,factor_type) latest ON latest.id=f.id WHERE f.status='verified'";
+		$verified = $wpdb->get_col( $wpdb->prepare( $sql, $ids ) );
+		foreach ( (array) $verified as $id ) $out[(int) $id] = true;
+		return $out;
 	}
 
 	/** Private account-management projection; PhoneKey remains the factor authority. */
@@ -224,6 +312,7 @@ final class PhoneKey_Bridge {
 
 		return [
 			'loggedIn'        => true,
+			'workspaceUrl'    => class_exists( \DSA\Access\Workspace_Admin_Service::class ) ? \DSA\Access\Workspace_Admin_Service::app_launch_url( $user ) : '',
 			'isAdmin'         => current_user_can( 'manage_options' ),
 			'isPrivileged'    => $is_privileged,
 			'privilegedEnrollmentComplete' => $privileged_enrollment_complete,
