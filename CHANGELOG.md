@@ -1,3 +1,9 @@
+## 8.0.0-rc.454 / Kiwe1 final display correction (2026-10-29)
+
+- Kiwe1 is accepted on the lab and all three named sites, with contextual conversations, feedback-derived testimonials, trusted native form identities, included Auth/Security Apps and native-capability Menu Edit. Store1.1.8, existing business state and Ascendants' Rank Math/native workflow remain.
+- Normalize the bounded native Forms notification focus ID and decode WordPress title entities for the plain-text Comments/Reviews heading. The existing text-only renderer, moderation policies and unchanged PhoneKey engine retain their owners.
+- Start9.9 and both existing Seam2.18.3 hosts are public. Native/source/browser/guest checks, authenticated recovery and exact hosted input/job retirement are accepted; original failures and limits remain in [the final release record](docs/KIWE-1-LIVE-2026-10-29.md).
+
 ## 8.0.0-rc.452 / Kiwe1 completion (2026-10-28, source candidate)
 
 - Reuse one contextual native Comments/Reviews/Website conversation and live eligible testimonials. Website plan controls pinned, team-hearted and optional liked sources; existing native Bricks query/tags remain. Privacy, source changes and relevant native review settings invalidate only testimonial-tagged cache pages.
@@ -3537,4 +3543,8 @@ Start the existing private runtime read in the early public head, alongside page
 - Add missing Search and Screen text controls to App settings and stock/related-product/add-button presentation to Store, using selected native settings patches. Keep unique technical editors and dormant values.
 - Route verified staff manifest launches into the existing role-aware dashboard, retain customer/guest and content-link flows, and reuse the existing functional App activity owner through a small private script. Private dashboard HTML stays uncached.
 - Future Google, Meta and expanded MCP are planned as optional Apps. Source qualification and lab acceptance are in progress; production remains RC439 and a new named rollout approval is required.
+
+## 8.0.0-rc.453 — 29 October 2026
+
+The final Kiwe1 candidate retains Core452's community testimonials, named native forms, required Auth/Security Apps and contextual Menu Edit. Forms now accepts the text-valued native WordPress notification ID, opens the intended private message, and keeps the complete inbox behind it. The PhoneKey engine and Store1.1.8 remain unchanged. Publication and native/browser acceptance are recorded separately in the completion ledger.
 

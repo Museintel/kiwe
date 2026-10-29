@@ -27,8 +27,8 @@ const checks = [
   ['app assets use pathname and version matching', pwa.includes('candidate.pathname !== expected.pathname') && pwa.includes("candidate.searchParams.get('ver') === version")],
   ['editorial caches retain bounded entry counts', pwa.includes('trimCache(KIWE_PWA.editorialCache, 30)') && pwa.includes('trimCache(KIWE_PWA.mediaCache, 40)')],
   ['notification clicks cannot navigate cross-origin', pwa.includes('new URL(target).origin !== self.location.origin')],
-  ['push campaign batches have an execution lock', push.includes('acquire_job_lock') && push.includes('release_job_lock') && push.includes('finally')],
-  ['stale push jobs are cleaned', push.includes("time() - 2 * DAY_IN_SECONDS") && push.includes("delete_option( 'dsa_push_job_'")],
+  ['push campaign batches use conditional job ownership', push.includes('Worker_Job::claim') && push.includes('$worker->release()') && push.includes('finally')],
+  ['stale push jobs are cleaned only under their current owner', push.includes('time()-2*DAY_IN_SECONDS') && push.includes('$worker->remove()')],
   ['vendor expiry is immediate for 404 and 410', push.includes("in_array( $code, [ 404, 410 ], true )")],
   ['OpenSSL P-256 and cron diagnostics remain exposed', push.includes("'p256'") && push.includes("'cronScheduled'") && push.includes("'wpCronDisabled'")],
 ];

@@ -59,7 +59,7 @@ check('external AI API cannot mutate WordPress', rest.includes("'mutatesContent'
 check('external AI API contains no second compiler or studio', !rest.includes("'/ai/seamflow/") && !rest.includes("'/ai/studio/") && !rest.includes('SeamFlow_Service'));
 check('external AI API is credentialed and rate limited', rest.includes('authenticate_request') && rest.includes("'kiwe-ai-client:'") && rest.includes("'Retry-After'"));
 check('task capsules remain public-only and mutation forbidden', capsules.includes("'publicOnly'  => true") && capsules.includes("'mutation'    => 'forbidden'"));
-check('access keys remain hashed at rest', keys.includes('wp_hash_password') && !keys.includes("'key' => $plain"));
+check('access keys retain hashed record storage through the conditional owner', keys.includes("'hash'        => wp_hash_password( $plain )") && keys.includes('Credential_Records::change') && !keys.includes('update_option( self::OPTION'));
 check('shared provider secret remains behind broker transport', provider.includes('Secret_Store::decrypt') && broker.includes("'secretAccess'  => false"));
 check('plugin registers one external SiteGraph boundary', plugin.includes('new AI_Access_Controller( $this->site_graph )') && plugin.includes('new Site_Graph_Controller( $this->site_graph )'));
 check('clean RC settings schema has no historical migration ladder', settings.includes('SCHEMA_VERSION = 8') && !settings.includes('SAFETY_MIGRATION_VERSION') && !settings.includes('apply_bricks_compatibility_profile'));

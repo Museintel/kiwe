@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Kiwe
  * Description: Kiwe Surface, Key.kiwe auth, and appsite layer for WordPress.
- * Version: 8.0.0-rc.452
+ * Version: 8.0.0-rc.454
  * Requires PHP: 8.2
  * Author: Kiwelauch
  */
@@ -21,7 +21,7 @@ if ( PHP_VERSION_ID < 80200 ) {
 	return;
 }
 
-define( 'DSA_VERSION', '8.0.0-rc.452' );
+define( 'DSA_VERSION', '8.0.0-rc.454' );
 define( 'DSA_FILE', __FILE__ );
 define( 'DSA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DSA_URL', plugin_dir_url( __FILE__ ) );

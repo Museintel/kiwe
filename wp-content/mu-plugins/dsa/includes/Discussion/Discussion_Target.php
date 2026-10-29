@@ -38,7 +38,9 @@ final class Discussion_Target {
 	public static function descriptor( \WP_Post $post ): array {
 		$review = 'product' === $post->post_type;
 		$site = 'page' === $post->post_type && (int) get_option( self::SITE_PAGE_OPTION, 0 ) === (int) $post->ID;
-		$out = [ 'id'=>(int) $post->ID, 'kind'=>$review ? 'review' : ( $site ? 'site' : 'comment' ), 'title'=>wp_strip_all_tags( get_the_title( $post ) ), 'url'=>(string) get_permalink( $post ), 'label'=>$review ? __( 'Reviews', 'dsa' ) : ( $site ? __( 'Site feedback', 'dsa' ) : __( 'Comments', 'dsa' ) ), 'open'=>comments_open( $post->ID ), 'threaded'=>(bool) get_option( 'thread_comments' ), 'depth'=>max( 1, min( 10, (int) get_option( 'thread_comments_depth', 5 ) ) ), 'loginRequired'=>(bool) get_option( 'comment_registration' ) ];
+		// This JSON value is plain text; the client assigns textContent rather than rendering title HTML.
+		$title = html_entity_decode( wp_strip_all_tags( get_the_title( $post ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$out = [ 'id'=>(int) $post->ID, 'kind'=>$review ? 'review' : ( $site ? 'site' : 'comment' ), 'title'=>$title, 'url'=>(string) get_permalink( $post ), 'label'=>$review ? __( 'Reviews', 'dsa' ) : ( $site ? __( 'Site feedback', 'dsa' ) : __( 'Comments', 'dsa' ) ), 'open'=>comments_open( $post->ID ), 'threaded'=>(bool) get_option( 'thread_comments' ), 'depth'=>max( 1, min( 10, (int) get_option( 'thread_comments_depth', 5 ) ) ), 'loginRequired'=>(bool) get_option( 'comment_registration' ) ];
 		if ( $review ) { $out['review'] = \DSA\Commerce\Discussion_Review_Adapter::descriptor( $post->ID ); $out['open'] = $out['open'] && $out['review']['enabled']; }
 		return $out;
 	}

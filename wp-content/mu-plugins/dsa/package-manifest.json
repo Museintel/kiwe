@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.452",
+  "version": "8.0.0-rc.454",
   "algorithm": "sha256",
   "file_count": 643,
   "files": {
@@ -306,7 +306,7 @@
     },
     "assets/js/forms-app.js": {
       "bytes": 15182,
-      "sha256": "1daf496c16a76220716502b21096d9de47d4a695404614b4523e9714c5b30725"
+      "sha256": "25857d33039ee98a144f0730201ca395b4d16751286973d39f13f40633db2199"
     },
     "assets/js/guest-app.js": {
       "bytes": 25635,
@@ -474,7 +474,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "3a57ae99d44cba0935ee4f6c8f1b1d4af186502058c53c3b0a2faf3eff7a0afe"
+      "sha256": "fab4e9b6cfa85a3042c85844f9752912907608407be026f333cb9f38d3eb11f5"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1585,8 +1585,8 @@
       "sha256": "895fb36d9b48e47d1136b00b607bbdfd33a6ae45e12741d63227edafa0bfff9b"
     },
     "includes/Discussion/Discussion_Target.php": {
-      "bytes": 3346,
-      "sha256": "860f4d08a9ce9e566b4f3089ef8f330a44cc435862d449a5808cbd2e63cc3798"
+      "bytes": 3521,
+      "sha256": "9d7de1de0c73bd2001129db1dad9ed61642a540d4bdbe63b29896837883cc87f"
     },
     "includes/Discussion/Public_Identity.php": {
       "bytes": 4078,

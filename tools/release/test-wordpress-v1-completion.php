@@ -21,6 +21,13 @@ function kiwe_v1_native_tests( bool $store ): array {
 	wp_update_user( [ 'ID'=>$reader, 'display_name'=>'Public Reader' ] );
 	$post = wp_insert_post( [ 'post_type'=>'post', 'post_status'=>'publish', 'post_title'=>'Community context fixture', 'comment_status'=>'open', 'post_author'=>1 ] );
 	$private = wp_insert_post( [ 'post_type'=>'post', 'post_status'=>'private', 'post_title'=>'Private fixture', 'comment_status'=>'open' ] );
+	$title_filter = static fn( $title, $id ) => $id === $post ? '<strong>Sweet &amp; savoury &#8217;</strong>' : $title;
+	add_filter( 'the_title', $title_filter, 99, 2 );
+	try {
+		$descriptor = DSA\Discussion\Discussion_Target::descriptor( get_post( $post ) );
+		$check( $descriptor['title'] === "Sweet & savoury ’", 'Discussion JSON decodes WordPress title entities as plain display text' );
+		$check( ! str_contains( $descriptor['title'], '<strong>' ) && $descriptor['open'], 'Discussion title formatting cannot introduce rendered markup or alter native policy' );
+	} finally { remove_filter( 'the_title', $title_filter, 99 ); }
 	$comment = static function( int $target, string $name, string $text, array $extra = [] ): int {
 		return (int) wp_insert_comment( $extra + [ 'comment_post_ID'=>$target, 'comment_author'=>$name, 'comment_author_email'=>'reader-v1@example.test', 'comment_content'=>$text, 'comment_approved'=>'1', 'user_id'=>$GLOBALS['v1_reader'] ] );
 	}; $GLOBALS['v1_reader'] = $reader;

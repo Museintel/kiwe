@@ -1,3 +1,5 @@
+Current acceptance,29 October: **the scoped Kiwe1 programme is complete on all three named sites and shared Start/Seam.** See [the final release, recovery and limits](KIWE-1-LIVE-2026-10-29.md). Core454 supersedes the intermediate452/453 checkpoints below; no duplicate implementation or further live approval is required.
+
 # Kiwe1 completion scope — 28 October 2026
 
 The founder extends the accepted Comments lab programme before the version1 handover. This document supersedes the earlier CF8 instruction to request another live approval: the founder now explicitly authorizes the completed, qualified release on Dharwadpedha.com, Nationalchikki.com and Ascendants.in, plus Start and both shared Seam delivery surfaces. Preserve the named sites' current native policies, other Apps, customer/commerce/content state and Ascendants' Rank Math/native WordPress workflow. No provider purchase, campaign, Google/Meta setup or expanded MCP write work follows from this approval.
@@ -17,6 +19,14 @@ The lab runs exact privately signed Core451/Store1.1.7; the founder accepts Feed
 
 Current task checkpoint: C:/Users/shariq/Documents/Codex/2026-09-05/im/work/kiwe-v1-completion-2026-10-28. Record source-backed findings, consequential failures, current candidates, acceptance limits and actual deployment separately.
 
-## Current source qualification
+## Source qualification on 28 October
 
 Fresh candidates are Core452, Store1.1.8, Start9.9 and compiler2.18.3; immutable451/117 artifacts remain unchanged. The expanded actual WordPress/MariaDB/unchanged PhoneKey suite passes137 checks (67 editorial,70 Store), including real Bricks2.4.2 Save submission, pair-specific SQL filters, exact private notification receipt and a burst of25 later arrivals. The initial isolated Bricks bootstrap omitted a native function; the final fixture loads the actual theme bootstrap rather than a fake implementation. The earlier popular-only comment-cache failure was corrected at native cache_domain, and failures remain in the task receipts. Full installed-browser/package/recovery and shared/publication gates remain open. No live site is changed by this source report.
+
+## 29 October continuation
+
+Core452 and Store1.1.8 pass the hosted lab installation, complete native dashboard renderer, actual browser Home/Apps/Auth/Security reads,19 native Bricks2.4.3 compiler/form tests, and guest Add/Quantity/Checkout/empty-cart checks. The two private synthetic form enquiries remain temporarily for the final browser check. The initial Bricks test adapter lacked2.4.3's native form methods; its first failure and successful compatible adapter are retained. No Kiwe form-storage change was needed. The initial dashboard critical-error page is not reproduced by complete native rendering or subsequent actual browser requests; old September logs do not establish a current cause.
+
+The browser confirms one remaining Forms navigation defect: native `wp_localize_script` emits the focus ID as text, while the screen required a number. A fresh Core453 candidate normalizes that bounded native ID. Immutable452/118 artifacts remain intact. Its complete baseline passes188 of190 gates, including four syntax groups, and initially fails two release-metadata gates; regenerate the declared token metadata and current changelog, then rerun those affected gates without relabelling the original failure. All native PHP behavior owners and Store118 remain unchanged.
+
+Seam2.18.3's committed canonical toolkit pin is6efa24d; the repaired public projection check and both builds pass. Existing public Sites version46 deploys source38623b8 (canonical compiler source3a664d3); Hostinger build01a18544-fb81-7066-b83f-f2217e6ae1a8 completes with Node22 retained. Served-artifact parity, Start9.9 publication and exact transport retirement remain open. All three client WordPress sites remain Core450 at this checkpoint; the founder's scoped authorization remains valid without another approval request.

@@ -1,0 +1,229 @@
+{
+  "schema": "kiwe.v1.acceptance-summary.v1",
+  "date": "2026-10-29",
+  "passed": true,
+  "launchName": "Kiwe 1",
+  "technicalCore": "8.0.0-rc.454",
+  "coreArchive": {
+    "sha256": "6eedca1569103a3345f551c3f5e6de11fb35c0e2241a7b31a20c87273f7a581e",
+    "bytes": 2536047
+  },
+  "store": {
+    "version": "1.1.8",
+    "sha256": "22ae7e249e421ef4428f22cbd2bdd96eb4b16b480a0e02cf23fedf3257843fcd"
+  },
+  "targets": [
+    {
+      "label": "lab",
+      "domain": "plum-giraffe-539524.hostingersite.com",
+      "core": "8.0.0-rc.454",
+      "installChecks": 603,
+      "bootChecks": 7,
+      "profileChecks": 24,
+      "originalRoleRows": 5,
+      "apps": {
+        "store": "1.1.8",
+        "seo": "1.1.0",
+        "guest": "1.1.3",
+        "ai": "1.1.0",
+        "sitegraph": "1.1.0"
+      },
+      "settingsChanged": false
+    },
+    {
+      "label": "national",
+      "domain": "nationalchikki.com",
+      "core": "8.0.0-rc.454",
+      "installChecks": 603,
+      "bootChecks": 7,
+      "profileChecks": 131,
+      "originalRoleRows": 112,
+      "apps": {
+        "store": "1.1.8",
+        "seo": "1.1.0",
+        "guest": "1.1.3",
+        "ai": "1.1.0",
+        "sitegraph": "1.1.0"
+      },
+      "settingsChanged": false
+    },
+    {
+      "label": "dharwad",
+      "domain": "dharwadpedha.com",
+      "core": "8.0.0-rc.454",
+      "installChecks": 603,
+      "bootChecks": 7,
+      "profileChecks": 383,
+      "originalRoleRows": 364,
+      "apps": {
+        "store": "1.1.8",
+        "seo": "1.1.0",
+        "guest": "1.1.3",
+        "ai": "1.1.0",
+        "sitegraph": "1.1.0"
+      },
+      "settingsChanged": false
+    },
+    {
+      "label": "ascendants",
+      "domain": "ascendants.in",
+      "core": "8.0.0-rc.454",
+      "installChecks": 603,
+      "bootChecks": 7,
+      "profileChecks": 155,
+      "originalRoleRows": 136,
+      "apps": {
+        "store": null,
+        "seo": null,
+        "guest": "1.1.3",
+        "ai": "1.1.0",
+        "sitegraph": "1.1.0"
+      },
+      "settingsChanged": false
+    }
+  ],
+  "qualification": {
+    "core": {
+      "kind": "One complete run and affected package-metadata repair",
+      "completeRun": "baseline454-a.out",
+      "passed": 189,
+      "failed": 1,
+      "repaired": [
+        "manifest454-b.out",
+        "package454-verify-b.out"
+      ],
+      "syntaxGroups": 4,
+      "originalFailureRetained": true
+    },
+    "nativeCurrentSource": 141,
+    "earlierPhysicalBoundaryChecks": 86,
+    "earlierNativeBricksChecks": 19,
+    "phoneKeyEngineSha256": "03ebbf97a5135a5f66ead3ea8aaafa54848edcfb0af2b92bd8c4687f493d46d0",
+    "seam": {
+      "composedTests": 424,
+      "initialSynchronizedRunPassed": 423,
+      "initialProvenanceFailureRetained": true,
+      "postPromotionRepositoryLayoutTests": 4,
+      "finalReproducibilityTests": 4,
+      "bothProductionBuilds": true
+    }
+  },
+  "shared": {
+    "start": {
+      "release": "9.9-d25ac5a01c64",
+      "files": 335,
+      "changedFiles": 275,
+      "unlistedPreserved": 1294
+    },
+    "seam": {
+      "schema": "2.18.3",
+      "styleNamespace": "v38",
+      "canonicalRuntimeCommit": "3a664d33f467da4fbb9601d68205a8fefcc4ddc7",
+      "pinnedKiweAuthoringCommit": "6efa24d6ec0338d559bce4f4f3eda703cd19350b",
+      "hostingerBuild": "01a18544-fb81-7066-b83f-f2217e6ae1a8",
+      "sitesProject": "appgprj_6a7b58e47fa88191b7f25cb6ba84aad4",
+      "sitesVersion": 46,
+      "sitesDeployment": "appgdep_6ae2a06105b481918b29dac27854f37c",
+      "contractParity": [
+        {
+          "url": "https://seam.kiwelaunch.com",
+          "status": 200,
+          "exactParsedContract": true,
+          "rawSha256": "f7fb8b58aa1e109feaa6b37611843d48a0039fbb9302e0487ba9f6cbfe4c5688",
+          "normalizedSha256": "886b2217da454ca828b029b6576dfec3ebb6159197641770886956fe4924f828",
+          "lineEndingOnly": true
+        },
+        {
+          "url": "https://seam-compiler-native.munaf-m-patni.chatgpt.site",
+          "status": 200,
+          "exactParsedContract": true,
+          "rawSha256": "886b2217da454ca828b029b6576dfec3ebb6159197641770886956fe4924f828",
+          "normalizedSha256": "886b2217da454ca828b029b6576dfec3ebb6159197641770886956fe4924f828",
+          "lineEndingOnly": false
+        }
+      ],
+      "actualBrowserDownloadParity": {
+        "passed": true,
+        "actualBrowserDownloads": true,
+        "hosts": [
+          "https://seam.kiwelaunch.com",
+          "https://seam-compiler-native.munaf-m-patni.chatgpt.site"
+        ],
+        "schema": "2.18.3",
+        "nativeNamedForm": true,
+        "saveSubmission": true,
+        "emailDeliveryDisabled": true,
+        "normalizedTemplateSha256": "7e127f2fecbd60287bf33b70682481b6c4abd80d015e687f1e02b85b5ee70b06",
+        "normalization": [
+          "date",
+          "date_formatted",
+          "validated native element and attribute allocated IDs with exact graph retained"
+        ]
+      }
+    }
+  },
+  "guestCheckout": {
+    "national": {
+      "productId": 477,
+      "add": true,
+      "quantity": true,
+      "checkout": true,
+      "phoneRequired": true,
+      "cartRestoredEmpty": true
+    },
+    "dharwad": {
+      "productId": 16,
+      "add": true,
+      "quantity": true,
+      "checkout": true,
+      "phoneRequired": true,
+      "cartRestoredEmpty": true
+    },
+    "orderSubmitted": false
+  },
+  "closure": {
+    "offlineArchives": 11,
+    "independentlyAuthenticatedMembers": 5929,
+    "retiredPrivateRoots": 7,
+    "retiredPrivateMembers": 3535,
+    "retiredPrivateRawBytes": 188368038,
+    "ownedTrackedPublicInputsConfirmedAbsent": 47,
+    "additionalSelfRetiringGuestHelpers": 2,
+    "ownedFinalControllerRetired": true,
+    "rootInventories": [
+      {
+        "domain": "plum-giraffe-539524.hostingersite.com",
+        "entries": 27,
+        "ownedInputs": [],
+        "passed": true
+      },
+      {
+        "domain": "nationalchikki.com",
+        "entries": 27,
+        "ownedInputs": [],
+        "passed": true
+      },
+      {
+        "domain": "dharwadpedha.com",
+        "entries": 30,
+        "ownedInputs": [],
+        "passed": true
+      },
+      {
+        "domain": "ascendants.in",
+        "entries": 31,
+        "ownedInputs": [],
+        "passed": true
+      }
+    ],
+    "soleOriginalCron": true,
+    "protectedOperatorInputs": 62,
+    "immediateRecoveryRootsRetained": 4
+  },
+  "limitations": [
+    "Fresh live owner sessions were unavailable; current shared owner UI was reviewed on the signed-in lab, and live role/settings/editor policy was checked natively.",
+    "Real email/SMS/WhatsApp/push, real OTP recipients, physical-device installs and real orders were not sent for this release.",
+    "Seven older local physical-test folders remain after automatic approval review rejected their deletion without a reason; no bypass was attempted.",
+    "Google, Meta, expanded MCP, remaining shared performance and Ascendants SEO handover remain separate programmes."
+  ]
+}
