@@ -12,7 +12,7 @@ on:
           - candidate
           - stable
       profile:
-        description: Package layout
+        description: Package profile
         required: true
         default: bundled
         type: choice
@@ -40,47 +40,49 @@ jobs:
       - name: Install Kiwe AI Toolkit dependencies
         working-directory: kiwe-ai-toolkit
         run: npm ci --no-audit --no-fund
-      - name: Install locked MCP dependencies for comparison
+      - name: Verify source baseline
         env:
           COMPOSER_ROOT_VERSION: dev-main
-        run: composer install --working-dir=packages/kiwe-mcp-runtime --no-dev --prefer-dist --no-interaction --no-progress
-      - name: Verify source baseline
         run: |
+          composer install --working-dir=packages/kiwe-mcp-runtime --no-dev --prefer-dist --no-interaction --no-progress
           npm ci --prefix tools/workspace-prototype --no-audit --no-fund
           node tools/release/verify-green-baseline.cjs
       - name: Require completed client feature coverage for stable launch
         if: inputs.channel == 'stable'
         run: node tools/workspace-prototype/audit-coverage.cjs "$RUNNER_TEMP/workspace-launch.json" --require-launch
-      - name: Prepare physical Core profile
-        if: inputs.profile == 'core'
-        run: |
-          node tools/release/build-core-app-profile.mjs --output-root="$RUNNER_TEMP/kiwe-core"
-          signing_root="$RUNNER_TEMP/kiwe-core-signing"
-          mkdir -p "$signing_root/tools/release" "$signing_root/wp-content"
-          cp -R "$RUNNER_TEMP/kiwe-core/mu-plugins" "$signing_root/wp-content/"
-          cp tools/release/build-signed-update.mjs "$signing_root/tools/release/"
-          cp tools/release/kiwe-update-public-key.json "$signing_root/tools/release/"
       - name: Build signed release feed
+        if: inputs.profile == 'bundled'
         env:
           KIWE_UPDATE_ED25519_PRIVATE_PEM: ${{ secrets.KIWE_UPDATE_ED25519_PRIVATE_PEM }}
-          KIWE_RELEASE_CHANNEL: ${{ inputs.channel }}
-          KIWE_RELEASE_PROFILE: ${{ inputs.profile }}
-        run: |
-          case "$KIWE_RELEASE_PROFILE" in
-            core)
-              node "$RUNNER_TEMP/kiwe-core-signing/tools/release/build-signed-update.mjs" \
-                --channel="$KIWE_RELEASE_CHANNEL" --archive="$RUNNER_TEMP/kiwe-core/kiwe-core.zip" \
-                --output-root="$GITHUB_WORKSPACE/public/app.kiwelaunch.com/updates/kiwe/v1"
-              ;;
-            bundled)
-              node tools/release/build-signed-update.mjs --channel="$KIWE_RELEASE_CHANNEL"
-              ;;
-            *) exit 2 ;;
-          esac
+        run: node tools/release/build-signed-update.mjs --channel=${{ inputs.channel }}
       - name: Upload deployable feed
+        if: inputs.profile == 'bundled'
         uses: actions/upload-artifact@v4
         with:
           name: kiwe-${{ inputs.channel }}-signed-feed
           path: public/app.kiwelaunch.com/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Build Core package
+        if: inputs.profile == 'core'
+        run: node tools/release/build-core-app-profile.mjs --output-root="$RUNNER_TEMP/kiwe-core-profile"
+      - name: Sign Core package
+        if: inputs.profile == 'core'
+        env:
+          KIWE_RELEASE_CHANNEL: ${{ inputs.channel }}
+          KIWE_UPDATE_ED25519_PRIVATE_PEM: ${{ secrets.KIWE_UPDATE_ED25519_PRIVATE_PEM }}
+        run: |
+          node tools/release/sign-core-app-profile.mjs \
+            --profile-root="$RUNNER_TEMP/kiwe-core-profile" \
+            --output-root="$RUNNER_TEMP/kiwe-core-signed" \
+            --channel="$KIWE_RELEASE_CHANNEL"
+      - name: Upload signed Core ZIP and manifest
+        if: inputs.profile == 'core'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiwe-${{ inputs.channel }}-core-signed
+          path: |
+            ${{ runner.temp }}/kiwe-core-signed/releases/*/kiwe-mu-plugin.zip
+            ${{ runner.temp }}/kiwe-core-signed/releases/*/manifest.json
           if-no-files-found: error
           retention-days: 30
