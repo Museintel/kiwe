@@ -20,7 +20,7 @@ function testimonial(m,g,otherDocument=false){
  g.bricks.queryLoopTypes=[{objectType:'kiwe_testimonials'}];
  g.kiwe.discussion.bricks.testimonialTarget='{kiwe_testimonial_target_id}';g.kiwe.discussion.bricks.testimonialQuery='kiwe_testimonials';
  m.documents[0].stitches[0].discussionTarget='{kiwe_testimonial_target_id}';
- const collection={kind:'collection',key:'testimonials',containerAnchor:'testimonials',prototypeAnchor:'testimonial',query:{objectType:'kiwe_testimonials'},authority:{source:'sitegraph',pointer:'/bricks/queryLoopTypes/0',evidence:'Synthetic native public array query'}};
+ const collection={kind:'collection',key:'testimonials',semantic:'testimonials',containerAnchor:'testimonials',prototypeAnchor:'testimonial',query:{objectType:'kiwe_testimonials'},authority:{source:'sitegraph',pointer:'/bricks/queryLoopTypes/0',evidence:'Synthetic native public array query'}};
  const region='<section data-seam-anchor="testimonials"><article data-seam-anchor="testimonial">Real source prototype</article></section>';
  if(otherDocument){const html='<!doctype html><html lang="en"><head><title>Other fixture</title></head><body>'+region+'</body></html>';fs.writeFileSync(temp+'/other.html',html);m.sources.push({path:'other.html',sha256:crypto.createHash('sha256').update(html).digest('hex')});m.documents.push({...structuredClone(m.documents[0]),path:'other.html',stitches:[collection],closure:{status:'complete',declaredAnchors:2,unresolved:[]}});}
  else{const html=fs.readFileSync(temp+'/index.html','utf8').replace('</body>',region+'</body>');fs.writeFileSync(temp+'/index.html',html);m.sources[0].sha256=crypto.createHash('sha256').update(html).digest('hex');m.documents[0].stitches.push(collection);m.documents[0].closure.declaredAnchors=5;}
