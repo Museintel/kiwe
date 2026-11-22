@@ -24,11 +24,14 @@ final class Checkout_Service {
 	public function register(): void {
 		if ( ! \DSA\Apps\Store_App_Service::enabled() ) return;
 		add_filter( 'woocommerce_checkout_get_value', [ $this, 'checkout_value' ], 5, 2 );
+		foreach ( [ 'billing_first_name','billing_last_name','billing_email','billing_phone' ] as $contact_field ) add_filter( 'default_checkout_' . $contact_field, [ $this, 'contact_checkout_value' ], 20, 2 );
 		add_filter( 'woocommerce_ship_to_different_address_checked', [ $this, 'ship_to_different_address_checked' ], 5 );
 		add_filter( 'woocommerce_checkout_posted_data', [ $this, 'merge_draft_into_posted_data' ], 5 );
 		add_action( 'woocommerce_after_checkout_validation', [ $this, 'capture_checkout_errors' ], 90, 2 );
+		add_action( 'woocommerce_after_checkout_validation', [ $this, 'capture_subscriber' ], 95, 2 );
 		add_action( 'woocommerce_checkout_order_processed', [ $this, 'clear_after_order' ], 90 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'clear_after_order' ], 90 );
+		add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'capture_block_subscriber' ], 85 );
 	}
 
 	public function enabled(): bool {
@@ -130,6 +133,7 @@ final class Checkout_Service {
 			$this->set_session_value( self::ERROR_KEY, $errors );
 			if ( empty( $errors['fields'] ) && empty( $errors['notices'] ) ) {
 				$this->persist_customer_addresses( $draft );
+				$this->capture_subscriber( $draft, new WP_Error() );
 			}
 		}
 
@@ -155,6 +159,27 @@ final class Checkout_Service {
 		$draft = $this->draft();
 
 		return array_key_exists( $input, $draft ) ? $draft[ $input ] : $value;
+	}
+	public function contact_checkout_value( $value, string $input ) {
+		if ( ! $this->enabled() ) return $value;
+		// A provided checkout value, including another plugin's value, takes priority over remembered contact.
+		if ( null !== $value && '' !== $value ) return $value;
+		$role = [ 'billing_first_name'=>'first_name', 'billing_last_name'=>'last_name', 'billing_email'=>'email', 'billing_phone'=>'phone' ][$input] ?? '';
+		if ( ! $role || ! class_exists( '\\DSA\\Identity\\Form_Contact_Service' ) ) return $value;
+		$own = \DSA\Identity\Form_Contact_Service::prefill();
+		return '' !== $own[$role] ? $own[$role] : $value;
+	}
+
+	/** A complete admitted checkout is a subscriber entry; autosaved partial keystrokes are not. */
+	public function capture_subscriber( array $data, WP_Error $errors ): void {
+		if ( ! $this->enabled() || $errors->has_errors() || ! class_exists( '\\DSA\\Identity\\Form_Contact_Service' ) ) return;
+		// Woo must create its requested customer first; do not reserve that email with a pending subscriber.
+		if ( ! is_user_logged_in() && ( ! empty( $data['createaccount'] ) || ( WC()->checkout() && WC()->checkout()->is_registration_required() ) ) ) return;
+		\DSA\Identity\Form_Contact_Service::capture( [ 'first_name'=>$data['billing_first_name'] ?? '', 'last_name'=>$data['billing_last_name'] ?? '', 'email'=>$data['billing_email'] ?? '', 'phone'=>$data['billing_phone'] ?? '' ] );
+	}
+	public function capture_block_subscriber( $order ): void {
+		if ( ! $order instanceof \WC_Order ) return;
+		$this->capture_subscriber( [ 'billing_first_name'=>$order->get_billing_first_name(), 'billing_last_name'=>$order->get_billing_last_name(), 'billing_email'=>$order->get_billing_email(), 'billing_phone'=>$order->get_billing_phone() ], new WP_Error() );
 	}
 
 	public function ship_to_different_address_checked( $checked ): bool {

@@ -318,10 +318,105 @@
                   "$ref": "#/$defs/token"
                 },
                 "discussionTarget": {
-                  "enum": ["current", "site", "{kiwe_discussion_id}", "{kiwe_testimonial_target_id}"]
+                  "enum": [
+                    "current",
+                    "site",
+                    "{kiwe_discussion_id}",
+                    "{kiwe_testimonial_target_id}"
+                  ]
+                },
+                "linkAction": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "channel",
+                    "subject"
+                  ],
+                  "properties": {
+                    "action": {
+                      "enum": [
+                        "chat",
+                        "share"
+                      ]
+                    },
+                    "channel": {
+                      "enum": [
+                        "whatsapp",
+                        "email",
+                        "x",
+                        "instagram",
+                        "facebook",
+                        "youtube",
+                        "pinterest",
+                        "linkedin",
+                        "native",
+                        "copy"
+                      ]
+                    },
+                    "subject": {
+                      "enum": [
+                        "current",
+                        "{post_id}"
+                      ]
+                    }
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {
+                          "action": {
+                            "const": "chat"
+                          }
+                        }
+                      },
+                      "then": {
+                        "properties": {
+                          "channel": {
+                            "enum": [
+                              "whatsapp",
+                              "email",
+                              "x",
+                              "instagram",
+                              "facebook"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
                 }
               },
-              "allOf": [{"if": {"required": ["discussionTarget"]}, "then": {"properties": {"module": {"const": "comments"}}}}],
+              "allOf": [
+                {
+                  "if": {
+                    "required": [
+                      "discussionTarget"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "module": {
+                        "const": "comments"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "required": [
+                      "linkAction"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "module": {
+                        "const": "links"
+                      }
+                    }
+                  }
+                }
+              ],
               "required": [
                 "anchor",
                 "module"

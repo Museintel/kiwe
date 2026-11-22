@@ -90,6 +90,24 @@
         "path": "contact.socialLinks.linkedin",
         "label": "Your LinkedIn",
         "type": "url"
+      },
+      {
+        "path": "contact.messagingLinks.x",
+        "label": "X message link (optional)",
+        "type": "url",
+        "help": "Paste a message link provided by your account, such as https://x.com/messages/compose?recipient_id=your_numeric_account_id. A Chat button saves enquiries privately in Daily Forms before opening your conversation. X can prefill the saved message. Leave blank if messaging is unavailable."
+      },
+      {
+        "path": "contact.messagingLinks.instagram",
+        "label": "Instagram message link (optional)",
+        "type": "url",
+        "help": "Kiwe uses your standard Instagram profile above for Chat automatically. To use a different conversation, paste its message link, such as https://ig.me/m/your_username. Visitors save their enquiry privately in Daily Forms, then copy and paste it in Instagram. Your account must accept messages; automatic message prefill is not available."
+      },
+      {
+        "path": "contact.messagingLinks.facebook",
+        "label": "Messenger message link (optional)",
+        "type": "url",
+        "help": "Kiwe uses your standard Facebook profile/page above for Chat automatically. To use a different conversation, paste its message link, such as https://m.me/your_page. Visitors save their enquiry privately in Daily Forms, then copy and paste it in Messenger. Your account must accept messages; automatic message prefill is not available."
       }
     ]
   },

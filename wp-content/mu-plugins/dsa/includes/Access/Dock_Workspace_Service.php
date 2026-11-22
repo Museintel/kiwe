@@ -54,7 +54,10 @@ final class Dock_Workspace_Service {
 		$choices['dock'] = array_intersect_key( $dock, $this->fields()['dock'] );
 		$labels = $this->labels( $dock );
 		$choices['dock']['enabled_items'] = array_intersect_key( $dock['enabled_items'], $labels );
-		$choices['dock']['item_order'] = array_values( array_filter( $dock['item_order'], static fn( $id ) => isset( $labels[ $id ] ) ) );
+		// An older saved order is a preference, not a catalogue of available
+		// controls. Expose newly registered buttons without enabling them or
+		// writing settings during a read; retain the owner's existing order.
+		$choices['dock']['item_order'] = array_values( array_filter( array_unique( array_merge( $dock['item_order'], array_keys( $labels ) ) ), static fn( $id ) => isset( $labels[ $id ] ) ) );
 		$choices['style'] = array_intersect_key( $all['style'], $this->fields()['style'] );
 		$choices['dsa_theme'] = array_intersect_key( $all['dsa_theme'], $this->fields()['dsa_theme'] );
 		$choices['commerce'] = \DSA\Apps\Store_App_Service::enabled() ? array_intersect_key( $all['commerce'], $this->fields()['commerce'] ) : [];

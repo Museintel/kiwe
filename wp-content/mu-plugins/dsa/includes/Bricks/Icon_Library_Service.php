@@ -20,6 +20,10 @@ final class Icon_Library_Service {
 		'app_ios' => 'app-ios', 'app_android' => 'app-android',
 		'message_circle' => 'message-circle', 'comments' => 'message-circle',
 		'thumbs_up' => 'thumbs-up', 'flag' => 'flag', 'pin' => 'pin',
+		'facebook' => 'facebook', 'instagram' => 'instagram', 'x' => 'x',
+		'youtube' => 'youtube', 'pinterest' => 'pinterest', 'linkedin' => 'linkedin',
+		'whatsapp' => 'whatsapp', 'mail' => 'mail', 'email' => 'mail',
+		'chat' => 'message-circle', 'share' => 'share-2',
 	];
 
 	private static ?string $sprite = null;

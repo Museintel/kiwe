@@ -15,6 +15,19 @@ final class Native_State {
   return !is_multisite()&&current_user_can('install_plugins')&&current_user_can('activate_plugins')&&wp_is_file_mod_allowed('kiwe_apps');
  }
  public static function can_recover(): bool { return !is_multisite() && wp_is_file_mod_allowed('kiwe_apps') && current_user_can('activate_plugins') && (current_user_can('update_plugins') || current_user_can('install_plugins')); }
+ public static function can_remove(string $id): bool { return $id==='mcp'&&!Package_Layout::bundled($id)&&self::allowed()&&current_user_can('delete_plugins'); }
+ public static function removal_expected(string $id): string { return hash('sha256',Signed_Packet::canonical([self::snapshot(),get_option(Code_Recovery::RELEASES,[]),Code_Recovery::state($id)])); }
+ public static function remove(string $id,string $expected): void {
+  if(!self::can_remove($id)||!hash_equals(self::removal_expected($id),$expected))throw new \RuntimeException('Refresh the App review before removing its code.');
+  self::tools();$known=(array)get_option(Code_Recovery::RELEASES,[]);$release=$known[$id]??null;
+  if(!is_array($release)||!Signed_Packet::release($release))throw new \RuntimeException('An authenticated installed release is required for removal.');
+  Code_Recovery::prepare($release);
+  try {
+   $file='kiwe-'.$id.'/kiwe-'.$id.'.php';deactivate_plugins($file,true,false);$result=delete_plugins([$file]);
+   if(is_wp_error($result)||file_exists(WP_PLUGIN_DIR.'/kiwe-'.$id))throw new \RuntimeException('WordPress could not confirm App removal.');
+   Code_Recovery::removed($id);wp_clean_plugins_cache(true);
+  }catch(\Throwable $error){Code_Recovery::recover_removal($id);throw$error;}
+ }
  public static function filesystem(): void {
   self::tools();
   if(get_filesystem_method([],WP_PLUGIN_DIR)!=='direct'||!WP_Filesystem([],WP_PLUGIN_DIR))throw new \RuntimeException('This Apps release needs WordPress direct filesystem access. Ask the hosting administrator to configure native file ownership.');

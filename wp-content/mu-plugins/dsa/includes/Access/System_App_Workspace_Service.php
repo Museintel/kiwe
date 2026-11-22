@@ -103,7 +103,7 @@ final class System_App_Workspace_Service {
 					$sanitized = SecureTrack_Settings_Policy::sanitize_kiwe_settings( array_replace( $current, $kiwe ), $current );
 					$selected = array_intersect_key( $sanitized, $kiwe );
 					if ( ! $settings->compare_and_update_selected( $raw, [ 'secure'=>$selected ] ) ) return $this->error( 'Website security settings changed. Reload before saving.' );
-					if ( array_intersect_key( $kiwe, array_flip( [ 'protection_profile','auto_logout_enabled','auto_logout_minutes','auto_logout_roles' ] ) ) ) SecureTrack_Settings_Policy::sync_from_kiwe( (array) $settings->get( 'secure', [] ) );
+					if ( array_intersect_key( $kiwe, array_flip( [ 'protection_profile','auto_logout_enabled','auto_logout_minutes','auto_logout_roles' ] ) ) ) SecureTrack_Settings_Policy::sync_from_kiwe( (array) $settings->get( 'secure', [] ), array_key_exists( 'protection_profile', $kiwe ) );
 				}
 				if ( $changes ) { $result = SecureTrack_Settings_Policy::update_app_policy( $changes ); if ( is_wp_error( $result ) ) return $result; }
 			}

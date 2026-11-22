@@ -35,9 +35,10 @@ final class Library_Service {
   foreach(Runtime_Contract::IDS as$id){$recovery=Code_Recovery::state($id);$owner=Runtime_Registry::owner($id);$release=$catalogue['catalogue']['apps'][$id]??null;$installed=$native['apps'][$id]??null;
    $items[]=['id'=>$id,'name'=>match($id){'store'=>'Store','seo'=>'SEO',default=>$owner::NAME},'description'=>$owner::card()['description'],
     'enabled'=>$owner::enabled(),'installed'=>is_array($installed),'version'=>(string)($installed['version']??''),'active'=>!empty($installed['active']),'bundled'=>Package_Layout::bundled($id),'externalOwner'=>$id==='seo'?$native['seoOwner']:'','settingsUrl'=>$owner::enabled()?$owner::url():'','automatic'=>Native_State::automatic($id),'automaticExpected'=>hash('sha256',Signed_Packet::canonical([$native,Native_State::automatic($id)])),'canUpdate'=>current_user_can('update_plugins'),'releaseVersion'=>(string)($release['version']??''),
+    'canRemove'=>isset($native['apps'][$id]) && Native_State::can_remove($id),'removalExpected'=>isset($native['apps'][$id]) && Native_State::can_remove($id)?Native_State::removal_expected($id):'',
     'job'=>isset($jobs[$id])?$installer->projection($jobs[$id]):null,
     'recoveryRemovesApp'=>($recovery['before']??null)===[],
-    'canRecover'=>Native_State::can_recover()&&($recovery['id']??'')===$id&&($recovery['phase']??'')==='accepted','recoveryExpected'=>($recovery['id']??'')===$id?hash('sha256',Signed_Packet::canonical($recovery)):''];
+    'canRecover'=>Native_State::can_recover()&&($recovery['id']??'')===$id&&in_array($recovery['phase']??'',['accepted','removed'],true),'recoveryExpected'=>($recovery['id']??'')===$id?hash('sha256',Signed_Packet::canonical($recovery)):''];
   }
   return['items'=>$items,'canInstall'=>Native_State::allowed(),'installationMessage'=>is_multisite()?'This first Apps release supports individual WordPress sites. Ask the network administrator for a qualified network migration.':(!wp_is_file_mod_allowed('kiwe_apps')?'WordPress file changes are disabled on this hosting account. Your website manager can review that restriction.':''),'catalogue'=>['available'=>$catalogue['available'],'message'=>$catalogue['message'],'checkedAt'=>$catalogue['checkedAt']],'woo'=>$native['woo'],'nativeUpdatesUrl'=>admin_url('plugins.php')];
  }
@@ -50,7 +51,7 @@ final class Library_Service {
  public function mutate(\WP_REST_Request $request): \WP_REST_Response {
   if(!$this->permission($request))return UI::failure(new \WP_Error('kiwe_apps_forbidden','Native plugin installation permission and a current review are required.'),403);
   $body=$request->get_json_params();$operation=is_array($body)?($body['operation']??''):'';
-  $keys=['refresh'=>['operation'],'review'=>['operation','app','automatic'],'start'=>['operation','app','automatic','expected'],'advance'=>['operation','app','job','cursor'],'cancel'=>['operation','app','job'],'automatic'=>['operation','app','enabled','expected'],'recover'=>['operation','app','expected']];
+  $keys=['refresh'=>['operation'],'review'=>['operation','app','automatic'],'start'=>['operation','app','automatic','expected'],'advance'=>['operation','app','job','cursor'],'cancel'=>['operation','app','job'],'automatic'=>['operation','app','enabled','expected'],'recover'=>['operation','app','expected'],'remove'=>['operation','app','expected']];
   if(!is_string($operation)||!isset($keys[$operation])||!is_array($body)||count($body)!==count($keys[$operation])||array_diff(array_keys($body),$keys[$operation])||($operation!=='refresh'&&!in_array($body['app']??'',Runtime_Contract::IDS,true)))return UI::failure(new \WP_Error('kiwe_apps_request','Review a supported App action.'),400);
   try{
    $installer=new Installer_Service();$id=$body['app']??'';
@@ -65,7 +66,9 @@ final class Library_Service {
    }
    if(!Release_Coordinator::acquire())throw new \RuntimeException('Another website update is finishing.');
    try{
-    if($operation==='automatic'){
+    if($operation==='remove'){
+     if(!is_string($body['expected']))throw new \RuntimeException('Review the current App before removal.');Native_State::remove($id,$body['expected']);return UI::response(['reload'=>true]);
+    }elseif($operation==='automatic'){
      if(!is_bool($body['enabled'])||!is_string($body['expected'])||!hash_equals(hash('sha256',Signed_Packet::canonical([Native_State::snapshot(),Native_State::automatic($id)])),$body['expected']))throw new \RuntimeException('The native App or update choice changed. Refresh before saving.');Native_State::automatic_choice($id,$body['enabled']);
     }elseif($operation==='recover'){
      if(!Native_State::can_recover())throw new \RuntimeException('Native plugin activation, file changes and software-management permission are required for recovery.');

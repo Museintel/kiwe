@@ -51,7 +51,7 @@ final class Team_App_Service {
 		unset( $person );
 		$account_policy = $service->account_policy();
 		$roles = Team_Workspace_Service::role_catalog();
-		return $this->response( [ 'people'=>$people, 'navigation'=>$list['navigation'], 'hasNext'=>$list['has_next'], 'canAccounts'=>current_user_can( 'list_users' ) && current_user_can( 'edit_users' ), 'accountPolicy'=>$account_policy, 'roleChoices'=>$roles, 'commerce'=>class_exists( 'WC_Customer' ) ] );
+		return $this->response( [ 'people'=>$people, 'navigation'=>$list['navigation'], 'hasNext'=>$list['has_next'], 'canAccounts'=>current_user_can( 'list_users' ) && current_user_can( 'edit_users' ), 'accountPolicy'=>$account_policy, 'roleChoices'=>$roles, 'commerce'=>\DSA\Apps\Store_App_Service::enabled() && class_exists( 'WC_Customer' ) ] );
 	}
 	public function create( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( 'POST' !== $request->get_method() || ! $this->permission( $request ) ) return $this->denied();

@@ -50,6 +50,9 @@ final class Native_Service_Source_Service {
 	}
 
 	public function activate( string $expected ) {
+		return Context_Write_Coordinator::run(fn()=>$this->activate_source($expected));
+	}
+	private function activate_source( string $expected ) {
 		if ( ! self::can_activate() ) return new \WP_Error( 'kiwe_service_source_unavailable', 'Review the existing service source or plans before starting public services.', [ 'status'=>409 ] );
 		$stored = get_option( Design_Context_Profile_Service::OPTION_PROFILE, [] );
 		$stored = is_array( $stored ) ? $stored : [];

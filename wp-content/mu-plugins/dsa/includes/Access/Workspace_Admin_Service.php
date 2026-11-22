@@ -282,7 +282,7 @@ final class Workspace_Admin_Service {
 			$actions[] = [ 'label'=>__( 'Posts', 'dsa' ), 'description'=>current_user_can( 'edit_others_posts' ) ? __( 'Manage articles, drafts and submissions', 'dsa' ) : __( 'Manage your articles and drafts', 'dsa' ), 'url'=>self::posting_url(), 'icon'=>'dashicons-admin-post' ];
 			if ( current_user_can( 'edit_others_posts' ) && current_user_can( 'publish_posts' ) ) $actions[] = [ 'label'=>__( 'Review submissions', 'dsa' ), 'description'=>__( 'Open posts awaiting approval', 'dsa' ), 'url'=>class_exists( Post_Workspace_Service::class ) && Post_Workspace_Service::enabled() ? add_query_arg( 'status', 'pending', Post_Workspace_Service::url() ) : admin_url( 'edit.php?post_status=pending' ), 'icon'=>'dashicons-yes-alt' ];
 		}
-		if ( current_user_can( 'moderate_comments' ) && class_exists( Continuity_App_Service::class ) && Continuity_App_Service::enabled() ) $actions[] = [ 'label'=>__( 'Feedback', 'dsa' ), 'description'=>current_user_can( 'kiwe_manage_context' ) ? __( 'Moderate comments and choose testimonials', 'dsa' ) : __( 'Moderate comments and reviews', 'dsa' ), 'url'=>Continuity_App_Service::feedback_url(), 'icon'=>'dashicons-testimonial' ];
+		if ( \DSA\Discussion\Feedback_Access::enabled() && current_user_can( 'moderate_comments' ) && class_exists( Continuity_App_Service::class ) && Continuity_App_Service::enabled() ) $actions[] = [ 'label'=>__( 'Feedback', 'dsa' ), 'description'=>current_user_can( 'kiwe_manage_context' ) ? __( 'Moderate comments and choose testimonials', 'dsa' ) : __( 'Moderate comments and reviews', 'dsa' ), 'url'=>Continuity_App_Service::feedback_url(), 'icon'=>'dashicons-testimonial' ];
 		if ( 'administrator' === $role ) {
 			if ( \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_products' ) && current_user_can( 'edit_products' ) ) $actions[] = [ 'label'=>__( 'Products', 'dsa' ), 'description'=>__( 'Manage products and pricing', 'dsa' ), 'url'=>Commerce_App_Service::enabled() ? Commerce_App_Service::url( 'products' ) : admin_url( 'edit.php?post_type=product' ), 'icon'=>'dashicons-products' ];
 			if ( \DSA\Apps\Store_App_Service::enabled() && function_exists( 'wc_get_orders' ) && current_user_can( 'edit_shop_orders' ) && current_user_can( 'edit_others_shop_orders' ) ) $actions[] = [ 'label'=>__( 'Orders', 'dsa' ), 'description'=>__( 'Review and fulfil orders', 'dsa' ), 'url'=>Commerce_App_Service::enabled() ? Commerce_App_Service::url( 'orders' ) : admin_url( 'edit.php?post_type=shop_order' ), 'icon'=>'dashicons-cart' ];
@@ -333,8 +333,8 @@ final class Workspace_Admin_Service {
 			$apps[] = [ 'label'=>__( 'Store', 'dsa' ), 'description'=>__( 'Products, delivery, taxes, offers and orders', 'dsa' ), 'url'=>\DSA\Apps\Store_App_Service::home_url(), 'icon'=>'dashicons-store', 'app'=>\DSA\Apps\Store_App_Service::card() ];
 		}
 
-		foreach ( [ \DSA\Apps\Guest_App_Service::class=>'dashicons-welcome-write-blog',\DSA\Apps\AI_App_Service::class=>'dashicons-lightbulb',\DSA\Apps\SiteGraph_App_Service::class=>'dashicons-networking' ] as $owner=>$icon ) {
-			if ( ! $owner::allowed() ) continue;
+		foreach ( [ \DSA\Apps\Guest_App_Service::class=>'dashicons-welcome-write-blog',\DSA\Apps\AI_App_Service::class=>'dashicons-lightbulb',\DSA\Apps\SiteGraph_App_Service::class=>'dashicons-networking',\DSA\Apps\MCP_App_Service::class=>'dashicons-admin-links' ] as $owner=>$icon ) {
+			if ( ! $owner::allowed() && ! ( $owner === \DSA\Apps\MCP_App_Service::class && $owner::enabled() && $owner::can_connect() ) ) continue;
 			$apps[] = [ 'label'=>$owner::NAME,'description'=>$owner::DESCRIPTION,'url'=>$owner::home_url(),'icon'=>$icon,'app'=>$owner::card() ];
 		}
 		foreach ( [ 'auth'=>'dashicons-lock', 'security'=>'dashicons-shield' ] as $id=>$icon ) {

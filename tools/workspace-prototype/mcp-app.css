@@ -1,0 +1,5 @@
+@import './module-workspace.css';
+@import './native-workflow.css';
+.kiwe-module main>section{padding-block:var(--kiwe-space-6,1.5rem);border-block-end:1px solid var(--kiwe-line,#c8d1c8)}
+.kiwe-mcp-connection{padding:var(--kiwe-space-5,1.25rem);border:1px solid var(--kiwe-line,#c8d1c8);border-radius:var(--kiwe-radius-card,1rem)}
+.kiwe-module pre{white-space:pre-wrap;overflow-wrap:anywhere}

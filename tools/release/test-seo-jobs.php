@@ -213,6 +213,13 @@ $pageApplied=$v->apply_object_proposal(new WP_REST_Request('POST',['id'=>1],['pr
 check('reviewed client page SEO updates only search metadata',$pageApplied->status===200&&$meta[1]['_kiwe_seo_title']==='Reviewed title'&&$posts[1]->post_excerpt==='Existing excerpt');
 $posts[1]->post_password='protected';clean_post_cache(1);$protected=$v->read_objects(new WP_REST_Request('GET',['scope'=>'page','item_id'=>1]));
 check('protected pages do not enter client page SEO',$protected->status===404);$pageSeoClient=false;$actor=1;
+[$s,$b,$v]=setup(1);$b->enabled=false;$nativeRecord=$v->authoring_record('post',1);$nativeItem=$nativeRecord['item']??[];
+check('Native SEO primitives work without a paid AI request',!is_wp_error($nativeRecord)&&!$b->calls&&!empty($nativeItem['expected']));
+$nativeSaved=$v->authoring_save_object(1,['scope'=>'post','expected'=>$nativeItem['expected'],'fields'=>['seoTitle'=>'Native external assistant title']]);
+check('Native SEO primitive reuses the existing writer and readback',$nativeSaved->status===200&&$meta[1]['_kiwe_seo_title']==='Native external assistant title'&&!$b->calls);
+$staleNative=$v->authoring_save_object(1,['scope'=>'post','expected'=>$nativeItem['expected'],'fields'=>['seoTitle'=>'Stale override']]);
+check('Native SEO primitive rejects stale writes',$staleNative->status===409&&$meta[1]['_kiwe_seo_title']==='Native external assistant title');
+$actor=2;check('Native SEO primitive cannot bypass current object authority',is_wp_error($v->authoring_record('post',1))&&$v->authoring_save_object(1,['scope'=>'post','expected'=>$nativeItem['expected'],'fields'=>['seoTitle'=>'Forbidden']])->status===403);$actor=1;
 // Rank Math now keeps the app off: its current native metadata and AI allowance remain untouched.
 [$s,$b,$v]=setup(1);define('RANK_MATH_VERSION','synthetic-late');$meta[1]['rank_math_title']='Provider-owned title';$externalBefore=$meta;
 check('external SEO provider disables the app instead of opening a second editor',!DSA\Apps\SEO_App_Service::enabled()&&$v->read_objects(new WP_REST_Request('GET',['scope'=>'post','item_id'=>1]))->status===403);

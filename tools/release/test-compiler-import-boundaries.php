@@ -33,6 +33,12 @@ namespace {
 	$check( $validate( $js )['sourceCode'] === true && ! \Bricks\Capabilities::current_user_can_execute_code(),'Native HTML authority admits source JavaScript without enabling PHP execution' );
 	$GLOBALS['code_allowed'] = true;
 	$check( $validate( $js )['sourceCode'] === true,'Authorized source JavaScript is retained explicitly' );
+	$check( $validate( $base,true )['sourceCode'] === false,'The isolated draft lane admits native bindings' );
+	$reject( static fn()=>$validate( $js,true ),'No authored JavaScript in the isolated lane even with native HTML authority' );
+	$interactive = $base; $interactive['content'][0]['settings']['_interactions'] = [ [ 'trigger'=>'click','action'=>'javascript','jsFunction'=>'unsafe' ] ];
+	$reject( static fn()=>$validate( $interactive,true ),'Executable Bricks interactions need separate native authority' );
+	$interactive['content'][0]['settings']['_interactions'] = [ [ 'trigger'=>'click','action'=>'scrollTo','targetSelector'=>'#safe' ] ];
+	$check( $validate( $interactive,true )['elements'] === 2,'Native scrolling stays available to draft imports' );
 	$unsupported = $base; $unsupported['version'] = '2.4.2';
 	$reject( static fn()=>$validate( $unsupported ),'Unqualified target family does not become accepted by metadata' );
 	$image = 'data:image/png;base64,AA==';

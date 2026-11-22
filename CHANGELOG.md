@@ -1,3 +1,7 @@
+## 8.0.0-rc.492 (2026-11-22, source sync)
+
+Published the reviewed WordPress source for the existing Core RC492 release, with Store 1.1.16 and MCP 1.0.0-rc.31. The combined source reproduces the signed Core ZIP using the Core profile builder. See the [RC492 source guide](docs/RC492-SOURCE.md) for artifact checksums and build instructions.
+
 ## 8.0.0-rc.454 / Kiwe1 final display correction (2026-10-29)
 
 - Kiwe1 is accepted on the lab and all three named sites, with contextual conversations, feedback-derived testimonials, trusted native form identities, included Auth/Security Apps and native-capability Menu Edit. Store1.1.8, existing business state and Ascendants' Rank Math/native workflow remain.

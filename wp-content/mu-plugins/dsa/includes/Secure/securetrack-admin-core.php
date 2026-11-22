@@ -1632,7 +1632,6 @@ function stp_pg_settings() {
         <label><input type="checkbox" name="emergency_safe_mode" <?php checked($s['emergency_safe_mode']); ?>> Emergency monitor-only mode</label><br>
         <label><input type="checkbox" name="adaptive_waf" <?php checked($s['adaptive_waf']); ?>> Enable normalized semantic payload detection</label><br>
         Block request at WAF score <input type="number" name="waf_block_score" value="<?php echo esc_attr($s['waf_block_score']); ?>" min="50" max="100" style="width:70px"><br>
-        <label><input type="checkbox" name="honeypot_enabled" <?php checked($s['honeypot_enabled']); ?>> Inject dynamic hidden honeypot endpoint</label><br>
         <label><input type="checkbox" name="tarpit_enabled" <?php checked($s['tarpit_enabled']); ?>> Ask severe bots to retry later (immediate 429 response)</label>
         <p class="description">Rejects the request immediately so legitimate visitors can use the server. No artificial delay is added.</p>
         <p class="description">Local-only detection for obfuscated SQLi, XSS, PHP execution payloads, traversal, encoded payloads, and bots that scrape hidden links. Emergency monitor-only mode keeps logging but pauses active denials while you investigate false positives.</p>

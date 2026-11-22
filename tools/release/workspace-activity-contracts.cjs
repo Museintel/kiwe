@@ -26,6 +26,9 @@ const root=path.resolve(__dirname,'../..'),read=p=>fs.readFileSync(path.join(roo
  recordWorkspaceVisit({headers:{get:()=>'{broken'}});assert.equal(calls.length,1,'Malformed presentation cannot replay a business request');
  recordWorkspaceVisit(response({...receipt,actor:6}),'');assert.equal(frames.length,0,'A Team or account-detail response cannot acknowledge an unseen Users collection');
  location.href='https://site.invalid/wp-admin/admin.php?page=kiwe-team';recordWorkspaceVisit(response({...receipt,actor:6}),'users');while(frames.length)frames.shift()();await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.length,2,'The rendered Users tab acknowledges its own receipt even when opened from Team');
+ const forms=coreCeiling=>({...receipt,snapshots:{forms:{section:'forms',realm:'all',epoch:'native-forms',ceiling:25,coreCeiling,issued:1,token:'signed',count:1}}});
+ recordWorkspaceVisit(response(forms(1000)),'forms');while(frames.length)frames.shift()();await new Promise(resolve=>setImmediate(resolve));
+ recordWorkspaceVisit(response(forms(1001)),'forms');while(frames.length)frames.shift()();await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.length,4,'Another Core enquiry has a distinct visit receipt even when the native Bricks ceiling is unchanged');assert.equal(JSON.parse(calls[3].options.body).coreCeiling,1001,'The Core source ceiling remains in the signed envelope');
  const native=read('wp-content/mu-plugins/dsa/includes/Access/Workspace_Activity_Service.php');
  assert(native.includes('BINARY option_value=BINARY %s'),'Concurrent native arrivals use compare-and-swap');
  assert(native.includes('array_slice( $keys, -64 )'),'Replay keys have a fixed bound');
@@ -37,5 +40,11 @@ const root=path.resolve(__dirname,'../..'),read=p=>fs.readFileSync(path.join(roo
  assert(read('wp-content/mu-plugins/dsa/includes/Settings.php').includes("$settings['abandoned_cart']['enabled'] = true;"),'Core capture ignores a legacy off switch');
  assert(setup.includes('SecureTrack_Db_Service::repair_database()'),'Setup uses native schema maintenance');
  assert(!/send_to_users|wp_mail\(/.test(setup),'Preparation has no external send path');
- console.log('PASS rendered, actor-scoped activity visits; bounded counters, stale-role and restore boundaries');
+ const {activitySource}=require('../workspace-prototype/build-workspace.cjs');
+ const shared=read('tools/workspace-prototype/workspace-activity.mjs');
+ assert(activitySource(shared,'forms').includes('snapshot.coreCeiling'),'Core Forms retains both source identities');
+ assert(!activitySource(shared,'commerce').includes('snapshot.coreCeiling'),'Native-only immutable Store does not ship the Forms adapter');
+ assert.throws(()=>activitySource(shared.replace('KIWE_MULTI_SOURCE_ACTIVITY_END','missing'),'forms'),/One explicit/,'Missing source boundary is refused');
+ assert.throws(()=>activitySource(shared+shared,'forms'),/One explicit/,'Duplicate source boundary is refused');
+ console.log('PASS rendered, actor-scoped activity visits; bounded counters, stale-role, restore and scoped build boundaries');
 })().catch(error=>{console.error(error);process.exitCode=1;});

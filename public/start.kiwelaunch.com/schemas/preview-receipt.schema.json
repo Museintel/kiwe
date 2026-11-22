@@ -22,7 +22,7 @@
     }
   },
   "allOf": [
-    {"if": {"properties": {"status": {"const": "ready-for-design-review"}}}, "then": {"properties": {"semanticMapValidation": {"properties": {"status": {"const": "passed"}}}, "runtimeResult": {"properties": {"status": {"const": "passed"}, "viewports": {"minItems": 2}, "proof": {"minItems": 2}}}}}},
+    {"if": {"properties": {"status": {"const": "ready-for-design-review"}}}, "then": {"properties": {"semanticMapValidation": {"properties": {"status": {"const": "passed"}}}, "runtimeResult": {"properties": {"status": {"const": "passed"}, "viewports": {"minItems": 3}, "proof": {"minItems": 3}}}}}},
     {"if": {"properties": {"status": {"const": "source-exported-unverified"}}}, "then": {"properties": {"runtimeResult": {"required": ["reason"], "properties": {"status": {"const": "unavailable"}, "reason": {"minLength": 1}}}}}}
   ],
   "$defs": {

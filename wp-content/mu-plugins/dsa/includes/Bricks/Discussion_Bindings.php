@@ -6,6 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** One current-loop binding for native Bricks controls and the shared Comments launcher. */
 final class Discussion_Bindings {
 	public static function render( string $name, $post = null ): string {
+		if(!\DSA\Discussion\Feedback_Access::enabled())return '';
 		$looping = class_exists( '\Bricks\Query' ) && \Bricks\Query::is_looping();
 		if ( $looping ) {
 			$object = \Bricks\Query::get_loop_object();

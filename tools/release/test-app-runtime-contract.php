@@ -21,7 +21,14 @@ try{
  foreach(['guest','ai','sitegraph']as$id){$provider=array_replace($descriptor,['id'=>$id,'coreApi'=>2,'requiresWoo'=>'','namespaces'=>[],'classes'=>[],'assets'=>[]]);check(Contract::validate($provider),'Noncommerce optional provider admitted '.$id);check(!Contract::validate(array_replace($provider,['requiresWoo'=>'11.2'])),'Noncommerce App cannot smuggle a Woo dependency '.$id);}
  foreach(['1.0','../1.0.0','1.0.0+unknown','1.0.0-rc.0','v1.0.0']as$bad)check(!Contract::version($bad),'Invalid version refused '.$bad);
  foreach(['../file.php','a/../file.php','/absolute.php','a//b.php','a\\b.php','a/.']as$bad)check(!Contract::relative($bad),'Unsafe relative path refused '.$bad);
- foreach([['coreApi'=>3],['extra'=>true],['id'=>'unknown'],['requiresWp'=>'0;code'],['requiresWoo'=>'1.0'],['namespaces'=>['DSA\\Access\\'=>'includes/Access/']],['classes'=>['DSA\\Runtime\\Update_Service'=>'includes/update.php']],['assets'=>['x'=>'../private.php']]]as$i=>$delta)check(!Contract::validate(array_replace($descriptor,$delta)),'Invalid provider boundary refused '.$i);
+ foreach([['coreApi'=>Contract::API+1],['extra'=>true],['id'=>'unknown'],['requiresWp'=>'0;code'],['requiresWoo'=>'1.0'],['namespaces'=>['DSA\\Access\\'=>'includes/Access/']],['classes'=>['DSA\\Runtime\\Update_Service'=>'includes/update.php']],['assets'=>['x'=>'../private.php']]]as$i=>$delta)check(!Contract::validate(array_replace($descriptor,$delta)),'Invalid provider boundary refused '.$i);
+ check(Contract::validate(array_replace($descriptor,['coreApi'=>3])),'Existing five-App provider API remains admitted');
+ $mcp=array_replace($descriptor,['id'=>'mcp','coreApi'=>4,'requiresWoo'=>'','namespaces'=>['DSA\\MCP\\'=>'includes/MCP/'],'classes'=>['DSA\\Access\\MCP_Workspace_Service'=>'includes/Access/MCP_Workspace_Service.php'],'assets'=>[]]);
+ check(Contract::validate($mcp),'Optional MCP provider admitted under the new Core API');
+ check(!Contract::validate(array_replace($mcp,['namespaces'=>['DSA\\PhoneKey\\'=>'includes/PhoneKey/']])),'MCP cannot replace the native identity owner');
+ $feedback=array_replace($descriptor,['id'=>'feedback','coreApi'=>3,'requiresWoo'=>'','namespaces'=>[],'classes'=>['DSA\\Access\\Feedback_Workspace_Service'=>'includes/Access/Feedback_Workspace_Service.php'],'assets'=>[]]);
+ check(!Contract::validate($feedback),'Built-in Feedback cannot be installed as an optional provider');
+ check(!Contract::validate(array_replace($feedback,['classes'=>['DSA\\Runtime\\Update_Service'=>'includes/unsafe.php']])),'Feedback cannot replace the Core updater');
  check(!Contract::compatible(array_replace($descriptor,['version'=>'1.0.0-rc.2'])),'Older signed code cannot supply this Core API implementation');
  check(Contract::supports('seo','1.0.0-rc.3')&&Contract::supports('store','1.0.0-rc.2'),'Current independent App floors admitted');
  check(!Contract::supports('store','1.0.0-rc.1')&&!Contract::supports('unknown','99.0.0'),'Older or unknown App floor refused');

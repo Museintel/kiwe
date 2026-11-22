@@ -4,11 +4,15 @@ namespace DSA\Utilities { final class Origin_Checker { public static function is
 namespace {
 define( 'ABSPATH', __DIR__ . '/' );
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
+define('WC_VERSION','11.2.1');function WC(){return new stdClass();}
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php'; define( 'KIWE_REACT_WORKSPACE', true );
 class WP_Error { public function __construct(public string $code, public string $message='', public array $data=[]) {} public function get_error_code(){return $this->code;} public function get_error_message(){return $this->message;} public function get_error_data(){return $this->data;} }
 class WP_REST_Response { public array $headers=[]; public function __construct(public array $data, public int $status=200){} public function header($key,$value){$this->headers[$key]=$value;} public function get_data(){return $this->data;} public function get_status(){return $this->status;} }
 class WP_REST_Request { public array $headers=['X-WP-Nonce'=>'good','x-kiwe-mutation'=>true]; public function __construct(public string $method='GET',public array $body=[],public array $url=[],public array $query=[]){} public function get_method(){return $this->method;} public function get_header($key){return $this->headers[$key]??'';} public function get_json_params(){return $this->body;} public function get_url_params(){return $this->url;} public function get_query_params(){return $this->query;} }
 $opts=[];$meta=[];$tags=[10=>(object)['term_id'=>10,'taxonomy'=>'post_tag','name'=>'Local','count'=>2],11=>(object)['term_id'=>11,'taxonomy'=>'post_tag','name'=>'News','count'=>1],20=>(object)['term_id'=>20,'taxonomy'=>'product_tag','name'=>'Gift','count'=>3]];$actor='admin';$writes=0;
+$wpdb=new class{public string $prefix='fixture_';public function prepare($sql,...$args){return$sql;}public function get_var($sql){if(str_contains($sql,'GET_LOCK')||str_contains($sql,'RELEASE_LOCK'))return'1';throw new RuntimeException('Unexpected SQL in source fixture.');}};
+function get_current_blog_id(){return 1;} function wp_cache_delete($key,$group){return true;}
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Profile_Service.php';
 function get_option($key,$default=false){return $GLOBALS['opts'][$key]??$default;} function update_option($key,$value){$GLOBALS['opts'][$key]=$value;$GLOBALS['writes']++;return true;}
 function get_taxonomy($name){if(!in_array($name,['post_tag','product_tag'],true))return false;$cap='post_tag'===$name?'manage_categories':'manage_product_terms';return (object)['cap'=>(object)['manage_terms'=>$cap,'edit_terms'=>$cap,'assign_terms'=>'product_tag'===$name?'edit_products':'edit_posts']];}
 function current_user_can($cap,...$args){$role=$GLOBALS['actor'];if('admin'===$role)return true;if('shop'===$role)return in_array($cap,['manage_product_terms','edit_products','edit_term'],true);if('editor'===$role)return $cap==='edit_posts';return false;}

@@ -5,7 +5,7 @@ class WP_REST_Request {
  public function __construct(private string $method='GET',private array $body=[],private array $headers=['X-WP-Nonce'=>'wp_rest','x-kiwe-mutation'=>'1']){}
  public function get_method(){return $this->method;}public function get_header($key){return $this->headers[$key]??'';}public function get_json_params(){return $this->body;}
 }
-class WP_REST_Response {public array $headers=[];public function __construct(public array $data,public int $status=200){}public function header($key,$value){$this->headers[$key]=$value;}}
+class WP_REST_Response {public array $headers=[];public function __construct(public array $data,public int $status=200){}public function get_status(){return $this->status;}public function header($key,$value){$this->headers[$key]=$value;}}
 function wp_json_encode($value,$flags=0){return json_encode($value,$flags);}
 function wp_parse_url($url){return parse_url($url);}
 function esc_url_raw($url){return filter_var($url,FILTER_VALIDATE_URL)?$url:'';}

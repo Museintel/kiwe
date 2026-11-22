@@ -5,6 +5,8 @@ import path from 'node:path';
 const token = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
 const sourcePath = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\\?#]+\.html?$/i;
 const commonTags = new Set(['{post_title}','{post_content}','{post_excerpt}','{post_date}','{post_url}','{post_id}','{post_author}','{featured_image}','{author_name}','{author_url}','{author_bio}','{author_avatar}','{site_title}','{site_tagline}','{site_url}','{term_name}','{term_description}']);
+const chatChannels = ['whatsapp','email','x','instagram','facebook'];
+const shareChannels = [...chatChannels,'youtube','pinterest','linkedin','native','copy'];
 
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const asArray = value => Array.isArray(value) ? value : [];
@@ -43,7 +45,7 @@ function graphIndex(graph) {
   const moduleIds = new Set(asArray(modules.items || modules.modules || modules.registered).map(entry => isObject(entry) ? String(entry.id || entry.module || entry.key || '') : String(entry || '')).filter(Boolean));
   const bindings = graph?.dynamicBindings?.schema === 'kiwe.dynamic-bindings.v1' && isObject(graph.dynamicBindings.fields) ? graph.dynamicBindings.fields : {};
   const kiwe = isObject(graph?.kiwe) ? graph.kiwe : isObject(nested?.kiwe) ? nested.kiwe : {};
-  return { tags, queries, moduleIds, bindings, discussion: isObject(kiwe.discussion) ? kiwe.discussion : {} };
+  return { tags, queries, moduleIds, bindings, discussion: isObject(kiwe.discussion) ? kiwe.discussion : {}, links: isObject(kiwe.links) ? kiwe.links : {} };
 }
 
 function anchorsIn(html) {
@@ -102,9 +104,16 @@ export function validateSeamMap(target = '.') {
     if (orphaned.length || absent.length || Number(document?.closure?.declaredAnchors) !== declared.size || document?.closure?.status !== 'complete' || asArray(document?.closure?.unresolved).length) finding(findings, 'fail', `SEAM closure is incomplete for ${rel}. Orphaned: ${orphaned.join(', ') || 'none'}; missing: ${absent.join(', ') || 'none'}.`, located.mapPath);
     for (const stitch of stitches) {
       if (!['field','collection','launcher','native-element','interaction','condition','static','template-boundary'].includes(stitch?.kind)) finding(findings, 'fail', `Unsupported stitch kind ${stitch?.kind || 'missing'}.`, located.mapPath);
+      if (typeof stitch?.semantic !== 'string' || stitch.semantic.length > 180 || !token.test(stitch.semantic)) finding(findings, 'fail', `Stitch ${stitch?.key || 'unknown'} needs a lowercase semantic role. Keep the exact case of any separate field binding.`, located.mapPath);
       if (!isObject(stitch?.authority) || !['sitegraph','owner','approved-source','wordpress-contract'].includes(stitch.authority.source) || !String(stitch.authority.pointer || '').trim() || !String(stitch.authority.evidence || '').trim()) finding(findings, 'fail', `Stitch ${stitch?.key || 'unknown'} lacks explicit authority.`, located.mapPath);
       if (stitch?.authority?.source === 'sitegraph') siteGraphStitches.push({stitch, document});
       if (stitch?.discussionTarget !== undefined && (stitch.kind !== 'launcher' || stitch.module !== 'comments' || stitch.authority?.source !== 'sitegraph' || !['current','site','{kiwe_discussion_id}','{kiwe_testimonial_target_id}'].includes(stitch.discussionTarget))) finding(findings,'fail',`Stitch ${stitch.key} needs a Comments launcher, exact SiteGraph authority and a supported discussion target.`,located.mapPath);
+      if (stitch?.linkAction !== undefined) {
+        const action = stitch.linkAction;
+        const valid = stitch.kind === 'launcher' && stitch.module === 'links' && stitch.authority?.source === 'sitegraph' && isObject(action) && Object.keys(action).every(key => ['action','channel','subject'].includes(key)) && ['chat','share'].includes(action.action) && ['current','{post_id}'].includes(action.subject) && (action.action === 'chat' ? chatChannels : shareChannels).includes(action.channel);
+        if (!valid) finding(findings,'fail',`Stitch ${stitch.key} needs a Links launcher, exact SiteGraph authority and a supported channel and subject.`,located.mapPath);
+        else if (action.subject === '{post_id}' && !stitches.some(item=>item?.kind==='collection' && item.query?.objectType==='post' && ['post','product'].includes(String(item.query?.post_type)))) finding(findings,'fail',`Stitch ${stitch.key} needs a native post/product loop for a per-record Links subject. On a single product or post use current.`,located.mapPath);
+      }
       if (stitch?.kind === 'field' && (!/^\{[A-Za-z_][^{}<>\r\n]*\}$/.test(String(stitch.dynamicTag || '')) || /^\{(?:echo|do_action|wp_query|php|execute)(?::|\})/i.test(stitch.dynamicTag))) finding(findings, 'fail', `Stitch ${stitch.key} has an unsafe dynamic tag.`, located.mapPath);
       if(stitch?.kind==='field'){
         const slot=stitch.slot,guard=stitch.guard||{},expected={image:'src',link:'href',alt:'alt','aria-label':'aria-label',title:'title'}[slot];
@@ -145,6 +154,12 @@ export function validateSeamMap(target = '.') {
           }
           if (stitch.kind === 'collection' && !index.queries.has(String(stitch.query?.objectType || ''))) finding(findings, 'fail', `SiteGraph does not prove query type ${stitch.query?.objectType || 'missing'}.`, graphRel);
           if (stitch.kind === 'launcher' && !index.moduleIds.has(String(stitch.module || ''))) finding(findings, 'fail', `SiteGraph does not prove Kiwe module ${stitch.module || 'missing'}.`, graphRel);
+          if (stitch.kind === 'launcher' && isObject(stitch.linkAction)) {
+            const {action,channel} = stitch.linkAction, links = index.links;
+            const capability = action === 'chat' ? links.attributes?.enquiry : links.attributes?.share;
+            if (links.schema !== 'kiwe.links.actions.v1' || capability?.available !== true || capability.name !== `data-kiwe-${action}` || links.attributes?.subject !== 'data-kiwe-subject-id') finding(findings,'fail','SiteGraph does not prove the selected Links action contract.',graphRel);
+            else if (action === 'chat' && !asArray(links.configuredEnquiries).includes(channel)) finding(findings,'fail','SiteGraph does not prove this configured enquiry channel.',graphRel);
+          }
           if (stitch.kind === 'launcher' && stitch.discussionTarget !== undefined) {
             const discussion = index.discussion;
             if (discussion.schema !== 'kiwe.discussion.v1' || discussion.launcher?.targetAttribute !== 'data-dsa-discussion-id') finding(findings,'fail','SiteGraph does not prove the contextual Comments target contract.',graphRel);

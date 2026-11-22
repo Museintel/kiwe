@@ -325,7 +325,48 @@
           "Save submission action on the form",
           "deliberately configured native email action for email delivery"
         ],
+        "contactReuse": "When the target advertises kiwe.form-contact.v1, admitted ordinary forms capture new pending Subscribers and privately reuse own session/submitted contact. Use standard name/given-name/family-name/email/tel autocomplete. Existing account proof and marketing choices are unchanged.",
         "privacy": "A saved enquiry is private and does not imply mail delivery or marketing consent. Do not retain passwords, upload bytes or credentials. The compiler enables native saving only for unambiguous ordinary enquiry forms."
+      },
+      "linkConversations": {
+        "status": "live",
+        "authority": "kiwe-links-and-native-private-forms",
+        "attributes": [
+          {
+            "attribute": "data-kiwe-chat",
+            "values": [
+              "whatsapp",
+              "email",
+              "x",
+              "instagram",
+              "facebook"
+            ],
+            "purpose": "Open the shared enquiry form before an external conversation. Requires the configured business contact or explicit qualified messaging link in Design Context. Saved privately in Daily Forms; no identity/marketing consent or external send is implied. Meta links use copy then open, not invented prefill.",
+            "example": "<button type=\"button\" data-kiwe-chat=\"whatsapp\">Ask us</button>"
+          },
+          {
+            "attribute": "data-kiwe-share",
+            "values": [
+              "whatsapp",
+              "email",
+              "x",
+              "instagram",
+              "facebook",
+              "youtube",
+              "pinterest",
+              "linkedin",
+              "native",
+              "copy"
+            ],
+            "purpose": "Share the canonical public product/post, otherwise business website. WhatsApp/email choose recipients independently of business contacts. Unqualified platforms use the native chooser/copy fallback. No SDK or visitor identity is included.",
+            "example": "<button type=\"button\" data-kiwe-share=\"native\">Share</button>"
+          },
+          {
+            "attribute": "data-kiwe-subject-id",
+            "purpose": "Optional actual native post ID for a card chat/share control, preferably {post_id} in a Bricks query loop. Omit for current eligible singular context. IDs are revalidated publicly; never use arbitrary URLs, query strings, order IDs or private titles.",
+            "example": "<button type=\"button\" data-kiwe-share=\"whatsapp\" data-kiwe-subject-id=\"{post_id}\">Share product</button>"
+          }
+        ]
       }
     },
     "candidateAttributes": [

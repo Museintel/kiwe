@@ -3605,6 +3605,50 @@ button.dsa-panel__status.is-unverified:is(:hover, :focus-visible) {
 	text-align: start;
 }
 
+.dsa-links-channel {
+	display: flex;
+	align-items: center;
+	gap: var(--dsa-runtime-token-0016);
+	min-inline-size: 0;
+	border: var(--dsa-runtime-token-0304);
+	border-radius: var(--dsa-runtime-token-0023);
+	background: var(--dsa-runtime-token-0330);
+	color: var(--dsa-runtime-token-0237);
+	box-shadow: var(--dsa-runtime-token-0331);
+}
+
+.dsa-links-channel .dsa-social-link {
+	flex: 1;
+	width: auto;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.dsa-links-icon-action {
+	display: flex;
+	flex: 0 0 var(--dsa-runtime-token-0366);
+	align-items: center;
+	justify-content: center;
+	min-inline-size: var(--dsa-runtime-token-0366);
+	min-block-size: var(--dsa-runtime-token-0366);
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: var(--dsa-runtime-token-0023);
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+}
+
+.dsa-links-icon-action svg {
+	inline-size: var(--dsa-geometry-icon-min);
+	block-size: var(--dsa-geometry-icon-min);
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+}
+
 .dsa-social-link__body strong {
 	font: inherit;
 	word-break: normal;
@@ -8462,7 +8506,7 @@ html:not(.dsa-overlay-active) .dsa-surface[data-dsa-ui-contract="2"][data-dsa-do
 	gap: var(--dsa-runtime-token-0015);
 }
 
-.dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-links-v2027 .dsa-social-link,
+.dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-links-v2027 .dsa-links-channel,
 .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-links-v2027 .dsa-shop-link,
 .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-links-v2027 .dsa-review-card,
 .dsa-surface[data-dsa-ui-contract="2"].dsa-visual-prototype .kiwe-links-v2027 .dsa-post-card {

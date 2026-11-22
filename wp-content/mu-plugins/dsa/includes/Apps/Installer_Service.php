@@ -75,8 +75,8 @@ final class Installer_Service {
     case'place':
      Package_Verifier::archive($this->file($job),$r);$state=Code_Recovery::state($id);
      if(($state['release']['sha256']??'')===$r['sha256']&&in_array($state['phase']??'',['placing','awaiting_boot','accepted'],true)){Package_Verifier::directory(WP_PLUGIN_DIR.'/kiwe-'.$id,$r);}
-     else{Code_Recovery::prepare($r);$upgrader=new \Plugin_Upgrader(new \Automatic_Upgrader_Skin());$result=$upgrader->install($this->file($job),['overwrite_package'=>true]);if(is_wp_error($result)||!$result)throw new \RuntimeException('WordPress could not finish this App installation. Your previous features are protected; resume to retry or cancel and review.');Package_Verifier::directory(WP_PLUGIN_DIR.'/kiwe-'.$id,$r);}
-     if(is_plugin_active($plugin))Code_Recovery::awaiting_boot($id);break;
+     else{Code_Recovery::prepare($r,$job['id']);$upgrader=new \Plugin_Upgrader(new \Automatic_Upgrader_Skin());$result=$upgrader->install($this->file($job),['overwrite_package'=>true]);if(is_wp_error($result)||!$result)throw new \RuntimeException('WordPress could not finish this App installation. Your previous features are protected; resume to retry or cancel and review.');Package_Verifier::directory(WP_PLUGIN_DIR.'/kiwe-'.$id,$r);}
+     if(is_plugin_active($plugin)&&(Code_Recovery::state($id)['phase']??'')!=='accepted')Code_Recovery::awaiting_boot($id);break;
     case'activate':Native_State::activate($plugin);Code_Recovery::awaiting_boot($id);break;
     case'confirm':
      Package_Verifier::directory(WP_PLUGIN_DIR.'/kiwe-'.$id,$r);$provider=Runtime_Registry::provider($id);
@@ -93,7 +93,11 @@ final class Installer_Service {
  private function label(string $step): string {return['install_woo'=>'WooCommerce installation','activate_woo'=>'WooCommerce activation','download'=>'App download','verify'=>'App authentication','place'=>'native App installation','activate'=>'App activation','confirm'=>'final verification'][$step]??'App review';}
  public function cancel(string $id,string $job_id): void {
   $this->authority();if(!Release_Coordinator::acquire())throw new \RuntimeException('Another website update is finishing.');
-  try{$jobs=$this->jobs();$job=$jobs[$id]??null;if(!is_array($job)||!hash_equals($job['id'],$job_id)||$job['status']==='complete')throw new \RuntimeException('Review the current App installation first.');$state=Code_Recovery::state($id);if(($state['release']['sha256']??'')===$job['plan']['release']['sha256']&&in_array($state['phase']??'',['placing','awaiting_boot','recovering','accepted'],true))Code_Recovery::recover(false,$id);$file=$this->file($job);if(is_file($file)&&!unlink($file))throw new \RuntimeException('The interrupted App download could not be retired.');$job['status']='cancelled';$job['message']='App installation cancelled. Any newly installed shared WooCommerce dependency stays available.';$jobs[$id]=$job;$this->save($jobs);}finally{Release_Coordinator::release();}
+  try{$jobs=$this->jobs();$job=$jobs[$id]??null;if(!is_array($job)||!hash_equals($job['id'],$job_id)||$job['status']==='complete')throw new \RuntimeException('Review the current App installation first.');$state=Code_Recovery::state($id);
+   $sameRelease=($state['release']['sha256']??'')===$job['plan']['release']['sha256'];$owned=($state['installationJob']??'')===$job_id;$placement=array_search('place',(array)($job['plan']['steps']??[]),true);
+   if($sameRelease&&$owned&&in_array($state['phase']??'',['placing','awaiting_boot','recovering','accepted'],true))Code_Recovery::recover(false,$id);
+   elseif($sameRelease&&in_array($state['phase']??'',['placing','awaiting_boot','recovering'],true)&&($placement===false||($job['cursor']??0)>=$placement))throw new \RuntimeException('This earlier installation has no matching recovery job. Use the native recovery review before cancelling.');
+   $file=$this->file($job);if(is_file($file)&&!unlink($file))throw new \RuntimeException('The interrupted App download could not be retired.');$job['status']='cancelled';$job['message']='App installation cancelled. Any newly installed shared WooCommerce dependency stays available.';$jobs[$id]=$job;$this->save($jobs);}finally{Release_Coordinator::release();}
  }
  public function projection(array $job): array { return['id'=>$job['id'],'app'=>$job['plan']['id'],'version'=>$job['plan']['version'],'status'=>$job['status'],'cursor'=>$job['cursor'],'total'=>count($job['plan']['steps']),'message'=>$job['message'],'updatedAt'=>$job['updatedAt']]; }
 }

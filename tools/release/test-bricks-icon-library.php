@@ -27,7 +27,7 @@ function check( bool $passed, string $label ): void {
 function bricks_render_dynamic_data( $value ) { return $GLOBALS['bridge']->render_dynamic_content( $value ); }
 
 $definitions = DSA\Bricks\Icon_Library_Service::definitions();
-check( count( $definitions ) === 34 && isset( $definitions['kiwe_icon_comments'], $definitions['kiwe_icon_message_circle'], $definitions['kiwe_icon_thumbs_up'], $definitions['kiwe_icon_flag'], $definitions['kiwe_icon_pin'] ) && $owner_reads === 0, 'Fixed icon chooser includes conversation/reaction artwork without data-owner reads' );
+check( count( $definitions ) === 45 && isset( $definitions['kiwe_icon_comments'], $definitions['kiwe_icon_message_circle'], $definitions['kiwe_icon_thumbs_up'], $definitions['kiwe_icon_flag'], $definitions['kiwe_icon_pin'], $definitions['kiwe_icon_whatsapp'], $definitions['kiwe_icon_email'] ) && isset( $definitions['kiwe_icon_chat'], $definitions['kiwe_icon_share'] ) && $owner_reads === 0, 'Fixed icon chooser includes conversations and shared social/contact artwork without data-owner reads' );
 $sprite = file_get_contents( $root . '/wp-content/mu-plugins/dsa/assets/icons/lucide/sprite.svg' );
 preg_match_all( '/<symbol\b[^>]*\bid="([a-z0-9-]+)"/', $sprite, $symbols );
 foreach ( $symbols[1] as $symbol ) {
@@ -74,7 +74,7 @@ $bricks_source = getenv( 'BRICKS_SOURCE' );
 if ( is_string( $bricks_source ) && '' !== $bricks_source ) {
 	require $bricks_source . '/includes/helpers.php';
 	require $bricks_source . '/includes/elements/base.php';
-	foreach ( [ 'cart', 'notifications', 'wishlist', 'bookmark', 'app_ios', 'app_android' ] as $name ) {
+	foreach ( [ 'cart', 'notifications', 'wishlist', 'bookmark', 'app_ios', 'app_android', 'whatsapp', 'email', 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin' ] as $name ) {
 		$rendered = Bricks\Element::render_icon(
 			[ 'library' => 'dynamicData', 'dynamicData' => '{kiwe_icon_' . $name . '}' ],
 			[ 'id' => 'native-' . $name, 'class' => [ 'brxe-icon', 'authored-icon' ], 'aria-hidden' => 'true' ]

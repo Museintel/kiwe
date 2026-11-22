@@ -9,6 +9,48 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class PhoneKey_Bridge {
+	/** The signed-in subscriber may reuse their own pending contact without turning it into proof. */
+	public static function own_form_contact(): array {
+		$id = get_current_user_id(); $user = $id ? get_userdata( $id ) : null; if ( ! $user ) return [];
+		$first = (string) get_user_meta( $id, 'first_name', true ) ?: (string) get_user_meta( $id, 'billing_first_name', true );
+		$last = (string) get_user_meta( $id, 'last_name', true ) ?: (string) get_user_meta( $id, 'billing_last_name', true );
+		$phone = function_exists( 'pk_user_phone' ) ? (string) \pk_user_phone( $id ) : '';
+		return [ 'name'=>trim( $first . ' ' . $last ) ?: \DSA\Discussion\Public_Identity::current_name(), 'first_name'=>$first, 'last_name'=>$last, 'email'=>(string) $user->user_email ?: (string) get_user_meta( $id, 'billing_email', true ), 'phone'=>$phone ?: (string) get_user_meta( $id, 'billing_phone', true ) ];
+	}
+
+	/** New contacts become pending native Subscribers. Existing accounts/factors/roles/sessions are never changed. */
+	public static function register_form_subscriber( array $contact ): void {
+		if ( get_current_user_id() || ! function_exists( 'pk_create_user_for_identifier' ) || ! function_exists( 'pk_find_user' ) || ! get_role( 'subscriber' ) ) return;
+		$identifiers = array_filter( [ 'email'=>$contact['email'] ?? '', 'phone'=>$contact['phone'] ?? '' ] );
+		if ( ! $identifiers ) return;
+		if ( ! \DSA\Utilities\Atomic_Rate_Limiter::allow( 'form-subscriber|' . get_current_blog_id() . '|' . \DSA\Utilities\Origin_Checker::client_ip(), 5, 600, false ) ) return;
+		global $wpdb; $locks = [];
+		try {
+			foreach ( $identifiers as $type=>$value ) {
+				$key = 'kiwe-contact-' . substr( hash_hmac( 'sha256', get_current_blog_id() . '|' . $type . '|' . $value, wp_salt( 'nonce' ) ), 0, 40 );
+				if ( (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s,0)', $key ) ) !== '1' ) return;
+				$locks[] = $key;
+			}
+			foreach ( $identifiers as $type=>$value ) if ( \pk_find_user( $value, $type ) || ( 'email' === $type && \pk_pending_wordpress_email_owner( $value ) ) ) return;
+			// Use PhoneKey's existing native creation/factor owner, with the lowest public role for this capture.
+			$role = static fn( $settings ) => array_replace( is_array( $settings ) ? $settings : [], [ 'signup_role'=>'subscriber' ] );
+			add_filter( 'option_pk_settings_v3', $role ); add_filter( 'default_option_pk_settings_v3', $role );
+			try { $type = array_key_first( $identifiers ); $id = \pk_create_user_for_identifier( $identifiers[$type], $type ); }
+			finally { remove_filter( 'option_pk_settings_v3', $role ); remove_filter( 'default_option_pk_settings_v3', $role ); }
+			if ( ! $id ) return;
+			foreach ( $identifiers as $factor=>$value ) if ( $factor !== $type ) {
+				update_user_meta( $id, 'pk_' . $factor . '_hash', \pk_hmac( $value ) );
+				if ( 'phone' === $factor ) update_user_meta( $id, 'pk_phone_last4', substr( preg_replace( '/\D/', '', $value ), -4 ) );
+				\pk_upsert_factor( $id, $factor, 'pending', \pk_hmac( $value ), [], $value );
+			}
+			$name = \DSA\Discussion\Public_Identity::clean( (string) ( $contact['name'] ?? '' ) );
+			$fields = [ 'ID'=>$id ]; foreach ( [ 'first_name','last_name' ] as $key ) if ( ! empty( $contact[$key] ) ) $fields[$key] = $contact[$key];
+			if ( $name ) $fields['display_name'] = $name;
+			wp_update_user( $fields );
+		} catch ( \Throwable $error ) { /* The original saved form must remain successful without disclosing account state. */ }
+		finally { foreach ( array_reverse( $locks ) as $key ) $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $key ) ); }
+	}
+
 	/** Private settings adapter; the tested engine keeps validation, roles and encryption. */
 	public static function admin_settings(): array { return function_exists( 'pk_settings' ) ? (array) \pk_settings() : []; }
 	public static function signup_roles(): array {

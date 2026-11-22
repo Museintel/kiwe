@@ -1,0 +1,16 @@
+{
+  "name": "kiwe/mcp-runtime",
+  "description": "Pinned optional transport dependency for the Kiwe MCP App; not loaded by public rendering.",
+  "type": "library",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.2",
+    "wordpress/mcp-adapter": "0.7.1"
+  },
+  "config": {
+    "platform": { "php": "8.2.35" },
+    "sort-packages": true,
+    "optimize-autoloader": true,
+    "allow-plugins": { "automattic/jetpack-autoloader": true }
+  }
+}

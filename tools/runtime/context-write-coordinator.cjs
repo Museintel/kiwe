@@ -1,0 +1,4 @@
+const cp=require('node:child_process'),path=require('node:path');
+const r=cp.spawnSync(process.env.KIWE_PHP||'php',['tools/runtime/test-context-write-coordinator.php'],{cwd:path.resolve(__dirname,'../..'),encoding:'utf8',windowsHide:true});
+if(r.status!==0)throw Error(r.stderr||r.stdout);const proof=JSON.parse(r.stdout);if(!proof.passed)throw Error('Native context coordinator proof failed');console.log('PASS Native context write coordination ('+proof.checks+' source checks; native SQL separate)');
+const selected=cp.spawnSync(process.env.KIWE_PHP||'php',['tools/runtime/test-selected-settings-order.php'],{cwd:path.resolve(__dirname,'../..'),encoding:'utf8',windowsHide:true});if(selected.status!==0)throw Error(selected.stderr||selected.stdout);const order=JSON.parse(selected.stdout);if(!order.passed)throw Error('Selected native settings preservation failed');console.log('PASS Selected settings key/value/order preservation ('+order.checks+' source checks)');

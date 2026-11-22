@@ -38,7 +38,7 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
  $menusBefore=$menus;$assert(str_contains($bridge->render_dynamic_content('Topics: {kiwe_tag_group_7}',1),'Public &amp; safe')&&$menus===$menusBefore,'render resolves escaped term links without listing menus');
  $args=end($termQueries);$assert($args['object_ids']===[1]&&$args['number']===100&&$args['meta_query'][0]['value']==='7','current record selection is scoped and bounded');
  $assert($bridge->render_dynamic_tag('{kiwe_tag_group_7}',3)==='','post group cannot cross into product tags');
- $assert($bridge->render_dynamic_tag('{kiwe_tag_group_8}',3)!==''&&end($termQueries)['taxonomy']==='product_tag','product tag categories follow their native taxonomy');
+ $assert($bridge->render_dynamic_tag('{kiwe_tag_group_8}',3)==='','non-Woo fixture hides dormant product tag groups');
  $assert($bridge->render_dynamic_tag('{kiwe_tag_group_7}',2)==='','draft assignments are private');
  $preview=true;$assert($bridge->render_dynamic_tag('{kiwe_tag_group_7}',2)!=='','permitted builder draft preview uses native object capability');$preview=false;
  $assert($bridge->render_dynamic_tag('{kiwe_tag_group_7_all}')!==''&&!isset(end($termQueries)['object_ids'])&&end($termQueries)['hide_empty']===true,'all group view excludes unused terms and stays bounded');

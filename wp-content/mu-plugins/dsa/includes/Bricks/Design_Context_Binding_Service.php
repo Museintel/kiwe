@@ -53,6 +53,7 @@ final class Design_Context_Binding_Service {
 			'commercePlan.sellingLocations.mode'=>'text', 'commercePlan.sellingLocations.countries'=>'list', 'commercePlan.sellingLocations.excludedCountries'=>'list',
 			'commercePlan.shippingLocations.mode'=>'text', 'commercePlan.shippingLocations.countries'=>'list',
 		];
+		foreach ( [ 'x','instagram','facebook' ] as $network ) $extra['contact.messagingLinks.'.$network] = 'link';
 		foreach ( [ 'commerce','blog','publication','physical_store','service_area' ] as $activity ) $extra['business.activities.'.$activity] = 'boolean';
 		foreach ( [ 'pinned','hearted','popular' ] as $source ) $extra['contentPlan.testimonialSources.'.$source] = 'boolean';
 		$fields = [];

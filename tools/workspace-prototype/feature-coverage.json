@@ -597,5 +597,46 @@
     "nativeEvidence": null,
     "browserEvidence": null,
     "nextAcceptance": "Actual physical Core/App install, resume, signed native update and code recovery on the lab; permission and complete-context continuity plus owner browser review."
+  },
+  {
+    "id": "feedback-app",
+    "area": "Comments, product reviews and website conversations",
+    "ui": "Built-in Core Feedback; App settings beside Dock owns configuration and Daily owns activity.",
+    "status": "partial",
+    "audience": "client",
+    "owner": "Core native discussions and feedback settings",
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/Feedback_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/Discussion/Feedback_Engine_Service.php"
+    ],
+    "routes": [
+      "feedback",
+      "feedback-settings"
+    ],
+    "launchRequired": true,
+    "nativeEvidence": "docs/FEEDBACK-APP-2026-10-29.md",
+    "browserEvidence": null,
+    "nextAcceptance": "Preserve the accepted built-in native discussion experience; future changes require their scoped source/native/browser qualification."
+  },
+  {
+    "id": "mcp",
+    "area": "Apps",
+    "audience": "owner",
+    "status": "partial",
+    "owner": "Optional Kiwe MCP App, native WordPress authority and per-App provider owners",
+    "launchRequired": false,
+    "routes": [
+      "admin.php?page=kiwe-mcp-app",
+      "/kiwe-mcp/v1/mcp",
+      "/kiwe-mcp/v1/workspace"
+    ],
+    "sources": [
+      "wp-content/mu-plugins/dsa/includes/Access/MCP_Workspace_Service.php",
+      "wp-content/mu-plugins/dsa/includes/MCP/Engine.php",
+      "tools/workspace-prototype/mcp-app-entry.jsx"
+    ],
+    "nativeEvidence": null,
+    "browserEvidence": null,
+    "nextAcceptance": "M02 actual native SQL, concurrency, lifecycle, isolated Codex OAuth and lab browser acceptance; production remains Core472."
   }
 ]

@@ -132,6 +132,9 @@ final class Design_Context_Journey_Service {
 	private static function expected( array $p ): string { return hash( 'sha256', wp_json_encode( [ $p['journey'] ?? [], $p['services']['enabled'] ?? null, $p['about']['team']['enabledByOwner'] ?? null ] ) ); }
 	/** Exact preference patch; never submits or rewrites the rest of the business profile. */
 	public static function save( string $id, string $action, string $expected ) {
+		return Context_Write_Coordinator::run(fn()=>self::write_choice($id,$action,$expected));
+	}
+	private static function write_choice( string $id, string $action, string $expected ) {
 		if ( ! is_user_logged_in() || ! current_user_can( 'kiwe_manage_context' ) ) return new \WP_Error( 'kiwe_context_forbidden', 'Design Context management access required.' );
 		$p = self::stored();
 		if ( ! hash_equals( self::expected( $p ), $expected ) ) return new \WP_Error( 'kiwe_context_stale', 'Your setup choices changed elsewhere. Reload and review them before saving.' );

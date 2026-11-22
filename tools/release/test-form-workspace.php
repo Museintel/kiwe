@@ -35,7 +35,7 @@ class Task_Workspace_UI {static function text($s,$limit=200){return is_string($s
 }
 namespace Bricks\Integrations\Form {class Submission_Database {static function get_table_name(){return 'wp_bricks_form_submissions';}static function get_form_settings($post,$form){return ['submissionFormName'=>'Business enquiries','fields'=>[['id'=>'email','label'=>'Email']]];}}}
 namespace {
-require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Bricks/Form_Identity_Service.php';
+require_once __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Identity/Form_Contact_Service.php';require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Bricks/Form_Identity_Service.php';
 require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Access/Form_Workspace_Service.php';
 $service=new \DSA\Access\Form_Workspace_Service();
 foreach(['administrator','kiwe_super_admin','editor','author','contributor','subscriber','customer','shop_manager','kiwe_web_designer','kiwe_user'] as $role){$actor->roles=[$role];$owner=$role==='kiwe_super_admin';check(\DSA\Access\Form_Workspace_Service::allowed()===in_array($role,['administrator','kiwe_super_admin']),'Owner-only inbox for '.$role);if(!in_array($role,['administrator','kiwe_super_admin']))check($service->detail(new WP_REST_Request(['id'=>25]))->status===403,'Direct private message denial for '.$role);}

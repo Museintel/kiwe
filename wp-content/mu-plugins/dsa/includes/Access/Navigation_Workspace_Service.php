@@ -366,6 +366,13 @@ final class Navigation_Workspace_Service {
 		do_action( 'wp_update_nav_menu', $menu_id );
 		return true;
 	}
+	/** One native menu for typed server adapters, without enumerating every menu's links. */
+	public function menu_snapshot(int $id) {
+		if(!current_user_can('kiwe_manage_navigation'))return new \WP_Error('kiwe_menu_forbidden','Navigation is unavailable.');
+		$menu=wp_get_nav_menu_object($id);$items=$this->items($id);
+		if(!$menu||is_wp_error($items))return new \WP_Error('kiwe_menu_missing','Choose an existing menu.');
+		return ['id'=>$id,'name'=>sanitize_text_field((string)$menu->name),'items'=>$this->project_items($items),'expected'=>self::fingerprint($items)];
+	}
 	public function handle(): void {
 		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! current_user_can( 'kiwe_manage_navigation' ) ) wp_die( esc_html__( 'Menu request unavailable.', 'dsa' ), '', [ 'response'=>403 ] );
 		$id = Task_Workspace_UI::id( $_POST['menu_id'] ?? 0 );

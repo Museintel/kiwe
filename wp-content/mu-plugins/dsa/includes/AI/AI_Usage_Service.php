@@ -14,9 +14,9 @@ final class AI_Usage_Service {
 	}
 
 	/** Only supported response shapes release a reservation; unknown adapters retain it. */
-	public static function reported( string $provider, string $model, array $body ): ?array {
+	public static function reported( string $provider, string $model, array $body, ?bool $interactions = null ): ?array {
 		if ( 'gemini' !== $provider ) return null;
-		$interactions = str_starts_with( $model, 'gemini-3' );
+		$interactions ??= str_starts_with( $model, 'gemini-3' );
 		$data = $body[ $interactions ? 'usage' : 'usageMetadata' ] ?? null;
 		if ( ! is_array( $data ) ) return null;
 		$keys = $interactions

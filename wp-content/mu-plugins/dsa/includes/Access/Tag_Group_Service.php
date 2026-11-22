@@ -11,6 +11,39 @@ final class Tag_Group_Service {
 	public const OPTION = 'kiwe_tag_groups_v1';
 	public const META = '_kiwe_tag_group_id';
 	public const PAGE_SIZE = 20;
+	public const AUTHORING_API = 1;
+	private function guarded_write( callable $work ): \WP_REST_Response {
+		$result = \DSA\Onboarding\Context_Write_Coordinator::run( function() use ( $work ) {
+			foreach ( [self::OPTION,'alloptions','notoptions'] as $key ) wp_cache_delete( $key,'options' );
+			return $work();
+		} );
+		return is_wp_error( $result ) ? $this->response( $result ) : $result;
+	}
+	/** Native private projection used by a separately admitted authoring caller. */
+	public function authoring_read( string $kind, array $ids = [] ) {
+		if ( ! Taxonomy_App_Service::enabled() || ! $this->can_kind( $kind,true ) || ( 'product' === $kind && ! \DSA\Apps\Store_App_Service::enabled() ) || count( $ids )>20 ) return $this->error( 'forbidden','This tag group is unavailable.',403 );
+		$groups = array_values( array_map( [$this,'project'],array_filter( $this->store(),static fn($g)=>$g['kind']===$kind ) ) );
+		$terms = [];
+		foreach ( $ids as $id ) {
+			$term = is_int($id) && $id>0 ? get_term($id,$this->taxonomy($kind)) : null;
+			if ( ! $term || is_wp_error($term) || !current_user_can('edit_term',$id) ) return $this->error('forbidden','Choose tags you can edit.',403);
+			$terms[] = [$id,(string)$term->name,(int)get_term_meta($id,self::META,true)];
+		}
+		return ['kind'=>$kind,'groups'=>$groups,'expected'=>hash('sha256',serialize([get_option(self::OPTION,[]),$terms]))];
+	}
+	public function authoring_change( string $action, int $id, array $input, string $expected ) {
+		$result = $this->guarded_write( function() use ($action,$id,$input,$expected) {
+			$kind = $input['kind'] ?? '';
+			$before = $this->authoring_read($kind,$action==='move'?($input['tagIds']??[]):[]);
+			if ( is_wp_error($before) ) return $this->response($before);
+			if ( !hash_equals($before['expected'],$expected) ) return $this->response($this->error('stale','Tag groups changed. Read them before saving.',409));
+			$request = new \WP_REST_Request('POST');$request->set_url_params(['id'=>$id]);
+			if ($action==='rename') {foreach($before['groups']as$group)if($group['id']===$id)$input['expected']=$group['expected'];}
+			$request->set_body_params($input);$request->set_header('content-type','application/json');$request->set_body(wp_json_encode($input));
+			return match($action){'create'=>$this->create_native($request),'rename'=>$this->rename_native($request),'move'=>$this->move_native($request),default=>$this->response($this->error('input','Choose a native tag-group action.'))};
+		} );
+		return $result->get_status()>=300 ? $this->error('change','The native tag-group save was not confirmed.',409) : $result->get_data();
+	}
 
 	public function register(): void {
 		add_action( 'rest_api_init', [ $this, 'routes' ] );
@@ -37,6 +70,7 @@ final class Tag_Group_Service {
 
 	private function taxonomy( string $kind ): string { return 'post' === $kind ? 'post_tag' : ( 'product' === $kind ? 'product_tag' : '' ); }
 	private function can_kind( string $kind, bool $write = false ): bool {
+		if ( 'product' === $kind && ! \DSA\Apps\Store_App_Service::enabled() ) return false;
 		$taxonomy = $this->taxonomy( $kind ); $object = $taxonomy ? get_taxonomy( $taxonomy ) : null;
 		if ( ! $object || ! current_user_can( 'product' === $kind ? 'edit_products' : 'edit_posts' ) ) return false;
 		return $write ? current_user_can( $object->cap->manage_terms ) && current_user_can( $object->cap->edit_terms ) : current_user_can( $object->cap->assign_terms );
@@ -53,6 +87,7 @@ final class Tag_Group_Service {
 	public function dynamic_groups(): array {
 		$out = [];
 		foreach ( array_slice( $this->store(), 0, 100 ) as $group ) {
+			if ( 'product' === $group['kind'] && ! \DSA\Apps\Store_App_Service::enabled() ) continue;
 			$id = absint( $group['id'] );
 			if ( ! $id || isset( $out[ $id ] ) || ! taxonomy_exists( $this->taxonomy( $group['kind'] ) ) ) continue;
 			$out[ $id ] = [ 'id'=>$id, 'kind'=>$group['kind'], 'name'=>sanitize_text_field( (string) $group['name'] ), 'taxonomy'=>$this->taxonomy( $group['kind'] ) ];
@@ -81,7 +116,8 @@ final class Tag_Group_Service {
 		$kind = $this->kind( $request->get_query_params() ); if ( is_wp_error( $kind ) ) return $this->response( $kind );
 		return $this->response( [ 'kind'=>$kind, 'groups'=>array_values( array_map( [ $this, 'project' ], array_filter( $this->store(), static fn( $group ): bool => $group['kind'] === $kind ) ) ) ] );
 	}
-	public function create_response( \WP_REST_Request $request ): \WP_REST_Response {
+	public function create_response( \WP_REST_Request $request ): \WP_REST_Response { return $this->guarded_write(fn()=>$this->create_native($request)); }
+	private function create_native( \WP_REST_Request $request ): \WP_REST_Response {
 		$input = $this->input( $request->get_json_params() ); $kind = $this->kind( $input, true ); if ( is_wp_error( $kind ) ) return $this->response( $kind );
 		$name = $this->name( $input['name'] ?? null ); if ( is_wp_error( $name ) ) return $this->response( $name );
 		$groups = $this->store(); if ( count( $groups ) >= 100 ) return $this->response( $this->error( 'limit', 'This workspace has reached its tag category limit.' ) );
@@ -92,7 +128,8 @@ final class Tag_Group_Service {
 		$after = $this->find( $this->store(), $id, $kind );
 		return $this->response( is_wp_error( $after ) || $after['name'] !== $name ? $this->error( 'readback', 'The new category could not be confirmed. Refresh before retrying.', 409 ) : $this->project( $after ) );
 	}
-	public function rename_response( \WP_REST_Request $request ): \WP_REST_Response {
+	public function rename_response( \WP_REST_Request $request ): \WP_REST_Response { return $this->guarded_write(fn()=>$this->rename_native($request)); }
+	private function rename_native( \WP_REST_Request $request ): \WP_REST_Response {
 		$input = $this->input( $request->get_json_params() ); $kind = $this->kind( $input, true ); if ( is_wp_error( $kind ) ) return $this->response( $kind );
 		$id = Task_Workspace_UI::id( $request->get_url_params()['id'] ?? 0 ); $groups = $this->store(); $before = $this->find( $groups, $id, $kind ); if ( is_wp_error( $before ) ) return $this->response( $before );
 		if ( ! is_string( $input['expected'] ?? null ) || ! hash_equals( $this->project( $before )['expected'], $input['expected'] ) ) return $this->response( $this->error( 'stale', 'This category changed. Refresh before saving.', 409 ) );
@@ -124,7 +161,8 @@ final class Tag_Group_Service {
 		if ( count( $terms ) > 100 ) return $this->response( $this->error( 'large', 'This category has more than 100 tags. Select its tags individually.' ) );
 		return $this->response( [ 'kind'=>$kind, 'groupId'=>$id, 'tagIds'=>array_values( array_map( 'intval', $terms ) ) ] );
 	}
-	public function move_response( \WP_REST_Request $request ): \WP_REST_Response {
+	public function move_response( \WP_REST_Request $request ): \WP_REST_Response { return $this->guarded_write(fn()=>$this->move_native($request)); }
+	private function move_native( \WP_REST_Request $request ): \WP_REST_Response {
 		$input = $this->input( $request->get_json_params() ); $kind = $this->kind( $input, true ); if ( is_wp_error( $kind ) ) return $this->response( $kind );
 		$source = max( 0, (int) ( $input['sourceId'] ?? -1 ) ); $target = max( 0, (int) ( $input['targetId'] ?? -1 ) );
 		$groups = $this->store();

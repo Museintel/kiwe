@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Design_Context_Profile_Service {
 	public const OPTION_PROFILE = 'kiwe_seam_design_context_v1';
+	/** Passive bounded-context read contract used by independently updated Apps. */
+	public const GUIDANCE_READ_API = 1;
 	public const OPTION_STATUS  = 'kiwe_onboarding_status_v1';
 	public const OPTION_SEO_REPORT = 'kiwe_overall_seo_report_v1';
 	public const PAGE_VISIBILITY_META = '_kiwe_search_visibility';
@@ -46,10 +48,10 @@ final class Design_Context_Profile_Service {
 		return array_key_exists( 'enabled', $services ) ? ! empty( $services['enabled'] ) : ( ! empty( $services['sourcePostType'] ) || ! empty( $services['items'] ) );
 	}
 
-	public function current(): array {
+	public function current( bool $bounded_guidance = false ): array {
 		$stored = get_option( self::OPTION_PROFILE, [] );
 		$stored = is_array( $stored ) ? $stored : [];
-		$inferred = $this->inferred( $stored );
+		$inferred = $this->inferred( $stored, $bounded_guidance );
 		$profile = array_replace_recursive( $inferred, $stored );
 		$profile['business']['activities'] = \DSA\Bricks\Design_Context_Binding_Service::activities( $profile );
 		// Native owners win, including edits made outside Kiwe.
@@ -87,6 +89,10 @@ final class Design_Context_Profile_Service {
 			$this->empty_social_links(),
 			is_array( $stored['contact']['socialLinks'] ?? null ) ? $stored['contact']['socialLinks'] : $inferred['contact']['socialLinks']
 		);
+		$messages = [];
+		foreach ( [ 'x','instagram','facebook' ] as $network ) $messages[$network] = \DSA\Link_Hub\Channel_Service::messaging_url( $network, $profile['contact']['messagingLinks'][$network] ?? '' );
+		unset( $profile['contact']['messagingLinks'] );
+		$profile['contact']['messagingLinks'] = $messages;
 		return $this->resolve_people( $profile );
 	}
 
@@ -97,7 +103,7 @@ final class Design_Context_Profile_Service {
 
 	/** Private identity card projection. Native WordPress options remain the authority. */
 	public function identity_projection(): array {
-		$profile = $this->current();
+		$profile = $this->current(true);
 		$identity = (array) ( $profile['identity'] ?? [] );
 		$contact = (array) ( $profile['contact'] ?? [] );
 		$state = [
@@ -140,6 +146,10 @@ final class Design_Context_Profile_Service {
 
 	/** Section inputs are scoped before the existing sanitizer and native writers run. */
 	public function save_section( string $section, array $raw, int $user_id, string $invitation_id = '', string $changed_field = '' ) {
+		if(!user_can($user_id,'kiwe_manage_context'))return new \WP_Error('kiwe_section_forbidden','Website management access required.');
+		return Context_Write_Coordinator::run(fn()=>$this->write_section($section,$raw,$user_id,$invitation_id,$changed_field));
+	}
+	private function write_section( string $section, array $raw, int $user_id, string $invitation_id = '', string $changed_field = '' ) {
 		$groups = [ 'identity'=>[ 'identity','business' ], 'story'=>[ 'audience','about','seo' ], 'contact'=>[ 'contact','localization' ], 'brand'=>[ 'brand' ], 'website-plan'=>[ 'contentPlan' ], 'services'=>[ 'services' ], 'store'=>[ 'commerce','regulatory' ] ];
 		if ( ! isset( $groups[ $section ] ) || ( 'store' === $section && ! $this->commerce_available() ) ) return new \WP_Error( 'kiwe_section', 'This section is unavailable.' );
 		if ( ! user_can( $user_id, 'kiwe_manage_context' ) ) return new \WP_Error( 'kiwe_section_forbidden', 'Website management access required.' );
@@ -160,7 +170,7 @@ final class Design_Context_Profile_Service {
 		if ( 'contact' === $section && '' !== $changed_field ) {
 			$validation = 'contact.phone' === $changed_field ? [ 'phone' ] : ( 'contact.email' === $changed_field ? [ 'email' ] : [] );
 		}
-		return $this->save( $merged, $user_id, $invitation_id, $section, $validation );
+		return $this->save( $merged, $user_id, $invitation_id, $section, $validation, $changed_field );
 	}
 
 	/**
@@ -171,16 +181,19 @@ final class Design_Context_Profile_Service {
 	 * overall Design Context status incomplete until required setup is restored.
 	 */
 	public function save_identity_changes( array $changes, string $expected, int $user_id ) {
+		if(!user_can($user_id,'kiwe_manage_context'))return new \WP_Error('kiwe_identity_forbidden','Website management access required.');
+		return Context_Write_Coordinator::run(fn()=>$this->write_identity_changes($changes,$expected,$user_id));
+	}
+	private function write_identity_changes( array $changes, string $expected, int $user_id ) {
 		if ( ! user_can( $user_id, 'kiwe_manage_context' ) ) return new \WP_Error( 'kiwe_identity_forbidden', __( 'Website management access required.', 'dsa' ) );
 		$current = $this->identity_projection();
 		if ( ! preg_match( '/^[a-f0-9]{64}$/', $expected ) || ! hash_equals( $current['expected'], $expected ) ) return new \WP_Error( 'kiwe_identity_stale', __( 'Business identity changed in another screen. Reload and review it before saving.', 'dsa' ), [ 'status'=>409 ] );
-		$allowed = [ 'siteName','tagline','industry','industrySector','siteType','logoId','logoInverseId','siteIconId','squareLogoId','roundLogoId','activities' ];
+		$definitions=self::identity_fields();$allowed = array_keys($definitions);
 		if ( ! $changes || count( $changes ) > count( $allowed ) || array_diff( array_keys( $changes ), $allowed ) ) return new \WP_Error( 'kiwe_identity_changes', __( 'Choose one or more supported identity details to save.', 'dsa' ), [ 'status'=>400 ] );
 
 		$latest = $this->current();
-		$text_limits = [ 'siteName'=>200, 'tagline'=>160, 'industry'=>200 ];
-		$sectors = [ '', 'food_beverage','retail','manufacturing','healthcare','education','hospitality','professional_services','technology','media','nonprofit','real_estate','other' ];
-		$types = [ 'business','ecommerce','publication','portfolio','nonprofit','community','education','service','other' ];
+		$text_limits = [];foreach($definitions as$key=>$field)if($field['type']==='text')$text_limits[$key]=$field['maxLength'];
+		$sectors = $definitions['industrySector']['options'];$types = $definitions['siteType']['options'];
 		foreach ( $changes as $key=>$value ) {
 			if ( 'activities' === $key ) {
 				$keys = array_keys(\DSA\Bricks\Design_Context_Binding_Service::activities([]));
@@ -211,8 +224,15 @@ final class Design_Context_Profile_Service {
 		return $after;
 	}
 
-	public function save( array $raw, int $user_id, string $invitation_id = '', string $section = '', ?array $validation_fields = null ) {
+	public function save( array $raw, int $user_id, string $invitation_id = '', string $section = '', ?array $validation_fields = null, string $changed_field = '' ) {
+		return Context_Write_Coordinator::run(fn()=>$this->write_profile($raw,$user_id,$invitation_id,$section,$validation_fields,$changed_field));
+	}
+	private function write_profile( array $raw, int $user_id, string $invitation_id = '', string $section = '', ?array $validation_fields = null, string $changed_field = '' ) {
 		$stored = (array) get_option( self::OPTION_PROFILE, [] );
+		if ( ! $section || 'contact' === $section ) foreach ( [ 'x'=>'X','instagram'=>'Instagram','facebook'=>'Messenger' ] as $network=>$label ) {
+			$link = $raw['contact']['messagingLinks'][$network] ?? '';
+			if ( $link && $link !== ( $stored['contact']['messagingLinks'][$network] ?? '' ) && ! \DSA\Link_Hub\Channel_Service::messaging_url( $network, $link ) ) return new \WP_Error( 'kiwe_message_link', sprintf( __( 'Use the message link provided by your %s account, or leave it blank.', 'dsa' ), $label ), [ 'fields'=>[ 'contact.messagingLinks.' . $network ] ] );
+		}
 		// Removed editors cannot erase legacy records on an unrelated save.
 		$raw['about']['team'] = $stored['about']['team'] ?? [ 'enabled'=>false, 'members'=>[] ];
 		$raw['resources'] = $stored['resources'] ?? [ 'items'=>[] ];
@@ -258,8 +278,9 @@ final class Design_Context_Profile_Service {
 			$profile = $this->apply_people_context( $profile, $user_id );
 		}
 		if ( ! $section || 'services' === $section ) $profile = $this->apply_services_context( $profile, $user_id );
-		if ( ( ! $section || in_array( $section, [ 'store','contact' ], true ) ) && $profile['commerce']['enabled'] && function_exists( 'WC' ) ) {
-			$this->apply_woocommerce( $profile );
+		if ( $profile['commerce']['enabled'] && function_exists( 'WC' ) ) {
+			if(!$section||$section==='store')$this->apply_woocommerce($profile);
+			elseif($section==='contact'&&($changed_field===''||str_starts_with($changed_field,'contact.address.')))$this->apply_woocommerce($profile,true);
 		}
 
 		$profile['scores'] = $this->scores( $profile );
@@ -294,9 +315,19 @@ final class Design_Context_Profile_Service {
 
 		return $profile;
 	}
+	/** One native identity input contract shared by dashboard and guided adapters. */
+	public static function identity_fields(): array {
+		$out=['siteName'=>['type'=>'text','maxLength'=>200],'tagline'=>['type'=>'text','maxLength'=>160],'industry'=>['type'=>'text','maxLength'=>200],
+		 'industrySector'=>['type'=>'select','options'=>['','food_beverage','retail','manufacturing','healthcare','education','hospitality','professional_services','technology','media','nonprofit','real_estate','other']],
+		 'siteType'=>['type'=>'select','options'=>['business','ecommerce','publication','portfolio','nonprofit','community','education','service','other']]];
+		foreach(['logoId','logoInverseId','siteIconId','squareLogoId','roundLogoId']as$key)$out[$key]=['type'=>'image'];
+		$out['activities']=['type'=>'business-activities','keys'=>array_keys(\DSA\Bricks\Design_Context_Binding_Service::activities([]))];return$out;
+	}
 
-	public function public_context( bool $administrator = false ): array {
-		$profile = $this->current();
+	public function public_context( bool $administrator = false, bool $bounded_guidance = false ): array {
+		// Guidance reads scalar context progressively. Native content/service/media
+		// collections use their own paged reads, rather than scanning them here.
+		$profile = $this->current( $bounded_guidance );
 		$scores = $this->scores( $profile );
 		$overall_seo = self::saved_seo_strength();
 		if ( null !== $overall_seo ) $scores['seoStrength'] = $overall_seo;
@@ -351,6 +382,7 @@ final class Design_Context_Profile_Service {
 				'whatsapp' => $profile['contact']['whatsapp'],
 				'whatsappSameAsPhone' => ! empty( $profile['contact']['whatsappSameAsPhone'] ),
 				'socialLinks' => array_filter( $profile['contact']['socialLinks'] ),
+				'messagingLinks' => array_filter( $profile['contact']['messagingLinks'] ?? [] ),
 				'address'  => $address,
 			],
 			'brand'       => $profile['brand'],
@@ -499,12 +531,12 @@ final class Design_Context_Profile_Service {
 		return $applied;
 	}
 
-	private function inferred( ?array $stored = null ): array {
+	private function inferred( ?array $stored = null, bool $bounded_guidance = false ): array {
 		$stored = is_array( $stored ) ? $stored : (array) get_option( self::OPTION_PROFILE, [] );
 		$country_state = sanitize_text_field( (string) get_option( 'woocommerce_default_country', '' ) );
 		[ $country, $state ] = array_pad( explode( ':', $country_state, 2 ), 2, '' );
 		$pages = [];
-		foreach ( get_pages( [ 'post_status' => [ 'publish', 'draft', 'private' ], 'sort_column' => 'menu_order,post_title' ] ) as $page ) {
+		foreach ( $bounded_guidance ? [] : get_pages( [ 'post_status' => [ 'publish', 'draft', 'private' ], 'sort_column' => 'menu_order,post_title' ] ) as $page ) {
 			$pages[] = [
 				'id' => (int) $page->ID,
 				'name' => sanitize_text_field( (string) $page->post_title ),
@@ -541,7 +573,7 @@ final class Design_Context_Profile_Service {
 			],
 			'brand' => [ 'tone' => '', 'colors' => [], 'notes' => '' ],
 			'contentPlan' => [ 'existingPages' => $pages, 'plannedPages' => [], 'showBlogRailOnHome' => false, 'highlightBestsellers' => false ],
-			'services' => $this->services_enabled( $stored ) ? $this->inferred_services( sanitize_key( (string) ( $stored['services']['sourcePostType'] ?? '' ) ) ) : [ 'enabled'=>false, 'sourcePostType'=>'', 'useForNavigation'=>false, 'items'=>[] ],
+			'services' => $this->services_enabled( $stored ) ? $this->inferred_services( sanitize_key( (string) ( $stored['services']['sourcePostType'] ?? '' ) ), $bounded_guidance ? [ 'disabled'=>true ] : [] ) : [ 'enabled'=>false, 'sourcePostType'=>'', 'useForNavigation'=>false, 'items'=>[] ],
 			'resources' => [ 'items' => [] ],
 			'commerce' => $product_plan,
 			'regulatory' => [
@@ -616,6 +648,8 @@ final class Design_Context_Profile_Service {
 		foreach ( $this->empty_social_links() as $network => $empty ) {
 			$social_links[ $network ] = esc_url_raw( (string) ( $contact['socialLinks'][ $network ] ?? '' ) );
 		}
+		$messaging_links = [];
+		foreach ( [ 'x','instagram','facebook' ] as $network ) $messaging_links[$network] = \DSA\Link_Hub\Channel_Service::messaging_url( $network, $contact['messagingLinks'][$network] ?? '' );
 		$phone = sanitize_text_field( (string) ( $contact['phone'] ?? '' ) );
 		$whatsapp_same = ! empty( $contact['whatsappSameAsPhone'] );
 		$whatsapp = $whatsapp_same ? $phone : sanitize_text_field( (string) ( $contact['whatsapp'] ?? '' ) );
@@ -722,6 +756,7 @@ final class Design_Context_Profile_Service {
 			'contact' => [
 				'phone' => $phone, 'email' => sanitize_email( (string) ( $contact['email'] ?? '' ) ), 'whatsapp' => $whatsapp, 'whatsappSameAsPhone' => $whatsapp_same, 'socialLinks' => $social_links,
 				'address' => [ 'line1' => sanitize_text_field( (string) ( $address['line1'] ?? '' ) ), 'line2' => sanitize_text_field( (string) ( $address['line2'] ?? '' ) ), 'city' => sanitize_text_field( (string) ( $address['city'] ?? '' ) ), 'state' => sanitize_text_field( (string) ( $address['state'] ?? '' ) ), 'postcode' => sanitize_text_field( (string) ( $address['postcode'] ?? '' ) ), 'country' => strtoupper( substr( sanitize_key( (string) ( $address['country'] ?? '' ) ), 0, 2 ) ) ],
+				'messagingLinks' => $messaging_links,
 			],
 			'localization' => [ 'timezone' => sanitize_text_field( (string) ( $localization['timezone'] ?? $current['localization']['timezone'] ) ), 'language' => sanitize_text_field( (string) get_bloginfo( 'language' ) ) ],
 			'audience' => [ 'primary' => sanitize_text_field( (string) ( $audience['primary'] ?? '' ) ), 'locations' => sanitize_text_field( (string) ( $audience['locations'] ?? '' ) ), 'needs' => sanitize_textarea_field( (string) ( $audience['needs'] ?? '' ) ) ],
@@ -784,7 +819,7 @@ final class Design_Context_Profile_Service {
 				'homepageDescription' => substr( sanitize_textarea_field( (string) ( $seo['homepageDescription'] ?? '' ) ), 0, 320 ),
 				'legalName' => substr( sanitize_text_field( (string) ( $seo['legalName'] ?? '' ) ), 0, 200 ),
 				'foundedYear' => ( static function ( int $year ): int { $current_year = (int) gmdate( 'Y' ); return $year >= 1000 && $year <= $current_year ? $year : 0; } )( absint( $seo['foundedYear'] ?? 0 ) ),
-				'primaryGoal' => in_array( $seo['primaryGoal'] ?? '', [ '', 'buy', 'contact', 'book', 'visit', 'subscribe', 'donate', 'read' ], true ) ? $seo['primaryGoal'] : '',
+				'primaryGoal' => in_array( $seo['primaryGoal'] ?? '', array_merge([''],array_keys(SEO_Context_Service::goal_options())), true ) ? $seo['primaryGoal'] : '',
 				'searchIntent' => substr( sanitize_text_field( (string) ( $seo['searchIntent'] ?? '' ) ), 0, 240 ),
 				'proofPoints' => substr( sanitize_textarea_field( (string) ( $seo['proofPoints'] ?? '' ) ), 0, 1600 ),
 				'allowIndexing' => ! empty( $seo['allowIndexing'] ),
@@ -811,11 +846,12 @@ final class Design_Context_Profile_Service {
 		return $errors;
 	}
 
-	private function apply_woocommerce( array $profile ): void {
+	private function apply_woocommerce( array $profile, bool $address_only = false ): void {
 		$a = $profile['contact']['address'];
 		update_option( 'woocommerce_store_address', $a['line1'] ); update_option( 'woocommerce_store_address_2', $a['line2'] );
 		update_option( 'woocommerce_store_city', $a['city'] ); update_option( 'woocommerce_store_postcode', $a['postcode'] );
 		update_option( 'woocommerce_default_country', $a['country'] . ( $a['state'] ? ':' . $a['state'] : '' ) );
+		if($address_only)return;
 		update_option( 'woocommerce_currency', $profile['commerce']['currency'] );
 		update_option( 'woocommerce_currency_pos', $profile['commerce']['currencyPosition'] );
 		update_option( 'woocommerce_price_num_decimals', $profile['commerce']['priceDecimals'] );
@@ -885,7 +921,10 @@ final class Design_Context_Profile_Service {
 	}
 
 	/** Reuse the existing native writer without saving unrelated context/options. */
-	public function save_service_record( string $source, array $item, int $actor_id ): array {
+	public function save_service_record( string $source, array $item, int $actor_id ): array|\WP_Error {
+		return Context_Write_Coordinator::run(fn()=>$this->write_service_record($source,$item,$actor_id));
+	}
+	private function write_service_record( string $source, array $item, int $actor_id ): array {
 		$result = $this->apply_services_context( [ 'services'=>[ 'enabled'=>true, 'sourcePostType'=>$source, 'items'=>[ $item ] ] ], $actor_id, false );
 		$saved = $result['services']['items'][0];
 		// The native post remains the record owner. Only this Kiwe-owned context

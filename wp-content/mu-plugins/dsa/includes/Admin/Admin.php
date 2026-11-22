@@ -1320,6 +1320,9 @@ final class Admin {
 		];
 
 		$this->settings->update( $update );
+		if ( is_array( $_POST['secure'] ?? null ) && array_key_exists( 'protection_profile', $_POST['secure'] ) ) {
+			\DSA\Secure\SecureTrack_Settings_Policy::sync_from_kiwe( $update['secure'], true );
+		}
 		$this->save_securetrack_ai_settings( $_POST['securetrack_ai'] ?? null, $update['ai'] );
 
 		$redirect_page = sanitize_key( wp_unslash( $_POST['_dsa_redirect'] ?? 'kiwe' ) );
@@ -7812,10 +7815,10 @@ final class Admin {
 								<th scope="row"><?php esc_html_e( 'Protection Profile', 'dsa' ); ?></th>
 								<td>
 									<select name="secure[protection_profile]">
-										<option value="monitor" <?php selected( (string) ( $secure['protection_profile'] ?? 'monitor' ), 'monitor' ); ?>><?php esc_html_e( 'Monitor only', 'dsa' ); ?></option>
-										<option value="recommended" <?php selected( (string) ( $secure['protection_profile'] ?? 'monitor' ), 'recommended' ); ?>><?php esc_html_e( 'Recommended enforcement', 'dsa' ); ?></option>
+										<option value="monitor" <?php selected( (string) ( $secure['protection_profile'] ?? 'monitor' ), 'monitor' ); ?>><?php esc_html_e( 'Keep individual protection choices', 'dsa' ); ?></option>
+										<option value="recommended" <?php selected( (string) ( $secure['protection_profile'] ?? 'monitor' ), 'recommended' ); ?>><?php esc_html_e( 'Recommended protections', 'dsa' ); ?></option>
 									</select>
-									<p class="description"><?php esc_html_e( 'Recommended enforcement enables brute-force blocking, semantic WAF checks, a honeypot, XML-RPC and user-enumeration hardening, security headers, file-editor protection, admin activity tracking, and bounded endpoint rate limits.', 'dsa' ); ?></p>
+									<p class="description"><?php esc_html_e( 'Recommended protections include brute-force blocking, suspicious-request checks, XML-RPC and user-listing protection, security headers, file-editor protection, administration activity and bounded endpoint limits. Individual saved choices remain authoritative.', 'dsa' ); ?></p>
 								</td>
 							</tr>
 							<tr>

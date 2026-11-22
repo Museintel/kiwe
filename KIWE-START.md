@@ -1,11 +1,11 @@
 # SEAM Start
 
-Contract version: `9.9`
-Updated: `2026-10-28`
+Contract version: `9.12`
+Updated: `2026-11-05`
 
 Read the matching [canonical command manifest](https://start.kiwelaunch.com/command-manifest.json) before acting. If the canonical host is unavailable to the participating AI, verify and use an intact attached Start kit; otherwise read the [GitHub manifest mirror](https://github.com/Museintel/kiwe/blob/main/kiwe-ai-toolkit/command-manifest.json) and the linked GitHub command context at the same version. Do not crawl the repository, substitute a similarly named domain, or use a command remembered from an older conversation.
 
-Read the [shared authoring and delivery rules](https://start.kiwelaunch.com/contracts/authoring-delivery.md) with the selected command. They own automatic quality checks, proven binding fallbacks, preview-only actions, reusable receipts and the stop/export path when browser tools are unavailable. These are routine AI responsibilities, not extra correction prompts for the client. The shared storefront rules cover complete card actions and pack information, native category archives, configured checkout routes and responsive sticky-header relationships.
+Read the [shared authoring and delivery rules](https://start.kiwelaunch.com/contracts/authoring-delivery.md) with the selected command. They own automatic quality checks, proven binding fallbacks, preview-only actions, reusable receipts and the stop/export path when browser tools are unavailable. These are routine AI responsibilities, not extra correction prompts for the client. The shared storefront rules cover complete card actions and pack information, native category archives, configured checkout/payment/thank-you routes, contextual discussion controls and responsive sticky-header relationships. Ecommerce scope is recorded through the shared surface checklist; geometry readiness includes intermediate widths and authored media boundaries.
 
 For the first message, attach the safe project brief/Design Context and paste only:
 
@@ -43,3 +43,5 @@ SiteGraph and its embedded Design Context are attached or safely connected proje
 Unknown commands, aliases and unsupported modifiers must be rejected.
 
 Public Design Context facts use the attached `dynamicBindings` catalogue. The visual preview retains real values and exact inert `data-seam-field`/`data-seam-slot` markers alongside `data-seam-anchor`; the closed field stitch cites the same binding, native tag and guarded slot. Never manufacture private, planning-only or unknown future bindings.
+
+When connected Kiwe advertises `mcp.design.read`, use the [native design handoff contract](https://start.kiwelaunch.com/contracts/mcp-design.md) to obtain current public evidence and the deterministic capture receipt. The connected AI generates previews locally; native import and publication remain separate.

@@ -47,20 +47,3 @@ export function FeedbackCard({item,onAction,busy,canCurate,actorKey,publicName,o
  </article>;
 }
 
-const fields=[
- ['newPosts','Allow comments on new posts','Existing posts keep their own open or closed setting.'],
- ['accountRequired','Require an account to send a comment','Comments always remain readable. PhoneKey guides visitors through the existing sign-in or subscription flow.'],
- ['moderateAll','Review every new contribution before publishing','WordPress moderation and spam decisions always apply, including to verified contacts.'],
- ['previousApproval','Require a previously approved contribution','A first contribution waits for moderation when this native WordPress rule is enabled.'],
- ['threaded','Allow replies','Replies stay within the original conversation and do not increase its top-level count.'],
-];
-export function FeedbackSettings({policy,busy,onAction}){
- const [values,setValues]=useState(policy.values);useEffect(()=>setValues(policy.values),[policy.expected]);
- const save=field=>onAction({operation:'policy',field,value:values[field],expected:policy.expected});
- const changed=field=>values[field]!==policy.values[field];
- return <details className="feedback-settings"><summary>Discussion settings</summary><p>These controls save the original WordPress discussion settings. Product-review rules stay in the Store App. Verified contact does not bypass manual moderation or spam protection.</p>
-  {fields.map(([field,label,help])=><section key={field}><fieldset disabled={busy}><legend>{label}</legend><p>{help}</p>{[[true,'On'],[false,'Off']].map(([value,title])=><label className="feedback-radio" key={title}><input type="radio" name={'discussion-'+field} checked={values[field]===value} onChange={()=>setValues(old=>({...old,[field]:value}))}/>{title}</label>)}</fieldset><button type="button" disabled={busy||!changed(field)} onClick={()=>save(field)}>Save {label.toLowerCase()}</button></section>)}
-  {values.threaded&&<section><label>Reply depth<input type="number" min={1} max={10} value={values.threadDepth} disabled={busy} onChange={e=>setValues(old=>({...old,threadDepth:Number(e.target.value)}))}/></label><button type="button" disabled={busy||!changed('threadDepth')} onClick={()=>save('threadDepth')}>Save reply depth</button></section>}
-  <section><label>Site-wide feedback page<select value={values.sitePage} disabled={busy} onChange={e=>setValues(old=>({...old,sitePage:Number(e.target.value)}))}><option value={0}>Do not use site-wide feedback</option>{values.sitePage>0&&!policy.pages.some(page=>page.id===values.sitePage)&&<option value={values.sitePage}>Current page is unavailable</option>}{policy.pages.map(page=><option key={page.id} value={page.id}>{page.title}{page.open?'':' · new comments closed'}</option>)}</select></label><p>Choose an existing public page for conversations outside a post or product. No page or review target is created automatically.</p><button type="button" disabled={busy||!changed('sitePage')} onClick={()=>save('sitePage')}>Save feedback page</button></section>
- </details>;
-}

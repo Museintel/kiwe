@@ -14,6 +14,30 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Private presentation adapters. Existing task services retain all write authority. */
 final class Continuity_App_Service {
+	public const MCP_SETUP_API = 1;
+	/** Native server callers still need the same business-editing authority. */
+	public static function native_allowed(): bool {
+		return self::enabled() && is_user_logged_in() && current_user_can('kiwe_manage_context') && !Team_Workspace_Service::suspended(get_current_user_id()) && (!is_multisite() || is_user_member_of_blog(get_current_user_id()));
+	}
+	public function field_snapshot(string $area) {
+		if(!self::native_allowed() || !in_array($area,['contact','story','brand','website-plan','services','store'],true))return $this->error('Business editing is unavailable.',403);
+		return $this->business($area);
+	}
+	public function services_snapshot(array $query=[]) {
+		if(!self::native_allowed())return $this->error('Service editing is unavailable.',403);
+		$id=absint($query['id']??0);if($id&&!current_user_can('edit_post',$id))return $this->error('This service is unavailable for your current role.',403);
+		$result=$this->service_records($query);
+		if(is_array($result)&&isset($result['values']['services.items']))$result['values']['services.items']=array_values(array_filter($result['values']['services.items'],static fn($item)=>empty($item['recordId'])||current_user_can('edit_post',(int)$item['recordId'])));
+		return $result;
+	}
+	public function change_service_record(array $body) {
+		if(!self::native_allowed())return $this->error('Service editing is unavailable.',403);
+		return \DSA\Onboarding\Context_Write_Coordinator::run(fn()=>$this->save_service_record($body));
+	}
+	public function change_service_plan(array $body) {
+		if(!self::native_allowed())return $this->error('Service editing is unavailable.',403);
+		return \DSA\Onboarding\Context_Write_Coordinator::run(fn()=>$this->save_service_plan($body));
+	}
 	public static function enabled(): bool { return defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
 	public function register(): void {
 		if ( ! self::enabled() ) return;
@@ -37,17 +61,13 @@ final class Continuity_App_Service {
 			$hook = add_menu_page( 'Store setup', 'Store setup', 'kiwe_manage_context', 'kiwe-store-plan', [ $this, 'document' ], 'dashicons-store', 32 );
 			add_action( 'load-' . $hook, [ $this, 'document' ], 1 );
 		}
-		if ( current_user_can( 'moderate_comments' ) ) {
-			$hook = add_menu_page( 'Feedback', 'Feedback', 'moderate_comments', 'kiwe-feedback', [ $this, 'document' ], 'dashicons-testimonial', 33 );
-			add_action( 'load-' . $hook, [ $this, 'document' ], 1 );
-		}
 		if ( $this->timeline_allowed() ) {
 			$hook = add_menu_page( 'Timeline', 'Timeline', 'read', 'kiwe-timeline', [ $this, 'document' ], 'dashicons-backup', 34 );
 			add_action( 'load-' . $hook, [ $this, 'document' ], 1 );
 		}
 	}
 	public function routes(): void {
-		register_rest_route( 'dsa/v1', '/workspace/continuity/(?P<area>pages|library|feedback|story|contact|brand|website-plan|services|store|timeline)', [
+		register_rest_route( 'dsa/v1', '/workspace/continuity/(?P<area>pages|library|story|contact|brand|website-plan|services|store|timeline)', [
 			[ 'methods'=>'GET', 'callback'=>[ $this, 'read' ], 'permission_callback'=>[ $this, 'permission' ] ],
 			[ 'methods'=>'POST', 'callback'=>[ $this, 'save' ], 'permission_callback'=>[ $this, 'permission' ] ],
 		] );
@@ -63,12 +83,17 @@ final class Continuity_App_Service {
 		return is_wp_error( $value ) ? Task_Workspace_UI::failure( $value, (int) ( $value->get_error_data()['status'] ?? 400 ) ) : Task_Workspace_UI::response( $value );
 	}
 	private function error( string $message, int $status = 400 ): \WP_Error { return new \WP_Error( 'kiwe_continuity', $message, [ 'status'=>$status ] ); }
-	public static function fields(): array { return json_decode( (string) file_get_contents( __DIR__ . '/business-fields.json' ), true ) ?: []; }
+	public static function fields(): array {
+		$areas=json_decode((string)file_get_contents(__DIR__.'/business-fields.json'),true)?:[];
+		foreach($areas['story']['fields']??[] as$key=>$field)if($field['path']==='seo.primaryGoal')$areas['story']['fields'][$key]=array_replace($field,['type'=>'select','options'=>[''=>'Choose your SEO goal']+SEO_Context_Service::goal_options()]);
+		return$areas;
+	}
 	private function value( array $data, string $path ) { foreach ( explode( '.', $path ) as $key ) $data = is_array( $data ) ? ( $data[ $key ] ?? null ) : null; return $data; }
 	private function assign( array &$data, string $path, $value ): void { $target =& $data; foreach ( explode( '.', $path ) as $key ) $target =& $target[ $key ]; $target = $value; }
 	private function business( string $area ) {
 		$schemas = self::fields(); if ( ! isset( $schemas[ $area ] ) || ( 'store' === $area && ! ( new Profile() )->commerce_available() ) ) return $this->error( 'This business area is unavailable.', 404 );
-		$profile = ( new Profile() )->current(); $values = [];
+		// Scalar authoring fields do not need the full page/service catalogue.
+		$profile = ( new Profile() )->current($area!=='services'); $values = [];
 		foreach ( $schemas[ $area ]['fields'] as $field ) $values[ $field['path'] ] = $this->value( $profile, $field['path'] );
 		$out = [ 'area'=>$area, 'title'=>$schemas[ $area ]['title'], 'fields'=>$schemas[ $area ]['fields'], 'values'=>$values, 'expected'=>hash( 'sha256', wp_json_encode( $profile ) ), 'commerce'=>( new Profile() )->commerce_available(), 'canUpload'=>current_user_can( 'upload_files' ) ];
 		// The existing card renderer follows the saved profile; hiding a card never clears its value.
@@ -130,7 +155,6 @@ final class Continuity_App_Service {
 			}
 			return $this->response( $this->library( $request ) );
 		}
-		if ( 'feedback' === $area ) return $this->response( ( new Comment_Moderation_Service() )->listing( [ 'page'=>$request->get_param( 'page' ), 'search'=>$request->get_param( 'search' ), 'status'=>$request->get_param( 'status' ), 'type'=>$request->get_param( 'type' ), 'sort'=>$request->get_param( 'sort' ), 'id'=>$request->get_param( 'id' ) ] ) );
 		if ( 'timeline' === $area ) return $this->response( 'version' === $request->get_param( 'operation' ) ? $this->timeline_version( Task_Workspace_UI::id( $request->get_param( 'id' ) ) ) : $this->timeline( $request ) );
 		if ( 'services' === $area ) {
 			if ( 'service_version' === $request->get_param('operation') ) return $this->response((new Service_History_Service())->version(Task_Workspace_UI::id($request->get_param('id'))));
@@ -157,8 +181,8 @@ final class Continuity_App_Service {
 			$input=array_diff_key($body,array_fill_keys(['operation','id','revisionId'],true)); $history=new Service_History_Service();
 			return $this->response('service_autosave'===$operation ? $history->autosave($body['id'],$input) : ('service_restore'===$operation ? $history->restore($body['id'],$body['revisionId'],$input) : $history->discard_autosave($body['id'],$body['revisionId'],$input)));
 		}
-		if ( 'services' === $area && 'service_record' === ( $body['operation'] ?? '' ) ) return $this->response( $this->save_service_record( $body ) );
-		if ( 'services' === $area && 'service_plan' === ( $body['operation'] ?? '' ) ) return $this->response( $this->save_service_plan( $body ) );
+		if ( 'services' === $area && 'service_record' === ( $body['operation'] ?? '' ) ) return $this->response( $this->change_service_record( $body ) );
+		if ( 'services' === $area && 'service_plan' === ( $body['operation'] ?? '' ) ) return $this->response( $this->change_service_plan( $body ) );
 		if ( 'services' === $area && in_array( $body['operation'] ?? '', [ 'convert_service_plans','undo_service_conversion' ],true ) ) {
 			if ( array_diff( array_keys($body),[ 'operation','expected' ] ) || ! is_string($body['expected'] ?? null) ) return $this->response( $this->error('Open the current Service conversion review.') );
 			$conversion=new Native_Service_Conversion_Service();
@@ -176,16 +200,16 @@ final class Continuity_App_Service {
 			$result = ( new Selection() )->select( $body['kind'], $body['id'], $body['selected'], $body['expected'] );
 			return $this->response( is_wp_error( $result ) ? $result : [ 'id'=>$body['id'], 'selected'=>Selection::selected( $body['kind'], $body['id'] ) ] );
 		}
-		if ( 'feedback' === $area ) {
-			$service = new Comment_Moderation_Service(); $operation = $body['operation'] ?? '';
-			if ( 'status' === $operation ) return $this->response( $service->change_status( array_diff_key( $body, [ 'operation'=>true ] ) ) );
-			if ( 'selection' === $operation ) return $this->response( $service->select( array_diff_key( $body, [ 'operation'=>true ] ) ) );
-			if ( 'reply' === $operation ) return $this->response( $service->reply( array_diff_key( $body, [ 'operation'=>true ] ) ) );
-			if ( 'reaction' === $operation ) return $this->response( $service->reaction( array_diff_key( $body, [ 'operation'=>true ] ) ) );
-			if ( 'reports_reviewed' === $operation ) return $this->response( $service->resolve_reports( array_diff_key( $body, [ 'operation'=>true ] ) ) );
-			if ( 'policy' === $operation ) return $this->response( \DSA\Discussion\Discussion_Settings::save( array_diff_key( $body, [ 'operation'=>true ] ) ) );
-			return $this->response( $this->error( 'Choose a feedback action.' ) );
-		}
+		return $this->change_field($area,$body);
+	}
+	/** Shared field mutation; browser routes retain their nonce/origin checks. */
+	public function change_field(string $area,array $body): \WP_REST_Response {
+		if(!self::native_allowed() || !in_array($area,['contact','story','brand','website-plan','services','store'],true))return $this->response($this->error('Business editing is unavailable.',403));
+		$result=\DSA\Onboarding\Context_Write_Coordinator::run(fn()=>$this->write_field($area,$body));
+		return is_wp_error($result)?$this->response($result):$result;
+	}
+	private function write_field(string $area,array $body): \WP_REST_Response {
+		if(!self::native_allowed() || !in_array($area,['contact','story','brand','website-plan','services','store'],true))return $this->response($this->error('Business editing is unavailable.',403));
 		$current = $this->business( $area ); if ( is_wp_error( $current ) ) return $this->response( $current );
 		if ( ! is_string( $body['expected'] ?? null ) || ! hash_equals( $current['expected'], $body['expected'] ) ) return $this->response( $this->error( 'Business details changed elsewhere. Reload and review before saving.', 409 ) );
 		$path = $body['path'] ?? ''; $field = null; foreach ( $current['fields'] as $candidate ) if ( $candidate['path'] === $path ) $field = $candidate;
@@ -296,6 +320,7 @@ final class Continuity_App_Service {
 		foreach ( [ 'meta','taxonomyPaths' ] as $group ) $item[$group] = array_replace( $old[$group] ?? [], $item[$group] );
 		foreach ( [ 'title','summary','description' ] as $key ) $item[$key] = 'title' === $key ? sanitize_text_field( $item[$key] ) : ( 'summary' === $key ? sanitize_textarea_field( $item[$key] ) : wp_kses_post( $item[$key] ) );
 		$saved = ( new Profile() )->save_service_record( $current['service']['source'], $item, get_current_user_id() );
+		if(is_wp_error($saved))return$saved;
 		if ( empty( $saved['recordId'] ) ) return $this->error( 'The service could not be created. Reload before retrying.', 409 );
 		if ( empty( ( new Profile() )->current()['services']['enabled'] ) ) return $this->error( 'The service was saved, but its Design Context connection could not be confirmed. Reload before retrying.', 409 );
 		$after = $this->service_records( [ 'id'=>$saved['recordId'], 'page'=>1 ] ); $actual = $after['values']['services.items'][0] ?? null;

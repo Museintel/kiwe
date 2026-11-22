@@ -96,7 +96,7 @@ if ( $case === 'events' ) {
         $cfg['track_visitors'] = $visitors; $cfg['track_pages'] = $pages; $calls = [];
         ob_start(); $hooks['wp_footer'][0](); $html = ob_get_clean(); $enabled = $visitors && $pages;
         check( "Public timing requires both existing switches ($visitors/$pages)", str_contains( $html, '__stpTimeTrack' ) === (bool) $enabled );
-        check( "Honeypot remains present ($visitors/$pages)", str_contains( $html, '/synthetic-honeypot' ) );
+        check( "Retired crawler trap is absent ($visitors/$pages)", !str_contains( $html, '/synthetic-honeypot' ) );
         if ( !$enabled ) check( "No diagnostic/session/nonce work with timing off ($visitors/$pages)", !$calls );
     }
     $cfg['exclude_admin'] = 1; $admin = true; $calls = [];

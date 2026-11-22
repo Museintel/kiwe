@@ -8,7 +8,7 @@ final class Runtime_Registry {
  private static array $providers = [];
  private static array $errors = [];
  public static function owner(string $id): string {
-  return match($id){'seo'=>SEO_App_Service::class,'store'=>Store_App_Service::class,'guest'=>Guest_App_Service::class,'ai'=>AI_App_Service::class,'sitegraph'=>SiteGraph_App_Service::class,default=>throw new \InvalidArgumentException('Unknown App.')};
+  return match($id){'seo'=>SEO_App_Service::class,'store'=>Store_App_Service::class,'guest'=>Guest_App_Service::class,'ai'=>AI_App_Service::class,'sitegraph'=>SiteGraph_App_Service::class,'mcp'=>MCP_App_Service::class,default=>throw new \InvalidArgumentException('Unknown App.')};
  }
 
  public static function register(array $descriptor, string $root): bool {

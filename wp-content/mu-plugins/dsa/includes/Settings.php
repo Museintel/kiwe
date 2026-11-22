@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Settings {
+	public const SELECTED_UPDATE_API = 2;
 	private const SCHEMA_VERSION = 8;
 	private const INSTALL_PROFILE_OPTION = 'dsa_install_profile';
 	private const SITE_GRAPH_ONLY_PROFILE = 'sitegraph_only_v1';
@@ -29,6 +30,7 @@ final class Settings {
 
 		$this->resolved_manifest = null;
 		$settings = get_option( DSA_OPTION_SETTINGS, null );
+		$existing_cart_timing = is_array( $settings ) && ! array_key_exists( 'reminder_schedule_hours', (array) ( $settings['abandoned_cart'] ?? [] ) );
 
 		if ( ! is_array( $settings ) ) {
 			$settings = $this->fresh_install_defaults();
@@ -55,6 +57,9 @@ final class Settings {
 		// Preserve explicit choices, but never let a capability added by a newer
 		// release become active merely because an older settings row lacks it.
 		$settings = $this->recursive_parse_args( $settings, $this->fresh_install_defaults() );
+		// Existing automatic programmes retain their cooldown model until their
+		// manager explicitly saves a schedule; a read must not change delivery.
+		if ( $existing_cart_timing ) $settings['abandoned_cart']['reminder_schedule_hours'] = [];
 		$settings['fragment_navigation'] = false;
 		unset( $settings['enhancements'] );
 		$settings = $this->resolve_core_integrations( $settings );
@@ -268,6 +273,11 @@ final class Settings {
 					'manual_reminders_enabled' => true,
 					'automatic_email_enabled'  => false,
 					'automatic_whatsapp_enabled' => false,
+					'automation_policy_v1'      => false,
+					'policy_automatic_email_enabled' => false,
+					'policy_automatic_whatsapp_enabled' => false,
+					'reminder_schedule_hours'   => [ 12, 24 ],
+					'automation_started_at'     => 0,
 					'guest_email_reminders_enabled' => false,
 					'inactivity_minutes'       => 60,
 					'heartbeat_minutes'        => 5,
@@ -632,8 +642,19 @@ final class Settings {
 
 	/** Atomic selected-choice update; preserves untouched raw choices, ciphertext and extensions. */
 	public function compare_and_update_selected( array $expected, array $choices ): bool {
-		$next = $this->recursive_parse_args( $choices, $expected );
+		$next = $this->selected_patch( $choices, $expected );
 		return $this->compare_and_persist( $expected,$next );
+	}
+	/** Selective native writes preserve original key order as well as sibling values. */
+	private function selected_patch( array $choices, array $current ): array {
+		foreach ( $choices as $key=>$value ) {
+			if ( array_key_exists( $key, $current ) && is_array( $current[$key] ) ) {
+				if ( $this->is_list_array( $current[$key] ) && ( $current[$key] !== [] || !is_array($value) || $this->is_list_array($value) ) ) {
+					if ( is_array( $value ) ) $current[$key] = array_values( $value );
+				} else $current[$key] = $this->selected_patch( is_array( $value ) ? $value : [], $current[$key] );
+			} else $current[$key] = $value;
+		}
+		return $current;
 	}
 	/** Framework import/reversal replaces only its exact raw owner field, including absence. */
 	public function compare_and_replace_framework_tokens( array $expected, ?array $tokens ): bool {

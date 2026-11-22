@@ -88,3 +88,5 @@ Do not create a second system for:
 - service worker/cache/history/focus/scroll authority.
 
 The website may include UI affordances for these capabilities, but production must hook into Kiwe/WordPress/Woo/Bricks-owned behavior.
+
+Links profile visits, saved enquiries and public sharing are separate sibling actions. Follow `contracts/links.md` and current `kiwe.links` evidence; use the compiler's guarded `linkAction` launcher for per-card native post IDs. Never replace these owners with a social SDK, extra popup, guessed message link or a URL copied from the browser address bar.

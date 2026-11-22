@@ -1,0 +1,6 @@
+const cp=require('node:child_process'),path=require('node:path'),assert=require('node:assert/strict');
+const result=cp.spawnSync(process.env.PHP_BINARY||'php',[path.join(__dirname,'test-cart-reminder-timing.php')],{windowsHide:true,encoding:'utf8'});
+assert.equal(result.status,0,result.stderr||result.stdout);const proof=JSON.parse(result.stdout);
+assert.equal(proof.passed,true);assert.equal(proof.deliveryAttempted,false);assert(Object.keys(proof.checks).length>=16);assert(Object.values(proof.checks).every(Boolean));
+console.log(JSON.stringify({passed:true,nativeTimingChecks:Object.keys(proof.checks).length,customerDeliveryAttempted:false}));
+const fenced=cp.spawnSync(process.env.PHP_BINARY||'php',[path.join(__dirname,'test-reminder-version-fence.php')],{windowsHide:true,encoding:'utf8'});assert.equal(fenced.status,0,fenced.stderr||fenced.stdout);const version=JSON.parse(fenced.stdout);assert.equal(version.passed,true);assert.equal(version.deliveryAttempted,false);assert(Object.keys(version.checks).length>=6);assert(Object.values(version.checks).every(Boolean));console.log(JSON.stringify({passed:true,versionFenceChecks:Object.keys(version.checks).length,customerDeliveryAttempted:false}));

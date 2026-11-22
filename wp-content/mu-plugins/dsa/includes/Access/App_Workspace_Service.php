@@ -13,10 +13,11 @@ final class App_Workspace_Service {
 	public const CAPABILITY = 'kiwe_manage_context';
 	public static function settings_allowed(): bool { return current_user_can( self::CAPABILITY ); }
 	public static function dock_allowed(): bool { return class_exists( Dock_Workspace_Service::class ) && Dock_Workspace_Service::allowed(); }
-	public static function allowed(): bool { return self::settings_allowed() || self::dock_allowed(); }
+	public static function feedback_allowed(): bool { return class_exists(\DSA\Discussion\Feedback_Access::class) && \DSA\Discussion\Feedback_Access::allowed() || current_user_can('manage_woocommerce'); }
+	public static function allowed(): bool { return self::settings_allowed() || self::dock_allowed() || self::feedback_allowed(); }
 	public static function audience_allowed(): bool { return self::settings_allowed() && current_user_can( 'list_users' ) && current_user_can( 'edit_users' ); }
 	public static function enabled(): bool { return defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
-	public static function url( string $view = 'settings', string $tab = '' ): string { $args = [ 'page'=>self::PAGE, 'app_view'=>'activity' === $view ? 'activity' : 'settings' ]; if ( in_array( $tab, [ 'home','dock','appearance','copy','transitions','feedback','install','dashboard' ], true ) ) $args['app_tab'] = $tab; return add_query_arg( $args, admin_url( 'admin.php' ) ); }
+	public static function url( string $view = 'settings', string $tab = '' ): string { $args = [ 'page'=>self::PAGE, 'app_view'=>'activity' === $view ? 'activity' : 'settings' ]; if ( in_array( $tab, [ 'home','dock','appearance','copy','transitions','feedback','sound','install','dashboard' ], true ) ) $args['app_tab'] = $tab; return add_query_arg( $args, admin_url( 'admin.php' ) ); }
 	public function register(): void {
 		add_action( 'admin_menu', [ $this, 'menu' ], 34 );
 		if ( ! self::enabled() ) return;
@@ -24,7 +25,7 @@ final class App_Workspace_Service {
 		if ( is_admin() ) add_action( 'load-toplevel_page_' . self::PAGE, [ $this, 'document' ], 1 );
 	}
 	public function menu(): void {
-		if ( self::allowed() ) add_menu_page( __( 'App', 'dsa' ), __( 'App', 'dsa' ), self::settings_allowed() ? self::CAPABILITY : Dock_Workspace_Service::CAPABILITY, self::PAGE, [ $this, 'fallback' ], 'dashicons-smartphone', 34 );
+		if ( self::allowed() ) add_menu_page( __( 'App', 'dsa' ), __( 'App', 'dsa' ), self::settings_allowed() ? self::CAPABILITY : (self::dock_allowed() ? Dock_Workspace_Service::CAPABILITY : 'read'), self::PAGE, [ $this, 'fallback' ], 'dashicons-smartphone', 34 );
 	}
 	public function fallback(): void { echo '<div class="wrap"><h1>' . esc_html__( 'App', 'dsa' ) . '</h1><p>' . esc_html__( 'Open this task from the Kiwe dashboard.', 'dsa' ) . '</p></div>'; }
 	public function routes(): void {
@@ -60,6 +61,13 @@ final class App_Workspace_Service {
 			'theme_screens'=>'screen-copy',
 		];
 	}
+	/** The native editing contract, without credentials, providers or arbitrary options. */
+	public static function editable_fields(): array {
+		if(!self::settings_allowed())return [];
+		$fields=self::fields();$fields['theme_screens']=[];
+		foreach(self::screen_copy_schema() as$screen=>$definition)$fields['theme_screens'][$screen]=['type'=>'screen-copy','fields'=>$definition['fields']];
+		return$fields;
+	}
 	private static function screen_copy_schema(): array {
 		$schema=\DSA\Theme\Screen_Copy_Schema::screens();
 		if(!\DSA\Apps\Store_App_Service::enabled()){
@@ -86,7 +94,7 @@ final class App_Workspace_Service {
 		$dock = self::dock_allowed() ? ( new Dock_Workspace_Service() )->snapshot() : null;
 		if ( $dock ) $choices = array_replace( $choices, array_diff_key( $dock['choices'], [ 'enabled'=>true ] ) );
 		$pwa = new \DSA\PWA\PWA_Service( new Settings() );
-		return [ 'schema'=>'kiwe.app-workspace.v1','choices'=>$choices,'expected'=>hash( 'sha256', wp_json_encode( [ $choices, $dock['expected'] ?? '' ] ) ),'canActivity'=>self::audience_allowed(),'canSettings'=>self::settings_allowed(),'canDock'=>self::dock_allowed(),
+		return [ 'schema'=>'kiwe.app-workspace.v1','choices'=>$choices,'expected'=>hash( 'sha256', wp_json_encode( [ $choices, $dock['expected'] ?? '' ] ) ),'canActivity'=>self::audience_allowed(),'canSettings'=>self::settings_allowed(),'canDock'=>self::dock_allowed(),'canFeedback'=>self::feedback_allowed(),
 			'dock'=>$dock ? array_intersect_key( $dock, array_flip( [ 'labels','themes','woo','phonekey','navigationUrl' ] ) ) : null,
 			'health'=>[ 'siteIconReady'=>(bool) get_site_icon_url( 512 ),'installEnabled'=>$pwa->public_config()['enabled'],'https'=>is_ssl() ],
 			'identityUrl'=>admin_url('admin.php?page=kiwe-identity'), 'activityUrl'=>self::url('activity'),'settingsUrl'=>self::url(),'siteUrl'=>home_url('/'),
@@ -161,6 +169,6 @@ final class App_Workspace_Service {
 	public function document(): void {
 		if(!self::enabled()||!is_admin()||is_network_admin()||is_user_admin()||wp_doing_ajax()||wp_doing_cron()||!is_user_logged_in()||!self::allowed()||!in_array($_SERVER['REQUEST_METHOD']??'',['GET','HEAD'],true))return;
 		if('HEAD'===$_SERVER['REQUEST_METHOD']){nocache_headers();header('X-Robots-Tag: noindex, nofollow',true);exit;}
-		Task_Workspace_UI::app_document('app','App',['endpoint'=>rest_url('dsa/v1/workspace/app'),'initialView'=>'activity'===($_GET['app_view']??'')&&self::audience_allowed()?'activity':'settings','initialTab'=>in_array($_GET['app_tab']??'',['home','dock','appearance','copy','transitions','feedback','install','dashboard'],true)&&('dashboard'!==$_GET['app_tab']||Site_Owner_Service::can_manage_dashboard())?$_GET['app_tab']:'home']);
+		Task_Workspace_UI::app_document('app','App',['endpoint'=>rest_url('dsa/v1/workspace/app'),'feedbackEndpoint'=>rest_url('dsa/v1/workspace/feedback-settings'),'initialView'=>'activity'===($_GET['app_view']??'')&&self::audience_allowed()?'activity':'settings','initialTab'=>in_array($_GET['app_tab']??'',['home','dock','appearance','copy','transitions','feedback','sound','install','dashboard'],true)&&('dashboard'!==$_GET['app_tab']||Site_Owner_Service::can_manage_dashboard())?$_GET['app_tab']:'home']);
 	}
 }

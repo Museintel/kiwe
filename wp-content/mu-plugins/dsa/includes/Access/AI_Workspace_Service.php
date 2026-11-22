@@ -3,8 +3,10 @@
 namespace DSA\Access;
 
 use DSA\AI\AI_Allowance_Service;
+use DSA\AI\AI_Configuration_Service as Configuration;
 use DSA\AI\AI_Feature_Policy as Policy;
 use DSA\AI\AI_Provider_Service;
+use DSA\Apps\MCP_Provider_Contract;
 use DSA\Settings;
 use DSA\Utilities\Origin_Checker;
 
@@ -19,6 +21,12 @@ final class AI_Workspace_Service {
 	private string $screen = '';
 
 	public function register(): void {
+		if ( class_exists( MCP_Provider_Contract::class ) ) {
+			MCP_Provider_Contract::register( 'ai', MCP_Provider_Contract::API, static function (): array {
+				require_once dirname( __DIR__ ) . '/AI/MCP_AI_Provider.php';
+				return \DSA\AI\MCP_AI_Provider::packet();
+			} );
+		}
 		add_action( 'admin_menu', [ $this, 'menu' ], 34 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'assets' ] );
 		add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
@@ -54,35 +62,15 @@ final class AI_Workspace_Service {
 			'goalUrl'=>current_user_can( 'kiwe_manage_context' ) ? \DSA\Onboarding\SEO_Context_Service::goal_url() : '',
 			'allowance'=>( new AI_Allowance_Service( $settings ) )->status(),
 			'ownerSetupUrl'=>current_user_can( 'manage_options' ) ? admin_url( 'admin.php?page=kiwe-ai' ) : '',
-			'owner'=>( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) ) ? $this->owner_snapshot( $ai, $settings ) : null,
+			'owner'=>Configuration::owner_allowed() ? $this->owner_snapshot( $ai, $settings ) : null,
 		];
 	}
 	private function owner_snapshot( array $ai, Settings $settings ): array {
-		$allowance = new AI_Allowance_Service( $settings );
-		$provider = ( new AI_Provider_Service( $settings ) )->status();
-		$controls = [
-			'allowNativeGeneration'=>! empty( $ai['allow_native_generation'] ),
-			'seoAllowed'=>! empty( $ai['seo_enabled'] ),
-			'securetrackAllowed'=>! empty( $ai['securetrack_brief_enabled'] ),
-			'requestLimits'=>$allowance->limits(),
-			'tokenLimits'=>$allowance->token_limits(),
-		];
+		$view = Configuration::owner_snapshot( $ai, $settings );
 		$last_check = get_option( self::PROVIDER_CHECK_OPTION, [] );
 		if ( ! is_array( $last_check ) || 'kiwe.ai-provider-check.v1' !== ( $last_check['schema'] ?? '' ) ) $last_check = null;
-		$key_stored = '' !== (string) ( $ai['native_api_key'] ?? '' );
-		$provider_snapshot = [
-			'id'=>(string) ( $provider['provider'] ?? 'none' ), 'model'=>(string) ( $provider['model'] ?? '' ),
-			'enabled'=>! empty( $provider['enabled'] ), 'configured'=>! empty( $provider['configured'] ),
-			'keyStatus'=>sanitize_key( (string) ( $provider['keyStatus']['status'] ?? 'empty' ) ),
-		];
-		$configuration = \DSA\AI\AI_Configuration_Service::projection( $ai );
-		$fingerprint = $controls + [ 'configuration'=>$configuration,'keyStored'=>$key_stored, 'provider'=>$provider_snapshot,'keyProof'=>hash_hmac( 'sha256',(string) ( $ai['native_api_key'] ?? '' ),wp_salt( 'nonce' ) ) ];
-		return $controls + [
-			'configuration'=>$configuration,
-			'keyStored'=>$key_stored,
-			'provider'=>$provider_snapshot + [ 'lastCheck'=>$last_check ],
-			'expected'=>hash( 'sha256', wp_json_encode( $fingerprint ) ),
-		];
+		$view['provider']['lastCheck'] = $last_check;
+		return $view;
 	}
 	public function read_app( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! $this->app_permission( $request ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_forbidden', __( 'AI assistance is unavailable for your account.', 'dsa' ) ), 403 );
@@ -104,36 +92,19 @@ final class AI_Workspace_Service {
 		return Task_Workspace_UI::response( $this->app_snapshot() );
 	}
 	public function save_owner_app( \WP_REST_Request $request ): \WP_REST_Response {
-		if ( ! $this->app_permission( $request ) || ! ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
+		if ( ! $this->app_permission( $request ) || ! Configuration::owner_allowed() ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
 		$body = $request->get_json_params();
 		$key = is_array( $body ) ? ( $body['key'] ?? null ) : null;
 		$value = is_array( $body ) ? ( $body['value'] ?? null ) : null;
 		$expected = is_array( $body ) ? ( $body['expected'] ?? null ) : null;
-		if ( ! is_string( $key ) || ! in_array( $key, [ 'allowNativeGeneration', 'seoAllowed', 'securetrackAllowed', 'requestLimits', 'tokenLimits','configuration' ], true ) || ! is_string( $expected ) || ! preg_match( '/^[a-f0-9]{64}$/D', $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Choose a valid website AI control.', 'dsa' ) ), 400 );
-		if ( in_array( $key, [ 'requestLimits', 'tokenLimits' ], true ) ) {
-			if ( ! is_array( $value ) || array_keys( $value ) !== [ 'minute', 'day', 'month' ] || count( array_filter( $value, static fn( $n ) => is_int( $n ) && $n >= 0 && $n <= 1000000000 ) ) !== 3 ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Enter whole-number allowance limits.', 'dsa' ) ), 400 );
-		} elseif ( 'configuration' === $key ) { if ( ! is_array( $value ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value','Choose supported AI settings.' ),400 ); } elseif ( ! is_bool( $value ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Choose on or off.', 'dsa' ) ), 400 );
-		$raw = get_option( DSA_OPTION_SETTINGS, null );
-		if ( ! is_array( $raw ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_settings', __( 'Website settings are unavailable. Refresh and review.', 'dsa' ) ), 409 );
-		$ai = is_array( $raw['ai'] ?? null ) ? $raw['ai'] : [];
-		$current = $this->owner_snapshot( $ai, new Settings() );
-		if ( ! hash_equals( $current['expected'], $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_changed', __( 'Website AI settings changed. Refresh before saving.', 'dsa' ) ), 409 );
-		switch ( $key ) {
-			case 'configuration': $ai = \DSA\AI\AI_Configuration_Service::patch( $value,$ai ); if ( is_wp_error( $ai ) ) return Task_Workspace_UI::failure( $ai,400 ); break;
-			case 'allowNativeGeneration': $ai['allow_native_generation'] = $value; break;
-			case 'seoAllowed': $ai['seo_enabled'] = $value; break;
-			case 'securetrackAllowed': $ai['securetrack_brief_enabled'] = $value; break;
-			case 'requestLimits': $ai['request_allowance'] = AI_Allowance_Service::sanitize_limits( $value ); break;
-			case 'tokenLimits': $ai['token_allowance'] = AI_Allowance_Service::sanitize_token_limits( $value ); break;
-		}
-		if ( ! ( new Settings() )->compare_and_update_selected( $raw,[ 'ai'=>$ai ] ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_changed','Settings changed or the save could not be confirmed. Refresh before retrying.' ),409 );
-		$stored = get_option( DSA_OPTION_SETTINGS, null );
-		if ( ! is_array( $stored ) || ( $stored['ai'] ?? null ) !== $ai ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_save', __( 'The setting could not be confirmed. Refresh and review.', 'dsa' ) ), 409 );
+		if ( ! is_string( $key ) || ! in_array( $key, Configuration::OWNER_FIELDS, true ) || ! is_string( $expected ) || ! preg_match( '/^[a-f0-9]{64}$/D', $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_value', __( 'Choose a valid website AI control.', 'dsa' ) ), 400 );
+		$saved = Configuration::save_owner( [ $key=>$value ], $expected );
+		if ( is_wp_error( $saved ) ) return Task_Workspace_UI::failure( $saved, in_array( $saved->get_error_code(), [ 'kiwe_ai_owner_value', 'kiwe_ai_configuration' ], true ) ? 400 : 409 );
 		return Task_Workspace_UI::response( $this->app_snapshot() );
 	}
 
 	public function check_provider_app( \WP_REST_Request $request ): \WP_REST_Response {
-		if ( ! $this->app_permission( $request ) || ! ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
+		if ( ! $this->app_permission( $request ) || ! Configuration::owner_allowed() ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_owner_forbidden', __( 'Website AI setup is unavailable for your account.', 'dsa' ) ), 403 );
 		$body = $request->get_json_params();
 		$expected = is_array( $body ) && is_string( $body['expected'] ?? null ) ? (string) $body['expected'] : '';
 		if ( ! is_array( $body ) || true !== ( $body['confirmed'] ?? null ) || ! preg_match( '/^[a-f0-9]{64}$/D', $expected ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_ai_provider_check', __( 'Confirm the single provider check before continuing.', 'dsa' ) ), 400 );

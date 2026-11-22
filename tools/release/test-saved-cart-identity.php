@@ -30,7 +30,7 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
 	check($journey->invoke($carts,['status'=>'abandoned','checkout_details_at'=>'2026-10-22 10:00:00'])['journeyLabel']==='Checkout form started','sheet details are distinct from the checkout page');
 	check($journey->invoke($carts,['status'=>'abandoned','checkout_started_at'=>'2026-10-22 10:01:00'])['journeyLabel']==='Left at checkout','actual abandoned checkout has its clear cue');
 	check($journey->invoke($carts,['status'=>'active','checkout_started_at'=>'2026-10-22 10:01:00'])['journeyLabel']==='Reached checkout','active checkout is not labelled abandoned');
-	check($journey->invoke($carts,['status'=>'converted','checkout_started_at'=>'2026-10-22 10:01:00'])['journeyLabel']==='Order placed','placed order does not remain a checkout abandonment');
+	check($journey->invoke($carts,['status'=>'converted','checkout_started_at'=>'2026-10-22 10:01:00'])['journeyLabel']==='Purchase completed','placed order does not remain a checkout abandonment');
  $allowed=false;check($label->invoke($carts,['user_id'=>1])==='Unknown','private title is denied before cache lookup');check($carts->workspace_rows()['items']===[],'denied role receives no list identity');$allowed=true;
  check($money->invoke($carts,523.16,'INR')==='₹523.16','Woo numeric currency entity is decoded as text');
  $wpdb->rows=[['id'=>1,'user_id'=>1,'contact_type'=>'email','contact_email_enc'=>'sealed:unused@example.test','status'=>'abandoned','last_activity_at'=>'2026-10-14 00:00:00','item_count'=>2,'cart_total'=>523.16,'currency'=>'INR','reminder_count'=>0]];

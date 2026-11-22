@@ -1,6 +1,6 @@
 <?php
 /** Native behavior test. Only a fresh, explicitly owned CLI database may run it. */
-if ( PHP_SAPI !== 'cli' || ! defined( 'KIWE_DISCUSSION_NATIVE_TEST' ) || true !== KIWE_DISCUSSION_NATIVE_TEST || ! defined( 'KIWE_DISCUSSION_OWNED_DATABASE' ) || DB_NAME !== KIWE_DISCUSSION_OWNED_DATABASE || ! preg_match( '/^kiwe_cf23_[0-9]{8}_(store|editorial)$/D', DB_NAME ) ) throw new RuntimeException( 'Owned native discussion fixture required.' );
+if ( PHP_SAPI !== 'cli' || ! defined( 'KIWE_DISCUSSION_NATIVE_TEST' ) || true !== KIWE_DISCUSSION_NATIVE_TEST || ! defined( 'KIWE_DISCUSSION_OWNED_DATABASE' ) || DB_NAME !== KIWE_DISCUSSION_OWNED_DATABASE || ! preg_match( '/^kiwe_(?:cf23_[0-9]{8}|fb_20261029)_(store|editorial)$/D', DB_NAME ) ) throw new RuntimeException( 'Owned native discussion fixture required.' );
 
 function kiwe_discussion_native_tests( bool $store ): array {
     global $wpdb;
@@ -98,9 +98,10 @@ function kiwe_discussion_native_tests( bool $store ): array {
     $check( $code($replay_after_moderation)==='kiwe_discussion_changed', 'An account change cannot reuse another private submission' );
     wp_set_comment_status( $published['id'], 'approve' );
     $page = $post( [ 'post_type'=>'page' ] );
-    $check( DSA\Discussion\Discussion_Target::automatic_id( $page ) === 0, 'Site-wide comments are absent until an explicit native public page is selected' );
+    $check( DSA\Discussion\Discussion_Target::automatic_id( $page ) === 0, 'Site-wide comments are absent until explicitly enabled' );
     update_option( DSA\Discussion\Discussion_Target::SITE_PAGE_OPTION, $page );
     $check( DSA\Discussion\Discussion_Target::automatic_id( $other ) === $other && DSA\Discussion\Discussion_Target::automatic_id( $page ) === $page, 'An explicit native site-feedback page does not replace contextual article discussion' );
+    delete_option(DSA\Discussion\Discussion_Target::SITE_PAGE_OPTION);
     $query_target = $post( [ 'post_title'=>'Bounded pagination fixture' ] );
     for ( $i=0; $i<15; ++$i ) { $id = wp_insert_comment( [ 'comment_post_ID'=>$query_target, 'comment_author'=>'Public fixture reader', 'comment_author_email'=>'private@example.test', 'comment_content'=>'Public fixture ' . $i, 'comment_approved'=>1, 'comment_type'=>'comment', 'user_id'=>$proven ] ); wp_insert_comment( [ 'comment_post_ID'=>$query_target, 'comment_parent'=>$id, 'comment_author'=>'Reply reader', 'comment_content'=>'Child fixture', 'comment_approved'=>1 ] ); }
     $wpdb->queries = [];

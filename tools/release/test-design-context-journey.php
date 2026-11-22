@@ -3,12 +3,13 @@ namespace DSA\Site { final class Site_Identity_Service { public static function 
 namespace DSA\AI { final class AI_Feature_Policy { public static function seo_enabled(){return true;} } }
 namespace DSA\Access { final class Commerce_App_Service { public static function url($area){return 'https://example.invalid/wp-admin/admin.php?page=kiwe-store&area='.$area;} } }
 namespace DSA\Onboarding {
- final class Design_Context_Profile_Service { public const OPTION_PROFILE='kiwe_seam_design_context_v1'; public const USER_META_TEAM_MEMBER='kiwe_public_team_member'; public const USER_META_TEAM_TITLE='kiwe_team_title'; public function commerce_available(){return $GLOBALS['woo'];} }
+ final class Design_Context_Profile_Service { public const OPTION_PROFILE='kiwe_seam_design_context_v1',OPTION_STATUS='fixture_context_status'; public const USER_META_TEAM_MEMBER='kiwe_public_team_member'; public const USER_META_TEAM_TITLE='kiwe_team_title'; public function commerce_available(){return $GLOBALS['woo'];} }
  final class Context_Selection_Service { public const MEDIA_META='_kiwe_design_context_media'; public const TESTIMONIAL_META='_kiwe_design_context_testimonial'; }
  final class User_Profile_Service { public static function eligible($id){return $id===9;} }
 }
 namespace {
  define('ABSPATH',__DIR__.'/');
+ function get_current_blog_id(){return 1;} function wp_cache_delete($key,$group){return true;}
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php'; define('DSA_OPTION_SETTINGS','dsa_settings');
  $woo=false;$allowed=true;$options=['site_icon'=>8];$transients=[];$queries=0;$writes=0;$evidence=['pages'=>true,'products'=>false,'media'=>false,'testimonials'=>false,'team'=>false,'articles'=>false,'navigation'=>false];
@@ -20,7 +21,7 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
  function WC(){return null;}
  function get_bloginfo($key){return 'Synthetic business';} function wp_strip_all_tags($v){return strip_tags($v);} function is_email($v){return filter_var($v,FILTER_VALIDATE_EMAIL);} function sanitize_key($v){return preg_replace('/[^a-z0-9_-]/','',strtolower($v));}
  function admin_url($path){return 'https://example.invalid/wp-admin/'.$path;} function wp_json_encode($v){return json_encode($v);} function post_type_exists($v){return $v==='service';}
- $wpdb=new class { public $posts='wp_posts',$postmeta='wp_postmeta',$term_relationships='wp_term_relationships',$term_taxonomy='wp_term_taxonomy',$comments='wp_comments',$commentmeta='wp_commentmeta',$last_error='';public function prepare($s,...$v){return $s.implode('|',$v);} public function get_var($s){++$GLOBALS['queries'];foreach(['media'=>'wp_postmeta','testimonials'=>'wp_commentmeta','products'=>"post_type='product'",'pages'=>"post_type='page'",'articles'=>"post_type='post'",'navigation'=>"post_type='nav_menu_item'"]as$k=>$v)if(str_contains($s,$v))return $GLOBALS['evidence'][$k]?1:null;return null;} };
+ $wpdb=new class { public $prefix='wp_',$posts='wp_posts',$postmeta='wp_postmeta',$term_relationships='wp_term_relationships',$term_taxonomy='wp_term_taxonomy',$comments='wp_comments',$commentmeta='wp_commentmeta',$last_error='';public function prepare($s,...$v){return $s.implode('|',$v);} public function get_var($s){if(preg_match('/^SELECT (GET_LOCK|RELEASE_LOCK)\(/',$s))return '1';++$GLOBALS['queries'];foreach(['media'=>'wp_postmeta','testimonials'=>'wp_commentmeta','products'=>"post_type='product'",'pages'=>"post_type='page'",'articles'=>"post_type='post'",'navigation'=>"post_type='nav_menu_item'"]as$k=>$v)if(str_contains($s,$v))return $GLOBALS['evidence'][$k]?1:null;return null;} };
  require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Journey_Service.php';
  $j=\DSA\Onboarding\Design_Context_Journey_Service::class;$key=\DSA\Onboarding\Design_Context_Profile_Service::OPTION_PROFILE;
  $options[$key]=['identity'=>['description'=>'What we do'],'audience'=>['primary'=>'Our readers'],'seo'=>['primaryGoal'=>'read','homepageDescription'=>'A publication','searchIntent'=>'Local news'],'brand'=>['tone'=>'clear'],'services'=>['enabled'=>false,'items'=>[['title'=>'Kept','description'=>'Kept']]],'about'=>['team'=>['members'=>[['userId'=>9]]]],'future'=>['keep'=>true]];

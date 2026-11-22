@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Small native WooCommerce task set; no storefront hooks or background work. */
 final class Commerce_App_Service {
+	public const AUTHORING_API = 1;
 	public const PAGE = 'kiwe-store';
 	public const PAGE_SIZE = 20;
 	public static function enabled(): bool { return defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && \DSA\Apps\Store_App_Service::enabled(); }
@@ -188,10 +189,15 @@ final class Commerce_App_Service {
 	}
 	public function read_coupons( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( 'GET' !== $request->get_method() || ! $this->permission( $request ) || ! $this->can_coupon() || ! class_exists( '\WC_Coupon' ) ) return $this->response( $this->error( 'forbidden', 'Coupons are unavailable for your account.', 403 ) );
-		$input=$request->get_query_params();$page=max(1,min(1000,(int)($input['page']??1)));$search=Task_Workspace_UI::text($input['search']??'',200);
+		return $this->response($this->coupon_catalogue($request->get_query_params()));
+	}
+	/** Native bounded promotion summaries, without customer restrictions or usage identities. */
+	public function coupon_catalogue(array $input=[]) {
+		if(!self::enabled()||!$this->can_coupon()||!class_exists('\WC_Coupon'))return $this->error('forbidden','Coupons are unavailable for your account.',403);
+		$page=max(1,min(1000,(int)($input['page']??1)));$search=Task_Workspace_UI::text($input['search']??'',200);
 		$query=new \WP_Query(['post_type'=>'shop_coupon','post_status'=>['publish','draft','private'],'posts_per_page'=>21,'offset'=>($page-1)*20,'orderby'=>'ID','order'=>'DESC','s'=>$search,'no_found_rows'=>true,'update_post_term_cache'=>false]);
 		$items=[];foreach(array_slice($query->posts,0,20)as$post){$record=$this->coupon_record((int)$post->ID);if(is_wp_error($record))continue;$items[]=array_intersect_key($record,array_flip(['id','name','type','amount','status','editable','reason','expected']));}
-		return $this->response(['items'=>$items,'page'=>$page,'search'=>$search,'hasNext'=>count($query->posts)>20,'enabled'=>'yes'===get_option('woocommerce_enable_coupons','yes'),'canCreate'=>$this->can_create_coupon()]);
+		return ['items'=>$items,'page'=>$page,'search'=>$search,'hasNext'=>count($query->posts)>20,'enabled'=>'yes'===get_option('woocommerce_enable_coupons','yes'),'canCreate'=>$this->can_create_coupon()];
 	}
 	public function read_coupon( \WP_REST_Request $request ): \WP_REST_Response {
 		if('GET'!==$request->get_method()||!$this->permission($request))return $this->response($this->error('forbidden','Coupon editing is unavailable.',403));
@@ -240,7 +246,6 @@ final class Commerce_App_Service {
 		return 'POST' !== $request->get_method() || true === Origin_Checker::mutation_allowed( $request );
 	}
 	public function routes(): void {
-		if ( self::enabled() && class_exists( '\DSA\Commerce\Discussion_Review_Adapter' ) ) register_rest_route( 'dsa/v1', '/workspace/commerce/review-policy', [ [ 'methods'=>'GET', 'callback'=>[ $this,'read_review_policy' ], 'permission_callback'=>[ $this,'permission' ] ], [ 'methods'=>'POST', 'callback'=>[ $this,'save_review_policy' ], 'permission_callback'=>[ $this,'permission' ] ] ] );
 		register_rest_route('dsa/v1','/workspace/commerce/display-policy',[
 			['methods'=>'GET','callback'=>[$this,'read_display_policy'],'permission_callback'=>[$this,'permission']],
 			['methods'=>'POST','callback'=>[$this,'save_display_policy'],'permission_callback'=>[$this,'permission']],
@@ -519,7 +524,8 @@ final class Commerce_App_Service {
    if ( $before['switches'][$key] === $input['value'] ) return $before;
    $raw = get_option( DSA_OPTION_SETTINGS, [] ); $next = $raw; $next['commerce'][$key] = $input['value'];
    // Native option writer preserves every other raw setting and runs WordPress invalidation hooks.
-   update_option( DSA_OPTION_SETTINGS, $next, false );
+   if(defined(\DSA\Settings::class.'::SELECTED_UPDATE_API')&&\DSA\Settings::SELECTED_UPDATE_API>=2){if(!(new \DSA\Settings())->compare_and_update_selected($raw,['commerce'=>[$key=>$input['value']]]))return $this->error('stale','Another setting changed. Reload and review before saving.',409);}
+   else update_option( DSA_OPTION_SETTINGS, $next, false );
    if ( get_option( DSA_OPTION_SETTINGS, [] ) !== $next ) return $this->error( 'write', 'Store settings could not be confirmed. Reload and review before retrying.', 409 );
    $after = $this->offer_policy_record();
    if ( is_wp_error( $after ) || $after['switches'][$key] !== $input['value'] ) return $this->error( 'readback', 'The effective Cart display setting differs from your change. Reload and review.', 409 );
@@ -675,19 +681,24 @@ final class Commerce_App_Service {
 	public function create_product( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( 'POST' !== $request->get_method() || ! $this->permission( $request ) || ! current_user_can( 'create_products' ) || ! current_user_can( 'edit_products' ) || ! class_exists( '\WC_Product_Simple' ) ) return $this->response( $this->error( 'forbidden', 'Your role cannot create products.', 403 ) );
 		$input = $request->get_json_params();
-		if ( ! is_array( $input ) || ! is_string( $input['name'] ?? null ) || strlen( $input['name'] ) > 960 ) return $this->response( $this->error( 'name', 'Enter a product name of up to 240 characters.' ) );
+		return $this->response( $this->create_product_record( is_array($input)?$input:[] ) );
+	}
+	/** The same native draft creation for private workspace and admitted MCP callers. */
+	public function create_product_record( array $input ) {
+		if ( ! self::enabled() || ! is_user_logged_in() || ! current_user_can('create_products') || !current_user_can('edit_products') || !class_exists('\WC_Product_Simple') ) return $this->error('forbidden','Your role cannot create products.',403);
+		if ( ! is_string( $input['name'] ?? null ) || strlen( $input['name'] ) > 960 ) return $this->error( 'name', 'Enter a product name of up to 240 characters.' );
 		$name = sanitize_text_field( $input['name'] );
-		if ( '' === $name || preg_match_all( '/./us', $name ) > 240 ) return $this->response( $this->error( 'name', 'Enter a product name of up to 240 characters.' ) );
+		if ( '' === $name || preg_match_all( '/./us', $name ) > 240 ) return $this->error( 'name', 'Enter a product name of up to 240 characters.' );
 		$image = Workspace_Media::validate( $input['imageId'] ?? 0 );
-		if ( is_wp_error( $image ) ) return $this->response( $image );
-		$type=$input['type']??'simple';if(!in_array($type,['simple','variable','grouped'],true))return $this->response($this->error('type','Choose a simple, variable or grouped draft product.'));
+		if ( is_wp_error( $image ) ) return $image;
+		$type=$input['type']??'simple';if(!in_array($type,['simple','variable','grouped'],true))return $this->error('type','Choose a simple, variable or grouped draft product.');
 		// Creation only makes a draft. Categories and inventory use the existing
 		// record's checked editors; a lost response is never auto-replayed.
 		try { $product = $type==='variable'?new \WC_Product_Variable():($type==='grouped'?new \WC_Product_Grouped():new \WC_Product_Simple()); $product->set_name( $name ); $product->set_image_id( $image ); $product->set_status( 'draft' ); $id = $product->save(); }
-		catch ( \Throwable $error ) { return $this->response( $this->error( 'create', 'The draft could not be confirmed. Reload the product list before trying again.', 409 ) ); }
+		catch ( \Throwable $error ) { return $this->error( 'create', 'The draft could not be confirmed. Reload the product list before trying again.', 409 ); }
 		$record = $id ? wc_get_product( $id ) : false;
-		if ( ! $record || $record->get_type()!==$type || $record->get_name( 'edit' ) !== $name || (int) $record->get_image_id( 'edit' ) !== $image || 'draft' !== $record->get_status( 'edit' ) ) return $this->response( $this->error( 'create', 'The draft could not be confirmed. Reload the product list before trying again.', 409 ) );
-		return $this->response( $this->project_product( $record ) );
+		if ( ! $record || $record->get_type()!==$type || $record->get_name( 'edit' ) !== $name || (int) $record->get_image_id( 'edit' ) !== $image || 'draft' !== $record->get_status( 'edit' ) ) return $this->error( 'create', 'The draft could not be confirmed. Reload the product list before trying again.', 409 );
+		return $this->project_product( $record );
 	}
 	public function save_inventory( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( 'POST' !== $request->get_method() || ! $this->permission( $request ) ) return $this->response( $this->error( 'forbidden', 'Inventory editing is unavailable.', 403 ) );
@@ -979,9 +990,18 @@ final class Commerce_App_Service {
 		$tags = array_values( array_map( 'intval', $product->get_tag_ids( 'edit' ) ) ); sort( $tags, SORT_NUMERIC );
 		return [ 'id'=>(int) $product->get_id(), 'type'=>(string) $product->get_type(), 'name'=>(string) $product->get_name( 'edit' ), 'description'=>(string) $product->get_description( 'edit' ), 'shortDescription'=>(string) $product->get_short_description( 'edit' ), 'status'=>(string) $product->get_status( 'edit' ), 'price'=>(string) $product->get_regular_price( 'edit' ), 'salePrice'=>(string) $product->get_sale_price( 'edit' ), 'saleFrom'=>$product->get_date_on_sale_from( 'edit' ) ? $product->get_date_on_sale_from( 'edit' )->getTimestamp() : null, 'saleTo'=>$product->get_date_on_sale_to( 'edit' ) ? $product->get_date_on_sale_to( 'edit' )->getTimestamp() : null, 'taxStatus'=>(string) $product->get_tax_status( 'edit' ), 'taxClass'=>(string) $product->get_tax_class( 'edit' ), 'virtual'=>(bool) $product->get_virtual( 'edit' ), 'weight'=>(string) $product->get_weight( 'edit' ), 'length'=>(string) $product->get_length( 'edit' ), 'width'=>(string) $product->get_width( 'edit' ), 'height'=>(string) $product->get_height( 'edit' ), 'shippingClassId'=>(int) $product->get_shipping_class_id( 'edit' ), 'weightUnit'=>(string) get_option( 'woocommerce_weight_unit', 'kg' ), 'dimensionUnit'=>(string) get_option( 'woocommerce_dimension_unit', 'cm' ), 'stock'=>$product->get_stock_quantity( 'edit' ), 'manageStock'=>$product->get_manage_stock( 'edit' ), 'stockStatus'=>(string) $product->get_stock_status( 'edit' ), 'sku'=>(string) $product->get_sku( 'edit' ), 'imageId'=>(int) $product->get_image_id( 'edit' ), 'galleryIds'=>array_map( 'intval', $product->get_gallery_image_ids( 'edit' ) ), 'categories'=>$categories, 'tags'=>$tags, 'groupedIds'=>$product->get_type()==='grouped'?array_map('intval',$product->get_children('edit')):[],'upsellIds'=>array_map('intval',$product->get_upsell_ids('edit')),'crossSellIds'=>array_map('intval',$product->get_cross_sell_ids('edit')),'attributes'=>Product_Variation_Workspace_Service::attribute_values($product),'defaultAttributes'=>$product->get_default_attributes('edit'),'modifiedGmt'=>$product->get_date_modified( 'edit' ) ? $product->get_date_modified( 'edit' )->date( 'c' ) : '' ];
 	}
-	public static function fingerprint( $product ): string { return hash( 'sha256', wp_json_encode( self::product_values( $product ) ) ); }
+	public static function fingerprint( $product ): string { return hash( 'sha256', wp_json_encode( [self::product_values( $product ),(bool)$product->get_reviews_allowed('edit')] ) ); }
+	/** One current product without hydrating the category catalogue or any orders. */
+	public function product_record( int $id ) {
+		$post=get_post($id);
+		if(!self::enabled()||!$post||$post->post_type!=='product'||$post->post_status==='trash'||!current_user_can('edit_products')||!current_user_can('edit_post',$id)||!current_user_can('read_post',$id))return $this->error('forbidden','Choose a product your role can edit.',403);
+		$product=wc_get_product($id);if(!$product)return $this->error('missing','This product is unavailable.',404);
+		$out=$this->project_product($product);unset($out['controls']);return $out;
+	}
 	private function project_product( $product ): array {
 		$out = self::product_values( $product );
+		$out['reviewsAllowed']=(bool)$product->get_reviews_allowed('edit');
+		$out['feedbackAvailable']=\DSA\Discussion\Feedback_Access::enabled();
 		$out['expected'] = self::fingerprint( $product );
 		$out['image'] = Workspace_Media::image( $out['imageId'] );
 		$out['gallery'] = array_map( [ Workspace_Media::class, 'image' ], $out['galleryIds'] );
@@ -1008,6 +1028,8 @@ final class Commerce_App_Service {
 		foreach ( [ 'name','price','status' ] as $key ) if ( ! is_string( $input[ $key ] ?? null ) ) return $this->error( 'input', 'Complete the product details.' );
 		$description_changed = array_key_exists( 'description', $input );
 		$short_changed = array_key_exists( 'shortDescription', $input );
+		$reviews_changed=array_key_exists('reviewsAllowed',$input);
+		if($reviews_changed && (!\DSA\Discussion\Feedback_Access::enabled() || !is_bool($input['reviewsAllowed'])))return $this->error('reviews','Choose whether this product accepts reviews.');
 		if ( $short_changed && ! is_string( $input['shortDescription'] ) ) return $this->error( 'input', 'Complete the product short description.' );
 		if ( $description_changed && ! is_string( $input['description'] ) ) return $this->error( 'input', 'Complete the product description.' );
 		if ( strlen( $input['name'] ) > 960 || ( $description_changed && strlen( $input['description'] ) > 100000 ) || ( $short_changed && strlen( $input['shortDescription'] ) > 5000 ) ) return $this->error( 'size', 'The product details exceed the writing limit.' );
@@ -1049,6 +1071,7 @@ final class Commerce_App_Service {
 			$product->set_name( $name ); if ( $description_changed ) $product->set_description( $description ); if ( $short_changed ) $product->set_short_description( $short ); if($before['type']==='simple')$product->set_regular_price( $price ); $product->set_status( $status ); $product->set_category_ids( $categories ); if ( $tag_changed ) $product->set_tag_ids( $tags );
 			if ( null !== $image ) $product->set_image_id( $image );
 			if ( null !== $gallery ) $product->set_gallery_image_ids( $gallery );
+			if ( $reviews_changed ) $product->set_reviews_allowed($input['reviewsAllowed']);
 			$saved = $product->save();
 		} catch ( \Throwable $error ) { return $this->error( 'write', 'The save could not be confirmed. Refresh before retrying.', 409 ); }
 		if ( ! $saved || is_wp_error( $saved ) ) return $this->error( 'write', 'The save could not be confirmed. Refresh before retrying.', 409 );
@@ -1056,13 +1079,14 @@ final class Commerce_App_Service {
 		if ( ! $record ) return $this->error( 'readback', 'The saved product could not be read. Refresh before retrying.', 409 );
 		$after = $this->project_product( $record );
 		foreach ( [ 'name'=>$name, 'description'=>$description, 'shortDescription'=>$short, 'price'=>$price, 'status'=>$status ] as $key=>$value ) if ( $after[ $key ] !== $value ) return $this->error( 'readback', 'The saved product differs. Refresh and review it.', 409 );
+		if($after['reviewsAllowed']!==($reviews_changed?$input['reviewsAllowed']:$before['reviewsAllowed']))return $this->error('reviews_readback','The review setting could not be confirmed. Reload and review.',409);
 		if ( $after['categories'] !== $categories ) return $this->error( 'readback', 'The saved categories differ. Refresh and review them.', 409 );
 		if ( $after['tags'] !== $tags ) return $this->error( 'readback', 'The saved product tags differ. Refresh and review them.', 409 );
 		if ( ( null !== $image && $after['imageId'] !== $image ) || ( null !== $gallery && $after['galleryIds'] !== $gallery ) ) return $this->error( 'image_readback', 'The saved images differ. Reload and review them.', 409 );
 		// Stock, SKU, sale dates and tax/shipping properties are untouched by this task.
 		return $after;
 	}
-	private function product_tax_record( int $id ) {
+	public function product_tax_record( int $id ) {
 		if ( ! function_exists( 'wc_get_product' ) || ! current_user_can( 'edit_products' ) || ! current_user_can( 'edit_post', $id ) ) return $this->error( 'forbidden', 'Your role cannot manage this product tax setup.', 403 );
 		$product = wc_get_product( $id ); if ( ! $product ) return $this->error( 'missing', 'This product is unavailable.', 404 );
 		$projected = $this->project_product( $product ); if ( ! $projected['taxEditable'] ) return $this->error( 'type', 'Tax classification is available for simple, external and variable parent products.', 409 );

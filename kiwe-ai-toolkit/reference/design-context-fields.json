@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.public-binding-reference.v1",
   "source": "wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php",
-  "sourceSha256": "3b9b0867eb26565b9ca8b893438d88cfb37ea66972771844836125566e53566b",
+  "sourceSha256": "8f17608b652ee48dd4e25daa8a715c00b2803689d841cb99c0ccbf268b676154",
   "policy": "Public field definitions only; no values. Current-site dynamicBindings additionally owns record, group, collection and configured commerce tags. Private/planning fields are never inferred from matching labels.",
   "fields": {
     "identity.siteName": {
@@ -535,6 +535,24 @@
     "commercePlan.shippingLocations.countries": {
       "tag": "{kiwe_context_commerce_plan_shipping_locations_countries}",
       "kind": "list",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contact.messagingLinks.x": {
+      "tag": "{kiwe_context_contact_messaging_links_x}",
+      "kind": "link",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contact.messagingLinks.instagram": {
+      "tag": "{kiwe_context_contact_messaging_links_instagram}",
+      "kind": "link",
+      "owner": "design-context-native-owner",
+      "scope": "site"
+    },
+    "contact.messagingLinks.facebook": {
+      "tag": "{kiwe_context_contact_messaging_links_facebook}",
+      "kind": "link",
       "owner": "design-context-native-owner",
       "scope": "site"
     },

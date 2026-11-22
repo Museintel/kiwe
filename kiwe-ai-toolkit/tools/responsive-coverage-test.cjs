@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');
+(async()=>{const {responsiveCoveragePlan}=await import('../lib/responsive-coverage.js');
+ const plan=responsiveCoveragePlan(['@media(max-width:980px){.hero{grid-row:1/3}} @media(max-width:700px){.hero{grid-row:auto}}']);
+ for(const width of [699,700,701,840,846,979,980,981])assert(plan.probes.some(p=>p.width===width),'Missing responsive interval/boundary '+width);
+ assert.equal(plan.complete,true);assert.equal(plan.browserExecuted,false);
+ const ignored=responsiveCoveragePlan(['/* @media(max-width:200px){} */ @media(prefers-reduced-motion:reduce){}']);assert.deepEqual(ignored.boundaries,[]);
+ for(const css of ['@media(max-width:50rem){}','@media(width<900px){}','@container card (width>20rem){}'])assert.equal(responsiveCoveragePlan([css]).complete,false,'Do not pretend unsupported query syntax was measured');
+ const many=responsiveCoveragePlan([Array.from({length:80},(_,i)=>'@media(max-width:'+(400+i*10)+'px){}').join('')]);assert.equal(many.complete,false);assert(many.omitted>0);assert.equal(many.probes.length,64);
+ assert.throws(()=>responsiveCoveragePlan([],{minimum:1000,maximum:500}));
+ console.log(JSON.stringify({passed:true,checks:16,scope:'Bounded static coverage plan; no browser claim'}));
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -16,7 +16,7 @@ export function recordWorkspaceVisit(response,renderedSection){
     const value=JSON.parse(atob(raw)),section=typeof renderedSection==='string'?renderedSection:activitySection(),snapshot=value.snapshots?.[section];
     if(!section||!Number.isSafeInteger(value.actor)||value.actor<1||!snapshot||!Number.isSafeInteger(snapshot.count)||snapshot.count<1||typeof value.nonce!=='string')return;
     const endpoint=new URL(value.endpoint,location.origin);if(endpoint.origin!==location.origin)return;
-    const key=[value.actor,section,snapshot.realm,snapshot.epoch,snapshot.ceiling].join(':');if(visiting.has(key))return;
+    const key=[value.actor,section,snapshot.realm,snapshot.epoch,snapshot.ceiling/* KIWE_MULTI_SOURCE_ACTIVITY_START */,...(section==='forms'&&Number.isSafeInteger(snapshot.coreCeiling)?[snapshot.coreCeiling]:[])/* KIWE_MULTI_SOURCE_ACTIVITY_END */].join(':');if(visiting.has(key))return;
     visiting.add(key);
     // Wait until the successful native response has had a chance to render.
     requestAnimationFrame(()=>requestAnimationFrame(()=>{

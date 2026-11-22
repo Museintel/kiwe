@@ -8,11 +8,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 final class Task_Workspace_UI {
 	/** Shared private document bootstrap for new workspace modules. */
 	public static function app_document( string $module, string $title, array $config ): void {
-		if ( ! in_array( $module, [ 'templates','analytics','backups','forms','app','apps','system' ], true ) ) return;
+		if ( ! in_array( $module, [ 'templates','analytics','backups','forms','app','apps','system','feedback','mcp' ], true ) ) return;
 		nocache_headers(); header( 'Cache-Control: private, no-store' ); header( 'X-Robots-Tag: noindex, nofollow' ); header( 'X-Content-Type-Options: nosniff' );
 		$handle = 'kiwe-' . $module . '-app';
-		wp_enqueue_style( $handle, DSA_URL . 'assets/css/' . $module . '-app.css', \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), DSA_VERSION );
-		wp_enqueue_script( $handle,DSA_URL . 'assets/js/' . $module . '-app.js',[ 'wp-element' ],DSA_VERSION,true );
+		wp_enqueue_style( $handle, \DSA\Apps\Asset_Locator::url('assets/css/' . $module . '-app.css'), \DSA\Access\Workspace_Design_Service::app_dependencies( [] ), \DSA\Apps\Asset_Locator::version('assets/css/' . $module . '-app.css') );
+		wp_enqueue_script( $handle,\DSA\Apps\Asset_Locator::url('assets/js/' . $module . '-app.js'),[ 'wp-element' ],\DSA\Apps\Asset_Locator::version('assets/js/' . $module . '-app.js'),true );
 		wp_localize_script( $handle,'KIWE_' . strtoupper( $module ) . '_APP',[ ...$config,'nonce'=>wp_create_nonce( 'wp_rest' ),'home'=>Workspace_Admin_Service::url(),...Workspace_Chrome_Service::projection() ] );
 		?><!doctype html><html <?php language_attributes(); ?>><head><meta charset="<?php bloginfo( 'charset' ); ?>"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?php echo esc_html( $title ); ?> · Kiwe</title><?php wp_print_styles( [ $handle ] ); ?></head><body><div id="<?php echo esc_attr( $handle ); ?>"><p><?php echo esc_html( 'Opening ' . $title . '…' ); ?></p></div><?php wp_print_scripts( [ 'wp-element',$handle ] ); ?></body></html><?php exit;
 	}

@@ -1,5 +1,6 @@
 <?php
 namespace DSA\AI;
+use DSA\Apps\AI_App_Service;
 use DSA\Security\Secret_Store;
 use DSA\Settings;
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -9,6 +10,80 @@ final class AI_Configuration_Service {
 	public const PROVIDERS = [ 'none','wordpress_ai_client','openai_compatible','gemini','groq','xai' ];
 	public const FLAGS = [ 'studio_enabled','token_saver_enabled','prefer_companion_context','bricks_editor_companion_enabled','allow_browser_handoff_export','companion_enabled','log_prompts' ];
 	public const LIMITS = [ 'max_native_tokens'=>[200,12000], 'max_native_context_bytes'=>[10000,200000], 'max_context_cards'=>[4,40], 'max_review_bytes'=>[20000,500000], 'cache_ttl_seconds'=>[30,3600] ];
+	public const OWNER_FIELDS = [ 'allowNativeGeneration', 'seoAllowed', 'securetrackAllowed', 'requestLimits', 'tokenLimits', 'configuration' ];
+	public static function owner_allowed(): bool {
+		return AI_App_Service::enabled() && current_user_can( AI_Feature_Policy::CAPABILITY ) && ( current_user_can( 'manage_options' ) || current_user_can( 'kiwe_manage_context' ) );
+	}
+
+	/** One fingerprint for both the WordPress editor and a reviewed MCP plan. */
+	public static function owner_snapshot( array $ai, Settings $settings ): array {
+		$allowance = new AI_Allowance_Service( $settings );
+		$provider = ( new AI_Provider_Service( $settings ) )->status();
+		$controls = [
+			'allowNativeGeneration'=>! empty( $ai['allow_native_generation'] ),
+			'seoAllowed'=>! empty( $ai['seo_enabled'] ),
+			'securetrackAllowed'=>! empty( $ai['securetrack_brief_enabled'] ),
+			'requestLimits'=>$allowance->limits(),
+			'tokenLimits'=>$allowance->token_limits(),
+		];
+		$sealed = (string) ( $ai['native_api_key'] ?? '' );
+		$view = $controls + [
+			'configuration'=>self::projection( $ai ),
+			'keyStored'=>'' !== $sealed,
+			'provider'=>[
+				'id'=>(string) ( $provider['provider'] ?? 'none' ), 'model'=>(string) ( $provider['model'] ?? '' ),
+				'enabled'=>! empty( $provider['enabled'] ), 'configured'=>! empty( $provider['configured'] ),
+				'keyStatus'=>sanitize_key( (string) ( $provider['keyStatus']['status'] ?? 'empty' ) ),
+			],
+		];
+		return $view + [ 'expected'=>hash( 'sha256', wp_json_encode( $view + [ 'keyProof'=>hash_hmac( 'sha256', $sealed, wp_salt( 'nonce' ) ) ] ) ) ];
+	}
+
+	public static function patch_owner( array $ai, array $changes ): array|\WP_Error {
+		if ( ! $changes || array_diff( array_keys( $changes ), self::OWNER_FIELDS ) ) return new \WP_Error( 'kiwe_ai_owner_value', 'Choose a valid website AI control.' );
+		foreach ( $changes as $key=>$value ) {
+			if ( 'configuration' === $key ) {
+				if ( ! is_array( $value ) ) return new \WP_Error( 'kiwe_ai_owner_value', 'Choose supported AI settings.' );
+				$ai = self::patch( $value, $ai );
+				if ( is_wp_error( $ai ) ) return $ai;
+				continue;
+			}
+			if ( in_array( $key, [ 'requestLimits', 'tokenLimits' ], true ) ) {
+				$windows = [ 'minute', 'day', 'month' ];
+				if ( ! is_array( $value ) || count( $value ) !== count( $windows ) || array_diff( $windows, array_keys( $value ) ) ||
+					count( array_filter( $value, static fn( $n ) => is_int( $n ) && $n >= 0 && $n <= 1000000000 ) ) !== count( $windows ) ) {
+					return new \WP_Error( 'kiwe_ai_owner_value', 'Enter whole-number allowance limits.' );
+				}
+				if ( 'requestLimits' === $key ) $ai['request_allowance'] = AI_Allowance_Service::sanitize_limits( $value );
+				else $ai['token_allowance'] = AI_Allowance_Service::sanitize_token_limits( $value );
+				continue;
+			}
+			if ( ! is_bool( $value ) ) return new \WP_Error( 'kiwe_ai_owner_value', 'Choose on or off.' );
+			$setting = match ( $key ) {
+				'allowNativeGeneration'=>'allow_native_generation',
+				'seoAllowed'=>'seo_enabled',
+				'securetrackAllowed'=>'securetrack_brief_enabled',
+			};
+			$ai[$setting] = $value;
+		}
+		return $ai;
+	}
+
+	public static function save_owner( array $changes, string $expected ): array|\WP_Error {
+		if ( ! self::owner_allowed() ) return new \WP_Error( 'kiwe_ai_owner_forbidden', 'Website AI setup is unavailable for your account.' );
+		$raw = get_option( DSA_OPTION_SETTINGS, null );
+		if ( ! is_array( $raw ) ) return new \WP_Error( 'kiwe_ai_owner_settings', 'Website settings are unavailable. Refresh and review.' );
+		$ai = is_array( $raw['ai'] ?? null ) ? $raw['ai'] : [];
+		$settings = new Settings();
+		if ( ! hash_equals( self::owner_snapshot( $ai, $settings )['expected'], $expected ) ) return new \WP_Error( 'kiwe_ai_owner_changed', 'Website AI settings changed. Refresh before saving.' );
+		$next = self::patch_owner( $ai, $changes );
+		if ( is_wp_error( $next ) ) return $next;
+		if ( ! $settings->compare_and_update_selected( $raw, [ 'ai'=>$next ] ) ) return new \WP_Error( 'kiwe_ai_owner_changed', 'Settings changed or the save could not be confirmed. Refresh before retrying.' );
+		$stored = get_option( DSA_OPTION_SETTINGS, null );
+		if ( ! is_array( $stored ) || ( $stored['ai'] ?? null ) !== $next ) return new \WP_Error( 'kiwe_ai_owner_save', 'The setting could not be confirmed. Refresh and review.' );
+		return self::owner_snapshot( $next, $settings );
+	}
+
 	public static function projection( array $ai ): array {
 		$all = array_replace( ( new Settings() )->defaults()['ai'] ?? [],$ai );
 		return array_intersect_key( $all,array_flip( [ ...self::FLAGS,...array_keys( self::LIMITS ),'native_provider','native_model','native_base_url','studio_mode','companion_modes' ] ) );

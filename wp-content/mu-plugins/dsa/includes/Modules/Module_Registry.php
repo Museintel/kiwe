@@ -96,7 +96,7 @@ final class Module_Registry {
 				'dismiss' => 'none',
 			]
 		);
-		$this->register( [ 'id'=>'comments', 'label'=>__( 'Comments', 'dsa' ), 'icon'=>$this->lucide_icon( 'message-circle' ), 'order'=>45, 'panel'=>'comments', 'binder'=>'comments', 'dismiss'=>'outside_safe' ] );
+		$this->register_feedback_module();
 
 		$this->register(
 			[
@@ -129,6 +129,12 @@ final class Module_Registry {
 				'protected_flow' => 'security_actions',
 			]
 		);
+	}
+
+	/** Called again after normal plugin providers load; an existing module stays intact. */
+	public function register_feedback_module(): void {
+		if ( ! \DSA\Discussion\Feedback_Access::enabled() || isset( $this->modules['comments'] ) ) return;
+		$this->register( [ 'id'=>'comments', 'label'=>__( 'Comments', 'dsa' ), 'icon'=>$this->lucide_icon( 'message-circle' ), 'order'=>45, 'panel'=>'comments', 'binder'=>'comments', 'dismiss'=>'outside_safe' ] );
 	}
 
 	private function lucide_icon( string $name ): string {

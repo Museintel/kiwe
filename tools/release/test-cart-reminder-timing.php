@@ -1,0 +1,21 @@
+<?php
+define('ABSPATH',__DIR__.'/');
+require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Commerce/Abandoned_Cart_Service.php';
+use DSA\Commerce\Abandoned_Cart_Service as Cart;
+$zone=new DateTimeZone('Asia/Kolkata');$base=(new DateTimeImmutable('2026-10-29 10:00:00',$zone))->getTimestamp();
+$row=['status'=>'abandoned','item_count'=>2,'last_activity_at'=>'2026-10-29 10:00:00','reminder_count'=>0];$config=['reminder_schedule_hours'=>[12,24],'automation_started_at'=>$base];$checks=[];
+$check=function($ok,$name)use(&$checks){$checks[$name]=(bool)$ok;if(!$ok)throw new RuntimeException($name);};
+$check(!Cart::automatic_due($row,$config,$base+12*3600-1,$zone),'No first reminder before 12 hours');
+$check(Cart::automatic_due($row,$config,$base+12*3600,$zone),'First due at 12 hours in site timezone');
+$row['reminder_count']=1;
+$check(!Cart::automatic_due($row,$config,$base+24*3600-1,$zone),'Second waits until 24 hours from activity');
+$check(Cart::automatic_due($row,$config,$base+24*3600,$zone),'Second due at 24 hours');
+$row['reminder_count']=2;$check(!Cart::automatic_due($row,$config,$base+72*3600,$zone),'No third scheduled attempt including manual budget');
+$row['reminder_count']=0;$check(!Cart::automatic_due($row,[...$config,'automation_started_at'=>$base+1],$base+24*3600,$zone),'Pre-enablement backlog excluded');
+$check(!Cart::automatic_due([...$row,'status'=>'converted'],$config,$base+24*3600,$zone),'Converted carts never due');
+$check(!Cart::automatic_due([...$row,'item_count'=>0],$config,$base+24*3600,$zone),'Empty carts never due');
+$check(!Cart::automatic_due([...$row,'last_activity_at'=>'2026-02-30 10:00:00'],$config,$base+24*3600,$zone),'Invalid native dates refused');
+$check(!Cart::automatic_due($row,$config,$base-1,$zone),'Future activity never due');
+foreach([[24,12],['12',24],[-1,24],[12,12],[1,2,3,4,5,6]]as$hours)$check(!Cart::automatic_due($row,[...$config,'reminder_schedule_hours'=>$hours],$base+24*3600,$zone),'Malformed schedule '.json_encode($hours).' refused');
+$check(Cart::automatic_due($row,[...$config,'reminder_schedule_hours'=>[]],$base,$zone),'Explicit legacy cooldown retains its separate sender checks');
+echo json_encode(['passed'=>true,'checks'=>$checks,'deliveryAttempted'=>false],JSON_UNESCAPED_SLASHES)."\n";

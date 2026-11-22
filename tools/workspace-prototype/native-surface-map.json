@@ -351,5 +351,23 @@
     ],
     "retainedAccess": "Included Auth/Security Apps reuse Core PhoneKey/SecureTrack policy. Native logs, accounts, roles, enforcement and optional telemetry choices keep their existing owners; the Apps cannot be removed.",
     "reviewBoundary": "Exact native partial-save preservation, role/secret/origin/nonce/stale denial, rollback and no-Woo boundaries are qualified in the owned WordPress suite. Auth engine remains unchanged. Real installed private browser navigation and settings UI must pass before live publication."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/Feedback_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "feedback-app"
+    ],
+    "retainedAccess": "Role-scoped activity and App settings documents reuse WordPress comments and the native Store review adapter.",
+    "reviewBoundary": "Built-in Core Feedback settings stay beside Dock; Daily remains activity-only. Preserve the accepted native WordPress/Store visibility, role and moderation owners."
+  },
+  {
+    "source": "wp-content/mu-plugins/dsa/includes/Access/MCP_Workspace_Service.php",
+    "callbacks": [],
+    "features": [
+      "mcp"
+    ],
+    "retainedAccess": "Current native editing capabilities; website managers enable MCP while each staff member controls only their own client connections. PhoneKey/native roles remain authoritative.",
+    "reviewBoundary": "Explicit intent-only App UI; native nonce/origin/mutation proof, own-account revocation, opaque resource-only OAuth, pinned transport and real client/native qualification. No production acceptance yet."
   }
 ]

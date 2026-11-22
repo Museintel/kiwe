@@ -34,7 +34,7 @@ final class Discussion_Review_Adapter {
 	public static function policy() {
 		if ( ! \DSA\Apps\Store_App_Service::enabled() || ! ( current_user_can( 'edit_products' ) || current_user_can( 'manage_woocommerce' ) ) || \DSA\Access\Team_Workspace_Service::suspended( get_current_user_id() ) ) return new \WP_Error( 'kiwe_review_policy_denied', __( 'Store review settings are unavailable to this account.', 'dsa' ), [ 'status'=>403 ] );
 		$raw = self::policy_raw(); foreach ( $raw as $value ) if ( ! in_array( $value, [ 'yes','no' ], true ) ) return new \WP_Error( 'kiwe_review_policy_value', __( 'A native review setting needs the store owner’s review.', 'dsa' ), [ 'status'=>409 ] );
-		return [ 'values'=>array_map( static fn( $v ) => 'yes' === $v, $raw ), 'canEdit'=>current_user_can( 'manage_woocommerce' ), 'expected'=>hash( 'sha256', wp_json_encode( $raw ) ) ];
+		return [ 'values'=>array_map( static fn( $v ) => 'yes' === $v, $raw ), 'canEdit'=>current_user_can( 'manage_woocommerce' ) || (\DSA\Discussion\Feedback_Access::allowed() && current_user_can('edit_products')), 'expected'=>hash( 'sha256', wp_json_encode( $raw ) ) ];
 	}
 	public static function save_policy( array $input ) {
 		$before = self::policy(); if ( is_wp_error( $before ) ) return $before;

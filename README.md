@@ -1,5 +1,7 @@
 # Kiwe DSA
 
+The current WordPress source on `main` is **Kiwe Core 8.0.0-rc.492**, with the source for Store 1.1.16 and MCP 1.0.0-rc.31. See the package checksums and build command in the [RC492 source guide](docs/RC492-SOURCE.md).
+
 **Current priority, 11 October — Dharwad design accepted:** [Native authored migration](docs/DHARWAD-DESIGN-MIGRATION-2026-10-11.md) publishes the preserved R49B/R52 layouts and enables the existing requested Munaf account through native Kiwe ownership. Product/article bindings, shop filters, homepage recommendations/pairings and phone/header behavior pass scoped native/Chrome checks; original business hashes and recovery custody remain intact. Signed RC311 is unchanged, and all migration helpers/jobs are retired. **39 actual attempts / 25 accepted tasks; two Woo milestones and four deferred Ascendants milestones remain. Next batch: task 21, live store operations and role/UI acceptance; task 22 follows with reliability and monitoring readiness.** Lab RC277 and Ascendants RC55.5 remain unchanged. No customer charge/send, feed publication, commit or push.
 
 **Prior Ascendants forecast — historical subset:**

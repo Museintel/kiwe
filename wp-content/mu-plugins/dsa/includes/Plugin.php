@@ -124,6 +124,7 @@ final class Plugin {
 	private $onboarding;
 	private $design_context_refinement;
 	private bool $store_services_registered = false;
+	private bool $feedback_services_registered = false;
 	private $role_access;
 	private $purchase_identity_gate;
 
@@ -208,16 +209,14 @@ final class Plugin {
 		$service_profile = Runtime_Profiler::start( 'service.register_services' );
 		( new Asset_Manifest_Service( ! empty( $diagnostics['enabled'] ) && ! empty( $diagnostics['asset_manifest'] ) ) )->register();
 		Atomic_Rate_Limiter::register();
-		// Native admission runs only on comment writes; public pages do not load the discussion graph.
-		add_filter( 'pre_comment_approved', static fn( $approved, $data ) => \DSA\Discussion\Discussion_Service::approval( $approved, $data ), PHP_INT_MAX, 2 );
-		add_filter( 'get_comment_author', static fn( $name, $id, $comment ) => \DSA\Discussion\Discussion_Service::author_name( $name, $id, $comment ), 20, 3 );
-		add_action( 'admin_init', static fn() => \DSA\Discussion\Discussion_Reaction_Store::install(), 26 );
-		add_action( 'wp_insert_comment', static fn( $id,$comment ) => \DSA\Discussion\Discussion_Reactions::native_insert( $id,$comment ), 20, 2 );
-		add_action( 'transition_comment_status', static fn( $new,$old,$comment ) => \DSA\Discussion\Discussion_Reactions::native_transition( $new,$old,$comment ), 20, 3 );
-		add_action( 'deleted_comment', static fn( $id,$comment ) => \DSA\Discussion\Discussion_Reactions::native_deleted( (int) $id,$comment ), 20, 2 );
-		add_action( 'deleted_user', static fn( $id ) => \DSA\Discussion\Discussion_Reaction_Store::delete_user( (int) $id ) );
+		// Shared public identity/privacy survives removal of optional Feedback execution.
+		add_filter( 'get_comment_author', static fn($name,$id,$comment)=>!is_admin() && $comment instanceof \WP_Comment && !is_wp_error(\DSA\Discussion\Discussion_Target::get((int)$comment->comment_post_ID)) ? \DSA\Discussion\Public_Identity::comment_name($comment) : $name,20,3 );
+		add_action('init',static fn()=>\DSA\Discussion\Site_Conversation::register());
+		add_filter('comments_open',[\DSA\Discussion\Site_Conversation::class,'filter_open'],20,2);
 		add_filter( 'wp_privacy_personal_data_exporters', static fn( $items ) => \DSA\Discussion\Discussion_Privacy::exporters( $items ) );
 		add_filter( 'wp_privacy_personal_data_erasers', static fn( $items ) => \DSA\Discussion\Discussion_Privacy::erasers( $items ) );
+		add_filter( 'wp_privacy_personal_data_exporters', static fn( $items ) => \DSA\Link_Hub\Enquiry_Privacy::exporters( $items ) );
+		add_filter( 'wp_privacy_personal_data_erasers', static fn( $items ) => \DSA\Link_Hub\Enquiry_Privacy::erasers( $items ) );
 		( new Update_Service() )->register();
 		( new \DSA\Apps\Update_Hooks() )->register();
 		add_action( 'admin_menu', static fn() => ( new \DSA\Apps\Library_Service() )->menu(), 37 );
@@ -228,7 +227,8 @@ final class Plugin {
 		// Ownership and the business workspace must survive disabling Key login.
 		$this->role_access->register();
 		( new \DSA\Onboarding\Native_Service_Source_Service() )->register();
-		foreach ( [ \DSA\Apps\Guest_App_Service::class,\DSA\Apps\AI_App_Service::class,\DSA\Apps\SiteGraph_App_Service::class ] as $optional_app ) ( new $optional_app() )->register();
+		foreach ( [ \DSA\Apps\Guest_App_Service::class,\DSA\Apps\AI_App_Service::class,\DSA\Apps\SiteGraph_App_Service::class,\DSA\Apps\MCP_App_Service::class ] as $optional_app ) ( new $optional_app() )->register();
+		add_action( 'plugins_loaded', [ $this, 'register_feedback_services' ], 25 );
 		( new \DSA\Access\Workspace_Activity_Service() )->register();
 		// App configuration is private; ordinary visitor requests do not load its editor.
 		add_action('admin_init',[$this->notification_preferences,'maybe_install'],25);
@@ -237,8 +237,14 @@ final class Plugin {
 		if(is_admin())add_action('load-toplevel_page_kiwe-app-settings',static fn()=>(new \DSA\Access\App_Workspace_Service())->document(),1);
 		// Private Forms code is not loaded by ordinary visitor page requests.
 		add_filter( 'bricks/form/save-submission/form_data', static fn( $data, $form, $post ) => \DSA\Bricks\Form_Identity_Service::capture( $data, $form, $post ), 50, 3 );
+		add_filter( 'bricks/form/response', [ \DSA\Bricks\Form_Contact_Adapter::class, 'response' ], 50, 2 );
 		add_action( 'admin_menu', static fn() => ( new \DSA\Access\Form_Workspace_Service() )->menu(), 36 );
 		add_action( 'rest_api_init', static fn() => ( new \DSA\Access\Form_Workspace_Service() )->routes() );
+		add_action( 'init', [ \DSA\Link_Hub\Enquiry_Store::class, 'register' ] );
+		add_action( 'rest_api_init', static fn() => ( new \DSA\Link_Hub\Enquiry_Controller() )->routes() );
+		add_action( 'rest_api_init', static fn() => ( new \DSA\Link_Hub\Share_Controller() )->routes() );
+		add_action( 'rest_api_init', [ \DSA\Identity\Form_Contact_Service::class, 'routes' ] );
+		foreach ( [ 'wp_login','wp_logout','dsa_phonekey_authenticated' ] as $contact_boundary ) add_action( $contact_boundary, [ \DSA\Identity\Form_Contact_Service::class, 'forget' ], 5, 0 );
 		if ( is_admin() && ! wp_doing_ajax() && ! wp_doing_cron() ) ( new \DSA\Access\System_App_Workspace_Service() )->register();
 		add_action( 'rest_api_init', [ \DSA\Access\System_App_Routes::class, 'register' ] );
 		( new \DSA\Access\Analytics_Reporting_Setup_Service( $this->settings, fn() => $this->abandoned_carts() ) )->register();
@@ -322,7 +328,6 @@ final class Plugin {
 		// cache/index hooks must remain available whenever the Surface is enabled.
 		if ( $surface_enabled ) {
 			( new Search_Controller( $this->search ) )->register();
-			add_action( 'rest_api_init', static fn() => ( new \DSA\Rest\Discussion_Controller() )->routes() );
 		}
 		if ( $surface_enabled ) {
 			( new Saved_Items_Controller( $this->saved_items ) )->register();
@@ -369,11 +374,24 @@ final class Plugin {
 		}, 95 );
 	}
 
+	/** Lazy native workspace factory; no hooks, queues or Store service on absent Store. */
+ public function campaign_workspace(): \DSA\Access\Campaign_Workspace_Service {
+  return new \DSA\Access\Campaign_Workspace_Service($this->notification_preferences,$this->notification_campaigns,$this->new_post_notifications,\DSA\Apps\Store_App_Service::enabled()?$this->abandoned_carts():null);
+ }
+
 	public function settings(): Settings {
 		return $this->settings;
 	}
 	public function register_woo_capture_analytics(): void {
 		if ( \DSA\Apps\Store_App_Service::enabled() && class_exists( 'WC_Order' ) && ! \DSA\Commerce\Store_Recovery_Gate_Service::is_paused() ) $this->store_analytics()->register();
+	}
+
+	/** Normal plugins announce optional Feedback before its hooks and module are admitted. */
+	public function register_feedback_services(): void {
+		if ( $this->feedback_services_registered || ! \DSA\Discussion\Feedback_Access::enabled() || ! class_exists( '\\DSA\\Discussion\\Feedback_Engine_Service' ) ) return;
+		$this->feedback_services_registered = true;
+		$this->modules->register_feedback_module();
+		( new \DSA\Discussion\Feedback_Engine_Service() )->register();
 	}
 
 	/** Register store callbacks only after WordPress has actually loaded Woo. */
@@ -388,6 +406,7 @@ final class Plugin {
 		$paused = \DSA\Commerce\Store_Recovery_Gate_Service::is_paused();
 		$surface = ! $paused && ! empty( $settings['enabled'] ) && ( ! empty( $commerce['cart_surface_enabled'] ) || ! empty( $commerce['checkout_surface_enabled'] ) );
 		( new Product_Context_Service() )->register();
+		if ( class_exists( '\\DSA\\Commerce\\Gateway_Asset_Service' ) ) ( new \DSA\Commerce\Gateway_Asset_Service() )->register();
 		( new \DSA\Commerce\Weight_Shipping_Service() )->register();
 		( new Order_Notification_Service( $this->notification_preferences, $this->channels, $this->push ) )->register();
 		if ( $paused ) return;

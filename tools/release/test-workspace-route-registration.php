@@ -26,5 +26,5 @@ foreach(['Team','Identity','Post','Taxonomy','Navigation','Guest','Notification'
 	$class=new ReflectionClass('DSA\\Access\\'.$name.'_App_Service');
 	$class->newInstanceWithoutConstructor()->routes();
 }
-foreach(['Workspace_Activity_Service','Analytics_Reporting_Setup_Service']as$name){require $base.$name.'.php';(new ReflectionClass('DSA\\Access\\'.$name))->newInstanceWithoutConstructor()->routes();}
+foreach(['Workspace_Activity_Service','Analytics_Reporting_Setup_Service','Feedback_Workspace_Service']as$name){require $base.$name.'.php';(new ReflectionClass('DSA\\Access\\'.$name))->newInstanceWithoutConstructor()->routes();}
 echo json_encode(['passed'=>true,'callbacks'=>$checks,'endpoints'=>count($routes),'routes'=>$routes])."\n";

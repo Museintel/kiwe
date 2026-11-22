@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.authoring-library.v1",
-  "contractVersion": "9.9",
-  "releaseId": "9.9-d25ac5a01c64",
+  "contractVersion": "9.12",
+  "releaseId": "9.12-d4f73b8069a1",
   "policy": "Complete for the enumerated public source families at this release. New files within those families are included automatically. The command manifest owns command grammar; canonical runtime/current schemas take precedence over portable guidance, whose historical command phrases are reference data only. Site-created tags, native element controls, enabled query types and dynamic content must additionally be read from the current site SiteGraph/Bricks context. Registered, inferred and target-verified capabilities are distinct. Unsupported or missing evidence must stop the affected handoff; never invent a tag, control, interaction or condition.",
   "families": [
     {
@@ -29,8 +29,8 @@
       "title": "Live Kiwe actions, dynamic content, icons and native Bricks rules"
     }
   ],
-  "resourceCount": 54,
-  "entryCount": 5503,
+  "resourceCount": 57,
+  "entryCount": 5602,
   "resources": [
     {
       "id": "21ad5c6f9a80fc76",
@@ -4020,11 +4020,11 @@
       "id": "4793e6dd8db54b9a",
       "family": "canonical-framework",
       "source": "wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.json",
-      "sha256": "27f095145e8d7ac83f2c94892fe6bf9bf77fef901bf1f56bfb2f1ea3aced1875",
-      "bytes": 20107,
+      "sha256": "e56842a88c063f7bd1d96740e99b89a95ed6f8e3e3afa7bf937d366654ad73f1",
+      "bytes": 22415,
       "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/",
       "raw": "https://start.kiwelaunch.com/library/source/wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.json",
-      "entryCount": 318,
+      "entryCount": 345,
       "entries": [
         {
           "pointer": "/schemaVersion",
@@ -5277,344 +5277,479 @@
           "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-249"
         },
         {
+          "pointer": "/capabilityAttributes/groups/forms/contactReuse",
+          "value": "When the target advertises kiwe.form-contact.v1, admitted ordinary forms capture new pending Subscribers and privately reuse own session/submitted contact. Use standard name/given-name/family-name/email/tel autocomplete. Existing account proof and marketing choices are unchanged.",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-250"
+        },
+        {
           "pointer": "/capabilityAttributes/groups/forms/privacy",
           "value": "A saved enquiry is private and does not imply mail delivery or marketing consent. Do not retain passwords, upload bytes or credentials. The compiler enables native saving only for unambiguous ordinary enquiry forms.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-250"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-251"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/status",
+          "value": "live",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-252"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/authority",
+          "value": "kiwe-links-and-native-private-forms",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-253"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/attribute",
+          "value": "data-kiwe-chat",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-254"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/values/0",
+          "value": "whatsapp",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-255"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/values/1",
+          "value": "email",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-256"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/values/2",
+          "value": "x",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-257"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/values/3",
+          "value": "instagram",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-258"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/values/4",
+          "value": "facebook",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-259"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/purpose",
+          "value": "Open the shared enquiry form before an external conversation. Requires the configured business contact or explicit qualified messaging link in Design Context. Saved privately in Daily Forms; no identity/marketing consent or external send is implied. Meta links use copy then open, not invented prefill.",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-260"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/0/example",
+          "value": "<button type=\"button\" data-kiwe-chat=\"whatsapp\">Ask us</button>",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-261"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/attribute",
+          "value": "data-kiwe-share",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-262"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/0",
+          "value": "whatsapp",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-263"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/1",
+          "value": "email",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-264"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/2",
+          "value": "x",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-265"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/3",
+          "value": "instagram",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-266"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/4",
+          "value": "facebook",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-267"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/5",
+          "value": "youtube",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-268"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/6",
+          "value": "pinterest",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-269"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/7",
+          "value": "linkedin",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-270"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/8",
+          "value": "native",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-271"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/values/9",
+          "value": "copy",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-272"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/purpose",
+          "value": "Share the canonical public product/post, otherwise business website. WhatsApp/email choose recipients independently of business contacts. Unqualified platforms use the native chooser/copy fallback. No SDK or visitor identity is included.",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-273"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/1/example",
+          "value": "<button type=\"button\" data-kiwe-share=\"native\">Share</button>",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-274"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/2/attribute",
+          "value": "data-kiwe-subject-id",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-275"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/2/purpose",
+          "value": "Optional actual native post ID for a card chat/share control, preferably {post_id} in a Bricks query loop. Omit for current eligible singular context. IDs are revalidated publicly; never use arbitrary URLs, query strings, order IDs or private titles.",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-276"
+        },
+        {
+          "pointer": "/capabilityAttributes/groups/linkConversations/attributes/2/example",
+          "value": "<button type=\"button\" data-kiwe-share=\"whatsapp\" data-kiwe-subject-id=\"{post_id}\">Share product</button>",
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-277"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/0/attribute",
           "value": "data-kiwe-share",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-251"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-278"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/0/status",
           "value": "candidate-not-live",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-252"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-279"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/0/purpose",
           "value": "Future Web Share / copy-link capability for products, posts, offers, and pages.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-253"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-280"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/1/attribute",
           "value": "data-kiwe-compare",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-254"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-281"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/1/status",
           "value": "candidate-not-live",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-255"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-282"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/1/purpose",
           "value": "Future product/content comparison tray.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-256"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-283"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/2/attribute",
           "value": "data-kiwe-recently-viewed",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-257"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-284"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/2/status",
           "value": "candidate-not-live",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-258"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-285"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/2/purpose",
           "value": "Future recently-viewed product/post rail and personalization signal.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-259"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-286"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/3/attribute",
           "value": "data-kiwe-follow",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-260"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-287"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/3/status",
           "value": "candidate-not-live",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-261"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-288"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/3/purpose",
           "value": "Future author, brand, topic, category, or product-subscription follow intent.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-262"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-289"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/4/attribute",
           "value": "data-kiwe-ai-context",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-263"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-290"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/4/status",
           "value": "candidate-not-live",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-264"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-291"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/4/purpose",
           "value": "Future safe context handoff to Kiwe AI from a selected section/card without exposing private data.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-265"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-292"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/5/attribute",
           "value": "data-kiwe-feedback",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-266"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-293"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/5/status",
           "value": "candidate-not-live",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-267"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-294"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/5/purpose",
           "value": "Future lightweight rating, helpful/not helpful, or report-an-issue intent.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-268"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-295"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/6/attribute",
           "value": "data-kiwe-offer",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-269"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-296"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/6/status",
           "value": "candidate-not-live",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-270"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-297"
         },
         {
           "pointer": "/capabilityAttributes/candidateAttributes/6/purpose",
           "value": "Future coupon, bundle, FBT, or personalization trigger that remains Woo/Kiwe-owned.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-271"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-298"
         },
         {
           "pointer": "/appShellAdoption/purpose",
           "value": "Defines which public Seam classes Kiwe DSA itself may apply inside live sheets/screens. Normal WordPress pages and Bricks layouts may use the full public Seam vocabulary; this map is specifically for Kiwe AppShell internals where generic classes can accidentally alter geometry.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-272"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-299"
         },
         {
           "pointer": "/appShellAdoption/levels/public-adopted",
           "value": "Runtime may add the public seam-* class to existing DSA markup because visual impact is low and reviewed.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-273"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-300"
         },
         {
           "pointer": "/appShellAdoption/levels/shadow-only",
           "value": "Runtime annotates the role with protected data-seam-* metadata only. This preserves AppShell isolation from site CSS even when core Seam role classes are headless.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-274"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-301"
         },
         {
           "pointer": "/appShellAdoption/levels/authority-only",
           "value": "Runtime/state authority only. Themes and Seam must not create behavior for this concern.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-275"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-302"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/eyebrow/classes/0",
           "value": "seam-eyebrow",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-276"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-303"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/eyebrow/classes/1",
           "value": "seam-tone-brand",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-277"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-304"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/eyebrow/reason",
           "value": "Text-only role; existing DSA selectors already own surface typography and color.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-278"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-305"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/caption/classes/0",
           "value": "seam-caption",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-279"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-306"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/caption/classes/1",
           "value": "seam-tone-muted",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-280"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-307"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/caption/reason",
           "value": "Text-only helper; safe for muted supporting copy.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-281"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-308"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/price/classes/0",
           "value": "seam-price",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-282"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-309"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/price/classes/1",
           "value": "seam-tone-brand",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-283"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-310"
         },
         {
           "pointer": "/appShellAdoption/publicAdopted/price/reason",
           "value": "Numeric/text-only helper; tabular numeric styling is compatible with DSA price landmarks.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-284"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-311"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/card",
           "value": "AppShell keeps card semantics on protected data-seam-* metadata so site CSS cannot accidentally style live DSA internals.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-285"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-312"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/button",
           "value": "AppShell keeps button semantics protected so site CSS cannot override DSA controls.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-286"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-313"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/input",
           "value": "AppShell keeps field/input semantics protected because Profile, Key.kiwe, checkout, and validation states are authority-owned.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-287"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-314"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/media",
           "value": "AppShell keeps media semantics protected because DSA media geometry is screen-specific.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-288"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-315"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/badge",
           "value": "AppShell keeps badge semantics protected so site CSS cannot alter notification/status badges.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-289"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-316"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/nav",
           "value": "AppShell keeps nav semantics protected because dock and context navigation use Geometry Engine variables.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-290"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-317"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/actions",
           "value": "AppShell keeps action-row semantics protected because action placement is panel/dock/context-owned.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-291"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-318"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/form",
           "value": "AppShell keeps form semantics protected because Profile, Key.kiwe, checkout, and notification forms are authority-owned.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-292"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-319"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/field",
           "value": "AppShell keeps field semantics protected because validation, account, and checkout fields are authority-owned.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-293"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-320"
         },
         {
           "pointer": "/appShellAdoption/shadowOnly/modal",
           "value": "AppShell keeps modal semantics protected because DSA sheet/screen geometry owns this surface.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-294"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-321"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/0",
           "value": "cart",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-295"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-322"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/1",
           "value": "checkout",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-296"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-323"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/2",
           "value": "payment",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-297"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-324"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/3",
           "value": "auth",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-298"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-325"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/4",
           "value": "phonekey",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-299"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-326"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/5",
           "value": "search-query",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-300"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-327"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/6",
           "value": "bricks-query",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-301"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-328"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/7",
           "value": "service-worker",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-302"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-329"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/8",
           "value": "browser-history",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-303"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-330"
         },
         {
           "pointer": "/appShellAdoption/authorityOnly/9",
           "value": "focus-trap",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-304"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-331"
         },
         {
           "pointer": "/protectedShadowAttributes/purpose",
           "value": "Kiwe DSA uses data-seam-* shadow metadata on live AppShell panels so tools can understand framework roles without generic Seam CSS restyling those panels.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-305"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-332"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/0",
           "value": "data-seam-root",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-306"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-333"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/1",
           "value": "data-seam-role",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-307"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-334"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/2",
           "value": "data-seam-flow",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-308"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-335"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/3",
           "value": "data-seam-tone",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-309"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-336"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/4",
           "value": "data-seam-scene",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-310"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-337"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/5",
           "value": "data-seam-state",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-311"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-338"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/6",
           "value": "data-seam-motion",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-312"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-339"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/7",
           "value": "data-seam-shape",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-313"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-340"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/8",
           "value": "data-seam-slot",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-314"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-341"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/9",
           "value": "data-seam-surface-panel",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-315"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-342"
         },
         {
           "pointer": "/protectedShadowAttributes/attributes/10",
           "value": "data-seam-authority",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-316"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-343"
         },
         {
           "pointer": "/protectedShadowAttributes/authorRule",
           "value": "Use public data-role/data-flow/classes for normal page markup. Do not add data-seam-* manually unless writing Kiwe runtime/core integration code.",
-          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-317"
+          "url": "https://start.kiwelaunch.com/library/4793e6dd8db54b9a/#entry-344"
         }
       ]
     },
@@ -7427,7 +7562,7 @@
       "id": "5d0dee2bea2703c7",
       "family": "tokens",
       "source": "packages/seam-contracts/generated/kiwe-token-catalog.json",
-      "sha256": "99df49c8394f640f72f26596a945c6254491a7c0eaaa224b45482caf67bc446c",
+      "sha256": "7e25b7ddb28a72d567006b8dcceef416f80f9c41c99798045ccbc9c4d9937255",
       "bytes": 14317,
       "url": "https://start.kiwelaunch.com/library/5d0dee2bea2703c7/",
       "raw": "https://start.kiwelaunch.com/library/source/packages/seam-contracts/generated/kiwe-token-catalog.json",
@@ -7440,7 +7575,7 @@
         },
         {
           "pointer": "/pluginVersion",
-          "value": "8.0.0-rc.452",
+          "value": "8.0.0-rc.492",
           "url": "https://start.kiwelaunch.com/library/5d0dee2bea2703c7/#entry-1"
         },
         {
@@ -9113,8 +9248,8 @@
       "id": "6cdae7aee330f065",
       "family": "authoring",
       "source": "kiwe-ai-toolkit/contexts/library.md",
-      "sha256": "2521f7ccde99de89555b157115a2613372397805c0e06ba0dfd148eba8679731",
-      "bytes": 1570,
+      "sha256": "152a3ee7e02ed2349e2c8d72ed8cc8bdb4a691039e46ae7389091879eb312d9b",
+      "bytes": 1910,
       "url": "https://start.kiwelaunch.com/library/6cdae7aee330f065/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/contexts/library.md",
       "entryCount": 0,
@@ -9146,8 +9281,8 @@
       "id": "a5e61242bc391bb7",
       "family": "authoring",
       "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
-      "sha256": "4d867a21b949d19028be6becba4d46c684db52739a3f434dc54ad2d6170ae29f",
-      "bytes": 20861,
+      "sha256": "e805523326f362c0597f24699d07a894248b3dc05f8055151e826323500ebb9c",
+      "bytes": 23512,
       "url": "https://start.kiwelaunch.com/library/a5e61242bc391bb7/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/contracts/authoring-delivery.md",
       "entryCount": 0,
@@ -9157,10 +9292,43 @@
       "id": "97d32b04a3283678",
       "family": "authoring",
       "source": "kiwe-ai-toolkit/contracts/discussion.md",
-      "sha256": "73afa3ea3b17ee3e3e1cff4fe97ba6fa05db7c4363735870c2ba54054689ab91",
-      "bytes": 6191,
+      "sha256": "76b6e62cc7b3e4bff74a5a192d2a9b0f0f01993a06c2ce7b9780fd435d25d32d",
+      "bytes": 6880,
       "url": "https://start.kiwelaunch.com/library/97d32b04a3283678/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/contracts/discussion.md",
+      "entryCount": 0,
+      "entries": []
+    },
+    {
+      "id": "f174e89fdbf05a1f",
+      "family": "authoring",
+      "source": "kiwe-ai-toolkit/contracts/ecommerce-surfaces.md",
+      "sha256": "5ba11544658e8c47e4c851702580d67663c01d8db862d00e466ff19132a55828",
+      "bytes": 6315,
+      "url": "https://start.kiwelaunch.com/library/f174e89fdbf05a1f/",
+      "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/contracts/ecommerce-surfaces.md",
+      "entryCount": 0,
+      "entries": []
+    },
+    {
+      "id": "e8c19732219c6eb7",
+      "family": "authoring",
+      "source": "kiwe-ai-toolkit/contracts/links.md",
+      "sha256": "37635647682a6d4942e6f957ea6d75d17f5f328bce4ce260c225cd10f8f41e76",
+      "bytes": 8896,
+      "url": "https://start.kiwelaunch.com/library/e8c19732219c6eb7/",
+      "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/contracts/links.md",
+      "entryCount": 0,
+      "entries": []
+    },
+    {
+      "id": "750bc95c3c838900",
+      "family": "authoring",
+      "source": "kiwe-ai-toolkit/contracts/mcp-design.md",
+      "sha256": "30cc76db273cd1346c0d1b5fb000287a2b75a67616b5f044d8f1f09fe876c62c",
+      "bytes": 5336,
+      "url": "https://start.kiwelaunch.com/library/750bc95c3c838900/",
+      "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/contracts/mcp-design.md",
       "entryCount": 0,
       "entries": []
     },
@@ -13912,7 +14080,7 @@
       "id": "ba17cc2efe323391",
       "family": "authoring",
       "source": "kiwe-ai-toolkit/schemas/preview-receipt.schema.json",
-      "sha256": "ec8cd084cd75fb08f514890157fe9e26445cee0eff38aa95f540198201faf981",
+      "sha256": "e40b9ef9c49731d8d8ce8d92f10494711688878017ae605553ffca3d23dfa833",
       "bytes": 2344,
       "url": "https://start.kiwelaunch.com/library/ba17cc2efe323391/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/schemas/preview-receipt.schema.json",
@@ -14175,12 +14343,12 @@
         },
         {
           "pointer": "/allOf/0/then/properties/runtimeResult/properties/viewports/minItems",
-          "value": 2,
+          "value": 3,
           "url": "https://start.kiwelaunch.com/library/ba17cc2efe323391/#entry-51"
         },
         {
           "pointer": "/allOf/0/then/properties/runtimeResult/properties/proof/minItems",
-          "value": 2,
+          "value": 3,
           "url": "https://start.kiwelaunch.com/library/ba17cc2efe323391/#entry-52"
         },
         {
@@ -14264,11 +14432,11 @@
       "id": "29c15647e40842b5",
       "family": "authoring",
       "source": "kiwe-ai-toolkit/schemas/seam-map.schema.json",
-      "sha256": "892feba0b9e770a0c5e36e0d52dc13c6ba3a30f4ed6366ea6e26fe354594afab",
-      "bytes": 14581,
+      "sha256": "d485be6b1c25ea36fbc9baa08ba3ba9c5cd324d259700d98e77aaafeec6410e1",
+      "bytes": 17292,
       "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/schemas/seam-map.schema.json",
-      "entryCount": 257,
+      "entryCount": 284,
       "entries": [
         {
           "pointer": "/$schema",
@@ -15016,544 +15184,679 @@
           "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-148"
         },
         {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/type",
+          "value": "object",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-149"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/additionalProperties",
+          "value": false,
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-150"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/required/0",
+          "value": "action",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-151"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/required/1",
+          "value": "channel",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-152"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/required/2",
+          "value": "subject",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-153"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/action/enum/0",
+          "value": "chat",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-154"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/action/enum/1",
+          "value": "share",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-155"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/0",
+          "value": "whatsapp",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-156"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/1",
+          "value": "email",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-157"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/2",
+          "value": "x",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-158"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/3",
+          "value": "instagram",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-159"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/4",
+          "value": "facebook",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-160"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/5",
+          "value": "youtube",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-161"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/6",
+          "value": "pinterest",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-162"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/7",
+          "value": "linkedin",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-163"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/8",
+          "value": "native",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-164"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/channel/enum/9",
+          "value": "copy",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-165"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/subject/enum/0",
+          "value": "current",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-166"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/properties/subject/enum/1",
+          "value": "{post_id}",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-167"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/allOf/0/if/properties/action/const",
+          "value": "chat",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-168"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/allOf/0/then/properties/channel/enum/0",
+          "value": "whatsapp",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-169"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/allOf/0/then/properties/channel/enum/1",
+          "value": "email",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-170"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/allOf/0/then/properties/channel/enum/2",
+          "value": "x",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-171"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/allOf/0/then/properties/channel/enum/3",
+          "value": "instagram",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-172"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/properties/linkAction/allOf/0/then/properties/channel/enum/4",
+          "value": "facebook",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-173"
+        },
+        {
           "pointer": "/$defs/stitch/allOf/1/oneOf/2/allOf/0/if/required/0",
           "value": "discussionTarget",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-149"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-174"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/2/allOf/0/then/properties/module/const",
           "value": "comments",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-150"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-175"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/allOf/1/if/required/0",
+          "value": "linkAction",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-176"
+        },
+        {
+          "pointer": "/$defs/stitch/allOf/1/oneOf/2/allOf/1/then/properties/module/const",
+          "value": "links",
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-177"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/2/required/0",
           "value": "anchor",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-151"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-178"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/2/required/1",
           "value": "module",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-152"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-179"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/3/properties/kind/const",
           "value": "native-element",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-153"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-180"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/3/properties/anchor/$ref",
           "value": "#/$defs/token",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-154"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-181"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/3/properties/element/type",
           "value": "string",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-155"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-182"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/3/properties/element/pattern",
           "value": "^[a-z][a-z0-9-]*$",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-156"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-183"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/3/required/0",
           "value": "anchor",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-157"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-184"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/3/required/1",
           "value": "element",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-158"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-185"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/4/properties/kind/const",
           "value": "interaction",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-159"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-186"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/4/properties/anchor/$ref",
           "value": "#/$defs/token",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-160"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-187"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/4/properties/interactions/type",
           "value": "array",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-161"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-188"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/4/properties/interactions/minItems",
           "value": 1,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-162"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-189"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/4/properties/interactions/items/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-163"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-190"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/4/required/0",
           "value": "anchor",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-164"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-191"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/4/required/1",
           "value": "interactions",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-165"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-192"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/properties/kind/const",
           "value": "condition",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-166"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-193"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/properties/anchor/$ref",
           "value": "#/$defs/token",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-167"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-194"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/properties/conditions/type",
           "value": "array",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-168"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-195"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/properties/conditions/minItems",
           "value": 1,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-169"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-196"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/properties/conditions/items/type",
           "value": "array",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-170"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-197"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/properties/conditions/items/minItems",
           "value": 1,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-171"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-198"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/properties/conditions/items/items/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-172"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-199"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/required/0",
           "value": "anchor",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-173"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-200"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/5/required/1",
           "value": "conditions",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-174"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-201"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/6/properties/kind/const",
           "value": "static",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-175"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-202"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/6/properties/anchor/$ref",
           "value": "#/$defs/token",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-176"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-203"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/6/properties/reason/type",
           "value": "string",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-177"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-204"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/6/properties/reason/minLength",
           "value": 1,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-178"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-205"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/6/required/0",
           "value": "anchor",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-179"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-206"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/6/required/1",
           "value": "reason",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-180"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-207"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/kind/const",
           "value": "template-boundary",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-181"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-208"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/anchor/$ref",
           "value": "#/$defs/token",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-182"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-209"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/outputPath/$ref",
           "value": "#/$defs/path",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-183"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-210"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/title/type",
           "value": "string",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-184"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-211"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/title/minLength",
           "value": 1,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-185"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-212"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/title/maxLength",
           "value": 180,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-186"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-213"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/runtime/enum/0",
           "value": "include",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-187"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-214"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/runtime/enum/1",
           "value": "exclude",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-188"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-215"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-189"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-216"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/additionalProperties",
           "value": false,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-190"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-217"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/required/0",
           "value": "templateType",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-191"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-218"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/required/1",
           "value": "commerce",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-192"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-219"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/required/2",
           "value": "content",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-193"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-220"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/required/3",
           "value": "templateConditions",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-194"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-221"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/templateType/enum/0",
           "value": "content",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-195"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-222"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/templateType/enum/1",
           "value": "header",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-196"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-223"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/templateType/enum/2",
           "value": "footer",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-197"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-224"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/templateType/enum/3",
           "value": "popup",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-198"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-225"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/templateType/enum/4",
           "value": "archive",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-199"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-226"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/commerce/enum/0",
           "value": "preserve",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-200"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-227"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/commerce/enum/1",
           "value": "woocommerce",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-201"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-228"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/content/enum/0",
           "value": "static",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-202"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-229"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/content/enum/1",
           "value": "posts",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-203"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-230"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/editorialSurface/type/0",
           "value": "string",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-204"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-231"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/editorialSurface/type/1",
           "value": "null",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-205"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-232"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/editorialSurface/enum/0",
           "value": "single",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-206"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-233"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/editorialSurface/enum/1",
           "value": "archive",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-207"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-234"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/editorialSurface/enum/2",
           "value": null,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-208"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-235"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/templateConditions/type",
           "value": "array",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-209"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-236"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/properties/wordpress/properties/templateConditions/items/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-210"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-237"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/required/0",
           "value": "anchor",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-211"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-238"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/required/1",
           "value": "outputPath",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-212"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-239"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/required/2",
           "value": "title",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-213"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-240"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/required/3",
           "value": "runtime",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-214"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-241"
         },
         {
           "pointer": "/$defs/stitch/allOf/1/oneOf/7/required/4",
           "value": "wordpress",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-215"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-242"
         },
         {
           "pointer": "/$defs/document/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-216"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-243"
         },
         {
           "pointer": "/$defs/document/additionalProperties",
           "value": false,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-217"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-244"
         },
         {
           "pointer": "/$defs/document/required/0",
           "value": "path",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-218"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-245"
         },
         {
           "pointer": "/$defs/document/required/1",
           "value": "wordpress",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-219"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-246"
         },
         {
           "pointer": "/$defs/document/required/2",
           "value": "closure",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-220"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-247"
         },
         {
           "pointer": "/$defs/document/required/3",
           "value": "stitches",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-221"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-248"
         },
         {
           "pointer": "/$defs/document/properties/path/$ref",
           "value": "#/$defs/path",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-222"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-249"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-223"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-250"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/additionalProperties",
           "value": false,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-224"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-251"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/required/0",
           "value": "templateType",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-225"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-252"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/required/1",
           "value": "commerce",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-226"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-253"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/required/2",
           "value": "content",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-227"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-254"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/required/3",
           "value": "templateConditions",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-228"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-255"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/templateType/enum/0",
           "value": "content",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-229"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-256"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/templateType/enum/1",
           "value": "header",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-230"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-257"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/templateType/enum/2",
           "value": "footer",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-231"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-258"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/templateType/enum/3",
           "value": "popup",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-232"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-259"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/templateType/enum/4",
           "value": "archive",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-233"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-260"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/commerce/enum/0",
           "value": "preserve",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-234"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-261"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/commerce/enum/1",
           "value": "woocommerce",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-235"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-262"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/content/enum/0",
           "value": "static",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-236"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-263"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/content/enum/1",
           "value": "posts",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-237"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-264"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/editorialSurface/type/0",
           "value": "string",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-238"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-265"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/editorialSurface/type/1",
           "value": "null",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-239"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-266"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/editorialSurface/enum/0",
           "value": "single",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-240"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-267"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/editorialSurface/enum/1",
           "value": "archive",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-241"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-268"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/editorialSurface/enum/2",
           "value": null,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-242"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-269"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/templateConditions/type",
           "value": "array",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-243"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-270"
         },
         {
           "pointer": "/$defs/document/properties/wordpress/properties/templateConditions/items/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-244"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-271"
         },
         {
           "pointer": "/$defs/document/properties/closure/type",
           "value": "object",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-245"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-272"
         },
         {
           "pointer": "/$defs/document/properties/closure/additionalProperties",
           "value": false,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-246"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-273"
         },
         {
           "pointer": "/$defs/document/properties/closure/required/0",
           "value": "status",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-247"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-274"
         },
         {
           "pointer": "/$defs/document/properties/closure/required/1",
           "value": "declaredAnchors",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-248"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-275"
         },
         {
           "pointer": "/$defs/document/properties/closure/required/2",
           "value": "unresolved",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-249"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-276"
         },
         {
           "pointer": "/$defs/document/properties/closure/properties/status/const",
           "value": "complete",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-250"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-277"
         },
         {
           "pointer": "/$defs/document/properties/closure/properties/declaredAnchors/type",
           "value": "integer",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-251"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-278"
         },
         {
           "pointer": "/$defs/document/properties/closure/properties/declaredAnchors/minimum",
           "value": 0,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-252"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-279"
         },
         {
           "pointer": "/$defs/document/properties/closure/properties/unresolved/type",
           "value": "array",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-253"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-280"
         },
         {
           "pointer": "/$defs/document/properties/closure/properties/unresolved/maxItems",
           "value": 0,
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-254"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-281"
         },
         {
           "pointer": "/$defs/document/properties/stitches/type",
           "value": "array",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-255"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-282"
         },
         {
           "pointer": "/$defs/document/properties/stitches/items/$ref",
           "value": "#/$defs/stitch",
-          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-256"
+          "url": "https://start.kiwelaunch.com/library/29c15647e40842b5/#entry-283"
         }
       ]
     },
@@ -15561,11 +15864,11 @@
       "id": "529eb4c2552ea43b",
       "family": "bindings",
       "source": "kiwe-ai-toolkit/reference/design-context-fields.json",
-      "sha256": "368a84486375daff2068ba7ca89916cc9a192f3b6b3d81d639cb78c0a22a691c",
-      "bytes": 17162,
+      "sha256": "6c4b18fd9ea38a2b7d24deb4904db2dc6eaa12defe5c1ad47a531ae778ec1959",
+      "bytes": 17756,
       "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/reference/design-context-fields.json",
-      "entryCount": 392,
+      "entryCount": 404,
       "entries": [
         {
           "pointer": "/schema",
@@ -15579,7 +15882,7 @@
         },
         {
           "pointer": "/sourceSha256",
-          "value": "3b9b0867eb26565b9ca8b893438d88cfb37ea66972771844836125566e53566b",
+          "value": "8f17608b652ee48dd4e25daa8a715c00b2803689d841cb99c0ccbf268b676154",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-2"
         },
         {
@@ -17368,164 +17671,224 @@
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-359"
         },
         {
-          "pointer": "/fields/business.activities.commerce/tag",
-          "value": "{kiwe_context_business_activities_commerce}",
+          "pointer": "/fields/contact.messagingLinks.x/tag",
+          "value": "{kiwe_context_contact_messaging_links_x}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-360"
         },
         {
-          "pointer": "/fields/business.activities.commerce/kind",
-          "value": "boolean",
+          "pointer": "/fields/contact.messagingLinks.x/kind",
+          "value": "link",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-361"
         },
         {
-          "pointer": "/fields/business.activities.commerce/owner",
+          "pointer": "/fields/contact.messagingLinks.x/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-362"
         },
         {
-          "pointer": "/fields/business.activities.commerce/scope",
+          "pointer": "/fields/contact.messagingLinks.x/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-363"
         },
         {
-          "pointer": "/fields/business.activities.blog/tag",
-          "value": "{kiwe_context_business_activities_blog}",
+          "pointer": "/fields/contact.messagingLinks.instagram/tag",
+          "value": "{kiwe_context_contact_messaging_links_instagram}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-364"
         },
         {
-          "pointer": "/fields/business.activities.blog/kind",
-          "value": "boolean",
+          "pointer": "/fields/contact.messagingLinks.instagram/kind",
+          "value": "link",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-365"
         },
         {
-          "pointer": "/fields/business.activities.blog/owner",
+          "pointer": "/fields/contact.messagingLinks.instagram/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-366"
         },
         {
-          "pointer": "/fields/business.activities.blog/scope",
+          "pointer": "/fields/contact.messagingLinks.instagram/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-367"
         },
         {
-          "pointer": "/fields/business.activities.publication/tag",
-          "value": "{kiwe_context_business_activities_publication}",
+          "pointer": "/fields/contact.messagingLinks.facebook/tag",
+          "value": "{kiwe_context_contact_messaging_links_facebook}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-368"
         },
         {
-          "pointer": "/fields/business.activities.publication/kind",
-          "value": "boolean",
+          "pointer": "/fields/contact.messagingLinks.facebook/kind",
+          "value": "link",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-369"
         },
         {
-          "pointer": "/fields/business.activities.publication/owner",
+          "pointer": "/fields/contact.messagingLinks.facebook/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-370"
         },
         {
-          "pointer": "/fields/business.activities.publication/scope",
+          "pointer": "/fields/contact.messagingLinks.facebook/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-371"
         },
         {
-          "pointer": "/fields/business.activities.physical_store/tag",
-          "value": "{kiwe_context_business_activities_physical_store}",
+          "pointer": "/fields/business.activities.commerce/tag",
+          "value": "{kiwe_context_business_activities_commerce}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-372"
         },
         {
-          "pointer": "/fields/business.activities.physical_store/kind",
+          "pointer": "/fields/business.activities.commerce/kind",
           "value": "boolean",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-373"
         },
         {
-          "pointer": "/fields/business.activities.physical_store/owner",
+          "pointer": "/fields/business.activities.commerce/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-374"
         },
         {
-          "pointer": "/fields/business.activities.physical_store/scope",
+          "pointer": "/fields/business.activities.commerce/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-375"
         },
         {
-          "pointer": "/fields/business.activities.service_area/tag",
-          "value": "{kiwe_context_business_activities_service_area}",
+          "pointer": "/fields/business.activities.blog/tag",
+          "value": "{kiwe_context_business_activities_blog}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-376"
         },
         {
-          "pointer": "/fields/business.activities.service_area/kind",
+          "pointer": "/fields/business.activities.blog/kind",
           "value": "boolean",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-377"
         },
         {
-          "pointer": "/fields/business.activities.service_area/owner",
+          "pointer": "/fields/business.activities.blog/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-378"
         },
         {
-          "pointer": "/fields/business.activities.service_area/scope",
+          "pointer": "/fields/business.activities.blog/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-379"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.pinned/tag",
-          "value": "{kiwe_context_content_plan_testimonial_sources_pinned}",
+          "pointer": "/fields/business.activities.publication/tag",
+          "value": "{kiwe_context_business_activities_publication}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-380"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.pinned/kind",
+          "pointer": "/fields/business.activities.publication/kind",
           "value": "boolean",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-381"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.pinned/owner",
+          "pointer": "/fields/business.activities.publication/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-382"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.pinned/scope",
+          "pointer": "/fields/business.activities.publication/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-383"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.hearted/tag",
-          "value": "{kiwe_context_content_plan_testimonial_sources_hearted}",
+          "pointer": "/fields/business.activities.physical_store/tag",
+          "value": "{kiwe_context_business_activities_physical_store}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-384"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.hearted/kind",
+          "pointer": "/fields/business.activities.physical_store/kind",
           "value": "boolean",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-385"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.hearted/owner",
+          "pointer": "/fields/business.activities.physical_store/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-386"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.hearted/scope",
+          "pointer": "/fields/business.activities.physical_store/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-387"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.popular/tag",
-          "value": "{kiwe_context_content_plan_testimonial_sources_popular}",
+          "pointer": "/fields/business.activities.service_area/tag",
+          "value": "{kiwe_context_business_activities_service_area}",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-388"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.popular/kind",
+          "pointer": "/fields/business.activities.service_area/kind",
           "value": "boolean",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-389"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.popular/owner",
+          "pointer": "/fields/business.activities.service_area/owner",
           "value": "design-context-native-owner",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-390"
         },
         {
-          "pointer": "/fields/contentPlan.testimonialSources.popular/scope",
+          "pointer": "/fields/business.activities.service_area/scope",
           "value": "site",
           "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-391"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.pinned/tag",
+          "value": "{kiwe_context_content_plan_testimonial_sources_pinned}",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-392"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.pinned/kind",
+          "value": "boolean",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-393"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.pinned/owner",
+          "value": "design-context-native-owner",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-394"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.pinned/scope",
+          "value": "site",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-395"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.hearted/tag",
+          "value": "{kiwe_context_content_plan_testimonial_sources_hearted}",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-396"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.hearted/kind",
+          "value": "boolean",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-397"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.hearted/owner",
+          "value": "design-context-native-owner",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-398"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.hearted/scope",
+          "value": "site",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-399"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.popular/tag",
+          "value": "{kiwe_context_content_plan_testimonial_sources_popular}",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-400"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.popular/kind",
+          "value": "boolean",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-401"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.popular/owner",
+          "value": "design-context-native-owner",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-402"
+        },
+        {
+          "pointer": "/fields/contentPlan.testimonialSources.popular/scope",
+          "value": "site",
+          "url": "https://start.kiwelaunch.com/library/529eb4c2552ea43b/#entry-403"
         }
       ]
     },
@@ -26877,11 +27240,11 @@
       "id": "6b4196a0f44c11f9",
       "family": "runtime",
       "source": "kiwe-ai-toolkit/reference/icons.json",
-      "sha256": "4f3be1095c471d2d00fc142e9c41a0f333cd478ded3e85e3ba6aaaa9128a35ac",
-      "bytes": 20801,
+      "sha256": "7ae66792c8a4fe0a6858c4d72d9b6c59c7cb3084e6d0724f7843dcd74af33a5c",
+      "bytes": 26344,
       "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/reference/icons.json",
-      "entryCount": 107,
+      "entryCount": 140,
       "entries": [
         {
           "pointer": "/schema",
@@ -26895,12 +27258,12 @@
         },
         {
           "pointer": "/sourceSha256",
-          "value": "520e0689a1a7207b3f3abca8298cb39ab5eaf2a19770f509e008213209f703b6",
+          "value": "ba12c5a81d15759558e1f8a78e19701ea8bd01e6043ba1c74a33b8c5a5e851d5",
           "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-2"
         },
         {
           "pointer": "/spriteSha256",
-          "value": "603ddf55a66a94d75523829daec8d558d2297a9d16e15030303909681ba357d0",
+          "value": "165e6287b3ac7492cbe3694b64a92158ff87b468c6d4ca22f67aeed6f562ea37",
           "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-3"
         },
         {
@@ -27417,6 +27780,171 @@
           "pointer": "/icons/kiwe_icon_pin/svg",
           "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"m16 3 5 5-4 2-3 5-5-5 5-3 2-4ZM9 10l-4 4 5 5 4-4M7 17l-5 5\"/></svg>",
           "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-106"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_facebook/tag",
+          "value": "{kiwe_icon_facebook}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-107"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_facebook/label",
+          "value": "Icon: Facebook",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-108"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_facebook/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M14.2 21v-7h-2.5v-3h2.5V8.8c0-3 1.8-4.8 4.6-4.8 1.1 0 2.1.1 2.6.2v3h-1.8c-1.4 0-1.8.7-1.8 1.7V11h3.4l-.5 3h-2.9v7z\"></path></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-109"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_instagram/tag",
+          "value": "{kiwe_icon_instagram}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-110"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_instagram/label",
+          "value": "Icon: Instagram",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-111"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_instagram/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"5\"></rect><circle cx=\"12\" cy=\"12\" r=\"4\"></circle><circle cx=\"17.5\" cy=\"6.5\" r=\"1\"></circle></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-112"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_x/tag",
+          "value": "{kiwe_icon_x}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-113"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_x/label",
+          "value": "Icon: X",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-114"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_x/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 4l14 16M19 4 5 20\"></path></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-115"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_youtube/tag",
+          "value": "{kiwe_icon_youtube}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-116"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_youtube/label",
+          "value": "Icon: Youtube",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-117"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_youtube/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"m9 8 7 4-7 4z\"></path></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-118"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_pinterest/tag",
+          "value": "{kiwe_icon_pinterest}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-119"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_pinterest/label",
+          "value": "Icon: Pinterest",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-120"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_pinterest/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 2a9.5 9.5 0 0 0-3.4 18.4c-.1-1.6 0-3.4.4-5.1l1.2-5s-.3-.8-.3-2c0-1.9 1.1-3.3 2.5-3.3 1.2 0 1.8.9 1.8 2 0 1.2-.8 3-1.2 4.7-.3 1.4.7 2.5 2.1 2.5 2.5 0 4.2-3.2 4.2-6.9 0-2.9-2.4-5.1-5.7-5.1-4 0-6.5 3-6.5 6.3 0 1.1.3 2.3 1 3 .3.3.3.5.2.9l-.3 1.3c-.1.4-.4.6-.8.4-1.9-.8-2.8-3.1-2.8-5.7C4.4 4.8 8 1 13.9 1 19 1 22 4.7 22 8.8c0 5.3-3 9.2-7.4 9.2-1.5 0-2.9-.8-3.4-1.8l-.9 3.5c-.3 1.2-1 2.5-1.6 3.4A10 10 0 0 0 12 22z\"></path></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-121"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_linkedin/tag",
+          "value": "{kiwe_icon_linkedin}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-122"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_linkedin/label",
+          "value": "Icon: Linkedin",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-123"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_linkedin/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><rect x=\"4\" y=\"9\" width=\"4\" height=\"11\"></rect><circle cx=\"6\" cy=\"5.5\" r=\"2\"></circle><path d=\"M11 20V9h4v1.7c.8-1.2 2-2.1 3.8-2.1 3 0 4.2 2 4.2 5.3V20h-4v-5.4c0-1.6-.6-2.7-2-2.7-1.4 0-2 1-2 2.7V20z\"></path></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-124"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_whatsapp/tag",
+          "value": "{kiwe_icon_whatsapp}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-125"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_whatsapp/label",
+          "value": "Icon: Whatsapp",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-126"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_whatsapp/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M20.5 11.6a8.5 8.5 0 0 1-12.7 7.4L3 20.5l1.5-4.7a8.5 8.5 0 1 1 16-4.2Z\"/><path d=\"M8.3 7.4c-.6 0-1 .7-1 1.5 0 2.3 3.5 6 6.4 6.4.8.1 1.6-.3 1.8-.9l.3-1-2.1-1-1 .9c-1.3-.6-2.3-1.6-2.9-2.9l.8-.9-.9-2.1z\"/></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-127"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_mail/tag",
+          "value": "{kiwe_icon_mail}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-128"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_mail/label",
+          "value": "Icon: Mail",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-129"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_mail/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"m3 7 9 6 9-6\"/></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-130"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_email/tag",
+          "value": "{kiwe_icon_email}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-131"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_email/label",
+          "value": "Icon: Email",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-132"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_email/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"m3 7 9 6 9-6\"/></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-133"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_chat/tag",
+          "value": "{kiwe_icon_chat}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-134"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_chat/label",
+          "value": "Icon: Chat",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-135"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_chat/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-136"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_share/tag",
+          "value": "{kiwe_icon_share}",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-137"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_share/label",
+          "value": "Icon: Share",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-138"
+        },
+        {
+          "pointer": "/icons/kiwe_icon_share/svg",
+          "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"18\" cy=\"5\" r=\"3\" xmlns=\"http://www.w3.org/2000/svg\" /><circle cx=\"6\" cy=\"12\" r=\"3\" xmlns=\"http://www.w3.org/2000/svg\" /><circle cx=\"18\" cy=\"19\" r=\"3\" xmlns=\"http://www.w3.org/2000/svg\" /><line x1=\"8.59\" x2=\"15.42\" y1=\"13.51\" y2=\"17.49\" xmlns=\"http://www.w3.org/2000/svg\" /><line x1=\"15.41\" x2=\"8.59\" y1=\"6.51\" y2=\"10.49\" xmlns=\"http://www.w3.org/2000/svg\" /></svg>",
+          "url": "https://start.kiwelaunch.com/library/6b4196a0f44c11f9/#entry-139"
         }
       ]
     },

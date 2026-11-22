@@ -115,7 +115,7 @@ final class Team_Workspace_Service {
 		if ( $accounts ) {
 			if ( ! current_user_can( 'list_users' ) || ! current_user_can( 'edit_users' ) || ( 'customers' === $nav['team_view'] && ! ( \DSA\Apps\Store_App_Service::enabled() && class_exists( 'WC_Customer' ) ) ) ) return $result;
 			unset( $args['capability__in'] );
-			if ( 'customers' === $nav['team_view'] ) $args['role__in'] = [ 'customer' ];
+			if ( 'customers' === $nav['team_view'] && ! class_exists( '\\DSA\\Commerce\\Paid_Customer_Query' ) ) return $result;
 			if ( $nav['team_role'] ) $args['role'] = $nav['team_role'];
 			if ( $nav['team_app'] ) $args['meta_query'] = [ [ 'key'=>\DSA\PWA\App_Activity_Service::meta_key(\DSA\PWA\App_Activity_Service::FIRST_USE_META), 'compare'=>'EXISTS' ] ];
 		}
@@ -127,7 +127,7 @@ final class Team_Workspace_Service {
 			$args['meta_key'] = Design_Context_Profile_Service::USER_META_TEAM_MEMBER;
 			$args['meta_value'] = '1';
 		}
-		$users = get_users( $args );
+		$users = 'customers' === $nav['team_view'] ? \DSA\Commerce\Paid_Customer_Query::users( $args ) : get_users( $args );
 		$result['has_next'] = count( $users ) > self::PAGE_SIZE && $nav['team_page'] < self::MAX_PAGE;
 		foreach ( array_slice( $users, 0, self::PAGE_SIZE ) as $user ) {
 			if ( ! $user instanceof \WP_User || ! ( $accounts ? $this->can_manage_account( (int) $user->ID ) : $this->can_manage_member( (int) $user->ID ) ) ) continue;

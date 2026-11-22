@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { validateSeamMap } from './seam-map-validator.js';
 import schemas from './authoring-schemas.cjs';
+import { responsiveCoveragePlan } from './responsive-coverage.js';
 
 const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
@@ -38,6 +39,15 @@ export function validatePreview(target = '.') {
   if (!schemas.receipt(receipt)) fail('Preview receipt JSON Schema: '+schemas.receipt.errors.slice(0,5).map(e=>`${e.instancePath} ${e.message}`).join('; '));
   if (discovery?.schema !== 'kiwe.ideate-discovery.v5' || discovery?.approval?.status !== 'approved') fail('The formal reviewed and approved /ideate artifact is required.');
   if (!object(bootstrap) || bootstrap.canonicalStart !== 'https://start.kiwelaunch.com/start.md' || typeof bootstrap.contractVersion !== 'string' || !['canonical','attached-kit'].includes(bootstrap.source) || !['connected-tool','task-capsule','attached-export','none'].includes(bootstrap.projectDataTransport)) fail('A truthful canonical/attached-kit bootstrap receipt and project-data transport are required.');
+  if (bootstrap?.projectDataKind === 'kiwe.mcp-design-part.v1' || fs.existsSync(path.join(root,'authoring/mcp-design-receipt.json'))) {
+    const capture = json('authoring/mcp-design-receipt.json');
+    if (!object(capture) || capture.schema !== 'kiwe.mcp-design-receipt.v1' || capture.selection?.area !== 'sitegraph' || capture.path !== 'seam/site-graph.json' || capture.projectDataTransport !== 'connected-tool' || capture.readOnly !== true || capture.originAuthenticatedByValidator !== false || capture.browserExecutedByValidator !== false || !Number.isSafeInteger(capture.bytes) || capture.bytes < 1 || capture.bytes > 2097152 || capture.parts !== Math.ceil(capture.bytes/6000) || bootstrap?.projectDataTransport !== 'connected-tool') fail('MCP design capture must retain its exact graph commitment and truthful transport limits.');
+    else {
+      const bytes=verify({path:capture.path,bytes:capture.bytes,sha256:capture.sha256},'MCP native design capture');
+      try { const graph=bytes&&JSON.parse(bytes.toString('utf8')); if(!graph || graph.schema!=='kiwe.site-graph.v1' || graph.authority?.publicDataOnly!==true || graph.authority?.mayMutateWordPress!==false || new URL(graph.authority?.source).href.replace(/\/+$/,'')!==new URL(capture.website).href.replace(/\/+$/,''))fail('MCP graph identity or public-only authority differs from its capture.'); }
+      catch(error){fail('MCP graph capture cannot be verified: '+error.message);}
+    }
+  }
   const kit = json('start/handoff.json');
   if (kit?.schema !== 'kiwe.authoring-kit.v1' || kit.canonicalStart !== 'https://start.kiwelaunch.com/start.md' || !Array.isArray(kit.files) || !kit.files.length || kit.files.length > 2000 || kit.contractVersion !== bootstrap?.contractVersion) fail('A matching pinned Start kit must accompany a reusable preview handoff.');
   else {
@@ -85,7 +95,20 @@ export function validatePreview(target = '.') {
     }
     if (receipt.status === 'ready-for-design-review') {
       const widths = array(runtime?.viewports).filter(v=>Number.isInteger(v.width)&&Number.isInteger(v.height)&&v.height>=240).map(v=>v.width);
-      if (runtime?.status !== 'passed' || !widths.some(w=>w>=1024) || !widths.some(w=>w>=240&&w<=480) || array(runtime?.proof).length<2) fail('Readiness requires referenced desktop and phone browser proof.');
+      if (runtime?.status !== 'passed' || !widths.some(w=>w>=1024) || !widths.some(w=>w>=600&&w<=1000) || !widths.some(w=>w>=240&&w<=480) || array(runtime?.proof).length<3) fail('Readiness requires referenced desktop, intermediate/tablet and phone browser proof.');
+      const cssSources = [];
+      for (const name of actualFiles.filter(name=>/\.(?:css|html?)$/i.test(name))) {
+        try { const bytes=fs.readFileSync(file(name),'utf8'); cssSources.push(/\.css$/i.test(name)?bytes:[...bytes.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m=>m[1]).join('\n')); }
+        catch(error) { fail(error.message); }
+      }
+      const coverage=responsiveCoveragePlan(cssSources);
+      const missing=coverage.probes.filter(p=>!widths.includes(p.width)).map(p=>p.width);
+      if(missing.length)fail('Responsive browser checks are missing planned widths: '+missing.join(', ')+'. Test media boundaries and interval interiors; zero page overflow alone is insufficient.');
+      if(coverage.requiresReview.length){
+        const review=runtime?.coverageReview;
+        if(!object(review)||typeof review.reason!=='string'||!review.reason.trim()||!Array.isArray(review.queries)||coverage.requiresReview.some(q=>!review.queries.includes(q))||!Array.isArray(review.proofPaths)||!review.proofPaths.length||review.proofPaths.some(p=>!proofPaths.has(p)))fail('Responsive coverage needs explicit query/container review with referenced browser proof: '+coverage.requiresReview.join('; '));
+      }
+      if(coverage.omitted)fail(coverage.omitted+' responsive probes exceed the bounded project plan. Split the review by page before claiming readiness.');
       if(discovery?.contentReadiness?.runtimeSmokeTest !== 'passed')fail('Discovery and runtime proof must agree about browser checks.');
     } else if (receipt.status === 'source-exported-unverified') {
       if (runtime?.status !== 'unavailable' || typeof runtime.reason !== 'string' || !runtime.reason.trim()) fail('An unverified checkpoint must identify the unavailable browser capability.');

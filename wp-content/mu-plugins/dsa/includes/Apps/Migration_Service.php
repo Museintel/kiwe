@@ -10,11 +10,12 @@ final class Migration_Service {
  /** A signed Core profile cannot silently drop an engine this website currently uses. */
  public static function assert_core_profile(array $manifest): void {
   if(!isset($manifest['apps'])){if(!Package_Layout::BUNDLED)throw new \RuntimeException('Independent Core requires an authenticated Core profile update. The bundled release channel is preserved for older installations.');return;}
-  $contract=$manifest['apps'];
-  if(!is_array($contract)||count($contract)!==3||array_diff(array_keys($contract),['profile','coreApi','minimum'])||($contract['profile']??'')!=='core'||!in_array($contract['coreApi']??null,[1,Runtime_Contract::API],true)||!is_array($contract['minimum']??null)||array_keys($contract['minimum'])!==($contract['coreApi']===1?['seo','store']:Runtime_Contract::IDS))throw new \RuntimeException('The Core App compatibility contract is invalid.');
-  if($contract['coreApi']===1)foreach(['guest','ai','sitegraph']as$id)if(!empty($manifest['files'])&&!isset($manifest['files'][match($id){'guest'=>'includes/Access/Guest_Engine_Service.php','ai'=>'includes/AI/AI_Provider_Service.php','sitegraph'=>'includes/Access/SiteGraph_Workspace_Service.php'}]))throw new \RuntimeException('The compatibility bridge must retain its unextracted workspace engines.');
-  foreach($contract['minimum']as$version)if(!is_string($version)||!Runtime_Contract::version($version))throw new \RuntimeException('The Core App compatibility version is invalid.');
-  $required=[];foreach(array_keys($contract['minimum'])as$id){$owner=Runtime_Registry::owner($id);$required[$id]=Package_Layout::bundled($id)?($id==='seo'?SEO_App_Service::requested()&&SEO_App_Service::external_owner()==='':($id==='store'?Store_App_Service::requested()&&Store_App_Service::available():$owner::requested())):$owner::enabled();}
+  $contract=$manifest['apps'];$minimum=Core_Profile_Contract::validate($manifest,MCP_App_Service::enabled());
+  // A signed future Core may introduce additional optional App identities. Only
+  // native engines this Core already recognizes can presently be active/required.
+  // Every known identity/floor must remain declared; unknown entries grant no code,
+  // installation, provider registration, settings or account authority here.
+  $required=[];foreach(array_keys($minimum)as$id){$owner=Runtime_Registry::owner($id);$required[$id]=Package_Layout::bundled($id)?($id==='seo'?SEO_App_Service::requested()&&SEO_App_Service::external_owner()==='':($id==='store'?Store_App_Service::requested()&&Store_App_Service::available():$owner::requested())):$owner::enabled();}
   $native=Native_State::snapshot();$known=(array)get_option(Code_Recovery::RELEASES,[]);
   foreach($required as$id=>$needed){if(!$needed)continue;
    $app=$native['apps'][$id]??null;$release=$known[$id]??null;

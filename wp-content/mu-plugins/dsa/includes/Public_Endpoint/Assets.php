@@ -11,6 +11,7 @@ use DSA\Design\Seam_Token_Service;
 use DSA\Design\Token_Schema;
 use DSA\Environment;
 use DSA\Link_Hub\Review_Service;
+use DSA\Link_Hub\Channel_Service;
 use DSA\Metrics\Metrics_Service;
 use DSA\Modules\Module_Registry;
 use DSA\Notifications\Notification_Preference_Service;
@@ -32,6 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Assets {
+	private ?array $contact_actions = null;
 	private $settings;
 	private $registry;
 	private $modules;
@@ -330,12 +332,15 @@ final class Assets {
 					'popularEnabled' => $this->search_popularity_available(),
 				],
 				'presentationModules' => array_filter( [
-					'comments' => esc_url_raw( $this->asset_url( 'assets/js/modules/comments-panel.js' ) ),
+					'comments' => \DSA\Discussion\Feedback_Access::enabled() ? esc_url_raw( $this->asset_url( 'assets/js/modules/comments-panel.js' ) ) : '',
 					'diagnostics' => esc_url_raw( $this->asset_url( 'assets/js/modules/diagnostics.js' ) ),
 					'profile' => esc_url_raw( $this->asset_url( 'assets/js/modules/profile-panel.js' ) ),
 					'cart' => \DSA\Apps\Store_App_Service::enabled() ? esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ) : '',
 					'checkout' => \DSA\Apps\Store_App_Service::enabled() ? esc_url_raw( $this->asset_url( 'assets/js/modules/commerce-panels.js' ) ) : '',
 					'links' => esc_url_raw( $this->asset_url( 'assets/js/modules/links-panel.js' ) ),
+					'link-enquiry' => esc_url_raw( $this->asset_url( 'assets/js/modules/link-enquiry.js' ) ),
+					'link-share' => esc_url_raw( $this->asset_url( 'assets/js/modules/link-share.js' ) ),
+					'form-prefill' => esc_url_raw( $this->asset_url( 'assets/js/modules/form-prefill.js' ) ),
 					'ai' => esc_url_raw( $this->asset_url( 'assets/js/modules/ai-panel.js' ) ),
 					'saved' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
 					'notifications' => esc_url_raw( $this->asset_url( 'assets/js/modules/surface-panels.js' ) ),
@@ -392,12 +397,12 @@ final class Assets {
 	 * the intent and cannot substitute a different phone, email, address, or
 	 * social profile through the Kiwe capability lane.
 	 */
+	private array $link_messaging = [];
+
 	private function contact_actions_data(): array {
-		$profile = ( new Design_Context_Enhancement_Service() )->resolved_profile();
-		$contact = is_array( $profile['contact'] ?? null ) ? $profile['contact'] : [];
-		$phone   = preg_replace( '/[^0-9+]/', '', Site_Identity_Service::store_phone() );
-		$email   = sanitize_email( Site_Identity_Service::store_email() );
-		$whatsapp = preg_replace( '/\D+/', '', (string) ( $contact['whatsapp'] ?? '' ) );
+		if ( null !== $this->contact_actions ) return $this->contact_actions;
+		$actions = Channel_Service::site_actions();
+		$this->link_messaging = $actions['messaging'];
 		$address = array_filter(
 			[
 				sanitize_text_field( (string) get_option( 'woocommerce_store_address', '' ) ),
@@ -407,18 +412,12 @@ final class Assets {
 				sanitize_text_field( str_replace( ':', ', ', (string) get_option( 'woocommerce_default_country', '' ) ) ),
 			]
 		);
-		$socials = [];
-		foreach ( [ 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin' ] as $network ) {
-			$url = esc_url_raw( (string) ( $contact['socialLinks'][ $network ] ?? '' ) );
-			if ( $url ) $socials[ $network ] = $url;
-		}
-
-		return [
-			'phone' => $phone ? esc_url_raw( 'tel:' . $phone ) : '',
-			'email' => $email ? esc_url_raw( 'mailto:' . $email ) : '',
-			'whatsapp' => $whatsapp ? esc_url_raw( 'https://wa.me/' . $whatsapp ) : '',
+		return $this->contact_actions = [
+			'phone' => $actions['phone'],
+			'email' => $actions['email'],
+			'whatsapp' => $actions['whatsapp'],
 			'directions' => $address ? esc_url_raw( 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode( implode( ', ', $address ) ) ) : '',
-			'socials' => $socials,
+			'socials' => $actions['socials'],
 		];
 	}
 
@@ -1181,6 +1180,7 @@ CSS;
 		];
 	}
 	private function discussion_data(): array {
+		if(!\DSA\Discussion\Feedback_Access::enabled())return ['targetId'=>0,'currentTargetId'=>0,'siteTargetId'=>0,'count'=>0,'stylesheet'=>''];
 		$current = is_singular() ? (int) get_queried_object_id() : 0;
 		$current_post = $current ? \DSA\Discussion\Discussion_Target::get( $current ) : null;
 		$id = \DSA\Discussion\Discussion_Target::automatic_id( $current );
@@ -1232,6 +1232,10 @@ CSS;
 			'scoreLabel'      => null !== $manual_score ? __( 'site score', 'dsa' ) : __( 'SEO readiness', 'dsa' ),
 			'scoreSource'     => null !== $manual_score ? 'manual' : ( null !== $score ? 'kiwe-onboarding' : 'none' ),
 			'socials'         => $this->social_links( $config ),
+			'contacts'        => Channel_Service::contact_rows( $this->contact_actions_data() ),
+			'messaging' => $this->link_messaging,
+			'enquiryAvailable' => true,
+			'shareAvailable' => true,
 			'shop'            => [
 				'label' => sanitize_text_field( $config['shop_label'] ?? __( 'Shop', 'dsa' ) ),
 				'url'   => $this->shop_url( $config ),
@@ -1245,7 +1249,12 @@ CSS;
 			'cartAvailable'     => $commerce_available && ! empty( $commerce['cart_surface_enabled'] ) && ! empty( $dock['enabled_items']['cart'] ),
 			'canEdit'         => false,
 		];
-
+		// Page context belongs to the real frontend query. A REST refresh must not replace it
+		// with a guessed archive ID or a context-free home subject.
+		if ( isset( $GLOBALS['wp_query'] ) && did_action( 'wp' ) ) {
+			$data['shareSubject'] = \DSA\Link_Hub\Public_Subject_Service::current();
+			$data['shareDocument'] = \DSA\Link_Hub\Share_Service::for_subject( $data['shareSubject'] );
+		}
 		return $data;
 	}
 
@@ -1254,24 +1263,7 @@ CSS;
 	}
 
 	private function social_links( array $config ): array {
-		$raw = isset( $config['social_links'] ) && is_array( $config['social_links'] ) ? $config['social_links'] : [];
-		$out = [];
-
-		foreach ( $this->social_link_labels() as $id => $label ) {
-			$url = esc_url_raw( $raw[ $id ] ?? '' );
-
-			if ( '' === $url ) {
-				continue;
-			}
-
-			$out[] = [
-				'id'    => $id,
-				'label' => $label,
-				'url'   => $url,
-			];
-		}
-
-		return $out;
+		return Channel_Service::social_rows( $config );
 	}
 
 	private function links_editor_data( array $config ): array {
@@ -1305,14 +1297,7 @@ CSS;
 	}
 
 	private function social_link_labels(): array {
-		return [
-			'facebook'  => 'Facebook',
-			'instagram' => 'Instagram',
-			'x'         => 'X',
-			'youtube'   => 'YouTube',
-			'pinterest' => 'Pinterest',
-			'linkedin'  => 'LinkedIn',
-		];
+		return Channel_Service::social_labels();
 	}
 
 	private function shop_url( array $config ): string {

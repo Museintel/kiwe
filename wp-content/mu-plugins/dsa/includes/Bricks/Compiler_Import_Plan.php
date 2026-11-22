@@ -6,21 +6,25 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** Target-specific authoring decisions. Read-only until the separate reviewed job is confirmed. */
 final class Compiler_Import_Plan {
 	public static function allowed(): bool {
-		return ! is_multisite() && Framework_Style_Service::allowed() && \DSA\Access\Template_Workspace_Service::allowed() && \DSA\Access\Template_Workspace_Service::available() && current_user_can( 'upload_files' ) && current_user_can( 'create_kiwe_templates' ) && current_user_can( 'delete_kiwe_templates' ) && \Bricks\Builder_Permissions::user_has_permission( 'import_export_templates' );
+		return ! is_multisite() && Framework_Style_Service::allowed() && \DSA\Access\Template_Workspace_Service::allowed() && \DSA\Access\Template_Workspace_Service::available() && current_user_can( 'upload_files' ) && current_user_can( 'create_kiwe_templates' ) && current_user_can( 'delete_kiwe_templates' ) && is_callable( [ '\Bricks\Builder_Permissions','user_has_permission' ] ) && \Bricks\Builder_Permissions::user_has_permission( 'import_export_templates' );
 	}
 	public static function prepare( array $inspection,\DSA\Settings $settings ): array {
 		if ( ! self::allowed() ) throw new Compiler_Package_Error( 'Your account needs native template import, Media, style editing and template recovery permissions.' );
 		$profile = $inspection['documents'][$inspection['profileFile']];
 		if ( ( $profile['schema'] ?? '' ) !== 'kiwe.framework-profile.v1' || ! is_array( $profile['settings']['tokens'] ?? null ) ) throw new Compiler_Package_Error( 'The package needs a supported Kiwe Framework Profile.' );
 		$input = $profile['settings']['tokens'];
-		self::guard_values( $input );
-		$enhancements = new \DSA\Onboarding\Design_Context_Enhancement_Service();
-		$owner = $enhancements->validate_framework_tokens( $input );
-		if ( is_wp_error( $owner ) ) throw new Compiler_Package_Error( 'This design conflicts with an owner-selected brand colour. Resolve it in Design Context before importing.' );
+		$isolated = ( $inspection['importPolicy'] ?? '' ) === Compiler_Package_Reader::ISOLATED_DRAFT;
+		if ( $isolated ? ( ( $profile['importPolicy'] ?? '' ) !== Compiler_Package_Reader::ISOLATED_DRAFT || array_keys( $input ) !== [ 'project' ] || ! is_array( $input['project'] ) ) : isset( $profile['importPolicy'] ) ) throw new Compiler_Package_Error( 'The package and profile must agree on which native styles they can change.' );
+		self::guard_values( $input,$isolated );
 		$before_tokens = $settings->get( 'tokens',[] );
 		$defaults = $settings->defaults()['tokens'] ?? [];
+		if ( ! $isolated ) {
+			$enhancements = new \DSA\Onboarding\Design_Context_Enhancement_Service();
+			$owner = $enhancements->validate_framework_tokens( $input );
+			if ( is_wp_error( $owner ) ) throw new Compiler_Package_Error( 'This design conflicts with an owner-selected brand colour. Resolve it in Design Context before importing.' );
+		}
 		// This sanitizer owns a slashed form boundary; preserve source CSS backslashes.
-		$next = Tokens::sanitize_framework_profile_tokens( wp_slash( $enhancements->apply_owner_colors_to_framework_tokens( $input ) ),$before_tokens,$defaults );
+		$next = Tokens::sanitize_framework_profile_tokens( wp_slash( $isolated ? $input : $enhancements->apply_owner_colors_to_framework_tokens( $input ) ),$before_tokens,$defaults );
 		$project = Tokens::project_extensions_for_bricks( $next['project'] ?? [] );
 		$source_project = $input['project'] ?? [];
 		foreach ( [ 'classes','variables' ] as $kind ) {
@@ -28,11 +32,13 @@ final class Compiler_Import_Plan {
 			foreach ( $source_project[$kind] ?? [] as $index=>$item ) {
 				$native = $project[$kind][$index];
 				if ( $native['name'] !== ltrim( (string) ( $item['name'] ?? '' ),'-' ) || ( $kind === 'variables' ? $native['value'] !== ( $item['value'] ?? '' ) : $native['id'] !== ( $item['id'] ?? '' ) || ( $native['settings'] ?? [] ) !== ( $item['settings'] ?? [] ) ) ) throw new Compiler_Package_Error( 'Native style validation would change a supplied design value. Recompile or review that style first.' );
+				if ( $isolated && ( $kind === 'variables' ? ! preg_match( '/^(?:svp-[a-z0-9]{6}-[a-z0-9]{6}-[a-z0-9-]+|sv-[a-z0-9-]+-[a-z0-9]{6}(?:-[a-z0-9]{6})?)$/D',$native['name'] ) : preg_grep( '/^_cssCustom(?::|$)/i',array_keys( $native['settings'] ?? [] ) ) ) ) throw new Compiler_Package_Error( 'A draft package must keep authored variables and custom CSS scoped to the project.' );
 			}
 		}
 		$style = $next['bricks_theme_style'] ?? [];
-		$universal = Tokens::export_for_bricks( Tokens::tokens_with_overrides( $next['overrides'] ?? [] ),[ 'id'=>$style['id'] ?? 'kiwe-global-design','label'=>$style['label'] ?? 'Kiwe Framework' ] );
-		$native_plan = Framework_Style_Service::plan( Framework_Style_Service::snapshot(),$universal,$project,! empty( $style['enabled'] ) );
+		$universal = $isolated ? [] : Tokens::export_for_bricks( Tokens::tokens_with_overrides( $next['overrides'] ?? [] ),[ 'id'=>$style['id'] ?? 'kiwe-global-design','label'=>$style['label'] ?? 'Kiwe Framework' ] );
+		$native_plan = Framework_Style_Service::plan( Framework_Style_Service::snapshot(),$universal,$project,! $isolated && ! empty( $style['enabled'] ) );
+		if ( $isolated && in_array( 'update-shared',array_column( $native_plan['changes'],'action' ),true ) ) throw new Compiler_Package_Error( 'A draft package cannot update any existing native style. Keep the existing style or recompile with a distinct project name.' );
 		$class_ids = [];
 		foreach ( $native_plan['after']['classes']['value'] as $class ) if ( is_array( $class ) && isset( $class['id'] ) ) $class_ids[$class['id']] = true;
 		$warnings = $inspection['warnings']; $blockers = [];
@@ -45,20 +51,22 @@ final class Compiler_Import_Plan {
 		foreach ( $inspection['templateFiles'] as $file ) {
 			$document = $inspection['documents'][$file];
 			if ( ! isset( $types[$document['templateType'] ?? ''] ) || ! is_string( $document['title'] ?? null ) || '' === trim( $document['title'] ) || strlen( $document['title'] ) > 200 ) throw new Compiler_Package_Error( 'A template type or title is unsupported by this Bricks installation.' );
-			$template_checks[$file] = self::validate_document( $document );
+			$template_checks[$file] = self::validate_document( $document,$isolated );
 			foreach ( [ 'content','header','footer' ] as $area ) foreach ( $document[$area] ?? [] as $element ) foreach ( $element['settings']['_cssGlobalClasses'] ?? [] as $id ) if ( ! is_string( $id ) || ! isset( $class_ids[$id] ) ) throw new Compiler_Package_Error( 'A template refers to a native class that is not installed or supplied by this profile.' );
 		}
-		return [ 'tokensBefore'=>$before_tokens,'tokensAfter'=>$next,'styles'=>$native_plan,'warnings'=>array_values( array_unique( $warnings ) ),'blockers'=>array_values( array_unique( $blockers ) ),'templates'=>$template_checks,'expectedTokens'=>hash( 'sha256',serialize( $before_tokens ) ) ];
+		return [ 'tokensBefore'=>$before_tokens,'tokensAfter'=>$isolated ? $before_tokens : $next,'styles'=>$native_plan,'warnings'=>array_values( array_unique( $warnings ) ),'blockers'=>array_values( array_unique( $blockers ) ),'templates'=>$template_checks,'expectedTokens'=>hash( 'sha256',serialize( $before_tokens ) ) ];
 	}
-	public static function validate_document( array $document ): array {
+	public static function validate_document( array $document,bool $isolated = false ): array {
 		$runtime = Source_Runtime_Bridge::dependency_error( $document ); if ( $runtime ) throw new Compiler_Package_Error( $runtime );
 		if ( ! is_string( $document['version'] ?? null ) || ! preg_match( '/^2\.3(?:\.|$)/D',$document['version'] ) ) throw new Compiler_Package_Error( 'This import adapter requires a template for the verified Bricks 2.3 family.' );
-		$elements = []; $ids = []; $needs_html = self::guard_values( $document );
+		$elements = []; $ids = []; $needs_html = self::guard_values( $document,$isolated );
 		foreach ( [ 'content','header','footer' ] as $area ) if ( isset( $document[$area] ) ) {
 			if ( ! is_array( $document[$area] ) || ! array_is_list( $document[$area] ) ) throw new Compiler_Package_Error( 'Native template content must be an element list.' );
 			foreach ( $document[$area] as $element ) {
 				$id = $element['id'] ?? null; $name = $element['name'] ?? null;
 				if ( ! is_string( $id ) || ! preg_match( '/^[a-z0-9_-]{1,80}$/iD',$id ) || isset( $ids[$id] ) || ! is_string( $name ) || ! isset( \Bricks\Elements::$elements[$name] ) || $name === 'code' ) throw new Compiler_Package_Error( 'A template contains an unknown, duplicated or executable native element.' );
+				if ( $isolated && in_array( $name,[ 'shortcode','template' ],true ) ) throw new Compiler_Package_Error( 'Shortcodes and linked templates need separate native authoring review.' );
+				if ( $isolated && $name === 'html' && ! current_user_can( 'unfiltered_html' ) ) throw new Compiler_Package_Error( 'Native HTML or SVG in this draft requires Bricks HTML authoring authority.' );
 				$ids[$id] = $element; $elements[] = $element;
 			}
 		}
@@ -76,24 +84,27 @@ final class Compiler_Import_Plan {
 			$visiting[$id] = true; foreach ( $ids[$id]['children'] ?? [] as $child ) $visit( $child,$depth + 1 ); unset( $visiting[$id] ); $done[$id] = true;
 		};
 		foreach ( array_keys( $ids ) as $id ) $visit( $id );
-		return [ 'title'=>trim( $document['title'] ),'type'=>$document['templateType'],'elements'=>count( $elements ),'sourceCode'=>$needs_html ];
+		return [ 'title'=>trim( $document['title'] ),'type'=>$document['templateType'],'elements'=>count( $elements ),'sourceCode'=>$needs_html,'conditions'=>count( (array) ( $document['templateSettings']['templateConditions'] ?? [] ) ) ];
 	}
-	private static function guard_values( array $document ): bool {
+	private static function guard_values( array $document,bool $isolated = false ): bool {
 		$nodes = 0; $needs_html = false;
-		$walk = static function( $value,int $depth = 0 ) use ( &$walk,&$nodes,&$needs_html ): void {
+		$walk = static function( $value,int $depth = 0 ) use ( &$walk,&$nodes,&$needs_html,$isolated ): void {
 			if ( ++$nodes > 250000 || $depth > 50 ) throw new Compiler_Package_Error( 'The native document exceeds its authoring limit.' );
 			if ( is_array( $value ) ) foreach ( $value as $key=>$item ) {
 				if ( is_string( $key ) && preg_match( '/^(?:signature|_signature|executeCode|codeExecute|queryEditor|useQueryEditor|phpQueryEditor|_phpCode)$/iD',$key ) && $item ) throw new Compiler_Package_Error( 'Imported PHP/query code or signatures need a separate native code review.' );
 				if ( is_string( $key ) && preg_match( '/customJs|_jsCustom/i',$key ) && $item ) $needs_html = true;
+				if ( $isolated && ( ( $key === 'action' && strtolower( is_string( $item ) ? $item : '' ) === 'javascript' ) || ( in_array( $key,[ 'jsFunction','jsFunctionArgs' ],true ) && $item ) ) ) throw new Compiler_Package_Error( 'Executable interactions need a separate native code review.' );
+				if ( $isolated && $key === 'objectType' && $item === 'api' ) throw new Compiler_Package_Error( 'API queries need separate native integration review.' );
 				$walk( $item,$depth + 1 );
 			}
 			elseif ( is_string( $value ) ) {
 				if ( preg_match( '/<\?(?:php|=)|\{echo:/i',$value ) ) throw new Compiler_Package_Error( 'Imported PHP or echo tags need a separate native code review.' );
-				if ( preg_match( '/<script\b|\bon[a-z]+\s*=|javascript\s*:/i',$value ) ) $needs_html = true;
+				if ( preg_match( '/<script\b|\bon[a-z]+\s*=|javascript\s*:/i',$value ) || ( $isolated && preg_match( '/<(?:iframe|object|embed|base|link|meta)\b|\bsrcdoc\s*=/i',$value ) ) ) $needs_html = true;
 			}
 		};
 		$walk( $document );
 		if ( ! empty( $document['pageSettings']['customJs'] ) || ! empty( $document['pageSettings']['customJsHeader'] ) || ! empty( $document['pageSettings']['customJsFooter'] ) ) $needs_html = true;
+		if ( $isolated && $needs_html ) throw new Compiler_Package_Error( 'Draft packages cannot carry source JavaScript. Review and import code separately in Bricks.' );
 		// Bricks' native non-Code element path uses WordPress HTML authority for JS.
 		// Never require or grant PHP execution merely to import source JavaScript.
 		if ( $needs_html && ! current_user_can( 'unfiltered_html' ) ) throw new Compiler_Package_Error( 'This design contains source JavaScript/HTML that requires native unfiltered HTML authoring permission.' );

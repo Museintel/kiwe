@@ -30,6 +30,7 @@ final class SEO_App_Service {
 	public static function expected(): string { return hash( 'sha256', (string) wp_json_encode( [ get_option( self::OPTION, null ), self::external_owner(), Runtime_Registry::installed('seo'), Runtime_Registry::provider('seo')['version'] ?? '' ] ) ); }
 
 	public function register( callable $start ): void {
+		add_action('kiwe_mcp_register_providers',static function($registry,int $api):void{if(self::enabled()&&class_exists(\DSA\SEO\MCP_SEO_Provider::class))\DSA\SEO\MCP_SEO_Provider::register($registry,$api);},10,2);
 		// MU boot precedes normal plugins: detect the actual SEO owner only after they load.
 		add_action( 'plugins_loaded', function () use ( $start ): void {
 			if ( $this->resolved ) return;

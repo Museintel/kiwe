@@ -290,6 +290,8 @@ final class WordPress_Role_Access_Service {
 			}
 		}
 		if ( Workspace_Admin_Service::uses_workspace( wp_get_current_user() ) ) $allowed[] = Workspace_Admin_Service::PAGE;
+		if ( \DSA\Apps\MCP_App_Service::enabled() && \DSA\Apps\MCP_App_Service::can_connect() ) $allowed[] = \DSA\Apps\MCP_App_Service::PAGE;
+		if(\DSA\Discussion\Feedback_Access::enabled() && (\DSA\Discussion\Feedback_Access::allowed() || current_user_can('manage_woocommerce')))$allowed[]='kiwe-feedback-settings';
 		if ( current_user_can( 'kiwe_manage_context' ) ) $allowed[] = \DSA\Onboarding\Design_Context_Journey_Service::PAGE;
 		if ( class_exists(App_Workspace_Service::class) && App_Workspace_Service::allowed() ) $allowed[] = App_Workspace_Service::PAGE;
 		if ( class_exists( Trash_Workspace_Service::class ) && Trash_Workspace_Service::allowed() ) $allowed[] = Trash_Workspace_Service::PAGE;
@@ -475,9 +477,11 @@ final class WordPress_Role_Access_Service {
 		$script = (string) $pagenow;
 		$work_roles = [ 'administrator',Template_Workspace_Service::ROLE,'author','editor','contributor','shop_manager' ];
 		if ( wp_doing_ajax() ) { $this->guard_ajax( $role ); return; }
+		if ( \DSA\Apps\MCP_App_Service::enabled() && \DSA\Apps\MCP_App_Service::can_connect() && ( ( 'admin.php' === $script && \DSA\Apps\MCP_App_Service::PAGE === sanitize_key($_GET['page']??'') ) || ( 'admin-post.php' === $script && in_array( $_REQUEST['action'] ?? '', [ 'kiwe_mcp_authorize','kiwe_mcp_consent' ], true ) ) ) ) return; // This native capability-based connection also supports permitted custom staff roles.
 		if ( ! in_array( $role, $work_roles, true ) ) { wp_safe_redirect( home_url( '/' ) ); exit; }
 		$page = sanitize_key( $_GET['page'] ?? '' );
 		if ( 'index.php' === $script ) return;
+		if ( 'admin-post.php' === $script && 'POST' === ($_SERVER['REQUEST_METHOD']??'') && \DSA\Apps\MCP_App_Service::action() === ($_POST['action']??'') && \DSA\Apps\MCP_App_Service::allowed() ) return; // Native App switch still checks nonce, origin and current state.
 		if ( 'admin-post.php' === $script && 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && \DSA\Apps\Store_App_Service::ACTION === ( $_POST['action'] ?? '' ) && \DSA\Apps\Store_App_Service::allowed() ) return;
 		if ( 'admin-post.php' === $script && 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && \DSA\Apps\SEO_App_Service::ACTION === ( $_POST['action'] ?? '' ) && \DSA\Apps\SEO_App_Service::allowed() ) return; // Same owner as the App REST switch; native handler verifies nonce, origin and stale state.
 		if ( class_exists( App_Workspace_Service::class ) && 'admin.php' === $script && App_Workspace_Service::PAGE === $page ) {
@@ -521,7 +525,8 @@ final class WordPress_Role_Access_Service {
 		if ( 'admin.php' === $script && 'kiwe-notifications' === $page && current_user_can( 'kiwe_use_notifications' ) ) return;
 		if ( class_exists( Taxonomy_App_Service::class ) && Taxonomy_App_Service::enabled() && 'admin.php' === $script && Taxonomy_App_Service::SERVICE_PAGE === $page && ( new Taxonomy_App_Service() )->service_definitions() ) return;
 		if ( 'admin.php' === $script && self::SEO_OBJECT_PAGE === $page && ( current_user_can( 'publish_posts' ) || current_user_can( 'edit_pages' ) || current_user_can( 'edit_products' ) || current_user_can( 'upload_files' ) ) ) return;
-		if ( class_exists( Continuity_App_Service::class ) && Continuity_App_Service::enabled() && 'admin.php' === $script && 'kiwe-feedback' === $page && current_user_can( 'moderate_comments' ) ) return;
+		if ( \DSA\Discussion\Feedback_Access::enabled() && 'admin.php' === $script && 'kiwe-feedback' === $page && current_user_can( 'moderate_comments' ) ) return;
+		if ( \DSA\Discussion\Feedback_Access::enabled() && 'admin.php' === $script && 'kiwe-feedback-settings' === $page && ( \DSA\Discussion\Feedback_Access::allowed() || current_user_can( 'manage_woocommerce' ) ) ) return;
 		if ( class_exists( Continuity_App_Service::class ) && 'admin.php' === $script && 'kiwe-timeline' === $page && ( new Continuity_App_Service() )->can_view_timeline() ) return;
 		if ( class_exists( Taxonomy_App_Service::class ) && Taxonomy_App_Service::enabled() && 'edit.php' === $script && Taxonomy_App_Service::PAGE === $page && ( current_user_can( 'edit_posts' ) || current_user_can( 'manage_categories' ) ) ) return;
 		if ( 'admin.php' === $script && 'kiwe-guests' === $page && ( current_user_can( 'kiwe_manage_guest_applications' ) || current_user_can( 'kiwe_guest_submit' ) || ( class_exists( Guest_App_Service::class ) && Guest_App_Service::enabled() && ( current_user_can( 'edit_others_posts' ) || current_user_can( 'edit_others_products' ) ) ) ) ) return;
@@ -590,6 +595,8 @@ final class WordPress_Role_Access_Service {
 	public function guard_rest( $result, $server, $request ) {
 		if ( ! Site_Owner_Service::enabled() || ! is_user_logged_in() || Site_Owner_Service::is_owner() ) return $result;
 		$route = $request->get_route(); $method = $request->get_method();
+		if ( rtrim($route,'/') === '/kiwe-mcp/v1/mcp' && \DSA\Apps\MCP_App_Service::enabled() && \DSA\MCP\Auth_Context::current() ) return $result; // Only an admitted bearer can use the curated resource; native operation permissions still apply.
+		if ( rtrim($route,'/') === '/kiwe-mcp/v1/workspace' && \DSA\Apps\MCP_App_Service::enabled() && \DSA\Apps\MCP_App_Service::can_connect() ) return $result; // Own connections only; the handler rechecks native nonce/origin/mutation proof.
 		$role = self::role_for( wp_get_current_user() );
 		if ( 'contributor' === $role && ! in_array( $method, [ 'GET','HEAD','OPTIONS' ], true ) && preg_match( '#^/wp/v2/(?:posts|media|comments|users|categories|tags)(?:/|$)#', $route ) ) {
 			return new \WP_Error( 'kiwe_guest_workspace_only', 'Guest contributions must use the protected Guest workspace.', [ 'status'=>403 ] );
@@ -600,6 +607,7 @@ final class WordPress_Role_Access_Service {
 		if ( 'POST' === $method && preg_match( '#^/dsa/v1/workspace/system/(auth|security)/?$#', $route, $system ) && \DSA\Apps\Required_App_Service::allowed( $system[1] ) ) return $result; // Included App retains native authority, nonce, origin and fresh-state checks.
 		if ( 'POST' === $method && '/dsa/v1/workspace/apps/store' === rtrim( $route, '/' ) && \DSA\Apps\Store_App_Service::allowed() ) return $result;
 		if ( 'POST' === $method && '/dsa/v1/workspace/apps/seo' === rtrim( $route, '/' ) && \DSA\Apps\SEO_App_Service::allowed() ) return $result; // The app owner rechecks nonce, origin, mutation proof and current state.
+		if ( 'POST' === $method && '/dsa/v1/workspace/apps/mcp' === rtrim( $route, '/' ) && \DSA\Apps\MCP_App_Service::allowed() ) return $result; // Native App switch rechecks nonce, origin, mutation proof and current state.
 		if ( 'POST' === $method && preg_match( '#^/dsa/v1/workspace/templates(?:/[1-9][0-9]*)?/?$#',$route ) && Template_Workspace_Service::allowed() ) return $result;
 		if ( 'POST' === $method && '/dsa/v1/workspace/trash' === rtrim( $route, '/' ) && Trash_Workspace_Service::allowed() ) return $result; // Native owner rechecks type, object capability, nonce, origin and exact review.
 		if ( 'POST' === $method && preg_match( '#^/dsa/v1/workspace/analytics/(?:review|strategy|setup)/?$#',$route ) && Analytics_Workspace_Service::allowed() ) return $result;
@@ -621,7 +629,8 @@ final class WordPress_Role_Access_Service {
 		if ( defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && preg_match( '#^/dsa/v1/workspace/posts(?:/terms|/[1-9][0-9]*(?:(?:/revisions(?:/[1-9][0-9]*/restore)?)|(?:/autosave(?:/[1-9][0-9]*/discard)?))?)?/?$#', $route ) && current_user_can( 'edit_posts' ) ) return $result;
 		if ( 'POST' === $method && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && preg_match( '#^/dsa/v1/workspace/record-controls/(?:post|product|service)/[1-9][0-9]*/?$#', $route ) && ( current_user_can( 'edit_posts' ) || current_user_can( 'edit_products' ) || current_user_can( 'kiwe_manage_context' ) ) ) return $result;
 		if ( 'POST' === $method && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && '/dsa/v1/workspace/continuity/timeline' === rtrim( $route, '/' ) && ( current_user_can( 'edit_posts' ) || current_user_can( Page_Publishing_Service::CAP_RESTORE ) ) ) return $result; // The adapter rechecks the exact record, writer, operation, nonce and review proofs.
-		if ( 'POST' === $method && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && preg_match( '#^/dsa/v1/workspace/continuity/(pages|library|feedback|story|contact|brand|website-plan|services|store)/?$#', $route, $area ) && ( 'pages' === $area[1] ? current_user_can( 'kiwe_view_pages' ) : ( 'feedback' === $area[1] ? current_user_can( 'moderate_comments' ) : current_user_can( 'kiwe_manage_context' ) ) ) ) return $result;
+		if(in_array($method,['GET','POST'],true) && \DSA\Discussion\Feedback_Access::enabled() && (($route==='/dsa/v1/workspace/feedback' && current_user_can('moderate_comments')) || ($route==='/dsa/v1/workspace/feedback-settings' && (\DSA\Discussion\Feedback_Access::allowed() || current_user_can('manage_woocommerce')))))return $result;
+		if ( 'POST' === $method && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && preg_match( '#^/dsa/v1/workspace/continuity/(pages|library|story|contact|brand|website-plan|services|store)/?$#', $route, $area ) && ( 'pages' === $area[1] ? current_user_can( 'kiwe_view_pages' ) : current_user_can( 'kiwe_manage_context' ) ) ) return $result;
 		if ( 'POST' === $method && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && '/dsa/v1/workspace/identity' === rtrim( $route, '/' ) && current_user_can( 'kiwe_manage_context' ) ) return $result;
 		if ( 'POST' === $method && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && preg_match( '#^/dsa/v1/workspace/taxonomies/product_cat(?:/[1-9][0-9]*(?:/move)?)?/?$#', $route ) && current_user_can( 'manage_product_terms' ) && current_user_can( 'edit_product_terms' ) && current_user_can( 'edit_products' ) ) return $result;
 		if ( 'POST' === $method && defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE && preg_match( '#^/dsa/v1/workspace/taxonomies/product_tag(?:/[1-9][0-9]*(?:/move)?)?/?$#', $route ) && current_user_can( 'manage_product_terms' ) && current_user_can( 'edit_product_terms' ) && current_user_can( 'edit_products' ) ) return $result;
@@ -637,12 +646,15 @@ final class WordPress_Role_Access_Service {
 			if ( preg_match( '#^/dsa/v1/workspace/seo/term/[a-z0-9_]+/[1-9][0-9]*/(?:proposal|save)/?$#', $route ) && ( current_user_can( 'manage_categories' ) || current_user_can( 'manage_product_terms' ) || current_user_can( 'kiwe_manage_context' ) ) ) return $result;
 			if ( preg_match( '#^/dsa/v1/workspace/seo/history/(?:start|control|review)/?$#', $route ) && current_user_can( 'kiwe_manage_ai_preferences' ) ) return $result;
 			if ( '/dsa/v1/workspace/ai/preference' === rtrim( $route, '/' ) && current_user_can( 'kiwe_manage_ai_preferences' ) ) return $result;
+			if ( in_array( rtrim( $route, '/' ), [ '/dsa/v1/workspace/ai/owner', '/dsa/v1/workspace/ai/provider-check' ], true ) &&
+				\DSA\Apps\AI_App_Service::enabled() && is_callable( [ \DSA\AI\AI_Configuration_Service::class, 'owner_allowed' ] ) && \DSA\AI\AI_Configuration_Service::owner_allowed() ) return $result; // Native AI still checks nonce, origin, mutation proof and current settings.
 			if ( preg_match( '#^/dsa/v1/workspace/guests/(?:settings|applications/[1-9][0-9]*|submissions(?:/[1-9][0-9]*)?)/?$#', $route ) ) return $result; // Each adapter rechecks the exact operation and object.
 			if ( preg_match( '#^/dsa/v1/workspace/notifications/(?:preferences|acknowledge|seen)/?$#', $route ) && current_user_can( 'kiwe_use_notifications' ) ) return $result;
 			if ( '/dsa/v1/workspace/notifications/site-emails' === rtrim( $route, '/' ) && current_user_can( 'kiwe_manage_notification_policy' ) && current_user_can( 'moderate_comments' ) ) return $result;
 			if ( in_array( rtrim($route,'/'), [ '/dsa/v1/workspace/notifications/campaigns','/dsa/v1/workspace/campaigns' ], true ) && current_user_can( 'kiwe_manage_notification_policy' ) ) return $result;
 			if ( '/dsa/v1/workspace/commerce/checkout-policy' === rtrim( $route,'/' ) && current_user_can( 'kiwe_manage_context' ) && ( current_user_can( 'edit_products' ) || current_user_can( 'edit_others_shop_orders' ) ) ) return $result;
 			if ( preg_match( '#^/dsa/v1/workspace/commerce/saved-carts/[1-9][0-9]*/?$#D',$route ) && current_user_can( 'edit_others_shop_orders' ) && current_user_can( 'kiwe_manage_notification_policy' ) ) return $result; // The cart owner rechecks consent, suspension, reservation and the exact review proof.
+			if ( '/dsa/v1/workspace/commerce/saved-carts/clear-unknown' === rtrim( $route, '/' ) && current_user_can( 'edit_others_shop_orders' ) && current_user_can( 'delete_shop_orders' ) ) return $result; // Snapshot-bound cleanup rechecks every personal-data guard at deletion.
 			if ( preg_match( '#^/dsa/v1/workspace/commerce/products(?:/[1-9][0-9]*(?:/(?:inventory|delivery|offer|nutrition|sale|tax|merchandising(?:/choices)?|links(?:/preview)?))?)?/?$#', $route ) && current_user_can( 'edit_products' ) ) return $result;
 			if ( preg_match('#^/dsa/v1/workspace/commerce/tax(?:/rates/(?:[1-9][0-9]*(?:/(?:rules|geography))?|create))?$#D',$route) && current_user_can('edit_products') && current_user_can('kiwe_manage_context') ) return $result;
 			if ( preg_match( '#^/dsa/v1/workspace/commerce/tax/(?:classes(?:/[a-z0-9][a-z0-9-]*)?|rates/[1-9][0-9]*/delete)/?$#D', $route ) && current_user_can( 'edit_products' ) && current_user_can( 'kiwe_manage_context' ) ) return $result;

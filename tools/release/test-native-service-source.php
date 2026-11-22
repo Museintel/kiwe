@@ -3,11 +3,14 @@ declare(strict_types=1);
 namespace DSA\Onboarding {
 	final class Design_Context_Profile_Service {
 		public const OPTION_PROFILE = 'kiwe_seam_design_context_v1';
+		public const OPTION_STATUS = 'fixture_context_status';
 		public function current(): array { return (array) \get_option( self::OPTION_PROFILE, [] ); }
 	}
 }
 namespace {
 	define( 'ABSPATH', __DIR__ );
+	function get_current_blog_id(){return 1;} function wp_cache_delete($key,$group){return true;}
+	$wpdb=new class {public $prefix='wp_';public function prepare($sql,...$args){return $sql;}public function get_var($sql){if(preg_match('/^SELECT (GET_LOCK|RELEASE_LOCK)\(/',$sql))return '1';throw new RuntimeException('Unexpected synthetic query');}};
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php';
 	final class WP_Error { public function __construct( public string $code, public string $message, public array $data = [] ) {} }

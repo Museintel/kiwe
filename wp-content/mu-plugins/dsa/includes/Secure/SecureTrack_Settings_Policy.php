@@ -105,7 +105,7 @@ final class SecureTrack_Settings_Policy {
 		return [ 'ok' => true, 'policy' => $stored ];
 	}
 
-	public static function sync_from_kiwe( array $secure ): void {
+	public static function sync_from_kiwe( array $secure, bool $apply_preset = false ): void {
 		$settings = (array) get_option( 'stp_settings', [] );
 		$engine_enabled = ! empty( $secure['enabled'] );
 		$auto_logout_enabled = $engine_enabled && ! empty( $secure['auto_logout_enabled'] );
@@ -120,12 +120,15 @@ final class SecureTrack_Settings_Policy {
 		$settings['idle_timeout_mins'] = $auto_logout_enabled && $roles ? max( 1, min( 1440, absint( $secure['auto_logout_minutes'] ?? 30 ) ) ) : 0;
 		$settings['idle_timeout_roles'] = $auto_logout_enabled ? $roles : [];
 
-		if ( $engine_enabled && 'recommended' === $profile ) {
+		// A preset is an explicit settings action, never a boot-time override of
+		// the administrator's subsequent individual protection choices.
+		if ( $engine_enabled && $apply_preset && 'recommended' === $profile ) {
 			$settings['emergency_safe_mode'] = 0;
 			$settings['endpoint_rate_limits'] = 1;
 			$settings['block_brute_force'] = 1;
 			$settings['adaptive_waf'] = 1;
-			$settings['honeypot_enabled'] = 1;
+			// Following a discoverable link is not evidence of an attack.
+			$settings['honeypot_enabled'] = 0;
 			$settings['tarpit_enabled'] = 0;
 			$settings['harden_xmlrpc'] = 1;
 			$settings['harden_rest_users'] = 1;

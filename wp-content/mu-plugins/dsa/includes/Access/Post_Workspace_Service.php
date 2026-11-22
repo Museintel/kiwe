@@ -163,7 +163,7 @@ final class Post_Workspace_Service {
 		return [ (int) $post->ID, (string) $post->post_title, (string) $post->post_content, (string) $post->post_status, (string) $post->post_date, (string) $post->post_date_gmt, (string) $post->post_modified_gmt, $categories, $tags, (int) get_post_thumbnail_id( $post->ID ), ( new self() )->seo( (int) $post->ID ), (string) $post->post_excerpt ];
 	}
 
-	public static function fingerprint( \WP_Post $post ): string { return hash( 'sha256', wp_json_encode( self::state( $post ) ) ); }
+	public static function fingerprint( \WP_Post $post ): string { return hash( 'sha256', wp_json_encode( [self::state( $post ),(string)$post->comment_status] ) ); }
 
 	public function post( int $id ) {
 		if ( ! $this->can_manage( $id ) ) return new \WP_Error( 'kiwe_post_forbidden', __( 'This post is unavailable in your workspace.', 'dsa' ), [ 'status'=>403 ] );
@@ -181,6 +181,7 @@ final class Post_Workspace_Service {
 			'tags'=>$this->post_tag_ids( $id ), 'seo'=>$this->seo( $id ), 'modifiedGmt'=>(string) $post->post_modified_gmt,
 			'scheduledLocal'=>'future' === $post->post_status ? substr( str_replace( ' ', 'T', (string) $post->post_date ), 0, 16 ) : '',
 			'expected'=>self::fingerprint( $post ),
+			'commentsAllowed'=>'open'===$post->comment_status,'feedbackAvailable'=>\DSA\Discussion\Feedback_Access::enabled(),
 			'controls'=>class_exists( Record_Card_Control_Service::class ) ? Record_Card_Control_Service::project( 'post', $id ) : null,
 		];
 	}
@@ -236,6 +237,13 @@ final class Post_Workspace_Service {
 			$resolved[] = (int) $created['term_id'];
 		}
 		$resolved = array_values( array_unique( $resolved ) );
+		// WordPress assigns its configured category when the selection is empty.
+		// Resolve that same native identity before saving and comparing readback.
+		if ( ! $resolved ) {
+			$default = (int) get_option( 'default_category', 0 );
+			$term = $default > 0 ? get_term( $default, 'category' ) : null;
+			if ( $term && ! is_wp_error( $term ) ) $resolved[] = $default;
+		}
 		if ( count( $resolved ) > 20 ) return new \WP_Error( 'kiwe_post_categories', __( 'Choose at most 20 categories.', 'dsa' ), [ 'status'=>400 ] );
 		sort( $resolved, SORT_NUMERIC );
 		return $resolved;
@@ -319,6 +327,10 @@ final class Post_Workspace_Service {
 		if ( is_wp_error( $tags ) ) return $tags;
 		$before_tags = $post ? $this->post_tag_ids( $id ) : [];
 		$fields = [ 'post_title'=>$title, 'post_content'=>$content, 'post_status'=>$status ];
+		if(array_key_exists('commentsAllowed',$input)){
+			if(!\DSA\Discussion\Feedback_Access::enabled()||!is_bool($input['commentsAllowed']))return new \WP_Error('kiwe_post_discussion','Choose whether this post allows comments while Feedback is on.',['status'=>400]);
+			$fields['comment_status']=$input['commentsAllowed']?'open':'closed';
+		}
 		if ( $scheduled ) { $fields['post_date']=$scheduled->format( 'Y-m-d H:i:s' ); $fields['post_date_gmt']=$scheduled->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' ); }
 		elseif ( $post && 'future' === $post->post_status ) { $fields['post_date']=current_time( 'mysql' ); $fields['post_date_gmt']=current_time( 'mysql', true ); }
 		if ( ! $post ) { $fields['post_type']='post'; $fields['post_author']=get_current_user_id(); $fields['post_category']=$categories; $fields['tags_input']=$tags; $saved=wp_insert_post( wp_slash( $fields ), true ); }
@@ -345,6 +357,7 @@ final class Post_Workspace_Service {
 			if ( $value !== get_post_meta( $saved_id, $key, true ) ) update_post_meta( $saved_id, $key, $value );
 		}
 		$after = $this->post( $saved_id );
+		if(!is_wp_error($after)&&array_key_exists('commentsAllowed',$input)&&$after['commentsAllowed']!==$input['commentsAllowed'])return new \WP_Error('kiwe_post_discussion_readback','The comment setting could not be confirmed. Reload and review.',['status'=>409]);
 		if ( null !== $image && (int) get_post_thumbnail_id( $saved_id ) !== $image ) return new \WP_Error( 'kiwe_post_image_unconfirmed', 'The post saved, but its image could not be confirmed. Reload and review.', [ 'status'=>409 ] );
 		if ( is_wp_error( $after ) || $after['title'] !== $title || $after['content'] !== $content || $after['status'] !== $status || ( $scheduled && $after['scheduledLocal'] !== $scheduled->format( 'Y-m-d\TH:i' ) ) || array_values( array_diff( $after['categories'], $categories ) ) || array_values( array_diff( $categories, $after['categories'] ) ) || $after['tags'] !== $tags || $after['seo'] !== $seo ) return new \WP_Error( 'kiwe_post_unconfirmed', __( 'The post changed during the save. Reload and review it.', 'dsa' ), [ 'status'=>409 ] );
 		return $after;

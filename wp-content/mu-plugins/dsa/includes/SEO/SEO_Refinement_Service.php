@@ -16,6 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Review-first, shared-host-safe editorial SEO batches. */
 final class SEO_Refinement_Service {
+	public const AUTHORING_API = 1;
 	public const OBJECT_PAGE = 'kiwe-seo-assistant';
 	private SEO_Job_Store $jobs;
 	private SEO_Discovery_Service $discovery;
@@ -91,12 +92,14 @@ final class SEO_Refinement_Service {
 	}
 
 	private function seo_term( \WP_REST_Request $request ) {
-		$taxonomy = sanitize_key( (string) $request['taxonomy'] );
+		return $this->native_term(sanitize_key((string)$request['taxonomy']),absint($request['id']));
+	}
+	private function native_term(string $taxonomy,int $id) {
 		$allowed = [ 'category','product_cat' ];
 		$service = $this->service_post_type();
 		if ( $service ) $allowed = array_merge( $allowed, get_object_taxonomies( $service ) );
 		if ( ! in_array( $taxonomy, $allowed, true ) || ! taxonomy_exists( $taxonomy ) ) return null;
-		$term = get_term( absint( $request['id'] ), $taxonomy );
+		$term = get_term( $id, $taxonomy );
 		return $term && ! is_wp_error( $term ) && current_user_can( 'edit_term', $term->term_id ) ? $term : null;
 	}
 
@@ -145,8 +148,12 @@ final class SEO_Refinement_Service {
 		return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'proposal'=>[ 'fields'=>$fields, 'reason'=>$proposal['reason'] ] ] );
 	}
 
-	public function save_term_seo( \WP_REST_Request $request ): \WP_REST_Response {
-		$term = $this->seo_term( $request ); $body = $request->get_json_params(); $summary = $term ? $this->term_summary( $term ) : null;
+	public function save_term_seo(\WP_REST_Request $request): \WP_REST_Response {
+  $body=$request->get_json_params();return $this->authoring_save_term((string)$request['taxonomy'],absint($request['id']),is_array($body)?$body:[]);
+ }
+ public function authoring_save_term(string $taxonomy,int $id,array $body): \WP_REST_Response {
+  if(!$this->authoring_allowed()||is_wp_error($this->authoring_record('term',$id,$taxonomy)))return UI::failure(new \WP_Error('kiwe_seo_term_forbidden','This category is unavailable to your role.'),403);
+  $term=$this->native_term($taxonomy,$id);$summary=$term?$this->term_summary($term):null;
 		if ( ! $summary || ! is_array( $body ) || ! hash_equals( $summary['expected'], (string) ( $body['expected'] ?? '' ) ) ) return UI::failure( new \WP_Error( 'kiwe_seo_term_changed', __( 'Refresh this category before saving SEO.', 'dsa' ) ), 409 );
 		$fields = $body['fields'] ?? null;
 		if ( ! is_array( $fields ) || array_diff( array_keys( $fields ), [ 'seoTitle','metaDescription','searchPhrases' ] ) || ! is_string( $fields['seoTitle'] ?? null ) || ! is_string( $fields['metaDescription'] ?? null ) || ! is_array( $fields['searchPhrases'] ?? null ) || count( $fields['searchPhrases'] ) > 10 ) return UI::failure( new \WP_Error( 'kiwe_seo_term_fields', __( 'Review the category SEO fields before saving.', 'dsa' ) ), 400 );
@@ -157,7 +164,7 @@ final class SEO_Refinement_Service {
 		$fresh = get_term( $id, $term->taxonomy ); $after = $fresh && ! is_wp_error( $fresh ) ? $this->term_summary( $fresh ) : null;
 		if ( ! $after || $after['current'] !== $clean ) return UI::failure( new \WP_Error( 'kiwe_seo_term_save', __( 'The category SEO save could not be confirmed. Reload before retrying.', 'dsa' ) ), 409 );
 		return UI::response( [ 'schema'=>self::OBJECT_SCHEMA, 'saved'=>true, 'item'=>$after ] );
-	}
+ }
 
 	public function object_document(): void {
 		if ( ! $this->object_app_enabled() || ! is_admin() || is_network_admin() || is_user_admin() || wp_doing_ajax() || wp_doing_cron() || ! $this->object_workspace_allowed() || ! in_array( $_SERVER['REQUEST_METHOD'] ?? '', [ 'GET','HEAD' ], true ) ) return;
@@ -469,10 +476,23 @@ final class SEO_Refinement_Service {
 	private function object_proposal_key( int $actor, string $token ): string { return 'kiwe_seo_object_' . $actor . '_' . $token; }
 
 	/** Save the exact fields the editor reviewed, using the existing native writer. */
+ public function authoring_allowed(): bool { return $this->object_app_enabled() && $this->object_workspace_allowed(); }
+ public function authoring_record(string $scope,int $id,string $taxonomy='') {
+  if(!$this->authoring_allowed())return new \WP_Error('kiwe_seo_authoring_forbidden','SEO editing is unavailable for your account.');
+  if($scope==='term'){
+   if($taxonomy==='product_cat'&&!\DSA\Apps\Store_App_Service::enabled())return new \WP_Error('kiwe_seo_store_off','Product SEO requires active Store.');
+   $term=$this->native_term($taxonomy,$id);return $term?$this->term_summary($term):new \WP_Error('kiwe_seo_term_forbidden','This category is unavailable to your role.');
+  }
+  if(!in_array($scope,['post','page','product','service','media'],true)||!$this->scope_available($scope)||!$this->can_edit_object($scope,$id)||($scope==='product'&&!\DSA\Apps\Store_App_Service::enabled()))return new \WP_Error('kiwe_seo_authoring_forbidden','Choose a record your role may edit.');
+  $record=$this->record($id,$this->internal_scope($scope),true,true);
+  return $record?['item'=>$this->object_summary($record,$scope),'evidence'=>array_intersect_key($record,array_flip(['title','excerpt','content','seoAuthority']))]:new \WP_Error('kiwe_seo_object_unavailable','This record cannot be refined.');
+ }
 	public function save_object_fields( \WP_REST_Request $request ): \WP_REST_Response {
-		if ( ! $this->object_permission( $request ) ) return UI::failure( new \WP_Error( 'kiwe_seo_object_forbidden', __( 'SEO editing is unavailable for your account.', 'dsa' ) ), 403 );
-		$id = absint( $request['id'] );
-		$body = $request->get_json_params();
+  if(!$this->object_permission($request))return UI::failure(new \WP_Error('kiwe_seo_object_forbidden','SEO editing is unavailable for your account.'),403);
+  $body=$request->get_json_params();return $this->authoring_save_object(absint($request['id']),is_array($body)?$body:[]);
+ }
+ public function authoring_save_object(int $id,array $body): \WP_REST_Response {
+  if(!$this->authoring_allowed()||is_wp_error($this->authoring_record((string)($body['scope']??''),$id)))return UI::failure(new \WP_Error('kiwe_seo_object_forbidden','SEO editing is unavailable for your account.'),403);
 		$scope = $this->requested_scope( is_array( $body ) ? ( $body['scope'] ?? '' ) : '' );
 		$expected = is_array( $body ) && is_string( $body['expected'] ?? null ) ? $body['expected'] : '';
 		$fields = is_array( $body ) && is_array( $body['fields'] ?? null ) ? $body['fields'] : null;

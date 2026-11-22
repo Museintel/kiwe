@@ -46,6 +46,10 @@
 	const presentationModuleUrls = data.presentationModules || {};
 	const presentationModules = new Map();
 	const presentationModulePromises = new Map();
+	let linksEnquiryController = null;
+	let linksEnquirySequence = 0;
+	let linksShareController = null;
+	let linksPendingView = '';
 	const discussionConfig = data.discussion || {};
 	let discussionTargetId = Number( discussionConfig.targetId ) || 0;
 	const discussionCounts = new Map();
@@ -341,6 +345,8 @@
 				searchConfig.nonce = data.nonce;
 			}
 			if ( payload.phonekey ) {
+				if ( Number( ( phonekey.user || {} ).id || 0 ) !== Number( ( payload.phonekey.user || {} ).id || 0 ) && presentationModules.has( 'form-prefill' ) ) presentationModules.get( 'form-prefill' ).invalidate();
+				if ( linksEnquiryController && ( phonekey.user || {} ).loggedIn && Number( ( phonekey.user || {} ).id || 0 ) !== Number( ( payload.phonekey.user || {} ).id || 0 ) ) linksEnquiryController.invalidate();
 				runtimeIdentityConfirmed = Boolean( payload.phonekey.user && typeof payload.phonekey.user.loggedIn === 'boolean' );
 				if ( payload.phonekey.config ) Object.assign( phonekeyConfig, payload.phonekey.config );
 				Object.assign( phonekey, payload.phonekey );
@@ -714,6 +720,10 @@
 		}
 
 		const closingMode = activeOverlayMode;
+		linksPendingView = '';
+		linksEnquirySequence++;
+		if ( linksEnquiryController ) linksEnquiryController.pause();
+		if ( linksShareController ) linksShareController.pause();
 		const closingModuleId = activeOverlayModuleId;
 		flushCheckoutDraft();
 		const finalizeClose = function () {
@@ -1304,6 +1314,12 @@
 	}
 
 	function dispatchSurfaceLifecycle( eventName, extra ) {
+		if ( eventName === 'suspend' || eventName === 'unmount' ) {
+			linksPendingView = '';
+			linksEnquirySequence++;
+			if ( linksEnquiryController ) linksEnquiryController.pause();
+			if ( linksShareController ) linksShareController.pause();
+		}
 		const detail = surfaceLifecycleDetail( eventName, extra );
 		window.DSA.surfaceLifecycle.current = detail;
 		window.dispatchEvent( new CustomEvent( 'surface:module:' + eventName, { detail: detail } ) );
@@ -1523,7 +1539,7 @@
 			{ selector: '.dsa-panel__button, .dsa-cart-panel__checkout, .dsa-cart-fbt__action, .dsa-cart-fbt__view, .dsa-links-edit-button, .dsa-links-admin-link, .dsa-app-badge, [data-dsa-ios-install-done]', meta: { role: 'button', tone: 'brand', slot: 'action' } },
 			{ selector: '.dsa-auth-field, [data-dsa-checkout-field], [data-dsa-notification-email], [data-dsa-notification-phone]', meta: { role: 'input', slot: 'input' } },
 			{ selector: '.dsa-checkout-field, .dsa-links-logo-field, .dsa-notification-contact, .dsa-notification-categories', meta: { role: 'field', flow: 'stack', slot: 'field' } },
-			{ selector: 'form[data-dsa-checkout-form], form[data-dsa-notification-form], form[data-dsa-profile-form], form[data-dsa-links-form]', meta: { role: 'form', flow: 'stack', authority: 'kiwe-dsa' } },
+			{ selector: 'form[data-dsa-checkout-form], form[data-dsa-notification-form], form[data-dsa-profile-form], form[data-dsa-links-form], form[data-dsa-enquiry-form]', meta: { role: 'form', flow: 'stack', authority: 'kiwe-dsa' } },
 			{ selector: '.dsa-context-action__badge, .dsa-cart-panel__stock-badge, .dsa-home-trust__badge', meta: { role: 'badge', tone: 'accent' } },
 			{ selector: '.dsa-cart-panel__quantity, .dsa-notification-platforms', meta: { role: 'actions', flow: 'row' } },
 			{ selector: '.dsa-cart-fbt__price, .dsa-saved-card__price', meta: { role: 'price', tone: 'brand', classes: [ 'seam-price', 'seam-tone-brand' ] } },
@@ -1758,7 +1774,8 @@
 			return presentationModulePromises.get( panel );
 		}
 		const url = String( presentationModuleUrls[ panel ] || '' );
-		const pending = url ? import( url ).then( function ( adapter ) {
+		const pending = url ? Promise.all( [ import( url ), panel === 'links' && presentationModuleUrls['link-share'] ? loadPresentationModule( 'link-share' ).catch( function () { return null; } ) : Promise.resolve() ] ).then( function ( loaded ) {
+			const adapter = loaded[0];
 			presentationModules.set( panel, adapter );
 			return adapter;
 		} ).catch( function ( error ) {
@@ -3011,6 +3028,9 @@
 	}
 
 	function renderLinksPanel( label ) {
+		if ( linksShareController && linksShareController.active() ) return linksShareController.render();
+		if ( linksEnquiryController && linksEnquiryController.active() ) return linksEnquiryController.render();
+		if ( linksPendingView ) return linksPendingView;
 		const adapter = presentationModules.get( 'links' );
 		return adapter && typeof adapter.render === 'function' ? adapter.render( linksPresentationPayload( label ) ) : renderLazyPresentation( 'links', label );
 	}
@@ -3025,6 +3045,7 @@
 		return {
 			label: copy.label || label || 'Links',
 			hub: linksHub,
+			iconSprite: iconSprite,
 			dark: currentColorMode() === 'dark',
 			logoDark: data.site && data.site.logoInverse ? data.site.logoInverse : '',
 			documentTitle: document.title || '',
@@ -3034,20 +3055,9 @@
 	}
 
 	function socialGlyph( id, label ) {
-		const title = escapeHtml( label || id || 'Social link' );
-		const open = '<svg viewBox="0 0 24 24" role="img" aria-label="' + title + '" focusable="false">';
-		const close = '</svg>';
-		const glyphs = {
-			share: '<circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="M8.2 10.9 15.7 6.2M8.2 13.1l7.5 4.7"></path>',
-			facebook: '<path d="M14.2 21v-7h-2.5v-3h2.5V8.8c0-3 1.8-4.8 4.6-4.8 1.1 0 2.1.1 2.6.2v3h-1.8c-1.4 0-1.8.7-1.8 1.7V11h3.4l-.5 3h-2.9v7z"></path>',
-			instagram: '<rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle>',
-			x: '<path d="M5 4l14 16M19 4 5 20"></path>',
-			youtube: '<path d="m9 8 7 4-7 4z"></path>',
-			pinterest: '<path d="M12 2a9.5 9.5 0 0 0-3.4 18.4c-.1-1.6 0-3.4.4-5.1l1.2-5s-.3-.8-.3-2c0-1.9 1.1-3.3 2.5-3.3 1.2 0 1.8.9 1.8 2 0 1.2-.8 3-1.2 4.7-.3 1.4.7 2.5 2.1 2.5 2.5 0 4.2-3.2 4.2-6.9 0-2.9-2.4-5.1-5.7-5.1-4 0-6.5 3-6.5 6.3 0 1.1.3 2.3 1 3 .3.3.3.5.2.9l-.3 1.3c-.1.4-.4.6-.8.4-1.9-.8-2.8-3.1-2.8-5.7C4.4 4.8 8 1 13.9 1 19 1 22 4.7 22 8.8c0 5.3-3 9.2-7.4 9.2-1.5 0-2.9-.8-3.4-1.8l-.9 3.5c-.3 1.2-1 2.5-1.6 3.4A10 10 0 0 0 12 22z"></path>',
-			linkedin: '<rect x="4" y="9" width="4" height="11"></rect><circle cx="6" cy="5.5" r="2"></circle><path d="M11 20V9h4v1.7c.8-1.2 2-2.1 3.8-2.1 3 0 4.2 2 4.2 5.3V20h-4v-5.4c0-1.6-.6-2.7-2-2.7-1.4 0-2 1-2 2.7V20z"></path>',
-		};
-		const body = glyphs[ id ] || '<circle cx="12" cy="12" r="8"></circle>';
-		return open + body + close;
+		const known = [ 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin', 'whatsapp' ];
+		const symbol = id === 'email' ? 'mail' : ( known.indexOf( id ) !== -1 ? id : 'share-2' );
+		return lucideIcon( symbol, 'dsa-social-glyph' );
 	}
 
 	function initializeLinksDockIcon() {
@@ -3055,7 +3065,8 @@
 		socialDockTimer = 0;
 		const button = surface.querySelector( '[data-dsa-module="links"]' );
 		const icon = button ? button.querySelector( '.dsa-dock__icon' ) : null;
-		const socials = Array.isArray( linksHub.socials ) ? linksHub.socials.filter( function ( item ) { return item && item.id; } ).slice( 0, 6 ) : [];
+		const contacts = Array.isArray( linksHub.contacts ) ? linksHub.contacts : [];
+		const socials = contacts.concat( Array.isArray( linksHub.socials ) ? linksHub.socials : [] ).filter( function ( item ) { return item && item.id; } ).slice( 0, 8 );
 
 		if ( ! icon ) {
 			return;
@@ -3940,7 +3951,11 @@
 	}
 
 	function isProtectedFlowActive() {
-		return Boolean( protectedFlow && protectedFlow.active );
+		// Private hydration describes its own AJAX request. The rendered Woo page and
+		// configured same-site routes retain authority over the browser's current flow.
+		return Boolean( protectedFlow.active
+			|| ( document.body && document.body.matches( '.woocommerce-cart, .woocommerce-checkout, .woocommerce-account' ) )
+			|| ( commerce.available && isProtectedCommerceNavigationUrl( new URL( window.location.href ) ) ) );
 	}
 
 	function triggerRules() {
@@ -4154,6 +4169,10 @@
 		if ( ! panel ) {
 			return;
 		}
+		if ( panel.hasAttribute( 'data-dsa-share-panel' ) && linksShareController ) { linksShareController.bind( panel ); return; }
+		if ( panel.hasAttribute( 'data-dsa-enquiry-panel' ) && linksEnquiryController ) { linksEnquiryController.bind( panel ); return; }
+		const loadingBack = panel.querySelector( '[data-dsa-enquiry-loading-back], [data-dsa-share-loading-back]' );
+		if ( loadingBack && ! loadingBack.dsaLinksBackBound ) { loadingBack.dsaLinksBackBound = true; loadingBack.addEventListener( 'click', function ( event ) { event.preventDefault(); event.stopPropagation(); openLinksView(); hydrateLazyPresentation( getSurfaceModule( 'links' ) ); } ); }
 
 		const cartButton = panel.querySelector( '[data-dsa-links-cart]' );
 		if ( cartButton ) {
@@ -4208,6 +4227,10 @@
 			return;
 		}
 
+		linksPendingView = '';
+		linksEnquirySequence++;
+		if ( linksEnquiryController ) linksEnquiryController.pause();
+		if ( linksShareController ) linksShareController.pause();
 		replaceOverlayContent( renderLinksEditor(), { reason: 'links_editor', module: getSurfaceModule( 'links' ), label: 'Links' } );
 		bindLinksPanel();
 		const panel = overlayRoot.querySelector( '[role="dialog"]' );
@@ -4221,6 +4244,10 @@
 		if ( ! overlayRoot ) {
 			return;
 		}
+		linksEnquirySequence++;
+		linksPendingView = '';
+		if ( linksEnquiryController ) linksEnquiryController.pause();
+		if ( linksShareController ) linksShareController.pause();
 
 		replaceOverlayContent( renderLinksPanel( 'Links' ), { reason: 'links_view', module: getSurfaceModule( 'links' ), label: 'Links' } );
 		bindLinksPanel();
@@ -4229,6 +4256,90 @@
 			panel.tabIndex = -1;
 			panel.focus( { preventScroll: true } );
 		}
+	}
+
+	function openLinkEnquiry( channel, subjectId ) {
+		if ( ! overlayRoot || ! linksHub.enquiryAvailable || ! [ 'whatsapp', 'email', 'x', 'instagram', 'facebook' ].includes( channel ) || ! externalModuleAvailable( 'links' ) ) return;
+		const sequence = ++linksEnquirySequence;
+		if ( overlayRoot.hidden || activeOverlayPanel !== 'links' ) openOverlay( 'links', 'Links' );
+		if ( overlayRoot.hidden || activeOverlayPanel !== 'links' ) return;
+		if ( linksEnquiryController ) linksEnquiryController.pause();
+		if ( linksShareController ) linksShareController.pause();
+		const lifecycle = activeOverlayLifecycle ? activeOverlayLifecycle.sequence : 0;
+		linksPendingView = '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="Links enquiry" data-dsa-keep-open><button type="button" class="dsa-panel__button" data-dsa-enquiry-loading-back>Back to Links</button><p role="status">Opening your enquiry…</p></section>';
+		replaceOverlayContent( linksPendingView, { reason:'enquiry_intent', module:getSurfaceModule( 'links' ) } );
+		bindLinksPanel();
+		loadPresentationModule( 'link-enquiry' ).then( function ( adapter ) {
+			if ( sequence !== linksEnquirySequence || overlayRoot.hidden || activeOverlayPanel !== 'links' || ! activeOverlayLifecycle || activeOverlayLifecycle.sequence !== lifecycle ) return;
+			if ( ! linksEnquiryController ) linksEnquiryController = adapter.createController( {
+				active: function () { return ! overlayRoot.hidden && ! overlayRoot.classList.contains( 'is-closing' ) && activeOverlayPanel === 'links'; },
+				lifecycle: function () { return activeOverlayLifecycle ? activeOverlayLifecycle.sequence : 0; },
+				panel: function () { return overlayRoot.querySelector( '[data-dsa-enquiry-panel]' ); },
+				paint: function ( html ) { return replaceOverlayContent( html, { reason: 'link_enquiry', module: getSurfaceModule( 'links' ) } ); },
+				get: dsaGet, post: dsaPost, back: openLinksView,
+				nonce: function ( value ) { data.nonce = value; phonekey.nonce = value; },
+				navigate: function ( url ) { window.location.assign( url ); },
+				copy: function ( text ) { return navigator.clipboard && window.isSecureContext ? navigator.clipboard.writeText( text ) : Promise.reject( new Error( 'Copy unavailable' ) ); },
+			} );
+			linksPendingView = '';
+			linksEnquiryController.open( channel, subjectId );
+		} ).catch( function ( error ) { if ( sequence === linksEnquirySequence && ! overlayRoot.hidden && activeOverlayPanel === 'links' && activeOverlayLifecycle && activeOverlayLifecycle.sequence === lifecycle ) { linksPendingView = ''; replaceOverlayContent( renderBasicPanel( 'Links enquiry', error.message || 'The enquiry could not open. Please try again.' ), { reason:'enquiry_error', module:getSurfaceModule( 'links' ) } ); } } );
+	}
+
+	function linkShareBridge( subjectId ) {
+		const sequence = linksEnquirySequence;
+		return {
+			navigate:function ( url ) { window.location.assign( url ); },
+			canShare:function ( payload ) { try { return typeof navigator.share === 'function' && ( ! navigator.canShare || navigator.canShare( payload ) ); } catch ( error ) { return false; } },
+			share:function ( payload ) { return navigator.share( payload ); },
+			copy:function ( text ) { return navigator.clipboard && window.isSecureContext ? navigator.clipboard.writeText( text ) : Promise.reject( new Error( 'Copy unavailable' ) ); },
+			announce:function ( text ) { if ( sequence === linksEnquirySequence ) announce( text ); },
+			fallback:function ( doc, channel ) { if ( sequence === linksEnquirySequence ) openLinkShareFallback( channel, subjectId, doc ); },
+		};
+	}
+
+	function openLinkShare( channel, subjectId ) {
+		if ( ! linksHub.shareAvailable || ! externalModuleAvailable( 'links' ) ) return;
+		const sequence = ++linksEnquirySequence;
+		const current = linksHub.shareDocument;
+		const prepared = current && current.subject && Number( current.subject.id ) === subjectId ? current : null;
+		const adapter = presentationModules.get( 'link-share' );
+		// Links loads the small sharing adapter on entry, so its row icons retain this exact
+		// user activation. Current public context arrives in the native page, without a fetch.
+		if ( adapter && prepared && adapter.activate( prepared, channel, linkShareBridge( subjectId ) ) ) return;
+		loadPresentationModule( 'link-share' ).then( function ( ready ) {
+			if ( sequence !== linksEnquirySequence ) return;
+			return ( prepared ? Promise.resolve( prepared ) : dsaGet( '/links/share?subjectId=' + subjectId ) ).then( function ( doc ) {
+				if ( sequence !== linksEnquirySequence ) return;
+				if ( ! ready.activate( doc, channel, linkShareBridge( subjectId ) ) ) openLinkShareFallback( channel, subjectId );
+			} );
+		} ).catch( function () { if ( sequence === linksEnquirySequence ) openLinkShareFallback( channel, subjectId ); } );
+	}
+
+	function openLinkShareFallback( channel, subjectId, initialDocument ) {
+		if ( ! overlayRoot || ! linksHub.shareAvailable || ! [ 'whatsapp','email','x','instagram','facebook','youtube','pinterest','linkedin','native','copy' ].includes( channel ) || ! externalModuleAvailable( 'links' ) ) return;
+		const sequence = ++linksEnquirySequence;
+		if ( overlayRoot.hidden || activeOverlayPanel !== 'links' ) openOverlay( 'links', 'Links' );
+		if ( overlayRoot.hidden || activeOverlayPanel !== 'links' ) return;
+		if ( linksEnquiryController ) linksEnquiryController.pause();
+		if ( linksShareController ) linksShareController.pause();
+		const lifecycle = activeOverlayLifecycle ? activeOverlayLifecycle.sequence : 0;
+		linksPendingView = '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="Share" data-dsa-keep-open><button type="button" class="dsa-panel__button" data-dsa-share-loading-back>Back to Links</button><p role="status">Preparing the public link…</p></section>';
+		replaceOverlayContent( linksPendingView, { reason:'share_intent', module:getSurfaceModule( 'links' ) } );
+		bindLinksPanel();
+		loadPresentationModule( 'link-share' ).then( function ( adapter ) {
+			if ( sequence !== linksEnquirySequence || overlayRoot.hidden || activeOverlayPanel !== 'links' || ! activeOverlayLifecycle || activeOverlayLifecycle.sequence !== lifecycle ) return;
+			if ( ! linksShareController ) linksShareController = adapter.createController( {
+				active: function () { return ! overlayRoot.hidden && ! overlayRoot.classList.contains( 'is-closing' ) && activeOverlayPanel === 'links'; },
+				lifecycle: function () { return activeOverlayLifecycle ? activeOverlayLifecycle.sequence : 0; },
+				panel: function () { return overlayRoot.querySelector( '[data-dsa-share-panel]' ); },
+				paint: function ( html ) { return replaceOverlayContent( html, { reason:'link_share', module:getSurfaceModule( 'links' ) } ); },
+				get:dsaGet, back:openLinksView,
+				...linkShareBridge( subjectId ),
+			} );
+			linksPendingView = '';
+			linksShareController.open( channel, subjectId, initialDocument );
+		} ).catch( function ( error ) { if ( sequence === linksEnquirySequence && ! overlayRoot.hidden && activeOverlayPanel === 'links' && activeOverlayLifecycle && activeOverlayLifecycle.sequence === lifecycle ) { linksPendingView = ''; replaceOverlayContent( renderBasicPanel( 'Share', error.message || 'Sharing could not open. Please try again.' ), { reason:'share_error', module:getSurfaceModule( 'links' ) } ); } } );
 	}
 
 	function updateLinks( form ) {
@@ -5625,6 +5736,7 @@
 		if ( ! overlayRoot ) return false;
 		if ( ! [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'comments', 'theme', 'ai', 'notifications', 'ios-install', 'games' ].includes( moduleId ) && ! moduleItems().some( function ( item ) { return item.id === moduleId; } ) ) return false;
 		if ( moduleId === 'cart' ) return commerce.available === true && ( commerce.settings || {} ).cartSurfaceEnabled !== false;
+		if ( moduleId === 'comments' ) return Boolean( presentationModuleUrls.comments );
 		if ( moduleId === 'search' ) return searchConfig.enabled !== false;
 		return true;
 	}
@@ -5676,11 +5788,12 @@
 
 	function enhanceModuleLaunchers( root ) {
 		if ( ! root || ! root.querySelectorAll ) return;
-		const selector = '[data-dsa-open-module]';
+		const selector = '[data-dsa-open-module], [data-kiwe-chat], [data-kiwe-share]';
 		const launchers = Array.from( root.querySelectorAll( selector ) );
 		if ( root.matches && root.matches( selector ) ) launchers.unshift( root );
 		launchers.forEach( function ( launcher ) {
-			const moduleId = String( launcher.dataset.dsaOpenModule || '' );
+			const linkAction = launcher.hasAttribute( 'data-kiwe-chat' ) || launcher.hasAttribute( 'data-kiwe-share' );
+			const moduleId = linkAction ? 'links' : String( launcher.dataset.dsaOpenModule || '' );
 			if ( moduleId === 'comments' ) {
 				const id = discussionLauncherId( launcher ); launcher.hidden = ! id;
 				if ( ! id ) return;
@@ -5696,7 +5809,7 @@
 					launcher.setAttribute( 'role', 'button' );
 					if ( ! launcher.hasAttribute( 'tabindex' ) ) launcher.setAttribute( 'tabindex', '0' );
 				}
-				if ( ! launcher.getAttribute( 'aria-label' ) && ! launcher.textContent.trim() ) launcher.setAttribute( 'aria-label', 'Open ' + ( getSurfaceModule( moduleId ).label || moduleId ) );
+				if ( ! launcher.getAttribute( 'aria-label' ) && ! launcher.textContent.trim() ) launcher.setAttribute( 'aria-label', linkAction ? ( launcher.hasAttribute( 'data-kiwe-share' ) ? 'Share public link' : 'Contact us' ) : 'Open ' + ( getSurfaceModule( moduleId ).label || moduleId ) );
 				if ( moduleId === 'search' ) {
 					const inputs = Array.from( launcher.querySelectorAll( 'input:not([type=hidden]), textarea, [contenteditable]' ) );
 					if ( launcher.matches( 'input, textarea, [contenteditable]' ) ) inputs.unshift( launcher );
@@ -5715,6 +5828,7 @@
 	}
 
 	function discussionLauncherId( launcher ) {
+		if ( ! externalModuleAvailable( 'comments' ) ) return 0;
 		const raw = launcher.getAttribute( 'data-dsa-discussion-id' );
 		if ( raw === 'site' ) return Number( discussionConfig.siteTargetId ) || 0;
 		if ( raw === 'current' ) return Number( discussionConfig.currentTargetId ) || 0;
@@ -5727,7 +5841,7 @@
 		document.querySelectorAll( '[data-dsa-open-module="comments"]' ).forEach( function ( launcher ) { if ( discussionLauncherId( launcher ) === Number( id ) ) updateExternalModuleBadge( launcher, count, 'comments' ); } );
 	}
 	function queueDiscussionCount( id ) {
-		if ( ! data.restUrl || discussionPendingCounts.has( id ) || discussionInFlightCounts.has( id ) ) return;
+		if ( ! externalModuleAvailable( 'comments' ) || ! data.restUrl || discussionPendingCounts.has( id ) || discussionInFlightCounts.has( id ) ) return;
 		discussionPendingCounts.add( id ); if ( discussionCountFrame ) return;
 		discussionCountFrame = window.requestAnimationFrame( function () {
 			discussionCountFrame = 0;
@@ -5740,7 +5854,7 @@
 	}
 	function queueDiscussionCountBatch() { const remaining = Array.from( discussionPendingCounts ); discussionPendingCounts.clear(); remaining.forEach( queueDiscussionCount ); }
 	window.addEventListener( 'surface:navigation:complete', function ( event ) {
-		if ( ( event.detail || {} ).mode !== 'morph' || ! data.restUrl ) return;
+		if ( ( event.detail || {} ).mode !== 'morph' || ! data.restUrl || ! externalModuleAvailable( 'comments' ) ) return;
 		dsaGet( '/discussion/context?url=' + encodeURIComponent( window.location.href.split( '#' )[0] ) ).then( function ( context ) {
 			discussionConfig.targetId = Number( context.targetId ) || 0; discussionConfig.count = Number( context.count ) || 0;
 			discussionConfig.currentTargetId = Number( context.currentTargetId ) || 0;
@@ -5751,7 +5865,7 @@
 	} );
 
 	function dsaPost( path, payload, retried, keepalive ) {
-		debugLog( 'REST POST start', { path: path, payload: payload || {}, retried: Boolean( retried ) } );
+		debugLog( 'REST POST start', { path: path, payload: path === '/links/enquiry' ? '[private enquiry]' : payload || {}, retried: Boolean( retried ) } );
 
 		return fetch( noStoreUrl( data.restUrl + path ), {
 			method: 'POST',
@@ -10917,6 +11031,36 @@
 	}
 
 	document.addEventListener( 'click', function ( event ) {
+		const share = closestEventTarget( event, '[data-kiwe-share]' );
+		if ( ! share || ! linksHub.shareAvailable ) return;
+		const channel = String( share.dataset.kiweShare || 'native' );
+		if ( ! [ 'whatsapp','email','x','instagram','facebook','youtube','pinterest','linkedin','native','copy' ].includes( channel ) ) return;
+		const subject = share.hasAttribute( 'data-kiwe-subject-id' ) ? Number( share.dataset.kiweSubjectId ) : Number( ( linksHub.shareSubject || {} ).id || 0 );
+		const prepared = linksHub.shareDocument;
+		const destination = prepared && prepared.schema === 'kiwe.public-share.v1' && prepared.subject && Number( prepared.subject.id ) === subject ? prepared.links?.[channel] : '';
+		if ( destination && share.tagName === 'A' && share.getAttribute( 'href' ) === destination ) {
+			// Preserve normal links, modifier keys and the original app/mail-handler gesture.
+			linksEnquirySequence++; event.stopImmediatePropagation(); return;
+		}
+		event.preventDefault(); event.stopImmediatePropagation();
+		openLinkShare( channel, Number.isSafeInteger( subject ) && subject > 0 ? subject : 0 );
+	}, true );
+
+	document.addEventListener( 'click', function ( event ) {
+		const chat = closestEventTarget( event, '[data-kiwe-chat]' );
+		if ( ! chat || ! linksHub.enquiryAvailable || ! [ 'whatsapp', 'email', 'x', 'instagram', 'facebook' ].includes( String( chat.dataset.kiweChat || '' ) ) ) return;
+		event.preventDefault(); event.stopImmediatePropagation();
+		const subject = chat.hasAttribute( 'data-kiwe-subject-id' ) ? Number( chat.dataset.kiweSubjectId ) : Number( ( linksHub.shareSubject || {} ).id || 0 );
+		openLinkEnquiry( chat.dataset.kiweChat, Number.isSafeInteger( subject ) && subject > 0 ? subject : 0 );
+	}, true );
+
+	document.addEventListener( 'keydown', function ( event ) {
+		const trigger = closestEventTarget( event, '[data-kiwe-chat], [data-kiwe-share]' );
+		if ( ! trigger || trigger.matches( 'button,a[href],input,select,textarea' ) || ( event.key !== 'Enter' && event.key !== ' ' ) ) return;
+		event.preventDefault(); event.stopImmediatePropagation(); trigger.click();
+	}, true );
+
+	document.addEventListener( 'click', function ( event ) {
 		const trigger = closestEventTarget( event, '[data-kiwe-contact], [data-kiwe-social]' );
 		if ( ! trigger || trigger.closest( '[data-dsa-surface]' ) ) return;
 		const contactIntent = String( trigger.dataset.kiweContact || '' ).toLowerCase();
@@ -11986,6 +12130,12 @@
 		} );
 	}
 
+	// Ordinary pages load neither this helper nor private contact data until a visitor enters a native form.
+	document.addEventListener( 'focusin', function ( event ) {
+		const form = event.target && event.target.closest ? event.target.closest( 'form.brxe-form, form[data-kiwe-form], form.checkout, form.wc-block-checkout__form' ) : null;
+		if ( ! form || ! presentationModuleUrls['form-prefill'] || form.querySelector( 'input[type="password"]' ) ) return;
+		loadPresentationModule( 'form-prefill' ).then( function ( adapter ) { return adapter.fill( form, dsaGet ); } ).catch( function () {} );
+	} );
 	bindFormMessageAccessibility();
 	window.setTimeout( openScheduledGameSurface, 180 );
 } )();

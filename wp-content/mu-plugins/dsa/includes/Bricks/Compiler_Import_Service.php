@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Resumable, explicitly requested authoring. No visitor hook, remote fetch or background job. */
 final class Compiler_Import_Service {
+	public const MCP_IMPORT_API = 1;
 	public const MARKER = '_kiwe_compiler_import_v1';
 	public const ASSET_HASH = '_kiwe_compiler_asset_sha256';
 	private \DSA\Settings $settings;
@@ -75,6 +76,28 @@ final class Compiler_Import_Service {
 		return $state;
 	}
 	public function status( string $id ): array { $this->require_access(); $dir = Files::directory( 'compiler',$id ); return $this->summary( $this->load( $dir,$id ) ); }
+	/** No listing or transport is delegated: the designer must supply the exact uploaded package and job. */
+	public function delegated_review( string $id,string $hash,string $action = '' ): array {
+		$this->require_access(); $state = $this->load( Files::directory( 'compiler',$id ),$id );
+		$this->require_isolated_package( $state,$hash );
+		return [ 'job'=>$this->summary( $state ),'expected'=>$action === '' ? '' : $this->delegated_expected( $state,$hash,$action ) ];
+	}
+	private function require_isolated_package( array $state,string $hash ): void {
+		if ( ( $state['inspection']['importPolicy'] ?? '' ) !== Compiler_Package_Reader::ISOLATED_DRAFT || ! hash_equals( $state['zipHash'],$hash ) ) throw new Compiler_Package_Error( 'Use the exact ZIP fingerprint for an isolated draft package uploaded to your native Framework workspace.' );
+	}
+	private function delegated_expected( array $state,string $hash,string $action ): string {
+		$this->require_isolated_package( $state,$hash );
+		$phases = [ 'approve'=>[ 'review' ],'step'=>[ 'media','styles','templates' ],'undo'=>[ 'media','styles','templates','complete','recovery-review' ] ];
+		if ( ! in_array( $state['status'],$phases[$action] ?? [],true ) || ( $action !== 'undo' && $state['expires'] < time() ) || ( $action === 'approve' && $state['plan']['blockers'] ) ) throw new Compiler_Package_Error( 'This exact import action is unavailable. Review the current native job.' );
+		$target = [];
+		if ( $action !== 'step' ) {
+			$target[] = Framework_Style_Service::fingerprint( Framework_Style_Service::snapshot() );
+			$target[] = hash( 'sha256',serialize( $this->settings->get( 'tokens',[] ) ) );
+			if ( $action === 'approve' && ( $target[0] !== $state['plan']['styles']['expected'] || $target[1] !== $state['plan']['expectedTokens'] ) ) throw new Compiler_Package_Error( 'Native styles changed since staging. Upload the ZIP again to review the current target.' );
+			if ( $action === 'undo' ) foreach ( $state['drafts'] as $draft ) $target[] = hash( 'sha256',serialize( $this->draft_snapshot( $draft['id'] ) ) );
+		}
+		return hash( 'sha256',serialize( [ $state['id'],$state['actor'],$state['site'],$state['zipHash'],$state['reviewHash'],$state['revision'],$state['status'],$action,$target ] ) );
+	}
 	public function listing(): array {
 		$this->require_access(); $jobs = [];
 		try { $root = \DSA\Backup\Configuration_Snapshot_Service::private_directory( false ); } catch ( \Throwable $error ) { return []; }
@@ -86,12 +109,13 @@ final class Compiler_Import_Service {
 		}
 		return $jobs;
 	}
-	public function advance( string $id,int $revision,string $action ): array {
+	public function advance( string $id,int $revision,string $action,?array $delegated = null ): array {
 		$this->require_access(); $dir = Files::directory( 'compiler',$id ); $lock = fopen( Files::path( $dir,'lock' ),'c+b' );
 		if ( ! $lock || ! flock( $lock,LOCK_EX | LOCK_NB ) ) { if ( is_resource( $lock ) ) fclose( $lock ); throw new Compiler_Package_Error( 'This import is already being processed. Resume in a moment.' ); }
 		try {
 			$state = $this->load( $dir,$id );
 			if ( $state['revision'] !== $revision ) throw new Compiler_Package_Error( 'Saved progress changed. Refresh this import before continuing.' );
+			if ( $delegated !== null && ! hash_equals( $this->delegated_expected( $state,$delegated['hash'],$action ),$delegated['expected'] ) ) throw new Compiler_Package_Error( 'The exact native import review changed. Prepare a fresh proposal.' );
 			if ( $action === 'remove' ) {
 				if ( ! in_array( $state['status'],[ 'review','complete','undone' ],true ) ) throw new Compiler_Package_Error( 'Finish or undo this partial import before removing its recovery.' );
 				flock( $lock,LOCK_UN ); fclose( $lock ); $lock = null; Files::retire( $dir ); return [ 'removed'=>true ];
@@ -169,6 +193,8 @@ final class Compiler_Import_Service {
 	}
 	private function install_styles( Compiler_Package_Reader $reader,string $dir,array &$state ): void {
 		$inspection = $state['inspection']; $file = $inspection['profileFile']; $inspection['documents'] = [ $file=>$reader->json( $file ) ];
+		$isolated = ( $inspection['importPolicy'] ?? '' ) === Compiler_Package_Reader::ISOLATED_DRAFT;
+		if ( $isolated && hash( 'sha256',serialize( $this->settings->get( 'tokens',[] ) ) ) !== $state['plan']['expectedTokens'] ) throw new Compiler_Package_Error( 'The active Framework changed after review. Review the target again before importing.' );
 		$inspection['documents'] = Compiler_Import_Plan::remap( $inspection,$state['media'] );
 		// Keep the reviewed template decisions; only proven native media pointers can change here.
 		$inspection['templateFiles'] = [];
@@ -185,6 +211,7 @@ final class Compiler_Import_Service {
 		}
 		$resume['expected'] = Framework_Style_Service::fingerprint( $resume['before'] );
 		Framework_Style_Service::apply( $resume,function( string $kind,array $before,array $after ) use ( $dir,&$state ): void { if ( ! isset( $state['journal'][$kind] ) ) $state['journal'][$kind] = [ 'before'=>$before,'after'=>$after ]; $this->save( $dir,$state ); } );
+		if ( $isolated ) { $state['status'] = 'templates'; return; }
 		$raw = get_option( DSA_OPTION_SETTINGS,null );
 		if ( ! is_array( $raw ) ) throw new Compiler_Package_Error( 'The native Kiwe settings owner is unavailable.' );
 		if ( ! isset( $state['tokenJournal'] ) ) {
@@ -204,7 +231,7 @@ final class Compiler_Import_Service {
 		$files = $state['inspection']['templateFiles'];
 		if ( $state['draftCursor'] >= count( $files ) ) { $state['status'] = 'complete'; return; }
 		$file = $files[$state['draftCursor']]; $inspection = $state['inspection']; $inspection['documents'] = [ $file=>$reader->json( $file ) ];
-		$document = Compiler_Import_Plan::remap( $inspection,$state['media'] )[$file]; Compiler_Import_Plan::validate_document( $document );
+		$document = Compiler_Import_Plan::remap( $inspection,$state['media'] )[$file]; Compiler_Import_Plan::validate_document( $document,( $inspection['importPolicy'] ?? '' ) === Compiler_Package_Reader::ISOLATED_DRAFT );
 		$marker = $state['id'] . ':template:' . hash( 'sha256',$file );
 		$existing = get_posts( [ 'post_type'=>BRICKS_DB_TEMPLATE_SLUG,'post_status'=>[ 'draft','pending','publish','private','trash' ],'numberposts'=>2,'fields'=>'ids','meta_key'=>self::MARKER,'meta_value'=>$marker,'suppress_filters'=>false ] );
 		if ( count( $existing ) > 1 ) throw new Compiler_Package_Error( 'A staged template has duplicate native records.' );
@@ -269,6 +296,6 @@ final class Compiler_Import_Service {
 	private function summary( array $state ): array {
 		$drafts = [];
 		foreach ( $state['drafts'] as $file=>$entry ) $drafts[] = [ 'id'=>$entry['id'],'title'=>$state['plan']['templates'][$file]['title'],'builderUrl'=>\DSA\Access\Template_Workspace_Service::builder_url( $entry['id'] ) ];
-		return [ 'id'=>$state['id'],'revision'=>$state['revision'],'status'=>$state['status'],'created'=>$state['created'],'expires'=>$state['expires'],'sourceHash'=>$state['inspection']['sourceHash'],'mediaTotal'=>count( array_filter( $state['inspection']['assets'],static fn( $asset ) => $asset['file'] && $asset['policy'] === 'import' ) ),'mediaDone'=>count( $state['media'] ),'templateTotal'=>count( $state['inspection']['templateFiles'] ),'templatesDone'=>$state['draftCursor'],'styles'=>$state['plan']['styles']['changes'],'stylesReused'=>$state['plan']['styles']['reused'],'warnings'=>$state['plan']['warnings'],'blockers'=>$state['plan']['blockers'],'drafts'=>$drafts,'messages'=>$state['messages'],'error'=>$state['error'] ?? '' ];
+		return [ 'id'=>$state['id'],'revision'=>$state['revision'],'status'=>$state['status'],'created'=>$state['created'],'expires'=>$state['expires'],'sourceHash'=>$state['inspection']['sourceHash'],'archiveSha256'=>$state['zipHash'],'policy'=>$state['inspection']['importPolicy'] ?? '', 'reviewTemplates'=>array_values( $state['plan']['templates'] ),'mediaTotal'=>count( array_filter( $state['inspection']['assets'],static fn( $asset ) => $asset['file'] && $asset['policy'] === 'import' ) ),'mediaDone'=>count( $state['media'] ),'templateTotal'=>count( $state['inspection']['templateFiles'] ),'templatesDone'=>$state['draftCursor'],'styles'=>$state['plan']['styles']['changes'],'stylesReused'=>$state['plan']['styles']['reused'],'warnings'=>$state['plan']['warnings'],'blockers'=>$state['plan']['blockers'],'drafts'=>$drafts,'messages'=>$state['messages'],'error'=>$state['error'] ?? '' ];
 	}
 }

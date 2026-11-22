@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Explicit authoring only. Reads bounded ZIP members; never extracts or fetches URLs. */
 final class Compiler_Package_Reader {
+	public const ISOLATED_DRAFT = 'isolated-draft-v1';
 	public const MAX_BYTES = 134217728;
 	public const MAX_ASSET = 16777216;
 	private \ZipArchive $zip;
@@ -54,7 +55,9 @@ final class Compiler_Package_Reader {
 	public function inventory(): array { return $this->integrity; }
 	private function verify_inventory( string $manifest,bool $full ): void {
 		$i = $this->integrity;
-		if ( ( $i['schema'] ?? '' ) !== 'seam.package-integrity.v1' || ( $i['algorithm'] ?? '' ) !== 'sha256' || ( $i['mutatesWordPress'] ?? null ) !== false || ! is_string( $i['profile'] ?? null ) || ! self::safe_path( $i['profile'] ) || ! is_array( $i['templates'] ?? null ) || ! array_is_list( $i['templates'] ) || count( $i['templates'] ) < 1 || count( $i['templates'] ) > 150 || ! is_array( $i['files'] ?? null ) || count( $i['files'] ) > 600 || ! is_array( $i['nativeMembers'] ?? null ) ) throw new Compiler_Package_Error( 'The compiler inventory format is unsupported.' );
+		$policy = $i['targetPolicy'] ?? '';
+		$schema = $i['schema'] ?? '';
+		if ( ! ( ( $schema === 'seam.package-integrity.v1' && ! array_key_exists( 'targetPolicy',$i ) ) || ( $schema === 'seam.package-integrity.v2' && $policy === self::ISOLATED_DRAFT ) ) || ( $i['algorithm'] ?? '' ) !== 'sha256' || ( $i['mutatesWordPress'] ?? null ) !== false || ! is_string( $i['profile'] ?? null ) || ! self::safe_path( $i['profile'] ) || ! is_array( $i['templates'] ?? null ) || ! array_is_list( $i['templates'] ) || count( $i['templates'] ) < 1 || count( $i['templates'] ) > 150 || ! is_array( $i['files'] ?? null ) || count( $i['files'] ) > 600 || ! is_array( $i['nativeMembers'] ?? null ) ) throw new Compiler_Package_Error( 'The compiler inventory format is unsupported.' );
 		$files = [];
 		foreach ( $i['files'] as $file ) {
 			$name = $file['path'] ?? null;
@@ -140,7 +143,7 @@ final class Compiler_Package_Reader {
 		foreach ( $assets as $asset ) if ( $asset['file'] && empty( $consumers[$asset['id']] ) ) throw new Compiler_Package_Error( 'Packaged media has no verified native consumer.' );
 		$issues = array_merge( $styles['issues'] ?? [],$discovered );
 		foreach ( $issues as $issue ) $blocks[] = is_array( $issue ) ? substr( (string) ( $issue['message'] ?? 'An unresolved dependency needs review.' ), 0, 300 ) : 'An unresolved dependency needs review.';
-		return [ 'sourceHash'=>$i['sourceHash'], 'profileFile'=>$i['profile'], 'templateFiles'=>$i['templates'], 'documents'=>$documents, 'assets'=>$assets, 'bindings'=>$styles['assetBindings'], 'issues'=>$issues, 'warnings'=>array_values( array_unique( $warnings ) ), 'blockers'=>array_values( array_unique( $blocks ) ), 'nativeImportReady'=>false ];
+		return [ 'sourceHash'=>$i['sourceHash'], 'importPolicy'=>$i['targetPolicy'] ?? '', 'profileFile'=>$i['profile'], 'templateFiles'=>$i['templates'], 'documents'=>$documents, 'assets'=>$assets, 'bindings'=>$styles['assetBindings'], 'issues'=>$issues, 'warnings'=>array_values( array_unique( $warnings ) ), 'blockers'=>array_values( array_unique( $blocks ) ), 'nativeImportReady'=>false ];
 	}
 	public static function embedded_references( string $value ): array {
 		$refs = []; if ( preg_match( '/^data:[^,]+,/i', $value ) ) $refs[] = $value;

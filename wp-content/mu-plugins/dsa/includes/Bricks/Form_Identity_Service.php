@@ -8,7 +8,7 @@ final class Form_Identity_Service {
 	public const META = '_kiwe_form_identity_v1';
 	private static array $pending = [];
 	public static function contract(): array {
-		return [ 'schema'=>'kiwe.form-identity.v1', 'available'=>class_exists( '\\Bricks\\Integrations\\Form\\Submission_Database' ), 'authority'=>'saved-native-bricks-form', 'attributes'=>[ 'key'=>'data-kiwe-form', 'label'=>'data-kiwe-form-label' ], 'keyPattern'=>'^[a-z][a-z0-9_-]{0,63}$', 'bricks'=>[ 'element'=>'form', 'nameControl'=>'submissionFormName', 'saveAction'=>'save-submission', 'emailRecipientTag'=>'{kiwe_store_email}' ], 'requires'=>[ 'native Bricks submission storage', 'the Save submission action on each form', 'a deliberately configured native email action for email delivery' ], 'daily'=>[ 'formFilters'=>'automatic from saved native page/form identities', 'notifications'=>'role-derived private team inbox; optional opted-in delivery' ], 'privacy'=>[ 'publicEnquiries'=>false, 'submittedLabelsAreAuthority'=>false, 'marketingConsentImplied'=>false ], 'authorRule'=>'Give each form a stable slug and descriptive label. Reuse the native Bricks form and its storage/delivery owners. A preview does not send enquiries; a saved message does not prove email delivery. Never invent recipients, store sign-in secrets or expose enquiry answers in public context.' ];
+		return [ 'schema'=>'kiwe.form-identity.v1', 'available'=>class_exists( '\\Bricks\\Integrations\\Form\\Submission_Database' ), 'authority'=>'saved-native-bricks-form', 'attributes'=>[ 'key'=>'data-kiwe-form', 'label'=>'data-kiwe-form-label' ], 'keyPattern'=>'^[a-z][a-z0-9_-]{0,63}$', 'bricks'=>[ 'element'=>'form', 'nameControl'=>'submissionFormName', 'saveAction'=>'save-submission', 'emailRecipientTag'=>'{kiwe_store_email}' ], 'requires'=>[ 'native Bricks submission storage', 'the Save submission action on each form', 'a deliberately configured native email action for email delivery' ], 'daily'=>[ 'formFilters'=>'automatic from saved native page/form identities', 'notifications'=>'role-derived private team inbox; optional opted-in delivery' ], 'formContact'=>\DSA\Identity\Form_Contact_Service::contract(), 'privacy'=>[ 'publicEnquiries'=>false, 'submittedLabelsAreAuthority'=>false, 'marketingConsentImplied'=>false ], 'authorRule'=>'Give each form a stable slug and descriptive label. Reuse the native Bricks form and its storage/delivery owners. A preview does not send enquiries; a saved message does not prove email delivery. Never invent recipients, store sign-in secrets or expose enquiry answers in public context.' ];
 	}
 	public static function identity( array $settings, int $post, string $form ): array {
 		$attributes = [];
@@ -48,7 +48,7 @@ final class Form_Identity_Service {
 		$identity = self::identity( $settings, $post, $form_id );
 		$identity['receipt'] = bin2hex( random_bytes( 16 ) );
 		$data[self::META] = [ 'type'=>'kiwe-internal', 'value'=>wp_json_encode( $identity, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) ];
-		self::$pending[$identity['receipt']] = [ 'identity'=>$identity, 'after'=>$after ];
+		self::$pending[$identity['receipt']] = [ 'identity'=>$identity, 'after'=>$after, 'contact'=>Form_Contact_Adapter::values( $data, $settings ) ];
 		if ( 1 === count( self::$pending ) ) add_action( 'shutdown', [ self::class, 'confirmed' ], 5 );
 		return $data;
 	}
@@ -70,6 +70,7 @@ final class Form_Identity_Service {
 				$metadata = is_array( $record ) ? ( $record[self::META] ?? [] ) : [];
 				$saved = is_string( $metadata['value'] ?? null ) ? json_decode( $metadata['value'], true ) : null;
 				if ( ! is_array( $saved ) || ! hash_equals( $receipt, (string) ( $saved['receipt'] ?? '' ) ) || $saved !== $identity ) continue;
+				\DSA\Identity\Form_Contact_Service::capture( $pending['contact'] );
 				do_action( 'kiwe_form_submission_saved', (int) $row['id'] );
 				break;
 			}

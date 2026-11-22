@@ -15,6 +15,7 @@ if ( ! defined('ABSPATH') ) exit;
 
 /** Drafts and review around the existing notification consent and three-recipient queue. */
 final class Campaign_Workspace_Service {
+	public const NATIVE_API=1;
 	public const OPTION='kiwe_campaign_drafts_v1';
 	private const LOCK='kiwe_campaign_workspace_lock';
 	private Notification_Preference_Service $preferences;
@@ -23,7 +24,8 @@ final class Campaign_Workspace_Service {
 	private ?Abandoned_Cart_Service $carts;
 	public function __construct(Notification_Preference_Service $p,Notification_Campaign_Service $d,?New_Post_Notification_Service $posts=null,?Abandoned_Cart_Service $carts=null){$this->preferences=$p;$this->delivery=$d;$this->posts=$posts;$this->carts=$carts;}
 	public function register():void{add_action('rest_api_init',[$this,'routes']);(new Campaign_Unsubscribe_Service($this->preferences))->register();add_action('kiwe_campaign_finished',[$this,'finished']);}
-	public function permission(\WP_REST_Request $r):bool{return Team_App_Service::enabled()&&is_user_logged_in()&&current_user_can('kiwe_manage_notification_policy')&&User_Group_Service::allowed()&&in_array($r->get_method(),['GET','POST'],true)&&wp_verify_nonce((string)$r->get_header('X-WP-Nonce'),'wp_rest')&&Origin_Checker::is_same_site_request()&&('GET'===$r->get_method()||true===Origin_Checker::mutation_allowed($r));}
+	public static function native_allowed():bool{return Team_App_Service::enabled()&&is_user_logged_in()&&current_user_can('kiwe_manage_notification_policy')&&User_Group_Service::allowed();}
+	public function permission(\WP_REST_Request $r):bool{return self::native_allowed()&&in_array($r->get_method(),['GET','POST'],true)&&wp_verify_nonce((string)$r->get_header('X-WP-Nonce'),'wp_rest')&&Origin_Checker::is_same_site_request()&&('GET'===$r->get_method()||true===Origin_Checker::mutation_allowed($r));}
 	public function routes():void{if(!Team_App_Service::enabled())return;register_rest_route('dsa/v1','/workspace/campaigns',[[ 'methods'=>'GET','callback'=>[$this,'read'],'permission_callback'=>[$this,'permission'] ],[ 'methods'=>'POST','callback'=>[$this,'write'],'permission_callback'=>[$this,'permission'] ]]);}
 	private function error(string $message,int $status=400):\WP_Error{return new \WP_Error('kiwe_campaign_workspace',$message,['status'=>$status]);}
 	private function response($value):\WP_REST_Response{return is_wp_error($value)?Task_Workspace_UI::failure($value,(int)($value->get_error_data()['status']??400)):Task_Workspace_UI::response($value);}
@@ -51,13 +53,18 @@ final class Campaign_Workspace_Service {
 		foreach($q->posts as$p)$items[]=['id'=>(int)$p->ID,'name'=>get_the_title($p),'url'=>(string)get_permalink($p),'excerpt'=>wp_html_excerpt(wp_strip_all_tags($p->post_excerpt?:$p->post_content),240,'…')];return $items;
 	}
 	public function read(\WP_REST_Request $r):\WP_REST_Response{
-		if(!$this->permission($r))return $this->response($this->error('Campaigns are unavailable for this account.',403));$q=$r->get_query_params();
-		if('sources'===($q['view']??''))return $this->response(['items'=>$this->sources(sanitize_key((string)($q['type']??'')),(string)($q['search']??''))]);
-		if('automations'===($q['view']??''))return $this->response($this->automations());
-		$id=is_string($q['id']??null)?$q['id']:'';if($id){$d=$this->find($id);return $this->response(is_wp_error($d)?$d:['draft'=>$this->project($d),'catalog'=>$this->catalog()]);}
+  if(!$this->permission($r))return $this->response($this->error('Campaigns are unavailable for this account.',403));
+  return $this->response($this->native_read($r->get_query_params()));
+ }
+ /** Shared native projection. Authentication transport never replaces role admission. */
+ public function native_read(array $q){
+  if(!self::native_allowed())return $this->error('Campaigns are unavailable for this account.',403);
+		if('sources'===($q['view']??''))return ['items'=>$this->sources(sanitize_key((string)($q['type']??'')),(string)($q['search']??''))];
+		if('automations'===($q['view']??''))return $this->automations();
+		$id=is_string($q['id']??null)?$q['id']:'';if($id){$d=$this->find($id);return is_wp_error($d)?$d:['draft'=>$this->project($d),'catalog'=>$this->catalog()];}
 		$items=$this->store();$search=strtolower(substr(sanitize_text_field((string)($q['search']??'')),0,80));$status=sanitize_key((string)($q['status']??''));$items=array_values(array_filter($items,static fn($d)=>(!$search||str_contains(strtolower($d['name']),$search))&&(!$status||$d['status']===$status)));$sort=$q['sort']??'changed_desc';usort($items,static fn($a,$b)=>'name_asc'===$sort?strnatcasecmp($a['name'],$b['name']):(('created_asc'===$sort?1:-1)*($a['updated']<=>$b['updated'])));
-		return $this->response(['items'=>array_map([$this,'project'],$items),'catalog'=>$this->catalog(),'delivery'=>$this->delivery->status()]);
-	}
+		return ['items'=>array_map([$this,'project'],$items),'catalog'=>$this->catalog(),'delivery'=>$this->delivery->status()];
+ }
 	private static function length(string $s):int{return (int)preg_match_all('/./us',$s);}
 	private function validate(array $input){
 		if(array_diff(array_keys($input),['id','expected','name','type','sourceId','group','channels','copies','scheduledAt']))return $this->error('Choose the supported campaign fields.');
@@ -105,27 +112,68 @@ final class Campaign_Workspace_Service {
 		return ['title'=>$copy['title'],'body'=>$body,'url'=>$url];
 	}
 	public function write(\WP_REST_Request $r):\WP_REST_Response{
-		if(!$this->permission($r))return $this->response($this->error('Campaigns are unavailable for this account.',403));$body=$r->get_json_params();if(!is_array($body))return $this->response($this->error('Choose a campaign task.'));$op=$body['operation']??'';
-		if('save'===$op){unset($body['operation']);return $this->response($this->save($body));}
-		if('automation'===$op)return $this->response($this->save_automation($body));
-		if('resume'===$op)return $this->response($this->delivery->resume(is_string($body['jobId']??null)?$body['jobId']:''));
-		if('cancel'===$op)return $this->response($this->delivery->cancel(is_string($body['jobId']??null)?$body['jobId']:'',is_string($body['expected']??null)?$body['expected']:''));
-		$id=is_string($body['id']??null)?$body['id']:'';$d=$this->find($id);if(is_wp_error($d))return $this->response($d);if('draft'!==$d['status']||!is_string($body['expected']??null)||!hash_equals($this->proof($d),$body['expected']))return $this->response($this->error('This campaign changed. Reload before continuing.',409));
-		if('archive'===$op)return $this->response($this->locked(function()use($id,$d){$fresh=$this->find($id);if(is_wp_error($fresh)||$fresh!==$d)return $this->error('The campaign changed. Refresh before archiving.',409);$rows=array_values(array_filter($this->store(),static fn($row)=>$row['id']!==$id));update_option(self::OPTION,$rows,false);return ['archived'=>true];}));
-		if(!in_array($op,['preview','queue'],true))return $this->response($this->error('Choose a campaign task.'));$planned=$this->plan($d);if(is_wp_error($planned))return $this->response($planned);if('preview'===$op)return $this->response($planned['preview']);
-		$p=$planned['preview'];if(true!==($body['confirmed']??null)||!is_string($body['audienceExpected']??null)||!hash_equals($p['expected'],$body['audienceExpected']))return $this->response($this->error('The campaign or reachable audience changed. Review it again before sending.',409));if(!$p['enabled']||!$p['count']||$p['limited'])return $this->response($this->error($p['limited']?'This audience exceeds the 500-target campaign limit. Refine the group. Nothing was queued.':'No opted-in verified account or enrolled browser can receive this campaign.',409));
-		return $this->response($this->locked(function()use($d,$body){$current=$this->find($d['id']);if(is_wp_error($current)||$current!==$d)return $this->error('This campaign changed. Review it again.',409);$fresh=$this->plan($current);if(is_wp_error($fresh))return $fresh;if(!hash_equals($fresh['preview']['expected'],$body['audienceExpected']))return $this->error('The reachable audience changed. Review it again before sending.',409);$result=$this->delivery->start_plan($fresh['plan']);if(is_wp_error($result))return $result;$rows=$this->store();foreach($rows as&$row)if($row['id']===$d['id']){$row['status']='queued';$row['jobId']=$result['job']['id'];$row['updated']=time();}unset($row);update_option(self::OPTION,$rows,false);return [...$result,'draft'=>$this->project($this->find($d['id']))];}));
-	}
+  if(!$this->permission($r))return $this->response($this->error('Campaigns are unavailable for this account.',403));
+  $body=$r->get_json_params();return $this->response(is_array($body)?$this->native_write($body):$this->error('Choose a campaign task.'));
+ }
+ /** Native UI and admitted integrations use the same writer and queue. */
+ public function native_write(array $body){
+  if(!self::native_allowed())return $this->error('Campaigns are unavailable for this account.',403);
+  $op=$body['operation']??'';
+		if('save'===$op){unset($body['operation']);return $this->save($body);}
+		if('automation'===$op)return $this->save_automation($body);
+		if('order-automation'===$op)return $this->save_order_automation($body);
+		if('resume'===$op)return $this->delivery->resume(is_string($body['jobId']??null)?$body['jobId']:'');
+		if('cancel'===$op)return $this->delivery->cancel(is_string($body['jobId']??null)?$body['jobId']:'',is_string($body['expected']??null)?$body['expected']:'');
+		$id=is_string($body['id']??null)?$body['id']:'';$d=$this->find($id);if(is_wp_error($d))return $d;if('draft'!==$d['status']||!is_string($body['expected']??null)||!hash_equals($this->proof($d),$body['expected']))return $this->error('This campaign changed. Reload before continuing.',409);
+		if('archive'===$op)return $this->locked(function()use($id,$d){$fresh=$this->find($id);if(is_wp_error($fresh)||$fresh!==$d)return $this->error('The campaign changed. Refresh before archiving.',409);$rows=array_values(array_filter($this->store(),static fn($row)=>$row['id']!==$id));update_option(self::OPTION,$rows,false);return ['archived'=>true];});
+		if(!in_array($op,['preview','queue'],true))return $this->error('Choose a campaign task.');$planned=$this->plan($d);if(is_wp_error($planned))return $planned;if('preview'===$op)return $planned['preview'];
+		$p=$planned['preview'];if(true!==($body['confirmed']??null)||!is_string($body['audienceExpected']??null)||!hash_equals($p['expected'],$body['audienceExpected']))return $this->error('The campaign or reachable audience changed. Review it again before sending.',409);if(!$p['enabled']||!$p['count']||$p['limited'])return $this->error($p['limited']?'This audience exceeds the 500-target campaign limit. Refine the group. Nothing was queued.':'No opted-in verified account or enrolled browser can receive this campaign.',409);
+		return $this->locked(function()use($d,$body){$current=$this->find($d['id']);if(is_wp_error($current)||$current!==$d)return $this->error('This campaign changed. Review it again.',409);$fresh=$this->plan($current);if(is_wp_error($fresh))return $fresh;if(!hash_equals($fresh['preview']['expected'],$body['audienceExpected']))return $this->error('The reachable audience changed. Review it again before sending.',409);$result=$this->delivery->start_plan($fresh['plan']);if(is_wp_error($result))return $result;$rows=$this->store();foreach($rows as&$row)if($row['id']===$d['id']){$row['status']='queued';$row['jobId']=$result['job']['id'];$row['updated']=time();}unset($row);update_option(self::OPTION,$rows,false);return [...$result,'draft'=>$this->project($this->find($d['id']))];});
+ }
+ /** Validate a draft without saving; fingerprints include the complete native draft store. */
+ public function native_audience(string $id){
+  if(!self::native_allowed())return $this->error('Campaigns are unavailable for this account.',403);
+  $draft=$this->find($id);if(is_wp_error($draft))return $draft;
+  if('draft'!==$draft['status'])return $this->error('Only an editable draft has a current audience preview.',409);
+  $planned=$this->plan($draft);return is_wp_error($planned)?$planned:$planned['preview'];
+ }
+ public function native_draft_plan(array $input){
+  if(!self::native_allowed())return $this->error('Campaigns are unavailable for this account.',403);
+  $after=$this->validate($input);if(is_wp_error($after))return $after;
+  $id=is_string($input['id']??null)?$input['id']:'';$before=$id?$this->find($id):null;
+  if(is_wp_error($before)||($before&&'draft'!==$before['status']))return $this->error('Choose a current editable draft.',409);
+  $source=$this->source($after);if(is_wp_error($source))return $source;
+  return ['before'=>$before?$this->project($before):null,'after'=>$after,'expected'=>hash_hmac('sha256',wp_json_encode([$this->store(),$this->catalog(),$source]),wp_salt('auth'))];
+ }
+
 	public function finished(array $job):void{if(empty($job['campaignId']))return;$this->locked(function()use($job){$rows=$this->store();foreach($rows as&$row)if($row['id']===$job['campaignId']&&($row['jobId']??'')===$job['id']){$row['status']=$job['status'];$row['receipt']=$job;$row['updated']=time();}unset($row);update_option(self::OPTION,$rows,false);return true;});}
 public function automations():array {
-		$state=['posts'=>$this->posts?['audience'=>$this->preferences->post_alert_summary(),'delivery'=>$this->posts->status()]:null,'cart'=>null];
+		$state=['posts'=>$this->posts?['audience'=>$this->preferences->post_alert_summary(),'delivery'=>$this->posts->status()]:null,'cart'=>null,'orders'=>null];
 		if(!$this->carts||!\DSA\Apps\Store_App_Service::enabled()||!current_user_can('edit_others_shop_orders'))return $state;
 		$config=$this->carts->config();
-		$fields=array_intersect_key($config,array_flip(['manual_reminders_enabled','automatic_email_enabled','automatic_whatsapp_enabled','inactivity_minutes','retention_days','cooldown_hours','max_reminders','email_subject','email_message','whatsapp_message']));
+		$fields=array_intersect_key($config,array_flip(['manual_reminders_enabled','automatic_email_enabled','automatic_whatsapp_enabled','reminder_schedule_hours','inactivity_minutes','retention_days','cooldown_hours','max_reminders','email_subject','email_message','whatsapp_message']));
 		foreach(['manual_reminders_enabled','automatic_email_enabled','automatic_whatsapp_enabled']as$key)$fields[$key]=!empty($fields[$key]);
 		foreach(['inactivity_minutes','retention_days','cooldown_hours','max_reminders']as$key)$fields[$key]=(int)($fields[$key]??0);
-		$cart=['fields'=>$fields,'schemaReady'=>$this->carts->ready(),'canEdit'=>current_user_can('kiwe_manage_context'),'ready'=>['email'=>$this->delivery->channel_ready('email'),'whatsapp'=>$this->delivery->channel_ready('whatsapp')]];
-		$cart['expected']=hash_hmac('sha256',serialize([$config,$cart]),wp_salt('auth'));$state['cart']=$cart;return $state;
+		$policyReady=method_exists($this->carts,'supports_automation_policy');
+		$cart=['fields'=>$fields,'schemaReady'=>$this->carts->ready(),'canEdit'=>$policyReady&&current_user_can('kiwe_manage_context'),'updateRequired'=>!$policyReady,'ready'=>['email'=>$this->delivery->channel_ready('email'),'whatsapp'=>$this->delivery->channel_ready('whatsapp')]];
+		$cart['expected']=hash_hmac('sha256',serialize([$config,$cart]),wp_salt('auth'));$state['cart']=$cart;
+		if(!method_exists(\DSA\Notifications\Order_Notification_Service::class,'delivery_policy'))return $state;
+		$orders=['fields'=>\DSA\Notifications\Order_Notification_Service::delivery_policy(),'statuses'=>[],'canEdit'=>current_user_can('kiwe_manage_context'),'ready'=>[]];
+		foreach(wc_get_order_statuses()as$key=>$name){$id=preg_replace('/^wc-/','',$key);if(!in_array($id,['checkout-draft','auto-draft','draft'],true))$orders['statuses'][]=['id'=>$id,'label'=>$name];}
+		foreach(['whatsapp','email','sms','app']as$key)$orders['ready'][$key]=$this->delivery->channel_ready($key);
+		$orders['expected']=hash_hmac('sha256',serialize([$orders,get_option(DSA_OPTION_SETTINGS)]),wp_salt('auth'));$state['orders']=$orders;return $state;
+	}
+	private function save_order_automation(array $body) {
+		$before=$this->automations()['orders']??null;
+		if(!$before||!$before['canEdit'])return $this->error('A site manager with order access controls order updates.',403);
+		if(array_diff(array_keys($body),['operation','fields','expected','confirmed'])||true!==($body['confirmed']??null)||!is_string($body['expected']??null)||!hash_equals($before['expected'],$body['expected']))return $this->error('Review the current order delivery controls before saving.',409);
+		$f=$body['fields']??null;
+		if(!is_array($f)||array_diff(array_keys($f),['statuses','channels'])||!is_array($f['statuses']??null)||!is_array($f['channels']??null)||count($f['statuses'])>50||count($f['channels'])>4||array_filter($f['statuses'],static fn($v)=>!is_string($v))||array_filter($f['channels'],static fn($v)=>!is_string($v))||array_values($f['statuses'])!==$f['statuses']||array_values($f['channels'])!==$f['channels']||count(array_unique($f['statuses']))!==count($f['statuses'])||count(array_unique($f['channels']))!==count($f['channels'])||array_diff($f['statuses'],array_column($before['statuses'],'id'))||array_diff($f['channels'],['whatsapp','email','sms','app']))return $this->error('Choose the current native order statuses and supported delivery channels.');
+		foreach($f['channels']as$channel)if(!in_array($channel,$before['fields']['channels'],true)&&empty($before['ready'][$channel]))return $this->error('Set up that delivery provider before enabling its order updates.',409);
+		$value=['statuses'=>$f['statuses']];foreach(['whatsapp','email','sms','app']as$channel)$value[$channel]=in_array($channel,$f['channels'],true);
+		$raw=get_option(DSA_OPTION_SETTINGS,null);$fresh=$this->automations()['orders']??null;
+		if(!is_array($raw)||!$fresh||!hash_equals($fresh['expected'],$body['expected'])||!(new Settings())->compare_and_update_selected($raw,['order_notifications'=>$value]))return $this->error('Order settings changed or saving is uncertain. Reload before another attempt.',409);
+		return $this->automations();
 	}
 	private function save_automation(array $body) {
 		$cart=$this->automations()['cart'];
@@ -136,11 +184,22 @@ public function automations():array {
 		foreach(['manual_reminders_enabled','automatic_email_enabled','automatic_whatsapp_enabled']as$key)if(!is_bool($f[$key]))return $this->error('Choose the reminder switches.');
 		if(($f['automatic_email_enabled']&&!$cart['ready']['email'])||($f['automatic_whatsapp_enabled']&&!$cart['ready']['whatsapp']))return $this->error('A selected channel needs provider setup before automation can be enabled.',409);
 		foreach(['inactivity_minutes'=>[15,43200],'retention_days'=>[7,365],'cooldown_hours'=>[1,720],'max_reminders'=>[1,5]]as$key=>$range)if(!is_int($f[$key])||$f[$key]<$range[0]||$f[$key]>$range[1])return $this->error('Choose valid tracking, retention and reminder limits.');
+		$hours=$f['reminder_schedule_hours']??null;
+		if(!is_array($hours)||array_values($hours)!==$hours||count($hours)>5)return $this->error('Choose up to five reminder times in hours after the last cart activity.');
+		$previous=0;foreach($hours as$hour){if(!is_int($hour)||$hour<=$previous||$hour>720)return $this->error('Reminder hours must increase and stay between 1 and 720.');$previous=$hour;}
+		if(count($hours)>1){$gaps=[];for($i=1;$i<count($hours);$i++)$gaps[]=$hours[$i]-$hours[$i-1];if($f['cooldown_hours']>min($gaps))return $this->error('The minimum time between attempts must fit between the scheduled reminders.');}
 		foreach(['email_subject'=>160,'email_message'=>4000,'whatsapp_message'=>1000]as$key=>$limit){if(!is_string($f[$key])||!trim($f[$key])||self::length($f[$key])>$limit)return $this->error('Complete the saved-cart title and messages within their limits.');$f[$key]='email_subject'===$key?sanitize_text_field($f[$key]):sanitize_textarea_field($f[$key]);}
 		foreach(['email_message','whatsapp_message']as$key)if(!str_contains($f[$key],'{recovery_url}'))return $this->error('Keep {recovery_url} in each reminder so it can restore the saved cart.');
 		$raw=get_option(DSA_OPTION_SETTINGS,null);$current=$this->automations()['cart'];
 		if(!is_array($raw)||!$current||!hash_equals($current['expected'],$body['expected']))return $this->error('The saved-cart settings changed. Reload before saving.',409);
-		if(!(new Settings())->compare_and_update_selected($raw,['abandoned_cart'=>$f]))return $this->error('The settings changed or their save is uncertain. Reload before another attempt.',409);
+		$started=(int)($this->carts->config()['automation_started_at']??0);
+		foreach(['automatic_email_enabled','automatic_whatsapp_enabled']as$key)if($f[$key]&&empty($cart['fields'][$key]))$started=time();
+		if($hours&&empty($cart['fields']['reminder_schedule_hours'])&&($f['automatic_email_enabled']||$f['automatic_whatsapp_enabled']))$started=time();
+		$stored=[...$f,'automation_started_at'=>$started,'automation_policy_v1'=>true];
+		// The old Store only understands these original flags. Keep them off so
+		// a downgrade cannot ignore the new cutoff/schedule and replay a backlog.
+		foreach(['email','whatsapp']as$channel){$stored['policy_automatic_'.$channel.'_enabled']=$f['automatic_'.$channel.'_enabled'];$stored['automatic_'.$channel.'_enabled']=false;}
+		if(!(new Settings())->compare_and_update_selected($raw,['abandoned_cart'=>$stored]))return $this->error('The settings changed or their save is uncertain. Reload before another attempt.',409);
 		if(!$this->carts->configure_runtime())return $this->error('Settings were saved, but tracking setup could not be confirmed. Reload and review before saving setup again.',409);
 		$after=$this->automations();foreach($f as$key=>$value)if(($after['cart']['fields'][$key]??null)!==$value)return $this->error('The automation save could not be confirmed. Reload before another attempt.',409);
 		return $after;

@@ -4,17 +4,11 @@ function escapeHtml( value ) {
 	} );
 }
 
-function socialGlyph( id, label ) {
-	const open = '<svg viewBox="0 0 24 24" role="img" aria-label="' + escapeHtml( label || id || 'Social link' ) + '" focusable="false">';
-	const glyphs = {
-		facebook: '<path d="M14.2 21v-7h-2.5v-3h2.5V8.8c0-3 1.8-4.8 4.6-4.8 1.1 0 2.1.1 2.6.2v3h-1.8c-1.4 0-1.8.7-1.8 1.7V11h3.4l-.5 3h-2.9v7z"></path>',
-		instagram: '<rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle>',
-		x: '<path d="M5 4l14 16M19 4 5 20"></path>',
-		youtube: '<path d="m9 8 7 4-7 4z"></path>',
-		pinterest: '<path d="M12 2a9.5 9.5 0 0 0-3.4 18.4c-.1-1.6 0-3.4.4-5.1l1.2-5s-.3-.8-.3-2c0-1.9 1.1-3.3 2.5-3.3 1.2 0 1.8.9 1.8 2 0 1.2-.8 3-1.2 4.7-.3 1.4.7 2.5 2.1 2.5 2.5 0 4.2-3.2 4.2-6.9 0-2.9-2.4-5.1-5.7-5.1-4 0-6.5 3-6.5 6.3 0 1.1.3 2.3 1 3 .3.3.3.5.2.9l-.3 1.3c-.1.4-.4.6-.8.4-1.9-.8-2.8-3.1-2.8-5.7C4.4 4.8 8 1 13.9 1 19 1 22 4.7 22 8.8c0 5.3-3 9.2-7.4 9.2-1.5 0-2.9-.8-3.4-1.8l-.9 3.5c-.3 1.2-1 2.5-1.6 3.4A10 10 0 0 0 12 22z"></path>',
-		linkedin: '<rect x="4" y="9" width="4" height="11"></rect><circle cx="6" cy="5.5" r="2"></circle><path d="M11 20V9h4v1.7c.8-1.2 2-2.1 3.8-2.1 3 0 4.2 2 4.2 5.3V20h-4v-5.4c0-1.6-.6-2.7-2-2.7-1.4 0-2 1-2 2.7V20z"></path>',
-	};
-	return open + ( glyphs[ id ] || '<circle cx="12" cy="12" r="8"></circle>' ) + '</svg>';
+function socialGlyph( id, label, iconSprite ) {
+ const open = '<svg viewBox="0 0 24 24" role="img" aria-label="' + escapeHtml( label || id || 'Social link' ) + '" focusable="false">';
+ const known = [ 'facebook', 'instagram', 'x', 'youtube', 'pinterest', 'linkedin', 'whatsapp', 'message-circle' ];
+ const symbol = id === 'email' ? 'mail' : ( known.indexOf( id ) !== -1 ? id : 'share-2' );
+ return open + ( iconSprite ? '<use href="' + escapeHtml( String( iconSprite ) + '#' + symbol ) + '"></use>' : '<circle cx="12" cy="12" r="8"></circle>' ) + '</svg>';
 }
 
 function linksCopy( payload ) {
@@ -31,13 +25,26 @@ function linksCopy( payload ) {
 	};
 }
 
-function social( item, preview ) {
-	const id = item.id || 'link';
-	const label = item.label || id;
-	const empty = ! item.url;
-	if ( empty && ( ! preview || ! item.editUrl ) ) return '';
-	const content = '<span class="dsa-social-icon" aria-hidden="true">' + socialGlyph( id, label ) + '</span><span class="dsa-social-link__body"><strong>' + escapeHtml( label ) + '</strong>' + ( empty ? '<small>Add link</small>' : '' ) + '</span>';
-	return '<a class="dsa-social-link' + ( empty ? ' dsa-social-link--empty' : '' ) + ' dsa-social-link--' + escapeHtml( id ) + '" href="' + escapeHtml( empty ? item.editUrl : item.url ) + '"' + ( empty ? ' data-dsa-full-navigation aria-label="Add ' + escapeHtml( label ) + ' link"' : ' target="_blank" rel="noopener noreferrer"' ) + '>' + content + '</a>';
+function social( item, preview, iconSprite, enquiryAvailable, shareAvailable, shareDocument ) {
+ const id = item.id || 'link', label = item.label || id, empty = ! item.url;
+ if ( empty && ( ! preview || ! item.editUrl ) ) return '';
+ const content = '<span class="dsa-social-icon" aria-hidden="true">' + socialGlyph( id, label, iconSprite ) + '</span><span class="dsa-social-link__body"><strong>' + escapeHtml( label ) + '</strong>' + ( empty ? '<small>Add link</small>' : '' ) + '</span>';
+ const canChat = enquiryAvailable && ! empty && ( item.kind === 'messaging' || item.chatAvailable || ( item.kind === 'contact' && [ 'whatsapp','email' ].includes( id ) ) );
+ const chatLabel = id === 'email' ? 'Email us' : 'Chat on ' + label;
+ const iconAction = ( action, text, glyph, href ) => '<' + ( href ? 'a href="' + escapeHtml( href ) + '" rel="noreferrer"' : 'button type="button"' ) + ' class="dsa-links-icon-action" data-kiwe-' + action + '="' + escapeHtml( id ) + '" aria-label="' + escapeHtml( text ) + '" title="' + escapeHtml( text ) + '">' + socialGlyph( glyph, text, iconSprite ) + '</' + ( href ? 'a' : 'button' ) + '>';
+ const chat = canChat ? iconAction( 'chat', chatLabel, 'message-circle' ) : '';
+ // Direct URLs are projected by the native public-subject owner. Other channels use the
+ // current gesture's device share/copy fallback, never another generic confirmation step.
+ const directUrl = shareDocument?.links?.[id];
+ const direct = typeof directUrl === 'string' && ( directUrl.startsWith( 'https://' ) || directUrl.startsWith( 'mailto:?' ) ) ? directUrl : '';
+ const share = shareAvailable && ! empty ? iconAction( 'share', 'Share on ' + label, 'share-2', direct ) : '';
+ let main;
+ if ( canChat && ( item.kind === 'messaging' || item.kind === 'contact' ) ) main = '<span class="dsa-social-link dsa-social-link--' + escapeHtml( id ) + '">' + content + '</span>';
+ else {
+  const navigation = item.kind === 'contact' && id === 'email' ? '' : ' target="_blank" rel="noopener noreferrer"';
+  main = '<a class="dsa-social-link' + ( empty ? ' dsa-social-link--empty' : '' ) + ' dsa-social-link--' + escapeHtml( id ) + '" href="' + escapeHtml( empty ? item.editUrl : item.url ) + '"' + ( empty ? ' data-dsa-full-navigation aria-label="Add ' + escapeHtml( label ) + ' link"' : navigation ) + '>' + content + '</a>';
+ }
+ return '<div class="dsa-links-channel">' + main + chat + share + '</div>';
 }
 
 function posts( items, section ) {
@@ -65,7 +72,10 @@ function linksViewData( payload ) {
 	const hub = payload.hub || {};
 	const copy = linksCopy( payload );
 	const editor = hub.editor || {};
-	const socials = hub.canEdit && Array.isArray( editor.socials ) && editor.socials.length ? editor.socials : ( Array.isArray( hub.socials ) ? hub.socials : [] );
+	const profiles = ( hub.canEdit && Array.isArray( editor.socials ) && editor.socials.length ? editor.socials : ( Array.isArray( hub.socials ) ? hub.socials : [] ) ).map( item => ( { ...item, chatAvailable:!! hub.messaging?.[item.id] } ) ).filter( item => item.url || ! hub.messaging?.[item.id] );
+	Object.values( hub.messaging || {} ).forEach( item => { if ( ! profiles.some( profile => profile.id === item.id && profile.url ) ) profiles.push( item ); } );
+	const contacts = Array.isArray( hub.contacts ) ? hub.contacts.filter( function ( item ) { return item && item.kind === 'contact' && [ 'whatsapp', 'email' ].indexOf( item.id ) !== -1; } ) : [];
+	const socials = contacts.concat( profiles );
 	const shop = hub.shop || {};
 	const actions = [];
 	if ( hub.commerceAvailable && ( shop.url || hub.canEdit ) ) actions.push( shop.url ? '<a class="dsa-shop-link" href="' + escapeHtml( shop.url ) + '" data-dsa-full-navigation><span>' + escapeHtml( shop.label || copy.shopLabel ) + '</span><small>' + escapeHtml( copy.shopMeta ) + '</small></a>' : '<span class="dsa-shop-link dsa-shop-link--empty"><span>' + escapeHtml( shop.label || copy.shopLabel ) + '</span><small>Not set</small></span>' );
@@ -87,7 +97,7 @@ function linksHero( data ) {
 
 function renderLegacyLinks( payload ) {
 	const data = linksViewData( payload );
-	return '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '"><div class="dsa-links-panel__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2>' + ( data.copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p>' : '' ) + '</div>' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + ( data.socials.length ? '<div class="dsa-social-grid">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit ); } ).join( '' ) + '</div>' : '' ) + ( data.actions.length ? '<div class="dsa-links-commerce-actions">' + data.actions.join( '' ) + '</div>' : '' ) + ( data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '' ) + ( data.hub.review && data.hub.review.text ? review( data.hub.review ) : '' ) + ( data.checks.length ? '<div class="dsa-health-row" data-dsa-context-slot data-dsa-context-name="links" data-dsa-context-width="dock">' + data.checks.map( health ).join( '' ) + '</div>' : '' ) + '</section>';
+	return '<section class="dsa-panel dsa-links-panel" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '"><div class="dsa-links-panel__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2>' + ( data.copy.intro ? '<p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p>' : '' ) + '</div>' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + ( data.socials.length ? '<div class="dsa-social-grid">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit, data.payload.iconSprite, data.hub.enquiryAvailable === true, data.hub.shareAvailable === true, data.hub.shareDocument ); } ).join( '' ) + '</div>' : '' ) + ( data.actions.length ? '<div class="dsa-links-commerce-actions">' + data.actions.join( '' ) + '</div>' : '' ) + ( data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '' ) + ( data.hub.review && data.hub.review.text ? review( data.hub.review ) : '' ) + ( data.checks.length ? '<div class="dsa-health-row" data-dsa-context-slot data-dsa-context-name="links" data-dsa-context-width="dock">' + data.checks.map( health ).join( '' ) + '</div>' : '' ) + '</section>';
 }
 
 function renderPrototypeLinks( payload ) {
@@ -96,7 +106,7 @@ function renderPrototypeLinks( payload ) {
 		'<section class="dsa-panel dsa-links-panel kiwe-links-v2027" role="dialog" aria-modal="false" aria-label="' + escapeHtml( data.copy.label ) + '" data-dsa-links-adapter="prototype-2027">',
 		'<div class="kiwe-links-v2027__title"><p class="dsa-hero-kicker">' + escapeHtml( data.copy.eyebrow ) + '</p><h2>' + escapeHtml( data.copy.title || data.name ) + '</h2><p class="dsa-panel__meta">' + escapeHtml( data.copy.intro ) + '</p></div>',
 		'<div class="kiwe-links-v2027__identity">' + linksHero( data ) + ( data.hub.canEdit ? adminBar( data.editor ) : '' ) + '</div>',
-		data.socials.length ? '<div class="dsa-social-grid kiwe-links-v2027__socials">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit ); } ).join( '' ) + '</div>' : '',
+		data.socials.length ? '<div class="dsa-social-grid kiwe-links-v2027__socials">' + data.socials.map( function ( item ) { return social( item, data.hub.canEdit, data.payload.iconSprite, data.hub.enquiryAvailable === true, data.hub.shareAvailable === true, data.hub.shareDocument ); } ).join( '' ) + '</div>' : '',
 		data.actions.length ? '<div class="dsa-links-commerce-actions kiwe-links-v2027__actions">' + data.actions.join( '' ) + '</div>' : '',
 		data.items.length ? posts( data.items, data.hub.postsSection || {} ) : '',
 		data.hub.review && data.hub.review.text ? review( data.hub.review ) : '',

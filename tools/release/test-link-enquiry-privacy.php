@@ -1,0 +1,20 @@
+<?php
+define('KIWE_LINK_ENQUIRY_FORMS_TEST',true);
+require __DIR__.'/test-link-enquiries.php';
+require __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Link_Hub/Enquiry_Privacy.php';
+use DSA\Link_Hub\Enquiry_Service as E;use DSA\Link_Hub\Enquiry_Privacy as P;
+$checks=[];$actor=0;$verified[77]=['whatsapp'=>'+919111111111'];
+function esc_html($value){return htmlspecialchars($value,ENT_QUOTES,'UTF-8');}
+function get_user_by($field,$email){return $field==='email'&&strcasecmp($email,'privacy@example.test')===0?(object)['ID'=>77]:false;}
+class PrivacyDb extends Db {
+ function get_results($sql,$mode){$this->queries[]=$sql;preg_match("/=LOWER\('([^']+)'\)/",$sql,$email);preg_match("/=BINARY '([^']+)'/",$sql,$phone);preg_match('/LIMIT (\d+) OFFSET (\d+)$/',$sql,$limit);$rows=[];foreach($this->rows as$row){$v=json_decode($row['post_content'],true);if($row['post_type']!=='kiwe_enquiry'||!in_array($row['post_status'],['private','trash'])||$row['post_author']!==0||($v['schema']??'')!==E::SCHEMA)continue;if(($v['contactKind']==='email'&&isset($email[1])&&strcasecmp($v['contact'],$email[1])===0)||($v['contactKind']==='phone'&&isset($phone[1])&&$v['contact']===$phone[1]))$rows[]=$row;}usort($rows,fn($a,$b)=>$a['ID']<=>$b['ID']);return array_slice($rows,(int)$limit[2],(int)$limit[1]);}
+}
+$wpdb=new PrivacyDb();
+function add_privacy_row($id,$override=[]){global $wpdb;$value=E::input(input(['contact'=>'privacy@example.test','message'=>'Literal <script>alert(1)</script> & https://example.test/a%20b',...$override]));$wpdb->rows[$id]=['ID'=>$id,'post_type'=>'kiwe_enquiry','post_status'=>'private','post_author'=>0,'post_date_gmt'=>'2026-11-02 12:00:00','post_content'=>json_encode($value)];}
+for($id=100;$id<125;$id++)add_privacy_row($id);add_privacy_row(900,['contact'=>'someone-else@example.test']);add_privacy_row(1000,['channel'=>'whatsapp','ticket'=>E::ticket('whatsapp'),'contact'=>'+919111111111']);
+$exporters=P::exporters(['native'=>['callback'=>'untouched']]);check(isset($exporters['kiwe-link-enquiries'])&&$exporters['native']['callback']==='untouched','Enquiry exporter extends native privacy owners without replacing them');check(isset(P::erasers([])['kiwe-link-enquiries']),'Native erasure owner registered');
+$first=P::export('privacy@example.test');check(count($first['data'])===20&&!$first['done'],'Privacy export is bounded and paginated');$last=P::export('privacy@example.test',2);check(count($last['data'])===5&&$last['done'],'Export second page has every remaining email enquiry');check(!str_contains(json_encode($first),'someone-else@example.test')&&!str_contains(json_encode($last),'+919111111111'),'Neither another email nor unlinked verified phone leaks into an email request');check(str_contains(json_encode($first),'&lt;script&gt;')&&!str_contains(json_encode($first),'<script>'),'Literal private message markup cannot become executable HTML in native export');
+$verified[77]['email']='privacy@example.test';$linked=P::export('privacy@example.test',2);check(count($linked['data'])===6&&str_contains(json_encode($linked),'+919111111111'),'Both actually verified matching factors admit the linked phone for native privacy');
+$deleteDenied=true;check(is_wp_error(P::erase('privacy@example.test'))&&count($wpdb->rows)===27,'Retained native data yields an explicit failed erasure');$deleteDenied=false;
+$erase=P::erase('privacy@example.test');check($erase['items_removed']&&!$erase['done']&&count($wpdb->rows)===7,'First erasure removes bounded records rather than offsetting past them');$erase=P::erase('privacy@example.test',2);check($erase['done']&&count($wpdb->rows)===1&&isset($wpdb->rows[900]),'Next erasure starts from remaining records and preserves the other person');check(P::export('bad')['data']===[]&&P::erase('bad')['done'],'Malformed privacy identifier never matches a personal enquiry');
+echo json_encode(['passed'=>true,'checks'=>count($checks),'cleanup'=>true,'scope'=>'Native privacy source with isolated SQL/identity owners; actual WordPress export/delete qualification remains separate'])."\n";

@@ -10,6 +10,7 @@ require_once __DIR__.'/SEO_Defaults_Model.php';
 
 /** Kiwe-only defaults; active external SEO providers retain their native authority. */
 final class SEO_Defaults_Service {
+	public const AUTHORING_API = 1;
 	public const OPTION = 'kiwe_seo_defaults_v1';
 	public const SCHEMA = 1;
 	public const ROBOTS = [ 'index', 'noindex', 'follow', 'nofollow', 'noarchive', 'nosnippet', 'noimageindex' ];
@@ -62,18 +63,23 @@ final class SEO_Defaults_Service {
 		$taxonomies = []; foreach ( get_taxonomies( [ 'public'=>true ], 'objects' ) as $name=>$taxonomy ) $taxonomies[] = [ 'id'=>$name, 'label'=>$taxonomy->labels->name ];
 		return UI::response( [ 'schema'=>1, 'owner'=>self::external_owner() ?: 'kiwe', 'editable'=>'' === self::external_owner(), 'enabled'=>self::enabled(), 'settings'=>self::settings(), 'variables'=>self::VARIABLES, 'postTypes'=>$types, 'taxonomies'=>$taxonomies, 'sitemapUrl'=>home_url( '/wp-sitemap.xml' ), 'newsUrl'=>home_url( '/news-sitemap.xml' ), 'newsAutomatic'=>self::news_automatic(), 'newsConfiguration'=>self::news(), 'identityUrl'=>current_user_can( 'kiwe_manage_context' ) ? admin_url( 'admin.php?page=kiwe-identity' ) : '', 'expected'=>self::expected() ] );
 	}
-	public function write( \WP_REST_Request $request ): \WP_REST_Response {
-		if ( ! $this->permission( $request ) ) return UI::failure( new \WP_Error( 'kiwe_seo_defaults_forbidden', 'Website SEO defaults are unavailable for your account.' ), 403 );
-		if ( '' !== self::external_owner() ) return UI::failure( new \WP_Error( 'kiwe_seo_defaults_owner', 'Change website defaults in the active SEO provider. Reviewed handover is a separate operation.' ), 409 );
-		$body = $request->get_json_params();
+ public static function authoring_allowed():bool{return self::enabled()&&(current_user_can('kiwe_manage_ai_preferences')||current_user_can('manage_options'));}
+ public function write(\WP_REST_Request $request):\WP_REST_Response{
+  if(!$this->permission($request))return UI::failure(new \WP_Error('kiwe_seo_defaults_forbidden','Website SEO defaults are unavailable for your account.'),403);
+  $body=$request->get_json_params();$saved=$this->authoring_save(is_array($body)?$body:[]);
+  return $saved->get_status()<300?$this->read($request):$saved;
+ }
+ public function authoring_save(array $body):\WP_REST_Response{
+  if(''!==self::external_owner())return UI::failure(new \WP_Error('kiwe_seo_defaults_owner','Change website defaults in the active SEO provider. Reviewed handover is a separate operation.'),409);
+  if(!self::authoring_allowed())return UI::failure(new \WP_Error('kiwe_seo_defaults_forbidden','Website SEO defaults require the active native owner and manager role.'),403);
 		if ( ! is_array( $body ) || ! is_string( $body['expected'] ?? null ) || ! hash_equals( self::expected(), $body['expected'] ) ) return UI::failure( new \WP_Error( 'kiwe_seo_defaults_stale', 'Website defaults changed. Refresh before saving.' ), 409 );
 		$clean = self::validate( $body['settings'] ?? null );
 		if ( is_wp_error( $clean ) ) return UI::failure( $clean, 400 );
 		if ( ! SEO_Settings_Handover_Service::compare_defaults( get_option( self::OPTION, null ), $clean ) ) return UI::failure( new \WP_Error( 'kiwe_seo_defaults_save', 'The defaults changed during saving. Refresh before retrying.' ), 409 );
 		do_action( 'kiwe_seo_defaults_changed' );
 		do_action( 'litespeed_purge_all' );
-		return $this->read( $request );
-	}
+		return UI::response(['saved'=>true,'settings'=>self::settings(),'expected'=>self::expected()]);
+ }
 
 	/** Refuse malformed/unknown state instead of silently dropping effective source behavior. */
 	public static function validate( $input ) {

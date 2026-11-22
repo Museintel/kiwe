@@ -60,6 +60,8 @@ final class Abandoned_Cart_Service {
 		add_action( 'woocommerce_cart_emptied', [ $this, 'mark_current_cart_cleared' ], 90 );
 		add_action( 'woocommerce_checkout_order_processed', [ $this, 'mark_order_converted' ], 90, 3 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'mark_store_api_order_converted' ], 90 );
+		add_action( 'woocommerce_payment_complete', [ $this, 'sync_order_conversion' ], 90, 1 );
+		add_action( 'woocommerce_order_status_changed', [ $this, 'sync_order_conversion' ], 90, 1 );
 		add_action( 'dsa_phonekey_authenticated', [ $this, 'link_phonekey_identity' ], 20, 2 );
 	}
 
@@ -183,6 +185,7 @@ final class Abandoned_Cart_Service {
 		if ( ! $this->woo_available() ) return;
 		if ( $this->recovery_paused() ) return;
 		if ( ! $this->ready() ) return;
+		$this->reconcile_order_conversions();
 		$this->refresh_abandoned_statuses();
 		$this->send_due_automatic_reminders();
 		$this->purge_old_rows();
@@ -192,6 +195,7 @@ final class Abandoned_Cart_Service {
 		if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
 			return;
 		}
+		if ( function_exists( 'is_checkout_pay_page' ) && is_checkout_pay_page() || function_exists( 'is_order_received_page' ) && is_order_received_page() ) return;
 
 		$checkout = function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) && ! ( function_exists( 'is_checkout_pay_page' ) && is_checkout_pay_page() );
 		$this->capture_current_cart( $checkout ? 'checkout_page' : 'browse' );
@@ -310,6 +314,8 @@ final class Abandoned_Cart_Service {
 
 		global $wpdb;
 
+		$saved_id = 0;
+		$contact_changed = false;
 		if ( $existing ) {
 			$same_cart = hash_equals( (string) ( $existing['cart_hash'] ?? '' ), $cart_hash );
 			$last_activity = (int) get_gmt_from_date( (string) ( $existing['last_activity_at'] ?? '' ), 'U' );
@@ -334,16 +340,29 @@ final class Abandoned_Cart_Service {
 			}
 			$profile = Runtime_Profiler::start();
 			$written = $wpdb->update( $this->carts_table(), $data, [ 'id' => (int) $existing['id'], 'customer_hash'=>(string) $existing['customer_hash'], 'user_id'=>(int) $existing['user_id'], 'status'=>$existing['status'] ] );
-			if ( false !== $written ) $this->remember_cart( (int) $existing['id'], $data['customer_hash'] );
+			if ( 0 === $written && ! $this->row( (int) $existing['id'] ) ) {
+				// Anonymous cleanup can win just before a contact write. Preserve the
+				// admitted update as a new cart rather than losing the visitor's lead.
+				$replacement = array_replace( $existing, $data );
+				unset( $replacement['id'] );
+				if ( $wpdb->insert( $this->carts_table(), $replacement ) ) $saved_id = (int) $wpdb->insert_id;
+			} elseif ( false !== $written ) $saved_id = (int) $existing['id'];
+			if ( $saved_id ) $this->remember_cart( $saved_id, $data['customer_hash'] );
 			Runtime_Profiler::finish( 'abandoned_cart.update', $profile );
 		} else {
 			$data['first_seen_at'] = $now;
 			$data['created_at'] = $now;
 			$profile = Runtime_Profiler::start();
-			if ( $wpdb->insert( $this->carts_table(), $data ) ) $this->remember_cart( (int) $wpdb->insert_id, $data['customer_hash'] );
+			if ( $wpdb->insert( $this->carts_table(), $data ) ) { $saved_id = (int) $wpdb->insert_id; $this->remember_cart( $saved_id, $data['customer_hash'] ); }
 			Runtime_Profiler::finish( 'abandoned_cart.insert', $profile );
 		}
 
+		if ( $saved_id && 'checkout_details' === $reason && ( $email || $phone ) && ( ! $existing || $contact_changed ) && class_exists( '\\DSA\\Identity\\Form_Contact_Service' ) ) {
+			// A valid saved contact is a pending Subscriber even if the visitor has
+			// not finished the remaining address fields. Never grants a session,
+			// verification or marketing consent; unchanged heartbeats do no work.
+			\DSA\Identity\Form_Contact_Service::capture( [ ...( $details['billing'] ?? [] ), 'email'=>$email, 'phone'=>$phone ] );
+		}
 		$this->capturing = false;
 	}
 
@@ -496,6 +515,7 @@ private function row( int $id ): array {
 		if ( ! $automated && empty( $this->config()['manual_reminders_enabled'] ) ) return 'Manual reminders are paused.';
 		if ( ! in_array( $channel, [ 'email','sms','whatsapp' ], true ) ) return 'Choose an existing reminder channel.';
 		if ( 'abandoned' !== ( $row['status'] ?? '' ) ) return 'This cart is no longer abandoned.';
+		if ( ! empty( $row['order_id'] ) && function_exists( 'wc_get_order' ) ) { $order = wc_get_order( (int) $row['order_id'] ); if ( $order instanceof \WC_Order && $order->is_paid() ) return 'This order is already paid.'; }
 		$id = absint( $row['user_id'] ?? 0 );
 		if ( ! $id || ! get_userdata( $id ) ) return 'The shopper needs a verified account and cart-reminder opt-in.';
 		if ( \DSA\Access\Team_Workspace_Service::suspended( $id ) ) return 'The account is blocked.';
@@ -505,9 +525,10 @@ private function row( int $id ): array {
 		$items = json_decode( (string) ( $row['items'] ?? '' ), true );
 		if ( ! is_array( $items ) || count( $items ) > 100 || strlen( (string) $row['items'] ) > 262144 ) return 'This cart needs the native store view.';
 		$config = $this->config();
+		if ( $automated && ! self::automatic_due( $row, $config, time(), wp_timezone() ) ) return 'This cart is not due in the current reminder schedule.';
 		if ( (int) $row['reminder_count'] >= max( 1, min( 5, (int) ( $config['max_reminders'] ?? 3 ) ) ) ) return 'This cart reached its reminder attempt limit.';
 		$last = ! empty( $row['last_reminder_at'] ) ? \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $row['last_reminder_at'], wp_timezone() ) : false;
-		if ( $last && $last->getTimestamp() >= time() - max( 1, (int) ( $config['cooldown_hours'] ?? 24 ) ) * HOUR_IN_SECONDS ) return 'This cart is inside its reminder cooldown.';
+		if ( $last && $last->getTimestamp() > time() - max( 1, (int) ( $config['cooldown_hours'] ?? 24 ) ) * HOUR_IN_SECONDS ) return 'This cart is inside its reminder cooldown.';
 		return '';
 	}
 
@@ -537,13 +558,48 @@ private function row( int $id ): array {
 		$status = in_array( $input['status'] ?? '', [ 'abandoned','active','converted','cleared' ], true ) ? $input['status'] : 'abandoned';
 		$page = max( 1, min( 1000, (int) ( $input['page'] ?? 1 ) ) );
 		$id = absint( $input['id'] ?? 0 );
-		$out = [ 'ready'=>$this->ready(), 'enabled'=>true, 'status'=>$status, 'page'=>$page, 'hasNext'=>false, 'items'=>[] ];
+		$out = [ 'ready'=>$this->ready(), 'enabled'=>true, 'status'=>$status, 'page'=>$page, 'hasNext'=>false, 'items'=>[], 'canClearUnknown'=>current_user_can( 'edit_others_shop_orders' ) && current_user_can( 'delete_shop_orders' ) && ! $this->recovery_paused() ];
 		if ( ! current_user_can( 'edit_others_shop_orders' ) || ! $out['ready'] ) return $out;
 		$direction = 'oldest' === ( $input['sort'] ?? '' ) ? 'ASC' : 'DESC';
-		$sql = $id ? $wpdb->prepare( "SELECT id,user_id,contact_type,contact_email_enc,contact_phone_enc,checkout_started_at,checkout_details_at,status,last_activity_at,item_count,cart_total,currency,reminder_count FROM {$this->carts_table()} WHERE id=%d AND status=%s LIMIT 1", $id,$status ) : $wpdb->prepare( "SELECT id,user_id,contact_type,contact_email_enc,contact_phone_enc,checkout_started_at,checkout_details_at,status,last_activity_at,item_count,cart_total,currency,reminder_count FROM {$this->carts_table()} WHERE status=%s ORDER BY last_activity_at {$direction},id {$direction} LIMIT 21 OFFSET %d", $status,( $page - 1 ) * 20 );
+		$sql = $id ? $wpdb->prepare( "SELECT id,user_id,contact_type,contact_email_enc,contact_phone_enc,checkout_started_at,checkout_details_at,order_id,status,last_activity_at,item_count,cart_total,currency,reminder_count FROM {$this->carts_table()} WHERE id=%d AND status=%s LIMIT 1", $id,$status ) : $wpdb->prepare( "SELECT id,user_id,contact_type,contact_email_enc,contact_phone_enc,checkout_started_at,checkout_details_at,order_id,status,last_activity_at,item_count,cart_total,currency,reminder_count FROM {$this->carts_table()} WHERE status=%s ORDER BY last_activity_at {$direction},id {$direction} LIMIT 21 OFFSET %d", $status,( $page - 1 ) * 20 );
 		$rows = $wpdb->get_results( $sql, ARRAY_A ) ?: []; $out['hasNext'] = count( $rows ) > 20;
 		$out['items'] = array_map( fn( $r ) => [ 'id'=>(int) $r['id'], ...$this->customer_summary( $r ), ...$this->journey( $r ), 'status'=>$r['status'], 'lastActivity'=>$r['last_activity_at'], 'itemCount'=>(int) $r['item_count'], 'total'=>$this->money( (float) $r['cart_total'],$r['currency'] ), 'attempts'=>(int) $r['reminder_count'] ], array_slice( $rows,0,20 ) );
 		return $out;
+	}
+
+	/** Never infer that a failed decryption means an anonymous cart. */
+	private function anonymous_where(): string {
+		return "user_id=0 AND phonekey_verified=0 AND contact_hash='' AND contact_type='' AND COALESCE(contact_email_enc,'')='' AND COALESCE(contact_phone_enc,'')='' AND COALESCE(checkout_snapshot_enc,'')='' AND checkout_details_at IS NULL AND order_id=0 AND reminder_count=0 AND NOT EXISTS (SELECT 1 FROM {$this->logs_table()} kiwe_receipt WHERE kiwe_receipt.cart_id={$this->carts_table()}.id)";
+	}
+
+	private function unknown_clear_proof( int $max_id, int $expires ): string {
+		return hash_hmac( 'sha256', wp_json_encode( [ 'unknown-carts-v1', get_current_blog_id(), get_current_user_id(), $this->carts_table(), $max_id, $expires ] ), wp_salt( 'nonce' ) );
+	}
+
+	public function unknown_clear_preview() {
+		global $wpdb;
+		if ( $this->recovery_paused() || ! $this->ready() || ! current_user_can( 'edit_others_shop_orders' ) || ! current_user_can( 'delete_shop_orders' ) ) return new \WP_Error( 'dsa_cart_clear_access', 'Clearing anonymous carts requires store-management access.', [ 'status'=>403 ] );
+		$max_id = (int) $wpdb->get_var( "SELECT COALESCE(MAX(id),0) FROM {$this->carts_table()}" );
+		$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->carts_table()} WHERE id<=%d AND {$this->anonymous_where()}", $max_id ) );
+		if ( null === $count ) return new \WP_Error( 'dsa_cart_clear_read', 'The anonymous-cart count could not be read. Refresh and try again.', [ 'status'=>503 ] );
+		$expires = time() + 15 * MINUTE_IN_SECONDS;
+		return [ 'maxId'=>$max_id, 'count'=>(int) $count, 'expires'=>$expires, 'expected'=>$this->unknown_clear_proof( $max_id, $expires ) ];
+	}
+
+	/** One reviewed snapshot, bounded chunks, and a fresh privacy predicate at DELETE. */
+	public function clear_unknown_carts( array $input ) {
+		global $wpdb;
+		if ( $this->recovery_paused() || ! $this->ready() || ! current_user_can( 'edit_others_shop_orders' ) || ! current_user_can( 'delete_shop_orders' ) ) return new \WP_Error( 'dsa_cart_clear_access', 'Clearing anonymous carts requires store-management access.', [ 'status'=>403 ] );
+		if ( array_diff( array_keys( $input ), [ 'maxId','expires','expected','cursor','confirmed' ] ) || true !== ( $input['confirmed'] ?? null ) || ! is_int( $input['maxId'] ?? null ) || $input['maxId'] < 0 || ! is_int( $input['expires'] ?? null ) || $input['expires'] <= time() || $input['expires'] > time() + 15 * MINUTE_IN_SECONDS || ! is_int( $input['cursor'] ?? null ) || $input['cursor'] < 0 || $input['cursor'] > $input['maxId'] || ! is_string( $input['expected'] ?? null ) || ! hash_equals( $this->unknown_clear_proof( $input['maxId'], $input['expires'] ), $input['expected'] ) ) return new \WP_Error( 'dsa_cart_clear_review', 'Review the anonymous-cart count again before clearing.', [ 'status'=>409 ] );
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$this->carts_table()} WHERE id>%d AND id<=%d AND {$this->anonymous_where()} ORDER BY id ASC LIMIT 100", $input['cursor'], $input['maxId'] ) );
+		if ( ! is_array( $ids ) ) return new \WP_Error( 'dsa_cart_clear_read', 'The next anonymous-cart batch could not be read.', [ 'status'=>503 ] );
+		$deleted = 0;
+		if ( $ids ) {
+			$selected = implode( ',', array_map( 'absint', $ids ) );
+			$deleted = $wpdb->query( "DELETE FROM {$this->carts_table()} WHERE id IN ({$selected}) AND {$this->anonymous_where()}" );
+			if ( false === $deleted ) return new \WP_Error( 'dsa_cart_clear_write', 'This batch could not be confirmed. Refresh before trying again.', [ 'status'=>503 ] );
+		}
+		return [ 'deleted'=>(int) $deleted, 'cursor'=>$ids ? (int) end( $ids ) : $input['maxId'], 'hasMore'=>count( $ids ) === 100 ];
 	}
 
 	public function resolve_attempt( int $id, int $attempt, string $expected, string $outcome ) {
@@ -615,10 +671,25 @@ private function row( int $id ): array {
 		global $wpdb;
 		$max = max( 1,min( 5,(int) ( $config['max_reminders'] ?? 3 ) ) );
 		$before = wp_date( 'Y-m-d H:i:s',time() - max( 1,(int) ( $config['cooldown_hours'] ?? 24 ) ) * HOUR_IN_SECONDS,wp_timezone() );
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->carts_table()} c WHERE status='abandoned' AND item_count > 0 AND user_id > 0 AND reminder_count < %d AND (last_reminder_at IS NULL OR last_reminder_at < %s) AND NOT EXISTS (SELECT 1 FROM {$this->logs_table()} l WHERE l.cart_id=c.id AND l.status='unknown') ORDER BY last_activity_at ASC LIMIT 50",$max,$before ),ARRAY_A ) ?: [];
+		$cutoff = (int) ( $config['automation_started_at'] ?? 0 );
+		$after = $cutoff > 0 ? wp_date( 'Y-m-d H:i:s', $cutoff, wp_timezone() ) : '1970-01-01 00:00:00';
+		$due_sql = '';
+		if ( ! empty( $config['reminder_schedule_hours'] ) ) {
+			$slots = []; $hours = $config['reminder_schedule_hours'];
+			if ( ! is_array( $hours ) || count( $hours ) > 5 || array_values( $hours ) !== $hours ) return 0;
+			$previous = 0;
+			foreach ( $hours as $index => $hour ) {
+				if ( ! is_int( $hour ) || $hour <= $previous || $hour > 720 ) return 0;
+				$previous = $hour;
+				$slots[] = $wpdb->prepare( '(reminder_count=%d AND last_activity_at<=%s)', $index, wp_date( 'Y-m-d H:i:s', time() - $hour * HOUR_IN_SECONDS, wp_timezone() ) );
+			}
+			$due_sql = ' AND (' . implode( ' OR ', $slots ) . ')';
+		}
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->carts_table()} c WHERE status='abandoned' AND item_count > 0 AND user_id > 0 AND reminder_count < %d AND last_activity_at >= %s AND (last_reminder_at IS NULL OR last_reminder_at <= %s){$due_sql} AND NOT EXISTS (SELECT 1 FROM {$this->logs_table()} l WHERE l.cart_id=c.id AND l.status='unknown') ORDER BY last_activity_at ASC LIMIT 50",$max,$after,$before ),ARRAY_A ) ?: [];
 		$sent = 0; $attempted = 0; $started = microtime( true );
 		foreach ( $rows as $row ) {
 			if ( $attempted >= 3 || microtime( true ) - $started > 10 ) break;
+			if ( ! self::automatic_due( $row, $config, time(), wp_timezone() ) ) continue;
 			foreach ( [ 'whatsapp','email' ] as $channel ) {
 				if ( empty( $config['automatic_' . $channel . '_enabled'] ) || '' !== $this->reminder_reason( $row,$channel,true ) ) continue;
 				++$attempted;
@@ -627,6 +698,26 @@ private function row( int $id ): array {
 			}
 		}
 		return $sent;
+	}
+
+	/** Timing only. Contact proof, opt-in, locks and uncertain outcomes stay with the existing sender. */
+	public static function automatic_due( array $row, array $config, int $now, \DateTimeZone $zone ): bool {
+		if ( 'abandoned' !== ( $row['status'] ?? '' ) || (int) ( $row['item_count'] ?? 0 ) < 1 ) return false;
+		$activity = \DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', (string) ( $row['last_activity_at'] ?? '' ), $zone );
+		$errors = \DateTimeImmutable::getLastErrors();
+		if ( ! $activity || ( is_array( $errors ) && ( $errors['warning_count'] || $errors['error_count'] ) ) || $activity->getTimestamp() > $now ) return false;
+		$cutoff = (int) ( $config['automation_started_at'] ?? 0 );
+		if ( $cutoff > 0 && $activity->getTimestamp() < $cutoff ) return false;
+		$hours = $config['reminder_schedule_hours'] ?? [];
+		if ( ! is_array( $hours ) ) return false;
+		// An empty schedule is the retained legacy cooldown model.
+		if ( ! $hours ) return true;
+		if ( count( $hours ) > 5 || array_values( $hours ) !== $hours ) return false;
+		$previous = 0;
+		foreach ( $hours as $hour ) { if ( ! is_int( $hour ) || $hour <= $previous || $hour > 720 ) return false; $previous = $hour; }
+		$attempt = max( 0, (int) ( $row['reminder_count'] ?? 0 ) );
+		if ( ! isset( $hours[$attempt] ) ) return false;
+		return $now - $activity->getTimestamp() >= $hours[$attempt] * 3600;
 	}
 
 	public function send_due_automatic_email_reminders(): int {
@@ -657,17 +748,25 @@ private function row( int $id ): array {
 		WC()->cart->calculate_totals(); return true;
 	}
 
+	/** Capability fence for independently updated Core and Store packages. */
+	public static function supports_automation_policy(): bool { return true; }
+
 	public function config(): array {
 		$all = $this->settings->all();
 		$defaults = $this->settings->defaults();
-		return array_replace( wp_parse_args( $all['abandoned_cart'] ?? [], $defaults['abandoned_cart'] ?? [] ), [ 'enabled'=>true ] );
+		$config = array_replace( wp_parse_args( $all['abandoned_cart'] ?? [], $defaults['abandoned_cart'] ?? [] ), [ 'enabled'=>true ] );
+		if ( ! empty( $config['automation_policy_v1'] ) ) {
+			$admitted = defined( '\\DSA\\Apps\\Runtime_Contract::COMMERCE_AUTOMATION_POLICY' ) && 1 === \DSA\Apps\Runtime_Contract::COMMERCE_AUTOMATION_POLICY;
+			foreach ( [ 'email','whatsapp' ] as $channel ) $config['automatic_' . $channel . '_enabled'] = $admitted && ! empty( $config['policy_automatic_' . $channel . '_enabled'] );
+		}
+		return $config;
 	}
 
 	private function convert_cart_for_order( $order_or_id ): void {
-		if ( ! $this->ready() ) return;
+		if ( $this->recovery_paused() || ! $this->ready() ) return;
 		$order = is_object( $order_or_id ) ? $order_or_id : ( function_exists( 'wc_get_order' ) ? wc_get_order( absint( $order_or_id ) ) : null );
 
-		if ( ! $order || ! method_exists( $order, 'get_id' ) ) {
+		if ( ! $order instanceof \WC_Order || 'shop_order' !== $order->get_type() ) {
 			return;
 		}
 
@@ -683,14 +782,52 @@ private function row( int $id ): array {
 		$wpdb->update(
 			$this->carts_table(),
 			[
-				'status'       => 'converted',
-				'converted_at' => $now,
 				'order_id'     => (int) $order->get_id(),
 				'cart_total'   => method_exists( $order, 'get_total' ) ? max( 0, (float) $order->get_total() ) : (float) $row['cart_total'],
 				'updated_at'   => $now,
 			],
-			[ 'id' => (int) $row['id'] ]
+			[ 'id' => (int) $row['id'], 'order_id'=>0, 'status'=>$row['status'], 'customer_hash'=>$row['customer_hash'] ]
 		);
+		$this->sync_order_conversion( (int) $order->get_id() );
+	}
+
+	/** Payment callbacks have no browser identity. Only the persisted order link counts. */
+	public function sync_order_conversion( int $order_id ): int {
+		global $wpdb;
+		if ( $this->recovery_paused() || ! $this->ready() || $order_id < 1 ) return 0;
+		$order = wc_get_order( $order_id );
+		$paid = $order instanceof \WC_Order && 'shop_order' === $order->get_type() && $order->is_paid();
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id,status,converted_at,last_activity_at,updated_at FROM {$this->carts_table()} WHERE order_id=%d ORDER BY id ASC LIMIT 100", $order_id ), ARRAY_A ) ?: [];
+		$changed = 0;
+		foreach ( $rows as $row ) {
+			if ( $paid && 'converted' === $row['status'] || ! $paid && 'converted' !== $row['status'] ) continue;
+			$now = current_time( 'mysql' );
+			$data = [ 'status'=>$paid ? 'converted' : 'abandoned', 'converted_at'=>null, 'updated_at'=>$now ];
+			if ( $paid ) {
+				$date = $order->get_date_paid() ?: $order->get_date_completed();
+				$data['converted_at'] = $date ? $date->date( 'Y-m-d H:i:s' ) : $now;
+				$data['cart_total'] = max( 0, (float) $order->get_total() );
+			}
+			$changed += 1 === $wpdb->update( $this->carts_table(), $data, [ 'id'=>(int) $row['id'], 'order_id'=>$order_id, 'status'=>$row['status'], 'updated_at'=>$row['updated_at'] ] ) ? 1 : 0;
+		}
+		return $changed;
+	}
+
+	/** Historical correction is background work, never a visitor-request scan. */
+	public function reconcile_order_conversions(): array {
+		global $wpdb;
+		if ( $this->recovery_paused() || ! $this->ready() ) return [ 'scanned'=>0, 'changed'=>0, 'complete'=>false ];
+		$cursor = max( 0, (int) get_option( 'dsa_cart_conversion_cursor', 0 ) );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id,order_id,status,updated_at FROM {$this->carts_table()} WHERE id>%d AND (order_id>0 OR status='converted') ORDER BY id ASC LIMIT 25", $cursor ), ARRAY_A );
+		if ( ! is_array( $rows ) ) return [ 'scanned'=>0, 'changed'=>0, 'complete'=>false ];
+		$changed = 0;
+		foreach ( $rows as $row ) {
+			if ( (int) $row['order_id'] > 0 ) $changed += $this->sync_order_conversion( (int) $row['order_id'] );
+			elseif ( 'converted' === $row['status'] ) $changed += 1 === $wpdb->update( $this->carts_table(), [ 'status'=>'abandoned', 'converted_at'=>null, 'updated_at'=>current_time( 'mysql' ) ], [ 'id'=>(int) $row['id'], 'order_id'=>0, 'status'=>'converted', 'updated_at'=>$row['updated_at'] ] ) ? 1 : 0;
+		}
+		$complete = count( $rows ) < 25;
+		update_option( 'dsa_cart_conversion_cursor', $complete ? 0 : (int) end( $rows )['id'], false );
+		return [ 'scanned'=>count( $rows ), 'changed'=>$changed, 'complete'=>$complete ];
 	}
 
 	private function find_open_cart( array $identity ): array {
@@ -698,7 +835,7 @@ private function row( int $id ): array {
 		$session = function_exists( 'WC' ) && WC() ? WC()->session : null;
 		$anchor = $session ? $session->get( 'kiwe_saved_cart', [] ) : [];
 		if ( is_array( $anchor ) && ! empty( $anchor['id'] ) && is_string( $anchor['customer'] ?? null ) && preg_match( '/^[a-f0-9]{64}$/D', $anchor['customer'] ) ) {
-			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->carts_table()} WHERE id=%d AND customer_hash=%s AND user_id IN (0,%d) AND status IN ('active','abandoned') LIMIT 1", absint( $anchor['id'] ), $anchor['customer'], absint( $identity['user_id'] ?? 0 ) ), ARRAY_A );
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->carts_table()} WHERE id=%d AND customer_hash=%s AND user_id IN (0,%d) AND order_id=0 AND status IN ('active','abandoned') LIMIT 1", absint( $anchor['id'] ), $anchor['customer'], absint( $identity['user_id'] ?? 0 ) ), ARRAY_A );
 			if ( $row ) return $row;
 		}
 		$parts = [];
@@ -724,7 +861,7 @@ private function row( int $id ): array {
 			return [];
 		}
 
-		$sql = "SELECT * FROM {$this->carts_table()} WHERE status IN ('active','abandoned') AND (" . implode( ' OR ', $parts ) . ') ORDER BY id DESC LIMIT 1';
+		$sql = "SELECT * FROM {$this->carts_table()} WHERE order_id=0 AND status IN ('active','abandoned') AND (" . implode( ' OR ', $parts ) . ') ORDER BY id DESC LIMIT 1';
 		return $wpdb->get_row( $wpdb->prepare( $sql, $params ), ARRAY_A ) ?: [];
 	}
 	private function remember_cart( int $id, string $customer ): void {
@@ -1018,7 +1155,13 @@ private function purge_old_rows(): void {
 	private function journey( array $row ): array {
 		$page = (string) ( $row['checkout_started_at'] ?? '' ); $details = (string) ( $row['checkout_details_at'] ?? '' );
 		$status = $row['status'] ?? '';
-		$label = 'converted' === $status ? __( 'Order placed', 'dsa' ) : ( 'cleared' === $status ? __( 'Cart cleared', 'dsa' ) : ( $page ? ( 'abandoned' === $status ? __( 'Left at checkout', 'dsa' ) : __( 'Reached checkout', 'dsa' ) ) : ( $details ? __( 'Checkout form started', 'dsa' ) : __( 'Checkout visit not recorded', 'dsa' ) ) ) );
+		$label = 'converted' === $status ? __( 'Purchase completed', 'dsa' ) : ( 'cleared' === $status ? __( 'Cart cleared', 'dsa' ) : ( $page ? ( 'abandoned' === $status ? __( 'Left at checkout', 'dsa' ) : __( 'Reached checkout', 'dsa' ) ) : ( $details ? __( 'Checkout form started', 'dsa' ) : __( 'Checkout visit not recorded', 'dsa' ) ) ) );
+		if ( ! empty( $row['order_id'] ) && function_exists( 'wc_get_order' ) ) {
+			$order = wc_get_order( (int) $row['order_id'] );
+			$label = $order instanceof \WC_Order ? ( $order->is_paid() ? __( 'Purchase completed', 'dsa' ) : match ( $order->get_status() ) {
+				'failed' => __( 'Payment failed', 'dsa' ), 'cancelled' => __( 'Order cancelled', 'dsa' ), 'refunded' => __( 'Order refunded', 'dsa' ), 'on-hold' => __( 'Payment not confirmed · order on hold', 'dsa' ), default => __( 'Awaiting payment', 'dsa' ),
+			} ) : __( 'Linked order unavailable', 'dsa' );
+		}
 		return [ 'checkoutReachedAt'=>$page, 'checkoutDetailsAt'=>$details, 'journeyLabel'=>$label ];
 	}
 

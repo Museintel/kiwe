@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * never credentials, visitor state, orders, drafts, filesystem paths or writes.
  */
 final class Design_Context_Service {
+	public const MCP_DESIGN_API = 1;
 	private const PUBLIC_MAX_PRODUCTS = 100;
 	private const PUBLIC_MAX_MEDIA    = 100;
 	private const ADMIN_MAX_PRODUCTS  = 200;
@@ -125,9 +126,11 @@ final class Design_Context_Service {
 				'bricks'         => is_array( $graph['bricks'] ?? null ) ? $graph['bricks'] : [],
 				'kiwe'           => [
 					'version'      => sanitize_text_field( (string) ( $graph['kiwe']['version'] ?? '' ) ),
+					'apps'         => is_array( $graph['kiwe']['apps'] ?? null ) ? $graph['kiwe']['apps'] : [],
 					'modules'      => is_array( $graph['kiwe']['modules'] ?? null ) ? $graph['kiwe']['modules'] : [],
 					'discussion'   => is_array( $graph['kiwe']['discussion'] ?? null ) ? $graph['kiwe']['discussion'] : [],
 					'forms'        => is_array( $graph['kiwe']['forms'] ?? null ) ? $graph['kiwe']['forms'] : [],
+					'links'        => is_array( $graph['kiwe']['links'] ?? null ) ? $graph['kiwe']['links'] : [],
 					'bricksBridge' => is_array( $graph['kiwe']['bricksBridge'] ?? null ) ? $graph['kiwe']['bricksBridge'] : [],
 				],
 				'bindingTargets' => is_array( $graph['bindingTargets'] ?? null ) ? $graph['bindingTargets'] : [],
@@ -138,6 +141,7 @@ final class Design_Context_Service {
 			'dynamicBindings' => $dynamic_bindings,
 			'discussion' => is_array( $graph['kiwe']['discussion'] ?? null ) ? $graph['kiwe']['discussion'] : [],
 			'forms' => is_array( $graph['kiwe']['forms'] ?? null ) ? $graph['kiwe']['forms'] : [],
+			'links' => is_array( $graph['kiwe']['links'] ?? null ) ? $graph['kiwe']['links'] : [],
 			'resolvedDesignContext' => $resolved_context,
 			'designContextEnhancementContract' => $enhancements->handoff_contract(),
 			'ideationContract' => [

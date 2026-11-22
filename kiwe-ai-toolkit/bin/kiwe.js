@@ -16,6 +16,8 @@ import {
   inspectBindings,
   validatePreview
 } from '../lib/kiwe-core.js';
+import fs from 'node:fs';
+import { writeDesignExport } from '../lib/mcp-design-export.js';
 
 function print(value) {
   process.stdout.write(`${typeof value === 'string' ? value : JSON.stringify(value, null, 2)}\n`);
@@ -63,6 +65,7 @@ function usage() {
   seam validate-seam-map <path>
   seam inspect-bindings <site-graph.json> [--field exact.binding.path]
   seam validate-preview <path>
+  seam assemble-design-export <capture.json> <project> --website <connected-https-site> --selection '<exact selection JSON>'
   seam validate-bricks-conversion <path> [--site-graph <path>] [--optional] [--documented]
   seam validate-framework-profile <path> [--optional]
   seam validate-bricks-theme-style <path> [--optional]
@@ -78,6 +81,10 @@ try {
   else if (action === 'manifest') print(getCommandManifest());
   else if (action === 'inspect-bindings') print(inspectBindings(args[0], {fields:option(args,'--field').split(',').filter(Boolean)}));
   else if (action === 'validate-preview') { const result=validatePreview(target(args)); print(result); if(!result.ok)process.exitCode=1; }
+  else if (action === 'assemble-design-export') {
+    if (!args[0] || !args[1] || fs.lstatSync(args[0]).isSymbolicLink() || !fs.statSync(args[0]).isFile() || fs.statSync(args[0]).size > 8388608) throw new Error('A bounded ordinary capture and output project are required.');
+    print(writeDesignExport(JSON.parse(fs.readFileSync(args[0],'utf8')),args[1],{expectedWebsite:option(args,'--website'),selection:JSON.parse(option(args,'--selection'))}));
+  }
   else if (action === 'commands') print(listCommands());
   else if (action === 'diagnose') print(diagnoseCommand(commandInput(args)));
   else if (action === 'route') print(routeCommand(commandInput(args)));

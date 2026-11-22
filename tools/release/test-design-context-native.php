@@ -8,7 +8,8 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Search_Report_Snapshot.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Bricks/Design_Context_Binding_Service.php';
 $options=[]; $meta=[]; $users=[]; $actor=1; $hook='personal_options_update'; $commerce=false; $service_queries=0;
-$wpdb=new class { public $prefix='wp_', $comments='wp_comments', $commentmeta='wp_commentmeta'; public function prepare($sql,...$args){return $sql;} };
+$wpdb=new class { public $prefix='wp_', $comments='wp_comments', $commentmeta='wp_commentmeta'; public function prepare($sql,...$args){return $sql;} public function get_var($sql){if(preg_match('/^SELECT (GET_LOCK|RELEASE_LOCK)\(/',$sql))return '1';throw new RuntimeException('Unexpected synthetic query');} };
+function get_current_blog_id(){return 1;} function wp_cache_delete($key,$group){return true;}
 if(!function_exists('add_filter')){function add_filter(...$args){}} if(!function_exists('remove_filter')){function remove_filter(...$args){}} if(!function_exists('wp_json_encode')){function wp_json_encode($value,...$args){return json_encode($value);}} if(!function_exists('wp_cache_get_last_changed')){function wp_cache_get_last_changed($group){return 'fixture-native-empty';}}
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Discussion/Discussion_Reactions.php';
 class WP_User { public function __construct(public int $ID, public string $display_name, public string $description='', public string $user_url='', public array $caps=[]) {} }
@@ -63,6 +64,7 @@ function wp_generate_uuid4(){return '11111111-2222-4333-8444-555555555555';}
 function get_comments($args){return [];}
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Context_Selection_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/User_Profile_Service.php';
+require_once __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Identity/Form_Contact_Service.php';require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Link_Hub/Channel_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Profile_Service.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/SEO/SEO_Defaults_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/SEO_Context_Service.php';
@@ -166,3 +168,14 @@ $options[\DSA\Apps\Store_App_Service::OPTION]='1';check($ctx->commerce_available
 
 // Restore fixture-only input for dependent renderer tests.
 $commerce=false;unset($options[\DSA\Apps\Store_App_Service::OPTION]);
+$links_options=$options;
+try {
+	$latest=$ctx->current(); $contact=$latest['contact'];
+	$contact['messagingLinks']=['x'=>'https://x.com/messages/compose?recipient_id=123','instagram'=>'https://ig.me/m/business','facebook'=>'https://m.me/business'];
+	$result=$ctx->save_section('contact',['contact'=>$contact,'localization'=>$latest['localization']],1,'','contact.messagingLinks.x');
+	check(!is_wp_error($result)&&$ctx->current()['contact']['messagingLinks']===$contact['messagingLinks'],'optional message destinations roundtrip through the existing scoped Design Context writer');
+	check($ctx->public_context()['contact']['messagingLinks']===$contact['messagingLinks'],'public business brief includes only declared canonical messaging fields');
+	$before_links=$options; $contact['messagingLinks']['x']='https://x.com/business';
+	$result=$ctx->save_section('contact',['contact'=>$contact,'localization'=>$latest['localization']],1,'','contact.messagingLinks.x');
+	check(is_wp_error($result)&&$options===$before_links,'invalid profile-as-message destination gives an error without changing saved settings');
+} finally { $options=$links_options; }

@@ -40,6 +40,8 @@ final class Store_App_Service {
   return [ 'available'=>false, 'cart'=>self::inactive_cart(), 'current'=>[], 'routes'=>[], 'decision'=>[], 'transitionMessages'=>[], 'complements'=>[], 'safety'=>[ 'navigationBlocking'=>false, 'cartMutation'=>false, 'fragmentCheckout'=>false ] ];
  }
  public function register(): void {
+  // The closure is inert on visitor requests and loads no optional Store/MCP code.
+  add_action('kiwe_mcp_register_providers',static function($registry,int $api):void{if(self::enabled()&&class_exists(\DSA\Commerce\MCP_Store_Provider::class))\DSA\Commerce\MCP_Store_Provider::register($registry,$api);},10,2);
   add_action( 'rest_api_init', [ $this, 'routes' ] );
   add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
  }

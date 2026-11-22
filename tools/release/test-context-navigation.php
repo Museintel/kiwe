@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/workspace-test-bootstrap.php';
 require __DIR__.'/fixtures/context-navigation-community.php';
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Discussion/Site_Conversation.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Context_Selection_Service.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Access/Task_Workspace_UI.php';
 require dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Site_Graph/Data_Query_Service.php';

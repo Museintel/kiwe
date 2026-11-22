@@ -1,4 +1,4 @@
-export const APP_IDS = ['seo','store','guest','ai','sitegraph'];
+export const APP_IDS = Object.freeze(['seo','store','guest','ai','sitegraph','mcp']);
 
 export function checkedAppLibrary(value) {
  const items=value?.items;

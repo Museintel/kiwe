@@ -21,7 +21,7 @@ function App(){
   catch(e){if(mounted.current){setJob(null);setError(e.message);await refresh();setError(e.message);}}finally{running.current=false;if(mounted.current)setBusy(false);}
  }
  async function start(){setBusy(true);setError('');try{const receipt=await request('',{operation:'start',app:selected,automatic,expected:review.expected});setJob(receipt.job);setBusy(false);advance(receipt.job);}catch(e){setError(e.message);setBusy(false);}}
- async function change(operation,fields={}){setBusy(true);setError('');try{const value=await request('',{operation,app:selected,...fields});setData(checkedAppLibrary(value));setReview(null);setJob(null);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function change(operation,fields={}){setBusy(true);setError('');try{const value=await request('',{operation,app:selected,...fields});if(value.reload){location.reload();return;}setData(checkedAppLibrary(value));setReview(null);setJob(null);}catch(e){setError(e.message);}finally{setBusy(false);}}
  const currentJob=job||item?.job,unfinished=currentJob&&!['complete','cancelled'].includes(currentJob.status);
  return <div className="kiwe-screen kiwe-module"><WorkspaceHeader config={config}/><main><p className="native-eyebrow">YOUR KIWE APPS</p><h1>Apps.</h1><p>Add what your business needs. Your settings and activity keep their familiar places in Kiwe.</p>
   <div className="kiwe-task-tabs"><a href={config.appsHome}>← Home</a><button type="button" disabled={busy} onClick={()=>refresh(true)}>Check available Apps</button><a href={data?.nativeUpdatesUrl}>WordPress updates ↗</a></div>
@@ -37,6 +37,7 @@ function App(){
     </>}
    </>}
    {item.installed&&item.canUpdate&&!unfinished&&<section><h3>Updates</h3><p>WordPress owns the schedule. Kiwe authenticates each release before installation.</p><button type="button" disabled={busy} onClick={()=>change('automatic',{enabled:!item.automatic,expected:item.automaticExpected})}>{item.automatic?'Turn automatic updates off':'Turn automatic updates on'}</button></section>}
+   {item.canRemove&&!unfinished&&<section><h3>Remove Feedback App</h3><p>Remove its code and screens. Comments, reviews, likes, settings and testimonial selections stay on this website.</p><button type="button" disabled={busy} onClick={()=>{if(window.confirm('Remove Feedback while preserving all existing comments, reviews and settings?'))change('remove',{expected:item.removalExpected});}}>Remove App</button></section>}
    {item.canRecover&&!unfinished&&<section><h3>{item.recoveryRemovesApp?'Before installation':'Previous App code'}</h3><p>{item.recoveryRemovesApp?'Remove the newly installed App code. Existing products, orders, accounts and business records stay on your website.':'Restore the immediate previous code. Products, orders, accounts and business records stay current.'}</p><button type="button" disabled={busy} onClick={()=>{if(window.confirm(item.recoveryRemovesApp?'Remove this App code while keeping current business data?':'Restore this App’s previous code while keeping current business data?'))change('recover',{expected:item.recoveryExpected});}}>{item.recoveryRemovesApp?'Remove App code':'Restore previous code'}</button></section>}
    {busy&&<p role="status">Finishing this step…</p>}
   </WorkspaceDialog>}

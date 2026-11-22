@@ -9,11 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Reviewed controls around the existing checkout and campaign owners; no gateway execution. */
 final class Checkout_Policy_Workspace_Service {
-	public function __construct( private Abandoned_Cart_Service $carts ) {}
+	public function __construct( private ?Abandoned_Cart_Service $carts = null ) {}
 	public function register(): void { if ( Commerce_App_Service::enabled() ) add_action( 'rest_api_init', [ $this,'routes' ] ); }
 	public function permission( \WP_REST_Request $r ): bool { return ( new Commerce_App_Service() )->permission( $r ); }
 	public function routes(): void {
-		foreach ( [ '/workspace/commerce/checkout-policy'=>[ 'read_policy','write_policy' ], '/workspace/commerce/saved-carts'=>[ 'read_carts',null ], '/workspace/commerce/saved-carts/(?P<id>[1-9][0-9]*)'=>[ 'read_cart','write_cart' ] ] as $path=>$methods ) {
+		foreach ( [ '/workspace/commerce/checkout-policy'=>[ 'read_policy','write_policy' ], '/workspace/commerce/saved-carts'=>[ 'read_carts',null ], '/workspace/commerce/saved-carts/clear-unknown'=>[ 'read_unknown_clear','write_unknown_clear' ], '/workspace/commerce/saved-carts/(?P<id>[1-9][0-9]*)'=>[ 'read_cart','write_cart' ] ] as $path=>$methods ) {
 			$args = []; foreach ( $methods as $i=>$callback ) if ( $callback ) $args[] = [ 'methods'=>$i ? 'POST' : 'GET','callback'=>[ $this,$callback ],'permission_callback'=>[ $this,'permission' ] ];
 			register_rest_route( 'dsa/v1',$path,$args );
 		}
@@ -96,11 +96,20 @@ final class Checkout_Policy_Workspace_Service {
 		return $this->response( match( $input['operation'] ?? null ) { 'guestCheckout'=>$this->change_guest_checkout( $input ),'checkoutFields'=>$this->change_checkout_fields( $input ),default=>$this->change_policy( $input ) } );
 	}
 	public function read_carts( \WP_REST_Request $r ): \WP_REST_Response {
+		if ( !$this->carts ) return $this->response($this->error('Saved-cart activity is unavailable in this settings task.',403));
 		if ( $r->get_method() !== 'GET' || ! $this->permission( $r ) || ! current_user_can( 'edit_others_shop_orders' ) ) return $this->response( $this->error( 'Saved carts require order-management access.',403 ) );
 		return $this->response( $this->carts->workspace_rows( $r->get_query_params() ) );
 	}
-	public function read_cart( \WP_REST_Request $r ): \WP_REST_Response { return $this->response( $r->get_method() === 'GET' && $this->permission( $r ) ? $this->carts->review_record( (int) $r->get_url_params()['id'] ) : $this->error( 'Saved cart is unavailable.',403 ) ); }
+	public function read_cart( \WP_REST_Request $r ): \WP_REST_Response { return $this->response( $this->carts && $r->get_method() === 'GET' && $this->permission( $r ) ? $this->carts->review_record( (int) $r->get_url_params()['id'] ) : $this->error( 'Saved cart is unavailable.',403 ) ); }
+	public function read_unknown_clear( \WP_REST_Request $r ): \WP_REST_Response {
+		return $this->response( $this->carts && 'GET' === $r->get_method() && $this->permission( $r ) ? $this->carts->unknown_clear_preview() : $this->error( 'Anonymous-cart cleanup is unavailable.',403 ) );
+	}
+	public function write_unknown_clear( \WP_REST_Request $r ): \WP_REST_Response {
+		$input = $r->get_json_params();
+		return $this->response( $this->carts && 'POST' === $r->get_method() && $this->permission( $r ) && is_array( $input ) ? $this->carts->clear_unknown_carts( $input ) : $this->error( 'Anonymous-cart cleanup is unavailable.',403 ) );
+	}
 	public function write_cart( \WP_REST_Request $r ): \WP_REST_Response {
+		if ( !$this->carts ) return $this->response($this->error('Saved-cart activity is unavailable in this settings task.',403));
 		if ( $r->get_method() !== 'POST' || ! $this->permission( $r ) ) return $this->response( $this->error( 'Saved cart is unavailable.',403 ) );
 		$input = $r->get_json_params(); $id = (int) $r->get_url_params()['id'];
 		if ( ! is_array( $input ) || array_diff( array_keys( $input ),[ 'operation','expected','confirmed','channel','attempt','outcome' ] ) || true !== ( $input['confirmed'] ?? null ) || ! is_string( $input['expected'] ?? null ) || ! preg_match( '/^[a-f0-9]{64}$/D',$input['expected'] ) ) return $this->response( $this->error( 'Review and confirm this cart task first.',409 ) );

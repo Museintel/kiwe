@@ -268,6 +268,10 @@ final class Settings_Controller {
 			'scoreLabel' => null !== $manual_score ? __( 'site score', 'dsa' ) : __( 'SEO readiness', 'dsa' ),
 			'scoreSource' => null !== $manual_score ? 'manual' : ( null !== $score ? 'kiwe-onboarding' : 'none' ),
 			'socials' => $this->social_links( $config ),
+			'contacts' => \DSA\Link_Hub\Channel_Service::site_contact_rows(),
+			'messaging' => \DSA\Link_Hub\Channel_Service::site_actions()['messaging'],
+			'enquiryAvailable' => true,
+			'shareAvailable' => true,
 			'shop'    => [
 				'label' => sanitize_text_field( $config['shop_label'] ?? __( 'Shop', 'dsa' ) ),
 				'url'   => $this->shop_url( $config ),
@@ -315,35 +319,11 @@ final class Settings_Controller {
 	}
 
 	private function social_links( array $config ): array {
-		$raw = isset( $config['social_links'] ) && is_array( $config['social_links'] ) ? $config['social_links'] : [];
-		$out = [];
-
-		foreach ( $this->social_link_labels() as $id => $label ) {
-			$url = esc_url_raw( $raw[ $id ] ?? '' );
-
-			if ( '' === $url ) {
-				continue;
-			}
-
-			$out[] = [
-				'id'    => $id,
-				'label' => $label,
-				'url'   => $url,
-			];
-		}
-
-		return $out;
+		return \DSA\Link_Hub\Channel_Service::social_rows( $config );
 	}
 
 	private function social_link_labels(): array {
-		return [
-			'facebook'  => 'Facebook',
-			'instagram' => 'Instagram',
-			'x'         => 'X',
-			'youtube'   => 'YouTube',
-			'pinterest' => 'Pinterest',
-			'linkedin'  => 'LinkedIn',
-		];
+		return \DSA\Link_Hub\Channel_Service::social_labels();
 	}
 
 	private function site_logo_url(): string {

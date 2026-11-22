@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Admin_Event_Notification_Service {
+	/** Optional engines can safely retain inbox-only behavior on an older Core. */
+	public static function supports_delivery_policy(): bool { return true; }
 	private const INBOX_META = 'dsa_admin_notification_inbox';
 	private $preferences;
 	private $push;
@@ -43,6 +45,7 @@ final class Admin_Event_Notification_Service {
 		add_action( 'transition_comment_status', [ $this, 'discussion_transition' ], 30, 3 );
 		add_action( 'kiwe_discussion_reaction_changed', [ $this, 'discussion_reaction' ], 20, 4 );
 		add_action( 'kiwe_form_submission_saved', [ $this, 'queue_form' ], 20 );
+		add_action( 'kiwe_link_enquiry_saved', [ $this, 'queue_link_enquiry' ], 20 );
 		add_action( 'kiwe_app_first_observed', [ $this, 'queue_app' ], 20 );
 		add_action( 'kiwe_campaign_finished', [ $this, 'queue_campaign' ], 20 );
 		add_action( 'kiwe_campaign_status_notification', [ $this, 'dispatch_campaign' ] );
@@ -102,7 +105,7 @@ final class Admin_Event_Notification_Service {
 			$eligible = array_values( array_filter( $eligible, $can_review ) );
 		}
 		if ( in_array( $topic, [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) ) {
-			$admit = static fn( $actor ) => \DSA\Discussion\Discussion_Notifications::visible_for( (int) $actor, [ 'type'=>$topic, 'objectId'=>absint( $event['objectId'] ?? 0 ) ] );
+			$admit = static fn( $actor ) => \DSA\Discussion\Feedback_Access::notification_visible_for( (int) $actor, [ 'type'=>$topic, 'objectId'=>absint( $event['objectId'] ?? 0 ) ] );
 			$native = array_values( array_filter( $native, $admit ) ); $eligible = array_values( array_filter( $eligible, $admit ) );
 		}
 		if ( 'admin_app_activity' === $topic ) {
@@ -127,14 +130,17 @@ final class Admin_Event_Notification_Service {
 		if ( isset( $event['severity'] ) ) $item['severity'] = sanitize_key( (string) $event['severity'] );
 		$this->store_inbox( $native, $item );
 		if ( ! empty( $event['inboxOnly'] ) ) return;
+		// An event owner can narrow delivery without changing inbox visibility,
+		// user preferences, verified recipients or the shared channel sender.
+		$delivery_channels = isset( $event['deliveryChannels'] ) && is_array( $event['deliveryChannels'] ) ? array_values( array_intersect( [ 'app','email','whatsapp','sms' ], $event['deliveryChannels'] ) ) : null;
 
 		$app_users = array_values( array_intersect( $eligible, $this->preferences->audience_user_ids_for_topic( 'app', $topic, $explicit ) ) );
-		if ( $app_users ) {
+		if ( $app_users && ( null === $delivery_channels || in_array( 'app', $delivery_channels, true ) ) ) {
 			$push_result = $this->push->send_to_users( $app_users, $title, $message, $url, [ 'eventId' => $event_id, 'eventType' => $topic, 'kicker' => $kicker ] );
 			$this->record_push_results( $event_id, $app_users, is_array( $push_result ) ? $push_result : [] );
 		}
 
-		$this->deliver_channels( $event_id, $topic, $title, $message, $url, $eligible );
+		$this->deliver_channels( $event_id, $topic, $title, $message, $url, $eligible, $delivery_channels );
 	}
 
 	private function account_notice( int $id, string $kind, string $title, string $message ): void {
@@ -369,8 +375,9 @@ final class Admin_Event_Notification_Service {
 
 	public function dispatch( string $event, int $object_id ): void {
 		if ( 'form_submission' === $event ) { $this->dispatch_form( $object_id ); return; }
+		if ( 'link_enquiry' === $event ) { $this->dispatch_link_enquiry( $object_id ); return; }
 		if ( 'app_observed' === $event ) { $this->dispatch_app( $object_id ); return; }
-		if ( in_array( $event, [ 'discussion_reply','discussion_status','discussion_like','discussion_heart','discussion_report' ], true ) ) { \DSA\Discussion\Discussion_Notifications::dispatch( $event, $object_id ); return; }
+		if ( in_array( $event, [ 'discussion_reply','discussion_status','discussion_like','discussion_heart','discussion_report' ], true ) ) { \DSA\Discussion\Feedback_Access::dispatch( $event, $object_id ); return; }
 		if ( 'abandoned_cart' === $event ) { $this->dispatch_saved_cart( $object_id ); return; }
 		if ( 'new_order' === $event ) {
 			$this->dispatch_order( $object_id );
@@ -425,7 +432,7 @@ final class Admin_Event_Notification_Service {
 		$object = absint( $item['objectId'] ?? 0 );
 		if ( 'admin_new_account' === $topic ) return \DSA\Access\Team_Workspace_Service::can_review_account_for( $id, $object );
 		if ( 'admin_app_activity' === $topic ) return \DSA\PWA\App_Activity_Service::notification_visible_for( $id, $object );
-		if ( in_array( $topic, [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) ) return \DSA\Discussion\Discussion_Notifications::visible_for( $id, $item );
+		if ( in_array( $topic, [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) ) return \DSA\Discussion\Feedback_Access::notification_visible_for( $id, $item );
 		if ( ! $object && in_array( $topic, [ 'admin_new_order','order_status' ], true ) && preg_match( '/^order-(\d+)(?:-|$)/', (string) ( $item['id'] ?? '' ), $match ) ) $object = (int) $match[1];
 		if ( 'admin_new_order' === $topic ) return $object > 0 && function_exists( 'wc_get_order' ) && wc_get_order( $object ) && user_can( $id, 'edit_shop_order', $object );
 		if ( 'order_status' === $topic ) { $order = $object && function_exists( 'wc_get_order' ) ? wc_get_order( $object ) : false; return $order && (int) $order->get_user_id() === $id; }
@@ -442,7 +449,7 @@ final class Admin_Event_Notification_Service {
 			if ( ! is_array( $item ) || ! empty( $item['acknowledgedAt'] ) || ! $preferences->topic_allowed_for_user( get_current_user_id(), sanitize_key( (string) ( $item['type'] ?? '' ) ) ) ) continue;
 			if ( 'admin_new_account' === ( $item['type'] ?? '' ) && ! \DSA\Access\Team_Workspace_Service::can_review_account_for( get_current_user_id(), absint( $item['objectId'] ?? 0 ) ) ) continue;
 			if ( 'admin_app_activity' === ( $item['type'] ?? '' ) && ! \DSA\PWA\App_Activity_Service::notification_visible_for( get_current_user_id(), absint( $item['objectId'] ?? 0 ) ) ) continue;
-			if ( in_array( $item['type'] ?? '', [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) && ! \DSA\Discussion\Discussion_Notifications::visible_for( get_current_user_id(), $item ) ) continue;
+			if ( in_array( $item['type'] ?? '', [ 'admin_new_comment','admin_comment_report','discussion_update' ], true ) && ! \DSA\Discussion\Feedback_Access::notification_visible_for( get_current_user_id(), $item ) ) continue;
 			$count++;
 		}
 		return $count;
@@ -493,11 +500,16 @@ final class Admin_Event_Notification_Service {
 		set_transient( $key, 1, HOUR_IN_SECONDS );
 		$scheduled = wp_schedule_single_event( time() + 3, 'dsa_admin_notification_event', [ $event, $object_id ] );
 		if ( false === $scheduled || is_wp_error( $scheduled ) ) {
-			if ( in_array( $event, [ 'new_comment','form_submission','app_observed' ], true ) || str_starts_with( $event, 'discussion_' ) ) { delete_transient( $key ); do_action( 'kiwe_discussion_notification_queue_unavailable', $event, $object_id ); return; }
+			if ( in_array( $event, [ 'new_comment','form_submission','link_enquiry','app_observed' ], true ) || str_starts_with( $event, 'discussion_' ) ) { delete_transient( $key ); do_action( 'kiwe_discussion_notification_queue_unavailable', $event, $object_id ); return; }
 			$this->dispatch( $event, $object_id );
 		}
 	}
 	public function queue_form( int $id ): void { $this->queue( 'form_submission', $id ); }
+	public function queue_link_enquiry( int $id ): void { $this->queue( 'link_enquiry', $id ); }
+	private function dispatch_link_enquiry( int $id ): void {
+		$record = \DSA\Link_Hub\Enquiry_Store::record( $id ); if ( ! $record ) return;
+		$this->dispatch_event( 'admin_form_submission', [ 'id'=>'link-enquiry-' . $id, 'objectId'=>$id, 'kicker'=>__( 'Forms', 'dsa' ), 'title'=>__( 'New link enquiry', 'dsa' ), 'message'=>__( 'An enquiry was saved through Links. Open Daily Forms to read it privately. External sending is not confirmed.', 'dsa' ), 'actionLabel'=>__( 'Read message', 'dsa' ), 'url'=>add_query_arg( [ 'submission'=>$id, 'submission_source'=>'links' ], \DSA\Access\Form_Workspace_Service::url() ) ] );
+	}
 	public function queue_app( int $id ): void { $this->queue( 'app_observed', $id ); }
 	private function dispatch_app( int $id ): void {
 		$this->dispatch_event( 'admin_app_activity', [ 'id'=>'app-observed-' . $id, 'objectId'=>$id, 'kicker'=>__( 'App', 'dsa' ), 'title'=>__( 'New app activity', 'dsa' ), 'message'=>__( 'A device first reported an app installation or opening. Review its observed activity and notification choices in Daily → App.', 'dsa' ), 'actionLabel'=>__( 'Review activity', 'dsa' ), 'url'=>\DSA\Access\App_Workspace_Service::url( 'activity' ) ] );
@@ -621,7 +633,7 @@ final class Admin_Event_Notification_Service {
 		$this->dispatch_event( 'admin_visitor_summary', [ 'id' => (string) $item['id'], 'kicker' => (string) $item['kicker'], 'title' => (string) $item['title'], 'message' => (string) $item['message'], 'actionLabel' => (string) $item['actionLabel'], 'url' => (string) $item['actionUrl'] ] );
 	}
 
-	private function deliver_channels( string $event_id, string $topic, string $title, string $message, string $url, array $eligible_user_ids = [] ): void {
+	private function deliver_channels( string $event_id, string $topic, string $title, string $message, string $url, array $eligible_user_ids = [], ?array $allowed_channels = null ): void {
 		if ( ! $this->channels ) {
 			return;
 		}
@@ -629,6 +641,7 @@ final class Admin_Event_Notification_Service {
 		$purpose = sanitize_key( $topic );
 		$delivery_message = trim( $title . "\n\n" . $message . ( $url ? "\n\n" . $url : '' ) );
 		foreach ( [ 'whatsapp', 'email', 'sms' ] as $channel ) {
+			if ( null !== $allowed_channels && ! in_array( $channel, $allowed_channels, true ) ) continue;
 			$audience = $this->preferences->audience_user_ids_for_topic( $channel, $topic, $eligible_user_ids );
 			if ( $eligible_user_ids ) $audience = array_values( array_intersect( $audience, $eligible_user_ids ) );
 			$audience = array_slice( $audience, 0, 100 );
@@ -645,7 +658,7 @@ final class Admin_Event_Notification_Service {
 					continue;
 				}
 				$context = [ 'purpose' => $purpose, 'user_id' => (int) $user_id ];
-				if ( 'whatsapp' === $channel && $this->preferences->user_accepts( (int) $user_id, 'email', $topic ) ) {
+				if ( 'whatsapp' === $channel && ( null === $allowed_channels || in_array( 'email', $allowed_channels, true ) ) && $this->preferences->user_accepts( (int) $user_id, 'email', $topic ) ) {
 					$context['fallback_email'] = $this->preferences->contact_for_user( (int) $user_id, 'email' );
 					$context['fallback_email_allowed'] = true;
 				}

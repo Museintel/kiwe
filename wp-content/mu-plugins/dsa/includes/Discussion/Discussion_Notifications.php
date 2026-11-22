@@ -45,7 +45,7 @@ final class Discussion_Notifications {
 			$title = __( 'Your comment received a like', 'dsa' ); $message = __( 'Someone appreciated your contribution. Open the conversation to see it.', 'dsa' );
 		}
 		if ( ! $user || ! $title || ! Public_Identity::verified( $user ) ) return;
-		$url = add_query_arg( [ 'kiwe-screen'=>'comments', 'kiwe-discussion'=>(int) $post->ID, 'kiwe-comment'=>$id ], get_permalink( $post ) );
+		$url = add_query_arg( [ 'kiwe-screen'=>'comments', 'kiwe-discussion'=>(int) $post->ID, 'kiwe-comment'=>$id ], Site_Conversation::owns($post)?home_url('/'):get_permalink( $post ) );
 		do_action( 'kiwe_notification_event', 'discussion_update', [ 'id'=>$event . '-' . $id . ( 'discussion_like' === $event ? '-' . gmdate( 'Ymd' ) : '' ), 'objectId'=>$id, 'userIds'=>[ $user ], 'title'=>$title, 'message'=>$message, 'url'=>$url, 'actionLabel'=>__( 'Open conversation', 'dsa' ) ] );
 	}
 }

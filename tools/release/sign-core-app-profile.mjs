@@ -13,7 +13,9 @@ for(const root of[profile,output])if(root===repo||root.startsWith(repo+path.sep)
 const source=path.join(repo,'wp-content/mu-plugins'),stage=path.join(profile,'mu-plugins');
 const ownership=JSON.parse(await fs.readFile(path.join(repo,'tools/release/apps-ownership.json'),'utf8'));
 const buildProfile=JSON.parse(await fs.readFile(path.join(profile,'build.json'),'utf8'));
-const bundled=buildProfile.bundledApps||[];if(bundled.some(id=>!['guest','ai','sitegraph'].includes(id))||new Set(bundled).size!==bundled.length)throw Error('Unknown bridge App.');
+const bundled=buildProfile.bundledApps||[];if(new Set(bundled).size!==bundled.length||!['','ai,guest,sitegraph'].includes([...bundled].sort().join(',')))throw Error('Unknown bridge App.');
+const compatibilityCoreApi=buildProfile.compatibilityCoreApi??ownership.coreApi;
+if(compatibilityCoreApi!==ownership.coreApi&&!(compatibilityCoreApi===3&&ownership.coreApi===4&&!bundled.length))throw Error('Unknown Core compatibility bridge.');
 const optional=new Set(Object.entries(ownership.apps).filter(([id])=>!bundled.includes(id)).flatMap(([,app])=>app.files));
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 const text=new Set(['.css','.html','.js','.json','.md','.php','.svg','.txt','.xml']);
@@ -32,8 +34,10 @@ for(const file of[path.join(source,'dsa.php'),path.join(source,'kiwe-incident-gu
 }
 const manifestBody=await fs.readFile(path.join(stage,'dsa/package-manifest.json'));
 const manifest=JSON.parse(manifestBody),build=JSON.parse(await fs.readFile(path.join(profile,'build.json'),'utf8'));
-if(manifest.schema!==1||manifest.algorithm!=='sha256'||manifest.apps?.profile!=='core'||manifest.apps?.coreApi!==(bundled.length?1:ownership.coreApi)||manifest.version!==build.version||manifest.file_count!==Object.keys(manifest.files).length)throw Error('A complete Core App profile is required.');
-for(const id of Object.keys(ownership.apps).filter(id=>!bundled.includes(id)))if(manifest.apps.minimum?.[id]!==ownership.apps[id].minimumVersion||!/^\d+\.\d+\.\d+(?:-(?:rc|beta|alpha)\.[1-9]\d*)?$/.test(manifest.apps.minimum?.[id]||''))throw Error('Every App minimum needs an exact compatible version.');
+if(manifest.schema!==1||manifest.algorithm!=='sha256'||manifest.apps?.profile!=='core'||manifest.apps?.coreApi!==compatibilityCoreApi||manifest.version!==build.version||manifest.file_count!==Object.keys(manifest.files).length)throw Error('A complete Core App profile is required.');
+const minimum=Object.fromEntries(Object.entries(ownership.apps).filter(([id])=>!bundled.includes(id)&&(compatibilityCoreApi!==3||id!=='mcp')).map(([id,app])=>[id,app.minimumVersion]));
+if(JSON.stringify(manifest.apps.minimum)!==JSON.stringify(minimum))throw Error('The exact native App compatibility floor changed.');
+for(const id of Object.keys(minimum))if(manifest.apps.minimum?.[id]!==ownership.apps[id].minimumVersion||!/^\d+\.\d+\.\d+(?:-(?:rc|beta|alpha)\.[1-9]\d*)?$/.test(manifest.apps.minimum?.[id]||''))throw Error('Every declared App minimum needs an exact compatible version.');
 for(const[name,body]of expected){
  const actual=await fs.readFile(path.join(stage,name));if(!actual.equals(body))throw Error('The profile differs from current canonical source: '+name);
  if(name.startsWith('dsa/')){const proof=manifest.files[name.slice(4)];if(proof?.sha256!==hash(body)||proof.bytes!==body.length)throw Error('The inner manifest does not commit this Core file: '+name);}

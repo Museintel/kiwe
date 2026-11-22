@@ -3,6 +3,9 @@ declare(strict_types=1);
 namespace {
 	$root = sys_get_temp_dir().DIRECTORY_SEPARATOR.'kiwe-organization-qa-'.bin2hex( random_bytes(6) ); mkdir( $root.'/public_html',0700,true );
 	define( 'ABSPATH',$root.'/public_html/' ); define( 'DAY_IN_SECONDS',86400 ); define( 'DSA_OPTION_SETTINGS','dsa_settings' );
+	require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
+	define('WC_VERSION','11.2.1'); function WC(){return new \stdClass();}
+	require_once __DIR__.'/../../wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php';
 	$checks = []; $options = []; $transients = []; $terms = []; $termMeta = []; $users = []; $userMeta = []; $menus = []; $items = []; $caps = []; $signedIn = true; $owner = true; $actor = 1; $product = false; $failUser = 0; $site = 'https://organization.example.test/';
 	function current_user_can( $cap,...$args ) { return $GLOBALS['caps'][$cap.( $args ? ':'.$args[0] : '' )] ?? $GLOBALS['caps'][$cap] ?? true; }
 	function is_user_logged_in() { return $GLOBALS['signedIn']; }

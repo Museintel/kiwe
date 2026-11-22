@@ -518,17 +518,29 @@ function stp_tarpit_response() {
 }
 
 function stp_waf_normalize( $value ) {
-	$s = strtolower( (string) $value );
+	$s = (string) $value;
+	// A small fixed decode budget handles the native URI/form layers without
+	// an attacker-controlled loop. Decode before Unicode normalization.
+	for ( $i = 0; $i < 2; $i++ ) {
+		$decoded = html_entity_decode( rawurldecode( $s ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		if ( $decoded === $s ) break;
+		$s = $decoded;
+	}
+	$s = strtolower( $s );
 	$s = strtr( $s, array(
 		'Ｕ' => 'u', 'Ｎ' => 'n', 'Ｉ' => 'i', 'Ｏ' => 'o', 'Ｓ' => 's', 'Ｅ' => 'e', 'Ｌ' => 'l', 'Ｃ' => 'c', 'Ｔ' => 't',
 		'ｕ' => 'u', 'ｎ' => 'n', 'ｉ' => 'i', 'ｏ' => 'o', 'ｓ' => 's', 'ｅ' => 'e', 'ｌ' => 'l', 'ｃ' => 'c', 'ｔ' => 't',
 		'（' => '(', '）' => ')', '／' => '/', '＊' => '*', '％' => '%', '＝' => '=', '＇' => "'", '＂' => '"', '－' => '-',
 	) );
-	$s = preg_replace( '/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $s );
-	$s = rawurldecode( $s );
-	$s = html_entity_decode( $s, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-	$s = preg_replace( '#/\*!?\d*|\*/|--|#.*$#m', ' ', $s );
-	$s = preg_replace( '/\/\*.*?\*\//s', ' ', $s );
+	// Malformed UTF-8 must not erase the remaining byte-level attack signals.
+	$s = preg_replace( '/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $s ) ?? $s;
+	// MySQL executable comments retain their body; ordinary block comments
+	// separate tokens. CSS colours, URL fragments and double hyphens in names
+	// are data, not SQL comments across an entire JSON request.
+	$s = preg_replace( '~/\*![0-9]{0,6}\s*(.*?)\*/~s', ' $1 ', $s );
+	$s = preg_replace( '~/\*.*?\*/~s', ' ', $s );
+	$s = preg_replace( '~--(?=\s|$)[^\r\n]*~', ' ', $s );
+	$s = preg_replace( '~\b(union|all|select)\s*\#[^\r\n]*(?=[\r\n])~', '$1 ', $s );
 	$s = preg_replace( '/\s+/', ' ', $s );
 	return trim( $s );
 }
@@ -556,7 +568,11 @@ function stp_scan_payload( $payload ) {
 		$score += $pts;
 	};
 
-	if ( preg_match( '/\bunion\s+(?:all\s+)?select\b|\bselect\b.+\bfrom\b|\binformation_schema\b|\bsleep\s*\(|\bbenchmark\s*\(/i', $n ) ) $add( 85, 'semantic_sqli' );
+	if ( preg_match( '/\bunion\s+(?:all\s+)?select\b|\binformation_schema\b|\b(?:select|and|or)\s+(?:\([^)]{0,80}\)\s*)?(?:sleep|benchmark)\s*\(/i', $n ) ) $add( 85, 'semantic_sqli' );
+	// "Select your size from our range" is ordinary editorial/checkout text.
+	// A standalone read expression is only a weak signal; strong SQL syntax
+	// above or corroborating injection syntax is needed for the default block.
+	if ( preg_match( '/\bselect\s+(?:\*|[a-z_][a-z0-9_]*(?:\s*,\s*[a-z_][a-z0-9_]*)*)\s+from\s+[a-z_][a-z0-9_]*/i', $n ) ) $add( 25, 'sql_read_expression' );
 	if ( preg_match( '/\bor\s+[\'"]?\d+[\'"]?\s*=\s*[\'"]?\d+|\band\s+[\'"]?\w+[\'"]?\s*=\s*[\'"]?\w+/i', $n ) ) $add( 55, 'boolean_sqli' );
 	if ( preg_match( '/<\s*script\b|javascript\s*:|on(?:error|load|mouseover)\s*=|document\s*\.\s*cookie/i', $n ) ) $add( 75, 'semantic_xss' );
 	if ( preg_match( '/(?:eval|assert|system|shell_exec|passthru|proc_open|popen)\s*\(|base64_decode\s*\(|array_map\s*\(\s*[\'"]assert/i', $n ) ) $add( 90, 'php_payload' );
@@ -569,8 +585,11 @@ function stp_scan_payload( $payload ) {
 
 function stp_request_payload() {
 	$parts = array( $_SERVER['REQUEST_URI'] ?? '' );
-	foreach ( array( $_GET, $_POST ) as $src ) {
+	$deferred = in_array( strtoupper((string)($_SERVER['REQUEST_METHOD']??'')), ['POST','PUT','PATCH'], true ) && true === apply_filters('kiwe_securetrack_defer_native_body',false);
+	$authored = !$deferred && in_array( strtoupper((string)($_SERVER['REQUEST_METHOD']??'')), ['POST','PUT','PATCH'], true ) ? \DSA\Secure\SecureTrack_Payload_Service::authored_fields() : [];
+	foreach ( array( $_GET, $deferred ? [] : $_POST ) as $source_index => $src ) {
 		foreach ( (array) $src as $k => $v ) {
+			if($source_index===1&&in_array($k,$authored,true))continue;
 			if ( is_array( $v ) ) $v = wp_json_encode( $v );
 			$parts[] = $k . '=' . (string) $v;
 		}
@@ -580,13 +599,15 @@ function stp_request_payload() {
 			$parts[] = $k . '=' . substr( sanitize_text_field( is_array( $v ) ? wp_json_encode( $v ) : (string) $v ), 0, 200 );
 		}
 	}
-	if ( isset( $GLOBALS['HTTP_RAW_POST_DATA'] ) && is_string( $GLOBALS['HTTP_RAW_POST_DATA'] ) ) {
-		$parts[] = substr( $GLOBALS['HTTP_RAW_POST_DATA'], 0, 250000 );
+	if ( !$deferred && isset( $GLOBALS['HTTP_RAW_POST_DATA'] ) && is_string( $GLOBALS['HTTP_RAW_POST_DATA'] ) ) {
+		$parts[] = \DSA\Secure\SecureTrack_Payload_Service::body(substr( $GLOBALS['HTTP_RAW_POST_DATA'], 0, 250000 ),$authored);
 	}
+	if($deferred)return implode("\n",$parts); // The exact native MCP resource authenticates before inspecting its envelope.
 	$fh = fopen( 'php://input', 'rb' );
 	$raw = $fh ? stream_get_contents( $fh, 250000 ) : '';
 	if ( $fh ) fclose( $fh );
 	if ( is_string( $raw ) && $raw !== '' ) {
+		$raw = \DSA\Secure\SecureTrack_Payload_Service::body($raw,$authored);
 		$parts[] = $raw;
 		$json = json_decode( $raw, true );
 		if ( is_array( $json ) ) {
@@ -608,14 +629,11 @@ function stp_waf_guard() {
 		stp_tarpit_response();
 		wp_die( 'Temporarily rate limited', 'Rate limited', array( 'response' => 429 ) );
 	}
-	if ( ! empty( stp_cfg()['honeypot_enabled'] ) && $path === stp_honeypot_path() ) {
-		global $wpdb;
-		if ( ! stp_tables_ready() ) wp_die( 'Forbidden', 'Forbidden', array( 'response' => 403 ) );
-		$ip_row = stp_upsert_ip( $ip );
-		$wpdb->update( stp_t( 'ips' ), array( 'status' => 'blocked', 'risk_score' => 100, 'blocked_at' => current_time( 'mysql' ), 'notes' => 'Honeypot endpoint hit' ), array( 'id' => (int) $ip_row->id ) );
-		stp_log( 'waf_block', array( 'sub' => 'honeypot_hit', 'url' => home_url( stp_honeypot_path() ), 'waf_score' => 100, 'extra' => array( 'honeypot' => true ) ) );
-		stp_tarpit_response();
-		wp_die( 'Forbidden', 'Forbidden', array( 'response' => 403 ) );
+	if ( $path === stp_honeypot_path() && in_array( strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ), array( 'GET', 'HEAD' ), true ) ) {
+		// Cached pages and crawler queues may retain the retired hidden link.
+		// Return an ordinary missing resource without changing IP/risk state.
+		nocache_headers();
+		wp_die( 'Not found', 'Not found', array( 'response' => 404 ) );
 	}
 	if ( stp_is_static_request() ) return;
 	$scan = stp_scan_payload( stp_request_payload() );
@@ -2867,9 +2885,7 @@ add_action( 'xmlrpc_call', function ( $method ) {
 
 add_action( 'wp_footer', function () {
 	$cfg = stp_cfg();
-	if ( ! empty( $cfg['honeypot_enabled'] ) ) {
-		echo '<a href="' . esc_url( home_url( stp_honeypot_path() ) ) . '" rel="nofollow" aria-hidden="true" tabindex="-1" style="position:absolute;left:-99999px;top:auto;width:1px;height:1px;overflow:hidden">.</a>' . "\n";
-	}
+	// Never publish a link that penalizes legitimate crawlers for following it.
 	if ( empty( $cfg['track_visitors'] ) || empty( $cfg['track_pages'] ) || ( ! empty( $cfg['exclude_admin'] ) && current_user_can( 'manage_options' ) ) ) return;
 	stp_diag( 'last_wp_footer', array( 'url' => $_SERVER['REQUEST_URI'] ?? '/', 'time' => current_time( 'mysql' ) ) );
 	$tok  = stp_session_token();

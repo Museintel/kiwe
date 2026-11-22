@@ -37,9 +37,11 @@ const shell=read('wp-content/mu-plugins/dsa/includes/Access/Workspace_Shell_Serv
 if(!shell.includes('Site_Identity_Service::workspace_brand()')||!shell.includes('task_catalog()'))throw Error('PHP Home fallback must retain site identity and role-derived catalog');
 
 const continuity=read('tools/workspace-prototype/native-continuity.jsx');
-for(const token of ['continuity-page-tabs','continuity-page-filters','continuity-library-tabs','continuity-library-filters','continuity-feedback-tabs','continuity-feedback-filters','continuity-service-tabs','continuity-service-filters','RecordCardFooter']){
+for(const token of ['continuity-page-tabs','continuity-page-filters','continuity-library-tabs','continuity-library-filters','continuity-service-tabs','continuity-service-filters','RecordCardFooter']){
  if(!continuity.includes(token))throw Error('Pages, feedback, services, or Design Library lost shared collection anatomy: '+token);
 }
+const feedback=read('tools/workspace-prototype/feedback-app-entry.jsx');
+for(const token of ['kiwe-task-filters','continuity-feedback-stack','FeedbackCard','WorkspaceHeader'])if(!feedback.includes(token))throw Error('The independent Feedback timeline lost shared collection anatomy: '+token);
 const navigation=read('tools/workspace-prototype/native-navigation.jsx');
 for(const token of ['native-nav-tabs','native-nav-filters','Find a menu category','+ New menu category'])if(!navigation.includes(token))throw Error('Navigation lost shared collection anatomy: '+token);
 if(!navigation.includes("openLinks(null,menu.id)")||!navigation.includes('>+ New link</button>'))throw Error('Navigation links must be created inside their destination menu category');

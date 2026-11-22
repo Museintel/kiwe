@@ -33,8 +33,14 @@
     bar.value = state.mediaDone + state.templatesDone + (['templates', 'complete'].indexOf(state.status) >= 0 ? 1 : 0);
     bar.setAttribute('aria-label', 'Design import progress');
     if (state.status === 'review') {
-      text('p', state.styles.length + ' native style changes; ' + state.stylesReused + ' existing styles reused. Shared variables and the active Framework can affect existing pages and Kiwe surfaces.');
-      if (state.styles.length) { var details = text('details', ''); text('summary', 'Review shared style changes', details); var list = text('ul', '', details); state.styles.forEach(function (item) { text('li', item.action + ': ' + item.kind + ' — ' + item.name, list); }); }
+      var isolated = state.policy === 'isolated-draft-v1';
+      text('p', state.styles.length + ' native style changes; ' + state.stylesReused + ' existing styles reused. ' + (isolated ? 'Adds only project styles. Your active Framework, shared styles and website routes stay in place.' : 'Shared variables and the active Framework can affect existing pages and Kiwe surfaces.'));
+      if (state.archiveSha256) text('p', 'ZIP fingerprint (SHA-256): ' + state.archiveSha256);
+      if (state.reviewTemplates && state.reviewTemplates.length) {
+        var templates = text('ul', '');
+        state.reviewTemplates.forEach(function (item) { text('li', item.title + ' · ' + item.type + ' · ' + item.elements + ' native elements · ' + (item.conditions || 0) + ' placement conditions' + (item.sourceCode ? ' · source code requires native HTML permission' : ''), templates); });
+      }
+      if (state.styles.length) { var details = text('details', ''); text('summary', isolated ? 'Review project style additions' : 'Review shared style changes', details); var list = text('ul', '', details); state.styles.forEach(function (item) { text('li', item.action + ': ' + item.kind + ' — ' + item.name, list); }); }
       (state.blockers || []).forEach(function (message) { text('p', message); });
       if (!state.blockers.length) button('Import media, styles and draft templates', async function () { await act('approve', true); });
     }

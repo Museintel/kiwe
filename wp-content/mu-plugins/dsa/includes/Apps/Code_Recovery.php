@@ -32,10 +32,11 @@ final class Code_Recovery {
   foreach(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root,\FilesystemIterator::SKIP_DOTS),\RecursiveIteratorIterator::CHILD_FIRST)as$file){$ok=$file->isDir()?rmdir($file->getPathname()):unlink($file->getPathname());if(!$ok)throw new \RuntimeException('App file cleanup could not finish.');}
   if(!rmdir($root))throw new \RuntimeException('App directory cleanup could not finish.');
  }
- public static function prepare(array $release): array {
+ public static function prepare(array $release,string $installation_job=''): array {
+  if($installation_job!==''&&!preg_match('/^[a-f0-9-]{36}$/D',$installation_job))throw new \RuntimeException('Exact native installation job required.');
   if(!Signed_Packet::release($release))throw new \RuntimeException('Authenticated App recovery requires a signed release.');
-  Native_State::filesystem();$id=$release['id'];$pending=self::state($id);if(is_file(self::marker($id))&&$pending&&!in_array($pending['phase']??'',['accepted','recovered'],true))throw new \RuntimeException('Finish or recover the pending App installation first.');$old=self::state($id);
-  if($old&&!in_array($old['phase']??'',['accepted','recovered'],true))throw new \RuntimeException('Finish or recover the previous App update first.');
+  Native_State::filesystem();$id=$release['id'];$pending=self::state($id);if(is_file(self::marker($id))&&$pending&&!in_array($pending['phase']??'',['accepted','recovered','removed'],true))throw new \RuntimeException('Finish or recover the pending App installation first.');$old=self::state($id);
+  if($old&&!in_array($old['phase']??'',['accepted','recovered','removed'],true))throw new \RuntimeException('Finish or recover the previous App update first.');
   $id=$release['id'];$root=self::root($id);$known=(array)get_option(self::RELEASES,[]);$prior=$known[$id]??null;$before=self::fingerprint($root);
   if($before){if(!is_array($prior)){Package_Verifier::directory($root,$release);$prior=$release;}else Package_Verifier::directory($root,$prior);}
   $base=wp_normalize_path(\DSA\Runtime\Release_Storage::apps());
@@ -44,13 +45,24 @@ final class Code_Recovery {
   // Preserve the current version before retiring its superseded recovery copy.
   if($old&&!empty($old['backup'])&&(file_exists($old['backup'])||is_link($old['backup'])))self::retire($old);
   $active=(array)get_option('active_plugins',[]);$position=array_search('kiwe-'.$id.'/kiwe-'.$id.'.php',$active,true);
-  $state=['schema'=>1,'id'=>$id,'phase'=>'placing','release'=>$release,'priorRelease'=>$prior,'before'=>$before,'active'=>is_plugin_active('kiwe-'.$id.'/kiwe-'.$id.'.php'),'activePosition'=>$position===false?count($active):$position,'backup'=>$backup,'createdAt'=>time()];self::write($state);
+  $state=['schema'=>1,'id'=>$id,'phase'=>'placing','release'=>$release,'priorRelease'=>$prior,'before'=>$before,'active'=>is_plugin_active('kiwe-'.$id.'/kiwe-'.$id.'.php'),'activePosition'=>$position===false?count($active):$position,'backup'=>$backup,'createdAt'=>time()];if($installation_job!=='')$state['installationJob']=$installation_job;self::write($state);
   if(file_put_contents(self::marker($id),$id,LOCK_EX)!==strlen($id))throw new \RuntimeException('The App boot recovery marker could not be written.');
   return$state;
  }
  public static function awaiting_boot(string $id): void {
   $s=self::state($id);if(!$s||!in_array($s['phase']??'',['placing','awaiting_boot','accepted'],true))throw new \RuntimeException('No App installation is awaiting verification.');
   Package_Verifier::directory(self::root($s['id']),$s['release']);$s['phase']='awaiting_boot';self::write($s);if(file_put_contents(self::marker($id),$id,LOCK_EX)!==strlen($id))throw new \RuntimeException('The App boot marker could not be confirmed.');
+ }
+ /** A normal native uninstall retains one authenticated immediate code recovery. */
+ public static function removed(string $id): void {
+  $s=self::state($id);if(!$s||($s['phase']??'')!=='placing'||is_dir(self::root($id)))throw new \RuntimeException('The App removal could not be confirmed.');
+  $s['phase']='removed';$s['removedAt']=time();self::write($s);if(is_file(self::marker($id)))unlink(self::marker($id));
+ }
+ /** A failed native delete may leave only an unchanged subset of our authenticated code. */
+ public static function recover_removal(string $id): void {
+  $s=self::state($id);if(!$s||($s['phase']??'')!=='placing')throw new \RuntimeException('No owned App removal can be recovered.');
+  foreach(self::fingerprint(self::root($id))as$name=>$proof)if(($s['before'][$name]??null)!==$proof)throw new \RuntimeException('Newer App files were preserved. Ask the website manager to review recovery.');
+  self::recover(false,$id);
  }
  /** Resume only the native activation choice captured before WordPress's silent update deactivation. */
  public static function restore_activation(string $id): void {
@@ -97,7 +109,7 @@ final class Code_Recovery {
   },PHP_INT_MAX);
  }
  public static function recover(bool $strict=true,string $id=''): void {
-  $s=self::state($id);if(!$s||!in_array($s['phase']??'',['placing','awaiting_boot','accepted','recovering'],true))throw new \RuntimeException('No immediate App recovery is available.');
+  $s=self::state($id);if(!$s||!in_array($s['phase']??'',['placing','awaiting_boot','accepted','removed','recovering'],true))throw new \RuntimeException('No immediate App recovery is available.');
   $root=self::root($s['id']);
   // A first install that placed no code already has its exact absent original.
   // Cancelling it must not require an empty recovery directory to survive.
@@ -122,7 +134,18 @@ final class Code_Recovery {
   if($s['before']&&!$already_restored&&!rename($original,$root))throw new \RuntimeException('The original App directory could not be restored.');
   self::complete_recovery($s,$root);
  }
+ /** A private backup may inherit0700/0600. Restored public plugin assets need native WordPress modes. */
+ private static function public_permissions(string $root,array $expected): void {
+  if(self::fingerprint($root)!==$expected)throw new \RuntimeException('Only the exact original App may receive public plugin permissions.');
+  Native_State::filesystem();$directory=defined('FS_CHMOD_DIR')?FS_CHMOD_DIR:0755;$file=defined('FS_CHMOD_FILE')?FS_CHMOD_FILE:0644;
+  if(!chmod($root,$directory))throw new \RuntimeException('The recovered App directory permissions could not be restored.');
+  foreach(new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root,\FilesystemIterator::SKIP_DOTS),\RecursiveIteratorIterator::SELF_FIRST)as$entry){
+   if($entry->isLink()||!chmod($entry->getPathname(),$entry->isDir()?$directory:$file))throw new \RuntimeException('The recovered App asset permissions could not be restored.');
+  }
+  if(self::fingerprint($root)!==$expected)throw new \RuntimeException('Recovered App code changed while restoring native permissions.');
+ }
  private static function complete_recovery(array $s,string $root): void {
+  if($s['before'])self::public_permissions($root,$s['before']);
   self::activation_choice($s);
   $known=(array)get_option(self::RELEASES,[]);if(is_array($s['priorRelease']))$known[$s['id']]=$s['priorRelease'];else unset($known[$s['id']]);update_option(self::RELEASES,$known,false);
   wp_clean_plugins_cache(true);foreach($s['before']as$name=>$proof)if(function_exists('opcache_invalidate'))@opcache_invalidate($root.'/'.$name,true);

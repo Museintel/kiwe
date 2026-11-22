@@ -6,7 +6,7 @@ namespace DSA\Commerce {
  class Cart_Payload_Service {function product_total(){return '$440.00';}function discount_summary(bool $productsOnly=false){return ['productsOnly'=>$productsOnly];}}
 }
 namespace {
- define('ABSPATH',__DIR__.'/');
+ define('ABSPATH',__DIR__.'/');class WP_Error {function __construct(public bool $failed=false){}function has_errors(){return$this->failed;}}
 require_once __DIR__.'/fixtures/app-runtime-autoloader.php';
 require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_App_Service.php';$checks=[];$allowed=true;$options=[];$saves=0;
  function check($ok,$label){if(!$ok)throw new \RuntimeException($label);$GLOBALS['checks'][]=$label;}
@@ -26,7 +26,7 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
   function set_shipping_email($v){$this->values['shipping_email']=$v;}function get_shipping_email(){return $this->values['shipping_email']??'';}
  }
  class DraftCart {public bool $needs=true,$address=true,$inclusive=false;function needs_shipping(){return $this->needs;}function needs_shipping_address(){return $this->needs&&$this->address;}function get_cart_contents_count(){return 2;}function get_total($context='view'){return $context==='edit'?523.16:'$523.16';}function get_cart_contents_total(){return 440;}function get_cart_contents_tax(){return 44;}function display_prices_including_tax(){return $this->inclusive;}function calculate_totals(){throw new \RuntimeException('Unexpected recalculation');}}
- class DraftCheckout {
+ class DraftCheckout {function is_registration_required(){return $GLOBALS['registrationRequired']??false;}
   function get_checkout_fields(){return ['billing'=>['billing_email'=>['type'=>'email','required'=>true,'label'=>'Email'],'billing_city'=>['type'=>'text','required'=>true,'label'=>'City'],'billing_country'=>['type'=>'text','required'=>true,'label'=>'Country']],'shipping'=>['shipping_city'=>['type'=>'text','required'=>true,'label'=>'Shipping city'],'shipping_country'=>['type'=>'text','required'=>true,'label'=>'Shipping country']],'order'=>['order_comments'=>['type'=>'textarea','required'=>false,'label'=>'Notes']]];}
   function get_value($key){return '';}
  }
@@ -57,6 +57,16 @@ require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Apps/Store_
  $allowed=false;check(!$service->available(),'Purchase identity gate still denies checkout');$allowed=true;
  \DSA\Commerce\Store_Recovery_Gate_Service::$paused=true;check(!$service->available(),'Recovery pause still denies checkout');\DSA\Commerce\Store_Recovery_Gate_Service::$paused=false;
  $settings->enabled=false;check(!$service->available(),'Disabled Surface remains inert');$settings->enabled=true;
+ check($service->contact_checkout_value(null,'billing_phone')===null,'Older Core without contact owner retains native checkout behavior');
+ eval('namespace DSA\\Identity; class Form_Contact_Service {static function prefill(){return ["name"=>"Own Subscriber","first_name"=>"Own","last_name"=>"Subscriber","email"=>"own@example.test","phone"=>"+919111111111"];}static function capture($v){$GLOBALS["subscriberCaptures"][]=$v;}}');
+ check($service->contact_checkout_value(null,'billing_phone')==='+919111111111','Own pending phone fills an empty native checkout default');
+ check($service->contact_checkout_value('native@example.test','billing_email')==='native@example.test','Existing Woo or plugin value wins over contact prefill');
+ check($service->contact_checkout_value(null,'shipping_city')===null,'Contact helper cannot prefill shipping/address fields');
+ $service->capture_subscriber(['billing_email'=>'new@example.test'],new WP_Error(true));check(empty($subscriberCaptures),'Rejected native checkout creates no subscriber');
+ $service->capture_subscriber(['billing_email'=>'new@example.test','createaccount'=>1],new WP_Error());check(empty($subscriberCaptures),'Explicit Woo customer creation is not preempted by pending subscriber');
+ $registrationRequired=true;$service->capture_subscriber(['billing_email'=>'new@example.test'],new WP_Error());check(empty($subscriberCaptures),'Woo required account creation keeps ownership');$registrationRequired=false;
+ $service->capture_subscriber(['billing_email'=>'new@example.test'],new WP_Error());check(count($subscriberCaptures)===1,'Admitted complete guest checkout uses shared subscriber owner');
+ $service->save_draft($billing,false);check(count($subscriberCaptures)===1,'Partial checkout autosave never captures another subscriber');
  $service->clear_after_order();check($wc->session->get('dsa_checkout_draft')===[]&&$wc->session->get('dsa_checkout_errors')===[],'Native completion clears owned draft and errors');
  echo json_encode(['passed'=>true,'checks'=>count($checks),'scope'=>'Actual Checkout_Service with synthetic native boundaries; no order, database, delivery or native integration proof']).PHP_EOL;
 }

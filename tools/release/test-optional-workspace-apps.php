@@ -14,14 +14,15 @@ class OptionalDatabase{public $prefix='fixture_';public $held=false;function pre
 $wpdb=new OptionalDatabase();
 function check($v,$label){$GLOBALS['checks'][$label]=(bool)$v;if(!$v)throw new RuntimeException($label);}
 try{
- foreach(['guest','ai','sitegraph']as$id){$owner=DSA\Apps\Runtime_Registry::owner($id);check(!$owner::enabled(),'Missing optional App stays off '.$id);}
+ foreach(['guest','ai','sitegraph','mcp']as$id){$owner=DSA\Apps\Runtime_Registry::owner($id);check(!$owner::enabled(),'Missing optional App stays off '.$id);}
  check(DSA\Apps\Guest_App_Service::change(true,DSA\Apps\Guest_App_Service::expected()) instanceof WP_Error&&!$writes,'Missing Guest package cannot be enabled or create a shadow state');
  $caps=[];check(DSA\Apps\AI_App_Service::change(true,DSA\Apps\AI_App_Service::expected()) instanceof WP_Error&&!$writes,'Role cannot enable AI');
  $broker=new DSA\AI\AI_Broker_Service(new DSA\Settings());check(!class_exists('DSA\\AI\\AI_Provider_Service',false),'Constructing the shared broker does not load absent paid transport');
  $status=$broker->status();check(!$status['provider']['configured']&&$status['provider']['reason']==='ai_app_unavailable','Absent AI has an honest inert provider status');
  $result=$broker->request(['service'=>'studio','capability'=>'draft','user'=>'Synthetic prompt']);check($result['called']===false&&$result['reason']==='ai_app_unavailable'&&!$writes,'Absent AI cannot send reserve or audit a paid request');
  $prompt=$broker->build_prompt(['business'=>['name'=>'Example']],'Create a homepage');check(str_contains($prompt['user'],'Example')&&str_contains($prompt['user'],'Create a homepage')&&!class_exists('DSA\\AI\\AI_Provider_Service',false),'Complete deterministic external authoring prompt remains without AI');
- check(DSA\Apps\Runtime_Contract::IDS===['seo','store','guest','ai','sitegraph'],'Five independent software identities are fixed');
+ check(DSA\Apps\Runtime_Contract::IDS===['seo','store','guest','ai','sitegraph','mcp'],'Independent software identities include optional MCP and exclude built-in Feedback');
+ check(DSA\Discussion\Feedback_Access::enabled()&&!method_exists(DSA\Apps\Feedback_App_Service::class,'change'),'Feedback remains built in without an optional provider or App switch');
  $contract=['schema'=>'kiwe.app-provider.v1','id'=>'guest','coreApi'=>2,'version'=>'1.0.0','requiresPhp'=>'8.2','requiresWp'=>'7.1','requiresWoo'=>'','namespaces'=>[],'classes'=>['DSA\\Access\\Guest_Engine_Service'=>'includes/Access/Guest_Engine_Service.php'],'assets'=>[]];
  check(DSA\Apps\Runtime_Contract::validate($contract),'Exact optional Guest class is admitted');$contract['classes']['DSA\\Security\\Secret_Store']='includes/Access/Guest_Engine_Service.php';check(!DSA\Apps\Runtime_Contract::validate($contract),'Guest cannot claim a Core security class');
  require $base.'Backup/Configuration_Snapshot_Service.php';$recovery=DSA\Backup\Configuration_Snapshot_Service::option_groups()['Kiwe'];

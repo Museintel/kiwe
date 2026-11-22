@@ -7,10 +7,11 @@ if (!defined('ABSPATH')) exit;
 
 /** Core business goal and native record privacy; no output, rewrite, import or scheduled hooks. */
 class SEO_Context_Service {
+	public static function goal_options(): array {return ['buy'=>'Sales','contact'=>'Enquiries','book'=>'Bookings','visit'=>'Visits','subscribe'=>'Subscriptions','donate'=>'Donations','read'=>'Readership'];}
 	public static function goal(): array {
 		$context = get_option( Design_Context_Profile_Service::OPTION_PROFILE, [] );
 		$seo = is_array( $context ) && is_array( $context['seo'] ?? null ) ? $context['seo'] : [];
-		$labels = [ 'buy'=>'Sales', 'contact'=>'Enquiries', 'book'=>'Bookings', 'visit'=>'Visits', 'subscribe'=>'Subscriptions', 'donate'=>'Donations', 'read'=>'Readership' ];
+		$labels = self::goal_options();
 		$key = is_string( $seo['primaryGoal'] ?? null ) && isset( $labels[$seo['primaryGoal']] ) ? $seo['primaryGoal'] : '';
 		return [ 'key'=>$key, 'label'=>$labels[$key] ?? 'Choose your SEO goal', 'searchIntent'=>\DSA\Access\Task_Workspace_UI::text( $seo['searchIntent'] ?? '', 240 ), 'proofPoints'=>\DSA\Access\Task_Workspace_UI::text( $seo['proofPoints'] ?? '', 1600 ) ];
 	}

@@ -369,6 +369,7 @@ final class Data_Query_Service {
 			$children = is_callable( [ $product, 'get_children' ] ) ? $this->public_product_references( (array) $product->get_children(), 40 ) : [];
 			$cross_sells = is_callable( [ $product, 'get_cross_sell_ids' ] ) ? $this->public_product_references( (array) $product->get_cross_sell_ids(), 40 ) : [];
 			$upsells = is_callable( [ $product, 'get_upsell_ids' ] ) ? $this->public_product_references( (array) $product->get_upsell_ids(), 40 ) : [];
+			$weight = is_callable( [ $product, 'get_weight' ] ) ? sanitize_text_field( (string) $product->get_weight() ) : '';
 			$node['product'] = [
 				'id'           => (int) $product->get_id(),
 				'type'         => sanitize_key( (string) $product->get_type() ),
@@ -378,6 +379,9 @@ final class Data_Query_Service {
 				'salePrice'    => wp_strip_all_tags( (string) $product->get_sale_price() ),
 				'priceHtml'    => is_callable( [ $product, 'get_price_html' ] ) ? wp_strip_all_tags( (string) $product->get_price_html() ) : '',
 				'currency'     => function_exists( 'get_woocommerce_currency' ) ? sanitize_text_field( get_woocommerce_currency() ) : '',
+				'weight'       => $weight,
+				'weightUnit'   => sanitize_text_field( (string) get_option( 'woocommerce_weight_unit', 'kg' ) ),
+				'weightText'   => '' !== $weight && function_exists( 'wc_format_weight' ) ? html_entity_decode( wp_strip_all_tags( wc_format_weight( $weight ) ), ENT_QUOTES ) : '',
 				'inStock'      => $product->is_in_stock(),
 				'purchasable'  => $product->is_purchasable(),
 				'sku'          => sanitize_text_field( (string) $product->get_sku() ),

@@ -4,9 +4,10 @@ if(result.status!==0||/Warning:|Fatal error:|Deprecated:/.test(result.stdout+res
 const service=fs.readFileSync('wp-content/mu-plugins/dsa/includes/Access/Comment_Moderation_Service.php','utf8');
 assert(service.includes('wp_set_comment_status')&&service.includes('Context_Selection_Service')&&service.includes("'number'=>self::PAGE_SIZE + 1"));
 assert(!/comment_author_email|CREATE TABLE|ALTER TABLE|wp_schedule|set_transient/.test(service));
-const ui=fs.readFileSync('tools/workspace-prototype/native-continuity.jsx','utf8');
+const ui=fs.readFileSync('tools/workspace-prototype/feedback-app-entry.jsx','utf8');
 const cards=fs.readFileSync('tools/workspace-prototype/feedback-cards.jsx','utf8');
-for(const text of ['All contributions, newest first','feedbackFilters(data.hasReviews)','FeedbackCard','Testimonial selection never edits'])assert(ui.includes(text),text);
+for(const text of ['DAILY ACTIVITY','feedbackFilters(data.hasReviews)','FeedbackCard','continuity-feedback-stack'])assert(ui.includes(text),text);
+assert(!ui.includes('Discussion settings')&&!ui.includes('sitePage'),'Daily remains an activity timeline without policy controls');
 for(const text of ['Eligible for live testimonials','item.likes','Mark reports reviewed'])assert(cards.includes(text),text);
 assert(!cards.includes('Mark as testimonial'),'Heart/pin and Website plan replace the obsolete manual selector');
 assert(!ui.includes('aria-label="Feedback types"'),'One timeline replaces the old separate type tabs');

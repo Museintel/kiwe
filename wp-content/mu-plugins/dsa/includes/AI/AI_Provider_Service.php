@@ -13,6 +13,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class AI_Provider_Service {
 	private const MAX_PROMPT_BYTES = 90000;
 	private const MAX_OUTPUT_BYTES = 80000;
+	public const FEATURED_IMAGE_API = 1;
+	public const IMAGE_MODEL = 'gemini-3.1-flash-image';
+	public const IMAGE_RATIOS = [ '1:1', '4:3', '3:2', '16:9' ];
+	public const IMAGE_MIMES = [ 'image/jpeg'=>'jpg', 'image/png'=>'png', 'image/webp'=>'webp' ];
+	public const MAX_REFERENCE_BYTES = 2097152;
+	public const MAX_REFERENCE_TOTAL = 6291456;
+	private const MAX_IMAGE_OUTPUT_BYTES = 4194304;
 
 	public function __construct( private Settings $settings ) {}
 
@@ -351,6 +358,158 @@ final class AI_Provider_Service {
 			'envelope'  => [] === $envelope ? [] : $this->public_envelope( $envelope ),
 			'estimates' => [] === $envelope ? [] : $this->estimates( $envelope ),
 		];
+	}
+
+	/** Featured images use the website's existing provider account and allowance. */
+	public function image_status(): array {
+		$ai = $this->settings();
+		$reason = match ( true ) {
+			! \DSA\Apps\AI_App_Service::enabled() => 'ai_app_unavailable',
+			empty( $ai['allow_native_generation'] ) => 'native_generation_disabled',
+			'gemini' !== $this->provider() => 'image_provider_required',
+			'' === $this->api_key() => 'missing_api_key',
+			default => '',
+		};
+		return [
+			'ready' => '' === $reason,
+			'reason' => $reason,
+			'model' => self::IMAGE_MODEL,
+			'requiresPaidProject' => true,
+			'providerQuotaVerified' => false,
+			'configurationPin' => hash_hmac( 'sha256', wp_json_encode( [ $reason, (string) ( $ai['native_api_key'] ?? '' ) ] ), wp_salt( 'auth' ) ),
+		];
+	}
+
+	/** One reviewed request. Timeouts and ambiguous responses never trigger an automatic retry. */
+	public function generate_featured_image( string $prompt, array $images, string $ratio, string $configuration_pin ): array|\WP_Error {
+		$status = $this->image_status();
+		if ( ! $status['ready'] || ! hash_equals( $status['configurationPin'], $configuration_pin ) ) {
+			throw new \RuntimeException( 'The website image provider changed. Prepare a fresh image review.' );
+		}
+		if ( '' === trim( $prompt ) || strlen( $prompt ) > 6000 || ! in_array( $ratio, self::IMAGE_RATIOS, true ) || count( $images ) < 1 || count( $images ) > 5 ) {
+			throw new \RuntimeException( 'Choose a supported image size and a bounded set of reference photos.' );
+		}
+		$parts = [ [ 'text'=>$prompt ] ];
+		$total_bytes = 0;
+		foreach ( $images as $image ) {
+			$bytes = $image['bytes'] ?? null;
+			$mime = $image['mime'] ?? '';
+			$role = $image['role'] ?? '';
+			if ( ! is_string( $bytes ) || '' === $bytes || strlen( $bytes ) > self::MAX_REFERENCE_BYTES ||
+				! is_string( $mime ) || ! isset( self::IMAGE_MIMES[ $mime ] ) || ! in_array( $role, [ 'subject', 'style' ], true ) ) {
+				throw new \RuntimeException( 'A selected image exceeds the provider input limits.' );
+			}
+			$total_bytes += strlen( $bytes );
+			if ( $total_bytes > self::MAX_REFERENCE_TOTAL ) {
+				throw new \RuntimeException( 'The selected photos are too large together. Choose fewer or smaller photos.' );
+			}
+			$parts[] = [ 'text'=>'subject' === $role ? 'Subject photo. Preserve what it shows.' : 'Website style reference. Use styling only.' ];
+			$parts[] = [ 'inlineData'=>[ 'mimeType'=>$mime, 'data'=>base64_encode( $bytes ) ] ];
+		}
+		$body = wp_json_encode( [
+			'contents' => [ [ 'role'=>'user', 'parts'=>$parts ] ],
+			'generationConfig' => [
+				'responseModalities' => [ 'TEXT', 'IMAGE' ],
+				'responseFormat' => [ 'image'=>[ 'aspectRatio'=>$ratio, 'imageSize'=>'1K' ] ],
+			],
+		] );
+		if ( ! is_string( $body ) ) throw new \RuntimeException( 'The selected photos could not be prepared.' );
+
+		$allowance = new AI_Allowance_Service( $this->settings );
+		$reservation = $allowance->reserve( 12000 + 1500 * count( $images ) );
+		if ( empty( $reservation['ok'] ) ) {
+			return self::featured_image_failure( 'kiwe_image_site_allowance', false );
+		}
+		$decoded = null;
+		$failure = null;
+		$settled = [];
+		try {
+			$response = wp_remote_post( 'https://generativelanguage.googleapis.com/v1/models/' . self::IMAGE_MODEL . ':generateContent', [
+				'timeout' => 40,
+				'redirection' => 0,
+				'limit_response_size' => 6291456,
+				'headers' => [ 'Content-Type'=>'application/json', 'x-goog-api-key'=>$this->api_key() ],
+				'body' => $body,
+			] );
+			if ( is_wp_error( $response ) ) {
+				$failure = self::featured_image_failure( 'kiwe_image_transport', true );
+			} else {
+				$code = (int) wp_remote_retrieve_response_code( $response );
+				$raw = wp_remote_retrieve_body( $response );
+				if ( $code >= 200 && $code < 300 ) {
+					$decoded = json_decode( $raw, true, 24 );
+				} else {
+					$failure = self::featured_image_http_failure( $code, $raw );
+				}
+				if ( 429 === $code ) {
+					$allowance->cooldown( (string) wp_remote_retrieve_header( $response, 'retry-after' ) );
+				}
+			}
+		} finally {
+			$usage = is_array( $decoded ) ? AI_Usage_Service::reported( 'gemini', self::IMAGE_MODEL, $decoded, false ) : null;
+			$settled = $allowance->settle( $reservation['ticket'], $usage['total'] ?? null );
+		}
+		if ( empty( $settled['ok'] ) ) return self::featured_image_failure( 'kiwe_image_usage_unconfirmed', true );
+		if ( $failure ) return $failure;
+		if ( ! is_array( $decoded ) ) return self::featured_image_failure( 'kiwe_image_invalid_response', true );
+		try { return $this->featured_image_result( $decoded, $ratio ); }
+		catch ( \RuntimeException ) { return self::featured_image_failure( 'kiwe_image_invalid_response', true ); }
+	}
+
+	/** Return known statuses only. Google may include project IDs or request details in its error body. */
+	private static function featured_image_http_failure( int $status, string $body ): \WP_Error {
+		$error = strlen( $body ) <= 65536 ? json_decode( $body, true, 16 ) : null;
+		$details = $error['error']['details'] ?? [];
+		foreach ( is_array( $details ) ? $details : [] as $detail ) {
+			if ( is_array( $detail ) && in_array( $detail['reason'] ?? '', [ 'BILLING_DISABLED', 'BILLING_NOT_ENABLED', 'BILLING_REQUIRED' ], true ) ) {
+				return self::featured_image_failure( 'kiwe_image_billing', true, $status );
+			}
+		}
+		return self::featured_image_failure( match ( $status ) {
+			400 => 'kiwe_image_request_rejected',
+			401, 403 => 'kiwe_image_access',
+			404 => 'kiwe_image_model_unavailable',
+			429 => 'kiwe_image_quota',
+			default => 'kiwe_image_provider_unavailable',
+		}, true, $status );
+	}
+
+	private static function featured_image_failure( string $code, bool $attempted, int $status = 0 ): \WP_Error {
+		return new \WP_Error( $code, '', [ 'attempted'=>$attempted, 'httpStatus'=>$status >= 100 && $status <= 599 ? $status : 0 ] );
+	}
+
+	private function featured_image_result( array $response, string $ratio ): array {
+		$candidate = $response['candidates'][0] ?? [];
+		$image = null;
+		$notes = [];
+		$parts = $candidate['content']['parts'] ?? null;
+		if ( 'STOP' !== ( $candidate['finishReason'] ?? '' ) || ! is_array( $parts ) ) {
+			throw new \RuntimeException( 'The provider did not return a complete image.' );
+		}
+		foreach ( $parts as $part ) {
+			if ( ! is_array( $part ) || ! empty( $part['thought'] ) ) continue;
+			if ( is_string( $part['text'] ?? null ) && count( $notes ) < 2 ) {
+				$notes[] = sanitize_textarea_field( $this->trim_bytes( $part['text'], 500 ) );
+			}
+			$inline = $part['inlineData'] ?? null;
+			if ( ! is_array( $inline ) ) continue;
+			$mime = $inline['mimeType'] ?? '';
+			$data = $inline['data'] ?? null;
+			if ( null !== $image || ! is_string( $mime ) || ! isset( self::IMAGE_MIMES[ $mime ] ) ||
+				! is_string( $data ) || strlen( $data ) > 4 * (int) ceil( self::MAX_IMAGE_OUTPUT_BYTES / 3 ) ) {
+				throw new \RuntimeException( 'The provider did not return one supported image.' );
+			}
+			$bytes = base64_decode( $data, true );
+			$geometry = false !== $bytes && strlen( $bytes ) <= self::MAX_IMAGE_OUTPUT_BYTES ? @getimagesizefromstring( $bytes ) : false;
+			[ $horizontal, $vertical ] = array_map( 'intval', explode( ':', $ratio ) );
+			if ( ! $geometry || $geometry['mime'] !== $mime || min( $geometry[0], $geometry[1] ) < 320 ||
+				max( $geometry[0], $geometry[1] ) > 2048 || abs( $geometry[0] / $geometry[1] - $horizontal / $vertical ) > 0.06 ) {
+				throw new \RuntimeException( 'The image returned in an unexpected format or framing. Review the provider result.' );
+			}
+			$image = [ 'bytes'=>$bytes, 'mime'=>$mime, 'width'=>$geometry[0], 'height'=>$geometry[1] ];
+		}
+		if ( null === $image ) throw new \RuntimeException( 'The provider did not return a usable image.' );
+		return $image + [ 'observations'=>implode( "\n", $notes ) ];
 	}
 
 	private function api_key(): string {

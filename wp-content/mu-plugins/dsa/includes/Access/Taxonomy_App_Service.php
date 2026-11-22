@@ -22,6 +22,7 @@ final class Taxonomy_App_Service {
 	public const PAGE_SIZE = 20;
 	public const MOVE_LIMIT = 20;
 	public const VISIBILITY_META = '_kiwe_search_visibility';
+	public const AUTHORING_API = 1;
 
 	public static function enabled(): bool { return defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
 
@@ -158,6 +159,25 @@ final class Taxonomy_App_Service {
 		$taxonomy = sanitize_key( $taxonomy );
 		$definitions = array_merge( $this->definitions(), $this->tag_definitions() );
 		return $definitions[ $taxonomy ] ?? new \WP_Error( 'kiwe_taxonomy_missing', __( 'This content group is unavailable. Refresh and choose an existing group.', 'dsa' ) );
+	}
+
+	/** Shared private native records, without manufacturing a REST cookie or nonce. */
+	public function authoring_terms( string $taxonomy, int $id = 0, array $query = [] ) {
+		$definition = $this->definition( $taxonomy );
+		if ( is_wp_error( $definition ) ) return $definition;
+		if ( ! $id ) return $this->list_terms( $definition['id'], $query );
+		$term = $this->term( $definition['id'], $id );
+		if ( is_wp_error( $term ) ) return $term;
+		if ( ! current_user_can( 'edit_term', $id ) ) return new \WP_Error( 'kiwe_taxonomy_forbidden', 'Your role cannot edit this term.' );
+		return $this->project_term( $term, $definition );
+	}
+	public function authoring_change( string $taxonomy, int $id, array $input ) {
+		$definition = $this->definition( $taxonomy );
+		if ( is_wp_error( $definition ) ) return $definition;
+		if ( array_diff( array_keys( $input ), $id ? [ 'name','expected' ] : [ 'name','parent' ] ) ) return new \WP_Error( 'kiwe_taxonomy_input', 'Use the native category or tag fields.' );
+		$result = $id ? $this->rename_term( $taxonomy, $id, $input ) : $this->create_term( $taxonomy, $input );
+		if ( is_wp_error( $result ) ) return $result;
+		return $this->authoring_terms( $taxonomy, $id ?: (int) $result );
 	}
 
 	private function page( $value ): int { return is_scalar( $value ) ? max( 1, min( 10000, (int) $value ) ) : 1; }

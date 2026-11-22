@@ -1,21 +1,21 @@
 {
   "schema": "kiwe.authoring-kit.v1",
-  "contractVersion": "9.9",
-  "releaseId": "9.9-d25ac5a01c64",
+  "contractVersion": "9.12",
+  "releaseId": "9.12-d4f73b8069a1",
   "canonicalStart": "https://start.kiwelaunch.com/start.md",
-  "pinnedStart": "https://start.kiwelaunch.com/v/9.9-d25ac5a01c64/start.md",
+  "pinnedStart": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/start.md",
   "firstPrompt": "PROMPT.txt",
   "sharedContext": "contracts/authoring-delivery.md",
   "files": [
     {
       "path": "bin/kiwe.js",
-      "bytes": 4269,
-      "sha256": "fbb868a2d590e808bdaf9391cdceebd36df52a6f2b3831edc276d1e3e42edf39"
+      "bytes": 4939,
+      "sha256": "264dbcf801da8ab0c21f697d0d703960a9690aeb62d242e81c306887cb4e4199"
     },
     {
       "path": "command-manifest.json",
-      "bytes": 7464,
-      "sha256": "b47c09ee2cd0e7f6b6a769127d5d51d12b9db3d98cfac3b36ba25afecdbe612b"
+      "bytes": 7465,
+      "sha256": "c6daedcb3062c058271d8c907dd276b5828f09a9aa7e58b17e64f5ec9d2ccfb6"
     },
     {
       "path": "contexts/accessibility.md",
@@ -39,8 +39,8 @@
     },
     {
       "path": "contexts/library.md",
-      "bytes": 1570,
-      "sha256": "2521f7ccde99de89555b157115a2613372397805c0e06ba0dfd148eba8679731"
+      "bytes": 1910,
+      "sha256": "152a3ee7e02ed2349e2c8d72ed8cc8bdb4a691039e46ae7389091879eb312d9b"
     },
     {
       "path": "contexts/preview.md",
@@ -54,13 +54,28 @@
     },
     {
       "path": "contracts/authoring-delivery.md",
-      "bytes": 20861,
-      "sha256": "4d867a21b949d19028be6becba4d46c684db52739a3f434dc54ad2d6170ae29f"
+      "bytes": 23512,
+      "sha256": "e805523326f362c0597f24699d07a894248b3dc05f8055151e826323500ebb9c"
     },
     {
       "path": "contracts/discussion.md",
-      "bytes": 6191,
-      "sha256": "73afa3ea3b17ee3e3e1cff4fe97ba6fa05db7c4363735870c2ba54054689ab91"
+      "bytes": 6880,
+      "sha256": "76b6e62cc7b3e4bff74a5a192d2a9b0f0f01993a06c2ce7b9780fd435d25d32d"
+    },
+    {
+      "path": "contracts/ecommerce-surfaces.md",
+      "bytes": 6315,
+      "sha256": "5ba11544658e8c47e4c851702580d67663c01d8db862d00e466ff19132a55828"
+    },
+    {
+      "path": "contracts/links.md",
+      "bytes": 8896,
+      "sha256": "37635647682a6d4942e6f957ea6d75d17f5f328bce4ce260c225cd10f8f41e76"
+    },
+    {
+      "path": "contracts/mcp-design.md",
+      "bytes": 5336,
+      "sha256": "30cc76db273cd1346c0d1b5fb000287a2b75a67616b5f044d8f1f09fe876c62c"
     },
     {
       "path": "contracts/seam-compiler-contract.json",
@@ -69,8 +84,8 @@
     },
     {
       "path": "entry.json",
-      "bytes": 2665,
-      "sha256": "7324a62cff190e9b32817e9ab2d488f9ec3925ed678342ee36bcc6df187264a8"
+      "bytes": 2666,
+      "sha256": "15008d32ac37cdebb1d20d3848072e83c6ed7d18c532d1adaeaf9b8dd5bc3088"
     },
     {
       "path": "lib/accessibility-validator.js",
@@ -85,7 +100,7 @@
     {
       "path": "lib/authoring-schemas.cjs",
       "bytes": 96096,
-      "sha256": "4d3eac351b3acdf57d5d84cc4d0427cdb5b06ea3999c5b70f3cd7b9afa6a0136"
+      "sha256": "09b24ceda100ced9e1af01531253127a8459e0d6b211ed41636bed151acfe59e"
     },
     {
       "path": "lib/binding-preflight.js",
@@ -118,9 +133,19 @@
       "sha256": "11bf948ddce3f4e96476ed413c151e097460fc2db774a366e27861b68031cfb1"
     },
     {
+      "path": "lib/mcp-design-export.js",
+      "bytes": 6419,
+      "sha256": "55137e238e617573ab73df54c43d8811658b5183cf51a60e3951121611a2f5d7"
+    },
+    {
       "path": "lib/preview-validator.js",
-      "bytes": 9264,
-      "sha256": "ac0973c71f9cff4aa9ad853a05c19b56a57cbac0f86155234440b713efd480aa"
+      "bytes": 12220,
+      "sha256": "852ec2fc960de4029ee82b185a7f87a749274a36881128ad86028a2249c5fe21"
+    },
+    {
+      "path": "lib/responsive-coverage.js",
+      "bytes": 2407,
+      "sha256": "c75e7994d272d46660c3863ca8ddface0b571ce6cc26b2eaf1437d21c63e3f6c"
     },
     {
       "path": "lib/seam-framework-package-validator.js",
@@ -129,13 +154,13 @@
     },
     {
       "path": "lib/seam-map-validator.js",
-      "bytes": 16536,
-      "sha256": "cbdd04b8dd5a5f97d1fd9ae7724ae7603f1f75ae047927ce08dc4d316ac1e882"
+      "bytes": 18815,
+      "sha256": "fd32f49f2206ad3d0f1a70b2df473dec7a6837ea516783c412a644bb8fe47e28"
     },
     {
       "path": "package.json",
-      "bytes": 183,
-      "sha256": "3d9b5884e8ee9af2c7316f9353b4202228c23cc8661f5b28d5ba465e6e1cc34b"
+      "bytes": 184,
+      "sha256": "3ad975421c5de1727d05006915a556dc7808e8f0d8106447d1a0151bb282e646"
     },
     {
       "path": "PROMPT.txt",
@@ -144,13 +169,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 1426,
-      "sha256": "063b12425c79c0f5a68d7dba51d5ea011481c3b75cf4b44c26c241fd38c4587d"
+      "bytes": 1428,
+      "sha256": "27f3f7d9f928be01c3b34a816c64d20bac79213a5fa1cb629c04fd748c69d879"
     },
     {
       "path": "reference/index.json",
-      "bytes": 14871,
-      "sha256": "aaaa026cd72e50dd30bc5dd826ed58ef09eed2888aac92f1853e5ebddc368669"
+      "bytes": 15545,
+      "sha256": "09dd40598b39a86513e718c320c1066717a12af9159f9de1c506fabba19be636"
     },
     {
       "path": "reference/source/docs/BRICKS-ICON-LIBRARY.md",
@@ -184,18 +209,18 @@
     },
     {
       "path": "reference/source/kiwe-ai-toolkit/reference/design-context-fields.json",
-      "bytes": 17162,
-      "sha256": "368a84486375daff2068ba7ca89916cc9a192f3b6b3d81d639cb78c0a22a691c"
+      "bytes": 17756,
+      "sha256": "6c4b18fd9ea38a2b7d24deb4904db2dc6eaa12defe5c1ad47a531ae778ec1959"
     },
     {
       "path": "reference/source/kiwe-ai-toolkit/reference/icons.json",
-      "bytes": 20801,
-      "sha256": "4f3be1095c471d2d00fc142e9c41a0f333cd478ded3e85e3ba6aaaa9128a35ac"
+      "bytes": 26344,
+      "sha256": "7ae66792c8a4fe0a6858c4d72d9b6c59c7cb3084e6d0724f7843dcd74af33a5c"
     },
     {
       "path": "reference/source/packages/seam-contracts/generated/kiwe-token-catalog.json",
       "bytes": 14317,
-      "sha256": "99df49c8394f640f72f26596a945c6254491a7c0eaaa224b45482caf67bc446c"
+      "sha256": "7e25b7ddb28a72d567006b8dcceef416f80f9c41c99798045ccbc9c4d9937255"
     },
     {
       "path": "reference/source/packages/seam-contracts/schemas/kiwe.appsite-package.v1.schema.json",
@@ -314,8 +339,8 @@
     },
     {
       "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/seam-vocabulary.json",
-      "bytes": 20107,
-      "sha256": "27f095145e8d7ac83f2c94892fe6bf9bf77fef901bf1f56bfb2f1ea3aced1875"
+      "bytes": 22415,
+      "sha256": "e56842a88c063f7bd1d96740e99b89a95ed6f8e3e3afa7bf937d366654ad73f1"
     },
     {
       "path": "reference/source/wp-content/mu-plugins/dsa/ui-system/theme-manifest.schema.json",
@@ -365,20 +390,20 @@
     {
       "path": "schemas/preview-receipt.schema.json",
       "bytes": 2344,
-      "sha256": "ec8cd084cd75fb08f514890157fe9e26445cee0eff38aa95f540198201faf981"
+      "sha256": "e40b9ef9c49731d8d8ce8d92f10494711688878017ae605553ffca3d23dfa833"
     },
     {
       "path": "schemas/seam-map.schema.json",
-      "bytes": 14581,
-      "sha256": "892feba0b9e770a0c5e36e0d52dc13c6ba3a30f4ed6366ea6e26fe354594afab"
+      "bytes": 17292,
+      "sha256": "d485be6b1c25ea36fbc9baa08ba3ba9c5cd324d259700d98e77aaafeec6410e1"
     },
     {
       "path": "start.md",
-      "bytes": 8533,
-      "sha256": "3d098670285909b914b08f24997e83be6bf9108fc2439b591d09859f5c13d958"
+      "bytes": 9040,
+      "sha256": "30bfacaec6d160ccdc4a1abcd2ffd6f45d531378a2a4903841d89e21f6f23795"
     }
   ],
   "archive": "https://start.kiwelaunch.com/start-authoring-kit.zip",
-  "archiveBytes": 223285,
-  "archiveSha256": "bf0e4170f68d1bd664474d151c97230aa49a8f74735d45dbe281420f85602918"
+  "archiveBytes": 242191,
+  "archiveSha256": "0ccd6de5af63af50ec7b347bdb3a385c3058259f3a57c1b43873cf5b2a35c3cf"
 }

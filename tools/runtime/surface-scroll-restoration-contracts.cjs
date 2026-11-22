@@ -15,4 +15,29 @@ ctx.restoreSurfaceScrollPosition(1000);ctx.setSurfaceScrollLocked(true);drain();
 const count=calls.length;ctx.restoreSurfaceScrollPosition(55);check(calls.length===count,'Late response never scrolls an open modal');
 ctx.menuAnchorNavigationPending=true;ctx.setSurfaceScrollLocked(false);check(calls.length===count,'Explicit menu anchor retains its destination');ctx.menuAnchorNavigationPending=false;
 history.scrollRestoration='manual';ctx.claimSurfaceHistoryEntry('profile');ctx.surfaceHistoryActive=false;ctx.restoreSurfaceScrollPosition(1200);drain();check(history.scrollRestoration==='manual','Previous manual browser policy preserved');
+
+// The idle Home screen must follow the current document even when private AJAX returns a neutral flow.
+Object.assign(ctx,{URL,protectedFlow:{active:false},commerce:{available:true,routes:{checkoutUrl:'https://example.test/secure-checkout/',cartUrl:'https://example.test/bag/',accountUrl:'https://example.test/profile/'}},
+ surfaceTriggerEnabled:()=>true,getSurfaceTrigger:()=>({enabled:true,delayMs:10000}),appConfig:{idle:{enabled:true}},homeArms:0});
+ctx.document.body.matches=selector=>Boolean(ctx.wooBodyClass&&selector.includes('.'+ctx.wooBodyClass));
+ctx.document.addEventListener=()=>{};
+ctx.document.visibilityState='visible';
+ctx.window.addEventListener=()=>{};
+ctx.window.clearTimeout=()=>{};
+ctx.window.setTimeout=()=>++ctx.homeArms;
+ctx.hasActiveSurfaceMode=()=>false;
+for(const name of ['isProtectedFlowActive','isProtectedCommerceNavigationUrl','isCheckoutNavigationUrl','isCartNavigationUrl','urlPathMatchesKnownRoute','trimTrailingSlash','startAppsiteIdleEvent'])vm.runInContext(fn(name),ctx);
+for(const [route,bodyClass] of [['/secure-checkout/',''],['/bag/',''],['/profile/',''],['/secure-checkout/pay-invoice/42/','woocommerce-checkout'],['/secure-checkout/receipt/42/','woocommerce-checkout']]){
+ ctx.window.location.href='https://example.test'+route;
+ ctx.wooBodyClass=bodyClass;
+ ctx.startAppsiteIdleEvent();
+ check(ctx.isProtectedFlowActive()&&ctx.homeArms===0,'Protected Woo route cannot arm idle Home: '+route);
+}
+ctx.window.location.href='https://example.test/checkout-guide/';ctx.wooBodyClass='';
+ctx.startAppsiteIdleEvent();
+check(!ctx.isProtectedFlowActive()&&ctx.homeArms===1,'An ordinary page still schedules Home using the existing setting');
+ctx.commerce.available=false;ctx.window.location.href='https://example.test/checkout/';
+check(!ctx.isProtectedFlowActive(),'A similarly named editorial page without Woo remains an ordinary page');
+ctx.wooBodyClass='woocommerce-checkout';
+check(ctx.isProtectedFlowActive(),'Native Woo checkout is protected even when the Kiwe Store App is disabled');
 console.log(JSON.stringify({passed:true,checks,instantRestores:calls.length}));

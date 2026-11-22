@@ -95,9 +95,9 @@ foreach(['/site-emails/extra','/site-emails/delete']as$suffix)check($access->gua
 $users[1]->roles=['author'];check($access->guard_rest(null,null,$req('/dsa/v1/workspace/notifications/site-emails')) instanceof WP_Error,'Author cannot change site-wide WordPress emails');$users[1]->roles=$beforeRoles;
 
 $beforeRoles=$users[1]->roles;$users[1]->roles=['administrator'];
-check($access->guard_rest(null,null,$req('/dsa/v1/workspace/continuity/feedback'))===null,'Client exact feedback mutation passes outer guard');
-check($access->guard_rest(null,null,$req('/dsa/v1/workspace/continuity/feedback/extra')) instanceof WP_Error,'Feedback guard does not admit suffix routes');
-$users[1]->roles=['author'];check($access->guard_rest(null,null,$req('/dsa/v1/workspace/continuity/feedback')) instanceof WP_Error,'Author cannot mutate feedback');$users[1]->roles=$beforeRoles;
+check($access->guard_rest(null,null,$req('/dsa/v1/workspace/feedback'))===null,'Client exact feedback mutation passes outer guard');
+check($access->guard_rest(null,null,$req('/dsa/v1/workspace/feedback/extra')) instanceof WP_Error,'Feedback guard does not admit suffix routes');
+$users[1]->roles=['author'];check($access->guard_rest(null,null,$req('/dsa/v1/workspace/feedback')) instanceof WP_Error,'Author cannot mutate feedback');$users[1]->roles=$beforeRoles;
 
 $beforeRoles=$users[1]->roles;$users[1]->roles=['administrator'];
 foreach(['/dsa/v1/workspace/navigation','/dsa/v1/workspace/navigation/12','/dsa/v1/workspace/navigation/groups','/dsa/v1/workspace/navigation/move'] as $route)check($access->guard_rest(null,null,$req($route))===null,'Client navigation write reaches exact private adapter: '.$route);
@@ -155,3 +155,12 @@ $beforeRoles=$users[1]->roles;check($access->guard_rest(null,null,$req('/dsa/v1/
 
 $beforeRoles=$users[1]->roles;check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/tax/rates/12/rules'))===null,'Client exact location rule update passes');foreach(['/rules/','/rules/delete']as$suffix)check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/tax/rates/12'.$suffix)) instanceof WP_Error,'Rule mutation suffix denied');$users[1]->roles=['shop_manager'];check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/tax/rates/12/rules')) instanceof WP_Error,'Manager cannot change global rules');$users[1]->roles=$beforeRoles;
 $beforeRoles=$users[1]->roles;check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/tax/rates/12/geography'))===null,'Client exact location region update passes');foreach(['/geography/','/geography/delete']as$suffix)check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/tax/rates/12'.$suffix)) instanceof WP_Error,'Region mutation suffix denied');$users[1]->roles=['shop_manager'];check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/tax/rates/12/geography')) instanceof WP_Error,'Manager cannot change global regions');$users[1]->roles=$beforeRoles;
+// Exercise the actual admin-page guard too: REST admission alone does not prove client navigation.
+require_once dirname(__DIR__,2).'/wp-content/mu-plugins/dsa/includes/Onboarding/Design_Context_Journey_Service.php';
+$feedbackRoleBefore=$users[1]->roles;$feedbackGetBefore=$_GET;$feedbackPageBefore=$GLOBALS['pagenow']??null;$feedbackPreferenceBefore=$options['kiwe_feedback_app_enabled_v1']??null;
+$actor=1;$users[1]->roles=['administrator'];$GLOBALS['pagenow']='admin.php';$_SERVER['REQUEST_METHOD']='GET';$options['kiwe_feedback_app_enabled_v1']='1';$feedbackPageGuard=new ReflectionMethod(DSA\Access\WordPress_Role_Access_Service::class,'guard_client_route');
+foreach(['kiwe-feedback','kiwe-feedback-settings']as$feedbackPage){$_GET=['page'=>$feedbackPage];$feedbackPageGuard->invoke($access,'administrator');check(true,'Client native page admission: '.$feedbackPage);}
+$_GET=['page'=>'kiwe-feedback-settings-extra'];$feedbackDenied=false;try{$feedbackPageGuard->invoke($access,'administrator');}catch(Denied){$feedbackDenied=true;}check($feedbackDenied,'Feedback native page admission excludes suffixes');
+$_GET=['page'=>'kiwe-feedback-settings'];$users[1]->roles=['author'];$feedbackDenied=false;try{$feedbackPageGuard->invoke($access,'author');}catch(Denied){$feedbackDenied=true;}check($feedbackDenied,'Author cannot enter Feedback settings');
+$users[1]->roles=['administrator'];$options['kiwe_feedback_app_enabled_v1']='0';$feedbackDenied=false;try{$feedbackPageGuard->invoke($access,'administrator');}catch(Denied){$feedbackDenied=true;}check(!$feedbackDenied,'Built-in Feedback settings ignore the retired optional-App flag');
+$users[1]->roles=$feedbackRoleBefore;$_GET=$feedbackGetBefore;$GLOBALS['pagenow']=$feedbackPageBefore;if($feedbackPreferenceBefore===null)unset($options['kiwe_feedback_app_enabled_v1']);else$options['kiwe_feedback_app_enabled_v1']=$feedbackPreferenceBefore;

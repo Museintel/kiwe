@@ -1,4 +1,4 @@
-/* Generated from Seam app/runtimeBridge.ts; source SHA256 77131e8e80ef150372eba9308a9bc451ea8470cd6ef6c9576a04f36fcd755e32; bridge 1. Do not edit. */
+/* Generated from Seam app/runtimeBridge.ts; source SHA256 35797a4f76d07df4aed751b02457c7b9a22c1a0ccb8fcf5340b6dcc9b3c0363f; bridge 1. Do not edit. */
 (function(w,d,c){
   "use strict";
   var api=w.BRXSourceRuntime=w.BRXSourceRuntime||{};
@@ -26,7 +26,7 @@
   api.bridgeArchiveLinks=function(roots){
     roots.forEach(function(root){Array.prototype.slice.call(root.querySelectorAll('[data-seam-archive-link]')).slice(0,100).forEach(function(link){
       var activeClass=link.getAttribute('data-seam-archive-active-class')||'';
-      if(!/^[a-zA-Z_][a-zA-Z0-9_-]{0,100}$/.test(activeClass))return;
+      if(!/^[a-zA-Z_][a-zA-Z0-9_-]{0,200}$/.test(activeClass))return;
       var active=false;try{var href=new w.URL(link.getAttribute('href'),w.location.href),here=new w.URL(w.location.href);active=href.origin===here.origin&&href.pathname.replace(/\/$/,'')===here.pathname.replace(/\/$/,'');}catch(error){}
       link.classList.toggle(activeClass,active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
     });});

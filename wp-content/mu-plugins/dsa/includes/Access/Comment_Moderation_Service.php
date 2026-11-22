@@ -70,7 +70,7 @@ final class Comment_Moderation_Service {
 			'text'=>Task_Workspace_UI::text( wp_strip_all_tags( (string) $comment->comment_content ), 5000 ),
 			'createdAt'=>max( 0, (int) strtotime( $comment->comment_date_gmt . ' UTC' ) ),
 			'parent'=>(int) $comment->comment_parent,
-			'context'=>'product' === ( $post->post_type ?? '' ) ? 'product' : ( 'page' === ( $post->post_type ?? '' ) ? 'website' : 'post' ),
+			'context'=>'product' === ( $post->post_type ?? '' ) ? 'product' : ( in_array( $post->post_type ?? '',[ 'page',\DSA\Discussion\Site_Conversation::TYPE ],true ) ? 'website' : 'post' ),
 			'likes'=>$this->actions_available ? (int) ( $this->social[$id]['likes'] ?? 0 ) : null,
 			'reports'=>$this->actions_available ? (int) ( $this->social[$id]['reports'] ?? 0 ) : null,
 			'reportsExpected'=>$this->actions_available ? $this->reports_expected( $comment, (int) ( $this->social[$id]['reports'] ?? 0 ) ) : '',
@@ -79,13 +79,13 @@ final class Comment_Moderation_Service {
 			'purchase'=>$this->purchases[(int) $comment->user_id] ?? null,
 			'canReply'=>! empty( $descriptor['open'] ) && (bool) get_option( 'thread_comments' ) && ! is_wp_error( \DSA\Discussion\Discussion_Target::parent( $post, $id ) ),
 			'social'=>$can_react ? \DSA\Discussion\Discussion_Reactions::decorate( $comment, $this->social[$id] ?? [], [ 'canModerate'=>true ] ) : null,
-			'sourceTitle'=>$post ? Task_Workspace_UI::text( get_the_title( $post ) ?: __( 'Untitled', 'dsa' ), 240 ) : __( 'Unavailable content', 'dsa' ),
+			'sourceTitle'=>\DSA\Discussion\Site_Conversation::owns($post)?__('Website feedback','dsa'):($post ? Task_Workspace_UI::text( get_the_title( $post ) ?: __( 'Untitled', 'dsa' ), 240 ) : __( 'Unavailable content', 'dsa' )),
 			'sourceType'=>$type,
 			'status'=>$this->status( $comment ),
 			'selected'=>$selected,
 			'public'=>$public,
 			'canSelect'=>current_user_can( 'kiwe_manage_context' ) && ( $public || $selected ),
-			'url'=>$public ? (string) get_comment_link( $comment ) : '',
+			'url'=>$public ? (\DSA\Discussion\Site_Conversation::owns($post)?add_query_arg(['kiwe-screen'=>'comments','kiwe-discussion'=>$comment->comment_post_ID,'kiwe-comment'=>$comment->comment_ID],home_url('/')):(string) get_comment_link( $comment )) : '',
 			'rating'=>'review' === $type ? min( 5, max( 0, (int) get_comment_meta( $id, 'rating', true ) ) ) : 0,
 			'expected'=>$this->expected( $comment ),
 		];
@@ -113,7 +113,7 @@ final class Comment_Moderation_Service {
 		elseif ( 'comment' === $type || ! $has_reviews ) $args['type__in'] = [ '', 'comment' ];
 		else $args['type__in'] = [ '', 'comment', 'review' ];
 		if ( in_array( $type, [ 'review','product' ], true ) ) $args['post_type'] = 'product';
-		if ( 'website' === $type ) $args['post_type'] = 'page';
+		if ( 'website' === $type ) $args['post_type'] = [ 'page',\DSA\Discussion\Site_Conversation::TYPE ];
 		if ( 'post' === $type ) $args['post_type'] = array_values( array_filter( get_post_types( [ 'public'=>true ], 'names' ), static fn( $name ) => ! in_array( $name, [ 'page','product','attachment' ], true ) && post_type_supports( $name, 'comments' ) ) ) ?: [ '__kiwe_no_discussion_post_type__' ];
 		if ( 'testimonial' === $type ) { $args['meta_key'] = Selection::TESTIMONIAL_META; $args['meta_value'] = '1'; }
 		$records = get_comments( $args ); $items = []; $focus = null;
@@ -141,7 +141,6 @@ final class Comment_Moderation_Service {
 			'focus'=>$focus,
 			'actorKey'=>( new \DSA\Discussion\Discussion_Service() )->current_actor_key(),
 			'publicName'=>\DSA\Discussion\Public_Identity::current_name(),
-			'policy'=>current_user_can( 'manage_options' ) ? \DSA\Discussion\Discussion_Settings::read() : null,
 		];
 	}
 	public function reply( array $input ) {

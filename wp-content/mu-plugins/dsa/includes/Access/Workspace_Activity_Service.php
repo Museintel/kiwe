@@ -160,7 +160,7 @@ final class Workspace_Activity_Service {
 			if ( 'forms' === $section ) {
 				$last = $seen['forms:all'] ?? []; $native = Form_Workspace_Service::activity( is_array( $last ) ? $last : [] );
 				if ( ! $native ) continue;
-				$snapshot = [ 'section'=>$section, 'realm'=>$realm, 'epoch'=>$native['epoch'], 'ceiling'=>$native['ceiling'], 'issued'=>time() ];
+				$snapshot = [ 'section'=>$section, 'realm'=>$realm, 'epoch'=>$native['epoch'], 'ceiling'=>$native['ceiling'], 'issued'=>time(), 'coreCeiling'=>$native['coreCeiling'] ?? 0 ];
 				$out[ $section ] = [ ...$snapshot, 'token'=>self::signature( $snapshot ), 'count'=>$native['count'] ]; continue;
 			}
 			$ceiling = max( 0, (int) ( $state['totals'][ $section ] ?? 0 ) ); $last = $seen[ $section . ':' . $realm ] ?? [];
@@ -202,13 +202,18 @@ final class Workspace_Activity_Service {
 	public function visit( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! $this->permission( $request ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_activity_denied', 'This visit could not be confirmed.' ), 403 );
 		$b = $request->get_json_params(); $keys = [ 'section', 'realm', 'epoch', 'ceiling', 'issued' ];
+		$has_core = is_array( $b ) && 'forms' === ( $b['section'] ?? '' ) && array_key_exists( 'coreCeiling', $b );
+		if ( $has_core && ( ! is_int( $b['coreCeiling'] ) || $b['coreCeiling'] < 0 ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_activity_invalid', 'Refresh Forms before updating its badge.' ), 400 );
+		if ( $has_core ) $keys[] = 'coreCeiling';
 		if ( ! is_array( $b ) || ! is_string( $b['section'] ?? null ) || ! is_string( $b['realm'] ?? null ) || ! is_string( $b['epoch'] ?? null ) || strlen( $b['epoch'] ) > 64 || ! is_string( $b['token'] ?? null ) || ! preg_match( '/^[a-f0-9]{64}$/D', $b['token'] ) || array_diff( $keys, array_keys( $b ) ) || ! is_int( $b['ceiling'] ) || $b['ceiling'] < 0 || ! is_int( $b['issued'] ) || $b['issued'] < time() - 600 || $b['issued'] > time() + 30 ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_activity_invalid', 'Refresh this space before updating its badge.' ), 400 );
 		$snapshot = []; foreach ( $keys as $name ) $snapshot[ $name ] = $b[ $name ]; $current = self::snapshots()[ $b['section'] ] ?? null;
-		if ( ! $current || $current['realm'] !== $b['realm'] || $current['epoch'] !== $b['epoch'] || $b['ceiling'] > $current['ceiling'] || ! hash_equals( self::signature( $snapshot ), $b['token'] ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_activity_stale', 'The account or space changed. Refresh before updating its badge.' ), 409 );
+		if ( ! $current || $current['realm'] !== $b['realm'] || $current['epoch'] !== $b['epoch'] || $b['ceiling'] > $current['ceiling'] || ( $has_core && $b['coreCeiling'] > ( $current['coreCeiling'] ?? 0 ) ) || ! hash_equals( self::signature( $snapshot ), $b['token'] ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_activity_stale', 'The account or space changed. Refresh before updating its badge.' ), 409 );
 		for ( $try = 0; $try < 3; $try++ ) {
 			$raw = get_user_meta( get_current_user_id(), self::user_meta_key( self::SEEN ), true ); $seen = is_array( $raw ) ? $raw : []; $key = $b['section'] . ':' . $b['realm'];
 			$last = $seen[ $key ] ?? []; $ceiling = ( $last['epoch'] ?? '' ) === $b['epoch'] ? max( $b['ceiling'], (int) ( $last['ceiling'] ?? 0 ) ) : $b['ceiling'];
 			$seen[ $key ] = [ 'epoch'=>$b['epoch'], 'ceiling'=>$ceiling ];
+			// A pre-upgrade/Bricks-only receipt can never clear newly captured Core enquiries.
+			if ( 'forms' === $b['section'] ) $seen[ $key ]['coreCeiling'] = max( $has_core ? $b['coreCeiling'] : 0, ( $last['epoch'] ?? '' ) === $b['epoch'] ? (int) ( $last['coreCeiling'] ?? 0 ) : 0 );
 			if ( $seen === $raw || ( ! is_array( $raw ) ? add_user_meta( get_current_user_id(), self::user_meta_key( self::SEEN ), $seen, true ) : update_user_meta( get_current_user_id(), self::user_meta_key( self::SEEN ), $seen, $raw ) ) ) return Task_Workspace_UI::response( [ 'seen'=>true ] );
 		}
 		return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_activity_busy', 'The badge could not be updated. Refresh to try again.' ), 409 );

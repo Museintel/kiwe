@@ -30,6 +30,8 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
+          extensions: openssl, zip
+          tools: composer:2.10.2
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -39,6 +41,10 @@ jobs:
       - name: Install Kiwe AI Toolkit dependencies
         working-directory: kiwe-ai-toolkit
         run: npm ci --no-audit --no-fund
+      - name: Install locked MCP dependencies for comparison
+        env:
+          COMPOSER_ROOT_VERSION: dev-main
+        run: composer install --working-dir=packages/kiwe-mcp-runtime --no-dev --prefer-dist --no-interaction --no-progress
       - name: Verify SiteGraph-only fresh-install profile
         run: |
           php tools/release/test-sitegraph-only-fresh-install.php

@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-registry-build.v2",
-  "contractVersion": "9.9",
-  "releaseId": "9.9-d25ac5a01c64",
-  "sourceHash": "sha256:d25ac5a01c64d4e576d186e910b8dccc4d589007884b13e0fef190d8a6289697",
+  "contractVersion": "9.12",
+  "releaseId": "9.12-d4f73b8069a1",
+  "sourceHash": "sha256:d4f73b8069a14f357ee5f9f5f2ba3a35e7171d1dc4f4f38960546d4c10b3d595",
   "generatedFrom": [
     "KIWE-START.md",
     "docs/BRICKS-ICON-LIBRARY.md",
@@ -21,6 +21,9 @@
     "kiwe-ai-toolkit/contexts/seam.md",
     "kiwe-ai-toolkit/contracts/authoring-delivery.md",
     "kiwe-ai-toolkit/contracts/discussion.md",
+    "kiwe-ai-toolkit/contracts/ecommerce-surfaces.md",
+    "kiwe-ai-toolkit/contracts/links.md",
+    "kiwe-ai-toolkit/contracts/mcp-design.md",
     "kiwe-ai-toolkit/contracts/seam-compiler-contract.json",
     "kiwe-ai-toolkit/entry.json",
     "kiwe-ai-toolkit/lib/accessibility-validator.js",
@@ -32,7 +35,9 @@
     "kiwe-ai-toolkit/lib/bricks-theme-style-validator.js",
     "kiwe-ai-toolkit/lib/framework-profile-validator.js",
     "kiwe-ai-toolkit/lib/kiwe-core.js",
+    "kiwe-ai-toolkit/lib/mcp-design-export.js",
     "kiwe-ai-toolkit/lib/preview-validator.js",
+    "kiwe-ai-toolkit/lib/responsive-coverage.js",
     "kiwe-ai-toolkit/lib/seam-framework-package-validator.js",
     "kiwe-ai-toolkit/lib/seam-map-validator.js",
     "kiwe-ai-toolkit/reference/bricks-elements.json",
@@ -79,5 +84,5 @@
     "wp-content/mu-plugins/dsa/ui-system/theme-package.schema.json",
     "wp-content/mu-plugins/dsa/ui-system/token-map.css"
   ],
-  "generatedAt": "2026-10-28"
+  "generatedAt": "2026-11-05"
 }
