@@ -1,29 +1,29 @@
 {
   "schema": "kiwe.command-route.v2",
   "contractVersion": "9.12",
-  "releaseId": "9.12-d4f73b8069a1",
+  "releaseId": "9.12-de4b80450e30",
   "route": "/library",
   "resources": [
     {
       "source": "KIWE-START.md",
       "url": "https://start.kiwelaunch.com/start.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/start.md",
       "sha256": "30bfacaec6d160ccdc4a1abcd2ffd6f45d531378a2a4903841d89e21f6f23795"
     },
     {
       "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
       "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/contracts/authoring-delivery.md",
       "sha256": "e805523326f362c0597f24699d07a894248b3dc05f8055151e826323500ebb9c"
     },
     {
       "source": "kiwe-ai-toolkit/contexts/library.md",
       "url": "https://start.kiwelaunch.com/contexts/library.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/contexts/library.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/contexts/library.md",
       "sha256": "152a3ee7e02ed2349e2c8d72ed8cc8bdb4a691039e46ae7389091879eb312d9b"
     }
   ],
-  "sourceHash": "sha256:d4f73b8069a14f357ee5f9f5f2ba3a35e7171d1dc4f4f38960546d4c10b3d595",
+  "sourceHash": "sha256:de4b80450e30a814475574363fa8541a23d08ef461031efd94a2d1f5f505b928",
   "command": "/library",
   "context": "contexts/library.md",
   "requires": [],

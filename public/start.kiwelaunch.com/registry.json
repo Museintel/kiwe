@@ -2,10 +2,10 @@
   "schema": "kiwe.command-registry.v2",
   "product": "SEAM",
   "contractVersion": "9.12",
-  "releaseId": "9.12-d4f73b8069a1",
+  "releaseId": "9.12-de4b80450e30",
   "updated": "2026-11-05",
   "canonicalBase": "https://start.kiwelaunch.com",
-  "immutableBase": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1",
+  "immutableBase": "https://start.kiwelaunch.com/v/9.12-de4b80450e30",
   "start": "https://start.kiwelaunch.com/start.md",
   "entry": "https://start.kiwelaunch.com/entry.json",
   "commandManifest": "https://start.kiwelaunch.com/command-manifest.json",
@@ -14,7 +14,7 @@
   "sourceRepository": "https://github.com/Museintel/kiwe",
   "sourceStart": "https://github.com/Museintel/kiwe/blob/main/KIWE-START.md",
   "rawSourceStart": "https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md",
-  "sourceHash": "sha256:d4f73b8069a14f357ee5f9f5f2ba3a35e7171d1dc4f4f38960546d4c10b3d595",
+  "sourceHash": "sha256:de4b80450e30a814475574363fa8541a23d08ef461031efd94a2d1f5f505b928",
   "fallback": {
     "whenCanonicalUnavailable": "Verify an intact attached Start kit and use its matching bootstrap/manifest/shared context first; otherwise read rawSourceStart at the same contract version. Never substitute a similarly named domain."
   },
@@ -30,20 +30,20 @@
     "/library": "https://start.kiwelaunch.com/library/contract.json"
   },
   "immutableCommands": {
-    "/ideate": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/ideate/contract.json",
-    "/preview": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/preview/contract.json",
-    "/seam": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/seam/contract.json",
-    "/convert /bricks": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/convert/bricks/contract.json",
-    "/audit": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/audit/contract.json",
-    "/accessibility": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/accessibility/contract.json",
-    "/fix": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/fix/contract.json",
-    "/redo": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/redo/contract.json",
-    "/library": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/library/contract.json"
+    "/ideate": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/ideate/contract.json",
+    "/preview": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/preview/contract.json",
+    "/seam": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/seam/contract.json",
+    "/convert /bricks": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/convert/bricks/contract.json",
+    "/audit": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/audit/contract.json",
+    "/accessibility": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/accessibility/contract.json",
+    "/fix": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/fix/contract.json",
+    "/redo": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/redo/contract.json",
+    "/library": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/library/contract.json"
   },
   "library": "https://start.kiwelaunch.com/library/catalog.json",
-  "immutableLibrary": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/library/catalog.json",
+  "immutableLibrary": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/library/catalog.json",
   "authoringKit": "https://start.kiwelaunch.com/start-authoring-kit.zip",
-  "immutableAuthoringKit": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/start-authoring-kit.zip",
+  "immutableAuthoringKit": "https://start.kiwelaunch.com/v/9.12-de4b80450e30/start-authoring-kit.zip",
   "cachePolicy": {
     "canonical": "no-store",
     "immutable": "public, max-age=31536000, immutable"
