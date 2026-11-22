@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.492",
+  "version": "8.0.0-rc.493",
   "algorithm": "sha256",
-  "file_count": 1027,
+  "file_count": 1029,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -117,8 +117,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 299602,
-      "sha256": "94029abff626f29927f5b72ee2ee5aca21244c03d6a02d7a468cf14234660891"
+      "bytes": 300231,
+      "sha256": "48f03a3bede47e9e9f0a997ae97c6259046a0e9a0b24de7351f8dfd8dc9d1b79"
     },
     "assets/css/system-app.css": {
       "bytes": 8974,
@@ -273,8 +273,8 @@
       "sha256": "c64a2f4feedbe592da5aa78a2684605183182190d003b20c8f599c121c8dbe62"
     },
     "assets/js/app-app.js": {
-      "bytes": 47064,
-      "sha256": "f67fe333243e96ca95c34f9dfdafdfab46f252bc04223b5837d1bac209a34610"
+      "bytes": 47199,
+      "sha256": "7f8471beeb08f9acb84bbc6f06b79873c44bec0ac146e5775a91629b69c16718"
     },
     "assets/js/app-island.js": {
       "bytes": 1747,
@@ -309,8 +309,16 @@
       "sha256": "2b2ac7396214bb7c5528751f3ddc49eeb0f0384a6a5c5044ba24bddf5103d725"
     },
     "assets/js/dock-app.js": {
-      "bytes": 22206,
-      "sha256": "e76c9d4409bcac76957049d81a4afe67ed4aa32e8d5815b63fd991b4f14427ea"
+      "bytes": 22427,
+      "sha256": "d6d016a387ce5914a24acce1f886c1e33e0ec477b7f58220594135c4de8ef57e"
+    },
+    "assets/js/dock-reveal.js": {
+      "bytes": 1594,
+      "sha256": "c7c47912aa5a26899ee54ae94c60453eb81d0f1ad47c32edc503b42087dadcad"
+    },
+    "assets/js/early-launcher.js": {
+      "bytes": 2333,
+      "sha256": "0a6fc6512e9dd36e7ab6b0ca1f4ce6349afddfce5a500fba7dd16104f7fc14c7"
     },
     "assets/js/feedback-app.js": {
       "bytes": 19642,
@@ -441,8 +449,8 @@
       "sha256": "0b7e10b4fe4b9649f92e360bfa96737f7d5d271d43cf5912aa140bf9ea5820c2"
     },
     "assets/js/surface.js": {
-      "bytes": 506933,
-      "sha256": "019acd93aca6e78c8cbbd0988eb9dfb9c344e5f1fa77959c94ef31ca37359d4f"
+      "bytes": 507754,
+      "sha256": "636f34a01ec883566528bd746b5b38143c9fe728223d89599b7395d6f7be62ac"
     },
     "assets/js/system-app.js": {
       "bytes": 14025,
@@ -502,7 +510,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "423fed74857ae2ab8ec07be3119b582c4c8cb364fb2cc2aec34a3de702199619"
+      "sha256": "e13b7981cf4eb64cacca2e817caf0d2d1e59b6466d70157acfbc79601aaaca8f"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -897,8 +905,8 @@
       "sha256": "46cd87fa1f06bfef733ebf3a8cea763ba602b1e359897d6c75a6a499defbcef3"
     },
     "includes/Access/Dock_Workspace_Service.php": {
-      "bytes": 15603,
-      "sha256": "22cc285746f74c3ae2c6add819e1ac82c381b97069161ff1f63ec4b2fa26c916"
+      "bytes": 21717,
+      "sha256": "f228d5b110b925548f74a407320331c394bd0abc121bf73929bb5d86b28068ec"
     },
     "includes/Access/Feedback_Workspace_Service.php": {
       "bytes": 4796,
@@ -1105,8 +1113,8 @@
       "sha256": "65140e5c7043f7c73b72fc4f0707e5ce00db1523d815581ac4350268fd9f4c7a"
     },
     "includes/Admin/Admin.php": {
-      "bytes": 656619,
-      "sha256": "6e0181b02caf1fc897173010b5c7ab85a77df76fa1a0786f9b4b237421f7e99d"
+      "bytes": 656919,
+      "sha256": "e5831697924e89092ef3541b8cd8b8b03780a05b1fee6ab69bd2792a8b072e10"
     },
     "includes/Admin/Legacy_Settings.php": {
       "bytes": 12551,
@@ -1681,8 +1689,8 @@
       "sha256": "24c7e164a77ebc1cdd9406b89806ed53726f07d74b63dc33d4756a5eba89ac56"
     },
     "includes/Dock/Dock_Settings_Service.php": {
-      "bytes": 21584,
-      "sha256": "65ab15141fb346d46d9ee9480ab17975117aa8eaca62b65ae77cf6fb3b9ec58b"
+      "bytes": 21742,
+      "sha256": "3937236aa268cd0bda7207008955de0ecae44d4cb4dcb8819bb27f5e7da04719"
     },
     "includes/Element_Registry.php": {
       "bytes": 15826,
@@ -2041,8 +2049,8 @@
       "sha256": "0a0c7b1e9a32d9f761288d9a041c7552c57231ebeb64b73af62858884e407198"
     },
     "includes/Public_Endpoint/Assets.php": {
-      "bytes": 69866,
-      "sha256": "cc73063d3bbd0a962da174dbbaf9b51975a667c4da4d11895a3127573dc88547"
+      "bytes": 71057,
+      "sha256": "a1e870fa3702f5ff9d153a2df7a8842931074fc91d43f04d5658de33446d65a0"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
       "bytes": 17981,
@@ -2133,8 +2141,8 @@
       "sha256": "f708461556a2906ede71bdfa74632a8f135f61b8207b67c596c6b3bcdee29e1f"
     },
     "includes/Runtime/Package_Manifest.php": {
-      "bytes": 11702,
-      "sha256": "e39fdc38ee33f24a8a205f1adf2e53e9c5e957d943edf647a6bfeee81eacef75"
+      "bytes": 11767,
+      "sha256": "e92137bc7d676f2b16c73d777ca2481ae34521b3329dd01542b78a79f3e08250"
     },
     "includes/Runtime/Private_Storage.php": {
       "bytes": 1989,
@@ -2341,8 +2349,8 @@
       "sha256": "f056ee6c34b2820b8384b4f8dc21a73e488952e48c98b1f94fb9339b62191de1"
     },
     "includes/Settings.php": {
-      "bytes": 30222,
-      "sha256": "ae9826fd027ffd316865b333210003d423fe4674c3d10693e7607d170ba4b8a2"
+      "bytes": 30259,
+      "sha256": "e4fd1f2f14eeecb0144ec3be1c516a8feb1377c151010d78cac8eb0c42d305dc"
     },
     "includes/Settings_Choice_Schema.php": {
       "bytes": 4602,

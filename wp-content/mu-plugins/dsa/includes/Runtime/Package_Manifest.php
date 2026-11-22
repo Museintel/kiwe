@@ -96,6 +96,8 @@ final class Package_Manifest {
 			'assets/css/workspace-foundation.css',
 			'assets/js/seam.js',
 			'assets/js/surface.js',
+			'assets/js/early-launcher.js',
+			'assets/js/dock-reveal.js',
 			'assets/js/public-contract.js',
 			'assets/js/source-runtime.js',
 			'includes/Bricks/Source_Runtime_Bridge.php',

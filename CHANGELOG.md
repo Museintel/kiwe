@@ -1,3 +1,9 @@
+## 8.0.0-rc.493 (2026-11-22, source candidate)
+
+- Start downloading the existing Surface script sooner and keep the first Sheet press while the script loads.
+- Open public Search while the private startup read is pending. A Search cart action waits for the current native session.
+- Add optional first-scroll Dock reveal and portable Dock profiles through the authorized Dock workspace.
+
 ## 8.0.0-rc.492 (2026-11-22, source sync)
 
 Published the reviewed WordPress source for the existing Core RC492 release, with Store 1.1.16 and MCP 1.0.0-rc.31. The combined source reproduces the signed Core ZIP using the Core profile builder. See the [RC492 source guide](docs/RC492-SOURCE.md) for artifact checksums and build instructions.

@@ -81,6 +81,7 @@ final class Assets {
 		}
 		add_filter( 'show_admin_bar', [ $this, 'filter_admin_bar' ], 1000 );
 		add_filter( 'body_class', [ $this, 'filter_body_classes' ] );
+		add_filter( 'wp_preload_resources', [ $this, 'preload_surface_script' ] );
 		add_action( 'wp_head', [ $this, 'print_phantom_viewport_seed' ], 0 );
 		add_action( 'wp_head', [ $this, 'print_boot_seed' ], 1 );
 		add_action( 'wp_head', [ $this, 'print_install_action_visibility' ], 2 );
@@ -891,6 +892,18 @@ CSS;
 		];
 	}
 
+	public function preload_surface_script( array $resources ): array {
+		if ( ! wp_script_is( 'dsa-surface', 'enqueued' ) ) return $resources;
+		$surface = wp_scripts()->registered['dsa-surface'];
+		$url = apply_filters( 'script_loader_src', add_query_arg( 'ver', $surface->ver, $surface->src ), 'dsa-surface' );
+		if ( is_string( $url ) && '' !== $url ) {
+			// The existing footer script can download while WordPress streams
+			// the body. Keep the page's critical styles and images ahead of it.
+			$resources[] = [ 'href' => $url, 'as' => 'script', 'fetchpriority' => 'low' ];
+		}
+		return $resources;
+	}
+
 	public function print_boot_seed(): void {
 		if ( ! $this->settings->get( 'enabled', true ) || ! Environment::should_render_frontend() ) {
 			return;
@@ -901,6 +914,13 @@ CSS;
 			wp_json_encode( DSA_VERSION ),
 			'0'
 		);
+		echo '<script id="dsa-early-launcher" data-no-optimize="1" data-no-defer="1" data-cfasync="false">' .
+			file_get_contents( DSA_DIR . 'assets/js/early-launcher.js' ) . '</script>' . "\n";
+		$dock = $this->settings->get( 'dock', [] );
+		if ( ( $dock['visible'] ?? true ) && ! empty( $dock['reveal_on_scroll'] ) ) {
+			echo '<script id="dsa-dock-reveal" data-no-optimize="1" data-no-defer="1" data-cfasync="false">' .
+				file_get_contents( DSA_DIR . 'assets/js/dock-reveal.js' ) . '</script>' . "\n";
+		}
 		printf(
 			'<script id="dsa-startup-hydration" data-no-optimize="1" data-no-defer="1" data-cfasync="false" data-dsa-runtime-endpoint="%s">%s</script>' . "\n",
 			esc_url( admin_url( 'admin-ajax.php?action=dsa_runtime_hydrate' ) ),
