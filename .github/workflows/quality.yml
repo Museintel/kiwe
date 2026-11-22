@@ -67,7 +67,7 @@ jobs:
           php tools/release/test-package-proof-refresh.php
           php tools/release/test-clean-conversion-template-isolation.php
   ui-contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
