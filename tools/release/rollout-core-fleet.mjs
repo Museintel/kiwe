@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash, createPublicKey, randomUUID, verify } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
@@ -166,6 +166,17 @@ export function validateTargets(sites, target) {
   }
 }
 
+export function validateIdentities(sites, keys) {
+  const identities = sites.map(({ domain }) => {
+    const key = keys?.[domain];
+    assert.ok(typeof key === 'string' && /^-----BEGIN OPENSSH PRIVATE KEY-----\r?\n/.test(key),
+      'Missing the private SSH identity for ' + domain);
+    return key.replace(/\r\n/g, '\n').trim();
+  });
+  assert.equal(new Set(identities).size, sites.length, 'Each site needs its own SSH identity');
+  return identities;
+}
+
 async function main() {
   const [releaseDir, configFile] = process.argv.slice(2);
   if (!releaseDir || !configFile) {
@@ -183,18 +194,27 @@ async function main() {
   }
   assert.equal(new Set(sites.map(site => passphrases[site.domain])).size, sites.length, 'Each site needs a separate backup passphrase');
 
-  const sshFlags = ['-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=10'];
+  const baseFlags = ['-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=10'];
   const sshDir = process.env.KIWE_FLEET_SSH_DIR;
+  assert.ok(sshDir || process.env.KIWE_FLEET_TARGET === 'staging', 'Production requires the protected SSH configuration');
+  const identityFiles = new Map();
   if (sshDir) {
-    sshFlags.push('-F', path.join(sshDir, 'config'), '-i', path.join(sshDir, 'identity'), '-o', 'IdentitiesOnly=yes',
-      '-o', 'UserKnownHostsFile=' + path.join(sshDir, 'known_hosts'));
+    const keys = validateIdentities(sites, JSON.parse(process.env.KIWE_FLEET_SSH_KEYS || '{}'));
+    for (const [index, site] of sites.entries()) {
+      const file = path.join(sshDir, 'identity-' + site.domain);
+      await writeFile(file, keys[index] + '\n', { mode: 0o600, flag: 'wx' });
+      identityFiles.set(site.domain, file);
+    }
+    baseFlags.push('-F', path.join(sshDir, 'config'), '-o', 'IdentitiesOnly=yes', '-o', 'IdentityAgent=none',
+      '-o', 'UserKnownHostsFile=' + path.join(sshDir, 'known_hosts'), '-o', 'GlobalKnownHostsFile=none');
   }
+  const sshFlags = site => sshDir ? [...baseFlags, '-i', identityFiles.get(site.domain)] : baseFlags;
   const nonce = randomUUID();
   const directories = new Map();
   const wp = site => 'wp --path=' + site.wordpressRoot + ' --quiet' + (site.wpUser ? ' --user=' + site.wpUser : '');
   async function ssh(site, command, input) {
     try {
-      const process = run('ssh', [...sshFlags, site.sshAlias, command], { timeout: 600000, maxBuffer: 1048576 });
+      const process = run('ssh', [...sshFlags(site), site.sshAlias, command], { timeout: 600000, maxBuffer: 1048576 });
       process.child.stdin.on('error', () => {});
       process.child.stdin.end(input);
       return await process;
@@ -215,7 +235,7 @@ async function main() {
       const work = privateRoot + '/core-fleet-' + nonce;
       await ssh(site, 'umask 077 && mkdir -m 700 -- ' + work);
       directories.set(site, work);
-      await run('scp', [...sshFlags, path.join(codeDirectory, 'core-fleet-site.php'), path.join(codeDirectory, 'core-fleet-recovery.php'),
+      await run('scp', [...sshFlags(site), path.join(codeDirectory, 'core-fleet-site.php'), path.join(codeDirectory, 'core-fleet-recovery.php'),
         path.join(releaseDir, 'manifest.json'), path.join(releaseDir, 'kiwe-mu-plugin.zip'),
         site.sshAlias + ':' + work + '/'], { timeout: 120000 });
     }

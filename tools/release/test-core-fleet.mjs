@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { publicVersion, rollout, validateTargets } from './rollout-core-fleet.mjs';
+import { publicVersion, rollout, validateIdentities, validateTargets } from './rollout-core-fleet.mjs';
 
 const target = '8.0.0-rc.494';
 const sites = [{ domain: 'store.example', firstScroll: true }, { domain: 'publisher.example' }];
@@ -101,6 +101,15 @@ test('production and staging destinations cannot be mixed', () => {
   assert.throws(() => validateTargets([{ ...approved[0], firstScroll: true, wpUser: 'operator' }, ...approved.slice(1)], 'production'), /Keep Ascendants/);
   const staging = approved.map(site => ({ ...site, domain: 'lab.' + site.domain }));
   assert.doesNotThrow(() => validateTargets(staging, 'staging'));
+});
+
+test('shared or missing identities fail before the first SSH connection', () => {
+  const header = '-----BEGIN ' + 'OPENSSH PRIVATE KEY-----\n';
+  const [first, second] = sites.map(site => site.domain);
+  const keys = { [first]: header + 'fixture-a', [second]: header + 'fixture-b' };
+  assert.deepEqual(validateIdentities(sites, keys), [keys[first], keys[second]]);
+  assert.throws(() => validateIdentities(sites, { [first]: keys[first] }), /Missing the private SSH identity/);
+  assert.throws(() => validateIdentities(sites, { ...keys, [second]: keys[first].replace('\n', '\r\n') }), /own SSH identity/);
 });
 
 test('file recovery runs without WordPress and excludes unrelated files and data', async t => {

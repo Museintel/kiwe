@@ -11,8 +11,8 @@ Restrict the production environment to trusted release refs. Keep `KIWE_UPDATE_E
 | Secret | Value |
 |---|---|
 | `KIWE_FLEET_CONFIG` | JSON array with a record for every approved domain. |
-| `KIWE_FLEET_SSH_CONFIG` | OpenSSH config with an alias for each approved hosting destination and the correct host, port and deploy user. |
-| `KIWE_FLEET_SSH_KEY` | Owner-controlled deploy identity with access to the approved WordPress roots. |
+| `KIWE_FLEET_SSH_CONFIG` | OpenSSH config with an alias for each approved hosting destination and the correct host, port and deploy user. Let the runner supply the identity file. |
+| `KIWE_FLEET_SSH_KEYS` | JSON object mapping each approved domain to its separate owner-controlled OpenSSH deploy key. |
 | `KIWE_FLEET_SSH_KNOWN_HOSTS` | SSH host keys independently confirmed through the hosting account. |
 | `KIWE_FLEET_BACKUP_PASSPHRASES` | JSON object mapping each domain to a separate recovery passphrase. Keep the values in the owner's recovery vault too. |
 | `HOSTINGER_API_TOKEN` | Owner-controlled Hostinger authorization for the named sites' cache clearing operation. |
