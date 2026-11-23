@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.496",
+  "version": "8.0.0-rc.497",
   "algorithm": "sha256",
   "file_count": 1038,
   "files": {
@@ -514,7 +514,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "2e15ebe3309470bcecc42551c9350d835f07fc92461ddb4fb948ae1b873c8ce4"
+      "sha256": "c88ca2f2da813565b41d747c9659b47f5a412f028fb32632d038472934036ab5"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1409,8 +1409,8 @@
       "sha256": "ed8220e07ee40468dfd8a30ef54c6ece7ed265b7bec145e3ab3eb6842083d263"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 137084,
-      "sha256": "1c32c1e658190e7be80057b1e0e5ab62b1e293ac0ae24e51509e4d1d5a89efd2"
+      "bytes": 136874,
+      "sha256": "bae28e55195397acb67172aef6e6e3a6defdc85f36900c8c43fd73a1281c1196"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 23620,
@@ -1461,8 +1461,8 @@
       "sha256": "a12fec09b55877e952af81a2f9fc4fdf9ea78688cc47bc0d4e637c700499fc31"
     },
     "includes/Bricks/Document_Routes.php": {
-      "bytes": 8685,
-      "sha256": "791fb0f8c7b0d138cbd087c9c1613be44dab3997352ae390367f07a7402044cb"
+      "bytes": 9212,
+      "sha256": "06c18764631211dc7019729e149f61cfbd35de30b3ac13816ffde210dcc5015c"
     },
     "includes/Bricks/Filter_Image_Service.php": {
       "bytes": 6414,

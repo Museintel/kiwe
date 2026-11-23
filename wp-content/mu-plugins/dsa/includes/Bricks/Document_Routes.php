@@ -2,6 +2,8 @@
 
 namespace DSA\Bricks;
 
+use Automattic\WooCommerce\Internal\Utilities\Users;
+
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Resolve only the native routes offered by Start. */
@@ -128,37 +130,20 @@ final class Document_Routes {
 		return compact( 'target','label','page','slug','url','proof','type','section' );
 	}
 
-	/** Render the native Section on the matching public storefront route. */
+	/** Render the native Section only on its exact WooCommerce route. */
 	public static function render_presentation(): void {
-		if ( ! function_exists( 'is_checkout' ) ) return;
+		if ( ! function_exists( 'is_checkout' ) || ! defined( 'BRICKS_DB_TEMPLATE_SLUG' )
+			|| ! shortcode_exists( 'bricks_template' ) || ( function_exists( 'bricks_is_builder' ) && bricks_is_builder() ) ) return;
 		$target = match ( true ) {
 			is_cart() => 'cart',
 			is_account_page() => 'account',
 			is_checkout() && ! is_wc_endpoint_url() => 'checkout',
+			self::order_route( 'order-pay' ) => 'order-payment',
+			self::order_route( 'order-received' ) => 'thank-you',
 			default => '',
 		};
-		if ( $target !== '' ) self::render_section( $target );
-	}
-
-	/** WooCommerce calls this hook after validating the order and its customer. */
-	public static function render_order_payment( \WC_Order $order ): void {
-		self::render_order_section( 'order-payment', 'order-pay', $order->get_id() );
-	}
-
-	public static function render_order_received( int $order_id ): void {
-		self::render_order_section( 'thank-you', 'order-received', $order_id );
-	}
-
-	private static function render_order_section( string $target, string $endpoint, int $order_id ): void {
-		if ( $order_id > 0 && is_checkout() && is_wc_endpoint_url( $endpoint )
-			&& $order_id === absint( get_query_var( $endpoint ) ) ) self::render_section( $target );
-	}
-
-	private static function render_section( string $target ): void {
-		if ( ! defined( 'BRICKS_DB_TEMPLATE_SLUG' ) || ! shortcode_exists( 'bricks_template' )
-			|| ( function_exists( 'bricks_is_builder' ) && bricks_is_builder() ) ) return;
 		$page = (int) get_queried_object_id();
-		if ( ! $page ) return;
+		if ( $target === '' || ! $page ) return;
 		$assignment = [ 'site'=>home_url( '/' ), 'target'=>$target, 'page'=>$page ];
 		$ids = get_posts( [
 			'post_type'=>BRICKS_DB_TEMPLATE_SLUG, 'post_status'=>'publish', 'has_password'=>false,
@@ -168,5 +153,24 @@ final class Document_Routes {
 		if ( count( $ids ) !== 1 || get_post_meta( $ids[0], BRICKS_DB_TEMPLATE_TYPE, true ) !== 'section'
 			|| get_post_meta( $ids[0], self::SECTION_META, true ) !== $assignment ) return;
 		echo do_shortcode( '[bricks_template id="' . (int) $ids[0] . '" on_hook="1"]' );
+	}
+
+	private static function order_route( string $endpoint ): bool {
+		if ( ! is_checkout() || ! is_wc_endpoint_url( $endpoint ) ) return false;
+		global $wp;
+		$id = absint( $wp->query_vars[$endpoint] ?? 0 );
+		$key = isset( $_GET['key'] ) && is_string( $_GET['key'] ) ? wc_clean( wp_unslash( $_GET['key'] ) ) : '';
+		$order = $id && $key !== '' ? wc_get_order( $id ) : false;
+
+		if ( ! $order || ! hash_equals( $order->get_order_key(), $key )
+			|| ( $order->get_user_id() && (int) $order->get_user_id() !== get_current_user_id() )
+			|| ( $endpoint === 'order-pay' && ! current_user_can( 'pay_for_order', $id ) )
+			|| ! is_callable( [ Users::class, 'should_user_verify_order_email' ] ) ) return false;
+
+		// Match the native checkout email form before rendering an order section.
+		$nonce = is_string( $_POST['check_submission'] ?? null ) ? sanitize_text_field( wp_unslash( $_POST['check_submission'] ) ) : '';
+		$email = wp_verify_nonce( $nonce, 'wc_verify_email' ) && is_string( $_POST['email'] ?? null )
+			? sanitize_email( wp_unslash( $_POST['email'] ) ) : null;
+		return ! Users::should_user_verify_order_email( $id, $email, $endpoint );
 	}
 }
