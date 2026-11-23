@@ -3,9 +3,22 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
 import { publicVersion, rollout, validateIdentities, validateTargets } from './rollout-core-fleet.mjs';
+import { inspectSqlDump } from './core-fleet-sql-backup.mjs';
+
+test('native SQL backup verification rejects incomplete and mismatched data', async () => {
+  const dump = 'CREATE TABLE `wp_posts` (\n  ID bigint NOT NULL\n);\n';
+  const archive = gzipSync(dump + '-- Dump completed on 2026-11-23\n');
+  const stream = bytes => Readable.from([bytes]);
+  assert.match(await inspectSqlDump(stream(archive), ['wp_posts']), /^[0-9a-f]{64}$/);
+  await assert.rejects(inspectSqlDump(stream(archive), ['wp_posts', 'wp_options']), /differs/);
+  await assert.rejects(inspectSqlDump(stream(archive.subarray(0, -8)), ['wp_posts']));
+  await assert.rejects(inspectSqlDump(stream(gzipSync(dump)), ['wp_posts']), /did not finish/);
+});
 
 const target = '8.0.0-rc.494';
 const sites = [{ domain: 'store.example', firstScroll: true }, { domain: 'publisher.example' }];

@@ -45,11 +45,8 @@ function kiwe_fleet_dock_change(bool $requested): void {
     }
 }
 
-function kiwe_fleet_recovery(string $root, string $work, string $choice): array {
+function kiwe_fleet_portable_database(string $work): array {
     global $wpdb;
-    if (kiwe_fleet_state($work)) {
-        throw new RuntimeException('A recovery checkpoint already exists for this run.');
-    }
     $passphrase = rtrim(stream_get_contents(STDIN, 2048), "\r\n");
     $cipher = new Portable_Archive_Cipher(Portable_Archive_Cipher::new_header(), $passphrase);
     umask(0077);
@@ -59,18 +56,104 @@ function kiwe_fleet_recovery(string $root, string $work, string $choice): array 
         throw new RuntimeException('The private database backup could not be opened.');
     }
     try {
-        $capture = Portable_Database_Capture::capture($wpdb, $stream, $cipher);
-        rewind($stream);
-        $verified = Portable_Database_Capture::verify($stream, $passphrase);
+        try {
+            $capture = Portable_Database_Capture::capture($wpdb, $stream, $cipher);
+            rewind($stream);
+            $verified = Portable_Database_Capture::verify($stream, $passphrase);
+        } finally {
+            fclose($stream);
+        }
+        if ($verified['archiveId'] !== $capture['archiveId'] || $verified['rows'] !== $capture['rows']
+            || count($verified['tables']) !== $capture['tables'] || !hash_equals($capture['sha256'], hash_file('sha256', $database))) {
+            throw new RuntimeException('The database backup failed read-back verification.');
+        }
+    } catch (Throwable $error) {
+        @unlink($database);
+        throw $error;
+    }
+    return ['file' => 'database.kiwedb', 'sha256' => $capture['sha256']];
+}
+
+function kiwe_fleet_sql_inventory(): array {
+    global $wpdb;
+    if (!preg_match('/^[A-Za-z0-9_]+$/D', $wpdb->prefix)) {
+        throw new RuntimeException('The WordPress database prefix could not be confirmed.');
+    }
+    $tables = $wpdb->get_results($wpdb->prepare(
+        'SELECT TABLE_NAME, TABLE_TYPE, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()
+         AND BINARY LEFT(TABLE_NAME, %d) = BINARY %s ORDER BY TABLE_NAME',
+        strlen($wpdb->prefix), $wpdb->prefix
+    ), ARRAY_N);
+    if ($wpdb->last_error || !$tables || count($tables) > Portable_Database_Capture::MAX_TABLES) {
+        throw new RuntimeException('The native database inventory could not be confirmed.');
+    }
+    $names = [];
+    foreach ($tables as [$name, $type, $engine]) {
+        if ($type !== 'BASE TABLE' || $engine !== 'InnoDB' || !preg_match('/^[A-Za-z0-9_]{1,64}$/D', $name)
+            || !str_starts_with($name, $wpdb->prefix)) {
+            throw new RuntimeException('Native SQL backup requires a WordPress table set with InnoDB tables.');
+        }
+        $names[] = $name;
+    }
+    return $names;
+}
+
+function kiwe_fleet_sql_database(string $work): array {
+    $receipt = json_decode(stream_get_contents(STDIN, 65536), true, 16, JSON_THROW_ON_ERROR);
+    $name = 'database.sql.gz.age';
+    $file = $work . '/' . $name;
+    if (!is_file($file) || is_link($file) || ($receipt['tables'] ?? null) !== kiwe_fleet_sql_inventory()
+        || !is_int($receipt['bytes'] ?? null) || $receipt['bytes'] !== filesize($file)
+        || !preg_match('/^[a-f0-9]{64}$/D', $receipt['sha256'] ?? '')
+        || !preg_match('/^[a-f0-9]{64}$/D', $receipt['sqlGzipSha256'] ?? '')
+        || !hash_equals($receipt['sha256'], hash_file('sha256', $file))) {
+        throw new RuntimeException('The transferred encrypted SQL backup did not match its verified receipt.');
+    }
+    return ['file' => $name, 'sha256' => $receipt['sha256'], 'sqlGzipSha256' => $receipt['sqlGzipSha256']];
+}
+
+function kiwe_fleet_write_sql_client(string $work): array {
+    global $wpdb;
+    $database = $wpdb->get_var('SELECT DATABASE()');
+    $connection = $wpdb->parse_db_host(DB_HOST);
+    if ($database !== DB_NAME || !preg_match('/^[A-Za-z0-9_]{1,64}$/D', $database) || !$connection) {
+        throw new RuntimeException('The WordPress database connection could not be confirmed.');
+    }
+    [$host, $port, $socket] = $connection;
+    $tables = kiwe_fleet_sql_inventory();
+    $options = ['host' => $host, 'user' => DB_USER, 'password' => DB_PASSWORD];
+    if ($port) {
+        $options['port'] = $port;
+    }
+    if ($socket || ($host === 'localhost' && ini_get('mysqli.default_socket'))) {
+        $options['socket'] = $socket ?: ini_get('mysqli.default_socket');
+    }
+    $configuration = "[client]\n";
+    foreach ($options as $name => $value) {
+        $configuration .= $name . '="' . addcslashes((string) $value, "\\\"\r\n\t") . "\"\n";
+    }
+    umask(0077);
+    $file = $work . '/sql-client.cnf';
+    $stream = fopen($file, 'xb');
+    if ($stream === false) {
+        throw new RuntimeException('Could not create private SQL client configuration.');
+    }
+    try {
+        if (fwrite($stream, $configuration) !== strlen($configuration)) {
+            throw new RuntimeException('Could not write private SQL client configuration.');
+        }
     } finally {
         fclose($stream);
     }
-    unset($passphrase);
-    if ($verified['archiveId'] !== $capture['archiveId'] || $verified['rows'] !== $capture['rows']
-        || count($verified['tables']) !== $capture['tables'] || !hash_equals($capture['sha256'], hash_file('sha256', $database))) {
-        throw new RuntimeException('The database backup failed read-back verification.');
-    }
+    return ['database' => $database, 'tables' => $tables];
+}
 
+function kiwe_fleet_recovery(string $root, string $work, string $choice, bool $useNativeSql): array {
+    if (kiwe_fleet_state($work)) {
+        throw new RuntimeException('A recovery checkpoint already exists for this run.');
+    }
+    umask(0077);
+    $database = $useNativeSql ? kiwe_fleet_sql_database($work) : kiwe_fleet_portable_database($work);
     require_once ABSPATH . 'wp-admin/includes/file.php';
     $backup = $root . '/kiwe-backup-' . wp_generate_uuid4();
     if (get_filesystem_method() !== 'direct' || !WP_Filesystem() || !wp_mkdir_p($backup . '/dsa')) {
@@ -91,7 +174,8 @@ function kiwe_fleet_recovery(string $root, string $work, string $choice): array 
         throw new RuntimeException('The previous Core files do not match their recovery copy.');
     }
     return kiwe_fleet_state($work, [
-        'current' => DSA_VERSION, 'backup' => wp_normalize_path($backup), 'databaseSha256' => $capture['sha256'],
+        'current' => DSA_VERSION, 'backup' => wp_normalize_path($backup), 'databaseSha256' => $database['sha256'],
+        'databaseFile' => $database['file'], 'sqlGzipSha256' => $database['sqlGzipSha256'] ?? null,
         'fingerprint' => $fingerprint, 'wordpressRoot' => realpath(ABSPATH), 'muRoot' => realpath(WPMU_PLUGIN_DIR),
         'choice' => $choice, 'dock' => kiwe_fleet_dock(), 'updateState' => get_option(Update_Service::STATE_OPTION, null),
     ]);
@@ -147,8 +231,10 @@ try {
     } elseif ($step === 'purge-local') {
         do_action('litespeed_purge_all');
         $result = ['pageCachePurgeSent' => true];
-    } elseif ($step === 'backup') {
-        $checkpoint = kiwe_fleet_recovery($root, $work, $choice);
+    } elseif ($step === 'prepare-sql-backup') {
+        $result = kiwe_fleet_write_sql_client($work);
+    } elseif ($step === 'backup' || $step === 'backup-sql') {
+        $checkpoint = kiwe_fleet_recovery($root, $work, $choice, $step === 'backup-sql');
         $result = ['current' => $checkpoint['current'], 'ready' => true];
     } else {
         $checkpoint = kiwe_fleet_state($work);
@@ -156,8 +242,11 @@ try {
             throw new RuntimeException('A matching recovery checkpoint is required.');
         }
         if ($step === 'apply') {
+            $database = $checkpoint['databaseFile'] ?? 'database.kiwedb';
             if (DSA_VERSION !== $checkpoint['current'] || !hash_equals($checkpoint['fingerprint'], kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))
-                || !hash_equals($checkpoint['databaseSha256'], hash_file('sha256', $work . '/database.kiwedb'))) {
+                || !in_array($database, ['database.kiwedb', 'database.sql.gz.age'], true)
+                || !is_file($work . '/' . $database) || is_link($work . '/' . $database)
+                || !hash_equals($checkpoint['databaseSha256'], hash_file('sha256', $work . '/' . $database))) {
                 throw new RuntimeException('The live package changed or the database backup was not verified.');
             }
             $checkpoint['startedTarget'] = $release['version'];

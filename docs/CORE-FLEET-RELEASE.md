@@ -44,11 +44,19 @@ The runner checks every target, authenticates and transfers the signed packet in
 
 If any switch or verification fails, the runner restores attempted sites in reverse order and reports the run ID and any site needing recovery. If WordPress cannot start, a standalone PHP step verifies and restores the previous Core files before the native settings check. Database snapshots are read back and authenticated. Manual database recovery remains separate from the automated Core rollback so recent orders stay in WordPress. The transfer files are removed while the recovery checkpoints remain in the site's private storage.
 
-The same coordinator can run locally with owner-provisioned SSH aliases and environment secrets.
+### Native SQL backup for large databases
+
+An owner-operated workstation can use a native SQL backup when a table exceeds the portable archive's row limit. The release adapter's `prepare-sql-backup` action lists the site's WordPress tables, verifies that they use InnoDB and writes a mode 0600 database client file within the private work directory. Stream a native MariaDB dump of that inventory with `--single-transaction --quick --skip-lock-tables --no-tablespaces --hex-blob` through gzip and encrypt it to the owner's vault recipient. Remove the temporary client file after streaming. The `core-fleet-sql-backup.mjs` helper requires both the export and encryption to finish. It decrypts the archive as a stream to verify the gzip data, table inventory and dump completion marker.
+
+Transfer the verified `database.sql.gz.age` file into the release's private work directory. Send the helper's JSON receipt to `backup-sql` on standard input. The adapter checks the file length, SHA-256 and table inventory before keeping the existing Core recovery checkpoint. The encrypted archive can also be kept on the owner's workstation. Keep the vault identity on the owner-controlled machine. Restore SQL only to an isolated database during a recovery rehearsal. Live database restoration remains an explicit owner decision.
+
+The same coordinator can run locally with owner-provisioned SSH aliases and environment secrets. On a Hostinger shared account, the Windows workstation adapter can reuse a laptop-bound key and a Hostinger MCP cache connection. The key has the scope of the hosting account. Keep it in the owner profile and verify the provider's host fingerprint before connecting.
 
 ```sh
 KIWE_FLEET_TARGET=staging node tools/release/rollout-core-fleet.mjs /path/to/signed-release /path/to/private-fleet.json
 node --test tools/release/test-core-fleet.mjs
 ```
+
+The workstation adapter takes the deployment environment, update mode, private laptop and site configuration, signed release directory, and cache acknowledgement directory. Its `rehearse` and `rehearse-sql` modes require a single staging site and restore it after verification. Its `apply` mode runs the coordinated install. The process reads site-specific backup passphrases from `KIWE_LOCAL_FLEET_BACKUP_PHRASES`. It emits a JSON `cache` event for each provider purge request. The authenticated caller clears that site's cache and writes `{"ok":true}` to the request ID's JSON file in the supplied directory. The process records the signed package digest and per-site verification in `proof.json`.
 
 This operation targets configured Hostinger WordPress sites. It uses the [Hostinger website cache API](https://github.com/hostinger/api-mcp-server/blob/main/src/core/tools/hosting.ts) and Kiwe's existing signature trust and App checks.
