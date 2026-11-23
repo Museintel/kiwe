@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "8.0.0-rc.495",
   "algorithm": "sha256",
-  "file_count": 1031,
+  "file_count": 1034,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -1217,8 +1217,8 @@
       "sha256": "dee715e6b99e14938d13cc380a119864aa054d0a2e85e74751e57158d2cc3471"
     },
     "includes/Apps/Package_Layout.php": {
-      "bytes": 28782,
-      "sha256": "045dcfdae07649ad37e907453ba460d0d1fb88f7a9a05213f8c653cdb157aba1"
+      "bytes": 28829,
+      "sha256": "da79943ea96a2710d9fb192d8d285fc44b8bd7b606dbaab68adb376b6667ada2"
     },
     "includes/Apps/Package_Verifier.php": {
       "bytes": 6864,
@@ -1429,8 +1429,8 @@
       "sha256": "4d9f42c095d9ac7a74db2d174fd2829d584f8ecbc561fad2cc708a8665d2b62c"
     },
     "includes/Bricks/Compiler_Import_Service.php": {
-      "bytes": 31370,
-      "sha256": "74c462e070f04a7c428eb2e42f2ff750a973183ec8a007a1d036e74c8af6260a"
+      "bytes": 33297,
+      "sha256": "bcce062715530e7570d056477fff7dff1ebeaee380e8e5ecc5399906bef8d944"
     },
     "includes/Bricks/Compiler_Import_Workspace.php": {
       "bytes": 3891,
@@ -1471,6 +1471,10 @@
     "includes/Bricks/Framework_Style_Service.php": {
       "bytes": 9202,
       "sha256": "0078fcc1bd2305f526a17a4d38bf29aacc25ec489ffb9f4fbb3ed23d13786cc7"
+    },
+    "includes/Bricks/Homepage_Publication_Service.php": {
+      "bytes": 9291,
+      "sha256": "68e5a481fdbea44b3f1574e19690591dbe220a20cd29a5b8e75be1d609f883c7"
     },
     "includes/Bricks/Icon_Library_Service.php": {
       "bytes": 3743,
@@ -1768,6 +1772,10 @@
       "bytes": 16927,
       "sha256": "8b4a71d82d33c8ff1f949e4e350209221aa608ee41ff8c631ba7292ec35aaec1"
     },
+    "includes/MCP/Bricks_Homepage_Provider.php": {
+      "bytes": 2748,
+      "sha256": "ce483ebb52ec03b194481987d488e47ed0fd1e8499bb85f25960a54b9dfe3dab"
+    },
     "includes/MCP/Bricks_Import_Provider.php": {
       "bytes": 9051,
       "sha256": "7a429cc13747504cbc3235d869c02bfc5711f9e1f495b0d8bae4efa0d3815150"
@@ -1793,16 +1801,16 @@
       "sha256": "03f1f74c05233511e2459ad8b3d2ee2c32f2acd72ea6068d828d1befc9480b1f"
     },
     "includes/MCP/Design_Provider.php": {
-      "bytes": 1572,
-      "sha256": "17139ccacaa2ed915fc94c0c3b41f91eb54341a15845691f7f0cb838c25d71eb"
+      "bytes": 2694,
+      "sha256": "a27e28272730473a9cade7e8f8779dde4ad4b46edb335daba60e7497d67662bd"
     },
     "includes/MCP/Design_Service.php": {
-      "bytes": 9476,
-      "sha256": "53a2f0aa39bf8111563a28365c3eed3e2fc7ce6f993094a03a1398f446dd39fa"
+      "bytes": 16935,
+      "sha256": "833cff43e49550e73e0a6aa042827fb83e08fa656fd3ee50e4e047b8746dc5de"
     },
     "includes/MCP/Engine.php": {
-      "bytes": 18331,
-      "sha256": "e91ef4974fabc022213b61ede70c3632e821c89827f13b94fcf14afcb30d2867"
+      "bytes": 18524,
+      "sha256": "219b6170f6676821369eab4e9fc01b9f125c798b763113199c3fddb7879b76f5"
     },
     "includes/MCP/Featured_Image_Provider.php": {
       "bytes": 28563,
@@ -1841,8 +1849,8 @@
       "sha256": "395b735f8ef9fd5ba9f12ff387d019130c1270a9bcf63493a5d788b827d8fc51"
     },
     "includes/MCP/Native_Provider.php": {
-      "bytes": 4397,
-      "sha256": "61780816ad500a3f4ea1d58337976887fe2a72537d69591418e6fd7643148241"
+      "bytes": 4487,
+      "sha256": "6ab3dd57b682324fb56b4b136ce946455670a20d5746187d9a8c76af482d9952"
     },
     "includes/MCP/OAuth_Failure.php": {
       "bytes": 304,
@@ -1869,12 +1877,12 @@
       "sha256": "707c4b554b8112f62578999dbda259b2b69a79ff0eedbe5d1d420c710b5b9ed4"
     },
     "includes/MCP/Setup_Provider.php": {
-      "bytes": 7523,
-      "sha256": "5971c60409c81cd41539d6556610a257479773c7ce4325afbb9c27a502aae3ac"
+      "bytes": 10149,
+      "sha256": "8e9ee22e7e591ba1766039e8bfd041d0f4e4cdb63dde1f6bc01a09005c17cddd"
     },
     "includes/MCP/Setup_Service.php": {
-      "bytes": 21785,
-      "sha256": "3b2750c8b6f36a1fd5ecb2a1769167542d2c87a46051045e57594c920317e395"
+      "bytes": 21962,
+      "sha256": "8c2efdd535d3baa3708995318cf44044461ac75020cc11ac74d94f91864ba1ef"
     },
     "includes/MCP/Tag_Group_Authoring.php": {
       "bytes": 1416,
@@ -2033,12 +2041,16 @@
       "sha256": "f0dd236bf957171e663965cabaa0c18ed7fa1471e153de651286f97b096038bc"
     },
     "includes/PhoneKey/PhoneKey_Core_Loader.php": {
-      "bytes": 400,
-      "sha256": "c47b8beb555e393849c68cbb00040cb0b545fb67029de51ef9de6bf893c60c1b"
+      "bytes": 464,
+      "sha256": "5b2c46449bc59897424287c0cd24ebd437377cd0d4d1c06fca67bda3458527ef"
     },
     "includes/PhoneKey/phonekey-core.php": {
-      "bytes": 213945,
-      "sha256": "03ebbf97a5135a5f66ead3ea8aaafa54848edcfb0af2b92bd8c4687f493d46d0"
+      "bytes": 214037,
+      "sha256": "36512ba1515d2616c234024629ab9058fadf84817e5a4159b06b5378b0a820d5"
+    },
+    "includes/PhoneKey/website-setup.php": {
+      "bytes": 6057,
+      "sha256": "15ad2a94a5e8c6b0aced13ea100c3a30fc6329d29bbd83dc5f8b7e7582bc0714"
     },
     "includes/Plugin.php": {
       "bytes": 24730,

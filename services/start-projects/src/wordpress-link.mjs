@@ -108,6 +108,9 @@ export function createWordPressLink(send = requestSite) {
         const mcp = siteUrl(origin, resource.resource);
         if (issuer.pathname !== '/' || issuer.search || !resource.authorization_servers?.includes(server.issuer)
             || !server.scopes_supported?.includes(scope) || !resource.scopes_supported?.includes(scope)) {
+          if (scope === 'mcp.bricks.homepage') {
+            throw new StartError(409, 'homepage_publish_unavailable', 'Enable the Kiwe MCP release with homepage publication on this website.');
+          }
           if (scope === 'mcp.bricks.import') {
             throw new StartError(409, 'bricks_import_unavailable', 'Enable Kiwe MCP with native Bricks draft import on this website.');
           }

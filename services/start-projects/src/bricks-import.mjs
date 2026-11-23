@@ -50,7 +50,7 @@ export function createBricksTarget(wordpress = createWordPressLink(), send = req
   };
 }
 
-function nativeIntent(value, operation, id) {
+export function nativeIntent(value, operation, id) {
   if (!intentPattern.test(value?.id ?? '') || (id && value.id !== id) || value.operation !== operation
       || !['prepared','complete'].includes(value.state)) throw failed();
   return value;
@@ -79,7 +79,7 @@ function nativeJob(raw, origin, archive, jobId) {
   };
 }
 
-function nativeApproval(value, origin, intent) {
+export function nativeApproval(value, origin, intent) {
   const url = siteUrl(origin, value);
   if (!url.pathname.endsWith('/wp-admin/admin-post.php') || url.searchParams.get('action') !== 'kiwe_mcp_change_review'
       || url.searchParams.get('intent') !== intent) throw failed();

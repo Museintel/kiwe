@@ -54,7 +54,7 @@ const storeItems = [
   ['thank-you','Thank you','WooCommerce'], ['account','My account and orders','WooCommerce'],
 ];
 
-export function websiteChecklist(project, inventory, homepage, conversion, canCompile) {
+export function websiteChecklist(project, inventory, homepage, conversion, canCompile, publication = null) {
   const base = '/projects/' + project.id;
   const native = project.site.url + '/wp-admin/';
   const draft = homepage?.draft;
@@ -72,6 +72,7 @@ export function websiteChecklist(project, inventory, homepage, conversion, canCo
     if (id === 'home' && homepage) {
       const label = !draft ? 'Generate homepage' : conversion?.status === 'draft_ready' ? 'Review Bricks draft' : 'Open homepage draft';
       links.push({ label, href: base + '/homepage' });
+      if (conversion?.status === 'draft_ready') links.push({ label: publication?.status === 'published' ? 'Homepage publication' : 'Publish homepage', href: base + '/homepage#publication' });
     }
     if (page?.editUrl) links.push({ label: 'Edit in WordPress', href: page.editUrl });
     if (templates.length === 1 && templates[0].editUrl) links.push({ label: 'Open in Bricks', href: templates[0].editUrl });

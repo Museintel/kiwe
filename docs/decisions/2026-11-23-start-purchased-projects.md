@@ -38,7 +38,7 @@ Keep the complete approved HTML, CSS and JavaScript. Prepare a separate Seam inp
 
 The project checklist combines published records and native route assignments with the active design revision. Fresh WordPress consent authorizes the inventory read. The saved inventory belongs to that site and project revision.
 
-Start invokes the trusted Seam release against the exact current approved homepage. WordPress reviews and imports one private Bricks draft using its existing permission and recovery checks. Start resumes the saved import and reports its native receipt. Source approval in Start and import approval in WordPress are separate decisions. Placement on a public route needs its own native plan and review.
+Start invokes the trusted Seam release against the exact current approved homepage. WordPress reviews and imports one private Bricks draft using its existing permission and recovery checks. Start resumes the saved import and reports its native receipt. Source approval in Start and import approval in WordPress are separate decisions. Placement on a public route has its own owner grant and exact native review. The first publication path targets an assigned static WordPress homepage with its own Bricks body. WordPress checks the source draft, target state and native template assignment, saves the previous body in encrypted recovery and verifies the updated body. Recovery applies only while the approved public layout is still current. Start keeps the acknowledgement, and native content and settings keep their current owners.
 
 ## Managed hosting
 

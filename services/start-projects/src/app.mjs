@@ -18,6 +18,7 @@ import {
 import { previewSource, seamSource } from './homepage-source.mjs';
 import { homepageArchive } from './homepage-archive.mjs';
 import { bricksInput, bricksReturn, createBricksImport } from './bricks-import.mjs';
+import { createHomepagePublication, publicationInput, publicationReturn } from './homepage-publication.mjs';
 import { createWebsiteInventory, inventoryReturn, websiteChecklist } from './website-inventory.mjs';
 import {
   contextArea, contextInput, contextOutput, contextEditInput, contextProposalOutput, contextReturnPath, createDesignContext,
@@ -89,7 +90,7 @@ function checkOrigin(request, expected) {
   }
 }
 
-function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, website, accountId) {
+function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId) {
   const server = new McpServer({ name: 'Kiwe Start', version: '0.1.0' });
   const result = (label, structuredContent) => ({
     content: [{ type: 'text', text: label }],
@@ -223,16 +224,27 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
       inputSchema: bricksInput,
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     }, (input) => run(async () => result('Bricks draft status', { conversion: await bricks.resume(accountId, input) })));
+    server.registerTool('kiwe_start_prepare_homepage_publication', {
+      description: 'Open WordPress owner authorization to publish the exact approved Bricks draft on the assigned homepage or restore the saved previous layout.',
+      inputSchema: publicationInput,
+      annotations: { destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    }, (input) => run(async () => result('Homepage publication review', await publication.begin(accountId, input))));
+    server.registerTool('kiwe_start_complete_homepage_publication', {
+      description: 'Check the exact native publication or recovery review. Apply it only after the owner has approved it in WordPress.',
+      inputSchema: publicationInput,
+      annotations: { destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    }, (input) => run(async () => result('Homepage publication', { publication: await publication.resume(accountId, input) })));
   }
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
   const keyConnections = createKeyConnections(projects, keyProvider);
   const agencySpaces = createAgencySpaces(projects, agencyReader);
   const context = createDesignContext(projects, startOrigin, contextWordPress, contextClock);
   const homepage = createHomepageWorkflow(projects, startOrigin, homepageWordPress, homepageProvider, contextClock);
   const bricks = createBricksImport(projects, homepage, startOrigin, bricksCompiler, bricksWordPress, contextClock);
+  const publication = createHomepagePublication(projects, startOrigin, publicationWordPress, contextClock);
   const inventory = createWebsiteInventory(projects, startOrigin, inventoryWordPress, contextClock);
   const website = {
     ...inventory,
@@ -241,7 +253,9 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       const project = projects.getProject(accountId, input);
       const home = project.key?.siteAuthenticated && project.key.state !== 'inactive' ? homepage.status(accountId, input) : null;
       const conversion = home?.draft?.status === 'approved' ? bricks.status(accountId, project.id, home.draft.id) : null;
-      return { ...native, items: websiteChecklist(project, native.inventory, home, conversion, bricks.available), homepage: home?.draft ?? null, conversion };
+      const published = conversion?.status === 'draft_ready' ? publication.status(accountId, project.id, home.draft.id) : null;
+      const items = websiteChecklist(project, native.inventory, home, conversion, bricks.available, published);
+      return { ...native, items, homepage: home?.draft ?? null, conversion, publication: published };
     },
   };
   const managedHosting = createManagedHosting(projects, hostingProvider);
@@ -296,7 +310,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return json(response, 405, { error: 'method_not_allowed' });
       }
       const payload = await readBody(request, jsonType);
-      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, website, accountId);
+      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, enableJsonResponse: true,
       });
@@ -342,6 +356,19 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           return redirect(response, '/projects/' + access.projectId + '/context');
         }
         return send(response, 200, siteReturnPage('Design Context is connected. Return to your Start project.', true));
+      } catch (error) {
+        if (!(error instanceof StartError)) throw error;
+        return send(response, error.status, siteReturnPage(error.message, false));
+      }
+    }
+    if (endpoint === 'GET ' + publicationReturn) {
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      try {
+        const opened = await publication.complete(Object.fromEntries(url.searchParams));
+        if (projects.accountForSession(sessionToken(request)) === opened.accountId) {
+          return redirect(response, '/projects/' + opened.projectId + '/homepage#publication');
+        }
+        return send(response, 200, siteReturnPage('The homepage publication review was saved.', true));
       } catch (error) {
         if (!(error instanceof StartError)) throw error;
         return send(response, error.status, siteReturnPage(error.message, false));
@@ -395,7 +422,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, siteReturnPage(error.message, false));
       }
     }
-    const homeRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/homepage(?:\/(request|revise|generate|approve|preview|source|convert|continue-import))?$/);
+    const homeRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/homepage(?:\/(request|revise|generate|approve|preview|source|convert|continue-import|publication|finish-publication))?$/);
     if (homeRoute) {
       const [, projectId, action] = homeRoute;
       const accountId = projects.accountForSession(sessionToken(request))
@@ -406,7 +433,8 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       const page = (error) => {
         const state = homepage.status(accountId, { projectId });
         const conversion = state.draft?.status === 'approved' ? bricks.status(accountId, projectId, state.draft.id) : null;
-        return homepagePage(project, state, { error, generator: homepage.generatorConfigured, compiler: bricks.available, conversion });
+        const published = conversion?.status === 'draft_ready' ? publication.status(accountId, project.id, state.draft.id) : null;
+        return homepagePage(project, state, { error, generator: homepage.generatorConfigured, compiler: bricks.available, conversion, publication: published });
       };
       if (method === 'GET' && !action) {
         response.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; frame-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
@@ -452,6 +480,14 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           }
           if (action === 'continue-import') {
             await bricks.resume(accountId, { ...fields, projectId, revision: Number(fields.revision) });
+          }
+          if (action === 'publication' || action === 'finish-publication') {
+            const input = { ...fields, projectId, revision: Number(fields.revision) };
+            if (action === 'publication') {
+              const result = await publication.begin(accountId, input);
+              if (result.authorizationUrl) return redirect(response, result.authorizationUrl);
+            } else await publication.resume(accountId, input);
+            return redirect(response, location + '#publication');
           }
           return redirect(response, location);
         } catch (error) {

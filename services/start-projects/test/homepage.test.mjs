@@ -293,9 +293,63 @@ function conversionFixture() {
   return { target: scoped, approve: () => { approved = true; }, uploads: () => uploads, begins: () => begins };
 }
 
-test('the Pages and Templates dashboard converts the approved homepage with a single resumable native import', async (t) => {
+function publicationFixture() {
+  let current = 'draft_ready';
+  let native;
+  let approvals = 0;
+  const scope = 'mcp.bricks.homepage';
+  const packet = (origin, status, keys) => ({ resultJson: JSON.stringify({
+    schema: 'kiwe.bricks-homepage-publication.v1', status, pageId: 19, url: origin + '/', ...keys,
+  }) });
+  return {
+    approve() { native.approved = true; },
+    writes: () => approvals,
+    target: {
+      async begin(domain, redirect, state, _verifier, granted) {
+        const origin = 'https://' + domain;
+        assert.equal(granted, scope);
+        assert.equal(new URL(redirect).pathname, '/projects/homepage-publish-return');
+        return { origin, issuer: origin, authorizationUrl: origin + '/approve-publication?state=' + state };
+      },
+      async exchange(_connection, confirmation, granted) {
+        assert.equal(confirmation, code);
+        assert.equal(granted, scope);
+        return { token: 'fixture-publication-grant', expiresIn: 900 };
+      },
+      async revoke() {},
+      async call({ origin }, token, name, input) {
+        assert.equal(token, 'fixture-publication-grant');
+        if (name === 'kiwe-mcp-read') {
+          assert.equal(input.operation, scope + '.status');
+          return packet(origin, current, input.arguments);
+        }
+        if (name === 'kiwe-mcp-prepare-change') {
+          assert.match(input.operation, /^mcp\.bricks\.homepage\.(publish|restore)$/);
+          assert.equal(input.arguments.draftId, 81);
+          native = { id: 'i_' + fingerprint(input.requestId).slice(0,32), operation: input.operation,
+            state: 'prepared', approvalRequired: true, approved: false, keys: input.arguments };
+          native.approvalUrl = origin + '/wp-admin/admin-post.php?action=kiwe_mcp_change_review&intent=' + native.id;
+        } else if (name === 'kiwe-mcp-apply-change') {
+          assert.equal(native.approved, true);
+          assert.equal(input.intent, native.id);
+          approvals++;
+          current = native.operation.endsWith('.restore') ? 'restored' : 'published';
+          native.state = 'complete';
+          native.result = packet(origin, current, native.keys);
+        } else {
+          assert.equal(name, 'kiwe-mcp-change-status');
+          assert.equal(input.intent, native.id);
+        }
+        return { ...native };
+      },
+    },
+  };
+}
+
+test('the Pages and Templates dashboard reviews, converts, publishes and restores one exact homepage', async (t) => {
   const native = wordpress();
   const conversion = conversionFixture();
+  const publication = publicationFixture();
   let compiles = 0;
   const compiler = { async compile({ files }) {
     compiles++;
@@ -305,7 +359,7 @@ test('the Pages and Templates dashboard converts the approved homepage with a si
   } };
   const f = await fixture(t, {
     wordpressLink: native.oauth, homepageWordPress: native.oauth, keyProvider,
-    bricksWordPress: conversion.target, bricksCompiler: compiler,
+    bricksWordPress: conversion.target, bricksCompiler: compiler, publicationWordPress: publication.target,
   });
   const owner = await f.connect('buyer-one');
   const foreign = await f.connect('someone-else');
@@ -351,7 +405,33 @@ test('the Pages and Templates dashboard converts the approved homepage with a si
   assert.equal((await mcp(owner, 'resume_bricks', action)).structuredContent.conversion.status, 'draft_ready');
   assert.equal(conversion.begins(), 1);
   await f.restart();
-  assert.match(await (await f.request(projectPages, project.options)).text(), /Private Bricks draft/);
+  const reopened = await f.connect('buyer-one');
+  const page = await (await f.request(projectPages, project.options)).text();
+  assert.match(page, /Publish homepage/);
+  const publish = { ...action, action: 'publish' };
+  assert.equal((await mcp(await f.connect('someone-else'), 'prepare_homepage_publication', publish)).isError, true);
+  const publishForm = await mutate('publication', { draftId: draft.id, revision: '3', action: 'publish' });
+  const publishCallback = approveUrl(publishForm.headers.get('location'), '/projects/homepage-publish-return');
+  assert.equal((await f.request(publishCallback, project.options)).status, 303);
+  const waiting = (await mcp(reopened, 'complete_homepage_publication', publish)).structuredContent.publication;
+  assert.equal(waiting.status, 'approval_required');
+  assert.equal(publication.writes(), 0);
+  publication.approve();
+  const result = (await mcp(reopened, 'complete_homepage_publication', publish)).structuredContent.publication;
+  assert.equal(result.status, 'published');
+  assert.equal(result.pageId, 19);
+  assert.equal(publication.writes(), 1);
+  assert.match(await (await f.request(project.home, project.options)).text(), /View homepage/);
+  assert.equal((await mcp(reopened, 'complete_homepage_publication', publish)).structuredContent.publication.status, 'published');
+  assert.equal(publication.writes(), 1);
+
+  const restore = { ...action, action: 'restore' };
+  const openedRestore = (await mcp(reopened, 'prepare_homepage_publication', restore)).structuredContent;
+  assert.equal((await f.request(approveUrl(openedRestore.authorizationUrl, '/projects/homepage-publish-return'), project.options)).status, 303);
+  publication.approve();
+  assert.equal((await mutate('finish-publication', { draftId: draft.id, revision: '3', action: 'restore' })).status, 303);
+  assert.match(await (await f.request(project.home, project.options)).text(), /previous homepage layout was restored/);
+  assert.equal(publication.writes(), 2);
 });
 
 test('the website dashboard labels only native records as published and shows Woo routes for an active store', async (t) => {

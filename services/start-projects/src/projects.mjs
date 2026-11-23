@@ -228,6 +228,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       approved_at INTEGER,
       UNIQUE (project_id, version)
     ) STRICT;
+    CREATE TABLE IF NOT EXISTS homepage_publications (
+      draft_id TEXT PRIMARY KEY REFERENCES homepage_drafts(id),
+      record TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS homepage_imports (
       draft_id TEXT PRIMARY KEY REFERENCES homepage_drafts(id),
       id TEXT NOT NULL UNIQUE,
@@ -384,6 +388,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return row;
   }
 
+  const readPublication = db.prepare('SELECT record FROM homepage_publications WHERE draft_id = ?');
+  const writePublication = db.prepare('INSERT INTO homepage_publications(draft_id,record) VALUES (?,?) '
+    + 'ON CONFLICT(draft_id) DO UPDATE SET record=excluded.record');
   const importByDraft = db.prepare('SELECT * FROM homepage_imports WHERE draft_id = ?');
   const addImport = db.prepare(
     'INSERT INTO homepage_imports(draft_id,id,source_sha) VALUES (?,?,?) ON CONFLICT(draft_id) DO NOTHING',
@@ -706,6 +713,21 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
           throw new StartError(409, 'website_changed', 'WordPress returned inventory for a different website.');
         }
         saveInventory.run(projectId, revision, snapshot.website, JSON.stringify(snapshot), now());
+      });
+    },
+
+    getHomepagePublication(accountId, { projectId, draftId }) {
+      const draft = approvedImportTarget(accountId, projectId, draftId);
+      const row = readPublication.get(draft.id);
+      return row ? JSON.parse(row.record) : null;
+    },
+
+    saveHomepagePublication(accountId, { projectId, draftId }, record) {
+      return transaction(() => {
+        const draft = approvedImportTarget(accountId, projectId, draftId);
+        const imported = importByDraft.get(draft.id);
+        if (imported?.status !== 'draft_ready') throw new StartError(409, 'bricks_draft_required', 'Prepare the current private Bricks draft first.');
+        writePublication.run(draft.id, JSON.stringify(record));
       });
     },
 

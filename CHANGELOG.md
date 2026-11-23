@@ -1,5 +1,7 @@
 ## Version 1.x (Start project candidate)
 
+- Prepare and confirm homepage publication from Start or MCP using separate WordPress owner approval. Restore the saved previous layout through the same native review.
+
 - Add the Pages and Templates workspace to Start and MCP. Read the connected site's published pages and template assignments. Convert one approved homepage through Seam and WordPress approval into a private Bricks draft.
 
 - Generate one homepage review from current public Design Context through Start and MCP. Preserve the exact source of each approved revision, and hand a separate native-only input to Seam.

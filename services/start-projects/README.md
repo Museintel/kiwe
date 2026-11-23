@@ -59,7 +59,15 @@ Open **Home** to generate, preview or revise one homepage. When the owner has ap
 
 To enable this conversion, set `KIWE_START_SEAM_ROOT` to the absolute path of a trusted, pinned Seam checkout with its locked dependencies installed. Set `KIWE_START_SEAM_WORK` to a private absolute working directory outside the served tree. The target needs Kiwe MCP with native Bricks import and package transfer. Keep a single Start process for active consent and imports. Import grants stay in process memory and last up to 15 minutes. If the grant ends after staging, open the saved Framework review on that site. Saved source and native draft receipts survive a Start restart.
 
-The other checklist rows link to their WordPress owners. Independent design generation for those rows and publishing through Start are outside this candidate.
+The other checklist rows link to their WordPress owners. Independent design generation for those rows remains pending.
+
+### Publish the homepage
+
+Review the private Bricks draft first. On a site with an assigned, public static homepage, choose **Publish homepage**, authorize the separate WordPress publication scope and approve the exact change. Return to Start and choose **Check publication**. The approved Bricks content is saved to the existing homepage. Its public address and WordPress page identity are preserved. Use the Seam candidate with the responsive preview corrections when compiling the source. [Paired Seam commit](https://github.com/Museintel/seam-compiler/commit/ab3f1bd93ef5d8ddd90be15c6df806afba2c9a13)
+
+WordPress verifies that the destination is a standalone homepage, checks the native draft and refuses a stale publication. A different post or content template keeps its existing assignment. The current candidate uses the homepage assigned in WordPress Reading settings. Its Pages post type must be enabled in Bricks and the route must use its own page content.
+
+The same flow can restore the previous layout while the published content still matches its receipt. WordPress holds the encrypted recovery. Start records only the native result and its page and approval references. A lapsed session can reopen consent and read current native status before another review.
 
 ## Included Kiwe hosting
 
@@ -105,6 +113,7 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_website` reads the Pages and Templates workspace and current conversion.
 - `kiwe_start_refresh_website` opens native consent to refresh the inventory.
 - `kiwe_start_convert_homepage` opens the approved homepage import when Seam is configured. `kiwe_start_resume_bricks` checks the same native job after authorization and separate import approval.
+- `kiwe_start_prepare_homepage_publication` opens the native publication or recovery approval. After the owner reviews it, `kiwe_start_complete_homepage_publication` checks the exact intent and applies the approved change.
 
 The service preserves the latest saved revision when a browser and an MCP client act at the same time. Cross-account project IDs confer no access.
 

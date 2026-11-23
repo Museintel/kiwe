@@ -243,6 +243,24 @@ function conversionStep(location, revision, draft, options) {
   return action + check;
 }
 
+function publicationStep(location, revision, draft, options) {
+  if (options.conversion?.status !== 'draft_ready') return '';
+  const published = options.publication;
+  const action = published?.status === 'published' || published?.action === 'restore' ? 'restore' : 'publish';
+  const hidden = revision + '<input type="hidden" name="draftId" value="' + escape(draft.id)
+    + '"><input type="hidden" name="action" value="' + action + '">';
+  const form = (route, label) => '<form method="post" action="' + location + '/' + route + '">'
+    + hidden + '<button class="button">' + label + '</button></form>';
+  const review = published?.sessionActive && published.approvalUrl
+    ? '<p><a class="button" href="' + escape(published.approvalUrl) + '">Approve in WordPress</a></p>'
+      + form('finish-publication', published.action === 'restore' ? 'Check restoration' : 'Check publication')
+    : form('publication', action === 'restore' ? 'Restore previous homepage design' : 'Publish homepage');
+  const state = published?.status === 'published'
+    ? '<p class="status">Published on the homepage. <a href="' + escape(published.url) + '">View homepage</a></p>'
+    : published?.status === 'restored' ? '<p class="status">The previous homepage layout was restored.</p>' : '';
+  return '<section id="publication"><h2>Homepage publication</h2>' + state + review + '</section>';
+}
+
 export function homepagePage(project, view, options = {}) {
   const location = '/projects/' + project.id + '/homepage';
   const draft = view.draft;
@@ -273,7 +291,7 @@ src="${location}/preview?draft=${draft.id}"></iframe><p><a href="${location}/pre
 ${revision}<input type="hidden" name="draftId" value="${draft.id}">
 <button class="button">Request another revision</button></form>`;
   return page('Homepage draft', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
-${error}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${conversionStep(location, revision, draft, options)}${download}${retry}
+${error}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${conversionStep(location, revision, draft, options)}${publicationStep(location, revision, draft, options)}${download}${retry}
 ${changes}<details><summary>Refresh saved business facts</summary>${request}</details>`, true);
 }
 
