@@ -1,3 +1,8 @@
+## 8.0.0-rc.494 (2026-11-23, source candidate)
+
+- Add the `data-dsa-hide-dock` frontend attribute and its `cover` value for full-height sections. The behavior composes with first-scroll reveal and existing header launchers.
+- Verify the normal public URL and clear host cache as part of a coordinated signed Core rollout.
+
 ## 8.0.0-rc.493 (2026-11-22, source candidate)
 
 - Start downloading the existing Surface script sooner and keep the first Sheet press while the script loads.

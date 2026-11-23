@@ -141,6 +141,7 @@ final class Surface_Renderer {
 			<div class="dsa-dock-context" data-dsa-dock-context hidden><div class="dsa-dock-context__content" data-dsa-dock-context-content></div></div>
 			<?php if ( $modules && ( $dock['visible'] ?? true ) ) : ?>
 			<div class="dsa-dock-cluster" data-dsa-dock-cluster>
+			<script id="dsa-dock-viewport" data-no-optimize="1" data-no-defer="1" data-cfasync="false"><?php echo file_get_contents( DSA_DIR . 'assets/js/dock-viewport.js' ); ?></script>
 			<nav class="dsa-dock dsa-phonekey-dock" data-dsa-dock role="toolbar" aria-label="<?php echo esc_attr__( 'Surface tools', 'dsa' ); ?>">
 				<?php foreach ( $modules as $index => $module ) : ?>
 					<?php

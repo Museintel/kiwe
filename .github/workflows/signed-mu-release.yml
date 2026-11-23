@@ -19,6 +19,33 @@ on:
         options:
           - bundled
           - core
+          - app
+      app_id:
+        description: Independent App to build (app profile only)
+        type: choice
+        default: guest
+        options:
+          - seo
+          - store
+          - guest
+          - ai
+          - sitegraph
+          - mcp
+          - all
+      app_version:
+        description: Exact App release version (app profile only)
+        type: string
+      rollout_core:
+        description: Roll out the signed Core to the configured Kiwe sites
+        type: boolean
+        default: false
+      rollout_target:
+        description: Deployment environment when rollout is enabled
+        type: choice
+        default: staging
+        options:
+          - staging
+          - production
 
 permissions:
   contents: read
@@ -47,6 +74,7 @@ jobs:
           composer install --working-dir=packages/kiwe-mcp-runtime --no-dev --prefer-dist --no-interaction --no-progress
           npm ci --prefix tools/workspace-prototype --no-audit --no-fund
           node tools/release/verify-green-baseline.cjs
+          node --test tools/release/test-core-fleet.mjs
       - name: Require completed client feature coverage for stable launch
         if: inputs.channel == 'stable'
         run: node tools/workspace-prototype/audit-coverage.cjs "$RUNNER_TEMP/workspace-launch.json" --require-launch
@@ -86,3 +114,63 @@ jobs:
             ${{ runner.temp }}/kiwe-core-signed/releases/*/manifest.json
           if-no-files-found: error
           retention-days: 30
+      - name: Build and sign App release
+        if: inputs.profile == 'app'
+        env:
+          KIWE_RELEASE_CHANNEL: ${{ inputs.channel }}
+          KIWE_APP_ID: ${{ inputs.app_id }}
+          KIWE_APP_VERSION: ${{ inputs.app_version }}
+          KIWE_UPDATE_ED25519_PRIVATE_PEM: ${{ secrets.KIWE_UPDATE_ED25519_PRIVATE_PEM }}
+        run: |
+          node tools/release/build-app-releases.mjs \
+            --output-root="$RUNNER_TEMP/kiwe-app-signed" \
+            --channel="$KIWE_RELEASE_CHANNEL" --app="$KIWE_APP_ID" --version="$KIWE_APP_VERSION"
+      - name: Upload signed App ZIPs, manifests and catalogue
+        if: inputs.profile == 'app'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiwe-${{ inputs.channel }}-${{ inputs.app_id }}-app-signed
+          path: |
+            ${{ runner.temp }}/kiwe-app-signed/channels/*.json
+            ${{ runner.temp }}/kiwe-app-signed/releases/*/*/*.zip
+            ${{ runner.temp }}/kiwe-app-signed/releases/*/*/release.json
+          if-no-files-found: error
+          retention-days: 30
+  rollout:
+    if: inputs.profile == 'core' && inputs.rollout_core
+    needs: release
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.rollout_target == 'production' && 'kiwe-fleet' || 'kiwe-fleet-staging' }}
+    concurrency:
+      group: kiwe-core-fleet
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: kiwe-${{ inputs.channel }}-core-signed
+          path: ${{ runner.temp }}/kiwe-signed-input
+      - name: Back up, update and verify the named sites
+        env:
+          KIWE_FLEET_CONFIG: ${{ secrets.KIWE_FLEET_CONFIG }}
+          KIWE_FLEET_SSH_CONFIG: ${{ secrets.KIWE_FLEET_SSH_CONFIG }}
+          KIWE_FLEET_SSH_KEYS: ${{ secrets.KIWE_FLEET_SSH_KEYS }}
+          KIWE_FLEET_SSH_KNOWN_HOSTS: ${{ secrets.KIWE_FLEET_SSH_KNOWN_HOSTS }}
+          KIWE_FLEET_BACKUP_PASSPHRASES: ${{ secrets.KIWE_FLEET_BACKUP_PASSPHRASES }}
+          HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+          KIWE_FLEET_TARGET: ${{ inputs.rollout_target }}
+        shell: bash
+        run: |
+          mapfile -t manifests < <(find "$RUNNER_TEMP/kiwe-signed-input" -type f -name manifest.json)
+          test "${#manifests[@]}" -eq 1
+          test -n "$KIWE_FLEET_SSH_CONFIG" && test -n "$KIWE_FLEET_SSH_KEYS" && test -n "$KIWE_FLEET_SSH_KNOWN_HOSTS"
+          umask 077
+          export KIWE_FLEET_SSH_DIR="$RUNNER_TEMP/kiwe-fleet-ssh"
+          mkdir -m 700 "$KIWE_FLEET_SSH_DIR"
+          printf '%s\n' "$KIWE_FLEET_SSH_CONFIG" > "$KIWE_FLEET_SSH_DIR/config"
+          printf '%s\n' "$KIWE_FLEET_SSH_KNOWN_HOSTS" > "$KIWE_FLEET_SSH_DIR/known_hosts"
+          printf '%s\n' "$KIWE_FLEET_CONFIG" > "$RUNNER_TEMP/kiwe-fleet.json"
+          node tools/release/rollout-core-fleet.mjs "$(dirname "${manifests[0]}")" "$RUNNER_TEMP/kiwe-fleet.json"
