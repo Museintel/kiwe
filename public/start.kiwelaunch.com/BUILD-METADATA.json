@@ -1,8 +1,8 @@
 {
   "schema": "kiwe.command-registry-build.v2",
   "contractVersion": "9.12",
-  "releaseId": "9.12-0a0018ba7b26",
-  "sourceHash": "sha256:0a0018ba7b268f106e09a33ebb9ca840a2c3c0180820c0d0df43766191017d05",
+  "releaseId": "9.12-9ecc11da6e79",
+  "sourceHash": "sha256:9ecc11da6e7985cd0ceeb4b8fe2747adbfab589755b8604b688c30b5c35976d7",
   "generatedFrom": [
     "KIWE-START.md",
     "docs/BRICKS-ICON-LIBRARY.md",

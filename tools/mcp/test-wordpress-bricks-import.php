@@ -53,7 +53,8 @@ function kiwe_mcp_bricks_native_tests( callable $check,callable $ledger,string $
 		$oldGrant = DSA\MCP\Auth_Context::current();
 		$deny( static fn()=>$r->read( 'mcp.bricks.import.status',$args,$oldGrant['scopes'],$oldGrant['pins'] ),'A real old scope cannot inspect private import jobs' );
 		[ $auth,$bearer ] = $connect( $r,[ 'mcp.read','mcp.bricks.import' ] ); $grant = DSA\MCP\Auth_Context::current();
-		$check( count( $r->describe( $grant['scopes'],$grant['pins'] ) ) === 5,'The new scope offers one connection read and exactly four import operations' );
+		$operations = DSA\MCP\Bricks_Import_Provider::transfer_available() ? 7 : 5;
+		$check( count( $r->describe( $grant['scopes'],$grant['pins'] ) ) === $operations,'Only connection status and the scoped Bricks import operations are available' );
 		$deny( static fn()=>$native->delegated_review( $job['id'],str_repeat( '0',64 ) ),'A different ZIP fingerprint is refused at the native owner' );
 		$dir = $files::directory( 'compiler',$job['id'] ); $sealed = $files::read( $dir,'state-' . $job['id'] . '.kiwe',50331648 );
 		$check( ! str_contains( $sealed,'Single Product' ) && ! str_starts_with( $dir,ABSPATH ),'The job stays encrypted and outside the website root' );

@@ -1,7 +1,7 @@
 {
   "schema": "kiwe.authoring-library.v1",
   "contractVersion": "9.12",
-  "releaseId": "9.12-0a0018ba7b26",
+  "releaseId": "9.12-9ecc11da6e79",
   "policy": "Complete for the enumerated public source families at this release. New files within those families are included automatically. The command manifest owns command grammar; canonical runtime/current schemas take precedence over portable guidance, whose historical command phrases are reference data only. Site-created tags, native element controls, enabled query types and dynamic content must additionally be read from the current site SiteGraph/Bricks context. Registered, inferred and target-verified capabilities are distinct. Unsupported or missing evidence must stop the affected handoff; never invent a tag, control, interaction or condition.",
   "families": [
     {
@@ -7562,7 +7562,7 @@
       "id": "5d0dee2bea2703c7",
       "family": "tokens",
       "source": "packages/seam-contracts/generated/kiwe-token-catalog.json",
-      "sha256": "f8acc58ba63161ce40a9af92ef40917bdf02e944045c8c274693ca38b97ff5b1",
+      "sha256": "8e0a48f41a770022e21d1e5cc4b80d3a8799e9d380c4b9bbbb4a1dfca0ec97fd",
       "bytes": 14317,
       "url": "https://start.kiwelaunch.com/library/5d0dee2bea2703c7/",
       "raw": "https://start.kiwelaunch.com/library/source/packages/seam-contracts/generated/kiwe-token-catalog.json",
@@ -7575,7 +7575,7 @@
         },
         {
           "pointer": "/pluginVersion",
-          "value": "8.0.0-rc.494",
+          "value": "8.0.0-rc.495",
           "url": "https://start.kiwelaunch.com/library/5d0dee2bea2703c7/#entry-1"
         },
         {
@@ -9325,8 +9325,8 @@
       "id": "750bc95c3c838900",
       "family": "authoring",
       "source": "kiwe-ai-toolkit/contracts/mcp-design.md",
-      "sha256": "30cc76db273cd1346c0d1b5fb000287a2b75a67616b5f044d8f1f09fe876c62c",
-      "bytes": 5336,
+      "sha256": "3991eff51bdbb1b565b74b2dc2f20e835ddec122c9ac352e175e0e380a39686e",
+      "bytes": 5727,
       "url": "https://start.kiwelaunch.com/library/750bc95c3c838900/",
       "raw": "https://start.kiwelaunch.com/library/source/kiwe-ai-toolkit/contracts/mcp-design.md",
       "entryCount": 0,
@@ -25824,8 +25824,8 @@
       "id": "e152593afcf42b51",
       "family": "runtime",
       "source": "docs/BRICKS-INTEGRATION.md",
-      "sha256": "2699bdcaea5baaa25cb7db09ed66e5faff867a9b1b4b6a98c7005c1808032479",
-      "bytes": 13083,
+      "sha256": "1c5fc7061133e0ab676c3def5a30f2866b5c30dfdeb77d169e9b5a555910c76e",
+      "bytes": 14688,
       "url": "https://start.kiwelaunch.com/library/e152593afcf42b51/",
       "raw": "https://start.kiwelaunch.com/library/source/docs/BRICKS-INTEGRATION.md",
       "entryCount": 0,

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.style-dependencies.v1.schema.json",
+  "title": "Seam compiler dependency ownership review v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","sourceHash","mutatesWordPress","installOrder","classes","variables","templateFiles","sourceFiles","assetBindings","issues","dependencyReviewPassed","nativeImportReady","limits","limitations"],
+  "properties": {
+    "schema":{"const":"seam.style-dependencies.v1"},
+    "sourceHash":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},
+    "mutatesWordPress":{"const":false},
+    "installOrder":{"type":"array","items":{"type":"string"}},
+    "classes":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["id","name"],"properties":{"id":{"type":"string"},"name":{"type":"string"}}}},
+    "variables":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","value"],"properties":{"name":{"type":"string"},"value":{"type":"string"}}}},
+    "templateFiles":{"type":"array","items":{"type":"string"}},
+    "sourceFiles":{"type":"array","items":{"type":"string"}},
+    "assetBindings":{"type":"array","maxItems":20000,"items":{"type":"object","additionalProperties":false,"required":["artifact","pointer","referenceHash","assetId"],"properties":{"artifact":{"type":"string","maxLength":240},"pointer":{"type":"string","pattern":"^/","maxLength":2000},"referenceHash":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},"assetId":{"type":"string","pattern":"^asset-[a-f0-9]{64}$"}}}},
+    "issues":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["code","source","message"],"properties":{"code":{"type":"string"},"source":{"type":"string"},"message":{"type":"string"}}}},
+    "dependencyReviewPassed":{"type":"boolean"},
+    "nativeImportReady":{"const":false},
+    "limits":{"type":"object","additionalProperties":false,"required":["assets","perAssetBytes","totalAssetBytes","nativeBytes","packageBytes"],"properties":{"assets":{"const":200},"perAssetBytes":{"const":16777216},"totalAssetBytes":{"const":67108864},"nativeBytes":{"const":67108864},"packageBytes":{"const":134217728}}},
+    "limitations":{"type":"array","items":{"type":"string"}}
+  }
+}
