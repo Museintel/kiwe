@@ -67,7 +67,8 @@ try {
 	$service->remove( $wordpress['id'] );
 	$copy = $service->create( $passphrase, 'Before change' );
 	$path = $service->download_path( $copy['id'] ); $bytes = file_get_contents( $path );
-	expect( str_starts_with( $path, $root . DIRECTORY_SEPARATOR . 'kiwe-private-backups' ), 'private storage outside docroot' );
+	$expected_private_root = wp_normalize_path( (string) realpath( $root ) ) . '/kiwe-private-backups/';
+	expect( str_starts_with( wp_normalize_path( $path ), $expected_private_root ), 'private storage outside docroot' );
 	expect( ! str_contains( $bytes, 'Kiwe QA' ) && ! str_contains( $bytes, 'Grow' ), 'content encrypted' );
 	expect( count( $service->inventory() ) === 1, 'inventory' );
 	rejects( static fn() => $service->preview_upload( $bytes, 'wrong-passphrase' ), 'wrong passphrase denied' );

@@ -9317,6 +9317,17 @@ html[data-dsa-dock-reveal="waiting"] #dsa-surface > [data-dsa-dock-cluster] * {
 	pointer-events: none !important;
 }
 
+html[data-dsa-dock-viewport-hidden] #dsa-surface > :is([data-dsa-dock-cluster], [data-dsa-dock-context]) {
+	visibility: hidden;
+	opacity: 0;
+	animation: none !important;
+}
+
+html[data-dsa-dock-viewport-hidden] #dsa-surface > :is([data-dsa-dock-cluster], [data-dsa-dock-context]) * {
+	visibility: hidden !important;
+	pointer-events: none !important;
+}
+
 @media (prefers-reduced-motion: no-preference) {
 	html[data-dsa-dock-reveal="revealing"] #dsa-surface > [data-dsa-dock-cluster] {
 		animation: dsa-dock-first-scroll var(--sf-duration-base) var(--sf-ease);

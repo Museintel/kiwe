@@ -12,6 +12,7 @@ Contextual **Comments/Reviews** below require Core451 and, for product reviews, 
 | `data-kiwe-cart-quantity` | Integer `1`–`99`; omitted = `1` | Optional quantity on the same add button. Native stock and purchase rules still apply. |
 | `data-kiwe-cart-status-target` | CSS selector, e.g. `#cart-status` | Optional status element for progress/success/error messages. Give that element `role="status" aria-live="polite"`. |
 | `data-dsa-open-module` | `menu`, `search`, `profile`, `links`, `saved`, `cart`, `theme`, `ai`, `notifications`, `ios-install`, `games` | Opens an available Kiwe destination. `notifications` opens the Notifications inbox and shares its badge and silent checkout reminder; `ai` remains a compatible inbox alias. `profile` shows sign-in/account as appropriate; `theme` toggles light/dark. Hidden dock icons do not prevent available destinations opening. |
+| `data-dsa-hide-dock` | Empty value or `cover` | Hides the Dock while any part of the marked element is in the viewport. Use `cover` for a hero that should keep the Dock hidden while it fills the viewport vertically. |
 | `data-dsa-install-pwa` | `ios`, `android`, `desktop`, `auto` | From RC393, runs the existing Home install action anywhere, including the footer. Configured store/download URLs are used when present; otherwise Kiwe offers supported installation or platform instructions. Use a real button/link with an accessible label. No extra per-button script, fake store listing or consent grant. |
 | `data-dsa-open-module` | `comments` | Core451: opens Comments, Store product Reviews or configured Site feedback. Existing PhoneKey, native moderation and Store rules apply. The shared runtime supplies the approved root-count badge. |
 | `data-dsa-discussion-id` | `current`, `site`, or `{kiwe_discussion_id}` | Target on that Comments launcher. Use the native tag in WordPress post/product loops; never a user/term ID or one static ID for every card. `site` requires the configured public website-feedback page. |
@@ -32,6 +33,8 @@ Contextual **Comments/Reviews** below require Core451 and, for product reviews, 
 | `data-kiwe-theme-status-target` | CSS selector, e.g. `#theme-status` | Optional element showing the current theme label. |
 
 For example, a custom product button needs **name** `data-kiwe-add-to-cart`, **value** `{post_id}`. An optional second row is **name** `data-kiwe-cart-quantity`, **value** `1`.
+
+For a full-height hero, set **name** `data-dsa-hide-dock` and **value** `cover` on the Bricks section. In HTML use `<section data-dsa-hide-dock="cover">`. When the next section enters the viewport, the Dock can show. Scrolling back into the hero hides it again. The first-scroll setting and other Dock visibility settings still apply, and separate header launchers remain accessible.
 
 A cosmetic header search needs **name** `data-dsa-open-module`, **value** `search`, on the form, its wrapper or the input. Kiwe makes it a keyboard-accessible launcher, keeps its decorative fields read-only and opens the real Search screen. The same attribute in a Bricks raw HTML element's native Attributes panel reaches its first visual root automatically. No HTML editing or frontend script is needed. An ordinary, unmarked search input remains editable.
 

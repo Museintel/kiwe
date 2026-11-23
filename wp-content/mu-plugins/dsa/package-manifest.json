@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.493",
+  "version": "8.0.0-rc.494",
   "algorithm": "sha256",
-  "file_count": 1029,
+  "file_count": 1030,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -117,8 +117,8 @@
       "sha256": "a7096f18ff0b6fb346a877cf6f002361c842c90eaf23a45c7da575505904b02f"
     },
     "assets/css/surface.css": {
-      "bytes": 300231,
-      "sha256": "48f03a3bede47e9e9f0a997ae97c6259046a0e9a0b24de7351f8dfd8dc9d1b79"
+      "bytes": 300582,
+      "sha256": "16b2cc19e5474b0330a4ba46f18366f035ed4314c0334577c12ebe1bd1bac299"
     },
     "assets/css/system-app.css": {
       "bytes": 8974,
@@ -316,6 +316,10 @@
       "bytes": 1594,
       "sha256": "c7c47912aa5a26899ee54ae94c60453eb81d0f1ad47c32edc503b42087dadcad"
     },
+    "assets/js/dock-viewport.js": {
+      "bytes": 3265,
+      "sha256": "73bb78d0d098c23851a6f6a5697852ed4148996f0a93d0d5c24e1643631a7102"
+    },
     "assets/js/early-launcher.js": {
       "bytes": 2333,
       "sha256": "0a6fc6512e9dd36e7ab6b0ca1f4ce6349afddfce5a500fba7dd16104f7fc14c7"
@@ -510,7 +514,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "e13b7981cf4eb64cacca2e817caf0d2d1e59b6466d70157acfbc79601aaaca8f"
+      "sha256": "407d96482c4a275a4d6d6875dc57bc2903f836ed202d054911a4d84c542fd990"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -2053,8 +2057,8 @@
       "sha256": "a1e870fa3702f5ff9d153a2df7a8842931074fc91d43f04d5658de33446d65a0"
     },
     "includes/Public_Endpoint/Surface_Renderer.php": {
-      "bytes": 17981,
-      "sha256": "6e0a4240e7d2d8caec3e12e19fe6ae67f17a40cc101cf2205c91ac8837662a55"
+      "bytes": 18159,
+      "sha256": "12c5f54db78d72a5edfce37c0131e4fb8b9ee1cc64b4f8869f9409238b70e968"
     },
     "includes/Rest/AI_Access_Controller.php": {
       "bytes": 12056,
