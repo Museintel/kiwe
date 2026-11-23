@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+// WP-CLI eval-file executes this entry point inside its own PHP wrapper.
 
 use DSA\Access\Dock_Workspace_Service;
 use DSA\Apps\Migration_Service;
@@ -14,7 +14,6 @@ use DSA\Settings;
 if (!defined('WP_CLI') || !WP_CLI || !defined('ABSPATH')) {
     exit(2);
 }
-require_once __DIR__ . '/core-fleet-recovery.php';
 
 function kiwe_fleet_state(string $work, ?array $values = null): array {
     $record = $work . '/checkpoint.json';
@@ -111,6 +110,7 @@ try {
     if ($choice !== 'keep' && !Dock_Workspace_Service::allowed()) {
         throw new RuntimeException('The configured WordPress operator cannot change the Dock setting.');
     }
+    require_once $work . '/core-fleet-recovery.php';
 
     $release = json_decode(file_get_contents($work . '/manifest.json'), true, 32, JSON_THROW_ON_ERROR);
     $archive = $work . '/kiwe-mu-plugin.zip';
