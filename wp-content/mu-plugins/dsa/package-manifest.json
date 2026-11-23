@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.494",
+  "version": "8.0.0-rc.495",
   "algorithm": "sha256",
   "file_count": 1031,
   "files": {
@@ -514,7 +514,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "407d96482c4a275a4d6d6875dc57bc2903f836ed202d054911a4d84c542fd990"
+      "sha256": "2cca38f977ab9e39f19754bee596fbe14b528f83b19d6f2dd41863b0cde3aa71"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1217,8 +1217,8 @@
       "sha256": "dee715e6b99e14938d13cc380a119864aa054d0a2e85e74751e57158d2cc3471"
     },
     "includes/Apps/Package_Layout.php": {
-      "bytes": 28736,
-      "sha256": "8d814e5e6a6d9cc889eb483a7e2ea9c56a9f9904d2f87dd1222197ee5ca33548"
+      "bytes": 28782,
+      "sha256": "045dcfdae07649ad37e907453ba460d0d1fb88f7a9a05213f8c653cdb157aba1"
     },
     "includes/Apps/Package_Verifier.php": {
       "bytes": 6864,

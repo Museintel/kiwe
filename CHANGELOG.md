@@ -1,4 +1,4 @@
-## Unreleased — Seam design drafts
+## 8.0.0-rc.495 (2026-11-23, source candidate)
 
 - Added an MCP package upload and a private Bricks preview for the exact approved draft import. The Framework workspace points site owners to the matching Seam draft download.
 
