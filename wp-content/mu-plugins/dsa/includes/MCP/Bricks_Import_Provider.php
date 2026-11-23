@@ -3,12 +3,20 @@ namespace DSA\MCP;
 
 use DSA\Bricks\Compiler_Import_Plan;
 use DSA\Bricks\Compiler_Import_Service;
+use DSA\Bricks\Compiler_Package_Reader;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-/** Exact draft-only bridge; the existing Framework workspace owns local ZIP upload and native recovery. */
+/** Draft-only access to Kiwe's native importer. */
 final class Bricks_Import_Provider {
 	public const SCOPE = 'mcp.bricks.import';
+	public const STAGE = 'mcp.bricks.import.stage';
+	public const PREVIEW = 'mcp.bricks.import.preview';
+	private static ?string $attachment = null;
+
+	public static function transfer_available(): bool {
+		return defined( Compiler_Import_Service::class . '::MCP_TRANSFER_API' ) && Compiler_Import_Service::MCP_TRANSFER_API === 1;
+	}
 	private static function object( array $fields ): array {
 		return [ 'type'=>'object','properties'=>$fields,'required'=>array_keys( $fields ),'additionalProperties'=>false ];
 	}
@@ -21,6 +29,34 @@ final class Bricks_Import_Provider {
 		$revision = [ 'revision'=>[ 'type'=>'integer','minimum'=>1,'maximum'=>65536 ] ];
 		$origin = [ 'beginIntent'=>self::text( 34 ) ];
 		$ops = [ 'mcp.bricks.import.status'=>$base + [ 'label'=>'Read the exact privately staged Bricks design and its native review','effect'=>'read','approval'=>'none','inputSchema'=>self::object( $job ),'execute'=>static fn( $a ) => self::result( self::native( $a )['job'] ) ] ];
+		if ( self::transfer_available() ) {
+			$ops[self::STAGE] = $base + [
+				'label'=>'Prepare an isolated Seam ZIP for private draft review',
+				'effect'=>'write', 'approval'=>'none',
+				'inputSchema'=>self::object( [ 'archiveSha256'=>self::text( 64 ), 'bytes'=>[ 'type'=>'integer', 'minimum'=>1 ] ] ),
+				'prepare'=>static fn( $a ) => [
+					'summary'=>'Check the exact Seam package for draft import',
+					'before'=>$a['bytes'] . ' bytes. ZIP SHA-256: ' . $a['archiveSha256'] . '.',
+					'after'=>'Creates a private review of the isolated package.',
+					'nativeExpected'=>self::attachment_fingerprint( $a ), 'needsApproval'=>false,
+				],
+				'current'=>static fn( $a ) => self::attachment_fingerprint( $a ),
+				'execute'=>static function ( $a ) {
+					self::admit_attachment( $a );
+					return self::result( ( new Compiler_Import_Service() )->stage( self::$attachment, $a['archiveSha256'] ) );
+				},
+			];
+			$ops[self::PREVIEW] = $base + [
+				'label'=>'Locate one private Bricks draft for visual comparison',
+				'effect'=>'read', 'approval'=>'none',
+				'inputSchema'=>self::object( $job + $origin + [ 'file'=>self::text( 240 ) ] ),
+				'execute'=>static function ( $a ) use ( $registry ) {
+					( new Intent_Service( $registry ) )->bricks_origin( $a['beginIntent'], $a['job'], $a['archiveSha256'] );
+					$id = ( new Compiler_Import_Service() )->delegated_preview( $a['job'], $a['archiveSha256'], $a['file'] );
+					return [ 'resultJson'=>wp_json_encode( [ 'id'=>$id, 'url'=>Bricks_Import_Transport::preview_url() ] ) ];
+				},
+			];
+		}
 		foreach ( [
 			'begin'=>[ 'approve','Review and start the exact Bricks draft import','required',$job + $revision ],
 			'next'=>[ 'step','Continue one native step of this approved Bricks draft import','none',$job + $revision + $origin ],
@@ -38,6 +74,21 @@ final class Bricks_Import_Provider {
 			];
 		}
 		return $ops;
+	}
+	private static function attachment_fingerprint( array $a ): string {
+		if ( $a['bytes'] > Compiler_Package_Reader::MAX_BYTES || ! preg_match( '/^[a-f0-9]{64}$/D', $a['archiveSha256'] ) ) throw new \RuntimeException( 'Use the SHA-256 and size of the exact Seam ZIP within the 128 MB limit.' );
+		return hash( 'sha256', $a['archiveSha256'] . ':' . $a['bytes'] );
+	}
+	public static function with_attachment( string $file, callable $apply ): array {
+		self::$attachment = $file;
+		try { return $apply(); }
+		finally { self::$attachment = null; }
+	}
+	public static function admit_attachment( array $a ): void {
+		$file = self::$attachment;
+		if ( $file === null || ! is_uploaded_file( $file ) || filesize( $file ) !== $a['bytes'] || ! hash_equals( $a['archiveSha256'], (string) hash_file( 'sha256', $file ) ) ) {
+			throw new \RuntimeException( 'Send the exact ZIP to the Kiwe package upload for this review.' );
+		}
 	}
 	private static function require_origin( array $a,string $action,Operation_Registry $registry ): void {
 		if ( in_array( $action,[ 'step','undo' ],true ) ) ( new Intent_Service( $registry ) )->bricks_origin( $a['beginIntent'],$a['job'],$a['archiveSha256'] );

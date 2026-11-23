@@ -25,7 +25,7 @@ final class MCP_App_Service extends Optional_App_Service {
   $page=is_string($_GET['page']??null)?$_GET['page']:'';
   return str_contains($path,'/kiwe-mcp/v1/') || str_starts_with($route,'/kiwe-mcp/v1/')
    || str_contains($path,'/.well-known/oauth-authorization-server') || str_contains($path,'/.well-known/openid-configuration') || str_contains($path,'/.well-known/oauth-protected-resource')
-   || str_starts_with($action,'kiwe_mcp_') || $page===self::PAGE;
+   || str_starts_with($action,'kiwe_mcp_') || $page===self::PAGE || isset($_GET['kiwe_bricks_draft_preview']);
  }
  public function register(): void {
   parent::register();

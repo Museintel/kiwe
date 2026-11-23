@@ -12,8 +12,9 @@ final class Compiler_Import_Workspace {
 		<section class="dsa-admin__panel" id="kiwe-compiler-import" aria-labelledby="kiwe-compiler-import-title">
 			<h2 id="kiwe-compiler-import-title"><?php esc_html_e( 'Import a compiled design','dsa' ); ?></h2>
 			<?php $jobs = ( new Compiler_Import_Service() )->listing(); if ( $jobs ) : ?><details><summary><?php esc_html_e( 'Saved imports and recovery','dsa' ); ?></summary><ul><?php foreach ( $jobs as $job ) : ?><li><a href="<?php echo esc_url( add_query_arg( [ 'page'=>'kiwe-framework','compiler-import'=>$job['id'] ],admin_url( 'admin.php' ) ) . '#kiwe-compiler-import' ); ?>"><?php echo esc_html( wp_date( 'j M Y, H:i',$job['created'] ) . ' · ' . $job['status'] ); ?></a></li><?php endforeach; ?></ul></details><?php endif; ?>
-			<p><?php esc_html_e( 'Choose the Framework ZIP from Seam. Kiwe checks its real media and styles before showing the changes for review. Existing pages and website routes are kept; templates are created as drafts.','dsa' ); ?></p>
-			<form data-compiler-upload><label for="kiwe-compiler-file"><?php esc_html_e( 'Compiler Framework ZIP','dsa' ); ?></label> <input id="kiwe-compiler-file" type="file" name="package" accept=".zip,application/zip" required> <button class="button button-primary" type="submit"><?php esc_html_e( 'Review package','dsa' ); ?></button></form>
+			<p><?php esc_html_e( 'Have an HTML design? Open Seam, upload your design files and download the Bricks draft package. Then choose the ZIP here to review the templates, images and styles.','dsa' ); ?> <a href="https://seam.kiwelaunch.com/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open Seam','dsa' ); ?></a></p>
+			<p><?php esc_html_e( 'If your AI sent a Kiwe review link, open that link to check its prepared design.','dsa' ); ?></p>
+			<form data-compiler-upload><label for="kiwe-compiler-file"><?php esc_html_e( 'Bricks draft package (.zip)','dsa' ); ?></label> <input id="kiwe-compiler-file" type="file" name="package" accept=".zip,application/zip" required> <button class="button button-primary" type="submit"><?php esc_html_e( 'Review design','dsa' ); ?></button></form>
 			<div data-compiler-progress aria-live="polite" role="status"></div>
 			<div data-compiler-review></div><div data-compiler-actions></div>
 		</section>

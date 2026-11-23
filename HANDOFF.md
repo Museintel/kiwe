@@ -1,3 +1,5 @@
+23 November — Seam design drafts add direct MCP ZIP staging and private native Bricks preview to the Framework import workflow. The matching Seam runner compiles and compares desktop and mobile drafts. This development requires the matching Core and MCP App packages for release. [Bricks integration](docs/BRICKS-INTEGRATION.md#design-drafts-from-seam)
+
 22 November 2026. The [Core493 candidate](docs/RC493-DOCK-RELEASE.md) integrates first-tap handling, public Search startup and the first-scroll Dock setting into the published RC492 source. The Core package and focused desktop, mobile, and settings checks pass. Sign the reviewed physical Core archive with the existing release key before a coordinated rollout.
 
 22 November 2026. Public main now carries the RC492 runtime source used to reproduce the signed Core release. The matching storefront App versions are Store 1.1.16 and MCP 1.0.0-rc.31. Package checksums and build instructions are in the [RC492 source guide](docs/RC492-SOURCE.md).

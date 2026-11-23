@@ -8,12 +8,13 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** Resumable, explicitly requested authoring. No visitor hook, remote fetch or background job. */
 final class Compiler_Import_Service {
 	public const MCP_IMPORT_API = 1;
+	public const MCP_TRANSFER_API = 1;
 	public const MARKER = '_kiwe_compiler_import_v1';
 	public const ASSET_HASH = '_kiwe_compiler_asset_sha256';
 	private \DSA\Settings $settings;
 	public function __construct( ?\DSA\Settings $settings = null ) { $this->settings = $settings ?? new \DSA\Settings(); }
 	private function require_access(): void { if ( ! Compiler_Import_Plan::allowed() ) throw new Compiler_Package_Error( 'Compiler import is unavailable for this account or Bricks installation.' ); }
-	public function stage( string $source ): array {
+	public function stage( string $source, ?string $isolated_hash = null ): array {
 		$this->require_access();
 		if ( ! Secret_Store::supports_native_encryption() ) throw new Compiler_Package_Error( 'This server needs native Sodium or OpenSSL AES-256-GCM for large design imports. Existing saved work is retained.' );
 		Files::quota( get_current_user_id() );
@@ -21,11 +22,14 @@ final class Compiler_Import_Service {
 		try {
 			$target = Files::path( $dir,'source.seam.zip' );
 			if ( is_link( $source ) || ! is_file( $source ) || filesize( $source ) > Compiler_Package_Reader::MAX_BYTES || ! copy( $source,$target ) || ! chmod( $target,0600 ) ) throw new Compiler_Package_Error( 'The package could not be kept in private storage.' );
+			$zip_hash = hash_file( 'sha256', $target );
+			if ( ! is_string( $zip_hash ) || ( $isolated_hash !== null && ! hash_equals( $isolated_hash, $zip_hash ) ) ) throw new Compiler_Package_Error( 'The received package fingerprint differs from the import review.' );
 			$reader = new Compiler_Package_Reader( $target ); $inspection = $reader->inspect();
+			if ( $isolated_hash !== null ) $this->require_isolated_package( [ 'inspection'=>$inspection, 'zipHash'=>$zip_hash ], $isolated_hash );
 			foreach ( $inspection['assets'] as $asset ) if ( $asset['file'] && ( $asset['mime'] ?? '' ) === 'image/svg+xml' && ( $asset['policy'] ?? '' ) === 'review' ) Compiler_Import_Plan::validate_embedded_svg( $reader->bytes( $asset['file'],262144 ) );
 			$plan = Compiler_Import_Plan::prepare( $inspection,$this->settings );
 			unset( $inspection['documents'] );
-			$state = [ 'schema'=>2,'id'=>$id,'actor'=>get_current_user_id(),'site'=>hash( 'sha256',home_url( '/' ) ),'revision'=>1,'created'=>time(),'expires'=>time()+DAY_IN_SECONDS,'status'=>'review','zipHash'=>hash_file( 'sha256',$target ),'inventory'=>$reader->inventory(),'inspection'=>$inspection,'plan'=>$plan,'media'=>[],'mediaIntents'=>[],'drafts'=>[],'journal'=>[],'draftCursor'=>0,'messages'=>[] ];
+			$state = [ 'schema'=>2,'id'=>$id,'actor'=>get_current_user_id(),'site'=>hash( 'sha256',home_url( '/' ) ),'revision'=>1,'created'=>time(),'expires'=>time()+DAY_IN_SECONDS,'status'=>'review','zipHash'=>$zip_hash,'inventory'=>$reader->inventory(),'inspection'=>$inspection,'plan'=>$plan,'media'=>[],'mediaIntents'=>[],'drafts'=>[],'journal'=>[],'draftCursor'=>0,'messages'=>[] ];
 			$this->save( $dir,$state ); $ready = true; return $this->summary( $state );
 		} finally { if ( ! $ready ) { unset( $reader ); Files::retire( $dir ); } }
 	}
@@ -76,11 +80,23 @@ final class Compiler_Import_Service {
 		return $state;
 	}
 	public function status( string $id ): array { $this->require_access(); $dir = Files::directory( 'compiler',$id ); return $this->summary( $this->load( $dir,$id ) ); }
-	/** No listing or transport is delegated: the designer must supply the exact uploaded package and job. */
+	/** A delegate can read the exact uploaded package and job. */
 	public function delegated_review( string $id,string $hash,string $action = '' ): array {
 		$this->require_access(); $state = $this->load( Files::directory( 'compiler',$id ),$id );
 		$this->require_isolated_package( $state,$hash );
 		return [ 'job'=>$this->summary( $state ),'expected'=>$action === '' ? '' : $this->delegated_expected( $state,$hash,$action ) ];
+	}
+	public function delegated_preview( string $job, string $hash, string $file ): int {
+		$this->require_access();
+		$state = $this->load( Files::directory( 'compiler', $job ), $job );
+		$this->require_isolated_package( $state, $hash );
+		$entry = $state['drafts'][$file] ?? [];
+		$id = (int) ( $entry['id'] ?? 0 );
+		$post = $id ? get_post( $id ) : null;
+		if ( $state['status'] !== 'complete' || $state['expires'] < time() || ! $post || $post->post_status !== 'draft' || $post->post_type !== BRICKS_DB_TEMPLATE_SLUG || ! current_user_can( 'edit_post', $id ) || ! in_array( hash( 'sha256', serialize( $this->draft_snapshot( $id ) ) ), $entry['allowed'], true ) ) {
+			throw new Compiler_Package_Error( 'Use a current draft from the completed import to compare this design.' );
+		}
+		return $id;
 	}
 	private function require_isolated_package( array $state,string $hash ): void {
 		if ( ( $state['inspection']['importPolicy'] ?? '' ) !== Compiler_Package_Reader::ISOLATED_DRAFT || ! hash_equals( $state['zipHash'],$hash ) ) throw new Compiler_Package_Error( 'Use the exact ZIP fingerprint for an isolated draft package uploaded to your native Framework workspace.' );

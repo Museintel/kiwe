@@ -25,7 +25,7 @@ final class Intent_Service {
  private function save(array $row): void { Records::put('intent',$row['id'],$row['data'],$row['expiresAt'],$row['userId'],$row['data']['binding']['client']); }
  private function projection(array $row): array {
   $d=$row['data'];return['id'=>$row['id'],'operation'=>$d['operation'],'state'=>$d['state'],'summary'=>$d['plan']['summary'],'before'=>$d['plan']['before'],'after'=>$d['plan']['after'],
-   'approvalRequired'=>$d['plan']['needsApproval'],'approvalUrl'=>$d['plan']['needsApproval']&&$d['state']==='prepared'?add_query_arg(['action'=>'kiwe_mcp_change_review','intent'=>$row['id']],admin_url('admin-post.php')):'',
+   'approvalRequired'=>$d['plan']['needsApproval'],'approved'=>is_array($d['approval']),'approvalUrl'=>$d['plan']['needsApproval']&&$d['state']==='prepared'?add_query_arg(['action'=>'kiwe_mcp_change_review','intent'=>$row['id']],admin_url('admin-post.php')):'',
    'reviewExpires'=>gmdate('c',$d['reviewUntil']),'message'=>$d['message']??'','result'=>$d['result']??null];
  }
  public function prepare(string $operation,array $arguments,string $requestId): array {
@@ -224,6 +224,7 @@ final class Intent_Service {
     throw new \RuntimeException('The approved price, currency or sale availability changed. Prepare a fresh review.');
    }
    if($d['operation']==='mcp.visual.client.receive')Featured_Image_Provider::admit_client_upload($d['arguments']);
+   if($d['operation']==='mcp.bricks.import.stage')Bricks_Import_Provider::admit_attachment($d['arguments']);
    Records::atomic(function()use(&$row,$g){$row=$this->row($row['id'],$g,true);if($row['data']['state']!=='prepared')throw new \RuntimeException('This change is no longer awaiting application.');$row['data']['state']='running';$row['data']['message']='Native operation started; interruption requires readback.';$this->save($row);});
    // Never hold the connection-table transaction across native writers/network jobs.
    try{$current=$this->grant();if($current!==$g)throw new \RuntimeException('The delegated authority changed.');$result=$this->registry->execute_prepared($d['operation'],$d['arguments'],$d['plan']['nativeExpected'],$g['scopes'],$g['pins']);$state='complete';$message='Native writer confirmed this change.';}

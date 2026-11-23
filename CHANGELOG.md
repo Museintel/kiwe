@@ -1,3 +1,7 @@
+## Unreleased — Seam design drafts
+
+- Added an MCP package upload and a private Bricks preview for the exact approved draft import. The Framework workspace points site owners to the matching Seam draft download.
+
 ## 8.0.0-rc.494 (2026-11-23, source candidate)
 
 - Add the `data-dsa-hide-dock` frontend attribute and its `cover` value for full-height sections. The behavior composes with first-scroll reveal and existing header launchers.
