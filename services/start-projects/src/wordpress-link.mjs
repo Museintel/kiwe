@@ -37,8 +37,67 @@ function form(fields) {
 
 export function createWordPressLink(send = requestSite) {
   const json = async (origin, target, options) => JSON.parse((await send(origin, target, options)).body);
+  const revoke = async (connection, token) => {
+    try {
+      await send(connection.origin, connection.revokeEndpoint, form({
+        client_id: connection.clientId, token, token_type_hint: 'access_token',
+      }));
+    } catch {}
+  };
+
+  async function call(connection, token, name, args) {
+    const id = randomUUID();
+    const response = await send(connection.origin, connection.resource, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/event-stream',
+        Authorization: 'Bearer ' + token,
+        'Content-Type': 'application/json',
+        'MCP-Protocol-Version': protocolVersion,
+        'Mcp-Method': 'tools/call',
+        'Mcp-Name': name,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id, method: 'tools/call',
+        params: {
+          name,
+          arguments: args,
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': protocolVersion,
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': { name: 'Kiwe Start', version: '1.0.0' },
+          },
+        },
+      }),
+    });
+    const packet = envelope(response, id);
+    if (packet?.id !== id || packet.error || packet.result?.isError || !packet.result) throw confirmationRequired();
+    return packet.result.structuredContent ?? JSON.parse(packet.result.content?.[0]?.text ?? 'null');
+  }
+
+  async function exchange(connection, code, scope) {
+    const { origin, redirect, resource, clientId, tokenEndpoint, verifier } = connection;
+    const grant = await json(origin, tokenEndpoint, form({
+      client_id: clientId,
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: verifier,
+      redirect_uri: redirect,
+      resource,
+    }));
+    if (!/^kiwe_mcp_access_g_[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/.test(grant.access_token ?? '')) {
+      throw confirmationRequired();
+    }
+    const granted = String(grant.scope ?? '').split(/\s+/);
+    if (!granted.includes(scope) || granted.some(item => !['mcp.read', scope].includes(item)) || grant.refresh_token) {
+      await revoke(connection, grant.access_token);
+      throw confirmationRequired();
+    }
+    return { token: grant.access_token, expiresIn: grant.expires_in };
+  }
+
   return {
-    async begin(domain, redirect, state, verifier) {
+    async begin(domain, redirect, state, verifier, scope = ownershipScope, name = 'Kiwe Start website connection') {
       const origin = 'https://' + domain;
       try {
         const [server, resource] = await Promise.all([
@@ -48,18 +107,21 @@ export function createWordPressLink(send = requestSite) {
         const issuer = siteUrl(origin, server.issuer);
         const mcp = siteUrl(origin, resource.resource);
         if (issuer.pathname !== '/' || issuer.search || !resource.authorization_servers?.includes(server.issuer)
-            || !server.scopes_supported?.includes(ownershipScope) || !resource.scopes_supported?.includes(ownershipScope)) {
+            || !server.scopes_supported?.includes(scope) || !resource.scopes_supported?.includes(scope)) {
+          if (scope !== ownershipScope) {
+            throw new StartError(409, 'context_unavailable', 'Enable the Kiwe MCP App version with Start Design Context on this website.');
+          }
           throw new StartError(409, 'site_link_unavailable', 'Enable the Kiwe MCP App version that supports site linking on this domain.');
         }
         const registration = siteUrl(origin, server.registration_endpoint);
         const authorize = siteUrl(origin, server.authorization_endpoint);
         const token = siteUrl(origin, server.token_endpoint);
-        const revoke = siteUrl(origin, server.revocation_endpoint);
+        const revocation = siteUrl(origin, server.revocation_endpoint);
         const client = await json(origin, registration, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_name: 'Kiwe Start website connection',
+            client_name: name,
             redirect_uris: [redirect],
             response_types: ['code'],
             grant_types: ['authorization_code'],
@@ -73,14 +135,14 @@ export function createWordPressLink(send = requestSite) {
           response_type: 'code',
           code_challenge: pkce(verifier),
           code_challenge_method: 'S256',
-          scope: 'mcp.read ' + ownershipScope,
+          scope: 'mcp.read ' + scope,
           state,
           resource: mcp.href,
         };
-        for (const [name, value] of Object.entries(fields)) authorize.searchParams.set(name, value);
+        for (const [key, value] of Object.entries(fields)) authorize.searchParams.set(key, value);
         return {
           issuer: server.issuer, origin, redirect, resource: mcp.href,
-          clientId: client.client_id, tokenEndpoint: token.href, revokeEndpoint: revoke.href,
+          clientId: client.client_id, tokenEndpoint: token.href, revokeEndpoint: revocation.href,
           authorizationUrl: authorize.href, verifier,
         };
       } catch (error) {
@@ -90,68 +152,27 @@ export function createWordPressLink(send = requestSite) {
     },
 
     async verify(connection, code) {
-      const { origin, redirect, resource, clientId, tokenEndpoint, revokeEndpoint, verifier, issuer } = connection;
-      let token;
+      let grant;
       try {
-        const grant = await json(origin, tokenEndpoint, form({
-          client_id: clientId,
-          grant_type: 'authorization_code',
-          code,
-          code_verifier: verifier,
-          redirect_uri: redirect,
-          resource,
-        }));
-        if (!/^kiwe_mcp_access_g_[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/.test(grant.access_token ?? '')) {
-          throw confirmationRequired();
-        }
-        token = grant.access_token;
-        if (!String(grant.scope ?? '').split(/\s+/).includes(ownershipScope)) throw confirmationRequired();
-        const id = randomUUID();
-        const name = 'kiwe-mcp-read';
-        const response = await send(origin, resource, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json, text/event-stream',
-            Authorization: 'Bearer ' + token,
-            'Content-Type': 'application/json',
-            'MCP-Protocol-Version': protocolVersion,
-            'Mcp-Method': 'tools/call',
-            'Mcp-Name': name,
-          },
-          body: JSON.stringify({
-            jsonrpc: '2.0', id, method: 'tools/call',
-            params: {
-              name,
-              arguments: { operation: 'mcp.site.connect.read', arguments: {} },
-              _meta: {
-                'io.modelcontextprotocol/protocolVersion': protocolVersion,
-                'io.modelcontextprotocol/clientCapabilities': {},
-                'io.modelcontextprotocol/clientInfo': { name: 'Kiwe Start', version: '1.0.0' },
-              },
-            },
-          }),
+        grant = await exchange(connection, code, ownershipScope);
+        const value = await call(connection, grant.token, 'kiwe-mcp-read', {
+          operation: 'mcp.site.connect.read', arguments: {},
         });
-        const packet = envelope(response, id);
-        if (packet?.id !== id || packet.error || packet.result?.isError || !packet.result) {
-          throw confirmationRequired();
-        }
-        const value = packet.result.structuredContent ?? JSON.parse(packet.result.content?.[0]?.text ?? 'null');
         const version = /^[0-9][0-9A-Za-z.+-]{0,59}$/;
-        if (!value || value.website !== issuer || !version.test(value.coreVersion ?? '')
+        if (!value || value.website !== connection.issuer || !version.test(value.coreVersion ?? '')
             || !version.test(value.wordpressVersion ?? '')) throw confirmationRequired();
-        return { url: origin, coreVersion: value.coreVersion, wordpressVersion: value.wordpressVersion };
+        return { url: connection.origin, coreVersion: value.coreVersion, wordpressVersion: value.wordpressVersion };
       } catch (error) {
         if (error instanceof StartError) throw error;
         throw confirmationRequired();
       } finally {
-        if (token) {
-          // This grant is short-lived and never written to the Start database.
-          try {
-            await send(origin, revokeEndpoint, form({ client_id: clientId, token, token_type_hint: 'access_token' }));
-          } catch {}
-        }
+        if (grant) await revoke(connection, grant.token);
       }
     },
+
+    exchange,
+    call,
+    revoke,
   };
 }
 

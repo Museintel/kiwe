@@ -49,7 +49,9 @@ test('Start web and MCP work on the same projects for single buyers and agencies
   const studio = await f.connect('studio');
   const customer = await f.connect('buyer-one');
   const tools = await studio.listTools();
-  assert.deepEqual(tools.tools.map(({ name }) => name), ['kiwe_start_projects', 'kiwe_start_project', 'kiwe_start_set_domain', 'kiwe_start_connect_site']);
+  assert.deepEqual(tools.tools.map(({ name }) => name), ['kiwe_start_projects', 'kiwe_start_project', 'kiwe_start_set_domain', 'kiwe_start_connect_site',
+    'kiwe_start_agency_workspace', 'kiwe_start_set_agency_home', 'kiwe_start_verify_agency_home',
+    'kiwe_start_context', 'kiwe_start_open_context', 'kiwe_start_prepare_context_change']);
   const agencyProjects = await studio.callTool({ name: 'kiwe_start_projects' });
   assert.deepEqual(agencyProjects.structuredContent.projects.map(({ id }) => id), [agencyOne, agencyTwo]);
   assert.ok((await customer.callTool({ name: 'kiwe_start_project', arguments: { projectId: agencyOne } })).isError);

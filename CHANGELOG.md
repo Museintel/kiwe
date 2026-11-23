@@ -1,5 +1,8 @@
 ## Version 1.x (Start project candidate)
 
+- Group standalone projects under Kiwe Launch and give agencies a private workspace with a verified home site.
+- Edit introductory Design Context through Start and prepare exact changes from MCP. WordPress retains its native fields, permissions and Bricks bindings.
+
 - Resume native Key setup from the verified Start project in the browser and MCP. Kiwe Auth redeems an owner-issued code, stores the site credential securely and proves the connection with no message.
 - Keep agency client senders optional and scoped to their own sites. Start advances after WordPress proof and sender readiness.
 

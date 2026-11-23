@@ -8,6 +8,12 @@ Kiwe Launch validates the payment and supplies the account and plan facts. Start
 
 Start saves a requested domain and selects included Kiwe hosting or an existing WordPress site. An existing site uses native Kiwe OAuth consent. Included hosting uses the configured Hostinger order and a verified temporary WordPress address.
 
+## Agency workspaces
+
+Every standalone purchaser opens their own projects under Kiwe Launch. An agency purchaser opens a private agency workspace with its own site projects. The same purchaser owns the workspace in the Start form and MCP. An agency name appears over its site list after the agency home is verified.
+
+An agency owner enters their business name and agency website domain in **Agency workspace settings** or through MCP. An eligible WordPress site already verified in that agency workspace can serve as its home. For any other home, Start returns a 24-hour text proof at the exact site's `/.well-known/kiwe-agency.txt`. The owner publishes it and selects **Verify website**. Start checks the specific HTTPS origin. Changing an agency home keeps the previous verified home active until the new proof succeeds. The proof does not purchase a domain, install hosting, or move client projects.
+
 ## Existing WordPress sites
 
 Choose an existing site and save its exact HTTPS domain. Start opens native WordPress consent for the Kiwe MCP App's `mcp.site.connect` scope. For sites with a designated Kiwe owner, that owner approves. An administrator with `manage_options` can approve on a single-site installation before a Kiwe owner has been designated. An ordinary editor can still use permitted MCP reads, and the connection proof remains owner-restricted.
@@ -25,7 +31,13 @@ Set `KIWE_START_KEY_ORIGIN` to the Key HTTPS origin and `KIWE_START_KEY_TOKEN` t
 3. Open **Set up WordPress** in Key. Enter the one-time code as the site owner in **Kiwe Auth** on that WordPress site. WordPress stores the encrypted credential and verifies the connection.
 4. Select **Check Key connection** or call the MCP tool again. The project reports the next Design Context step after native website proof and sender readiness.
 
-A standalone buyer has their own Start project and Design Context. Each agency has its own home website with separate child projects for its clients. Each project keeps its own Design Context. This candidate links a workspace’s Key account and the verified site. Agency home website designation and the Design Context form are later steps.
+## Design Context
+
+From the site's project, open **Design Context** and authorize the introductory fields in WordPress. The dedicated `mcp.start.context` scope covers business name, tagline, industry, website type, description, audience, site goal, differentiator, and public phone and email. Existing website proof grants retain their limited read permission. The introductory forms use native field definitions and an exact current-value check, then save through WordPress. The full native journey remains available for brand assets, products, services, and the other site-specific settings.
+
+In MCP, read the selected section and ask the authorized human for the missing facts. Prepare that exact answer, then open its Start review. The human can compare the current and proposed values and confirm for the named website. The same value is visible in Start, MCP and WordPress after it saves. The native writer refuses stale changes. Individual site scopes, temporary grants and per-site context stay separate even inside one agency. Native edits feed the existing Bricks dynamic bindings where templates use them.
+
+The edit session lasts up to 15 minutes and can be closed from Start. Start keeps the native token and any pending review in process memory. Saved values belong to WordPress. Restarting Start retains the agency and project records and requires fresh WordPress consent for editing.
 
 ## Included Kiwe hosting
 
@@ -62,6 +74,9 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 
 - `kiwe_start_provision_site` sets up or checks included hosting when a Hostinger order is configured.
 - `kiwe_start_connect_key` opens native Key approval or refreshes the verified site's Key status when Key is configured.
+- `kiwe_start_agency_workspace`, `kiwe_start_set_agency_home` and `kiwe_start_verify_agency_home` manage the agency's own website.
+- `kiwe_start_open_context` opens the site's narrow WordPress consent, and `kiwe_start_context` reads the authorized section.
+- `kiwe_start_prepare_context_change` returns a link for the human to review and save the exact supplied value.
 
 The service preserves the latest saved revision when a browser and an MCP client act at the same time. Cross-account project IDs confer no access.
 
@@ -70,6 +85,8 @@ The service preserves the latest saved revision when a browser and an MCP client
 Run Node 22.13 or newer and install the locked dependencies with `npm ci`. Run `npm test` to verify the HTTP purchase callback, browser request flow, durable restart, managed and existing hosting choices, account isolation and real MCP tool calls. Set `KIWE_START_TEST_SOCKET=1` for isolated Unix-socket qualification on hosts that restrict TCP loopback.
 
 The optional real-browser check runs the production service entry point with an isolated checkout and OAuth issuer. It opens a client project at 390 CSS pixels and an agency project at 1440 CSS pixels, saves each domain through the form and reads both back through MCP. Install the existing UI harness dependencies under `tools/ui-contract`, then run `npm run test:browser` in this service. Set `KIWE_START_TEST_CHROME` to use an installed Chrome executable. The harness resolves Playwright from the repository's UI test dependency by default.
+
+Batch 4 passed 15 Start tests locally and on Hostinger Node 22. Its 291 source checks cover native setup, authorization, guidance and change contracts. Plum Giraffe loaded the candidate context operations with the full MCP provider on WordPress 7.1.5 and signed Core RC495. With temporary native options, it admitted the scoped fields, saved a tagline through the native writer, read it through the Bricks binding and denied a stale repeat. The original options hash matched. Chrome checked that both agency verification and Design Context forms fit at 390 and 1440 CSS pixels. The hosted Start scenarios use test purchases and mediated WordPress responses. The new App scope needs a signed rollout before production use.
 
 The Batch 3 candidate passed all 11 Start tests and three Key integration tests in the isolated Plum Giraffe run, plus one connected rehearsal on Hostinger Node 22.23.5 and WordPress 7.1.5 with signed Core RC495. The rehearsal used candidate Kiwe Auth source, a test purchase and a simulated sender. A native site owner verified the connection over the Key HTTP routes, using a temporary WordPress options table. The encrypted credential and native settings readback passed. Start web and MCP both reached Design Context. The lab's existing option hash matched, and no recipient message was sent. The relay and temporary data were retired. The connected test uses the previously qualified website ownership contract. Live buyer, agency-home and Key enrolment remain pending.
 

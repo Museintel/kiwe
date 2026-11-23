@@ -55,7 +55,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Use a 
 
 process.umask(0o077);
 mkdirSync(path.dirname(database), { recursive: true, mode: 0o700 });
-const projects = openProjects(database);
+const projects = openProjects(database, { launchWebsite: checkoutOrigin });
 const authorizeMcp = createMcpAuthorization({
   issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
 });

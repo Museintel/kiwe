@@ -33,6 +33,23 @@ export const domainInput = claimInput.extend({
   revision: z.number().int().positive(),
 });
 export const siteLinkInput = claimInput.extend({ revision: z.number().int().positive() });
+export const agencyHomeInput = z.strictObject({
+  name: z.string().trim().min(1).max(80).regex(/^[^\u0000-\u001f\u007f]+$/u),
+  domain: z.string().min(1).max(253),
+});
+export const agencyVerificationInput = z.strictObject({ attemptId: z.uuid() });
+const workspace = z.strictObject({
+  type: z.enum(['kiwe_launch', 'agency']),
+  name: z.string(),
+  website: z.url().nullable(),
+});
+export const agencySpaceOutput = z.strictObject({
+  workspace,
+  pending: z.strictObject({
+    attemptId: z.uuid(), name: z.string(), website: z.url(), proofUrl: z.url(),
+    proofText: z.string(), expiresAt: z.string(),
+  }).nullable(),
+});
 const connectedSite = z.strictObject({
   url: z.url(), coreVersion: z.string(), wordpressVersion: z.string(), verifiedAt: z.string(),
 });
@@ -49,6 +66,7 @@ const projectOutput = z.strictObject({
   id: z.uuid(),
   planId: id,
   accountType: z.enum(['client', 'agency']),
+  workspace,
   hostingIncluded: z.boolean(),
   domain: z.string().nullable(),
   hosting: hostChoices.nullable(),
@@ -81,7 +99,14 @@ function normalizeDomain(value) {
   return domain;
 }
 
-function view(row) {
+const agencyProofPath = '/.well-known/kiwe-agency.txt';
+
+function workspaceView(accountType, agency, launchWebsite) {
+  if (accountType === 'client') return { type: 'kiwe_launch', name: 'Kiwe Launch', website: launchWebsite };
+  return { type: 'agency', name: agency?.name ?? 'Your agency', website: agency?.website ?? null };
+}
+
+function view(row, launchWebsite) {
   const site = row.site_url ? {
     url: row.site_url, coreVersion: row.core_version, wordpressVersion: row.wordpress_version, verifiedAt: row.verified_at,
   } : null;
@@ -101,6 +126,7 @@ function view(row) {
     id: row.id,
     planId: row.plan_id,
     accountType: row.account_type,
+    workspace: workspaceView(row.account_type, { name: row.agency_name, website: row.agency_website }, launchWebsite),
     hostingIncluded: Boolean(row.hosting_included),
     domain: row.domain,
     hosting: row.hosting,
@@ -121,7 +147,7 @@ const digest = (value) => createHash('sha256').update(value, 'utf8').digest('hex
 const handoffLifetime = 5 * 60 * 1000;
 export const browserLifetime = 8 * 60 * 60 * 1000;
 
-export function openProjects(filename, { now = Date.now } = {}) {
+export function openProjects(filename, { now = Date.now, launchWebsite = 'https://kiwelaunch.com' } = {}) {
   const db = new DatabaseSync(filename, { enableDoubleQuotedStringLiterals: false });
   db.exec('PRAGMA busy_timeout = 3000; PRAGMA journal_mode = WAL;');
   db.exec(`
@@ -171,6 +197,17 @@ export function openProjects(filename, { now = Date.now } = {}) {
       account_id TEXT PRIMARY KEY,
       workspace_id TEXT NOT NULL UNIQUE
     ) STRICT;
+    CREATE TABLE IF NOT EXISTS agency_spaces (
+      account_id TEXT PRIMARY KEY,
+      name TEXT,
+      website TEXT UNIQUE,
+      verified_at INTEGER,
+      attempt_id TEXT,
+      attempt_name TEXT,
+      attempt_website TEXT,
+      proof_text TEXT,
+      expires_at INTEGER
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS project_key_links (
       project_id TEXT PRIMARY KEY REFERENCES projects(id),
       state TEXT NOT NULL DEFAULT 'awaiting_approval',
@@ -195,9 +232,10 @@ export function openProjects(filename, { now = Date.now } = {}) {
   const projection = 'SELECT p.*, s.site_url, s.core_version, s.wordpress_version, s.verified_at, '
     + 'm.status AS managed_status, m.setup_domain, '
     + 'k.project_id AS key_project_id, k.state AS key_state, k.sender AS key_sender, k.site_authenticated AS key_site_authenticated, '
-    + 'k.manage_url AS key_manage_url, k.pairing_pending AS key_pairing_pending FROM projects p '
+    + 'k.manage_url AS key_manage_url, k.pairing_pending AS key_pairing_pending, '
+    + 'a.name AS agency_name, a.website AS agency_website FROM projects p '
     + 'LEFT JOIN project_sites s ON p.id = s.project_id LEFT JOIN managed_sites m ON p.id = m.project_id '
-    + 'LEFT JOIN project_key_links k ON p.id = k.project_id';
+    + 'LEFT JOIN project_key_links k ON p.id = k.project_id LEFT JOIN agency_spaces a ON p.account_id = a.account_id';
   const owned = db.prepare(projection + ' WHERE p.id = ? AND p.account_id = ?');
   const list = db.prepare(projection + ' WHERE p.account_id = ? ORDER BY p.rowid');
   const insert = db.prepare(
@@ -269,6 +307,40 @@ export function openProjects(filename, { now = Date.now } = {}) {
   const keyWorkspace = db.prepare('SELECT workspace_id FROM key_workspaces WHERE account_id = ?');
   const addKeyLink = db.prepare('INSERT INTO project_key_links(project_id) VALUES (?) ON CONFLICT(project_id) DO NOTHING');
   const updateKeyLink = db.prepare('UPDATE project_key_links SET state = ?, sender = ?, site_authenticated = ?, pairing_pending = ?, manage_url = ? WHERE project_id = ?');
+
+  const agencyMember = db.prepare("SELECT 1 FROM projects WHERE account_id = ? AND account_type = 'agency' LIMIT 1");
+  const agencySpace = db.prepare('SELECT * FROM agency_spaces WHERE account_id = ?');
+  const addAgency = db.prepare('INSERT INTO agency_spaces(account_id) VALUES (?) ON CONFLICT(account_id) DO NOTHING');
+  const agencyClaim = db.prepare('SELECT 1 FROM agency_spaces WHERE website = ? AND account_id <> ?');
+  const nativeAgencySite = db.prepare(
+    "SELECT 1 FROM project_sites s JOIN projects p ON s.project_id = p.id WHERE s.site_url = ? AND p.account_id = ? AND p.account_type = 'agency'",
+  );
+  const addAgencyAttempt = db.prepare(
+    'UPDATE agency_spaces SET attempt_id = ?, attempt_name = ?, attempt_website = ?, proof_text = ?, expires_at = ? WHERE account_id = ?',
+  );
+  const confirmAgency = db.prepare(
+    'UPDATE agency_spaces SET name = ?, website = ?, verified_at = ?, attempt_id = NULL, attempt_name = NULL, '
+    + 'attempt_website = NULL, proof_text = NULL, expires_at = NULL WHERE account_id = ?',
+  );
+
+  function agencyState(accountId) {
+    if (!agencyMember.get(accountId)) throw new StartError(404, 'agency_unavailable', 'An agency plan opens its own workspace.');
+    const row = agencySpace.get(accountId);
+    const pending = row?.expires_at > now() ? {
+      attemptId: row.attempt_id, name: row.attempt_name, website: row.attempt_website,
+      proofUrl: row.attempt_website + agencyProofPath, proofText: row.proof_text,
+      expiresAt: new Date(row.expires_at).toISOString(),
+    } : null;
+    return { workspace: workspaceView('agency', row, launchWebsite), pending };
+  }
+
+  function saveAgencyHome(accountId, name, website) {
+    if (agencyClaim.get(website, accountId)) throw new StartError(409, 'agency_unavailable', 'This agency website is already assigned.');
+    confirmAgency.run(name, website, now(), accountId);
+    return agencyState(accountId);
+  }
+
+  const projectView = (row) => view(row, launchWebsite);
 
   function requireKeyTarget(accountId, { projectId, revision }) {
     const row = owned.get(projectId, accountId);
@@ -348,14 +420,48 @@ export function openProjects(filename, { now = Date.now } = {}) {
     },
 
     listProjects(accountId) {
-      return list.all(accountId).map(view);
+      return list.all(accountId).map(projectView);
     },
 
     getProject(accountId, input) {
       const { projectId } = parse(claimInput, input);
       const row = owned.get(projectId, accountId);
       if (!row) throw missingProject();
-      return view(row);
+      return projectView(row);
+    },
+
+    getAgencySpace(accountId) {
+      return agencyState(accountId);
+    },
+
+    prepareAgencyHome(accountId, input) {
+      const { name, domain } = parse(agencyHomeInput, input);
+      const website = 'https://' + normalizeDomain(domain);
+      return transaction(() => {
+        const current = agencyState(accountId);
+        if (current.workspace.website === website && current.workspace.name === name) return current;
+        addAgency.run(accountId);
+        if (current.workspace.website === website || nativeAgencySite.get(website, accountId)) {
+          return saveAgencyHome(accountId, name, website);
+        }
+        if (current.pending?.website === website && current.pending.name === name) return current;
+        addAgencyAttempt.run(randomUUID(), name, website, 'kiwe-agency-' + secret(), now() + 24 * 60 * 60 * 1000, accountId);
+        return agencyState(accountId);
+      });
+    },
+
+    agencyAttempt(accountId, input) {
+      const { attemptId } = parse(agencyVerificationInput, input);
+      const { pending } = agencyState(accountId);
+      if (pending?.attemptId !== attemptId) throw new StartError(410, 'agency_proof_expired', 'Create a fresh website check for this workspace.');
+      return pending;
+    },
+
+    confirmAgencyHome(accountId, input) {
+      return transaction(() => {
+        const pending = this.agencyAttempt(accountId, input);
+        return saveAgencyHome(accountId, pending.name, pending.website);
+      });
     },
 
     setDomain(accountId, input) {
@@ -367,7 +473,7 @@ export function openProjects(filename, { now = Date.now } = {}) {
         if (details.hosting === 'included' && !row.hosting_included) {
           throw new StartError(409, 'hosting_unavailable', 'This purchase uses an existing site.');
         }
-        if (row.domain === domain && row.hosting === details.hosting) return view(row);
+        if (row.domain === domain && row.hosting === details.hosting) return projectView(row);
         if (row.key_project_id) throw new StartError(409, 'key_setup_started', 'This website already has a Key request.');
         if (row.managed_status) throw new StartError(409, 'hosting_already_requested', 'This project already has a hosting request.');
         if (row.revision !== details.revision) {
@@ -376,7 +482,7 @@ export function openProjects(filename, { now = Date.now } = {}) {
         forgetSite.run(row.id);
         dropLinkAttempt.run(row.id);
         update.run(domain, details.hosting, row.id, accountId);
-        return view(owned.get(row.id, accountId));
+        return projectView(owned.get(row.id, accountId));
       });
     },
 
@@ -411,12 +517,12 @@ export function openProjects(filename, { now = Date.now } = {}) {
       return transaction(() => {
         const row = requireManagedTarget(accountId, details);
         updateManaged.run(status, row.id);
-        return view(owned.get(row.id, accountId));
+        return projectView(owned.get(row.id, accountId));
       });
     },
 
     siteLinkTarget(accountId, input) {
-      return view(requireLinkTarget(accountId, parse(siteLinkInput, input)));
+      return projectView(requireLinkTarget(accountId, parse(siteLinkInput, input)));
     },
 
     pendingSiteLink(projectId, revision) {
@@ -458,7 +564,7 @@ export function openProjects(filename, { now = Date.now } = {}) {
         confirmLink.run(row.id, proof.url, proof.coreVersion, proof.wordpressVersion, new Date(now()).toISOString());
         dropLinkAttempt.run(row.id);
         update.run(row.domain, row.hosting, row.id, row.account_id);
-        return { ...view(owned.get(row.id, row.account_id)), accountId: row.account_id };
+        return { ...projectView(owned.get(row.id, row.account_id)), accountId: row.account_id };
       });
     },
 
@@ -482,7 +588,7 @@ export function openProjects(filename, { now = Date.now } = {}) {
           pairingPending: receipt.pairingPending,
         });
         updateKeyLink.run(state, sender, Number(siteAuthenticated), Number(pairingPending), receipt.approvalUrl, row.id);
-        return view(owned.get(row.id, accountId));
+        return projectView(owned.get(row.id, accountId));
       });
     },
 

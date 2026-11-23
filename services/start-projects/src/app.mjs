@@ -4,12 +4,17 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
+  agencyHomeInput, agencySpaceOutput, agencyVerificationInput,
   StartError, browserLifetime, claimInput, domainInput, projectScope, projectsOutput, singleProjectOutput, siteLinkInput,
 } from './projects.mjs';
-import { projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
+import { agencyPage, contextPage, contextReviewPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
 import { createKeyConnections } from './key-connection.mjs';
+import { createAgencySpaces } from './agency-space.mjs';
+import {
+  contextArea, contextInput, contextOutput, contextEditInput, contextProposalOutput, contextReturnPath, createDesignContext,
+} from './design-context.mjs';
 
 const jsonType = 'application/json';
 const formType = 'application/x-www-form-urlencoded';
@@ -77,7 +82,7 @@ function checkOrigin(request, expected) {
   }
 }
 
-function mcpTools(projects, siteConnections, managedHosting, keyConnections, accountId) {
+function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, accountId) {
   const server = new McpServer({ name: 'Kiwe Start', version: '0.1.0' });
   const result = (label, structuredContent) => ({
     content: [{ type: 'text', text: label }],
@@ -129,11 +134,50 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, acc
       annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
     }, (input) => run(async () => result('Key connection status', await keyConnections.resume(accountId, input))));
   }
+  server.registerTool('kiwe_start_agency_workspace', {
+    description: 'Read the purchaser’s agency workspace and any pending proof for its own home website.',
+    outputSchema: agencySpaceOutput,
+    annotations: { readOnlyHint: true },
+  }, () => run(() => result('Agency workspace', projects.getAgencySpace(accountId))));
+  server.registerTool('kiwe_start_set_agency_home', {
+    description: 'Use the agency owner’s confirmed business name and own website domain. Return the proof file if website ownership needs verification.',
+    inputSchema: agencyHomeInput,
+    outputSchema: agencySpaceOutput,
+    annotations: { destructiveHint: false, idempotentHint: true },
+  }, (input) => run(() => result('Agency website setup', projects.prepareAgencyHome(accountId, input))));
+  server.registerTool('kiwe_start_verify_agency_home', {
+    description: 'Verify the approved agency home after the exact proof file is published. Check the latest workspace for its attempt ID.',
+    inputSchema: agencyVerificationInput,
+    outputSchema: agencySpaceOutput,
+    annotations: { destructiveHint: false, openWorldHint: true },
+  }, (input) => run(async () => result('Agency website verified', await agencySpaces.verify(accountId, input))));
+  server.registerTool('kiwe_start_context', {
+    description: 'Read the native, site-specific Design Context section. Show current values and ask the authorized human for any missing public business facts.',
+    inputSchema: contextInput,
+    outputSchema: contextOutput,
+    annotations: { readOnlyHint: true },
+  }, (input) => run(async () => result('Design Context', await context.status(accountId, input))));
+  server.registerTool('kiwe_start_open_context', {
+    description: 'Open the selected WordPress site’s native consent for introductory Design Context editing.',
+    inputSchema: siteLinkInput,
+    outputSchema: z.strictObject({ authorizationUrl: z.url() }),
+    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, (input) => run(async () => result('Approve Design Context access in WordPress', {
+    authorizationUrl: await context.begin(accountId, input),
+  })));
+  server.registerTool('kiwe_start_prepare_context_change', {
+    description: 'Prepare the exact public business fact supplied by the human. Open the review link so they can confirm it in Start and save to the selected WordPress site.',
+    inputSchema: contextEditInput,
+    outputSchema: contextProposalOutput,
+    annotations: { destructiveHint: false },
+  }, (input) => run(async () => result('Open the review to confirm this Design Context change', await context.propose(accountId, input))));
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock }) {
   const keyConnections = createKeyConnections(projects, keyProvider);
+  const agencySpaces = createAgencySpaces(projects, agencyReader);
+  const context = createDesignContext(projects, startOrigin, contextWordPress, contextClock);
   const managedHosting = createManagedHosting(projects, hostingProvider);
   const siteConnections = createSiteConnections(projects, startOrigin, wordpressLink);
   const secure = new URL(startOrigin).protocol === 'https:';
@@ -186,7 +230,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return json(response, 405, { error: 'method_not_allowed' });
       }
       const payload = await readBody(request, jsonType);
-      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, accountId);
+      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, accountId);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, enableJsonResponse: true,
       });
@@ -223,6 +267,82 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       projects.endSession(sessionToken(request));
       setCookie(response, '', 0);
       return redirect(response, '/projects');
+    }
+    if (endpoint === 'GET ' + contextReturnPath) {
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      try {
+        const access = await context.complete(Object.fromEntries(url.searchParams));
+        if (projects.accountForSession(sessionToken(request)) === access.accountId) {
+          return redirect(response, '/projects/' + access.projectId + '/context');
+        }
+        return send(response, 200, siteReturnPage('Design Context is connected. Return to your Start project.', true));
+      } catch (error) {
+        if (!(error instanceof StartError)) throw error;
+        return send(response, error.status, siteReturnPage(error.message, false));
+      }
+    }
+    const contextRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/context(?:\/(authorize|close|review\/([a-f0-9-]{36})))?$/);
+    if (contextRoute) {
+      const accountId = projects.accountForSession(sessionToken(request));
+      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
+      const [, projectId, action, reviewId] = contextRoute;
+      const project = projects.getProject(accountId, { projectId });
+      const area = contextArea.safeParse(url.searchParams.get('area')).data ?? 'identity';
+      const location = '/projects/' + projectId + '/context';
+      if (method === 'GET' && reviewId) {
+        return send(response, 200, contextReviewPage(project, context.review(accountId, projectId, reviewId), reviewId));
+      }
+      if (method === 'GET' && !action) {
+        try {
+          const view = await context.status(accountId, { projectId, revision: project.revision, area });
+          return send(response, 200, contextPage(project, area, view));
+        } catch (error) {
+          if (!(error instanceof StartError)) throw error;
+          return send(response, error.status, contextPage(project, area, null, error.message));
+        }
+      }
+      if (method === 'POST') {
+        checkOrigin(request, startOrigin);
+        try {
+          const form = await readBody(request, formType);
+          if (reviewId) {
+            const savedArea = await context.confirm(accountId, projectId, reviewId);
+            return redirect(response, location + '?area=' + savedArea);
+          }
+          if (action === 'authorize') {
+            const approval = await context.begin(accountId, { projectId, revision: Number(form.revision) });
+            return redirect(response, approval);
+          }
+          if (action === 'close') {
+            await context.close(accountId, projectId);
+            return redirect(response, location + '?area=' + area);
+          }
+          await context.save(accountId, { ...form, projectId, revision: Number(form.revision) });
+          return redirect(response, location + '?area=' + form.area);
+        } catch (error) {
+          if (!(error instanceof StartError)) throw error;
+          return send(response, error.status, contextPage(project, area, null, error.message));
+        }
+      }
+    }
+    const agencyRoute = pathname === '/projects/agency' || pathname === '/projects/agency/verify';
+    if (agencyRoute) {
+      const accountId = projects.accountForSession(sessionToken(request));
+      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
+      const agency = projects.getAgencySpace(accountId);
+      if (endpoint === 'GET /projects/agency') return send(response, 200, agencyPage(agency));
+      if (method === 'POST') {
+        checkOrigin(request, startOrigin);
+        try {
+          const input = await readBody(request, formType);
+          if (pathname.endsWith('/verify')) await agencySpaces.verify(accountId, input);
+          else projects.prepareAgencyHome(accountId, input);
+          return redirect(response, '/projects/agency');
+        } catch (error) {
+          if (!(error instanceof StartError)) throw error;
+          return send(response, error.status, agencyPage(projects.getAgencySpace(accountId), error.message));
+        }
+      }
     }
     const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';

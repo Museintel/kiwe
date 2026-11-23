@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
@@ -29,11 +31,42 @@ export function signInPage(checkoutOrigin, message = 'Sign in through Kiwe Launc
 }
 
 export function projectsPage(projects) {
-  const cards = projects.map((project) => `<li>
+  const section = (items, details = '') => items.length ? `<section>
+<h2>${escape(items[0].workspace.name)}</h2>${details}
+<ul class="projects">${items.map((project) => `<li>
 <a href="/projects/${project.id}">${escape(project.domain || 'Choose a domain')}</a>
 <p>${escape(project.planId)} · ${project.hostingIncluded ? 'Kiwe hosting included' : 'Your existing hosting'}</p>
-</li>`).join('');
-  return page('Your projects', cards ? `<ul class="projects">${cards}</ul>` : '<p>Your purchased projects will appear here.</p>', true);
+</li>`).join('')}</ul></section>` : '';
+  const clients = projects.filter(({ accountType }) => accountType === 'client');
+  const agency = projects.filter(({ accountType }) => accountType === 'agency');
+  return page('Your projects', projects.length
+    ? section(clients) + section(agency, '<p><a href="/projects/agency">Agency workspace settings</a></p>')
+    : '<p>Your purchased projects will appear here.</p>', true);
+}
+
+export function agencyPage({ workspace, pending }, error) {
+  const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
+  const current = workspace.website ? `<p class="status">Verified agency website <a href="${escape(workspace.website)}">${escape(workspace.website)}</a></p>` : '';
+  const proof = pending ? `<section class="card">
+<h2>Verify ${escape(pending.website)}</h2>
+<p>Publish a plain text file at this address on your agency website.</p>
+<p><code>${escape(pending.proofUrl)}</code></p>
+<p>Use this exact text as the entire file.</p>
+<p><code>${escape(pending.proofText)}</code></p>
+<p>The proof expires after 24 hours.</p>
+<form method="post" action="/projects/agency/verify">
+<input type="hidden" name="attemptId" value="${escape(pending.attemptId)}">
+<button class="button">Verify website</button>
+</form></section>` : '';
+  return page('Agency workspace', `<p><a href="/projects">All projects</a></p>
+${alert}${current}
+<form method="post" action="/projects/agency">
+<label for="agency-name">Agency name</label>
+<input id="agency-name" name="name" maxlength="80" value="${escape(pending?.name || (workspace.website ? workspace.name : ''))}" required>
+<label for="agency-domain">Agency website domain</label>
+<input id="agency-domain" name="domain" inputmode="url" placeholder="agency.com" maxlength="253" value="${escape((pending?.website || workspace.website || '').slice('https://'.length))}" required>
+<button class="button">Set agency website</button>
+</form>${proof}`, true);
 }
 
 function hostingStep(project, available) {
@@ -94,7 +127,7 @@ ${project.hosting ? '' : '<option value="" disabled selected>Choose hosting</opt
 <option value="existing"${project.hosting === 'existing' ? ' selected' : ''}>I have an existing WordPress site</option>
 </select>`
     : '<input type="hidden" name="hosting" value="existing"><p>You’ll connect an existing WordPress site.</p>';
-  return page('Choose your domain', `<p><a href="/projects">All projects</a></p>
+  return page('Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
 ${alert}${status}
 <form method="post" action="/projects/${project.id}/domain">
 <label for="domain">Domain</label>
@@ -103,7 +136,67 @@ ${selection}
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">Save domain</button>
 </form>
-${connect}${hostingStep(project, managed)}${keyStep(project, keyEnabled)}`, true);
+${connect}${hostingStep(project, managed)}${keyStep(project, keyEnabled)}
+${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/context">Open Design Context</a></p>` : ''}`, true);
+}
+
+const contextNames = { identity: 'Business identity', story: 'Story and audience', contact: 'Public contact' };
+
+function contextLink(project) {
+  return '/projects/' + project.id + '/context';
+}
+
+function fieldControl(field, id) {
+  const label = `<label for="${id}">${escape(field.label)}</label>`;
+  if (field.type === 'select') {
+    return label + `<select id="${id}" name="value">${field.choices.map(choice => (
+      `<option value="${escape(choice.value)}"${choice.value === field.value ? ' selected' : ''}>${escape(choice.label)}</option>`
+    )).join('')}</select>`;
+  }
+  if (field.type === 'textarea') {
+    return label + `<textarea id="${id}" name="value" rows="4" maxlength="${field.maxLength}">${escape(field.value)}</textarea>`;
+  }
+  return label + `<input id="${id}" name="value" type="${field.type}" maxlength="${field.maxLength}" value="${escape(field.value)}">`;
+}
+
+export function contextPage(project, area, view, error) {
+  const location = contextLink(project);
+  const status = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
+  const menu = `<nav aria-label="Design Context sections"><ul class="context-nav">${Object.entries(contextNames).map(([part, label]) => (
+    `<li><a href="${location}?area=${part}"${area === part ? ' aria-current="page"' : ''}>${label}</a></li>`
+  )).join('')}</ul></nav>`;
+  const authorization = project.key?.siteAuthenticated && project.key.state !== 'inactive'
+    ? `<form method="post" action="${location}/authorize">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">Authorize in WordPress</button></form>` : '';
+  const section = view?.section;
+  const details = section ? `<h2>${contextNames[area]}</h2>
+${section.fields.map((field, index) => `<form class="context-field" method="post" action="${location}?area=${area}">
+${fieldControl(field, 'context-field-' + index)}
+<input type="hidden" name="revision" value="${project.revision}">
+<input type="hidden" name="area" value="${area}">
+<input type="hidden" name="field" value="${escape(field.path)}">
+<input type="hidden" name="expected" value="${escape(section.expected)}">
+<input type="hidden" name="reviewId" value="${randomUUID()}">
+<button class="button">Save ${escape(field.label)}</button>
+</form>`).join('')}
+<form class="context-end" method="post" action="${location}/close">
+<button class="link">Close WordPress access</button></form>` : authorization;
+  const native = project.site ? `<p><a href="${escape(project.site.url)}/wp-admin/admin.php?page=kiwe-design-context">Open the full Design Context journey in WordPress</a></p>` : '';
+  return page('Design Context', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
+${status}<p>Enter the public business facts for this website. Changes save in WordPress.</p>
+${menu}${details}${native}`, true);
+}
+
+export function contextReviewPage(project, review, reviewId) {
+  const location = contextLink(project);
+  return page('Review Design Context change', `<p><a href="${location}?area=${review.area}">Back to Design Context</a></p>
+<p>Website <strong>${escape(project.domain)}</strong></p>
+<h2>${escape(review.label)}</h2>
+<p>Current value</p><blockquote>${escape(review.before || 'Empty')}</blockquote>
+<p>New value</p><blockquote>${escape(review.value || 'Clear the current value')}</blockquote>
+<form method="post" action="${location}/review/${reviewId}">
+<button class="button">Confirm and save to WordPress</button></form>`, true);
 }
 
 export function siteAuthorizationPage(project, authorizationUrl) {
@@ -140,7 +233,7 @@ h1 { line-height: 1.18; margin-bottom: 1.25rem; }
 a, .link { color: #1b6548; }
 .link { appearance: none; background: none; border: 0; font: inherit; text-decoration: underline; }
 label { display: block; margin-top: 1rem; font-weight: 650; }
-input, select {
+input, select, textarea {
   display: block;
   width: 100%;
   min-height: 2.75rem;
@@ -169,6 +262,13 @@ button { cursor: pointer; }
 .projects { list-style: none; padding: 0; }
 .projects li { padding: 1rem 0; border-bottom: 1px solid #d8e4dc; }
 .projects li p { margin: .3rem 0 0; }
+.context-nav { display: flex; gap: .7rem 1rem; flex-wrap: wrap; list-style: none; padding: 0; }
+.context-nav [aria-current] { font-weight: 700; }
+.context-field { padding-bottom: 1rem; border-bottom: 1px solid #d8e4dc; }
+.context-end { margin-top: 1rem; }
+.card { border: 1px solid #d8e4dc; border-radius: .6rem; margin-top: 1.5rem; padding: 1rem; }
+.card code, blockquote { overflow-wrap: anywhere; }
+blockquote { margin: .5rem 0 1rem; border-left: 3px solid #aec7b8; padding: .5rem .9rem; white-space: pre-wrap; }
 .status, .error { padding: .75rem 1rem; border-radius: .4rem; }
 .status { background: #e7f3ec; }
 .error { color: #711825; background: #fce8eb; }
