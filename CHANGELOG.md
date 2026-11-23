@@ -1,4 +1,4 @@
-## 8.0.0-rc.496 (2026-11-24, candidate)
+## 8.0.0-rc.497 (2026-11-24, candidate)
 
 - Add permission-scoped Design Context, website setup and Bricks document operations for Start and Kiwe MCP.
 - Publish and restore individually reviewed Bricks pages, templates and homepage assignments through native WordPress owner approval.
