@@ -1,3 +1,5 @@
+23 November — Version 1.x begins with a verified purchase and a resumable Start project for an individual client or an agency. The versioned authoring guide serves browser AI. The guided web and MCP paths share project actions and human approvals. [Purchased project authority](decisions/2026-11-23-start-purchased-projects.md)
+
 29 October — Kiwe1 completes the native community and business-context loop: one contextual conversation, privacy-safe live feedback testimonials, named private forms and role-aware activity. Included Auth/Security Apps expose existing policies without replacing PhoneKey or native authority. All three named installations and shared Start/Seam are accepted; future MCP/Google/Meta remain Apps programmes. [Actual release and limits](KIWE-1-LIVE-2026-10-29.md).
 
 24 October — Apps have separate optional code lifecycles while Core keeps the complete business brief and shared authoring experience. Complete AP01–AP06 under their original IDs; software installs require native authority and physical absence must leave no business engine. [Implementation decision](decisions/2026-10-24-physical-app-runtime.md).

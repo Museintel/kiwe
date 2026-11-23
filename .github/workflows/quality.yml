@@ -112,3 +112,16 @@ jobs:
       - name: Test signed delivery, replay protection and fallback
         working-directory: services/key-gateway
         run: npm test
+
+  start-projects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test the Start purchase handoff and MCP routes
+        working-directory: services/start-projects
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test

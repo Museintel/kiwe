@@ -1,3 +1,8 @@
+## Version 1.x (Start project candidate)
+
+- Open one resumable Start project for each trusted site entitlement. Web and MCP share the purchaser's projects, domain and hosting choice.
+- Verify checkout retries, single-use handoffs, issuer and account boundaries and both hosting choices in the [standalone Start service](services/start-projects/README.md). Live checkout and hosting integrations are pending.
+
 ## 8.0.0-rc.492 (2026-11-22, source sync)
 
 Published the reviewed WordPress source for the existing Core RC492 release, with Store 1.1.16 and MCP 1.0.0-rc.31. The combined source reproduces the signed Core ZIP using the Core profile builder. See the [RC492 source guide](docs/RC492-SOURCE.md) for artifact checksums and build instructions.
