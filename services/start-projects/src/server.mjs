@@ -5,6 +5,7 @@ import { createStartServer } from './app.mjs';
 import { createMcpAuthorization } from './auth.mjs';
 import { openProjects } from './projects.mjs';
 import { createHostingerProvider } from './managed-hosting.mjs';
+import { createKeyProvider } from './key-connection.mjs';
 
 function required(name) {
   const value = process.env[name];
@@ -42,6 +43,11 @@ const issuer = configuredUrl('KIWE_START_OAUTH_ISSUER');
 const jwks = configuredUrl('KIWE_START_OAUTH_JWKS');
 const purchaseToken = required('KIWE_START_PURCHASE_TOKEN');
 if (!/^[A-Za-z0-9_-]{43,128}$/.test(purchaseToken)) throw new Error('Use a random purchase credential.');
+const keyToken = process.env.KIWE_START_KEY_TOKEN;
+if (keyToken && (keyToken === purchaseToken || !/^[A-Za-z0-9_-]{43,128}$/.test(keyToken))) {
+  throw new Error('Use a separate random service credential for Key.');
+}
+const key = keyToken ? createKeyProvider({ token: keyToken, origin: configuredUrl('KIWE_START_KEY_ORIGIN', true) }) : undefined;
 const database = required('KIWE_START_DATABASE');
 if (!path.isAbsolute(database)) throw new Error('Use an absolute private database path.');
 const port = Number(process.env.PORT || 3000);
@@ -53,7 +59,7 @@ const projects = openProjects(database);
 const authorizeMcp = createMcpAuthorization({
   issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
 });
-const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider() });
+const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider(), keyProvider: key });
 server.listen(port, process.env.KIWE_START_BIND || '127.0.0.1');
 for (const name of ['SIGINT', 'SIGTERM']) {
   process.once(name, () => server.close(() => projects.close()));

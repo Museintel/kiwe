@@ -47,7 +47,7 @@ function purchase(entitlementId, extras = {}) {
   };
 }
 
-async function fixture(t, { wordpressLink, hostingProvider } = {}) {
+async function fixture(t, { wordpressLink, hostingProvider, keyProvider } = {}) {
   const checkoutCredential = randomBytes(32).toString('base64url');
   const directory = await mkdtemp(path.join(tmpdir(), 'kiwe-start-test-'));
   const filename = path.join(directory, 'projects.sqlite');
@@ -62,7 +62,7 @@ async function fixture(t, { wordpressLink, hostingProvider } = {}) {
   let url;
   async function start() {
     projects = openProjects(filename, { now: () => clock });
-    server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken: checkoutCredential, authorizeMcp, wordpressLink, hostingProvider });
+    server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken: checkoutCredential, authorizeMcp, wordpressLink, hostingProvider, keyProvider });
     if (useSocket) server.listen(socket);
     else server.listen(0, '127.0.0.1');
     await once(server, 'listening');

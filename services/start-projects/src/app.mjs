@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
+import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
@@ -8,6 +9,7 @@ import {
 import { projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
+import { createKeyConnections } from './key-connection.mjs';
 
 const jsonType = 'application/json';
 const formType = 'application/x-www-form-urlencoded';
@@ -75,7 +77,7 @@ function checkOrigin(request, expected) {
   }
 }
 
-function mcpTools(projects, siteConnections, managedHosting, accountId) {
+function mcpTools(projects, siteConnections, managedHosting, keyConnections, accountId) {
   const server = new McpServer({ name: 'Kiwe Start', version: '0.1.0' });
   const result = (label, structuredContent) => ({
     content: [{ type: 'text', text: label }],
@@ -119,10 +121,19 @@ function mcpTools(projects, siteConnections, managedHosting, accountId) {
       annotations: { destructiveHint: false, idempotentHint: true },
     }, (input) => run(async () => result('Kiwe hosting status', { project: await managedHosting.step(accountId, input) })));
   }
+  if (keyConnections.available) {
+    server.registerTool('kiwe_start_connect_key', {
+      description: 'Resume Key setup for a verified WordPress site. The approved Key account owns the sender. Open the returned Key link for native approval or pairing.',
+      inputSchema: siteLinkInput,
+      outputSchema: singleProjectOutput.extend({ approvalUrl: z.url() }),
+      annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    }, (input) => run(async () => result('Key connection status', await keyConnections.resume(accountId, input))));
+  }
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider }) {
+  const keyConnections = createKeyConnections(projects, keyProvider);
   const managedHosting = createManagedHosting(projects, hostingProvider);
   const siteConnections = createSiteConnections(projects, startOrigin, wordpressLink);
   const secure = new URL(startOrigin).protocol === 'https:';
@@ -175,7 +186,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return json(response, 405, { error: 'method_not_allowed' });
       }
       const payload = await readBody(request, jsonType);
-      const server = mcpTools(projects, siteConnections, managedHosting, accountId);
+      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, accountId);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, enableJsonResponse: true,
       });
@@ -213,7 +224,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       setCookie(response, '', 0);
       return redirect(response, '/projects');
     }
-    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting))?$/);
+    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = projects.accountForSession(sessionToken(request));
@@ -221,7 +232,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       if (listRoute) return send(response, 200, projectsPage(projects.listProjects(accountId)));
       const [, projectId, action] = match;
       const project = projects.getProject(accountId, { projectId });
-      if (method === 'GET' && !action) return send(response, 200, projectPage(project, { managed: managedHosting.available }));
+      if (method === 'GET' && !action) return send(response, 200, projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available }));
       if (method === 'POST' && action) {
         checkOrigin(request, startOrigin);
         try {
@@ -231,13 +242,17 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
             const pending = await siteConnections.begin(accountId, input);
             return send(response, 200, siteAuthorizationPage(project, pending.authorizationUrl));
           }
+          if (action === 'key') {
+            const key = await keyConnections.resume(accountId, input);
+            return redirect(response, key.project.key.state === 'awaiting_approval' ? key.approvalUrl : '/projects/' + projectId);
+          }
           if (action === 'hosting') await managedHosting.step(accountId, input);
           else projects.setDomain(accountId, input);
           return redirect(response, '/projects/' + projectId);
         } catch (error) {
           if (!(error instanceof StartError)) throw error;
           const latest = projects.getProject(accountId, { projectId });
-          return send(response, error.status, projectPage(latest, { error: error.message, managed: managedHosting.available }));
+          return send(response, error.status, projectPage(latest, { error: error.message, managed: managedHosting.available, keyEnabled: keyConnections.available }));
         }
       }
     }

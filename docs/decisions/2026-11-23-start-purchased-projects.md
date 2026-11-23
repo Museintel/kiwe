@@ -16,6 +16,14 @@ The Kiwe MCP App provides a dedicated read-only site proof operation under `mcp.
 
 Start binds a native OAuth code exchange to the project revision, account, exact site issuer and a one-time callback state. The website's native grant supplies the proof. Start stores only the verified site and its runtime versions. A server request follows the chosen HTTPS origin and pins the validated public DNS addresses. A changed domain retires pending proof and clears the previous link.
 
+## Key and agency ownership
+
+A standalone buyer connects an existing or new Key account to their site through native Key approval. Each agency workspace is anchored to the agency’s own website. Kiwe Launch is the home of the Kiwe agency, with the individual store and test sites managed under it. A child project retains its own verified domain, site ownership, Design Context, sender selection, and approval history. Staff or client access to one site applies to that site. The agency home can have its own Design Context.
+
+Use a stable workspace identity for account authorization. Verify the agency’s own website separately from a client’s site consent and before using its identity on client-facing pages. The first client site must leave the parent choice empty. Agency branding and parent-site verification are separate work. This slice persists the workspace’s Key account binding and each verified site's sender.
+
+Key stores the WhatsApp pairings and per-site signing credentials. Key and WordPress each require their existing native owner approval for setup. Start sees the exact origin, sender readiness and signed-site proof. The buyer reaches Design Context when WordPress and its Key sender are ready. An optional client-number invite keeps the agency’s working sender available during pairing. Design Context entries are supplied by the authorized humans who know that site’s business.
+
 ## Managed hosting
 
 An eligible purchaser can request hosted WordPress through the Start form or MCP. Start records the reserved Hostinger temporary address before the setup write. Every follow-up uses that exact address. The selected custom domain remains on the project. Readiness requires both provider completion and a WordPress response for the assigned site. The hosted and existing paths continue toward the site's own authority and Key.

@@ -52,10 +52,31 @@ function hostingStep(project, available) {
 </form>`;
 }
 
-export function projectPage(project, { error, managed = false } = {}) {
+function keyStep(project, available) {
+  if (!available || !project.site) return '';
+  const messages = {
+    awaiting_approval: 'Approve the website in Key to choose its account.',
+    sender_ready: project.key?.siteAuthenticated
+      ? 'WhatsApp is connected to this WordPress site.'
+      : 'The Key sender is ready. Open Key for the one-time WordPress setup code.',
+    sender_offline: 'Open Key to reconnect the WhatsApp sender.',
+    inactive: 'This Key website or account is inactive.',
+  };
+  const status = project.key ? `<p class="status">${escape(messages[project.key.state])}</p>` : '';
+  const pairing = project.key?.pairingPending ? '<p>The client number is waiting for a WhatsApp scan.</p>' : '';
+  const label = project.key ? 'Check Key connection' : 'Connect Key';
+  const manage = project.key?.manageUrl && project.key.state !== 'awaiting_approval'
+    ? `<p><a href="${escape(project.key.manageUrl)}">Open Key</a></p>` : '';
+  return `${status}${pairing}${manage}<form method="post" action="/projects/${project.id}/key">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">${label}</button>
+</form>`;
+}
+
+export function projectPage(project, { error, managed = false, keyEnabled = false } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const status = project.site
-    ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(project.domain)}</a>. Next, connect Key.</p>`
+    ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(project.domain)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context.' : ''}</p>`
     : project.domain && !project.managedSite
       ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
       : '';
@@ -82,7 +103,7 @@ ${selection}
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">Save domain</button>
 </form>
-${connect}${hostingStep(project, managed)}`, true);
+${connect}${hostingStep(project, managed)}${keyStep(project, keyEnabled)}`, true);
 }
 
 export function siteAuthorizationPage(project, authorizationUrl) {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { createWordPressLink } from '../src/wordpress-link.mjs';
+import { createKeyProvider } from '../src/key-connection.mjs';
 import { publicAddress, siteUrl } from '../src/site-network.mjs';
 import { cookie, fixture, purchase, startOrigin } from './fixture.mjs';
 
@@ -86,8 +87,8 @@ function nativeFixture() {
   };
 }
 
-async function newProject(f, entitlementId, domain = 'existing.example') {
-  const accepted = await f.postReceipt('purchases', purchase(entitlementId));
+async function newProject(f, entitlementId, domain = 'existing.example', extras = {}) {
+  const accepted = await f.postReceipt('purchases', purchase(entitlementId, extras));
   const { projectId } = await accepted.json();
   const session = cookie(await f.redeem(await f.ticket(entitlementId, 'buyer-one')));
   const endpoint = '/projects/' + projectId;
@@ -141,6 +142,72 @@ test('a WordPress owner approval connects the same purchase in web and MCP', asy
   const changed = await f.form(endpoint + '/domain', { domain: 'new.example', hosting: 'existing', revision: '3' }, { cookie: session });
   assert.equal(changed.status, 303);
   assert.doesNotMatch(await (await f.request(endpoint, { headers: { Cookie: session } })).text(), /Website verified/);
+});
+
+test('the same verified project resumes Key approval and readiness in the browser and MCP', async (t) => {
+  const native = nativeFixture();
+  const keyOrigin = 'https://key.example.test';
+  const approvalUrl = keyOrigin + '/start/connect/12345678-1234-4abc-8def-123456789012';
+  let keyStatus = { state: 'awaiting_approval', sender: null, siteAuthenticated: false, pairingPending: false };
+  const requests = [];
+  let link = approvalUrl;
+  const provider = createKeyProvider({ origin: keyOrigin, token: 'test-only', http: async (address, options) => {
+    assert.equal(address, keyOrigin + '/integrations/start/requests');
+    assert.equal(options.redirect, 'error');
+    assert.equal(options.headers.Authorization, 'Bearer test-only');
+    const row = JSON.parse(options.body);
+    requests.push(row);
+    return Response.json({ origin: row.origin, ...keyStatus, approvalUrl: link });
+  } });
+  const f = await fixture(t, { wordpressLink: native.wordpress, keyProvider: provider });
+  const { projectId, endpoint, session } = await newProject(f, 'key-agency', 'existing.example', { accountType: 'agency' });
+  const client = await f.connect('buyer-one');
+  const other = await f.connect('another-buyer');
+  const key = (actor, revision) => actor.callTool({
+    name: 'kiwe_start_connect_key', arguments: { projectId, revision },
+  });
+  assert.equal((await key(client, 2)).isError, true);
+  assert.equal(requests.length, 0);
+  const begin = await client.callTool({ name: 'kiwe_start_connect_site', arguments: { projectId, revision: 2 } });
+  await f.request(native.decision(begin.structuredContent.authorizationUrl), { headers: { Cookie: session } });
+  assert.equal((await key(other, 3)).isError, true);
+  assert.equal((await key(client, 2)).isError, true);
+  assert.equal(requests.length, 0);
+  const surface = () => f.request(endpoint, { headers: { Cookie: session } });
+  assert.match(await (await surface()).text(), /Connect Key/);
+  const browser = await f.form(endpoint + '/key', { revision: '3' }, { cookie: session });
+  assert.equal(browser.status, 303);
+  assert.equal(browser.headers.get('location'), approvalUrl);
+  assert.equal(requests[0].origin, origin);
+  assert.equal(requests[0].accountType, 'agency');
+  assert.match(requests[0].workspaceId, /^[a-f0-9-]{36}$/);
+
+  const pending = await key(client, 3);
+  assert.equal(pending.structuredContent.approvalUrl, approvalUrl);
+  assert.deepEqual(requests[1], requests[0]);
+  assert.equal(pending.structuredContent.project.next, 'connect_key');
+
+  link = 'https://unexpected.example.test/start/connect/12345678-1234-4abc-8def-123456789012';
+  assert.equal((await key(client, 3)).isError, true);
+  link = approvalUrl;
+  keyStatus = { state: 'sender_ready', sender: 'account_primary', siteAuthenticated: false, pairingPending: false };
+  const waiting = await key(client, 3);
+  assert.equal(waiting.structuredContent.project.next, 'connect_key');
+  assert.match(await (await surface()).text(), /one-time WordPress setup code/);
+
+  await f.restart();
+  const resumed = await f.connect('buyer-one');
+  keyStatus.siteAuthenticated = true;
+  keyStatus.pairingPending = true;
+  const checked = await key(resumed, 3);
+  assert.equal(checked.isError, undefined);
+  assert.equal(checked.structuredContent.project.next, 'fill_design_context');
+  assert.deepEqual(requests.at(-1), requests[0]);
+  const html = await (await surface()).text();
+  assert.match(html, /Next, fill in Design Context/);
+  assert.match(html, /client number is waiting/);
+  const domain = await f.form(endpoint + '/domain', { domain: 'other.example', hosting: 'existing', revision: '3' }, { cookie: session });
+  assert.equal(domain.status, 409);
 });
 
 test('a non-owner native approval cannot change the Start project', async (t) => {

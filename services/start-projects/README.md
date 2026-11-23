@@ -16,6 +16,17 @@ After consent, Start reads the site's identity and runtime versions, saves the c
 
 The first release targets single-site WordPress at the root of the saved HTTPS domain. The site needs signed Kiwe MCP App 1.2.0-rc.3 or a later release that advertises the connection scope. Start follows the native authorization metadata on the selected domain and pins outbound requests to verified public addresses.
 
+## Connect Key
+
+Set `KIWE_START_KEY_ORIGIN` to the Key HTTPS origin and `KIWE_START_KEY_TOKEN` to a dedicated random service credential. Configure the matching credential and Start origin on Key. Start only requests Key setup for a verified WordPress project.
+
+1. Open **Connect Key** in the project or call `kiwe_start_connect_key`. Open the returned Key link.
+2. In Key, sign in or pair a new account, then approve the website. An agency uses its Key account across its sites and can invite one client to pair a separate number.
+3. Open **Set up WordPress** in Key. Enter the one-time code as the site owner in **Kiwe Auth** on that WordPress site. WordPress stores the encrypted credential and verifies the connection.
+4. Select **Check Key connection** or call the MCP tool again. The project reports the next Design Context step after native website proof and sender readiness.
+
+A standalone buyer has their own Start project and Design Context. Each agency has its own home website with separate child projects for its clients. Each project keeps its own Design Context. This candidate links a workspace’s Key account and the verified site. Agency home website designation and the Design Context form are later steps.
+
 ## Included Kiwe hosting
 
 An eligible buyer can set up hosting from the project form or `kiwe_start_provision_site`. Both surface the same durable request. The Hostinger adapter reserves a free temporary address before it requests WordPress. Subsequent calls look up the same address and check the provider status. The project shows the temporary address after the provider reports completion and the WordPress REST API answers for that site. An interrupted request reconciles the original address. The project keeps its requested custom domain for a later domain connection step.
@@ -50,6 +61,7 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_connect_site` prepares the same native WordPress approval link for the saved existing site. After approval, the project reports its verified site and the next Key step.
 
 - `kiwe_start_provision_site` sets up or checks included hosting when a Hostinger order is configured.
+- `kiwe_start_connect_key` opens native Key approval or refreshes the verified site's Key status when Key is configured.
 
 The service preserves the latest saved revision when a browser and an MCP client act at the same time. Cross-account project IDs confer no access.
 
@@ -58,6 +70,8 @@ The service preserves the latest saved revision when a browser and an MCP client
 Run Node 22.13 or newer and install the locked dependencies with `npm ci`. Run `npm test` to verify the HTTP purchase callback, browser request flow, durable restart, managed and existing hosting choices, account isolation and real MCP tool calls. Set `KIWE_START_TEST_SOCKET=1` for isolated Unix-socket qualification on hosts that restrict TCP loopback.
 
 The optional real-browser check runs the production service entry point with an isolated checkout and OAuth issuer. It opens a client project at 390 CSS pixels and an agency project at 1440 CSS pixels, saves each domain through the form and reads both back through MCP. Install the existing UI harness dependencies under `tools/ui-contract`, then run `npm run test:browser` in this service. Set `KIWE_START_TEST_CHROME` to use an installed Chrome executable. The harness resolves Playwright from the repository's UI test dependency by default.
+
+The Batch 3 candidate passed all 11 Start tests and three Key integration tests in the isolated Plum Giraffe run, plus one connected rehearsal on Hostinger Node 22.23.5 and WordPress 7.1.5 with signed Core RC495. The rehearsal used candidate Kiwe Auth source, a test purchase and a simulated sender. A native site owner verified the connection over the Key HTTP routes, using a temporary WordPress options table. The encrypted credential and native settings readback passed. Start web and MCP both reached Design Context. The lab's existing option hash matched, and no recipient message was sent. The relay and temporary data were retired. The connected test uses the previously qualified website ownership contract. Live buyer, agency-home and Key enrolment remain pending.
 
 The Batch 2 candidate passed ten tests on local Node 24 and Hostinger Node 22.23.5 and the phone and desktop Chrome checks. Plum Giraffe ran the signed MCP App 1.2.0-rc.3 on Core RC495. The owner and editor exercised real registration, code exchange, MCP proof and revocation over HTTPS. Isolated WP-CLI supplied the two native consent decisions. Start showed the verified owner's project and denied the editor. The owner-authorized hosting test created a single free temporary WordPress site through Hostinger MCP. A completed provider receipt and real WordPress HTTPS readback made the synthetic Start purchase ready in the web form and MCP. Automated retries and interrupted responses were tested with a simulated provider.
 

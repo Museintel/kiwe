@@ -1,5 +1,8 @@
 ## Version 1.x (Start project candidate)
 
+- Resume native Key setup from the verified Start project in the browser and MCP. Kiwe Auth redeems an owner-issued code, stores the site credential securely and proves the connection with no message.
+- Keep agency client senders optional and scoped to their own sites. Start advances after WordPress proof and sender readiness.
+
 - Add the existing WordPress connection to Start web and MCP. Verify the selected site through native owner consent and store its identity without retaining a WordPress access token.
 - Open one resumable Start project for each trusted site entitlement. Web and MCP share the purchaser's projects, domain and hosting choice.
 - Start included hosting on one reserved Hostinger address, reconcile interrupted requests and verify WordPress readiness through web or MCP.

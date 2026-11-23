@@ -39,6 +39,12 @@ const connectedSite = z.strictObject({
 const managedSite = z.strictObject({
   status: z.enum(['queued', 'provisioning', 'ready', 'needs_attention']), url: z.url().nullable(),
 });
+export const keyState = z.strictObject({
+  state: z.enum(['awaiting_approval', 'sender_ready', 'sender_offline', 'inactive']),
+  sender: z.enum(['account_primary', 'dedicated']).nullable(),
+  siteAuthenticated: z.boolean(),
+  pairingPending: z.boolean(),
+});
 const projectOutput = z.strictObject({
   id: z.uuid(),
   planId: id,
@@ -49,7 +55,8 @@ const projectOutput = z.strictObject({
   revision: z.number().int().positive(),
   site: connectedSite.nullable(),
   managedSite: managedSite.nullable(),
-  next: z.enum(['choose_domain', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key']),
+  key: keyState.extend({ manageUrl: z.url().nullable() }).nullable(),
+  next: z.enum(['choose_domain', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key', 'fill_design_context']),
 });
 export const singleProjectOutput = z.strictObject({ project: projectOutput });
 export const projectsOutput = z.strictObject({ projects: z.array(projectOutput) });
@@ -81,8 +88,12 @@ function view(row) {
   const hosted = row.managed_status ? {
     status: row.managed_status, url: row.managed_status === 'ready' ? 'https://' + row.setup_domain : null,
   } : null;
+  const key = row.key_state ? {
+    state: row.key_state, sender: row.key_sender, siteAuthenticated: Boolean(row.key_site_authenticated), pairingPending: Boolean(row.key_pairing_pending),
+    manageUrl: row.key_manage_url,
+  } : null;
   let next = 'choose_domain';
-  if (site) next = 'connect_key';
+  if (site) next = key?.siteAuthenticated && key.state === 'sender_ready' ? 'fill_design_context' : 'connect_key';
   else if (hosted?.status === 'ready') next = 'activate_kiwe';
   else if (row.hosting === 'included') next = 'provision_site';
   else if (row.domain) next = 'connect_site';
@@ -96,6 +107,7 @@ function view(row) {
     revision: row.revision,
     site,
     managedSite: hosted,
+    key,
     next,
   };
 }
@@ -155,6 +167,18 @@ export function openProjects(filename, { now = Date.now } = {}) {
       verified_at TEXT NOT NULL
     ) STRICT;
     CREATE UNIQUE INDEX IF NOT EXISTS project_sites_url ON project_sites(site_url);
+    CREATE TABLE IF NOT EXISTS key_workspaces (
+      account_id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL UNIQUE
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS project_key_links (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      state TEXT NOT NULL DEFAULT 'awaiting_approval',
+      sender TEXT,
+      site_authenticated INTEGER NOT NULL DEFAULT 0 CHECK(site_authenticated IN (0, 1)),
+      manage_url TEXT,
+      pairing_pending INTEGER NOT NULL DEFAULT 0
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS site_link_attempts (
       digest TEXT PRIMARY KEY,
       project_id TEXT NOT NULL UNIQUE REFERENCES projects(id),
@@ -169,8 +193,11 @@ export function openProjects(filename, { now = Date.now } = {}) {
   const byEntitlement = db.prepare('SELECT * FROM projects WHERE entitlement_id = ?');
   const ownerOfProject = db.prepare('SELECT account_id FROM projects WHERE id = ?');
   const projection = 'SELECT p.*, s.site_url, s.core_version, s.wordpress_version, s.verified_at, '
-    + 'm.status AS managed_status, m.setup_domain FROM projects p '
-    + 'LEFT JOIN project_sites s ON p.id = s.project_id LEFT JOIN managed_sites m ON p.id = m.project_id';
+    + 'm.status AS managed_status, m.setup_domain, '
+    + 'k.project_id AS key_project_id, k.state AS key_state, k.sender AS key_sender, k.site_authenticated AS key_site_authenticated, '
+    + 'k.manage_url AS key_manage_url, k.pairing_pending AS key_pairing_pending FROM projects p '
+    + 'LEFT JOIN project_sites s ON p.id = s.project_id LEFT JOIN managed_sites m ON p.id = m.project_id '
+    + 'LEFT JOIN project_key_links k ON p.id = k.project_id';
   const owned = db.prepare(projection + ' WHERE p.id = ? AND p.account_id = ?');
   const list = db.prepare(projection + ' WHERE p.account_id = ? ORDER BY p.rowid');
   const insert = db.prepare(
@@ -234,6 +261,23 @@ export function openProjects(filename, { now = Date.now } = {}) {
     }
     if (!row.domain || row.hosting !== 'included' || !row.hosting_included) {
       throw new StartError(409, 'hosting_unavailable', 'Choose the hosting included with your plan first.');
+    }
+    return row;
+  }
+
+  const ensureKeyWorkspace = db.prepare('INSERT INTO key_workspaces(account_id, workspace_id) VALUES (?, ?) ON CONFLICT(account_id) DO NOTHING');
+  const keyWorkspace = db.prepare('SELECT workspace_id FROM key_workspaces WHERE account_id = ?');
+  const addKeyLink = db.prepare('INSERT INTO project_key_links(project_id) VALUES (?) ON CONFLICT(project_id) DO NOTHING');
+  const updateKeyLink = db.prepare('UPDATE project_key_links SET state = ?, sender = ?, site_authenticated = ?, pairing_pending = ?, manage_url = ? WHERE project_id = ?');
+
+  function requireKeyTarget(accountId, { projectId, revision }) {
+    const row = owned.get(projectId, accountId);
+    if (!row) throw missingProject();
+    if (row.revision !== revision) {
+      throw new StartError(409, 'project_changed', 'The project changed. Reload it before connecting Key.');
+    }
+    if (!row.site_url) {
+      throw new StartError(409, 'website_required', 'Verify the WordPress site before connecting Key.');
     }
     return row;
   }
@@ -324,6 +368,7 @@ export function openProjects(filename, { now = Date.now } = {}) {
           throw new StartError(409, 'hosting_unavailable', 'This purchase uses an existing site.');
         }
         if (row.domain === domain && row.hosting === details.hosting) return view(row);
+        if (row.key_project_id) throw new StartError(409, 'key_setup_started', 'This website already has a Key request.');
         if (row.managed_status) throw new StartError(409, 'hosting_already_requested', 'This project already has a hosting request.');
         if (row.revision !== details.revision) {
           throw new StartError(409, 'project_changed', 'The project changed. Reload it before saving.');
@@ -414,6 +459,30 @@ export function openProjects(filename, { now = Date.now } = {}) {
         dropLinkAttempt.run(row.id);
         update.run(row.domain, row.hosting, row.id, row.account_id);
         return { ...view(owned.get(row.id, row.account_id)), accountId: row.account_id };
+      });
+    },
+
+    prepareKeyRequest(accountId, details) {
+      return transaction(() => {
+        const row = requireKeyTarget(accountId, details);
+        ensureKeyWorkspace.run(accountId, randomUUID());
+        addKeyLink.run(row.id);
+        return {
+          projectId: row.id, workspaceId: keyWorkspace.get(accountId).workspace_id,
+          origin: row.site_url, accountType: row.account_type,
+        };
+      });
+    },
+
+    saveKeyStatus(accountId, details, receipt) {
+      return transaction(() => {
+        const row = requireKeyTarget(accountId, details);
+        const { state, sender, siteAuthenticated, pairingPending } = parse(keyState, {
+          state: receipt.state, sender: receipt.sender, siteAuthenticated: receipt.siteAuthenticated,
+          pairingPending: receipt.pairingPending,
+        });
+        updateKeyLink.run(state, sender, Number(siteAuthenticated), Number(pairingPending), receipt.approvalUrl, row.id);
+        return view(owned.get(row.id, accountId));
       });
     },
 
