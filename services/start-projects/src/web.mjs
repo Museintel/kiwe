@@ -137,6 +137,7 @@ ${selection}
 <button class="button">Save domain</button>
 </form>
 ${connect}${hostingStep(project, managed)}${keyStep(project, keyEnabled)}
+${project.site ? `<p><a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
 ${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/context">Open Design Context</a> <a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
 }
 
@@ -199,6 +200,49 @@ export function contextReviewPage(project, review, reviewId) {
 <button class="button">Confirm and save to WordPress</button></form>`, true);
 }
 
+export function websitePage(project, state, message) {
+  const base = '/projects/' + project.id;
+  const alert = message ? `<p class="error" role="alert">${escape(message)}</p>` : '';
+  const updated = state.inventory
+    ? `<p class="muted">WordPress inventory checked ${escape(state.inventory.checkedAt.slice(0, 10))}.</p>`
+    : '<p>Refresh the website inventory to see its current WordPress pages and Store routes.</p>';
+  const rows = state.items.map(item => {
+    const convert = item.convert ? `<form class="website-convert" method="post" action="${escape(item.convert.href)}">
+<input type="hidden" name="draftId" value="${escape(item.convert.draftId)}"><input type="hidden" name="revision" value="${escape(item.convert.revision)}">
+<button class="button">Convert to Bricks</button></form>` : '';
+    const links = item.links.map(link => `<a href="${escape(link.href)}">${escape(link.label)}</a>`).join('<br>');
+    return `<tr><th scope="row">${escape(item.name)}<span class="website-mobile-type">${escape(item.type)}</span></th>
+<td class="website-type">${escape(item.type)}</td><td>${escape(item.status)}${item.designStatus ? `<br><strong>${escape(item.designStatus)}</strong>` : ''}</td>
+<td>${convert}${links}</td></tr>`;
+  }).join('');
+  return page('Pages & Templates', `<p><a href="${base}">Project</a> · ${escape(project.domain)}</p>
+${alert}${updated}
+<form method="post" action="${base}/pages/refresh"><input type="hidden" name="revision" value="${project.revision}">
+<button class="button">${state.inventory ? 'Refresh website inventory' : 'Read website inventory'}</button></form>
+<div class="website-rows"><table><caption>${escape(project.domain)} pages and templates</caption>
+<thead><tr><th>Page or template</th><th class="website-type">Type</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table></div>`, true);
+}
+
+function conversionStep(location, revision, draft, options) {
+  if (!options.compiler || draft.status !== 'approved') return '';
+  const conversion = options.conversion;
+  const hidden = revision + `<input type="hidden" name="draftId" value="${draft.id}">`;
+  if (conversion?.recoveryRequired) {
+    return `<p class="status">Check the saved imports in WordPress Framework.</p>
+<p><a href="${escape(conversion.frameworkUrl)}">Open WordPress Framework</a></p>`;
+  }
+  if (!conversion || (!conversion.reviewUrl && !conversion.sessionActive)) {
+    return `<form method="post" action="${location}/convert">${hidden}<button class="button">Convert to Bricks</button></form>`;
+  }
+  if (conversion.status === 'draft_ready') {
+    return `<p class="status">Private Bricks draft is ready for review.</p><p><a class="button" href="${escape(conversion.builderUrl)}">Open Bricks draft</a></p>`;
+  }
+  const nativeLink = conversion.approvalUrl || conversion.reviewUrl;
+  const action = nativeLink ? `<p><a class="button" href="${escape(nativeLink)}">${conversion.approvalUrl ? 'Approve draft import in WordPress' : 'Open native import review'}</a></p>` : '';
+  const check = conversion.sessionActive ? `<form method="post" action="${location}/continue-import">${hidden}<button class="button">Check Bricks import</button></form>` : '';
+  return action + check;
+}
+
 export function homepagePage(project, view, options = {}) {
   const location = '/projects/' + project.id + '/homepage';
   const draft = view.draft;
@@ -229,7 +273,7 @@ src="${location}/preview?draft=${draft.id}"></iframe><p><a href="${location}/pre
 ${revision}<input type="hidden" name="draftId" value="${draft.id}">
 <button class="button">Request another revision</button></form>`;
   return page('Homepage draft', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
-${error}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${download}${retry}
+${error}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${conversionStep(location, revision, draft, options)}${download}${retry}
 ${changes}<details><summary>Refresh saved business facts</summary>${request}</details>`, true);
 }
 
@@ -303,6 +347,19 @@ button { cursor: pointer; }
 .card { border: 1px solid #d8e4dc; border-radius: .6rem; margin-top: 1.5rem; padding: 1rem; }
 .card code, blockquote { overflow-wrap: anywhere; }
 main:has(.homepage-preview) { max-width: 92rem; }
+.website-rows { overflow-x: auto; margin-top: 1.25rem; }
+.website-rows table { width: 100%; border-collapse: collapse; text-align: left; }
+.website-rows caption { text-align: left; padding-bottom: .5rem; }
+.website-rows th, .website-rows td { padding: .65rem .55rem; border-bottom: 1px solid #ceddd4; vertical-align: top; }
+.website-rows th, .website-rows a { overflow-wrap: anywhere; }
+.website-convert .button { margin: 0 0 .5rem; padding-inline: .7rem; }
+.website-mobile-type { display: none; }
+@media (max-width: 35rem) {
+  .website-rows table { table-layout: fixed; }
+  .website-rows th, .website-rows td { padding-inline: .4rem; overflow-wrap: anywhere; }
+  .website-rows .website-type { display: none; }
+  .website-mobile-type { display: block; font-size: .85rem; font-weight: normal; }
+}
 .homepage-preview { display: block; width: 100%; height: min(72vh, 53rem); min-height: 26rem; border: 1px solid #83978b; border-radius: .6rem; background: white; }
 details { margin-top: 1rem; }
 blockquote { margin: .5rem 0 1rem; border-left: 3px solid #aec7b8; padding: .5rem .9rem; white-space: pre-wrap; }

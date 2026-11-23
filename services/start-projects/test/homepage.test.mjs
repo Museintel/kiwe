@@ -203,6 +203,200 @@ test('a connected designer makes one homepage, and only the owner can approve it
   assert.deepEqual(resumed.structuredContent.previousDesign, design);
 });
 
+function conversionFixture() {
+  const operation = 'mcp.bricks.import.';
+  const job = 'f'.repeat(32);
+  let archive;
+  let approved = false;
+  let revision = 1;
+  let phase = 'review';
+  let uploads = 0;
+  let begins = 0;
+  const intents = new Map();
+  const scoped = {
+    async begin(domain, redirect, state, verifier, scope) {
+      const origin = 'https://' + domain;
+      assert.equal(scope, 'mcp.bricks.import');
+      return { origin, issuer: origin, redirect, verifier, authorizationUrl: origin + '/authorize?state=' + state };
+    },
+    async exchange(connection, confirmation, scope) {
+      assert.equal(new URL(connection.redirect).pathname, '/projects/bricks-return');
+      assert.equal(confirmation, code);
+      assert.equal(scope, 'mcp.bricks.import');
+      return { token: 'fictional-conversion-grant', expiresIn: 900 };
+    },
+    async revoke() {},
+    async call(connection, token, name, args) {
+      assert.equal(token, 'fictional-conversion-grant');
+      if (name === 'kiwe-mcp-read') {
+        assert.equal(args.operation, operation + 'status');
+        assert.equal(args.arguments.job, job);
+        return receipt(connection.origin);
+      }
+      if (name === 'kiwe-mcp-prepare-change') {
+        const item = intents.get(args.requestId);
+        if (item) return project(item, connection.origin);
+        const id = 'i_' + fingerprint(args.requestId).slice(0, 32);
+        const itemData = { id, operation: args.operation, state: 'prepared', result: null };
+        intents.set(args.requestId, itemData);
+        if (itemData.operation === operation + 'stage') archive = args.arguments.archiveSha256;
+        else assert.equal(args.arguments.archiveSha256, archive);
+        return project(itemData, connection.origin);
+      }
+      const item = [...intents.values()].find(record => record.id === args.intent);
+      assert.ok(item);
+      if (name === 'kiwe-mcp-apply-change') {
+        if (item.operation === operation + 'begin') {
+          assert.equal(approved, true);
+          begins++;
+          revision++;
+          phase = 'media';
+        } else {
+          assert.equal(item.operation, operation + 'next');
+          phase = { media: 'styles', styles: 'templates', templates: 'complete' }[phase];
+          revision++;
+        }
+        item.state = 'complete';
+        item.result = receipt(connection.origin);
+      } else assert.equal(name, 'kiwe-mcp-change-status');
+      return project(item, connection.origin);
+    },
+    async upload(connection, token, id, bytes) {
+      assert.equal(token, 'fictional-conversion-grant');
+      const item = [...intents.values()].find(record => record.id === id);
+      assert.equal(item.operation, operation + 'stage');
+      assert.equal(fingerprint(bytes), archive);
+      uploads++;
+      item.state = 'complete';
+      item.result = receipt(connection.origin);
+      // The server persisted the native job and the HTTP reply was lost.
+      throw new Error('Lost upload response');
+    },
+  };
+
+  function receipt(origin) {
+    return { resultJson: JSON.stringify({
+      schema: 'kiwe.mcp-bricks-import.v1', job, archiveSha256: archive, status: phase, revision,
+      nativeReviewUrl: origin + '/wp-admin/admin.php?page=kiwe-framework&compiler-import=' + job + '#kiwe-compiler-import',
+      templateTotal: 1, templatesDone: phase === 'complete' ? 1 : 0,
+      blockerCount: 0, needsAttention: false, publishesWebsite: false,
+      drafts: phase === 'complete' ? [{ id: 81, title: 'Homepage draft' }] : [],
+    }) };
+  }
+
+  function project(item, origin) {
+    const isApproval = item.operation === operation + 'begin';
+    return { ...item, approved: isApproval && approved,
+      approvalUrl: isApproval ? origin + '/wp-admin/admin-post.php?action=kiwe_mcp_change_review&intent=' + item.id : '' };
+  }
+
+  return { target: scoped, approve: () => { approved = true; }, uploads: () => uploads, begins: () => begins };
+}
+
+test('the Pages and Templates dashboard converts the approved homepage with a single resumable native import', async (t) => {
+  const native = wordpress();
+  const conversion = conversionFixture();
+  let compiles = 0;
+  const compiler = { async compile({ files }) {
+    compiles++;
+    assert.ok(!files['preview.js']);
+    assert.match(files['seam/seam-map.json'], /index\.html/);
+    return { bytes: Buffer.from('fixture-only-seam-archive') };
+  } };
+  const f = await fixture(t, {
+    wordpressLink: native.oauth, homepageWordPress: native.oauth, keyProvider,
+    bricksWordPress: conversion.target, bricksCompiler: compiler,
+  });
+  const owner = await f.connect('buyer-one');
+  const foreign = await f.connect('someone-else');
+  const project = await connect(f, owner);
+  const mutate = (action, fields) => f.form(project.home + '/' + action, fields, { cookie: project.session });
+  const projectPages = '/projects/' + project.projectId + '/pages';
+  assert.match(await (await f.request(projectPages, project.options)).text(), /Generate homepage/);
+  const opened = await mutate('request', { revision: '3' });
+  await f.request(approveUrl(opened.headers.get('location'), '/projects/homepage-return'), project.options);
+  const prior = (await mcp(owner, 'homepage', { projectId: project.projectId })).structuredContent.draft;
+  const draft = (await mcp(owner, 'submit_homepage_design', {
+    projectId: project.projectId, draftId: prior.id, design,
+  })).structuredContent.draft;
+  const action = { ...project.input, draftId: draft.id };
+  assert.equal((await mcp(owner, 'convert_homepage', action)).isError, true);
+  assert.equal((await mutate('approve', { draftId: draft.id, sha256: draft.sourceSha256 })).status, 303);
+  assert.match(await (await f.request(projectPages, project.options)).text(), /action="[^"]+\/homepage\/convert"/);
+  assert.equal((await mcp(foreign, 'convert_homepage', action)).isError, true);
+
+  const approvals = await Promise.all([mcp(owner, 'convert_homepage', action), mcp(owner, 'convert_homepage', action)]);
+  assert.equal(approvals[0].structuredContent.authorizationUrl, approvals[1].structuredContent.authorizationUrl);
+  const callback = approveUrl(approvals[0].structuredContent.authorizationUrl, '/projects/bricks-return');
+  const lost = await f.request(callback, project.options);
+  assert.equal(lost.status, 409);
+  assert.equal(conversion.uploads(), 1);
+  assert.equal((await f.request(callback, project.options)).status, 409);
+
+  const [pending, same] = await Promise.all([mcp(owner, 'resume_bricks', action), mcp(owner, 'resume_bricks', action)]);
+  assert.equal(pending.structuredContent.conversion.status, 'approval_required');
+  assert.deepEqual(pending.structuredContent, same.structuredContent);
+  assert.equal(conversion.uploads(), 1);
+  assert.equal(compiles, 1);
+  assert.equal(conversion.begins(), 0);
+  assert.match(await (await f.request(project.home, project.options)).text(), /Approve draft import in WordPress/);
+
+  conversion.approve();
+  assert.equal((await mutate('continue-import', { draftId: draft.id, revision: '3' })).status, 303);
+  const desktop = (await mcp(owner, 'website', { projectId: project.projectId })).structuredContent;
+  assert.equal(desktop.conversion.status, 'draft_ready');
+  assert.match(desktop.conversion.builderUrl, /post=81&action=edit$/);
+  assert.equal(desktop.items[0].designStatus, 'Private Bricks draft');
+  assert.equal(conversion.begins(), 1);
+  assert.equal((await mcp(owner, 'resume_bricks', action)).structuredContent.conversion.status, 'draft_ready');
+  assert.equal(conversion.begins(), 1);
+  await f.restart();
+  assert.match(await (await f.request(projectPages, project.options)).text(), /Private Bricks draft/);
+});
+
+test('the website dashboard labels only native records as published and shows Woo routes for an active store', async (t) => {
+  const native = wordpress();
+  let released = false;
+  const inventory = {
+    ...native.oauth,
+    async begin(domain, redirect, state, verifier, scope) {
+      assert.equal(scope, 'mcp.design.read');
+      return native.oauth.begin(domain, redirect, state, verifier);
+    },
+    async exchange(_connection, confirmation) {
+      assert.equal(confirmation, code);
+      return { token: 'fixture-inventory' };
+    },
+    async call(connection, token, _name, args) {
+      assert.equal(token, 'fixture-inventory');
+      assert.equal(args.operation, 'mcp.design.website.read');
+      const origin = connection.origin;
+      const item = (id, title, uri) => ({ id, title, url: origin + uri, editUrl: origin + '/wp-admin/post.php?post=' + id + '&action=edit' });
+      return { resultJson: JSON.stringify({
+        schema: 'kiwe.start-website-inventory.v1', website: origin, commerce: true, bricks: true,
+        homeMode: 'page', records: { home: item(22, 'Home', '/'), checkout: item(24, 'Checkout', '/checkout/') },
+        templates: { header: [{ id: 27, title: 'Header', editUrl: origin + '/wp-admin/post.php?post=27&action=edit' }], footer: [] },
+        otherPages: [item(25, 'Our story', '/our-story/')],
+      }) };
+    },
+    async revoke() { released = true; },
+  };
+  const f = await fixture(t, { wordpressLink: native.oauth, keyProvider, inventoryWordPress: inventory });
+  const client = await f.connect('buyer-one');
+  const project = await connect(f, client);
+  const response = await mcp(client, 'refresh_website', project.input);
+  const accepted = await f.request(approveUrl(response.structuredContent.authorizationUrl, '/projects/website-return'), project.options);
+  const page = '/projects/' + project.projectId + '/pages';
+  assert.equal(accepted.headers.get('location'), page);
+  assert.equal(released, true);
+  const home = (await mcp(client, 'website', { projectId: project.projectId })).structuredContent;
+  assert.equal(home.items.find(item => item.id === 'home').status, 'Published page');
+  assert.equal(home.items.find(item => item.id === 'checkout').status, 'Published page');
+  assert.equal(home.items.find(item => item.id === 'thank-you').status, 'Native route');
+  assert.equal(home.items.find(item => item.id === 'footer').status, 'Review in WordPress');
+  assert.match(await (await f.request(page, project.options)).text(), /Our story/);
+});
+
 test('a configured browser generator receives only the public brief and can fill the current request', async (t) => {
   const native = wordpress();
   let calls = 0;

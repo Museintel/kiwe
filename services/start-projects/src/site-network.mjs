@@ -30,7 +30,7 @@ export function siteUrl(origin, value) {
 const maxResponse = 96 * 1024;
 
 /** Use only public DNS results and keep the checked address pinned through the TLS request. */
-export async function requestSite(origin, target, { method = 'GET', headers = {}, body } = {}) {
+export async function requestSite(origin, target, { method = 'GET', headers = {}, body, timeout = 7000 } = {}) {
   const url = siteUrl(origin, target);
   const addresses = await lookup(url.hostname, { all: true });
   if (!addresses.length || addresses.some(({ address }) => !publicAddress(address))) {
@@ -45,7 +45,7 @@ export async function requestSite(origin, target, { method = 'GET', headers = {}
       lookup: (_host, options, callback) => options.all
         ? callback(null, [chosen])
         : callback(null, chosen.address, chosen.family),
-      signal: AbortSignal.timeout(7000),
+      signal: AbortSignal.timeout(timeout),
       headers: {
         Accept: 'application/json',
         'Accept-Encoding': 'identity',

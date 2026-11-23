@@ -228,6 +228,24 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       approved_at INTEGER,
       UNIQUE (project_id, version)
     ) STRICT;
+    CREATE TABLE IF NOT EXISTS homepage_imports (
+      draft_id TEXT PRIMARY KEY REFERENCES homepage_drafts(id),
+      id TEXT NOT NULL UNIQUE,
+      source_sha TEXT NOT NULL,
+      archive_sha TEXT,
+      stage_intent TEXT,
+      begin_intent TEXT,
+      status TEXT NOT NULL DEFAULT 'authorization_required',
+      approval_url TEXT,
+      receipt TEXT
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS project_website_inventory (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      project_revision INTEGER NOT NULL,
+      website TEXT NOT NULL,
+      snapshot TEXT NOT NULL,
+      checked_at INTEGER NOT NULL
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS site_link_attempts (
       digest TEXT PRIMARY KEY,
       project_id TEXT NOT NULL UNIQUE REFERENCES projects(id),
@@ -366,6 +384,18 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return row;
   }
 
+  const importByDraft = db.prepare('SELECT * FROM homepage_imports WHERE draft_id = ?');
+  const addImport = db.prepare(
+    'INSERT INTO homepage_imports(draft_id,id,source_sha) VALUES (?,?,?) ON CONFLICT(draft_id) DO NOTHING',
+  );
+  const updateImport = db.prepare(
+    'UPDATE homepage_imports SET archive_sha=?, stage_intent=?, begin_intent=?, status=?, approval_url=?, receipt=? WHERE id=?',
+  );
+  const inventoryByProject = db.prepare('SELECT * FROM project_website_inventory WHERE project_id = ?');
+  const saveInventory = db.prepare(
+    'INSERT INTO project_website_inventory(project_id,project_revision,website,snapshot,checked_at) VALUES (?,?,?,?,?) '
+    + 'ON CONFLICT(project_id) DO UPDATE SET project_revision=excluded.project_revision, website=excluded.website, snapshot=excluded.snapshot, checked_at=excluded.checked_at',
+  );
   const currentHome = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? ORDER BY version DESC LIMIT 1');
   const homeById = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? AND id = ?');
   const lastHomeDesign = db.prepare(
@@ -400,6 +430,28 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       throw new StartError(409, 'homepage_changed', 'A newer homepage revision is active. Open the current draft.');
     }
     return readHome(latest);
+  }
+
+  function websiteTarget(accountId, projectId, revision) {
+    const project = owned.get(projectId, accountId);
+    if (!project) throw missingProject();
+    if (revision !== undefined && project.revision !== revision) {
+      throw new StartError(409, 'project_changed', 'Open the updated project before reading its website.');
+    }
+    if (!project.site_url) throw new StartError(409, 'website_required', 'Connect this WordPress website first.');
+    return project;
+  }
+
+  function approvedImportTarget(accountId, projectId, draftId) {
+    const draft = latestHomepage(accountId, projectId, draftId);
+    if (!draft?.source || draft.approved_at === null) {
+      throw new StartError(409, 'homepage_approval_required', 'Approve the current homepage preview before Convert to Bricks.');
+    }
+    return draft;
+  }
+
+  function importReceipt(row) {
+    return row ? { ...row, receipt: row.receipt ? JSON.parse(row.receipt) : null } : null;
   }
 
   function transaction(work) {
@@ -637,6 +689,50 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         });
         updateKeyLink.run(state, sender, Number(siteAuthenticated), Number(pairingPending), receipt.approvalUrl, row.id);
         return projectView(owned.get(row.id, accountId));
+      });
+    },
+
+    getWebsiteInventory(accountId, projectId) {
+      const project = websiteTarget(accountId, projectId);
+      const row = inventoryByProject.get(projectId);
+      if (row?.project_revision !== project.revision || row.website !== project.site_url) return null;
+      return { ...JSON.parse(row.snapshot), checkedAt: new Date(row.checked_at).toISOString() };
+    },
+
+    saveWebsiteInventory(accountId, { projectId, revision, snapshot }) {
+      return transaction(() => {
+        const project = websiteTarget(accountId, projectId, revision);
+        if (snapshot.website !== project.site_url) {
+          throw new StartError(409, 'website_changed', 'WordPress returned inventory for a different website.');
+        }
+        saveInventory.run(projectId, revision, snapshot.website, JSON.stringify(snapshot), now());
+      });
+    },
+
+    readHomepageImport(accountId, projectId, draftId) {
+      const draft = approvedImportTarget(accountId, projectId, draftId);
+      return importReceipt(importByDraft.get(draft.id));
+    },
+
+    reserveHomepageImport(accountId, projectId, draftId) {
+      return transaction(() => {
+        const draft = approvedImportTarget(accountId, projectId, draftId);
+        addImport.run(draft.id, randomUUID().replaceAll('-', ''), draft.source.sha256);
+        return importReceipt(importByDraft.get(draft.id));
+      });
+    },
+
+    saveHomepageImport(accountId, projectId, draftId, id, changes) {
+      return transaction(() => {
+        const draft = approvedImportTarget(accountId, projectId, draftId);
+        const row = importReceipt(importByDraft.get(draft.id));
+        if (row?.id !== id || row.source_sha !== draft.source.sha256) {
+          throw new StartError(409, 'bricks_run_changed', 'Reload this approved homepage before continuing its import.');
+        }
+        const next = { ...row, ...changes };
+        updateImport.run(next.archive_sha, next.stage_intent, next.begin_intent, next.status, next.approval_url,
+          next.receipt ? JSON.stringify(next.receipt) : null, id);
+        return next;
       });
     },
 

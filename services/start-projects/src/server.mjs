@@ -7,6 +7,7 @@ import { openProjects } from './projects.mjs';
 import { createHostingerProvider } from './managed-hosting.mjs';
 import { createKeyProvider } from './key-connection.mjs';
 import { createHomepageProvider } from './homepage.mjs';
+import { createBricksCompiler } from './bricks-compiler.mjs';
 
 function required(name) {
   const value = process.env[name];
@@ -58,6 +59,15 @@ if (generatorToken || generatorUrl) {
       || generatorToken === purchaseToken || generatorToken === keyToken) throw new Error('Configure a separate HTTPS homepage generator credential.');
   homepageProvider = createHomepageProvider({ endpoint, token: generatorToken });
 }
+const seamRoot = process.env.KIWE_START_SEAM_ROOT;
+const seamWork = process.env.KIWE_START_SEAM_WORK;
+let bricksCompiler;
+if (seamRoot || seamWork) {
+  if (!seamRoot || !seamWork || !path.isAbsolute(seamRoot) || !path.isAbsolute(seamWork)) {
+    throw new Error('Configure the approved Seam checkout and a private absolute workspace.');
+  }
+  bricksCompiler = createBricksCompiler({ seamRoot, workRoot: seamWork });
+}
 const database = required('KIWE_START_DATABASE');
 if (!path.isAbsolute(database)) throw new Error('Use an absolute private database path.');
 const port = Number(process.env.PORT || 3000);
@@ -69,7 +79,7 @@ const projects = openProjects(database, { launchWebsite: checkoutOrigin });
 const authorizeMcp = createMcpAuthorization({
   issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
 });
-const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider(), keyProvider: key, homepageProvider });
+const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider(), keyProvider: key, homepageProvider, bricksCompiler });
 server.listen(port, process.env.KIWE_START_BIND || '127.0.0.1');
 for (const name of ['SIGINT', 'SIGTERM']) {
   process.once(name, () => server.close(() => projects.close()));

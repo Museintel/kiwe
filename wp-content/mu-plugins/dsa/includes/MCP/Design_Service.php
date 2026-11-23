@@ -67,6 +67,68 @@ final class Design_Service {
   if(isset($result['error']))throw new \RuntimeException('Native public catalogue unavailable.');
   unset($result['generatedAt']);return$result;
  }
+ public function website(): array {
+  if (!self::allowed()) throw new \RuntimeException('Website inventory is unavailable.');
+  $page = static function(int $id): ?array {
+   if ($id < 1) return null;
+   $post = get_post($id);
+   if (!$post || 'page' !== $post->post_type || 'publish' !== $post->post_status || $post->post_password !== '') return null;
+   return [
+    'id'=>$id,'title'=>sanitize_text_field(get_the_title($post)),
+    'url'=>esc_url_raw(get_permalink($post)), 'editUrl'=>esc_url_raw(get_edit_post_link($id,'raw') ?: ''),
+   ];
+  };
+  $records = [];
+  $front = (string)get_option('show_on_front');
+  $records['home'] = 'page' === $front ? $page((int)get_option('page_on_front')) : null;
+  $records['blog'] = 'page' === $front ? $page((int)get_option('page_for_posts')) : null;
+  $records['privacy'] = $page((int)get_option('wp_page_for_privacy_policy'));
+  foreach (['about'=>['about','about-us'],'contact'=>['contact','contact-us']] as $key=>$paths) {
+   foreach ($paths as $path) {
+    $candidate = get_page_by_path($path, OBJECT, 'page');
+    $records[$key] = $candidate ? $page((int)$candidate->ID) : null;
+    if ($records[$key]) break;
+   }
+  }
+  $woo = function_exists('wc_get_page_id');
+  if ($woo) {
+   foreach (['shop'=>'shop','cart'=>'cart','checkout'=>'checkout','account'=>'myaccount'] as $key=>$native) {
+    $records[$key] = $page((int)wc_get_page_id($native));
+   }
+  }
+  $bricks = defined('BRICKS_VERSION') && defined('BRICKS_DB_TEMPLATE_SLUG');
+  $templates = ['header'=>[], 'footer'=>[]];
+  if ($bricks) {
+   foreach (array_keys($templates) as $type) {
+    $found = get_posts([
+     'post_type'=>BRICKS_DB_TEMPLATE_SLUG, 'post_status'=>'publish', 'has_password'=>false,
+     'numberposts'=>3, 'fields'=>'ids', 'no_found_rows'=>true,
+     'meta_key'=>'_bricks_template_type', 'meta_value'=>$type,
+    ]);
+    foreach ($found as $id) {
+     $templates[$type][] = [
+      'id'=>(int)$id,'title'=>sanitize_text_field(get_the_title($id)),
+      'editUrl'=>esc_url_raw(get_edit_post_link($id,'raw') ?: ''),
+     ];
+    }
+   }
+  }
+  $known = array_column(array_filter($records), 'id');
+  $other_pages = [];
+  foreach (get_posts(['post_type'=>'page','post_status'=>'publish','has_password'=>false,'numberposts'=>24,
+   'fields'=>'ids','no_found_rows'=>true,'post__not_in'=>$known,'orderby'=>'title','order'=>'ASC']) as $id) {
+   $record = $page((int)$id);
+   if ($record) $other_pages[] = $record;
+  }
+  $json = wp_json_encode([
+   'schema'=>'kiwe.start-website-inventory.v1','website'=>Urls::issuer(),
+   'commerce'=>$woo,'bricks'=>$bricks,'homeMode'=>'page' === $front ? 'page' : 'posts',
+   'records'=>(object)array_filter($records),'templates'=>$templates,'otherPages'=>$other_pages,
+  ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  if (!is_string($json) || strlen($json) > 24000) throw new \RuntimeException('The website inventory exceeds its size budget.');
+  return ['resultJson'=>$json];
+ }
+
  public function homepage(): array {
   if (!self::allowed()) throw new \RuntimeException('Public design evidence is unavailable.');
   $plugin = \DSA\Plugin::instance();

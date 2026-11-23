@@ -7,7 +7,7 @@ import {
   agencyHomeInput, agencySpaceOutput, agencyVerificationInput,
   StartError, browserLifetime, claimInput, domainInput, projectScope, projectsOutput, singleProjectOutput, siteLinkInput,
 } from './projects.mjs';
-import { agencyPage, contextPage, contextReviewPage, homepagePage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
+import { agencyPage, contextPage, contextReviewPage, homepagePage, websitePage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
 import { createKeyConnections } from './key-connection.mjs';
@@ -17,6 +17,8 @@ import {
 } from './homepage.mjs';
 import { previewSource, seamSource } from './homepage-source.mjs';
 import { homepageArchive } from './homepage-archive.mjs';
+import { bricksInput, bricksReturn, createBricksImport } from './bricks-import.mjs';
+import { createWebsiteInventory, inventoryReturn, websiteChecklist } from './website-inventory.mjs';
 import {
   contextArea, contextInput, contextOutput, contextEditInput, contextProposalOutput, contextReturnPath, createDesignContext,
 } from './design-context.mjs';
@@ -87,7 +89,7 @@ function checkOrigin(request, expected) {
   }
 }
 
-function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, accountId) {
+function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, website, accountId) {
   const server = new McpServer({ name: 'Kiwe Start', version: '0.1.0' });
   const result = (label, structuredContent) => ({
     content: [{ type: 'text', text: label }],
@@ -198,14 +200,50 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     inputSchema: homeRevisionInput,
     annotations: { destructiveHint: false },
   }, (input) => run(async () => result('Homepage revision opened', await homepage.revise(accountId, input))));
+  server.registerTool('kiwe_start_website', {
+    description: 'Read the website’s Pages and Templates workspace, including the current homepage review and native conversion status.',
+    inputSchema: claimInput,
+    annotations: { readOnlyHint: true },
+  }, (input) => run(() => result('Pages and Templates', website.state(accountId, input))));
+  server.registerTool('kiwe_start_refresh_website', {
+    description: 'Open native WordPress approval to refresh the current site’s published pages and Bricks template inventory.',
+    inputSchema: siteLinkInput,
+    annotations: { destructiveHint: false, idempotentHint: true },
+  }, (input) => run(async () => result('Approve website read in WordPress', {
+    authorizationUrl: await website.begin(accountId, input),
+  })));
+  if (bricks.available) {
+    server.registerTool('kiwe_start_convert_homepage', {
+      description: 'Start conversion of the current, owner-approved homepage to a private native Bricks draft. Return the WordPress authorization or saved review.',
+      inputSchema: bricksInput,
+      annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    }, (input) => run(async () => result('Bricks draft conversion', await bricks.begin(accountId, input))));
+    server.registerTool('kiwe_start_resume_bricks', {
+      description: 'Check and continue the same homepage import after the native WordPress approval. Read its exact draft link when ready.',
+      inputSchema: bricksInput,
+      annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    }, (input) => run(async () => result('Bricks draft status', { conversion: await bricks.resume(accountId, input) })));
+  }
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler }) {
   const keyConnections = createKeyConnections(projects, keyProvider);
   const agencySpaces = createAgencySpaces(projects, agencyReader);
   const context = createDesignContext(projects, startOrigin, contextWordPress, contextClock);
   const homepage = createHomepageWorkflow(projects, startOrigin, homepageWordPress, homepageProvider, contextClock);
+  const bricks = createBricksImport(projects, homepage, startOrigin, bricksCompiler, bricksWordPress, contextClock);
+  const inventory = createWebsiteInventory(projects, startOrigin, inventoryWordPress, contextClock);
+  const website = {
+    ...inventory,
+    state(accountId, input) {
+      const native = inventory.status(accountId, input);
+      const project = projects.getProject(accountId, input);
+      const home = project.key?.siteAuthenticated && project.key.state !== 'inactive' ? homepage.status(accountId, input) : null;
+      const conversion = home?.draft?.status === 'approved' ? bricks.status(accountId, project.id, home.draft.id) : null;
+      return { ...native, items: websiteChecklist(project, native.inventory, home, conversion, bricks.available), homepage: home?.draft ?? null, conversion };
+    },
+  };
   const managedHosting = createManagedHosting(projects, hostingProvider);
   const siteConnections = createSiteConnections(projects, startOrigin, wordpressLink);
   const secure = new URL(startOrigin).protocol === 'https:';
@@ -258,7 +296,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return json(response, 405, { error: 'method_not_allowed' });
       }
       const payload = await readBody(request, jsonType);
-      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, accountId);
+      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, website, accountId);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, enableJsonResponse: true,
       });
@@ -309,6 +347,41 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, siteReturnPage(error.message, false));
       }
     }
+    if (endpoint === 'GET ' + inventoryReturn || endpoint === 'GET ' + bricksReturn) {
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      const conversion = pathname === bricksReturn;
+      try {
+        const state = await (conversion ? bricks : website).complete(Object.fromEntries(url.searchParams));
+        const section = conversion ? '/homepage' : '/pages';
+        if (projects.accountForSession(sessionToken(request)) === state.accountId) {
+          return redirect(response, '/projects/' + state.projectId + section);
+        }
+        return send(response, 200, siteReturnPage(conversion ? 'The Bricks review is saved. Reopen your Start project.'
+          : 'The website inventory is saved. Reopen your Start project.', true));
+      } catch (error) {
+        if (!(error instanceof StartError)) throw error;
+        return send(response, error.status, siteReturnPage(error.message, false));
+      }
+    }
+    const pagesRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/pages(?:\/(refresh))?$/);
+    if (pagesRoute) {
+      const [, projectId, action] = pagesRoute;
+      const accountId = projects.accountForSession(sessionToken(request));
+      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
+      const project = projects.getProject(accountId, { projectId });
+      const page = (error) => websitePage(project, website.state(accountId, { projectId }), error);
+      if (method === 'GET' && !action) return send(response, 200, page());
+      if (method === 'POST' && action === 'refresh') {
+        checkOrigin(request, startOrigin);
+        try {
+          const input = await readBody(request, formType);
+          return redirect(response, await website.begin(accountId, { projectId, revision: Number(input.revision) }));
+        } catch (error) {
+          if (!(error instanceof StartError)) throw error;
+          return send(response, error.status, page(error.message));
+        }
+      }
+    }
     if (endpoint === 'GET ' + homepageReturn) {
       response.setHeader('Referrer-Policy', 'no-referrer');
       try {
@@ -322,7 +395,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, error.status, siteReturnPage(error.message, false));
       }
     }
-    const homeRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/homepage(?:\/(request|revise|generate|approve|preview|source))?$/);
+    const homeRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/homepage(?:\/(request|revise|generate|approve|preview|source|convert|continue-import))?$/);
     if (homeRoute) {
       const [, projectId, action] = homeRoute;
       const accountId = projects.accountForSession(sessionToken(request))
@@ -330,7 +403,11 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
       const project = projects.getProject(accountId, { projectId });
       const location = '/projects/' + projectId + '/homepage';
-      const page = (error) => homepagePage(project, homepage.status(accountId, { projectId }), { error, generator: homepage.generatorConfigured });
+      const page = (error) => {
+        const state = homepage.status(accountId, { projectId });
+        const conversion = state.draft?.status === 'approved' ? bricks.status(accountId, projectId, state.draft.id) : null;
+        return homepagePage(project, state, { error, generator: homepage.generatorConfigured, compiler: bricks.available, conversion });
+      };
       if (method === 'GET' && !action) {
         response.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; frame-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
         return send(response, 200, page());
@@ -369,6 +446,13 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           if (action === 'revise') await homepage.revise(accountId, { ...fields, projectId, revision: Number(fields.revision) });
           if (action === 'approve') homepage.approve(accountId, { ...fields, projectId });
           if (action === 'generate') await homepage.generate(accountId, { projectId });
+          if (action === 'convert') {
+            const started = await bricks.begin(accountId, { ...fields, projectId, revision: Number(fields.revision) });
+            if (started.authorizationUrl) return redirect(response, started.authorizationUrl);
+          }
+          if (action === 'continue-import') {
+            await bricks.resume(accountId, { ...fields, projectId, revision: Number(fields.revision) });
+          }
           return redirect(response, location);
         } catch (error) {
           if (!(error instanceof StartError)) throw error;

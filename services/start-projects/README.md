@@ -45,11 +45,21 @@ Open **Homepage draft** from the verified project. **Generate homepage** request
 
 The design selects a layout, type treatment, accessible colors, a proven hero image, and Dock behavior. The renderer builds a single HTML, CSS and JavaScript homepage with the captured business facts. It emits native loops for products, categories and posts when the site proves those queries and fields. It uses safe static links when native support has yet to be proven. Empty catalogues leave those sections out. The preview uses an isolated iframe and a local script to prevent live link and launcher actions.
 
-The owner can request another revision with instructions or refresh the native business facts. Start retains the previous design to guide a revision. Approval is a browser action tied to the current source fingerprint. Each approved revision has its own download. **Download the raw preview files** keeps the complete approved HTML, CSS and JavaScript. **Download for Seam** prepares a separate copy, omits the preview-only script and fingerprints its exact HTML for Seam. The approved-source receipt links the package to its preview. Native import and publication follow their existing approval flow.
+The owner can request another revision with instructions or refresh the native business facts. Start retains the previous design to guide a revision. Approval is a browser action tied to the current source fingerprint. Each approved revision has its own download. **Download the raw preview files** keeps the complete approved HTML, CSS and JavaScript. **Download for Seam** prepares a separate copy, omits the preview-only script and fingerprints its exact HTML for Seam. The approved-source receipt links the package to its preview.
 
 The connected MCP client can read the request, choose a design and submit it for human review. For one-click generation in the browser, configure `KIWE_START_HOMEPAGE_GENERATOR_URL` and `KIWE_START_HOMEPAGE_GENERATOR_TOKEN` for an authorized HTTPS design generator. The service receives the public brief, human direction, previous design when one exists and the design output schema. It returns the small design object. The Start service holds the provider's credential. When no generator is configured, the saved request can be completed through MCP.
 
 A runner can download an approved source byte stream over HTTP with an authorized Start access token for that purchaser. Use the revision-specific raw or Seam URL from the homepage tool. The response includes the downloadable source fingerprint and the approved raw source fingerprint.
+
+## Pages and Templates
+
+Open **Pages & Templates** from a verified project. Refresh the inventory through WordPress consent. The read uses `mcp.design.website.read` under `mcp.design.read` and revokes its temporary grant after the refresh. It reads published pages, header and footer templates and native page assignments for the connected site. A project with WooCommerce shows the Store checklist. Each row distinguishes its known native state from the design review.
+
+Open **Home** to generate, preview or revise one homepage. When the owner has approved its exact source, **Convert to Bricks** is available on the dashboard and in the homepage review. Start runs the supported Seam command on a private copy of that source, uploads one isolated ZIP and opens the separate WordPress approval for the import. After the owner approves, **Check Bricks import** continues the same job until its private Bricks draft is ready. Start saves the archive fingerprint and native receipt. A repeat request checks the receipt before attempting another write.
+
+To enable this conversion, set `KIWE_START_SEAM_ROOT` to the absolute path of a trusted, pinned Seam checkout with its locked dependencies installed. Set `KIWE_START_SEAM_WORK` to a private absolute working directory outside the served tree. The target needs Kiwe MCP with native Bricks import and package transfer. Keep a single Start process for active consent and imports. Import grants stay in process memory and last up to 15 minutes. If the grant ends after staging, open the saved Framework review on that site. Saved source and native draft receipts survive a Start restart.
+
+The other checklist rows link to their WordPress owners. Independent design generation for those rows and publishing through Start are outside this candidate.
 
 ## Included Kiwe hosting
 
@@ -91,6 +101,10 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_prepare_context_change` returns a link for the human to review and save the exact supplied value.
 - `kiwe_start_open_homepage` starts the one-page brief through WordPress consent.
 - `kiwe_start_homepage`, `kiwe_start_submit_homepage_design` and `kiwe_start_revise_homepage` read, prepare and revise that project's homepage. The owner approves its exact source in Start.
+
+- `kiwe_start_website` reads the Pages and Templates workspace and current conversion.
+- `kiwe_start_refresh_website` opens native consent to refresh the inventory.
+- `kiwe_start_convert_homepage` opens the approved homepage import when Seam is configured. `kiwe_start_resume_bricks` checks the same native job after authorization and separate import approval.
 
 The service preserves the latest saved revision when a browser and an MCP client act at the same time. Cross-account project IDs confer no access.
 

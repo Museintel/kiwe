@@ -40,7 +40,7 @@ namespace {
  function check($ok,$why){if(!$ok)throw new \RuntimeException($why);$GLOBALS['checks'][$why]=true;}
  function deny($fn,$why){try{$fn();}catch(\RuntimeException){check(true,$why);return;}throw new \RuntimeException('Expected refusal '.$why);}
  function read($a){return json_decode((new Service())->read($a)['resultJson'],true,512,JSON_THROW_ON_ERROR);}
- $ops=Provider::operations();$op=$ops['mcp.design.read'];check(count($ops)===2&&$op['scope']==='mcp.design.read'&&$op['effect']==='read'&&$op['approval']==='none','Design evidence offers two independently pinned reads');
+ $ops=Provider::operations();$op=$ops['mcp.design.read'];check(count($ops)===3&&$op['scope']==='mcp.design.read'&&$op['effect']==='read'&&$op['approval']==='none','Design evidence offers three independently pinned reads');
  check(Schema::contract($op['inputSchema'])&&Schema::contract($op['outputSchema']),'Closed bounded native schemas');check(($op['permission'])([])&&($op['discoverPermission'])(),'Native discover/read permission');
  $registry=new DSA\MCP\Operation_Registry();$registry->register('mcp',1,fn()=>['schema'=>DSA\Apps\MCP_Provider_Contract::SCHEMA,'api'=>1,'app'=>'mcp','setup'=>['state'=>'ready','needs'=>[],'providerConsentRequired'=>false],'operations'=>$ops]);$oldPins=$registry->freeze(['mcp.read']);
  check($registry->describe(['mcp.read'],$oldPins)===[],'Earlier read scope does not advertise design exports');check(is_wp_error($registry->read('mcp.design.read',['area'=>'guide'],['mcp.read'],$oldPins)),'Earlier scope cannot execute design reads');check(is_wp_error($registry->read('mcp.design.read',['area'=>'guide'],['mcp.design.read'],$oldPins)),'Adding a requested scope cannot expand original frozen pins');

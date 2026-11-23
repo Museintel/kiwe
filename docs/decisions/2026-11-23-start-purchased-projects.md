@@ -34,6 +34,12 @@ Start prepares one homepage from a scoped native public brief and the owner's de
 
 Keep the complete approved HTML, CSS and JavaScript. Prepare a separate Seam input that excludes the preview runtime and retains its approval receipt. Seam owns Bricks conversion, and WordPress owns native review, placement and publishing. The first homepage approval supplies direction for the later individual pages and templates.
 
+## Pages and Templates
+
+The project checklist combines published records and native route assignments with the active design revision. Fresh WordPress consent authorizes the inventory read. The saved inventory belongs to that site and project revision.
+
+Start invokes the trusted Seam release against the exact current approved homepage. WordPress reviews and imports one private Bricks draft using its existing permission and recovery checks. Start resumes the saved import and reports its native receipt. Source approval in Start and import approval in WordPress are separate decisions. Placement on a public route needs its own native plan and review.
+
 ## Managed hosting
 
 An eligible purchaser can request hosted WordPress through the Start form or MCP. Start records the reserved Hostinger temporary address before the setup write. Every follow-up uses that exact address. The selected custom domain remains on the project. Readiness requires both provider completion and a WordPress response for the assigned site. The hosted and existing paths continue toward the site's own authority and Key.
