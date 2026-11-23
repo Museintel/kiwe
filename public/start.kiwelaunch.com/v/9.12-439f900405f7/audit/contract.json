@@ -1,0 +1,38 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.12",
+  "releaseId": "9.12-439f900405f7",
+  "route": "/audit",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-439f900405f7/start.md",
+      "sha256": "30bfacaec6d160ccdc4a1abcd2ffd6f45d531378a2a4903841d89e21f6f23795"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
+      "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-439f900405f7/contracts/authoring-delivery.md",
+      "sha256": "e805523326f362c0597f24699d07a894248b3dc05f8055151e826323500ebb9c"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/audit.md",
+      "url": "https://start.kiwelaunch.com/contexts/audit.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-439f900405f7/contexts/audit.md",
+      "sha256": "ed1d2a637fa1ac4653285678d65e9ee5821b0cfa13a27c58d0ac20f7026aae7a"
+    }
+  ],
+  "sourceHash": "sha256:439f900405f7dc7e73b6145c55a1e6074eea34682fda4af2bc4702964a0f6060",
+  "command": "/audit",
+  "context": "contexts/audit.md",
+  "requires": [
+    "source or generated artifact"
+  ],
+  "outputs": [
+    "machine-readable report",
+    "human summary",
+    "score evidence"
+  ],
+  "boundary": "Read only. Never modify the submitted artifact."
+}

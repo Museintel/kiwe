@@ -14,6 +14,7 @@ use DSA\Settings;
 if (!defined('WP_CLI') || !WP_CLI || !defined('ABSPATH')) {
     exit(2);
 }
+require_once __DIR__ . '/core-fleet-recovery.php';
 
 function kiwe_fleet_state(string $work, ?array $values = null): array {
     $record = $work . '/checkpoint.json';
@@ -86,8 +87,13 @@ function kiwe_fleet_recovery(string $root, string $work, string $choice): array 
         || hash_file('sha256', WPMU_PLUGIN_DIR . '/dsa/package-manifest.json') !== hash_file('sha256', $backup . '/dsa/package-manifest.json')) {
         throw new RuntimeException('The original Kiwe package failed backup verification.');
     }
+    $fingerprint = kiwe_fleet_fingerprint($backup);
+    if (!hash_equals($fingerprint, kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))) {
+        throw new RuntimeException('The previous Core files do not match their recovery copy.');
+    }
     return kiwe_fleet_state($work, [
         'current' => DSA_VERSION, 'backup' => wp_normalize_path($backup), 'databaseSha256' => $capture['sha256'],
+        'fingerprint' => $fingerprint, 'wordpressRoot' => realpath(ABSPATH), 'muRoot' => realpath(WPMU_PLUGIN_DIR),
         'choice' => $choice, 'dock' => kiwe_fleet_dock(), 'updateState' => get_option(Update_Service::STATE_OPTION, null),
     ]);
 }
@@ -150,9 +156,12 @@ try {
             throw new RuntimeException('A matching recovery checkpoint is required.');
         }
         if ($step === 'apply') {
-            if (DSA_VERSION !== $checkpoint['current'] || !hash_equals($checkpoint['databaseSha256'], hash_file('sha256', $work . '/database.kiwedb'))) {
+            if (DSA_VERSION !== $checkpoint['current'] || !hash_equals($checkpoint['fingerprint'], kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))
+                || !hash_equals($checkpoint['databaseSha256'], hash_file('sha256', $work . '/database.kiwedb'))) {
                 throw new RuntimeException('The live package changed or the database backup was not verified.');
             }
+            $checkpoint['startedTarget'] = $release['version'];
+            kiwe_fleet_state($work, $checkpoint);
             add_filter('pre_option_' . Update_Service::SETTINGS_OPTION,
                 static fn() => ['channel' => $release['channel'], 'automatic' => false]);
             add_filter('pre_http_request', static function ($result, array $request, string $url) use ($archive, $release) {
@@ -170,15 +179,25 @@ try {
             if (DSA_VERSION !== $release['version'] || $choice === 'keep') {
                 throw new RuntimeException('The selected release must boot before changing its Dock setting.');
             }
-            kiwe_fleet_dock_change($choice === 'on');
+            if (kiwe_fleet_dock() !== ($choice === 'on')) {
+                $checkpoint['dockStarted'] = true;
+                kiwe_fleet_state($work, $checkpoint);
+                kiwe_fleet_dock_change($choice === 'on');
+            }
             $result = ['dock' => kiwe_fleet_dock()];
         } elseif ($step === 'rollback') {
-            if ($choice !== 'keep') {
+            if (DSA_VERSION !== $checkpoint['current'] && DSA_VERSION !== ($checkpoint['startedTarget'] ?? '')) {
+                throw new RuntimeException('The installed Core no longer belongs to this rollout.');
+            }
+            if (!empty($checkpoint['dockStarted'])) {
                 kiwe_fleet_dock_change($checkpoint['dock']);
             }
             if (DSA_VERSION !== $checkpoint['current']
                 && !kiwe_mu_rollback_update(['backup' => $checkpoint['backup'], 'oldVersion' => $checkpoint['current']])) {
                 throw new RuntimeException('The previous Kiwe package could not be restored.');
+            }
+            if (!hash_equals($checkpoint['fingerprint'], kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))) {
+                throw new RuntimeException('The previous Core files were not confirmed.');
             }
             if ($checkpoint['updateState'] === null) {
                 delete_option(Update_Service::STATE_OPTION);

@@ -1,12 +1,12 @@
 # One signed Core release for the fleet
 
-In **Build signed Kiwe MU release**, choose `profile=core` and enable `rollout_core`. One workflow run builds and signs Core once, then deploys that exact ZIP to every destination in the protected `kiwe-fleet` environment. Begin with a staging-only environment configuration, then qualify the actual owner-controlled production access before enabling it on live sites.
+In **Build signed Kiwe MU release**, choose `profile=core` and enable `rollout_core`. The default `rollout_target=staging` deploys the signed ZIP using the `kiwe-fleet-staging` environment. An approved production run selects `rollout_target=production` and takes its credentials from the separately protected `kiwe-fleet` environment. Staging rejects the four production domains before connecting to any host.
 
 Each site's active Apps stay independent of the shared Core version. The native Core compatibility check verifies the existing signed App receipts before the first site changes. A missing or incompatible installed App blocks the release with the affected domain, so the maintainer can handle its App release separately.
 
 ## Environment
 
-Restrict the production environment to trusted release refs. Keep `KIWE_UPDATE_ED25519_PRIVATE_PEM` in the established signing workflow's protected secret storage. Configure these values in the owner-controlled `kiwe-fleet` deployment environment.
+Restrict the production environment to trusted release refs. Keep `KIWE_UPDATE_ED25519_PRIVATE_PEM` in the established signing workflow's protected secret storage. Configure separate values for each owner-controlled deployment environment.
 
 | Secret | Value |
 |---|---|
@@ -42,12 +42,12 @@ Set `firstScroll` for sites whose Dock settings are managed in the rollout. Supp
 
 The runner checks every target, authenticates and transfers the signed packet into private hosting storage, then backs up every site that needs a change before the first switch. Each switch uses Kiwe's native updater, clears WordPress and Hostinger caches, and checks two ordinary homepage requests with no cache-busting query. The normal URL must serve the same Core as WordPress reports. The final pass checks the whole fleet again.
 
-If any switch or verification fails, the runner restores attempted sites in reverse order and reports the run ID and any site needing recovery. Database snapshots are read back and authenticated, and manual database recovery remains separate from the automated Core rollback so recent orders stay in WordPress. The transfer files are removed while the recovery checkpoints remain in the site's private storage.
+If any switch or verification fails, the runner restores attempted sites in reverse order and reports the run ID and any site needing recovery. If WordPress cannot start, a standalone PHP step verifies and restores the previous Core files before the native settings check. Database snapshots are read back and authenticated. Manual database recovery remains separate from the automated Core rollback so recent orders stay in WordPress. The transfer files are removed while the recovery checkpoints remain in the site's private storage.
 
 The same coordinator can run locally with owner-provisioned SSH aliases and environment secrets.
 
 ```sh
-node tools/release/rollout-core-fleet.mjs /path/to/signed-release /path/to/private-fleet.json
+KIWE_FLEET_TARGET=staging node tools/release/rollout-core-fleet.mjs /path/to/signed-release /path/to/private-fleet.json
 node --test tools/release/test-core-fleet.mjs
 ```
 

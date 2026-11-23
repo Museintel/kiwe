@@ -115,7 +115,12 @@ export async function rollout(sites, target, siteTask, purge, probe = verifyPubl
     const failures = [];
     for (const { site, snapshot } of attempted.reverse()) {
       try {
-        await siteTask(site, 'rollback');
+        try {
+          await siteTask(site, 'rollback');
+        } catch {
+          await siteTask(site, 'restore-files');
+          await siteTask(site, 'rollback');
+        }
         await purge(site);
         const state = await siteTask(site, 'inspect');
         assert.equal(state.current, snapshot.current);
@@ -143,6 +148,24 @@ function validSite(site) {
     (site.firstScroll === undefined || site.wpUser !== undefined);
 }
 
+export function validateTargets(sites, target) {
+  const dockSites = ['dharwadpedha.com', 'evergreenbasin.com', 'nationalchikki.com'];
+  const publisher = 'ascendants.in';
+  const productionDomains = new Set([publisher, ...dockSites]);
+  assert.ok(['staging', 'production'].includes(target), 'Select the staging or production deployment environment');
+  assert.ok(Array.isArray(sites) && sites.length && sites.every(validSite), 'Invalid private fleet configuration');
+  assert.equal(new Set(sites.map(site => site.domain)).size, sites.length, 'Duplicate fleet domain');
+  assert.equal(new Set(sites.map(site => site.sshAlias.toLowerCase() + ':' + site.wordpressRoot.replace(/\/+$/, ''))).size,
+    sites.length, 'Duplicate fleet WordPress root');
+  if (target === 'staging') {
+    assert.ok(sites.every(site => !productionDomains.has(site.domain)), 'The staging fleet cannot contain production domains');
+  } else {
+    assert.deepEqual(new Set(sites.map(site => site.domain)), productionDomains, 'The production fleet must contain the four approved domains');
+    assert.ok(sites.every(site => site.domain === publisher ? site.firstScroll === undefined : site.firstScroll === true),
+      'Keep Ascendants Dock settings and enable first-scroll on the three Dock sites');
+  }
+}
+
 async function main() {
   const [releaseDir, configFile] = process.argv.slice(2);
   if (!releaseDir || !configFile) {
@@ -150,8 +173,7 @@ async function main() {
   }
   const release = await readRelease(releaseDir);
   const sites = JSON.parse(await readFile(configFile, 'utf8'));
-  assert.ok(Array.isArray(sites) && sites.length && sites.every(validSite), 'Invalid private fleet configuration');
-  assert.equal(new Set(sites.map(site => site.domain)).size, sites.length, 'Duplicate fleet domain');
+  validateTargets(sites, process.env.KIWE_FLEET_TARGET);
   const passphrases = JSON.parse(process.env.KIWE_FLEET_BACKUP_PASSPHRASES || '{}');
   const hostingerToken = process.env.HOSTINGER_API_TOKEN;
   assert.ok(hostingerToken, 'Missing Hostinger cache API authorization');
@@ -159,6 +181,7 @@ async function main() {
     assert.ok(typeof passphrases[domain] === 'string' && passphrases[domain].length >= 16 &&
       passphrases[domain].length <= 256 && !/[\r\n]/.test(passphrases[domain]), 'Missing private backup phrase for ' + domain);
   }
+  assert.equal(new Set(sites.map(site => passphrases[site.domain])).size, sites.length, 'Each site needs a separate backup passphrase');
 
   const sshFlags = ['-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=10'];
   const sshDir = process.env.KIWE_FLEET_SSH_DIR;
@@ -192,13 +215,17 @@ async function main() {
       const work = privateRoot + '/core-fleet-' + nonce;
       await ssh(site, 'umask 077 && mkdir -m 700 -- ' + work);
       directories.set(site, work);
-      await run('scp', [...sshFlags, path.join(codeDirectory, 'core-fleet-site.php'),
+      await run('scp', [...sshFlags, path.join(codeDirectory, 'core-fleet-site.php'), path.join(codeDirectory, 'core-fleet-recovery.php'),
         path.join(releaseDir, 'manifest.json'), path.join(releaseDir, 'kiwe-mu-plugin.zip'),
         site.sshAlias + ':' + work + '/'], { timeout: 120000 });
     }
     const siteTask = async (site, action) => {
       const firstScroll = site.firstScroll === undefined ? 'keep' : (site.firstScroll ? 'on' : 'off');
       const work = directories.get(site);
+      if (action === 'restore-files') {
+        const { stdout } = await ssh(site, 'php ' + work + '/core-fleet-recovery.php ' + work + ' ' + site.wordpressRoot);
+        return JSON.parse(stdout);
+      }
       const { stdout } = await ssh(site, wp(site) + ' eval-file ' + work + '/core-fleet-site.php ' +
         [action, work, site.domain, firstScroll].join(' '), action === 'backup' ? passphrases[site.domain] : undefined);
       return JSON.parse(stdout);
@@ -219,7 +246,7 @@ async function main() {
     throw Error('Fleet run ' + nonce + ': ' + error.message, { cause: error });
   } finally {
     for (const [site, work] of directories) {
-      const uploaded = ['core-fleet-site.php', 'manifest.json', 'kiwe-mu-plugin.zip'];
+      const uploaded = ['core-fleet-site.php', 'core-fleet-recovery.php', 'manifest.json', 'kiwe-mu-plugin.zip'];
       await ssh(site, 'rm -f -- ' + uploaded.map(file => work + '/' + file).join(' '))
         .catch(() => console.error(site.domain + ' still has private transfer files for fleet run ' + nonce));
     }
