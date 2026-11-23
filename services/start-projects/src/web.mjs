@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import { documentPath, wooPresentation } from './document-targets.mjs';
+
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character]);
@@ -243,7 +245,7 @@ function conversionStep(location, revision, draft, options) {
   return action + check;
 }
 
-function publicationStep(location, revision, draft, options) {
+function publicationStep(location, revision, draft, options, target, origin) {
   if (options.conversion?.status !== 'draft_ready') return '';
   const published = options.publication;
   const action = published?.status === 'published' || published?.action === 'restore' ? 'restore' : 'publish';
@@ -254,35 +256,50 @@ function publicationStep(location, revision, draft, options) {
   const review = published?.sessionActive && published.approvalUrl
     ? '<p><a class="button" href="' + escape(published.approvalUrl) + '">Approve in WordPress</a></p>'
       + form('finish-publication', published.action === 'restore' ? 'Check restoration' : 'Check publication')
-    : form('publication', action === 'restore' ? 'Restore previous homepage' : 'Publish homepage');
+    : form('publication', action === 'restore' ? (target ? 'Restore previous design' : 'Restore previous homepage')
+      : (target ? 'Publish design' : 'Publish homepage'));
+  const destination = published?.url || (published?.pageId ? origin + '/wp-admin/post.php?action=edit&post=' + published.pageId : '');
   const state = published?.status === 'published'
-    ? '<p class="status">Published on the homepage. <a href="' + escape(published.url) + '">View homepage</a>'
+    ? '<p class="status">' + (target ? 'Published. ' : 'Published on the homepage. ')
+      + '<a href="' + escape(destination) + '">' + (target ? (published.url ? 'View page' : 'Open in Bricks') : 'View homepage') + '</a>'
       + (published.blogUrl ? ' · <a href="' + escape(published.blogUrl) + '">View Blog</a>' : '') + '</p>'
-    : published?.status === 'restored' ? '<p class="status">The previous homepage was restored.</p>' : '';
-  return '<section id="publication"><h2>Homepage publication</h2>' + state + review + '</section>';
+    : published?.status === 'restored' ? '<p class="status">' + (target ? 'The previous design' : 'The previous homepage') + ' was restored.</p>' : '';
+  const cleanup = published?.importCleanupPending ? '<p>Remove the completed import in WordPress Framework to free an import slot.</p>' : '';
+  return '<section id="publication"><h2>' + (target ? 'Publication' : 'Homepage publication') + '</h2>' + state + cleanup + review + '</section>';
 }
 
 export function homepagePage(project, view, options = {}) {
-  const location = '/projects/' + project.id + '/homepage';
+  const target = view.target;
+  const location = documentPath(project.id, target?.id);
+  const label = target?.name ?? 'Homepage';
+  const title = label + ' draft';
+  const generate = target ? 'Generate design' : 'Generate homepage';
   const draft = view.draft;
   const error = options.error ? `<p class="error" role="alert">${escape(options.error)}</p>` : '';
   const revision = `<input type="hidden" name="revision" value="${project.revision}">`;
   const request = `<form class="card" method="post" action="${location}/request">
 <label for="homepage-direction">Design direction</label>
 <textarea id="homepage-direction" name="feedback" rows="3" maxlength="1200" placeholder="Describe a layout, mood or reference."></textarea>
-${revision}<button class="button">${draft ? 'Refresh Design Context and generate' : 'Generate homepage'}</button></form>`;
+${revision}<button class="button">${draft ? 'Refresh Design Context and generate' : generate}</button></form>`;
+  const back = target ? '<a href="/projects/' + project.id + '/pages">Pages &amp; Templates</a>' : '<a href="/projects/' + project.id + '">Project</a>';
+  const nativeNote = target && wooPresentation.has(target.id)
+    ? '<p>Preview the design that appears above the live WooCommerce controls on this route.</p>' : '';
+  if (!draft && target && !view.homeApproved) {
+    return page(title, '<p>' + back + '</p>' + error
+      + '<p><a href="' + documentPath(project.id) + '">Approve the homepage</a> to set the design direction for this website.</p>', true);
+  }
   if (!draft) {
-    return page('Homepage draft', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
-${error}<p>Build the first homepage from this site’s saved Design Context.</p>${request}`, true);
+    return page(title, `<p>${back} · ${escape(project.domain)}</p>
+${error}${nativeNote}${target ? '' : '<p>Build the first homepage from this site’s saved Design Context.</p>'}${request}`, true);
   }
   const ready = draft.status !== 'waiting_for_design';
   const status = draft.status === 'approved' ? 'Approved for Seam conversion.'
-    : ready ? 'Ready for your review.' : options.generator ? 'The homepage request is saved.' : 'Waiting for your connected AI to prepare the design.';
-  const preview = ready ? `<iframe class="homepage-preview" title="Homepage draft preview" sandbox="allow-scripts"
+    : ready ? 'Ready for your review.' : options.generator ? 'The design request is saved.' : 'Waiting for your connected AI to prepare the design.';
+  const preview = ready ? `<iframe class="homepage-preview" title="${escape(label)} preview" sandbox="allow-scripts"
 src="${location}/preview?draft=${draft.id}"></iframe><p><a href="${location}/preview?draft=${draft.id}">Open full-width preview</a></p>` : '';
   const approve = draft.status === 'review' ? `<form method="post" action="${location}/approve">
 <input type="hidden" name="draftId" value="${draft.id}"><input type="hidden" name="sha256" value="${escape(draft.sourceSha256)}">
-<button class="button">Approve this homepage</button></form>` : '';
+<button class="button">${target ? 'Approve design' : 'Approve this homepage'}</button></form>` : '';
   const download = draft.sourceUrl ? `<p><a class="button" href="${location}/source?draft=${draft.id}&amp;format=seam">Download for Seam</a>
 <a href="${location}/source?draft=${draft.id}">Download the raw preview files</a></p>` : '';
   const retry = !ready && options.generator ? `<form method="post" action="${location}/generate"><button class="button">Generate draft</button></form>` : '';
@@ -290,9 +307,9 @@ src="${location}/preview?draft=${draft.id}"></iframe><p><a href="${location}/pre
 <label for="homepage-feedback">What would you change?</label>
 <textarea id="homepage-feedback" name="feedback" rows="3" maxlength="1200"></textarea>
 ${revision}<input type="hidden" name="draftId" value="${draft.id}">
-<button class="button">Request another revision</button></form>`;
-  return page('Homepage draft', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
-${error}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${conversionStep(location, revision, draft, options)}${publicationStep(location, revision, draft, options)}${download}${retry}
+<button class="button">Request another revision</button>${target ? '<button class="button" name="regenerate" value="1">Regenerate design</button>' : ''}</form>`;
+  return page(title, `<p>${back} · ${escape(project.domain)}</p>
+${error}${nativeNote}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${conversionStep(location, revision, draft, options)}${publicationStep(location, revision, draft, options, target, project.site.url)}${download}${retry}
 ${changes}<details><summary>Refresh saved business facts</summary>${request}</details>`, true);
 }
 

@@ -16,20 +16,23 @@ function inside(root, file) {
 /** Only the trusted local Seam CLI compiles the approved, typed source. */
 export function createBricksCompiler({ seamRoot, workRoot, execute = exec }) {
   return {
-    async compile({ id, files, archiveSha256 = null }) {
+    async compile({ id, files, archiveSha256 = null, templateType = 'content', document = false }) {
       if (!/^[a-f0-9]{32}$/.test(id)) throw new Error('Invalid Bricks import workspace.');
       await mkdir(workRoot, { recursive: true, mode: 0o700 });
       const root = await realpath(workRoot);
       const run = path.join(root, id);
       await mkdir(run, { recursive: true, mode: 0o700 });
       if (await realpath(run) !== run) throw new Error('The Bricks import workspace could not be verified.');
-      const source = path.join(run, 'source');
+      // Earlier homepage runs keep their original project path. Each document source
+      // gets its own deterministic Seam project so an import cannot restyle another row.
+      const namespace = document ? 'document-' + exact(JSON.stringify(files)).slice(0, 20) : 'source';
+      const source = path.join(run, namespace);
       const output = path.join(run, 'seam');
       await mkdir(source, { recursive: true, mode: 0o700 });
       if (await realpath(source) !== source) throw new Error('The Bricks source workspace could not be verified.');
       const expected = ['index.html','styles.css','seam/site-graph.json','seam/seam-map.json','authoring/start-homepage-receipt.json'];
       if (Object.keys(files).length !== expected.length || expected.some(name => typeof files[name] !== 'string')) {
-        throw new Error('Convert the exact approved homepage package.');
+        throw new Error('Convert the exact approved source package.');
       }
       for (const name of expected) {
         const filename = path.join(source, name);
@@ -39,7 +42,7 @@ export function createBricksCompiler({ seamRoot, workRoot, execute = exec }) {
         try {
           const prior = await readFile(filename);
           if (await realpath(filename) !== filename || exact(prior) !== exact(files[name])) {
-            throw new Error('The saved homepage package changed.');
+            throw new Error('The saved source package changed.');
           }
         } catch (error) {
           if (error.code !== 'ENOENT') throw error;
@@ -56,9 +59,9 @@ export function createBricksCompiler({ seamRoot, workRoot, execute = exec }) {
       }
       const manifest = JSON.parse(await readFile(path.join(output, 'manifest.json'), 'utf8'));
       if (!Array.isArray(manifest.templates) || manifest.templates.length !== 1 || manifest.templates[0].path !== 'index.html'
-          || manifest.templates[0].templateType !== 'content' || manifest.sourceRuntimeDependencies?.length
+          || manifest.templates[0].templateType !== templateType || manifest.sourceRuntimeDependencies?.length
           || manifest.framework?.dependencies?.archive !== 'seam-framework.zip') {
-        throw new Error('Seam must return one native homepage draft package.');
+        throw new Error('Seam must return one native template of the approved document type.');
       }
       const archive = await realpath(path.join(output, 'seam-framework.zip'));
       if (!inside(output, archive)) throw new Error('The Seam ZIP could not be verified.');

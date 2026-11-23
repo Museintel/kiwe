@@ -66,7 +66,8 @@ function wordpress() {
     async call(connection, token, name, args) {
       assert.equal(token, 'isolated-test-credential');
       assert.equal(name, 'kiwe-mcp-read');
-      assert.deepEqual(args, { operation: 'mcp.design.homepage.read', arguments: {} });
+      assert.ok(['mcp.design.homepage.read','mcp.design.document.read'].includes(args.operation));
+      assert.deepEqual(args.arguments, {});
       seen += 1;
       return { resultJson: JSON.stringify(evidence(connection.origin)) };
     },
@@ -293,14 +294,17 @@ function conversionFixture() {
   return { target: scoped, approve: () => { approved = true; }, uploads: () => uploads, begins: () => begins };
 }
 
-function publicationFixture() {
+function publicationFixture(document) {
   let current = 'draft_ready';
   let native;
   let approvals = 0;
-  const scope = 'mcp.bricks.homepage';
+  const scope = document ? 'mcp.bricks.document' : 'mcp.bricks.homepage';
   const packet = (origin, status, keys) => ({ resultJson: JSON.stringify({
-    schema: 'kiwe.bricks-homepage-publication.v1', status, pageId: status === 'draft_ready' ? 0 : 19, url: origin + '/',
-    ...(status === 'published' ? { blogUrl: origin + '/blog/' } : {}), ...keys,
+    ...(document
+      ? { schema: 'kiwe.bricks-document-publication.v1', placementId: status === 'draft_ready' ? 0 : 21, url: origin + '/contact/' }
+      : { schema: 'kiwe.bricks-homepage-publication.v1', pageId: status === 'draft_ready' ? 0 : 19, url: origin + '/',
+          ...(status === 'published' ? { blogUrl: origin + '/blog/' } : {}) }),
+    status, ...keys,
   }) });
   return {
     approve() { native.approved = true; },
@@ -325,7 +329,8 @@ function publicationFixture() {
           return packet(origin, current, input.arguments);
         }
         if (name === 'kiwe-mcp-prepare-change') {
-          assert.match(input.operation, /^mcp\.bricks\.homepage\.(publish|restore)$/);
+          assert.ok([scope + '.publish', scope + '.restore'].includes(input.operation));
+          if (document) assert.equal(input.arguments.target, document);
           assert.equal(input.arguments.draftId, 81);
           native = { id: 'i_' + fingerprint(input.requestId).slice(0,32), operation: input.operation,
             state: 'prepared', approvalRequired: true, approved: false, keys: input.arguments };
@@ -478,6 +483,94 @@ test('the website dashboard labels only native records as published and shows Wo
   assert.equal(home.items.find(item => item.id === 'thank-you').status, 'Native route');
   assert.equal(home.items.find(item => item.id === 'footer').status, 'Review in WordPress');
   assert.match(await (await f.request(page, project.options)).text(), /Our story/);
+});
+
+test('one document keeps its direction, approval, exact import and publication separate from other rows', async (t) => {
+  const native = wordpress();
+  const conversion = conversionFixture();
+  const publication = publicationFixture('contact');
+  const inventory = {
+    ...native.oauth,
+    async exchange() { return { token: 'inventory' }; },
+    async call({ origin }, _t, _name, args) {
+      assert.equal(args.operation, 'mcp.design.website.read');
+      return { resultJson: JSON.stringify({
+        schema: 'kiwe.start-website-inventory.v1', website: origin, commerce: true, bricks: true,
+        homeMode: 'page', records: {}, templates: { header: [], footer: [], 'post-archive': [] }, otherPages: [],
+      }) };
+    },
+  };
+  const f = await fixture(t, {
+    wordpressLink: native.oauth, homepageWordPress: native.oauth, keyProvider, inventoryWordPress: inventory,
+    bricksWordPress: conversion.target, publicationWordPress: publication.target,
+    bricksCompiler: { async compile({ files, templateType, document }) {
+      assert.equal(templateType, 'content');
+      assert.equal(document, true);
+      assert.equal(JSON.parse(files['authoring/start-homepage-receipt.json']).document, 'contact');
+      assert.equal('preview.js' in files, false);
+      return { bytes: Buffer.from('verified fixture: ' + fingerprint(JSON.stringify(files))) };
+    } },
+  });
+  const owner = await f.connect('buyer-one');
+  const outsider = await f.connect('buyer-two');
+  const project = await connect(f, owner);
+  const { projectId } = project;
+  const list = '/projects/' + projectId + '/pages';
+  const at = (target) => list + '/' + target;
+  const start = (tool, args) => mcp(owner, tool, args);
+  const open = async (name, input, route) => {
+    const result = await start(name, input);
+    assert.equal(result.isError, undefined, JSON.stringify(result));
+    return f.request(approveUrl(result.structuredContent.authorizationUrl, route), project.options);
+  };
+  const post = (url, fields) => f.form(url, fields, { cookie: project.session });
+  const read = async (target) => (await start('document', { projectId, target })).structuredContent;
+  const input = { ...project.input, target: 'contact' };
+  assert.equal((await open('refresh_website', project.input, '/projects/website-return')).status, 303);
+  assert.equal((await start('open_document', input)).isError, true, 'Require approved homepage direction first.');
+  assert.match(await (await f.request(at('contact'), project.options)).text(), /Approve the homepage/);
+  assert.equal((await open('open_homepage', project.input, '/projects/homepage-return')).status, 303);
+  const home = (await start('homepage', { projectId })).structuredContent.draft;
+  const homeReview = (await start('submit_homepage_design', { projectId, draftId: home.id, design })).structuredContent.draft;
+  assert.equal((await post(project.home + '/approve', { draftId: home.id, sha256: homeReview.sourceSha256 })).status, 303);
+
+  for (const target of ['contact', 'blog']) {
+    const response = await open('open_document', { ...input, target, feedback: 'Keep the same typography.' }, '/projects/homepage-return');
+    assert.equal(response.headers.get('location'), at(target));
+  }
+  const waiting = (await read('contact')).draft;
+  assert.deepEqual(waiting.brief.style, design);
+  const proposal = { projectId, target: 'contact', draftId: waiting.id, design: { layout: 'centered', sections: ['description'], heading: 'Talk to us' } };
+  assert.equal((await mcp(outsider, 'submit_document_design', proposal)).isError, true);
+  assert.equal((await start('submit_document_design', { ...proposal, target: 'blog' })).isError, true);
+  const review = (await start('submit_document_design', proposal)).structuredContent.draft;
+  assert.equal((await read('blog')).draft.status, 'waiting_for_design');
+  assert.equal((await f.request(at('contact') + '/source', project.options)).status, 409);
+  const preview = await f.request(at('contact') + '/preview?draft=' + waiting.id, project.options);
+  assert.match(preview.headers.get('content-security-policy'), /sandbox allow-scripts/);
+  assert.match(await preview.text(), /Talk to us/);
+  assert.equal((await post(at('blog') + '/approve', { draftId: waiting.id, sha256: review.sourceSha256 })).status, 409);
+  assert.equal((await post(at('contact') + '/approve', { draftId: waiting.id, sha256: review.sourceSha256 })).status, 303);
+  const compile = { ...input, draftId: waiting.id };
+  assert.equal((await open('convert_document', compile, '/projects/bricks-return')).status, 409, 'Simulated lost native upload reply.');
+  await start('resume_bricks', compile);
+  conversion.approve();
+  assert.equal((await start('resume_bricks', compile)).structuredContent.conversion.status, 'draft_ready');
+  assert.equal((await open('prepare_document_publication', { ...compile, action: 'publish' }, '/projects/homepage-publish-return')).headers.get('location'),
+    at('contact') + '#publication');
+  assert.equal((await start('complete_document_publication', { ...compile, action: 'publish' })).structuredContent.publication.status, 'approval_required');
+  assert.equal(publication.writes(), 0);
+  publication.approve();
+  assert.equal((await start('complete_document_publication', { ...compile, action: 'publish' })).structuredContent.publication.status, 'published');
+  assert.equal((await start('website', { projectId })).structuredContent.items.find(row => row.id === 'contact').designStatus, 'Published');
+  assert.equal((await open('prepare_document_publication', { ...compile, action: 'restore' }, '/projects/homepage-publish-return')).status, 303);
+  publication.approve();
+  assert.equal((await start('complete_document_publication', { ...compile, action: 'restore' })).structuredContent.publication.status, 'restored');
+  const regenerated = await start('revise_document', { ...compile, regenerate: true, feedback: 'A new layout for contact.' });
+  assert.equal(regenerated.structuredContent.previousDesign, null);
+  assert.notEqual(regenerated.structuredContent.draft.id, waiting.id);
+  assert.equal((await start('homepage', { projectId })).structuredContent.draft.id, home.id);
+  assert.equal((await read('blog')).draft.status, 'waiting_for_design');
 });
 
 test('a configured browser generator receives only the public brief and can fill the current request', async (t) => {

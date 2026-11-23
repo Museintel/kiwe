@@ -76,6 +76,7 @@ final class Bricks_Integration {
 		( new Filter_Image_Service() )->register();
 		$this->context_collections()?->register();
 		$this->activate_native_checkout_element_authority();
+		if ( function_exists( 'wc_get_page_id' ) ) add_action( 'bricks_after_header', [ Document_Routes::class, 'render_presentation' ], 12 );
 		add_filter( 'bricks/dynamic_tags_list', [ $this, 'add_dynamic_tags' ], 20 );
 		foreach ( ['updated_option','added_option','deleted_option','save_post','deleted_post','added_post_meta','updated_post_meta','deleted_post_meta','profile_update','added_user_meta','updated_user_meta','deleted_user_meta','edited_term','delete_term'] as $binding_change ) add_action($binding_change,[Design_Context_Binding_Service::class,'invalidate'],10,0);
 		if ( \DSA\Apps\Store_App_Service::enabled() ) {

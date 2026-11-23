@@ -104,6 +104,10 @@ final class Compiler_Import_Service {
 	}
 	/** Return exact reviewed content and reserve its dependencies before public placement. */
 	public function homepage_content( string $job, string $hash, int $draft, bool $retain = false ): array {
+		return $this->placement_content( $job, $hash, $draft, 'content', '', $retain );
+	}
+
+	private function placement_content( string $job, string $hash, int $draft, string $type, string $target, bool $retain ): array {
 		$this->require_access();
 		$dir = Files::directory( 'compiler',$job );
 		$lock = $retain ? fopen( Files::path( $dir,'lock' ),'c+b' ) : null;
@@ -114,12 +118,14 @@ final class Compiler_Import_Service {
 			$state = $this->load( $dir,$job );
 			$this->require_isolated_package( $state,$hash );
 			$file = array_key_first( $state['drafts'] );
-			if ( count( $state['drafts'] ) !== 1 || ( $state['plan']['templates'][$file]['type'] ?? '' ) !== 'content'
-				|| $this->verified_draft_id( $state,$file ) !== $draft ) {
-				throw new Compiler_Package_Error( 'Choose the exact single-content Bricks draft approved for this homepage.' );
+			if ( count( $state['drafts'] ) !== 1 || ( $state['plan']['templates'][$file]['type'] ?? '' ) !== $type
+				|| $this->verified_draft_id( $state,$file ) !== $draft
+				|| ( $target !== '' && ! str_ends_with( get_post_field( 'post_title', $draft, 'raw' ), ' [Start ' . $target . '] [Draft]' ) ) ) {
+				throw new Compiler_Package_Error( 'Choose the exact single Bricks draft approved for this route.' );
 			}
-			$content = get_post_meta( $draft,BRICKS_DB_PAGE_CONTENT,true );
-			if ( ! is_array( $content ) || ! $content ) throw new Compiler_Package_Error( 'This Bricks draft has no native page content.' );
+			$key = \Bricks\Database::get_bricks_data_key( $type );
+			$content = get_post_meta( $draft, $key, true );
+			if ( ! is_array( $content ) || ! $content ) throw new Compiler_Package_Error( 'This Bricks draft has no native content.' );
 			if ( $retain && empty( $state['homepageDependenciesRetained'] ) ) {
 				$state['homepageDependenciesRetained'] = true;
 				$this->save( $dir,$state );
@@ -129,13 +135,31 @@ final class Compiler_Import_Service {
 			if ( is_resource( $lock ) ) { flock( $lock,LOCK_UN ); fclose( $lock ); }
 		}
 	}
+	/** Read the exact source document and hold its native dependencies for a placement. */
+	public function document_content( string $job, string $hash, int $draft, string $type, string $target, bool $retain = false ): array {
+		return $this->placement_content( $job, $hash, $draft, $type, $target, $retain );
+	}
+
+	/** Retire the staging ZIP after publication has saved its own layout recovery. */
+	public function retire_placed_document( string $job, string $hash, int $draft ): void {
+		$this->require_access();
+		$dir = Files::directory( 'compiler', $job );
+		$state = $this->load( $dir, $job );
+		$this->require_isolated_package( $state, $hash );
+		$file = array_key_first( $state['drafts'] );
+		if ( empty( $state['homepageDependenciesRetained'] ) || $this->verified_draft_id( $state, $file ) !== $draft ) {
+			throw new Compiler_Package_Error( 'Preserve the private draft and the retained layout dependencies.' );
+		}
+		$this->advance( $job, $state['revision'], 'remove' );
+	}
+
 	private function require_isolated_package( array $state,string $hash ): void {
 		if ( ( $state['inspection']['importPolicy'] ?? '' ) !== Compiler_Package_Reader::ISOLATED_DRAFT || ! hash_equals( $state['zipHash'],$hash ) ) throw new Compiler_Package_Error( 'Use the exact ZIP fingerprint for an isolated draft package uploaded to your native Framework workspace.' );
 	}
 	private function delegated_expected( array $state,string $hash,string $action ): string {
 		$this->require_isolated_package( $state,$hash );
 		if ( $action === 'undo' && ! empty( $state['homepageDependenciesRetained'] ) ) {
-			throw new Compiler_Package_Error( 'Restore a placed homepage through its separate publication review.' );
+			throw new Compiler_Package_Error( 'Restore the placed design through its separate publication review.' );
 		}
 		$phases = [ 'approve'=>[ 'review' ],'step'=>[ 'media','styles','templates' ],'undo'=>[ 'media','styles','templates','complete','recovery-review' ] ];
 		if ( ! in_array( $state['status'],$phases[$action] ?? [],true ) || ( $action !== 'undo' && $state['expires'] < time() ) || ( $action === 'approve' && $state['plan']['blockers'] ) ) throw new Compiler_Package_Error( 'This exact import action is unavailable. Review the current native job.' );
@@ -172,7 +196,7 @@ final class Compiler_Import_Service {
 			}
 			if ( $action === 'undo' ) {
 				if ( ! empty( $state['homepageDependenciesRetained'] ) ) {
-					throw new Compiler_Package_Error( 'Restore a placed homepage through its separate publication review.' );
+					throw new Compiler_Package_Error( 'Restore the placed design through its separate publication review.' );
 				}
 				$this->undo( $dir,$state ); $state['revision']++; $this->save( $dir,$state ); return $this->summary( $state );
 			}

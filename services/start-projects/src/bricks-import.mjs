@@ -4,16 +4,17 @@ import { claimInput, parse, siteLinkInput, StartError } from './projects.mjs';
 import { requestSite, siteUrl } from './site-network.mjs';
 import { createWordPressLink } from './wordpress-link.mjs';
 import { seamSource } from './homepage-source.mjs';
+import { documentId } from './document-targets.mjs';
 
 export const bricksReturn = '/projects/bricks-return';
-export const bricksInput = siteLinkInput.extend({ draftId: z.uuid() });
+export const bricksInput = siteLinkInput.extend({ draftId: z.uuid(), target: documentId.optional() });
 const scope = 'mcp.bricks.import';
 const opaque = () => randomBytes(32).toString('base64url');
 const intentPattern = /^i_[a-f0-9]{32}$/;
 const approvalCode = /^kiwe_mcp_code_c_[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/;
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const phases = ['media', 'styles', 'templates'];
-const unavailable = () => new StartError(409, 'bricks_connection_required', 'Open WordPress authorization for this homepage draft.');
+const unavailable = () => new StartError(409, 'bricks_connection_required', 'Open WordPress authorization for this Bricks draft.');
 const failed = () => new StartError(409, 'bricks_review_required', 'WordPress could not finish this step. Open the saved native review or check the current import again.');
 
 function uploadUrl(connection) {
@@ -118,16 +119,16 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
   function editable(accountId, details) {
     const project = projects.getProject(accountId, { projectId: details.projectId });
     if (details.revision !== undefined && project.revision !== details.revision) throw unavailable();
-    const source = homepage.source(accountId, project.id, details.draftId, true);
+    const source = homepage.source(accountId, project.id, details.draftId, true, details.target);
     return { project, source };
   }
 
-  async function advance(accountId, project, draftId, row, source) {
+  async function advance(accountId, project, { draftId, target }, row, source) {
     const grant = grantFor(row.id);
     if (!grant || grant.connection.origin !== project.site.url) throw unavailable();
     const { connection, token } = grant;
     const save = changes => {
-      row = projects.saveHomepageImport(accountId, project.id, draftId, row.id, changes);
+      row = projects.saveHomepageImport(accountId, project.id, draftId, row.id, changes, target);
     };
     const call = (name, args) => wordpress.call(connection, token, 'kiwe-mcp-' + name, args);
     const op = suffix => scope + '.' + suffix;
@@ -136,7 +137,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
       operation: op(suffix), arguments: args, requestId,
     }).then(r => nativeIntent(r, op(suffix)));
     const apply = (suffix, id) => {
-      projects.readHomepageImport(accountId, project.id, draftId);
+      projects.readHomepageImport(accountId, project.id, draftId, target);
       return call('apply-change', { intent: id }).then(r => nativeIntent(r, op(suffix), id));
     };
 
@@ -147,6 +148,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
       if (current?.state !== 'complete') {
         const { bytes } = await compiler.compile({
           id: row.id, files: seamSource(source).files, archiveSha256: row.archive_sha,
+          templateType: source.templateType, document: Boolean(source.target),
         });
         const archive = digest(bytes);
         if (row.archive_sha && row.archive_sha !== archive) throw failed();
@@ -156,7 +158,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
           save({ stage_intent: current.id });
         }
         if (current.state === 'prepared') {
-          projects.readHomepageImport(accountId, project.id, draftId);
+          projects.readHomepageImport(accountId, project.id, draftId, target);
           current = nativeIntent(await wordpress.upload(connection, token, current.id, bytes), op('stage'), current.id);
         }
       }
@@ -211,7 +213,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
   async function resume(accountId, details) {
     if (!compiler) throw new StartError(503, 'seam_unavailable', 'The site operator needs to configure Seam before conversion.');
     const { project, source } = editable(accountId, details);
-    const row = projects.readHomepageImport(accountId, project.id, details.draftId);
+    const row = projects.readHomepageImport(accountId, project.id, details.draftId, details.target);
     if (!row) throw unavailable();
     if (row.status === 'draft_ready') return view(project, row);
     if (!grantFor(row.id)) {
@@ -220,7 +222,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
     }
     let work = running.get(row.id);
     if (!work) {
-      work = advance(accountId, project, details.draftId, row, source).finally(() => running.delete(row.id));
+      work = advance(accountId, project, details, row, source).finally(() => running.delete(row.id));
       running.set(row.id, work);
     }
     try { return view(project, await work); }
@@ -233,17 +235,17 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
   return {
     available: Boolean(compiler),
 
-    status(accountId, projectId, draftId) {
+    status(accountId, projectId, draftId, target) {
       const project = projects.getProject(accountId, { projectId });
       if (!draftId) return null;
-      return view(project, projects.readHomepageImport(accountId, projectId, draftId));
+      return view(project, projects.readHomepageImport(accountId, projectId, draftId, target));
     },
 
     async begin(accountId, input) {
       if (!compiler) throw new StartError(503, 'seam_unavailable', 'The site operator needs to configure Seam before conversion.');
       const details = parse(bricksInput, input);
       const { project } = editable(accountId, details);
-      const row = projects.reserveHomepageImport(accountId, project.id, details.draftId);
+      const row = projects.reserveHomepageImport(accountId, project.id, details.draftId, details.target);
       if (grantFor(row.id) || row.stage_intent || row.status === 'draft_ready') {
         return { authorizationUrl: null, conversion: view(project, row) };
       }
@@ -270,7 +272,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
       flows.delete(state);
       if (error || !approvalCode.test(code ?? '')) throw unavailable();
       const { project } = editable(flow.accountId, flow);
-      const row = projects.readHomepageImport(flow.accountId, project.id, flow.draftId);
+      const row = projects.readHomepageImport(flow.accountId, project.id, flow.draftId, flow.target);
       if (row?.id !== flow.id || row.stage_intent || grantFor(row.id) || connecting.has(row.id)) throw unavailable();
       connecting.add(row.id);
       try {
@@ -285,7 +287,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
         grants.set(row.id, { token: grant.token, connection: flow.connection, expiresAt: now() + ttl * 1000 });
       } finally { connecting.delete(row.id); }
       await resume(flow.accountId, flow);
-      return { accountId: flow.accountId, projectId: project.id };
+      return { accountId: flow.accountId, projectId: project.id, target: flow.target };
     },
 
     resume(accountId, input) { return resume(accountId, parse(bricksInput, input)); },

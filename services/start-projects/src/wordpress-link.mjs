@@ -111,6 +111,9 @@ export function createWordPressLink(send = requestSite) {
           if (scope === 'mcp.bricks.homepage') {
             throw new StartError(409, 'homepage_publish_unavailable', 'Enable the Kiwe MCP release with homepage publication on this website.');
           }
+          if (scope === 'mcp.bricks.document') {
+            throw new StartError(409, 'document_publish_unavailable', 'Enable the Kiwe MCP release with page and template publication on this website.');
+          }
           if (scope === 'mcp.bricks.import') {
             throw new StartError(409, 'bricks_import_unavailable', 'Enable Kiwe MCP with native Bricks draft import on this website.');
           }

@@ -4,6 +4,7 @@ if(!defined('ABSPATH'))exit;
 
 use DSA\Apps\Store_App_Service;
 use DSA\Design\Seam_Token_Service as Tokens;
+use DSA\Bricks\Document_Routes;
 
 /** Stateless bounded projections of existing public native owners. Never render or fetch content. */
 final class Design_Service {
@@ -83,7 +84,9 @@ final class Design_Service {
   $records['home'] = 'page' === $front ? $page((int)get_option('page_on_front')) : null;
   $records['blog'] = 'page' === $front ? $page((int)get_option('page_for_posts')) : null;
   $records['privacy'] = $page((int)get_option('wp_page_for_privacy_policy'));
-  foreach (['about'=>['about','about-us'],'contact'=>['contact','contact-us']] as $key=>$paths) {
+  $records['terms'] = $page((int)get_option('woocommerce_terms_page_id'));
+  foreach (['about'=>['about','about-us'],'contact'=>['contact','contact-us'],'terms'=>['terms','terms-and-conditions']] as $key=>$paths) {
+   if (!empty($records[$key])) continue;
    foreach ($paths as $path) {
     $candidate = get_page_by_path($path, OBJECT, 'page');
     $records[$key] = $candidate ? $page((int)$candidate->ID) : null;
@@ -98,18 +101,40 @@ final class Design_Service {
   }
   $bricks = defined('BRICKS_VERSION') && defined('BRICKS_DB_TEMPLATE_SLUG');
   $templates = ['header'=>[], 'footer'=>[]];
+  if ($bricks && class_exists(Document_Routes::class)) {
+   $roles = Document_Routes::types();
+   foreach (Document_Routes::PRESENTATION as $role) $roles[$role] = 'section';
+   foreach ($roles as $role=>$type) {
+    if (!$woo && (str_starts_with($type, 'wc_') || $type === 'section')) continue;
+    $templates[$role] = [];
+   }
+  }
   if ($bricks) {
-   foreach (array_keys($templates) as $type) {
-    $found = get_posts([
-     'post_type'=>BRICKS_DB_TEMPLATE_SLUG, 'post_status'=>'publish', 'has_password'=>false,
-     'numberposts'=>3, 'fields'=>'ids', 'no_found_rows'=>true,
-     'meta_key'=>'_bricks_template_type', 'meta_value'=>$type,
-    ]);
-    foreach ($found as $id) {
-     $templates[$type][] = [
+   $by_type = [];
+   foreach (array_keys($templates) as $role) {
+    $type = $roles[$role] ?? $role;
+    if (!isset($by_type[$type])) {
+     $by_type[$type] = get_posts([
+      'post_type'=>BRICKS_DB_TEMPLATE_SLUG,'post_status'=>'publish','has_password'=>false,
+      'numberposts'=>-1,'fields'=>'ids','no_found_rows'=>true,
+      'meta_key'=>BRICKS_DB_TEMPLATE_TYPE,'meta_value'=>$type,
+     ]);
+     update_meta_cache('post', $by_type[$type]);
+    }
+    foreach ($by_type[$type] as $id) {
+     if ($type === 'section') {
+      $mark = get_post_meta($id, Document_Routes::SECTION_META, true);
+      if (($mark['target'] ?? '') !== $role || ($mark['site'] ?? '') !== home_url('/')) continue;
+     } elseif (!in_array($type, ['header','footer'], true)) {
+      $settings = get_post_meta($id, BRICKS_DB_TEMPLATE_SETTINGS, true);
+      $wanted = Document_Routes::condition($role, (int)($records[$role]['id'] ?? 0));
+      if (($settings['templateConditions'] ?? []) != $wanted) continue;
+     }
+     $templates[$role][] = [
       'id'=>(int)$id,'title'=>sanitize_text_field(get_the_title($id)),
       'editUrl'=>esc_url_raw(get_edit_post_link($id,'raw') ?: ''),
      ];
+     if (count($templates[$role]) >= 3) break;
     }
    }
   }
@@ -129,7 +154,7 @@ final class Design_Service {
   return ['resultJson'=>$json];
  }
 
- public function homepage(): array {
+ public function homepage(bool $document = false): array {
   if (!self::allowed()) throw new \RuntimeException('Public design evidence is unavailable.');
   $plugin = \DSA\Plugin::instance();
   $graph = new \DSA\AI\Site_Graph_Service($plugin->settings(), $plugin->modules());
@@ -165,6 +190,7 @@ final class Design_Service {
   }
   $bricks = $packet['siteGraph']['bricks'] ?? [];
   $labels = ['site_title','site_tagline','kiwe_business_description','kiwe_business_usp','kiwe_store_email','post_title','post_url','featured_image','term_name','term_url'];
+  if ($document) $labels = array_merge($labels, ['kiwe_store_phone','kiwe_store_phone_url','kiwe_store_email_url','kiwe_business_story']);
   $tags = [];
   foreach ((array)($bricks['dynamicTags'] ?? []) as $tag) {
    $name = trim((string)($tag['name'] ?? ''), '{}');
@@ -204,6 +230,15 @@ final class Design_Service {
     'media'=>$media,
    ],
   ];
+  if ($document) {
+   $brief['seamDesignContext']['contact'] = [
+    'email'=>sanitize_email($context['contact']['email'] ?? ''),
+    'phone'=>$clean($context['contact']['phone'] ?? '', 50),
+   ];
+   $brief['seamDesignContext']['about']['story'] = $clean($context['about']['story'] ?? '', 1600);
+   $brief['dynamicBindings']['fields'] += array_intersect_key($fields, array_fill_keys(
+    ['contact.email','contact.phone','contact.emailUrl','contact.phoneUrl','about.story'], true));
+  }
   $brief['revision'] = 'sha256:'.hash('sha256', (string)wp_json_encode($brief));
   $json = wp_json_encode($brief, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
   if (!is_string($json) || strlen($json) > 24000) throw new \RuntimeException('The homepage brief exceeds its allowed size.');

@@ -1,5 +1,7 @@
 ## Version 1.x (Start project candidate)
 
+- Generate, preview, revise, convert and publish one page or template at a time through Start and MCP. Use the approved homepage direction, preserve existing native page content, and keep WooCommerce in charge of transaction and account views.
+
 - Publish the first homepage on a posts-only WordPress site after owner review. Preserve the original posts index at its reviewed Blog route and reuse the same pages after interruption.
 
 - Prepare and confirm homepage publication from Start or MCP using separate WordPress owner approval. Restore the saved previous layout through the same native review.

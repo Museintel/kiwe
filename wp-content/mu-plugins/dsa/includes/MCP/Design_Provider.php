@@ -27,6 +27,12 @@ final class Design_Provider {
     'outputSchema'=>['type'=>'object','properties'=>['resultJson'=>['type'=>'string','maxLength'=>24000]],'required'=>['resultJson'],'additionalProperties'=>false],
     'discoverPermission'=>$can,'permission'=>$can,'execute'=>static fn()=>(new Design_Service())->website(),
    ],
+   'mcp.design.document.read'=>[
+    'scope'=>'mcp.design.read','label'=>'Read public business facts and bindings for one Start document','effect'=>'read','approval'=>'none','accessVersion'=>1,
+    'inputSchema'=>['type'=>'object','properties'=>[],'additionalProperties'=>false],
+    'outputSchema'=>['type'=>'object','properties'=>['resultJson'=>['type'=>'string','maxLength'=>24000]],'required'=>['resultJson'],'additionalProperties'=>false],
+    'discoverPermission'=>$can,'permission'=>$can,'execute'=>static fn()=>(new Design_Service())->homepage(true),
+   ],
    'mcp.design.homepage.read'=>[
     'scope'=>'mcp.design.read','label'=>'Read the public business and catalogue facts for one homepage','effect'=>'read','approval'=>'none','accessVersion'=>1,
     'inputSchema'=>['type'=>'object','properties'=>[],'additionalProperties'=>false],

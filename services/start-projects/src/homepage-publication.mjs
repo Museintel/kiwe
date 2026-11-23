@@ -7,39 +7,49 @@ import { siteUrl } from './site-network.mjs';
 
 export const publicationReturn = '/projects/homepage-publish-return';
 export const publicationInput = bricksInput.extend({ action: z.enum(['publish','restore']) });
-const scope = 'mcp.bricks.homepage';
+const scopeFor = (target) => target && target !== 'home' ? 'mcp.bricks.document' : 'mcp.bricks.homepage';
 const codePattern = /^kiwe_mcp_code_c_[a-f0-9]{32}\.[A-Za-z0-9_-]{43}$/;
 const expiresIn = 900_000;
 const opaque = () => randomBytes(32).toString('base64url');
-const error = () => new StartError(409, 'homepage_publication_review', 'WordPress could not confirm this homepage publication. Check the assigned homepage and use its current owner review.');
+const error = () => new StartError(409, 'homepage_publication_review', 'WordPress could not confirm this publication. Check the assigned route and use its current owner review.');
 
 export function createHomepagePublication(projects, startOrigin, wordpress = createWordPressLink(), now = Date.now) {
   const pending = new Map();
   const grants = new Map();
   const working = new Map();
 
-  function target(accountId, { projectId, revision, draftId }) {
+  function target(accountId, { projectId, revision, draftId, target: documentId }) {
     const project = projects.getProject(accountId, { projectId });
     if (revision !== undefined && project.revision !== revision) throw error();
-    const imported = projects.readHomepageImport(accountId, projectId, draftId);
+    const imported = projects.readHomepageImport(accountId, projectId, draftId, documentId);
     if (!imported || imported.status !== 'draft_ready' || !imported.receipt?.draftId) throw error();
+    const draft = projects.getHomepage(accountId, projectId, draftId, documentId);
+    const placement = draft.document?.item;
     return { project, imported, args: {
       job: imported.receipt.job, archiveSha256: imported.archive_sha, draftId: imported.receipt.draftId,
+      ...(placement ? { target: placement.id, pageId: placement.pageId } : {}),
     } };
   }
 
   function checkedReceipt(raw, { args, project }) {
     let value;
     try { value = JSON.parse(raw?.resultJson); } catch { throw error(); }
-    if (value?.schema !== 'kiwe.bricks-homepage-publication.v1'
-        || Object.keys(args).some(key => value[key] !== args[key])
-        || value.url !== project.site.url + '/' || !Number.isSafeInteger(value.pageId) || value.pageId < (value.status === 'draft_ready' ? 0 : 1)
-        || !['draft_ready','published','restored','restore_in_progress','review_current_homepage'].includes(value.status)) throw error();
+    const expected = args.target ? 'kiwe.bricks-document-publication.v1' : 'kiwe.bricks-homepage-publication.v1';
+    const publishedId = args.target ? value?.placementId : value?.pageId;
+    if (value?.schema !== expected || Object.keys(args).some(key => value[key] !== args[key])
+        || (!args.target && value.url !== project.site.url + '/')
+        || !Number.isSafeInteger(publishedId) || publishedId < (value.status === 'published' ? 1 : 0)
+        || !['draft_ready','published','restored','restore_in_progress','review_current_homepage','review_current_document'].includes(value.status)) throw error();
+    let publicUrl = null;
+    if (value.url !== null) {
+      try { publicUrl = siteUrl(project.site.url, value.url).href; } catch { throw error(); }
+    }
     let blogUrl;
     if (value.blogUrl !== undefined) {
       try { blogUrl = siteUrl(project.site.url, value.blogUrl).href; } catch { throw error(); }
     }
-    return { pageId: value.pageId, url: value.url, status: value.status, ...(blogUrl ? { blogUrl } : {}) };
+    return { pageId: publishedId, url: publicUrl, status: value.status, ...(blogUrl ? { blogUrl } : {}),
+      ...(args.target ? { importCleanupPending: value.importCleanupPending === true } : {}) };
   }
 
   function currentGrant(id) {
@@ -61,7 +71,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
     const site = target(accountId, details);
     const prior = projects.getHomepagePublication(accountId, details);
     if (prior?.status !== 'approval_required' || prior.action !== details.action || !prior.intent) throw error();
-    const op = scope + '.' + details.action;
+    const op = scopeFor(details.target) + '.' + details.action;
     const call = (name, args) => wordpress.call(grant.connection, grant.token, 'kiwe-mcp-' + name, args);
     const raw = await call('change-status', { intent: prior.intent });
     if (raw?.id === prior.intent && raw.operation === op && ['cancelled','needs-review','failed'].includes(raw.state)) {
@@ -85,7 +95,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
   }
 
   return {
-    status(accountId, projectId, draftId) { return view(accountId, { projectId, draftId }); },
+    status(accountId, projectId, draftId, documentId) { return view(accountId, { projectId, draftId, target: documentId }); },
 
     async begin(accountId, input) {
       const details = parse(publicationInput, input);
@@ -104,7 +114,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
         else if (flow.id === imported.id && flow.action === details.action) return { authorizationUrl: flow.connection.authorizationUrl };
       }
       const state = opaque();
-      const connection = await wordpress.begin(project.domain, startOrigin + publicationReturn, state, opaque(), scope, 'Kiwe Start homepage publication');
+      const connection = await wordpress.begin(project.domain, startOrigin + publicationReturn, state, opaque(), scopeFor(details.target), 'Kiwe Start publication');
       if (connection.origin !== project.site.url) throw error();
       target(accountId, details);
       pending.set(state, { ...details, accountId, id: imported.id, connection, expiresAt: now() + 600_000 });
@@ -121,6 +131,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
       if (site.imported.id !== flow.id || currentGrant(flow.id) || working.has(flow.id)) throw error();
 
       const prepare = async () => {
+        const scope = scopeFor(flow.target);
         let authorization;
         let keep = false;
         try {
@@ -130,7 +141,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
           const { token } = authorization;
           const call = (name, args) => wordpress.call(flow.connection, token, 'kiwe-mcp-' + name, args);
           const read = checkedReceipt(await call('read', { operation: scope + '.status', arguments: site.args }), site);
-          if (read.status === 'review_current_homepage') throw error();
+          if (['review_current_homepage','review_current_document'].includes(read.status)) throw error();
           if ((flow.action === 'publish' && read.status === 'published')
               || (flow.action === 'restore' && read.status === 'restored')) {
             projects.saveHomepagePublication(flow.accountId, flow, read);
@@ -156,7 +167,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
       const work = prepare();
       working.set(flow.id, work);
       try { await work; } finally { working.delete(flow.id); }
-      return { accountId: flow.accountId, projectId: flow.projectId };
+      return { accountId: flow.accountId, projectId: flow.projectId, target: flow.target };
     },
 
     async resume(accountId, input) {

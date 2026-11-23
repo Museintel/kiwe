@@ -42,7 +42,7 @@ final class Bricks_Homepage_Provider {
 							'Replace the homepage’s Bricks content with the exact reviewed draft and save the previous layout for recovery.', true );
 				},
 				'current'=>static fn( $a ) => ( new Homepage_Publication_Service() )->plan( $a, $restore )['expected'],
-				'execute'=>static fn( $a, $expected ) => Authoring_Service::mutate( 'bricks-homepage', static fn() =>
+				'execute'=>static fn( $a, $expected ) => Authoring_Service::mutate( 'bricks-publication', static fn() =>
 					self::result( ( new Homepage_Publication_Service() )->apply( $a, $expected, $restore ) ) ),
 			];
 		}

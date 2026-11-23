@@ -261,6 +261,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     ) STRICT;
     CREATE INDEX IF NOT EXISTS site_link_expiry ON site_link_attempts(expires_at);
   `);
+  const draftColumns = db.prepare('PRAGMA table_info(homepage_drafts)').all().map(column => column.name);
+  if (!draftColumns.includes('target')) db.exec("ALTER TABLE homepage_drafts ADD COLUMN target TEXT NOT NULL DEFAULT 'home'");
+  if (!draftColumns.includes('document')) db.exec('ALTER TABLE homepage_drafts ADD COLUMN document TEXT');
+  db.exec('CREATE INDEX IF NOT EXISTS start_drafts_by_target ON homepage_drafts(project_id,target,version)');
   const byEntitlement = db.prepare('SELECT * FROM projects WHERE entitlement_id = ?');
   const ownerOfProject = db.prepare('SELECT account_id FROM projects WHERE id = ?');
   const projection = 'SELECT p.*, s.site_url, s.core_version, s.wordpress_version, s.verified_at, '
@@ -403,18 +407,23 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     'INSERT INTO project_website_inventory(project_id,project_revision,website,snapshot,checked_at) VALUES (?,?,?,?,?) '
     + 'ON CONFLICT(project_id) DO UPDATE SET project_revision=excluded.project_revision, website=excluded.website, snapshot=excluded.snapshot, checked_at=excluded.checked_at',
   );
-  const currentHome = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? ORDER BY version DESC LIMIT 1');
-  const homeById = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? AND id = ?');
+  const currentHome = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? AND target = ? ORDER BY version DESC LIMIT 1');
+  const maxDraftVersion = db.prepare('SELECT MAX(version) AS version FROM homepage_drafts WHERE project_id = ?');
+  const approvedHomeDirection = db.prepare(
+    "SELECT design FROM homepage_drafts WHERE project_id = ? AND project_revision = ? AND target = 'home' AND approved_at IS NOT NULL ORDER BY version DESC LIMIT 1",
+  );
+  const homeById = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? AND target = ? AND id = ?');
   const lastHomeDesign = db.prepare(
-    'SELECT design FROM homepage_drafts WHERE project_id = ? AND project_revision = ? AND version < ? AND design IS NOT NULL ORDER BY version DESC LIMIT 1',
+    'SELECT design FROM homepage_drafts WHERE project_id = ? AND project_revision = ? AND target = ? AND version < ? AND design IS NOT NULL ORDER BY version DESC LIMIT 1',
   );
   const addHome = db.prepare(
-    'INSERT INTO homepage_drafts(id, project_id, project_revision, version, graph, feedback) VALUES (?, ?, ?, ?, ?, ?)',
+    'INSERT INTO homepage_drafts(id, project_id, project_revision, version, graph, feedback, target, document) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
   );
   const attachHomeSource = db.prepare('UPDATE homepage_drafts SET design = ?, source = ? WHERE id = ? AND source IS NULL');
   const approveHome = db.prepare('UPDATE homepage_drafts SET approved_at = ? WHERE id = ? AND approved_at IS NULL');
   const readHome = (row) => row
-    ? { ...row, design: row.design ? JSON.parse(row.design) : null, source: row.source ? JSON.parse(row.source) : null }
+    ? { ...row, design: row.design ? JSON.parse(row.design) : null, source: row.source ? JSON.parse(row.source) : null,
+      document: row.document ? JSON.parse(row.document) : null }
     : null;
 
   function homepageTarget(accountId, projectId, revision) {
@@ -429,9 +438,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return row;
   }
 
-  function latestHomepage(accountId, projectId, draftId) {
+  function latestHomepage(accountId, projectId, draftId, target = 'home') {
     const project = homepageTarget(accountId, projectId);
-    const draft = currentHome.get(projectId);
+    const draft = currentHome.get(projectId, target);
     const latest = draft?.project_revision === project.revision ? draft : null;
     if (draftId && latest?.id !== draftId) {
       throw new StartError(409, 'homepage_changed', 'A newer homepage revision is active. Open the current draft.');
@@ -449,8 +458,8 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return project;
   }
 
-  function approvedImportTarget(accountId, projectId, draftId) {
-    const draft = latestHomepage(accountId, projectId, draftId);
+  function approvedImportTarget(accountId, projectId, draftId, target) {
+    const draft = latestHomepage(accountId, projectId, draftId, target);
     if (!draft?.source || draft.approved_at === null) {
       throw new StartError(409, 'homepage_approval_required', 'Approve the current homepage preview before Convert to Bricks.');
     }
@@ -716,37 +725,37 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
-    getHomepagePublication(accountId, { projectId, draftId }) {
-      const draft = approvedImportTarget(accountId, projectId, draftId);
+    getHomepagePublication(accountId, { projectId, draftId, target }) {
+      const draft = approvedImportTarget(accountId, projectId, draftId, target);
       const row = readPublication.get(draft.id);
       return row ? JSON.parse(row.record) : null;
     },
 
-    saveHomepagePublication(accountId, { projectId, draftId }, record) {
+    saveHomepagePublication(accountId, { projectId, draftId, target }, record) {
       return transaction(() => {
-        const draft = approvedImportTarget(accountId, projectId, draftId);
+        const draft = approvedImportTarget(accountId, projectId, draftId, target);
         const imported = importByDraft.get(draft.id);
         if (imported?.status !== 'draft_ready') throw new StartError(409, 'bricks_draft_required', 'Prepare the current private Bricks draft first.');
         writePublication.run(draft.id, JSON.stringify(record));
       });
     },
 
-    readHomepageImport(accountId, projectId, draftId) {
-      const draft = approvedImportTarget(accountId, projectId, draftId);
+    readHomepageImport(accountId, projectId, draftId, target) {
+      const draft = approvedImportTarget(accountId, projectId, draftId, target);
       return importReceipt(importByDraft.get(draft.id));
     },
 
-    reserveHomepageImport(accountId, projectId, draftId) {
+    reserveHomepageImport(accountId, projectId, draftId, target) {
       return transaction(() => {
-        const draft = approvedImportTarget(accountId, projectId, draftId);
+        const draft = approvedImportTarget(accountId, projectId, draftId, target);
         addImport.run(draft.id, randomUUID().replaceAll('-', ''), draft.source.sha256);
         return importReceipt(importByDraft.get(draft.id));
       });
     },
 
-    saveHomepageImport(accountId, projectId, draftId, id, changes) {
+    saveHomepageImport(accountId, projectId, draftId, id, changes, target) {
       return transaction(() => {
-        const draft = approvedImportTarget(accountId, projectId, draftId);
+        const draft = approvedImportTarget(accountId, projectId, draftId, target);
         const row = importReceipt(importByDraft.get(draft.id));
         if (row?.id !== id || row.source_sha !== draft.source.sha256) {
           throw new StartError(409, 'bricks_run_changed', 'Reload this approved homepage before continuing its import.');
@@ -758,56 +767,64 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
-    getHomepage(accountId, projectId, draftId) {
-      return latestHomepage(accountId, projectId, draftId);
+    getHomepage(accountId, projectId, draftId, target) {
+      return latestHomepage(accountId, projectId, draftId, target);
     },
 
-    getApprovedHomepage(accountId, projectId, draftId) {
+    getApprovedHomepage(accountId, projectId, draftId, target = 'home') {
       const project = homepageTarget(accountId, projectId);
-      const row = draftId ? homeById.get(projectId, draftId) : currentHome.get(projectId);
+      const row = draftId ? homeById.get(projectId, target, draftId) : currentHome.get(projectId, target);
       return row?.project_revision === project.revision && row.approved_at !== null ? readHome(row) : null;
     },
 
-    previousHomepageDesign(accountId, projectId, version) {
+    previousHomepageDesign(accountId, projectId, version, target = 'home') {
       const project = homepageTarget(accountId, projectId);
-      const row = lastHomeDesign.get(projectId, project.revision, version);
+      const row = lastHomeDesign.get(projectId, project.revision, target, version);
       return row ? JSON.parse(row.design) : null;
     },
 
-    prepareHomepage(accountId, { projectId, revision, graph, feedback, fromDraft }) {
+    getHomepageDirection(accountId, projectId) {
+      const project = homepageTarget(accountId, projectId);
+      const row = approvedHomeDirection.get(projectId, project.revision);
+      return row ? JSON.parse(row.design) : null;
+    },
+
+    prepareHomepage(accountId, { projectId, revision, graph, feedback, fromDraft, target = 'home', document = null }) {
       return transaction(() => {
         const project = homepageTarget(accountId, projectId, revision);
-        const previous = currentHome.get(projectId);
+        const previous = currentHome.get(projectId, target);
         if (fromDraft && (previous?.id !== fromDraft || previous.project_revision !== project.revision)) {
           throw new StartError(409, 'homepage_changed', 'A newer homepage revision is active. Open the current draft.');
         }
+        const specification = document === null ? null : JSON.stringify(document);
         if (previous && previous.project_revision === project.revision && !previous.source
-            && previous.graph === graph && previous.feedback === feedback) return readHome(previous);
-        addHome.run(randomUUID(), projectId, revision, (previous?.version ?? 0) + 1, graph, feedback);
-        return readHome(currentHome.get(projectId));
+            && previous.graph === graph && previous.feedback === feedback && previous.document === specification) return readHome(previous);
+        addHome.run(randomUUID(), projectId, revision, (maxDraftVersion.get(projectId).version ?? 0) + 1,
+          graph, feedback, target, specification);
+        return readHome(currentHome.get(projectId, target));
       });
     },
 
-    saveHomepage(accountId, projectId, draftId, design, source) {
+    saveHomepage(accountId, projectId, draftId, design, source, target) {
       return transaction(() => {
-        const draft = latestHomepage(accountId, projectId, draftId);
+        const draft = latestHomepage(accountId, projectId, draftId, target);
         if (draft.source) {
           if (draft.source.sha256 === source.sha256) return draft;
           throw new StartError(409, 'homepage_saved', 'This draft was saved. Request a new revision for further changes.');
         }
         attachHomeSource.run(JSON.stringify(design), JSON.stringify(source), draftId);
-        return readHome(currentHome.get(projectId));
+        return readHome(currentHome.get(projectId, draft.target));
       });
     },
 
-    approveHomepage(accountId, projectId, draftId, sha256) {
+    approveHomepage(accountId, projectId, draftId, sha256, target) {
       return transaction(() => {
-        const draft = latestHomepage(accountId, projectId, draftId);
+        const draft = latestHomepage(accountId, projectId, draftId, target);
         if (!draft.source || draft.source.sha256 !== sha256) {
           throw new StartError(409, 'homepage_changed', 'Approve the current preview and its exact source.');
         }
         approveHome.run(now(), draftId);
-        return readHome(currentHome.get(projectId));
+        return readHome(currentHome.get(projectId, draft.target));
       });
     },
 

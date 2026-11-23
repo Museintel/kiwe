@@ -59,7 +59,17 @@ Open **Home** to generate, preview or revise one homepage. When the owner has ap
 
 To enable this conversion, set `KIWE_START_SEAM_ROOT` to the absolute path of a trusted, pinned Seam checkout with its locked dependencies installed. Set `KIWE_START_SEAM_WORK` to a private absolute working directory outside the served tree. The target needs Kiwe MCP with native Bricks import and package transfer. Keep a single Start process for active consent and imports. Import grants stay in process memory and last up to 15 minutes. If the grant ends after staging, open the saved Framework review on that site. Saved source and native draft receipts survive a Start restart.
 
-The other checklist rows link to their WordPress owners. Independent design generation for those rows remains pending.
+### Design and publish one page or template
+
+Approve a homepage direction, then refresh **Pages & Templates**. Choose a specific row and select **Generate design**. Start opens native consent for the row’s public Design Context and catalogue brief. The approved homepage supplies the palette and typography. Each row has its own source history, preview, approval and Bricks receipt.
+
+**Request another revision** gives the generator the previous design and the owner’s instructions. **Regenerate design** starts a fresh layout from the approved homepage direction. The design uses native facts and supported elements with a typed layout, heading and optional sections. The browser uses the configured design generator. An MCP designer can fill the same request. Preview interactions stay inside the review, including when the native page uses a real WooCommerce form.
+
+Approve the preview, choose **Convert to Bricks**, and confirm the private draft in WordPress. Start compiles each document in an isolated project namespace. Pin the [paired Seam candidate with native Search typography support](https://github.com/Museintel/seam-compiler/commit/d59ce2b2fa6d939661da10042b2b470ed0318927). Choose **Publish design** to review the exact route and assignment in WordPress, then **Check publication**. **Restore previous design** opens a separate review. Successful placement saves encrypted native recovery and frees its temporary import slot while keeping the private Bricks draft and required styles.
+
+Header, footer, single post, archives, search, 404 and product layouts use native Bricks assignments. Blog uses the WordPress posts route. About and Contact can create their own pages. Existing pages retain their author-owned content. Privacy and Terms use the site’s existing published policy text. If a shared template condition or route has changed, WordPress requests a new review. Narrower existing conditions still take precedence according to Bricks.
+
+On Store projects, Shop and category listings use the native results query. The Cart, Checkout, Order payment, Thank you and Account designs place a Bricks presentation section above the existing WooCommerce view. WooCommerce handles forms, checkout, payment, login and order data. Create and assign the native commerce pages in WooCommerce before placing those designs.
 
 ### Publish the homepage
 
@@ -112,8 +122,11 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_open_homepage` starts the one-page brief through WordPress consent.
 - `kiwe_start_homepage`, `kiwe_start_submit_homepage_design` and `kiwe_start_revise_homepage` read, prepare and revise that project's homepage. The owner approves its exact source in Start.
 
-- `kiwe_start_website` reads the Pages and Templates workspace and current conversion.
+- `kiwe_start_website` reads the Pages and Templates workspace and each row’s design and publication status.
 - `kiwe_start_refresh_website` opens native consent to refresh the inventory.
+- `kiwe_start_open_document`, `kiwe_start_document`, `kiwe_start_submit_document_design` and `kiwe_start_revise_document` work on one checklist `target` per request. The owner approves its exact source in Start.
+- `kiwe_start_convert_document` starts the approved row’s Seam import. `kiwe_start_resume_bricks` resumes its saved job with the same `target`.
+- `kiwe_start_prepare_document_publication` and `kiwe_start_complete_document_publication` use the separate `mcp.bricks.document` owner review to publish or restore one row.
 - `kiwe_start_convert_homepage` opens the approved homepage import when Seam is configured. `kiwe_start_resume_bricks` checks the same native job after authorization and separate import approval.
 - `kiwe_start_prepare_homepage_publication` opens the native publication or recovery approval. After the owner reviews it, `kiwe_start_complete_homepage_publication` checks the exact intent and applies the approved change.
 

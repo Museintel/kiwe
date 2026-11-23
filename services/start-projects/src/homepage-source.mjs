@@ -10,7 +10,7 @@ export const homepageDesign = z.strictObject({
   hideDockOnHero: z.boolean(),
 });
 export const fingerprint = value => createHash('sha256').update(value).digest('hex');
-const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+export const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[c]);
 
@@ -22,7 +22,7 @@ function luminance(hex) {
   return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
 }
 
-function contrast(a, b) {
+export function contrast(a, b) {
   const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (values[0] + .05) / (values[1] + .05);
 }
@@ -63,15 +63,7 @@ export function homepageBrief(origin, graph) {
   };
 }
 
-export function buildHomepage(brief, graphText, input) {
-  const design = homepageDesign.parse(input);
-  const graph = JSON.parse(graphText);
-  const { paper, ink, accent } = design.palette;
-  if (contrast(paper, ink) < 4.5) throw new Error('Use a foreground and background with at least 4.5:1 contrast.');
-  const media = brief.media.find(item => item.id === design.heroMediaId);
-  if (design.heroMediaId !== null && !media) throw new Error('Choose a hero image from the site’s approved media.');
-  const accentInk = contrast(accent, '#ffffff') >= contrast(accent, '#000000') ? '#ffffff' : '#000000';
-
+export function seamBindings(graph) {
   const stitches = [];
   const capability = graph.siteGraph.bricks;
   const nativeFields = graph.dynamicBindings?.fields ?? {};
@@ -103,7 +95,7 @@ export function buildHomepage(brief, graphText, input) {
       + id + '" aria-label="' + label + '">' + label + '</button>';
   }
 
-  function collection(records, kind, title) {
+  function collection(records, kind, title, mainQuery = false) {
     if (!records.length) return '';
     const term = kind === 'categories';
     const objectType = term ? 'term' : 'post';
@@ -111,6 +103,7 @@ export function buildHomepage(brief, graphText, input) {
     const linkTag = term ? '{term_url}' : '{post_url}';
     const images = !term && records.every(record => record.image) && tags.has('{featured_image}');
     const live = queries.has(objectType) && tags.has(titleTag) && tags.has(linkTag);
+    if (mainQuery && !live) throw new Error('This site has not advertised a native Bricks post loop.');
     const container = kind + '.collection';
     const prototype = kind + '.item';
     if (live) {
@@ -118,7 +111,7 @@ export function buildHomepage(brief, graphText, input) {
         kind: 'collection', key: container, semantic: container, containerAnchor: container, prototypeAnchor: prototype,
         authority: authority('/catalog/' + (term ? 'productCategories' : kind), 'Current native public records'),
         itemSelector: '.home-' + kind + '-item', expectedPreviewCount: records.length,
-        query: term
+        query: mainQuery ? { objectType: 'post', is_archive_main_query: true } : term
           ? { objectType, taxonomy: ['product_cat'], hide_empty: true, number: records.length, orderby: 'name', order: 'ASC' }
           : { objectType, post_type: [kind === 'products' ? 'product' : 'post'], posts_per_page: records.length, orderby: 'date', order: 'DESC' },
       });
@@ -139,6 +132,53 @@ export function buildHomepage(brief, graphText, input) {
     return '<section class="home-section" id="' + kind + '"><h2>' + title + '</h2><div class="home-' + kind
       + (live ? '" data-seam-anchor="' + container : '') + '">' + items + '</div></section>';
   }
+
+  function native(anchor, element) {
+    stitches.push({
+      kind: 'native-element', key: anchor, anchor, semantic: anchor, element,
+      authority: { source: 'wordpress-contract', pointer: anchor, evidence: 'Native renderer for this document' },
+    });
+    return ' data-seam-anchor="' + anchor + '"';
+  }
+
+  return { stitches, field, tag, tags, collection, launcher, native };
+}
+
+export function seamPackage(graphText, html, css, script, stitches, { templateType, commerce = 'preserve' }) {
+  const graph = JSON.parse(graphText);
+  const anchors = new Set(stitches.flatMap(stitch => stitch.kind === 'collection'
+    ? [stitch.containerAnchor, stitch.prototypeAnchor] : [stitch.anchor]));
+  const files = { 'index.html': html, 'styles.css': css, 'preview.js': script, 'seam/site-graph.json': graphText };
+  const map = {
+    schema: 'kiwe.seam-map.v1', mode: 'strict', sourcePolicy: 'marker-only',
+    siteGraph: { schema: 'kiwe.site-graph.v1', path: 'seam/site-graph.json', revision: graph.revision, hash: fingerprint(graphText) },
+    sources: [{ path: 'index.html', sha256: fingerprint(html) }],
+    documents: [{
+      path: 'index.html',
+      wordpress: { templateType, commerce, content: 'static', editorialSurface: null, templateConditions: [] },
+      closure: { status: 'complete', declaredAnchors: anchors.size, unresolved: [] },
+      stitches,
+    }],
+    requiresHumanReview: [],
+  };
+  files['seam/seam-map.json'] = JSON.stringify(map, null, 2);
+  return { files, sha256: fingerprint(JSON.stringify(files)), notes: {
+    productLoop: stitches.some(stitch => stitch.key === 'products.collection'),
+    categoryLoop: stitches.some(stitch => stitch.key === 'categories.collection'),
+    editorialLoop: stitches.some(stitch => stitch.key === 'posts.collection'),
+  } };
+}
+
+export function buildHomepage(brief, graphText, input) {
+  const design = homepageDesign.parse(input);
+  const graph = JSON.parse(graphText);
+  const { paper, ink, accent } = design.palette;
+  if (contrast(paper, ink) < 4.5) throw new Error('Use a foreground and background with at least 4.5:1 contrast.');
+  const media = brief.media.find(item => item.id === design.heroMediaId);
+  if (design.heroMediaId !== null && !media) throw new Error('Choose a hero image from the site’s approved media.');
+  const accentInk = contrast(accent, '#ffffff') >= contrast(accent, '#000000') ? '#ffffff' : '#000000';
+
+  const { stitches, tag, field, launcher, collection } = seamBindings(graph);
 
   const name = field('brand.name', tag('identity.siteName', '{site_title}'), 'text', brief.name, 'identity.siteName');
   const tagline = brief.tagline
@@ -203,33 +243,16 @@ export function buildHomepage(brief, graphText, input) {
     '});',
   ].join('\n');
 
-  const anchors = new Set(stitches.flatMap(stitch => stitch.kind === 'collection'
-    ? [stitch.containerAnchor, stitch.prototypeAnchor] : [stitch.anchor]));
-  const files = { 'index.html': html, 'styles.css': css, 'preview.js': script, 'seam/site-graph.json': graphText };
-  const map = {
-    schema: 'kiwe.seam-map.v1', mode: 'strict', sourcePolicy: 'marker-only',
-    siteGraph: { schema: 'kiwe.site-graph.v1', path: 'seam/site-graph.json', revision: graph.revision, hash: fingerprint(graphText) },
-    sources: [{ path: 'index.html', sha256: fingerprint(html) }],
-    documents: [{
-      path: 'index.html',
-      wordpress: { templateType: 'content', commerce: brief.products.length ? 'woocommerce' : 'preserve', content: 'static', editorialSurface: null, templateConditions: [] },
-      closure: { status: 'complete', declaredAnchors: anchors.size, unresolved: [] },
-      stitches,
-    }],
-    requiresHumanReview: [],
-  };
-  files['seam/seam-map.json'] = JSON.stringify(map, null, 2);
-  return { files, sha256: fingerprint(JSON.stringify(files)), notes: {
-    productLoop: stitches.some(stitch => stitch.key === 'products.collection'),
-    categoryLoop: stitches.some(stitch => stitch.key === 'categories.collection'),
-    editorialLoop: stitches.some(stitch => stitch.key === 'posts.collection'),
-  } };
+  return seamPackage(graphText, html, css, script, stitches, {
+    templateType: 'content', commerce: brief.products.length ? 'woocommerce' : 'preserve',
+  });
 }
 
 /** Omit the preview-only script from a separate, fingerprinted Seam input. */
 export function seamSource(source) {
   const files = { ...source.files };
   files['index.html'] = files['index.html'].replace('<script src="preview.js"></script>', '');
+  if (source.target) files['index.html'] = files['index.html'].replace('<p class="start-preview-feedback" aria-live="polite"></p>', '');
   delete files['preview.js'];
   const map = JSON.parse(files['seam/seam-map.json']);
   map.sources = [{ path: 'index.html', sha256: fingerprint(files['index.html']) }];
@@ -237,6 +260,7 @@ export function seamSource(source) {
   files['authoring/start-homepage-receipt.json'] = JSON.stringify({
     schema: 'kiwe.start-homepage-source.v1', approvedSourceSha256: source.sha256,
     excludedPreviewRuntime: ['preview.js'],
+    ...(source.target ? { document: source.target, templateType: source.templateType, schema: 'kiwe.start-document-source.v1' } : {}),
   }, null, 2);
   return { files, sha256: fingerprint(JSON.stringify(files)) };
 }

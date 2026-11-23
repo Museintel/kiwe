@@ -61,6 +61,7 @@ final class Package_Layout {
   'includes/MCP/Authoring_Provider.php',
   'includes/MCP/Authoring_Service.php',
   'includes/MCP/Authorization_Service.php',
+  'includes/MCP/Bricks_Document_Provider.php',
   'includes/MCP/Bricks_Homepage_Provider.php',
   'includes/MCP/Bricks_Import_Provider.php',
   'includes/MCP/Bricks_Import_Transport.php',

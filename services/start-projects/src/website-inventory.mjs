@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { claimInput, parse, siteLinkInput, StartError } from './projects.mjs';
 import { createWordPressLink } from './wordpress-link.mjs';
+import { documentId, documentPath, websiteDocuments } from './document-targets.mjs';
 
 export const inventoryReturn = '/projects/website-return';
 const nonce = () => randomBytes(32).toString('base64url');
@@ -13,8 +14,8 @@ const template = record.omit({ url: true });
 const schema = z.strictObject({
   schema: z.literal('kiwe.start-website-inventory.v1'), website: z.url(), commerce: z.boolean(),
   bricks: z.boolean(), homeMode: z.enum(['page','posts']),
-  records: z.partialRecord(z.enum(['home','blog','about','contact','privacy','shop','cart','checkout','account']), record),
-  templates: z.strictObject({ header: z.array(template).max(3), footer: z.array(template).max(3) }),
+  records: z.partialRecord(z.enum(['home','blog','about','contact','privacy','terms','shop','cart','checkout','account']), record),
+  templates: z.partialRecord(documentId, z.array(template).max(3)),
   otherPages: z.array(record).max(24),
 });
 
@@ -40,39 +41,35 @@ function snapshot(source, website) {
   };
 }
 
-const siteItems = [
-  ['home','Home','Page'], ['header','Header','Template'], ['footer','Footer','Template'],
-  ['about','About','Page'], ['contact','Contact','Page'], ['blog','Blog','Page'],
-  ['single-post','Single post','Template'], ['post-archive','Post archives','Template'],
-  ['search','Search results','Template'], ['not-found','Page not found','Template'],
-  ['privacy','Privacy policy','Page'], ['terms','Terms','Page'],
-];
-const storeItems = [
-  ['shop','Shop','WooCommerce'], ['product-category','Product categories','Template'],
-  ['single-product','Single product','Template'], ['cart','Cart','WooCommerce'],
-  ['checkout','Checkout','WooCommerce'], ['order-payment','Order payment','WooCommerce'],
-  ['thank-you','Thank you','WooCommerce'], ['account','My account and orders','WooCommerce'],
-];
-
-export function websiteChecklist(project, inventory, homepage, conversion, canCompile, publication = null) {
-  const base = '/projects/' + project.id;
+export function websiteChecklist(project, inventory, homepage, conversion, canCompile, publication = null, documents = new Map()) {
   const native = project.site.url + '/wp-admin/';
-  const draft = homepage?.draft;
-  const rows = (inventory?.commerce ? [...siteItems, ...storeItems] : siteItems).map(([id, name, type]) => {
-    const page = inventory?.records[id];
+  const canDesign = inventory?.bricks && homepage;
+  const homeApproved = Boolean(homepage?.draft?.status === 'approved' || homepage?.homeApproved);
+  const rows = websiteDocuments.filter(item => item.type !== 'WooCommerce' || inventory?.commerce);
+  for (const page of inventory?.otherPages ?? []) {
+    rows.push({ id: 'page-' + page.id, name: page.title || 'Page ' + page.id, type: 'Page', page });
+  }
+  return rows.map(({ id, name, type, page = inventory?.records[id] }) => {
     const templates = inventory?.templates[id] ?? [];
     const endpoint = ['order-payment','thank-you'].includes(id) && Boolean(inventory?.records.checkout);
     const nativeBlogHome = inventory?.homeMode === 'posts' && ['home','blog'].includes(id);
     const status = page ? 'Published page' : templates.length ? 'Published templates available'
       : endpoint || nativeBlogHome ? 'Native route' : inventory ? 'Review in WordPress' : 'Site inventory pending';
+    const state = id === 'home' ? { draft: homepage?.draft, conversion, publication } : documents.get(id);
+    const draft = state?.draft;
+    const placement = state?.publication;
+    const imported = state?.conversion;
+    const href = documentPath(project.id, id);
     const links = [];
-    const convert = id === 'home' && draft?.status === 'approved' && canCompile
-      && (!conversion || (!conversion.sessionActive && !conversion.reviewUrl && !conversion.recoveryRequired))
-      ? { href: base + '/homepage/convert', draftId: draft.id, revision: project.revision } : null;
-    if (id === 'home' && homepage) {
-      const label = !draft ? 'Generate homepage' : conversion?.status === 'draft_ready' ? 'Review Bricks draft' : 'Open homepage draft';
-      links.push({ label, href: base + '/homepage' });
-      if (conversion?.status === 'draft_ready') links.push({ label: publication?.status === 'published' ? 'Homepage publication' : 'Publish homepage', href: base + '/homepage#publication' });
+    if (id === 'home' ? homepage : canDesign) {
+      const label = !draft ? (id === 'home' ? 'Generate homepage' : homeApproved ? 'Generate' : 'Open design')
+        : imported?.status === 'draft_ready' ? 'Review Bricks draft' : 'Open design';
+      links.push({ label, href });
+      if (imported?.status === 'draft_ready') links.push({
+        label: placement?.status === 'published' ? (id === 'home' ? 'Homepage publication' : 'View publication')
+          : (id === 'home' ? 'Publish homepage' : 'Publish'),
+        href: href + '#publication',
+      });
     }
     if (page?.editUrl) links.push({ label: 'Edit in WordPress', href: page.editUrl });
     if (templates.length === 1 && templates[0].editUrl) links.push({ label: 'Open in Bricks', href: templates[0].editUrl });
@@ -85,15 +82,13 @@ export function websiteChecklist(project, inventory, homepage, conversion, canCo
       draft_ready: 'Private Bricks draft', approval_required: 'WordPress approval pending',
       importing: 'Import in progress', native_review: 'Review import in WordPress',
     };
-    const designStatus = id !== 'home' || !draft ? null : importStatus[conversion?.status] ??
+    const designStatus = placement?.status === 'published' ? 'Published' : !draft ? null : importStatus[imported?.status] ??
       (draft.status === 'approved' ? 'Approved preview' : draft.status === 'review' ? 'Preview ready' : 'Waiting for design');
+    const convert = draft?.status === 'approved' && canCompile
+      && (!imported || (!imported.sessionActive && !imported.reviewUrl && !imported.recoveryRequired))
+      ? { href: href + '/convert', draftId: draft.id, revision: project.revision } : null;
     return { id, name, type, status, designStatus, links, ...(convert ? { convert } : {}) };
   });
-  for (const page of inventory?.otherPages ?? []) rows.push({
-    id: 'page-' + page.id, name: page.title || 'Page ' + page.id, type: 'Page', status: 'Published page',
-    designStatus: null, links: page.editUrl ? [{ label: 'Edit in WordPress', href: page.editUrl }] : [],
-  });
-  return rows;
 }
 
 export function createWebsiteInventory(projects, startOrigin, wordpress = createWordPressLink(), now = Date.now) {
