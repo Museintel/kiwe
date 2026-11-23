@@ -20,6 +20,25 @@ final class Design_Provider {
   $can=static fn()=>Design_Service::allowed();
   return['mcp.design.read'=>['scope'=>'mcp.design.read','label'=>'Read public design evidence and the Start preview workflow','effect'=>'read','approval'=>'none','accessVersion'=>1,
    'inputSchema'=>self::input_schema(),'outputSchema'=>['type'=>'object','properties'=>['resultJson'=>['type'=>'string','maxLength'=>24000]],'required'=>['resultJson'],'additionalProperties'=>false],
-   'discoverPermission'=>$can,'permission'=>$can,'execute'=>static fn($args)=>(new Design_Service())->read($args)]];
+   'discoverPermission'=>$can,'permission'=>$can,'execute'=>static fn($args)=>(new Design_Service())->read($args)],
+   'mcp.design.website.read'=>[
+    'scope'=>'mcp.design.read','label'=>'Read the native website page and template inventory for Start','effect'=>'read','approval'=>'none','accessVersion'=>1,
+    'inputSchema'=>['type'=>'object','properties'=>[],'additionalProperties'=>false],
+    'outputSchema'=>['type'=>'object','properties'=>['resultJson'=>['type'=>'string','maxLength'=>24000]],'required'=>['resultJson'],'additionalProperties'=>false],
+    'discoverPermission'=>$can,'permission'=>$can,'execute'=>static fn()=>(new Design_Service())->website(),
+   ],
+   'mcp.design.document.read'=>[
+    'scope'=>'mcp.design.read','label'=>'Read public business facts and bindings for one Start document','effect'=>'read','approval'=>'none','accessVersion'=>1,
+    'inputSchema'=>['type'=>'object','properties'=>[],'additionalProperties'=>false],
+    'outputSchema'=>['type'=>'object','properties'=>['resultJson'=>['type'=>'string','maxLength'=>24000]],'required'=>['resultJson'],'additionalProperties'=>false],
+    'discoverPermission'=>$can,'permission'=>$can,'execute'=>static fn()=>(new Design_Service())->homepage(true),
+   ],
+   'mcp.design.homepage.read'=>[
+    'scope'=>'mcp.design.read','label'=>'Read the public business and catalogue facts for one homepage','effect'=>'read','approval'=>'none','accessVersion'=>1,
+    'inputSchema'=>['type'=>'object','properties'=>[],'additionalProperties'=>false],
+    'outputSchema'=>['type'=>'object','properties'=>['resultJson'=>['type'=>'string','maxLength'=>24000]],'required'=>['resultJson'],'additionalProperties'=>false],
+    'discoverPermission'=>$can,'permission'=>$can,'execute'=>static fn()=>(new Design_Service())->homepage(),
+   ],
+  ];
  }
 }

@@ -3916,7 +3916,10 @@ function pk_admin_page() {
 	echo '<h2 class="nav-tab-wrapper"><a class="nav-tab ' . ( 'settings' === $tab ? 'nav-tab-active' : '' ) . '" href="' . esc_url( admin_url( 'admin.php?page=kiwe-auth' ) ) . '">Settings</a><a class="nav-tab ' . ( 'users' === $tab ? 'nav-tab-active' : '' ) . '" href="' . esc_url( admin_url( 'admin.php?page=kiwe-auth&tab=users' ) ) . '">Users</a><a class="nav-tab ' . ( 'activity' === $tab ? 'nav-tab-active' : '' ) . '" href="' . esc_url( admin_url( 'admin.php?page=kiwe-auth&tab=activity' ) ) . '">Activity</a></h2>';
 	if ( 'users' === $tab ) pk_admin_users();
 	elseif ( 'activity' === $tab ) pk_admin_activity();
-	else pk_admin_settings( $s );
+	else {
+		if ( function_exists( 'pk_render_website_setup' ) ) pk_render_website_setup( $s );
+		pk_admin_settings( $s );
+	}
 	echo '<style>.pk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.pk-card{background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px}.pk-card h2{margin-top:0}.pk-matrix th,.pk-matrix td{padding:7px}.pk-status{display:inline-block;padding:3px 7px;border-radius:999px;background:#eef2ff}.pk-good{background:#dcfce7}.pk-warn{background:#fef3c7}.pk-bad{background:#fee2e2}.pk-code{background:#f1f5f9;padding:2px 5px;border-radius:4px}</style>';
 	echo '</div>';
 }

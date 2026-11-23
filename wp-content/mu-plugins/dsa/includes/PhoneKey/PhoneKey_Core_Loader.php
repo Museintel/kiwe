@@ -17,5 +17,6 @@ final class PhoneKey_Core_Loader {
 		}
 
 		require_once DSA_DIR . 'includes/PhoneKey/phonekey-core.php';
+		require_once DSA_DIR . 'includes/PhoneKey/website-setup.php';
 	}
 }

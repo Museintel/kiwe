@@ -47,6 +47,59 @@ final class Setup_Provider {
    'inputSchema'=>$input,'outputSchema'=>$out,'permission'=>in_array($kind,['service','service-plan'],true)?static fn($a)=>Setup_Service::service_allowed($a):$permission,'discoverPermission'=>$permission,
    'prepare'=>static fn($a)=>$s->prepare($kind,$a),'current'=>static fn($a)=>$s->prepare($kind,$a)['nativeExpected'],'execute'=>static fn($a,$expected)=>$s->apply($kind,$a,$expected),
   ];
-  return$operations;
+  return $operations + self::start_context($s, $context, $readOut, $out);
+ }
+
+ /** Start may edit only the introductory public business fields. */
+ private const START_CONTEXT_FIELDS = [
+  'identity' => ['siteName','tagline','industry','siteType'],
+  'story' => ['identity.description','audience.primary','seo.primaryGoal','about.usp'],
+  'contact' => ['contact.phone','contact.email'],
+ ];
+
+ private static function start_context(Setup_Service $setup, callable $permission, array $readOut, array $out): array {
+  $scope = 'mcp.start.context';
+  $area = self::choice(array_keys(self::START_CONTEXT_FIELDS));
+  $read = static function(array $arguments) use ($setup): array {
+   return $setup->read(['area' => $arguments['area']], self::START_CONTEXT_FIELDS[$arguments['area']] ?? []);
+  };
+  $change = static function(array $arguments, callable $action): array {
+   $area = $arguments['area'];
+   if (!in_array($arguments['field'], self::START_CONTEXT_FIELDS[$area] ?? [], true)) {
+    throw new \RuntimeException('Choose an available introductory Design Context field.');
+   }
+   $native = [
+    'field' => $arguments['field'],
+    'valueJson' => wp_json_encode($arguments['value']),
+   ];
+   $kind = 'identity' === $area ? 'identity' : 'context';
+   if ('context' === $kind) $native['area'] = $area;
+   return $action($kind, $native);
+  };
+  $prepare = static function(array $arguments) use ($change, $setup): array {
+   $plan = $change($arguments, $setup->prepare(...));
+   if (!hash_equals($plan['nativeExpected'], $arguments['expected'])) {
+    throw new \RuntimeException('Design Context changed. Open the latest values before saving.');
+   }
+   return $plan;
+  };
+  return [
+   'mcp.start.context.read' => self::operation(
+    $scope, 'Read the introductory Design Context fields for Kiwe Start', self::object(['area' => $area], ['area']),
+    $readOut, $permission, $read, $permission
+   ),
+   'mcp.start.context.change' => [
+    'scope' => $scope, 'label' => 'Save one approved introductory Design Context field',
+    'effect' => 'write', 'approval' => 'none', 'accessVersion' => 1,
+    'inputSchema' => self::object([
+     'area' => $area, 'field' => self::text(160), 'expected' => self::text(64), 'value' => self::text(2000),
+    ], ['area','field','expected','value']),
+    'outputSchema' => $out, 'permission' => $permission, 'discoverPermission' => $permission,
+    'prepare' => $prepare, 'current' => static fn(array $a) => $prepare($a)['nativeExpected'],
+    'execute' => static fn(array $a, string $expected) => $change(
+     $a, static fn(string $kind, array $native) => $setup->apply($kind, $native, $expected)
+    ),
+   ],
+  ];
  }
 }

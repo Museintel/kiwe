@@ -1,3 +1,8 @@
+## 8.0.0-rc.496 (2026-11-24, candidate)
+
+- Add permission-scoped Design Context, website setup and Bricks document operations for Start and Kiwe MCP.
+- Publish and restore individually reviewed Bricks pages, templates and homepage assignments through native WordPress owner approval.
+
 ## 8.0.0-rc.495 (2026-11-23, source candidate)
 
 - Added an MCP package upload and a private Bricks preview for the exact approved draft import. The Framework workspace points site owners to the matching Seam draft download.

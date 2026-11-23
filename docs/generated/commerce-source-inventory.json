@@ -2620,7 +2620,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Bricks/Bricks_Integration.php",
-      "sha256": "afa4f591185320ae24cdf2b0aeb696bb874ab39dd615df20543db2bab166b5c0",
+      "sha256": "bae28e55195397acb67172aef6e6e3a6defdc85f36900c8c43fd73a1281c1196",
       "symbols": [
         {
           "kind": "method",
@@ -2654,503 +2654,569 @@
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_tags_list",
+          "name": "bricks_after_header",
           "line": 79
         },
         {
           "kind": "hook",
+          "name": "bricks/dynamic_tags_list",
+          "line": 80
+        },
+        {
+          "kind": "hook",
           "name": "bricks/elements/",
-          "line": 83
+          "line": 84
         },
         {
           "kind": "hook",
           "name": "bricks/posts/query_vars",
-          "line": 85
-        },
-        {
-          "kind": "hook",
-          "name": "bricks/dynamic_data/render_tag",
           "line": 86
         },
         {
           "kind": "hook",
-          "name": "bricks/dynamic_data/render_content",
+          "name": "bricks/dynamic_data/render_tag",
           "line": 87
         },
         {
           "kind": "hook",
+          "name": "bricks/dynamic_data/render_content",
+          "line": 88
+        },
+        {
+          "kind": "hook",
           "name": "bricks/elements/",
-          "line": 90
+          "line": 91
         },
         {
           "kind": "hook",
           "name": "bricks/posts/query_vars",
-          "line": 92
+          "line": 93
         },
         {
           "kind": "hook",
           "name": "sanitize_post_meta_",
-          "line": 95
+          "line": 96
         },
         {
           "kind": "hook",
           "name": "bricks/element/render_attributes",
-          "line": 97
-        },
-        {
-          "kind": "hook",
-          "name": "bricks/frontend/render_element",
           "line": 98
         },
         {
           "kind": "hook",
-          "name": "bricks/elements/filter-search/controls",
+          "name": "bricks/frontend/render_element",
           "line": 99
         },
         {
           "kind": "hook",
-          "name": "bricks/elements/icon/controls",
+          "name": "bricks/elements/filter-search/controls",
           "line": 100
         },
         {
           "kind": "hook",
+          "name": "bricks/elements/icon/controls",
+          "line": 101
+        },
+        {
+          "kind": "hook",
           "name": "bricks/elements/",
-          "line": 102
+          "line": 103
         },
         {
           "kind": "hook",
           "name": "bricks/element/settings",
-          "line": 104
+          "line": 105
         },
         {
           "kind": "hook",
           "name": "bricks/elements/woocommerce-mini-cart/controls",
-          "line": 106
-        },
-        {
-          "kind": "hook",
-          "name": "bricks/elements/product-add-to-cart/control_groups",
           "line": 107
         },
         {
           "kind": "hook",
-          "name": "bricks/elements/product-add-to-cart/controls",
+          "name": "bricks/elements/product-add-to-cart/control_groups",
           "line": 108
         },
         {
           "kind": "hook",
-          "name": "bricks/elements/product-upsells/control_groups",
+          "name": "bricks/elements/product-add-to-cart/controls",
           "line": 109
         },
         {
           "kind": "hook",
-          "name": "bricks/elements/product-upsells/controls",
+          "name": "bricks/elements/product-upsells/control_groups",
           "line": 110
         },
         {
           "kind": "hook",
-          "name": "bricks/element/set_root_attributes",
+          "name": "bricks/elements/product-upsells/controls",
           "line": 111
         },
         {
           "kind": "hook",
-          "name": "woocommerce_before_mini_cart",
+          "name": "bricks/element/set_root_attributes",
           "line": 112
         },
         {
           "kind": "hook",
-          "name": "woocommerce_widget_cart_item_quantity",
+          "name": "woocommerce_before_mini_cart",
           "line": 113
         },
         {
           "kind": "hook",
-          "name": "woocommerce_widget_shopping_cart_before_buttons",
+          "name": "woocommerce_widget_cart_item_quantity",
           "line": 114
         },
         {
           "kind": "hook",
-          "name": "wp_enqueue_scripts",
-          "line": 116
+          "name": "woocommerce_widget_shopping_cart_before_buttons",
+          "line": 115
         },
         {
           "kind": "hook",
-          "name": "added_post_meta",
+          "name": "wp_enqueue_scripts",
           "line": 117
         },
         {
           "kind": "hook",
-          "name": "updated_post_meta",
+          "name": "added_post_meta",
           "line": 118
+        },
+        {
+          "kind": "hook",
+          "name": "updated_post_meta",
+          "line": 119
         },
         {
           "kind": "method",
           "name": "activate_native_checkout_element_authority",
-          "line": 131
+          "line": 132
         },
         {
           "kind": "method",
           "name": "maybe_resolve_compiler_popup_meta",
-          "line": 161
+          "line": 162
         },
         {
           "kind": "hook",
           "name": "shutdown",
-          "line": 177
+          "line": 178
         },
         {
           "kind": "method",
           "name": "resolve_compiler_popup_references",
-          "line": 190
+          "line": 191
         },
         {
           "kind": "method",
           "name": "compiler_popup_references_in_value",
-          "line": 250
+          "line": 251
         },
         {
           "kind": "method",
           "name": "resolve_compiler_popup_value",
-          "line": 267
+          "line": 268
         },
         {
           "kind": "method",
           "name": "enqueue_studio_editor_companion",
-          "line": 293
+          "line": 294
         },
         {
           "kind": "method",
           "name": "is_bricks_builder_main",
-          "line": 334
+          "line": 335
         },
         {
           "kind": "method",
           "name": "add_dynamic_tags",
-          "line": 345
+          "line": 346
         },
         {
           "kind": "method",
           "name": "render_dynamic_tag",
-          "line": 370
+          "line": 371
         },
         {
           "kind": "method",
           "name": "render_dynamic_content",
-          "line": 411
+          "line": 412
         },
         {
           "kind": "method",
           "name": "preserve_authored_html",
-          "line": 424
+          "line": 425
         },
         {
           "kind": "method",
           "name": "base_dynamic_tag_definitions",
-          "line": 452
+          "line": 453
         },
         {
           "kind": "method",
           "name": "add_bestseller_controls",
-          "line": 529
+          "line": 530
         },
         {
           "kind": "method",
           "name": "bestseller_query_vars",
-          "line": 536
+          "line": 537
         },
         {
           "kind": "method",
           "name": "bestseller_badge_value",
-          "line": 550
+          "line": 551
         },
         {
           "kind": "method",
           "name": "dynamic_tag_value",
-          "line": 560
+          "line": 561
         },
         {
           "kind": "method",
           "name": "design_context_tag_value",
-          "line": 666
+          "line": 667
         },
         {
           "kind": "method",
           "name": "current_team_member",
-          "line": 721
+          "line": 722
         },
         {
           "kind": "method",
           "name": "service_tag_value",
-          "line": 736
+          "line": 737
         },
         {
           "kind": "method",
           "name": "tag_group_definitions",
-          "line": 763
+          "line": 764
         },
         {
           "kind": "method",
           "name": "tag_group_value",
-          "line": 775
+          "line": 776
         },
         {
           "kind": "method",
           "name": "product_nutrition_image_tag_value",
-          "line": 798
+          "line": 799
         },
         {
           "kind": "method",
           "name": "product_weight_tag_value",
-          "line": 806
+          "line": 807
         },
         {
           "kind": "method",
           "name": "nav_menu_tag_definitions",
-          "line": 828
+          "line": 829
         },
         {
           "kind": "method",
           "name": "nav_menu_tag_value",
-          "line": 847
+          "line": 848
         },
         {
           "kind": "method",
           "name": "logo_tag_value",
-          "line": 865
+          "line": 866
         },
         {
           "kind": "method",
           "name": "woo_store_option",
-          "line": 880
+          "line": 881
         },
         {
           "kind": "method",
           "name": "woo_store_country_state",
-          "line": 889
+          "line": 890
         },
         {
           "kind": "method",
           "name": "woo_locations_label",
-          "line": 906
+          "line": 907
         },
         {
           "kind": "method",
           "name": "country_list_label",
-          "line": 950
+          "line": 951
         },
         {
           "kind": "method",
           "name": "country_label",
-          "line": 964
+          "line": 965
         },
         {
           "kind": "method",
           "name": "state_label",
-          "line": 977
+          "line": 978
         },
         {
           "kind": "method",
           "name": "add_element_attributes",
-          "line": 990
+          "line": 991
         },
         {
           "kind": "method",
           "name": "add_dsa_icon_launcher_controls",
-          "line": 1043
+          "line": 1044
         },
         {
           "kind": "method",
           "name": "add_context_action_controls",
-          "line": 1069
+          "line": 1070
         },
         {
           "kind": "method",
           "name": "add_search_bridge_controls",
-          "line": 1109
+          "line": 1110
         },
         {
           "kind": "method",
           "name": "observe_rendered_element",
-          "line": 1125
+          "line": 1126
         },
         {
           "kind": "method",
           "name": "bridge_html_launcher",
-          "line": 1168
+          "line": 1169
         },
         {
           "kind": "method",
           "name": "add_mini_cart_controls",
-          "line": 1185
+          "line": 1186
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_control_group",
-          "line": 1765
+          "line": 1766
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_controls",
-          "line": 1778
+          "line": 1779
         },
         {
           "kind": "method",
           "name": "add_linked_products_control_group",
-          "line": 1819
+          "line": 1820
         },
         {
           "kind": "method",
           "name": "add_linked_products_controls",
-          "line": 1828
+          "line": 1829
         },
         {
           "kind": "method",
           "name": "bridge_element_settings",
-          "line": 1853
+          "line": 1854
         },
         {
           "kind": "method",
           "name": "add_add_to_cart_attributes",
-          "line": 1911
+          "line": 1912
         },
         {
           "kind": "method",
           "name": "restore_mini_cart_context",
-          "line": 1951
+          "line": 1952
         },
         {
           "kind": "method",
           "name": "render_mini_cart_quantity",
-          "line": 1960
+          "line": 1961
         },
         {
           "kind": "method",
           "name": "render_mini_cart_recommendations",
-          "line": 2010
+          "line": 2011
         },
         {
           "kind": "method",
           "name": "render_mini_cart_product_rail",
-          "line": 2070
+          "line": 2071
         },
         {
           "kind": "method",
           "name": "render_mini_cart_offer_banners",
-          "line": 2117
+          "line": 2118
         },
         {
           "kind": "method",
           "name": "render_mini_cart_total_after_discount",
-          "line": 2157
+          "line": 2158
         },
         {
           "kind": "method",
           "name": "cart_offer_badge",
-          "line": 2179
+          "line": 2180
         },
         {
           "kind": "method",
           "name": "cart_offer_button_label",
-          "line": 2193
+          "line": 2194
         },
         {
           "kind": "method",
           "name": "cart_offer_headline",
-          "line": 2211
+          "line": 2212
         },
         {
           "kind": "method",
           "name": "cart_offer_subtext",
-          "line": 2241
+          "line": 2242
         },
         {
           "kind": "method",
           "name": "enqueue_mini_cart_adapter",
-          "line": 2255
+          "line": 2256
         },
         {
           "kind": "method",
           "name": "enqueue_add_to_cart_adapter",
-          "line": 2272
+          "line": 2273
         },
         {
           "kind": "method",
           "name": "frontend_console_debug_enabled",
-          "line": 2299
+          "line": 2300
         },
         {
           "kind": "method",
           "name": "classify_from_bricks_name",
-          "line": 2310
+          "line": 2311
         },
         {
           "kind": "method",
           "name": "bricks_config",
-          "line": 2352
+          "line": 2353
         },
         {
           "kind": "method",
           "name": "commerce_config",
-          "line": 2358
+          "line": 2359
         },
         {
           "kind": "method",
           "name": "mini_cart_settings",
-          "line": 2364
+          "line": 2365
         },
         {
           "kind": "method",
           "name": "product_max_quantity",
-          "line": 2375
+          "line": 2376
         },
         {
           "kind": "method",
           "name": "stock_badge_html",
-          "line": 2387
+          "line": 2388
         },
         {
           "kind": "method",
           "name": "product_id_from_element",
-          "line": 2413
+          "line": 2414
         },
         {
           "kind": "method",
           "name": "cart_item_for_product",
-          "line": 2427
+          "line": 2428
         },
         {
           "kind": "method",
           "name": "add_to_cart_runtime_enabled",
-          "line": 2446
+          "line": 2447
         },
         {
           "kind": "method",
           "name": "mini_cart_css",
-          "line": 2454
+          "line": 2455
         },
         {
           "kind": "method",
           "name": "mini_cart_js",
-          "line": 2497
+          "line": 2498
         },
         {
           "kind": "metadata",
           "name": "_kiwe_nonce",
-          "line": 2562
+          "line": 2563
         },
         {
           "kind": "method",
           "name": "add_to_cart_css",
-          "line": 2662
+          "line": 2663
         },
         {
           "kind": "method",
           "name": "add_to_cart_js",
-          "line": 2690
+          "line": 2691
         },
         {
           "kind": "metadata",
           "name": "_kiwe_nonce",
-          "line": 2766
+          "line": 2767
+        }
+      ]
+    },
+    {
+      "source": "wp-content/mu-plugins/dsa/includes/Bricks/Document_Routes.php",
+      "sha256": "be1517e2981098c5ef6ff3c20426d0aeabd41774125e4730fe1c19cc6cfebe6a",
+      "symbols": [
+        {
+          "kind": "metadata",
+          "name": "_kiwe_start_woo_presentation",
+          "line": 10
+        },
+        {
+          "kind": "method",
+          "name": "source_type",
+          "line": 12
+        },
+        {
+          "kind": "method",
+          "name": "types",
+          "line": 21
+        },
+        {
+          "kind": "method",
+          "name": "page_options",
+          "line": 27
+        },
+        {
+          "kind": "method",
+          "name": "fail",
+          "line": 33
+        },
+        {
+          "kind": "method",
+          "name": "public_page",
+          "line": 37
+        },
+        {
+          "kind": "method",
+          "name": "find_slug",
+          "line": 46
+        },
+        {
+          "kind": "method",
+          "name": "condition",
+          "line": 50
+        },
+        {
+          "kind": "method",
+          "name": "resolve",
+          "line": 69
+        },
+        {
+          "kind": "method",
+          "name": "render_presentation",
+          "line": 132
+        },
+        {
+          "kind": "method",
+          "name": "order_route",
+          "line": 156
         }
       ]
     },

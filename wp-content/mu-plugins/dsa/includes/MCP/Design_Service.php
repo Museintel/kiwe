@@ -4,6 +4,7 @@ if(!defined('ABSPATH'))exit;
 
 use DSA\Apps\Store_App_Service;
 use DSA\Design\Seam_Token_Service as Tokens;
+use DSA\Bricks\Document_Routes;
 
 /** Stateless bounded projections of existing public native owners. Never render or fetch content. */
 final class Design_Service {
@@ -67,6 +68,183 @@ final class Design_Service {
   if(isset($result['error']))throw new \RuntimeException('Native public catalogue unavailable.');
   unset($result['generatedAt']);return$result;
  }
+ public function website(): array {
+  if (!self::allowed()) throw new \RuntimeException('Website inventory is unavailable.');
+  $page = static function(int $id): ?array {
+   if ($id < 1) return null;
+   $post = get_post($id);
+   if (!$post || 'page' !== $post->post_type || 'publish' !== $post->post_status || $post->post_password !== '') return null;
+   return [
+    'id'=>$id,'title'=>sanitize_text_field(get_the_title($post)),
+    'url'=>esc_url_raw(get_permalink($post)), 'editUrl'=>esc_url_raw(get_edit_post_link($id,'raw') ?: ''),
+   ];
+  };
+  $records = [];
+  $front = (string)get_option('show_on_front');
+  $records['home'] = 'page' === $front ? $page((int)get_option('page_on_front')) : null;
+  $records['blog'] = 'page' === $front ? $page((int)get_option('page_for_posts')) : null;
+  $records['privacy'] = $page((int)get_option('wp_page_for_privacy_policy'));
+  $records['terms'] = $page((int)get_option('woocommerce_terms_page_id'));
+  foreach (['about'=>['about','about-us'],'contact'=>['contact','contact-us'],'terms'=>['terms','terms-and-conditions']] as $key=>$paths) {
+   if (!empty($records[$key])) continue;
+   foreach ($paths as $path) {
+    $candidate = get_page_by_path($path, OBJECT, 'page');
+    $records[$key] = $candidate ? $page((int)$candidate->ID) : null;
+    if ($records[$key]) break;
+   }
+  }
+  $woo = function_exists('wc_get_page_id');
+  if ($woo) {
+   foreach (['shop'=>'shop','cart'=>'cart','checkout'=>'checkout','account'=>'myaccount'] as $key=>$native) {
+    $records[$key] = $page((int)wc_get_page_id($native));
+   }
+  }
+  $bricks = defined('BRICKS_VERSION') && defined('BRICKS_DB_TEMPLATE_SLUG');
+  $templates = ['header'=>[], 'footer'=>[]];
+  if ($bricks && class_exists(Document_Routes::class)) {
+   $roles = Document_Routes::types();
+   foreach (Document_Routes::PRESENTATION as $role) $roles[$role] = 'section';
+   foreach ($roles as $role=>$type) {
+    if (!$woo && (str_starts_with($type, 'wc_') || $type === 'section')) continue;
+    $templates[$role] = [];
+   }
+  }
+  if ($bricks) {
+   $by_type = [];
+   foreach (array_keys($templates) as $role) {
+    $type = $roles[$role] ?? $role;
+    if (!isset($by_type[$type])) {
+     $by_type[$type] = get_posts([
+      'post_type'=>BRICKS_DB_TEMPLATE_SLUG,'post_status'=>'publish','has_password'=>false,
+      'numberposts'=>-1,'fields'=>'ids','no_found_rows'=>true,
+      'meta_key'=>BRICKS_DB_TEMPLATE_TYPE,'meta_value'=>$type,
+     ]);
+     update_meta_cache('post', $by_type[$type]);
+    }
+    foreach ($by_type[$type] as $id) {
+     if ($type === 'section') {
+      $mark = get_post_meta($id, Document_Routes::SECTION_META, true);
+      if (($mark['target'] ?? '') !== $role || ($mark['site'] ?? '') !== home_url('/')) continue;
+     } elseif (!in_array($type, ['header','footer'], true)) {
+      $settings = get_post_meta($id, BRICKS_DB_TEMPLATE_SETTINGS, true);
+      $wanted = Document_Routes::condition($role, (int)($records[$role]['id'] ?? 0));
+      if (($settings['templateConditions'] ?? []) != $wanted) continue;
+     }
+     $templates[$role][] = [
+      'id'=>(int)$id,'title'=>sanitize_text_field(get_the_title($id)),
+      'editUrl'=>esc_url_raw(get_edit_post_link($id,'raw') ?: ''),
+     ];
+     if (count($templates[$role]) >= 3) break;
+    }
+   }
+  }
+  $known = array_column(array_filter($records), 'id');
+  $other_pages = [];
+  foreach (get_posts(['post_type'=>'page','post_status'=>'publish','has_password'=>false,'numberposts'=>24,
+   'fields'=>'ids','no_found_rows'=>true,'post__not_in'=>$known,'orderby'=>'title','order'=>'ASC']) as $id) {
+   $record = $page((int)$id);
+   if ($record) $other_pages[] = $record;
+  }
+  $json = wp_json_encode([
+   'schema'=>'kiwe.start-website-inventory.v1','website'=>Urls::issuer(),
+   'commerce'=>$woo,'bricks'=>$bricks,'homeMode'=>'page' === $front ? 'page' : 'posts',
+   'records'=>(object)array_filter($records),'templates'=>$templates,'otherPages'=>$other_pages,
+  ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  if (!is_string($json) || strlen($json) > 24000) throw new \RuntimeException('The website inventory exceeds its size budget.');
+  return ['resultJson'=>$json];
+ }
+
+ public function homepage(bool $document = false): array {
+  if (!self::allowed()) throw new \RuntimeException('Public design evidence is unavailable.');
+  $plugin = \DSA\Plugin::instance();
+  $graph = new \DSA\AI\Site_Graph_Service($plugin->settings(), $plugin->modules());
+  $packet = (new \DSA\Site_Graph\Design_Context_Service($graph))->context([
+   'productLimit'=>4, 'contentLimit'=>4, 'mediaLimit'=>4, 'customContentLimit'=>0, 'termLimit'=>0,
+   'resources'=>['site','business','products','posts','media','terms'],
+  ], false);
+  $context = $packet['resolvedDesignContext'] ?? $packet['seamDesignContext'];
+  $clean = static function($value, int $limit): string {
+   $text = trim(wp_strip_all_tags((string)$value));
+   return function_exists('mb_substr') ? mb_substr($text, 0, $limit) : wp_check_invalid_utf8(substr($text, 0, $limit), true);
+  };
+  $cards = static function(array $rows, bool $term = false) use ($clean): array {
+   $result = [];
+   foreach ($rows as $row) {
+    $title = $clean($row[$term ? 'name' : 'title'] ?? '', 160);
+    $url = esc_url_raw((string)($row['url'] ?? ''), ['https']);
+    if (empty($row['id']) || '' === $title || '' === $url || ($term && (int)($row['count'] ?? 0) < 1)) continue;
+    $image = $row['featuredImage'] ?? [];
+    $result[] = [
+     'id'=>(int)$row['id'], 'title'=>$title, 'url'=>$url,
+     'image'=>esc_url_raw((string)($image['url'] ?? ''), ['https']), 'alt'=>$clean($image['alt'] ?? '', 200),
+    ];
+    if (count($result) >= 4) break;
+   }
+   return $result;
+  };
+  $media = [];
+  foreach ((array)($packet['catalog']['media'] ?? []) as $item) {
+   if (empty($item['id']) || !str_starts_with((string)($item['mimeType'] ?? ''), 'image/')) continue;
+   $url = esc_url_raw((string)($item['url'] ?? ''), ['https']);
+   if ($url !== '') $media[] = ['id'=>(int)$item['id'], 'image'=>$url, 'alt'=>$clean($item['alt'] ?? '', 200)];
+  }
+  $bricks = $packet['siteGraph']['bricks'] ?? [];
+  $labels = ['site_title','site_tagline','kiwe_business_description','kiwe_business_usp','kiwe_store_email','post_title','post_url','featured_image','term_name','term_url'];
+  if ($document) $labels = array_merge($labels, ['kiwe_store_phone','kiwe_store_phone_url','kiwe_store_email_url','kiwe_business_story']);
+  $tags = [];
+  foreach ((array)($bricks['dynamicTags'] ?? []) as $tag) {
+   $name = trim((string)($tag['name'] ?? ''), '{}');
+   if (in_array($name, $labels, true)) $tags[] = ['name'=>'{'.$name.'}'];
+  }
+  $modules = $packet['siteGraph']['kiwe']['modules'] ?? [];
+  $enabled = [];
+  foreach ((array)($modules['items'] ?? []) as $module) {
+   $id = $module['id'] ?? '';
+   if (in_array($id, ['search','cart'], true) && false !== ($module['enabled'] ?? true)) $enabled[] = ['id'=>$id];
+  }
+  $fields = (array)($packet['dynamicBindings']['fields'] ?? []);
+  $store = Store_App_Service::enabled();
+  $brief = [
+   'schema'=>'kiwe.site-graph.v1',
+   'authority'=>['source'=>Urls::issuer(),'publicDataOnly'=>true,'readOnly'=>true,'mayMutateWordPress'=>false],
+   'siteGraph'=>[
+    'bricks'=>['dynamicTags'=>$tags,'queryLoopTypes'=>array_values(array_intersect(['post','term'], array_column((array)($bricks['queryLoopTypes'] ?? []), 'objectType')))],
+    'woocommerce'=>['active'=>$store],
+    'kiwe'=>['version'=>(string)($packet['siteGraph']['kiwe']['version'] ?? ''),'modules'=>['items'=>$enabled]],
+   ],
+   'seamDesignContext'=>[
+    'identity'=>[
+     'siteName'=>$clean($context['identity']['siteName'] ?? '', 200),
+     'tagline'=>$clean($context['identity']['tagline'] ?? '', 160),
+     'description'=>$clean($context['identity']['description'] ?? '', 1200),
+    ],
+    'audience'=>['primary'=>$clean($context['audience']['primary'] ?? '', 300)],
+    'about'=>['usp'=>$clean($context['about']['usp'] ?? '', 540)],
+    'seo'=>['primaryGoal'=>$clean($context['seo']['primaryGoal'] ?? '', 50)],
+   ],
+   'dynamicBindings'=>['schema'=>'kiwe.dynamic-bindings.v1','fields'=>array_intersect_key($fields, array_fill_keys(['identity.siteName','identity.tagline','identity.description','about.usp'], true))],
+   'catalog'=>[
+    'products'=>$store ? $cards((array)($packet['catalog']['products'] ?? [])) : [],
+    'posts'=>$cards((array)($packet['catalog']['posts'] ?? [])),
+    'productCategories'=>$store ? $cards((array)($packet['catalog']['productCategories'] ?? []), true) : [],
+    'media'=>$media,
+   ],
+  ];
+  if ($document) {
+   $brief['seamDesignContext']['contact'] = [
+    'email'=>sanitize_email($context['contact']['email'] ?? ''),
+    'phone'=>$clean($context['contact']['phone'] ?? '', 50),
+   ];
+   $brief['seamDesignContext']['about']['story'] = $clean($context['about']['story'] ?? '', 1600);
+   $brief['dynamicBindings']['fields'] += array_intersect_key($fields, array_fill_keys(
+    ['contact.email','contact.phone','contact.emailUrl','contact.phoneUrl','about.story'], true));
+  }
+  $brief['revision'] = 'sha256:'.hash('sha256', (string)wp_json_encode($brief));
+  $json = wp_json_encode($brief, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  if (!is_string($json) || strlen($json) > 24000) throw new \RuntimeException('The homepage brief exceeds its allowed size.');
+  return ['resultJson'=>$json];
+ }
+
  public function read(array $args):array {
   if(!self::allowed()||!Schema::value($args,Design_Provider::input_schema()))throw new \RuntimeException('Public design evidence is unavailable.');
   $selection=$this->selection($args);$part=$args['part']??0;$expected=$args['expected']??'';
