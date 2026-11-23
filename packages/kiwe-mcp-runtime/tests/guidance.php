@@ -42,16 +42,31 @@ namespace {
  function get_post($id){return$id instanceof WP_Post?$id:($GLOBALS['posts'][$id]??null);}function get_permalink($post){return'https://fixture.example/content/'.$post->ID;}function wp_get_attachment_url($id){return'https://fixture.example/uploads/'.$id.'.jpg';}function is_post_publicly_viewable($post){return$post->post_status==='publish'&&!$post->blocked;}function post_password_required($post){return$post->post_password!=='';}function is_post_type_viewable($name){return in_array($name,['post','page','product','attachment','custom_service'],true);}
  function get_taxonomy($tax){if(!in_array($tax,['category','post_tag','product_cat','private_tax'],true))return null;return(object)['name'=>$tax,'public'=>$tax!=='private_tax','cap'=>(object)['manage_terms'=>'manage_categories']];}
  function get_terms($args){$GLOBALS['termQuery']=$args;return[(object)['term_id'=>10,'name'=>'Public &amp; term','description'=>'Description','taxonomy'=>$args['taxonomy']]];}function get_term_link($t){return'https://fixture.example/category/'.$t->term_id;}
+ function is_user_logged_in(){return get_current_user_id()>0;}function absint($value){return abs((int)$value);}
  function home_url($path='/'){return'https://fixture.example'.$path;}function rest_url($path){return'https://fixture.example/wp-json/'.$path;}function untrailingslashit($s){return rtrim($s,'/');}function wp_parse_url($s,$part=-1){return parse_url($s,$part);}function wp_salt($s){return'not-a-production-key';}
  class WP_Error {public function __construct(public string $code,public string $message=''){} }
  class WP_Post {public string $post_title='Public title',$post_excerpt='Public excerpt',$post_content='Read me [dangerous-shortcode]',$post_password='';public bool $blocked=false;public int $post_parent=0;public function __construct(public int $ID,public string $post_type='post',public string $post_status='publish'){} }
  class WP_Query {public array $posts;public function __construct($args){$GLOBALS['queries'][]=$args;$items=array_filter($GLOBALS['posts'],static fn($p)=>$p->post_type===$args['post_type']&&$p->post_status===$args['post_status']&&$p->post_password==='');$this->posts=array_slice(array_values($items),$args['offset'],$args['posts_per_page']);}}
  class Database {public string $posts='wp_posts',$prefix='wp_',$last_error='';public array $presence=[];public bool $failed=false;public array $sql=[];public function prepare($sql,...$args){foreach($args as$v)$sql=preg_replace('/%s/',"'".str_replace("'","''",$v)."'",$sql,1);return$sql;}public function esc_like($s){return$s;}public function get_col($sql){$found=$this->get_var($sql);return $found===null?[]:[$found];}public function get_var($sql){$this->sql[]=$sql;$this->last_error=$this->failed?'synthetic unavailable':'';if(str_starts_with($sql,'SHOW'))return null;foreach($this->presence as$type)if(str_contains($sql,"'".$type."'"))return 8;return null;}}
  $wpdb=new Database();$root=dirname(__DIR__,3).'/wp-content/mu-plugins/dsa/includes/';
- foreach(['Apps/Runtime_Contract','Apps/MCP_Provider_Contract','Bricks/Design_Context_Binding_Service','Utilities/Content_Visibility','MCP/Credentials','MCP/Schema','MCP/Urls','MCP/Orientation','MCP/Guidance_Service','MCP/App_Guidance','MCP/Content_Reader','MCP/Guidance_Provider','MCP/Setup_Provider','MCP/Authoring_Provider','MCP/Growth_Provider','MCP/Design_Provider','MCP/Bricks_Import_Provider','MCP/Maintenance_Provider','MCP/Featured_Image_Provider','MCP/Native_Provider','MCP/Operation_Registry']as$class)require$root.$class.'.php';
+ foreach(['Access/Site_Owner_Service','Apps/Runtime_Contract','Apps/MCP_Provider_Contract','Bricks/Design_Context_Binding_Service','Utilities/Content_Visibility','MCP/Credentials','MCP/Schema','MCP/Urls','MCP/Orientation','MCP/Guidance_Service','MCP/App_Guidance','MCP/Content_Reader','MCP/Guidance_Provider','MCP/Setup_Provider','MCP/Authoring_Provider','MCP/Growth_Provider','MCP/Design_Provider','MCP/Bricks_Import_Provider','MCP/Maintenance_Provider','MCP/Featured_Image_Provider','MCP/Native_Provider','MCP/Operation_Registry']as$class)require$root.$class.'.php';
  use DSA\MCP\{Guidance_Service as Guide,App_Guidance,Content_Reader,Operation_Registry as Registry,Native_Provider,Schema};
  $checks=[];function check($condition,$label){global$checks;$checks[$label]=$condition;if(!$condition)throw new RuntimeException('FAIL '.$label);}function registry(){ $r=new Registry();Native_Provider::register($r);return$r; }
- $r=registry();$described=$r->describe($r->scopes());check(count($described)===8,'Older Core retains eight typed reads without setup-write support');$scopes=$r->scopes();check(count($scopes)===5,'Five distinct read scopes');$pins=$r->freeze($scopes);
+ $r=registry();$described=$r->describe($r->scopes());check(count($described)===8,'Ordinary connections retain eight typed reads on the older Core fixture');
+ $scopes=$r->scopes();check(count($scopes)===6&&in_array('mcp.site.connect',$scopes,true),'Site verification has a separate opt-in read scope');
+ $pins=$r->freeze($scopes);
+ $siteScope=['mcp.read','mcp.site.connect'];
+ $options['kiwe_access_policy_v1']=['ownerId'=>1,'enabled'=>true];
+ $wp_version='7.1.5';
+ $ownerPins=$r->freeze($siteScope);
+ check($r->read('mcp.site.connect.read',[],$siteScope,$ownerPins)===['website'=>'https://fixture.example','coreVersion'=>'8.0.0-test','wordpressVersion'=>'7.1.5'],'The native owner has the exact public site proof');
+ $actor=2;
+ check(count($r->freeze($siteScope))===1&&is_wp_error($r->read('mcp.site.connect.read',[],$siteScope,$ownerPins)),'An editor cannot inherit or execute owner proof');
+ $actor=1;
+ unset($options['kiwe_access_policy_v1']);
+ $caps[1][]='manage_options';
+ check(isset($r->freeze($siteScope)['mcp.site.connect.read']),'Native admin can connect a single site before an owner is designated');
+ array_pop($caps[1]);
  foreach(\DSA\MCP\Guidance_Provider::operations()as$id=>$op){check(Schema::contract($op['inputSchema'])&&Schema::contract($op['outputSchema']),'Closed contract '.$id);check($op['effect']==='read'&&$op['approval']==='none','Read-only operation '.$id);}
  $wire=json_decode(wp_json_encode($described));check($wire[0]->inputSchema->properties instanceof stdClass,'Empty schema properties serialize as an object');check(Schema::wire(['type'=>'object','properties'=>['inner'=>['type'=>'object','properties'=>[],'additionalProperties'=>false]],'additionalProperties'=>false])['properties']->inner['properties'] instanceof stdClass,'Nested empty properties stay objects');
  $oldPins=$r->freeze(['mcp.read']);check(count($r->describe(['mcp.read'],$oldPins))===1,'M02 consent stays connection-only');check(is_wp_error($r->read('mcp.apps.read',[],$scopes,$oldPins)),'Extra requested scopes cannot widen old pinned consent');
