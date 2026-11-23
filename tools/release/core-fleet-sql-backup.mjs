@@ -53,20 +53,8 @@ export async function inspectSqlDump(compressed, tables) {
   return hash.digest('hex');
 }
 
-export async function captureEncryptedSql({ command, args, input, age, identity, recipient, file, tables }) {
-  assert.match(recipient, /^age1[a-z0-9]+$/);
-  const timeout = 1200000;
-  const dump = checkedProcess(command, args, 'Native SQL dump', timeout);
-  const encrypt = checkedProcess(age, ['--encrypt', '--recipient', recipient, '--output', file], 'Database encryption', timeout);
-  dump.child.stdin.on('error', () => {});
-  dump.child.stdin.end(input);
-  try {
-    await Promise.all([dump.completed, encrypt.completed, pipeline(dump.child.stdout, encrypt.child.stdin)]);
-  } finally {
-    if (dump.child.exitCode === null) dump.child.kill();
-    if (encrypt.child.exitCode === null) encrypt.child.kill();
-  }
-  const decrypt = checkedProcess(age, ['--decrypt', '--identity', identity, file], 'Encrypted database verification', timeout);
+export async function verifyEncryptedSql({ age, identity, file, tables }) {
+  const decrypt = checkedProcess(age, ['--decrypt', '--identity', identity, file], 'Encrypted database verification', 1200000);
   decrypt.child.stdin.end();
   let sqlGzipSha256;
   try {

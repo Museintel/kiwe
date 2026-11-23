@@ -181,6 +181,21 @@ function kiwe_fleet_recovery(string $root, string $work, string $choice, bool $u
     ]);
 }
 
+function kiwe_fleet_verify_checkpoint(string $work, array $checkpoint): void {
+    $name = $checkpoint['databaseFile'] ?? 'database.kiwedb';
+    $copy = $checkpoint['backup'] ?? '';
+    if (DSA_VERSION !== $checkpoint['current'] || ($checkpoint['wordpressRoot'] ?? '') !== realpath(ABSPATH)
+        || ($checkpoint['muRoot'] ?? '') !== realpath(WPMU_PLUGIN_DIR)
+        || !in_array($name, ['database.kiwedb', 'database.sql.gz.age'], true)
+        || !is_file($work . '/' . $name) || is_link($work . '/' . $name)
+        || !hash_equals($checkpoint['databaseSha256'], hash_file('sha256', $work . '/' . $name))
+        || dirname($copy) !== dirname($work) || !preg_match('/^kiwe-backup-[a-f0-9-]{36}$/D', basename($copy))
+        || !hash_equals($checkpoint['fingerprint'], kiwe_fleet_fingerprint($copy))
+        || !hash_equals($checkpoint['fingerprint'], kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))) {
+        throw new RuntimeException('The Core files or verified database backup no longer match the checkpoint.');
+    }
+}
+
 try {
     [$step, $work, $domain, $choice] = $args;
     $root = wp_normalize_path(Private_Storage::directory('releases'));
@@ -236,19 +251,24 @@ try {
     } elseif ($step === 'backup' || $step === 'backup-sql') {
         $checkpoint = kiwe_fleet_recovery($root, $work, $choice, $step === 'backup-sql');
         $result = ['current' => $checkpoint['current'], 'ready' => true];
+    } elseif ($step === 'resume-backup') {
+        $checkpoint = kiwe_fleet_state($work);
+        if (!$checkpoint) {
+            $result = ['ready' => false];
+        } else {
+            if (!empty($checkpoint['startedTarget']) || $checkpoint['choice'] !== $choice || $checkpoint['dock'] !== kiwe_fleet_dock()) {
+                throw new RuntimeException('This checkpoint is not from an untouched release attempt.');
+            }
+            kiwe_fleet_verify_checkpoint($work, $checkpoint);
+            $result = ['current' => $checkpoint['current'], 'ready' => true];
+        }
     } else {
         $checkpoint = kiwe_fleet_state($work);
         if (empty($checkpoint['current']) || $checkpoint['choice'] !== $choice) {
             throw new RuntimeException('A matching recovery checkpoint is required.');
         }
         if ($step === 'apply') {
-            $database = $checkpoint['databaseFile'] ?? 'database.kiwedb';
-            if (DSA_VERSION !== $checkpoint['current'] || !hash_equals($checkpoint['fingerprint'], kiwe_fleet_fingerprint(WPMU_PLUGIN_DIR))
-                || !in_array($database, ['database.kiwedb', 'database.sql.gz.age'], true)
-                || !is_file($work . '/' . $database) || is_link($work . '/' . $database)
-                || !hash_equals($checkpoint['databaseSha256'], hash_file('sha256', $work . '/' . $database))) {
-                throw new RuntimeException('The live package changed or the database backup was not verified.');
-            }
+            kiwe_fleet_verify_checkpoint($work, $checkpoint);
             $checkpoint['startedTarget'] = $release['version'];
             kiwe_fleet_state($work, $checkpoint);
             add_filter('pre_option_' . Update_Service::SETTINGS_OPTION,

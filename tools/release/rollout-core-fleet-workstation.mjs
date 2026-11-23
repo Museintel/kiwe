@@ -7,11 +7,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { publicVersion, readRelease, rollout, validateTargets } from './rollout-core-fleet.mjs';
-import { captureEncryptedSql } from './core-fleet-sql-backup.mjs';
+import { verifyEncryptedSql } from './core-fleet-sql-backup.mjs';
 
 const exec = promisify(execFile);
 const toolRoot = fileURLToPath(new URL('.', import.meta.url));
-const [target, mode, configFile, releaseDir, channelDir] = process.argv.slice(2);
+const [target, mode, configFile, releaseDir, channelDir, resumeFile] = process.argv.slice(2);
 const { laptop, sites } = JSON.parse(await readFile(configFile, 'utf8'));
 validateTargets(sites, target);
 assert.ok(mode === 'apply' || (['rehearse', 'rehearse-sql'].includes(mode) && target === 'staging' && sites.length === 1));
@@ -27,7 +27,15 @@ assert.ok(sites.every(site => typeof phrases[site.domain] === 'string' && /^[A-Z
 assert.equal(new Set(sites.map(site => phrases[site.domain])).size, sites.length);
 
 const release = await readRelease(releaseDir);
-const nonce = randomUUID();
+const resume = resumeFile ? JSON.parse(await readFile(resumeFile, 'utf8')) : null;
+if (resume) {
+	assert.ok(mode === 'apply' && resume.ok === false && resume.target === target && resume.sha256 === release.sha256);
+	assert.match(resume.run, /^[a-f0-9-]{36}$/);
+	assert.ok(!resume.events.some(entry => entry.action === 'apply'), 'The prior attempt switched a site');
+	assert.deepEqual(resume.events.filter(entry => entry.type === 'prepared').map(entry => entry.domain),
+		sites.map(site => site.domain), 'The preparation targets changed');
+}
+const nonce = resume?.run || randomUUID();
 const targetHost = laptop.user + '@' + laptop.host;
 const php = '/opt/alt/php82/usr/bin/php -d extension=sodium';
 const options = [
@@ -76,7 +84,8 @@ async function prepare(site) {
 	assert.match(root, /^\/[a-zA-Z0-9_.\/-]+\/kiwe-private-releases\/site-[a-f0-9]{16}$/);
 	assert.ok(root.startsWith('/home/' + laptop.user + '/domains/' + site.domain + '/') && !root.includes('..') && !root.startsWith(site.wordpressRoot + '/'));
 	const destination = root + '/core-fleet-' + nonce;
-	await remote(site, 'umask 077 && mkdir -m 700 -- ' + destination);
+	await remote(site, resume ? 'test -d ' + destination + ' && test ! -L ' + destination :
+		'umask 077 && mkdir -m 700 -- ' + destination);
 	remoteWork.set(site, destination);
 	const localFiles = transfer.map((name, index) => path.join(index < 2 ? toolRoot : releaseDir, name));
 	await copyPrivate(destination, localFiles);
@@ -98,28 +107,58 @@ async function siteTask(site, action, input) {
 
 async function sqlBackup(site) {
 	const directory = remoteWork.get(site);
-	const { age, ageKeygen, vaultIdentity, storage } = laptop;
+	const { age, ageKeygen, vaultIdentity, storage, remoteAge, remoteAgeSha256 } = laptop;
 	const { stdout } = await exec(ageKeygen, ['-y', vaultIdentity], { windowsHide: true, timeout: 8000 });
 	const recipient = stdout.trim();
 	assert.equal(recipient, laptop.vaultRecipient, 'The recovery identity differs from the enrolled laptop');
+	assert.match(recipient, /^age1[a-z0-9]+$/);
+	assert.match(remoteAgeSha256, /^[a-f0-9]{64}$/);
+	assert.equal(path.basename(remoteAge), 'age-fleet');
 	const { database, tables } = await siteTask(site, 'prepare-sql-backup');
 	assert.match(database, /^[A-Za-z0-9_]{1,64}$/);
 	assert.ok(Array.isArray(tables) && tables.length && tables.every(table => /^[A-Za-z0-9_]{1,64}$/.test(table)));
-	const localRoot = path.join(storage, nonce, site.domain);
+	const localRoot = path.join(storage, nonce, randomUUID(), site.domain);
 	await mkdir(localRoot, { recursive: true });
 	const filename = 'database.sql.gz.age';
 	const file = path.join(localRoot, filename);
 	event('native-sql-started', { domain: site.domain, tables: tables.length });
 	const config = directory + '/sql-client.cnf';
-	const dump = 'set -o pipefail\n' + "trap 'rm -f -- " + config + "' EXIT\n" +
-		'/usr/bin/mariadb-dump --defaults-file=' + config + ' --single-transaction --quick --skip-lock-tables --no-tablespaces --hex-blob -- ' +
-		database + ' ' + tables.join(' ') + ' | /usr/bin/gzip -1 -c\n';
-	const receipt = await captureEncryptedSql({
-		command: 'ssh.exe', args: commands('/bin/bash -s'), input: dump, age, identity: vaultIdentity, recipient, file, tables,
-	});
+	const ageOnServer = directory + '/age-fleet';
+	const fifo = directory + '/sql-gzip-check.pipe';
+	const sealed = directory + '/' + filename;
+	const partial = sealed + '.partial';
+	await copyPrivate(directory, [remoteAge]);
+	const dump = [
+		'set -euo pipefail',
+		'umask 077',
+		"trap 'rm -f -- " + [config, ageOnServer, fifo, partial].join(' ') + "' EXIT",
+		'test ! -e ' + sealed,
+		"printf '%s  %s\\n' " + remoteAgeSha256 + ' ' + ageOnServer + ' | /usr/bin/sha256sum -c - >/dev/null',
+		'chmod 700 -- ' + ageOnServer,
+		'/usr/bin/mkfifo -m 600 -- ' + fifo,
+		'/usr/bin/gzip -t < ' + fifo + ' &',
+		'validator=$!',
+		'if ! /usr/bin/mariadb-dump --defaults-file=' + config +
+			' --single-transaction --quick --skip-lock-tables --no-tablespaces --hex-blob -- ' + database + ' ' + tables.join(' ') +
+			' | /usr/bin/gzip -1 -c | /usr/bin/tee ' + fifo + ' | ' + ageOnServer +
+			' --encrypt --recipient ' + recipient + ' --output ' + partial + '; then',
+		'  kill "$validator" 2>/dev/null || true',
+		'  wait "$validator" || true',
+		'  exit 1',
+		'fi',
+		'wait "$validator"',
+		'mv -- ' + partial + ' ' + sealed,
+		'/usr/bin/sha256sum -- ' + sealed,
+		'',
+	].join('\n');
+	const output = await remote(site, '/bin/bash -s', dump, 1200000);
+	const sha = output.split(/\s+/)[0];
+	assert.match(sha, /^[a-f0-9]{64}$/);
+	await exec('scp.exe', ['-P', String(laptop.port), ...options, targetHost + ':' + sealed, file],
+		{ timeout: 900000, maxBuffer: 1048576, windowsHide: true });
+	const receipt = await verifyEncryptedSql({ age, identity: vaultIdentity, file, tables });
+	assert.equal(receipt.sha256, sha, 'The encrypted SQL backup changed during transfer');
 	await writeFile(path.join(localRoot, 'receipt.json'), JSON.stringify({ domain: site.domain, ...receipt }, null, 2) + '\n', { flag: 'wx' });
-	await copyPrivate(directory, [file], 900000);
-	await remote(site, 'chmod 600 -- ' + directory + '/' + filename);
 	const result = await siteTask(site, 'backup-sql', JSON.stringify(receipt));
 	event('native-sql-verified', { domain: site.domain, bytes: receipt.bytes, tables: tables.length });
 	return result;
@@ -127,6 +166,13 @@ async function sqlBackup(site) {
 
 async function task(site, action) {
 	if (action === 'backup') {
+		if (resume) {
+			const checkpoint = await siteTask(site, 'resume-backup');
+			if (checkpoint.ready) {
+				event('backup-reused', { domain: site.domain, core: checkpoint.current });
+				return checkpoint;
+			}
+		}
 		if (mode === 'rehearse-sql') return sqlBackup(site);
 		try { return await siteTask(site, action, phrases[site.domain]); }
 		catch (error) {
@@ -201,7 +247,8 @@ try {
 	process.exitCode = 1;
 } finally {
 	for (const [site, directory] of remoteWork) {
-		try { await remote(site, 'rm -f -- ' + [...transfer, 'sql-client.cnf'].map(name => directory + '/' + name).join(' ')); }
+		const temporary = [...transfer, 'sql-client.cnf', 'age-fleet', 'sql-gzip-check.pipe', 'database.sql.gz.age.partial'];
+		try { await remote(site, 'rm -f -- ' + temporary.map(name => directory + '/' + name).join(' ')); }
 		catch { event('cleanup-needed', { domain: site.domain, run: nonce }); }
 	}
 	await writeFile(path.join(channelDir, 'proof.json'), JSON.stringify(record, null, 2) + '\n', { flag: 'wx' });
