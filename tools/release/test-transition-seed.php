@@ -9,6 +9,10 @@ namespace {
  function wp_json_encode($value){return json_encode($value,JSON_THROW_ON_ERROR);}
  function admin_url($path){return 'https://site.test/wp-admin/'.$path;}
  function esc_url($value){return htmlspecialchars($value,ENT_QUOTES);}
+ function wp_script_is($handle,$state){return $handle==='dsa-surface'&&$state==='enqueued'&&$GLOBALS['surface_enqueued'];}
+ function wp_scripts(){return (object)['registered'=>['dsa-surface'=>(object)['src'=>'https://site.test/dsa/assets/js/surface.js','ver'=>'candidate.10']]];}
+ function add_query_arg($key,$value,$url){return $url.'?'.$key.'='.$value;}
+ function apply_filters($hook,$value,$handle){return $hook==='script_loader_src'&&$handle==='dsa-surface'?$value.'&test=1':$value;}
  set_error_handler(static function($level,$message){throw new RuntimeException($message);});
  require DSA_DIR.'includes/Public_Endpoint/Assets.php';
  $settings=new DSA\Settings();$reflection=new ReflectionClass(DSA\Public_Endpoint\Assets::class);$assets=$reflection->newInstanceWithoutConstructor();$reflection->getProperty('settings')->setValue($assets,$settings);$checks=0;
@@ -17,6 +21,18 @@ namespace {
  $html=$render();$check(str_contains($html,'id="dsa-boot-seed"'),'Existing boot seed retained');$check(str_contains($html,'id="dsa-transition-reader"')&&str_contains($html,file_get_contents(DSA_DIR.'assets/js/transition-reader.js')),'Actual reader bytes print through the existing canonical DSA_DIR');$check(!defined('DSA_PATH'),'No invented alias masks a frontend fatal');
  $check(str_contains($html,'id="dsa-startup-hydration"')&&str_contains($html,file_get_contents(DSA_DIR.'assets/js/startup-hydration.js'))&&str_contains($html,'data-dsa-runtime-endpoint="https://site.test/wp-admin/admin-ajax.php?action=dsa_runtime_hydrate"'),'Actual private startup read prints once in the early head');
  $check(substr_count($html,'id="dsa-startup-hydration"')===1&&str_contains($html,'data-no-optimize="1" data-no-defer="1" data-cfasync="false"'),'Existing optimizers preserve the early inline read');
+ $check(substr_count($html,'id="dsa-early-launcher"')===1&&str_contains($html,file_get_contents(DSA_DIR.'assets/js/early-launcher.js')),'The first-launcher handler is available before the footer');
+ $check(!str_contains($html,'id="dsa-dock-reveal"'),'An ordinary Dock adds no first-scroll script');
+ $settings->value['dock']=['visible'=>true,'reveal_on_scroll'=>true];
+ $html=$render();
+ $check(substr_count($html,'id="dsa-dock-reveal"')===1&&str_contains($html,file_get_contents(DSA_DIR.'assets/js/dock-reveal.js')),'The opted-in Dock receives the reveal state in the head');
+ $settings->value['dock']['visible']=false;
+ $check(!str_contains($render(),'id="dsa-dock-reveal"'),'A hidden Dock adds no first-scroll script');
+ unset($settings->value['dock']);
+ $before=[['href'=>'https://site.test/hero.jpg','as'=>'image']];$GLOBALS['surface_enqueued']=false;
+ $check($assets->preload_surface_script($before)===$before,'Disabled script leaves the existing resource list intact');
+ $GLOBALS['surface_enqueued']=true;$preloads=$assets->preload_surface_script($before);
+ $check($preloads===array_merge($before,[['href'=>'https://site.test/dsa/assets/js/surface.js?ver=candidate.10&test=1','as'=>'script','fetchpriority'=>'low']]),'Preload uses the version and URL filters of the footer script at low priority');
  $settings->value['visual_effects']['show_on_navigation']=false;$html=$render();$check(str_contains($html,'id="dsa-boot-seed"')&&str_contains($html,'id="dsa-startup-hydration"')&&!str_contains($html,'dsa-transition-reader'),'Private startup does not depend on optional transitions');
  $settings->value['enabled']=false;$check($render()==='','Disabled Surface adds no boot or reader');$settings->value['enabled']=true;DSA\Environment::$public=false;$check($render()==='','Private request exclusions are retained');
  restore_error_handler();echo json_encode(['passed'=>true,'checks'=>$checks,'scope'=>'Actual PHP early asset printer and canonical source file, not just syntax/string matching']).PHP_EOL;

@@ -15,6 +15,21 @@
 - Start included hosting on one reserved Hostinger address, reconcile interrupted requests and verify WordPress readiness through web or MCP.
 - Verify checkout retries, single-use handoffs, issuer and account boundaries and both hosting choices in the [standalone Start service](services/start-projects/README.md). Production checkout and hosting configuration are pending.
 
+## 8.0.0-rc.495 (2026-11-23, source candidate)
+
+- Added an MCP package upload and a private Bricks preview for the exact approved draft import. The Framework workspace points site owners to the matching Seam draft download.
+
+## 8.0.0-rc.494 (2026-11-23, source candidate)
+
+- Add the `data-dsa-hide-dock` frontend attribute and its `cover` value for full-height sections. The behavior composes with first-scroll reveal and existing header launchers.
+- Verify the normal public URL and clear host cache as part of a coordinated signed Core rollout.
+
+## 8.0.0-rc.493 (2026-11-22, source candidate)
+
+- Start downloading the existing Surface script sooner and keep the first Sheet press while the script loads.
+- Open public Search while the private startup read is pending. A Search cart action waits for the current native session.
+- Add optional first-scroll Dock reveal and portable Dock profiles through the authorized Dock workspace.
+
 ## 8.0.0-rc.492 (2026-11-22, source sync)
 
 Published the reviewed WordPress source for the existing Core RC492 release, with Store 1.1.16 and MCP 1.0.0-rc.31. The combined source reproduces the signed Core ZIP using the Core profile builder. See the [RC492 source guide](docs/RC492-SOURCE.md) for artifact checksums and build instructions.

@@ -384,6 +384,7 @@ final class Settings {
 				],
 				'dock'                => [
 					'visible'             => true,
+					'reveal_on_scroll'    => false,
 					'hide_frontend_admin_bar' => true,
 					'style'               => 'phonekey',
 					'presentation'        => 'dock',

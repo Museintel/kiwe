@@ -61,6 +61,7 @@ final class Dock_Settings_Service {
 		return [
 			'style'               => 'phonekey',
 			'visible'             => array_key_exists( 'visible', $input ) ? ! empty( $input['visible'] ) : ( $current['visible'] ?? true ),
+			'reveal_on_scroll'    => array_key_exists( 'reveal_on_scroll', $input ) ? ! empty( $input['reveal_on_scroll'] ) : ! empty( $current['reveal_on_scroll'] ),
 			'presentation'        => in_array( $input['presentation'] ?? ( $current['presentation'] ?? 'dock' ), [ 'dock', 'navbar' ], true ) ? sanitize_key( $input['presentation'] ?? $current['presentation'] ) : 'dock',
 			'shape'               => $shape,
 			'material'            => in_array( $input['material'] ?? ( $current['material'] ?? 'glass' ), [ 'glass', 'solid' ], true ) ? sanitize_key( $input['material'] ?? $current['material'] ) : 'glass',

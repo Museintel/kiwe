@@ -9305,3 +9305,36 @@ button.dsa-guest-status { cursor: pointer; }
 /* Private role-aware actions share the ordinary Menu navigation owner. */
 .dsa-menu-staff-actions{display:flex;flex-wrap:wrap;gap:var(--seam-space-3,12px)}
 .dsa-menu-staff-actions .dsa-menu-dashboard{flex:1;min-width:7rem;text-align:center}
+
+[data-dsa-launch-pending]{cursor:progress;opacity:.65}
+
+html[data-dsa-dock-reveal="waiting"] #dsa-surface > [data-dsa-dock-cluster] {
+	visibility: hidden;
+	opacity: 0;
+}
+
+html[data-dsa-dock-reveal="waiting"] #dsa-surface > [data-dsa-dock-cluster] * {
+	pointer-events: none !important;
+}
+
+html[data-dsa-dock-viewport-hidden] #dsa-surface > :is([data-dsa-dock-cluster], [data-dsa-dock-context]) {
+	visibility: hidden;
+	opacity: 0;
+	animation: none !important;
+}
+
+html[data-dsa-dock-viewport-hidden] #dsa-surface > :is([data-dsa-dock-cluster], [data-dsa-dock-context]) * {
+	visibility: hidden !important;
+	pointer-events: none !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html[data-dsa-dock-reveal="revealing"] #dsa-surface > [data-dsa-dock-cluster] {
+		animation: dsa-dock-first-scroll var(--sf-duration-base) var(--sf-ease);
+	}
+}
+
+@keyframes dsa-dock-first-scroll {
+	from { opacity: 0; translate: 0 var(--sf-space-lg); }
+	to { opacity: 1; translate: none; }
+}

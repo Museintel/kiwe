@@ -439,6 +439,7 @@
 	bindInitialPreloader();
 
 	if ( ! surface ) {
+		if ( window.DSA.earlyLauncher ) window.DSA.earlyLauncher( false );
 		return;
 	}
 
@@ -1137,11 +1138,12 @@
 			announce( appPhoneKeyGate ? 'Finish secure sign in first.' : 'Finish notification setup first.' );
 			return;
 		}
-		if ( runtimeHydrationFailed ) {
+		const publicSearch = module.id === 'search' && module.panel === 'search';
+		if ( ! publicSearch && runtimeHydrationFailed ) {
 			runtimeHydrated = false;
 			runtimeHydrationPromise = hydrateRuntime();
 		}
-		const awaitingRuntime = ! runtimeHydrated;
+		const awaitingRuntime = ! publicSearch && ! runtimeHydrated;
 
 		if ( ! enterSurfaceMode( requestedMode ) ) {
 			return;
@@ -4900,6 +4902,15 @@
 		if ( ! productId ) return Promise.reject( new Error( 'Product is unavailable.' ) );
 		quantity = quantity === undefined ? 1 : Number( quantity );
 		if ( ! Number.isInteger( quantity ) || quantity < 1 || quantity > 99 ) return Promise.reject( new Error( 'Choose a quantity from 1 to 99.' ) );
+		// Search results are public. The Store operation uses the visitor's
+		// current native session even when Search opened during startup.
+		if ( source === 'dsa_search' && ( ! runtimeHydrated || runtimeHydrationFailed ) ) {
+			const pending = runtimeHydrationFailed ? window.DSA.refreshRuntime() : runtimeHydrationPromise;
+			return pending.then( function () {
+				if ( ! runtimeHydrated || runtimeHydrationFailed ) throw new Error( 'Your cart could not load. Please try again.' );
+				return addProductToCart( productId, source, quantity );
+			} );
+		}
 		surfaceFeedback( 'cart' );
 		let cartSequence = 0;
 		return enqueueCartMutation( function () {
@@ -12137,5 +12148,6 @@
 		loadPresentationModule( 'form-prefill' ).then( function ( adapter ) { return adapter.fill( form, dsaGet ); } ).catch( function () {} );
 	} );
 	bindFormMessageAccessibility();
+	if ( window.DSA.earlyLauncher ) window.DSA.earlyLauncher( Boolean( overlayRoot ) );
 	window.setTimeout( openScheduledGameSurface, 180 );
 } )();

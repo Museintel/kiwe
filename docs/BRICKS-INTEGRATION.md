@@ -1,5 +1,17 @@
 # Bricks Integration Notes
 
+## Design drafts from Seam
+
+Upload HTML, CSS and JavaScript to Seam and choose **Download Bricks draft package** after conversion. In WordPress, go to **Kiwe → Framework → Import a compiled design**, choose the ZIP, and review the proposed templates and dependencies. After import, the draft links open in Bricks. This path works from the browser for people without a development environment.
+
+AI clients and build runners use the same native importer through Kiwe MCP. The `mcp.bricks.import` scope includes these operations on connections that consented to them:
+
+- `stage` prepares the archive SHA-256 and byte count. Upload the ZIP as the `package` multipart field to `bricks/package` on the Kiwe MCP namespace using the same bearer and `X-Kiwe-Intent`. Kiwe stages the exact isolated package in private storage and returns the import review.
+- `begin` requests native approval for the reviewed package. `next` continues the job under that approval. `status` reads progress and `undo` requests conditional recovery.
+- `preview` locates one unchanged draft from the completed import by its ZIP member name. The render request uses the same MCP connection, archive and original approved intent. Preview HTML uses the native Bricks renderer and private cache headers.
+
+The compiler and automated visual comparison run outside WordPress. The shared Seam draft runner reports measured desktop and mobile similarity for the imported drafts. Review routes, dynamic behaviour and placement on the destination site before publishing. Authors can review and publish through their existing WordPress roles.
+
 ## Contextual Comments/Reviews — from Core451
 
 `{kiwe_discussion_id}` and `{kiwe_discussion_count}` resolve only an eligible native WordPress post context; a taxonomy/user loop cannot supply its ID. Use the ID tag with `data-dsa-open-module="comments"` and `data-dsa-discussion-id` on a real button/link. `{kiwe_icon_comments}` reuses packaged Dock artwork. The shared launcher supplies its own badge; replies are separate from approved root counts. Product reviews require Store1.1.7; ordinary post comments do not require Woo. [Authoring and strict compiler intent](../kiwe-ai-toolkit/contracts/discussion.md).

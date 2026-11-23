@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.local/schemas/kiwe.bricks-theme-style.v1.json",
+  "title": "Kiwe Bricks Theme Style",
+  "description": "Lean Bricks theme-style JSON for Bricks' Theme Styles manager. This is not a Kiwe Framework profile, not a Bricks template, and not a DSA/AppShell theme package.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "label",
+    "settings"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 64,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "_custom": {
+          "type": "boolean"
+        },
+        "conditions": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "main": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "general": {
+          "type": "object"
+        },
+        "colors": {
+          "type": "object"
+        },
+        "typography": {
+          "type": "object"
+        },
+        "links": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "not": {
+    "anyOf": [
+      { "required": [ "schema" ] },
+      { "required": [ "schemaVersion" ] },
+      { "required": [ "theme" ] },
+      { "required": [ "css" ] },
+      { "required": [ "content" ] },
+      { "required": [ "header" ] },
+      { "required": [ "footer" ] },
+      { "required": [ "templateType" ] },
+      { "required": [ "globalClasses" ] },
+      { "required": [ "global_classes" ] },
+      { "required": [ "elements" ] },
+      { "required": [ "dock" ] },
+      { "required": [ "screens" ] }
+    ]
+  }
+}

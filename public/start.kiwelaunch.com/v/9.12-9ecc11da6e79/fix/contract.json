@@ -1,0 +1,38 @@
+{
+  "schema": "kiwe.command-route.v2",
+  "contractVersion": "9.12",
+  "releaseId": "9.12-9ecc11da6e79",
+  "route": "/fix",
+  "resources": [
+    {
+      "source": "KIWE-START.md",
+      "url": "https://start.kiwelaunch.com/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-9ecc11da6e79/start.md",
+      "sha256": "30bfacaec6d160ccdc4a1abcd2ffd6f45d531378a2a4903841d89e21f6f23795"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
+      "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-9ecc11da6e79/contracts/authoring-delivery.md",
+      "sha256": "e805523326f362c0597f24699d07a894248b3dc05f8055151e826323500ebb9c"
+    },
+    {
+      "source": "kiwe-ai-toolkit/contexts/accessibility.md",
+      "url": "https://start.kiwelaunch.com/contexts/accessibility.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-9ecc11da6e79/contexts/accessibility.md",
+      "sha256": "bbe4043f7bcb9517d656470e9fed86db14a475f2f8802fd7201817dc66a09b00"
+    }
+  ],
+  "sourceHash": "sha256:9ecc11da6e7985cd0ceeb4b8fe2747adbfab589755b8604b688c30b5c35976d7",
+  "command": "/fix",
+  "context": "contexts/accessibility.md",
+  "requires": [
+    "artifact",
+    "audit report"
+  ],
+  "outputs": [
+    "corrected artifact",
+    "before/after report"
+  ],
+  "boundary": "Apply only proven findings and preserve art direction, content and behavior."
+}

@@ -7230,6 +7230,10 @@ final class Admin {
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="dsa_save_dock_settings">
 					<?php wp_nonce_field( 'dsa_save_dock_settings' ); ?>
+					<p>
+						<input type="hidden" name="dock[reveal_on_scroll]" value="0">
+						<label><input type="checkbox" name="dock[reveal_on_scroll]" value="1" <?php checked( ! empty( $dock['reveal_on_scroll'] ) ); ?>> <?php esc_html_e( 'Show the Dock after the first scroll', 'dsa' ); ?></label>
+					</p>
 					<ul class="dsa-dock-order" data-dsa-dock-order>
 						<?php foreach ( $order as $id ) : ?>
 							<li class="dsa-dock-order__item" draggable="true" data-dsa-dock-item="<?php echo esc_attr( $id ); ?>">

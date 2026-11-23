@@ -13,6 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 final class Dock_Workspace_Service {
 	public const PAGE = 'kiwe-dock-settings';
 	public const CAPABILITY = 'kiwe_manage_navigation';
+	private const PROFILE_SCHEMA = 'kiwe.dock-profile.v1';
+	private const PROFILE_ITEMS = [ 'menu', 'search', 'profile', 'links', 'saved', 'cart', 'comments', 'theme', 'ai' ];
+	private const PROFILE_THEMES = [ 'legacy', 'kiwe2027' ];
 	public static function allowed(): bool { return current_user_can( self::CAPABILITY ); }
 	public static function url(): string { return admin_url( 'admin.php?page=' . self::PAGE ); }
 	public static function enabled(): bool { return defined( 'KIWE_REACT_WORKSPACE' ) && true === KIWE_REACT_WORKSPACE; }
@@ -32,6 +35,10 @@ final class Dock_Workspace_Service {
 		register_rest_route( 'dsa/v1', '/workspace/dock', [
 			[ 'methods'=>'GET', 'callback'=>[ $this, 'read' ], 'permission_callback'=>[ $this, 'permission' ] ],
 			[ 'methods'=>'POST', 'callback'=>[ $this, 'save' ], 'permission_callback'=>[ $this, 'permission' ] ],
+		] );
+		register_rest_route( 'dsa/v1', '/workspace/dock/profile', [
+			[ 'methods' => 'GET', 'callback' => [ $this, 'read_profile' ], 'permission_callback' => [ $this, 'permission' ] ],
+			[ 'methods' => 'POST', 'callback' => [ $this, 'save_profile' ], 'permission_callback' => [ $this, 'permission' ] ],
 		] );
 	}
 	public function permission( \WP_REST_Request $request ): bool {
@@ -71,15 +78,100 @@ final class Dock_Workspace_Service {
 	}
 	/** Each field describes its existing native storage and accepted input type. */
 	public function fields(): array {
-		$dock = [ 'visible'=>'bool', 'enabled_items'=>'map', 'item_order'=>'order', 'focus_item'=>'item', 'menu_nav_ids'=>'menus', 'menu_label'=>'text', 'menu_context_title'=>'text',
+		$dock = [ 'visible'=>'bool', 'reveal_on_scroll'=>'bool', 'enabled_items'=>'map', 'item_order'=>'order', 'focus_item'=>'item', 'menu_nav_ids'=>'menus', 'menu_label'=>'text', 'menu_context_title'=>'text',
 			'phonekey_visibility'=>[ 'all','visitors','users','customers','admins' ], 'presentation'=>[ 'dock','navbar' ], 'shape'=>[ 'pill','box','square' ], 'material'=>[ 'glass','solid' ],
 			'split_style'=>'bool', 'hide_frontend_admin_bar'=>'bool', 'menu_context_enabled'=>'bool' ];
 		foreach ( [ 'desktop','tablet','mobile' ] as $device ) $dock += [ $device.'_orientation'=>[ 'auto','vertical','horizontal' ], $device.'_vertical_edge'=>[ 'left','right' ], $device.'_vertical_position'=>[ 'center','bottom' ], $device.'_horizontal_edge'=>[ 'top','bottom' ], $device.'_horizontal_position'=>[ 'left','center','right' ], $device.'_horizontal_vertical_position'=>[ 'center','bottom' ] ];
 		return [ 'dock'=>$dock, 'style'=>[ 'active_theme_id'=>'theme', 'mode'=>[ 'classic','sheet' ], 'sheet_position'=>[ 'bottom','right','left' ], 'sheet_animation'=>[ 'slide','soft','snap' ], 'sheet_backdrop'=>[ 'blur','fade' ], 'sheet_spacing'=>[ 'edge','inset' ], 'sheet_duration_ms'=>'duration', 'sheet_max_height'=>'height', 'sheet_width_percent'=>'width', 'sheet_side_max_width'=>'sidewidth' ], 'dsa_theme'=>[ 'active_color'=>'color', 'hover_color'=>'color' ], 'commerce'=>[ 'cart_surface_enabled'=>'bool', 'cart_quantity_controls'=>'bool' ] ];
 	}
+	private function profile_fields(): array {
+		$dock = [ 'visible', 'reveal_on_scroll', 'presentation', 'shape', 'material', 'split_style', 'focus_item', 'item_order', 'enabled_items' ];
+		foreach ( [ 'desktop', 'tablet', 'mobile' ] as $device ) {
+			foreach ( [ 'orientation', 'vertical_edge', 'vertical_position', 'horizontal_edge', 'horizontal_position', 'horizontal_vertical_position' ] as $field ) {
+				$dock[] = $device . '_' . $field;
+			}
+		}
+		return [
+			'dock' => array_fill_keys( $dock, true ),
+			'style' => array_fill_keys( [ 'active_theme_id', 'mode', 'sheet_position', 'sheet_animation', 'sheet_backdrop', 'sheet_spacing', 'sheet_duration_ms', 'sheet_max_height', 'sheet_width_percent', 'sheet_side_max_width' ], true ),
+			'commerce' => [ 'cart_surface_enabled' => true, 'cart_quantity_controls' => true ],
+		];
+	}
+
+	public function export_profile( array $snapshot ): array {
+		$choices = [];
+		foreach ( $this->profile_fields() as $group => $fields ) {
+			$choices[ $group ] = array_intersect_key( $snapshot['choices'][ $group ], $fields );
+		}
+		$choices['dock']['enabled_items'] = array_intersect_key( $choices['dock']['enabled_items'], array_fill_keys( self::PROFILE_ITEMS, true ) );
+		$choices['dock']['item_order'] = array_values( array_intersect( $choices['dock']['item_order'], self::PROFILE_ITEMS ) );
+		if ( ! in_array( $choices['dock']['focus_item'], [ '', ...self::PROFILE_ITEMS ], true ) ) unset( $choices['dock']['focus_item'] );
+		if ( ! in_array( $choices['style']['active_theme_id'], self::PROFILE_THEMES, true ) ) unset( $choices['style']['active_theme_id'] );
+		return [ 'schema' => self::PROFILE_SCHEMA, 'choices' => array_filter( $choices ) ];
+	}
+
+	public function apply_profile( array $body ) {
+		if ( ! self::allowed() ) return new \WP_Error( 'kiwe_dock_forbidden', 'Dock settings are unavailable for your account.', [ 'status' => 403 ] );
+		$profile = $body['profile'] ?? null;
+		$invalid = new \WP_Error( 'kiwe_dock_profile', 'Choose a portable Dock profile.' );
+		if ( array_diff( array_keys( $body ), [ 'profile', 'expected' ] ) || ! is_array( $profile )
+			|| array_diff( array_keys( $profile ), [ 'schema', 'choices' ] ) || self::PROFILE_SCHEMA !== ( $profile['schema'] ?? null )
+			|| empty( $profile['choices'] ) || ! is_array( $profile['choices'] ) ) return $invalid;
+
+		$changes = $profile['choices'];
+		$fields = $this->profile_fields();
+		foreach ( $changes as $group => $values ) {
+			if ( ! isset( $fields[ $group ] ) || ! is_array( $values ) || array_diff_key( $values, $fields[ $group ] ) ) return $invalid;
+		}
+		if ( array_key_exists( 'active_theme_id', $changes['style'] ?? [] )
+			&& ! in_array( $changes['style']['active_theme_id'], self::PROFILE_THEMES, true ) ) return $invalid;
+		foreach ( $changes['commerce'] ?? [] as $value ) if ( ! is_bool( $value ) ) return $invalid;
+
+		$known = array_fill_keys( self::PROFILE_ITEMS, true );
+		$snapshot = $this->snapshot();
+		$available = array_intersect_key( $snapshot['labels'], $known );
+		if ( isset( $changes['dock'] ) ) {
+			$dock = $changes['dock'];
+			if ( array_key_exists( 'enabled_items', $dock ) ) {
+				if ( ! is_array( $dock['enabled_items'] ) || array_diff_key( $dock['enabled_items'], $known ) ) return $invalid;
+				foreach ( $dock['enabled_items'] as $value ) if ( ! is_bool( $value ) ) return $invalid;
+				$dock['enabled_items'] = array_intersect_key( $dock['enabled_items'], $available );
+			}
+			if ( array_key_exists( 'item_order', $dock ) ) {
+				$order = $dock['item_order'];
+				if ( ! is_array( $order ) || ! array_is_list( $order ) || count( $order ) > count( $known ) ) return $invalid;
+				foreach ( $order as $item ) if ( ! is_string( $item ) || ! isset( $known[ $item ] ) ) return $invalid;
+				if ( count( array_unique( $order ) ) !== count( $order ) ) return $invalid;
+				$order = array_values( array_intersect( $order, array_keys( $available ) ) );
+				$dock['item_order'] = array_merge( $order, array_values( array_diff( $snapshot['choices']['dock']['item_order'], $order ) ) );
+			}
+			if ( array_key_exists( 'focus_item', $dock ) ) {
+				$focus = $dock['focus_item'];
+				if ( ! is_string( $focus ) || ( '' !== $focus && ! isset( $known[ $focus ] ) ) ) return $invalid;
+				if ( '' !== $focus && ! isset( $available[ $focus ] ) ) unset( $dock['focus_item'] );
+			}
+			$changes['dock'] = $dock;
+		}
+		if ( ! $snapshot['woo'] ) unset( $changes['commerce'] );
+		return $this->update( [ 'expected' => $body['expected'] ?? null, 'changes' => array_filter( $changes ) ] );
+	}
+
 	public function read( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! $this->permission( $request ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_dock_forbidden', 'Dock settings are unavailable for your account.' ), 403 );
 		return Task_Workspace_UI::response( $this->snapshot() );
+	}
+	public function read_profile( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! $this->permission( $request ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_dock_forbidden', 'Dock settings are unavailable for your account.' ), 403 );
+		$snapshot = $this->snapshot();
+		return Task_Workspace_UI::response( [ 'expected' => $snapshot['expected'], 'profile' => $this->export_profile( $snapshot ) ] );
+	}
+	public function save_profile( \WP_REST_Request $request ): \WP_REST_Response {
+		if ( ! $this->permission( $request ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_dock_forbidden', 'Dock settings are unavailable for your account.' ), 403 );
+		$body = $request->get_json_params();
+		$result = $this->apply_profile( is_array( $body ) ? $body : [] );
+		return is_wp_error( $result )
+			? Task_Workspace_UI::failure( $result, (int) ( $result->get_error_data()['status'] ?? 400 ) )
+			: Task_Workspace_UI::response( [ 'expected' => $result['expected'], 'profile' => $this->export_profile( $result ) ] );
 	}
 	public function save( \WP_REST_Request $request ): \WP_REST_Response {
 		if ( ! $this->permission( $request ) ) return Task_Workspace_UI::failure( new \WP_Error( 'kiwe_dock_forbidden', 'Dock settings are unavailable for your account.' ), 403 );

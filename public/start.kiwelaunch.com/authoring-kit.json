@@ -1,9 +1,9 @@
 {
   "schema": "kiwe.authoring-kit.v1",
   "contractVersion": "9.12",
-  "releaseId": "9.12-d4f73b8069a1",
+  "releaseId": "9.12-9ecc11da6e79",
   "canonicalStart": "https://start.kiwelaunch.com/start.md",
-  "pinnedStart": "https://start.kiwelaunch.com/v/9.12-d4f73b8069a1/start.md",
+  "pinnedStart": "https://start.kiwelaunch.com/v/9.12-9ecc11da6e79/start.md",
   "firstPrompt": "PROMPT.txt",
   "sharedContext": "contracts/authoring-delivery.md",
   "files": [
@@ -74,8 +74,8 @@
     },
     {
       "path": "contracts/mcp-design.md",
-      "bytes": 5336,
-      "sha256": "30cc76db273cd1346c0d1b5fb000287a2b75a67616b5f044d8f1f09fe876c62c"
+      "bytes": 5727,
+      "sha256": "3991eff51bdbb1b565b74b2dc2f20e835ddec122c9ac352e175e0e380a39686e"
     },
     {
       "path": "contracts/seam-compiler-contract.json",
@@ -170,12 +170,12 @@
     {
       "path": "README.md",
       "bytes": 1428,
-      "sha256": "27f3f7d9f928be01c3b34a816c64d20bac79213a5fa1cb629c04fd748c69d879"
+      "sha256": "40658c7be53f80211c5023c2269a9fc92bdff8dc818d0e211227555518dc2c73"
     },
     {
       "path": "reference/index.json",
       "bytes": 15545,
-      "sha256": "09dd40598b39a86513e718c320c1066717a12af9159f9de1c506fabba19be636"
+      "sha256": "3a7e07f42bf6643df796beb6df994f6b8810a613f7221454d586f09dcafe2708"
     },
     {
       "path": "reference/source/docs/BRICKS-ICON-LIBRARY.md",
@@ -184,8 +184,8 @@
     },
     {
       "path": "reference/source/docs/BRICKS-INTEGRATION.md",
-      "bytes": 13083,
-      "sha256": "2699bdcaea5baaa25cb7db09ed66e5faff867a9b1b4b6a98c7005c1808032479"
+      "bytes": 14688,
+      "sha256": "1c5fc7061133e0ab676c3def5a30f2866b5c30dfdeb77d169e9b5a555910c76e"
     },
     {
       "path": "reference/source/docs/design-context-native-records.md",
@@ -199,8 +199,8 @@
     },
     {
       "path": "reference/source/docs/FRONTEND-ATTRIBUTES.md",
-      "bytes": 12688,
-      "sha256": "a030563158463b867e8cd502a8f21c3eee2718f0c6a537b870b084cd37b3b96b"
+      "bytes": 13528,
+      "sha256": "a5b157113430ecc7c784160d88bf701bdc0fe09f25be809addb78fd1a9398fd1"
     },
     {
       "path": "reference/source/kiwe-ai-toolkit/reference/bricks-elements.json",
@@ -220,7 +220,7 @@
     {
       "path": "reference/source/packages/seam-contracts/generated/kiwe-token-catalog.json",
       "bytes": 14317,
-      "sha256": "7e25b7ddb28a72d567006b8dcceef416f80f9c41c99798045ccbc9c4d9937255"
+      "sha256": "8e0a48f41a770022e21d1e5cc4b80d3a8799e9d380c4b9bbbb4a1dfca0ec97fd"
     },
     {
       "path": "reference/source/packages/seam-contracts/schemas/kiwe.appsite-package.v1.schema.json",
@@ -404,6 +404,6 @@
     }
   ],
   "archive": "https://start.kiwelaunch.com/start-authoring-kit.zip",
-  "archiveBytes": 242191,
-  "archiveSha256": "0ccd6de5af63af50ec7b347bdb3a385c3058259f3a57c1b43873cf5b2a35c3cf"
+  "archiveBytes": 243258,
+  "archiveSha256": "51976fe5784b647d2602e8bbb7a5a4dceb4b1d7d3c39d667eab8c986ceda7269"
 }

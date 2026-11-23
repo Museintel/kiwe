@@ -15,12 +15,30 @@ function fixture(){
  const a=fixture();a.c.openOverlay('cart','Cart');check(!a.root.hidden&&a.root.innerHTML.includes('data-dsa-runtime-pending'),'The actual shared open function displays its normal sheet immediately during a private read');check(a.c.rendered===0&&a.c.bound.length===0&&a.c.metrics.length===0,'Private account/cart content and actions remain unbound while identity is unknown');check(a.root.innerHTML.includes('aria-busy="true"')&&a.root.innerHTML.includes('role="status"'),'The visible pending sheet exposes accessible progress');a.finish();await a.tick();check(a.root.innerHTML==='private-cart'&&a.c.bound.join()==='cart'&&a.c.metrics.length===1,'Only the current ready screen mounts its real shared binder and records one open');check(a.c.history.length===1,'Hydration does not create another history entry or reopen the sheet');
  const closed=fixture();closed.c.openOverlay('profile','Profile');closed.root.hidden=true;closed.c.activeOverlayLifecycle=null;closed.finish();await closed.tick();check(closed.c.rendered===0&&closed.c.bound.length===0,'Closing while pending cannot reopen a screen');
  const closing=fixture();closing.c.openOverlay('profile','Profile');closing.root.classList.add('is-closing');closing.finish();await closing.tick();check(closing.c.rendered===0,'Completion during the close animation cannot replace its content');
- const swapped=fixture();swapped.c.openOverlay('profile','Profile');swapped.c.openOverlay('search','Search');swapped.finish();await swapped.tick();check(swapped.c.bound.join()==='search'&&swapped.c.rendered===1,'Rapid selection hydrates only the most recent lifecycle');
+ const swapped=fixture();swapped.c.openOverlay('profile','Profile');swapped.c.openOverlay('search','Search');check(swapped.c.bound.join()==='search'&&swapped.c.rendered===1&&!swapped.root.innerHTML.includes('data-dsa-runtime-pending'),'Public Search is usable while identity is pending');swapped.finish();await swapped.tick();check(swapped.c.bound.join()==='search'&&swapped.c.rendered===1,'Private startup leaves an already open Search intact');
  const replaced=fixture();replaced.c.openOverlay('profile','Profile');replaced.c.overlayContentSequence++;replaced.finish();await replaced.tick();check(replaced.c.rendered===0,'A newer journey in the same lifecycle cannot be overwritten by startup completion');
  const ready=fixture();ready.c.runtimeHydrated=true;ready.c.openOverlay('profile','Profile');check(ready.root.innerHTML==='private-profile'&&ready.c.bound.join()==='profile','Ready runtime keeps the direct existing render and action path');
  const gate=fixture();gate.c.gated=true;gate.c.openOverlay('cart','Cart');check(gate.root.hidden&&gate.c.rendered===0,'The installed-app required identity gate still takes priority');
  const fail=fixture();fail.c.openOverlay('profile','Profile');fail.c.runtimeHydrationFailed=true;fail.finish();await fail.tick();check(fail.root.innerHTML.includes('Try again')&&fail.c.rendered===0&&fail.c.bound.length===0,'A rejected private read offers retry instead of presenting a guest account as authoritative');fail.root.retry.click();await fail.tick();check(fail.root.innerHTML==='private-profile'&&fail.c.bound.join()==='profile','Explicit retry uses the existing private refresh and current lifecycle');
  const retry=fixture();retry.c.runtimeHydrated=true;retry.c.runtimeHydrationFailed=true;retry.c.openOverlay('profile','Profile');await retry.tick();check(retry.c.bound.join()==='profile','Reopening after a failed private read retries rather than reusing failed identity');
+ const failedSearch=fixture();failedSearch.c.runtimeHydrationFailed=true;failedSearch.c.openOverlay('search','Search');check(failedSearch.c.bound.join()==='search'&&failedSearch.c.runtimeHydrationFailed,'A failed identity read leaves public Search available');
+ const mutations=[];
+ let finishCartStartup;
+ const cart={
+   commerce:{available:true},runtimeHydrated:false,runtimeHydrationFailed:false,
+   runtimeHydrationPromise:new Promise(resolve=>{finishCartStartup=resolve;}),
+   surfaceFeedback(){},enqueueCartMutation:callback=>callback(),nextCartSequence:()=>1,
+   dsaPost:(route,body)=>{mutations.push({route,body});return Promise.resolve({ok:true});},
+   window:{DSA:{refreshRuntime:()=>Promise.resolve(false)}},
+ };
+ vm.createContext(cart);vm.runInContext(extract('addProductToCart'),cart);
+ const adding=cart.addProductToCart(12,'dsa_search',1);
+ check(mutations.length===0,'Search Add waits for current cart identity');
+ cart.runtimeHydrated=true;finishCartStartup(true);await adding;
+ check(mutations.length===1&&mutations[0].route==='/cart/add'&&mutations[0].body.productId===12,'A ready Search add uses the native Store mutation once');
+ cart.runtimeHydrationFailed=true;
+ await assert.rejects(cart.addProductToCart(12,'dsa_search',1),/cart could not load/);
+ check(mutations.length===1,'Failed identity refresh leaves the cart untouched');
  check(source.includes("openOverlay( button.dataset.dsaModule, button.getAttribute( 'aria-label' ) || 'Surface module' );")&&!source.includes("runtimeHydrationPromise.then( function () {\n\t\t\topenOverlay( button.dataset.dsaModule"),'Dock and attributed entry points use the same immediate shared owner');
  console.log(JSON.stringify({passed:true,checks,scope:'Actual shared open/deferred activation with private-read, dismissal, rapid-change, failure and retry races; browser latency remains separate.'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

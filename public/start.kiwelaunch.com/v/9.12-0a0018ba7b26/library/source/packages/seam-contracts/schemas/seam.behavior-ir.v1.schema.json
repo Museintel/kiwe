@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.behavior-ir.v1.schema.json",
+  "title": "SEAM behavior intermediate representation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sourceHash", "behaviors", "residuals"],
+  "properties": {
+    "schema": { "const": "seam.behavior-ir.v1" },
+    "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "behaviors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "sourceNodeId", "event", "intent", "authority", "targetNodeIds", "confidence", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "sourceNodeId": { "type": "string", "minLength": 1 },
+          "event": { "type": "string", "minLength": 1 }, "intent": { "type": "string", "minLength": 1 },
+          "authority": { "enum": ["bricks-interaction", "browser", "wordpress", "woocommerce", "kiwe-capability", "third-party", "unsupported"] },
+          "targetNodeIds": { "type": "array", "items": { "type": "string" } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    },
+    "residuals": { "type": "array", "items": { "type": "string" } }
+  }
+}

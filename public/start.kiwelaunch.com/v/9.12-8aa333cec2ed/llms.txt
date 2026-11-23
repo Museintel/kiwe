@@ -1,0 +1,12 @@
+# SEAM by Kiwe
+
+> Canonical command boundary: /ideate, /preview, /seam; inspect, fix and convert with exact evidence.
+
+- [Start contract](https://start.kiwelaunch.com/start.md)
+- [Command manifest](https://start.kiwelaunch.com/command-manifest.json)
+- [Complete reference library](https://start.kiwelaunch.com/library/)
+- [Machine library with source hashes and pointers](https://start.kiwelaunch.com/library/catalog.json)
+- [Machine registry](https://start.kiwelaunch.com/.well-known/kiwe.json)
+- [GitHub source mirror](https://raw.githubusercontent.com/Museintel/kiwe/main/KIWE-START.md)
+
+Never substitute kiwilaunch.com or another similarly named domain.
