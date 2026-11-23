@@ -1409,8 +1409,8 @@
       "sha256": "ed8220e07ee40468dfd8a30ef54c6ece7ed265b7bec145e3ab3eb6842083d263"
     },
     "includes/Bricks/Bricks_Integration.php": {
-      "bytes": 136874,
-      "sha256": "bae28e55195397acb67172aef6e6e3a6defdc85f36900c8c43fd73a1281c1196"
+      "bytes": 137084,
+      "sha256": "1c32c1e658190e7be80057b1e0e5ab62b1e293ac0ae24e51509e4d1d5a89efd2"
     },
     "includes/Bricks/Clean_Conversion_Test_Service.php": {
       "bytes": 23620,
@@ -1461,8 +1461,8 @@
       "sha256": "a12fec09b55877e952af81a2f9fc4fdf9ea78688cc47bc0d4e637c700499fc31"
     },
     "includes/Bricks/Document_Routes.php": {
-      "bytes": 8544,
-      "sha256": "be1517e2981098c5ef6ff3c20426d0aeabd41774125e4730fe1c19cc6cfebe6a"
+      "bytes": 8685,
+      "sha256": "791fb0f8c7b0d138cbd087c9c1613be44dab3997352ae390367f07a7402044cb"
     },
     "includes/Bricks/Filter_Image_Service.php": {
       "bytes": 6414,
