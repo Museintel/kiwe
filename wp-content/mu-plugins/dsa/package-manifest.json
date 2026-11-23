@@ -1825,8 +1825,8 @@
       "sha256": "395b735f8ef9fd5ba9f12ff387d019130c1270a9bcf63493a5d788b827d8fc51"
     },
     "includes/MCP/Native_Provider.php": {
-      "bytes": 2895,
-      "sha256": "bfd4e2e215965b3feda8878b5de03d37625b6248469e26a2fe1a54067a1cd0c2"
+      "bytes": 4397,
+      "sha256": "61780816ad500a3f4ea1d58337976887fe2a72537d69591418e6fd7643148241"
     },
     "includes/MCP/OAuth_Failure.php": {
       "bytes": 304,

@@ -20,7 +20,45 @@ final class Native_Provider {
       return['website'=>Urls::issuer(),'name'=>\DSA\Access\Task_Workspace_UI::text(get_bloginfo('name'),200),'coreVersion'=>(string)DSA_VERSION,'wordpressVersion'=>(string)$wp_version,'providerApi'=>1,'readOnly'=>Setup_Provider::connected_writes($registry)===[],
        'guidance'=>'Start with Kiwe. Discover approved operations first. Read native site orientation, Design Context and App recommendations, then ask only useful missing questions. For design, use mcp.design.read area guide only when advertised; pin the matching Start instructions and kit. Existing connections do not inherit added permissions. Only separately approved setup scopes can prepare and apply native changes; consequential actions also need an exact native review. Google, Meta and future Apps own their provider linking and consent; this connection grants none of those accounts or spending permissions.'];
      }]
-   ]+(defined(\DSA\Onboarding\Design_Context_Profile_Service::class.'::GUIDANCE_READ_API')&&\DSA\Onboarding\Design_Context_Profile_Service::GUIDANCE_READ_API===1?Guidance_Provider::operations($registry):[])+Setup_Provider::operations($registry)+Authoring_Provider::operations()+Growth_Provider::operations()+Design_Provider::operations()+Bricks_Import_Provider::operations($registry)+Maintenance_Provider::operations()+Featured_Image_Provider::operations()];
+   ]+self::start_site_link()+(defined(\DSA\Onboarding\Design_Context_Profile_Service::class.'::GUIDANCE_READ_API')&&\DSA\Onboarding\Design_Context_Profile_Service::GUIDANCE_READ_API===1?Guidance_Provider::operations($registry):[])+Setup_Provider::operations($registry)+Authoring_Provider::operations()+Growth_Provider::operations()+Design_Provider::operations()+Bricks_Import_Provider::operations($registry)+Maintenance_Provider::operations()+Featured_Image_Provider::operations()];
   });
+ }
+
+ /** A dedicated read-only consent scope for proving control of the website in Start. */
+ private static function start_site_link(): array {
+  $allowed = static function(): bool {
+   $actor = get_current_user_id();
+   if ( ! Credentials::actor_allowed( $actor ) ) return false;
+   if ( is_multisite() || \DSA\Access\Site_Owner_Service::owner_id() > 0 ) {
+    return \DSA\Access\Site_Owner_Service::can_manage_dashboard();
+   }
+   return current_user_can( 'manage_options' );
+  };
+  return [
+   'mcp.site.connect.read' => [
+    'scope' => 'mcp.site.connect',
+    'label' => 'Verify control of this website for Kiwe Start',
+    'effect' => 'read',
+    'approval' => 'none',
+    'accessVersion' => 1,
+    'inputSchema' => [ 'type' => 'object', 'properties' => [], 'additionalProperties' => false ],
+    'outputSchema' => [
+     'type' => 'object',
+     'additionalProperties' => false,
+     'properties' => [
+      'website' => [ 'type' => 'string', 'maxLength' => 2048 ],
+      'coreVersion' => [ 'type' => 'string', 'maxLength' => 60 ],
+      'wordpressVersion' => [ 'type' => 'string', 'maxLength' => 40 ],
+     ],
+     'required' => [ 'website', 'coreVersion', 'wordpressVersion' ],
+    ],
+    'discoverPermission' => $allowed,
+    'permission' => $allowed,
+    'execute' => static function(): array {
+     global $wp_version;
+     return [ 'website' => Urls::issuer(), 'coreVersion' => (string) DSA_VERSION, 'wordpressVersion' => (string) $wp_version ];
+    },
+   ],
+  ];
  }
 }

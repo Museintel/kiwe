@@ -6,7 +6,30 @@ This service opens the authenticated Start project after Kiwe Launch confirms a 
 
 Kiwe Launch validates the payment and supplies the account and plan facts. Start owns the project until the website is installed or connected. Key owns WhatsApp identities and sender authority. The connected WordPress site owns Design Context, products, content and publication.
 
-The current slice saves a requested domain and selects included Kiwe hosting or an existing WordPress site. Site provisioning and verification of existing site ownership require their provider integrations. A saved domain is a setup choice. The domain and hosting step response identifies the applicable integration.
+Start saves a requested domain and selects included Kiwe hosting or an existing WordPress site. An existing site uses native Kiwe OAuth consent. Included hosting uses the configured Hostinger order and a verified temporary WordPress address.
+
+## Existing WordPress sites
+
+Choose an existing site and save its exact HTTPS domain. Start opens native WordPress consent for the Kiwe MCP App's `mcp.site.connect` scope. For sites with a designated Kiwe owner, that owner approves. An administrator with `manage_options` can approve on a single-site installation before a Kiwe owner has been designated. An ordinary editor can still use permitted MCP reads, and the connection proof remains owner-restricted.
+
+After consent, Start reads the site's identity and runtime versions, saves the connected site at the confirmed project revision, and revokes the temporary access token. Changing the domain or hosting choice clears the previous site proof. WordPress application passwords and long-lived site credentials are unnecessary for this step.
+
+The first release targets single-site WordPress at the root of the saved HTTPS domain. The site needs signed Kiwe MCP App 1.2.0-rc.3 or a later release that advertises the connection scope. Start follows the native authorization metadata on the selected domain and pins outbound requests to verified public addresses.
+
+## Included Kiwe hosting
+
+An eligible buyer can set up hosting from the project form or `kiwe_start_provision_site`. Both surface the same durable request. The Hostinger adapter reserves a free temporary address before it requests WordPress. Subsequent calls look up the same address and check the provider status. The project shows the temporary address after the provider reports completion and the WordPress REST API answers for that site. An interrupted request reconciles the original address. The project keeps its requested custom domain for a later domain connection step.
+
+This adapter targets an existing Hostinger Web or Cloud order. Configure the four variables below together to enable the managed form and tool. Store the API credential in the deployment's native secret store. WordPress receives a generated initial administrator at the configured operator email. The hosting operator can access the installation through Hostinger and complete the site's separate ownership handover. The project stores the assigned address and setup state.
+
+| Variable | Purpose |
+| --- | --- |
+| `KIWE_START_HOSTINGER_TOKEN` | Server-side Hostinger credential for the managed order |
+| `KIWE_START_HOSTINGER_ORDER` | Order that includes capacity for new WordPress sites |
+| `KIWE_START_HOSTINGER_ACCOUNT` | Hosting username that must match setup records |
+| `KIWE_START_HOSTINGER_ADMIN_EMAIL` | Authorized initial WordPress operator mailbox |
+
+On a request with a lost response, Start checks the stored address before resubmitting to the same destination. An assigned address stays bound to the project. A failed setup goes to operator review. The first release qualifies WordPress at a temporary address. Kiwe activation, custom DNS and the purchaser's ongoing native authorization follow their own workflows. [Hostinger website setup API](https://github.com/hostinger/api-php-sdk/blob/main/docs/Api/HostingWebsitesApi.md)
 
 ## Checkout handoff
 
@@ -24,6 +47,10 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_project` reads the specified project.
 - `kiwe_start_set_domain` saves a human-confirmed domain and hosting choice at the current revision.
 
+- `kiwe_start_connect_site` prepares the same native WordPress approval link for the saved existing site. After approval, the project reports its verified site and the next Key step.
+
+- `kiwe_start_provision_site` sets up or checks included hosting when a Hostinger order is configured.
+
 The service preserves the latest saved revision when a browser and an MCP client act at the same time. Cross-account project IDs confer no access.
 
 ## Runtime and verification
@@ -32,7 +59,9 @@ Run Node 22.13 or newer and install the locked dependencies with `npm ci`. Run `
 
 The optional real-browser check runs the production service entry point with an isolated checkout and OAuth issuer. It opens a client project at 390 CSS pixels and an agency project at 1440 CSS pixels, saves each domain through the form and reads both back through MCP. Install the existing UI harness dependencies under `tools/ui-contract`, then run `npm run test:browser` in this service. Set `KIWE_START_TEST_CHROME` to use an installed Chrome executable. The harness resolves Playwright from the repository's UI test dependency by default.
 
-The 23 November 2026 candidate passed four end-to-end tests on local Node 24 and on Hostinger Node 22.23.5 over a private Unix socket, plus both real-browser traces and remote-JWKS readback. The public Start command registry also passed its drift check. Production-facing checkout, buyer authentication and hosting activation require their real service integrations.
+The Batch 2 candidate passed ten tests on local Node 24 and Hostinger Node 22.23.5 and the phone and desktop Chrome checks. Plum Giraffe ran the signed MCP App 1.2.0-rc.3 on Core RC495. The owner and editor exercised real registration, code exchange, MCP proof and revocation over HTTPS. Isolated WP-CLI supplied the two native consent decisions. Start showed the verified owner's project and denied the editor. The owner-authorized hosting test created a single free temporary WordPress site through Hostinger MCP. A completed provider receipt and real WordPress HTTPS readback made the synthetic Start purchase ready in the web form and MCP. Automated retries and interrupted responses were tested with a simulated provider.
+
+Kiwe Launch buyer identity, verified purchase delivery, the production managed hosting credential and public Start service routing require live integration. [Signed MCP candidate](https://github.com/Museintel/kiwe/actions/runs/45228013550)
 
 The runnable service uses `npm start` and the following environment variables.
 

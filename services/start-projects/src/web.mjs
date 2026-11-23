@@ -36,10 +36,34 @@ export function projectsPage(projects) {
   return page('Your projects', cards ? `<ul class="projects">${cards}</ul>` : '<p>Your purchased projects will appear here.</p>', true);
 }
 
-export function projectPage(project, error) {
+function hostingStep(project, available) {
+  if (!available || project.hosting !== 'included') return '';
+  const hosted = project.managedSite;
+  if (hosted?.status === 'ready') {
+    return `<p class="status">WordPress is ready on your <a href="${escape(hosted.url)}">temporary address</a>. Next, activate Kiwe.</p>`;
+  }
+  if (hosted?.status === 'needs_attention') {
+    return '<p class="error" role="alert">Hosting setup needs attention. Your project is saved.</p>';
+  }
+  return `${hosted ? '<p class="status">Hosting setup is in progress.</p>' : ''}
+<form method="post" action="/projects/${project.id}/hosting">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">${hosted ? 'Check hosting status' : 'Set up Kiwe hosting'}</button>
+</form>`;
+}
+
+export function projectPage(project, { error, managed = false } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
-  const status = project.domain
-    ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
+  const status = project.site
+    ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(project.domain)}</a>. Next, connect Key.</p>`
+    : project.domain && !project.managedSite
+      ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
+      : '';
+  const connect = project.next === 'connect_site'
+    ? `<form method="post" action="/projects/${project.id}/connect">
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">Connect WordPress site</button>
+</form>`
     : '';
   const selection = project.hostingIncluded
     ? `<label for="hosting">Hosting</label>
@@ -57,7 +81,20 @@ ${alert}${status}
 ${selection}
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">Save domain</button>
-</form>`, true);
+</form>
+${connect}${hostingStep(project, managed)}`, true);
+}
+
+export function siteAuthorizationPage(project, authorizationUrl) {
+  return page('Authorize this website',
+    `<p>Sign in to WordPress at <strong>${escape(project.domain)}</strong> and approve the connection to Kiwe Start.</p>
+<a class="button" href="${escape(authorizationUrl)}">Open WordPress authorization</a>
+<p><a href="/projects/${project.id}">Back to project</a></p>`, true);
+}
+
+export function siteReturnPage(message, approved) {
+  return page(approved ? 'Website connected' : 'Website authorization needed',
+    `<p>${escape(message)}</p><a class="button" href="/projects">Return to Kiwe Start</a>`);
 }
 
 export const stylesheet = `:root {

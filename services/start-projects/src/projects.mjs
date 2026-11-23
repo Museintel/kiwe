@@ -32,6 +32,13 @@ export const domainInput = claimInput.extend({
   hosting: hostChoices,
   revision: z.number().int().positive(),
 });
+export const siteLinkInput = claimInput.extend({ revision: z.number().int().positive() });
+const connectedSite = z.strictObject({
+  url: z.url(), coreVersion: z.string(), wordpressVersion: z.string(), verifiedAt: z.string(),
+});
+const managedSite = z.strictObject({
+  status: z.enum(['queued', 'provisioning', 'ready', 'needs_attention']), url: z.url().nullable(),
+});
 const projectOutput = z.strictObject({
   id: z.uuid(),
   planId: id,
@@ -40,7 +47,9 @@ const projectOutput = z.strictObject({
   domain: z.string().nullable(),
   hosting: hostChoices.nullable(),
   revision: z.number().int().positive(),
-  next: z.enum(['choose_domain', 'provision_site', 'connect_site']),
+  site: connectedSite.nullable(),
+  managedSite: managedSite.nullable(),
+  next: z.enum(['choose_domain', 'provision_site', 'activate_kiwe', 'connect_site', 'connect_key']),
 });
 export const singleProjectOutput = z.strictObject({ project: projectOutput });
 export const projectsOutput = z.strictObject({ projects: z.array(projectOutput) });
@@ -66,6 +75,17 @@ function normalizeDomain(value) {
 }
 
 function view(row) {
+  const site = row.site_url ? {
+    url: row.site_url, coreVersion: row.core_version, wordpressVersion: row.wordpress_version, verifiedAt: row.verified_at,
+  } : null;
+  const hosted = row.managed_status ? {
+    status: row.managed_status, url: row.managed_status === 'ready' ? 'https://' + row.setup_domain : null,
+  } : null;
+  let next = 'choose_domain';
+  if (site) next = 'connect_key';
+  else if (hosted?.status === 'ready') next = 'activate_kiwe';
+  else if (row.hosting === 'included') next = 'provision_site';
+  else if (row.domain) next = 'connect_site';
   return {
     id: row.id,
     planId: row.plan_id,
@@ -74,7 +94,9 @@ function view(row) {
     domain: row.domain,
     hosting: row.hosting,
     revision: row.revision,
-    next: !row.domain ? 'choose_domain' : row.hosting === 'included' ? 'provision_site' : 'connect_site',
+    site,
+    managedSite: hosted,
+    next,
   };
 }
 
@@ -117,18 +139,47 @@ export function openProjects(filename, { now = Date.now } = {}) {
     ) STRICT;
     CREATE INDEX IF NOT EXISTS handoffs_expiry ON handoffs(expires_at);
     CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
+    CREATE TABLE IF NOT EXISTS managed_sites (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      status TEXT NOT NULL CHECK(status IN ('queued', 'provisioning', 'ready', 'needs_attention')),
+      setup_domain TEXT UNIQUE,
+      reserved_at INTEGER,
+      hold_until INTEGER NOT NULL DEFAULT 0,
+      CHECK(status = 'queued' OR setup_domain IS NOT NULL)
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS project_sites (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      site_url TEXT NOT NULL,
+      core_version TEXT NOT NULL,
+      wordpress_version TEXT NOT NULL,
+      verified_at TEXT NOT NULL
+    ) STRICT;
+    CREATE UNIQUE INDEX IF NOT EXISTS project_sites_url ON project_sites(site_url);
+    CREATE TABLE IF NOT EXISTS site_link_attempts (
+      digest TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL UNIQUE REFERENCES projects(id),
+      account_id TEXT NOT NULL,
+      revision INTEGER NOT NULL,
+      issuer TEXT NOT NULL,
+      connection TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    ) STRICT;
+    CREATE INDEX IF NOT EXISTS site_link_expiry ON site_link_attempts(expires_at);
   `);
   const byEntitlement = db.prepare('SELECT * FROM projects WHERE entitlement_id = ?');
   const ownerOfProject = db.prepare('SELECT account_id FROM projects WHERE id = ?');
-  const owned = db.prepare('SELECT * FROM projects WHERE id = ? AND account_id = ?');
-  const list = db.prepare('SELECT * FROM projects WHERE account_id = ? ORDER BY rowid');
+  const projection = 'SELECT p.*, s.site_url, s.core_version, s.wordpress_version, s.verified_at, '
+    + 'm.status AS managed_status, m.setup_domain FROM projects p '
+    + 'LEFT JOIN project_sites s ON p.id = s.project_id LEFT JOIN managed_sites m ON p.id = m.project_id';
+  const owned = db.prepare(projection + ' WHERE p.id = ? AND p.account_id = ?');
+  const list = db.prepare(projection + ' WHERE p.account_id = ? ORDER BY p.rowid');
   const insert = db.prepare(
     'INSERT INTO projects(id, entitlement_id, purchase_id, account_id, account_type, plan_id, hosting_included) '
     + 'VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(entitlement_id) DO NOTHING',
   );
   const update = db.prepare(
     'UPDATE projects SET domain = ?, hosting = ?, revision = revision + 1 '
-    + 'WHERE id = ? AND account_id = ? RETURNING *',
+    + 'WHERE id = ? AND account_id = ?',
   );
   const addHandoff = db.prepare('INSERT INTO handoffs(digest, project_id, expires_at) VALUES (?, ?, ?)');
   const consumeHandoff = db.prepare('DELETE FROM handoffs WHERE digest = ? AND expires_at > ? RETURNING project_id');
@@ -137,6 +188,55 @@ export function openProjects(filename, { now = Date.now } = {}) {
   const endSession = db.prepare('DELETE FROM sessions WHERE digest = ?');
   const pruneHandoffs = db.prepare('DELETE FROM handoffs WHERE expires_at <= ?');
   const pruneSessions = db.prepare('DELETE FROM sessions WHERE expires_at <= ?');
+
+  const pendingLink = db.prepare('SELECT connection FROM site_link_attempts WHERE project_id = ? AND revision = ? AND expires_at > ?');
+  const addLinkAttempt = db.prepare(
+    'INSERT INTO site_link_attempts(digest, project_id, account_id, revision, issuer, connection, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  );
+  const takeLinkAttempt = db.prepare('DELETE FROM site_link_attempts WHERE digest = ? AND issuer = ? AND expires_at > ? RETURNING *');
+  const dropLinkAttempt = db.prepare('DELETE FROM site_link_attempts WHERE project_id = ?');
+  const pruneLinks = db.prepare('DELETE FROM site_link_attempts WHERE expires_at <= ?');
+  const forgetSite = db.prepare('DELETE FROM project_sites WHERE project_id = ?');
+  const attachedSite = db.prepare('SELECT project_id FROM project_sites WHERE site_url = ?');
+  const confirmLink = db.prepare(
+    'INSERT INTO project_sites(project_id, site_url, core_version, wordpress_version, verified_at) VALUES (?, ?, ?, ?, ?)',
+  );
+
+  function requireLinkTarget(accountId, { projectId, revision }) {
+    const row = owned.get(projectId, accountId);
+    if (!row) throw missingProject();
+    if (row.revision !== revision) {
+      throw new StartError(409, 'project_changed', 'The project changed. Reload it before connecting a site.');
+    }
+    if (!row.domain || row.hosting !== 'existing' || row.site_url) {
+      throw new StartError(409, 'site_link_choice', 'Choose an unconnected existing WordPress site first.');
+    }
+    return row;
+  }
+
+  const managedJob = db.prepare('SELECT status, setup_domain AS domain, reserved_at AS reservedAt FROM managed_sites WHERE project_id = ?');
+  const addManaged = db.prepare('INSERT INTO managed_sites(project_id, status) VALUES (?, ?) ON CONFLICT(project_id) DO NOTHING');
+  const reserveManaged = db.prepare(
+    "UPDATE managed_sites SET setup_domain = ?, reserved_at = ? WHERE project_id = ? AND setup_domain IS NULL",
+  );
+  const claimManaged = db.prepare(
+    "UPDATE managed_sites SET hold_until = ? WHERE project_id = ? AND status = 'queued' AND hold_until <= ?",
+  );
+  const updateManaged = db.prepare(
+    "UPDATE managed_sites SET status = ? WHERE project_id = ? AND status NOT IN ('ready', 'needs_attention')",
+  );
+
+  function requireManagedTarget(accountId, { projectId, revision }) {
+    const row = owned.get(projectId, accountId);
+    if (!row) throw missingProject();
+    if (row.revision !== revision) {
+      throw new StartError(409, 'project_changed', 'The project changed. Reload it before setting up hosting.');
+    }
+    if (!row.domain || row.hosting !== 'included' || !row.hosting_included) {
+      throw new StartError(409, 'hosting_unavailable', 'Choose the hosting included with your plan first.');
+    }
+    return row;
+  }
 
   function transaction(work) {
     db.exec('BEGIN IMMEDIATE');
@@ -224,10 +324,96 @@ export function openProjects(filename, { now = Date.now } = {}) {
           throw new StartError(409, 'hosting_unavailable', 'This purchase uses an existing site.');
         }
         if (row.domain === domain && row.hosting === details.hosting) return view(row);
+        if (row.managed_status) throw new StartError(409, 'hosting_already_requested', 'This project already has a hosting request.');
         if (row.revision !== details.revision) {
           throw new StartError(409, 'project_changed', 'The project changed. Reload it before saving.');
         }
-        return view(update.get(domain, details.hosting, row.id, accountId));
+        forgetSite.run(row.id);
+        dropLinkAttempt.run(row.id);
+        update.run(domain, details.hosting, row.id, accountId);
+        return view(owned.get(row.id, accountId));
+      });
+    },
+
+    prepareManagedSite(accountId, details) {
+      return transaction(() => {
+        const row = requireManagedTarget(accountId, details);
+        addManaged.run(row.id, 'queued');
+        return managedJob.get(row.id);
+      });
+    },
+
+    reserveManagedSite(accountId, details, domain) {
+      return transaction(() => {
+        const row = requireManagedTarget(accountId, details);
+        reserveManaged.run(domain, now(), row.id);
+        return managedJob.get(row.id);
+      });
+    },
+
+    managedReservationExpired(accountId, details) {
+      const row = requireManagedTarget(accountId, details);
+      return now() - managedJob.get(row.id).reservedAt >= 24 * 60 * 60 * 1000;
+    },
+
+    claimManagedStart(accountId, details) {
+      const row = requireManagedTarget(accountId, details);
+      const time = now();
+      return claimManaged.run(time + 90_000, row.id, time).changes === 1;
+    },
+
+    saveManagedStatus(accountId, details, status) {
+      return transaction(() => {
+        const row = requireManagedTarget(accountId, details);
+        updateManaged.run(status, row.id);
+        return view(owned.get(row.id, accountId));
+      });
+    },
+
+    siteLinkTarget(accountId, input) {
+      return view(requireLinkTarget(accountId, parse(siteLinkInput, input)));
+    },
+
+    pendingSiteLink(projectId, revision) {
+      const existing = pendingLink.get(projectId, revision, now());
+      return existing ? JSON.parse(existing.connection) : null;
+    },
+
+    saveSiteLink(accountId, details, state, connection) {
+      return transaction(() => {
+        const row = requireLinkTarget(accountId, details);
+        const previous = pendingLink.get(row.id, row.revision, now());
+        if (previous) return JSON.parse(previous.connection);
+        pruneLinks.run(now());
+        dropLinkAttempt.run(row.id);
+        addLinkAttempt.run(digest(state), row.id, accountId, row.revision, connection.issuer,
+          JSON.stringify(connection), now() + handoffLifetime * 2);
+        return connection;
+      });
+    },
+
+    takeSiteLink(state, issuer) {
+      const row = takeLinkAttempt.get(digest(state), issuer, now());
+      if (!row) throw new StartError(410, 'site_link_expired', 'Open a new site authorization link in Kiwe Start.');
+      return {
+        projectId: row.project_id, accountId: row.account_id, revision: row.revision,
+        connection: JSON.parse(row.connection),
+      };
+    },
+
+    confirmSiteLink(flow, proof) {
+      return transaction(() => {
+        const row = requireLinkTarget(flow.accountId, flow);
+        if (proof.url !== 'https://' + row.domain) {
+          throw new StartError(409, 'site_domain_mismatch', 'The verified website must use the selected domain.');
+        }
+        if (attachedSite.get(proof.url)) {
+          throw new StartError(409, 'site_already_linked', 'This website is already connected to a Kiwe project.');
+        }
+        confirmLink.run(row.id, proof.url, proof.coreVersion, proof.wordpressVersion, new Date(now()).toISOString());
+        dropLinkAttempt.run(row.id);
+        update.run(row.domain, row.hosting, row.id, row.account_id);
+        return { ...view(owned.get(row.id, row.account_id)), accountId: row.account_id };
       });
     },
 

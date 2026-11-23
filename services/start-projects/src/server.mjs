@@ -4,6 +4,7 @@ import { createRemoteJWKSet } from 'jose';
 import { createStartServer } from './app.mjs';
 import { createMcpAuthorization } from './auth.mjs';
 import { openProjects } from './projects.mjs';
+import { createHostingerProvider } from './managed-hosting.mjs';
 
 function required(name) {
   const value = process.env[name];
@@ -20,6 +21,19 @@ function configuredUrl(name, originOnly = false) {
     throw new Error('Invalid URL in ' + name + '.');
   }
   return originOnly ? url.origin : value;
+}
+
+function managedProvider() {
+  const token = process.env.KIWE_START_HOSTINGER_TOKEN;
+  if (!token) return undefined;
+  const orderId = Number(required('KIWE_START_HOSTINGER_ORDER'));
+  const username = required('KIWE_START_HOSTINGER_ACCOUNT');
+  const adminEmail = required('KIWE_START_HOSTINGER_ADMIN_EMAIL');
+  if (!Number.isSafeInteger(orderId) || orderId < 1 || !/^u[0-9]+$/.test(username)
+      || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) {
+    throw new Error('Set a valid managed hosting order, account and operator email.');
+  }
+  return createHostingerProvider({ token, orderId, username, adminEmail });
 }
 
 const startOrigin = configuredUrl('KIWE_START_ORIGIN', true);
@@ -39,7 +53,7 @@ const projects = openProjects(database);
 const authorizeMcp = createMcpAuthorization({
   issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
 });
-const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp });
+const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider() });
 server.listen(port, process.env.KIWE_START_BIND || '127.0.0.1');
 for (const name of ['SIGINT', 'SIGTERM']) {
   process.once(name, () => server.close(() => projects.close()));

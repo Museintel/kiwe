@@ -1,7 +1,9 @@
 ## Version 1.x (Start project candidate)
 
+- Add the existing WordPress connection to Start web and MCP. Verify the selected site through native owner consent and store its identity without retaining a WordPress access token.
 - Open one resumable Start project for each trusted site entitlement. Web and MCP share the purchaser's projects, domain and hosting choice.
-- Verify checkout retries, single-use handoffs, issuer and account boundaries and both hosting choices in the [standalone Start service](services/start-projects/README.md). Live checkout and hosting integrations are pending.
+- Start included hosting on one reserved Hostinger address, reconcile interrupted requests and verify WordPress readiness through web or MCP.
+- Verify checkout retries, single-use handoffs, issuer and account boundaries and both hosting choices in the [standalone Start service](services/start-projects/README.md). Production checkout and hosting configuration are pending.
 
 ## 8.0.0-rc.492 (2026-11-22, source sync)
 
