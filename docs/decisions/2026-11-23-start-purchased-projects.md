@@ -28,6 +28,12 @@ Key stores the WhatsApp pairings and per-site signing credentials. Key and WordP
 
 WordPress owns the business facts and serves the existing Bricks bindings. Start loads introductory fields through the separate `mcp.start.context` grant and submits one approved change through the native writer. A client or authorized agency user supplies the facts. A browser form can save the edited native field. An MCP proposal opens a human review for the exact site and value. Native state checks protect edits made through WordPress during a Start session. The wider journey remains in WordPress.
 
+## One homepage review
+
+Start prepares one homepage from a scoped native public brief and the owner's design direction. The creative client or configured provider supplies the visual design. WordPress supplies the saved business facts, public records and capability evidence. A proposed preview carries its revision and exact source fingerprint. Only the owner can approve that source in Start. Changes create another revision and preserve earlier approvals.
+
+Keep the complete approved HTML, CSS and JavaScript. Prepare a separate Seam input that excludes the preview runtime and retains its approval receipt. Seam owns Bricks conversion, and WordPress owns native review, placement and publishing. The first homepage approval supplies direction for the later individual pages and templates.
+
 ## Managed hosting
 
 An eligible purchaser can request hosted WordPress through the Start form or MCP. Start records the reserved Hostinger temporary address before the setup write. Every follow-up uses that exact address. The selected custom domain remains on the project. Readiness requires both provider completion and a WordPress response for the assigned site. The hosted and existing paths continue toward the site's own authority and Key.

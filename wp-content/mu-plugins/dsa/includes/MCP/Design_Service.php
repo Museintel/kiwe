@@ -67,6 +67,87 @@ final class Design_Service {
   if(isset($result['error']))throw new \RuntimeException('Native public catalogue unavailable.');
   unset($result['generatedAt']);return$result;
  }
+ public function homepage(): array {
+  if (!self::allowed()) throw new \RuntimeException('Public design evidence is unavailable.');
+  $plugin = \DSA\Plugin::instance();
+  $graph = new \DSA\AI\Site_Graph_Service($plugin->settings(), $plugin->modules());
+  $packet = (new \DSA\Site_Graph\Design_Context_Service($graph))->context([
+   'productLimit'=>4, 'contentLimit'=>4, 'mediaLimit'=>4, 'customContentLimit'=>0, 'termLimit'=>0,
+   'resources'=>['site','business','products','posts','media','terms'],
+  ], false);
+  $context = $packet['resolvedDesignContext'] ?? $packet['seamDesignContext'];
+  $clean = static function($value, int $limit): string {
+   $text = trim(wp_strip_all_tags((string)$value));
+   return function_exists('mb_substr') ? mb_substr($text, 0, $limit) : wp_check_invalid_utf8(substr($text, 0, $limit), true);
+  };
+  $cards = static function(array $rows, bool $term = false) use ($clean): array {
+   $result = [];
+   foreach ($rows as $row) {
+    $title = $clean($row[$term ? 'name' : 'title'] ?? '', 160);
+    $url = esc_url_raw((string)($row['url'] ?? ''), ['https']);
+    if (empty($row['id']) || '' === $title || '' === $url || ($term && (int)($row['count'] ?? 0) < 1)) continue;
+    $image = $row['featuredImage'] ?? [];
+    $result[] = [
+     'id'=>(int)$row['id'], 'title'=>$title, 'url'=>$url,
+     'image'=>esc_url_raw((string)($image['url'] ?? ''), ['https']), 'alt'=>$clean($image['alt'] ?? '', 200),
+    ];
+    if (count($result) >= 4) break;
+   }
+   return $result;
+  };
+  $media = [];
+  foreach ((array)($packet['catalog']['media'] ?? []) as $item) {
+   if (empty($item['id']) || !str_starts_with((string)($item['mimeType'] ?? ''), 'image/')) continue;
+   $url = esc_url_raw((string)($item['url'] ?? ''), ['https']);
+   if ($url !== '') $media[] = ['id'=>(int)$item['id'], 'image'=>$url, 'alt'=>$clean($item['alt'] ?? '', 200)];
+  }
+  $bricks = $packet['siteGraph']['bricks'] ?? [];
+  $labels = ['site_title','site_tagline','kiwe_business_description','kiwe_business_usp','kiwe_store_email','post_title','post_url','featured_image','term_name','term_url'];
+  $tags = [];
+  foreach ((array)($bricks['dynamicTags'] ?? []) as $tag) {
+   $name = trim((string)($tag['name'] ?? ''), '{}');
+   if (in_array($name, $labels, true)) $tags[] = ['name'=>'{'.$name.'}'];
+  }
+  $modules = $packet['siteGraph']['kiwe']['modules'] ?? [];
+  $enabled = [];
+  foreach ((array)($modules['items'] ?? []) as $module) {
+   $id = $module['id'] ?? '';
+   if (in_array($id, ['search','cart'], true) && false !== ($module['enabled'] ?? true)) $enabled[] = ['id'=>$id];
+  }
+  $fields = (array)($packet['dynamicBindings']['fields'] ?? []);
+  $store = Store_App_Service::enabled();
+  $brief = [
+   'schema'=>'kiwe.site-graph.v1',
+   'authority'=>['source'=>Urls::issuer(),'publicDataOnly'=>true,'readOnly'=>true,'mayMutateWordPress'=>false],
+   'siteGraph'=>[
+    'bricks'=>['dynamicTags'=>$tags,'queryLoopTypes'=>array_values(array_intersect(['post','term'], array_column((array)($bricks['queryLoopTypes'] ?? []), 'objectType')))],
+    'woocommerce'=>['active'=>$store],
+    'kiwe'=>['version'=>(string)($packet['siteGraph']['kiwe']['version'] ?? ''),'modules'=>['items'=>$enabled]],
+   ],
+   'seamDesignContext'=>[
+    'identity'=>[
+     'siteName'=>$clean($context['identity']['siteName'] ?? '', 200),
+     'tagline'=>$clean($context['identity']['tagline'] ?? '', 160),
+     'description'=>$clean($context['identity']['description'] ?? '', 1200),
+    ],
+    'audience'=>['primary'=>$clean($context['audience']['primary'] ?? '', 300)],
+    'about'=>['usp'=>$clean($context['about']['usp'] ?? '', 540)],
+    'seo'=>['primaryGoal'=>$clean($context['seo']['primaryGoal'] ?? '', 50)],
+   ],
+   'dynamicBindings'=>['schema'=>'kiwe.dynamic-bindings.v1','fields'=>array_intersect_key($fields, array_fill_keys(['identity.siteName','identity.tagline','identity.description','about.usp'], true))],
+   'catalog'=>[
+    'products'=>$store ? $cards((array)($packet['catalog']['products'] ?? [])) : [],
+    'posts'=>$cards((array)($packet['catalog']['posts'] ?? [])),
+    'productCategories'=>$store ? $cards((array)($packet['catalog']['productCategories'] ?? []), true) : [],
+    'media'=>$media,
+   ],
+  ];
+  $brief['revision'] = 'sha256:'.hash('sha256', (string)wp_json_encode($brief));
+  $json = wp_json_encode($brief, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  if (!is_string($json) || strlen($json) > 24000) throw new \RuntimeException('The homepage brief exceeds its allowed size.');
+  return ['resultJson'=>$json];
+ }
+
  public function read(array $args):array {
   if(!self::allowed()||!Schema::value($args,Design_Provider::input_schema()))throw new \RuntimeException('Public design evidence is unavailable.');
   $selection=$this->selection($args);$part=$args['part']??0;$expected=$args['expected']??'';

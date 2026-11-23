@@ -216,6 +216,18 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       manage_url TEXT,
       pairing_pending INTEGER NOT NULL DEFAULT 0
     ) STRICT;
+    CREATE TABLE IF NOT EXISTS homepage_drafts (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id),
+      project_revision INTEGER NOT NULL,
+      version INTEGER NOT NULL,
+      graph TEXT NOT NULL,
+      feedback TEXT NOT NULL,
+      design TEXT,
+      source TEXT,
+      approved_at INTEGER,
+      UNIQUE (project_id, version)
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS site_link_attempts (
       digest TEXT PRIMARY KEY,
       project_id TEXT NOT NULL UNIQUE REFERENCES projects(id),
@@ -352,6 +364,42 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       throw new StartError(409, 'website_required', 'Verify the WordPress site before connecting Key.');
     }
     return row;
+  }
+
+  const currentHome = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? ORDER BY version DESC LIMIT 1');
+  const homeById = db.prepare('SELECT * FROM homepage_drafts WHERE project_id = ? AND id = ?');
+  const lastHomeDesign = db.prepare(
+    'SELECT design FROM homepage_drafts WHERE project_id = ? AND project_revision = ? AND version < ? AND design IS NOT NULL ORDER BY version DESC LIMIT 1',
+  );
+  const addHome = db.prepare(
+    'INSERT INTO homepage_drafts(id, project_id, project_revision, version, graph, feedback) VALUES (?, ?, ?, ?, ?, ?)',
+  );
+  const attachHomeSource = db.prepare('UPDATE homepage_drafts SET design = ?, source = ? WHERE id = ? AND source IS NULL');
+  const approveHome = db.prepare('UPDATE homepage_drafts SET approved_at = ? WHERE id = ? AND approved_at IS NULL');
+  const readHome = (row) => row
+    ? { ...row, design: row.design ? JSON.parse(row.design) : null, source: row.source ? JSON.parse(row.source) : null }
+    : null;
+
+  function homepageTarget(accountId, projectId, revision) {
+    const row = owned.get(projectId, accountId);
+    if (!row) throw missingProject();
+    if (revision !== undefined && row.revision !== revision) {
+      throw new StartError(409, 'project_changed', 'Open the updated project before working on its homepage.');
+    }
+    if (!row.site_url || !row.key_site_authenticated || row.key_state === 'inactive') {
+      throw new StartError(409, 'homepage_setup_required', 'Verify the WordPress site and Key before requesting a homepage.');
+    }
+    return row;
+  }
+
+  function latestHomepage(accountId, projectId, draftId) {
+    const project = homepageTarget(accountId, projectId);
+    const draft = currentHome.get(projectId);
+    const latest = draft?.project_revision === project.revision ? draft : null;
+    if (draftId && latest?.id !== draftId) {
+      throw new StartError(409, 'homepage_changed', 'A newer homepage revision is active. Open the current draft.');
+    }
+    return readHome(latest);
   }
 
   function transaction(work) {
@@ -589,6 +637,59 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         });
         updateKeyLink.run(state, sender, Number(siteAuthenticated), Number(pairingPending), receipt.approvalUrl, row.id);
         return projectView(owned.get(row.id, accountId));
+      });
+    },
+
+    getHomepage(accountId, projectId, draftId) {
+      return latestHomepage(accountId, projectId, draftId);
+    },
+
+    getApprovedHomepage(accountId, projectId, draftId) {
+      const project = homepageTarget(accountId, projectId);
+      const row = draftId ? homeById.get(projectId, draftId) : currentHome.get(projectId);
+      return row?.project_revision === project.revision && row.approved_at !== null ? readHome(row) : null;
+    },
+
+    previousHomepageDesign(accountId, projectId, version) {
+      const project = homepageTarget(accountId, projectId);
+      const row = lastHomeDesign.get(projectId, project.revision, version);
+      return row ? JSON.parse(row.design) : null;
+    },
+
+    prepareHomepage(accountId, { projectId, revision, graph, feedback, fromDraft }) {
+      return transaction(() => {
+        const project = homepageTarget(accountId, projectId, revision);
+        const previous = currentHome.get(projectId);
+        if (fromDraft && (previous?.id !== fromDraft || previous.project_revision !== project.revision)) {
+          throw new StartError(409, 'homepage_changed', 'A newer homepage revision is active. Open the current draft.');
+        }
+        if (previous && previous.project_revision === project.revision && !previous.source
+            && previous.graph === graph && previous.feedback === feedback) return readHome(previous);
+        addHome.run(randomUUID(), projectId, revision, (previous?.version ?? 0) + 1, graph, feedback);
+        return readHome(currentHome.get(projectId));
+      });
+    },
+
+    saveHomepage(accountId, projectId, draftId, design, source) {
+      return transaction(() => {
+        const draft = latestHomepage(accountId, projectId, draftId);
+        if (draft.source) {
+          if (draft.source.sha256 === source.sha256) return draft;
+          throw new StartError(409, 'homepage_saved', 'This draft was saved. Request a new revision for further changes.');
+        }
+        attachHomeSource.run(JSON.stringify(design), JSON.stringify(source), draftId);
+        return readHome(currentHome.get(projectId));
+      });
+    },
+
+    approveHomepage(accountId, projectId, draftId, sha256) {
+      return transaction(() => {
+        const draft = latestHomepage(accountId, projectId, draftId);
+        if (!draft.source || draft.source.sha256 !== sha256) {
+          throw new StartError(409, 'homepage_changed', 'Approve the current preview and its exact source.');
+        }
+        approveHome.run(now(), draftId);
+        return readHome(currentHome.get(projectId));
       });
     },
 

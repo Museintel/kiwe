@@ -6,6 +6,7 @@ import { createMcpAuthorization } from './auth.mjs';
 import { openProjects } from './projects.mjs';
 import { createHostingerProvider } from './managed-hosting.mjs';
 import { createKeyProvider } from './key-connection.mjs';
+import { createHomepageProvider } from './homepage.mjs';
 
 function required(name) {
   const value = process.env[name];
@@ -48,6 +49,15 @@ if (keyToken && (keyToken === purchaseToken || !/^[A-Za-z0-9_-]{43,128}$/.test(k
   throw new Error('Use a separate random service credential for Key.');
 }
 const key = keyToken ? createKeyProvider({ token: keyToken, origin: configuredUrl('KIWE_START_KEY_ORIGIN', true) }) : undefined;
+const generatorToken = process.env.KIWE_START_HOMEPAGE_GENERATOR_TOKEN;
+const generatorUrl = process.env.KIWE_START_HOMEPAGE_GENERATOR_URL;
+let homepageProvider;
+if (generatorToken || generatorUrl) {
+  const endpoint = configuredUrl('KIWE_START_HOMEPAGE_GENERATOR_URL');
+  if (!endpoint.startsWith('https://') || !generatorToken || generatorToken.length < 32
+      || generatorToken === purchaseToken || generatorToken === keyToken) throw new Error('Configure a separate HTTPS homepage generator credential.');
+  homepageProvider = createHomepageProvider({ endpoint, token: generatorToken });
+}
 const database = required('KIWE_START_DATABASE');
 if (!path.isAbsolute(database)) throw new Error('Use an absolute private database path.');
 const port = Number(process.env.PORT || 3000);
@@ -59,7 +69,7 @@ const projects = openProjects(database, { launchWebsite: checkoutOrigin });
 const authorizeMcp = createMcpAuthorization({
   issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
 });
-const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider(), keyProvider: key });
+const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider(), keyProvider: key, homepageProvider });
 server.listen(port, process.env.KIWE_START_BIND || '127.0.0.1');
 for (const name of ['SIGINT', 'SIGTERM']) {
   process.once(name, () => server.close(() => projects.close()));

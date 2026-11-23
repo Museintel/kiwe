@@ -39,6 +39,18 @@ In MCP, read the selected section and ask the authorized human for the missing f
 
 The edit session lasts up to 15 minutes and can be closed from Start. Start keeps the native token and any pending review in process memory. Saved values belong to WordPress. Restarting Start retains the agency and project records and requires fresh WordPress consent for editing.
 
+## Homepage draft
+
+Open **Homepage draft** from the verified project. **Generate homepage** requests one homepage, with optional design direction. The WordPress owner authorizes `mcp.design.read` for the scoped `mcp.design.homepage.read` operation. Earlier frozen grants retain their existing pins. Start captures current public Design Context, verified Bricks bindings, and a bounded set of live catalogue records and selected media. The capture needs a saved business name and description. The temporary WordPress grant is revoked after the brief is read.
+
+The design selects a layout, type treatment, accessible colors, a proven hero image, and Dock behavior. The renderer builds a single HTML, CSS and JavaScript homepage with the captured business facts. It emits native loops for products, categories and posts when the site proves those queries and fields. It uses safe static links when native support has yet to be proven. Empty catalogues leave those sections out. The preview uses an isolated iframe and a local script to prevent live link and launcher actions.
+
+The owner can request another revision with instructions or refresh the native business facts. Start retains the previous design to guide a revision. Approval is a browser action tied to the current source fingerprint. Each approved revision has its own download. **Download the raw preview files** keeps the complete approved HTML, CSS and JavaScript. **Download for Seam** prepares a separate copy, omits the preview-only script and fingerprints its exact HTML for Seam. The approved-source receipt links the package to its preview. Native import and publication follow their existing approval flow.
+
+The connected MCP client can read the request, choose a design and submit it for human review. For one-click generation in the browser, configure `KIWE_START_HOMEPAGE_GENERATOR_URL` and `KIWE_START_HOMEPAGE_GENERATOR_TOKEN` for an authorized HTTPS design generator. The service receives the public brief, human direction, previous design when one exists and the design output schema. It returns the small design object. The Start service holds the provider's credential. When no generator is configured, the saved request can be completed through MCP.
+
+A runner can download an approved source byte stream over HTTP with an authorized Start access token for that purchaser. Use the revision-specific raw or Seam URL from the homepage tool. The response includes the downloadable source fingerprint and the approved raw source fingerprint.
+
 ## Included Kiwe hosting
 
 An eligible buyer can set up hosting from the project form or `kiwe_start_provision_site`. Both surface the same durable request. The Hostinger adapter reserves a free temporary address before it requests WordPress. Subsequent calls look up the same address and check the provider status. The project shows the temporary address after the provider reports completion and the WordPress REST API answers for that site. An interrupted request reconciles the original address. The project keeps its requested custom domain for a later domain connection step.
@@ -77,6 +89,8 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_agency_workspace`, `kiwe_start_set_agency_home` and `kiwe_start_verify_agency_home` manage the agency's own website.
 - `kiwe_start_open_context` opens the site's narrow WordPress consent, and `kiwe_start_context` reads the authorized section.
 - `kiwe_start_prepare_context_change` returns a link for the human to review and save the exact supplied value.
+- `kiwe_start_open_homepage` starts the one-page brief through WordPress consent.
+- `kiwe_start_homepage`, `kiwe_start_submit_homepage_design` and `kiwe_start_revise_homepage` read, prepare and revise that project's homepage. The owner approves its exact source in Start.
 
 The service preserves the latest saved revision when a browser and an MCP client act at the same time. Cross-account project IDs confer no access.
 
@@ -85,6 +99,8 @@ The service preserves the latest saved revision when a browser and an MCP client
 Run Node 22.13 or newer and install the locked dependencies with `npm ci`. Run `npm test` to verify the HTTP purchase callback, browser request flow, durable restart, managed and existing hosting choices, account isolation and real MCP tool calls. Set `KIWE_START_TEST_SOCKET=1` for isolated Unix-socket qualification on hosts that restrict TCP loopback.
 
 The optional real-browser check runs the production service entry point with an isolated checkout and OAuth issuer. It opens a client project at 390 CSS pixels and an agency project at 1440 CSS pixels, saves each domain through the form and reads both back through MCP. Install the existing UI harness dependencies under `tools/ui-contract`, then run `npm run test:browser` in this service. Set `KIWE_START_TEST_CHROME` to use an installed Chrome executable. The harness resolves Playwright from the repository's UI test dependency by default.
+
+Batch 5 passed 17 Start tests locally and on Hostinger Node 22. The PHP design scope suite passed 54 checks. Plum Giraffe on WordPress 7.1.5 and signed Core RC495 returned the native homepage brief and kept older grants limited to their pinned operations. The full workflow used test purchases, public catalogue fixtures and a simulated configured generator. The owner-approved fixture compiled with Seam into one Bricks content draft with three native query loops and 11 dynamic bindings. The generated review package omitted the source preview runtime. Chrome exercised the sandbox and layout at 390, 768 and 1440 CSS pixels. Native staging, the imported Bricks visual comparison, and the production generator configuration are later work.
 
 Batch 4 passed 15 Start tests locally and on Hostinger Node 22. Its 291 source checks cover native setup, authorization, guidance and change contracts. Plum Giraffe loaded the candidate context operations with the full MCP provider on WordPress 7.1.5 and signed Core RC495. With temporary native options, it admitted the scoped fields, saved a tagline through the native writer, read it through the Bricks binding and denied a stale repeat. The original options hash matched. Chrome checked that both agency verification and Design Context forms fit at 390 and 1440 CSS pixels. The hosted Start scenarios use test purchases and mediated WordPress responses. The new App scope needs a signed rollout before production use.
 

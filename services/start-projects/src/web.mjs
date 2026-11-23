@@ -137,7 +137,7 @@ ${selection}
 <button class="button">Save domain</button>
 </form>
 ${connect}${hostingStep(project, managed)}${keyStep(project, keyEnabled)}
-${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/context">Open Design Context</a></p>` : ''}`, true);
+${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/context">Open Design Context</a> <a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
 }
 
 const contextNames = { identity: 'Business identity', story: 'Story and audience', contact: 'Public contact' };
@@ -197,6 +197,40 @@ export function contextReviewPage(project, review, reviewId) {
 <p>New value</p><blockquote>${escape(review.value || 'Clear the current value')}</blockquote>
 <form method="post" action="${location}/review/${reviewId}">
 <button class="button">Confirm and save to WordPress</button></form>`, true);
+}
+
+export function homepagePage(project, view, options = {}) {
+  const location = '/projects/' + project.id + '/homepage';
+  const draft = view.draft;
+  const error = options.error ? `<p class="error" role="alert">${escape(options.error)}</p>` : '';
+  const revision = `<input type="hidden" name="revision" value="${project.revision}">`;
+  const request = `<form class="card" method="post" action="${location}/request">
+<label for="homepage-direction">Design direction</label>
+<textarea id="homepage-direction" name="feedback" rows="3" maxlength="1200" placeholder="Describe a layout, mood or reference."></textarea>
+${revision}<button class="button">${draft ? 'Refresh Design Context and generate' : 'Generate homepage'}</button></form>`;
+  if (!draft) {
+    return page('Homepage draft', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
+${error}<p>Build the first homepage from this site’s saved Design Context.</p>${request}`, true);
+  }
+  const ready = draft.status !== 'waiting_for_design';
+  const status = draft.status === 'approved' ? 'Approved for Seam conversion.'
+    : ready ? 'Ready for your review.' : options.generator ? 'The homepage request is saved.' : 'Waiting for your connected AI to prepare the design.';
+  const preview = ready ? `<iframe class="homepage-preview" title="Homepage draft preview" sandbox="allow-scripts"
+src="${location}/preview?draft=${draft.id}"></iframe><p><a href="${location}/preview?draft=${draft.id}">Open full-width preview</a></p>` : '';
+  const approve = draft.status === 'review' ? `<form method="post" action="${location}/approve">
+<input type="hidden" name="draftId" value="${draft.id}"><input type="hidden" name="sha256" value="${escape(draft.sourceSha256)}">
+<button class="button">Approve this homepage</button></form>` : '';
+  const download = draft.sourceUrl ? `<p><a class="button" href="${location}/source?draft=${draft.id}&amp;format=seam">Download for Seam</a>
+<a href="${location}/source?draft=${draft.id}">Download the raw preview files</a></p>` : '';
+  const retry = !ready && options.generator ? `<form method="post" action="${location}/generate"><button class="button">Generate draft</button></form>` : '';
+  const changes = `<form class="card" method="post" action="${location}/revise">
+<label for="homepage-feedback">What would you change?</label>
+<textarea id="homepage-feedback" name="feedback" rows="3" maxlength="1200"></textarea>
+${revision}<input type="hidden" name="draftId" value="${draft.id}">
+<button class="button">Request another revision</button></form>`;
+  return page('Homepage draft', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
+${error}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${download}${retry}
+${changes}<details><summary>Refresh saved business facts</summary>${request}</details>`, true);
 }
 
 export function siteAuthorizationPage(project, authorizationUrl) {
@@ -268,6 +302,9 @@ button { cursor: pointer; }
 .context-end { margin-top: 1rem; }
 .card { border: 1px solid #d8e4dc; border-radius: .6rem; margin-top: 1.5rem; padding: 1rem; }
 .card code, blockquote { overflow-wrap: anywhere; }
+main:has(.homepage-preview) { max-width: 92rem; }
+.homepage-preview { display: block; width: 100%; height: min(72vh, 53rem); min-height: 26rem; border: 1px solid #83978b; border-radius: .6rem; background: white; }
+details { margin-top: 1rem; }
 blockquote { margin: .5rem 0 1rem; border-left: 3px solid #aec7b8; padding: .5rem .9rem; white-space: pre-wrap; }
 .status, .error { padding: .75rem 1rem; border-radius: .4rem; }
 .status { background: #e7f3ec; }

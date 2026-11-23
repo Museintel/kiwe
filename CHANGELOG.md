@@ -1,5 +1,7 @@
 ## Version 1.x (Start project candidate)
 
+- Generate one homepage review from current public Design Context through Start and MCP. Preserve the exact source of each approved revision, and hand a separate native-only input to Seam.
+
 - Group standalone projects under Kiwe Launch and give agencies a private workspace with a verified home site.
 - Edit introductory Design Context through Start and prepare exact changes from MCP. WordPress retains its native fields, permissions and Bricks bindings.
 
