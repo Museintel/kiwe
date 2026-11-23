@@ -54,7 +54,7 @@ const directBridgeAllowlist = new Set([
   'AI/Copilot_Service.php', 'Admin/Admin.php', 'Commerce/Abandoned_Cart_Service.php',
   'Commerce/COD_Gate_Service.php', 'Commerce/Store_Analytics_Service.php',
   'Diagnostics/Production_Readiness_Service.php', 'Notifications/Notification_Preference_Service.php',
-  'Notifications/Push_Service.php', 'PhoneKey/PhoneKey_Bridge.php', 'PhoneKey/phonekey-core.php',
+  'Notifications/Push_Service.php', 'PhoneKey/PhoneKey_Bridge.php', 'PhoneKey/phonekey-core.php', 'PhoneKey/website-setup.php',
   'Rest/Account_Controller.php', 'Rest/Cart_Controller.php', 'Utilities/Origin_Checker.php'
 ]);
 const unexpectedConsumers = [];
