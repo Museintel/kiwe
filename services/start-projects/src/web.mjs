@@ -254,10 +254,11 @@ function publicationStep(location, revision, draft, options) {
   const review = published?.sessionActive && published.approvalUrl
     ? '<p><a class="button" href="' + escape(published.approvalUrl) + '">Approve in WordPress</a></p>'
       + form('finish-publication', published.action === 'restore' ? 'Check restoration' : 'Check publication')
-    : form('publication', action === 'restore' ? 'Restore previous homepage design' : 'Publish homepage');
+    : form('publication', action === 'restore' ? 'Restore previous homepage' : 'Publish homepage');
   const state = published?.status === 'published'
-    ? '<p class="status">Published on the homepage. <a href="' + escape(published.url) + '">View homepage</a></p>'
-    : published?.status === 'restored' ? '<p class="status">The previous homepage layout was restored.</p>' : '';
+    ? '<p class="status">Published on the homepage. <a href="' + escape(published.url) + '">View homepage</a>'
+      + (published.blogUrl ? ' · <a href="' + escape(published.blogUrl) + '">View Blog</a>' : '') + '</p>'
+    : published?.status === 'restored' ? '<p class="status">The previous homepage was restored.</p>' : '';
   return '<section id="publication"><h2>Homepage publication</h2>' + state + review + '</section>';
 }
 

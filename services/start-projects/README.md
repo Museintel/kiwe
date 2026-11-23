@@ -63,11 +63,13 @@ The other checklist rows link to their WordPress owners. Independent design gene
 
 ### Publish the homepage
 
-Review the private Bricks draft first. On a site with an assigned, public static homepage, choose **Publish homepage**, authorize the separate WordPress publication scope and approve the exact change. Return to Start and choose **Check publication**. The approved Bricks content is saved to the existing homepage. Its public address and WordPress page identity are preserved. Use the Seam candidate with the responsive preview corrections when compiling the source. [Paired Seam commit](https://github.com/Museintel/seam-compiler/commit/ab3f1bd93ef5d8ddd90be15c6df806afba2c9a13)
+Review the private Bricks draft and choose **Publish homepage**. Authorize the separate WordPress publication scope and approve the exact change. Return to Start and choose **Check publication**. Use the Seam candidate with the responsive preview corrections when compiling the source. [Paired Seam commit](https://github.com/Museintel/seam-compiler/commit/ab3f1bd93ef5d8ddd90be15c6df806afba2c9a13)
 
-WordPress verifies that the destination is a standalone homepage, checks the native draft and refuses a stale publication. A different post or content template keeps its existing assignment. The current candidate uses the homepage assigned in WordPress Reading settings. Its Pages post type must be enabled in Bricks and the route must use its own page content.
+When the site still shows its posts at the root, WordPress creates the Home page and assigns it in Reading settings. The review shows the Blog destination for the original posts index. It reuses an eligible assigned posts page or allocates an unused Blog address. If needed, the same review enables Bricks editing for Pages. The public root changes after both assigned pages are ready. The saved setup can resume without creating another set.
 
-The same flow can restore the previous layout while the published content still matches its receipt. WordPress holds the encrypted recovery. Start records only the native result and its page and approval references. A lapsed session can reopen consent and read current native status before another review.
+On a site with an assigned static homepage, WordPress updates its native page layout on the existing address. The page must use its own Bricks content and be separate from protected WordPress and WooCommerce routes. Both paths refuse stale approvals.
+
+**Restore previous homepage** has a separate WordPress approval. A first-time restore returns the posts index to its original route and keeps generated pages as drafts. A layout restore uses WordPress's encrypted recovery. Start records the native result and its page and approval references. When a session lapses, reopen consent to read current native status before a new review.
 
 ## Included Kiwe hosting
 

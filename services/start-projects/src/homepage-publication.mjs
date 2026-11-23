@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { bricksInput, nativeApproval, nativeIntent } from './bricks-import.mjs';
 import { parse, StartError } from './projects.mjs';
 import { createWordPressLink } from './wordpress-link.mjs';
+import { siteUrl } from './site-network.mjs';
 
 export const publicationReturn = '/projects/homepage-publish-return';
 export const publicationInput = bricksInput.extend({ action: z.enum(['publish','restore']) });
@@ -32,9 +33,13 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
     try { value = JSON.parse(raw?.resultJson); } catch { throw error(); }
     if (value?.schema !== 'kiwe.bricks-homepage-publication.v1'
         || Object.keys(args).some(key => value[key] !== args[key])
-        || value.url !== project.site.url + '/' || !Number.isSafeInteger(value.pageId) || value.pageId < 1
-        || !['draft_ready','published','restored','review_current_homepage'].includes(value.status)) throw error();
-    return { pageId: value.pageId, url: value.url, status: value.status };
+        || value.url !== project.site.url + '/' || !Number.isSafeInteger(value.pageId) || value.pageId < (value.status === 'draft_ready' ? 0 : 1)
+        || !['draft_ready','published','restored','restore_in_progress','review_current_homepage'].includes(value.status)) throw error();
+    let blogUrl;
+    if (value.blogUrl !== undefined) {
+      try { blogUrl = siteUrl(project.site.url, value.blogUrl).href; } catch { throw error(); }
+    }
+    return { pageId: value.pageId, url: value.url, status: value.status, ...(blogUrl ? { blogUrl } : {}) };
   }
 
   function currentGrant(id) {
@@ -131,7 +136,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
             projects.saveHomepagePublication(flow.accountId, flow, read);
             return;
           }
-          if (flow.action === 'restore' && read.status !== 'published') throw error();
+          if (flow.action === 'restore' && !['published','restore_in_progress'].includes(read.status)) throw error();
           const operation = scope + '.' + flow.action;
           const intent = nativeIntent(await call('prepare-change', { operation, arguments: site.args, requestId: opaque() }), operation);
           if (intent.state !== 'prepared' || intent.approvalRequired !== true || intent.approved) throw error();

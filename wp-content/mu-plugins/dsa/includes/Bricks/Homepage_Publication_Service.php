@@ -60,8 +60,11 @@ final class Homepage_Publication_Service {
 		if ( ! is_string( $value ) ) throw new Compiler_Package_Error( 'The homepage recovery record needs review.' );
 		$data = Secret_Store::decrypt_with_status( $value );
 		$record = $data['status'] === 'ok' ? json_decode( $data['value'], true, 64 ) : null;
-		if ( ! is_array( $record ) || ( $record['schema'] ?? 0 ) !== 1 || ( $record['page'] ?? 0 ) !== $id
-			|| ( $record['website'] ?? '' ) !== home_url( '/' ) || ! is_array( $record['previous'] ?? null ) ) {
+		if ( ! is_array( $record ) || ( $record['schema'] ?? 0 ) !== 1 || ! is_string( $record['website'] ?? null ) ) {
+			throw new Compiler_Package_Error( 'The homepage recovery record could not be verified.' );
+		}
+		if ( $record['website'] !== home_url( '/' ) ) return null;
+		if ( ( $record['page'] ?? 0 ) !== $id || ! is_array( $record['previous'] ?? null ) ) {
 			throw new Compiler_Package_Error( 'The homepage recovery record could not be verified.' );
 		}
 		return $record;
@@ -97,6 +100,12 @@ final class Homepage_Publication_Service {
 	}
 
 	public function status( array $args ): array {
+		if ( ! self::allowed() ) throw new Compiler_Package_Error( 'Only the WordPress site owner can view this publication.' );
+		$assignment = ( new Homepage_Assignment_Service() )->status( $args );
+		if ( $assignment ) {
+			$receipt = $this->receipt( $args, $assignment['page'], $assignment['status'] );
+			return isset( $assignment['blogUrl'] ) ? $receipt + [ 'blogUrl'=>$assignment['blogUrl'] ] : $receipt;
+		}
 		$post = $this->page();
 		$current = $this->layout( $post->ID );
 		$recovery = $this->recovery( $post->ID, $current );
@@ -112,6 +121,10 @@ final class Homepage_Publication_Service {
 	}
 
 	public function plan( array $args, bool $restore ): array {
+		$assignment = new Homepage_Assignment_Service();
+		if ( $restore ? $assignment->owns_recovery( $args ) : get_option( 'show_on_front' ) === 'posts' ) {
+			return $assignment->plan( $args, $restore );
+		}
 		$post = $this->page();
 		$id = $post->ID;
 		$templates = \Bricks\Database::get_all_templates_by_type();
@@ -143,6 +156,11 @@ final class Homepage_Publication_Service {
 		$plan = $this->plan( $args, $restore );
 		if ( ! hash_equals( $plan['expected'], $expected ) ) {
 			throw new Compiler_Package_Error( 'The homepage or draft changed. Open a new publication review.' );
+		}
+		if ( ! empty( $plan['assignment'] ) ) {
+			$id = ( new Homepage_Assignment_Service() )->apply( $args, $plan, $restore );
+			$receipt = $this->receipt( $args, $id, $restore ? 'restored' : 'published' );
+			return $restore ? $receipt : $receipt + [ 'blogUrl'=>get_permalink( (int) get_option( 'page_for_posts' ) ) ];
 		}
 		$id = $plan['post']->ID;
 		$current = $plan['current'];

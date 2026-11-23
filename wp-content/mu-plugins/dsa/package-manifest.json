@@ -2,7 +2,7 @@
   "schema": 1,
   "version": "8.0.0-rc.495",
   "algorithm": "sha256",
-  "file_count": 1034,
+  "file_count": 1035,
   "files": {
     "assets/css/admin.css": {
       "bytes": 19334,
@@ -1472,9 +1472,13 @@
       "bytes": 9202,
       "sha256": "0078fcc1bd2305f526a17a4d38bf29aacc25ec489ffb9f4fbb3ed23d13786cc7"
     },
+    "includes/Bricks/Homepage_Assignment_Service.php": {
+      "bytes": 18671,
+      "sha256": "a477c358eddc95970f38e61a3e5c8f9351652ff36a92f49c5c8a973a2880ede8"
+    },
     "includes/Bricks/Homepage_Publication_Service.php": {
-      "bytes": 9291,
-      "sha256": "68e5a481fdbea44b3f1574e19690591dbe220a20cd29a5b8e75be1d609f883c7"
+      "bytes": 10384,
+      "sha256": "ff2c02e6ab3217686db17fdec53187293ae828adb1299b76b7bf6f980921da9c"
     },
     "includes/Bricks/Icon_Library_Service.php": {
       "bytes": 3743,
@@ -1773,8 +1777,8 @@
       "sha256": "8b4a71d82d33c8ff1f949e4e350209221aa608ee41ff8c631ba7292ec35aaec1"
     },
     "includes/MCP/Bricks_Homepage_Provider.php": {
-      "bytes": 2748,
-      "sha256": "ce483ebb52ec03b194481987d488e47ed0fd1e8499bb85f25960a54b9dfe3dab"
+      "bytes": 2898,
+      "sha256": "d8aeae870d45247ae72b066e73fb1437c1016b53d09bad6dacb8870b1fd5ab61"
     },
     "includes/MCP/Bricks_Import_Provider.php": {
       "bytes": 9051,

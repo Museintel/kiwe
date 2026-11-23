@@ -299,7 +299,8 @@ function publicationFixture() {
   let approvals = 0;
   const scope = 'mcp.bricks.homepage';
   const packet = (origin, status, keys) => ({ resultJson: JSON.stringify({
-    schema: 'kiwe.bricks-homepage-publication.v1', status, pageId: 19, url: origin + '/', ...keys,
+    schema: 'kiwe.bricks-homepage-publication.v1', status, pageId: status === 'draft_ready' ? 0 : 19, url: origin + '/',
+    ...(status === 'published' ? { blogUrl: origin + '/blog/' } : {}), ...keys,
   }) });
   return {
     approve() { native.approved = true; },
@@ -421,7 +422,9 @@ test('the Pages and Templates dashboard reviews, converts, publishes and restore
   assert.equal(result.status, 'published');
   assert.equal(result.pageId, 19);
   assert.equal(publication.writes(), 1);
-  assert.match(await (await f.request(project.home, project.options)).text(), /View homepage/);
+  const publishedHomepage = await (await f.request(project.home, project.options)).text();
+  assert.match(publishedHomepage, /View homepage/);
+  assert.match(publishedHomepage, /href="https:\/\/alder\.example\.test\/blog\/"[^>]*>View Blog/);
   assert.equal((await mcp(reopened, 'complete_homepage_publication', publish)).structuredContent.publication.status, 'published');
   assert.equal(publication.writes(), 1);
 
@@ -430,7 +433,7 @@ test('the Pages and Templates dashboard reviews, converts, publishes and restore
   assert.equal((await f.request(approveUrl(openedRestore.authorizationUrl, '/projects/homepage-publish-return'), project.options)).status, 303);
   publication.approve();
   assert.equal((await mutate('finish-publication', { draftId: draft.id, revision: '3', action: 'restore' })).status, 303);
-  assert.match(await (await f.request(project.home, project.options)).text(), /previous homepage layout was restored/);
+  assert.match(await (await f.request(project.home, project.options)).text(), /previous homepage was restored/);
   assert.equal(publication.writes(), 2);
 });
 

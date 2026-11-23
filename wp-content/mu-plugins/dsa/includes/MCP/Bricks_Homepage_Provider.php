@@ -16,7 +16,7 @@ final class Bricks_Homepage_Provider {
 		$args = [ 'job'=>[ 'type'=>'string', 'maxLength'=>32 ], 'archiveSha256'=>[ 'type'=>'string', 'maxLength'=>64 ],
 			'draftId'=>[ 'type'=>'integer', 'minimum'=>1 ] ];
 		$base = [
-			'scope'=>self::SCOPE, 'accessVersion'=>1, 'discoverPermission'=>$permission, 'permission'=>$permission,
+			'scope'=>self::SCOPE, 'accessVersion'=>2, 'discoverPermission'=>$permission, 'permission'=>$permission,
 			'inputSchema'=>[ 'type'=>'object', 'properties'=>$args, 'required'=>array_keys( $args ), 'additionalProperties'=>false ],
 			'outputSchema'=>[ 'type'=>'object', 'properties'=>[ 'resultJson'=>[ 'type'=>'string', 'maxLength'=>3000 ] ],
 				'required'=>[ 'resultJson' ], 'additionalProperties'=>false ],
@@ -27,11 +27,14 @@ final class Bricks_Homepage_Provider {
 			'execute'=>static fn( $a ) => self::result( ( new Homepage_Publication_Service() )->status( $a ) ),
 		] ];
 		foreach ( [ 'publish'=>false, 'restore'=>true ] as $action=>$restore ) {
-			$label = $restore ? 'Restore the exact previous homepage design' : 'Publish the reviewed design on the assigned homepage';
+			$label = $restore ? 'Restore the exact previous homepage design' : 'Publish the reviewed homepage design';
 			$ops[self::SCOPE . '.' . $action] = $base + [
 				'label'=>$label, 'effect'=>'write', 'approval'=>'required',
 				'prepare'=>static function( $a ) use ( $restore, $label ): array {
 					$plan = ( new Homepage_Publication_Service() )->plan( $a, $restore );
+					if ( ! empty( $plan['assignment'] ) ) {
+						return Authoring_Service::plan( $label, $plan['expected'], $plan['beforeText'], $plan['afterText'], true );
+					}
 					$page = $plan['post'];
 					return Authoring_Service::plan( $label, $plan['expected'],
 						home_url( '/' ) . ' · ' . get_the_title( $page ) . ' · WordPress page ' . $page->ID,
