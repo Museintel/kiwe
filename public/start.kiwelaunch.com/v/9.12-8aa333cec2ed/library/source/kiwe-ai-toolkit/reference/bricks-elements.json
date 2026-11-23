@@ -1,0 +1,540 @@
+{
+  "schema": "kiwe.compiler-elements-reference.v1",
+  "repository": "Museintel/seam-compiler",
+  "revision": "0f7679c3244fa6806ad5de3a6177a96e8ed54f40",
+  "source": "app/bricksCapabilities.ts",
+  "sourceSha256": "42ea63753b8c7f7cf0bc89c1b97224da3f6bc8ac2a95d84d30cb3bf202c50e5d",
+  "bricksVersion": "2.3.10",
+  "registryVersion": "1.2.0",
+  "policy": "Registered means available in the source inventory, not automatic conversion or target verification. Current target calibration/SiteGraph is required. This reference grants no executable-code authority.",
+  "elements": [
+    {
+      "name": "accordion",
+      "status": "inferred"
+    },
+    {
+      "name": "accordion-nested",
+      "status": "registered"
+    },
+    {
+      "name": "alert",
+      "status": "registered"
+    },
+    {
+      "name": "animated-typing",
+      "status": "registered"
+    },
+    {
+      "name": "audio",
+      "status": "registered"
+    },
+    {
+      "name": "back-to-top",
+      "status": "registered"
+    },
+    {
+      "name": "base",
+      "status": "registered"
+    },
+    {
+      "name": "block",
+      "status": "registered"
+    },
+    {
+      "name": "breadcrumbs",
+      "status": "registered"
+    },
+    {
+      "name": "button",
+      "status": "inferred"
+    },
+    {
+      "name": "carousel",
+      "status": "registered"
+    },
+    {
+      "name": "code",
+      "status": "registered"
+    },
+    {
+      "name": "container",
+      "status": "registered"
+    },
+    {
+      "name": "countdown",
+      "status": "registered"
+    },
+    {
+      "name": "counter",
+      "status": "registered"
+    },
+    {
+      "name": "custom-render-element",
+      "status": "registered"
+    },
+    {
+      "name": "div",
+      "status": "inferred"
+    },
+    {
+      "name": "divider",
+      "status": "registered"
+    },
+    {
+      "name": "dropdown",
+      "status": "registered"
+    },
+    {
+      "name": "facebook-page",
+      "status": "registered"
+    },
+    {
+      "name": "filter-active-filters",
+      "status": "registered"
+    },
+    {
+      "name": "filter-base",
+      "status": "registered"
+    },
+    {
+      "name": "filter-checkbox",
+      "status": "registered"
+    },
+    {
+      "name": "filter-datepicker",
+      "status": "registered"
+    },
+    {
+      "name": "filter-radio",
+      "status": "registered"
+    },
+    {
+      "name": "filter-range",
+      "status": "registered"
+    },
+    {
+      "name": "filter-search",
+      "status": "registered"
+    },
+    {
+      "name": "filter-select",
+      "status": "registered"
+    },
+    {
+      "name": "filter-submit",
+      "status": "registered"
+    },
+    {
+      "name": "form",
+      "status": "inferred"
+    },
+    {
+      "name": "heading",
+      "status": "inferred"
+    },
+    {
+      "name": "html",
+      "status": "fallback"
+    },
+    {
+      "name": "icon",
+      "status": "registered"
+    },
+    {
+      "name": "icon-box",
+      "status": "registered"
+    },
+    {
+      "name": "image",
+      "status": "inferred"
+    },
+    {
+      "name": "image-gallery",
+      "status": "registered"
+    },
+    {
+      "name": "instagram-feed",
+      "status": "registered"
+    },
+    {
+      "name": "list",
+      "status": "registered"
+    },
+    {
+      "name": "logo",
+      "status": "registered"
+    },
+    {
+      "name": "map",
+      "status": "registered"
+    },
+    {
+      "name": "map-connector",
+      "status": "registered"
+    },
+    {
+      "name": "map-leaflet",
+      "status": "registered"
+    },
+    {
+      "name": "nav-menu",
+      "status": "registered"
+    },
+    {
+      "name": "nav-nested",
+      "status": "registered"
+    },
+    {
+      "name": "offcanvas",
+      "status": "registered"
+    },
+    {
+      "name": "pagination",
+      "status": "registered"
+    },
+    {
+      "name": "pie-chart",
+      "status": "registered"
+    },
+    {
+      "name": "post-author",
+      "status": "registered"
+    },
+    {
+      "name": "post-comments",
+      "status": "registered"
+    },
+    {
+      "name": "post-content",
+      "status": "registered"
+    },
+    {
+      "name": "post-excerpt",
+      "status": "registered"
+    },
+    {
+      "name": "post-meta",
+      "status": "registered"
+    },
+    {
+      "name": "post-navigation",
+      "status": "registered"
+    },
+    {
+      "name": "post-reading-progress-bar",
+      "status": "registered"
+    },
+    {
+      "name": "post-reading-time",
+      "status": "registered"
+    },
+    {
+      "name": "posts",
+      "status": "registered"
+    },
+    {
+      "name": "post-sharing",
+      "status": "registered"
+    },
+    {
+      "name": "post-taxonomy",
+      "status": "registered"
+    },
+    {
+      "name": "post-title",
+      "status": "registered"
+    },
+    {
+      "name": "post-toc",
+      "status": "registered"
+    },
+    {
+      "name": "pricing-tables",
+      "status": "registered"
+    },
+    {
+      "name": "progress-bar",
+      "status": "registered"
+    },
+    {
+      "name": "query-results-summary",
+      "status": "registered"
+    },
+    {
+      "name": "rating",
+      "status": "registered"
+    },
+    {
+      "name": "related-posts",
+      "status": "registered"
+    },
+    {
+      "name": "search",
+      "status": "registered"
+    },
+    {
+      "name": "section",
+      "status": "inferred"
+    },
+    {
+      "name": "shortcode",
+      "status": "registered"
+    },
+    {
+      "name": "sidebar",
+      "status": "registered"
+    },
+    {
+      "name": "slider",
+      "status": "registered"
+    },
+    {
+      "name": "slider-nested",
+      "status": "registered"
+    },
+    {
+      "name": "slot",
+      "status": "registered"
+    },
+    {
+      "name": "social-icons",
+      "status": "registered"
+    },
+    {
+      "name": "svg",
+      "status": "registered"
+    },
+    {
+      "name": "tabs",
+      "status": "registered"
+    },
+    {
+      "name": "tabs-nested",
+      "status": "registered"
+    },
+    {
+      "name": "team-members",
+      "status": "registered"
+    },
+    {
+      "name": "template",
+      "status": "registered"
+    },
+    {
+      "name": "testimonials",
+      "status": "registered"
+    },
+    {
+      "name": "text",
+      "status": "inferred"
+    },
+    {
+      "name": "text-basic",
+      "status": "inferred"
+    },
+    {
+      "name": "text-link",
+      "status": "inferred"
+    },
+    {
+      "name": "toggle",
+      "status": "registered"
+    },
+    {
+      "name": "toggle-mode",
+      "status": "registered"
+    },
+    {
+      "name": "video",
+      "status": "inferred"
+    },
+    {
+      "name": "wordpress",
+      "status": "registered"
+    },
+    {
+      "name": "product-title",
+      "status": "inferred"
+    },
+    {
+      "name": "product-gallery",
+      "status": "inferred"
+    },
+    {
+      "name": "product-short-description",
+      "status": "inferred"
+    },
+    {
+      "name": "product-price",
+      "status": "inferred"
+    },
+    {
+      "name": "product-stock",
+      "status": "inferred"
+    },
+    {
+      "name": "product-meta",
+      "status": "inferred"
+    },
+    {
+      "name": "product-rating",
+      "status": "inferred"
+    },
+    {
+      "name": "product-content",
+      "status": "registered"
+    },
+    {
+      "name": "product-add-to-cart",
+      "status": "inferred"
+    },
+    {
+      "name": "product-related",
+      "status": "inferred"
+    },
+    {
+      "name": "product-reviews",
+      "status": "inferred"
+    },
+    {
+      "name": "product-additional-information",
+      "status": "inferred"
+    },
+    {
+      "name": "product-tabs",
+      "status": "inferred"
+    },
+    {
+      "name": "product-upsells",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-breadcrumbs",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-mini-cart",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-cart-collaterals",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-cart-coupon",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-cart-items",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-checkout-coupon",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-checkout-login",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-checkout-customer-details",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-checkout-order-review",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-checkout-thankyou",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-checkout-order-table",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-checkout-order-payment",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-products",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-products-pagination",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-products-orderby",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-products-total-results",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-products-filter",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-products-archive-description",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-notice",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-account-page",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-account-form-login",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-account-form-register",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-account-form-lost-password",
+      "status": "inferred"
+    },
+    {
+      "name": "woocommerce-account-form-reset-password",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-orders",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-downloads",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-addresses",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-view-order",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-form-edit-address",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-form-edit-account",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-payment-methods",
+      "status": "registered"
+    },
+    {
+      "name": "woocommerce-account-add-payment-method",
+      "status": "registered"
+    }
+  ]
+}

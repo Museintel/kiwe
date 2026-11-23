@@ -1,29 +1,29 @@
 {
   "schema": "kiwe.command-route.v2",
   "contractVersion": "9.12",
-  "releaseId": "9.12-0a0018ba7b26",
+  "releaseId": "9.12-8aa333cec2ed",
   "route": "/ideate",
   "resources": [
     {
       "source": "KIWE-START.md",
       "url": "https://start.kiwelaunch.com/start.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-0a0018ba7b26/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-8aa333cec2ed/start.md",
       "sha256": "30bfacaec6d160ccdc4a1abcd2ffd6f45d531378a2a4903841d89e21f6f23795"
     },
     {
       "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
       "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-0a0018ba7b26/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-8aa333cec2ed/contracts/authoring-delivery.md",
       "sha256": "e805523326f362c0597f24699d07a894248b3dc05f8055151e826323500ebb9c"
     },
     {
       "source": "kiwe-ai-toolkit/contexts/ideate.md",
       "url": "https://start.kiwelaunch.com/contexts/ideate.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-0a0018ba7b26/contexts/ideate.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-8aa333cec2ed/contexts/ideate.md",
       "sha256": "86ab4146341a620dede32c743a0f25ea148c9e186b89179013a8c8cc9d1caf99"
     }
   ],
-  "sourceHash": "sha256:0a0018ba7b268f106e09a33ebb9ca840a2c3c0180820c0d0df43766191017d05",
+  "sourceHash": "sha256:8aa333cec2ed2ab27130a914e21afc87ffc9347c630cf13eb56bfbcde58845c5",
   "command": "/ideate",
   "context": "contexts/ideate.md",
   "requires": [
