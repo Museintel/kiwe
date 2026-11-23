@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kiwe.dev/contracts/seam.page-ir.v1.schema.json",
+  "title": "SEAM page intermediate representation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sourceHash", "nodes", "residuals"],
+  "properties": {
+    "schema": { "const": "seam.page-ir.v1" },
+    "sourceHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "value"],
+        "properties": { "name": { "type": "string", "pattern": "^--[a-zA-Z][a-zA-Z0-9_-]*$" }, "value": { "type": "string" } }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "parentId", "kind", "tag", "text", "attributes", "component", "layout", "style", "provenance"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "parentId": { "type": ["string", "null"] },
+          "kind": { "enum": ["section", "container", "heading", "text", "link", "button", "image", "video", "list", "list-item", "form", "input", "table", "generic"] },
+          "tag": { "type": "string", "minLength": 1 },
+          "text": { "type": "string" },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+          "component": {
+            "type": "object", "additionalProperties": false,
+            "required": ["semanticType", "adapter", "preferredElement", "confidence", "evidence", "limitations"],
+            "properties": {
+              "semanticType": { "enum": ["landmark", "navigation", "layout", "heading", "text", "link", "button", "image", "video", "audio", "embed", "separator", "list", "list-item", "form", "field", "table", "vector", "vector-part", "media-source", "other"] },
+              "adapter": { "enum": ["direct", "direct-media", "aggregate-list", "aggregate-svg", "semantic-layout", "media-child", "svg-child", "review"] },
+              "preferredElement": { "type": "string", "minLength": 1 },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+              "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "limitations": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "layout": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["display", "direction", "wrap", "gap", "widthMode"],
+            "properties": {
+              "display": { "type": "string" }, "direction": { "type": "string" }, "wrap": { "type": "string" },
+              "gap": { "type": "string" }, "widthMode": { "enum": ["intrinsic", "fixed", "fluid", "clamped", "unknown"] },
+              "responsive": {
+                "type": "array",
+                "items": {
+                  "type": "object", "additionalProperties": false, "required": ["viewportId", "viewportWidth", "breakpoint", "visible", "display", "direction", "wrap", "gap", "width", "height"],
+                  "properties": {
+                    "viewportId": { "type": "string" }, "viewportWidth": { "type": "integer", "minimum": 240 }, "breakpoint": { "type": ["string", "null"] }, "visible": { "type": "boolean" },
+                    "display": { "type": "string" }, "direction": { "type": "string" }, "wrap": { "type": "string" }, "gap": { "type": "string" },
+                    "width": { "type": "number", "minimum": 0 }, "height": { "type": "number", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          },
+          "style": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["native", "tokenBindings", "residuals"],
+            "properties": {
+              "native": { "type": "object", "additionalProperties": true },
+              "tokenBindings": { "type": "object", "additionalProperties": { "type": "string" } },
+              "residuals": { "type": "array", "items": { "type": "string" } },
+              "responsive": {
+                "type": "array",
+                "items": {
+                  "type": "object", "additionalProperties": false, "required": ["viewportId", "viewportWidth", "breakpoint", "native"],
+                  "properties": { "viewportId": { "type": "string" }, "viewportWidth": { "type": "integer", "minimum": 240 }, "breakpoint": { "type": ["string", "null"] }, "native": { "type": "object", "additionalProperties": true } }
+                }
+              }
+            }
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["captureNodeIds", "viewportIds", "selector"],
+            "properties": {
+              "captureNodeIds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "viewportIds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "selector": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "residuals": { "type": "array", "items": { "type": "string" } }
+  }
+}

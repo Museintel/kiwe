@@ -1,9 +1,9 @@
 {
   "schema": "kiwe.authoring-kit.v1",
   "contractVersion": "9.12",
-  "releaseId": "9.12-439f900405f7",
+  "releaseId": "9.12-0a0018ba7b26",
   "canonicalStart": "https://start.kiwelaunch.com/start.md",
-  "pinnedStart": "https://start.kiwelaunch.com/v/9.12-439f900405f7/start.md",
+  "pinnedStart": "https://start.kiwelaunch.com/v/9.12-0a0018ba7b26/start.md",
   "firstPrompt": "PROMPT.txt",
   "sharedContext": "contracts/authoring-delivery.md",
   "files": [
@@ -170,12 +170,12 @@
     {
       "path": "README.md",
       "bytes": 1428,
-      "sha256": "5b67678bc260c4993f4b696022cdbb34cd55783d493129fffb709038069c2d4e"
+      "sha256": "ebfa08e4fadad13b7e49d1a13c04cc8f2af654b3eed316c20c9c7561478a7778"
     },
     {
       "path": "reference/index.json",
       "bytes": 15545,
-      "sha256": "2a0d275a26e745614a68ea94bea12f6a2e84988683c28efac5c0ef7981559b4b"
+      "sha256": "81e8b4a29f096553148b7e4de6e7e10eb89715ea2563389cabf39993f2bd62fa"
     },
     {
       "path": "reference/source/docs/BRICKS-ICON-LIBRARY.md",
@@ -199,8 +199,8 @@
     },
     {
       "path": "reference/source/docs/FRONTEND-ATTRIBUTES.md",
-      "bytes": 13293,
-      "sha256": "d245606f6db18c62dc9aa434d9f0f3b745765c70cd4dc7b84d7514e192709f61"
+      "bytes": 13528,
+      "sha256": "a5b157113430ecc7c784160d88bf701bdc0fe09f25be809addb78fd1a9398fd1"
     },
     {
       "path": "reference/source/kiwe-ai-toolkit/reference/bricks-elements.json",
@@ -404,6 +404,6 @@
     }
   ],
   "archive": "https://start.kiwelaunch.com/start-authoring-kit.zip",
-  "archiveBytes": 242395,
-  "archiveSha256": "6680d506340e152c0e89d1d9274d9be97d24e4d8391aa9c5644b342757ea3d8a"
+  "archiveBytes": 242463,
+  "archiveSha256": "a07bbbb6d557f54d7cdd206b7075e97833a8b339a6f02fe6d78e7f5dc9a6f7cb"
 }

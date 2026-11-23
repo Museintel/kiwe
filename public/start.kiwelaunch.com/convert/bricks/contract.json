@@ -1,29 +1,29 @@
 {
   "schema": "kiwe.command-route.v2",
   "contractVersion": "9.12",
-  "releaseId": "9.12-439f900405f7",
+  "releaseId": "9.12-0a0018ba7b26",
   "route": "/convert/bricks",
   "resources": [
     {
       "source": "KIWE-START.md",
       "url": "https://start.kiwelaunch.com/start.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-439f900405f7/start.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-0a0018ba7b26/start.md",
       "sha256": "30bfacaec6d160ccdc4a1abcd2ffd6f45d531378a2a4903841d89e21f6f23795"
     },
     {
       "source": "kiwe-ai-toolkit/contracts/authoring-delivery.md",
       "url": "https://start.kiwelaunch.com/contracts/authoring-delivery.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-439f900405f7/contracts/authoring-delivery.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-0a0018ba7b26/contracts/authoring-delivery.md",
       "sha256": "e805523326f362c0597f24699d07a894248b3dc05f8055151e826323500ebb9c"
     },
     {
       "source": "kiwe-ai-toolkit/contexts/convert-bricks.md",
       "url": "https://start.kiwelaunch.com/contexts/convert-bricks.md",
-      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-439f900405f7/contexts/convert-bricks.md",
+      "pinnedUrl": "https://start.kiwelaunch.com/v/9.12-0a0018ba7b26/contexts/convert-bricks.md",
       "sha256": "0cc6b66d5838ba409c676b9d36b9e20a141098f69331bf951d975d488b7019d9"
     }
   ],
-  "sourceHash": "sha256:439f900405f7dc7e73b6145c55a1e6074eea34682fda4af2bc4702964a0f6060",
+  "sourceHash": "sha256:0a0018ba7b268f106e09a33ebb9ca840a2c3c0180820c0d0df43766191017d05",
   "command": "/convert /bricks",
   "context": "contexts/convert-bricks.md",
   "requires": [
