@@ -1,3 +1,8 @@
+## 8.0.0-rc.496 (2026-11-24, candidate)
+
+- Add permission-scoped Design Context, website setup and Bricks document operations for Start and Kiwe MCP.
+- Publish and restore individually reviewed Bricks pages, templates and homepage assignments through native WordPress owner approval.
+
 ## Version 1.x (Start project candidate)
 
 - Generate, preview, revise, convert and publish one page or template at a time through Start and MCP. Use the approved homepage direction, preserve existing native page content, and keep WooCommerce in charge of transaction and account views.
