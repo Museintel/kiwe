@@ -29,16 +29,16 @@ All 28 Start service tests passed locally and on Plum Giraffe under Node 22.23.5
 
 ## Existing-site pilot
 
-1. **Finish the shared pilot.** The live Start dashboard runs on Hostinger Node 22. Key RC6 lets the active owner of both store tenants approve sign-in. Start verified the Kiwe Launch agency domain and opened its introductory test entitlement with the two existing sites. Start's original public guide, protected login, Key handoff and guest denial passed live readback. The pilot still needs a live sign-in from the invited owner. The shared MCP authoring and Seam workflow handles individual designs. One-click browser generation needs its own authorized provider.
-2. **Dharwad Pedha.** Complete native owner approval in Start and load its existing Design Context. Preview and import one private Bricks draft and record the owner's review.
-3. **National Chikki.** Repeat the single-draft workflow and record the owner's review.
+1. **Shared pilot.** The live Start dashboard runs on Hostinger Node 22 with Key RC7. The invited owner signed in to the verified Kiwe Launch agency, and Start saved both stores' exact WordPress origins after native MCP verification. Start's original public guide, protected login, Key handoff and guest denial passed live readback. One-click browser generation needs its own authorized provider.
+2. **Dharwad Pedha.** The WordPress link is verified and Start offers the Key connection step. The founder deferred the design review. The remaining design test uses one approved preview, a private Bricks draft and an owner-reviewed publication.
+3. **National Chikki.** The WordPress link is verified and Start offers the Key connection step. Complete its single-draft and publication test after the Dharwad review.
 4. **Evergreen Basin.** Use the separate client invitation to collect the client's own Design Context. Start design when the client has supplied the required facts.
 
 ### Hosted sign-in correction
 
 The original static guide's `.htaccess` applied `form-action 'none'` to the live Start sign-in page. A direct server request followed the expected Key redirect, while the browser blocked the form. The Start document root now leaves route-specific headers to the application. The prior hosting profile is retained privately for rollback.
 
-The live **Continue with Key** button opened Key's WhatsApp sign-in. The original guide returned its published checksum, the guide and registry kept their restrictive policies, and guests still received HTTP 401 on `/projects`. The invited owner must complete Key sign-in and approval before the authenticated dashboard review. Run the [hosted login check](../services/start-projects/README.md#browser-login) on subsequent pilot deployments.
+The live **Continue with Key** button opened Key's WhatsApp sign-in. The original guide returned its published checksum, the guide and registry kept their restrictive policies, and guests still received HTTP 401 on `/projects`. The invited owner reached the live dashboard and both projects passed native verification. On National Chikki, the WordPress sign-in landed on its admin dashboard and reopening the review completed the connection. Run the [hosted login check](../services/start-projects/README.md#browser-login) on subsequent pilot deployments.
 
 Key RC7 corrected a second approval error. The old referrer policy caused Chrome to submit a null origin. The Key approval forms now preserve their own origin and require the same account, session and CSRF checks. In the paired Chrome rehearsal, the real form and callback routes opened a dashboard with two test projects. The Key deployment preserved the owner and both active store connections. [Key RC7 source](https://github.com/Museintel/key.kiwe/commit/335d2fe7c46de85c6c7605a5e2fd35e1f17060a3)
 
