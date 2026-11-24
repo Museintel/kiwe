@@ -26,7 +26,7 @@ On the configured Start login page, a first-time invitee enters the private code
 
 The client dashboard and MCP use the assigned site membership. For introductory Design Context, clients authorize their own WordPress account on that exact site. Start binds native consent and proposed changes to the account, site revision and client membership. A reinstated client authorizes again. The native WordPress link also gives a user with the right site role access to the complete Design Context. Billing, hosting and Key stay with the agency. WordPress single sign-on requires separate integration.
 
-The [plans and prices](https://kiwelaunch.com/plans/) are live with a header link to [Start login](https://start.kiwelaunch.com/login/). The login link serves the pilot status page until production Start routing and identity are configured. [Hosting and rollout plan](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
+The [plans and prices](https://kiwelaunch.com/plans/) are live with a header link to [Start login](https://start.kiwelaunch.com/login/). Start accepts the enrolled Key owner in the closed Agency pilot. General customer sign-in requires a configured commercial identity provider. [Hosting and rollout plan](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
 
 ## Existing WordPress sites
 
@@ -126,7 +126,15 @@ Keep the purchase credential inside the checkout server and keep handoff tickets
 
 For the closed agency pilot, configure `KIWE_START_KEY_PILOT_ACCOUNT` with the `key:` subject of the verified Key owner and use the dedicated Start service credential already configured for Key. Key requires its matching `KIWE_KEY_START_PILOT_OWNER_ID` and native owner approval. Start accepts only that subject. This mode opens a test Agency entitlement and provides a 20-minute MCP bearer from **MCP access** in the signed-in dashboard. The bearer expires on replacement or sign-out and uses the same project permissions. Customer invitations, purchases and standard OAuth discovery use the separate commercial identity configuration. Use a dedicated private pilot database so the production account rollout can explicitly migrate the approved projects.
 
-Hostinger can serve the existing versioned guide beside the project service by setting `KIWE_START_GUIDE_ROOT` to the absolute directory containing the verified public guide snapshot. The project and login routes retain their own authentication and response policies.
+Hostinger can serve the existing versioned guide beside the project service by setting `KIWE_START_GUIDE_ROOT` to the absolute directory containing the verified public guide snapshot. The Start service sets the security headers for each route. When replacing the static guide host, remove the legacy guide-only CSP, referrer and CORS directives from the Start document root's `.htaccess`. Keep the existing Passenger configuration and private environment settings. The guide handler applies its original security headers to the guide and registry.
+
+Run the hosted header check from the Start service directory after each Key pilot deployment.
+
+```sh
+npm run test:hosted-login -- https://start.kiwelaunch.com https://key.kiwelaunch.com
+```
+
+In a signed-out browser, open `/login/`, select **Continue with Key** and confirm that Key opens. The HTTP check covers the hosting layer, and the browser check covers form submission and navigation.
 
 For the shared Hostinger runtime, set `GOMAXPROCS=2` in Start's environment. The TypeScript compiler subprocess uses the same environment. Hostinger rejected the unrestricted Go worker count during the pilot, and the bounded run produced one Bricks review ZIP from the synthetic Start homepage.
 

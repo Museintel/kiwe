@@ -34,4 +34,12 @@ All 28 Start service tests passed locally and on Plum Giraffe under Node 22.23.5
 3. **National Chikki.** Repeat the single-draft workflow and record the owner's review.
 4. **Evergreen Basin.** Use the separate client invitation to collect the client's own Design Context. Start design when the client has supplied the required facts.
 
+### Hosted sign-in correction
+
+The original static guide's `.htaccess` applied `form-action 'none'` to the live Start sign-in page. A direct server request followed the expected Key redirect, while the browser blocked the form. The Start document root now leaves route-specific headers to the application. The prior hosting profile is retained privately for rollback.
+
+The live **Continue with Key** button opened Key's WhatsApp sign-in. The original guide returned its published checksum, the guide and registry kept their restrictive policies, and guests still received HTTP 401 on `/projects`. The invited owner must complete Key sign-in and approval before the authenticated dashboard review. Run the [hosted login check](../services/start-projects/README.md#browser-login) on subsequent pilot deployments.
+
+Key RC7 corrected a second approval error. The old referrer policy caused Chrome to submit a null origin. The Key approval forms now preserve their own origin and require the same account, session and CSRF checks. In the paired Chrome rehearsal, the real form and callback routes opened a dashboard with two test projects. The Key deployment preserved the owner and both active store connections. [Key RC7 source](https://github.com/Museintel/key.kiwe/commit/335d2fe7c46de85c6c7605a5e2fd35e1f17060a3)
+
 The store previews use existing WordPress hosting. Managed onboarding is a separate release. The connected Hostinger account has no active Agency Hosting order. Confirm the eligible order and actual renewal cost, qualify the Agency setup API, verify temporary domain and installation receipts, install the signed Kiwe and MCP packages, then qualify customer domain ownership, TLS and native role assignment. Hostinger's current setup adapter in Start uses the Shared and Cloud API. A portable enrollment file must be signed, short-lived and bound to its site, with the same ownership proof on import. Payment and domain registration checkout are deferred from the pilot. [Hostinger Agency API](https://github.com/hostinger/api-mcp-server/blob/main/types.d.ts)

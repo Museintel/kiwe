@@ -221,6 +221,7 @@ export function buildHomepage(brief, graphText, input) {
     '.layout-editorial{max-width:66rem}.layout-centered{text-align:center}.layout-centered .home-intro{margin:auto}.home-intro{max-width:54rem;min-width:0}',
     '.layout-split:has(.home-hero-image){grid-template-columns:1.14fr 1fr}.home-hero-image{width:100%;height:100%;max-height:30rem;object-fit:cover;border-radius:1rem}',
     'h1,h2,h3{font-family:' + type + ';line-height:1.1;overflow-wrap:anywhere}h1{font-size:clamp(2.65rem,7vw,6.4rem);letter-spacing:-.065em;margin:0}',
+    '.layout-split:has(.home-hero-image) h1{font-size:clamp(2.4rem,4.6vw,4.1rem);text-wrap:balance}',
     'h2{font-size:clamp(1.75rem,4vw,3rem);letter-spacing:-.045em;margin:.15rem 0 1.25rem}h3{font-size:1.25rem;margin:.5rem 0}',
     '.home-intro p,.home-about p{font-size:clamp(1.05rem,2vw,1.28rem);max-width:55ch}.layout-centered p{margin-inline:auto}',
     '.home-cta{background:var(--home-accent);color:var(--home-accent-ink);padding:.8rem 1.35rem;text-decoration:none;display:inline-block;border-radius:3rem;font-weight:700}',
