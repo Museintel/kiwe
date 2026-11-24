@@ -586,7 +586,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           const fields = await readBody(request, formType);
           if (action === 'request') {
             const link = await homepage.begin(accountId, { ...fields, projectId, target, revision: Number(fields.revision) });
-            return send(response, 200, siteAuthorizationPage(project, link, 'let Kiwe Start read the saved Design Context for this design'));
+            return send(response, 200, siteAuthorizationPage(project, link, 'let Kiwe Start read the saved Design Context for this design', location));
           }
           if (action === 'revise') await homepage.revise(accountId, {
             ...fields, projectId, target, revision: Number(fields.revision), regenerate: fields.regenerate === '1',
@@ -595,7 +595,9 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           if (action === 'generate') await homepage.generate(accountId, { projectId, target });
           if (action === 'convert') {
             const started = await bricks.begin(accountId, { ...fields, projectId, target, revision: Number(fields.revision) });
-            if (started.authorizationUrl) return redirect(response, started.authorizationUrl);
+            if (started.authorizationUrl) {
+              return send(response, 200, siteAuthorizationPage(project, started.authorizationUrl, 'let Kiwe Start prepare the private Bricks draft review', location));
+            }
           }
           if (action === 'continue-import') {
             await bricks.resume(accountId, { ...fields, projectId, target, revision: Number(fields.revision) });
@@ -604,7 +606,12 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
             const input = { ...fields, projectId, target, revision: Number(fields.revision) };
             if (action === 'publication') {
               const result = await publication.begin(accountId, input);
-              if (result.authorizationUrl) return redirect(response, result.authorizationUrl);
+              if (result.authorizationUrl) {
+                const purpose = input.action === 'restore'
+                  ? 'let Kiwe Start prepare the review to restore the previous design'
+                  : 'let Kiwe Start prepare the review to publish this design';
+                return send(response, 200, siteAuthorizationPage(project, result.authorizationUrl, purpose, location + '#publication'));
+              }
             } else await publication.resume(accountId, input);
             return redirect(response, location + '#publication');
           }

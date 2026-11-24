@@ -393,9 +393,11 @@ test('the Pages and Templates dashboard reviews, converts, publishes and restore
   assert.match(await (await f.request(projectPages, project.options)).text(), /action="[^"]+\/homepage\/convert"/);
   assert.equal((await mcp(foreign, 'convert_homepage', action)).isError, true);
 
+  const convertForm = await mutate('convert', { draftId: draft.id, revision: '3' });
+  const convertLink = await wordpressAuthorization(convertForm);
   const approvals = await Promise.all([mcp(owner, 'convert_homepage', action), mcp(owner, 'convert_homepage', action)]);
-  assert.equal(approvals[0].structuredContent.authorizationUrl, approvals[1].structuredContent.authorizationUrl);
-  const callback = approveUrl(approvals[0].structuredContent.authorizationUrl, '/projects/bricks-return');
+  for (const approval of approvals) assert.equal(approval.structuredContent.authorizationUrl, convertLink);
+  const callback = approveUrl(convertLink, '/projects/bricks-return');
   const lost = await f.request(callback, project.options);
   assert.equal(lost.status, 409);
   assert.equal(conversion.uploads(), 1);
@@ -425,8 +427,11 @@ test('the Pages and Templates dashboard reviews, converts, publishes and restore
   const publish = { ...action, action: 'publish' };
   assert.equal((await mcp(await f.connect('someone-else'), 'prepare_homepage_publication', publish)).isError, true);
   const publishForm = await mutate('publication', { draftId: draft.id, revision: '3', action: 'publish' });
-  const publishCallback = approveUrl(publishForm.headers.get('location'), '/projects/homepage-publish-return');
-  assert.equal((await f.request(publishCallback, project.options)).status, 303);
+  assert.ok((await publishForm.clone().text()).includes(`href="${project.home}#publication">Back to design review`));
+  const publishLink = await wordpressAuthorization(publishForm);
+  assert.equal((await mcp(reopened, 'prepare_homepage_publication', publish)).structuredContent.authorizationUrl, publishLink);
+  const publishCallback = approveUrl(publishLink, '/projects/homepage-publish-return');
+  assert.equal((await f.request(publishCallback, project.options)).headers.get('location'), project.home + '#publication');
   const waiting = (await mcp(reopened, 'complete_homepage_publication', publish)).structuredContent.publication;
   assert.equal(waiting.status, 'approval_required');
   assert.equal(publication.writes(), 0);
@@ -442,8 +447,12 @@ test('the Pages and Templates dashboard reviews, converts, publishes and restore
   assert.equal(publication.writes(), 1);
 
   const restore = { ...action, action: 'restore' };
+  const restoreForm = await mutate('publication', { draftId: draft.id, revision: '3', action: 'restore' });
+  assert.match(await restoreForm.clone().text(), /prepare the review to restore the previous design/);
+  const restoreLink = await wordpressAuthorization(restoreForm);
   const openedRestore = (await mcp(reopened, 'prepare_homepage_publication', restore)).structuredContent;
-  assert.equal((await f.request(approveUrl(openedRestore.authorizationUrl, '/projects/homepage-publish-return'), project.options)).status, 303);
+  assert.equal(openedRestore.authorizationUrl, restoreLink);
+  assert.equal((await f.request(approveUrl(restoreLink, '/projects/homepage-publish-return'), project.options)).status, 303);
   publication.approve();
   assert.equal((await mutate('finish-publication', { draftId: draft.id, revision: '3', action: 'restore' })).status, 303);
   assert.match(await (await f.request(project.home, project.options)).text(), /previous homepage was restored/);
@@ -566,12 +575,17 @@ test('one document keeps its direction, approval, exact import and publication s
   assert.equal((await post(at('blog') + '/approve', { draftId: waiting.id, sha256: review.sourceSha256 })).status, 409);
   assert.equal((await post(at('contact') + '/approve', { draftId: waiting.id, sha256: review.sourceSha256 })).status, 303);
   const compile = { ...input, draftId: waiting.id };
-  assert.equal((await open('convert_document', compile, '/projects/bricks-return')).status, 409, 'Simulated lost native upload reply.');
+  const contactFields = { draftId: waiting.id, revision: String(input.revision) };
+  const documentConvert = await wordpressAuthorization(await post(at('contact') + '/convert', contactFields));
+  assert.equal((await start('convert_document', compile)).structuredContent.authorizationUrl, documentConvert);
+  assert.equal((await f.request(approveUrl(documentConvert, '/projects/bricks-return'), project.options)).status, 409, 'Simulated lost native upload reply.');
   await start('resume_bricks', compile);
   conversion.approve();
   assert.equal((await start('resume_bricks', compile)).structuredContent.conversion.status, 'draft_ready');
-  assert.equal((await open('prepare_document_publication', { ...compile, action: 'publish' }, '/projects/homepage-publish-return')).headers.get('location'),
-    at('contact') + '#publication');
+  const documentPublish = await wordpressAuthorization(await post(at('contact') + '/publication', { ...contactFields, action: 'publish' }));
+  assert.equal((await start('prepare_document_publication', { ...compile, action: 'publish' })).structuredContent.authorizationUrl, documentPublish);
+  const documentReturn = await f.request(approveUrl(documentPublish, '/projects/homepage-publish-return'), project.options);
+  assert.equal(documentReturn.headers.get('location'), at('contact') + '#publication');
   assert.equal((await start('complete_document_publication', { ...compile, action: 'publish' })).structuredContent.publication.status, 'approval_required');
   assert.equal(publication.writes(), 0);
   publication.approve();

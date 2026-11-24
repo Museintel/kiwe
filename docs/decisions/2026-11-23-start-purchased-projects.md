@@ -46,6 +46,8 @@ Start invokes the trusted Seam release against the exact current approved homepa
 
 The project stores drafts by checklist target. Existing Start databases map older drafts to Home automatically. A WordPress owner authorizes public design evidence for the requested revision. The approved homepage sets its design direction, and the owner approves each target’s source separately. A terminal placement receipt belongs to that exact target and import.
 
+Start submits its design, conversion, publication and restoration forms to its own origin. The response links to the native WordPress authorization and back to the exact design review. The website owner completes the existing approval steps in WordPress. MCP returns the same native authorization URL.
+
 Start compiles each approved document in a distinct Seam namespace so different layouts can coexist in the site’s native style registry. WordPress places the reviewed design through native Bricks template conditions or a reviewed page assignment. Original page and post bodies retain their WordPress authority. Authored privacy and terms text must already be present in WordPress. Cart, checkout, payment, order confirmation and account sections use native Bricks Sections rendered only on their assigned WooCommerce route. The placement saves its own encrypted recovery and retires the completed import transport. The exact imported template stays private for reference.
 
 ## Managed hosting

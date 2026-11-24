@@ -7,6 +7,7 @@
 
 ## Version 1.x (Start project candidate)
 
+- Open WordPress authorization from the Start review page for Bricks conversion, publication and restoration.
 - Link verified Start projects to the existing WordPress Design Context form. Read saved public facts through Kiwe MCP when preparing a design.
 - Restore browser sign-in to the Key pilot and check the published Start login and guide policies after deployment.
 - Fit split homepage hero headings to the text column on mobile and desktop.

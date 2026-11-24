@@ -309,11 +309,14 @@ ${error}${nativeNote}<p class="status">Revision ${draft.version} · ${status}</p
 ${changes}<details><summary>Refresh saved business facts</summary>${designContext}${request}</details>`, true);
 }
 
-export function siteAuthorizationPage(project, authorizationUrl, purpose = 'approve the connection to Kiwe Start') {
+export function siteAuthorizationPage(project, authorizationUrl, purpose = 'approve the connection to Kiwe Start', designReview) {
+  const back = designReview
+    ? `<a href="${escape(designReview)}">Back to design review</a>`
+    : `<a href="/projects/${project.id}">Back to project</a>`;
   return page('Authorize this website',
     `<p>Sign in to WordPress at <strong>${escape(new URL(authorizationUrl).hostname)}</strong> and ${escape(purpose)}.</p>
 <a class="button" href="${escape(authorizationUrl)}">Open WordPress authorization</a>
-<p><a href="/projects/${project.id}">Back to project</a></p>`, true);
+<p>${back}</p>`, true);
 }
 
 export function siteReturnPage(message, approved) {
