@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Refer a business to Kiwe Launch. Help your clients get an Appsite at the partner price and earn a monthly commission for paid service.">
+  <link rel="canonical" href="https://kiwelaunch.com/partners/">
+  <link rel="stylesheet" href="/assets/launch/site.css">
+  <script src="/assets/launch/site.js" defer></script>
+  <title>Become a partner | Kiwe Launch</title>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="Kiwe Launch home"><span class="brand-mark" aria-hidden="true"></span>kiwe<span class="brand-sub">launch</span></a>
+      <div class="header-actions"><a class="login" href="https://start.kiwelaunch.com/login/">Log in</a><a class="button button-small" href="/#plan">See the Client plan</a></div>
+    </div>
+  </header>
+  <main class="subpage" id="main">
+    <section class="section wrap">
+      <div class="demo-layout partner-layout">
+        <div>
+          <p class="eyebrow">Kiwe Partner Program</p>
+          <h1>Help good businesses get online.</h1>
+          <p class="intro">Refer clients who need a website or an online store. They get the Kiwe partner price, and you earn while they’re on a paid plan.</p>
+          <ul class="info-list">
+            <li><strong>Your client pays ₹7,200 for their first year</strong> and then ₹600/month with a verified referral.</li>
+            <li><strong>You earn ₹100 per paid month of service.</strong> Commission reflects any refunds or reversals.</li>
+            <li><strong>Your client owns their Appsite.</strong> They set up their own account and work directly with Kiwe.</li>
+          </ul>
+          <p>Register your interest to hear when partner enrollment opens.</p>
+        </div>
+        <form class="intake-form" action="/launch-api/intake.php" method="post" data-intake>
+          <h2 class="subhead">Register your interest</h2>
+          <input type="hidden" name="kind" value="partner">
+          <label>Your name<input name="name" autocomplete="name" maxlength="100" required></label>
+          <label>Work email<input type="email" name="email" autocomplete="email" maxlength="254" required></label>
+          <label>Business or freelance name<input name="business" autocomplete="organization" maxlength="150" required></label>
+          <label>Phone <span class="optional">(optional)</span><input type="tel" name="phone" autocomplete="tel" maxlength="24"></label>
+          <label>What kinds of businesses do you help? <span class="optional">(optional)</span><textarea name="message" rows="3" maxlength="1200"></textarea></label>
+          <div hidden aria-hidden="true"><label>Leave this empty<input name="website_code" tabindex="-1" autocomplete="off"></label></div>
+          <label class="consent"><input type="checkbox" name="consent" value="yes" required><span>Kiwe may contact me about the Partner Program. <a href="/privacy/">How we use your details</a></span></label>
+          <button class="button" type="submit">Register my interest</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner"><a href="/" class="brand" aria-label="Kiwe Launch home"><span class="brand-mark" aria-hidden="true"></span>kiwe<span class="brand-sub">launch</span></a><nav aria-label="Footer navigation"><a href="/#demo">Book a demo</a><a href="/privacy/">Privacy</a></nav><small>© Kiwe Launch</small></div>
+  </footer>
+</body>
+</html>

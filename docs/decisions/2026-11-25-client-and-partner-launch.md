@@ -29,4 +29,6 @@ The earlier [purchased projects decision](2026-11-23-start-purchased-projects.md
 
 Batch 1 stores the payment and referral references, immutable first-term price and chosen domain with the project in a single transaction. The trusted Launch service supplies payment confirmation and verified attribution. Replayed deliveries return the original project. A payment or referral may only create one new project. The [integration guide](../../services/start-projects/README.md#checkout-handoff) specifies the current receipt.
 
+The Batch 2 [public site and enquiry flow](../../services/launch-office/README.md) presents the single offer and saves demo requests and Partner Program interest in the private Launch inbox. It uses actual public site examples and a labelled sample dashboard. Checkout enrolment adds verified buyer accounts, private referrals and the registrar quote before payment is offered.
+
 Use the current environment for isolated checkout and provider rehearsals before enabling real registration, charges or payouts. Exercise the published-page workflow with Dharwad Pedha and National Chikki before onboarding Evergreen Basin with client-supplied Design Context. Review each exact draft and native publication with the appropriate owner.
