@@ -128,6 +128,8 @@ For the closed agency pilot, configure `KIWE_START_KEY_PILOT_ACCOUNT` with the `
 
 Hostinger can serve the existing versioned guide beside the project service by setting `KIWE_START_GUIDE_ROOT` to the absolute directory containing the verified public guide snapshot. The project and login routes retain their own authentication and response policies.
 
+For the shared Hostinger runtime, set `GOMAXPROCS=2` in Start's environment. The TypeScript compiler subprocess uses the same environment. Hostinger rejected the unrestricted Go worker count during the pilot, and the bounded run produced one Bricks review ZIP from the synthetic Start homepage.
+
 The header on Kiwe Launch opens `GET /login/` on Start. Configure an OpenID Connect confidential client with the exact callback `https://start.kiwelaunch.com/projects/login/return`. Start uses authorization code, S256 PKCE, an expiring browser-bound transaction and a verified signed ID token. The issuer must provide the same immutable subject to Start's browser client, Launch's trusted purchase integration and the MCP resource. Configure those registrations to share stable subjects. Email is used to accept a matching client invitation after the issuer verifies it.
 
 The login transaction rotates the Start session and consumes the prior browser transaction. Preserve the database across restarts and keep authorization codes, invitation codes, bearer credentials and cookies out of access and application logs.
