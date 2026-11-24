@@ -136,6 +136,8 @@ For an owned domain, use `{ "mode": "owned", "name": "example.com" }`. For a ref
 
 Keep the purchase credential inside the checkout server and keep handoff tickets out of URLs and logs. An entitlement reference or redirect alone grants no access. The checkout backend must authenticate the buyer before issuing each handoff; payment webhook deliveries call only the entitlement endpoint.
 
+Launch uses the same purchase credential for `POST /projects/api/purchase-delivery` with the exact `entitlementId` and verified `accountId` of a referred Client purchase. The endpoint returns `projectId` and `readyAt`. The latter is the Unix timestamp of the verified Kiwe site connection after the included managed WordPress site is ready. An unfinished project returns a null date. Launch uses this limited record to qualify commission periods. Partners use the separate Launch dashboard.
+
 ## Browser login
 
 For the closed pilot, configure `KIWE_START_KEY_PILOT_ACCOUNT` with the `key:` subject of the verified Key owner and use the dedicated Start service credential already configured for Key. Key requires its matching `KIWE_KEY_START_PILOT_OWNER_ID` and native owner approval. The Key sign-in accepts only that subject and opens the existing pilot workspace.

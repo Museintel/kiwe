@@ -34,6 +34,18 @@
 .billing-actions label { display: flex; gap: .45rem; align-items: start; }
 .billing-actions input[type="checkbox"] { margin: .35rem 0 0; accent-color: var(--lime); }
 .billing-actions .billing-link { justify-self: start; padding: .2rem 0; border: 0; background: transparent; color: #e7f5d3; font-weight: 750; text-decoration: underline; text-underline-offset: .22em; text-align: left; }
+.partner-balances { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 1.1rem 0; }
+.partner-balances div { padding: .65rem .75rem; border: 1px solid #606f57; border-radius: .65rem; }
+.partner-balances dt { font-size: .87rem; color: #d4dece; }
+.partner-balances dd { margin: .18rem 0 0; font-size: clamp(1.1rem, 2.2vw, 1.6rem); font-weight: 750; overflow-wrap: anywhere; }
+.checkout-summary button:disabled { opacity: .55; cursor: default; }
+.partner-clients { margin-top: 1.25rem; }
+.partner-pages { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .6rem; }
+.partner-withdrawals { display: grid; list-style: none; margin: .45rem 0 0; padding: 0; }
+.partner-withdrawals li { padding-block: .75rem; border-top: 1px solid #606f57; }
+.partner-withdrawals li:first-child { border-top: 0; }
+.partner-withdrawals span, .partner-withdrawals small { display: block; color: #d4dece; overflow-wrap: anywhere; }
+.partner-withdrawals .billing-actions { margin-top: .3rem; }
 @media (max-width: 730px) {
   .checkout-grid { grid-template-columns: minmax(0, 1fr); }
 }

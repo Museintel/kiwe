@@ -62,11 +62,11 @@ function kiwe_billing_hosted_url(mixed $url): ?string
     return $url;
 }
 
-function kiwe_billing_first_term_end(int $time): int
+function kiwe_billing_month_end(int $time, int $months): int
 {
     $india = new DateTimeZone('Asia/Kolkata');
     $day = (new DateTimeImmutable('@' . $time))->setTimezone($india);
-    $next = $day->modify('first day of this month')->modify('+1 year');
+    $next = $day->modify('first day of this month')->modify('+' . $months . ' months');
     return $next->setDate((int) $next->format('Y'), (int) $next->format('n'), min((int) $day->format('j'), (int) $next->format('t')))
         ->getTimestamp();
 }

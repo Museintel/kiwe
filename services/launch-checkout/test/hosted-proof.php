@@ -54,13 +54,16 @@ require __DIR__ . '/billing-fixture.php';
 $gatewayFile = $root . '/data/gateway.json';
 file_put_contents($gatewayFile, '{"links":{},"payments":{},"subscriptions":{}}');
 $charges = 0;
-$startCallback = static function (string $action, array $data) use ($buyer, $draft, &$charges): array {
+$readyAt = null;
+$fixtureProject = '00000000-1221-4111-8111-000000000001';
+$startCallback = static function (string $action, array $data) use ($buyer, $draft, $fixtureProject, &$readyAt, &$charges): array {
     kiwe_checkout_expect($data['accountId'] === $buyer['id'], 'Start keeps the verified account ID.');
     if ($action === 'purchases') {
         kiwe_checkout_expect($data['clientOrder']['paidMinor'] === $draft['quote']['upfrontMinor'], 'Start receives the paid quote.');
         $charges++;
-        return ['projectId' => '00000000-1221-4111-8111-000000000001'];
+        return ['projectId' => $fixtureProject];
     }
+    if ($action === 'purchase-delivery') return ['projectId' => $fixtureProject, 'readyAt' => $readyAt];
     return ['ticket' => str_repeat('a', 43), 'action' => 'http://127.0.0.1:8598/projects/open'];
 };
 $secret = 'Kiwe checkout isolated webhook fixture secret';
@@ -104,4 +107,66 @@ $renewal = $billing->status($buyer['id'])['mandate'];
 kiwe_checkout_expect($renewal['startsAt'] === $billingState['firstTermEnd'] && $renewal['status'] === 'created',
     'Renewal approval starts as the first year ends.');
 
-echo json_encode(['ok' => true, 'php' => PHP_VERSION, 'accountId' => $buyer['id'], 'draftRevision' => $draft['revision']], JSON_THROW_ON_ERROR), PHP_EOL;
+$first = (new DateTimeImmutable('2024-01-31T12:00:00+05:30'))->getTimestamp();
+$last = kiwe_billing_month_end($first, 12);
+kiwe_checkout_expect(kiwe_billing_month_end($first, 1) === (new DateTimeImmutable('2024-02-29T12:00:00+05:30'))->getTimestamp(),
+    'Service months clamp to the last day of shorter months.');
+$db = new PDO('sqlite:' . $root . '/data/checkout.sqlite');
+$db->prepare('UPDATE launch_payments SET confirmed_at = ?, first_term_end = ? WHERE id = ?')->execute([$first, $last, $billingState['id']]);
+$db->prepare('UPDATE launch_renewal_mandates SET start_at = ? WHERE id = ?')->execute([$last, $renewal['id']]);
+
+$partners = $billing->partners();
+$partnerId = $partner['id'];
+kiwe_checkout_expect($partners->summary($partnerId)['earned'] === 0, 'A paid referral vests nothing before setup is verified.');
+kiwe_checkout_expect($partners->reconcileDeliveries() === ['checked' => 1, 'ready' => 0, 'retry' => 0], 'Await a verified Start service.');
+$readyAt = $first + 86400;
+$db->exec('UPDATE launch_partner_services SET check_after = 0');
+kiwe_checkout_expect($partners->reconcileDeliveries() === ['checked' => 1, 'ready' => 1, 'retry' => 0], 'Verify the exact Start service record.');
+
+$send = static function (string $name, array $payload, string $id) use ($billing, $secret): void {
+    $raw = json_encode(['account_id' => 'acc_KiweTestFixture', 'event' => $name, 'created_at' => time(), 'payload' => $payload],
+        JSON_THROW_ON_ERROR);
+    $billing->ingest($raw, hash_hmac('sha256', $raw, $secret), $id);
+};
+$gateway = json_decode(file_get_contents($gatewayFile), true, flags: JSON_THROW_ON_ERROR);
+$subscription = reset($gateway['subscriptions']);
+$subscription['status'] = 'active';
+$subscription['start_at'] = $last;
+$subscription['current_start'] = $last;
+$subscription['current_end'] = kiwe_billing_month_end($last, 1);
+$monthPayment = ['id' => 'pay_HostedMonth', 'amount' => $draft['quote']['renewalMinor'], 'currency' => 'INR',
+    'status' => 'captured', 'amount_refunded' => 0];
+$cycle = ['subscription' => ['entity' => $subscription], 'payment' => ['entity' => $monthPayment]];
+$send('subscription.charged', $cycle, 'hosted-month');
+$send('subscription.charged', $cycle, 'hosted-month-replay');
+kiwe_checkout_expect($partners->summary($partnerId)['available'] === 130000, 'Twelve paid first-term months and one paid renewal each earn INR 100.');
+
+$firstRequest = 'wd_' . str_repeat('1', 32);
+$secondRequest = 'wd_' . str_repeat('2', 32);
+$partners->requestWithdrawal($partnerId, $firstRequest, 60000);
+$partners->requestWithdrawal($partnerId, $secondRequest, 60000);
+$partners->reviewWithdrawal($firstRequest, 60000, 'approve');
+$partners->reviewWithdrawal($secondRequest, 60000, 'approve');
+$partners->recordPayout($firstRequest, 60000, 'UTR-HOSTED-SYNTHETIC');
+$reused = false;
+try {
+    $partners->recordPayout($secondRequest, 60000, 'utr-hosted-synthetic');
+} catch (KiweCheckoutError $error) {
+    $reused = $error->status === 409 && $error->getMessage() === 'This transfer is already recorded.';
+}
+kiwe_checkout_expect($reused, 'One external transfer cannot settle two withdrawals.');
+$partners->reviewWithdrawal($secondRequest, 60000, 'decline');
+kiwe_checkout_expect($partners->summary($partnerId)['available'] === 70000, 'Declining an unpaid request releases its reservation.');
+
+$dispute = ['id' => 'disp_HostedChargeback', 'payment_id' => $monthPayment['id'], 'currency' => 'INR',
+    'amount' => $monthPayment['amount'], 'amount_deducted' => $monthPayment['amount']];
+$send('payment.dispute.lost', ['dispute' => ['entity' => $dispute]], 'hosted-chargeback');
+kiwe_checkout_expect($partners->summary($partnerId)['available'] === 60000, 'A lost chargeback removes the reversed renewal commission.');
+$refund = ['id' => 'rfnd_HostedAnnual', 'payment_id' => $payment['id'], 'currency' => 'INR',
+    'amount' => intdiv($payment['amount'], 2), 'status' => 'processed'];
+$send('refund.processed', ['refund' => ['entity' => $refund]], 'hosted-annual-refund');
+kiwe_checkout_expect($partners->summary($partnerId) === ['earned' => 60000, 'available' => 0, 'pending' => 0,
+    'paid' => 60000, 'held' => 0, 'adjustmentDue' => 0], 'Refunded charges reduce the available balance after recorded payouts.');
+
+echo json_encode(['ok' => true, 'php' => PHP_VERSION, 'accountId' => $buyer['id'], 'partnerAccountId' => $partnerId,
+    'draftRevision' => $draft['revision']], JSON_THROW_ON_ERROR), PHP_EOL;

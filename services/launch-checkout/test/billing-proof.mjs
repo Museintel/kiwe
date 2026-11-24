@@ -15,7 +15,8 @@ export async function startForCheckout(checkoutOrigin) {
   const origin = 'http://127.0.0.1:' + port;
   const purchaseToken = randomBytes(32).toString('base64url');
   const pilotAccount = 'key:isolated-owner';
-  const projects = openProjects(':memory:', { launchWebsite: checkoutOrigin });
+  let fixtureTime = null;
+  const projects = openProjects(':memory:', { launchWebsite: checkoutOrigin, now: () => fixtureTime ?? Date.now() });
   const server = createStartServer({
     projects, startOrigin: origin, checkoutOrigin, pilotPurchaseToken: purchaseToken,
     browserLogin: { pilotAccount, authorizationOrigin: 'https://key.kiwelaunch.com' },
@@ -24,6 +25,21 @@ export async function startForCheckout(checkoutOrigin) {
   await once(server, 'listening');
   return {
     origin, purchaseToken, projects, pilotAccount,
+    confirmManagedSite(accountId, projectId, readyAt) {
+      const target = { projectId, revision: projects.getProject(accountId, { projectId }).revision };
+      const domain = 'partner-fixture.example.invalid';
+      fixtureTime = readyAt * 1000;
+      try {
+        projects.prepareManagedSite(accountId, target);
+        projects.reserveManagedSite(accountId, target, domain);
+        projects.saveManagedStatus(accountId, target, 'ready');
+        projects.confirmSiteLink({ ...target, accountId }, {
+          url: 'https://' + domain, coreVersion: '8.0.0-rc.498', wordpressVersion: '7.1.5',
+        });
+      } finally {
+        fixtureTime = null;
+      }
+    },
     async close() {
       await new Promise(resolve => server.close(resolve));
       projects.close();
@@ -212,4 +228,5 @@ export async function verifyBilling({ origin, data, page, direct, directEmail, d
   assert.equal(await event('payment_link.paid', { payment_link: { entity: directLink }, payment: { entity: directPayment } }, 'direct-paid-late'), 200);
   assert.equal(await direct.getByRole('button', { name: 'Open Kiwe Start' }).count(), 0);
   assert.equal((await tools('kiwe_launch_reconcile_billing', {})).delivered, 0);
+  return { event, payment, purchaseId: link.reference_id, projectId: purchasedProjectId };
 }

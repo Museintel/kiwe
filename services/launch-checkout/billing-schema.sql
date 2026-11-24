@@ -51,6 +51,16 @@ CREATE TABLE IF NOT EXISTS launch_refunds (
 ) STRICT;
 CREATE INDEX IF NOT EXISTS launch_refunds_by_payment ON launch_refunds(payment_id);
 
+CREATE TABLE IF NOT EXISTS launch_disputes (
+    dispute_id TEXT PRIMARY KEY,
+    payment_id TEXT NOT NULL,
+    deducted INTEGER NOT NULL CHECK(deducted >= 0),
+    held INTEGER NOT NULL CHECK(held >= 0),
+    terminal INTEGER NOT NULL CHECK(terminal IN (0, 1)),
+    occurred_at INTEGER NOT NULL
+) STRICT;
+CREATE INDEX IF NOT EXISTS launch_disputes_by_payment ON launch_disputes(payment_id);
+
 CREATE TABLE IF NOT EXISTS launch_billing_events (
     id TEXT PRIMARY KEY,
     digest TEXT NOT NULL,

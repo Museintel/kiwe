@@ -1,3 +1,5 @@
+25 November — Standalone Client accounts retain control of their sites. Referring partners see their enrolled clients and earn ₹100 per completed paid month after verified setup. They can request a withdrawal and see its status in the Partner area. Refunds and payment reversals adjust the commission balance. [Partner workflow](../services/launch-checkout/README.md#partner-earnings-and-withdrawals)
+
 25 November — A paid Client order opens Start under the same verified Launch account. The first payment covers 12 months. The buyer separately approves the monthly price and start date for automatic renewal and can cancel from checkout. [Checkout workflow](../services/launch-checkout/README.md#first-year-and-monthly-renewals)
 
 25 November — The checkout verifies the buyer's email before saving an account. The matching email unlocks a referral price and pre-filled details. The buyer chooses an eligible standard domain or confirms a domain they own. The Partner Program offers a private link and keeps the buyer in control of their account. [Checkout workflow](../services/launch-checkout/README.md)

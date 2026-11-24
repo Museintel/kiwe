@@ -433,6 +433,14 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       const handoff = projects.issueHandoff(input);
       return json(response, 201, { ...handoff, action: startOrigin + '/projects/open' });
     }
+    if ((!pilot || launchBuyers) && endpoint === 'POST /projects/api/purchase-delivery') {
+      purchaseWrite(request);
+      const input = await readBody(request, jsonType);
+      if (typeof input?.accountId !== 'string' || !/^launch:[a-f0-9]{32}$/.test(input.accountId)) {
+        throw new StartError(403, 'launch_buyer_required', 'This connection checks Kiwe Launch Client deliveries.');
+      }
+      return json(response, 200, projects.purchaseDelivery(input));
+    }
     if (!pilot && endpoint === 'POST /projects/api/client-handoffs') {
       purchaseWrite(request);
       const handoff = projects.issueClientHandoff(await readBody(request, jsonType));

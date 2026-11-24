@@ -1,6 +1,6 @@
 <?php
 $e = 'kiwe_checkout_escape';
-$money = static fn (int $minor): string => '₹' . number_format($minor / 100, 0);
+$money = static fn (int $minor): string => '₹' . number_format($minor / 100, $minor % 100 ? 2 : 0);
 $mode = $formInput['mode'] ?? 'register';
 ?>
 <!doctype html>
@@ -30,7 +30,7 @@ $mode = $formInput['mode'] ?? 'register';
     <div class="checkout-heading">
       <p class="eyebrow">Kiwe Launch</p>
       <h1><?= $partnerTab ? 'Partner area' : 'Set up your Appsite.' ?></h1>
-      <p><?= $partnerTab ? 'Create private links for the businesses you refer.' : 'Verify your account, choose a domain and save your setup.' ?></p>
+      <p><?= $partnerTab ? 'Refer businesses to Kiwe and track your earnings.' : 'Verify your account, choose a domain and save your setup.' ?></p>
     </div>
     <?php if ($flash): ?>
       <p class="form-status checkout-notice<?= $flash['error'] ? ' error' : '' ?>" role="<?= $flash['error'] ? 'alert' : 'status' ?>"><?= $e($flash['message']) ?></p>
@@ -78,6 +78,28 @@ $mode = $formInput['mode'] ?? 'register';
                 </li>
                 <?php endforeach; ?>
               </ul>
+            <?php endif; ?>
+            <?php if ($partnerDashboard): ?>
+              <div class="partner-clients" id="partner-clients">
+                <h3 class="checkout-subhead">Your enrolled clients</h3>
+                <?php if (!$partnerDashboard['clients']): ?>
+                  <p><?= $clientPage === 1 ? 'Clients appear here after their first payment is confirmed.' : 'There are no more clients on this page.' ?></p>
+                <?php else: ?>
+                  <ul class="checkout-referrals">
+                    <?php foreach ($partnerDashboard['clients'] as $client): ?>
+                      <li><div><strong><?= $e($client['domain']) ?></strong><span><?= $e($client['client_email']) ?></span>
+                        <small><?= $client['refunded'] >= $client['amount'] ? 'First-year payment refunded' : ($client['ready_at'] ? 'Site setup verified' : 'Site setup pending') ?></small></div>
+                        <strong><?= $money($client['earned']) ?> earned</strong></li>
+                    <?php endforeach; ?>
+                  </ul>
+                <?php endif; ?>
+                <?php if ($clientPage > 1 || $partnerDashboard['more']): ?>
+                  <nav class="partner-pages" aria-label="Enrolled clients">
+                    <?php if ($clientPage > 1): ?><a class="text-link" href="/checkout/?tab=partner&amp;clients_page=<?= $clientPage - 1 ?>#partner-clients">Previous clients</a><?php endif; ?>
+                    <?php if ($partnerDashboard['more']): ?><a class="text-link" href="/checkout/?tab=partner&amp;clients_page=<?= $clientPage + 1 ?>#partner-clients">Next clients</a><?php endif; ?>
+                  </nav>
+                <?php endif; ?>
+              </div>
             <?php endif; ?>
           <?php else: ?>
             <p>Join with your verified email to create referral links for your clients.</p>
@@ -168,10 +190,14 @@ $mode = $formInput['mode'] ?? 'register';
       </section>
       <aside class="checkout-summary">
         <?php if ($partnerTab): ?>
-          <p class="eyebrow">Kiwe Partner Program</p>
-          <h2>Give your client the partner price.</h2>
-          <p><strong><?= $money($checkout->plan['referred']['upfrontMinor']) ?></strong> for their first 12 months, then <?= $money($checkout->plan['referred']['renewalMinor']) ?>/month with a verified referral.</p>
-          <p>Your client owns their account and Appsite. You can see the status of the links you create.</p>
+          <?php if ($partnerDashboard): ?>
+            <?php require $root . '/partner-view.php'; ?>
+          <?php else: ?>
+            <p class="eyebrow">Kiwe Partner Program</p>
+            <h2>Give your client the partner price.</h2>
+            <p><strong><?= $money($checkout->plan['referred']['upfrontMinor']) ?></strong> for their first 12 months, then <?= $money($checkout->plan['referred']['renewalMinor']) ?>/month with a verified referral.</p>
+            <p>Your client owns their account and Appsite. You can see the status of the links you create.</p>
+          <?php endif; ?>
         <?php else: ?>
           <p class="eyebrow"><?= ($billingState ? $billingState['quote']['referralId'] : $referral) ? 'Verified partner price' : 'Kiwe Client' ?></p>
           <h2><?= $money($price['upfrontMinor']) ?></h2>

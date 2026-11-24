@@ -400,7 +400,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     + 'VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(entitlement_id) DO NOTHING',
   );
   const newClientDomain = db.prepare("UPDATE projects SET domain = ?, hosting = 'included' WHERE id = ?");
-  const clientOrderByProject = db.prepare('SELECT details FROM project_client_orders WHERE project_id = ?');
+  const clientOrderByProject = db.prepare('SELECT details, referral_id FROM project_client_orders WHERE project_id = ?');
   const clientOrderByPayment = db.prepare('SELECT project_id FROM project_client_orders WHERE payment_id = ?');
   const clientOrderByReferral = db.prepare('SELECT project_id FROM project_client_orders WHERE referral_id = ?');
   const insertClientOrder = db.prepare(
@@ -719,6 +719,19 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         addHandoff.run(digest(ticket), row.id, expiresAt);
         return { ticket, expiresAt };
       });
+    },
+
+    purchaseDelivery(input) {
+      const { entitlementId, accountId } = parse(handoffInput, input);
+      const purchase = byEntitlement.get(entitlementId);
+      if (!purchase || purchase.account_id !== accountId || purchase.account_type !== 'client'
+          || purchase.plan_id !== clientPlan.id || !clientOrderByProject.get(purchase.id)?.referral_id) {
+        throw missingProject();
+      }
+      const row = owned.get(purchase.id, accountId);
+      const ready = row.hosting === 'included' && row.managed_status === 'ready'
+        && row.site_url === 'https://' + row.setup_domain;
+      return { projectId: row.id, readyAt: ready ? Math.floor(Date.parse(row.verified_at) / 1000) : null };
     },
 
     redeemHandoff(input) {

@@ -61,7 +61,8 @@ function kiwe_checkout_boot(string $root): ?array
     $plan = json_decode(file_get_contents($root . '/client-plan.json'), true, flags: JSON_THROW_ON_ERROR);
     if (($plan['currency'] ?? '') !== 'INR' || ($plan['hostingIncluded'] ?? false) !== true
         || !isset($plan['direct']['upfrontMinor'], $plan['direct']['renewalMinor'],
-            $plan['referred']['upfrontMinor'], $plan['referred']['renewalMinor'], $plan['domain']['includedExtension'])) {
+            $plan['referred']['upfrontMinor'], $plan['referred']['renewalMinor'], $plan['domain']['includedExtension'])
+        || !is_int($plan['monthlyPartnerCommissionMinor'] ?? null) || $plan['monthlyPartnerCommissionMinor'] < 1) {
         throw new RuntimeException('The canonical Kiwe plan is unavailable.');
     }
     if ($test) {

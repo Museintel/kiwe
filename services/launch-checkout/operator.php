@@ -20,6 +20,13 @@ try {
         'billing-status' => ['billing' => kiwe_checkout_operator_billing($billing, $value)],
         'reconcile-billing' => $billing?->deliverPending() ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503),
         'recover-renewal' => kiwe_checkout_operator_recover($billing, $value, $argv[3] ?? ''),
+        'partner-summary' => ['balance' => kiwe_checkout_operator_partners($billing)->summary($value)],
+        'reconcile-partner-deliveries' => kiwe_checkout_operator_partners($billing)->reconcileDeliveries(),
+        'withdrawals' => kiwe_checkout_operator_partners($billing)->withdrawals($value ?: 'pending', kiwe_checkout_operator_page($argv[3] ?? '1')),
+        'review-withdrawal' => ['withdrawal' => kiwe_checkout_operator_partners($billing)
+            ->reviewWithdrawal($value, kiwe_checkout_operator_amount($argv[3] ?? ''), $argv[4] ?? '')],
+        'record-payout' => ['withdrawal' => kiwe_checkout_operator_partners($billing)
+            ->recordPayout($value, kiwe_checkout_operator_amount($argv[3] ?? ''), $argv[4] ?? '')],
         default => throw new KiweCheckoutError('Unknown Launch operation.'),
     };
     echo json_encode($result, JSON_THROW_ON_ERROR), PHP_EOL;
@@ -56,4 +63,23 @@ function kiwe_checkout_operator_recover(?KiweBilling $billing, string $account, 
     if (!preg_match('/^launch:[a-f0-9]{32}$/D', $account)) throw new KiweCheckoutError('Enter a Launch account ID.');
     $billing->recoverMandate($account, $subscription);
     return ['billing' => kiwe_checkout_operator_billing($billing, $account)];
+}
+
+function kiwe_checkout_operator_partners(?KiweBilling $billing): KiwePartners
+{
+    return $billing?->partners() ?? throw new KiweCheckoutError('Launch partner earnings are unavailable.', 503);
+}
+
+function kiwe_checkout_operator_amount(string $amount): int
+{
+    $minor = filter_var($amount, FILTER_VALIDATE_INT);
+    if ($minor === false || $minor < 1) throw new KiweCheckoutError('Enter the exact positive amount in paise.');
+    return $minor;
+}
+
+function kiwe_checkout_operator_page(string $page): int
+{
+    $number = filter_var($page, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => intdiv(PHP_INT_MAX, 50) - 1]]);
+    if ($number === false) throw new KiweCheckoutError('Enter a valid withdrawal page.');
+    return $number;
 }

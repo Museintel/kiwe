@@ -139,6 +139,17 @@ function kiwe_checkout_action(KiweCheckout $checkout, ?KiweBilling $billing, ?ar
             case 'open-start':
                 $checkout->limit('start-handoff', $account['id'], 20, 900);
                 return ['handoff' => $billing->handoff($account['id'])];
+            case 'request-withdrawal':
+                $_SESSION['tab'] = 'partner';
+                $checkout->limit('partner-withdrawal', $account['id'], 20, 3600);
+                $id = kiwe_checkout_text($_POST['withdrawal'] ?? '', 'withdrawal', 40);
+                $amount = filter_var($_POST['amount_minor'] ?? '', FILTER_VALIDATE_INT);
+                $withdrawal = $billing->partners()->requestWithdrawal($account['id'], $id, $amount ?: 0);
+                return $withdrawal['status'] === 'requested' ? 'Your withdrawal request is ready for review.' : 'This withdrawal is already recorded.';
+            case 'cancel-withdrawal':
+                $_SESSION['tab'] = 'partner';
+                $billing->partners()->cancelWithdrawal($account['id'], kiwe_checkout_text($_POST['withdrawal'] ?? '', 'withdrawal', 40));
+                return 'Your withdrawal request was cancelled.';
         }
     }
     throw new KiweCheckoutError('This checkout action is unavailable.', 400);
@@ -207,10 +218,14 @@ function kiwe_checkout_serve(array $state, string $root): void
     unset($_SESSION['flash'], $_SESSION['share'], $_SESSION['draft_input']);
     $link = $account ? null : $checkout->linkInfo($_SESSION['verification'] ?? null);
     $partnerTab = ($_SESSION['tab'] ?? '') === 'partner';
-    $referral = $account ? $checkout->referralFor($account['id']) : null;
-    $draft = $account ? $checkout->draft($account['id']) : null;
-    $billingState = $account ? $billing?->status($account['id']) : null;
+    $referral = $account && !$partnerTab ? $checkout->referralFor($account['id']) : null;
+    $draft = $account && !$partnerTab ? $checkout->draft($account['id']) : null;
+    $billingState = $account && !$partnerTab ? $billing?->status($account['id']) : null;
     $partnerReferrals = $partnerTab && ($account['partner'] ?? false) ? $checkout->partnerReferrals($account) : [];
+    $clientPage = filter_var($_GET['clients_page'] ?? 1, FILTER_VALIDATE_INT, [
+        'options' => ['min_range' => 1, 'max_range' => intdiv(PHP_INT_MAX, 20) - 1],
+    ]) ?: 1;
+    $partnerDashboard = $partnerTab && ($account['partner'] ?? false) ? $billing?->partners()->dashboard($account['id'], $clientPage) : null;
     $formInput += ($draft['profile'] ?? []) + [
         'domain' => $draft['quote']['domain']['name'] ?? $referral['domain'] ?? '',
         'mode' => $draft['quote']['domain']['mode'] ?? 'register',

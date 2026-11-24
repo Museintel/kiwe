@@ -11,6 +11,7 @@ import { setTimeout as wait } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { clientPlan } from '../../start-projects/src/client-plan.mjs';
 import { startForCheckout, verifyBilling } from './billing-proof.mjs';
+import { verifyPartners } from './partner-proof.mjs';
 
 const require = createRequire(new URL('../../start-projects/package.json', import.meta.url));
 const harness = process.env.KIWE_LAUNCH_UI_HARNESS ?? fileURLToPath(new URL('../../../tools/ui-contract', import.meta.url));
@@ -88,7 +89,7 @@ async function operation(name, args) {
 try {
   await mkdir(path.join(data, 'sessions'), { recursive: true });
   for (const file of ['boot.php', 'store.php', 'providers.php', 'schema.sql', 'web.php', 'view.php', 'operator.php',
-    'billing.php', 'billing-providers.php', 'billing-schema.sql', 'billing-view.php']) {
+    'billing.php', 'billing-providers.php', 'billing-schema.sql', 'billing-view.php', 'partners.php', 'partner-schema.sql', 'partner-view.php']) {
     await cp(path.join(service, file), path.join(root, file));
   }
   await cp(path.join(service, 'test', 'settings-fixture.php'), path.join(root, 'settings.php'));
@@ -220,9 +221,12 @@ try {
     await partner.screenshot({ path: path.join(proof, 'partner-links-1440.png'), fullPage: true });
     await direct.screenshot({ path: path.join(proof, 'signup-390.png'), fullPage: true });
   }
-  await verifyBilling({ origin, data, page: referred, direct, directEmail: 'buyer@example.invalid', directPassword: resetPassword,
+  const paid = await verifyBilling({ origin, data, page: referred, direct, directEmail: 'buyer@example.invalid', directPassword: resetPassword,
     accountId: account.id, quote, tools: operation, start, clientPlan });
+  await verifyPartners({ origin, data, partner, anotherPartner: mismatched, buyer: referred, start, paid,
+    buyerId: account.id, partnerId: enrolment.account.id, call: (name, args) => mcp.callTool({ name, arguments: args }) });
   process.stdout.write('Verified checkout, Razorpay billing and retries, renewal consent, refunds and same-account Kiwe Start handoff passed.\n');
+  process.stdout.write('Partner service proof, commission adjustments, private withdrawals and payout readback passed.\n');
 } finally {
   await mcp?.close();
   await browser?.close();

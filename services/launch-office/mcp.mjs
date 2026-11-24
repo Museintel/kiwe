@@ -17,7 +17,7 @@ const server = new McpServer({ name: 'kiwe-launch-office', version: '1.0.0' });
 async function callPhp(script, ...input) {
   const php = process.env.KIWE_LAUNCH_PHP ?? 'php';
   const args = process.env.KIWE_LAUNCH_PHP_CONFIG ? ['-c', path.resolve(process.env.KIWE_LAUNCH_PHP_CONFIG)] : [];
-  const timeout = input[0] === 'reconcile-billing' ? 55000 : 12000;
+  const timeout = input[0] === 'reconcile-billing' ? 55000 : input[0] === 'reconcile-partner-deliveries' ? 30000 : 12000;
   const { stdout } = await run(php, [...args, script, ...input], { timeout, maxBuffer: 512 * 1024 });
   return JSON.parse(stdout);
 }
@@ -90,6 +90,32 @@ if (checkoutRoot) {
     inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/), subscriptionId: z.string().regex(/^sub_[A-Za-z0-9]{4,80}$/) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, ({ accountId, subscriptionId }) => operation('recover-renewal', accountId, subscriptionId));
+  const withdrawalId = z.string().regex(/^wd_[a-f0-9]{32}$/);
+  const amountMinor = z.number().int().positive();
+  server.registerTool('kiwe_launch_partner_summary', {
+    description: 'Read one enrolled partner’s net earnings, available balance, pending and paid withdrawals, and payment adjustments in paise.',
+    inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/) },
+    annotations: { readOnlyHint: true },
+  }, ({ accountId }) => operation('partner-summary', accountId));
+  server.registerTool('kiwe_launch_reconcile_partner_deliveries', {
+    description: 'Read verified managed-site setup dates from Start for a bounded group of paid referrals.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, () => operation('reconcile-partner-deliveries'));
+  server.registerTool('kiwe_launch_withdrawals', {
+    description: 'Read Partner Program withdrawal and payout records without client or bank details.',
+    inputSchema: { state: z.enum(['pending', 'paid', 'all']).default('pending'), page: z.number().int().positive().default(1) },
+    annotations: { readOnlyHint: true },
+  }, ({ state, page }) => operation('withdrawals', state, String(page)));
+  server.registerTool('kiwe_launch_review_withdrawal', {
+    description: 'Record a Kiwe operator’s decision on a partner’s exact withdrawal amount. Approval checks the current balance.',
+    inputSchema: { withdrawalId, amountMinor, decision: z.enum(['approve', 'decline']) },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  }, ({ withdrawalId, amountMinor, decision }) => operation('review-withdrawal', withdrawalId, String(amountMinor), decision));
+  server.registerTool('kiwe_launch_record_payout', {
+    description: 'Record an already confirmed external transfer for one approved withdrawal. This updates the ledger only.',
+    inputSchema: { withdrawalId, amountMinor, reference: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{5,79}$/) },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  }, ({ withdrawalId, amountMinor, reference }) => operation('record-payout', withdrawalId, String(amountMinor), reference));
 }
 
 await server.connect(new StdioServerTransport());

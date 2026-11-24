@@ -7,6 +7,7 @@
 
 ## Version 1.x (Start project candidate)
 
+- Show enrolled referrals, commission balances and withdrawals in Launch. Accrue commission from paid billing periods after verified managed-site setup and reflect refunds and disputes. Add private MCP operations for delivery reconciliation, withdrawal review and confirmed payout records.
 - Confirm first-year Razorpay payments, obtain separate month-13 renewal approval, record payment and refund events, and open Start under the buyer's verified Launch account in the checkout candidate.
 - Add a Launch checkout candidate with verified buyer credentials, private referral attribution, domain eligibility and scoped MCP quotes.
 - Present the single Kiwe Client plan on the Appsite homepage. Add demo and Partner Program interest forms with a private MCP inbox.

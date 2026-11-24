@@ -27,6 +27,12 @@ final class KiweBilling
         $this->db->exec(file_get_contents(__DIR__ . '/billing-schema.sql'));
     }
 
+    public function partners(): KiwePartners
+    {
+        require_once __DIR__ . '/partners.php';
+        return new KiwePartners($this->db, $this->checkout->plan['monthlyPartnerCommissionMinor'], $this->start);
+    }
+
     private function query(string $sql, array $params = []): PDOStatement
     {
         $statement = $this->db->prepare($sql);
@@ -154,6 +160,7 @@ final class KiweBilling
                     || ($referral['id'] ?? null) !== $quote['referralId'] || $quote['expiresAt'] <= time()) {
                     throw new KiweCheckoutError('Your checkout changed. Review it and try again.', 409);
                 }
+                if ($referral) $quote['partnerCommissionMinor'] = $this->checkout->plan['monthlyPartnerCommissionMinor'];
                 $id = 'kiwe_' . bin2hex(random_bytes(16));
                 $this->query('INSERT INTO launch_payments (id, account_id, draft_id, draft_revision, quote, consent_at, link_expires_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)', [$id, $account['id'], $draft['id'], $draft['revision'],
@@ -230,7 +237,7 @@ final class KiweBilling
         $this->query('UPDATE launch_payments SET reviewed_at = CASE WHEN payment_id IS NULL THEN 0 ELSE reviewed_at END,
             payment_id = ?, confirmed_at = COALESCE(confirmed_at, ?),
             first_term_end = COALESCE(first_term_end, ?), payment_refunded = MAX(payment_refunded, ?) WHERE id = ?',
-            [$paymentId, $confirmed, kiwe_billing_first_term_end($confirmed), $payment['amount_refunded'] ?? 0, $purchase['id']]);
+            [$paymentId, $confirmed, kiwe_billing_month_end($confirmed, 12), $payment['amount_refunded'] ?? 0, $purchase['id']]);
     }
 
     private function validPayment(array $payment, int $amount, string $currency): bool
@@ -432,6 +439,33 @@ final class KiweBilling
             [$paymentId, $mandate['id'], $mandate['amount'], $payment['amount_refunded'] ?? 0, $start, $end]);
     }
 
+    private function acceptDispute(string $event, array $dispute, int $time): void
+    {
+        $phase = match ($event) {
+            'payment.dispute.created', 'payment.dispute.under_review', 'payment.dispute.action_required' => 'pending',
+            'payment.dispute.won', 'payment.dispute.closed' => 'resolved',
+            'payment.dispute.lost' => 'lost',
+            default => null,
+        };
+        if (!$phase) return;
+        $id = kiwe_billing_id($dispute['id'] ?? null, 'disp');
+        $payment = kiwe_billing_id($dispute['payment_id'] ?? null, 'pay');
+        $amount = $dispute['amount'] ?? null;
+        $deducted = $dispute['amount_deducted'] ?? null;
+        if (!$id || !$payment || ($dispute['currency'] ?? '') !== 'INR' || !is_int($amount) || $amount < 1
+            || !is_int($deducted) || $deducted < 0 || $deducted > $amount) {
+            throw new KiweCheckoutError('Invalid payment dispute details.', 422);
+        }
+        $held = $phase === 'pending' ? $amount - $deducted : 0;
+        if ($phase === 'lost' && $deducted === 0) $deducted = $amount;
+        $this->query('INSERT INTO launch_disputes VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(dispute_id) DO UPDATE SET deducted = excluded.deducted, held = excluded.held,
+                terminal = excluded.terminal, occurred_at = excluded.occurred_at
+            WHERE launch_disputes.payment_id = excluded.payment_id AND (excluded.occurred_at > launch_disputes.occurred_at
+                OR (excluded.occurred_at = launch_disputes.occurred_at AND excluded.terminal > launch_disputes.terminal))',
+            [$id, $payment, $deducted, $held, (int) ($phase !== 'pending'), $time]);
+    }
+
     public function ingest(string $raw, string $signature, string $eventId): void
     {
         if (!preg_match('/^[a-fA-F0-9]{64}$/D', $signature)
@@ -475,6 +509,8 @@ final class KiweBilling
             if (!$mandate) return;
             $this->acceptSubscription($mandate, $subscription, $time);
             if ($event === 'subscription.charged') $this->acceptRenewal($mandate, $subscription, $payload['payment']['entity'] ?? []);
+        } elseif (str_starts_with($event, 'payment.dispute.')) {
+            $this->acceptDispute($event, $payload['dispute']['entity'] ?? [], $time);
         } elseif ($event === 'refund.processed') {
             $refund = $payload['refund']['entity'] ?? [];
             $id = kiwe_billing_id($refund['id'] ?? null, 'rfnd');

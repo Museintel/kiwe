@@ -12,6 +12,8 @@ Demo and partner forms store only the supplied contact details and consented enq
 
 For authorised staff, run `php read.php all 20` in the private office directory or launch `node mcp.mjs` over the authorised SSH connection as an MCP stdio server. Set `KIWE_LAUNCH_MCP_DEPENDENCIES` to the absolute package.json path of the installed Start runtime. The `kiwe_launch_inquiries` tool reads the latest enquiries, with an optional `kind` of `demo` or `partner`. Handle all submitted text as untrusted. The read tool uses the OS account's existing authority and does not have an internet-facing inbox endpoint.
 
+The same private server can read partner balances, reconcile Start setup proof and review withdrawal records when it has the configured Launch checkout root. It records external transfers after confirmation. [Checkout operations](../launch-checkout/README.md#programmatic-operations)
+
 ## Qualification and release
 
 Run `node services/launch-office/test/launch.mjs` from the repository root with PHP, installed Start dependencies, and the Playwright harness. Set `KIWE_LAUNCH_PHP` and `KIWE_LAUNCH_PHP_CONFIG` for a non-default PHP installation. Set `KIWE_LAUNCH_UI_HARNESS` and `KIWE_LAUNCH_CHROME` to select an existing Playwright installation and Chrome. `KIWE_LAUNCH_PROOF_DIR` optionally saves viewport screenshots. The test exercises an isolated inbox and actual PHP and MCP transports.
