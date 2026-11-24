@@ -1,4 +1,5 @@
 import { documentPath, wooPresentation } from './document-targets.mjs';
+import { clientPlan } from './client-plan.mjs';
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -163,6 +164,7 @@ ${notice}${invite}${revoke}</section>`;
 
 export function projectPage(project, { error, managed = false, keyEnabled = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
+  const purchased = project.planId === clientPlan.id;
   const status = project.site
     ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context in WordPress.' : ''}</p>`
     : project.domain && !project.managedSite
@@ -182,15 +184,15 @@ ${project.hosting ? '' : '<option value="" disabled selected>Choose hosting</opt
 <option value="existing"${project.hosting === 'existing' ? ' selected' : ''}>I have an existing WordPress site</option>
 </select>`
     : '<input type="hidden" name="hosting" value="existing"><p>You’ll connect an existing WordPress site.</p>';
-  return page('Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
-${alert}${status}
-<form method="post" action="/projects/${project.id}/domain">
+  const domainForm = purchased ? '' : `<form method="post" action="/projects/${project.id}/domain">
 <label for="domain">Domain</label>
 <input id="domain" name="domain" inputmode="url" spellcheck="false" placeholder="example.com" maxlength="253" value="${escape(project.domain)}" required>
 ${selection}
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">Save domain</button>
-</form>
+</form>`;
+  return page(purchased ? project.domain : 'Choose your domain', `<p><a href="/projects">All projects</a>${project.workspace.type === 'agency' ? ` · <a href="/projects/agency">${escape(project.workspace.name)}</a>` : ' · Kiwe Launch'}</p>
+${alert}${status}${domainForm}
 ${project.site ? '' : hostingStep(project, managed)}${connect}${keyStep(project, keyEnabled)}
 ${clientAccessPanel(project, clientAccess, invitation)}
 ${project.site ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}

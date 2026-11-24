@@ -8,8 +8,7 @@ const hostAccount = 'u100000000';
 const orderId = 201;
 
 async function hostedProject(f, entitlementId, allowed = true) {
-  const paid = await f.postReceipt('purchases', purchase(entitlementId, { hostingIncluded: allowed }));
-  const { projectId } = await paid.json();
+  const { projectId } = f.seedLegacyPurchase(purchase(entitlementId, { hostingIncluded: allowed }));
   const session = cookie(await f.redeem(await f.ticket(entitlementId, 'buyer-one')));
   const endpoint = '/projects/' + projectId;
   const domain = await f.form(endpoint + '/domain', {

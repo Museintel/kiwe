@@ -1,3 +1,5 @@
+25 November — Launch one managed Client plan and a referral-only Partner Program. The client owns the Start project and fills Design Context in WordPress. A partner refers clients and tracks commission independently of site administration. Preserve the Version 1 recovery point and use shared web and Kiwe MCP actions for setup, design and publishing. [Accepted plan and delivery sequence](decisions/2026-11-25-client-and-partner-launch.md)
+
 24 November — Keep Design Context editing in the existing WordPress admin form. Start links clients to the verified site's form and reads the saved details for page design through Kiwe MCP. [Design Context authority](decisions/2026-11-23-start-purchased-projects.md#design-context-authority)
 
 23 November — Keep the live Kiwe ecosystem as the tested Version 1 restore point. Use the same guided Start project from web forms or MCP after a verified purchase. The customer supplies and approves business facts, products and services. Approve the homepage first, then review individual pages and templates before compilation and publication. [Start project decision](decisions/2026-11-23-start-purchased-projects.md)

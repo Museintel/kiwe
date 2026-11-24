@@ -7,7 +7,7 @@ test('a verified Start login reaches the same entitled account as MCP and replac
   const identity = await browserIdentity();
   const f = await fixture(t, { browserLogin: identity.provider });
   const receipt = purchase('agency-sign-in', { accountType: 'agency', planId: 'kiwe-agency-monthly' });
-  const project = await (await f.postReceipt('purchases', receipt)).json();
+  const project = f.seedLegacyPurchase(receipt);
   const before = cookie(await f.redeem(await f.ticket(receipt.entitlementId, receipt.accountId)));
   const screen = await f.request('/login/');
   assert.equal(screen.status, 200);

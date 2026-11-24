@@ -6,17 +6,21 @@ This service opens authenticated site projects after Kiwe Launch confirms an ent
 
 Kiwe Launch validates the payment and supplies the account and plan facts. Start owns the project until the website is installed or connected. Key owns WhatsApp identities and sender authority. The connected WordPress site owns Design Context, products, content and publication.
 
-Start saves a requested domain and selects included Kiwe hosting or an existing WordPress site. An existing site uses native Kiwe OAuth consent. Included hosting uses the configured Hostinger order and a verified temporary WordPress address.
+New Client orders carry the confirmed domain and included hosting into Start. Existing site projects use native Kiwe OAuth consent. Included hosting uses the configured Hostinger order and a verified temporary WordPress address.
+
+## Kiwe Client plan
+
+The Client plan is `kiwe-client-managed-v1`. The direct price is ₹8,400 for the first 12 months, then ₹700 monthly. A verified referral sets the price to ₹7,200 for the first 12 months, then ₹600 monthly. The catalogue treats prices as tax-inclusive. Included hosting supports registering one eligible standard `.in` domain or bringing a domain the buyer owns. Launch verifies the referral, price and domain status at checkout.
+
+`GET /projects/api/client-plan` returns the canonical catalogue. Authenticated clients can read the same catalogue through `kiwe_start_client_plan`. Amounts are in paise. The partner ledger and provider integrations are subsequent launch batches. [Launch decision](../../docs/decisions/2026-11-25-client-and-partner-launch.md)
 
 ## Agency workspaces
 
-Every standalone purchaser opens their own projects under Kiwe Launch. An agency purchaser opens a private agency workspace with its own site projects. The same purchaser owns the workspace in the Start form and MCP. An agency name appears over its site list after the agency home is verified.
+Every Client buyer opens their own project under Kiwe Launch. The closed pilot and previously linked workspaces retain project access through the Start form and MCP. An agency name appears over the existing workspace's site list after the agency home is verified.
 
 An agency owner enters their business name and agency website domain in **Agency workspace settings** or through MCP. An eligible WordPress site already verified in that agency workspace can serve as its home. For any other home, Start returns a 24-hour text proof at the exact site's `/.well-known/kiwe-agency.txt`. The owner publishes it and selects **Verify website**. Start checks the specific HTTPS origin. Changing an agency home keeps the previous verified home active until the new proof succeeds. The proof does not purchase a domain, install hosting, or move client projects.
 
-## Monthly plans and independent client access
-
-Client costs ₹499 per site per month and includes managed hosting, with an existing WordPress connection available. Agency costs ₹999 per month and includes up to three site slots. Both prices are before applicable taxes. Each managed Agency site requires a trusted hosted entitlement.
+## Independent client access in existing workspaces
 
 The browser **Add site** form and `kiwe_start_add_agency_site` set up an existing WordPress domain in the current agency workspace. Adding a domain reuses the initial empty unhosted slot if one exists. A repeated request for the same domain returns the existing project. Start checks the three-site limit in the same transaction for new slots and trusted entitlements. Slots count the agency's own projects, including reserved domains and any legacy agency projects. A verified agency home by itself uses no slot.
 
@@ -26,7 +30,7 @@ On the configured Start login page, a first-time invitee enters the private code
 
 The client dashboard and MCP use the assigned site membership. A verified project links directly to its WordPress Design Context. Clients sign in to WordPress with their own site account and edit using the permissions of their native role. Billing, hosting and Key stay with the agency. WordPress single sign-on requires separate integration.
 
-The [plans and prices](https://kiwelaunch.com/plans/) are live with a header link to [Start login](https://start.kiwelaunch.com/login/). Start accepts the enrolled Key owner in the closed Agency pilot. General customer sign-in requires a configured commercial identity provider. [Hosting and rollout plan](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
+The existing [Start login](https://start.kiwelaunch.com/login/) accepts the enrolled Key owner in the closed pilot. New Client sign-in requires a configured buyer identity provider. [Pilot hosting and rollout record](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
 
 ## Existing WordPress sites
 
@@ -112,11 +116,23 @@ On a request with a lost response, Start checks the stored address before resubm
 
 ## Checkout handoff
 
-For the pilot, a trusted Launch operator can issue a test entitlement to the verified account subject through the existing purchase route. Use the payment provider integration for public purchases when recurring billing is enabled.
-
-1. From the trusted checkout backend, send the confirmed site entitlement to `POST /projects/api/purchases` as JSON. Authenticate with the separate purchase service credential. Supply `entitlementId`, `purchaseId`, `accountId`, `accountType` (client or agency), `planId` and `hostingIncluded` (boolean). Reusing the entitlement with identical facts returns the original project. Conflicting facts return HTTP 409.
+1. After verifying the payment, account, any referral and the domain selection, the trusted Launch backend sends JSON to `POST /projects/api/purchases` with the separate purchase service credential. Supply `entitlementId`, `purchaseId`, `accountId`, `accountType: "client"`, `planId: "kiwe-client-managed-v1"`, `hostingIncluded: true` and a `clientOrder`. Use the payment provider's stable payment identifier as `purchaseId`.
 2. After authenticating the purchasing account on Kiwe Launch, send its `accountId` and `entitlementId` to `POST /projects/api/handoffs` from that backend. The response contains a one-time ticket, its expiration and the Start form action.
 3. Render a top-level browser form on the configured Kiwe Launch origin. POST the ticket in the form body to the returned action as `application/x-www-form-urlencoded`. The Start service verifies origin, consumes the ticket and redirects the buyer into the saved project with a secure session cookie. A new ticket for the same account reopens the same project after sign-out.
+
+For a direct order selecting a new domain, the `clientOrder` object has the following shape.
+
+```json
+{
+  "currency": "INR",
+  "paidMinor": 840000,
+  "renewalMinor": 70000,
+  "referralId": null,
+  "domain": { "mode": "register", "name": "example.in", "category": "standard" }
+}
+```
+
+For an owned domain, use `{ "mode": "owned", "name": "example.com" }`. For a referred order, send a verified referral ID with amounts `720000` and `60000`. A repeat delivery with the same entitlement and identical details returns the original project. Changed facts or reuse of the payment or referral return HTTP 409. Pre-existing entitlement replays have the same ownership checks as before.
 
 Keep the purchase credential inside the checkout server and keep handoff tickets out of URLs and logs. An entitlement reference or redirect alone grants no access. The checkout backend must authenticate the buyer before issuing each handoff; payment webhook deliveries call only the entitlement endpoint.
 
@@ -144,6 +160,7 @@ The login transaction rotates the Start session and consumes the prior browser t
 
 The protected resource is `/projects/mcp`, with resource metadata at `/.well-known/oauth-protected-resource/projects/mcp`. Use JWT access tokens from the configured OAuth issuer with that resource audience and the `start:projects` scope. The OAuth subject must be the same stable account identifier that the trusted checkout sends. This service relies on the configured issuer for interactive authorization.
 
+- `kiwe_start_client_plan` reads the Client price, billing schedule, referral terms and included domain eligibility.
 - `kiwe_start_projects` lists the buyer's projects.
 - `kiwe_start_project` reads the specified project and reports its verified WordPress Design Context link in `project.site.designContextUrl`.
 - `kiwe_start_set_domain` saves a human-confirmed domain and hosting choice at the current revision.
@@ -171,7 +188,7 @@ The service preserves the latest saved revision when a browser and an MCP client
 
 Run Node 22.13 or newer and install the locked dependencies with `npm ci`. Run `npm test` to verify the HTTP purchase callback, browser request flow, durable restart, managed and existing hosting choices, account isolation and real MCP tool calls. Set `KIWE_START_TEST_SOCKET=1` for isolated Unix-socket qualification on hosts that restrict TCP loopback.
 
-The optional real-browser check runs the production service entry point with an isolated checkout and OAuth issuer. It opens a client project at 390 CSS pixels and an agency project at 1440 CSS pixels, saves each domain through the form and reads both back through MCP. Install the existing UI harness dependencies under `tools/ui-contract`, then run `npm run test:browser` in this service. Set `KIWE_START_TEST_CHROME` to use an installed Chrome executable. The harness resolves Playwright from the repository's UI test dependency by default.
+The optional real-browser check runs the production service entry point with an isolated checkout and OAuth issuer. It opens a direct Client purchase at 390 CSS pixels and a referred Client purchase at 1440 CSS pixels. It checks that each Start project uses the confirmed domain and reads it back through MCP. Install the existing UI harness dependencies under `tools/ui-contract`, then run `npm run test:browser` in this service. Set `KIWE_START_TEST_CHROME` to use an installed Chrome executable. The harness resolves Playwright from the repository's UI test dependency by default.
 
 Batch 5 passed 17 Start tests locally and on Hostinger Node 22. The PHP design scope suite passed 54 checks. Plum Giraffe on WordPress 7.1.5 and signed Core RC495 returned the native homepage brief and kept older grants limited to their pinned operations. The full workflow used test purchases, public catalogue fixtures and a simulated configured generator. The owner-approved fixture compiled with Seam into one Bricks content draft with three native query loops and 11 dynamic bindings. The generated review package omitted the source preview runtime. Chrome exercised the sandbox and layout at 390, 768 and 1440 CSS pixels. Native staging, the imported Bricks visual comparison, and the production generator configuration are later work.
 

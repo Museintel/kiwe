@@ -10,6 +10,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { generateKeyPair, SignJWT } from 'jose';
 import { createStartServer } from '../src/app.mjs';
 import { createMcpAuthorization } from '../src/auth.mjs';
+import { clientPlan } from '../src/client-plan.mjs';
 import { openProjects, projectScope } from '../src/projects.mjs';
 
 const startOrigin = 'https://start.example.test';
@@ -48,6 +49,16 @@ function purchase(entitlementId, extras = {}) {
   return {
     entitlementId, purchaseId: 'order-' + entitlementId, accountId: 'buyer-one',
     accountType: 'client', planId: 'Kiwe', hostingIncluded: false, ...extras,
+  };
+}
+
+function clientPurchase(entitlementId, {
+  accountId = 'buyer-one', referralId = null, domain = { mode: 'owned', name: 'Buyer.Example.' },
+} = {}) {
+  const price = referralId ? clientPlan.referred : clientPlan.direct;
+  return {
+    ...purchase(entitlementId, { accountId, planId: clientPlan.id, hostingIncluded: true }),
+    clientOrder: { currency: clientPlan.currency, paidMinor: price.upfrontMinor, renewalMinor: price.renewalMinor, referralId, domain },
   };
 }
 
@@ -122,6 +133,7 @@ async function fixture(t, { browserLogin, publicGuide, wordpressLink, hostingPro
   }
   return {
     request, postReceipt, form, ticket, redeem, token, connectBearer,
+    seedLegacyPurchase(input) { return projects.acceptPurchase(input, { preserveLegacy: true }); },
     async connect(accountId) { return connectBearer(await token(accountId)); },
     advance(ms) { clock += ms; },
     async restart() { await stop(); await start(); },
@@ -135,4 +147,4 @@ function cookie(response) {
   return value.split(';')[0];
 }
 
-export { cookie, fixture, issuer, resource, purchase, startOrigin, checkoutOrigin };
+export { cookie, fixture, issuer, resource, purchase, clientPurchase, startOrigin, checkoutOrigin };

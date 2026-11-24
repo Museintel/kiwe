@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { z } from 'zod';
+import { clientPlan } from './client-plan.mjs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
@@ -105,6 +106,10 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
       return { isError: true, content: [{ type: 'text', text: error.message }] };
     }
   };
+  server.registerTool('kiwe_start_client_plan', {
+    description: 'Read the Kiwe Client price, billing schedule, eligible domain extension and referral terms.',
+    annotations: { readOnlyHint: true },
+  }, () => result('Kiwe Client plan', clientPlan));
   server.registerTool('kiwe_start_projects', {
     description: 'List projects owned by or assigned to the signed-in account with their domain and setup step.',
     outputSchema: projectsOutput,
@@ -348,6 +353,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     const { pathname } = url;
     const method = request.method;
     const endpoint = method + ' ' + pathname;
+    if (endpoint === 'GET /projects/api/client-plan') return json(response, 200, clientPlan);
     if (method === 'GET' && [browserLoginPath, '/login', '/login/index.html'].includes(pathname)) {
       if (accountForBrowser(request)) return redirect(response, '/projects');
       return sendSignIn(response, browserLogin ? 200 : 503);
@@ -383,7 +389,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           projects.acceptPurchase({
             entitlementId: 'kiwe-agency-pilot', purchaseId: 'kiwe-agency-pilot', accountId: pilotAccount,
             accountType: 'agency', planId: 'kiwe-agency-monthly', hostingIncluded: false,
-          });
+          }, { preserveLegacy: true });
         }
         const lifetime = pilot ? pilotBrowserLifetime : browserLifetime;
         const session = projects.signIn(account, pending.invitationDigest, sessionToken(request), lifetime);

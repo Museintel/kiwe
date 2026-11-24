@@ -89,8 +89,7 @@ function nativeFixture() {
 }
 
 async function newProject(f, entitlementId, domain = 'existing.example', extras = {}) {
-  const accepted = await f.postReceipt('purchases', purchase(entitlementId, extras));
-  const { projectId } = await accepted.json();
+  const { projectId } = f.seedLegacyPurchase(purchase(entitlementId, extras));
   const session = cookie(await f.redeem(await f.ticket(entitlementId, 'buyer-one')));
   const endpoint = '/projects/' + projectId;
   const response = await f.form(endpoint + '/domain', { domain, hosting: 'existing', revision: '1' }, { cookie: session });

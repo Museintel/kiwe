@@ -2,6 +2,8 @@
 
 23 November 2026. Status accepted for the Version 1.x candidate.
 
+The [25 November Client and Partner decision](2026-11-25-client-and-partner-launch.md) supersedes the sales and new-account choices in this record. The native authority and design workflow described here remain the basis of the current service.
+
 A verified site entitlement from Kiwe Launch creates one durable Start project. The stable entitlement identifier is the idempotency key and the trusted purchaser account owns the record. A purchase can yield multiple site entitlements for the same agency. The checkout process is responsible for payment validation and purchaser authentication.
 
 The hosted Start service holds pre-install state separately from the static versioned authoring guide. The web form and MCP call the same project actions. Browser access uses the configured OpenID Connect issuer or a short-lived, one-time handoff from an authenticated checkout session. MCP uses an audience-bound OAuth access token. Browser sign-in, trusted purchase delivery and MCP share the issuer's stable account subject.

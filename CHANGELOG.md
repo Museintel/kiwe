@@ -7,6 +7,7 @@
 
 ## Version 1.x (Start project candidate)
 
+- Admit confirmed managed Client orders with the direct or referred pricing and an eligible standard `.in` selection or owned domain. Deduplicate receipts and expose the same plan through HTTP and Kiwe MCP.
 - Open WordPress authorization from the Start review page for Bricks conversion, publication and restoration.
 - Link verified Start projects to the existing WordPress Design Context form. Read saved public facts through Kiwe MCP when preparing a design.
 - Restore browser sign-in to the Key pilot and check the published Start login and guide policies after deployment.

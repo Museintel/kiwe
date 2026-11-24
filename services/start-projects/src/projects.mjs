@@ -3,6 +3,7 @@ import { isIP } from 'node:net';
 import { DatabaseSync } from 'node:sqlite';
 import { domainToASCII } from 'node:url';
 import { z } from 'zod';
+import { clientPlan } from './client-plan.mjs';
 
 export class StartError extends Error {
   constructor(status, code, message) {
@@ -16,6 +17,17 @@ export const projectScope = 'start:projects';
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,159}$/);
 export const accountInput = id;
 const hostChoices = z.enum(['included', 'existing']);
+const domainName = z.string().min(1).max(253);
+const verifiedClientOrder = z.strictObject({
+  currency: z.literal(clientPlan.currency),
+  paidMinor: z.number().int().positive(),
+  renewalMinor: z.number().int().positive(),
+  referralId: id.nullable(),
+  domain: z.discriminatedUnion('mode', [
+    z.strictObject({ mode: z.literal('register'), name: domainName, category: z.literal('standard') }),
+    z.strictObject({ mode: z.literal('owned'), name: domainName }),
+  ]),
+});
 export const purchaseInput = z.strictObject({
   entitlementId: id,
   purchaseId: id,
@@ -23,6 +35,7 @@ export const purchaseInput = z.strictObject({
   accountType: z.enum(['client', 'agency']),
   planId: id,
   hostingIncluded: z.boolean(),
+  clientOrder: verifiedClientOrder.optional(),
 });
 export const handoffInput = z.strictObject({ entitlementId: id, accountId: id });
 export const ticketInput = z.strictObject({ ticket: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
@@ -35,13 +48,13 @@ const clientHandoffInput = z.union([
 ]);
 const agencyPlan = 'kiwe-agency-monthly';
 const agencySiteLimit = 3;
-const monthlyPlans = new Map([
+const retiredRetailPlans = new Map([
   ['kiwe-client-monthly', { accountType: 'client', requiresHosting: true }],
   [agencyPlan, { accountType: 'agency', requiresHosting: false }],
 ]);
 
 export const domainInput = claimInput.extend({
-  domain: z.string().min(1).max(253),
+  domain: domainName,
   hosting: hostChoices,
   revision: z.number().int().positive(),
 });
@@ -115,6 +128,27 @@ function normalizeDomain(value) {
   return domain;
 }
 
+function validateClientOrder(receipt) {
+  const order = receipt.clientOrder;
+  if (receipt.planId !== clientPlan.id) {
+    if (order) throw new StartError(400, 'plan_details_mismatch', 'This order requires the current Kiwe Client plan.');
+    return null;
+  }
+  if (!order || receipt.accountType !== 'client' || !receipt.hostingIncluded) {
+    throw new StartError(400, 'plan_details_mismatch', 'Provide the confirmed Kiwe Client payment and domain details.');
+  }
+  const price = order.referralId ? clientPlan.referred : clientPlan.direct;
+  if (order.paidMinor !== price.upfrontMinor || order.renewalMinor !== price.renewalMinor) {
+    throw new StartError(400, 'price_mismatch', 'The payment and renewal must match the confirmed Kiwe Client price.');
+  }
+  const name = normalizeDomain(order.domain.name);
+  const labels = name.split('.');
+  if (order.domain.mode === 'register' && (labels.length !== 2 || labels[1] !== clientPlan.domain.includedExtension)) {
+    throw new StartError(400, 'domain_not_included', 'Choose an eligible standard .in domain or bring a domain you own.');
+  }
+  return { ...order, domain: { ...order.domain, name } };
+}
+
 const agencyProofPath = '/.well-known/kiwe-agency.txt';
 
 function workspaceView(accountType, agency, launchWebsite) {
@@ -184,6 +218,12 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       CHECK((domain IS NULL) = (hosting IS NULL))
     ) STRICT;
     CREATE INDEX IF NOT EXISTS projects_account ON projects(account_id);
+    CREATE TABLE IF NOT EXISTS project_client_orders (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      payment_id TEXT NOT NULL UNIQUE,
+      referral_id TEXT UNIQUE,
+      details TEXT NOT NULL
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS handoffs (
       digest TEXT PRIMARY KEY,
       project_id TEXT NOT NULL REFERENCES projects(id),
@@ -358,6 +398,13 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const insert = db.prepare(
     'INSERT INTO projects(id, entitlement_id, purchase_id, account_id, account_type, plan_id, hosting_included) '
     + 'VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(entitlement_id) DO NOTHING',
+  );
+  const newClientDomain = db.prepare("UPDATE projects SET domain = ?, hosting = 'included' WHERE id = ?");
+  const clientOrderByProject = db.prepare('SELECT details FROM project_client_orders WHERE project_id = ?');
+  const clientOrderByPayment = db.prepare('SELECT project_id FROM project_client_orders WHERE payment_id = ?');
+  const clientOrderByReferral = db.prepare('SELECT project_id FROM project_client_orders WHERE referral_id = ?');
+  const insertClientOrder = db.prepare(
+    'INSERT INTO project_client_orders(project_id, payment_id, referral_id, details) VALUES (?, ?, ?, ?)',
   );
   const update = db.prepare(
     'UPDATE projects SET domain = ?, hosting = ?, revision = revision + 1 '
@@ -623,21 +670,28 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   }
 
   return {
-    acceptPurchase(input) {
+    acceptPurchase(input, { preserveLegacy = false } = {}) {
       const receipt = parse(purchaseInput, input);
-      const plan = monthlyPlans.get(receipt.planId);
+      const plan = retiredRetailPlans.get(receipt.planId);
       if (plan && (plan.accountType !== receipt.accountType || (plan.requiresHosting && !receipt.hostingIncluded))) {
-        throw new StartError(400, 'plan_details_mismatch', 'The purchase details do not match this Kiwe monthly plan.');
+        throw new StartError(400, 'plan_details_mismatch', 'The purchase details do not match the original Kiwe plan.');
       }
+      const order = validateClientOrder(receipt);
+      const details = order ? JSON.stringify(order) : null;
       return transaction(() => {
         const row = byEntitlement.get(receipt.entitlementId);
         if (row) {
           if (row.purchase_id !== receipt.purchaseId || row.account_id !== receipt.accountId
               || row.account_type !== receipt.accountType || row.plan_id !== receipt.planId
-              || row.hosting_included !== Number(receipt.hostingIncluded)) {
+              || row.hosting_included !== Number(receipt.hostingIncluded)
+              || (clientOrderByProject.get(row.id)?.details ?? null) !== details) {
             throw new StartError(409, 'entitlement_conflict', 'This entitlement already has different purchase details.');
           }
           return { created: false, projectId: row.id };
+        }
+        if (!order && !preserveLegacy) throw new StartError(410, 'plan_retired', 'New purchases use the Kiwe Client plan.');
+        if (order && (clientOrderByPayment.get(receipt.purchaseId) || (order.referralId && clientOrderByReferral.get(order.referralId)))) {
+          throw new StartError(409, 'client_order_used', 'This payment or referral is already linked to a project.');
         }
         if (receipt.accountType === 'agency'
             && (receipt.planId === agencyPlan || monthlyAgency.get(receipt.accountId, agencyPlan))) {
@@ -646,6 +700,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         const projectId = randomUUID();
         insert.run(projectId, receipt.entitlementId, receipt.purchaseId, receipt.accountId,
           receipt.accountType, receipt.planId, Number(receipt.hostingIncluded));
+        if (order) {
+          insertClientOrder.run(projectId, receipt.purchaseId, order.referralId, details);
+          newClientDomain.run(order.domain.name, projectId);
+        }
         return { created: true, projectId };
       });
     },
@@ -875,6 +933,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
           throw new StartError(409, 'hosting_unavailable', 'This purchase uses an existing site.');
         }
         if (row.domain === domain && row.hosting === details.hosting) return projectView(row);
+        if (row.plan_id === clientPlan.id) {
+          throw new StartError(409, 'domain_set_at_checkout', 'The domain and hosting were set at checkout.');
+        }
         if (row.key_project_id) throw new StartError(409, 'key_setup_started', 'This website already has a Key request.');
         if (row.managed_status) throw new StartError(409, 'hosting_already_requested', 'This project already has a hosting request.');
         if (row.revision !== details.revision) {

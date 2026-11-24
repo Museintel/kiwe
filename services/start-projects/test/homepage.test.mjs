@@ -98,8 +98,7 @@ async function wordpressAuthorization(response) {
 }
 
 async function connect(f, client) {
-  const receipt = await f.postReceipt('purchases', purchase('homepage'));
-  const { projectId } = await receipt.json();
+  const { projectId } = f.seedLegacyPurchase(purchase('homepage'));
   const session = cookie(await f.redeem(await f.ticket('homepage', 'buyer-one')));
   const website = '/projects/' + projectId;
   const home = website + '/homepage';

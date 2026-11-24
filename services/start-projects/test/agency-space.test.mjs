@@ -3,10 +3,9 @@ import test from 'node:test';
 import { cookie, fixture, purchase } from './fixture.mjs';
 
 async function project(f, entitlementId, accountId, accountType) {
-  const receipt = await f.postReceipt('purchases', purchase(entitlementId, { accountId, accountType }));
-  assert.equal(receipt.status, 201);
+  const receipt = f.seedLegacyPurchase(purchase(entitlementId, { accountId, accountType }));
   return {
-    projectId: (await receipt.json()).projectId,
+    projectId: receipt.projectId,
     session: cookie(await f.redeem(await f.ticket(entitlementId, accountId))),
   };
 }

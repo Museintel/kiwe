@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { clientPurchase } from './fixture.mjs';
 
 const source = fileURLToPath(new URL('../', import.meta.url));
 const browserSource = process.env.KIWE_START_TEST_UI_HARNESS ?? fileURLToPath(new URL('../../../tools/ui-contract/', import.meta.url));
@@ -84,16 +85,15 @@ try {
     chromiumSandbox: true, headless: true,
   });
   const results = [];
-  for (const [width, accountType, hosting] of [[390, 'client', 'existing'], [1440, 'agency', 'included']]) {
-    const accountId = 'test-' + accountType;
-    const entitlementId = 'site-' + accountType;
-    const domain = accountType + '.example';
-    const { projectId } = await post('purchases', {
-      entitlementId, purchaseId: 'order-' + accountType, accountId, accountType, planId: 'kiwe-lab',
-      hostingIncluded: hosting === 'included',
-    });
+  for (const [width, channel] of [[390, 'direct'], [1440, 'referred']]) {
+    const accountId = 'test-' + channel;
+    const entitlementId = 'site-' + channel;
+    const domain = channel === 'direct' ? { mode: 'register', name: 'direct-bakery.in', category: 'standard' }
+      : { mode: 'owned', name: 'referred-shop.example' };
+    const referralId = channel === 'referred' ? 'test-referral' : null;
+    const { projectId } = await post('purchases', clientPurchase(entitlementId, { accountId, referralId, domain }));
     const { ticket, action } = await post('handoffs', { entitlementId, accountId });
-    const checkoutPath = '/' + accountType;
+    const checkoutPath = '/' + channel;
     checkoutPages.set(checkoutPath, `<!doctype html><html lang="en"><title>Checkout fixture</title>
 <form method="post" action="${action}"><input type="hidden" name="ticket" value="${ticket}"><button>Open Kiwe Start</button></form>`);
     const page = await browser.newPage({ viewport: { width, height: 840 } });
@@ -103,14 +103,10 @@ try {
     });
     await page.goto(checkoutOrigin + checkoutPath, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Open Kiwe Start' }).click();
-    await page.getByRole('heading', { name: 'Choose your domain' }).waitFor({ timeout: 8000 });
+    await page.getByRole('heading', { name: domain.name, exact: true }).waitFor({ timeout: 8000 });
     assert.equal(page.url(), startOrigin + '/projects/' + projectId);
-    const form = page.getByLabel('Domain', { exact: true });
-    await form.fill(domain);
-    if (hosting === 'included') await page.getByLabel('Hosting', { exact: true }).selectOption(hosting);
-    await page.getByRole('button', { name: 'Save domain' }).click();
     await page.getByText('Domain saved.', { exact: false }).waitFor({ timeout: 8000 });
-    assert.equal(await form.inputValue(), domain);
+    assert.equal(await page.getByRole('button', { name: 'Save domain' }).count(), 0);
     const widthFits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
     assert.equal(widthFits, true);
     await page.close();
@@ -123,12 +119,13 @@ try {
     }));
     try {
       const result = await client.callTool({ name: 'kiwe_start_project', arguments: { projectId } });
-      assert.equal(result.structuredContent.project.domain, domain);
-      assert.equal(result.structuredContent.project.hosting, hosting);
+      assert.equal(result.structuredContent.project.domain, domain.name);
+      assert.equal(result.structuredContent.project.hosting, 'included');
+      assert.equal(result.structuredContent.project.next, 'provision_site');
     } finally {
       await client.close();
     }
-    results.push({ width, accountType, hosting, browserHandoff: true, domainSaved: true, widthFits, verifiedMcpReadback: true });
+    results.push({ width, channel, browserHandoff: true, checkoutDomainSaved: true, widthFits, verifiedMcpReadback: true });
   }
   console.log(JSON.stringify(results));
 } finally {
