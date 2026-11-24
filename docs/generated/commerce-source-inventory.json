@@ -407,7 +407,7 @@
     },
     {
       "source": "wp-content/mu-plugins/dsa/includes/Access/WordPress_Role_Access_Service.php",
-      "sha256": "95d5b33f666afc239df831ce3070e45196d322d529fa10156432ba85b2f962c6",
+      "sha256": "50cd1a5d7e38a7899d885c59d749c2341a147be6ab4d9deafd516a805fbe25ba",
       "symbols": [
         {
           "kind": "method",
@@ -511,118 +511,123 @@
         },
         {
           "kind": "method",
-          "name": "client_capabilities",
+          "name": "native_order_payment_check",
           "line": 83
         },
         {
           "kind": "method",
+          "name": "client_capabilities",
+          "line": 90
+        },
+        {
+          "kind": "method",
           "name": "role_for",
-          "line": 113
+          "line": 121
         },
         {
           "kind": "method",
           "name": "capabilities_for",
-          "line": 118
+          "line": 126
         },
         {
           "kind": "method",
           "name": "shop_manager_capabilities",
-          "line": 132
+          "line": 140
         },
         {
           "kind": "method",
           "name": "client_service_type",
-          "line": 135
-        },
-        {
-          "kind": "method",
-          "name": "client_business_capabilities",
           "line": 143
         },
         {
           "kind": "method",
+          "name": "client_business_capabilities",
+          "line": 151
+        },
+        {
+          "kind": "method",
           "name": "content_boundary",
-          "line": 165
+          "line": 173
         },
         {
           "kind": "method",
           "name": "post_type_capabilities",
-          "line": 202
+          "line": 210
         },
         {
           "kind": "method",
           "name": "editorial_capabilities",
-          "line": 222
+          "line": 230
         },
         {
           "kind": "method",
           "name": "limit_editorial_menu",
-          "line": 259
+          "line": 268
         },
         {
           "kind": "method",
           "name": "guard_editorial_admin_route",
-          "line": 324
+          "line": 333
         },
         {
           "kind": "method",
           "name": "restricted_role",
-          "line": 387
+          "line": 396
         },
         {
           "kind": "method",
           "name": "guard_shop_manager_route",
-          "line": 412
+          "line": 421
         },
         {
           "kind": "method",
           "name": "redirect_to_posts",
-          "line": 435
+          "line": 444
         },
         {
           "kind": "method",
           "name": "menu_order",
-          "line": 440
+          "line": 449
         },
         {
           "kind": "method",
           "name": "toolbar",
-          "line": 447
+          "line": 456
         },
         {
           "kind": "method",
           "name": "guard_builder",
-          "line": 453
+          "line": 462
         },
         {
           "kind": "method",
           "name": "enforce_bricks_boundary",
-          "line": 458
+          "line": 467
         },
         {
           "kind": "method",
           "name": "bricks_access_column",
-          "line": 469
+          "line": 478
         },
         {
           "kind": "method",
           "name": "guard_client_route",
-          "line": 474
+          "line": 483
         },
         {
           "kind": "method",
           "name": "guard_ajax",
-          "line": 575
+          "line": 584
         },
         {
           "kind": "method",
           "name": "guard_rest",
-          "line": 595
+          "line": 604
         },
         {
           "kind": "method",
           "name": "deny",
-          "line": 693
+          "line": 702
         }
       ]
     },

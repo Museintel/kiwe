@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 function WC(){return true;}
+function wc_customer_has_capability(){throw new LogicException("Use the already resolved native capability.");}
 function wc_get_order($id){return $GLOBALS['businessOrders'][$id]??false;}
 function get_post_type_object($name){return $GLOBALS['businessTypes'][$name]??null;}
 function get_object_taxonomies($name,$output){return $GLOBALS['businessTaxonomies'][$name]??[];}
@@ -74,6 +75,19 @@ $beforeRoles=$users[1]->roles;$users[1]->roles=['shop_manager'];check($access->g
 
 $actor=1;check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/products/13/sale'))===null,'Client sale task passes outer guard');
 $beforeRoles=$users[1]->roles;$users[1]->roles=['shop_manager'];check($access->guard_rest(null,null,$req('/dsa/v1/workspace/commerce/products/13/sale'))===null,'Product staff sale task passes outer guard');$users[1]->roles=$beforeRoles;
+
+
+$guest = new WP_User(0,[]);
+$granted = ['pay_for_order'=>true];
+$probe = ['pay_for_order',0,61];
+check($access->client_capabilities($granted,['pay_for_order'],$probe,$guest)===$granted,'Kiwe preserves the native per-order payment grant for a guest');
+check($access->client_capabilities([],['pay_for_order'],$probe,$guest)===[],'Kiwe preserves the native per-order payment denial');
+check(empty($access->client_capabilities($granted,['pay_for_order','manage_options'],$probe,$guest)['manage_options']),'Payment capability does not widen a combined capability check');
+$staff=$users[1];
+$staffRoles=$staff->roles;
+$staff->roles=['shop_manager'];
+check($access->editorial_capabilities($granted,['pay_for_order'],['pay_for_order',$staff->ID,61],$staff)===$granted,'Editorial limits preserve the native payment grant for a restricted user');
+$staff->roles=$staffRoles;
 
 // RC111: order access must not become site/account/content administration.
 $beforeRoles=$users[1]->roles;$users[1]->roles=['shop_manager'];
