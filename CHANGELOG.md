@@ -7,6 +7,8 @@
 
 ## Version 1.x (Start project candidate)
 
+- Open the closed Agency pilot with an invited Key owner, expose revocable short-lived MCP access, and serve the versioned public Start guide alongside the authenticated routes.
+
 - Publish Client at ₹499 per site per month and Agency at ₹999 per month with Start login in the Kiwe Launch header. Enforce the Agency plan's three site slots through the browser, MCP and trusted purchase intake.
 - Add browser sign-in through a configured OpenID Connect issuer and let clients accept verified invitations directly in Start. Require a client's own WordPress consent for their assigned Design Context.
 - Connect a ready managed WordPress site after signed Kiwe installation and use its verified address for native setup and design actions.

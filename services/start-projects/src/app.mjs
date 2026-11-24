@@ -5,10 +5,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   agencyHomeInput, agencySiteInput, agencySpaceOutput, agencyVerificationInput, clientInvitationInput,
-  StartError, browserLifetime, claimInput, domainInput, parse, projectScope, projectsOutput, singleProjectOutput, siteLinkInput, ticketInput,
+  StartError, browserLifetime, claimInput, domainInput, parse, pilotBrowserLifetime, projectScope, projectsOutput, singleProjectOutput, siteLinkInput, ticketInput,
 } from './projects.mjs';
 import { browserLoginInput, browserLoginLifetime, browserLoginPath, browserLoginReturn } from './browser-login.mjs';
-import { agencyPage, contextPage, contextReviewPage, homepagePage, websitePage, clientProjectPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
+import { agencyPage, contextPage, contextReviewPage, homepagePage, websitePage, clientProjectPage, pilotMcpPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
 import { createKeyConnections } from './key-connection.mjs';
@@ -94,7 +94,7 @@ function checkOrigin(request, expected) {
   }
 }
 
-function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId) {
+function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId, pilot) {
   const server = new McpServer({ name: 'Kiwe Start', version: '0.1.0' });
   const result = (label, structuredContent) => ({
     content: [{ type: 'text', text: label }],
@@ -119,7 +119,7 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     outputSchema: singleProjectOutput,
     annotations: { readOnlyHint: true },
   }, (input) => run(() => result('Project setup', { project: projects.readProject(accountId, input) })));
-  if (projects.canManageClientAccess(accountId)) {
+  if (!pilot && projects.canManageClientAccess(accountId)) {
     server.registerTool('kiwe_start_invite_client', {
       description: 'Create a private invitation for a client with a verified email on the selected agency website.',
       inputSchema: clientInvitationInput,
@@ -299,7 +299,9 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
+  const pilotAccount = browserLogin?.pilotAccount;
+  const pilot = Boolean(pilotAccount);
   const keyConnections = createKeyConnections(projects, keyProvider);
   const agencySpaces = createAgencySpaces(projects, agencyReader);
   const context = createDesignContext(projects, startOrigin, contextWordPress, contextClock);
@@ -352,13 +354,17 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     (part) => part.startsWith(name + '='),
   )?.slice(name.length + 1);
   const sessionToken = (request) => requestCookie(request, cookieName);
+  const accountForBrowser = (request) => {
+    const accountId = projects.accountForSession(sessionToken(request));
+    return pilot && accountId !== pilotAccount ? null : accountId;
+  };
   const setCookie = (response, name, value, maxAge) => response.appendHeader(
     'Set-Cookie',
     `${name}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`,
   );
   function sendSignIn(response, status, message) {
     if (browserLogin) response.setHeader('Content-Security-Policy', browserPolicy + "; form-action 'self' " + browserLogin.authorizationOrigin);
-    return send(response, status, signInPage(checkoutOrigin, message, Boolean(browserLogin)));
+    return send(response, status, signInPage(checkoutOrigin, message, Boolean(browserLogin), pilot));
   }
 
   async function route(request, response) {
@@ -366,8 +372,8 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     const { pathname } = url;
     const method = request.method;
     const endpoint = method + ' ' + pathname;
-    if (method === 'GET' && (pathname === browserLoginPath || pathname === '/login')) {
-      if (projects.accountForSession(sessionToken(request))) return redirect(response, '/projects');
+    if (method === 'GET' && [browserLoginPath, '/login', '/login/index.html'].includes(pathname)) {
+      if (accountForBrowser(request)) return redirect(response, '/projects');
       return sendSignIn(response, browserLogin ? 200 : 503);
     }
     if (endpoint === 'POST /projects/sign-in' && browserLogin) {
@@ -396,30 +402,49 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         const pending = projects.takeBrowserLogin(binding, state);
         setCookie(response, loginCookie, '', 0);
         const account = await browserLogin.complete(url.search, state, pending);
-        const session = projects.signIn(account, pending.invitationDigest, sessionToken(request));
-        setCookie(response, cookieName, session.token, browserLifetime / 1000);
+        if (pilot) {
+          if (account.accountId !== pilotAccount) throw new StartError(403, 'pilot_owner_required', 'Use the invited Key account.');
+          projects.acceptPurchase({
+            entitlementId: 'kiwe-agency-pilot', purchaseId: 'kiwe-agency-pilot', accountId: pilotAccount,
+            accountType: 'agency', planId: 'kiwe-agency-monthly', hostingIncluded: false,
+          });
+        }
+        const lifetime = pilot ? pilotBrowserLifetime : browserLifetime;
+        const session = projects.signIn(account, pending.invitationDigest, sessionToken(request), lifetime);
+        setCookie(response, cookieName, session.token, lifetime / 1000);
         return redirect(response, session.projectId ? '/projects/' + session.projectId : '/projects');
       } catch (error) {
         if (!(error instanceof StartError)) throw error;
         return sendSignIn(response, error.status, error.message);
       }
     }
-    if (endpoint === 'POST /projects/api/purchases') {
+    if (pilot && pathname === '/projects/mcp-access' && (method === 'GET' || method === 'POST')) {
+      const session = sessionToken(request);
+      if (projects.accountForSession(session) !== pilotAccount) return sendSignIn(response, 401);
+      if (method === 'POST') {
+        checkOrigin(request, startOrigin);
+        parse(z.strictObject({}), await readBody(request, formType));
+        response.setHeader('Referrer-Policy', 'no-referrer');
+        return send(response, 201, pilotMcpPage(projects.issuePilotMcp(session, pilotAccount)));
+      }
+      return send(response, 200, pilotMcpPage());
+    }
+    if (!pilot && endpoint === 'POST /projects/api/purchases') {
       purchaseWrite(request);
       const result = projects.acceptPurchase(await readBody(request, jsonType));
       return json(response, result.created ? 201 : 200, result);
     }
-    if (endpoint === 'POST /projects/api/handoffs') {
+    if (!pilot && endpoint === 'POST /projects/api/handoffs') {
       purchaseWrite(request);
       const handoff = projects.issueHandoff(await readBody(request, jsonType));
       return json(response, 201, { ...handoff, action: startOrigin + '/projects/open' });
     }
-    if (endpoint === 'POST /projects/api/client-handoffs') {
+    if (!pilot && endpoint === 'POST /projects/api/client-handoffs') {
       purchaseWrite(request);
       const handoff = projects.issueClientHandoff(await readBody(request, jsonType));
       return json(response, 201, { ...handoff, action: startOrigin + '/projects/open' });
     }
-    if (endpoint === 'GET ' + metadataPath) {
+    if (!pilot && endpoint === 'GET ' + metadataPath) {
       return json(response, 200, {
         resource, authorization_servers: [issuer], scopes_supported: [projectScope],
         bearer_methods_supported: ['header'],
@@ -427,9 +452,10 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     }
     if (pathname === mcpPath) {
       if (request.headers.origin !== undefined) checkOrigin(request, startOrigin);
-      const accountId = await authorizeMcp(bearer(request));
+      const token = bearer(request);
+      const accountId = pilot ? projects.accountForPilotMcp(token, pilotAccount) : await authorizeMcp(token);
       if (!accountId) {
-        response.setHeader('WWW-Authenticate', `Bearer resource_metadata="${metadataUrl}", scope="${projectScope}"`);
+        response.setHeader('WWW-Authenticate', pilot ? 'Bearer realm="Kiwe Start pilot"' : `Bearer resource_metadata="${metadataUrl}", scope="${projectScope}"`);
         return json(response, 401, { error: 'authorization_required' });
       }
       if (method !== 'POST') {
@@ -437,7 +463,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return json(response, 405, { error: 'method_not_allowed' });
       }
       const payload = await readBody(request, jsonType);
-      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId);
+      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId, pilot);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, enableJsonResponse: true,
       });
@@ -450,7 +476,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       response.setHeader('Referrer-Policy', 'no-referrer');
       try {
         const project = await siteConnections.complete(Object.fromEntries(url.searchParams));
-        if (projects.accountForSession(sessionToken(request)) === project.accountId) {
+        if (accountForBrowser(request) === project.accountId) {
           return redirect(response, '/projects/' + project.id);
         }
         return send(response, 200, siteReturnPage('The verified site is saved on your project.', true));
@@ -462,7 +488,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     if (endpoint === 'GET /projects/style.css') {
       return send(response, 200, stylesheet, 'text/css; charset=utf-8');
     }
-    if (endpoint === 'POST /projects/open') {
+    if (!pilot && endpoint === 'POST /projects/open') {
       checkOrigin(request, checkoutOrigin);
       const session = projects.redeemHandoff(await readBody(request, formType));
       projects.endSession(sessionToken(request));
@@ -480,7 +506,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       response.setHeader('Referrer-Policy', 'no-referrer');
       try {
         const access = await context.complete(Object.fromEntries(url.searchParams));
-        if (projects.accountForSession(sessionToken(request)) === access.accountId) {
+        if (accountForBrowser(request) === access.accountId) {
           return redirect(response, '/projects/' + access.projectId + '/context');
         }
         return send(response, 200, siteReturnPage('Design Context is connected. Return to your Start project.', true));
@@ -493,7 +519,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       response.setHeader('Referrer-Policy', 'no-referrer');
       try {
         const opened = await publication.complete(Object.fromEntries(url.searchParams));
-        if (projects.accountForSession(sessionToken(request)) === opened.accountId) {
+        if (accountForBrowser(request) === opened.accountId) {
           return redirect(response, documentPath(opened.projectId, opened.target) + '#publication');
         }
         return send(response, 200, siteReturnPage('The publication review was saved.', true));
@@ -507,7 +533,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       const conversion = pathname === bricksReturn;
       try {
         const state = await (conversion ? bricks : website).complete(Object.fromEntries(url.searchParams));
-        if (projects.accountForSession(sessionToken(request)) === state.accountId) {
+        if (accountForBrowser(request) === state.accountId) {
           return redirect(response, conversion ? documentPath(state.projectId, state.target) : '/projects/' + state.projectId + '/pages');
         }
         return send(response, 200, siteReturnPage(conversion ? 'The Bricks review is saved. Reopen your Start project.'
@@ -520,7 +546,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     const pagesRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/pages(?:\/(refresh))?$/);
     if (pagesRoute) {
       const [, projectId, action] = pagesRoute;
-      const accountId = projects.accountForSession(sessionToken(request));
+      const accountId = accountForBrowser(request);
       if (!accountId) return sendSignIn(response, 401);
       const project = projects.getProject(accountId, { projectId });
       const page = (error) => websitePage(project, website.state(accountId, { projectId }), error);
@@ -540,7 +566,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       response.setHeader('Referrer-Policy', 'no-referrer');
       try {
         const opened = await homepage.complete(Object.fromEntries(url.searchParams));
-        if (projects.accountForSession(sessionToken(request)) === opened.accountId) {
+        if (accountForBrowser(request) === opened.accountId) {
           return redirect(response, documentPath(opened.projectId, opened.target));
         }
         return send(response, 200, siteReturnPage('The design request is saved. Return to your Start project.', true));
@@ -552,7 +578,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     const homeRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/(?:homepage|pages\/([a-z][a-z0-9-]{0,30}))(?:\/(request|revise|generate|approve|preview|source|convert|continue-import|publication|finish-publication))?$/);
     if (homeRoute && homeRoute[2] !== 'refresh') {
       const [, projectId, target, action] = homeRoute;
-      const accountId = projects.accountForSession(sessionToken(request))
+      const accountId = accountForBrowser(request)
         ?? (action === 'source' && method === 'GET' ? await authorizeMcp(bearer(request)) : null);
       if (!accountId) return sendSignIn(response, 401);
       const project = projects.getProject(accountId, { projectId });
@@ -628,7 +654,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     }
     const contextRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/context(?:\/(authorize|close|review\/([a-f0-9-]{36})))?$/);
     if (contextRoute) {
-      const accountId = projects.accountForSession(sessionToken(request));
+      const accountId = accountForBrowser(request);
       if (!accountId) return sendSignIn(response, 401);
       const [, projectId, action, reviewId] = contextRoute;
       const project = projects.readProject(accountId, { projectId });
@@ -673,7 +699,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     }
     const agencyRoute = pathname === '/projects/agency' || pathname === '/projects/agency/verify';
     if (agencyRoute) {
-      const accountId = projects.accountForSession(sessionToken(request));
+      const accountId = accountForBrowser(request);
       if (!accountId) return sendSignIn(response, 401);
       const agency = projects.getAgencySpace(accountId);
       if (endpoint === 'GET /projects/agency') return send(response, 200, agencyPage(agency));
@@ -691,7 +717,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       }
     }
     if (endpoint === 'POST /projects/agency/sites') {
-      const accountId = projects.accountForSession(sessionToken(request));
+      const accountId = accountForBrowser(request);
       if (!accountId) return sendSignIn(response, 401);
       checkOrigin(request, startOrigin);
       try {
@@ -699,15 +725,15 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return redirect(response, '/projects/' + project.id);
       } catch (error) {
         if (!(error instanceof StartError)) throw error;
-        return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message));
+        return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message, pilot));
       }
     }
     const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
-      const accountId = projects.accountForSession(sessionToken(request));
+      const accountId = accountForBrowser(request);
       if (!accountId) return sendSignIn(response, 401);
-      if (listRoute) return send(response, 200, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId)));
+      if (listRoute) return send(response, 200, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), undefined, pilot));
       const [, projectId, action] = match;
       const ref = { projectId };
       if (method === 'GET' && !action) {
@@ -716,7 +742,10 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return send(response, 200, showOwnerProject(project));
       }
       function showOwnerProject(project, options = {}) {
-        const clientAccess = project.accountType === 'agency' && project.site
+        if (keyProvider?.origin) {
+          response.setHeader('Content-Security-Policy', browserPolicy + "; form-action 'self' " + keyProvider.origin);
+        }
+        const clientAccess = !pilot && project.accountType === 'agency' && project.site
           ? projects.clientAccess(accountId, ref) : null;
         return projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available, clientAccess, ...options });
       }
@@ -727,6 +756,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           const { revision, ...form } = await readBody(request, formType);
           const input = { ...form, projectId, revision: Number(revision) };
           if (action === 'invite-client') {
+            if (pilot) throw new StartError(403, 'pilot_owner_only', 'Client invitations open with customer sign-in.');
             const invitation = projects.inviteClient(accountId, input);
             response.setHeader('Referrer-Policy', 'no-referrer');
             return send(response, 201, showOwnerProject(project, { invitation }));
@@ -753,6 +783,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         }
       }
     }
+    if (publicGuide && await publicGuide(request, response, pathname)) return;
     return json(response, 404, { error: 'not_found' });
   }
 

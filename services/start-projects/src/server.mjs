@@ -4,11 +4,13 @@ import { createRemoteJWKSet } from 'jose';
 import { createStartServer } from './app.mjs';
 import { createMcpAuthorization } from './auth.mjs';
 import { createBrowserLogin } from './browser-login.mjs';
+import { createKeyPilotLogin } from './key-pilot-login.mjs';
 import { openProjects } from './projects.mjs';
 import { createHostingerProvider } from './managed-hosting.mjs';
 import { createKeyProvider } from './key-connection.mjs';
 import { createHomepageProvider } from './homepage.mjs';
 import { createBricksCompiler } from './bricks-compiler.mjs';
+import { createPublicGuide } from './public-guide.mjs';
 
 function required(name) {
   const value = process.env[name];
@@ -42,26 +44,41 @@ function managedProvider() {
 
 const startOrigin = configuredUrl('KIWE_START_ORIGIN', true);
 const checkoutOrigin = configuredUrl('KIWE_START_CHECKOUT_ORIGIN', true);
-const issuer = configuredUrl('KIWE_START_OAUTH_ISSUER');
-const jwks = configuredUrl('KIWE_START_OAUTH_JWKS');
-const purchaseToken = required('KIWE_START_PURCHASE_TOKEN');
-if (!/^[A-Za-z0-9_-]{43,128}$/.test(purchaseToken)) throw new Error('Use a random purchase credential.');
-const loginSettings = ['KIWE_START_LOGIN_CLIENT_ID', 'KIWE_START_LOGIN_CLIENT_SECRET', 'KIWE_START_LOGIN_AUTHORIZATION_URL', 'KIWE_START_LOGIN_TOKEN_URL'];
-let browserLogin;
-if (loginSettings.some(name => process.env[name])) {
-  const clientSecret = required('KIWE_START_LOGIN_CLIENT_SECRET');
-  if (clientSecret === purchaseToken) throw new Error('Use separate checkout and browser login credentials.');
-  browserLogin = createBrowserLogin({
-    startOrigin, issuer, jwks, clientSecret, clientId: required('KIWE_START_LOGIN_CLIENT_ID'),
-    authorizationEndpoint: configuredUrl('KIWE_START_LOGIN_AUTHORIZATION_URL'),
-    tokenEndpoint: configuredUrl('KIWE_START_LOGIN_TOKEN_URL'),
-  });
-}
+const pilotAccount = process.env.KIWE_START_KEY_PILOT_ACCOUNT;
+const purchaseToken = pilotAccount ? undefined : required('KIWE_START_PURCHASE_TOKEN');
+if (purchaseToken && !/^[A-Za-z0-9_-]{43,128}$/.test(purchaseToken)) throw new Error('Use a random purchase credential.');
 const keyToken = process.env.KIWE_START_KEY_TOKEN;
 if (keyToken && (keyToken === purchaseToken || !/^[A-Za-z0-9_-]{43,128}$/.test(keyToken))) {
   throw new Error('Use a separate random service credential for Key.');
 }
-const key = keyToken ? createKeyProvider({ token: keyToken, origin: configuredUrl('KIWE_START_KEY_ORIGIN', true) }) : undefined;
+const keyOrigin = keyToken ? configuredUrl('KIWE_START_KEY_ORIGIN', true) : undefined;
+const key = keyToken ? createKeyProvider({ token: keyToken, origin: keyOrigin }) : undefined;
+const loginSettings = ['KIWE_START_LOGIN_CLIENT_ID', 'KIWE_START_LOGIN_CLIENT_SECRET', 'KIWE_START_LOGIN_AUTHORIZATION_URL', 'KIWE_START_LOGIN_TOKEN_URL'];
+let browserLogin;
+let issuer;
+let authorizeMcp;
+if (pilotAccount) {
+  if (!key || !startOrigin.startsWith('https://')
+      || [...loginSettings, 'KIWE_START_OAUTH_ISSUER', 'KIWE_START_OAUTH_JWKS'].some(name => process.env[name])) {
+    throw new Error('Configure the closed Key pilot with its own HTTPS identity settings.');
+  }
+  browserLogin = createKeyPilotLogin({ origin: keyOrigin, token: keyToken, accountId: pilotAccount });
+} else {
+  issuer = configuredUrl('KIWE_START_OAUTH_ISSUER');
+  const jwks = configuredUrl('KIWE_START_OAUTH_JWKS');
+  authorizeMcp = createMcpAuthorization({
+    issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
+  });
+  if (loginSettings.some(name => process.env[name])) {
+    const clientSecret = required('KIWE_START_LOGIN_CLIENT_SECRET');
+    if (clientSecret === purchaseToken || clientSecret === keyToken) throw new Error('Use separate checkout and browser login credentials.');
+    browserLogin = createBrowserLogin({
+      startOrigin, issuer, jwks, clientSecret, clientId: required('KIWE_START_LOGIN_CLIENT_ID'),
+      authorizationEndpoint: configuredUrl('KIWE_START_LOGIN_AUTHORIZATION_URL'),
+      tokenEndpoint: configuredUrl('KIWE_START_LOGIN_TOKEN_URL'),
+    });
+  }
+}
 const generatorToken = process.env.KIWE_START_HOMEPAGE_GENERATOR_TOKEN;
 const generatorUrl = process.env.KIWE_START_HOMEPAGE_GENERATOR_URL;
 let homepageProvider;
@@ -82,16 +99,16 @@ if (seamRoot || seamWork) {
 }
 const database = required('KIWE_START_DATABASE');
 if (!path.isAbsolute(database)) throw new Error('Use an absolute private database path.');
+const guideRoot = process.env.KIWE_START_GUIDE_ROOT;
+if (guideRoot && !path.isAbsolute(guideRoot)) throw new Error('Use an absolute public guide directory.');
+const publicGuide = guideRoot ? await createPublicGuide(guideRoot) : undefined;
 const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Use a valid PORT.');
 
 process.umask(0o077);
 mkdirSync(path.dirname(database), { recursive: true, mode: 0o700 });
 const projects = openProjects(database, { launchWebsite: checkoutOrigin });
-const authorizeMcp = createMcpAuthorization({
-  issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
-});
-const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, hostingProvider: managedProvider(), keyProvider: key, homepageProvider, bricksCompiler });
+const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, publicGuide, hostingProvider: managedProvider(), keyProvider: key, homepageProvider, bricksCompiler });
 server.listen(port, process.env.KIWE_START_BIND || '127.0.0.1');
 for (const name of ['SIGINT', 'SIGTERM']) {
   process.once(name, () => server.close(() => projects.close()));

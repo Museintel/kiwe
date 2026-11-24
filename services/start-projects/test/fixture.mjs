@@ -51,7 +51,7 @@ function purchase(entitlementId, extras = {}) {
   };
 }
 
-async function fixture(t, { browserLogin, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress } = {}) {
+async function fixture(t, { browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress } = {}) {
   const checkoutCredential = randomBytes(32).toString('base64url');
   const directory = await mkdtemp(path.join(tmpdir(), 'kiwe-start-test-'));
   const filename = path.join(directory, 'projects.sqlite');
@@ -66,7 +66,7 @@ async function fixture(t, { browserLogin, wordpressLink, hostingProvider, keyPro
   let url;
   async function start() {
     projects = openProjects(filename, { now: () => clock });
-    server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken: checkoutCredential, authorizeMcp, browserLogin, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock: () => clock, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress });
+    server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken: checkoutCredential, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock: () => clock, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress });
     if (useSocket) server.listen(socket);
     else server.listen(0, '127.0.0.1');
     await once(server, 'listening');
@@ -110,9 +110,9 @@ async function fixture(t, { browserLogin, wordpressLink, hostingProvider, keyPro
     return new SignJWT({ scope }).setProtectedHeader({ alg: 'ES256' }).setIssuer(issuer).setAudience(aud)
       .setSubject(accountId).setIssuedAt().setExpirationTime(expiry).sign(privateKey);
   }
-  async function connect(accountId) {
+  async function connectBearer(bearer) {
     const transport = new StreamableHTTPClientTransport(new URL(url + '/projects/mcp'), {
-      requestInit: { headers: { Authorization: 'Bearer ' + await token(accountId) } },
+      requestInit: { headers: { Authorization: 'Bearer ' + bearer } },
       fetch: fetchHttp,
     });
     const client = new Client({ name: 'Kiwe qualification', version: '1.0.0' });
@@ -121,7 +121,8 @@ async function fixture(t, { browserLogin, wordpressLink, hostingProvider, keyPro
     return client;
   }
   return {
-    request, postReceipt, form, ticket, redeem, token, connect,
+    request, postReceipt, form, ticket, redeem, token, connectBearer,
+    async connect(accountId) { return connectBearer(await token(accountId)); },
     advance(ms) { clock += ms; },
     async restart() { await stop(); await start(); },
   };

@@ -27,20 +27,31 @@ ${body}
 </html>`;
 }
 
-export function signInPage(checkoutOrigin, message, browserLogin) {
-  const details = message || (browserLogin ? 'Use your Kiwe Launch account to open your site projects.' : 'Open your project using your Kiwe Launch enrollment link.');
+export function signInPage(checkoutOrigin, message, browserLogin, pilot) {
+  const details = message || (pilot ? 'Sign in with the Key account invited to the Kiwe Launch agency pilot.'
+    : browserLogin ? 'Use your Kiwe Launch account to open your site projects.' : 'Open your project using your Kiwe Launch enrollment link.');
   const form = browserLogin ? `<form method="post" action="/projects/sign-in">
-<details><summary>I have a client invitation</summary>
+${pilot ? '' : `<details><summary>I have a client invitation</summary>
 <label for="invite-code">Invitation code</label>
 <input id="invite-code" name="inviteCode" maxlength="43" autocomplete="off" spellcheck="false">
-</details>
-<button class="button">Continue to sign in</button>
+</details>`}
+<button class="button">${pilot ? 'Continue with Key' : 'Continue to sign in'}</button>
 </form>` : '';
   return page('Log in to Kiwe Start',
     `<p${message ? ' class="error" role="alert"' : ''}>${escape(details)}</p>${form}<p><a href="${escape(checkoutOrigin)}">Go to Kiwe Launch</a></p>`);
 }
 
-export function projectsPage(projects, agencySites, error) {
+export function pilotMcpPage(token) {
+  const credential = token ? `<p>Copy this token into your MCP client’s authorization settings. It expires in 20 minutes or when you sign out.</p>
+<label for="pilot-token">Access token</label>
+<input type="text" id="pilot-token" value="${escape(token)}" autocomplete="off" spellcheck="false" readonly>` : '';
+  return page('MCP access', `<p><a href="/projects">All projects</a></p><p>Connect to <code>/projects/mcp</code> with a temporary bearer token.</p>
+${credential}<form method="post" action="/projects/mcp-access">
+<button class="button">${token ? 'Replace token' : 'Create token'}</button>
+</form>`, true);
+}
+
+export function projectsPage(projects, agencySites, error, pilot = false) {
   const section = (items, details = '') => items.length ? `<section>
 <h2>${escape(items[0].workspace.name)}</h2>${details}
 <ul class="projects">${items.map((project) => `<li>
@@ -49,7 +60,8 @@ export function projectsPage(projects, agencySites, error) {
 </li>`).join('')}</ul></section>` : '';
   const clients = projects.filter(({ accountType }) => accountType === 'client');
   const agency = projects.filter(({ accountType }) => accountType === 'agency');
-  const agencySettings = '<p><a href="/projects/agency">Agency workspace settings</a></p>';
+  const agencySettings = '<p><a href="/projects/agency">Agency workspace settings</a></p>'
+    + (pilot ? '<p><a href="/projects/mcp-access">MCP access</a></p>' : '');
   const allowance = agencySites ? `<p>${agencySites.used} of ${agencySites.limit} site slots reserved</p>` : '';
   const addSite = agencySites && agencySites.used < agencySites.limit ? `<form method="post" action="/projects/agency/sites">
 <label for="new-domain">Domain of an existing WordPress site</label>

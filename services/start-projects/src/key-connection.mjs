@@ -9,6 +9,7 @@ function unavailable() {
 
 export function createKeyProvider({ origin, token, http = fetch }) {
   return {
+    origin,
     async prepare(request) {
       try {
         const response = await http(origin + '/integrations/start/requests', {

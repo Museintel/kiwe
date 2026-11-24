@@ -162,6 +162,8 @@ const secret = () => randomBytes(32).toString('base64url');
 const digest = (value) => createHash('sha256').update(value, 'utf8').digest('hex');
 const handoffLifetime = 5 * 60 * 1000;
 export const browserLifetime = 8 * 60 * 60 * 1000;
+export const pilotBrowserLifetime = 60 * 60 * 1000;
+export const pilotMcpLifetime = 20 * 60 * 1000;
 
 export function openProjects(filename, { now = Date.now, launchWebsite = 'https://kiwelaunch.com' } = {}) {
   const db = new DatabaseSync(filename, { enableDoubleQuotedStringLiterals: false });
@@ -193,6 +195,11 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     ) STRICT;
     CREATE INDEX IF NOT EXISTS handoffs_expiry ON handoffs(expires_at);
     CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
+    CREATE TABLE IF NOT EXISTS pilot_mcp_tokens (
+      digest TEXT PRIMARY KEY,
+      session_digest TEXT NOT NULL UNIQUE,
+      expires_at INTEGER NOT NULL
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS browser_logins (
       digest TEXT PRIMARY KEY,
       browser_digest TEXT NOT NULL,
@@ -359,6 +366,15 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const consumeHandoff = db.prepare('DELETE FROM handoffs WHERE digest = ? AND expires_at > ? RETURNING project_id');
   const addSession = db.prepare('INSERT INTO sessions(digest, account_id, expires_at) VALUES (?, ?, ?)');
   const checkSession = db.prepare('SELECT account_id FROM sessions WHERE digest = ? AND expires_at > ?');
+  const putPilotToken = db.prepare(
+    'INSERT INTO pilot_mcp_tokens(digest, session_digest, expires_at) VALUES (?, ?, ?) '
+    + 'ON CONFLICT(session_digest) DO UPDATE SET digest = excluded.digest, expires_at = excluded.expires_at',
+  );
+  const checkPilotToken = db.prepare(
+    'SELECT s.account_id FROM pilot_mcp_tokens t JOIN sessions s ON s.digest = t.session_digest '
+    + 'WHERE t.digest = ? AND t.expires_at > ? AND s.expires_at > ?',
+  );
+  const prunePilotTokens = db.prepare('DELETE FROM pilot_mcp_tokens WHERE expires_at <= ?');
   const endSession = db.prepare('DELETE FROM sessions WHERE digest = ?');
   const pruneHandoffs = db.prepare('DELETE FROM handoffs WHERE expires_at <= ?');
   const pruneSessions = db.prepare('DELETE FROM sessions WHERE expires_at <= ?');
@@ -571,10 +587,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     };
   }
 
-  function openSession(accountId, projectId, time) {
+  function openSession(accountId, projectId, time, lifetime = browserLifetime) {
     const token = secret();
     pruneSessions.run(time);
-    addSession.run(digest(token), accountId, time + browserLifetime);
+    addSession.run(digest(token), accountId, time + lifetime);
     return { token, projectId };
   }
 
@@ -678,13 +694,32 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       return JSON.parse(row.pending);
     },
 
-    signIn({ accountId, verifiedEmail: email }, invitationDigest, previousSession) {
+    signIn({ accountId, verifiedEmail: email }, invitationDigest, previousSession, lifetime = browserLifetime) {
       return transaction(() => {
         const time = now();
         const client = invitationDigest ? claimClientInvitation(accountId, email, invitationDigest, time) : null;
         if (previousSession) endSession.run(digest(previousSession));
-        return openSession(accountId, client?.id ?? null, time);
+        return openSession(accountId, client?.id ?? null, time, lifetime);
       });
+    },
+
+    issuePilotMcp(session, pilotAccount) {
+      if (!ticketInput.shape.ticket.safeParse(session).success) throw missingProject();
+      return transaction(() => {
+        const time = now();
+        const binding = digest(session);
+        if (checkSession.get(binding, time)?.account_id !== pilotAccount) throw missingProject();
+        const token = 'kiwe_start_pilot_' + secret();
+        prunePilotTokens.run(time);
+        putPilotToken.run(digest(token), binding, time + pilotMcpLifetime);
+        return token;
+      });
+    },
+
+    accountForPilotMcp(token, pilotAccount) {
+      if (!/^kiwe_start_pilot_[A-Za-z0-9_-]{43}$/.test(token)) return null;
+      const time = now();
+      return checkPilotToken.get(digest(token), time, time)?.account_id === pilotAccount ? pilotAccount : null;
     },
 
     accountForSession(token) {

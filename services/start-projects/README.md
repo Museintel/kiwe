@@ -124,6 +124,10 @@ Keep the purchase credential inside the checkout server and keep handoff tickets
 
 ## Browser login
 
+For the closed agency pilot, configure `KIWE_START_KEY_PILOT_ACCOUNT` with the `key:` subject of the verified Key owner and use the dedicated Start service credential already configured for Key. Key requires its matching `KIWE_KEY_START_PILOT_OWNER_ID` and native owner approval. Start accepts only that subject. This mode opens a test Agency entitlement and provides a 20-minute MCP bearer from **MCP access** in the signed-in dashboard. The bearer expires on replacement or sign-out and uses the same project permissions. Customer invitations, purchases and standard OAuth discovery use the separate commercial identity configuration. Use a dedicated private pilot database so the production account rollout can explicitly migrate the approved projects.
+
+Hostinger can serve the existing versioned guide beside the project service by setting `KIWE_START_GUIDE_ROOT` to the absolute directory containing the verified public guide snapshot. The project and login routes retain their own authentication and response policies.
+
 The header on Kiwe Launch opens `GET /login/` on Start. Configure an OpenID Connect confidential client with the exact callback `https://start.kiwelaunch.com/projects/login/return`. Start uses authorization code, S256 PKCE, an expiring browser-bound transaction and a verified signed ID token. The issuer must provide the same immutable subject to Start's browser client, Launch's trusted purchase integration and the MCP resource. Configure those registrations to share stable subjects. Email is used to accept a matching client invitation after the issuer verifies it.
 
 The login transaction rotates the Start session and consumes the prior browser transaction. Preserve the database across restarts and keep authorization codes, invitation codes, bearer credentials and cookies out of access and application logs.
