@@ -60,7 +60,18 @@ test('one managed plan opens one hosting setup across web, MCP and restart', asy
     },
   });
 
-  const f = await fixture(t, { hostingProvider: provider });
+  let verifiedUrl = 'https://kiwe-customer.example';
+  const wordpressLink = {
+    async begin(domain, redirect, state) {
+      assert.equal(domain, temp);
+      const origin = 'https://' + domain;
+      return { origin, issuer: origin, redirect, authorizationUrl: origin + '/authorize?state=' + state };
+    },
+    async verify() {
+      return { url: verifiedUrl, coreVersion: '8.0.0-rc.498', wordpressVersion: '7.1.5' };
+    },
+  };
+  const f = await fixture(t, { hostingProvider: provider, wordpressLink });
   const { projectId, endpoint, session } = await hostedProject(f, 'included');
   const step = (client) => client.callTool({
     name: 'kiwe_start_provision_site', arguments: { projectId, revision: 2 },
@@ -69,6 +80,10 @@ test('one managed plan opens one hosting setup across web, MCP and restart', asy
   assert.equal((await step(outsider)).isError, true);
   assert.deepEqual(requests, []);
   const client = await f.connect('buyer-one');
+  const connect = (client) => client.callTool({
+    name: 'kiwe_start_connect_site', arguments: { projectId, revision: 2 },
+  });
+  assert.equal((await connect(client)).isError, true);
   const web = () => f.form(endpoint + '/hosting', { revision: '2' }, { cookie: session });
   const effects = await Promise.all([web(), step(client), step(client)]);
   assert.equal(effects[0].status, 303);
@@ -92,9 +107,28 @@ test('one managed plan opens one hosting setup across web, MCP and restart', asy
   assert.equal(ready.managedSite.url, 'https://' + temp);
   assert.equal(ready.domain, 'kiwe-customer.example');
   assert.equal(ready.next, 'activate_kiwe');
-  assert.match(await (await f.request(endpoint, { headers: { Cookie: session } })).text(), /WordPress is ready/);
+  const html = await (await f.request(endpoint, { headers: { Cookie: session } })).text();
+  assert.match(html, /WordPress is ready/);
+  assert.match(html, /Connect WordPress site/);
   await web();
   assert.equal(requests.filter((path) => path.startsWith('/orders/')).length, 1);
+
+  const first = new URL((await connect(resumed)).structuredContent.authorizationUrl);
+  const approve = (authorization) => f.request('/projects/site-return?' + new URLSearchParams({
+    state: authorization.searchParams.get('state'), iss: authorization.origin,
+    code: 'kiwe_mcp_code_c_' + '1'.repeat(32) + '.' + 'A'.repeat(43),
+  }), { headers: { Cookie: session } });
+  assert.equal((await approve(first)).status, 409);
+  verifiedUrl = first.origin;
+  const authorization = await f.form(endpoint + '/connect', { revision: '2' }, { cookie: session });
+  assert.equal(authorization.status, 200);
+  const chosen = (await authorization.text()).match(/href="(https:\/\/[^"]+\/authorize\?state=[^"]+)"/)?.[1];
+  assert.equal(new URL(chosen).origin, verifiedUrl);
+  assert.equal((await approve(new URL(chosen))).status, 303);
+  const saved = await resumed.callTool({ name: 'kiwe_start_project', arguments: { projectId } });
+  assert.equal(saved.structuredContent.project.site.url, verifiedUrl);
+  assert.equal(saved.structuredContent.project.domain, 'kiwe-customer.example');
+  assert.equal(saved.structuredContent.project.next, 'connect_key');
 });
 
 test('a lost provider response is reconciled on the saved temporary domain', async (t) => {

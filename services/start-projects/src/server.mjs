@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createRemoteJWKSet } from 'jose';
 import { createStartServer } from './app.mjs';
 import { createMcpAuthorization } from './auth.mjs';
+import { createBrowserLogin } from './browser-login.mjs';
 import { openProjects } from './projects.mjs';
 import { createHostingerProvider } from './managed-hosting.mjs';
 import { createKeyProvider } from './key-connection.mjs';
@@ -45,6 +46,17 @@ const issuer = configuredUrl('KIWE_START_OAUTH_ISSUER');
 const jwks = configuredUrl('KIWE_START_OAUTH_JWKS');
 const purchaseToken = required('KIWE_START_PURCHASE_TOKEN');
 if (!/^[A-Za-z0-9_-]{43,128}$/.test(purchaseToken)) throw new Error('Use a random purchase credential.');
+const loginSettings = ['KIWE_START_LOGIN_CLIENT_ID', 'KIWE_START_LOGIN_CLIENT_SECRET', 'KIWE_START_LOGIN_AUTHORIZATION_URL', 'KIWE_START_LOGIN_TOKEN_URL'];
+let browserLogin;
+if (loginSettings.some(name => process.env[name])) {
+  const clientSecret = required('KIWE_START_LOGIN_CLIENT_SECRET');
+  if (clientSecret === purchaseToken) throw new Error('Use separate checkout and browser login credentials.');
+  browserLogin = createBrowserLogin({
+    startOrigin, issuer, jwks, clientSecret, clientId: required('KIWE_START_LOGIN_CLIENT_ID'),
+    authorizationEndpoint: configuredUrl('KIWE_START_LOGIN_AUTHORIZATION_URL'),
+    tokenEndpoint: configuredUrl('KIWE_START_LOGIN_TOKEN_URL'),
+  });
+}
 const keyToken = process.env.KIWE_START_KEY_TOKEN;
 if (keyToken && (keyToken === purchaseToken || !/^[A-Za-z0-9_-]{43,128}$/.test(keyToken))) {
   throw new Error('Use a separate random service credential for Key.');
@@ -79,7 +91,7 @@ const projects = openProjects(database, { launchWebsite: checkoutOrigin });
 const authorizeMcp = createMcpAuthorization({
   issuer, resource: startOrigin + '/projects/mcp', keys: createRemoteJWKSet(new URL(jwks)),
 });
-const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, hostingProvider: managedProvider(), keyProvider: key, homepageProvider, bricksCompiler });
+const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, hostingProvider: managedProvider(), keyProvider: key, homepageProvider, bricksCompiler });
 server.listen(port, process.env.KIWE_START_BIND || '127.0.0.1');
 for (const name of ['SIGINT', 'SIGTERM']) {
   process.once(name, () => server.close(() => projects.close()));

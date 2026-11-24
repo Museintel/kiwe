@@ -114,7 +114,7 @@ export function createWebsiteInventory(projects, startOrigin, wordpress = create
         flow.projectId === project.id && flow.revision === project.revision && flow.expiresAt > now());
       if (previous) return previous.connection.authorizationUrl;
       const state = nonce();
-      const connection = await wordpress.begin(project.domain, startOrigin + inventoryReturn, state, nonce(), scope, 'Kiwe Start Pages and Templates');
+      const connection = await wordpress.begin(new URL(project.site.url).hostname, startOrigin + inventoryReturn, state, nonce(), scope, 'Kiwe Start Pages and Templates');
       if (connection.origin !== project.site.url) throw unavailable();
       for (const [id, flow] of flows) if (flow.expiresAt <= now()) flows.delete(id);
       flows.set(state, { ...details, accountId, connection, expiresAt: now() + 600000 });

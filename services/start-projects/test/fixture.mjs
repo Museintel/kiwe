@@ -30,9 +30,13 @@ function socketFetch(socketPath) {
         const chunks = [];
         reply.on('data', (chunk) => chunks.push(chunk));
         reply.on('error', reject);
-        reply.on('end', () => resolve(new Response(Buffer.concat(chunks), {
-          status: reply.statusCode, headers: reply.headers,
-        })));
+        reply.on('end', () => {
+          const headers = new Headers();
+          for (const [name, values] of Object.entries(reply.headersDistinct)) {
+            for (const value of values) headers.append(name, value);
+          }
+          resolve(new Response(Buffer.concat(chunks), { status: reply.statusCode, headers }));
+        });
       });
       wire.on('error', reject);
       wire.end(body);
@@ -47,7 +51,7 @@ function purchase(entitlementId, extras = {}) {
   };
 }
 
-async function fixture(t, { wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress } = {}) {
+async function fixture(t, { browserLogin, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress } = {}) {
   const checkoutCredential = randomBytes(32).toString('base64url');
   const directory = await mkdtemp(path.join(tmpdir(), 'kiwe-start-test-'));
   const filename = path.join(directory, 'projects.sqlite');
@@ -62,7 +66,7 @@ async function fixture(t, { wordpressLink, hostingProvider, keyProvider, agencyR
   let url;
   async function start() {
     projects = openProjects(filename, { now: () => clock });
-    server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken: checkoutCredential, authorizeMcp, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock: () => clock, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress });
+    server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken: checkoutCredential, authorizeMcp, browserLogin, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock: () => clock, homepageWordPress, homepageProvider, bricksWordPress, bricksCompiler, inventoryWordPress, publicationWordPress });
     if (useSocket) server.listen(socket);
     else server.listen(0, '127.0.0.1');
     await once(server, 'listening');

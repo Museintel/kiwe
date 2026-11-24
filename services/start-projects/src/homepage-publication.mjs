@@ -114,7 +114,7 @@ export function createHomepagePublication(projects, startOrigin, wordpress = cre
         else if (flow.id === imported.id && flow.action === details.action) return { authorizationUrl: flow.connection.authorizationUrl };
       }
       const state = opaque();
-      const connection = await wordpress.begin(project.domain, startOrigin + publicationReturn, state, opaque(), scopeFor(details.target), 'Kiwe Start publication');
+      const connection = await wordpress.begin(new URL(project.site.url).hostname, startOrigin + publicationReturn, state, opaque(), scopeFor(details.target), 'Kiwe Start publication');
       if (connection.origin !== project.site.url) throw error();
       target(accountId, details);
       pending.set(state, { ...details, accountId, id: imported.id, connection, expiresAt: now() + 600_000 });

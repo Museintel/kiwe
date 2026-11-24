@@ -25,7 +25,10 @@ a:focus-visible { outline: 3px solid #388053; outline-offset: 4px; }
 .wrap { width: min(100% - 2.5rem, 1060px); margin-inline: auto; }
 .site-header .wrap, footer .wrap { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-block: 1rem; }
 .wordmark { font-size: 1.45rem; font-weight: 800; letter-spacing: -.055em; text-decoration: none; }
-.site-header a:last-child, footer { color: var(--muted); font-size: .9rem; }
+.site-header nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: .55rem 1.15rem; font-size: .9rem; }
+.guide, footer { color: var(--muted); }
+.login { padding: .45rem .86rem; border: 1px solid var(--accent); border-radius: .45rem; color: var(--deep); font-weight: 700; text-decoration: none; }
+.login:hover { background: var(--lime); }
 .hero { background: var(--deep); color: #fbfff8; padding-block: clamp(2.7rem, 6vw, 5.1rem); }
 .hero h1 { margin: 0; font-size: clamp(2.45rem, 6.8vw, 5.15rem); line-height: 1.01; letter-spacing: -.065em; }
 .hero p { max-width: 37rem; margin: 1rem 0 0; color: #e0eade; font-size: clamp(1rem, 2vw, 1.2rem); }
@@ -34,6 +37,8 @@ main { padding-bottom: 2.2rem; }
 .plan { border: 1px solid var(--line); border-radius: 1.15rem; background: var(--card); padding: clamp(1.2rem, 3vw, 2.05rem); }
 .plan h2 { margin: 0; font-size: 1.85rem; line-height: 1.1; letter-spacing: -.035em; }
 .plan p { color: var(--muted); margin: .65rem 0 1.2rem; }
+.plan .price { color: var(--ink); margin: .55rem 0 0; }
+.price strong { font-size: clamp(2.4rem, 4.6vw, 3.45rem); letter-spacing: -.055em; line-height: 1.15; }
 .hosting { padding: .7rem .85rem; background: #eaf2e8; border-radius: .45rem; font-weight: 700; }
 .plan ul { margin: 1.25rem 0 0; padding-left: 1.2rem; }
 .plan li + li { margin-top: .55rem; }
@@ -49,7 +54,10 @@ footer { border-top: 1px solid var(--line); }
 <header class="site-header">
   <div class="wrap">
     <a class="wordmark" href="/plans/">Kiwe Launch</a>
-    <a href="https://start.kiwelaunch.com/">Read the Start guide</a>
+    <nav aria-label="Main navigation">
+      <a class="guide" href="https://start.kiwelaunch.com/">Start guide</a>
+      <a class="login" href="https://start.kiwelaunch.com/login/">Log in</a>
+    </nav>
   </div>
 </header>
 <main>
@@ -63,28 +71,30 @@ footer { border-top: 1px solid var(--line); }
     <section class="plans" aria-label="Plan comparison">
       <article class="plan">
         <h2>Client</h2>
+        <p class="price"><strong>₹499</strong> / site / month</p>
         <p>For a business owner launching and managing one website.</p>
         <div class="hosting">Managed hosting included</div>
         <ul>
-          <li>Set up WordPress and Kiwe from your own Start dashboard.</li>
-          <li>Connect a domain you own or choose a new domain during setup.</li>
+          <li>One website with its own Kiwe Start dashboard.</li>
+          <li>Connect a domain you own.</li>
           <li>Use the included hosting or connect an existing WordPress site.</li>
           <li>Add your business details and review each design before it goes live.</li>
         </ul>
       </article>
       <article class="plan">
         <h2>Agency</h2>
+        <p class="price"><strong>₹999</strong> / agency / month</p>
         <p>For teams designing and managing websites for clients.</p>
-        <div class="hosting">Managed hosting optional</div>
+        <div class="hosting">Up to three site projects</div>
         <ul>
           <li>Manage your website and client projects from an agency dashboard.</li>
-          <li>Choose managed hosting or connect a WordPress site you already host.</li>
+          <li>Use your own WordPress hosting or add managed hosting for each site.</li>
           <li>Give each client independent access to their own Start dashboard.</li>
           <li>Use an agency WhatsApp number by default and choose a client number for individual sites.</li>
         </ul>
       </article>
     </section>
-    <p class="note">These plans are a preview. Pricing and enrollment details will be published before monthly billing starts.</p>
+    <p class="note">Prices are before applicable taxes. New domains and Agency managed hosting are priced separately. Public enrollment and monthly payments are pending.</p>
   </div>
 </main>
 <footer>

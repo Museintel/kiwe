@@ -4,9 +4,10 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
-  agencyHomeInput, agencySpaceOutput, agencyVerificationInput, clientInvitationInput,
-  StartError, browserLifetime, claimInput, domainInput, projectScope, projectsOutput, singleProjectOutput, siteLinkInput,
+  agencyHomeInput, agencySiteInput, agencySpaceOutput, agencyVerificationInput, clientInvitationInput,
+  StartError, browserLifetime, claimInput, domainInput, parse, projectScope, projectsOutput, singleProjectOutput, siteLinkInput, ticketInput,
 } from './projects.mjs';
+import { browserLoginInput, browserLoginLifetime, browserLoginPath, browserLoginReturn } from './browser-login.mjs';
 import { agencyPage, contextPage, contextReviewPage, homepagePage, websitePage, clientProjectPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
@@ -31,6 +32,7 @@ const formType = 'application/x-www-form-urlencoded';
 const mcpPath = '/projects/mcp';
 const metadataPath = '/.well-known/oauth-protected-resource' + mcpPath;
 const maxBodySize = 16 * 1024;
+const browserPolicy = "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 function send(response, status, body, type = 'text/html; charset=utf-8') {
   response.writeHead(status, { 'Content-Type': type });
@@ -136,7 +138,7 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     annotations: { destructiveHint: false, idempotentHint: true },
   }, (input) => run(() => result('Domain saved', { project: projects.setDomain(accountId, input) })));
   server.registerTool('kiwe_start_connect_site', {
-    description: 'Open the native WordPress authorization for the selected existing site. The website owner approves the link. Read the same project after approval.',
+    description: 'Open native authorization for the selected existing or ready managed WordPress site with Kiwe MCP installed. The website owner approves the link.',
     inputSchema: siteLinkInput,
     annotations: { destructiveHint: false, idempotentHint: true },
   }, (input) => run(async () => result('Open this link to approve the website connection', await siteConnections.begin(accountId, input))));
@@ -161,6 +163,14 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     outputSchema: agencySpaceOutput,
     annotations: { readOnlyHint: true },
   }, () => run(() => result('Agency workspace', projects.getAgencySpace(accountId))));
+  if (projects.agencySites(accountId)) {
+    server.registerTool('kiwe_start_add_agency_site', {
+      description: 'Add an agency site project for a confirmed existing WordPress domain. Read the site allowance with kiwe_start_agency_workspace. WordPress ownership still needs approval.',
+      inputSchema: agencySiteInput,
+      outputSchema: singleProjectOutput,
+      annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    }, (input) => run(() => result('Agency site project', { project: projects.addAgencySite(accountId, input) })));
+  }
   server.registerTool('kiwe_start_set_agency_home', {
     description: 'Use the agency owner’s confirmed business name and own website domain. Return the proof file if website ownership needs verification.',
     inputSchema: agencyHomeInput,
@@ -289,7 +299,7 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
   const keyConnections = createKeyConnections(projects, keyProvider);
   const agencySpaces = createAgencySpaces(projects, agencyReader);
   const context = createDesignContext(projects, startOrigin, contextWordPress, contextClock);
@@ -337,19 +347,63 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       throw new StartError(401, 'purchase_authority_required', 'A trusted Kiwe Launch connection is required.');
     }
   };
-  const sessionToken = (request) => request.headers.cookie?.split(/;\s*/).find(
-    (part) => part.startsWith(cookieName + '='),
-  )?.slice(cookieName.length + 1);
-  const setCookie = (response, value, maxAge) => response.setHeader(
+  const loginCookie = secure ? '__Host-kiwe-start-login' : 'kiwe-start-login-lab';
+  const requestCookie = (request, name) => request.headers.cookie?.split(/;\s*/).find(
+    (part) => part.startsWith(name + '='),
+  )?.slice(name.length + 1);
+  const sessionToken = (request) => requestCookie(request, cookieName);
+  const setCookie = (response, name, value, maxAge) => response.appendHeader(
     'Set-Cookie',
-    `${cookieName}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`,
+    `${name}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`,
   );
+  function sendSignIn(response, status, message) {
+    if (browserLogin) response.setHeader('Content-Security-Policy', browserPolicy + "; form-action 'self' " + browserLogin.authorizationOrigin);
+    return send(response, status, signInPage(checkoutOrigin, message, Boolean(browserLogin)));
+  }
 
   async function route(request, response) {
     const url = new URL(request.url, startOrigin);
     const { pathname } = url;
     const method = request.method;
     const endpoint = method + ' ' + pathname;
+    if (method === 'GET' && (pathname === browserLoginPath || pathname === '/login')) {
+      if (projects.accountForSession(sessionToken(request))) return redirect(response, '/projects');
+      return sendSignIn(response, browserLogin ? 200 : 503);
+    }
+    if (endpoint === 'POST /projects/sign-in' && browserLogin) {
+      checkOrigin(request, startOrigin);
+      try {
+        const { inviteCode } = parse(browserLoginInput, await readBody(request, formType));
+        const attempt = await browserLogin.begin(inviteCode);
+        projects.saveBrowserLogin(attempt, browserLoginLifetime * 1000);
+        setCookie(response, loginCookie, attempt.binding, browserLoginLifetime);
+        return redirect(response, attempt.authorization.href);
+      } catch (error) {
+        if (!(error instanceof StartError)) throw error;
+        return sendSignIn(response, error.status, error.message);
+      }
+    }
+    if (endpoint === 'GET ' + browserLoginReturn && browserLogin) {
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      try {
+        const states = url.searchParams.getAll('state');
+        const [state] = states;
+        const binding = requestCookie(request, loginCookie);
+        if (states.length !== 1 || !ticketInput.shape.ticket.safeParse(state).success
+            || !ticketInput.shape.ticket.safeParse(binding).success) {
+          throw new StartError(410, 'login_expired', 'Start a new sign-in on this device.');
+        }
+        const pending = projects.takeBrowserLogin(binding, state);
+        setCookie(response, loginCookie, '', 0);
+        const account = await browserLogin.complete(url.search, state, pending);
+        const session = projects.signIn(account, pending.invitationDigest, sessionToken(request));
+        setCookie(response, cookieName, session.token, browserLifetime / 1000);
+        return redirect(response, session.projectId ? '/projects/' + session.projectId : '/projects');
+      } catch (error) {
+        if (!(error instanceof StartError)) throw error;
+        return sendSignIn(response, error.status, error.message);
+      }
+    }
     if (endpoint === 'POST /projects/api/purchases') {
       purchaseWrite(request);
       const result = projects.acceptPurchase(await readBody(request, jsonType));
@@ -412,14 +466,15 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       checkOrigin(request, checkoutOrigin);
       const session = projects.redeemHandoff(await readBody(request, formType));
       projects.endSession(sessionToken(request));
-      setCookie(response, session.token, browserLifetime / 1000);
+      setCookie(response, cookieName, session.token, browserLifetime / 1000);
       return redirect(response, '/projects/' + session.projectId);
     }
     if (endpoint === 'POST /projects/sign-out') {
       checkOrigin(request, startOrigin);
       projects.endSession(sessionToken(request));
-      setCookie(response, '', 0);
-      return redirect(response, '/projects');
+      setCookie(response, cookieName, '', 0);
+      setCookie(response, loginCookie, '', 0);
+      return redirect(response, browserLogin ? browserLoginPath : '/projects');
     }
     if (endpoint === 'GET ' + contextReturnPath) {
       response.setHeader('Referrer-Policy', 'no-referrer');
@@ -466,7 +521,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     if (pagesRoute) {
       const [, projectId, action] = pagesRoute;
       const accountId = projects.accountForSession(sessionToken(request));
-      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
+      if (!accountId) return sendSignIn(response, 401);
       const project = projects.getProject(accountId, { projectId });
       const page = (error) => websitePage(project, website.state(accountId, { projectId }), error);
       if (method === 'GET' && !action) return send(response, 200, page());
@@ -499,7 +554,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       const [, projectId, target, action] = homeRoute;
       const accountId = projects.accountForSession(sessionToken(request))
         ?? (action === 'source' && method === 'GET' ? await authorizeMcp(bearer(request)) : null);
-      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
+      if (!accountId) return sendSignIn(response, 401);
       const project = projects.getProject(accountId, { projectId });
       const location = documentPath(projectId, target);
       const page = (error) => {
@@ -574,9 +629,10 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     const contextRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/context(?:\/(authorize|close|review\/([a-f0-9-]{36})))?$/);
     if (contextRoute) {
       const accountId = projects.accountForSession(sessionToken(request));
-      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
+      if (!accountId) return sendSignIn(response, 401);
       const [, projectId, action, reviewId] = contextRoute;
-      const project = projects.getProject(accountId, { projectId });
+      const project = projects.readProject(accountId, { projectId });
+      if (project.site) response.setHeader('Content-Security-Policy', browserPolicy + "; form-action 'self' " + new URL(project.site.url).origin);
       const area = contextArea.safeParse(url.searchParams.get('area')).data ?? 'identity';
       const location = '/projects/' + projectId + '/context';
       if (method === 'GET' && reviewId) {
@@ -618,7 +674,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     const agencyRoute = pathname === '/projects/agency' || pathname === '/projects/agency/verify';
     if (agencyRoute) {
       const accountId = projects.accountForSession(sessionToken(request));
-      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
+      if (!accountId) return sendSignIn(response, 401);
       const agency = projects.getAgencySpace(accountId);
       if (endpoint === 'GET /projects/agency') return send(response, 200, agencyPage(agency));
       if (method === 'POST') {
@@ -634,12 +690,24 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         }
       }
     }
+    if (endpoint === 'POST /projects/agency/sites') {
+      const accountId = projects.accountForSession(sessionToken(request));
+      if (!accountId) return sendSignIn(response, 401);
+      checkOrigin(request, startOrigin);
+      try {
+        const project = projects.addAgencySite(accountId, await readBody(request, formType));
+        return redirect(response, '/projects/' + project.id);
+      } catch (error) {
+        if (!(error instanceof StartError)) throw error;
+        return send(response, error.status, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId), error.message));
+      }
+    }
     const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = projects.accountForSession(sessionToken(request));
-      if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
-      if (listRoute) return send(response, 200, projectsPage(projects.listProjects(accountId)));
+      if (!accountId) return sendSignIn(response, 401);
+      if (listRoute) return send(response, 200, projectsPage(projects.listProjects(accountId), projects.agencySites(accountId)));
       const [, projectId, action] = match;
       const ref = { projectId };
       if (method === 'GET' && !action) {
@@ -692,13 +760,13 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Referrer-Policy', 'same-origin');
     response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    response.setHeader('Content-Security-Policy', browserPolicy + "; form-action 'self'");
     void route(request, response).catch((error) => {
       if (response.writableEnded) return;
       if (response.headersSent) return response.destroy();
       if (error instanceof StartError) {
         if (request.url === '/projects/open') {
-          return send(response, error.status, signInPage(checkoutOrigin, error.message));
+          return sendSignIn(response, error.status, error.message);
         }
         return json(response, error.status, { error: error.code, message: error.message });
       }

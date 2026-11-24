@@ -155,7 +155,7 @@ export function createHomepageWorkflow(projects, startOrigin, wordpress = create
       if (previous) return previous[1].connection.authorizationUrl;
       for (const [id, flow] of pending) if (flow.expiresAt <= now()) pending.delete(id);
       const state = nonce();
-      const connection = await wordpress.begin(project.domain, redirect, state, nonce(), scope, specification ? 'Kiwe Start document brief' : 'Kiwe Start homepage brief');
+      const connection = await wordpress.begin(new URL(project.site.url).hostname, redirect, state, nonce(), scope, specification ? 'Kiwe Start document brief' : 'Kiwe Start homepage brief');
       target(accountId, details);
       if (connection.origin !== project.site.url) throw unavailable();
       pending.set(state, { ...details, accountId, connection, fromDraft: existing?.id, document: specification, expiresAt: now() + deadline });

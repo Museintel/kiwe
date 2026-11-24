@@ -254,7 +254,7 @@ export function createBricksImport(projects, homepage, startOrigin, compiler, wo
       if (opening.has(row.id)) return opening.get(row.id);
       const setup = (async () => {
         const state = opaque();
-        const connection = await wordpress.begin(project.domain, startOrigin + bricksReturn, state, opaque(), scope, 'Kiwe Start Bricks draft');
+        const connection = await wordpress.begin(new URL(project.site.url).hostname, startOrigin + bricksReturn, state, opaque(), scope, 'Kiwe Start Bricks draft');
         if (connection.origin !== project.site.url) throw unavailable();
         for (const [key, flow] of flows) if (flow.expiresAt <= now()) flows.delete(key);
         for (const key of grants.keys()) grantFor(key);

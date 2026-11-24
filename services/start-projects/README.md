@@ -1,6 +1,6 @@
 # Kiwe Start projects
 
-This service opens the authenticated Start project after Kiwe Launch confirms a purchase. One purchased site entitlement opens one project. An agency can own multiple projects, including multiple site entitlements from one purchase. The domain and hosting choice are shared by the web form and MCP. The existing public Start authoring guide continues to serve its versioned instructions.
+This service opens authenticated site projects after Kiwe Launch confirms an entitlement. The browser and MCP share the same project records, domain and hosting choices. The public Start authoring guide serves its versioned instructions alongside the project service.
 
 ## Ownership
 
@@ -16,13 +16,17 @@ An agency owner enters their business name and agency website domain in **Agency
 
 ## Monthly plans and independent client access
 
-The trusted purchase intake accepts `kiwe-client-monthly` with hosting included. The client can also connect an existing WordPress site. `kiwe-agency-monthly` supports either hosting choice. A trusted Launch operator can test the agency entry through the existing purchase and handoff routes before enabling billing.
+Client costs ₹499 per site per month and includes managed hosting, with an existing WordPress connection available. Agency costs ₹999 per month and includes up to three site slots. Both prices are before applicable taxes. Each managed Agency site requires a trusted hosted entitlement.
+
+The browser **Add site** form and `kiwe_start_add_agency_site` set up an existing WordPress domain in the current agency workspace. Adding a domain reuses the initial empty unhosted slot if one exists. A repeated request for the same domain returns the existing project. Start checks the three-site limit in the same transaction for new slots and trusted entitlements. Slots count the agency's own projects, including reserved domains and any legacy agency projects. A verified agency home by itself uses no slot.
 
 An agency owner opens **Client access** for a verified site or calls `kiwe_start_invite_client`. Start issues a code valid for seven days, bound to the selected email and website revision. `kiwe_start_revoke_client` and the web action revoke Start access and unused tickets for that site. A changed website requires fresh approval.
 
-After authenticating the client and verifying their email, the trusted Launch backend sends `accountId`, `verifiedEmail` and `inviteCode` to `POST /projects/api/client-handoffs` using server-only purchase authorization. A returning client sends `accountId` and optionally their `projectId`. Submit the resulting ticket to the existing browser handoff action. The client sees their site through Start and MCP. The Design Context link uses that site's native WordPress login. Billing, hosting and Key stay with the agency. WordPress federation is future work.
+On the configured Start login page, a first-time invitee enters the private code and signs in with the verified email chosen by the agency. Start accepts the grant once. Returning clients sign in with the same account. An existing trusted Launch broker can instead send `accountId`, `verifiedEmail` and `inviteCode` to `POST /projects/api/client-handoffs` or reopen an active grant with `accountId` and optionally `projectId`.
 
-The [plan preview](https://kiwelaunch.com/plans/) is published. Live sign-in, Start routing and Key setup are pending. [Hosting and pricing model](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
+The client dashboard and MCP use the assigned site membership. For introductory Design Context, clients authorize their own WordPress account on that exact site. Start binds native consent and proposed changes to the account, site revision and client membership. A reinstated client authorizes again. The native WordPress link also gives a user with the right site role access to the complete Design Context. Billing, hosting and Key stay with the agency. WordPress single sign-on requires separate integration.
+
+The [plans and prices](https://kiwelaunch.com/plans/) are live with a header link to [Start login](https://start.kiwelaunch.com/login/). The login link serves the pilot status page until production Start routing and identity are configured. [Hosting and rollout plan](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
 
 ## Existing WordPress sites
 
@@ -31,6 +35,8 @@ Choose an existing site and save its exact HTTPS domain. Start opens native Word
 After consent, Start reads the site's identity and runtime versions, saves the connected site at the confirmed project revision, and revokes the temporary access token. Changing the domain or hosting choice clears the previous site proof. WordPress application passwords and long-lived site credentials are unnecessary for this step.
 
 The first release targets single-site WordPress at the root of the saved HTTPS domain. The site needs signed Kiwe MCP App 1.2.0-rc.3 or a later release that advertises the connection scope. Start follows the native authorization metadata on the selected domain and pins outbound requests to verified public addresses.
+
+When the Shared or Cloud adapter marks a managed installation ready, Start can run the same owner-consent flow after the signed Kiwe packages are installed. Its connection and subsequent actions use the provider-assigned temporary address. The custom domain stays a requested domain until it has its own verified hostname, TLS and migration. Production Agency provisioning, automatic signed installation and domain registration need their provider integration.
 
 ## Connect Key
 
@@ -108,11 +114,19 @@ On a request with a lost response, Start checks the stored address before resubm
 
 ## Checkout handoff
 
+For the pilot, a trusted Launch operator can issue a test entitlement to the verified account subject through the existing purchase route. Use the payment provider integration for public purchases when recurring billing is enabled.
+
 1. From the trusted checkout backend, send the confirmed site entitlement to `POST /projects/api/purchases` as JSON. Authenticate with the separate purchase service credential. Supply `entitlementId`, `purchaseId`, `accountId`, `accountType` (client or agency), `planId` and `hostingIncluded` (boolean). Reusing the entitlement with identical facts returns the original project. Conflicting facts return HTTP 409.
 2. After authenticating the purchasing account on Kiwe Launch, send its `accountId` and `entitlementId` to `POST /projects/api/handoffs` from that backend. The response contains a one-time ticket, its expiration and the Start form action.
 3. Render a top-level browser form on the configured Kiwe Launch origin. POST the ticket in the form body to the returned action as `application/x-www-form-urlencoded`. The Start service verifies origin, consumes the ticket and redirects the buyer into the saved project with a secure session cookie. A new ticket for the same account reopens the same project after sign-out.
 
 Keep the purchase credential inside the checkout server and keep handoff tickets out of URLs and logs. An entitlement reference or redirect alone grants no access. The checkout backend must authenticate the buyer before issuing each handoff; payment webhook deliveries call only the entitlement endpoint.
+
+## Browser login
+
+The header on Kiwe Launch opens `GET /login/` on Start. Configure an OpenID Connect confidential client with the exact callback `https://start.kiwelaunch.com/projects/login/return`. Start uses authorization code, S256 PKCE, an expiring browser-bound transaction and a verified signed ID token. The issuer must provide the same immutable subject to Start's browser client, Launch's trusted purchase integration and the MCP resource. Configure those registrations to share stable subjects. Email is used to accept a matching client invitation after the issuer verifies it.
+
+The login transaction rotates the Start session and consumes the prior browser transaction. Preserve the database across restarts and keep authorization codes, invitation codes, bearer credentials and cookies out of access and application logs.
 
 ## MCP
 
@@ -127,6 +141,7 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_provision_site` sets up or checks included hosting when a Hostinger order is configured.
 - `kiwe_start_connect_key` opens native Key approval or refreshes the verified site's Key status when Key is configured.
 - `kiwe_start_agency_workspace`, `kiwe_start_set_agency_home` and `kiwe_start_verify_agency_home` manage the agency's own website.
+- `kiwe_start_add_agency_site` adds an existing WordPress project to a monthly Agency workspace. `kiwe_start_agency_workspace` also reports its used and allowed site slots.
 - `kiwe_start_open_context` opens the site's narrow WordPress consent, and `kiwe_start_context` reads the authorized section.
 - `kiwe_start_prepare_context_change` returns a link for the human to review and save the exact supplied value.
 - `kiwe_start_open_homepage` starts the one-page brief through WordPress consent.
@@ -167,9 +182,11 @@ The runnable service uses `npm start` and the following environment variables.
 | `KIWE_START_PURCHASE_TOKEN` | Random server-only secret of 32 bytes or more, encoded as base64url |
 | `KIWE_START_OAUTH_ISSUER` | Exact OAuth issuer identifier |
 | `KIWE_START_OAUTH_JWKS` | Configured issuer's verification key URL |
+| `KIWE_START_LOGIN_CLIENT_ID` and `KIWE_START_LOGIN_CLIENT_SECRET` | Dedicated browser OIDC client and server-only credential using `client_secret_basic` |
+| `KIWE_START_LOGIN_AUTHORIZATION_URL` and `KIWE_START_LOGIN_TOKEN_URL` | Trusted endpoints from the same issuer's OIDC registration |
 | `KIWE_START_DATABASE` | Absolute private SQLite path in a persistent directory |
 | `KIWE_START_BIND` and `PORT` | Process binding, defaulting to `127.0.0.1:3000` |
 
-Route `/projects` and the MCP resource metadata path to the service. Serve the versioned Start guide through its existing static routes. Use a protected persistent directory for the database and a SQLite-consistent backup, including pending writes. The standalone candidate and test checkout are suitable for isolated qualification. The production checkout and OAuth provider wiring require verified issuer configuration.
+Route `/login/`, `/projects` and the MCP resource metadata path to the service. Serve the versioned Start guide through its existing static routes. Use a protected persistent directory for the database and a SQLite-consistent backup, including pending writes. The static public login status page is retained in `public/start-login` for deployment before the OIDC route is active.
 
 [Start ownership decision](../../docs/decisions/2026-11-23-start-purchased-projects.md)

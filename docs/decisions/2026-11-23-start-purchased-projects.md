@@ -4,7 +4,7 @@
 
 A verified site entitlement from Kiwe Launch creates one durable Start project. The stable entitlement identifier is the idempotency key and the trusted purchaser account owns the record. A purchase can yield multiple site entitlements for the same agency. The checkout process is responsible for payment validation and purchaser authentication.
 
-The hosted Start service holds pre-install state separately from the static versioned authoring guide. Both the web form and MCP call the same project actions. Browser access uses a short-lived, one-time handoff from an authenticated checkout session. MCP uses an audience-bound OAuth access token from the configured issuer. The two channels identify the same purchaser account and share a revision check for writes.
+The hosted Start service holds pre-install state separately from the static versioned authoring guide. The web form and MCP call the same project actions. Browser access uses the configured OpenID Connect issuer or a short-lived, one-time handoff from an authenticated checkout session. MCP uses an audience-bound OAuth access token. Browser sign-in, trusted purchase delivery and MCP share the issuer's stable account subject.
 
 The selected domain is a draft until a managed provider or the owner of an existing WordPress site verifies it. Host provision, native site ownership, Key sender setup and WordPress business content retain their respective authorities. This slice defines the next step from the entitlement and the buyer's hosting choice.
 
@@ -26,7 +26,7 @@ Key stores the WhatsApp pairings and per-site signing credentials. Key and WordP
 
 ## Independent agency clients
 
-An agency retains the billing project. Its verified site's client receives a separate Kiwe identity grant after authenticating through Launch and proving the invited email. The same grant admits the client's browser and MCP reads for that site. Access can be revoked without affecting the agency or the client's other projects. WordPress owns native site roles and sessions. A federated WordPress login requires its own implementation and acceptance.
+An agency retains the billing project. Its verified site's client receives a separate membership after proving the invited email through the trusted issuer. The same membership admits the client's browser and MCP sessions for that site. Its Design Context grant also requires native WordPress consent and binds the credential to the account, membership and site revision. Revocation ends the client's access to that site in Start and MCP. WordPress owns native site roles and sessions. A federated WordPress login requires its own implementation and acceptance.
 
 ## Design Context authority
 
@@ -50,4 +50,4 @@ Start compiles each approved document in a distinct Seam namespace so different 
 
 ## Managed hosting
 
-An eligible purchaser can request hosted WordPress through the Start form or MCP. Start records the reserved Hostinger temporary address before the setup write. Every follow-up uses that exact address. The selected custom domain remains on the project. Readiness requires both provider completion and a WordPress response for the assigned site. The hosted and existing paths continue toward the site's own authority and Key.
+An eligible purchaser can request hosted WordPress through the Start form or MCP. The Shared and Cloud adapter records the reserved Hostinger temporary address before the setup write. Readiness requires both provider completion and a WordPress response for the assigned site. After signed Kiwe installation, WordPress owner consent connects that same temporary address. Key, Design Context and design operations use the verified WordPress origin. The selected custom domain remains a separate request until its own verification and attachment. The Agency provider uses a different setup API and needs its own order and qualification.

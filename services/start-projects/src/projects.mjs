@@ -33,9 +33,11 @@ const clientHandoffInput = z.union([
   z.strictObject({ accountId: id, inviteCode: ticketInput.shape.ticket, verifiedEmail }),
   z.strictObject({ accountId: id, projectId: z.uuid().optional() }),
 ]);
+const agencyPlan = 'kiwe-agency-monthly';
+const agencySiteLimit = 3;
 const monthlyPlans = new Map([
   ['kiwe-client-monthly', { accountType: 'client', requiresHosting: true }],
-  ['kiwe-agency-monthly', { accountType: 'agency', requiresHosting: false }],
+  [agencyPlan, { accountType: 'agency', requiresHosting: false }],
 ]);
 
 export const domainInput = claimInput.extend({
@@ -49,6 +51,7 @@ export const agencyHomeInput = z.strictObject({
   domain: z.string().min(1).max(253),
 });
 export const agencyVerificationInput = z.strictObject({ attemptId: z.uuid() });
+export const agencySiteInput = z.strictObject({ domain: domainInput.shape.domain });
 const workspace = z.strictObject({
   type: z.enum(['kiwe_launch', 'agency']),
   name: z.string(),
@@ -56,6 +59,7 @@ const workspace = z.strictObject({
 });
 export const agencySpaceOutput = z.strictObject({
   workspace,
+  sites: z.strictObject({ used: z.number().int().nonnegative(), limit: z.literal(agencySiteLimit) }).optional(),
   pending: z.strictObject({
     attemptId: z.uuid(), name: z.string(), website: z.url(), proofUrl: z.url(),
     proofText: z.string(), expiresAt: z.string(),
@@ -189,6 +193,13 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     ) STRICT;
     CREATE INDEX IF NOT EXISTS handoffs_expiry ON handoffs(expires_at);
     CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions(expires_at);
+    CREATE TABLE IF NOT EXISTS browser_logins (
+      digest TEXT PRIMARY KEY,
+      browser_digest TEXT NOT NULL,
+      pending TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    ) STRICT;
+    CREATE INDEX IF NOT EXISTS browser_logins_expiry ON browser_logins(expires_at);
     CREATE TABLE IF NOT EXISTS managed_sites (
       project_id TEXT PRIMARY KEY REFERENCES projects(id),
       status TEXT NOT NULL CHECK(status IN ('queued', 'provisioning', 'ready', 'needs_attention')),
@@ -303,6 +314,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   if (!draftColumns.includes('document')) db.exec('ALTER TABLE homepage_drafts ADD COLUMN document TEXT');
   db.exec('CREATE INDEX IF NOT EXISTS start_drafts_by_target ON homepage_drafts(project_id,target,version)');
   const byEntitlement = db.prepare('SELECT * FROM projects WHERE entitlement_id = ?');
+  const pruneLogins = db.prepare('DELETE FROM browser_logins WHERE expires_at <= ?');
+  const addLogin = db.prepare('INSERT INTO browser_logins(digest, browser_digest, pending, expires_at) VALUES (?, ?, ?, ?)');
+  const consumeLogin = db.prepare('DELETE FROM browser_logins WHERE digest = ? AND browser_digest = ? AND expires_at > ? RETURNING pending');
   const ownerOfProject = db.prepare('SELECT account_id FROM projects WHERE id = ?');
   const projection = 'SELECT p.*, s.site_url, s.core_version, s.wordpress_version, s.verified_at, '
     + 'm.status AS managed_status, m.setup_domain, '
@@ -368,10 +382,11 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     if (row.revision !== revision) {
       throw new StartError(409, 'project_changed', 'The project changed. Reload it before connecting a site.');
     }
-    if (!row.domain || row.hosting !== 'existing' || row.site_url) {
-      throw new StartError(409, 'site_link_choice', 'Choose an unconnected existing WordPress site first.');
+    const domain = row.hosting === 'existing' ? row.domain : row.managed_status === 'ready' ? row.setup_domain : null;
+    if (!domain || row.site_url) {
+      throw new StartError(409, 'site_link_choice', 'Choose an existing WordPress site or finish the managed WordPress setup first.');
     }
-    return row;
+    return { row, domain };
   }
 
   const managedJob = db.prepare('SELECT status, setup_domain AS domain, reserved_at AS reservedAt FROM managed_sites WHERE project_id = ?');
@@ -404,6 +419,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   const updateKeyLink = db.prepare('UPDATE project_key_links SET state = ?, sender = ?, site_authenticated = ?, pairing_pending = ?, manage_url = ? WHERE project_id = ?');
 
   const agencyMember = db.prepare("SELECT 1 FROM projects WHERE account_id = ? AND account_type = 'agency' LIMIT 1");
+  const monthlyAgency = db.prepare("SELECT purchase_id FROM projects WHERE account_id = ? AND account_type = 'agency' AND plan_id = ? ORDER BY rowid LIMIT 1");
+  const countAgencySites = db.prepare("SELECT COUNT(*) AS used FROM projects WHERE account_id = ? AND account_type = 'agency'");
+  const agencyDomain = db.prepare("SELECT id FROM projects WHERE account_id = ? AND account_type = 'agency' AND domain = ? ORDER BY rowid LIMIT 1");
+  const emptyAgencySlot = db.prepare("SELECT id FROM projects WHERE account_id = ? AND account_type = 'agency' AND plan_id = ? AND domain IS NULL AND hosting_included = 0 ORDER BY rowid LIMIT 1");
   const agencySpace = db.prepare('SELECT * FROM agency_spaces WHERE account_id = ?');
   const addAgency = db.prepare('INSERT INTO agency_spaces(account_id) VALUES (?) ON CONFLICT(account_id) DO NOTHING');
   const agencyClaim = db.prepare('SELECT 1 FROM agency_spaces WHERE website = ? AND account_id <> ?');
@@ -418,6 +437,14 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     + 'attempt_website = NULL, proof_text = NULL, expires_at = NULL WHERE account_id = ?',
   );
 
+  function agencySites(accountId) {
+    return monthlyAgency.get(accountId, agencyPlan) ? { used: countAgencySites.get(accountId).used, limit: agencySiteLimit } : null;
+  }
+
+  function requireAgencySiteCapacity(used) {
+    if (used >= agencySiteLimit) throw new StartError(409, 'agency_site_limit', 'The Agency plan includes up to three site projects.');
+  }
+
   function agencyState(accountId) {
     if (!agencyMember.get(accountId)) throw new StartError(404, 'agency_unavailable', 'An agency plan opens its own workspace.');
     const row = agencySpace.get(accountId);
@@ -426,7 +453,8 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       proofUrl: row.attempt_website + agencyProofPath, proofText: row.proof_text,
       expiresAt: new Date(row.expires_at).toISOString(),
     } : null;
-    return { workspace: workspaceView('agency', row, launchWebsite), pending };
+    const sites = agencySites(accountId);
+    return { workspace: workspaceView('agency', row, launchWebsite), pending, ...(sites ? { sites } : {}) };
   }
 
   function saveAgencyHome(accountId, name, website) {
@@ -550,6 +578,21 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return { token, projectId };
   }
 
+  function claimClientInvitation(accountId, email, invitationDigest, time) {
+    const verified = verifiedEmail.safeParse(email);
+    const invitation = getClientInvite.get(invitationDigest, time);
+    const owner = invitation && ownerOfProject.get(invitation.project_id);
+    const project = owner && owned.get(invitation.project_id, owner.account_id);
+    if (!verified.success || !project || project.account_type !== 'agency' || owner.account_id === accountId
+        || invitation.email !== verified.data || project.site_url !== invitation.site_url
+        || project.revision !== invitation.project_revision || clientGrantForProject.get(project.id)) {
+      throw new StartError(404, 'client_invite_unavailable', 'This client invitation is unavailable. Use the invited account and a current code.');
+    }
+    clearClientInvite.run(project.id);
+    addClientGrant.run(randomUUID(), project.id, accountId, project.site_url, project.revision);
+    return clientProject.get(project.id, accountId);
+  }
+
   function transaction(work) {
     db.exec('BEGIN IMMEDIATE');
     try {
@@ -570,17 +613,23 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         throw new StartError(400, 'plan_details_mismatch', 'The purchase details do not match this Kiwe monthly plan.');
       }
       return transaction(() => {
-        const inserted = insert.run(
-          randomUUID(), receipt.entitlementId, receipt.purchaseId, receipt.accountId,
-          receipt.accountType, receipt.planId, Number(receipt.hostingIncluded),
-        );
         const row = byEntitlement.get(receipt.entitlementId);
-        if (row.purchase_id !== receipt.purchaseId || row.account_id !== receipt.accountId
-            || row.account_type !== receipt.accountType || row.plan_id !== receipt.planId
-            || row.hosting_included !== Number(receipt.hostingIncluded)) {
-          throw new StartError(409, 'entitlement_conflict', 'This entitlement already has different purchase details.');
+        if (row) {
+          if (row.purchase_id !== receipt.purchaseId || row.account_id !== receipt.accountId
+              || row.account_type !== receipt.accountType || row.plan_id !== receipt.planId
+              || row.hosting_included !== Number(receipt.hostingIncluded)) {
+            throw new StartError(409, 'entitlement_conflict', 'This entitlement already has different purchase details.');
+          }
+          return { created: false, projectId: row.id };
         }
-        return { created: inserted.changes === 1, projectId: row.id };
+        if (receipt.accountType === 'agency'
+            && (receipt.planId === agencyPlan || monthlyAgency.get(receipt.accountId, agencyPlan))) {
+          requireAgencySiteCapacity(countAgencySites.get(receipt.accountId).used);
+        }
+        const projectId = randomUUID();
+        insert.run(projectId, receipt.entitlementId, receipt.purchaseId, receipt.accountId,
+          receipt.accountType, receipt.planId, Number(receipt.hostingIncluded));
+        return { created: true, projectId };
       });
     },
 
@@ -613,6 +662,31 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
+    saveBrowserLogin({ binding, state, pending }, lifetime) {
+      transaction(() => {
+        const time = now();
+        const { inviteCode, ...login } = pending;
+        if (inviteCode) login.invitationDigest = digest(inviteCode);
+        pruneLogins.run(time);
+        addLogin.run(digest(state), digest(binding), JSON.stringify(login), time + lifetime);
+      });
+    },
+
+    takeBrowserLogin(binding, state) {
+      const row = consumeLogin.get(digest(state), digest(binding), now());
+      if (!row) throw new StartError(410, 'login_expired', 'Start a new sign-in on this device.');
+      return JSON.parse(row.pending);
+    },
+
+    signIn({ accountId, verifiedEmail: email }, invitationDigest, previousSession) {
+      return transaction(() => {
+        const time = now();
+        const client = invitationDigest ? claimClientInvitation(accountId, email, invitationDigest, time) : null;
+        if (previousSession) endSession.run(digest(previousSession));
+        return openSession(accountId, client?.id ?? null, time);
+      });
+    },
+
     accountForSession(token) {
       return token ? checkSession.get(digest(token), now())?.account_id ?? null : null;
     },
@@ -640,6 +714,16 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const client = clientProject.get(projectId, accountId);
       if (!client) throw missingProject();
       return clientView(client);
+    },
+
+    designContextAccess(accountId, { projectId }) {
+      const row = owned.get(projectId, accountId) ?? clientProject.get(projectId, accountId);
+      if (!row) throw missingProject();
+      return {
+        project: row.grant_id ? clientView(row) : projectView(row),
+        binding: JSON.stringify([accountId, row.id, row.revision, row.grant_id ?? null]),
+        ready: Boolean(row.site_url && row.key_site_authenticated && row.key_state !== 'inactive'),
+      };
     },
 
     canManageClientAccess(accountId) {
@@ -687,24 +771,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const { accountId } = request;
       return transaction(() => {
         const time = now();
-        let client;
-        if (request.inviteCode) {
-          const invitation = getClientInvite.get(digest(request.inviteCode), time);
-          const owner = invitation && ownerOfProject.get(invitation.project_id);
-          const project = owner && owned.get(invitation.project_id, owner.account_id);
-          if (!project || project.account_type !== 'agency' || owner.account_id === accountId
-              || invitation.email !== request.verifiedEmail || project.site_url !== invitation.site_url
-              || project.revision !== invitation.project_revision || clientGrantForProject.get(project.id)) {
-            throw new StartError(404, 'client_invite_unavailable', 'This client invitation is unavailable.');
-          }
-          clearClientInvite.run(project.id);
-          addClientGrant.run(randomUUID(), project.id, accountId, project.site_url, project.revision);
-          client = clientProject.get(project.id, accountId);
-        } else {
-          client = request.projectId
-            ? clientProject.get(request.projectId, accountId)
-            : clientProjects.all(accountId)[0];
-        }
+        const client = request.inviteCode
+          ? claimClientInvitation(accountId, request.verifiedEmail, digest(request.inviteCode), time)
+          : request.projectId ? clientProject.get(request.projectId, accountId) : clientProjects.all(accountId)[0];
         if (!client) throw missingProject();
         const ticket = secret();
         const expiresAt = time + handoffLifetime;
@@ -716,6 +785,28 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
 
     getAgencySpace(accountId) {
       return agencyState(accountId);
+    },
+
+    agencySites,
+
+    addAgencySite(accountId, input) {
+      const { domain: value } = parse(agencySiteInput, input);
+      const domain = normalizeDomain(value);
+      return transaction(() => {
+        const plan = monthlyAgency.get(accountId, agencyPlan);
+        if (!plan) throw new StartError(404, 'agency_unavailable', 'An Agency monthly plan is required to add a site.');
+        const previous = agencyDomain.get(accountId, domain);
+        if (previous) return projectView(owned.get(previous.id, accountId));
+        let slot = emptyAgencySlot.get(accountId, agencyPlan);
+        if (!slot) {
+          requireAgencySiteCapacity(countAgencySites.get(accountId).used);
+          const id = randomUUID();
+          insert.run(id, 'agency-site/' + id, plan.purchase_id, accountId, 'agency', agencyPlan, 0);
+          slot = { id };
+        }
+        update.run(domain, 'existing', slot.id, accountId);
+        return projectView(owned.get(slot.id, accountId));
+      });
     },
 
     prepareAgencyHome(accountId, input) {
@@ -763,6 +854,12 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
         if (row.revision !== details.revision) {
           throw new StartError(409, 'project_changed', 'The project changed. Reload it before saving.');
         }
+        if (row.account_type === 'agency' && monthlyAgency.get(accountId, agencyPlan)) {
+          const existing = agencyDomain.get(accountId, domain);
+          if (existing && existing.id !== row.id) {
+            throw new StartError(409, 'agency_domain_used', 'This domain is already in your agency workspace.');
+          }
+        }
         forgetSite.run(row.id);
         dropLinkAttempt.run(row.id);
         update.run(domain, details.hosting, row.id, accountId);
@@ -806,7 +903,8 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     },
 
     siteLinkTarget(accountId, input) {
-      return projectView(requireLinkTarget(accountId, parse(siteLinkInput, input)));
+      const { row, domain } = requireLinkTarget(accountId, parse(siteLinkInput, input));
+      return { id: row.id, revision: row.revision, domain };
     },
 
     pendingSiteLink(projectId, revision) {
@@ -816,7 +914,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
 
     saveSiteLink(accountId, details, state, connection) {
       return transaction(() => {
-        const row = requireLinkTarget(accountId, details);
+        const { row, domain } = requireLinkTarget(accountId, details);
+        if (connection.origin !== 'https://' + domain) {
+          throw new StartError(409, 'site_domain_mismatch', 'The authorization must use the assigned website address.');
+        }
         const previous = pendingLink.get(row.id, row.revision, now());
         if (previous) return JSON.parse(previous.connection);
         pruneLinks.run(now());
@@ -838,9 +939,9 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
 
     confirmSiteLink(flow, proof) {
       return transaction(() => {
-        const row = requireLinkTarget(flow.accountId, flow);
-        if (proof.url !== 'https://' + row.domain) {
-          throw new StartError(409, 'site_domain_mismatch', 'The verified website must use the selected domain.');
+        const { row, domain } = requireLinkTarget(flow.accountId, flow);
+        if (proof.url !== 'https://' + domain) {
+          throw new StartError(409, 'site_domain_mismatch', 'The verified website must use the assigned website address.');
         }
         if (attachedSite.get(proof.url)) {
           throw new StartError(409, 'site_already_linked', 'This website is already connected to a Kiwe project.');

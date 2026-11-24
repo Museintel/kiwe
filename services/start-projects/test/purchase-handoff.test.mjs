@@ -161,3 +161,44 @@ test('monthly Client includes hosting and the Agency entitlement opens a private
   const overview = await app.callTool({ name: 'kiwe_start_projects', arguments: {} });
   assert.deepEqual(overview.structuredContent.projects.map(project => project.hostingIncluded), [false, true]);
 });
+
+test('an agency reserves three site slots across the browser, MCP and purchase service', async (t) => {
+  const f = await fixture(t);
+  const details = { accountType: 'agency', planId: 'kiwe-agency-monthly', accountId: 'site-agency' };
+  const receipt = purchase('site-agency-activation', details);
+  const first = (await (await f.postReceipt('purchases', receipt)).json()).projectId;
+  const session = cookie(await f.redeem(await f.ticket(receipt.entitlementId, details.accountId)));
+  const client = await f.connect(details.accountId);
+  const addSite = (domain) => client.callTool({ name: 'kiwe_start_add_agency_site', arguments: { domain } });
+  const addPath = '/projects/agency/sites';
+  const form = (domain, extra) => f.form(addPath, { domain }, { cookie: session, ...extra });
+  const dashboard = () => f.request('/projects', { headers: { Cookie: session } });
+  assert.match(await (await dashboard()).text(), /1 of 3 site slots reserved/);
+  assert.equal((await form('one.example', { origin: checkoutOrigin })).status, 403);
+  assert.equal((await form('one.example', { cookie: '' })).status, 401);
+  const [submitted, added] = await Promise.all([form('One.Example.'), addSite('one.example')]);
+  assert.equal(submitted.headers.get('location'), '/projects/' + first);
+  assert.equal(added.structuredContent.project.id, first);
+  assert.equal(added.structuredContent.project.next, 'connect_site');
+  assert.equal(added.structuredContent.project.hostingIncluded, false);
+
+  const paid = purchase('agency-hosted-one', { ...details, hostingIncluded: true });
+  assert.equal((await f.postReceipt('purchases', paid)).status, 201);
+  const last = await addSite('other.example');
+  assert.equal(last.structuredContent.project.hostingIncluded, false);
+  assert.equal((await form('fourth.example')).status, 409);
+  assert.equal((await addSite('fourth.example')).isError, true);
+  assert.equal((await f.postReceipt('purchases', purchase('extra', { ...details, planId: 'older-agency' }))).status, 409);
+  assert.equal((await f.postReceipt('purchases', purchase('extra-hosted', { ...details, hostingIncluded: true }))).status, 409);
+  assert.equal((await f.postReceipt('purchases', paid)).status, 200);
+  assert.equal((await addSite('Other.Example')).structuredContent.project.id, last.structuredContent.project.id);
+  const state = await client.callTool({ name: 'kiwe_start_agency_workspace' });
+  assert.deepEqual(state.structuredContent.sites, { used: 3, limit: 3 });
+  const html = await (await dashboard()).text();
+  assert.match(html, /3 of 3 site slots reserved/);
+  assert.doesNotMatch(html, /<button[^>]*>Add site/);
+  const stranger = await f.connect('different-account');
+  assert.doesNotMatch(JSON.stringify((await stranger.listTools()).tools), /kiwe_start_add_agency_site/);
+  await f.restart();
+  assert.equal((await form('another.example')).status, 409);
+});

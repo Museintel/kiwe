@@ -19,8 +19,7 @@ function nativeFixture() {
       configurations.set(origin, {
         name: 'Verified site business',
         story: 'First approved description on ' + new URL(origin).hostname,
-        accessToken: 'kiwe_mcp_access_g_' + randomBytes(16).toString('hex') + '.' + randomBytes(32).toString('base64url'),
-        grant: false, approvals: new Map(), registrations: new Map(), intents: new Map(),
+        grants: new Set(), approvals: new Map(), registrations: new Map(), intents: new Map(),
       });
     }
     return configurations.get(origin);
@@ -55,18 +54,17 @@ function nativeFixture() {
       assert.equal(entries.get('code'), nativeCode);
       assert.equal(entries.get('redirect_uri'), site.registrations.get(clientId));
       assert.equal(createHash('sha256').update(entries.get('code_verifier')).digest('base64url'), site.approvals.get(clientId));
-      site.grant = true;
-      return json({ access_token: site.accessToken, scope: 'mcp.read ' + scope, expires_in: 900 });
+      const token = 'kiwe_mcp_access_g_' + randomBytes(16).toString('hex') + '.' + randomBytes(32).toString('base64url');
+      site.grants.add(token);
+      return json({ access_token: token, scope: 'mcp.read ' + scope, expires_in: 900 });
     }
     if (url.pathname === '/revoke') {
-      assert.equal(new URLSearchParams(options.body).get('token'), site.accessToken);
-      site.grant = false;
+      assert.ok(site.grants.delete(new URLSearchParams(options.body).get('token')));
       revoked++;
       return json({});
     }
     assert.equal(url.pathname, '/wp-json/kiwe-mcp/v1/mcp');
-    assert.ok(site.grant);
-    assert.equal(options.headers.Authorization, 'Bearer ' + site.accessToken);
+    assert.ok(site.grants.has(options.headers.Authorization.slice('Bearer '.length)));
     const rpc = JSON.parse(options.body);
     const args = rpc.params.arguments;
     let result;
@@ -175,7 +173,7 @@ test('native Design Context edits are shared across the browser and MCP and isol
 
   const second = (await call(agency, 'context', { ...two.input, area: 'story' })).structuredContent;
   assert.equal(second.status, 'needs_authorization');
-  assert.equal(native.at(two.origin).grant, false);
+  assert.equal(native.at(two.origin).grants.size, 0);
   const view = (await read()).structuredContent.section;
   assert.match(view.fields[0].value, /first\.example\.test/);
   assert.match(await (await request(one.context + '?area=story', one.session)).text(), /What you do/);
@@ -196,7 +194,7 @@ test('native Design Context edits are shared across the browser and MCP and isol
   assert.deepEqual(native.writes, [one.origin, one.origin]);
   assert.equal(native.at(one.origin).story, edit.value);
   assert.match(native.at(two.origin).story, /second\.example\.test/);
-  assert.ok(!JSON.stringify(await read()).includes(native.at(one.origin).accessToken));
+  assert.ok(!JSON.stringify(await read()).includes([...native.at(one.origin).grants][0]));
   assert.equal((await f.form(one.context + '/close', {}, { cookie: one.session })).status, 303);
   assert.equal(native.revoked(), 1);
   assert.equal((await read()).structuredContent.status, 'needs_authorization');
@@ -220,4 +218,55 @@ test('a WordPress-side edit invalidates an older Start review and consent expire
   assert.equal(native.at(site.origin).story, 'Saved directly in WordPress');
   f.advance(901_000);
   assert.equal((await call(client, 'context', args)).structuredContent.status, 'needs_authorization');
+});
+
+test('a client edits assigned Design Context with their own native consent and loses it when access is revoked', async (t) => {
+  const native = nativeFixture();
+  const f = await fixture(t, { wordpressLink: checkoutSiteProof, contextWordPress: native.link, keyProvider: key });
+  const agency = await f.connect('agency');
+  const client = await f.connect('client-account');
+  const assigned = await connectProject(f, agency, 'agency', 'assigned', 'assigned.example.test');
+  const other = await connectProject(f, agency, 'agency', 'unassigned', 'unassigned.example.test');
+  const email = 'client@example.test';
+  const inviteClient = async () => {
+    const invitation = await call(agency, 'invite_client', { ...assigned.input, email });
+    const opened = await f.postReceipt('client-handoffs', {
+      accountId: 'client-account', inviteCode: invitation.structuredContent.inviteCode, verifiedEmail: email,
+    });
+    return cookie(await f.redeem((await opened.json()).ticket));
+  };
+  const session = await inviteClient();
+  const browser = (path) => f.request(path, { headers: { Cookie: session } });
+  const scopeInput = { ...assigned.input, area: 'story' };
+  const actorRead = () => call(client, 'context', scopeInput);
+  const ownerRead = () => call(agency, 'context', scopeInput);
+  const ownerUrl = (await call(agency, 'open_context', assigned.input)).structuredContent.authorizationUrl;
+  assert.equal((await f.request(native.approve(ownerUrl), { headers: { Cookie: assigned.session } })).status, 303);
+  assert.equal((await ownerRead()).structuredContent.status, 'ready');
+  assert.equal((await actorRead()).structuredContent.status, 'needs_authorization');
+  assert.equal((await browser(other.context)).status, 404);
+  const clientPage = await browser(assigned.context + '?area=story');
+  assert.match(clientPage.headers.get('content-security-policy'), /form-action 'self' https:\/\/assigned\.example\.test/);
+  assert.doesNotMatch(await clientPage.text(), /First approved description/);
+
+  const approval = await f.form(assigned.context + '/authorize', { revision: String(assigned.input.revision) }, { cookie: session });
+  const clientUrl = approval.headers.get('location');
+  assert.notEqual(clientUrl, ownerUrl);
+  assert.equal((await browser(native.approve(clientUrl))).status, 303);
+  const { section } = (await actorRead()).structuredContent;
+  const edits = { ...scopeInput, field, value: 'Written by the invited client', expected: section.expected };
+  const { reviewUrl } = (await call(client, 'prepare_context_change', edits)).structuredContent;
+  assert.equal((await f.form(new URL(reviewUrl).pathname, {}, { cookie: session })).status, 303);
+  assert.equal((await ownerRead()).structuredContent.section.fields[0].value, edits.value);
+  assert.deepEqual(native.writes, [assigned.origin]);
+
+  const stale = (await call(client, 'prepare_context_change', { ...edits, expected: hash(edits.value), value: 'Previous consent' })).structuredContent;
+  assert.equal((await call(agency, 'revoke_client', { projectId: assigned.input.projectId })).isError, undefined);
+  assert.equal((await actorRead()).isError, true);
+  assert.equal((await browser(assigned.context)).status, 404);
+  assert.equal((await ownerRead()).structuredContent.status, 'ready');
+  const newSession = await inviteClient();
+  assert.equal((await actorRead()).structuredContent.status, 'needs_authorization');
+  assert.equal((await f.form(new URL(stale.reviewUrl).pathname, {}, { cookie: newSession })).status, 409);
+  assert.deepEqual(native.writes, [assigned.origin]);
 });

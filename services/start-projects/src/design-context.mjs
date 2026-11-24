@@ -86,14 +86,15 @@ export function createDesignContext(projects, startOrigin, wordpress = createWor
   const nativeUrl = (website) => website + '/wp-admin/admin.php?page=kiwe-design-context';
 
   function target(accountId, details) {
-    const project = projects.getProject(accountId, { projectId: details.projectId });
+    const { project, binding, ready } = projects.designContextAccess(accountId, details);
     if (project.revision !== details.revision) {
       throw new StartError(409, 'project_changed', 'Open the updated project before editing Design Context.');
     }
-    if (!project.site || !project.key?.siteAuthenticated || project.key.state === 'inactive') {
+    if (details.binding && details.binding !== binding) throw contextError();
+    if (!ready) {
       throw new StartError(409, 'context_setup_required', 'Connect the WordPress site and verify Key first.');
     }
-    return project;
+    return { ...project, binding };
   }
 
   function remember(map, key, value) {
@@ -102,9 +103,9 @@ export function createDesignContext(projects, startOrigin, wordpress = createWor
   }
 
   function activeGrant(project) {
-    const grant = grants.get(project.id);
+    const grant = grants.get(project.binding);
     if (!grant || grant.expiresAt <= now() || grant.connection.origin !== project.site.url) {
-      if (grant) grants.delete(project.id);
+      if (grant) grants.delete(project.binding);
       return null;
     }
     return grant;
@@ -143,15 +144,18 @@ export function createDesignContext(projects, startOrigin, wordpress = createWor
     return { grant, rule };
   }
 
-  async function apply(project, args, requestId) {
+  async function apply(accountId, project, args, requestId) {
     const { grant, rule } = await editable(project, args);
     const { area, field, expected, value } = args;
     if (rule.value === value) return;
     try {
+      const access = { ...args, binding: project.binding };
+      target(accountId, access);
       const prepared = await wordpress.call(grant.connection, grant.token, 'kiwe-mcp-prepare-change', {
         operation, requestId, arguments: { area, field, expected, value },
       });
       if (!/^i_[a-f0-9]{32}$/.test(prepared?.id ?? '') || prepared.operation !== operation || prepared.approvalRequired) throw changedContext();
+      target(accountId, access);
       const saved = await wordpress.call(grant.connection, grant.token, 'kiwe-mcp-apply-change', { intent: prepared.id });
       if (saved?.id !== prepared.id || saved?.state !== 'complete' || saved.operation !== operation) throw changedContext();
     } catch {
@@ -171,29 +175,31 @@ export function createDesignContext(projects, startOrigin, wordpress = createWor
       const details = parse(contextInput, input);
       const project = target(accountId, details);
       const grant = activeGrant(project);
-      return grant
-        ? { ...base(project), status: 'ready', section: await section(grant, details.area) }
-        : { ...base(project), status: 'needs_authorization', section: null };
+      if (!grant) return { ...base(project), status: 'needs_authorization', section: null };
+      const current = await section(grant, details.area);
+      target(accountId, { ...details, binding: project.binding });
+      return { ...base(project), status: 'ready', section: current };
     },
 
     async begin(accountId, input) {
       const details = parse(siteLinkInput, input);
       const project = target(accountId, details);
-      const existing = [...flows.values()].find(flow => flow.projectId === project.id && flow.expiresAt > now());
+      const { binding } = project;
+      const existing = [...flows.values()].find(flow => flow.binding === binding && flow.expiresAt > now());
       if (existing) return existing.connection.authorizationUrl;
-      if (opening.has(project.id)) return opening.get(project.id);
+      if (opening.has(binding)) return opening.get(binding);
       const pending = (async () => {
         const state = randomBytes(32).toString('base64url');
         const connection = await wordpress.begin(
-          project.domain, redirect, state, randomBytes(32).toString('base64url'), scope, 'Kiwe Start Design Context',
+          new URL(project.site.url).hostname, redirect, state, randomBytes(32).toString('base64url'), scope, 'Kiwe Start Design Context',
         );
-        target(accountId, details);
+        target(accountId, { ...details, binding });
         if (connection.origin !== project.site.url) throw contextError();
-        remember(flows, state, { ...details, accountId, connection, expiresAt: now() + flowLifetime });
+        remember(flows, state, { ...details, binding, accountId, connection, expiresAt: now() + flowLifetime });
         return connection.authorizationUrl;
       })();
-      opening.set(project.id, pending);
-      try { return await pending; } finally { opening.delete(project.id); }
+      opening.set(binding, pending);
+      try { return await pending; } finally { opening.delete(binding); }
     },
 
     async complete({ state, iss, code, error }) {
@@ -223,23 +229,24 @@ export function createDesignContext(projects, startOrigin, wordpress = createWor
         throw error;
       }
       const previous = activeGrant(project);
-      remember(grants, project.id, { connection, token: grant.token, expiresAt: now() + ttl * 1000 });
+      remember(grants, project.binding, { connection, token: grant.token, expiresAt: now() + ttl * 1000 });
       if (previous) await wordpress.revoke(previous.connection, previous.token);
       return { accountId: flow.accountId, projectId: project.id };
     },
 
     async save(accountId, input) {
       const details = parse(contextReviewInput, input);
-      await apply(target(accountId, details), details, details.reviewId);
+      await apply(accountId, target(accountId, details), details, details.reviewId);
     },
 
     async propose(accountId, input) {
       const details = parse(contextEditInput, input);
       const project = target(accountId, details);
       const { rule } = await editable(project, details);
+      target(accountId, { ...details, binding: project.binding });
       const reviewId = randomUUID();
       const expiresAt = now() + flowLifetime;
-      remember(reviews, reviewId, { ...details, accountId, expiresAt, label: rule.label, before: rule.value });
+      remember(reviews, reviewId, { ...details, binding: project.binding, accountId, expiresAt, label: rule.label, before: rule.value });
       return { reviewUrl: startOrigin + '/projects/' + project.id + '/context/review/' + reviewId, expiresAt: new Date(expiresAt).toISOString() };
     },
 
@@ -249,16 +256,16 @@ export function createDesignContext(projects, startOrigin, wordpress = createWor
 
     async confirm(accountId, projectId, reviewId) {
       const review = ownedReview(accountId, projectId, reviewId);
-      await apply(target(accountId, review), review, reviewId);
+      await apply(accountId, target(accountId, review), review, reviewId);
       reviews.delete(reviewId);
       return review.area;
     },
 
     async close(accountId, projectId) {
-      const project = projects.getProject(accountId, { projectId });
+      const { project, binding } = projects.designContextAccess(accountId, { projectId });
       if (!project.site) return;
-      const grant = activeGrant(project);
-      grants.delete(projectId);
+      const grant = activeGrant({ ...project, binding });
+      grants.delete(binding);
       if (grant) await wordpress.revoke(grant.connection, grant.token);
     },
   };

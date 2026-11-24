@@ -27,12 +27,20 @@ ${body}
 </html>`;
 }
 
-export function signInPage(checkoutOrigin, message = 'Sign in through Kiwe Launch to open your projects.') {
-  return page('Open your Kiwe project',
-    `<p>${escape(message)}</p><a class="button" href="${escape(checkoutOrigin)}">Go to Kiwe Launch</a>`);
+export function signInPage(checkoutOrigin, message, browserLogin) {
+  const details = message || (browserLogin ? 'Use your Kiwe Launch account to open your site projects.' : 'Open your project using your Kiwe Launch enrollment link.');
+  const form = browserLogin ? `<form method="post" action="/projects/sign-in">
+<details><summary>I have a client invitation</summary>
+<label for="invite-code">Invitation code</label>
+<input id="invite-code" name="inviteCode" maxlength="43" autocomplete="off" spellcheck="false">
+</details>
+<button class="button">Continue to sign in</button>
+</form>` : '';
+  return page('Log in to Kiwe Start',
+    `<p${message ? ' class="error" role="alert"' : ''}>${escape(details)}</p>${form}<p><a href="${escape(checkoutOrigin)}">Go to Kiwe Launch</a></p>`);
 }
 
-export function projectsPage(projects) {
+export function projectsPage(projects, agencySites, error) {
   const section = (items, details = '') => items.length ? `<section>
 <h2>${escape(items[0].workspace.name)}</h2>${details}
 <ul class="projects">${items.map((project) => `<li>
@@ -41,9 +49,17 @@ export function projectsPage(projects) {
 </li>`).join('')}</ul></section>` : '';
   const clients = projects.filter(({ accountType }) => accountType === 'client');
   const agency = projects.filter(({ accountType }) => accountType === 'agency');
-  return page('Your projects', projects.length
-    ? section(clients) + section(agency, '<p><a href="/projects/agency">Agency workspace settings</a></p>')
-    : '<p>Your purchased projects will appear here.</p>', true);
+  const agencySettings = '<p><a href="/projects/agency">Agency workspace settings</a></p>';
+  const allowance = agencySites ? `<p>${agencySites.used} of ${agencySites.limit} site slots reserved</p>` : '';
+  const addSite = agencySites && agencySites.used < agencySites.limit ? `<form method="post" action="/projects/agency/sites">
+<label for="new-domain">Domain of an existing WordPress site</label>
+<input id="new-domain" name="domain" inputmode="url" placeholder="example.com" maxlength="253" required>
+<button class="button">Add site</button>
+</form>` : '';
+  const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
+  return page('Your projects', alert + (projects.length
+    ? section(clients) + section(agency, agencySettings + allowance + addSite)
+    : '<p>Your purchased projects will appear here.</p>'), true);
 }
 
 export function agencyPage({ workspace, pending }, error) {
@@ -75,7 +91,7 @@ function hostingStep(project, available) {
   if (!available || project.hosting !== 'included') return '';
   const hosted = project.managedSite;
   if (hosted?.status === 'ready') {
-    return `<p class="status">WordPress is ready on your <a href="${escape(hosted.url)}">temporary address</a>. Next, activate Kiwe.</p>`;
+    return `<p class="status">WordPress is ready on your <a href="${escape(hosted.url)}">temporary address</a>. Install Kiwe and its MCP App there before connecting it here.</p>`;
   }
   if (hosted?.status === 'needs_attention') {
     return '<p class="error" role="alert">Hosting setup needs attention. Your project is saved.</p>';
@@ -112,13 +128,14 @@ export function clientProjectPage(project) {
   const designContext = new URL('/wp-admin/admin.php?page=kiwe-onboarding', project.site.url).href;
   return page(project.domain, `<p><a href="/projects">All projects</a></p>
 <p>Your website is linked to this Kiwe account.</p>
-<p><a class="button" href="${escape(designContext)}">Open Design Context in WordPress</a></p>
+<p><a class="button" href="/projects/${project.id}/context">Open Design Context in Start</a></p>
+<p><a href="${escape(designContext)}">Open Design Context in WordPress</a></p>
 <p><a href="${escape(project.site.url)}">Visit your website</a></p>`, true);
 }
 
 function clientAccessPanel(project, state, invitation) {
   if (!state) return '';
-  const notice = invitation ? `<p class="status">Share this one-time code privately with the invited client. They sign in with the email you selected. The code expires in seven days.</p>
+  const notice = invitation ? `<p class="status">Share the <a href="/login/">Start login page</a> and this one-time code privately. The client signs in with the email you selected. The code expires in seven days.</p>
 <p><code>${escape(invitation.inviteCode)}</code></p>` : '';
   const invite = state !== 'active' ? `<form method="post" action="/projects/${project.id}/invite-client">
 <label for="client-email">Client email</label>
@@ -135,11 +152,11 @@ ${notice}${invite}${revoke}</section>`;
 export function projectPage(project, { error, managed = false, keyEnabled = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const status = project.site
-    ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(project.domain)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context.' : ''}</p>`
+    ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context.' : ''}</p>`
     : project.domain && !project.managedSite
       ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
       : '';
-  const connect = project.next === 'connect_site'
+  const connect = project.next === 'connect_site' || project.next === 'activate_kiwe'
     ? `<form method="post" action="/projects/${project.id}/connect">
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">Connect WordPress site</button>
@@ -162,7 +179,7 @@ ${selection}
 <input type="hidden" name="revision" value="${project.revision}">
 <button class="button">Save domain</button>
 </form>
-${connect}${hostingStep(project, managed)}${keyStep(project, keyEnabled)}
+${project.site ? '' : hostingStep(project, managed)}${connect}${keyStep(project, keyEnabled)}
 ${clientAccessPanel(project, clientAccess, invitation)}
 ${project.site ? `<p><a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
 ${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/context">Open Design Context</a> <a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
@@ -340,7 +357,7 @@ ${changes}<details><summary>Refresh saved business facts</summary>${request}</de
 
 export function siteAuthorizationPage(project, authorizationUrl) {
   return page('Authorize this website',
-    `<p>Sign in to WordPress at <strong>${escape(project.domain)}</strong> and approve the connection to Kiwe Start.</p>
+    `<p>Sign in to WordPress at <strong>${escape(new URL(authorizationUrl).hostname)}</strong> and approve the connection to Kiwe Start.</p>
 <a class="button" href="${escape(authorizationUrl)}">Open WordPress authorization</a>
 <p><a href="/projects/${project.id}">Back to project</a></p>`, true);
 }

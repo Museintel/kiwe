@@ -5,6 +5,7 @@ import { createWordPressLink } from '../src/wordpress-link.mjs';
 import { createKeyProvider } from '../src/key-connection.mjs';
 import { publicAddress, siteUrl } from '../src/site-network.mjs';
 import { cookie, fixture, purchase, startOrigin } from './fixture.mjs';
+import { browserIdentity } from './browser-identity.mjs';
 
 const origin = 'https://existing.example';
 const code = 'kiwe_mcp_code_c_' + '2'.repeat(32) + '.' + 'B'.repeat(43);
@@ -268,7 +269,8 @@ test('the website transport admits only the selected HTTPS origin and public add
 
 test('an agency client uses their own identity and can open only their verified site', async (t) => {
   const native = nativeFixture();
-  const f = await fixture(t, { wordpressLink: native.wordpress });
+  const identity = await browserIdentity();
+  const f = await fixture(t, { wordpressLink: native.wordpress, browserLogin: identity.provider });
   const { projectId, endpoint, session } = await newProject(f, 'client-access-one', 'existing.example', {
     accountType: 'agency', planId: 'kiwe-agency-monthly',
   });
@@ -337,6 +339,23 @@ test('an agency client uses their own identity and can open only their verified 
   assert.equal((await f.redeem((await pending.json()).ticket)).status, 410);
   assert.equal((await f.request(endpoint, { headers: { Cookie: reopened } })).status, 404);
   assert.equal((await f.postReceipt('client-handoffs', { accountId: 'client-one' })).status, 404);
+
+  const newInvitation = (await signedInAgain.callTool({
+    name: 'kiwe_start_invite_client', arguments: { projectId, email, revision: Number(fields.revision) },
+  })).structuredContent.inviteCode;
+  const directSignIn = async (verified) => {
+    const attempt = await f.form('/projects/sign-in', { inviteCode: newInvitation });
+    const callback = await identity.callback(attempt, { accountId: 'client-one', email, verified });
+    return f.request(callback.path, { headers: { Cookie: callback.binding } });
+  };
+  assert.equal((await directSignIn(false)).status, 404);
+  const direct = await directSignIn(true);
+  assert.equal(direct.status, 303, await direct.clone().text());
+  assert.equal(direct.headers.get('location'), endpoint);
+  const directSession = direct.headers.getSetCookie().find(value => value.startsWith('__Host-kiwe-start=')).split(';')[0];
+  assert.equal((await f.request(endpoint, { headers: { Cookie: directSession } })).status, 200);
+  assert.equal((await f.request(other.endpoint, { headers: { Cookie: directSession } })).status, 404);
+  assert.equal((await directSignIn(true)).status, 404);
 });
 
 test('a client invitation is specific to the verified site revision', async (t) => {
