@@ -90,6 +90,9 @@ $mode = $formInput['mode'] ?? 'register';
           <div class="checkout-card-head"><h2>Your setup</h2><a class="text-link" href="/checkout/?tab=partner"><?= $account['partner'] ? 'Partner area' : 'Become a partner' ?></a></div>
           <p>Verified email <strong><?= $e($account['email']) ?></strong></p>
           <?php if ($referral): ?><p class="checkout-note">Your partner price is applied.</p><?php endif; ?>
+          <?php if ($billingState): ?>
+            <p class="checkout-note">Domain on this payment <strong><?= $e($billingState['quote']['domain']['name']) ?></strong></p>
+          <?php else: ?>
           <form action="/checkout/" method="post" class="checkout-form">
             <?= kiwe_checkout_post_fields('save-draft') ?>
             <input type="hidden" name="revision" value="<?= $e($draft['revision'] ?? 0) ?>">
@@ -117,6 +120,7 @@ $mode = $formInput['mode'] ?? 'register';
             </fieldset>
             <button class="button">Check domain and save details</button>
           </form>
+          <?php endif; ?>
         <?php elseif ($link): ?>
           <h2><?= $link['purpose'] === 'reset' ? 'Choose a new password' : 'Create your password' ?></h2>
           <p>Verified email <strong><?= $e($link['email']) ?></strong></p>
@@ -169,11 +173,13 @@ $mode = $formInput['mode'] ?? 'register';
           <p><strong><?= $money($checkout->plan['referred']['upfrontMinor']) ?></strong> for their first 12 months, then <?= $money($checkout->plan['referred']['renewalMinor']) ?>/month with a verified referral.</p>
           <p>Your client owns their account and Appsite. You can see the status of the links you create.</p>
         <?php else: ?>
-          <p class="eyebrow"><?= $referral ? 'Verified partner price' : 'Kiwe Client' ?></p>
+          <p class="eyebrow"><?= ($billingState ? $billingState['quote']['referralId'] : $referral) ? 'Verified partner price' : 'Kiwe Client' ?></p>
           <h2><?= $money($price['upfrontMinor']) ?></h2>
           <p>For your first 12 months, then <strong><?= $money($price['renewalMinor']) ?>/month</strong>. Taxes included.</p>
           <p>Managed hosting and renewals for one eligible standard .in domain while your plan stays active.</p>
-          <?php if ($draft): ?>
+          <?php if ($billingState): ?>
+            <?php require $root . '/billing-view.php'; ?>
+          <?php elseif ($draft): ?>
             <div class="checkout-receipt">
               <h3><?= $quoteActive ? 'Saved checkout' : 'Refresh your checkout' ?></h3>
               <p><strong><?= $e($draft['quote']['domain']['name']) ?></strong></p>
@@ -185,7 +191,16 @@ $mode = $formInput['mode'] ?? 'register';
                 <p>Hostinger confirmed availability when you saved. Registration is subject to a fresh check.</p>
                 <?php if ($draft['quote']['registryIdentityRequired']): ?><p>The registry requires identity verification at registration.</p><?php endif; ?>
               <?php endif; ?>
-              <p>Payment opens after the checkout pilot.</p>
+              <?php if ($quoteActive && $billing): ?>
+                <form method="post" action="/checkout/" class="billing-actions">
+                  <?= kiwe_checkout_post_fields('pay-first-year') ?>
+                  <input type="hidden" name="revision" value="<?= $e($draft['revision']) ?>">
+                  <label><input type="checkbox" name="payment_consent" value="yes" required> I agree to pay <?= $money($price['upfrontMinor']) ?> for the first 12 months.</label>
+                  <button class="button button-lime">Pay first year with Razorpay</button>
+                </form>
+              <?php elseif (!$billing): ?>
+                <p>Payment opens after the checkout pilot.</p>
+              <?php endif; ?>
             </div>
           <?php endif; ?>
         <?php endif; ?>

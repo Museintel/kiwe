@@ -30,7 +30,7 @@ On the configured Start login page, a first-time invitee enters the private code
 
 The client dashboard and MCP use the assigned site membership. A verified project links directly to its WordPress Design Context. Clients sign in to WordPress with their own site account and edit using the permissions of their native role. Billing, hosting and Key stay with the agency. WordPress single sign-on requires separate integration.
 
-The existing [Start login](https://start.kiwelaunch.com/login/) accepts the enrolled Key owner in the closed pilot. New Client sign-in requires a configured buyer identity provider. [Pilot hosting and rollout record](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
+The existing [Start login](https://start.kiwelaunch.com/login/) accepts the enrolled Key owner in the closed pilot. The Client checkout candidate can also open a purchased project from the buyer's verified Launch account when the Start purchase connection is configured. [Pilot hosting and rollout record](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
 
 ## Existing WordPress sites
 
@@ -138,7 +138,9 @@ Keep the purchase credential inside the checkout server and keep handoff tickets
 
 ## Browser login
 
-For the closed agency pilot, configure `KIWE_START_KEY_PILOT_ACCOUNT` with the `key:` subject of the verified Key owner and use the dedicated Start service credential already configured for Key. Key requires its matching `KIWE_KEY_START_PILOT_OWNER_ID` and native owner approval. Start accepts only that subject. This mode opens a test Agency entitlement and provides a 20-minute MCP bearer from **MCP access** in the signed-in dashboard. The bearer expires on replacement or sign-out and uses the same project permissions. Customer invitations, purchases and standard OAuth discovery use the separate commercial identity configuration. Use a dedicated private pilot database so the production account rollout can explicitly migrate the approved projects.
+For the closed pilot, configure `KIWE_START_KEY_PILOT_ACCOUNT` with the `key:` subject of the verified Key owner and use the dedicated Start service credential already configured for Key. Key requires its matching `KIWE_KEY_START_PILOT_OWNER_ID` and native owner approval. The Key sign-in accepts only that subject and opens the existing pilot workspace.
+
+To test Client purchases alongside that workspace, set a separate `KIWE_START_PURCHASE_TOKEN` on Start and the matching `startToken` on the Launch server. The purchase connection accepts verified `launch:` account IDs for the Client plan. Buyers use their Launch credentials and receive the same project when they select **Open Kiwe Start** again. Signed-in users in this mode can issue a 20-minute bearer from **MCP access**. The bearer obeys the same project permissions and expires on replacement or sign-out. Standard OAuth discovery and existing client invitations use the OIDC configuration.
 
 Hostinger can serve the existing versioned guide beside the project service by setting `KIWE_START_GUIDE_ROOT` to the absolute directory containing the verified public guide snapshot. The Start service sets the security headers for each route. When replacing the static guide host, remove the legacy guide-only CSP, referrer and CORS directives from the Start document root's `.htaccess`. Keep the existing Passenger configuration and private environment settings. The guide handler applies its original security headers to the guide and registry.
 

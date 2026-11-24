@@ -26,7 +26,7 @@ ${body}
 </html>`;
 }
 
-export function signInPage(checkoutOrigin, message, browserLogin, pilot) {
+export function signInPage(checkoutOrigin, message, browserLogin, pilot, launchBuyers = false) {
   const details = message || (pilot ? 'Sign in with the Key account invited to the Kiwe Launch agency pilot.'
     : browserLogin ? 'Use your Kiwe Launch account to open your site projects.' : 'Open your project using your Kiwe Launch enrollment link.');
   const form = browserLogin ? `<form method="post" action="/projects/sign-in">
@@ -36,8 +36,9 @@ ${pilot ? '' : `<details><summary>I have a client invitation</summary>
 </details>`}
 <button class="button">${pilot ? 'Continue with Key' : 'Continue to sign in'}</button>
 </form>` : '';
+  const buyer = launchBuyers ? `<p><a href="${escape(checkoutOrigin + '/checkout/#sign-in')}">Sign in with your Kiwe Launch account</a></p>` : '';
   return page('Log in to Kiwe Start',
-    `<p${message ? ' class="error" role="alert"' : ''}>${escape(details)}</p>${form}<p><a href="${escape(checkoutOrigin)}">Go to Kiwe Launch</a></p>`);
+    `<p${message ? ' class="error" role="alert"' : ''}>${escape(details)}</p>${form}${buyer}<p><a href="${escape(checkoutOrigin)}">Go to Kiwe Launch</a></p>`);
 }
 
 export function pilotMcpPage(token) {
@@ -59,8 +60,8 @@ export function projectsPage(projects, agencySites, error, pilot = false) {
 </li>`).join('')}</ul></section>` : '';
   const clients = projects.filter(({ accountType }) => accountType === 'client');
   const agency = projects.filter(({ accountType }) => accountType === 'agency');
-  const agencySettings = '<p><a href="/projects/agency">Agency workspace settings</a></p>'
-    + (pilot ? '<p><a href="/projects/mcp-access">MCP access</a></p>' : '');
+  const mcp = pilot ? '<p><a href="/projects/mcp-access">MCP access</a></p>' : '';
+  const agencySettings = '<p><a href="/projects/agency">Agency workspace settings</a></p>';
   const allowance = agencySites ? `<p>${agencySites.used} of ${agencySites.limit} site slots reserved</p>` : '';
   const addSite = agencySites && agencySites.used < agencySites.limit ? `<form method="post" action="/projects/agency/sites">
 <label for="new-domain">Domain of an existing WordPress site</label>
@@ -68,7 +69,7 @@ export function projectsPage(projects, agencySites, error, pilot = false) {
 <button class="button">Add site</button>
 </form>` : '';
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
-  return page('Your projects', alert + (projects.length
+  return page('Your projects', alert + mcp + (projects.length
     ? section(clients) + section(agency, agencySettings + allowance + addSite)
     : '<p>Your purchased projects will appear here.</p>'), true);
 }

@@ -27,6 +27,9 @@ if (!$state) {
     <a class="button" href="/#demo">Book a demo</a></main></html>';
     exit;
 }
+if ($state['billing']) {
+    header("Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self' https://rzp.io https://rzp.in; frame-ancestors 'none'");
+}
 
 require $root . '/web.php';
 kiwe_checkout_serve($state, $root);

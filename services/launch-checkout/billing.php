@@ -1,0 +1,518 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/billing-providers.php';
+
+final class KiweBilling
+{
+    private PDO $db;
+
+    public function __construct(
+        string $database,
+        private readonly KiweCheckout $checkout,
+        private readonly string $origin,
+        public readonly string $startOrigin,
+        private readonly string $merchant,
+        private readonly string $webhookSecret,
+        private readonly array $renewalPlans,
+        public readonly int $cycles,
+        private readonly Closure $razorpay,
+        private readonly Closure $start,
+    ) {
+        umask(0077);
+        $this->db = new PDO('sqlite:' . $database, options: [PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+        $this->db->exec('PRAGMA foreign_keys = ON');
+        $this->db->exec('PRAGMA busy_timeout = 1500');
+        $this->db->exec(file_get_contents(__DIR__ . '/billing-schema.sql'));
+    }
+
+    private function query(string $sql, array $params = []): PDOStatement
+    {
+        $statement = $this->db->prepare($sql);
+        foreach ($params as $offset => $value) {
+            $type = match (true) {
+                is_int($value) => PDO::PARAM_INT,
+                $value === null => PDO::PARAM_NULL,
+                default => PDO::PARAM_STR,
+            };
+            $statement->bindValue($offset + 1, $value, $type);
+        }
+        $statement->execute();
+        return $statement;
+    }
+
+    private function row(string $sql, array $params): ?array
+    {
+        return $this->query($sql, $params)->fetch() ?: null;
+    }
+
+    private function transaction(Closure $work): mixed
+    {
+        $this->db->exec('BEGIN IMMEDIATE');
+        try {
+            $result = $work();
+            $this->db->exec('COMMIT');
+            return $result;
+        } catch (Throwable $error) {
+            $this->db->exec('ROLLBACK');
+            throw $error;
+        }
+    }
+
+    private function active(string $accountId): ?array
+    {
+        return $this->row('SELECT * FROM launch_payments WHERE account_id = ? AND retired_at IS NULL', [$accountId]);
+    }
+
+    private function purchase(string $id): ?array
+    {
+        return $this->row('SELECT * FROM launch_payments WHERE id = ?', [$id]);
+    }
+
+    private function mandate(string $purchase): ?array
+    {
+        return $this->row('SELECT * FROM launch_renewal_mandates WHERE purchase_id = ? AND retired_at IS NULL', [$purchase]);
+    }
+
+    private function quote(array $purchase): array
+    {
+        return json_decode($purchase['quote'], true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    private function refunded(string $paymentId, int $observed = 0): int
+    {
+        $total = $this->row('SELECT COALESCE(SUM(amount), 0) AS total FROM launch_refunds WHERE payment_id = ?', [$paymentId]);
+        return max($observed, (int) $total['total']);
+    }
+
+    private function nextRenewalStart(array $purchase): int
+    {
+        $row = $this->row('SELECT MAX(r.period_end) AS period_end FROM launch_renewal_payments r
+            JOIN launch_renewal_mandates m ON m.id = r.mandate_id
+            WHERE m.purchase_id = ? AND r.amount_refunded < r.amount
+            AND COALESCE((SELECT SUM(amount) FROM launch_refunds WHERE payment_id = r.payment_id), 0) < r.amount', [$purchase['id']]);
+        $paidUntil = max($purchase['first_term_end'], (int) ($row['period_end'] ?? 0));
+        if ($paidUntil > time() + 1800) return $paidUntil;
+        return (new DateTimeImmutable('@' . (time() + 1800)))->setTimezone(new DateTimeZone('Asia/Kolkata'))->modify('tomorrow')->getTimestamp();
+    }
+
+    public function status(string $accountId): ?array
+    {
+        $purchase = $this->active($accountId);
+        if (!$purchase) return null;
+        $quote = $this->quote($purchase);
+        $paid = $purchase['payment_id'] !== null;
+        $refunded = $paid ? $this->refunded($purchase['payment_id'], $purchase['payment_refunded']) : 0;
+        $mandate = $this->mandate($purchase['id']);
+        $periods = $this->query('SELECT r.* FROM launch_renewal_payments r JOIN launch_renewal_mandates m ON m.id = r.mandate_id
+            WHERE m.purchase_id = ? ORDER BY r.period_start DESC LIMIT 12', [$purchase['id']])->fetchAll();
+        $periods = array_map(fn (array $row): array => [
+            'amount' => $row['amount'], 'start' => $row['period_start'], 'end' => $row['period_end'],
+            'refunded' => $this->refunded($row['payment_id'], $row['amount_refunded']),
+        ], $periods);
+        return [
+            'id' => $purchase['id'], 'paid' => $paid, 'refunded' => $refunded, 'quote' => $quote,
+            'linkUrl' => !$paid && $purchase['link_expires_at'] > time() ? $purchase['link_url'] : null,
+            'firstTermEnd' => $purchase['first_term_end'], 'projectId' => $purchase['start_project_id'],
+            'renewalStart' => $paid ? $this->nextRenewalStart($purchase) : null,
+            'mandate' => $mandate ? [
+                'status' => $mandate['status'], 'id' => $mandate['id'],
+                'url' => $mandate['status'] === 'created' ? $mandate['authorization_url'] : null,
+                'cycles' => $mandate['authorised_cycles'],
+                'startsAt' => $mandate['start_at'],
+            ] : null,
+            'renewals' => $periods,
+        ];
+    }
+
+    public function begin(array $account, int $revision, string $network): string
+    {
+        $this->checkout->limit('billing-network', $network, 30, 3600);
+        $this->checkout->limit('billing-account', $account['id'], 12, 3600);
+        $purchase = $this->active($account['id']);
+        if (!$purchase) {
+            $draft = $this->checkout->draft($account['id']);
+            $referral = $this->checkout->referralFor($account['id'])['id'] ?? null;
+            $quote = $draft['quote'] ?? [];
+            $terms = $this->checkout->plan[$referral ? 'referred' : 'direct'];
+            if (!$draft || $draft['revision'] !== $revision || $quote['expiresAt'] <= time()
+                || $quote['referralId'] !== $referral || $quote['planId'] !== $this->checkout->plan['id']
+                || $quote['currency'] !== $this->checkout->plan['currency']
+                || $quote['upfrontMinor'] !== $terms['upfrontMinor'] || $quote['renewalMinor'] !== $terms['renewalMinor']) {
+                throw new KiweCheckoutError('Refresh your checkout details and price before paying.', 409);
+            }
+            if ($quote['domain']['mode'] === 'register' && $this->checkout->domainAvailability($quote['domain']['name'])['status'] !== 'eligible') {
+                throw new KiweCheckoutError('The registrar could not confirm this domain. Choose a new domain and save again.', 409);
+            }
+            $purchase = $this->transaction(function () use ($account, $draft, $quote): array {
+                $existing = $this->active($account['id']);
+                if ($existing) return $existing;
+                $current = $this->row('SELECT id, revision FROM checkout_drafts WHERE account_id = ?', [$account['id']]);
+                $referral = $this->row('SELECT id FROM checkout_referrals WHERE buyer_id = ? AND revoked_at IS NULL', [$account['id']]);
+                if (($current['id'] ?? null) !== $draft['id'] || ($current['revision'] ?? null) !== $draft['revision']
+                    || ($referral['id'] ?? null) !== $quote['referralId'] || $quote['expiresAt'] <= time()) {
+                    throw new KiweCheckoutError('Your checkout changed. Review it and try again.', 409);
+                }
+                $id = 'kiwe_' . bin2hex(random_bytes(16));
+                $this->query('INSERT INTO launch_payments (id, account_id, draft_id, draft_revision, quote, consent_at, link_expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)', [$id, $account['id'], $draft['id'], $draft['revision'],
+                    json_encode($quote, JSON_THROW_ON_ERROR), time(), time() + 1800]);
+                return $this->purchase($id);
+            });
+        }
+        if ($purchase['payment_id'] || $purchase['link_expires_at'] <= time()) {
+            throw new KiweCheckoutError('Check the saved payment status to continue.', 409);
+        }
+        if (!$purchase['link_id']) {
+            $link = $this->findLink($purchase['id']);
+            if (!$link) {
+                if ($purchase['link_expires_at'] < time() + 900) throw new KiweCheckoutError('Check the saved payment status to continue.', 409);
+                $quote = $this->quote($purchase);
+                $link = ($this->razorpay)('POST', '/payment_links', [
+                    'amount' => $quote['upfrontMinor'], 'currency' => $quote['currency'], 'reference_id' => $purchase['id'],
+                    'accept_partial' => false, 'description' => 'Kiwe Client — first 12 months',
+                    'notify' => ['sms' => false, 'email' => false], 'reminder_enable' => false,
+                    'expire_by' => $purchase['link_expires_at'],
+                    'callback_url' => $this->origin . '/checkout/', 'callback_method' => 'get',
+                ]);
+            }
+            $this->transaction(fn () => $this->saveLink($purchase, $link));
+            if (($link['status'] ?? '') !== 'created') throw new KiweCheckoutError('Check the saved payment status to continue.', 409);
+            $purchase = $this->purchase($purchase['id']);
+        }
+        return kiwe_billing_hosted_url($purchase['link_url'])
+            ?? throw new KiweCheckoutError('Razorpay did not return a payment link.', 503);
+    }
+
+    private function findLink(string $reference): ?array
+    {
+        $reply = ($this->razorpay)('GET', '/payment_links?reference_id=' . rawurlencode($reference));
+        $links = $reply['payment_links'] ?? null;
+        if (!is_array($links) || count($links) > 1 || ($links && !is_array($links[0] ?? null))) {
+            throw new KiweCheckoutError('Razorpay could not confirm this payment link.', 503);
+        }
+        return $links[0] ?? null;
+    }
+
+    private function saveLink(array $purchase, array $link): void
+    {
+        $quote = $this->quote($purchase);
+        $id = kiwe_billing_id($link['id'] ?? null, 'plink');
+        if (!$id || ($link['reference_id'] ?? '') !== $purchase['id']
+            || ($link['amount'] ?? null) !== $quote['upfrontMinor'] || ($link['currency'] ?? '') !== $quote['currency']
+            || ($link['accept_partial'] ?? null) !== false || ($link['expire_by'] ?? null) !== $purchase['link_expires_at']
+            || ($purchase['link_id'] && $purchase['link_id'] !== $id)) {
+            throw new KiweCheckoutError('The Razorpay link does not match the checkout.', 409);
+        }
+        $url = kiwe_billing_hosted_url($link['short_url'] ?? null);
+        $this->query('UPDATE launch_payments SET link_id = COALESCE(link_id, ?), link_url = COALESCE(link_url, ?)
+            WHERE id = ? AND (link_id IS NULL OR link_id = ?)', [$id, $url, $purchase['id'], $id]);
+        if (in_array($link['status'] ?? '', ['expired', 'cancelled'], true) && ($link['amount_paid'] ?? null) === 0) {
+            $this->query('UPDATE launch_payments SET retired_at = COALESCE(retired_at, ?) WHERE id = ? AND payment_id IS NULL',
+                [time(), $purchase['id']]);
+        }
+    }
+
+    private function acceptFirstYear(array $purchase, array $link, array $payment): void
+    {
+        $this->saveLink($purchase, $link);
+        $quote = $this->quote($purchase);
+        $paymentId = kiwe_billing_id($payment['id'] ?? null, 'pay');
+        $order = kiwe_billing_id($link['order_id'] ?? null, 'order');
+        if (!$paymentId || !$order || ($payment['order_id'] ?? '') !== $order
+            || ($link['status'] ?? '') !== 'paid' || ($link['amount_paid'] ?? null) !== $quote['upfrontMinor']
+            || !$this->validPayment($payment, $quote['upfrontMinor'], $quote['currency'])
+            || ($purchase['payment_id'] && $purchase['payment_id'] !== $paymentId)) {
+            throw new KiweCheckoutError('Razorpay has not confirmed the exact first-year payment.', 409);
+        }
+        $confirmed = time();
+        $this->query('UPDATE launch_payments SET reviewed_at = CASE WHEN payment_id IS NULL THEN 0 ELSE reviewed_at END,
+            payment_id = ?, confirmed_at = COALESCE(confirmed_at, ?),
+            first_term_end = COALESCE(first_term_end, ?), payment_refunded = MAX(payment_refunded, ?) WHERE id = ?',
+            [$paymentId, $confirmed, kiwe_billing_first_term_end($confirmed), $payment['amount_refunded'] ?? 0, $purchase['id']]);
+    }
+
+    private function validPayment(array $payment, int $amount, string $currency): bool
+    {
+        $refund = $payment['amount_refunded'] ?? 0;
+        return in_array($payment['status'] ?? '', ['captured', 'refunded'], true)
+            && ($payment['amount'] ?? null) === $amount && ($payment['currency'] ?? '') === $currency
+            && is_int($refund) && $refund >= 0 && $refund <= $amount
+            && (($payment['status'] ?? '') !== 'refunded' || $refund === $amount);
+    }
+
+    public function refresh(string $accountId): ?array
+    {
+        $purchase = $this->active($accountId);
+        if (!$purchase) return null;
+        if (!$purchase['payment_id']) {
+            $link = $purchase['link_id'] ? ($this->razorpay)('GET', '/payment_links/' . $purchase['link_id'])
+                : $this->findLink($purchase['id']);
+            if (!$link && !$purchase['link_id'] && $purchase['link_expires_at'] <= time()) {
+                $this->query('UPDATE launch_payments SET retired_at = ? WHERE id = ? AND link_id IS NULL AND payment_id IS NULL',
+                    [time(), $purchase['id']]);
+            } elseif ($link) {
+                $this->transaction(fn () => $this->saveLink($purchase, $link));
+                if (($link['status'] ?? '') === 'paid' && ($order = kiwe_billing_id($link['order_id'] ?? null, 'order'))) {
+                    $quote = $this->quote($purchase);
+                    $payments = ($this->razorpay)('GET', '/orders/' . $order . '/payments');
+                    $matching = array_filter($payments['items'] ?? [], fn ($row): bool =>
+                        is_array($row) && $this->validPayment($row, $quote['upfrontMinor'], $quote['currency']));
+                    if (count($matching) !== 1) throw new KiweCheckoutError('Razorpay is still confirming the payment.', 409);
+                    $this->transaction(fn () => $this->acceptFirstYear($this->purchase($purchase['id']), $link, reset($matching)));
+                }
+            }
+        }
+        if ($mandate = $this->mandate($purchase['id'])) {
+            if ($mandate['subscription_id']) {
+                $subscription = ($this->razorpay)('GET', '/subscriptions/' . $mandate['subscription_id']);
+                $this->transaction(fn () => $this->acceptSubscription($mandate, $subscription, time()));
+            }
+        }
+        return $this->status($accountId);
+    }
+
+    public function deliver(string $accountId): ?string
+    {
+        $purchase = $this->active($accountId);
+        if (!$purchase || !$purchase['payment_id']) return null;
+        $quote = $this->quote($purchase);
+        if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) return $purchase['start_project_id'];
+        if ($purchase['start_project_id']) return $purchase['start_project_id'];
+        $payment = ($this->razorpay)('GET', '/payments/' . $purchase['payment_id']);
+        if (($payment['id'] ?? '') !== $purchase['payment_id'] || !$this->validPayment($payment, $quote['upfrontMinor'], $quote['currency'])) {
+            throw new KiweCheckoutError('Razorpay is still reconciling your payment.', 503);
+        }
+        $this->query('UPDATE launch_payments SET payment_refunded = MAX(payment_refunded, ?) WHERE id = ?',
+            [$payment['amount_refunded'] ?? 0, $purchase['id']]);
+        $purchase = $this->purchase($purchase['id']);
+        if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) return $purchase['start_project_id'];
+        if ($purchase['start_project_id']) return $purchase['start_project_id'];
+        $receipt = [
+            'entitlementId' => $purchase['id'], 'purchaseId' => $purchase['payment_id'], 'accountId' => $accountId,
+            'accountType' => 'client', 'planId' => $quote['planId'], 'hostingIncluded' => true,
+            'clientOrder' => [
+                'currency' => $quote['currency'], 'paidMinor' => $quote['upfrontMinor'], 'renewalMinor' => $quote['renewalMinor'],
+                'referralId' => $quote['referralId'], 'domain' => $quote['domain'],
+            ],
+        ];
+        $result = ($this->start)('purchases', $receipt);
+        $project = $result['projectId'] ?? null;
+        if (!is_string($project) || !preg_match('/^[a-f0-9-]{36}$/D', $project)) {
+            throw new KiweCheckoutError('Start is still opening your project. Try again shortly.', 503);
+        }
+        $this->query('UPDATE launch_payments SET start_project_id = ? WHERE id = ? AND start_project_id IS NULL', [$project, $purchase['id']]);
+        return $this->purchase($purchase['id'])['start_project_id'];
+    }
+
+    public function handoff(string $accountId): array
+    {
+        if (!$this->deliver($accountId)) throw new KiweCheckoutError('Start opens after the first-year payment is confirmed.', 409);
+        $purchase = $this->active($accountId);
+        $reply = ($this->start)('handoffs', ['entitlementId' => $purchase['id'], 'accountId' => $accountId]);
+        $action = $this->startOrigin . '/projects/open';
+        if (($reply['action'] ?? '') !== $action || !is_string($reply['ticket'] ?? null)
+            || !preg_match('/^[A-Za-z0-9_-]{43}$/D', $reply['ticket'])) {
+            throw new KiweCheckoutError('Start did not confirm a sign-in ticket.', 503);
+        }
+        return ['ticket' => $reply['ticket'], 'action' => $action];
+    }
+
+    public function renew(string $accountId, string $network, int $quotedAmount, int $quotedStart, int $quotedCycles): string
+    {
+        $this->checkout->limit('renewal-network', $network, 30, 3600);
+        $this->checkout->limit('renewal-account', $accountId, 12, 3600);
+        $purchase = $this->active($accountId);
+        if (!$purchase || !$purchase['payment_id']) {
+            throw new KiweCheckoutError('Renewal approval opens after the first-year payment is confirmed.', 409);
+        }
+        $quote = $this->quote($purchase);
+        if ($quotedAmount !== $quote['renewalMinor'] || $quotedStart !== $this->nextRenewalStart($purchase) || $quotedCycles !== $this->cycles) {
+            throw new KiweCheckoutError('Review the updated renewal terms before approving them.', 409);
+        }
+        if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) {
+            throw new KiweCheckoutError('This first-year payment was refunded.', 409);
+        }
+        $mandate = $this->mandate($purchase['id']);
+        if ($mandate) {
+            if ($mandate['status'] === 'created' && ($url = kiwe_billing_hosted_url($mandate['authorization_url']))) return $url;
+            if (!self::terminalMandate($mandate['status'])) {
+                throw new KiweCheckoutError('Check the status of your existing renewal approval.', 409);
+            }
+        }
+        $planId = $this->renewalPlans[$quote['referralId'] ? 'referred' : 'direct'];
+        $plan = ($this->razorpay)('GET', '/plans/' . $planId);
+        if (($plan['id'] ?? '') !== $planId || ($plan['period'] ?? '') !== 'monthly' || ($plan['interval'] ?? 0) !== 1
+            || ($plan['item']['amount'] ?? null) !== $quote['renewalMinor'] || ($plan['item']['currency'] ?? '') !== $quote['currency']) {
+            throw new KiweCheckoutError('The Razorpay renewal plan needs to be checked.', 503);
+        }
+        $reference = $this->transaction(function () use ($purchase, $planId, $quote, $quotedStart): string {
+            $previous = $this->mandate($purchase['id']);
+            if ($previous && !self::terminalMandate($previous['status'])) {
+                throw new KiweCheckoutError('A renewal approval is already being created.', 409);
+            }
+            if ($this->refunded($purchase['payment_id'], $purchase['payment_refunded']) >= $quote['upfrontMinor']) {
+                throw new KiweCheckoutError('This first-year payment was refunded.', 409);
+            }
+            if ($quotedStart !== $this->nextRenewalStart($purchase)) {
+                throw new KiweCheckoutError('Review the updated renewal date before approving it.', 409);
+            }
+            if ($previous) $this->query('UPDATE launch_renewal_mandates SET retired_at = ? WHERE id = ?', [time(), $previous['id']]);
+            $id = 'mandate_' . bin2hex(random_bytes(12));
+            $this->query('INSERT INTO launch_renewal_mandates (id, purchase_id, plan_id, amount, start_at, authorised_cycles, consent_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)', [$id, $purchase['id'], $planId, $quote['renewalMinor'], $quotedStart, $this->cycles, time()]);
+            return $id;
+        });
+        $reply = ($this->razorpay)('POST', '/subscriptions', [
+            'plan_id' => $planId, 'quantity' => 1, 'total_count' => $this->cycles, 'customer_notify' => false,
+            'start_at' => $quotedStart, 'expire_by' => min(time() + 7 * 86400, $quotedStart - 900),
+            'notes' => ['kiwe_mandate' => $reference],
+        ]);
+        $this->transaction(fn () => $this->acceptSubscription($this->mandate($purchase['id']), $reply, time()));
+        return kiwe_billing_hosted_url($reply['short_url'] ?? null)
+            ?? throw new KiweCheckoutError('Razorpay did not return a renewal approval link.', 503);
+    }
+
+    private function acceptSubscription(array $mandate, array $subscription, int $occurred): void
+    {
+        $id = kiwe_billing_id($subscription['id'] ?? null, 'sub');
+        $status = $subscription['status'] ?? '';
+        if (!$id || ($mandate['subscription_id'] && $mandate['subscription_id'] !== $id)
+            || ($subscription['notes']['kiwe_mandate'] ?? '') !== $mandate['id']
+            || ($subscription['plan_id'] ?? '') !== $mandate['plan_id'] || ($subscription['start_at'] ?? null) !== $mandate['start_at']
+            || ($subscription['quantity'] ?? null) !== 1 || ($subscription['total_count'] ?? null) !== $mandate['authorised_cycles']
+            || !in_array($status, ['created', 'authenticated', 'active', 'pending', 'halted', 'paused', 'cancelled', 'completed', 'expired'], true)) {
+            throw new KiweCheckoutError('The renewal approval does not match the Kiwe plan.', 409);
+        }
+        $this->query("UPDATE launch_renewal_mandates SET subscription_id = ?, authorization_url = COALESCE(?, authorization_url),
+            status = CASE WHEN status IN ('cancelled', 'completed', 'expired') THEN status
+                WHEN ? IN ('cancelled', 'completed', 'expired') OR status_at <= ? THEN ? ELSE status END, status_at = MAX(status_at, ?) WHERE id = ?",
+            [$id, kiwe_billing_hosted_url($subscription['short_url'] ?? null), $status,
+                $occurred, $status, $occurred, $mandate['id']]);
+    }
+
+    public function recoverMandate(string $accountId, string $subscriptionId): void
+    {
+        $purchase = $this->active($accountId);
+        $mandate = $purchase ? $this->mandate($purchase['id']) : null;
+        if (!$mandate || !kiwe_billing_id($subscriptionId, 'sub')) throw new KiweCheckoutError('Enter the matching Razorpay subscription.', 422);
+        $subscription = ($this->razorpay)('GET', '/subscriptions/' . $subscriptionId);
+        $this->transaction(fn () => $this->acceptSubscription($mandate, $subscription, time()));
+    }
+
+    public static function terminalMandate(string $status): bool
+    {
+        return in_array($status, ['cancelled', 'completed', 'expired'], true);
+    }
+
+    public function cancelRenewal(string $accountId): void
+    {
+        $purchase = $this->active($accountId);
+        $mandate = $purchase ? $this->mandate($purchase['id']) : null;
+        if (!$mandate || !$mandate['subscription_id']) throw new KiweCheckoutError('Check the renewal approval first.', 409);
+        if (self::terminalMandate($mandate['status'])) return;
+        $subscription = ($this->razorpay)('POST', '/subscriptions/' . $mandate['subscription_id'] . '/cancel', ['cancel_at_cycle_end' => false]);
+        if (($subscription['status'] ?? '') !== 'cancelled') throw new KiweCheckoutError('Razorpay is still confirming the cancellation.', 503);
+        $this->transaction(fn () => $this->acceptSubscription($mandate, $subscription, time()));
+    }
+
+    private function acceptRenewal(array $mandate, array $subscription, array $payment): void
+    {
+        $start = $subscription['current_start'] ?? 0;
+        $end = $subscription['current_end'] ?? 0;
+        $paymentId = kiwe_billing_id($payment['id'] ?? null, 'pay');
+        if (!$paymentId || !is_int($start) || !is_int($end) || $start < $mandate['start_at'] || $end <= $start
+            || $end - $start > 32 * 86400 || !$this->validPayment($payment, $mandate['amount'], 'INR')) {
+            throw new KiweCheckoutError('The renewal payment does not match the approved amount or period.', 409);
+        }
+        $this->query('INSERT INTO launch_renewal_payments VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(payment_id) DO UPDATE SET amount_refunded = MAX(amount_refunded, excluded.amount_refunded)
+            WHERE mandate_id = excluded.mandate_id AND period_start = excluded.period_start AND period_end = excluded.period_end',
+            [$paymentId, $mandate['id'], $mandate['amount'], $payment['amount_refunded'] ?? 0, $start, $end]);
+    }
+
+    public function ingest(string $raw, string $signature, string $eventId): void
+    {
+        if (!preg_match('/^[a-fA-F0-9]{64}$/D', $signature)
+            || !hash_equals(hash_hmac('sha256', $raw, $this->webhookSecret), strtolower($signature))) {
+            throw new KiweCheckoutError('Invalid webhook signature.', 401);
+        }
+        $event = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+        $name = $event['event'] ?? '';
+        if (($event['account_id'] ?? '') !== $this->merchant) throw new KiweCheckoutError('Invalid merchant.', 403);
+        if (!is_string($name)) throw new KiweCheckoutError('Invalid billing event.', 422);
+        $hash = hash('sha256', $raw);
+        if ($eventId === '') $eventId = $hash;
+        if (!preg_match('/^[A-Za-z0-9_-]{1,128}$/D', $eventId)) throw new KiweCheckoutError('Invalid event identifier.', 422);
+        $time = $event['created_at'] ?? null;
+        if (!is_int($time) || $time <= 0 || $time > time() + 300) throw new KiweCheckoutError('Invalid event date.', 422);
+        $this->transaction(function () use ($event, $name, $hash, $eventId, $time): void {
+            $known = $this->row('SELECT digest FROM launch_billing_events WHERE id = ?', [$eventId]);
+            if ($known) {
+                if ($known['digest'] !== $hash) throw new KiweCheckoutError('Conflicting billing event.', 409);
+                return;
+            }
+            $this->applyEvent($name, $event['payload'] ?? [], $time);
+            $this->query('INSERT INTO launch_billing_events VALUES (?, ?, ?)', [$eventId, $hash, time()]);
+            $this->query('DELETE FROM launch_billing_events WHERE received_at < ?', [time() - 90 * 86400]);
+        });
+    }
+
+    private function applyEvent(string $event, array $payload, int $time): void
+    {
+        if (in_array($event, ['payment_link.paid', 'payment_link.expired', 'payment_link.cancelled'], true)) {
+            $link = $payload['payment_link']['entity'] ?? [];
+            $purchase = $this->purchase($link['reference_id'] ?? '');
+            if (!$purchase) return;
+            if ($event === 'payment_link.paid') $this->acceptFirstYear($purchase, $link, $payload['payment']['entity'] ?? []);
+            else $this->saveLink($purchase, $link);
+        } elseif (str_starts_with($event, 'subscription.')) {
+            $subscription = $payload['subscription']['entity'] ?? [];
+            $reference = $subscription['notes']['kiwe_mandate'] ?? '';
+            $mandate = $this->row('SELECT * FROM launch_renewal_mandates WHERE id = ? OR subscription_id = ?',
+                [$reference, kiwe_billing_id($subscription['id'] ?? null, 'sub')]);
+            if (!$mandate) return;
+            $this->acceptSubscription($mandate, $subscription, $time);
+            if ($event === 'subscription.charged') $this->acceptRenewal($mandate, $subscription, $payload['payment']['entity'] ?? []);
+        } elseif ($event === 'refund.processed') {
+            $refund = $payload['refund']['entity'] ?? [];
+            $id = kiwe_billing_id($refund['id'] ?? null, 'rfnd');
+            $payment = kiwe_billing_id($refund['payment_id'] ?? null, 'pay');
+            $amount = $refund['amount'] ?? null;
+            if (!$id || !$payment || !is_int($amount) || $amount < 1 || ($refund['status'] ?? '') !== 'processed'
+                || ($refund['currency'] ?? '') !== 'INR') throw new KiweCheckoutError('Invalid refund details.', 422);
+            $this->query('INSERT INTO launch_refunds VALUES (?, ?, ?) ON CONFLICT(refund_id) DO NOTHING', [$id, $payment, $amount]);
+            $snapshot = $payload['payment']['entity'] ?? [];
+            $total = $snapshot['amount_refunded'] ?? null;
+            if (($snapshot['id'] ?? '') === $payment && ($snapshot['currency'] ?? '') === 'INR' && is_int($total)
+                && $total >= $amount && $total <= ($snapshot['amount'] ?? 0)) {
+                $this->query('UPDATE launch_payments SET payment_refunded = MAX(payment_refunded, ?) WHERE payment_id = ?', [$total, $payment]);
+                $this->query('UPDATE launch_renewal_payments SET amount_refunded = MAX(amount_refunded, ?) WHERE payment_id = ?', [$total, $payment]);
+            }
+        }
+    }
+
+    public function deliverPending(): array
+    {
+        $pending = $this->query('SELECT id, account_id, payment_id FROM launch_payments WHERE start_project_id IS NULL
+            AND retired_at IS NULL AND reviewed_at < ? AND payment_refunded < json_extract(quote, \'$.upfrontMinor\')
+            AND COALESCE((SELECT SUM(amount) FROM launch_refunds WHERE payment_id = launch_payments.payment_id), 0)
+                < json_extract(quote, \'$.upfrontMinor\') ORDER BY reviewed_at LIMIT 2', [time() - 180])->fetchAll();
+        $delivered = 0;
+        $retry = 0;
+        $errors = [];
+        foreach ($pending as $row) {
+            if ($this->query('UPDATE launch_payments SET reviewed_at = ? WHERE id = ? AND reviewed_at < ?',
+                [time(), $row['id'], time() - 180])->rowCount() !== 1) continue;
+            try {
+                if (!$row['payment_id']) $this->refresh($row['account_id']);
+                if ($this->deliver($row['account_id'])) $delivered++;
+            } catch (Throwable $error) {
+                $retry++;
+                $errors[] = $error instanceof KiweCheckoutError ? $error->getMessage() : 'Launch billing could not reconcile this record.';
+            }
+        }
+        return ['delivered' => $delivered, 'retry' => $retry, 'errors' => $errors];
+    }
+}

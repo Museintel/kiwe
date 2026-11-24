@@ -17,7 +17,8 @@ const server = new McpServer({ name: 'kiwe-launch-office', version: '1.0.0' });
 async function callPhp(script, ...input) {
   const php = process.env.KIWE_LAUNCH_PHP ?? 'php';
   const args = process.env.KIWE_LAUNCH_PHP_CONFIG ? ['-c', path.resolve(process.env.KIWE_LAUNCH_PHP_CONFIG)] : [];
-  const { stdout } = await run(php, [...args, script, ...input], { timeout: 12000, maxBuffer: 512 * 1024 });
+  const timeout = input[0] === 'reconcile-billing' ? 55000 : 12000;
+  const { stdout } = await run(php, [...args, script, ...input], { timeout, maxBuffer: 512 * 1024 });
   return JSON.parse(stdout);
 }
 
@@ -53,9 +54,9 @@ server.registerTool('kiwe_launch_inquiries', {
 const checkoutRoot = process.env.KIWE_LAUNCH_CHECKOUT_ROOT;
 if (checkoutRoot) {
   const operator = path.join(path.resolve(checkoutRoot), 'operator.php');
-  async function operation(action, value) {
+  async function operation(action, ...values) {
     try {
-      return asMcp(await callPhp(operator, action, value));
+      return asMcp(await callPhp(operator, action, ...values));
     } catch {
       return failure('The private Launch checkout could not be reached.');
     }
@@ -75,6 +76,20 @@ if (checkoutRoot) {
     inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/) },
     annotations: { readOnlyHint: true },
   }, ({ accountId }) => operation('quote', accountId));
+  server.registerTool('kiwe_launch_billing_status', {
+    description: 'Read the confirmed payment, refunds, renewal and Start project status for one Launch account.',
+    inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/) },
+    annotations: { readOnlyHint: true },
+  }, ({ accountId }) => operation('billing-status', accountId));
+  server.registerTool('kiwe_launch_reconcile_billing', {
+    description: 'Check pending Razorpay payments and deliver confirmed first-year purchases to Kiwe Start once.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, () => operation('reconcile-billing'));
+  server.registerTool('kiwe_launch_recover_renewal', {
+    description: 'Reconcile a previously reserved Kiwe renewal to its verified Razorpay subscription ID.',
+    inputSchema: { accountId: z.string().regex(/^launch:[a-f0-9]{32}$/), subscriptionId: z.string().regex(/^sub_[A-Za-z0-9]{4,80}$/) },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, ({ accountId, subscriptionId }) => operation('recover-renewal', accountId, subscriptionId));
 }
 
 await server.connect(new StdioServerTransport());

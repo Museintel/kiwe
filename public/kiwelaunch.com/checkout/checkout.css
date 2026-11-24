@@ -29,6 +29,11 @@
 .checkout-referrals { padding: 0; margin: 0; list-style: none; }
 .checkout-referrals li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .65rem; padding-block: .75rem; border-top: 1px solid var(--line); }
 .checkout-referrals span, .checkout-referrals small { display: block; color: var(--soft); overflow-wrap: anywhere; }
+.checkout-receipt h3:not(:first-child) { margin-top: 1.35rem; }
+.billing-actions { display: grid; gap: .65rem; margin: .85rem 0 0; }
+.billing-actions label { display: flex; gap: .45rem; align-items: start; }
+.billing-actions input[type="checkbox"] { margin: .35rem 0 0; accent-color: var(--lime); }
+.billing-actions .billing-link { justify-self: start; padding: .2rem 0; border: 0; background: transparent; color: #e7f5d3; font-weight: 750; text-decoration: underline; text-underline-offset: .22em; text-align: left; }
 @media (max-width: 730px) {
   .checkout-grid { grid-template-columns: minmax(0, 1fr); }
 }

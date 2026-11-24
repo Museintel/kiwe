@@ -51,7 +51,7 @@ function bearer(request) {
 }
 
 function sameSecret(actual, expected) {
-  if (!actual) return false;
+  if (!actual || !expected) return false;
   const hash = (value) => createHash('sha256').update(value, 'utf8').digest();
   return timingSafeEqual(hash(actual), hash(expected));
 }
@@ -281,9 +281,12 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, workflowClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, pilotPurchaseToken, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, workflowClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
   const pilotAccount = browserLogin?.pilotAccount;
   const pilot = Boolean(pilotAccount);
+  const launchBuyers = pilot && Boolean(pilotPurchaseToken);
+  const launchAccount = (value) => launchBuyers && typeof value === 'string' && /^launch:[a-f0-9]{32}$/.test(value);
+  const pilotAccess = (accountId) => accountId === pilotAccount || launchAccount(accountId);
   const keyConnections = createKeyConnections(projects, keyProvider);
   const agencySpaces = createAgencySpaces(projects, agencyReader);
   const homepage = createHomepageWorkflow(projects, startOrigin, homepageWordPress, homepageProvider, workflowClock);
@@ -326,7 +329,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
   const metadataUrl = startOrigin + metadataPath;
   const resource = startOrigin + mcpPath;
   const purchaseWrite = (request) => {
-    if (!sameSecret(bearer(request), purchaseToken)) {
+    if (!sameSecret(bearer(request), pilot ? pilotPurchaseToken : purchaseToken)) {
       throw new StartError(401, 'purchase_authority_required', 'A trusted Kiwe Launch connection is required.');
     }
   };
@@ -337,7 +340,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
   const sessionToken = (request) => requestCookie(request, cookieName);
   const accountForBrowser = (request) => {
     const accountId = projects.accountForSession(sessionToken(request));
-    return pilot && accountId !== pilotAccount ? null : accountId;
+    return pilot && !pilotAccess(accountId) ? null : accountId;
   };
   const setCookie = (response, name, value, maxAge) => response.appendHeader(
     'Set-Cookie',
@@ -345,7 +348,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
   );
   function sendSignIn(response, status, message) {
     if (browserLogin) response.setHeader('Content-Security-Policy', browserPolicy + "; form-action 'self' " + browserLogin.authorizationOrigin);
-    return send(response, status, signInPage(checkoutOrigin, message, Boolean(browserLogin), pilot));
+    return send(response, status, signInPage(checkoutOrigin, message, Boolean(browserLogin), pilot, launchBuyers));
   }
 
   async function route(request, response) {
@@ -402,23 +405,32 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     }
     if (pilot && pathname === '/projects/mcp-access' && (method === 'GET' || method === 'POST')) {
       const session = sessionToken(request);
-      if (projects.accountForSession(session) !== pilotAccount) return sendSignIn(response, 401);
+      const accountId = accountForBrowser(request);
+      if (!accountId) return sendSignIn(response, 401);
       if (method === 'POST') {
         checkOrigin(request, startOrigin);
         parse(z.strictObject({}), await readBody(request, formType));
         response.setHeader('Referrer-Policy', 'no-referrer');
-        return send(response, 201, pilotMcpPage(projects.issuePilotMcp(session, pilotAccount)));
+        return send(response, 201, pilotMcpPage(projects.issuePilotMcp(session, accountId)));
       }
       return send(response, 200, pilotMcpPage());
     }
-    if (!pilot && endpoint === 'POST /projects/api/purchases') {
+    if ((!pilot || launchBuyers) && endpoint === 'POST /projects/api/purchases') {
       purchaseWrite(request);
-      const result = projects.acceptPurchase(await readBody(request, jsonType));
+      const receipt = await readBody(request, jsonType);
+      if (pilot && (!launchAccount(receipt?.accountId) || receipt?.accountType !== 'client')) {
+        throw new StartError(403, 'launch_buyer_required', 'This connection accepts Kiwe Launch Client purchases.');
+      }
+      const result = projects.acceptPurchase(receipt);
       return json(response, result.created ? 201 : 200, result);
     }
-    if (!pilot && endpoint === 'POST /projects/api/handoffs') {
+    if ((!pilot || launchBuyers) && endpoint === 'POST /projects/api/handoffs') {
       purchaseWrite(request);
-      const handoff = projects.issueHandoff(await readBody(request, jsonType));
+      const input = await readBody(request, jsonType);
+      if (pilot && !launchAccount(input?.accountId)) {
+        throw new StartError(403, 'launch_buyer_required', 'Sign in with the purchasing Kiwe Launch account.');
+      }
+      const handoff = projects.issueHandoff(input);
       return json(response, 201, { ...handoff, action: startOrigin + '/projects/open' });
     }
     if (!pilot && endpoint === 'POST /projects/api/client-handoffs') {
@@ -435,7 +447,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     if (pathname === mcpPath) {
       if (request.headers.origin !== undefined) checkOrigin(request, startOrigin);
       const token = bearer(request);
-      const accountId = pilot ? projects.accountForPilotMcp(token, pilotAccount) : await authorizeMcp(token);
+      const accountId = pilot ? projects.accountForPilotMcp(token, pilotAccess) : await authorizeMcp(token);
       if (!accountId) {
         response.setHeader('WWW-Authenticate', pilot ? 'Bearer realm="Kiwe Start pilot"' : `Bearer resource_metadata="${metadataUrl}", scope="${projectScope}"`);
         return json(response, 401, { error: 'authorization_required' });
@@ -470,9 +482,13 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     if (endpoint === 'GET /projects/style.css') {
       return send(response, 200, stylesheet, 'text/css; charset=utf-8');
     }
-    if (!pilot && endpoint === 'POST /projects/open') {
+    if ((!pilot || launchBuyers) && endpoint === 'POST /projects/open') {
       checkOrigin(request, checkoutOrigin);
       const session = projects.redeemHandoff(await readBody(request, formType));
+      if (pilot && !launchAccount(projects.accountForSession(session.token))) {
+        projects.endSession(session.token);
+        throw new StartError(403, 'launch_buyer_required', 'Sign in with the purchasing Kiwe Launch account.');
+      }
       projects.endSession(sessionToken(request));
       setCookie(response, cookieName, session.token, browserLifetime / 1000);
       return redirect(response, '/projects/' + session.projectId);

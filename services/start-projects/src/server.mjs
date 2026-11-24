@@ -45,7 +45,7 @@ function managedProvider() {
 const startOrigin = configuredUrl('KIWE_START_ORIGIN', true);
 const checkoutOrigin = configuredUrl('KIWE_START_CHECKOUT_ORIGIN', true);
 const pilotAccount = process.env.KIWE_START_KEY_PILOT_ACCOUNT;
-const purchaseToken = pilotAccount ? undefined : required('KIWE_START_PURCHASE_TOKEN');
+const purchaseToken = pilotAccount ? process.env.KIWE_START_PURCHASE_TOKEN : required('KIWE_START_PURCHASE_TOKEN');
 if (purchaseToken && !/^[A-Za-z0-9_-]{43,128}$/.test(purchaseToken)) throw new Error('Use a random purchase credential.');
 const keyToken = process.env.KIWE_START_KEY_TOKEN;
 if (keyToken && (keyToken === purchaseToken || !/^[A-Za-z0-9_-]{43,128}$/.test(keyToken))) {
@@ -108,7 +108,10 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Use a 
 process.umask(0o077);
 mkdirSync(path.dirname(database), { recursive: true, mode: 0o700 });
 const projects = openProjects(database, { launchWebsite: checkoutOrigin });
-const server = createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, publicGuide, hostingProvider: managedProvider(), keyProvider: key, homepageProvider, bricksCompiler });
+const server = createStartServer({
+  projects, startOrigin, checkoutOrigin, issuer, purchaseToken, pilotPurchaseToken: pilotAccount ? purchaseToken : undefined,
+  authorizeMcp, browserLogin, publicGuide, hostingProvider: managedProvider(), keyProvider: key, homepageProvider, bricksCompiler,
+});
 server.listen(port, process.env.KIWE_START_BIND || '127.0.0.1');
 for (const name of ['SIGINT', 'SIGTERM']) {
   process.once(name, () => server.close(() => projects.close()));

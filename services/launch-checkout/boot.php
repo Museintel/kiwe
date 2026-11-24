@@ -3,6 +3,45 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/store.php';
+require_once __DIR__ . '/billing.php';
+
+function kiwe_checkout_billing(mixed $config, KiweCheckout $checkout, string $database, string $origin, bool $test): ?KiweBilling
+{
+    if (!is_array($config)) return null;
+    $startOrigin = $config['startOrigin'] ?? '';
+    $cycles = $config['cycles'] ?? 120;
+    $plans = $config['plans'] ?? [];
+    $merchant = kiwe_billing_id($config['merchant'] ?? null, 'acc');
+    $secret = $config['webhookSecret'] ?? '';
+    if (!$merchant || !is_string($secret) || strlen($secret) < 32 || !is_int($cycles) || $cycles < 1 || $cycles > 1200
+        || !kiwe_billing_id($plans['direct'] ?? null, 'plan') || !kiwe_billing_id($plans['referred'] ?? null, 'plan')) {
+        throw new RuntimeException('Kiwe billing credentials or plans are invalid.');
+    }
+    $razorpay = null;
+    if ($test) {
+        if (!preg_match('~^http://127\.0\.0\.1:[1-9][0-9]{0,4}$~D', $startOrigin)) {
+            throw new RuntimeException('Invalid isolated Start origin.');
+        }
+        if (isset($config['razorpay'])) $razorpay = Closure::fromCallable($config['razorpay']);
+        $start = Closure::fromCallable($config['start']);
+    } else {
+        if ($startOrigin !== 'https://start.kiwelaunch.com' || strlen($config['startToken'] ?? '') < 43) {
+            throw new RuntimeException('Kiwe billing cannot confirm its Start connection.');
+        }
+        $start = kiwe_billing_start($startOrigin, $config['startToken']);
+    }
+    if (!$razorpay) {
+        $keyId = $config['keyId'] ?? '';
+        $mode = $test ? 'test' : 'live';
+        if (($config['mode'] ?? '') !== $mode
+            || !preg_match('/^rzp_' . $mode . '_[A-Za-z0-9]+$/D', $keyId)
+            || strlen($config['keySecret'] ?? '') < 16 || !function_exists('curl_init')) {
+            throw new RuntimeException('Kiwe billing is not configured for its declared provider mode.');
+        }
+        $razorpay = kiwe_billing_gateway($keyId, $config['keySecret']);
+    }
+    return new KiweBilling($database, $checkout, $origin, $startOrigin, $merchant, $secret, $plans, $cycles, $razorpay, $start);
+}
 
 function kiwe_checkout_boot(string $root): ?array
 {
@@ -39,8 +78,10 @@ function kiwe_checkout_boot(string $root): ?array
         $mailer = static fn (string $email, string $purpose, string $body) => kiwe_checkout_send_email($mailbox, $mailToken, $email, $purpose, $body);
         $registrar = static fn (string $name, string $extension): array => kiwe_checkout_hostinger_domain($registrarToken, $name, $extension);
     }
+    $database = $storage . '/checkout.sqlite';
+    $checkout = new KiweCheckout($database, $plan, $origin, $secret, $mailer, $registrar);
     return [
         'origin' => $origin, 'test' => $test, 'sessions' => $storage . '/sessions',
-        'checkout' => new KiweCheckout($storage . '/checkout.sqlite', $plan, $origin, $secret, $mailer, $registrar),
+        'checkout' => $checkout, 'billing' => kiwe_checkout_billing($settings['billing'] ?? null, $checkout, $database, $origin, $test),
     ];
 }

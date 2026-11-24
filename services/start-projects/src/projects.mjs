@@ -775,10 +775,11 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       });
     },
 
-    accountForPilotMcp(token, pilotAccount) {
+    accountForPilotMcp(token, allowed) {
       if (!/^kiwe_start_pilot_[A-Za-z0-9_-]{43}$/.test(token)) return null;
       const time = now();
-      return checkPilotToken.get(digest(token), time, time)?.account_id === pilotAccount ? pilotAccount : null;
+      const accountId = checkPilotToken.get(digest(token), time, time)?.account_id;
+      return accountId && allowed(accountId) ? accountId : null;
     },
 
     accountForSession(token) {

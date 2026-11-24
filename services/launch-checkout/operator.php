@@ -11,12 +11,16 @@ try {
     $state = kiwe_checkout_boot($root);
     if (!$state) throw new KiweCheckoutError('Launch checkout is disabled or its providers are unconfigured.', 503);
     $checkout = $state['checkout'];
+    $billing = $state['billing'];
     $value = $argv[2] ?? '';
     $result = match ($argv[1] ?? '') {
         'domain' => ['domain' => kiwe_checkout_domain($value), ...$checkout->domainAvailability($value)],
         'enrol-partner' => ['account' => $checkout->enrolPartner($value)],
         'quote' => kiwe_checkout_operator_quote($checkout, $value),
-        default => throw new KiweCheckoutError('Use domain, enrol-partner, or quote.'),
+        'billing-status' => ['billing' => kiwe_checkout_operator_billing($billing, $value)],
+        'reconcile-billing' => $billing?->deliverPending() ?? throw new KiweCheckoutError('Launch billing is unavailable.', 503),
+        'recover-renewal' => kiwe_checkout_operator_recover($billing, $value, $argv[3] ?? ''),
+        default => throw new KiweCheckoutError('Unknown Launch operation.'),
     };
     echo json_encode($result, JSON_THROW_ON_ERROR), PHP_EOL;
 } catch (KiweCheckoutError $error) {
@@ -32,4 +36,24 @@ function kiwe_checkout_operator_quote(KiweCheckout $checkout, string $accountId)
     $draft = $checkout->draft($accountId);
     if (!$draft) throw new KiweCheckoutError('This account has no saved checkout.', 404);
     return ['id' => $draft['id'], 'revision' => $draft['revision'], 'quote' => $draft['quote']];
+}
+
+function kiwe_checkout_operator_billing(?KiweBilling $billing, string $accountId): ?array
+{
+    if (!$billing) throw new KiweCheckoutError('Launch billing is unavailable.', 503);
+    if (!preg_match('/^launch:[a-f0-9]{32}$/D', $accountId)) throw new KiweCheckoutError('Enter a Launch account ID.');
+    $status = $billing->status($accountId);
+    if ($status) {
+        unset($status['linkUrl']);
+        unset($status['mandate']['url']);
+    }
+    return $status;
+}
+
+function kiwe_checkout_operator_recover(?KiweBilling $billing, string $account, string $subscription): array
+{
+    if (!$billing) throw new KiweCheckoutError('Launch billing is unavailable.', 503);
+    if (!preg_match('/^launch:[a-f0-9]{32}$/D', $account)) throw new KiweCheckoutError('Enter a Launch account ID.');
+    $billing->recoverMandate($account, $subscription);
+    return ['billing' => kiwe_checkout_operator_billing($billing, $account)];
 }

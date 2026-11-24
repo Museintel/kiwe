@@ -10,7 +10,7 @@ import path from 'node:path';
 import { setTimeout as wait } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { clientPlan } from '../../start-projects/src/client-plan.mjs';
-import { openProjects } from '../../start-projects/src/projects.mjs';
+import { startForCheckout, verifyBilling } from './billing-proof.mjs';
 
 const require = createRequire(new URL('../../start-projects/package.json', import.meta.url));
 const harness = process.env.KIWE_LAUNCH_UI_HARNESS ?? fileURLToPath(new URL('../../../tools/ui-contract', import.meta.url));
@@ -28,7 +28,9 @@ await new Promise((resolve, reject) => portProbe.close(error => error ? reject(e
 const origin = 'http://127.0.0.1:' + port;
 const php = process.env.KIWE_LAUNCH_PHP ?? 'php';
 const phpArgs = process.env.KIWE_LAUNCH_PHP_CONFIG ? ['-c', process.env.KIWE_LAUNCH_PHP_CONFIG] : [];
-const env = { ...process.env, KIWE_LAUNCH_PHP: php, KIWE_LAUNCH_CHECKOUT_ROOT: root, KIWE_CHECKOUT_TEST_ORIGIN: origin };
+const start = await startForCheckout(origin);
+const env = { ...process.env, KIWE_LAUNCH_PHP: php, KIWE_LAUNCH_CHECKOUT_ROOT: root, KIWE_CHECKOUT_TEST_ORIGIN: origin,
+  KIWE_BILLING_TEST_START_ORIGIN: start.origin, KIWE_BILLING_TEST_START_TOKEN: start.purchaseToken };
 const password = 'Saffron test pass phrase 48';
 const resetPassword = 'Updated test pass phrase 52';
 let browser;
@@ -85,12 +87,15 @@ async function operation(name, args) {
 
 try {
   await mkdir(path.join(data, 'sessions'), { recursive: true });
-  for (const file of ['boot.php', 'store.php', 'providers.php', 'schema.sql', 'web.php', 'view.php', 'operator.php']) {
+  for (const file of ['boot.php', 'store.php', 'providers.php', 'schema.sql', 'web.php', 'view.php', 'operator.php',
+    'billing.php', 'billing-providers.php', 'billing-schema.sql', 'billing-view.php']) {
     await cp(path.join(service, file), path.join(root, file));
   }
   await cp(path.join(service, 'test', 'settings-fixture.php'), path.join(root, 'settings.php'));
+  await cp(path.join(service, 'test', 'billing-fixture.php'), path.join(root, 'billing-fixture.php'));
   await writeFile(path.join(root, 'client-plan.json'), JSON.stringify(clientPlan));
   await writeFile(path.join(data, 'rate-key'), randomBytes(32), { mode: 0o600 });
+  await writeFile(path.join(data, 'gateway.json'), JSON.stringify({ links: {}, payments: {}, subscriptions: {} }));
   server = spawn(php, [...phpArgs, '-S', '127.0.0.1:' + port, '-t', app], { windowsHide: true, env, stdio: 'ignore' });
   let ready = false;
   for (let retry = 0; retry < 50; retry += 1) {
@@ -206,16 +211,6 @@ try {
   assert.equal(quote.upfrontMinor, clientPlan.referred.upfrontMinor);
   assert.equal(quote.renewalMinor, clientPlan.referred.renewalMinor);
   assert.deepEqual(quote.domain, { mode: 'register', name: 'eligible.in', category: 'standard' });
-  const projects = openProjects(':memory:');
-  try {
-    const accepted = projects.acceptPurchase({
-      entitlementId: 'test-confirmed-slice', purchaseId: 'test-paid-fixture', accountId: account.id,
-      accountType: 'client', planId: quote.planId, hostingIncluded: true,
-      clientOrder: { currency: quote.currency, paidMinor: quote.upfrontMinor, renewalMinor: quote.renewalMinor,
-        referralId: quote.referralId, domain: quote.domain },
-    });
-    assert.equal(accepted.created, true, 'Start accepts the account and a simulated payment for the quoted plan');
-  } finally { projects.close(); }
   await partner.reload();
   await partner.getByText('Email verified', { exact: true }).waitFor();
   if (process.env.KIWE_LAUNCH_PROOF_DIR) {
@@ -225,7 +220,9 @@ try {
     await partner.screenshot({ path: path.join(proof, 'partner-links-1440.png'), fullPage: true });
     await direct.screenshot({ path: path.join(proof, 'signup-390.png'), fullPage: true });
   }
-  process.stdout.write('Verified signup, password reset, partner enrolment, referral privacy, domain decisions, MCP quotes and Start receipt passed.\n');
+  await verifyBilling({ origin, data, page: referred, direct, directEmail: 'buyer@example.invalid', directPassword: resetPassword,
+    accountId: account.id, quote, tools: operation, start, clientPlan });
+  process.stdout.write('Verified checkout, Razorpay billing and retries, renewal consent, refunds and same-account Kiwe Start handoff passed.\n');
 } finally {
   await mcp?.close();
   await browser?.close();
@@ -234,6 +231,7 @@ try {
     server.kill();
     await exited;
   }
+  await start.close();
   if (path.dirname(root) === path.resolve(tmpdir()) && path.basename(root).startsWith('kiwe-checkout-test-')) {
     await rm(root, { recursive: true, force: true, maxRetries: 3 });
   }

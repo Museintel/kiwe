@@ -1,4 +1,5 @@
 const linkForm = document.querySelector('#checkout-link');
+document.querySelector('#start-handoff')?.requestSubmit();
 function receiveLink() {
   const fragment = new URLSearchParams(location.hash.slice(1));
   const referral = fragment.get('ref');
@@ -13,7 +14,11 @@ addEventListener('hashchange', receiveLink);
 receiveLink();
 
 const signIn = document.querySelector('#sign-in');
-if (signIn && location.hash === '#sign-in') signIn.open = true;
+function showSignIn() {
+  if (signIn && location.hash === '#sign-in') signIn.open = true;
+}
+addEventListener('hashchange', showSignIn);
+showSignIn();
 document.querySelector('a[href="#sign-in"]')?.addEventListener('click', () => {
   if (signIn) signIn.open = true;
 });

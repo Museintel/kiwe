@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-return [
+$settings = [
     'enabled' => true,
     'test' => true,
     'origin' => getenv('KIWE_CHECKOUT_TEST_ORIGIN') ?: 'http://127.0.0.1:8597',
@@ -22,3 +22,18 @@ return [
         ]], $domain);
     },
 ];
+if ($start = getenv('KIWE_BILLING_TEST_START_ORIGIN')) {
+    require __DIR__ . '/billing-fixture.php';
+    $settings['billing'] = [
+        'startOrigin' => $start,
+        'merchant' => 'acc_KiweTestFixture',
+        'webhookSecret' => 'Kiwe checkout isolated webhook fixture secret',
+        'plans' => ['direct' => 'plan_DirectFixture', 'referred' => 'plan_ReferralFixture'],
+        'cycles' => 120,
+        'razorpay' => static fn (string $method, string $path, array $data = []): array =>
+            kiwe_test_gateway(__DIR__, $method, $path, $data),
+        'start' => static fn (string $action, array $data): array =>
+            kiwe_test_start(__DIR__, $start, getenv('KIWE_BILLING_TEST_START_TOKEN'), $action, $data),
+    ];
+}
+return $settings;
