@@ -117,8 +117,8 @@ export function createWordPressLink(send = requestSite) {
           if (scope === 'mcp.bricks.import') {
             throw new StartError(409, 'bricks_import_unavailable', 'Enable Kiwe MCP with native Bricks draft import on this website.');
           }
-          if (scope !== ownershipScope) {
-            throw new StartError(409, 'context_unavailable', 'Enable the Kiwe MCP App version with Start Design Context on this website.');
+          if (scope === 'mcp.design.read') {
+            throw new StartError(409, 'design_read_unavailable', 'Enable the Kiwe MCP App version with public design and inventory reads on this website.');
           }
           throw new StartError(409, 'site_link_unavailable', 'Enable the Kiwe MCP App version that supports site linking on this domain.');
         }

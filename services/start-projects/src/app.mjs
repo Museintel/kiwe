@@ -8,7 +8,7 @@ import {
   StartError, browserLifetime, claimInput, domainInput, parse, pilotBrowserLifetime, projectScope, projectsOutput, singleProjectOutput, siteLinkInput, ticketInput,
 } from './projects.mjs';
 import { browserLoginInput, browserLoginLifetime, browserLoginPath, browserLoginReturn } from './browser-login.mjs';
-import { agencyPage, contextPage, contextReviewPage, homepagePage, websitePage, clientProjectPage, pilotMcpPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
+import { agencyPage, homepagePage, websitePage, clientProjectPage, pilotMcpPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
 import { createKeyConnections } from './key-connection.mjs';
@@ -23,9 +23,6 @@ import { bricksInput, bricksReturn, createBricksImport } from './bricks-import.m
 import { createHomepagePublication, publicationInput, publicationReturn } from './homepage-publication.mjs';
 import { createWebsiteInventory, inventoryReturn, websiteChecklist } from './website-inventory.mjs';
 import { documentId, documentPath, websiteDocuments } from './document-targets.mjs';
-import {
-  contextArea, contextInput, contextOutput, contextEditInput, contextProposalOutput, contextReturnPath, createDesignContext,
-} from './design-context.mjs';
 
 const jsonType = 'application/json';
 const formType = 'application/x-www-form-urlencoded';
@@ -94,7 +91,7 @@ function checkOrigin(request, expected) {
   }
 }
 
-function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId, pilot) {
+function mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, homepage, bricks, publication, website, accountId, pilot) {
   const server = new McpServer({ name: 'Kiwe Start', version: '0.1.0' });
   const result = (label, structuredContent) => ({
     content: [{ type: 'text', text: label }],
@@ -114,7 +111,7 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     annotations: { readOnlyHint: true },
   }, () => result('Your Start projects', { projects: projects.listProjects(accountId) }));
   server.registerTool('kiwe_start_project', {
-    description: 'Read an accessible project, its current revision and the next setup step.',
+    description: 'Read an accessible project, its next setup step and the native Design Context link for a verified WordPress site.',
     inputSchema: claimInput,
     outputSchema: singleProjectOutput,
     annotations: { readOnlyHint: true },
@@ -183,26 +180,6 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     outputSchema: agencySpaceOutput,
     annotations: { destructiveHint: false, openWorldHint: true },
   }, (input) => run(async () => result('Agency website verified', await agencySpaces.verify(accountId, input))));
-  server.registerTool('kiwe_start_context', {
-    description: 'Read the native, site-specific Design Context section. Show current values and ask the authorized human for any missing public business facts.',
-    inputSchema: contextInput,
-    outputSchema: contextOutput,
-    annotations: { readOnlyHint: true },
-  }, (input) => run(async () => result('Design Context', await context.status(accountId, input))));
-  server.registerTool('kiwe_start_open_context', {
-    description: 'Open the selected WordPress site’s native consent for introductory Design Context editing.',
-    inputSchema: siteLinkInput,
-    outputSchema: z.strictObject({ authorizationUrl: z.url() }),
-    annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: true },
-  }, (input) => run(async () => result('Approve Design Context access in WordPress', {
-    authorizationUrl: await context.begin(accountId, input),
-  })));
-  server.registerTool('kiwe_start_prepare_context_change', {
-    description: 'Prepare the exact public business fact supplied by the human. Open the review link so they can confirm it in Start and save to the selected WordPress site.',
-    inputSchema: contextEditInput,
-    outputSchema: contextProposalOutput,
-    annotations: { destructiveHint: false },
-  }, (input) => run(async () => result('Open the review to confirm this Design Context change', await context.propose(accountId, input))));
   server.registerTool('kiwe_start_homepage', {
     description: 'Read this one homepage request, the scoped public Design Context, and its current owner review link.',
     inputSchema: claimInput,
@@ -299,16 +276,15 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
   return server;
 }
 
-export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, contextWordPress, contextClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
+export function createStartServer({ projects, startOrigin, checkoutOrigin, issuer, purchaseToken, authorizeMcp, browserLogin, publicGuide, wordpressLink, hostingProvider, keyProvider, agencyReader, workflowClock, homepageWordPress, homepageProvider, inventoryWordPress, bricksWordPress, bricksCompiler, publicationWordPress }) {
   const pilotAccount = browserLogin?.pilotAccount;
   const pilot = Boolean(pilotAccount);
   const keyConnections = createKeyConnections(projects, keyProvider);
   const agencySpaces = createAgencySpaces(projects, agencyReader);
-  const context = createDesignContext(projects, startOrigin, contextWordPress, contextClock);
-  const homepage = createHomepageWorkflow(projects, startOrigin, homepageWordPress, homepageProvider, contextClock);
-  const bricks = createBricksImport(projects, homepage, startOrigin, bricksCompiler, bricksWordPress, contextClock);
-  const publication = createHomepagePublication(projects, startOrigin, publicationWordPress, contextClock);
-  const inventory = createWebsiteInventory(projects, startOrigin, inventoryWordPress, contextClock);
+  const homepage = createHomepageWorkflow(projects, startOrigin, homepageWordPress, homepageProvider, workflowClock);
+  const bricks = createBricksImport(projects, homepage, startOrigin, bricksCompiler, bricksWordPress, workflowClock);
+  const publication = createHomepagePublication(projects, startOrigin, publicationWordPress, workflowClock);
+  const inventory = createWebsiteInventory(projects, startOrigin, inventoryWordPress, workflowClock);
   const website = {
     ...inventory,
     state(accountId, input) {
@@ -463,7 +439,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         return json(response, 405, { error: 'method_not_allowed' });
       }
       const payload = await readBody(request, jsonType);
-      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, context, homepage, bricks, publication, website, accountId, pilot);
+      const server = mcpTools(projects, siteConnections, managedHosting, keyConnections, agencySpaces, homepage, bricks, publication, website, accountId, pilot);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, enableJsonResponse: true,
       });
@@ -501,19 +477,6 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
       setCookie(response, cookieName, '', 0);
       setCookie(response, loginCookie, '', 0);
       return redirect(response, browserLogin ? browserLoginPath : '/projects');
-    }
-    if (endpoint === 'GET ' + contextReturnPath) {
-      response.setHeader('Referrer-Policy', 'no-referrer');
-      try {
-        const access = await context.complete(Object.fromEntries(url.searchParams));
-        if (accountForBrowser(request) === access.accountId) {
-          return redirect(response, '/projects/' + access.projectId + '/context');
-        }
-        return send(response, 200, siteReturnPage('Design Context is connected. Return to your Start project.', true));
-      } catch (error) {
-        if (!(error instanceof StartError)) throw error;
-        return send(response, error.status, siteReturnPage(error.message, false));
-      }
     }
     if (endpoint === 'GET ' + publicationReturn) {
       response.setHeader('Referrer-Policy', 'no-referrer');
@@ -623,7 +586,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
           const fields = await readBody(request, formType);
           if (action === 'request') {
             const link = await homepage.begin(accountId, { ...fields, projectId, target, revision: Number(fields.revision) });
-            return redirect(response, link);
+            return send(response, 200, siteAuthorizationPage(project, link, 'let Kiwe Start read the saved Design Context for this design'));
           }
           if (action === 'revise') await homepage.revise(accountId, {
             ...fields, projectId, target, revision: Number(fields.revision), regenerate: fields.regenerate === '1',
@@ -653,50 +616,13 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         }
       }
     }
-    const contextRoute = pathname.match(/^\/projects\/([a-f0-9-]{36})\/context(?:\/(authorize|close|review\/([a-f0-9-]{36})))?$/);
+    const contextRoute = method === 'GET' && pathname.match(/^\/projects\/([a-f0-9-]{36})\/context$/);
     if (contextRoute) {
       const accountId = accountForBrowser(request);
       if (!accountId) return sendSignIn(response, 401);
-      const [, projectId, action, reviewId] = contextRoute;
+      const [, projectId] = contextRoute;
       const project = projects.readProject(accountId, { projectId });
-      if (project.site) response.setHeader('Content-Security-Policy', browserPolicy + "; form-action 'self' " + new URL(project.site.url).origin);
-      const area = contextArea.safeParse(url.searchParams.get('area')).data ?? 'identity';
-      const location = '/projects/' + projectId + '/context';
-      if (method === 'GET' && reviewId) {
-        return send(response, 200, contextReviewPage(project, context.review(accountId, projectId, reviewId), reviewId));
-      }
-      if (method === 'GET' && !action) {
-        try {
-          const view = await context.status(accountId, { projectId, revision: project.revision, area });
-          return send(response, 200, contextPage(project, area, view));
-        } catch (error) {
-          if (!(error instanceof StartError)) throw error;
-          return send(response, error.status, contextPage(project, area, null, error.message));
-        }
-      }
-      if (method === 'POST') {
-        checkOrigin(request, startOrigin);
-        try {
-          const form = await readBody(request, formType);
-          if (reviewId) {
-            const savedArea = await context.confirm(accountId, projectId, reviewId);
-            return redirect(response, location + '?area=' + savedArea);
-          }
-          if (action === 'authorize') {
-            const approval = await context.begin(accountId, { projectId, revision: Number(form.revision) });
-            return redirect(response, approval);
-          }
-          if (action === 'close') {
-            await context.close(accountId, projectId);
-            return redirect(response, location + '?area=' + area);
-          }
-          await context.save(accountId, { ...form, projectId, revision: Number(form.revision) });
-          return redirect(response, location + '?area=' + form.area);
-        } catch (error) {
-          if (!(error instanceof StartError)) throw error;
-          return send(response, error.status, contextPage(project, area, null, error.message));
-        }
-      }
+      return redirect(response, project.site?.designContextUrl ?? '/projects/' + project.id);
     }
     const agencyRoute = pathname === '/projects/agency' || pathname === '/projects/agency/verify';
     if (agencyRoute) {

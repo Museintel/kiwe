@@ -102,6 +102,10 @@ test('a WordPress owner approval connects the same purchase in web and MCP', asy
   const native = nativeFixture();
   const f = await fixture(t, { wordpressLink: native.wordpress });
   const { projectId, endpoint, session } = await newProject(f, 'site-one');
+  const options = { headers: { Cookie: session } };
+  const legacyContext = endpoint + '/context?area=identity';
+  assert.equal((await f.request(legacyContext)).status, 401);
+  assert.equal((await f.request(legacyContext, options)).headers.get('location'), endpoint);
   const client = await f.connect('buyer-one');
   const outsider = await f.connect('someone-else');
   const input = { projectId, revision: 2 };
@@ -127,7 +131,18 @@ test('a WordPress owner approval connects the same purchase in web and MCP', asy
   assert.equal(connected.next, 'connect_key');
   assert.equal(connected.site.url, origin);
   assert.equal(connected.site.wordpressVersion, '7.1.5');
-  assert.match(await (await f.request(endpoint, { headers: { Cookie: session } })).text(), /Website verified/);
+  const contextUrl = origin + '/wp-admin/admin.php?page=kiwe-design-context';
+  assert.equal(connected.site.designContextUrl, contextUrl);
+  const dashboard = await (await f.request(endpoint, options)).text();
+  assert.match(dashboard, /Website verified/);
+  assert.ok(dashboard.includes(`href="${contextUrl}">Open Design Context in WordPress`));
+  const moved = await f.request(legacyContext, options);
+  assert.equal(moved.status, 303);
+  assert.equal(moved.headers.get('location'), contextUrl);
+  for (const suffix of ['/context', '/context/authorize', '/context/close', '/context/review/' + projectId]) {
+    assert.equal((await f.form(endpoint + suffix, { revision: '3' }, { cookie: session })).status, 404);
+  }
+  assert.equal((await f.request('/projects/context-return', options)).status, 404);
   await f.restart();
   assert.match(await (await f.request(endpoint, { headers: { Cookie: session } })).text(), /Website verified/);
 
@@ -143,6 +158,7 @@ test('a WordPress owner approval connects the same purchase in web and MCP', asy
   const changed = await f.form(endpoint + '/domain', { domain: 'new.example', hosting: 'existing', revision: '3' }, { cookie: session });
   assert.equal(changed.status, 303);
   assert.doesNotMatch(await (await f.request(endpoint, { headers: { Cookie: session } })).text(), /Website verified/);
+  assert.equal((await f.request(legacyContext, options)).headers.get('location'), endpoint);
 });
 
 test('the same verified project resumes Key approval and readiness in the browser and MCP', async (t) => {
@@ -205,7 +221,7 @@ test('the same verified project resumes Key approval and readiness in the browse
   assert.equal(checked.structuredContent.project.next, 'fill_design_context');
   assert.deepEqual(requests.at(-1), requests[0]);
   const html = await (await surface()).text();
-  assert.match(html, /Next, fill in Design Context/);
+  assert.match(html, /Next, fill in Design Context in WordPress/);
   assert.match(html, /client number is waiting/);
   const domain = await f.form(endpoint + '/domain', { domain: 'other.example', hosting: 'existing', revision: '3' }, { cookie: session });
   assert.equal(domain.status, 409);
@@ -313,9 +329,14 @@ test('an agency client uses their own identity and can open only their verified 
   assert.equal(nativeProject.access, 'client');
   assert.equal(nativeProject.key, null);
   assert.equal(nativeProject.workspace.type, 'kiwe_launch');
-  const browser = await f.request(endpoint, { headers: { Cookie: clientSession } });
+  const contextUrl = origin + '/wp-admin/admin.php?page=kiwe-design-context';
+  assert.equal(nativeProject.site.designContextUrl, contextUrl);
+  const clientOptions = { headers: { Cookie: clientSession } };
+  const browser = await f.request(endpoint, clientOptions);
   assert.equal(browser.status, 200);
-  assert.match(await browser.text(), /Open Design Context in WordPress/);
+  assert.ok((await browser.text()).includes(`href="${contextUrl}">Open Design Context in WordPress`));
+  assert.equal((await f.request(endpoint + '/context', clientOptions)).headers.get('location'), contextUrl);
+  assert.equal((await f.request(other.endpoint + '/context', clientOptions)).status, 404);
   assert.equal((await f.request(other.endpoint, { headers: { Cookie: clientSession } })).status, 404);
   assert.equal((await f.form(endpoint + '/domain', { ...fields, domain: 'different.example', hosting: 'existing' }, { cookie: clientSession })).status, 404);
   const clientTools = await actor.listTools();
@@ -338,6 +359,7 @@ test('an agency client uses their own identity and can open only their verified 
   assert.equal(revoke.structuredContent.revoked, true);
   assert.equal((await f.redeem((await pending.json()).ticket)).status, 410);
   assert.equal((await f.request(endpoint, { headers: { Cookie: reopened } })).status, 404);
+  assert.equal((await f.request(endpoint + '/context', { headers: { Cookie: reopened } })).status, 404);
   assert.equal((await f.postReceipt('client-handoffs', { accountId: 'client-one' })).status, 404);
 
   const newInvitation = (await signedInAgain.callTool({

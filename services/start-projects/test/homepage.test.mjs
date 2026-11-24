@@ -88,6 +88,15 @@ const approveUrl = (link, route, issuer) => {
   const url = new URL(link);
   return route + '?' + new URLSearchParams({ state: url.searchParams.get('state'), code, iss: issuer || url.origin });
 };
+async function wordpressAuthorization(response) {
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('location'), null);
+  assert.match(response.headers.get('content-security-policy'), /form-action 'self'$/);
+  const link = (await response.text()).match(/href="([^"]+)">Open WordPress authorization/);
+  assert.ok(link);
+  return link[1].replaceAll('&amp;', '&');
+}
+
 async function connect(f, client) {
   const receipt = await f.postReceipt('purchases', purchase('homepage'));
   const { projectId } = await receipt.json();
@@ -128,8 +137,7 @@ test('a connected designer makes one homepage, and only the owner can approve it
   assert.equal((await mcp(other, 'homepage', { projectId: project.projectId })).isError, true);
   assert.equal((await read()).structuredContent.draft, null);
   const opened = await mutate('request', { revision: '3', feedback: 'Warm editorial style' });
-  assert.equal(opened.status, 303);
-  const handoff = opened.headers.get('location');
+  const handoff = await wordpressAuthorization(opened);
   assert.equal((await f.request(approveUrl(handoff, '/projects/homepage-return', 'https://foreign.example.test'), project.options)).status, 409);
   const callback = approveUrl(handoff, '/projects/homepage-return');
   assert.equal((await f.request(callback, project.options)).headers.get('location'), project.home);
@@ -374,7 +382,7 @@ test('the Pages and Templates dashboard reviews, converts, publishes and restore
   const projectPages = '/projects/' + project.projectId + '/pages';
   assert.match(await (await f.request(projectPages, project.options)).text(), /Generate homepage/);
   const opened = await mutate('request', { revision: '3' });
-  await f.request(approveUrl(opened.headers.get('location'), '/projects/homepage-return'), project.options);
+  await f.request(approveUrl(await wordpressAuthorization(opened), '/projects/homepage-return'), project.options);
   const prior = (await mcp(owner, 'homepage', { projectId: project.projectId })).structuredContent.draft;
   const draft = (await mcp(owner, 'submit_homepage_design', {
     projectId: project.projectId, draftId: prior.id, design,
@@ -598,9 +606,13 @@ test('a configured browser generator receives only the public brief and can fill
   const f = await fixture(t, { wordpressLink: native.oauth, homepageWordPress: native.oauth, keyProvider, homepageProvider: provider });
   const owner = await f.connect('buyer-one');
   const project = await connect(f, owner);
+  const ownerPage = await f.request(project.home, project.options);
+  assert.match(await ownerPage.text(), /href="https:\/\/alder\.example\.test\/wp-admin\/admin\.php\?page=kiwe-design-context">Open Design Context in WordPress/);
   const requested = await f.form(project.home + '/request', { revision: '3', feedback: 'Use warm colors' }, { cookie: project.session });
   assert.equal(calls, 0);
-  const accepted = await f.request(approveUrl(requested.headers.get('location'), '/projects/homepage-return'), project.options);
+  const { authorizationUrl } = (await mcp(owner, 'open_homepage', { ...project.input, feedback: 'Use warm colors' })).structuredContent;
+  assert.equal(await wordpressAuthorization(requested), authorizationUrl);
+  const accepted = await f.request(approveUrl(authorizationUrl, '/projects/homepage-return'), project.options);
   assert.equal(accepted.status, 303);
   assert.equal(calls, 1);
   const status = await mcp(owner, 'homepage', { projectId: project.projectId });

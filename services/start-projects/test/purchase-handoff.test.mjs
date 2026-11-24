@@ -51,7 +51,6 @@ test('Start web and MCP work on the same projects for single buyers and agencies
   const tools = await studio.listTools();
   assert.deepEqual(tools.tools.map(({ name }) => name), ['kiwe_start_projects', 'kiwe_start_project', 'kiwe_start_set_domain', 'kiwe_start_connect_site',
     'kiwe_start_agency_workspace', 'kiwe_start_set_agency_home', 'kiwe_start_verify_agency_home',
-    'kiwe_start_context', 'kiwe_start_open_context', 'kiwe_start_prepare_context_change',
     'kiwe_start_homepage', 'kiwe_start_open_homepage', 'kiwe_start_submit_homepage_design', 'kiwe_start_revise_homepage',
     'kiwe_start_document', 'kiwe_start_open_document', 'kiwe_start_submit_document_design', 'kiwe_start_revise_document',
     'kiwe_start_website', 'kiwe_start_refresh_website']);

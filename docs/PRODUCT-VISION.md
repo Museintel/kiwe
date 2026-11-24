@@ -174,6 +174,8 @@ The intended journey is:
 
 Existing native WordPress/WooCommerce records remain authoritative. Design Context is an editing and planning surface, not a duplicate database. A present-day static heading will not become dynamic merely because it resembles a context field: binding evidence and post-import verification are required.
 
+Start links to Design Context in the connected WordPress site's admin. The client edits the existing form there. Start reads the saved public facts for each design request through Kiwe MCP.
+
 Future work extends this journey to a reviewed generate-site action and bounded frontend section/query choices. Those actions must retain the same context provenance, preview, permission and rollback boundaries. A designer remains useful for art direction, integrations and exceptional workflows.
 
 ## Two app experiences

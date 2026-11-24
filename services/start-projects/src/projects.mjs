@@ -66,7 +66,7 @@ export const agencySpaceOutput = z.strictObject({
   }).nullable(),
 });
 const connectedSite = z.strictObject({
-  url: z.url(), coreVersion: z.string(), wordpressVersion: z.string(), verifiedAt: z.string(),
+  url: z.url(), coreVersion: z.string(), wordpressVersion: z.string(), verifiedAt: z.string(), designContextUrl: z.url(),
 });
 const managedSite = z.strictObject({
   status: z.enum(['queued', 'provisioning', 'ready', 'needs_attention']), url: z.url().nullable(),
@@ -125,6 +125,7 @@ function workspaceView(accountType, agency, launchWebsite) {
 function view(row, launchWebsite) {
   const site = row.site_url ? {
     url: row.site_url, coreVersion: row.core_version, wordpressVersion: row.wordpress_version, verifiedAt: row.verified_at,
+    designContextUrl: new URL('/wp-admin/admin.php?page=kiwe-design-context', row.site_url).href,
   } : null;
   const hosted = row.managed_status ? {
     status: row.managed_status, url: row.managed_status === 'ready' ? 'https://' + row.setup_domain : null,
@@ -749,16 +750,6 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const client = clientProject.get(projectId, accountId);
       if (!client) throw missingProject();
       return clientView(client);
-    },
-
-    designContextAccess(accountId, { projectId }) {
-      const row = owned.get(projectId, accountId) ?? clientProject.get(projectId, accountId);
-      if (!row) throw missingProject();
-      return {
-        project: row.grant_id ? clientView(row) : projectView(row),
-        binding: JSON.stringify([accountId, row.id, row.revision, row.grant_id ?? null]),
-        ready: Boolean(row.site_url && row.key_site_authenticated && row.key_state !== 'inactive'),
-      };
     },
 
     canManageClientAccess(accountId) {

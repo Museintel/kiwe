@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { documentPath, wooPresentation } from './document-targets.mjs';
 
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
@@ -136,12 +134,14 @@ function keyStep(project, available) {
 </form>`;
 }
 
+function designContextButton(site) {
+  return `<a class="button" href="${escape(site.designContextUrl)}">Open Design Context in WordPress</a>`;
+}
+
 export function clientProjectPage(project) {
-  const designContext = new URL('/wp-admin/admin.php?page=kiwe-onboarding', project.site.url).href;
   return page(project.domain, `<p><a href="/projects">All projects</a></p>
 <p>Your website is linked to this Kiwe account.</p>
-<p><a class="button" href="/projects/${project.id}/context">Open Design Context in Start</a></p>
-<p><a href="${escape(designContext)}">Open Design Context in WordPress</a></p>
+<p>${designContextButton(project.site)}</p>
 <p><a href="${escape(project.site.url)}">Visit your website</a></p>`, true);
 }
 
@@ -164,7 +164,7 @@ ${notice}${invite}${revoke}</section>`;
 export function projectPage(project, { error, managed = false, keyEnabled = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const status = project.site
-    ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context.' : ''}</p>`
+    ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(new URL(project.site.url).hostname)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context in WordPress.' : ''}</p>`
     : project.domain && !project.managedSite
       ? `<p class="status">Domain saved. Next, ${project.hosting === 'included' ? 'set up Kiwe hosting' : 'connect your WordPress site'}.</p>`
       : '';
@@ -193,67 +193,8 @@ ${selection}
 </form>
 ${project.site ? '' : hostingStep(project, managed)}${connect}${keyStep(project, keyEnabled)}
 ${clientAccessPanel(project, clientAccess, invitation)}
-${project.site ? `<p><a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
-${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/context">Open Design Context</a> <a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
-}
-
-const contextNames = { identity: 'Business identity', story: 'Story and audience', contact: 'Public contact' };
-
-function contextLink(project) {
-  return '/projects/' + project.id + '/context';
-}
-
-function fieldControl(field, id) {
-  const label = `<label for="${id}">${escape(field.label)}</label>`;
-  if (field.type === 'select') {
-    return label + `<select id="${id}" name="value">${field.choices.map(choice => (
-      `<option value="${escape(choice.value)}"${choice.value === field.value ? ' selected' : ''}>${escape(choice.label)}</option>`
-    )).join('')}</select>`;
-  }
-  if (field.type === 'textarea') {
-    return label + `<textarea id="${id}" name="value" rows="4" maxlength="${field.maxLength}">${escape(field.value)}</textarea>`;
-  }
-  return label + `<input id="${id}" name="value" type="${field.type}" maxlength="${field.maxLength}" value="${escape(field.value)}">`;
-}
-
-export function contextPage(project, area, view, error) {
-  const location = contextLink(project);
-  const status = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
-  const menu = `<nav aria-label="Design Context sections"><ul class="context-nav">${Object.entries(contextNames).map(([part, label]) => (
-    `<li><a href="${location}?area=${part}"${area === part ? ' aria-current="page"' : ''}>${label}</a></li>`
-  )).join('')}</ul></nav>`;
-  const authorization = project.key?.siteAuthenticated && project.key.state !== 'inactive'
-    ? `<form method="post" action="${location}/authorize">
-<input type="hidden" name="revision" value="${project.revision}">
-<button class="button">Authorize in WordPress</button></form>` : '';
-  const section = view?.section;
-  const details = section ? `<h2>${contextNames[area]}</h2>
-${section.fields.map((field, index) => `<form class="context-field" method="post" action="${location}?area=${area}">
-${fieldControl(field, 'context-field-' + index)}
-<input type="hidden" name="revision" value="${project.revision}">
-<input type="hidden" name="area" value="${area}">
-<input type="hidden" name="field" value="${escape(field.path)}">
-<input type="hidden" name="expected" value="${escape(section.expected)}">
-<input type="hidden" name="reviewId" value="${randomUUID()}">
-<button class="button">Save ${escape(field.label)}</button>
-</form>`).join('')}
-<form class="context-end" method="post" action="${location}/close">
-<button class="link">Close WordPress access</button></form>` : authorization;
-  const native = project.site ? `<p><a href="${escape(project.site.url)}/wp-admin/admin.php?page=kiwe-design-context">Open the full Design Context journey in WordPress</a></p>` : '';
-  return page('Design Context', `<p><a href="/projects/${project.id}">Project</a> · ${escape(project.domain)}</p>
-${status}<p>Enter the public business facts for this website. Changes save in WordPress.</p>
-${menu}${details}${native}`, true);
-}
-
-export function contextReviewPage(project, review, reviewId) {
-  const location = contextLink(project);
-  return page('Review Design Context change', `<p><a href="${location}?area=${review.area}">Back to Design Context</a></p>
-<p>Website <strong>${escape(project.domain)}</strong></p>
-<h2>${escape(review.label)}</h2>
-<p>Current value</p><blockquote>${escape(review.before || 'Empty')}</blockquote>
-<p>New value</p><blockquote>${escape(review.value || 'Clear the current value')}</blockquote>
-<form method="post" action="${location}/review/${reviewId}">
-<button class="button">Confirm and save to WordPress</button></form>`, true);
+${project.site ? `<p>${designContextButton(project.site)} <a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
+${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
 }
 
 export function websitePage(project, state, message) {
@@ -338,13 +279,14 @@ ${revision}<button class="button">${draft ? 'Refresh Design Context and generate
   const back = target ? '<a href="/projects/' + project.id + '/pages">Pages &amp; Templates</a>' : '<a href="/projects/' + project.id + '">Project</a>';
   const nativeNote = target && wooPresentation.has(target.id)
     ? '<p>Preview the design that appears above the live WooCommerce controls on this route.</p>' : '';
+  const designContext = `<p>${designContextButton(project.site)}</p>`;
   if (!draft && target && !view.homeApproved) {
     return page(title, '<p>' + back + '</p>' + error
       + '<p><a href="' + documentPath(project.id) + '">Approve the homepage</a> to set the design direction for this website.</p>', true);
   }
   if (!draft) {
     return page(title, `<p>${back} · ${escape(project.domain)}</p>
-${error}${nativeNote}${target ? '' : '<p>Build the first homepage from this site’s saved Design Context.</p>'}${request}`, true);
+${error}${nativeNote}${designContext}${request}`, true);
   }
   const ready = draft.status !== 'waiting_for_design';
   const status = draft.status === 'approved' ? 'Approved for Seam conversion.'
@@ -364,7 +306,7 @@ ${revision}<input type="hidden" name="draftId" value="${draft.id}">
 <button class="button">Request another revision</button>${target ? '<button class="button" name="regenerate" value="1">Regenerate design</button>' : ''}</form>`;
   return page(title, `<p>${back} · ${escape(project.domain)}</p>
 ${error}${nativeNote}<p class="status">Revision ${draft.version} · ${status}</p>${preview}${approve}${conversionStep(location, revision, draft, options)}${publicationStep(location, revision, draft, options, target, project.site.url)}${download}${retry}
-${changes}<details><summary>Refresh saved business facts</summary>${request}</details>`, true);
+${changes}<details><summary>Refresh saved business facts</summary>${designContext}${request}</details>`, true);
 }
 
 export function siteAuthorizationPage(project, authorizationUrl, purpose = 'approve the connection to Kiwe Start') {
@@ -430,10 +372,6 @@ button { cursor: pointer; }
 .projects { list-style: none; padding: 0; }
 .projects li { padding: 1rem 0; border-bottom: 1px solid #d8e4dc; }
 .projects li p { margin: .3rem 0 0; }
-.context-nav { display: flex; gap: .7rem 1rem; flex-wrap: wrap; list-style: none; padding: 0; }
-.context-nav [aria-current] { font-weight: 700; }
-.context-field { padding-bottom: 1rem; border-bottom: 1px solid #d8e4dc; }
-.context-end { margin-top: 1rem; }
 .card { border: 1px solid #d8e4dc; border-radius: .6rem; margin-top: 1.5rem; padding: 1rem; }
 .card code, blockquote { overflow-wrap: anywhere; }
 main:has(.homepage-preview) { max-width: 92rem; }

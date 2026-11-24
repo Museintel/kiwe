@@ -26,11 +26,11 @@ Key stores the WhatsApp pairings and per-site signing credentials. Key and WordP
 
 ## Independent agency clients
 
-An agency retains the billing project. Its verified site's client receives a separate membership after proving the invited email through the trusted issuer. The same membership admits the client's browser and MCP sessions for that site. Its Design Context grant also requires native WordPress consent and binds the credential to the account, membership and site revision. Revocation ends the client's access to that site in Start and MCP. WordPress owns native site roles and sessions. A federated WordPress login requires its own implementation and acceptance.
+An agency retains the billing project. Its verified site's client receives a separate membership after proving the invited email through the trusted issuer. The same membership admits the client's browser and MCP sessions for that site. Revocation ends the client's access to that site in Start and MCP. WordPress owns native site roles and sessions, including Design Context editing. A federated WordPress login requires its own implementation and acceptance.
 
 ## Design Context authority
 
-WordPress owns the business facts and serves the existing Bricks bindings. Start loads introductory fields through the separate `mcp.start.context` grant and submits one approved change through the native writer. A client or authorized agency user supplies the facts. A browser form can save the edited native field. An MCP proposal opens a human review for the exact site and value. Native state checks protect edits made through WordPress during a Start session. The wider journey remains in WordPress.
+24 November 2026. The connected WordPress site owns the Design Context form, access checks and saved business facts. It serves the existing Bricks bindings. Start links the client or owner to the canonical form on the project's verified origin. The same link is available through the Start project MCP tool. The legacy Start form and its write requests are retired. When someone requests a design, Start reads the saved public brief through the existing native MCP consent.
 
 ## One homepage review
 

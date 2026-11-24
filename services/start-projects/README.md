@@ -24,7 +24,7 @@ An agency owner opens **Client access** for a verified site or calls `kiwe_start
 
 On the configured Start login page, a first-time invitee enters the private code and signs in with the verified email chosen by the agency. Start accepts the grant once. Returning clients sign in with the same account. An existing trusted Launch broker can instead send `accountId`, `verifiedEmail` and `inviteCode` to `POST /projects/api/client-handoffs` or reopen an active grant with `accountId` and optionally `projectId`.
 
-The client dashboard and MCP use the assigned site membership. For introductory Design Context, clients authorize their own WordPress account on that exact site. Start binds native consent and proposed changes to the account, site revision and client membership. A reinstated client authorizes again. The native WordPress link also gives a user with the right site role access to the complete Design Context. Billing, hosting and Key stay with the agency. WordPress single sign-on requires separate integration.
+The client dashboard and MCP use the assigned site membership. A verified project links directly to its WordPress Design Context. Clients sign in to WordPress with their own site account and edit using the permissions of their native role. Billing, hosting and Key stay with the agency. WordPress single sign-on requires separate integration.
 
 The [plans and prices](https://kiwelaunch.com/plans/) are live with a header link to [Start login](https://start.kiwelaunch.com/login/). Start accepts the enrolled Key owner in the closed Agency pilot. General customer sign-in requires a configured commercial identity provider. [Hosting and rollout plan](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
 
@@ -49,15 +49,13 @@ Set `KIWE_START_KEY_ORIGIN` to the Key HTTPS origin and `KIWE_START_KEY_TOKEN` t
 
 ## Design Context
 
-From the site's project, open **Design Context** and authorize the introductory fields in WordPress. The dedicated `mcp.start.context` scope covers business name, tagline, industry, website type, description, audience, site goal, differentiator, and public phone and email. Existing website proof grants retain their limited read permission. The introductory forms use native field definitions and an exact current-value check, then save through WordPress. The full native journey remains available for brand assets, products, services, and the other site-specific settings.
+From a verified project, select **Open Design Context in WordPress**. Use the existing form to enter or update business facts, brand assets, products and services. An old Start Design Context bookmark takes the signed-in user to the same WordPress screen.
 
-In MCP, read the selected section and ask the authorized human for the missing facts. Prepare that exact answer, then open its Start review. The human can compare the current and proposed values and confirm for the named website. The same value is visible in Start, MCP and WordPress after it saves. The native writer refuses stale changes. Individual site scopes, temporary grants and per-site context stay separate even inside one agency. Native edits feed the existing Bricks dynamic bindings where templates use them.
-
-The edit session lasts up to 15 minutes and can be closed from Start. Start keeps the native token and any pending review in process memory. Saved values belong to WordPress. Restarting Start retains the agency and project records and requires fresh WordPress consent for editing.
+MCP's `kiwe_start_project` returns the same URL in `project.site.designContextUrl`. Start requests a fresh, read-only public brief from WordPress for each new design. Native edits feed existing Bricks dynamic bindings wherever a template uses them.
 
 ## Homepage draft
 
-Open **Homepage draft** from the verified project. **Generate homepage** requests one homepage, with optional design direction. The WordPress owner authorizes `mcp.design.read` for the scoped `mcp.design.homepage.read` operation. Earlier frozen grants retain their existing pins. Start captures current public Design Context, verified Bricks bindings, and a bounded set of live catalogue records and selected media. The capture needs a saved business name and description. The temporary WordPress grant is revoked after the brief is read.
+Open **Homepage draft** from the verified project. **Generate homepage** requests one homepage, with optional design direction, and presents the link to WordPress authorization. The WordPress owner authorizes `mcp.design.read` for the scoped `mcp.design.homepage.read` operation. Earlier frozen grants retain their existing pins. Start captures current public Design Context, verified Bricks bindings, and a bounded set of live catalogue records and selected media. The capture needs a saved business name and description. The temporary WordPress grant is revoked after the brief is read.
 
 The design selects a layout, type treatment, accessible colors, a proven hero image, and Dock behavior. The renderer builds a single HTML, CSS and JavaScript homepage with the captured business facts. It emits native loops for products, categories and posts when the site proves those queries and fields. It uses safe static links when native support has yet to be proven. Empty catalogues leave those sections out. The preview uses an isolated iframe and a local script to prevent live link and launcher actions.
 
@@ -147,7 +145,7 @@ The login transaction rotates the Start session and consumes the prior browser t
 The protected resource is `/projects/mcp`, with resource metadata at `/.well-known/oauth-protected-resource/projects/mcp`. Use JWT access tokens from the configured OAuth issuer with that resource audience and the `start:projects` scope. The OAuth subject must be the same stable account identifier that the trusted checkout sends. This service relies on the configured issuer for interactive authorization.
 
 - `kiwe_start_projects` lists the buyer's projects.
-- `kiwe_start_project` reads the specified project.
+- `kiwe_start_project` reads the specified project and reports its verified WordPress Design Context link in `project.site.designContextUrl`.
 - `kiwe_start_set_domain` saves a human-confirmed domain and hosting choice at the current revision.
 
 - `kiwe_start_connect_site` prepares the same native WordPress approval link for the saved existing site. After approval, the project reports its verified site and the next Key step.
@@ -156,8 +154,6 @@ The protected resource is `/projects/mcp`, with resource metadata at `/.well-kno
 - `kiwe_start_connect_key` opens native Key approval or refreshes the verified site's Key status when Key is configured.
 - `kiwe_start_agency_workspace`, `kiwe_start_set_agency_home` and `kiwe_start_verify_agency_home` manage the agency's own website.
 - `kiwe_start_add_agency_site` adds an existing WordPress project to a monthly Agency workspace. `kiwe_start_agency_workspace` also reports its used and allowed site slots.
-- `kiwe_start_open_context` opens the site's narrow WordPress consent, and `kiwe_start_context` reads the authorized section.
-- `kiwe_start_prepare_context_change` returns a link for the human to review and save the exact supplied value.
 - `kiwe_start_open_homepage` starts the one-page brief through WordPress consent.
 - `kiwe_start_homepage`, `kiwe_start_submit_homepage_design` and `kiwe_start_revise_homepage` read, prepare and revise that project's homepage. The owner approves its exact source in Start.
 
