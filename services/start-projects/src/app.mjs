@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
-  agencyHomeInput, agencySpaceOutput, agencyVerificationInput,
+  agencyHomeInput, agencySpaceOutput, agencyVerificationInput, clientInvitationInput,
   StartError, browserLifetime, claimInput, domainInput, projectScope, projectsOutput, singleProjectOutput, siteLinkInput,
 } from './projects.mjs';
-import { agencyPage, contextPage, contextReviewPage, homepagePage, websitePage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
+import { agencyPage, contextPage, contextReviewPage, homepagePage, websitePage, clientProjectPage, projectPage, projectsPage, signInPage, siteAuthorizationPage, siteReturnPage, stylesheet } from './web.mjs';
 import { createSiteConnections, siteCallbackPath } from './wordpress-link.mjs';
 import { createManagedHosting } from './managed-hosting.mjs';
 import { createKeyConnections } from './key-connection.mjs';
@@ -107,16 +107,28 @@ function mcpTools(projects, siteConnections, managedHosting, keyConnections, age
     }
   };
   server.registerTool('kiwe_start_projects', {
-    description: 'List projects owned by the signed-in purchaser with their domain and setup step.',
+    description: 'List projects owned by or assigned to the signed-in account with their domain and setup step.',
     outputSchema: projectsOutput,
     annotations: { readOnlyHint: true },
   }, () => result('Your Start projects', { projects: projects.listProjects(accountId) }));
   server.registerTool('kiwe_start_project', {
-    description: 'Read a purchased project, its current revision and the next setup step.',
+    description: 'Read an accessible project, its current revision and the next setup step.',
     inputSchema: claimInput,
     outputSchema: singleProjectOutput,
     annotations: { readOnlyHint: true },
-  }, (input) => run(() => result('Project setup', { project: projects.getProject(accountId, input) })));
+  }, (input) => run(() => result('Project setup', { project: projects.readProject(accountId, input) })));
+  if (projects.canManageClientAccess(accountId)) {
+    server.registerTool('kiwe_start_invite_client', {
+      description: 'Create a private invitation for a client with a verified email on the selected agency website.',
+      inputSchema: clientInvitationInput,
+      annotations: { destructiveHint: false, idempotentHint: false },
+    }, (input) => run(() => result('Private client invitation', projects.inviteClient(accountId, input))));
+    server.registerTool('kiwe_start_revoke_client', {
+      description: 'Revoke the client’s Start access and any pending invitation for the selected agency website.',
+      inputSchema: claimInput,
+      annotations: { destructiveHint: true, idempotentHint: true },
+    }, (input) => run(() => result('Client access revoked', projects.revokeClient(accountId, input))));
+  }
   server.registerTool('kiwe_start_set_domain', {
     description: 'Save the domain and hosting choice confirmed by the owner. Use included for eligible Kiwe hosting or existing for an existing WordPress site.',
     inputSchema: domainInput,
@@ -346,6 +358,11 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
     if (endpoint === 'POST /projects/api/handoffs') {
       purchaseWrite(request);
       const handoff = projects.issueHandoff(await readBody(request, jsonType));
+      return json(response, 201, { ...handoff, action: startOrigin + '/projects/open' });
+    }
+    if (endpoint === 'POST /projects/api/client-handoffs') {
+      purchaseWrite(request);
+      const handoff = projects.issueClientHandoff(await readBody(request, jsonType));
       return json(response, 201, { ...handoff, action: startOrigin + '/projects/open' });
     }
     if (endpoint === 'GET ' + metadataPath) {
@@ -617,20 +634,39 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         }
       }
     }
-    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key))?$/);
+    const match = pathname.match(/^\/projects\/([a-f0-9-]{36})(?:\/(domain|connect|hosting|key|invite-client|revoke-client))?$/);
     const listRoute = endpoint === 'GET /projects' || endpoint === 'GET /projects/';
     if (listRoute || match) {
       const accountId = projects.accountForSession(sessionToken(request));
       if (!accountId) return send(response, 401, signInPage(checkoutOrigin));
       if (listRoute) return send(response, 200, projectsPage(projects.listProjects(accountId)));
       const [, projectId, action] = match;
-      const project = projects.getProject(accountId, { projectId });
-      if (method === 'GET' && !action) return send(response, 200, projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available }));
+      const ref = { projectId };
+      if (method === 'GET' && !action) {
+        const project = projects.readProject(accountId, ref);
+        if (project.access === 'client') return send(response, 200, clientProjectPage(project));
+        return send(response, 200, showOwnerProject(project));
+      }
+      function showOwnerProject(project, options = {}) {
+        const clientAccess = project.accountType === 'agency' && project.site
+          ? projects.clientAccess(accountId, ref) : null;
+        return projectPage(project, { managed: managedHosting.available, keyEnabled: keyConnections.available, clientAccess, ...options });
+      }
+      const project = projects.getProject(accountId, ref);
       if (method === 'POST' && action) {
         checkOrigin(request, startOrigin);
         try {
           const { revision, ...form } = await readBody(request, formType);
           const input = { ...form, projectId, revision: Number(revision) };
+          if (action === 'invite-client') {
+            const invitation = projects.inviteClient(accountId, input);
+            response.setHeader('Referrer-Policy', 'no-referrer');
+            return send(response, 201, showOwnerProject(project, { invitation }));
+          }
+          if (action === 'revoke-client') {
+            projects.revokeClient(accountId, ref);
+            return redirect(response, '/projects/' + projectId);
+          }
           if (action === 'connect') {
             const pending = await siteConnections.begin(accountId, input);
             return send(response, 200, siteAuthorizationPage(project, pending.authorizationUrl));
@@ -645,7 +681,7 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         } catch (error) {
           if (!(error instanceof StartError)) throw error;
           const latest = projects.getProject(accountId, { projectId });
-          return send(response, error.status, projectPage(latest, { error: error.message, managed: managedHosting.available, keyEnabled: keyConnections.available }));
+          return send(response, error.status, showOwnerProject(latest, { error: error.message }));
         }
       }
     }

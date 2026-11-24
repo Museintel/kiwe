@@ -265,3 +265,96 @@ test('the website transport admits only the selected HTTPS origin and public add
     assert.throws(() => siteUrl(origin, url));
   }
 });
+
+test('an agency client uses their own identity and can open only their verified site', async (t) => {
+  const native = nativeFixture();
+  const f = await fixture(t, { wordpressLink: native.wordpress });
+  const { projectId, endpoint, session } = await newProject(f, 'client-access-one', 'existing.example', {
+    accountType: 'agency', planId: 'kiwe-agency-monthly',
+  });
+  const other = await newProject(f, 'client-access-other', 'other.example', {
+    accountType: 'agency', planId: 'kiwe-agency-monthly',
+  });
+  const email = 'member@example.test';
+  const fields = { email, revision: '2' };
+  assert.equal((await f.form(endpoint + '/invite-client', fields, { cookie: session })).status, 409);
+
+  const agency = await f.connect('buyer-one');
+  const actor = await f.connect('client-one');
+  const permission = await agency.callTool({ name: 'kiwe_start_connect_site', arguments: { projectId, revision: 2 } });
+  const approved = await f.request(native.decision(permission.structuredContent.authorizationUrl), { headers: { Cookie: session } });
+  assert.equal(approved.status, 303);
+  const now = await agency.callTool({ name: 'kiwe_start_project', arguments: { projectId } });
+  fields.revision = String(now.structuredContent.project.revision);
+  assert.equal((await f.form(endpoint + '/invite-client', { ...fields, revision: '1' }, { cookie: session })).status, 409);
+  const invited = await f.form(endpoint + '/invite-client', fields, { cookie: session });
+  assert.equal(invited.status, 201);
+  assert.equal(invited.headers.get('cache-control'), 'no-store');
+  const inviteCode = (await invited.text()).match(/<code>([A-Za-z0-9_-]{43})<\/code>/)?.[1];
+  assert.ok(inviteCode);
+
+  const detail = { accountId: 'client-one', verifiedEmail: email, inviteCode };
+  assert.equal((await f.postReceipt('client-handoffs', detail, 'wrong-authority')).status, 401);
+  assert.equal((await f.postReceipt('client-handoffs', { ...detail, verifiedEmail: 'other@example.test' })).status, 404);
+  assert.equal((await f.postReceipt('client-handoffs', { ...detail, accountId: 'buyer-one' })).status, 404);
+  const accepted = await f.postReceipt('client-handoffs', detail);
+  assert.equal(accepted.status, 201);
+  const first = await accepted.json();
+  assert.equal(first.projectId, projectId);
+  assert.equal((await f.postReceipt('client-handoffs', detail)).status, 404);
+  const clientSession = cookie(await f.redeem(first.ticket));
+  assert.equal((await f.redeem(first.ticket)).status, 410);
+
+  const clientProjects = await actor.callTool({ name: 'kiwe_start_projects', arguments: {} });
+  assert.deepEqual(clientProjects.structuredContent.projects.map(project => project.id), [projectId]);
+  const nativeProject = clientProjects.structuredContent.projects[0];
+  assert.equal(nativeProject.access, 'client');
+  assert.equal(nativeProject.key, null);
+  assert.equal(nativeProject.workspace.type, 'kiwe_launch');
+  const browser = await f.request(endpoint, { headers: { Cookie: clientSession } });
+  assert.equal(browser.status, 200);
+  assert.match(await browser.text(), /Open Design Context in WordPress/);
+  assert.equal((await f.request(other.endpoint, { headers: { Cookie: clientSession } })).status, 404);
+  assert.equal((await f.form(endpoint + '/domain', { ...fields, domain: 'different.example', hosting: 'existing' }, { cookie: clientSession })).status, 404);
+  const clientTools = await actor.listTools();
+  assert.ok(!clientTools.tools.some(tool => ['kiwe_start_invite_client', 'kiwe_start_revoke_client'].includes(tool.name)));
+  assert.equal((await f.form(endpoint + '/revoke-client', {}, { cookie: clientSession })).status, 404);
+  assert.equal((await agency.callTool({ name: 'kiwe_start_projects', arguments: {} })).structuredContent.projects.length, 2);
+
+  await f.restart();
+  const reopen = await f.postReceipt('client-handoffs', { accountId: 'client-one' });
+  assert.equal(reopen.status, 201);
+  const repeat = await reopen.json();
+  assert.equal(repeat.projectId, projectId);
+  const reopened = cookie(await f.redeem(repeat.ticket));
+  assert.equal((await f.request(endpoint, { headers: { Cookie: reopened } })).status, 200);
+
+  const pending = await f.postReceipt('client-handoffs', { accountId: 'client-one', projectId });
+  assert.equal(pending.status, 201);
+  const signedInAgain = await f.connect('buyer-one');
+  const revoke = await signedInAgain.callTool({ name: 'kiwe_start_revoke_client', arguments: { projectId } });
+  assert.equal(revoke.structuredContent.revoked, true);
+  assert.equal((await f.redeem((await pending.json()).ticket)).status, 410);
+  assert.equal((await f.request(endpoint, { headers: { Cookie: reopened } })).status, 404);
+  assert.equal((await f.postReceipt('client-handoffs', { accountId: 'client-one' })).status, 404);
+});
+
+test('a client invitation is specific to the verified site revision', async (t) => {
+  const native = nativeFixture();
+  const f = await fixture(t, { wordpressLink: native.wordpress });
+  const { projectId, endpoint, session } = await newProject(f, 'client-access-revision', 'existing.example', {
+    accountType: 'agency', planId: 'kiwe-agency-monthly',
+  });
+  const agency = await f.connect('buyer-one');
+  const permission = await agency.callTool({ name: 'kiwe_start_connect_site', arguments: { projectId, revision: 2 } });
+  assert.equal((await f.request(native.decision(permission.structuredContent.authorizationUrl), { headers: { Cookie: session } })).status, 303);
+  const email = 'client@example.test';
+  const current = await agency.callTool({ name: 'kiwe_start_project', arguments: { projectId } });
+  const { revision } = current.structuredContent.project;
+  const invite = await agency.callTool({ name: 'kiwe_start_invite_client', arguments: { projectId, revision, email } });
+  assert.ok(invite.structuredContent.inviteCode);
+  assert.equal((await f.form(endpoint + '/domain', { domain: 'replacement.example', hosting: 'existing', revision: String(revision) }, { cookie: session })).status, 303);
+  assert.equal((await f.postReceipt('client-handoffs', {
+    accountId: 'client-one', verifiedEmail: email, inviteCode: invite.structuredContent.inviteCode,
+  })).status, 404);
+});

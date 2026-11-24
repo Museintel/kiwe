@@ -24,6 +24,10 @@ The agency owner explicitly selects their home website. Start verifies it throug
 
 Key stores the WhatsApp pairings and per-site signing credentials. Key and WordPress each require their existing native owner approval for setup. Start sees the exact origin, sender readiness and signed-site proof. The buyer reaches Design Context when WordPress and its Key sender are ready. An optional client-number invite keeps the agency’s working sender available during pairing. Design Context entries are supplied by the authorized humans who know that site’s business.
 
+## Independent agency clients
+
+An agency retains the billing project. Its verified site's client receives a separate Kiwe identity grant after authenticating through Launch and proving the invited email. The same grant admits the client's browser and MCP reads for that site. Access can be revoked without affecting the agency or the client's other projects. WordPress owns native site roles and sessions. A federated WordPress login requires its own implementation and acceptance.
+
 ## Design Context authority
 
 WordPress owns the business facts and serves the existing Bricks bindings. Start loads introductory fields through the separate `mcp.start.context` grant and submits one approved change through the native writer. A client or authorized agency user supplies the facts. A browser form can save the edited native field. An MCP proposal opens a human review for the exact site and value. Native state checks protect edits made through WordPress during a Start session. The wider journey remains in WordPress.

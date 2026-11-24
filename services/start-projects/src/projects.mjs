@@ -27,6 +27,17 @@ export const purchaseInput = z.strictObject({
 export const handoffInput = z.strictObject({ entitlementId: id, accountId: id });
 export const ticketInput = z.strictObject({ ticket: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
 export const claimInput = z.strictObject({ projectId: z.uuid() });
+const verifiedEmail = z.string().trim().toLowerCase().max(254).pipe(z.email());
+export const clientInvitationInput = claimInput.extend({ email: verifiedEmail, revision: z.number().int().positive() });
+const clientHandoffInput = z.union([
+  z.strictObject({ accountId: id, inviteCode: ticketInput.shape.ticket, verifiedEmail }),
+  z.strictObject({ accountId: id, projectId: z.uuid().optional() }),
+]);
+const monthlyPlans = new Map([
+  ['kiwe-client-monthly', { accountType: 'client', requiresHosting: true }],
+  ['kiwe-agency-monthly', { accountType: 'agency', requiresHosting: false }],
+]);
+
 export const domainInput = claimInput.extend({
   domain: z.string().min(1).max(253),
   hosting: hostChoices,
@@ -66,6 +77,7 @@ const projectOutput = z.strictObject({
   id: z.uuid(),
   planId: id,
   accountType: z.enum(['client', 'agency']),
+  access: z.literal('client').optional(),
   workspace,
   hostingIncluded: z.boolean(),
   domain: z.string().nullable(),
@@ -193,6 +205,31 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       verified_at TEXT NOT NULL
     ) STRICT;
     CREATE UNIQUE INDEX IF NOT EXISTS project_sites_url ON project_sites(site_url);
+
+    CREATE TABLE IF NOT EXISTS project_client_invites (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id),
+      digest TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL,
+      site_url TEXT NOT NULL,
+      project_revision INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS project_client_access (
+      grant_id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL UNIQUE REFERENCES projects(id),
+      account_id TEXT NOT NULL,
+      site_url TEXT NOT NULL,
+      project_revision INTEGER NOT NULL
+    ) STRICT;
+    CREATE INDEX IF NOT EXISTS project_client_account ON project_client_access(account_id);
+    CREATE TABLE IF NOT EXISTS project_client_handoffs (
+      digest TEXT PRIMARY KEY,
+      grant_id TEXT NOT NULL REFERENCES project_client_access(grant_id) ON DELETE CASCADE,
+      project_id TEXT NOT NULL REFERENCES projects(id),
+      account_id TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    ) STRICT;
+    CREATE INDEX IF NOT EXISTS project_client_handoffs_expiry ON project_client_handoffs(expires_at);
     CREATE TABLE IF NOT EXISTS key_workspaces (
       account_id TEXT PRIMARY KEY,
       workspace_id TEXT NOT NULL UNIQUE
@@ -276,6 +313,26 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     + 'LEFT JOIN project_key_links k ON p.id = k.project_id LEFT JOIN agency_spaces a ON p.account_id = a.account_id';
   const owned = db.prepare(projection + ' WHERE p.id = ? AND p.account_id = ?');
   const list = db.prepare(projection + ' WHERE p.account_id = ? ORDER BY p.rowid');
+  const clientProjection = projection.replace('SELECT p.*,', 'SELECT c.grant_id, p.*,')
+    + ' JOIN project_client_access c ON c.project_id = p.id AND c.project_revision = p.revision AND c.site_url = s.site_url';
+  const clientProject = db.prepare(clientProjection + ' WHERE p.id = ? AND c.account_id = ?');
+  const clientProjects = db.prepare(clientProjection + ' WHERE c.account_id = ? ORDER BY p.rowid');
+  const clientGrantForProject = db.prepare(clientProjection + ' WHERE p.id = ?');
+  const clientAccessManager = db.prepare("SELECT 1 FROM projects p JOIN project_sites s ON p.id = s.project_id WHERE p.account_id = ? AND p.account_type = 'agency' LIMIT 1");
+  const clearClientGrant = db.prepare('DELETE FROM project_client_access WHERE project_id = ?');
+  const addClientGrant = db.prepare('INSERT INTO project_client_access(grant_id, project_id, account_id, site_url, project_revision) VALUES (?, ?, ?, ?, ?)');
+  const addClientInvite = db.prepare(
+    'INSERT INTO project_client_invites(project_id, digest, email, site_url, project_revision, expires_at) VALUES (?, ?, ?, ?, ?, ?) '
+    + 'ON CONFLICT(project_id) DO UPDATE SET digest = excluded.digest, email = excluded.email, site_url = excluded.site_url, '
+    + 'project_revision = excluded.project_revision, expires_at = excluded.expires_at',
+  );
+  const getClientInvite = db.prepare('SELECT * FROM project_client_invites WHERE digest = ? AND expires_at > ?');
+  const pendingClientInvite = db.prepare('SELECT 1 FROM project_client_invites WHERE project_id = ? AND site_url = ? AND project_revision = ? AND expires_at > ?');
+  const clearClientInvite = db.prepare('DELETE FROM project_client_invites WHERE project_id = ?');
+  const pruneClientInvites = db.prepare('DELETE FROM project_client_invites WHERE expires_at <= ?');
+  const addClientHandoff = db.prepare('INSERT INTO project_client_handoffs(digest, grant_id, project_id, account_id, expires_at) VALUES (?, ?, ?, ?, ?)');
+  const consumeClientHandoff = db.prepare('DELETE FROM project_client_handoffs WHERE digest = ? AND expires_at > ? RETURNING *');
+  const pruneClientHandoffs = db.prepare('DELETE FROM project_client_handoffs WHERE expires_at <= ?');
   const insert = db.prepare(
     'INSERT INTO projects(id, entitlement_id, purchase_id, account_id, account_type, plan_id, hosting_included) '
     + 'VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(entitlement_id) DO NOTHING',
@@ -470,6 +527,29 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     return row ? { ...row, receipt: row.receipt ? JSON.parse(row.receipt) : null } : null;
   }
 
+
+  function agencyClientTarget(accountId, projectId) {
+    const project = owned.get(projectId, accountId);
+    if (!project || project.account_type !== 'agency') throw missingProject();
+    if (!project.site_url) throw new StartError(409, 'website_required', 'Verify this website before inviting its client.');
+    return project;
+  }
+
+  function clientView(row) {
+    return {
+      ...projectView(row), access: 'client', accountType: 'client', planId: 'agency-client',
+      workspace: workspaceView('client', null, launchWebsite),
+      managedSite: null, key: null, next: 'fill_design_context',
+    };
+  }
+
+  function openSession(accountId, projectId, time) {
+    const token = secret();
+    pruneSessions.run(time);
+    addSession.run(digest(token), accountId, time + browserLifetime);
+    return { token, projectId };
+  }
+
   function transaction(work) {
     db.exec('BEGIN IMMEDIATE');
     try {
@@ -485,6 +565,10 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
   return {
     acceptPurchase(input) {
       const receipt = parse(purchaseInput, input);
+      const plan = monthlyPlans.get(receipt.planId);
+      if (plan && (plan.accountType !== receipt.accountType || (plan.requiresHosting && !receipt.hostingIncluded))) {
+        throw new StartError(400, 'plan_details_mismatch', 'The purchase details do not match this Kiwe monthly plan.');
+      }
       return transaction(() => {
         const inserted = insert.run(
           randomUUID(), receipt.entitlementId, receipt.purchaseId, receipt.accountId,
@@ -517,13 +601,15 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const { ticket } = parse(ticketInput, input);
       return transaction(() => {
         const time = now();
-        const record = consumeHandoff.get(digest(ticket), time);
-        if (!record) throw new StartError(410, 'handoff_expired', 'Open the project again from your Kiwe purchase.');
-        const row = ownerOfProject.get(record.project_id);
-        const token = secret();
-        pruneSessions.run(time);
-        addSession.run(digest(token), row.account_id, time + browserLifetime);
-        return { token, projectId: record.project_id };
+        const key = digest(ticket);
+        const record = consumeHandoff.get(key, time);
+        if (record) return openSession(ownerOfProject.get(record.project_id).account_id, record.project_id, time);
+        const shared = consumeClientHandoff.get(key, time);
+        const current = shared && clientProject.get(shared.project_id, shared.account_id);
+        if (!current || current.grant_id !== shared.grant_id) {
+          throw new StartError(410, 'handoff_expired', 'Open the project again from your Kiwe account.');
+        }
+        return openSession(shared.account_id, shared.project_id, time);
       });
     },
 
@@ -536,7 +622,7 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
     },
 
     listProjects(accountId) {
-      return list.all(accountId).map(projectView);
+      return [...list.all(accountId).map(projectView), ...clientProjects.all(accountId).map(clientView)];
     },
 
     getProject(accountId, input) {
@@ -544,6 +630,88 @@ export function openProjects(filename, { now = Date.now, launchWebsite = 'https:
       const row = owned.get(projectId, accountId);
       if (!row) throw missingProject();
       return projectView(row);
+    },
+
+
+    readProject(accountId, input) {
+      const { projectId } = parse(claimInput, input);
+      const project = owned.get(projectId, accountId);
+      if (project) return projectView(project);
+      const client = clientProject.get(projectId, accountId);
+      if (!client) throw missingProject();
+      return clientView(client);
+    },
+
+    canManageClientAccess(accountId) {
+      return Boolean(clientAccessManager.get(accountId));
+    },
+
+    clientAccess(accountId, input) {
+      const { projectId } = parse(claimInput, input);
+      const project = agencyClientTarget(accountId, projectId);
+      if (clientGrantForProject.get(projectId)) return 'active';
+      return pendingClientInvite.get(projectId, project.site_url, project.revision, now()) ? 'invited' : 'none';
+    },
+
+    inviteClient(accountId, input) {
+      const { projectId, email, revision } = parse(clientInvitationInput, input);
+      return transaction(() => {
+        const project = agencyClientTarget(accountId, projectId);
+        if (project.revision !== revision) throw new StartError(409, 'project_changed', 'Open the updated website before inviting its client.');
+        if (clientGrantForProject.get(projectId)) {
+          throw new StartError(409, 'client_already_connected', 'Revoke the current client access before inviting someone else.');
+        }
+        clearClientGrant.run(projectId);
+        const time = now();
+        const inviteCode = secret();
+        const expiresAt = time + 7 * 24 * 60 * 60 * 1000;
+        pruneClientInvites.run(time);
+        addClientInvite.run(projectId, digest(inviteCode), email, project.site_url, project.revision, expiresAt);
+        return { inviteCode, expiresAt };
+      });
+    },
+
+    revokeClient(accountId, input) {
+      const { projectId } = parse(claimInput, input);
+      return transaction(() => {
+        const project = owned.get(projectId, accountId);
+        if (!project || project.account_type !== 'agency') throw missingProject();
+        clearClientInvite.run(projectId);
+        clearClientGrant.run(projectId);
+        return { revoked: true };
+      });
+    },
+
+    issueClientHandoff(input) {
+      const request = parse(clientHandoffInput, input);
+      const { accountId } = request;
+      return transaction(() => {
+        const time = now();
+        let client;
+        if (request.inviteCode) {
+          const invitation = getClientInvite.get(digest(request.inviteCode), time);
+          const owner = invitation && ownerOfProject.get(invitation.project_id);
+          const project = owner && owned.get(invitation.project_id, owner.account_id);
+          if (!project || project.account_type !== 'agency' || owner.account_id === accountId
+              || invitation.email !== request.verifiedEmail || project.site_url !== invitation.site_url
+              || project.revision !== invitation.project_revision || clientGrantForProject.get(project.id)) {
+            throw new StartError(404, 'client_invite_unavailable', 'This client invitation is unavailable.');
+          }
+          clearClientInvite.run(project.id);
+          addClientGrant.run(randomUUID(), project.id, accountId, project.site_url, project.revision);
+          client = clientProject.get(project.id, accountId);
+        } else {
+          client = request.projectId
+            ? clientProject.get(request.projectId, accountId)
+            : clientProjects.all(accountId)[0];
+        }
+        if (!client) throw missingProject();
+        const ticket = secret();
+        const expiresAt = time + handoffLifetime;
+        pruneClientHandoffs.run(time);
+        addClientHandoff.run(digest(ticket), client.grant_id, client.id, accountId, expiresAt);
+        return { ticket, expiresAt, projectId: client.id };
+      });
     },
 
     getAgencySpace(accountId) {

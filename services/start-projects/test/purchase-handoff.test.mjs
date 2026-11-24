@@ -134,3 +134,30 @@ test('MCP requires a current audience-bound access token with the project scope'
   const projects = await unregistered.callTool({ name: 'kiwe_start_projects' });
   assert.deepEqual(projects.structuredContent.projects, []);
 });
+
+test('monthly Client includes hosting and the Agency entitlement opens a private workspace with either option', async (t) => {
+  const f = await fixture(t);
+  const client = { planId: 'kiwe-client-monthly', accountType: 'client' };
+  assert.equal((await f.postReceipt('purchases', purchase('monthly-client', client))).status, 400);
+  assert.equal((await f.postReceipt('purchases', purchase('wrong-agency', { planId: 'kiwe-agency-monthly' }))).status, 400);
+  const withHosting = await f.postReceipt('purchases', purchase('monthly-client', { ...client, hostingIncluded: true }));
+  assert.equal(withHosting.status, 201);
+  const clientId = (await withHosting.json()).projectId;
+  const buyerCookie = cookie(await f.redeem(await f.ticket('monthly-client', 'buyer-one')));
+  assert.equal((await f.form('/projects/' + clientId + '/domain', {
+    domain: 'my-site.example', hosting: 'existing', revision: '1',
+  }, { cookie: buyerCookie })).status, 303);
+
+  const agency = { accountType: 'agency', planId: 'kiwe-agency-monthly', accountId: 'agency-one' };
+  for (const hostingIncluded of [false, true]) {
+    const entitlement = 'agency-monthly-' + hostingIncluded;
+    assert.equal((await f.postReceipt('purchases', purchase(entitlement, { ...agency, hostingIncluded }))).status, 201);
+    const signIn = await f.redeem(await f.ticket(entitlement, 'agency-one'));
+    assert.equal(signIn.status, 303);
+    const home = await f.request('/projects', { headers: { Cookie: cookie(signIn) } });
+    assert.match(await home.text(), /Agency workspace settings/);
+  }
+  const app = await f.connect('agency-one');
+  const overview = await app.callTool({ name: 'kiwe_start_projects', arguments: {} });
+  assert.deepEqual(overview.structuredContent.projects.map(project => project.hostingIncluded), [false, true]);
+});

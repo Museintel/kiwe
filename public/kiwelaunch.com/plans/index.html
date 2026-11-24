@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Explore Kiwe’s monthly Client and Agency plans for launching and managing WordPress websites.">
+<link rel="canonical" href="https://kiwelaunch.com/plans/">
+<title>Client and Agency plans | Kiwe Launch</title>
+<style>
+:root {
+  color-scheme: light;
+  --ink: #162d27;
+  --deep: #102d24;
+  --muted: #4e655c;
+  --paper: #f7f8f3;
+  --card: #fff;
+  --line: #d5dfd6;
+  --accent: #316548;
+  --lime: #daf2b9;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 1rem/1.55 "Aptos", "Segoe UI", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+a { color: inherit; text-underline-offset: .2em; }
+a:focus-visible { outline: 3px solid #388053; outline-offset: 4px; }
+.wrap { width: min(100% - 2.5rem, 1060px); margin-inline: auto; }
+.site-header .wrap, footer .wrap { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-block: 1rem; }
+.wordmark { font-size: 1.45rem; font-weight: 800; letter-spacing: -.055em; text-decoration: none; }
+.site-header a:last-child, footer { color: var(--muted); font-size: .9rem; }
+.hero { background: var(--deep); color: #fbfff8; padding-block: clamp(2.7rem, 6vw, 5.1rem); }
+.hero h1 { margin: 0; font-size: clamp(2.45rem, 6.8vw, 5.15rem); line-height: 1.01; letter-spacing: -.065em; }
+.hero p { max-width: 37rem; margin: 1rem 0 0; color: #e0eade; font-size: clamp(1rem, 2vw, 1.2rem); }
+main { padding-bottom: 2.2rem; }
+.plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.plan { border: 1px solid var(--line); border-radius: 1.15rem; background: var(--card); padding: clamp(1.2rem, 3vw, 2.05rem); }
+.plan h2 { margin: 0; font-size: 1.85rem; line-height: 1.1; letter-spacing: -.035em; }
+.plan p { color: var(--muted); margin: .65rem 0 1.2rem; }
+.hosting { padding: .7rem .85rem; background: #eaf2e8; border-radius: .45rem; font-weight: 700; }
+.plan ul { margin: 1.25rem 0 0; padding-left: 1.2rem; }
+.plan li + li { margin-top: .55rem; }
+.note { margin: 1.4rem 0 0; padding: 1rem 1.2rem; border-left: 3px solid var(--accent); color: var(--muted); }
+footer { border-top: 1px solid var(--line); }
+@media (max-width: 700px) {
+  .plans { grid-template-columns: 1fr; }
+  .wrap { width: calc(100% - 2rem); }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="wordmark" href="/plans/">Kiwe Launch</a>
+    <a href="https://start.kiwelaunch.com/">Read the Start guide</a>
+  </div>
+</header>
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1>Choose a Kiwe plan</h1>
+      <p>Launch your own website or manage a separate website for each client. Both plans are designed for monthly billing.</p>
+    </div>
+  </section>
+  <div class="wrap">
+    <section class="plans" aria-label="Plan comparison">
+      <article class="plan">
+        <h2>Client</h2>
+        <p>For a business owner launching and managing one website.</p>
+        <div class="hosting">Managed hosting included</div>
+        <ul>
+          <li>Set up WordPress and Kiwe from your own Start dashboard.</li>
+          <li>Connect a domain you own or choose a new domain during setup.</li>
+          <li>Use the included hosting or connect an existing WordPress site.</li>
+          <li>Add your business details and review each design before it goes live.</li>
+        </ul>
+      </article>
+      <article class="plan">
+        <h2>Agency</h2>
+        <p>For teams designing and managing websites for clients.</p>
+        <div class="hosting">Managed hosting optional</div>
+        <ul>
+          <li>Manage your website and client projects from an agency dashboard.</li>
+          <li>Choose managed hosting or connect a WordPress site you already host.</li>
+          <li>Give each client independent access to their own Start dashboard.</li>
+          <li>Use an agency WhatsApp number by default and choose a client number for individual sites.</li>
+        </ul>
+      </article>
+    </section>
+    <p class="note">These plans are a preview. Pricing and enrollment details will be published before monthly billing starts.</p>
+  </div>
+</main>
+<footer>
+  <div class="wrap">
+    <span>Kiwe Launch</span>
+    <a href="https://start.kiwelaunch.com/">Kiwe Start</a>
+  </div>
+</footer>
+</body>
+</html>

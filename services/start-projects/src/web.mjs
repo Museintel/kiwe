@@ -37,7 +37,7 @@ export function projectsPage(projects) {
 <h2>${escape(items[0].workspace.name)}</h2>${details}
 <ul class="projects">${items.map((project) => `<li>
 <a href="/projects/${project.id}">${escape(project.domain || 'Choose a domain')}</a>
-<p>${escape(project.planId)} · ${project.hostingIncluded ? 'Kiwe hosting included' : 'Your existing hosting'}</p>
+<p>${project.access === 'client' ? 'Client workspace' : `${escape(project.planId)} · ${project.hostingIncluded ? 'Kiwe hosting included' : 'Your existing hosting'}`}</p>
 </li>`).join('')}</ul></section>` : '';
   const clients = projects.filter(({ accountType }) => accountType === 'client');
   const agency = projects.filter(({ accountType }) => accountType === 'agency');
@@ -108,7 +108,31 @@ function keyStep(project, available) {
 </form>`;
 }
 
-export function projectPage(project, { error, managed = false, keyEnabled = false } = {}) {
+export function clientProjectPage(project) {
+  const designContext = new URL('/wp-admin/admin.php?page=kiwe-onboarding', project.site.url).href;
+  return page(project.domain, `<p><a href="/projects">All projects</a></p>
+<p>Your website is linked to this Kiwe account.</p>
+<p><a class="button" href="${escape(designContext)}">Open Design Context in WordPress</a></p>
+<p><a href="${escape(project.site.url)}">Visit your website</a></p>`, true);
+}
+
+function clientAccessPanel(project, state, invitation) {
+  if (!state) return '';
+  const notice = invitation ? `<p class="status">Share this one-time code privately with the invited client. They sign in with the email you selected. The code expires in seven days.</p>
+<p><code>${escape(invitation.inviteCode)}</code></p>` : '';
+  const invite = state !== 'active' ? `<form method="post" action="/projects/${project.id}/invite-client">
+<label for="client-email">Client email</label>
+<input type="email" name="email" id="client-email" maxlength="254" required>
+<input type="hidden" name="revision" value="${project.revision}">
+<button class="button">${state === 'invited' ? 'Replace invitation' : 'Create invitation'}</button></form>` : '';
+  const revoke = state !== 'none' ? `<form method="post" action="/projects/${project.id}/revoke-client">
+<button class="link">${state === 'active' ? 'Revoke client access' : 'Cancel invitation'}</button></form>` : '';
+  return `<section class="card"><h2>Client access</h2>
+<p>${state === 'active' ? 'Your client can open this website in their own Start dashboard.' : 'Invite your client to sign in with their own Kiwe account.'}</p>
+${notice}${invite}${revoke}</section>`;
+}
+
+export function projectPage(project, { error, managed = false, keyEnabled = false, clientAccess = null, invitation = null } = {}) {
   const alert = error ? `<p class="error" role="alert">${escape(error)}</p>` : '';
   const status = project.site
     ? `<p class="status">Website verified at <a href="${escape(project.site.url)}">${escape(project.domain)}</a>.${project.next === 'fill_design_context' ? ' Next, fill in Design Context.' : ''}</p>`
@@ -139,6 +163,7 @@ ${selection}
 <button class="button">Save domain</button>
 </form>
 ${connect}${hostingStep(project, managed)}${keyStep(project, keyEnabled)}
+${clientAccessPanel(project, clientAccess, invitation)}
 ${project.site ? `<p><a class="button" href="/projects/${project.id}/pages">Pages &amp; Templates</a></p>` : ''}
 ${project.key?.siteAuthenticated && project.key.state !== 'inactive' ? `<p><a class="button" href="/projects/${project.id}/context">Open Design Context</a> <a class="button" href="/projects/${project.id}/homepage">Homepage draft</a></p>` : ''}`, true);
 }

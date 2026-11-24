@@ -14,6 +14,16 @@ Every standalone purchaser opens their own projects under Kiwe Launch. An agency
 
 An agency owner enters their business name and agency website domain in **Agency workspace settings** or through MCP. An eligible WordPress site already verified in that agency workspace can serve as its home. For any other home, Start returns a 24-hour text proof at the exact site's `/.well-known/kiwe-agency.txt`. The owner publishes it and selects **Verify website**. Start checks the specific HTTPS origin. Changing an agency home keeps the previous verified home active until the new proof succeeds. The proof does not purchase a domain, install hosting, or move client projects.
 
+## Monthly plans and independent client access
+
+The trusted purchase intake accepts `kiwe-client-monthly` with hosting included. The client can also connect an existing WordPress site. `kiwe-agency-monthly` supports either hosting choice. A trusted Launch operator can test the agency entry through the existing purchase and handoff routes before enabling billing.
+
+An agency owner opens **Client access** for a verified site or calls `kiwe_start_invite_client`. Start issues a code valid for seven days, bound to the selected email and website revision. `kiwe_start_revoke_client` and the web action revoke Start access and unused tickets for that site. A changed website requires fresh approval.
+
+After authenticating the client and verifying their email, the trusted Launch backend sends `accountId`, `verifiedEmail` and `inviteCode` to `POST /projects/api/client-handoffs` using server-only purchase authorization. A returning client sends `accountId` and optionally their `projectId`. Submit the resulting ticket to the existing browser handoff action. The client sees their site through Start and MCP. The Design Context link uses that site's native WordPress login. Billing, hosting and Key stay with the agency. WordPress federation is future work.
+
+The [plan preview](https://kiwelaunch.com/plans/) is published. Live sign-in, Start routing and Key setup are pending. [Hosting and pricing model](../../docs/KIWE-LAUNCH-HOSTING-2026-11-24.md)
+
 ## Existing WordPress sites
 
 Choose an existing site and save its exact HTTPS domain. Start opens native WordPress consent for the Kiwe MCP App's `mcp.site.connect` scope. For sites with a designated Kiwe owner, that owner approves. An administrator with `manage_options` can approve on a single-site installation before a Kiwe owner has been designated. An ordinary editor can still use permitted MCP reads, and the connection proof remains owner-restricted.
