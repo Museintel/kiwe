@@ -87,6 +87,12 @@ try {
     });
     await page.evaluate(() => document.fonts.ready);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, 'Homepage fits at ' + width);
+    const fit = await page.locator('.logo-set:not(.loop-copy) li').evaluateAll(items => items.every(item => {
+      const viewport = item.closest('.logo-window').getBoundingClientRect();
+      const logo = item.getBoundingClientRect();
+      return logo.left >= viewport.left - 1 && logo.right <= viewport.right + 1;
+    }));
+    assert.ok(fit, 'All four static logos are visible at ' + width);
     assert.equal(errors.length, 0);
     if (proofDir && (width === 390 || width === 1440)) {
       await page.screenshot({ path: path.join(proofDir, 'home-' + width + '.png'), fullPage: true });

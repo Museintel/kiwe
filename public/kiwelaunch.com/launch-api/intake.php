@@ -20,7 +20,7 @@ function kiwe_launch_reply(int $status, string $message): never
 <!doctype html>
 <html lang="en-IN">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex"><link rel="stylesheet" href="/assets/launch/site.css">
+<meta name="robots" content="noindex"><link rel="stylesheet" href="/assets/launch/site.css?v=2">
 <title>Kiwe Launch request</title>
 <main class="subpage"><section class="section wrap"><h1>Kiwe Launch</h1><p class="intro">$message</p>
 <a class="button" href="$back">Return to the form</a></section></main>
