@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "8.0.0-rc.497",
+  "version": "8.0.0-rc.498",
   "algorithm": "sha256",
   "file_count": 1038,
   "files": {
@@ -514,7 +514,7 @@
     },
     "dsa.php": {
       "bytes": 4536,
-      "sha256": "c88ca2f2da813565b41d747c9659b47f5a412f028fb32632d038472934036ab5"
+      "sha256": "75c08906b7c80e7a7690d29d68d41f080f861e4a21f4186ccd4b348d93b4c84d"
     },
     "framework-system/HANDOFF-LITE.md": {
       "bytes": 4119,
@@ -1073,8 +1073,8 @@
       "sha256": "2103d6aadabd5d934dab58e0ed3018b9454675d771e0990bb77467386a459a22"
     },
     "includes/Access/WordPress_Role_Access_Service.php": {
-      "bytes": 63380,
-      "sha256": "95d5b33f666afc239df831ce3070e45196d322d529fa10156432ba85b2f962c6"
+      "bytes": 63837,
+      "sha256": "50cd1a5d7e38a7899d885c59d749c2341a147be6ab4d9deafd516a805fbe25ba"
     },
     "includes/Access/Workspace_Activity_Service.php": {
       "bytes": 18521,

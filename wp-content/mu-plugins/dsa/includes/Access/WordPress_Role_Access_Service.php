@@ -79,8 +79,16 @@ final class WordPress_Role_Access_Service {
 		return $user instanceof WP_User && Team_Workspace_Service::suspended( (int) $user->ID ) ? new \WP_Error( 'kiwe_account_suspended', __( 'This account cannot sign in. Contact the website administrator.', 'dsa' ) ) : $user;
 	}
 
+	// WooCommerce grants this per order. Keep its native object-level decision.
+	private static function native_order_payment_check( array $caps, array $args ): bool {
+		return $caps === [ 'pay_for_order' ] && ( $args[0] ?? '' ) === 'pay_for_order'
+			&& function_exists( 'wc_customer_has_capability' );
+	}
+
+
 	/** This deny-by-default capability boundary also covers AJAX and REST writes. */
 	public function client_capabilities( array $allcaps, array $caps, array $args, WP_User $user ): array {
+		if ( self::native_order_payment_check( $caps, $args ) ) return $allcaps;
 		if ( ! Site_Owner_Service::enabled() ) {
 			if ( ! empty( $allcaps['manage_options'] ) ) {
 				foreach ( array_merge( Template_Workspace_Service::owner_template_caps(), self::client_business_capabilities(), [ 'kiwe_view_analytics','bricks_full_access' ] ) as $cap ) $allcaps[ $cap ] = true;
@@ -220,6 +228,7 @@ final class WordPress_Role_Access_Service {
 	}
 
 	public function editorial_capabilities( array $allcaps, array $caps, array $args, WP_User $user ): array {
+		if ( self::native_order_payment_check( $caps, $args ) ) return $allcaps;
 		if ( Site_Owner_Service::is_owner( (int) $user->ID ) ) return $allcaps;
 		$roles = (array) $user->roles;
 		if ( in_array( 'contributor', $roles, true ) ) {
