@@ -555,7 +555,8 @@ export function createStartServer({ projects, startOrigin, checkoutOrigin, issue
         checkOrigin(request, startOrigin);
         try {
           const input = await readBody(request, formType);
-          return redirect(response, await website.begin(accountId, { projectId, revision: Number(input.revision) }));
+          const authorizationUrl = await website.begin(accountId, { projectId, revision: Number(input.revision) });
+          return send(response, 200, siteAuthorizationPage(project, authorizationUrl, 'let Kiwe Start read your published pages and templates'));
         } catch (error) {
           if (!(error instanceof StartError)) throw error;
           return send(response, error.status, page(error.message));

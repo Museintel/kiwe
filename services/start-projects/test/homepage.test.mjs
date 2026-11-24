@@ -472,9 +472,15 @@ test('the website dashboard labels only native records as published and shows Wo
   const f = await fixture(t, { wordpressLink: native.oauth, keyProvider, inventoryWordPress: inventory });
   const client = await f.connect('buyer-one');
   const project = await connect(f, client);
-  const response = await mcp(client, 'refresh_website', project.input);
-  const accepted = await f.request(approveUrl(response.structuredContent.authorizationUrl, '/projects/website-return'), project.options);
   const page = '/projects/' + project.projectId + '/pages';
+  const review = await f.form(page + '/refresh', { revision: '3' }, { cookie: project.session });
+  assert.equal(review.status, 200);
+  assert.equal(review.headers.get('location'), null);
+  assert.match(review.headers.get('content-security-policy'), /form-action 'self'$/);
+  const response = await mcp(client, 'refresh_website', project.input);
+  const { authorizationUrl } = response.structuredContent;
+  assert.ok((await review.text()).includes(`href="${authorizationUrl}">Open WordPress authorization`));
+  const accepted = await f.request(approveUrl(authorizationUrl, '/projects/website-return'), project.options);
   assert.equal(accepted.headers.get('location'), page);
   assert.equal(released, true);
   const home = (await mcp(client, 'website', { projectId: project.projectId })).structuredContent;
