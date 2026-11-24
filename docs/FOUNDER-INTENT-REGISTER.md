@@ -1,3 +1,5 @@
+25 November — The checkout verifies the buyer's email before saving an account. The matching email unlocks a referral price and pre-filled details. The buyer chooses an eligible standard domain or confirms a domain they own. The Partner Program offers a private link and keeps the buyer in control of their account. [Checkout workflow](../services/launch-checkout/README.md)
+
 25 November — Present Kiwe Launch as a digital partner for the life of a business. Show the Kiwe Appsite using actual sites and feature screenshots, followed by the one Client offer, customer proof, a demo request and partner entry. [Launch site and inbox](../services/launch-office/README.md)
 
 25 November — Launch one managed Client plan and a referral-only Partner Program. The client owns the Start project and fills Design Context in WordPress. A partner refers clients and tracks commission independently of site administration. Preserve the Version 1 recovery point and use shared web and Kiwe MCP actions for setup, design and publishing. [Accepted plan and delivery sequence](decisions/2026-11-25-client-and-partner-launch.md)

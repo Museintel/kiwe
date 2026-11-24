@@ -31,4 +31,6 @@ Batch 1 stores the payment and referral references, immutable first-term price a
 
 The Batch 2 [public site and enquiry flow](../../services/launch-office/README.md) presents the single offer and saves demo requests and Partner Program interest in the private Launch inbox. It uses actual public site examples and a labelled sample dashboard. Checkout enrolment adds verified buyer accounts, private referrals and the registrar quote before payment is offered.
 
+The [checkout candidate](../../services/launch-checkout/README.md) uses email verification and a durable Launch account ID. Verified buyers can join the Partner Program. Start consumes the account ID from confirmed purchases in Batch 3. The test runtime uses a captured mail transport and registrar fixtures. Public checkout activation depends on verified live provider credentials.
+
 Use the current environment for isolated checkout and provider rehearsals before enabling real registration, charges or payouts. Exercise the published-page workflow with Dharwad Pedha and National Chikki before onboarding Evergreen Basin with client-supplied Design Context. Review each exact draft and native publication with the appropriate owner.
