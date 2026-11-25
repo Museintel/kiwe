@@ -22,7 +22,7 @@ export function recurringPayload(draft,saved){
   return {subscriptionTerms:{renewalMinor,intervalMonths,firstTermMonths}};
 }
 
-export function RecurringProductFields({value,onChange,canSet,variation=false}){
+export function RecurringProductFields({value,onChange,canSet,checkoutReady=false,variation=false}){
   if(value===undefined)return null;
   return <fieldset className="kiwe-settings-section">
     <legend>Billing</legend>
@@ -34,7 +34,7 @@ export function RecurringProductFields({value,onChange,canSet,variation=false}){
         <option value="recurring" disabled={!canSet&&!value}>Recurring subscription</option>
       </select>
     </label>
-    {!canSet&&<p className="wf-small">{variation?'Keep this variation virtual and disabled to set recurring terms.':'Set the product to Virtual in Delivery and keep it as a draft to set recurring terms.'}</p>}
+    {!canSet&&<p className="wf-small">{checkoutReady?'Set this item to Virtual to use recurring billing.':variation?'Keep this variation virtual and disabled to set recurring terms.':'Set the product to Virtual in Delivery and keep it as a draft to set recurring terms.'}</p>}
     {value&&<>
       <p className="wf-small">The checkout price covers the first term. The renewal price applies after that term ends.</p>
       <label>Renewal price (₹)<input inputMode="decimal" pattern="[0-9]{1,7}([.][0-9]{1,2})?" required value={value.renewalPrice} onChange={event=>onChange({...value,renewalPrice:event.target.value})}/></label>

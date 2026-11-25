@@ -348,6 +348,8 @@ The fresh-install profile recursively disables optional booleans and enables onl
 | Key authentication | Email/phone identification, OTP, progressive verification, passkeys, new-device recovery, privileged strict flow | `PhoneKey/phonekey-core.php`, `PhoneKey/PhoneKey_Core_Loader.php`, Surface runtime |
 | Saved | Bookmarks and Woo wishlists using user meta; logged-out intent resumes after authentication | `Saved/Saved_Items_Service.php`, `Rest/Saved_Items_Controller.php` |
 | Cart/Checkout | Optional cart sheet and field collection; final validation/payment/order stay with Woo | `Commerce/*`, `Rest/Cart_Controller.php`, `Rest/Checkout_Controller.php` |
+| Store checkout policy | An explicit Store Off choice closes new payments for all Woo products | `Apps/Store_Checkout_Gate.php` |
+| Recurring checkout pilot | Buyer-approved native Woo order and recurring terms, Razorpay Test Mode mandate, verified Woo receipts and account continuation | `Commerce/Subscription_Checkout_Service.php`, `Commerce/Subscription_Billing_Service.php`, [pilot decision](decisions/2026-11-25-razorpay-checkout-and-memberships.md#shopper-checkout-pilot) |
 | Purchase identity | Guest/subscriber gate, one verified factor for purchase, Customer transition after first order | `Commerce/Purchase_Identity_Gate.php` |
 | Trust | Deterministic SSL, payment, Key and security signals; no invented badges | `Trust/Trust_Service.php` |
 | Notifications | Topic registry, role-aware policy, inbox, email/WhatsApp/SMS/push dispatch | `Notifications/*`, `Communications/*`, `docs/notification-architecture.md` |

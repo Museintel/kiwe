@@ -1065,10 +1065,12 @@ final class Commerce_App_Service {
 		$billing_changed = array_key_exists( 'subscriptionTerms', $input ) && $input['subscriptionTerms'] !== $billing;
 		if ( $billing_changed ) {
 			if ( $before['type'] !== 'simple' || ! class_exists( Billing::class ) ) return $this->error( 'billing', 'Use a simple product or configure terms on individual variations.', 409 );
-			$billing = Billing::validate( $input['subscriptionTerms'], $before['virtual'], 'publish' === $status );
+			$billing = Billing::validate( $input['subscriptionTerms'], $before['virtual'] );
 			if ( is_wp_error( $billing ) ) return $billing;
 		}
-		if ( null !== $billing && 'publish' === $status ) return $this->error( 'billing', 'Save this recurring product as a draft during the billing pilot.', 409 );
+		if ( null !== $billing && 'publish' === $status && ! Billing::checkout_allowed( $product, $billing ) ) {
+			return $this->error( 'billing', 'Keep this subscription as a draft until it has a matching Razorpay Test Mode plan and meets the checkout requirements.', 409 );
+		}
 		if ( '' !== $input['price'] && ! preg_match( '/^\d{1,12}(?:\.\d{1,6})?$/D', $input['price'] ) ) return $this->error( 'price', 'Enter a non-negative price, using a dot for decimals.' );
 		$price = '' === $input['price'] ? '' : wc_format_decimal( $input['price'] );
 		if(in_array($before['type'],['variable','grouped'],true)&&$price!==$before['price'])return $this->error('price','Set prices on the individual products or variations.',409);

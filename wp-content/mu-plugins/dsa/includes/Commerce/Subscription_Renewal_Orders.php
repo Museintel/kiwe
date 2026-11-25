@@ -1,13 +1,15 @@
 <?php
 namespace DSA\Commerce;
 
+use DSA\Apps\Store_Checkout_Gate;
+
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Native Woo order receipts are the ledger for verified paid periods. */
 final class Subscription_Renewal_Orders {
-	public const AGREEMENT = '_kiwe_subscription_agreement_v1';
+	public const AGREEMENT = Store_Checkout_Gate::AGREEMENT;
 	public const CHARGE = '_kiwe_subscription_charge_v1';
-	public const GATEWAY = 'kiwe_razorpay_subscription';
+	public const GATEWAY = Store_Checkout_Gate::GATEWAY;
 	public const JOINED = '_kiwe_membership_joined_v1';
 	private const SOURCE = 'kiwe-subscription';
 

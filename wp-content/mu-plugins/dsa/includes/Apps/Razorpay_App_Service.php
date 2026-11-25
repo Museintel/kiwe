@@ -39,6 +39,7 @@ final class Razorpay_App_Service {
 			'standardMethodChoices' => class_exists( \DSA\Commerce\Razorpay_Checkout_Service::class ) && \DSA\Commerce\Razorpay_Checkout_Service::can_choose(),
 			'kiweSubscriptionQuotes' => Store_App_Service::enabled() && class_exists( \DSA\Commerce\Subscription_Quote_Service::class ),
 			'kiweSubscriptionPilot' => class_exists( \DSA\Commerce\Subscription_Billing_Service::class ) && \DSA\Commerce\Subscription_Billing_Service::available(),
+			'kiweSubscriptionCheckoutPilot' => class_exists( \DSA\Commerce\Subscription_Checkout_Service::class ) && \DSA\Commerce\Subscription_Checkout_Service::enabled(),
 		];
 	}
 

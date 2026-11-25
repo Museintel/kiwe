@@ -119,7 +119,7 @@ try {
         && $accepted['start_at'] === $agreement['firstRenewalAt'] && $accepted['total_count'] === 12,
         'The combined native Woo total is charged upfront and the approval contains twelve scheduled renewal cycles.');
     $assert($write($change, ['orderId'=>$id, 'action'=>'recover','recordId'=>$subscriptionId])['state'] === 'awaiting-approval', 'Provider readback recovers the exact recorded approval.');
-    $assert(!$service->ordinary_payment_allowed(true, wc_get_order($id)), 'An enrolled Woo order rejects the ordinary order-pay path.');
+    $assert(!apply_filters('woocommerce_order_needs_payment', true, wc_get_order($id)), 'An enrolled Woo order rejects the ordinary order-pay path.');
     $assert(!(new Users())->membership_listing(1, $fixture)['people'], 'An authorization request alone never creates a member.');
     $product->set_name('Current catalog name');
     Products::write($product, ['renewalMinor'=>90000, 'intervalMonths'=>1, 'firstTermMonths'=>12]);

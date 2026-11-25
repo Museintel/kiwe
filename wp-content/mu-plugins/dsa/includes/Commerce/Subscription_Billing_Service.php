@@ -2,6 +2,7 @@
 namespace DSA\Commerce;
 
 use DSA\Apps\Store_App_Service;
+use DSA\Apps\Store_Checkout_Gate;
 use DSA\MCP\Authoring_Service;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -9,7 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** Consented native order terms and Razorpay's verified invoice are the two billing authorities. */
 final class Subscription_Billing_Service {
 	public const ROUTE = '/razorpay/subscriptions';
-	private const CYCLES = 12;
+	public const CYCLES = 12;
+	public const EXPIRY_HOOK = 'dsa_expire_subscription_checkout';
 
 	public static function available(): bool {
 		return Store_App_Service::enabled() && ! Store_Recovery_Gate_Service::is_paused() && Razorpay_Subscription_Provider::available();
@@ -18,7 +20,7 @@ final class Subscription_Billing_Service {
 	public function register(): void {
 		add_action( 'woocommerce_order_details_after_order_table', [ new Subscription_Renewal_Orders(), 'render_membership' ] );
 		( new Membership_Directory() )->register();
-		add_filter( 'woocommerce_order_needs_payment', [ $this, 'ordinary_payment_allowed' ], 100, 2 );
+		add_action( self::EXPIRY_HOOK, [ $this, 'expire_checkout' ] );
 		if ( ! self::available() ) return;
 		add_action( 'rest_api_init', function (): void {
 			register_rest_route( 'dsa/v1', self::ROUTE, [
@@ -27,11 +29,6 @@ final class Subscription_Billing_Service {
 				'callback'=>[ $this, 'webhook' ],
 			] );
 		} );
-	}
-
-	public function ordinary_payment_allowed( bool $needs_payment, \WC_Order $order ): bool {
-		return $needs_payment && ! $order->get_meta( Subscription_Renewal_Orders::AGREEMENT )
-			&& Subscription_Renewal_Orders::GATEWAY !== $order->get_payment_method();
 	}
 
 	public static function can_manage(): bool {
@@ -70,30 +67,59 @@ final class Subscription_Billing_Service {
 			$existing = $order->get_meta( Subscription_Renewal_Orders::AGREEMENT );
 			if ( is_array( $existing ) ) return self::public_state( $order, $existing );
 
-			$quote = self::eligible_snapshot( $order );
-			$plan = Razorpay_Subscription_Provider::plan( $plan_id );
-			if ( 'monthly' !== ( $plan['period'] ?? null ) || $quote['intervalMonths'] !== ( $plan['interval'] ?? null )
-				|| $quote['renewalMinor'] !== ( $plan['item']['amount'] ?? null ) || 'INR' !== ( $plan['item']['currency'] ?? null ) ) {
-				throw new \DomainException( 'The Razorpay plan must match the reviewed renewal price, currency and interval.' );
-			}
-			$created = time();
-			$agreement = $quote + [
-				'orderId'=>$id, 'customerId'=>$order->get_customer_id(), 'planId'=>$plan_id, 'cycles'=>self::CYCLES,
-				'reference'=>bin2hex( random_bytes( 16 ) ), 'fingerprint'=>self::order_fingerprint( $order ),
-				'createdAt'=>$created, 'firstRenewalAt'=>self::add_months( $created, $quote['firstTermMonths'] ),
-				'approvalExpiresAt'=>$created + DAY_IN_SECONDS, 'subscriptionId'=>'', 'authorizationUrl'=>'', 'providerStatus'=>'',
-			];
-			$order->set_payment_method( Subscription_Renewal_Orders::GATEWAY );
-			$order->set_payment_method_title( __( 'Razorpay subscription', 'dsa' ) );
-			$order->set_status( 'on-hold' );
-			$order->update_meta_data( Subscription_Renewal_Orders::AGREEMENT, $agreement );
-			$order->save();
-
-			// Persist the intent before the provider call. A lost response calls for readback of the matching provider record.
-			$subscription = Razorpay_Subscription_Provider::create( $agreement );
-			$agreement = self::bind( $order, $agreement, $subscription );
+			$agreement = self::begin( $order, self::eligible_snapshot( $order ), $plan_id );
 			return self::public_state( $order, $agreement );
 		} );
+	}
+
+	/** Only the classic gateway calls this, while its validated shopper checkout is locked. */
+	public static function open_checkout( int $id, string $terms_digest ): void {
+		self::synchronized( 'order', $id, static function () use ( $id, $terms_digest ): void {
+			$order = wc_get_order( $id );
+			if ( ! $order || ! Subscription_Checkout_Service::owns_order( $order )
+				|| 'checkout' !== $order->get_created_via() || $order->get_parent_id()
+				|| $order->get_meta( Subscription_Renewal_Orders::AGREEMENT ) ) {
+				throw new \DomainException( __( 'Review this subscription from your account orders.', 'dsa' ) );
+			}
+			$quote = self::eligible_snapshot( $order, Subscription_Renewal_Orders::GATEWAY );
+			$plan_id = Subscription_Checkout_Service::plan_id( $quote );
+			if ( ! $plan_id || ! hash_equals( $terms_digest, Subscription_Quote_Service::terms_digest( $quote, $order ) ) ) {
+				throw new \DomainException( __( 'The order changed. Review the current total and renewal terms.', 'dsa' ) );
+			}
+			self::begin( $order, $quote, $plan_id, true );
+		} );
+	}
+
+	private static function begin( \WC_Order $order, array $quote, string $plan_id, bool $checkout = false ): array {
+		$plan = Razorpay_Subscription_Provider::plan( $plan_id );
+		if ( 'monthly' !== ( $plan['period'] ?? null ) || $quote['intervalMonths'] !== ( $plan['interval'] ?? null )
+			|| $quote['renewalMinor'] !== ( $plan['item']['amount'] ?? null ) || 'INR' !== ( $plan['item']['currency'] ?? null ) ) {
+			throw new \DomainException( 'The Razorpay plan must match the reviewed renewal price, currency and interval.' );
+		}
+		Store_Checkout_Gate::remember_usage();
+		$created = time();
+		$agreement = $quote + [
+			'orderId'=>$order->get_id(), 'customerId'=>$order->get_customer_id(), 'planId'=>$plan_id, 'cycles'=>self::CYCLES,
+			'reference'=>bin2hex( random_bytes( 16 ) ), 'fingerprint'=>self::order_fingerprint( $order ),
+			'createdAt'=>$created, 'firstRenewalAt'=>self::add_months( $created, $quote['firstTermMonths'] ),
+			'approvalExpiresAt'=>$created + DAY_IN_SECONDS, 'subscriptionId'=>'', 'authorizationUrl'=>'', 'providerStatus'=>'',
+		];
+		if ( $checkout ) {
+			$agreement['checkoutConsentAt'] = $created;
+			Subscription_Checkout_Service::remember_order( $order );
+		}
+		$order->set_payment_method( Subscription_Renewal_Orders::GATEWAY );
+		$order->set_payment_method_title( __( 'Razorpay subscription', 'dsa' ) );
+		$order->set_status( 'on-hold' );
+		$order->update_meta_data( Subscription_Renewal_Orders::AGREEMENT, $agreement );
+		$order->save();
+
+		// Only send the request after the intent can be found again through native storage.
+		$saved = wc_get_order( $order->get_id() );
+		if ( ! $saved || ! $saved->has_status( 'on-hold' ) || $agreement !== $saved->get_meta( Subscription_Renewal_Orders::AGREEMENT ) ) {
+			throw new \RuntimeException( 'WooCommerce could not confirm the subscription order.' );
+		}
+		return self::bind( $saved, $agreement, Razorpay_Subscription_Provider::create( $agreement ) );
 	}
 
 	public static function enrollment( int $id ): array {
@@ -167,11 +193,11 @@ final class Subscription_Billing_Service {
 		];
 	}
 
-	private static function eligible_snapshot( \WC_Order $order ): array {
+	private static function eligible_snapshot( \WC_Order $order, string $payment_method = '' ): array {
 		$customer = $order->get_customer_id();
 		if ( ! $order->has_status( [ 'pending', 'failed' ] ) || ! $customer || ! user_can( $customer, 'read' )
 			|| \DSA\Access\Team_Workspace_Service::suspended( $customer ) || ( is_multisite() && ! is_user_member_of_blog( $customer ) )
-			|| $order->get_payment_method() || $order->get_transaction_id() ) {
+			|| $payment_method !== $order->get_payment_method() || $order->get_transaction_id() ) {
 			throw new \DomainException( 'Use an unpaid customer order that has not entered another payment flow.' );
 		}
 		$quote = Subscription_Quote_Service::snapshot( $order );
@@ -180,7 +206,7 @@ final class Subscription_Billing_Service {
 		}
 		foreach ( $quote['lines'] as $line ) {
 			$product = wc_get_product( $line['variationId'] ?: $line['productId'] );
-			if ( ! $product || $product->managing_stock() || ( wc_tax_enabled() && 'none' !== $product->get_tax_status() ) ) {
+			if ( ! $product || ! Subscription_Product_Service::supported_for_checkout( $product ) ) {
 				throw new \DomainException( 'The pilot needs recurring items without stock tracking or renewal taxes.' );
 			}
 		}
@@ -204,13 +230,23 @@ final class Subscription_Billing_Service {
 
 	/** Billing continues when the optional MCP app is turned off. */
 	public static function synchronized( string $scope, int $id, callable $write ): mixed {
+		$key = self::lock( $scope, $id );
+		try { return $write(); }
+		finally { self::unlock( $key ); }
+	}
+
+	public static function lock( string $scope, int $id ): string {
 		global $wpdb;
 		$key = 'kiwe-membership-' . substr( hash( 'sha256', DB_NAME . '|' . $wpdb->prefix . '|' . $scope . '|' . $id ), 0, 40 );
 		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s,0)', $key ) ) ) {
 			throw new \RuntimeException( 'Another request is reconciling this membership. Retry the event.' );
 		}
-		try { return $write(); }
-		finally { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $key ) ); }
+		return $key;
+	}
+
+	public static function unlock( string $key ): void {
+		global $wpdb;
+		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $key ) );
 	}
 
 	private static function bind( \WC_Order $order, array $agreement, array $subscription ): array {
@@ -226,6 +262,9 @@ final class Subscription_Billing_Service {
 		if ( ! $agreement['subscriptionId'] ) {
 			$agreement['subscriptionId'] = $id;
 			$agreement['authorizationUrl'] = Razorpay_Subscription_Provider::authorization_url( $subscription['short_url'] ?? null );
+			if ( ! empty( $agreement['checkoutConsentAt'] ) ) {
+				wp_schedule_single_event( max( time() + MINUTE_IN_SECONDS, $agreement['approvalExpiresAt'] + MINUTE_IN_SECONDS ), self::EXPIRY_HOOK, [ $order->get_id() ] );
+			}
 		}
 		// Cancellation is terminal for this provider ID, even if older events arrive later.
 		if ( 'cancelled' === ( $subscription['status'] ?? '' ) ) $agreement['providerStatus'] = 'cancelled';
@@ -234,6 +273,27 @@ final class Subscription_Billing_Service {
 			$order->save_meta_data();
 		}
 		return $agreement;
+	}
+
+	public function expire_checkout( int $id ): void {
+		if ( ! self::available() ) return;
+		try {
+			self::synchronized( 'order', $id, static function () use ( $id ): void {
+				$order = wc_get_order( $id );
+				$agreement = $order ? $order->get_meta( Subscription_Renewal_Orders::AGREEMENT ) : null;
+				if ( empty( $agreement['checkoutConsentAt'] ) || empty( $agreement['subscriptionId'] ) || $agreement['approvalExpiresAt'] > time()
+					|| ! $order->has_status( [ 'on-hold', 'cancelled' ] ) || $order->get_date_paid()
+					|| $order->get_meta( Subscription_Renewal_Orders::CHARGE ) ) return;
+				$remote = Razorpay_Subscription_Provider::subscription( $agreement['subscriptionId'] );
+				if ( 'expired' !== ( $remote['status'] ?? '' ) ) return;
+				$agreement = self::bind( $order, $agreement, $remote );
+				$agreement['providerStatus'] = 'expired';
+				$order->update_meta_data( Subscription_Renewal_Orders::AGREEMENT, $agreement );
+				$order->update_status( 'cancelled', __( 'Razorpay confirmed the subscription authorization expired.', 'dsa' ) );
+			} );
+		} catch ( \Throwable $error ) {
+			wc_get_logger()->warning( 'The expired subscription checkout needs provider review.', [ 'source'=>'kiwe-subscriptions', 'order_id'=>$id ] );
+		}
 	}
 
 	public function webhook( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {

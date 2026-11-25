@@ -8,7 +8,9 @@ check(service.includes("current_user_can('edit_post',$parent)")&&service.include
 check(service.includes('LIMIT 201')&&service.includes('LIMIT 1001')&&service.includes('LIMIT 4001'),'Bounded catalog and private metadata review');
 check(service.includes('GET_LOCK(%s,0)')&&service.includes('hash_equals')&&service.includes('COMMIT')&&service.includes('ROLLBACK')&&service.includes('in_transaction'),'Nonblocking checked writes and native transaction ownership');
 check(service.includes('_variation_description')&&service.includes('protected_meta')&&service.includes('Protected product categories')&&service.includes('Protected parent content'),'Native description writer and protected SEO relationships content');
-check(service.includes('checkout')===false&&service.includes('wc_product_has_unique_sku')&&service.includes('sale_date'),'Native SKU and existing timezone owner reuse');
+check(!/\b(?:WC_Checkout|WC_Payment_Gateway|WC_Cart|WC_Order|wc_get_order|wc_get_checkout_url|woocommerce_checkout\w*)\b|WC\(\)\s*->\s*(?:cart|session|checkout)\b/i.test(service)
+  && service.includes('wc_product_has_unique_sku') && service.includes('sale_date'),
+  'Native SKU and timezone ownership without touching shopper checkout state');
 check(app.includes("in_array($before['type'],['variable','grouped'],true)&&$price!==$before['price']")&&app.includes("if($before['type']==='simple')$product->set_regular_price"),'Variable parent prices remain native derived values');
 check(app.includes("$before['inventoryEditable']")&&app.includes("$before['deliveryEditable']"),'Existing simple task writers retain their boundary');
 check(app.includes('Product_Variation_Workspace_Service::attribute_values($product)')&&app.includes("'defaultAttributes'=>$product->get_default_attributes('edit')"),'Shared basic fingerprint tracks attributes and defaults');

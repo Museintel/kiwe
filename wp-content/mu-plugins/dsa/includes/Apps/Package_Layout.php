@@ -62,6 +62,8 @@ final class Package_Layout {
   'includes/Commerce/Razorpay_Subscription_Provider.php',
   'includes/Commerce/Store_Commerce_Analytics_Service.php',
   'includes/Commerce/Subscription_Billing_Service.php',
+  'includes/Commerce/Subscription_Checkout_Gateway.php',
+  'includes/Commerce/Subscription_Checkout_Service.php',
   'includes/Commerce/Subscription_Product_Service.php',
   'includes/Commerce/Subscription_Quote_Service.php',
   'includes/Commerce/Subscription_Renewal_Orders.php',

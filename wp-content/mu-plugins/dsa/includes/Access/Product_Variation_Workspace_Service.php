@@ -162,12 +162,19 @@ final class Product_Variation_Workspace_Service {
 			$billing_changed = array_key_exists( 'subscriptionTerms', $input ) && $input['subscriptionTerms'] !== $billing;
 			if ( $billing_changed ) {
 				if ( ! class_exists( Billing::class ) ) return $this->error( 'billing', 'Recurring product setup is unavailable.' );
-				$billing = Billing::validate( $input['subscriptionTerms'], $input['virtual'], $input['enabled'] );
+				$billing = Billing::validate( $input['subscriptionTerms'], $input['virtual'] );
 				if ( is_wp_error( $billing ) ) return $billing;
 			}
-			if ( null !== $billing && ( $input['enabled'] || ! $input['virtual'] ) ) return $this->error( 'billing', 'Keep this recurring variation virtual and disabled during the billing pilot.' );
+			if ( null !== $billing && ! $input['virtual'] ) return $this->error( 'billing', 'Keep this recurring variation virtual.' );
 			if ( $billing_changed ) Billing::write( $p, $billing );
 			$wanted=$input;$wanted['attributes']=$attrs;$wanted['price']=$price;$wanted['salePrice']=$sale;$wanted['description']=$description;foreach(['weight','length','width','height']as$key)$wanted[$key]=$input[$key]===''?'':wc_format_decimal($input[$key]);
+			if ( null !== $billing && $input['enabled'] ) {
+				$p->set_virtual( $input['virtual'] );
+				$p->set_manage_stock( $input['manageStock'] );
+				if ( ! Billing::checkout_allowed( $p, $billing ) ) {
+					return $this->error( 'billing', 'Keep this variation disabled until it has a matching Razorpay Test Mode plan and meets the checkout requirements.' );
+				}
+			}
 			if($id&&!$billing_changed&&array_intersect_key($record,array_flip($fields))===array_intersect_key($wanted,array_flip($fields)))return ['id'=>$id,'changed'=>false,'action'=>'update','variation'=>$record];
 			$p->set_attributes($attrs);$p->set_status($input['enabled']?'publish':'private');$p->set_regular_price($price);$p->set_sale_price($sale);$p->set_date_on_sale_from($from);$p->set_date_on_sale_to($to);$p->set_sku($input['sku']);$p->set_manage_stock($input['manageStock']);if($input['manageStock']||$input['stock']!==$record['stock'])$p->set_stock_quantity($input['stock']);$p->set_stock_status($input['stockStatus']);$p->set_backorders($input['backorders']);$p->set_image_id($image);$p->set_description($description);$p->set_virtual($input['virtual']);foreach(['weight','length','width','height']as$key)$p->{'set_'.$key}($input[$key]);$p->set_shipping_class_id($input['shippingClassId']);$p->set_tax_class($input['taxClass']);$p->set_menu_order($input['position']);try{$saved=$p->save();}finally{$this->affectedId=(int)$p->get_id();}if(!$saved)throw new \RuntimeException('Native variation save failed.');
 			\WC_Product_Variable::sync($s['id']);$after=$this->variation($s['id'],(int)$saved);if(is_wp_error($after))throw new \RuntimeException('Saved variation unavailable.');

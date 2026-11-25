@@ -4,6 +4,8 @@
 - Open the existing checkout sheet from the native WooCommerce checkout form and return saved details to the same page.
 - Add an opt-in classic checkout summary, native coupon support on the Bricks shortcode route, and qualified Razorpay UPI/card choices alongside native COD.
 - Author recurring terms on draft WooCommerce simple products and disabled variations. Expose native quote readback through Store MCP.
+- Pilot subscriptions on the classic WooCommerce checkout with matching Razorpay Test Mode plans. Show the native first charge and separate renewal schedule, require fresh consent after a change, and resume approval from the customer's existing Woo order.
+- Turning Kiwe Store off closes purchases of one-time products and subscriptions in WooCommerce.
 - Use the bundled SVG sanitizer namespace from Bricks when importing compiled designs.
 
 ## 8.0.0-rc.499 (2026-11-25, candidate)

@@ -1,11 +1,13 @@
 <?php
 namespace DSA\Commerce;
 
+use DSA\Apps\Store_Checkout_Gate;
+
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Recurring terms decorate native WooCommerce records. */
 final class Subscription_Product_Service {
-	public const META = '_kiwe_subscription_terms_v1';
+	public const META = Store_Checkout_Gate::PRODUCT_TERMS;
 	public const OPTION = 'kiwe_store_subscription_authoring_v1';
 
 	public static function can_author(): bool {
@@ -22,14 +24,17 @@ final class Subscription_Product_Service {
 
 	public static function editor( \WC_Product $product ): array {
 		if ( ! self::can_author() || ! $product->is_type( [ 'simple', 'variation' ] ) ) return [];
-		return [ 'subscriptionTerms' => self::terms( $product ) ];
+		return [
+			'subscriptionTerms' => self::terms( $product ),
+			'subscriptionCheckoutReady' => Subscription_Checkout_Service::enabled(),
+		];
 	}
 
-	public static function validate( mixed $input, bool $virtual, bool $public ): array|\WP_Error|null {
+	public static function validate( mixed $input, bool $virtual ): array|\WP_Error|null {
 		if ( ! self::can_author() ) return new \WP_Error( 'kiwe_subscription_forbidden', 'Recurring product setup is unavailable for your account.', [ 'status' => 403 ] );
 		if ( null === $input ) return null;
-		if ( $public || ! $virtual ) {
-			return new \WP_Error( 'kiwe_subscription_draft', 'During the billing pilot, keep the product virtual and save it as a draft or keep the variation disabled.', [ 'status' => 409 ] );
+		if ( ! $virtual ) {
+			return new \WP_Error( 'kiwe_subscription_virtual', 'Use a virtual product for recurring billing.', [ 'status' => 409 ] );
 		}
 		$limits = [ 'renewalMinor' => 999999999, 'intervalMonths' => 12, 'firstTermMonths' => 12 ];
 		if ( ! is_array( $input ) || count( $input ) !== count( $limits ) ) return self::invalid_terms();
@@ -47,8 +52,21 @@ final class Subscription_Product_Service {
 	}
 
 	public static function write( \WC_Product $product, ?array $terms ): void {
-		if ( null === $terms ) $product->delete_meta_data( self::META );
-		else $product->update_meta_data( self::META, $terms );
+		if ( null === $terms ) {
+			$product->delete_meta_data( self::META );
+			return;
+		}
+		Store_Checkout_Gate::remember_usage();
+		$product->update_meta_data( self::META, $terms );
+	}
+
+	public static function supported_for_checkout( \WC_Product $product ): bool {
+		return $product->is_virtual() && ! $product->managing_stock()
+			&& ( ! wc_tax_enabled() || 'none' === $product->get_tax_status() );
+	}
+
+	public static function checkout_allowed( \WC_Product $product, mixed $terms ): bool {
+		return is_array( $terms ) && self::supported_for_checkout( $product ) && '' !== Subscription_Checkout_Service::plan_id( $terms );
 	}
 
 	public function register(): void {
@@ -57,6 +75,8 @@ final class Subscription_Product_Service {
 	}
 
 	public function purchasable( bool $purchasable, \WC_Product $product ): bool {
-		return $purchasable && null === self::terms( $product );
+		if ( ! $purchasable ) return false;
+		$terms = self::terms( $product );
+		return null === $terms || ( 'publish' === $product->get_status() && self::checkout_allowed( $product, $terms ) );
 	}
 }

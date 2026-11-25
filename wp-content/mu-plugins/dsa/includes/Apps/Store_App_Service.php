@@ -40,6 +40,8 @@ final class Store_App_Service {
   return [ 'available'=>false, 'cart'=>self::inactive_cart(), 'current'=>[], 'routes'=>[], 'decision'=>[], 'transitionMessages'=>[], 'complements'=>[], 'safety'=>[ 'navigationBlocking'=>false, 'cartMutation'=>false, 'fragmentCheckout'=>false ] ];
  }
  public function register(): void {
+  // The Core gate respects an explicit Off choice even when Store services are unloaded.
+  add_action('plugins_loaded',static function():void{if(function_exists('WC'))Store_Checkout_Gate::register(self::enabled());},29);
   // The closure is inert on visitor requests and loads no optional Store/MCP code.
   add_action('kiwe_mcp_register_providers',static function($registry,int $api):void{if(self::enabled()&&class_exists(\DSA\Commerce\MCP_Store_Provider::class))\DSA\Commerce\MCP_Store_Provider::register($registry,$api);},10,2);
   add_action( 'rest_api_init', [ $this, 'routes' ] );
@@ -49,7 +51,7 @@ final class Store_App_Service {
   $enabled = self::enabled(); $available = self::available();
   return [ 'id'=>'store', 'enabled'=>$enabled, 'canChange'=>self::allowed(), 'blocked'=>!$available || !Runtime_Registry::installed('store'), 'installed'=>Runtime_Registry::installed('store'), 'manageUrl'=>current_user_can('install_plugins') || current_user_can('update_plugins') ? Library_Service::url('store') : '',
    'status'=>$enabled ? 'On' : 'Off', 'toggleLabel'=>'Store',
-   'description'=>!Runtime_Registry::installed('store') ? 'Add Kiwe Store when this website needs ecommerce. Existing business details and native records stay in place.' : (!$available ? 'WooCommerce is not active. Your site manager can add it when this website needs a store.' : ( $enabled ? 'Products, delivery, taxes, offers, carts, wishlists and orders.' : 'Turn on to use Kiwe Store. Your products, orders and saved settings stay on the website.' )),
+   'description'=>!Runtime_Registry::installed('store') ? 'Add Kiwe Store when this website needs ecommerce. Existing business details and native records stay in place.' : (!$available ? 'WooCommerce is not active. Your site manager can add it when this website needs a store.' : ( $enabled ? 'Products, delivery, taxes, offers, carts, wishlists and orders.' : 'Turn on Store to open checkout for products and subscriptions.' )),
    'url'=>$enabled ? self::url() : '', 'endpoint'=>self::allowed() ? rest_url( 'dsa/v1/workspace/apps/store' ) : '',
    'expected'=>self::allowed() ? self::expected() : '', 'action'=>admin_url( 'admin-post.php' ), 'nonce'=>self::allowed() ? wp_create_nonce( self::ACTION ) : '',
   ];
