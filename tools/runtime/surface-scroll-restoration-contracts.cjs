@@ -16,6 +16,37 @@ const count=calls.length;ctx.restoreSurfaceScrollPosition(55);check(calls.length
 ctx.menuAnchorNavigationPending=true;ctx.setSurfaceScrollLocked(false);check(calls.length===count,'Explicit menu anchor retains its destination');ctx.menuAnchorNavigationPending=false;
 history.scrollRestoration='manual';ctx.claimSurfaceHistoryEntry('profile');ctx.surfaceHistoryActive=false;ctx.restoreSurfaceScrollPosition(1200);drain();check(history.scrollRestoration==='manual','Previous manual browser policy preserved');
 
+// Checkout fallback turns the existing overlay entry into the native form anchor.
+const jumps = [];
+const focusTarget = {
+ hasAttribute: () => false,
+ focus: () => jumps.push('focus'),
+ scrollIntoView: () => jumps.push('scroll'),
+};
+ctx.document.querySelector = selector => selector === 'form.checkout #customer_details' ? focusTarget : null;
+ctx.closeOverlay = (force, options) => {
+ assert.equal(force, false);
+ assert.ok(options.retainHistory && options.immediate);
+ ctx.setSurfaceScrollLocked(false);
+};
+const replaced = [];
+history.replaceState = (state, title, url) => {
+ history.state = state;
+ ctx.window.location.hash = url;
+ replaced.push(url);
+};
+vm.runInContext(fn('openNativeCheckoutDetails'), ctx);
+for (let open = 0; open < 2; open++) {
+ ctx.setSurfaceScrollLocked(true);
+ ctx.claimSurfaceHistoryEntry('checkout');
+ let prevented = false;
+ ctx.openNativeCheckoutDetails({button:0,currentTarget:{hash:'#customer_details'},preventDefault:() => { prevented = true; }});
+ drain();
+ check(prevented && replaced.at(-1) === '#customer_details' && !history.state.kiweSurface, 'Checkout anchor replaces the active synthetic entry, including a repeat at the same hash');
+ check(history.state.foreign === 'preserved' && !ctx.surfaceHistoryActive, 'Checkout fallback preserves other history state and releases the sheet');
+}
+check(jumps.join(',') === 'focus,scroll,focus,scroll', 'Native checkout details receive keyboard focus and scroll after the sheet closes');
+
 // The idle Home screen must follow the current document even when private AJAX returns a neutral flow.
 Object.assign(ctx,{URL,protectedFlow:{active:false},commerce:{available:true,routes:{checkoutUrl:'https://example.test/secure-checkout/',cartUrl:'https://example.test/bag/',accountUrl:'https://example.test/profile/'}},
  surfaceTriggerEnabled:()=>true,getSurfaceTrigger:()=>({enabled:true,delayMs:10000}),appConfig:{idle:{enabled:true}},homeArms:0});

@@ -5010,7 +5010,7 @@
 
 		const nativeLink = panel.querySelector( '[data-dsa-checkout-native-details]' );
 		if ( nativeLink ) {
-			nativeLink.addEventListener( 'click', function () { closeOverlay(); } );
+			nativeLink.addEventListener( 'click', openNativeCheckoutDetails );
 		}
 
 		if ( ! checkoutState.contract ) {
@@ -5051,6 +5051,33 @@
 			event.preventDefault();
 			event.stopPropagation();
 			saveCheckoutDraft( form, true, true );
+		} );
+	}
+
+	function openNativeCheckoutDetails( event ) {
+		const target = document.querySelector( 'form.checkout #customer_details' );
+		if ( ! target || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ) return;
+		event.preventDefault();
+
+		// Convert the sheet entry into the native anchor before moving focus.
+		// A separate hash navigation and history.back() can race each other.
+		const hash = event.currentTarget.hash;
+		const method = surfaceHistoryActive || window.location.hash === hash ? 'replaceState' : 'pushState';
+		const state = Object.assign( {}, window.history.state );
+		delete state.kiweSurface;
+		surfaceHistoryActive = false;
+		closeOverlay( false, { retainHistory: true, immediate: true } );
+		try {
+			window.history[ method ]( state, '', hash );
+		} catch ( error ) {
+			window.location.hash = hash;
+		}
+		window.requestAnimationFrame( function () {
+			window.requestAnimationFrame( function () {
+				if ( ! target.hasAttribute( 'tabindex' ) ) target.tabIndex = -1;
+				target.focus( { preventScroll: true } );
+				target.scrollIntoView( { block: 'start' } );
+			} );
 		} );
 	}
 
