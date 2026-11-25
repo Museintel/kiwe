@@ -54,7 +54,7 @@ p { color: var(--soft); }
 .nav-mobile { display: none; }
 .button { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 3.15rem; padding: .74rem 1.2rem; border: 1px solid transparent; border-radius: 99px; background: var(--ink); color: #fff; font-weight: 800; font-size: .93rem; line-height: 1.25; text-align: center; text-decoration: none; }
 .button:hover { background: #394532; }
-.button-small { min-height: 2.65rem; font-size: .87rem; }
+.button-small { min-height: 2.65rem; font-size: .87rem; white-space: nowrap; flex-shrink: 0; }
 .button-lime { background: var(--lime); color: var(--ink); }
 .button-lime:hover { background: #b9e45c; }
 .button-outline { background: transparent; color: var(--ink); border-color: #b3bdae; }
@@ -95,7 +95,7 @@ p { color: var(--soft); }
 .logo-set li { display: flex; align-items: center; gap: .52rem; white-space: nowrap; font-size: clamp(.98rem, 1.8vw, 1.4rem); font-weight: 800; letter-spacing: -.038em; }
 .logo-set img { width: auto; height: 1.51rem; object-fit: contain; }
 .logo-track:not(.looping) .logo-set { flex-wrap: wrap; }
-.looping { width: max-content; animation: slide-left var(--loop-time, 32s) linear infinite; }
+.looping { --loop-time: 32s; width: max-content; animation: slide-left var(--loop-time) linear infinite; }
 .looping > * { width: max-content; }
 .logo-track.looping > * { min-width: 100cqw; }
 .proof-track.looping { --loop-time: 43s; }
