@@ -19,7 +19,10 @@ namespace {
  use DSA\MCP\{Schema,Operation_Registry as Registry};
  $ops=Provider::operations();check(count($ops)<=32&&count($ops)>20,'Store supplies its own bounded provider contract');
  foreach($ops as$id=>$op){check(Schema::contract($op['inputSchema'])&&Schema::contract($op['outputSchema']),'Closed Store schema '.$id);check(str_starts_with($op['scope'],'store.authoring.'),'Store-specific scope '.$id);if($op['effect']==='write'&&!in_array($id,['store.product.create','store.product.save'],true))check($op['approval']==='required','Consequential Store action requires native review '.$id);}
- $r=new Registry();Provider::register($r,1);$scope=$r->scopes();$pins=$r->freeze($scope);check(count($pins)===count($ops),'Current native Store grant pins only its implemented operations');check($r->describe(['mcp.setup.read','mcp.setup.write','mcp.apps.manage'])===[],'Old MCP setup/software scopes gain no Store access');
+ $r=new Registry();Provider::register($r,1);$scope=$r->scopes();$pins=$r->freeze($scope);
+ check(array_values(array_diff(array_keys($ops),array_keys($pins)))===['store.razorpay.status','store.subscription.quote'],
+  'A product author grant excludes merchant settings and renewal quotes without their native authorities');
+ check($r->describe(['mcp.setup.read','mcp.setup.write','mcp.apps.manage'])===[],'Old MCP setup/software scopes gain no Store access');
  $s=new Store();$args=['id'=>10,'fieldsJson'=>json_encode(['name'=>'New draft title'])];$plan=$s->prepare('save',$args);check(!$plan['needsApproval']&&$writes===0,'Routine Store draft editing prepares without financial publication or writes');
  $data=json_decode($s->read(['area'=>'product','id'=>10])['dataJson'],true);check($data['price']==='50.00'&&$data['weight']==='200'&&!isset($data['controls']),'Native prices/weights are preserved while browser nonces are excluded');
  foreach(['expected','acceptEffect','confirmed','meta','option','customerId','sql']as$key)denied(fn()=>$s->prepare('save',['id'=>10,'fieldsJson'=>json_encode([$key=>'untrusted'])]),'No arbitrary native bypass field '.$key);

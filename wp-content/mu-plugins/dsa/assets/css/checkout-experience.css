@@ -1,0 +1,48 @@
+.kiwe-checkout-experience .kiwe-checkout-address,
+.kiwe-checkout-experience .kiwe-checkout-payment-choices {
+	margin: 0 0 1.25rem;
+	padding: 1rem 1.15rem;
+	border: 1px solid color-mix(in srgb, currentColor 17%, transparent);
+	border-radius: .875rem;
+	background: color-mix(in srgb, currentColor 3%, transparent);
+}
+
+.kiwe-checkout-experience .kiwe-checkout-address h2,
+.kiwe-checkout-experience .kiwe-checkout-payment-choices legend {
+	margin: 0;
+	font: inherit;
+	font-weight: 700;
+}
+
+.kiwe-checkout-experience .kiwe-checkout-address p {
+	margin: .45rem 0;
+	overflow-wrap: anywhere;
+}
+
+.kiwe-checkout-experience .kiwe-checkout-payment-choices button {
+	min-height: 2.75rem;
+	margin: .25rem .35rem .25rem 0;
+	padding: .5rem .875rem;
+	border: 1px solid currentColor;
+	border-radius: .65rem;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.kiwe-checkout-experience .kiwe-checkout-payment-choices button[aria-pressed="true"] {
+	box-shadow: inset 0 0 0 1px currentColor;
+	background: color-mix(in srgb, currentColor 11%, transparent);
+	font-weight: 700;
+}
+
+.kiwe-checkout-experience .kiwe-checkout-payment-choices[hidden],
+.kiwe-checkout-experience .kiwe-checkout-payment-choices button[hidden] {
+	display: none;
+}
+
+.kiwe-checkout-experience .woocommerce-form-coupon-toggle a,
+.kiwe-checkout-experience .kiwe-checkout-address a {
+	text-underline-offset: .2em;
+}

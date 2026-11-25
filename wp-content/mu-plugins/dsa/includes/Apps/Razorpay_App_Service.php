@@ -9,7 +9,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /** Kiwe's private connection view for the native Razorpay WooCommerce gateway. */
 final class Razorpay_App_Service {
 	public const PLUGIN = 'woo-razorpay/woo-razorpay.php';
-	public const RECURRING_PLUGIN = 'razorpay-subscriptions-for-woocommerce/razorpay-subscriptions.php';
 	private const OPTION = 'woocommerce_razorpay_settings';
 
 	public static function allowed(): bool {
@@ -36,8 +35,9 @@ final class Razorpay_App_Service {
 			'gatewayActive' => $active,
 			'gatewayEnabled' => $active && 'yes' === ( $settings['enabled'] ?? '' ),
 			'mode' => $mode,
-			'wooSubscriptionsActive' => class_exists( '\WC_Subscriptions', false ),
-			'razorpaySubscriptionsActive' => is_plugin_active( self::RECURRING_PLUGIN ),
+			'checkoutExperienceEnabled' => class_exists( \DSA\Commerce\Checkout_Experience_Service::class ) && \DSA\Commerce\Checkout_Experience_Service::enabled(),
+			'standardMethodChoices' => class_exists( \DSA\Commerce\Razorpay_Checkout_Service::class ) && \DSA\Commerce\Razorpay_Checkout_Service::can_choose(),
+			'kiweSubscriptionQuotes' => Store_App_Service::enabled() && class_exists( \DSA\Commerce\Subscription_Quote_Service::class ),
 		];
 	}
 

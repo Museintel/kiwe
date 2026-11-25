@@ -169,7 +169,7 @@ function renderCheckoutPanel( payload ) {
 	payload = payload || {};
 	const copy = checkoutCopy( payload );
 	const contract = checkoutState.contract || {};
-	const nativeFormLink = checkoutState.returnToPage && document.querySelector( 'form.checkout #customer_details' )
+	const nativeFormLink = payload.nativeDetailsAvailable
 		? '<a href="#customer_details" data-dsa-checkout-native-details>Open the checkout form</a>' : '';
 
 	if ( checkoutState.loading || ! checkoutState.contract ) {

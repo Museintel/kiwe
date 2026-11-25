@@ -51,18 +51,18 @@ final class MCP_Store_Authoring {
   if($area==='products'){
    $q=['limit'=>9,'offset'=>($page-1)*8,'orderby'=>'ID','order'=>'DESC','status'=>['draft','pending','publish','private']];if(!current_user_can('edit_others_products'))$q['author']=get_current_user_id();if(!empty($a['search']))$q['s']=$a['search'];$rows=wc_get_products($q);$data=[];foreach(array_slice($rows,0,8)as$product){$id=(int)$product->get_id();if(current_user_can('edit_post',$id)&&current_user_can('read_post',$id))$data[]=array_intersect_key(Native::native((new Products())->product_record($id)),array_flip(['id','name','type','status','price','weight','weightUnit','expected']));}$hasMore=count($rows)>8;
   }else{$data=self::state($area,$a);$hasMore=!empty($data['hasNext']);}
-  return['area'=>$area,'page'=>$page,'hasMore'=>$hasMore,'dataJson'=>Native::json($data,24000),'guidance'=>'Store and Woo retain these native records. Read current values/IDs before saving. Financial policy, published products and product choices need an exact native review. No order, customer, saved-cart, gateway credential or payment execution is available here.'];
+  return['area'=>$area,'page'=>$page,'hasMore'=>$hasMore,'dataJson'=>Native::json($data,24000),'guidance'=>'Store and Woo retain these native records. Read current values and IDs before saving. Financial policy, published products and product choices need an exact native review. Subscription quotes use a separate operation with native order permissions.'];
  }
  /** Fixed field allowlists are adapters, not arbitrary options, meta or REST targets. */
  public static function fields(string $kind): array{return match($kind){
   'create'=>['name','type','imageId'],
-  'save','publish'=>['name','price','status','description','shortDescription','categories','tags','imageId','galleryIds','reviewsAllowed'],
+  'save','publish'=>['name','price','status','description','shortDescription','categories','tags','imageId','galleryIds','reviewsAllowed','subscriptionTerms'],
   'inventory'=>['manageStock','sku','stockStatus','stock'],
   'delivery'=>['virtual','shippingClassId','weight','length','width','height'],
   'sale'=>['salePrice','startsAt','endsAt'],'nutrition'=>['imageId'],
   'relationships'=>['field','ids'],'offer'=>['productId','discountType','discountScope','discount'],
   'options'=>['key','attribute','default','remove'],
-  'variation'=>['attributes','enabled','price','salePrice','startsAt','endsAt','sku','manageStock','stock','stockStatus','backorders','imageId','description','virtual','weight','length','width','height','shippingClassId','taxClass','position'],
+  'variation'=>['attributes','enabled','price','salePrice','startsAt','endsAt','sku','manageStock','stock','stockStatus','backorders','imageId','description','virtual','weight','length','width','height','shippingClassId','taxClass','position','subscriptionTerms'],
   'attribute','attribute-value'=>['action','name','slug'],
    'tax-setting','tax-rate'=>['key','value'],'tax-class'=>['name'],'tax-rate-create'=>['name','rate','priority','order','compound','shipping','country','state','class','cities','postcodes'],
   'tax-geography'=>['country','state'],'tax-rules'=>['kind','op','codes','ids'],

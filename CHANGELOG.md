@@ -2,6 +2,9 @@
 
 - Show Razorpay setup status in Kiwe Apps and Store MCP.
 - Open the existing checkout sheet from the native WooCommerce checkout form and return saved details to the same page.
+- Add an opt-in classic checkout summary, native coupon support on the Bricks shortcode route, and qualified Razorpay UPI/card choices alongside native COD.
+- Author recurring terms on draft WooCommerce simple products and disabled variations. Expose native quote readback through Store MCP.
+- Use the bundled SVG sanitizer namespace from Bricks when importing compiled designs.
 
 ## 8.0.0-rc.499 (2026-11-25, candidate)
 

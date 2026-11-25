@@ -409,7 +409,12 @@ final class Plugin {
 		if ( class_exists( '\\DSA\\Commerce\\Gateway_Asset_Service' ) ) ( new \DSA\Commerce\Gateway_Asset_Service() )->register();
 		( new \DSA\Commerce\Weight_Shipping_Service() )->register();
 		( new Order_Notification_Service( $this->notification_preferences, $this->channels, $this->push ) )->register();
+		if ( class_exists( \DSA\Commerce\Subscription_Product_Service::class ) ) ( new \DSA\Commerce\Subscription_Product_Service() )->register();
 		if ( $paused ) return;
+		if ( class_exists( \DSA\Commerce\Checkout_Experience_Service::class ) && \DSA\Commerce\Checkout_Experience_Service::enabled() ) {
+			( new \DSA\Commerce\Checkout_Experience_Service() )->register();
+			( new \DSA\Commerce\Razorpay_Checkout_Service() )->register();
+		}
 		if ( ! empty( $commerce['linked_products_enabled'] ) ) $this->linked_products()->register();
 		$this->register_woo_capture_analytics();
 		$this->abandoned_carts()->register();

@@ -7606,6 +7606,7 @@
 		return adapter.renderCheckout( {
 			label: resolvedLabel,
 			checkoutState: checkoutState,
+			nativeDetailsAvailable: checkoutState.returnToPage && Boolean( document.querySelector( 'form.checkout #customer_details' ) ),
 			settings: commerce.settings || {},
 			routes: commerce.routes || {},
 			screenTheme: screenTheme( 'checkout' ),

@@ -113,7 +113,10 @@ final class Compiler_Import_Plan {
 	public static function validate_embedded_svg( string $bytes ): void {
 		if ( strlen( $bytes ) > 262144 || ! current_user_can( 'unfiltered_html' ) || ! is_callable( [ '\Bricks\Svg','load_libraries' ] ) ) throw new Compiler_Package_Error( 'This embedded SVG needs native review by an authorized designer.' );
 		\Bricks\Svg::load_libraries();
-		$sanitizer = new \enshrined\svgSanitize\Sanitizer();
+		$sanitizer_class = '\Bricks\Vendor\enshrined\svgSanitize\Sanitizer';
+		if ( ! class_exists( $sanitizer_class ) ) $sanitizer_class = '\enshrined\svgSanitize\Sanitizer';
+		if ( ! class_exists( $sanitizer_class ) ) throw new Compiler_Package_Error( 'Bricks SVG sanitization is unavailable. Review this asset before importing.' );
+		$sanitizer = new $sanitizer_class();
 		$sanitizer->setAllowedTags( new \Bricks\Integrations\Svg_Sanitizer\Allowed_Tags() );
 		$sanitizer->setAllowedAttrs( new \Bricks\Integrations\Svg_Sanitizer\Allowed_Attributes() );
 		$sanitizer->removeRemoteReferences( true ); $clean = $sanitizer->sanitize( $bytes );

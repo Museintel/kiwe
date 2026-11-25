@@ -21,14 +21,24 @@ final class MCP_Store_Provider {
   $input=self::object(['area'=>self::choice(MCP_Store_Authoring::AREAS),'id'=>self::integer(),'parentId'=>self::integer(),'relatedId'=>self::integer(),'page'=>['type'=>'integer','minimum'=>1,'maximum'=>1000],'search'=>self::text(100),'country'=>self::text(2),'locationKind'=>self::choice(['city','postcode'])],['area']);
   $read=self::object(['area'=>self::text(100),'page'=>self::integer(1),'hasMore'=>['type'=>'boolean'],'dataJson'=>self::text(24000),'guidance'=>self::text(1500)],['area','page','hasMore','dataJson','guidance']);
   $ops=['store.authoring.read'=>['scope'=>'store.authoring.read','label'=>'Read applicable native product and Store setup records','effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>$input,'outputSchema'=>$read,'permission'=>$allowed,'discoverPermission'=>$allowed,'execute'=>static fn($a)=>$service->read($a)]];
-  $gatewayFields=array_fill_keys(['storeEnabled','gatewayInstalled','gatewayActive','gatewayEnabled','wooSubscriptionsActive','razorpaySubscriptionsActive'],['type'=>'boolean']);
+  $gatewayFields=array_fill_keys(['storeEnabled','gatewayInstalled','gatewayActive','gatewayEnabled','checkoutExperienceEnabled','standardMethodChoices','kiweSubscriptionQuotes'],['type'=>'boolean']);
   $gatewayFields['mode']=self::choice(['unconfigured','test','live']);
   $gatewayAllowed=static fn()=>class_exists(Razorpay_App_Service::class)&&Razorpay_App_Service::allowed();
   $ops['store.razorpay.status']=[
-   'scope'=>'store.authoring.read','label'=>'Check the local Razorpay gateway configuration and installed subscription dependencies',
+   'scope'=>'store.authoring.read','label'=>'Check Razorpay gateway and Kiwe checkout configuration',
    'effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>self::object([]),
    'outputSchema'=>self::object($gatewayFields,array_keys($gatewayFields)),
    'permission'=>$gatewayAllowed,'discoverPermission'=>$gatewayAllowed,'execute'=>static fn()=>Razorpay_App_Service::status(),
+  ];
+  $quoteFields=array_fill_keys(['firstChargeMinor','renewalMinor','firstTermMonths','intervalMonths','recurringLines','oneTimeLines'],self::integer());
+  $quoteFields['currency']=self::choice(['INR']);
+  $ops['store.subscription.quote']=[
+   'scope'=>'store.authoring.read','label'=>'Review Kiwe renewal terms on an unpaid WooCommerce order',
+   'effect'=>'read','approval'=>'none','accessVersion'=>1,'inputSchema'=>self::object(['orderId'=>self::integer(1)],['orderId']),
+   'outputSchema'=>self::object($quoteFields,array_keys($quoteFields)),
+   'permission'=>static fn($a)=>class_exists(Subscription_Quote_Service::class)&&Subscription_Quote_Service::can_review_order($a['orderId']),
+   'discoverPermission'=>static fn()=>class_exists(Subscription_Quote_Service::class)&&Subscription_Quote_Service::can_review(),
+   'execute'=>static fn($a)=>Subscription_Quote_Service::review_order($a['orderId']),
   ];
   $definitions=[
    'store.product.create'=>['create',[],[]],

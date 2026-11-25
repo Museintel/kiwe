@@ -1,5 +1,6 @@
 <?php
 namespace DSA\Access;
+use DSA\Commerce\Subscription_Product_Service as Billing;
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Private native product choices; no visitor hooks, catalog copies or workers. */
@@ -77,7 +78,7 @@ final class Product_Variation_Workspace_Service {
 		$expected=hash_hmac('sha256',serialize([$s['expected'],$values,$meta,$id?get_post($id,ARRAY_A):null]),wp_salt('nonce'));
 		$shipping=get_terms(['taxonomy'=>'product_shipping_class','hide_empty'=>false,'number'=>201]);if(is_wp_error($shipping))return $this->error('shipping','Shipping classes could not be read.');
 		$choices=array_values(array_filter($s['attributes'],static fn($a)=>$a['variation']));$canEdit=!$s['large']&&count($shipping)<=200&&($id>0||$s['canCreate'])&&count(array_filter($choices,static fn($a)=>!$a['canEdit']))===0;
-		return $values+['expected'=>$expected,'parentExpected'=>$s['expected'],'parentId'=>$parent,'parentName'=>$s['name'],'parentManagesStock'=>(bool)$s['product']->get_manage_stock('edit'),'choices'=>$choices,'image'=>Workspace_Media::image($values['imageId']),'canUpload'=>current_user_can('upload_files'),'canPublish'=>current_user_can('publish_products'),'canEdit'=>$canEdit,'currency'=>get_option('woocommerce_currency',''),'timezone'=>wp_timezone_string(),'shippingClasses'=>array_map(static fn($t)=>['id'=>(int)$t->term_id,'name'=>$t->name],array_slice($shipping,0,200)),'taxClasses'=>array_merge([['value'=>'parent','label'=>'Same as product'],['value'=>'','label'=>'Standard']],array_map(static fn($slug)=>['value'=>$slug,'label'=>ucwords(str_replace('-',' ',$slug))],\WC_Tax::get_tax_class_slugs()))];
+		return $values + ( class_exists( Billing::class ) ? Billing::editor( $p ) : [] ) + ['expected'=>$expected,'parentExpected'=>$s['expected'],'parentId'=>$parent,'parentName'=>$s['name'],'parentManagesStock'=>(bool)$s['product']->get_manage_stock('edit'),'choices'=>$choices,'image'=>Workspace_Media::image($values['imageId']),'canUpload'=>current_user_can('upload_files'),'canPublish'=>current_user_can('publish_products'),'canEdit'=>$canEdit,'currency'=>get_option('woocommerce_currency',''),'timezone'=>wp_timezone_string(),'shippingClasses'=>array_map(static fn($t)=>['id'=>(int)$t->term_id,'name'=>$t->name],array_slice($shipping,0,200)),'taxClasses'=>array_merge([['value'=>'parent','label'=>'Same as product'],['value'=>'','label'=>'Standard']],array_map(static fn($slug)=>['value'=>$slug,'label'=>ucwords(str_replace('-',' ',$slug))],\WC_Tax::get_tax_class_slugs()))];
 	}
 	private function metadata(int $id) { global $wpdb;$rows=$this->rows($wpdb->prepare("SELECT meta_id,meta_key,meta_value FROM {$wpdb->postmeta} WHERE post_id=%d ORDER BY meta_id LIMIT 1001",$id));return count($rows)>1000||strlen(serialize($rows))>2000000?$this->error('limit','This product metadata needs designer review.'):$rows; }
 	private function begin(): bool {
@@ -136,7 +137,7 @@ final class Product_Variation_Workspace_Service {
 	}
 	public function save_variation(int $parent,int $id,array $input) {
 		$fields=['attributes','enabled','price','salePrice','startsAt','endsAt','sku','manageStock','stock','stockStatus','backorders','imageId','description','virtual','weight','length','width','height','shippingClassId','taxClass','position'];
-		if(array_diff(array_keys($input),[...$fields,'expected','confirmed'])||array_diff($fields,array_keys($input)))return $this->error('input','Complete one variation only.',400);
+		if(array_diff(array_keys($input),[...$fields,'expected','confirmed','subscriptionTerms'])||array_diff($fields,array_keys($input)))return $this->error('input','Complete one variation only.',400);
 		return $this->mutation($parent,$id,$input,function($s,$record)use($input,$id,$fields){
 			if(!$record['canEdit']||(!$id&&!current_user_can('create_products')))return $this->error('forbidden','Your role cannot make this variation change.',403);
 			$axes=array_column($record['choices'],null,'key');if(!$axes||!is_array($input['attributes'])||array_diff(array_keys($input['attributes']),array_keys($axes)))return $this->error('choices','Select the product variation attributes.',400);
@@ -157,12 +158,22 @@ final class Product_Variation_Workspace_Service {
 			if($input['shippingClassId']!==$record['shippingClassId']){$tax=get_taxonomy('product_shipping_class');if(!$tax||!current_user_can($tax->cap->assign_terms)||($input['shippingClassId']&&!term_exists($input['shippingClassId'],'product_shipping_class')))return $this->error('shipping','Choose a shipping class you can assign.',403);}
 			if(!is_string($input['taxClass'])||(!in_array($input['taxClass'],['','parent',...\WC_Tax::get_tax_class_slugs()],true)&&$input['taxClass']!==$record['taxClass']))return $this->error('tax','Choose a native tax class or inheritance.',400);
 			$p=$id?$this->child($s,$id):new \WC_Product_Variation();if(is_wp_error($p))return $p;if(!$id){$p->set_parent_id($s['id']);$p->set_status('private');}
+			$billing = class_exists( Billing::class ) ? Billing::terms( $p ) : null;
+			$billing_changed = array_key_exists( 'subscriptionTerms', $input ) && $input['subscriptionTerms'] !== $billing;
+			if ( $billing_changed ) {
+				if ( ! class_exists( Billing::class ) ) return $this->error( 'billing', 'Recurring product setup is unavailable.' );
+				$billing = Billing::validate( $input['subscriptionTerms'], $input['virtual'], $input['enabled'] );
+				if ( is_wp_error( $billing ) ) return $billing;
+			}
+			if ( null !== $billing && ( $input['enabled'] || ! $input['virtual'] ) ) return $this->error( 'billing', 'Keep this recurring variation virtual and disabled during the billing pilot.' );
+			if ( $billing_changed ) Billing::write( $p, $billing );
 			$wanted=$input;$wanted['attributes']=$attrs;$wanted['price']=$price;$wanted['salePrice']=$sale;$wanted['description']=$description;foreach(['weight','length','width','height']as$key)$wanted[$key]=$input[$key]===''?'':wc_format_decimal($input[$key]);
-			if($id&&array_intersect_key($record,array_flip($fields))===array_intersect_key($wanted,array_flip($fields)))return ['id'=>$id,'changed'=>false,'action'=>'update','variation'=>$record];
+			if($id&&!$billing_changed&&array_intersect_key($record,array_flip($fields))===array_intersect_key($wanted,array_flip($fields)))return ['id'=>$id,'changed'=>false,'action'=>'update','variation'=>$record];
 			$p->set_attributes($attrs);$p->set_status($input['enabled']?'publish':'private');$p->set_regular_price($price);$p->set_sale_price($sale);$p->set_date_on_sale_from($from);$p->set_date_on_sale_to($to);$p->set_sku($input['sku']);$p->set_manage_stock($input['manageStock']);if($input['manageStock']||$input['stock']!==$record['stock'])$p->set_stock_quantity($input['stock']);$p->set_stock_status($input['stockStatus']);$p->set_backorders($input['backorders']);$p->set_image_id($image);$p->set_description($description);$p->set_virtual($input['virtual']);foreach(['weight','length','width','height']as$key)$p->{'set_'.$key}($input[$key]);$p->set_shipping_class_id($input['shippingClassId']);$p->set_tax_class($input['taxClass']);$p->set_menu_order($input['position']);try{$saved=$p->save();}finally{$this->affectedId=(int)$p->get_id();}if(!$saved)throw new \RuntimeException('Native variation save failed.');
 			\WC_Product_Variable::sync($s['id']);$after=$this->variation($s['id'],(int)$saved);if(is_wp_error($after))throw new \RuntimeException('Saved variation unavailable.');
 			foreach($fields as$key){if($key==='stockStatus'&&$input['manageStock'])continue;if($after[$key]!==$wanted[$key])throw new \RuntimeException('Saved variation differs.');}
+			if ( $billing_changed && $after['subscriptionTerms'] !== $billing ) throw new \RuntimeException( 'Saved recurring terms differ.' );
 			return ['id'=>(int)$saved,'changed'=>true,'action'=>$id?'update':'create','variation'=>$after];
-		},['_regular_price','_sale_price','_price','_sale_price_dates_from','_sale_price_dates_to','_sku','_manage_stock','_stock','_stock_status','_backorders','_thumbnail_id','_variation_description','_virtual','_weight','_length','_width','_height','_tax_class','_product_version',...array_map(static fn($key)=>'attribute_'.$key,array_keys(is_array($input['attributes']??null)?$input['attributes']:[]))]);
+		},['_regular_price','_sale_price','_price','_sale_price_dates_from','_sale_price_dates_to','_sku','_manage_stock','_stock','_stock_status','_backorders','_thumbnail_id','_variation_description','_virtual','_weight','_length','_width','_height','_tax_class','_product_version',Billing::META,...array_map(static fn($key)=>'attribute_'.$key,array_keys(is_array($input['attributes']??null)?$input['attributes']:[]))]);
 	}
 }

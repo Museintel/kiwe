@@ -50,8 +50,8 @@ try {
     $check($operation['permission']() && $operation['discoverPermission'](), 'MCP discovers readiness for the WooCommerce manager.');
     $state = $operation['execute']();
     $check($state['mode'] === 'test' && $state['gatewayActive'] && $state['gatewayEnabled'], 'Native option readback confirms Test Mode setup.');
-    $check($state['wooSubscriptionsActive'] === class_exists('WC_Subscriptions', false)
-        && $state['razorpaySubscriptionsActive'] === is_plugin_active(App::RECURRING_PLUGIN), 'Recurring dependencies are reported separately.');
+    $check($state['kiweSubscriptionQuotes'] && is_bool($state['standardMethodChoices']),
+        'Kiwe reports its own subscription quote capability and the checkout method setting.');
     $card = App::card();
     $check($card['id'] === 'razorpay' && $card['status'] === 'Test Mode configured' && $card['canChange'] === false
         && str_contains($card['url'], 'tab=checkout&section=razorpay'), 'The App opens the native Razorpay settings.');

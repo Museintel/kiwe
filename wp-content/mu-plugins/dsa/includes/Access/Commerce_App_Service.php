@@ -3,6 +3,7 @@
 namespace DSA\Access;
 
 use DSA\Utilities\Origin_Checker;
+use DSA\Commerce\Subscription_Product_Service as Billing;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -990,7 +991,12 @@ final class Commerce_App_Service {
 		$tags = array_values( array_map( 'intval', $product->get_tag_ids( 'edit' ) ) ); sort( $tags, SORT_NUMERIC );
 		return [ 'id'=>(int) $product->get_id(), 'type'=>(string) $product->get_type(), 'name'=>(string) $product->get_name( 'edit' ), 'description'=>(string) $product->get_description( 'edit' ), 'shortDescription'=>(string) $product->get_short_description( 'edit' ), 'status'=>(string) $product->get_status( 'edit' ), 'price'=>(string) $product->get_regular_price( 'edit' ), 'salePrice'=>(string) $product->get_sale_price( 'edit' ), 'saleFrom'=>$product->get_date_on_sale_from( 'edit' ) ? $product->get_date_on_sale_from( 'edit' )->getTimestamp() : null, 'saleTo'=>$product->get_date_on_sale_to( 'edit' ) ? $product->get_date_on_sale_to( 'edit' )->getTimestamp() : null, 'taxStatus'=>(string) $product->get_tax_status( 'edit' ), 'taxClass'=>(string) $product->get_tax_class( 'edit' ), 'virtual'=>(bool) $product->get_virtual( 'edit' ), 'weight'=>(string) $product->get_weight( 'edit' ), 'length'=>(string) $product->get_length( 'edit' ), 'width'=>(string) $product->get_width( 'edit' ), 'height'=>(string) $product->get_height( 'edit' ), 'shippingClassId'=>(int) $product->get_shipping_class_id( 'edit' ), 'weightUnit'=>(string) get_option( 'woocommerce_weight_unit', 'kg' ), 'dimensionUnit'=>(string) get_option( 'woocommerce_dimension_unit', 'cm' ), 'stock'=>$product->get_stock_quantity( 'edit' ), 'manageStock'=>$product->get_manage_stock( 'edit' ), 'stockStatus'=>(string) $product->get_stock_status( 'edit' ), 'sku'=>(string) $product->get_sku( 'edit' ), 'imageId'=>(int) $product->get_image_id( 'edit' ), 'galleryIds'=>array_map( 'intval', $product->get_gallery_image_ids( 'edit' ) ), 'categories'=>$categories, 'tags'=>$tags, 'groupedIds'=>$product->get_type()==='grouped'?array_map('intval',$product->get_children('edit')):[],'upsellIds'=>array_map('intval',$product->get_upsell_ids('edit')),'crossSellIds'=>array_map('intval',$product->get_cross_sell_ids('edit')),'attributes'=>Product_Variation_Workspace_Service::attribute_values($product),'defaultAttributes'=>$product->get_default_attributes('edit'),'modifiedGmt'=>$product->get_date_modified( 'edit' ) ? $product->get_date_modified( 'edit' )->date( 'c' ) : '' ];
 	}
-	public static function fingerprint( $product ): string { return hash( 'sha256', wp_json_encode( [self::product_values( $product ),(bool)$product->get_reviews_allowed('edit')] ) ); }
+	public static function fingerprint( $product ): string {
+		$record = [ self::product_values( $product ), (bool) $product->get_reviews_allowed( 'edit' ) ];
+		$billing = class_exists( Billing::class ) ? Billing::terms( $product ) : null;
+		if ( null !== $billing ) $record[] = $billing;
+		return hash( 'sha256', wp_json_encode( $record ) );
+	}
 	/** One current product without hydrating the category catalogue or any orders. */
 	public function product_record( int $id ) {
 		$post=get_post($id);
@@ -1000,6 +1006,7 @@ final class Commerce_App_Service {
 	}
 	private function project_product( $product ): array {
 		$out = self::product_values( $product );
+		if ( class_exists( Billing::class ) ) $out += Billing::editor( $product );
 		$out['reviewsAllowed']=(bool)$product->get_reviews_allowed('edit');
 		$out['feedbackAvailable']=\DSA\Discussion\Feedback_Access::enabled();
 		$out['expected'] = self::fingerprint( $product );
@@ -1020,6 +1027,22 @@ final class Commerce_App_Service {
 	}
 	public function save_product_record( int $id, array $input ) {
 		if ( ! function_exists( 'wc_get_product' ) || ! current_user_can( 'edit_products' ) || ! current_user_can( 'edit_post', $id ) ) return $this->error( 'forbidden', 'Your role cannot edit this product.', 403 );
+		if ( ! class_exists( Billing::class ) || ! Billing::can_author() ) return $this->persist_product_record( $id, $input );
+
+		global $wpdb;
+		$lock = 'kiwe-product-details-' . substr( hash( 'sha256', DB_NAME . '|' . $wpdb->prefix . '|' . $id ), 0, 32 );
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s,0)', $lock ) ) ) {
+			return $this->error( 'busy', 'Another product change is finishing. Refresh and review before saving.', 409 );
+		}
+		try {
+			clean_post_cache( $id );
+			return $this->persist_product_record( $id, $input );
+		} finally {
+			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+		}
+	}
+
+	private function persist_product_record( int $id, array $input ) {
 		$product = wc_get_product( $id );
 		if ( ! $product ) return $this->error( 'missing', 'This product is unavailable.', 404 );
 		$before = $this->project_product( $product );
@@ -1038,6 +1061,14 @@ final class Commerce_App_Service {
 		$status = $input['status'];
 		if ( ! in_array( $status, [ 'draft','pending','publish','private' ], true ) ) return $this->error( 'status', 'Choose a valid product status.' );
 		if ( in_array( $status, [ 'publish','private' ], true ) && ! current_user_can( 'publish_products' ) ) return $this->error( 'publish', 'Your role cannot publish products.', 403 );
+		$billing = class_exists( Billing::class ) ? Billing::terms( $product ) : null;
+		$billing_changed = array_key_exists( 'subscriptionTerms', $input ) && $input['subscriptionTerms'] !== $billing;
+		if ( $billing_changed ) {
+			if ( $before['type'] !== 'simple' || ! class_exists( Billing::class ) ) return $this->error( 'billing', 'Use a simple product or configure terms on individual variations.', 409 );
+			$billing = Billing::validate( $input['subscriptionTerms'], $before['virtual'], 'publish' === $status );
+			if ( is_wp_error( $billing ) ) return $billing;
+		}
+		if ( null !== $billing && 'publish' === $status ) return $this->error( 'billing', 'Save this recurring product as a draft during the billing pilot.', 409 );
 		if ( '' !== $input['price'] && ! preg_match( '/^\d{1,12}(?:\.\d{1,6})?$/D', $input['price'] ) ) return $this->error( 'price', 'Enter a non-negative price, using a dot for decimals.' );
 		$price = '' === $input['price'] ? '' : wc_format_decimal( $input['price'] );
 		if(in_array($before['type'],['variable','grouped'],true)&&$price!==$before['price'])return $this->error('price','Set prices on the individual products or variations.',409);
@@ -1072,6 +1103,7 @@ final class Commerce_App_Service {
 			if ( null !== $image ) $product->set_image_id( $image );
 			if ( null !== $gallery ) $product->set_gallery_image_ids( $gallery );
 			if ( $reviews_changed ) $product->set_reviews_allowed($input['reviewsAllowed']);
+			if ( $billing_changed ) Billing::write( $product, $billing );
 			$saved = $product->save();
 		} catch ( \Throwable $error ) { return $this->error( 'write', 'The save could not be confirmed. Refresh before retrying.', 409 ); }
 		if ( ! $saved || is_wp_error( $saved ) ) return $this->error( 'write', 'The save could not be confirmed. Refresh before retrying.', 409 );
@@ -1080,6 +1112,7 @@ final class Commerce_App_Service {
 		$after = $this->project_product( $record );
 		foreach ( [ 'name'=>$name, 'description'=>$description, 'shortDescription'=>$short, 'price'=>$price, 'status'=>$status ] as $key=>$value ) if ( $after[ $key ] !== $value ) return $this->error( 'readback', 'The saved product differs. Refresh and review it.', 409 );
 		if($after['reviewsAllowed']!==($reviews_changed?$input['reviewsAllowed']:$before['reviewsAllowed']))return $this->error('reviews_readback','The review setting could not be confirmed. Reload and review.',409);
+		if ( $billing_changed && Billing::terms( $record ) !== $billing ) return $this->error( 'billing', 'The recurring terms could not be confirmed. Reload and review.', 409 );
 		if ( $after['categories'] !== $categories ) return $this->error( 'readback', 'The saved categories differ. Refresh and review them.', 409 );
 		if ( $after['tags'] !== $tags ) return $this->error( 'readback', 'The saved product tags differ. Refresh and review them.', 409 );
 		if ( ( null !== $image && $after['imageId'] !== $image ) || ( null !== $gallery && $after['galleryIds'] !== $gallery ) ) return $this->error( 'image_readback', 'The saved images differ. Reload and review them.', 409 );

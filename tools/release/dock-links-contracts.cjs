@@ -11,6 +11,10 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
  }
  const commerceSource=read('wp-content/mu-plugins/dsa/assets/js/modules/commerce-panels.js');const commerce=await load(commerceSource+'\nexport {checkoutCopy};');
  for(const returnToPage of [false,true]){const html=commerce.renderCheckout({checkoutState:{returnToPage,contract:{available:true,groups:{}}}});assert(html.includes('form="dsa-checkout-surface-form"><span>Place order</span>'));assert(!html.includes('Return to Place order'));}
+ const edit=commerce.renderCheckout({checkoutState:{editDetails:true,returnToPage:true,contract:{available:true,groups:{}}}});
+ assert(edit.includes('>Save details</span>'));assert(!edit.includes('>Place order</span>'));
+ const waiting=commerce.renderCheckout({nativeDetailsAvailable:true,checkoutState:{loading:true,returnToPage:true}});
+ assert(waiting.includes('href="#customer_details" data-dsa-checkout-native-details'));
  assert.equal(commerce.checkoutCopy({}).continueLabel,'Place order');assert.equal(commerce.checkoutCopy({}).returnLabel,'Place order');assert.equal(commerce.checkoutCopy({screenTheme:{continueLabel:'Custom action'}}).continueLabel,'Custom action');checks.push('both checkout states use Place order and preserve authored copy');
  const fields=JSON.parse(read('wp-content/mu-plugins/dsa/includes/Access/business-fields.json')).contact.fields;
  const entry=await load(read('tools/workspace-prototype/social-link-entry.mjs'));

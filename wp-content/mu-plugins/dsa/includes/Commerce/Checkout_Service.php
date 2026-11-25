@@ -47,6 +47,10 @@ final class Checkout_Service {
 
 	public function render_details_link(): void {
 		if ( ! $this->enabled() || ! $this->identity_allowed() ) return;
+		if ( Checkout_Experience_Service::enabled() ) {
+			Checkout_Experience_Service::address_summary();
+			return;
+		}
 		echo '<a href="#customer_details" data-kiwe-checkout-details>' . esc_html__( 'Edit checkout details', 'dsa' ) . '</a>';
 	}
 
