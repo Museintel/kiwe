@@ -3,6 +3,12 @@ const repo=path.resolve(__dirname,'../..'),ownership=JSON.parse(fs.readFileSync(
 const files=Object.values(ownership.apps).flatMap(a=>a.files).sort();assert.equal(files.length,new Set(files).size,'An App file must have one owner');
 for(const file of files)assert(fs.statSync(path.join(repo,'wp-content/mu-plugins/dsa',file)).isFile(),file);
 for(const file of ownership.shared.commerceExceptions)assert(!files.includes(file),'General reporting/security stay in Core');
+for (const [id, app] of Object.entries(ownership.apps)) {
+  for (const name of Object.keys(app.classes)) {
+    const namespace = Object.keys(app.namespaces).find(prefix => name.startsWith(prefix));
+    assert(!namespace, id + ': declare ' + name + ' through its owned namespace');
+  }
+}
 const target=path.join(repo,'wp-content/mu-plugins/dsa/includes/Apps/Package_Layout.php');
 const text=`<?php\nnamespace DSA\\Apps;\nif (!defined('ABSPATH')) exit;\n\n/** Generated from tools/release/apps-ownership.json. Build profiles share one source owner. */\nfinal class Package_Layout {\n public const BUNDLED = true; // KIWE_APPS_BUNDLED_PROFILE\n public const BUNDLED_APPS = []; // KIWE_APPS_PARTIAL_PROFILE\n public static function bundled(string $id): bool { return self::BUNDLED || in_array($id,self::BUNDLED_APPS,true); }\n public const MINIMUM = [${Object.entries(ownership.apps).map(([id,app])=>"'"+id+"'=>'"+app.minimumVersion+"'").join(',')}];\n public const APP_FILES = [\n${files.map(f=>"  '"+f+"',").join('\n')}\n ];\n}\n`;
 if(process.argv.includes('--check'))assert.equal(fs.readFileSync(target,'utf8').replace(/\r\n?/g,'\n'),text,'App/Core ownership map is stale');else fs.writeFileSync(target,text);

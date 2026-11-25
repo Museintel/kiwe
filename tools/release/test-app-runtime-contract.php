@@ -17,6 +17,13 @@ function check(bool $ok,string $label){if(!$ok)throw new RuntimeException($label
 $descriptor=['schema'=>Contract::SCHEMA,'id'=>'seo','version'=>'1.0.0','coreApi'=>1,'requiresPhp'=>'8.2','requiresWp'=>'7.0','requiresWoo'=>'','namespaces'=>['DSA\\SEO\\'=>'includes/SEO/'],'classes'=>[],'assets'=>['assets/js/seo.js'=>'assets/js/seo.js']];
 try{
  check(Contract::validate($descriptor),'Exact versioned provider accepted');
+ $ownership = json_decode(file_get_contents(__DIR__ . '/apps-ownership.json'), true, flags: JSON_THROW_ON_ERROR);
+ foreach ($ownership['apps'] as $id => $app) {
+  $provider = array_intersect_key($app, array_flip(['requiresPhp', 'requiresWp', 'requiresWoo', 'namespaces', 'classes']));
+  $provider += ['schema'=>Contract::SCHEMA, 'id'=>$id, 'version'=>$app['minimumVersion'], 'coreApi'=>$ownership['coreApi'], 'assets'=>[]];
+  foreach ($app['files'] as $file) if (str_starts_with($file, 'assets/')) $provider['assets'][$file] = $file;
+  check(Contract::validate($provider), 'Release ownership produces a native descriptor for ' . $id);
+ }
  check(Contract::validate(array_replace($descriptor,['coreApi'=>2])),'New Core admits the prior and current provider APIs');
  foreach(['guest','ai','sitegraph']as$id){$provider=array_replace($descriptor,['id'=>$id,'coreApi'=>2,'requiresWoo'=>'','namespaces'=>[],'classes'=>[],'assets'=>[]]);check(Contract::validate($provider),'Noncommerce optional provider admitted '.$id);check(!Contract::validate(array_replace($provider,['requiresWoo'=>'11.2'])),'Noncommerce App cannot smuggle a Woo dependency '.$id);}
  foreach(['1.0','../1.0.0','1.0.0+unknown','1.0.0-rc.0','v1.0.0']as$bad)check(!Contract::version($bad),'Invalid version refused '.$bad);
